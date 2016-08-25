@@ -156,7 +156,17 @@ enum qop {
          */
         QOP_TEX_RESULT,
 
+        /* 32-bit immediate loaded to each SIMD channel */
         QOP_LOAD_IMM,
+
+        /* 32-bit immediate divided into 16 2-bit unsigned int values and
+         * loaded to each corresponding SIMD channel.
+         */
+        QOP_LOAD_IMM_U2,
+        /* 32-bit immediate divided into 16 2-bit signed int values and
+         * loaded to each corresponding SIMD channel.
+         */
+        QOP_LOAD_IMM_I2,
 
         /* Jumps to block->successor[0] if the qinst->cond (as a
          * QPU_COND_BRANCH_*) passes, or block->successor[1] if not.  Note
@@ -794,6 +804,22 @@ qir_LOAD_IMM(struct vc4_compile *c, uint32_t val)
 {
         return qir_emit_def(c, qir_inst(QOP_LOAD_IMM, c->undef,
                                         qir_reg(QFILE_LOAD_IMM, val), c->undef));
+}
+
+static inline struct qreg
+qir_LOAD_IMM_U2(struct vc4_compile *c, uint32_t val)
+{
+        return qir_emit_def(c, qir_inst(QOP_LOAD_IMM_U2, c->undef,
+                                        qir_reg(QFILE_LOAD_IMM, val),
+                                        c->undef));
+}
+
+static inline struct qreg
+qir_LOAD_IMM_I2(struct vc4_compile *c, uint32_t val)
+{
+        return qir_emit_def(c, qir_inst(QOP_LOAD_IMM_I2, c->undef,
+                                        qir_reg(QFILE_LOAD_IMM, val),
+                                        c->undef));
 }
 
 static inline void

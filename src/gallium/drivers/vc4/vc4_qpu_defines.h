@@ -246,6 +246,12 @@ enum qpu_unpack {
 #define QPU_UNPACK_SHIFT                57
 #define QPU_UNPACK_MASK                 QPU_MASK(59, 57)
 
+#define QPU_LOAD_IMM_MODE_SHIFT         57
+#define QPU_LOAD_IMM_MODE_MASK          QPU_MASK(59, 57)
+# define QPU_LOAD_IMM_MODE_U32          0
+# define QPU_LOAD_IMM_MODE_I2           1
+# define QPU_LOAD_IMM_MODE_U2           3
+
 /**
  * If set, the pack field means PACK_MUL or R4 packing, instead of normal
  * regfile a packing.

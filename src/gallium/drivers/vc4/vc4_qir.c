@@ -83,6 +83,8 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
 
         [QOP_LOAD_IMM] = { "load_imm", 0, 1 },
+        [QOP_LOAD_IMM_U2] = { "load_imm_u2", 0, 1 },
+        [QOP_LOAD_IMM_I2] = { "load_imm_i2", 0, 1 },
 
         [QOP_BRANCH] = { "branch", 0, 0, true },
         [QOP_UNIFORMS_RESET] = { "uniforms_reset", 0, 2, true },

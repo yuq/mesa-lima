@@ -428,6 +428,14 @@ vc4_generate_code_block(struct vc4_compile *c,
                         queue(block, qpu_load_imm_ui(dst, qinst->src[0].index));
                         break;
 
+                case QOP_LOAD_IMM_U2:
+                        queue(block, qpu_load_imm_u2(dst, qinst->src[0].index));
+                        break;
+
+                case QOP_LOAD_IMM_I2:
+                        queue(block, qpu_load_imm_i2(dst, qinst->src[0].index));
+                        break;
+
                 case QOP_MS_MASK:
                         src[1] = qpu_ra(QPU_R_MS_REV_FLAGS);
                         fixup_raddr_conflict(block, dst, &src[0], &src[1],

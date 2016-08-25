@@ -165,6 +165,20 @@ qpu_load_imm_ui(struct qpu_reg dst, uint32_t val)
 }
 
 uint64_t
+qpu_load_imm_u2(struct qpu_reg dst, uint32_t val)
+{
+        return qpu_load_imm_ui(dst, val) | QPU_SET_FIELD(QPU_LOAD_IMM_MODE_U2,
+                                                         QPU_LOAD_IMM_MODE);
+}
+
+uint64_t
+qpu_load_imm_i2(struct qpu_reg dst, uint32_t val)
+{
+        return qpu_load_imm_ui(dst, val) | QPU_SET_FIELD(QPU_LOAD_IMM_MODE_I2,
+                                                         QPU_LOAD_IMM_MODE);
+}
+
+uint64_t
 qpu_branch(uint32_t cond, uint32_t target)
 {
         uint64_t inst = 0;
