@@ -104,6 +104,7 @@ void
 anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
                 struct anv_shader_module *module,
                 const char *entrypoint,
+                const struct anv_pipeline_layout *pipeline_layout,
                 const VkSpecializationInfo *spec_info)
 {
    struct mesa_sha1 *ctx;
@@ -112,6 +113,10 @@ anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
    _mesa_sha1_update(ctx, key, key_size);
    _mesa_sha1_update(ctx, module->sha1, sizeof(module->sha1));
    _mesa_sha1_update(ctx, entrypoint, strlen(entrypoint));
+   if (pipeline_layout) {
+      _mesa_sha1_update(ctx, pipeline_layout->sha1,
+                        sizeof(pipeline_layout->sha1));
+   }
    /* hash in shader stage, pipeline layout? */
    if (spec_info) {
       _mesa_sha1_update(ctx, spec_info->pMapEntries,

@@ -27,6 +27,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "util/mesa-sha1.h"
+
 #include "anv_private.h"
 
 /*
@@ -202,6 +204,15 @@ void anv_DestroyDescriptorSetLayout(
    anv_free2(&device->alloc, pAllocator, set_layout);
 }
 
+static void
+sha1_update_descriptor_set_layout(struct mesa_sha1 *ctx,
+                                  const struct anv_descriptor_set_layout *layout)
+{
+   size_t size = sizeof(*layout) +
+                 sizeof(layout->binding[0]) * layout->binding_count;
+   _mesa_sha1_update(ctx, layout, size);
+}
+
 /*
  * Pipeline layouts.  These have nothing to do with the pipeline.  They are
  * just muttiple descriptor set layouts pasted together
@@ -245,6 +256,19 @@ VkResult anv_CreatePipelineLayout(
          }
       }
    }
+
+   struct mesa_sha1 *ctx = _mesa_sha1_init();
+   for (unsigned s = 0; s < layout->num_sets; s++) {
+      sha1_update_descriptor_set_layout(ctx, layout->set[s].layout);
+      _mesa_sha1_update(ctx, &layout->set[s].dynamic_offset_start,
+                        sizeof(layout->set[s].dynamic_offset_start));
+   }
+   _mesa_sha1_update(ctx, &layout->num_sets, sizeof(layout->num_sets));
+   for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
+      _mesa_sha1_update(ctx, &layout->stage[s].has_dynamic_offsets,
+                        sizeof(layout->stage[s].has_dynamic_offsets));
+   }
+   _mesa_sha1_final(ctx, layout->sha1);
 
    *pPipelineLayout = anv_pipeline_layout_to_handle(layout);
 

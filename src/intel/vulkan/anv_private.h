@@ -1063,6 +1063,8 @@ struct anv_pipeline_layout {
    struct {
       bool has_dynamic_offsets;
    } stage[MESA_SHADER_STAGES];
+
+   unsigned char sha1[20];
 };
 
 struct anv_buffer {
@@ -1428,6 +1430,7 @@ struct anv_shader_module {
 void anv_hash_shader(unsigned char *hash, const void *key, size_t key_size,
                      struct anv_shader_module *module,
                      const char *entrypoint,
+                     const struct anv_pipeline_layout *pipeline_layout,
                      const VkSpecializationInfo *spec_info);
 
 static inline gl_shader_stage
