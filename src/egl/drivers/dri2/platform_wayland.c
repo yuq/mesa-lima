@@ -1083,16 +1083,52 @@ static const __DRIextension *image_loader_extensions[] = {
 };
 
 static EGLBoolean
+dri2_wl_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
+   static const struct {
+      const char *format_name;
+      int has_format;
+      unsigned int rgba_masks[4];
+   } visuals[] = {
+      { "XRGB8888", HAS_XRGB8888, { 0xff0000, 0xff00, 0x00ff, 0xff000000 } },
+      { "ARGB8888", HAS_ARGB8888, { 0xff0000, 0xff00, 0x00ff, 0 } },
+      { "RGB565",   HAS_RGB565,   { 0x00f800, 0x07e0, 0x001f, 0 } },
+   };
+   unsigned int format_count[ARRAY_SIZE(visuals)] = { 0 };
+   unsigned int count, i, j;
+
+   count = 0;
+   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
+      for (j = 0; j < ARRAY_SIZE(visuals); j++) {
+         struct dri2_egl_config *dri2_conf;
+
+         if (!(dri2_dpy->formats & visuals[j].has_format))
+            continue;
+
+         dri2_conf = dri2_add_config(disp, dri2_dpy->driver_configs[i],
+               count + 1, EGL_WINDOW_BIT, NULL, visuals[j].rgba_masks);
+         if (dri2_conf) {
+            count++;
+            format_count[j]++;
+         }
+      }
+   }
+
+   for (i = 0; i < ARRAY_SIZE(format_count); i++) {
+      if (!format_count[i]) {
+         _eglLog(_EGL_DEBUG, "No DRI config supports native format %s",
+                 visuals[i].format_name);
+      }
+   }
+
+   return (count != 0);
+}
+
+static EGLBoolean
 dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy;
-   const __DRIconfig *config;
-   uint32_t types;
-   int i;
-   static const unsigned int argb_masks[4] =
-      { 0xff0000, 0xff00, 0xff, 0xff000000 };
-   static const unsigned int rgb_masks[4] = { 0xff0000, 0xff00, 0xff, 0 };
-   static const unsigned int rgb565_masks[4] = { 0xf800, 0x07e0, 0x001f, 0 };
 
    loader_set_logger(_eglLog);
 
@@ -1195,15 +1231,9 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_screen;
    }
 
-   types = EGL_WINDOW_BIT;
-   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
-      config = dri2_dpy->driver_configs[i];
-      if (dri2_dpy->formats & HAS_XRGB8888)
-	 dri2_add_config(disp, config, i + 1, types, NULL, rgb_masks);
-      if (dri2_dpy->formats & HAS_ARGB8888)
-	 dri2_add_config(disp, config, i + 1, types, NULL, argb_masks);
-      if (dri2_dpy->formats & HAS_RGB565)
-        dri2_add_config(disp, config, i + 1, types, NULL, rgb565_masks);
+   if (!dri2_wl_add_configs_for_visuals(drv, disp)) {
+      _eglError(EGL_NOT_INITIALIZED, "DRI2: failed to add configs");
+      goto cleanup_screen;
    }
 
    dri2_set_WL_bind_wayland_display(drv, disp);
@@ -1816,13 +1846,6 @@ static EGLBoolean
 dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 {
    struct dri2_egl_display *dri2_dpy;
-   const __DRIconfig *config;
-   uint32_t types;
-   int i;
-   static const unsigned int argb_masks[4] =
-      { 0xff0000, 0xff00, 0xff, 0xff000000 };
-   static const unsigned int rgb_masks[4] = { 0xff0000, 0xff00, 0xff, 0 };
-   static const unsigned int rgb565_masks[4] = { 0xf800, 0x07e0, 0x001f, 0 };
 
    loader_set_logger(_eglLog);
 
@@ -1869,15 +1892,9 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_wl_setup_swap_interval(dri2_dpy);
 
-   types = EGL_WINDOW_BIT;
-   for (i = 0; dri2_dpy->driver_configs[i]; i++) {
-      config = dri2_dpy->driver_configs[i];
-      if (dri2_dpy->formats & HAS_XRGB8888)
-	 dri2_add_config(disp, config, i + 1, types, NULL, rgb_masks);
-      if (dri2_dpy->formats & HAS_ARGB8888)
-	 dri2_add_config(disp, config, i + 1, types, NULL, argb_masks);
-      if (dri2_dpy->formats & HAS_RGB565)
-        dri2_add_config(disp, config, i + 1, types, NULL, rgb565_masks);
+   if (!dri2_wl_add_configs_for_visuals(drv, disp)) {
+      _eglError(EGL_NOT_INITIALIZED, "DRI2: failed to add configs");
+      goto cleanup_screen;
    }
 
    /* Fill vtbl last to prevent accidentally calling virtual function during
@@ -1887,6 +1904,8 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 
    return EGL_TRUE;
 
+ cleanup_screen:
+   dri2_dpy->core->destroyScreen(dri2_dpy->dri_screen);
  cleanup_driver:
    dlclose(dri2_dpy->driver);
  cleanup_shm:
