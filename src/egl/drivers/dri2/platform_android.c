@@ -753,7 +753,7 @@ static EGLBoolean
 droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
-   const struct {
+   static const struct {
       int format;
       unsigned int rgba_masks[4];
    } visuals[] = {
