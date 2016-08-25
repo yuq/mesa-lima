@@ -397,6 +397,10 @@ svga_texture_transfer_map(struct pipe_context *pipe,
 
    st->base.stride = nblocksx*util_format_get_blocksize(texture->format);
    st->base.layer_stride = st->base.stride * nblocksy;
+   st->use_direct_map = use_direct_map;
+
+   *ptransfer = &st->base;
+
 
    if (usage & PIPE_TRANSFER_WRITE) {
       /* record texture upload for HUD */
@@ -509,10 +513,6 @@ svga_texture_transfer_map(struct pipe_context *pipe,
          svga_set_texture_dirty(tex, st->slice, level);
       }
    }
-
-   st->use_direct_map = use_direct_map;
-
-   *ptransfer = &st->base;
 
    /*
     * Begin mapping code
