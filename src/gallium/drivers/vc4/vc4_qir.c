@@ -292,6 +292,7 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
                 [QFILE_FRAG_X] = "frag_x",
                 [QFILE_FRAG_Y] = "frag_y",
                 [QFILE_FRAG_REV_FLAG] = "frag_rev_flag",
+                [QFILE_QPU_ELEMENT] = "elem",
         };
 
         switch (reg.file) {

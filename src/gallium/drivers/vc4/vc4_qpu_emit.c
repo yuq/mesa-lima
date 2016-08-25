@@ -339,6 +339,9 @@ vc4_generate_code_block(struct vc4_compile *c,
                         case QFILE_FRAG_REV_FLAG:
                                 src[i] = qpu_rb(QPU_R_MS_REV_FLAGS);
                                 break;
+                        case QFILE_QPU_ELEMENT:
+                                src[i] = qpu_ra(QPU_R_ELEM_QPU);
+                                break;
 
                         case QFILE_TLB_COLOR_WRITE:
                         case QFILE_TLB_COLOR_WRITE_MS:
@@ -383,6 +386,7 @@ vc4_generate_code_block(struct vc4_compile *c,
                 case QFILE_FRAG_X:
                 case QFILE_FRAG_Y:
                 case QFILE_FRAG_REV_FLAG:
+                case QFILE_QPU_ELEMENT:
                         assert(!"not reached");
                         break;
                 }

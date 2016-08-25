@@ -61,6 +61,7 @@ enum qfile {
         QFILE_FRAG_X,
         QFILE_FRAG_Y,
         QFILE_FRAG_REV_FLAG,
+        QFILE_QPU_ELEMENT,
 
         /**
          * Stores an immediate value in the index field that will be used
