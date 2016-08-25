@@ -759,10 +759,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       if (intel_miptree_is_lossless_compressed(brw, irb->mt)) {
          /* Compressed buffers can be cleared also using normal rep-clear. In
-          * such case they bahave such as if they were drawn using normal 3D
+          * such case they behave such as if they were drawn using normal 3D
           * render pipeline, and we simply mark the mcs as dirty.
           */
-         assert(partial_clear);
          irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
       }
    }
