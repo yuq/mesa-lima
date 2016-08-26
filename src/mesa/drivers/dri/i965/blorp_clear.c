@@ -35,7 +35,6 @@
 #include "brw_meta_util.h"
 #include "brw_context.h"
 #include "brw_eu.h"
-#include "brw_state.h"
 
 #include "nir_builder.h"
 
@@ -56,9 +55,8 @@ brw_blorp_params_get_clear_kernel(struct brw_context *brw,
    memset(&blorp_key, 0, sizeof(blorp_key));
    blorp_key.use_simd16_replicated_data = use_replicated_data;
 
-   if (brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                        &blorp_key, sizeof(blorp_key),
-                        &params->wm_prog_kernel, &params->wm_prog_data))
+   if (brw->blorp.lookup_shader(&brw->blorp, &blorp_key, sizeof(blorp_key),
+                                &params->wm_prog_kernel, &params->wm_prog_data))
       return;
 
    void *mem_ctx = ralloc_context(NULL);
@@ -88,11 +86,10 @@ brw_blorp_params_get_clear_kernel(struct brw_context *brw,
       brw_blorp_compile_nir_shader(brw, b.shader, &wm_key, use_replicated_data,
                                    &prog_data, &program_size);
 
-   brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                    &blorp_key, sizeof(blorp_key),
-                    program, program_size,
-                    &prog_data, sizeof(prog_data),
-                    &params->wm_prog_kernel, &params->wm_prog_data);
+   brw->blorp.upload_shader(&brw->blorp, &blorp_key, sizeof(blorp_key),
+                            program, program_size,
+                            &prog_data, sizeof(prog_data),
+                            &params->wm_prog_kernel, &params->wm_prog_data);
 
    ralloc_free(mem_ctx);
 }

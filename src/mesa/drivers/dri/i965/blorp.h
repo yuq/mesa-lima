@@ -41,6 +41,15 @@ struct blorp_context {
    void *driver_ctx;
 
    const struct isl_device *isl_dev;
+
+   bool (*lookup_shader)(struct blorp_context *blorp,
+                         const void *key, uint32_t key_size,
+                         uint32_t *kernel_out, void *prog_data_out);
+   void (*upload_shader)(struct blorp_context *blorp,
+                         const void *key, uint32_t key_size,
+                         const void *kernel, uint32_t kernel_size,
+                         const void *prog_data, uint32_t prog_data_size,
+                         uint32_t *kernel_out, void *prog_data_out);
 };
 
 void blorp_init(struct blorp_context *blorp, void *driver_ctx,

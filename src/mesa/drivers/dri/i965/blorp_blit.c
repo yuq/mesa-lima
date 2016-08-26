@@ -32,7 +32,6 @@
 
 #include "blorp_priv.h"
 #include "brw_context.h"
-#include "brw_state.h"
 #include "brw_meta_util.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
@@ -1196,9 +1195,8 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
                           struct brw_blorp_params *params,
                           const struct brw_blorp_blit_prog_key *prog_key)
 {
-   if (brw_search_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                        prog_key, sizeof(*prog_key),
-                        &params->wm_prog_kernel, &params->wm_prog_data))
+   if (brw->blorp.lookup_shader(&brw->blorp, prog_key, sizeof(*prog_key),
+                                &params->wm_prog_kernel, &params->wm_prog_data))
       return;
 
    const unsigned *program;
@@ -1219,11 +1217,10 @@ brw_blorp_get_blit_kernel(struct brw_context *brw,
    program = brw_blorp_compile_nir_shader(brw, nir, &wm_key, false,
                                           &prog_data, &program_size);
 
-   brw_upload_cache(&brw->cache, BRW_CACHE_BLORP_PROG,
-                    prog_key, sizeof(*prog_key),
-                    program, program_size,
-                    &prog_data, sizeof(prog_data),
-                    &params->wm_prog_kernel, &params->wm_prog_data);
+   brw->blorp.upload_shader(&brw->blorp, prog_key, sizeof(*prog_key),
+                            program, program_size,
+                            &prog_data, sizeof(prog_data),
+                            &params->wm_prog_kernel, &params->wm_prog_data);
 }
 
 static void
