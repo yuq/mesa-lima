@@ -487,6 +487,7 @@ fs_visitor::emit_fb_writes()
    }
 
    prog_data->dual_src_blend = (this->dual_src_output.file != BAD_FILE);
+   assert(!prog_data->dual_src_blend || key->nr_color_regions == 1);
 
    if (inst == NULL) {
       /* Even if there's no color buffers enabled, we still need to send
