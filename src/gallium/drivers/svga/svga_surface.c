@@ -664,17 +664,21 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
 void
 svga_propagate_rendertargets(struct svga_context *svga)
 {
-   const unsigned num_cbufs = svga_screen(svga->pipe.screen)->max_color_buffers;
    unsigned i;
 
-   for (i = 0; i < num_cbufs; i++) {
-      if (svga->curr.framebuffer.cbufs[i]) {
-         svga_propagate_surface(svga, svga->curr.framebuffer.cbufs[i]);
+   /* Note that we examine the svga->state.hw_draw.framebuffer surfaces,
+    * not the svga->curr.framebuffer surfaces, because it's the former
+    * surfaces which may be backing surface views (the actual render targets).
+    */
+   for (i = 0; i < svga->state.hw_draw.num_rendertargets; i++) {
+      struct pipe_surface *s = svga->state.hw_draw.rtv[i];
+      if (s) {
+         svga_propagate_surface(svga, s);
       }
    }
 
-   if (svga->curr.framebuffer.zsbuf) {
-      svga_propagate_surface(svga, svga->curr.framebuffer.zsbuf);
+   if (svga->state.hw_draw.dsv) {
+      svga_propagate_surface(svga, svga->state.hw_draw.dsv);
    }
 }
 
