@@ -850,8 +850,27 @@ static void r600_blit(struct pipe_context *ctx,
                       const struct pipe_blit_info *info)
 {
 	struct r600_context *rctx = (struct r600_context*)ctx;
+	struct r600_texture *rdst = (struct r600_texture *)info->dst.resource;
 
 	if (do_hardware_msaa_resolve(ctx, info)) {
+		return;
+	}
+
+	/* Using SDMA for copying to a linear texture in GTT is much faster.
+	 * This improves DRI PRIME performance.
+	 *
+	 * resource_copy_region can't do this yet, because dma_copy calls it
+	 * on failure (recursion).
+	 */
+	if (rdst->surface.level[info->dst.level].mode ==
+	    RADEON_SURF_MODE_LINEAR_ALIGNED &&
+	    rctx->b.dma_copy &&
+	    util_can_blit_via_copy_region(info, false)) {
+		rctx->b.dma_copy(ctx, info->dst.resource, info->dst.level,
+				 info->dst.box.x, info->dst.box.y,
+				 info->dst.box.z,
+				 info->src.resource, info->src.level,
+				 &info->src.box);
 		return;
 	}
 
