@@ -108,7 +108,6 @@ static void svga_set_framebuffer_state(struct pipe_context *pipe,
 {
    struct svga_context *svga = svga_context(pipe);
    struct pipe_framebuffer_state *dst = &svga->curr.framebuffer;
-   boolean propagate = FALSE;
    unsigned i;
 
    /* make sure any pending drawing calls are flushed before changing
@@ -120,22 +119,15 @@ static void svga_set_framebuffer_state(struct pipe_context *pipe,
    dst->height = fb->height;
    dst->nr_cbufs = fb->nr_cbufs;
 
-   /* check if we need to propagate any of the target surfaces */
+   /* Check if we need to propagate any of the render targets which we may
+    * be unbinding.
+    */
    for (i = 0; i < dst->nr_cbufs; i++) {
       struct pipe_surface *s = i < fb->nr_cbufs ? fb->cbufs[i] : NULL;
       if (dst->cbufs[i] && dst->cbufs[i] != s) {
          if (svga_surface_needs_propagation(dst->cbufs[i])) {
-            propagate = TRUE;
-            break;
-         }
-      }
-   }
-
-   if (propagate) {
-      for (i = 0; i < dst->nr_cbufs; i++) {
-         struct pipe_surface *s = i < fb->nr_cbufs ? fb->cbufs[i] : NULL;
-         if (dst->cbufs[i] && dst->cbufs[i] != s)
             svga_propagate_surface(svga, dst->cbufs[i]);
+         }
       }
    }
 
