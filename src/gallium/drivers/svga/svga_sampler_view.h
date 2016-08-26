@@ -104,6 +104,10 @@ svga_check_sampler_view_resource_collision(struct svga_context *svga,
                                            struct svga_winsys_surface *res,
                                            unsigned shader);
 
+boolean
+svga_check_sampler_framebuffer_resource_collision(struct svga_context *svga,
+                                                  enum pipe_shader_type shader);
+
 enum pipe_error
 svga_validate_pipe_sampler_view(struct svga_context *svga,
                                 struct svga_pipe_sampler_view *sv);

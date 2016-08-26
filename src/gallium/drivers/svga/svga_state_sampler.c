@@ -40,9 +40,10 @@
 #include "svga_format.h"
 #include "svga_resource_buffer.h"
 #include "svga_resource_texture.h"
+#include "svga_sampler_view.h"
 #include "svga_shader.h"
 #include "svga_state.h"
-#include "svga_sampler_view.h"
+#include "svga_surface.h"
 
 
 /** Get resource handle for a texture or buffer */
@@ -81,6 +82,36 @@ svga_check_sampler_view_resource_collision(struct svga_context *svga,
       if (sv && res == svga_resource_handle(sv->base.texture)) {
          return TRUE;
       }
+   }
+
+   return FALSE;
+}
+
+
+/**
+ * Check if there are any resources that are both bound to a render target
+ * and bound as a shader resource for the given type of shader.
+ */
+boolean
+svga_check_sampler_framebuffer_resource_collision(struct svga_context *svga,
+                                                  enum pipe_shader_type shader)
+{
+   struct svga_surface *surf;
+   unsigned i;
+
+   for (i = 0; i < svga->curr.framebuffer.nr_cbufs; i++) {
+      surf = svga_surface(svga->curr.framebuffer.cbufs[i]);
+      if (surf &&
+          svga_check_sampler_view_resource_collision(svga, surf->handle,
+                                                     shader)) {
+         return TRUE;
+      }
+   }
+
+   surf = svga_surface(svga->curr.framebuffer.zsbuf);
+   if (surf &&
+       svga_check_sampler_view_resource_collision(svga, surf->handle, shader)) {
+      return TRUE;
    }
 
    return FALSE;
