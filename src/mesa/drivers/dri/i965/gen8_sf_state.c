@@ -62,7 +62,7 @@ upload_sbe(struct brw_context *brw)
 
    /* _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM,
     * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM |
-    * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
+    * BRW_NEW_GS_PROG_DATA | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
     * BRW_NEW_VUE_MAP_GEOM_OUT
     */
    calculate_attr_overrides(brw, attr_overrides,
@@ -140,7 +140,7 @@ const struct brw_tracked_state gen8_sbe_state = {
                BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_TES_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },

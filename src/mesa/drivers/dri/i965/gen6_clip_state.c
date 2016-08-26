@@ -43,9 +43,9 @@ brw_is_drawing_points(const struct brw_context *brw)
       return true;
    }
 
-   if (brw->geometry_program) {
-      /* BRW_NEW_GEOMETRY_PROGRAM */
-      return brw->geometry_program->OutputType == GL_POINTS;
+   if (brw->gs.prog_data) {
+      /* BRW_NEW_GS_PROG_DATA */
+      return brw->gs.prog_data->output_topology == _3DPRIM_POINTLIST;
    } else if (brw->tes.prog_data) {
       /* BRW_NEW_TES_PROG_DATA */
       return brw->tes.prog_data->output_topology ==
@@ -66,9 +66,9 @@ brw_is_drawing_lines(const struct brw_context *brw)
       return true;
    }
 
-   if (brw->geometry_program) {
-      /* BRW_NEW_GEOMETRY_PROGRAM */
-      return brw->geometry_program->OutputType == GL_LINE_STRIP;
+   if (brw->gs.prog_data) {
+      /* BRW_NEW_GS_PROG_DATA */
+      return brw->gs.prog_data->output_topology == _3DPRIM_LINESTRIP;
    } else if (brw->tes.prog_data) {
       /* BRW_NEW_TES_PROG_DATA */
       return brw->tes.prog_data->output_topology ==
@@ -263,7 +263,7 @@ const struct brw_tracked_state gen6_clip_state = {
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_RASTERIZER_DISCARD |
@@ -281,7 +281,7 @@ const struct brw_tracked_state gen7_clip_state = {
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_RASTERIZER_DISCARD |

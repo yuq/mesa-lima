@@ -61,7 +61,7 @@ upload_sbe_state(struct brw_context *brw)
 
    /* _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM,
     * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM |
-    * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
+    * BRW_NEW_GS_PROG_DATA | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
     * BRW_NEW_VUE_MAP_GEOM_OUT
     */
    uint32_t urb_entry_read_length;
@@ -98,7 +98,7 @@ const struct brw_tracked_state gen7_sbe_state = {
                BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_TES_PROG_DATA |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_VUE_MAP_GEOM_OUT,
@@ -192,7 +192,7 @@ upload_sf_state(struct brw_context *brw)
    }
 
    /* _NEW_SCISSOR | _NEW_POLYGON,
-    * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA
+    * BRW_NEW_GS_PROG_DATA | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA
     */
    if (ctx->Scissor.EnableFlags ||
        brw_is_drawing_points(brw) || brw_is_drawing_lines(brw))
@@ -262,7 +262,7 @@ const struct brw_tracked_state gen7_sf_state = {
                _NEW_SCISSOR,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
-               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_GS_PROG_DATA |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_TES_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
