@@ -511,27 +511,12 @@ svga_set_sampler_views(struct pipe_context *pipe,
    }
 
    /* Check if any of the sampler view resources collide with the framebuffer
-    * color buffers or depth stencil resource. If so, enable the NEW_FRAME_BUFFER
+    * color buffers or depth stencil resource. If so, set the NEW_FRAME_BUFFER
     * dirty bit so that emit_framebuffer can be invoked to create backed view
     * for the conflicted surface view.
     */
-   for (i = 0; i < svga->curr.framebuffer.nr_cbufs; i++) {
-      if (svga->curr.framebuffer.cbufs[i]) {
-         struct svga_surface *s = svga_surface(svga->curr.framebuffer.cbufs[i]);
-         if (svga_check_sampler_view_resource_collision(svga, s->handle, shader)) {
-            svga->dirty |= SVGA_NEW_FRAME_BUFFER;
-            break;
-         }
-      }
-   }
-
-   if (svga->curr.framebuffer.zsbuf) {
-      struct svga_surface *s = svga_surface(svga->curr.framebuffer.zsbuf);
-      if (s) {
-         if (svga_check_sampler_view_resource_collision(svga, s->handle, shader)) {
-            svga->dirty |= SVGA_NEW_FRAME_BUFFER;
-         }
-      }
+   if (svga_check_sampler_framebuffer_resource_collision(svga, shader)) {
+      svga->dirty |= SVGA_NEW_FRAME_BUFFER;
    }
 
 done:
