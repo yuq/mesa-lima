@@ -1503,34 +1503,6 @@ generate_code(struct brw_codegen *p,
       assert(inst->mlen <= BRW_MAX_MSG_LENGTH);
 
       unsigned pre_emit_nr_insn = p->nr_insn;
-      bool fix_exec_size = false;
-
-      if (dst.width == BRW_WIDTH_4) {
-         /* This happens in attribute fixups for "dual instanced" geometry
-          * shaders, since they use attributes that are vec4's.  Since the exec
-          * width is only 4, it's essential that the caller set
-          * force_writemask_all in order to make sure the instruction is executed
-          * regardless of which channels are enabled.
-          */
-         assert(inst->force_writemask_all);
-
-         /* Fix up any <8;8,1> or <0;4,1> source registers to <4;4,1> to satisfy
-          * the following register region restrictions (from Graphics BSpec:
-          * 3D-Media-GPGPU Engine > EU Overview > Registers and Register Regions
-          * > Register Region Restrictions)
-          *
-          *     1. ExecSize must be greater than or equal to Width.
-          *
-          *     2. If ExecSize = Width and HorzStride != 0, VertStride must be set
-          *        to Width * HorzStride."
-          */
-         for (int i = 0; i < 3; i++) {
-            if (src[i].file == BRW_GENERAL_REGISTER_FILE)
-               src[i] = stride(src[i], 4, 4, 1);
-         }
-         brw_set_default_exec_size(p, BRW_EXECUTE_4);
-         fix_exec_size = true;
-      }
 
       switch (inst->opcode) {
       case VEC4_OPCODE_UNPACK_UNIFORM:
@@ -2033,9 +2005,6 @@ generate_code(struct brw_codegen *p,
       default:
          unreachable("Unsupported opcode");
       }
-
-      if (fix_exec_size)
-         brw_set_default_exec_size(p, BRW_EXECUTE_8);
 
       if (inst->opcode == VEC4_OPCODE_PACK_BYTES) {
          /* Handled dependency hints in the generator. */
