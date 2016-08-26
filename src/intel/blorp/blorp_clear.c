@@ -208,12 +208,13 @@ get_fast_clear_rect(const struct isl_device *dev,
 
 void
 blorp_fast_clear(struct blorp_batch *batch,
-                 const struct blorp_surf *surf,
-                 uint32_t level, uint32_t layer, enum isl_format format,
+                 const struct blorp_surf *surf, enum isl_format format,
+                 uint32_t level, uint32_t start_layer, uint32_t num_layers,
                  uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
 {
    struct blorp_params params;
    blorp_params_init(&params);
+   params.num_layers = num_layers;
 
    params.x0 = x0;
    params.y0 = y0;
@@ -228,8 +229,8 @@ blorp_fast_clear(struct blorp_batch *batch,
 
    blorp_params_get_clear_kernel(batch->blorp, &params, true);
 
-   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level, layer,
-                               format, true);
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
+                               start_layer, format, true);
 
    batch->blorp->exec(batch, &params);
 }
@@ -238,13 +239,14 @@ blorp_fast_clear(struct blorp_batch *batch,
 void
 blorp_clear(struct blorp_batch *batch,
             const struct blorp_surf *surf,
-            uint32_t level, uint32_t layer,
+            uint32_t level, uint32_t start_layer, uint32_t num_layers,
             uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
             enum isl_format format, union isl_color_value clear_color,
             bool color_write_disable[4])
 {
    struct blorp_params params;
    blorp_params_init(&params);
+   params.num_layers = num_layers;
 
    params.x0 = x0;
    params.y0 = y0;
@@ -276,8 +278,8 @@ blorp_clear(struct blorp_batch *batch,
    blorp_params_get_clear_kernel(batch->blorp, &params,
                                  use_simd16_replicated_data);
 
-   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level, layer,
-                               format, true);
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
+                               start_layer, format, true);
 
    batch->blorp->exec(batch, &params);
 }

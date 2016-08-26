@@ -735,9 +735,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw);
-      blorp_fast_clear(&batch, &surf, level, layer,
+      blorp_fast_clear(&batch, &surf,
                        (enum isl_format)brw->render_target_format[format],
-                       x0, y0, x1, y1);
+                       level, layer, 1, x0, y0, x1, y1);
       blorp_batch_finish(&batch);
 
       /* Now that the fast clear has occurred, put the buffer in
@@ -754,7 +754,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw);
-      blorp_clear(&batch, &surf, level, layer, x0, y0, x1, y1,
+      blorp_clear(&batch, &surf, level, layer, 1, x0, y0, x1, y1,
                   (enum isl_format)brw->render_target_format[format],
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
