@@ -59,8 +59,10 @@ upload_sbe_state(struct brw_context *brw)
    }
    dw1 |= point_sprite_origin;
 
-   /* BRW_NEW_VUE_MAP_GEOM_OUT | BRW_NEW_FRAGMENT_PROGRAM
-    * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | BRW_NEW_FS_PROG_DATA
+   /* _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM,
+    * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM |
+    * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
+    * BRW_NEW_VUE_MAP_GEOM_OUT
     */
    uint32_t urb_entry_read_length;
    uint32_t urb_entry_read_offset;
@@ -90,12 +92,14 @@ const struct brw_tracked_state gen7_sbe_state = {
       .mesa  = _NEW_BUFFERS |
                _NEW_LIGHT |
                _NEW_POINT |
+               _NEW_POLYGON |
                _NEW_PROGRAM,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
                BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_TES_PROG_DATA |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },
@@ -187,7 +191,9 @@ upload_sf_state(struct brw_context *brw)
       dw2 |= GEN6_SF_CULL_NONE;
    }
 
-   /* _NEW_SCISSOR _NEW_POLYGON BRW_NEW_GEOMETRY_PROGRAM BRW_NEW_PRIMITIVE */
+   /* _NEW_SCISSOR | _NEW_POLYGON,
+    * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA
+    */
    if (ctx->Scissor.EnableFlags ||
        brw_is_drawing_points(brw) || brw_is_drawing_lines(brw))
       dw2 |= GEN6_SF_SCISSOR_ENABLE;
@@ -256,7 +262,9 @@ const struct brw_tracked_state gen7_sf_state = {
                _NEW_SCISSOR,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
+               BRW_NEW_GEOMETRY_PROGRAM |
                BRW_NEW_PRIMITIVE |
+               BRW_NEW_TES_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = upload_sf_state,

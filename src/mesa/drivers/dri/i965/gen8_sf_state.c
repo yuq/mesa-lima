@@ -60,8 +60,10 @@ upload_sbe(struct brw_context *brw)
    else
       dw1 |= GEN6_SF_POINT_SPRITE_UPPERLEFT;
 
-   /* BRW_NEW_VUE_MAP_GEOM_OUT | BRW_NEW_FRAGMENT_PROGRAM |
-    * _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM | BRW_NEW_FS_PROG_DATA
+   /* _NEW_POINT | _NEW_LIGHT | _NEW_PROGRAM,
+    * BRW_NEW_FS_PROG_DATA | BRW_NEW_FRAGMENT_PROGRAM |
+    * BRW_NEW_GEOMETRY_PROGRAM | BRW_NEW_PRIMITIVE | BRW_NEW_TES_PROG_DATA |
+    * BRW_NEW_VUE_MAP_GEOM_OUT
     */
    calculate_attr_overrides(brw, attr_overrides,
                             &point_sprite_enables,
@@ -132,11 +134,14 @@ const struct brw_tracked_state gen8_sbe_state = {
       .mesa  = _NEW_BUFFERS |
                _NEW_LIGHT |
                _NEW_POINT |
+               _NEW_POLYGON |
                _NEW_PROGRAM,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_GEOMETRY_PROGRAM |
+               BRW_NEW_TES_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },
    .emit = upload_sbe,
