@@ -3760,7 +3760,6 @@ static void si_init_config(struct si_context *sctx)
 	unsigned raster_config, raster_config_1;
 	uint64_t border_color_va = sctx->border_color_buffer->gpu_address;
 	struct si_pm4_state *pm4 = CALLOC_STRUCT(si_pm4_state);
-	int i;
 
 	if (!pm4)
 		return;
@@ -3791,11 +3790,6 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028BD8_PA_SC_CENTROID_PRIORITY_1, 0xfedcba98);
 
 	si_pm4_set_reg(pm4, R_02882C_PA_SU_PRIM_FILTER_CNTL, 0);
-
-	for (i = 0; i < 16; i++) {
-		si_pm4_set_reg(pm4, R_0282D0_PA_SC_VPORT_ZMIN_0 + i*8, 0);
-		si_pm4_set_reg(pm4, R_0282D4_PA_SC_VPORT_ZMAX_0 + i*8, fui(1.0));
-	}
 
 	switch (sctx->screen->b.family) {
 	case CHIP_TAHITI:
