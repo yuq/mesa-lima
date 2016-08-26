@@ -5413,16 +5413,13 @@ static unsigned llvm_get_type_size(LLVMTypeRef type)
 static void declare_tess_lds(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
-	LLVMTypeRef i32 = ctx->radeon_bld.soa.bld_base.uint_bld.elem_type;
-	unsigned lds_size = ctx->screen->b.chip_class >= CIK ? 65536 : 32768;
+	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
+	struct lp_build_context *uint = &bld_base->uint_bld;
 
-	/* The actual size is computed outside of the shader to reduce
-	 * the number of shader variants. */
-	ctx->lds =
-		LLVMAddGlobalInAddressSpace(gallivm->module,
-					    LLVMArrayType(i32, lds_size / 4),
-					    "tess_lds",
-					    LOCAL_ADDR_SPACE);
+	unsigned lds_size = ctx->screen->b.chip_class >= CIK ? 65536 : 32768;
+	ctx->lds = LLVMBuildIntToPtr(gallivm->builder, uint->zero,
+		LLVMPointerType(LLVMArrayType(ctx->i32, lds_size / 4), LOCAL_ADDR_SPACE),
+		"tess_lds");
 }
 
 static void create_function(struct si_shader_context *ctx)
