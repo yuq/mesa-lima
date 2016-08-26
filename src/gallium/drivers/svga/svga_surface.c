@@ -658,6 +658,28 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
 
 
 /**
+ * If any of the render targets are in backing texture views, propagate any
+ * changes to them back to the original texture.
+ */
+void
+svga_propagate_rendertargets(struct svga_context *svga)
+{
+   const unsigned num_cbufs = svga_screen(svga->pipe.screen)->max_color_buffers;
+   unsigned i;
+
+   for (i = 0; i < num_cbufs; i++) {
+      if (svga->curr.framebuffer.cbufs[i]) {
+         svga_propagate_surface(svga, svga->curr.framebuffer.cbufs[i]);
+      }
+   }
+
+   if (svga->curr.framebuffer.zsbuf) {
+      svga_propagate_surface(svga, svga->curr.framebuffer.zsbuf);
+   }
+}
+
+
+/**
  * Check if we should call svga_propagate_surface on the surface.
  */
 boolean
