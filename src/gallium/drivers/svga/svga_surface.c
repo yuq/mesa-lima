@@ -607,35 +607,36 @@ svga_propagate_surface(struct svga_context *svga, struct pipe_surface *surf)
    struct svga_surface *s = svga_surface(surf);
    struct svga_texture *tex = svga_texture(surf->texture);
    struct svga_screen *ss = svga_screen(surf->texture->screen);
-   unsigned zslice, layer;
-   unsigned nlayers = 1;
-   unsigned i;
 
    if (!s->dirty)
       return;
 
    SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_PROPAGATESURFACE);
 
-   if (surf->texture->target == PIPE_TEXTURE_CUBE) {
-      zslice = 0;
-      layer = surf->u.tex.first_layer;
-   }
-   else if (surf->texture->target == PIPE_TEXTURE_1D_ARRAY ||
-            surf->texture->target == PIPE_TEXTURE_2D_ARRAY) {
-      zslice = 0;
-      layer = surf->u.tex.first_layer;
-      nlayers = surf->u.tex.last_layer - surf->u.tex.first_layer + 1;
-   }
-   else {
-      zslice = surf->u.tex.first_layer;
-      layer = 0;
-   }
-
    s->dirty = FALSE;
    ss->texture_timestamp++;
    svga_age_texture_view(tex, surf->u.tex.level);
 
    if (s->handle != tex->handle) {
+      unsigned zslice, layer;
+      unsigned nlayers = 1;
+      unsigned i;
+
+      if (surf->texture->target == PIPE_TEXTURE_CUBE) {
+         zslice = 0;
+         layer = surf->u.tex.first_layer;
+      }
+      else if (surf->texture->target == PIPE_TEXTURE_1D_ARRAY ||
+               surf->texture->target == PIPE_TEXTURE_2D_ARRAY) {
+         zslice = 0;
+         layer = surf->u.tex.first_layer;
+         nlayers = surf->u.tex.last_layer - surf->u.tex.first_layer + 1;
+      }
+      else {
+         zslice = surf->u.tex.first_layer;
+         layer = 0;
+      }
+
       SVGA_DBG(DEBUG_VIEWS,
                "svga: Surface propagate: tex %p, level %u, from %p\n",
                tex, surf->u.tex.level, surf);
