@@ -198,7 +198,7 @@ gen7_format_needs_valign2(const struct isl_device *dev,
  * flags except ISL_TILING_X_BIT and ISL_TILING_LINEAR_BIT.
  */
 void
-gen7_filter_tiling(const struct isl_device *dev,
+gen6_filter_tiling(const struct isl_device *dev,
                    const struct isl_surf_init_info *restrict info,
                    isl_tiling_flags_t *flags)
 {
@@ -297,6 +297,16 @@ gen7_filter_tiling(const struct isl_device *dev,
        */
       *flags &= ~ISL_TILING_Y0_BIT;
    }
+
+   /* From the Sandybridge PRM, Volume 1, Part 2, page 32:
+    *
+    *    "NOTE: 128BPE Format Color Buffer ( render target ) MUST be either
+    *     TileX or Linear."
+    *
+    * This is necessary all the way back to 965, but is permitted on Gen7+.
+    */
+   if (ISL_DEV_GEN(dev) < 7 && isl_format_get_layout(info->format)->bpb >= 128)
+      *flags &= ~ISL_TILING_Y0_BIT;
 }
 
 /**

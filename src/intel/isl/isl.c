@@ -236,11 +236,11 @@ isl_surf_choose_tiling(const struct isl_device *dev,
 {
    isl_tiling_flags_t tiling_flags = info->tiling_flags;
 
-   if (ISL_DEV_GEN(dev) >= 7) {
-      gen7_filter_tiling(dev, info, &tiling_flags);
+   if (ISL_DEV_GEN(dev) >= 6) {
+      gen6_filter_tiling(dev, info, &tiling_flags);
    } else {
       isl_finishme("%s: gen%u", __func__, ISL_DEV_GEN(dev));
-      gen7_filter_tiling(dev, info, &tiling_flags);
+      gen6_filter_tiling(dev, info, &tiling_flags);
    }
 
    #define CHOOSE(__tiling) \

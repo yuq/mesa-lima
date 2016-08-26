@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 void
-gen7_filter_tiling(const struct isl_device *dev,
+gen6_filter_tiling(const struct isl_device *dev,
                    const struct isl_surf_init_info *restrict info,
                    isl_tiling_flags_t *flags);
 
