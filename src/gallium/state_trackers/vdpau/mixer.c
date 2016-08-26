@@ -240,8 +240,8 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
    struct u_rect rect, clip, *prect, dirty_area;
    unsigned i, layer = 0;
    struct pipe_video_buffer *video_buffer;
-   struct pipe_sampler_view *sampler_view, **sampler_views;
-   struct pipe_surface *surface, **surfaces;
+   struct pipe_sampler_view *sampler_view;
+   struct pipe_surface *surface;
 
    vlVdpVideoMixer *vmixer;
    vlVdpSurface *surf;
@@ -325,22 +325,6 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
       }
    }
 
-   surfaces = video_buffer->get_surfaces(video_buffer);
-   sampler_views = video_buffer->get_sampler_view_planes(video_buffer);
-
-   for(i = 0; i < VL_MAX_SURFACES; ++i) {
-      if(sampler_views[i] != NULL && surfaces[i] != NULL) {
-         if (vmixer->noise_reduction.filter)
-            vl_median_filter_render(vmixer->noise_reduction.filter,
-                                    sampler_views[i], surfaces[i]);
-
-         if (vmixer->sharpness.filter)
-            vl_matrix_filter_render(vmixer->sharpness.filter,
-                                    sampler_views[i], surfaces[i]);
-
-      }
-   }
-
    prect = RectToPipe(video_source_rect, &rect);
    if (!prect) {
       rect.x0 = 0;
@@ -409,6 +393,14 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
       vlVdpSave4DelayedRendering(vmixer->device, destination_surface, &vmixer->cstate);
    else {
       vl_compositor_render(&vmixer->cstate, compositor, surface, &dirty_area, true);
+
+      if (vmixer->noise_reduction.filter)
+         vl_median_filter_render(vmixer->noise_reduction.filter,
+                                 sampler_view, surface);
+
+      if (vmixer->sharpness.filter)
+         vl_matrix_filter_render(vmixer->sharpness.filter,
+                                 sampler_view, surface);
 
       if (vmixer->bicubic.filter)
          vl_bicubic_filter_render(vmixer->bicubic.filter,
