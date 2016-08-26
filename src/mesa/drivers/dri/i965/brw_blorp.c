@@ -287,8 +287,6 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
    intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
 
-   intel_miptree_prepare_mcs(brw, dst_mt);
-
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
        __func__,
@@ -689,6 +687,9 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
       can_fast_clear = false;
 
+   const bool is_lossless_compressed = intel_miptree_is_lossless_compressed(
+                                          brw, irb->mt);
+
    if (can_fast_clear) {
       /* Record the clear color in the miptree so that it will be
        * programmed in SURFACE_STATE by later rendering and resolve
@@ -708,7 +709,8 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * it now.
        */
       if (!irb->mt->mcs_mt) {
-         if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt)) {
+         assert(!is_lossless_compressed);
+         if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
             /* MCS allocation failed--probably this will only happen in
              * out-of-memory conditions.  But in any case, try to recover
              * by falling back to a non-blorp clear technique.
@@ -757,7 +759,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
 
-      if (intel_miptree_is_lossless_compressed(brw, irb->mt)) {
+      if (is_lossless_compressed) {
          /* Compressed buffers can be cleared also using normal rep-clear. In
           * such case they behave such as if they were drawn using normal 3D
           * render pipeline, and we simply mark the mcs as dirty.

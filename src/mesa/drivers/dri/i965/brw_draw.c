@@ -409,8 +409,8 @@ brw_predraw_set_aux_buffers(struct brw_context *brw)
       struct intel_renderbuffer *irb =
          intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
-      if (irb) {
-         intel_miptree_prepare_mcs(brw, irb->mt);
+      if (!irb) {
+         continue;
       }
    }
 }
