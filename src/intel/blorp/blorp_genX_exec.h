@@ -293,8 +293,10 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
     * the URB. This is controlled by the 3DSTATE_VERTEX_BUFFERS and
     * 3DSTATE_VERTEX_ELEMENTS packets below. The VUE contents are as follows:
     *   dw0: Reserved, MBZ.
-    *   dw1: Render Target Array Index. The HiZ op does not use indexed
-    *        vertices, so set the dword to 0.
+    *   dw1: Render Target Array Index. Below vertex fetcher gets programmed
+    *        to assign this with primitive instance identifier which will be
+    *        used for layered clears. All other renders have only one instance
+    *        and therefore the value will be effectively zero.
     *   dw2: Viewport Index. The HiZ op disables viewport mapping and
     *        scissoring, so set the dword to 0.
     *   dw3: Point Width: The HiZ op does not emit the POINTLIST primitive,
@@ -313,7 +315,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
     * "Vertex URB Entry (VUE) Formats".
     *
     * Only vertex position X and Y are going to be variable, Z is fixed to
-    * zero and W to one. Header words dw0-3 are all zero. There is no need to
+    * zero and W to one. Header words dw0,2,3 are zero. There is no need to
     * include the fixed values in the vertex buffer. Vertex fetcher can be
     * instructed to fill vertex elements with constant values of one and zero
     * instead of reading them from the buffer.
@@ -327,7 +329,16 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
    ve[0].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
    ve[0].SourceElementOffset = 0;
    ve[0].Component0Control = VFCOMP_STORE_0;
+
+   /* From Gen8 onwards hardware is no more instructed to overwrite components
+    * using an element specifier. Instead one has separate 3DSTATE_VF_SGVS
+    * (System Generated Value Setup) state packet for it.
+    */
+#if GEN_GEN >= 8
    ve[0].Component1Control = VFCOMP_STORE_0;
+#else
+   ve[0].Component1Control = VFCOMP_STORE_IID;
+#endif
    ve[0].Component2Control = VFCOMP_STORE_0;
    ve[0].Component3Control = VFCOMP_STORE_0;
 
@@ -361,7 +372,14 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
    }
 
 #if GEN_GEN >= 8
-   blorp_emit(batch, GENX(3DSTATE_VF_SGVS), sgvs);
+   /* Overwrite Render Target Array Index (2nd dword) in the VUE header with
+    * primitive instance identifier. This is used for layered clears.
+    */
+   blorp_emit(batch, GENX(3DSTATE_VF_SGVS), sgvs) {
+      sgvs.InstanceIDEnable = true;
+      sgvs.InstanceIDComponentNumber = COMP_1;
+      sgvs.InstanceIDElementOffset = 0;
+   }
 
    for (unsigned i = 0; i < num_elements; i++) {
       blorp_emit(batch, GENX(3DSTATE_VF_INSTANCING), vf) {
