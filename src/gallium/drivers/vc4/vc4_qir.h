@@ -448,6 +448,7 @@ struct vc4_compile {
         struct qreg execute;
 
         struct qreg line_x, point_x, point_y;
+        /** boolean (~0 -> true) if the fragment has been discarded. */
         struct qreg discard;
         struct qreg payload_FRAG_Z;
         struct qreg payload_FRAG_W;

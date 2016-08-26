@@ -1236,7 +1236,7 @@ emit_frag_end(struct vc4_compile *c)
         }
 
         uint32_t discard_cond = QPU_COND_ALWAYS;
-        if (c->discard.file != QFILE_NULL) {
+        if (c->s->info.fs.uses_discard) {
                 qir_SF(c, c->discard);
                 discard_cond = QPU_COND_ZS;
         }
@@ -1721,15 +1721,33 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_discard:
-                c->discard = qir_uniform_ui(c, ~0);
+                if (c->execute.file != QFILE_NULL) {
+                        qir_SF(c, c->execute);
+                        qir_MOV_cond(c, QPU_COND_ZS, c->discard,
+                                     qir_uniform_ui(c, ~0));
+                } else {
+                        qir_MOV_dest(c, c->discard, qir_uniform_ui(c, ~0));
+                }
                 break;
 
-        case nir_intrinsic_discard_if:
-                if (c->discard.file == QFILE_NULL)
-                        c->discard = qir_uniform_ui(c, 0);
-                c->discard = qir_OR(c, c->discard,
+        case nir_intrinsic_discard_if: {
+                /* true (~0) if we're discarding */
+                struct qreg cond = ntq_get_src(c, instr->src[0], 0);
+
+                if (c->execute.file != QFILE_NULL) {
+                        /* execute == 0 means the channel is active.  Invert
+                         * the condition so that we can use zero as "executing
+                         * and discarding."
+                         */
+                        qir_SF(c, qir_AND(c, c->execute, qir_NOT(c, cond)));
+                        qir_MOV_cond(c, QPU_COND_ZS, c->discard, cond);
+                } else {
+                        qir_OR_dest(c, c->discard, c->discard,
                                     ntq_get_src(c, instr->src[0], 0));
+                }
+
                 break;
+        }
 
         default:
                 fprintf(stderr, "Unknown intrinsic: ");
@@ -2001,6 +2019,9 @@ ntq_emit_impl(struct vc4_compile *c, nir_function_impl *impl)
 static void
 nir_to_qir(struct vc4_compile *c)
 {
+        if (c->stage == QSTAGE_FRAG && c->s->info.fs.uses_discard)
+                c->discard = qir_MOV(c, qir_uniform_ui(c, 0));
+
         ntq_setup_inputs(c);
         ntq_setup_outputs(c);
         ntq_setup_uniforms(c);
