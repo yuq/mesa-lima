@@ -213,6 +213,7 @@ void si_begin_new_cs(struct si_context *ctx)
 
 	ctx->b.scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 	ctx->b.viewports.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
+	ctx->b.viewports.depth_range_dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 	si_mark_atom_dirty(ctx, &ctx->b.scissors.atom);
 	si_mark_atom_dirty(ctx, &ctx->b.viewports.atom);
 

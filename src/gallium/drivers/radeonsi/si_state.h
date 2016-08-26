@@ -76,6 +76,7 @@ struct si_state_rasterizer {
 	bool			clamp_fragment_color;
 	bool			rasterizer_discard;
 	bool			scissor_enable;
+	bool			clip_halfz;
 };
 
 struct si_dsa_stencil_ref_part {

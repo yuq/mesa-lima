@@ -312,6 +312,7 @@ void r600_begin_new_cs(struct r600_context *ctx)
 	ctx->b.scissors.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 	r600_mark_atom_dirty(ctx, &ctx->b.scissors.atom);
 	ctx->b.viewports.dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
+	ctx->b.viewports.depth_range_dirty_mask = (1 << R600_MAX_VIEWPORTS) - 1;
 	r600_mark_atom_dirty(ctx, &ctx->b.viewports.atom);
 	if (ctx->b.chip_class <= EVERGREEN) {
 		r600_mark_atom_dirty(ctx, &ctx->config_state.atom);

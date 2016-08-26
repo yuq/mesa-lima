@@ -473,6 +473,7 @@ static void *evergreen_create_rs_state(struct pipe_context *ctx,
 	r600_init_command_buffer(&rs->buffer, 30);
 
 	rs->scissor_enable = state->scissor;
+	rs->clip_halfz = state->clip_halfz;
 	rs->flatshade = state->flatshade;
 	rs->sprite_coord_enable = state->sprite_coord_enable;
 	rs->two_side = state->light_twoside;

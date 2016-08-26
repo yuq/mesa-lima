@@ -366,7 +366,7 @@ static void r600_bind_rs_state(struct pipe_context *ctx, void *state)
 		r600_mark_atom_dirty(rctx, &rctx->clip_misc_state.atom);
 	}
 
-	r600_set_scissor_enable(&rctx->b, rs->scissor_enable);
+	r600_viewport_set_rast_deps(&rctx->b, rs->scissor_enable, rs->clip_halfz);
 
 	/* Re-emit PA_SC_LINE_STIPPLE. */
 	rctx->last_primitive_type = -1;

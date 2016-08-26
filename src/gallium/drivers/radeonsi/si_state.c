@@ -733,6 +733,7 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 	}
 
 	rs->scissor_enable = state->scissor;
+	rs->clip_halfz = state->clip_halfz;
 	rs->two_side = state->light_twoside;
 	rs->multisample_enable = state->multisample;
 	rs->force_persample_interp = state->force_persample_interp;
@@ -872,7 +873,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
 	}
 
-	r600_set_scissor_enable(&sctx->b, rs->scissor_enable);
+	r600_viewport_set_rast_deps(&sctx->b, rs->scissor_enable, rs->clip_halfz);
 
 	si_pm4_bind_state(sctx, rasterizer, rs);
 	si_update_poly_offset_state(sctx);

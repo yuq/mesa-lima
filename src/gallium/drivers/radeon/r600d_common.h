@@ -246,5 +246,7 @@
 #define   S_028254_BR_Y(x)                                            (((unsigned)(x) & 0x7FFF) << 16)
 #define   G_028254_BR_Y(x)                                            (((x) >> 16) & 0x7FFF)
 #define   C_028254_BR_Y                                               0x8000FFFF
+#define R_0282D0_PA_SC_VPORT_ZMIN_0                                     0x0282D0
+#define R_0282D4_PA_SC_VPORT_ZMAX_0                                     0x0282D4
 
 #endif
