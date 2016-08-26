@@ -119,6 +119,9 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
       },
    };
 
+   info->view.array_len = MAX2(info->surf.logical_level0_px.depth,
+                               info->surf.logical_level0_px.array_len);
+
    if (!is_render_target &&
        (info->surf.dim == ISL_SURF_DIM_3D ||
         info->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)) {
@@ -128,12 +131,12 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
        * guaranteed that we won't be doing any funny surface hacks.
        */
       info->view.base_array_layer = 0;
-      info->view.array_len = MAX2(info->surf.logical_level0_px.depth,
-                                  info->surf.logical_level0_px.array_len);
       info->z_offset = layer / layer_multiplier;
    } else {
       info->view.base_array_layer = layer / layer_multiplier;
-      info->view.array_len = 1;
+
+      assert(info->view.array_len >= info->view.base_array_layer);
+      info->view.array_len -= info->view.base_array_layer;
       info->z_offset = 0;
    }
 }
