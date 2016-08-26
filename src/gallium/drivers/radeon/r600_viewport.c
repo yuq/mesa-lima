@@ -276,6 +276,19 @@ static void r600_set_viewport_states(struct pipe_context *ctx,
 	rctx->set_atom_dirty(rctx, &rctx->scissors.atom, true);
 }
 
+static void r600_emit_one_viewport(struct r600_common_context *rctx,
+				   struct pipe_viewport_state *state)
+{
+	struct radeon_winsys_cs *cs = rctx->gfx.cs;
+
+	radeon_emit(cs, fui(state->scale[0]));
+	radeon_emit(cs, fui(state->translate[0]));
+	radeon_emit(cs, fui(state->scale[1]));
+	radeon_emit(cs, fui(state->translate[1]));
+	radeon_emit(cs, fui(state->scale[2]));
+	radeon_emit(cs, fui(state->translate[2]));
+}
+
 static void r600_emit_viewports(struct r600_common_context *rctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
@@ -288,12 +301,7 @@ static void r600_emit_viewports(struct r600_common_context *rctx, struct r600_at
 			return;
 
 		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE, 6);
-		radeon_emit(cs, fui(states[0].scale[0]));
-		radeon_emit(cs, fui(states[0].translate[0]));
-		radeon_emit(cs, fui(states[0].scale[1]));
-		radeon_emit(cs, fui(states[0].translate[1]));
-		radeon_emit(cs, fui(states[0].scale[2]));
-		radeon_emit(cs, fui(states[0].translate[2]));
+		r600_emit_one_viewport(rctx, &states[0]);
 		rctx->viewports.dirty_mask &= ~1; /* clear one bit */
 		return;
 	}
@@ -305,14 +313,8 @@ static void r600_emit_viewports(struct r600_common_context *rctx, struct r600_at
 
 		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE +
 					       start * 4 * 6, count * 6);
-		for (i = start; i < start+count; i++) {
-			radeon_emit(cs, fui(states[i].scale[0]));
-			radeon_emit(cs, fui(states[i].translate[0]));
-			radeon_emit(cs, fui(states[i].scale[1]));
-			radeon_emit(cs, fui(states[i].translate[1]));
-			radeon_emit(cs, fui(states[i].scale[2]));
-			radeon_emit(cs, fui(states[i].translate[2]));
-		}
+		for (i = start; i < start+count; i++)
+			r600_emit_one_viewport(rctx, &states[i]);
 	}
 	rctx->viewports.dirty_mask = 0;
 }
