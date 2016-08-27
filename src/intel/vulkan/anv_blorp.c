@@ -254,6 +254,22 @@ copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
    blorp_batch_finish(&batch);
 }
 
+void anv_CmdCopyBufferToImage(
+    VkCommandBuffer                             commandBuffer,
+    VkBuffer                                    srcBuffer,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
+    uint32_t                                    regionCount,
+    const VkBufferImageCopy*                    pRegions)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_buffer, src_buffer, srcBuffer);
+   ANV_FROM_HANDLE(anv_image, dst_image, dstImage);
+
+   copy_buffer_to_image(cmd_buffer, src_buffer, dst_image,
+                        regionCount, pRegions, true);
+}
+
 void anv_CmdCopyImageToBuffer(
     VkCommandBuffer                             commandBuffer,
     VkImage                                     srcImage,
