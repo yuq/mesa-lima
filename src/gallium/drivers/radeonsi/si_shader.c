@@ -3056,10 +3056,10 @@ static void si_export_null(struct lp_build_tgsi_context *bld_base)
 	args[2] = uint->one; /* DONE bit */
 	args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
 	args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
-	args[5] = uint->undef; /* R */
-	args[6] = uint->undef; /* G */
-	args[7] = uint->undef; /* B */
-	args[8] = uint->undef; /* A */
+	args[5] = base->undef; /* R */
+	args[6] = base->undef; /* G */
+	args[7] = base->undef; /* B */
+	args[8] = base->undef; /* A */
 
 	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
 			   ctx->voidt, args, 9, 0);
