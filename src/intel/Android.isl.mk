@@ -20,17 +20,16 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-LOCAL_PATH := $(call my-dir)
-
-# Import variables LIBISL_FILES.
-include $(LOCAL_PATH)/Makefile.sources
+# ---------------------------------------
+# libmesa_isl_gen* common variables
+# ---------------------------------------
 
 LIBISL_GENX_COMMON_INCLUDES := \
 	$(MESA_TOP)/src/ \
 	$(MESA_TOP)/src/mesa/drivers/dri/i965
 
 # ---------------------------------------
-# Build libisl_gen4
+# Build libmesa_isl_gen4
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -49,7 +48,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl_gen5
+# Build libmesa_isl_gen5
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -68,7 +67,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl_gen6
+# Build libmesa_isl_gen6
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -87,7 +86,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl_gen7
+# Build libmesa_isl_gen7
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -106,7 +105,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl_gen75
+# Build libmesa_isl_gen75
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -125,7 +124,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl_gen8
+# Build libmesa_isl_gen8
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -144,7 +143,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl_gen9
+# Build libmesa_isl_gen9
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -163,7 +162,7 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
-# Build libisl
+# Build libmesa_isl
 # ---------------------------------------
 
 include $(CLEAR_VARS)
@@ -205,12 +204,12 @@ define bash-gen
 endef
 
 isl_format_layout_deps := \
-	$(LOCAL_PATH)/gen_format_layout.py \
-	$(LOCAL_PATH)/isl_format_layout.csv
+	$(LOCAL_PATH)/isl/gen_format_layout.py \
+	$(LOCAL_PATH)/isl/isl_format_layout.csv
 
-$(intermediates)/isl_format_layout.c: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/gen_format_layout.py
-$(intermediates)/isl_format_layout.c: PRIVATE_CSV := $(LOCAL_PATH)/isl_format_layout.csv
-$(intermediates)/isl_format_layout.c: $(isl_format_layout_deps)
+$(intermediates)/isl/isl_format_layout.c: PRIVATE_SCRIPT := $(MESA_PYTHON2) $(LOCAL_PATH)/isl/gen_format_layout.py
+$(intermediates)/isl/isl_format_layout.c: PRIVATE_CSV := $(LOCAL_PATH)/isl/isl_format_layout.csv
+$(intermediates)/isl/isl_format_layout.c: $(isl_format_layout_deps)
 	$(call bash-gen)
 
 include $(MESA_COMMON_MK)
