@@ -946,6 +946,16 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ARB_tessellation_shader = GL_TRUE;
    }
 
+   /* What this is really checking for is the ability to support multiple
+    * invocations of a geometry shader. There is no separate cap for that, so
+    * we check the GLSLVersion.
+    */
+   if (consts->GLSLVersion >= 400 &&
+       screen->get_shader_param(screen, PIPE_SHADER_GEOMETRY,
+                                PIPE_SHADER_CAP_MAX_INSTRUCTIONS) > 0) {
+      extensions->OES_geometry_shader = GL_TRUE;
+   }
+
    if (screen->fence_finish) {
       extensions->ARB_sync = GL_TRUE;
    }
@@ -1210,6 +1220,11 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->ARB_texture_multisample &&
       extensions->ARB_gpu_shader5 &&
       extensions->EXT_shader_integer_mix;
+
+   extensions->OES_texture_cube_map_array =
+      extensions->ARB_ES3_1_compatibility &&
+      extensions->OES_geometry_shader &&
+      extensions->ARB_texture_cube_map_array;
 
    extensions->OES_primitive_bounding_box = extensions->ARB_ES3_1_compatibility;
    consts->NoPrimitiveBoundingBoxOutput = true;
