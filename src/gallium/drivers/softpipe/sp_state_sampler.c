@@ -49,7 +49,7 @@
  */
 static void
 softpipe_bind_sampler_states(struct pipe_context *pipe,
-                             unsigned shader,
+                             enum pipe_shader_type shader,
                              unsigned start,
                              unsigned num,
                              void **samplers)

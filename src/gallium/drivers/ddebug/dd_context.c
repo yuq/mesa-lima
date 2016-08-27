@@ -230,7 +230,8 @@ DD_CSO_CREATE(sampler, sampler)
 DD_CSO_DELETE(sampler)
 
 static void
-dd_context_bind_sampler_states(struct pipe_context *_pipe, unsigned shader,
+dd_context_bind_sampler_states(struct pipe_context *_pipe,
+                               enum pipe_shader_type shader,
                                unsigned start, unsigned count, void **states)
 {
    struct dd_context *dctx = dd_context(_pipe);

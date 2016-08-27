@@ -559,7 +559,7 @@ vc4_create_sampler_state(struct pipe_context *pctx,
 
 static void
 vc4_sampler_states_bind(struct pipe_context *pctx,
-                        unsigned shader, unsigned start,
+                        enum pipe_shader_type shader, unsigned start,
                         unsigned nr, void **hwcso)
 {
         struct vc4_context *vc4 = vc4_context(pctx);

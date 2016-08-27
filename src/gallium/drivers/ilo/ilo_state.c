@@ -1052,7 +1052,8 @@ ilo_create_sampler_state(struct pipe_context *pipe,
 }
 
 static void
-ilo_bind_sampler_states(struct pipe_context *pipe, unsigned shader,
+ilo_bind_sampler_states(struct pipe_context *pipe,
+                        enum pipe_shader_type shader,
                         unsigned start, unsigned count, void **samplers)
 {
    struct ilo_state_vector *vec = &ilo_context(pipe)->state_vector;

@@ -633,7 +633,7 @@ nv50_gp_sampler_states_bind(struct pipe_context *pipe, unsigned nr, void **s)
 
 static void
 nv50_bind_sampler_states(struct pipe_context *pipe,
-                         unsigned shader, unsigned start,
+                         enum pipe_shader_type shader, unsigned start,
                          unsigned num_samplers, void **samplers)
 {
    assert(start == 0);
@@ -646,6 +646,9 @@ nv50_bind_sampler_states(struct pipe_context *pipe,
       break;
    case PIPE_SHADER_FRAGMENT:
       nv50_fp_sampler_states_bind(pipe, num_samplers, samplers);
+      break;
+   default:
+      assert(!"unexpected shader type");
       break;
    }
 }

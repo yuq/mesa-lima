@@ -86,7 +86,7 @@ static void set_sampler_views(struct fd_texture_stateobj *tex,
 
 void
 fd_sampler_states_bind(struct pipe_context *pctx,
-		unsigned shader, unsigned start,
+		enum pipe_shader_type shader, unsigned start,
 		unsigned nr, void **hwcso)
 {
 	struct fd_context *ctx = fd_context(pctx);

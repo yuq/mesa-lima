@@ -377,7 +377,7 @@ trace_context_create_sampler_state(struct pipe_context *_pipe,
 
 static void
 trace_context_bind_sampler_states(struct pipe_context *_pipe,
-                                  unsigned shader,
+                                  enum pipe_shader_type shader,
                                   unsigned start,
                                   unsigned num_states,
                                   void **states)

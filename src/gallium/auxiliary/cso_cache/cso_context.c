@@ -316,7 +316,7 @@ void cso_destroy_context( struct cso_context *ctx )
          static struct pipe_sampler_view *views[PIPE_MAX_SHADER_SAMPLER_VIEWS] = { NULL };
          static void *zeros[PIPE_MAX_SAMPLERS] = { NULL };
          struct pipe_screen *scr = ctx->pipe->screen;
-         unsigned sh;
+         enum pipe_shader_type sh;
          for (sh = 0; sh < PIPE_SHADER_TYPES; sh++) {
             int maxsam = scr->get_shader_param(scr, sh,
                                                PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS);
@@ -1207,7 +1207,8 @@ cso_single_sampler(struct cso_context *ctx, unsigned shader_stage,
  * Send staged sampler state to the driver.
  */
 void
-cso_single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
+cso_single_sampler_done(struct cso_context *ctx,
+                        enum pipe_shader_type shader_stage)
 {
    struct sampler_info *info = &ctx->samplers[shader_stage];
    const unsigned old_nr_samplers = info->nr_samplers;
@@ -1233,7 +1234,7 @@ cso_single_sampler_done(struct cso_context *ctx, unsigned shader_stage)
  */
 enum pipe_error
 cso_set_samplers(struct cso_context *ctx,
-                 unsigned shader_stage,
+                 enum pipe_shader_type shader_stage,
                  unsigned nr,
                  const struct pipe_sampler_state **templates)
 {

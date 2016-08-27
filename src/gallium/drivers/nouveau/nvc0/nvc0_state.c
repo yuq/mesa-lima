@@ -426,7 +426,8 @@ nvc0_sampler_state_delete(struct pipe_context *pipe, void *hwcso)
 }
 
 static inline void
-nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0, int s,
+nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0,
+                               enum pipe_shader_type s,
                                unsigned nr, void **hwcso)
 {
    unsigned i;
@@ -456,7 +457,7 @@ nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0, int s,
 
 static void
 nvc0_stage_sampler_states_bind_range(struct nvc0_context *nvc0,
-                                     const unsigned s,
+                                     const enum pipe_shader_type s,
                                      unsigned start, unsigned nr, void **cso)
 {
    const unsigned end = start + nr;
@@ -497,7 +498,8 @@ nvc0_stage_sampler_states_bind_range(struct nvc0_context *nvc0,
 }
 
 static void
-nvc0_bind_sampler_states(struct pipe_context *pipe, unsigned shader,
+nvc0_bind_sampler_states(struct pipe_context *pipe,
+                         enum pipe_shader_type shader,
                          unsigned start, unsigned nr, void **s)
 {
    switch (shader) {
@@ -525,6 +527,9 @@ nvc0_bind_sampler_states(struct pipe_context *pipe, unsigned shader,
       nvc0_stage_sampler_states_bind_range(nvc0_context(pipe), 5,
                                            start, nr, s);
       nvc0_context(pipe)->dirty_cp |= NVC0_NEW_CP_SAMPLERS;
+      break;
+   default:
+      assert(!"unexpected shader type");
       break;
    }
 }

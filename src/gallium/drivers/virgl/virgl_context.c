@@ -765,7 +765,8 @@ static void virgl_delete_sampler_state(struct pipe_context *ctx,
 }
 
 static void virgl_bind_sampler_states(struct pipe_context *ctx,
-                                     unsigned shader, unsigned start_slot,
+                                     enum pipe_shader_type shader,
+                                     unsigned start_slot,
                                      unsigned num_samplers,
                                      void **samplers)
 {

@@ -286,7 +286,7 @@ svga_create_sampler_state(struct pipe_context *pipe,
 
 static void
 svga_bind_sampler_states(struct pipe_context *pipe,
-                         unsigned shader,
+                         enum pipe_shader_type shader,
                          unsigned start,
                          unsigned num,
                          void **samplers)

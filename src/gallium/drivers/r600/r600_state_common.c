@@ -408,7 +408,7 @@ void r600_sampler_states_dirty(struct r600_context *rctx,
 }
 
 static void r600_bind_sampler_states(struct pipe_context *pipe,
-                               unsigned shader,
+			       enum pipe_shader_type shader,
 			       unsigned start,
 			       unsigned count, void **states)
 {

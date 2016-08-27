@@ -750,7 +750,8 @@ si_images_update_compressed_colortex_mask(struct si_images_info *images)
 
 /* SAMPLER STATES */
 
-static void si_bind_sampler_states(struct pipe_context *ctx, unsigned shader,
+static void si_bind_sampler_states(struct pipe_context *ctx,
+                                   enum pipe_shader_type shader,
                                    unsigned start, unsigned count, void **states)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
