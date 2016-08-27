@@ -3941,7 +3941,6 @@ struct gl_extensions
    GLboolean EXT_window_rectangles;
    GLboolean OES_copy_image;
    GLboolean OES_sample_variables;
-   GLboolean OES_shader_io_blocks;
    GLboolean OES_standard_derivatives;
    GLboolean OES_texture_buffer;
    GLboolean OES_texture_cube_map_array;
