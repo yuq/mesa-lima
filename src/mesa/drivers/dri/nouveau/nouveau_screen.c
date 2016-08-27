@@ -130,6 +130,7 @@ nouveau_init_screen2(__DRIscreen *dri_screen)
 		dri_screen->max_gl_es1_version = 10;
 		break;
 	case 0x20:
+	case 0x30:
 		screen->driver = &nv20_driver;
 		dri_screen->max_gl_compat_version = 13;
 		dri_screen->max_gl_es1_version = 10;
