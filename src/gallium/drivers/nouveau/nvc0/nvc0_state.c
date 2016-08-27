@@ -1409,7 +1409,7 @@ nvc0_bind_buffers_range(struct nvc0_context *nvc0, const unsigned t,
 
 static void
 nvc0_set_shader_buffers(struct pipe_context *pipe,
-                        unsigned shader,
+                        enum pipe_shader_type shader,
                         unsigned start, unsigned nr,
                         const struct pipe_shader_buffer *buffers)
 {

@@ -1060,19 +1060,21 @@ static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
 /* SHADER BUFFERS */
 
 static unsigned
-si_shader_buffer_descriptors_idx(unsigned shader)
+si_shader_buffer_descriptors_idx(enum pipe_shader_type shader)
 {
 	return SI_DESCS_FIRST_SHADER + shader * SI_NUM_SHADER_DESCS +
 	       SI_SHADER_DESCS_SHADER_BUFFERS;
 }
 
 static struct si_descriptors *
-si_shader_buffer_descriptors(struct si_context *sctx, unsigned shader)
+si_shader_buffer_descriptors(struct si_context *sctx,
+				  enum pipe_shader_type shader)
 {
 	return &sctx->descriptors[si_shader_buffer_descriptors_idx(shader)];
 }
 
-static void si_set_shader_buffers(struct pipe_context *ctx, unsigned shader,
+static void si_set_shader_buffers(struct pipe_context *ctx,
+				  enum pipe_shader_type shader,
 				  unsigned start_slot, unsigned count,
 				  const struct pipe_shader_buffer *sbuffers)
 {
