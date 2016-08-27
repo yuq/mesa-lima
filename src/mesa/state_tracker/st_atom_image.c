@@ -46,7 +46,7 @@
 
 static void
 st_bind_images(struct st_context *st, struct gl_linked_shader *shader,
-              unsigned shader_type)
+              enum pipe_shader_type shader_type)
 {
    unsigned i;
    struct pipe_image_view images[MAX_IMAGE_UNIFORMS];

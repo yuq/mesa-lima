@@ -704,7 +704,8 @@ static void si_set_shader_image(struct si_context *ctx,
 }
 
 static void
-si_set_shader_images(struct pipe_context *pipe, unsigned shader,
+si_set_shader_images(struct pipe_context *pipe,
+		     enum pipe_shader_type shader,
 		     unsigned start_slot, unsigned count,
 		     const struct pipe_image_view *views)
 {

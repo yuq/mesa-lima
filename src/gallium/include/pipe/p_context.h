@@ -332,7 +332,8 @@ struct pipe_context {
     *                   unless it's NULL, in which case no images will
     *                   be bound.
     */
-   void (*set_shader_images)(struct pipe_context *, unsigned shader,
+   void (*set_shader_images)(struct pipe_context *,
+                             enum pipe_shader_type shader,
                              unsigned start_slot, unsigned count,
                              const struct pipe_image_view *images);
 

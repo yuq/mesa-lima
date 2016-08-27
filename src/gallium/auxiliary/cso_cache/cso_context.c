@@ -1360,7 +1360,8 @@ cso_restore_fragment_sampler_views(struct cso_context *ctx)
 
 
 void
-cso_set_shader_images(struct cso_context *ctx, unsigned shader_stage,
+cso_set_shader_images(struct cso_context *ctx,
+                      enum pipe_shader_type shader_stage,
                       unsigned start, unsigned count,
                       struct pipe_image_view *images)
 {

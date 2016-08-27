@@ -1853,7 +1853,7 @@ ilo_set_sampler_views(struct pipe_context *pipe, enum pipe_shader_type shader,
 }
 
 static void
-ilo_set_shader_images(struct pipe_context *pipe, unsigned shader,
+ilo_set_shader_images(struct pipe_context *pipe, enum pipe_shader_type shader,
                       unsigned start, unsigned count,
                       const struct pipe_image_view *views)
 {

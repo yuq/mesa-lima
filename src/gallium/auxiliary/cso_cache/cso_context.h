@@ -196,7 +196,8 @@ cso_set_sampler_views(struct cso_context *cso,
 /* shader images */
 
 void
-cso_set_shader_images(struct cso_context *cso, unsigned shader_stage,
+cso_set_shader_images(struct cso_context *cso,
+                      enum pipe_shader_type shader_stage,
                       unsigned start, unsigned count,
                       struct pipe_image_view *views);
 

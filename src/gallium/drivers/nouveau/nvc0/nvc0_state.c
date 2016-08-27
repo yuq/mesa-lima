@@ -1344,7 +1344,8 @@ nvc0_bind_images_range(struct nvc0_context *nvc0, const unsigned s,
 }
 
 static void
-nvc0_set_shader_images(struct pipe_context *pipe, unsigned shader,
+nvc0_set_shader_images(struct pipe_context *pipe,
+                       enum pipe_shader_type shader,
                        unsigned start, unsigned nr,
                        const struct pipe_image_view *images)
 {

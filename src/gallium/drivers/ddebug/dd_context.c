@@ -521,7 +521,8 @@ dd_context_set_sampler_views(struct pipe_context *_pipe,
 }
 
 static void
-dd_context_set_shader_images(struct pipe_context *_pipe, unsigned shader,
+dd_context_set_shader_images(struct pipe_context *_pipe,
+                             enum pipe_shader_type shader,
                              unsigned start, unsigned num,
                              const struct pipe_image_view *views)
 {

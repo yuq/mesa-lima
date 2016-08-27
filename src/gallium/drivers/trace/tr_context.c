@@ -1749,7 +1749,7 @@ static void trace_context_set_shader_buffers(struct pipe_context *_context,
 }
 
 static void trace_context_set_shader_images(struct pipe_context *_context,
-                                            unsigned shader,
+                                            enum pipe_shader_type shader,
                                             unsigned start, unsigned nr,
                                             const struct pipe_image_view *images)
 {

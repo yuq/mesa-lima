@@ -27,7 +27,7 @@
 #include "sp_buffer.h"
 
 static void softpipe_set_shader_images(struct pipe_context *pipe,
-                                       unsigned shader,
+                                       enum pipe_shader_type shader,
                                        unsigned start,
                                        unsigned num,
                                        const struct pipe_image_view *images)
