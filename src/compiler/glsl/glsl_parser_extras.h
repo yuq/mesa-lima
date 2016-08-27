@@ -320,6 +320,7 @@ struct _mesa_glsl_parse_state {
    bool has_texture_cube_map_array() const
    {
       return ARB_texture_cube_map_array_enable ||
+             EXT_texture_cube_map_array_enable ||
              OES_texture_cube_map_array_enable ||
              is_version(400, 320);
    }
@@ -736,6 +737,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_texture_array_warn;
    bool EXT_texture_buffer_enable;
    bool EXT_texture_buffer_warn;
+   bool EXT_texture_cube_map_array_enable;
+   bool EXT_texture_cube_map_array_warn;
    bool MESA_shader_framebuffer_fetch_enable;
    bool MESA_shader_framebuffer_fetch_warn;
    bool MESA_shader_framebuffer_fetch_non_coherent_enable;

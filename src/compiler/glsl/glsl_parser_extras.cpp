@@ -665,6 +665,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(EXT_tessellation_shader),
    EXT(EXT_texture_array),
    EXT(EXT_texture_buffer),
+   EXT(EXT_texture_cube_map_array),
    EXT(MESA_shader_integer_functions),
 };
 

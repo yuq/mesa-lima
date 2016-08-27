@@ -249,6 +249,7 @@ gpu_shader5_or_OES_texture_cube_map_array(const _mesa_glsl_parse_state *state)
 {
    return state->is_version(400, 320) ||
           state->ARB_gpu_shader5_enable ||
+          state->EXT_texture_cube_map_array_enable ||
           state->OES_texture_cube_map_array_enable;
 }
 
@@ -371,6 +372,7 @@ texture_gather_cube_map_array(const _mesa_glsl_parse_state *state)
    return state->is_version(400, 320) ||
           state->ARB_texture_gather_enable ||
           state->ARB_gpu_shader5_enable ||
+          state->EXT_texture_cube_map_array_enable ||
           state->OES_texture_cube_map_array_enable;
 }
 

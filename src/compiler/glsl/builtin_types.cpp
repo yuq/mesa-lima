@@ -299,6 +299,7 @@ _mesa_glsl_initialize_types(struct _mesa_glsl_parse_state *state)
     * is harmless.
     */
    if (state->ARB_texture_cube_map_array_enable ||
+       state->EXT_texture_cube_map_array_enable ||
        state->OES_texture_cube_map_array_enable) {
       add_type(symbols, glsl_type::samplerCubeArray_type);
       add_type(symbols, glsl_type::samplerCubeArrayShadow_type);
@@ -339,6 +340,7 @@ _mesa_glsl_initialize_types(struct _mesa_glsl_parse_state *state)
    }
 
    if (state->ARB_shader_image_load_store_enable ||
+       state->EXT_texture_cube_map_array_enable ||
        state->OES_texture_cube_map_array_enable) {
       add_type(symbols, glsl_type::imageCubeArray_type);
       add_type(symbols, glsl_type::iimageCubeArray_type);
