@@ -1198,6 +1198,27 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp,
       }
    }
 
+   if (key->dst_rgb) {
+      /* The destination image is bound as a red texture three times as wide
+       * as the actual image.  Our shader is effectively running one color
+       * component at a time.  We need to pick off the appropriate component
+       * from the source color and write that to destination red.
+       */
+      assert(dst_pos->num_components == 2);
+      nir_ssa_def *comp =
+         nir_umod(&b, nir_channel(&b, dst_pos, 0), nir_imm_int(&b, 3));
+
+      nir_ssa_def *color_component =
+         nir_bcsel(&b, nir_ieq(&b, comp, nir_imm_int(&b, 0)),
+                       nir_channel(&b, color, 0),
+                       nir_bcsel(&b, nir_ieq(&b, comp, nir_imm_int(&b, 1)),
+                                     nir_channel(&b, color, 1),
+                                     nir_channel(&b, color, 2)));
+
+      nir_ssa_def *u = nir_ssa_undef(&b, 1, 32);
+      color = nir_vec4(&b, color_component, u, u, u);
+   }
+
    nir_store_var(&b, v.color_out, color, 0xf);
 
    return b.shader;
@@ -1772,6 +1793,40 @@ surf_convert_to_uncompressed(const struct isl_device *isl_dev,
    info->surf.format = get_copy_format_for_bpb(fmtl->bpb);
 }
 
+static void
+surf_fake_rgb_with_red(const struct isl_device *isl_dev,
+                       struct brw_blorp_surface_info *info,
+                       uint32_t *x, uint32_t *width)
+{
+   surf_convert_to_single_slice(isl_dev, info);
+
+   info->surf.logical_level0_px.width *= 3;
+   info->surf.phys_level0_sa.width *= 3;
+   *x *= 3;
+   *width *= 3;
+
+   enum isl_format red_format;
+   switch (info->view.format) {
+   case ISL_FORMAT_R8G8B8_UNORM:
+      red_format = ISL_FORMAT_R8_UNORM;
+      break;
+   case ISL_FORMAT_R16G16B16_UNORM:
+      red_format = ISL_FORMAT_R16_UNORM;
+      break;
+   case ISL_FORMAT_R32G32B32_UINT:
+      red_format = ISL_FORMAT_R32_UINT;
+      break;
+   default:
+      unreachable("Invalid RGB copy destination format");
+   }
+   assert(isl_format_get_layout(red_format)->channels.r.type ==
+          isl_format_get_layout(info->view.format)->channels.r.type);
+   assert(isl_format_get_layout(red_format)->channels.r.bits ==
+          isl_format_get_layout(info->view.format)->channels.r.bits);
+
+   info->surf.format = info->view.format = red_format;
+}
+
 void
 blorp_copy(struct blorp_batch *batch,
            const struct blorp_surf *src_surf,
@@ -1817,6 +1872,13 @@ blorp_copy(struct blorp_batch *batch,
     */
    uint32_t dst_width = src_width;
    uint32_t dst_height = src_height;
+
+   if (dst_fmtl->bpb % 3 == 0) {
+      surf_fake_rgb_with_red(batch->blorp->isl_dev, &params.dst,
+                             &dst_x, &dst_width);
+      wm_prog_key.dst_rgb = true;
+      wm_prog_key.need_dst_offset = true;
+   }
 
    do_blorp_blit(batch, &params, &wm_prog_key,
                  src_x, src_y, src_x + src_width, src_y + src_height,

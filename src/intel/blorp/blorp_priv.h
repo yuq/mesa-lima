@@ -245,6 +245,13 @@ struct brw_blorp_blit_prog_key
     */
    bool dst_tiled_w;
 
+   /* True if the destination is an RGB format.  If true, the surface state
+    * for the render target must be configured as red with three times the
+    * normal width.  We need to do this because you cannot render to
+    * non-power-of-two formats.
+    */
+   bool dst_rgb;
+
    /* True if all source samples should be blended together to produce each
     * destination pixel.  If true, src_tiled_w must be false, tex_samples must
     * equal src_samples, and tex_samples must be nonzero.
