@@ -465,7 +465,7 @@ static bool is_compressed_colortex(struct r600_texture *rtex)
 }
 
 static void si_set_sampler_views(struct pipe_context *ctx,
-				 unsigned shader, unsigned start,
+				 enum pipe_shader_type shader, unsigned start,
                                  unsigned count,
 				 struct pipe_sampler_view **views)
 {

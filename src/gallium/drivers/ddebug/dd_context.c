@@ -507,7 +507,8 @@ dd_context_stream_output_target_destroy(struct pipe_context *_pipe,
  */
 
 static void
-dd_context_set_sampler_views(struct pipe_context *_pipe, unsigned shader,
+dd_context_set_sampler_views(struct pipe_context *_pipe,
+                             enum pipe_shader_type shader,
                              unsigned start, unsigned num,
                              struct pipe_sampler_view **views)
 {

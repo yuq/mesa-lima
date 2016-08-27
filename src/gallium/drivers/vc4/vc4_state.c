@@ -480,7 +480,7 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
 }
 
 static struct vc4_texture_stateobj *
-vc4_get_stage_tex(struct vc4_context *vc4, unsigned shader)
+vc4_get_stage_tex(struct vc4_context *vc4, enum pipe_shader_type shader)
 {
         switch (shader) {
         case PIPE_SHADER_FRAGMENT:
@@ -660,7 +660,8 @@ vc4_sampler_view_destroy(struct pipe_context *pctx,
 }
 
 static void
-vc4_set_sampler_views(struct pipe_context *pctx, unsigned shader,
+vc4_set_sampler_views(struct pipe_context *pctx,
+                      enum pipe_shader_type shader,
                       unsigned start, unsigned nr,
                       struct pipe_sampler_view **views)
 {

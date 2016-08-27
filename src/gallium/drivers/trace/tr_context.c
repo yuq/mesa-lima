@@ -1016,7 +1016,7 @@ trace_context_surface_destroy(struct pipe_context *_pipe,
 
 static void
 trace_context_set_sampler_views(struct pipe_context *_pipe,
-                                unsigned shader,
+                                enum pipe_shader_type shader,
                                 unsigned start,
                                 unsigned num,
                                 struct pipe_sampler_view **views)

@@ -656,7 +656,7 @@ nvc0_stage_set_sampler_views_range(struct nvc0_context *nvc0, const unsigned s,
 }
 
 static void
-nvc0_set_sampler_views(struct pipe_context *pipe, unsigned shader,
+nvc0_set_sampler_views(struct pipe_context *pipe, enum pipe_shader_type shader,
                        unsigned start, unsigned nr,
                        struct pipe_sampler_view **views)
 {

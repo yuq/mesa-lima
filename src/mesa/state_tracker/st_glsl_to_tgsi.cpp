@@ -6465,7 +6465,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    struct gl_shader_compiler_options *options =
          &ctx->Const.ShaderCompilerOptions[shader->Stage];
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
-   unsigned ptarget = st_shader_stage_to_ptarget(shader->Stage);
+   enum pipe_shader_type ptarget = st_shader_stage_to_ptarget(shader->Stage);
 
    validate_ir_tree(shader->ir);
 
@@ -6701,7 +6701,7 @@ get_mesa_program(struct gl_context *ctx,
                  struct gl_linked_shader *shader)
 {
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
-   unsigned ptarget = st_shader_stage_to_ptarget(shader->Stage);
+   enum pipe_shader_type ptarget = st_shader_stage_to_ptarget(shader->Stage);
    enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
       pscreen->get_shader_param(pscreen, ptarget, PIPE_SHADER_CAP_PREFERRED_IR);
    struct gl_program *prog = NULL;
@@ -6855,7 +6855,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       gl_shader_stage stage = prog->_LinkedShaders[i]->Stage;
       const struct gl_shader_compiler_options *options =
             &ctx->Const.ShaderCompilerOptions[stage];
-      unsigned ptarget = st_shader_stage_to_ptarget(stage);
+      enum pipe_shader_type ptarget = st_shader_stage_to_ptarget(stage);
       bool have_dround = pscreen->get_shader_param(pscreen, ptarget,
                                                    PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED);
       bool have_dfrexp = pscreen->get_shader_param(pscreen, ptarget,

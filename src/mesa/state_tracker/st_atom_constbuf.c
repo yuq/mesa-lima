@@ -57,7 +57,7 @@ void st_upload_constants( struct st_context *st,
                           struct gl_program_parameter_list *params,
                           gl_shader_stage stage)
 {
-   unsigned shader_type = st_shader_stage_to_ptarget(stage);
+   enum pipe_shader_type shader_type = st_shader_stage_to_ptarget(stage);
 
    assert(shader_type == PIPE_SHADER_VERTEX ||
           shader_type == PIPE_SHADER_FRAGMENT ||

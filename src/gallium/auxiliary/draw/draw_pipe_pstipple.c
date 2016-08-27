@@ -104,8 +104,8 @@ struct pstip_stage
                                       unsigned, unsigned, void **);
 
    void (*driver_set_sampler_views)(struct pipe_context *,
-                                    unsigned shader, unsigned start,
-                                    unsigned count,
+                                    enum pipe_shader_type shader,
+                                    unsigned start, unsigned count,
                                     struct pipe_sampler_view **);
 
    void (*driver_set_polygon_stipple)(struct pipe_context *,
@@ -143,7 +143,7 @@ generate_pstip_fs(struct pstip_stage *pstip)
    assert(pstip->fs->sampler_unit < PIPE_MAX_SAMPLERS);
 
    pstip->fs->pstip_fs = pstip->driver_create_fs_state(pipe, &pstip_fs);
-   
+
    FREE((void *)pstip_fs.tokens);
 
    if (!pstip->fs->pstip_fs)
@@ -399,7 +399,8 @@ pstip_bind_sampler_states(struct pipe_context *pipe,
 
 static void
 pstip_set_sampler_views(struct pipe_context *pipe,
-                        unsigned shader, unsigned start, unsigned num,
+                        enum pipe_shader_type shader,
+                        unsigned start, unsigned num,
                         struct pipe_sampler_view **views)
 {
    struct pstip_stage *pstip = pstip_stage_from_pipe(pipe);

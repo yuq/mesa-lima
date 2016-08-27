@@ -1802,7 +1802,7 @@ ilo_set_viewport_states(struct pipe_context *pipe,
 }
 
 static void
-ilo_set_sampler_views(struct pipe_context *pipe, unsigned shader,
+ilo_set_sampler_views(struct pipe_context *pipe, enum pipe_shader_type shader,
                       unsigned start, unsigned count,
                       struct pipe_sampler_view **views)
 {
@@ -1845,6 +1845,9 @@ ilo_set_sampler_views(struct pipe_context *pipe, unsigned shader,
       break;
    case PIPE_SHADER_COMPUTE:
       vec->dirty |= ILO_DIRTY_VIEW_CS;
+      break;
+   default:
+      assert(!"unexpected shader type");
       break;
    }
 }

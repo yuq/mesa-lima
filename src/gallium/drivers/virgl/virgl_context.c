@@ -690,7 +690,7 @@ static struct pipe_sampler_view *virgl_create_sampler_view(struct pipe_context *
 }
 
 static void virgl_set_sampler_views(struct pipe_context *ctx,
-                                   unsigned shader_type,
+                                   enum pipe_shader_type shader_type,
                                    unsigned start_slot,
                                    unsigned num_views,
                                    struct pipe_sampler_view **views)

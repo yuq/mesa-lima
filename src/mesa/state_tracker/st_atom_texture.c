@@ -427,7 +427,7 @@ update_textures(struct st_context *st,
    struct gl_shader_program *shader =
       st->ctx->_Shader->CurrentProgram[mesa_shader];
    unsigned glsl_version = shader ? shader->Version : 0;
-   unsigned shader_stage = st_shader_stage_to_ptarget(mesa_shader);
+   enum pipe_shader_type shader_stage = st_shader_stage_to_ptarget(mesa_shader);
 
    if (samplers_used == 0x0 && old_max == 0)
       return;

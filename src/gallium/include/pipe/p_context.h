@@ -285,7 +285,8 @@ struct pipe_context {
                                 unsigned num_viewports,
                                 const struct pipe_viewport_state *);
 
-   void (*set_sampler_views)(struct pipe_context *, unsigned shader,
+   void (*set_sampler_views)(struct pipe_context *,
+                             enum pipe_shader_type shader,
                              unsigned start_slot, unsigned num_views,
                              struct pipe_sampler_view **);
 

@@ -712,7 +712,7 @@ nv50_stage_set_sampler_views(struct nv50_context *nv50, int s,
 }
 
 static void
-nv50_set_sampler_views(struct pipe_context *pipe, unsigned shader,
+nv50_set_sampler_views(struct pipe_context *pipe, enum pipe_shader_type shader,
                        unsigned start, unsigned nr,
                        struct pipe_sampler_view **views)
 {

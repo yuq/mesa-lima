@@ -910,7 +910,8 @@ aaline_bind_sampler_states(struct pipe_context *pipe,
 
 
 static void
-aaline_set_sampler_views(struct pipe_context *pipe, unsigned shader,
+aaline_set_sampler_views(struct pipe_context *pipe,
+                         enum pipe_shader_type shader,
                          unsigned start, unsigned num,
                          struct pipe_sampler_view **views)
 {

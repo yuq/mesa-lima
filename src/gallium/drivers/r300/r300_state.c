@@ -1522,7 +1522,8 @@ static uint32_t r300_assign_texture_cache_region(unsigned index, unsigned num)
         return R300_TX_CACHE(num + index);
 }
 
-static void r300_set_sampler_views(struct pipe_context* pipe, unsigned shader,
+static void r300_set_sampler_views(struct pipe_context* pipe,
+                                   enum pipe_shader_type shader,
                                    unsigned start, unsigned count,
                                    struct pipe_sampler_view** views)
 {

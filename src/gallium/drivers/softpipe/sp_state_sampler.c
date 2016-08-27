@@ -97,7 +97,7 @@ softpipe_sampler_view_destroy(struct pipe_context *pipe,
 
 void
 softpipe_set_sampler_views(struct pipe_context *pipe,
-                           unsigned shader,
+                           enum pipe_shader_type shader,
                            unsigned start,
                            unsigned num,
                            struct pipe_sampler_view **views)

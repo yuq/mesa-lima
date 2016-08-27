@@ -1284,7 +1284,7 @@ cso_restore_fragment_samplers(struct cso_context *ctx)
 
 void
 cso_set_sampler_views(struct cso_context *ctx,
-                      unsigned shader_stage,
+                      enum pipe_shader_type shader_stage,
                       unsigned count,
                       struct pipe_sampler_view **views)
 {
