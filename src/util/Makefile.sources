@@ -25,6 +25,8 @@ MESA_UTIL_FILES :=	\
 	set.c \
 	set.h \
 	simple_list.h \
+	slab.c \
+	slab.h \
 	strndup.c \
 	strndup.h \
 	strtod.c \
