@@ -1264,7 +1264,7 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
 
    uint32_t byte_offset;
    isl_tiling_get_intratile_offset_sa(isl_dev, info->surf.tiling,
-                                      info->view.format, info->surf.row_pitch,
+                                      info->surf.format, info->surf.row_pitch,
                                       x_offset_sa, y_offset_sa,
                                       &byte_offset,
                                       &info->tile_x_sa, &info->tile_y_sa);
