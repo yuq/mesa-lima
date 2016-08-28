@@ -168,6 +168,73 @@ get_blorp_surf_for_anv_image(const struct anv_image *image,
    };
 }
 
+void anv_CmdCopyImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     srcImage,
+    VkImageLayout                               srcImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
+    uint32_t                                    regionCount,
+    const VkImageCopy*                          pRegions)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, src_image, srcImage);
+   ANV_FROM_HANDLE(anv_image, dst_image, dstImage);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+      VkOffset3D srcOffset =
+         anv_sanitize_image_offset(src_image->type, pRegions[r].srcOffset);
+      VkOffset3D dstOffset =
+         anv_sanitize_image_offset(dst_image->type, pRegions[r].dstOffset);
+      VkExtent3D extent =
+         anv_sanitize_image_extent(src_image->type, pRegions[r].extent);
+
+      unsigned dst_base_layer, layer_count;
+      if (dst_image->type == VK_IMAGE_TYPE_3D) {
+         dst_base_layer = pRegions[r].dstOffset.z;
+         layer_count = pRegions[r].extent.depth;
+      } else {
+         dst_base_layer = pRegions[r].dstSubresource.baseArrayLayer;
+         layer_count = pRegions[r].dstSubresource.layerCount;
+      }
+
+      unsigned src_base_layer;
+      if (src_image->type == VK_IMAGE_TYPE_3D) {
+         src_base_layer = pRegions[r].srcOffset.z;
+      } else {
+         src_base_layer = pRegions[r].srcSubresource.baseArrayLayer;
+         assert(pRegions[r].srcSubresource.layerCount == layer_count);
+      }
+
+      assert(pRegions[r].srcSubresource.aspectMask ==
+             pRegions[r].dstSubresource.aspectMask);
+
+      uint32_t a;
+      for_each_bit(a, pRegions[r].dstSubresource.aspectMask) {
+         VkImageAspectFlagBits aspect = (1 << a);
+
+         struct blorp_surf src_surf, dst_surf;
+         get_blorp_surf_for_anv_image(src_image, aspect, &src_surf);
+         get_blorp_surf_for_anv_image(dst_image, aspect, &dst_surf);
+
+         for (unsigned i = 0; i < layer_count; i++) {
+            blorp_copy(&batch, &src_surf, pRegions[r].srcSubresource.mipLevel,
+                       src_base_layer + i,
+                       &dst_surf, pRegions[r].dstSubresource.mipLevel,
+                       dst_base_layer + i,
+                       srcOffset.x, srcOffset.y,
+                       dstOffset.x, dstOffset.y,
+                       extent.width, extent.height);
+         }
+      }
+   }
+
+   blorp_batch_finish(&batch);
+}
+
 static void
 copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
                      struct anv_buffer *anv_buffer,
