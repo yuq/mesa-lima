@@ -612,6 +612,11 @@ descriptor=[
   [ "PRIMITIVE_BOUNDING_BOX_ARB", "CONTEXT_FLOAT8(PrimitiveBoundingBox), extra_OES_primitive_bounding_box" ],
 ]},
 
+{ "apis": ["GL_CORE", "GLES32"], "params": [
+  [ "MULTISAMPLE_LINE_WIDTH_RANGE_ARB", "CONTEXT_FLOAT2(Const.MinLineWidthAA), extra_ES32" ],
+  [ "MULTISAMPLE_LINE_WIDTH_GRANULARITY_ARB", "CONTEXT_FLOAT(Const.LineWidthGranularity), extra_ES32" ],
+]},
+
 # Remaining enums are only in OpenGL
 { "apis": ["GL", "GL_CORE"], "params": [
   [ "ACCUM_RED_BITS", "BUFFER_INT(Visual.accumRedBits), NO_EXTRA" ],

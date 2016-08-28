@@ -142,6 +142,7 @@ enum value_extra {
    EXTRA_API_ES2,
    EXTRA_API_ES3,
    EXTRA_API_ES31,
+   EXTRA_API_ES32,
    EXTRA_NEW_BUFFERS, 
    EXTRA_NEW_FRAG_CLAMP,
    EXTRA_VALID_DRAW_BUFFER,
@@ -413,6 +414,12 @@ static const int extra_ARB_gpu_shader5_or_oes_geometry_shader[] = {
 static const int extra_ARB_gpu_shader5_or_OES_sample_variables[] = {
    EXT(ARB_gpu_shader5),
    EXT(OES_sample_variables),
+   EXTRA_END
+};
+
+static const int extra_ES32[] = {
+   EXT(ARB_ES3_2_compatibility),
+   EXTRA_API_ES32,
    EXTRA_END
 };
 
@@ -1164,6 +1171,11 @@ check_extra(struct gl_context *ctx, const char *func, const struct value_desc *d
          if (_mesa_is_gles31(ctx))
             api_found = GL_TRUE;
 	 break;
+      case EXTRA_API_ES32:
+         api_check = GL_TRUE;
+         if (_mesa_is_gles32(ctx))
+            api_found = GL_TRUE;
+	 break;
       case EXTRA_API_GL:
          api_check = GL_TRUE;
          if (_mesa_is_desktop_gl(ctx))
@@ -1312,12 +1324,14 @@ find_value(const char *func, GLenum pname, void **p, union value *v)
     * value since it's compatible with GLES2 its entry in table_set[] is at the
     * end.
     */
-   STATIC_ASSERT(ARRAY_SIZE(table_set) == API_OPENGL_LAST + 3);
-   if (_mesa_is_gles3(ctx)) {
-      api = API_OPENGL_LAST + 1;
-   }
-   if (_mesa_is_gles31(ctx)) {
-      api = API_OPENGL_LAST + 2;
+   STATIC_ASSERT(ARRAY_SIZE(table_set) == API_OPENGL_LAST + 4);
+   if (ctx->API == API_OPENGLES2) {
+      if (ctx->Version >= 32)
+         api = API_OPENGL_LAST + 3;
+      else if (ctx->Version >= 31)
+         api = API_OPENGL_LAST + 2;
+      else if (ctx->Version >= 30)
+         api = API_OPENGL_LAST + 1;
    }
    mask = ARRAY_SIZE(table(api)) - 1;
    hash = (pname * prime_factor);

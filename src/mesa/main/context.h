@@ -318,6 +318,16 @@ _mesa_is_gles31(const struct gl_context *ctx)
 
 
 /**
+ * Checks if the context is for GLES 3.2 or later
+ */
+static inline bool
+_mesa_is_gles32(const struct gl_context *ctx)
+{
+   return ctx->API == API_OPENGLES2 && ctx->Version >= 32;
+}
+
+
+/**
  * Checks if the context supports geometry shaders.
  */
 static inline bool
