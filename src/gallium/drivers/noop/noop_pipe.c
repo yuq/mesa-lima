@@ -271,11 +271,24 @@ static void noop_flush(struct pipe_context *ctx,
                        struct pipe_fence_handle **fence,
                        unsigned flags)
 {
+   if (fence)
+      *fence = NULL;
 }
 
 static void noop_destroy_context(struct pipe_context *ctx)
 {
    FREE(ctx);
+}
+
+static boolean noop_generate_mipmap(struct pipe_context *ctx,
+                                    struct pipe_resource *resource,
+                                    enum pipe_format format,
+                                    unsigned base_level,
+                                    unsigned last_level,
+                                    unsigned first_layer,
+                                    unsigned last_layer)
+{
+   return true;
 }
 
 static struct pipe_context *noop_create_context(struct pipe_screen *screen,
@@ -293,6 +306,7 @@ static struct pipe_context *noop_create_context(struct pipe_screen *screen,
    ctx->clear_render_target = noop_clear_render_target;
    ctx->clear_depth_stencil = noop_clear_depth_stencil;
    ctx->resource_copy_region = noop_resource_copy_region;
+   ctx->generate_mipmap = noop_generate_mipmap;
    ctx->blit = noop_blit;
    ctx->flush_resource = noop_flush_resource;
    ctx->create_query = noop_create_query;
@@ -359,6 +373,16 @@ static int noop_get_shader_param(struct pipe_screen* pscreen, unsigned shader, e
    return screen->get_shader_param(screen, shader, param);
 }
 
+static int noop_get_compute_param(struct pipe_screen *pscreen,
+                                  enum pipe_shader_ir ir_type,
+                                  enum pipe_compute_cap param,
+                                  void *ret)
+{
+   struct pipe_screen *screen = ((struct noop_pipe_screen*)pscreen)->oscreen;
+
+   return screen->get_compute_param(screen, ir_type, param, ret);
+}
+
 static boolean noop_is_format_supported(struct pipe_screen* pscreen,
                                         enum pipe_format format,
                                         enum pipe_texture_target target,
@@ -384,6 +408,29 @@ static void noop_destroy_screen(struct pipe_screen *screen)
    FREE(screen);
 }
 
+static void noop_fence_reference(struct pipe_screen *screen,
+                          struct pipe_fence_handle **ptr,
+                          struct pipe_fence_handle *fence)
+{
+}
+
+static boolean noop_fence_finish(struct pipe_screen *screen,
+                                 struct pipe_context *ctx,
+                                 struct pipe_fence_handle *fence,
+                                 uint64_t timeout)
+{
+   return true;
+}
+
+static void noop_query_memory_info(struct pipe_screen *pscreen,
+                                   struct pipe_memory_info *info)
+{
+   struct noop_pipe_screen *noop_screen = (struct noop_pipe_screen*)pscreen;
+   struct pipe_screen *screen = noop_screen->oscreen;
+
+   screen->query_memory_info(screen, info);
+}
+
 struct pipe_screen *noop_screen_create(struct pipe_screen *oscreen)
 {
    struct noop_pipe_screen *noop_screen;
@@ -406,6 +453,7 @@ struct pipe_screen *noop_screen_create(struct pipe_screen *oscreen)
    screen->get_device_vendor = noop_get_device_vendor;
    screen->get_param = noop_get_param;
    screen->get_shader_param = noop_get_shader_param;
+   screen->get_compute_param = noop_get_compute_param;
    screen->get_paramf = noop_get_paramf;
    screen->is_format_supported = noop_is_format_supported;
    screen->context_create = noop_create_context;
@@ -415,6 +463,9 @@ struct pipe_screen *noop_screen_create(struct pipe_screen *oscreen)
    screen->resource_destroy = noop_resource_destroy;
    screen->flush_frontbuffer = noop_flush_frontbuffer;
    screen->get_timestamp = noop_get_timestamp;
+   screen->fence_reference = noop_fence_reference;
+   screen->fence_finish = noop_fence_finish;
+   screen->query_memory_info = noop_query_memory_info;
 
    return screen;
 }
