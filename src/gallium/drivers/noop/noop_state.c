@@ -42,49 +42,25 @@ static void noop_set_blend_color(struct pipe_context *ctx,
 static void *noop_create_blend_state(struct pipe_context *ctx,
                                      const struct pipe_blend_state *state)
 {
-   struct pipe_blend_state *nstate = CALLOC_STRUCT(pipe_blend_state);
-
-   if (!nstate) {
-      return NULL;
-   }
-   *nstate = *state;
-   return nstate;
+   return MALLOC(1);
 }
 
 static void *noop_create_dsa_state(struct pipe_context *ctx,
                                    const struct pipe_depth_stencil_alpha_state *state)
 {
-   struct pipe_depth_stencil_alpha_state *nstate = CALLOC_STRUCT(pipe_depth_stencil_alpha_state);
-
-   if (!nstate) {
-      return NULL;
-   }
-   *nstate = *state;
-   return nstate;
+   return MALLOC(1);
 }
 
 static void *noop_create_rs_state(struct pipe_context *ctx,
                                   const struct pipe_rasterizer_state *state)
 {
-   struct pipe_rasterizer_state *nstate = CALLOC_STRUCT(pipe_rasterizer_state);
-
-   if (!nstate) {
-      return NULL;
-   }
-   *nstate = *state;
-   return nstate;
+   return MALLOC(1);
 }
 
 static void *noop_create_sampler_state(struct pipe_context *ctx,
                                        const struct pipe_sampler_state *state)
 {
-   struct pipe_sampler_state *nstate = CALLOC_STRUCT(pipe_sampler_state);
-
-   if (!nstate) {
-      return NULL;
-   }
-   *nstate = *state;
-   return nstate;
+   return MALLOC(1);
 }
 
 static struct pipe_sampler_view *noop_create_sampler_view(struct pipe_context *ctx,
@@ -207,12 +183,6 @@ static void noop_delete_state(struct pipe_context *ctx, void *state)
    FREE(state);
 }
 
-static void noop_delete_vertex_element(struct pipe_context *ctx, void *state)
-{
-   FREE(state);
-}
-
-
 static void noop_set_index_buffer(struct pipe_context *ctx,
                                   const struct pipe_index_buffer *ib)
 {
@@ -228,25 +198,13 @@ static void *noop_create_vertex_elements(struct pipe_context *ctx,
                                          unsigned count,
                                          const struct pipe_vertex_element *state)
 {
-   struct pipe_vertex_element *nstate = CALLOC_STRUCT(pipe_vertex_element);
-
-   if (!nstate) {
-      return NULL;
-   }
-   *nstate = *state;
-   return nstate;
+   return MALLOC(1);
 }
 
 static void *noop_create_shader_state(struct pipe_context *ctx,
                                       const struct pipe_shader_state *state)
 {
-   struct pipe_shader_state *nstate = CALLOC_STRUCT(pipe_shader_state);
-
-   if (!nstate) {
-      return NULL;
-   }
-   *nstate = *state;
-   return nstate;
+   return MALLOC(1);
 }
 
 static struct pipe_stream_output_target *noop_create_stream_output_target(
@@ -305,7 +263,7 @@ void noop_init_state_functions(struct pipe_context *ctx)
    ctx->delete_fs_state = noop_delete_state;
    ctx->delete_rasterizer_state = noop_delete_state;
    ctx->delete_sampler_state = noop_delete_state;
-   ctx->delete_vertex_elements_state = noop_delete_vertex_element;
+   ctx->delete_vertex_elements_state = noop_delete_state;
    ctx->delete_vs_state = noop_delete_state;
    ctx->set_blend_color = noop_set_blend_color;
    ctx->set_clip_state = noop_set_clip_state;
