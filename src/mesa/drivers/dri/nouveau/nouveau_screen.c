@@ -49,7 +49,7 @@ static void
 nouveau_destroy_screen(__DRIscreen *dri_screen);
 
 static const __DRIconfig **
-nouveau_get_configs(void)
+nouveau_get_configs(uint32_t chipset)
 {
 	__DRIconfig **configs = NULL;
 	int i;
@@ -78,7 +78,7 @@ nouveau_get_configs(void)
 					  ARRAY_SIZE(back_buffer_modes),
 					  msaa_samples,
 					  ARRAY_SIZE(msaa_samples),
-					  GL_TRUE, GL_FALSE);
+					  GL_TRUE, chipset < 0x10);
 		assert(config);
 
 		configs = driConcatConfigs(configs, config);
@@ -144,7 +144,7 @@ nouveau_init_screen2(__DRIscreen *dri_screen)
 	dri_screen->extensions = nouveau_screen_extensions;
 	screen->dri_screen = dri_screen;
 
-	configs = nouveau_get_configs();
+	configs = nouveau_get_configs(screen->device->chipset);
 	if (!configs)
 		goto fail;
 
