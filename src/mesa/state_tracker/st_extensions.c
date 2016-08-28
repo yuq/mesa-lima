@@ -1233,4 +1233,22 @@ void st_init_extensions(struct pipe_screen *screen,
 
    extensions->OES_primitive_bounding_box = extensions->ARB_ES3_1_compatibility;
    consts->NoPrimitiveBoundingBoxOutput = true;
+
+   extensions->ANDROID_extension_pack_es31a =
+      extensions->KHR_texture_compression_astc_ldr &&
+      extensions->KHR_blend_equation_advanced &&
+      extensions->OES_sample_variables &&
+      extensions->ARB_shader_image_load_store &&
+      extensions->ARB_texture_stencil8 &&
+      extensions->ARB_texture_multisample &&
+      extensions->OES_copy_image &&
+      extensions->ARB_draw_buffers_blend &&
+      extensions->OES_geometry_shader &&
+      extensions->ARB_gpu_shader5 &&
+      extensions->OES_primitive_bounding_box &&
+      extensions->ARB_tessellation_shader &&
+      extensions->ARB_texture_border_clamp &&
+      extensions->OES_texture_buffer &&
+      extensions->OES_texture_cube_map_array &&
+      extensions->EXT_texture_sRGB_decode;
 }
