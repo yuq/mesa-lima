@@ -1866,6 +1866,9 @@ const struct function gl_core_functions_possible[] = {
    { "glMultiDrawArraysIndirectCountARB", 31, -1 },
    { "glMultiDrawElementsIndirectCountARB", 31, -1 },
 
+   /* GL_ARB_ES3_2_compatibility */
+   { "glPrimitiveBoundingBoxARB", 45, -1 },
+
    { NULL, 0, -1 }
 };
 
