@@ -153,6 +153,9 @@ namespace {
       // Add libclc include
       c.getPreprocessorOpts().Includes.push_back("clc/clc.h");
 
+      // Add definition for the OpenCL version
+      c.getPreprocessorOpts().addMacroDef("__OPENCL_VERSION__=110");
+
       // clc.h requires that this macro be defined:
       c.getPreprocessorOpts().addMacroDef("cl_clang_storage_class_specifiers");
       c.getPreprocessorOpts().addRemappedFile(
