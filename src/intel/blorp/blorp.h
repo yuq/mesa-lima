@@ -98,7 +98,7 @@ void
 blorp_blit(struct blorp_batch *batch,
            const struct blorp_surf *src_surf,
            unsigned src_level, unsigned src_layer,
-           enum isl_format src_format, int src_swizzle,
+           enum isl_format src_format, struct isl_swizzle src_swizzle,
            const struct blorp_surf *dst_surf,
            unsigned dst_level, unsigned dst_layer,
            enum isl_format dst_format,

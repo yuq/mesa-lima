@@ -21,7 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#include "program/prog_instruction.h"
 #include "compiler/nir/nir_builder.h"
 
 #include "blorp_priv.h"
@@ -1248,25 +1247,6 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
    }
 }
 
-/**
- * Convert an swizzle enumeration (i.e. SWIZZLE_X) to one of the Gen7.5+
- * "Shader Channel Select" enumerations (i.e. HSW_SCS_RED).  The mappings are
- *
- * SWIZZLE_X, SWIZZLE_Y, SWIZZLE_Z, SWIZZLE_W, SWIZZLE_ZERO, SWIZZLE_ONE
- *         0          1          2          3             4            5
- *         4          5          6          7             0            1
- *   SCS_RED, SCS_GREEN,  SCS_BLUE, SCS_ALPHA,     SCS_ZERO,     SCS_ONE
- *
- * which is simply adding 4 then modding by 8 (or anding with 7).
- *
- * We then may need to apply workarounds for textureGather hardware bugs.
- */
-static enum isl_channel_select
-swizzle_to_scs(GLenum swizzle)
-{
-   return (enum isl_channel_select)((swizzle + 4) & 7);
-}
-
 static void
 surf_convert_to_single_slice(const struct isl_device *isl_dev,
                              struct brw_blorp_surface_info *info)
@@ -1380,7 +1360,7 @@ void
 blorp_blit(struct blorp_batch *batch,
            const struct blorp_surf *src_surf,
            unsigned src_level, unsigned src_layer,
-           enum isl_format src_format, int src_swizzle,
+           enum isl_format src_format, struct isl_swizzle src_swizzle,
            const struct blorp_surf *dst_surf,
            unsigned dst_level, unsigned dst_layer,
            enum isl_format dst_format,
@@ -1637,12 +1617,7 @@ blorp_blit(struct blorp_batch *batch,
 
    brw_blorp_get_blit_kernel(batch->blorp, &params, &wm_prog_key);
 
-   params.src.view.swizzle = (struct isl_swizzle) {
-      .r = swizzle_to_scs(GET_SWZ(src_swizzle, 0)),
-      .g = swizzle_to_scs(GET_SWZ(src_swizzle, 1)),
-      .b = swizzle_to_scs(GET_SWZ(src_swizzle, 2)),
-      .a = swizzle_to_scs(GET_SWZ(src_swizzle, 3)),
-   };
+   params.src.view.swizzle = src_swizzle;
 
    batch->blorp->exec(batch, &params);
 }
