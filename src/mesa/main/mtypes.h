@@ -3957,6 +3957,7 @@ struct gl_extensions
    GLboolean AMD_seamless_cubemap_per_texture;
    GLboolean AMD_vertex_shader_layer;
    GLboolean AMD_vertex_shader_viewport_index;
+   GLboolean ANDROID_extension_pack_es31a;
    GLboolean APPLE_object_purgeable;
    GLboolean ATI_meminfo;
    GLboolean ATI_texture_compression_3dc;

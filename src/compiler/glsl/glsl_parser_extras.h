@@ -709,6 +709,8 @@ struct _mesa_glsl_parse_state {
    bool AMD_vertex_shader_layer_warn;
    bool AMD_vertex_shader_viewport_index_enable;
    bool AMD_vertex_shader_viewport_index_warn;
+   bool ANDROID_extension_pack_es31a_enable;
+   bool ANDROID_extension_pack_es31a_warn;
    bool EXT_blend_func_extended_enable;
    bool EXT_blend_func_extended_warn;
    bool EXT_clip_cull_distance_enable;
