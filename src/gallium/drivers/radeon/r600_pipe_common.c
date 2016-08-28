@@ -881,6 +881,14 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 				*max_threads_per_block = 256;
 		}
 		return sizeof(uint64_t);
+	case PIPE_COMPUTE_CAP_ADDRESS_BITS:
+		if (ret) {
+			uint32_t *address_bits = ret;
+			address_bits[0] = 32;
+			if (rscreen->chip_class >= SI)
+				address_bits[0] = 64;
+		}
+		return 1 * sizeof(uint32_t);
 
 	case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE:
 		if (ret) {

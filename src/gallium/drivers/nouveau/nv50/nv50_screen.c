@@ -418,6 +418,8 @@ nv50_screen_get_compute_param(struct pipe_screen *pscreen,
       RET((uint32_t []) { screen->mp_count });
    case PIPE_COMPUTE_CAP_MAX_CLOCK_FREQUENCY:
       RET((uint32_t []) { 512 }); /* FIXME: arbitrary limit */
+   case PIPE_COMPUTE_CAP_ADDRESS_BITS:
+      RET((uint32_t []) { 32 });
    default:
       return 0;
    }

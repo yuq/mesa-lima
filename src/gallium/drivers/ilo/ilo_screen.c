@@ -199,6 +199,7 @@ ilo_get_compute_param(struct pipe_screen *screen,
       uint32_t max_compute_units;
       uint32_t images_supported;
       uint32_t subgroup_size;
+      uint32_t address_bits;
    } val;
    const void *ptr;
    int size;
@@ -265,6 +266,11 @@ ilo_get_compute_param(struct pipe_screen *screen,
 
       ptr = &val.max_input_size;
       size = sizeof(val.max_input_size);
+      break;
+   case PIPE_COMPUTE_CAP_ADDRESS_BITS:
+      val.address_bits = 32;
+      ptr = &val.address_bits;
+      size = sizeof(val.address_bits);
       break;
    case PIPE_COMPUTE_CAP_MAX_MEM_ALLOC_SIZE:
       val.max_mem_alloc_size = 1u << 31;
