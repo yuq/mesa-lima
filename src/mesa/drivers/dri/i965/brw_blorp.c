@@ -362,6 +362,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
               brw_blorp_to_isl_format(brw, src_format, false), src_isl_swizzle,
               &dst_surf, dst_level, dst_layer,
               brw_blorp_to_isl_format(brw, dst_format, true),
+              ISL_SWIZZLE_IDENTITY,
               src_x0, src_y0, src_x1, src_y1,
               dst_x0, dst_y0, dst_x1, dst_y1,
               filter, mirror_x, mirror_y);

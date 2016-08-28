@@ -1363,7 +1363,7 @@ blorp_blit(struct blorp_batch *batch,
            enum isl_format src_format, struct isl_swizzle src_swizzle,
            const struct blorp_surf *dst_surf,
            unsigned dst_level, unsigned dst_layer,
-           enum isl_format dst_format,
+           enum isl_format dst_format, struct isl_swizzle dst_swizzle,
            float src_x0, float src_y0,
            float src_x1, float src_y1,
            float dst_x0, float dst_y0,
@@ -1618,6 +1618,7 @@ blorp_blit(struct blorp_batch *batch,
    brw_blorp_get_blit_kernel(batch->blorp, &params, &wm_prog_key);
 
    params.src.view.swizzle = src_swizzle;
+   params.dst.view.swizzle = dst_swizzle;
 
    batch->blorp->exec(batch, &params);
 }
