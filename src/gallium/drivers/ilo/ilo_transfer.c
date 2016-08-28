@@ -1184,7 +1184,7 @@ ilo_transfer_unmap(struct pipe_context *pipe,
 
    pipe_resource_reference(&xfer->base.resource, NULL);
 
-   util_slab_free(&ilo->transfer_mempool, xfer);
+   slab_free_st(&ilo->transfer_mempool, xfer);
 }
 
 static void *
@@ -1200,7 +1200,7 @@ ilo_transfer_map(struct pipe_context *pipe,
    void *ptr;
 
    /* note that xfer is not zero'd */
-   xfer = util_slab_alloc(&ilo->transfer_mempool);
+   xfer = slab_alloc_st(&ilo->transfer_mempool);
    if (!xfer) {
       *transfer = NULL;
       return NULL;
@@ -1226,7 +1226,7 @@ ilo_transfer_map(struct pipe_context *pipe,
 
    if (!ptr) {
       pipe_resource_reference(&xfer->base.resource, NULL);
-      util_slab_free(&ilo->transfer_mempool, xfer);
+      slab_free_st(&ilo->transfer_mempool, xfer);
       *transfer = NULL;
       return NULL;
    }

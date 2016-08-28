@@ -39,7 +39,7 @@
 #include "util/u_blitter.h"
 #include "util/list.h"
 #include "util/u_range.h"
-#include "util/u_slab.h"
+#include "util/slab.h"
 #include "util/u_suballoc.h"
 #include "util/u_transfer.h"
 
@@ -527,7 +527,7 @@ struct r600_common_context {
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_zeroed_memory;
-	struct util_slab_mempool	pool_transfers;
+	struct slab_mempool	pool_transfers;
 
 	/* Current unaccounted memory usage. */
 	uint64_t			vram;

@@ -27,7 +27,7 @@
 #include "r300_chipset.h"
 #include "radeon/radeon_winsys.h"
 #include "pipe/p_screen.h"
-#include "util/u_slab.h"
+#include "util/slab.h"
 #include "os/os_thread.h"
 #include <stdio.h>
 

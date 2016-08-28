@@ -33,7 +33,7 @@
 #include "indices/u_primconvert.h"
 #include "util/u_blitter.h"
 #include "util/list.h"
-#include "util/u_slab.h"
+#include "util/slab.h"
 #include "util/u_string.h"
 
 #include "freedreno_batch.h"
@@ -121,11 +121,11 @@ struct fd_context {
 	struct primconvert_context *primconvert;
 
 	/* slab for pipe_transfer allocations: */
-	struct util_slab_mempool transfer_pool;
+	struct slab_mempool transfer_pool;
 
 	/* slabs for fd_hw_sample and fd_hw_sample_period allocations: */
-	struct util_slab_mempool sample_pool;
-	struct util_slab_mempool sample_period_pool;
+	struct slab_mempool sample_pool;
+	struct slab_mempool sample_period_pool;
 
 	/* sample-providers for hw queries: */
 	const struct fd_hw_sample_provider *sample_providers[MAX_HW_SAMPLE_PROVIDERS];

@@ -32,7 +32,7 @@
 #include "util/u_format.h"
 #include "util/u_transfer.h"
 #include "util/u_helpers.h"
-#include "util/u_slab.h"
+#include "util/slab.h"
 #include "util/u_upload_mgr.h"
 #include "util/u_blitter.h"
 #include "tgsi/tgsi_text.h"
@@ -862,7 +862,7 @@ virgl_context_destroy( struct pipe_context *ctx )
       u_upload_destroy(vctx->uploader);
    util_primconvert_destroy(vctx->primconvert);
 
-   util_slab_destroy(&vctx->texture_transfer_pool);
+   slab_destroy(&vctx->texture_transfer_pool);
    FREE(vctx);
 }
 
@@ -943,8 +943,8 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
    virgl_init_so_functions(vctx);
 
    list_inithead(&vctx->to_flush_bufs);
-   util_slab_create(&vctx->texture_transfer_pool, sizeof(struct virgl_transfer),
-                    16, UTIL_SLAB_SINGLETHREADED);
+   slab_create(&vctx->texture_transfer_pool, sizeof(struct virgl_transfer),
+                    16);
 
    vctx->primconvert = util_primconvert_create(&vctx->base, rs->caps.caps.v1.prim_mask);
    vctx->uploader = u_upload_create(&vctx->base, 1024 * 1024,

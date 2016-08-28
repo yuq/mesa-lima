@@ -121,7 +121,7 @@ vc4_resource_transfer_unmap(struct pipe_context *pctx,
         }
 
         pipe_resource_reference(&ptrans->resource, NULL);
-        util_slab_free(&vc4->transfer_pool, ptrans);
+        slab_free_st(&vc4->transfer_pool, ptrans);
 }
 
 static struct pipe_resource *
@@ -194,13 +194,13 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
         if (usage & PIPE_TRANSFER_WRITE)
                 rsc->writes++;
 
-        trans = util_slab_alloc(&vc4->transfer_pool);
+        trans = slab_alloc_st(&vc4->transfer_pool);
         if (!trans)
                 return NULL;
 
         /* XXX: Handle DONTBLOCK, DISCARD_RANGE, PERSISTENT, COHERENT. */
 
-        /* util_slab_alloc() doesn't zero: */
+        /* slab_alloc_st() doesn't zero: */
         memset(trans, 0, sizeof(*trans));
         ptrans = &trans->base;
 

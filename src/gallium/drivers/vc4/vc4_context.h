@@ -29,7 +29,7 @@
 
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
-#include "util/u_slab.h"
+#include "util/slab.h"
 
 #define __user
 #include "vc4_drm.h"
@@ -238,7 +238,7 @@ struct vc4_context {
         bool msaa;
 	/** @} */
 
-        struct util_slab_mempool transfer_pool;
+        struct slab_mempool transfer_pool;
         struct blitter_context *blitter;
 
         /** bitfield of VC4_DIRTY_* */

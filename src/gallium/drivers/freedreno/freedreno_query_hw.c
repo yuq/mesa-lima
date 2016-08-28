@@ -108,10 +108,10 @@ resume_query(struct fd_batch *batch, struct fd_hw_query *hq,
 	assert(idx >= 0);   /* query never would have been created otherwise */
 	assert(!hq->period);
 	batch->active_providers |= (1 << idx);
-	hq->period = util_slab_alloc(&batch->ctx->sample_period_pool);
+	hq->period = slab_alloc_st(&batch->ctx->sample_period_pool);
 	list_inithead(&hq->period->list);
 	hq->period->start = get_sample(batch, ring, hq->base.type);
-	/* NOTE: util_slab_alloc() does not zero out the buffer: */
+	/* NOTE: slab_alloc_st() does not zero out the buffer: */
 	hq->period->end = NULL;
 }
 
@@ -137,7 +137,7 @@ destroy_periods(struct fd_context *ctx, struct fd_hw_query *hq)
 		fd_hw_sample_reference(ctx, &period->start, NULL);
 		fd_hw_sample_reference(ctx, &period->end, NULL);
 		list_del(&period->list);
-		util_slab_free(&ctx->sample_period_pool, period);
+		slab_free_st(&ctx->sample_period_pool, period);
 	}
 }
 
@@ -339,13 +339,13 @@ fd_hw_create_query(struct fd_context *ctx, unsigned query_type)
 struct fd_hw_sample *
 fd_hw_sample_init(struct fd_batch *batch, uint32_t size)
 {
-	struct fd_hw_sample *samp = util_slab_alloc(&batch->ctx->sample_pool);
+	struct fd_hw_sample *samp = slab_alloc_st(&batch->ctx->sample_pool);
 	pipe_reference_init(&samp->reference, 1);
 	samp->size = size;
 	debug_assert(util_is_power_of_two(size));
 	batch->next_sample_offset = align(batch->next_sample_offset, size);
 	samp->offset = batch->next_sample_offset;
-	/* NOTE: util_slab_alloc() does not zero out the buffer: */
+	/* NOTE: slab_alloc_st() does not zero out the buffer: */
 	samp->prsc = NULL;
 	samp->num_tiles = 0;
 	samp->tile_stride = 0;
@@ -376,7 +376,7 @@ void
 __fd_hw_sample_destroy(struct fd_context *ctx, struct fd_hw_sample *samp)
 {
 	pipe_resource_reference(&samp->prsc, NULL);
-	util_slab_free(&ctx->sample_pool, samp);
+	slab_free_st(&ctx->sample_pool, samp);
 }
 
 /* called from gmem code once total storage requirements are known (ie.
@@ -486,10 +486,10 @@ fd_hw_query_init(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
 
-	util_slab_create(&ctx->sample_pool, sizeof(struct fd_hw_sample),
-			16, UTIL_SLAB_SINGLETHREADED);
-	util_slab_create(&ctx->sample_period_pool, sizeof(struct fd_hw_sample_period),
-			16, UTIL_SLAB_SINGLETHREADED);
+	slab_create(&ctx->sample_pool, sizeof(struct fd_hw_sample),
+			16);
+	slab_create(&ctx->sample_period_pool, sizeof(struct fd_hw_sample_period),
+			16);
 	list_inithead(&ctx->active_queries);
 }
 
@@ -498,6 +498,6 @@ fd_hw_query_fini(struct pipe_context *pctx)
 {
 	struct fd_context *ctx = fd_context(pctx);
 
-	util_slab_destroy(&ctx->sample_pool);
-	util_slab_destroy(&ctx->sample_period_pool);
+	slab_destroy(&ctx->sample_pool);
+	slab_destroy(&ctx->sample_period_pool);
 }

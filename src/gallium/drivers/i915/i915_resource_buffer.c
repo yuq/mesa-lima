@@ -70,7 +70,7 @@ i915_buffer_transfer_map(struct pipe_context *pipe,
 {
    struct i915_context *i915 = i915_context(pipe);
    struct i915_buffer *buffer = i915_buffer(resource);
-   struct pipe_transfer *transfer = util_slab_alloc(&i915->transfer_pool);
+   struct pipe_transfer *transfer = slab_alloc_st(&i915->transfer_pool);
 
    if (!transfer)
       return NULL;
@@ -89,7 +89,7 @@ i915_buffer_transfer_unmap(struct pipe_context *pipe,
                            struct pipe_transfer *transfer)
 {
    struct i915_context *i915 = i915_context(pipe);
-   util_slab_free(&i915->transfer_pool, transfer);
+   slab_free_st(&i915->transfer_pool, transfer);
 }
 
 void

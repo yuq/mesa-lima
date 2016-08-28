@@ -283,7 +283,7 @@ static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 				      unsigned offset)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
-	struct r600_transfer *transfer = util_slab_alloc(&rctx->pool_transfers);
+	struct r600_transfer *transfer = slab_alloc_st(&rctx->pool_transfers);
 
 	transfer->transfer.resource = resource;
 	transfer->transfer.level = level;
@@ -468,7 +468,7 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 	if (rtransfer->staging)
 		r600_resource_reference(&rtransfer->staging, NULL);
 
-	util_slab_free(&rctx->pool_transfers, transfer);
+	slab_free_st(&rctx->pool_transfers, transfer);
 }
 
 void r600_buffer_subdata(struct pipe_context *ctx,

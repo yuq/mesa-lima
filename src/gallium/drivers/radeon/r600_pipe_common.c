@@ -431,9 +431,8 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen,
 			      unsigned context_flags)
 {
-	util_slab_create(&rctx->pool_transfers,
-			 sizeof(struct r600_transfer), 64,
-			 UTIL_SLAB_SINGLETHREADED);
+	slab_create(&rctx->pool_transfers,
+			 sizeof(struct r600_transfer), 64);
 
 	rctx->screen = rscreen;
 	rctx->ws = rscreen->ws;
@@ -533,7 +532,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 		u_upload_destroy(rctx->uploader);
 	}
 
-	util_slab_destroy(&rctx->pool_transfers);
+	slab_destroy(&rctx->pool_transfers);
 
 	if (rctx->allocator_zeroed_memory) {
 		u_suballocator_destroy(rctx->allocator_zeroed_memory);

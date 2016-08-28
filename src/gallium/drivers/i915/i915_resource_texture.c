@@ -721,7 +721,7 @@ i915_texture_transfer_map(struct pipe_context *pipe,
 {
    struct i915_context *i915 = i915_context(pipe);
    struct i915_texture *tex = i915_texture(resource);
-   struct i915_transfer *transfer = util_slab_alloc(&i915->texture_transfer_pool);
+   struct i915_transfer *transfer = slab_alloc_st(&i915->texture_transfer_pool);
    boolean use_staging_texture = FALSE;
    struct i915_winsys *iws = i915_screen(pipe->screen)->iws;
    enum pipe_format format = resource->format;
@@ -814,7 +814,7 @@ i915_texture_transfer_unmap(struct pipe_context *pipe,
       pipe_resource_reference(&itransfer->staging_texture, NULL);
    }
 
-   util_slab_free(&i915->texture_transfer_pool, itransfer);
+   slab_free_st(&i915->texture_transfer_pool, itransfer);
 }
 
 #if 0
