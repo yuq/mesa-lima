@@ -772,6 +772,9 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxFramebufferHeight = 16384;
    ctx->Const.MaxFramebufferLayers = ctx->Const.MaxArrayTextureLayers;
    ctx->Const.MaxFramebufferSamples = max_samples;
+
+   /* OES_primitive_bounding_box */
+   ctx->Const.NoPrimitiveBoundingBoxOutput = true;
 }
 
 static void
