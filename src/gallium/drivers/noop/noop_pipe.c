@@ -134,13 +134,25 @@ static struct pipe_resource *noop_resource_from_handle(struct pipe_screen *scree
    return noop_resource;
 }
 
-static boolean noop_resource_get_handle(struct pipe_screen *screen,
+static boolean noop_resource_get_handle(struct pipe_screen *pscreen,
                                         struct pipe_context *ctx,
                                         struct pipe_resource *resource,
                                         struct winsys_handle *handle,
                                         unsigned usage)
 {
-   return FALSE;
+   struct noop_pipe_screen *noop_screen = (struct noop_pipe_screen*)pscreen;
+   struct pipe_screen *screen = noop_screen->oscreen;
+   struct pipe_resource *tex;
+   bool result;
+
+   /* resource_get_handle musn't fail. Just create something and return it. */
+   tex = screen->resource_create(screen, resource);
+   if (!tex)
+      return false;
+
+   result = screen->resource_get_handle(screen, NULL, tex, handle, usage);
+   pipe_resource_reference(&tex, NULL);
+   return result;
 }
 
 static void noop_resource_destroy(struct pipe_screen *screen,
