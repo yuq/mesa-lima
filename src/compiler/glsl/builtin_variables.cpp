@@ -759,7 +759,7 @@ builtin_variable_generator::generate_constants()
          add_const("gl_MaxGeometryAtomicCounters",
                    state->Const.MaxGeometryAtomicCounters);
       }
-      if (!state->es_shader) {
+      if (state->is_version(110, 320)) {
          add_const("gl_MaxTessControlAtomicCounters",
                    state->Const.MaxTessControlAtomicCounters);
          add_const("gl_MaxTessEvaluationAtomicCounters",
@@ -781,7 +781,7 @@ builtin_variable_generator::generate_constants()
          add_const("gl_MaxGeometryAtomicCounterBuffers",
                    state->Const.MaxGeometryAtomicCounterBuffers);
       }
-      if (!state->es_shader) {
+      if (state->is_version(110, 320)) {
          add_const("gl_MaxTessControlAtomicCounterBuffers",
                    state->Const.MaxTessControlAtomicCounterBuffers);
          add_const("gl_MaxTessEvaluationAtomicCounterBuffers",
