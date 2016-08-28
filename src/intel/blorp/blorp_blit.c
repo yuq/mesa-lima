@@ -1276,7 +1276,7 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
    struct isl_surf_init_info init_info = { 0, };
 
    init_info.dim = ISL_SURF_DIM_2D;
-   init_info.format = ISL_FORMAT_R8_UINT;
+   init_info.format = info->surf.format;
    init_info.width =
       minify(info->surf.logical_level0_px.width, info->view.base_level);
    init_info.height =
