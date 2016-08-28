@@ -24,13 +24,6 @@
 #include "anv_private.h"
 #include "vk_format_info.h"
 
-#define ISL_SWIZZLE(r, g, b, a) { \
-   ISL_CHANNEL_SELECT_##r, \
-   ISL_CHANNEL_SELECT_##g, \
-   ISL_CHANNEL_SELECT_##b, \
-   ISL_CHANNEL_SELECT_##a, \
-}
-
 #define RGBA ISL_SWIZZLE(RED, GREEN, BLUE, ALPHA)
 #define BGRA ISL_SWIZZLE(BLUE, GREEN, RED, ALPHA)
 #define RGB1 ISL_SWIZZLE(RED, GREEN, BLUE, ONE)
@@ -283,7 +276,7 @@ anv_get_format(const struct gen_device_info *devinfo, VkFormat vk_format,
          format.isl_format = rgbx;
       } else {
          format.isl_format = isl_format_rgb_to_rgba(format.isl_format);
-         format.swizzle = (struct anv_format_swizzle) RGB1;
+         format.swizzle = RGB1;
       }
    }
 

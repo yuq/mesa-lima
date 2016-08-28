@@ -1621,16 +1621,9 @@ anv_graphics_pipeline_create(VkDevice device,
                              const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 
-struct anv_format_swizzle {
-   enum isl_channel_select r:4;
-   enum isl_channel_select g:4;
-   enum isl_channel_select b:4;
-   enum isl_channel_select a:4;
-};
-
 struct anv_format {
    enum isl_format isl_format:16;
-   struct anv_format_swizzle swizzle;
+   struct isl_swizzle swizzle;
 };
 
 struct anv_format

@@ -345,7 +345,7 @@ alloc_surface_state(struct anv_device *device,
 
 static enum isl_channel_select
 remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
-              struct anv_format_swizzle format_swizzle)
+              struct isl_swizzle format_swizzle)
 {
    if (swizzle == VK_COMPONENT_SWIZZLE_IDENTITY)
       swizzle = component;
@@ -414,15 +414,15 @@ anv_image_view_init(struct anv_image_view *iview,
       .levels = anv_get_levelCount(image, range),
       .base_array_layer = range->baseArrayLayer,
       .array_len = anv_get_layerCount(image, range),
-      .channel_select = {
-         remap_swizzle(pCreateInfo->components.r,
-                       VK_COMPONENT_SWIZZLE_R, format.swizzle),
-         remap_swizzle(pCreateInfo->components.g,
-                       VK_COMPONENT_SWIZZLE_G, format.swizzle),
-         remap_swizzle(pCreateInfo->components.b,
-                       VK_COMPONENT_SWIZZLE_B, format.swizzle),
-         remap_swizzle(pCreateInfo->components.a,
-                       VK_COMPONENT_SWIZZLE_A, format.swizzle),
+      .swizzle = {
+         .r = remap_swizzle(pCreateInfo->components.r,
+                            VK_COMPONENT_SWIZZLE_R, format.swizzle),
+         .g = remap_swizzle(pCreateInfo->components.g,
+                            VK_COMPONENT_SWIZZLE_G, format.swizzle),
+         .b = remap_swizzle(pCreateInfo->components.b,
+                            VK_COMPONENT_SWIZZLE_B, format.swizzle),
+         .a = remap_swizzle(pCreateInfo->components.a,
+                            VK_COMPONENT_SWIZZLE_A, format.swizzle),
       },
    };
 

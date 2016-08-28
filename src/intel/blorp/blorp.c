@@ -111,12 +111,7 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
       .format = format,
       .base_level = level,
       .levels = 1,
-      .channel_select = {
-         ISL_CHANNEL_SELECT_RED,
-         ISL_CHANNEL_SELECT_GREEN,
-         ISL_CHANNEL_SELECT_BLUE,
-         ISL_CHANNEL_SELECT_ALPHA,
-      },
+      .swizzle = ISL_SWIZZLE_IDENTITY,
    };
 
    info->view.array_len = MAX2(info->surf.logical_level0_px.depth,

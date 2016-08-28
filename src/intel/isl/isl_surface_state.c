@@ -411,10 +411,10 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 #endif
 
 #if (GEN_GEN >= 8 || GEN_IS_HASWELL)
-   s.ShaderChannelSelectRed = info->view->channel_select[0];
-   s.ShaderChannelSelectGreen = info->view->channel_select[1];
-   s.ShaderChannelSelectBlue = info->view->channel_select[2];
-   s.ShaderChannelSelectAlpha = info->view->channel_select[3];
+   s.ShaderChannelSelectRed = info->view->swizzle.r;
+   s.ShaderChannelSelectGreen = info->view->swizzle.g;
+   s.ShaderChannelSelectBlue = info->view->swizzle.b;
+   s.ShaderChannelSelectAlpha = info->view->swizzle.a;
 #endif
 
    s.SurfaceBaseAddress = info->address;

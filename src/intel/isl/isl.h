@@ -854,6 +854,22 @@ struct isl_surf {
    isl_surf_usage_flags_t usage;
 };
 
+struct isl_swizzle {
+   enum isl_channel_select r:4;
+   enum isl_channel_select g:4;
+   enum isl_channel_select b:4;
+   enum isl_channel_select a:4;
+};
+
+#define ISL_SWIZZLE(R, G, B, A) ((struct isl_swizzle) { \
+      .r = ISL_CHANNEL_SELECT_##R, \
+      .g = ISL_CHANNEL_SELECT_##G, \
+      .b = ISL_CHANNEL_SELECT_##B, \
+      .a = ISL_CHANNEL_SELECT_##A, \
+   })
+
+#define ISL_SWIZZLE_IDENTITY ISL_SWIZZLE(RED, GREEN, BLUE, ALPHA)
+
 struct isl_view {
    /**
     * Indicates the usage of the particular view
@@ -889,7 +905,7 @@ struct isl_view {
    uint32_t base_array_layer;
    uint32_t array_len;
 
-   enum isl_channel_select channel_select[4];
+   struct isl_swizzle swizzle;
 };
 
 union isl_color_value {

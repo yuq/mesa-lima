@@ -217,12 +217,7 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
       .levels = 1,
       .base_array_layer = irb->mt_layer / layer_multiplier,
       .array_len = MAX2(irb->layer_count, 1),
-      .channel_select = {
-         ISL_CHANNEL_SELECT_RED,
-         ISL_CHANNEL_SELECT_GREEN,
-         ISL_CHANNEL_SELECT_BLUE,
-         ISL_CHANNEL_SELECT_ALPHA,
-      },
+      .swizzle = ISL_SWIZZLE_IDENTITY,
       .usage = ISL_SURF_USAGE_RENDER_TARGET_BIT,
    };
 
@@ -611,11 +606,11 @@ brw_update_texture_surface(struct gl_context *ctx,
          .levels = intel_obj->_MaxLevel - obj->BaseLevel + 1,
          .base_array_layer = obj->MinLayer,
          .array_len = view_num_layers,
-         .channel_select = {
-            swizzle_to_scs(GET_SWZ(swizzle, 0), need_green_to_blue),
-            swizzle_to_scs(GET_SWZ(swizzle, 1), need_green_to_blue),
-            swizzle_to_scs(GET_SWZ(swizzle, 2), need_green_to_blue),
-            swizzle_to_scs(GET_SWZ(swizzle, 3), need_green_to_blue),
+         .swizzle = {
+            .r = swizzle_to_scs(GET_SWZ(swizzle, 0), need_green_to_blue),
+            .g = swizzle_to_scs(GET_SWZ(swizzle, 1), need_green_to_blue),
+            .b = swizzle_to_scs(GET_SWZ(swizzle, 2), need_green_to_blue),
+            .a = swizzle_to_scs(GET_SWZ(swizzle, 3), need_green_to_blue),
          },
          .usage = ISL_SURF_USAGE_TEXTURE_BIT,
       };
@@ -1189,12 +1184,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                .levels = 1,
                .base_array_layer = irb->mt_layer / mt_layer_unit,
                .array_len = irb->layer_count,
-               .channel_select = {
-                  ISL_CHANNEL_SELECT_RED,
-                  ISL_CHANNEL_SELECT_GREEN,
-                  ISL_CHANNEL_SELECT_BLUE,
-                  ISL_CHANNEL_SELECT_ALPHA,
-               },
+               .swizzle = ISL_SWIZZLE_IDENTITY,
                .usage = ISL_SURF_USAGE_TEXTURE_BIT,
             };
 
@@ -1748,12 +1738,7 @@ update_image_surface(struct brw_context *brw,
                .levels = 1,
                .base_array_layer = obj->MinLayer + u->_Layer,
                .array_len = num_layers,
-               .channel_select = {
-                  ISL_CHANNEL_SELECT_RED,
-                  ISL_CHANNEL_SELECT_GREEN,
-                  ISL_CHANNEL_SELECT_BLUE,
-                  ISL_CHANNEL_SELECT_ALPHA,
-               },
+               .swizzle = ISL_SWIZZLE_IDENTITY,
                .usage = ISL_SURF_USAGE_STORAGE_BIT,
             };
 

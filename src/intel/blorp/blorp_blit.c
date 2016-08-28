@@ -1637,10 +1637,12 @@ blorp_blit(struct blorp_batch *batch,
 
    brw_blorp_get_blit_kernel(batch->blorp, &params, &wm_prog_key);
 
-   for (unsigned i = 0; i < 4; i++) {
-      params.src.view.channel_select[i] =
-         swizzle_to_scs(GET_SWZ(src_swizzle, i));
-   }
+   params.src.view.swizzle = (struct isl_swizzle) {
+      .r = swizzle_to_scs(GET_SWZ(src_swizzle, 0)),
+      .g = swizzle_to_scs(GET_SWZ(src_swizzle, 1)),
+      .b = swizzle_to_scs(GET_SWZ(src_swizzle, 2)),
+      .a = swizzle_to_scs(GET_SWZ(src_swizzle, 3)),
+   };
 
    batch->blorp->exec(batch, &params);
 }
