@@ -1426,7 +1426,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          coord_components = 3;
          break;
       default:
-         assert("Invalid sampler type");
+         unreachable("Invalid sampler type");
       }
 
       if (is_array && texop != nir_texop_lod)
