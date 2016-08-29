@@ -1522,7 +1522,6 @@ generate_code(struct brw_codegen *p,
       brw_set_default_saturate(p, inst->saturate);
       brw_set_default_mask_control(p, inst->force_writemask_all);
       brw_set_default_acc_write_control(p, inst->writes_accumulator);
-      brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
 
       assert(inst->group % inst->exec_size == 0);
       assert(inst->group % 8 == 0 ||
@@ -1530,6 +1529,16 @@ generate_code(struct brw_codegen *p,
              inst->src[0].type == BRW_REGISTER_TYPE_DF ||
              inst->src[1].type == BRW_REGISTER_TYPE_DF ||
              inst->src[2].type == BRW_REGISTER_TYPE_DF);
+
+      unsigned exec_size = inst->exec_size;
+      if (devinfo->gen == 7 &&
+          !devinfo->is_haswell &&
+          (get_exec_type_size(inst) == 8 ||
+           inst->dst.type == BRW_REGISTER_TYPE_DF))
+         exec_size *= 2;
+
+      brw_set_default_exec_size(p, cvt(exec_size) - 1);
+
       if (!inst->force_writemask_all)
          brw_set_default_group(p, inst->group);
 

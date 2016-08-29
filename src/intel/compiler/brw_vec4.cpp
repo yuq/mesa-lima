@@ -2115,6 +2115,16 @@ get_lowered_simd_width(const struct gen_device_info *devinfo,
       }
    }
 
+   /* IvyBridge can manage a maximum of 4 DFs per SIMD4x2 instruction, since
+    * it doesn't support compression in Align16 mode, no matter if it has
+    * force_writemask_all enabled or disabled (the latter is affected by the
+    * compressed instruction bug in gen7, which is another reason to enforce
+    * this limit).
+    */
+   if (devinfo->gen == 7 && !devinfo->is_haswell &&
+       (get_exec_type_size(inst) == 8 || type_sz(inst->dst.type) == 8))
+      lowered_width = MIN2(lowered_width, 4);
+
    return lowered_width;
 }
 
