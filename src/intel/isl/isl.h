@@ -1438,7 +1438,7 @@ isl_tiling_get_intratile_offset_sa(const struct isl_device *dev,
     * surfaces.
     */
    assert(total_x_offset_sa % fmtl->bw == 0);
-   assert(total_y_offset_sa % fmtl->bw == 0);
+   assert(total_y_offset_sa % fmtl->bh == 0);
    const uint32_t total_x_offset = total_x_offset_sa / fmtl->bw;
    const uint32_t total_y_offset = total_y_offset_sa / fmtl->bh;
 
