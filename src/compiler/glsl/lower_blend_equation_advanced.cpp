@@ -438,7 +438,7 @@ deref_output(ir_variable *var)
 static ir_function_signature *
 get_main(gl_linked_shader *sh)
 {
-   ir_function_signature *sig;
+   ir_function_signature *sig = NULL;
    /* We can't use _mesa_get_main_function_signature() because we don't
     * have a symbol table at this point.  Just go find main() by hand.
     */
