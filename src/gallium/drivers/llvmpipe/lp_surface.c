@@ -195,7 +195,7 @@ llvmpipe_clear_render_target(struct pipe_context *pipe,
 {
    struct llvmpipe_context *llvmpipe = llvmpipe_context(pipe);
 
-   if (!llvmpipe_check_render_cond(llvmpipe))
+   if (render_condition_enabled && !llvmpipe_check_render_cond(llvmpipe))
       return;
 
    util_clear_render_target(pipe, dst, color,
@@ -215,7 +215,7 @@ llvmpipe_clear_depth_stencil(struct pipe_context *pipe,
 {
    struct llvmpipe_context *llvmpipe = llvmpipe_context(pipe);
 
-   if (!llvmpipe_check_render_cond(llvmpipe))
+   if (render_condition_enabled && !llvmpipe_check_render_cond(llvmpipe))
       return;
 
    util_clear_depth_stencil(pipe, dst, clear_flags,
