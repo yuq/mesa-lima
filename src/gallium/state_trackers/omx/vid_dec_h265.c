@@ -570,9 +570,48 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
 {
    struct dpb_list *entry = NULL;
    struct pipe_video_buffer *tmp;
+   struct ref_pic_set *rps;
+   int i;
 
    if (!priv->frame_started)
       return;
+
+   priv->picture.h265.NumPocStCurrBefore = 0;
+   priv->picture.h265.NumPocStCurrAfter = 0;
+   memset(priv->picture.h265.RefPicSetStCurrBefore, 0, 8);
+   memset(priv->picture.h265.RefPicSetStCurrAfter, 0, 8);
+   for (i = 0; i < MAX_NUM_REF_PICS; ++i) {
+      priv->picture.h265.ref[i] = NULL;
+      priv->picture.h265.PicOrderCntVal[i] = 0;
+   }
+
+   rps = priv->codec_data.h265.rps;
+
+   if (rps) {
+      priv->picture.h265.NumDeltaPocsOfRefRpsIdx = rps->num_delta_poc;
+      for (i = 0; i < rps->num_pics; ++i) {
+         priv->picture.h265.PicOrderCntVal[i] =
+            rps->delta_poc[i] + get_poc(priv);
+
+         LIST_FOR_EACH_ENTRY(entry, &priv->codec_data.h265.dpb_list, list) {
+            if (entry->poc == priv->picture.h265.PicOrderCntVal[i]) {
+               priv->picture.h265.ref[i] = entry->buffer;
+               break;
+            }
+         }
+
+         if (rps->used[i]) {
+            if (i < rps->num_neg_pics) {
+               priv->picture.h265.NumPocStCurrBefore++;
+               priv->picture.h265.RefPicSetStCurrBefore[i] = i;
+            } else {
+               int j = i - rps->num_neg_pics;
+               priv->picture.h265.NumPocStCurrAfter++;
+               priv->picture.h265.RefPicSetStCurrAfter[j] = i;
+            }
+         }
+      }
+   }
 
    priv->codec->end_frame(priv->codec, priv->target, &priv->picture.base);
    priv->frame_started = false;
