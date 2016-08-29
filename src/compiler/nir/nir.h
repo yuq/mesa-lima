@@ -2526,6 +2526,8 @@ void nir_convert_to_ssa(nir_shader *shader);
 bool nir_repair_ssa_impl(nir_function_impl *impl);
 bool nir_repair_ssa(nir_shader *shader);
 
+void nir_convert_loop_to_lcssa(nir_loop *loop);
+
 /* If phi_webs_only is true, only convert SSA values involved in phi nodes to
  * registers.  If false, convert all values (even those not involved in a phi
  * node) to registers.
