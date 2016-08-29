@@ -287,6 +287,98 @@ static void seq_parameter_set(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp)
    sps->strong_intra_smoothing_enabled_flag = vl_rbsp_u(rbsp, 1);
 }
 
+static struct pipe_h265_pps *pic_parameter_set_id(vid_dec_PrivateType *priv,
+                                                  struct vl_rbsp *rbsp)
+{
+   unsigned id = vl_rbsp_ue(rbsp);
+
+   if (id >= ARRAY_SIZE(priv->codec_data.h265.pps))
+      return NULL;
+
+   return &priv->codec_data.h265.pps[id];
+}
+
+static void picture_parameter_set(vid_dec_PrivateType *priv,
+                                  struct vl_rbsp *rbsp)
+{
+   struct pipe_h265_sps *sps;
+   struct pipe_h265_pps *pps;
+   int i;
+
+   pps = pic_parameter_set_id(priv, rbsp);
+   if (!pps)
+      return;
+
+   memset(pps, 0, sizeof(*pps));
+   sps = pps->sps = seq_parameter_set_id(priv, rbsp);
+   if (!sps)
+      return;
+
+   pps->dependent_slice_segments_enabled_flag = vl_rbsp_u(rbsp, 1);
+   pps->output_flag_present_flag = vl_rbsp_u(rbsp, 1);
+   pps->num_extra_slice_header_bits = vl_rbsp_u(rbsp, 3);
+   pps->sign_data_hiding_enabled_flag = vl_rbsp_u(rbsp, 1);
+   pps->cabac_init_present_flag = vl_rbsp_u(rbsp, 1);
+
+   pps->num_ref_idx_l0_default_active_minus1 = vl_rbsp_ue(rbsp);
+   pps->num_ref_idx_l1_default_active_minus1 = vl_rbsp_ue(rbsp);
+   pps->init_qp_minus26 = vl_rbsp_se(rbsp);
+   pps->constrained_intra_pred_flag = vl_rbsp_u(rbsp, 1);
+   pps->transform_skip_enabled_flag = vl_rbsp_u(rbsp, 1);
+
+   pps->cu_qp_delta_enabled_flag = vl_rbsp_u(rbsp, 1);
+   if (pps->cu_qp_delta_enabled_flag)
+      pps->diff_cu_qp_delta_depth = vl_rbsp_ue(rbsp);
+
+   pps->pps_cb_qp_offset = vl_rbsp_se(rbsp);
+   pps->pps_cr_qp_offset = vl_rbsp_se(rbsp);
+   pps->pps_slice_chroma_qp_offsets_present_flag = vl_rbsp_u(rbsp, 1);
+
+   pps->weighted_pred_flag = vl_rbsp_u(rbsp, 1);
+   pps->weighted_bipred_flag = vl_rbsp_u(rbsp, 1);
+
+   pps->transquant_bypass_enabled_flag = vl_rbsp_u(rbsp, 1);
+   pps->tiles_enabled_flag = vl_rbsp_u(rbsp, 1);
+   pps->entropy_coding_sync_enabled_flag = vl_rbsp_u(rbsp, 1);
+
+   if (pps->tiles_enabled_flag) {
+      pps->num_tile_columns_minus1 = vl_rbsp_ue(rbsp);
+      pps->num_tile_rows_minus1 = vl_rbsp_ue(rbsp);
+
+      pps->uniform_spacing_flag = vl_rbsp_u(rbsp, 1);
+      if (!pps->uniform_spacing_flag) {
+         for (i = 0; i < pps->num_tile_columns_minus1; ++i)
+            pps->column_width_minus1[i] = vl_rbsp_ue(rbsp);
+
+         for (i = 0; i < pps->num_tile_rows_minus1; ++i)
+            pps->row_height_minus1[i] = vl_rbsp_ue(rbsp);
+      }
+
+      if (!pps->num_tile_columns_minus1 || !pps->num_tile_rows_minus1)
+         pps->loop_filter_across_tiles_enabled_flag = vl_rbsp_u(rbsp, 1);
+   }
+
+   pps->pps_loop_filter_across_slices_enabled_flag = vl_rbsp_u(rbsp, 1);
+
+   pps->deblocking_filter_control_present_flag = vl_rbsp_u(rbsp, 1);
+   if (pps->deblocking_filter_control_present_flag) {
+      pps->deblocking_filter_override_enabled_flag = vl_rbsp_u(rbsp, 1);
+      pps->pps_deblocking_filter_disabled_flag = vl_rbsp_u(rbsp, 1);
+      if (!pps->pps_deblocking_filter_disabled_flag) {
+         pps->pps_beta_offset_div2 = vl_rbsp_se(rbsp);
+         pps->pps_tc_offset_div2 = vl_rbsp_se(rbsp);
+      }
+   }
+
+   /* pps_scaling_list_data_present_flag */
+   if (vl_rbsp_u(rbsp, 1))
+      scaling_list_data();
+
+   pps->lists_modification_present_flag = vl_rbsp_u(rbsp, 1);
+   pps->log2_parallel_merge_level_minus2 = vl_rbsp_ue(rbsp);
+   pps->slice_segment_header_extension_present_flag = vl_rbsp_u(rbsp, 1);
+}
+
 static void vid_dec_h265_BeginFrame(vid_dec_PrivateType *priv)
 {
    if (priv->frame_started)
@@ -422,6 +514,12 @@ static void vid_dec_h265_Decode(vid_dec_PrivateType *priv,
 
       vl_rbsp_init(&rbsp, vlc, ~0);
       seq_parameter_set(priv, &rbsp);
+
+   } else if (nal_unit_type == NAL_UNIT_TYPE_PPS) {
+      struct vl_rbsp rbsp;
+
+      vl_rbsp_init(&rbsp, vlc, ~0);
+      picture_parameter_set(priv, &rbsp);
 
    }
 
