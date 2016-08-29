@@ -286,9 +286,8 @@ isl_choose_msaa_layout(const struct isl_device *dev,
    }
 }
 
-static void
-isl_msaa_interleaved_scale_px_to_sa(uint32_t samples,
-                                    uint32_t *width, uint32_t *height)
+struct isl_extent2d
+isl_get_interleaved_msaa_px_size_sa(uint32_t samples)
 {
    assert(isl_is_pow2(samples));
 
@@ -300,10 +299,23 @@ isl_msaa_interleaved_scale_px_to_sa(uint32_t samples,
     *    MSFMT_DEPTH_STENCIL, W_L and H_L must be adjusted as follows before
     *    proceeding: [...]
     */
+   return (struct isl_extent2d) {
+      .width = 1 << ((ffs(samples) - 0) / 2),
+      .height = 1 << ((ffs(samples) - 1) / 2),
+   };
+}
+
+static void
+isl_msaa_interleaved_scale_px_to_sa(uint32_t samples,
+                                    uint32_t *width, uint32_t *height)
+{
+   const struct isl_extent2d px_size_sa =
+      isl_get_interleaved_msaa_px_size_sa(samples);
+
    if (width)
-      *width = isl_align(*width, 2) << ((ffs(samples) - 0) / 2);
+      *width = isl_align(*width, 2) * px_size_sa.width;
    if (height)
-      *height = isl_align(*height, 2) << ((ffs(samples) - 1) / 2);
+      *height = isl_align(*height, 2) * px_size_sa.width;
 }
 
 static enum isl_array_pitch_span

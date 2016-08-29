@@ -1143,6 +1143,9 @@ isl_surf_choose_tiling(const struct isl_device *dev,
                        const struct isl_surf_init_info *restrict info,
                        enum isl_tiling *tiling);
 
+struct isl_extent2d ATTRIBUTE_CONST
+isl_get_interleaved_msaa_px_size_sa(uint32_t samples);
+
 static inline bool
 isl_surf_usage_is_display(isl_surf_usage_flags_t usage)
 {
