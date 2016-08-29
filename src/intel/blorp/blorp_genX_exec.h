@@ -113,28 +113,6 @@ __gen_combine_address(struct blorp_batch *batch, void *location,
       _dw + 1; /* Array starts at dw[1] */               \
    })
 
-/* Once vertex fetcher has written full VUE entries with complete
- * header the space requirement is as follows per vertex (in bytes):
- *
- *     Header    Position    Program constants
- *   +--------+------------+-------------------+
- *   |   16   |     16     |      n x 16       |
- *   +--------+------------+-------------------+
- *
- * where 'n' stands for number of varying inputs expressed as vec4s.
- *
- * The URB size is in turn expressed in 64 bytes (512 bits).
- */
-static inline unsigned
-gen7_blorp_get_vs_entry_size(const struct blorp_params *params)
-{
-    const unsigned num_varyings =
-       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
-    const unsigned total_needed = 16 + 16 + num_varyings * 16;
-
-   return DIV_ROUND_UP(total_needed, 64);
-}
-
 /* 3DSTATE_URB
  * 3DSTATE_URB_VS
  * 3DSTATE_URB_HS
@@ -166,7 +144,24 @@ static void
 emit_urb_config(struct blorp_batch *batch,
                 const struct blorp_params *params)
 {
-   blorp_emit_urb_config(batch, gen7_blorp_get_vs_entry_size(params));
+   /* Once vertex fetcher has written full VUE entries with complete
+    * header the space requirement is as follows per vertex (in bytes):
+    *
+    *     Header    Position    Program constants
+    *   +--------+------------+-------------------+
+    *   |   16   |     16     |      n x 16       |
+    *   +--------+------------+-------------------+
+    *
+    * where 'n' stands for number of varying inputs expressed as vec4s.
+    */
+    const unsigned num_varyings =
+       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
+    const unsigned total_needed = 16 + 16 + num_varyings * 16;
+
+   /* The URB size is expressed in units of 64 bytes (512 bits) */
+   const unsigned vs_entry_size = DIV_ROUND_UP(total_needed, 64);
+
+   blorp_emit_urb_config(batch, vs_entry_size);
 }
 
 static void
