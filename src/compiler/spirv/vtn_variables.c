@@ -783,7 +783,7 @@ vtn_get_builtin_location(struct vtn_builder *b,
       *location = VARYING_SLOT_CLIP_DIST0; /* XXX CLIP_DIST1? */
       break;
    case SpvBuiltInCullDistance:
-      /* XXX figure this out */
+      *location = VARYING_SLOT_CULL_DIST0;
       break;
    case SpvBuiltInVertexIndex:
       *location = SYSTEM_VALUE_VERTEX_ID;
