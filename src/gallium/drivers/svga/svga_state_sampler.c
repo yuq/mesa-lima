@@ -66,7 +66,7 @@ svga_resource_handle(struct pipe_resource *res)
 boolean
 svga_check_sampler_view_resource_collision(struct svga_context *svga,
                                            struct svga_winsys_surface *res,
-                                           unsigned shader)
+                                           enum pipe_shader_type shader)
 {
    struct pipe_screen *screen = svga->pipe.screen;
    unsigned i;
@@ -228,7 +228,7 @@ static enum pipe_error
 update_sampler_resources(struct svga_context *svga, unsigned dirty)
 {
    enum pipe_error ret = PIPE_OK;
-   unsigned shader;
+   enum pipe_shader_type shader;
 
    if (!svga_have_vgpu10(svga))
       return PIPE_OK;
@@ -339,7 +339,7 @@ static enum pipe_error
 update_samplers(struct svga_context *svga, unsigned dirty )
 {
    enum pipe_error ret = PIPE_OK;
-   unsigned shader;
+   enum pipe_shader_type shader;
 
    if (!svga_have_vgpu10(svga))
       return PIPE_OK;

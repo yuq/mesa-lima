@@ -529,7 +529,7 @@ done:
 void
 svga_cleanup_sampler_state(struct svga_context *svga)
 {
-   unsigned shader;
+   enum pipe_shader_type shader;
 
    if (!svga_have_vgpu10(svga))
       return;

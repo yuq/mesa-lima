@@ -311,7 +311,7 @@ xlate_index_format(unsigned indexWidth)
 static enum pipe_error
 validate_sampler_resources(struct svga_context *svga)
 {
-   unsigned shader;
+   enum pipe_shader_type shader;
 
    assert(svga_have_vgpu10(svga));
 
@@ -376,7 +376,7 @@ validate_sampler_resources(struct svga_context *svga)
 static enum pipe_error
 validate_constant_buffers(struct svga_context *svga)
 {
-   unsigned shader;
+   enum pipe_shader_type shader;
 
    assert(svga_have_vgpu10(svga));
 

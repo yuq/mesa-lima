@@ -162,7 +162,7 @@ compile_vs(struct svga_context *svga,
 static void
 make_vs_key(struct svga_context *svga, struct svga_compile_key *key)
 {
-   const unsigned shader = PIPE_SHADER_VERTEX;
+   const enum pipe_shader_type shader = PIPE_SHADER_VERTEX;
 
    memset(key, 0, sizeof *key);
 

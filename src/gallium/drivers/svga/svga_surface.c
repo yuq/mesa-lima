@@ -402,7 +402,7 @@ struct pipe_surface *
 svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
    enum pipe_error ret = PIPE_OK;
-   unsigned shader;
+   enum pipe_shader_type shader;
    struct pipe_surface *surf = NULL;
 
    assert(svga_have_vgpu10(svga));

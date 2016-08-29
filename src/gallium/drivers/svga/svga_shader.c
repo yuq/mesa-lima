@@ -166,7 +166,8 @@ svga_remap_generic_index(int8_t remap_table[MAX_GENERIC_VARYING],
  * state.  This is basically the texture-related state.
  */
 void
-svga_init_shader_key_common(const struct svga_context *svga, unsigned shader,
+svga_init_shader_key_common(const struct svga_context *svga,
+                            enum pipe_shader_type shader,
                             struct svga_compile_key *key)
 {
    unsigned i, idx = 0;

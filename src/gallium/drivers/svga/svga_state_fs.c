@@ -180,7 +180,7 @@ make_fs_key(const struct svga_context *svga,
             struct svga_fragment_shader *fs,
             struct svga_compile_key *key)
 {
-   const unsigned shader = PIPE_SHADER_FRAGMENT;
+   const enum pipe_shader_type shader = PIPE_SHADER_FRAGMENT;
    unsigned i;
 
    memset(key, 0, sizeof *key);

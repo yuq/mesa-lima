@@ -65,7 +65,7 @@
 static unsigned
 svga_get_extra_constants_common(struct svga_context *svga,
                                 const struct svga_shader_variant *variant,
-                                unsigned shader, float *dest)
+                                enum pipe_shader_type shader, float *dest)
 {
    uint32_t *dest_u = (uint32_t *) dest;  // uint version of dest
    unsigned i;
@@ -271,7 +271,7 @@ svga_get_extra_gs_constants(struct svga_context *svga, float *dest)
  * \param value  the new float[4] value
  */
 static enum pipe_error
-emit_const(struct svga_context *svga, unsigned shader, unsigned i,
+emit_const(struct svga_context *svga, enum pipe_shader_type shader, unsigned i,
            const float *value)
 {
    enum pipe_error ret = PIPE_OK;
@@ -316,7 +316,7 @@ emit_const(struct svga_context *svga, unsigned shader, unsigned i,
  */
 static enum pipe_error
 emit_const_range(struct svga_context *svga,
-                 unsigned shader,
+                 enum pipe_shader_type shader,
                  unsigned offset,
                  unsigned count,
                  const float (*values)[4])
@@ -439,7 +439,7 @@ emit_const_range(struct svga_context *svga,
  * On VGPU10, emit_consts_vgpu10 is used instead.
  */
 static enum pipe_error
-emit_consts_vgpu9(struct svga_context *svga, unsigned shader)
+emit_consts_vgpu9(struct svga_context *svga, enum pipe_shader_type shader)
 {
    const struct pipe_constant_buffer *cbuf;
    struct svga_screen *ss = svga_screen(svga->pipe.screen);
@@ -541,7 +541,7 @@ emit_consts_vgpu9(struct svga_context *svga, unsigned shader)
 
 
 static enum pipe_error
-emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
+emit_constbuf_vgpu10(struct svga_context *svga, enum pipe_shader_type shader)
 {
    const struct pipe_constant_buffer *cbuf;
    struct pipe_resource *dst_buffer = NULL;
@@ -686,7 +686,7 @@ emit_constbuf_vgpu10(struct svga_context *svga, unsigned shader)
 
 
 static enum pipe_error
-emit_consts_vgpu10(struct svga_context *svga, unsigned shader)
+emit_consts_vgpu10(struct svga_context *svga, enum pipe_shader_type shader)
 {
    enum pipe_error ret;
    unsigned dirty_constbufs;
