@@ -531,6 +531,7 @@ compute_version_es2(const struct gl_extensions *extensions,
                          extensions->EXT_shader_integer_mix);
    const bool ver_3_2 = (ver_3_1 &&
                          extensions->KHR_blend_equation_advanced &&
+                         extensions->KHR_robustness &&
                          extensions->KHR_texture_compression_astc_ldr &&
                          extensions->OES_copy_image &&
                          extensions->ARB_draw_buffers_blend &&
