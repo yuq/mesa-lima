@@ -1187,27 +1187,33 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    }
 
    if (modules[MESA_SHADER_VERTEX]) {
-      anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
-                              modules[MESA_SHADER_VERTEX],
-                              pStages[MESA_SHADER_VERTEX]->pName,
-                              pStages[MESA_SHADER_VERTEX]->pSpecializationInfo);
+      result = anv_pipeline_compile_vs(pipeline, cache, pCreateInfo,
+                                       modules[MESA_SHADER_VERTEX],
+                                       pStages[MESA_SHADER_VERTEX]->pName,
+                                       pStages[MESA_SHADER_VERTEX]->pSpecializationInfo);
+      if (result != VK_SUCCESS)
+         goto compile_fail;
    }
 
    if (modules[MESA_SHADER_TESS_CTRL] || modules[MESA_SHADER_TESS_EVAL])
       anv_finishme("no tessellation support");
 
    if (modules[MESA_SHADER_GEOMETRY]) {
-      anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
-                              modules[MESA_SHADER_GEOMETRY],
-                              pStages[MESA_SHADER_GEOMETRY]->pName,
-                              pStages[MESA_SHADER_GEOMETRY]->pSpecializationInfo);
+      result = anv_pipeline_compile_gs(pipeline, cache, pCreateInfo,
+                                       modules[MESA_SHADER_GEOMETRY],
+                                       pStages[MESA_SHADER_GEOMETRY]->pName,
+                                       pStages[MESA_SHADER_GEOMETRY]->pSpecializationInfo);
+      if (result != VK_SUCCESS)
+         goto compile_fail;
    }
 
    if (modules[MESA_SHADER_FRAGMENT]) {
-      anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, extra,
-                              modules[MESA_SHADER_FRAGMENT],
-                              pStages[MESA_SHADER_FRAGMENT]->pName,
-                              pStages[MESA_SHADER_FRAGMENT]->pSpecializationInfo);
+      result = anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, extra,
+                                       modules[MESA_SHADER_FRAGMENT],
+                                       pStages[MESA_SHADER_FRAGMENT]->pName,
+                                       pStages[MESA_SHADER_FRAGMENT]->pSpecializationInfo);
+      if (result != VK_SUCCESS)
+         goto compile_fail;
    }
 
    if (!(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT)) {
@@ -1270,6 +1276,11 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
       pipeline->topology = _3DPRIM_RECTLIST;
 
    return VK_SUCCESS;
+
+compile_fail:
+   anv_reloc_list_finish(&pipeline->batch_relocs, alloc);
+
+   return result;
 }
 
 VkResult

@@ -76,9 +76,13 @@ genX(compute_pipeline_create)(
 
    assert(pCreateInfo->stage.stage == VK_SHADER_STAGE_COMPUTE_BIT);
    ANV_FROM_HANDLE(anv_shader_module, module,  pCreateInfo->stage.module);
-   anv_pipeline_compile_cs(pipeline, cache, pCreateInfo, module,
-                           pCreateInfo->stage.pName,
-                           pCreateInfo->stage.pSpecializationInfo);
+   result = anv_pipeline_compile_cs(pipeline, cache, pCreateInfo, module,
+                                    pCreateInfo->stage.pName,
+                                    pCreateInfo->stage.pSpecializationInfo);
+   if (result != VK_SUCCESS) {
+      anv_free2(&device->alloc, pAllocator, pipeline);
+      return result;
+   }
 
    pipeline->use_repclear = false;
 
