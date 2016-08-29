@@ -2127,7 +2127,7 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
       }
    }
 
-   brw_set_uip_jip(p);
+   brw_set_uip_jip(p, start_offset);
    annotation_finalize(&annotation, p->next_insn_offset);
 
 #ifndef NDEBUG

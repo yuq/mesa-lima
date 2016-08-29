@@ -2024,7 +2024,7 @@ generate_code(struct brw_codegen *p,
       }
    }
 
-   brw_set_uip_jip(p);
+   brw_set_uip_jip(p, 0);
    annotation_finalize(&annotation, p->next_insn_offset);
 
 #ifndef NDEBUG

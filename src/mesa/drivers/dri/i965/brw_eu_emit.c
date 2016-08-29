@@ -2775,7 +2775,7 @@ brw_find_loop_end(struct brw_codegen *p, int start_offset)
  * BREAK, CONT, and HALT instructions to their correct locations.
  */
 void
-brw_set_uip_jip(struct brw_codegen *p)
+brw_set_uip_jip(struct brw_codegen *p, int start_offset)
 {
    const struct brw_device_info *devinfo = p->devinfo;
    int offset;
@@ -2786,17 +2786,9 @@ brw_set_uip_jip(struct brw_codegen *p)
    if (devinfo->gen < 6)
       return;
 
-   for (offset = 0; offset < p->next_insn_offset;
-        offset = next_offset(devinfo, store, offset)) {
+   for (offset = start_offset; offset < p->next_insn_offset; offset += 16) {
       brw_inst *insn = store + offset;
-
-      if (brw_inst_cmpt_control(devinfo, insn)) {
-	 /* Fixups for compacted BREAK/CONTINUE not supported yet. */
-         assert(brw_inst_opcode(devinfo, insn) != BRW_OPCODE_BREAK &&
-                brw_inst_opcode(devinfo, insn) != BRW_OPCODE_CONTINUE &&
-                brw_inst_opcode(devinfo, insn) != BRW_OPCODE_HALT);
-	 continue;
-      }
+      assert(brw_inst_cmpt_control(devinfo, insn) == 0);
 
       int block_end_offset = brw_find_next_block_end(p, offset);
       switch (brw_inst_opcode(devinfo, insn)) {
