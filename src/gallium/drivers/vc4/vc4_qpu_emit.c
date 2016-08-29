@@ -434,6 +434,7 @@ vc4_generate_code_block(struct vc4_compile *c,
 
                 case QOP_LOAD_IMM_I2:
                         queue(block, qpu_load_imm_i2(dst, qinst->src[0].index));
+                        break;
 
                 case QOP_ROT_MUL:
                         /* Rotation at the hardware level occurs on the inputs
