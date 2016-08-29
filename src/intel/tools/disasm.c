@@ -75,12 +75,13 @@ gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly, int start,
 
       /* Simplistic, but efficient way to terminate disasm */
       if (brw_inst_opcode(devinfo, insn) == BRW_OPCODE_SEND ||
-          brw_inst_opcode(devinfo, insn) == BRW_OPCODE_SENDC)
+          brw_inst_opcode(devinfo, insn) == BRW_OPCODE_SENDC) {
          if (brw_inst_eot(devinfo, insn))
             break;
-         if (brw_inst_opcode(devinfo, insn) == 0)
-            break;
+      }
 
+      if (brw_inst_opcode(devinfo, insn) == 0)
+         break;
    }
 }
 
