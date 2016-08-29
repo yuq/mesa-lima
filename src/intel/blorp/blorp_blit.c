@@ -1271,9 +1271,6 @@ static void
 surf_convert_to_single_slice(const struct isl_device *isl_dev,
                              struct brw_blorp_surface_info *info)
 {
-   /* This only makes sense for a single level and array slice */
-   assert(info->view.levels == 1 && info->view.array_len == 1);
-
    /* Just bail if we have nothing to do. */
    if (info->surf.dim == ISL_SURF_DIM_2D &&
        info->view.base_level == 0 && info->view.base_array_layer == 0 &&
