@@ -1977,6 +1977,160 @@ vec4_visitor::convert_to_hw_regs()
    }
 }
 
+/**
+ * Get the closest native SIMD width supported by the hardware for instruction
+ * \p inst.  The instruction will be left untouched by
+ * vec4_visitor::lower_simd_width() if the returned value matches the
+ * instruction's original execution size.
+ */
+static unsigned
+get_lowered_simd_width(const struct gen_device_info *devinfo,
+                       const vec4_instruction *inst)
+{
+   unsigned lowered_width = MIN2(16, inst->exec_size);
+
+   /* We need to split some cases of double-precision instructions that write
+    * 2 registers. We only need to care about this in gen7 because that is the
+    * only hardware that implements fp64 in Align16.
+    */
+   if (devinfo->gen == 7 && inst->size_written > REG_SIZE) {
+      /* HSW PRM, 3D Media GPGPU Engine, Region Alignment Rules for Direct
+       * Register Addressing:
+       *
+       *    "When destination spans two registers, the source MUST span two
+       *     registers."
+       */
+      for (unsigned i = 0; i < 3; i++) {
+         if (inst->src[i].file == BAD_FILE)
+            continue;
+         if (inst->size_read(i) <= REG_SIZE)
+            lowered_width = MIN2(lowered_width, 4);
+      }
+   }
+
+   return lowered_width;
+}
+
+static bool
+dst_src_regions_overlap(vec4_instruction *inst)
+{
+   if (inst->size_written == 0)
+      return false;
+
+   unsigned dst_start = inst->dst.offset;
+   unsigned dst_end = dst_start + inst->size_written - 1;
+   for (int i = 0; i < 3; i++) {
+      if (inst->src[i].file == BAD_FILE)
+         continue;
+
+      if (inst->dst.file != inst->src[i].file ||
+          inst->dst.nr != inst->src[i].nr)
+         continue;
+
+      unsigned src_start = inst->src[i].offset;
+      unsigned src_end = src_start + inst->size_read(i) - 1;
+
+      if ((dst_start >= src_start && dst_start <= src_end) ||
+          (dst_end >= src_start && dst_end <= src_end) ||
+          (dst_start <= src_start && dst_end >= src_end)) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
+bool
+vec4_visitor::lower_simd_width()
+{
+   bool progress = false;
+
+   foreach_block_and_inst_safe(block, vec4_instruction, inst, cfg) {
+      const unsigned lowered_width = get_lowered_simd_width(devinfo, inst);
+      assert(lowered_width <= inst->exec_size);
+      if (lowered_width == inst->exec_size)
+         continue;
+
+      /* We need to deal with source / destination overlaps when splitting.
+       * The hardware supports reading from and writing to the same register
+       * in the same instruction, but we need to be careful that each split
+       * instruction we produce does not corrupt the source of the next.
+       *
+       * The easiest way to handle this is to make the split instructions write
+       * to temporaries if there is an src/dst overlap and then move from the
+       * temporaries to the original destination. We also need to consider
+       * instructions that do partial writes via align1 opcodes, in which case
+       * we need to make sure that the we initialize the temporary with the
+       * value of the instruction's dst.
+       */
+      bool needs_temp = dst_src_regions_overlap(inst);
+      for (unsigned n = 0; n < inst->exec_size / lowered_width; n++)  {
+         unsigned channel_offset = lowered_width * n;
+
+         unsigned size_written = lowered_width * type_sz(inst->dst.type);
+
+         /* Create the split instruction from the original so that we copy all
+          * relevant instruction fields, then set the width and calculate the
+          * new dst/src regions.
+          */
+         vec4_instruction *linst = new(mem_ctx) vec4_instruction(*inst);
+         linst->exec_size = lowered_width;
+         linst->group = channel_offset;
+         linst->size_written = size_written;
+
+         /* Compute split dst region */
+         dst_reg dst;
+         if (needs_temp) {
+            unsigned num_regs = DIV_ROUND_UP(size_written, REG_SIZE);
+            dst = retype(dst_reg(VGRF, alloc.allocate(num_regs)),
+                         inst->dst.type);
+            if (inst->is_align1_partial_write()) {
+               vec4_instruction *copy = MOV(dst, src_reg(inst->dst));
+               copy->exec_size = lowered_width;
+               copy->group = channel_offset;
+               copy->size_written = size_written;
+               inst->insert_before(block, copy);
+            }
+         } else {
+            dst = horiz_offset(inst->dst, channel_offset);
+         }
+         linst->dst = dst;
+
+         /* Compute split source regions */
+         for (int i = 0; i < 3; i++) {
+            if (linst->src[i].file == BAD_FILE)
+               continue;
+
+            if (!is_uniform(linst->src[i]))
+               linst->src[i] = horiz_offset(linst->src[i], channel_offset);
+         }
+
+         inst->insert_before(block, linst);
+
+         /* If we used a temporary to store the result of the split
+          * instruction, copy the result to the original destination
+          */
+         if (needs_temp) {
+            vec4_instruction *mov =
+               MOV(offset(inst->dst, lowered_width, n), src_reg(dst));
+            mov->exec_size = lowered_width;
+            mov->group = channel_offset;
+            mov->size_written = size_written;
+            mov->predicate = inst->predicate;
+            inst->insert_before(block, mov);
+         }
+      }
+
+      inst->remove(block);
+      progress = true;
+   }
+
+   if (progress)
+      invalidate_live_intervals();
+
+   return progress;
+}
+
 bool
 vec4_visitor::run()
 {
@@ -2064,6 +2218,11 @@ vec4_visitor::run()
    if (devinfo->gen <= 5 && OPT(lower_minmax)) {
       OPT(opt_cmod_propagation);
       OPT(opt_cse);
+      OPT(opt_copy_propagation);
+      OPT(dead_code_eliminate);
+   }
+
+   if (OPT(lower_simd_width)) {
       OPT(opt_copy_propagation);
       OPT(dead_code_eliminate);
    }
