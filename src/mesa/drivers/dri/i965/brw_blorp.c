@@ -653,7 +653,7 @@ set_write_disables(const struct intel_renderbuffer *irb,
 static bool
 do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                       struct gl_renderbuffer *rb, unsigned buf,
-                      bool partial_clear, bool encode_srgb, unsigned layer)
+                      bool partial_clear, bool encode_srgb)
 {
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
@@ -727,16 +727,17 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    struct blorp_surf surf;
    unsigned level = irb->mt_level;
    blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
+   const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
    if (can_fast_clear) {
-      DBG("%s (fast) to mt %p level %d layer %d\n", __FUNCTION__,
-          irb->mt, irb->mt_level, irb->mt_layer);
+      DBG("%s (fast) to mt %p level %d layers %d+%d\n", __FUNCTION__,
+          irb->mt, irb->mt_level, irb->mt_layer, num_layers);
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw);
       blorp_fast_clear(&batch, &surf,
                        (enum isl_format)brw->render_target_format[format],
-                       level, layer, 1, x0, y0, x1, y1);
+                       level, irb->mt_layer, num_layers, x0, y0, x1, y1);
       blorp_batch_finish(&batch);
 
       /* Now that the fast clear has occurred, put the buffer in
@@ -745,15 +746,16 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        */
       irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
    } else {
-      DBG("%s (slow) to mt %p level %d layer %d\n", __FUNCTION__,
-          irb->mt, irb->mt_level, irb->mt_layer);
+      DBG("%s (slow) to mt %p level %d layer %d+%d\n", __FUNCTION__,
+          irb->mt, irb->mt_level, irb->mt_layer, num_layers);
 
       union isl_color_value clear_color;
       memcpy(clear_color.f32, ctx->Color.ClearColor.f, sizeof(float) * 4);
 
       struct blorp_batch batch;
       blorp_batch_init(&brw->blorp, &batch, brw);
-      blorp_clear(&batch, &surf, level, layer, 1, x0, y0, x1, y1,
+      blorp_clear(&batch, &surf, level, irb->mt_layer, num_layers,
+                  x0, y0, x1, y1,
                   (enum isl_format)brw->render_target_format[format],
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
@@ -794,23 +796,9 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
          intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
       }
 
-      if (fb->MaxNumLayers > 0) {
-         unsigned layer_multiplier =
-            (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-             irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
-            irb->mt->num_samples : 1;
-         for (unsigned layer = 0; layer < num_layers; layer++) {
-            if (!do_single_blorp_clear(
-                    brw, fb, rb, buf, partial_clear, encode_srgb,
-                    irb->mt_layer + layer * layer_multiplier)) {
-               return false;
-            }
-         }
-      } else {
-         unsigned layer = irb->mt_layer;
-         if (!do_single_blorp_clear(brw, fb, rb, buf, partial_clear,
-                                    encode_srgb, layer))
-            return false;
+      if (!do_single_blorp_clear(brw, fb, rb, buf, partial_clear,
+                                 encode_srgb)) {
+         return false;
       }
 
       irb->need_downsample = true;
