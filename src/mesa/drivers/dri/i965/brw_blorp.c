@@ -720,7 +720,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       }
    }
 
-   intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
    intel_miptree_used_for_rendering(irb->mt);
 
    /* We can't setup the blorp_surf until we've allocated the MCS above */
@@ -790,12 +789,16 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
       if (rb == NULL)
          continue;
 
+      const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
+      for (unsigned layer = 0; layer < num_layers; layer++) {
+         intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
+      }
+
       if (fb->MaxNumLayers > 0) {
          unsigned layer_multiplier =
             (irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
              irb->mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) ?
             irb->mt->num_samples : 1;
-         unsigned num_layers = irb->layer_count;
          for (unsigned layer = 0; layer < num_layers; layer++) {
             if (!do_single_blorp_clear(
                     brw, fb, rb, buf, partial_clear, encode_srgb,
