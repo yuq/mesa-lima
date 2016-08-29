@@ -1262,10 +1262,15 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
     */
    assert(info->tile_x_sa == 0 && info->tile_y_sa == 0);
 
+   uint32_t layer = 0, z = 0;
+   if (info->surf.dim == ISL_SURF_DIM_3D)
+      z = info->view.base_array_layer + info->z_offset;
+   else
+      layer = info->view.base_array_layer;
+
    uint32_t x_offset_sa, y_offset_sa;
    isl_surf_get_image_offset_sa(&info->surf, info->view.base_level,
-                                info->view.base_array_layer, 0,
-                                &x_offset_sa, &y_offset_sa);
+                                layer, z, &x_offset_sa, &y_offset_sa);
 
    uint32_t byte_offset;
    isl_tiling_get_intratile_offset_sa(isl_dev, info->surf.tiling,
@@ -1302,6 +1307,7 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
    info->view.levels = 1;
    info->view.base_array_layer = 0;
    info->view.array_len = 1;
+   info->z_offset = 0;
 }
 
 static void
@@ -1462,9 +1468,6 @@ blorp_blit(struct blorp_batch *batch,
    brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[1],
                                    src_y0, src_y1, dst_y0, dst_y1, mirror_y);
 
-   /* For some texture types, we need to pass the layer through the sampler. */
-   params.wm_inputs.src_z = params.src.z_offset;
-
    if (devinfo->gen > 6 &&
        params.dst.surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
       assert(params.dst.surf.samples > 1);
@@ -1619,6 +1622,9 @@ blorp_blit(struct blorp_batch *batch,
        */
       wm_prog_key.persample_msaa_dispatch = true;
    }
+
+   /* For some texture types, we need to pass the layer through the sampler. */
+   params.wm_inputs.src_z = params.src.z_offset;
 
    brw_blorp_get_blit_kernel(batch->blorp, &params, &wm_prog_key);
 
