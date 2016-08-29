@@ -497,7 +497,7 @@ lower_blend_equation_advanced(struct gl_linked_shader *sh)
     * which writes a subset of the components, starting at location_frac.
     * The variables can't overlap, thankfully.
     */
-   ir_variable *outputs[4];
+   ir_variable *outputs[4] = { NULL, NULL, NULL, NULL };
    foreach_in_list(ir_instruction, ir, sh->ir) {
       ir_variable *var = ir->as_variable();
       if (!var || var->data.mode != ir_var_shader_out)
