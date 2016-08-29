@@ -1251,4 +1251,24 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->OES_texture_buffer &&
       extensions->OES_texture_cube_map_array &&
       extensions->EXT_texture_sRGB_decode;
+
+   /* Same deal as for ARB_ES3_1_compatibility - this has to be computed
+    * before overall versions are selected. Also it's actually a subset of ES
+    * 3.2, since it doesn't require ASTC or advanced blending.
+    */
+   extensions->ARB_ES3_2_compatibility =
+      extensions->ARB_ES3_1_compatibility &&
+      extensions->KHR_robustness &&
+      extensions->ARB_copy_image &&
+      extensions->ARB_draw_buffers_blend &&
+      extensions->ARB_draw_elements_base_vertex &&
+      extensions->OES_geometry_shader &&
+      extensions->ARB_gpu_shader5 &&
+      extensions->ARB_sample_shading &&
+      extensions->ARB_tessellation_shader &&
+      extensions->ARB_texture_border_clamp &&
+      extensions->OES_texture_buffer &&
+      extensions->ARB_texture_cube_map_array &&
+      extensions->ARB_texture_stencil8 &&
+      extensions->ARB_texture_multisample;
 }
