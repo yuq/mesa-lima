@@ -102,7 +102,7 @@ softpipe_clear_render_target(struct pipe_context *pipe,
 {
    struct softpipe_context *softpipe = softpipe_context(pipe);
 
-   if (!softpipe_check_render_cond(softpipe))
+   if (render_condition_enabled && !softpipe_check_render_cond(softpipe))
       return;
 
    util_clear_render_target(pipe, dst, color,
@@ -122,7 +122,7 @@ softpipe_clear_depth_stencil(struct pipe_context *pipe,
 {
    struct softpipe_context *softpipe = softpipe_context(pipe);
 
-   if (!softpipe_check_render_cond(softpipe))
+   if (render_condition_enabled && !softpipe_check_render_cond(softpipe))
       return;
 
    util_clear_depth_stencil(pipe, dst, clear_flags,
