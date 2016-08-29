@@ -97,7 +97,10 @@ DERIVEDCLASS(vid_dec_PrivateType, omx_base_filter_PrivateType)
       struct { \
          unsigned temporal_id; \
          unsigned level_idc; \
+         bool IdrPicFlag; \
+         int slice_prev_poc; \
          void *ref_pic_set_list; \
+         void *rps; \
          struct pipe_h265_sps sps[16]; \
          struct pipe_h265_pps pps[64]; \
          struct list_head dpb_list; \

@@ -72,6 +72,20 @@ struct ref_pic_set {
   bool used[MAX_NUM_REF_PICS];
 };
 
+static bool is_idr_picture(unsigned nal_unit_type)
+{
+   return (nal_unit_type == NAL_UNIT_TYPE_IDR_W_RADL ||
+           nal_unit_type == NAL_UNIT_TYPE_IDR_N_LP);
+}
+
+/* broken link access picture */
+static bool is_bla_picture(unsigned nal_unit_type)
+{
+   return (nal_unit_type == NAL_UNIT_TYPE_BLA_W_LP ||
+           nal_unit_type == NAL_UNIT_TYPE_BLA_W_RADL ||
+           nal_unit_type == NAL_UNIT_TYPE_BLA_N_LP);
+}
+
 /* random access point picture */
 static bool is_rap_picture(unsigned nal_unit_type)
 {
@@ -83,6 +97,24 @@ static bool is_slice_picture(unsigned nal_unit_type)
 {
    return (nal_unit_type <= NAL_UNIT_TYPE_RASL_R ||
            is_rap_picture(nal_unit_type));
+}
+
+static void set_poc(vid_dec_PrivateType *priv,
+                    unsigned nal_unit_type, int i)
+{
+   priv->picture.h265.CurrPicOrderCntVal = i;
+
+   if (priv->codec_data.h265.temporal_id == 0 &&
+       (nal_unit_type == NAL_UNIT_TYPE_TRAIL_R ||
+        nal_unit_type == NAL_UNIT_TYPE_TSA_R ||
+        nal_unit_type == NAL_UNIT_TYPE_STSA_R ||
+        is_rap_picture(nal_unit_type)))
+      priv->codec_data.h265.slice_prev_poc = i;
+}
+
+static unsigned get_poc(vid_dec_PrivateType *priv)
+{
+   return priv->picture.h265.CurrPicOrderCntVal;
 }
 
 static void profile_tier(struct vl_rbsp *rbsp)
@@ -450,6 +482,7 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
       return;
 
    entry->buffer = priv->target;
+   entry->poc = get_poc(priv);
 
    LIST_ADDTAIL(&entry->list, &priv->codec_data.h265.dpb_list);
    ++priv->codec_data.h265.dpb_num;
@@ -462,6 +495,159 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
    priv->in_buffers[0]->pInputPortPrivate = vid_dec_h265_Flush(priv, NULL);
    priv->target = tmp;
    priv->frame_finished = priv->in_buffers[0]->pInputPortPrivate != NULL;
+}
+
+static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
+                         unsigned nal_unit_type)
+{
+   struct pipe_h265_pps *pps;
+   struct pipe_h265_sps *sps;
+   bool first_slice_segment_in_pic_flag;
+   bool dependent_slice_segment_flag = false;
+   struct ref_pic_set *rps = NULL;
+   unsigned poc_lsb, poc_msb, slice_prev_poc;
+   unsigned max_poc_lsb, prev_poc_lsb, prev_poc_msb;
+   unsigned num_st_rps;
+   int i;
+
+   if (priv->picture.h265.IDRPicFlag != is_idr_picture(nal_unit_type))
+      vid_dec_h265_EndFrame(priv);
+
+   priv->picture.h265.IDRPicFlag = is_idr_picture(nal_unit_type);
+
+   first_slice_segment_in_pic_flag = vl_rbsp_u(rbsp, 1);
+
+   if (is_rap_picture(nal_unit_type))
+      /* no_output_of_prior_pics_flag */
+      vl_rbsp_u(rbsp, 1);
+
+   pps = pic_parameter_set_id(priv, rbsp);
+   if (!pps)
+      return;
+
+   sps = pps->sps;
+   if (!sps)
+      return;
+
+   if (pps != priv->picture.h265.pps)
+      vid_dec_h265_EndFrame(priv);
+
+   priv->picture.h265.pps = pps;
+
+   if (priv->picture.h265.RAPPicFlag != is_rap_picture(nal_unit_type))
+      vid_dec_h265_EndFrame(priv);
+   priv->picture.h265.RAPPicFlag = is_rap_picture(nal_unit_type);
+
+   num_st_rps = sps->num_short_term_ref_pic_sets;
+
+   if (priv->picture.h265.CurrRpsIdx != num_st_rps)
+      vid_dec_h265_EndFrame(priv);
+   priv->picture.h265.CurrRpsIdx = num_st_rps;
+
+   if (!first_slice_segment_in_pic_flag) {
+      int size, num;
+      int bits_slice_segment_address = 0;
+
+      if (pps->dependent_slice_segments_enabled_flag)
+         dependent_slice_segment_flag = vl_rbsp_u(rbsp, 1);
+
+      size = 1 << (sps->log2_min_luma_coding_block_size_minus3 + 3 +
+                   sps->log2_diff_max_min_luma_coding_block_size);
+
+      num = ((sps->pic_width_in_luma_samples + size - 1) / size) *
+            ((sps->pic_height_in_luma_samples + size - 1) / size);
+
+      while (num > (1 << bits_slice_segment_address))
+         bits_slice_segment_address++;
+
+      /* slice_segment_address */
+      vl_rbsp_u(rbsp, bits_slice_segment_address);
+   }
+
+   if (dependent_slice_segment_flag)
+      return;
+
+   for (i = 0; i < pps->num_extra_slice_header_bits; ++i)
+      /* slice_reserved_flag */
+      vl_rbsp_u(rbsp, 1);
+
+   /* slice_type */
+   vl_rbsp_ue(rbsp);
+
+   if (pps->output_flag_present_flag)
+      /* pic output flag */
+      vl_rbsp_u(rbsp, 1);
+
+   if (sps->separate_colour_plane_flag)
+      /* colour_plane_id */
+      vl_rbsp_u(rbsp, 2);
+
+   if (is_idr_picture(nal_unit_type)) {
+      set_poc(priv, nal_unit_type, 0);
+      return;
+   }
+
+   /* slice_pic_order_cnt_lsb */
+   poc_lsb =
+      vl_rbsp_u(rbsp, sps->log2_max_pic_order_cnt_lsb_minus4 + 4);
+
+   slice_prev_poc = (int)priv->codec_data.h265.slice_prev_poc;
+   max_poc_lsb = 1 << (sps->log2_max_pic_order_cnt_lsb_minus4 + 4);
+
+   prev_poc_lsb = slice_prev_poc & (max_poc_lsb - 1);
+   prev_poc_msb = slice_prev_poc - prev_poc_lsb;
+
+   if ((poc_lsb < prev_poc_lsb) &&
+       ((prev_poc_lsb - poc_lsb ) >= (max_poc_lsb / 2)))
+      poc_msb = prev_poc_msb + max_poc_lsb;
+
+   else if ((poc_lsb > prev_poc_lsb ) &&
+            ((poc_lsb - prev_poc_lsb) > (max_poc_lsb / 2)))
+      poc_msb = prev_poc_msb - max_poc_lsb;
+
+   else
+      poc_msb = prev_poc_msb;
+
+   if (is_bla_picture(nal_unit_type))
+      poc_msb = 0;
+
+   if (get_poc(priv) != poc_msb + poc_lsb)
+      vid_dec_h265_EndFrame(priv);
+
+   set_poc(priv, nal_unit_type, (poc_msb + poc_lsb));
+
+   /* short_term_ref_pic_set_sps_flag */
+   if (!vl_rbsp_u(rbsp, 1)) {
+      rps = (struct ref_pic_set *)
+         priv->codec_data.h265.ref_pic_set_list + num_st_rps;
+      st_ref_pic_set();
+
+   } else if (num_st_rps > 1) {
+      int num_bits = 0;
+      unsigned idx;
+
+      while ((1 << num_bits) < num_st_rps)
+         num_bits++;
+
+      if (num_bits > 0)
+         /* short_term_ref_pic_set_idx */
+         idx = vl_rbsp_u(rbsp, num_bits);
+      else
+         idx = 0;
+
+      rps = (struct ref_pic_set *)
+         priv->codec_data.h265.ref_pic_set_list + idx;
+   }
+
+   if (is_bla_picture(nal_unit_type)) {
+      rps->num_neg_pics = 0;
+      rps->num_pos_pics = 0;
+      rps->num_pics = 0;
+   }
+
+   priv->codec_data.h265.rps = rps;
+
+   return;
 }
 
 static void vid_dec_h265_Decode(vid_dec_PrivateType *priv,
@@ -521,9 +707,34 @@ static void vid_dec_h265_Decode(vid_dec_PrivateType *priv,
       vl_rbsp_init(&rbsp, vlc, ~0);
       picture_parameter_set(priv, &rbsp);
 
-   }
+   } else if (is_slice_picture(nal_unit_type)) {
+      unsigned bits = vl_vlc_valid_bits(vlc);
+      unsigned bytes = bits / 8 + 5;
+      struct vl_rbsp rbsp;
+      uint8_t buf[9];
+      const void *ptr = buf;
+      unsigned i;
 
-   /* TODO */
+      buf[0] = 0x0;
+      buf[1] = 0x0;
+      buf[2] = 0x1;
+      buf[3] = nal_unit_type << 1 | nuh_layer_id >> 5;
+      buf[4] = nuh_layer_id << 3 | nuh_temporal_id_plus1;
+      for (i = 5; i < bytes; ++i)
+         buf[i] = vl_vlc_peekbits(vlc, bits) >> ((bytes - i - 1) * 8);
+
+      priv->bytes_left = (vl_vlc_bits_left(vlc) - bits) / 8;
+      priv->slice = vlc->data;
+
+      vl_rbsp_init(&rbsp, vlc, 128);
+      slice_header(priv, &rbsp, nal_unit_type);
+
+      vid_dec_h265_BeginFrame(priv);
+
+      priv->codec->decode_bitstream(priv->codec, priv->target,
+                                    &priv->picture.base, 1,
+                                    &ptr, &bytes);
+   }
 
    /* resync to byte boundary */
    vl_vlc_eatbits(vlc, vl_vlc_valid_bits(vlc) % 8);
