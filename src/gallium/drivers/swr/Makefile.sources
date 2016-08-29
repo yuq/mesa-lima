@@ -45,6 +45,11 @@ CXX_SOURCES := \
 	swr_query.h \
 	swr_query.cpp
 
+ARCHRAST_CXX_SOURCES := \
+	rasterizer/archrast/archrast.cpp \
+	rasterizer/archrast/archrast.h \
+	rasterizer/archrast/eventmanager.h
+
 COMMON_CXX_SOURCES := \
 	rasterizer/common/formats.cpp \
 	rasterizer/common/formats.h \

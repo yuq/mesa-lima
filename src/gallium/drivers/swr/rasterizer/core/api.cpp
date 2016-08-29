@@ -46,6 +46,8 @@
 #include "common/simdintrin.h"
 #include "common/os.h"
 
+#include "archrast/archrast.h"
+
 static const SWR_RECT g_MaxScissorRect = { 0, 0, KNOB_MAX_SCISSOR_X, KNOB_MAX_SCISSOR_Y };
 
 void SetupDefaultState(SWR_CONTEXT *pContext);
@@ -107,6 +109,10 @@ HANDLE SwrCreateContext(
     pContext->ppScratch = new uint8_t*[pContext->NumWorkerThreads];
     pContext->pStats = new SWR_STATS[pContext->NumWorkerThreads];
 
+    // Setup ArchRast thread contexts which includes +1 for API thread.
+    pContext->pArContext = new HANDLE[pContext->NumWorkerThreads+1];
+    pContext->pArContext[pContext->NumWorkerThreads] = ArchRast::CreateThreadContext();
+
     // Allocate scratch space for workers.
     ///@note We could lazily allocate this but its rather small amount of memory.
     for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
@@ -121,6 +127,9 @@ HANDLE SwrCreateContext(
 #else
         pContext->ppScratch[i] = (uint8_t*)AlignedMalloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
 #endif
+
+        // Initialize worker thread context for ArchRast.
+        pContext->pArContext[i] = ArchRast::CreateThreadContext();
     }
 
     // State setup AFTER context is fully initialized
@@ -176,9 +185,12 @@ void SwrDestroyContext(HANDLE hContext)
 #else
         AlignedFree(pContext->ppScratch[i]);
 #endif
+
+        ArchRast::DestroyThreadContext(pContext->pArContext[i]);
     }
 
     delete [] pContext->ppScratch;
+    delete [] pContext->pArContext;
     delete [] pContext->pStats;
 
     delete(pContext->pHotTileMgr);
@@ -1194,6 +1206,9 @@ void DrawIndexedInstance(
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
     API_STATE* pState = &pDC->pState->state;
 
+    AR_BEGIN(AR_API_CTX, APIDrawIndexed, pDC->drawId);
+    AR_EVENT(AR_API_CTX, DrawIndexedInstance(topology, numIndices, indexOffset, baseVertex, numInstances, startInstance));
+
     uint32_t maxIndicesPerDraw = MaxVertsPerDraw(pDC, numIndices, topology);
     uint32_t primsPerDraw = GetNumPrims(topology, maxIndicesPerDraw);
     uint32_t remainingIndices = numIndices;
@@ -1265,6 +1280,7 @@ void DrawIndexedInstance(
     pDC = GetDrawContext(pContext);
     pDC->pState->state.rastState.cullMode = oldCullMode;
 
+    AR_END(AR_API_CTX, APIDrawIndexed, numIndices * numInstances);
     RDTSC_STOP(APIDrawIndexed, numIndices * numInstances, 0);
 }
 

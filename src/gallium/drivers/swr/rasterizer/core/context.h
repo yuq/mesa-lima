@@ -506,7 +506,24 @@ struct SWR_CONTEXT
     uint32_t lastFrameChecked;
     uint64_t lastDrawChecked;
     TileSet singleThreadLockedTiles;
+
+    // ArchRast thread contexts.
+    HANDLE* pArContext;
 };
 
 #define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.pStats[workerId].name += count; }
 #define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.statsFE.name += count; }
+
+// ArchRast instrumentation framework
+#ifdef KNOB_ENABLE_AR
+#define AR_WORKER_CTX  pDC->pContext->pArContext[workerId]
+#define AR_API_CTX     pDC->pContext->pArContext[pContext->NumWorkerThreads]
+
+#define AR_BEGIN(ctx, type, id)    ArchRast::dispatch(ctx, ArchRast::Start(ArchRast::type, id))
+#define AR_END(ctx, type, count)   ArchRast::dispatch(ctx, ArchRast::End(ArchRast::type, count))
+#define AR_EVENT(ctx, event)       ArchRast::dispatch(ctx, ArchRast::event)
+#else
+#define AR_BEGIN(ctx, type, id)
+#define AR_END(ctx, type, id)
+#define AR_EVENT(ctx, event)
+#endif
