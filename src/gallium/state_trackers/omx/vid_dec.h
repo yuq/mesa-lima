@@ -61,6 +61,9 @@
 #define OMX_VID_DEC_AVC_NAME "OMX.mesa.video_decoder.avc"
 #define OMX_VID_DEC_AVC_ROLE "video_decoder.avc"
 
+#define OMX_VID_DEC_HEVC_NAME "OMX.mesa.video_decoder.hevc"
+#define OMX_VID_DEC_HEVC_ROLE "video_decoder.hevc"
+
 #define OMX_VID_DEC_TIMESTAMP_INVALID ((OMX_TICKS) -1)
 
 struct vl_vlc;

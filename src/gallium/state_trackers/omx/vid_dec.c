@@ -69,7 +69,7 @@ OMX_ERRORTYPE vid_dec_LoaderComponent(stLoaderComponentType *comp)
    comp->componentVersion.s.nVersionMinor = 0;
    comp->componentVersion.s.nRevision = 0;
    comp->componentVersion.s.nStep = 1;
-   comp->name_specific_length = 2;
+   comp->name_specific_length = 3;
 
    comp->name = CALLOC(1, OMX_MAX_STRINGNAME_SIZE);
    if (comp->name == NULL)
@@ -91,6 +91,10 @@ OMX_ERRORTYPE vid_dec_LoaderComponent(stLoaderComponentType *comp)
    if (comp->name_specific[1] == NULL)
       goto error_specific;
 
+   comp->name_specific[2] = CALLOC(1, OMX_MAX_STRINGNAME_SIZE);
+   if (comp->name_specific[2] == NULL)
+      goto error_specific;
+
    comp->role_specific[0] = CALLOC(1, OMX_MAX_STRINGNAME_SIZE);
    if (comp->role_specific[0] == NULL)
       goto error_specific;
@@ -99,20 +103,28 @@ OMX_ERRORTYPE vid_dec_LoaderComponent(stLoaderComponentType *comp)
    if (comp->role_specific[1] == NULL)
       goto error_specific;
 
+   comp->role_specific[2] = CALLOC(1, OMX_MAX_STRINGNAME_SIZE);
+   if (comp->role_specific[2] == NULL)
+      goto error_specific;
+
    strcpy(comp->name, OMX_VID_DEC_BASE_NAME);
    strcpy(comp->name_specific[0], OMX_VID_DEC_MPEG2_NAME);
    strcpy(comp->name_specific[1], OMX_VID_DEC_AVC_NAME);
+   strcpy(comp->name_specific[2], OMX_VID_DEC_HEVC_NAME);
 
    strcpy(comp->role_specific[0], OMX_VID_DEC_MPEG2_ROLE);
    strcpy(comp->role_specific[1], OMX_VID_DEC_AVC_ROLE);
+   strcpy(comp->role_specific[2], OMX_VID_DEC_HEVC_ROLE);
 
    comp->constructor = vid_dec_Constructor;
 
    return OMX_ErrorNone;
 
 error_specific:
+   FREE(comp->role_specific[2]);
    FREE(comp->role_specific[1]);
    FREE(comp->role_specific[0]);
+   FREE(comp->name_specific[2]);
    FREE(comp->name_specific[1]);
    FREE(comp->name_specific[0]);
 
@@ -150,6 +162,9 @@ static OMX_ERRORTYPE vid_dec_Constructor(OMX_COMPONENTTYPE *comp, OMX_STRING nam
 
    if (!strcmp(name, OMX_VID_DEC_AVC_NAME))
       priv->profile = PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH;
+
+   if (!strcmp(name, OMX_VID_DEC_HEVC_NAME))
+      priv->profile = PIPE_VIDEO_PROFILE_HEVC_MAIN;
 
    priv->BufferMgmtCallback = vid_dec_FrameDecoded;
    priv->messageHandler = vid_dec_MessageHandler;
@@ -290,6 +305,8 @@ static OMX_ERRORTYPE vid_dec_SetParameter(OMX_HANDLETYPE handle, OMX_INDEXTYPE i
          priv->profile = PIPE_VIDEO_PROFILE_MPEG2_MAIN;
       } else if (!strcmp((char *)role->cRole, OMX_VID_DEC_AVC_ROLE)) {
          priv->profile = PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH;
+      } else if (!strcmp((char *)role->cRole, OMX_VID_DEC_HEVC_ROLE)) {
+         priv->profile = PIPE_VIDEO_PROFILE_HEVC_MAIN;
       } else {
          return OMX_ErrorBadParameter;
       }
@@ -338,6 +355,8 @@ static OMX_ERRORTYPE vid_dec_GetParameter(OMX_HANDLETYPE handle, OMX_INDEXTYPE i
          strcpy((char *)role->cRole, OMX_VID_DEC_MPEG2_ROLE);
       else if (priv->profile == PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH)
          strcpy((char *)role->cRole, OMX_VID_DEC_AVC_ROLE);
+      else if (priv->profile == PIPE_VIDEO_PROFILE_HEVC_MAIN)
+         strcpy((char *)role->cRole, OMX_VID_DEC_HEVC_ROLE);
 
       break;
    }
@@ -383,6 +402,8 @@ static OMX_ERRORTYPE vid_dec_MessageHandler(OMX_COMPONENTTYPE* comp, internalReq
             vid_dec_mpeg12_Init(priv);
          else if (priv->profile == PIPE_VIDEO_PROFILE_MPEG4_AVC_HIGH)
             vid_dec_h264_Init(priv);
+         else if (priv->profile == PIPE_VIDEO_PROFILE_HEVC_MAIN)
+            vid_dec_h265_Init(priv);
 
       } else if ((msg->messageParam == OMX_StateLoaded) && (priv->state == OMX_StateIdle)) {
          if (priv->shadow) {
