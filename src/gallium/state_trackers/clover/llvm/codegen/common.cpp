@@ -81,11 +81,10 @@ namespace {
 
          // OpenCL 1.2 specification, Ch. 6.1.5: "A built-in data
          // type that is not a power of two bytes in size must be
-         // aligned to the next larger power of two".  We need this
-         // alignment for three element vectors, which have
-         // non-power-of-2 store size.
+         // aligned to the next larger power of two.
+         // This rule applies to built-in types only, not structs or unions."
          const unsigned arg_store_size = dl.getTypeStoreSize(arg_type);
-         const unsigned arg_api_size = util_next_power_of_two(arg_store_size);
+         const unsigned arg_api_size = dl.getTypeAllocSize(arg_type);
 
          const auto target_type = !arg_type->isIntegerTy() ? arg_type :
             dl.getSmallestLegalIntType(mod.getContext(), arg_store_size * 8);
