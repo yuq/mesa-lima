@@ -479,3 +479,190 @@ void anv_CmdBlitImage(
 
    blorp_batch_finish(&batch);
 }
+
+static void
+do_buffer_copy(struct blorp_batch *batch,
+               struct anv_bo *src, uint64_t src_offset,
+               struct anv_bo *dst, uint64_t dst_offset,
+               int width, int height, int block_size)
+{
+   struct anv_device *device = batch->blorp->driver_ctx;
+
+   /* The actual format we pick doesn't matter as blorp will throw it away.
+    * The only thing that actually matters is the size.
+    */
+   enum isl_format format;
+   switch (block_size) {
+   case 1:  format = ISL_FORMAT_R8_UINT;              break;
+   case 2:  format = ISL_FORMAT_R8G8_UINT;            break;
+   case 4:  format = ISL_FORMAT_R8G8B8A8_UNORM;       break;
+   case 8:  format = ISL_FORMAT_R16G16B16A16_UNORM;   break;
+   case 16: format = ISL_FORMAT_R32G32B32A32_UINT;    break;
+   default:
+      unreachable("Not a power-of-two format size");
+   }
+
+   struct isl_surf surf;
+   isl_surf_init(&device->isl_dev, &surf,
+                 .dim = ISL_SURF_DIM_2D,
+                 .format = format,
+                 .width = width,
+                 .height = height,
+                 .depth = 1,
+                 .levels = 1,
+                 .array_len = 1,
+                 .samples = 1,
+                 .usage = ISL_SURF_USAGE_TEXTURE_BIT |
+                          ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                 .tiling_flags = ISL_TILING_LINEAR_BIT);
+   assert(surf.row_pitch == width * block_size);
+
+   struct blorp_surf src_blorp_surf = {
+      .surf = &surf,
+      .addr = {
+         .buffer = src,
+         .offset = src_offset,
+      },
+   };
+
+   struct blorp_surf dst_blorp_surf = {
+      .surf = &surf,
+      .addr = {
+         .buffer = dst,
+         .offset = dst_offset,
+      },
+   };
+
+   blorp_copy(batch, &src_blorp_surf, 0, 0, &dst_blorp_surf, 0, 0,
+              0, 0, 0, 0, width, height);
+}
+
+/* This is maximum possible width/height our HW can handle */
+#define MAX_SURFACE_DIM (1ull << 14)
+
+void anv_CmdCopyBuffer(
+    VkCommandBuffer                             commandBuffer,
+    VkBuffer                                    srcBuffer,
+    VkBuffer                                    dstBuffer,
+    uint32_t                                    regionCount,
+    const VkBufferCopy*                         pRegions)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_buffer, src_buffer, srcBuffer);
+   ANV_FROM_HANDLE(anv_buffer, dst_buffer, dstBuffer);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   for (unsigned r = 0; r < regionCount; r++) {
+      uint64_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
+      uint64_t dst_offset = dst_buffer->offset + pRegions[r].dstOffset;
+      uint64_t copy_size = pRegions[r].size;
+
+      /* First, we compute the biggest format that can be used with the
+       * given offsets and size.
+       */
+      int bs = 16;
+
+      int fs = ffs(src_offset) - 1;
+      if (fs != -1)
+         bs = MIN2(bs, 1 << fs);
+      assert(src_offset % bs == 0);
+
+      fs = ffs(dst_offset) - 1;
+      if (fs != -1)
+         bs = MIN2(bs, 1 << fs);
+      assert(dst_offset % bs == 0);
+
+      fs = ffs(pRegions[r].size) - 1;
+      if (fs != -1)
+         bs = MIN2(bs, 1 << fs);
+      assert(pRegions[r].size % bs == 0);
+
+      /* First, we make a bunch of max-sized copies */
+      uint64_t max_copy_size = MAX_SURFACE_DIM * MAX_SURFACE_DIM * bs;
+      while (copy_size >= max_copy_size) {
+         do_buffer_copy(&batch, src_buffer->bo, src_offset,
+                        dst_buffer->bo, dst_offset,
+                        MAX_SURFACE_DIM, MAX_SURFACE_DIM, bs);
+         copy_size -= max_copy_size;
+         src_offset += max_copy_size;
+         dst_offset += max_copy_size;
+      }
+
+      /* Now make a max-width copy */
+      uint64_t height = copy_size / (MAX_SURFACE_DIM * bs);
+      assert(height < MAX_SURFACE_DIM);
+      if (height != 0) {
+         uint64_t rect_copy_size = height * MAX_SURFACE_DIM * bs;
+         do_buffer_copy(&batch, src_buffer->bo, src_offset,
+                        dst_buffer->bo, dst_offset,
+                        MAX_SURFACE_DIM, height, bs);
+         copy_size -= rect_copy_size;
+         src_offset += rect_copy_size;
+         dst_offset += rect_copy_size;
+      }
+
+      /* Finally, make a small copy to finish it off */
+      if (copy_size != 0) {
+         do_buffer_copy(&batch, src_buffer->bo, src_offset,
+                        dst_buffer->bo, dst_offset,
+                        copy_size / bs, 1, bs);
+      }
+   }
+
+   blorp_batch_finish(&batch);
+}
+
+void anv_CmdUpdateBuffer(
+    VkCommandBuffer                             commandBuffer,
+    VkBuffer                                    dstBuffer,
+    VkDeviceSize                                dstOffset,
+    VkDeviceSize                                dataSize,
+    const uint32_t*                             pData)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_buffer, dst_buffer, dstBuffer);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   /* We can't quite grab a full block because the state stream needs a
+    * little data at the top to build its linked list.
+    */
+   const uint32_t max_update_size =
+      cmd_buffer->device->dynamic_state_block_pool.block_size - 64;
+
+   assert(max_update_size < MAX_SURFACE_DIM * 4);
+
+   while (dataSize) {
+      const uint32_t copy_size = MIN2(dataSize, max_update_size);
+
+      struct anv_state tmp_data =
+         anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, copy_size, 64);
+
+      memcpy(tmp_data.map, pData, copy_size);
+
+      int bs;
+      if ((copy_size & 15) == 0 && (dstOffset & 15) == 0) {
+         bs = 16;
+      } else if ((copy_size & 7) == 0 && (dstOffset & 7) == 0) {
+         bs = 8;
+      } else {
+         assert((copy_size & 3) == 0 && (dstOffset & 3) == 0);
+         bs = 4;
+      }
+
+      do_buffer_copy(&batch,
+                     &cmd_buffer->device->dynamic_state_block_pool.bo,
+                     tmp_data.offset,
+                     dst_buffer->bo, dst_buffer->offset + dstOffset,
+                     copy_size / bs, 1, bs);
+
+      dataSize -= copy_size;
+      dstOffset += copy_size;
+      pData = (void *)pData + copy_size;
+   }
+
+   blorp_batch_finish(&batch);
+}
