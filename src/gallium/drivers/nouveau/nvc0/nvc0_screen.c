@@ -781,7 +781,7 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    ret = nouveau_bo_new(dev, flags, 0, 4096, NULL, &screen->fence.bo);
    if (ret)
-      goto fail;
+      FAIL_SCREEN_INIT("Error allocating fence BO: %d\n", ret);
    nouveau_bo_map(screen->fence.bo, 0, NULL);
    screen->fence.map = screen->fence.bo->map;
    screen->base.fence.emit = nvc0_screen_fence_emit;
@@ -956,7 +956,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 20, NULL,
                         &screen->text);
    if (ret)
-      goto fail;
+      FAIL_SCREEN_INIT("Error allocating TEXT area: %d\n", ret);
 
    /* XXX: getting a page fault at the end of the code buffer every few
     *  launches, don't use the last 256 bytes to work around them - prefetch ?
@@ -966,7 +966,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 12, 7 << 16, NULL,
                         &screen->uniform_bo);
    if (ret)
-      goto fail;
+      FAIL_SCREEN_INIT("Error allocating uniform BO: %d\n", ret);
 
    PUSH_REFN (push, screen->uniform_bo, NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_WR);
 
@@ -1030,10 +1030,8 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    if (screen->base.drm->version >= 0x01000101) {
       ret = nouveau_getparam(dev, NOUVEAU_GETPARAM_GRAPH_UNITS, &value);
-      if (ret) {
-         NOUVEAU_ERR("NOUVEAU_GETPARAM_GRAPH_UNITS failed.\n");
-         goto fail;
-      }
+      if (ret)
+         FAIL_SCREEN_INIT("NOUVEAU_GETPARAM_GRAPH_UNITS failed: %d\n", ret);
    } else {
       if (dev->chipset >= 0xe0 && dev->chipset < 0xf0)
          value = (8 << 8) | 4;
@@ -1067,7 +1065,7 @@ nvc0_screen_create(struct nouveau_device *dev)
       ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 20, NULL,
                            &screen->poly_cache);
       if (ret)
-         goto fail;
+         FAIL_SCREEN_INIT("Error allocating poly cache BO: %d\n", ret);
 
       BEGIN_NVC0(push, NVC0_3D(VERTEX_QUARANTINE_ADDRESS_HIGH), 3);
       PUSH_DATAh(push, screen->poly_cache->offset);
@@ -1078,7 +1076,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    ret = nouveau_bo_new(dev, NV_VRAM_DOMAIN(&screen->base), 1 << 17, 1 << 17, NULL,
                         &screen->txc);
    if (ret)
-      goto fail;
+      FAIL_SCREEN_INIT("Error allocating txc BO: %d\n", ret);
 
    BEGIN_NVC0(push, NVC0_3D(TIC_ADDRESS_HIGH), 3);
    PUSH_DATAh(push, screen->txc->offset);
