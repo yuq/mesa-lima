@@ -49,6 +49,8 @@ struct brw_blorp_blit_vars {
    nir_variable *v_rect_grid;
    nir_variable *v_coord_transform;
    nir_variable *v_src_z;
+   nir_variable *v_src_offset;
+   nir_variable *v_dst_offset;
 
    /* gl_FragCoord */
    nir_variable *frag_coord;
@@ -69,12 +71,16 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
                                      type, #name); \
    v->v_##name->data.interpolation = INTERP_MODE_FLAT; \
    v->v_##name->data.location = VARYING_SLOT_VAR0 + \
-      offsetof(struct brw_blorp_wm_inputs, name) / (4 * sizeof(float));
+      offsetof(struct brw_blorp_wm_inputs, name) / (4 * sizeof(float)); \
+   v->v_##name->data.location_frac = \
+      (offsetof(struct brw_blorp_wm_inputs, name) / sizeof(float)) % 4;
 
    LOAD_INPUT(discard_rect, glsl_vec4_type())
    LOAD_INPUT(rect_grid, glsl_vec4_type())
    LOAD_INPUT(coord_transform, glsl_vec4_type())
    LOAD_INPUT(src_z, glsl_uint_type())
+   LOAD_INPUT(src_offset, glsl_vector_type(GLSL_TYPE_UINT, 2))
+   LOAD_INPUT(dst_offset, glsl_vector_type(GLSL_TYPE_UINT, 2))
 
 #undef LOAD_INPUT
 
@@ -94,6 +100,17 @@ blorp_blit_get_frag_coords(nir_builder *b,
                            struct brw_blorp_blit_vars *v)
 {
    nir_ssa_def *coord = nir_f2i(b, nir_load_var(b, v->frag_coord));
+
+   /* Account for destination surface intratile offset
+    *
+    * Transformation parameters giving translation from destination to source
+    * coordinates don't take into account possible intra-tile destination
+    * offset.  Therefore it has to be first subtracted from the incoming
+    * coordinates.  Vertices are set up based on coordinates containing the
+    * intra-tile offset.
+    */
+   if (key->need_dst_offset)
+      coord = nir_isub(b, coord, nir_load_var(b, v->v_dst_offset));
 
    if (key->persample_msaa_dispatch) {
       return nir_vec3(b, nir_channel(b, coord, 0), nir_channel(b, coord, 1),
@@ -1160,6 +1177,9 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp,
                                             key->tex_layout);
          }
 
+         if (key->need_src_offset)
+            src_pos = nir_iadd(&b, src_pos, nir_load_var(&b, v.v_src_offset));
+
          /* Now (X, Y, S) = decode_msaa(tex_samples, detile(tex_tiling, offset)).
           *
           * In other words: X, Y, and S now contain values which, when passed to
@@ -1247,6 +1267,23 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
    }
 }
 
+static inline void
+surf_get_intratile_offset_px(struct brw_blorp_surface_info *info,
+                             uint32_t *tile_x_px, uint32_t *tile_y_px)
+{
+   if (info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
+      struct isl_extent2d px_size_sa =
+         isl_get_interleaved_msaa_px_size_sa(info->surf.samples);
+      assert(info->tile_x_sa % px_size_sa.width == 0);
+      assert(info->tile_y_sa % px_size_sa.height == 0);
+      *tile_x_px = info->tile_x_sa / px_size_sa.width;
+      *tile_y_px = info->tile_y_sa / px_size_sa.height;
+   } else {
+      *tile_x_px = info->tile_x_sa;
+      *tile_y_px = info->tile_y_sa;
+   }
+}
+
 static void
 surf_convert_to_single_slice(const struct isl_device *isl_dev,
                              struct brw_blorp_surface_info *info)
@@ -1280,6 +1317,14 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
                                       &info->tile_x_sa, &info->tile_y_sa);
    info->addr.offset += byte_offset;
 
+   const uint32_t slice_width_px =
+      minify(info->surf.logical_level0_px.width, info->view.base_level);
+   const uint32_t slice_height_px =
+      minify(info->surf.logical_level0_px.height, info->view.base_level);
+
+   uint32_t tile_x_px, tile_y_px;
+   surf_get_intratile_offset_px(info, &tile_x_px, &tile_y_px);
+
    /* TODO: Once this file gets converted to C, we shouls just use designated
     * initializers.
     */
@@ -1287,10 +1332,8 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
 
    init_info.dim = ISL_SURF_DIM_2D;
    init_info.format = info->surf.format;
-   init_info.width =
-      minify(info->surf.logical_level0_px.width, info->view.base_level);
-   init_info.height =
-      minify(info->surf.logical_level0_px.height, info->view.base_level);
+   init_info.width = slice_width_px + tile_x_px;
+   init_info.height = slice_height_px + tile_y_px;
    init_info.depth = 1;
    init_info.levels = 1;
    init_info.array_len = 1;
@@ -1492,6 +1535,7 @@ blorp_blit(struct blorp_batch *batch,
       surf_fake_interleaved_msaa(batch->blorp->isl_dev, &params.dst);
 
       wm_prog_key.use_kill = true;
+      wm_prog_key.need_dst_offset = true;
    }
 
    if (params.dst.surf.tiling == ISL_TILING_W) {
@@ -1552,6 +1596,7 @@ blorp_blit(struct blorp_batch *batch,
 
       wm_prog_key.dst_tiled_w = true;
       wm_prog_key.use_kill = true;
+      wm_prog_key.need_dst_offset = true;
 
       if (params.dst.surf.samples > 1) {
          /* If the destination surface is a W-tiled multisampled stencil
@@ -1576,6 +1621,7 @@ blorp_blit(struct blorp_batch *batch,
       surf_retile_w_to_y(batch->blorp->isl_dev, &params.src);
 
       wm_prog_key.src_tiled_w = true;
+      wm_prog_key.need_src_offset = true;
    }
 
    /* tex_samples and rt_samples are the sample counts that are set up in
@@ -1597,6 +1643,24 @@ blorp_blit(struct blorp_batch *batch,
        * per pixel.
        */
       wm_prog_key.persample_msaa_dispatch = true;
+   }
+
+   if (params.src.tile_x_sa || params.src.tile_y_sa) {
+      assert(wm_prog_key.need_src_offset);
+      surf_get_intratile_offset_px(&params.src,
+                                   &params.wm_inputs.src_offset.x,
+                                   &params.wm_inputs.src_offset.y);
+   }
+
+   if (params.dst.tile_x_sa || params.dst.tile_y_sa) {
+      assert(wm_prog_key.need_dst_offset);
+      surf_get_intratile_offset_px(&params.dst,
+                                   &params.wm_inputs.dst_offset.x,
+                                   &params.wm_inputs.dst_offset.y);
+      params.x0 += params.wm_inputs.dst_offset.x;
+      params.y0 += params.wm_inputs.dst_offset.y;
+      params.x1 += params.wm_inputs.dst_offset.x;
+      params.y1 += params.wm_inputs.dst_offset.y;
    }
 
    /* For some texture types, we need to pass the layer through the sampler. */

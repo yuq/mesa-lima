@@ -926,9 +926,7 @@ blorp_emit_surface_state(struct blorp_batch *batch,
    isl_surf_fill_state(batch->blorp->isl_dev, state,
                        .surf = &surf, .view = &surface->view,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
-                       .mocs = mocs, .clear_color = surface->clear_color,
-                       .x_offset_sa = surface->tile_x_sa,
-                       .y_offset_sa = surface->tile_y_sa);
+                       .mocs = mocs, .clear_color = surface->clear_color);
 
    blorp_surface_reloc(batch, state_offset + ss_info.reloc_dw * 4,
                        surface->addr, 0);
