@@ -193,9 +193,110 @@ static void scaling_list_data(void)
    assert(0);
 }
 
-static void st_ref_pic_set(void)
+static void st_ref_pic_set(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
+                           struct ref_pic_set *rps, struct pipe_h265_sps *sps,
+                           unsigned idx)
 {
-   /* TODO */
+   bool inter_rps_pred_flag;
+   unsigned delta_idx_minus1;
+   int delta_poc;
+   int i;
+
+   inter_rps_pred_flag = (idx != 0) ? (vl_rbsp_u(rbsp, 1)) : false;
+
+   if (inter_rps_pred_flag) {
+      struct ref_pic_set *ref_rps;
+      unsigned sign, abs;
+      int delta_rps;
+      bool used;
+      int j;
+
+      if (idx == sps->num_short_term_ref_pic_sets)
+         delta_idx_minus1 = vl_rbsp_ue(rbsp);
+      else
+         delta_idx_minus1 = 0;
+
+      ref_rps = (struct ref_pic_set *)
+         priv->codec_data.h265.ref_pic_set_list + idx - (delta_idx_minus1 + 1);
+
+      /* delta_rps_sign */
+      sign = vl_rbsp_u(rbsp, 1);
+      /* abs_delta_rps_minus1 */
+      abs = vl_rbsp_ue(rbsp);
+      delta_rps = (1 - 2 * sign) * (abs + 1);
+
+      rps->num_neg_pics = 0;
+      rps->num_pos_pics = 0;
+      rps->num_pics = 0;
+
+      for(i = 0 ; i <= ref_rps->num_pics; ++i) {
+         /* used_by_curr_pic_flag */
+         if (!vl_rbsp_u(rbsp, 1))
+            /* use_delta_flag */
+            vl_rbsp_u(rbsp, 1);
+         else {
+            delta_poc = delta_rps +
+               ((i < ref_rps->num_pics)? ref_rps->delta_poc[i] : 0);
+            rps->delta_poc[rps->num_pics] = delta_poc;
+            rps->used[rps->num_pics] = true;
+            if (delta_poc < 0)
+               rps->num_neg_pics++;
+            else
+               rps->num_pos_pics++;
+            rps->num_pics++;
+         }
+      }
+
+      rps->num_delta_poc = ref_rps->num_pics;
+
+      /* sort delta poc */
+      for (i = 1; i < rps->num_pics; ++i) {
+         delta_poc = rps->delta_poc[i];
+         used = rps->used[i];
+         for (j = i - 1; j >= 0; j--) {
+            if (delta_poc < rps->delta_poc[j]) {
+               rps->delta_poc[j + 1] = rps->delta_poc[j];
+               rps->used[j + 1] = rps->used[j];
+               rps->delta_poc[j] = delta_poc;
+               rps->used[j] = used;
+            }
+         }
+      }
+
+      for (i = 0 , j = rps->num_neg_pics - 1;
+           i < rps->num_neg_pics >> 1; i++, j--) {
+         delta_poc = rps->delta_poc[i];
+         used = rps->used[i];
+         rps->delta_poc[i] = rps->delta_poc[j];
+         rps->used[i] = rps->used[j];
+         rps->delta_poc[j] = delta_poc;
+         rps->used[j] = used;
+      }
+   } else {
+      /* num_negative_pics */
+      rps->num_neg_pics = vl_rbsp_ue(rbsp);
+      /* num_positive_pics */
+      rps->num_pos_pics = vl_rbsp_ue(rbsp);
+      rps->num_pics = rps->num_neg_pics + rps->num_pos_pics;
+
+      delta_poc = 0;
+      for(i = 0 ; i < rps->num_neg_pics; ++i) {
+         /* delta_poc_s0_minus1 */
+         delta_poc -= (vl_rbsp_ue(rbsp) + 1);
+         rps->delta_poc[i] = delta_poc;
+         /* used_by_curr_pic_s0_flag */
+         rps->used[i] = vl_rbsp_u(rbsp, 1);
+      }
+
+      delta_poc = 0;
+      for(i = rps->num_neg_pics; i < rps->num_pics; ++i) {
+         /* delta_poc_s1_minus1 */
+         delta_poc += (vl_rbsp_ue(rbsp) + 1);
+         rps->delta_poc[i] = delta_poc;
+         /* used_by_curr_pic_s1_flag */
+         rps->used[i] = vl_rbsp_u(rbsp, 1);
+      }
+   }
 }
 
 static struct pipe_h265_sps *seq_parameter_set_id(vid_dec_PrivateType *priv,
@@ -301,7 +402,7 @@ static void seq_parameter_set(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp)
 
       rps = (struct ref_pic_set *)
          priv->codec_data.h265.ref_pic_set_list + i;
-      st_ref_pic_set();
+      st_ref_pic_set(priv, rbsp, rps, sps, i);
    }
 
    sps->long_term_ref_pics_present_flag = vl_rbsp_u(rbsp, 1);
@@ -495,6 +596,9 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
    priv->in_buffers[0]->pInputPortPrivate = vid_dec_h265_Flush(priv, NULL);
    priv->target = tmp;
    priv->frame_finished = priv->in_buffers[0]->pInputPortPrivate != NULL;
+   if (priv->frame_finished &&
+       (priv->in_buffers[0]->nFlags & OMX_BUFFERFLAG_EOS))
+      FREE(priv->codec_data.h265.ref_pic_set_list);
 }
 
 static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
@@ -620,7 +724,7 @@ static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
    if (!vl_rbsp_u(rbsp, 1)) {
       rps = (struct ref_pic_set *)
          priv->codec_data.h265.ref_pic_set_list + num_st_rps;
-      st_ref_pic_set();
+      st_ref_pic_set(priv, rbsp, rps, sps, num_st_rps);
 
    } else if (num_st_rps > 1) {
       int num_bits = 0;
@@ -745,6 +849,8 @@ void vid_dec_h265_Init(vid_dec_PrivateType *priv)
    priv->picture.base.profile = PIPE_VIDEO_PROFILE_HEVC_MAIN;
 
    LIST_INITHEAD(&priv->codec_data.h265.dpb_list);
+   priv->codec_data.h265.ref_pic_set_list = (struct ref_pic_set *)
+      CALLOC(MAX_NUM_REF_PICS, sizeof(struct ref_pic_set));
 
    priv->Decode = vid_dec_h265_Decode;
    priv->EndFrame = vid_dec_h265_EndFrame;
