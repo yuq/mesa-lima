@@ -146,14 +146,8 @@ anv_device_init_meta(struct anv_device *device)
    if (result != VK_SUCCESS)
       goto fail_resolve;
 
-   result = anv_device_init_meta_blit2d_state(device);
-   if (result != VK_SUCCESS)
-      goto fail_blit2d;
-
    return VK_SUCCESS;
 
-fail_blit2d:
-   anv_device_finish_meta_resolve_state(device);
 fail_resolve:
    anv_device_finish_meta_clear_state(device);
 fail_clear:
@@ -165,5 +159,4 @@ anv_device_finish_meta(struct anv_device *device)
 {
    anv_device_finish_meta_resolve_state(device);
    anv_device_finish_meta_clear_state(device);
-   anv_device_finish_meta_blit2d_state(device);
 }
