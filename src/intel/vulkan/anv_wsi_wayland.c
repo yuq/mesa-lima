@@ -116,7 +116,7 @@ wl_drm_format_for_vk_format(VkFormat vk_format, bool alpha)
 #endif
 
    default:
-      assert("!Unsupported Vulkan format");
+      assert(!"Unsupported Vulkan format");
       return 0;
    }
 }
