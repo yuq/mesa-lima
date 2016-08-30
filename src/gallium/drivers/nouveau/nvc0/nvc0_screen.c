@@ -673,7 +673,7 @@ nvc0_screen_init_compute(struct nvc0_screen *screen)
    }
 }
 
-bool
+static int
 nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
                             uint32_t lpos, uint32_t lneg, uint32_t cstack)
 {
@@ -683,7 +683,7 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
 
    if (size >= (1 << 20)) {
       NOUVEAU_ERR("requested TLS size too large: 0x%"PRIx64"\n", size);
-      return false;
+      return -1;
    }
 
    size *= (screen->base.device->chipset >= 0xe0) ? 64 : 48; /* max warps */
@@ -694,13 +694,11 @@ nvc0_screen_resize_tls_area(struct nvc0_screen *screen,
 
    ret = nouveau_bo_new(screen->base.device, NV_VRAM_DOMAIN(&screen->base), 1 << 17, size,
                         NULL, &bo);
-   if (ret) {
-      NOUVEAU_ERR("failed to allocate TLS area, size: 0x%"PRIx64"\n", size);
-      return false;
-   }
+   if (ret)
+      return ret;
    nouveau_bo_ref(NULL, &screen->tls);
    screen->tls = bo;
-   return true;
+   return 0;
 }
 
 #define FAIL_SCREEN_INIT(str, err)                    \
@@ -1042,7 +1040,9 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->mp_count = value >> 8;
    screen->mp_count_compute = screen->mp_count;
 
-   nvc0_screen_resize_tls_area(screen, 128 * 16, 0, 0x200);
+   ret = nvc0_screen_resize_tls_area(screen, 128 * 16, 0, 0x200);
+   if (ret)
+      FAIL_SCREEN_INIT("Error allocating TLS area: %d\n", ret);
 
    BEGIN_NVC0(push, NVC0_3D(CODE_ADDRESS_HIGH), 2);
    PUSH_DATAh(push, screen->text->offset);
