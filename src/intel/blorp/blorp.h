@@ -130,7 +130,7 @@ blorp_clear(struct blorp_batch *batch,
             uint32_t level, uint32_t start_layer, uint32_t num_layers,
             uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
             enum isl_format format, union isl_color_value clear_color,
-            bool color_write_disable[4]);
+            const bool color_write_disable[4]);
 
 void
 blorp_ccs_resolve(struct blorp_batch *batch,

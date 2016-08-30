@@ -245,7 +245,7 @@ blorp_clear(struct blorp_batch *batch,
             uint32_t level, uint32_t start_layer, uint32_t num_layers,
             uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
             enum isl_format format, union isl_color_value clear_color,
-            bool color_write_disable[4])
+            const bool color_write_disable[4])
 {
    struct blorp_params params;
    blorp_params_init(&params);
@@ -276,10 +276,12 @@ blorp_clear(struct blorp_batch *batch,
    /* Constant color writes ignore everyting in blend and color calculator
     * state.  This is not documented.
     */
-   for (unsigned i = 0; i < 4; i++) {
-      params.color_write_disable[i] = color_write_disable[i];
-      if (color_write_disable[i])
-         use_simd16_replicated_data = false;
+   if (color_write_disable) {
+      for (unsigned i = 0; i < 4; i++) {
+         params.color_write_disable[i] = color_write_disable[i];
+         if (color_write_disable[i])
+            use_simd16_replicated_data = false;
+      }
    }
 
    blorp_params_get_clear_kernel(batch->blorp, &params,
