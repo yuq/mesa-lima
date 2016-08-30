@@ -427,7 +427,7 @@ nvc0_sampler_state_delete(struct pipe_context *pipe, void *hwcso)
 
 static inline void
 nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0,
-                               enum pipe_shader_type s,
+                               unsigned s,
                                unsigned nr, void **hwcso)
 {
    unsigned i;
@@ -457,7 +457,7 @@ nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0,
 
 static void
 nvc0_stage_sampler_states_bind_range(struct nvc0_context *nvc0,
-                                     const enum pipe_shader_type s,
+                                     unsigned s,
                                      unsigned start, unsigned nr, void **cso)
 {
    const unsigned end = start + nr;
