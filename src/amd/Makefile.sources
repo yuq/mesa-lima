@@ -1,4 +1,5 @@
 COMMON_HEADER_FILES = \
+	common/gfx9d.h \
 	common/sid.h \
 	common/r600d_common.h \
 	common/amd_family.h \
