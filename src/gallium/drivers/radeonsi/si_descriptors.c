@@ -394,14 +394,14 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[3] &= C_008F1C_TILING_INDEX;
-	state[4] &= C_008F20_PITCH;
+	state[4] &= C_008F20_PITCH_GFX6;
 	state[6] &= C_008F28_COMPRESSION_EN;
 
 	state[0] = va >> 8;
 	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
 	state[3] |= S_008F1C_TILING_INDEX(si_tile_mode_index(tex, base_level,
 							     is_stencil));
-	state[4] |= S_008F20_PITCH(pitch - 1);
+	state[4] |= S_008F20_PITCH_GFX6(pitch - 1);
 
 	if (tex->dcc_offset && first_level < tex->surface.num_dcc_levels) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);

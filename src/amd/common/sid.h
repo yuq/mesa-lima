@@ -2261,9 +2261,9 @@
 #define   S_008F20_DEPTH(x)                                           (((unsigned)(x) & 0x1FFF) << 0)
 #define   G_008F20_DEPTH(x)                                           (((x) >> 0) & 0x1FFF)
 #define   C_008F20_DEPTH                                              0xFFFFE000
-#define   S_008F20_PITCH(x)                                           (((unsigned)(x) & 0x3FFF) << 13)
-#define   G_008F20_PITCH(x)                                           (((x) >> 13) & 0x3FFF)
-#define   C_008F20_PITCH                                              0xF8001FFF
+#define   S_008F20_PITCH_GFX6(x)                                      (((unsigned)(x) & 0x3FFF) << 13)
+#define   G_008F20_PITCH_GFX6(x)                                      (((x) >> 13) & 0x3FFF)
+#define   C_008F20_PITCH_GFX6                                         0xF8001FFF
 #define R_008F24_SQ_IMG_RSRC_WORD5                                      0x008F24
 #define   S_008F24_BASE_ARRAY(x)                                      (((unsigned)(x) & 0x1FFF) << 0)
 #define   G_008F24_BASE_ARRAY(x)                                      (((x) >> 0) & 0x1FFF)
@@ -2674,21 +2674,21 @@
 #define   S_0098F8_NUM_PIPES(x)                                       (((unsigned)(x) & 0x07) << 0)
 #define   G_0098F8_NUM_PIPES(x)                                       (((x) >> 0) & 0x07)
 #define   C_0098F8_NUM_PIPES                                          0xFFFFFFF8
-#define   S_0098F8_PIPE_INTERLEAVE_SIZE(x)                            (((unsigned)(x) & 0x07) << 4)
-#define   G_0098F8_PIPE_INTERLEAVE_SIZE(x)                            (((x) >> 4) & 0x07)
-#define   C_0098F8_PIPE_INTERLEAVE_SIZE                               0xFFFFFF8F
+#define   S_0098F8_PIPE_INTERLEAVE_SIZE_GFX6(x)                       (((unsigned)(x) & 0x07) << 4)
+#define   G_0098F8_PIPE_INTERLEAVE_SIZE_GFX6(x)                       (((x) >> 4) & 0x07)
+#define   C_0098F8_PIPE_INTERLEAVE_SIZE_GFX6                          0xFFFFFF8F
 #define   S_0098F8_BANK_INTERLEAVE_SIZE(x)                            (((unsigned)(x) & 0x07) << 8)
 #define   G_0098F8_BANK_INTERLEAVE_SIZE(x)                            (((x) >> 8) & 0x07)
 #define   C_0098F8_BANK_INTERLEAVE_SIZE                               0xFFFFF8FF
-#define   S_0098F8_NUM_SHADER_ENGINES(x)                              (((unsigned)(x) & 0x03) << 12)
-#define   G_0098F8_NUM_SHADER_ENGINES(x)                              (((x) >> 12) & 0x03)
-#define   C_0098F8_NUM_SHADER_ENGINES                                 0xFFFFCFFF
+#define   S_0098F8_NUM_SHADER_ENGINES_GFX6(x)                         (((unsigned)(x) & 0x03) << 12)
+#define   G_0098F8_NUM_SHADER_ENGINES_GFX6(x)                         (((x) >> 12) & 0x03)
+#define   C_0098F8_NUM_SHADER_ENGINES_GFX6                            0xFFFFCFFF
 #define   S_0098F8_SHADER_ENGINE_TILE_SIZE(x)                         (((unsigned)(x) & 0x07) << 16)
 #define   G_0098F8_SHADER_ENGINE_TILE_SIZE(x)                         (((x) >> 16) & 0x07)
 #define   C_0098F8_SHADER_ENGINE_TILE_SIZE                            0xFFF8FFFF
-#define   S_0098F8_NUM_GPUS(x)                                        (((unsigned)(x) & 0x07) << 20)
-#define   G_0098F8_NUM_GPUS(x)                                        (((x) >> 20) & 0x07)
-#define   C_0098F8_NUM_GPUS                                           0xFF8FFFFF
+#define   S_0098F8_NUM_GPUS_GFX6(x)                                   (((unsigned)(x) & 0x07) << 20)
+#define   G_0098F8_NUM_GPUS_GFX6(x)                                   (((x) >> 20) & 0x07)
+#define   C_0098F8_NUM_GPUS_GFX6                                      0xFF8FFFFF
 #define   S_0098F8_MULTI_GPU_TILE_SIZE(x)                             (((unsigned)(x) & 0x03) << 24)
 #define   G_0098F8_MULTI_GPU_TILE_SIZE(x)                             (((x) >> 24) & 0x03)
 #define   C_0098F8_MULTI_GPU_TILE_SIZE                                0xFCFFFFFF
@@ -5514,16 +5514,16 @@
 #define     V_028350_RASTER_CONFIG_SE_MAP_1                         0x01
 #define     V_028350_RASTER_CONFIG_SE_MAP_2                         0x02
 #define     V_028350_RASTER_CONFIG_SE_MAP_3                         0x03
-#define   S_028350_SE_XSEL(x)                                         (((unsigned)(x) & 0x03) << 26)
-#define   G_028350_SE_XSEL(x)                                         (((x) >> 26) & 0x03)
-#define   C_028350_SE_XSEL                                            0xF3FFFFFF
+#define   S_028350_SE_XSEL_GFX6(x)                                    (((unsigned)(x) & 0x03) << 26)
+#define   G_028350_SE_XSEL_GFX6(x)                                    (((x) >> 26) & 0x03)
+#define   C_028350_SE_XSEL_GFX6                                       0xF3FFFFFF
 #define     V_028350_RASTER_CONFIG_SE_XSEL_8_WIDE_TILE              0x00
 #define     V_028350_RASTER_CONFIG_SE_XSEL_16_WIDE_TILE             0x01
 #define     V_028350_RASTER_CONFIG_SE_XSEL_32_WIDE_TILE             0x02
 #define     V_028350_RASTER_CONFIG_SE_XSEL_64_WIDE_TILE             0x03
-#define   S_028350_SE_YSEL(x)                                         (((unsigned)(x) & 0x03) << 28)
-#define   G_028350_SE_YSEL(x)                                         (((x) >> 28) & 0x03)
-#define   C_028350_SE_YSEL                                            0xCFFFFFFF
+#define   S_028350_SE_YSEL_GFX6(x)                                    (((unsigned)(x) & 0x03) << 28)
+#define   G_028350_SE_YSEL_GFX6(x)                                    (((x) >> 28) & 0x03)
+#define   C_028350_SE_YSEL_GFX6                                       0xCFFFFFFF
 #define     V_028350_RASTER_CONFIG_SE_YSEL_8_WIDE_TILE              0x00
 #define     V_028350_RASTER_CONFIG_SE_YSEL_16_WIDE_TILE             0x01
 #define     V_028350_RASTER_CONFIG_SE_YSEL_32_WIDE_TILE             0x02
@@ -5537,16 +5537,16 @@
 #define     V_028354_RASTER_CONFIG_SE_PAIR_MAP_1                    0x01
 #define     V_028354_RASTER_CONFIG_SE_PAIR_MAP_2                    0x02
 #define     V_028354_RASTER_CONFIG_SE_PAIR_MAP_3                    0x03
-#define   S_028354_SE_PAIR_XSEL(x)                                    (((unsigned)(x) & 0x03) << 2)
-#define   G_028354_SE_PAIR_XSEL(x)                                    (((x) >> 2) & 0x03)
-#define   C_028354_SE_PAIR_XSEL                                       0xFFFFFFF3
+#define   S_028354_SE_PAIR_XSEL_GFX6(x)                               (((unsigned)(x) & 0x03) << 2)
+#define   G_028354_SE_PAIR_XSEL_GFX6(x)                               (((x) >> 2) & 0x03)
+#define   C_028354_SE_PAIR_XSEL_GFX6                                  0xFFFFFFF3
 #define     V_028354_RASTER_CONFIG_SE_PAIR_XSEL_8_WIDE_TILE         0x00
 #define     V_028354_RASTER_CONFIG_SE_PAIR_XSEL_16_WIDE_TILE        0x01
 #define     V_028354_RASTER_CONFIG_SE_PAIR_XSEL_32_WIDE_TILE        0x02
 #define     V_028354_RASTER_CONFIG_SE_PAIR_XSEL_64_WIDE_TILE        0x03
-#define   S_028354_SE_PAIR_YSEL(x)                                    (((unsigned)(x) & 0x03) << 4)
-#define   G_028354_SE_PAIR_YSEL(x)                                    (((x) >> 4) & 0x03)
-#define   C_028354_SE_PAIR_YSEL                                       0xFFFFFFCF
+#define   S_028354_SE_PAIR_YSEL_GFX6(x)                               (((unsigned)(x) & 0x03) << 4)
+#define   G_028354_SE_PAIR_YSEL_GFX6(x)                               (((x) >> 4) & 0x03)
+#define   C_028354_SE_PAIR_YSEL_GFX6                                  0xFFFFFFCF
 #define     V_028354_RASTER_CONFIG_SE_PAIR_YSEL_8_WIDE_TILE         0x00
 #define     V_028354_RASTER_CONFIG_SE_PAIR_YSEL_16_WIDE_TILE        0x01
 #define     V_028354_RASTER_CONFIG_SE_PAIR_YSEL_32_WIDE_TILE        0x02
@@ -6704,9 +6704,9 @@
 #define R_0287DC_PA_CL_POINT_SIZE                                       0x0287DC
 #define R_0287E0_PA_CL_POINT_CULL_RAD                                   0x0287E0
 #define R_0287E4_VGT_DMA_BASE_HI                                        0x0287E4
-#define   S_0287E4_BASE_ADDR(x)                                       (((unsigned)(x) & 0xFF) << 0)
-#define   G_0287E4_BASE_ADDR(x)                                       (((x) >> 0) & 0xFF)
-#define   C_0287E4_BASE_ADDR                                          0xFFFFFF00
+#define   S_0287E4_BASE_ADDR_GFX6(x)                                  (((unsigned)(x) & 0xFF) << 0)
+#define   G_0287E4_BASE_ADDR_GFX6(x)                                  (((x) >> 0) & 0xFF)
+#define   C_0287E4_BASE_ADDR_GFX6                                     0xFFFFFF00
 #define R_0287E8_VGT_DMA_BASE                                           0x0287E8
 #define R_0287F0_VGT_DRAW_INITIATOR                                     0x0287F0
 #define   S_0287F0_SOURCE_SELECT(x)                                   (((unsigned)(x) & 0x03) << 0)
@@ -7823,9 +7823,9 @@
 #define     V_028A90_PIXEL_PIPE_STAT_DUMP                           0x39
 #define     V_028A90_PIXEL_PIPE_STAT_RESET                          0x3A
 /*     */
-#define   S_028A90_ADDRESS_HI(x)                                      (((unsigned)(x) & 0x1FF) << 18)
-#define   G_028A90_ADDRESS_HI(x)                                      (((x) >> 18) & 0x1FF)
-#define   C_028A90_ADDRESS_HI                                         0xF803FFFF
+#define   S_028A90_ADDRESS_HI_GFX6(x)                                 (((unsigned)(x) & 0x1FF) << 18)
+#define   G_028A90_ADDRESS_HI_GFX6(x)                                 (((x) >> 18) & 0x1FF)
+#define   C_028A90_ADDRESS_HI_GFX6                                    0xF803FFFF
 #define   S_028A90_EXTENDED_EVENT(x)                                  (((unsigned)(x) & 0x1) << 27)
 #define   G_028A90_EXTENDED_EVENT(x)                                  (((x) >> 27) & 0x1)
 #define   C_028A90_EXTENDED_EVENT                                     0xF7FFFFFF

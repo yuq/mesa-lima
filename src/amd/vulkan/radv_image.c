@@ -201,7 +201,7 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 
 	state[1] &= C_008F14_BASE_ADDRESS_HI;
 	state[3] &= C_008F1C_TILING_INDEX;
-	state[4] &= C_008F20_PITCH;
+	state[4] &= C_008F20_PITCH_GFX6;
 	state[6] &= C_008F28_COMPRESSION_EN;
 
 	assert(!(va & 255));
@@ -210,7 +210,7 @@ si_set_mutable_tex_desc_fields(struct radv_device *device,
 	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
 	state[3] |= S_008F1C_TILING_INDEX(si_tile_mode_index(image, base_level,
 							     is_stencil));
-	state[4] |= S_008F20_PITCH(pitch - 1);
+	state[4] |= S_008F20_PITCH_GFX6(pitch - 1);
 
 	if (image->surface.dcc_size && image->surface.level[first_level].dcc_enabled) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
@@ -370,7 +370,7 @@ si_make_texture_descriptor(struct radv_device *device,
 			S_008F1C_TILING_INDEX(image->fmask.tile_mode_index) |
 			S_008F1C_TYPE(radv_tex_dim(image->type, view_type, 1, 0, false));
 		fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-			S_008F20_PITCH(image->fmask.pitch_in_pixels - 1);
+			S_008F20_PITCH_GFX6(image->fmask.pitch_in_pixels - 1);
 		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer) |
 			S_008F24_LAST_ARRAY(last_layer);
 		fmask_state[6] = 0;

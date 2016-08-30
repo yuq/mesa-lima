@@ -3000,7 +3000,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 				 S_008F1C_TILING_INDEX(tex->fmask.tile_mode_index) |
 				 S_008F1C_TYPE(si_tex_dim(res->target, target, 0));
 		fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-				 S_008F20_PITCH(tex->fmask.pitch_in_pixels - 1);
+				 S_008F20_PITCH_GFX6(tex->fmask.pitch_in_pixels - 1);
 		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer) |
 				 S_008F24_LAST_ARRAY(last_layer);
 		fmask_state[6] = 0;
