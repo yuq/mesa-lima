@@ -1408,110 +1408,54 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
    info->tile_y_sa /= 2;
 }
 
-void
-blorp_blit(struct blorp_batch *batch,
-           const struct blorp_surf *src_surf,
-           unsigned src_level, unsigned src_layer,
-           enum isl_format src_format, struct isl_swizzle src_swizzle,
-           const struct blorp_surf *dst_surf,
-           unsigned dst_level, unsigned dst_layer,
-           enum isl_format dst_format, struct isl_swizzle dst_swizzle,
-           float src_x0, float src_y0,
-           float src_x1, float src_y1,
-           float dst_x0, float dst_y0,
-           float dst_x1, float dst_y1,
-           GLenum filter, bool mirror_x, bool mirror_y)
+static void
+do_blorp_blit(struct blorp_batch *batch,
+              struct blorp_params *params,
+              struct brw_blorp_blit_prog_key *wm_prog_key,
+              float src_x0, float src_y0,
+              float src_x1, float src_y1,
+              float dst_x0, float dst_y0,
+              float dst_x1, float dst_y1,
+              bool mirror_x, bool mirror_y)
 {
    const struct gen_device_info *devinfo = batch->blorp->isl_dev->info;
 
-   struct blorp_params params;
-   blorp_params_init(&params);
-
-   brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
-                               src_layer, src_format, false);
-   brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
-                               dst_layer, dst_format, true);
-
-   struct brw_blorp_blit_prog_key wm_prog_key;
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
-
-   if (isl_format_has_sint_channel(params.src.view.format)) {
-      wm_prog_key.texture_data_type = nir_type_int;
-   } else if (isl_format_has_uint_channel(params.src.view.format)) {
-      wm_prog_key.texture_data_type = nir_type_uint;
+   if (isl_format_has_sint_channel(params->src.view.format)) {
+      wm_prog_key->texture_data_type = nir_type_int;
+   } else if (isl_format_has_uint_channel(params->src.view.format)) {
+      wm_prog_key->texture_data_type = nir_type_uint;
    } else {
-      wm_prog_key.texture_data_type = nir_type_float;
-   }
-
-   /* Scaled blitting or not. */
-   wm_prog_key.blit_scaled =
-      ((dst_x1 - dst_x0) == (src_x1 - src_x0) &&
-       (dst_y1 - dst_y0) == (src_y1 - src_y0)) ? false : true;
-
-   /* Scaling factors used for bilinear filtering in multisample scaled
-    * blits.
-    */
-   if (params.src.surf.samples == 16)
-      wm_prog_key.x_scale = 4.0f;
-   else
-      wm_prog_key.x_scale = 2.0f;
-   wm_prog_key.y_scale = params.src.surf.samples / wm_prog_key.x_scale;
-
-   if (filter == GL_LINEAR &&
-       params.src.surf.samples <= 1 && params.dst.surf.samples <= 1)
-      wm_prog_key.bilinear_filter = true;
-
-   if ((params.src.surf.usage & ISL_SURF_USAGE_DEPTH_BIT) == 0 &&
-       (params.src.surf.usage & ISL_SURF_USAGE_STENCIL_BIT) == 0 &&
-       !isl_format_has_int_channel(params.src.surf.format) &&
-       params.src.surf.samples > 1 && params.dst.surf.samples <= 1) {
-      /* We are downsampling a non-integer color buffer, so blend.
-       *
-       * Regarding integer color buffers, the OpenGL ES 3.2 spec says:
-       *
-       *    "If the source formats are integer types or stencil values, a
-       *    single sample's value is selected for each pixel."
-       *
-       * This implies we should not blend in that case.
-       */
-      wm_prog_key.blend = true;
+      wm_prog_key->texture_data_type = nir_type_float;
    }
 
    /* src_samples and dst_samples are the true sample counts */
-   wm_prog_key.src_samples = params.src.surf.samples;
-   wm_prog_key.dst_samples = params.dst.surf.samples;
+   wm_prog_key->src_samples = params->src.surf.samples;
+   wm_prog_key->dst_samples = params->dst.surf.samples;
 
-   wm_prog_key.tex_aux_usage = params.src.aux_usage;
+   wm_prog_key->tex_aux_usage = params->src.aux_usage;
 
    /* src_layout and dst_layout indicate the true MSAA layout used by src and
     * dst.
     */
-   wm_prog_key.src_layout = params.src.surf.msaa_layout;
-   wm_prog_key.dst_layout = params.dst.surf.msaa_layout;
+   wm_prog_key->src_layout = params->src.surf.msaa_layout;
+   wm_prog_key->dst_layout = params->dst.surf.msaa_layout;
 
    /* Round floating point values to nearest integer to avoid "off by one texel"
     * kind of errors when blitting.
     */
-   params.x0 = params.wm_inputs.discard_rect.x0 = roundf(dst_x0);
-   params.y0 = params.wm_inputs.discard_rect.y0 = roundf(dst_y0);
-   params.x1 = params.wm_inputs.discard_rect.x1 = roundf(dst_x1);
-   params.y1 = params.wm_inputs.discard_rect.y1 = roundf(dst_y1);
+   params->x0 = params->wm_inputs.discard_rect.x0 = roundf(dst_x0);
+   params->y0 = params->wm_inputs.discard_rect.y0 = roundf(dst_y0);
+   params->x1 = params->wm_inputs.discard_rect.x1 = roundf(dst_x1);
+   params->y1 = params->wm_inputs.discard_rect.y1 = roundf(dst_y1);
 
-   params.wm_inputs.rect_grid.x1 =
-      minify(params.src.surf.logical_level0_px.width, src_level) *
-      wm_prog_key.x_scale - 1.0f;
-   params.wm_inputs.rect_grid.y1 =
-      minify(params.src.surf.logical_level0_px.height, src_level) *
-      wm_prog_key.y_scale - 1.0f;
-
-   brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[0],
+   brw_blorp_setup_coord_transform(&params->wm_inputs.coord_transform[0],
                                    src_x0, src_x1, dst_x0, dst_x1, mirror_x);
-   brw_blorp_setup_coord_transform(&params.wm_inputs.coord_transform[1],
+   brw_blorp_setup_coord_transform(&params->wm_inputs.coord_transform[1],
                                    src_y0, src_y1, dst_y0, dst_y1, mirror_y);
 
    if (devinfo->gen > 6 &&
-       params.dst.surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
-      assert(params.dst.surf.samples > 1);
+       params->dst.surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
+      assert(params->dst.surf.samples > 1);
 
       /* We must expand the rectangle we send through the rendering pipeline,
        * to account for the fact that we are mapping the destination region as
@@ -1526,19 +1470,19 @@ blorp_blit(struct blorp_batch *batch,
        * pipeline as multisampled.
        */
       struct isl_extent2d px_size_sa =
-         isl_get_interleaved_msaa_px_size_sa(params.dst.surf.samples);
-      params.x0 = ROUND_DOWN_TO(params.x0, 2) * px_size_sa.width;
-      params.y0 = ROUND_DOWN_TO(params.y0, 2) * px_size_sa.height;
-      params.x1 = ALIGN(params.x1, 2) * px_size_sa.width;
-      params.y1 = ALIGN(params.y1, 2) * px_size_sa.height;
+         isl_get_interleaved_msaa_px_size_sa(params->dst.surf.samples);
+      params->x0 = ROUND_DOWN_TO(params->x0, 2) * px_size_sa.width;
+      params->y0 = ROUND_DOWN_TO(params->y0, 2) * px_size_sa.height;
+      params->x1 = ALIGN(params->x1, 2) * px_size_sa.width;
+      params->y1 = ALIGN(params->y1, 2) * px_size_sa.height;
 
-      surf_fake_interleaved_msaa(batch->blorp->isl_dev, &params.dst);
+      surf_fake_interleaved_msaa(batch->blorp->isl_dev, &params->dst);
 
-      wm_prog_key.use_kill = true;
-      wm_prog_key.need_dst_offset = true;
+      wm_prog_key->use_kill = true;
+      wm_prog_key->need_dst_offset = true;
    }
 
-   if (params.dst.surf.tiling == ISL_TILING_W) {
+   if (params->dst.surf.tiling == ISL_TILING_W) {
       /* We must modify the rectangle we send through the rendering pipeline
        * (and the size and x/y offset of the destination surface), to account
        * for the fact that we are mapping it as Y-tiled when it is in fact
@@ -1585,31 +1529,32 @@ blorp_blit(struct blorp_batch *batch,
        * TODO: what if this makes the coordinates (or the texture size) too
        * large?
        */
-      const unsigned x_align = 8, y_align = params.dst.surf.samples != 0 ? 8 : 4;
-      params.x0 = ROUND_DOWN_TO(params.x0, x_align) * 2;
-      params.y0 = ROUND_DOWN_TO(params.y0, y_align) / 2;
-      params.x1 = ALIGN(params.x1, x_align) * 2;
-      params.y1 = ALIGN(params.y1, y_align) / 2;
+      const unsigned x_align = 8;
+      const unsigned y_align = params->dst.surf.samples != 0 ? 8 : 4;
+      params->x0 = ROUND_DOWN_TO(params->x0, x_align) * 2;
+      params->y0 = ROUND_DOWN_TO(params->y0, y_align) / 2;
+      params->x1 = ALIGN(params->x1, x_align) * 2;
+      params->y1 = ALIGN(params->y1, y_align) / 2;
 
       /* Retile the surface to Y-tiled */
-      surf_retile_w_to_y(batch->blorp->isl_dev, &params.dst);
+      surf_retile_w_to_y(batch->blorp->isl_dev, &params->dst);
 
-      wm_prog_key.dst_tiled_w = true;
-      wm_prog_key.use_kill = true;
-      wm_prog_key.need_dst_offset = true;
+      wm_prog_key->dst_tiled_w = true;
+      wm_prog_key->use_kill = true;
+      wm_prog_key->need_dst_offset = true;
 
-      if (params.dst.surf.samples > 1) {
+      if (params->dst.surf.samples > 1) {
          /* If the destination surface is a W-tiled multisampled stencil
           * buffer that we're mapping as Y tiled, then we need to arrange for
           * the WM program to run once per sample rather than once per pixel,
           * because the memory layout of related samples doesn't match between
           * W and Y tiling.
           */
-         wm_prog_key.persample_msaa_dispatch = true;
+         wm_prog_key->persample_msaa_dispatch = true;
       }
    }
 
-   if (devinfo->gen < 8 && params.src.surf.tiling == ISL_TILING_W) {
+   if (devinfo->gen < 8 && params->src.surf.tiling == ISL_TILING_W) {
       /* On Haswell and earlier, we have to fake W-tiled sources as Y-tiled.
        * Broadwell adds support for sampling from stencil.
        *
@@ -1618,58 +1563,130 @@ blorp_blit(struct blorp_batch *batch,
        *
        * TODO: what if this makes the texture size too large?
        */
-      surf_retile_w_to_y(batch->blorp->isl_dev, &params.src);
+      surf_retile_w_to_y(batch->blorp->isl_dev, &params->src);
 
-      wm_prog_key.src_tiled_w = true;
-      wm_prog_key.need_src_offset = true;
+      wm_prog_key->src_tiled_w = true;
+      wm_prog_key->need_src_offset = true;
    }
 
    /* tex_samples and rt_samples are the sample counts that are set up in
     * SURFACE_STATE.
     */
-   wm_prog_key.tex_samples = params.src.surf.samples;
-   wm_prog_key.rt_samples  = params.dst.surf.samples;
+   wm_prog_key->tex_samples = params->src.surf.samples;
+   wm_prog_key->rt_samples  = params->dst.surf.samples;
 
    /* tex_layout and rt_layout indicate the MSAA layout the GPU pipeline will
     * use to access the source and destination surfaces.
     */
-   wm_prog_key.tex_layout = params.src.surf.msaa_layout;
-   wm_prog_key.rt_layout = params.dst.surf.msaa_layout;
+   wm_prog_key->tex_layout = params->src.surf.msaa_layout;
+   wm_prog_key->rt_layout = params->dst.surf.msaa_layout;
 
-   if (params.src.surf.samples > 0 && params.dst.surf.samples > 1) {
+   if (params->src.surf.samples > 0 && params->dst.surf.samples > 1) {
       /* We are blitting from a multisample buffer to a multisample buffer, so
        * we must preserve samples within a pixel.  This means we have to
        * arrange for the WM program to run once per sample rather than once
        * per pixel.
        */
-      wm_prog_key.persample_msaa_dispatch = true;
+      wm_prog_key->persample_msaa_dispatch = true;
    }
 
-   if (params.src.tile_x_sa || params.src.tile_y_sa) {
-      assert(wm_prog_key.need_src_offset);
-      surf_get_intratile_offset_px(&params.src,
-                                   &params.wm_inputs.src_offset.x,
-                                   &params.wm_inputs.src_offset.y);
+   if (params->src.tile_x_sa || params->src.tile_y_sa) {
+      assert(wm_prog_key->need_src_offset);
+      surf_get_intratile_offset_px(&params->src,
+                                   &params->wm_inputs.src_offset.x,
+                                   &params->wm_inputs.src_offset.y);
    }
 
-   if (params.dst.tile_x_sa || params.dst.tile_y_sa) {
-      assert(wm_prog_key.need_dst_offset);
-      surf_get_intratile_offset_px(&params.dst,
-                                   &params.wm_inputs.dst_offset.x,
-                                   &params.wm_inputs.dst_offset.y);
-      params.x0 += params.wm_inputs.dst_offset.x;
-      params.y0 += params.wm_inputs.dst_offset.y;
-      params.x1 += params.wm_inputs.dst_offset.x;
-      params.y1 += params.wm_inputs.dst_offset.y;
+   if (params->dst.tile_x_sa || params->dst.tile_y_sa) {
+      assert(wm_prog_key->need_dst_offset);
+      surf_get_intratile_offset_px(&params->dst,
+                                   &params->wm_inputs.dst_offset.x,
+                                   &params->wm_inputs.dst_offset.y);
+      params->x0 += params->wm_inputs.dst_offset.x;
+      params->y0 += params->wm_inputs.dst_offset.y;
+      params->x1 += params->wm_inputs.dst_offset.x;
+      params->y1 += params->wm_inputs.dst_offset.y;
    }
 
    /* For some texture types, we need to pass the layer through the sampler. */
-   params.wm_inputs.src_z = params.src.z_offset;
+   params->wm_inputs.src_z = params->src.z_offset;
 
-   brw_blorp_get_blit_kernel(batch->blorp, &params, &wm_prog_key);
+   brw_blorp_get_blit_kernel(batch->blorp, params, wm_prog_key);
+
+   batch->blorp->exec(batch, params);
+}
+
+void
+blorp_blit(struct blorp_batch *batch,
+           const struct blorp_surf *src_surf,
+           unsigned src_level, unsigned src_layer,
+           enum isl_format src_format, struct isl_swizzle src_swizzle,
+           const struct blorp_surf *dst_surf,
+           unsigned dst_level, unsigned dst_layer,
+           enum isl_format dst_format, struct isl_swizzle dst_swizzle,
+           float src_x0, float src_y0,
+           float src_x1, float src_y1,
+           float dst_x0, float dst_y0,
+           float dst_x1, float dst_y1,
+           GLenum filter, bool mirror_x, bool mirror_y)
+{
+   struct blorp_params params;
+   blorp_params_init(&params);
+
+   brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
+                               src_layer, src_format, false);
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
+                               dst_layer, dst_format, true);
 
    params.src.view.swizzle = src_swizzle;
    params.dst.view.swizzle = dst_swizzle;
 
-   batch->blorp->exec(batch, &params);
+   struct brw_blorp_blit_prog_key wm_prog_key;
+   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
+
+   /* Scaled blitting or not. */
+   wm_prog_key.blit_scaled =
+      ((dst_x1 - dst_x0) == (src_x1 - src_x0) &&
+       (dst_y1 - dst_y0) == (src_y1 - src_y0)) ? false : true;
+
+   /* Scaling factors used for bilinear filtering in multisample scaled
+    * blits.
+    */
+   if (params.src.surf.samples == 16)
+      wm_prog_key.x_scale = 4.0f;
+   else
+      wm_prog_key.x_scale = 2.0f;
+   wm_prog_key.y_scale = params.src.surf.samples / wm_prog_key.x_scale;
+
+   if (filter == GL_LINEAR &&
+       params.src.surf.samples <= 1 && params.dst.surf.samples <= 1)
+      wm_prog_key.bilinear_filter = true;
+
+   if ((params.src.surf.usage & ISL_SURF_USAGE_DEPTH_BIT) == 0 &&
+       (params.src.surf.usage & ISL_SURF_USAGE_STENCIL_BIT) == 0 &&
+       !isl_format_has_int_channel(params.src.surf.format) &&
+       params.src.surf.samples > 1 && params.dst.surf.samples <= 1) {
+      /* We are downsampling a non-integer color buffer, so blend.
+       *
+       * Regarding integer color buffers, the OpenGL ES 3.2 spec says:
+       *
+       *    "If the source formats are integer types or stencil values, a
+       *    single sample's value is selected for each pixel."
+       *
+       * This implies we should not blend in that case.
+       */
+      wm_prog_key.blend = true;
+   }
+
+   params.wm_inputs.rect_grid.x1 =
+      minify(params.src.surf.logical_level0_px.width, src_level) *
+      wm_prog_key.x_scale - 1.0f;
+   params.wm_inputs.rect_grid.y1 =
+      minify(params.src.surf.logical_level0_px.height, src_level) *
+      wm_prog_key.y_scale - 1.0f;
+
+   do_blorp_blit(batch, &params, &wm_prog_key,
+                 src_x0, src_y0, src_x1, src_y1,
+                 dst_x0, dst_y0, dst_x1, dst_y1,
+                 mirror_x, mirror_y);
 }
