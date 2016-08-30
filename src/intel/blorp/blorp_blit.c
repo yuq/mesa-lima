@@ -1340,9 +1340,7 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
     */
    if (isl_dev->info->gen > 6 &&
        info->surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
-      info->surf.logical_level0_px = info->surf.phys_level0_sa;
-      info->surf.samples = 1;
-      info->surf.msaa_layout = ISL_MSAA_LAYOUT_NONE;
+      surf_fake_interleaved_msaa(isl_dev, info);
    }
 
    if (isl_dev->info->gen == 6) {
