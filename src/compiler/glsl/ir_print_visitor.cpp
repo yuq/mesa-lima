@@ -344,7 +344,7 @@ void ir_print_visitor::visit(ir_texture *ir)
       ir->lod_info.component->accept(this);
       break;
    case ir_samples_identical:
-      unreachable(!"ir_samples_identical was already handled");
+      unreachable("ir_samples_identical was already handled");
    };
    fprintf(f, ")");
 }
