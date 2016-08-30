@@ -267,24 +267,6 @@ const struct brw_tracked_state gen6_clip_state = {
                BRW_NEW_META_IN_PROGRESS |
                BRW_NEW_PRIMITIVE |
                BRW_NEW_RASTERIZER_DISCARD |
-               BRW_NEW_VUE_MAP_GEOM_OUT,
-   },
-   .emit = upload_clip_state,
-};
-
-const struct brw_tracked_state gen7_clip_state = {
-   .dirty = {
-      .mesa  = _NEW_BUFFERS |
-               _NEW_LIGHT |
-               _NEW_POLYGON |
-               _NEW_TRANSFORM,
-      .brw   = BRW_NEW_BLORP |
-               BRW_NEW_CONTEXT |
-               BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_GS_PROG_DATA |
-               BRW_NEW_META_IN_PROGRESS |
-               BRW_NEW_PRIMITIVE |
-               BRW_NEW_RASTERIZER_DISCARD |
                BRW_NEW_TES_PROG_DATA |
                BRW_NEW_VUE_MAP_GEOM_OUT,
    },
