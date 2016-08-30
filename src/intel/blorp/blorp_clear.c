@@ -23,6 +23,9 @@
 
 #include "util/ralloc.h"
 
+#include "main/macros.h" /* Needed for MAX3 and MAX2 for format_rgb9e5 */
+#include "util/format_rgb9e5.h"
+
 #include "blorp_priv.h"
 #include "brw_defines.h"
 
@@ -251,6 +254,11 @@ blorp_clear(struct blorp_batch *batch,
    params.y0 = y0;
    params.x1 = x1;
    params.y1 = y1;
+
+   if (format == ISL_FORMAT_R9G9B9E5_SHAREDEXP) {
+      clear_color.u32[0] = float3_to_rgb9e5(clear_color.f32);
+      format = ISL_FORMAT_R32_UINT;
+   }
 
    memcpy(&params.wm_inputs, clear_color.f32, sizeof(float) * 4);
 
