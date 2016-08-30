@@ -1690,3 +1690,136 @@ blorp_blit(struct blorp_batch *batch,
                  dst_x0, dst_y0, dst_x1, dst_y1,
                  mirror_x, mirror_y);
 }
+
+static enum isl_format
+get_copy_format_for_bpb(unsigned bpb)
+{
+   /* The choice of UNORM and UINT formats is very intentional here.  Most of
+    * the time, we want to use a UINT format to avoid any rounding error in
+    * the blit.  For stencil blits, R8_UINT is required by the hardware.
+    * (It's the only format allowed in conjunction with W-tiling.)  Also we
+    * intentionally use the 4-channel formats whenever we can.  This is so
+    * that, when we do a RGB <-> RGBX copy, the two formats will line up even
+    * though one of them is 3/4 the size of the other.  The choice of UNORM
+    * vs. UINT is also very intentional because Haswell doesn't handle 8 or
+    * 16-bit RGB UINT formats at all so we have to use UNORM there.
+    * Fortunately, the only time we should ever use two different formats in
+    * the table below is for RGB -> RGBA blits and so we will never have any
+    * UNORM/UINT mismatch.
+    */
+   switch (bpb) {
+   case 8:  return ISL_FORMAT_R8_UINT;
+   case 16: return ISL_FORMAT_R8G8_UINT;
+   case 24: return ISL_FORMAT_R8G8B8_UNORM;
+   case 32: return ISL_FORMAT_R8G8B8A8_UNORM;
+   case 48: return ISL_FORMAT_R16G16B16_UNORM;
+   case 64: return ISL_FORMAT_R16G16B16A16_UNORM;
+   case 96: return ISL_FORMAT_R32G32B32_UINT;
+   case 128:return ISL_FORMAT_R32G32B32A32_UINT;
+   default:
+      unreachable("Unknown format bpb");
+   }
+}
+
+static void
+surf_convert_to_uncompressed(const struct isl_device *isl_dev,
+                             struct brw_blorp_surface_info *info,
+                             uint32_t *x, uint32_t *y,
+                             uint32_t *width, uint32_t *height)
+{
+   const struct isl_format_layout *fmtl =
+      isl_format_get_layout(info->surf.format);
+
+   assert(fmtl->bw > 1 || fmtl->bh > 1);
+
+   /* This is a compressed surface.  We need to convert it to a single
+    * slice (because compressed layouts don't perfectly match uncompressed
+    * ones with the same bpb) and divide x, y, width, and height by the
+    * block size.
+    */
+   surf_convert_to_single_slice(isl_dev, info);
+
+   if (width || height) {
+      assert(*width % fmtl->bw == 0 ||
+             *x + *width == info->surf.logical_level0_px.width);
+      assert(*height % fmtl->bh == 0 ||
+             *y + *height == info->surf.logical_level0_px.height);
+      *width = DIV_ROUND_UP(*width, fmtl->bw);
+      *height = DIV_ROUND_UP(*height, fmtl->bh);
+   }
+
+   assert(*x % fmtl->bw == 0);
+   assert(*y % fmtl->bh == 0);
+   *x /= fmtl->bw;
+   *y /= fmtl->bh;
+
+   info->surf.logical_level0_px.width =
+      DIV_ROUND_UP(info->surf.logical_level0_px.width, fmtl->bw);
+   info->surf.logical_level0_px.height =
+      DIV_ROUND_UP(info->surf.logical_level0_px.height, fmtl->bh);
+
+   assert(info->surf.phys_level0_sa.width % fmtl->bw == 0);
+   assert(info->surf.phys_level0_sa.height % fmtl->bh == 0);
+   info->surf.phys_level0_sa.width /= fmtl->bw;
+   info->surf.phys_level0_sa.height /= fmtl->bh;
+
+   assert(info->tile_x_sa % fmtl->bw == 0);
+   assert(info->tile_y_sa % fmtl->bh == 0);
+   info->tile_x_sa /= fmtl->bw;
+   info->tile_y_sa /= fmtl->bh;
+
+   /* It's now an uncompressed surface so we need an uncompressed format */
+   info->surf.format = get_copy_format_for_bpb(fmtl->bpb);
+}
+
+void
+blorp_copy(struct blorp_batch *batch,
+           const struct blorp_surf *src_surf,
+           unsigned src_level, unsigned src_layer,
+           const struct blorp_surf *dst_surf,
+           unsigned dst_level, unsigned dst_layer,
+           uint32_t src_x, uint32_t src_y,
+           uint32_t dst_x, uint32_t dst_y,
+           uint32_t src_width, uint32_t src_height)
+{
+   struct blorp_params params;
+   blorp_params_init(&params);
+
+   brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
+                               src_layer, ISL_FORMAT_UNSUPPORTED, false);
+   brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
+                               dst_layer, ISL_FORMAT_UNSUPPORTED, true);
+
+   struct brw_blorp_blit_prog_key wm_prog_key;
+   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
+
+   const struct isl_format_layout *src_fmtl =
+      isl_format_get_layout(params.src.surf.format);
+   const struct isl_format_layout *dst_fmtl =
+      isl_format_get_layout(params.dst.surf.format);
+
+   params.src.view.format = get_copy_format_for_bpb(src_fmtl->bpb);
+   if (src_fmtl->bw > 1 || src_fmtl->bh > 1) {
+      surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.src,
+                                   &src_x, &src_y, &src_width, &src_height);
+      wm_prog_key.need_src_offset = true;
+   }
+
+   params.dst.view.format = get_copy_format_for_bpb(dst_fmtl->bpb);
+   if (dst_fmtl->bw > 1 || dst_fmtl->bh > 1) {
+      surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.dst,
+                                   &dst_x, &dst_y, NULL, NULL);
+      wm_prog_key.need_dst_offset = true;
+   }
+
+   /* Once both surfaces are stompped to uncompressed as needed, the
+    * destination size is the same as the source size.
+    */
+   uint32_t dst_width = src_width;
+   uint32_t dst_height = src_height;
+
+   do_blorp_blit(batch, &params, &wm_prog_key,
+                 src_x, src_y, src_x + src_width, src_y + src_height,
+                 dst_x, dst_y, dst_x + dst_width, dst_y + dst_height,
+                 false, false);
+}

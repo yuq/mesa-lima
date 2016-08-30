@@ -109,6 +109,16 @@ blorp_blit(struct blorp_batch *batch,
            uint32_t filter, bool mirror_x, bool mirror_y);
 
 void
+blorp_copy(struct blorp_batch *batch,
+           const struct blorp_surf *src_surf,
+           unsigned src_level, unsigned src_layer,
+           const struct blorp_surf *dst_surf,
+           unsigned dst_level, unsigned dst_layer,
+           uint32_t src_x, uint32_t src_y,
+           uint32_t dst_x, uint32_t dst_y,
+           uint32_t src_width, uint32_t src_height);
+
+void
 blorp_fast_clear(struct blorp_batch *batch,
                  const struct blorp_surf *surf, enum isl_format format,
                  uint32_t level, uint32_t start_layer, uint32_t num_layers,
