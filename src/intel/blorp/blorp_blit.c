@@ -1484,34 +1484,12 @@ blorp_blit(struct blorp_batch *batch,
        * If it's UMS, then we have no choice but to set up the rendering
        * pipeline as multisampled.
        */
-      switch (params.dst.surf.samples) {
-      case 2:
-         params.x0 = ROUND_DOWN_TO(params.x0 * 2, 4);
-         params.y0 = ROUND_DOWN_TO(params.y0, 4);
-         params.x1 = ALIGN(params.x1 * 2, 4);
-         params.y1 = ALIGN(params.y1, 4);
-         break;
-      case 4:
-         params.x0 = ROUND_DOWN_TO(params.x0 * 2, 4);
-         params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
-         params.x1 = ALIGN(params.x1 * 2, 4);
-         params.y1 = ALIGN(params.y1 * 2, 4);
-         break;
-      case 8:
-         params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
-         params.y0 = ROUND_DOWN_TO(params.y0 * 2, 4);
-         params.x1 = ALIGN(params.x1 * 4, 8);
-         params.y1 = ALIGN(params.y1 * 2, 4);
-         break;
-      case 16:
-         params.x0 = ROUND_DOWN_TO(params.x0 * 4, 8);
-         params.y0 = ROUND_DOWN_TO(params.y0 * 4, 8);
-         params.x1 = ALIGN(params.x1 * 4, 8);
-         params.y1 = ALIGN(params.y1 * 4, 8);
-         break;
-      default:
-         unreachable("Unrecognized sample count in brw_blorp_blit_params ctor");
-      }
+      struct isl_extent2d px_size_sa =
+         isl_get_interleaved_msaa_px_size_sa(params.dst.surf.samples);
+      params.x0 = ROUND_DOWN_TO(params.x0, 2) * px_size_sa.width;
+      params.y0 = ROUND_DOWN_TO(params.y0, 2) * px_size_sa.height;
+      params.x1 = ALIGN(params.x1, 2) * px_size_sa.width;
+      params.y1 = ALIGN(params.y1, 2) * px_size_sa.height;
 
       surf_fake_interleaved_msaa(batch->blorp->isl_dev, &params.dst);
 
