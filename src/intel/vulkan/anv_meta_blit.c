@@ -300,7 +300,7 @@ meta_emit_blit(struct anv_cmd_buffer *cmd_buffer,
       pipeline = device->meta_state.blit.pipeline_3d_src;
       break;
    default:
-      unreachable(!"bad VkImageType");
+      unreachable("bad VkImageType");
    }
 
    if (cmd_buffer->state.pipeline != anv_pipeline_from_handle(pipeline)) {
