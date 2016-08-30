@@ -666,3 +666,59 @@ void anv_CmdUpdateBuffer(
 
    blorp_batch_finish(&batch);
 }
+
+void anv_CmdClearColorImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     _image,
+    VkImageLayout                               imageLayout,
+    const VkClearColorValue*                    pColor,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*              pRanges)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, image, _image);
+
+   static const bool color_write_disable[4] = { false, false, false, false };
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   union isl_color_value clear_color;
+   memcpy(clear_color.u32, pColor->uint32, sizeof(pColor->uint32));
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT, &surf);
+
+   for (unsigned r = 0; r < rangeCount; r++) {
+      if (pRanges[r].aspectMask == 0)
+         continue;
+
+      assert(pRanges[r].aspectMask == VK_IMAGE_ASPECT_COLOR_BIT);
+
+      struct anv_format src_format =
+         anv_get_format(&cmd_buffer->device->info, image->vk_format,
+                        VK_IMAGE_ASPECT_COLOR_BIT, image->tiling);
+
+      unsigned base_layer = pRanges[r].baseArrayLayer;
+      unsigned layer_count = pRanges[r].layerCount;
+
+      for (unsigned i = 0; i < pRanges[r].levelCount; i++) {
+         const unsigned level = pRanges[r].baseMipLevel + i;
+         const unsigned level_width = anv_minify(image->extent.width, level);
+         const unsigned level_height = anv_minify(image->extent.height, level);
+
+         if (image->type == VK_IMAGE_TYPE_3D) {
+            base_layer = 0;
+            layer_count = anv_minify(image->extent.depth, level);
+         }
+
+         blorp_clear(&batch, &surf,
+                     src_format.isl_format, src_format.swizzle,
+                     level, base_layer, layer_count,
+                     0, 0, level_width, level_height,
+                     clear_color, color_write_disable);
+      }
+   }
+
+   blorp_batch_finish(&batch);
+}
