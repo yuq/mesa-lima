@@ -539,6 +539,7 @@ svga_texture_transfer_map(struct pipe_context *pipe,
           * At this point, the svga_surfaces_flush() should already have
           * called in svga_texture_get_transfer().
           */
+         svga->hud.surface_write_flushes++;
          svga_context_flush(svga, NULL);
          map = svga->swc->surface_map(svga->swc, surf, usage, &retry);
       }
@@ -583,7 +584,7 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    }
 
    svga->hud.map_buffer_time += (svga_get_time(svga) - begin);
-   svga->hud.num_resources_mapped++;
+   svga->hud.num_textures_mapped++;
 
 done:
    SVGA_STATS_TIME_POP(sws);

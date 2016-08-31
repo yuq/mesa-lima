@@ -731,7 +731,8 @@ svga_create_query(struct pipe_context *pipe,
    case SVGA_QUERY_NUM_FALLBACKS:
    case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_NUM_VALIDATIONS:
-   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_NUM_BUFFERS_MAPPED:
+   case SVGA_QUERY_NUM_TEXTURES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
    case SVGA_QUERY_COMMAND_BUFFER_SIZE:
    case SVGA_QUERY_SURFACE_WRITE_FLUSHES:
@@ -808,7 +809,8 @@ svga_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_NUM_VALIDATIONS:
    case SVGA_QUERY_MAP_BUFFER_TIME:
-   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_NUM_BUFFERS_MAPPED:
+   case SVGA_QUERY_NUM_TEXTURES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
    case SVGA_QUERY_COMMAND_BUFFER_SIZE:
    case SVGA_QUERY_FLUSH_TIME:
@@ -896,8 +898,11 @@ svga_begin_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_MAP_BUFFER_TIME:
       sq->begin_count = svga->hud.map_buffer_time;
       break;
-   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
-      sq->begin_count = svga->hud.num_resources_mapped;
+   case SVGA_QUERY_NUM_BUFFERS_MAPPED:
+      sq->begin_count = svga->hud.num_buffers_mapped;
+      break;
+   case SVGA_QUERY_NUM_TEXTURES_MAPPED:
+      sq->begin_count = svga->hud.num_textures_mapped;
       break;
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
       sq->begin_count = svga->hud.num_bytes_uploaded;
@@ -1010,8 +1015,11 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
    case SVGA_QUERY_MAP_BUFFER_TIME:
       sq->end_count = svga->hud.map_buffer_time;
       break;
-   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
-      sq->end_count = svga->hud.num_resources_mapped;
+   case SVGA_QUERY_NUM_BUFFERS_MAPPED:
+      sq->end_count = svga->hud.num_buffers_mapped;
+      break;
+   case SVGA_QUERY_NUM_TEXTURES_MAPPED:
+      sq->end_count = svga->hud.num_textures_mapped;
       break;
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
       sq->end_count = svga->hud.num_bytes_uploaded;
@@ -1142,7 +1150,8 @@ svga_get_query_result(struct pipe_context *pipe,
    case SVGA_QUERY_NUM_FLUSHES:
    case SVGA_QUERY_NUM_VALIDATIONS:
    case SVGA_QUERY_MAP_BUFFER_TIME:
-   case SVGA_QUERY_NUM_RESOURCES_MAPPED:
+   case SVGA_QUERY_NUM_BUFFERS_MAPPED:
+   case SVGA_QUERY_NUM_TEXTURES_MAPPED:
    case SVGA_QUERY_NUM_BYTES_UPLOADED:
    case SVGA_QUERY_COMMAND_BUFFER_SIZE:
    case SVGA_QUERY_FLUSH_TIME:

@@ -263,7 +263,7 @@ svga_buffer_hw_storage_map(struct svga_context *svga,
 {
    struct svga_winsys_screen *sws = svga_buffer_winsys_screen(sbuf);
 
-   svga->hud.num_resources_mapped++;
+   svga->hud.num_buffers_mapped++;
 
    if (sws->have_gb_objects) {
       return svga->swc->surface_map(svga->swc, sbuf->handle, flags, retry);

@@ -53,7 +53,8 @@ enum svga_hud {
    SVGA_QUERY_NUM_FLUSHES,
    SVGA_QUERY_NUM_VALIDATIONS,
    SVGA_QUERY_MAP_BUFFER_TIME,
-   SVGA_QUERY_NUM_RESOURCES_MAPPED,
+   SVGA_QUERY_NUM_BUFFERS_MAPPED,
+   SVGA_QUERY_NUM_TEXTURES_MAPPED,
    SVGA_QUERY_NUM_BYTES_UPLOADED,
    SVGA_QUERY_COMMAND_BUFFER_SIZE,
    SVGA_QUERY_FLUSH_TIME,
@@ -537,7 +538,8 @@ struct svga_context
       uint64_t num_flushes;             /**< SVGA_QUERY_NUM_FLUSHES */
       uint64_t num_validations;         /**< SVGA_QUERY_NUM_VALIDATIONS */
       uint64_t map_buffer_time;         /**< SVGA_QUERY_MAP_BUFFER_TIME */
-      uint64_t num_resources_mapped;    /**< SVGA_QUERY_NUM_RESOURCES_MAPPED */
+      uint64_t num_buffers_mapped;      /**< SVGA_QUERY_NUM_BUFFERS_MAPPED */
+      uint64_t num_textures_mapped;     /**< SVGA_QUERY_NUM_TEXTURES_MAPPED */
       uint64_t command_buffer_size;     /**< SVGA_QUERY_COMMAND_BUFFER_SIZE */
       uint64_t flush_time;              /**< SVGA_QUERY_FLUSH_TIME */
       uint64_t surface_write_flushes;   /**< SVGA_QUERY_SURFACE_WRITE_FLUSHES */
