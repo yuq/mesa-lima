@@ -231,12 +231,16 @@ If a surface includes several layers then all layers will be cleared.
 ``clear_render_target`` clears a single color rendertarget with the specified
 color value. While it is only possible to clear one surface at a time (which can
 include several layers), this surface need not be bound to the framebuffer.
+If render_condition_enabled is false, any current rendering condition is ignored
+and the clear will be unconditional.
 
 ``clear_depth_stencil`` clears a single depth, stencil or depth/stencil surface
 with the specified depth and stencil values (for combined depth/stencil buffers,
 it is also possible to only clear one or the other part). While it is only
 possible to clear one surface at a time (which can include several layers),
 this surface need not be bound to the framebuffer.
+If render_condition_enabled is false, any current rendering condition is ignored
+and the clear will be unconditional.
 
 ``clear_texture`` clears a non-PIPE_BUFFER resource's specified level
 and bounding box with a clear value provided in that resource's native
