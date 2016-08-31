@@ -680,15 +680,13 @@ out:
    return !ret;
 }
 
-bool
-nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
+static inline int
+nvc0_program_alloc_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
 {
    struct nvc0_screen *screen = nvc0->screen;
    const bool is_cp = prog->type == PIPE_SHADER_COMPUTE;
    int ret;
    uint32_t size = prog->code_size + (is_cp ? 0 : NVC0_SHADER_HEADER_SIZE);
-   uint32_t lib_pos = screen->lib_code->start;
-   uint32_t code_pos;
 
    /* On Fermi, SP_START_ID must be aligned to 0x40.
     * On Kepler, the first instruction must be aligned to 0x80 because
@@ -699,23 +697,8 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
    size = align(size, 0x40);
 
    ret = nouveau_heap_alloc(screen->text_heap, size, prog, &prog->mem);
-   if (ret) {
-      struct nouveau_heap *heap = screen->text_heap;
-      /* Note that the code library, which is allocated before anything else,
-       * does not have a priv pointer. We can stop once we hit it.
-       */
-      while (heap->next && heap->next->priv) {
-         struct nvc0_program *evict = heap->next->priv;
-         nouveau_heap_free(&evict->mem);
-      }
-      debug_printf("WARNING: out of code space, evicting all shaders.\n");
-      ret = nouveau_heap_alloc(heap, size, prog, &prog->mem);
-      if (ret) {
-         NOUVEAU_ERR("shader too large (0x%x) to fit in code space ?\n", size);
-         return false;
-      }
-      IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
-   }
+   if (ret)
+      return ret;
    prog->code_base = prog->mem->start;
 
    if (!is_cp) {
@@ -730,18 +713,27 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
             break;
          }
       }
-      code_pos = prog->code_base + NVC0_SHADER_HEADER_SIZE;
    } else {
       if (screen->base.class_3d >= NVE4_3D_CLASS) {
          if (prog->mem->start & 0x40)
             prog->code_base += 0x40;
          assert((prog->code_base & 0x7f) == 0x00);
       }
-      code_pos = prog->code_base;
    }
 
+   return 0;
+}
+
+static inline void
+nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
+{
+   struct nvc0_screen *screen = nvc0->screen;
+   const bool is_cp = prog->type == PIPE_SHADER_COMPUTE;
+   uint32_t code_pos = prog->code_base + (is_cp ? 0 : NVC0_SHADER_HEADER_SIZE);
+
    if (prog->relocs)
-      nv50_ir_relocate_code(prog->relocs, prog->code, code_pos, lib_pos, 0);
+      nv50_ir_relocate_code(prog->relocs, prog->code, code_pos,
+                            screen->lib_code->start, 0);
    if (prog->fixups) {
       nv50_ir_apply_fixups(prog->fixups, prog->code,
                            prog->fp.force_persample_interp,
@@ -761,16 +753,51 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
       }
    }
 
+   if (!is_cp)
+      nvc0->base.push_data(&nvc0->base, screen->text, prog->code_base,
+                           NV_VRAM_DOMAIN(&screen->base),
+                           NVC0_SHADER_HEADER_SIZE, prog->hdr);
+
+   nvc0->base.push_data(&nvc0->base, screen->text, code_pos,
+                        NV_VRAM_DOMAIN(&screen->base), prog->code_size,
+                        prog->code);
+}
+
+bool
+nvc0_program_upload(struct nvc0_context *nvc0, struct nvc0_program *prog)
+{
+   struct nvc0_screen *screen = nvc0->screen;
+   const bool is_cp = prog->type == PIPE_SHADER_COMPUTE;
+   int ret;
+   uint32_t size = prog->code_size + (is_cp ? 0 : NVC0_SHADER_HEADER_SIZE);
+
+   ret = nvc0_program_alloc_code(nvc0, prog);
+   if (ret) {
+      struct nouveau_heap *heap = screen->text_heap;
+
+      /* Note that the code library, which is allocated before anything else,
+       * does not have a priv pointer. We can stop once we hit it.
+       */
+      while (heap->next && heap->next->priv) {
+         struct nvc0_program *evict = heap->next->priv;
+         nouveau_heap_free(&evict->mem);
+      }
+      debug_printf("WARNING: out of code space, evicting all shaders.\n");
+
+      ret = nvc0_program_alloc_code(nvc0, prog);
+      if (ret) {
+         NOUVEAU_ERR("shader too large (0x%x) to fit in code space ?\n", size);
+         return false;
+      }
+      IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
+   }
+
+   nvc0_program_upload_code(nvc0, prog);
+
 #ifdef DEBUG
    if (debug_get_bool_option("NV50_PROG_DEBUG", false))
       nvc0_program_dump(prog);
 #endif
-
-   if (!is_cp)
-      nvc0->base.push_data(&nvc0->base, screen->text, prog->code_base,
-                           NV_VRAM_DOMAIN(&screen->base), NVC0_SHADER_HEADER_SIZE, prog->hdr);
-   nvc0->base.push_data(&nvc0->base, screen->text, code_pos,
-                        NV_VRAM_DOMAIN(&screen->base), prog->code_size, prog->code);
 
    BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(MEM_BARRIER), 1);
    PUSH_DATA (nvc0->base.pushbuf, 0x1011);

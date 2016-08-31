@@ -60,7 +60,7 @@ nvc0_program_validate(struct nvc0_context *nvc0, struct nvc0_program *prog)
    }
 
    if (likely(prog->code_size))
-      return nvc0_program_upload_code(nvc0, prog);
+      return nvc0_program_upload(nvc0, prog);
    return true; /* stream output info only */
 }
 
