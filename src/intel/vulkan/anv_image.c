@@ -392,7 +392,7 @@ anv_image_view_init(struct anv_image_view *iview,
       break;
    }
 
-   struct anv_surface *surface =
+   const struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, range->aspectMask);
 
    iview->image = image;
@@ -653,8 +653,9 @@ anv_DestroyBufferView(VkDevice _device, VkBufferView bufferView,
    anv_free2(&device->alloc, pAllocator, view);
 }
 
-struct anv_surface *
-anv_image_get_surface_for_aspect_mask(struct anv_image *image, VkImageAspectFlags aspect_mask)
+const struct anv_surface *
+anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
+                                      VkImageAspectFlags aspect_mask)
 {
    switch (aspect_mask) {
    case VK_IMAGE_ASPECT_COLOR_BIT:

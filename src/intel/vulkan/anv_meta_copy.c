@@ -278,9 +278,9 @@ void anv_CmdCopyImage(
       VkImageAspectFlags aspect = pRegions[r].srcSubresource.aspectMask;
 
       /* Create blit surfaces */
-      struct anv_surface *src_surf =
+      const struct anv_surface *src_surf =
          anv_image_get_surface_for_aspect_mask(src_image, aspect);
-      struct anv_surface *dst_surf =
+      const struct anv_surface *dst_surf =
          anv_image_get_surface_for_aspect_mask(dest_image, aspect);
       struct anv_meta_blit2d_surf b_src =
          blit_surf_for_image(src_image, src_surf);

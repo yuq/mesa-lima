@@ -1753,8 +1753,8 @@ VkResult anv_image_create(VkDevice _device,
                           const VkAllocationCallbacks* alloc,
                           VkImage *pImage);
 
-struct anv_surface *
-anv_image_get_surface_for_aspect_mask(struct anv_image *image,
+const struct anv_surface *
+anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
                                       VkImageAspectFlags aspect_mask);
 
 void anv_image_view_init(struct anv_image_view *view,
