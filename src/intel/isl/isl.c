@@ -1329,7 +1329,8 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
    assert(surf->samples == 1 && surf->msaa_layout == ISL_MSAA_LAYOUT_NONE);
    assert(ISL_DEV_GEN(dev) >= 7);
 
-   assert(surf->dim == ISL_SURF_DIM_2D);
+   assert(ISL_DEV_GEN(dev) >= 8 || surf->dim == ISL_SURF_DIM_2D);
+
    assert(surf->logical_level0_px.depth == 1);
 
    /* TODO: More conditions where it can fail. */
