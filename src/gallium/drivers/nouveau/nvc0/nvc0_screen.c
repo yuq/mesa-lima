@@ -987,7 +987,7 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    nvc0_magic_3d_init(push, screen->eng3d->oclass);
 
-   ret = nvc0_screen_resize_text_area(screen, 1 << 20);
+   ret = nvc0_screen_resize_text_area(screen, 1 << 19);
    if (ret)
       FAIL_SCREEN_INIT("Error allocating TEXT area: %d\n", ret);
 
