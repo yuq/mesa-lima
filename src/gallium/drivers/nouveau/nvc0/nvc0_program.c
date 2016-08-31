@@ -788,12 +788,35 @@ nvc0_program_upload(struct nvc0_context *nvc0, struct nvc0_program *prog)
       }
       debug_printf("WARNING: out of code space, evicting all shaders.\n");
 
+      /* Make sure to synchronize before deleting the code segment. */
+      IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
+
+      if ((screen->text->size << 1) <= (1 << 23)) {
+         ret = nvc0_screen_resize_text_area(screen, screen->text->size << 1);
+         if (ret) {
+            NOUVEAU_ERR("Error allocating TEXT area: %d\n", ret);
+            return false;
+         }
+         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEXT);
+         BCTX_REFN_bo(nvc0->bufctx_3d, 3D_TEXT,
+                      NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RD,
+                      screen->text);
+         if (screen->compute) {
+            nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_TEXT);
+            BCTX_REFN_bo(nvc0->bufctx_cp, CP_TEXT,
+                         NV_VRAM_DOMAIN(&screen->base) | NOUVEAU_BO_RD,
+                         screen->text);
+         }
+
+         /* Re-upload the builtin function into the new code segment. */
+         nvc0_program_library_upload(nvc0);
+      }
+
       ret = nvc0_program_alloc_code(nvc0, prog);
       if (ret) {
          NOUVEAU_ERR("shader too large (0x%x) to fit in code space ?\n", size);
          return false;
       }
-      IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
 
       /* All currently bound shaders have to be reuploaded. */
       for (int i = 0; i < ARRAY_SIZE(progs); i++) {
