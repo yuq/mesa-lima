@@ -59,7 +59,6 @@ struct nv50_program {
    unsigned code_size;
    unsigned code_base;
    uint32_t *immd;
-   unsigned immd_size;
    unsigned parm_size; /* size limit of uniform buffer */
    uint32_t tls_space; /* required local memory per thread */
 
