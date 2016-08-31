@@ -4344,10 +4344,23 @@ handle_tess_shader_input_decl(struct _mesa_glsl_parse_state *state,
    if (var->data.patch)
       return;
 
-   /* Unsized arrays are implicitly sized to gl_MaxPatchVertices. */
+   /* The ARB_tessellation_shader spec says:
+    *
+    *    "Declaring an array size is optional.  If no size is specified, it
+    *     will be taken from the implementation-dependent maximum patch size
+    *     (gl_MaxPatchVertices).  If a size is specified, it must match the
+    *     maximum patch size; otherwise, a compile or link error will occur."
+    *
+    * This text appears twice, once for TCS inputs, and again for TES inputs.
+    */
    if (var->type->is_unsized_array()) {
       var->type = glsl_type::get_array_instance(var->type->fields.array,
             state->Const.MaxPatchVertices);
+   } else if (var->type->length != state->Const.MaxPatchVertices) {
+      _mesa_glsl_error(&loc, state,
+                       "per-vertex tessellation shader input arrays must be "
+                       "sized to gl_MaxPatchVertices (%d).",
+                       state->Const.MaxPatchVertices);
    }
 }
 
