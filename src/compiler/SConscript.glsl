@@ -89,35 +89,7 @@ mesa_objs = env.StaticObject([
 
 compiler_objs += mesa_objs
 
-glsl = env.ConvenienceLibrary(
-    target = 'glsl',
-    source = glsl_sources,
-)
-
-# SCons builtin dependency scanner doesn't detect that glsl_lexer.ll depends on
-# glsl_parser.h
-env.Depends(glsl, glsl_parser)
-
-Export('glsl')
-
-# Skip building these programs as they will cause SCons error "Two environments
-# with different actions were specified for the same target"
-if env['crosscompile'] or env['embedded']:
-    Return()
-
-env = env.Clone()
-
-if env['platform'] == 'windows':
-    env.PrependUnique(LIBS = [
-        'user32',
-    ])
-
-env.Prepend(LIBS = [compiler, glsl])
-
-compiler_objs += env.StaticObject("glsl/main.cpp")
-
 # GLSL generated sources
-
 env.CodeGenerate(
     target = 'glsl/ir_expression_operation.h',
     script = 'glsl/ir_expression_operation.py',
@@ -136,6 +108,38 @@ env.CodeGenerate(
     source = [],
     command = python_cmd + ' $SCRIPT strings > $TARGET'
 )
+
+glsl = env.ConvenienceLibrary(
+    target = 'glsl',
+    source = glsl_sources,
+)
+
+# SCons builtin dependency scanner doesn't detect that glsl_lexer.ll depends on
+# glsl_parser.h
+env.Depends(glsl, glsl_parser)
+
+Export('glsl')
+
+#
+# XXX: It's important to not add any generated source files after this point,
+# or it will break MinGW cross-compilation.
+#
+
+# Skip building these programs as they will cause SCons error "Two environments
+# with different actions were specified for the same target"
+if env['crosscompile'] or env['embedded']:
+    Return()
+
+env = env.Clone()
+
+if env['platform'] == 'windows':
+    env.PrependUnique(LIBS = [
+        'user32',
+    ])
+
+env.Prepend(LIBS = [compiler, glsl])
+
+compiler_objs += env.StaticObject("glsl/main.cpp")
 
 glsl_compiler = env.Program(
     target = 'glsl_compiler',
