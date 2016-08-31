@@ -242,9 +242,10 @@ blorp_fast_clear(struct blorp_batch *batch,
 void
 blorp_clear(struct blorp_batch *batch,
             const struct blorp_surf *surf,
+            enum isl_format format, struct isl_swizzle swizzle,
             uint32_t level, uint32_t start_layer, uint32_t num_layers,
             uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
-            enum isl_format format, union isl_color_value clear_color,
+            union isl_color_value clear_color,
             const bool color_write_disable[4])
 {
    struct blorp_params params;
@@ -290,6 +291,7 @@ blorp_clear(struct blorp_batch *batch,
    while (num_layers > 0) {
       brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
                                   start_layer, format, true);
+      params.dst.view.swizzle = swizzle;
 
       /* We may be restricted on the number of layers we can bind at any one
        * time.  In particular, Sandy Bridge has a maximum number of layers of
