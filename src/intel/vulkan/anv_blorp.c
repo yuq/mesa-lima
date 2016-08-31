@@ -722,3 +722,124 @@ void anv_CmdClearColorImage(
 
    blorp_batch_finish(&batch);
 }
+
+static void
+resolve_image(struct blorp_batch *batch,
+              const struct anv_image *src_image,
+              uint32_t src_level, uint32_t src_layer,
+              const struct anv_image *dst_image,
+              uint32_t dst_level, uint32_t dst_layer,
+              VkImageAspectFlags aspect_mask,
+              uint32_t src_x, uint32_t src_y, uint32_t dst_x, uint32_t dst_y,
+              uint32_t width, uint32_t height)
+{
+   assert(src_image->type == VK_IMAGE_TYPE_2D);
+   assert(src_image->samples > 1);
+   assert(dst_image->type == VK_IMAGE_TYPE_2D);
+   assert(dst_image->samples == 1);
+
+   uint32_t a;
+   for_each_bit(a, aspect_mask) {
+      VkImageAspectFlagBits aspect = 1 << a;
+
+      struct blorp_surf src_surf, dst_surf;
+      get_blorp_surf_for_anv_image(src_image, aspect, &src_surf);
+      get_blorp_surf_for_anv_image(dst_image, aspect, &dst_surf);
+
+      blorp_blit(batch,
+                 &src_surf, src_level, src_layer,
+                 ISL_FORMAT_UNSUPPORTED, ISL_SWIZZLE_IDENTITY,
+                 &dst_surf, dst_level, dst_layer,
+                 ISL_FORMAT_UNSUPPORTED, ISL_SWIZZLE_IDENTITY,
+                 src_x, src_y, src_x + width, src_y + height,
+                 dst_x, dst_y, dst_x + width, dst_y + height,
+                 0x2600 /* GL_NEAREST */, false, false);
+   }
+}
+
+void anv_CmdResolveImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     srcImage,
+    VkImageLayout                               srcImageLayout,
+    VkImage                                     dstImage,
+    VkImageLayout                               dstImageLayout,
+    uint32_t                                    regionCount,
+    const VkImageResolve*                       pRegions)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, src_image, srcImage);
+   ANV_FROM_HANDLE(anv_image, dst_image, dstImage);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   for (uint32_t r = 0; r < regionCount; r++) {
+      assert(pRegions[r].srcSubresource.aspectMask ==
+             pRegions[r].dstSubresource.aspectMask);
+      assert(pRegions[r].srcSubresource.layerCount ==
+             pRegions[r].dstSubresource.layerCount);
+
+      const uint32_t layer_count = pRegions[r].dstSubresource.layerCount;
+
+      for (uint32_t layer = 0; layer < layer_count; layer++) {
+         resolve_image(&batch,
+                       src_image, pRegions[r].srcSubresource.mipLevel,
+                       pRegions[r].srcSubresource.baseArrayLayer + layer,
+                       dst_image, pRegions[r].dstSubresource.mipLevel,
+                       pRegions[r].dstSubresource.baseArrayLayer + layer,
+                       pRegions[r].dstSubresource.aspectMask,
+                       pRegions[r].srcOffset.x, pRegions[r].srcOffset.y,
+                       pRegions[r].dstOffset.x, pRegions[r].dstOffset.y,
+                       pRegions[r].extent.width, pRegions[r].extent.height);
+      }
+   }
+
+   blorp_batch_finish(&batch);
+}
+
+void
+anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   struct anv_subpass *subpass = cmd_buffer->state.subpass;
+
+   /* FINISHME(perf): Skip clears for resolve attachments.
+    *
+    * From the Vulkan 1.0 spec:
+    *
+    *    If the first use of an attachment in a render pass is as a resolve
+    *    attachment, then the loadOp is effectively ignored as the resolve is
+    *    guaranteed to overwrite all pixels in the render area.
+    */
+
+   if (!subpass->has_resolve)
+      return;
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+
+   for (uint32_t i = 0; i < subpass->color_count; ++i) {
+      uint32_t src_att = subpass->color_attachments[i];
+      uint32_t dst_att = subpass->resolve_attachments[i];
+
+      if (dst_att == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      struct anv_image_view *src_iview = fb->attachments[src_att];
+      struct anv_image_view *dst_iview = fb->attachments[dst_att];
+
+      const VkRect2D render_area = cmd_buffer->state.render_area;
+
+      assert(src_iview->aspect_mask == dst_iview->aspect_mask);
+      resolve_image(&batch, src_iview->image,
+                    src_iview->base_mip, src_iview->base_layer,
+                    dst_iview->image,
+                    dst_iview->base_mip, dst_iview->base_layer,
+                    src_iview->aspect_mask,
+                    render_area.offset.x, render_area.offset.y,
+                    render_area.offset.x, render_area.offset.y,
+                    render_area.extent.width, render_area.extent.height);
+   }
+
+   blorp_batch_finish(&batch);
+}

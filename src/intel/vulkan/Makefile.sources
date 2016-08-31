@@ -34,7 +34,6 @@ VULKAN_FILES := \
 	anv_meta.c \
 	anv_meta.h \
 	anv_meta_clear.c \
-	anv_meta_resolve.c \
 	anv_nir.h \
 	anv_nir_apply_dynamic_offsets.c \
 	anv_nir_apply_pipeline_layout.c \

@@ -142,14 +142,8 @@ anv_device_init_meta(struct anv_device *device)
    if (result != VK_SUCCESS)
       goto fail_clear;
 
-   result = anv_device_init_meta_resolve_state(device);
-   if (result != VK_SUCCESS)
-      goto fail_resolve;
-
    return VK_SUCCESS;
 
-fail_resolve:
-   anv_device_finish_meta_clear_state(device);
 fail_clear:
    return result;
 }
@@ -157,6 +151,5 @@ fail_clear:
 void
 anv_device_finish_meta(struct anv_device *device)
 {
-   anv_device_finish_meta_resolve_state(device);
    anv_device_finish_meta_clear_state(device);
 }
