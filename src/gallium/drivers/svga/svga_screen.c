@@ -944,6 +944,8 @@ svga_screen_create(struct svga_winsys_screen *sws)
       debug_get_bool_option("SVGA_NO_SURFACE_VIEW", FALSE);
    svgascreen->debug.no_sampler_view =
       debug_get_bool_option("SVGA_NO_SAMPLER_VIEW", FALSE);
+   svgascreen->debug.no_cache_index_buffers =
+      debug_get_bool_option("SVGA_NO_CACHE_INDEX_BUFFERS", FALSE);
 
    screen = &svgascreen->screen;
 

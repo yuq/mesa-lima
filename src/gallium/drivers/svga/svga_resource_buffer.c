@@ -98,6 +98,13 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    transfer->stride = 0;
    transfer->layer_stride = 0;
 
+   if (usage & PIPE_TRANSFER_WRITE) {
+      /* If we write to the buffer for any reason, free any saved translated
+       * vertices.
+       */
+      pipe_resource_reference(&sbuf->translated_indices.buffer, NULL);
+   }
+
    if ((usage & PIPE_TRANSFER_READ) && sbuf->dirty) {
       enum pipe_error ret;
 
@@ -360,6 +367,8 @@ svga_buffer_destroy( struct pipe_screen *screen,
 
    if (sbuf->swbuf && !sbuf->user)
       align_free(sbuf->swbuf);
+
+   pipe_resource_reference(&sbuf->translated_indices.buffer, NULL);
 
    ss->hud.total_resource_bytes -= sbuf->size;
    assert(ss->hud.num_resources > 0);
