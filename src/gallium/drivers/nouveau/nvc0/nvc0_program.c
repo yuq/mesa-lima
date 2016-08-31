@@ -774,6 +774,10 @@ nvc0_program_upload(struct nvc0_context *nvc0, struct nvc0_program *prog)
    ret = nvc0_program_alloc_code(nvc0, prog);
    if (ret) {
       struct nouveau_heap *heap = screen->text_heap;
+      struct nvc0_program *progs[] = { /* Sorted accordingly to SP_START_ID */
+         nvc0->compprog, nvc0->vertprog, nvc0->tctlprog,
+         nvc0->tevlprog, nvc0->gmtyprog, nvc0->fragprog
+      };
 
       /* Note that the code library, which is allocated before anything else,
        * does not have a priv pointer. We can stop once we hit it.
@@ -790,6 +794,29 @@ nvc0_program_upload(struct nvc0_context *nvc0, struct nvc0_program *prog)
          return false;
       }
       IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
+
+      /* All currently bound shaders have to be reuploaded. */
+      for (int i = 0; i < ARRAY_SIZE(progs); i++) {
+         if (!progs[i] || progs[i] == prog)
+            continue;
+
+         ret = nvc0_program_alloc_code(nvc0, progs[i]);
+         if (ret) {
+            NOUVEAU_ERR("failed to re-upload a shader after code eviction.\n");
+            return false;
+         }
+         nvc0_program_upload_code(nvc0, progs[i]);
+
+         if (progs[i]->type == PIPE_SHADER_COMPUTE) {
+            /* Caches have to be invalidated but the CP_START_ID will be
+             * updated in the launch_grid functions. */
+            BEGIN_NVC0(nvc0->base.pushbuf, NVC0_CP(FLUSH), 1);
+            PUSH_DATA (nvc0->base.pushbuf, NVC0_COMPUTE_FLUSH_CODE);
+         } else {
+            BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(SP_START_ID(i)), 1);
+            PUSH_DATA (nvc0->base.pushbuf, progs[i]->code_base);
+         }
+      }
    }
 
    nvc0_program_upload_code(nvc0, prog);
