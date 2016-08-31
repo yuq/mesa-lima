@@ -140,9 +140,7 @@ brw_emit_surface_state(struct brw_context *brw,
    struct isl_surf *aux_surf = NULL, aux_surf_s;
    uint64_t aux_offset = 0;
    enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
-   if (mt->mcs_mt &&
-       ((view.usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) ||
-        mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)) {
+   if (mt->mcs_mt && !(flags & INTEL_AUX_BUFFER_DISABLED)) {
       intel_miptree_get_aux_isl_surf(brw, mt, &aux_surf_s, &aux_usage);
       aux_surf = &aux_surf_s;
       assert(mt->mcs_mt->offset == 0);
@@ -425,6 +423,58 @@ swizzle_to_scs(GLenum swizzle, bool need_green_to_blue)
    return (need_green_to_blue && scs == HSW_SCS_GREEN) ? HSW_SCS_BLUE : scs;
 }
 
+static unsigned
+brw_find_matching_rb(const struct gl_framebuffer *fb,
+                     const struct intel_mipmap_tree *mt)
+{
+   for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
+      const struct intel_renderbuffer *irb =
+         intel_renderbuffer(fb->_ColorDrawBuffers[i]);
+
+      if (irb && irb->mt == mt)
+         return i;
+   }
+
+   return fb->_NumColorDrawBuffers;
+}
+
+static bool
+brw_disable_aux_surface(const struct brw_context *brw,
+                        const struct intel_mipmap_tree *mt)
+{
+   /* Nothing to disable. */
+   if (!mt->mcs_mt)
+      return false;
+
+   /* There are special cases only for lossless compression. */
+   if (!intel_miptree_is_lossless_compressed(brw, mt))
+      return mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED;
+
+   const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
+   const unsigned rb_index = brw_find_matching_rb(fb, mt);
+
+   /* If we are drawing into this with compression enabled, then we must also
+    * enable compression when texturing from it regardless of
+    * fast_clear_state.  If we don't then, after the first draw call with
+    * this setup, there will be data in the CCS which won't get picked up by
+    * subsequent texturing operations as required by ARB_texture_barrier.
+    * Since we don't want to re-emit the binding table or do a resolve
+    * operation every draw call, the easiest thing to do is just enable
+    * compression on the texturing side.  This is completely safe to do
+    * since, if compressed texturing weren't allowed, we would have disabled
+    * compression of render targets in whatever_that_function_is_called().
+    */
+   if (rb_index < fb->_NumColorDrawBuffers) {
+      if (brw->draw_aux_buffer_disabled[rb_index]) {
+         assert(mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED);
+      }
+
+      return brw->draw_aux_buffer_disabled[rb_index];
+   }
+
+   return mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED;
+}
+
 void
 brw_update_texture_surface(struct gl_context *ctx,
                            unsigned unit,
@@ -542,7 +592,8 @@ brw_update_texture_surface(struct gl_context *ctx,
           obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
          view.usage |= ISL_SURF_USAGE_CUBE_BIT;
 
-      const int flags = 0;
+      const int flags =
+         brw_disable_aux_surface(brw, mt) ? INTEL_AUX_BUFFER_DISABLED : 0;
       brw_emit_surface_state(brw, mt, flags, mt->target, view,
                              surface_state_infos[brw->gen].tex_mocs,
                              surf_offset, surf_index,
@@ -1113,7 +1164,8 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                .usage = ISL_SURF_USAGE_TEXTURE_BIT,
             };
 
-            const int flags = 0;
+            const int flags = brw->draw_aux_buffer_disabled[i] ?
+                                 INTEL_AUX_BUFFER_DISABLED : 0;
             brw_emit_surface_state(brw, irb->mt, flags, target, view,
                                    surface_state_infos[brw->gen].tex_mocs,
                                    surf_offset, surf_index,
@@ -1672,8 +1724,9 @@ update_image_surface(struct brw_context *brw,
             };
 
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
-
-            const int flags = 0;
+            const int flags =
+               mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED ?
+               INTEL_AUX_BUFFER_DISABLED : 0;
             brw_emit_surface_state(brw, mt, flags, mt->target, view,
                                    surface_state_infos[brw->gen].tex_mocs,
                                    surf_offset, surf_index,
