@@ -1254,8 +1254,13 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
    /* Just bail if we have nothing to do. */
    if (info->surf.dim == ISL_SURF_DIM_2D &&
        info->view.base_level == 0 && info->view.base_array_layer == 0 &&
-       info->surf.levels == 0 && info->surf.logical_level0_px.array_len == 0)
+       info->surf.levels == 1 && info->surf.logical_level0_px.array_len == 1)
       return;
+
+   /* If this gets triggered then we've gotten here twice which.  This
+    * shouldn't happen thanks to the above early return.
+    */
+   assert(info->tile_x_sa == 0 && info->tile_y_sa == 0);
 
    uint32_t x_offset_sa, y_offset_sa;
    isl_surf_get_image_offset_sa(&info->surf, info->view.base_level,
