@@ -162,6 +162,7 @@ public:
       linked_sig->replace_parameters(&formal_parameters);
 
       linked_sig->is_intrinsic = sig->is_intrinsic;
+      linked_sig->intrinsic_id = sig->intrinsic_id;
 
       if (sig->is_defined) {
          foreach_in_list(const ir_instruction, original, &sig->body) {

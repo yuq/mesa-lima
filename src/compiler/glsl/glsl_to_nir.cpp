@@ -610,50 +610,73 @@ nir_visitor::visit(ir_call *ir)
    if (ir->callee->is_intrinsic) {
       nir_intrinsic_op op;
       if (strcmp(ir->callee_name(), "__intrinsic_atomic_read") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_atomic_counter_read);
          op = nir_intrinsic_atomic_counter_read_var;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_increment") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_atomic_counter_increment);
          op = nir_intrinsic_atomic_counter_inc_var;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_predecrement") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_atomic_counter_predecrement);
          op = nir_intrinsic_atomic_counter_dec_var;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_load") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_load);
          op = nir_intrinsic_image_load;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_store") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_store);
          op = nir_intrinsic_image_store;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_add") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_add);
          op = nir_intrinsic_image_atomic_add;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_min") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_min);
          op = nir_intrinsic_image_atomic_min;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_max") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_max);
          op = nir_intrinsic_image_atomic_max;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_and") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_and);
          op = nir_intrinsic_image_atomic_and;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_or") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_or);
          op = nir_intrinsic_image_atomic_or;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_xor") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_xor);
          op = nir_intrinsic_image_atomic_xor;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_exchange") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_exchange);
          op = nir_intrinsic_image_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_atomic_comp_swap") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_atomic_comp_swap);
          op = nir_intrinsic_image_atomic_comp_swap;
       } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_memory_barrier);
          op = nir_intrinsic_memory_barrier;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_size") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_size);
          op = nir_intrinsic_image_size;
       } else if (strcmp(ir->callee_name(), "__intrinsic_image_samples") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_image_samples);
          op = nir_intrinsic_image_samples;
       } else if (strcmp(ir->callee_name(), "__intrinsic_store_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_store);
          op = nir_intrinsic_store_ssbo;
       } else if (strcmp(ir->callee_name(), "__intrinsic_load_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_load);
          op = nir_intrinsic_load_ssbo;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_add_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_add);
          op = nir_intrinsic_ssbo_atomic_add;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_and_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_and);
          op = nir_intrinsic_ssbo_atomic_and;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_or_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_or);
          op = nir_intrinsic_ssbo_atomic_or;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_xor_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_xor);
          op = nir_intrinsic_ssbo_atomic_xor;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_min_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_min);
          assert(ir->return_deref);
          if (ir->return_deref->type == glsl_type::int_type)
             op = nir_intrinsic_ssbo_atomic_imin;
@@ -662,6 +685,7 @@ nir_visitor::visit(ir_call *ir)
          else
             unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_max_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_max);
          assert(ir->return_deref);
          if (ir->return_deref->type == glsl_type::int_type)
             op = nir_intrinsic_ssbo_atomic_imax;
@@ -670,34 +694,49 @@ nir_visitor::visit(ir_call *ir)
          else
             unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_exchange_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_exchange);
          op = nir_intrinsic_ssbo_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_comp_swap_ssbo") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_ssbo_atomic_comp_swap);
          op = nir_intrinsic_ssbo_atomic_comp_swap;
       } else if (strcmp(ir->callee_name(), "__intrinsic_shader_clock") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shader_clock);
          op = nir_intrinsic_shader_clock;
       } else if (strcmp(ir->callee_name(), "__intrinsic_group_memory_barrier") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_group_memory_barrier);
          op = nir_intrinsic_group_memory_barrier;
       } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_atomic_counter") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_memory_barrier_atomic_counter);
          op = nir_intrinsic_memory_barrier_atomic_counter;
       } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_buffer") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_memory_barrier_buffer);
          op = nir_intrinsic_memory_barrier_buffer;
       } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_image") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_memory_barrier_image);
          op = nir_intrinsic_memory_barrier_image;
       } else if (strcmp(ir->callee_name(), "__intrinsic_memory_barrier_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_memory_barrier_shared);
          op = nir_intrinsic_memory_barrier_shared;
       } else if (strcmp(ir->callee_name(), "__intrinsic_load_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_load);
          op = nir_intrinsic_load_shared;
       } else if (strcmp(ir->callee_name(), "__intrinsic_store_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_store);
          op = nir_intrinsic_store_shared;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_add_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_add);
          op = nir_intrinsic_shared_atomic_add;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_and_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_and);
          op = nir_intrinsic_shared_atomic_and;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_or_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_or);
          op = nir_intrinsic_shared_atomic_or;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_xor_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_xor);
          op = nir_intrinsic_shared_atomic_xor;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_min_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_min);
          assert(ir->return_deref);
          if (ir->return_deref->type == glsl_type::int_type)
             op = nir_intrinsic_shared_atomic_imin;
@@ -706,6 +745,7 @@ nir_visitor::visit(ir_call *ir)
          else
             unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_max_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_max);
          assert(ir->return_deref);
          if (ir->return_deref->type == glsl_type::int_type)
             op = nir_intrinsic_shared_atomic_imax;
@@ -714,8 +754,10 @@ nir_visitor::visit(ir_call *ir)
          else
             unreachable("Invalid type");
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_exchange_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_exchange);
          op = nir_intrinsic_shared_atomic_exchange;
       } else if (strcmp(ir->callee_name(), "__intrinsic_atomic_comp_swap_shared") == 0) {
+         assert(ir->callee->intrinsic_id == ir_intrinsic_shared_atomic_comp_swap);
          op = nir_intrinsic_shared_atomic_comp_swap;
       } else {
          unreachable("not reached");

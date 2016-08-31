@@ -454,6 +454,7 @@ lower_ubo_reference_visitor::ssbo_store(void *mem_ctx,
    assert(sig);
    sig->replace_parameters(&sig_params);
    sig->is_intrinsic = true;
+   sig->intrinsic_id = ir_intrinsic_ssbo_store;
 
    ir_function *f = new(mem_ctx) ir_function("__intrinsic_store_ssbo");
    f->add_signature(sig);
@@ -491,6 +492,7 @@ lower_ubo_reference_visitor::ssbo_load(void *mem_ctx,
    assert(sig);
    sig->replace_parameters(&sig_params);
    sig->is_intrinsic = true;
+   sig->intrinsic_id = ir_intrinsic_ssbo_load;
 
    ir_function *f = new(mem_ctx) ir_function("__intrinsic_load_ssbo");
    f->add_signature(sig);
@@ -1017,6 +1019,10 @@ lower_ubo_reference_visitor::lower_ssbo_atomic_intrinsic(ir_call *ir)
    assert(sig);
    sig->replace_parameters(&sig_params);
    sig->is_intrinsic = true;
+
+   assert(ir->callee->intrinsic_id >= ir_intrinsic_generic_load);
+   assert(ir->callee->intrinsic_id <= ir_intrinsic_generic_atomic_comp_swap);
+   sig->intrinsic_id = MAP_INTRINSIC_TO_TYPE(ir->callee->intrinsic_id, ssbo);
 
    char func_name[64];
    sprintf(func_name, "%s_ssbo", ir->callee_name());

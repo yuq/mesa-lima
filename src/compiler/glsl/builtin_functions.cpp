@@ -634,7 +634,8 @@ private:
                            const char *intrinsic_name,
                            image_prototype_ctr prototype,
                            unsigned num_arguments,
-                           unsigned flags);
+                           unsigned flags,
+                           enum ir_intrinsic_id id);
 
    /**
     * Create new functions for all known image built-ins and types.
@@ -821,9 +822,12 @@ private:
    B1(interpolateAtOffset)
    B1(interpolateAtSample)
 
-   ir_function_signature *_atomic_counter_intrinsic(builtin_available_predicate avail);
-   ir_function_signature *_atomic_counter_intrinsic1(builtin_available_predicate avail);
-   ir_function_signature *_atomic_counter_intrinsic2(builtin_available_predicate avail);
+   ir_function_signature *_atomic_counter_intrinsic(builtin_available_predicate avail,
+                                                    enum ir_intrinsic_id id);
+   ir_function_signature *_atomic_counter_intrinsic1(builtin_available_predicate avail,
+                                                     enum ir_intrinsic_id id);
+   ir_function_signature *_atomic_counter_intrinsic2(builtin_available_predicate avail,
+                                                     enum ir_intrinsic_id id);
    ir_function_signature *_atomic_counter_op(const char *intrinsic,
                                              builtin_available_predicate avail);
    ir_function_signature *_atomic_counter_op1(const char *intrinsic,
@@ -832,12 +836,14 @@ private:
                                               builtin_available_predicate avail);
 
    ir_function_signature *_atomic_intrinsic2(builtin_available_predicate avail,
-                                             const glsl_type *type);
+                                             const glsl_type *type,
+                                             enum ir_intrinsic_id id);
    ir_function_signature *_atomic_op2(const char *intrinsic,
                                       builtin_available_predicate avail,
                                       const glsl_type *type);
    ir_function_signature *_atomic_intrinsic3(builtin_available_predicate avail,
-                                             const glsl_type *type);
+                                             const glsl_type *type,
+                                             enum ir_intrinsic_id id);
    ir_function_signature *_atomic_op3(const char *intrinsic,
                                       builtin_available_predicate avail,
                                       const glsl_type *type);
@@ -859,10 +865,12 @@ private:
                                  const glsl_type *image_type,
                                  const char *intrinsic_name,
                                  unsigned num_arguments,
-                                 unsigned flags);
+                                 unsigned flags,
+                                 enum ir_intrinsic_id id);
 
    ir_function_signature *_memory_barrier_intrinsic(
-      builtin_available_predicate avail);
+      builtin_available_predicate avail,
+      enum ir_intrinsic_id id);
    ir_function_signature *_memory_barrier(const char *intrinsic_name,
                                           builtin_available_predicate avail);
 
@@ -980,94 +988,128 @@ void
 builtin_builder::create_intrinsics()
 {
    add_function("__intrinsic_atomic_read",
-                _atomic_counter_intrinsic(shader_atomic_counters),
+                _atomic_counter_intrinsic(shader_atomic_counters,
+                                          ir_intrinsic_atomic_counter_read),
                 NULL);
    add_function("__intrinsic_atomic_increment",
-                _atomic_counter_intrinsic(shader_atomic_counters),
+                _atomic_counter_intrinsic(shader_atomic_counters,
+                                          ir_intrinsic_atomic_counter_increment),
                 NULL);
    add_function("__intrinsic_atomic_predecrement",
-                _atomic_counter_intrinsic(shader_atomic_counters),
+                _atomic_counter_intrinsic(shader_atomic_counters,
+                                          ir_intrinsic_atomic_counter_predecrement),
                 NULL);
 
    add_function("__intrinsic_atomic_add",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_add),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_add),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_add),
                 NULL);
    add_function("__intrinsic_atomic_sub",
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_sub),
                 NULL);
    add_function("__intrinsic_atomic_min",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_min),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_min),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_min),
                 NULL);
    add_function("__intrinsic_atomic_max",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_max),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_max),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_max),
                 NULL);
    add_function("__intrinsic_atomic_and",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_and),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_and),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_and),
                 NULL);
    add_function("__intrinsic_atomic_or",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_or),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_or),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_or),
                 NULL);
    add_function("__intrinsic_atomic_xor",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_xor),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_xor),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_xor),
                 NULL);
    add_function("__intrinsic_atomic_exchange",
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_exchange),
                 _atomic_intrinsic2(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic1(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_exchange),
+                _atomic_counter_intrinsic1(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_exchange),
                 NULL);
    add_function("__intrinsic_atomic_comp_swap",
                 _atomic_intrinsic3(buffer_atomics_supported,
-                                   glsl_type::uint_type),
+                                   glsl_type::uint_type,
+                                   ir_intrinsic_generic_atomic_comp_swap),
                 _atomic_intrinsic3(buffer_atomics_supported,
-                                   glsl_type::int_type),
-                _atomic_counter_intrinsic2(shader_atomic_counter_ops),
+                                   glsl_type::int_type,
+                                   ir_intrinsic_generic_atomic_comp_swap),
+                _atomic_counter_intrinsic2(shader_atomic_counter_ops,
+                                           ir_intrinsic_atomic_counter_comp_swap),
                 NULL);
 
    add_image_functions(false);
 
    add_function("__intrinsic_memory_barrier",
-                _memory_barrier_intrinsic(shader_image_load_store),
+                _memory_barrier_intrinsic(shader_image_load_store,
+                                          ir_intrinsic_memory_barrier),
                 NULL);
    add_function("__intrinsic_group_memory_barrier",
-                _memory_barrier_intrinsic(compute_shader),
+                _memory_barrier_intrinsic(compute_shader,
+                                          ir_intrinsic_group_memory_barrier),
                 NULL);
    add_function("__intrinsic_memory_barrier_atomic_counter",
-                _memory_barrier_intrinsic(compute_shader),
+                _memory_barrier_intrinsic(compute_shader,
+                                          ir_intrinsic_memory_barrier_atomic_counter),
                 NULL);
    add_function("__intrinsic_memory_barrier_buffer",
-                _memory_barrier_intrinsic(compute_shader),
+                _memory_barrier_intrinsic(compute_shader,
+                                          ir_intrinsic_memory_barrier_buffer),
                 NULL);
    add_function("__intrinsic_memory_barrier_image",
-                _memory_barrier_intrinsic(compute_shader),
+                _memory_barrier_intrinsic(compute_shader,
+                                          ir_intrinsic_memory_barrier_image),
                 NULL);
    add_function("__intrinsic_memory_barrier_shared",
-                _memory_barrier_intrinsic(compute_shader),
+                _memory_barrier_intrinsic(compute_shader,
+                                          ir_intrinsic_memory_barrier_shared),
                 NULL);
 
    add_function("__intrinsic_shader_clock",
@@ -2985,7 +3027,8 @@ builtin_builder::add_image_function(const char *name,
                                     const char *intrinsic_name,
                                     image_prototype_ctr prototype,
                                     unsigned num_arguments,
-                                    unsigned flags)
+                                    unsigned flags,
+                                    enum ir_intrinsic_id intrinsic_id)
 {
    static const glsl_type *const types[] = {
       glsl_type::image1D_type,
@@ -3031,7 +3074,7 @@ builtin_builder::add_image_function(const char *name,
           (types[i]->sampler_dimensionality == GLSL_SAMPLER_DIM_MS ||
            !(flags & IMAGE_FUNCTION_MS_ONLY)))
          f->add_signature(_image(prototype, types[i], intrinsic_name,
-                                 num_arguments, flags));
+                                 num_arguments, flags, intrinsic_id));
    }
 
    shader->symbols->add_function(f);
@@ -3047,7 +3090,8 @@ builtin_builder::add_image_functions(bool glsl)
                        &builtin_builder::_image_prototype, 0,
                        (flags | IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE |
                        IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE |
-                       IMAGE_FUNCTION_READ_ONLY));
+                       IMAGE_FUNCTION_READ_ONLY),
+                      ir_intrinsic_image_load);
 
    add_image_function(glsl ? "imageStore" : "__intrinsic_image_store",
                       "__intrinsic_image_store",
@@ -3055,56 +3099,67 @@ builtin_builder::add_image_functions(bool glsl)
                       (flags | IMAGE_FUNCTION_RETURNS_VOID |
                        IMAGE_FUNCTION_HAS_VECTOR_DATA_TYPE |
                        IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE |
-                       IMAGE_FUNCTION_WRITE_ONLY));
+                       IMAGE_FUNCTION_WRITE_ONLY),
+                      ir_intrinsic_image_store);
 
    const unsigned atom_flags = flags | IMAGE_FUNCTION_AVAIL_ATOMIC;
 
    add_image_function(glsl ? "imageAtomicAdd" : "__intrinsic_image_atomic_add",
                       "__intrinsic_image_atomic_add",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1, atom_flags,
+                      ir_intrinsic_image_atomic_add);
 
    add_image_function(glsl ? "imageAtomicMin" : "__intrinsic_image_atomic_min",
                       "__intrinsic_image_atomic_min",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1, atom_flags,
+                      ir_intrinsic_image_atomic_min);
 
    add_image_function(glsl ? "imageAtomicMax" : "__intrinsic_image_atomic_max",
                       "__intrinsic_image_atomic_max",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1, atom_flags,
+                      ir_intrinsic_image_atomic_max);
 
    add_image_function(glsl ? "imageAtomicAnd" : "__intrinsic_image_atomic_and",
                       "__intrinsic_image_atomic_and",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1, atom_flags,
+                      ir_intrinsic_image_atomic_and);
 
    add_image_function(glsl ? "imageAtomicOr" : "__intrinsic_image_atomic_or",
                       "__intrinsic_image_atomic_or",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1, atom_flags,
+                      ir_intrinsic_image_atomic_or);
 
    add_image_function(glsl ? "imageAtomicXor" : "__intrinsic_image_atomic_xor",
                       "__intrinsic_image_atomic_xor",
-                      &builtin_builder::_image_prototype, 1, atom_flags);
+                      &builtin_builder::_image_prototype, 1, atom_flags,
+                      ir_intrinsic_image_atomic_xor);
 
    add_image_function((glsl ? "imageAtomicExchange" :
                        "__intrinsic_image_atomic_exchange"),
                       "__intrinsic_image_atomic_exchange",
                       &builtin_builder::_image_prototype, 1,
                       (flags | IMAGE_FUNCTION_AVAIL_ATOMIC_EXCHANGE |
-                       IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE));
+                       IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE),
+                      ir_intrinsic_image_atomic_exchange);
 
    add_image_function((glsl ? "imageAtomicCompSwap" :
                        "__intrinsic_image_atomic_comp_swap"),
                       "__intrinsic_image_atomic_comp_swap",
-                      &builtin_builder::_image_prototype, 2, atom_flags);
+                      &builtin_builder::_image_prototype, 2, atom_flags,
+                      ir_intrinsic_image_atomic_comp_swap);
 
    add_image_function(glsl ? "imageSize" : "__intrinsic_image_size",
                       "__intrinsic_image_size",
                       &builtin_builder::_image_size_prototype, 1,
-                      flags | IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE);
+                      flags | IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE,
+                      ir_intrinsic_image_size);
 
    add_image_function(glsl ? "imageSamples" : "__intrinsic_image_samples",
                       "__intrinsic_image_samples",
                       &builtin_builder::_image_samples_prototype, 1,
                       flags | IMAGE_FUNCTION_SUPPORTS_FLOAT_DATA_TYPE |
-                      IMAGE_FUNCTION_MS_ONLY);
+                      IMAGE_FUNCTION_MS_ONLY,
+                      ir_intrinsic_image_samples);
 }
 
 ir_variable *
@@ -3208,10 +3263,11 @@ builtin_builder::new_sig(const glsl_type *return_type,
    ir_factory body(&sig->body, mem_ctx);             \
    sig->is_defined = true;
 
-#define MAKE_INTRINSIC(return_type, avail, ...)      \
+#define MAKE_INTRINSIC(return_type, id, avail, ...)  \
    ir_function_signature *sig =                      \
       new_sig(return_type, avail, __VA_ARGS__);      \
-   sig->is_intrinsic = true;
+   sig->is_intrinsic = true;                         \
+   sig->intrinsic_id = id;
 
 ir_function_signature *
 builtin_builder::unop(builtin_available_predicate avail,
@@ -5218,50 +5274,55 @@ builtin_builder::_interpolateAtSample(const glsl_type *type)
 }
 
 ir_function_signature *
-builtin_builder::_atomic_counter_intrinsic(builtin_available_predicate avail)
+builtin_builder::_atomic_counter_intrinsic(builtin_available_predicate avail,
+                                           enum ir_intrinsic_id id)
 {
    ir_variable *counter = in_var(glsl_type::atomic_uint_type, "counter");
-   MAKE_INTRINSIC(glsl_type::uint_type, avail, 1, counter);
+   MAKE_INTRINSIC(glsl_type::uint_type, id, avail, 1, counter);
    return sig;
 }
 
 ir_function_signature *
-builtin_builder::_atomic_counter_intrinsic1(builtin_available_predicate avail)
+builtin_builder::_atomic_counter_intrinsic1(builtin_available_predicate avail,
+                                            enum ir_intrinsic_id id)
 {
    ir_variable *counter = in_var(glsl_type::atomic_uint_type, "counter");
    ir_variable *data = in_var(glsl_type::uint_type, "data");
-   MAKE_INTRINSIC(glsl_type::uint_type, avail, 2, counter, data);
+   MAKE_INTRINSIC(glsl_type::uint_type, id, avail, 2, counter, data);
    return sig;
 }
 
 ir_function_signature *
-builtin_builder::_atomic_counter_intrinsic2(builtin_available_predicate avail)
+builtin_builder::_atomic_counter_intrinsic2(builtin_available_predicate avail,
+                                            enum ir_intrinsic_id id)
 {
    ir_variable *counter = in_var(glsl_type::atomic_uint_type, "counter");
    ir_variable *compare = in_var(glsl_type::uint_type, "compare");
    ir_variable *data = in_var(glsl_type::uint_type, "data");
-   MAKE_INTRINSIC(glsl_type::uint_type, avail, 3, counter, compare, data);
+   MAKE_INTRINSIC(glsl_type::uint_type, id, avail, 3, counter, compare, data);
    return sig;
 }
 
 ir_function_signature *
 builtin_builder::_atomic_intrinsic2(builtin_available_predicate avail,
-                                    const glsl_type *type)
+                                    const glsl_type *type,
+                                    enum ir_intrinsic_id id)
 {
    ir_variable *atomic = in_var(type, "atomic");
    ir_variable *data = in_var(type, "data");
-   MAKE_INTRINSIC(type, avail, 2, atomic, data);
+   MAKE_INTRINSIC(type, id, avail, 2, atomic, data);
    return sig;
 }
 
 ir_function_signature *
 builtin_builder::_atomic_intrinsic3(builtin_available_predicate avail,
-                                    const glsl_type *type)
+                                    const glsl_type *type,
+                                    enum ir_intrinsic_id id)
 {
    ir_variable *atomic = in_var(type, "atomic");
    ir_variable *data1 = in_var(type, "data1");
    ir_variable *data2 = in_var(type, "data2");
-   MAKE_INTRINSIC(type, avail, 3, atomic, data1, data2);
+   MAKE_INTRINSIC(type, id, avail, 3, atomic, data1, data2);
    return sig;
 }
 
@@ -5518,7 +5579,8 @@ builtin_builder::_image(image_prototype_ctr prototype,
                         const glsl_type *image_type,
                         const char *intrinsic_name,
                         unsigned num_arguments,
-                        unsigned flags)
+                        unsigned flags,
+                        enum ir_intrinsic_id id)
 {
    ir_function_signature *sig = (this->*prototype)(image_type,
                                                    num_arguments, flags);
@@ -5540,15 +5602,17 @@ builtin_builder::_image(image_prototype_ctr prototype,
 
    } else {
       sig->is_intrinsic = true;
+      sig->intrinsic_id = id;
    }
 
    return sig;
 }
 
 ir_function_signature *
-builtin_builder::_memory_barrier_intrinsic(builtin_available_predicate avail)
+builtin_builder::_memory_barrier_intrinsic(builtin_available_predicate avail,
+                                           enum ir_intrinsic_id id)
 {
-   MAKE_INTRINSIC(glsl_type::void_type, avail, 0);
+   MAKE_INTRINSIC(glsl_type::void_type, id, avail, 0);
    return sig;
 }
 
@@ -5566,7 +5630,7 @@ ir_function_signature *
 builtin_builder::_shader_clock_intrinsic(builtin_available_predicate avail,
                                          const glsl_type *type)
 {
-   MAKE_INTRINSIC(type, avail, 0);
+   MAKE_INTRINSIC(type, ir_intrinsic_shader_clock, avail, 0);
    return sig;
 }
 
