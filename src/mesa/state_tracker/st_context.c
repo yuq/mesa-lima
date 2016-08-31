@@ -255,11 +255,16 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
       st->active_states = st_get_active_states(ctx);
    }
 
-   if (new_state & _NEW_TEXTURE)
+   if (new_state & _NEW_TEXTURE) {
       st->dirty |= st->active_states &
                    (ST_NEW_SAMPLER_VIEWS |
                     ST_NEW_SAMPLERS |
                     ST_NEW_IMAGE_UNITS);
+      if (ctx->FragmentProgram._Current &&
+          ctx->FragmentProgram._Current->Base.ExternalSamplersUsed) {
+         st->dirty |= ST_NEW_FS_STATE;
+      }
+   }
 
    if (new_state & _NEW_PROGRAM_CONSTANTS)
       st->dirty |= st->active_states & ST_NEW_CONSTANTS;

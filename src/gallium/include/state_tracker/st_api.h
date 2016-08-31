@@ -200,6 +200,9 @@ struct st_egl_image
    /* this is owned by the caller */
    struct pipe_resource *texture;
 
+   /* format only differs from texture->format for multi-planar (YUV): */
+   enum pipe_format format;
+
    unsigned level;
    unsigned layer;
 };

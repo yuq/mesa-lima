@@ -4347,6 +4347,10 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
             }
          }
       }
+
+      if (inst->tex_target == TEXTURE_EXTERNAL_INDEX)
+         prog->ExternalSamplersUsed |= 1 << inst->sampler.index;
+
       if (inst->buffer.file != PROGRAM_UNDEFINED && (
                 is_resource_instruction(inst->op) ||
                 inst->op == TGSI_OPCODE_STORE)) {

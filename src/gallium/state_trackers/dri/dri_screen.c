@@ -334,6 +334,17 @@ dri_get_egl_image(struct st_manager *smapi,
 
    stimg->texture = NULL;
    pipe_resource_reference(&stimg->texture, img->texture);
+   switch (img->dri_components) {
+   case __DRI_IMAGE_COMPONENTS_Y_U_V:
+      stimg->format = PIPE_FORMAT_IYUV;
+      break;
+   case __DRI_IMAGE_COMPONENTS_Y_UV:
+      stimg->format = PIPE_FORMAT_NV12;
+      break;
+   default:
+      stimg->format = img->texture->format;
+      break;
+   }
    stimg->level = img->level;
    stimg->layer = img->layer;
 

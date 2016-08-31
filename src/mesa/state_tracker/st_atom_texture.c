@@ -408,6 +408,15 @@ update_single_texture(struct st_context *st,
       }
    }
 
+   switch (view_format) {
+   case PIPE_FORMAT_NV12:
+   case PIPE_FORMAT_IYUV:
+      view_format = PIPE_FORMAT_R8_UNORM;
+      break;
+   default:
+      break;
+   }
+
    *sampler_view =
       st_get_texture_sampler_view_from_stobj(st, stObj, view_format,
                                              glsl_version);
@@ -426,6 +435,8 @@ update_textures(struct st_context *st,
 {
    const GLuint old_max = *num_textures;
    GLbitfield samplers_used = prog->SamplersUsed;
+   GLbitfield free_slots = ~prog->SamplersUsed;
+   GLbitfield external_samplers_used = prog->ExternalSamplersUsed;
    GLuint unit;
    struct gl_shader_program *shader =
       st->ctx->_Shader->CurrentProgram[mesa_shader];
@@ -458,6 +469,53 @@ update_textures(struct st_context *st,
       }
 
       pipe_sampler_view_reference(&(sampler_views[unit]), sampler_view);
+   }
+
+   /* For any external samplers with multiplaner YUV, stuff the additional
+    * sampler views we need at the end.
+    *
+    * Trying to cache the sampler view in the stObj looks painful, so just
+    * re-create the sampler view for the extra planes each time.  Main use
+    * case is video playback (ie. fps games wouldn't be using this) so I
+    * guess no point to try to optimize this feature.
+    */
+   while (unlikely(external_samplers_used)) {
+      GLuint unit = u_bit_scan(&external_samplers_used);
+      GLuint extra = 0;
+      struct st_texture_object *stObj =
+            st_get_texture_object(st->ctx, prog, unit);
+      struct pipe_sampler_view tmpl;
+
+      if (!stObj)
+         continue;
+
+      /* use original view as template: */
+      tmpl = *sampler_views[unit];
+
+      switch (st_get_view_format(stObj)) {
+      case PIPE_FORMAT_NV12:
+         /* we need one additional R8G8 view: */
+         tmpl.format = PIPE_FORMAT_RG88_UNORM;
+         tmpl.swizzle_g = PIPE_SWIZZLE_Y;   /* tmpl from Y plane is R8 */
+         extra = u_bit_scan(&free_slots);
+         sampler_views[extra] =
+               st->pipe->create_sampler_view(st->pipe, stObj->pt->next, &tmpl);
+         break;
+      case PIPE_FORMAT_IYUV:
+         /* we need two additional R8 views: */
+         tmpl.format = PIPE_FORMAT_R8_UNORM;
+         extra = u_bit_scan(&free_slots);
+         sampler_views[extra] =
+               st->pipe->create_sampler_view(st->pipe, stObj->pt->next, &tmpl);
+         extra = u_bit_scan(&free_slots);
+         sampler_views[extra] =
+               st->pipe->create_sampler_view(st->pipe, stObj->pt->next->next, &tmpl);
+         break;
+      default:
+         break;
+      }
+
+      *num_textures = MAX2(*num_textures, extra + 1);
    }
 
    cso_set_sampler_views(st->cso_context,

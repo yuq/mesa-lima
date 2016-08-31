@@ -170,6 +170,27 @@ st_create_texture_sampler_view(struct pipe_context *pipe,
                                                 texture->format);
 }
 
+static inline struct st_texture_object *
+st_get_texture_object(struct gl_context *ctx,
+                      const struct gl_program *prog,
+                      unsigned unit)
+{
+   const GLuint texUnit = prog->SamplerUnits[unit];
+   struct gl_texture_object *texObj = ctx->Texture.Unit[texUnit]._Current;
+
+   if (!texObj)
+      return NULL;
+
+   return st_texture_object(texObj);
+}
+
+static inline enum pipe_format
+st_get_view_format(struct st_texture_object *stObj)
+{
+   if (!stObj)
+      return PIPE_FORMAT_NONE;
+   return stObj->surface_based ? stObj->surface_format : stObj->pt->format;
+}
 
 
 extern struct pipe_resource *

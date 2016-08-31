@@ -83,6 +83,21 @@ static int convert_fourcc(int format, int *dri_components_p)
       format = __DRI_IMAGE_FORMAT_GR88;
       dri_components = __DRI_IMAGE_COMPONENTS_RG;
       break;
+   /*
+    * For multi-planar YUV formats, we return the format of the first
+    * plane only.  Since there is only one caller which supports multi-
+    * planar YUV it gets to figure out the remaining planes on it's
+    * own.
+    */
+   case __DRI_IMAGE_FOURCC_YUV420:
+   case __DRI_IMAGE_FOURCC_YVU420:
+      format = __DRI_IMAGE_FORMAT_R8;
+      dri_components = __DRI_IMAGE_COMPONENTS_Y_U_V;
+      break;
+   case __DRI_IMAGE_FOURCC_NV12:
+      format = __DRI_IMAGE_FORMAT_R8;
+      dri_components = __DRI_IMAGE_COMPONENTS_Y_UV;
+      break;
    default:
       return -1;
    }
@@ -90,6 +105,11 @@ static int convert_fourcc(int format, int *dri_components_p)
    return format;
 }
 
+/* NOTE this probably isn't going to do the right thing for YUV images
+ * (but I think the same can be said for intel_query_image()).  I think
+ * only needed for exporting dmabuf's, so I think I won't loose much
+ * sleep over it.
+ */
 static int convert_to_fourcc(int format)
 {
    switch(format) {
@@ -762,14 +782,16 @@ dri2_lookup_egl_image(struct dri_screen *screen, void *handle)
 static __DRIimage *
 dri2_create_image_from_winsys(__DRIscreen *_screen,
                               int width, int height, int format,
-                              struct winsys_handle *whandle,
+                              int num_handles, struct winsys_handle *whandle,
                               void *loaderPrivate)
 {
    struct dri_screen *screen = dri_screen(_screen);
+   struct pipe_screen *pscreen = screen->base.screen;
    __DRIimage *img;
    struct pipe_resource templ;
    unsigned tex_usage;
    enum pipe_format pf;
+   int i;
 
    tex_usage = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
 
@@ -783,19 +805,47 @@ dri2_create_image_from_winsys(__DRIscreen *_screen,
 
    memset(&templ, 0, sizeof(templ));
    templ.bind = tex_usage;
-   templ.format = pf;
    templ.target = screen->target;
    templ.last_level = 0;
-   templ.width0 = width;
-   templ.height0 = height;
    templ.depth0 = 1;
    templ.array_size = 1;
 
-   img->texture = screen->base.screen->resource_from_handle(screen->base.screen,
-         &templ, whandle, PIPE_HANDLE_USAGE_READ_WRITE);
-   if (!img->texture) {
-      FREE(img);
-      return NULL;
+   for (i = num_handles - 1; i >= 0; i--) {
+      struct pipe_resource *tex;
+
+      /* TODO: something a lot less ugly */
+      switch (i) {
+      case 0:
+         templ.width0 = width;
+         templ.height0 = height;
+         templ.format = pf;
+         break;
+      case 1:
+         templ.width0 = width / 2;
+         templ.height0 = height / 2;
+         templ.format = (num_handles == 2) ?
+               PIPE_FORMAT_RG88_UNORM :   /* NV12, etc */
+               PIPE_FORMAT_R8_UNORM;      /* I420, etc */
+         break;
+      case 2:
+         templ.width0 = width / 2;
+         templ.height0 = height / 2;
+         templ.format = PIPE_FORMAT_R8_UNORM;
+         break;
+      default:
+         unreachable("too many planes!");
+      }
+
+      tex = pscreen->resource_from_handle(pscreen,
+            &templ, &whandle[i], PIPE_HANDLE_USAGE_READ_WRITE);
+      if (!tex) {
+         pipe_resource_reference(&img->texture, NULL);
+         FREE(img);
+         return NULL;
+      }
+
+      tex->next = img->texture;
+      img->texture = tex;
    }
 
    img->level = 0;
@@ -826,7 +876,7 @@ dri2_create_image_from_name(__DRIscreen *_screen,
    whandle.stride = pitch * util_format_get_blocksize(pf);
 
    return dri2_create_image_from_winsys(_screen, width, height, format,
-                                        &whandle, loaderPrivate);
+                                        1, &whandle, loaderPrivate);
 }
 
 static __DRIimage *
@@ -836,12 +886,26 @@ dri2_create_image_from_fd(__DRIscreen *_screen,
                           int *offsets, unsigned *error,
                           int *dri_components, void *loaderPrivate)
 {
-   struct winsys_handle whandle;
+   struct winsys_handle whandles[3];
    int format;
    __DRIimage *img = NULL;
    unsigned err = __DRI_IMAGE_ERROR_SUCCESS;
+   int expected_num_fds, i;
 
-   if (num_fds != 1) {
+   switch (fourcc) {
+   case __DRI_IMAGE_FOURCC_YUV420:
+   case __DRI_IMAGE_FOURCC_YVU420:
+      expected_num_fds = 3;
+      break;
+   case __DRI_IMAGE_FOURCC_NV12:
+      expected_num_fds = 2;
+      break;
+   default:
+      expected_num_fds = 1;
+      break;
+   }
+
+   if (num_fds != expected_num_fds) {
       err = __DRI_IMAGE_ERROR_BAD_MATCH;
       goto exit;
    }
@@ -852,19 +916,30 @@ dri2_create_image_from_fd(__DRIscreen *_screen,
       goto exit;
    }
 
-   if (fds[0] < 0) {
-      err = __DRI_IMAGE_ERROR_BAD_ALLOC;
-      goto exit;
+   memset(whandles, 0, sizeof(whandles));
+
+   for (i = 0; i < num_fds; i++) {
+      if (fds[i] < 0) {
+         err = __DRI_IMAGE_ERROR_BAD_ALLOC;
+         goto exit;
+      }
+
+      whandles[i].type = DRM_API_HANDLE_TYPE_FD;
+      whandles[i].handle = (unsigned)fds[i];
+      whandles[i].stride = (unsigned)strides[i];
+      whandles[i].offset = (unsigned)offsets[i];
    }
 
-   memset(&whandle, 0, sizeof(whandle));
-   whandle.type = DRM_API_HANDLE_TYPE_FD;
-   whandle.handle = (unsigned)fds[0];
-   whandle.stride = (unsigned)strides[0];
-   whandle.offset = (unsigned)offsets[0];
+   if (fourcc == __DRI_IMAGE_FOURCC_YVU420) {
+      /* convert to YUV420 by swapping 2nd and 3rd planes: */
+      struct winsys_handle tmp = whandles[1];
+      whandles[1] = whandles[2];
+      whandles[2] = tmp;
+      fourcc = __DRI_IMAGE_FOURCC_YUV420;
+   }
 
    img = dri2_create_image_from_winsys(_screen, width, height, format,
-                                       &whandle, loaderPrivate);
+                                       num_fds, whandles, loaderPrivate);
    if(img == NULL)
       err = __DRI_IMAGE_ERROR_BAD_ALLOC;
 
@@ -1067,7 +1142,7 @@ dri2_from_names(__DRIscreen *screen, int width, int height, int format,
    whandle.offset = offsets[0];
 
    img = dri2_create_image_from_winsys(screen, width, height, format,
-                                       &whandle, loaderPrivate);
+                                       1, &whandle, loaderPrivate);
    if (img == NULL)
       return NULL;
 

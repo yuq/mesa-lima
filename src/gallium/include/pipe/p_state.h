@@ -498,6 +498,12 @@ struct pipe_resource
 
    unsigned bind;            /**< bitmask of PIPE_BIND_x */
    unsigned flags;           /**< bitmask of PIPE_RESOURCE_FLAG_x */
+
+   /**
+    * For planar images, ie. YUV EGLImage external, etc, pointer to the
+    * next plane.
+    */
+   struct pipe_resource *next;
 };
 
 
