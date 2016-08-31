@@ -604,8 +604,6 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
 
    prog->code = info->bin.code;
    prog->code_size = info->bin.codeSize;
-   prog->immd_data = info->immd.buf;
-   prog->immd_size = info->immd.bufSize;
    prog->relocs = info->bin.relocData;
    prog->fixups = info->bin.fixupData;
    prog->num_gprs = MAX2(4, (info->bin.maxGPR + 1));
@@ -692,13 +690,6 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
    uint32_t lib_pos = screen->lib_code->start;
    uint32_t code_pos;
 
-   /* c[] bindings need to be aligned to 0x100, but we could use relocations
-    * to save space. */
-   if (prog->immd_size) {
-      prog->immd_base = size;
-      size = align(size, 0x40);
-      size += prog->immd_size + 0xc0; /* add 0xc0 for align 0x40 -> 0x100 */
-   }
    /* On Fermi, SP_START_ID must be aligned to 0x40.
     * On Kepler, the first instruction must be aligned to 0x80 because
     * latency information is expected only at certain positions.
@@ -726,9 +717,6 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
       IMMED_NVC0(nvc0->base.pushbuf, NVC0_3D(SERIALIZE), 0);
    }
    prog->code_base = prog->mem->start;
-   prog->immd_base = align(prog->mem->start + prog->immd_base, 0x100);
-   assert((prog->immd_size == 0) || (prog->immd_base + prog->immd_size <=
-                                     prog->mem->start + prog->mem->size));
 
    if (!is_cp) {
       if (screen->base.class_3d >= NVE4_3D_CLASS) {
@@ -783,10 +771,6 @@ nvc0_program_upload_code(struct nvc0_context *nvc0, struct nvc0_program *prog)
                            NV_VRAM_DOMAIN(&screen->base), NVC0_SHADER_HEADER_SIZE, prog->hdr);
    nvc0->base.push_data(&nvc0->base, screen->text, code_pos,
                         NV_VRAM_DOMAIN(&screen->base), prog->code_size, prog->code);
-   if (prog->immd_size)
-      nvc0->base.push_data(&nvc0->base,
-                           screen->text, prog->immd_base, NV_VRAM_DOMAIN(&screen->base),
-                           prog->immd_size, prog->immd_data);
 
    BEGIN_NVC0(nvc0->base.pushbuf, NVC0_3D(MEM_BARRIER), 1);
    PUSH_DATA (nvc0->base.pushbuf, 0x1011);
@@ -830,7 +814,6 @@ nvc0_program_destroy(struct nvc0_context *nvc0, struct nvc0_program *prog)
    if (prog->mem)
       nouveau_heap_free(&prog->mem);
    FREE(prog->code); /* may be 0 for hardcoded shaders */
-   FREE(prog->immd_data);
    FREE(prog->relocs);
    FREE(prog->fixups);
    if (prog->type == PIPE_SHADER_COMPUTE && prog->cp.syms)
