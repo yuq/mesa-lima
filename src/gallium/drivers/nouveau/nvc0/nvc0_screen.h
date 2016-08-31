@@ -136,6 +136,8 @@ int nvc0_screen_tsc_alloc(struct nvc0_screen *, void *);
 int nve4_screen_compute_setup(struct nvc0_screen *, struct nouveau_pushbuf *);
 int nvc0_screen_compute_setup(struct nvc0_screen *, struct nouveau_pushbuf *);
 
+int nvc0_screen_resize_text_area(struct nvc0_screen *, uint64_t);
+
 static inline void
 nvc0_resource_fence(struct nv04_resource *res, uint32_t flags)
 {

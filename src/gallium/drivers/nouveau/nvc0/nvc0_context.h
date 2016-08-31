@@ -27,6 +27,7 @@
 #include "nv50/nv50_2d.xml.h"
 #include "nvc0/nvc0_m2mf.xml.h"
 #include "nvc0/nve4_p2mf.xml.h"
+#include "nvc0/nvc0_compute.xml.h"
 #include "nvc0/nvc0_macros.h"
 
 /* NOTE: must keep NVC0_NEW_3D_...PROG in consecutive bits in this order */
