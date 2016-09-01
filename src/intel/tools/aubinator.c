@@ -30,6 +30,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
