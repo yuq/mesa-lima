@@ -159,6 +159,7 @@ NineUnknown_SetPrivateData( struct NineUnknown *This,
     struct pheader *header;
     const void *user_data = pData;
     char guid_str[64];
+    void *header_data;
 
     DBG("This=%p GUID=%s pData=%p SizeOfData=%u Flags=%x\n",
         This, GUID_sprintf(guid_str, refguid), pData, SizeOfData, Flags);
@@ -167,7 +168,7 @@ NineUnknown_SetPrivateData( struct NineUnknown *This,
         user_assert(SizeOfData == sizeof(IUnknown *), D3DERR_INVALIDCALL);
 
     /* data consists of a header and the actual data. avoiding 2 mallocs */
-    header = CALLOC_VARIANT_LENGTH_STRUCT(pheader, SizeOfData-1);
+    header = CALLOC_VARIANT_LENGTH_STRUCT(pheader, SizeOfData);
     if (!header) { return E_OUTOFMEMORY; }
     header->unknown = (Flags & D3DSPD_IUNKNOWN) ? TRUE : FALSE;
 
@@ -182,12 +183,13 @@ NineUnknown_SetPrivateData( struct NineUnknown *This,
     }
 
     header->size = SizeOfData;
-    memcpy(header->data, user_data, header->size);
+    header_data = (void *)header + sizeof(*header);
+    memcpy(header_data, user_data, header->size);
     memcpy(&header->guid, refguid, sizeof(header->guid));
 
     err = util_hash_table_set(This->pdata, &header->guid, header);
     if (err == PIPE_OK) {
-        if (header->unknown) { IUnknown_AddRef(*(IUnknown **)header->data); }
+        if (header->unknown) { IUnknown_AddRef(*(IUnknown **)header_data); }
         return D3D_OK;
     }
 
@@ -206,6 +208,7 @@ NineUnknown_GetPrivateData( struct NineUnknown *This,
     struct pheader *header;
     DWORD sizeofdata;
     char guid_str[64];
+    void *header_data;
 
     DBG("This=%p GUID=%s pData=%p pSizeOfData=%p\n",
         This, GUID_sprintf(guid_str, refguid), pData, pSizeOfData);
@@ -224,8 +227,9 @@ NineUnknown_GetPrivateData( struct NineUnknown *This,
         return D3DERR_MOREDATA;
     }
 
-    if (header->unknown) { IUnknown_AddRef(*(IUnknown **)header->data); }
-    memcpy(pData, header->data, header->size);
+    header_data = (void *)header + sizeof(*header);
+    if (header->unknown) { IUnknown_AddRef(*(IUnknown **)header_data); }
+    memcpy(pData, header_data, header->size);
 
     return D3D_OK;
 }
