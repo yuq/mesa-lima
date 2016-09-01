@@ -1269,7 +1269,7 @@ vec4_instruction_scheduler::calculate_deps()
       /* read-after-write deps. */
       for (int i = 0; i < 3; i++) {
          if (inst->src[i].file == VGRF) {
-            for (unsigned j = 0; j < inst->regs_read(i); ++j)
+            for (unsigned j = 0; j < regs_read(inst, i); ++j)
                add_dep(last_grf_write[inst->src[i].nr + j], n);
          } else if (inst->src[i].file == FIXED_GRF) {
             add_dep(last_fixed_grf_write, n);
@@ -1303,7 +1303,7 @@ vec4_instruction_scheduler::calculate_deps()
 
       /* write-after-write deps. */
       if (inst->dst.file == VGRF) {
-         for (unsigned j = 0; j < inst->regs_written; ++j) {
+         for (unsigned j = 0; j < regs_written(inst); ++j) {
             add_dep(last_grf_write[inst->dst.nr + j], n);
             last_grf_write[inst->dst.nr + j] = n;
          }
@@ -1351,7 +1351,7 @@ vec4_instruction_scheduler::calculate_deps()
       /* write-after-read deps. */
       for (int i = 0; i < 3; i++) {
          if (inst->src[i].file == VGRF) {
-            for (unsigned j = 0; j < inst->regs_read(i); ++j)
+            for (unsigned j = 0; j < regs_read(inst, i); ++j)
                add_dep(n, last_grf_write[inst->src[i].nr + j]);
          } else if (inst->src[i].file == FIXED_GRF) {
             add_dep(n, last_fixed_grf_write);
@@ -1384,7 +1384,7 @@ vec4_instruction_scheduler::calculate_deps()
        * can mark this as WAR dependency.
        */
       if (inst->dst.file == VGRF) {
-         for (unsigned j = 0; j < inst->regs_written; ++j)
+         for (unsigned j = 0; j < regs_written(inst); ++j)
             last_grf_write[inst->dst.nr + j] = n;
       } else if (inst->dst.file == MRF) {
          last_mrf_write[inst->dst.nr] = n;

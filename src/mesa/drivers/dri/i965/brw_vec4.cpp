@@ -1335,11 +1335,11 @@ vec4_visitor::split_virtual_grfs()
     * to split.
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
-      if (inst->dst.file == VGRF && inst->regs_written > 1)
+      if (inst->dst.file == VGRF && regs_written(inst) > 1)
          split_grf[inst->dst.nr] = false;
 
       for (int i = 0; i < 3; i++) {
-         if (inst->src[i].file == VGRF && inst->regs_read(i) > 1)
+         if (inst->src[i].file == VGRF && regs_read(inst, i) > 1)
             split_grf[inst->src[i].nr] = false;
       }
    }

@@ -254,6 +254,32 @@ set_saturate(bool saturate, vec4_instruction *inst)
    return inst;
 }
 
+/**
+ * Return the number of dataflow registers written by the instruction (either
+ * fully or partially) counted from 'floor(reg_offset(inst->dst) /
+ * register_size)'.  The somewhat arbitrary register size unit is 16B for the
+ * UNIFORM and IMM files and 32B for all other files.
+ */
+inline unsigned
+regs_written(const vec4_instruction *inst)
+{
+   /* XXX - Take into account register-misaligned offsets correctly. */
+   return inst->regs_written;
+}
+
+/**
+ * Return the number of dataflow registers read by the instruction (either
+ * fully or partially) counted from 'floor(reg_offset(inst->src[i]) /
+ * register_size)'.  The somewhat arbitrary register size unit is 16B for the
+ * UNIFORM and IMM files and 32B for all other files.
+ */
+inline unsigned
+regs_read(const vec4_instruction *inst, unsigned i)
+{
+   /* XXX - Take into account register-misaligned offsets correctly. */
+   return inst->regs_read(i);
+}
+
 } /* namespace brw */
 
 #endif
