@@ -24,8 +24,8 @@ static unsigned FindGLXFunction(const GLubyte *name)
 
     while (first <= last) {
         int middle = (first + last) / 2;
-        int comp = strcmp((const char *) name,
-                          __glXDispatchTableStrings[middle]);
+        int comp = strcmp(__glXDispatchTableStrings[middle],
+                          (const char *) name);
 
         if (comp < 0)
             first = middle + 1;
