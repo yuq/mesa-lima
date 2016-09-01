@@ -168,7 +168,8 @@ svga_resource_copy_region(struct pipe_context *pipe,
           util_format_is_compressed(dst_tex->format) &&
           !util_format_is_depth_and_stencil(src_tex->format) &&
           stex->handle != dtex->handle &&
-          src_tex->target == dst_tex->target) {
+          svga_resource_type(src_tex->target) ==
+          svga_resource_type(dst_tex->target)) {
          copy_region_vgpu10(svga,
                             src_tex,
                             src_box->x, src_box->y, src_z,
@@ -229,16 +230,17 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
    if (stex->handle == dtex->handle)
       return false;
 
-   // can't copy between different resource types
-   if (blit_info->src.resource->target != blit_info->dst.resource->target)
+   /* can't copy between different resource types */
+   if (svga_resource_type(blit_info->src.resource->target) !=
+       svga_resource_type(blit_info->dst.resource->target))
       return false;
 
-   // check that the blit src/dst regions are same size, no flipping, etc.
+   /* check that the blit src/dst regions are same size, no flipping, etc. */
    if (blit_info->src.box.width != blit_info->dst.box.width ||
        blit_info->src.box.height != blit_info->dst.box.height)
       return false;
 
-   // depth/stencil copies not supported at this time
+   /* depth/stencil copies not supported at this time */
    if (blit_info->mask != PIPE_MASK_RGBA)
       return false;
 
@@ -246,7 +248,8 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
        blit_info->scissor_enable)
       return false;
 
-   // check that src/dst surface formats are compatible for the VGPU device.
+   /* check that src/dst surface formats are compatible for
+      the VGPU device.*/
    return util_is_format_compatible(
         util_format_description(blit_info->src.resource->format),
         util_format_description(blit_info->dst.resource->format));
