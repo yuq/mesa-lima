@@ -30,7 +30,6 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
-#include <error.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -794,8 +793,10 @@ handle_trace_block(struct gen_spec *spec, uint32_t *p)
    case AUB_TRACE_OP_DATA_WRITE:
       if (address_space != AUB_TRACE_MEMTYPE_GTT)
          break;
-      if (gtt_size < offset + size)
-         error(EXIT_FAILURE, errno, "overflow gtt space");
+      if (gtt_size < offset + size) {
+         fprintf(stderr, "overflow gtt space: %s", strerror(errno));
+         exit(EXIT_FAILURE);
+      }
       memcpy((char *) gtt + offset, data, size);
       if (gtt_end < offset + size)
          gtt_end = offset + size;
@@ -834,16 +835,22 @@ aub_file_open(const char *filename)
    file = malloc(sizeof *file);
    file->filename = strdup(filename);
    file->fd = open(file->filename, O_RDONLY);
-   if (file->fd == -1)
-      error(EXIT_FAILURE, errno, "open %s failed", file->filename);
+   if (file->fd == -1) {
+      fprintf(stderr, "open %s failed: %s", file->filename, strerror(errno));
+      exit(EXIT_FAILURE);
+   }
 
-   if (fstat(file->fd, &file->sb) == -1)
-      error(EXIT_FAILURE, errno, "stat failed");
+   if (fstat(file->fd, &file->sb) == -1) {
+      fprintf(stderr, "stat failed: %s", strerror(errno));
+      exit(EXIT_FAILURE);
+   }
 
    file->map = mmap(NULL, file->sb.st_size,
                     PROT_READ, MAP_SHARED, file->fd, 0);
-   if (file->map == MAP_FAILED)
-      error(EXIT_FAILURE, errno, "mmap failed");
+   if (file->map == MAP_FAILED) {
+      fprintf(stderr, "mmap failed: %s", strerror(errno));
+      exit(EXIT_FAILURE);
+   }
 
    file->cursor = file->map;
    file->end = file->map + file->sb.st_size / 4;
@@ -852,8 +859,10 @@ aub_file_open(const char *filename)
    gtt_size = 1ul << 40;
    gtt = mmap(NULL, gtt_size, PROT_READ | PROT_WRITE,
               MAP_PRIVATE | MAP_ANONYMOUS |  MAP_NORESERVE, -1, 0);
-   if (gtt == MAP_FAILED)
-      error(EXIT_FAILURE, errno, "failed to alloc gtt space");
+   if (gtt == MAP_FAILED) {
+      fprintf(stderr, "failed to alloc gtt space: %s", strerror(errno));
+      exit(1);
+   }
 
    return file;
 }
@@ -1056,8 +1065,10 @@ int main(int argc, char *argv[])
       } else if (strcmp(argv[i], "--no-offsets") == 0) {
          option_print_offsets = false;
       } else if (is_prefix(argv[i], "--gen", &value)) {
-         if (value == NULL)
-            error(EXIT_FAILURE, 0, "option '--gen' requires an argument\n");
+         if (value == NULL) {
+            fprintf(stderr, "option '--gen' requires an argument\n");
+            exit(EXIT_FAILURE);
+         }
          found_arg_gen = true;
          gen_major = 0;
          gen_minor = 0;
@@ -1071,8 +1082,10 @@ int main(int argc, char *argv[])
             option_color = COLOR_NEVER;
          else if (strcmp(value, "auto") == 0)
             option_color = COLOR_AUTO;
-         else
-            error(EXIT_FAILURE, 0, "invalid value for --color: %s", value);
+         else {
+            fprintf(stderr, "invalid value for --color: %s", value);
+            exit(EXIT_FAILURE);
+         }
       } else if (strcmp(argv[i], "--help") == 0) {
          print_help(stdout);
          exit(EXIT_SUCCESS);
@@ -1131,8 +1144,9 @@ int main(int argc, char *argv[])
       gen_major = 9;
       gen_minor = 0;
    } else {
-      error(EXIT_FAILURE, 0, "can't parse gen: %s, expected ivb, byt, hsw, "
+      fprintf(stderr, "can't parse gen: %s, expected ivb, byt, hsw, "
                              "bdw, chv, skl, kbl or bxt\n", gen_val);
+      exit(EXIT_FAILURE);
    }
 
    /* Do this before we redirect stdout to pager. */
