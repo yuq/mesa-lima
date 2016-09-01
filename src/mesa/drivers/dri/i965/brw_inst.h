@@ -627,6 +627,14 @@ brw_inst_set_imm_df(const struct gen_device_info *devinfo,
    brw_inst_set_bits(insn, 127, 64, dt.u);
 }
 
+static inline void
+brw_inst_set_imm_uq(const struct gen_device_info *devinfo,
+                    brw_inst *insn, uint64_t value)
+{
+   (void) devinfo;
+   brw_inst_set_bits(insn, 127, 64, value);
+}
+
 /** @} */
 
 /* The AddrImm fields are split into two discontiguous sections on Gen8+ */

@@ -144,7 +144,7 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
       assert(type < ARRAY_SIZE(hw_types));
       assert(hw_types[type] != -1);
       assert(devinfo->gen >= 7 || type < BRW_REGISTER_TYPE_DF);
-      assert(devinfo->gen >= 8 || type < BRW_REGISTER_TYPE_HF);
+      assert(devinfo->gen >= 8 || type < BRW_REGISTER_TYPE_Q);
       return hw_types[type];
    }
 }
@@ -411,6 +411,9 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
       if (reg.type == BRW_REGISTER_TYPE_DF ||
           brw_inst_opcode(devinfo, inst) == BRW_OPCODE_DIM)
          brw_inst_set_imm_df(devinfo, inst, reg.df);
+      else if (reg.type == BRW_REGISTER_TYPE_UQ ||
+               reg.type == BRW_REGISTER_TYPE_Q)
+         brw_inst_set_imm_uq(devinfo, inst, reg.u64);
       else
          brw_inst_set_imm_ud(devinfo, inst, reg.ud);
 
