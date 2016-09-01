@@ -846,6 +846,8 @@ nir_deref_get_const_initializer_load(nir_shader *shader, nir_deref_var *deref)
    case GLSL_TYPE_INT:
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
    case GLSL_TYPE_BOOL:
       load->value = constant->values[matrix_col];
       break;

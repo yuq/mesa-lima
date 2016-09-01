@@ -254,6 +254,22 @@ constant_copy(ir_constant *ir, void *mem_ctx)
       }
       break;
 
+   case GLSL_TYPE_UINT64:
+      /* Only float base types can be matrices. */
+      assert(cols == 1);
+
+      for (unsigned r = 0; r < rows; r++)
+         ret->values[0].u64[r] = ir->value.u64[r];
+      break;
+
+   case GLSL_TYPE_INT64:
+      /* Only float base types can be matrices. */
+      assert(cols == 1);
+
+      for (unsigned r = 0; r < rows; r++)
+         ret->values[0].i64[r] = ir->value.i64[r];
+      break;
+
    case GLSL_TYPE_BOOL:
       /* Only float base types can be matrices. */
       assert(cols == 1);
