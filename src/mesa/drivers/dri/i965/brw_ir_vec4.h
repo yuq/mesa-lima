@@ -65,7 +65,7 @@ offset(src_reg reg, unsigned delta)
 {
    assert(delta == 0 ||
           (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
-   reg.reg_offset += delta;
+   reg.offset += delta * (reg.file == UNIFORM ? 16 : REG_SIZE);
    return reg;
 }
 
@@ -134,7 +134,7 @@ offset(dst_reg reg, unsigned delta)
 {
    assert(delta == 0 ||
           (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
-   reg.reg_offset += delta;
+   reg.offset += delta * (reg.file == UNIFORM ? 16 : REG_SIZE);
    return reg;
 }
 

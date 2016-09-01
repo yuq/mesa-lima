@@ -441,7 +441,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
             continue;
 
          const unsigned reg = (alloc.offsets[inst->src[i].nr] +
-                                inst->src[i].reg_offset);
+                               inst->src[i].offset / REG_SIZE);
          const copy_entry &entry = entries[reg];
 
          if (do_constant_prop && try_constant_propagate(devinfo, inst, i, &entry))
@@ -453,7 +453,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
       /* Track available source registers. */
       if (inst->dst.file == VGRF) {
 	 const int reg =
-            alloc.offsets[inst->dst.nr] + inst->dst.reg_offset;
+            alloc.offsets[inst->dst.nr] + inst->dst.offset / REG_SIZE;
 
 	 /* Update our destination's current channel values.  For a direct copy,
 	  * the value is the newly propagated source.  Otherwise, we don't know

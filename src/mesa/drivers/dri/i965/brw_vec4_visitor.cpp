@@ -1481,7 +1481,7 @@ vec4_visitor::emit_scratch_read(bblock_t *block, vec4_instruction *inst,
 				dst_reg temp, src_reg orig_src,
 				int base_offset)
 {
-   int reg_offset = base_offset + orig_src.reg_offset;
+   int reg_offset = base_offset + orig_src.offset / REG_SIZE;
    src_reg index = get_scratch_offset(block, inst, orig_src.reladdr,
                                       reg_offset);
 
@@ -1498,7 +1498,7 @@ void
 vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
                                  int base_offset)
 {
-   int reg_offset = base_offset + inst->dst.reg_offset;
+   int reg_offset = base_offset + inst->dst.offset / REG_SIZE;
    src_reg index = get_scratch_offset(block, inst, inst->dst.reladdr,
                                       reg_offset);
 
@@ -1523,7 +1523,7 @@ vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
 
    inst->dst.file = temp.file;
    inst->dst.nr = temp.nr;
-   inst->dst.reg_offset = temp.reg_offset;
+   inst->dst.offset %= REG_SIZE;
    inst->dst.reladdr = NULL;
 }
 
@@ -1553,7 +1553,7 @@ vec4_visitor::emit_resolve_reladdr(int scratch_loc[], bblock_t *block,
       dst_reg temp = dst_reg(this, glsl_type::vec4_type);
       emit_scratch_read(block, inst, temp, src, scratch_loc[src.nr]);
       src.nr = temp.nr;
-      src.reg_offset = temp.reg_offset;
+      src.offset %= REG_SIZE;
       src.reladdr = NULL;
    }
 
@@ -1649,7 +1649,7 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				      dst_reg temp, src_reg orig_src,
                                       int base_offset, src_reg indirect)
 {
-   int reg_offset = base_offset + orig_src.reg_offset;
+   int reg_offset = base_offset + orig_src.offset / 16;
    const unsigned index = prog_data->base.binding_table.pull_constants_start;
 
    src_reg offset;
@@ -1710,7 +1710,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
           inst->src[0].file != UNIFORM)
          continue;
 
-      int uniform_nr = inst->src[0].nr + inst->src[0].reg_offset;
+      int uniform_nr = inst->src[0].nr + inst->src[0].offset / 16;
 
       for (unsigned j = 0; j < DIV_ROUND_UP(inst->src[2].ud, 16); j++)
          pull_constant_loc[uniform_nr + j] = 0;
@@ -1740,7 +1740,7 @@ vec4_visitor::move_uniform_array_access_to_pull_constants()
           inst->src[0].file != UNIFORM)
          continue;
 
-      int uniform_nr = inst->src[0].nr + inst->src[0].reg_offset;
+      int uniform_nr = inst->src[0].nr + inst->src[0].offset / 16;
 
       assert(inst->src[0].swizzle == BRW_SWIZZLE_NOOP);
 

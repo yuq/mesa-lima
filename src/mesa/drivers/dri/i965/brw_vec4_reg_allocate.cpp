@@ -33,8 +33,8 @@ static void
 assign(unsigned int *reg_hw_locations, backend_reg *reg)
 {
    if (reg->file == VGRF) {
-      reg->nr = reg_hw_locations[reg->nr] + reg->reg_offset;
-      reg->reg_offset = 0;
+      reg->nr = reg_hw_locations[reg->nr] + reg->offset / REG_SIZE;
+      reg->offset %= REG_SIZE;
    }
 }
 

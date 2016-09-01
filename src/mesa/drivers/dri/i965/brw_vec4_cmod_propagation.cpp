@@ -71,7 +71,7 @@ opt_cmod_propagation_local(bblock_t *block)
          if (inst->src[0].in_range(scan_inst->dst,
                                    scan_inst->regs_written)) {
             if ((scan_inst->predicate && scan_inst->opcode != BRW_OPCODE_SEL) ||
-                scan_inst->dst.reg_offset != inst->src[0].reg_offset ||
+                scan_inst->dst.offset / REG_SIZE != inst->src[0].offset / REG_SIZE ||
                 (scan_inst->dst.writemask != WRITEMASK_X &&
                  scan_inst->dst.writemask != WRITEMASK_XYZW) ||
                 (scan_inst->dst.writemask == WRITEMASK_XYZW &&
