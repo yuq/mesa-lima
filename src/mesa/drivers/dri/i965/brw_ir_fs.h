@@ -49,9 +49,6 @@ public:
     */
    unsigned component_size(unsigned width) const;
 
-   /** Smear a channel of the reg to all channels. */
-   fs_reg &set_smear(unsigned subreg);
-
    /** Register region horizontal stride */
    uint8_t stride;
 };

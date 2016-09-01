@@ -435,15 +435,6 @@ fs_reg::equals(const fs_reg &r) const
            stride == r.stride);
 }
 
-fs_reg &
-fs_reg::set_smear(unsigned subreg)
-{
-   assert(file != ARF && file != FIXED_GRF && file != IMM);
-   offset = ROUND_DOWN_TO(offset, REG_SIZE) + subreg * type_sz(type);
-   stride = 0;
-   return *this;
-}
-
 bool
 fs_reg::is_contiguous() const
 {
@@ -556,15 +547,14 @@ fs_visitor::get_timestamp(const fs_builder &bld)
 void
 fs_visitor::emit_shader_time_begin()
 {
-   shader_start_time = get_timestamp(bld.annotate("shader time start"));
-
    /* We want only the low 32 bits of the timestamp.  Since it's running
     * at the GPU clock rate of ~1.2ghz, it will roll over every ~3 seconds,
     * which is plenty of time for our purposes.  It is identical across the
     * EUs, but since it's tracking GPU core speed it will increment at a
     * varying rate as render P-states change.
     */
-   shader_start_time.set_smear(0);
+   shader_start_time = component(
+      get_timestamp(bld.annotate("shader time start")), 0);
 }
 
 void
@@ -575,8 +565,7 @@ fs_visitor::emit_shader_time_end()
    assert(end && ((fs_inst *) end)->eot);
    const fs_builder ibld = bld.annotate("shader time end")
                               .exec_all().at(NULL, end);
-
-   fs_reg shader_end_time = get_timestamp(ibld);
+   const fs_reg timestamp = get_timestamp(ibld);
 
    /* We only use the low 32 bits of the timestamp - see
     * emit_shader_time_begin()).
@@ -585,22 +574,21 @@ fs_visitor::emit_shader_time_end()
     * else that might disrupt timing) by setting smear to 2 and checking if
     * that field is != 0.
     */
-   shader_end_time.set_smear(0);
+   const fs_reg shader_end_time = component(timestamp, 0);
 
    /* Check that there weren't any timestamp reset events (assuming these
     * were the only two timestamp reads that happened).
     */
-   fs_reg reset = shader_end_time;
-   reset.set_smear(2);
+   const fs_reg reset = component(timestamp, 2);
    set_condmod(BRW_CONDITIONAL_Z,
                ibld.AND(ibld.null_reg_ud(), reset, brw_imm_ud(1u)));
    ibld.IF(BRW_PREDICATE_NORMAL);
 
    fs_reg start = shader_start_time;
    start.negate = true;
-   fs_reg diff = fs_reg(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_UD);
-   diff.set_smear(0);
-
+   const fs_reg diff = component(fs_reg(VGRF, alloc.allocate(1),
+                                        BRW_REGISTER_TYPE_UD),
+                                 0);
    const fs_builder cbld = ibld.group(1, 0);
    cbld.group(1, 0).ADD(diff, start, shader_end_time);
 
@@ -1257,9 +1245,9 @@ fs_visitor::emit_sampleid_setup()
                     brw_imm_v(0x44440000));
       abld.AND(*reg, tmp, brw_imm_w(0xf));
    } else {
-      fs_reg t1(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_D);
-      t1.set_smear(0);
-      fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
+      const fs_reg t1 = component(fs_reg(VGRF, alloc.allocate(1),
+                                         BRW_REGISTER_TYPE_D), 0);
+      const fs_reg t2(VGRF, alloc.allocate(1), BRW_REGISTER_TYPE_W);
 
       /* The PS will be run in MSDISPMODE_PERSAMPLE. For example with
        * 8x multisampling, subspan 0 will represent sample N (where N
@@ -2149,9 +2137,7 @@ fs_visitor::lower_constant_loads()
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = VGRF;
          inst->src[i].nr = dst.nr;
-         inst->src[i].offset %= 4;
-         inst->src[i].set_smear((pull_index & 3) * 4 /
-                                type_sz(inst->src[i].type));
+         inst->src[i].offset = (pull_index & 3) * 4 + inst->src[i].offset % 4;
 
          brw_mark_surface_used(prog_data, index);
       }
