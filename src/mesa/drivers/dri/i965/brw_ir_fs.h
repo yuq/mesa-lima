@@ -52,12 +52,6 @@ public:
    /** Smear a channel of the reg to all channels. */
    fs_reg &set_smear(unsigned subreg);
 
-   /**
-    * Offset in bytes from the start of the register.  Values up to a
-    * backend_reg::reg_offset unit are valid.
-    */
-   int subreg_offset;
-
    /** Register region horizontal stride */
    uint8_t stride;
 };
@@ -87,15 +81,15 @@ byte_offset(fs_reg reg, unsigned delta)
    case ATTR:
    case UNIFORM: {
       const unsigned reg_size = (reg.file == UNIFORM ? 4 : REG_SIZE);
-      const unsigned suboffset = reg.subreg_offset + delta;
+      const unsigned suboffset = reg.offset % reg_size + delta;
       reg.offset += ROUND_DOWN_TO(suboffset, reg_size);
-      reg.subreg_offset = suboffset % reg_size;
+      reg.offset = ROUND_DOWN_TO(reg.offset, reg_size) + suboffset % reg_size;
       break;
    }
    case MRF: {
-      const unsigned suboffset = reg.subreg_offset + delta;
+      const unsigned suboffset = reg.offset % REG_SIZE + delta;
       reg.nr += suboffset / REG_SIZE;
-      reg.subreg_offset = suboffset % REG_SIZE;
+      reg.offset = ROUND_DOWN_TO(reg.offset, REG_SIZE) + suboffset % REG_SIZE;
       break;
    }
    case ARF:
@@ -193,7 +187,7 @@ static inline unsigned
 reg_offset(const fs_reg &r)
 {
    return (r.file == VGRF || r.file == IMM ? 0 : r.nr) *
-          (r.file == UNIFORM ? 4 : REG_SIZE) + r.offset + r.subreg_offset;
+          (r.file == UNIFORM ? 4 : REG_SIZE) + r.offset;
 }
 
 /**

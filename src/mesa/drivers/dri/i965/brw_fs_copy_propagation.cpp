@@ -341,7 +341,7 @@ region_contained_in(const fs_reg &src, unsigned regs_read,
                     const fs_reg &dst, unsigned regs_written)
 {
    return src.file == dst.file && src.nr == dst.nr &&
-      (src.offset + src.subreg_offset >= dst.offset + dst.subreg_offset) &&
+          src.offset >= dst.offset &&
       src.offset / REG_SIZE + regs_read <= dst.offset / REG_SIZE + regs_written;
 }
 
@@ -461,30 +461,21 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    inst->saturate = inst->saturate || entry->saturate;
 
    /* Compute the offset of inst->src[arg] relative to entry->dst */
-   const unsigned rel_offset = inst->src[arg].offset - entry->dst.offset +
-                               inst->src[arg].subreg_offset;
+   const unsigned rel_offset = inst->src[arg].offset - entry->dst.offset;
 
    /* Compute the first component of the copy that the instruction is
     * reading, and the base byte offset within that component.
     */
-   assert(entry->dst.subreg_offset == 0 && entry->dst.stride == 1);
+   assert(entry->dst.offset % REG_SIZE == 0 && entry->dst.stride == 1);
    const unsigned component = rel_offset / type_sz(entry->dst.type);
    const unsigned suboffset = rel_offset % type_sz(entry->dst.type);
-
-   /* Account for the inconsistent units reg_offset is expressed in.
-    * FINISHME -- Make the units of reg_offset consistent (e.g. bytes?) for
-    *             all register files.
-    */
-   const unsigned reg_size = (entry->src.file == UNIFORM ? 4 : REG_SIZE);
 
    /* Calculate the byte offset at the origin of the copy of the given
     * component and suboffset.
     */
-   const unsigned offset = suboffset +
+   inst->src[arg].offset = suboffset +
       component * entry->src.stride * type_sz(entry->src.type) +
-      entry->src.offset + entry->src.subreg_offset;
-   inst->src[arg].offset = ROUND_DOWN_TO(offset, reg_size);
-   inst->src[arg].subreg_offset = offset % reg_size;
+      entry->src.offset;
 
    if (has_source_modifiers) {
       if (entry->dst.type != inst->src[arg].type) {

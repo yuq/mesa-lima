@@ -97,14 +97,14 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen, bool compressed)
       }
 
       brw_reg = retype(brw_reg, reg->type);
-      brw_reg = byte_offset(brw_reg, reg->subreg_offset);
+      brw_reg = byte_offset(brw_reg, reg->offset % REG_SIZE);
       brw_reg.abs = reg->abs;
       brw_reg.negate = reg->negate;
       break;
    case ARF:
    case FIXED_GRF:
    case IMM:
-      assert(reg->subreg_offset == 0);
+      assert(reg->offset % REG_SIZE == 0);
       brw_reg = reg->as_brw_reg();
       break;
    case BAD_FILE:

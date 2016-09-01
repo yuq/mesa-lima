@@ -426,7 +426,6 @@ fs_reg::fs_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
    this->offset = 0;
-   this->subreg_offset = 0;
    this->stride = 1;
    if (this->file == IMM &&
        (this->type != BRW_REGISTER_TYPE_V &&
@@ -440,7 +439,6 @@ bool
 fs_reg::equals(const fs_reg &r) const
 {
    return (this->backend_reg::equals(r) &&
-           subreg_offset == r.subreg_offset &&
            stride == r.stride);
 }
 
@@ -448,7 +446,7 @@ fs_reg &
 fs_reg::set_smear(unsigned subreg)
 {
    assert(file != ARF && file != FIXED_GRF && file != IMM);
-   subreg_offset = subreg * type_sz(type);
+   offset = ROUND_DOWN_TO(offset, REG_SIZE) + subreg * type_sz(type);
    stride = 0;
    return *this;
 }
@@ -710,7 +708,7 @@ fs_inst::is_partial_write() const
    return ((this->predicate && this->opcode != BRW_OPCODE_SEL) ||
            (this->exec_size * type_sz(this->dst.type)) < 32 ||
            !this->dst.is_contiguous() ||
-           this->dst.subreg_offset > 0);
+           this->dst.offset % REG_SIZE != 0);
 }
 
 unsigned
@@ -1485,7 +1483,7 @@ fs_visitor::assign_curb_setup()
             assert(inst->src[i].stride == 0);
             inst->src[i] = byte_offset(
                retype(brw_reg, inst->src[i].type),
-               inst->src[i].subreg_offset);
+               inst->src[i].offset % 4);
 	 }
       }
    }
@@ -1642,7 +1640,7 @@ fs_visitor::convert_attr_sources_to_hw_regs(fs_inst *inst)
          unsigned width = inst->src[i].stride == 0 ? 1 : exec_size;
          struct brw_reg reg =
             stride(byte_offset(retype(brw_vec8_grf(grf, 0), inst->src[i].type),
-                               inst->src[i].subreg_offset),
+                               inst->src[i].offset % REG_SIZE),
                    exec_size * inst->src[i].stride,
                    width, inst->src[i].stride);
          reg.abs = inst->src[i].abs;
@@ -2715,7 +2713,7 @@ fs_visitor::compute_to_mrf()
 	  inst->dst.type != inst->src[0].type ||
 	  inst->src[0].abs || inst->src[0].negate ||
           !inst->src[0].is_contiguous() ||
-          inst->src[0].subreg_offset)
+          inst->src[0].offset % REG_SIZE != 0)
 	 continue;
 
       /* Can't compute-to-MRF this GRF if someone else was going to
@@ -3519,7 +3517,7 @@ fs_visitor::lower_integer_multiplication()
                      assert(src1_1_w.stride == 1);
                      src1_1_w.stride = 2;
                   }
-                  src1_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
+                  src1_1_w.offset += type_sz(BRW_REGISTER_TYPE_UW);
                }
                ibld.MUL(low, inst->src[0], src1_0_w);
                ibld.MUL(high, inst->src[0], src1_1_w);
@@ -3538,7 +3536,7 @@ fs_visitor::lower_integer_multiplication()
                   assert(src0_1_w.stride == 1);
                   src0_1_w.stride = 2;
                }
-               src0_1_w.subreg_offset += type_sz(BRW_REGISTER_TYPE_UW);
+               src0_1_w.offset += type_sz(BRW_REGISTER_TYPE_UW);
 
                ibld.MUL(low, src0_0_w, inst->src[1]);
                ibld.MUL(high, src0_1_w, inst->src[1]);
@@ -3546,14 +3544,14 @@ fs_visitor::lower_integer_multiplication()
 
             fs_reg dst = inst->dst;
             dst.type = BRW_REGISTER_TYPE_UW;
-            dst.subreg_offset = 2;
+            dst.offset = ROUND_DOWN_TO(dst.offset, REG_SIZE) + 2;
             dst.stride = 2;
 
             high.type = BRW_REGISTER_TYPE_UW;
             high.stride = 2;
 
             low.type = BRW_REGISTER_TYPE_UW;
-            low.subreg_offset = 2;
+            low.offset = ROUND_DOWN_TO(low.offset, REG_SIZE) + 2;
             low.stride = 2;
 
             ibld.ADD(dst, low, high);
@@ -5317,9 +5315,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case VGRF:
       fprintf(file, "vgrf%d", inst->dst.nr);
       if (alloc.sizes[inst->dst.nr] != inst->regs_written ||
-          inst->dst.subreg_offset)
+          inst->dst.offset % REG_SIZE)
          fprintf(file, "+%d.%d",
-                 inst->dst.offset / REG_SIZE, inst->dst.subreg_offset);
+                 inst->dst.offset / REG_SIZE, inst->dst.offset % REG_SIZE);
       break;
    case FIXED_GRF:
       fprintf(file, "g%d", inst->dst.nr);
@@ -5373,9 +5371,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       case VGRF:
          fprintf(file, "vgrf%d", inst->src[i].nr);
          if (alloc.sizes[inst->src[i].nr] != (unsigned)inst->regs_read(i) ||
-             inst->src[i].subreg_offset)
+             inst->src[i].offset % REG_SIZE != 0)
             fprintf(file, "+%d.%d", inst->src[i].offset / REG_SIZE,
-                    inst->src[i].subreg_offset);
+                    inst->src[i].offset % REG_SIZE);
          break;
       case FIXED_GRF:
          fprintf(file, "g%d", inst->src[i].nr);
@@ -5388,9 +5386,9 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          break;
       case UNIFORM:
          fprintf(file, "u%d", inst->src[i].nr + inst->src[i].offset / 4);
-         if (inst->src[i].subreg_offset) {
+         if (inst->src[i].offset % 4 != 0) {
             fprintf(file, "+%d.%d", inst->src[i].offset / 4,
-                    inst->src[i].subreg_offset);
+                    inst->src[i].offset % 4);
          }
          break;
       case BAD_FILE:

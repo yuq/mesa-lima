@@ -280,12 +280,12 @@ fs_visitor::opt_combine_constants()
 
       ibld.MOV(reg, brw_imm_f(imm->val));
       imm->nr = reg.nr;
-      imm->subreg_offset = reg.subreg_offset;
+      imm->subreg_offset = reg.offset % REG_SIZE;
 
-      reg.subreg_offset += sizeof(float);
-      if ((unsigned)reg.subreg_offset == 8 * sizeof(float)) {
+      reg.offset += sizeof(float);
+      if (reg.offset == 8 * sizeof(float)) {
          reg.nr = alloc.allocate(1);
-         reg.subreg_offset = 0;
+         reg.offset = 0;
       }
    }
    promoted_constants = table.len;
@@ -296,7 +296,7 @@ fs_visitor::opt_combine_constants()
          fs_reg *reg = link->reg;
          reg->file = VGRF;
          reg->nr = table.imm[i].nr;
-         reg->subreg_offset = table.imm[i].subreg_offset;
+         reg->offset = table.imm[i].subreg_offset;
          reg->stride = 0;
          reg->negate = signbit(reg->f) != signbit(table.imm[i].val);
          assert((isnan(reg->f) && isnan(table.imm[i].val)) ||

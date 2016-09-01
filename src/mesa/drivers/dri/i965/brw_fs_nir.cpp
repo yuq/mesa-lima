@@ -509,13 +509,13 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
       }
 
       tmp.type = BRW_REGISTER_TYPE_W;
-      tmp.subreg_offset = 2;
+      tmp.offset = ROUND_DOWN_TO(tmp.offset, REG_SIZE) + 2;
       tmp.stride = 2;
 
       bld.OR(tmp, g0, brw_imm_uw(0x3f80));
 
       tmp.type = BRW_REGISTER_TYPE_D;
-      tmp.subreg_offset = 0;
+      tmp.offset = ROUND_DOWN_TO(tmp.offset, REG_SIZE);
       tmp.stride = 1;
    } else {
       /* Bit 31 of g1.6 is 0 if the polygon is front facing. */
