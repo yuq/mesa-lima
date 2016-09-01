@@ -194,7 +194,13 @@ vec4_instruction::has_source_and_destination_hazard() const
    case TES_OPCODE_ADD_INDIRECT_URB_OFFSET:
       return true;
    default:
-      return false;
+      /* 8-wide compressed DF operations are executed as two 4-wide operations,
+       * so we have a src/dst hazard if the first half of the instruction
+       * overwrites the source of the second half. Prevent this by marking
+       * compressed instructions as having src/dst hazards, so the register
+       * allocator assigns safe register regions for dst and srcs.
+       */
+      return size_written > REG_SIZE;
    }
 }
 
