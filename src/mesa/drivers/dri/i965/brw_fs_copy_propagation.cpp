@@ -341,9 +341,8 @@ region_contained_in(const fs_reg &src, unsigned regs_read,
                     const fs_reg &dst, unsigned regs_written)
 {
    return src.file == dst.file && src.nr == dst.nr &&
-      (src.reg_offset * REG_SIZE + src.subreg_offset >=
-       dst.reg_offset * REG_SIZE + dst.subreg_offset) &&
-      src.reg_offset + regs_read <= dst.reg_offset + regs_written;
+      (src.offset + src.subreg_offset >= dst.offset + dst.subreg_offset) &&
+      src.offset / REG_SIZE + regs_read <= dst.offset / REG_SIZE + regs_written;
 }
 
 bool
@@ -462,8 +461,7 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    inst->saturate = inst->saturate || entry->saturate;
 
    /* Compute the offset of inst->src[arg] relative to entry->dst */
-   const unsigned rel_offset = (inst->src[arg].reg_offset
-                                - entry->dst.reg_offset) * REG_SIZE +
+   const unsigned rel_offset = inst->src[arg].offset - entry->dst.offset +
                                inst->src[arg].subreg_offset;
 
    /* Compute the first component of the copy that the instruction is
@@ -484,8 +482,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
     */
    const unsigned offset = suboffset +
       component * entry->src.stride * type_sz(entry->src.type) +
-      entry->src.reg_offset * reg_size + entry->src.subreg_offset;
-   inst->src[arg].reg_offset = offset / reg_size;
+      entry->src.offset + entry->src.subreg_offset;
+   inst->src[arg].offset = ROUND_DOWN_TO(offset, reg_size);
    inst->src[arg].subreg_offset = offset % reg_size;
 
    if (has_source_modifiers) {
@@ -747,7 +745,7 @@ can_propagate_from(fs_inst *inst)
            inst->dst.file == VGRF &&
            ((inst->src[0].file == VGRF &&
              (inst->src[0].nr != inst->dst.nr ||
-              inst->src[0].reg_offset != inst->dst.reg_offset)) ||
+              inst->src[0].offset / REG_SIZE != inst->dst.offset / REG_SIZE)) ||
             inst->src[0].file == ATTR ||
             inst->src[0].file == UNIFORM ||
             inst->src[0].file == IMM) &&
@@ -824,7 +822,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
             if (inst->src[i].file == VGRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
                entry->dst = inst->dst;
-               entry->dst.reg_offset += offset;
+               entry->dst.offset += offset * REG_SIZE;
                entry->src = inst->src[i];
                entry->regs_written = regs_written;
                entry->regs_read = inst->regs_read(i);

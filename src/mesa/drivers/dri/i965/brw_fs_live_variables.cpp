@@ -120,7 +120,7 @@ fs_live_variables::setup_def_use()
 
             for (int j = 0; j < inst->regs_read(i); j++) {
                setup_one_read(bd, inst, ip, reg);
-               reg.reg_offset++;
+               reg.offset += REG_SIZE;
             }
 	 }
 
@@ -131,7 +131,7 @@ fs_live_variables::setup_def_use()
             fs_reg reg = inst->dst;
             for (int j = 0; j < inst->regs_written; j++) {
                setup_one_write(bd, inst, ip, reg);
-               reg.reg_offset++;
+               reg.offset += REG_SIZE;
             }
 	 }
 

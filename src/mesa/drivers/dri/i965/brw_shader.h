@@ -44,14 +44,14 @@ struct backend_reg : private brw_reg
    const brw_reg &as_brw_reg() const
    {
       assert(file == ARF || file == FIXED_GRF || file == MRF || file == IMM);
-      assert(reg_offset == 0);
+      assert(reg_offset == 0 && offset == 0);
       return static_cast<const brw_reg &>(*this);
    }
 
    brw_reg &as_brw_reg()
    {
       assert(file == ARF || file == FIXED_GRF || file == MRF || file == IMM);
-      assert(reg_offset == 0);
+      assert(reg_offset == 0 && offset == 0);
       return static_cast<brw_reg &>(*this);
    }
 
@@ -74,6 +74,9 @@ struct backend_reg : private brw_reg
     * For uniforms, this is in units of 1 float.
     */
    uint16_t reg_offset;
+
+   /** Offset from the start of the (virtual) register in bytes. */
+   uint16_t offset;
 
    using brw_reg::type;
    using brw_reg::file;

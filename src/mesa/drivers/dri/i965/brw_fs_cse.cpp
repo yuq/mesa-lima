@@ -221,7 +221,7 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       payload = ralloc_array(bld.shader->mem_ctx, fs_reg, sources);
       for (int i = 0; i < header_size; i++) {
          payload[i] = src;
-         src.reg_offset++;
+         src.offset += REG_SIZE;
       }
       for (int i = header_size; i < sources; i++) {
          payload[i] = src;

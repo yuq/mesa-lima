@@ -354,7 +354,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
       return false;
 
    fs_reg reg = this->src[0];
-   if (reg.file != VGRF || reg.reg_offset != 0 || reg.stride == 0)
+   if (reg.file != VGRF || reg.offset / REG_SIZE != 0 || reg.stride == 0)
       return false;
 
    if (grf_alloc.sizes[reg.nr] != this->regs_written)
@@ -366,7 +366,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
          return false;
 
       if (i < this->header_size) {
-         reg.reg_offset += 1;
+         reg.offset += REG_SIZE;
       } else {
          reg = horiz_offset(reg, this->exec_size);
       }
@@ -425,7 +425,7 @@ fs_reg::fs_reg()
 fs_reg::fs_reg(struct ::brw_reg reg) :
    backend_reg(reg)
 {
-   this->reg_offset = 0;
+   this->offset = 0;
    this->subreg_offset = 0;
    this->stride = 1;
    if (this->file == IMM &&
@@ -1463,7 +1463,7 @@ fs_visitor::assign_curb_setup()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == UNIFORM) {
-            int uniform_nr = inst->src[i].nr + inst->src[i].reg_offset;
+            int uniform_nr = inst->src[i].nr + inst->src[i].offset / 4;
             int constant_nr;
             if (uniform_nr >= 0 && uniform_nr < (int) uniforms) {
                constant_nr = push_constant_loc[uniform_nr];
@@ -1620,7 +1620,7 @@ fs_visitor::convert_attr_sources_to_hw_regs(fs_inst *inst)
          int grf = payload.num_regs +
                    prog_data->curb_read_length +
                    inst->src[i].nr +
-                   inst->src[i].reg_offset;
+                   inst->src[i].offset / REG_SIZE;
 
          /* As explained at brw_reg_from_fs_reg, From the Haswell PRM:
           *
@@ -1773,13 +1773,13 @@ fs_visitor::split_virtual_grfs()
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == VGRF) {
-         int reg = vgrf_to_reg[inst->dst.nr] + inst->dst.reg_offset;
+         int reg = vgrf_to_reg[inst->dst.nr] + inst->dst.offset / REG_SIZE;
          for (int j = 1; j < inst->regs_written; j++)
             split_points[reg + j] = false;
       }
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == VGRF) {
-            int reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].reg_offset;
+            int reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].offset / REG_SIZE;
             for (int j = 1; j < inst->regs_read(i); j++)
                split_points[reg + j] = false;
          }
@@ -1826,16 +1826,18 @@ fs_visitor::split_virtual_grfs()
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == VGRF) {
-         reg = vgrf_to_reg[inst->dst.nr] + inst->dst.reg_offset;
+         reg = vgrf_to_reg[inst->dst.nr] + inst->dst.offset / REG_SIZE;
          inst->dst.nr = new_virtual_grf[reg];
-         inst->dst.reg_offset = new_reg_offset[reg];
+         inst->dst.offset = new_reg_offset[reg] * REG_SIZE +
+                            inst->dst.offset % REG_SIZE;
          assert((unsigned)new_reg_offset[reg] < alloc.sizes[new_virtual_grf[reg]]);
       }
       for (int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == VGRF) {
-            reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].reg_offset;
+            reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].offset / REG_SIZE;
             inst->src[i].nr = new_virtual_grf[reg];
-            inst->src[i].reg_offset = new_reg_offset[reg];
+            inst->src[i].offset = new_reg_offset[reg] * REG_SIZE +
+                                  inst->src[i].offset % REG_SIZE;
             assert((unsigned)new_reg_offset[reg] < alloc.sizes[new_virtual_grf[reg]]);
          }
       }
@@ -2001,7 +2003,7 @@ fs_visitor::assign_constant_locations()
          if (inst->src[i].file != UNIFORM)
             continue;
 
-         int constant_nr = inst->src[i].nr + inst->src[i].reg_offset;
+         int constant_nr = inst->src[i].nr + inst->src[i].offset / 4;
 
          if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0) {
             assert(inst->src[2].ud % 4 == 0);
@@ -2155,7 +2157,7 @@ fs_visitor::lower_constant_loads()
          if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT && i == 0)
             continue;
 
-         unsigned location = inst->src[i].nr + inst->src[i].reg_offset;
+         unsigned location = inst->src[i].nr + inst->src[i].offset / 4;
          if (location >= uniforms)
             continue; /* Out of bounds access */
 
@@ -2182,7 +2184,7 @@ fs_visitor::lower_constant_loads()
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = VGRF;
          inst->src[i].nr = dst.nr;
-         inst->src[i].reg_offset = 0;
+         inst->src[i].offset %= 4;
          inst->src[i].set_smear((pull_index & 3) * 4 /
                                 type_sz(inst->src[i].type));
 
@@ -2192,7 +2194,7 @@ fs_visitor::lower_constant_loads()
       if (inst->opcode == SHADER_OPCODE_MOV_INDIRECT &&
           inst->src[0].file == UNIFORM) {
 
-         unsigned location = inst->src[0].nr + inst->src[0].reg_offset;
+         unsigned location = inst->src[0].nr + inst->src[0].offset / 4;
          if (location >= uniforms)
             continue; /* Out of bounds access */
 
@@ -2748,9 +2750,9 @@ fs_visitor::compute_to_mrf()
              * would need us to understand coalescing out more than one MOV at
              * a time.
              */
-            if (scan_inst->dst.reg_offset < inst->src[0].reg_offset ||
-                scan_inst->dst.reg_offset + scan_inst->regs_written >
-                inst->src[0].reg_offset + inst->regs_read(0))
+            if (scan_inst->dst.offset / REG_SIZE < inst->src[0].offset / REG_SIZE ||
+                scan_inst->dst.offset / REG_SIZE + scan_inst->regs_written >
+                inst->src[0].offset / REG_SIZE + inst->regs_read(0))
                break;
 
 	    /* SEND instructions can't have MRF as a destination. */
@@ -2852,7 +2854,7 @@ fs_visitor::compute_to_mrf()
             }
 
             scan_inst->dst.file = MRF;
-            scan_inst->dst.reg_offset = 0;
+            scan_inst->dst.offset %= REG_SIZE;
             scan_inst->saturate |= inst->saturate;
             if (!regs_left)
                break;
@@ -3264,7 +3266,7 @@ fs_visitor::lower_uniform_pull_constant_loads()
              * mode.  Reserve space for the register.
             */
             offset = payload = fs_reg(VGRF, alloc.allocate(2));
-            offset.reg_offset++;
+            offset.offset += REG_SIZE;
             inst->mlen = 2;
          } else {
             offset = payload = fs_reg(VGRF, alloc.allocate(1));
@@ -5317,7 +5319,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       if (alloc.sizes[inst->dst.nr] != inst->regs_written ||
           inst->dst.subreg_offset)
          fprintf(file, "+%d.%d",
-                 inst->dst.reg_offset, inst->dst.subreg_offset);
+                 inst->dst.offset / REG_SIZE, inst->dst.subreg_offset);
       break;
    case FIXED_GRF:
       fprintf(file, "g%d", inst->dst.nr);
@@ -5329,10 +5331,10 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       fprintf(file, "(null)");
       break;
    case UNIFORM:
-      fprintf(file, "***u%d***", inst->dst.nr + inst->dst.reg_offset);
+      fprintf(file, "***u%d***", inst->dst.nr + inst->dst.offset / 4);
       break;
    case ATTR:
-      fprintf(file, "***attr%d***", inst->dst.nr + inst->dst.reg_offset);
+      fprintf(file, "***attr%d***", inst->dst.nr + inst->dst.offset / REG_SIZE);
       break;
    case ARF:
       switch (inst->dst.nr) {
@@ -5372,7 +5374,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "vgrf%d", inst->src[i].nr);
          if (alloc.sizes[inst->src[i].nr] != (unsigned)inst->regs_read(i) ||
              inst->src[i].subreg_offset)
-            fprintf(file, "+%d.%d", inst->src[i].reg_offset,
+            fprintf(file, "+%d.%d", inst->src[i].offset / REG_SIZE,
                     inst->src[i].subreg_offset);
          break;
       case FIXED_GRF:
@@ -5382,12 +5384,12 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "***m%d***", inst->src[i].nr);
          break;
       case ATTR:
-         fprintf(file, "attr%d+%d", inst->src[i].nr, inst->src[i].reg_offset);
+         fprintf(file, "attr%d+%d", inst->src[i].nr, inst->src[i].offset / REG_SIZE);
          break;
       case UNIFORM:
-         fprintf(file, "u%d", inst->src[i].nr + inst->src[i].reg_offset);
+         fprintf(file, "u%d", inst->src[i].nr + inst->src[i].offset / 4);
          if (inst->src[i].subreg_offset) {
-            fprintf(file, "+%d.%d", inst->src[i].reg_offset,
+            fprintf(file, "+%d.%d", inst->src[i].offset / 4,
                     inst->src[i].subreg_offset);
          }
          break;

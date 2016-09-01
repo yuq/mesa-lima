@@ -3999,7 +3999,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       if (const_offset) {
          /* Offsets are in bytes but they should always be multiples of 4 */
          assert(const_offset->u32[0] % 4 == 0);
-         src.reg_offset = const_offset->u32[0] / 4;
+         src.offset = const_offset->u32[0] + src.offset % 4;
 
          for (unsigned j = 0; j < instr->num_components; j++) {
             bld.MOV(offset(dest, bld, j), offset(src, bld, j));

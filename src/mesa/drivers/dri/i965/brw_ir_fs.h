@@ -88,7 +88,7 @@ byte_offset(fs_reg reg, unsigned delta)
    case UNIFORM: {
       const unsigned reg_size = (reg.file == UNIFORM ? 4 : REG_SIZE);
       const unsigned suboffset = reg.subreg_offset + delta;
-      reg.reg_offset += suboffset / reg_size;
+      reg.offset += ROUND_DOWN_TO(suboffset, reg_size);
       reg.subreg_offset = suboffset % reg_size;
       break;
    }
@@ -192,8 +192,8 @@ reg_space(const fs_reg &r)
 static inline unsigned
 reg_offset(const fs_reg &r)
 {
-   return ((r.file == VGRF || r.file == IMM ? 0 : r.nr) + r.reg_offset) *
-          (r.file == UNIFORM ? 4 : REG_SIZE) + r.subreg_offset;
+   return (r.file == VGRF || r.file == IMM ? 0 : r.nr) *
+          (r.file == UNIFORM ? 4 : REG_SIZE) + r.offset + r.subreg_offset;
 }
 
 /**

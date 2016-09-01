@@ -116,7 +116,8 @@ opt_saturate_propagation_local(fs_visitor *v, bblock_t *block)
          for (int i = 0; i < scan_inst->sources; i++) {
             if (scan_inst->src[i].file == VGRF &&
                 scan_inst->src[i].nr == inst->src[0].nr &&
-                scan_inst->src[i].reg_offset == inst->src[0].reg_offset) {
+                scan_inst->src[i].offset / REG_SIZE ==
+                 inst->src[0].offset / REG_SIZE) {
                if (scan_inst->opcode != BRW_OPCODE_MOV ||
                    !scan_inst->saturate ||
                    scan_inst->src[0].abs ||

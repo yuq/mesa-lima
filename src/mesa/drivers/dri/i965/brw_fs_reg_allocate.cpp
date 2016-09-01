@@ -36,8 +36,8 @@ static void
 assign_reg(unsigned *reg_hw_locations, fs_reg *reg)
 {
    if (reg->file == VGRF) {
-      reg->nr = reg_hw_locations[reg->nr] + reg->reg_offset;
-      reg->reg_offset = 0;
+      reg->nr = reg_hw_locations[reg->nr] + reg->offset / REG_SIZE;
+      reg->offset %= REG_SIZE;
    }
 }
 
@@ -780,7 +780,7 @@ emit_unspill(const fs_builder &bld, fs_reg dst,
          unspill_inst->mlen = 1; /* header contains offset */
       }
 
-      dst.reg_offset += reg_size;
+      dst.offset += reg_size * REG_SIZE;
       spill_offset += reg_size * REG_SIZE;
    }
 }
@@ -796,7 +796,7 @@ emit_spill(const fs_builder &bld, fs_reg src,
    for (unsigned i = 0; i < count / reg_size; i++) {
       fs_inst *spill_inst =
          bld.emit(SHADER_OPCODE_GEN4_SCRATCH_WRITE, bld.null_reg_f(), src);
-      src.reg_offset += reg_size;
+      src.offset += reg_size * REG_SIZE;
       spill_inst->offset = spill_offset + i * reg_size * REG_SIZE;
       spill_inst->mlen = 1 + reg_size; /* header, value */
       spill_inst->base_mrf = spill_base_mrf(bld.shader);
@@ -904,12 +904,12 @@ fs_visitor::spill_reg(int spill_reg)
 	 if (inst->src[i].file == VGRF &&
              inst->src[i].nr == spill_reg) {
             int regs_read = inst->regs_read(i);
-            int subset_spill_offset = (spill_offset +
-                                       REG_SIZE * inst->src[i].reg_offset);
+            int subset_spill_offset = spill_offset +
+               ROUND_DOWN_TO(inst->src[i].offset, REG_SIZE);
             fs_reg unspill_dst(VGRF, alloc.allocate(regs_read));
 
             inst->src[i].nr = unspill_dst.nr;
-            inst->src[i].reg_offset = 0;
+            inst->src[i].offset %= REG_SIZE;
 
             /* We read the largest power-of-two divisor of the register count
              * (because only POT scratch read blocks are allowed by the
@@ -932,12 +932,12 @@ fs_visitor::spill_reg(int spill_reg)
 
       if (inst->dst.file == VGRF &&
           inst->dst.nr == spill_reg) {
-         int subset_spill_offset = (spill_offset +
-                                    REG_SIZE * inst->dst.reg_offset);
+         int subset_spill_offset = spill_offset +
+            ROUND_DOWN_TO(inst->dst.offset, REG_SIZE);
          fs_reg spill_src(VGRF, alloc.allocate(inst->regs_written));
 
          inst->dst.nr = spill_src.nr;
-         inst->dst.reg_offset = 0;
+         inst->dst.offset %= REG_SIZE;
 
          /* If we're immediately spilling the register, we should not use
           * destination dependency hints.  Doing so will cause the GPU do

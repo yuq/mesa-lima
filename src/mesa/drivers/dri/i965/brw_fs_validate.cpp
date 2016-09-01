@@ -43,13 +43,13 @@ fs_visitor::validate()
 {
    foreach_block_and_inst (block, fs_inst, inst, cfg) {
       if (inst->dst.file == VGRF) {
-         fsv_assert(inst->dst.reg_offset + inst->regs_written <=
+         fsv_assert(inst->dst.offset / REG_SIZE + inst->regs_written <=
                     alloc.sizes[inst->dst.nr]);
       }
 
       for (unsigned i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == VGRF) {
-            fsv_assert(inst->src[i].reg_offset + inst->regs_read(i) <=
+            fsv_assert(inst->src[i].offset / REG_SIZE + inst->regs_read(i) <=
                        (int)alloc.sizes[inst->src[i].nr]);
          }
       }

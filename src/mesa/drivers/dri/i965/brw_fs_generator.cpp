@@ -56,7 +56,7 @@ brw_file_from_reg(fs_reg *reg)
 static struct brw_reg
 brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen, bool compressed)
 {
-   assert(reg->reg_offset == 0);
+   assert(reg->offset / REG_SIZE == 0);
    struct brw_reg brw_reg;
 
    switch (reg->file) {

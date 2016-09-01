@@ -50,7 +50,7 @@ is_nop_mov(const fs_inst *inst)
    if (inst->opcode == SHADER_OPCODE_LOAD_PAYLOAD) {
       fs_reg dst = inst->dst;
       for (int i = 0; i < inst->sources; i++) {
-         dst.reg_offset = i;
+         dst.offset = i * REG_SIZE + dst.offset % REG_SIZE;
          if (!dst.equals(inst->src[i])) {
             return false;
          }
@@ -192,7 +192,7 @@ fs_visitor::register_coalesce()
          mov[0] = inst;
          channels_remaining -= inst->regs_written;
       } else {
-         const int offset = inst->src[0].reg_offset;
+         const int offset = inst->src[0].offset / REG_SIZE;
          if (mov[offset]) {
             /* This is the second time that this offset in the register has
              * been set.  This means, in particular, that inst->dst was
@@ -203,9 +203,9 @@ fs_visitor::register_coalesce()
             channels_remaining = -1;
             continue;
          }
-         dst_reg_offset[offset] = inst->dst.reg_offset;
+         dst_reg_offset[offset] = inst->dst.offset / REG_SIZE;
          if (inst->regs_written > 1)
-            dst_reg_offset[offset + 1] = inst->dst.reg_offset + 1;
+            dst_reg_offset[offset + 1] = inst->dst.offset / REG_SIZE + 1;
          mov[offset] = inst;
          channels_remaining -= inst->regs_written;
       }
@@ -253,16 +253,16 @@ fs_visitor::register_coalesce()
          if (scan_inst->dst.file == VGRF &&
              scan_inst->dst.nr == src_reg) {
             scan_inst->dst.nr = dst_reg;
-            scan_inst->dst.reg_offset =
-               dst_reg_offset[scan_inst->dst.reg_offset];
+            scan_inst->dst.offset = scan_inst->dst.offset % REG_SIZE +
+               dst_reg_offset[scan_inst->dst.offset / REG_SIZE] * REG_SIZE;
          }
 
          for (int j = 0; j < scan_inst->sources; j++) {
             if (scan_inst->src[j].file == VGRF &&
                 scan_inst->src[j].nr == src_reg) {
                scan_inst->src[j].nr = dst_reg;
-               scan_inst->src[j].reg_offset =
-                  dst_reg_offset[scan_inst->src[j].reg_offset];
+               scan_inst->src[j].offset = scan_inst->src[j].offset % REG_SIZE +
+                  dst_reg_offset[scan_inst->src[j].offset / REG_SIZE] * REG_SIZE;
             }
          }
       }

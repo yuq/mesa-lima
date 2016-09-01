@@ -43,21 +43,21 @@ fs_visitor::emit_vs_system_value(int location)
 
    switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
-      reg->reg_offset = 0;
+      reg->offset = 0;
       vs_prog_data->uses_basevertex = true;
       break;
    case SYSTEM_VALUE_BASE_INSTANCE:
-      reg->reg_offset = 1;
+      reg->offset = REG_SIZE;
       vs_prog_data->uses_baseinstance = true;
       break;
    case SYSTEM_VALUE_VERTEX_ID:
       unreachable("should have been lowered");
    case SYSTEM_VALUE_VERTEX_ID_ZERO_BASE:
-      reg->reg_offset = 2;
+      reg->offset = 2 * REG_SIZE;
       vs_prog_data->uses_vertexid = true;
       break;
    case SYSTEM_VALUE_INSTANCE_ID:
-      reg->reg_offset = 3;
+      reg->offset = 3 * REG_SIZE;
       vs_prog_data->uses_instanceid = true;
       break;
    case SYSTEM_VALUE_DRAW_ID:
@@ -67,7 +67,7 @@ fs_visitor::emit_vs_system_value(int location)
            BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
            BITFIELD64_BIT(SYSTEM_VALUE_INSTANCE_ID)))
          reg->nr += 4;
-      reg->reg_offset = 0;
+      reg->offset = 0;
       vs_prog_data->uses_drawid = true;
       break;
    default:
@@ -574,7 +574,7 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       fs_reg u = userplane[i];
       fs_reg output = outputs[VARYING_SLOT_CLIP_DIST0 + i / 4];
-      output.reg_offset = i & 3;
+      output.offset = output.offset % REG_SIZE + (i & 3) * REG_SIZE;
 
       abld.MUL(output, outputs[clip_vertex], u);
       for (int j = 1; j < 4; j++) {

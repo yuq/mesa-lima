@@ -90,7 +90,8 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (scan_inst->overwrites_reg(inst->src[0])) {
             if (scan_inst->is_partial_write() ||
-                scan_inst->dst.reg_offset != inst->src[0].reg_offset ||
+                scan_inst->dst.offset / REG_SIZE !=
+                 inst->src[0].offset / REG_SIZE ||
                 scan_inst->exec_size != inst->exec_size)
                break;
 

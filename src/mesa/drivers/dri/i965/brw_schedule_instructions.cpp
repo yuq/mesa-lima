@@ -1008,7 +1008,8 @@ fs_instruction_scheduler::calculate_deps()
                   add_dep(last_grf_write[inst->src[i].nr + r], n);
             } else {
                for (int r = 0; r < inst->regs_read(i); r++) {
-                  add_dep(last_grf_write[inst->src[i].nr * 16 + inst->src[i].reg_offset + r], n);
+                  add_dep(last_grf_write[inst->src[i].nr * 16 +
+                                         inst->src[i].offset / REG_SIZE + r], n);
                }
             }
          } else if (inst->src[i].file == FIXED_GRF) {
@@ -1057,8 +1058,10 @@ fs_instruction_scheduler::calculate_deps()
             }
          } else {
             for (int r = 0; r < inst->regs_written; r++) {
-               add_dep(last_grf_write[inst->dst.nr * 16 + inst->dst.reg_offset + r], n);
-               last_grf_write[inst->dst.nr * 16 + inst->dst.reg_offset + r] = n;
+               add_dep(last_grf_write[inst->dst.nr * 16 +
+                                      inst->dst.offset / REG_SIZE + r], n);
+               last_grf_write[inst->dst.nr * 16 +
+                              inst->dst.offset / REG_SIZE + r] = n;
             }
          }
       } else if (inst->dst.file == MRF) {
@@ -1131,7 +1134,8 @@ fs_instruction_scheduler::calculate_deps()
                   add_dep(n, last_grf_write[inst->src[i].nr + r], 0);
             } else {
                for (int r = 0; r < inst->regs_read(i); r++) {
-                  add_dep(n, last_grf_write[inst->src[i].nr * 16 + inst->src[i].reg_offset + r], 0);
+                  add_dep(n, last_grf_write[inst->src[i].nr * 16 +
+                                            inst->src[i].offset / REG_SIZE + r], 0);
                }
             }
          } else if (inst->src[i].file == FIXED_GRF) {
@@ -1180,7 +1184,8 @@ fs_instruction_scheduler::calculate_deps()
                last_grf_write[inst->dst.nr + r] = n;
          } else {
             for (int r = 0; r < inst->regs_written; r++) {
-               last_grf_write[inst->dst.nr * 16 + inst->dst.reg_offset + r] = n;
+               last_grf_write[inst->dst.nr * 16 +
+                              inst->dst.offset / REG_SIZE + r] = n;
             }
          }
       } else if (inst->dst.file == MRF) {
