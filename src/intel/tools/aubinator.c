@@ -1014,6 +1014,12 @@ setup_pager(void)
 static void
 print_help(FILE *file)
 {
+   const char *progname;
+#if defined(__GLIBC__) || defined(__CYGWIN__)
+   progname = program_invocation_short_name;
+#else
+   progname = getprogname();
+#endif
    fprintf(file,
            "Usage: %s [OPTION]... FILE\n"
            "Decode aub file contents.\n\n"
@@ -1025,7 +1031,7 @@ print_help(FILE *file)
            "                        if omitted), 'always', or 'never'\n"
            "      --no-pager      don't launch pager\n"
            "      --no-offsets    don't print instruction offsets\n",
-           basename(program_invocation_name));
+           basename(progname));
 }
 
 static bool
