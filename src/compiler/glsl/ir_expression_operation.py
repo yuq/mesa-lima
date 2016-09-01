@@ -357,7 +357,7 @@ class operation(object):
 
 
    def get_enum_name(self):
-      return "ir_{}op_{}".format(("un", "bin", "tri", "quad")[self.num_operands-1], self.name)
+      return "ir_{0}op_{1}".format(("un", "bin", "tri", "quad")[self.num_operands-1], self.name)
 
 
    def get_template(self):
@@ -394,10 +394,10 @@ class operation(object):
 
 
    def get_c_expression(self, types, indices=("c", "c", "c")):
-      src0 = "op[0]->value.{}[{}]".format(types[0].union_field, indices[0])
-      src1 = "op[1]->value.{}[{}]".format(types[1].union_field, indices[1]) if len(types) >= 2 else "ERROR"
-      src2 = "op[2]->value.{}[{}]".format(types[2].union_field, indices[2]) if len(types) >= 3 else "ERROR"
-      src3 = "op[3]->value.{}[c]".format(types[3].union_field) if len(types) >= 4 else "ERROR"
+      src0 = "op[0]->value.{0}[{1}]".format(types[0].union_field, indices[0])
+      src1 = "op[1]->value.{0}[{1}]".format(types[1].union_field, indices[1]) if len(types) >= 2 else "ERROR"
+      src2 = "op[2]->value.{0}[{1}]".format(types[2].union_field, indices[2]) if len(types) >= 3 else "ERROR"
+      src3 = "op[3]->value.{0}[c]".format(types[3].union_field) if len(types) >= 4 else "ERROR"
 
       expr = self.c_expression[types[0].union_field] if types[0].union_field in self.c_expression else self.c_expression['default']
 
