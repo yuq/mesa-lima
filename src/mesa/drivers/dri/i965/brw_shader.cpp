@@ -65,12 +65,14 @@ brw_type_for_base_type(const struct glsl_type *type)
       return BRW_REGISTER_TYPE_UD;
    case GLSL_TYPE_DOUBLE:
       return BRW_REGISTER_TYPE_DF;
+   case GLSL_TYPE_UINT64:
+      return BRW_REGISTER_TYPE_UQ;
+   case GLSL_TYPE_INT64:
+      return BRW_REGISTER_TYPE_Q;
    case GLSL_TYPE_VOID:
    case GLSL_TYPE_ERROR:
    case GLSL_TYPE_INTERFACE:
    case GLSL_TYPE_FUNCTION:
-   case GLSL_TYPE_UINT64:
-   case GLSL_TYPE_INT64:
       unreachable("not reached");
    }
 
@@ -561,15 +563,16 @@ brw_negate_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_DF:
       reg->df = -reg->df;
       return true;
+   case BRW_REGISTER_TYPE_UQ:
+   case BRW_REGISTER_TYPE_Q:
+      reg->d64 = -reg->d64;
+      return true;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       unreachable("no UB/B immediates");
    case BRW_REGISTER_TYPE_UV:
    case BRW_REGISTER_TYPE_V:
       assert(!"unimplemented: negate UV/V immediate");
-   case BRW_REGISTER_TYPE_UQ:
-   case BRW_REGISTER_TYPE_Q:
-      assert(!"unimplemented: negate UQ/Q immediate");
    case BRW_REGISTER_TYPE_HF:
       assert(!"unimplemented: negate HF immediate");
    }
@@ -596,6 +599,9 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
    case BRW_REGISTER_TYPE_VF:
       reg->ud &= ~0x80808080;
       return true;
+   case BRW_REGISTER_TYPE_Q:
+      reg->d64 = imaxabs(reg->d64);
+      return true;
    case BRW_REGISTER_TYPE_UB:
    case BRW_REGISTER_TYPE_B:
       unreachable("no UB/B immediates");
@@ -609,8 +615,6 @@ brw_abs_immediate(enum brw_reg_type type, struct brw_reg *reg)
       assert(!"unimplemented: abs unsigned immediate");
    case BRW_REGISTER_TYPE_V:
       assert(!"unimplemented: abs V immediate");
-   case BRW_REGISTER_TYPE_Q:
-      assert(!"unimplemented: abs Q immediate");
    case BRW_REGISTER_TYPE_HF:
       assert(!"unimplemented: abs HF immediate");
    }
@@ -689,6 +693,9 @@ backend_reg::is_zero() const
    case BRW_REGISTER_TYPE_D:
    case BRW_REGISTER_TYPE_UD:
       return d == 0;
+   case BRW_REGISTER_TYPE_UQ:
+   case BRW_REGISTER_TYPE_Q:
+      return u64 == 0;
    default:
       return false;
    }
@@ -708,6 +715,9 @@ backend_reg::is_one() const
    case BRW_REGISTER_TYPE_D:
    case BRW_REGISTER_TYPE_UD:
       return d == 1;
+   case BRW_REGISTER_TYPE_UQ:
+   case BRW_REGISTER_TYPE_Q:
+      return u64 == 1;
    default:
       return false;
    }
@@ -726,6 +736,8 @@ backend_reg::is_negative_one() const
       return df == -1.0;
    case BRW_REGISTER_TYPE_D:
       return d == -1;
+   case BRW_REGISTER_TYPE_Q:
+      return d64 == -1;
    default:
       return false;
    }

@@ -277,6 +277,7 @@ struct brw_reg {
 
       double df;
       uint64_t u64;
+      int64_t d64;
       float f;
       int   d;
       unsigned ud;
