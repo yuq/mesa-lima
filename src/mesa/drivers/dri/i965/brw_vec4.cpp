@@ -2636,6 +2636,12 @@ vec4_visitor::run()
       return false;
 
    OPT(lower_64bit_mad_to_mul_add);
+
+   /* Run this before payload setup because tesselation shaders
+    * rely on it to prevent cross dvec2 regioning on DF attributes
+    * that are setup so that XY are on the second half of register and
+    * ZW are in the first half of the next.
+    */
    OPT(scalarize_df);
 
    setup_payload();
@@ -2651,6 +2657,12 @@ vec4_visitor::run()
             continue;
          spill_reg(i);
       }
+
+      /* We want to run this after spilling because 64-bit (un)spills need to
+       * emit code to shuffle 64-bit data for the 32-bit scratch read/write
+       * messages that can produce unsupported 64-bit swizzle regions.
+       */
+      OPT(scalarize_df);
    }
 
    bool allocated_without_spills = reg_allocate();
@@ -2666,6 +2678,12 @@ vec4_visitor::run()
          if (failed)
             return false;
       }
+
+      /* We want to run this after spilling because 64-bit (un)spills need to
+       * emit code to shuffle 64-bit data for the 32-bit scratch read/write
+       * messages that can produce unsupported 64-bit swizzle regions.
+       */
+      OPT(scalarize_df);
    }
 
    opt_schedule_instructions();
