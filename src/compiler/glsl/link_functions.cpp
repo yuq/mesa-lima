@@ -161,7 +161,6 @@ public:
 
       linked_sig->replace_parameters(&formal_parameters);
 
-      linked_sig->_is_intrinsic = sig->_is_intrinsic;
       linked_sig->intrinsic_id = sig->intrinsic_id;
 
       if (sig->is_defined) {
