@@ -1338,3 +1338,32 @@ SVGA3D_vgpu10_BufferCopy(struct svga_winsys_context *swc,
    swc->commit(swc);
    return PIPE_OK;
 }
+
+enum pipe_error
+SVGA3D_vgpu10_TransferFromBuffer(struct svga_winsys_context *swc,
+                                 struct svga_winsys_surface *src,
+                                 unsigned srcOffset, unsigned srcPitch,
+                                 unsigned srcSlicePitch,
+                                 struct svga_winsys_surface *dst,
+                                 unsigned dstSubResource,
+                                 SVGA3dBox *dstBox)
+{
+   SVGA3dCmdDXTransferFromBuffer *cmd;
+ 
+   cmd = SVGA3D_FIFOReserve(swc, SVGA_3D_CMD_DX_TRANSFER_FROM_BUFFER,
+                            sizeof(SVGA3dCmdDXTransferFromBuffer), 2);
+
+   if (!cmd)
+      return PIPE_ERROR_OUT_OF_MEMORY;
+
+   swc->surface_relocation(swc, &cmd->srcSid, NULL, src, SVGA_RELOC_READ);
+   swc->surface_relocation(swc, &cmd->destSid, NULL, dst, SVGA_RELOC_WRITE);
+   cmd->srcOffset = srcOffset;
+   cmd->srcPitch = srcPitch;
+   cmd->srcSlicePitch = srcSlicePitch;
+   cmd->destSubResource = dstSubResource;
+   cmd->destBox = *dstBox;
+ 
+   swc->commit(swc);
+   return PIPE_OK;
+}

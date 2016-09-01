@@ -668,4 +668,14 @@ SVGA3D_vgpu10_BufferCopy(struct svga_winsys_context *swc,
                          struct svga_winsys_surface *src,
                          struct svga_winsys_surface *dst,
                          unsigned srcx, unsigned dstx, unsigned width);
+
+enum pipe_error
+SVGA3D_vgpu10_TransferFromBuffer(struct svga_winsys_context *swc,
+                                 struct svga_winsys_surface *src,
+                                 unsigned srcOffset, unsigned srcPitch,
+                                 unsigned srcSlicePitch,
+                                 struct svga_winsys_surface *dst,
+                                 unsigned dstSubResource,
+                                 SVGA3dBox *dstBox);
+
 #endif /* __SVGA3D_H__ */

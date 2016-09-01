@@ -2030,6 +2030,17 @@ SVGA3D_DUMP_HEADER(GenMips)
    SVGA3D_DUMP_PARAMETER(shaderResourceViewId, u);
 }
 
+SVGA3D_DUMP_HEADER(TransferFromBuffer)
+{
+   SVGA3D_DUMP_PARAMETER(srcSid, u);
+   SVGA3D_DUMP_PARAMETER(srcOffset, u);
+   SVGA3D_DUMP_PARAMETER(srcPitch, u);
+   SVGA3D_DUMP_PARAMETER(srcSlicePitch, u);
+   SVGA3D_DUMP_PARAMETER(destSid, u);
+   SVGA3D_DUMP_PARAMETER(destSubResource, u);
+   dump_SVGA3dBox(&cmd->destBox);
+}
+
 static void
 dump_SVGA3dCmdInvalidateGBSurface(const SVGA3dCmdInvalidateGBSurface *cmd)
 {
@@ -2130,6 +2141,7 @@ svga_dump_command(uint32_t cmd_id, const void *data, uint32_t size)
    SVGA3D_DUMP_CASE_BASIC(BufferCopy, BUFFER_COPY);
    SVGA3D_DUMP_CASE_BASIC(BufferUpdate, BUFFER_UPDATE);
    SVGA3D_DUMP_CASE_BASIC(GenMips, GENMIPS);
+   SVGA3D_DUMP_CASE_BASIC(TransferFromBuffer, TRANSFER_FROM_BUFFER);
 
    case SVGA_3D_CMD_DX_SET_RENDERTARGETS:
       _debug_printf("\tSVGA_3D_CMD_DX_SET_RENDERTARGETS\n");
