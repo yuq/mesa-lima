@@ -75,7 +75,7 @@ public:
       const char *const name = callee->function_name();
 
       /* We don't actually need to find intrinsics; they're not real */
-      if (callee->is_intrinsic)
+      if (callee->is_intrinsic())
          return visit_continue;
 
       /* Determine if the requested function signature already exists in the
@@ -161,7 +161,7 @@ public:
 
       linked_sig->replace_parameters(&formal_parameters);
 
-      linked_sig->is_intrinsic = sig->is_intrinsic;
+      linked_sig->_is_intrinsic = sig->_is_intrinsic;
       linked_sig->intrinsic_id = sig->intrinsic_id;
 
       if (sig->is_defined) {
@@ -323,7 +323,7 @@ find_matching_signature(const char *name, const exec_list *actual_parameters,
       ir_function_signature *sig =
          f->matching_signature(NULL, actual_parameters, false);
 
-      if (sig && (sig->is_defined || sig->is_intrinsic))
+      if (sig && (sig->is_defined || sig->is_intrinsic()))
          return sig;
    }
 

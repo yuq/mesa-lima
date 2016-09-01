@@ -449,7 +449,7 @@ nir_function_visitor::visit_enter(ir_function *ir)
 void
 nir_visitor::create_function(ir_function_signature *ir)
 {
-   if (ir->is_intrinsic)
+   if (ir->is_intrinsic())
       return;
 
    nir_function *func = nir_function_create(shader, ir->function_name());
@@ -470,7 +470,7 @@ nir_visitor::visit(ir_function *ir)
 void
 nir_visitor::visit(ir_function_signature *ir)
 {
-   if (ir->is_intrinsic)
+   if (ir->is_intrinsic())
       return;
 
    struct hash_entry *entry =
@@ -607,7 +607,7 @@ nir_visitor::visit(ir_return *ir)
 void
 nir_visitor::visit(ir_call *ir)
 {
-   if (ir->callee->is_intrinsic) {
+   if (ir->callee->is_intrinsic()) {
       nir_intrinsic_op op;
 
       switch (ir->callee->intrinsic_id) {

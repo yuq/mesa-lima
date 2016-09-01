@@ -284,7 +284,7 @@ lower_shared_reference_visitor::shared_store(void *mem_ctx,
       ir_function_signature(glsl_type::void_type, compute_shader_enabled);
    assert(sig);
    sig->replace_parameters(&sig_params);
-   sig->is_intrinsic = true;
+   sig->_is_intrinsic = true;
    sig->intrinsic_id = ir_intrinsic_shared_store;
 
    ir_function *f = new(mem_ctx) ir_function("__intrinsic_store_shared");
@@ -312,7 +312,7 @@ lower_shared_reference_visitor::shared_load(void *mem_ctx,
       new(mem_ctx) ir_function_signature(type, compute_shader_enabled);
    assert(sig);
    sig->replace_parameters(&sig_params);
-   sig->is_intrinsic = true;
+   sig->_is_intrinsic = true;
    sig->intrinsic_id = ir_intrinsic_shared_load;
 
    ir_function *f = new(mem_ctx) ir_function("__intrinsic_load_shared");
@@ -406,7 +406,7 @@ lower_shared_reference_visitor::lower_shared_atomic_intrinsic(ir_call *ir)
                                          compute_shader_enabled);
    assert(sig);
    sig->replace_parameters(&sig_params);
-   sig->is_intrinsic = true;
+   sig->_is_intrinsic = true;
 
    assert(ir->callee->intrinsic_id >= ir_intrinsic_generic_load);
    assert(ir->callee->intrinsic_id <= ir_intrinsic_generic_atomic_comp_swap);

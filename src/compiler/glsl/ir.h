@@ -1187,11 +1187,17 @@ public:
    /** Whether or not this function signature is a built-in. */
    bool is_builtin() const;
 
+   /** Whehter or not this function signautre is an intrinsic. */
+   inline bool is_intrinsic() const
+   {
+      return _is_intrinsic;
+   }
+
    /**
     * Whether or not this function is an intrinsic to be implemented
     * by the driver.
     */
-   bool is_intrinsic;
+   bool _is_intrinsic;
 
    /** Indentifier for this intrinsic. */
    enum ir_intrinsic_id intrinsic_id;

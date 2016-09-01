@@ -3266,7 +3266,7 @@ builtin_builder::new_sig(const glsl_type *return_type,
 #define MAKE_INTRINSIC(return_type, id, avail, ...)  \
    ir_function_signature *sig =                      \
       new_sig(return_type, avail, __VA_ARGS__);      \
-   sig->is_intrinsic = true;                         \
+   sig->_is_intrinsic = true;                        \
    sig->intrinsic_id = id;
 
 ir_function_signature *
@@ -5601,7 +5601,7 @@ builtin_builder::_image(image_prototype_ctr prototype,
       sig->is_defined = true;
 
    } else {
-      sig->is_intrinsic = true;
+      sig->_is_intrinsic = true;
       sig->intrinsic_id = id;
    }
 
