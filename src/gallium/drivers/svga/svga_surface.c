@@ -442,25 +442,7 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
 
       s->view_id = util_bitmask_add(svga->surface_view_id_bm);
 
-      switch (s->base.texture->target) {
-      case PIPE_TEXTURE_1D:
-      case PIPE_TEXTURE_1D_ARRAY:
-         resType = SVGA3D_RESOURCE_TEXTURE1D;
-         break;
-      case PIPE_TEXTURE_RECT:
-      case PIPE_TEXTURE_2D:
-      case PIPE_TEXTURE_2D_ARRAY:
-      case PIPE_TEXTURE_CUBE:
-         /* drawing to cube map is treated as drawing to 2D array */
-         resType = SVGA3D_RESOURCE_TEXTURE2D;
-         break;
-      case PIPE_TEXTURE_3D:
-         resType = SVGA3D_RESOURCE_TEXTURE3D;
-         break;
-      default:
-         assert(!"Unexpected texture target");
-         resType = SVGA3D_RESOURCE_TEXTURE2D;
-      }
+      resType = svga_resource_type(s->base.texture->target);
 
       if (util_format_is_depth_or_stencil(s->base.format)) {
          ret = SVGA3D_vgpu10_DefineDepthStencilView(svga->swc,
