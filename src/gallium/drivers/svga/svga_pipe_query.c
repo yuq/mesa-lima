@@ -265,7 +265,7 @@ allocate_query_block(struct svga_context *svga)
        * any empty memory block around that can be freed up.
        */
       index = -1;
-      for (i = 0; i < SVGA_QUERY_MAX && index == -1; i++) {
+      for (i = 0; i < SVGA3D_QUERYTYPE_MAX && index == -1; i++) {
          struct svga_qmem_alloc_entry *alloc_entry;
          struct svga_qmem_alloc_entry *prev_alloc_entry = NULL;
 
@@ -380,7 +380,7 @@ allocate_query(struct svga_context *svga,
    int slot_index = -1;
    unsigned offset;
 
-   assert(type < SVGA_QUERY_MAX);
+   assert(type < SVGA3D_QUERYTYPE_MAX);
 
    alloc_entry = svga->gb_query_map[type];
 
@@ -453,7 +453,7 @@ destroy_gb_query_obj(struct svga_context *svga)
    struct svga_winsys_screen *sws = svga_screen(svga->pipe.screen)->sws;
    unsigned i;
 
-   for (i = 0; i < SVGA_QUERY_MAX; i++) {
+   for (i = 0; i < SVGA3D_QUERYTYPE_MAX; i++) {
       struct svga_qmem_alloc_entry *alloc_entry, *next;
       alloc_entry = svga->gb_query_map[i];
       while (alloc_entry) {
