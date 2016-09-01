@@ -399,8 +399,8 @@ intelInitExtensions(struct gl_context *ctx)
    }
 
    if (brw->gen >= 8) {
-      ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_gpu_shader_fp64 = true;
+      ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_vertex_attrib_64bit = true;
       ctx->Extensions.ARB_ES3_2_compatibility = true;
       ctx->Extensions.OES_geometry_shader = true;
@@ -409,11 +409,11 @@ intelInitExtensions(struct gl_context *ctx)
    }
 
    if (brw->gen >= 9) {
+      ctx->Extensions.ANDROID_extension_pack_es31a = true;
+      ctx->Extensions.ARB_shader_stencil_export = true;
       ctx->Extensions.KHR_blend_equation_advanced_coherent = true;
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
       ctx->Extensions.KHR_texture_compression_astc_sliced_3d = true;
-      ctx->Extensions.ARB_shader_stencil_export = true;
-      ctx->Extensions.ANDROID_extension_pack_es31a = true;
       ctx->Extensions.MESA_shader_framebuffer_fetch = true;
    }
 
