@@ -424,6 +424,9 @@ struct svga_winsys_context
 
    /** To report perf/conformance/etc issues to the state tracker */
    struct pipe_debug_callback *debug_callback;
+
+   /** The more recent command issued to command buffer */
+   SVGAFifo3dCmdId last_command;
 };
 
 

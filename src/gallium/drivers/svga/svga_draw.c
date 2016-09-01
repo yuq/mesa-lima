@@ -427,6 +427,32 @@ validate_constant_buffers(struct svga_context *svga)
 }
 
 
+/**
+ * Was the last command put into the command buffer a drawing command?
+ * We use this to determine if we can skip emitting buffer re-bind
+ * commands when we have a sequence of drawing commands that use the
+ * same vertex/index buffers with no intervening commands.
+ *
+ * The first drawing command will bind the vertex/index buffers.  If
+ * the immediately following command is also a drawing command using the
+ * same buffers, we shouldn't have to rebind them.
+ */
+static bool
+last_command_was_draw(const struct svga_context *svga)
+{
+   switch (SVGA3D_GetLastCommand(svga->swc)) {
+   case SVGA_3D_CMD_DX_DRAW:
+   case SVGA_3D_CMD_DX_DRAW_INDEXED:
+   case SVGA_3D_CMD_DX_DRAW_INSTANCED:
+   case SVGA_3D_CMD_DX_DRAW_INDEXED_INSTANCED:
+   case SVGA_3D_CMD_DX_DRAW_AUTO:
+      return true;
+   default:
+      return false;
+   }
+}
+
+
 static enum pipe_error
 draw_vgpu10(struct svga_hwtnl *hwtnl,
             const SVGA3dPrimitiveRange *range,
@@ -583,7 +609,7 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
           * command, we still need to reference the vertex buffers surfaces.
           */
          for (i = 0; i < vbuf_count; i++) {
-            if (vbuffer_handles[i]) {
+            if (vbuffer_handles[i] && !last_command_was_draw(svga)) {
                ret = svga->swc->resource_rebind(svga->swc, vbuffer_handles[i],
                                                 NULL, SVGA_RELOC_READ);
                if (ret != PIPE_OK)
@@ -626,10 +652,12 @@ draw_vgpu10(struct svga_hwtnl *hwtnl,
          /* Even though we can avoid emitting the redundant SetIndexBuffer
           * command, we still need to reference the index buffer surface.
           */
-         ret = svga->swc->resource_rebind(svga->swc, ib_handle,
-                                          NULL, SVGA_RELOC_READ);
-         if (ret != PIPE_OK)
-            return ret;
+         if (!last_command_was_draw(svga)) {
+            ret = svga->swc->resource_rebind(svga->swc, ib_handle,
+                                             NULL, SVGA_RELOC_READ);
+            if (ret != PIPE_OK)
+               return ret;
+         }
       }
 
       if (instance_count > 1) {

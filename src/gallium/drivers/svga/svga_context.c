@@ -338,6 +338,8 @@ void svga_context_flush( struct svga_context *svga,
 
    svga_screen_cache_flush(svgascreen, fence);
 
+   SVGA3D_ResetLastCommand(svga->swc);
+
    /* To force the re-emission of rendertargets and texture sampler bindings on
     * the next command buffer.
     */
