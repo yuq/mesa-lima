@@ -1181,8 +1181,11 @@ vec4_visitor::opt_register_coalesce()
                break;
             }
 
-            /* This doesn't handle coalescing of multiple registers. */
-            if (scan_inst->size_written > REG_SIZE)
+            /* This only handles coalescing of a single register starting at
+             * the source offset of the copy instruction.
+             */
+            if (scan_inst->size_written > REG_SIZE ||
+                scan_inst->dst.offset != inst->src[0].offset)
                break;
 
 	    /* Mark which channels we found unconditional writes for. */
@@ -1246,8 +1249,7 @@ vec4_visitor::opt_register_coalesce()
 	 while (scan_inst != inst) {
 	    if (scan_inst->dst.file == VGRF &&
                 scan_inst->dst.nr == inst->src[0].nr &&
-		scan_inst->dst.offset / REG_SIZE ==
-                 inst->src[0].offset / REG_SIZE) {
+		scan_inst->dst.offset == inst->src[0].offset) {
                scan_inst->reswizzle(inst->dst.writemask,
                                     inst->src[0].swizzle);
 	       scan_inst->dst.file = inst->dst.file;
