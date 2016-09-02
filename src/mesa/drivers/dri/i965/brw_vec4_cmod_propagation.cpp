@@ -71,7 +71,7 @@ opt_cmod_propagation_local(bblock_t *block)
          if (regions_overlap(inst->src[0], inst->size_read(0),
                              scan_inst->dst, scan_inst->size_written)) {
             if ((scan_inst->predicate && scan_inst->opcode != BRW_OPCODE_SEL) ||
-                scan_inst->dst.offset / REG_SIZE != inst->src[0].offset / REG_SIZE ||
+                scan_inst->dst.offset != inst->src[0].offset ||
                 (scan_inst->dst.writemask != WRITEMASK_X &&
                  scan_inst->dst.writemask != WRITEMASK_XYZW) ||
                 (scan_inst->dst.writemask == WRITEMASK_XYZW &&
