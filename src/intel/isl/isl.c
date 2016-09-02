@@ -594,7 +594,6 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          assert(info->depth == 1);
          assert(info->levels == 1);
          assert(isl_format_supports_multisampling(dev->info, info->format));
-         assert(fmtl->bw == 1 && fmtl->bh == 1);
 
          *phys_level0_sa = (struct isl_extent4d) {
             .w = info->width,
@@ -606,6 +605,9 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
          isl_msaa_interleaved_scale_px_to_sa(info->samples,
                                              &phys_level0_sa->w,
                                              &phys_level0_sa->h);
+
+         phys_level0_sa->w = isl_align(phys_level0_sa->w, fmtl->bw);
+         phys_level0_sa->h = isl_align(phys_level0_sa->h, fmtl->bh);
          break;
       }
       break;
