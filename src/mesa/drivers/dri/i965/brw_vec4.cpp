@@ -365,7 +365,7 @@ vec4_visitor::opt_vector_float()
    bool progress = false;
 
    foreach_block(block, cfg) {
-      int last_reg = -1, last_reg_offset = -1;
+      int last_reg = -1, last_offset = -1;
       enum brw_reg_file last_reg_file = BAD_FILE;
 
       uint8_t imm[4] = { 0 };
@@ -405,7 +405,7 @@ vec4_visitor::opt_vector_float()
           * sequence.  Combine anything we've accumulated so far.
           */
          if (last_reg != inst->dst.nr ||
-             last_reg_offset != inst->dst.offset / REG_SIZE ||
+             last_offset != inst->dst.offset ||
              last_reg_file != inst->dst.file ||
              (vf > 0 && dest_type != need_type)) {
 
@@ -449,7 +449,7 @@ vec4_visitor::opt_vector_float()
             imm_inst[inst_count++] = inst;
 
             last_reg = inst->dst.nr;
-            last_reg_offset = inst->dst.offset / REG_SIZE;
+            last_offset = inst->dst.offset;
             last_reg_file = inst->dst.file;
             if (vf > 0)
                dest_type = need_type;
