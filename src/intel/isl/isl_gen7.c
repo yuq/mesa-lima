@@ -249,9 +249,13 @@ gen6_filter_tiling(const struct isl_device *dev,
        *   For multisample render targets, this field must be 1 (true). MSRTs
        *   can only be tiled.
        *
-       * Multisample surfaces never require X tiling, and Y tiling generally
-       * performs better than X. So choose Y. (Unless it's stencil, then it
-       * must be W).
+       * From the Broadwell PRM >> Volume2d: Command Structures >>
+       * RENDER_SURFACE_STATE Tile Mode:
+       *
+       *   If Number of Multisamples is not MULTISAMPLECOUNT_1, this field
+       *   must be YMAJOR.
+       *
+       * As usual, though, stencil is special and requires W-tiling.
        */
       *flags &= (ISL_TILING_ANY_Y_MASK | ISL_TILING_W_BIT);
    }

@@ -41,17 +41,6 @@ gen8_choose_msaa_layout(const struct isl_device *dev,
    }
 
    /* From the Broadwell PRM >> Volume2d: Command Structures >>
-    * RENDER_SURFACE_STATE Tile Mode:
-    *
-    *    - If Number of Multisamples is not MULTISAMPLECOUNT_1, this field
-    *      must be YMAJOR.
-    *
-    * As usual, though, stencil is special.
-    */
-   if (!isl_tiling_is_any_y(tiling) && !isl_surf_usage_is_stencil(info->usage))
-      return false;
-
-   /* From the Broadwell PRM >> Volume2d: Command Structures >>
     * RENDER_SURFACE_STATE Multisampled Surface Storage Format:
     *
     *    All multisampled render target surfaces must have this field set to
