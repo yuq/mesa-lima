@@ -4820,7 +4820,9 @@ shuffle_64bit_data_for_32bit_write(const fs_builder &bld,
    assert(type_sz(src.type) == 8);
    assert(type_sz(dst.type) == 4);
 
-   assert(!src.in_range(dst, 2 * components * bld.dispatch_width() / 8));
+   assert(!regions_overlap(
+             dst, 2 * components * dst.component_size(bld.dispatch_width()),
+             src, components * src.component_size(bld.dispatch_width())));
 
    for (unsigned i = 0; i < components; i++) {
       const fs_reg component_i = offset(src, bld, i);
