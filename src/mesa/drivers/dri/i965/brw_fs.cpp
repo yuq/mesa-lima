@@ -2646,16 +2646,18 @@ fs_visitor::opt_redundant_discard_jumps()
 
 /**
  * Compute a bitmask with GRF granularity with a bit set for each GRF starting
- * from \p r which overlaps the region starting at \p r and spanning \p n GRF
- * units.
+ * from \p r.offset which overlaps the region starting at \p s.offset and
+ * spanning \p ds bytes.
  */
 static inline unsigned
-mask_relative_to(const fs_reg &r, const fs_reg &s, unsigned n)
+mask_relative_to(const fs_reg &r, const fs_reg &s, unsigned ds)
 {
-   const int rel_offset = (reg_offset(s) - reg_offset(r)) / REG_SIZE;
+   const int rel_offset = reg_offset(s) - reg_offset(r);
+   const int shift = rel_offset / REG_SIZE;
+   const unsigned n = DIV_ROUND_UP(rel_offset % REG_SIZE + ds, REG_SIZE);
    assert(reg_space(r) == reg_space(s) &&
-          rel_offset >= 0 && rel_offset < int(8 * sizeof(unsigned)));
-   return ((1 << n) - 1) << rel_offset;
+          shift >= 0 && shift < int(8 * sizeof(unsigned)));
+   return ((1 << n) - 1) << shift;
 }
 
 bool
@@ -2735,8 +2737,7 @@ fs_visitor::compute_to_mrf()
 
             /* Clear the bits for any registers this instruction overwrites. */
             regs_left &= ~mask_relative_to(
-               inst->src[0], scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written,
-                                                          REG_SIZE));
+               inst->src[0], scan_inst->dst, scan_inst->size_written);
             if (!regs_left)
                break;
 	 }
@@ -2794,8 +2795,7 @@ fs_visitor::compute_to_mrf()
                              inst->src[0], inst->size_read(0))) {
             /* Clear the bits for any registers this instruction overwrites. */
             regs_left &= ~mask_relative_to(
-               inst->src[0], scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written,
-                                                          REG_SIZE));
+               inst->src[0], scan_inst->dst, scan_inst->size_written);
 
             const unsigned rel_offset = reg_offset(scan_inst->dst) -
                                         reg_offset(inst->src[0]);
