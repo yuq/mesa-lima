@@ -41,12 +41,12 @@ using namespace brw;
  * but we currently do not.  It is easier for the consumers of this
  * information to work with whole VGRFs.
  *
- * However, we internally track use/def information at the per-component
- * (reg_offset) level for greater accuracy.  Large VGRFs may be accessed
- * piecemeal over many (possibly non-adjacent) instructions.  In this case,
- * examining a single instruction is insufficient to decide whether a whole
- * VGRF is ultimately used or defined.  Tracking individual components
- * allows us to easily assemble this information.
+ * However, we internally track use/def information at the per-GRF level for
+ * greater accuracy.  Large VGRFs may be accessed piecemeal over many
+ * (possibly non-adjacent) instructions.  In this case, examining a single
+ * instruction is insufficient to decide whether a whole VGRF is ultimately
+ * used or defined.  Tracking individual components allows us to easily
+ * assemble this information.
  *
  * See Muchnick's Advanced Compiler Design and Implementation, section
  * 14.1 (p444).

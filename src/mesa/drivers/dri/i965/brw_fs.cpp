@@ -172,12 +172,12 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
     * be any component of a vector, and then we load 4 contiguous
     * components starting from that.
     *
-    * We break down the const_offset to a portion added to the variable
-    * offset and a portion done using reg_offset, which means that if you
-    * have GLSL using something like "uniform vec4 a[20]; gl_FragColor =
-    * a[i]", we'll temporarily generate 4 vec4 loads from offset i * 4, and
-    * CSE can later notice that those loads are all the same and eliminate
-    * the redundant ones.
+    * We break down the const_offset to a portion added to the variable offset
+    * and a portion done using fs_reg::offset, which means that if you have
+    * GLSL using something like "uniform vec4 a[20]; gl_FragColor = a[i]",
+    * we'll temporarily generate 4 vec4 loads from offset i * 4, and CSE can
+    * later notice that those loads are all the same and eliminate the
+    * redundant ones.
     */
    fs_reg vec4_offset = vgrf(glsl_type::uint_type);
    bld.ADD(vec4_offset, varying_offset, brw_imm_ud(const_offset & ~0xf));
@@ -2062,7 +2062,7 @@ fs_visitor::assign_constant_locations()
    stage_prog_data->nr_params = num_push_constants;
    stage_prog_data->nr_pull_params = num_pull_constants;
 
-   /* Up until now, the param[] array has been indexed by reg + reg_offset
+   /* Up until now, the param[] array has been indexed by reg + offset
     * of UNIFORM registers.  Move pull constants into pull_param[] and
     * condense param[] to only contain the uniforms we chose to push.
     *
@@ -3165,10 +3165,6 @@ fs_visitor::insert_gen4_send_dependency_workarounds()
       return;
 
    bool progress = false;
-
-   /* Note that we're done with register allocation, so GRF fs_regs always
-    * have a .reg_offset of 0.
-    */
 
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->mlen != 0 && inst->dst.file == VGRF) {

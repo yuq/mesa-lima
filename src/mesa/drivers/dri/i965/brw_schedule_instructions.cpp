@@ -1489,10 +1489,10 @@ fs_instruction_scheduler::choose_instruction_to_schedule()
             if (v->devinfo->gen < 7) {
                fs_inst *chosen_inst = (fs_inst *)chosen->inst;
 
-               /* We use regs_written > 1 as our test for the kind of send
-                * instruction to avoid -- only sends generate many regs, and a
-                * single-result send is probably actually reducing register
-                * pressure.
+               /* We use size_written > 4 * exec_size as our test for the kind
+                * of send instruction to avoid -- only sends generate many
+                * regs, and a single-result send is probably actually reducing
+                * register pressure.
                 */
                if (inst->size_written <= 4 * inst->exec_size &&
                    chosen_inst->size_written > 4 * chosen_inst->exec_size) {

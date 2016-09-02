@@ -1010,7 +1010,7 @@ enum opcode {
     * For example, parameters for a send-from-GRF message.  Or, updating
     * channels of a size 4 VGRF used to store vec4s such as texturing results.
     *
-    * This will be lowered into MOVs from each source to consecutive reg_offsets
+    * This will be lowered into MOVs from each source to consecutive offsets
     * of the destination VGRF.
     *
     * src[0] may be BAD_FILE.  If so, the lowering pass skips emitting the MOV,

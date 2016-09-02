@@ -1321,10 +1321,10 @@ vec4_visitor::eliminate_find_live_channel()
  * Splits virtual GRFs requesting more than one contiguous physical register.
  *
  * We initially create large virtual GRFs for temporary structures, arrays,
- * and matrices, so that the dereference visitor functions can add reg_offsets
- * to work their way down to the actual member being accessed.  But when it
- * comes to optimization, we'd like to treat each register as individual
- * storage if possible.
+ * and matrices, so that the visitor functions can add offsets to work their
+ * way down to the actual member being accessed.  But when it comes to
+ * optimization, we'd like to treat each register as individual storage if
+ * possible.
  *
  * So far, the only thing that might prevent splitting is a send message from
  * a GRF on IVB.
