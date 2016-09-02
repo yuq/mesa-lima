@@ -30,8 +30,6 @@ gen6_choose_msaa_layout(const struct isl_device *dev,
                   enum isl_tiling tiling,
                   enum isl_msaa_layout *msaa_layout)
 {
-   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
-
    assert(ISL_DEV_GEN(dev) == 6);
    assert(info->samples >= 1);
 
@@ -40,22 +38,7 @@ gen6_choose_msaa_layout(const struct isl_device *dev,
       return false;
    }
 
-   /* From the Sandybridge PRM, Volume 4 Part 1 p72, SURFACE_STATE, Surface
-    * Format:
-    *
-    *    If Number of Multisamples is set to a value other than
-    *    MULTISAMPLECOUNT_1, this field cannot be set to the following
-    *    formats:
-    *
-    *       - any format with greater than 64 bits per element
-    *       - any compressed texture format (BC*)
-    *       - any YCRCB* format
-    */
-   if (fmtl->bpb > 64)
-      return false;
-   if (isl_format_is_compressed(info->format))
-      return false;
-   if (isl_format_is_yuv(info->format))
+   if (!isl_format_supports_multisampling(dev->info, info->format))
       return false;
 
    /* From the Sandybridge PRM, Volume 4 Part 1 p85, SURFACE_STATE, Number of

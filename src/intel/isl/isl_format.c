@@ -429,6 +429,34 @@ isl_format_supports_lossless_compression(const struct gen_device_info *devinfo,
    return format_gen(devinfo) >= format_info[format].lossless_compression;
 }
 
+bool
+isl_format_supports_multisampling(const struct gen_device_info *devinfo,
+                                  enum isl_format format)
+{
+   /* From the Sandybridge PRM, Volume 4 Part 1 p72, SURFACE_STATE, Surface
+    * Format:
+    *
+    *    If Number of Multisamples is set to a value other than
+    *    MULTISAMPLECOUNT_1, this field cannot be set to the following
+    *    formats:
+    *
+    *       - any format with greater than 64 bits per element
+    *       - any compressed texture format (BC*)
+    *       - any YCRCB* format
+    *
+    * The restriction on the format's size is removed on Broadwell.
+    */
+   if (devinfo->gen < 8 && isl_format_get_layout(format)->bpb > 64) {
+      return false;
+   } else if (isl_format_is_compressed(format)) {
+      return false;
+   } else if (isl_format_is_yuv(format)) {
+      return false;
+   } else {
+      return true;
+   }
+}
+
 static inline bool
 isl_format_has_channel_type(enum isl_format fmt, enum isl_base_type type)
 {

@@ -79,9 +79,7 @@ gen8_choose_msaa_layout(const struct isl_device *dev,
    /* More obvious restrictions */
    if (isl_surf_usage_is_display(info->usage))
       return false;
-   if (isl_format_is_compressed(info->format))
-      return false;
-   if (isl_format_is_yuv(info->format))
+   if (!isl_format_supports_multisampling(dev->info, info->format))
       return false;
 
    if (isl_surf_usage_is_depth_or_stencil(info->usage) ||
