@@ -81,7 +81,7 @@ translate_indices(struct svga_hwtnl *hwtnl, struct pipe_resource *src,
    if (!screen->debug.no_cache_index_buffers) {
       /* Check if we already have a translated index buffer */
       if (src_sbuf->translated_indices.buffer &&
-          src_sbuf->translated_indices.orig_prim == PIPE_PRIM_QUADS &&
+          src_sbuf->translated_indices.orig_prim == orig_prim &&
           src_sbuf->translated_indices.new_prim == gen_prim &&
           src_sbuf->translated_indices.offset == offset &&
           src_sbuf->translated_indices.count == orig_nr &&
@@ -123,7 +123,7 @@ translate_indices(struct svga_hwtnl *hwtnl, struct pipe_resource *src,
        * again in the future.
        */
       pipe_resource_reference(&src_sbuf->translated_indices.buffer, dst);
-      src_sbuf->translated_indices.orig_prim = PIPE_PRIM_QUADS;
+      src_sbuf->translated_indices.orig_prim = orig_prim;
       src_sbuf->translated_indices.new_prim = gen_prim;
       src_sbuf->translated_indices.offset = offset;
       src_sbuf->translated_indices.count = orig_nr;
