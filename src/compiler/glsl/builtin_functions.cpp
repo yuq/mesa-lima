@@ -471,6 +471,13 @@ shader_clock(const _mesa_glsl_parse_state *state)
 }
 
 static bool
+shader_clock_int64(const _mesa_glsl_parse_state *state)
+{
+   return state->ARB_shader_clock_enable &&
+          state->ARB_gpu_shader_int64_enable;
+}
+
+static bool
 shader_storage_buffer_object(const _mesa_glsl_parse_state *state)
 {
    return state->has_shader_storage_buffer_objects();
@@ -3075,6 +3082,11 @@ builtin_builder::create_builtins()
    add_function("clock2x32ARB",
                 _shader_clock(shader_clock,
                               glsl_type::uvec2_type),
+                NULL);
+
+   add_function("clockARB",
+                _shader_clock(shader_clock_int64,
+                              glsl_type::uint64_t_type),
                 NULL);
 
    add_function("anyInvocationARB", _vote(ir_unop_vote_any), NULL);
@@ -5858,7 +5870,13 @@ builtin_builder::_shader_clock(builtin_available_predicate avail,
 
    body.emit(call(shader->symbols->get_function("__intrinsic_shader_clock"),
                   retval, sig->parameters));
-   body.emit(ret(retval));
+
+   if (type == glsl_type::uint64_t_type) {
+      body.emit(ret(expr(ir_unop_pack_uint_2x32, retval)));
+   } else {
+      body.emit(ret(retval));
+   }
+
    return sig;
 }
 
