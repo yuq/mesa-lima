@@ -50,7 +50,7 @@ namespace brw {
             const fs_reg dst = bld.vgrf(BRW_REGISTER_TYPE_UD, rsize);
             fs_inst *inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
 
-            inst->size_written = rsize * bld.dispatch_width() / 8 * REG_SIZE;
+            inst->size_written = rsize * dst.component_size(inst->exec_size);
             inst->predicate = pred;
             return dst;
          }

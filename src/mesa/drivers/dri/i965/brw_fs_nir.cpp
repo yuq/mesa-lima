@@ -1654,7 +1654,7 @@ emit_pixel_interpolater_send(const fs_builder &bld,
    inst = bld.emit(opcode, dst, payload, desc);
    inst->mlen = mlen;
    /* 2 floats per slot returned */
-   inst->size_written = 2 * bld.dispatch_width() / 8 * REG_SIZE;
+   inst->size_written = 2 * dst.component_size(inst->exec_size);
    inst->pi_noperspective = interpolation == INTERP_MODE_NOPERSPECTIVE;
 
    wm_prog_data->pulls_bary = true;
@@ -2137,7 +2137,8 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
             unsigned read_components = num_components + first_component;
             fs_reg tmp = bld.vgrf(dst.type, read_components);
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, icp_handle);
-            inst->size_written = read_components * type_sz(tmp_dst.type) / 4 * REG_SIZE;
+            inst->size_written = read_components *
+                                 tmp.component_size(inst->exec_size);
             for (unsigned i = 0; i < num_components; i++) {
                bld.MOV(offset(tmp_dst, bld, i),
                        offset(tmp, bld, i + first_component));
@@ -2145,7 +2146,8 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
          } else {
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp_dst,
                             icp_handle);
-            inst->size_written = num_components * type_sz(tmp_dst.type) / 4 * REG_SIZE;
+            inst->size_written = num_components *
+                                 tmp_dst.component_size(inst->exec_size);
          }
          inst->offset = base_offset + offset_const->u32[0];
          inst->mlen = 1;
@@ -2159,7 +2161,8 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
          if (first_component != 0) {
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp,
                             payload);
-            inst->size_written = read_components * type_sz(tmp_dst.type) / 4 * REG_SIZE;
+            inst->size_written = read_components *
+                                 tmp.component_size(inst->exec_size);
             for (unsigned i = 0; i < num_components; i++) {
                bld.MOV(offset(tmp_dst, bld, i),
                        offset(tmp, bld, i + first_component));
@@ -2167,7 +2170,8 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
          } else {
             inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8_PER_SLOT, tmp_dst,
                          payload);
-            inst->size_written = num_components * type_sz(tmp_dst.type) / 4 * REG_SIZE;
+            inst->size_written = num_components *
+                                 tmp_dst.component_size(inst->exec_size);
          }
          inst->offset = base_offset;
          inst->mlen = 2;
@@ -2503,8 +2507,8 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
             inst->offset = imm_offset;
             inst->mlen = 2;
          }
-         inst->size_written =
-            ((num_components + first_component) * type_sz(dst.type) / 4) * REG_SIZE;
+         inst->size_written = (num_components + first_component) *
+                              inst->dst.component_size(inst->exec_size);
 
          /* If we are reading 64-bit data using 32-bit read messages we need
           * build proper 64-bit data elements by shuffling the low and high
@@ -3025,9 +3029,8 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
             }
             inst->mlen = 2;
             inst->offset = imm_offset;
-            inst->size_written =
-               ((num_components + first_component) * type_sz(dest.type) / 4) *
-               REG_SIZE;
+            inst->size_written = (num_components + first_component) *
+                                 inst->dst.component_size(inst->exec_size);
 
             /* If we are reading 64-bit data using 32-bit read messages we need
              * build proper 64-bit data elements by shuffling the low and high
@@ -4677,9 +4680,10 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
                             nir_ssa_def_components_read(&instr->dest.ssa):
                             (1 << dest_size) - 1;
       assert(write_mask != 0); /* dead code should have been eliminated */
-      inst->size_written = util_last_bit(write_mask) * dispatch_width / 8 * REG_SIZE;
+      inst->size_written = util_last_bit(write_mask) *
+                           inst->dst.component_size(inst->exec_size);
    } else {
-      inst->size_written = 4 * dispatch_width / 8 * REG_SIZE;
+      inst->size_written = 4 * inst->dst.component_size(inst->exec_size);
    }
 
    if (srcs[TEX_LOGICAL_SRC_SHADOW_C].file != BAD_FILE)

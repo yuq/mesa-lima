@@ -191,7 +191,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    fs_reg vec4_result = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
    fs_inst *inst = bld.emit(FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL,
                             vec4_result, surf_index, vec4_offset);
-   inst->size_written = 4 * bld.dispatch_width() / 8 * REG_SIZE;
+   inst->size_written = 4 * vec4_result.component_size(inst->exec_size);
 
    if (type_sz(dst.type) == 8) {
       shuffle_32bit_load_result_to_64bit_data(
