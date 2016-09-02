@@ -1315,6 +1315,63 @@ isl_surf_get_hiz_surf(const struct isl_device *dev,
    assert(surf->msaa_layout == ISL_MSAA_LAYOUT_NONE ||
           surf->msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED);
 
+   /* From the Broadwell PRM Vol. 7, "Hierarchical Depth Buffer":
+    *
+    *    "The Surface Type, Height, Width, Depth, Minimum Array Element, Render
+    *    Target View Extent, and Depth Coordinate Offset X/Y of the
+    *    hierarchical depth buffer are inherited from the depth buffer. The
+    *    height and width of the hierarchical depth buffer that must be
+    *    allocated are computed by the following formulas, where HZ is the
+    *    hierarchical depth buffer and Z is the depth buffer. The Z_Height,
+    *    Z_Width, and Z_Depth values given in these formulas are those present
+    *    in 3DSTATE_DEPTH_BUFFER incremented by one.
+    *
+    *    "The value of Z_Height and Z_Width must each be multiplied by 2 before
+    *    being applied to the table below if Number of Multisamples is set to
+    *    NUMSAMPLES_4. The value of Z_Height must be multiplied by 2 and
+    *    Z_Width must be multiplied by 4 before being applied to the table
+    *    below if Number of Multisamples is set to NUMSAMPLES_8."
+    *
+    * In the Sky Lake PRM, the second paragraph is replaced with this:
+    *
+    *    "The Z_Height and Z_Width values must equal those present in
+    *    3DSTATE_DEPTH_BUFFER incremented by one."
+    *
+    * In other words, on Sandy Bridge through Broadwell, each 128-bit HiZ
+    * block corresponds to a region of 8x4 samples in the primary depth
+    * surface.  On Sky Lake, on the other hand, each HiZ block corresponds to
+    * a region of 8x4 pixels in the primary depth surface regardless of the
+    * number of samples.  The dimensions of a HiZ block in both pixels and
+    * samples are given in the table below:
+    *
+    *                    | SNB - BDW |     SKL+
+    *              ------+-----------+-------------
+    *                1x  |  8 x 4 sa |   8 x 4 sa
+    *               MSAA |  8 x 4 px |   8 x 4 px
+    *              ------+-----------+-------------
+    *                2x  |  8 x 4 sa |  16 x 4 sa
+    *               MSAA |  4 x 4 px |   8 x 4 px
+    *              ------+-----------+-------------
+    *                4x  |  8 x 4 sa |  16 x 8 sa
+    *               MSAA |  4 x 2 px |   8 x 4 px
+    *              ------+-----------+-------------
+    *                8x  |  8 x 4 sa |  32 x 8 sa
+    *               MSAA |  2 x 2 px |   8 x 4 px
+    *              ------+-----------+-------------
+    *               16x  |    N/A    | 32 x 16 sa
+    *               MSAA |    N/A    |  8 x  4 px
+    *              ------+-----------+-------------
+    *
+    * There are a number of different ways that this discrepency could be
+    * handled.  The way we have chosen is to simply make MSAA HiZ have the
+    * same number of samples as the parent surface pre-Sky Lake and always be
+    * single-sampled on Sky Lake and above.  Since the block sizes of
+    * compressed formats are given in samples, this neatly handles everything
+    * without the need for additional HiZ formats with different block sizes
+    * on SKL+.
+    */
+   const unsigned samples = ISL_DEV_GEN(dev) >= 9 ? 1 : surf->samples;
+
    isl_surf_init(dev, hiz_surf,
                  .dim = ISL_SURF_DIM_2D,
                  .format = ISL_FORMAT_HIZ,
@@ -1323,8 +1380,7 @@ isl_surf_get_hiz_surf(const struct isl_device *dev,
                  .depth = 1,
                  .levels = surf->levels,
                  .array_len = surf->logical_level0_px.array_len,
-                 /* On SKL+, HiZ is always single-sampled */
-                 .samples = ISL_DEV_GEN(dev) >= 9 ? 1 : surf->samples,
+                 .samples = samples,
                  .usage = ISL_SURF_USAGE_HIZ_BIT,
                  .tiling_flags = ISL_TILING_HIZ_BIT);
 }
