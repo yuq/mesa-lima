@@ -35,7 +35,7 @@
 #include <stdio.h>
 #include <amdgpu_drm.h>
 
-#include "../../../drivers/radeonsi/sid.h"
+#include "amd/common/sid.h"
 
 /* FENCES */
 

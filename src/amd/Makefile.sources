@@ -1,0 +1,3 @@
+COMMON_HEADER_FILES = \
+	common/sid.h \
+	common/r600d_common.h

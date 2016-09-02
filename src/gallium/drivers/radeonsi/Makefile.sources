@@ -5,7 +5,6 @@ C_SOURCES := \
 	si_cp_dma.c \
 	si_debug.c \
 	si_descriptors.c \
-	sid.h \
 	si_dma.c \
 	si_hw_context.c \
 	si_pipe.c \

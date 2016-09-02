@@ -50,6 +50,10 @@ SUBDIRS = . gtest util mapi/glapi/gen mapi
 # include only conditionally ?
 SUBDIRS += compiler
 
+if HAVE_GALLIUM_RADEON_COMMON
+SUBDIRS += amd
+endif
+
 if HAVE_INTEL_DRIVERS
 SUBDIRS += intel
 endif

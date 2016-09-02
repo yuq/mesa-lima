@@ -2,7 +2,6 @@ C_SOURCES := \
 	cayman_msaa.c \
 	r600_buffer_common.c \
 	r600_cs.h \
-	r600d_common.h \
 	r600_gpu_load.c \
 	r600_perfcounter.c \
 	r600_pipe_common.c \
