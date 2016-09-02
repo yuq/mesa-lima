@@ -1481,6 +1481,7 @@ vec4_visitor::emit_scratch_read(bblock_t *block, vec4_instruction *inst,
 				dst_reg temp, src_reg orig_src,
 				int base_offset)
 {
+   assert(orig_src.offset % REG_SIZE == 0);
    int reg_offset = base_offset + orig_src.offset / REG_SIZE;
    src_reg index = get_scratch_offset(block, inst, orig_src.reladdr,
                                       reg_offset);
@@ -1498,6 +1499,7 @@ void
 vec4_visitor::emit_scratch_write(bblock_t *block, vec4_instruction *inst,
                                  int base_offset)
 {
+   assert(inst->dst.offset % REG_SIZE == 0);
    int reg_offset = base_offset + inst->dst.offset / REG_SIZE;
    src_reg index = get_scratch_offset(block, inst, inst->dst.reladdr,
                                       reg_offset);
