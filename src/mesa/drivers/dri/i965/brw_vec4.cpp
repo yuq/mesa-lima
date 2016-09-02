@@ -980,6 +980,7 @@ vec4_visitor::opt_set_dependency_control()
          int reg = inst->dst.nr + inst->dst.offset / REG_SIZE;
          if (inst->dst.file == VGRF || inst->dst.file == FIXED_GRF) {
             if (last_grf_write[reg] &&
+                last_grf_write[reg]->dst.offset == inst->dst.offset &&
                 !(inst->dst.writemask & grf_channels_written[reg])) {
                last_grf_write[reg]->no_dd_clear = true;
                inst->no_dd_check = true;
@@ -991,6 +992,7 @@ vec4_visitor::opt_set_dependency_control()
             grf_channels_written[reg] |= inst->dst.writemask;
          } else if (inst->dst.file == MRF) {
             if (last_mrf_write[reg] &&
+                last_mrf_write[reg]->dst.offset == inst->dst.offset &&
                 !(inst->dst.writemask & mrf_channels_written[reg])) {
                last_mrf_write[reg]->no_dd_clear = true;
                inst->no_dd_check = true;
