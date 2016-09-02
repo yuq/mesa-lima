@@ -5267,8 +5267,6 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "arf%d.%d", inst->dst.nr & 0xf, inst->dst.subnr);
          break;
       }
-      if (inst->dst.subnr)
-         fprintf(file, "+%d", inst->dst.subnr);
       break;
    case IMM:
       unreachable("not reached");
@@ -5356,8 +5354,6 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             fprintf(file, "arf%d.%d", inst->src[i].nr & 0xf, inst->src[i].subnr);
             break;
          }
-         if (inst->src[i].subnr)
-            fprintf(file, "+%d", inst->src[i].subnr);
          break;
       }
 
