@@ -332,20 +332,6 @@ can_take_stride(fs_inst *inst, unsigned arg, unsigned stride,
    return true;
 }
 
-/**
- * Check that the register region read by src [src.offset,
- * src.offset + size_read[ is fully contained inside the register
- * region written by dst [dst.offset, dst.offset + size_written[.
- */
-static inline bool
-region_contained_in(const fs_reg &src, unsigned size_read,
-                    const fs_reg &dst, unsigned size_written)
-{
-   return src.file == dst.file && src.nr == dst.nr &&
-          src.offset >= dst.offset &&
-          src.offset + size_read <= dst.offset + size_written;
-}
-
 bool
 fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
 {
