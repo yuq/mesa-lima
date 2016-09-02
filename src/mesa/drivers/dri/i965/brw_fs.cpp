@@ -5233,10 +5233,6 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    switch (inst->dst.file) {
    case VGRF:
       fprintf(file, "vgrf%d", inst->dst.nr);
-      if (alloc.sizes[inst->dst.nr] * REG_SIZE != inst->size_written ||
-          inst->dst.offset % REG_SIZE)
-         fprintf(file, "+%d.%d",
-                 inst->dst.offset / REG_SIZE, inst->dst.offset % REG_SIZE);
       break;
    case FIXED_GRF:
       fprintf(file, "g%d", inst->dst.nr);
@@ -5248,10 +5244,10 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       fprintf(file, "(null)");
       break;
    case UNIFORM:
-      fprintf(file, "***u%d***", inst->dst.nr + inst->dst.offset / 4);
+      fprintf(file, "***u%d***", inst->dst.nr);
       break;
    case ATTR:
-      fprintf(file, "***attr%d***", inst->dst.nr + inst->dst.offset / REG_SIZE);
+      fprintf(file, "***attr%d***", inst->dst.nr);
       break;
    case ARF:
       switch (inst->dst.nr) {
@@ -5277,6 +5273,15 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    case IMM:
       unreachable("not reached");
    }
+
+   if (inst->dst.offset ||
+       (inst->dst.file == VGRF &&
+        alloc.sizes[inst->dst.nr] * REG_SIZE != inst->size_written)) {
+      const unsigned reg_size = (inst->dst.file == UNIFORM ? 4 : REG_SIZE);
+      fprintf(file, "+%d.%d", inst->dst.offset / reg_size,
+              inst->dst.offset % reg_size);
+   }
+
    if (inst->dst.stride != 1)
       fprintf(file, "<%u>", inst->dst.stride);
    fprintf(file, ":%s, ", brw_reg_type_letters(inst->dst.type));
@@ -5289,10 +5294,6 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       switch (inst->src[i].file) {
       case VGRF:
          fprintf(file, "vgrf%d", inst->src[i].nr);
-         if (alloc.sizes[inst->src[i].nr] * REG_SIZE != inst->size_read(i) ||
-             inst->src[i].offset % REG_SIZE != 0)
-            fprintf(file, "+%d.%d", inst->src[i].offset / REG_SIZE,
-                    inst->src[i].offset % REG_SIZE);
          break;
       case FIXED_GRF:
          fprintf(file, "g%d", inst->src[i].nr);
@@ -5301,14 +5302,10 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
          fprintf(file, "***m%d***", inst->src[i].nr);
          break;
       case ATTR:
-         fprintf(file, "attr%d+%d", inst->src[i].nr, inst->src[i].offset / REG_SIZE);
+         fprintf(file, "attr%d", inst->src[i].nr);
          break;
       case UNIFORM:
-         fprintf(file, "u%d", inst->src[i].nr + inst->src[i].offset / 4);
-         if (inst->src[i].offset % 4 != 0) {
-            fprintf(file, "+%d.%d", inst->src[i].offset / 4,
-                    inst->src[i].offset % 4);
-         }
+         fprintf(file, "u%d", inst->src[i].nr);
          break;
       case BAD_FILE:
          fprintf(file, "(null)");
@@ -5363,6 +5360,15 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
             fprintf(file, "+%d", inst->src[i].subnr);
          break;
       }
+
+      if (inst->src[i].offset ||
+          (inst->src[i].file == VGRF &&
+           alloc.sizes[inst->src[i].nr] * REG_SIZE != inst->size_read(i))) {
+         const unsigned reg_size = (inst->src[i].file == UNIFORM ? 4 : REG_SIZE);
+         fprintf(file, "+%d.%d", inst->src[i].offset / reg_size,
+                 inst->src[i].offset % reg_size);
+      }
+
       if (inst->src[i].abs)
          fprintf(file, "|");
 
