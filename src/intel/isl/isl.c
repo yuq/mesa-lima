@@ -580,7 +580,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       case ISL_MSAA_LAYOUT_ARRAY:
          assert(info->depth == 1);
          assert(info->levels == 1);
-         assert(!isl_format_is_compressed(info->format));
+         assert(isl_format_supports_multisampling(dev->info, info->format));
+         assert(fmtl->bw == 1 && fmtl->bh == 1);
 
          *phys_level0_sa = (struct isl_extent4d) {
             .w = info->width,
@@ -593,7 +594,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       case ISL_MSAA_LAYOUT_INTERLEAVED:
          assert(info->depth == 1);
          assert(info->levels == 1);
-         assert(!isl_format_is_compressed(info->format));
+         assert(isl_format_supports_multisampling(dev->info, info->format));
+         assert(fmtl->bw == 1 && fmtl->bh == 1);
 
          *phys_level0_sa = (struct isl_extent4d) {
             .w = info->width,
