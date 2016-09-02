@@ -41,7 +41,7 @@ extern "C"
 #endif
 
 #define ADDRLIB_VERSION_MAJOR 6
-#define ADDRLIB_VERSION_MINOR 1
+#define ADDRLIB_VERSION_MINOR 2
 #define ADDRLIB_VERSION ((ADDRLIB_VERSION_MAJOR << 16) | ADDRLIB_VERSION_MINOR)
 
 /// Virtually all interface functions need ADDR_HANDLE as first parameter
