@@ -739,8 +739,8 @@ can_propagate_from(fs_inst *inst)
    return (inst->opcode == BRW_OPCODE_MOV &&
            inst->dst.file == VGRF &&
            ((inst->src[0].file == VGRF &&
-             (inst->src[0].nr != inst->dst.nr ||
-              inst->src[0].offset / REG_SIZE != inst->dst.offset / REG_SIZE)) ||
+             !regions_overlap(inst->dst, inst->size_written,
+                              inst->src[0], inst->size_read(0))) ||
             inst->src[0].file == ATTR ||
             inst->src[0].file == UNIFORM ||
             inst->src[0].file == IMM) &&
