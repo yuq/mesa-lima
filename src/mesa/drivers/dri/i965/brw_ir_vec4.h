@@ -147,6 +147,62 @@ writemask(dst_reg reg, unsigned mask)
    return reg;
 }
 
+/**
+ * Return an integer identifying the discrete address space a register is
+ * contained in.  A register is by definition fully contained in the single
+ * reg_space it belongs to, so two registers with different reg_space ids are
+ * guaranteed not to overlap.  Most register files are a single reg_space of
+ * its own, only the VGRF file is composed of multiple discrete address
+ * spaces, one for each VGRF allocation.
+ */
+static inline uint32_t
+reg_space(const backend_reg &r)
+{
+   return r.file << 16 | (r.file == VGRF ? r.nr : 0);
+}
+
+/**
+ * Return the base offset in bytes of a register relative to the start of its
+ * reg_space().
+ */
+static inline unsigned
+reg_offset(const backend_reg &r)
+{
+   return (r.file == VGRF || r.file == IMM ? 0 : r.nr) *
+          (r.file == UNIFORM ? 16 : REG_SIZE) + r.offset +
+          (r.file == ARF || r.file == FIXED_GRF ? r.subnr : 0);
+}
+
+/**
+ * Return whether the register region starting at \p r and spanning \p dr
+ * bytes could potentially overlap the register region starting at \p s and
+ * spanning \p ds bytes.
+ */
+static inline bool
+regions_overlap(const backend_reg &r, unsigned dr,
+                const backend_reg &s, unsigned ds)
+{
+   if (r.file == MRF && (r.nr & BRW_MRF_COMPR4)) {
+      /* COMPR4 regions are translated by the hardware during decompression
+       * into two separate half-regions 4 MRFs apart from each other.
+       */
+      backend_reg t0 = r;
+      t0.nr &= ~BRW_MRF_COMPR4;
+      backend_reg t1 = t0;
+      t1.offset += 4 * REG_SIZE;
+      return regions_overlap(t0, dr / 2, s, ds) ||
+             regions_overlap(t1, dr / 2, s, ds);
+
+   } else if (s.file == MRF && (s.nr & BRW_MRF_COMPR4)) {
+      return regions_overlap(s, ds, r, dr);
+
+   } else {
+      return reg_space(r) == reg_space(s) &&
+             !(reg_offset(r) + dr <= reg_offset(s) ||
+               reg_offset(s) + ds <= reg_offset(r));
+   }
+}
+
 class vec4_instruction : public backend_instruction {
 public:
    DECLARE_RALLOC_CXX_OPERATORS(vec4_instruction)
@@ -263,9 +319,8 @@ set_saturate(bool saturate, vec4_instruction *inst)
 inline unsigned
 regs_written(const vec4_instruction *inst)
 {
-   /* XXX - Use reg_offset() as promised by the comment above. */
    assert(inst->dst.file != UNIFORM && inst->dst.file != IMM);
-   return DIV_ROUND_UP(inst->dst.offset % REG_SIZE + inst->size_written,
+   return DIV_ROUND_UP(reg_offset(inst->dst) % REG_SIZE + inst->size_written,
                        REG_SIZE);
 }
 
@@ -278,10 +333,9 @@ regs_written(const vec4_instruction *inst)
 inline unsigned
 regs_read(const vec4_instruction *inst, unsigned i)
 {
-   /* XXX - Use reg_offset() as promised by the comment above. */
    const unsigned reg_size =
       inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 16 : REG_SIZE;
-   return DIV_ROUND_UP(inst->src[i].offset % reg_size + inst->size_read(i),
+   return DIV_ROUND_UP(reg_offset(inst->src[i]) % reg_size + inst->size_read(i),
                        reg_size);
 }
 
