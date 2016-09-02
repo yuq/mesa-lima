@@ -56,7 +56,6 @@ brw_file_from_reg(fs_reg *reg)
 static struct brw_reg
 brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen, bool compressed)
 {
-   assert(reg->offset / REG_SIZE == 0);
    struct brw_reg brw_reg;
 
    switch (reg->file) {
@@ -97,14 +96,14 @@ brw_reg_from_fs_reg(fs_inst *inst, fs_reg *reg, unsigned gen, bool compressed)
       }
 
       brw_reg = retype(brw_reg, reg->type);
-      brw_reg = byte_offset(brw_reg, reg->offset % REG_SIZE);
+      brw_reg = byte_offset(brw_reg, reg->offset);
       brw_reg.abs = reg->abs;
       brw_reg.negate = reg->negate;
       break;
    case ARF:
    case FIXED_GRF:
    case IMM:
-      assert(reg->offset % REG_SIZE == 0);
+      assert(reg->offset == 0);
       brw_reg = reg->as_brw_reg();
       break;
    case BAD_FILE:
