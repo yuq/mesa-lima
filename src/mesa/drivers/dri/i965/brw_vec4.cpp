@@ -1254,8 +1254,7 @@ vec4_visitor::opt_register_coalesce()
                                     inst->src[0].swizzle);
 	       scan_inst->dst.file = inst->dst.file;
                scan_inst->dst.nr = inst->dst.nr;
-	       scan_inst->dst.offset = scan_inst->dst.offset % REG_SIZE +
-                  ROUND_DOWN_TO(inst->dst.offset, REG_SIZE);
+	       scan_inst->dst.offset = inst->dst.offset;
                if (inst->saturate &&
                    inst->dst.type != scan_inst->dst.type) {
                   /* If we have reached this point, scan_inst is a non
