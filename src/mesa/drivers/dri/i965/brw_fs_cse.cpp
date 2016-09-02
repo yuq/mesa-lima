@@ -335,7 +335,9 @@ fs_visitor::opt_cse_local(bblock_t *block)
             /* Kill all AEB entries that use the destination we just
              * overwrote.
              */
-            if (inst->overwrites_reg(entry->generator->src[i])) {
+            if (regions_overlap(inst->dst, inst->size_written,
+                                entry->generator->src[i],
+                                entry->generator->size_read(i))) {
                entry->remove();
                ralloc_free(entry);
                break;

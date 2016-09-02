@@ -241,12 +241,6 @@ fs_inst::equals(fs_inst *inst) const
 }
 
 bool
-fs_inst::overwrites_reg(const fs_reg &reg) const
-{
-   return reg.in_range(dst, DIV_ROUND_UP(size_written, REG_SIZE));
-}
-
-bool
 fs_inst::is_send_from_grf() const
 {
    switch (opcode) {

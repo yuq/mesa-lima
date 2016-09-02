@@ -88,7 +88,8 @@ opt_cmod_propagation_local(const gen_device_info *devinfo, bblock_t *block)
 
       bool read_flag = false;
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
-         if (scan_inst->overwrites_reg(inst->src[0])) {
+         if (regions_overlap(scan_inst->dst, scan_inst->size_written,
+                             inst->src[0], inst->size_read(0))) {
             if (scan_inst->is_partial_write() ||
                 scan_inst->dst.offset != inst->src[0].offset ||
                 scan_inst->exec_size != inst->exec_size)

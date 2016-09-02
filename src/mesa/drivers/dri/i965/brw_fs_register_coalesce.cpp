@@ -138,8 +138,10 @@ can_coalesce_vars(brw::fs_live_variables *live_intervals,
          if (scan_ip > end_ip)
             return true; /* registers do not interfere */
 
-         if (scan_inst->overwrites_reg(inst->dst) ||
-             scan_inst->overwrites_reg(inst->src[0]))
+         if (regions_overlap(scan_inst->dst, scan_inst->size_written,
+                             inst->dst, inst->size_written) ||
+             regions_overlap(scan_inst->dst, scan_inst->size_written,
+                             inst->src[0], inst->size_read(0)))
             return false; /* registers interfere */
       }
    }

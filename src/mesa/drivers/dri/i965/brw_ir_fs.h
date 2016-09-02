@@ -334,7 +334,6 @@ public:
    void resize_sources(uint8_t num_sources);
 
    bool equals(fs_inst *inst) const;
-   bool overwrites_reg(const fs_reg &reg) const;
    bool is_send_from_grf() const;
    bool is_partial_write() const;
    bool is_copy_payload(const brw::simple_allocator &grf_alloc) const;

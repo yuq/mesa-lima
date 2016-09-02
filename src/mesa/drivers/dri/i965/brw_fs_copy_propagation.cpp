@@ -161,8 +161,10 @@ fs_copy_prop_dataflow::setup_initial_values()
 
          /* Mark ACP entries which are killed by this instruction. */
          for (int i = 0; i < num_acp; i++) {
-            if (inst->overwrites_reg(acp[i]->dst) ||
-                inst->overwrites_reg(acp[i]->src)) {
+            if (regions_overlap(inst->dst, inst->size_written,
+                                acp[i]->dst, acp[i]->size_written) ||
+                regions_overlap(inst->dst, inst->size_written,
+                                acp[i]->src, acp[i]->size_read)) {
                BITSET_SET(bd[block->num].kill, i);
             }
          }
