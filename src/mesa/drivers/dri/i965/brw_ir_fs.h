@@ -79,17 +79,13 @@ byte_offset(fs_reg reg, unsigned delta)
       break;
    case VGRF:
    case ATTR:
-   case UNIFORM: {
-      const unsigned reg_size = (reg.file == UNIFORM ? 4 : REG_SIZE);
-      const unsigned suboffset = reg.offset % reg_size + delta;
-      reg.offset += ROUND_DOWN_TO(suboffset, reg_size);
-      reg.offset = ROUND_DOWN_TO(reg.offset, reg_size) + suboffset % reg_size;
+   case UNIFORM:
+      reg.offset += delta;
       break;
-   }
    case MRF: {
-      const unsigned suboffset = reg.offset % REG_SIZE + delta;
+      const unsigned suboffset = reg.offset + delta;
       reg.nr += suboffset / REG_SIZE;
-      reg.offset = ROUND_DOWN_TO(reg.offset, REG_SIZE) + suboffset % REG_SIZE;
+      reg.offset = suboffset % REG_SIZE;
       break;
    }
    case ARF:
