@@ -3468,62 +3468,27 @@ fs_visitor::lower_integer_multiplication()
                         inst->dst.type);
 
             if (devinfo->gen >= 7) {
-               fs_reg src1_0_w = inst->src[1];
-               fs_reg src1_1_w = inst->src[1];
-
                if (inst->src[1].file == IMM) {
-                  src1_0_w.ud &= 0xffff;
-                  src1_1_w.ud >>= 16;
+                  ibld.MUL(low, inst->src[0],
+                           brw_imm_uw(inst->src[1].ud & 0xffff));
+                  ibld.MUL(high, inst->src[0],
+                           brw_imm_uw(inst->src[1].ud >> 16));
                } else {
-                  src1_0_w.type = BRW_REGISTER_TYPE_UW;
-                  if (src1_0_w.stride != 0) {
-                     assert(src1_0_w.stride == 1);
-                     src1_0_w.stride = 2;
-                  }
-
-                  src1_1_w.type = BRW_REGISTER_TYPE_UW;
-                  if (src1_1_w.stride != 0) {
-                     assert(src1_1_w.stride == 1);
-                     src1_1_w.stride = 2;
-                  }
-                  src1_1_w.offset += type_sz(BRW_REGISTER_TYPE_UW);
+                  ibld.MUL(low, inst->src[0],
+                           subscript(inst->src[1], BRW_REGISTER_TYPE_UW, 0));
+                  ibld.MUL(high, inst->src[0],
+                           subscript(inst->src[1], BRW_REGISTER_TYPE_UW, 1));
                }
-               ibld.MUL(low, inst->src[0], src1_0_w);
-               ibld.MUL(high, inst->src[0], src1_1_w);
             } else {
-               fs_reg src0_0_w = inst->src[0];
-               fs_reg src0_1_w = inst->src[0];
-
-               src0_0_w.type = BRW_REGISTER_TYPE_UW;
-               if (src0_0_w.stride != 0) {
-                  assert(src0_0_w.stride == 1);
-                  src0_0_w.stride = 2;
-               }
-
-               src0_1_w.type = BRW_REGISTER_TYPE_UW;
-               if (src0_1_w.stride != 0) {
-                  assert(src0_1_w.stride == 1);
-                  src0_1_w.stride = 2;
-               }
-               src0_1_w.offset += type_sz(BRW_REGISTER_TYPE_UW);
-
-               ibld.MUL(low, src0_0_w, inst->src[1]);
-               ibld.MUL(high, src0_1_w, inst->src[1]);
+               ibld.MUL(low, subscript(inst->src[0], BRW_REGISTER_TYPE_UW, 0),
+                        inst->src[1]);
+               ibld.MUL(high, subscript(inst->src[0], BRW_REGISTER_TYPE_UW, 1),
+                        inst->src[1]);
             }
 
-            fs_reg dst = inst->dst;
-            dst.type = BRW_REGISTER_TYPE_UW;
-            dst.offset = ROUND_DOWN_TO(dst.offset, REG_SIZE) + 2;
-            dst.stride = 2;
-
-            high.type = BRW_REGISTER_TYPE_UW;
-            high.stride = 2;
-
-            low.type = BRW_REGISTER_TYPE_UW;
-            low.offset = ROUND_DOWN_TO(low.offset, REG_SIZE) + 2;
-            low.stride = 2;
-
-            ibld.ADD(dst, low, high);
+            ibld.ADD(subscript(inst->dst, BRW_REGISTER_TYPE_UW, 1),
+                     subscript(low, BRW_REGISTER_TYPE_UW, 1),
+                     subscript(high, BRW_REGISTER_TYPE_UW, 0));
 
             if (inst->conditional_mod || orig_dst.file == MRF) {
                set_condmod(inst->conditional_mod,

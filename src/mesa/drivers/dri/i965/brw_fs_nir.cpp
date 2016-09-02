@@ -508,15 +508,8 @@ fs_visitor::optimize_frontfacing_ternary(nir_alu_instr *instr,
          g0.negate = true;
       }
 
-      tmp.type = BRW_REGISTER_TYPE_W;
-      tmp.offset = ROUND_DOWN_TO(tmp.offset, REG_SIZE) + 2;
-      tmp.stride = 2;
-
-      bld.OR(tmp, g0, brw_imm_uw(0x3f80));
-
-      tmp.type = BRW_REGISTER_TYPE_D;
-      tmp.offset = ROUND_DOWN_TO(tmp.offset, REG_SIZE);
-      tmp.stride = 1;
+      bld.OR(subscript(tmp, BRW_REGISTER_TYPE_W, 1),
+             g0, brw_imm_uw(0x3f80));
    } else {
       /* Bit 31 of g1.6 is 0 if the polygon is front facing. */
       fs_reg g1_6 = fs_reg(retype(brw_vec1_grf(1, 6), BRW_REGISTER_TYPE_D));
