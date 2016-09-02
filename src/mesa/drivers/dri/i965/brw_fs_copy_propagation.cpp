@@ -818,8 +818,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                                           type_sz(inst->src[i].type);
             if (inst->src[i].file == VGRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
-               entry->dst = inst->dst;
-               entry->dst.offset += offset * REG_SIZE;
+               entry->dst = byte_offset(inst->dst, offset);
                entry->src = inst->src[i];
                entry->size_written = size_written;
                entry->size_read = inst->size_read(i);
@@ -830,7 +829,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                   ralloc_free(entry);
                }
             }
-            offset += DIV_ROUND_UP(size_written, REG_SIZE);
+            offset += size_written;
          }
       }
    }
