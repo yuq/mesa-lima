@@ -1620,6 +1620,7 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
 
          int grf = attribute_map[inst->src[i].nr +
                                  inst->src[i].offset / REG_SIZE];
+         assert(inst->src[i].offset % REG_SIZE == 0);
 
          /* All attributes used in the shader need to have been assigned a
           * hardware register by the caller
