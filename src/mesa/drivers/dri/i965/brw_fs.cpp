@@ -2717,9 +2717,8 @@ fs_visitor::compute_to_mrf()
              * would need us to understand coalescing out more than one MOV at
              * a time.
              */
-            if (scan_inst->dst.offset / REG_SIZE < inst->src[0].offset / REG_SIZE ||
-                scan_inst->dst.offset / REG_SIZE + DIV_ROUND_UP(scan_inst->size_written, REG_SIZE) >
-                inst->src[0].offset / REG_SIZE + DIV_ROUND_UP(inst->size_read(0), REG_SIZE))
+            if (!region_contained_in(scan_inst->dst, scan_inst->size_written,
+                                     inst->src[0], inst->size_read(0)))
                break;
 
 	    /* SEND instructions can't have MRF as a destination. */
