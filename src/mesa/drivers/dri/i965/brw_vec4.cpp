@@ -1098,7 +1098,7 @@ vec4_visitor::opt_register_coalesce()
       /* Remove no-op MOVs */
       if (inst->dst.file == inst->src[0].file &&
           inst->dst.nr == inst->src[0].nr &&
-          inst->dst.offset / REG_SIZE == inst->src[0].offset / REG_SIZE) {
+          inst->dst.offset == inst->src[0].offset) {
          bool is_nop_mov = true;
 
          for (unsigned c = 0; c < 4; c++) {
