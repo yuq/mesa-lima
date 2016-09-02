@@ -1651,6 +1651,7 @@ vec4_visitor::emit_pull_constant_load(bblock_t *block, vec4_instruction *inst,
 				      dst_reg temp, src_reg orig_src,
                                       int base_offset, src_reg indirect)
 {
+   assert(orig_src.offset % 16 == 0);
    int reg_offset = base_offset + orig_src.offset / 16;
    const unsigned index = prog_data->base.binding_table.pull_constants_start;
 
