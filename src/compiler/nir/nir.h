@@ -1758,6 +1758,9 @@ typedef struct nir_shader_compiler_options {
     * information must be inferred from the list of input nir_variables.
     */
    bool use_interpolated_input_intrinsics;
+
+   bool lower_b2dx;
+   bool lower_b2i;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader_info {
@@ -2108,6 +2111,16 @@ nir_after_cf_node(nir_cf_node *node)
 }
 
 static inline nir_cursor
+nir_after_phis(nir_block *block)
+{
+   nir_foreach_instr(instr, block) {
+      if (instr->type != nir_instr_type_phi)
+         return nir_before_instr(instr);
+   }
+   return nir_after_block(block);
+}
+
+static inline nir_cursor
 nir_after_cf_node_and_phis(nir_cf_node *node)
 {
    if (node->type == nir_cf_node_block)
@@ -2116,11 +2129,7 @@ nir_after_cf_node_and_phis(nir_cf_node *node)
    nir_block *block = nir_cf_node_as_block(nir_cf_node_next(node));
    assert(block->cf_node.type == nir_cf_node_block);
 
-   nir_foreach_instr(instr, block) {
-      if (instr->type != nir_instr_type_phi)
-         return nir_before_instr(instr);
-   }
-   return nir_after_block(block);
+   return nir_after_phis(block);
 }
 
 static inline nir_cursor
