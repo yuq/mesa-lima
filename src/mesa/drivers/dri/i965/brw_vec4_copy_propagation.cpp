@@ -72,8 +72,8 @@ is_channel_updated(vec4_instruction *inst, src_reg *values[4], int ch)
    if (!src || src->file != VGRF)
       return false;
 
-   return (src->in_range(inst->dst, DIV_ROUND_UP(inst->size_written, REG_SIZE)) &&
-           inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch)));
+   return regions_overlap(*src, REG_SIZE, inst->dst, inst->size_written) &&
+          inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch));
 }
 
 static bool

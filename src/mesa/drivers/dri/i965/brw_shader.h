@@ -62,7 +62,6 @@ struct backend_reg : private brw_reg
    bool is_negative_one() const;
    bool is_null() const;
    bool is_accumulator() const;
-   bool in_range(const backend_reg &r, unsigned n) const;
 
    /** Offset from the start of the (virtual) register in bytes. */
    uint16_t offset;

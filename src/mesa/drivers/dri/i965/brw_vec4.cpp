@@ -1143,7 +1143,8 @@ vec4_visitor::opt_register_coalesce()
                                                   inst) {
          _scan_inst = scan_inst;
 
-         if (inst->src[0].in_range(scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written, REG_SIZE))) {
+         if (regions_overlap(inst->src[0], inst->size_read(0),
+                             scan_inst->dst, scan_inst->size_written)) {
             /* Found something writing to the reg we want to coalesce away. */
             if (to_mrf) {
                /* SEND instructions can't have MRF as a destination. */
@@ -1197,8 +1198,8 @@ vec4_visitor::opt_register_coalesce()
           */
 	 bool interfered = false;
 	 for (int i = 0; i < 3; i++) {
-            if (inst->src[0].in_range(scan_inst->src[i],
-                                      DIV_ROUND_UP(scan_inst->size_read(i), REG_SIZE)))
+            if (regions_overlap(inst->src[0], inst->size_read(0),
+                                scan_inst->src[i], scan_inst->size_read(i)))
 	       interfered = true;
 	 }
 	 if (interfered)
@@ -1207,7 +1208,8 @@ vec4_visitor::opt_register_coalesce()
          /* If somebody else writes the same channels of our destination here,
           * we can't coalesce before that.
           */
-         if (inst->dst.in_range(scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written, REG_SIZE)) &&
+         if (regions_overlap(inst->dst, inst->size_written,
+                             scan_inst->dst, scan_inst->size_written) &&
              (inst->dst.writemask & scan_inst->dst.writemask) != 0) {
             break;
          }
@@ -1223,8 +1225,8 @@ vec4_visitor::opt_register_coalesce()
             }
          } else {
             for (int i = 0; i < 3; i++) {
-               if (inst->dst.in_range(scan_inst->src[i],
-                                      DIV_ROUND_UP(scan_inst->size_read(i), REG_SIZE)))
+               if (regions_overlap(inst->dst, inst->size_written,
+                                   scan_inst->src[i], scan_inst->size_read(i)))
                   interfered = true;
             }
             if (interfered)
