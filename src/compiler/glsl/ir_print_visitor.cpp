@@ -478,7 +478,8 @@ void ir_print_visitor::visit(ir_constant *ir)
             else
                fprintf(f, "%f", ir->value.d[i]);
             break;
-	 default: assert(0);
+	 default:
+            unreachable("Invalid constant type");
 	 }
       }
    }
