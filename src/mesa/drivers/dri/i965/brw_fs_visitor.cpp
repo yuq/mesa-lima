@@ -573,8 +573,8 @@ void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 
    for (int i = 0; i < key->nr_userclip_plane_consts; i++) {
       fs_reg u = userplane[i];
-      fs_reg output = outputs[VARYING_SLOT_CLIP_DIST0 + i / 4];
-      output.offset = output.offset % REG_SIZE + (i & 3) * REG_SIZE;
+      const fs_reg output = offset(outputs[VARYING_SLOT_CLIP_DIST0 + i / 4],
+                                   bld, i & 3);
 
       abld.MUL(output, outputs[clip_vertex], u);
       for (int j = 1; j < 4; j++) {

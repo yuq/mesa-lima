@@ -280,7 +280,7 @@ fs_visitor::opt_combine_constants()
 
       ibld.MOV(reg, brw_imm_f(imm->val));
       imm->nr = reg.nr;
-      imm->subreg_offset = reg.offset % REG_SIZE;
+      imm->subreg_offset = reg.offset;
 
       reg.offset += sizeof(float);
       if (reg.offset == 8 * sizeof(float)) {

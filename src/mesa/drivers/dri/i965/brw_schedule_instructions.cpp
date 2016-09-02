@@ -1494,8 +1494,8 @@ fs_instruction_scheduler::choose_instruction_to_schedule()
                 * single-result send is probably actually reducing register
                 * pressure.
                 */
-               if (inst->size_written <= inst->exec_size / 8 * REG_SIZE &&
-                   chosen_inst->size_written > chosen_inst->exec_size / 8 * REG_SIZE) {
+               if (inst->size_written <= 4 * inst->exec_size &&
+                   chosen_inst->size_written > 4 * chosen_inst->exec_size) {
                   chosen = n;
                   continue;
                } else if (inst->size_written > chosen_inst->size_written) {
