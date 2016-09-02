@@ -900,7 +900,7 @@ fs_inst::size_read(int arg) const
    switch (src[arg].file) {
    case UNIFORM:
    case IMM:
-      return 4;
+      return components_read(arg) * type_sz(src[arg].type);
    case BAD_FILE:
    case ARF:
    case FIXED_GRF:
