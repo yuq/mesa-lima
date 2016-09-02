@@ -333,18 +333,17 @@ can_take_stride(fs_inst *inst, unsigned arg, unsigned stride,
 }
 
 /**
- * Check that the register region read by src [src.reg_offset,
- * src.reg_offset + regs_read] is contained inside the register
- * region written by dst [dst.reg_offset, dst.reg_offset + regs_written]
- * Both src and dst must have the same register number and file.
+ * Check that the register region read by src [src.offset,
+ * src.offset + size_read[ is fully contained inside the register
+ * region written by dst [dst.offset, dst.offset + size_written[.
  */
 static inline bool
-region_contained_in(const fs_reg &src, unsigned regs_read,
-                    const fs_reg &dst, unsigned regs_written)
+region_contained_in(const fs_reg &src, unsigned size_read,
+                    const fs_reg &dst, unsigned size_written)
 {
    return src.file == dst.file && src.nr == dst.nr &&
           src.offset >= dst.offset &&
-      src.offset / REG_SIZE + regs_read <= dst.offset / REG_SIZE + regs_written;
+          src.offset + size_read <= dst.offset + size_written;
 }
 
 bool
@@ -369,10 +368,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    /* Bail if inst is reading a range that isn't contained in the range
     * that entry is writing.
     */
-   if (!region_contained_in(inst->src[arg], DIV_ROUND_UP(inst->size_read(arg),
-                                                         REG_SIZE),
-                            entry->dst, DIV_ROUND_UP(entry->size_written,
-                                                     REG_SIZE)))
+   if (!region_contained_in(inst->src[arg], inst->size_read(arg),
+                            entry->dst, entry->size_written))
       return false;
 
    /* we can't generally copy-propagate UD negations because we
@@ -527,10 +524,8 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       /* Bail if inst is reading a range that isn't contained in the range
        * that entry is writing.
        */
-      if (!region_contained_in(inst->src[i], DIV_ROUND_UP(inst->size_read(i),
-                                                          REG_SIZE),
-                               entry->dst, DIV_ROUND_UP(entry->size_written,
-                                                        REG_SIZE)))
+      if (!region_contained_in(inst->src[i], inst->size_read(i),
+                               entry->dst, entry->size_written))
          continue;
 
       /* If the type sizes don't match each channel of the instruction is
