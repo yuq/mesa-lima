@@ -46,6 +46,7 @@ is_direct_copy(vec4_instruction *inst)
    return (inst->opcode == BRW_OPCODE_MOV &&
 	   !inst->predicate &&
 	   inst->dst.file == VGRF &&
+	   inst->dst.offset % REG_SIZE == 0 &&
 	   !inst->dst.reladdr &&
 	   !inst->src[0].reladdr &&
 	   (inst->dst.type == inst->src[0].type ||
@@ -73,7 +74,8 @@ is_channel_updated(vec4_instruction *inst, src_reg *values[4], int ch)
       return false;
 
    return regions_overlap(*src, REG_SIZE, inst->dst, inst->size_written) &&
-          inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch));
+          (inst->dst.offset != src->offset ||
+           inst->dst.writemask & (1 << BRW_GET_SWZ(src->swizzle, ch)));
 }
 
 static bool
@@ -436,8 +438,9 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	     inst->src[i].reladdr)
 	    continue;
 
-         /* We only handle single-register copies. */
-         if (inst->size_read(i) != REG_SIZE)
+         /* We only handle register-aligned single GRF copies. */
+         if (inst->size_read(i) != REG_SIZE ||
+             inst->src[i].offset % REG_SIZE)
             continue;
 
          const unsigned reg = (alloc.offsets[inst->src[i].nr] +
