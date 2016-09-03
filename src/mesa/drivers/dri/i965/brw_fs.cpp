@@ -2797,15 +2797,15 @@ fs_visitor::compute_to_mrf()
                inst->src[0], scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written,
                                                           REG_SIZE));
 
-            const unsigned rel_offset = (reg_offset(scan_inst->dst) -
-                                         reg_offset(inst->src[0])) / REG_SIZE;
+            const unsigned rel_offset = reg_offset(scan_inst->dst) -
+                                        reg_offset(inst->src[0]);
 
             if (inst->dst.nr & BRW_MRF_COMPR4) {
                /* Apply the same address transformation done by the hardware
                 * for COMPR4 MRF writes.
                 */
-               assert(rel_offset < 2);
-               scan_inst->dst.nr = inst->dst.nr + rel_offset * 4;
+               assert(rel_offset < 2 * REG_SIZE);
+               scan_inst->dst.nr = inst->dst.nr + rel_offset / REG_SIZE * 4;
 
                /* Clear the COMPR4 bit if the generating instruction is not
                 * compressed.
@@ -2817,11 +2817,11 @@ fs_visitor::compute_to_mrf()
                /* Calculate the MRF number the result of this instruction is
                 * ultimately written to.
                 */
-               scan_inst->dst.nr = inst->dst.nr + rel_offset;
+               scan_inst->dst.nr = inst->dst.nr + rel_offset / REG_SIZE;
             }
 
             scan_inst->dst.file = MRF;
-            scan_inst->dst.offset = inst->dst.offset + scan_inst->dst.offset % REG_SIZE;
+            scan_inst->dst.offset = inst->dst.offset + rel_offset % REG_SIZE;
             scan_inst->saturate |= inst->saturate;
             if (!regs_left)
                break;
