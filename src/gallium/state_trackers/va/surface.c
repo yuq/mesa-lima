@@ -632,24 +632,26 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
 
    memset(&templat, 0, sizeof(templat));
 
+   templat.buffer_format = pscreen->get_video_param(
+      pscreen,
+      PIPE_VIDEO_PROFILE_UNKNOWN,
+      PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+      PIPE_VIDEO_CAP_PREFERED_FORMAT
+   );
+   templat.interlaced = pscreen->get_video_param(
+      pscreen,
+      PIPE_VIDEO_PROFILE_UNKNOWN,
+      PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
+      PIPE_VIDEO_CAP_PREFERS_INTERLACED
+   );
+
    if (expected_fourcc) {
-      templat.buffer_format = VaFourccToPipeFormat(expected_fourcc);
-      templat.interlaced = 0;
-   } else {
-      templat.buffer_format = pscreen->get_video_param
-            (
-               pscreen,
-               PIPE_VIDEO_PROFILE_UNKNOWN,
-               PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
-               PIPE_VIDEO_CAP_PREFERED_FORMAT
-               );
-      templat.interlaced = pscreen->get_video_param
-            (
-               pscreen,
-               PIPE_VIDEO_PROFILE_UNKNOWN,
-               PIPE_VIDEO_ENTRYPOINT_BITSTREAM,
-               PIPE_VIDEO_CAP_PREFERS_INTERLACED
-               );
+      enum pipe_format expected_format = VaFourccToPipeFormat(expected_fourcc);
+
+      if (expected_format != templat.buffer_format || memory_attibute)
+        templat.interlaced = 0;
+
+      templat.buffer_format = expected_format;
    }
 
    templat.chroma_format = ChromaToPipe(format);
