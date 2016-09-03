@@ -1325,6 +1325,12 @@ type_is_float(glsl_base_type type)
    return type == GLSL_TYPE_FLOAT || type == GLSL_TYPE_DOUBLE;
 }
 
+static bool
+type_is_signed(glsl_base_type type)
+{
+   return type == GLSL_TYPE_INT || type == GLSL_TYPE_INT64;
+}
+
 void
 nir_visitor::visit(ir_expression *ir)
 {
@@ -1679,7 +1685,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_binop_div:
       if (type_is_float(out_type))
          result = nir_fdiv(&b, srcs[0], srcs[1]);
-      else if (out_type == GLSL_TYPE_INT)
+      else if (type_is_signed(out_type))
          result = nir_idiv(&b, srcs[0], srcs[1]);
       else
          result = nir_udiv(&b, srcs[0], srcs[1]);
@@ -1691,7 +1697,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_binop_min:
       if (type_is_float(out_type))
          result = nir_fmin(&b, srcs[0], srcs[1]);
-      else if (out_type == GLSL_TYPE_INT)
+      else if (type_is_signed(out_type))
          result = nir_imin(&b, srcs[0], srcs[1]);
       else
          result = nir_umin(&b, srcs[0], srcs[1]);
@@ -1699,7 +1705,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_binop_max:
       if (type_is_float(out_type))
          result = nir_fmax(&b, srcs[0], srcs[1]);
-      else if (out_type == GLSL_TYPE_INT)
+      else if (type_is_signed(out_type))
          result = nir_imax(&b, srcs[0], srcs[1]);
       else
          result = nir_umax(&b, srcs[0], srcs[1]);
@@ -1722,8 +1728,8 @@ nir_visitor::visit(ir_expression *ir)
       break;
    case ir_binop_lshift: result = nir_ishl(&b, srcs[0], srcs[1]); break;
    case ir_binop_rshift:
-      result = (out_type == GLSL_TYPE_INT) ? nir_ishr(&b, srcs[0], srcs[1])
-                                           : nir_ushr(&b, srcs[0], srcs[1]);
+      result = (type_is_signed(out_type)) ? nir_ishr(&b, srcs[0], srcs[1])
+                                          : nir_ushr(&b, srcs[0], srcs[1]);
       break;
    case ir_binop_imul_high:
       result = (out_type == GLSL_TYPE_INT) ? nir_imul_high(&b, srcs[0], srcs[1])
@@ -1735,7 +1741,7 @@ nir_visitor::visit(ir_expression *ir)
       if (supports_ints) {
          if (type_is_float(types[0]))
             result = nir_flt(&b, srcs[0], srcs[1]);
-         else if (types[0] == GLSL_TYPE_INT)
+         else if (type_is_signed(types[0]))
             result = nir_ilt(&b, srcs[0], srcs[1]);
          else
             result = nir_ult(&b, srcs[0], srcs[1]);
@@ -1747,7 +1753,7 @@ nir_visitor::visit(ir_expression *ir)
       if (supports_ints) {
          if (type_is_float(types[0]))
             result = nir_flt(&b, srcs[1], srcs[0]);
-         else if (types[0] == GLSL_TYPE_INT)
+         else if (type_is_signed(types[0]))
             result = nir_ilt(&b, srcs[1], srcs[0]);
          else
             result = nir_ult(&b, srcs[1], srcs[0]);
@@ -1759,7 +1765,7 @@ nir_visitor::visit(ir_expression *ir)
       if (supports_ints) {
          if (type_is_float(types[0]))
             result = nir_fge(&b, srcs[1], srcs[0]);
-         else if (types[0] == GLSL_TYPE_INT)
+         else if (type_is_signed(types[0]))
             result = nir_ige(&b, srcs[1], srcs[0]);
          else
             result = nir_uge(&b, srcs[1], srcs[0]);
@@ -1771,7 +1777,7 @@ nir_visitor::visit(ir_expression *ir)
       if (supports_ints) {
          if (type_is_float(types[0]))
             result = nir_fge(&b, srcs[0], srcs[1]);
-         else if (types[0] == GLSL_TYPE_INT)
+         else if (type_is_signed(types[0]))
             result = nir_ige(&b, srcs[0], srcs[1]);
          else
             result = nir_uge(&b, srcs[0], srcs[1]);
