@@ -2821,7 +2821,7 @@ fs_visitor::compute_to_mrf()
             }
 
             scan_inst->dst.file = MRF;
-            scan_inst->dst.offset %= REG_SIZE;
+            scan_inst->dst.offset = inst->dst.offset + scan_inst->dst.offset % REG_SIZE;
             scan_inst->saturate |= inst->saturate;
             if (!regs_left)
                break;
