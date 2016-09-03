@@ -6819,7 +6819,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
             unsigned qual_location;
             if (process_qualifier_constant(state, &loc, "location",
                                            qual->location, &qual_location)) {
-               fields[i].location = VARYING_SLOT_VAR0 + qual_location;
+               fields[i].location = qual_location +
+                  (fields[i].patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0);
                expl_location = fields[i].location +
                   fields[i].type->count_attribute_slots(false);
             }
@@ -7299,7 +7300,8 @@ ast_interface_block::hir(exec_list *instructions,
                                       layout.location, &expl_location)) {
          return NULL;
       } else {
-         expl_location = VARYING_SLOT_VAR0 + expl_location;
+         expl_location += this->layout.flags.q.patch ? VARYING_SLOT_PATCH0
+                                                     : VARYING_SLOT_VAR0;
       }
    }
 
