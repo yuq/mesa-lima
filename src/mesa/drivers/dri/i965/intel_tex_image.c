@@ -47,12 +47,27 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
    DBG("%s\n", __func__);
 
    /* Figure out image dimensions at start level. */
-   for (i = intelImage->base.Base.Level; i > 0; i--) {
-      width <<= 1;
-      if (height != 1)
-         height <<= 1;
-      if (intelObj->base.Target == GL_TEXTURE_3D)
-         depth <<= 1;
+   switch(intelObj->base.Target) {
+   case GL_TEXTURE_2D_MULTISAMPLE:
+   case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
+   case GL_TEXTURE_RECTANGLE:
+      assert(intelImage->base.Base.Level == 0);
+      break;
+   case GL_TEXTURE_3D:
+      depth <<= intelImage->base.Base.Level;
+      /* Fall through */
+   case GL_TEXTURE_2D:
+   case GL_TEXTURE_2D_ARRAY:
+   case GL_TEXTURE_CUBE_MAP:
+   case GL_TEXTURE_CUBE_MAP_ARRAY:
+      height <<= intelImage->base.Base.Level;
+      /* Fall through */
+   case GL_TEXTURE_1D:
+   case GL_TEXTURE_1D_ARRAY:
+      width <<= intelImage->base.Base.Level;
+      break;
+   default:
+      unreachable("Unexpected target");
    }
 
    /* Guess a reasonable value for lastLevel.  This is probably going
