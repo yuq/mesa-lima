@@ -106,7 +106,9 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
                                   storage->type->matrix_columns);
          unsigned vector_size = storage->type->vector_elements;
          unsigned max_vector_size = 4;
-         if (storage->type->base_type == GLSL_TYPE_DOUBLE) {
+         if (storage->type->base_type == GLSL_TYPE_DOUBLE ||
+             storage->type->base_type == GLSL_TYPE_UINT64 ||
+             storage->type->base_type == GLSL_TYPE_INT64) {
             vector_size *= 2;
             if (vector_size > 4)
                max_vector_size = 8;
