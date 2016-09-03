@@ -31,7 +31,7 @@ LOCAL_MODULE_CLASS := STATIC_LIBRARIES
 
 LOCAL_SRC_FILES := $(BLORP_FILES)
 
-LOCAL_C_INCLUDES := := \
+LOCAL_C_INCLUDES := \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/gallium/include \
