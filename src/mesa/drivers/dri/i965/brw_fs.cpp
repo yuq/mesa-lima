@@ -353,7 +353,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
       return false;
 
    fs_reg reg = this->src[0];
-   if (reg.file != VGRF || reg.offset != 0 || reg.stride == 0)
+   if (reg.file != VGRF || reg.offset != 0 || reg.stride != 1)
       return false;
 
    if (grf_alloc.sizes[reg.nr] * REG_SIZE != this->size_written)
