@@ -263,9 +263,10 @@ set_saturate(bool saturate, vec4_instruction *inst)
 inline unsigned
 regs_written(const vec4_instruction *inst)
 {
-   /* XXX - Take into account register-misaligned offsets correctly. */
+   /* XXX - Use reg_offset() as promised by the comment above. */
    assert(inst->dst.file != UNIFORM && inst->dst.file != IMM);
-   return DIV_ROUND_UP(inst->size_written, REG_SIZE);
+   return DIV_ROUND_UP(inst->dst.offset % REG_SIZE + inst->size_written,
+                       REG_SIZE);
 }
 
 /**
@@ -277,10 +278,11 @@ regs_written(const vec4_instruction *inst)
 inline unsigned
 regs_read(const vec4_instruction *inst, unsigned i)
 {
-   /* XXX - Take into account register-misaligned offsets correctly. */
+   /* XXX - Use reg_offset() as promised by the comment above. */
    const unsigned reg_size =
       inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 16 : REG_SIZE;
-   return DIV_ROUND_UP(inst->size_read(i), reg_size);
+   return DIV_ROUND_UP(inst->src[i].offset % reg_size + inst->size_read(i),
+                       reg_size);
 }
 
 } /* namespace brw */
