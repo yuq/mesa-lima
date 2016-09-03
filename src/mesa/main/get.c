@@ -423,6 +423,13 @@ static const int extra_ES32[] = {
    EXTRA_END
 };
 
+static const int extra_KHR_robustness_or_GL[] = {
+   EXT(KHR_robustness),
+   EXTRA_API_GL,
+   EXTRA_API_GL_CORE,
+   EXTRA_END
+};
+
 EXTRA_EXT(ARB_texture_cube_map);
 EXTRA_EXT(EXT_texture_array);
 EXTRA_EXT(NV_fog_distance);
