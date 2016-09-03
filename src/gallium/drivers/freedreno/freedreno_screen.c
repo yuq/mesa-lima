@@ -536,8 +536,7 @@ fd_screen_bo_get_handle(struct pipe_screen *pscreen,
 
 struct fd_bo *
 fd_screen_bo_from_handle(struct pipe_screen *pscreen,
-		struct winsys_handle *whandle,
-		unsigned *out_stride)
+		struct winsys_handle *whandle)
 {
 	struct fd_screen *screen = fd_screen(pscreen);
 	struct fd_bo *bo;
@@ -557,8 +556,6 @@ fd_screen_bo_from_handle(struct pipe_screen *pscreen,
 		DBG("ref name 0x%08x failed", whandle->handle);
 		return NULL;
 	}
-
-	*out_stride = whandle->stride;
 
 	return bo;
 }

@@ -898,14 +898,17 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 
 	util_range_init(&rsc->valid_buffer_range);
 
-	rsc->bo = fd_screen_bo_from_handle(pscreen, handle, &slice->pitch);
+	rsc->bo = fd_screen_bo_from_handle(pscreen, handle);
 	if (!rsc->bo)
 		goto fail;
 
 	rsc->base.vtbl = &fd_resource_vtbl;
 	rsc->cpp = util_format_get_blocksize(tmpl->format);
-	slice->pitch /= rsc->cpp;
+	slice->pitch = handle->stride / rsc->cpp;
 	slice->offset = handle->offset;
+
+	if ((slice->pitch < align(prsc->width0, 32)) || (slice->pitch % 32))
+		goto fail;
 
 	assert(rsc->cpp);
 

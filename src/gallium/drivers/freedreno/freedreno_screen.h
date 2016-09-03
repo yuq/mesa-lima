@@ -86,8 +86,7 @@ boolean fd_screen_bo_get_handle(struct pipe_screen *pscreen,
 		unsigned stride,
 		struct winsys_handle *whandle);
 struct fd_bo * fd_screen_bo_from_handle(struct pipe_screen *pscreen,
-		struct winsys_handle *whandle,
-		unsigned *out_stride);
+		struct winsys_handle *whandle);
 
 struct pipe_screen * fd_screen_create(struct fd_device *dev);
 
