@@ -852,7 +852,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_iadd:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
    case nir_op_fadd:
       inst = bld.ADD(result, op[0], op[1]);
       inst->saturate = instr->dest.saturate;
@@ -982,14 +981,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_inot:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       if (devinfo->gen >= 8) {
          op[0] = resolve_source_modifiers(op[0]);
       }
       bld.NOT(result, op[0]);
       break;
    case nir_op_ixor:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       if (devinfo->gen >= 8) {
          op[0] = resolve_source_modifiers(op[0]);
          op[1] = resolve_source_modifiers(op[1]);
@@ -997,7 +994,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       bld.XOR(result, op[0], op[1]);
       break;
    case nir_op_ior:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       if (devinfo->gen >= 8) {
          op[0] = resolve_source_modifiers(op[0]);
          op[1] = resolve_source_modifiers(op[1]);
@@ -1005,7 +1001,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       bld.OR(result, op[0], op[1]);
       break;
    case nir_op_iand:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       if (devinfo->gen >= 8) {
          op[0] = resolve_source_modifiers(op[0]);
          op[1] = resolve_source_modifiers(op[1]);
@@ -1143,7 +1138,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_imin:
    case nir_op_umin:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
    case nir_op_fmin:
       inst = bld.emit_minmax(result, op[0], op[1], BRW_CONDITIONAL_L);
       inst->saturate = instr->dest.saturate;
@@ -1151,7 +1145,6 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_imax:
    case nir_op_umax:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
    case nir_op_fmax:
       inst = bld.emit_minmax(result, op[0], op[1], BRW_CONDITIONAL_GE);
       inst->saturate = instr->dest.saturate;
@@ -1343,15 +1336,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       unreachable("not reached: should have been lowered");
 
    case nir_op_ishl:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       bld.SHL(result, op[0], op[1]);
       break;
    case nir_op_ishr:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       bld.ASR(result, op[0], op[1]);
       break;
    case nir_op_ushr:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
       bld.SHR(result, op[0], op[1]);
       break;
 
