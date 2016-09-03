@@ -344,7 +344,8 @@ nvc0_clear_render_target(struct pipe_context *pipe,
       nvc0_resource_fence(res, NOUVEAU_BO_WR);
    }
 
-   IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
+   if (!render_condition_enabled)
+      IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
 
    BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
@@ -352,7 +353,8 @@ nvc0_clear_render_target(struct pipe_context *pipe,
                  (z << NVC0_3D_CLEAR_BUFFERS_LAYER__SHIFT));
    }
 
-   IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
+   if (!render_condition_enabled)
+      IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
    nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
@@ -670,7 +672,8 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
    PUSH_DATA (push, dst->u.tex.first_layer);
    IMMED_NVC0(push, NVC0_3D(MULTISAMPLE_MODE), mt->ms_mode);
 
-   IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
+   if (!render_condition_enabled)
+      IMMED_NVC0(push, NVC0_3D(COND_MODE), NVC0_3D_COND_MODE_ALWAYS);
 
    BEGIN_NIC0(push, NVC0_3D(CLEAR_BUFFERS), sf->depth);
    for (z = 0; z < sf->depth; ++z) {
@@ -678,7 +681,8 @@ nvc0_clear_depth_stencil(struct pipe_context *pipe,
                  (z << NVC0_3D_CLEAR_BUFFERS_LAYER__SHIFT));
    }
 
-   IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
+   if (!render_condition_enabled)
+      IMMED_NVC0(push, NVC0_3D(COND_MODE), nvc0->cond_condmode);
 
    nvc0->dirty_3d |= NVC0_NEW_3D_FRAMEBUFFER;
 }
