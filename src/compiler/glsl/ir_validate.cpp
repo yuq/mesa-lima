@@ -253,7 +253,8 @@ ir_validate::visit_leave(ir_expression *ir)
    case ir_unop_sign:
       assert(ir->operands[0]->type->base_type == GLSL_TYPE_INT ||
              ir->operands[0]->type->base_type == GLSL_TYPE_FLOAT ||
-             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE);
+             ir->operands[0]->type->base_type == GLSL_TYPE_DOUBLE ||
+             ir->operands[0]->type->base_type == GLSL_TYPE_INT64);
       assert(ir->type == ir->operands[0]->type);
       break;
 
