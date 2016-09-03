@@ -370,7 +370,7 @@ TEST_F(cmod_propagation_test, intervening_dest_write)
    src_reg zero(brw_imm_f(0.0f));
    bld.ADD(offset(dest, 2), src0, src1);
    bld.emit(SHADER_OPCODE_TEX, dest, src2)
-      ->regs_written = 4;
+      ->size_written = 4 * REG_SIZE;
    bld.CMP(bld.null_reg_f(), offset(src_reg(dest), 2), zero, BRW_CONDITIONAL_GE);
 
    /* = Before =

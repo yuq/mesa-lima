@@ -1133,7 +1133,7 @@ vec4_visitor::opt_register_coalesce()
                                                   inst) {
          _scan_inst = scan_inst;
 
-         if (inst->src[0].in_range(scan_inst->dst, scan_inst->regs_written)) {
+         if (inst->src[0].in_range(scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written, REG_SIZE))) {
             /* Found something writing to the reg we want to coalesce away. */
             if (to_mrf) {
                /* SEND instructions can't have MRF as a destination. */
@@ -1169,7 +1169,7 @@ vec4_visitor::opt_register_coalesce()
             }
 
             /* This doesn't handle coalescing of multiple registers. */
-            if (scan_inst->regs_written > 1)
+            if (scan_inst->size_written > REG_SIZE)
                break;
 
 	    /* Mark which channels we found unconditional writes for. */
@@ -1197,7 +1197,7 @@ vec4_visitor::opt_register_coalesce()
          /* If somebody else writes the same channels of our destination here,
           * we can't coalesce before that.
           */
-         if (inst->dst.in_range(scan_inst->dst, scan_inst->regs_written) &&
+         if (inst->dst.in_range(scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written, REG_SIZE)) &&
              (inst->dst.writemask & scan_inst->dst.writemask) != 0) {
             break;
          }

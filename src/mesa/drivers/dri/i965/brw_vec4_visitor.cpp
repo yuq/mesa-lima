@@ -46,7 +46,7 @@ vec4_instruction::vec4_instruction(enum opcode opcode, const dst_reg &dst,
    this->predicate = BRW_PREDICATE_NONE;
    this->predicate_inverse = false;
    this->target = 0;
-   this->regs_written = (dst.file == BAD_FILE ? 0 : 1);
+   this->size_written = (dst.file == BAD_FILE ? 0 : REG_SIZE);
    this->shadow_compare = false;
    this->ir = NULL;
    this->urb_write_flags = BRW_URB_WRITE_NO_FLAGS;

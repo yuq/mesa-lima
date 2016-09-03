@@ -129,7 +129,7 @@ instructions_match(vec4_instruction *a, vec4_instruction *b)
           a->shadow_compare == b->shadow_compare &&
           a->dst.writemask == b->dst.writemask &&
           a->force_writemask_all == b->force_writemask_all &&
-          a->regs_written == b->regs_written &&
+          a->size_written == b->size_written &&
           operands_match(a, b);
 }
 
