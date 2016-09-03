@@ -120,7 +120,7 @@ TEST_F(nir_cf_test, delete_break_in_loop)
     *                 // succs: block_1
     *         }
     *         block block_2:
-    *         // preds: block_1
+    *         // preds:
     *         // succs: block_3
     *         block block_3:
     * }
@@ -130,18 +130,18 @@ TEST_F(nir_cf_test, delete_break_in_loop)
    EXPECT_EQ(block_1, block_0->successors[0]);
    EXPECT_EQ(NULL,    block_0->successors[1]);
    EXPECT_EQ(block_1, block_1->successors[0]); /* back to itself */
-   EXPECT_EQ(block_2, block_1->successors[1]); /* fake successor */
+   EXPECT_EQ(NULL,    block_1->successors[1]);
    EXPECT_EQ(block_3, block_2->successors[0]);
    EXPECT_EQ(NULL,    block_2->successors[1]);
    EXPECT_EQ(NULL,    block_3->successors[0]);
    EXPECT_EQ(NULL,    block_3->successors[1]);
    EXPECT_EQ(0,       block_0->predecessors->entries);
    EXPECT_EQ(2,       block_1->predecessors->entries);
-   EXPECT_EQ(1,       block_2->predecessors->entries);
+   EXPECT_EQ(0,       block_2->predecessors->entries);
    EXPECT_EQ(1,       block_3->predecessors->entries);
    EXPECT_TRUE(_mesa_set_search(block_1->predecessors, block_0));
    EXPECT_TRUE(_mesa_set_search(block_1->predecessors, block_1));
-   EXPECT_TRUE(_mesa_set_search(block_2->predecessors, block_1));
+   EXPECT_FALSE(_mesa_set_search(block_2->predecessors, block_1));
    EXPECT_TRUE(_mesa_set_search(block_3->predecessors, block_2));
 
    nir_metadata_require(b.impl, nir_metadata_dominance);
