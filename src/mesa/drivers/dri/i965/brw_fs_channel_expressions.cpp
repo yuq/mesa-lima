@@ -86,6 +86,8 @@ channel_expressions_predicate(ir_instruction *ir)
       case ir_binop_interpolate_at_offset:
       case ir_binop_interpolate_at_sample:
       case ir_unop_pack_double_2x32:
+      case ir_unop_pack_int_2x32:
+      case ir_unop_pack_uint_2x32:
          return false;
       default:
          break;
@@ -180,6 +182,8 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
       case ir_binop_interpolate_at_sample:
       /* We scalarize these in NIR, so no need to do it here */
       case ir_unop_pack_double_2x32:
+      case ir_unop_pack_int_2x32:
+      case ir_unop_pack_uint_2x32:
          return visit_continue;
 
       default:
@@ -428,6 +432,8 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
       unreachable("not reached: expression operates on scalars only");
 
    case ir_unop_pack_double_2x32:
+   case ir_unop_pack_int_2x32:
+   case ir_unop_pack_uint_2x32:
       unreachable("not reached: to be lowered in NIR, should've been skipped");
 
    case ir_unop_frexp_sig:
@@ -461,9 +467,7 @@ ir_channel_expressions_visitor::visit_leave(ir_assignment *ir)
    case ir_unop_d2u64:
    case ir_unop_u642i64:
    case ir_unop_i642u64:
-   case ir_unop_pack_int_2x32:
    case ir_unop_unpack_int_2x32:
-   case ir_unop_pack_uint_2x32:
    case ir_unop_unpack_uint_2x32:
       unreachable("unsupported");
    }

@@ -653,6 +653,13 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_f2d:
    case nir_op_i2d:
    case nir_op_u2d:
+   case nir_op_f2i64:
+   case nir_op_f2u64:
+   case nir_op_i2i64:
+   case nir_op_i2u64:
+   case nir_op_u2i64:
+   case nir_op_u2u64:
+   case nir_op_b2i64:
       /* CHV PRM, vol07, 3D Media GPGPU Engine, Register Region Restrictions:
        *
        *    "When source or destination is 64b (...), regioning in Align1
@@ -666,7 +673,9 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        * data elements aligned to 64-bit. This restriction does not apply to
        * BDW and later.
        */
-      if (devinfo->is_cherryview || devinfo->is_broxton) {
+      if (nir_dest_bit_size(instr->dest.dest) == 64 &&
+          nir_src_bit_size(instr->src[0].src) == 32 &&
+          (devinfo->is_cherryview || devinfo->is_broxton)) {
          fs_reg tmp = bld.vgrf(result.type, 1);
          tmp = subscript(tmp, op[0].type, 0);
          inst = bld.MOV(tmp, op[0]);
@@ -678,8 +687,12 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_d2f:
    case nir_op_d2i:
    case nir_op_d2u:
-      inst = bld.MOV(result, op[0]);
-      inst->saturate = instr->dest.saturate;
+      if (instr->op == nir_op_b2i64) {
+         bld.MOV(result, negate(op[0]));
+      } else {
+         inst = bld.MOV(result, op[0]);
+         inst->saturate = instr->dest.saturate;
+      }
       break;
 
    case nir_op_f2i:
@@ -1222,6 +1235,19 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       }
 
       if (instr->op == nir_op_unpack_double_2x32_split_x)
+         bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 0));
+      else
+         bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 1));
+      break;
+   }
+
+   case nir_op_pack_int_2x32_split:
+      bld.emit(FS_OPCODE_PACK, result, op[0], op[1]);
+      break;
+
+   case nir_op_unpack_int_2x32_split_x:
+   case nir_op_unpack_int_2x32_split_y: {
+      if (instr->op == nir_op_unpack_int_2x32_split_x)
          bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 0));
       else
          bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 1));
