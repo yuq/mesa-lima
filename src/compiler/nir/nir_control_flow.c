@@ -530,8 +530,6 @@ remove_phi_src(nir_block *block, nir_block *pred)
 static void
 unlink_jump(nir_block *block, nir_jump_type type, bool add_normal_successors)
 {
-   nir_block *next = block->successors[0];
-
    if (block->successors[0])
       remove_phi_src(block->successors[0], block);
    if (block->successors[1])
