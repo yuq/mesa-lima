@@ -1263,7 +1263,7 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
                                 GLfloat dst0, GLfloat dst1,
                                 bool mirror)
 {
-   float scale = (src1 - src0) / (dst1 - dst0);
+   double scale = (double)(src1 - src0) / (double)(dst1 - dst0);
    if (!mirror) {
       /* When not mirroring a coordinate (say, X), we need:
        *   src_x - src_x0 = (dst_x - dst_x0 + 0.5) * scale
@@ -1276,7 +1276,7 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
        * so 0.5 provides the necessary correction.
        */
       xform->multiplier = scale;
-      xform->offset = src0 + (-dst0 + 0.5f) * scale;
+      xform->offset = src0 + (-(double)dst0 + 0.5) * scale;
    } else {
       /* When mirroring X we need:
        *   src_x - src_x0 = dst_x1 - dst_x - 0.5
@@ -1284,7 +1284,7 @@ brw_blorp_setup_coord_transform(struct brw_blorp_coord_transform *xform,
        *   src_x = src_x0 + (dst_x1 -dst_x - 0.5) * scale
        */
       xform->multiplier = -scale;
-      xform->offset = src0 + (dst1 - 0.5f) * scale;
+      xform->offset = src0 + ((double)dst1 - 0.5) * scale;
    }
 }
 
