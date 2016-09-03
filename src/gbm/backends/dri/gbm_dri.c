@@ -867,8 +867,14 @@ gbm_dri_bo_create(struct gbm_device *gbm,
    bo->base.base.format = format;
 
    switch (format) {
+   case GBM_FORMAT_R8:
+      dri_format = __DRI_IMAGE_FORMAT_R8;
+      break;
+   case GBM_FORMAT_GR88:
+      dri_format = __DRI_IMAGE_FORMAT_GR88;
+      break;
    case GBM_FORMAT_RGB565:
-      dri_format =__DRI_IMAGE_FORMAT_RGB565;
+      dri_format = __DRI_IMAGE_FORMAT_RGB565;
       break;
    case GBM_FORMAT_XRGB8888:
    case GBM_BO_FORMAT_XRGB8888:
