@@ -1758,9 +1758,6 @@ typedef struct nir_shader_compiler_options {
     * information must be inferred from the list of input nir_variables.
     */
    bool use_interpolated_input_intrinsics;
-
-   bool lower_b2dx;
-   bool lower_b2i;
 } nir_shader_compiler_options;
 
 typedef struct nir_shader_info {
