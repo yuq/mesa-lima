@@ -56,6 +56,7 @@
 
 enum {
    INTEL_RENDERBUFFER_LAYERED = 1 << 0,
+   INTEL_AUX_BUFFER_DISABLED = 1 << 1,
 };
 
 struct surface_state_info {
@@ -193,6 +194,10 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    struct intel_renderbuffer *irb = intel_renderbuffer(rb);
    struct intel_mipmap_tree *mt = irb->mt;
+
+   if (brw->gen < 9) {
+      assert(!(flags & INTEL_AUX_BUFFER_DISABLED));
+   }
 
    assert(brw_render_target_supported(brw, rb));
    intel_miptree_used_for_rendering(mt);
@@ -885,6 +890,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    /* BRW_NEW_FS_PROG_DATA */
 
    assert(!(flags & INTEL_RENDERBUFFER_LAYERED));
+   assert(!(flags & INTEL_AUX_BUFFER_DISABLED));
 
    if (rb->TexImage && !brw->has_surface_tile_offset) {
       intel_renderbuffer_get_tile_offsets(irb, &tile_x, &tile_y);
@@ -987,8 +993,10 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
    if (fb->_NumColorDrawBuffers >= 1) {
       for (i = 0; i < fb->_NumColorDrawBuffers; i++) {
          const uint32_t surf_index = render_target_start + i;
-         const int flags =
-            _mesa_geometric_layers(fb) > 0 ? INTEL_RENDERBUFFER_LAYERED : 0;
+         const int flags = (_mesa_geometric_layers(fb) > 0 ?
+                              INTEL_RENDERBUFFER_LAYERED : 0) |
+                           (brw->draw_aux_buffer_disabled[i] ? 
+                              INTEL_AUX_BUFFER_DISABLED : 0);
 
 	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
             surf_offset[surf_index] =
