@@ -30,7 +30,8 @@ MESA_UTIL_FILES :=	\
 	strtod.c \
 	strtod.h \
 	texcompress_rgtc_tmp.h \
-	u_atomic.h
+	u_atomic.h \
+	u_endian.h
 
 MESA_UTIL_GENERATED_FILES = \
 	format_srgb.c
