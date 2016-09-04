@@ -1,4 +1,4 @@
-# Copyright © 2016 Red Hat.
+# Copyright 2016 Red Hat Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,9 +19,17 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-include Makefile.sources
+ADDRLIB_LIBS = addrlib/libamdgpu_addrlib.la
 
-noinst_LTLIBRARIES =
+addrlib_libamdgpu_addrlib_la_CPPFLAGS = \
+	-I$(top_srcdir)/src/ \
+	-I$(srcdir)/common \
+	-I$(srcdir)/addrlib \
+	-I$(srcdir)/addrlib/core \
+	-I$(srcdir)/addrlib/inc/chip/r800 \
+	-I$(srcdir)/addrlib/r800/chip \
+	-DBRAHMA_BUILD=1
 
-EXTRA_DIST = $(COMMON_HEADER_FILES)
-include Makefile.addrlib.am
+noinst_LTLIBRARIES += $(ADDRLIB_LIBS)
+
+addrlib_libamdgpu_addrlib_la_SOURCES = $(ADDRLIB_FILES)

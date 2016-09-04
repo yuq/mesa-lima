@@ -32,7 +32,7 @@
 #ifndef AMDGPU_ID_H
 #define AMDGPU_ID_H
 
-#include "pipe/p_config.h"
+#include "util/u_endian.h"
 
 #if defined(PIPE_ARCH_LITTLE_ENDIAN)
 #define LITTLEENDIAN_CPU

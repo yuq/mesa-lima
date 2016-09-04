@@ -39,7 +39,7 @@
 #include <xf86drm.h>
 #include <stdio.h>
 #include <sys/stat.h>
-#include "amdgpu_id.h"
+#include "amd/common/amdgpu_id.h"
 
 #define CIK_TILE_MODE_COLOR_2D			14
 
