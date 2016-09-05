@@ -286,5 +286,16 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       return false;
 
    build_program_resource_list(ctx, shProg);
+
+   for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
+      struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
+      if (!shader)
+         continue;
+
+      /* The GLSL IR won't be needed anymore. */
+      ralloc_free(shader->ir);
+      shader->ir = NULL;
+   }
+
    return true;
 }
