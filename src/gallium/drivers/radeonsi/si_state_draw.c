@@ -882,9 +882,19 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	struct pipe_index_buffer ib = {};
 	unsigned mask, dirty_fb_counter, dirty_tex_counter, rast_prim;
 
-	if (!info->count && !info->indirect &&
-	    (info->indexed || !info->count_from_stream_output))
-		return;
+	if (likely(!info->indirect)) {
+		/* SI-CI treat instance_count==0 as instance_count==1. There is
+		 * no workaround for indirect draws, but we can at least skip
+		 * direct draws.
+		 */
+		if (unlikely(!info->instance_count))
+			return;
+
+		/* Handle count == 0. */
+		if (unlikely(!info->count &&
+			     (info->indexed || !info->count_from_stream_output)))
+			return;
+	}
 
 	if (!sctx->vs_shader.cso) {
 		assert(0);
