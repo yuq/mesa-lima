@@ -896,22 +896,22 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			return;
 	}
 
-	if (!sctx->vs_shader.cso) {
+	if (unlikely(!sctx->vs_shader.cso)) {
 		assert(0);
 		return;
 	}
-	if (!sctx->ps_shader.cso && (!rs || !rs->rasterizer_discard)) {
+	if (unlikely(!sctx->ps_shader.cso && (!rs || !rs->rasterizer_discard))) {
 		assert(0);
 		return;
 	}
-	if (!!sctx->tes_shader.cso != (info->mode == PIPE_PRIM_PATCHES)) {
+	if (unlikely(!!sctx->tes_shader.cso != (info->mode == PIPE_PRIM_PATCHES))) {
 		assert(0);
 		return;
 	}
 
 	/* Re-emit the framebuffer state if needed. */
 	dirty_fb_counter = p_atomic_read(&sctx->b.screen->dirty_fb_counter);
-	if (dirty_fb_counter != sctx->b.last_dirty_fb_counter) {
+	if (unlikely(dirty_fb_counter != sctx->b.last_dirty_fb_counter)) {
 		sctx->b.last_dirty_fb_counter = dirty_fb_counter;
 		sctx->framebuffer.dirty_cbufs |=
 			((1 << sctx->framebuffer.state.nr_cbufs) - 1);
@@ -921,7 +921,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 	/* Invalidate & recompute texture descriptors if needed. */
 	dirty_tex_counter = p_atomic_read(&sctx->b.screen->dirty_tex_descriptor_counter);
-	if (dirty_tex_counter != sctx->b.last_dirty_tex_descriptor_counter) {
+	if (unlikely(dirty_tex_counter != sctx->b.last_dirty_tex_descriptor_counter)) {
 		sctx->b.last_dirty_tex_descriptor_counter = dirty_tex_counter;
 		si_update_all_texture_descriptors(sctx);
 	}
