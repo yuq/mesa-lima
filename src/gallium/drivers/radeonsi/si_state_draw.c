@@ -553,26 +553,30 @@ static void si_emit_draw_packets(struct si_context *sctx,
 
 	/* draw packet */
 	if (info->indexed) {
-		radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+		if (ib->index_size != sctx->last_index_size) {
+			radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
 
-		/* index type */
-		switch (ib->index_size) {
-		case 1:
-			radeon_emit(cs, V_028A7C_VGT_INDEX_8);
-			break;
-		case 2:
-			radeon_emit(cs, V_028A7C_VGT_INDEX_16 |
-				    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
-					     V_028A7C_VGT_DMA_SWAP_16_BIT : 0));
-			break;
-		case 4:
-			radeon_emit(cs, V_028A7C_VGT_INDEX_32 |
-				    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
-					     V_028A7C_VGT_DMA_SWAP_32_BIT : 0));
-			break;
-		default:
-			assert(!"unreachable");
-			return;
+			/* index type */
+			switch (ib->index_size) {
+			case 1:
+				radeon_emit(cs, V_028A7C_VGT_INDEX_8);
+				break;
+			case 2:
+				radeon_emit(cs, V_028A7C_VGT_INDEX_16 |
+					    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
+						     V_028A7C_VGT_DMA_SWAP_16_BIT : 0));
+				break;
+			case 4:
+				radeon_emit(cs, V_028A7C_VGT_INDEX_32 |
+					    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
+						     V_028A7C_VGT_DMA_SWAP_32_BIT : 0));
+				break;
+			default:
+				assert(!"unreachable");
+				return;
+			}
+
+			sctx->last_index_size = ib->index_size;
 		}
 
 		index_max_size = (ib->buffer->width0 - ib->offset) /
@@ -582,6 +586,12 @@ static void si_emit_draw_packets(struct si_context *sctx,
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      (struct r600_resource *)ib->buffer,
 				      RADEON_USAGE_READ, RADEON_PRIO_INDEX_BUFFER);
+	} else {
+		/* On CI and later, non-indexed draws overwrite VGT_INDEX_TYPE,
+		 * so the state must be re-emitted before the next indexed draw.
+		 */
+		if (sctx->b.chip_class >= CIK)
+			sctx->last_index_size = -1;
 	}
 
 	if (!info->indirect) {

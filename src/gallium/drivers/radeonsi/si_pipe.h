@@ -307,6 +307,7 @@ struct si_context {
 	bool			occlusion_queries_disabled;
 
 	/* Emitted draw state. */
+	int			last_index_size;
 	int			last_base_vertex;
 	int			last_start_instance;
 	int			last_drawid;
