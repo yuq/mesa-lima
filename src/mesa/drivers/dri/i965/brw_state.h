@@ -288,7 +288,7 @@ void brw_update_texture_surface(struct gl_context *ctx,
 
 uint32_t brw_update_renderbuffer_surface(struct brw_context *brw,
                                          struct gl_renderbuffer *rb,
-                                         bool layered, unsigned unit,
+                                         uint32_t flags, unsigned unit,
                                          uint32_t surf_index);
 
 void brw_update_renderbuffer_surfaces(struct brw_context *brw,

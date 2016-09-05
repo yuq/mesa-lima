@@ -54,6 +54,10 @@
 #include "brw_defines.h"
 #include "brw_wm.h"
 
+enum {
+   INTEL_RENDERBUFFER_LAYERED = 1 << 0,
+};
+
 struct surface_state_info {
    unsigned num_dwords;
    unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
@@ -74,7 +78,7 @@ static const struct surface_state_info surface_state_infos[] = {
 
 static void
 brw_emit_surface_state(struct brw_context *brw,
-                       struct intel_mipmap_tree *mt,
+                       struct intel_mipmap_tree *mt, uint32_t flags,
                        GLenum target, struct isl_view view,
                        uint32_t mocs, uint32_t *surf_offset, int surf_index,
                        unsigned read_domains, unsigned write_domains)
@@ -183,7 +187,7 @@ brw_emit_surface_state(struct brw_context *brw,
 uint32_t
 brw_update_renderbuffer_surface(struct brw_context *brw,
                                 struct gl_renderbuffer *rb,
-                                bool layered, unsigned unit /* unused */,
+                                uint32_t flags, unsigned unit /* unused */,
                                 uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -220,7 +224,7 @@ brw_update_renderbuffer_surface(struct brw_context *brw,
    };
 
    uint32_t offset;
-   brw_emit_surface_state(brw, mt, mt->target, view,
+   brw_emit_surface_state(brw, mt, flags, mt->target, view,
                           surface_state_infos[brw->gen].rb_mocs,
                           &offset, surf_index,
                           I915_GEM_DOMAIN_RENDER,
@@ -533,7 +537,8 @@ brw_update_texture_surface(struct gl_context *ctx,
           obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
          view.usage |= ISL_SURF_USAGE_CUBE_BIT;
 
-      brw_emit_surface_state(brw, mt, mt->target, view,
+      const int flags = 0;
+      brw_emit_surface_state(brw, mt, flags, mt->target, view,
                              surface_state_infos[brw->gen].tex_mocs,
                              surf_offset, surf_index,
                              I915_GEM_DOMAIN_SAMPLER, 0);
@@ -865,7 +870,7 @@ brw_emit_null_surface_state(struct brw_context *brw,
 static uint32_t
 gen4_update_renderbuffer_surface(struct brw_context *brw,
                                  struct gl_renderbuffer *rb,
-                                 bool layered, unsigned unit,
+                                 uint32_t flags, unsigned unit,
                                  uint32_t surf_index)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -879,7 +884,7 @@ gen4_update_renderbuffer_surface(struct brw_context *brw,
    mesa_format rb_format = _mesa_get_render_format(ctx, intel_rb_format(irb));
    /* BRW_NEW_FS_PROG_DATA */
 
-   assert(!layered);
+   assert(!(flags & INTEL_RENDERBUFFER_LAYERED));
 
    if (rb->TexImage && !brw->has_surface_tile_offset) {
       intel_renderbuffer_get_tile_offsets(irb, &tile_x, &tile_y);
@@ -982,12 +987,13 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
    if (fb->_NumColorDrawBuffers >= 1) {
       for (i = 0; i < fb->_NumColorDrawBuffers; i++) {
          const uint32_t surf_index = render_target_start + i;
+         const int flags =
+            _mesa_geometric_layers(fb) > 0 ? INTEL_RENDERBUFFER_LAYERED : 0;
 
 	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
             surf_offset[surf_index] =
                brw->vtbl.update_renderbuffer_surface(
-                  brw, fb->_ColorDrawBuffers[i],
-                  _mesa_geometric_layers(fb) > 0, i, surf_index);
+                  brw, fb->_ColorDrawBuffers[i], flags, i, surf_index);
 	 } else {
             brw->vtbl.emit_null_surface_state(brw, w, h, s,
                &surf_offset[surf_index]);
@@ -1099,7 +1105,8 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
                .usage = ISL_SURF_USAGE_TEXTURE_BIT,
             };
 
-            brw_emit_surface_state(brw, irb->mt, target, view,
+            const int flags = 0;
+            brw_emit_surface_state(brw, irb->mt, flags, target, view,
                                    surface_state_infos[brw->gen].tex_mocs,
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER, 0);
@@ -1658,7 +1665,8 @@ update_image_surface(struct brw_context *brw,
 
             const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
 
-            brw_emit_surface_state(brw, mt, mt->target, view,
+            const int flags = 0;
+            brw_emit_surface_state(brw, mt, flags, mt->target, view,
                                    surface_state_infos[brw->gen].tex_mocs,
                                    surf_offset, surf_index,
                                    I915_GEM_DOMAIN_SAMPLER,

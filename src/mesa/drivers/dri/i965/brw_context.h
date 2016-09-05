@@ -747,7 +747,7 @@ struct brw_context
    {
       uint32_t (*update_renderbuffer_surface)(struct brw_context *brw,
                                               struct gl_renderbuffer *rb,
-                                              bool layered, unsigned unit,
+                                              uint32_t flags, unsigned unit,
                                               uint32_t surf_index);
       void (*emit_null_surface_state)(struct brw_context *brw,
                                       unsigned width,
