@@ -711,6 +711,7 @@ struct svga_winsys_screen
 
    boolean have_generate_mipmap_cmd;
    boolean have_set_predication_cmd;
+   boolean have_transfer_from_buffer_cmd;
 };
 
 

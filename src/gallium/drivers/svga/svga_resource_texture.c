@@ -34,6 +34,7 @@
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/u_resource.h"
+#include "util/u_upload_mgr.h"
 
 #include "svga_cmd.h"
 #include "svga_format.h"
@@ -403,11 +404,6 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
    unsigned w, h, nblocksx, nblocksy;
    unsigned usage = st->base.usage;
 
-   if (!surf) {
-      FREE(st);
-      return NULL;
-   }
-
    /* we'll directly access the guest-backed surface */
    w = u_minify(texture->width0, level);
    h = u_minify(texture->height0, level);
@@ -416,13 +412,6 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
    st->hw_nblocksy = nblocksy;
    st->base.stride = nblocksx*util_format_get_blocksize(texture->format);
    st->base.layer_stride = st->base.stride * nblocksy;
-
-   /* If this is the first time mapping to the surface in this
-    * command buffer, clear the dirty masks of this surface.
-    */
-   if (sws->surface_is_flushed(sws, surf)) {
-      svga_clear_texture_dirty(tex);
-   }
 
    if (need_tex_readback(transfer)) {
       enum pipe_error ret;
@@ -525,11 +514,6 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
                                                st->base.box.y,
                                                st->base.box.z);
 
-      if (usage & PIPE_TRANSFER_WRITE) {
-         /* mark this texture level as dirty */
-         svga_set_texture_dirty(tex, st->slice, level);
-      }
-
       return (void *) (map + offset);
    }
 }
@@ -550,12 +534,16 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    struct svga_winsys_screen *sws = svga_screen(pipe->screen)->sws;
    struct svga_texture *tex = svga_texture(texture);
    struct svga_transfer *st;
+   struct svga_winsys_surface *surf = tex->handle;
    boolean use_direct_map = svga_have_gb_objects(svga) &&
                             !svga_have_gb_dma(svga);
-   void *returnVal = NULL;
+   void *map = NULL;
    int64_t begin = svga_get_time(svga);
 
    SVGA_STATS_TIME_PUSH(sws, SVGA_STATS_TIME_TEXTRANSFERMAP);
+
+   if (!surf)
+      goto done;
 
    /* We can't map texture storage directly unless we have GB objects */
    if (usage & PIPE_TRANSFER_MAP_DIRECTLY) {
@@ -596,14 +584,30 @@ svga_texture_transfer_map(struct pipe_context *pipe,
    st->use_direct_map = use_direct_map;
    pipe_resource_reference(&st->base.resource, texture);
 
-   if (use_direct_map) {
-      returnVal = svga_texture_transfer_map_direct(svga, st);
-   }
-   else {
-      returnVal = svga_texture_transfer_map_dma(svga, st);
+   /* If this is the first time mapping to the surface in this
+    * command buffer, clear the dirty masks of this surface.
+    */
+   if (sws->surface_is_flushed(sws, surf)) {
+      svga_clear_texture_dirty(tex);
    }
 
-   if (!returnVal) {
+   if (!use_direct_map) {
+      /* upload to the DMA buffer */
+      map = svga_texture_transfer_map_dma(svga, st);
+   }
+   else {
+      if (svga_texture_transfer_map_can_upload(svga, st)) {
+         /* upload to the texture upload buffer */
+         map = svga_texture_transfer_map_upload(svga, st);
+      }
+
+      if (!map) {
+         /* map directly to the GBS surface */
+         map = svga_texture_transfer_map_direct(svga, st);
+      }
+   }
+
+   if (!map) {
       FREE(st);
    }
    else {
@@ -613,13 +617,18 @@ svga_texture_transfer_map(struct pipe_context *pipe,
          /* record texture upload for HUD */
          svga->hud.num_bytes_uploaded +=
             st->base.layer_stride * st->base.box.depth;
+
+         /* mark this texture level as dirty */
+         svga_set_texture_dirty(tex, st->slice, level);
       }
    }
 
 done:
    svga->hud.map_buffer_time += (svga_get_time(svga) - begin);
    SVGA_STATS_TIME_POP(sws);
-   return returnVal;
+   (void) sws;
+
+   return map;
 }
 
 /**
@@ -732,6 +741,7 @@ svga_texture_transfer_unmap_direct(struct svga_context *svga,
 
    svga_texture_surface_unmap(svga, transfer);
 
+   /* Now send an update command to update the content in the backend. */
    if (st->base.usage & PIPE_TRANSFER_WRITE) {
       struct svga_winsys_surface *surf = tex->handle;
       SVGA3dBox box;
@@ -785,6 +795,7 @@ svga_texture_transfer_unmap_direct(struct svga_context *svga,
          ret = update_image_vgpu9(svga, surf, &box, st->slice, transfer->level);
          assert(ret == PIPE_OK);
       }
+      (void) ret;
    }
 }
 
@@ -800,16 +811,20 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
 
    SVGA_STATS_TIME_PUSH(sws, SVGA_STATS_TIME_TEXTRANSFERUNMAP);
 
-   if (st->use_direct_map) {
-      svga_texture_transfer_unmap_direct(svga, st);
+   if (!st->use_direct_map) {
+      svga_texture_transfer_unmap_dma(svga, st);
+   }
+   else if (st->upload.buf) {
+      svga_texture_transfer_unmap_upload(svga, st);
    }
    else {
-      svga_texture_transfer_unmap_dma(svga, st);
+      svga_texture_transfer_unmap_direct(svga, st);
    }
 
    if (st->base.usage & PIPE_TRANSFER_WRITE) {
       svga->hud.num_resource_updates++;
 
+      /* Mark the texture level as dirty */
       ss->texture_timestamp++;
       svga_age_texture_view(tex, transfer->level);
       if (transfer->resource->target == PIPE_TEXTURE_CUBE)
@@ -821,6 +836,7 @@ svga_texture_transfer_unmap(struct pipe_context *pipe,
    pipe_resource_reference(&st->base.resource, NULL);
    FREE(st);
    SVGA_STATS_TIME_POP(sws);
+   (void) sws;
 }
 
 
@@ -1236,4 +1252,194 @@ svga_texture_generate_mipmap(struct pipe_context *pipe,
    svga->hud.num_generate_mipmap++;
 
    return TRUE;
+}
+
+
+/* texture upload buffer default size in bytes */
+#define TEX_UPLOAD_DEFAULT_SIZE (1024 * 1024)
+
+/**
+ * Create a texture upload buffer
+ */
+boolean
+svga_texture_transfer_map_upload_create(struct svga_context *svga)
+{
+   svga->tex_upload = u_upload_create(&svga->pipe, TEX_UPLOAD_DEFAULT_SIZE,
+                                      0, PIPE_USAGE_STAGING);
+   return svga->tex_upload != NULL;
+}
+
+
+/**
+ * Destroy the texture upload buffer
+ */
+void
+svga_texture_transfer_map_upload_destroy(struct svga_context *svga)
+{
+   u_upload_destroy(svga->tex_upload);
+}
+
+
+/**
+ * Returns true if this transfer map request can use the upload buffer.
+ */
+boolean
+svga_texture_transfer_map_can_upload(struct svga_context *svga,
+                                     struct svga_transfer *st)
+{
+   struct pipe_resource *texture = st->base.resource;
+
+   if (!svga_have_vgpu10(svga))
+      return FALSE;
+
+   if (svga_sws(svga)->have_transfer_from_buffer_cmd == FALSE)
+      return FALSE;
+
+   if (st->base.usage & PIPE_TRANSFER_READ)
+      return FALSE;
+
+   /* TransferFromBuffer command is not well supported with multi-samples surface */
+   if (texture->nr_samples > 1)
+      return FALSE;
+
+   /* Do not use the upload path with compressed format or rgb9_e5 */
+   if (util_format_is_compressed(texture->format) ||
+       texture->format == PIPE_FORMAT_R9G9B9E5_FLOAT)
+      return FALSE;
+
+   return TRUE;
+}
+
+
+/**
+ * Use upload buffer for the transfer map request.
+ */
+void *
+svga_texture_transfer_map_upload(struct svga_context *svga,
+                                 struct svga_transfer *st)
+{
+   struct pipe_resource *texture = st->base.resource;
+   struct pipe_resource *tex_buffer = NULL;
+   void *tex_map;
+   unsigned nblocksx, nblocksy;
+   unsigned offset;
+   unsigned upload_size;
+
+   assert(svga->tex_upload);
+
+   st->upload.box.x = st->base.box.x;
+   st->upload.box.y = st->base.box.y;
+   st->upload.box.z = st->base.box.z;
+   st->upload.box.w = st->base.box.width;
+   st->upload.box.h = st->base.box.height;
+   st->upload.box.d = st->base.box.depth;
+   st->upload.nlayers = 1;
+
+   switch (texture->target) {
+   case PIPE_TEXTURE_CUBE:
+      st->upload.box.z = 0;
+      break;
+   case PIPE_TEXTURE_2D_ARRAY:
+      st->upload.nlayers = st->base.box.depth;
+      st->upload.box.z = 0;
+      st->upload.box.d = 1;
+      break;
+   case PIPE_TEXTURE_1D_ARRAY:
+      st->upload.nlayers = st->base.box.depth;
+      st->upload.box.y = st->upload.box.z = 0;
+      st->upload.box.d = 1;
+      break;
+   default:
+      break;
+   }
+
+   nblocksx = util_format_get_nblocksx(texture->format, st->base.box.width);
+   nblocksy = util_format_get_nblocksy(texture->format, st->base.box.height);
+
+   st->base.stride = nblocksx * util_format_get_blocksize(texture->format);
+   st->base.layer_stride = st->base.stride * nblocksy;
+
+   /* In order to use the TransferFromBuffer command to update the
+    * texture content from the buffer, the layer stride for a multi-layers
+    * surface needs to be in multiples of 16 bytes.
+    */
+   if (st->upload.nlayers > 1 && st->base.layer_stride & 15)
+      return NULL;
+
+   upload_size = st->base.layer_stride * st->base.box.depth;
+   upload_size = align(upload_size, 16);
+
+   /* If the upload size exceeds the default buffer size, the
+    * upload buffer manager code will try to allocate a new buffer
+    * with the new buffer size.
+    */
+   u_upload_alloc(svga->tex_upload, 0, upload_size, 16,
+                  &offset, &tex_buffer, &tex_map);
+
+   if (!tex_map) {
+      return NULL;
+   }
+
+   st->upload.buf = tex_buffer;
+   st->upload.map = tex_map;
+   st->upload.offset = offset;
+
+   return tex_map;
+}
+
+
+/**
+ * Unmap upload map transfer request
+ */
+void
+svga_texture_transfer_unmap_upload(struct svga_context *svga,
+                                   struct svga_transfer *st)
+{
+   struct svga_winsys_surface *srcsurf;
+   struct svga_winsys_surface *dstsurf;
+   struct pipe_resource *texture = st->base.resource;
+   enum pipe_error ret; 
+   unsigned subResource;
+   unsigned numMipLevels;
+   unsigned i, layer;
+   unsigned offset = st->upload.offset;
+
+   assert(svga->tex_upload);
+   assert(st->upload.buf);
+   
+   /* unmap the texture upload buffer */
+   u_upload_unmap(svga->tex_upload);
+
+   srcsurf = svga_buffer_handle(svga, st->upload.buf);
+   dstsurf = svga_texture(texture)->handle;
+   assert(dstsurf);
+
+   numMipLevels = texture->last_level + 1;
+
+   for (i = 0, layer = st->slice; i < st->upload.nlayers; i++, layer++) {
+      subResource = layer * numMipLevels + st->base.level;
+
+      /* send a transferFromBuffer command to update the host texture surface */
+      assert((offset & 15) == 0);
+
+      ret = SVGA3D_vgpu10_TransferFromBuffer(svga->swc, srcsurf,
+                                             offset,
+                                             st->base.stride,
+                                             st->base.layer_stride,
+                                             dstsurf, subResource,
+                                             &st->upload.box);
+      if (ret != PIPE_OK) {
+         svga_context_flush(svga, NULL);
+         ret = SVGA3D_vgpu10_TransferFromBuffer(svga->swc, srcsurf,
+                                                offset,
+                                                st->base.stride,
+                                                st->base.layer_stride,
+                                                dstsurf, subResource,
+                                                &st->upload.box);
+         assert(ret == PIPE_OK);
+      }
+      offset += st->base.layer_stride;
+   }
+
+   pipe_resource_reference(&st->upload.buf, NULL);
 }

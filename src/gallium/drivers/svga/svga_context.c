@@ -102,6 +102,7 @@ static void svga_destroy( struct pipe_context *pipe )
    util_bitmask_destroy(svga->stream_output_id_bm);
    util_bitmask_destroy(svga->query_id_bm);
    u_upload_destroy(svga->const0_upload);
+   svga_texture_transfer_map_upload_destroy(svga);
 
    /* free user's constant buffers */
    for (shader = 0; shader < PIPE_SHADER_TYPES; ++shader) {
@@ -214,6 +215,9 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    if (!svga->const0_upload)
       goto cleanup;
 
+   if (!svga_texture_transfer_map_upload_create(svga))
+      goto cleanup;
+
    /* Avoid shortcircuiting state with initial value of zero.
     */
    memset(&svga->state.hw_clear, 0xcd, sizeof(svga->state.hw_clear));
@@ -279,6 +283,7 @@ cleanup:
 
    if (svga->const0_upload)
       u_upload_destroy(svga->const0_upload);
+   svga_texture_transfer_map_upload_destroy(svga);
    if (svga->hwtnl)
       svga_hwtnl_destroy(svga->hwtnl);
    if (svga->swc)
