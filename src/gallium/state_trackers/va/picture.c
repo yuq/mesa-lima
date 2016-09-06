@@ -322,7 +322,7 @@ handleVAEncMiscParameterTypeRateControl(vlVaContext *context, VAEncMiscParameter
        PIPE_H264_ENC_RATE_CONTROL_METHOD_CONSTANT)
       context->desc.h264enc.rate_ctrl.target_bitrate = rc->bits_per_second;
    else
-      context->desc.h264enc.rate_ctrl.target_bitrate = rc->bits_per_second * rc->target_percentage;
+      context->desc.h264enc.rate_ctrl.target_bitrate = rc->bits_per_second * rc->target_percentage / 100;
    context->desc.h264enc.rate_ctrl.peak_bitrate = rc->bits_per_second;
    if (context->desc.h264enc.rate_ctrl.target_bitrate < 2000000)
       context->desc.h264enc.rate_ctrl.vbv_buffer_size = MIN2((context->desc.h264enc.rate_ctrl.target_bitrate * 2.75), 2000000);

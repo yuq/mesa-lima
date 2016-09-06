@@ -120,7 +120,7 @@ vlVaGetConfigAttributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint en
          value = VA_RT_FORMAT_YUV420;
          break;
       case VAConfigAttribRateControl:
-         value = VA_RC_CQP | VA_RC_CBR;
+         value = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR;
          break;
       default:
          value = VA_ATTRIB_NOT_SUPPORTED;
