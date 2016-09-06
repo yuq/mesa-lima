@@ -175,6 +175,8 @@ public:
 
    virtual void parseDriverInfo(const struct nv50_ir_prog_info *info) {
       threads = info->prop.cp.numThreads;
+      if (threads == 0)
+         threads = info->target >= NVISA_GK104_CHIPSET ? 1024 : 512;
    }
 
    virtual bool runLegalizePass(Program *, CGStage stage) const = 0;
