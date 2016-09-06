@@ -1988,6 +1988,8 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
    for (int i = 0; i < 3; i++)
       linked_shader->info.Comp.LocalSize[i] = 0;
 
+   linked_shader->info.Comp.LocalSizeVariable = false;
+
    /* This function is called for all shader stages, but it only has an effect
     * for compute shaders.
     */
@@ -2022,6 +2024,20 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
             linked_shader->info.Comp.LocalSize[i] =
                shader->info.Comp.LocalSize[i];
          }
+      } else if (shader->info.Comp.LocalSizeVariable) {
+         if (linked_shader->info.Comp.LocalSize[0] != 0) {
+            /* The ARB_compute_variable_group_size spec says:
+             *
+             *     If one compute shader attached to a program declares a
+             *     variable local group size and a second compute shader
+             *     attached to the same program declares a fixed local group
+             *     size, a link-time error results.
+             */
+            linker_error(prog, "compute shader defined with both fixed and "
+                         "variable local group size\n");
+            return;
+         }
+         linked_shader->info.Comp.LocalSizeVariable = true;
       }
    }
 
@@ -2029,12 +2045,17 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->info.Comp.LocalSize[0] == 0) {
-      linker_error(prog, "compute shader didn't declare local size\n");
+   if (linked_shader->info.Comp.LocalSize[0] == 0 &&
+       !linked_shader->info.Comp.LocalSizeVariable) {
+      linker_error(prog, "compute shader must contain a fixed or a variable "
+                         "local group size\n");
       return;
    }
    for (int i = 0; i < 3; i++)
       prog->Comp.LocalSize[i] = linked_shader->info.Comp.LocalSize[i];
+
+   prog->Comp.LocalSizeVariable =
+      linked_shader->info.Comp.LocalSizeVariable;
 }
 
 
