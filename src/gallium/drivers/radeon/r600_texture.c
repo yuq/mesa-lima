@@ -2251,13 +2251,21 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 		    desc->swizzle[i] > PIPE_SWIZZLE_W)
 			continue;
 
-		if (util_format_is_pure_sint(surface_format)) {
+		if (desc->channel[i].pure_integer &&
+		    desc->channel[i].type == UTIL_FORMAT_TYPE_SIGNED) {
+			/* Use the maximum value for clamping the clear color. */
+			int max = u_bit_consecutive(0, desc->channel[i].size - 1);
+
 			values[i] = color->i[i] != 0;
-			if (color->i[i] != 0 && color->i[i] != INT32_MAX)
+			if (color->i[i] != 0 && MIN2(color->i[i], max) != max)
 				return;
-		} else if (util_format_is_pure_uint(surface_format)) {
+		} else if (desc->channel[i].pure_integer &&
+			   desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
+			/* Use the maximum value for clamping the clear color. */
+			unsigned max = u_bit_consecutive(0, desc->channel[i].size);
+
 			values[i] = color->ui[i] != 0U;
-			if (color->ui[i] != 0U && color->ui[i] != UINT32_MAX)
+			if (color->ui[i] != 0U && MIN2(color->ui[i], max) != max)
 				return;
 		} else {
 			values[i] = color->f[i] != 0.0F;
