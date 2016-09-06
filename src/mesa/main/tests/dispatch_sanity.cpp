@@ -942,6 +942,9 @@ const struct function common_desktop_functions_possible[] = {
    { "glDispatchCompute", 43, -1 },
    { "glDispatchComputeIndirect", 43, -1 },
 
+   /* GL_ARB_compute_variable_group_size */
+   { "glDispatchComputeGroupSizeARB", 43, -1 },
+
    /* GL_EXT_polygon_offset_clamp */
    { "glPolygonOffsetClampEXT", 11, -1 },
 

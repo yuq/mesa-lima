@@ -8254,7 +8254,9 @@
     <enum name="QUERY_BUFFER_BARRIER_BIT"           value="0x00008000"/>
 </category>
 
-<!-- ARB extensions 149 - 153 -->
+<!-- ARB extensions 149 - 152 -->
+
+<xi:include href="ARB_compute_variable_group_size.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 
 <xi:include href="ARB_indirect_parameters.xml" xmlns:xi="http://www.w3.org/2001/XInclude"/>
 

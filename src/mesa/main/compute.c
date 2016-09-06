@@ -60,3 +60,11 @@ _mesa_DispatchComputeIndirect(GLintptr indirect)
 
    ctx->Driver.DispatchComputeIndirect(ctx, indirect);
 }
+
+void GLAPIENTRY
+_mesa_DispatchComputeGroupSizeARB(GLuint num_groups_x, GLuint num_groups_y,
+                                  GLuint num_groups_z, GLuint group_size_x,
+                                  GLuint group_size_y, GLuint group_size_z)
+{
+
+}
