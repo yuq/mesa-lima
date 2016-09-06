@@ -1919,11 +1919,44 @@ vtn_handle_ssbo_or_shared_atomic(struct vtn_builder *b, SpvOp opcode,
    */
 
    if (chain->var->mode == vtn_variable_mode_workgroup) {
+      struct vtn_type *type = chain->var->type;
       nir_deref *deref = &vtn_access_chain_to_deref(b, chain)->deref;
       nir_intrinsic_op op = get_shared_nir_atomic_op(opcode);
       atomic = nir_intrinsic_instr_create(b->nb.shader, op);
       atomic->variables[0] = nir_deref_as_var(nir_copy_deref(atomic, deref));
-      fill_common_atomic_sources(b, opcode, w, &atomic->src[0]);
+
+      switch (opcode) {
+      case SpvOpAtomicLoad:
+         atomic->num_components = glsl_get_vector_elements(type->type);
+         break;
+
+      case SpvOpAtomicStore:
+         atomic->num_components = glsl_get_vector_elements(type->type);
+         nir_intrinsic_set_write_mask(atomic, (1 << atomic->num_components) - 1);
+         atomic->src[0] = nir_src_for_ssa(vtn_ssa_value(b, w[4])->def);
+         break;
+
+      case SpvOpAtomicExchange:
+      case SpvOpAtomicCompareExchange:
+      case SpvOpAtomicCompareExchangeWeak:
+      case SpvOpAtomicIIncrement:
+      case SpvOpAtomicIDecrement:
+      case SpvOpAtomicIAdd:
+      case SpvOpAtomicISub:
+      case SpvOpAtomicSMin:
+      case SpvOpAtomicUMin:
+      case SpvOpAtomicSMax:
+      case SpvOpAtomicUMax:
+      case SpvOpAtomicAnd:
+      case SpvOpAtomicOr:
+      case SpvOpAtomicXor:
+         fill_common_atomic_sources(b, opcode, w, &atomic->src[0]);
+         break;
+
+      default:
+         unreachable("Invalid SPIR-V atomic");
+
+      }
    } else {
       assert(chain->var->mode == vtn_variable_mode_ssbo);
       struct vtn_type *type;
