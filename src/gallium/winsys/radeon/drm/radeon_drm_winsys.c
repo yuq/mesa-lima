@@ -35,7 +35,6 @@
 #include "radeon_drm_cs.h"
 #include "radeon_drm_public.h"
 
-#include "pipebuffer/pb_bufmgr.h"
 #include "util/u_memory.h"
 #include "util/u_hash_table.h"
 

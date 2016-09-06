@@ -34,7 +34,6 @@
 #define AMDGPU_BO_H
 
 #include "amdgpu_winsys.h"
-#include "pipebuffer/pb_bufmgr.h"
 
 struct amdgpu_winsys_bo {
    struct pb_buffer base;
