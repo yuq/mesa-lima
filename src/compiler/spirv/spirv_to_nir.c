@@ -1749,8 +1749,8 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       break;
 
    case SpvOpAtomicCompareExchange:
-      intrin->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
-      intrin->src[3] = nir_src_for_ssa(vtn_ssa_value(b, w[6])->def);
+      intrin->src[2] = nir_src_for_ssa(vtn_ssa_value(b, w[8])->def);
+      intrin->src[3] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
       break;
 
    case SpvOpAtomicISub:
