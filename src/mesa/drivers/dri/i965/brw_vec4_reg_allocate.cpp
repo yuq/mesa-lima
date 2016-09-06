@@ -369,6 +369,15 @@ can_use_scratch_for_source(const vec4_instruction *inst, unsigned i,
    return prev_inst_read_scratch_reg;
 }
 
+static inline unsigned
+spill_cost_for_type(enum brw_reg_type type)
+{
+   /* Spilling of a 64-bit register involves emitting 2 32-bit scratch
+    * messages plus the 64b/32b shuffling code.
+    */
+   return type_sz(type) == 8 ? 2.25f : 1.0f;
+}
+
 void
 vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
 {
@@ -395,7 +404,8 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
              * reg for this instruction.
              */
             if (!can_use_scratch_for_source(inst, i, inst->src[i].nr)) {
-               spill_costs[inst->src[i].nr] += loop_scale;
+               spill_costs[inst->src[i].nr] +=
+                  loop_scale * spill_cost_for_type(inst->src[i].type);
                if (inst->src[i].reladdr ||
                    inst->src[i].offset >= REG_SIZE)
                   no_spill[inst->src[i].nr] = true;
@@ -423,7 +433,8 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
       }
 
       if (inst->dst.file == VGRF && !no_spill[inst->dst.nr]) {
-         spill_costs[inst->dst.nr] += loop_scale;
+         spill_costs[inst->dst.nr] +=
+            loop_scale * spill_cost_for_type(inst->dst.type);
          if (inst->dst.reladdr || inst->dst.offset >= REG_SIZE)
             no_spill[inst->dst.nr] = true;
 
