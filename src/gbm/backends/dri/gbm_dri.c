@@ -949,7 +949,7 @@ gbm_dri_bo_map(struct gbm_bo *_bo,
       return *map_data;
    }
 
-   if (!dri->image || dri->image->base.version < 12) {
+   if (!dri->image || dri->image->base.version < 12 || !dri->image->mapImage) {
       errno = ENOSYS;
       return NULL;
    }
@@ -980,7 +980,8 @@ gbm_dri_bo_unmap(struct gbm_bo *_bo, void *map_data)
       return;
    }
 
-   if (!dri->context || !dri->image || dri->image->base.version < 12)
+   if (!dri->context || !dri->image ||
+       dri->image->base.version < 12 || !dri->image->unmapImage)
       return;
 
    dri->image->unmapImage(dri->context, bo->image, map_data);
