@@ -24,6 +24,7 @@
 #include "slab.h"
 #include "macros.h"
 #include "simple_list.h"
+#include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
 
