@@ -497,6 +497,7 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
          state->in_qualifier->flags.q.local_size == 0;
 
       valid_in_mask.flags.q.local_size = 7;
+      valid_in_mask.flags.q.local_size_variable = 1;
       break;
    default:
       _mesa_glsl_error(loc, state,
@@ -573,6 +574,10 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
       this->point_mode = q.point_mode;
    }
 
+   if (q.flags.q.local_size_variable) {
+      state->cs_input_local_size_variable_specified = true;
+   }
+
    if (create_node) {
       if (create_gs_ast) {
          node = new(mem_ctx) ast_gs_input_layout(*loc, q.prim_type);
@@ -607,7 +612,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     "%s '%s':"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                     message, name,
                     bad.flags.q.invariant ? " invariant" : "",
                     bad.flags.q.precise ? " precise" : "",
@@ -646,6 +651,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     bad.flags.q.prim_type ? " prim_type" : "",
                     bad.flags.q.max_vertices ? " max_vertices" : "",
                     bad.flags.q.local_size ? " local_size" : "",
+                    bad.flags.q.local_size_variable ? " local_size_variable" : "",
                     bad.flags.q.early_fragment_tests ? " early_fragment_tests" : "",
                     bad.flags.q.explicit_image_format ? " image_format" : "",
                     bad.flags.q.coherent ? " coherent" : "",

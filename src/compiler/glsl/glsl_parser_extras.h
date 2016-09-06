@@ -405,6 +405,12 @@ struct _mesa_glsl_parse_state {
    unsigned cs_input_local_size[3];
 
    /**
+    * True if a compute shader input local variable size was specified using
+    * a layout directive as specified by ARB_compute_variable_group_size.
+    */
+   bool cs_input_local_size_variable_specified;
+
+   /**
     * Output layout qualifiers from GLSL 1.50 (geometry shader controls),
     * and GLSL 4.00 (tessellation control shader).
     */

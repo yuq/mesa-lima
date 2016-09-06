@@ -297,6 +297,8 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
           sizeof(this->atomic_counter_offsets));
    this->allow_extension_directive_midshader =
       ctx->Const.AllowGLSLExtensionDirectiveMidShader;
+
+   this->cs_input_local_size_variable_specified = false;
 }
 
 /**
@@ -1676,6 +1678,7 @@ set_shader_inout_layout(struct gl_shader *shader,
    if (shader->Stage != MESA_SHADER_COMPUTE) {
       /* Should have been prevented by the parser. */
       assert(!state->cs_input_local_size_specified);
+      assert(!state->cs_input_local_size_variable_specified);
    }
 
    if (shader->Stage != MESA_SHADER_FRAGMENT) {
@@ -1791,6 +1794,9 @@ set_shader_inout_layout(struct gl_shader *shader,
          for (int i = 0; i < 3; i++)
             shader->info.Comp.LocalSize[i] = 0;
       }
+
+      shader->info.Comp.LocalSizeVariable =
+         state->cs_input_local_size_variable_specified;
       break;
 
    case MESA_SHADER_FRAGMENT:
