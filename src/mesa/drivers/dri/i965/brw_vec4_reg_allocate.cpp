@@ -436,6 +436,18 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
          if (type_sz(inst->dst.type) == 8 && inst->exec_size != 8)
             no_spill[inst->dst.nr] = true;
 
+         /* FROM_DOUBLE opcodes are setup so that they use a dst register
+          * with a size of 2 even if they only produce a single-precison
+          * result (this is so that the opcode can use the larger register to
+          * produce a 64-bit aligned intermediary result as required by the
+          * hardware during the conversion process). This creates a problem for
+          * spilling though, because when we attempt to emit a spill for the
+          * dst we see a 32-bit destination and emit a scratch write that
+          * allocates a single spill register.
+          */
+         if (inst->opcode == VEC4_OPCODE_FROM_DOUBLE)
+            no_spill[inst->dst.nr] = true;
+
          /* We can't spill registers that mix 32-bit and 64-bit access (that
           * contain 64-bit data that is operated on via 32-bit instructions)
           */
