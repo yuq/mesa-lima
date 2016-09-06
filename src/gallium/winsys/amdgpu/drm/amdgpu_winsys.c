@@ -368,6 +368,12 @@ fail:
    return false;
 }
 
+static void do_winsys_deinit(struct amdgpu_winsys *ws)
+{
+   AddrDestroy(ws->addrlib);
+   amdgpu_device_deinitialize(ws->dev);
+}
+
 static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
 {
    struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
@@ -378,8 +384,7 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
    pipe_mutex_destroy(ws->bo_fence_lock);
    pb_cache_deinit(&ws->bo_cache);
    pipe_mutex_destroy(ws->global_bo_list_lock);
-   AddrDestroy(ws->addrlib);
-   amdgpu_device_deinitialize(ws->dev);
+   do_winsys_deinit(ws);
    FREE(rws);
 }
 
