@@ -42,6 +42,7 @@
 #include "common/simdintrin.h"
 #include "core/threads.h"
 #include "ringbuffer.h"
+#include "archrast/archrast.h"
 
 // x.8 fixed point precision values
 #define FIXED_POINT_SHIFT 8
@@ -515,15 +516,30 @@ struct SWR_CONTEXT
 #define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.statsFE.name += count; }
 
 // ArchRast instrumentation framework
-#ifdef KNOB_ENABLE_AR
-#define AR_WORKER_CTX  pDC->pContext->pArContext[workerId]
-#define AR_API_CTX     pDC->pContext->pArContext[pContext->NumWorkerThreads]
+#define AR_WORKER_CTX  pContext->pArContext[workerId]
+#define AR_API_CTX     pContext->pArContext[pContext->NumWorkerThreads]
 
-#define AR_BEGIN(ctx, type, id)    ArchRast::dispatch(ctx, ArchRast::Start(ArchRast::type, id))
-#define AR_END(ctx, type, count)   ArchRast::dispatch(ctx, ArchRast::End(ArchRast::type, count))
-#define AR_EVENT(ctx, event)       ArchRast::dispatch(ctx, ArchRast::event)
+#ifdef KNOB_ENABLE_AR
+    #define _AR_BEGIN(ctx, type, id)    ArchRast::dispatch(ctx, ArchRast::Start(ArchRast::type, id))
+    #define _AR_END(ctx, type, count)   ArchRast::dispatch(ctx, ArchRast::End(ArchRast::type, count))
+    #define _AR_EVENT(ctx, event)       ArchRast::dispatch(ctx, ArchRast::event)
 #else
-#define AR_BEGIN(ctx, type, id)
-#define AR_END(ctx, type, id)
-#define AR_EVENT(ctx, event)
+    #ifdef KNOB_ENABLE_RDTSC
+        #define _AR_BEGIN(ctx, type, id) (void)ctx; RDTSC_START(type)
+        #define _AR_END(ctx, type, id)   RDTSC_STOP(type, id, 0)
+    #else
+        #define _AR_BEGIN(ctx, type, id) (void)ctx
+        #define _AR_END(ctx, type, id)
+    #endif
+    #define _AR_EVENT(ctx, event)
 #endif
+
+// Use these macros for api thread.
+#define AR_API_BEGIN(type, id) _AR_BEGIN(AR_API_CTX, type, id)
+#define AR_API_END(type, count) _AR_END(AR_API_CTX, type, count)
+#define AR_API_EVENT(event) _AR_EVENT(AR_API_CTX, event)
+
+// Use these macros for worker threads.
+#define AR_BEGIN(type, id) _AR_BEGIN(AR_WORKER_CTX, type, id)
+#define AR_END(type, count) _AR_END(AR_WORKER_CTX, type, count)
+#define AR_EVENT(event) _AR_EVENT(AR_WORKER_CTX, event)

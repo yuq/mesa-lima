@@ -501,6 +501,10 @@ public:
     // execute the clipper stage
     void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
     {
+        SWR_ASSERT(pa.pDC != nullptr);
+
+        SWR_CONTEXT *pContext = pa.pDC->pContext;
+
         // set up binner based on PA state
         PFN_PROCESS_PRIMS pfnBinner;
         switch (pa.binTopology)
@@ -548,11 +552,11 @@ public:
 
         if (clipMask)
         {
-            RDTSC_START(FEGuardbandClip);
+            AR_BEGIN(FEGuardbandClip, pa.pDC->drawId);
             // we have to clip tris, execute the clipper, which will also
             // call the binner
             ClipSimd(vMask(primMask), vMask(clipMask), pa, primId, viewportIdx);
-            RDTSC_STOP(FEGuardbandClip, 1, 0);
+            AR_END(FEGuardbandClip, 1);
         }
         else if (validMask)
         {

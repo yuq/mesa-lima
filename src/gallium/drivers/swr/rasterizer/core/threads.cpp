@@ -501,7 +501,7 @@ void WorkOnFifoBE(
             {
                 BE_WORK *pWork;
 
-                RDTSC_START(WorkerFoundWork);
+                AR_BEGIN(WorkerFoundWork, pDC->drawId);
 
                 uint32_t numWorkItems = tile->getNumQueued();
                 SWR_ASSERT(numWorkItems);
@@ -510,7 +510,7 @@ void WorkOnFifoBE(
                 SWR_ASSERT(pWork);
                 if (pWork->type == DRAW)
                 {
-                    pContext->pHotTileMgr->InitializeHotTiles(pContext, pDC, tileID);
+                    pContext->pHotTileMgr->InitializeHotTiles(pContext, pDC, workerId, tileID);
                 }
 
                 while ((pWork = tile->peek()) != nullptr)
@@ -518,7 +518,7 @@ void WorkOnFifoBE(
                     pWork->pfnWork(pDC, workerId, tileID, &pWork->desc);
                     tile->dequeue();
                 }
-                RDTSC_STOP(WorkerFoundWork, numWorkItems, pDC->drawId);
+                AR_END(WorkerFoundWork, numWorkItems);
 
                 _ReadWriteBarrier();
 
@@ -735,12 +735,12 @@ DWORD workerThreadMain(LPVOID pData)
                 break;
             }
 
-            RDTSC_START(WorkerWaitForThreadEvent);
+            AR_BEGIN(WorkerWaitForThreadEvent, 0);
 
             pContext->FifosNotEmpty.wait(lock);
             lock.unlock();
 
-            RDTSC_STOP(WorkerWaitForThreadEvent, 0, 0);
+            AR_END(WorkerWaitForThreadEvent, 0);
 
             if (pContext->threadPool.inThreadShutdown)
             {
@@ -750,9 +750,9 @@ DWORD workerThreadMain(LPVOID pData)
 
         if (IsBEThread)
         {
-            RDTSC_START(WorkerWorkOnFifoBE);
+            AR_BEGIN(WorkerWorkOnFifoBE, 0);
             WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles, numaNode, numaMask);
-            RDTSC_STOP(WorkerWorkOnFifoBE, 0, 0);
+            AR_END(WorkerWorkOnFifoBE, 0);
 
             WorkOnCompute(pContext, workerId, curDrawBE);
         }

@@ -130,7 +130,7 @@ void ProcessStoreTiles(
     uint32_t workerId,
     void *pUserData)
 {
-    RDTSC_START(FEProcessStoreTiles);
+    AR_BEGIN(FEProcessStoreTiles, pDC->drawId);
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
     STORE_TILES_DESC* pDesc = (STORE_TILES_DESC*)pUserData;
 
@@ -155,7 +155,7 @@ void ProcessStoreTiles(
         }
     }
 
-    RDTSC_STOP(FEProcessStoreTiles, 0, pDC->drawId);
+    AR_END(FEProcessStoreTiles, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -171,7 +171,7 @@ void ProcessDiscardInvalidateTiles(
     uint32_t workerId,
     void *pUserData)
 {
-    RDTSC_START(FEProcessInvalidateTiles);
+    AR_BEGIN(FEProcessInvalidateTiles, pDC->drawId);
     DISCARD_INVALIDATE_TILES_DESC *pDesc = (DISCARD_INVALIDATE_TILES_DESC*)pUserData;
     MacroTileMgr *pTileMgr = pDC->pTileMgr;
 
@@ -210,7 +210,7 @@ void ProcessDiscardInvalidateTiles(
         }
     }
 
-    RDTSC_STOP(FEProcessInvalidateTiles, 0, pDC->drawId);
+    AR_END(FEProcessInvalidateTiles, 0);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -542,7 +542,9 @@ static void StreamOut(
     uint32_t* pPrimData,
     uint32_t streamIndex)
 {
-    RDTSC_START(FEStreamout);
+    SWR_CONTEXT *pContext = pDC->pContext;
+
+    AR_BEGIN(FEStreamout, pDC->drawId);
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_STREAMOUT_STATE &soState = state.soState;
@@ -615,7 +617,7 @@ static void StreamOut(
     UPDATE_STAT_FE(SoPrimStorageNeeded[streamIndex], soContext.numPrimStorageNeeded);
     UPDATE_STAT_FE(SoNumPrimsWritten[streamIndex], soContext.numPrimsWritten);
 
-    RDTSC_STOP(FEStreamout, 1, 0);
+    AR_END(FEStreamout, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -698,7 +700,9 @@ static void GeometryShaderStage(
     uint32_t* pSoPrimData,
     simdscalari primID)
 {
-    RDTSC_START(FEGeometryShader);
+    SWR_CONTEXT *pContext = pDC->pContext;
+
+    AR_BEGIN(FEGeometryShader, pDC->drawId);
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_GS_STATE* pState = &state.gsState;
@@ -895,7 +899,7 @@ static void GeometryShaderStage(
     UPDATE_STAT_FE(GsInvocations, numInputPrims * pState->instanceCount);
     UPDATE_STAT_FE(GsPrimitives, totalPrimsGenerated);
 
-    RDTSC_STOP(FEGeometryShader, 1, 0);
+    AR_END(FEGeometryShader, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -990,6 +994,7 @@ static void TessellationStages(
     uint32_t* pSoPrimData,
     simdscalari primID)
 {
+    SWR_CONTEXT *pContext = pDC->pContext;
     const API_STATE& state = GetApiState(pDC);
     const SWR_TS_STATE& tsState = state.tsState;
 
@@ -1053,9 +1058,9 @@ static void TessellationStages(
     hsContext.mask = GenerateMask(numPrims);
 
     // Run the HS
-    RDTSC_START(FEHullShader);
+    AR_BEGIN(FEHullShader, pDC->drawId);
     state.pfnHsFunc(GetPrivateState(pDC), &hsContext);
-    RDTSC_STOP(FEHullShader, 0, 0);
+    AR_END(FEHullShader, 0);
 
     UPDATE_STAT_FE(HsInvocations, numPrims);
 
@@ -1065,9 +1070,9 @@ static void TessellationStages(
     {
         // Run Tessellator
         SWR_TS_TESSELLATED_DATA tsData = { 0 };
-        RDTSC_START(FETessellation);
+        AR_BEGIN(FETessellation, pDC->drawId);
         TSTessellate(tsCtx, hsContext.pCPout[p].tessFactors, tsData);
-        RDTSC_STOP(FETessellation, 0, 0);
+        AR_END(FETessellation, 0);
 
         if (tsData.NumPrimitives == 0)
         {
@@ -1107,9 +1112,9 @@ static void TessellationStages(
         {
             dsContext.mask = GenerateMask(tsData.NumDomainPoints - dsInvocations);
 
-            RDTSC_START(FEDomainShader);
+            AR_BEGIN(FEDomainShader, pDC->drawId);
             state.pfnDsFunc(GetPrivateState(pDC), &dsContext);
-            RDTSC_STOP(FEDomainShader, 0, 0);
+            AR_END(FEDomainShader, 0);
 
             dsInvocations += KNOB_SIMD_WIDTH;
         }
@@ -1142,12 +1147,12 @@ static void TessellationStages(
                 if (HasRastT::value)
                 {
                     simdvector prim[3]; // Only deal with triangles, lines, or points
-                    RDTSC_START(FEPAAssemble);
+                    AR_BEGIN(FEPAAssemble, pDC->drawId);
 #if SWR_ENABLE_ASSERTS
                     bool assemble =
 #endif
                         tessPa.Assemble(VERTEX_POSITION_SLOT, prim);
-                    RDTSC_STOP(FEPAAssemble, 1, 0);
+                    AR_END(FEPAAssemble, 1);
                     SWR_ASSERT(assemble);
 
                     SWR_ASSERT(pfnClipFunc);
@@ -1196,7 +1201,7 @@ void ProcessDraw(
     }
 #endif
 
-    RDTSC_START(FEProcessDraw);
+    AR_BEGIN(FEProcessDraw, pDC->drawId);
 
     DRAW_WORK&          work = *(DRAW_WORK*)pUserData;
     const API_STATE&    state = GetApiState(pDC);
@@ -1334,9 +1339,9 @@ void ProcessDraw(
             {
 
                 // 1. Execute FS/VS for a single SIMD.
-                RDTSC_START(FEFetchShader);
+                AR_BEGIN(FEFetchShader, pDC->drawId);
                 state.pfnFetchFunc(fetchInfo, vin);
-                RDTSC_STOP(FEFetchShader, 0, 0);
+                AR_END(FEFetchShader, 0);
 
                 // forward fetch generated vertex IDs to the vertex shader
                 vsContext.VertexID = fetchInfo.VertexID;
@@ -1356,9 +1361,9 @@ void ProcessDraw(
                 if (!KNOB_TOSS_FETCH)
 #endif
                 {
-                    RDTSC_START(FEVertexShader);
+                    AR_BEGIN(FEVertexShader, pDC->drawId);
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext);
-                    RDTSC_STOP(FEVertexShader, 0, 0);
+                    AR_END(FEVertexShader, 0);
 
                     UPDATE_STAT_FE(VsInvocations, GetNumInvocations(i, endVertex));
                 }
@@ -1369,9 +1374,9 @@ void ProcessDraw(
             {
                 simdvector prim[MAX_NUM_VERTS_PER_PRIM];
                 // PaAssemble returns false if there is not enough verts to assemble.
-                RDTSC_START(FEPAAssemble);
+                AR_BEGIN(FEPAAssemble, pDC->drawId);
                 bool assemble = pa.Assemble(VERTEX_POSITION_SLOT, prim);
-                RDTSC_STOP(FEPAAssemble, 1, 0);
+                AR_END(FEPAAssemble, 1);
 
 #if KNOB_ENABLE_TOSS_POINTS
                 if (!KNOB_TOSS_FETCH)
@@ -1428,7 +1433,7 @@ void ProcessDraw(
         pa.Reset();
     }
 
-    RDTSC_STOP(FEProcessDraw, numPrims * work.numInstances, pDC->drawId);
+    AR_END(FEProcessDraw, numPrims * work.numInstances);
 }
 
 struct FEDrawChooser
@@ -1787,7 +1792,9 @@ void BinTriangles(
     simdscalari primID,
     simdscalari viewportIdx)
 {
-    RDTSC_START(FEBinTriangles);
+    SWR_CONTEXT *pContext = pDC->pContext;
+
+    AR_BEGIN(FEBinTriangles, pDC->drawId);
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
@@ -2168,7 +2175,7 @@ void BinTriangles(
     }
 
 endBinTriangles:
-    RDTSC_STOP(FEBinTriangles, 1, 0);
+    AR_END(FEBinTriangles, 1);
 }
 
 struct FEBinTrianglesChooser
@@ -2204,7 +2211,9 @@ void BinPoints(
     simdscalari primID,
     simdscalari viewportIdx)
 {
-    RDTSC_START(FEBinPoints);
+    SWR_CONTEXT *pContext = pDC->pContext;
+
+    AR_BEGIN(FEBinPoints, pDC->drawId);
 
     simdvector& primVerts = prim[0];
 
@@ -2519,10 +2528,7 @@ void BinPoints(
         }
     }
 
-
-
-    
-    RDTSC_STOP(FEBinPoints, 1, 0);
+    AR_END(FEBinPoints, 1);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -2542,7 +2548,9 @@ void BinLines(
     simdscalari primID,
     simdscalari viewportIdx)
 {
-    RDTSC_START(FEBinLines);
+    SWR_CONTEXT *pContext = pDC->pContext;
+
+    AR_BEGIN(FEBinLines, pDC->drawId);
 
     const API_STATE& state = GetApiState(pDC);
     const SWR_RASTSTATE& rastState = state.rastState;
@@ -2765,5 +2773,5 @@ void BinLines(
 
 endBinLines:
 
-    RDTSC_STOP(FEBinLines, 1, 0);
+    AR_END(FEBinLines, 1);
 }

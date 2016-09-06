@@ -291,7 +291,7 @@ public:
         }
     }
 
-    void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID);
+    void InitializeHotTiles(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroID);
 
     HOTTILE *GetHotTile(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC, uint32_t macroID, SWR_RENDERTARGET_ATTACHMENT attachment, bool create, uint32_t numSamples = 1,
         uint32_t renderTargetArrayIndex = 0);

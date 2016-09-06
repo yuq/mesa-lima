@@ -758,7 +758,7 @@ INLINE bool TrivialAcceptTest<std::false_type>(const int mask0, const int mask1,
 template <typename RT, typename ValidEdgeMaskT, typename InputCoverageT>
 struct GenerateSVInnerCoverage
 {
-    INLINE GenerateSVInnerCoverage(DRAW_CONTEXT*, EDGE*, double*,  uint64_t &){};
+    INLINE GenerateSVInnerCoverage(DRAW_CONTEXT*, uint32_t, EDGE*, double*,  uint64_t &){};
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -768,8 +768,10 @@ struct GenerateSVInnerCoverage
 template <typename RT>
 struct GenerateSVInnerCoverage<RT, AllEdgesValidT, InnerConservativeCoverageT>
 {
-    INLINE GenerateSVInnerCoverage(DRAW_CONTEXT* pDC, EDGE* pRastEdges, double* pStartQuadEdges,  uint64_t &innerCoverageMask)
+    INLINE GenerateSVInnerCoverage(DRAW_CONTEXT* pDC, uint32_t workerId, EDGE* pRastEdges, double* pStartQuadEdges,  uint64_t &innerCoverageMask)
     {
+        SWR_CONTEXT *pContext = pDC->pContext;
+
         double startQuadEdgesAdj[RT::NumEdgesT::value];
         for(uint32_t e = 0; e < RT::NumEdgesT::value; ++e)
         {
@@ -777,9 +779,9 @@ struct GenerateSVInnerCoverage<RT, AllEdgesValidT, InnerConservativeCoverageT>
         }
 
         // not trivial accept or reject, must rasterize full tile
-        RDTSC_START(BERasterizePartial);
+        AR_BEGIN(BERasterizePartial, pDC->drawId);
         innerCoverageMask = rasterizePartialTile<RT::NumEdgesT::value, typename RT::ValidEdgeMaskT>(pDC, startQuadEdgesAdj, pRastEdges);
-        RDTSC_STOP(BERasterizePartial, 0, 0);
+        AR_END(BERasterizePartial, 0);
     }
 };
 
@@ -835,6 +837,7 @@ struct UpdateEdgeMasksInnerConservative<RT, ValidEdgeMaskT, InnerConservativeCov
 template <typename RT>
 void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile, void* pDesc)
 {
+    SWR_CONTEXT *pContext = pDC->pContext;
     const TRIANGLE_WORK_DESC &workDesc = *((TRIANGLE_WORK_DESC*)pDesc);
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
@@ -842,9 +845,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         return;
     }
 #endif
-    RDTSC_START(BERasterizeTriangle);
+    AR_BEGIN(BERasterizeTriangle, pDC->drawId);
+    AR_BEGIN(BETriangleSetup, pDC->drawId);
 
-    RDTSC_START(BETriangleSetup);
     const API_STATE &state = GetApiState(pDC);
     const SWR_RASTSTATE &rastState = state.rastState;
     const BACKEND_FUNCS& backendFuncs = pDC->pState->backendFuncs;
@@ -1009,7 +1012,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
 
     SWR_ASSERT(intersect.xmin <= intersect.xmax && intersect.ymin <= intersect.ymax && intersect.xmin >= 0 && intersect.xmax >= 0 && intersect.ymin >= 0 && intersect.ymax >= 0);
 
-    RDTSC_STOP(BETriangleSetup, 0, pDC->drawId);
+    AR_END(BETriangleSetup, 0);
 
     // update triangle desc
     uint32_t minTileX = intersect.xmin >> (KNOB_TILE_X_DIM_SHIFT + FIXED_POINT_SHIFT);
@@ -1022,11 +1025,11 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
     if (numTilesX == 0 || numTilesY == 0) 
     {
         RDTSC_EVENT(BEEmptyTriangle, 1, 0);
-        RDTSC_STOP(BERasterizeTriangle, 1, 0);
+        AR_END(BERasterizeTriangle, 1);
         return;
     }
 
-    RDTSC_START(BEStepSetup);
+    AR_BEGIN(BEStepSetup, pDC->drawId);
 
     // Step to pixel center of top-left pixel of the triangle bbox
     // Align intersect bbox (top/left) to raster tile's (top/left).
@@ -1134,7 +1137,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         }
     }
 
-    RDTSC_STOP(BEStepSetup, 0, pDC->drawId);
+    AR_END(BEStepSetup, 0);
 
     uint32_t tY = minTileY;
     uint32_t tX = minTileX;
@@ -1226,14 +1229,14 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                         }
 
                         // not trivial accept or reject, must rasterize full tile
-                        RDTSC_START(BERasterizePartial);
+                        AR_BEGIN(BERasterizePartial, pDC->drawId);
                         triDesc.coverageMask[sampleNum] = rasterizePartialTile<RT::NumEdgesT::value, typename RT::ValidEdgeMaskT>(pDC, startQuadEdges, rastEdges);
-                        RDTSC_STOP(BERasterizePartial, 0, 0);
+                        AR_END(BERasterizePartial, 0);
 
                         triDesc.anyCoveredSamples |= triDesc.coverageMask[sampleNum]; 
                         
                         // Output SV InnerCoverage, if needed
-                        GenerateSVInnerCoverage<RT, typename RT::ValidEdgeMaskT, typename RT::InputCoverageT>(pDC, rastEdges, startQuadEdges, triDesc.innerCoverageMask);
+                        GenerateSVInnerCoverage<RT, typename RT::ValidEdgeMaskT, typename RT::InputCoverageT>(pDC, workerId, rastEdges, startQuadEdges, triDesc.innerCoverageMask);
                     }
                 }
                 else
@@ -1264,9 +1267,9 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
                     UnrollerL<1, RT::MT::numSamples, 1>::step(copyCoverage);
                 }
 
-                RDTSC_START(BEPixelBackend);
+                AR_BEGIN(BEPixelBackend, pDC->drawId);
                 backendFuncs.pfnBackend(pDC, workerId, tileX << KNOB_TILE_X_DIM_SHIFT, tileY << KNOB_TILE_Y_DIM_SHIFT, triDesc, renderBuffers);
-                RDTSC_STOP(BEPixelBackend, 0, 0);
+                AR_END(BEPixelBackend, 0);
             }
 
             // step to the next tile in X
@@ -1285,7 +1288,7 @@ void RasterizeTriangle(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t macroTile,
         StepRasterTileY<RT>(state.psState.numRenderTargets, renderBuffers, currentRenderBufferRow);
     }
 
-    RDTSC_STOP(BERasterizeTriangle, 1, 0);
+    AR_END(BERasterizeTriangle, 1);
 }
 
 void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)
@@ -1420,6 +1423,8 @@ void RasterizeTriPoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile,
 
 void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void* pData)
 {
+    SWR_CONTEXT *pContext = pDC->pContext;
+
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
     {
@@ -1475,9 +1480,9 @@ void RasterizeSimplePoint(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTi
     GetRenderHotTiles(pDC, macroTile, tileAlignedX >> KNOB_TILE_X_DIM_SHIFT , tileAlignedY >> KNOB_TILE_Y_DIM_SHIFT, 
         renderBuffers, triDesc.triFlags.renderTargetArrayIndex);
 
-    RDTSC_START(BEPixelBackend);
+    AR_BEGIN(BEPixelBackend, pDC->drawId);
     backendFuncs.pfnBackend(pDC, workerId, tileAlignedX, tileAlignedY, triDesc, renderBuffers);
-    RDTSC_STOP(BEPixelBackend, 0, 0);
+    AR_END(BEPixelBackend, 0);
 }
 
 // Get pointers to hot tile memory for color RT, depth, stencil
@@ -1561,6 +1566,7 @@ INLINE void StepRasterTileY(uint32_t NumRT, RenderOutputBuffers &buffers, Render
 
 void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
 {
+    SWR_CONTEXT *pContext = pDC->pContext;
     const TRIANGLE_WORK_DESC &workDesc = *((TRIANGLE_WORK_DESC*)pData);
 #if KNOB_ENABLE_TOSS_POINTS
     if (KNOB_TOSS_BIN_TRIS)
@@ -1570,7 +1576,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
 #endif
 
     // bloat line to two tris and call the triangle rasterizer twice
-    RDTSC_START(BERasterizeLine);
+    AR_BEGIN(BERasterizeLine, pDC->drawId);
 
     const API_STATE &state = GetApiState(pDC);
     const SWR_RASTSTATE &rastState = state.rastState;
@@ -1763,7 +1769,7 @@ void RasterizeLine(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, voi
         pfnTriRast(pDC, workerId, macroTile, (void*)&newWorkDesc);
     }
 
-    RDTSC_STOP(BERasterizeLine, 1, 0);
+    AR_END(BERasterizeLine, 1);
 }
 
 struct RasterizerChooser

@@ -432,15 +432,17 @@ INLINE uint32_t GetNumOMSamples(SWR_MULTISAMPLE_COUNT blendSampleCount)
 template<typename T>
 struct PixelRateZTestLoop
 {
-    PixelRateZTestLoop(DRAW_CONTEXT *DC, const SWR_TRIANGLE_DESC &Work, const BarycentricCoeffs& Coeffs, const API_STATE& apiState, 
+    PixelRateZTestLoop(DRAW_CONTEXT *DC, uint32_t _workerId, const SWR_TRIANGLE_DESC &Work, const BarycentricCoeffs& Coeffs, const API_STATE& apiState,
                        uint8_t*& depthBase, uint8_t*& stencilBase, const uint8_t ClipDistanceMask) :
-                       work(Work), coeffs(Coeffs), state(apiState), psState(apiState.psState),
+                       pDC(DC), workerId(_workerId), work(Work), coeffs(Coeffs), state(apiState), psState(apiState.psState),
                        clipDistanceMask(ClipDistanceMask), pDepthBase(depthBase), pStencilBase(stencilBase) {};
            
     INLINE
     uint32_t operator()(simdscalar& activeLanes, SWR_PS_CONTEXT& psContext, 
                         const CORE_BUCKETS BEDepthBucket, uint32_t currentSimdIn8x8 = 0)
     {
+        SWR_CONTEXT *pContext = pDC->pContext;
+
         uint32_t statCount = 0;
         simdscalar anyDepthSamplePassed = _simd_setzero_ps();
         for(uint32_t sample = 0; sample < T::MultisampleT::numCoverageSamples; sample++)
@@ -454,7 +456,7 @@ struct PixelRateZTestLoop
                 continue;
             }
 
-            RDTSC_START(BEBarycentric);
+            AR_BEGIN(BEBarycentric, pDC->drawId);
             // calculate per sample positions
             psContext.vX.sample = _simd_add_ps(psContext.vX.UL, T::MultisampleT::vX(sample));
             psContext.vY.sample = _simd_add_ps(psContext.vY.UL, T::MultisampleT::vY(sample));
@@ -472,7 +474,7 @@ struct PixelRateZTestLoop
                 vZ[sample] = vplaneps(coeffs.vZa, coeffs.vZb, coeffs.vZc, psContext.vI.sample, psContext.vJ.sample);
                 vZ[sample] = state.pfnQuantizeDepth(vZ[sample]);
             }
-            RDTSC_STOP(BEBarycentric, 0, 0);
+            AR_END(BEBarycentric, 0);
 
             ///@todo: perspective correct vs non-perspective correct clipping?
             // if clip distances are enabled, we need to interpolate for each sample
@@ -488,13 +490,14 @@ struct PixelRateZTestLoop
             uint8_t * pStencilSample = pStencilBase + RasterTileStencilOffset(sample);
 
             // ZTest for this sample
-            RDTSC_START(BEDepthBucket);
+            ///@todo Need to uncomment out this bucket.
+            //AR_BEGIN(BEDepthBucket, pDC->drawId);
             depthPassMask[sample] = vCoverageMask[sample];
             stencilPassMask[sample] = vCoverageMask[sample];
             depthPassMask[sample] = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                                      vZ[sample], pDepthSample, vCoverageMask[sample], 
                                                      pStencilSample, &stencilPassMask[sample]);
-            RDTSC_STOP(BEDepthBucket, 0, 0);
+            //AR_END(BEDepthBucket, 0);
 
             // early-exit if no pixels passed depth or earlyZ is forced on
             if(psState.forceEarlyZ || !_simd_movemask_ps(depthPassMask[sample]))
@@ -525,6 +528,9 @@ struct PixelRateZTestLoop
 
 private:
     // functor inputs
+    DRAW_CONTEXT* pDC;
+    uint32_t workerId;
+
     const SWR_TRIANGLE_DESC& work;
     const BarycentricCoeffs& coeffs;
     const API_STATE& state;
