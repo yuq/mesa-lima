@@ -527,17 +527,15 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
 
    /* Create a new winsys. */
    ws = CALLOC_STRUCT(amdgpu_winsys);
-   if (!ws) {
-      pipe_mutex_unlock(dev_tab_mutex);
-      return NULL;
-   }
+   if (!ws)
+      goto fail;
 
    ws->dev = dev;
    ws->info.drm_major = drm_major;
    ws->info.drm_minor = drm_minor;
 
    if (!do_winsys_init(ws, fd))
-      goto fail;
+      goto fail_alloc;
 
    /* Create managers. */
    pb_cache_init(&ws->bo_cache, 500000, ws->check_vm ? 1.0f : 2.0f, 0,
@@ -587,9 +585,9 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
 
    return &ws->base;
 
+fail_alloc:
+   FREE(ws);
 fail:
    pipe_mutex_unlock(dev_tab_mutex);
-   pb_cache_deinit(&ws->bo_cache);
-   FREE(ws);
    return NULL;
 }
