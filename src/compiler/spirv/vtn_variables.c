@@ -1026,21 +1026,17 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       break;
    }
 
-   /* Now we handle decorations that apply to a particular nir_variable */
-   nir_variable *nir_var = vtn_var->var;
    if (val->value_type == vtn_value_type_access_chain) {
       assert(val->access_chain->length == 0);
       assert(val->access_chain->var == void_var);
       assert(member == -1);
    } else {
       assert(val->value_type == vtn_value_type_type);
-      if (member != -1)
-         nir_var = vtn_var->members[member];
    }
 
-   /* Location is odd in that it can apply in three different cases: To a
-    * non-split variable, to a whole split variable, or to one structure
-    * member of a split variable.
+   /* Location is odd.  If applied to a split structure, we have to walk the
+    * whole thing and accumulate the location.  It's easier to handle as a
+    * special case.
     */
    if (dec->decoration == SpvDecorationLocation) {
       unsigned location = dec->literals[0];
@@ -1061,10 +1057,10 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          assert(!"Location must be on input or output variable");
       }
 
-      if (nir_var) {
+      if (vtn_var->var) {
          /* This handles the member and lone variable cases */
-         nir_var->data.location = location;
-         nir_var->data.explicit_location = true;
+         vtn_var->var->data.location = location;
+         vtn_var->var->data.explicit_location = true;
       } else {
          /* This handles the structure member case */
          assert(vtn_var->members);
@@ -1079,12 +1075,30 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          }
       }
       return;
+   } else {
+      if (vtn_var->var) {
+         assert(member <= 0);
+         apply_var_decoration(b, vtn_var->var, dec);
+      } else if (vtn_var->members) {
+         if (member >= 0) {
+            assert(vtn_var->members);
+            apply_var_decoration(b, vtn_var->members[member], dec);
+         } else {
+            unsigned length =
+               glsl_get_length(glsl_without_array(vtn_var->type->type));
+            for (unsigned i = 0; i < length; i++)
+               apply_var_decoration(b, vtn_var->members[i], dec);
+         }
+      } else {
+         /* A few variables, those with external storage, have no actual
+          * nir_variables associated with them.  Fortunately, all decorations
+          * we care about for those variables are on the type only.
+          */
+         assert(vtn_var->mode == vtn_variable_mode_ubo ||
+                vtn_var->mode == vtn_variable_mode_ssbo ||
+                vtn_var->mode == vtn_variable_mode_push_constant);
+      }
    }
-
-   if (nir_var == NULL)
-      return;
-
-   apply_var_decoration(b, nir_var, dec);
 }
 
 /* Tries to compute the size of an interface block based on the strides and
