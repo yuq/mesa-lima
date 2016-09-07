@@ -2503,10 +2503,6 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			if (rctx->screen->debug_flags & DBG_NO_DCC_CLEAR)
 				continue;
 
-			/* We can change the micro tile mode before a full clear. */
-			if (rctx->screen->chip_class >= SI)
-				si_set_optimal_micro_tile_mode(rctx->screen, tex);
-
 			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,
 							  color, &reset_value,
 							  &clear_words_needed))
@@ -2533,10 +2529,6 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				continue;
 			}
 
-			/* We can change the micro tile mode before a full clear. */
-			if (rctx->screen->chip_class >= SI)
-				si_set_optimal_micro_tile_mode(rctx->screen, tex);
-
 			/* Do the fast clear. */
 			rctx->clear_buffer(&rctx->b, &tex->cmask_buffer->b.b,
 					   tex->cmask.offset, tex->cmask.size, 0,
@@ -2544,6 +2536,10 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 			tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
 		}
+
+		/* We can change the micro tile mode before a full clear. */
+		if (rctx->screen->chip_class >= SI)
+			si_set_optimal_micro_tile_mode(rctx->screen, tex);
 
 		evergreen_set_clear_color(tex, fb->cbufs[i]->format, color);
 
