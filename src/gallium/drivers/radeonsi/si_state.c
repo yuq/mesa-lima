@@ -3441,7 +3441,6 @@ void si_init_state_functions(struct si_context *sctx)
 	si_init_external_atom(sctx, &sctx->b.scissors.atom, &sctx->atoms.s.scissors);
 	si_init_external_atom(sctx, &sctx->b.viewports.atom, &sctx->atoms.s.viewports);
 
-	si_init_atom(sctx, &sctx->cache_flush, &sctx->atoms.s.cache_flush, si_emit_cache_flush);
 	si_init_atom(sctx, &sctx->framebuffer.atom, &sctx->atoms.s.framebuffer, si_emit_framebuffer_state);
 	si_init_atom(sctx, &sctx->msaa_sample_locs.atom, &sctx->atoms.s.msaa_sample_locs, si_emit_msaa_sample_locs);
 	si_init_atom(sctx, &sctx->db_render_state, &sctx->atoms.s.db_render_state, si_emit_db_render_state);

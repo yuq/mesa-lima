@@ -124,7 +124,6 @@ union si_state {
 union si_state_atoms {
 	struct {
 		/* The order matters. */
-		struct r600_atom *cache_flush;
 		struct r600_atom *render_cond;
 		struct r600_atom *streamout_begin;
 		struct r600_atom *streamout_enable; /* must be after streamout_begin */
@@ -343,7 +342,7 @@ void si_destroy_shader_cache(struct si_screen *sscreen);
 void si_init_shader_selector_async(void *job, int thread_index);
 
 /* si_state_draw.c */
-void si_emit_cache_flush(struct si_context *sctx, struct r600_atom *atom);
+void si_emit_cache_flush(struct si_context *sctx);
 void si_ce_pre_draw_synchronization(struct si_context *sctx);
 void si_ce_post_draw_synchronization(struct si_context *sctx);
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *dinfo);

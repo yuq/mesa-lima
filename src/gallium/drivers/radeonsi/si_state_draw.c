@@ -706,7 +706,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 }
 
-void si_emit_cache_flush(struct si_context *sctx, struct r600_atom *atom)
+void si_emit_cache_flush(struct si_context *sctx)
 {
 	struct r600_common_context *rctx = &sctx->b;
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
@@ -1029,10 +1029,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		r600_resource(info->indirect_params)->TC_L2_dirty = false;
 	}
 
-	/* Check flush flags. */
-	if (sctx->b.flags)
-		si_mark_atom_dirty(sctx, sctx->atoms.s.cache_flush);
-
 	/* Add buffer sizes for memory checking in need_cs_space. */
 	if (sctx->emit_scratch_reloc && sctx->scratch_buffer)
 		r600_context_add_resource_size(ctx, &sctx->scratch_buffer->b.b);
@@ -1047,6 +1043,10 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	 */
 	if (!si_upload_vertex_buffer_descriptors(sctx))
 		return;
+
+	/* Flushed caches prior to emitting states. */
+	if (sctx->b.flags)
+		si_emit_cache_flush(sctx);
 
 	/* Emit states. */
 	mask = sctx->dirty_atoms;

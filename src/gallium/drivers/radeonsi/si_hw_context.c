@@ -115,7 +115,7 @@ void si_context_gfx_flush(void *context, unsigned flags,
 		ctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2 |
 				SI_CONTEXT_INV_VMEM_L1;
 
-	si_emit_cache_flush(ctx, NULL);
+	si_emit_cache_flush(ctx);
 
 	if (ctx->trace_buf)
 		si_trace_emit(ctx);

@@ -474,7 +474,7 @@ static void si_launch_grid(
 		si_initialize_compute(sctx);
 
 	if (sctx->b.flags)
-		si_emit_cache_flush(sctx, NULL);
+		si_emit_cache_flush(sctx);
 
 	if (!si_switch_compute_shader(sctx, program, &program->shader, info->pc))
 		return;

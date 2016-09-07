@@ -170,7 +170,7 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	 * Also wait for the previous CP DMA operations.
 	 */
 	if (sctx->b.flags) {
-		si_emit_cache_flush(sctx, NULL);
+		si_emit_cache_flush(sctx);
 		*flags |= SI_CP_DMA_RAW_WAIT;
 	}
 
