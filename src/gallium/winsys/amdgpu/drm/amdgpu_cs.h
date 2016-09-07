@@ -47,7 +47,6 @@ struct amdgpu_cs_buffer {
    struct amdgpu_winsys_bo *bo;
    uint64_t priority_usage;
    enum radeon_bo_usage usage;
-   enum radeon_bo_domain domains;
 };
 
 enum ib_type {

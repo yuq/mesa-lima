@@ -292,8 +292,9 @@ int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *
 }
 
 static int
-amdgpu_lookup_or_add_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo)
+amdgpu_lookup_or_add_buffer(struct amdgpu_cs *acs, struct amdgpu_winsys_bo *bo)
 {
+   struct amdgpu_cs_context *cs = acs->csc;
    struct amdgpu_cs_buffer *buffer;
    unsigned hash;
    int idx = amdgpu_lookup_buffer(cs, bo);
@@ -347,34 +348,12 @@ amdgpu_lookup_or_add_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_b
    hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
    cs->buffer_indices_hashlist[hash] = idx;
 
+   if (bo->initial_domain & RADEON_DOMAIN_VRAM)
+      acs->main.base.used_vram += bo->base.size;
+   else if (bo->initial_domain & RADEON_DOMAIN_GTT)
+      acs->main.base.used_gart += bo->base.size;
+
    return idx;
-}
-
-static unsigned amdgpu_add_buffer(struct amdgpu_cs *acs,
-                                 struct amdgpu_winsys_bo *bo,
-                                 enum radeon_bo_usage usage,
-                                 enum radeon_bo_domain domains,
-                                 unsigned priority,
-                                 enum radeon_bo_domain *added_domains)
-{
-   struct amdgpu_cs_context *cs = acs->csc;
-   struct amdgpu_cs_buffer *buffer;
-   int i = amdgpu_lookup_or_add_buffer(cs, bo);
-
-   assert(priority < 64);
-
-   if (i < 0) {
-      *added_domains = 0;
-      return ~0;
-   }
-
-   buffer = &cs->buffers[i];
-   buffer->priority_usage |= 1llu << priority;
-   buffer->usage |= usage;
-   *added_domains = domains & ~buffer->domains;
-   buffer->domains |= domains;
-   cs->flags[i] = MAX2(cs->flags[i], priority / 4);
-   return i;
 }
 
 static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
@@ -386,17 +365,19 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    /* Don't use the "domains" parameter. Amdgpu doesn't support changing
     * the buffer placement during command submission.
     */
-   struct amdgpu_cs *cs = amdgpu_cs(rcs);
+   struct amdgpu_cs *acs = amdgpu_cs(rcs);
+   struct amdgpu_cs_context *cs = acs->csc;
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
-   enum radeon_bo_domain added_domains;
-   unsigned index = amdgpu_add_buffer(cs, bo, usage, bo->initial_domain,
-                                     priority, &added_domains);
+   struct amdgpu_cs_buffer *buffer;
+   int index = amdgpu_lookup_or_add_buffer(acs, bo);
 
-   if (added_domains & RADEON_DOMAIN_VRAM)
-      cs->main.base.used_vram += bo->base.size;
-   else if (added_domains & RADEON_DOMAIN_GTT)
-      cs->main.base.used_gart += bo->base.size;
+   if (index < 0)
+      return 0;
 
+   buffer = &cs->buffers[index];
+   buffer->priority_usage |= 1llu << priority;
+   buffer->usage |= usage;
+   cs->flags[index] = MAX2(cs->flags[index], priority / 4);
    return index;
 }
 
