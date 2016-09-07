@@ -190,7 +190,7 @@ static boolean r300_setup_atoms(struct r300_context* r300)
     /* VAP. */
     R300_INIT_ATOM(viewport_state, 9);
     R300_INIT_ATOM(pvs_flush, 2);
-    R300_INIT_ATOM(vap_invariant_state, is_r500 ? 11 : 9);
+    R300_INIT_ATOM(vap_invariant_state, is_r500 || !has_tcl ? 11 : 9);
     R300_INIT_ATOM(vertex_stream_state, 0);
     R300_INIT_ATOM(vs_state, 0);
     R300_INIT_ATOM(vs_constants, 0);
@@ -314,6 +314,14 @@ static void r300_init_states(struct pipe_context *pipe)
 
         if (r300->screen->caps.is_r500) {
             OUT_CB_REG(R500_VAP_TEX_TO_COLOR_CNTL, 0);
+        } else if (!r300->screen->caps.has_tcl) {
+            /* RSxxx:
+             * Static VAP setup since r300_emit_vs_state() is never called.
+             */
+            OUT_CB_REG(R300_VAP_CNTL, R300_PVS_NUM_SLOTS(10) |
+                                      R300_PVS_NUM_CNTLRS(5) |
+                                      R300_PVS_NUM_FPUS(2) |
+                                      R300_PVS_VF_MAX_VTX_NUM(5));
         }
         END_CB;
     }
