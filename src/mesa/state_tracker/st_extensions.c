@@ -1196,6 +1196,28 @@ void st_init_extensions(struct pipe_screen *screen,
          extensions->ARB_compute_shader =
                                       extensions->ARB_shader_image_load_store &&
                                       extensions->ARB_shader_atomic_counters;
+
+         if (extensions->ARB_compute_shader) {
+            uint64_t max_variable_threads_per_block = 0;
+
+            screen->get_compute_param(screen, PIPE_SHADER_IR_TGSI,
+                                      PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK,
+                                      &max_variable_threads_per_block);
+
+            for (i = 0; i < 3; i++) {
+               /* Clamp the values to avoid having a local work group size
+                * greater than the maximum number of invocations.
+                */
+               consts->MaxComputeVariableGroupSize[i] =
+                  MIN2(consts->MaxComputeWorkGroupSize[i],
+                       max_variable_threads_per_block);
+            }
+            consts->MaxComputeVariableGroupInvocations =
+               max_variable_threads_per_block;
+
+            extensions->ARB_compute_variable_group_size =
+               max_variable_threads_per_block > 0;
+         }
       }
    }
 
