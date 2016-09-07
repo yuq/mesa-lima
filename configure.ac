@@ -1466,6 +1466,10 @@ if test "$have_sysfs" = yes; then
     have_pci_id=yes
 fi
 
+if test "$have_libdrm" = yes; then
+    have_pci_id=yes
+fi
+
 # This is outside the case (above) so that it is invoked even for non-GLX
 # builds.
 AM_CONDITIONAL(HAVE_XF86VIDMODE, test "x$HAVE_XF86VIDMODE" = xyes)
@@ -1575,7 +1579,7 @@ if test "x$enable_dri" = xyes; then
         fi
 
         if test "x$have_pci_id" != xyes; then
-            AC_MSG_ERROR([libudev-dev or sysfs required for building DRI])
+            AC_MSG_ERROR([libudev-dev, sysfs or libdrm >= $LIBDRM_REQUIRED required for building DRI])
         fi
 
         case "$host_cpu" in
@@ -1793,7 +1797,7 @@ if test "x$enable_gbm" = xauto; then
 fi
 if test "x$enable_gbm" = xyes; then
     if test "x$need_pci_id$have_pci_id" = xyesno; then
-        AC_MSG_ERROR([gbm requires udev >= $LIBUDEV_REQUIRED or sysfs])
+        AC_MSG_ERROR([gbm requires udev >= $LIBUDEV_REQUIRED, sysfs or libdrm >= $LIBDRM_REQUIRED])
     fi
 
     if test "x$enable_dri" = xyes; then
@@ -2110,7 +2114,7 @@ for plat in $egl_platforms; do
 
         case "$plat$need_pci_id$have_pci_id" in
                 waylandyesno|drmyesno)
-                    AC_MSG_ERROR([cannot build $plat platform without udev >= $LIBUDEV_REQUIRED or sysfs]) ;;
+                    AC_MSG_ERROR([cannot build $plat platform without udev >= $LIBUDEV_REQUIRED, sysfs or libdrm >= $LIBDRM_REQUIRED]) ;;
         esac
 done
 
@@ -2348,7 +2352,7 @@ gallium_require_llvm() {
 
 gallium_require_drm_loader() {
     if test "x$need_pci_id$have_pci_id" = xyesno; then
-        AC_MSG_ERROR([Gallium drm loader requires libudev >= $LIBUDEV_REQUIRED or sysfs])
+        AC_MSG_ERROR([Gallium drm loader requires libudev >= $LIBUDEV_REQUIRED, sysfs or libdrm >= $LIBDRM_REQUIRED])
     fi
 }
 
