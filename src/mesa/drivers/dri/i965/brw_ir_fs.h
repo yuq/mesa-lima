@@ -192,6 +192,20 @@ reg_offset(const fs_reg &r)
 }
 
 /**
+ * Return the amount of padding in bytes left unused between individual
+ * components of register \p r due to a (horizontal) stride value greater than
+ * one, or zero if components are tightly packed in the register file.
+ */
+static inline unsigned
+reg_padding(const fs_reg &r)
+{
+   const unsigned stride = ((r.file != ARF && r.file != FIXED_GRF) ? r.stride :
+                            r.hstride == 0 ? 0 :
+                            1 << (r.hstride - 1));
+   return (MAX2(1, stride) - 1) * type_sz(r.type);
+}
+
+/**
  * Return whether the register region starting at \p r and spanning \p dr
  * bytes could potentially overlap the register region starting at \p s and
  * spanning \p ds bytes.
@@ -423,7 +437,9 @@ regs_written(const fs_inst *inst)
 {
    /* XXX - Take into account register-misaligned offsets correctly. */
    assert(inst->dst.file != UNIFORM && inst->dst.file != IMM);
-   return DIV_ROUND_UP(inst->size_written, REG_SIZE);
+   return DIV_ROUND_UP(inst->size_written -
+                       MIN2(inst->size_written, reg_padding(inst->dst)),
+                       REG_SIZE);
 }
 
 /**
@@ -438,7 +454,9 @@ regs_read(const fs_inst *inst, unsigned i)
    /* XXX - Take into account register-misaligned offsets correctly. */
    const unsigned reg_size =
       inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 4 : REG_SIZE;
-   return DIV_ROUND_UP(inst->size_read(i), reg_size);
+   return DIV_ROUND_UP(inst->size_read(i) -
+                       MIN2(inst->size_read(i), reg_padding(inst->src[i])),
+                       reg_size);
 }
 
 #endif
