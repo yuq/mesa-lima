@@ -55,12 +55,12 @@ fs_visitor::dead_code_eliminate()
          if (inst->dst.file == VGRF && !inst->has_side_effects()) {
             bool result_live = false;
 
-            if (inst->regs_written == 1) {
+            if (regs_written(inst) == 1) {
                int var = live_intervals->var_from_reg(inst->dst);
                result_live = BITSET_TEST(live, var);
             } else {
                int var = live_intervals->var_from_reg(inst->dst);
-               for (int i = 0; i < inst->regs_written; i++) {
+               for (unsigned i = 0; i < regs_written(inst); i++) {
                   result_live = result_live || BITSET_TEST(live, var + i);
                }
             }
@@ -96,7 +96,7 @@ fs_visitor::dead_code_eliminate()
          if (inst->dst.file == VGRF) {
             if (!inst->is_partial_write()) {
                int var = live_intervals->var_from_reg(inst->dst);
-               for (int i = 0; i < inst->regs_written; i++) {
+               for (unsigned i = 0; i < regs_written(inst); i++) {
                   BITSET_CLEAR(live, var + i);
                }
             }
@@ -114,7 +114,7 @@ fs_visitor::dead_code_eliminate()
             if (inst->src[i].file == VGRF) {
                int var = live_intervals->var_from_reg(inst->src[i]);
 
-               for (int j = 0; j < inst->regs_read(i); j++) {
+               for (unsigned j = 0; j < regs_read(inst, i); j++) {
                   BITSET_SET(live, var + j);
                }
             }

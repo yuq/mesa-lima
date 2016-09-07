@@ -190,7 +190,7 @@ fs_visitor::register_coalesce()
             dst_reg_offset[i] = i;
          }
          mov[0] = inst;
-         channels_remaining -= inst->regs_written;
+         channels_remaining -= regs_written(inst);
       } else {
          const int offset = inst->src[0].offset / REG_SIZE;
          if (mov[offset]) {
@@ -207,7 +207,7 @@ fs_visitor::register_coalesce()
          if (inst->regs_written > 1)
             dst_reg_offset[offset + 1] = inst->dst.offset / REG_SIZE + 1;
          mov[offset] = inst;
-         channels_remaining -= inst->regs_written;
+         channels_remaining -= regs_written(inst);
       }
 
       if (channels_remaining)

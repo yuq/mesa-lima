@@ -118,7 +118,7 @@ fs_live_variables::setup_def_use()
             if (reg.file != VGRF)
                continue;
 
-            for (int j = 0; j < inst->regs_read(i); j++) {
+            for (unsigned j = 0; j < regs_read(inst, i); j++) {
                setup_one_read(bd, inst, ip, reg);
                reg.offset += REG_SIZE;
             }
@@ -129,7 +129,7 @@ fs_live_variables::setup_def_use()
          /* Set def[] for this instruction */
          if (inst->dst.file == VGRF) {
             fs_reg reg = inst->dst;
-            for (int j = 0; j < inst->regs_written; j++) {
+            for (unsigned j = 0; j < regs_written(inst); j++) {
                setup_one_write(bd, inst, ip, reg);
                reg.offset += REG_SIZE;
             }

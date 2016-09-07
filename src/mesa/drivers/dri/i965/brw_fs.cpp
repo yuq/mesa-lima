@@ -1772,13 +1772,13 @@ fs_visitor::split_virtual_grfs()
    foreach_block_and_inst(block, fs_inst, inst, cfg) {
       if (inst->dst.file == VGRF) {
          int reg = vgrf_to_reg[inst->dst.nr] + inst->dst.offset / REG_SIZE;
-         for (int j = 1; j < inst->regs_written; j++)
+         for (unsigned j = 1; j < regs_written(inst); j++)
             split_points[reg + j] = false;
       }
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file == VGRF) {
             int reg = vgrf_to_reg[inst->src[i].nr] + inst->src[i].offset / REG_SIZE;
-            for (int j = 1; j < inst->regs_read(i); j++)
+            for (unsigned j = 1; j < regs_read(inst, i); j++)
                split_points[reg + j] = false;
          }
       }
@@ -2611,7 +2611,7 @@ fs_visitor::opt_register_renaming()
          if (remap[dst] == -1) {
             remap[dst] = dst;
          } else {
-            remap[dst] = alloc.allocate(inst->regs_written);
+            remap[dst] = alloc.allocate(regs_written(inst));
             inst->dst.nr = remap[dst];
             progress = true;
          }
@@ -2727,7 +2727,7 @@ fs_visitor::compute_to_mrf()
        * regs_left bitset keeps track of the registers we haven't yet found a
        * generating instruction for.
        */
-      unsigned regs_left = (1 << inst->regs_read(0)) - 1;
+      unsigned regs_left = (1 << regs_read(inst, 0)) - 1;
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
@@ -2819,7 +2819,7 @@ fs_visitor::compute_to_mrf()
       /* Found all generating instructions of our MRF's source value, so it
        * should be safe to rewrite them to point to the MRF directly.
        */
-      regs_left = (1 << inst->regs_read(0)) - 1;
+      regs_left = (1 << regs_read(inst, 0)) - 1;
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
@@ -3086,7 +3086,7 @@ void
 fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
                                                         fs_inst *inst)
 {
-   int write_len = inst->regs_written;
+   int write_len = regs_written(inst);
    int first_write_grf = inst->dst.nr;
    bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
@@ -3119,7 +3119,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
        * dependency has more latency than a MOV.
        */
       if (scan_inst->dst.file == VGRF) {
-         for (int i = 0; i < scan_inst->regs_written; i++) {
+         for (unsigned i = 0; i < regs_written(scan_inst); i++) {
             int reg = scan_inst->dst.nr + i;
 
             if (reg >= first_write_grf &&
@@ -3157,7 +3157,7 @@ fs_visitor::insert_gen4_pre_send_dependency_workarounds(bblock_t *block,
 void
 fs_visitor::insert_gen4_post_send_dependency_workarounds(bblock_t *block, fs_inst *inst)
 {
-   int write_len = inst->regs_written;
+   int write_len = regs_written(inst);
    int first_write_grf = inst->dst.nr;
    bool needs_dep[BRW_MAX_MRF(devinfo->gen)];
    assert(write_len < (int)sizeof(needs_dep) - 1);
@@ -3800,7 +3800,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
       /* Send from the GRF */
       fs_reg payload = fs_reg(VGRF, -1, BRW_REGISTER_TYPE_F);
       load = bld.LOAD_PAYLOAD(payload, sources, length, payload_header_size);
-      payload.nr = bld.shader->alloc.allocate(load->regs_written);
+      payload.nr = bld.shader->alloc.allocate(regs_written(load));
       load->dst = payload;
 
       inst->src[0] = payload;
@@ -3821,7 +3821,7 @@ lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
    }
 
    inst->opcode = FS_OPCODE_FB_WRITE;
-   inst->mlen = load->regs_written;
+   inst->mlen = regs_written(load);
    inst->header_size = header_size;
 }
 
@@ -4069,7 +4069,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
                                 unsigned grad_components)
 {
    const gen_device_info *devinfo = bld.shader->devinfo;
-   int reg_width = bld.dispatch_width() / 8;
+   unsigned reg_width = bld.dispatch_width() / 8;
    unsigned header_size = 0, length = 0;
    fs_reg sources[MAX_SAMPLER_MESSAGE_SIZE];
    for (unsigned i = 0; i < ARRAY_SIZE(sources); i++)
@@ -4097,9 +4097,9 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
        * and we have an explicit header, we need to set up the sampler
        * writemask.  It's reversed from normal: 1 means "don't write".
        */
-      if (!inst->eot && inst->regs_written != 4 * reg_width) {
-         assert((inst->regs_written % reg_width) == 0);
-         unsigned mask = ~((1 << (inst->regs_written / reg_width)) - 1) & 0xf;
+      if (!inst->eot && regs_written(inst) != 4 * reg_width) {
+         assert(regs_written(inst) % reg_width == 0);
+         unsigned mask = ~((1 << (regs_written(inst) / reg_width)) - 1) & 0xf;
          inst->offset |= mask << 12;
       }
    }

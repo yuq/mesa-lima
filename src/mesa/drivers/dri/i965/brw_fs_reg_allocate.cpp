@@ -362,9 +362,9 @@ void fs_visitor::calculate_payload_ranges(int payload_node_count,
             if (node_nr >= payload_node_count)
                continue;
 
-            for (int j = 0; j < inst->regs_read(i); j++) {
+            for (unsigned j = 0; j < regs_read(inst, i); j++) {
                payload_last_use_ip[node_nr + j] = use_ip;
-               assert(node_nr + j < payload_node_count);
+               assert(node_nr + j < unsigned(payload_node_count));
             }
          }
       }
@@ -903,10 +903,10 @@ fs_visitor::spill_reg(int spill_reg)
       for (unsigned int i = 0; i < inst->sources; i++) {
 	 if (inst->src[i].file == VGRF &&
              inst->src[i].nr == spill_reg) {
-            int regs_read = inst->regs_read(i);
+            int count = regs_read(inst, i);
             int subset_spill_offset = spill_offset +
                ROUND_DOWN_TO(inst->src[i].offset, REG_SIZE);
-            fs_reg unspill_dst(VGRF, alloc.allocate(regs_read));
+            fs_reg unspill_dst(VGRF, alloc.allocate(count));
 
             inst->src[i].nr = unspill_dst.nr;
             inst->src[i].offset %= REG_SIZE;
@@ -916,7 +916,7 @@ fs_visitor::spill_reg(int spill_reg)
              * hardware) up to the maximum supported block size.
              */
             const unsigned width =
-               MIN2(32, 1u << (ffs(MAX2(1, regs_read) * 8) - 1));
+               MIN2(32, 1u << (ffs(MAX2(1, count) * 8) - 1));
 
             /* Set exec_all() on unspill messages under the (rather
              * pessimistic) assumption that there is no one-to-one
@@ -926,7 +926,7 @@ fs_visitor::spill_reg(int spill_reg)
              * unspill destination is a block-local temporary.
              */
             emit_unspill(ibld.exec_all().group(width, 0),
-                         unspill_dst, subset_spill_offset, regs_read);
+                         unspill_dst, subset_spill_offset, count);
 	 }
       }
 
@@ -934,7 +934,7 @@ fs_visitor::spill_reg(int spill_reg)
           inst->dst.nr == spill_reg) {
          int subset_spill_offset = spill_offset +
             ROUND_DOWN_TO(inst->dst.offset, REG_SIZE);
-         fs_reg spill_src(VGRF, alloc.allocate(inst->regs_written));
+         fs_reg spill_src(VGRF, alloc.allocate(regs_written(inst)));
 
          inst->dst.nr = spill_src.nr;
          inst->dst.offset %= REG_SIZE;
@@ -971,19 +971,19 @@ fs_visitor::spill_reg(int spill_reg)
          const fs_builder ubld = ibld.exec_all(!per_channel).group(width, 0);
 
 	 /* If our write is going to affect just part of the
-          * inst->regs_written(), then we need to unspill the destination
-          * since we write back out all of the regs_written().  If the
-          * original instruction had force_writemask_all set and is not a
-          * partial write, there should be no need for the unspill since the
+          * regs_written(inst), then we need to unspill the destination since
+          * we write back out all of the regs_written().  If the original
+          * instruction had force_writemask_all set and is not a partial
+          * write, there should be no need for the unspill since the
           * instruction will be overwriting the whole destination in any case.
 	  */
          if (inst->is_partial_write() ||
              (!inst->force_writemask_all && !per_channel))
             emit_unspill(ubld, spill_src, subset_spill_offset,
-                         inst->regs_written);
+                         regs_written(inst));
 
          emit_spill(ubld.at(block, inst->next), spill_src,
-                    subset_spill_offset, inst->regs_written);
+                    subset_spill_offset, regs_written(inst));
       }
    }
 

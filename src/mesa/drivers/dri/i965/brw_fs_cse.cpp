@@ -199,8 +199,8 @@ instructions_match(fs_inst *a, fs_inst *b, bool *negate)
 static void
 create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
 {
-   int written = inst->regs_written;
-   int dst_width =
+   unsigned written = regs_written(inst);
+   unsigned dst_width =
       DIV_ROUND_UP(inst->dst.component_size(inst->exec_size), REG_SIZE);
    fs_inst *copy;
 
@@ -234,7 +234,7 @@ create_copy_instr(const fs_builder &bld, fs_inst *inst, fs_reg src, bool negate)
       copy->force_writemask_all = inst->force_writemask_all;
       copy->src[0].negate = negate;
    }
-   assert(copy->regs_written == written);
+   assert(regs_written(copy) == written);
 }
 
 bool
@@ -284,7 +284,7 @@ fs_visitor::opt_cse_local(bblock_t *block)
             if (no_existing_temp && !entry->generator->dst.is_null()) {
                const fs_builder ibld = fs_builder(this, block, entry->generator)
                                        .at(block, entry->generator->next);
-               int written = entry->generator->regs_written;
+               int written = regs_written(entry->generator);
 
                entry->tmp = fs_reg(VGRF, alloc.allocate(written),
                                    entry->generator->dst.type);
