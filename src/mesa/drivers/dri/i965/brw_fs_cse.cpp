@@ -185,7 +185,7 @@ instructions_match(fs_inst *a, fs_inst *b, bool *negate)
           a->dst.type == b->dst.type &&
           a->offset == b->offset &&
           a->mlen == b->mlen &&
-          a->regs_written == b->regs_written &&
+          a->size_written == b->size_written &&
           a->base_mrf == b->base_mrf &&
           a->eot == b->eot &&
           a->header_size == b->header_size &&
@@ -296,7 +296,7 @@ fs_visitor::opt_cse_local(bblock_t *block)
 
             /* dest <- temp */
             if (!inst->dst.is_null()) {
-               assert(inst->regs_written == entry->generator->regs_written);
+               assert(inst->size_written == entry->generator->size_written);
                assert(inst->dst.type == entry->tmp.type);
                const fs_builder ibld(this, block, inst);
 

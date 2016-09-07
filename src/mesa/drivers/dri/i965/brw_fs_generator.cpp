@@ -357,13 +357,14 @@ void
 fs_generator::generate_fb_read(fs_inst *inst, struct brw_reg dst,
                                struct brw_reg payload)
 {
+   assert(inst->size_written % REG_SIZE == 0);
    brw_wm_prog_data *prog_data =
       reinterpret_cast<brw_wm_prog_data *>(this->prog_data);
    const unsigned surf_index =
       prog_data->binding_table.render_target_start + inst->target;
 
    gen9_fb_READ(p, dst, payload, surf_index,
-                inst->header_size, inst->regs_written,
+                inst->header_size, inst->size_written / REG_SIZE,
                 prog_data->persample_dispatch);
 
    brw_mark_surface_used(&prog_data->base, surf_index);
@@ -452,6 +453,7 @@ fs_generator::generate_urb_read(fs_inst *inst,
                                 struct brw_reg dst,
                                 struct brw_reg header)
 {
+   assert(inst->size_written % REG_SIZE == 0);
    assert(header.file == BRW_GENERAL_REGISTER_FILE);
    assert(header.type == BRW_REGISTER_TYPE_UD);
 
@@ -467,7 +469,7 @@ fs_generator::generate_urb_read(fs_inst *inst,
       brw_inst_set_urb_per_slot_offset(p->devinfo, send, true);
 
    brw_inst_set_mlen(p->devinfo, send, inst->mlen);
-   brw_inst_set_rlen(p->devinfo, send, inst->regs_written);
+   brw_inst_set_rlen(p->devinfo, send, inst->size_written / REG_SIZE);
    brw_inst_set_header_present(p->devinfo, send, true);
    brw_inst_set_urb_global_offset(p->devinfo, send, inst->offset);
 }
@@ -625,6 +627,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                            struct brw_reg surface_index,
                            struct brw_reg sampler_index)
 {
+   assert(inst->size_written % REG_SIZE == 0);
    int msg_type = -1;
    uint32_t simd_mode;
    uint32_t return_format;
@@ -895,7 +898,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                  surface + base_binding_table_index,
                  sampler % 16,
                  msg_type,
-                 inst->regs_written,
+                 inst->size_written / REG_SIZE,
                  inst->mlen,
                  inst->header_size != 0,
                  simd_mode,
@@ -932,7 +935,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
                               0 /* surface */,
                               0 /* sampler */,
                               msg_type,
-                              inst->regs_written,
+                              inst->size_written / REG_SIZE,
                               inst->mlen /* mlen */,
                               inst->header_size != 0 /* header */,
                               simd_mode,
@@ -1263,7 +1266,7 @@ fs_generator::generate_varying_pull_constant_load_gen4(fs_inst *inst,
        */
       msg_type = BRW_SAMPLER_MESSAGE_SIMD16_LD;
       assert(inst->mlen == 3);
-      assert(inst->regs_written == 8);
+      assert(inst->size_written == 8 * REG_SIZE);
       rlen = 8;
       simd_mode = BRW_SAMPLER_SIMD_MODE_SIMD16;
    }
@@ -1399,6 +1402,7 @@ fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
                                                 struct brw_reg msg_data,
                                                 unsigned msg_type)
 {
+   assert(inst->size_written % REG_SIZE == 0);
    assert(msg_data.type == BRW_REGISTER_TYPE_UD);
 
    brw_pixel_interpolator_query(p,
@@ -1408,7 +1412,7 @@ fs_generator::generate_pixel_interpolator_query(fs_inst *inst,
          msg_type,
          msg_data,
          inst->mlen,
-         inst->regs_written);
+         inst->size_written / REG_SIZE);
 }
 
 

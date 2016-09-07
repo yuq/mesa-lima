@@ -97,7 +97,7 @@ fs_visitor::emit_mcs_fetch(const fs_reg &coordinate, unsigned components,
    /* We only care about one or two regs of response, but the sampler always
     * writes 4/8.
     */
-   inst->regs_written = 4 * dispatch_width / 8;
+   inst->size_written = 4 * dispatch_width / 8 * REG_SIZE;
 
    return dest;
 }

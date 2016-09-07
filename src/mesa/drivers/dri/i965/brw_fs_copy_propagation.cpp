@@ -43,7 +43,7 @@ namespace { /* avoid conflict with opt_copy_propagation_elements */
 struct acp_entry : public exec_node {
    fs_reg dst;
    fs_reg src;
-   uint8_t regs_written;
+   uint8_t size_written;
    uint8_t regs_read;
    enum opcode opcode;
    bool saturate;
@@ -368,7 +368,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
     * that entry is writing.
     */
    if (!region_contained_in(inst->src[arg], inst->regs_read(arg),
-                            entry->dst, entry->regs_written))
+                            entry->dst, DIV_ROUND_UP(entry->size_written,
+                                                     REG_SIZE)))
       return false;
 
    /* we can't generally copy-propagate UD negations because we
@@ -524,7 +525,8 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
        * that entry is writing.
        */
       if (!region_contained_in(inst->src[i], inst->regs_read(i),
-                               entry->dst, entry->regs_written))
+                               entry->dst, DIV_ROUND_UP(entry->size_written,
+                                                        REG_SIZE)))
          continue;
 
       /* If the type sizes don't match each channel of the instruction is
@@ -770,8 +772,8 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
       /* kill the destination from the ACP */
       if (inst->dst.file == VGRF) {
          foreach_in_list_safe(acp_entry, entry, &acp[inst->dst.nr % ACP_HASH_SIZE]) {
-            if (regions_overlap(entry->dst, entry->regs_written * REG_SIZE,
-                                inst->dst, inst->regs_written * REG_SIZE))
+            if (regions_overlap(entry->dst, entry->size_written,
+                                inst->dst, inst->size_written))
                entry->remove();
          }
 
@@ -784,7 +786,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                 * _any_ of the registers that it reads
                 */
                if (regions_overlap(entry->src, entry->regs_read * REG_SIZE,
-                                   inst->dst, inst->regs_written * REG_SIZE))
+                                   inst->dst, inst->size_written))
                   entry->remove();
             }
 	 }
@@ -797,7 +799,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
          entry->dst = inst->dst;
          entry->src = inst->src[0];
-         entry->regs_written = inst->regs_written;
+         entry->size_written = inst->size_written;
          entry->regs_read = inst->regs_read(0);
          entry->opcode = inst->opcode;
          entry->saturate = inst->saturate;
@@ -808,14 +810,14 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          for (int i = 0; i < inst->sources; i++) {
             int effective_width = i < inst->header_size ? 8 : inst->exec_size;
             assert(effective_width * type_sz(inst->src[i].type) % REG_SIZE == 0);
-            int regs_written = effective_width *
-               type_sz(inst->src[i].type) / REG_SIZE;
+            const unsigned size_written = effective_width *
+                                          type_sz(inst->src[i].type);
             if (inst->src[i].file == VGRF) {
                acp_entry *entry = ralloc(copy_prop_ctx, acp_entry);
                entry->dst = inst->dst;
                entry->dst.offset += offset * REG_SIZE;
                entry->src = inst->src[i];
-               entry->regs_written = regs_written;
+               entry->size_written = size_written;
                entry->regs_read = inst->regs_read(i);
                entry->opcode = inst->opcode;
                if (!entry->dst.equals(inst->src[i])) {
@@ -824,7 +826,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                   ralloc_free(entry);
                }
             }
-            offset += regs_written;
+            offset += DIV_ROUND_UP(size_written, REG_SIZE);
          }
       }
    }

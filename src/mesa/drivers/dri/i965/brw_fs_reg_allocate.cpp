@@ -826,7 +826,8 @@ fs_visitor::choose_spill_reg(struct ra_graph *g)
       }
 
       if (inst->dst.file == VGRF)
-         spill_costs[inst->dst.nr] += inst->regs_written * loop_scale;
+         spill_costs[inst->dst.nr] += DIV_ROUND_UP(inst->size_written, REG_SIZE)
+                                      * loop_scale;
 
       switch (inst->opcode) {
 

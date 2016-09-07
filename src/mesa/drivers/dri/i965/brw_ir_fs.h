@@ -421,7 +421,8 @@ inline unsigned
 regs_written(const fs_inst *inst)
 {
    /* XXX - Take into account register-misaligned offsets correctly. */
-   return inst->regs_written;
+   assert(inst->dst.file != UNIFORM && inst->dst.file != IMM);
+   return DIV_ROUND_UP(inst->size_written, REG_SIZE);
 }
 
 /**

@@ -204,7 +204,7 @@ fs_visitor::register_coalesce()
             continue;
          }
          dst_reg_offset[offset] = inst->dst.offset / REG_SIZE;
-         if (inst->regs_written > 1)
+         if (inst->size_written > REG_SIZE)
             dst_reg_offset[offset + 1] = inst->dst.offset / REG_SIZE + 1;
          mov[offset] = inst;
          channels_remaining -= regs_written(inst);

@@ -76,11 +76,10 @@ fs_inst::init(enum opcode opcode, uint8_t exec_size, const fs_reg &dst,
    case FIXED_GRF:
    case MRF:
    case ATTR:
-      this->regs_written = DIV_ROUND_UP(dst.component_size(exec_size),
-                                        REG_SIZE);
+      this->size_written = dst.component_size(exec_size);
       break;
    case BAD_FILE:
-      this->regs_written = 0;
+      this->size_written = 0;
       break;
    case IMM:
    case UNIFORM:
@@ -192,7 +191,7 @@ fs_visitor::VARYING_PULL_CONSTANT_LOAD(const fs_builder &bld,
    fs_reg vec4_result = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
    fs_inst *inst = bld.emit(FS_OPCODE_VARYING_PULL_CONSTANT_LOAD_LOGICAL,
                             vec4_result, surf_index, vec4_offset);
-   inst->regs_written = 4 * bld.dispatch_width() / 8;
+   inst->size_written = 4 * bld.dispatch_width() / 8 * REG_SIZE;
 
    if (type_sz(dst.type) == 8) {
       shuffle_32bit_load_result_to_64bit_data(
@@ -244,7 +243,7 @@ fs_inst::equals(fs_inst *inst) const
 bool
 fs_inst::overwrites_reg(const fs_reg &reg) const
 {
-   return reg.in_range(dst, regs_written);
+   return reg.in_range(dst, DIV_ROUND_UP(size_written, REG_SIZE));
 }
 
 bool
@@ -357,7 +356,7 @@ fs_inst::is_copy_payload(const brw::simple_allocator &grf_alloc) const
    if (reg.file != VGRF || reg.offset / REG_SIZE != 0 || reg.stride == 0)
       return false;
 
-   if (grf_alloc.sizes[reg.nr] != this->regs_written)
+   if (grf_alloc.sizes[reg.nr] * REG_SIZE != this->size_written)
       return false;
 
    for (int i = 0; i < this->sources; i++) {
@@ -2548,7 +2547,7 @@ fs_visitor::opt_sampler_eot()
    for (unsigned i = 0; i < FB_WRITE_LOGICAL_NUM_SRCS; i++) {
       if (i == FB_WRITE_LOGICAL_SRC_COLOR0) {
          if (!fb_write->src[i].equals(tex_inst->dst) ||
-             fb_write->regs_read(i) != tex_inst->regs_written)
+             fb_write->regs_read(i) * REG_SIZE != tex_inst->size_written)
          return false;
       } else if (i != FB_WRITE_LOGICAL_SRC_COMPONENTS) {
          if (fb_write->src[i].file != BAD_FILE)
@@ -2564,7 +2563,7 @@ fs_visitor::opt_sampler_eot()
    tex_inst->offset |= fb_write->target << 24;
    tex_inst->eot = true;
    tex_inst->dst = ibld.null_reg_ud();
-   tex_inst->regs_written = 0;
+   tex_inst->size_written = 0;
    fb_write->remove(cfg->blocks[cfg->num_blocks - 1]);
 
    /* Marking EOT is sufficient, lower_logical_sends() will notice the EOT
@@ -2606,7 +2605,7 @@ fs_visitor::opt_register_renaming()
 
       if (depth == 0 &&
           inst->dst.file == VGRF &&
-          alloc.sizes[inst->dst.nr] == inst->regs_written &&
+          alloc.sizes[inst->dst.nr] * REG_SIZE == inst->size_written &&
           !inst->is_partial_write()) {
          if (remap[dst] == -1) {
             remap[dst] = dst;
@@ -2730,7 +2729,7 @@ fs_visitor::compute_to_mrf()
       unsigned regs_left = (1 << regs_read(inst, 0)) - 1;
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
-         if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
+         if (regions_overlap(scan_inst->dst, scan_inst->size_written,
                              inst->src[0], inst->regs_read(0) * REG_SIZE)) {
 	    /* Found the last thing to write our reg we want to turn
 	     * into a compute-to-MRF.
@@ -2749,7 +2748,7 @@ fs_visitor::compute_to_mrf()
              * a time.
              */
             if (scan_inst->dst.offset / REG_SIZE < inst->src[0].offset / REG_SIZE ||
-                scan_inst->dst.offset / REG_SIZE + scan_inst->regs_written >
+                scan_inst->dst.offset / REG_SIZE + DIV_ROUND_UP(scan_inst->size_written, REG_SIZE) >
                 inst->src[0].offset / REG_SIZE + inst->regs_read(0))
                break;
 
@@ -2768,7 +2767,8 @@ fs_visitor::compute_to_mrf()
 
             /* Clear the bits for any registers this instruction overwrites. */
             regs_left &= ~mask_relative_to(
-               inst->src[0], scan_inst->dst, scan_inst->regs_written);
+               inst->src[0], scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written,
+                                                          REG_SIZE));
             if (!regs_left)
                break;
 	 }
@@ -2793,8 +2793,8 @@ fs_visitor::compute_to_mrf()
 	 if (interfered)
 	    break;
 
-         if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
-                             inst->dst, inst->regs_written * REG_SIZE)) {
+         if (regions_overlap(scan_inst->dst, scan_inst->size_written,
+                             inst->dst, inst->size_written)) {
 	    /* If somebody else writes our MRF here, we can't
 	     * compute-to-MRF before that.
 	     */
@@ -2803,7 +2803,7 @@ fs_visitor::compute_to_mrf()
 
          if (scan_inst->mlen > 0 && scan_inst->base_mrf != -1 &&
              regions_overlap(fs_reg(MRF, scan_inst->base_mrf), scan_inst->mlen * REG_SIZE,
-                             inst->dst, inst->regs_written * REG_SIZE)) {
+                             inst->dst, inst->size_written)) {
 	    /* Found a SEND instruction, which means that there are
 	     * live values in MRFs from base_mrf to base_mrf +
 	     * scan_inst->mlen - 1.  Don't go pushing our MRF write up
@@ -2822,11 +2822,12 @@ fs_visitor::compute_to_mrf()
       regs_left = (1 << regs_read(inst, 0)) - 1;
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
-         if (regions_overlap(scan_inst->dst, scan_inst->regs_written * REG_SIZE,
+         if (regions_overlap(scan_inst->dst, scan_inst->size_written,
                              inst->src[0], inst->regs_read(0) * REG_SIZE)) {
             /* Clear the bits for any registers this instruction overwrites. */
             regs_left &= ~mask_relative_to(
-               inst->src[0], scan_inst->dst, scan_inst->regs_written);
+               inst->src[0], scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written,
+                                                          REG_SIZE));
 
             const unsigned rel_offset = (reg_offset(scan_inst->dst) -
                                          reg_offset(inst->src[0])) / REG_SIZE;
@@ -2841,7 +2842,7 @@ fs_visitor::compute_to_mrf()
                /* Clear the COMPR4 bit if the generating instruction is not
                 * compressed.
                 */
-               if (scan_inst->regs_written < 2)
+               if (scan_inst->size_written < 2 * REG_SIZE)
                   scan_inst->dst.nr &= ~BRW_MRF_COMPR4;
 
             } else {
@@ -3024,7 +3025,7 @@ fs_visitor::remove_duplicate_mrf_writes()
       /* Clear out any MRF move records whose sources got overwritten. */
       for (unsigned i = 0; i < ARRAY_SIZE(last_mrf_move); i++) {
          if (last_mrf_move[i] &&
-             regions_overlap(inst->dst, inst->regs_written * REG_SIZE,
+             regions_overlap(inst->dst, inst->size_written,
                              last_mrf_move[i]->src[0],
                              last_mrf_move[i]->regs_read(0) * REG_SIZE)) {
             last_mrf_move[i] = NULL;
@@ -4603,7 +4604,7 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
     * which is the one that is going to limit the overall execution size of
     * the instruction due to this rule.
     */
-   unsigned reg_count = inst->regs_written;
+   unsigned reg_count = DIV_ROUND_UP(inst->size_written, REG_SIZE);
 
    for (unsigned i = 0; i < inst->sources; i++)
       reg_count = MAX2(reg_count, (unsigned)inst->regs_read(i));
@@ -4630,13 +4631,14 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
     */
    if (devinfo->gen < 8) {
       for (unsigned i = 0; i < inst->sources; i++) {
-         if (inst->regs_written == 2 &&
+         if (DIV_ROUND_UP(inst->size_written, REG_SIZE) == 2 &&
              inst->regs_read(i) != 0 && inst->regs_read(i) != 2 &&
              !is_uniform(inst->src[i]) &&
              !(type_sz(inst->dst.type) == 4 && inst->dst.stride == 1 &&
-               type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1))
-            max_width = MIN2(max_width, inst->exec_size /
-                             inst->regs_written);
+               type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1)) {
+            const unsigned reg_count = DIV_ROUND_UP(inst->size_written, REG_SIZE);
+            max_width = MIN2(max_width, inst->exec_size / reg_count);
+         }
       }
    }
 
@@ -4681,9 +4683,10 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
     * In this situation we calculate the maximum size of the split
     * instructions so they only ever write to a single register.
     */
-   if (devinfo->gen < 8 && inst->regs_written > 1 &&
+   if (devinfo->gen < 8 && inst->size_written > REG_SIZE &&
        !inst->force_writemask_all) {
-      const unsigned channels_per_grf = inst->exec_size / inst->regs_written;
+      const unsigned channels_per_grf = inst->exec_size /
+         DIV_ROUND_UP(inst->size_written, REG_SIZE);
       unsigned exec_type_size = 0;
       for (int i = 0; i < inst->sources; i++) {
          if (inst->src[i].file != BAD_FILE)
@@ -5087,8 +5090,7 @@ needs_dst_copy(const fs_builder &lbld, const fs_inst *inst)
     * the results of multiple lowered instructions in order to make sure that
     * they end up arranged correctly in the original destination region.
     */
-   if (inst->regs_written * REG_SIZE >
-       inst->dst.component_size(inst->exec_size))
+   if (inst->size_written > inst->dst.component_size(inst->exec_size))
       return true;
 
    /* If the lowered execution size is larger than the original the result of
@@ -5111,7 +5113,7 @@ needs_dst_copy(const fs_builder &lbld, const fs_inst *inst)
        * group which could cause one of the lowered instructions to overwrite
        * the data read from the same source by other lowered instructions.
        */
-      if (regions_overlap(inst->dst, inst->regs_written * REG_SIZE,
+      if (regions_overlap(inst->dst, inst->size_written,
                           inst->src[i], inst->regs_read(i) * REG_SIZE) &&
           !inst->dst.equals(inst->src[i]))
         return true;
@@ -5138,8 +5140,8 @@ emit_zip(const fs_builder &lbld, bblock_t *block, fs_inst *inst)
 
    /* Specified channel group from the destination region. */
    const fs_reg dst = horiz_offset(inst->dst, lbld.group());
-   const unsigned dst_size = inst->regs_written * REG_SIZE /
-            inst->dst.component_size(inst->exec_size);
+   const unsigned dst_size = inst->size_written /
+      inst->dst.component_size(inst->exec_size);
 
    if (needs_dst_copy(lbld, inst)) {
       const fs_reg tmp = lbld.vgrf(inst->dst.type, dst_size);
@@ -5191,7 +5193,7 @@ fs_visitor::lower_simd_width()
           * original or the lowered instruction, whichever is lower.
           */
          const unsigned n = DIV_ROUND_UP(inst->exec_size, lower_width);
-         const unsigned dst_size = inst->regs_written * REG_SIZE /
+         const unsigned dst_size = inst->size_written /
             inst->dst.component_size(inst->exec_size);
 
          assert(!inst->writes_accumulator && !inst->mlen);
@@ -5215,9 +5217,8 @@ fs_visitor::lower_simd_width()
                split_inst.src[j] = emit_unzip(lbld, block, inst, j);
 
             split_inst.dst = emit_zip(lbld, block, inst);
-            split_inst.regs_written = DIV_ROUND_UP(
-               split_inst.dst.component_size(lower_width) * dst_size,
-               REG_SIZE);
+            split_inst.size_written =
+               split_inst.dst.component_size(lower_width) * dst_size;
 
             lbld.emit(split_inst);
          }
@@ -5314,7 +5315,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
    switch (inst->dst.file) {
    case VGRF:
       fprintf(file, "vgrf%d", inst->dst.nr);
-      if (alloc.sizes[inst->dst.nr] != inst->regs_written ||
+      if (alloc.sizes[inst->dst.nr] * REG_SIZE != inst->size_written ||
           inst->dst.offset % REG_SIZE)
          fprintf(file, "+%d.%d",
                  inst->dst.offset / REG_SIZE, inst->dst.offset % REG_SIZE);
