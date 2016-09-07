@@ -45,6 +45,8 @@ genX(graphics_pipeline_create)(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
+   struct anv_physical_device *physical_device =
+      &device->instance->physicalDevice;
    struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
    struct anv_pipeline *pipeline;
    VkResult result;
@@ -123,7 +125,7 @@ genX(graphics_pipeline_create)(
 
          vs.VertexURBEntryReadLength   = vs_prog_data->base.urb_read_length;
          vs.VertexURBEntryReadOffset   = 0;
-         vs.MaximumNumberofThreads     = device->info.max_vs_threads - 1;
+         vs.MaximumNumberofThreads     = physical_device->max_vs_threads - 1;
          vs.StatisticsEnable           = true;
          vs.VSFunctionEnable           = true;
       }
@@ -152,7 +154,7 @@ genX(graphics_pipeline_create)(
          gs.DispatchGRFStartRegisterforURBData =
             gs_prog_data->base.base.dispatch_grf_start_reg;
 
-         gs.MaximumNumberofThreads     = device->info.max_gs_threads - 1;
+         gs.MaximumNumberofThreads     = physical_device->max_gs_threads - 1;
          /* This in the next dword on HSW. */
          gs.ControlDataFormat          = gs_prog_data->control_data_format;
          gs.ControlDataHeaderSize      = gs_prog_data->control_data_header_size_hwords;
@@ -185,7 +187,7 @@ genX(graphics_pipeline_create)(
        * don't at least set the maximum number of threads.
        */
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-         ps.MaximumNumberofThreads = device->info.max_wm_threads - 1;
+         ps.MaximumNumberofThreads = physical_device->max_wm_threads - 1;
       }
    } else {
       const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
@@ -207,7 +209,7 @@ genX(graphics_pipeline_create)(
             .offset = 0,
          };
          ps.PerThreadScratchSpace         = scratch_space(&wm_prog_data->base);
-         ps.MaximumNumberofThreads        = device->info.max_wm_threads - 1;
+         ps.MaximumNumberofThreads        = physical_device->max_wm_threads - 1;
          ps.PushConstantEnable            = wm_prog_data->base.nr_params > 0;
          ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
          ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;

@@ -570,6 +570,20 @@ struct anv_physical_device {
     struct isl_device                           isl_dev;
     int                                         cmd_parser_version;
 
+    uint32_t                                    eu_total;
+    uint32_t                                    subslice_total;
+
+    /**
+     * Platform specific constants containing the maximum number of threads
+     * for each pipeline stage.
+     */
+    uint32_t                                    max_vs_threads;
+    uint32_t                                    max_hs_threads;
+    uint32_t                                    max_ds_threads;
+    uint32_t                                    max_gs_threads;
+    uint32_t                                    max_wm_threads;
+    uint32_t                                    max_cs_threads;
+
     struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 

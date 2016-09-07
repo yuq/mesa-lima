@@ -924,14 +924,15 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
    if (size == 0) {
       /* We own the lock.  Allocate a buffer */
 
-      struct gen_device_info *devinfo = &device->info;
+      struct anv_physical_device *physical_device =
+         &device->instance->physicalDevice;
       uint32_t max_threads[] = {
-         [MESA_SHADER_VERTEX]                  = devinfo->max_vs_threads,
-         [MESA_SHADER_TESS_CTRL]               = devinfo->max_hs_threads,
-         [MESA_SHADER_TESS_EVAL]               = devinfo->max_ds_threads,
-         [MESA_SHADER_GEOMETRY]                = devinfo->max_gs_threads,
-         [MESA_SHADER_FRAGMENT]                = devinfo->max_wm_threads,
-         [MESA_SHADER_COMPUTE]                 = devinfo->max_cs_threads,
+         [MESA_SHADER_VERTEX]           = physical_device->max_vs_threads,
+         [MESA_SHADER_TESS_CTRL]        = physical_device->max_hs_threads,
+         [MESA_SHADER_TESS_EVAL]        = physical_device->max_ds_threads,
+         [MESA_SHADER_GEOMETRY]         = physical_device->max_gs_threads,
+         [MESA_SHADER_FRAGMENT]         = physical_device->max_wm_threads,
+         [MESA_SHADER_COMPUTE]          = physical_device->max_cs_threads,
       };
 
       size = per_thread_scratch * max_threads[stage];

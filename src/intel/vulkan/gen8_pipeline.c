@@ -55,6 +55,8 @@ genX(graphics_pipeline_create)(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
+   struct anv_physical_device *physical_device =
+      &device->instance->physicalDevice;
    struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
    struct anv_pipeline *pipeline;
    VkResult result;
@@ -142,7 +144,7 @@ genX(graphics_pipeline_create)(
          gs.DispatchGRFStartRegisterForURBData =
             gs_prog_data->base.base.dispatch_grf_start_reg;
 
-         gs.MaximumNumberofThreads  = device->info.max_gs_threads / 2 - 1;
+         gs.MaximumNumberofThreads  = physical_device->max_gs_threads / 2 - 1;
          gs.ControlDataHeaderSize   = gs_prog_data->control_data_header_size_hwords;
          gs.DispatchMode            = gs_prog_data->base.dispatch_mode;
          gs.StatisticsEnable        = true;
@@ -213,7 +215,7 @@ genX(graphics_pipeline_create)(
          vs.VertexURBEntryReadLength      = vs_prog_data->base.urb_read_length;
          vs.VertexURBEntryReadOffset      = 0;
 
-         vs.MaximumNumberofThreads        = device->info.max_vs_threads - 1;
+         vs.MaximumNumberofThreads        = physical_device->max_vs_threads - 1;
          vs.StatisticsEnable              = false;
          vs.SIMD8DispatchEnable           = pipeline->vs_simd8 != NO_KERNEL;
          vs.VertexCacheDisable            = false;
