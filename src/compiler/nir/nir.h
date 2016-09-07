@@ -2600,7 +2600,7 @@ bool nir_opt_dead_cf(nir_shader *shader);
 
 bool nir_opt_gcm(nir_shader *shader, bool value_number);
 
-bool nir_opt_peephole_select(nir_shader *shader);
+bool nir_opt_peephole_select(nir_shader *shader, unsigned limit);
 
 bool nir_opt_remove_phis(nir_shader *shader);
 

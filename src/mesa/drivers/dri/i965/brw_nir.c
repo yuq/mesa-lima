@@ -416,7 +416,7 @@ nir_optimize(nir_shader *nir, bool is_scalar)
       OPT(nir_copy_prop);
       OPT(nir_opt_dce);
       OPT(nir_opt_cse);
-      OPT(nir_opt_peephole_select);
+      OPT(nir_opt_peephole_select, 0);
       OPT(nir_opt_algebraic);
       OPT(nir_opt_constant_folding);
       OPT(nir_opt_dead_cf);
