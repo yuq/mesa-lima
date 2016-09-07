@@ -457,6 +457,16 @@ _eglParseContextAttribList(_EGLContext *ctx, _EGLDisplay *dpy,
 /**
  * Initialize the given _EGLContext object to defaults and/or the values
  * in the attrib_list.
+ *
+ * According to EGL 1.5 Section 3.7:
+ *
+ * "EGL_OPENGL_API and EGL_OPENGL_ES_API are interchangeable for all
+ *  purposes except eglCreateContext."
+ *
+ * And since we only support GL and GLES, this is the only place where the
+ * bound API matters at all. We look up the current API from the current
+ * thread, and stash that in the context we're initializing. Our caller is
+ * responsible for determining whether that's an API it supports.
  */
 EGLBoolean
 _eglInitContext(_EGLContext *ctx, _EGLDisplay *dpy, _EGLConfig *conf,
