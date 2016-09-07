@@ -590,6 +590,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(ARB_ES3_2_compatibility),
    EXT(ARB_arrays_of_arrays),
    EXT(ARB_compute_shader),
+   EXT(ARB_compute_variable_group_size),
    EXT(ARB_conservative_depth),
    EXT(ARB_cull_distance),
    EXT(ARB_derivative_control),
