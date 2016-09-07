@@ -531,9 +531,6 @@ svga_cleanup_sampler_state(struct svga_context *svga)
 {
    enum pipe_shader_type shader;
 
-   if (!svga_have_vgpu10(svga))
-      return;
-
    for (shader = 0; shader <= PIPE_SHADER_GEOMETRY; shader++) {
       unsigned i;
 
