@@ -1611,7 +1611,6 @@ fill_common_atomic_sources(struct vtn_builder *b, SpvOp opcode,
       src[0] = nir_src_for_ssa(vtn_ssa_value(b, w[8])->def);
       src[1] = nir_src_for_ssa(vtn_ssa_value(b, w[7])->def);
       break;
-      /* Fall through */
 
    case SpvOpAtomicExchange:
    case SpvOpAtomicIAdd:
