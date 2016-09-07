@@ -490,6 +490,7 @@ EXTRA_EXT(ARB_cull_distance);
 EXTRA_EXT(EXT_window_rectangles);
 EXTRA_EXT(KHR_blend_equation_advanced_coherent);
 EXTRA_EXT(OES_primitive_bounding_box);
+EXTRA_EXT(ARB_compute_variable_group_size);
 
 static const int
 extra_ARB_color_buffer_float_or_glcore[] = {
@@ -2292,6 +2293,15 @@ find_value_indexed(const char *func, GLenum pname, GLuint index, union value *v)
       if (index >= 3)
          goto invalid_value;
       v->value_int = ctx->Const.MaxComputeWorkGroupSize[index];
+      return TYPE_INT;
+
+   /* ARB_compute_variable_group_size */
+   case GL_MAX_COMPUTE_VARIABLE_GROUP_SIZE_ARB:
+      if (!ctx->Extensions.ARB_compute_variable_group_size)
+         goto invalid_enum;
+      if (index >= 3)
+         goto invalid_value;
+      v->value_int = ctx->Const.MaxComputeVariableGroupSize[index];
       return TYPE_INT;
    }
 

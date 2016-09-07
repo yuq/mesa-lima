@@ -132,5 +132,9 @@ extern GLboolean
 _mesa_validate_DispatchComputeIndirect(struct gl_context *ctx,
                                        GLintptr indirect);
 
+extern GLboolean
+_mesa_validate_DispatchComputeGroupSizeARB(struct gl_context *ctx,
+                                           const GLuint *num_groups,
+                                           const GLuint *group_size);
 
 #endif

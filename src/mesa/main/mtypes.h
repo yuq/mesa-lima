@@ -2078,6 +2078,11 @@ struct gl_compute_program
     * Size of shared variables accessed by the compute shader.
     */
    unsigned SharedSize;
+
+   /**
+    * Whether a variable work group size has been specified.
+    */
+   bool LocalSizeVariable;
 };
 
 
@@ -2340,7 +2345,8 @@ struct gl_shader_info
    GLbitfield BlendSupport;
 
    /**
-    * Compute shader state from ARB_compute_shader layout qualifiers.
+    * Compute shader state from ARB_compute_shader and
+    * ARB_compute_variable_group_size layout qualifiers.
     */
    struct {
       /**
@@ -2348,6 +2354,12 @@ struct gl_shader_info
        * it's not set in this shader.
        */
       unsigned LocalSize[3];
+
+      /**
+       * Whether a variable work group size has been specified as defined by
+       * ARB_compute_variable_group_size.
+       */
+      bool LocalSizeVariable;
    } Comp;
 };
 
@@ -2826,6 +2838,11 @@ struct gl_shader_program
        * Size of shared variables accessed by the compute shader.
        */
       unsigned SharedSize;
+
+      /**
+       * Whether a variable work group size has been specified.
+       */
+      bool LocalSizeVariable;
    } Comp;
 
    /* post-link info: */
@@ -3783,6 +3800,10 @@ struct gl_constants
    GLuint MaxComputeWorkGroupInvocations;
    GLuint MaxComputeSharedMemorySize;
 
+   /** GL_ARB_compute_variable_group_size */
+   GLuint MaxComputeVariableGroupSize[3]; /* Array of x, y, z dimensions */
+   GLuint MaxComputeVariableGroupInvocations;
+
    /** GL_ARB_gpu_shader5 */
    GLfloat MinFragmentInterpolationOffset;
    GLfloat MaxFragmentInterpolationOffset;
@@ -3834,6 +3855,7 @@ struct gl_extensions
    GLboolean ARB_clip_control;
    GLboolean ARB_color_buffer_float;
    GLboolean ARB_compute_shader;
+   GLboolean ARB_compute_variable_group_size;
    GLboolean ARB_conditional_render_inverted;
    GLboolean ARB_conservative_depth;
    GLboolean ARB_copy_image;

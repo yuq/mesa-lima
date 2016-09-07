@@ -42,6 +42,7 @@ EXT(ARB_clip_control                        , ARB_clip_control                  
 EXT(ARB_color_buffer_float                  , ARB_color_buffer_float                 , GLL, GLC,  x ,  x , 2004)
 EXT(ARB_compressed_texture_pixel_storage    , dummy_true                             , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_compute_shader                      , ARB_compute_shader                     , GLL, GLC,  x ,  x , 2012)
+EXT(ARB_compute_variable_group_size         , ARB_compute_variable_group_size        , GLL, GLC,  x ,  x , 2013)
 EXT(ARB_conditional_render_inverted         , ARB_conditional_render_inverted        , GLL, GLC,  x ,  x , 2014)
 EXT(ARB_conservative_depth                  , ARB_conservative_depth                 , GLL, GLC,  x ,  x , 2011)
 EXT(ARB_copy_buffer                         , dummy_true                             , GLL, GLC,  x ,  x , 2008)

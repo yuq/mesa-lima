@@ -721,6 +721,12 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    consts->MaxTessPatchComponents = MAX_TESS_PATCH_COMPONENTS;
    consts->MaxTessControlTotalOutputComponents = MAX_TESS_CONTROL_TOTAL_OUTPUT_COMPONENTS;
    consts->PrimitiveRestartForPatches = false;
+
+   /** GL_ARB_compute_variable_group_size */
+   consts->MaxComputeVariableGroupSize[0] = 512;
+   consts->MaxComputeVariableGroupSize[1] = 512;
+   consts->MaxComputeVariableGroupSize[2] = 64;
+   consts->MaxComputeVariableGroupInvocations = 512;
 }
 
 
