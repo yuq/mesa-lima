@@ -801,31 +801,31 @@ static unsigned amdgpu_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
 
 DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", false)
 
-/* Since the kernel driver doesn't synchronize execution between different
- * rings automatically, we have to add fence dependencies manually.
- */
-static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
+static void amdgpu_add_fence_dependency(struct amdgpu_cs *acs,
+                                        struct amdgpu_cs_buffer *buffer)
 {
    struct amdgpu_cs_context *cs = acs->csc;
-   int i;
+   struct amdgpu_winsys_bo *bo = buffer->bo;
+   struct amdgpu_cs_fence *dep;
+   unsigned new_num_fences = 0;
 
-   cs->request.number_of_dependencies = 0;
-
-   for (i = 0; i < cs->num_buffers; i++) {
-      struct amdgpu_cs_fence *dep;
+   for (unsigned j = 0; j < bo->num_fences; ++j) {
+      struct amdgpu_fence *bo_fence = (void *)bo->fences[j];
       unsigned idx;
 
-      struct amdgpu_fence *bo_fence = (void *)cs->buffers[i].bo->fence;
-      if (!bo_fence)
-         continue;
-
       if (bo_fence->ctx == acs->ctx &&
-          bo_fence->fence.ip_type == cs->request.ip_type &&
-          bo_fence->fence.ip_instance == cs->request.ip_instance &&
-          bo_fence->fence.ring == cs->request.ring)
+         bo_fence->fence.ip_type == cs->request.ip_type &&
+         bo_fence->fence.ip_instance == cs->request.ip_instance &&
+         bo_fence->fence.ring == cs->request.ring)
          continue;
 
       if (amdgpu_fence_wait((void *)bo_fence, 0, false))
+         continue;
+
+      amdgpu_fence_reference(&bo->fences[new_num_fences], bo->fences[j]);
+      new_num_fences++;
+
+      if (!(buffer->usage & RADEON_USAGE_SYNCHRONIZED))
          continue;
 
       if (bo_fence->submission_in_progress)
@@ -844,6 +844,52 @@ static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
       dep = &cs->request.dependencies[idx];
       memcpy(dep, &bo_fence->fence, sizeof(*dep));
    }
+
+   for (unsigned j = new_num_fences; j < bo->num_fences; ++j)
+      amdgpu_fence_reference(&bo->fences[j], NULL);
+
+   bo->num_fences = new_num_fences;
+}
+
+/* Since the kernel driver doesn't synchronize execution between different
+ * rings automatically, we have to add fence dependencies manually.
+ */
+static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
+{
+   struct amdgpu_cs_context *cs = acs->csc;
+   int i;
+
+   cs->request.number_of_dependencies = 0;
+
+   for (i = 0; i < cs->num_buffers; i++)
+      amdgpu_add_fence_dependency(acs, &cs->buffers[i]);
+}
+
+static void amdgpu_add_fence(struct amdgpu_winsys_bo *bo,
+                             struct pipe_fence_handle *fence)
+{
+   if (bo->num_fences >= bo->max_fences) {
+      unsigned new_max_fences = MAX2(1, bo->max_fences * 2);
+      struct pipe_fence_handle **new_fences =
+         REALLOC(bo->fences,
+                 bo->num_fences * sizeof(*new_fences),
+                 new_max_fences * sizeof(*new_fences));
+      if (new_fences) {
+         bo->fences = new_fences;
+         bo->max_fences = new_max_fences;
+      } else {
+         fprintf(stderr, "amdgpu_add_fence: allocation failure, dropping fence\n");
+         if (!bo->num_fences)
+            return;
+
+         bo->num_fences--; /* prefer to keep a more recent fence if possible */
+         amdgpu_fence_reference(&bo->fences[bo->num_fences], NULL);
+      }
+   }
+
+   bo->fences[bo->num_fences] = NULL;
+   amdgpu_fence_reference(&bo->fences[bo->num_fences], fence);
+   bo->num_fences++;
 }
 
 void amdgpu_cs_submit_ib(void *job, int thread_index)
@@ -1031,9 +1077,9 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       pipe_mutex_lock(ws->bo_fence_lock);
       amdgpu_add_fence_dependencies(cs);
       for (i = 0; i < num_buffers; i++) {
-         p_atomic_inc(&cur->buffers[i].bo->num_active_ioctls);
-         amdgpu_fence_reference(&cur->buffers[i].bo->fence,
-                                cur->fence);
+         struct amdgpu_winsys_bo *bo = cur->buffers[i].bo;
+         p_atomic_inc(&bo->num_active_ioctls);
+         amdgpu_add_fence(bo, cur->fence);
       }
       pipe_mutex_unlock(ws->bo_fence_lock);
 
