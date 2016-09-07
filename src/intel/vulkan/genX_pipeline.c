@@ -104,6 +104,8 @@ genX(compute_pipeline_create)(
       ALIGN(cs_prog_data->push.per_thread.regs * cs_prog_data->threads +
             cs_prog_data->push.cross_thread.regs, 2);
 
+   const uint32_t subslices = MAX2(physical_device->subslice_total, 1);
+
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
       vfe.ScratchSpaceBasePointer = (struct anv_address) {
          .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
@@ -117,7 +119,8 @@ genX(compute_pipeline_create)(
 #else
       vfe.GPGPUMode              = true;
 #endif
-      vfe.MaximumNumberofThreads = physical_device->max_cs_threads - 1;
+      vfe.MaximumNumberofThreads =
+         physical_device->max_cs_threads * subslices - 1;
       vfe.NumberofURBEntries     = GEN_GEN <= 7 ? 0 : 2;
       vfe.ResetGatewayTimer      = true;
 #if GEN_GEN <= 8
