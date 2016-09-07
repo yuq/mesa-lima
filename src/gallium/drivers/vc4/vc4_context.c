@@ -45,43 +45,29 @@ vc4_flush(struct pipe_context *pctx)
         struct pipe_surface *zsbuf = vc4->framebuffer.zsbuf;
 
         if (cbuf && (vc4->resolve & PIPE_CLEAR_COLOR0)) {
-                pipe_surface_reference(&vc4->color_write,
-                                       cbuf->texture->nr_samples > 1 ?
-                                       NULL : cbuf);
-                pipe_surface_reference(&vc4->msaa_color_write,
-                                       cbuf->texture->nr_samples > 1 ?
-                                       cbuf : NULL);
+                if (cbuf->texture->nr_samples > 1) {
+                        pipe_surface_reference(&vc4->msaa_color_write, cbuf);
+                } else {
+                        pipe_surface_reference(&vc4->color_write, cbuf);
+                }
 
                 if (!(vc4->cleared & PIPE_CLEAR_COLOR0)) {
                         pipe_surface_reference(&vc4->color_read, cbuf);
-                } else {
-                        pipe_surface_reference(&vc4->color_read, NULL);
                 }
 
-        } else {
-                pipe_surface_reference(&vc4->color_write, NULL);
-                pipe_surface_reference(&vc4->color_read, NULL);
-                pipe_surface_reference(&vc4->msaa_color_write, NULL);
         }
 
         if (vc4->framebuffer.zsbuf &&
             (vc4->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
-                pipe_surface_reference(&vc4->zs_write,
-                                       zsbuf->texture->nr_samples > 1 ?
-                                       NULL : zsbuf);
-                pipe_surface_reference(&vc4->msaa_zs_write,
-                                       zsbuf->texture->nr_samples > 1 ?
-                                       zsbuf : NULL);
+                if (zsbuf->texture->nr_samples > 1) {
+                        pipe_surface_reference(&vc4->msaa_zs_write, zsbuf);
+                } else {
+                        pipe_surface_reference(&vc4->zs_write, zsbuf);
+                }
 
                 if (!(vc4->cleared & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
                         pipe_surface_reference(&vc4->zs_read, zsbuf);
-                } else {
-                        pipe_surface_reference(&vc4->zs_read, NULL);
                 }
-        } else {
-                pipe_surface_reference(&vc4->zs_write, NULL);
-                pipe_surface_reference(&vc4->zs_read, NULL);
-                pipe_surface_reference(&vc4->msaa_zs_write, NULL);
         }
 
         vc4_job_submit(vc4);
@@ -181,9 +167,6 @@ vc4_context_destroy(struct pipe_context *pctx)
 
         pipe_surface_reference(&vc4->framebuffer.cbufs[0], NULL);
         pipe_surface_reference(&vc4->framebuffer.zsbuf, NULL);
-
-        pipe_surface_reference(&vc4->color_write, NULL);
-        pipe_surface_reference(&vc4->color_read, NULL);
 
         vc4_program_fini(pctx);
 

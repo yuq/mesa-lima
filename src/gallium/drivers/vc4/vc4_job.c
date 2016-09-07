@@ -70,6 +70,13 @@ vc4_job_reset(struct vc4_context *vc4)
         vc4->draw_min_y = ~0;
         vc4->draw_max_x = 0;
         vc4->draw_max_y = 0;
+
+        pipe_surface_reference(&vc4->color_write, NULL);
+        pipe_surface_reference(&vc4->color_read, NULL);
+        pipe_surface_reference(&vc4->msaa_color_write, NULL);
+        pipe_surface_reference(&vc4->zs_write, NULL);
+        pipe_surface_reference(&vc4->zs_read, NULL);
+        pipe_surface_reference(&vc4->msaa_zs_write, NULL);
 }
 
 static void

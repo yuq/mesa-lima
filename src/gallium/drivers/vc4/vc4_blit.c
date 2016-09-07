@@ -132,15 +132,10 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
                 vc4_get_blit_surface(pctx, info->src.resource, info->src.level);
 
         pipe_surface_reference(&vc4->color_read, src_surf);
-        pipe_surface_reference(&vc4->color_write,
-                               dst_surf->texture->nr_samples > 1 ?
-                               NULL : dst_surf);
-        pipe_surface_reference(&vc4->msaa_color_write,
-                               dst_surf->texture->nr_samples > 1 ?
-                               dst_surf : NULL);
-        pipe_surface_reference(&vc4->zs_read, NULL);
-        pipe_surface_reference(&vc4->zs_write, NULL);
-        pipe_surface_reference(&vc4->msaa_zs_write, NULL);
+        if (dst_surf->texture->nr_samples > 1)
+                pipe_surface_reference(&vc4->color_write, dst_surf);
+        else
+                pipe_surface_reference(&vc4->msaa_color_write, dst_surf);
 
         vc4->draw_min_x = info->dst.box.x;
         vc4->draw_min_y = info->dst.box.y;
