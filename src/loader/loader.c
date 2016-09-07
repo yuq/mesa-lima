@@ -69,16 +69,11 @@
 #include <sys/stat.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include <string.h>
 #ifdef HAVE_LIBUDEV
 #include <assert.h>
 #include <dlfcn.h>
-#include <unistd.h>
-#include <stdlib.h>
-#ifdef USE_DRICONF
-#include "xmlconfig.h"
-#include "xmlpool.h"
-#endif
 #endif
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
@@ -89,7 +84,13 @@
 #include "loader.h"
 
 #ifdef HAVE_LIBDRM
+#include <stdlib.h>
+#include <unistd.h>
 #include <xf86drm.h>
+#ifdef USE_DRICONF
+#include "xmlconfig.h"
+#include "xmlpool.h"
+#endif
 #endif
 
 #define __IS_LOADER
@@ -203,99 +204,9 @@ udev_device_new_from_fd(struct udev *udev, int fd)
 
    return device;
 }
+#endif
 
-static char *
-get_render_node_from_id_path_tag(struct udev *udev,
-                                 char *id_path_tag,
-                                 char another_tag)
-{
-   struct udev_device *device;
-   struct udev_enumerate *e;
-   struct udev_list_entry *entry;
-   const char *path, *id_path_tag_tmp;
-   char *path_res;
-   char found = 0;
-   UDEV_SYMBOL(struct udev_enumerate *, udev_enumerate_new,
-               (struct udev *));
-   UDEV_SYMBOL(int, udev_enumerate_add_match_subsystem,
-               (struct udev_enumerate *, const char *));
-   UDEV_SYMBOL(int, udev_enumerate_add_match_sysname,
-               (struct udev_enumerate *, const char *));
-   UDEV_SYMBOL(int, udev_enumerate_scan_devices,
-               (struct udev_enumerate *));
-   UDEV_SYMBOL(struct udev_list_entry *, udev_enumerate_get_list_entry,
-               (struct udev_enumerate *));
-   UDEV_SYMBOL(void, udev_enumerate_unref,
-               (struct udev_enumerate *));
-   UDEV_SYMBOL(struct udev_list_entry *, udev_list_entry_get_next,
-               (struct udev_list_entry *));
-   UDEV_SYMBOL(const char *, udev_list_entry_get_name,
-               (struct udev_list_entry *));
-   UDEV_SYMBOL(struct udev_device *, udev_device_new_from_syspath,
-               (struct udev *, const char *));
-   UDEV_SYMBOL(const char *, udev_device_get_property_value,
-               (struct udev_device *, const char *));
-   UDEV_SYMBOL(const char *, udev_device_get_devnode,
-               (struct udev_device *));
-   UDEV_SYMBOL(struct udev_device *, udev_device_unref,
-               (struct udev_device *));
-
-   e = udev_enumerate_new(udev);
-   udev_enumerate_add_match_subsystem(e, "drm");
-   udev_enumerate_add_match_sysname(e, "render*");
-
-   udev_enumerate_scan_devices(e);
-   udev_list_entry_foreach(entry, udev_enumerate_get_list_entry(e)) {
-      path = udev_list_entry_get_name(entry);
-      device = udev_device_new_from_syspath(udev, path);
-      if (!device)
-         continue;
-      id_path_tag_tmp = udev_device_get_property_value(device, "ID_PATH_TAG");
-      if (id_path_tag_tmp) {
-         if ((!another_tag && !strcmp(id_path_tag, id_path_tag_tmp)) ||
-             (another_tag && strcmp(id_path_tag, id_path_tag_tmp))) {
-            found = 1;
-            break;
-         }
-      }
-      udev_device_unref(device);
-   }
-
-   udev_enumerate_unref(e);
-
-   if (found) {
-      path_res = strdup(udev_device_get_devnode(device));
-      udev_device_unref(device);
-      return path_res;
-   }
-   return NULL;
-}
-
-static char *
-get_id_path_tag_from_fd(struct udev *udev, int fd)
-{
-   struct udev_device *device;
-   const char *id_path_tag_tmp;
-   char *id_path_tag;
-   UDEV_SYMBOL(const char *, udev_device_get_property_value,
-               (struct udev_device *, const char *));
-   UDEV_SYMBOL(struct udev_device *, udev_device_unref,
-               (struct udev_device *));
-
-   device = udev_device_new_from_fd(udev, fd);
-   if (!device)
-      return NULL;
-
-   id_path_tag_tmp = udev_device_get_property_value(device, "ID_PATH_TAG");
-   if (!id_path_tag_tmp)
-      return NULL;
-
-   id_path_tag = strdup(id_path_tag_tmp);
-
-   udev_device_unref(device);
-   return id_path_tag;
-}
-
+#if defined(HAVE_LIBDRM)
 #ifdef USE_DRICONF
 static const char __driConfigOptionsLoader[] =
 DRI_CONF_BEGIN
@@ -321,17 +232,60 @@ static char *loader_get_dri_config_device_id(void)
 }
 #endif
 
+static char *drm_construct_id_path_tag(drmDevicePtr device)
+{
+/* Length of "pci-xxxx_xx_xx_x\0" */
+#define PCI_ID_PATH_TAG_LENGTH 17
+   char *tag = NULL;
+
+   if (device->bustype == DRM_BUS_PCI) {
+        tag = calloc(PCI_ID_PATH_TAG_LENGTH, sizeof(char));
+        if (tag == NULL)
+            return NULL;
+
+        snprintf(tag, PCI_ID_PATH_TAG_LENGTH, "pci-%04x_%02x_%02x_%1u",
+                 device->businfo.pci->domain, device->businfo.pci->bus,
+                 device->businfo.pci->dev, device->businfo.pci->func);
+   }
+   return tag;
+}
+
+static bool drm_device_matches_tag(drmDevicePtr device, const char *prime_tag)
+{
+   char *tag = drm_construct_id_path_tag(device);
+   int ret;
+
+   if (tag == NULL)
+      return false;
+
+   ret = strcmp(tag, prime_tag);
+
+   free(tag);
+   return ret == 0;
+}
+
+static char *drm_get_id_path_tag_for_fd(int fd)
+{
+   drmDevicePtr device;
+   char *tag;
+
+   if (drmGetDevice(fd, &device) != 0)
+       return NULL;
+
+   tag = drm_construct_id_path_tag(device);
+   drmFreeDevice(&device);
+   return tag;
+}
+
 int loader_get_user_preferred_fd(int default_fd, int *different_device)
 {
-   struct udev *udev;
+/* Arbitrary "maximum" value of drm devices. */
+#define MAX_DRM_DEVICES 32
    const char *dri_prime = getenv("DRI_PRIME");
-   char *prime = NULL;
-   int is_different_device = 0, fd = default_fd;
-   char *default_device_id_path_tag;
-   char *device_name = NULL;
-   char another_tag = 0;
-   UDEV_SYMBOL(struct udev *, udev_new, (void));
-   UDEV_SYMBOL(struct udev *, udev_unref, (struct udev *));
+   char *default_tag, *prime = NULL;
+   drmDevicePtr devices[MAX_DRM_DEVICES];
+   int i, num_devices, fd;
+   bool found = false;
 
    if (dri_prime)
       prime = strdup(dri_prime);
@@ -345,55 +299,66 @@ int loader_get_user_preferred_fd(int default_fd, int *different_device)
       return default_fd;
    }
 
-   udev = udev_new();
-   if (!udev)
-      goto prime_clean;
+   default_tag = drm_get_id_path_tag_for_fd(default_fd);
+   if (default_tag == NULL)
+      goto err;
 
-   default_device_id_path_tag = get_id_path_tag_from_fd(udev, default_fd);
-   if (!default_device_id_path_tag)
-      goto udev_clean;
+   num_devices = drmGetDevices(devices, MAX_DRM_DEVICES);
+   if (num_devices < 0)
+      goto err;
 
-   is_different_device = 1;
    /* two format are supported:
     * "1": choose any other card than the card used by default.
     * id_path_tag: (for example "pci-0000_02_00_0") choose the card
     * with this id_path_tag.
     */
    if (!strcmp(prime,"1")) {
-      free(prime);
-      prime = strdup(default_device_id_path_tag);
-      /* request a card with a different card than the default card */
-      another_tag = 1;
-   } else if (!strcmp(default_device_id_path_tag, prime))
-      /* we are to get a new fd (render-node) of the same device */
-      is_different_device = 0;
+      /* Hmm... detection for 2-7 seems to be broken. Oh well ...
+       * Pick the first render device that is not our own.
+       */
+      for (i = 0; i < num_devices; i++) {
+         if (devices[i]->available_nodes & 1 << DRM_NODE_RENDER &&
+             !drm_device_matches_tag(devices[i], default_tag)) {
 
-   device_name = get_render_node_from_id_path_tag(udev,
-                                                  prime,
-                                                  another_tag);
-   if (device_name == NULL) {
-      is_different_device = 0;
-      goto default_device_clean;
-   }
-
-   fd = loader_open_device(device_name);
-   if (fd >= 0) {
-      close(default_fd);
+            found = true;
+            break;
+         }
+      }
    } else {
-      fd = default_fd;
-      is_different_device = 0;
+      for (i = 0; i < num_devices; i++) {
+         if (devices[i]->available_nodes & 1 << DRM_NODE_RENDER &&
+            drm_device_matches_tag(devices[i], prime)) {
+
+            found = true;
+            break;
+         }
+      }
    }
-   free(device_name);
 
- default_device_clean:
-   free(default_device_id_path_tag);
- udev_clean:
-   udev_unref(udev);
- prime_clean:
+   if (!found) {
+      drmFreeDevices(devices, num_devices);
+      goto err;
+   }
+
+   fd = loader_open_device(devices[i]->nodes[DRM_NODE_RENDER]);
+   drmFreeDevices(devices, num_devices);
+   if (fd < 0)
+      goto err;
+
+   close(default_fd);
+
+   *different_device = !!strcmp(default_tag, prime);
+
+   free(default_tag);
    free(prime);
-
-   *different_device = is_different_device;
    return fd;
+
+ err:
+   *different_device = 0;
+
+   free(default_tag);
+   free(prime);
+   return default_fd;
 }
 #else
 int loader_get_user_preferred_fd(int default_fd, int *different_device)
