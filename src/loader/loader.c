@@ -204,57 +204,6 @@ udev_device_new_from_fd(struct udev *udev, int fd)
    return device;
 }
 
-static int
-libudev_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
-{
-   struct udev *udev = NULL;
-   struct udev_device *device = NULL, *parent;
-   const char *pci_id;
-   UDEV_SYMBOL(struct udev *, udev_new, (void));
-   UDEV_SYMBOL(struct udev_device *, udev_device_get_parent,
-               (struct udev_device *));
-   UDEV_SYMBOL(const char *, udev_device_get_property_value,
-               (struct udev_device *, const char *));
-   UDEV_SYMBOL(struct udev_device *, udev_device_unref,
-               (struct udev_device *));
-   UDEV_SYMBOL(struct udev *, udev_unref, (struct udev *));
-
-   *chip_id = -1;
-
-   if (dlsym_failed)
-      return 0;
-
-   udev = udev_new();
-   device = udev_device_new_from_fd(udev, fd);
-   if (!device)
-      goto out;
-
-   parent = udev_device_get_parent(device);
-   if (parent == NULL) {
-      log_(_LOADER_WARNING, "MESA-LOADER: could not get parent device\n");
-      goto out;
-   }
-
-   pci_id = udev_device_get_property_value(parent, "PCI_ID");
-   if (pci_id == NULL) {
-      log_(_LOADER_INFO, "MESA-LOADER: no PCI ID\n");
-      *chip_id = -1;
-      goto out;
-   } else if (sscanf(pci_id, "%x:%x", vendor_id, chip_id) != 2) {
-      log_(_LOADER_WARNING, "MESA-LOADER: malformed PCI ID\n");
-      *chip_id = -1;
-      goto out;
-   }
-
-out:
-   if (device)
-      udev_device_unref(device);
-   if (udev)
-      udev_unref(udev);
-
-   return (*chip_id >= 0);
-}
-
 static char *
 get_render_node_from_id_path_tag(struct udev *udev,
                                  char *id_path_tag,
@@ -471,113 +420,32 @@ dev_node_from_fd(int fd, unsigned int *maj, unsigned int *min)
 }
 #endif
 
-#if defined(HAVE_SYSFS)
-static int
-sysfs_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
-{
-   unsigned int maj, min;
-   FILE *f;
-   char buf[0x40];
-
-   if (dev_node_from_fd(fd, &maj, &min) < 0) {
-      *chip_id = -1;
-      return 0;
-   }
-
-   snprintf(buf, sizeof(buf), "/sys/dev/char/%d:%d/device/vendor", maj, min);
-   if (!(f = fopen(buf, "r"))) {
-      *chip_id = -1;
-      return 0;
-   }
-   if (fscanf(f, "%x", vendor_id) != 1) {
-      *chip_id = -1;
-      fclose(f);
-      return 0;
-   }
-   fclose(f);
-   snprintf(buf, sizeof(buf), "/sys/dev/char/%d:%d/device/device", maj, min);
-   if (!(f = fopen(buf, "r"))) {
-      *chip_id = -1;
-      return 0;
-   }
-   if (fscanf(f, "%x", chip_id) != 1) {
-      *chip_id = -1;
-      fclose(f);
-      return 0;
-   }
-   fclose(f);
-   return 1;
-}
-#endif
-
 #if defined(HAVE_LIBDRM)
-/* for i915 */
-#include <i915_drm.h>
-/* for radeon */
-#include <radeon_drm.h>
 
 static int
 drm_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 {
-   drmVersionPtr version;
+   drmDevicePtr device;
+   int ret;
 
-   *chip_id = -1;
-
-   version = drmGetVersion(fd);
-   if (!version) {
-      log_(_LOADER_WARNING, "MESA-LOADER: invalid drm fd\n");
-      return 0;
-   }
-   if (!version->name) {
-      log_(_LOADER_WARNING, "MESA-LOADER: unable to determine the driver name\n");
-      drmFreeVersion(version);
-      return 0;
-   }
-
-   if (strcmp(version->name, "i915") == 0) {
-      struct drm_i915_getparam gp;
-      int ret;
-
-      *vendor_id = 0x8086;
-
-      memset(&gp, 0, sizeof(gp));
-      gp.param = I915_PARAM_CHIPSET_ID;
-      gp.value = chip_id;
-      ret = drmCommandWriteRead(fd, DRM_I915_GETPARAM, &gp, sizeof(gp));
-      if (ret) {
-         log_(_LOADER_WARNING, "MESA-LOADER: failed to get param for i915\n");
-	 *chip_id = -1;
+   if (drmGetDevice(fd, &device) == 0) {
+      if (device->bustype == DRM_BUS_PCI) {
+         *vendor_id = device->deviceinfo.pci->vendor_id;
+         *chip_id = device->deviceinfo.pci->device_id;
+         ret = 1;
       }
-   }
-   else if (strcmp(version->name, "radeon") == 0) {
-      struct drm_radeon_info info;
-      int ret;
-
-      *vendor_id = 0x1002;
-
-      memset(&info, 0, sizeof(info));
-      info.request = RADEON_INFO_DEVICE_ID;
-      info.value = (unsigned long) chip_id;
-      ret = drmCommandWriteRead(fd, DRM_RADEON_INFO, &info, sizeof(info));
-      if (ret) {
-         log_(_LOADER_WARNING, "MESA-LOADER: failed to get info for radeon\n");
-	 *chip_id = -1;
+      else {
+         log_(_LOADER_WARNING, "MESA-LOADER: device is not located on the PCI bus\n");
+         ret = 0;
       }
+      drmFreeDevice(&device);
    }
-   else if (strcmp(version->name, "nouveau") == 0) {
-      *vendor_id = 0x10de;
-      /* not used */
-      *chip_id = 0;
-   }
-   else if (strcmp(version->name, "vmwgfx") == 0) {
-      *vendor_id = 0x15ad;
-      /* assume SVGA II */
-      *chip_id = 0x0405;
+   else {
+      log_(_LOADER_WARNING, "MESA-LOADER: failed to retrieve device information\n");
+      ret = 0;
    }
 
-   drmFreeVersion(version);
-
-   return (*chip_id >= 0);
+   return ret;
 }
 #endif
 
@@ -585,14 +453,6 @@ drm_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 int
 loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 {
-#if HAVE_LIBUDEV
-   if (libudev_get_pci_id_for_fd(fd, vendor_id, chip_id))
-      return 1;
-#endif
-#if HAVE_SYSFS
-   if (sysfs_get_pci_id_for_fd(fd, vendor_id, chip_id))
-      return 1;
-#endif
 #if HAVE_LIBDRM
    if (drm_get_pci_id_for_fd(fd, vendor_id, chip_id))
       return 1;
