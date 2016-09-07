@@ -81,14 +81,32 @@ struct amdgpu_winsys_bo {
    struct pipe_fence_handle **fences;
 };
 
+struct amdgpu_slab {
+   struct pb_slab base;
+   struct amdgpu_winsys_bo *buffer;
+   struct amdgpu_winsys_bo *entries;
+};
+
 bool amdgpu_bo_can_reclaim(struct pb_buffer *_buf);
 void amdgpu_bo_destroy(struct pb_buffer *_buf);
 void amdgpu_bo_init_functions(struct amdgpu_winsys *ws);
+
+bool amdgpu_bo_can_reclaim_slab(void *priv, struct pb_slab_entry *entry);
+struct pb_slab *amdgpu_bo_slab_alloc(void *priv, unsigned heap,
+                                     unsigned entry_size,
+                                     unsigned group_index);
+void amdgpu_bo_slab_free(void *priv, struct pb_slab *slab);
 
 static inline
 struct amdgpu_winsys_bo *amdgpu_winsys_bo(struct pb_buffer *bo)
 {
    return (struct amdgpu_winsys_bo *)bo;
+}
+
+static inline
+struct amdgpu_slab *amdgpu_slab(struct pb_slab *slab)
+{
+   return (struct amdgpu_slab *)slab;
 }
 
 static inline

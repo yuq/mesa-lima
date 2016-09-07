@@ -33,6 +33,7 @@
 #define AMDGPU_WINSYS_H
 
 #include "pipebuffer/pb_cache.h"
+#include "pipebuffer/pb_slab.h"
 #include "gallium/drivers/radeon/radeon_winsys.h"
 #include "addrlib/addrinterface.h"
 #include "util/u_queue.h"
@@ -40,10 +41,14 @@
 
 struct amdgpu_cs;
 
+#define AMDGPU_SLAB_MIN_SIZE_LOG2 9
+#define AMDGPU_SLAB_MAX_SIZE_LOG2 14
+
 struct amdgpu_winsys {
    struct radeon_winsys base;
    struct pipe_reference reference;
    struct pb_cache bo_cache;
+   struct pb_slabs bo_slabs;
 
    amdgpu_device_handle dev;
 

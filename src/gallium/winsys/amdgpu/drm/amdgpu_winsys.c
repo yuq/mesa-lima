@@ -382,6 +382,7 @@ static void amdgpu_winsys_destroy(struct radeon_winsys *rws)
       util_queue_destroy(&ws->cs_queue);
 
    pipe_mutex_destroy(ws->bo_fence_lock);
+   pb_slabs_deinit(&ws->bo_slabs);
    pb_cache_deinit(&ws->bo_cache);
    pipe_mutex_destroy(ws->global_bo_list_lock);
    do_winsys_deinit(ws);
@@ -547,6 +548,15 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
                  (ws->info.vram_size + ws->info.gart_size) / 8,
                  amdgpu_bo_destroy, amdgpu_bo_can_reclaim);
 
+   if (!pb_slabs_init(&ws->bo_slabs,
+                      AMDGPU_SLAB_MIN_SIZE_LOG2, AMDGPU_SLAB_MAX_SIZE_LOG2,
+                      12, /* number of heaps (domain/flags combinations) */
+                      ws,
+                      amdgpu_bo_can_reclaim_slab,
+                      amdgpu_bo_slab_alloc,
+                      amdgpu_bo_slab_free))
+      goto fail_cache;
+
    /* init reference */
    pipe_reference_init(&ws->reference, 1);
 
@@ -590,6 +600,9 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
 
    return &ws->base;
 
+fail_cache:
+   pb_cache_deinit(&ws->bo_cache);
+   do_winsys_deinit(ws);
 fail_alloc:
    FREE(ws);
 fail:
