@@ -8039,6 +8039,20 @@ ast_cs_input_layout::hir(exec_list *instructions,
       }
    }
 
+   /* The ARB_compute_variable_group_size spec says:
+    *
+    *     If a compute shader including a *local_size_variable* qualifier also
+    *     declares a fixed local group size using the *local_size_x*,
+    *     *local_size_y*, or *local_size_z* qualifiers, a compile-time error
+    *     results
+    */
+   if (state->cs_input_local_size_variable_specified) {
+      _mesa_glsl_error(&loc, state,
+                       "compute shader can't include both a variable and a "
+                       "fixed local group size");
+      return NULL;
+   }
+
    state->cs_input_local_size_specified = true;
    for (int i = 0; i < 3; i++)
       state->cs_input_local_size[i] = qual_local_size[i];
