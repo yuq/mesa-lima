@@ -55,7 +55,6 @@ gbm_device_get_fd(struct gbm_device *gbm)
    return gbm->fd;
 }
 
-/* FIXME: maybe superfluous, use udev subclass from the fd? */
 /** Get the backend name for the given gbm device
  *
  * \return The backend name string - this belongs to the device and must not
