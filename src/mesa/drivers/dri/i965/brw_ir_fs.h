@@ -187,7 +187,8 @@ static inline unsigned
 reg_offset(const fs_reg &r)
 {
    return (r.file == VGRF || r.file == IMM ? 0 : r.nr) *
-          (r.file == UNIFORM ? 4 : REG_SIZE) + r.offset;
+          (r.file == UNIFORM ? 4 : REG_SIZE) + r.offset +
+          (r.file == ARF || r.file == FIXED_GRF ? r.subnr : 0);
 }
 
 /**
