@@ -2200,7 +2200,16 @@ static void evergreen_set_clear_color(struct r600_texture *rtex,
 
 	memset(&uc, 0, sizeof(uc));
 
-	if (util_format_is_pure_uint(surface_format)) {
+	if (util_format_get_blocksizebits(surface_format) == 128) {
+		/* DCC fast clear only:
+		 *   CLEAR_WORD0 = R = G = B
+		 *   CLEAR_WORD1 = A
+		 */
+		assert(color->ui[0] == color->ui[1] &&
+		       color->ui[0] == color->ui[2]);
+		uc.ui[0] = color->ui[0];
+		uc.ui[1] = color->ui[3];
+	} else if (util_format_is_pure_uint(surface_format)) {
 		util_format_write_4ui(surface_format, color->ui, 0, &uc, 0, 0, 0, 1, 1);
 	} else if (util_format_is_pure_sint(surface_format)) {
 		util_format_write_4i(surface_format, color->i, 0, &uc, 0, 0, 0, 1, 1);
@@ -2211,7 +2220,7 @@ static void evergreen_set_clear_color(struct r600_texture *rtex,
 	memcpy(rtex->color_clear_value, &uc, 2 * sizeof(uint32_t));
 }
 
-static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
+static bool vi_get_fast_clear_parameters(enum pipe_format surface_format,
 					 const union pipe_color_union *color,
 					 uint32_t* reset_value,
 					 bool* clear_words_needed)
@@ -2222,6 +2231,11 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 	bool extra_value = false;
 	int extra_channel;
 	const struct util_format_description *desc = util_format_description(surface_format);
+
+	if (desc->block.bits == 128 &&
+	    (color->ui[0] != color->ui[1] ||
+	     color->ui[0] != color->ui[2]))
+		return false;
 
 	*clear_words_needed = true;
 	*reset_value = 0x20202020U;
@@ -2242,7 +2256,7 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 		else
 			extra_channel = 0;
 	} else
-		return;
+		return true;
 
 	for (i = 0; i < 4; ++i) {
 		int index = desc->swizzle[i] - PIPE_SWIZZLE_X;
@@ -2258,7 +2272,7 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 			values[i] = color->i[i] != 0;
 			if (color->i[i] != 0 && MIN2(color->i[i], max) != max)
-				return;
+				return true;
 		} else if (desc->channel[i].pure_integer &&
 			   desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED) {
 			/* Use the maximum value for clamping the clear color. */
@@ -2266,11 +2280,11 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 			values[i] = color->ui[i] != 0U;
 			if (color->ui[i] != 0U && MIN2(color->ui[i], max) != max)
-				return;
+				return true;
 		} else {
 			values[i] = color->f[i] != 0.0F;
 			if (color->f[i] != 0.0F && color->f[i] != 1.0F)
-				return;
+				return true;
 		}
 
 		if (index == extra_channel)
@@ -2284,7 +2298,7 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 		    desc->swizzle[i] - PIPE_SWIZZLE_X != extra_channel &&
 		    desc->swizzle[i] >= PIPE_SWIZZLE_X &&
 		    desc->swizzle[i] <= PIPE_SWIZZLE_W)
-			return;
+			return true;
 
 	*clear_words_needed = false;
 	if (main_value)
@@ -2292,6 +2306,7 @@ static void vi_get_fast_clear_parameters(enum pipe_format surface_format,
 
 	if (extra_value)
 		*reset_value |= 0x40404040U;
+	return true;
 }
 
 void vi_dcc_clear_level(struct r600_common_context *rctx,
@@ -2424,11 +2439,6 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 
 		tex = (struct r600_texture *)fb->cbufs[i]->texture;
 
-		/* 128-bit formats are unusupported */
-		if (util_format_get_blocksizebits(fb->cbufs[i]->format) > 64) {
-			continue;
-		}
-
 		/* the clear is allowed if all layers are bound */
 		if (fb->cbufs[i]->u.tex.first_layer != 0 ||
 		    fb->cbufs[i]->u.tex.last_layer != util_max_layer(&tex->resource.b.b, 0)) {
@@ -2489,13 +2499,22 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			if (rctx->screen->chip_class >= SI)
 				si_set_optimal_micro_tile_mode(rctx->screen, tex);
 
-			vi_get_fast_clear_parameters(fb->cbufs[i]->format, color, &reset_value, &clear_words_needed);
+			if (!vi_get_fast_clear_parameters(fb->cbufs[i]->format,
+							  color, &reset_value,
+							  &clear_words_needed))
+				continue;
+
 			vi_dcc_clear_level(rctx, tex, 0, reset_value);
 
 			if (clear_words_needed)
 				tex->dirty_level_mask |= 1 << fb->cbufs[i]->u.tex.level;
 			tex->separate_dcc_dirty = true;
 		} else {
+			/* 128-bit formats are unusupported */
+			if (util_format_get_blocksizebits(fb->cbufs[i]->format) > 64) {
+				continue;
+			}
+
 			/* Stoney/RB+ doesn't work with CMASK fast clear. */
 			if (rctx->family == CHIP_STONEY)
 				continue;
