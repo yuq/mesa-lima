@@ -34,5 +34,7 @@ $(intermediates)/brw_nir_trig_workarounds.c: $(brw_nir_trig_workarounds_deps)
 	@mkdir -p $(dir $@)
 	$(hide) PYTHONPATH=$(MESA_TOP)/src/compiler/nir $(MESA_PYTHON2) $< > $@
 
+LOCAL_STATIC_LIBRARIES = libmesa_genxml
+
 LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
 	$(i965_compiler_GENERATED_FILES))
