@@ -575,26 +575,6 @@ static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
       break;
    }
 
-   cs->max_num_buffers = 512;
-   cs->buffers = (struct amdgpu_cs_buffer*)
-                  CALLOC(1, cs->max_num_buffers * sizeof(struct amdgpu_cs_buffer));
-   if (!cs->buffers) {
-      return false;
-   }
-
-   cs->handles = CALLOC(1, cs->max_num_buffers * sizeof(amdgpu_bo_handle));
-   if (!cs->handles) {
-      FREE(cs->buffers);
-      return false;
-   }
-
-   cs->flags = CALLOC(1, cs->max_num_buffers);
-   if (!cs->flags) {
-      FREE(cs->handles);
-      FREE(cs->buffers);
-      return false;
-   }
-
    for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
       cs->buffer_indices_hashlist[i] = -1;
    }
