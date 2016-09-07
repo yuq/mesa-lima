@@ -923,7 +923,7 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
          return;
       }
 
-      LIST_FOR_EACH_ENTRY(bo, &ws->global_bo_list, global_list_item) {
+      LIST_FOR_EACH_ENTRY(bo, &ws->global_bo_list, u.real.global_list_item) {
          assert(num < ws->num_buffers);
          handles[num++] = bo->bo;
       }
