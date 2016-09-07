@@ -1669,11 +1669,15 @@ static const struct u_resource_vtbl r600_texture_vtbl =
 /* DCC channel type categories within which formats can be reinterpreted
  * while keeping the same DCC encoding. The swizzle must also match. */
 enum dcc_channel_type {
-	dcc_channel_any32,
-	dcc_channel_int16,
+	dcc_channel_float32,
+	dcc_channel_uint32,
+	dcc_channel_sint32,
 	dcc_channel_float16,
-	dcc_channel_any_10_10_10_2,
-	dcc_channel_any8,
+	dcc_channel_uint16,
+	dcc_channel_sint16,
+	dcc_channel_uint_10_10_10_2,
+	dcc_channel_uint8,
+	dcc_channel_sint8,
 	dcc_channel_incompatible,
 };
 
@@ -1692,19 +1696,23 @@ vi_get_dcc_channel_type(const struct util_format_description *desc)
 
 	switch (desc->channel[i].size) {
 	case 32:
-		if (desc->nr_channels == 4)
-			return dcc_channel_incompatible;
-		else
-			return dcc_channel_any32;
+		if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT)
+			return dcc_channel_float32;
+		if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED)
+			return dcc_channel_uint32;
+		return dcc_channel_sint32;
 	case 16:
 		if (desc->channel[i].type == UTIL_FORMAT_TYPE_FLOAT)
 			return dcc_channel_float16;
-		else
-			return dcc_channel_int16;
+		if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED)
+			return dcc_channel_uint16;
+		return dcc_channel_sint16;
 	case 10:
-		return dcc_channel_any_10_10_10_2;
+		return dcc_channel_uint_10_10_10_2;
 	case 8:
-		return dcc_channel_any8;
+		if (desc->channel[i].type == UTIL_FORMAT_TYPE_UNSIGNED)
+			return dcc_channel_uint8;
+		return dcc_channel_sint8;
 	default:
 		return dcc_channel_incompatible;
 	}
