@@ -318,14 +318,15 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 			wd_switch_on_eop = true;
 
 		/* Performance recommendation for 4 SE Gfx7-8 parts if
-		 * instances are smaller than a primgroup. Ignore the fact
-		 * primgroup_size is a primitive count, not vertex count.
-		 * Don't do anything for indirect draws.
+		 * instances are smaller than a primgroup.
+		 * Assume indirect draws always use small instances.
+		 * This is needed for good VS wave utilization.
 		 */
 		if (sctx->b.chip_class <= VI &&
 		    sctx->b.screen->info.max_se >= 4 &&
-		    !info->indirect &&
-		    info->instance_count > 1 && info->count < primgroup_size)
+		    (info->indirect ||
+		     (info->instance_count > 1 &&
+		      si_num_prims_for_vertices(info) < primgroup_size)))
 			wd_switch_on_eop = true;
 
 		/* Required on CIK and later. */
