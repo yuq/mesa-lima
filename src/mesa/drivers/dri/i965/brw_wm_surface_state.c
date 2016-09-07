@@ -438,6 +438,38 @@ brw_find_matching_rb(const struct gl_framebuffer *fb,
    return fb->_NumColorDrawBuffers;
 }
 
+static inline bool
+brw_texture_view_sane(const struct brw_context *brw,
+                      const struct intel_mipmap_tree *mt, unsigned format)
+{
+   /* There are special cases only for lossless compression. */
+   if (!intel_miptree_is_lossless_compressed(brw, mt))
+      return true;
+
+   if (isl_format_supports_lossless_compression(brw->intelScreen->devinfo,
+                                                format))
+      return true;
+
+   /* Logic elsewhere needs to take care to resolve the color buffer prior
+    * to sampling it as non-compressed.
+    */
+   if (mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED)
+      return false;
+
+   const struct gl_framebuffer *fb = brw->ctx.DrawBuffer;
+   const unsigned rb_index = brw_find_matching_rb(fb, mt);
+
+   if (rb_index == fb->_NumColorDrawBuffers)
+      return true;
+
+   /* Underlying surface is compressed but it is sampled using a format that
+    * the sampling engine doesn't support as compressed. Compression must be
+    * disabled for both sampling engine and data port in case the same surface
+    * is used also as render target.
+    */
+   return brw->draw_aux_buffer_disabled[rb_index];
+}
+
 static bool
 brw_disable_aux_surface(const struct brw_context *brw,
                         const struct intel_mipmap_tree *mt)
@@ -591,6 +623,8 @@ brw_update_texture_surface(struct gl_context *ctx,
       if (obj->Target == GL_TEXTURE_CUBE_MAP ||
           obj->Target == GL_TEXTURE_CUBE_MAP_ARRAY)
          view.usage |= ISL_SURF_USAGE_CUBE_BIT;
+
+      assert(brw_texture_view_sane(brw, mt, format));
 
       const int flags =
          brw_disable_aux_surface(brw, mt) ? INTEL_AUX_BUFFER_DISABLED : 0;
