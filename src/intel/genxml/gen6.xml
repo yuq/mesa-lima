@@ -1006,7 +1006,10 @@
     <field name="Statistics Enable" start="170" end="170" type="bool"/>
     <field name="SO Statistics Enable" start="169" end="169" type="bool"/>
     <field name="Rendering Enabled" start="168" end="168" type="uint"/>
-    <field name="Reorder Enable" start="222" end="222" type="bool"/>
+    <field name="Reorder Mode" start="222" end="222" type="uint">
+      <value name="LEADING" value="0"/>
+      <value name="TRAILING" value="1"/>
+    </field>
     <field name="Discard Adjacency" start="221" end="221" type="bool"/>
     <field name="SVBI Payload Enable" start="220" end="220" type="bool"/>
     <field name="SVBI Post-Increment Enable" start="219" end="219" type="bool"/>

@@ -1303,11 +1303,7 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
       gs.ControlDataFormat       = gs_prog_data->control_data_format;
       gs.ControlDataHeaderSize   = gs_prog_data->control_data_header_size_hwords;
       gs.InstanceControl         = MAX2(gs_prog_data->invocations, 1) - 1;
-#if GEN_GEN >= 8 || GEN_IS_HASWELL
       gs.ReorderMode             = TRAILING;
-#else
-      gs.ReorderEnable           = true;
-#endif
 
 #if GEN_GEN >= 8
       gs.ExpectedVertexCount     = gs_prog_data->vertices_in;
