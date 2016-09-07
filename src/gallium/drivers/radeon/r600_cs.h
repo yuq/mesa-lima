@@ -73,8 +73,10 @@ static inline unsigned radeon_add_to_buffer_list(struct r600_common_context *rct
 						 enum radeon_bo_priority priority)
 {
 	assert(usage);
-	return rctx->ws->cs_add_buffer(ring->cs, rbo->buf, usage,
-				      rbo->domains, priority) * 4;
+	return rctx->ws->cs_add_buffer(
+		ring->cs, rbo->buf,
+		(enum radeon_bo_usage)(usage | RADEON_USAGE_SYNCHRONIZED),
+		rbo->domains, priority) * 4;
 }
 
 /**

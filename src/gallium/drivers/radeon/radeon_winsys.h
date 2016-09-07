@@ -57,7 +57,12 @@ enum radeon_bo_flag { /* bitfield */
 enum radeon_bo_usage { /* bitfield */
     RADEON_USAGE_READ = 2,
     RADEON_USAGE_WRITE = 4,
-    RADEON_USAGE_READWRITE = RADEON_USAGE_READ | RADEON_USAGE_WRITE
+    RADEON_USAGE_READWRITE = RADEON_USAGE_READ | RADEON_USAGE_WRITE,
+
+    /* The winsys ensures that the CS submission will be scheduled after
+     * previously flushed CSs referencing this BO in a conflicting way.
+     */
+    RADEON_USAGE_SYNCHRONIZED = 8
 };
 
 enum ring_type {
