@@ -62,8 +62,8 @@ struct amdgpu_winsys_bo {
     */
    volatile int is_shared; /* bool (int for atomicity) */
 
-   /* Fences for buffer synchronization. */
-   struct pipe_fence_handle *fence[RING_LAST];
+   /* Fence for buffer synchronization. */
+   struct pipe_fence_handle *fence;
 
    struct list_head global_list_item;
 };

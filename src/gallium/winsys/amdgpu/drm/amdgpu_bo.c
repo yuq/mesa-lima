@@ -44,7 +44,6 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_winsys *ws = bo->ws;
    int64_t abs_timeout;
-   int i;
 
    if (timeout == 0) {
       if (p_atomic_read(&bo->num_active_ioctls))
@@ -75,49 +74,42 @@ static bool amdgpu_bo_wait(struct pb_buffer *_buf, uint64_t timeout,
 
    if (timeout == 0) {
       pipe_mutex_lock(ws->bo_fence_lock);
-      for (i = 0; i < RING_LAST; i++)
-         if (bo->fence[i]) {
-            if (amdgpu_fence_wait(bo->fence[i], 0, false)) {
-               /* Release the idle fence to avoid checking it again later. */
-               amdgpu_fence_reference(&bo->fence[i], NULL);
-            } else {
-               pipe_mutex_unlock(ws->bo_fence_lock);
-               return false;
-            }
+      if (bo->fence) {
+         if (amdgpu_fence_wait(bo->fence, 0, false)) {
+            /* Release the idle fence to avoid checking it again later. */
+            amdgpu_fence_reference(&bo->fence, NULL);
+         } else {
+            pipe_mutex_unlock(ws->bo_fence_lock);
+            return false;
          }
+      }
       pipe_mutex_unlock(ws->bo_fence_lock);
       return true;
 
    } else {
-      struct pipe_fence_handle *fence[RING_LAST] = {};
-      bool fence_idle[RING_LAST] = {};
+      struct pipe_fence_handle *fence = NULL;
+      bool fence_idle = false;
       bool buffer_idle = true;
 
-      /* Take references to all fences, so that we can wait for them
+      /* Take a reference to the fences, so that we can wait for it
        * without the lock. */
       pipe_mutex_lock(ws->bo_fence_lock);
-      for (i = 0; i < RING_LAST; i++)
-         amdgpu_fence_reference(&fence[i], bo->fence[i]);
+      amdgpu_fence_reference(&fence, bo->fence);
       pipe_mutex_unlock(ws->bo_fence_lock);
 
-      /* Now wait for the fences. */
-      for (i = 0; i < RING_LAST; i++) {
-         if (fence[i]) {
-            if (amdgpu_fence_wait(fence[i], abs_timeout, true))
-               fence_idle[i] = true;
-            else
-               buffer_idle = false;
-         }
+      /* Now wait for the fence. */
+      if (fence) {
+         if (amdgpu_fence_wait(fence, abs_timeout, true))
+            fence_idle = true;
+         else
+            buffer_idle = false;
       }
 
       /* Release idle fences to avoid checking them again later. */
       pipe_mutex_lock(ws->bo_fence_lock);
-      for (i = 0; i < RING_LAST; i++) {
-         if (fence[i] == bo->fence[i] && fence_idle[i])
-            amdgpu_fence_reference(&bo->fence[i], NULL);
-
-         amdgpu_fence_reference(&fence[i], NULL);
-      }
+      if (fence == bo->fence && fence_idle)
+         amdgpu_fence_reference(&bo->fence, NULL);
+      amdgpu_fence_reference(&fence, NULL);
       pipe_mutex_unlock(ws->bo_fence_lock);
 
       return buffer_idle;
@@ -133,7 +125,6 @@ static enum radeon_bo_domain amdgpu_bo_get_initial_domain(
 void amdgpu_bo_destroy(struct pb_buffer *_buf)
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
-   int i;
 
    pipe_mutex_lock(bo->ws->global_bo_list_lock);
    LIST_DEL(&bo->global_list_item);
@@ -144,8 +135,7 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
    amdgpu_va_range_free(bo->va_handle);
    amdgpu_bo_free(bo->bo);
 
-   for (i = 0; i < RING_LAST; i++)
-      amdgpu_fence_reference(&bo->fence[i], NULL);
+   amdgpu_fence_reference(&bo->fence, NULL);
 
    if (bo->initial_domain & RADEON_DOMAIN_VRAM)
       bo->ws->allocated_vram -= align64(bo->base.size, bo->ws->info.gart_page_size);

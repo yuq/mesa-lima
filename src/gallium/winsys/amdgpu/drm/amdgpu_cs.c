@@ -827,44 +827,42 @@ DEBUG_GET_ONCE_BOOL_OPTION(all_bos, "RADEON_ALL_BOS", false)
 static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
 {
    struct amdgpu_cs_context *cs = acs->csc;
-   int i, j;
+   int i;
 
    cs->request.number_of_dependencies = 0;
 
    for (i = 0; i < cs->num_buffers; i++) {
-      for (j = 0; j < RING_LAST; j++) {
-         struct amdgpu_cs_fence *dep;
-         unsigned idx;
+      struct amdgpu_cs_fence *dep;
+      unsigned idx;
 
-         struct amdgpu_fence *bo_fence = (void *)cs->buffers[i].bo->fence[j];
-         if (!bo_fence)
-            continue;
+      struct amdgpu_fence *bo_fence = (void *)cs->buffers[i].bo->fence;
+      if (!bo_fence)
+         continue;
 
-         if (bo_fence->ctx == acs->ctx &&
-             bo_fence->fence.ip_type == cs->request.ip_type &&
-             bo_fence->fence.ip_instance == cs->request.ip_instance &&
-             bo_fence->fence.ring == cs->request.ring)
-            continue;
+      if (bo_fence->ctx == acs->ctx &&
+          bo_fence->fence.ip_type == cs->request.ip_type &&
+          bo_fence->fence.ip_instance == cs->request.ip_instance &&
+          bo_fence->fence.ring == cs->request.ring)
+         continue;
 
-         if (amdgpu_fence_wait((void *)bo_fence, 0, false))
-            continue;
+      if (amdgpu_fence_wait((void *)bo_fence, 0, false))
+         continue;
 
-         if (bo_fence->submission_in_progress)
-            os_wait_until_zero(&bo_fence->submission_in_progress,
-                               PIPE_TIMEOUT_INFINITE);
+      if (bo_fence->submission_in_progress)
+         os_wait_until_zero(&bo_fence->submission_in_progress,
+                            PIPE_TIMEOUT_INFINITE);
 
-         idx = cs->request.number_of_dependencies++;
-         if (idx >= cs->max_dependencies) {
-            unsigned size;
+      idx = cs->request.number_of_dependencies++;
+      if (idx >= cs->max_dependencies) {
+         unsigned size;
 
-            cs->max_dependencies = idx + 8;
-            size = cs->max_dependencies * sizeof(struct amdgpu_cs_fence);
-            cs->request.dependencies = realloc(cs->request.dependencies, size);
-         }
-
-         dep = &cs->request.dependencies[idx];
-         memcpy(dep, &bo_fence->fence, sizeof(*dep));
+         cs->max_dependencies = idx + 8;
+         size = cs->max_dependencies * sizeof(struct amdgpu_cs_fence);
+         cs->request.dependencies = realloc(cs->request.dependencies, size);
       }
+
+      dep = &cs->request.dependencies[idx];
+      memcpy(dep, &bo_fence->fence, sizeof(*dep));
    }
 }
 
@@ -1054,7 +1052,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       amdgpu_add_fence_dependencies(cs);
       for (i = 0; i < num_buffers; i++) {
          p_atomic_inc(&cur->buffers[i].bo->num_active_ioctls);
-         amdgpu_fence_reference(&cur->buffers[i].bo->fence[cs->ring_type],
+         amdgpu_fence_reference(&cur->buffers[i].bo->fence,
                                 cur->fence);
       }
       pipe_mutex_unlock(ws->bo_fence_lock);
