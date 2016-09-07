@@ -4599,8 +4599,8 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
     */
    if (devinfo->gen < 8) {
       for (unsigned i = 0; i < inst->sources; i++) {
-         if (DIV_ROUND_UP(inst->size_written, REG_SIZE) == 2 &&
-             inst->size_read(i) != 0 && DIV_ROUND_UP(inst->size_read(i), REG_SIZE) != 2 &&
+         if (inst->size_written > REG_SIZE &&
+             inst->size_read(i) != 0 && inst->size_read(i) <= REG_SIZE &&
              !is_uniform(inst->src[i]) &&
              !(type_sz(inst->dst.type) == 4 && inst->dst.stride == 1 &&
                type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1)) {
