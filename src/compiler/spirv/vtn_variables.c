@@ -889,81 +889,9 @@ vtn_get_builtin_location(struct vtn_builder *b,
 }
 
 static void
-var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
-                  const struct vtn_decoration *dec, void *void_var)
+apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
+                     const struct vtn_decoration *dec)
 {
-   struct vtn_variable *vtn_var = void_var;
-
-   /* Handle decorations that apply to a vtn_variable as a whole */
-   switch (dec->decoration) {
-   case SpvDecorationBinding:
-      vtn_var->binding = dec->literals[0];
-      return;
-   case SpvDecorationDescriptorSet:
-      vtn_var->descriptor_set = dec->literals[0];
-      return;
-   default:
-      break;
-   }
-
-   /* Now we handle decorations that apply to a particular nir_variable */
-   nir_variable *nir_var = vtn_var->var;
-   if (val->value_type == vtn_value_type_access_chain) {
-      assert(val->access_chain->length == 0);
-      assert(val->access_chain->var == void_var);
-      assert(member == -1);
-   } else {
-      assert(val->value_type == vtn_value_type_type);
-      if (member != -1)
-         nir_var = vtn_var->members[member];
-   }
-
-   /* Location is odd in that it can apply in three different cases: To a
-    * non-split variable, to a whole split variable, or to one structure
-    * member of a split variable.
-    */
-   if (dec->decoration == SpvDecorationLocation) {
-      unsigned location = dec->literals[0];
-      bool is_vertex_input;
-      if (b->shader->stage == MESA_SHADER_FRAGMENT &&
-          vtn_var->mode == vtn_variable_mode_output) {
-         is_vertex_input = false;
-         location += FRAG_RESULT_DATA0;
-      } else if (b->shader->stage == MESA_SHADER_VERTEX &&
-                 vtn_var->mode == vtn_variable_mode_input) {
-         is_vertex_input = true;
-         location += VERT_ATTRIB_GENERIC0;
-      } else if (vtn_var->mode == vtn_variable_mode_input ||
-                 vtn_var->mode == vtn_variable_mode_output) {
-         is_vertex_input = false;
-         location += VARYING_SLOT_VAR0;
-      } else {
-         assert(!"Location must be on input or output variable");
-      }
-
-      if (nir_var) {
-         /* This handles the member and lone variable cases */
-         nir_var->data.location = location;
-         nir_var->data.explicit_location = true;
-      } else {
-         /* This handles the structure member case */
-         assert(vtn_var->members);
-         unsigned length =
-            glsl_get_length(glsl_without_array(vtn_var->type->type));
-         for (unsigned i = 0; i < length; i++) {
-            vtn_var->members[i]->data.location = location;
-            vtn_var->members[i]->data.explicit_location = true;
-            location +=
-               glsl_count_attribute_slots(vtn_var->members[i]->interface_type,
-                                          is_vertex_input);
-         }
-      }
-      return;
-   }
-
-   if (nir_var == NULL)
-      return;
-
    switch (dec->decoration) {
    case SpvDecorationRelaxedPrecision:
       break; /* FIXME: Do nothing with this for now. */
@@ -1078,6 +1006,85 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                spirv_decoration_to_string(dec->decoration));
       break;
    }
+}
+
+static void
+var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
+                  const struct vtn_decoration *dec, void *void_var)
+{
+   struct vtn_variable *vtn_var = void_var;
+
+   /* Handle decorations that apply to a vtn_variable as a whole */
+   switch (dec->decoration) {
+   case SpvDecorationBinding:
+      vtn_var->binding = dec->literals[0];
+      return;
+   case SpvDecorationDescriptorSet:
+      vtn_var->descriptor_set = dec->literals[0];
+      return;
+   default:
+      break;
+   }
+
+   /* Now we handle decorations that apply to a particular nir_variable */
+   nir_variable *nir_var = vtn_var->var;
+   if (val->value_type == vtn_value_type_access_chain) {
+      assert(val->access_chain->length == 0);
+      assert(val->access_chain->var == void_var);
+      assert(member == -1);
+   } else {
+      assert(val->value_type == vtn_value_type_type);
+      if (member != -1)
+         nir_var = vtn_var->members[member];
+   }
+
+   /* Location is odd in that it can apply in three different cases: To a
+    * non-split variable, to a whole split variable, or to one structure
+    * member of a split variable.
+    */
+   if (dec->decoration == SpvDecorationLocation) {
+      unsigned location = dec->literals[0];
+      bool is_vertex_input;
+      if (b->shader->stage == MESA_SHADER_FRAGMENT &&
+          vtn_var->mode == vtn_variable_mode_output) {
+         is_vertex_input = false;
+         location += FRAG_RESULT_DATA0;
+      } else if (b->shader->stage == MESA_SHADER_VERTEX &&
+                 vtn_var->mode == vtn_variable_mode_input) {
+         is_vertex_input = true;
+         location += VERT_ATTRIB_GENERIC0;
+      } else if (vtn_var->mode == vtn_variable_mode_input ||
+                 vtn_var->mode == vtn_variable_mode_output) {
+         is_vertex_input = false;
+         location += VARYING_SLOT_VAR0;
+      } else {
+         assert(!"Location must be on input or output variable");
+      }
+
+      if (nir_var) {
+         /* This handles the member and lone variable cases */
+         nir_var->data.location = location;
+         nir_var->data.explicit_location = true;
+      } else {
+         /* This handles the structure member case */
+         assert(vtn_var->members);
+         unsigned length =
+            glsl_get_length(glsl_without_array(vtn_var->type->type));
+         for (unsigned i = 0; i < length; i++) {
+            vtn_var->members[i]->data.location = location;
+            vtn_var->members[i]->data.explicit_location = true;
+            location +=
+               glsl_count_attribute_slots(vtn_var->members[i]->interface_type,
+                                          is_vertex_input);
+         }
+      }
+      return;
+   }
+
+   if (nir_var == NULL)
+      return;
+
+   apply_var_decoration(b, nir_var, dec);
 }
 
 /* Tries to compute the size of an interface block based on the strides and
