@@ -291,6 +291,65 @@ int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *
    return -1;
 }
 
+static int
+amdgpu_lookup_or_add_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo)
+{
+   struct amdgpu_cs_buffer *buffer;
+   unsigned hash;
+   int idx = amdgpu_lookup_buffer(cs, bo);
+
+   if (idx >= 0)
+      return idx;
+
+   /* New buffer, check if the backing array is large enough. */
+   if (cs->num_buffers >= cs->max_num_buffers) {
+      unsigned new_max =
+         MAX2(cs->max_num_buffers + 16, (unsigned)(cs->max_num_buffers * 1.3));
+      struct amdgpu_cs_buffer *new_buffers;
+      amdgpu_bo_handle *new_handles;
+      uint8_t *new_flags;
+
+      new_buffers = MALLOC(new_max * sizeof(*new_buffers));
+      new_handles = MALLOC(new_max * sizeof(*new_handles));
+      new_flags = MALLOC(new_max * sizeof(*new_flags));
+
+      if (!new_buffers || !new_handles || !new_flags) {
+         fprintf(stderr, "amdgpu_lookup_or_add_buffer: allocation failed\n");
+         FREE(new_buffers);
+         FREE(new_handles);
+         FREE(new_flags);
+         return -1;
+      }
+
+      memcpy(new_buffers, cs->buffers, cs->num_buffers * sizeof(*new_buffers));
+      memcpy(new_handles, cs->handles, cs->num_buffers * sizeof(*new_handles));
+      memcpy(new_flags, cs->flags, cs->num_buffers * sizeof(*new_flags));
+
+      FREE(cs->buffers);
+      FREE(cs->handles);
+      FREE(cs->flags);
+
+      cs->max_num_buffers = new_max;
+      cs->buffers = new_buffers;
+      cs->handles = new_handles;
+      cs->flags = new_flags;
+   }
+
+   idx = cs->num_buffers;
+   buffer = &cs->buffers[idx];
+   memset(buffer, 0, sizeof(*buffer));
+   amdgpu_winsys_bo_reference(&buffer->bo, bo);
+   cs->handles[idx] = bo->bo;
+   cs->flags[idx] = 0;
+   p_atomic_inc(&bo->num_cs_references);
+   cs->num_buffers++;
+
+   hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
+   cs->buffer_indices_hashlist[hash] = idx;
+
+   return idx;
+}
+
 static unsigned amdgpu_add_buffer(struct amdgpu_cs *acs,
                                  struct amdgpu_winsys_bo *bo,
                                  enum radeon_bo_usage usage,
@@ -300,54 +359,22 @@ static unsigned amdgpu_add_buffer(struct amdgpu_cs *acs,
 {
    struct amdgpu_cs_context *cs = acs->csc;
    struct amdgpu_cs_buffer *buffer;
-   unsigned hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
-   int i = -1;
+   int i = amdgpu_lookup_or_add_buffer(cs, bo);
 
    assert(priority < 64);
-   *added_domains = 0;
 
-   i = amdgpu_lookup_buffer(cs, bo);
-
-   if (i >= 0) {
-      buffer = &cs->buffers[i];
-      buffer->priority_usage |= 1llu << priority;
-      buffer->usage |= usage;
-      *added_domains = domains & ~buffer->domains;
-      buffer->domains |= domains;
-      cs->flags[i] = MAX2(cs->flags[i], priority / 4);
-      return i;
+   if (i < 0) {
+      *added_domains = 0;
+      return ~0;
    }
 
-   /* New buffer, check if the backing array is large enough. */
-   if (cs->num_buffers >= cs->max_num_buffers) {
-      uint32_t size;
-      cs->max_num_buffers += 10;
-
-      size = cs->max_num_buffers * sizeof(struct amdgpu_cs_buffer);
-      cs->buffers = realloc(cs->buffers, size);
-
-      size = cs->max_num_buffers * sizeof(amdgpu_bo_handle);
-      cs->handles = realloc(cs->handles, size);
-
-      cs->flags = realloc(cs->flags, cs->max_num_buffers);
-   }
-
-   /* Initialize the new buffer. */
-   cs->buffers[cs->num_buffers].bo = NULL;
-   amdgpu_winsys_bo_reference(&cs->buffers[cs->num_buffers].bo, bo);
-   cs->handles[cs->num_buffers] = bo->bo;
-   cs->flags[cs->num_buffers] = priority / 4;
-   p_atomic_inc(&bo->num_cs_references);
-   buffer = &cs->buffers[cs->num_buffers];
-   buffer->bo = bo;
-   buffer->priority_usage = 1llu << priority;
-   buffer->usage = usage;
-   buffer->domains = domains;
-
-   cs->buffer_indices_hashlist[hash] = cs->num_buffers;
-
-   *added_domains = domains;
-   return cs->num_buffers++;
+   buffer = &cs->buffers[i];
+   buffer->priority_usage |= 1llu << priority;
+   buffer->usage |= usage;
+   *added_domains = domains & ~buffer->domains;
+   buffer->domains |= domains;
+   cs->flags[i] = MAX2(cs->flags[i], priority / 4);
+   return i;
 }
 
 static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
