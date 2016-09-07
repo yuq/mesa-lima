@@ -303,15 +303,27 @@ DRI_CONF_BEGIN
         DRI_CONF_DEVICE_ID_PATH_TAG()
     DRI_CONF_SECTION_END
 DRI_CONF_END;
+
+static char *loader_get_dri_config_device_id(void)
+{
+   driOptionCache defaultInitOptions;
+   driOptionCache userInitOptions;
+   char *prime = NULL;
+
+   driParseOptionInfo(&defaultInitOptions, __driConfigOptionsLoader);
+   driParseConfigFiles(&userInitOptions, &defaultInitOptions, 0, "loader");
+   if (driCheckOption(&userInitOptions, "device_id", DRI_STRING))
+      prime = strdup(driQueryOptionstr(&userInitOptions, "device_id"));
+   driDestroyOptionCache(&userInitOptions);
+   driDestroyOptionInfo(&defaultInitOptions);
+
+   return prime;
+}
 #endif
 
 int loader_get_user_preferred_fd(int default_fd, int *different_device)
 {
    struct udev *udev;
-#ifdef USE_DRICONF
-   driOptionCache defaultInitOptions;
-   driOptionCache userInitOptions;
-#endif
    const char *dri_prime = getenv("DRI_PRIME");
    char *prime = NULL;
    int is_different_device = 0, fd = default_fd;
@@ -324,14 +336,8 @@ int loader_get_user_preferred_fd(int default_fd, int *different_device)
    if (dri_prime)
       prime = strdup(dri_prime);
 #ifdef USE_DRICONF
-   else {
-      driParseOptionInfo(&defaultInitOptions, __driConfigOptionsLoader);
-      driParseConfigFiles(&userInitOptions, &defaultInitOptions, 0, "loader");
-      if (driCheckOption(&userInitOptions, "device_id", DRI_STRING))
-         prime = strdup(driQueryOptionstr(&userInitOptions, "device_id"));
-      driDestroyOptionCache(&userInitOptions);
-      driDestroyOptionInfo(&defaultInitOptions);
-   }
+   else
+      prime = loader_get_dri_config_device_id();
 #endif
 
    if (prime == NULL) {
