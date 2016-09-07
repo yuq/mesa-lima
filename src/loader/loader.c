@@ -297,7 +297,7 @@ get_id_path_tag_from_fd(struct udev *udev, int fd)
 }
 
 #ifdef USE_DRICONF
-const char __driConfigOptionsLoader[] =
+static const char __driConfigOptionsLoader[] =
 DRI_CONF_BEGIN
     DRI_CONF_SECTION_INITIALIZATION
         DRI_CONF_DEVICE_ID_PATH_TAG()
