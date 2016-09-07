@@ -71,10 +71,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
-#ifdef HAVE_LIBUDEV
-#include <assert.h>
-#include <dlfcn.h>
-#endif
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
 #endif
@@ -123,88 +119,6 @@ loader_open_device(const char *device_name)
    }
    return fd;
 }
-
-#ifdef HAVE_LIBUDEV
-#include <libudev.h>
-
-static void *udev_handle = NULL;
-
-static void *
-udev_dlopen_handle(void)
-{
-   char name[80];
-   unsigned flags = RTLD_NOLOAD | RTLD_LOCAL | RTLD_LAZY;
-   int version;
-
-   /* libudev.so.1 changed the return types of the two unref functions
-    * from voids to pointers.  We don't use those return values, and the
-    * only ABI I've heard that cares about this kind of change (calling
-    * a function with a void * return that actually only returns void)
-    * might be ia64.
-    */
-
-   /* First try opening an already linked libudev, then try loading one */
-   do {
-      for (version = 1; version >= 0; version--) {
-         snprintf(name, sizeof(name), "libudev.so.%d", version);
-         udev_handle = dlopen(name, flags);
-         if (udev_handle)
-            return udev_handle;
-      }
-
-      if ((flags & RTLD_NOLOAD) == 0)
-         break;
-
-      flags &= ~RTLD_NOLOAD;
-   } while (1);
-
-   log_(_LOADER_WARNING,
-        "Couldn't dlopen libudev.so.1 or "
-        "libudev.so.0, driver detection may be broken.\n");
-   return NULL;
-}
-
-static int dlsym_failed = 0;
-
-static void *
-checked_dlsym(void *dlopen_handle, const char *name)
-{
-   void *result = dlsym(dlopen_handle, name);
-   if (!result)
-      dlsym_failed = 1;
-   return result;
-}
-
-#define UDEV_SYMBOL(ret, name, args) \
-   ret (*name) args = checked_dlsym(udev_dlopen_handle(), #name);
-
-
-static inline struct udev_device *
-udev_device_new_from_fd(struct udev *udev, int fd)
-{
-   struct udev_device *device;
-   struct stat buf;
-   UDEV_SYMBOL(struct udev_device *, udev_device_new_from_devnum,
-               (struct udev *udev, char type, dev_t devnum));
-
-   if (dlsym_failed)
-      return NULL;
-
-   if (fstat(fd, &buf) < 0) {
-      log_(_LOADER_WARNING, "MESA-LOADER: failed to stat fd %d\n", fd);
-      return NULL;
-   }
-
-   device = udev_device_new_from_devnum(udev, 'c', buf.st_rdev);
-   if (device == NULL) {
-      log_(_LOADER_WARNING,
-              "MESA-LOADER: could not create udev device for fd %d\n", fd);
-      return NULL;
-   }
-
-   return device;
-}
-#endif
 
 #if defined(HAVE_LIBDRM)
 #ifdef USE_DRICONF
@@ -432,42 +346,6 @@ loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 }
 
 
-#ifdef HAVE_LIBUDEV
-static char *
-libudev_get_device_name_for_fd(int fd)
-{
-   char *device_name = NULL;
-   struct udev *udev;
-   struct udev_device *device;
-   const char *const_device_name;
-   UDEV_SYMBOL(struct udev *, udev_new, (void));
-   UDEV_SYMBOL(const char *, udev_device_get_devnode,
-               (struct udev_device *));
-   UDEV_SYMBOL(struct udev_device *, udev_device_unref,
-               (struct udev_device *));
-   UDEV_SYMBOL(struct udev *, udev_unref, (struct udev *));
-
-   if (dlsym_failed)
-      return NULL;
-
-   udev = udev_new();
-   device = udev_device_new_from_fd(udev, fd);
-   if (device == NULL)
-      return NULL;
-
-   const_device_name = udev_device_get_devnode(device);
-   if (!const_device_name)
-      goto out;
-   device_name = strdup(const_device_name);
-
-out:
-   udev_device_unref(device);
-   udev_unref(udev);
-   return device_name;
-}
-#endif
-
-
 #if HAVE_SYSFS
 static char *
 sysfs_get_device_name_for_fd(int fd)
@@ -533,10 +411,6 @@ loader_get_device_name_for_fd(int fd)
 {
    char *result = NULL;
 
-#if HAVE_LIBUDEV
-   if ((result = libudev_get_device_name_for_fd(fd)))
-      return result;
-#endif
 #if HAVE_SYSFS
    if ((result = sysfs_get_device_name_for_fd(fd)))
       return result;
