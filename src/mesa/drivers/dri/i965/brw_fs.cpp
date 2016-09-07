@@ -848,7 +848,7 @@ fs_inst::size_read(int arg) const
 
    case FS_OPCODE_LINTERP:
       if (arg == 1)
-         return REG_SIZE;
+         return 16;
       break;
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
