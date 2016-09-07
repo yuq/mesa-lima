@@ -142,9 +142,6 @@ NineTexture9_ctor( struct NineTexture9 *This,
 
     if (Usage & D3DUSAGE_DYNAMIC) {
         info->usage = PIPE_USAGE_DYNAMIC;
-        info->bind |=
-            PIPE_BIND_TRANSFER_READ |
-            PIPE_BIND_TRANSFER_WRITE;
     }
 
     if (Usage & D3DUSAGE_SOFTWAREPROCESSING)

@@ -136,9 +136,7 @@ root_resource::root_resource(clover::device &dev, memory_obj &obj,
    info.target = translate_target(obj.type());
    info.bind = (PIPE_BIND_SAMPLER_VIEW |
                 PIPE_BIND_COMPUTE_RESOURCE |
-                PIPE_BIND_GLOBAL |
-                PIPE_BIND_TRANSFER_READ |
-                PIPE_BIND_TRANSFER_WRITE);
+                PIPE_BIND_GLOBAL);
 
    if (obj.flags() & CL_MEM_USE_HOST_PTR && user_ptr_support) {
       // Page alignment is normally required for this, just try, hope for the

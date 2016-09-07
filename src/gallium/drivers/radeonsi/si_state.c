@@ -1856,11 +1856,6 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		retval |= PIPE_BIND_VERTEX_BUFFER;
 	}
 
-	if (usage & PIPE_BIND_TRANSFER_READ)
-		retval |= PIPE_BIND_TRANSFER_READ;
-	if (usage & PIPE_BIND_TRANSFER_WRITE)
-		retval |= PIPE_BIND_TRANSFER_WRITE;
-
 	if ((usage & PIPE_BIND_LINEAR) &&
 	    !util_format_is_compressed(format) &&
 	    !(usage & PIPE_BIND_DEPTH_STENCIL))

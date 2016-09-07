@@ -239,8 +239,7 @@ d3d9_get_pipe_depth_format_bindings(D3DFORMAT format)
     case D3DFMT_D32F_LOCKABLE:
     case D3DFMT_D16_LOCKABLE:
     case D3DFMT_D32_LOCKABLE:
-        return PIPE_BIND_DEPTH_STENCIL | PIPE_BIND_TRANSFER_READ |
-               PIPE_BIND_TRANSFER_WRITE;
+        return PIPE_BIND_DEPTH_STENCIL;
     case D3DFMT_DF16:
     case D3DFMT_DF24:
     case D3DFMT_INTZ:

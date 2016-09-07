@@ -87,11 +87,6 @@ fd2_screen_is_format_supported(struct pipe_screen *pscreen,
 		retval |= PIPE_BIND_INDEX_BUFFER;
 	}
 
-	if (usage & PIPE_BIND_TRANSFER_READ)
-		retval |= PIPE_BIND_TRANSFER_READ;
-	if (usage & PIPE_BIND_TRANSFER_WRITE)
-		retval |= PIPE_BIND_TRANSFER_WRITE;
-
 	if (retval != usage) {
 		DBG("not supported: format=%s, target=%d, sample_count=%d, "
 				"usage=%x, retval=%x", util_format_name(format),

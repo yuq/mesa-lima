@@ -101,9 +101,6 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
 
     if (Usage & D3DUSAGE_DYNAMIC) {
         info->usage = PIPE_USAGE_DYNAMIC;
-        info->bind |=
-            PIPE_BIND_TRANSFER_READ |
-            PIPE_BIND_TRANSFER_WRITE;
     }
     if (Usage & D3DUSAGE_SOFTWAREPROCESSING)
         DBG("Application asked for Software Vertex Processing, "

@@ -410,8 +410,7 @@ enum pipe_flush_flags
 #define PIPE_BIND_INDEX_BUFFER         (1 << 5) /* draw_elements */
 #define PIPE_BIND_CONSTANT_BUFFER      (1 << 6) /* set_constant_buffer */
 #define PIPE_BIND_DISPLAY_TARGET       (1 << 7) /* flush_front_buffer */
-#define PIPE_BIND_TRANSFER_WRITE       (1 << 8) /* transfer_map */
-#define PIPE_BIND_TRANSFER_READ        (1 << 9) /* transfer_map */
+/* gap */
 #define PIPE_BIND_STREAM_OUTPUT        (1 << 10) /* set_stream_output_buffers */
 #define PIPE_BIND_CURSOR               (1 << 11) /* mouse cursor */
 #define PIPE_BIND_CUSTOM               (1 << 12) /* state-tracker/winsys usages */

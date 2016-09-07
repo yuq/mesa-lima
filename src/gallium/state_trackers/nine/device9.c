@@ -254,7 +254,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         tmpl.last_level = 0;
         tmpl.nr_samples = 0;
         tmpl.usage = PIPE_USAGE_DEFAULT;
-        tmpl.bind = PIPE_BIND_VERTEX_BUFFER | PIPE_BIND_TRANSFER_WRITE;
+        tmpl.bind = PIPE_BIND_VERTEX_BUFFER;
         tmpl.flags = 0;
         This->dummy_vbo = pScreen->resource_create(pScreen, &tmpl);
 

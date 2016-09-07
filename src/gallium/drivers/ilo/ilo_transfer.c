@@ -180,7 +180,6 @@ xfer_alloc_staging_res(struct ilo_transfer *xfer)
    templ.array_size = box->depth;
    templ.nr_samples = 1;
    templ.usage = PIPE_USAGE_STAGING;
-   templ.bind = PIPE_BIND_TRANSFER_WRITE;
 
    if (xfer->base.usage & PIPE_TRANSFER_FLUSH_EXPLICIT) {
       templ.flags = PIPE_RESOURCE_FLAG_MAP_PERSISTENT |
@@ -1111,7 +1110,7 @@ buf_pwrite(struct ilo_context *ilo, struct pipe_resource *res,
          templ = *res;
          templ.width0 = size;
          templ.usage = PIPE_USAGE_STAGING;
-         templ.bind = PIPE_BIND_TRANSFER_WRITE;
+         templ.bind = 0;
          staging = ilo->base.screen->resource_create(ilo->base.screen, &templ);
          if (staging) {
             const struct ilo_vma *staging_vma = ilo_resource_get_vma(staging);

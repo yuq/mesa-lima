@@ -84,10 +84,8 @@ nvc0_screen_is_format_supported(struct pipe_screen *pscreen,
        nouveau_screen(pscreen)->class_3d != NVEA_3D_CLASS)
       return false;
 
-   /* transfers & shared are always supported */
-   bindings &= ~(PIPE_BIND_TRANSFER_READ |
-                 PIPE_BIND_TRANSFER_WRITE |
-                 PIPE_BIND_LINEAR |
+   /* shared is always supported */
+   bindings &= ~(PIPE_BIND_LINEAR |
                  PIPE_BIND_SHARED);
 
    if (bindings & PIPE_BIND_SHADER_IMAGE && sample_count > 1 &&

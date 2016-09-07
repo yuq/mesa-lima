@@ -386,7 +386,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		struct r600_resource *staging;
 
 		staging = (struct r600_resource*) pipe_buffer_create(
-				ctx->screen, PIPE_BIND_TRANSFER_READ, PIPE_USAGE_STAGING,
+				ctx->screen, 0, PIPE_USAGE_STAGING,
 				box->width + (box->x % R600_MAP_BUFFER_ALIGNMENT));
 		if (staging) {
 			/* Copy the VRAM buffer to the staging buffer. */

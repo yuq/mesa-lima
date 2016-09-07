@@ -1821,7 +1821,7 @@ st_GetTexSubImage(struct gl_context * ctx,
    GLenum gl_target = texImage->TexObject->Target;
    enum pipe_texture_target pipe_target;
    struct pipe_blit_info blit;
-   unsigned bind = PIPE_BIND_TRANSFER_READ;
+   unsigned bind;
    struct pipe_transfer *tex_xfer;
    ubyte *map = NULL;
    boolean done = FALSE;
@@ -1885,9 +1885,9 @@ st_GetTexSubImage(struct gl_context * ctx,
    }
 
    if (format == GL_DEPTH_COMPONENT || format == GL_DEPTH_STENCIL)
-      bind |= PIPE_BIND_DEPTH_STENCIL;
+      bind = PIPE_BIND_DEPTH_STENCIL;
    else
-      bind |= PIPE_BIND_RENDER_TARGET;
+      bind = PIPE_BIND_RENDER_TARGET;
 
    /* GetTexImage only returns a single face for cubemaps. */
    if (gl_target == GL_TEXTURE_CUBE_MAP) {

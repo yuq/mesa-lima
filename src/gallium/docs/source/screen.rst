@@ -529,8 +529,6 @@ resources might be created and handled quite differently.
 * ``PIPE_BIND_VERTEX_BUFFER``: A vertex buffer.
 * ``PIPE_BIND_INDEX_BUFFER``: An vertex index/element buffer.
 * ``PIPE_BIND_CONSTANT_BUFFER``: A buffer of shader constants.
-* ``PIPE_BIND_TRANSFER_WRITE``: A transfer object which will be written to.
-* ``PIPE_BIND_TRANSFER_READ``: A transfer object which will be read from.
 * ``PIPE_BIND_STREAM_OUTPUT``: A stream output buffer.
 * ``PIPE_BIND_CUSTOM``:
 * ``PIPE_BIND_SCANOUT``: A front color buffer or scanout buffer.

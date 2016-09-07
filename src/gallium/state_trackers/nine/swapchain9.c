@@ -301,8 +301,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     }
 
     for (i = 0; i < newBufferCount; ++i) {
-        tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
-                     PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_RENDER_TARGET;
+        tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
         tmplt.nr_samples = pParams->MultiSampleType;
         if (!has_present_buffers)
             tmplt.bind |= PIPE_BIND_SHARED | PIPE_BIND_SCANOUT | PIPE_BIND_DISPLAY_TARGET;
@@ -547,8 +546,7 @@ create_present_buffer( struct NineSwapChain9 *This,
     tmplt.usage = PIPE_USAGE_DEFAULT;
     tmplt.flags = 0;
     tmplt.format = PIPE_FORMAT_B8G8R8X8_UNORM;
-    tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_TRANSFER_READ |
-                 PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_RENDER_TARGET |
+    tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET |
                  PIPE_BIND_SHARED | PIPE_BIND_SCANOUT | PIPE_BIND_DISPLAY_TARGET;
     tmplt.nr_samples = 0;
     if (This->actx->linear_framebuffer)

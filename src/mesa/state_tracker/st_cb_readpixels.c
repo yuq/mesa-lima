@@ -274,7 +274,6 @@ blit_to_staging(struct st_context *st, struct st_renderbuffer *strb,
    memset(&dst_templ, 0, sizeof(dst_templ));
    dst_templ.target = PIPE_TEXTURE_2D;
    dst_templ.format = dst_format;
-   dst_templ.bind = PIPE_BIND_TRANSFER_READ;
    if (util_format_is_depth_or_stencil(dst_format))
       dst_templ.bind |= PIPE_BIND_DEPTH_STENCIL;
    else
@@ -404,7 +403,7 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
    struct pipe_resource *src;
    struct pipe_resource *dst = NULL;
    enum pipe_format dst_format, src_format;
-   unsigned bind = PIPE_BIND_TRANSFER_READ;
+   unsigned bind;
    struct pipe_transfer *tex_xfer;
    ubyte *map = NULL;
    int dst_x, dst_y;
@@ -452,9 +451,9 @@ st_ReadPixels(struct gl_context *ctx, GLint x, GLint y,
    }
 
    if (format == GL_DEPTH_COMPONENT || format == GL_DEPTH_STENCIL)
-      bind |= PIPE_BIND_DEPTH_STENCIL;
+      bind = PIPE_BIND_DEPTH_STENCIL;
    else
-      bind |= PIPE_BIND_RENDER_TARGET;
+      bind = PIPE_BIND_RENDER_TARGET;
 
    /* Choose the destination format by finding the best match
     * for the format+type combo. */

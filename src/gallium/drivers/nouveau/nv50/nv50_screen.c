@@ -75,10 +75,8 @@ nv50_screen_is_format_supported(struct pipe_screen *pscreen,
           sample_count > 1)
          return false;
 
-   /* transfers & shared are always supported */
-   bindings &= ~(PIPE_BIND_TRANSFER_READ |
-                 PIPE_BIND_TRANSFER_WRITE |
-                 PIPE_BIND_LINEAR |
+   /* shared is always supported */
+   bindings &= ~(PIPE_BIND_LINEAR |
                  PIPE_BIND_SHARED);
 
    return (( nv50_format_table[format].usage |

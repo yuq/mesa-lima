@@ -204,7 +204,7 @@ resource_get_image_info(const struct pipe_resource *templ,
     * images when the image size is greater than one-fourth of the mappable
     * aperture.
     */
-   if (templ->bind & (PIPE_BIND_TRANSFER_WRITE | PIPE_BIND_TRANSFER_READ))
+   if (templ->usage == PIPE_USAGE_STAGING)
       info->prefer_linear_threshold = dev->aperture_mappable / 4;
 
    info->bind_surface_sampler = (templ->bind & PIPE_BIND_SAMPLER_VIEW);

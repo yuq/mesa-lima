@@ -664,12 +664,6 @@ static boolean r300_is_format_supported(struct pipe_screen* screen,
         }
     }
 
-    /* Transfers are always supported. */
-    if (usage & PIPE_BIND_TRANSFER_READ)
-        retval |= PIPE_BIND_TRANSFER_READ;
-    if (usage & PIPE_BIND_TRANSFER_WRITE)
-        retval |= PIPE_BIND_TRANSFER_WRITE;
-
     return retval == usage;
 }
 
