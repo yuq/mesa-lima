@@ -926,13 +926,33 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
 
       struct anv_physical_device *physical_device =
          &device->instance->physicalDevice;
+
+      /* WaCSScratchSize:hsw
+       *
+       * Haswell's scratch space address calculation appears to be sparse
+       * rather than tightly packed. The Thread ID has bits indicating which
+       * subslice, EU within a subslice, and thread within an EU it is.
+       * There's a maximum of two slices and two subslices, so these can be
+       * stored with a single bit. Even though there are only 10 EUs per
+       * subslice, this is stored in 4 bits, so there's an effective maximum
+       * value of 16 EUs. Similarly, although there are only 7 threads per EU,
+       * this is stored in a 3 bit number, giving an effective maximum value
+       * of 8 threads per EU.
+       *
+       * This means that we need to use 16 * 8 instead of 10 * 7 for the
+       * number of threads per subslice.
+       */
+      const unsigned subslices = MAX2(physical_device->subslice_total, 1);
+      const unsigned scratch_ids_per_subslice =
+         device->info.is_haswell ? 16 * 8 : physical_device->max_cs_threads;
+
       uint32_t max_threads[] = {
          [MESA_SHADER_VERTEX]           = physical_device->max_vs_threads,
          [MESA_SHADER_TESS_CTRL]        = physical_device->max_hs_threads,
          [MESA_SHADER_TESS_EVAL]        = physical_device->max_ds_threads,
          [MESA_SHADER_GEOMETRY]         = physical_device->max_gs_threads,
          [MESA_SHADER_FRAGMENT]         = physical_device->max_wm_threads,
-         [MESA_SHADER_COMPUTE]          = physical_device->max_cs_threads,
+         [MESA_SHADER_COMPUTE]          = scratch_ids_per_subslice * subslices,
       };
 
       size = per_thread_scratch * max_threads[stage];
