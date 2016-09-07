@@ -863,31 +863,7 @@ fs_inst::size_read(int arg) const
    case SHADER_OPCODE_MOV_INDIRECT:
       if (arg == 0) {
          assert(src[2].file == IMM);
-         unsigned region_length = src[2].ud;
-
-         if (src[0].file == UNIFORM) {
-            assert(region_length % 4 == 0);
-            return region_length;
-         } else if (src[0].file == FIXED_GRF) {
-            /* If the start of the region is not register aligned, then
-             * there's some portion of the register that's technically
-             * unread at the beginning.
-             *
-             * However, the register allocator works in terms of whole
-             * registers, and does not use subnr.  It assumes that the
-             * read starts at the beginning of the register, and extends
-             * regs_read() whole registers beyond that.
-             *
-             * To compensate, we extend the region length to include this
-             * unread portion at the beginning.
-             */
-            if (src[0].subnr)
-               region_length += src[0].subnr;
-
-            return region_length;
-         } else {
-            assert(!"Invalid register file");
-         }
+         return src[2].ud;
       }
       break;
 

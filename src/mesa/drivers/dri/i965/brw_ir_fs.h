@@ -435,9 +435,9 @@ set_saturate(bool saturate, fs_inst *inst)
 inline unsigned
 regs_written(const fs_inst *inst)
 {
-   /* XXX - Take into account register-misaligned offsets correctly. */
    assert(inst->dst.file != UNIFORM && inst->dst.file != IMM);
-   return DIV_ROUND_UP(inst->size_written -
+   return DIV_ROUND_UP(reg_offset(inst->dst) % REG_SIZE +
+                       inst->size_written -
                        MIN2(inst->size_written, reg_padding(inst->dst)),
                        REG_SIZE);
 }
@@ -451,10 +451,10 @@ regs_written(const fs_inst *inst)
 inline unsigned
 regs_read(const fs_inst *inst, unsigned i)
 {
-   /* XXX - Take into account register-misaligned offsets correctly. */
    const unsigned reg_size =
       inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 4 : REG_SIZE;
-   return DIV_ROUND_UP(inst->size_read(i) -
+   return DIV_ROUND_UP(reg_offset(inst->src[i]) % reg_size +
+                       inst->size_read(i) -
                        MIN2(inst->size_read(i), reg_padding(inst->src[i])),
                        reg_size);
 }
