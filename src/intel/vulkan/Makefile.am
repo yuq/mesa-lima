@@ -91,7 +91,9 @@ AM_CPPFLAGS += \
 	-DVK_USE_PLATFORM_XLIB_KHR
 
 VULKAN_SOURCES += $(VULKAN_WSI_X11_FILES)
-VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS)
+
+# FIXME: Use pkg-config for X11-xcb ldflags.
+VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS) -lX11-xcb
 endif
 
 
@@ -149,7 +151,7 @@ EXTRA_DIST = \
 	dev_icd.json.in \
 	intel_icd.json
 
-libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS) -lX11-xcb
+libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
 
 libvulkan_intel_la_LDFLAGS = \
 	-shared \
@@ -184,7 +186,7 @@ intel_icd.json : intel_icd.json.in
 
 # Libvulkan with dummy gem. Used for unit tests.
 libvulkan_test_la_SOURCES = $(VULKAN_GEM_STUB_FILES)
-libvulkan_test_la_LIBADD = $(VULKAN_LIB_DEPS) -lX11-xcb
+libvulkan_test_la_LIBADD = $(VULKAN_LIB_DEPS)
 
 include $(top_srcdir)/install-lib-links.mk
 
