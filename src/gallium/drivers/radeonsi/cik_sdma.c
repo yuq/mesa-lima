@@ -165,6 +165,10 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	       src_slice_pitch * bpp * (srcz + src_box->depth) <=
 	       rsrc->resource.buf->size);
 
+	/* Test CIK with radeon and amdgpu before enabling this. */
+	if (sctx->b.chip_class == CIK)
+		return false;
+
 	if (!r600_prepare_for_dma_blit(&sctx->b, rdst, dst_level, dstx, dsty,
 					dstz, rsrc, src_level, src_box))
 		return false;
