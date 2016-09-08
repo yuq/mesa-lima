@@ -505,6 +505,7 @@ STATETRACKER_FILES = \
 	state_tracker/st_mesa_to_tgsi.h \
 	state_tracker/st_nir.h \
 	state_tracker/st_nir_lower_builtin.c \
+	state_tracker/st_nir_lower_tex_src_plane.c \
 	state_tracker/st_pbo.c \
 	state_tracker/st_pbo.h \
 	state_tracker/st_program.c \
