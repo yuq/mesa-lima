@@ -283,8 +283,9 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
                /* Access to images is implemented using indirect messages
                 * against data port. Normal render target write understands
                 * lossless compression but unfortunately the typed/untyped
-                * read/write interface doesn't. Therefore the compressed
-                * surfaces need to be resolved prior to accessing them.
+                * read/write interface doesn't. Therefore even lossless
+                * compressed surfaces need to be resolved prior to accessing
+                * them. Hence skip setting INTEL_MIPTREE_IGNORE_CCS_E.
                 */
                intel_miptree_resolve_color(brw, tex_obj->mt, 0);
 
@@ -300,7 +301,7 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       }
    }
 
-   /* Resolve color buffers for non-coherent framebufer fetch. */
+   /* Resolve color buffers for non-coherent framebuffer fetch. */
    if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
        ctx->FragmentProgram._Current &&
        ctx->FragmentProgram._Current->Base.OutputsRead) {
