@@ -170,6 +170,18 @@ vc4_submit_setup_rcl_msaa_surface(struct vc4_context *vc4,
 void
 vc4_job_submit(struct vc4_context *vc4)
 {
+        if (!vc4->needs_flush)
+                return;
+
+        /* The RCL setup would choke if the draw bounds cause no drawing, so
+         * just drop the drawing if that's the case.
+         */
+        if (vc4->draw_max_x <= vc4->draw_min_x ||
+            vc4->draw_max_y <= vc4->draw_min_y) {
+                vc4_job_reset(vc4);
+                return;
+        }
+
         if (vc4_debug & VC4_DEBUG_CL) {
                 fprintf(stderr, "BCL:\n");
                 vc4_dump_cl(vc4->bcl.base, cl_offset(&vc4->bcl), false);

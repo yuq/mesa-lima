@@ -44,18 +44,6 @@ vc4_flush(struct pipe_context *pctx)
         struct pipe_surface *cbuf = vc4->framebuffer.cbufs[0];
         struct pipe_surface *zsbuf = vc4->framebuffer.zsbuf;
 
-        if (!vc4->needs_flush)
-                return;
-
-        /* The RCL setup would choke if the draw bounds cause no drawing, so
-         * just drop the drawing if that's the case.
-         */
-        if (vc4->draw_max_x <= vc4->draw_min_x ||
-            vc4->draw_max_y <= vc4->draw_min_y) {
-                vc4_job_reset(vc4);
-                return;
-        }
-
         if (cbuf && (vc4->resolve & PIPE_CLEAR_COLOR0)) {
                 pipe_surface_reference(&vc4->color_write,
                                        cbuf->texture->nr_samples > 1 ?
