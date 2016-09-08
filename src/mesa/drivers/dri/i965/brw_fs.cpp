@@ -5906,6 +5906,9 @@ fs_visitor::allocate_registers(bool allow_spilling)
    }
 
    if (!allocated_without_spills) {
+      if (!allow_spilling)
+         fail("Failure to register allocate and spilling is not allowed.");
+
       /* We assume that any spilling is worse than just dropping back to
        * SIMD8.  There's probably actually some intermediate point where
        * SIMD16 with a couple of spills is still better.
@@ -5929,8 +5932,6 @@ fs_visitor::allocate_registers(bool allow_spilling)
             break;
       }
    }
-
-   assert(last_scratch == 0 || allow_spilling);
 
    /* This must come after all optimization and register allocation, since
     * it inserts dead code that happens to have side effects, and it does
