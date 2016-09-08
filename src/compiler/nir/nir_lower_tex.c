@@ -38,17 +38,6 @@
 #include "nir.h"
 #include "nir_builder.h"
 
-static int
-tex_instr_find_src(nir_tex_instr *tex, nir_tex_src_type src_type)
-{
-   for (unsigned i = 0; i < tex->num_srcs; i++) {
-      if (tex->src[i].src_type == src_type)
-         return i;
-   }
-
-   return -1;
-}
-
 static void
 tex_instr_remove_src(nir_tex_instr *tex, unsigned src_idx)
 {
@@ -69,7 +58,7 @@ static void
 project_src(nir_builder *b, nir_tex_instr *tex)
 {
    /* Find the projector in the srcs list, if present. */
-   int proj_index = tex_instr_find_src(tex, nir_tex_src_projector);
+   int proj_index = nir_tex_instr_src_index(tex, nir_tex_src_projector);
    if (proj_index < 0)
       return;
 
@@ -131,11 +120,11 @@ project_src(nir_builder *b, nir_tex_instr *tex)
 static bool
 lower_offset(nir_builder *b, nir_tex_instr *tex)
 {
-   int offset_index = tex_instr_find_src(tex, nir_tex_src_offset);
+   int offset_index = nir_tex_instr_src_index(tex, nir_tex_src_offset);
    if (offset_index < 0)
       return false;
 
-   int coord_index = tex_instr_find_src(tex, nir_tex_src_coord);
+   int coord_index = nir_tex_instr_src_index(tex, nir_tex_src_coord);
    assert(coord_index >= 0);
 
    assert(tex->src[offset_index].src.is_ssa);
