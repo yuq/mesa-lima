@@ -211,7 +211,7 @@ sample_plane(nir_builder *b, nir_tex_instr *tex, int plane)
    plane_tex->src[1].src = nir_src_for_ssa(nir_imm_int(b, plane));
    plane_tex->src[1].src_type = nir_tex_src_plane;
    plane_tex->op = nir_texop_tex;
-   plane_tex->sampler_dim = 2;
+   plane_tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
    plane_tex->dest_type = nir_type_float;
    plane_tex->coord_components = 2;
 
