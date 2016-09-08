@@ -116,9 +116,11 @@ vc4_start_draw(struct vc4_context *vc4, int vert_count)
 }
 
 static void
-vc4_update_shadow_textures(struct pipe_context *pctx,
+vc4_predraw_check_textures(struct pipe_context *pctx,
                            struct vc4_texture_stateobj *stage_tex)
 {
+        struct vc4_context *vc4 = vc4_context(pctx);
+
         for (int i = 0; i < stage_tex->num_textures; i++) {
                 struct pipe_sampler_view *view = stage_tex->textures[i];
                 if (!view)
@@ -126,6 +128,8 @@ vc4_update_shadow_textures(struct pipe_context *pctx,
                 struct vc4_resource *rsc = vc4_resource(view->texture);
                 if (rsc->shadow_parent)
                         vc4_update_shadow_baselevel_texture(pctx, view);
+
+                vc4_flush_jobs_writing_resource(vc4, view->texture);
         }
 }
 
@@ -263,12 +267,12 @@ static void
 vc4_hw_2116_workaround(struct pipe_context *pctx)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_job *job = vc4->job;
+        struct vc4_job *job = vc4_get_job_for_fbo(vc4);
 
         if (job->draw_calls_queued == 0x1ef0) {
                 perf_debug("Flushing batch due to HW-2116 workaround "
                            "(too many draw calls per scene\n");
-                vc4_flush(pctx);
+                vc4_job_submit(vc4, job);
         }
 }
 
@@ -276,7 +280,6 @@ static void
 vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_job *job = vc4->job;
 
         if (info->mode >= PIPE_PRIM_QUADS) {
                 util_primconvert_save_index_buffer(vc4->primconvert, &vc4->indexbuf);
@@ -288,10 +291,12 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         }
 
         /* Before setting up the draw, do any fixup blits necessary. */
-        vc4_update_shadow_textures(pctx, &vc4->verttex);
-        vc4_update_shadow_textures(pctx, &vc4->fragtex);
+        vc4_predraw_check_textures(pctx, &vc4->verttex);
+        vc4_predraw_check_textures(pctx, &vc4->fragtex);
 
         vc4_hw_2116_workaround(pctx);
+
+        struct vc4_job *job = vc4_get_job_for_fbo(vc4);
 
         vc4_get_draw_cl_space(job, info->count);
 
@@ -466,14 +471,15 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
           const union pipe_color_union *color, double depth, unsigned stencil)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_job *job = vc4->job;
+        struct vc4_job *job = vc4_get_job_for_fbo(vc4);
 
         /* We can't flag new buffers for clearing once we've queued draws.  We
          * could avoid this by using the 3d engine to clear.
          */
         if (job->draw_calls_queued) {
                 perf_debug("Flushing rendering to process new clear.\n");
-                vc4_flush(pctx);
+                vc4_job_submit(vc4, job);
+                job = vc4_get_job_for_fbo(vc4);
         }
 
         /* Clearing ZS will clear both Z and stencil, so if we're trying to

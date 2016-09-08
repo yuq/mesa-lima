@@ -41,38 +41,12 @@ void
 vc4_flush(struct pipe_context *pctx)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct pipe_surface *cbuf = vc4->framebuffer.cbufs[0];
-        struct pipe_surface *zsbuf = vc4->framebuffer.zsbuf;
-        struct vc4_job *job = vc4->job;
 
-        if (cbuf && (job->resolve & PIPE_CLEAR_COLOR0)) {
-                if (cbuf->texture->nr_samples > 1) {
-                        pipe_surface_reference(&job->msaa_color_write, cbuf);
-                } else {
-                        pipe_surface_reference(&job->color_write, cbuf);
-                }
-
-                pipe_surface_reference(&job->color_read, cbuf);
+        struct hash_entry *entry;
+        hash_table_foreach(vc4->jobs, entry) {
+                struct vc4_job *job = entry->data;
+                vc4_job_submit(vc4, job);
         }
-
-        if (zsbuf && (job->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
-                if (zsbuf->texture->nr_samples > 1) {
-                        pipe_surface_reference(&job->msaa_zs_write, zsbuf);
-                } else {
-                        pipe_surface_reference(&job->zs_write, zsbuf);
-                }
-
-                pipe_surface_reference(&job->zs_read, zsbuf);
-        }
-
-        vc4_job_submit(vc4, job);
-
-        /* We have no hardware context saved between our draw calls, so we
-         * need to flag the next draw as needing all state emitted.  Emitting
-         * all state at the start of our draws is also what ensures that we
-         * return to the state we need after a previous tile has finished.
-         */
-        vc4->dirty = ~0;
 }
 
 static void
@@ -92,70 +66,26 @@ vc4_pipe_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
         }
 }
 
-/**
- * Flushes the current command lists if they reference the given BO.
- *
- * This helps avoid flushing the command buffers when unnecessary.
- */
-bool
-vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo,
-                     bool include_reads)
-{
-        struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_job *job = vc4->job;
-
-        if (!job->needs_flush)
-                return false;
-
-        /* Walk all the referenced BOs in the drawing command list to see if
-         * they match.
-         */
-        if (include_reads) {
-                struct vc4_bo **referenced_bos = job->bo_pointers.base;
-                for (int i = 0; i < cl_offset(&job->bo_handles) / 4; i++) {
-                        if (referenced_bos[i] == bo) {
-                                return true;
-                        }
-                }
-        }
-
-        /* Also check for the Z/color buffers, since the references to those
-         * are only added immediately before submit.
-         */
-        struct vc4_surface *csurf = vc4_surface(vc4->framebuffer.cbufs[0]);
-        if (csurf) {
-                struct vc4_resource *ctex = vc4_resource(csurf->base.texture);
-                if (ctex->bo == bo) {
-                        return true;
-                }
-        }
-
-        struct vc4_surface *zsurf = vc4_surface(vc4->framebuffer.zsbuf);
-        if (zsurf) {
-                struct vc4_resource *ztex =
-                        vc4_resource(zsurf->base.texture);
-                if (ztex->bo == bo) {
-                        return true;
-                }
-        }
-
-        return false;
-}
-
 static void
 vc4_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct pipe_surface *zsurf = vc4->framebuffer.zsbuf;
+        struct hash_entry *entry = _mesa_hash_table_search(vc4->write_jobs,
+                                                           prsc);
+        if (!entry)
+                return;
 
-        if (zsurf && zsurf->texture == prsc)
-                vc4->job->resolve &= ~(PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL);
+        struct vc4_job *job = entry->data;
+        if (job->key.zsbuf && job->key.zsbuf->texture == prsc)
+                job->resolve &= ~(PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL);
 }
 
 static void
 vc4_context_destroy(struct pipe_context *pctx)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+
+        vc4_flush(pctx);
 
         if (vc4->blitter)
                 util_blitter_destroy(vc4->blitter);
@@ -205,8 +135,7 @@ vc4_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
         vc4_query_init(pctx);
         vc4_resource_context_init(pctx);
 
-        vc4->job = rzalloc(vc4, struct vc4_job);
-        vc4_job_init(vc4->job);
+        vc4_job_init(vc4);
 
         vc4->fd = screen->fd;
 

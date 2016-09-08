@@ -74,11 +74,10 @@ drm_gem_cma_create(struct drm_device *dev, size_t size)
 }
 
 static int
-vc4_simulator_pin_bos(struct drm_device *dev, struct vc4_exec_info *exec)
+vc4_simulator_pin_bos(struct drm_device *dev, struct vc4_job *job,
+                      struct vc4_exec_info *exec)
 {
         struct drm_vc4_submit_cl *args = exec->args;
-        struct vc4_context *vc4 = dev->vc4;
-        struct vc4_job *job = vc4->job;
         struct vc4_bo **bos = job->bo_pointers.base;
 
         exec->bo_count = args->bo_handle_count;
@@ -220,7 +219,8 @@ vc4_dump_to_file(struct vc4_exec_info *exec)
 }
 
 int
-vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
+vc4_simulator_flush(struct vc4_context *vc4,
+                    struct drm_vc4_submit_cl *args, struct vc4_job *job)
 {
         struct vc4_screen *screen = vc4->screen;
         struct vc4_surface *csurf = vc4_surface(vc4->framebuffer.cbufs[0]);
@@ -257,7 +257,7 @@ vc4_simulator_flush(struct vc4_context *vc4, struct drm_vc4_submit_cl *args)
 
         exec.args = args;
 
-        ret = vc4_simulator_pin_bos(dev, &exec);
+        ret = vc4_simulator_pin_bos(dev, job, &exec);
         if (ret)
                 return ret;
 

@@ -406,11 +406,10 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
                           const struct pipe_framebuffer_state *framebuffer)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_job *job = vc4->job;
         struct pipe_framebuffer_state *cso = &vc4->framebuffer;
         unsigned i;
 
-        vc4_flush(pctx);
+        vc4->job = NULL;
 
         for (i = 0; i < framebuffer->nr_cbufs; i++)
                 pipe_surface_reference(&cso->cbufs[i], framebuffer->cbufs[i]);
@@ -423,23 +422,6 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
 
         cso->width = framebuffer->width;
         cso->height = framebuffer->height;
-
-        /* If we're binding to uninitialized buffers, no need to load their
-         * contents before drawing..
-         */
-        if (cso->cbufs[0]) {
-                struct vc4_resource *rsc =
-                        vc4_resource(cso->cbufs[0]->texture);
-                if (!rsc->writes)
-                        job->cleared |= PIPE_CLEAR_COLOR0;
-        }
-
-        if (cso->zsbuf) {
-                struct vc4_resource *rsc =
-                        vc4_resource(cso->zsbuf->texture);
-                if (!rsc->writes)
-                        job->cleared |= PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL;
-        }
 
         /* Nonzero texture mipmap levels are laid out as if they were in
          * power-of-two-sized spaces.  The renderbuffer config infers its
@@ -460,22 +442,6 @@ vc4_set_framebuffer_state(struct pipe_context *pctx,
                         (rsc->slices[cso->zsbuf->u.tex.level].stride /
                          rsc->cpp);
         }
-
-        job->msaa = false;
-        if (cso->cbufs[0])
-                job->msaa = cso->cbufs[0]->texture->nr_samples > 1;
-        else if (cso->zsbuf)
-                job->msaa = cso->zsbuf->texture->nr_samples > 1;
-
-        if (job->msaa) {
-                job->tile_width = 32;
-                job->tile_height = 32;
-        } else {
-                job->tile_width = 64;
-                job->tile_height = 64;
-        }
-        job->draw_tiles_x = DIV_ROUND_UP(cso->width, job->tile_width);
-        job->draw_tiles_y = DIV_ROUND_UP(cso->height, job->tile_height);
 
         vc4->dirty |= VC4_DIRTY_FRAMEBUFFER;
 }

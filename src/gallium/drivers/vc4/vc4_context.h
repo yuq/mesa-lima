@@ -190,6 +190,12 @@ struct vc4_vertex_stateobj {
         unsigned num_elements;
 };
 
+/* Hash table key for vc4->jobs */
+struct vc4_job_key {
+        struct pipe_surface *cbuf;
+        struct pipe_surface *zsbuf;
+};
+
 /**
  * A complete bin/render job.
  *
@@ -266,6 +272,8 @@ struct vc4_job {
          * the current job.
          */
         uint32_t draw_calls_queued;
+
+        struct vc4_job_key key;
 };
 
 struct vc4_context {
@@ -274,8 +282,20 @@ struct vc4_context {
         int fd;
         struct vc4_screen *screen;
 
-        /** The render job for the currently bound FBO. */
+        /** The 3D rendering job for the currently bound FBO. */
         struct vc4_job *job;
+
+        /* Map from struct vc4_job_key to the job for that FBO.
+         */
+        struct hash_table *jobs;
+
+        /**
+         * Map from vc4_resource to a job writing to that resource.
+         *
+         * Primarily for flushing jobs rendering to textures that are now
+         * being read from.
+         */
+        struct hash_table *write_jobs;
 
         struct slab_mempool transfer_pool;
         struct blitter_context *blitter;
@@ -404,7 +424,8 @@ void vc4_program_fini(struct pipe_context *pctx);
 void vc4_query_init(struct pipe_context *pctx);
 void vc4_simulator_init(struct vc4_screen *screen);
 int vc4_simulator_flush(struct vc4_context *vc4,
-                        struct drm_vc4_submit_cl *args);
+                        struct drm_vc4_submit_cl *args,
+                        struct vc4_job *job);
 
 void vc4_set_shader_uniform_dirty_flags(struct vc4_compiled_shader *shader);
 void vc4_write_uniforms(struct vc4_context *vc4,
@@ -413,11 +434,17 @@ void vc4_write_uniforms(struct vc4_context *vc4,
                         struct vc4_texture_stateobj *texstate);
 
 void vc4_flush(struct pipe_context *pctx);
-void vc4_job_init(struct vc4_job *job);
+void vc4_job_init(struct vc4_context *vc4);
+struct vc4_job *vc4_get_job(struct vc4_context *vc4,
+                            struct pipe_surface *cbuf,
+                            struct pipe_surface *zsbuf);
+struct vc4_job *vc4_get_job_for_fbo(struct vc4_context *vc4);
+
 void vc4_job_submit(struct vc4_context *vc4, struct vc4_job *job);
-void vc4_job_reset(struct vc4_job *job);
-bool vc4_cl_references_bo(struct pipe_context *pctx, struct vc4_bo *bo,
-                          bool include_reads);
+void vc4_flush_jobs_writing_resource(struct vc4_context *vc4,
+                                     struct pipe_resource *prsc);
+void vc4_flush_jobs_reading_resource(struct vc4_context *vc4,
+                                     struct pipe_resource *prsc);
 void vc4_emit_state(struct pipe_context *pctx);
 void vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c);
 struct qpu_reg *vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c);

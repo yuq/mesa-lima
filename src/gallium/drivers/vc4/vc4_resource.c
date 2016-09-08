@@ -115,7 +115,6 @@ vc4_resource_transfer_unmap(struct pipe_context *pctx,
                 blit.filter = PIPE_TEX_FILTER_NEAREST;
 
                 pctx->blit(pctx, &blit);
-                vc4_flush(pctx);
 
                 pipe_resource_reference(&trans->ss_resource, NULL);
         }
@@ -178,20 +177,20 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                         if (prsc->bind & PIPE_BIND_VERTEX_BUFFER)
                                 vc4->dirty |= VC4_DIRTY_VTXBUF;
                 } else {
-                        /* If we failed to reallocate, flush everything so
-                         * that we don't violate any syncing requirements.
+                        /* If we failed to reallocate, flush users so that we
+                         * don't violate any syncing requirements.
                          */
-                        vc4_flush(pctx);
+                        vc4_flush_jobs_reading_resource(vc4, prsc);
                 }
         } else if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
                 /* If we're writing and the buffer is being used by the CL, we
                  * have to flush the CL first.  If we're only reading, we need
                  * to flush if the CL has written our buffer.
                  */
-                if (vc4_cl_references_bo(pctx, rsc->bo,
-                                         usage & PIPE_TRANSFER_WRITE)) {
-                        vc4_flush(pctx);
-                }
+                if (usage & PIPE_TRANSFER_WRITE)
+                        vc4_flush_jobs_reading_resource(vc4, prsc);
+                else
+                        vc4_flush_jobs_writing_resource(vc4, prsc);
         }
 
         if (usage & PIPE_TRANSFER_WRITE)
@@ -245,7 +244,7 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                         blit.filter = PIPE_TEX_FILTER_NEAREST;
 
                         pctx->blit(pctx, &blit);
-                        vc4_flush(pctx);
+                        vc4_flush_jobs_writing_resource(vc4, blit.dst.resource);
                 }
 
                 /* The rest of the mapping process should use our temporary. */

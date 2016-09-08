@@ -51,10 +51,6 @@ static bool
 vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
-        struct vc4_job *job = vc4->job;
-        bool old_msaa = job->msaa;
-        int old_tile_width = job->tile_width;
-        int old_tile_height = job->tile_height;
         bool msaa = (info->src.resource->nr_samples > 1 ||
                      info->dst.resource->nr_samples > 1);
         int tile_width = msaa ? 32 : 64;
@@ -115,8 +111,6 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         if (info->dst.resource->format != info->src.resource->format)
                 return false;
 
-        vc4_flush(pctx);
-
         if (false) {
                 fprintf(stderr, "RCL blit from %d,%d to %d,%d (%d,%d)\n",
                         info->src.box.x,
@@ -132,11 +126,19 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         struct pipe_surface *src_surf =
                 vc4_get_blit_surface(pctx, info->src.resource, info->src.level);
 
+        vc4_flush_jobs_reading_resource(vc4, info->src.resource);
+
+        struct vc4_job *job = vc4_get_job(vc4, dst_surf, NULL);
         pipe_surface_reference(&job->color_read, src_surf);
-        if (dst_surf->texture->nr_samples > 1)
-                pipe_surface_reference(&job->color_write, dst_surf);
-        else
-                pipe_surface_reference(&job->msaa_color_write, dst_surf);
+
+        /* If we're resolving from MSAA to single sample, we still need to run
+         * the engine in MSAA mode for the load.
+         */
+        if (!job->msaa && info->src.resource->nr_samples > 1) {
+                job->msaa = true;
+                job->tile_width = 32;
+                job->tile_height = 32;
+        }
 
         job->draw_min_x = info->dst.box.x;
         job->draw_min_y = info->dst.box.y;
@@ -152,10 +154,6 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         job->resolve |= PIPE_CLEAR_COLOR;
 
         vc4_job_submit(vc4, job);
-
-        job->msaa = old_msaa;
-        job->tile_width = old_tile_width;
-        job->tile_height = old_tile_height;
 
         pipe_surface_reference(&dst_surf, NULL);
         pipe_surface_reference(&src_surf, NULL);
