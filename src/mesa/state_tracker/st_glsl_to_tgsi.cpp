@@ -5284,6 +5284,8 @@ _mesa_sysval_to_semantic(unsigned sysval)
       return TGSI_SEMANTIC_BLOCK_ID;
    case SYSTEM_VALUE_NUM_WORK_GROUPS:
       return TGSI_SEMANTIC_GRID_SIZE;
+   case SYSTEM_VALUE_LOCAL_GROUP_SIZE:
+      return TGSI_SEMANTIC_BLOCK_SIZE;
 
    /* Unhandled */
    case SYSTEM_VALUE_LOCAL_INVOCATION_INDEX:
