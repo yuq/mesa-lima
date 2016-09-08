@@ -641,6 +641,9 @@ struct radeon_winsys {
     /**
      * Return the buffer list.
      *
+     * This is the buffer list as passed to the kernel, i.e. it only contains
+     * the parent buffers of sub-allocated buffers.
+     *
      * \param cs    Command stream
      * \param list  Returned buffer list. Set to NULL to query the count only.
      * \return      The buffer count.

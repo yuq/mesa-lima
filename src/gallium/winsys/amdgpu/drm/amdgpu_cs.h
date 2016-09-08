@@ -45,7 +45,14 @@ struct amdgpu_ctx {
 
 struct amdgpu_cs_buffer {
    struct amdgpu_winsys_bo *bo;
-   uint64_t priority_usage;
+   union {
+      struct {
+         uint64_t priority_usage;
+      } real;
+      struct {
+         uint32_t real_idx; /* index of underlying real BO */
+      } slab;
+   } u;
    enum radeon_bo_usage usage;
 };
 
@@ -73,14 +80,17 @@ struct amdgpu_cs_context {
    struct amdgpu_cs_ib_info    ib[IB_NUM];
 
    /* Buffers. */
-   unsigned                    max_num_buffers;
-   unsigned                    num_buffers;
+   unsigned                    max_real_buffers;
+   unsigned                    num_real_buffers;
    amdgpu_bo_handle            *handles;
    uint8_t                     *flags;
-   struct amdgpu_cs_buffer     *buffers;
+   struct amdgpu_cs_buffer     *real_buffers;
+
+   unsigned                    num_slab_buffers;
+   unsigned                    max_slab_buffers;
+   struct amdgpu_cs_buffer     *slab_buffers;
 
    int                         buffer_indices_hashlist[4096];
-
 
    unsigned                    max_dependencies;
 
@@ -198,6 +208,7 @@ amdgpu_bo_is_referenced_by_cs_with_usage(struct amdgpu_cs *cs,
                                          enum radeon_bo_usage usage)
 {
    int index;
+   struct amdgpu_cs_buffer *buffer;
 
    if (!bo->num_cs_references)
       return false;
@@ -206,7 +217,10 @@ amdgpu_bo_is_referenced_by_cs_with_usage(struct amdgpu_cs *cs,
    if (index == -1)
       return false;
 
-   return (cs->csc->buffers[index].usage & usage) != 0;
+   buffer = bo->bo ? &cs->csc->real_buffers[index]
+                   : &cs->csc->slab_buffers[index];
+
+   return (buffer->usage & usage) != 0;
 }
 
 static inline bool
