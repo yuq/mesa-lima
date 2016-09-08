@@ -149,6 +149,7 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         job->tile_height = tile_height;
         job->msaa = msaa;
         job->needs_flush = true;
+        job->resolve |= PIPE_CLEAR_COLOR;
 
         vc4_job_submit(vc4, job);
 

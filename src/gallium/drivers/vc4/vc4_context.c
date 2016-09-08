@@ -52,10 +52,7 @@ vc4_flush(struct pipe_context *pctx)
                         pipe_surface_reference(&job->color_write, cbuf);
                 }
 
-                if (!(job->cleared & PIPE_CLEAR_COLOR0)) {
-                        pipe_surface_reference(&job->color_read, cbuf);
-                }
-
+                pipe_surface_reference(&job->color_read, cbuf);
         }
 
         if (zsbuf && (job->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
@@ -65,9 +62,7 @@ vc4_flush(struct pipe_context *pctx)
                         pipe_surface_reference(&job->zs_write, zsbuf);
                 }
 
-                if (!(job->cleared & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
-                        pipe_surface_reference(&job->zs_read, zsbuf);
-                }
+                pipe_surface_reference(&job->zs_read, zsbuf);
         }
 
         vc4_job_submit(vc4, job);

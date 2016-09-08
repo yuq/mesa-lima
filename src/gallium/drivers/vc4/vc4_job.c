@@ -81,10 +81,8 @@ vc4_submit_setup_rcl_surface(struct vc4_job *job,
 {
         struct vc4_surface *surf = vc4_surface(psurf);
 
-        if (!surf) {
-                submit_surf->hindex = ~0;
+        if (!surf)
                 return;
-        }
 
         struct vc4_resource *rsc = vc4_resource(psurf->texture);
         submit_surf->hindex = vc4_gem_hindex(job, rsc->bo);
@@ -124,10 +122,8 @@ vc4_submit_setup_rcl_render_config_surface(struct vc4_job *job,
 {
         struct vc4_surface *surf = vc4_surface(psurf);
 
-        if (!surf) {
-                submit_surf->hindex = ~0;
+        if (!surf)
                 return;
-        }
 
         struct vc4_resource *rsc = vc4_resource(psurf->texture);
         submit_surf->hindex = vc4_gem_hindex(job, rsc->bo);
@@ -153,10 +149,8 @@ vc4_submit_setup_rcl_msaa_surface(struct vc4_job *job,
 {
         struct vc4_surface *surf = vc4_surface(psurf);
 
-        if (!surf) {
-                submit_surf->hindex = ~0;
+        if (!surf)
                 return;
-        }
 
         struct vc4_resource *rsc = vc4_resource(psurf->texture);
         submit_surf->hindex = vc4_gem_hindex(job, rsc->bo);
@@ -202,25 +196,41 @@ vc4_job_submit(struct vc4_context *vc4, struct vc4_job *job)
                 cl_u8(&bcl, VC4_PACKET_FLUSH);
                 cl_end(&job->bcl, bcl);
         }
-        struct drm_vc4_submit_cl submit;
-        memset(&submit, 0, sizeof(submit));
+        struct drm_vc4_submit_cl submit = {
+                .color_read.hindex = ~0,
+                .zs_read.hindex = ~0,
+                .color_write.hindex = ~0,
+                .msaa_color_write.hindex = ~0,
+                .zs_write.hindex = ~0,
+                .msaa_zs_write.hindex = ~0,
+        };
 
         cl_ensure_space(&job->bo_handles, 6 * sizeof(uint32_t));
         cl_ensure_space(&job->bo_pointers, 6 * sizeof(struct vc4_bo *));
 
-        vc4_submit_setup_rcl_surface(job, &submit.color_read,
-                                     job->color_read, false, false);
-        vc4_submit_setup_rcl_render_config_surface(job, &submit.color_write,
-                                                   job->color_write);
-        vc4_submit_setup_rcl_surface(job, &submit.zs_read,
-                                     job->zs_read, true, false);
-        vc4_submit_setup_rcl_surface(job, &submit.zs_write,
-                                     job->zs_write, true, true);
-
-        vc4_submit_setup_rcl_msaa_surface(job, &submit.msaa_color_write,
-                                          job->msaa_color_write);
-        vc4_submit_setup_rcl_msaa_surface(job, &submit.msaa_zs_write,
-                                          job->msaa_zs_write);
+        if (job->resolve & PIPE_CLEAR_COLOR) {
+                if (!(job->cleared & PIPE_CLEAR_COLOR)) {
+                        vc4_submit_setup_rcl_surface(job, &submit.color_read,
+                                                     job->color_read,
+                                                     false, false);
+                }
+                vc4_submit_setup_rcl_render_config_surface(job,
+                                                           &submit.color_write,
+                                                           job->color_write);
+                vc4_submit_setup_rcl_msaa_surface(job,
+                                                  &submit.msaa_color_write,
+                                                  job->msaa_color_write);
+        }
+        if (job->resolve & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) {
+                if (!(job->cleared & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL))) {
+                        vc4_submit_setup_rcl_surface(job, &submit.zs_read,
+                                                     job->zs_read, true, false);
+                }
+                vc4_submit_setup_rcl_surface(job, &submit.zs_write,
+                                             job->zs_write, true, true);
+                vc4_submit_setup_rcl_msaa_surface(job, &submit.msaa_zs_write,
+                                                  job->msaa_zs_write);
+        }
 
         if (job->msaa) {
                 /* This bit controls how many pixels the general
