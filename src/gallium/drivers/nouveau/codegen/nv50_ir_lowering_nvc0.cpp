@@ -2695,13 +2695,30 @@ NVC0LoweringPass::visit(Instruction *i)
 
    /* Kepler+ has a special opcode to compute a new base address to be used
     * for indirect loads.
+    *
+    * Maxwell+ has an additional similar requirement for indirect
+    * interpolation ops in frag shaders.
     */
-   if (targ->getChipset() >= NVISA_GK104_CHIPSET && !i->perPatch &&
-       (i->op == OP_VFETCH || i->op == OP_EXPORT) && i->src(0).isIndirect(0)) {
+   bool doAfetch = false;
+   if (targ->getChipset() >= NVISA_GK104_CHIPSET &&
+       !i->perPatch &&
+       (i->op == OP_VFETCH || i->op == OP_EXPORT) &&
+       i->src(0).isIndirect(0)) {
+      doAfetch = true;
+   }
+   if (targ->getChipset() >= NVISA_GM107_CHIPSET &&
+       (i->op == OP_LINTERP || i->op == OP_PINTERP) &&
+       i->src(0).isIndirect(0)) {
+      doAfetch = true;
+   }
+
+   if (doAfetch) {
+      Value *addr = cloneShallow(func, i->getSrc(0));
       Instruction *afetch = bld.mkOp1(OP_AFETCH, TYPE_U32, bld.getSSA(),
-                                      cloneShallow(func, i->getSrc(0)));
+                                      i->getSrc(0));
       afetch->setIndirect(0, 0, i->getIndirect(0, 0));
-      i->src(0).get()->reg.data.offset = 0;
+      addr->reg.data.offset = 0;
+      i->setSrc(0, addr);
       i->setIndirect(0, 0, afetch->getDef(0));
    }
 
