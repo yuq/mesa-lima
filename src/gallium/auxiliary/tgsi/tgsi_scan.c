@@ -102,6 +102,7 @@ scan_instruction(struct tgsi_shader_info *info,
 {
    unsigned i;
    bool is_mem_inst = false;
+   bool is_interp_instruction = false;
 
    assert(fullinst->Instruction.Opcode < TGSI_OPCODE_LAST);
    info->opcode_count[fullinst->Instruction.Opcode]++;
@@ -126,6 +127,8 @@ scan_instruction(struct tgsi_shader_info *info,
        fullinst->Instruction.Opcode == TGSI_OPCODE_INTERP_SAMPLE) {
       const struct tgsi_full_src_register *src0 = &fullinst->Src[0];
       unsigned input;
+
+      is_interp_instruction = true;
 
       if (src0->Register.Indirect && src0->Indirect.ArrayID)
          input = info->input_array_first[src0->Indirect.ArrayID];
@@ -190,12 +193,16 @@ scan_instruction(struct tgsi_shader_info *info,
             info->input_usage_mask[ind] |= usage_mask;
          }
 
-         if (info->processor == PIPE_SHADER_FRAGMENT &&
-             !src->Register.Indirect) {
-            unsigned name =
-               info->input_semantic_name[src->Register.Index];
-            unsigned index =
-               info->input_semantic_index[src->Register.Index];
+         if (info->processor == PIPE_SHADER_FRAGMENT) {
+            unsigned name, index, input;
+
+            if (src->Register.Indirect && src->Indirect.ArrayID)
+               input = info->input_array_first[src->Indirect.ArrayID];
+            else
+               input = src->Register.Index;
+
+            name = info->input_semantic_name[input];
+            index = info->input_semantic_index[input];
 
             if (name == TGSI_SEMANTIC_POSITION &&
                 (src->Register.SwizzleX == TGSI_SWIZZLE_Z ||
@@ -212,6 +219,50 @@ scan_instruction(struct tgsi_shader_info *info,
                   (1 << src->Register.SwizzleW);
 
                info->colors_read |= mask << (index * 4);
+            }
+
+            /* Process only interpolated varyings. Don't include POSITION.
+             * Don't include integer varyings, because they are not
+             * interpolated. Don't process inputs interpolated by INTERP
+             * opcodes. Those are tracked separately.
+             */
+            if ((!is_interp_instruction || i != 0) &&
+                (name == TGSI_SEMANTIC_GENERIC ||
+                 name == TGSI_SEMANTIC_TEXCOORD ||
+                 name == TGSI_SEMANTIC_COLOR ||
+                 name == TGSI_SEMANTIC_BCOLOR ||
+                 name == TGSI_SEMANTIC_FOG ||
+                 name == TGSI_SEMANTIC_CLIPDIST)) {
+               switch (info->input_interpolate[index]) {
+               case TGSI_INTERPOLATE_COLOR:
+               case TGSI_INTERPOLATE_PERSPECTIVE:
+                  switch (info->input_interpolate_loc[index]) {
+                  case TGSI_INTERPOLATE_LOC_CENTER:
+                     info->uses_persp_center = TRUE;
+                     break;
+                  case TGSI_INTERPOLATE_LOC_CENTROID:
+                     info->uses_persp_centroid = TRUE;
+                     break;
+                  case TGSI_INTERPOLATE_LOC_SAMPLE:
+                     info->uses_persp_sample = TRUE;
+                     break;
+                  }
+                  break;
+               case TGSI_INTERPOLATE_LINEAR:
+                  switch (info->input_interpolate_loc[index]) {
+                  case TGSI_INTERPOLATE_LOC_CENTER:
+                     info->uses_linear_center = TRUE;
+                     break;
+                  case TGSI_INTERPOLATE_LOC_CENTROID:
+                     info->uses_linear_centroid = TRUE;
+                     break;
+                  case TGSI_INTERPOLATE_LOC_SAMPLE:
+                     info->uses_linear_sample = TRUE;
+                     break;
+                  }
+                  break;
+                  /* TGSI_INTERPOLATE_CONSTANT doesn't do any interpolation. */
+               }
             }
          }
       }
@@ -355,48 +406,6 @@ scan_declaration(struct tgsi_shader_info *info,
          else {
             info->num_inputs++;
             assert(reg < info->num_inputs);
-         }
-
-         /* Only interpolated varyings. Don't include POSITION.
-          * Don't include integer varyings, because they are not
-          * interpolated.
-          */
-         if (semName == TGSI_SEMANTIC_GENERIC ||
-             semName == TGSI_SEMANTIC_TEXCOORD ||
-             semName == TGSI_SEMANTIC_COLOR ||
-             semName == TGSI_SEMANTIC_BCOLOR ||
-             semName == TGSI_SEMANTIC_FOG ||
-             semName == TGSI_SEMANTIC_CLIPDIST) {
-            switch (fulldecl->Interp.Interpolate) {
-            case TGSI_INTERPOLATE_COLOR:
-            case TGSI_INTERPOLATE_PERSPECTIVE:
-               switch (fulldecl->Interp.Location) {
-               case TGSI_INTERPOLATE_LOC_CENTER:
-                  info->uses_persp_center = TRUE;
-                  break;
-               case TGSI_INTERPOLATE_LOC_CENTROID:
-                  info->uses_persp_centroid = TRUE;
-                  break;
-               case TGSI_INTERPOLATE_LOC_SAMPLE:
-                  info->uses_persp_sample = TRUE;
-                  break;
-               }
-               break;
-            case TGSI_INTERPOLATE_LINEAR:
-               switch (fulldecl->Interp.Location) {
-               case TGSI_INTERPOLATE_LOC_CENTER:
-                  info->uses_linear_center = TRUE;
-                  break;
-               case TGSI_INTERPOLATE_LOC_CENTROID:
-                  info->uses_linear_centroid = TRUE;
-                  break;
-               case TGSI_INTERPOLATE_LOC_SAMPLE:
-                  info->uses_linear_sample = TRUE;
-                  break;
-               }
-               break;
-               /* TGSI_INTERPOLATE_CONSTANT doesn't do any interpolation. */
-            }
          }
 
          if (semName == TGSI_SEMANTIC_PRIMID)
