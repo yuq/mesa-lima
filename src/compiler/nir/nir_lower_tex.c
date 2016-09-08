@@ -39,22 +39,6 @@
 #include "nir_builder.h"
 
 static void
-tex_instr_remove_src(nir_tex_instr *tex, unsigned src_idx)
-{
-   assert(src_idx < tex->num_srcs);
-
-   /* First rewrite the source to NIR_SRC_INIT */
-   nir_instr_rewrite_src(&tex->instr, &tex->src[src_idx].src, NIR_SRC_INIT);
-
-   /* Now, move all of the other sources down */
-   for (unsigned i = src_idx + 1; i < tex->num_srcs; i++) {
-      tex->src[i-1].src_type = tex->src[i].src_type;
-      nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
-   }
-   tex->num_srcs--;
-}
-
-static void
 project_src(nir_builder *b, nir_tex_instr *tex)
 {
    /* Find the projector in the srcs list, if present. */
@@ -114,7 +98,7 @@ project_src(nir_builder *b, nir_tex_instr *tex)
                             nir_src_for_ssa(projected));
    }
 
-   tex_instr_remove_src(tex, proj_index);
+   nir_tex_instr_remove_src(tex, proj_index);
 }
 
 static bool
@@ -159,7 +143,7 @@ lower_offset(nir_builder *b, nir_tex_instr *tex)
    nir_instr_rewrite_src(&tex->instr, &tex->src[coord_index].src,
                          nir_src_for_ssa(offset_coord));
 
-   tex_instr_remove_src(tex, offset_index);
+   nir_tex_instr_remove_src(tex, offset_index);
 
    return true;
 }

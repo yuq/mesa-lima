@@ -536,6 +536,22 @@ nir_tex_instr_create(nir_shader *shader, unsigned num_srcs)
    return instr;
 }
 
+void
+nir_tex_instr_remove_src(nir_tex_instr *tex, unsigned src_idx)
+{
+   assert(src_idx < tex->num_srcs);
+
+   /* First rewrite the source to NIR_SRC_INIT */
+   nir_instr_rewrite_src(&tex->instr, &tex->src[src_idx].src, NIR_SRC_INIT);
+
+   /* Now, move all of the other sources down */
+   for (unsigned i = src_idx + 1; i < tex->num_srcs; i++) {
+      tex->src[i-1].src_type = tex->src[i].src_type;
+      nir_instr_move_src(&tex->instr, &tex->src[i-1].src, &tex->src[i].src);
+   }
+   tex->num_srcs--;
+}
+
 nir_phi_instr *
 nir_phi_instr_create(nir_shader *shader)
 {

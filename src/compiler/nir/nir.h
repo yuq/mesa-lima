@@ -1329,6 +1329,8 @@ nir_tex_instr_src_index(nir_tex_instr *instr, nir_tex_src_type type)
    return -1;
 }
 
+void nir_tex_instr_remove_src(nir_tex_instr *tex, unsigned src_idx);
+
 typedef union {
    float f32[4];
    double f64[4];
