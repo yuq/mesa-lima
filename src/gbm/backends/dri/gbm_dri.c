@@ -591,7 +591,8 @@ gbm_dri_bo_get_fd(struct gbm_bo *_bo)
    if (bo->image == NULL)
       return -1;
 
-   dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_FD, &fd);
+   if (!dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_FD, &fd))
+      return -1;
 
    return fd;
 }

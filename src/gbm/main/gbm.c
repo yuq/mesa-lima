@@ -204,7 +204,8 @@ gbm_bo_get_handle(struct gbm_bo *bo)
  * descriptor.
 
  * \param bo The buffer object
- * \return Returns a file descriptor referring  to the underlying buffer
+ * \return Returns a file descriptor referring to the underlying buffer or -1
+ * if an error occurs.
  */
 GBM_EXPORT int
 gbm_bo_get_fd(struct gbm_bo *bo)
