@@ -1249,6 +1249,12 @@ builtin_variable_generator::generate_cs_special_vars()
                     "gl_LocalInvocationID");
    add_system_value(SYSTEM_VALUE_WORK_GROUP_ID, uvec3_t, "gl_WorkGroupID");
    add_system_value(SYSTEM_VALUE_NUM_WORK_GROUPS, uvec3_t, "gl_NumWorkGroups");
+
+   if (state->ARB_compute_variable_group_size_enable) {
+      add_system_value(SYSTEM_VALUE_LOCAL_GROUP_SIZE,
+                       uvec3_t, "gl_LocalGroupSizeARB");
+   }
+
    if (state->ctx->Const.LowerCsDerivedVariables) {
       add_variable("gl_GlobalInvocationID", uvec3_t, ir_var_auto, 0);
       add_variable("gl_LocalInvocationIndex", uint_t, ir_var_auto, 0);
