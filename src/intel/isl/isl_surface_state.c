@@ -172,7 +172,6 @@ get_qpitch(const struct isl_surf *surf)
    default:
       unreachable("Bad isl_surf_dim");
    case ISL_DIM_LAYOUT_GEN4_2D:
-   case ISL_DIM_LAYOUT_GEN4_3D:
       if (GEN_GEN >= 9) {
          return isl_surf_get_array_pitch_el_rows(surf);
       } else {
@@ -199,6 +198,22 @@ get_qpitch(const struct isl_surf *surf)
        *    slices.
        */
       return isl_surf_get_array_pitch_el(surf);
+   case ISL_DIM_LAYOUT_GEN4_3D:
+      /* QPitch doesn't make sense for ISL_DIM_LAYOUT_GEN4_3D since it uses a
+       * different pitch at each LOD.  Also, the QPitch field is ignored for
+       * these surfaces.  From the Broadwell PRM documentation for QPitch:
+       *
+       *    This field specifies the distance in rows between array slices. It
+       *    is used only in the following cases:
+       *     - Surface Array is enabled OR
+       *     - Number of Mulitsamples is not NUMSAMPLES_1 and Multisampled
+       *       Surface Storage Format set to MSFMT_MSS OR
+       *     - Surface Type is SURFTYPE_CUBE
+       *
+       * None of the three conditions above can possibly apply to a 3D surface
+       * so it is safe to just set QPitch to 0.
+       */
+      return 0;
    }
 }
 #endif /* GEN_GEN >= 8 */
