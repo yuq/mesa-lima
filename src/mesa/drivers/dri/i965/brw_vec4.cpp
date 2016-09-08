@@ -199,11 +199,8 @@ vec4_instruction::has_source_and_destination_hazard() const
 }
 
 unsigned
-vec4_instruction::regs_read(unsigned arg) const
+vec4_instruction::size_read(unsigned arg) const
 {
-   if (src[arg].file == BAD_FILE)
-      return 0;
-
    switch (opcode) {
    case SHADER_OPCODE_SHADER_TIME_ADD:
    case SHADER_OPCODE_UNTYPED_ATOMIC:
@@ -213,13 +210,26 @@ vec4_instruction::regs_read(unsigned arg) const
    case SHADER_OPCODE_TYPED_SURFACE_READ:
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case TCS_OPCODE_URB_WRITE:
-      return arg == 0 ? mlen : 1;
-
+      if (arg == 0)
+         return mlen * REG_SIZE;
+      break;
    case VS_OPCODE_PULL_CONSTANT_LOAD_GEN7:
-      return arg == 1 ? mlen : 1;
-
+      if (arg == 1)
+         return mlen * REG_SIZE;
+      break;
    default:
-      return 1;
+      break;
+   }
+
+   switch (src[arg].file) {
+   case BAD_FILE:
+      return 0;
+   case IMM:
+   case UNIFORM:
+      return 4 * type_sz(src[arg].type);
+   default:
+      /* XXX - Represent actual execution size and vertical stride. */
+      return 8 * type_sz(src[arg].type);
    }
 }
 
@@ -1188,7 +1198,7 @@ vec4_visitor::opt_register_coalesce()
 	 bool interfered = false;
 	 for (int i = 0; i < 3; i++) {
             if (inst->src[0].in_range(scan_inst->src[i],
-                                      scan_inst->regs_read(i)))
+                                      DIV_ROUND_UP(scan_inst->size_read(i), REG_SIZE)))
 	       interfered = true;
 	 }
 	 if (interfered)
@@ -1214,7 +1224,7 @@ vec4_visitor::opt_register_coalesce()
          } else {
             for (int i = 0; i < 3; i++) {
                if (inst->dst.in_range(scan_inst->src[i],
-                                      scan_inst->regs_read(i)))
+                                      DIV_ROUND_UP(scan_inst->size_read(i), REG_SIZE)))
                   interfered = true;
             }
             if (interfered)

@@ -437,7 +437,7 @@ vec4_visitor::opt_copy_propagation(bool do_constant_prop)
 	    continue;
 
          /* We only handle single-register copies. */
-         if (inst->regs_read(i) != 1)
+         if (inst->size_read(i) != REG_SIZE)
             continue;
 
          const unsigned reg = (alloc.offsets[inst->src[i].nr] +

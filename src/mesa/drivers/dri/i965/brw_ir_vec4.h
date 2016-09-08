@@ -167,7 +167,7 @@ public:
    unsigned sol_vertex; /**< gen6: used for setting dst index in SVB header */
 
    bool is_send_from_grf();
-   unsigned regs_read(unsigned arg) const;
+   unsigned size_read(unsigned arg) const;
    bool can_reswizzle(const struct gen_device_info *devinfo, int dst_writemask,
                       int swizzle, int swizzle_mask);
    void reswizzle(int dst_writemask, int swizzle);
@@ -278,7 +278,9 @@ inline unsigned
 regs_read(const vec4_instruction *inst, unsigned i)
 {
    /* XXX - Take into account register-misaligned offsets correctly. */
-   return inst->regs_read(i);
+   const unsigned reg_size =
+      inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 16 : REG_SIZE;
+   return DIV_ROUND_UP(inst->size_read(i), reg_size);
 }
 
 } /* namespace brw */
