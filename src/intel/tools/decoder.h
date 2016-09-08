@@ -47,7 +47,7 @@ struct gen_field_iterator {
    struct gen_group *group;
    const char *name;
    char value[128];
-   uint32_t *p;
+   const uint32_t *p;
    int i;
 };
 
