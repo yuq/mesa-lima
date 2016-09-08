@@ -303,9 +303,21 @@ _mesa_get_fb0_attachment(struct gl_context *ctx, struct gl_framebuffer *fb,
 
    switch (attachment) {
    case GL_FRONT_LEFT:
-      return &fb->Attachment[BUFFER_FRONT_LEFT];
+      /* Front buffers can be allocated on the first use, but
+       * glGetFramebufferAttachmentParameteriv must work even if that
+       * allocation hasn't happened yet. In such case, use the back buffer,
+       * which should be the same.
+       */
+      if (fb->Attachment[BUFFER_FRONT_LEFT].Type == GL_NONE)
+         return &fb->Attachment[BUFFER_BACK_LEFT];
+      else
+         return &fb->Attachment[BUFFER_FRONT_LEFT];
    case GL_FRONT_RIGHT:
-      return &fb->Attachment[BUFFER_FRONT_RIGHT];
+      /* Same as above. */
+      if (fb->Attachment[BUFFER_FRONT_RIGHT].Type == GL_NONE)
+         return &fb->Attachment[BUFFER_BACK_RIGHT];
+      else
+         return &fb->Attachment[BUFFER_FRONT_RIGHT];
    case GL_BACK_LEFT:
       return &fb->Attachment[BUFFER_BACK_LEFT];
    case GL_BACK_RIGHT:
