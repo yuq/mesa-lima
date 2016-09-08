@@ -603,6 +603,9 @@ struct radeon_winsys {
     /**
      * Return the index of an already-added buffer.
      *
+     * Not supported on amdgpu. Drivers with GPUVM should not care about
+     * buffer indices.
+     *
      * \param cs        Command stream
      * \param buf       Buffer
      * \return          The buffer index, or -1 if the buffer has not been added.

@@ -697,14 +697,6 @@ amdgpu_cs_add_const_preamble_ib(struct radeon_winsys_cs *rcs)
    return &cs->const_preamble_ib.base;
 }
 
-static int amdgpu_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
-                               struct pb_buffer *buf)
-{
-   struct amdgpu_cs *cs = amdgpu_cs(rcs);
-
-   return amdgpu_lookup_buffer(cs->csc, (struct amdgpu_winsys_bo*)buf);
-}
-
 static bool amdgpu_cs_validate(struct radeon_winsys_cs *rcs)
 {
    return true;
@@ -1116,7 +1108,6 @@ void amdgpu_cs_init_functions(struct amdgpu_winsys *ws)
    ws->base.cs_add_const_preamble_ib = amdgpu_cs_add_const_preamble_ib;
    ws->base.cs_destroy = amdgpu_cs_destroy;
    ws->base.cs_add_buffer = amdgpu_cs_add_buffer;
-   ws->base.cs_lookup_buffer = amdgpu_cs_lookup_buffer;
    ws->base.cs_validate = amdgpu_cs_validate;
    ws->base.cs_check_space = amdgpu_cs_check_space;
    ws->base.cs_get_buffer_list = amdgpu_cs_get_buffer_list;
