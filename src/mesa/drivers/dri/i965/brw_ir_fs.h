@@ -338,7 +338,7 @@ public:
    bool is_partial_write() const;
    bool is_copy_payload(const brw::simple_allocator &grf_alloc) const;
    unsigned components_read(unsigned i) const;
-   int size_read(int arg) const;
+   unsigned size_read(int arg) const;
    bool can_do_source_mods(const struct gen_device_info *devinfo);
    bool can_change_types() const;
    bool has_side_effects() const;

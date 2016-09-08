@@ -811,7 +811,7 @@ fs_inst::components_read(unsigned i) const
    }
 }
 
-int
+unsigned
 fs_inst::size_read(int arg) const
 {
    switch (opcode) {
