@@ -460,8 +460,8 @@ _eglParseContextAttribList(_EGLContext *ctx, _EGLDisplay *dpy,
  *
  * According to EGL 1.5 Section 3.7:
  *
- * "EGL_OPENGL_API and EGL_OPENGL_ES_API are interchangeable for all
- *  purposes except eglCreateContext."
+ *	"EGL_OPENGL_API and EGL_OPENGL_ES_API are interchangeable for all
+ *	purposes except eglCreateContext."
  *
  * And since we only support GL and GLES, this is the only place where the
  * bound API matters at all. We look up the current API from the current
