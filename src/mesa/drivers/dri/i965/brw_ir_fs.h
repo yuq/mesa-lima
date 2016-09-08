@@ -324,7 +324,7 @@ public:
    bool is_partial_write() const;
    bool is_copy_payload(const brw::simple_allocator &grf_alloc) const;
    unsigned components_read(unsigned i) const;
-   int regs_read(int arg) const;
+   int size_read(int arg) const;
    bool can_do_source_mods(const struct gen_device_info *devinfo);
    bool can_change_types() const;
    bool has_side_effects() const;
@@ -435,7 +435,9 @@ inline unsigned
 regs_read(const fs_inst *inst, unsigned i)
 {
    /* XXX - Take into account register-misaligned offsets correctly. */
-   return inst->regs_read(i);
+   const unsigned reg_size =
+      inst->src[i].file == UNIFORM || inst->src[i].file == IMM ? 4 : REG_SIZE;
+   return DIV_ROUND_UP(inst->size_read(i), reg_size);
 }
 
 #endif

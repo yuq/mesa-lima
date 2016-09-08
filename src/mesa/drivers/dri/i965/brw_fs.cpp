@@ -818,7 +818,7 @@ fs_inst::components_read(unsigned i) const
 }
 
 int
-fs_inst::regs_read(int arg) const
+fs_inst::size_read(int arg) const
 {
    switch (opcode) {
    case FS_OPCODE_FB_WRITE:
@@ -837,28 +837,28 @@ fs_inst::regs_read(int arg) const
    case SHADER_OPCODE_TYPED_SURFACE_WRITE:
    case FS_OPCODE_INTERPOLATE_AT_PER_SLOT_OFFSET:
       if (arg == 0)
-         return mlen;
+         return mlen * REG_SIZE;
       break;
 
    case FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7:
       /* The payload is actually stored in src1 */
       if (arg == 1)
-         return mlen;
+         return mlen * REG_SIZE;
       break;
 
    case FS_OPCODE_LINTERP:
       if (arg == 1)
-         return 1;
+         return REG_SIZE;
       break;
 
    case SHADER_OPCODE_LOAD_PAYLOAD:
       if (arg < this->header_size)
-         return 1;
+         return REG_SIZE;
       break;
 
    case CS_OPCODE_CS_TERMINATE:
    case SHADER_OPCODE_BARRIER:
-      return 1;
+      return REG_SIZE;
 
    case SHADER_OPCODE_MOV_INDIRECT:
       if (arg == 0) {
@@ -867,7 +867,7 @@ fs_inst::regs_read(int arg) const
 
          if (src[0].file == UNIFORM) {
             assert(region_length % 4 == 0);
-            return region_length / 4;
+            return region_length;
          } else if (src[0].file == FIXED_GRF) {
             /* If the start of the region is not register aligned, then
              * there's some portion of the register that's technically
@@ -884,7 +884,7 @@ fs_inst::regs_read(int arg) const
             if (src[0].subnr)
                region_length += src[0].subnr;
 
-            return DIV_ROUND_UP(region_length, REG_SIZE);
+            return region_length;
          } else {
             assert(!"Invalid register file");
          }
@@ -893,22 +893,20 @@ fs_inst::regs_read(int arg) const
 
    default:
       if (is_tex() && arg == 0 && src[0].file == VGRF)
-         return mlen;
+         return mlen * REG_SIZE;
       break;
    }
 
    switch (src[arg].file) {
    case UNIFORM:
    case IMM:
-      return 1;
+      return 4;
    case BAD_FILE:
    case ARF:
    case FIXED_GRF:
    case VGRF:
    case ATTR:
-      return DIV_ROUND_UP(components_read(arg) *
-                          src[arg].component_size(exec_size),
-                          REG_SIZE);
+      return components_read(arg) * src[arg].component_size(exec_size);
    case MRF:
       unreachable("MRF registers are not allowed as sources");
    }
@@ -2547,7 +2545,7 @@ fs_visitor::opt_sampler_eot()
    for (unsigned i = 0; i < FB_WRITE_LOGICAL_NUM_SRCS; i++) {
       if (i == FB_WRITE_LOGICAL_SRC_COLOR0) {
          if (!fb_write->src[i].equals(tex_inst->dst) ||
-             fb_write->regs_read(i) * REG_SIZE != tex_inst->size_written)
+             fb_write->size_read(i) != tex_inst->size_written)
          return false;
       } else if (i != FB_WRITE_LOGICAL_SRC_COMPONENTS) {
          if (fb_write->src[i].file != BAD_FILE)
@@ -2730,7 +2728,7 @@ fs_visitor::compute_to_mrf()
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->size_written,
-                             inst->src[0], inst->regs_read(0) * REG_SIZE)) {
+                             inst->src[0], inst->size_read(0))) {
 	    /* Found the last thing to write our reg we want to turn
 	     * into a compute-to-MRF.
 	     */
@@ -2749,7 +2747,7 @@ fs_visitor::compute_to_mrf()
              */
             if (scan_inst->dst.offset / REG_SIZE < inst->src[0].offset / REG_SIZE ||
                 scan_inst->dst.offset / REG_SIZE + DIV_ROUND_UP(scan_inst->size_written, REG_SIZE) >
-                inst->src[0].offset / REG_SIZE + inst->regs_read(0))
+                inst->src[0].offset / REG_SIZE + DIV_ROUND_UP(inst->size_read(0), REG_SIZE))
                break;
 
 	    /* SEND instructions can't have MRF as a destination. */
@@ -2785,8 +2783,8 @@ fs_visitor::compute_to_mrf()
 	  */
 	 bool interfered = false;
 	 for (int i = 0; i < scan_inst->sources; i++) {
-            if (regions_overlap(scan_inst->src[i], scan_inst->regs_read(i) * REG_SIZE,
-                                inst->src[0], inst->regs_read(0) * REG_SIZE)) {
+            if (regions_overlap(scan_inst->src[i], scan_inst->size_read(i),
+                                inst->src[0], inst->size_read(0))) {
 	       interfered = true;
 	    }
 	 }
@@ -2823,7 +2821,7 @@ fs_visitor::compute_to_mrf()
 
       foreach_inst_in_block_reverse_starting_from(fs_inst, scan_inst, inst) {
          if (regions_overlap(scan_inst->dst, scan_inst->size_written,
-                             inst->src[0], inst->regs_read(0) * REG_SIZE)) {
+                             inst->src[0], inst->size_read(0))) {
             /* Clear the bits for any registers this instruction overwrites. */
             regs_left &= ~mask_relative_to(
                inst->src[0], scan_inst->dst, DIV_ROUND_UP(scan_inst->size_written,
@@ -3027,7 +3025,7 @@ fs_visitor::remove_duplicate_mrf_writes()
          if (last_mrf_move[i] &&
              regions_overlap(inst->dst, inst->size_written,
                              last_mrf_move[i]->src[0],
-                             last_mrf_move[i]->regs_read(0) * REG_SIZE)) {
+                             last_mrf_move[i]->size_read(0))) {
             last_mrf_move[i] = NULL;
          }
       }
@@ -4607,7 +4605,7 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
    unsigned reg_count = DIV_ROUND_UP(inst->size_written, REG_SIZE);
 
    for (unsigned i = 0; i < inst->sources; i++)
-      reg_count = MAX2(reg_count, (unsigned)inst->regs_read(i));
+      reg_count = MAX2(reg_count, DIV_ROUND_UP(inst->size_read(i), REG_SIZE));
 
    /* Calculate the maximum execution size of the instruction based on the
     * factor by which it goes over the hardware limit of 2 GRFs.
@@ -4632,7 +4630,7 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
    if (devinfo->gen < 8) {
       for (unsigned i = 0; i < inst->sources; i++) {
          if (DIV_ROUND_UP(inst->size_written, REG_SIZE) == 2 &&
-             inst->regs_read(i) != 0 && inst->regs_read(i) != 2 &&
+             inst->size_read(i) != 0 && DIV_ROUND_UP(inst->size_read(i), REG_SIZE) != 2 &&
              !is_uniform(inst->src[i]) &&
              !(type_sz(inst->dst.type) == 4 && inst->dst.stride == 1 &&
                type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1)) {
@@ -5114,7 +5112,7 @@ needs_dst_copy(const fs_builder &lbld, const fs_inst *inst)
        * the data read from the same source by other lowered instructions.
        */
       if (regions_overlap(inst->dst, inst->size_written,
-                          inst->src[i], inst->regs_read(i) * REG_SIZE) &&
+                          inst->src[i], inst->size_read(i)) &&
           !inst->dst.equals(inst->src[i]))
         return true;
    }
@@ -5371,7 +5369,7 @@ fs_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
       switch (inst->src[i].file) {
       case VGRF:
          fprintf(file, "vgrf%d", inst->src[i].nr);
-         if (alloc.sizes[inst->src[i].nr] != (unsigned)inst->regs_read(i) ||
+         if (alloc.sizes[inst->src[i].nr] * REG_SIZE != inst->size_read(i) ||
              inst->src[i].offset % REG_SIZE != 0)
             fprintf(file, "+%d.%d", inst->src[i].offset / REG_SIZE,
                     inst->src[i].offset % REG_SIZE);

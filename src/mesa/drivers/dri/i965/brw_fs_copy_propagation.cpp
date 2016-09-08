@@ -44,7 +44,7 @@ struct acp_entry : public exec_node {
    fs_reg dst;
    fs_reg src;
    uint8_t size_written;
-   uint8_t regs_read;
+   uint8_t size_read;
    enum opcode opcode;
    bool saturate;
 };
@@ -367,7 +367,8 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    /* Bail if inst is reading a range that isn't contained in the range
     * that entry is writing.
     */
-   if (!region_contained_in(inst->src[arg], inst->regs_read(arg),
+   if (!region_contained_in(inst->src[arg], DIV_ROUND_UP(inst->size_read(arg),
+                                                         REG_SIZE),
                             entry->dst, DIV_ROUND_UP(entry->size_written,
                                                      REG_SIZE)))
       return false;
@@ -524,7 +525,8 @@ fs_visitor::try_constant_propagate(fs_inst *inst, acp_entry *entry)
       /* Bail if inst is reading a range that isn't contained in the range
        * that entry is writing.
        */
-      if (!region_contained_in(inst->src[i], inst->regs_read(i),
+      if (!region_contained_in(inst->src[i], DIV_ROUND_UP(inst->size_read(i),
+                                                          REG_SIZE),
                                entry->dst, DIV_ROUND_UP(entry->size_written,
                                                         REG_SIZE)))
          continue;
@@ -785,7 +787,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                /* Make sure we kill the entry if this instruction overwrites
                 * _any_ of the registers that it reads
                 */
-               if (regions_overlap(entry->src, entry->regs_read * REG_SIZE,
+               if (regions_overlap(entry->src, entry->size_read,
                                    inst->dst, inst->size_written))
                   entry->remove();
             }
@@ -800,7 +802,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
          entry->dst = inst->dst;
          entry->src = inst->src[0];
          entry->size_written = inst->size_written;
-         entry->regs_read = inst->regs_read(0);
+         entry->size_read = inst->size_read(0);
          entry->opcode = inst->opcode;
          entry->saturate = inst->saturate;
          acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
@@ -818,7 +820,7 @@ fs_visitor::opt_copy_propagate_local(void *copy_prop_ctx, bblock_t *block,
                entry->dst.offset += offset * REG_SIZE;
                entry->src = inst->src[i];
                entry->size_written = size_written;
-               entry->regs_read = inst->regs_read(i);
+               entry->size_read = inst->size_read(i);
                entry->opcode = inst->opcode;
                if (!entry->dst.equals(inst->src[i])) {
                   acp[entry->dst.nr % ACP_HASH_SIZE].push_tail(entry);
