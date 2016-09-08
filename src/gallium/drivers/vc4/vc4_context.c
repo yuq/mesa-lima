@@ -56,17 +56,6 @@ vc4_flush(struct pipe_context *pctx)
                 return;
         }
 
-        /* Increment the semaphore indicating that binning is done and
-         * unblocking the render thread.  Note that this doesn't act until the
-         * FLUSH completes.
-         */
-        cl_ensure_space(&vc4->bcl, 8);
-        struct vc4_cl_out *bcl = cl_start(&vc4->bcl);
-        cl_u8(&bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
-        /* The FLUSH caps all of our bin lists with a VC4_PACKET_RETURN. */
-        cl_u8(&bcl, VC4_PACKET_FLUSH);
-        cl_end(&vc4->bcl, bcl);
-
         if (cbuf && (vc4->resolve & PIPE_CLEAR_COLOR0)) {
                 pipe_surface_reference(&vc4->color_write,
                                        cbuf->texture->nr_samples > 1 ?
