@@ -89,18 +89,12 @@ struct gen_disasm *
 gen_disasm_create(int pciid)
 {
    struct gen_disasm *gd;
-   const struct gen_device_info *dev_info = NULL;
 
    gd = malloc(sizeof *gd);
    if (gd == NULL)
       return NULL;
 
-   dev_info = gen_get_device_info(pciid);
-
-   gd->devinfo.gen = dev_info->gen;
-   gd->devinfo.is_cherryview = dev_info->is_cherryview;
-   gd->devinfo.is_g4x = dev_info->is_g4x;
-
+   gd->devinfo = *gen_get_device_info(pciid);
    brw_init_compaction_tables(&gd->devinfo);
 
    return gd;
