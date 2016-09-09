@@ -76,7 +76,7 @@ static void calculate_curbe_offsets( struct brw_context *brw )
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FS_PROG_DATA */
-   const GLuint nr_fp_regs = (brw->wm.prog_data->base.nr_params + 15) / 16;
+   const GLuint nr_fp_regs = (brw->wm.base.prog_data->nr_params + 15) / 16;
 
    /* BRW_NEW_VS_PROG_DATA */
    const GLuint nr_vp_regs = (brw->vs.base.prog_data->nr_params + 15) / 16;
@@ -219,8 +219,8 @@ brw_upload_constant_buffer(struct brw_context *brw)
       GLuint offset = brw->curbe.wm_start * 16;
 
       /* BRW_NEW_FS_PROG_DATA | _NEW_PROGRAM_CONSTANTS: copy uniform values */
-      for (i = 0; i < brw->wm.prog_data->base.nr_params; i++) {
-	 buf[offset + i] = *brw->wm.prog_data->base.param[i];
+      for (i = 0; i < brw->wm.base.prog_data->nr_params; i++) {
+	 buf[offset + i] = *brw->wm.base.prog_data->param[i];
       }
    }
 

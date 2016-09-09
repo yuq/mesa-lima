@@ -35,7 +35,9 @@ upload_sbe_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FS_PROG_DATA */
-   uint32_t num_outputs = brw->wm.prog_data->num_varying_inputs;
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+   uint32_t num_outputs = wm_prog_data->num_varying_inputs;
    uint32_t dw1;
    uint32_t point_sprite_enables;
    int i;
@@ -81,7 +83,7 @@ upload_sbe_state(struct brw_context *brw)
    }
 
    OUT_BATCH(point_sprite_enables); /* dw10 */
-   OUT_BATCH(brw->wm.prog_data->flat_inputs);
+   OUT_BATCH(wm_prog_data->flat_inputs);
    OUT_BATCH(0); /* wrapshortest enables 0-7 */
    OUT_BATCH(0); /* wrapshortest enables 8-15 */
    ADVANCE_BATCH();

@@ -236,6 +236,9 @@ static bool
 pma_fix_enable(const struct brw_context *brw)
 {
    const struct gl_context *ctx = &brw->ctx;
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
    /* _NEW_BUFFERS */
    struct intel_renderbuffer *depth_irb =
       intel_get_renderbuffer(ctx->DrawBuffer, BUFFER_DEPTH);
@@ -252,10 +255,8 @@ pma_fix_enable(const struct brw_context *brw)
     */
    const bool hiz_enabled = depth_irb && intel_renderbuffer_has_hiz(depth_irb);
 
-   /* BRW_NEW_FS_PROG_DATA:
-    * 3DSTATE_WM::Early Depth/Stencil Control != EDSC_PREPS (2).
-    */
-   const bool edsc_not_preps = !brw->wm.prog_data->early_fragment_tests;
+   /* 3DSTATE_WM::Early Depth/Stencil Control != EDSC_PREPS (2). */
+   const bool edsc_not_preps = !wm_prog_data->early_fragment_tests;
 
    /* 3DSTATE_PS_EXTRA::PixelShaderValid is always true. */
    const bool pixel_shader_valid = true;
@@ -288,11 +289,9 @@ pma_fix_enable(const struct brw_context *brw)
     */
    const bool stencil_writes_enabled = ctx->Stencil._WriteEnabled;
 
-   /* BRW_NEW_FS_PROG_DATA:
-    * 3DSTATE_PS_EXTRA::Pixel Shader Computed Depth Mode != PSCDEPTH_OFF
-    */
+   /* 3DSTATE_PS_EXTRA::Pixel Shader Computed Depth Mode != PSCDEPTH_OFF */
    const bool ps_computes_depth =
-      brw->wm.prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
+      wm_prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
 
    /* BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::PixelShaderKillsPixels
     * BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::oMask Present to RenderTarget
@@ -303,8 +302,8 @@ pma_fix_enable(const struct brw_context *brw)
     * 3DSTATE_WM::ForceKillPix != ForceOff is always true.
     */
    const bool kill_pixel =
-      brw->wm.prog_data->uses_kill ||
-      brw->wm.prog_data->uses_omask ||
+      wm_prog_data->uses_kill ||
+      wm_prog_data->uses_omask ||
       (_mesa_is_multisample_enabled(ctx) && ctx->Multisample.SampleAlphaToCoverage) ||
       ctx->Color.AlphaEnabled;
 

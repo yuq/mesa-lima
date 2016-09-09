@@ -113,9 +113,7 @@ static void
 upload_ps_extra(struct brw_context *brw)
 {
    /* BRW_NEW_FS_PROG_DATA */
-   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
-
-   gen8_upload_ps_extra(brw, prog_data);
+   gen8_upload_ps_extra(brw, brw_wm_prog_data(brw->wm.base.prog_data));
 }
 
 const struct brw_tracked_state gen8_ps_extra = {
@@ -135,6 +133,10 @@ upload_wm_state(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    uint32_t dw1 = 0;
 
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+
    dw1 |= GEN7_WM_STATISTICS_ENABLE;
    dw1 |= GEN7_WM_LINE_AA_WIDTH_1_0;
    dw1 |= GEN7_WM_LINE_END_CAP_AA_WIDTH_0_5;
@@ -148,14 +150,13 @@ upload_wm_state(struct brw_context *brw)
    if (ctx->Polygon.StippleFlag)
       dw1 |= GEN7_WM_POLYGON_STIPPLE_ENABLE;
 
-   /* BRW_NEW_FS_PROG_DATA */
-   dw1 |= brw->wm.prog_data->barycentric_interp_modes <<
+   dw1 |= wm_prog_data->barycentric_interp_modes <<
       GEN7_WM_BARYCENTRIC_INTERPOLATION_MODE_SHIFT;
 
    /* BRW_NEW_FS_PROG_DATA */
-   if (brw->wm.prog_data->early_fragment_tests)
+   if (wm_prog_data->early_fragment_tests)
       dw1 |= GEN7_WM_EARLY_DS_CONTROL_PREPS;
-   else if (brw->wm.prog_data->has_side_effects)
+   else if (wm_prog_data->has_side_effects)
       dw1 |= GEN7_WM_EARLY_DS_CONTROL_PSEXEC;
 
    BEGIN_BATCH(2);
@@ -274,7 +275,8 @@ static void
 upload_ps_state(struct brw_context *brw)
 {
    /* BRW_NEW_FS_PROG_DATA */
-   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
+   const struct brw_wm_prog_data *prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
    gen8_upload_ps_state(brw, &brw->wm.base, prog_data, brw->wm.fast_clear_op);
 }
 

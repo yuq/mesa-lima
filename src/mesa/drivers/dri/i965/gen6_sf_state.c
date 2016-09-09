@@ -158,6 +158,9 @@ calculate_attr_overrides(const struct brw_context *brw,
                          uint32_t *urb_entry_read_length,
                          uint32_t *urb_entry_read_offset)
 {
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
    uint32_t max_source_attr = 0;
 
    *point_sprite_enables = 0;
@@ -203,8 +206,7 @@ calculate_attr_overrides(const struct brw_context *brw,
    memset(attr_overrides, 0, 16*sizeof(*attr_overrides));
 
    for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      /* BRW_NEW_FS_PROG_DATA */
-      int input_index = brw->wm.prog_data->urb_setup[attr];
+      int input_index = wm_prog_data->urb_setup[attr];
 
       if (input_index < 0)
 	 continue;
@@ -267,7 +269,9 @@ upload_sf_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FS_PROG_DATA */
-   uint32_t num_outputs = brw->wm.prog_data->num_varying_inputs;
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+   uint32_t num_outputs = wm_prog_data->num_varying_inputs;
    uint32_t dw1, dw2, dw3, dw4;
    uint32_t point_sprite_enables;
    int i;
@@ -430,7 +434,7 @@ upload_sf_state(struct brw_context *brw)
       OUT_BATCH(attr_overrides[i * 2] | attr_overrides[i * 2 + 1] << 16);
    }
    OUT_BATCH(point_sprite_enables); /* dw16 */
-   OUT_BATCH(brw->wm.prog_data->flat_inputs);
+   OUT_BATCH(wm_prog_data->flat_inputs);
    OUT_BATCH(0); /* wrapshortest enables 0-7 */
    OUT_BATCH(0); /* wrapshortest enables 8-15 */
    ADVANCE_BATCH();

@@ -80,7 +80,8 @@ brw_upload_wm_unit(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct gl_fragment_program *fp = brw->fragment_program;
    /* BRW_NEW_FS_PROG_DATA */
-   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
+   const struct brw_wm_prog_data *prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
    struct brw_wm_unit_state *wm;
 
    wm = brw_state_batch(brw, AUB_TRACE_WM_STATE,

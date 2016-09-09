@@ -182,7 +182,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
 		    key, sizeof(struct brw_wm_prog_key),
 		    program, program_size,
 		    &prog_data, sizeof(prog_data),
-		    &brw->wm.base.prog_offset, &brw->wm.prog_data);
+		    &brw->wm.base.prog_offset, &brw->wm.base.prog_data);
 
    ralloc_free(mem_ctx);
 
@@ -578,12 +578,12 @@ brw_upload_wm_prog(struct brw_context *brw)
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
 			 &key, sizeof(key),
-			 &brw->wm.base.prog_offset, &brw->wm.prog_data)) {
+			 &brw->wm.base.prog_offset,
+                         &brw->wm.base.prog_data)) {
       bool success = brw_codegen_wm_prog(brw, current, fp, &key);
       (void) success;
       assert(success);
    }
-   brw->wm.base.prog_data = &brw->wm.prog_data->base;
 }
 
 bool
@@ -628,12 +628,12 @@ brw_fs_precompile(struct gl_context *ctx,
    key.coherent_fb_fetch = ctx->Extensions.MESA_shader_framebuffer_fetch;
 
    uint32_t old_prog_offset = brw->wm.base.prog_offset;
-   struct brw_wm_prog_data *old_prog_data = brw->wm.prog_data;
+   struct brw_stage_prog_data *old_prog_data = brw->wm.base.prog_data;
 
    bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key);
 
    brw->wm.base.prog_offset = old_prog_offset;
-   brw->wm.prog_data = old_prog_data;
+   brw->wm.base.prog_data = old_prog_data;
 
    return success;
 }

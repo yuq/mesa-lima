@@ -38,7 +38,8 @@ upload_wm_state(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FS_PROG_DATA */
-   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
+   const struct brw_wm_prog_data *prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
    bool writes_depth = prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
    uint32_t dw1, dw2;
 
@@ -251,7 +252,8 @@ static void
 upload_ps_state(struct brw_context *brw)
 {
    /* BRW_NEW_FS_PROG_DATA */
-   const struct brw_wm_prog_data *prog_data = brw->wm.prog_data;
+   const struct brw_wm_prog_data *prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
    const struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FS_PROG_DATA | _NEW_COLOR */
    const bool enable_dual_src_blend = prog_data->dual_src_blend &&

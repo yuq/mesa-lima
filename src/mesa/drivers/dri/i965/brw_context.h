@@ -1180,7 +1180,6 @@ struct brw_context
 
    struct {
       struct brw_stage_state base;
-      struct brw_wm_prog_data *prog_data;
 
       GLuint render_surf;
 

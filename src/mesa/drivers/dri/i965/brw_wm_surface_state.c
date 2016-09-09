@@ -832,7 +832,7 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
    struct brw_fragment_program *fp =
       (struct brw_fragment_program *) brw->fragment_program;
    /* BRW_NEW_FS_PROG_DATA */
-   struct brw_stage_prog_data *prog_data = &brw->wm.prog_data->base;
+   struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
 
    _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_FRAGMENT);
    /* _NEW_PROGRAM_CONSTANTS */
@@ -1099,11 +1099,15 @@ update_renderbuffer_surfaces(struct brw_context *brw)
 {
    const struct gl_context *ctx = &brw->ctx;
 
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+
    /* _NEW_BUFFERS | _NEW_COLOR */
    const struct gl_framebuffer *fb = ctx->DrawBuffer;
    brw_update_renderbuffer_surfaces(
       brw, fb,
-      brw->wm.prog_data->binding_table.render_target_start,
+      wm_prog_data->binding_table.render_target_start,
       brw->wm.base.surf_offset);
    brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
@@ -1133,6 +1137,10 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
 {
    const struct gl_context *ctx = &brw->ctx;
 
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+
    /* BRW_NEW_FRAGMENT_PROGRAM */
    if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
        brw->fragment_program &&
@@ -1143,9 +1151,8 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
       for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
          struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
          const struct intel_renderbuffer *irb = intel_renderbuffer(rb);
-         /* BRW_NEW_FS_PROG_DATA */
          const unsigned surf_index =
-            brw->wm.prog_data->binding_table.render_target_read_start + i;
+            wm_prog_data->binding_table.render_target_read_start + i;
          uint32_t *surf_offset = &brw->wm.base.surf_offset[surf_index];
 
          if (irb) {
@@ -1430,7 +1437,7 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_FS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                           &brw->wm.base, &brw->wm.prog_data->base);
+                           &brw->wm.base, brw->wm.base.prog_data);
 }
 
 const struct brw_tracked_state brw_wm_ubo_surfaces = {
@@ -1509,7 +1516,7 @@ brw_upload_wm_abo_surfaces(struct brw_context *brw)
    if (prog) {
       /* BRW_NEW_FS_PROG_DATA */
       brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                              &brw->wm.base, &brw->wm.prog_data->base);
+                              &brw->wm.base, brw->wm.base.prog_data);
    }
 }
 
@@ -1803,7 +1810,7 @@ brw_upload_wm_image_surfaces(struct brw_context *brw)
    if (prog) {
       /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                                &brw->wm.base, &brw->wm.prog_data->base);
+                                &brw->wm.base, brw->wm.base.prog_data);
    }
 }
 

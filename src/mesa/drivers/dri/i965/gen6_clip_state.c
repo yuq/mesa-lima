@@ -99,7 +99,7 @@ upload_clip_state(struct brw_context *brw)
    struct gl_framebuffer *fb = ctx->DrawBuffer;
 
    /* BRW_NEW_FS_PROG_DATA */
-   if (brw->wm.prog_data->barycentric_interp_modes &
+   if (brw_wm_prog_data(brw->wm.base.prog_data)->barycentric_interp_modes &
        BRW_BARYCENTRIC_NONPERSPECTIVE_BITS) {
       dw2 |= GEN6_CLIP_NON_PERSPECTIVE_BARYCENTRIC_ENABLE;
    }
