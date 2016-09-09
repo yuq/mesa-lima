@@ -686,7 +686,6 @@ brw_upload_tess_programs(struct brw_context *brw)
       brw_upload_tcs_prog(brw);
       brw_upload_tes_prog(brw);
    } else {
-      brw->tcs.prog_data = NULL;
       brw->tcs.base.prog_data = NULL;
       brw->tes.prog_data = NULL;
       brw->tes.base.prog_data = NULL;

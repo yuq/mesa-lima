@@ -399,7 +399,6 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
 
    /* Also, NULL out any stale program pointers. */
    brw->vs.base.prog_data = NULL;
-   brw->tcs.prog_data = NULL;
    brw->tcs.base.prog_data = NULL;
    brw->tes.prog_data = NULL;
    brw->tes.base.prog_data = NULL;

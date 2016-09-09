@@ -304,7 +304,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
                     key, sizeof(*key),
                     program, program_size,
                     &prog_data, sizeof(prog_data),
-                    &stage_state->prog_offset, &brw->tcs.prog_data);
+                    &stage_state->prog_offset, &brw->tcs.base.prog_data);
    ralloc_free(mem_ctx);
    if (!tcs)
       ralloc_free(nir);
@@ -378,13 +378,13 @@ brw_upload_tcs_prog(struct brw_context *brw)
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_TCS_PROG,
                          &key, sizeof(key),
-                         &stage_state->prog_offset, &brw->tcs.prog_data)) {
+                         &stage_state->prog_offset,
+                         &brw->tcs.base.prog_data)) {
       bool success = brw_codegen_tcs_prog(brw, current[MESA_SHADER_TESS_CTRL],
                                           tcp, &key);
       assert(success);
       (void)success;
    }
-   brw->tcs.base.prog_data = &brw->tcs.prog_data->base.base;
 }
 
 
@@ -396,7 +396,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_tcs_prog_key key;
    uint32_t old_prog_offset = brw->tcs.base.prog_offset;
-   struct brw_tcs_prog_data *old_prog_data = brw->tcs.prog_data;
+   struct brw_stage_prog_data *old_prog_data = brw->tcs.base.prog_data;
    bool success;
 
    struct gl_tess_ctrl_program *tcp = (struct gl_tess_ctrl_program *)prog;
@@ -430,7 +430,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    success = brw_codegen_tcs_prog(brw, shader_prog, btcp, &key);
 
    brw->tcs.base.prog_offset = old_prog_offset;
-   brw->tcs.prog_data = old_prog_data;
+   brw->tcs.base.prog_data = old_prog_data;
 
    return success;
 }

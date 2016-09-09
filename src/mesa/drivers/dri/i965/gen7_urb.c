@@ -215,7 +215,9 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    unsigned gs_entry_size_bytes = gs_size * 64;
 
    /* BRW_NEW_TCS_PROG_DATA */
-   unsigned hs_size = tess_present ? brw->tcs.prog_data->base.urb_entry_size : 1;
+   const struct brw_vue_prog_data *tcs_vue_prog_data =
+      brw_vue_prog_data(brw->tcs.base.prog_data);
+   unsigned hs_size = tess_present ? tcs_vue_prog_data->urb_entry_size : 1;
    unsigned hs_entry_size_bytes = hs_size * 64;
    /* BRW_NEW_TES_PROG_DATA */
    unsigned ds_size = tess_present ? brw->tes.prog_data->base.urb_entry_size : 1;
