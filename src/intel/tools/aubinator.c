@@ -790,7 +790,25 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
          else
             start = p[1];
 
-         parse_commands(spec, gtt + start, 1 << 20, engine);
+         if (p[0] & (1 << 22)) {
+            /* MI_BATCH_BUFFER_START with "2nd Level Batch Buffer" set acts
+             * like a subroutine call.  Commands that come afterwards get
+             * processed once the 2nd level batch buffer returns with
+             * MI_BATCH_BUFFER_END.
+             */
+            parse_commands(spec, gtt + start, gtt_end - start, engine);
+         } else {
+            /* MI_BATCH_BUFFER_START with "2nd Level Batch Buffer" unset acts
+             * like a goto.  Nothing after it will ever get processed.  In
+             * order to prevent the recursion from growing, we just reset the
+             * loop and continue;
+             */
+            p = gtt + start;
+            /* We don't know where secondaries end so use the GTT end */
+            end = gtt + gtt_end;
+            length = 0;
+            continue;
+         }
       } else if ((p[0] & 0xffff0000) == AUB_MI_BATCH_BUFFER_END) {
          break;
       }
