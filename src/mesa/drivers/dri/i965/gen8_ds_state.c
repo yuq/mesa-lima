@@ -36,9 +36,11 @@ gen8_upload_ds_state(struct brw_context *brw)
    bool active = brw->tess_eval_program;
 
    /* BRW_NEW_TES_PROG_DATA */
-   const struct brw_tes_prog_data *tes_prog_data = brw->tes.prog_data;
-   const struct brw_vue_prog_data *vue_prog_data = &tes_prog_data->base;
-   const struct brw_stage_prog_data *prog_data = &vue_prog_data->base;
+   const struct brw_stage_prog_data *prog_data = stage_state->prog_data;
+   const struct brw_vue_prog_data *vue_prog_data =
+      brw_vue_prog_data(stage_state->prog_data);
+   const struct brw_tes_prog_data *tes_prog_data =
+      brw_tes_prog_data(stage_state->prog_data);
    const int ds_pkt_len = brw->gen >= 9 ? 11 : 9;
 
    if (active) {

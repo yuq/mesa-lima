@@ -223,7 +223,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
                     key, sizeof(*key),
                     program, program_size,
                     &prog_data, sizeof(prog_data),
-                    &stage_state->prog_offset, &brw->tes.prog_data);
+                    &stage_state->prog_offset, &brw->tes.base.prog_data);
    ralloc_free(mem_ctx);
 
    return true;
@@ -285,13 +285,13 @@ brw_upload_tes_prog(struct brw_context *brw)
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_TES_PROG,
                          &key, sizeof(key),
-                         &stage_state->prog_offset, &brw->tes.prog_data)) {
+                         &stage_state->prog_offset,
+                         &brw->tes.base.prog_data)) {
       bool success = brw_codegen_tes_prog(brw, current[MESA_SHADER_TESS_EVAL],
                                           tep, &key);
       assert(success);
       (void)success;
    }
-   brw->tes.base.prog_data = &brw->tes.prog_data->base.base;
 }
 
 
@@ -303,7 +303,7 @@ brw_tes_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_tes_prog_key key;
    uint32_t old_prog_offset = brw->tes.base.prog_offset;
-   struct brw_tes_prog_data *old_prog_data = brw->tes.prog_data;
+   struct brw_stage_prog_data *old_prog_data = brw->tes.base.prog_data;
    bool success;
 
    struct gl_tess_eval_program *tep = (struct gl_tess_eval_program *)prog;
@@ -331,7 +331,7 @@ brw_tes_precompile(struct gl_context *ctx,
    success = brw_codegen_tes_prog(brw, shader_prog, btep, &key);
 
    brw->tes.base.prog_offset = old_prog_offset;
-   brw->tes.prog_data = old_prog_data;
+   brw->tes.base.prog_data = old_prog_data;
 
    return success;
 }

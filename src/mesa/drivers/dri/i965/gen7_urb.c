@@ -220,7 +220,9 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    unsigned hs_size = tess_present ? tcs_vue_prog_data->urb_entry_size : 1;
    unsigned hs_entry_size_bytes = hs_size * 64;
    /* BRW_NEW_TES_PROG_DATA */
-   unsigned ds_size = tess_present ? brw->tes.prog_data->base.urb_entry_size : 1;
+   const struct brw_vue_prog_data *tes_vue_prog_data =
+      brw_vue_prog_data(brw->tes.base.prog_data);
+   unsigned ds_size = tess_present ? tes_vue_prog_data->urb_entry_size : 1;
    unsigned ds_entry_size_bytes = ds_size * 64;
 
    /* If we're just switching between programs with the same URB requirements,
