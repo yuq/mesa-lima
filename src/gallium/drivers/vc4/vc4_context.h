@@ -415,4 +415,5 @@ uint8_t vc4_get_tex_format(enum pipe_format f);
 const uint8_t *vc4_get_format_swizzle(enum pipe_format f);
 void vc4_init_query_functions(struct vc4_context *vc4);
 void vc4_blit(struct pipe_context *pctx, const struct pipe_blit_info *blit_info);
+void vc4_blitter_save(struct vc4_context *vc4);
 #endif /* VC4_CONTEXT_H */

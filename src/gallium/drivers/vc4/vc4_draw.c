@@ -22,6 +22,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "util/u_blitter.h"
 #include "util/u_prim.h"
 #include "util/u_format.h"
 #include "util/u_pack_color.h"
@@ -468,21 +469,37 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
                 vc4_flush(pctx);
         }
 
+        /* Clearing ZS will clear both Z and stencil, so if we're trying to
+         * clear just one then we need to draw a quad to do it instead.
+         */
+        if ((buffers & PIPE_CLEAR_DEPTHSTENCIL) != 0 &&
+            (buffers & PIPE_CLEAR_DEPTHSTENCIL) != PIPE_CLEAR_DEPTHSTENCIL &&
+            util_format_is_depth_and_stencil(vc4->framebuffer.zsbuf->format)) {
+                vc4_blitter_save(vc4);
+                util_blitter_clear(vc4->blitter,
+                                   vc4->framebuffer.width,
+                                   vc4->framebuffer.height,
+                                   1,
+                                   buffers & PIPE_CLEAR_DEPTHSTENCIL,
+                                   NULL, depth, stencil);
+                buffers &= ~PIPE_CLEAR_DEPTHSTENCIL;
+                if (!buffers)
+                        return;
+        }
+
         if (buffers & PIPE_CLEAR_COLOR0) {
                 vc4->clear_color[0] = vc4->clear_color[1] =
                         pack_rgba(vc4->framebuffer.cbufs[0]->format,
                                   color->f);
         }
 
-        if (buffers & PIPE_CLEAR_DEPTH) {
+        if (buffers & PIPE_CLEAR_DEPTHSTENCIL) {
                 /* Though the depth buffer is stored with Z in the high 24,
                  * for this field we just need to store it in the low 24.
                  */
                 vc4->clear_depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM, depth);
-        }
-
-        if (buffers & PIPE_CLEAR_STENCIL)
                 vc4->clear_stencil = stencil;
+        }
 
         vc4->draw_min_x = 0;
         vc4->draw_min_y = 0;

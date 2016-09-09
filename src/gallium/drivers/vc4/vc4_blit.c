@@ -166,18 +166,9 @@ vc4_tile_blit(struct pipe_context *pctx, const struct pipe_blit_info *info)
         return true;
 }
 
-static bool
-vc4_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
+void
+vc4_blitter_save(struct vc4_context *vc4)
 {
-        struct vc4_context *vc4 = vc4_context(ctx);
-
-        if (!util_blitter_is_blit_supported(vc4->blitter, info)) {
-                fprintf(stderr, "blit unsupported %s -> %s\n",
-                    util_format_short_name(info->src.resource->format),
-                    util_format_short_name(info->dst.resource->format));
-                return false;
-        }
-
         util_blitter_save_vertex_buffer_slot(vc4->blitter, vc4->vertexbuf.vb);
         util_blitter_save_vertex_elements(vc4->blitter, vc4->vtx);
         util_blitter_save_vertex_shader(vc4->blitter, vc4->prog.bind_vs);
@@ -195,7 +186,21 @@ vc4_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
                         (void **)vc4->fragtex.samplers);
         util_blitter_save_fragment_sampler_views(vc4->blitter,
                         vc4->fragtex.num_textures, vc4->fragtex.textures);
+}
 
+static bool
+vc4_render_blit(struct pipe_context *ctx, struct pipe_blit_info *info)
+{
+        struct vc4_context *vc4 = vc4_context(ctx);
+
+        if (!util_blitter_is_blit_supported(vc4->blitter, info)) {
+                fprintf(stderr, "blit unsupported %s -> %s\n",
+                    util_format_short_name(info->src.resource->format),
+                    util_format_short_name(info->dst.resource->format));
+                return false;
+        }
+
+        vc4_blitter_save(vc4);
         util_blitter_blit(vc4->blitter, info);
 
         return true;
