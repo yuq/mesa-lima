@@ -202,8 +202,6 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
     return &cs->base;
 }
 
-#define OUT_CS(cs, value) (cs)->current.buf[(cs)->current.cdw++] = (value)
-
 static inline void update_reloc(struct drm_radeon_cs_reloc *reloc,
                                 enum radeon_bo_domain rd,
                                 enum radeon_bo_domain wd,
@@ -461,10 +459,10 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
         /* pad DMA ring to 8 DWs */
         if (cs->ws->info.chip_class <= SI) {
             while (rcs->current.cdw & 7)
-                OUT_CS(&cs->base, 0xf0000000); /* NOP packet */
+                radeon_emit(&cs->base, 0xf0000000); /* NOP packet */
         } else {
             while (rcs->current.cdw & 7)
-                OUT_CS(&cs->base, 0x00000000); /* NOP packet */
+                radeon_emit(&cs->base, 0x00000000); /* NOP packet */
         }
         break;
     case RING_GFX:
@@ -473,15 +471,15 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
          */
         if (cs->ws->info.gfx_ib_pad_with_type2) {
             while (rcs->current.cdw & 7)
-                OUT_CS(&cs->base, 0x80000000); /* type2 nop packet */
+                radeon_emit(&cs->base, 0x80000000); /* type2 nop packet */
         } else {
             while (rcs->current.cdw & 7)
-                OUT_CS(&cs->base, 0xffff1000); /* type3 nop packet */
+                radeon_emit(&cs->base, 0xffff1000); /* type3 nop packet */
         }
         break;
     case RING_UVD:
         while (rcs->current.cdw & 15)
-            OUT_CS(&cs->base, 0x80000000); /* type2 nop packet */
+            radeon_emit(&cs->base, 0x80000000); /* type2 nop packet */
         break;
     default:
         break;
