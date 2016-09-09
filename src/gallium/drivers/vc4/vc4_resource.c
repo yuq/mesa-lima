@@ -156,9 +156,22 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
         enum pipe_format format = prsc->format;
         char *buf;
 
+        /* Upgrade DISCARD_RANGE to WHOLE_RESOURCE if the whole resource is
+         * being mapped.
+         */
+        if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
+            !(usage & PIPE_TRANSFER_UNSYNCHRONIZED) &&
+            !(prsc->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT) &&
+            prsc->last_level == 0 &&
+            prsc->width0 == box->width &&
+            prsc->height0 == box->height &&
+            prsc->depth0 == box->depth &&
+            prsc->array_size == 1) {
+                usage |= PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
+        }
+
         if (usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) {
                 if (vc4_resource_bo_alloc(rsc)) {
-
                         /* If it might be bound as one of our vertex buffers,
                          * make sure we re-emit vertex buffer state.
                          */
@@ -177,17 +190,7 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                  */
                 if (vc4_cl_references_bo(pctx, rsc->bo,
                                          usage & PIPE_TRANSFER_WRITE)) {
-                        if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-                            prsc->last_level == 0 &&
-                            prsc->width0 == box->width &&
-                            prsc->height0 == box->height &&
-                            prsc->depth0 == box->depth &&
-                            vc4_resource_bo_alloc(rsc)) {
-                                if (prsc->bind & PIPE_BIND_VERTEX_BUFFER)
-                                        vc4->dirty |= VC4_DIRTY_VTXBUF;
-                        } else {
-                                vc4_flush(pctx);
-                        }
+                        vc4_flush(pctx);
                 }
         }
 
