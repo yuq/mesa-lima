@@ -98,19 +98,6 @@ static bool radeon_init_cs_context(struct radeon_cs_context *csc,
     int i;
 
     csc->fd = ws->fd;
-    csc->nrelocs = 512;
-    csc->relocs_bo = (struct radeon_bo_item*)
-                     CALLOC(1, csc->nrelocs * sizeof(csc->relocs_bo[0]));
-    if (!csc->relocs_bo) {
-        return false;
-    }
-
-    csc->relocs = (struct drm_radeon_cs_reloc*)
-                  CALLOC(1, csc->nrelocs * sizeof(struct drm_radeon_cs_reloc));
-    if (!csc->relocs) {
-        FREE(csc->relocs_bo);
-        return false;
-    }
 
     csc->chunks[0].chunk_id = RADEON_CHUNK_ID_IB;
     csc->chunks[0].length_dw = 0;
@@ -285,7 +272,7 @@ static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
     /* New relocation, check if the backing array is large enough. */
     if (csc->crelocs >= csc->nrelocs) {
         uint32_t size;
-        csc->nrelocs += 10;
+        csc->nrelocs = MAX2(csc->nrelocs + 16, (unsigned)(csc->nrelocs * 1.3));
 
         size = csc->nrelocs * sizeof(csc->relocs_bo[0]);
         csc->relocs_bo = realloc(csc->relocs_bo, size);
