@@ -76,6 +76,10 @@ static void
 blorp_emit_urb_config(struct blorp_batch *batch,
                       unsigned vs_entry_size, unsigned sf_entry_size);
 
+static void
+blorp_emit_pipeline(struct blorp_batch *batch,
+                    const struct blorp_params *params);
+
 /***** BEGIN blorp_exec implementation ******/
 
 #include "genxml/gen_macros.h"
@@ -272,6 +276,9 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    vb[0].BufferAccessType = VERTEXDATA;
    vb[0].EndAddress = vb[0].BufferStartingAddress;
    vb[0].EndAddress.offset += size - 1;
+#elif GEN_GEN == 4
+   vb[0].BufferAccessType = VERTEXDATA;
+   vb[0].MaxIndex = 2;
 #endif
 
    blorp_emit_input_varying_data(batch, params,
@@ -290,6 +297,9 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    vb[1].BufferAccessType = INSTANCEDATA;
    vb[1].EndAddress = vb[1].BufferStartingAddress;
    vb[1].EndAddress.offset += size - 1;
+#elif GEN_GEN == 4
+   vb[1].BufferAccessType = INSTANCEDATA;
+   vb[1].MaxIndex = 0;
 #endif
 
    const unsigned num_dwords = 1 + GENX(VERTEX_BUFFER_STATE_length) * 2;
@@ -309,7 +319,8 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 {
    const unsigned num_varyings =
       params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
-   const unsigned num_elements = 2 + num_varyings;
+   bool need_ndc = batch->blorp->compiler->devinfo->gen <= 5;
+   const unsigned num_elements = 2 + need_ndc + num_varyings;
 
    struct GENX(VERTEX_ELEMENT_STATE) ve[num_elements];
    memset(ve, 0, num_elements * sizeof(*ve));
@@ -382,8 +393,31 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 #endif
       .Component2Control = VFCOMP_STORE_SRC,
       .Component3Control = VFCOMP_STORE_SRC,
+#if GEN_GEN <= 5
+      .DestinationElementOffset = slot * 4,
+#endif
    };
    slot++;
+
+#if GEN_GEN <= 5
+   /* On Iron Lake and earlier, a native device coordinates version of the
+    * position goes right after the normal VUE header and before position.
+    * Since w == 1 for all of our coordinates, this is just a copy of the
+    * position.
+    */
+   ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
+      .VertexBufferIndex = 0,
+      .Valid = true,
+      .SourceElementFormat = ISL_FORMAT_R32G32B32_FLOAT,
+      .SourceElementOffset = 0,
+      .Component0Control = VFCOMP_STORE_SRC,
+      .Component1Control = VFCOMP_STORE_SRC,
+      .Component2Control = VFCOMP_STORE_SRC,
+      .Component3Control = VFCOMP_STORE_1_FP,
+      .DestinationElementOffset = slot * 4,
+   };
+   slot++;
+#endif
 
    ve[slot] = (struct GENX(VERTEX_ELEMENT_STATE)) {
       .VertexBufferIndex = 0,
@@ -394,6 +428,9 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
       .Component1Control = VFCOMP_STORE_SRC,
       .Component2Control = VFCOMP_STORE_SRC,
       .Component3Control = VFCOMP_STORE_1_FP,
+#if GEN_GEN <= 5
+      .DestinationElementOffset = slot * 4,
+#endif
    };
    slot++;
 
@@ -407,6 +444,9 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
          .Component1Control = VFCOMP_STORE_SRC,
          .Component2Control = VFCOMP_STORE_SRC,
          .Component3Control = VFCOMP_STORE_SRC,
+#if GEN_GEN <= 5
+         .DestinationElementOffset = slot * 4,
+#endif
       };
       slot++;
    }
@@ -1162,6 +1202,7 @@ static void
 blorp_emit_surface_state(struct blorp_batch *batch,
                          const struct brw_blorp_surface_info *surface,
                          void *state, uint32_t state_offset,
+                         const bool color_write_disables[4],
                          bool is_render_target)
 {
    const struct isl_device *isl_dev = batch->blorp->isl_dev;
@@ -1178,13 +1219,26 @@ blorp_emit_surface_state(struct blorp_batch *batch,
    if (aux_usage == ISL_AUX_USAGE_HIZ)
       aux_usage = ISL_AUX_USAGE_NONE;
 
+   isl_channel_mask_t write_disable_mask = 0;
+   if (is_render_target && GEN_GEN <= 5) {
+      if (color_write_disables[0])
+         write_disable_mask |= ISL_CHANNEL_RED_BIT;
+      if (color_write_disables[1])
+         write_disable_mask |= ISL_CHANNEL_GREEN_BIT;
+      if (color_write_disables[2])
+         write_disable_mask |= ISL_CHANNEL_BLUE_BIT;
+      if (color_write_disables[3])
+         write_disable_mask |= ISL_CHANNEL_ALPHA_BIT;
+   }
+
    const uint32_t mocs =
       is_render_target ? batch->blorp->mocs.rb : batch->blorp->mocs.tex;
 
    isl_surf_fill_state(batch->blorp->isl_dev, state,
                        .surf = &surf, .view = &surface->view,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
-                       .mocs = mocs, .clear_color = surface->clear_color);
+                       .mocs = mocs, .clear_color = surface->clear_color,
+                       .write_disables = write_disable_mask);
 
    blorp_surface_reloc(batch, state_offset + isl_dev->ss.addr_offset,
                        surface->addr, 0);
@@ -1257,7 +1311,7 @@ blorp_emit_surface_states(struct blorp_batch *batch,
          blorp_emit_surface_state(batch, &params->dst,
                                   surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
                                   surface_offsets[BLORP_RENDERBUFFER_BT_INDEX],
-                                  true);
+                                  params->color_write_disable, true);
       } else {
          assert(params->depth.enabled || params->stencil.enabled);
          const struct brw_blorp_surface_info *surface =
@@ -1269,7 +1323,8 @@ blorp_emit_surface_states(struct blorp_batch *batch,
       if (params->src.enabled) {
          blorp_emit_surface_state(batch, &params->src,
                                   surface_maps[BLORP_TEXTURE_BT_INDEX],
-                                  surface_offsets[BLORP_TEXTURE_BT_INDEX], false);
+                                  surface_offsets[BLORP_TEXTURE_BT_INDEX],
+                                  NULL, false);
       }
    }
 

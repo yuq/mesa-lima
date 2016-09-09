@@ -32,6 +32,10 @@
 
 #include "blorp/blorp_genX_exec.h"
 
+#if GEN_GEN <= 5
+#include "gen4_blorp_exec.h"
+#endif
+
 #include "brw_blorp.h"
 
 static void *
@@ -169,8 +173,11 @@ blorp_emit_urb_config(struct blorp_batch *batch,
    brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
 
    gen7_upload_urb(brw, vs_entry_size, false, false);
-#else
+#elif GEN_GEN == 6
    gen6_upload_urb(brw, vs_entry_size, false, 0);
+#else
+   /* We calculate it now and emit later. */
+   brw_calculate_urb_fence(brw, 0, vs_entry_size, sf_entry_size);
 #endif
 }
 
@@ -215,7 +222,9 @@ retry:
    gen7_l3_state.emit(brw);
 #endif
 
+#if GEN_GEN >= 6
    brw_emit_depth_stall_flushes(brw);
+#endif
 
 #if GEN_GEN == 8
    gen8_write_pma_stall_bits(brw, 0);

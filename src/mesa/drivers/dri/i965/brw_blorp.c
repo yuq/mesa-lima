@@ -71,6 +71,16 @@ brw_blorp_init(struct brw_context *brw)
    brw->blorp.compiler = brw->screen->compiler;
 
    switch (brw->gen) {
+   case 4:
+      if (brw->is_g4x) {
+         brw->blorp.exec = gen45_blorp_exec;
+      } else {
+         brw->blorp.exec = gen4_blorp_exec;
+      }
+      break;
+   case 5:
+      brw->blorp.exec = gen5_blorp_exec;
+      break;
    case 6:
       brw->blorp.mocs.tex = 0;
       brw->blorp.mocs.rb = 0;

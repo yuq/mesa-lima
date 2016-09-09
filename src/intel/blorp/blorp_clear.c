@@ -366,11 +366,6 @@ blorp_clear(struct blorp_batch *batch,
    struct blorp_params params;
    blorp_params_init(&params);
 
-   params.x0 = x0;
-   params.y0 = y0;
-   params.x1 = x1;
-   params.y1 = y1;
-
    /* Manually apply the clear destination swizzle.  This way swizzled clears
     * will work for swizzles which we can't normally use for rendering and it
     * also ensures that they work on pre-Haswell hardware which can't swizlle
@@ -426,6 +421,27 @@ blorp_clear(struct blorp_batch *batch,
       brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
                                   start_layer, format, true);
       params.dst.view.swizzle = swizzle;
+
+      params.x0 = x0;
+      params.y0 = y0;
+      params.x1 = x1;
+      params.y1 = y1;
+
+      /* The MinLOD and MinimumArrayElement don't work properly for cube maps.
+       * Convert them to a single slice on gen4.
+       */
+      if (batch->blorp->isl_dev->info->gen == 4 &&
+          (params.dst.surf.usage & ISL_SURF_USAGE_CUBE_BIT)) {
+         blorp_surf_convert_to_single_slice(batch->blorp->isl_dev, &params.dst);
+
+         if (params.dst.tile_x_sa || params.dst.tile_y_sa) {
+            /* This is gen4 so there is no multisampling and sa == px. */
+            params.x0 += params.dst.tile_x_sa;
+            params.y0 += params.dst.tile_y_sa;
+            params.x1 += params.dst.tile_x_sa;
+            params.y1 += params.dst.tile_y_sa;
+         }
+      }
 
       params.num_samples = params.dst.surf.samples;
 

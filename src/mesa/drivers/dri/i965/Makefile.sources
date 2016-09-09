@@ -126,12 +126,15 @@ i965_FILES = \
 	libdrm_macros.h
 
 i965_gen4_FILES = \
+	genX_blorp_exec.c \
 	genX_state_upload.c
 
 i965_gen45_FILES = \
+	genX_blorp_exec.c \
 	genX_state_upload.c
 
 i965_gen5_FILES = \
+	genX_blorp_exec.c \
 	genX_state_upload.c
 
 i965_gen6_FILES = \

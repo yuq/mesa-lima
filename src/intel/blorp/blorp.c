@@ -124,10 +124,10 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
       info->z_offset = 0;
    }
 
-   /* Sandy Bridge has a limit of a maximum of 512 layers for layered
-    * rendering.
+   /* Sandy Bridge and earlier have a limit of a maximum of 512 layers for
+    * layered rendering.
     */
-   if (is_render_target && blorp->isl_dev->info->gen == 6)
+   if (is_render_target && blorp->isl_dev->info->gen <= 6)
       info->view.array_len = MIN2(info->view.array_len, 512);
 }
 
