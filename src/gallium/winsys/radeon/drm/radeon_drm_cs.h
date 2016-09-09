@@ -49,7 +49,6 @@ struct radeon_cs_context {
     unsigned                    validated_crelocs;
     struct radeon_bo_item       *relocs_bo;
     struct drm_radeon_cs_reloc  *relocs;
-    uint64_t                    *priority_usage;
 
     int                         reloc_indices_hashlist[4096];
 };
