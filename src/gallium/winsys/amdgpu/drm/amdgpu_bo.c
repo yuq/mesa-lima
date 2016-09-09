@@ -508,6 +508,9 @@ amdgpu_bo_create(struct radeon_winsys *rws,
    struct amdgpu_winsys_bo *bo;
    unsigned usage = 0, pb_cache_bucket;
 
+   /* This flag is irrelevant for the cache. */
+   flags &= ~RADEON_FLAG_HANDLE;
+
    /* Align size to page size. This is the minimum alignment for normal
     * BOs. Aligning this here helps the cached bufmgr. Especially small BOs,
     * like constant/uniform buffers, can benefit from better and more reuse.

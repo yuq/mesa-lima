@@ -1117,6 +1117,8 @@ r600_texture_create_object(struct pipe_screen *screen,
 		r600_init_resource_fields(rscreen, resource, rtex->size,
 					  rtex->surface.bo_alignment);
 
+		resource->flags |= RADEON_FLAG_HANDLE;
+
 		if (!r600_alloc_resource(rscreen, resource)) {
 			FREE(rtex);
 			return NULL;
