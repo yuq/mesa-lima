@@ -282,7 +282,7 @@ int loader_get_user_preferred_fd(int default_fd, int *different_device)
 }
 #endif
 
-#if defined(HAVE_SYSFS) || defined(HAVE_LIBDRM)
+#if defined(HAVE_LIBDRM)
 static int
 dev_node_from_fd(int fd, unsigned int *maj, unsigned int *min)
 {
@@ -346,47 +346,6 @@ loader_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
 }
 
 
-#if HAVE_SYSFS
-static char *
-sysfs_get_device_name_for_fd(int fd)
-{
-   char *device_name = NULL;
-   unsigned int maj, min;
-   FILE *f;
-   char buf[0x40];
-   static const char match[9] = "\nDEVNAME=";
-   int expected = 1;
-
-   if (dev_node_from_fd(fd, &maj, &min) < 0)
-      return NULL;
-
-   snprintf(buf, sizeof(buf), "/sys/dev/char/%d:%d/uevent", maj, min);
-   if (!(f = fopen(buf, "r")))
-       return NULL;
-
-   while (expected < sizeof(match)) {
-      int c = getc(f);
-
-      if (c == EOF) {
-         fclose(f);
-         return NULL;
-      } else if (c == match[expected] )
-         expected++;
-      else
-         expected = 0;
-   }
-
-   strcpy(buf, "/dev/");
-   if (fgets(buf + 5, sizeof(buf) - 5, f)) {
-      buf[strcspn(buf, "\n")] = '\0';
-      device_name = strdup(buf);
-   }
-
-   fclose(f);
-   return device_name;
-}
-#endif
-
 #if defined(HAVE_LIBDRM)
 static char *
 drm_get_device_name_for_fd(int fd)
@@ -411,10 +370,6 @@ loader_get_device_name_for_fd(int fd)
 {
    char *result = NULL;
 
-#if HAVE_SYSFS
-   if ((result = sysfs_get_device_name_for_fd(fd)))
-      return result;
-#endif
 #if HAVE_LIBDRM
    if ((result = drm_get_device_name_for_fd(fd)))
       return result;

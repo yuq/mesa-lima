@@ -1356,13 +1356,6 @@ linux*)
     need_pci_id=no ;;
 esac
 
-AC_ARG_ENABLE([sysfs],
-    [AS_HELP_STRING([--enable-sysfs],
-        [enable /sys PCI identification @<:@default=disabled@:>@])],
-    [have_sysfs="$enableval"],
-    [have_sysfs=no]
-)
-
 if test "x$enable_dri" = xyes; then
     if test "$enable_static" = yes; then
         AC_MSG_ERROR([Cannot use static libraries for DRI drivers])
@@ -1452,11 +1445,6 @@ xdri)
 esac
 
 have_pci_id=no
-if test "$have_sysfs" = yes; then
-    DEFINES="$DEFINES -DHAVE_SYSFS"
-    have_pci_id=yes
-fi
-
 if test "$have_libdrm" = yes; then
     have_pci_id=yes
 fi
@@ -1570,7 +1558,7 @@ if test "x$enable_dri" = xyes; then
         fi
 
         if test "x$have_pci_id" != xyes; then
-            AC_MSG_ERROR([sysfs or libdrm >= $LIBDRM_REQUIRED required for building DRI])
+            AC_MSG_ERROR([libdrm >= $LIBDRM_REQUIRED required for building DRI])
         fi
 
         case "$host_cpu" in
@@ -1788,7 +1776,7 @@ if test "x$enable_gbm" = xauto; then
 fi
 if test "x$enable_gbm" = xyes; then
     if test "x$need_pci_id$have_pci_id" = xyesno; then
-        AC_MSG_ERROR([gbm requires sysfs or libdrm >= $LIBDRM_REQUIRED])
+        AC_MSG_ERROR([gbm requires libdrm >= $LIBDRM_REQUIRED])
     fi
 
     if test "x$enable_dri" = xyes; then
@@ -2102,7 +2090,7 @@ for plat in $egl_platforms; do
 
         case "$plat$need_pci_id$have_pci_id" in
                 waylandyesno|drmyesno)
-                    AC_MSG_ERROR([cannot build $plat platform without sysfs or libdrm >= $LIBDRM_REQUIRED]) ;;
+                    AC_MSG_ERROR([cannot build $plat platform without libdrm >= $LIBDRM_REQUIRED]) ;;
         esac
 done
 
@@ -2340,7 +2328,7 @@ gallium_require_llvm() {
 
 gallium_require_drm_loader() {
     if test "x$need_pci_id$have_pci_id" = xyesno; then
-        AC_MSG_ERROR([Gallium drm loader requires sysfs or libdrm >= $LIBDRM_REQUIRED])
+        AC_MSG_ERROR([Gallium drm loader requires libdrm >= $LIBDRM_REQUIRED])
     fi
 }
 
