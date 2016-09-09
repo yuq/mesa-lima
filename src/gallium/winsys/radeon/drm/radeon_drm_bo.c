@@ -269,6 +269,8 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
     struct radeon_drm_winsys *rws = bo->rws;
     struct drm_gem_close args;
 
+    assert(bo->handle && "must not be called for slab entries");
+
     memset(&args, 0, sizeof(args));
 
     pipe_mutex_lock(rws->bo_handles_mutex);
@@ -279,8 +281,8 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
     }
     pipe_mutex_unlock(rws->bo_handles_mutex);
 
-    if (bo->ptr)
-        os_munmap(bo->ptr, bo->base.size);
+    if (bo->u.real.ptr)
+        os_munmap(bo->u.real.ptr, bo->base.size);
 
     if (rws->info.has_virtual_memory) {
         if (rws->va_unmap_working) {
@@ -310,14 +312,14 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
     args.handle = bo->handle;
     drmIoctl(rws->fd, DRM_IOCTL_GEM_CLOSE, &args);
 
-    pipe_mutex_destroy(bo->map_mutex);
+    pipe_mutex_destroy(bo->u.real.map_mutex);
 
     if (bo->initial_domain & RADEON_DOMAIN_VRAM)
         rws->allocated_vram -= align(bo->base.size, rws->info.gart_page_size);
     else if (bo->initial_domain & RADEON_DOMAIN_GTT)
         rws->allocated_gtt -= align(bo->base.size, rws->info.gart_page_size);
 
-    if (bo->map_count >= 1) {
+    if (bo->u.real.map_count >= 1) {
         if (bo->initial_domain & RADEON_DOMAIN_VRAM)
             bo->rws->mapped_vram -= bo->base.size;
         else
@@ -331,8 +333,10 @@ static void radeon_bo_destroy_or_cache(struct pb_buffer *_buf)
 {
    struct radeon_bo *bo = radeon_bo(_buf);
 
-   if (bo->use_reusable_pool)
-      pb_cache_add_buffer(&bo->cache_entry);
+    assert(bo->handle && "must not be called for slab entries");
+
+   if (bo->u.real.use_reusable_pool)
+      pb_cache_add_buffer(&bo->u.real.cache_entry);
    else
       radeon_bo_destroy(_buf);
 }
@@ -341,18 +345,26 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
 {
     struct drm_radeon_gem_mmap args = {0};
     void *ptr;
+    unsigned offset;
 
     /* If the buffer is created from user memory, return the user pointer. */
     if (bo->user_ptr)
         return bo->user_ptr;
 
+    if (bo->handle) {
+        offset = 0;
+    } else {
+        offset = bo->va - bo->u.slab.real->va;
+        bo = bo->u.slab.real;
+    }
+
     /* Map the buffer. */
-    pipe_mutex_lock(bo->map_mutex);
+    pipe_mutex_lock(bo->u.real.map_mutex);
     /* Return the pointer if it's already mapped. */
-    if (bo->ptr) {
-        bo->map_count++;
-        pipe_mutex_unlock(bo->map_mutex);
-        return bo->ptr;
+    if (bo->u.real.ptr) {
+        bo->u.real.map_count++;
+        pipe_mutex_unlock(bo->u.real.map_mutex);
+        return (uint8_t*)bo->u.real.ptr + offset;
     }
     args.handle = bo->handle;
     args.offset = 0;
@@ -361,7 +373,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
                             DRM_RADEON_GEM_MMAP,
                             &args,
                             sizeof(args))) {
-        pipe_mutex_unlock(bo->map_mutex);
+        pipe_mutex_unlock(bo->u.real.map_mutex);
         fprintf(stderr, "radeon: gem_mmap failed: %p 0x%08X\n",
                 bo, bo->handle);
         return NULL;
@@ -376,21 +388,21 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
         ptr = os_mmap(0, args.size, PROT_READ|PROT_WRITE, MAP_SHARED,
                       bo->rws->fd, args.addr_ptr);
         if (ptr == MAP_FAILED) {
-            pipe_mutex_unlock(bo->map_mutex);
+            pipe_mutex_unlock(bo->u.real.map_mutex);
             fprintf(stderr, "radeon: mmap failed, errno: %i\n", errno);
             return NULL;
         }
     }
-    bo->ptr = ptr;
-    bo->map_count = 1;
+    bo->u.real.ptr = ptr;
+    bo->u.real.map_count = 1;
 
     if (bo->initial_domain & RADEON_DOMAIN_VRAM)
        bo->rws->mapped_vram += bo->base.size;
     else
        bo->rws->mapped_gtt += bo->base.size;
 
-    pipe_mutex_unlock(bo->map_mutex);
-    return bo->ptr;
+    pipe_mutex_unlock(bo->u.real.map_mutex);
+    return (uint8_t*)bo->u.real.ptr + offset;
 }
 
 static void *radeon_bo_map(struct pb_buffer *buf,
@@ -478,27 +490,30 @@ static void radeon_bo_unmap(struct pb_buffer *_buf)
     if (bo->user_ptr)
         return;
 
-    pipe_mutex_lock(bo->map_mutex);
-    if (!bo->ptr) {
-        pipe_mutex_unlock(bo->map_mutex);
+    if (!bo->handle)
+        bo = bo->u.slab.real;
+
+    pipe_mutex_lock(bo->u.real.map_mutex);
+    if (!bo->u.real.ptr) {
+        pipe_mutex_unlock(bo->u.real.map_mutex);
         return; /* it's not been mapped */
     }
 
-    assert(bo->map_count);
-    if (--bo->map_count) {
-        pipe_mutex_unlock(bo->map_mutex);
+    assert(bo->u.real.map_count);
+    if (--bo->u.real.map_count) {
+        pipe_mutex_unlock(bo->u.real.map_mutex);
         return; /* it's been mapped multiple times */
     }
 
-    os_munmap(bo->ptr, bo->base.size);
-    bo->ptr = NULL;
+    os_munmap(bo->u.real.ptr, bo->base.size);
+    bo->u.real.ptr = NULL;
 
     if (bo->initial_domain & RADEON_DOMAIN_VRAM)
        bo->rws->mapped_vram -= bo->base.size;
     else
        bo->rws->mapped_gtt -= bo->base.size;
 
-    pipe_mutex_unlock(bo->map_mutex);
+    pipe_mutex_unlock(bo->u.real.map_mutex);
 }
 
 static const struct pb_vtbl radeon_bo_vtbl = {
@@ -557,6 +572,8 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
         return NULL;
     }
 
+    assert(args.handle != 0);
+
     bo = CALLOC_STRUCT(radeon_bo);
     if (!bo)
         return NULL;
@@ -570,8 +587,8 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     bo->handle = args.handle;
     bo->va = 0;
     bo->initial_domain = initial_domains;
-    pipe_mutex_init(bo->map_mutex);
-    pb_cache_init_entry(&rws->bo_cache, &bo->cache_entry, &bo->base,
+    pipe_mutex_init(bo->u.real.map_mutex);
+    pb_cache_init_entry(&rws->bo_cache, &bo->u.real.cache_entry, &bo->base,
                         pb_cache_bucket);
 
     if (rws->info.has_virtual_memory) {
@@ -666,6 +683,8 @@ static void radeon_bo_get_metadata(struct pb_buffer *_buf,
     struct radeon_bo *bo = radeon_bo(_buf);
     struct drm_radeon_gem_set_tiling args;
 
+    assert(bo->handle && "must not be called for slab entries");
+
     memset(&args, 0, sizeof(args));
 
     args.handle = bo->handle;
@@ -698,6 +717,8 @@ static void radeon_bo_set_metadata(struct pb_buffer *_buf,
 {
     struct radeon_bo *bo = radeon_bo(_buf);
     struct drm_radeon_gem_set_tiling args;
+
+    assert(bo->handle && "must not be called for slab entries");
 
     memset(&args, 0, sizeof(args));
 
@@ -796,7 +817,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
             return NULL;
     }
 
-    bo->use_reusable_pool = true;
+    bo->u.real.use_reusable_pool = true;
 
     pipe_mutex_lock(ws->bo_handles_mutex);
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
@@ -829,6 +850,8 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
         return NULL;
     }
 
+    assert(args.handle != 0);
+
     pipe_mutex_lock(ws->bo_handles_mutex);
 
     /* Initialize it. */
@@ -841,7 +864,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
     bo->user_ptr = pointer;
     bo->va = 0;
     bo->initial_domain = RADEON_DOMAIN_GTT;
-    pipe_mutex_init(bo->map_mutex);
+    pipe_mutex_init(bo->u.real.map_mutex);
 
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
 
@@ -963,6 +986,8 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
         lseek(whandle->handle, 0, SEEK_SET);
     }
 
+    assert(handle != 0);
+
     bo->handle = handle;
 
     /* Initialize it. */
@@ -972,7 +997,7 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
     bo->base.vtbl = &radeon_bo_vtbl;
     bo->rws = ws;
     bo->va = 0;
-    pipe_mutex_init(bo->map_mutex);
+    pipe_mutex_init(bo->u.real.map_mutex);
 
     if (bo->flink_name)
         util_hash_table_set(ws->bo_names, (void*)(uintptr_t)bo->flink_name, bo);
@@ -1044,9 +1069,14 @@ static bool radeon_winsys_bo_get_handle(struct pb_buffer *buffer,
     struct radeon_bo *bo = radeon_bo(buffer);
     struct radeon_drm_winsys *ws = bo->rws;
 
+    if (!bo->handle) {
+        offset += bo->va - bo->u.slab.real->va;
+        bo = bo->u.slab.real;
+    }
+
     memset(&flink, 0, sizeof(flink));
 
-    bo->use_reusable_pool = false;
+    bo->u.real.use_reusable_pool = false;
 
     if (whandle->type == DRM_API_HANDLE_TYPE_SHARED) {
         if (!bo->flink_name) {

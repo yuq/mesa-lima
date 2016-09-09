@@ -34,23 +34,32 @@
 
 #include "radeon_drm_winsys.h"
 #include "os/os_thread.h"
+#include "pipebuffer/pb_slab.h"
 
 struct radeon_bo {
     struct pb_buffer base;
-    struct pb_cache_entry cache_entry;
+    union {
+        struct {
+            struct pb_cache_entry cache_entry;
+
+            void *ptr;
+            pipe_mutex map_mutex;
+            unsigned map_count;
+            bool use_reusable_pool;
+        } real;
+        struct {
+            struct pb_slab_entry entry;
+            struct radeon_bo *real;
+        } slab;
+    } u;
 
     struct radeon_drm_winsys *rws;
     void *user_ptr; /* from buffer_from_ptr */
 
-    void *ptr;
-    pipe_mutex map_mutex;
-    unsigned map_count;
-
-    uint32_t handle;
+    uint32_t handle; /* 0 for slab entries */
     uint32_t flink_name;
     uint64_t va;
     enum radeon_bo_domain initial_domain;
-    bool use_reusable_pool;
 
     /* how many command streams is this bo referenced in? */
     int num_cs_references;
