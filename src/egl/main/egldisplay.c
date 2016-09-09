@@ -44,6 +44,8 @@
 #include "egldriver.h"
 #include "eglglobals.h"
 #include "egllog.h"
+#include "eglimage.h"
+#include "eglsync.h"
 
 /* Includes for _eglNativePlatformDetectNativeDisplay */
 #ifdef HAVE_MINCORE
@@ -300,6 +302,26 @@ _eglReleaseDisplayResources(_EGLDriver *drv, _EGLDisplay *display)
       drv->API.DestroySurface(drv, display, surf);
    }
    assert(!display->ResourceLists[_EGL_RESOURCE_SURFACE]);
+
+   list = display->ResourceLists[_EGL_RESOURCE_IMAGE];
+   while (list) {
+      _EGLImage *image = (_EGLImage *) list;
+      list = list->Next;
+
+      _eglUnlinkImage(image);
+      drv->API.DestroyImageKHR(drv, display, image);
+   }
+   assert(!display->ResourceLists[_EGL_RESOURCE_IMAGE]);
+
+   list = display->ResourceLists[_EGL_RESOURCE_SYNC];
+   while (list) {
+      _EGLSync *sync = (_EGLSync *) list;
+      list = list->Next;
+
+      _eglUnlinkSync(sync);
+      drv->API.DestroySyncKHR(drv, display, sync);
+   }
+   assert(!display->ResourceLists[_EGL_RESOURCE_SYNC]);
 }
 
 
