@@ -406,11 +406,13 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
       _eglAppendExtension(&exts, "EGL_KHR_image");
    _EGL_CHECK_EXTENSION(KHR_image_base);
    _EGL_CHECK_EXTENSION(KHR_image_pixmap);
+   _EGL_CHECK_EXTENSION(KHR_no_config_context);
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
    _EGL_CHECK_EXTENSION(KHR_wait_sync);
 
-   _EGL_CHECK_EXTENSION(MESA_configless_context);
+   if (dpy->Extensions.KHR_no_config_context)
+      _eglAppendExtension(&exts, "EGL_MESA_configless_context");
    _EGL_CHECK_EXTENSION(MESA_drm_image);
    _EGL_CHECK_EXTENSION(MESA_image_dma_buf_export);
 
@@ -627,7 +629,7 @@ eglCreateContext(EGLDisplay dpy, EGLConfig config, EGLContext share_list,
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_CONTEXT, drv);
 
-   if (!config && !disp->Extensions.MESA_configless_context)
+   if (!config && !disp->Extensions.KHR_no_config_context)
       RETURN_EGL_ERROR(disp, EGL_BAD_CONFIG, EGL_NO_CONTEXT);
 
    if (!share && share_list != EGL_NO_CONTEXT)

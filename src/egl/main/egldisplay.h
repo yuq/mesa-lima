@@ -112,11 +112,11 @@ struct _egl_extensions
    EGLBoolean KHR_gl_texture_cubemap_image;
    EGLBoolean KHR_image_base;
    EGLBoolean KHR_image_pixmap;
+   EGLBoolean KHR_no_config_context;
    EGLBoolean KHR_reusable_sync;
    EGLBoolean KHR_surfaceless_context;
    EGLBoolean KHR_wait_sync;
 
-   EGLBoolean MESA_configless_context;
    EGLBoolean MESA_drm_image;
    EGLBoolean MESA_image_dma_buf_export;
 

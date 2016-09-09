@@ -603,8 +603,8 @@ dri2_setup_screen(_EGLDisplay *disp)
       disp->ClientAPIs |= EGL_OPENGL_ES3_BIT_KHR;
 
    assert(dri2_dpy->image_driver || dri2_dpy->dri2 || dri2_dpy->swrast);
+   disp->Extensions.KHR_no_config_context = EGL_TRUE;
    disp->Extensions.KHR_surfaceless_context = EGL_TRUE;
-   disp->Extensions.MESA_configless_context = EGL_TRUE;
 
    if (dri2_renderer_query_integer(dri2_dpy,
                                    __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB))

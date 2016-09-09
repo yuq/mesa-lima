@@ -642,9 +642,9 @@ _eglCheckMakeCurrent(_EGLContext *ctx, _EGLSurface *draw, _EGLSurface *read)
           (read && read->Config != ctx->Config))
          return _eglError(EGL_BAD_MATCH, "eglMakeCurrent");
    } else {
-      /* Otherwise we must be using the EGL_MESA_configless_context
+      /* Otherwise we must be using the EGL_KHR_no_config_context
        * extension */
-      assert(dpy->Extensions.MESA_configless_context);
+      assert(dpy->Extensions.KHR_no_config_context);
 
       /* The extension doesn't permit binding draw and read buffers with
        * differing contexts */
