@@ -5434,10 +5434,6 @@ fs_visitor::setup_fs_payload_gen6()
    assert(stage == MESA_SHADER_FRAGMENT);
    brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
 
-   unsigned barycentric_interp_modes =
-      (stage == MESA_SHADER_FRAGMENT) ?
-      ((brw_wm_prog_data*) this->prog_data)->barycentric_interp_modes : 0;
-
    assert(devinfo->gen >= 6);
 
    /* R0-1: masks, pixel X/Y coordinates. */
@@ -5452,7 +5448,7 @@ fs_visitor::setup_fs_payload_gen6()
     * Mode" bits in WM_STATE.
     */
    for (int i = 0; i < BRW_BARYCENTRIC_MODE_COUNT; ++i) {
-      if (barycentric_interp_modes & (1 << i)) {
+      if (prog_data->barycentric_interp_modes & (1 << i)) {
          payload.barycentric_coord_reg[i] = payload.num_regs;
          payload.num_regs += 2;
          if (dispatch_width == 16) {
