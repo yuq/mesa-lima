@@ -48,6 +48,16 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         GLenum filter, bool mirror_x, bool mirror_y,
                         bool decode_srgb, bool encode_srgb);
 
+void
+brw_blorp_copy_miptrees(struct brw_context *brw,
+                        struct intel_mipmap_tree *src_mt,
+                        unsigned src_level, unsigned src_logical_layer,
+                        struct intel_mipmap_tree *dst_mt,
+                        unsigned dst_level, unsigned dst_logical_layer,
+                        unsigned src_x, unsigned src_y,
+                        unsigned dst_x, unsigned dst_y,
+                        unsigned src_width, unsigned src_height);
+
 bool
 brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
                       GLbitfield mask, bool partial_clear, bool encode_srgb);

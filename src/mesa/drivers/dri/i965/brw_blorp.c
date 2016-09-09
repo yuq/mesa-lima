@@ -288,6 +288,23 @@ physical_to_logical_layer(struct intel_mipmap_tree *mt,
    }
 }
 
+static void
+miptree_check_level_logical_layer(struct intel_mipmap_tree *mt,
+                                  unsigned level,
+                                  unsigned logical_layer)
+{
+   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
+       mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
+      const unsigned num_samples = MAX2(1, mt->num_samples);
+      for (unsigned s = 0; s < num_samples; s++) {
+         const unsigned physical_layer = (logical_layer * num_samples) + s;
+         intel_miptree_check_level_layer(mt, level, physical_layer);
+      }
+   } else {
+      intel_miptree_check_level_layer(mt, level, logical_layer);
+   }
+}
+
 /**
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
  * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src_layer (dst_layer) is
@@ -382,6 +399,58 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
               src_x0, src_y0, src_x1, src_y1,
               dst_x0, dst_y0, dst_x1, dst_y1,
               filter, mirror_x, mirror_y);
+   blorp_batch_finish(&batch);
+
+   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
+
+   if (intel_miptree_is_lossless_compressed(brw, dst_mt))
+      dst_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
+}
+
+void
+brw_blorp_copy_miptrees(struct brw_context *brw,
+                        struct intel_mipmap_tree *src_mt,
+                        unsigned src_level, unsigned src_layer,
+                        struct intel_mipmap_tree *dst_mt,
+                        unsigned dst_level, unsigned dst_layer,
+                        unsigned src_x, unsigned src_y,
+                        unsigned dst_x, unsigned dst_y,
+                        unsigned src_width, unsigned src_height)
+{
+   /* Get ready to blit.  This includes depth resolving the src and dst
+    * buffers if necessary.  Note: it's not necessary to do a color resolve on
+    * the destination buffer because we use the standard render path to render
+    * to destination color buffers, and the standard render path is
+    * fast-color-aware.
+    */
+   intel_miptree_resolve_color(brw, src_mt, INTEL_MIPTREE_IGNORE_CCS_E);
+   intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
+   intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
+
+   DBG("%s from %dx %s mt %p %d %d (%d,%d) %dx%d"
+       "to %dx %s mt %p %d %d (%d,%d)\n",
+       __func__,
+       src_mt->num_samples, _mesa_get_format_name(src_mt->format), src_mt,
+       src_level, src_layer, src_x, src_y, src_width, src_height,
+       dst_mt->num_samples, _mesa_get_format_name(dst_mt->format), dst_mt,
+       dst_level, dst_layer, dst_x, dst_y);
+
+   miptree_check_level_logical_layer(src_mt, src_level, src_layer);
+   miptree_check_level_logical_layer(dst_mt, dst_level, dst_layer);
+   intel_miptree_used_for_rendering(dst_mt);
+
+   struct isl_surf tmp_surfs[4];
+   struct blorp_surf src_surf, dst_surf;
+   blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
+                          &src_level, &tmp_surfs[0]);
+   blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
+                          &dst_level, &tmp_surfs[2]);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&brw->blorp, &batch, brw);
+   blorp_copy(&batch, &src_surf, src_level, src_layer,
+              &dst_surf, dst_level, dst_layer,
+              src_x, src_y, dst_x, dst_y, src_width, src_height);
    blorp_batch_finish(&batch);
 
    intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
