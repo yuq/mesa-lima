@@ -354,7 +354,8 @@ gen7_choose_valign_el(const struct isl_device *dev,
     */
    if (isl_surf_usage_is_depth(info->usage) ||
        info->samples > 1 ||
-       tiling == ISL_TILING_Y0) {
+       ((info->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) &&
+        tiling == ISL_TILING_Y0)) {
       require_valign4 = true;
    }
 
