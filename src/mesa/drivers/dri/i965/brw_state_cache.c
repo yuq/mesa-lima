@@ -398,7 +398,6 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
    brw->state.pipelines[BRW_COMPUTE_PIPELINE].brw = ~0ull;
 
    /* Also, NULL out any stale program pointers. */
-   brw->vs.prog_data = NULL;
    brw->vs.base.prog_data = NULL;
    brw->tcs.prog_data = NULL;
    brw->tcs.base.prog_data = NULL;

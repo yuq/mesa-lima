@@ -109,7 +109,9 @@ static void
 upload_urb(struct brw_context *brw)
 {
    /* BRW_NEW_VS_PROG_DATA */
-   const unsigned vs_size = MAX2(brw->vs.prog_data->base.urb_entry_size, 1);
+   const struct brw_vue_prog_data *vs_vue_prog_data =
+      brw_vue_prog_data(brw->vs.base.prog_data);
+   const unsigned vs_size = MAX2(vs_vue_prog_data->urb_entry_size, 1);
 
    /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
    const bool gs_present = brw->ff_gs.prog_active || brw->geometry_program;

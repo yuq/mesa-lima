@@ -229,7 +229,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
 		    key, sizeof(struct brw_vs_prog_key),
 		    program, program_size,
 		    &prog_data, sizeof(prog_data),
-		    &brw->vs.base.prog_offset, &brw->vs.prog_data);
+		    &brw->vs.base.prog_offset, &brw->vs.base.prog_data);
    ralloc_free(mem_ctx);
 
    return true;
@@ -372,13 +372,12 @@ brw_upload_vs_prog(struct brw_context *brw)
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
 			 &key, sizeof(key),
-			 &brw->vs.base.prog_offset, &brw->vs.prog_data)) {
+			 &brw->vs.base.prog_offset, &brw->vs.base.prog_data)) {
       bool success = brw_codegen_vs_prog(brw, current[MESA_SHADER_VERTEX],
                                          vp, &key);
       (void) success;
       assert(success);
    }
-   brw->vs.base.prog_data = &brw->vs.prog_data->base.base;
 }
 
 bool
@@ -389,7 +388,7 @@ brw_vs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_vs_prog_key key;
    uint32_t old_prog_offset = brw->vs.base.prog_offset;
-   struct brw_vs_prog_data *old_prog_data = brw->vs.prog_data;
+   struct brw_stage_prog_data *old_prog_data = brw->vs.base.prog_data;
    bool success;
 
    struct gl_vertex_program *vp = (struct gl_vertex_program *) prog;
@@ -406,7 +405,7 @@ brw_vs_precompile(struct gl_context *ctx,
    success = brw_codegen_vs_prog(brw, shader_prog, bvp, &key);
 
    brw->vs.base.prog_offset = old_prog_offset;
-   brw->vs.prog_data = old_prog_data;
+   brw->vs.base.prog_data = old_prog_data;
 
    return success;
 }

@@ -713,12 +713,15 @@ brw_upload_programs(struct brw_context *brw,
        */
       GLbitfield64 old_slots = brw->vue_map_geom_out.slots_valid;
       bool old_separate = brw->vue_map_geom_out.separate;
+      struct brw_vue_prog_data *vue_prog_data;
       if (brw->geometry_program)
-         brw->vue_map_geom_out = brw->gs.prog_data->base.vue_map;
+         vue_prog_data = brw_vue_prog_data(brw->gs.base.prog_data);
       else if (brw->tess_eval_program)
-         brw->vue_map_geom_out = brw->tes.prog_data->base.vue_map;
+         vue_prog_data = brw_vue_prog_data(brw->tes.base.prog_data);
       else
-         brw->vue_map_geom_out = brw->vs.prog_data->base.vue_map;
+         vue_prog_data = brw_vue_prog_data(brw->vs.base.prog_data);
+
+      brw->vue_map_geom_out = vue_prog_data->vue_map;
 
       /* If the layout has changed, signal BRW_NEW_VUE_MAP_GEOM_OUT. */
       if (old_slots != brw->vue_map_geom_out.slots_valid ||

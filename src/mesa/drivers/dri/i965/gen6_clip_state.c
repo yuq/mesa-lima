@@ -103,7 +103,7 @@ upload_clip_state(struct brw_context *brw)
    }
 
    /* BRW_NEW_VS_PROG_DATA */
-   dw1 |= brw->vs.prog_data->base.cull_distance_mask;
+   dw1 |= brw_vue_prog_data(brw->vs.base.prog_data)->cull_distance_mask;
 
    if (brw->gen >= 7)
       dw1 |= GEN7_CLIP_EARLY_CULL;

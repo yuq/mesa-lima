@@ -439,7 +439,9 @@ brw_prepare_vertices(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_VS_PROG_DATA */
-   GLbitfield64 vs_inputs = brw->vs.prog_data->inputs_read;
+   const struct brw_vs_prog_data *vs_prog_data =
+      brw_vs_prog_data(brw->vs.base.prog_data);
+   GLbitfield64 vs_inputs = vs_prog_data->inputs_read;
    const unsigned char *ptr = NULL;
    GLuint interleaved = 0;
    unsigned int min_index = brw->vb.min_index + brw->basevertex;
@@ -665,16 +667,18 @@ brw_prepare_vertices(struct brw_context *brw)
 void
 brw_prepare_shader_draw_parameters(struct brw_context *brw)
 {
+   const struct brw_vs_prog_data *vs_prog_data =
+      brw_vs_prog_data(brw->vs.base.prog_data);
+
    /* For non-indirect draws, upload gl_BaseVertex. */
-   if ((brw->vs.prog_data->uses_basevertex ||
-        brw->vs.prog_data->uses_baseinstance) &&
+   if ((vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance) &&
        brw->draw.draw_params_bo == NULL) {
       intel_upload_data(brw, &brw->draw.params, sizeof(brw->draw.params), 4,
 			&brw->draw.draw_params_bo,
                         &brw->draw.draw_params_offset);
    }
 
-   if (brw->vs.prog_data->uses_drawid) {
+   if (vs_prog_data->uses_drawid) {
       intel_upload_data(brw, &brw->draw.gl_drawid, sizeof(brw->draw.gl_drawid), 4,
                         &brw->draw.draw_id_bo,
                         &brw->draw.draw_id_offset);
@@ -770,11 +774,14 @@ brw_emit_vertices(struct brw_context *brw)
 
    brw_emit_query_begin(brw);
 
+   const struct brw_vs_prog_data *vs_prog_data =
+      brw_vs_prog_data(brw->vs.base.prog_data);
+
    unsigned nr_elements = brw->vb.nr_enabled;
-   if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid ||
-       brw->vs.prog_data->uses_basevertex || brw->vs.prog_data->uses_baseinstance)
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
+       vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       ++nr_elements;
-   if (brw->vs.prog_data->uses_drawid)
+   if (vs_prog_data->uses_drawid)
       nr_elements++;
 
    /* If the VS doesn't read any inputs (calculating vertex position from
@@ -810,10 +817,10 @@ brw_emit_vertices(struct brw_context *brw)
     */
 
    const bool uses_draw_params =
-      brw->vs.prog_data->uses_basevertex ||
-      brw->vs.prog_data->uses_baseinstance;
+      vs_prog_data->uses_basevertex ||
+      vs_prog_data->uses_baseinstance;
    const unsigned nr_buffers = brw->vb.nr_buffers +
-      uses_draw_params + brw->vs.prog_data->uses_drawid;
+      uses_draw_params + vs_prog_data->uses_drawid;
 
    if (nr_buffers) {
       if (brw->gen >= 6) {
@@ -848,7 +855,7 @@ brw_emit_vertices(struct brw_context *brw)
                                   0); /* step rate */
       }
 
-      if (brw->vs.prog_data->uses_drawid) {
+      if (vs_prog_data->uses_drawid) {
          EMIT_VERTEX_BUFFER_STATE(brw, brw->vb.nr_buffers + 1,
                                   brw->draw.draw_id_bo,
                                   brw->draw.draw_id_offset,
@@ -926,24 +933,24 @@ brw_emit_vertices(struct brw_context *brw)
                     ((i * 4) << BRW_VE1_DST_OFFSET_SHIFT));
    }
 
-   if (brw->vs.prog_data->uses_vertexid || brw->vs.prog_data->uses_instanceid ||
-       brw->vs.prog_data->uses_basevertex || brw->vs.prog_data->uses_baseinstance) {
+   if (vs_prog_data->uses_vertexid || vs_prog_data->uses_instanceid ||
+       vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance) {
       uint32_t dw0 = 0, dw1 = 0;
       uint32_t comp0 = BRW_VE1_COMPONENT_STORE_0;
       uint32_t comp1 = BRW_VE1_COMPONENT_STORE_0;
       uint32_t comp2 = BRW_VE1_COMPONENT_STORE_0;
       uint32_t comp3 = BRW_VE1_COMPONENT_STORE_0;
 
-      if (brw->vs.prog_data->uses_basevertex)
+      if (vs_prog_data->uses_basevertex)
          comp0 = BRW_VE1_COMPONENT_STORE_SRC;
 
-      if (brw->vs.prog_data->uses_baseinstance)
+      if (vs_prog_data->uses_baseinstance)
          comp1 = BRW_VE1_COMPONENT_STORE_SRC;
 
-      if (brw->vs.prog_data->uses_vertexid)
+      if (vs_prog_data->uses_vertexid)
          comp2 = BRW_VE1_COMPONENT_STORE_VID;
 
-      if (brw->vs.prog_data->uses_instanceid)
+      if (vs_prog_data->uses_instanceid)
          comp3 = BRW_VE1_COMPONENT_STORE_IID;
 
       dw1 = (comp0 << BRW_VE1_COMPONENT_0_SHIFT) |
@@ -970,7 +977,7 @@ brw_emit_vertices(struct brw_context *brw)
       OUT_BATCH(dw1);
    }
 
-   if (brw->vs.prog_data->uses_drawid) {
+   if (vs_prog_data->uses_drawid) {
       uint32_t dw0 = 0, dw1 = 0;
 
       dw1 = (BRW_VE1_COMPONENT_STORE_SRC << BRW_VE1_COMPONENT_0_SHIFT) |

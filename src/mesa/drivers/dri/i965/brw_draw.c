@@ -521,15 +521,17 @@ brw_try_draw_prims(struct gl_context *ctx,
       const int new_basevertex =
          prims[i].indexed ? prims[i].basevertex : prims[i].start;
       const int new_baseinstance = prims[i].base_instance;
+      const struct brw_vs_prog_data *vs_prog_data =
+         brw_vs_prog_data(brw->vs.base.prog_data);
       if (i > 0) {
          const bool uses_draw_parameters =
-            brw->vs.prog_data->uses_basevertex ||
-            brw->vs.prog_data->uses_baseinstance;
+            vs_prog_data->uses_basevertex ||
+            vs_prog_data->uses_baseinstance;
 
          if ((uses_draw_parameters && prims[i].is_indirect) ||
-             (brw->vs.prog_data->uses_basevertex &&
+             (vs_prog_data->uses_basevertex &&
               brw->draw.params.gl_basevertex != new_basevertex) ||
-             (brw->vs.prog_data->uses_baseinstance &&
+             (vs_prog_data->uses_baseinstance &&
               brw->draw.params.gl_baseinstance != new_baseinstance))
             brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
       }
@@ -556,13 +558,13 @@ brw_try_draw_prims(struct gl_context *ctx,
       /* gl_DrawID always needs its own vertex buffer since it's not part of
        * the indirect parameter buffer. If the program uses gl_DrawID we need
        * to flag BRW_NEW_VERTICES. For the first iteration, we don't have
-       * valid brw->vs.prog_data, but we always flag BRW_NEW_VERTICES before
+       * valid vs_prog_data, but we always flag BRW_NEW_VERTICES before
        * the loop.
        */
       brw->draw.gl_drawid = prims[i].draw_id;
       drm_intel_bo_unreference(brw->draw.draw_id_bo);
       brw->draw.draw_id_bo = NULL;
-      if (i > 0 && brw->vs.prog_data->uses_drawid)
+      if (i > 0 && vs_prog_data->uses_drawid)
          brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
 
       if (brw->gen < 6)
