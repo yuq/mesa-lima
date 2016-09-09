@@ -748,10 +748,9 @@ static void si_shader_ps(struct si_shader *shader)
 	si_pm4_set_reg(pm4, R_0286D8_SPI_PS_IN_CONTROL, spi_ps_in_control);
 
 	si_pm4_set_reg(pm4, R_028710_SPI_SHADER_Z_FORMAT,
-		       info->writes_samplemask ? V_028710_SPI_SHADER_32_ABGR :
-		       info->writes_stencil ? V_028710_SPI_SHADER_32_GR :
-		       info->writes_z ? V_028710_SPI_SHADER_32_R :
-		       V_028710_SPI_SHADER_ZERO);
+		       si_get_spi_shader_z_format(info->writes_z,
+						  info->writes_stencil,
+						  info->writes_samplemask));
 
 	si_pm4_set_reg(pm4, R_028714_SPI_SHADER_COL_FORMAT, spi_shader_col_format);
 	si_pm4_set_reg(pm4, R_02823C_CB_SHADER_MASK, cb_shader_mask);

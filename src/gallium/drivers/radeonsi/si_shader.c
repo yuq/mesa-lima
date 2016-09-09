@@ -2928,6 +2928,25 @@ struct si_ps_exports {
 	LLVMValueRef args[10][9];
 };
 
+unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
+				    bool writes_samplemask)
+{
+	if (writes_z) {
+		/* Z needs 32 bits. */
+		if (writes_samplemask)
+			return V_028710_SPI_SHADER_32_ABGR;
+		else if (writes_stencil)
+			return V_028710_SPI_SHADER_32_GR;
+		else
+			return V_028710_SPI_SHADER_32_R;
+	} else if (writes_stencil || writes_samplemask) {
+		/* Both stencil and sample mask need only 16 bits. */
+		return V_028710_SPI_SHADER_UINT16_ABGR;
+	} else {
+		return V_028710_SPI_SHADER_ZERO;
+	}
+}
+
 static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 			    LLVMValueRef depth, LLVMValueRef stencil,
 			    LLVMValueRef samplemask, struct si_ps_exports *exp)
@@ -2937,6 +2956,9 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 	struct lp_build_context *uint = &bld_base->uint_bld;
 	LLVMValueRef args[9];
 	unsigned mask = 0;
+	unsigned format = si_get_spi_shader_z_format(depth != NULL,
+						     stencil != NULL,
+						     samplemask != NULL);
 
 	assert(depth || stencil || samplemask);
 
@@ -2952,19 +2974,36 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 	args[7] = base->undef; /* B, sample mask */
 	args[8] = base->undef; /* A, alpha to mask */
 
-	if (depth) {
-		args[5] = depth;
-		mask |= 0x1;
-	}
+	if (format == V_028710_SPI_SHADER_UINT16_ABGR) {
+		assert(!depth);
+		args[4] = uint->one; /* COMPR flag */
 
-	if (stencil) {
-		args[6] = stencil;
-		mask |= 0x2;
-	}
-
-	if (samplemask) {
-		args[7] = samplemask;
-		mask |= 0x4;
+		if (stencil) {
+			/* Stencil should be in X[23:16]. */
+			stencil = bitcast(bld_base, TGSI_TYPE_UNSIGNED, stencil);
+			stencil = LLVMBuildShl(base->gallivm->builder, stencil,
+					       LLVMConstInt(ctx->i32, 16, 0), "");
+			args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT, stencil);
+			mask |= 0x3;
+		}
+		if (samplemask) {
+			/* SampleMask should be in Y[15:0]. */
+			args[6] = samplemask;
+			mask |= 0xc;
+		}
+	} else {
+		if (depth) {
+			args[5] = depth;
+			mask |= 0x1;
+		}
+		if (stencil) {
+			args[6] = stencil;
+			mask |= 0x2;
+		}
+		if (samplemask) {
+			args[7] = samplemask;
+			mask |= 0x4;
+		}
 	}
 
 	/* SI (except OLAND) has a bug that it only looks

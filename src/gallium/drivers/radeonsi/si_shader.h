@@ -518,5 +518,7 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 				  struct si_shader_config *conf,
 				  unsigned symbol_offset);
+unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
+				    bool writes_samplemask);
 
 #endif
