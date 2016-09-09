@@ -107,7 +107,6 @@ struct si_shader_context
 
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef lds;
-	LLVMValueRef *constants[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef shader_buffers[SI_NUM_SHADER_BUFFERS];
 	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
 	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
@@ -1881,12 +1880,19 @@ static LLVMValueRef fetch_constant(
 	idx = reg->Register.Index * 4 + swizzle;
 
 	if (!reg->Register.Indirect && !reg->Dimension.Indirect) {
+		LLVMValueRef c0, c1;
+
+		c0 = buffer_load_const(ctx, ctx->const_buffers[buf],
+				       LLVMConstInt(ctx->i32, idx * 4, 0));
+
 		if (!tgsi_type_is_64bit(type))
-			return bitcast(bld_base, type, ctx->constants[buf][idx]);
+			return bitcast(bld_base, type, c0);
 		else {
+			c1 = buffer_load_const(ctx, ctx->const_buffers[buf],
+					       LLVMConstInt(ctx->i32,
+							    (idx + 1) * 4, 0));
 			return radeon_llvm_emit_fetch_64bit(bld_base, type,
-							    ctx->constants[buf][idx],
-							    ctx->constants[buf][idx + 1]);
+							    c0, c1);
 		}
 	}
 
@@ -5796,25 +5802,12 @@ static void preload_constants(struct si_shader_context *ctx)
 	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_CONST_BUFFERS);
 
 	for (buf = 0; buf < SI_NUM_CONST_BUFFERS; buf++) {
-		unsigned i, num_const = info->const_file_max[buf] + 1;
-
-		if (num_const == 0)
+		if (info->const_file_max[buf] == -1)
 			continue;
-
-		/* Allocate space for the constant values */
-		ctx->constants[buf] = CALLOC(num_const * 4, sizeof(LLVMValueRef));
 
 		/* Load the resource descriptor */
 		ctx->const_buffers[buf] =
 			build_indexed_load_const(ctx, ptr, lp_build_const_int32(gallivm, buf));
-
-		/* Load the constants, we rely on the code sinking to do the rest */
-		for (i = 0; i < num_const * 4; ++i) {
-			ctx->constants[buf][i] =
-				buffer_load_const(ctx,
-					ctx->const_buffers[buf],
-					lp_build_const_int32(gallivm, i * 4));
-		}
 	}
 }
 
@@ -6905,8 +6898,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 out:
-	for (int i = 0; i < SI_NUM_CONST_BUFFERS; i++)
-		FREE(ctx.constants[i]);
 	return r;
 }
 
