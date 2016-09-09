@@ -37,15 +37,15 @@
 static void
 brw_upload_cs_state(struct brw_context *brw)
 {
-   if (!brw->cs.prog_data)
+   if (!brw->cs.base.prog_data)
       return;
 
    uint32_t offset;
    uint32_t *desc = (uint32_t*) brw_state_batch(brw, AUB_TRACE_SURFACE_STATE,
                                                 8 * 4, 64, &offset);
    struct brw_stage_state *stage_state = &brw->cs.base;
-   struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
-   struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
+   struct brw_stage_prog_data *prog_data = stage_state->prog_data;
+   struct brw_cs_prog_data *cs_prog_data = brw_cs_prog_data(prog_data);
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
@@ -285,7 +285,8 @@ gen7_upload_cs_push_constants(struct brw_context *brw)
 
    if (cp) {
       /* BRW_NEW_CS_PROG_DATA */
-      struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
+      struct brw_cs_prog_data *cs_prog_data =
+         brw_cs_prog_data(brw->cs.base.prog_data);
 
       _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
       brw_upload_cs_push_constants(brw, &cp->program.Base, cs_prog_data,
@@ -319,7 +320,7 @@ brw_upload_cs_pull_constants(struct brw_context *brw)
       (struct brw_compute_program *) brw->compute_program;
 
    /* BRW_NEW_CS_PROG_DATA */
-   const struct brw_stage_prog_data *prog_data = &brw->cs.prog_data->base;
+   const struct brw_stage_prog_data *prog_data = brw->cs.base.prog_data;
 
    _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
    /* _NEW_PROGRAM_CONSTANTS */

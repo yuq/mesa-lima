@@ -115,7 +115,8 @@ prepare_indirect_gpgpu_walker(struct brw_context *brw)
 static void
 brw_emit_gpgpu_walker(struct brw_context *brw)
 {
-   const struct brw_cs_prog_data *prog_data = brw->cs.prog_data;
+   const struct brw_cs_prog_data *prog_data =
+      brw_cs_prog_data(brw->cs.base.prog_data);
 
    const GLuint *num_groups = brw->compute.num_work_groups;
    uint32_t indirect_flag;

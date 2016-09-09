@@ -1195,7 +1195,6 @@ struct brw_context
 
    struct {
       struct brw_stage_state base;
-      struct brw_cs_prog_data *prog_data;
    } cs;
 
    /* RS hardware binding table */

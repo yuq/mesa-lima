@@ -1464,7 +1464,7 @@ brw_upload_cs_ubo_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_CS_PROG_DATA */
    brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                           &brw->cs.base, &brw->cs.prog_data->base);
+                           &brw->cs.base, brw->cs.base.prog_data);
 }
 
 const struct brw_tracked_state brw_cs_ubo_surfaces = {
@@ -1542,7 +1542,7 @@ brw_upload_cs_abo_surfaces(struct brw_context *brw)
    if (prog) {
       /* BRW_NEW_CS_PROG_DATA */
       brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                              &brw->cs.base, &brw->cs.prog_data->base);
+                              &brw->cs.base, brw->cs.base.prog_data);
    }
 }
 
@@ -1568,7 +1568,7 @@ brw_upload_cs_image_surfaces(struct brw_context *brw)
    if (prog) {
       /* BRW_NEW_CS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                                &brw->cs.base, &brw->cs.prog_data->base);
+                                &brw->cs.base, brw->cs.base.prog_data);
    }
 }
 
@@ -1848,7 +1848,8 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    /* BRW_NEW_CS_PROG_DATA */
-   const struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
+   const struct brw_cs_prog_data *cs_prog_data =
+      brw_cs_prog_data(brw->cs.base.prog_data);
 
    if (prog && cs_prog_data->uses_num_work_groups) {
       const unsigned surf_idx =
