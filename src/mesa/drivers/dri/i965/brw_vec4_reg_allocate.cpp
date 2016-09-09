@@ -374,9 +374,13 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
 {
    float loop_scale = 1.0;
 
+   unsigned *reg_type_size = (unsigned *)
+      ralloc_size(NULL, this->alloc.count * sizeof(unsigned));
+
    for (unsigned i = 0; i < this->alloc.count; i++) {
       spill_costs[i] = 0.0;
       no_spill[i] = alloc.sizes[i] != 1 && alloc.sizes[i] != 2;
+      reg_type_size[i] = 0;
    }
 
    /* Calculate costs for spilling nodes.  Call it a cost of 1 per
@@ -406,6 +410,15 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
                if (type_sz(inst->src[i].type) == 8 && inst->exec_size != 8)
                   no_spill[inst->src[i].nr] = true;
             }
+
+            /* We can't spill registers that mix 32-bit and 64-bit access (that
+             * contain 64-bit data that is operated on via 32-bit instructions)
+             */
+            unsigned type_size = type_sz(inst->src[i].type);
+            if (reg_type_size[inst->src[i].nr] == 0)
+               reg_type_size[inst->src[i].nr] = type_size;
+            else if (reg_type_size[inst->src[i].nr] != type_size)
+               no_spill[inst->src[i].nr] = true;
          }
       }
 
@@ -421,6 +434,15 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
           * are writing data for both threads.
           */
          if (type_sz(inst->dst.type) == 8 && inst->exec_size != 8)
+            no_spill[inst->dst.nr] = true;
+
+         /* We can't spill registers that mix 32-bit and 64-bit access (that
+          * contain 64-bit data that is operated on via 32-bit instructions)
+          */
+         unsigned type_size = type_sz(inst->dst.type);
+         if (reg_type_size[inst->dst.nr] == 0)
+            reg_type_size[inst->dst.nr] = type_size;
+         else if (reg_type_size[inst->dst.nr] != type_size)
             no_spill[inst->dst.nr] = true;
       }
 
@@ -448,6 +470,8 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
          break;
       }
    }
+
+   ralloc_free(reg_type_size);
 }
 
 int
