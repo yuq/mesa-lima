@@ -709,8 +709,6 @@ amdgpu_cs_add_const_preamble_ib(struct radeon_winsys_cs *rcs)
    return &cs->const_preamble_ib.base;
 }
 
-#define OUT_CS(cs, value) (cs)->current.buf[(cs)->current.cdw++] = (value)
-
 static int amdgpu_cs_lookup_buffer(struct radeon_winsys_cs *rcs,
                                struct pb_buffer *buf)
 {
@@ -772,14 +770,14 @@ static bool amdgpu_cs_check_space(struct radeon_winsys_cs *rcs, unsigned dw)
 
    /* Pad with NOPs and add INDIRECT_BUFFER packet */
    while ((rcs->current.cdw & 7) != 4)
-      OUT_CS(rcs, 0xffff1000); /* type3 nop packet */
+      radeon_emit(rcs, 0xffff1000); /* type3 nop packet */
 
-   OUT_CS(rcs, PKT3(ib->ib_type == IB_MAIN ? PKT3_INDIRECT_BUFFER_CIK
+   radeon_emit(rcs, PKT3(ib->ib_type == IB_MAIN ? PKT3_INDIRECT_BUFFER_CIK
                                            : PKT3_INDIRECT_BUFFER_CONST, 2, 0));
-   OUT_CS(rcs, va);
-   OUT_CS(rcs, va >> 32);
+   radeon_emit(rcs, va);
+   radeon_emit(rcs, va >> 32);
    new_ptr_ib_size = &rcs->current.buf[rcs->current.cdw];
-   OUT_CS(rcs, S_3F2_CHAIN(1) | S_3F2_VALID(1));
+   radeon_emit(rcs, S_3F2_CHAIN(1) | S_3F2_VALID(1));
 
    assert((rcs->current.cdw & 7) == 0);
    assert(rcs->current.cdw <= rcs->current.max_dw);
@@ -983,34 +981,34 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
       /* pad DMA ring to 8 DWs */
       if (ws->info.chip_class <= SI) {
          while (rcs->current.cdw & 7)
-            OUT_CS(rcs, 0xf0000000); /* NOP packet */
+            radeon_emit(rcs, 0xf0000000); /* NOP packet */
       } else {
          while (rcs->current.cdw & 7)
-            OUT_CS(rcs, 0x00000000); /* NOP packet */
+            radeon_emit(rcs, 0x00000000); /* NOP packet */
       }
       break;
    case RING_GFX:
       /* pad GFX ring to 8 DWs to meet CP fetch alignment requirements */
       if (ws->info.gfx_ib_pad_with_type2) {
          while (rcs->current.cdw & 7)
-            OUT_CS(rcs, 0x80000000); /* type2 nop packet */
+            radeon_emit(rcs, 0x80000000); /* type2 nop packet */
       } else {
          while (rcs->current.cdw & 7)
-            OUT_CS(rcs, 0xffff1000); /* type3 nop packet */
+            radeon_emit(rcs, 0xffff1000); /* type3 nop packet */
       }
 
       /* Also pad the const IB. */
       if (cs->const_ib.ib_mapped)
          while (!cs->const_ib.base.current.cdw || (cs->const_ib.base.current.cdw & 7))
-            OUT_CS(&cs->const_ib.base, 0xffff1000); /* type3 nop packet */
+            radeon_emit(&cs->const_ib.base, 0xffff1000); /* type3 nop packet */
 
       if (cs->const_preamble_ib.ib_mapped)
          while (!cs->const_preamble_ib.base.current.cdw || (cs->const_preamble_ib.base.current.cdw & 7))
-            OUT_CS(&cs->const_preamble_ib.base, 0xffff1000);
+            radeon_emit(&cs->const_preamble_ib.base, 0xffff1000);
       break;
    case RING_UVD:
       while (rcs->current.cdw & 15)
-         OUT_CS(rcs, 0x80000000); /* type2 nop packet */
+         radeon_emit(rcs, 0x80000000); /* type2 nop packet */
       break;
    default:
       break;
