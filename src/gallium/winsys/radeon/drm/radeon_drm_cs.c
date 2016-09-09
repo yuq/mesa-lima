@@ -189,19 +189,6 @@ radeon_drm_cs_create(struct radeon_winsys_ctx *ctx,
     return &cs->base;
 }
 
-static inline void update_reloc(struct drm_radeon_cs_reloc *reloc,
-                                enum radeon_bo_domain rd,
-                                enum radeon_bo_domain wd,
-                                unsigned priority,
-                                enum radeon_bo_domain *added_domains)
-{
-    *added_domains = (rd | wd) & ~(reloc->read_domains | reloc->write_domain);
-
-    reloc->read_domains |= rd;
-    reloc->write_domain |= wd;
-    reloc->flags = MAX2(reloc->flags, priority);
-}
-
 int radeon_lookup_buffer(struct radeon_cs_context *csc, struct radeon_bo *bo)
 {
     unsigned hash = bo->handle & (ARRAY_SIZE(csc->reloc_indices_hashlist)-1);
@@ -230,30 +217,17 @@ int radeon_lookup_buffer(struct radeon_cs_context *csc, struct radeon_bo *bo)
     return -1;
 }
 
-static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
-                                 struct radeon_bo *bo,
-                                 enum radeon_bo_usage usage,
-                                 enum radeon_bo_domain domains,
-                                 unsigned priority,
-                                 enum radeon_bo_domain *added_domains)
+static unsigned radeon_lookup_or_add_buffer(struct radeon_drm_cs *cs,
+                                            struct radeon_bo *bo)
 {
     struct radeon_cs_context *csc = cs->csc;
     struct drm_radeon_cs_reloc *reloc;
     unsigned hash = bo->handle & (ARRAY_SIZE(csc->reloc_indices_hashlist)-1);
-    enum radeon_bo_domain rd = usage & RADEON_USAGE_READ ? domains : 0;
-    enum radeon_bo_domain wd = usage & RADEON_USAGE_WRITE ? domains : 0;
     int i = -1;
-
-    assert(priority < 64);
-    *added_domains = 0;
 
     i = radeon_lookup_buffer(csc, bo);
 
     if (i >= 0) {
-        reloc = &csc->relocs[i];
-        update_reloc(reloc, rd, wd, priority / 4, added_domains);
-        csc->relocs_bo[i].priority_usage |= 1llu << priority;
-
         /* For async DMA, every add_buffer call must add a buffer to the list
          * no matter how many duplicates there are. This is due to the fact
          * the DMA CS checker doesn't use NOP packets for offset patching,
@@ -285,20 +259,19 @@ static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
 
     /* Initialize the new relocation. */
     csc->relocs_bo[csc->num_relocs].bo = NULL;
-    csc->relocs_bo[csc->num_relocs].priority_usage = 1llu << priority;
+    csc->relocs_bo[csc->num_relocs].priority_usage = 0;
     radeon_bo_reference(&csc->relocs_bo[csc->num_relocs].bo, bo);
     p_atomic_inc(&bo->num_cs_references);
     reloc = &csc->relocs[csc->num_relocs];
     reloc->handle = bo->handle;
-    reloc->read_domains = rd;
-    reloc->write_domain = wd;
-    reloc->flags = priority / 4;
+    reloc->read_domains = 0;
+    reloc->write_domain = 0;
+    reloc->flags = 0;
 
     csc->reloc_indices_hashlist[hash] = csc->num_relocs;
 
     csc->chunks[1].length_dw += RELOC_DWORDS;
 
-    *added_domains = rd | wd;
     return csc->num_relocs++;
 }
 
@@ -311,8 +284,17 @@ static unsigned radeon_drm_cs_add_buffer(struct radeon_winsys_cs *rcs,
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct radeon_bo *bo = (struct radeon_bo*)buf;
     enum radeon_bo_domain added_domains;
-    unsigned index = radeon_add_buffer(cs, bo, usage, domains, priority,
-                                       &added_domains);
+    enum radeon_bo_domain rd = usage & RADEON_USAGE_READ ? domains : 0;
+    enum radeon_bo_domain wd = usage & RADEON_USAGE_WRITE ? domains : 0;
+    struct drm_radeon_cs_reloc *reloc;
+    unsigned index = radeon_lookup_or_add_buffer(cs, bo);
+
+    reloc = &cs->csc->relocs[index];
+    added_domains = (rd | wd) & ~(reloc->read_domains | reloc->write_domain);
+    reloc->read_domains |= rd;
+    reloc->write_domain |= wd;
+    reloc->flags = MAX2(reloc->flags, priority);
+    cs->csc->relocs_bo[index].priority_usage |= 1llu << priority;
 
     if (added_domains & RADEON_DOMAIN_VRAM)
         cs->base.used_vram += bo->base.size;
