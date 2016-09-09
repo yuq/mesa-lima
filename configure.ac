@@ -1349,13 +1349,6 @@ if test "x$enable_shader_cache" = "xyes"; then
    AC_DEFINE([ENABLE_SHADER_CACHE], [1], [Enable shader cache])
 fi
 
-case "$host_os" in
-linux*)
-    need_pci_id=yes ;;
-*)
-    need_pci_id=no ;;
-esac
-
 if test "x$enable_dri" = xyes; then
     if test "$enable_static" = yes; then
         AC_MSG_ERROR([Cannot use static libraries for DRI drivers])
@@ -1443,11 +1436,6 @@ xdri)
     GL_PC_LIB_PRIV="-lm $PTHREAD_LIBS $DLOPEN_LIBS"
     ;;
 esac
-
-have_pci_id=no
-if test "$have_libdrm" = yes; then
-    have_pci_id=yes
-fi
 
 # This is outside the case (above) so that it is invoked even for non-GLX
 # builds.
@@ -1555,10 +1543,6 @@ if test "x$enable_dri" = xyes; then
         DEFINES="$DEFINES -DHAVE_ALIAS"
         if test "x$enable_dri3" = xyes; then
             DEFINES="$DEFINES -DHAVE_DRI3"
-        fi
-
-        if test "x$have_pci_id" != xyes; then
-            AC_MSG_ERROR([libdrm >= $LIBDRM_REQUIRED required for building DRI])
         fi
 
         case "$host_cpu" in
@@ -1775,10 +1759,6 @@ if test "x$enable_gbm" = xauto; then
     esac
 fi
 if test "x$enable_gbm" = xyes; then
-    if test "x$need_pci_id$have_pci_id" = xyesno; then
-        AC_MSG_ERROR([gbm requires libdrm >= $LIBDRM_REQUIRED])
-    fi
-
     if test "x$enable_dri" = xyes; then
         if test "x$enable_shared_glapi" = xno; then
             AC_MSG_ERROR([gbm_dri requires --enable-shared-glapi])
@@ -2087,11 +2067,6 @@ for plat in $egl_platforms; do
 		AC_MSG_ERROR([EGL platform '$plat' does not exist])
 		;;
 	esac
-
-        case "$plat$need_pci_id$have_pci_id" in
-                waylandyesno|drmyesno)
-                    AC_MSG_ERROR([cannot build $plat platform without libdrm >= $LIBDRM_REQUIRED]) ;;
-        esac
 done
 
 # libEGL wants to default to the first platform specified in
@@ -2326,12 +2301,6 @@ gallium_require_llvm() {
     fi
 }
 
-gallium_require_drm_loader() {
-    if test "x$need_pci_id$have_pci_id" = xyesno; then
-        AC_MSG_ERROR([Gallium drm loader requires libdrm >= $LIBDRM_REQUIRED])
-    fi
-}
-
 dnl This is for Glamor. Skip this if OpenGL is disabled.
 require_egl_drm() {
     if test "x$enable_opengl" = xno; then
@@ -2431,32 +2400,27 @@ if test -n "$with_gallium_drivers"; then
         xsvga)
             HAVE_GALLIUM_SVGA=yes
             gallium_require_drm "svga"
-            gallium_require_drm_loader
             ;;
         xi915)
             HAVE_GALLIUM_I915=yes
             PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             gallium_require_drm "Gallium i915"
-            gallium_require_drm_loader
             ;;
         xilo)
             HAVE_GALLIUM_ILO=yes
             PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             gallium_require_drm "Gallium i965/ilo"
-            gallium_require_drm_loader
             ;;
         xr300)
             HAVE_GALLIUM_R300=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             gallium_require_drm "Gallium R300"
-            gallium_require_drm_loader
             gallium_require_llvm "Gallium R300"
             ;;
         xr600)
             HAVE_GALLIUM_R600=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             gallium_require_drm "Gallium R600"
-            gallium_require_drm_loader
             if test "x$enable_opencl" = xyes; then
                 radeon_gallium_llvm_check "r600g" "3" "6" "0"
                 LLVM_COMPONENTS="${LLVM_COMPONENTS} bitreader asmparser"
@@ -2467,7 +2431,6 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             gallium_require_drm "radeonsi"
-            gallium_require_drm_loader
             radeon_gallium_llvm_check "radeonsi" "3" "6" "0"
             require_egl_drm "radeonsi"
             ;;
@@ -2475,13 +2438,11 @@ if test -n "$with_gallium_drivers"; then
             HAVE_GALLIUM_NOUVEAU=yes
             PKG_CHECK_MODULES([NOUVEAU], [libdrm_nouveau >= $LIBDRM_NOUVEAU_REQUIRED])
             gallium_require_drm "nouveau"
-            gallium_require_drm_loader
             ;;
         xfreedreno)
             HAVE_GALLIUM_FREEDRENO=yes
             PKG_CHECK_MODULES([FREEDRENO], [libdrm_freedreno >= $LIBDRM_FREEDRENO_REQUIRED])
             gallium_require_drm "freedreno"
-            gallium_require_drm_loader
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
@@ -2513,7 +2474,6 @@ if test -n "$with_gallium_drivers"; then
             HAVE_GALLIUM_VC4=yes
             PKG_CHECK_MODULES([VC4], [libdrm_vc4 >= $LIBDRM_VC4_REQUIRED])
             gallium_require_drm "vc4"
-            gallium_require_drm_loader
 
             PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
                               [USE_VC4_SIMULATOR=yes;
@@ -2523,7 +2483,6 @@ if test -n "$with_gallium_drivers"; then
         xvirgl)
             HAVE_GALLIUM_VIRGL=yes
             gallium_require_drm "virgl"
-            gallium_require_drm_loader
             require_egl_drm "virgl"
             ;;
         *)
