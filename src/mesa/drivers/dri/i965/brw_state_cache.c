@@ -401,7 +401,6 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
    brw->vs.base.prog_data = NULL;
    brw->tcs.base.prog_data = NULL;
    brw->tes.base.prog_data = NULL;
-   brw->gs.prog_data = NULL;
    brw->gs.base.prog_data = NULL;
    brw->wm.prog_data = NULL;
    brw->wm.base.prog_data = NULL;

@@ -211,7 +211,9 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    /* BRW_NEW_VS_PROG_DATA */
    unsigned vs_entry_size_bytes = vs_size * 64;
    /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
-   unsigned gs_size = gs_present ? brw->gs.prog_data->base.urb_entry_size : 1;
+   const struct brw_vue_prog_data *gs_vue_prog_data =
+      brw_vue_prog_data(brw->gs.base.prog_data);
+   unsigned gs_size = gs_present ? gs_vue_prog_data->urb_entry_size : 1;
    unsigned gs_entry_size_bytes = gs_size * 64;
 
    /* BRW_NEW_TCS_PROG_DATA */

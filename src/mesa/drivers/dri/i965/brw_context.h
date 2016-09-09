@@ -1120,7 +1120,6 @@ struct brw_context
 
    struct {
       struct brw_stage_state base;
-      struct brw_gs_prog_data *prog_data;
 
       /**
        * True if the 3DSTATE_GS command most recently emitted to the 3D

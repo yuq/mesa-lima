@@ -128,7 +128,9 @@ upload_urb(struct brw_context *brw)
     */
    unsigned gs_size = vs_size;
    if (brw->geometry_program) {
-      gs_size = brw->gs.prog_data->base.urb_entry_size;
+      const struct brw_vue_prog_data *gs_vue_prog_data =
+         brw_vue_prog_data(brw->gs.base.prog_data);
+      gs_size = gs_vue_prog_data->urb_entry_size;
       assert(gs_size >= 1);
    }
 

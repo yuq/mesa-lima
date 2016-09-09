@@ -191,7 +191,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                     key, sizeof(*key),
                     program, program_size,
                     &prog_data, sizeof(prog_data),
-                    &stage_state->prog_offset, &brw->gs.prog_data);
+                    &stage_state->prog_offset, &brw->gs.base.prog_data);
    ralloc_free(mem_ctx);
 
    return true;
@@ -248,7 +248,6 @@ brw_upload_gs_prog(struct brw_context *brw)
       /* Other state atoms had better not try to access prog_data, since
        * there's no GS program.
        */
-      brw->gs.prog_data = NULL;
       brw->gs.base.prog_data = NULL;
 
       return;
@@ -258,13 +257,13 @@ brw_upload_gs_prog(struct brw_context *brw)
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_GS_PROG,
                          &key, sizeof(key),
-                         &stage_state->prog_offset, &brw->gs.prog_data)) {
+                         &stage_state->prog_offset,
+                         &brw->gs.base.prog_data)) {
       bool success = brw_codegen_gs_prog(brw, current[MESA_SHADER_GEOMETRY],
                                          gp, &key);
       assert(success);
       (void)success;
    }
-   brw->gs.base.prog_data = &brw->gs.prog_data->base.base;
 }
 
 bool
@@ -275,7 +274,7 @@ brw_gs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_gs_prog_key key;
    uint32_t old_prog_offset = brw->gs.base.prog_offset;
-   struct brw_gs_prog_data *old_prog_data = brw->gs.prog_data;
+   struct brw_stage_prog_data *old_prog_data = brw->gs.base.prog_data;
    bool success;
 
    struct gl_geometry_program *gp = (struct gl_geometry_program *) prog;
@@ -289,7 +288,7 @@ brw_gs_precompile(struct gl_context *ctx,
    success = brw_codegen_gs_prog(brw, shader_prog, bgp, &key);
 
    brw->gs.base.prog_offset = old_prog_offset;
-   brw->gs.prog_data = old_prog_data;
+   brw->gs.base.prog_data = old_prog_data;
 
    return success;
 }

@@ -42,7 +42,7 @@ gen6_upload_gs_push_constants(struct brw_context *brw)
 
    if (gp) {
       /* BRW_NEW_GS_PROG_DATA */
-      struct brw_stage_prog_data *prog_data = &brw->gs.prog_data->base.base;
+      struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
 
       _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_GEOMETRY);
       gen6_upload_push_constants(brw, &gp->program.Base, prog_data,
@@ -97,8 +97,12 @@ upload_gs_state(struct brw_context *brw)
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool active = brw->geometry_program;
    /* BRW_NEW_GS_PROG_DATA */
-   const struct brw_vue_prog_data *prog_data = &brw->gs.prog_data->base;
    const struct brw_stage_state *stage_state = &brw->gs.base;
+   const struct brw_stage_prog_data *prog_data = stage_state->prog_data;
+   const struct brw_vue_prog_data *vue_prog_data =
+      brw_vue_prog_data(stage_state->prog_data);
+   const struct brw_gs_prog_data *gs_prog_data =
+      brw_gs_prog_data(stage_state->prog_data);
 
    if (!active || stage_state->push_const_size == 0) {
       /* Disable the push constant buffers. */
@@ -139,10 +143,10 @@ upload_gs_state(struct brw_context *brw)
       OUT_BATCH(GEN6_GS_SPF_MODE | GEN6_GS_VECTOR_MASK_ENABLE |
                 ((ALIGN(stage_state->sampler_count, 4)/4) <<
                  GEN6_GS_SAMPLER_COUNT_SHIFT) |
-                ((prog_data->base.binding_table.size_bytes / 4) <<
+                ((prog_data->binding_table.size_bytes / 4) <<
                  GEN6_GS_BINDING_TABLE_ENTRY_COUNT_SHIFT));
 
-      if (prog_data->base.total_scratch) {
+      if (prog_data->total_scratch) {
          OUT_RELOC(stage_state->scratch_bo,
                    I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
                    ffs(stage_state->per_thread_scratch) - 11);
@@ -150,10 +154,10 @@ upload_gs_state(struct brw_context *brw)
          OUT_BATCH(0); /* no scratch space */
       }
 
-      OUT_BATCH((prog_data->urb_read_length <<
+      OUT_BATCH((vue_prog_data->urb_read_length <<
                  GEN6_GS_URB_READ_LENGTH_SHIFT) |
                 (0 << GEN6_GS_URB_ENTRY_READ_OFFSET_SHIFT) |
-                (prog_data->base.dispatch_grf_start_reg <<
+                (prog_data->dispatch_grf_start_reg <<
                  GEN6_GS_DISPATCH_START_GRF_SHIFT));
 
       OUT_BATCH(((devinfo->max_gs_threads - 1) << GEN6_GS_MAX_THREADS_SHIFT) |
@@ -161,7 +165,7 @@ upload_gs_state(struct brw_context *brw)
                 GEN6_GS_SO_STATISTICS_ENABLE |
                 GEN6_GS_RENDERING_ENABLE);
 
-      if (brw->gs.prog_data->gen6_xfb_enabled) {
+      if (gs_prog_data->gen6_xfb_enabled) {
          /* GEN6_GS_REORDER is equivalent to GEN7_GS_REORDER_TRAILING
           * in gen7. SNB and IVB specs are the same regarding the reordering of
           * TRISTRIP/TRISTRIP_REV vertices and triangle orientation, so we do

@@ -43,9 +43,10 @@ brw_is_drawing_points(const struct brw_context *brw)
       return true;
    }
 
-   if (brw->gs.prog_data) {
+   if (brw->gs.base.prog_data) {
       /* BRW_NEW_GS_PROG_DATA */
-      return brw->gs.prog_data->output_topology == _3DPRIM_POINTLIST;
+      return brw_gs_prog_data(brw->gs.base.prog_data)->output_topology ==
+             _3DPRIM_POINTLIST;
    } else if (brw->tes.base.prog_data) {
       /* BRW_NEW_TES_PROG_DATA */
       return brw_tes_prog_data(brw->tes.base.prog_data)->output_topology ==
@@ -66,9 +67,10 @@ brw_is_drawing_lines(const struct brw_context *brw)
       return true;
    }
 
-   if (brw->gs.prog_data) {
+   if (brw->gs.base.prog_data) {
       /* BRW_NEW_GS_PROG_DATA */
-      return brw->gs.prog_data->output_topology == _3DPRIM_LINESTRIP;
+      return brw_gs_prog_data(brw->gs.base.prog_data)->output_topology ==
+             _3DPRIM_LINESTRIP;
    } else if (brw->tes.base.prog_data) {
       /* BRW_NEW_TES_PROG_DATA */
       return brw_tes_prog_data(brw->tes.base.prog_data)->output_topology ==
