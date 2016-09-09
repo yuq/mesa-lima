@@ -1037,7 +1037,15 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 		}
 		return sizeof(uint32_t);
 	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
-		return 0;
+		if (ret) {
+			uint64_t *max_variable_threads_per_block = ret;
+			if (rscreen->chip_class >= SI && HAVE_LLVM >= 0x309 &&
+			    ir_type == PIPE_SHADER_IR_TGSI)
+				*max_variable_threads_per_block = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
+			else
+				*max_variable_threads_per_block = 0;
+		}
+		return sizeof(uint64_t);
 	}
 
         fprintf(stderr, "unknown PIPE_COMPUTE_CAP %d\n", param);

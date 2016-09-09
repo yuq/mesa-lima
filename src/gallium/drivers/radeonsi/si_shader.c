@@ -1770,16 +1770,21 @@ static void declare_system_value(
 		LLVMValueRef values[3];
 		unsigned i;
 		unsigned *properties = ctx->shader->selector->info.properties;
-		unsigned sizes[3] = {
-			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH],
-			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT],
-			properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH]
-		};
 
-		for (i = 0; i < 3; ++i)
-			values[i] = lp_build_const_int32(gallivm, sizes[i]);
+		if (properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] != 0) {
+			unsigned sizes[3] = {
+				properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH],
+				properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT],
+				properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH]
+			};
 
-		value = lp_build_gather_values(gallivm, values, 3);
+			for (i = 0; i < 3; ++i)
+				values[i] = lp_build_const_int32(gallivm, sizes[i]);
+
+			value = lp_build_gather_values(gallivm, values, 3);
+		} else {
+			value = LLVMGetParam(radeon_bld->main_fn, SI_PARAM_BLOCK_SIZE);
+		}
 		break;
 	}
 
@@ -5680,6 +5685,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	case PIPE_SHADER_COMPUTE:
 		params[SI_PARAM_GRID_SIZE] = v3i32;
+		params[SI_PARAM_BLOCK_SIZE] = v3i32;
 		params[SI_PARAM_BLOCK_ID] = v3i32;
 		last_sgpr = SI_PARAM_BLOCK_ID;
 
@@ -5716,7 +5722,12 @@ static void create_function(struct si_shader_context *ctx)
 		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
 		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH];
 
-		assert(max_work_group_size);
+		if (!max_work_group_size) {
+			/* This is a variable group size compute shader,
+			 * compile it for the maximum possible group size.
+			 */
+			max_work_group_size = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
+		}
 
 		radeon_llvm_add_attribute(ctx->radeon_bld.main_fn,
 		                          "amdgpu-max-work-group-size",
@@ -6653,11 +6664,16 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		unsigned max_vgprs = 256;
 		unsigned max_sgprs = sscreen->b.chip_class >= VI ? 800 : 512;
 		unsigned max_sgprs_per_wave = 128;
-		unsigned min_waves_per_cu =
-			DIV_ROUND_UP(props[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
-				     props[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
-				     props[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH],
-				     wave_size);
+		unsigned max_block_threads;
+
+		if (props[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH])
+			max_block_threads = props[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
+					    props[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
+					    props[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH];
+		else
+			max_block_threads = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
+
+		unsigned min_waves_per_cu = DIV_ROUND_UP(max_block_threads, wave_size);
 		unsigned min_waves_per_simd = DIV_ROUND_UP(min_waves_per_cu, 4);
 
 		max_vgprs = max_vgprs / min_waves_per_simd;

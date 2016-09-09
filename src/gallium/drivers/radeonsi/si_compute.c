@@ -601,11 +601,19 @@ static void si_setup_tgsi_grid(struct si_context *sctx,
 			radeon_emit(cs, 0);
 		}
 	} else {
+		struct si_compute *program = sctx->cs_shader_state.program;
+		bool variable_group_size =
+			program->shader.selector->info.properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] == 0;
 
-		radeon_set_sh_reg_seq(cs, grid_size_reg, 3);
+		radeon_set_sh_reg_seq(cs, grid_size_reg, variable_group_size ? 6 : 3);
 		radeon_emit(cs, info->grid[0]);
 		radeon_emit(cs, info->grid[1]);
 		radeon_emit(cs, info->grid[2]);
+		if (variable_group_size) {
+			radeon_emit(cs, info->block[0]);
+			radeon_emit(cs, info->block[1]);
+			radeon_emit(cs, info->block[2]);
+		}
 	}
 }
 
