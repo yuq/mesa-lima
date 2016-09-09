@@ -88,6 +88,16 @@ gen_spec_find_struct(struct gen_spec *spec, const char *name)
    return NULL;
 }
 
+struct gen_group *
+gen_spec_find_register(struct gen_spec *spec, uint32_t offset)
+{
+   for (int i = 0; i < spec->nregisters; i++)
+      if (spec->registers[i]->register_offset == offset)
+         return spec->registers[i];
+
+   return NULL;
+}
+
 uint32_t
 gen_spec_get_gen(struct gen_spec *spec)
 {
@@ -163,6 +173,19 @@ get_group_offset_count(struct parser_context *ctx, const char *name,
       if (strcmp(atts[i], "count") == 0)
          *count = strtoul(atts[i + 1], &p, 0);
       else if (strcmp(atts[i], "start") == 0)
+         *offset = strtoul(atts[i + 1], &p, 0);
+   }
+   return;
+}
+
+static void
+get_register_offset(const char **atts, uint32_t *offset)
+{
+   char *p;
+   int i;
+
+   for (i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "num") == 0)
          *offset = strtoul(atts[i + 1], &p, 0);
    }
    return;
@@ -288,9 +311,11 @@ start_element(void *data, const char *element_name, const char **atts)
 
       ctx->spec->gen = MAKE_GEN(major, minor);
    } else if (strcmp(element_name, "instruction") == 0 ||
-              strcmp(element_name, "struct") == 0 ||
-              strcmp(element_name, "register") == 0) {
+              strcmp(element_name, "struct") == 0) {
       ctx->group = create_group(ctx, name, atts);
+   } else if (strcmp(element_name, "register") == 0) {
+      ctx->group = create_group(ctx, name, atts);
+      get_register_offset(atts, &ctx->group->register_offset);
    } else if (strcmp(element_name, "group") == 0) {
       get_group_offset_count(ctx, name, atts, &ctx->group->group_offset,
                              &ctx->group->group_count);

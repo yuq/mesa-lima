@@ -39,6 +39,7 @@ struct gen_group *gen_spec_find_struct(struct gen_spec *spec, const char *name);
 struct gen_spec *gen_spec_load(const char *filename);
 uint32_t gen_spec_get_gen(struct gen_spec *spec);
 struct gen_group *gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p);
+struct gen_group *gen_spec_find_register(struct gen_spec *spec, uint32_t offset);
 int gen_group_get_length(struct gen_group *group, const uint32_t *p);
 const char *gen_group_get_name(struct gen_group *group);
 uint32_t gen_group_get_opcode(struct gen_group *group);
@@ -59,6 +60,9 @@ struct gen_group {
 
    uint32_t opcode_mask;
    uint32_t opcode;
+
+   /* Register specific */
+   uint32_t register_offset;
 };
 
 struct gen_type {

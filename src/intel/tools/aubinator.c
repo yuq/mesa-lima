@@ -616,6 +616,18 @@ handle_3dstate_scissor_state_pointers(struct gen_spec *spec, uint32_t *p)
    decode_structure(spec, scissor_rect, gtt + start);
 }
 
+static void
+handle_load_register_imm(struct gen_spec *spec, uint32_t *p)
+{
+   struct gen_group *reg = gen_spec_find_register(spec, p[1]);
+
+   if (reg != NULL) {
+      printf("register %s (0x%x): 0x%x\n",
+             reg->name, reg->register_offset, p[2]);
+      decode_structure(spec, reg, &p[2]);
+   }
+}
+
 #define ARRAY_LENGTH(a) (sizeof (a) / sizeof (a)[0])
 
 #define STATE_BASE_ADDRESS                  0x61010000
@@ -654,6 +666,8 @@ handle_3dstate_scissor_state_pointers(struct gen_spec *spec, uint32_t *p)
 #define _3DSTATE_CC_STATE_POINTERS          0x780e0000
 #define _3DSTATE_SCISSOR_STATE_POINTERS     0x780f0000
 
+#define _MI_LOAD_REGISTER_IMM               0x11000000
+
 struct custom_handler {
    uint32_t opcode;
    void (*handle)(struct gen_spec *spec, uint32_t *p);
@@ -687,7 +701,8 @@ struct custom_handler {
    { _3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP, handle_3dstate_viewport_state_pointers_sf_clip },
    { _3DSTATE_BLEND_STATE_POINTERS, handle_3dstate_blend_state_pointers },
    { _3DSTATE_CC_STATE_POINTERS, handle_3dstate_cc_state_pointers },
-   { _3DSTATE_SCISSOR_STATE_POINTERS, handle_3dstate_scissor_state_pointers }
+   { _3DSTATE_SCISSOR_STATE_POINTERS, handle_3dstate_scissor_state_pointers },
+   { _MI_LOAD_REGISTER_IMM, handle_load_register_imm }
 };
 
 static void
