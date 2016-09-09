@@ -1125,7 +1125,7 @@ void
 fs_visitor::compute_sample_position(fs_reg dst, fs_reg int_sample_pos)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
+   struct brw_wm_prog_data *wm_prog_data = brw_wm_prog_data(this->prog_data);
    assert(dst.type == BRW_REGISTER_TYPE_F);
 
    if (wm_prog_data->persample_dispatch) {
@@ -1293,7 +1293,7 @@ fs_reg *
 fs_visitor::emit_samplemaskin_setup()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
+   struct brw_wm_prog_data *wm_prog_data = brw_wm_prog_data(this->prog_data);
    assert(devinfo->gen >= 6);
 
    fs_reg *reg = new(this->mem_ctx) fs_reg(vgrf(glsl_type::int_type));
@@ -1344,7 +1344,7 @@ fs_visitor::resolve_source_modifiers(const fs_reg &src)
 void
 fs_visitor::emit_discard_jump()
 {
-   assert(((brw_wm_prog_data*) this->prog_data)->uses_kill);
+   assert(brw_wm_prog_data(this->prog_data)->uses_kill);
 
    /* For performance, after a discard, jump to the end of the
     * shader if all relevant channels have been discarded.
@@ -1361,8 +1361,7 @@ fs_visitor::emit_gs_thread_end()
 {
    assert(stage == MESA_SHADER_GEOMETRY);
 
-   struct brw_gs_prog_data *gs_prog_data =
-      (struct brw_gs_prog_data *) prog_data;
+   struct brw_gs_prog_data *gs_prog_data = brw_gs_prog_data(prog_data);
 
    if (gs_compile->control_data_header_size_bits > 0) {
       emit_gs_control_data_bits(this->final_gs_vertex_count);
@@ -1451,7 +1450,7 @@ void
 fs_visitor::calculate_urb_setup()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    memset(prog_data->urb_setup, -1,
@@ -1542,7 +1541,7 @@ void
 fs_visitor::assign_urb_setup()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
 
    int urb_start = payload.num_regs + prog_data->base.curb_read_length;
 
@@ -1609,7 +1608,7 @@ fs_visitor::convert_attr_sources_to_hw_regs(fs_inst *inst)
 void
 fs_visitor::assign_vs_urb_setup()
 {
-   brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
+   struct brw_vs_prog_data *vs_prog_data = brw_vs_prog_data(prog_data);
 
    assert(stage == MESA_SHADER_VERTEX);
 
@@ -1640,7 +1639,7 @@ fs_visitor::assign_tes_urb_setup()
 {
    assert(stage == MESA_SHADER_TESS_EVAL);
 
-   brw_vue_prog_data *vue_prog_data = (brw_vue_prog_data *) prog_data;
+   struct brw_vue_prog_data *vue_prog_data = brw_vue_prog_data(prog_data);
 
    first_non_payload_grf += 8 * vue_prog_data->urb_read_length;
 
@@ -1655,7 +1654,7 @@ fs_visitor::assign_gs_urb_setup()
 {
    assert(stage == MESA_SHADER_GEOMETRY);
 
-   brw_vue_prog_data *vue_prog_data = (brw_vue_prog_data *) prog_data;
+   struct brw_vue_prog_data *vue_prog_data = brw_vue_prog_data(prog_data);
 
    first_non_payload_grf +=
       8 * vue_prog_data->urb_read_length * nir->info.gs.vertices_in;
@@ -1940,7 +1939,7 @@ fs_visitor::assign_constant_locations()
 
    int thread_local_id_index =
       (stage == MESA_SHADER_COMPUTE) ?
-      ((brw_cs_prog_data*)stage_prog_data)->thread_local_id_index : -1;
+      brw_cs_prog_data(stage_prog_data)->thread_local_id_index : -1;
 
    /* First, we walk through the instructions and do two things:
     *
@@ -2085,7 +2084,7 @@ fs_visitor::assign_constant_locations()
    ralloc_free(param);
 
    if (stage == MESA_SHADER_COMPUTE)
-      ((brw_cs_prog_data*)stage_prog_data)->thread_local_id_index =
+      brw_cs_prog_data(stage_prog_data)->thread_local_id_index =
          new_thread_local_id_index;
 }
 
@@ -3597,7 +3596,7 @@ setup_color_payload(const fs_builder &bld, const brw_wm_prog_key *key,
 
 static void
 lower_fb_write_logical_send(const fs_builder &bld, fs_inst *inst,
-                            const brw_wm_prog_data *prog_data,
+                            const struct brw_wm_prog_data *prog_data,
                             const brw_wm_prog_key *key,
                             const fs_visitor::thread_payload &payload)
 {
@@ -4353,7 +4352,7 @@ fs_visitor::lower_logical_sends()
       case FS_OPCODE_FB_WRITE_LOGICAL:
          assert(stage == MESA_SHADER_FRAGMENT);
          lower_fb_write_logical_send(ibld, inst,
-                                     (const brw_wm_prog_data *)prog_data,
+                                     brw_wm_prog_data(prog_data),
                                      (const brw_wm_prog_key *)key,
                                      payload);
          break;
@@ -5432,7 +5431,7 @@ void
 fs_visitor::setup_fs_payload_gen6()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
 
    assert(devinfo->gen >= 6);
 
@@ -5531,10 +5530,8 @@ fs_visitor::setup_gs_payload()
 {
    assert(stage == MESA_SHADER_GEOMETRY);
 
-   struct brw_gs_prog_data *gs_prog_data =
-      (struct brw_gs_prog_data *) prog_data;
-   struct brw_vue_prog_data *vue_prog_data =
-      (struct brw_vue_prog_data *) prog_data;
+   struct brw_gs_prog_data *gs_prog_data = brw_gs_prog_data(prog_data);
+   struct brw_vue_prog_data *vue_prog_data = brw_vue_prog_data(prog_data);
 
    /* R0: thread header, R1: output URB handles */
    payload.num_regs = 2;
@@ -5942,8 +5939,7 @@ fs_visitor::run_tcs_single_patch()
 {
    assert(stage == MESA_SHADER_TESS_CTRL);
 
-   struct brw_tcs_prog_data *tcs_prog_data =
-      (struct brw_tcs_prog_data *) prog_data;
+   struct brw_tcs_prog_data *tcs_prog_data = brw_tcs_prog_data(prog_data);
 
    /* r1-r4 contain the ICP handles. */
    payload.num_regs = 5;
@@ -6104,7 +6100,7 @@ fs_visitor::run_gs()
 bool
 fs_visitor::run_fs(bool allow_spilling, bool do_rep_send)
 {
-   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
+   struct brw_wm_prog_data *wm_prog_data = brw_wm_prog_data(this->prog_data);
    brw_wm_prog_key *wm_key = (brw_wm_prog_key *) this->key;
 
    assert(stage == MESA_SHADER_FRAGMENT);
@@ -6598,8 +6594,7 @@ static void
 cs_fill_push_const_info(const struct gen_device_info *devinfo,
                         struct brw_cs_prog_data *cs_prog_data)
 {
-   const struct brw_stage_prog_data *prog_data =
-      (struct brw_stage_prog_data*) cs_prog_data;
+   const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
    bool fill_thread_id =
       cs_prog_data->thread_local_id_index >= 0 &&
       cs_prog_data->thread_local_id_index < (int)prog_data->nr_params;

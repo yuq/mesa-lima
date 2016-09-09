@@ -731,6 +731,23 @@ struct brw_gs_prog_data
    unsigned char transform_feedback_swizzles[64 /* BRW_MAX_SOL_BINDINGS */];
 };
 
+#define DEFINE_PROG_DATA_DOWNCAST(stage)                       \
+static inline struct brw_##stage##_prog_data *                 \
+brw_##stage##_prog_data(struct brw_stage_prog_data *prog_data) \
+{                                                              \
+   return (struct brw_##stage##_prog_data *) prog_data;        \
+}
+DEFINE_PROG_DATA_DOWNCAST(vue)
+DEFINE_PROG_DATA_DOWNCAST(vs)
+DEFINE_PROG_DATA_DOWNCAST(tcs)
+DEFINE_PROG_DATA_DOWNCAST(tes)
+DEFINE_PROG_DATA_DOWNCAST(gs)
+DEFINE_PROG_DATA_DOWNCAST(wm)
+DEFINE_PROG_DATA_DOWNCAST(cs)
+DEFINE_PROG_DATA_DOWNCAST(ff_gs)
+DEFINE_PROG_DATA_DOWNCAST(clip)
+DEFINE_PROG_DATA_DOWNCAST(sf)
+#undef DEFINE_PROG_DATA_DOWNCAST
 
 /** @} */
 

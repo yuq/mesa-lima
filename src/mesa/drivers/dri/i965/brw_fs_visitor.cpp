@@ -39,7 +39,7 @@ fs_visitor::emit_vs_system_value(int location)
       fs_reg(ATTR, 4 * (_mesa_bitcount_64(nir->info.inputs_read) +
                         _mesa_bitcount_64(nir->info.double_inputs_read)),
              BRW_REGISTER_TYPE_D);
-   brw_vs_prog_data *vs_prog_data = (brw_vs_prog_data *) prog_data;
+   struct brw_vs_prog_data *vs_prog_data = brw_vs_prog_data(prog_data);
 
    switch (location) {
    case SYSTEM_VALUE_BASE_VERTEX:
@@ -160,7 +160,7 @@ fs_visitor::emit_dummy_fs()
    /* Tell the SF we don't have any inputs.  Gen4-5 require at least one
     * varying to avoid GPU hangs, so set that.
     */
-   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) this->prog_data;
+   struct brw_wm_prog_data *wm_prog_data = brw_wm_prog_data(this->prog_data);
    wm_prog_data->num_varying_inputs = devinfo->gen < 6 ? 1 : 0;
    memset(wm_prog_data->urb_setup, -1,
           sizeof(wm_prog_data->urb_setup[0]) * VARYING_SLOT_MAX);
@@ -184,7 +184,7 @@ struct brw_reg
 fs_visitor::interp_reg(int location, int channel)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
    int regnr = prog_data->urb_setup[location] * 2 + channel / 2;
    int stride = (channel & 1) * 4;
 
@@ -308,7 +308,7 @@ fs_visitor::emit_interpolation_setup_gen6()
    this->wpos_w = vgrf(glsl_type::float_type);
    abld.emit(SHADER_OPCODE_RCP, this->wpos_w, this->pixel_w);
 
-   brw_wm_prog_data *wm_prog_data = (brw_wm_prog_data *) prog_data;
+   struct brw_wm_prog_data *wm_prog_data = brw_wm_prog_data(prog_data);
    uint32_t centroid_modes = wm_prog_data->barycentric_interp_modes &
       (1 << BRW_BARYCENTRIC_PERSPECTIVE_CENTROID |
        1 << BRW_BARYCENTRIC_NONPERSPECTIVE_CENTROID);
@@ -406,7 +406,7 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
                                  fs_reg src0_alpha, unsigned components)
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
 
    /* Hand over gl_FragDepth or the payload depth. */
    const fs_reg dst_depth = (payload.dest_depth_reg ?
@@ -445,7 +445,7 @@ void
 fs_visitor::emit_fb_writes()
 {
    assert(stage == MESA_SHADER_FRAGMENT);
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
    brw_wm_prog_key *key = (brw_wm_prog_key*) this->key;
 
    fs_inst *inst = NULL;
@@ -533,8 +533,7 @@ fs_visitor::setup_uniform_clipplane_values(gl_clip_plane *clip_planes)
  */
 void fs_visitor::compute_clip_distance(gl_clip_plane *clip_planes)
 {
-   struct brw_vue_prog_data *vue_prog_data =
-      (struct brw_vue_prog_data *) prog_data;
+   struct brw_vue_prog_data *vue_prog_data = brw_vue_prog_data(prog_data);
    const struct brw_vs_prog_key *key =
       (const struct brw_vs_prog_key *) this->key;
 
@@ -590,7 +589,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
    int slot, urb_offset, length;
    int starting_urb_offset = 0;
    const struct brw_vue_prog_data *vue_prog_data =
-      (const struct brw_vue_prog_data *) this->prog_data;
+      brw_vue_prog_data(this->prog_data);
    const struct brw_vs_prog_key *vs_key =
       (const struct brw_vs_prog_key *) this->key;
    const GLbitfield64 psiz_mask =
@@ -639,7 +638,7 @@ fs_visitor::emit_urb_writes(const fs_reg &gs_vertex_count)
 
    if (stage == MESA_SHADER_GEOMETRY) {
       const struct brw_gs_prog_data *gs_prog_data =
-         (const struct brw_gs_prog_data *) this->prog_data;
+         brw_gs_prog_data(this->prog_data);
 
       /* We need to increment the Global Offset to skip over the control data
        * header and the extra "Vertex Count" field (1 HWord) at the beginning
@@ -901,8 +900,7 @@ fs_visitor::init()
    }
 
    if (stage == MESA_SHADER_COMPUTE) {
-      const brw_cs_prog_data *cs_prog_data =
-         (const brw_cs_prog_data *) prog_data;
+      const struct brw_cs_prog_data *cs_prog_data = brw_cs_prog_data(prog_data);
       unsigned size = cs_prog_data->local_size[0] *
                       cs_prog_data->local_size[1] *
                       cs_prog_data->local_size[2];

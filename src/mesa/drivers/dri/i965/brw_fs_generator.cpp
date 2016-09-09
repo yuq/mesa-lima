@@ -198,7 +198,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
 {
    uint32_t msg_control;
 
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
 
    if (devinfo->gen < 6) {
       brw_push_insn_state(p);
@@ -246,7 +246,7 @@ fs_generator::fire_fb_write(fs_inst *inst,
 void
 fs_generator::generate_fb_write(fs_inst *inst, struct brw_reg payload)
 {
-   brw_wm_prog_data *prog_data = (brw_wm_prog_data*) this->prog_data;
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
    const brw_wm_prog_key * const key = (brw_wm_prog_key * const) this->key;
    struct brw_reg implied_header;
 
@@ -357,8 +357,7 @@ fs_generator::generate_fb_read(fs_inst *inst, struct brw_reg dst,
                                struct brw_reg payload)
 {
    assert(inst->size_written % REG_SIZE == 0);
-   brw_wm_prog_data *prog_data =
-      reinterpret_cast<brw_wm_prog_data *>(this->prog_data);
+   struct brw_wm_prog_data *prog_data = brw_wm_prog_data(this->prog_data);
    const unsigned surf_index =
       prog_data->binding_table.render_target_start + inst->target;
 

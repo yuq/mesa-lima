@@ -1637,7 +1637,7 @@ emit_pixel_interpolater_send(const fs_builder &bld,
                              glsl_interp_mode interpolation)
 {
    struct brw_wm_prog_data *wm_prog_data =
-      (struct brw_wm_prog_data *) bld.shader->stage_prog_data;
+      brw_wm_prog_data(bld.shader->stage_prog_data);
    fs_inst *inst;
    fs_reg payload;
    int mlen;
@@ -1683,8 +1683,7 @@ fs_visitor::emit_gs_end_primitive(const nir_src &vertex_count_nir_src)
 {
    assert(stage == MESA_SHADER_GEOMETRY);
 
-   struct brw_gs_prog_data *gs_prog_data =
-      (struct brw_gs_prog_data *) prog_data;
+   struct brw_gs_prog_data *gs_prog_data = brw_gs_prog_data(prog_data);
 
    if (gs_compile->control_data_header_size_bits == 0)
       return;
@@ -1745,8 +1744,7 @@ fs_visitor::emit_gs_control_data_bits(const fs_reg &vertex_count)
    assert(stage == MESA_SHADER_GEOMETRY);
    assert(gs_compile->control_data_bits_per_vertex != 0);
 
-   struct brw_gs_prog_data *gs_prog_data =
-      (struct brw_gs_prog_data *) prog_data;
+   struct brw_gs_prog_data *gs_prog_data = brw_gs_prog_data(prog_data);
 
    const fs_builder abld = bld.annotate("emit control data bits");
    const fs_builder fwa_bld = bld.exec_all();
@@ -1901,8 +1899,7 @@ fs_visitor::emit_gs_vertex(const nir_src &vertex_count_nir_src,
 {
    assert(stage == MESA_SHADER_GEOMETRY);
 
-   struct brw_gs_prog_data *gs_prog_data =
-      (struct brw_gs_prog_data *) prog_data;
+   struct brw_gs_prog_data *gs_prog_data = brw_gs_prog_data(prog_data);
 
    fs_reg vertex_count = get_nir_src(vertex_count_nir_src);
    vertex_count.type = BRW_REGISTER_TYPE_UD;
@@ -2000,7 +1997,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
                                unsigned num_components,
                                unsigned first_component)
 {
-   struct brw_gs_prog_data *gs_prog_data = (struct brw_gs_prog_data *) prog_data;
+   struct brw_gs_prog_data *gs_prog_data = brw_gs_prog_data(prog_data);
 
    nir_const_value *vertex_const = nir_src_as_const_value(vertex_src);
    nir_const_value *offset_const = nir_src_as_const_value(offset_src);
@@ -2357,8 +2354,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
 {
    assert(stage == MESA_SHADER_TESS_CTRL);
    struct brw_tcs_prog_key *tcs_key = (struct brw_tcs_prog_key *) key;
-   struct brw_tcs_prog_data *tcs_prog_data =
-      (struct brw_tcs_prog_data *) prog_data;
+   struct brw_tcs_prog_data *tcs_prog_data = brw_tcs_prog_data(prog_data);
 
    fs_reg dst;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -2874,7 +2870,7 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
                                    nir_intrinsic_instr *instr)
 {
    assert(stage == MESA_SHADER_TESS_EVAL);
-   struct brw_tes_prog_data *tes_prog_data = (struct brw_tes_prog_data *) prog_data;
+   struct brw_tes_prog_data *tes_prog_data = brw_tes_prog_data(prog_data);
 
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -3078,7 +3074,7 @@ fs_visitor::nir_emit_gs_intrinsic(const fs_builder &bld,
    switch (instr->intrinsic) {
    case nir_intrinsic_load_primitive_id:
       assert(stage == MESA_SHADER_GEOMETRY);
-      assert(((struct brw_gs_prog_data *)prog_data)->include_primitive_id);
+      assert(brw_gs_prog_data(prog_data)->include_primitive_id);
       bld.MOV(retype(dest, BRW_REGISTER_TYPE_UD),
               retype(fs_reg(brw_vec8_grf(2, 0)), BRW_REGISTER_TYPE_UD));
       break;
@@ -3154,8 +3150,8 @@ fs_visitor::emit_non_coherent_fb_read(const fs_builder &bld, const fs_reg &dst,
    const brw_wm_prog_key *wm_key =
       reinterpret_cast<const brw_wm_prog_key *>(key);
    assert(!wm_key->coherent_fb_fetch);
-   const brw_wm_prog_data *wm_prog_data =
-      reinterpret_cast<const brw_wm_prog_data *>(stage_prog_data);
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(stage_prog_data);
 
    /* Calculate the surface index relative to the start of the texture binding
     * table block, since that's what the texturing messages expect.
@@ -3599,8 +3595,7 @@ fs_visitor::nir_emit_cs_intrinsic(const fs_builder &bld,
                                   nir_intrinsic_instr *instr)
 {
    assert(stage == MESA_SHADER_COMPUTE);
-   struct brw_cs_prog_data *cs_prog_data =
-      (struct brw_cs_prog_data *) prog_data;
+   struct brw_cs_prog_data *cs_prog_data = brw_cs_prog_data(prog_data);
 
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
@@ -3804,7 +3799,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
    case nir_intrinsic_atomic_counter_comp_swap: {
       if (stage == MESA_SHADER_FRAGMENT &&
           instr->intrinsic != nir_intrinsic_atomic_counter_read)
-         ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+         brw_wm_prog_data(prog_data)->has_side_effects = true;
 
       /* Get some metadata from the image intrinsic. */
       const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
@@ -3852,7 +3847,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
 
       if (stage == MESA_SHADER_FRAGMENT &&
           instr->intrinsic != nir_intrinsic_image_load)
-         ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+         brw_wm_prog_data(prog_data)->has_side_effects = true;
 
       /* Get the referenced image variable and type. */
       const nir_variable *var = instr->variables[0]->var;
@@ -4163,7 +4158,7 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
       assert(devinfo->gen >= 7);
 
       if (stage == MESA_SHADER_FRAGMENT)
-         ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+         brw_wm_prog_data(prog_data)->has_side_effects = true;
 
       /* Block index */
       fs_reg surf_index;
@@ -4371,7 +4366,7 @@ fs_visitor::nir_emit_ssbo_atomic(const fs_builder &bld,
                                  int op, nir_intrinsic_instr *instr)
 {
    if (stage == MESA_SHADER_FRAGMENT)
-      ((struct brw_wm_prog_data *)prog_data)->has_side_effects = true;
+      brw_wm_prog_data(prog_data)->has_side_effects = true;
 
    fs_reg dest;
    if (nir_intrinsic_infos[instr->intrinsic].has_dest)
