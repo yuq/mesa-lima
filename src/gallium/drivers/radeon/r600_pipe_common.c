@@ -1081,11 +1081,8 @@ static void r600_query_memory_info(struct pipe_screen *screen,
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ)
 {
-	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-
 	if (templ->target == PIPE_BUFFER) {
-		return r600_buffer_create(screen, templ,
-					  rscreen->info.gart_page_size);
+		return r600_buffer_create(screen, templ, 256);
 	} else {
 		return r600_texture_create(screen, templ);
 	}
