@@ -1851,7 +1851,7 @@ vec4_visitor::convert_to_hw_regs()
          struct brw_reg reg;
          switch (src.file) {
          case VGRF:
-            reg = brw_vec8_grf(src.nr + src.offset / REG_SIZE, 0);
+            reg = byte_offset(brw_vec8_grf(src.nr, 0), src.offset);
             reg.type = src.type;
             reg.swizzle = src.swizzle;
             reg.abs = src.abs;
@@ -1859,9 +1859,10 @@ vec4_visitor::convert_to_hw_regs()
             break;
 
          case UNIFORM:
-            reg = stride(brw_vec4_grf(prog_data->base.dispatch_grf_start_reg +
-                                      (src.nr + src.offset / 16) / 2,
-                                      ((src.nr + src.offset / 16) % 2) * 4),
+            reg = stride(byte_offset(brw_vec4_grf(
+                                        prog_data->base.dispatch_grf_start_reg +
+                                        src.nr / 2, src.nr % 2 * 4),
+                                     src.offset),
                          0, 4, 1);
             reg.type = src.type;
             reg.swizzle = src.swizzle;
@@ -1907,14 +1908,14 @@ vec4_visitor::convert_to_hw_regs()
 
       switch (inst->dst.file) {
       case VGRF:
-         reg = brw_vec8_grf(dst.nr + dst.offset / REG_SIZE, 0);
+         reg = byte_offset(brw_vec8_grf(dst.nr, 0), dst.offset);
          reg.type = dst.type;
          reg.writemask = dst.writemask;
          break;
 
       case MRF:
-         assert(((dst.nr + dst.offset / REG_SIZE) & ~BRW_MRF_COMPR4) < BRW_MAX_MRF(devinfo->gen));
-         reg = brw_message_reg(dst.nr + dst.offset / REG_SIZE);
+         reg = byte_offset(brw_message_reg(dst.nr), dst.offset);
+         assert((reg.nr & ~BRW_MRF_COMPR4) < BRW_MAX_MRF(devinfo->gen));
          reg.type = dst.type;
          reg.writemask = dst.writemask;
          break;
