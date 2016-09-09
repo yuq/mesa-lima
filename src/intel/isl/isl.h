@@ -728,7 +728,26 @@ struct isl_format_layout {
 struct isl_tile_info {
    enum isl_tiling tiling;
 
-   /** The logical size of the tile in units of surface elements
+   /* The size (in bits per block) of a single surface element
+    *
+    * For surfaces with power-of-two formats, this is the same as
+    * isl_format_layout::bpb.  For non-power-of-two formats it may be smaller.
+    * The logical_extent_el field is in terms of elements of this size.
+    *
+    * For example, consider ISL_FORMAT_R32G32B32_FLOAT for which
+    * isl_format_layout::bpb is 96 (a non-power-of-two).  In this case, none
+    * of the tiling formats can actually hold an integer number of 96-bit
+    * surface elements so isl_tiling_get_info returns an isl_tile_info for a
+    * 32-bit element size.  It is the responsibility of the caller to
+    * recognize that 32 != 96 ad adjust accordingly.  For instance, to compute
+    * the width of a surface in tiles, you would do:
+    *
+    * width_tl = DIV_ROUND_UP(width_el * (format_bpb / tile_info.format_bpb),
+    *                         tile_info.logical_extent_el.width);
+    */
+   uint32_t format_bpb;
+
+   /** The logical size of the tile in units of format_bpb size elements
     *
     * This field determines how a given surface is cut up into tiles.  It is
     * used to compute the size of a surface in tiles and can be used to
