@@ -125,13 +125,13 @@ static void radeon_cs_context_cleanup(struct radeon_cs_context *csc)
 {
     unsigned i;
 
-    for (i = 0; i < csc->crelocs; i++) {
+    for (i = 0; i < csc->num_relocs; i++) {
         p_atomic_dec(&csc->relocs_bo[i].bo->num_cs_references);
         radeon_bo_reference(&csc->relocs_bo[i].bo, NULL);
     }
 
-    csc->crelocs = 0;
-    csc->validated_crelocs = 0;
+    csc->num_relocs = 0;
+    csc->num_validated_relocs = 0;
     csc->chunks[0].length_dw = 0;
     csc->chunks[1].length_dw = 0;
 
@@ -212,7 +212,7 @@ int radeon_lookup_buffer(struct radeon_cs_context *csc, struct radeon_bo *bo)
         return i;
 
     /* Hash collision, look for the BO in the list of relocs linearly. */
-    for (i = csc->crelocs - 1; i >= 0; i--) {
+    for (i = csc->num_relocs - 1; i >= 0; i--) {
         if (csc->relocs_bo[i].bo == bo) {
             /* Put this reloc in the hash list.
              * This will prevent additional hash collisions if there are
@@ -270,36 +270,36 @@ static unsigned radeon_add_buffer(struct radeon_drm_cs *cs,
     }
 
     /* New relocation, check if the backing array is large enough. */
-    if (csc->crelocs >= csc->nrelocs) {
+    if (csc->num_relocs >= csc->max_relocs) {
         uint32_t size;
-        csc->nrelocs = MAX2(csc->nrelocs + 16, (unsigned)(csc->nrelocs * 1.3));
+        csc->max_relocs = MAX2(csc->max_relocs + 16, (unsigned)(csc->max_relocs * 1.3));
 
-        size = csc->nrelocs * sizeof(csc->relocs_bo[0]);
+        size = csc->max_relocs * sizeof(csc->relocs_bo[0]);
         csc->relocs_bo = realloc(csc->relocs_bo, size);
 
-        size = csc->nrelocs * sizeof(struct drm_radeon_cs_reloc);
+        size = csc->max_relocs * sizeof(struct drm_radeon_cs_reloc);
         csc->relocs = realloc(csc->relocs, size);
 
         csc->chunks[1].chunk_data = (uint64_t)(uintptr_t)csc->relocs;
     }
 
     /* Initialize the new relocation. */
-    csc->relocs_bo[csc->crelocs].bo = NULL;
-    csc->relocs_bo[csc->crelocs].priority_usage = 1llu << priority;
-    radeon_bo_reference(&csc->relocs_bo[csc->crelocs].bo, bo);
+    csc->relocs_bo[csc->num_relocs].bo = NULL;
+    csc->relocs_bo[csc->num_relocs].priority_usage = 1llu << priority;
+    radeon_bo_reference(&csc->relocs_bo[csc->num_relocs].bo, bo);
     p_atomic_inc(&bo->num_cs_references);
-    reloc = &csc->relocs[csc->crelocs];
+    reloc = &csc->relocs[csc->num_relocs];
     reloc->handle = bo->handle;
     reloc->read_domains = rd;
     reloc->write_domain = wd;
     reloc->flags = priority / 4;
 
-    csc->reloc_indices_hashlist[hash] = csc->crelocs;
+    csc->reloc_indices_hashlist[hash] = csc->num_relocs;
 
     csc->chunks[1].length_dw += RELOC_DWORDS;
 
     *added_domains = rd | wd;
-    return csc->crelocs++;
+    return csc->num_relocs++;
 }
 
 static unsigned radeon_drm_cs_add_buffer(struct radeon_winsys_cs *rcs,
@@ -338,21 +338,21 @@ static bool radeon_drm_cs_validate(struct radeon_winsys_cs *rcs)
         cs->base.used_vram < cs->ws->info.vram_size * 0.8;
 
     if (status) {
-        cs->csc->validated_crelocs = cs->csc->crelocs;
+        cs->csc->num_validated_relocs = cs->csc->num_relocs;
     } else {
         /* Remove lately-added buffers. The validation failed with them
          * and the CS is about to be flushed because of that. Keep only
          * the already-validated buffers. */
         unsigned i;
 
-        for (i = cs->csc->validated_crelocs; i < cs->csc->crelocs; i++) {
+        for (i = cs->csc->num_validated_relocs; i < cs->csc->num_relocs; i++) {
             p_atomic_dec(&cs->csc->relocs_bo[i].bo->num_cs_references);
             radeon_bo_reference(&cs->csc->relocs_bo[i].bo, NULL);
         }
-        cs->csc->crelocs = cs->csc->validated_crelocs;
+        cs->csc->num_relocs = cs->csc->num_validated_relocs;
 
         /* Flush if there are any relocs. Clean up otherwise. */
-        if (cs->csc->crelocs) {
+        if (cs->csc->num_relocs) {
             cs->flush_cs(cs->flush_data, RADEON_FLUSH_ASYNC, NULL);
         } else {
             radeon_cs_context_cleanup(cs->csc);
@@ -381,13 +381,13 @@ static unsigned radeon_drm_cs_get_buffer_list(struct radeon_winsys_cs *rcs,
     int i;
 
     if (list) {
-        for (i = 0; i < cs->csc->crelocs; i++) {
+        for (i = 0; i < cs->csc->num_relocs; i++) {
             list[i].bo_size = cs->csc->relocs_bo[i].bo->base.size;
             list[i].vm_address = cs->csc->relocs_bo[i].bo->va;
             list[i].priority_usage = cs->csc->relocs_bo[i].priority_usage;
         }
     }
-    return cs->csc->crelocs;
+    return cs->csc->num_relocs;
 }
 
 void radeon_drm_cs_emit_ioctl_oneshot(void *job, int thread_index)
@@ -414,7 +414,7 @@ void radeon_drm_cs_emit_ioctl_oneshot(void *job, int thread_index)
         }
     }
 
-    for (i = 0; i < csc->crelocs; i++)
+    for (i = 0; i < csc->num_relocs; i++)
         p_atomic_dec(&csc->relocs_bo[i].bo->num_active_ioctls);
 
     radeon_cs_context_cleanup(csc);
@@ -495,13 +495,13 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
 
     /* If the CS is not empty or overflowed, emit it in a separate thread. */
     if (cs->base.current.cdw && cs->base.current.cdw <= cs->base.current.max_dw && !debug_get_option_noop()) {
-        unsigned i, crelocs;
+        unsigned i, num_relocs;
 
-        crelocs = cs->cst->crelocs;
+        num_relocs = cs->cst->num_relocs;
 
         cs->cst->chunks[0].length_dw = cs->base.current.cdw;
 
-        for (i = 0; i < crelocs; i++) {
+        for (i = 0; i < num_relocs; i++) {
             /* Update the number of active asynchronous CS ioctls for the buffer. */
             p_atomic_inc(&cs->cst->relocs_bo[i].bo->num_active_ioctls);
         }

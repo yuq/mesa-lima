@@ -44,9 +44,9 @@ struct radeon_cs_context {
     uint32_t                    flags[2];
 
     /* Buffers. */
-    unsigned                    nrelocs;
-    unsigned                    crelocs;
-    unsigned                    validated_crelocs;
+    unsigned                    max_relocs;
+    unsigned                    num_relocs;
+    unsigned                    num_validated_relocs;
     struct radeon_bo_item       *relocs_bo;
     struct drm_radeon_cs_reloc  *relocs;
 
