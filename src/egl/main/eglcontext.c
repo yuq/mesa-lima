@@ -538,9 +538,14 @@ _eglQueryContext(_EGLDriver *drv, _EGLDisplay *dpy, _EGLContext *c,
 
    switch (attribute) {
    case EGL_CONFIG_ID:
-      if (!c->Config)
-         return _eglError(EGL_BAD_ATTRIBUTE, "eglQueryContext");
-      *value = c->Config->ConfigID;
+      /*
+       * From EGL_KHR_no_config_context:
+       *
+       *    "Querying EGL_CONFIG_ID returns the ID of the EGLConfig with
+       *     respect to which the context was created, or zero if created
+       *     without respect to an EGLConfig."
+       */
+      *value = c->Config ? c->Config->ConfigID : 0;
       break;
    case EGL_CONTEXT_CLIENT_VERSION:
       *value = c->ClientMajorVersion;
