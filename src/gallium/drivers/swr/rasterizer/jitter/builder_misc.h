@@ -165,3 +165,4 @@ Value* CreateEntryAlloca(Function* pFunc, Type* pType);
 // Static stack allocations for scatter operations
 Value* pScatterStackSrc{ nullptr };
 Value* pScatterStackOffsets{ nullptr };
+
