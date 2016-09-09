@@ -123,6 +123,7 @@ const struct brw_tracked_state gen8_ps_extra = {
       .mesa  = _NEW_BUFFERS | _NEW_COLOR,
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
+               BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_ps_extra,
@@ -282,7 +283,6 @@ const struct brw_tracked_state gen8_ps_state = {
       .mesa  = _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_FRAGMENT_PROGRAM |
                BRW_NEW_FS_PROG_DATA,
    },
    .emit = upload_ps_state,
