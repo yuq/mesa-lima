@@ -593,6 +593,11 @@ remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
        */
       if (var->data.is_unmatched_generic_inout && !var->data.is_xfb_only) {
          assert(var->data.mode != ir_var_temporary);
+
+         /* Assign zeros to demoted inputs to allow more optimizations. */
+         if (var->data.mode == ir_var_shader_in && !var->constant_value)
+            var->constant_value = ir_constant::zero(var, var->type);
+
          var->data.mode = ir_var_auto;
       }
    }
