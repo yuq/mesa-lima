@@ -1,45 +1,7 @@
 /*
  * Copyright (C) 2013 Rob Clark <robclark@freedesktop.org>
- *
- * This code is derived from the following files.
- *
- * * src/glx/dri3_common.c
- * Copyright © 2013 Keith Packard
- *
- * * src/egl/drivers/dri2/common.c
- * * src/gbm/backends/dri/driver_name.c
- * Copyright © 2011 Intel Corporation
- *
- * Authors:
- *    Kristian Høgsberg <krh@bitplanet.net>
- *    Benjamin Franzke <benjaminfranzke@googlemail.com>
- *
- * * src/gallium/targets/egl-static/egl.c
- * Copyright (C) 2010-2011 LunarG Inc.
- *
- * Authors:
- *    Chia-I Wu <olv@lunarg.com>
- *
- * * src/gallium/state_trackers/egl/drm/native_drm.c
- * Copyright (C) 2010 Chia-I Wu <olv@0xlab.org>
- *
- * * src/egl/drivers/dri2/platform_android.c
- *
- * Copyright (C) 2010-2011 Chia-I Wu <olvaffe@gmail.com>
- * Copyright (C) 2010-2011 LunarG Inc.
- *
- * Based on platform_x11, which has
- *
- * Copyright © 2011 Intel Corporation
- *
- * * src/gallium/auxiliary/pipe-loader/pipe_loader_drm.c
- * Copyright 2011 Intel Corporation
- * Copyright 2012 Francisco Jerez
- * All Rights Reserved.
- *
- * Authors:
- *    Kristian Høgsberg <krh@bitplanet.net>
- *    Benjamin Franzke <benjaminfranzke@googlemail.com>
+ * Copyright (C) 2014-2016 Emil Velikov <emil.l.velikov@gmail.com>
+ * Copyright (C) 2016 Intel Corporation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
