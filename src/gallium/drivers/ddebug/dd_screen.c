@@ -243,7 +243,7 @@ dd_screen_resource_get_handle(struct pipe_screen *_screen,
                               unsigned usage)
 {
    struct pipe_screen *screen = dd_screen(_screen)->screen;
-   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+   struct pipe_context *pipe = _pipe ? dd_context(_pipe)->pipe : NULL;
 
    return screen->resource_get_handle(screen, pipe, resource, handle, usage);
 }
