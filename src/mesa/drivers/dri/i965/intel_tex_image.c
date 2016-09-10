@@ -40,7 +40,6 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
 {
    GLuint lastLevel;
    int width, height, depth;
-   GLuint i;
 
    intel_get_image_dims(&intelImage->base.Base, &width, &height, &depth);
 
