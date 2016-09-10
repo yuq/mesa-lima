@@ -1036,6 +1036,8 @@ static int r600_get_compute_param(struct pipe_screen *screen,
 			*subgroup_size = r600_wavefront_size(rscreen->family);
 		}
 		return sizeof(uint32_t);
+	case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
+		return 0;
 	}
 
         fprintf(stderr, "unknown PIPE_COMPUTE_CAP %d\n", param);

@@ -498,6 +498,10 @@ pipe_screen::get_compute_param.
   threads. Also known as wavefront size, warp size or SIMD width.
 * ``PIPE_COMPUTE_CAP_ADDRESS_BITS``: The default compute device address space
   size specified as an unsigned integer value in bits.
+* ``PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK``: Maximum variable number
+  of threads that a single block can contain. This is similar to
+  PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK, except that the variable size is not
+  known a compile-time but at dispatch-time.
 
 .. _pipe_bind:
 

@@ -303,6 +303,8 @@ ilo_get_compute_param(struct pipe_screen *screen,
       ptr = &val.subgroup_size;
       size = sizeof(val.subgroup_size);
       break;
+   case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
+      /* fallthrough */
    default:
       ptr = NULL;
       size = 0;

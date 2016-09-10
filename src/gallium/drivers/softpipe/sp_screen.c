@@ -522,6 +522,7 @@ softpipe_get_compute_param(struct pipe_screen *_screen,
    case PIPE_COMPUTE_CAP_IMAGES_SUPPORTED:
    case PIPE_COMPUTE_CAP_SUBGROUP_SIZE:
    case PIPE_COMPUTE_CAP_ADDRESS_BITS:
+   case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
       break;
    }
    return 0;
