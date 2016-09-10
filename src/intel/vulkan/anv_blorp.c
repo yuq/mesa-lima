@@ -537,6 +537,24 @@ do_buffer_copy(struct blorp_batch *batch,
               0, 0, 0, 0, width, height);
 }
 
+/**
+ * Returns the greatest common divisor of a and b that is a power of two.
+ */
+static inline uint64_t
+gcd_pow2_u64(uint64_t a, uint64_t b)
+{
+   assert(a > 0 || b > 0);
+
+   unsigned a_log2 = ffsll(a) - 1;
+   unsigned b_log2 = ffsll(b) - 1;
+
+   /* If either a or b is 0, then a_log2 or b_log2 till be UINT_MAX in which
+    * case, the MIN2() will take the other one.  If both are 0 then we will
+    * hit the assert above.
+    */
+   return 1 << MIN2(a_log2, b_log2);
+}
+
 /* This is maximum possible width/height our HW can handle */
 #define MAX_SURFACE_DIM (1ull << 14)
 
@@ -563,21 +581,9 @@ void anv_CmdCopyBuffer(
        * given offsets and size.
        */
       int bs = 16;
-
-      int fs = ffs(src_offset) - 1;
-      if (fs != -1)
-         bs = MIN2(bs, 1 << fs);
-      assert(src_offset % bs == 0);
-
-      fs = ffs(dst_offset) - 1;
-      if (fs != -1)
-         bs = MIN2(bs, 1 << fs);
-      assert(dst_offset % bs == 0);
-
-      fs = ffs(pRegions[r].size) - 1;
-      if (fs != -1)
-         bs = MIN2(bs, 1 << fs);
-      assert(pRegions[r].size % bs == 0);
+      bs = gcd_pow2_u64(bs, src_offset);
+      bs = gcd_pow2_u64(bs, dst_offset);
+      bs = gcd_pow2_u64(bs, pRegions[r].size);
 
       /* First, we make a bunch of max-sized copies */
       uint64_t max_copy_size = MAX_SURFACE_DIM * MAX_SURFACE_DIM * bs;
@@ -643,15 +649,9 @@ void anv_CmdUpdateBuffer(
 
       memcpy(tmp_data.map, pData, copy_size);
 
-      int bs;
-      if ((copy_size & 15) == 0 && (dstOffset & 15) == 0) {
-         bs = 16;
-      } else if ((copy_size & 7) == 0 && (dstOffset & 7) == 0) {
-         bs = 8;
-      } else {
-         assert((copy_size & 3) == 0 && (dstOffset & 3) == 0);
-         bs = 4;
-      }
+      int bs = 16;
+      bs = gcd_pow2_u64(bs, dstOffset);
+      bs = gcd_pow2_u64(bs, copy_size);
 
       do_buffer_copy(&batch,
                      &cmd_buffer->device->dynamic_state_block_pool.bo,
