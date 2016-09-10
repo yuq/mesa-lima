@@ -50,6 +50,7 @@ intel_miptree_create_for_teximage(struct brw_context *brw,
    case GL_TEXTURE_2D_MULTISAMPLE:
    case GL_TEXTURE_2D_MULTISAMPLE_ARRAY:
    case GL_TEXTURE_RECTANGLE:
+   case GL_TEXTURE_EXTERNAL_OES:
       assert(intelImage->base.Base.Level == 0);
       break;
    case GL_TEXTURE_3D:
