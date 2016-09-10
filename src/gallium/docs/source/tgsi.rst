@@ -3054,6 +3054,34 @@ parameter to the clEnqueueNDRangeKernel call with which the shader
 was started.
 
 
+TGSI_SEMANTIC_GRID_SIZE
+"""""""""""""""""""""""
+
+For compute shaders, this semantic indicates the maximum (x, y, z) dimensions
+of a grid of thread blocks.
+
+
+TGSI_SEMANTIC_BLOCK_ID
+""""""""""""""""""""""
+
+For compute shaders, this semantic indicates the (x, y, z) coordinates of the
+current block inside of the grid.
+
+
+TGSI_SEMANTIC_BLOCK_SIZE
+""""""""""""""""""""""""
+
+For compute shaders, this semantic indicates the maximum (x, y, z) dimensions
+of a block in threads.
+
+
+TGSI_SEMANTIC_THREAD_ID
+"""""""""""""""""""""""
+
+For compute shaders, this semantic indicates the (x, y, z) coordinates of the
+current thread inside of the block.
+
+
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
 
