@@ -313,8 +313,19 @@ dd_dump_draw_vbo(struct dd_draw_state *dstate, struct pipe_draw_info *info, FILE
             DUMP_M(resource, dstate->sampler_views[sh][i], texture);
          }
 
-      /* TODO: print shader images */
-      /* TODO: print shader buffers */
+      for (i = 0; i < PIPE_MAX_SHADER_IMAGES; i++)
+         if (dstate->shader_images[sh][i].resource) {
+            DUMP_I(image_view, &dstate->shader_images[sh][i], i);
+            if (dstate->shader_images[sh][i].resource)
+               DUMP_M(resource, &dstate->shader_images[sh][i], resource);
+         }
+
+      for (i = 0; i < PIPE_MAX_SHADER_BUFFERS; i++)
+         if (dstate->shader_buffers[sh][i].buffer) {
+            DUMP_I(shader_buffer, &dstate->shader_buffers[sh][i], i);
+            if (dstate->shader_buffers[sh][i].buffer)
+               DUMP_M(resource, &dstate->shader_buffers[sh][i], buffer);
+         }
 
       fprintf(f, COLOR_SHADER "end shader: %s" COLOR_RESET "\n\n", shader_str[sh]);
    }
@@ -804,7 +815,20 @@ dd_copy_draw_state(struct dd_draw_state *dst, struct dd_draw_state *src)
          else
             dst->sampler_states[i][j] = NULL;
       }
-      /* TODO: shader buffers & images */
+
+      for (j = 0; j < PIPE_MAX_SHADER_IMAGES; j++) {
+         pipe_resource_reference(&dst->shader_images[i][j].resource,
+                                 src->shader_images[i][j].resource);
+         memcpy(&dst->shader_images[i][j], &src->shader_images[i][j],
+                sizeof(src->shader_images[i][j]));
+      }
+
+      for (j = 0; j < PIPE_MAX_SHADER_BUFFERS; j++) {
+         pipe_resource_reference(&dst->shader_buffers[i][j].buffer,
+                                 src->shader_buffers[i][j].buffer);
+         memcpy(&dst->shader_buffers[i][j], &src->shader_buffers[i][j],
+                sizeof(src->shader_buffers[i][j]));
+      }
    }
 
    if (src->velems)
