@@ -448,6 +448,12 @@ nvc0_screen_get_compute_param(struct pipe_screen *pscreen,
       RET(((uint64_t []) { 1024, 1024, 64 }));
    case PIPE_COMPUTE_CAP_MAX_THREADS_PER_BLOCK:
       RET((uint64_t []) { 1024 });
+   case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
+      if (obj_class >= NVE4_COMPUTE_CLASS) {
+         RET((uint64_t []) { 1024 });
+      } else {
+         RET((uint64_t []) { 512 });
+      }
    case PIPE_COMPUTE_CAP_MAX_GLOBAL_SIZE: /* g[] */
       RET((uint64_t []) { 1ULL << 40 });
    case PIPE_COMPUTE_CAP_MAX_LOCAL_SIZE: /* s[] */
@@ -478,8 +484,6 @@ nvc0_screen_get_compute_param(struct pipe_screen *pscreen,
       RET((uint32_t []) { 512 }); /* FIXME: arbitrary limit */
    case PIPE_COMPUTE_CAP_ADDRESS_BITS:
       RET((uint32_t []) { 64 });
-   case PIPE_COMPUTE_CAP_MAX_VARIABLE_THREADS_PER_BLOCK:
-      RET((uint64_t []) { 0 });
    default:
       return 0;
    }
