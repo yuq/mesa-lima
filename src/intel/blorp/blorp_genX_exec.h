@@ -120,6 +120,18 @@ _blorp_combine_address(struct blorp_batch *batch, void *location,
       _dw ? _dw + 1 : NULL; /* Array starts at dw[1] */     \
    })
 
+#define STRUCT_ZERO(S) ({ struct S t; memset(&t, 0, sizeof(t)); t; })
+
+#define blorp_emit_dynamic(batch, state, name, align, offset)      \
+   for (struct state name = STRUCT_ZERO(state),                         \
+        *_dst = blorp_alloc_dynamic_state(batch,                   \
+                                          _blorp_cmd_length(state) * 4, \
+                                          align, offset);               \
+        __builtin_expect(_dst != NULL, 1);                              \
+        _blorp_cmd_pack(state)(batch, (void *)_dst, &name),             \
+        blorp_flush_range(batch, _dst, _blorp_cmd_length(state) * 4),   \
+        _dst = NULL)
+
 /* 3DSTATE_URB
  * 3DSTATE_URB_VS
  * 3DSTATE_URB_HS
@@ -846,26 +858,19 @@ static uint32_t
 blorp_emit_blend_state(struct blorp_batch *batch,
                        const struct blorp_params *params)
 {
-   struct GENX(BLEND_STATE) blend;
-   memset(&blend, 0, sizeof(blend));
-
-   for (unsigned i = 0; i < params->num_draw_buffers; ++i) {
-      blend.Entry[i].PreBlendColorClampEnable = true;
-      blend.Entry[i].PostBlendColorClampEnable = true;
-      blend.Entry[i].ColorClampRange = COLORCLAMP_RTFORMAT;
-
-      blend.Entry[i].WriteDisableRed = params->color_write_disable[0];
-      blend.Entry[i].WriteDisableGreen = params->color_write_disable[1];
-      blend.Entry[i].WriteDisableBlue = params->color_write_disable[2];
-      blend.Entry[i].WriteDisableAlpha = params->color_write_disable[3];
-   }
-
    uint32_t offset;
-   void *state = blorp_alloc_dynamic_state(batch,
-                                           GENX(BLEND_STATE_length) * 4,
-                                           64, &offset);
-   GENX(BLEND_STATE_pack)(NULL, state, &blend);
-   blorp_flush_range(batch, state, GENX(BLEND_STATE_length) * 4);
+   blorp_emit_dynamic(batch, GENX(BLEND_STATE), blend, 64, &offset) {
+      for (unsigned i = 0; i < params->num_draw_buffers; ++i) {
+         blend.Entry[i].PreBlendColorClampEnable = true;
+         blend.Entry[i].PostBlendColorClampEnable = true;
+         blend.Entry[i].ColorClampRange = COLORCLAMP_RTFORMAT;
+
+         blend.Entry[i].WriteDisableRed = params->color_write_disable[0];
+         blend.Entry[i].WriteDisableGreen = params->color_write_disable[1];
+         blend.Entry[i].WriteDisableBlue = params->color_write_disable[2];
+         blend.Entry[i].WriteDisableAlpha = params->color_write_disable[3];
+      }
+   }
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_BLEND_STATE_POINTERS), sp) {
@@ -889,18 +894,12 @@ static uint32_t
 blorp_emit_color_calc_state(struct blorp_batch *batch,
                             const struct blorp_params *params)
 {
-   struct GENX(COLOR_CALC_STATE) cc = { 0 };
-
-#if GEN_GEN <= 8
-   cc.StencilReferenceValue = params->stencil_ref;
-#endif
-
    uint32_t offset;
-   void *state = blorp_alloc_dynamic_state(batch,
-                                           GENX(COLOR_CALC_STATE_length) * 4,
-                                           64, &offset);
-   GENX(COLOR_CALC_STATE_pack)(NULL, state, &cc);
-   blorp_flush_range(batch, state, GENX(COLOR_CALC_STATE_length) * 4);
+   blorp_emit_dynamic(batch, GENX(COLOR_CALC_STATE), cc, 64, &offset) {
+#if GEN_GEN <= 8
+      cc.StencilReferenceValue = params->stencil_ref;
+#endif
+   }
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_CC_STATE_POINTERS), sp) {
@@ -1126,31 +1125,25 @@ static void
 blorp_emit_sampler_state(struct blorp_batch *batch,
                          const struct blorp_params *params)
 {
-   struct GENX(SAMPLER_STATE) sampler = {
-      .MipModeFilter = MIPFILTER_NONE,
-      .MagModeFilter = MAPFILTER_LINEAR,
-      .MinModeFilter = MAPFILTER_LINEAR,
-      .MinLOD = 0,
-      .MaxLOD = 0,
-      .TCXAddressControlMode = TCM_CLAMP,
-      .TCYAddressControlMode = TCM_CLAMP,
-      .TCZAddressControlMode = TCM_CLAMP,
-      .MaximumAnisotropy = RATIO21,
-      .RAddressMinFilterRoundingEnable = true,
-      .RAddressMagFilterRoundingEnable = true,
-      .VAddressMinFilterRoundingEnable = true,
-      .VAddressMagFilterRoundingEnable = true,
-      .UAddressMinFilterRoundingEnable = true,
-      .UAddressMagFilterRoundingEnable = true,
-      .NonnormalizedCoordinateEnable = true,
-   };
-
    uint32_t offset;
-   void *state = blorp_alloc_dynamic_state(batch,
-                                           GENX(SAMPLER_STATE_length) * 4,
-                                           32, &offset);
-   GENX(SAMPLER_STATE_pack)(NULL, state, &sampler);
-   blorp_flush_range(batch, state, GENX(SAMPLER_STATE_length) * 4);
+   blorp_emit_dynamic(batch, GENX(SAMPLER_STATE), sampler, 32, &offset) {
+      sampler.MipModeFilter = MIPFILTER_NONE;
+      sampler.MagModeFilter = MAPFILTER_LINEAR;
+      sampler.MinModeFilter = MAPFILTER_LINEAR;
+      sampler.MinLOD = 0;
+      sampler.MaxLOD = 0;
+      sampler.TCXAddressControlMode = TCM_CLAMP;
+      sampler.TCYAddressControlMode = TCM_CLAMP;
+      sampler.TCZAddressControlMode = TCM_CLAMP;
+      sampler.MaximumAnisotropy = RATIO21;
+      sampler.RAddressMinFilterRoundingEnable = true;
+      sampler.RAddressMagFilterRoundingEnable = true;
+      sampler.VAddressMinFilterRoundingEnable = true;
+      sampler.VAddressMagFilterRoundingEnable = true;
+      sampler.UAddressMinFilterRoundingEnable = true;
+      sampler.UAddressMagFilterRoundingEnable = true;
+      sampler.NonnormalizedCoordinateEnable = true;
+   }
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_SAMPLER_STATE_POINTERS_PS), ssp) {
@@ -1293,17 +1286,10 @@ blorp_emit_viewport_state(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
    uint32_t cc_vp_offset;
-
-   void *state = blorp_alloc_dynamic_state(batch,
-                                           GENX(CC_VIEWPORT_length) * 4, 32,
-                                           &cc_vp_offset);
-
-   GENX(CC_VIEWPORT_pack)(batch, state,
-      &(struct GENX(CC_VIEWPORT)) {
-         .MinimumDepth = 0.0,
-         .MaximumDepth = 1.0,
-      });
-   blorp_flush_range(batch, state, GENX(CC_VIEWPORT_length) * 4);
+   blorp_emit_dynamic(batch, GENX(CC_VIEWPORT), vp, 32, &cc_vp_offset) {
+      vp.MinimumDepth = 0.0;
+      vp.MaximumDepth = 1.0;
+   }
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), vsp) {
