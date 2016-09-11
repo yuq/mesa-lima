@@ -1924,8 +1924,7 @@ static LLVMValueRef fetch_constant(
 		addr2 = lp_build_add(&bld_base->uint_bld, addr2,
 				     lp_build_const_int32(base->gallivm, idx * 4));
 
-		result2 = buffer_load_const(ctx, ctx->const_buffers[buf],
-					    addr2);
+		result2 = buffer_load_const(ctx, bufp, addr2);
 
 		result = radeon_llvm_emit_fetch_64bit(bld_base, type,
 						      result, result2);
