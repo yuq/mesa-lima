@@ -2917,7 +2917,7 @@ HRESULT NINE_WINAPI
 NineDevice9_SetNPatchMode( struct NineDevice9 *This,
                            float nSegments )
 {
-    STUB(D3DERR_INVALIDCALL);
+    return D3D_OK; /* Nothing to do because we don't advertise NPatch support */
 }
 
 float NINE_WINAPI
