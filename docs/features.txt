@@ -279,7 +279,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
 
   GL_ARB_bindless_texture                               started (airlied)
   GL_ARB_cl_event                                       not started
-  GL_ARB_compute_variable_group_size                    not started
+  GL_ARB_compute_variable_group_size                    DONE (nvc0)
   GL_ARB_ES3_2_compatibility                            DONE (i965/gen8+)
   GL_ARB_fragment_shader_interlock                      not started
   GL_ARB_gl_spirv                                       not started
