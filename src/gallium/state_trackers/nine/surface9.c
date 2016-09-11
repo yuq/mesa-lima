@@ -76,6 +76,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
     /* The only way we can have !pContainer is being created
      * from create_zs_or_rt_surface with params 0 0 0 */
     assert(pContainer || (Level == 0 && Layer == 0 && TextureType == 0));
+    /* Make sure no resource is passed for pool systemmem */
+    assert(pDesc->Pool != D3DPOOL_SYSTEMMEM || !pResource);
 
     This->data = (uint8_t *)user_buffer;
 
@@ -134,8 +136,6 @@ NineSurface9_ctor( struct NineSurface9 *This,
         if (!This->data)
             return E_OUTOFMEMORY;
     }
-
-    assert(pDesc->Pool != D3DPOOL_SYSTEMMEM || !pResource);
 
     if (pResource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
         pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
