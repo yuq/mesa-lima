@@ -106,9 +106,10 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
     /* if (pDesc->Usage & D3DUSAGE_NPATCHES) { } */
     /* if (pDesc->Usage & D3DUSAGE_POINTS) { } */
     /* if (pDesc->Usage & D3DUSAGE_RTPATCHES) { } */
+    /* The buffer must be usable with both sw and hw
+     * vertex processing. It is expected to be slower with hw. */
     if (Usage & D3DUSAGE_SOFTWAREPROCESSING)
-        DBG("Application asked for Software Vertex Processing, "
-            "but this is unimplemented\n");
+        info->usage = PIPE_USAGE_STAGING;
     /* if (pDesc->Usage & D3DUSAGE_TEXTAPI) { } */
 
     info->height0 = 1;
