@@ -101,6 +101,7 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	struct drm_amdgpu_info_hw_ip dma = {}, compute = {}, uvd = {};
 	struct drm_amdgpu_info_hw_ip uvd_enc = {}, vce = {}, vcn_dec = {};
 	struct drm_amdgpu_info_hw_ip vcn_enc = {}, gfx = {};
+	struct amdgpu_gds_resource_info gds = {};
 	uint32_t vce_version = 0, vce_feature = 0, uvd_version = 0, uvd_feature = 0;
 	int r, i, j;
 	drmDevicePtr devinfo;
@@ -248,6 +249,12 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 		return false;
 	}
 
+	r = amdgpu_query_gds_info(dev, &gds);
+	if (r) {
+		fprintf(stderr, "amdgpu: amdgpu_query_gds_info failed.\n");
+		return false;
+	}
+
 	/* Set chip identification. */
 	info->pci_id = amdinfo->asic_id; /* TODO: is this correct? */
 	info->vce_harvest_config = amdinfo->vce_harvest_config;
@@ -283,6 +290,8 @@ bool ac_query_gpu_info(int fd, amdgpu_device_handle dev,
 	info->gart_size = gtt.heap_size;
 	info->vram_size = vram.heap_size;
 	info->vram_vis_size = vram_vis.heap_size;
+	info->gds_size = gds.gds_total_size;
+	info->gds_gfx_partition_size = gds.gds_gfx_partition_size;
 	/* The kernel can split large buffers in VRAM but not in GTT, so large
 	 * allocations can fail or cause buffer movement failures in the kernel.
 	 */
@@ -403,6 +412,8 @@ void ac_print_gpu_info(struct radeon_info *info)
 	printf("gart_size = %i MB\n", (int)DIV_ROUND_UP(info->gart_size, 1024*1024));
 	printf("vram_size = %i MB\n", (int)DIV_ROUND_UP(info->vram_size, 1024*1024));
 	printf("vram_vis_size = %i MB\n", (int)DIV_ROUND_UP(info->vram_vis_size, 1024*1024));
+	printf("gds_size = %u kB\n", info->gds_size / 1024);
+	printf("gds_gfx_partition_size = %u kB\n", info->gds_gfx_partition_size / 1024);
 	printf("max_alloc_size = %i MB\n",
 	       (int)DIV_ROUND_UP(info->max_alloc_size, 1024*1024));
 	printf("min_alloc_size = %u\n", info->min_alloc_size);
