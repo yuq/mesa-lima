@@ -1509,11 +1509,9 @@ eglClientWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags, EGLTime timeout)
 }
 
 
-static EGLint EGLAPIENTRY
-eglWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags)
+static EGLint
+_eglWaitSyncCommon(_EGLDisplay *disp, _EGLSync *s, EGLint flags)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLSync *s = _eglLookupSync(sync, disp);
    _EGLContext *ctx = _eglGetCurrentContext();
    _EGLDriver *drv;
    EGLint ret;
@@ -1534,6 +1532,14 @@ eglWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags)
    RETURN_EGL_EVAL(disp, ret);
 }
 
+static EGLint EGLAPIENTRY
+eglWaitSyncKHR(EGLDisplay dpy, EGLSync sync, EGLint flags)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   return _eglWaitSyncCommon(disp, s, flags);
+}
+
 
 EGLBoolean EGLAPIENTRY
 eglWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags)
@@ -1542,7 +1548,9 @@ eglWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags)
     * EGLBoolean. In both cases, the return values can only be EGL_FALSE and
     * EGL_TRUE.
     */
-   return eglWaitSyncKHR(dpy, sync, flags);
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   return _eglWaitSyncCommon(disp, s, flags);
 }
 
 
