@@ -1984,6 +1984,7 @@ vec4_visitor::convert_to_hw_regs()
          case BAD_FILE:
             /* Probably unused. */
             reg = brw_null_reg();
+            reg = retype(reg, src.type);
             break;
 
          case MRF:
@@ -2034,6 +2035,7 @@ vec4_visitor::convert_to_hw_regs()
 
       case BAD_FILE:
          reg = brw_null_reg();
+         reg = retype(reg, dst.type);
          break;
 
       case IMM:
