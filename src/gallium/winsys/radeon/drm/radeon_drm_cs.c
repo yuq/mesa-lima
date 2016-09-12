@@ -471,6 +471,8 @@ void radeon_drm_cs_emit_ioctl_oneshot(void *job, int thread_index)
 
     for (i = 0; i < csc->num_relocs; i++)
         p_atomic_dec(&csc->relocs_bo[i].bo->num_active_ioctls);
+    for (i = 0; i < csc->num_slab_buffers; i++)
+        p_atomic_dec(&csc->slab_buffers[i].bo->num_active_ioctls);
 
     radeon_cs_context_cleanup(csc);
 }
@@ -487,11 +489,61 @@ void radeon_drm_cs_sync_flush(struct radeon_winsys_cs *rcs)
         util_queue_job_wait(&cs->flush_completed);
 }
 
+/* Add the given fence to a slab buffer fence list.
+ *
+ * There is a potential race condition when bo participates in submissions on
+ * two or more threads simultaneously. Since we do not know which of the
+ * submissions will be sent to the GPU first, we have to keep the fences
+ * of all submissions.
+ *
+ * However, fences that belong to submissions that have already returned from
+ * their respective ioctl do not have to be kept, because we know that they
+ * will signal earlier.
+ */
+static void radeon_bo_slab_fence(struct radeon_bo *bo, struct radeon_bo *fence)
+{
+    unsigned dst;
+
+    assert(fence->num_cs_references);
+
+    /* Cleanup older fences */
+    dst = 0;
+    for (unsigned src = 0; src < bo->u.slab.num_fences; ++src) {
+        if (bo->u.slab.fences[src]->num_cs_references) {
+            bo->u.slab.fences[dst] = bo->u.slab.fences[src];
+            dst++;
+        } else {
+            radeon_bo_reference(&bo->u.slab.fences[src], NULL);
+        }
+    }
+    bo->u.slab.num_fences = dst;
+
+    /* Check available space for the new fence */
+    if (bo->u.slab.num_fences >= bo->u.slab.max_fences) {
+        unsigned new_max_fences = bo->u.slab.max_fences + 1;
+        struct radeon_bo **new_fences = REALLOC(bo->u.slab.fences,
+                                                bo->u.slab.max_fences * sizeof(*new_fences),
+                                                new_max_fences * sizeof(*new_fences));
+        if (!new_fences) {
+            fprintf(stderr, "radeon_bo_slab_fence: allocation failure, dropping fence\n");
+            return;
+        }
+
+        bo->u.slab.fences = new_fences;
+        bo->u.slab.max_fences = new_max_fences;
+    }
+
+    /* Add the new fence */
+    bo->u.slab.fences[bo->u.slab.num_fences] = NULL;
+    radeon_bo_reference(&bo->u.slab.fences[bo->u.slab.num_fences], fence);
+    bo->u.slab.num_fences++;
+}
+
 DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
 static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
                                unsigned flags,
-                               struct pipe_fence_handle **fence)
+                               struct pipe_fence_handle **pfence)
 {
     struct radeon_drm_cs *cs = radeon_drm_cs(rcs);
     struct radeon_cs_context *tmp;
@@ -531,15 +583,31 @@ static int radeon_drm_cs_flush(struct radeon_winsys_cs *rcs,
        fprintf(stderr, "radeon: command stream overflowed\n");
     }
 
-    if (fence) {
-       if (cs->next_fence) {
-          radeon_fence_reference(fence, cs->next_fence);
-       } else {
-          radeon_fence_reference(fence, NULL);
-          *fence = radeon_cs_create_fence(rcs);
-       }
+    if (pfence || cs->csc->num_slab_buffers) {
+        struct pipe_fence_handle *fence;
+
+        if (cs->next_fence) {
+            fence = cs->next_fence;
+            cs->next_fence = NULL;
+        } else {
+            fence = radeon_cs_create_fence(rcs);
+        }
+
+        if (pfence)
+            radeon_fence_reference(pfence, fence);
+
+        pipe_mutex_lock(cs->ws->bo_fence_lock);
+        for (unsigned i = 0; i < cs->csc->num_slab_buffers; ++i) {
+            struct radeon_bo *bo = cs->csc->slab_buffers[i].bo;
+            p_atomic_inc(&bo->num_active_ioctls);
+            radeon_bo_slab_fence(bo, (struct radeon_bo *)fence);
+        }
+        pipe_mutex_unlock(cs->ws->bo_fence_lock);
+
+        radeon_fence_reference(&fence, NULL);
+    } else {
+        radeon_fence_reference(&cs->next_fence, NULL);
     }
-    radeon_fence_reference(&cs->next_fence, NULL);
 
     radeon_drm_cs_sync_flush(rcs);
 

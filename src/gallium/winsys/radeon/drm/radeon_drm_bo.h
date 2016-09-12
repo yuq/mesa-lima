@@ -50,6 +50,10 @@ struct radeon_bo {
         struct {
             struct pb_slab_entry entry;
             struct radeon_bo *real;
+
+            unsigned num_fences;
+            unsigned max_fences;
+            struct radeon_bo **fences;
         } slab;
     } u;
 

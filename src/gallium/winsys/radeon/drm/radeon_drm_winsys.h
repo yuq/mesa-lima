@@ -91,6 +91,7 @@ struct radeon_drm_winsys {
     struct util_hash_table *bo_vas;
     pipe_mutex bo_handles_mutex;
     pipe_mutex bo_va_mutex;
+    pipe_mutex bo_fence_lock;
 
     uint64_t va_offset;
     struct list_head va_holes;

@@ -53,7 +53,7 @@ struct radeon_bo_va_hole {
     uint64_t         size;
 };
 
-static bool radeon_bo_is_busy(struct radeon_bo *bo)
+static bool radeon_real_bo_is_busy(struct radeon_bo *bo)
 {
     struct drm_radeon_gem_busy args = {0};
 
@@ -62,13 +62,64 @@ static bool radeon_bo_is_busy(struct radeon_bo *bo)
                                &args, sizeof(args)) != 0;
 }
 
-static void radeon_bo_wait_idle(struct radeon_bo *bo)
+static bool radeon_bo_is_busy(struct radeon_bo *bo)
+{
+    unsigned num_idle;
+    bool busy = false;
+
+    if (bo->handle)
+        return radeon_real_bo_is_busy(bo);
+
+    pipe_mutex_lock(bo->rws->bo_fence_lock);
+    for (num_idle = 0; num_idle < bo->u.slab.num_fences; ++num_idle) {
+        if (radeon_real_bo_is_busy(bo->u.slab.fences[num_idle])) {
+            busy = true;
+            break;
+        }
+        radeon_bo_reference(&bo->u.slab.fences[num_idle], NULL);
+    }
+    memmove(&bo->u.slab.fences[0], &bo->u.slab.fences[num_idle],
+            (bo->u.slab.num_fences - num_idle) * sizeof(bo->u.slab.fences[0]));
+    bo->u.slab.num_fences -= num_idle;
+    pipe_mutex_unlock(bo->rws->bo_fence_lock);
+
+    return busy;
+}
+
+static void radeon_real_bo_wait_idle(struct radeon_bo *bo)
 {
     struct drm_radeon_gem_wait_idle args = {0};
 
     args.handle = bo->handle;
     while (drmCommandWrite(bo->rws->fd, DRM_RADEON_GEM_WAIT_IDLE,
                            &args, sizeof(args)) == -EBUSY);
+}
+
+static void radeon_bo_wait_idle(struct radeon_bo *bo)
+{
+    if (bo->handle) {
+        radeon_real_bo_wait_idle(bo);
+    } else {
+        pipe_mutex_lock(bo->rws->bo_fence_lock);
+        while (bo->u.slab.num_fences) {
+            struct radeon_bo *fence = NULL;
+            radeon_bo_reference(&fence, bo->u.slab.fences[0]);
+            pipe_mutex_unlock(bo->rws->bo_fence_lock);
+
+            /* Wait without holding the fence lock. */
+            radeon_real_bo_wait_idle(fence);
+
+            pipe_mutex_lock(bo->rws->bo_fence_lock);
+            if (bo->u.slab.num_fences && fence == bo->u.slab.fences[0]) {
+                radeon_bo_reference(&bo->u.slab.fences[0], NULL);
+                memmove(&bo->u.slab.fences[0], &bo->u.slab.fences[1],
+                        (bo->u.slab.num_fences - 1) * sizeof(bo->u.slab.fences[0]));
+                bo->u.slab.num_fences--;
+            }
+            radeon_bo_reference(&fence, NULL);
+        }
+        pipe_mutex_unlock(bo->rws->bo_fence_lock);
+    }
 }
 
 static bool radeon_bo_wait(struct pb_buffer *_buf, uint64_t timeout,

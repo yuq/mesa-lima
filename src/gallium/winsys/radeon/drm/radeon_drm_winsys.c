@@ -556,6 +556,7 @@ static void radeon_winsys_destroy(struct radeon_winsys *rws)
     util_hash_table_destroy(ws->bo_vas);
     pipe_mutex_destroy(ws->bo_handles_mutex);
     pipe_mutex_destroy(ws->bo_va_mutex);
+    pipe_mutex_destroy(ws->bo_fence_lock);
 
     if (ws->fd >= 0)
         close(ws->fd);
@@ -787,6 +788,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
     ws->bo_vas = util_hash_table_create(handle_hash, handle_compare);
     pipe_mutex_init(ws->bo_handles_mutex);
     pipe_mutex_init(ws->bo_va_mutex);
+    pipe_mutex_init(ws->bo_fence_lock);
     ws->va_offset = ws->va_start;
     list_inithead(&ws->va_holes);
 
