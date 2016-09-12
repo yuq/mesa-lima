@@ -1081,8 +1081,8 @@ eglCopyBuffers(EGLDisplay dpy, EGLSurface surface, EGLNativePixmapType target)
 }
 
 
-EGLBoolean EGLAPIENTRY
-eglWaitClient(void)
+static EGLBoolean
+_eglWaitClientCommon(void)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    _EGLDisplay *disp;
@@ -1108,12 +1108,17 @@ eglWaitClient(void)
    RETURN_EGL_EVAL(disp, ret);
 }
 
+EGLBoolean EGLAPIENTRY
+eglWaitClient(void)
+{
+   return _eglWaitClientCommon();
+}
 
 EGLBoolean EGLAPIENTRY
 eglWaitGL(void)
 {
    /* Since we only support OpenGL and GLES, eglWaitGL is equivalent to eglWaitClient. */
-   return eglWaitClient();
+   return _eglWaitClientCommon();
 }
 
 
