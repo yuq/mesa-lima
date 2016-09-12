@@ -813,6 +813,22 @@ eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config,
    return surface;
 }
 
+static void *
+fixupNativePixmap(_EGLDisplay *disp, void *native_pixmap)
+{
+#ifdef HAVE_X11_PLATFORM
+      /* The `native_pixmap` parameter for the X11 platform differs between
+       * eglCreatePixmapSurface() and eglCreatePlatformPixmapSurfaceEXT(). In
+       * eglCreatePixmapSurface(), the type of `native_pixmap` is an Xlib
+       * `Pixmap`. In eglCreatePlatformPixmapSurfaceEXT(), the type is
+       * `Pixmap*`.  Convert `Pixmap*` to `Pixmap` because that's what
+       * dri2_x11_create_pixmap_surface() expects.
+       */
+   if (disp->Platform == _EGL_PLATFORM_X11 && native_pixmap != NULL)
+      return (void *)(* (Pixmap*) native_pixmap);
+#endif
+   return native_pixmap;
+}
 
 static EGLSurface
 _eglCreatePixmapSurfaceCommon(_EGLDisplay *disp, EGLConfig config,
@@ -849,19 +865,7 @@ eglCreatePlatformPixmapSurfaceEXT(EGLDisplay dpy, EGLConfig config,
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
 
-#ifdef HAVE_X11_PLATFORM
-      /* The `native_pixmap` parameter for the X11 platform differs between
-       * eglCreatePixmapSurface() and eglCreatePlatformPixmapSurfaceEXT(). In
-       * eglCreatePixmapSurface(), the type of `native_pixmap` is an Xlib
-       * `Pixmap`. In eglCreatePlatformPixmapSurfaceEXT(), the type is
-       * `Pixmap*`.  Convert `Pixmap*` to `Pixmap` because that's what
-       * dri2_x11_create_pixmap_surface() expects.
-       */
-   if (disp->Platform == _EGL_PLATFORM_X11 && native_pixmap != NULL) {
-      native_pixmap = (void*) (* (Pixmap*) native_pixmap);
-   }
-#endif
-
+   native_pixmap = fixupNativePixmap(disp, native_pixmap);
    return _eglCreatePixmapSurfaceCommon(disp, config, native_pixmap,
                                         attrib_list);
 }
@@ -872,14 +876,16 @@ eglCreatePlatformPixmapSurface(EGLDisplay dpy, EGLConfig config,
                                void *native_pixmap,
                                const EGLAttrib *attrib_list)
 {
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
    EGLSurface surface;
    EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
 
    if (attrib_list && !int_attribs)
       RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_NO_SURFACE);
 
-   surface = eglCreatePlatformPixmapSurfaceEXT(dpy, config, native_pixmap,
-                                               int_attribs);
+   native_pixmap = fixupNativePixmap(disp, native_pixmap);
+   surface = _eglCreatePixmapSurfaceCommon(disp, config, native_pixmap,
+                                           int_attribs);
    free(int_attribs);
    return surface;
 }
