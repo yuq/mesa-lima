@@ -22,8 +22,8 @@
  */
 
 #include "common/gen_l3_config.h"
+#include "common/gen_sample_positions.h"
 #include "vk_format_info.h"
-#include "genX_multisample.h"
 
 static uint32_t
 vertex_element_comp_control(enum isl_format format, unsigned comp)
@@ -610,16 +610,16 @@ emit_ms_state(struct anv_pipeline *pipeline,
 
       switch (samples) {
       case 1:
-         SAMPLE_POS_1X(ms.Sample);
+         GEN_SAMPLE_POS_1X(ms.Sample);
          break;
       case 2:
-         SAMPLE_POS_2X(ms.Sample);
+         GEN_SAMPLE_POS_2X(ms.Sample);
          break;
       case 4:
-         SAMPLE_POS_4X(ms.Sample);
+         GEN_SAMPLE_POS_4X(ms.Sample);
          break;
       case 8:
-         SAMPLE_POS_8X(ms.Sample);
+         GEN_SAMPLE_POS_8X(ms.Sample);
          break;
       default:
          break;

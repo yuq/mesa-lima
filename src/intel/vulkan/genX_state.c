@@ -28,8 +28,8 @@
 #include <fcntl.h>
 
 #include "anv_private.h"
-#include "genX_multisample.h"
 
+#include "common/gen_sample_positions.h"
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
@@ -77,12 +77,12 @@ genX(init_device_state)(struct anv_device *device)
     * VkPhysicalDeviceFeatures::standardSampleLocations.
     */
    anv_batch_emit(&batch, GENX(3DSTATE_SAMPLE_PATTERN), sp) {
-      SAMPLE_POS_1X(sp._1xSample);
-      SAMPLE_POS_2X(sp._2xSample);
-      SAMPLE_POS_4X(sp._4xSample);
-      SAMPLE_POS_8X(sp._8xSample);
+      GEN_SAMPLE_POS_1X(sp._1xSample);
+      GEN_SAMPLE_POS_2X(sp._2xSample);
+      GEN_SAMPLE_POS_4X(sp._4xSample);
+      GEN_SAMPLE_POS_8X(sp._8xSample);
 #if GEN_GEN >= 9
-      SAMPLE_POS_16X(sp._16xSample);
+      GEN_SAMPLE_POS_16X(sp._16xSample);
 #endif
    }
 #endif

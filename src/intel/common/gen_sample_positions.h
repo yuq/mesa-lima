@@ -22,17 +22,17 @@
  */
 #pragma once
 
-#define SAMPLE_POS_1X(prefix) \
+#define GEN_SAMPLE_POS_1X(prefix) \
 prefix##0XOffset   = 0.5; \
 prefix##0YOffset   = 0.5;
 
-#define SAMPLE_POS_2X(prefix) \
+#define GEN_SAMPLE_POS_2X(prefix) \
 prefix##0XOffset   = 0.25; \
 prefix##0YOffset   = 0.25; \
 prefix##1XOffset   = 0.75; \
 prefix##1YOffset   = 0.75;
 
-#define SAMPLE_POS_4X(prefix) \
+#define GEN_SAMPLE_POS_4X(prefix) \
 prefix##0XOffset   = 0.375; \
 prefix##0YOffset   = 0.125; \
 prefix##1XOffset   = 0.875; \
@@ -42,7 +42,7 @@ prefix##2YOffset   = 0.625; \
 prefix##3XOffset   = 0.625; \
 prefix##3YOffset   = 0.875;
 
-#define SAMPLE_POS_8X(prefix) \
+#define GEN_SAMPLE_POS_8X(prefix) \
 prefix##0XOffset   = 0.5625; \
 prefix##0YOffset   = 0.3125; \
 prefix##1XOffset   = 0.4375; \
@@ -60,7 +60,7 @@ prefix##6YOffset   = 0.9375; \
 prefix##7XOffset   = 0.9375; \
 prefix##7YOffset   = 0.0625;
 
-#define SAMPLE_POS_16X(prefix) \
+#define GEN_SAMPLE_POS_16X(prefix) \
 prefix##0XOffset   = 0.5625; \
 prefix##0YOffset   = 0.5625; \
 prefix##1XOffset   = 0.4375; \

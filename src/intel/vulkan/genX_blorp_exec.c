@@ -24,7 +24,6 @@
 #include <assert.h>
 
 #include "anv_private.h"
-#include "genX_multisample.h"
 
 /* These are defined in anv_private.h and blorp_genX_exec.h */
 #undef __gen_address_type
@@ -32,6 +31,7 @@
 #undef __gen_combine_address
 
 #include "common/gen_l3_config.h"
+#include "common/gen_sample_positions.h"
 #include "blorp/blorp_genX_exec.h"
 
 static void *
@@ -164,16 +164,16 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch, unsigned samples)
 
       switch (samples) {
       case 1:
-         SAMPLE_POS_1X(ms.Sample);
+         GEN_SAMPLE_POS_1X(ms.Sample);
          break;
       case 2:
-         SAMPLE_POS_2X(ms.Sample);
+         GEN_SAMPLE_POS_2X(ms.Sample);
          break;
       case 4:
-         SAMPLE_POS_4X(ms.Sample);
+         GEN_SAMPLE_POS_4X(ms.Sample);
          break;
       case 8:
-         SAMPLE_POS_8X(ms.Sample);
+         GEN_SAMPLE_POS_8X(ms.Sample);
          break;
       default:
          break;
