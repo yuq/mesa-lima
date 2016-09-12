@@ -516,7 +516,7 @@ dri_screen_create(struct gbm_dri_device *dri)
 {
    char *driver_name;
 
-   driver_name = loader_get_driver_for_fd(dri->base.base.fd, 0);
+   driver_name = loader_get_driver_for_fd(dri->base.base.fd);
    if (!driver_name)
       return -1;
 

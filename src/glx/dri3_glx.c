@@ -780,7 +780,7 @@ dri3_create_screen(int screen, struct glx_display * priv)
    psc->fd = loader_get_user_preferred_fd(psc->fd, &psc->is_different_gpu);
    deviceName = NULL;
 
-   driverName = loader_get_driver_for_fd(psc->fd, 0);
+   driverName = loader_get_driver_for_fd(psc->fd);
    if (!driverName) {
       ErrorMessageF("No driver found\n");
       goto handle_error;

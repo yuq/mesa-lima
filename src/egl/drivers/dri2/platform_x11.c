@@ -681,7 +681,7 @@ dri2_x11_connect(struct dri2_egl_display *dri2_dpy)
    /* If Mesa knows about the appropriate driver for this fd, then trust it.
     * Otherwise, default to the server's value.
     */
-   loader_driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
+   loader_driver_name = loader_get_driver_for_fd(dri2_dpy->fd);
    if (loader_driver_name) {
       dri2_dpy->driver_name = loader_driver_name;
    } else {

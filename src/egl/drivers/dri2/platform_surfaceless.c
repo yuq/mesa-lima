@@ -282,7 +282,7 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       if (dri2_dpy->fd < 0)
          continue;
 
-      dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd, 0);
+      dri2_dpy->driver_name = loader_get_driver_for_fd(dri2_dpy->fd);
       if (dri2_dpy->driver_name) {
          if (dri2_load_driver(disp)) {
             driver_loaded = 1;

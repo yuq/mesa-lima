@@ -176,7 +176,7 @@ pipe_loader_drm_probe_fd(struct pipe_loader_device **dev, int fd)
    ddev->base.ops = &pipe_loader_drm_ops;
    ddev->fd = fd;
 
-   ddev->base.driver_name = loader_get_driver_for_fd(fd, _LOADER_GALLIUM);
+   ddev->base.driver_name = loader_get_driver_for_fd(fd);
    if (!ddev->base.driver_name)
       goto fail;
 

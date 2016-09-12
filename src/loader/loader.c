@@ -378,13 +378,10 @@ loader_get_device_name_for_fd(int fd)
 }
 
 char *
-loader_get_driver_for_fd(int fd, unsigned driver_types)
+loader_get_driver_for_fd(int fd)
 {
    int vendor_id, chip_id, i, j;
    char *driver = NULL;
-
-   if (!driver_types)
-      driver_types = _LOADER_GALLIUM | _LOADER_DRI;
 
    if (!loader_get_pci_id_for_fd(fd, &vendor_id, &chip_id)) {
 
@@ -408,9 +405,6 @@ loader_get_driver_for_fd(int fd, unsigned driver_types)
 
    for (i = 0; driver_map[i].driver; i++) {
       if (vendor_id != driver_map[i].vendor_id)
-         continue;
-
-      if (!(driver_types & driver_map[i].driver_types))
          continue;
 
       if (driver_map[i].predicate && !driver_map[i].predicate(fd))
