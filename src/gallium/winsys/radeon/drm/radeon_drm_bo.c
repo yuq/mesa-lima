@@ -587,6 +587,7 @@ static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
     bo->handle = args.handle;
     bo->va = 0;
     bo->initial_domain = initial_domains;
+    bo->hash = __sync_fetch_and_add(&rws->next_bo_hash, 1);
     pipe_mutex_init(bo->u.real.map_mutex);
     pb_cache_init_entry(&rws->bo_cache, &bo->u.real.cache_entry, &bo->base,
                         pb_cache_bucket);
@@ -864,6 +865,7 @@ static struct pb_buffer *radeon_winsys_bo_from_ptr(struct radeon_winsys *rws,
     bo->user_ptr = pointer;
     bo->va = 0;
     bo->initial_domain = RADEON_DOMAIN_GTT;
+    bo->hash = __sync_fetch_and_add(&ws->next_bo_hash, 1);
     pipe_mutex_init(bo->u.real.map_mutex);
 
     util_hash_table_set(ws->bo_handles, (void*)(uintptr_t)bo->handle, bo);
@@ -997,6 +999,7 @@ static struct pb_buffer *radeon_winsys_bo_from_handle(struct radeon_winsys *rws,
     bo->base.vtbl = &radeon_bo_vtbl;
     bo->rws = ws;
     bo->va = 0;
+    bo->hash = __sync_fetch_and_add(&ws->next_bo_hash, 1);
     pipe_mutex_init(bo->u.real.map_mutex);
 
     if (bo->flink_name)

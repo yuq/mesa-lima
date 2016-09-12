@@ -31,7 +31,14 @@
 
 struct radeon_bo_item {
     struct radeon_bo    *bo;
-    uint64_t            priority_usage;
+    union {
+        struct {
+            uint64_t    priority_usage;
+        } real;
+        struct {
+            unsigned    real_idx;
+        } slab;
+    } u;
 };
 
 struct radeon_cs_context {
@@ -49,6 +56,10 @@ struct radeon_cs_context {
     unsigned                    num_validated_relocs;
     struct radeon_bo_item       *relocs_bo;
     struct drm_radeon_cs_reloc  *relocs;
+
+    unsigned                    num_slab_buffers;
+    unsigned                    max_slab_buffers;
+    struct radeon_bo_item       *slab_buffers;
 
     int                         reloc_indices_hashlist[4096];
 };
@@ -107,6 +118,9 @@ radeon_bo_is_referenced_by_cs_for_write(struct radeon_drm_cs *cs,
     index = radeon_lookup_buffer(cs->csc, bo);
     if (index == -1)
         return false;
+
+    if (!bo->handle)
+        index = cs->csc->slab_buffers[index].u.slab.real_idx;
 
     return cs->csc->relocs[index].write_domain != 0;
 }

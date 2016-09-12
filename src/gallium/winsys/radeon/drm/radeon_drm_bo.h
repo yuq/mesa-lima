@@ -59,6 +59,7 @@ struct radeon_bo {
     uint32_t handle; /* 0 for slab entries */
     uint32_t flink_name;
     uint64_t va;
+    uint32_t hash;
     enum radeon_bo_domain initial_domain;
 
     /* how many command streams is this bo referenced in? */
