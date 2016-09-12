@@ -295,9 +295,9 @@ eglGetDisplay(EGLNativeDisplayType nativeDisplay)
    return _eglGetDisplayHandle(dpy);
 }
 
-static EGLDisplay EGLAPIENTRY
-eglGetPlatformDisplayEXT(EGLenum platform, void *native_display,
-                         const EGLint *attrib_list)
+static EGLDisplay
+_eglGetPlatformDisplayCommon(EGLenum platform, void *native_display,
+			     const EGLint *attrib_list)
 {
    _EGLDisplay *dpy;
 
@@ -326,17 +326,25 @@ eglGetPlatformDisplayEXT(EGLenum platform, void *native_display,
    return _eglGetDisplayHandle(dpy);
 }
 
+static EGLDisplay EGLAPIENTRY
+eglGetPlatformDisplayEXT(EGLenum platform, void *native_display,
+                         const EGLint *attrib_list)
+{
+   return _eglGetPlatformDisplayCommon(platform, native_display, attrib_list);
+}
+
 EGLDisplay EGLAPIENTRY
 eglGetPlatformDisplay(EGLenum platform, void *native_display,
                       const EGLAttrib *attrib_list)
 {
    EGLDisplay display;
-   EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
+   EGLint *int_attribs;
 
+   int_attribs = _eglConvertAttribsToInt(attrib_list);
    if (attrib_list && !int_attribs)
       RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, NULL);
 
-   display = eglGetPlatformDisplayEXT(platform, native_display, int_attribs);
+   display = _eglGetPlatformDisplayCommon(platform, native_display, int_attribs);
    free(int_attribs);
    return display;
 }
