@@ -762,14 +762,9 @@ eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config,
                                         attrib_list);
 }
 
-
-static EGLSurface EGLAPIENTRY
-eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
-                                  void *native_window,
-                                  const EGLint *attrib_list)
+static void *
+fixupNativeWindow(_EGLDisplay *disp, void *native_window)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-
 #ifdef HAVE_X11_PLATFORM
    if (disp->Platform == _EGL_PLATFORM_X11 && native_window != NULL) {
       /* The `native_window` parameter for the X11 platform differs between
@@ -779,9 +774,20 @@ eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
        * `Window*`.  Convert `Window*` to `Window` because that's what
        * dri2_x11_create_window_surface() expects.
        */
-      native_window = (void*) (* (Window*) native_window);
+      return (void *)(* (Window*) native_window);
    }
 #endif
+   return native_window;
+}
+
+static EGLSurface EGLAPIENTRY
+eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
+                                  void *native_window,
+                                  const EGLint *attrib_list)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+
+   native_window = fixupNativeWindow(disp, native_window);
 
    return _eglCreateWindowSurfaceCommon(disp, config, native_window,
                                         attrib_list);
@@ -793,14 +799,16 @@ eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config,
                                void *native_window,
                                const EGLAttrib *attrib_list)
 {
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
    EGLSurface surface;
    EGLint *int_attribs = _eglConvertAttribsToInt(attrib_list);
 
    if (attrib_list && !int_attribs)
       RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_NO_SURFACE);
 
-   surface = eglCreatePlatformWindowSurfaceEXT(dpy, config, native_window,
-                                               int_attribs);
+   native_window = fixupNativeWindow(disp, native_window);
+   surface = _eglCreateWindowSurfaceCommon(disp, config, native_window,
+                                           int_attribs);
    free(int_attribs);
    return surface;
 }
