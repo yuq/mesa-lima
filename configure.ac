@@ -1140,6 +1140,13 @@ if test "x$have_libdrm" = xyes; then
 	DEFINES="$DEFINES -DHAVE_LIBDRM"
 fi
 
+require_libdrm() {
+    if test "x$have_libdrm" != xyes; then
+       AC_MSG_ERROR([$1 requires libdrm >= $LIBDRM_REQUIRED])
+    fi
+}
+
+
 # Select which platform-dependent DRI code gets built
 case "$host_os" in
 darwin*)
@@ -1391,9 +1398,7 @@ xdri)
     if test x"$driglx_direct" = xyes; then
         if test x"$dri_platform" = xdrm ; then
             DEFINES="$DEFINES -DGLX_USE_DRM"
-            if test "x$have_libdrm" != xyes; then
-               AC_MSG_ERROR([Direct rendering requires libdrm >= $LIBDRM_REQUIRED])
-            fi
+            require_libdrm "Direct rendering"
 
             PKG_CHECK_MODULES([DRI2PROTO], [dri2proto >= $DRI2PROTO_REQUIRED])
             GL_PC_REQ_PRIV="$GL_PC_REQ_PRIV libdrm >= $LIBDRM_REQUIRED"
@@ -2034,8 +2039,6 @@ egl_platforms=`IFS=', '; echo $with_egl_platforms`
 for plat in $egl_platforms; do
 	case "$plat" in
 	wayland)
-		test "x$have_libdrm" != xyes &&
-			AC_MSG_ERROR([EGL platform wayland requires libdrm >= $LIBDRM_REQUIRED])
 
 		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
 
@@ -2051,13 +2054,9 @@ for plat in $egl_platforms; do
 	drm)
 		test "x$enable_gbm" = "xno" &&
 			AC_MSG_ERROR([EGL platform drm needs gbm])
-		test "x$have_libdrm" != xyes &&
-			AC_MSG_ERROR([EGL platform drm requires libdrm >= $LIBDRM_REQUIRED])
 		;;
 
 	surfaceless)
-		test "x$have_libdrm" != xyes &&
-			AC_MSG_ERROR([EGL platform surfaceless requires libdrm >= $LIBDRM_REQUIRED])
 		;;
 
 	android)
@@ -2065,6 +2064,12 @@ for plat in $egl_platforms; do
 
 	*)
 		AC_MSG_ERROR([EGL platform '$plat' does not exist])
+		;;
+	esac
+
+	case "$plat" in
+	wayland|drm|surfaceless)
+		require_libdrm "Platform $plat"
 		;;
 	esac
 done
@@ -2286,12 +2291,6 @@ AC_SUBST([D3D_DRIVER_INSTALL_DIR])
 dnl
 dnl Gallium helper functions
 dnl
-gallium_require_drm() {
-    if test "x$have_libdrm" != xyes; then
-       AC_MSG_ERROR([$1 requires libdrm >= $LIBDRM_REQUIRED])
-    fi
-}
-
 gallium_require_llvm() {
     if test "x$MESA_LLVM" = x0; then
         case "$host" in *gnux32) return;; esac
@@ -2399,28 +2398,28 @@ if test -n "$with_gallium_drivers"; then
         case "x$driver" in
         xsvga)
             HAVE_GALLIUM_SVGA=yes
-            gallium_require_drm "svga"
+            require_libdrm "svga"
             ;;
         xi915)
             HAVE_GALLIUM_I915=yes
             PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
-            gallium_require_drm "Gallium i915"
+            require_libdrm "Gallium i915"
             ;;
         xilo)
             HAVE_GALLIUM_ILO=yes
             PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
-            gallium_require_drm "Gallium i965/ilo"
+            require_libdrm "Gallium i965/ilo"
             ;;
         xr300)
             HAVE_GALLIUM_R300=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
-            gallium_require_drm "Gallium R300"
+            require_libdrm "Gallium R300"
             gallium_require_llvm "Gallium R300"
             ;;
         xr600)
             HAVE_GALLIUM_R600=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
-            gallium_require_drm "Gallium R600"
+            require_libdrm "Gallium R600"
             if test "x$enable_opencl" = xyes; then
                 radeon_gallium_llvm_check "r600g" "3" "6" "0"
                 LLVM_COMPONENTS="${LLVM_COMPONENTS} bitreader asmparser"
@@ -2430,19 +2429,19 @@ if test -n "$with_gallium_drivers"; then
             HAVE_GALLIUM_RADEONSI=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
-            gallium_require_drm "radeonsi"
+            require_libdrm "radeonsi"
             radeon_gallium_llvm_check "radeonsi" "3" "6" "0"
             require_egl_drm "radeonsi"
             ;;
         xnouveau)
             HAVE_GALLIUM_NOUVEAU=yes
             PKG_CHECK_MODULES([NOUVEAU], [libdrm_nouveau >= $LIBDRM_NOUVEAU_REQUIRED])
-            gallium_require_drm "nouveau"
+            require_libdrm "nouveau"
             ;;
         xfreedreno)
             HAVE_GALLIUM_FREEDRENO=yes
             PKG_CHECK_MODULES([FREEDRENO], [libdrm_freedreno >= $LIBDRM_FREEDRENO_REQUIRED])
-            gallium_require_drm "freedreno"
+            require_libdrm "freedreno"
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
@@ -2473,7 +2472,7 @@ if test -n "$with_gallium_drivers"; then
         xvc4)
             HAVE_GALLIUM_VC4=yes
             PKG_CHECK_MODULES([VC4], [libdrm_vc4 >= $LIBDRM_VC4_REQUIRED])
-            gallium_require_drm "vc4"
+            require_libdrm "vc4"
 
             PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
                               [USE_VC4_SIMULATOR=yes;
@@ -2482,7 +2481,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xvirgl)
             HAVE_GALLIUM_VIRGL=yes
-            gallium_require_drm "virgl"
+            require_libdrm "virgl"
             require_egl_drm "virgl"
             ;;
         *)
