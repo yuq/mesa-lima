@@ -23,6 +23,7 @@
 
 #include "blorp_priv.h"
 #include "common/gen_device_info.h"
+#include "common/gen_sample_positions.h"
 #include "intel_aub.h"
 
 /**
@@ -68,8 +69,6 @@ blorp_surface_reloc(struct blorp_batch *batch, uint32_t ss_offset,
 
 static void
 blorp_emit_urb_config(struct blorp_batch *batch, unsigned vs_entry_size);
-static void
-blorp_emit_3dstate_multisample(struct blorp_batch *batch, unsigned samples);
 
 /***** BEGIN blorp_exec implementation ******/
 
@@ -1021,6 +1020,49 @@ blorp_emit_sampler_state(struct blorp_batch *batch,
 #endif
 }
 
+static void
+blorp_emit_3dstate_multisample(struct blorp_batch *batch,
+                               const struct blorp_params *params)
+{
+   const unsigned samples = params->dst.surf.samples;
+
+   blorp_emit(batch, GENX(3DSTATE_MULTISAMPLE), ms) {
+      ms.NumberofMultisamples       = __builtin_ffs(samples) - 1;
+
+#if GEN_GEN >= 8
+      /* The PRM says that this bit is valid only for DX9:
+       *
+       *    SW can choose to set this bit only for DX9 API. DX10/OGL API's
+       *    should not have any effect by setting or not setting this bit.
+       */
+      ms.PixelPositionOffsetEnable  = false;
+      ms.PixelLocation              = CENTER;
+#elif GEN_GEN >= 7
+      ms.PixelLocation              = PIXLOC_CENTER;
+
+      switch (samples) {
+      case 1:
+         GEN_SAMPLE_POS_1X(ms.Sample);
+         break;
+      case 2:
+         GEN_SAMPLE_POS_2X(ms.Sample);
+         break;
+      case 4:
+         GEN_SAMPLE_POS_4X(ms.Sample);
+         break;
+      case 8:
+         GEN_SAMPLE_POS_8X(ms.Sample);
+         break;
+      default:
+         break;
+      }
+#else
+      ms.PixelLocation              = PIXLOC_CENTER;
+      GEN_SAMPLE_POS_4X(ms.Sample);
+#endif
+   }
+}
+
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static void
 blorp_emit_viewport_state(struct blorp_batch *batch,
@@ -1118,7 +1160,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    if (params->src.addr.buffer)
       blorp_emit_sampler_state(batch, params);
 
-   blorp_emit_3dstate_multisample(batch, params->dst.surf.samples);
+   blorp_emit_3dstate_multisample(batch, params);
 
    blorp_emit(batch, GENX(3DSTATE_SAMPLE_MASK), mask) {
       mask.SampleMask = (1 << params->dst.surf.samples) - 1;

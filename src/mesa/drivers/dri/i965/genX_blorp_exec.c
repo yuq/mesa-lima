@@ -162,19 +162,6 @@ blorp_emit_urb_config(struct blorp_batch *batch, unsigned vs_entry_size)
 #endif
 }
 
-static void
-blorp_emit_3dstate_multisample(struct blorp_batch *batch, unsigned samples)
-{
-   assert(batch->blorp->driver_ctx == batch->driver_batch);
-   struct brw_context *brw = batch->driver_batch;
-
-#if GEN_GEN >= 8
-   gen8_emit_3dstate_multisample(brw, samples);
-#else
-   gen6_emit_3dstate_multisample(brw, samples);
-#endif
-}
-
 void
 genX(blorp_exec)(struct blorp_batch *batch,
                  const struct blorp_params *params)
