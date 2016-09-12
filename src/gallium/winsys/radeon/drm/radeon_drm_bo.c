@@ -1014,12 +1014,10 @@ no_slab:
 
     /* Determine the pb_cache bucket for minimizing pb_cache misses. */
     pb_cache_bucket = 0;
-    if (size <= 4096) /* small buffers */
-       pb_cache_bucket += 1;
     if (domain & RADEON_DOMAIN_VRAM) /* VRAM or VRAM+GTT */
-       pb_cache_bucket += 2;
+       pb_cache_bucket += 1;
     if (flags == RADEON_FLAG_GTT_WC) /* WC */
-       pb_cache_bucket += 4;
+       pb_cache_bucket += 2;
     assert(pb_cache_bucket < ARRAY_SIZE(ws->bo_cache.buckets));
 
     bo = radeon_bo(pb_cache_reclaim_buffer(&ws->bo_cache, size, alignment,
