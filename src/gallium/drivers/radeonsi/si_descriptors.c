@@ -410,10 +410,6 @@ static void si_set_sampler_view(struct si_context *sctx,
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
 		uint32_t *desc = descs->list + slot * 16;
 
-		si_sampler_view_add_buffer(sctx, view->texture,
-					   RADEON_USAGE_READ,
-					   rview->is_stencil_sampler, true);
-
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
 
@@ -446,6 +442,12 @@ static void si_set_sampler_view(struct si_context *sctx,
 		}
 
 		views->enabled_mask |= 1u << slot;
+
+		/* Since this can flush, it must be done after enabled_mask is
+		 * updated. */
+		si_sampler_view_add_buffer(sctx, view->texture,
+					   RADEON_USAGE_READ,
+					   rview->is_stencil_sampler, true);
 	} else {
 		pipe_sampler_view_reference(&views->views[slot], NULL);
 		memcpy(descs->list + slot*16, null_texture_descriptor, 8*4);
@@ -627,9 +629,6 @@ static void si_set_shader_image(struct si_context *ctx,
 	if (&images->views[slot] != view)
 		util_copy_image_view(&images->views[slot], view);
 
-	si_sampler_view_add_buffer(ctx, &res->b.b,
-				   RADEON_USAGE_READWRITE, false, true);
-
 	if (res->b.b.target == PIPE_BUFFER) {
 		if (view->access & PIPE_IMAGE_ACCESS_WRITE)
 			si_mark_image_range_valid(view);
@@ -702,6 +701,10 @@ static void si_set_shader_image(struct si_context *ctx,
 	images->enabled_mask |= 1u << slot;
 	descs->dirty_mask |= 1u << slot;
 	ctx->descriptors_dirty |= 1u << si_image_descriptors_idx(shader);
+
+	/* Since this can flush, it must be done after enabled_mask is updated. */
+	si_sampler_view_add_buffer(ctx, &res->b.b,
+				   RADEON_USAGE_READWRITE, false, true);
 }
 
 static void
