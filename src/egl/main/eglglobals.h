@@ -36,6 +36,13 @@
 
 #include "egltypedefs.h"
 
+enum
+{
+    _EGL_DEBUG_BIT_CRITICAL = 0x1,
+    _EGL_DEBUG_BIT_ERROR = 0x2,
+    _EGL_DEBUG_BIT_WARN = 0x4,
+    _EGL_DEBUG_BIT_INFO = 0x8,
+};
 
 /**
  * Global library data
@@ -51,6 +58,9 @@ struct _egl_global
    void (*AtExitCalls[10])(void);
 
    const char *ClientExtensionString;
+
+   EGLDEBUGPROCKHR debugCallback;
+   unsigned int debugTypesEnabled;
 };
 
 

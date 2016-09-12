@@ -56,7 +56,10 @@ struct _egl_global _eglGlobal =
    " EGL_EXT_platform_wayland"
    " EGL_EXT_platform_x11"
    " EGL_KHR_client_get_all_proc_addresses"
-   " EGL_MESA_platform_gbm"
+   " EGL_MESA_platform_gbm",
+
+   NULL, /* debugCallback */
+   _EGL_DEBUG_BIT_CRITICAL | _EGL_DEBUG_BIT_ERROR, /* debugTypesEnabled */
 };
 
 

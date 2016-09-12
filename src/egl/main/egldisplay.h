@@ -79,6 +79,8 @@ struct _egl_resource
    EGLBoolean IsLinked;
    EGLint RefCount;
 
+   EGLLabelKHR Label;
+
    /* used to link resources of the same type */
    _EGLResource *Next;
 };
@@ -165,6 +167,8 @@ struct _egl_display
 
    /* lists of resources */
    _EGLResource *ResourceLists[_EGL_NUM_RESOURCES];
+
+   EGLLabelKHR Label;
 };
 
 

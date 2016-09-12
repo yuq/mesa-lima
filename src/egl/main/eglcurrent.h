@@ -54,6 +54,14 @@ struct _egl_thread_info
    EGLint LastError;
    _EGLContext *CurrentContext;
    EGLenum CurrentAPI;
+   EGLLabelKHR Label;
+
+   /**
+    * The name of the EGL function that's being called at the moment. This is
+    * used to report the function name to the EGL_KHR_debug callback.
+    */
+   const char *CurrentFuncName;
+   EGLLabelKHR CurrentObjectLabel;
 };
 
 
