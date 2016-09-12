@@ -879,6 +879,12 @@ struct isl_view {
     *
     * For cube maps, both base_array_layer and array_len should be
     * specified in terms of 2-D layers and must be a multiple of 6.
+    *
+    * 3-D textures are effectively treated as 2-D arrays when used as a
+    * storage image or render target.  If `usage` contains
+    * ISL_SURF_USAGE_RENDER_TARGET_BIT or ISL_SURF_USAGE_STORAGE_BIT then
+    * base_array_layer and array_len are applied.  If the surface is only used
+    * for texturing, they are ignored.
     */
    uint32_t base_array_layer;
    uint32_t array_len;

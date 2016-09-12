@@ -288,8 +288,6 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
          s.RenderTargetViewExtent = s.Depth;
       break;
    case SURFTYPE_3D:
-      s.MinimumArrayElement = info->view->base_array_layer;
-
       /* From the Broadwell PRM >> RENDER_SURFACE_STATE::Depth:
        *
        *    If the volume texture is MIP-mapped, this field specifies the
@@ -309,11 +307,16 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        * textures with more levels than we can render to.  In order to prevent
        * assert-failures in the packing function below, we only set the field
        * when it's actually going to be used by the hardware.
+       *
+       * Similaraly, the MinimumArrayElement field is ignored by all hardware
+       * prior to Sky Lake when texturing and we want it set to 0 anyway.
+       * Since it's already initialized to 0, we can just leave it alone for
+       * texture surfaces.
        */
       if (info->view->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
                                ISL_SURF_USAGE_STORAGE_BIT)) {
-         s.RenderTargetViewExtent = isl_minify(info->surf->logical_level0_px.depth,
-                                               info->view->base_level) - 1;
+         s.MinimumArrayElement = info->view->base_array_layer;
+         s.RenderTargetViewExtent = info->view->array_len - 1;
       }
       break;
    default:
