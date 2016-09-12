@@ -497,7 +497,12 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 	rtex->resource.b.b.bind = templ.bind;
 	pb_reference(&rtex->resource.buf, new_tex->resource.buf);
 	rtex->resource.gpu_address = new_tex->resource.gpu_address;
+	rtex->resource.vram_usage = new_tex->resource.vram_usage;
+	rtex->resource.gart_usage = new_tex->resource.gart_usage;
+	rtex->resource.bo_size = new_tex->resource.bo_size;
+	rtex->resource.bo_alignment = new_tex->resource.bo_alignment;
 	rtex->resource.domains = new_tex->resource.domains;
+	rtex->resource.flags = new_tex->resource.flags;
 	rtex->size = new_tex->size;
 	rtex->surface = new_tex->surface;
 	rtex->non_disp_tiling = new_tex->non_disp_tiling;
@@ -1119,7 +1124,13 @@ r600_texture_create_object(struct pipe_screen *screen,
 	} else {
 		resource->buf = buf;
 		resource->gpu_address = rscreen->ws->buffer_get_virtual_address(resource->buf);
+		resource->bo_size = buf->size;
+		resource->bo_alignment = buf->alignment;
 		resource->domains = rscreen->ws->buffer_get_initial_domain(resource->buf);
+		if (resource->domains & RADEON_DOMAIN_VRAM)
+			resource->vram_usage = buf->size;
+		else if (resource->domains & RADEON_DOMAIN_GTT)
+			resource->gart_usage = buf->size;
 	}
 
 	if (rtex->cmask.size) {
