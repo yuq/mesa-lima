@@ -296,6 +296,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer,
       anv_pack_struct(&scratch1, GENX(SCRATCH1),
                       .L3AtomicDisable = !has_dc);
       anv_pack_struct(&chicken3, GENX(CHICKEN3),
+                      .L3AtomicDisableMask = true,
                       .L3AtomicDisable = !has_dc);
       emit_lri(&cmd_buffer->batch, GENX(SCRATCH1_num), scratch1);
       emit_lri(&cmd_buffer->batch, GENX(CHICKEN3_num), chicken3);
