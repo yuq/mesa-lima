@@ -30,6 +30,8 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := $(C_SOURCES)
 
+LOCAL_C_INCLUDES := $(MESA_TOP)/src/amd/common
+
 LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_radeonsi
 
@@ -41,7 +43,7 @@ LOCAL_GENERATED_SOURCES := $(addprefix $(intermediates)/, $(GENERATED_SOURCES))
 $(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
 $(LOCAL_GENERATED_SOURCES): PRIVATE_CUSTOM_TOOL = $(PRIVATE_PYTHON) $^ > $@
 
-$(intermediates)/sid_tables.h:  $(intermediates)/%.h: $(LOCAL_PATH)/%.py $(LOCAL_PATH)/sid.h
+$(intermediates)/sid_tables.h:  $(intermediates)/%.h: $(LOCAL_PATH)/%.py $(MESA_TOP)/src/amd/common/sid.h
 	$(transform-generated-source)
 
 include $(GALLIUM_COMMON_MK)
