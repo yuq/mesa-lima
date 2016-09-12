@@ -50,7 +50,7 @@ struct _egl_global _eglGlobal =
       _eglFiniDisplay
    },
 
-   /* ClientExtensionsString */
+   /* ClientExtensionString */
    "EGL_EXT_client_extensions"
    " EGL_EXT_platform_base"
    " EGL_EXT_platform_wayland"
