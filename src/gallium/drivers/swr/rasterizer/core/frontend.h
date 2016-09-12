@@ -304,6 +304,7 @@ void ProcessClear(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, v
 void ProcessStoreTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessDiscardInvalidateTiles(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 void ProcessSync(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
+void ProcessShutdown(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t workerId, void *pUserData);
 
 PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative);
 

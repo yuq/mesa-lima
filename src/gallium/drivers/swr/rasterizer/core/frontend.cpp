@@ -81,6 +81,36 @@ void ProcessSync(
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief FE handler for SwrDestroyContext.
+/// @param pContext - pointer to SWR context.
+/// @param pDC - pointer to draw context.
+/// @param workerId - thread's worker id. Even thread has a unique id.
+/// @param pUserData - Pointer to user data passed back to sync callback.
+void ProcessShutdown(
+    SWR_CONTEXT *pContext,
+    DRAW_CONTEXT *pDC,
+    uint32_t workerId,
+    void *pUserData)
+{
+    BE_WORK work;
+    work.type = SHUTDOWN;
+    work.pfnWork = ProcessShutdownBE;
+
+    MacroTileMgr *pTileMgr = pDC->pTileMgr;
+    // Enqueue at least 1 work item for each worker thread
+    // account for number of numa nodes
+    uint32_t numNumaNodes = pContext->threadPool.numaMask + 1;
+
+    for (uint32_t i = 0; i < pContext->threadPool.numThreads; ++i)
+    {
+        for (uint32_t n = 0; n < numNumaNodes; ++n)
+        {
+            pTileMgr->enqueue(i, n, &work);
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief FE handler for SwrClearRenderTarget.
 /// @param pContext - pointer to SWR context.
 /// @param pDC - pointer to draw context.

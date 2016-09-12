@@ -157,46 +157,6 @@ HANDLE SwrCreateContext(
     return (HANDLE)pContext;
 }
 
-void SwrDestroyContext(HANDLE hContext)
-{
-    SWR_CONTEXT *pContext = GetContext(hContext);
-    DestroyThreadPool(pContext, &pContext->threadPool);
-
-    // free the fifos
-    for (uint32_t i = 0; i < KNOB_MAX_DRAWS_IN_FLIGHT; ++i)
-    {
-        delete [] pContext->dcRing[i].dynState.pStats;
-        delete pContext->dcRing[i].pArena;
-        delete pContext->dsRing[i].pArena;
-        pContext->pMacroTileManagerArray[i].~MacroTileMgr();
-        pContext->pDispatchQueueArray[i].~DispatchQueue();
-    }
-
-    AlignedFree(pContext->pDispatchQueueArray);
-    AlignedFree(pContext->pMacroTileManagerArray);
-
-    // Free scratch space.
-    for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
-    {
-#if defined(_WIN32)
-        VirtualFree(pContext->ppScratch[i], 0, MEM_RELEASE);
-#else
-        AlignedFree(pContext->ppScratch[i]);
-#endif
-
-        ArchRast::DestroyThreadContext(pContext->pArContext[i]);
-    }
-
-    delete [] pContext->ppScratch;
-    delete [] pContext->pArContext;
-    delete [] pContext->pStats;
-
-    delete(pContext->pHotTileMgr);
-
-    pContext->~SWR_CONTEXT();
-    AlignedFree(GetContext(hContext));
-}
-
 void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)
 {
     memcpy(&dst.state, &src.state, sizeof(API_STATE));
@@ -380,6 +340,54 @@ API_STATE* GetDrawState(SWR_CONTEXT *pContext)
     SWR_ASSERT(pDC->pState != nullptr);
 
     return &pDC->pState->state;
+}
+
+void SwrDestroyContext(HANDLE hContext)
+{
+    SWR_CONTEXT *pContext = GetContext(hContext);
+    DRAW_CONTEXT* pDC = GetDrawContext(pContext);
+
+    pDC->FeWork.type = SHUTDOWN;
+    pDC->FeWork.pfnWork = ProcessShutdown;
+
+    //enqueue
+    QueueDraw(pContext);
+
+    DestroyThreadPool(pContext, &pContext->threadPool);
+
+    // free the fifos
+    for (uint32_t i = 0; i < KNOB_MAX_DRAWS_IN_FLIGHT; ++i)
+    {
+        delete[] pContext->dcRing[i].dynState.pStats;
+        delete pContext->dcRing[i].pArena;
+        delete pContext->dsRing[i].pArena;
+        pContext->pMacroTileManagerArray[i].~MacroTileMgr();
+        pContext->pDispatchQueueArray[i].~DispatchQueue();
+    }
+
+    AlignedFree(pContext->pDispatchQueueArray);
+    AlignedFree(pContext->pMacroTileManagerArray);
+
+    // Free scratch space.
+    for (uint32_t i = 0; i < pContext->NumWorkerThreads; ++i)
+    {
+#if defined(_WIN32)
+        VirtualFree(pContext->ppScratch[i], 0, MEM_RELEASE);
+#else
+        AlignedFree(pContext->ppScratch[i]);
+#endif
+
+        ArchRast::DestroyThreadContext(pContext->pArContext[i]);
+    }
+
+    delete[] pContext->ppScratch;
+    delete[] pContext->pArContext;
+    delete[] pContext->pStats;
+
+    delete(pContext->pHotTileMgr);
+
+    pContext->~SWR_CONTEXT();
+    AlignedFree(GetContext(hContext));
 }
 
 void SWR_API SwrSaveState(

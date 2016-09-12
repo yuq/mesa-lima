@@ -428,7 +428,8 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint32_t& curDrawBE, 
 ///                      still have work pending in a previous draw. Additionally, the lockedTiles is
 ///                      hueristic that can steer a worker back to the same macrotile that it had been
 ///                      working on in a previous draw.
-void WorkOnFifoBE(
+/// @returns        true if worker thread should shutdown
+bool WorkOnFifoBE(
     SWR_CONTEXT *pContext,
     uint32_t workerId,
     uint32_t &curDrawBE,
@@ -436,12 +437,14 @@ void WorkOnFifoBE(
     uint32_t numaNode,
     uint32_t numaMask)
 {
+    bool bShutdown = false;
+
     // Find the first incomplete draw that has pending work. If no such draw is found then
     // return. FindFirstIncompleteDraw is responsible for incrementing the curDrawBE.
     uint32_t drawEnqueued = 0;
     if (FindFirstIncompleteDraw(pContext, curDrawBE, drawEnqueued) == false)
     {
-        return;
+        return false;
     }
 
     uint32_t lastRetiredDraw = pContext->dcRing[curDrawBE % KNOB_MAX_DRAWS_IN_FLIGHT].drawId - 1;
@@ -458,17 +461,17 @@ void WorkOnFifoBE(
     {
         DRAW_CONTEXT *pDC = &pContext->dcRing[i % KNOB_MAX_DRAWS_IN_FLIGHT];
 
-        if (pDC->isCompute) return; // We don't look at compute work.
+        if (pDC->isCompute) return false; // We don't look at compute work.
 
         // First wait for FE to be finished with this draw. This keeps threading model simple
         // but if there are lots of bubbles between draws then serializing FE and BE may
         // need to be revisited.
-        if (!pDC->doneFE) return;
+        if (!pDC->doneFE) return false;
         
         // If this draw is dependent on a previous draw then we need to bail.
         if (CheckDependency(pContext, pDC, lastRetiredDraw))
         {
-            return;
+            return false;
         }
 
         // Grab the list of all dirty macrotiles. A tile is dirty if it has work queued to it.
@@ -512,6 +515,10 @@ void WorkOnFifoBE(
                 {
                     pContext->pHotTileMgr->InitializeHotTiles(pContext, pDC, workerId, tileID);
                 }
+                else if (pWork->type == SHUTDOWN)
+                {
+                    bShutdown = true;
+                }
 
                 while ((pWork = tile->peek()) != nullptr)
                 {
@@ -526,7 +533,7 @@ void WorkOnFifoBE(
 
                 // Optimization: If the draw is complete and we're the last one to have worked on it then
                 // we can reset the locked list as we know that all previous draws before the next are guaranteed to be complete.
-                if ((curDrawBE == i) && pDC->pTileMgr->isWorkComplete())
+                if ((curDrawBE == i) && (bShutdown || pDC->pTileMgr->isWorkComplete()))
                 {
                     // We can increment the current BE and safely move to next draw since we know this draw is complete.
                     curDrawBE++;
@@ -537,6 +544,11 @@ void WorkOnFifoBE(
                     lockedTiles.clear();
                     break;
                 }
+
+                if (bShutdown)
+                {
+                    break;
+                }
             }
             else
             {
@@ -545,6 +557,8 @@ void WorkOnFifoBE(
             }
         }
     }
+
+    return bShutdown;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -710,8 +724,15 @@ DWORD workerThreadMain(LPVOID pData)
     uint32_t curDrawBE = 0;
     uint32_t curDrawFE = 0;
 
-    while (pContext->threadPool.inThreadShutdown == false)
+    bool bShutdown = false;
+
+    while (true)
     {
+        if (bShutdown && !threadHasWork(curDrawBE))
+        {
+            break;
+        }
+
         uint32_t loop = 0;
         while (loop++ < KNOB_WORKER_SPIN_LOOP_COUNT && !threadHasWork(curDrawBE))
         {
@@ -729,29 +750,18 @@ DWORD workerThreadMain(LPVOID pData)
                 continue;
             }
 
-            if (pContext->threadPool.inThreadShutdown)
-            {
-                lock.unlock();
-                break;
-            }
-
             AR_BEGIN(WorkerWaitForThreadEvent, 0);
 
             pContext->FifosNotEmpty.wait(lock);
             lock.unlock();
 
             AR_END(WorkerWaitForThreadEvent, 0);
-
-            if (pContext->threadPool.inThreadShutdown)
-            {
-                break;
-            }
         }
 
         if (IsBEThread)
         {
             AR_BEGIN(WorkerWorkOnFifoBE, 0);
-            WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles, numaNode, numaMask);
+            bShutdown |= WorkOnFifoBE(pContext, workerId, curDrawBE, lockedTiles, numaNode, numaMask);
             AR_END(WorkerWorkOnFifoBE, 0);
 
             WorkOnCompute(pContext, workerId, curDrawBE);
@@ -918,7 +928,6 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
     pPool->numThreads = numThreads;
     pContext->NumWorkerThreads = pPool->numThreads;
 
-    pPool->inThreadShutdown = false;
     pPool->pThreadData = (THREAD_DATA *)malloc(pPool->numThreads * sizeof(THREAD_DATA));
     pPool->numaMask = 0;
 
@@ -1001,17 +1010,15 @@ void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 {
     if (!pContext->threadInfo.SINGLE_THREADED)
     {
-        // Inform threads to finish up
-        std::unique_lock<std::mutex> lock(pContext->WaitLock);
-        pPool->inThreadShutdown = true;
-        _mm_mfence();
-        pContext->FifosNotEmpty.notify_all();
-        lock.unlock();
+        // Wait for all threads to finish
+        SwrWaitForIdle(pContext);
 
         // Wait for threads to finish and destroy them
         for (uint32_t t = 0; t < pPool->numThreads; ++t)
         {
-            pPool->pThreads[t]->join();
+            // Detach from thread.  Cannot join() due to possibility (in Windows) of code
+            // in some DLLMain(THREAD_DETATCH case) blocking the thread until after this returns.
+            pPool->pThreads[t]->detach();
             delete(pPool->pThreads[t]);
         }
 

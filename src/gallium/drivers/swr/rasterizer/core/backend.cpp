@@ -78,6 +78,16 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
     AR_END(BEDispatch, 1);
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Process shutdown.
+/// @param pDC - pointer to draw context (dispatch).
+/// @param workerId - The unique worker ID that is assigned to this thread.
+/// @param threadGroupId - the linear index for the thread group within the dispatch.
+void ProcessShutdownBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData)
+{
+    // Dummy function
+}
+
 void ProcessSyncBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pUserData)
 {
     uint32_t x, y;
