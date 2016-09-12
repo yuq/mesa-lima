@@ -42,6 +42,13 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+static struct pb_buffer *
+radeon_winsys_bo_create(struct radeon_winsys *rws,
+                        uint64_t size,
+                        unsigned alignment,
+                        enum radeon_bo_domain domain,
+                        enum radeon_bo_flag flags);
+
 static inline struct radeon_bo *radeon_bo(struct pb_buffer *bo)
 {
     return (struct radeon_bo *)bo;
@@ -700,6 +707,120 @@ bool radeon_bo_can_reclaim(struct pb_buffer *_buf)
    return radeon_bo_wait(_buf, 0, RADEON_USAGE_READWRITE);
 }
 
+bool radeon_bo_can_reclaim_slab(void *priv, struct pb_slab_entry *entry)
+{
+    struct radeon_bo *bo = NULL; /* fix container_of */
+    bo = container_of(entry, bo, u.slab.entry);
+
+    return radeon_bo_can_reclaim(&bo->base);
+}
+
+static void radeon_bo_slab_destroy(struct pb_buffer *_buf)
+{
+    struct radeon_bo *bo = radeon_bo(_buf);
+
+    assert(!bo->handle);
+
+    pb_slab_free(&bo->rws->bo_slabs, &bo->u.slab.entry);
+}
+
+static const struct pb_vtbl radeon_winsys_bo_slab_vtbl = {
+    radeon_bo_slab_destroy
+    /* other functions are never called */
+};
+
+struct pb_slab *radeon_bo_slab_alloc(void *priv, unsigned heap,
+                                     unsigned entry_size,
+                                     unsigned group_index)
+{
+    struct radeon_drm_winsys *ws = priv;
+    struct radeon_slab *slab = CALLOC_STRUCT(radeon_slab);
+    enum radeon_bo_domain domains;
+    enum radeon_bo_flag flags = 0;
+    unsigned base_hash;
+
+    if (!slab)
+        return NULL;
+
+    if (heap & 1)
+        flags |= RADEON_FLAG_GTT_WC;
+    if (heap & 2)
+        flags |= RADEON_FLAG_CPU_ACCESS;
+
+    switch (heap >> 2) {
+    case 0:
+        domains = RADEON_DOMAIN_VRAM;
+        break;
+    default:
+    case 1:
+        domains = RADEON_DOMAIN_VRAM_GTT;
+        break;
+    case 2:
+        domains = RADEON_DOMAIN_GTT;
+        break;
+    }
+
+    slab->buffer = radeon_bo(radeon_winsys_bo_create(&ws->base,
+                                                     64 * 1024, 64 * 1024,
+                                                     domains, flags));
+    if (!slab->buffer)
+        goto fail;
+
+    assert(slab->buffer->handle);
+
+    slab->base.num_entries = slab->buffer->base.size / entry_size;
+    slab->base.num_free = slab->base.num_entries;
+    slab->entries = CALLOC(slab->base.num_entries, sizeof(*slab->entries));
+    if (!slab->entries)
+        goto fail_buffer;
+
+    LIST_INITHEAD(&slab->base.free);
+
+    base_hash = __sync_fetch_and_add(&ws->next_bo_hash, slab->base.num_entries);
+
+    for (unsigned i = 0; i < slab->base.num_entries; ++i) {
+        struct radeon_bo *bo = &slab->entries[i];
+
+        bo->base.alignment = entry_size;
+        bo->base.usage = slab->buffer->base.usage;
+        bo->base.size = entry_size;
+        bo->base.vtbl = &radeon_winsys_bo_slab_vtbl;
+        bo->rws = ws;
+        bo->va = slab->buffer->va + i * entry_size;
+        bo->initial_domain = domains;
+        bo->hash = base_hash + i;
+        bo->u.slab.entry.slab = &slab->base;
+        bo->u.slab.entry.group_index = group_index;
+        bo->u.slab.real = slab->buffer;
+
+        LIST_ADDTAIL(&bo->u.slab.entry.head, &slab->base.free);
+    }
+
+    return &slab->base;
+
+fail_buffer:
+    radeon_bo_reference(&slab->buffer, NULL);
+fail:
+    FREE(slab);
+    return NULL;
+}
+
+void radeon_bo_slab_free(void *priv, struct pb_slab *pslab)
+{
+    struct radeon_slab *slab = (struct radeon_slab *)pslab;
+
+    for (unsigned i = 0; i < slab->base.num_entries; ++i) {
+        struct radeon_bo *bo = &slab->entries[i];
+        for (unsigned j = 0; j < bo->u.slab.num_fences; ++j)
+            radeon_bo_reference(&bo->u.slab.fences[j], NULL);
+        FREE(bo->u.slab.fences);
+    }
+
+    FREE(slab->entries);
+    radeon_bo_reference(&slab->buffer, NULL);
+    FREE(slab);
+}
+
 static unsigned eg_tile_split(unsigned tile_split)
 {
     switch (tile_split) {
@@ -823,6 +944,54 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     if (size > UINT_MAX)
         return NULL;
 
+    /* Sub-allocate small buffers from slabs. */
+    if (!(flags & RADEON_FLAG_HANDLE) &&
+        size <= (1 << RADEON_SLAB_MAX_SIZE_LOG2) &&
+        ws->info.has_virtual_memory &&
+        alignment <= MAX2(1 << RADEON_SLAB_MIN_SIZE_LOG2, util_next_power_of_two(size))) {
+        struct pb_slab_entry *entry;
+        unsigned heap = 0;
+
+        if (flags & RADEON_FLAG_GTT_WC)
+            heap |= 1;
+        if (flags & RADEON_FLAG_CPU_ACCESS)
+            heap |= 2;
+        if (flags & ~(RADEON_FLAG_GTT_WC | RADEON_FLAG_CPU_ACCESS))
+            goto no_slab;
+
+        switch (domain) {
+        case RADEON_DOMAIN_VRAM:
+            heap |= 0 * 4;
+            break;
+        case RADEON_DOMAIN_VRAM_GTT:
+            heap |= 1 * 4;
+            break;
+        case RADEON_DOMAIN_GTT:
+            heap |= 2 * 4;
+            break;
+        default:
+            goto no_slab;
+        }
+
+        entry = pb_slab_alloc(&ws->bo_slabs, size, heap);
+        if (!entry) {
+            /* Clear the cache and try again. */
+            pb_cache_release_all_buffers(&ws->bo_cache);
+
+            entry = pb_slab_alloc(&ws->bo_slabs, size, heap);
+        }
+        if (!entry)
+            return NULL;
+
+        bo = NULL;
+        bo = container_of(entry, bo, u.slab.entry);
+
+        pipe_reference_init(&bo->base.reference, 1);
+
+        return &bo->base;
+    }
+no_slab:
+
     /* This flag is irrelevant for the cache. */
     flags &= ~RADEON_FLAG_HANDLE;
 
@@ -862,6 +1031,7 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
                           pb_cache_bucket);
     if (!bo) {
         /* Clear the cache and try again. */
+        pb_slabs_reclaim(&ws->bo_slabs);
         pb_cache_release_all_buffers(&ws->bo_cache);
         bo = radeon_create_bo(ws, size, alignment, usage, domain, flags,
                               pb_cache_bucket);

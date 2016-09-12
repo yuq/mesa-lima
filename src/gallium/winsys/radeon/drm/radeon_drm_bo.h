@@ -74,9 +74,21 @@ struct radeon_bo {
     int num_active_ioctls;
 };
 
+struct radeon_slab {
+    struct pb_slab base;
+    struct radeon_bo *buffer;
+    struct radeon_bo *entries;
+};
+
 void radeon_bo_destroy(struct pb_buffer *_buf);
 bool radeon_bo_can_reclaim(struct pb_buffer *_buf);
 void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws);
+
+bool radeon_bo_can_reclaim_slab(void *priv, struct pb_slab_entry *entry);
+struct pb_slab *radeon_bo_slab_alloc(void *priv, unsigned heap,
+                                     unsigned entry_size,
+                                     unsigned group_index);
+void radeon_bo_slab_free(void *priv, struct pb_slab *slab);
 
 static inline
 void radeon_bo_reference(struct radeon_bo **dst, struct radeon_bo *src)

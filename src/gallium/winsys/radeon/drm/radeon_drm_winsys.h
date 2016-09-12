@@ -32,6 +32,7 @@
 
 #include "gallium/drivers/radeon/radeon_winsys.h"
 #include "pipebuffer/pb_cache.h"
+#include "pipebuffer/pb_slab.h"
 #include "util/u_queue.h"
 #include "util/list.h"
 #include <radeon_drm.h>
@@ -62,10 +63,14 @@ enum radeon_generation {
     DRV_SI
 };
 
+#define RADEON_SLAB_MIN_SIZE_LOG2 9
+#define RADEON_SLAB_MAX_SIZE_LOG2 14
+
 struct radeon_drm_winsys {
     struct radeon_winsys base;
     struct pipe_reference reference;
     struct pb_cache bo_cache;
+    struct pb_slabs bo_slabs;
 
     int fd; /* DRM file descriptor */
     int num_cs; /* The number of command streams created. */
