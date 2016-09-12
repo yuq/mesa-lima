@@ -841,7 +841,9 @@ svga_texture_create(struct pipe_screen *screen,
    tex->key.size.depth = template->depth0;
    tex->key.arraySize = 1;
    tex->key.numFaces = 1;
-   tex->key.sampleCount = template->nr_samples;
+
+   /* single sample texture can be treated as non-multisamples texture */
+   tex->key.sampleCount = template->nr_samples > 1 ? template->nr_samples : 0;
 
    if (template->nr_samples > 1) {
       tex->key.flags |= SVGA3D_SURFACE_MASKABLE_ANTIALIAS;

@@ -134,7 +134,9 @@ svga_texture_view_surface(struct svga_context *svga,
    key->cachable = 1;
    key->arraySize = 1;
    key->numFaces = 1;
-   key->sampleCount = tex->b.b.nr_samples;
+
+   /* single sample surface can be treated as non-multisamples surface */
+   key->sampleCount = tex->b.b.nr_samples > 1 ? tex->b.b.nr_samples : 0;
 
    if (key->sampleCount > 1) {
       key->flags |= SVGA3D_SURFACE_MASKABLE_ANTIALIAS;
