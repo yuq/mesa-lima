@@ -1570,11 +1570,9 @@ eglSignalSyncKHR(EGLDisplay dpy, EGLSync sync, EGLenum mode)
 }
 
 
-EGLBoolean EGLAPIENTRY
-eglGetSyncAttrib(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLAttrib *value)
+static EGLBoolean
+_eglGetSyncAttribCommon(_EGLDisplay *disp, _EGLSync *s, EGLint attribute, EGLAttrib *value)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLSync *s = _eglLookupSync(sync, disp);
    _EGLDriver *drv;
    EGLBoolean ret;
 
@@ -1586,10 +1584,20 @@ eglGetSyncAttrib(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLAttrib *valu
    RETURN_EGL_EVAL(disp, ret);
 }
 
+EGLBoolean EGLAPIENTRY
+eglGetSyncAttrib(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLAttrib *value)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   return _eglGetSyncAttribCommon(disp, s, attribute, value);
+}
+
 
 static EGLBoolean EGLAPIENTRY
 eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *value)
 {
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
    EGLAttrib attrib;
    EGLBoolean result;
 
@@ -1597,7 +1605,7 @@ eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *valu
       RETURN_EGL_ERROR(NULL, EGL_BAD_PARAMETER, EGL_FALSE);
 
    attrib = *value;
-   result = eglGetSyncAttrib(dpy, sync, attribute, &attrib);
+   result = _eglGetSyncAttribCommon(disp, s, attribute, &attrib);
 
    /* The EGL_KHR_fence_sync spec says this about eglGetSyncAttribKHR:
     *
