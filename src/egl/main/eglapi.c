@@ -2028,6 +2028,148 @@ eglExportDMABUFImageMESA(EGLDisplay dpy, EGLImage image,
    RETURN_EGL_EVAL(disp, ret);
 }
 
+static EGLint EGLAPIENTRY
+eglLabelObjectKHR(EGLDisplay dpy, EGLenum objectType, EGLObjectKHR object,
+		  EGLLabelKHR label)
+{
+   _EGLDisplay *disp = NULL;
+   _EGLResourceType type;
+
+   _EGL_FUNC_START(NULL, EGL_NONE, NULL, EGL_BAD_ALLOC);
+
+   if (objectType == EGL_OBJECT_THREAD_KHR) {
+      _EGLThreadInfo *t = _eglGetCurrentThread();
+
+      if (!_eglIsCurrentThreadDummy()) {
+         t->Label = label;
+         return EGL_SUCCESS;
+      }
+
+      RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_BAD_ALLOC);
+   }
+
+   disp = _eglLockDisplay(dpy);
+   if (disp == NULL)
+      RETURN_EGL_ERROR(disp, EGL_BAD_DISPLAY, EGL_BAD_DISPLAY);
+
+   if (objectType == EGL_OBJECT_DISPLAY_KHR) {
+      if (dpy != (EGLDisplay) object)
+         RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_BAD_PARAMETER);
+
+      disp->Label = label;
+      RETURN_EGL_EVAL(disp, EGL_SUCCESS);
+   }
+
+   switch (objectType) {
+      case EGL_OBJECT_CONTEXT_KHR:
+         type = _EGL_RESOURCE_CONTEXT;
+         break;
+      case EGL_OBJECT_SURFACE_KHR:
+         type = _EGL_RESOURCE_SURFACE;
+         break;
+      case EGL_OBJECT_IMAGE_KHR:
+         type = _EGL_RESOURCE_IMAGE;
+         break;
+      case EGL_OBJECT_SYNC_KHR:
+         type = _EGL_RESOURCE_SYNC;
+         break;
+      case EGL_OBJECT_STREAM_KHR:
+      default:
+         RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_BAD_PARAMETER);
+   }
+
+   if (_eglCheckResource(object, type, disp)) {
+      _EGLResource *res = (_EGLResource *) object;
+
+      res->Label = label;
+      RETURN_EGL_EVAL(disp, EGL_SUCCESS);
+   }
+
+   RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_BAD_PARAMETER);
+}
+
+static EGLBoolean
+validDebugMessageLevel(EGLAttrib level)
+{
+   return (level >= EGL_DEBUG_MSG_CRITICAL_KHR &&
+           level <= EGL_DEBUG_MSG_INFO_KHR);
+}
+
+static EGLint EGLAPIENTRY
+eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
+			  const EGLAttrib *attrib_list)
+{
+   unsigned int newEnabled;
+
+   _EGL_FUNC_START(NULL, EGL_NONE, NULL, EGL_BAD_ALLOC);
+
+   mtx_lock(_eglGlobal.Mutex);
+
+   newEnabled = _eglGlobal.debugTypesEnabled;
+   if (attrib_list != NULL) {
+      int i;
+
+      for (i = 0; attrib_list[i] != EGL_NONE; i += 2) {
+         if (validDebugMessageLevel(attrib_list[i])) {
+            if (attrib_list[i + 1])
+               newEnabled |= DebugBitFromType(attrib_list[i]);
+            else
+               newEnabled &= ~DebugBitFromType(attrib_list[i]);
+            continue;
+         }
+
+         // On error, set the last error code, call the current
+         // debug callback, and return the error code.
+         mtx_unlock(_eglGlobal.Mutex);
+         _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
+               "Invalid attribute 0x%04lx", (unsigned long) attrib_list[i]);
+         return EGL_BAD_ATTRIBUTE;
+      }
+   }
+
+   if (callback != NULL) {
+      _eglGlobal.debugCallback = callback;
+      _eglGlobal.debugTypesEnabled = newEnabled;
+   } else {
+      _eglGlobal.debugCallback = NULL;
+      _eglGlobal.debugTypesEnabled = _EGL_DEBUG_BIT_CRITICAL | _EGL_DEBUG_BIT_ERROR;
+   }
+
+   mtx_unlock(_eglGlobal.Mutex);
+   return EGL_SUCCESS;
+}
+
+static EGLBoolean EGLAPIENTRY
+eglQueryDebugKHR(EGLint attribute, EGLAttrib *value)
+{
+   _EGL_FUNC_START(NULL, EGL_NONE, NULL, EGL_BAD_ALLOC);
+
+   mtx_lock(_eglGlobal.Mutex);
+
+   do {
+      if (validDebugMessageLevel(attribute)) {
+         if (_eglGlobal.debugTypesEnabled & DebugBitFromType(attribute))
+            *value = EGL_TRUE;
+         else
+            *value = EGL_FALSE;
+         break;
+      }
+
+      if (attribute == EGL_DEBUG_CALLBACK_KHR) {
+         *value = (EGLAttrib) _eglGlobal.debugCallback;
+         break;
+      }
+
+      mtx_unlock(_eglGlobal.Mutex);
+      _eglReportError(EGL_BAD_ATTRIBUTE, NULL,
+              "Invalid attribute 0x%04lx", (unsigned long) attribute);
+      return EGL_FALSE;
+   } while (0);
+
+   mtx_unlock(_eglGlobal.Mutex);
+   return EGL_TRUE;
+}
+
 __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char *procname)
 {
@@ -2107,6 +2249,9 @@ eglGetProcAddress(const char *procname)
       { "eglGetSyncValuesCHROMIUM", (_EGLProc) eglGetSyncValuesCHROMIUM },
       { "eglExportDMABUFImageQueryMESA", (_EGLProc) eglExportDMABUFImageQueryMESA },
       { "eglExportDMABUFImageMESA", (_EGLProc) eglExportDMABUFImageMESA },
+      { "eglLabelObjectKHR", (_EGLProc) eglLabelObjectKHR },
+      { "eglDebugMessageControlKHR", (_EGLProc) eglDebugMessageControlKHR },
+      { "eglQueryDebugKHR", (_EGLProc) eglQueryDebugKHR },
       { NULL, NULL }
    };
    EGLint i;
