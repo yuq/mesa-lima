@@ -30,7 +30,6 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
-#include <libgen.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -1012,14 +1011,8 @@ setup_pager(void)
 }
 
 static void
-print_help(FILE *file)
+print_help(const char *progname, FILE *file)
 {
-   const char *progname;
-#if defined(__GLIBC__) || defined(__CYGWIN__)
-   progname = program_invocation_short_name;
-#else
-   progname = getprogname();
-#endif
    fprintf(file,
            "Usage: %s [OPTION]... FILE\n"
            "Decode aub file contents.\n\n"
@@ -1031,7 +1024,7 @@ print_help(FILE *file)
            "                        if omitted), 'always', or 'never'\n"
            "      --no-pager      don't launch pager\n"
            "      --no-offsets    don't print instruction offsets\n",
-           basename(progname));
+           progname);
 }
 
 static bool
@@ -1062,7 +1055,7 @@ int main(int argc, char *argv[])
    char gen_file[256], gen_val[24];
 
    if (argc == 1) {
-      print_help(stderr);
+      print_help(argv[0], stderr);
       exit(EXIT_FAILURE);
    }
 
@@ -1094,7 +1087,7 @@ int main(int argc, char *argv[])
             exit(EXIT_FAILURE);
          }
       } else if (strcmp(argv[i], "--help") == 0) {
-         print_help(stdout);
+         print_help(argv[0], stdout);
          exit(EXIT_SUCCESS);
       } else {
          if (argv[i][0] == '-') {
@@ -1174,7 +1167,7 @@ int main(int argc, char *argv[])
    disasm = gen_disasm_create(pci_id);
 
    if (argv[i] == NULL) {
-       print_help(stderr);
+       print_help(argv[0], stderr);
        exit(EXIT_FAILURE);
    } else {
        file = aub_file_open(argv[i]);
