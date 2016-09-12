@@ -246,7 +246,6 @@ blorp_clear(struct blorp_batch *batch,
 {
    struct blorp_params params;
    blorp_params_init(&params);
-   params.num_layers = num_layers;
 
    params.x0 = x0;
    params.y0 = y0;
@@ -278,10 +277,20 @@ blorp_clear(struct blorp_batch *batch,
    blorp_params_get_clear_kernel(batch->blorp, &params,
                                  use_simd16_replicated_data);
 
-   brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
-                               start_layer, format, true);
+   while (num_layers > 0) {
+      brw_blorp_surface_info_init(batch->blorp, &params.dst, surf, level,
+                                  start_layer, format, true);
 
-   batch->blorp->exec(batch, &params);
+      /* We may be restricted on the number of layers we can bind at any one
+       * time.  In particular, Sandy Bridge has a maximum number of layers of
+       * 512 but a maximum 3D texture size is much larger.
+       */
+      params.num_layers = MIN2(params.dst.view.array_len, num_layers);
+      batch->blorp->exec(batch, &params);
+
+      start_layer += params.num_layers;
+      num_layers -= params.num_layers;
+   }
 }
 
 void
