@@ -203,21 +203,6 @@ genX(blorp_exec)(struct blorp_batch *batch,
 
    blorp_exec(batch, params);
 
-   /* BLORP sets DRAWING_RECTANGLE but we always want it set to the maximum.
-    * Since we set it once at driver init and never again, we have to set it
-    * back after invoking blorp.
-    *
-    * TODO: BLORP should assume a max drawing rectangle
-    */
-   blorp_emit(batch, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
-      rect.ClippedDrawingRectangleYMin = 0;
-      rect.ClippedDrawingRectangleXMin = 0;
-      rect.ClippedDrawingRectangleYMax = UINT16_MAX;
-      rect.ClippedDrawingRectangleXMax = UINT16_MAX;
-      rect.DrawingRectangleOriginY = 0;
-      rect.DrawingRectangleOriginX = 0;
-   }
-
    cmd_buffer->state.vb_dirty = ~0;
    cmd_buffer->state.dirty = ~0;
    cmd_buffer->state.push_constants_dirty = ~0;

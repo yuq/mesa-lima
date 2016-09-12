@@ -1216,11 +1216,6 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
       clear.DepthClearValue = params->depth.clear_color.u32[0];
    }
 
-   blorp_emit(batch, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
-      rect.ClippedDrawingRectangleXMax = MAX2(params->x1, params->x0) - 1;
-      rect.ClippedDrawingRectangleYMax = MAX2(params->y1, params->y0) - 1;
-   }
-
    blorp_emit(batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType = SEQUENTIAL;
       prim.PrimitiveTopologyType = _3DPRIM_RECTLIST;

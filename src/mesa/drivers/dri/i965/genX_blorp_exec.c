@@ -206,6 +206,11 @@ retry:
 
    brw_emit_depth_stall_flushes(brw);
 
+   blorp_emit(batch, GENX(3DSTATE_DRAWING_RECTANGLE), rect) {
+      rect.ClippedDrawingRectangleXMax = MAX2(params->x1, params->x0) - 1;
+      rect.ClippedDrawingRectangleYMax = MAX2(params->y1, params->y0) - 1;
+   }
+
    blorp_exec(batch, params);
 
    /* Make sure we didn't wrap the batch unintentionally, and make sure we
