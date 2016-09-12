@@ -1309,11 +1309,10 @@ eglReleaseThread(void)
 }
 
 
-static EGLImage EGLAPIENTRY
-eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
+static EGLImage
+_eglCreateImageCommon(_EGLDisplay *disp, EGLContext ctx, EGLenum target,
                   EGLClientBuffer buffer, const EGLint *attr_list)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLContext *context = _eglLookupContext(ctx, disp);
    _EGLDriver *drv;
    _EGLImage *img;
@@ -1337,18 +1336,27 @@ eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
    RETURN_EGL_EVAL(disp, ret);
 }
 
+static EGLImage EGLAPIENTRY
+eglCreateImageKHR(EGLDisplay dpy, EGLContext ctx, EGLenum target,
+                  EGLClientBuffer buffer, const EGLint *attr_list)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   return _eglCreateImageCommon(disp, ctx, target, buffer, attr_list);
+}
+
 
 EGLImage EGLAPIENTRY
 eglCreateImage(EGLDisplay dpy, EGLContext ctx, EGLenum target,
                EGLClientBuffer buffer, const EGLAttrib *attr_list)
 {
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
    EGLImage image;
    EGLint *int_attribs = _eglConvertAttribsToInt(attr_list);
 
    if (attr_list && !int_attribs)
-      RETURN_EGL_ERROR(NULL, EGL_BAD_ALLOC, EGL_NO_IMAGE);
+      RETURN_EGL_ERROR(disp, EGL_BAD_ALLOC, EGL_NO_IMAGE);
 
-   image = eglCreateImageKHR(dpy, ctx, target, buffer, int_attribs);
+   image = _eglCreateImageCommon(disp, ctx, target, buffer, int_attribs);
    free(int_attribs);
    return image;
 }
