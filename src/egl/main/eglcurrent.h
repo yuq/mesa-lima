@@ -99,6 +99,28 @@ _eglGetCurrentContext(void);
 extern EGLBoolean
 _eglError(EGLint errCode, const char *msg);
 
+extern EGLLabelKHR
+_eglGetThreadLabel(void);
+
+extern void
+_eglDebugReportFull(EGLenum error, const char *command, const char *funcName,
+      EGLint type, EGLLabelKHR objectLabel, const char *message, ...);
+
+extern void
+_eglDebugReport(EGLenum error, const char *funcName,
+      EGLint type, const char *message, ...);
+
+#define _eglReportCritical(error, funcName, ...) \
+    _eglDebugReport(error, funcName, EGL_DEBUG_MSG_CRITICAL_KHR, __VA_ARGS__)
+
+#define _eglReportError(error, funcName, ...) \
+    _eglDebugReport(error, funcName, EGL_DEBUG_MSG_ERROR_KHR, __VA_ARGS__)
+
+#define _eglReportWarn(funcName, ...) \
+    _eglDebugReport(EGL_SUCCESS, funcName, EGL_DEBUG_MSG_WARN_KHR, __VA_ARGS__)
+
+#define _eglReportInfo(funcName, ...) \
+    _eglDebugReport(EGL_SUCCESS, funcName, EGL_DEBUG_MSG_INFO_KHR, __VA_ARGS__)
 
 #ifdef __cplusplus
 }

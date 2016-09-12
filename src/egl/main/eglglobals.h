@@ -70,5 +70,10 @@ extern struct _egl_global _eglGlobal;
 extern void
 _eglAddAtExitCall(void (*func)(void));
 
+static inline unsigned int DebugBitFromType(EGLenum type)
+{
+   assert(type >= EGL_DEBUG_MSG_CRITICAL_KHR && type <= EGL_DEBUG_MSG_INFO_KHR);
+   return (1 << (type - EGL_DEBUG_MSG_CRITICAL_KHR));
+}
 
 #endif /* EGLGLOBALS_INCLUDED */
