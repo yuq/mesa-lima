@@ -492,6 +492,10 @@ anv_image_view_init(struct anv_image_view *iview,
          isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
          isl_view.format = isl_lower_storage_image_format(&device->info,
                                                           isl_view.format);
+         if (image->type == VK_IMAGE_TYPE_3D) {
+            isl_view.base_array_layer = 0;
+            isl_view.array_len = iview->extent.depth;
+         }
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,
                              .surf = &surface->isl,
