@@ -106,7 +106,6 @@ struct si_shader_context
 	LLVMValueRef empty_md;
 
 	/* Preloaded descriptors. */
-	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
 
@@ -1849,6 +1848,15 @@ static void declare_compute_memory(struct radeon_llvm_context *radeon_bld,
 	ctx->shared_memory = LLVMBuildBitCast(gallivm->builder, var, i8p, "");
 }
 
+static LLVMValueRef load_const_buffer_desc(struct si_shader_context *ctx, int i)
+{
+	LLVMValueRef list_ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
+					     SI_PARAM_CONST_BUFFERS);
+
+	return build_indexed_load_const(ctx, list_ptr,
+					LLVMConstInt(ctx->i32, i, 0));
+}
+
 static LLVMValueRef fetch_constant(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *reg,
@@ -1876,15 +1884,16 @@ static LLVMValueRef fetch_constant(
 	idx = reg->Register.Index * 4 + swizzle;
 
 	if (!reg->Register.Indirect && !reg->Dimension.Indirect) {
-		LLVMValueRef c0, c1;
+		LLVMValueRef c0, c1, desc;
 
-		c0 = buffer_load_const(ctx, ctx->const_buffers[buf],
+		desc = load_const_buffer_desc(ctx, buf);
+		c0 = buffer_load_const(ctx, desc,
 				       LLVMConstInt(ctx->i32, idx * 4, 0));
 
 		if (!tgsi_type_is_64bit(type))
 			return bitcast(bld_base, type, c0);
 		else {
-			c1 = buffer_load_const(ctx, ctx->const_buffers[buf],
+			c1 = buffer_load_const(ctx, desc,
 					       LLVMConstInt(ctx->i32,
 							    (idx + 1) * 4, 0));
 			return radeon_llvm_emit_fetch_64bit(bld_base, type,
@@ -1900,7 +1909,7 @@ static LLVMValueRef fetch_constant(
 						   SI_NUM_CONST_BUFFERS);
 		bufp = build_indexed_load_const(ctx, ptr, index);
 	} else
-		bufp = ctx->const_buffers[buf];
+		bufp = load_const_buffer_desc(ctx, buf);
 
 	addr = ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
 	addr = LLVMBuildLoad(base->gallivm->builder, addr, "load addr reg");
@@ -5838,24 +5847,6 @@ static void create_function(struct si_shader_context *ctx)
 		declare_tess_lds(ctx);
 }
 
-static void preload_constant_buffers(struct si_shader_context *ctx)
-{
-	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	const struct tgsi_shader_info *info = bld_base->info;
-	unsigned buf;
-	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_CONST_BUFFERS);
-
-	for (buf = 0; buf < SI_NUM_CONST_BUFFERS; buf++) {
-		if (info->const_file_max[buf] == -1)
-			continue;
-
-		/* Load the resource descriptor */
-		ctx->const_buffers[buf] =
-			build_indexed_load_const(ctx, ptr, lp_build_const_int32(gallivm, buf));
-	}
-}
-
 /**
  * Load ESGS and GSVS ring buffer resource descriptors and save the variables
  * for later use.
@@ -6697,7 +6688,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	create_meta_data(&ctx);
 	create_function(&ctx);
-	preload_constant_buffers(&ctx);
 	preload_ring_buffers(&ctx);
 
 	if (ctx.is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
