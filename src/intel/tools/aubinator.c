@@ -303,7 +303,7 @@ handle_media_interface_descriptor_load(struct gen_spec *spec, uint32_t *p)
       }
 
       insns = (struct brw_instruction *) (gtt + start);
-      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+      gen_disasm_disassemble(disasm, insns, 0, stdout);
 
       dump_samplers(spec, descriptors[3] & ~0x1f);
       dump_binding_table(spec, descriptors[4] & ~0x1f);
@@ -401,7 +401,7 @@ handle_3dstate_vs(struct gen_spec *spec, uint32_t *p)
              instruction_base, start);
 
       insns = (struct brw_instruction *) (gtt + instruction_base + start);
-      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+      gen_disasm_disassemble(disasm, insns, 0, stdout);
    }
 }
 
@@ -425,7 +425,7 @@ handle_3dstate_hs(struct gen_spec *spec, uint32_t *p)
              instruction_base, start);
 
       insns = (struct brw_instruction *) (gtt + instruction_base + start);
-      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+      gen_disasm_disassemble(disasm, insns, 0, stdout);
    }
 }
 
@@ -519,21 +519,21 @@ handle_3dstate_ps(struct gen_spec *spec, uint32_t *p)
    printf("  Kernel[0] %s\n", k0);
    if (k0 != unused) {
       insns = (struct brw_instruction *) (gtt + start);
-      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+      gen_disasm_disassemble(disasm, insns, 0, stdout);
    }
 
    start = instruction_base + (p[k1_offset] & mask);
    printf("  Kernel[1] %s\n", k1);
    if (k1 != unused) {
       insns = (struct brw_instruction *) (gtt + start);
-      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+      gen_disasm_disassemble(disasm, insns, 0, stdout);
    }
 
    start = instruction_base + (p[k2_offset] & mask);
    printf("  Kernel[2] %s\n", k2);
    if (k2 != unused) {
       insns = (struct brw_instruction *) (gtt + start);
-      gen_disasm_disassemble(disasm, insns, 0, 8192, stdout);
+      gen_disasm_disassemble(disasm, insns, 0, stdout);
    }
 }
 

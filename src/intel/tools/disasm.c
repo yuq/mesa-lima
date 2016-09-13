@@ -45,13 +45,15 @@ is_send(uint32_t opcode)
 }
 
 void
-gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly, int start,
-                       int end, FILE *out)
+gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly,
+                       int start, FILE *out)
 {
    struct gen_device_info *devinfo = &disasm->devinfo;
    bool dump_hex = false;
+   int offset = start;
 
-   for (int offset = start; offset < end;) {
+   /* This loop exits when send-with-EOT or when opcode is 0 */
+   while (true) {
       brw_inst *insn = assembly + offset;
       brw_inst uncompacted;
       bool compacted = brw_inst_cmpt_control(devinfo, insn);
