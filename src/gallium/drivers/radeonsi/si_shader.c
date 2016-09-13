@@ -105,8 +105,8 @@ struct si_shader_context
 	unsigned uniform_md_kind;
 	LLVMValueRef empty_md;
 
+	/* Preloaded descriptors. */
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
-	LLVMValueRef lds;
 	LLVMValueRef shader_buffers[SI_NUM_SHADER_BUFFERS];
 	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
 	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
@@ -114,6 +114,8 @@ struct si_shader_context
 	LLVMValueRef images[SI_NUM_IMAGES];
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
+
+	LLVMValueRef lds;
 	LLVMValueRef gs_next_vertex[4];
 	LLVMValueRef return_value;
 
@@ -5843,7 +5845,7 @@ static void create_function(struct si_shader_context *ctx)
 		declare_tess_lds(ctx);
 }
 
-static void preload_constants(struct si_shader_context *ctx)
+static void preload_constant_buffers(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
@@ -6777,7 +6779,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 	create_meta_data(&ctx);
 	create_function(&ctx);
-	preload_constants(&ctx);
+	preload_constant_buffers(&ctx);
 	preload_shader_buffers(&ctx);
 	preload_samplers(&ctx);
 	preload_images(&ctx);
