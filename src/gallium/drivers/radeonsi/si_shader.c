@@ -112,7 +112,6 @@ struct si_shader_context
 	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
 	LLVMValueRef fmasks[SI_NUM_SAMPLERS];
 	LLVMValueRef images[SI_NUM_IMAGES];
-	LLVMValueRef so_buffers[4];
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
 	LLVMValueRef gs_next_vertex[4];
@@ -2271,6 +2270,19 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	LLVMBuilderRef builder = gallivm->builder;
 	int i, j;
 	struct lp_build_if_state if_ctx;
+	LLVMValueRef so_buffers[4];
+	LLVMValueRef buf_ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
+					    SI_PARAM_RW_BUFFERS);
+
+	/* Load the descriptors. */
+	for (i = 0; i < 4; ++i) {
+		if (ctx->shader->selector->so.stride[i]) {
+			LLVMValueRef offset = lp_build_const_int32(gallivm,
+								   SI_VS_STREAMOUT_BUF0 + i);
+
+			so_buffers[i] = build_indexed_load_const(ctx, buf_ptr, offset);
+		}
+	}
 
 	/* Get bits [22:16], i.e. (so_param >> 16) & 127; */
 	LLVMValueRef so_vtx_count =
@@ -2366,7 +2378,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 					      lp_build_const_int32(gallivm, stream), "");
 
 			lp_build_if(&if_ctx_stream, gallivm, can_emit_stream);
-			build_tbuffer_store_dwords(ctx, ctx->so_buffers[buf_idx],
+			build_tbuffer_store_dwords(ctx, so_buffers[buf_idx],
 						   vdata, num_comps,
 						   so_write_offset[buf_idx],
 						   LLVMConstInt(ctx->i32, 0, 0),
@@ -5924,35 +5936,6 @@ static void preload_images(struct si_shader_context *ctx)
 	}
 }
 
-static void preload_streamout_buffers(struct si_shader_context *ctx)
-{
-	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	unsigned i;
-
-	/* Streamout can only be used if the shader is compiled as VS. */
-	if (!ctx->shader->selector->so.num_outputs ||
-	    (ctx->type == PIPE_SHADER_VERTEX &&
-	     (ctx->shader->key.vs.as_es ||
-	      ctx->shader->key.vs.as_ls)) ||
-	    (ctx->type == PIPE_SHADER_TESS_EVAL &&
-	     ctx->shader->key.tes.as_es))
-		return;
-
-	LLVMValueRef buf_ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
-					    SI_PARAM_RW_BUFFERS);
-
-	/* Load the resources, we rely on the code sinking to do the rest */
-	for (i = 0; i < 4; ++i) {
-		if (ctx->shader->selector->so.stride[i]) {
-			LLVMValueRef offset = lp_build_const_int32(gallivm,
-								   SI_VS_STREAMOUT_BUF0 + i);
-
-			ctx->so_buffers[i] = build_indexed_load_const(ctx, buf_ptr, offset);
-		}
-	}
-}
-
 /**
  * Load ESGS and GSVS ring buffer resource descriptors and save the variables
  * for later use.
@@ -6497,7 +6480,6 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	create_meta_data(ctx);
 	create_function(ctx);
-	preload_streamout_buffers(ctx);
 	preload_ring_buffers(ctx);
 
 	args[0] = ctx->gsvs_ring[0];
@@ -6799,7 +6781,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	preload_shader_buffers(&ctx);
 	preload_samplers(&ctx);
 	preload_images(&ctx);
-	preload_streamout_buffers(&ctx);
 	preload_ring_buffers(&ctx);
 
 	if (ctx.is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
