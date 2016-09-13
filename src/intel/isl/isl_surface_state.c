@@ -243,6 +243,15 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
       assert(isl_format_supports_rendering(dev->info, info->view->format));
    else if (info->view->usage & ISL_SURF_USAGE_TEXTURE_BIT)
       assert(isl_format_supports_sampling(dev->info, info->view->format));
+
+   /* From the Sky Lake PRM Vol. 2d, RENDER_SURFACE_STATE::SurfaceFormat
+    *
+    *    This field cannot be a compressed (BC*, DXT*, FXT*, ETC*, EAC*)
+    *    format if the Surface Type is SURFTYPE_1D
+    */
+   if (info->surf->dim == ISL_SURF_DIM_1D)
+      assert(!isl_format_is_compressed(info->view->format));
+
    s.SurfaceFormat = info->view->format;
 
 #if GEN_IS_HASWELL

@@ -540,7 +540,6 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       assert(info->height == 1);
       assert(info->depth == 1);
       assert(info->samples == 1);
-      assert(!isl_format_is_compressed(info->format));
 
       switch (dim_layout) {
       case ISL_DIM_LAYOUT_GEN4_3D:
@@ -549,8 +548,8 @@ isl_calc_phys_level0_extent_sa(const struct isl_device *dev,
       case ISL_DIM_LAYOUT_GEN9_1D:
       case ISL_DIM_LAYOUT_GEN4_2D:
          *phys_level0_sa = (struct isl_extent4d) {
-            .w = info->width,
-            .h = 1,
+            .w = isl_align_npot(info->width, fmtl->bw),
+            .h = fmtl->bh,
             .d = 1,
             .a = info->array_len,
          };
