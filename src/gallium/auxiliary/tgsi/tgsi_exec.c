@@ -5148,6 +5148,10 @@ exec_instruction(
             /* returning from main() */
             mach->CondStackTop = 0;
             mach->LoopStackTop = 0;
+            mach->ContStackTop = 0;
+            mach->LoopLabelStackTop = 0;
+            mach->SwitchStackTop = 0;
+            mach->BreakStackTop = 0;
             *pc = -1;
             return FALSE;
          }
