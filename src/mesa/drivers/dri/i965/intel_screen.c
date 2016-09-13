@@ -609,6 +609,9 @@ intel_query_image(__DRIimage *image, int attrib, int *value)
    case __DRI_IMAGE_ATTRIB_NUM_PLANES:
       *value = 1;
       return true;
+   case __DRI_IMAGE_ATTRIB_OFFSET:
+      *value = image->offset;
+      return true;
 
   default:
       return false;
@@ -845,7 +848,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
 }
 
 static const __DRIimageExtension intelImageExtension = {
-    .base = { __DRI_IMAGE, 11 },
+    .base = { __DRI_IMAGE, 13 },
 
     .createImageFromName                = intel_create_image_from_name,
     .createImageFromRenderbuffer        = intel_create_image_from_renderbuffer,
@@ -860,7 +863,9 @@ static const __DRIimageExtension intelImageExtension = {
     .createImageFromFds                 = intel_create_image_from_fds,
     .createImageFromDmaBufs             = intel_create_image_from_dma_bufs,
     .blitImage                          = NULL,
-    .getCapabilities                    = NULL
+    .getCapabilities                    = NULL,
+    .mapImage                           = NULL,
+    .unmapImage                         = NULL,
 };
 
 static int
