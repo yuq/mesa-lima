@@ -156,13 +156,14 @@ void TargetNVC0::initOpInfo()
 
    static const uint32_t commutative[(OP_LAST + 31) / 32] =
    {
-      // ADD, MAD, MUL, AND, OR, XOR, MAX, MIN
+      // ADD, MUL, MAD, FMA, AND, OR, XOR, MAX, MIN, SET_AND, SET_OR, SET_XOR,
+      // SET, SELP, SLCT
       0x0670ca00, 0x0000003f, 0x00000000, 0x00000000
    };
 
    static const uint32_t shortForm[(OP_LAST + 31) / 32] =
    {
-      // ADD, MAD, MUL, AND, OR, XOR, PRESIN, PREEX2, SFN, CVT, PINTERP, MOV
+      // ADD, MUL, MAD, FMA, AND, OR, XOR, MAX, MIN
       0x0670ca00, 0x00000000, 0x00000000, 0x00000000
    };
 
