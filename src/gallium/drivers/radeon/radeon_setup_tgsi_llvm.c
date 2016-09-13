@@ -446,14 +446,29 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		}
 	}
 
-	case TGSI_FILE_INPUT:
-		result = ctx->inputs[radeon_llvm_reg_index_soa(reg->Register.Index, swizzle)];
+	case TGSI_FILE_INPUT: {
+		unsigned index = reg->Register.Index;
+		LLVMValueRef input[4];
+
+		/* I don't think doing this for vertex shaders is beneficial.
+		 * For those, we want to make sure the VMEM loads are executed
+		 * only once. Fragment shaders don't care much, because
+		 * v_interp instructions are much cheaper than VMEM loads.
+		 */
+		if (ctx->soa.bld_base.info->processor == PIPE_SHADER_FRAGMENT)
+			ctx->load_input(ctx, index, &ctx->input_decls[index], input);
+		else
+			memcpy(input, &ctx->inputs[index * 4], sizeof(input));
+
+		result = input[swizzle];
+
 		if (tgsi_type_is_64bit(type)) {
 			ptr = result;
-			ptr2 = ctx->inputs[radeon_llvm_reg_index_soa(reg->Register.Index, swizzle + 1)];
+			ptr2 = input[swizzle + 1];
 			return radeon_llvm_emit_fetch_64bit(bld_base, type, ptr, ptr2);
 		}
 		break;
+	}
 
 	case TGSI_FILE_TEMPORARY:
 		if (reg->Register.Index >= ctx->temps_count)
@@ -626,8 +641,13 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	{
 		unsigned idx;
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
-			if (ctx->load_input)
-				ctx->load_input(ctx, idx, decl);
+			if (ctx->load_input) {
+				ctx->input_decls[idx] = *decl;
+
+				if (bld_base->info->processor != PIPE_SHADER_FRAGMENT)
+					ctx->load_input(ctx, idx, decl,
+							&ctx->inputs[idx * 4]);
+			}
 		}
 	}
 	break;

@@ -440,7 +440,8 @@ static LLVMValueRef get_instance_index_for_fetch(
 static void declare_input_vs(
 	struct radeon_llvm_context *radeon_bld,
 	unsigned input_index,
-	const struct tgsi_full_declaration *decl)
+	const struct tgsi_full_declaration *decl,
+	LLVMValueRef out[4])
 {
 	struct lp_build_context *base = &radeon_bld->soa.bld_base.base;
 	struct gallivm_state *gallivm = base->gallivm;
@@ -498,11 +499,8 @@ static void declare_input_vs(
 	/* Break up the vec4 into individual components */
 	for (chan = 0; chan < 4; chan++) {
 		LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
-		/* XXX: Use a helper function for this.  There is one in
- 		 * tgsi_llvm.c. */
-		ctx->radeon_bld.inputs[radeon_llvm_reg_index_soa(input_index, chan)] =
-				LLVMBuildExtractElement(gallivm->builder,
-				input, llvm_chan, "");
+		out[chan] = LLVMBuildExtractElement(gallivm->builder,
+						    input, llvm_chan, "");
 	}
 }
 
@@ -1463,7 +1461,8 @@ static LLVMValueRef get_interp_param(struct si_shader_context *ctx,
 static void declare_input_fs(
 	struct radeon_llvm_context *radeon_bld,
 	unsigned input_index,
-	const struct tgsi_full_declaration *decl)
+	const struct tgsi_full_declaration *decl,
+	LLVMValueRef out[4])
 {
 	struct lp_build_context *base = &radeon_bld->soa.bld_base.base;
 	struct si_shader_context *ctx =
@@ -1482,14 +1481,10 @@ static void declare_input_fs(
 		unsigned offset = SI_PARAM_POS_FIXED_PT + 1 +
 				  (i ? util_bitcount(colors_read & 0xf) : 0);
 
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)] =
-			mask & 0x1 ? LLVMGetParam(main_fn, offset++) : base->undef;
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 1)] =
-			mask & 0x2 ? LLVMGetParam(main_fn, offset++) : base->undef;
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 2)] =
-			mask & 0x4 ? LLVMGetParam(main_fn, offset++) : base->undef;
-		radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 3)] =
-			mask & 0x8 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		out[0] = mask & 0x1 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		out[1] = mask & 0x2 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		out[2] = mask & 0x4 ? LLVMGetParam(main_fn, offset++) : base->undef;
+		out[3] = mask & 0x8 ? LLVMGetParam(main_fn, offset++) : base->undef;
 		return;
 	}
 
@@ -1513,7 +1508,7 @@ static void declare_input_fs(
 			shader->selector->info.colors_read, interp_param,
 			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK),
 			LLVMGetParam(main_fn, SI_PARAM_FRONT_FACE),
-			&radeon_bld->inputs[radeon_llvm_reg_index_soa(input_index, 0)]);
+			&out[0]);
 }
 
 static LLVMValueRef get_sample_id(struct radeon_llvm_context *radeon_bld)

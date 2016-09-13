@@ -30,7 +30,9 @@
 #include <llvm-c/Core.h>
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_tgsi.h"
+#include "tgsi/tgsi_parse.h"
 
+#define RADEON_LLVM_MAX_INPUT_SLOTS 32
 #define RADEON_LLVM_MAX_INPUTS 32 * 4
 #define RADEON_LLVM_MAX_OUTPUTS 32 * 4
 
@@ -62,7 +64,8 @@ struct radeon_llvm_context {
 	  */
 	void (*load_input)(struct radeon_llvm_context *,
 			   unsigned input_index,
-			   const struct tgsi_full_declaration *decl);
+			   const struct tgsi_full_declaration *decl,
+			   LLVMValueRef out[4]);
 
 	void (*load_system_value)(struct radeon_llvm_context *,
 				  unsigned index,
@@ -75,6 +78,7 @@ struct radeon_llvm_context {
 	  * values will be in the form of a target intrinsic that will inform the
 	  * backend how to load the actual inputs to the shader. 
 	  */
+	struct tgsi_full_declaration input_decls[RADEON_LLVM_MAX_INPUT_SLOTS];
 	LLVMValueRef inputs[RADEON_LLVM_MAX_INPUTS];
 	LLVMValueRef outputs[RADEON_LLVM_MAX_OUTPUTS][TGSI_NUM_CHANNELS];
 
