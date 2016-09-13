@@ -1373,11 +1373,11 @@ isl_surf_get_hiz_surf(const struct isl_device *dev,
    const unsigned samples = ISL_DEV_GEN(dev) >= 9 ? 1 : surf->samples;
 
    isl_surf_init(dev, hiz_surf,
-                 .dim = ISL_SURF_DIM_2D,
+                 .dim = surf->dim,
                  .format = ISL_FORMAT_HIZ,
                  .width = surf->logical_level0_px.width,
                  .height = surf->logical_level0_px.height,
-                 .depth = 1,
+                 .depth = surf->logical_level0_px.depth,
                  .levels = surf->levels,
                  .array_len = surf->logical_level0_px.array_len,
                  .samples = samples,
