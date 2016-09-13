@@ -90,7 +90,7 @@ ir3_optimize_loop(nir_shader *s)
 		progress = false;
 
 		OPT_V(s, nir_lower_vars_to_ssa);
-		OPT_V(s, nir_lower_alu_to_scalar);
+		progress |= OPT(s, nir_lower_alu_to_scalar);
 		OPT_V(s, nir_lower_phis_to_scalar);
 
 		progress |= OPT(s, nir_copy_prop);
