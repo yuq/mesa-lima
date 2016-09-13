@@ -35,6 +35,15 @@ struct gen_disasm {
     struct gen_device_info devinfo;
 };
 
+static bool
+is_send(uint32_t opcode)
+{
+   return (opcode == BRW_OPCODE_SEND  ||
+           opcode == BRW_OPCODE_SENDC ||
+           opcode == BRW_OPCODE_SENDS ||
+           opcode == BRW_OPCODE_SENDSC );
+}
+
 void
 gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly, int start,
                        int end, FILE *out)
@@ -74,14 +83,10 @@ gen_disasm_disassemble(struct gen_disasm *disasm, void *assembly, int start,
       brw_disassemble_inst(out, devinfo, insn, compacted);
 
       /* Simplistic, but efficient way to terminate disasm */
-      if (brw_inst_opcode(devinfo, insn) == BRW_OPCODE_SEND ||
-          brw_inst_opcode(devinfo, insn) == BRW_OPCODE_SENDC) {
-         if (brw_inst_eot(devinfo, insn))
-            break;
-      }
-
-      if (brw_inst_opcode(devinfo, insn) == 0)
+      uint32_t opcode = brw_inst_opcode(devinfo, insn);
+      if (opcode == 0 || (is_send(opcode) && brw_inst_eot(devinfo, insn))) {
          break;
+      }
    }
 }
 
