@@ -313,10 +313,14 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
        * Since it's already initialized to 0, we can just leave it alone for
        * texture surfaces.
        */
-      if (info->view->usage & (ISL_SURF_USAGE_RENDER_TARGET_BIT |
-                               ISL_SURF_USAGE_STORAGE_BIT)) {
+      if (info->view->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
          s.MinimumArrayElement = info->view->base_array_layer;
          s.RenderTargetViewExtent = info->view->array_len - 1;
+      } else if (info->view->usage & ISL_SURF_USAGE_STORAGE_BIT) {
+         s.MinimumArrayElement = 0;
+         s.RenderTargetViewExtent =
+            isl_minify(info->surf->logical_level0_px.depth,
+                       info->view->base_level) - 1;
       }
       break;
    default:
