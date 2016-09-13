@@ -254,6 +254,9 @@ nir_lower_alu_to_scalar_impl(nir_function_impl *impl)
             lower_alu_instr_scalar(nir_instr_as_alu(instr), &builder);
       }
    }
+
+   nir_metadata_preserve(impl, nir_metadata_block_index |
+                               nir_metadata_dominance);
 }
 
 void
