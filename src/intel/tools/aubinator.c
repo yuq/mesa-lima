@@ -91,18 +91,14 @@ print_dword_val(struct gen_field_iterator *iter, uint64_t offset,
                 int *dword_num)
 {
    struct gen_field *f;
-   union {
-      uint32_t dw;
-      float f;
-   } v;
 
    f = iter->group->fields[iter->i - 1];
-   v.dw = iter->p[f->start / 32];
+   const int dword = f->start / 32;
 
-   if (*dword_num != (f->start / 32)) {
+   if (*dword_num != dword) {
       printf("0x%08lx:  0x%08x : Dword %d\n",
-             offset + 4 * (f->start / 32), v.dw, f->start / 32);
-      *dword_num = (f->start / 32);
+             offset + 4 * dword,  iter->p[dword], dword);
+      *dword_num = dword;
    }
 }
 
