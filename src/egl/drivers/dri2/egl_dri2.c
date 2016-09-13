@@ -2259,8 +2259,15 @@ dri2_export_dma_buf_image_mesa(_EGLDriver *drv, _EGLDisplay *disp, _EGLImage *im
       dri2_dpy->image->queryImage(dri2_img->dri_image,
 				  __DRI_IMAGE_ATTRIB_STRIDE, strides);
 
-   if (offsets)
-      offsets[0] = 0;
+   if (offsets) {
+      int img_offset;
+      bool ret = dri2_dpy->image->queryImage(dri2_img->dri_image,
+                     __DRI_IMAGE_ATTRIB_OFFSET, &img_offset);
+      if (ret)
+         offsets[0] = img_offset;
+      else
+         offsets[0] = 0;
+   }
 
    return EGL_TRUE;
 }
