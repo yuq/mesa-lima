@@ -4285,9 +4285,9 @@ static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
 /**
  * Load an image view, fmask view. or sampler state descriptor.
  */
-static LLVMValueRef get_sampler_desc_custom(struct si_shader_context *ctx,
-					    LLVMValueRef list, LLVMValueRef index,
-					    enum desc_type type)
+static LLVMValueRef load_sampler_desc_custom(struct si_shader_context *ctx,
+					     LLVMValueRef list, LLVMValueRef index,
+					     enum desc_type type)
 {
 	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
@@ -4314,13 +4314,13 @@ static LLVMValueRef get_sampler_desc_custom(struct si_shader_context *ctx,
 	return build_indexed_load_const(ctx, list, index);
 }
 
-static LLVMValueRef get_sampler_desc(struct si_shader_context *ctx,
+static LLVMValueRef load_sampler_desc(struct si_shader_context *ctx,
 				     LLVMValueRef index, enum desc_type type)
 {
 	LLVMValueRef list = LLVMGetParam(ctx->radeon_bld.main_fn,
 					 SI_PARAM_SAMPLERS);
 
-	return get_sampler_desc_custom(ctx, list, index, type);
+	return load_sampler_desc_custom(ctx, list, index, type);
 }
 
 /* Disable anisotropic filtering if BASE_LEVEL == LAST_LEVEL.
@@ -4375,17 +4375,17 @@ static void tex_fetch_ptrs(
 						       reg->Register.Index,
 						       SI_NUM_SAMPLERS);
 
-		*res_ptr = get_sampler_desc(ctx, ind_index, DESC_IMAGE);
+		*res_ptr = load_sampler_desc(ctx, ind_index, DESC_IMAGE);
 
 		if (target == TGSI_TEXTURE_2D_MSAA ||
 		    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
 			if (samp_ptr)
 				*samp_ptr = NULL;
 			if (fmask_ptr)
-				*fmask_ptr = get_sampler_desc(ctx, ind_index, DESC_FMASK);
+				*fmask_ptr = load_sampler_desc(ctx, ind_index, DESC_FMASK);
 		} else {
 			if (samp_ptr) {
-				*samp_ptr = get_sampler_desc(ctx, ind_index, DESC_SAMPLER);
+				*samp_ptr = load_sampler_desc(ctx, ind_index, DESC_SAMPLER);
 				*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 			}
 			if (fmask_ptr)
@@ -5894,15 +5894,15 @@ static void preload_samplers(struct si_shader_context *ctx)
 		/* Resource */
 		offset = lp_build_const_int32(gallivm, i);
 		ctx->sampler_views[i] =
-			get_sampler_desc(ctx, offset, DESC_IMAGE);
+			load_sampler_desc(ctx, offset, DESC_IMAGE);
 
 		/* FMASK resource */
 		if (info->is_msaa_sampler[i])
 			ctx->fmasks[i] =
-				get_sampler_desc(ctx, offset, DESC_FMASK);
+				load_sampler_desc(ctx, offset, DESC_FMASK);
 		else {
 			ctx->sampler_states[i] =
-				get_sampler_desc(ctx, offset, DESC_SAMPLER);
+				load_sampler_desc(ctx, offset, DESC_SAMPLER);
 			ctx->sampler_states[i] =
 				sici_fix_sampler_aniso(ctx, ctx->sampler_views[i],
 						       ctx->sampler_states[i]);
