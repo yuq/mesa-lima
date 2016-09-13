@@ -107,11 +107,6 @@ struct si_shader_context
 
 	/* Preloaded descriptors. */
 	LLVMValueRef const_buffers[SI_NUM_CONST_BUFFERS];
-	LLVMValueRef shader_buffers[SI_NUM_SHADER_BUFFERS];
-	LLVMValueRef sampler_views[SI_NUM_SAMPLERS];
-	LLVMValueRef sampler_states[SI_NUM_SAMPLERS];
-	LLVMValueRef fmasks[SI_NUM_SAMPLERS];
-	LLVMValueRef images[SI_NUM_IMAGES];
 	LLVMValueRef esgs_ring;
 	LLVMValueRef gsvs_ring[4];
 
@@ -3406,18 +3401,18 @@ static LLVMValueRef
 shader_buffer_fetch_rsrc(struct si_shader_context *ctx,
 			 const struct tgsi_full_src_register *reg)
 {
-	LLVMValueRef ind_index;
-	LLVMValueRef rsrc_ptr;
+	LLVMValueRef index;
+	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
+					     SI_PARAM_SHADER_BUFFERS);
 
 	if (!reg->Register.Indirect)
-		return ctx->shader_buffers[reg->Register.Index];
+		index = LLVMConstInt(ctx->i32, reg->Register.Index, 0);
+	else
+		index = get_bounded_indirect_index(ctx, &reg->Indirect,
+						   reg->Register.Index,
+						   SI_NUM_SHADER_BUFFERS);
 
-	ind_index = get_bounded_indirect_index(ctx, &reg->Indirect,
-					       reg->Register.Index,
-					       SI_NUM_SHADER_BUFFERS);
-
-	rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_SHADER_BUFFERS);
-	return build_indexed_load_const(ctx, rsrc_ptr, ind_index);
+	return build_indexed_load_const(ctx, rsrc_ptr, index);
 }
 
 static bool tgsi_is_array_sampler(unsigned target)
@@ -3480,18 +3475,21 @@ image_fetch_rsrc(
 	LLVMValueRef *rsrc)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn,
+					     SI_PARAM_IMAGES);
+	LLVMValueRef index, tmp;
 
 	assert(image->Register.File == TGSI_FILE_IMAGE);
 
 	if (!image->Register.Indirect) {
-		/* Fast path: use preloaded resources */
-		*rsrc = ctx->images[image->Register.Index];
-	} else {
-		/* Indexing and manual load */
-		LLVMValueRef ind_index;
-		LLVMValueRef rsrc_ptr;
-		LLVMValueRef tmp;
+		const struct tgsi_shader_info *info = bld_base->info;
 
+		index = LLVMConstInt(ctx->i32, image->Register.Index, 0);
+
+		if (info->images_writemask & (1 << image->Register.Index) &&
+		    !(info->images_buffers & (1 << image->Register.Index)))
+			dcc_off = true;
+	} else {
 		/* From the GL_ARB_shader_image_load_store extension spec:
 		 *
 		 *    If a shader performs an image load, store, or atomic
@@ -3501,16 +3499,15 @@ image_fetch_rsrc(
 		 *    array, the results of the operation are undefined but may
 		 *    not lead to termination.
 		 */
-		ind_index = get_bounded_indirect_index(ctx, &image->Indirect,
-						       image->Register.Index,
-						       SI_NUM_IMAGES);
-
-		rsrc_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_IMAGES);
-		tmp = build_indexed_load_const(ctx, rsrc_ptr, ind_index);
-		if (dcc_off)
-			tmp = force_dcc_off(ctx, tmp);
-		*rsrc = tmp;
+		index = get_bounded_indirect_index(ctx, &image->Indirect,
+						   image->Register.Index,
+						   SI_NUM_IMAGES);
 	}
+
+	tmp = build_indexed_load_const(ctx, rsrc_ptr, index);
+	if (dcc_off)
+		tmp = force_dcc_off(ctx, tmp);
+	*rsrc = tmp;
 }
 
 static LLVMValueRef image_fetch_coords(
@@ -4362,41 +4359,37 @@ static void tex_fetch_ptrs(
 	unsigned target = inst->Texture.Texture;
 	unsigned sampler_src;
 	unsigned sampler_index;
+	LLVMValueRef index;
 
 	sampler_src = emit_data->inst->Instruction.NumSrcRegs - 1;
 	sampler_index = emit_data->inst->Src[sampler_src].Register.Index;
 
 	if (emit_data->inst->Src[sampler_src].Register.Indirect) {
 		const struct tgsi_full_src_register *reg = &emit_data->inst->Src[sampler_src];
-		LLVMValueRef ind_index;
 
-		ind_index = get_bounded_indirect_index(ctx,
-						       &reg->Indirect,
-						       reg->Register.Index,
-						       SI_NUM_SAMPLERS);
-
-		*res_ptr = load_sampler_desc(ctx, ind_index, DESC_IMAGE);
-
-		if (target == TGSI_TEXTURE_2D_MSAA ||
-		    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-			if (samp_ptr)
-				*samp_ptr = NULL;
-			if (fmask_ptr)
-				*fmask_ptr = load_sampler_desc(ctx, ind_index, DESC_FMASK);
-		} else {
-			if (samp_ptr) {
-				*samp_ptr = load_sampler_desc(ctx, ind_index, DESC_SAMPLER);
-				*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
-			}
-			if (fmask_ptr)
-				*fmask_ptr = NULL;
-		}
+		index = get_bounded_indirect_index(ctx,
+						   &reg->Indirect,
+						   reg->Register.Index,
+						   SI_NUM_SAMPLERS);
 	} else {
-		*res_ptr = ctx->sampler_views[sampler_index];
+		index = LLVMConstInt(ctx->i32, sampler_index, 0);
+	}
+
+	*res_ptr = load_sampler_desc(ctx, index, DESC_IMAGE);
+
+	if (target == TGSI_TEXTURE_2D_MSAA ||
+	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
 		if (samp_ptr)
-			*samp_ptr = ctx->sampler_states[sampler_index];
+			*samp_ptr = NULL;
 		if (fmask_ptr)
-			*fmask_ptr = ctx->fmasks[sampler_index];
+			*fmask_ptr = load_sampler_desc(ctx, index, DESC_FMASK);
+	} else {
+		if (samp_ptr) {
+			*samp_ptr = load_sampler_desc(ctx, index, DESC_SAMPLER);
+			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
+		}
+		if (fmask_ptr)
+			*fmask_ptr = NULL;
 	}
 }
 
@@ -5863,81 +5856,6 @@ static void preload_constant_buffers(struct si_shader_context *ctx)
 	}
 }
 
-static void preload_shader_buffers(struct si_shader_context *ctx)
-{
-	struct gallivm_state *gallivm = &ctx->radeon_bld.gallivm;
-	LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_SHADER_BUFFERS);
-	int buf, maxbuf;
-
-	maxbuf = MIN2(ctx->shader->selector->info.file_max[TGSI_FILE_BUFFER],
-		      SI_NUM_SHADER_BUFFERS - 1);
-	for (buf = 0; buf <= maxbuf; ++buf) {
-		ctx->shader_buffers[buf] =
-			build_indexed_load_const(
-				ctx, ptr, lp_build_const_int32(gallivm, buf));
-	}
-}
-
-static void preload_samplers(struct si_shader_context *ctx)
-{
-	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	const struct tgsi_shader_info *info = bld_base->info;
-	unsigned i, num_samplers = info->file_max[TGSI_FILE_SAMPLER] + 1;
-	LLVMValueRef offset;
-
-	if (num_samplers == 0)
-		return;
-
-	/* Load the resources and samplers, we rely on the code sinking to do the rest */
-	for (i = 0; i < num_samplers; ++i) {
-		/* Resource */
-		offset = lp_build_const_int32(gallivm, i);
-		ctx->sampler_views[i] =
-			load_sampler_desc(ctx, offset, DESC_IMAGE);
-
-		/* FMASK resource */
-		if (info->is_msaa_sampler[i])
-			ctx->fmasks[i] =
-				load_sampler_desc(ctx, offset, DESC_FMASK);
-		else {
-			ctx->sampler_states[i] =
-				load_sampler_desc(ctx, offset, DESC_SAMPLER);
-			ctx->sampler_states[i] =
-				sici_fix_sampler_aniso(ctx, ctx->sampler_views[i],
-						       ctx->sampler_states[i]);
-		}
-	}
-}
-
-static void preload_images(struct si_shader_context *ctx)
-{
-	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
-	struct tgsi_shader_info *info = &ctx->shader->selector->info;
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	unsigned num_images = bld_base->info->file_max[TGSI_FILE_IMAGE] + 1;
-	LLVMValueRef res_ptr;
-	unsigned i;
-
-	if (num_images == 0)
-		return;
-
-	res_ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_IMAGES);
-
-	for (i = 0; i < num_images; ++i) {
-		/* Rely on LLVM to shrink the load for buffer resources. */
-		LLVMValueRef rsrc =
-			build_indexed_load_const(ctx, res_ptr,
-						 lp_build_const_int32(gallivm, i));
-
-		if (info->images_writemask & (1 << i) &&
-		    !(info->images_buffers & (1 << i)))
-			rsrc = force_dcc_off(ctx, rsrc);
-
-		ctx->images[i] = rsrc;
-	}
-}
-
 /**
  * Load ESGS and GSVS ring buffer resource descriptors and save the variables
  * for later use.
@@ -6780,9 +6698,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	create_meta_data(&ctx);
 	create_function(&ctx);
 	preload_constant_buffers(&ctx);
-	preload_shader_buffers(&ctx);
-	preload_samplers(&ctx);
-	preload_images(&ctx);
 	preload_ring_buffers(&ctx);
 
 	if (ctx.is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
