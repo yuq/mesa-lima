@@ -1788,9 +1788,10 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 	surface->base.u = templ->u;
 	surface->level_info = &rtex->surface.level[templ->u.tex.level];
 
-	vi_dcc_disable_if_incompatible_format(rctx, texture,
-					      templ->u.tex.level,
-					      templ->format);
+	if (texture->target != PIPE_BUFFER)
+		vi_dcc_disable_if_incompatible_format(rctx, texture,
+						      templ->u.tex.level,
+						      templ->format);
 
 	return &surface->base;
 }
