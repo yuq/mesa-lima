@@ -381,7 +381,7 @@ nir_optimize(nir_shader *nir, bool is_scalar)
       OPT(nir_copy_prop);
 
       if (is_scalar) {
-         OPT_V(nir_lower_phis_to_scalar);
+         OPT(nir_lower_phis_to_scalar);
       }
 
       OPT(nir_copy_prop);
