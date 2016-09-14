@@ -6378,8 +6378,7 @@ move_interpolation_to_top(nir_shader *nir)
 static void
 brw_nir_set_default_interpolation(const struct gen_device_info *devinfo,
                                   struct nir_shader *nir,
-                                  bool api_flat_shade,
-                                  bool per_sample_interpolation)
+                                  bool api_flat_shade)
 {
    assert(nir->stage == MESA_SHADER_FRAGMENT);
 
@@ -6398,13 +6397,6 @@ brw_nir_set_default_interpolation(const struct gen_device_info *devinfo,
                                         : INTERP_MODE_SMOOTH;
       }
 
-      /* Apply 'sample' if necessary for API state. */
-      if (per_sample_interpolation &&
-          var->data.interpolation != INTERP_MODE_FLAT) {
-         var->data.centroid = false;
-         var->data.sample = true;
-      }
-
       /* On Ironlake and below, there is only one interpolation mode.
        * Centroid interpolation doesn't mean anything on this hardware --
        * there is no multisampling.
@@ -6412,32 +6404,6 @@ brw_nir_set_default_interpolation(const struct gen_device_info *devinfo,
       if (devinfo->gen < 6) {
          var->data.centroid = false;
          var->data.sample = false;
-      }
-   }
-
-   if (per_sample_interpolation) {
-      nir_foreach_block(block, nir_shader_get_entrypoint(nir)) {
-         nir_foreach_instr(instr, block) {
-            if (instr->type != nir_instr_type_intrinsic)
-               continue;
-
-            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
-            if (intrin->intrinsic != nir_intrinsic_interp_var_at_centroid)
-               continue;
-
-            nir_variable *var = intrin->variables[0]->var;
-            if (var->data.interpolation == INTERP_MODE_FLAT)
-               continue;
-
-            /* The description of the interpolateAtCentroid intrinsic is that
-             * it interpolates the variable as if it had the "centroid"
-             * qualifier.  When executing with per_sample_interpolation, this
-             * is equivalent to having the "sample" qualifier.  Just convert
-             * it to a load_var instead.
-             */
-            assert(var->data.sample);
-            intrin->intrinsic = nir_intrinsic_load_var;
-         }
       }
    }
 }
@@ -6500,8 +6466,8 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
                                       true);
    brw_nir_set_default_interpolation(compiler->devinfo, shader,
-                                     key->flat_shade, key->persample_interp);
-   brw_nir_lower_fs_inputs(shader);
+                                     key->flat_shade);
+   brw_nir_lower_fs_inputs(shader, key);
    brw_nir_lower_fs_outputs(shader);
    if (!key->multisample_fbo)
       NIR_PASS_V(shader, demote_sample_qualifiers);

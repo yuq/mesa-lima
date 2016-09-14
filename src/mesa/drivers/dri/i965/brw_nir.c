@@ -281,13 +281,18 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 }
 
 void
-brw_nir_lower_fs_inputs(nir_shader *nir)
+brw_nir_lower_fs_inputs(nir_shader *nir,
+                        const struct brw_wm_prog_key *key)
 {
    foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       var->data.driver_location = var->data.location;
    }
 
-   nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
+   nir_lower_io_options lower_io_options = 0;
+   if (key->persample_interp)
+      lower_io_options |= nir_lower_io_force_sample_interpolation;
+
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4, lower_io_options);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);
