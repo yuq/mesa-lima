@@ -2012,10 +2012,11 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
  *                                    of unused uniforms from being removed.
  *                                    The setting of this flag only matters if
  *                                    \c linked is \c true.
- * \param max_unroll_iterations       Maximum number of loop iterations to be
- *                                    unrolled.  Setting to 0 disables loop
- *                                    unrolling.
  * \param options                     The driver's preferred shader options.
+ * \param native_integers             Selects optimizations that depend on the
+ *                                    implementations supporting integers
+ *                                    natively (as opposed to supporting
+ *                                    integers in floating point registers).
  */
 bool
 do_common_optimization(exec_list *ir, bool linked,
