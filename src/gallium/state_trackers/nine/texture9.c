@@ -244,6 +244,8 @@ NineTexture9_GetLevelDesc( struct NineTexture9 *This,
                            UINT Level,
                            D3DSURFACE_DESC *pDesc )
 {
+    DBG("This=%p Level=%d pDesc=%p\n", This, Level, pDesc);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
@@ -258,6 +260,8 @@ NineTexture9_GetSurfaceLevel( struct NineTexture9 *This,
                               UINT Level,
                               IDirect3DSurface9 **ppSurfaceLevel )
 {
+    DBG("This=%p Level=%d ppSurfaceLevel=%p\n", This, Level, ppSurfaceLevel);
+
     user_assert(Level <= This->base.base.info.last_level, D3DERR_INVALIDCALL);
     user_assert(Level == 0 || !(This->base.base.usage & D3DUSAGE_AUTOGENMIPMAP),
                 D3DERR_INVALIDCALL);
