@@ -37,6 +37,7 @@
 #include "standalone_scaffolding.h"
 #include "standalone.h"
 #include "util/string_to_uint_map.h"
+#include "opt_add_neg_to_sub.h"
 
 static const struct standalone_options *options;
 
@@ -440,6 +441,9 @@ standalone_compile_shader(const struct standalone_options *_options,
 
          if (!shader)
             continue;
+
+         add_neg_to_sub_visitor v;
+         visit_list_elements(&v, shader->ir);
 
          shader->Program = rzalloc(shader, gl_program);
          init_gl_program(shader->Program, shader->Stage);
