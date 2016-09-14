@@ -750,8 +750,8 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
       if (!find.variable_found()) {
         if (prog->IsES) {
           linker_warning(prog,
-                         "vertex shader does not write to `gl_Position'."
-                         "It's value is undefined. \n");
+                         "vertex shader does not write to `gl_Position'. "
+                         "Its value is undefined. \n");
         } else {
           linker_error(prog,
                        "vertex shader does not write to `gl_Position'. \n");
