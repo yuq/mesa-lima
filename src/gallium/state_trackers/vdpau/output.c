@@ -773,7 +773,7 @@ struct pipe_resource *vlVdpOutputSurfaceGallium(VdpOutputSurface surface)
    return vlsurface->surface->texture;
 }
 
-VdpStatus vlVdpOutputSurfaceDMABuf(VdpVideoSurface surface,
+VdpStatus vlVdpOutputSurfaceDMABuf(VdpOutputSurface surface,
                                    struct VdpSurfaceDMABufDesc *result)
 {
    vlVdpOutputSurface *vlsurface;
