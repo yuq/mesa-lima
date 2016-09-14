@@ -778,6 +778,9 @@ ConstantFolding::expr(Instruction *i,
       }
       break;
    }
+   case OP_SHLADD:
+      res.data.u32 = (a->data.u32 << b->data.u32) + c->data.u32;
+      break;
    default:
       return;
    }
