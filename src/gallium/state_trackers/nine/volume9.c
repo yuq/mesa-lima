@@ -167,6 +167,11 @@ NineVolume9_GetContainer( struct NineVolume9 *This,
                           REFIID riid,
                           void **ppContainer )
 {
+    char guid_str[64];
+
+    DBG("This=%p riid=%p id=%s ppContainer=%p\n",
+        This, riid, riid ? GUID_sprintf(guid_str, riid) : "", ppContainer);
+
     if (!NineUnknown(This)->container)
         return E_NOINTERFACE;
     return NineUnknown_QueryInterface(NineUnknown(This)->container, riid, ppContainer);
