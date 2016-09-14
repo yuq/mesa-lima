@@ -253,6 +253,11 @@ NineSurface9_GetContainer( struct NineSurface9 *This,
                            void **ppContainer )
 {
     HRESULT hr;
+    char guid_str[64];
+
+    DBG("This=%p riid=%p id=%s ppContainer=%p\n",
+        This, riid, riid ? GUID_sprintf(guid_str, riid) : "", ppContainer);
+
     if (!NineUnknown(This)->container)
         return E_NOINTERFACE;
     hr = NineUnknown_QueryInterface(NineUnknown(This)->container, riid, ppContainer);
