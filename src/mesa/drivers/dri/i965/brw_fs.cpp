@@ -6414,6 +6414,32 @@ brw_nir_set_default_interpolation(const struct gen_device_info *devinfo,
          var->data.sample = false;
       }
    }
+
+   if (per_sample_interpolation) {
+      nir_foreach_block(block, nir_shader_get_entrypoint(nir)) {
+         nir_foreach_instr(instr, block) {
+            if (instr->type != nir_instr_type_intrinsic)
+               continue;
+
+            nir_intrinsic_instr *intrin = nir_instr_as_intrinsic(instr);
+            if (intrin->intrinsic != nir_intrinsic_interp_var_at_centroid)
+               continue;
+
+            nir_variable *var = intrin->variables[0]->var;
+            if (var->data.interpolation == INTERP_MODE_FLAT)
+               continue;
+
+            /* The description of the interpolateAtCentroid intrinsic is that
+             * it interpolates the variable as if it had the "centroid"
+             * qualifier.  When executing with per_sample_interpolation, this
+             * is equivalent to having the "sample" qualifier.  Just convert
+             * it to a load_var instead.
+             */
+            assert(var->data.sample);
+            intrin->intrinsic = nir_intrinsic_load_var;
+         }
+      }
+   }
 }
 
 /**
