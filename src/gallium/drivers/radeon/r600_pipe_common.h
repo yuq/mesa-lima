@@ -695,6 +695,11 @@ r600_invalidate_resource(struct pipe_context *ctx,
 			 struct pipe_resource *resource);
 
 /* r600_common_pipe.c */
+void r600_gfx_write_fence(struct r600_common_context *ctx,
+			  uint64_t va, uint32_t old_value, uint32_t new_value);
+unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen);
+void r600_gfx_wait_fence(struct r600_common_context *ctx,
+			 uint64_t va, uint32_t ref, uint32_t mask);
 void r600_draw_rectangle(struct blitter_context *blitter,
 			 int x1, int y1, int x2, int y2, float depth,
 			 enum blitter_attrib_type type,

@@ -80,6 +80,58 @@ void radeon_shader_binary_clean(struct radeon_shader_binary *b)
  * pipe_context
  */
 
+void r600_gfx_write_fence(struct r600_common_context *ctx,
+			  uint64_t va, uint32_t old_value, uint32_t new_value)
+{
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+
+	if (ctx->chip_class == CIK) {
+		/* Two EOP events are required to make all engines go idle
+		 * (and optional cache flushes executed) before the timestamp
+		 * is written.
+		 */
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
+				EVENT_INDEX(5));
+		radeon_emit(cs, va);
+		radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
+		radeon_emit(cs, old_value); /* immediate data */
+		radeon_emit(cs, 0); /* unused */
+	}
+
+	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
+			EVENT_INDEX(5));
+	radeon_emit(cs, va);
+	radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
+	radeon_emit(cs, new_value); /* immediate data */
+	radeon_emit(cs, 0); /* unused */
+}
+
+unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen)
+{
+	unsigned dwords = 6;
+
+	if (screen->chip_class == CIK)
+		dwords *= 2;
+
+	return dwords;
+}
+
+void r600_gfx_wait_fence(struct r600_common_context *ctx,
+			 uint64_t va, uint32_t ref, uint32_t mask)
+{
+	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+
+	radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
+	radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, ref); /* reference value */
+	radeon_emit(cs, mask); /* mask */
+	radeon_emit(cs, 4); /* poll interval */
+}
+
 void r600_draw_rectangle(struct blitter_context *blitter,
 			 int x1, int y1, int x2, int y2, float depth,
 			 enum blitter_attrib_type type,
