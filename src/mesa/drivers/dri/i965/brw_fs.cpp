@@ -6373,42 +6373,6 @@ move_interpolation_to_top(nir_shader *nir)
 }
 
 /**
- * Apply default interpolation settings to FS inputs which don't specify any.
- */
-static void
-brw_nir_set_default_interpolation(const struct gen_device_info *devinfo,
-                                  struct nir_shader *nir,
-                                  bool api_flat_shade)
-{
-   assert(nir->stage == MESA_SHADER_FRAGMENT);
-
-   nir_foreach_variable(var, &nir->inputs) {
-      /* Apply default interpolation mode.
-       *
-       * Everything defaults to smooth except for the legacy GL color
-       * built-in variables, which might be flat depending on API state.
-       */
-      if (var->data.interpolation == INTERP_MODE_NONE) {
-         const bool flat = api_flat_shade &&
-            (var->data.location == VARYING_SLOT_COL0 ||
-             var->data.location == VARYING_SLOT_COL1);
-
-         var->data.interpolation = flat ? INTERP_MODE_FLAT
-                                        : INTERP_MODE_SMOOTH;
-      }
-
-      /* On Ironlake and below, there is only one interpolation mode.
-       * Centroid interpolation doesn't mean anything on this hardware --
-       * there is no multisampling.
-       */
-      if (devinfo->gen < 6) {
-         var->data.centroid = false;
-         var->data.sample = false;
-      }
-   }
-}
-
-/**
  * Demote per-sample barycentric intrinsics to centroid.
  *
  * Useful when rendering to a non-multisampled buffer.
@@ -6465,9 +6429,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
                                       true);
-   brw_nir_set_default_interpolation(compiler->devinfo, shader,
-                                     key->flat_shade);
-   brw_nir_lower_fs_inputs(shader, key);
+   brw_nir_lower_fs_inputs(shader, compiler->devinfo, key);
    brw_nir_lower_fs_outputs(shader);
    if (!key->multisample_fbo)
       NIR_PASS_V(shader, demote_sample_qualifiers);
