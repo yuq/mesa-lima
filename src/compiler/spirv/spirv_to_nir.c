@@ -2449,6 +2449,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityDerivativeControl:
       case SpvCapabilityInterpolationFunction:
       case SpvCapabilityMultiViewport:
+      case SpvCapabilitySampleRateShading:
          break;
 
       case SpvCapabilityClipDistance:
@@ -2468,7 +2469,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityImageGatherExtended:
       case SpvCapabilityStorageImageMultisample:
       case SpvCapabilityImageCubeArray:
-      case SpvCapabilitySampleRateShading:
       case SpvCapabilityInt8:
       case SpvCapabilityInputAttachment:
       case SpvCapabilitySparseResidency:
