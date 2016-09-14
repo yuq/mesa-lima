@@ -70,7 +70,10 @@ NineUnknown_QueryInterface( struct NineUnknown *This,
     do {
         if (GUID_equal(This->guids[i], riid)) {
             *ppvObject = This;
-            assert(This->refs);
+            /* Tests showed that this call succeeds even on objects with
+             * zero refcount. This can happen if the app released all references
+             * but the resource is still bound.
+             */
             NineUnknown_AddRef(This);
             return S_OK;
         }
