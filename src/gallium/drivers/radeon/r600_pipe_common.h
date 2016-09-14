@@ -120,6 +120,7 @@ enum r600_coherency {
 struct r600_common_context;
 struct r600_perfcounters;
 struct tgsi_shader_info;
+struct r600_qbo_state;
 
 struct radeon_shader_reloc {
 	char name[32];
@@ -649,6 +650,8 @@ struct r600_common_context {
 
 	/* Enable or disable occlusion queries. */
 	void (*set_occlusion_query_state)(struct pipe_context *ctx, bool enable);
+
+	void (*save_qbo_state)(struct pipe_context *ctx, struct r600_qbo_state *st);
 
 	/* This ensures there is enough space in the command stream. */
 	void (*need_gfx_cs_space)(struct pipe_context *ctx, unsigned num_dw,

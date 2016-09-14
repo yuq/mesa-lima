@@ -28,6 +28,7 @@
 #include "si_shader.h"
 #include "sid.h"
 #include "radeon/r600_cs.h"
+#include "radeon/r600_query.h"
 
 #include "util/u_dual_blend.h"
 #include "util/u_format.h"
@@ -1072,6 +1073,16 @@ static void si_set_occlusion_query_state(struct pipe_context *ctx, bool enable)
 	struct si_context *sctx = (struct si_context*)ctx;
 
 	si_mark_atom_dirty(sctx, &sctx->db_render_state);
+}
+
+static void si_save_qbo_state(struct pipe_context *ctx, struct r600_qbo_state *st)
+{
+	struct si_context *sctx = (struct si_context*)ctx;
+
+	st->saved_compute = sctx->cs_shader_state.program;
+
+	si_get_pipe_constant_buffer(sctx, PIPE_SHADER_COMPUTE, 0, &st->saved_const0);
+	si_get_shader_buffers(sctx, PIPE_SHADER_COMPUTE, 0, 3, st->saved_ssbo);
 }
 
 static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *state)
@@ -3498,6 +3509,7 @@ void si_init_state_functions(struct si_context *sctx)
 
 	sctx->b.b.set_active_query_state = si_set_active_query_state;
 	sctx->b.set_occlusion_query_state = si_set_occlusion_query_state;
+	sctx->b.save_qbo_state = si_save_qbo_state;
 	sctx->b.need_gfx_cs_space = si_need_gfx_cs_space;
 
 	sctx->b.b.draw_vbo = si_draw_vbo;

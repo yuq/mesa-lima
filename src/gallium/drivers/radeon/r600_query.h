@@ -29,6 +29,7 @@
 #define R600_QUERY_H
 
 #include "pipe/p_defines.h"
+#include "pipe/p_state.h"
 #include "util/list.h"
 
 struct pipe_context;
@@ -266,5 +267,11 @@ void r600_perfcounters_add_block(struct r600_common_screen *,
 void r600_perfcounters_do_destroy(struct r600_perfcounters *);
 void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 				 struct r600_query_hw *query);
+
+struct r600_qbo_state {
+	void *saved_compute;
+	struct pipe_constant_buffer saved_const0;
+	struct pipe_shader_buffer saved_ssbo[3];
+};
 
 #endif /* R600_QUERY_H */
