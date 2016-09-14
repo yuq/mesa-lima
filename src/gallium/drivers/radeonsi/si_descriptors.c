@@ -837,6 +837,27 @@ static void si_buffer_resources_begin_new_cs(struct si_context *sctx,
 	}
 }
 
+static void si_get_buffer_from_descriptors(struct si_buffer_resources *buffers,
+					   struct si_descriptors *descs,
+					   unsigned idx, struct pipe_resource **buf,
+					   unsigned *offset, unsigned *size)
+{
+	pipe_resource_reference(buf, buffers->buffers[idx]);
+	if (*buf) {
+		struct r600_resource *res = r600_resource(*buf);
+		const uint32_t *desc = descs->list + idx * 4;
+		uint64_t va;
+
+		*size = desc[2];
+
+		assert(G_008F04_STRIDE(desc[1]) == 0);
+		va = ((uint64_t)desc[1] << 32) | desc[0];
+
+		assert(va >= res->gpu_address && va + *size <= res->gpu_address + res->bo_size);
+		*offset = va - res->gpu_address;
+	}
+}
+
 /* VERTEX BUFFERS */
 
 static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
@@ -1062,6 +1083,16 @@ static void si_pipe_set_constant_buffer(struct pipe_context *ctx,
 			       slot, input);
 }
 
+void si_get_pipe_constant_buffer(struct si_context *sctx, uint shader,
+				 uint slot, struct pipe_constant_buffer *cbuf)
+{
+	cbuf->user_buffer = NULL;
+	si_get_buffer_from_descriptors(
+		&sctx->const_buffers[shader],
+		si_const_buffer_descriptors(sctx, shader),
+		slot, &cbuf->buffer, &cbuf->buffer_offset, &cbuf->buffer_size);
+}
+
 /* SHADER BUFFERS */
 
 static unsigned
@@ -1129,6 +1160,21 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 		descs->dirty_mask |= 1u << slot;
 		sctx->descriptors_dirty |=
 			1u << si_shader_buffer_descriptors_idx(shader);
+	}
+}
+
+void si_get_shader_buffers(struct si_context *sctx, uint shader,
+			   uint start_slot, uint count,
+			   struct pipe_shader_buffer *sbuf)
+{
+	struct si_buffer_resources *buffers = &sctx->shader_buffers[shader];
+	struct si_descriptors *descs = si_shader_buffer_descriptors(sctx, shader);
+
+	for (unsigned i = 0; i < count; ++i) {
+		si_get_buffer_from_descriptors(
+			buffers, descs, start_slot + i,
+			&sbuf[i].buffer, &sbuf[i].buffer_offset,
+			&sbuf[i].buffer_size);
 	}
 }
 
