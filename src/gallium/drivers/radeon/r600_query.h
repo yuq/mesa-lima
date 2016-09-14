@@ -34,6 +34,7 @@
 
 struct pipe_context;
 struct pipe_query;
+struct pipe_resource;
 
 struct r600_common_context;
 struct r600_common_screen;
@@ -88,6 +89,12 @@ struct r600_query_ops {
 	bool (*get_result)(struct r600_common_context *,
 			   struct r600_query *, bool wait,
 			   union pipe_query_result *result);
+	void (*get_result_resource)(struct r600_common_context *,
+				    struct r600_query *, bool wait,
+				    enum pipe_query_value_type result_type,
+				    int index,
+				    struct pipe_resource *resource,
+				    unsigned offset);
 };
 
 struct r600_query {

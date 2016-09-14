@@ -621,6 +621,8 @@ struct r600_common_context {
 
 	struct pipe_debug_callback	debug;
 
+	void				*query_result_shader;
+
 	/* Copy one resource to another using async DMA. */
 	void (*dma_copy)(struct pipe_context *ctx,
 			 struct pipe_resource *dst,

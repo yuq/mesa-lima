@@ -573,6 +573,9 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 		r600_texture_reference(&rctx->dcc_stats[i].tex, NULL);
 	}
 
+	if (rctx->query_result_shader)
+		rctx->b.delete_compute_state(&rctx->b, rctx->query_result_shader);
+
 	if (rctx->gfx.cs)
 		rctx->ws->cs_destroy(rctx->gfx.cs);
 	if (rctx->dma.cs)

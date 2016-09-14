@@ -25,6 +25,9 @@
 #include "r600_query.h"
 #include "r600_cs.h"
 #include "util/u_memory.h"
+#include "util/u_upload_mgr.h"
+
+#include "tgsi/tgsi_text.h"
 
 struct r600_hw_query_params {
 	unsigned start_offset;
@@ -282,11 +285,13 @@ static bool r600_query_sw_get_result(struct r600_common_context *rctx,
 	return true;
 }
 
+
 static struct r600_query_ops sw_query_ops = {
 	.destroy = r600_query_sw_destroy,
 	.begin = r600_query_sw_begin,
 	.end = r600_query_sw_end,
-	.get_result = r600_query_sw_get_result
+	.get_result = r600_query_sw_get_result,
+	.get_result_resource = NULL
 };
 
 static struct pipe_query *r600_query_sw_create(struct pipe_context *ctx,
@@ -380,11 +385,20 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 	return true;
 }
 
+static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
+                                              struct r600_query *rquery,
+                                              bool wait,
+                                              enum pipe_query_value_type result_type,
+                                              int index,
+                                              struct pipe_resource *resource,
+                                              unsigned offset);
+
 static struct r600_query_ops query_hw_ops = {
 	.destroy = r600_query_hw_destroy,
 	.begin = r600_query_hw_begin,
 	.end = r600_query_hw_end,
 	.get_result = r600_query_hw_get_result,
+	.get_result_resource = r600_query_hw_get_result_resource,
 };
 
 static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
@@ -1047,6 +1061,21 @@ static boolean r600_get_query_result(struct pipe_context *ctx,
 	return rquery->ops->get_result(rctx, rquery, wait, result);
 }
 
+static void r600_get_query_result_resource(struct pipe_context *ctx,
+                                           struct pipe_query *query,
+                                           boolean wait,
+                                           enum pipe_query_value_type result_type,
+                                           int index,
+                                           struct pipe_resource *resource,
+                                           unsigned offset)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct r600_query *rquery = (struct r600_query *)query;
+
+	rquery->ops->get_result_resource(rctx, rquery, wait, result_type, index,
+	                                 resource, offset);
+}
+
 static void r600_query_hw_clear_result(struct r600_query_hw *query,
 				       union pipe_query_result *result)
 {
@@ -1085,6 +1114,365 @@ bool r600_query_hw_get_result(struct r600_common_context *rctx,
 		result->u64 = (1000000 * result->u64) / rctx->screen->info.clock_crystal_freq;
 	}
 	return true;
+}
+
+/* Create the compute shader that is used to collect the results.
+ *
+ * One compute grid with a single thread is launched for every query result
+ * buffer. The thread (optionally) reads a previous summary buffer, then
+ * accumulates data from the query result buffer, and writes the result either
+ * to a summary buffer to be consumed by the next grid invocation or to the
+ * user-supplied buffer.
+ *
+ * Data layout:
+ *
+ * CONST
+ *  0.x = end_offset
+ *  0.y = result_stride
+ *  0.z = result_count
+ *  0.w = bit field:
+ *          1: read previously accumulated values
+ *          2: write accumulated values for chaining
+ *          4: write result available
+ *          8: convert result to boolean (0/1)
+ *         16: only read one dword and use that as result
+ *         32: apply timestamp conversion
+ *         64: store full 64 bits result
+ *        128: store signed 32 bits result
+ *  1.x = fence_offset
+ *  1.y = pair_stride
+ *  1.z = pair_count
+ *
+ * BUFFER[0] = query result buffer
+ * BUFFER[1] = previous summary buffer
+ * BUFFER[2] = next summary buffer or user-supplied buffer
+ */
+static void r600_create_query_result_shader(struct r600_common_context *rctx)
+{
+	/* TEMP[0].xy = accumulated result so far
+	 * TEMP[0].z = result not available
+	 *
+	 * TEMP[1].x = current result index
+	 * TEMP[1].y = current pair index
+	 */
+	static const char text_tmpl[] =
+		"COMP\n"
+		"PROPERTY CS_FIXED_BLOCK_WIDTH 1\n"
+		"PROPERTY CS_FIXED_BLOCK_HEIGHT 1\n"
+		"PROPERTY CS_FIXED_BLOCK_DEPTH 1\n"
+		"DCL BUFFER[0]\n"
+		"DCL BUFFER[1]\n"
+		"DCL BUFFER[2]\n"
+		"DCL CONST[0..1]\n"
+		"DCL TEMP[0..5]\n"
+		"IMM[0] UINT32 {0, 31, 2147483647, 4294967295}\n"
+		"IMM[1] UINT32 {1, 2, 4, 8}\n"
+		"IMM[2] UINT32 {16, 32, 64, 128}\n"
+		"IMM[3] UINT32 {1000000, 0, %u, 0}\n" /* for timestamp conversion */
+
+		"AND TEMP[5], CONST[0].wwww, IMM[2].xxxx\n"
+		"UIF TEMP[5]\n"
+			/* Check result availability. */
+			"LOAD TEMP[1].x, BUFFER[0], CONST[1].xxxx\n"
+			"ISHR TEMP[0].z, TEMP[1].xxxx, IMM[0].yyyy\n"
+			"MOV TEMP[1], TEMP[0].zzzz\n"
+			"NOT TEMP[0].z, TEMP[0].zzzz\n"
+
+			/* Load result if available. */
+			"UIF TEMP[1]\n"
+				"LOAD TEMP[0].xy, BUFFER[0], IMM[0].xxxx\n"
+			"ENDIF\n"
+		"ELSE\n"
+			/* Load previously accumulated result if requested. */
+			"MOV TEMP[0], IMM[0].xxxx\n"
+			"AND TEMP[4], CONST[0].wwww, IMM[1].xxxx\n"
+			"UIF TEMP[4]\n"
+				"LOAD TEMP[0].xyz, BUFFER[1], IMM[0].xxxx\n"
+			"ENDIF\n"
+
+			"MOV TEMP[1].x, IMM[0].xxxx\n"
+			"BGNLOOP\n"
+				/* Break if accumulated result so far is not available. */
+				"UIF TEMP[0].zzzz\n"
+					"BRK\n"
+				"ENDIF\n"
+
+				/* Break if result_index >= result_count. */
+				"USGE TEMP[5], TEMP[1].xxxx, CONST[0].zzzz\n"
+				"UIF TEMP[5]\n"
+					"BRK\n"
+				"ENDIF\n"
+
+				/* Load fence and check result availability */
+				"UMAD TEMP[5].x, TEMP[1].xxxx, CONST[0].yyyy, CONST[1].xxxx\n"
+				"LOAD TEMP[5].x, BUFFER[0], TEMP[5].xxxx\n"
+				"ISHR TEMP[0].z, TEMP[5].xxxx, IMM[0].yyyy\n"
+				"NOT TEMP[0].z, TEMP[0].zzzz\n"
+				"UIF TEMP[0].zzzz\n"
+					"BRK\n"
+				"ENDIF\n"
+
+				"MOV TEMP[1].y, IMM[0].xxxx\n"
+				"BGNLOOP\n"
+					/* Load start and end. */
+					"UMUL TEMP[5].x, TEMP[1].xxxx, CONST[0].yyyy\n"
+					"UMAD TEMP[5].x, TEMP[1].yyyy, CONST[1].yyyy, TEMP[5].xxxx\n"
+					"LOAD TEMP[2].xy, BUFFER[0], TEMP[5].xxxx\n"
+
+					"UADD TEMP[5].x, TEMP[5].xxxx, CONST[0].xxxx\n"
+					"LOAD TEMP[3].xy, BUFFER[0], TEMP[5].xxxx\n"
+
+					"U64ADD TEMP[3].xy, TEMP[3], -TEMP[2]\n"
+					"U64ADD TEMP[0].xy, TEMP[0], TEMP[3]\n"
+
+					/* Increment pair index */
+					"UADD TEMP[1].y, TEMP[1].yyyy, IMM[1].xxxx\n"
+					"USGE TEMP[5], TEMP[1].yyyy, CONST[1].zzzz\n"
+					"UIF TEMP[5]\n"
+						"BRK\n"
+					"ENDIF\n"
+				"ENDLOOP\n"
+
+				/* Increment result index */
+				"UADD TEMP[1].x, TEMP[1].xxxx, IMM[1].xxxx\n"
+			"ENDLOOP\n"
+		"ENDIF\n"
+
+		"AND TEMP[4], CONST[0].wwww, IMM[1].yyyy\n"
+		"UIF TEMP[4]\n"
+			/* Store accumulated data for chaining. */
+			"STORE BUFFER[2].xyz, IMM[0].xxxx, TEMP[0]\n"
+		"ELSE\n"
+			"AND TEMP[4], CONST[0].wwww, IMM[1].zzzz\n"
+			"UIF TEMP[4]\n"
+				/* Store result availability. */
+				"NOT TEMP[0].z, TEMP[0]\n"
+				"AND TEMP[0].z, TEMP[0].zzzz, IMM[1].xxxx\n"
+				"STORE BUFFER[2].x, IMM[0].xxxx, TEMP[0].zzzz\n"
+
+				"AND TEMP[4], CONST[0].wwww, IMM[2].zzzz\n"
+				"UIF TEMP[4]\n"
+					"STORE BUFFER[2].y, IMM[0].xxxx, IMM[0].xxxx\n"
+				"ENDIF\n"
+			"ELSE\n"
+				/* Store result if it is available. */
+				"NOT TEMP[4], TEMP[0].zzzz\n"
+				"UIF TEMP[4]\n"
+					/* Apply timestamp conversion */
+					"AND TEMP[4], CONST[0].wwww, IMM[2].yyyy\n"
+					"UIF TEMP[4]\n"
+						"U64MUL TEMP[0].xy, TEMP[0], IMM[3].xyxy\n"
+						"U64DIV TEMP[0].xy, TEMP[0], IMM[3].zwzw\n"
+					"ENDIF\n"
+
+					/* Convert to boolean */
+					"AND TEMP[4], CONST[0].wwww, IMM[1].wwww\n"
+					"UIF TEMP[4]\n"
+						"U64SNE TEMP[0].x, TEMP[0].xyxy, IMM[0].xxxx\n"
+						"AND TEMP[0].x, TEMP[0].xxxx, IMM[1].xxxx\n"
+						"MOV TEMP[0].y, IMM[0].xxxx\n"
+					"ENDIF\n"
+
+					"AND TEMP[4], CONST[0].wwww, IMM[2].zzzz\n"
+					"UIF TEMP[4]\n"
+						"STORE BUFFER[2].xy, IMM[0].xxxx, TEMP[0].xyxy\n"
+					"ELSE\n"
+						/* Clamping */
+						"UIF TEMP[0].yyyy\n"
+							"MOV TEMP[0].x, IMM[0].wwww\n"
+						"ENDIF\n"
+
+						"AND TEMP[4], CONST[0].wwww, IMM[2].wwww\n"
+						"UIF TEMP[4]\n"
+							"UMIN TEMP[0].x, TEMP[0].xxxx, IMM[0].zzzz\n"
+						"ENDIF\n"
+
+						"STORE BUFFER[2].x, IMM[0].xxxx, TEMP[0].xxxx\n"
+					"ENDIF\n"
+				"ENDIF\n"
+			"ENDIF\n"
+		"ENDIF\n"
+
+		"END\n";
+
+	char text[sizeof(text_tmpl) + 32];
+	struct tgsi_token tokens[1024];
+	struct pipe_compute_state state = {};
+
+	/* Hard code the frequency into the shader so that the backend can
+	 * use the full range of optimizations for divide-by-constant.
+	 */
+	snprintf(text, sizeof(text), text_tmpl,
+		 rctx->screen->info.clock_crystal_freq);
+
+	if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
+		assert(false);
+		return;
+	}
+
+	state.ir_type = PIPE_SHADER_IR_TGSI;
+	state.prog = tokens;
+
+	rctx->query_result_shader = rctx->b.create_compute_state(&rctx->b, &state);
+}
+
+static void r600_restore_qbo_state(struct r600_common_context *rctx,
+				   struct r600_qbo_state *st)
+{
+	rctx->b.bind_compute_state(&rctx->b, st->saved_compute);
+
+	rctx->b.set_constant_buffer(&rctx->b, PIPE_SHADER_COMPUTE, 0, &st->saved_const0);
+	pipe_resource_reference(&st->saved_const0.buffer, NULL);
+
+	rctx->b.set_shader_buffers(&rctx->b, PIPE_SHADER_COMPUTE, 0, 3, st->saved_ssbo);
+	for (unsigned i = 0; i < 3; ++i)
+		pipe_resource_reference(&st->saved_ssbo[i].buffer, NULL);
+}
+
+static void r600_query_hw_get_result_resource(struct r600_common_context *rctx,
+                                              struct r600_query *rquery,
+                                              bool wait,
+                                              enum pipe_query_value_type result_type,
+                                              int index,
+                                              struct pipe_resource *resource,
+                                              unsigned offset)
+{
+	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
+	struct r600_query_buffer *qbuf;
+	struct r600_query_buffer *qbuf_prev;
+	struct pipe_resource *tmp_buffer = NULL;
+	unsigned tmp_buffer_offset = 0;
+	struct r600_qbo_state saved_state = {};
+	struct pipe_grid_info grid = {};
+	struct pipe_constant_buffer constant_buffer = {};
+	struct pipe_shader_buffer ssbo[3];
+	struct r600_hw_query_params params;
+	struct {
+		uint32_t end_offset;
+		uint32_t result_stride;
+		uint32_t result_count;
+		uint32_t config;
+		uint32_t fence_offset;
+		uint32_t pair_stride;
+		uint32_t pair_count;
+	} consts;
+
+	if (!rctx->query_result_shader) {
+		r600_create_query_result_shader(rctx);
+		if (!rctx->query_result_shader)
+			return;
+	}
+
+	if (query->buffer.previous) {
+		u_suballocator_alloc(rctx->allocator_zeroed_memory, 16, 16,
+				     &tmp_buffer_offset, &tmp_buffer);
+		if (!tmp_buffer)
+			return;
+	}
+
+	rctx->save_qbo_state(&rctx->b, &saved_state);
+
+	r600_get_hw_query_params(rctx, query, index >= 0 ? index : 0, &params);
+	consts.end_offset = params.end_offset - params.start_offset;
+	consts.fence_offset = params.fence_offset - params.start_offset;
+	consts.result_stride = query->result_size;
+	consts.pair_stride = params.pair_stride;
+	consts.pair_count = params.pair_count;
+
+	constant_buffer.buffer_size = sizeof(consts);
+	constant_buffer.user_buffer = &consts;
+
+	ssbo[1].buffer = tmp_buffer;
+	ssbo[1].buffer_offset = tmp_buffer_offset;
+	ssbo[1].buffer_size = 16;
+
+	ssbo[2] = ssbo[1];
+
+	rctx->b.bind_compute_state(&rctx->b, rctx->query_result_shader);
+
+	grid.block[0] = 1;
+	grid.block[1] = 1;
+	grid.block[2] = 1;
+	grid.grid[0] = 1;
+	grid.grid[1] = 1;
+	grid.grid[2] = 1;
+
+	consts.config = 0;
+	if (index < 0)
+		consts.config |= 4;
+	if (query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE ||
+	    query->b.type == PIPE_QUERY_SO_OVERFLOW_PREDICATE)
+		consts.config |= 8;
+	else if (query->b.type == PIPE_QUERY_TIMESTAMP ||
+		 query->b.type == PIPE_QUERY_TIME_ELAPSED)
+		consts.config |= 32;
+
+	switch (result_type) {
+	case PIPE_QUERY_TYPE_U64:
+	case PIPE_QUERY_TYPE_I64:
+		consts.config |= 64;
+		break;
+	case PIPE_QUERY_TYPE_I32:
+		consts.config |= 128;
+		break;
+	case PIPE_QUERY_TYPE_U32:
+		break;
+	}
+
+	rctx->flags |= rctx->screen->barrier_flags.cp_to_L2;
+
+	for (qbuf = &query->buffer; qbuf; qbuf = qbuf_prev) {
+		if (query->b.type != PIPE_QUERY_TIMESTAMP) {
+			qbuf_prev = qbuf->previous;
+			consts.result_count = qbuf->results_end / query->result_size;
+			consts.config &= ~3;
+			if (qbuf != &query->buffer)
+				consts.config |= 1;
+			if (qbuf->previous)
+				consts.config |= 2;
+		} else {
+			/* Only read the last timestamp. */
+			qbuf_prev = NULL;
+			consts.result_count = 0;
+			consts.config |= 16;
+			params.start_offset += qbuf->results_end - query->result_size;
+		}
+
+		rctx->b.set_constant_buffer(&rctx->b, PIPE_SHADER_COMPUTE, 0, &constant_buffer);
+
+		ssbo[0].buffer = &qbuf->buf->b.b;
+		ssbo[0].buffer_offset = params.start_offset;
+		ssbo[0].buffer_size = qbuf->results_end - params.start_offset;
+
+		if (!qbuf->previous) {
+			ssbo[2].buffer = resource;
+			ssbo[2].buffer_offset = offset;
+			ssbo[2].buffer_size = 8;
+
+			((struct r600_resource *)resource)->TC_L2_dirty = true;
+		}
+
+		rctx->b.set_shader_buffers(&rctx->b, PIPE_SHADER_COMPUTE, 0, 3, ssbo);
+
+		if (wait && qbuf == &query->buffer) {
+			uint64_t va;
+
+			/* Wait for result availability. Wait only for readiness
+			 * of the last entry, since the fence writes should be
+			 * serialized in the CP.
+			 */
+			va = qbuf->buf->gpu_address + qbuf->results_end - query->result_size;
+			va += params.fence_offset;
+
+			r600_gfx_wait_fence(rctx, va, 0x80000000, 0x80000000);
+		}
+
+		rctx->b.launch_grid(&rctx->b, &grid);
+		rctx->flags |= rctx->screen->barrier_flags.compute_to_L2;
+	}
+
+	r600_restore_qbo_state(rctx, &saved_state);
+	pipe_resource_reference(&tmp_buffer, NULL);
 }
 
 static void r600_render_condition(struct pipe_context *ctx,
@@ -1392,6 +1780,7 @@ void r600_query_init(struct r600_common_context *rctx)
 	rctx->b.begin_query = r600_begin_query;
 	rctx->b.end_query = r600_end_query;
 	rctx->b.get_query_result = r600_get_query_result;
+	rctx->b.get_query_result_resource = r600_get_query_result_resource;
 	rctx->render_cond_atom.emit = r600_emit_query_predication;
 
 	if (((struct r600_common_screen*)rctx->b.screen)->info.num_render_backends > 0)
