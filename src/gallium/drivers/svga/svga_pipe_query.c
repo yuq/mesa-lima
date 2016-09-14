@@ -986,11 +986,6 @@ svga_end_query(struct pipe_context *pipe, struct pipe_query *q)
       }
       assert(ret == PIPE_OK);
       (void) ret;
-      /* TODO: Delay flushing. We don't really need to flush here, just ensure
-       * that there is one flush before svga_get_query_result attempts to get
-       * the result.
-       */
-      svga_context_flush(svga, NULL);
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED:
    case PIPE_QUERY_PRIMITIVES_EMITTED:
