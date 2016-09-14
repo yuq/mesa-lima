@@ -26,6 +26,14 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 
+struct r600_hw_query_params {
+	unsigned start_offset;
+	unsigned end_offset;
+	unsigned fence_offset;
+	unsigned pair_stride;
+	unsigned pair_count;
+};
+
 /* Queries without buffer handling or suspend/resume. */
 struct r600_query_sw {
 	struct r600_query b;
@@ -359,7 +367,7 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 		unsigned i, j;
 
 		/* Set top bits for unused backends. */
-		num_results = buffer->b.b.width0 / (16 * ctx->max_db);
+		num_results = buffer->b.b.width0 / query->result_size;
 		for (j = 0; j < num_results; j++) {
 			for (i = 0; i < ctx->max_db; i++) {
 				if (!(ctx->backend_mask & (1<<i))) {
@@ -429,18 +437,19 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		query->result_size = 16 * rctx->max_db;
+		query->result_size += 16; /* for the fence + alignment */
 		query->num_cs_dw_begin = 6;
-		query->num_cs_dw_end = 6;
+		query->num_cs_dw_end = 6 + r600_gfx_write_fence_dwords(rctx->screen);
 		query->flags |= R600_QUERY_HW_FLAG_PREDICATE;
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
-		query->result_size = 16;
+		query->result_size = 24;
 		query->num_cs_dw_begin = 8;
-		query->num_cs_dw_end = 8;
+		query->num_cs_dw_end = 8 + r600_gfx_write_fence_dwords(rctx->screen);
 		break;
 	case PIPE_QUERY_TIMESTAMP:
-		query->result_size = 8;
-		query->num_cs_dw_end = 8;
+		query->result_size = 16;
+		query->num_cs_dw_end = 8 + r600_gfx_write_fence_dwords(rctx->screen);
 		query->flags = R600_QUERY_HW_FLAG_NO_START;
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
@@ -457,8 +466,9 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */
 		query->result_size = (rctx->chip_class >= EVERGREEN ? 11 : 8) * 16;
+		query->result_size += 8; /* for the fence + alignment */
 		query->num_cs_dw_begin = 6;
-		query->num_cs_dw_end = 6;
+		query->num_cs_dw_end = 6 + r600_gfx_write_fence_dwords(rctx->screen);
 		break;
 	default:
 		assert(0);
@@ -605,6 +615,9 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) & 0xFFFF);
+
+		va += ctx->max_db * 16 - 8;
+		r600_gfx_write_fence(ctx, va, 0, 0x80000000);
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -617,7 +630,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, (va >> 32) & 0xFFFF);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
-		va += query->result_size/2;
+		va += 8;
 		/* fall through */
 	case PIPE_QUERY_TIMESTAMP:
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
@@ -626,14 +639,23 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, (3 << 29) | ((va >> 32) & 0xFFFF));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, 0);
+
+		va += 8;
+		r600_gfx_write_fence(ctx, va, 0, 0x80000000);
 		break;
-	case PIPE_QUERY_PIPELINE_STATISTICS:
-		va += query->result_size/2;
+	case PIPE_QUERY_PIPELINE_STATISTICS: {
+		unsigned sample_size = (query->result_size - 8) / 2;
+
+		va += sample_size;
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_PIPELINESTAT) | EVENT_INDEX(2));
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) & 0xFFFF);
+
+		va += sample_size;
+		r600_gfx_write_fence(ctx, va, 0, 0x80000000);
 		break;
+	}
 	default:
 		assert(0);
 	}
@@ -832,6 +854,61 @@ bool r600_query_hw_end(struct r600_common_context *rctx,
 	return true;
 }
 
+static void r600_get_hw_query_params(struct r600_common_context *rctx,
+				     struct r600_query_hw *rquery, int index,
+				     struct r600_hw_query_params *params)
+{
+	params->pair_stride = 0;
+	params->pair_count = 1;
+
+	switch (rquery->b.type) {
+	case PIPE_QUERY_OCCLUSION_COUNTER:
+	case PIPE_QUERY_OCCLUSION_PREDICATE:
+		params->start_offset = 0;
+		params->end_offset = 8;
+		params->fence_offset = rctx->max_db * 16;
+		params->pair_stride = 16;
+		params->pair_count = rctx->max_db;
+		break;
+	case PIPE_QUERY_TIME_ELAPSED:
+		params->start_offset = 0;
+		params->end_offset = 8;
+		params->fence_offset = 16;
+		break;
+	case PIPE_QUERY_TIMESTAMP:
+		params->start_offset = 0;
+		params->end_offset = 0;
+		params->fence_offset = 8;
+		break;
+	case PIPE_QUERY_PRIMITIVES_EMITTED:
+		params->start_offset = 8;
+		params->end_offset = 24;
+		params->fence_offset = params->end_offset + 4;
+		break;
+	case PIPE_QUERY_PRIMITIVES_GENERATED:
+		params->start_offset = 0;
+		params->end_offset = 16;
+		params->fence_offset = params->end_offset + 4;
+		break;
+	case PIPE_QUERY_SO_STATISTICS:
+		params->start_offset = 8 - index * 8;
+		params->end_offset = 24 - index * 8;
+		params->fence_offset = params->end_offset + 4;
+		break;
+	case PIPE_QUERY_PIPELINE_STATISTICS:
+	{
+		/* Offsets apply to EG+ */
+		static const unsigned offsets[] = {56, 48, 24, 32, 40, 16, 8, 0, 64, 72, 80};
+		params->start_offset = offsets[index];
+		params->end_offset = 88 + offsets[index];
+		params->fence_offset = 2 * 88;
+		break;
+	}
+	default:
+		unreachable("r600_get_hw_query_params unsupported");
+	}
+}
+
 static unsigned r600_query_read_result(void *map, unsigned start_index, unsigned end_index,
 				       bool test_status_bit)
 {
@@ -857,20 +934,18 @@ static void r600_query_hw_add_result(struct r600_common_context *ctx,
 {
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER: {
-		unsigned results_base = 0;
-		while (results_base != query->result_size) {
+		for (unsigned i = 0; i < ctx->max_db; ++i) {
+			unsigned results_base = i * 16;
 			result->u64 +=
 				r600_query_read_result(buffer + results_base, 0, 2, true);
-			results_base += 16;
 		}
 		break;
 	}
 	case PIPE_QUERY_OCCLUSION_PREDICATE: {
-		unsigned results_base = 0;
-		while (results_base != query->result_size) {
+		for (unsigned i = 0; i < ctx->max_db; ++i) {
+			unsigned results_base = i * 16;
 			result->b = result->b ||
 				r600_query_read_result(buffer + results_base, 0, 2, true) != 0;
-			results_base += 16;
 		}
 		break;
 	}
