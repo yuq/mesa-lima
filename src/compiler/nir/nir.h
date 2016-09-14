@@ -2397,9 +2397,17 @@ void nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
                               unsigned base_offset,
                               int (*type_size)(const struct glsl_type *));
 
+typedef enum {
+   /* If set, this forces all non-flat fragment shader inputs to be
+    * interpolated as if with the "sample" qualifier.  This requires
+    * nir_shader_compiler_options::use_interpolated_input_intrinsics.
+    */
+   nir_lower_io_force_sample_interpolation = (1 << 1),
+} nir_lower_io_options;
 void nir_lower_io(nir_shader *shader,
                   nir_variable_mode modes,
-                  int (*type_size)(const struct glsl_type *));
+                  int (*type_size)(const struct glsl_type *),
+                  nir_lower_io_options);
 nir_src *nir_get_io_offset_src(nir_intrinsic_instr *instr);
 nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 

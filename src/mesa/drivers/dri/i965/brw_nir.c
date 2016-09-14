@@ -205,7 +205,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
     * loaded as one vec4 or dvec4 per element (or matrix column), depending on
     * whether it is a double-precision type or not.
     */
-   nir_lower_io(nir, nir_var_shader_in, type_size_vs_input);
+   nir_lower_io(nir, nir_var_shader_in, type_size_vs_input, 0);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);
@@ -237,7 +237,7 @@ brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
    }
 
    /* Inputs are stored in vec4 slots, so use type_size_vec4(). */
-   nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
 
    if (is_scalar || nir->stage != MESA_SHADER_GEOMETRY) {
       /* This pass needs actual constants */
@@ -262,7 +262,7 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
       var->data.driver_location = var->data.location;
    }
 
-   nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);
@@ -287,7 +287,7 @@ brw_nir_lower_fs_inputs(nir_shader *nir)
       var->data.driver_location = var->data.location;
    }
 
-   nir_lower_io(nir, nir_var_shader_in, type_size_vec4);
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);
@@ -303,11 +303,11 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
       nir_assign_var_locations(&nir->outputs, &nir->num_outputs,
                                VARYING_SLOT_VAR0,
                                type_size_vec4_times_4);
-      nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4);
+      nir_lower_io(nir, nir_var_shader_out, type_size_vec4_times_4, 0);
    } else {
       nir_foreach_variable(var, &nir->outputs)
          var->data.driver_location = var->data.location;
-      nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
+      nir_lower_io(nir, nir_var_shader_out, type_size_vec4, 0);
    }
 }
 
@@ -318,7 +318,7 @@ brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
       var->data.driver_location = var->data.location;
    }
 
-   nir_lower_io(nir, nir_var_shader_out, type_size_vec4);
+   nir_lower_io(nir, nir_var_shader_out, type_size_vec4, 0);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);
@@ -345,7 +345,7 @@ brw_nir_lower_fs_outputs(nir_shader *nir)
          SET_FIELD(var->data.location, BRW_NIR_FRAG_OUTPUT_LOCATION);
    }
 
-   nir_lower_io(nir, nir_var_shader_out, type_size_dvec4);
+   nir_lower_io(nir, nir_var_shader_out, type_size_dvec4, 0);
 }
 
 void
@@ -353,7 +353,7 @@ brw_nir_lower_cs_shared(nir_shader *nir)
 {
    nir_assign_var_locations(&nir->shared, &nir->num_shared, 0,
                             type_size_scalar_bytes);
-   nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes);
+   nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes, 0);
 }
 
 #define OPT(pass, ...) ({                                  \

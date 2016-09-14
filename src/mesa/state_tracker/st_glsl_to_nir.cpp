@@ -359,7 +359,8 @@ st_finalize_nir(struct st_context *st, struct gl_program *prog, nir_shader *nir)
                                    &nir->uniforms, &nir->num_uniforms);
 
    NIR_PASS_V(nir, nir_lower_system_values);
-   NIR_PASS_V(nir, nir_lower_io, nir_var_all, st_glsl_type_size);
+   NIR_PASS_V(nir, nir_lower_io, nir_var_all, st_glsl_type_size,
+              (nir_lower_io_options)0);
    NIR_PASS_V(nir, nir_lower_samplers, shader_program);
 }
 

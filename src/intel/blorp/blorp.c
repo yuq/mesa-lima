@@ -204,7 +204,7 @@ brw_blorp_compile_nir_shader(struct blorp_context *blorp, struct nir_shader *nir
       unsigned end = var->data.location + nir_uniform_type_size(var->type);
       nir->num_uniforms = MAX2(nir->num_uniforms, end);
    }
-   nir_lower_io(nir, nir_var_uniform, nir_uniform_type_size);
+   nir_lower_io(nir, nir_var_uniform, nir_uniform_type_size, 0);
 
    const unsigned *program =
       brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx,
