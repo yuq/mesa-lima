@@ -915,6 +915,7 @@ ConstantFolding::opnd3(Instruction *i, ImmediateValue &imm2)
 void
 ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
 {
+   const Target *target = prog->getTarget();
    const int t = !s;
    const operation op = i->op;
    Instruction *newi = i;
@@ -1016,6 +1017,12 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->src(1).mod = i->src(2).mod;
          i->setSrc(2, NULL);
          i->op = OP_ADD;
+      } else
+      if (s == 1 && !imm0.isNegative() && imm0.isPow2() &&
+          target->isOpSupported(i->op, i->dType)) {
+         i->op = OP_SHLADD;
+         imm0.applyLog2();
+         i->setSrc(1, new_ImmediateValue(prog, imm0.reg.data.u32));
       }
       break;
    case OP_ADD:
