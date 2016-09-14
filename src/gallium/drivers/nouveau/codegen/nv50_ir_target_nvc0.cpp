@@ -105,6 +105,7 @@ static const struct opProperties _initProps[] =
    { OP_MAX,    0x3, 0x3, 0x0, 0x0, 0x2, 0x2 },
    { OP_MIN,    0x3, 0x3, 0x0, 0x0, 0x2, 0x2 },
    { OP_MAD,    0x7, 0x0, 0x0, 0x8, 0x6, 0x2 | 0x8 }, // special c[] constraint
+   { OP_SHLADD, 0x5, 0x0, 0x0, 0x0, 0x4, 0x6 },
    { OP_MADSP,  0x0, 0x0, 0x0, 0x0, 0x6, 0x2 },
    { OP_ABS,    0x0, 0x0, 0x0, 0x0, 0x1, 0x0 },
    { OP_NEG,    0x0, 0x1, 0x0, 0x0, 0x1, 0x0 },
@@ -158,13 +159,13 @@ void TargetNVC0::initOpInfo()
    {
       // ADD, MUL, MAD, FMA, AND, OR, XOR, MAX, MIN, SET_AND, SET_OR, SET_XOR,
       // SET, SELP, SLCT
-      0x0670ca00, 0x0000003f, 0x00000000, 0x00000000
+      0x0ce0ca00, 0x0000007e, 0x00000000, 0x00000000
    };
 
    static const uint32_t shortForm[(OP_LAST + 31) / 32] =
    {
       // ADD, MUL, MAD, FMA, AND, OR, XOR, MAX, MIN
-      0x0670ca00, 0x00000000, 0x00000000, 0x00000000
+      0x0ce0ca00, 0x00000000, 0x00000000, 0x00000000
    };
 
    static const operation noDest[] =
@@ -450,6 +451,12 @@ TargetNVC0::isModSupported(const Instruction *insn, int s, Modifier mod) const
       case OP_SUB:
          if (s == 0)
             return insn->src(1).mod.neg() ? false : true;
+         break;
+      case OP_SHLADD:
+         if (s == 1)
+            return false;
+         if (insn->src(s ? 0 : 2).mod.neg())
+            return false;
          break;
       default:
          return false;

@@ -57,6 +57,7 @@ enum operation
    OP_MAD,
    OP_FMA,
    OP_SAD, // abs(src0 - src1) + src2
+   OP_SHLADD,
    OP_ABS,
    OP_NEG,
    OP_NOT,

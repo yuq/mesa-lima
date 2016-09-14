@@ -86,6 +86,7 @@ const char *operationStr[OP_LAST + 1] =
    "mad",
    "fma",
    "sad",
+   "shladd",
    "abs",
    "neg",
    "not",
