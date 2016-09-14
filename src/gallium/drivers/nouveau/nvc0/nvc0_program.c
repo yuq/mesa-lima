@@ -562,6 +562,14 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    info->bin.sourceRep = NV50_PROGRAM_IR_TGSI;
    info->bin.source = (void *)prog->pipe.tokens;
 
+#ifdef DEBUG
+   info->target = debug_get_num_option("NV50_PROG_CHIPSET", chipset);
+   info->optLevel = debug_get_num_option("NV50_PROG_OPTIMIZE", 3);
+   info->dbgFlags = debug_get_num_option("NV50_PROG_DEBUG", 0);
+#else
+   info->optLevel = 3;
+#endif
+
    info->io.genUserClip = prog->vp.num_ucps;
    info->io.auxCBSlot = 15;
    info->io.msInfoCBSlot = 15;
@@ -570,12 +578,12 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    info->io.msInfoBase = NVC0_CB_AUX_MS_INFO;
    info->io.bufInfoBase = NVC0_CB_AUX_BUF_INFO(0);
    info->io.suInfoBase = NVC0_CB_AUX_SU_INFO(0);
-   if (chipset >= NVISA_GK104_CHIPSET) {
+   if (info->target >= NVISA_GK104_CHIPSET) {
       info->io.texBindBase = NVC0_CB_AUX_TEX_INFO(0);
    }
 
    if (prog->type == PIPE_SHADER_COMPUTE) {
-      if (chipset >= NVISA_GK104_CHIPSET) {
+      if (info->target >= NVISA_GK104_CHIPSET) {
          info->io.auxCBSlot = 7;
          info->io.msInfoCBSlot = 7;
          info->io.uboInfoBase = NVC0_CB_AUX_UBO_INFO(0);
@@ -586,13 +594,6 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
    }
 
    info->assignSlots = nvc0_program_assign_varying_slots;
-
-#ifdef DEBUG
-   info->optLevel = debug_get_num_option("NV50_PROG_OPTIMIZE", 3);
-   info->dbgFlags = debug_get_num_option("NV50_PROG_DEBUG", 0);
-#else
-   info->optLevel = 3;
-#endif
 
    ret = nv50_ir_generate_code(info);
    if (ret) {
