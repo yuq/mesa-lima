@@ -907,6 +907,14 @@ ConstantFolding::opnd3(Instruction *i, ImmediateValue &imm2)
          return;
       }
       break;
+   case OP_SHLADD:
+      if (imm2.isInteger(0)) {
+         i->op = OP_SHL;
+         i->setSrc(2, NULL);
+         foldCount++;
+         return;
+      }
+      break;
    default:
       return;
    }
