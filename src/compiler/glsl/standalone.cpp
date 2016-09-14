@@ -331,7 +331,11 @@ standalone_compile_shader(const struct standalone_options *_options,
       return NULL;
    }
 
-   initialize_context(ctx, (glsl_es) ? API_OPENGLES2 : API_OPENGL_COMPAT);
+   if (glsl_es) {
+      initialize_context(ctx, API_OPENGLES2);
+   } else {
+      initialize_context(ctx, options->glsl_version > 130 ? API_OPENGL_CORE : API_OPENGL_COMPAT);
+   }
 
    struct gl_shader_program *whole_program;
 
