@@ -826,6 +826,18 @@ brw_mask_reg(unsigned subnr)
 }
 
 static inline struct brw_reg
+brw_vmask_reg()
+{
+   return brw_sr0_reg(3);
+}
+
+static inline struct brw_reg
+brw_dmask_reg()
+{
+   return brw_sr0_reg(2);
+}
+
+static inline struct brw_reg
 brw_message_reg(unsigned nr)
 {
    return brw_vec8_reg(BRW_MESSAGE_REGISTER_FILE, nr, 0);

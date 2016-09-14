@@ -2043,9 +2043,12 @@ fs_generator::generate_code(const cfg_t *cfg, int dispatch_width)
          generate_set_simd4x2_offset(inst, dst, src[0]);
          break;
 
-      case SHADER_OPCODE_FIND_LIVE_CHANNEL:
-         brw_find_live_channel(p, dst);
+      case SHADER_OPCODE_FIND_LIVE_CHANNEL: {
+         const struct brw_reg mask =
+            stage == MESA_SHADER_FRAGMENT ? brw_vmask_reg() : brw_dmask_reg();
+         brw_find_live_channel(p, dst, mask);
          break;
+      }
 
       case SHADER_OPCODE_BROADCAST:
          assert(inst->force_writemask_all);

@@ -3361,7 +3361,8 @@ brw_pixel_interpolator_query(struct brw_codegen *p,
 }
 
 void
-brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
+brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst,
+                      struct brw_reg mask)
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned exec_size = 1 << brw_inst_exec_size(devinfo, p->current);
@@ -3369,6 +3370,7 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
    brw_inst *inst;
 
    assert(devinfo->gen >= 7);
+   assert(mask.type == BRW_REGISTER_TYPE_UD);
 
    brw_push_insn_state(p);
 
@@ -3377,18 +3379,32 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
 
       if (devinfo->gen >= 8) {
          /* Getting the first active channel index is easy on Gen8: Just find
-          * the first bit set in the mask register.  The same register exists
-          * on HSW already but it reads back as all ones when the current
+          * the first bit set in the execution mask.  The register exists on
+          * HSW already but it reads back as all ones when the current
           * instruction has execution masking disabled, so it's kind of
           * useless.
           */
-         inst = brw_FBL(p, vec1(dst),
-                        retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD));
+         struct brw_reg exec_mask =
+            retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD);
+
+         if (mask.file != BRW_IMMEDIATE_VALUE || mask.ud != 0xffffffff) {
+            /* Unfortunately, ce0 does not take into account the thread
+             * dispatch mask, which may be a problem in cases where it's not
+             * tightly packed (i.e. it doesn't have the form '2^n - 1' for
+             * some n).  Combine ce0 with the given dispatch (or vector) mask
+             * to mask off those channels which were never dispatched by the
+             * hardware.
+             */
+            brw_SHR(p, vec1(dst), mask, brw_imm_ud(qtr_control * 8));
+            brw_AND(p, vec1(dst), exec_mask, vec1(dst));
+            exec_mask = vec1(dst);
+         }
 
          /* Quarter control has the effect of magically shifting the value of
-          * this register so you'll get the first active channel relative to
-          * the specified quarter control as result.
+          * ce0 so you'll get the first active channel relative to the
+          * specified quarter control as result.
           */
+         inst = brw_FBL(p, vec1(dst), exec_mask);
       } else {
          const struct brw_reg flag = brw_flag_reg(1, 0);
 
@@ -3422,9 +3438,14 @@ brw_find_live_channel(struct brw_codegen *p, struct brw_reg dst)
    } else {
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
 
-      if (devinfo->gen >= 8) {
+      if (devinfo->gen >= 8 &&
+          mask.file == BRW_IMMEDIATE_VALUE && mask.ud == 0xffffffff) {
          /* In SIMD4x2 mode the first active channel index is just the
-          * negation of the first bit of the mask register.
+          * negation of the first bit of the mask register.  Note that ce0
+          * doesn't take into account the dispatch mask, so the Gen7 path
+          * should be used instead unless you have the guarantee that the
+          * dispatch mask is tightly packed (i.e. it has the form '2^n - 1'
+          * for some n).
           */
          inst = brw_AND(p, brw_writemask(dst, WRITEMASK_X),
                         negate(retype(brw_mask_reg(0), BRW_REGISTER_TYPE_UD)),

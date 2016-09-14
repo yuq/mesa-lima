@@ -1863,7 +1863,7 @@ generate_code(struct brw_codegen *p,
          break;
 
       case SHADER_OPCODE_FIND_LIVE_CHANNEL:
-         brw_find_live_channel(p, dst);
+         brw_find_live_channel(p, dst, brw_dmask_reg());
          break;
 
       case SHADER_OPCODE_BROADCAST:
