@@ -60,8 +60,10 @@ NineUnknown_QueryInterface( struct NineUnknown *This,
                             void **ppvObject )
 {
     unsigned i = 0;
+    char guid_str[64];
 
-    DBG("This=%p riid=%p ppvObject=%p\n", This, riid, ppvObject);
+    DBG("This=%p riid=%p id=%s ppvObject=%p\n",
+        This, riid, riid ? GUID_sprintf(guid_str, riid) : "", ppvObject);
 
     if (!ppvObject) return E_POINTER;
 
