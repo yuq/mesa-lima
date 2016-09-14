@@ -152,6 +152,7 @@ private:
    void emitIADD();
    void emitIMUL();
    void emitIMAD();
+   void emitISCADD();
    void emitIMNMX();
    void emitICMP();
    void emitISET();
@@ -1813,6 +1814,34 @@ CodeEmitterGM107::emitIMAD()
 }
 
 void
+CodeEmitterGM107::emitISCADD()
+{
+   switch (insn->src(2).getFile()) {
+   case FILE_GPR:
+      emitInsn(0x5c180000);
+      emitGPR (0x14, insn->src(2));
+      break;
+   case FILE_MEMORY_CONST:
+      emitInsn(0x4c180000);
+      emitCBUF(0x22, -1, 0x14, 16, 2, insn->src(2));
+      break;
+   case FILE_IMMEDIATE:
+      emitInsn(0x38180000);
+      emitIMMD(0x14, 19, insn->src(2));
+      break;
+   default:
+      assert(!"bad src1 file");
+      break;
+   }
+   emitNEG (0x31, insn->src(0));
+   emitNEG (0x30, insn->src(2));
+   emitCC  (0x2f);
+   emitIMMD(0x27, 5, insn->src(1));
+   emitGPR (0x08, insn->src(0));
+   emitGPR (0x00, insn->def(0));
+}
+
+void
 CodeEmitterGM107::emitIMNMX()
 {
    switch (insn->src(1).getFile()) {
@@ -3097,6 +3126,9 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       } else {
          emitIMAD();
       }
+      break;
+   case OP_SHLADD:
+      emitISCADD();
       break;
    case OP_MIN:
    case OP_MAX:

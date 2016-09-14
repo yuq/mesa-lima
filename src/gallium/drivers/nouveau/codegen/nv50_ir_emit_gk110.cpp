@@ -96,6 +96,7 @@ private:
    void emitDMUL(const Instruction *);
    void emitIMAD(const Instruction *);
    void emitISAD(const Instruction *);
+   void emitSHLADD(const Instruction *);
    void emitFMAD(const Instruction *);
    void emitDMAD(const Instruction *);
    void emitMADSP(const Instruction *i);
@@ -754,6 +755,54 @@ CodeEmitterGK110::emitISAD(const Instruction *i)
 
    if (i->dType == TYPE_S32)
       code[1] |= 1 << 19;
+}
+
+void
+CodeEmitterGK110::emitSHLADD(const Instruction *i)
+{
+   uint8_t addOp = (i->src(2).mod.neg() << 1) | i->src(0).mod.neg();
+   const ImmediateValue *imm = i->src(1).get()->asImm();
+   assert(imm);
+
+   if (i->src(2).getFile() == FILE_IMMEDIATE) {
+      code[0] = 0x1;
+      code[1] = 0xc0c << 20;
+   } else {
+      code[0] = 0x2;
+      code[1] = 0x20c << 20;
+   }
+   code[1] |= addOp << 19;
+
+   emitPredicate(i);
+
+   defId(i->def(0), 2);
+   srcId(i->src(0), 10);
+
+   if (i->flagsDef >= 0)
+      code[1] |= 1 << 18;
+
+   assert(!(imm->reg.data.u32 & 0xffffffe0));
+   code[1] |= imm->reg.data.u32 << 10;
+
+   switch (i->src(2).getFile()) {
+   case FILE_GPR:
+      assert(code[0] & 0x2);
+      code[1] |= 0xc << 28;
+      srcId(i->src(2), 23);
+      break;
+   case FILE_MEMORY_CONST:
+      assert(code[0] & 0x2);
+      code[1] |= 0x4 << 28;
+      setCAddress14(i->src(2));
+      break;
+   case FILE_IMMEDIATE:
+      assert(code[0] & 0x1);
+      setShortImmediate(i, 2);
+      break;
+   default:
+      assert(!"bad src2 file");
+      break;
+   }
 }
 
 void
@@ -2402,6 +2451,9 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_SAD:
       emitISAD(insn);
+      break;
+   case OP_SHLADD:
+      emitSHLADD(insn);
       break;
    case OP_NOT:
       emitNOT(insn);

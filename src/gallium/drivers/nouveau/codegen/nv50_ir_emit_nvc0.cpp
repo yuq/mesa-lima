@@ -101,6 +101,7 @@ private:
    void emitDMUL(const Instruction *);
    void emitIMAD(const Instruction *);
    void emitISAD(const Instruction *);
+   void emitSHLADD(const Instruction *a);
    void emitFMAD(const Instruction *);
    void emitDMAD(const Instruction *);
    void emitMADSP(const Instruction *);
@@ -756,6 +757,45 @@ CodeEmitterNVC0::emitIMAD(const Instruction *i)
 
    if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
       code[0] |= 1 << 6;
+}
+
+void
+CodeEmitterNVC0::emitSHLADD(const Instruction *i)
+{
+   uint8_t addOp = (i->src(2).mod.neg() << 1) | i->src(0).mod.neg();
+   const ImmediateValue *imm = i->src(1).get()->asImm();
+   assert(imm);
+
+   code[0] = 0x00000003;
+   code[1] = 0x40000000 | addOp << 23;
+
+   emitPredicate(i);
+
+   defId(i->def(0), 14);
+   srcId(i->src(0), 20);
+
+   if (i->flagsDef >= 0)
+      code[1] |= 1 << 16;
+
+   assert(!(imm->reg.data.u32 & 0xffffffe0));
+   code[0] |= imm->reg.data.u32 << 5;
+
+   switch (i->src(2).getFile()) {
+   case FILE_GPR:
+      srcId(i->src(2), 26);
+      break;
+   case FILE_MEMORY_CONST:
+      code[1] |= 0x4000;
+      code[1] |= i->getSrc(2)->reg.fileIndex << 10;
+      setAddress16(i->src(2));
+      break;
+   case FILE_IMMEDIATE:
+      setImmediate(i, 2);
+      break;
+   default:
+      assert(!"bad src2 file");
+      break;
+   }
 }
 
 void
@@ -2602,6 +2642,9 @@ CodeEmitterNVC0::emitInstruction(Instruction *insn)
       break;
    case OP_SAD:
       emitISAD(insn);
+      break;
+   case OP_SHLADD:
+      emitSHLADD(insn);
       break;
    case OP_NOT:
       emitNOT(insn);
