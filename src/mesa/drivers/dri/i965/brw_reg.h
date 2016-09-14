@@ -567,6 +567,12 @@ brw_uw1_reg(enum brw_reg_file file, unsigned nr, unsigned subnr)
 }
 
 static inline struct brw_reg
+brw_ud1_reg(enum brw_reg_file file, unsigned nr, unsigned subnr)
+{
+   return retype(brw_vec1_reg(file, nr, subnr), BRW_REGISTER_TYPE_UD);
+}
+
+static inline struct brw_reg
 brw_imm_reg(enum brw_reg_type type)
 {
    return brw_reg(BRW_IMMEDIATE_VALUE,
@@ -789,19 +795,9 @@ brw_notification_reg(void)
 }
 
 static inline struct brw_reg
-brw_sr0_reg(void)
+brw_sr0_reg(unsigned subnr)
 {
-   return brw_reg(BRW_ARCHITECTURE_REGISTER_FILE,
-                  BRW_ARF_STATE,
-                  0,
-                  0,
-                  0,
-                  BRW_REGISTER_TYPE_UD,
-                  BRW_VERTICAL_STRIDE_8,
-                  BRW_WIDTH_8,
-                  BRW_HORIZONTAL_STRIDE_1,
-                  BRW_SWIZZLE_XYZW,
-                  WRITEMASK_XYZW);
+   return brw_ud1_reg(BRW_ARCHITECTURE_REGISTER_FILE, BRW_ARF_STATE, subnr);
 }
 
 static inline struct brw_reg
