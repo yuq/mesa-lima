@@ -38,6 +38,8 @@
 #include "standalone.h"
 #include "util/string_to_uint_map.h"
 #include "util/set.h"
+#include "linker.h"
+#include "glsl_parser_extras.h"
 #include "opt_add_neg_to_sub.h"
 
 class dead_variable_visitor : public ir_hierarchical_visitor {
@@ -478,10 +480,49 @@ standalone_compile_shader(const struct standalone_options *_options,
       }
    }
 
-   if ((status == EXIT_SUCCESS) && options->do_link)  {
+   if (status == EXIT_SUCCESS) {
       _mesa_clear_shader_program_data(ctx, whole_program);
 
-      link_shaders(ctx, whole_program);
+      if (options->do_link)  {
+         link_shaders(ctx, whole_program);
+      } else {
+         const gl_shader_stage stage = whole_program->Shaders[0]->Stage;
+
+         whole_program->LinkStatus = GL_TRUE;
+         whole_program->_LinkedShaders[stage] =
+            link_intrastage_shaders(whole_program /* mem_ctx */,
+                                    ctx,
+                                    whole_program,
+                                    whole_program->Shaders,
+                                    1,
+                                    true);
+
+         /* Par-linking can fail, for example, if there are undefined external
+          * references.
+          */
+         if (whole_program->_LinkedShaders[stage] != NULL) {
+            assert(whole_program->LinkStatus);
+
+            struct gl_shader_compiler_options *const compiler_options =
+               &ctx->Const.ShaderCompilerOptions[stage];
+
+            exec_list *const ir =
+               whole_program->_LinkedShaders[stage]->ir;
+
+            bool progress;
+            do {
+               progress = do_function_inlining(ir);
+
+               progress = do_common_optimization(ir,
+                                                 false,
+                                                 false,
+                                                 compiler_options,
+                                                 true)
+                  && progress;
+            } while(progress);
+         }
+      }
+
       status = (whole_program->LinkStatus) ? EXIT_SUCCESS : EXIT_FAILURE;
 
       if (strlen(whole_program->InfoLog) > 0) {
