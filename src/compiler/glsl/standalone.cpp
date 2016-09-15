@@ -40,6 +40,7 @@
 #include "util/set.h"
 #include "linker.h"
 #include "glsl_parser_extras.h"
+#include "ir_builder_print_visitor.h"
 #include "opt_add_neg_to_sub.h"
 
 class dead_variable_visitor : public ir_hierarchical_visitor {
@@ -549,6 +550,17 @@ standalone_compile_shader(const struct standalone_options *_options,
 
          shader->Program = rzalloc(shader, gl_program);
          init_gl_program(shader->Program, shader->Stage);
+      }
+
+      if (options->dump_builder) {
+         for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+            struct gl_linked_shader *shader = whole_program->_LinkedShaders[i];
+
+            if (!shader)
+               continue;
+
+            _mesa_print_builder_for_ir(stdout, shader->ir);
+         }
       }
    }
 
