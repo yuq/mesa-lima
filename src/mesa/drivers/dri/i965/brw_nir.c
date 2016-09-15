@@ -514,10 +514,10 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
  * will not work.
  */
 nir_shader *
-brw_postprocess_nir(nir_shader *nir,
-                    const struct gen_device_info *devinfo,
+brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
                     bool is_scalar)
 {
+   const struct gen_device_info *devinfo = compiler->devinfo;
    bool debug_enabled =
       (INTEL_DEBUG & intel_debug_flag_for_shader_stage(nir->stage));
 
@@ -579,10 +579,11 @@ brw_postprocess_nir(nir_shader *nir,
 
 nir_shader *
 brw_nir_apply_sampler_key(nir_shader *nir,
-                          const struct gen_device_info *devinfo,
+                          const struct brw_compiler *compiler,
                           const struct brw_sampler_prog_key_data *key_tex,
                           bool is_scalar)
 {
+   const struct gen_device_info *devinfo = compiler->devinfo;
    nir_lower_tex_options tex_options = { 0 };
 
    /* Iron Lake and prior require lowering of all rectangle textures */

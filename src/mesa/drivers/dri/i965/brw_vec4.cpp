@@ -2112,12 +2112,11 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 {
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_VERTEX];
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
-   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
-                                      is_scalar);
+   shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, is_scalar);
    brw_nir_lower_vs_inputs(shader, is_scalar,
                            use_legacy_snorm_formula, key->gl_attrib_wa_flags);
    brw_nir_lower_vue_outputs(shader, is_scalar);
-   shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
+   shader = brw_postprocess_nir(shader, compiler, is_scalar);
 
    const unsigned *assembly = NULL;
 

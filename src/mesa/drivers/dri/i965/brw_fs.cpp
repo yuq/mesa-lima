@@ -6396,14 +6396,13 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                char **error_str)
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
-   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
-                                      true);
+   shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
    brw_nir_lower_fs_inputs(shader, vue_map, prog, compiler->devinfo, key);
    brw_nir_lower_fs_outputs(shader);
    if (!key->multisample_fbo)
       NIR_PASS_V(shader, demote_sample_qualifiers);
    NIR_PASS_V(shader, move_interpolation_to_top);
-   shader = brw_postprocess_nir(shader, compiler->devinfo, true);
+   shader = brw_postprocess_nir(shader, compiler, true);
 
    /* key->alpha_test_func means simulating alpha testing via discards,
     * so the shader definitely kills pixels.
@@ -6628,8 +6627,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
                char **error_str)
 {
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
-   shader = brw_nir_apply_sampler_key(shader, compiler->devinfo, &key->tex,
-                                      true);
+   shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
    brw_nir_lower_cs_shared(shader);
    prog_data->base.total_shared += shader->num_shared;
 
@@ -6642,7 +6640,7 @@ brw_compile_cs(const struct brw_compiler *compiler, void *log_data,
            (unsigned)4 * (prog_data->thread_local_id_index + 1));
 
    brw_nir_lower_intrinsics(shader, &prog_data->base);
-   shader = brw_postprocess_nir(shader, compiler->devinfo, true);
+   shader = brw_postprocess_nir(shader, compiler, true);
 
    prog_data->local_size[0] = shader->info->cs.local_size[0];
    prog_data->local_size[1] = shader->info->cs.local_size[1];

@@ -467,13 +467,13 @@ brw_compile_tcs(const struct brw_compiler *compiler,
                             nir->info->outputs_written,
                             nir->info->patch_outputs_written);
 
-   nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
+   nir = brw_nir_apply_sampler_key(nir, compiler, &key->tex, is_scalar);
    brw_nir_lower_vue_inputs(nir, is_scalar, &input_vue_map);
    brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map);
    if (key->quads_workaround)
       brw_nir_apply_tcs_quads_workaround(nir);
 
-   nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
+   nir = brw_postprocess_nir(nir, compiler, is_scalar);
 
    if (is_scalar)
       prog_data->instances = DIV_ROUND_UP(nir->info->tcs.vertices_out, 8);
