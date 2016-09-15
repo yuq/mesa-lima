@@ -213,7 +213,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
          if (safe_aux_usage & (1 << ISL_AUX_USAGE_CCS_E))
             flags |= INTEL_MIPTREE_IGNORE_CCS_E;
 
-         intel_miptree_resolve_color(brw, mt, flags);
+         intel_miptree_resolve_color(brw, mt,
+                                     *level, start_layer, num_layers, flags);
 
          assert(mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED);
          surf->aux_usage = ISL_AUX_USAGE_NONE;
@@ -929,19 +930,19 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
 }
 
 void
-brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
+brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt,
+                        unsigned level, unsigned layer)
 {
-   DBG("%s to mt %p\n", __FUNCTION__, mt);
+   DBG("%s to mt %p level %u layer %u\n", __FUNCTION__, mt, level, layer);
 
    const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
 
    struct isl_surf isl_tmp[2];
    struct blorp_surf surf;
-   unsigned level = 0;
    blorp_surf_for_miptree(brw, &surf, mt, true,
                           (1 << ISL_AUX_USAGE_CCS_E) |
                           (1 << ISL_AUX_USAGE_CCS_D),
-                          &level, 0 /* start_layer */, 1 /* num_layers */,
+                          &level, layer, 1 /* num_layers */,
                           isl_tmp);
 
    enum blorp_fast_clear_op resolve_op;
@@ -958,7 +959,7 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
-   blorp_ccs_resolve(&batch, &surf, 0 /* level */, 0 /* layer */,
+   blorp_ccs_resolve(&batch, &surf, level, layer,
                      brw_blorp_to_isl_format(brw, format, true),
                      resolve_op);
    blorp_batch_finish(&batch);

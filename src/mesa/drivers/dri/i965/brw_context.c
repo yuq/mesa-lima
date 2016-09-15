@@ -316,8 +316,9 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
             intel_renderbuffer(fb->_ColorDrawBuffers[i]);
 
          if (irb &&
-             intel_miptree_resolve_color(brw, irb->mt,
-                                         INTEL_MIPTREE_IGNORE_CCS_E))
+             intel_miptree_resolve_color(
+                brw, irb->mt, irb->mt_level, irb->mt_layer, irb->layer_count,
+                INTEL_MIPTREE_IGNORE_CCS_E))
             brw_render_cache_set_check_flush(brw, irb->mt->bo);
       }
    }
@@ -1349,10 +1350,13 @@ intel_resolve_for_dri2_flush(struct brw_context *brw,
       rb = intel_get_renderbuffer(fb, buffers[i]);
       if (rb == NULL || rb->mt == NULL)
          continue;
-      if (rb->mt->num_samples <= 1)
-         intel_miptree_resolve_color(brw, rb->mt, 0);
-      else
+      if (rb->mt->num_samples <= 1) {
+         assert(rb->mt_layer == 0 && rb->mt_level == 0 &&
+                rb->layer_count == 1);
+         intel_miptree_resolve_color(brw, rb->mt, 0, 0, 1, 0);
+      } else {
          intel_renderbuffer_downsample(brw, rb);
+      }
    }
 }
 

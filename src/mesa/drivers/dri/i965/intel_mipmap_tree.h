@@ -990,7 +990,8 @@ intel_miptree_used_for_rendering(const struct brw_context *brw,
 
 bool
 intel_miptree_resolve_color(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt,
+                            struct intel_mipmap_tree *mt, unsigned level,
+                            unsigned start_layer, unsigned num_layers,
                             int flags);
 
 void

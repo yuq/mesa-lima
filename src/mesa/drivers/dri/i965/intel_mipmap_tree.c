@@ -2203,12 +2203,35 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 					   BLORP_HIZ_OP_DEPTH_RESOLVE);
 }
 
+static void
+intel_miptree_check_color_resolve(const struct intel_mipmap_tree *mt,
+                                  unsigned level, unsigned layer)
+{
+   if (!mt->mcs_buf)
+      return;
+
+   /* Fast color clear is not supported for mipmapped surfaces. */
+   assert(level == 0 && mt->first_level == 0 && mt->last_level == 0);
+
+   /* Compression of arrayed msaa surfaces is supported. */
+   if (mt->num_samples > 1)
+      return;
+
+   /* Fast color clear is not supported for non-msaa arrays. */
+   assert(layer == 0 && mt->logical_depth0 == 1);
+
+   (void)level;
+   (void)layer;
+}
 
 bool
 intel_miptree_resolve_color(struct brw_context *brw,
-                            struct intel_mipmap_tree *mt,
+                            struct intel_mipmap_tree *mt, unsigned level,
+                            unsigned start_layer, unsigned num_layers,
                             int flags)
 {
+   intel_miptree_check_color_resolve(mt, level, start_layer);
+
    /* From gen9 onwards there is new compression scheme for single sampled
     * surfaces called "lossless compressed". These don't need to be always
     * resolved.
@@ -2224,10 +2247,13 @@ intel_miptree_resolve_color(struct brw_context *brw,
       return false;
    case INTEL_FAST_CLEAR_STATE_UNRESOLVED:
    case INTEL_FAST_CLEAR_STATE_CLEAR:
+      /* For now arrayed fast clear is not supported. */
+      assert(num_layers == 1);
+
       /* Fast color clear resolves only make sense for non-MSAA buffers. */
       if (mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE ||
           intel_miptree_is_lossless_compressed(brw, mt)) {
-         brw_blorp_resolve_color(brw, mt);
+         brw_blorp_resolve_color(brw, mt, level, start_layer);
          return true;
       } else {
          return false;
@@ -2242,7 +2268,7 @@ intel_miptree_all_slices_resolve_color(struct brw_context *brw,
                                        struct intel_mipmap_tree *mt,
                                        int flags)
 {
-   intel_miptree_resolve_color(brw, mt, flags);
+   intel_miptree_resolve_color(brw, mt, 0, 0, 1, flags);
 }
 
 /**
