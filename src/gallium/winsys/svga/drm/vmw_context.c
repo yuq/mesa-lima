@@ -179,11 +179,36 @@ vmw_swc_flush(struct svga_winsys_context *swc,
               struct pipe_fence_handle **pfence)
 {
    struct vmw_svga_winsys_context *vswc = vmw_svga_winsys_context(swc);
+   struct vmw_winsys_screen *vws = vswc->vws;
    struct pipe_fence_handle *fence = NULL;
    unsigned i;
    enum pipe_error ret;
 
+   /*
+    * If we hit a retry, lock the mutex and retry immediately.
+    * If we then still hit a retry, sleep until another thread
+    * wakes us up after it has released its buffers from the
+    * validate list.
+    *
+    * If we hit another error condition, we still need to broadcast since
+    * pb_validate_validate releases validated buffers in its error path.
+    */
+
    ret = pb_validate_validate(vswc->validate);
+   if (ret != PIPE_OK) {
+      pipe_mutex_lock(vws->cs_mutex);
+      while (ret == PIPE_ERROR_RETRY) {
+         ret = pb_validate_validate(vswc->validate);
+         if (ret == PIPE_ERROR_RETRY) {
+            pipe_condvar_wait(vws->cs_cond, vws->cs_mutex);
+         }
+      }
+      if (ret != PIPE_OK) {
+         pipe_condvar_broadcast(vws->cs_cond);
+      }
+      pipe_mutex_unlock(vws->cs_mutex);
+   }
+
    assert(ret == PIPE_OK);
    if(ret == PIPE_OK) {
    
@@ -210,7 +235,7 @@ vmw_swc_flush(struct svga_winsys_context *swc,
       }
 
       if (vswc->command.used || pfence != NULL)
-         vmw_ioctl_command(vswc->vws,
+         vmw_ioctl_command(vws,
 			   vswc->base.cid,
 			   0,
                            vswc->command.buffer,
@@ -218,6 +243,9 @@ vmw_swc_flush(struct svga_winsys_context *swc,
                            &fence);
 
       pb_validate_fence(vswc->validate, fence);
+      pipe_mutex_lock(vws->cs_mutex);
+      pipe_condvar_broadcast(vws->cs_cond);
+      pipe_mutex_unlock(vws->cs_mutex);
    }
 
    vswc->command.used = 0;
