@@ -84,8 +84,8 @@ vec4_tes_visitor::setup_payload()
 
          bool is_64bit = type_sz(inst->src[i].type) == 8;
 
-         struct brw_reg grf =
-            brw_vec4_grf(reg + inst->src[i].nr / 2, 4 * (inst->src[i].nr % 2));
+         unsigned slot = inst->src[i].nr + inst->src[i].offset / 16;
+         struct brw_reg grf = brw_vec4_grf(reg + slot / 2, 4 * (slot % 2));
          grf = stride(grf, 0, is_64bit ? 2 : 4, 1);
          grf.swizzle = inst->src[i].swizzle;
          grf.type = inst->src[i].type;
