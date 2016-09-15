@@ -2093,12 +2093,13 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
  * If this function is supplied a single shader, it is cloned, and the new
  * shader is returned.
  */
-static struct gl_linked_shader *
+struct gl_linked_shader *
 link_intrastage_shaders(void *mem_ctx,
                         struct gl_context *ctx,
                         struct gl_shader_program *prog,
                         struct gl_shader **shader_list,
-                        unsigned num_shaders)
+                        unsigned num_shaders,
+                        bool allow_missing_main)
 {
    struct gl_uniform_block *ubo_blocks = NULL;
    struct gl_uniform_block *ssbo_blocks = NULL;
@@ -2176,6 +2177,9 @@ link_intrastage_shaders(void *mem_ctx,
       }
    }
 
+   if (main == NULL && allow_missing_main)
+      main = shader_list[0];
+
    if (main == NULL) {
       linker_error(prog, "%s shader lacks `main'\n",
                    _mesa_shader_stage_to_string(shader_list[0]->Stage));
@@ -2205,16 +2209,18 @@ link_intrastage_shaders(void *mem_ctx,
    /* Move any instructions other than variable declarations or function
     * declarations into main.
     */
-   exec_node *insertion_point =
-      move_non_declarations(linked->ir, (exec_node *) &main_sig->body, false,
-                            linked);
+   if (main_sig != NULL) {
+      exec_node *insertion_point =
+         move_non_declarations(linked->ir, (exec_node *) &main_sig->body, false,
+                               linked);
 
-   for (unsigned i = 0; i < num_shaders; i++) {
-      if (shader_list[i] == main)
-         continue;
+      for (unsigned i = 0; i < num_shaders; i++) {
+         if (shader_list[i] == main)
+            continue;
 
-      insertion_point = move_non_declarations(shader_list[i]->ir,
-                                              insertion_point, true, linked);
+         insertion_point = move_non_declarations(shader_list[i]->ir,
+                                                 insertion_point, true, linked);
+      }
    }
 
    if (!link_function_calls(prog, linked, shader_list, num_shaders)) {
@@ -4824,7 +4830,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       if (num_shaders[stage] > 0) {
          gl_linked_shader *const sh =
             link_intrastage_shaders(mem_ctx, ctx, prog, shader_list[stage],
-                                    num_shaders[stage]);
+                                    num_shaders[stage], false);
 
          if (!prog->LinkStatus) {
             if (sh)

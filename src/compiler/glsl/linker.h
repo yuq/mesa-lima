@@ -85,6 +85,15 @@ extern void
 link_check_atomic_counter_resources(struct gl_context *ctx,
                                     struct gl_shader_program *prog);
 
+
+extern struct gl_linked_shader *
+link_intrastage_shaders(void *mem_ctx,
+                        struct gl_context *ctx,
+                        struct gl_shader_program *prog,
+                        struct gl_shader **shader_list,
+                        unsigned num_shaders,
+                        bool allow_missing_main);
+
 /**
  * Class for processing all of the leaf fields of a variable that corresponds
  * to a program resource.
