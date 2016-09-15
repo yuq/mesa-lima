@@ -143,6 +143,8 @@ LIBGLSL_SHADER_CACHE_FILES = \
 # glsl_compiler
 
 GLSL_COMPILER_CXX_FILES = \
+	glsl/ir_builder_print_visitor.cpp \
+	glsl/ir_builder_print_visitor.h \
 	glsl/standalone_scaffolding.cpp \
 	glsl/standalone_scaffolding.h \
 	glsl/standalone.cpp \
