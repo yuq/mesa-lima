@@ -1198,6 +1198,7 @@ nir_tex_instr_dest_size(nir_tex_instr *instr)
          case GLSL_SAMPLER_DIM_MS:
          case GLSL_SAMPLER_DIM_RECT:
          case GLSL_SAMPLER_DIM_EXTERNAL:
+         case GLSL_SAMPLER_DIM_SUBPASS:
             ret = 2;
             break;
          case GLSL_SAMPLER_DIM_3D:
