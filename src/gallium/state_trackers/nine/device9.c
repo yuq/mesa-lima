@@ -1134,11 +1134,8 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
                         HANDLE *pSharedHandle)
 {
     struct NineSurface9 *surface;
-    struct pipe_screen *screen = This->screen;
-    struct pipe_resource *resource = NULL;
     HRESULT hr;
     D3DSURFACE_DESC desc;
-    struct pipe_resource templ;
 
     DBG("This=%p type=%u Pool=%s Width=%u Height=%u Format=%s MS=%u Quality=%u "
         "Discard_or_Lockable=%i ppSurface=%p pSharedHandle=%p\n",
@@ -1152,31 +1149,6 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     user_assert(Width && Height, D3DERR_INVALIDCALL);
     user_assert(Pool != D3DPOOL_MANAGED, D3DERR_INVALIDCALL);
 
-    memset(&templ, 0, sizeof(templ));
-    templ.target = PIPE_TEXTURE_2D;
-    templ.width0 = Width;
-    templ.height0 = Height;
-    templ.depth0 = 1;
-    templ.array_size = 1;
-    templ.last_level = 0;
-    templ.nr_samples = (unsigned)MultiSample;
-    templ.usage = PIPE_USAGE_DEFAULT;
-    templ.flags = 0;
-    templ.bind = PIPE_BIND_SAMPLER_VIEW; /* StretchRect */
-    switch (type) {
-    case 0: templ.bind |= PIPE_BIND_RENDER_TARGET; break;
-    case 1: templ.bind = d3d9_get_pipe_depth_format_bindings(Format); break;
-    default:
-        assert(type == 2);
-        break;
-    }
-    templ.format = d3d9_to_pipe_format_checked(screen, Format, templ.target,
-                                               templ.nr_samples, templ.bind,
-                                               FALSE, Pool == D3DPOOL_SCRATCH);
-
-    if (templ.format == PIPE_FORMAT_NONE && Format != D3DFMT_NULL)
-        return D3DERR_INVALIDCALL;
-
     desc.Format = Format;
     desc.Type = D3DRTYPE_SURFACE;
     desc.Usage = 0;
@@ -1188,31 +1160,17 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     switch (type) {
     case 0: desc.Usage = D3DUSAGE_RENDERTARGET; break;
     case 1: desc.Usage = D3DUSAGE_DEPTHSTENCIL; break;
-    default: break;
+    default: assert(type == 2); break;
     }
 
-    if (compressed_format(Format)) {
-        const unsigned w = util_format_get_blockwidth(templ.format);
-        const unsigned h = util_format_get_blockheight(templ.format);
-
-        user_assert(!(Width % w) && !(Height % h), D3DERR_INVALIDCALL);
-    }
-
-    if (Pool == D3DPOOL_DEFAULT && Format != D3DFMT_NULL) {
-        /* resource_create doesn't return an error code, so check format here */
-        user_assert(templ.format != PIPE_FORMAT_NONE, D3DERR_INVALIDCALL);
-        resource = screen->resource_create(screen, &templ);
-        user_assert(resource, D3DERR_OUTOFVIDEOMEMORY);
-        if (Discard_or_Lockable && (desc.Usage & D3DUSAGE_RENDERTARGET))
-            resource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
-    } else {
-        resource = NULL;
-    }
-    hr = NineSurface9_new(This, NULL, resource, NULL, 0, 0, 0, &desc, &surface);
-    pipe_resource_reference(&resource, NULL);
-
-    if (SUCCEEDED(hr))
+    hr = NineSurface9_new(This, NULL, NULL, NULL, 0, 0, 0, &desc, &surface);
+    if (SUCCEEDED(hr)) {
         *ppSurface = (IDirect3DSurface9 *)surface;
+
+        if (surface->base.resource && Discard_or_Lockable && (type != 1))
+            surface->base.resource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
+    }
+
     return hr;
 }
 
