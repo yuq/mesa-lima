@@ -165,10 +165,14 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (!(This->params.BehaviorFlags & D3DCREATE_FPU_PRESERVE))
         nine_setup_fpu();
 
-    if (This->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING)
-        DBG("Application asked full Software Vertex Processing. Ignoring.\n");
+    if (This->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING) {
+        DBG("Application asked full Software Vertex Processing.\n");
+        This->swvp = true;
+    } else
+        This->swvp = false;
     if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)
-        DBG("Application asked mixed Software Vertex Processing. Ignoring.\n");
+        DBG("Application asked mixed Software Vertex Processing.\n");
+    /* TODO: check if swvp is resetted by device Resets */
 
     This->pipe = This->screen->context_create(This->screen, NULL, 0);
     if (!This->pipe) { return E_OUTOFMEMORY; } /* guess */
@@ -2904,13 +2908,17 @@ HRESULT NINE_WINAPI
 NineDevice9_SetSoftwareVertexProcessing( struct NineDevice9 *This,
                                          BOOL bSoftware )
 {
-    STUB(D3DERR_INVALIDCALL);
+    if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING) {
+        This->swvp = bSoftware;
+        return D3D_OK;
+    } else
+        return D3DERR_INVALIDCALL; /* msdn. TODO: check in practice */
 }
 
 BOOL NINE_WINAPI
 NineDevice9_GetSoftwareVertexProcessing( struct NineDevice9 *This )
 {
-    return !!(This->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING);
+    return This->swvp;
 }
 
 HRESULT NINE_WINAPI
