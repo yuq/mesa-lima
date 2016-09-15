@@ -1471,6 +1471,7 @@ public:
 #include "ir_expression_operation.h"
 
 extern const char *const ir_expression_operation_strings[ir_last_opcode + 1];
+extern const char *const ir_expression_operation_enum_strings[ir_last_opcode + 1];
 
 class ir_expression : public ir_rvalue {
 public:
