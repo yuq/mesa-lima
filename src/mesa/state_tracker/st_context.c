@@ -166,7 +166,8 @@ void st_invalidate_state(struct gl_context * ctx, GLbitfield new_state)
    struct st_context *st = st_context(ctx);
 
    if (new_state & _NEW_BUFFERS) {
-      st->dirty |= ST_NEW_DSA |
+      st->dirty |= ST_NEW_BLEND |
+                   ST_NEW_DSA |
                    ST_NEW_FB_STATE |
                    ST_NEW_SAMPLE_MASK |
                    ST_NEW_SAMPLE_SHADING |
