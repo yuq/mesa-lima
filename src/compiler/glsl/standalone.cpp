@@ -153,6 +153,12 @@ initialize_context(struct gl_context *ctx, gl_api api)
       break;
    case 150:
    case 330:
+   case 400:
+   case 410:
+   case 420:
+   case 430:
+   case 440:
+   case 450:
       ctx->Const.MaxClipPlanes = 8;
       ctx->Const.MaxDrawBuffers = 8;
       ctx->Const.MinProgramTexelOffset = -8;
@@ -324,6 +330,12 @@ standalone_compile_shader(const struct standalone_options *_options,
    case 140:
    case 150:
    case 330:
+   case 400:
+   case 410:
+   case 420:
+   case 430:
+   case 440:
+   case 450:
       glsl_es = false;
       break;
    default:
