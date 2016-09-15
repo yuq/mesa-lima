@@ -60,6 +60,7 @@ enum {
 struct dpb_list {
    struct list_head list;
    struct pipe_video_buffer *buffer;
+   OMX_TICKS timestamp;
    unsigned poc;
 };
 
@@ -518,6 +519,9 @@ static void vid_dec_h265_BeginFrame(vid_dec_PrivateType *priv)
       return;
 
    vid_dec_NeedTarget(priv);
+   if (priv->first_buf_in_frame)
+      priv->timestamp = priv->timestamps[0];
+   priv->first_buf_in_frame = false;
 
    if (!priv->codec) {
       struct pipe_video_codec templat = {};
@@ -558,6 +562,8 @@ static struct pipe_video_buffer *vid_dec_h265_Flush(vid_dec_PrivateType *priv,
       return NULL;
 
    buf = result->buffer;
+   if (timestamp)
+      *timestamp = result->timestamp;
 
    --priv->codec_data.h265.dpb_num;
    LIST_DEL(&result->list);
@@ -572,6 +578,7 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
    struct pipe_video_buffer *tmp;
    struct ref_pic_set *rps;
    int i;
+   OMX_TICKS timestamp;
 
    if (!priv->frame_started)
       return;
@@ -621,7 +628,9 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
    if (!entry)
       return;
 
+   priv->first_buf_in_frame = true;
    entry->buffer = priv->target;
+   entry->timestamp = priv->timestamp;
    entry->poc = get_poc(priv);
 
    LIST_ADDTAIL(&entry->list, &priv->codec_data.h265.dpb_list);
@@ -632,7 +641,8 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
       return;
 
    tmp = priv->in_buffers[0]->pInputPortPrivate;
-   priv->in_buffers[0]->pInputPortPrivate = vid_dec_h265_Flush(priv, NULL);
+   priv->in_buffers[0]->pInputPortPrivate = vid_dec_h265_Flush(priv, &timestamp);
+   priv->in_buffers[0]->nTimeStamp = timestamp;
    priv->target = tmp;
    priv->frame_finished = priv->in_buffers[0]->pInputPortPrivate != NULL;
    if (priv->frame_finished &&
@@ -894,4 +904,5 @@ void vid_dec_h265_Init(vid_dec_PrivateType *priv)
    priv->Decode = vid_dec_h265_Decode;
    priv->EndFrame = vid_dec_h265_EndFrame;
    priv->Flush = vid_dec_h265_Flush;
+   priv->first_buf_in_frame = true;
 }
