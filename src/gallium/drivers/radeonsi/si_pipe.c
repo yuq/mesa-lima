@@ -818,6 +818,11 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		HAVE_LLVM < 0x0308 ||
 		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
 
+	sscreen->b.barrier_flags.cp_to_L2 = SI_CONTEXT_INV_SMEM_L1 |
+					    SI_CONTEXT_INV_VMEM_L1 |
+					    SI_CONTEXT_INV_GLOBAL_L2;
+	sscreen->b.barrier_flags.compute_to_L2 = SI_CONTEXT_CS_PARTIAL_FLUSH;
+
 	if (debug_get_bool_option("RADEON_DUMP_SHADERS", false))
 		sscreen->b.debug_flags |= DBG_FS | DBG_VS | DBG_GS | DBG_PS | DBG_CS;
 

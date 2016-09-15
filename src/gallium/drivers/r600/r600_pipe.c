@@ -680,6 +680,12 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 	rscreen->b.has_cp_dma = rscreen->b.info.drm_minor >= 27 &&
 			      !(rscreen->b.debug_flags & DBG_NO_CP_DMA);
 
+	rscreen->b.barrier_flags.cp_to_L2 =
+		R600_CONTEXT_INV_VERTEX_CACHE |
+		R600_CONTEXT_INV_TEX_CACHE |
+		R600_CONTEXT_INV_CONST_CACHE;
+	rscreen->b.barrier_flags.compute_to_L2 = R600_CONTEXT_PS_PARTIAL_FLUSH;
+
 	rscreen->global_pool = compute_memory_pool_new(rscreen);
 
 	/* Create the auxiliary context. This must be done last. */

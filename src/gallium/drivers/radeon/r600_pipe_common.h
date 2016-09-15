@@ -415,6 +415,18 @@ struct r600_common_screen {
 	 */
 	unsigned			dirty_tex_descriptor_counter;
 
+	struct {
+		/* Context flags to set so that all writes from earlier jobs
+		 * in the CP are seen by L2 clients.
+		 */
+		unsigned cp_to_L2;
+
+		/* Context flags to set so that all writes from earlier
+		 * compute jobs are seen by L2 clients.
+		 */
+		unsigned compute_to_L2;
+	} barrier_flags;
+
 	void (*query_opaque_metadata)(struct r600_common_screen *rscreen,
 				      struct r600_texture *rtex,
 				      struct radeon_bo_metadata *md);
