@@ -962,22 +962,25 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 
 /**\}*/
 
+enum intel_fast_clear_state
+intel_miptree_get_fast_clear_state(const struct intel_mipmap_tree *mt,
+                                   unsigned level, unsigned layer);
+
+void
+intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
+                                   unsigned level,
+                                   unsigned first_layer,
+                                   unsigned num_layers,
+                                   enum intel_fast_clear_state new_state);
+
 /**
  * Update the fast clear state for a miptree to indicate that it has been used
  * for rendering.
  */
-static inline void
+void
 intel_miptree_used_for_rendering(const struct brw_context *brw,
-                                 struct intel_mipmap_tree *mt)
-{
-   /* If the buffer was previously in fast clear state, change it to
-    * unresolved state, since it won't be guaranteed to be clear after
-    * rendering occurs.
-    */
-   if (mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR ||
-      intel_miptree_is_lossless_compressed(brw, mt))
-      mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
-}
+                                 struct intel_mipmap_tree *mt, unsigned level,
+                                 unsigned start_layer, unsigned num_layers);
 
 /**
  * Flag values telling color resolve pass which special types of buffers

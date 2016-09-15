@@ -2205,6 +2205,13 @@ intel_miptree_all_slices_resolve_depth(struct brw_context *brw,
 					   BLORP_HIZ_OP_DEPTH_RESOLVE);
 }
 
+enum intel_fast_clear_state
+intel_miptree_get_fast_clear_state(const struct intel_mipmap_tree *mt,
+                                   unsigned level, unsigned layer)
+{
+   return mt->fast_clear_state;
+}
+
 static void
 intel_miptree_check_color_resolve(const struct intel_mipmap_tree *mt,
                                   unsigned level, unsigned layer)
@@ -2224,6 +2231,45 @@ intel_miptree_check_color_resolve(const struct intel_mipmap_tree *mt,
 
    (void)level;
    (void)layer;
+}
+
+void
+intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
+                                   unsigned level,
+                                   unsigned first_layer,
+                                   unsigned num_layers,
+                                   enum intel_fast_clear_state new_state)
+{
+   intel_miptree_check_color_resolve(mt, level, first_layer);
+
+   assert(first_layer + num_layers <= mt->physical_depth0);
+
+   mt->fast_clear_state = new_state;
+}
+
+void
+intel_miptree_used_for_rendering(const struct brw_context *brw,
+                                 struct intel_mipmap_tree *mt, unsigned level,
+                                 unsigned start_layer, unsigned num_layers)
+{
+   const bool is_lossless_compressed =
+      intel_miptree_is_lossless_compressed(brw, mt);
+
+   for (unsigned i = 0; i < num_layers; ++i) {
+      const enum intel_fast_clear_state fast_clear_state =
+         intel_miptree_get_fast_clear_state(mt, level, start_layer + i);
+
+      /* If the buffer was previously in fast clear state, change it to
+       * unresolved state, since it won't be guaranteed to be clear after
+       * rendering occurs.
+       */
+      if (is_lossless_compressed ||
+          fast_clear_state == INTEL_FAST_CLEAR_STATE_CLEAR) {
+         intel_miptree_set_fast_clear_state(
+            mt, level, start_layer + i, 1,
+            INTEL_FAST_CLEAR_STATE_UNRESOLVED);
+      }
+   }
 }
 
 bool

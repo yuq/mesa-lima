@@ -222,7 +222,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
    }
 
    if (is_render_target)
-      intel_miptree_used_for_rendering(brw, mt);
+      intel_miptree_used_for_rendering(brw, mt, *level,
+                                       start_layer, num_layers);
 
    if (surf->aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
