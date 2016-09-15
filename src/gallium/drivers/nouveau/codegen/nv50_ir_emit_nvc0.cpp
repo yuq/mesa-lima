@@ -735,8 +735,14 @@ CodeEmitterNVC0::emitUADD(const Instruction *i)
 void
 CodeEmitterNVC0::emitIMAD(const Instruction *i)
 {
+   uint8_t addOp =
+      (i->src(2).mod.neg() << 1) | (i->src(0).mod.neg() ^ i->src(1).mod.neg());
+
    assert(i->encSize == 8);
    emitForm_A(i, HEX64(20000000, 00000003));
+
+   assert(addOp != 3);
+   code[0] |= addOp << 8;
 
    if (isSignedType(i->dType))
       code[0] |= 1 << 7;
@@ -747,10 +753,6 @@ CodeEmitterNVC0::emitIMAD(const Instruction *i)
 
    if (i->flagsDef >= 0) code[1] |= 1 << 16;
    if (i->flagsSrc >= 0) code[1] |= 1 << 23;
-
-   if (i->src(2).mod.neg()) code[0] |= 0x10;
-   if (i->src(1).mod.neg() ^
-       i->src(0).mod.neg()) code[0] |= 0x20;
 
    if (i->subOp == NV50_IR_SUBOP_MUL_HIGH)
       code[0] |= 1 << 6;
