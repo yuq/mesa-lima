@@ -5127,7 +5127,33 @@ ast_declarator_list::hir(exec_list *instructions,
          const glsl_type *const t = (earlier == NULL)
             ? var->type : earlier->type;
 
-         if (t->is_unsized_array())
+         /* Skip the unsized array check for TCS/TES/GS inputs & TCS outputs.
+          *
+          * The GL_OES_tessellation_shader spec says about inputs:
+          *
+          *    "Declaring an array size is optional. If no size is specified,
+          *     it will be taken from the implementation-dependent maximum
+          *     patch size (gl_MaxPatchVertices)."
+          *
+          * and about TCS outputs:
+          *
+          *    "If no size is specified, it will be taken from output patch
+          *     size declared in the shader."
+          *
+          * The GL_OES_geometry_shader spec says:
+          *
+          *    "All geometry shader input unsized array declarations will be
+          *     sized by an earlier input primitive layout qualifier, when
+          *     present, as per the following table."
+          */
+         const bool implicitly_sized =
+            (var->data.mode == ir_var_shader_in &&
+             state->stage >= MESA_SHADER_TESS_CTRL &&
+             state->stage <= MESA_SHADER_GEOMETRY) ||
+            (var->data.mode == ir_var_shader_out &&
+             state->stage == MESA_SHADER_TESS_CTRL);
+
+         if (t->is_unsized_array() && !implicitly_sized)
             /* Section 10.17 of the GLSL ES 1.00 specification states that
              * unsized array declarations have been removed from the language.
              * Arrays that are sized using an initializer are still explicitly
