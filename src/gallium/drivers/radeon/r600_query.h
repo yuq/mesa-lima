@@ -99,7 +99,7 @@ struct r600_query {
 
 enum {
 	R600_QUERY_HW_FLAG_NO_START = (1 << 0),
-	R600_QUERY_HW_FLAG_PREDICATE = (1 << 1),
+	/* gap */
 	/* whether begin_query doesn't clear the result */
 	R600_QUERY_HW_FLAG_BEGIN_RESUMES = (1 << 2),
 };

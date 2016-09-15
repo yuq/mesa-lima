@@ -338,11 +338,9 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	if (!buf)
 		return NULL;
 
-	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
-		if (!query->ops->prepare_buffer(ctx, query, buf)) {
-			r600_resource_reference(&buf, NULL);
-			return NULL;
-		}
+	if (!query->ops->prepare_buffer(ctx, query, buf)) {
+		r600_resource_reference(&buf, NULL);
+		return NULL;
 	}
 
 	return buf;
@@ -440,7 +438,6 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		query->result_size += 16; /* for the fence + alignment */
 		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6 + r600_gfx_write_fence_dwords(rctx->screen);
-		query->flags |= R600_QUERY_HW_FLAG_PREDICATE;
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		query->result_size = 24;
@@ -461,7 +458,6 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6;
 		query->stream = index;
-		query->flags |= R600_QUERY_HW_FLAG_PREDICATE;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS:
 		/* 11 values on EG, 8 on R600. */
@@ -793,16 +789,14 @@ void r600_query_hw_reset_buffers(struct r600_common_context *rctx,
 	query->buffer.results_end = 0;
 	query->buffer.previous = NULL;
 
-	if (query->flags & R600_QUERY_HW_FLAG_PREDICATE) {
-		/* Obtain a new buffer if the current one can't be mapped without a stall. */
-		if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
-		    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
+	/* Obtain a new buffer if the current one can't be mapped without a stall. */
+	if (r600_rings_is_buffer_referenced(rctx, query->buffer.buf->buf, RADEON_USAGE_READWRITE) ||
+	    !rctx->ws->buffer_wait(query->buffer.buf->buf, 0, RADEON_USAGE_READWRITE)) {
+		r600_resource_reference(&query->buffer.buf, NULL);
+		query->buffer.buf = r600_new_query_buffer(rctx, query);
+	} else {
+		if (!query->ops->prepare_buffer(rctx, query, query->buffer.buf))
 			r600_resource_reference(&query->buffer.buf, NULL);
-			query->buffer.buf = r600_new_query_buffer(rctx, query);
-		} else {
-			if (!query->ops->prepare_buffer(rctx, query, query->buffer.buf))
-				r600_resource_reference(&query->buffer.buf, NULL);
-		}
 	}
 }
 
