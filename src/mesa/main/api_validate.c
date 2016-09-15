@@ -45,6 +45,12 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
       return false;
    }
 
+   if (!_mesa_all_buffers_are_unmapped(ctx->Array.VAO)) {
+      _mesa_error(ctx, GL_INVALID_OPERATION,
+                  "%s(vertex buffers are mapped)", function);
+      return false;
+   }
+
    switch (ctx->API) {
    case API_OPENGLES2:
       /* For ES2, we can draw if we have a vertex program/shader). */
@@ -117,12 +123,6 @@ check_valid_to_render(struct gl_context *ctx, const char *function)
 
    default:
       unreachable("Invalid API value in check_valid_to_render()");
-   }
-
-   if (!_mesa_all_buffers_are_unmapped(ctx->Array.VAO)) {
-      _mesa_error(ctx, GL_INVALID_OPERATION,
-                  "%s(vertex buffers are mapped)", function);
-      return false;
    }
 
    return true;
