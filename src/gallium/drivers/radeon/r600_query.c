@@ -953,12 +953,8 @@ static void r600_query_hw_add_result(struct r600_common_context *ctx,
 		result->u64 += r600_query_read_result(buffer, 0, 2, false);
 		break;
 	case PIPE_QUERY_TIMESTAMP:
-	{
-		uint32_t *current_result = (uint32_t*)buffer;
-		result->u64 = (uint64_t)current_result[0] |
-			      (uint64_t)current_result[1] << 32;
+		result->u64 = *(uint64_t*)buffer;
 		break;
-	}
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 		/* SAMPLE_STREAMOUTSTATS stores this structure:
 		 * {
