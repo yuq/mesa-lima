@@ -405,9 +405,9 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
 {
    enum pipe_error ret = PIPE_OK;
    enum pipe_shader_type shader;
-   struct pipe_surface *surf = NULL;
 
    assert(svga_have_vgpu10(svga));
+   assert(s);
 
    SVGA_STATS_TIME_PUSH(svga_sws(svga),
                         SVGA_STATS_TIME_VALIDATESURFACEVIEW);
@@ -481,12 +481,11 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
          goto done;
       }
    }
-   surf = &s->base;
    
 done:
    SVGA_STATS_TIME_POP(svga_sws(svga));
 
-   return surf;
+   return &s->base;
 }
 
 
