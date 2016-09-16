@@ -1302,10 +1302,29 @@ svga_texture_transfer_map_can_upload(struct svga_context *svga,
    if (texture->nr_samples > 1)
       return FALSE;
 
-   /* Do not use the upload path with compressed format or rgb9_e5 */
-   if (util_format_is_compressed(texture->format) ||
-       texture->format == PIPE_FORMAT_R9G9B9E5_FLOAT)
+   if (util_format_is_compressed(texture->format)) {
+      /* XXX Need to take a closer look to see why texture upload
+       * with 3D texture with compressed format fails
+       */ 
+      if (texture->target == PIPE_TEXTURE_3D)
+          return FALSE;
+
+#ifdef DEBUG
+      {
+         struct svga_texture *tex = svga_texture(texture);
+         unsigned blockw, blockh, bytesPerBlock;
+
+         svga_format_size(tex->key.format, &blockw, &blockh, &bytesPerBlock);
+
+         /* dest box must start on block boundary */
+         assert((st->base.box.x % blockw) == 0);
+         assert((st->base.box.y % blockh) == 0);
+      }
+#endif
+   }
+   else if (texture->format == PIPE_FORMAT_R9G9B9E5_FLOAT) {
       return FALSE;
+   }
 
    return TRUE;
 }
