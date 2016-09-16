@@ -1226,6 +1226,11 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->OES_geometry_shader &&
       extensions->ARB_texture_cube_map_array;
 
+   extensions->OES_viewport_array =
+      extensions->ARB_ES3_1_compatibility &&
+      extensions->OES_geometry_shader &&
+      extensions->ARB_viewport_array;
+
    extensions->OES_primitive_bounding_box = extensions->ARB_ES3_1_compatibility;
    consts->NoPrimitiveBoundingBoxOutput = true;
 }
