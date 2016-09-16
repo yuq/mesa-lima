@@ -845,8 +845,7 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 static unsigned si_get_alpha_test_func(struct si_context *sctx)
 {
 	/* Alpha-test should be disabled if colorbuffer 0 is integer. */
-	if (sctx->queued.named.dsa &&
-	    !sctx->framebuffer.cb0_is_integer)
+	if (sctx->queued.named.dsa)
 		return sctx->queued.named.dsa->alpha_func;
 
 	return PIPE_FUNC_ALWAYS;
@@ -957,8 +956,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 			if (sctx->queued.named.blend) {
 				key->ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
-							      rs->multisample_enable &&
-							      !sctx->framebuffer.cb0_is_integer;
+							      rs->multisample_enable;
 			}
 
 			key->ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;

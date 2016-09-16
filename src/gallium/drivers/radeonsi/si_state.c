@@ -1144,8 +1144,7 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 		S_028010_DISABLE_SMEM_EXPCLEAR_OPTIMIZATION(sctx->db_stencil_disable_expclear) |
 		S_028010_DECOMPRESS_Z_ON_FLUSH(sctx->framebuffer.nr_samples >= 4));
 
-	db_shader_control = S_02880C_ALPHA_TO_MASK_DISABLE(sctx->framebuffer.cb0_is_integer) |
-		            sctx->ps_db_shader_control;
+	db_shader_control = sctx->ps_db_shader_control;
 
 	/* Bug workaround for smoothing (overrasterization) on SI. */
 	if (sctx->b.chip_class == SI && sctx->smoothing_enabled) {
@@ -2288,7 +2287,6 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	struct pipe_constant_buffer constbuf = {0};
 	struct r600_surface *surf = NULL;
 	struct r600_texture *rtex;
-	bool old_cb0_is_integer = sctx->framebuffer.cb0_is_integer;
 	bool old_any_dst_linear = sctx->framebuffer.any_dst_linear;
 	unsigned old_nr_samples = sctx->framebuffer.nr_samples;
 	int i;
@@ -2333,12 +2331,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	sctx->framebuffer.compressed_cb_mask = 0;
 	sctx->framebuffer.nr_samples = util_framebuffer_get_num_samples(state);
 	sctx->framebuffer.log_samples = util_logbase2(sctx->framebuffer.nr_samples);
-	sctx->framebuffer.cb0_is_integer = state->nr_cbufs && state->cbufs[0] &&
-				  util_format_is_pure_integer(state->cbufs[0]->format);
 	sctx->framebuffer.any_dst_linear = false;
-
-	if (sctx->framebuffer.cb0_is_integer != old_cb0_is_integer)
-		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 	for (i = 0; i < state->nr_cbufs; i++) {
 		if (!state->cbufs[i])

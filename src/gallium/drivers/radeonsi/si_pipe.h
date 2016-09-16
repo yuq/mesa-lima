@@ -165,7 +165,6 @@ struct si_framebuffer {
 	struct pipe_framebuffer_state	state;
 	unsigned			nr_samples;
 	unsigned			log_samples;
-	unsigned			cb0_is_integer;
 	unsigned			compressed_cb_mask;
 	unsigned			spi_shader_col_format;
 	unsigned			spi_shader_col_format_alpha;
