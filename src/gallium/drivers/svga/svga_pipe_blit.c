@@ -325,18 +325,6 @@ svga_blit(struct pipe_context *pipe,
       return;
    }
 
-   /**
-    * When there is blit from srgb to linear format or vice versa, we change
-    * src.format to srgb or linear, respectively
-    */
-
-   if (util_format_is_srgb(blit.dst.format)) {
-      blit.src.format = util_format_srgb(blit.src.format);
-   }
-   else {
-      blit.src.format = util_format_linear(blit.src.format);
-   }
-
    /* XXX turn off occlusion and streamout queries */
 
    util_blitter_save_vertex_buffer_slot(svga->blitter, svga->curr.vb);
