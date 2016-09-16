@@ -1172,6 +1172,8 @@ VOID ElemLib::AdjustSurfaceInfo(
             case ADDR_PACKED_BC3: // Fall through
             case ADDR_PACKED_BC5: // Fall through
                 bBCnFormat = TRUE;
+                // fall through
+            case ADDR_PACKED_ASTC:
                 packedBits = 128;
                 break;
             case ADDR_ROUND_BY_HALF:  // Fall through
@@ -1291,7 +1293,9 @@ VOID ElemLib::RestoreSurfaceInfo(
             break;
         case ADDR_PACKED_BC2: // Fall through
         case ADDR_PACKED_BC3: // Fall through
-            case ADDR_PACKED_BC5:
+        case ADDR_PACKED_BC5:
+            // fall through
+        case ADDR_PACKED_ASTC:
             originalBits = 128;
             break;
         case ADDR_ROUND_BY_HALF:  // Fall through
@@ -1487,6 +1491,105 @@ UINT_32 ElemLib::GetBitsPerPixel(
             expandY = 4;
             bpp = 128;
             break;
+
+        case ADDR_FMT_ASTC_4x4:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 4;
+            expandY  = 4;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_5x4:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 5;
+            expandY  = 4;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_5x5:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 5;
+            expandY  = 5;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_6x5:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 6;
+            expandY  = 5;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_6x6:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 6;
+            expandY  = 6;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_8x5:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 8;
+            expandY  = 5;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_8x6:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 8;
+            expandY  = 6;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_8x8:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 8;
+            expandY  = 8;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_10x5:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 10;
+            expandY  = 5;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_10x6:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 10;
+            expandY  = 6;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_10x8:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 10;
+            expandY  = 8;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_10x10:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 10;
+            expandY  = 10;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_12x10:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 12;
+            expandY  = 10;
+            bpp      = 128;
+            break;
+
+        case ADDR_FMT_ASTC_12x12:
+            elemMode = ADDR_PACKED_ASTC;
+            expandX  = 12;
+            expandY  = 12;
+            bpp      = 128;
+            break;
+
         default:
             bpp = 0;
             ADDR_ASSERT_ALWAYS();

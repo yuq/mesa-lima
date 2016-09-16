@@ -131,6 +131,7 @@ enum ElemMode
     ADDR_PACKED_BC3,        // Each data element is uncompressed to a 4x4 pixel/texel array
     ADDR_PACKED_BC4,        // Each data element is uncompressed to a 4x4 pixel/texel array
     ADDR_PACKED_BC5,        // Each data element is uncompressed to a 4x4 pixel/texel array
+    ADDR_PACKED_ASTC,
 
     // These formats provide various kinds of compression
     ADDR_ZPLANE_R5XX,       // Compressed Zplane using r5xx architecture format

@@ -273,6 +273,20 @@ typedef enum _AddrFormat {
     ADDR_FMT_APC7                                 = 0x0000003d,
     ADDR_FMT_CTX1                                 = 0x0000003e,
     ADDR_FMT_RESERVED_63                          = 0x0000003f,
+    ADDR_FMT_ASTC_4x4                             = 0x00000040,
+    ADDR_FMT_ASTC_5x4                             = 0x00000041,
+    ADDR_FMT_ASTC_5x5                             = 0x00000042,
+    ADDR_FMT_ASTC_6x5                             = 0x00000043,
+    ADDR_FMT_ASTC_6x6                             = 0x00000044,
+    ADDR_FMT_ASTC_8x5                             = 0x00000045,
+    ADDR_FMT_ASTC_8x6                             = 0x00000046,
+    ADDR_FMT_ASTC_8x8                             = 0x00000047,
+    ADDR_FMT_ASTC_10x5                            = 0x00000048,
+    ADDR_FMT_ASTC_10x6                            = 0x00000049,
+    ADDR_FMT_ASTC_10x8                            = 0x0000004a,
+    ADDR_FMT_ASTC_10x10                           = 0x0000004b,
+    ADDR_FMT_ASTC_12x10                           = 0x0000004c,
+    ADDR_FMT_ASTC_12x12                           = 0x0000004d,
 } AddrFormat;
 
 /**
