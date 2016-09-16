@@ -333,7 +333,24 @@ _mesa_DepthRangeArrayv(GLuint first, GLsizei count, const GLclampd *v)
 void GLAPIENTRY
 _mesa_DepthRangeArrayfvOES(GLuint first, GLsizei count, const GLfloat *v)
 {
+   int i;
+   GET_CURRENT_CONTEXT(ctx);
 
+   if (MESA_VERBOSE & VERBOSE_API)
+      _mesa_debug(ctx, "glDepthRangeArrayfv %d %d\n", first, count);
+
+   if ((first + count) > ctx->Const.MaxViewports) {
+      _mesa_error(ctx, GL_INVALID_VALUE,
+                  "glDepthRangeArrayfv: first (%d) + count (%d) >= MaxViewports (%d)",
+                  first, count, ctx->Const.MaxViewports);
+      return;
+   }
+
+   for (i = 0; i < count; i++)
+      set_depth_range_no_notify(ctx, i + first, v[i * 2], v[i * 2 + 1]);
+
+   if (ctx->Driver.DepthRange)
+      ctx->Driver.DepthRange(ctx);
 }
 
 /**
@@ -367,7 +384,7 @@ _mesa_DepthRangeIndexed(GLuint index, GLclampd nearval, GLclampd farval)
 void GLAPIENTRY
 _mesa_DepthRangeIndexedfOES(GLuint index, GLfloat nearval, GLfloat farval)
 {
-
+   _mesa_DepthRangeIndexed(index, nearval, farval);
 }
 
 /** 
