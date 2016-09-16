@@ -3115,44 +3115,6 @@ LockVolume9_GetDevice( struct NineVolume9 *This,
 #endif
 
 static HRESULT NINE_WINAPI
-LockVolume9_SetPrivateData( struct NineVolume9 *This,
-                            REFGUID refguid,
-                            const void *pData,
-                            DWORD SizeOfData,
-                            DWORD Flags )
-{
-    HRESULT r;
-    pipe_mutex_lock(d3dlock_global);
-    r = NineVolume9_SetPrivateData(This, refguid, pData, SizeOfData, Flags);
-    pipe_mutex_unlock(d3dlock_global);
-    return r;
-}
-
-static HRESULT NINE_WINAPI
-LockVolume9_GetPrivateData( struct NineVolume9 *This,
-                            REFGUID refguid,
-                            void *pData,
-                            DWORD *pSizeOfData )
-{
-    HRESULT r;
-    pipe_mutex_lock(d3dlock_global);
-    r = NineVolume9_GetPrivateData(This, refguid, pData, pSizeOfData);
-    pipe_mutex_unlock(d3dlock_global);
-    return r;
-}
-
-static HRESULT NINE_WINAPI
-LockVolume9_FreePrivateData( struct NineVolume9 *This,
-                             REFGUID refguid )
-{
-    HRESULT r;
-    pipe_mutex_lock(d3dlock_global);
-    r = NineVolume9_FreePrivateData(This, refguid);
-    pipe_mutex_unlock(d3dlock_global);
-    return r;
-}
-
-static HRESULT NINE_WINAPI
 LockVolume9_GetContainer( struct NineVolume9 *This,
                           REFIID riid,
                           void **ppContainer )
