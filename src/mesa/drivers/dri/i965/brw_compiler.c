@@ -133,10 +133,6 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
       compiler->glsl_compiler_options[i].EmitNoIndirectTemp = is_scalar;
       compiler->glsl_compiler_options[i].OptimizeForAOS = !is_scalar;
 
-      /* !ARB_gpu_shader5 */
-      if (devinfo->gen < 7)
-         compiler->glsl_compiler_options[i].EmitNoIndirectSampler = true;
-
       if (is_scalar) {
          compiler->glsl_compiler_options[i].NirOptions = &scalar_nir_options;
       } else {
