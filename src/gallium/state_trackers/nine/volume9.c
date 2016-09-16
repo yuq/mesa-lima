@@ -513,9 +513,9 @@ IDirect3DVolume9Vtbl NineVolume9_vtable = {
     (void *)NineUnknown_AddRef,
     (void *)NineUnknown_Release,
     (void *)NineUnknown_GetDevice, /* actually part of Volume9 iface */
-    (void *)NineVolume9_SetPrivateData,
-    (void *)NineVolume9_GetPrivateData,
-    (void *)NineVolume9_FreePrivateData,
+    (void *)NineUnknown_SetPrivateData,
+    (void *)NineUnknown_GetPrivateData,
+    (void *)NineUnknown_FreePrivateData,
     (void *)NineVolume9_GetContainer,
     (void *)NineVolume9_GetDesc,
     (void *)NineVolume9_LockBox,
