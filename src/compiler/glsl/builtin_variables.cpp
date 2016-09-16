@@ -876,7 +876,8 @@ builtin_variable_generator::generate_constants()
    }
 
    if (state->is_version(410, 0) ||
-       state->ARB_viewport_array_enable)
+       state->ARB_viewport_array_enable ||
+       state->OES_viewport_array_enable)
       add_const("gl_MaxViewports", state->Const.MaxViewports);
 
    if (state->has_tessellation_shader()) {
@@ -1096,7 +1097,8 @@ builtin_variable_generator::generate_gs_special_vars()
 
    var = add_output(VARYING_SLOT_LAYER, int_t, "gl_Layer");
    var->data.interpolation = INTERP_MODE_FLAT;
-   if (state->is_version(410, 0) || state->ARB_viewport_array_enable) {
+   if (state->is_version(410, 0) || state->ARB_viewport_array_enable ||
+       state->OES_viewport_array_enable) {
       var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
@@ -1226,7 +1228,8 @@ builtin_variable_generator::generate_fs_special_vars()
    }
 
    if (state->is_version(430, 0) ||
-       state->ARB_fragment_layer_viewport_enable) {
+       state->ARB_fragment_layer_viewport_enable ||
+       state->OES_viewport_array_enable) {
       var = add_input(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
    }

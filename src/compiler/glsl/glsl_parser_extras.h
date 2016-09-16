@@ -698,6 +698,8 @@ struct _mesa_glsl_parse_state {
    bool OES_texture_cube_map_array_warn;
    bool OES_texture_storage_multisample_2d_array_enable;
    bool OES_texture_storage_multisample_2d_array_warn;
+   bool OES_viewport_array_enable;
+   bool OES_viewport_array_warn;
 
    /* All other extensions go here, sorted alphabetically.
     */
