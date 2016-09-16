@@ -330,6 +330,12 @@ _mesa_DepthRangeArrayv(GLuint first, GLsizei count, const GLclampd *v)
       ctx->Driver.DepthRange(ctx);
 }
 
+void GLAPIENTRY
+_mesa_DepthRangeArrayfvOES(GLuint first, GLsizei count, const GLfloat *v)
+{
+
+}
+
 /**
  * Update a single DepthRange
  *
@@ -356,6 +362,12 @@ _mesa_DepthRangeIndexed(GLuint index, GLclampd nearval, GLclampd farval)
    }
 
    _mesa_set_depth_range(ctx, index, nearval, farval);
+}
+
+void GLAPIENTRY
+_mesa_DepthRangeIndexedfOES(GLuint index, GLfloat nearval, GLfloat farval)
+{
+
 }
 
 /** 
