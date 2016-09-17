@@ -432,11 +432,7 @@ struct sm1_local_const
 {
     INT idx;
     struct ureg_src reg;
-    union {
-        boolean b;
-        float f[4];
-        int32_t i[4];
-    } imm;
+    float f[4]; /* for indirect addressing of float constants */
 };
 
 struct shader_translator
@@ -507,8 +503,10 @@ struct shader_translator
 
     struct sm1_local_const *lconstf;
     unsigned num_lconstf;
-    struct sm1_local_const lconsti[NINE_MAX_CONST_I];
-    struct sm1_local_const lconstb[NINE_MAX_CONST_B];
+    struct sm1_local_const *lconsti;
+    unsigned num_lconsti;
+    struct sm1_local_const *lconstb;
+    unsigned num_lconstb;
 
     boolean indirect_const_access;
     boolean failure;
@@ -542,6 +540,7 @@ static boolean
 tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
    INT i;
+
    if (index < 0 || index >= tx->num_constf_allowed) {
        tx->failure = TRUE;
        return FALSE;
@@ -557,24 +556,36 @@ tx_lconstf(struct shader_translator *tx, struct ureg_src *src, INT index)
 static boolean
 tx_lconsti(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
+   int i;
+
    if (index < 0 || index >= tx->num_consti_allowed) {
        tx->failure = TRUE;
        return FALSE;
    }
-   if (tx->lconsti[index].idx == index)
-      *src = tx->lconsti[index].reg;
-   return tx->lconsti[index].idx == index;
+   for (i = 0; i < tx->num_lconsti; ++i) {
+      if (tx->lconsti[i].idx == index) {
+         *src = tx->lconsti[i].reg;
+         return TRUE;
+      }
+   }
+   return FALSE;
 }
 static boolean
 tx_lconstb(struct shader_translator *tx, struct ureg_src *src, INT index)
 {
+   int i;
+
    if (index < 0 || index >= tx->num_constb_allowed) {
        tx->failure = TRUE;
        return FALSE;
    }
-   if (tx->lconstb[index].idx == index)
-      *src = tx->lconstb[index].reg;
-   return tx->lconstb[index].idx == index;
+   for (i = 0; i < tx->num_lconstb; ++i) {
+      if (tx->lconstb[i].idx == index) {
+         *src = tx->lconstb[i].reg;
+         return TRUE;
+      }
+   }
+   return FALSE;
 }
 
 static void
@@ -599,23 +610,55 @@ tx_set_lconstf(struct shader_translator *tx, INT index, float f[4])
     tx->lconstf[n].idx = index;
     tx->lconstf[n].reg = ureg_imm4f(tx->ureg, f[0], f[1], f[2], f[3]);
 
-    memcpy(tx->lconstf[n].imm.f, f, sizeof(tx->lconstf[n].imm.f));
+    memcpy(tx->lconstf[n].f, f, sizeof(tx->lconstf[n].f));
 }
 static void
 tx_set_lconsti(struct shader_translator *tx, INT index, int i[4])
 {
+    unsigned n;
+
     FAILURE_VOID(index < 0 || index >= tx->num_consti_allowed)
-    tx->lconsti[index].idx = index;
-    tx->lconsti[index].reg = tx->native_integers ?
+
+    for (n = 0; n < tx->num_lconsti; ++n)
+        if (tx->lconsti[n].idx == index)
+            break;
+    if (n == tx->num_lconsti) {
+       if ((n % 8) == 0) {
+          tx->lconsti = REALLOC(tx->lconsti,
+                                (n + 0) * sizeof(tx->lconsti[0]),
+                                (n + 8) * sizeof(tx->lconsti[0]));
+          assert(tx->lconsti);
+       }
+       tx->num_lconsti++;
+    }
+
+    tx->lconsti[n].idx = index;
+    tx->lconsti[n].reg = tx->native_integers ?
        ureg_imm4i(tx->ureg, i[0], i[1], i[2], i[3]) :
        ureg_imm4f(tx->ureg, i[0], i[1], i[2], i[3]);
 }
 static void
 tx_set_lconstb(struct shader_translator *tx, INT index, BOOL b)
 {
+    unsigned n;
+
     FAILURE_VOID(index < 0 || index >= tx->num_constb_allowed)
-    tx->lconstb[index].idx = index;
-    tx->lconstb[index].reg = tx->native_integers ?
+
+    for (n = 0; n < tx->num_lconstb; ++n)
+        if (tx->lconstb[n].idx == index)
+            break;
+    if (n == tx->num_lconstb) {
+       if ((n % 8) == 0) {
+          tx->lconstb = REALLOC(tx->lconstb,
+                                (n + 0) * sizeof(tx->lconstb[0]),
+                                (n + 8) * sizeof(tx->lconstb[0]));
+          assert(tx->lconstb);
+       }
+       tx->num_lconstb++;
+    }
+
+    tx->lconstb[n].idx = index;
+    tx->lconstb[n].reg = tx->native_integers ?
        ureg_imm1u(tx->ureg, b ? 0xffffffff : 0) :
        ureg_imm1f(tx->ureg, b ? 1.0f : 0.0f);
 }
@@ -942,7 +985,26 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         if (param->rel || !tx_lconstf(tx, &src, param->idx)) {
             if (!param->rel)
                 nine_info_mark_const_f_used(tx->info, param->idx);
-            src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
+            /* vswp constant handling: we use two buffers
+             * to fit all the float constants. The special handling
+             * doesn't need to be elsewhere, because all the instructions
+             * accessing the constants directly are VS1, and swvp
+             * is VS >= 2 */
+            if (IS_VS && tx->info->swvp_on) {
+                if (!param->rel) {
+                    if (param->idx < 4096) {
+                        src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
+                        src = ureg_src_dimension(src, 0);
+                    } else {
+                        src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx - 4096);
+                        src = ureg_src_dimension(src, 1);
+                    }
+                } else {
+                    src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx); /* TODO: swvp rel > 4096 */
+                    src = ureg_src_dimension(src, 0);
+                }
+            } else
+                src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
         }
         if (!IS_VS && tx->version.major < 2) {
             /* ps 1.X clamps constants */
@@ -964,8 +1026,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         assert(!param->rel);
         if (!tx_lconsti(tx, &src, param->idx)) {
             nine_info_mark_const_i_used(tx->info, param->idx);
-            src = ureg_src_register(TGSI_FILE_CONSTANT,
-                                    tx->info->const_i_base + param->idx);
+            if (IS_VS && tx->info->swvp_on) {
+                src = ureg_src_register(TGSI_FILE_CONSTANT, param->idx);
+                src = ureg_src_dimension(src, 2);
+            } else
+                src = ureg_src_register(TGSI_FILE_CONSTANT,
+                                        tx->info->const_i_base + param->idx);
         }
         break;
     case D3DSPR_CONSTBOOL:
@@ -974,8 +1040,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
            char r = param->idx / 4;
            char s = param->idx & 3;
            nine_info_mark_const_b_used(tx->info, param->idx);
-           src = ureg_src_register(TGSI_FILE_CONSTANT,
-                                   tx->info->const_b_base + r);
+           if (IS_VS && tx->info->swvp_on) {
+               src = ureg_src_register(TGSI_FILE_CONSTANT, r);
+               src = ureg_src_dimension(src, 3);
+           } else
+               src = ureg_src_register(TGSI_FILE_CONSTANT,
+                                       tx->info->const_b_base + r);
            src = ureg_swizzle(src, s, s, s, s);
         }
         break;
@@ -3353,8 +3423,6 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     struct shader_translator *tx;
     HRESULT hr = D3D_OK;
     const unsigned processor = info->type;
-    unsigned s, slot_max;
-    unsigned max_const_f;
 
     user_assert(processor != ~0, D3DERR_INVALIDCALL);
 
@@ -3409,6 +3477,12 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     } else {
         tx->num_consti_allowed = NINE_MAX_CONST_I;
         tx->num_constb_allowed = NINE_MAX_CONST_B;
+    }
+
+    if (IS_VS && tx->version.major >= 2 && info->swvp_on) {
+        tx->num_constf_allowed = 8192;
+        tx->num_consti_allowed = 2048;
+        tx->num_constb_allowed = 2048;
     }
 
     /* VS must always write position. Declare it here to make it the 1st output.
@@ -3485,7 +3559,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
                     k = i;
             }
             indices[n] = tx->lconstf[k].idx;
-            memcpy(&data[n * 4], &tx->lconstf[k].imm.f[0], 4 * sizeof(float));
+            memcpy(&data[n * 4], &tx->lconstf[k].f[0], 4 * sizeof(float));
             tx->lconstf[k].idx = INT_MAX;
         }
 
@@ -3520,25 +3594,35 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
 
     /* r500 */
     if (info->const_float_slots > device->max_vs_const_f &&
-        (info->const_int_slots || info->const_bool_slots))
+        (info->const_int_slots || info->const_bool_slots) &&
+        (!IS_VS || !info->swvp_on))
         ERR("Overlapping constant slots. The shader is likely to be buggy\n");
 
 
     if (tx->indirect_const_access) /* vs only */
         info->const_float_slots = device->max_vs_const_f;
 
-    max_const_f = IS_VS ? device->max_vs_const_f : device->max_ps_const_f;
-    slot_max = info->const_bool_slots > 0 ?
-                   max_const_f + NINE_MAX_CONST_I
-                   + DIV_ROUND_UP(info->const_bool_slots, 4) :
-                       info->const_int_slots > 0 ?
-                           max_const_f + info->const_int_slots :
-                               info->const_float_slots;
+    if (!IS_VS || !info->swvp_on) {
+        unsigned s, slot_max;
+        unsigned max_const_f = IS_VS ? device->max_vs_const_f : device->max_ps_const_f;
 
-    info->const_used_size = sizeof(float[4]) * slot_max; /* slots start from 1 */
+        slot_max = info->const_bool_slots > 0 ?
+                       max_const_f + NINE_MAX_CONST_I
+                       + DIV_ROUND_UP(info->const_bool_slots, 4) :
+                           info->const_int_slots > 0 ?
+                               max_const_f + info->const_int_slots :
+                                   info->const_float_slots;
 
-    for (s = 0; s < slot_max; s++)
-        ureg_DECL_constant(tx->ureg, s);
+        info->const_used_size = sizeof(float[4]) * slot_max; /* slots start from 1 */
+
+        for (s = 0; s < slot_max; s++)
+            ureg_DECL_constant(tx->ureg, s);
+    } else {
+         ureg_DECL_constant2D(tx->ureg, 0, 4095, 0);
+         ureg_DECL_constant2D(tx->ureg, 0, 4095, 1);
+         ureg_DECL_constant2D(tx->ureg, 0, 2047, 2);
+         ureg_DECL_constant2D(tx->ureg, 0, 511, 3);
+    }
 
     if (debug_get_bool_option("NINE_TGSI_DUMP", FALSE)) {
         unsigned count;
