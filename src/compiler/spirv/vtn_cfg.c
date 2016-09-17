@@ -443,6 +443,19 @@ vtn_cfg_walk_blocks(struct vtn_builder *b, struct list_head *cf_list,
             vtn_order_case(swtch, case_block->switch_case);
          }
 
+         enum vtn_branch_type branch_type =
+            vtn_get_branch_type(break_block, switch_case, NULL,
+                                loop_break, loop_cont);
+
+         if (branch_type != vtn_branch_type_none) {
+            /* It is possible that the break is actually the continue block
+             * for the containing loop.  In this case, we need to bail and let
+             * the loop parsing code handle the continue properly.
+             */
+            assert(branch_type == vtn_branch_type_loop_continue);
+            return;
+         }
+
          block = break_block;
          continue;
       }
