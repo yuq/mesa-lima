@@ -239,12 +239,12 @@ vtn_get_branch_type(struct vtn_block *block,
              swcase->fallthrough == block->switch_case);
       swcase->fallthrough = block->switch_case;
       return vtn_branch_type_switch_fallthrough;
-   } else if (block == switch_break) {
-      return vtn_branch_type_switch_break;
    } else if (block == loop_break) {
       return vtn_branch_type_loop_break;
    } else if (block == loop_cont) {
       return vtn_branch_type_loop_continue;
+   } else if (block == switch_break) {
+      return vtn_branch_type_switch_break;
    } else {
       return vtn_branch_type_none;
    }
