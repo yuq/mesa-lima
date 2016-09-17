@@ -3501,7 +3501,10 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     tx->parse++; /* for byte_size */
 
     if (tx->failure) {
-        ERR("Encountered buggy shader\n");
+        /* For VS shaders, we print the warning later,
+         * we first try with swvp. */
+        if (IS_PS)
+            ERR("Encountered buggy shader\n");
         ureg_destroy(tx->ureg);
         hr = D3DERR_INVALIDCALL;
         goto out;

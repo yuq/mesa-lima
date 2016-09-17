@@ -79,6 +79,143 @@ prepare_rasterizer(struct NineDevice9 *device)
 }
 
 static void
+prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+
+    if (state->changed.vs_const_f || state->changed.group & NINE_STATE_SWVP) {
+        struct pipe_constant_buffer cb;
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 4096 * sizeof(float[4]);
+        cb.user_buffer = state->vs_const_f_swvp;
+
+        if (state->vs->lconstf.ranges) {
+            const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
+            const struct nine_range *r = lconstf->ranges;
+            unsigned n = 0;
+            float *dst = device->state.vs_lconstf_temp;
+            float *src = (float *)cb.user_buffer;
+            memcpy(dst, src, cb.buffer_size);
+            while (r) {
+                unsigned p = r->bgn;
+                unsigned c = r->end - r->bgn;
+                memcpy(&dst[p * 4], &lconstf->data[n * 4], c * 4 * sizeof(float));
+                n += c;
+                r = r->next;
+            }
+            cb.user_buffer = dst;
+        }
+
+        state->pipe.cb0_swvp = cb;
+
+        cb.user_buffer = (char *)cb.user_buffer + 4096 * sizeof(float[4]);
+        state->pipe.cb1_swvp = cb;
+    }
+
+    if (state->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
+        struct pipe_constant_buffer cb;
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 2048 * sizeof(float[4]);
+        cb.user_buffer = state->vs_const_i;
+
+        state->pipe.cb2_swvp = cb;
+        state->changed.vs_const_i = 0;
+    }
+
+    if (state->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
+        struct pipe_constant_buffer cb;
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 512 * sizeof(float[4]);
+        cb.user_buffer = state->vs_const_b;
+
+        state->pipe.cb3_swvp = cb;
+        state->changed.vs_const_b = 0;
+    }
+
+    if (!device->driver_caps.user_cbufs) {
+        struct pipe_constant_buffer *cb = &(state->pipe.cb0_swvp);
+        u_upload_data(device->constbuf_uploader,
+                      0,
+                      cb->buffer_size,
+                      device->constbuf_alignment,
+                      cb->user_buffer,
+                      &(cb->buffer_offset),
+                      &(cb->buffer));
+        u_upload_unmap(device->constbuf_uploader);
+        cb->user_buffer = NULL;
+
+        cb = &(state->pipe.cb1_swvp);
+        u_upload_data(device->constbuf_uploader,
+                      0,
+                      cb->buffer_size,
+                      device->constbuf_alignment,
+                      cb->user_buffer,
+                      &(cb->buffer_offset),
+                      &(cb->buffer));
+        u_upload_unmap(device->constbuf_uploader);
+        cb->user_buffer = NULL;
+
+        cb = &(state->pipe.cb2_swvp);
+        u_upload_data(device->constbuf_uploader,
+                      0,
+                      cb->buffer_size,
+                      device->constbuf_alignment,
+                      cb->user_buffer,
+                      &(cb->buffer_offset),
+                      &(cb->buffer));
+        u_upload_unmap(device->constbuf_uploader);
+        cb->user_buffer = NULL;
+
+        cb = &(state->pipe.cb3_swvp);
+        u_upload_data(device->constbuf_uploader,
+                      0,
+                      cb->buffer_size,
+                      device->constbuf_alignment,
+                      cb->user_buffer,
+                      &(cb->buffer_offset),
+                      &(cb->buffer));
+        u_upload_unmap(device->constbuf_uploader);
+        cb->user_buffer = NULL;
+    }
+
+    if (device->state.changed.vs_const_f) {
+        struct nine_range *r = device->state.changed.vs_const_f;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.vs_const_f = NULL;
+    }
+
+    if (device->state.changed.vs_const_i) {
+        struct nine_range *r = device->state.changed.vs_const_i;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.vs_const_i = NULL;
+    }
+
+    if (device->state.changed.vs_const_b) {
+        struct nine_range *r = device->state.changed.vs_const_b;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.vs_const_b = NULL;
+    }
+
+    state->changed.group &= ~NINE_STATE_VS_CONST;
+    state->commit |= NINE_STATE_COMMIT_CONST_VS;
+}
+
+static void
 prepare_vs_constants_userbuf(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
@@ -88,20 +225,26 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     cb.buffer_size = device->state.vs->const_used_size;
     cb.user_buffer = device->state.vs_const_f;
 
-    if (!cb.buffer_size)
+    if (device->swvp) {
+        prepare_vs_constants_userbuf_swvp(device);
         return;
+    }
 
-    if (state->changed.vs_const_i) {
+    if (state->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
         int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
         memcpy(idst, state->vs_const_i, NINE_MAX_CONST_I * sizeof(int[4]));
         state->changed.vs_const_i = 0;
     }
-    if (state->changed.vs_const_b) {
+
+    if (state->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
         int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
         uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
         memcpy(bdst, state->vs_const_b, NINE_MAX_CONST_B * sizeof(BOOL));
         state->changed.vs_const_b = 0;
     }
+
+    if (!cb.buffer_size)
+        return;
 
     if (device->state.vs->lconstf.ranges) {
         /* TODO: Can we make it so that we don't have to copy everything ? */
@@ -251,7 +394,7 @@ prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
     int has_key_changed = 0;
 
     if (likely(state->programmable_vs))
-        has_key_changed = NineVertexShader9_UpdateKey(vs, state);
+        has_key_changed = NineVertexShader9_UpdateKey(vs, device);
 
     if (!shader_changed && !has_key_changed)
         return 0;
@@ -740,8 +883,16 @@ commit_vs_constants(struct NineDevice9 *device)
 
     if (unlikely(!device->state.programmable_vs))
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs_ff);
-    else
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs);
+    else {
+        if (device->swvp) {
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb0_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 1, &device->state.pipe.cb1_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 2, &device->state.pipe.cb2_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 3, &device->state.pipe.cb3_swvp);
+        } else {
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->state.pipe.cb_vs);
+        }
+    }
 }
 
 static inline void
@@ -777,7 +928,8 @@ commit_ps(struct NineDevice9 *device)
    (NINE_STATE_VS |         \
     NINE_STATE_TEXTURE |    \
     NINE_STATE_FOG_SHADER | \
-    NINE_STATE_POINTSIZE_SHADER)
+    NINE_STATE_POINTSIZE_SHADER | \
+    NINE_STATE_SWVP)
 
 #define NINE_STATE_SHADER_CHANGE_PS \
    (NINE_STATE_PS |         \
@@ -886,14 +1038,14 @@ nine_update_state(struct NineDevice9 *device)
             commit_index_buffer(device);
     }
 
-    if (likely(group & (NINE_STATE_FREQUENT | NINE_STATE_VS | NINE_STATE_PS))) {
+    if (likely(group & (NINE_STATE_FREQUENT | NINE_STATE_VS | NINE_STATE_PS | NINE_STATE_SWVP))) {
         if (group & NINE_STATE_MULTISAMPLE)
             group |= check_multisample(device);
         if (group & NINE_STATE_RASTERIZER)
             prepare_rasterizer(device);
         if (group & (NINE_STATE_TEXTURE | NINE_STATE_SAMPLER))
             update_textures_and_samplers(device);
-        if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->programmable_vs)
+        if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS | NINE_STATE_SWVP)) && state->programmable_vs)
             prepare_vs_constants_userbuf(device);
         if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
             prepare_ps_constants_userbuf(device);

@@ -26,6 +26,7 @@
 #include "util/u_half.h"
 
 #include "iunknown.h"
+#include "device9.h"
 #include "nine_helpers.h"
 #include "nine_shader.h"
 #include "nine_state.h"
@@ -50,6 +51,7 @@ struct NineVertexShader9
 
     boolean position_t; /* if true, disable vport transform */
     boolean point_size; /* if true, set rasterizer.point_size_per_vertex to 1 */
+    boolean swvp_only;
 
     unsigned const_used_size; /* in bytes */
 
@@ -73,8 +75,9 @@ NineVertexShader9( void *data )
 
 static inline BOOL
 NineVertexShader9_UpdateKey( struct NineVertexShader9 *vs,
-                             struct nine_state *state )
+                             struct NineDevice9 *device )
 {
+    struct nine_state *state = &(device->state);
     uint8_t samplers_shadow;
     uint64_t key;
     BOOL res;
@@ -84,7 +87,8 @@ NineVertexShader9_UpdateKey( struct NineVertexShader9 *vs,
     key = samplers_shadow;
 
     if (vs->byte_code.version < 0x30)
-        key |= (uint32_t) (state->rs[D3DRS_FOGENABLE] << 8);
+        key |= (uint32_t) ((!!state->rs[D3DRS_FOGENABLE]) << 8);
+    key |= (uint32_t) (device->swvp << 9);
 
     /* We want to use a 64 bits key for performance.
      * Use compressed float16 values for the pointsize min/max in the key.

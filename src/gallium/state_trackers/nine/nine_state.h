@@ -84,8 +84,9 @@
 #define NINE_STATE_PS1X_SHADER (1 << 26)
 #define NINE_STATE_POINTSIZE_SHADER (1 << 27)
 #define NINE_STATE_MULTISAMPLE (1 << 28)
-#define NINE_STATE_ALL          0x1fffffff
-#define NINE_STATE_UNHANDLED   (1 << 29)
+#define NINE_STATE_SWVP        (1 << 29)
+#define NINE_STATE_ALL          0x3fffffff
+#define NINE_STATE_UNHANDLED   (1 << 30)
 
 #define NINE_STATE_COMMIT_DSA  (1 << 0)
 #define NINE_STATE_COMMIT_RASTERIZER (1 << 1)
@@ -101,6 +102,9 @@
 #define NINE_MAX_CONST_F   256
 #define NINE_MAX_CONST_I   16
 #define NINE_MAX_CONST_B   16
+#define NINE_MAX_CONST_F_SWVP   8192
+#define NINE_MAX_CONST_I_SWVP   2048
+#define NINE_MAX_CONST_B_SWVP   2048
 #define NINE_MAX_CONST_ALL 276 /* B consts count only 1/4 th */
 
 #define NINE_CONST_I_BASE(nconstf) \
@@ -157,6 +161,7 @@ struct nine_state
      */
     struct NineVertexShader9 *vs;
     float *vs_const_f;
+    float *vs_const_f_swvp;
     int   *vs_const_i;
     BOOL  *vs_const_b;
     float *vs_lconstf_temp;
@@ -229,6 +234,10 @@ struct nine_state
         struct pipe_rasterizer_state rast;
         struct pipe_blend_state blend;
         struct pipe_constant_buffer cb_vs;
+        struct pipe_constant_buffer cb0_swvp;
+        struct pipe_constant_buffer cb1_swvp;
+        struct pipe_constant_buffer cb2_swvp;
+        struct pipe_constant_buffer cb3_swvp;
         struct pipe_constant_buffer cb_ps;
         struct pipe_constant_buffer cb_vs_ff;
         struct pipe_constant_buffer cb_ps_ff;

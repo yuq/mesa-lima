@@ -168,11 +168,30 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (This->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING) {
         DBG("Application asked full Software Vertex Processing.\n");
         This->swvp = true;
+        This->may_swvp = true;
     } else
         This->swvp = false;
-    if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)
+    if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING) {
         DBG("Application asked mixed Software Vertex Processing.\n");
+        This->may_swvp = true;
+    }
     /* TODO: check if swvp is resetted by device Resets */
+
+    if (This->may_swvp &&
+        (This->screen->get_shader_param(This->screen, PIPE_SHADER_VERTEX,
+                                        PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE)
+                                     < (NINE_MAX_CONST_F_SWVP/2) * sizeof(float[4]) ||
+         This->screen->get_shader_param(This->screen, PIPE_SHADER_VERTEX,
+                                        PIPE_SHADER_CAP_MAX_CONST_BUFFERS) < 5)) {
+        /* Note: We just go on, some apps never use the abilities of
+         * swvp, and just set more constants than allowed at init.
+         * Only cards we support that are affected are the r500 */
+        WARN("Card unable to handle Software Vertex Processing. Game may fail\n");
+    }
+
+    /* When may_swvp, SetConstant* limits are different */
+    if (This->may_swvp)
+        This->caps.MaxVertexShaderConst = NINE_MAX_CONST_F_SWVP;
 
     This->pipe = This->screen->context_create(This->screen, NULL, 0);
     if (!This->pipe) { return E_OUTOFMEMORY; } /* guess */
@@ -322,12 +341,22 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->vs_const_size = max_const_vs * sizeof(float[4]);
         This->ps_const_size = max_const_ps * sizeof(float[4]);
         /* Include space for I,B constants for user constbuf. */
+        if (This->may_swvp) {
+            This->state.vs_const_f_swvp = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
+            if (!This->state.vs_const_f_swvp)
+                return E_OUTOFMEMORY;
+            This->state.vs_lconstf_temp = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
+            This->state.vs_const_i = CALLOC(NINE_MAX_CONST_I_SWVP * sizeof(int[4]), 1);
+            This->state.vs_const_b = CALLOC(NINE_MAX_CONST_B_SWVP * sizeof(BOOL), 1);
+        } else {
+            This->state.vs_const_f_swvp = NULL;
+            This->state.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
+            This->state.vs_const_i = CALLOC(NINE_MAX_CONST_I * sizeof(int[4]), 1);
+            This->state.vs_const_b = CALLOC(NINE_MAX_CONST_B * sizeof(BOOL), 1);
+        }
         This->state.vs_const_f = CALLOC(This->vs_const_size, 1);
         This->state.ps_const_f = CALLOC(This->ps_const_size, 1);
-        This->state.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
         This->state.ps_lconstf_temp = CALLOC(This->ps_const_size,1);
-        This->state.vs_const_i = CALLOC(NINE_MAX_CONST_I * sizeof(int[4]), 1);
-        This->state.vs_const_b = CALLOC(NINE_MAX_CONST_B * sizeof(BOOL), 1);
         if (!This->state.vs_const_f || !This->state.ps_const_f ||
             !This->state.vs_lconstf_temp || !This->state.ps_lconstf_temp ||
             !This->state.vs_const_i || !This->state.vs_const_b)
@@ -464,6 +493,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     FREE(This->state.ps_lconstf_temp);
     FREE(This->state.vs_const_i);
     FREE(This->state.vs_const_b);
+    FREE(This->state.vs_const_f_swvp);
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
@@ -2490,11 +2520,11 @@ NineDevice9_CreateStateBlock( struct NineDevice9 *This,
        /* TODO: texture/sampler state */
        memcpy(dst->changed.rs,
               nine_render_states_vertex, sizeof(dst->changed.rs));
-       nine_ranges_insert(&dst->changed.vs_const_f, 0, This->max_vs_const_f,
+       nine_ranges_insert(&dst->changed.vs_const_f, 0, This->may_swvp ? NINE_MAX_CONST_F_SWVP : This->max_vs_const_f,
                           &This->range_pool);
-       nine_ranges_insert(&dst->changed.vs_const_i, 0, NINE_MAX_CONST_I,
+       nine_ranges_insert(&dst->changed.vs_const_i, 0, This->may_swvp ? NINE_MAX_CONST_I_SWVP : NINE_MAX_CONST_I,
                           &This->range_pool);
-       nine_ranges_insert(&dst->changed.vs_const_b, 0, NINE_MAX_CONST_B,
+       nine_ranges_insert(&dst->changed.vs_const_b, 0, This->may_swvp ? NINE_MAX_CONST_B_SWVP : NINE_MAX_CONST_B,
                           &This->range_pool);
        for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
            dst->changed.sampler[s] |= 1 << D3DSAMP_DMAPOFFSET;
@@ -2890,6 +2920,7 @@ NineDevice9_SetSoftwareVertexProcessing( struct NineDevice9 *This,
 {
     if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING) {
         This->swvp = bSoftware;
+        This->state.changed.group |= NINE_STATE_SWVP;
         return D3D_OK;
     } else
         return D3DERR_INVALIDCALL; /* msdn. TODO: check in practice */
@@ -3376,6 +3407,7 @@ NineDevice9_SetVertexShaderConstantF( struct NineDevice9 *This,
                                       UINT Vector4fCount )
 {
     struct nine_state *state = This->update;
+    float *vs_const_f = This->may_swvp ? state->vs_const_f_swvp : state->vs_const_f;
 
     DBG("This=%p StartRegister=%u pConstantData=%p Vector4fCount=%u\n",
         This, StartRegister, pConstantData, Vector4fCount);
@@ -3388,18 +3420,26 @@ NineDevice9_SetVertexShaderConstantF( struct NineDevice9 *This,
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     if (!This->is_recording) {
-        if (!memcmp(&state->vs_const_f[StartRegister * 4], pConstantData,
+        if (!memcmp(&vs_const_f[StartRegister * 4], pConstantData,
                     Vector4fCount * 4 * sizeof(state->vs_const_f[0])))
             return D3D_OK;
     }
 
-    memcpy(&state->vs_const_f[StartRegister * 4],
+    memcpy(&vs_const_f[StartRegister * 4],
            pConstantData,
            Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
 
     nine_ranges_insert(&state->changed.vs_const_f,
                        StartRegister, StartRegister + Vector4fCount,
                        &This->range_pool);
+
+    if (This->may_swvp) {
+        Vector4fCount = MIN2(StartRegister + Vector4fCount, NINE_MAX_CONST_F) - StartRegister;
+        if (StartRegister < NINE_MAX_CONST_F)
+            memcpy(&state->vs_const_f[StartRegister * 4],
+                   pConstantData,
+                   Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
+    }
 
     state->changed.group |= NINE_STATE_VS_CONST;
 
@@ -3413,13 +3453,14 @@ NineDevice9_GetVertexShaderConstantF( struct NineDevice9 *This,
                                       UINT Vector4fCount )
 {
     const struct nine_state *state = &This->state;
+    float *vs_const_f = This->may_swvp ? state->vs_const_f_swvp : state->vs_const_f;
 
     user_assert(StartRegister                  < This->caps.MaxVertexShaderConst, D3DERR_INVALIDCALL);
     user_assert(StartRegister + Vector4fCount <= This->caps.MaxVertexShaderConst, D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     memcpy(pConstantData,
-           &state->vs_const_f[StartRegister * 4],
+           &vs_const_f[StartRegister * 4],
            Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
 
     return D3D_OK;
@@ -3437,8 +3478,10 @@ NineDevice9_SetVertexShaderConstantI( struct NineDevice9 *This,
     DBG("This=%p StartRegister=%u pConstantData=%p Vector4iCount=%u\n",
         This, StartRegister, pConstantData, Vector4iCount);
 
-    user_assert(StartRegister                  < NINE_MAX_CONST_I, D3DERR_INVALIDCALL);
-    user_assert(StartRegister + Vector4iCount <= NINE_MAX_CONST_I, D3DERR_INVALIDCALL);
+    user_assert(StartRegister < (This->may_swvp ? NINE_MAX_CONST_I_SWVP : NINE_MAX_CONST_I),
+                D3DERR_INVALIDCALL);
+    user_assert(StartRegister + Vector4iCount <= (This->may_swvp ? NINE_MAX_CONST_I_SWVP : NINE_MAX_CONST_I),
+                D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     if (This->driver_caps.vs_integer) {
@@ -3476,8 +3519,10 @@ NineDevice9_GetVertexShaderConstantI( struct NineDevice9 *This,
     const struct nine_state *state = &This->state;
     int i;
 
-    user_assert(StartRegister                  < NINE_MAX_CONST_I, D3DERR_INVALIDCALL);
-    user_assert(StartRegister + Vector4iCount <= NINE_MAX_CONST_I, D3DERR_INVALIDCALL);
+    user_assert(StartRegister < (This->may_swvp ? NINE_MAX_CONST_I_SWVP : NINE_MAX_CONST_I),
+                D3DERR_INVALIDCALL);
+    user_assert(StartRegister + Vector4iCount <= (This->may_swvp ? NINE_MAX_CONST_I_SWVP : NINE_MAX_CONST_I),
+                D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     if (This->driver_caps.vs_integer) {
@@ -3509,8 +3554,10 @@ NineDevice9_SetVertexShaderConstantB( struct NineDevice9 *This,
     DBG("This=%p StartRegister=%u pConstantData=%p BoolCount=%u\n",
         This, StartRegister, pConstantData, BoolCount);
 
-    user_assert(StartRegister              < NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
-    user_assert(StartRegister + BoolCount <= NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
+    user_assert(StartRegister < (This->may_swvp ? NINE_MAX_CONST_B_SWVP : NINE_MAX_CONST_B),
+                D3DERR_INVALIDCALL);
+    user_assert(StartRegister + BoolCount <= (This->may_swvp ? NINE_MAX_CONST_B_SWVP : NINE_MAX_CONST_B),
+                D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     if (!This->is_recording) {
@@ -3543,8 +3590,10 @@ NineDevice9_GetVertexShaderConstantB( struct NineDevice9 *This,
     const struct nine_state *state = &This->state;
     int i;
 
-    user_assert(StartRegister              < NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
-    user_assert(StartRegister + BoolCount <= NINE_MAX_CONST_B, D3DERR_INVALIDCALL);
+    user_assert(StartRegister < (This->may_swvp ? NINE_MAX_CONST_B_SWVP : NINE_MAX_CONST_B),
+                D3DERR_INVALIDCALL);
+    user_assert(StartRegister + BoolCount <= (This->may_swvp ? NINE_MAX_CONST_B_SWVP : NINE_MAX_CONST_B),
+                D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     for (i = 0; i < BoolCount; i++)

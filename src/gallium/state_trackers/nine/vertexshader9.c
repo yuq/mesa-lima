@@ -63,12 +63,21 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     info.fog_enable = 0;
     info.point_size_min = 0;
     info.point_size_max = 0;
-    info.swvp_on = false;
+    info.swvp_on = !!(device->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING);
 
     hr = nine_translate_shader(device, &info);
+    if (hr == D3DERR_INVALIDCALL &&
+        (device->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)) {
+        /* Retry with a swvp shader. It will require swvp to be on. */
+        info.swvp_on = true;
+        hr = nine_translate_shader(device, &info);
+    }
+    if (hr == D3DERR_INVALIDCALL)
+        ERR("Encountered buggy shader\n");
     if (FAILED(hr))
         return hr;
     This->byte_code.version = info.version;
+    This->swvp_only = info.swvp_on;
 
     This->byte_code.tokens = mem_dup(pFunction, info.byte_size);
     if (!This->byte_code.tokens)
@@ -77,7 +86,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
 
     This->variant.cso = info.cso;
     This->last_cso = info.cso;
-    This->last_key = 0;
+    This->last_key = (uint32_t) (info.swvp_on << 9);
 
     This->const_used_size = info.const_used_size;
     This->lconstf = info.lconstf;
@@ -168,7 +177,7 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
         info.fog_enable = device->state.rs[D3DRS_FOGENABLE];
         info.point_size_min = asfloat(device->state.rs[D3DRS_POINTSIZE_MIN]);
         info.point_size_max = asfloat(device->state.rs[D3DRS_POINTSIZE_MAX]);
-        info.swvp_on = false;
+        info.swvp_on = device->swvp;
 
         hr = nine_translate_shader(This->base.device, &info);
         if (FAILED(hr))

@@ -48,6 +48,7 @@ struct NineDevice9
 {
     struct NineUnknown base;
     boolean ex;
+    boolean may_swvp;
 
     /* G3D context */
     struct pipe_screen *screen;
