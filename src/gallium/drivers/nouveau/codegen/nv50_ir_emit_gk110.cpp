@@ -773,7 +773,7 @@ CodeEmitterGK110::emitNOT(const Instruction *i)
       break;
    case FILE_MEMORY_CONST:
       code[1] |= 0x4 << 28;
-      setCAddress14(i->src(1));
+      setCAddress14(i->src(0));
       break;
    default:
       assert(0);
