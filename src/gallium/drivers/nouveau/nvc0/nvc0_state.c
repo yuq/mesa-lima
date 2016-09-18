@@ -573,7 +573,10 @@ nvc0_stage_set_sampler_views(struct nvc0_context *nvc0, int s,
       }
 
       if (old) {
-         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
+         if (s == 5)
+            nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_TEX(i));
+         else
+            nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
          nvc0_screen_tic_unlock(nvc0->screen, old);
       }
 
@@ -583,76 +586,16 @@ nvc0_stage_set_sampler_views(struct nvc0_context *nvc0, int s,
    for (i = nr; i < nvc0->num_textures[s]; ++i) {
       struct nv50_tic_entry *old = nv50_tic_entry(nvc0->textures[s][i]);
       if (old) {
-         nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
+         if (s == 5)
+            nouveau_bufctx_reset(nvc0->bufctx_cp, NVC0_BIND_CP_TEX(i));
+         else
+            nouveau_bufctx_reset(nvc0->bufctx_3d, NVC0_BIND_3D_TEX(s, i));
          nvc0_screen_tic_unlock(nvc0->screen, old);
          pipe_sampler_view_reference(&nvc0->textures[s][i], NULL);
       }
    }
 
    nvc0->num_textures[s] = nr;
-
-   nvc0->dirty_3d |= NVC0_NEW_3D_TEXTURES;
-}
-
-static void
-nvc0_stage_set_sampler_views_range(struct nvc0_context *nvc0, const unsigned s,
-                                   unsigned start, unsigned nr,
-                                   struct pipe_sampler_view **views)
-{
-   struct nouveau_bufctx *bctx = (s == 5) ? nvc0->bufctx_cp : nvc0->bufctx_3d;
-   const unsigned end = start + nr;
-   const unsigned bin = (s == 5) ? NVC0_BIND_CP_TEX(0) : NVC0_BIND_3D_TEX(s, 0);
-   int last_valid = -1;
-   unsigned i;
-
-   if (views) {
-      for (i = start; i < end; ++i) {
-         const unsigned p = i - start;
-         if (views[p])
-            last_valid = i;
-         if (views[p] == nvc0->textures[s][i])
-            continue;
-         nvc0->textures_dirty[s] |= 1 << i;
-
-         if (views[p] && views[p]->texture) {
-            struct pipe_resource *res = views[p]->texture;
-            if (res->target == PIPE_BUFFER &&
-                (res->flags & PIPE_RESOURCE_FLAG_MAP_COHERENT))
-               nvc0->textures_coherent[s] |= 1 << i;
-            else
-               nvc0->textures_coherent[s] &= ~(1 << i);
-         } else {
-            nvc0->textures_coherent[s] &= ~(1 << i);
-         }
-
-         if (nvc0->textures[s][i]) {
-            struct nv50_tic_entry *old = nv50_tic_entry(nvc0->textures[s][i]);
-            nouveau_bufctx_reset(bctx, bin + i);
-            nvc0_screen_tic_unlock(nvc0->screen, old);
-         }
-         pipe_sampler_view_reference(&nvc0->textures[s][i], views[p]);
-      }
-   } else {
-      for (i = start; i < end; ++i) {
-         struct nv50_tic_entry *old = nv50_tic_entry(nvc0->textures[s][i]);
-         if (!old)
-            continue;
-         nvc0->textures_dirty[s] |= 1 << i;
-
-         nvc0_screen_tic_unlock(nvc0->screen, old);
-         pipe_sampler_view_reference(&nvc0->textures[s][i], NULL);
-         nouveau_bufctx_reset(bctx, bin + i);
-      }
-   }
-
-   if (nvc0->num_textures[s] <= end) {
-      if (last_valid < 0) {
-         for (i = start; i && !nvc0->textures[s][i - 1]; --i);
-         nvc0->num_textures[s] = i;
-      } else {
-         nvc0->num_textures[s] = last_valid + 1;
-      }
-   }
 }
 
 static void
@@ -660,33 +603,16 @@ nvc0_set_sampler_views(struct pipe_context *pipe, enum pipe_shader_type shader,
                        unsigned start, unsigned nr,
                        struct pipe_sampler_view **views)
 {
-   assert(start == 0);
-   switch (shader) {
-   case PIPE_SHADER_VERTEX:
-      nvc0_stage_set_sampler_views(nvc0_context(pipe), 0, nr, views);
-      break;
-   case PIPE_SHADER_TESS_CTRL:
-      nvc0_stage_set_sampler_views(nvc0_context(pipe), 1, nr, views);
-      break;
-   case PIPE_SHADER_TESS_EVAL:
-      nvc0_stage_set_sampler_views(nvc0_context(pipe), 2, nr, views);
-      break;
-   case PIPE_SHADER_GEOMETRY:
-      nvc0_stage_set_sampler_views(nvc0_context(pipe), 3, nr, views);
-      break;
-   case PIPE_SHADER_FRAGMENT:
-      nvc0_stage_set_sampler_views(nvc0_context(pipe), 4, nr, views);
-      break;
-   case PIPE_SHADER_COMPUTE:
-      nvc0_stage_set_sampler_views_range(nvc0_context(pipe), 5,
-                                         start, nr, views);
-      nvc0_context(pipe)->dirty_cp |= NVC0_NEW_CP_TEXTURES;
-      break;
-   default:
-      ;
-   }
-}
+   const unsigned s = nvc0_shader_stage(shader);
 
+   assert(start == 0);
+   nvc0_stage_set_sampler_views(nvc0_context(pipe), s, nr, views);
+
+   if (s == 5)
+      nvc0_context(pipe)->dirty_cp |= NVC0_NEW_CP_TEXTURES;
+   else
+      nvc0_context(pipe)->dirty_3d |= NVC0_NEW_3D_TEXTURES;
+}
 
 /* ============================= SHADERS =======================================
  */
