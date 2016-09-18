@@ -451,87 +451,22 @@ nvc0_stage_sampler_states_bind(struct nvc0_context *nvc0,
    }
 
    nvc0->num_samplers[s] = nr;
-
-   nvc0->dirty_3d |= NVC0_NEW_3D_SAMPLERS;
-}
-
-static void
-nvc0_stage_sampler_states_bind_range(struct nvc0_context *nvc0,
-                                     unsigned s,
-                                     unsigned start, unsigned nr, void **cso)
-{
-   const unsigned end = start + nr;
-   int last_valid = -1;
-   unsigned i;
-
-   if (cso) {
-      for (i = start; i < end; ++i) {
-         const unsigned p = i - start;
-         if (cso[p])
-            last_valid = i;
-         if (cso[p] == nvc0->samplers[s][i])
-            continue;
-         nvc0->samplers_dirty[s] |= 1 << i;
-
-         if (nvc0->samplers[s][i])
-            nvc0_screen_tsc_unlock(nvc0->screen, nvc0->samplers[s][i]);
-         nvc0->samplers[s][i] = cso[p];
-      }
-   } else {
-      for (i = start; i < end; ++i) {
-         if (nvc0->samplers[s][i]) {
-            nvc0_screen_tsc_unlock(nvc0->screen, nvc0->samplers[s][i]);
-            nvc0->samplers[s][i] = NULL;
-            nvc0->samplers_dirty[s] |= 1 << i;
-         }
-      }
-   }
-
-   if (nvc0->num_samplers[s] <= end) {
-      if (last_valid < 0) {
-         for (i = start; i && !nvc0->samplers[s][i - 1]; --i);
-         nvc0->num_samplers[s] = i;
-      } else {
-         nvc0->num_samplers[s] = last_valid + 1;
-      }
-   }
 }
 
 static void
 nvc0_bind_sampler_states(struct pipe_context *pipe,
                          enum pipe_shader_type shader,
-                         unsigned start, unsigned nr, void **s)
+                         unsigned start, unsigned nr, void **samplers)
 {
-   switch (shader) {
-   case PIPE_SHADER_VERTEX:
-      assert(start == 0);
-      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 0, nr, s);
-      break;
-   case PIPE_SHADER_TESS_CTRL:
-      assert(start == 0);
-      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 1, nr, s);
-      break;
-   case PIPE_SHADER_TESS_EVAL:
-      assert(start == 0);
-      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 2, nr, s);
-      break;
-   case PIPE_SHADER_GEOMETRY:
-      assert(start == 0);
-      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 3, nr, s);
-      break;
-   case PIPE_SHADER_FRAGMENT:
-      assert(start == 0);
-      nvc0_stage_sampler_states_bind(nvc0_context(pipe), 4, nr, s);
-      break;
-   case PIPE_SHADER_COMPUTE:
-      nvc0_stage_sampler_states_bind_range(nvc0_context(pipe), 5,
-                                           start, nr, s);
+   const unsigned s = nvc0_shader_stage(shader);
+
+   assert(start == 0);
+   nvc0_stage_sampler_states_bind(nvc0_context(pipe), s, nr, samplers);
+
+   if (s == 5)
       nvc0_context(pipe)->dirty_cp |= NVC0_NEW_CP_SAMPLERS;
-      break;
-   default:
-      assert(!"unexpected shader type");
-      break;
-   }
+   else
+      nvc0_context(pipe)->dirty_3d |= NVC0_NEW_3D_SAMPLERS;
 }
 
 
