@@ -1671,6 +1671,7 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
    case SpvOpAtomicIDecrement:
    case SpvOpAtomicIAdd:
    case SpvOpAtomicISub:
+   case SpvOpAtomicLoad:
    case SpvOpAtomicSMin:
    case SpvOpAtomicUMin:
    case SpvOpAtomicSMax:
@@ -1681,17 +1682,9 @@ vtn_handle_image(struct vtn_builder *b, SpvOp opcode,
       image = *vtn_value(b, w[3], vtn_value_type_image_pointer)->image;
       break;
 
-   case SpvOpAtomicLoad: {
-      image.image =
-         vtn_value(b, w[3], vtn_value_type_access_chain)->access_chain;
+   case SpvOpAtomicStore:
+      image = *vtn_value(b, w[1], vtn_value_type_image_pointer)->image;
       break;
-   }
-
-   case SpvOpAtomicStore: {
-      image.image =
-         vtn_value(b, w[1], vtn_value_type_access_chain)->access_chain;
-      break;
-   }
 
    case SpvOpImageQuerySize:
       image.image =
