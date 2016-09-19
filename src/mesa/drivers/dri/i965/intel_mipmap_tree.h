@@ -973,6 +973,11 @@ intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
                                    unsigned num_layers,
                                    enum intel_fast_clear_state new_state);
 
+bool
+intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
+                                   unsigned start_level, unsigned num_levels,
+                                   unsigned start_layer, unsigned num_layers);
+
 /**
  * Update the fast clear state for a miptree to indicate that it has been used
  * for rendering.

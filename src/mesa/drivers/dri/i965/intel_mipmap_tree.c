@@ -2247,6 +2247,14 @@ intel_miptree_set_fast_clear_state(struct intel_mipmap_tree *mt,
    mt->fast_clear_state = new_state;
 }
 
+bool
+intel_miptree_has_color_unresolved(const struct intel_mipmap_tree *mt,
+                                   unsigned start_level, unsigned num_levels,
+                                   unsigned start_layer, unsigned num_layers)
+{
+   return mt->fast_clear_state != INTEL_FAST_CLEAR_STATE_RESOLVED;
+}
+
 void
 intel_miptree_used_for_rendering(const struct brw_context *brw,
                                  struct intel_mipmap_tree *mt, unsigned level,
