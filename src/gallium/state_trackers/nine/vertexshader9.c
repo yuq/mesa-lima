@@ -23,10 +23,12 @@
 #include "nine_helpers.h"
 #include "nine_shader.h"
 
+#include "vertexdeclaration9.h"
 #include "vertexshader9.h"
 
 #include "device9.h"
 #include "pipe/p_context.h"
+#include "cso_cache/cso_context.h"
 
 #define DBG_CHANNEL DBG_VERTEXSHADER
 
@@ -64,6 +66,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     info.point_size_min = 0;
     info.point_size_max = 0;
     info.swvp_on = !!(device->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING);
+    info.process_vertices = false;
 
     hr = nine_translate_shader(device, &info);
     if (hr == D3DERR_INVALIDCALL &&
@@ -109,6 +112,7 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
     if (This->base.device) {
         struct pipe_context *pipe = This->base.device->pipe;
         struct nine_shader_variant *var = &This->variant;
+        struct nine_shader_variant_so *var_so = &This->variant_so;
 
         do {
             if (var->cso) {
@@ -119,6 +123,13 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
             var = var->next;
         } while (var);
 
+        while (var_so && var_so->vdecl) {
+            if (var_so->cso) {
+                cso_delete_vertex_shader(This->base.device->cso_sw, var_so->cso );
+            }
+            var_so = var_so->next;
+        }
+
         if (This->ff_cso) {
             if (This->ff_cso == This->base.device->state.cso.vs)
                 pipe->bind_vs_state(pipe, NULL);
@@ -126,6 +137,7 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
         }
     }
     nine_shader_variants_free(&This->variant);
+    nine_shader_variants_so_free(&This->variant_so);
 
     FREE((void *)This->byte_code.tokens); /* const_cast */
 
@@ -178,6 +190,7 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
         info.point_size_min = asfloat(device->state.rs[D3DRS_POINTSIZE_MIN]);
         info.point_size_max = asfloat(device->state.rs[D3DRS_POINTSIZE_MAX]);
         info.swvp_on = device->swvp;
+        info.process_vertices = false;
 
         hr = nine_translate_shader(This->base.device, &info);
         if (FAILED(hr))
@@ -190,6 +203,38 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
     This->last_cso = cso;
 
     return cso;
+}
+
+void *
+NineVertexShader9_GetVariantProcessVertices( struct NineVertexShader9 *This,
+                                             struct NineVertexDeclaration9 *vdecl_out,
+                                             struct pipe_stream_output_info *so )
+{
+    struct nine_shader_info info;
+    HRESULT hr;
+    void *cso;
+
+    cso = nine_shader_variant_so_get(&This->variant_so, vdecl_out, so);
+    if (cso)
+        return cso;
+
+    info.type = PIPE_SHADER_VERTEX;
+    info.const_i_base = 0;
+    info.const_b_base = 0;
+    info.byte_code = This->byte_code.tokens;
+    info.sampler_mask_shadow = 0;
+    info.fog_enable = false;
+    info.point_size_min = 0;
+    info.point_size_max = 0;
+    info.swvp_on = true;
+    info.vdecl_out = vdecl_out;
+    info.process_vertices = true;
+    hr = nine_translate_shader(This->base.device, &info);
+    if (FAILED(hr))
+        return NULL;
+    *so = info.so;
+    nine_shader_variant_so_add(&This->variant_so, vdecl_out, so, info.cso);
+    return info.cso;
 }
 
 IDirect3DVertexShader9Vtbl NineVertexShader9_vtable = {

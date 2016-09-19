@@ -31,6 +31,8 @@
 #include "nine_shader.h"
 #include "nine_state.h"
 
+struct NineVertexDeclaration9;
+
 struct NineVertexShader9
 {
     struct NineUnknown base;
@@ -57,8 +59,6 @@ struct NineVertexShader9
 
     struct nine_lconstf lconstf;
 
-    const struct pipe_stream_output_info *so;
-
     uint64_t ff_key[3];
     void *ff_cso;
 
@@ -66,6 +66,9 @@ struct NineVertexShader9
     void *last_cso;
 
     uint64_t next_key;
+
+    /* so */
+    struct nine_shader_variant_so variant_so;
 };
 static inline struct NineVertexShader9 *
 NineVertexShader9( void *data )
@@ -106,6 +109,11 @@ NineVertexShader9_UpdateKey( struct NineVertexShader9 *vs,
 
 void *
 NineVertexShader9_GetVariant( struct NineVertexShader9 *vs );
+
+void *
+NineVertexShader9_GetVariantProcessVertices( struct NineVertexShader9 *vs,
+                                             struct NineVertexDeclaration9 *vdecl_out,
+                                             struct pipe_stream_output_info *so );
 
 /*** public ***/
 

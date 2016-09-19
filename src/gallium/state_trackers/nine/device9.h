@@ -52,8 +52,11 @@ struct NineDevice9
 
     /* G3D context */
     struct pipe_screen *screen;
+    struct pipe_screen *screen_sw;
     struct pipe_context *pipe;
+    struct pipe_context *pipe_sw;
     struct cso_context *cso;
+    struct cso_context *cso_sw;
 
     /* creation parameters */
     D3DCAPS9 caps;
@@ -115,6 +118,8 @@ struct NineDevice9
         boolean user_vbufs;
         boolean user_ibufs;
         boolean user_cbufs;
+        boolean user_sw_vbufs;
+        boolean user_sw_cbufs;
         boolean window_space_position_support;
         boolean vs_integer;
         boolean ps_integer;
@@ -128,6 +133,8 @@ struct NineDevice9
     struct u_upload_mgr *vertex_uploader;
     struct u_upload_mgr *index_uploader;
     struct u_upload_mgr *constbuf_uploader;
+    struct u_upload_mgr *vertex_sw_uploader;
+    struct u_upload_mgr *constbuf_sw_uploader;
     unsigned constbuf_alignment;
 
     struct nine_range_pool range_pool;

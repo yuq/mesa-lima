@@ -26,6 +26,7 @@
 #include "buffer9.h"
 #include "indexbuffer9.h"
 #include "surface9.h"
+#include "vertexbuffer9.h"
 #include "vertexdeclaration9.h"
 #include "vertexshader9.h"
 #include "pixelshader9.h"
@@ -36,6 +37,8 @@
 #include "cso_cache/cso_context.h"
 #include "util/u_upload_mgr.h"
 #include "util/u_math.h"
+#include "util/u_box.h"
+#include "util/u_simple_shaders.h"
 
 #define DBG_CHANNEL DBG_DEVICE
 
@@ -1354,6 +1357,367 @@ nine_state_clear(struct nine_state *state, const boolean device)
             list_delinit(&state->texture[i]->list);
         nine_bind(&state->texture[i], NULL);
     }
+}
+
+void
+nine_state_init_sw(struct NineDevice9 *device)
+{
+    struct pipe_context *pipe_sw = device->pipe_sw;
+    struct pipe_rasterizer_state rast;
+    struct pipe_blend_state blend;
+    struct pipe_depth_stencil_alpha_state dsa;
+    struct pipe_framebuffer_state fb;
+
+    /* Only used with Streamout */
+    memset(&rast, 0, sizeof(rast));
+    rast.rasterizer_discard = true;
+    rast.point_quad_rasterization = 1; /* to make llvmpipe happy */
+    cso_set_rasterizer(device->cso_sw, &rast);
+
+    /* dummy settings */
+    memset(&blend, 0, sizeof(blend));
+    memset(&dsa, 0, sizeof(dsa));
+    memset(&fb, 0, sizeof(fb));
+    cso_set_blend(device->cso_sw, &blend);
+    cso_set_depth_stencil_alpha(device->cso_sw, &dsa);
+    cso_set_framebuffer(device->cso_sw, &fb);
+    cso_set_viewport_dims(device->cso_sw, 1.0, 1.0, false);
+    cso_set_fragment_shader_handle(device->cso_sw, util_make_empty_fragment_shader(pipe_sw));
+}
+
+/* There is duplication with update_vertex_elements.
+ * TODO: Share the code */
+
+static void
+update_vertex_elements_sw(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+    const struct NineVertexDeclaration9 *vdecl = device->state.vdecl;
+    const struct NineVertexShader9 *vs;
+    unsigned n, b, i;
+    int index;
+    char vdecl_index_map[16]; /* vs->num_inputs <= 16 */
+    char used_streams[device->caps.MaxStreams];
+    int dummy_vbo_stream = -1;
+    BOOL need_dummy_vbo = FALSE;
+    struct pipe_vertex_element ve[PIPE_MAX_ATTRIBS];
+
+    state->stream_usage_mask = 0;
+    memset(vdecl_index_map, -1, 16);
+    memset(used_streams, 0, device->caps.MaxStreams);
+    vs = state->programmable_vs ? device->state.vs : device->ff.vs;
+
+    if (vdecl) {
+        for (n = 0; n < vs->num_inputs; ++n) {
+            DBG("looking up input %u (usage %u) from vdecl(%p)\n",
+                n, vs->input_map[n].ndecl, vdecl);
+
+            for (i = 0; i < vdecl->nelems; i++) {
+                if (vdecl->usage_map[i] == vs->input_map[n].ndecl) {
+                    vdecl_index_map[n] = i;
+                    used_streams[vdecl->elems[i].vertex_buffer_index] = 1;
+                    break;
+                }
+            }
+            if (vdecl_index_map[n] < 0)
+                need_dummy_vbo = TRUE;
+        }
+    } else {
+        /* No vertex declaration. Likely will never happen in practice,
+         * but we need not crash on this */
+        need_dummy_vbo = TRUE;
+    }
+
+    if (need_dummy_vbo) {
+        for (i = 0; i < device->caps.MaxStreams; i++ ) {
+            if (!used_streams[i]) {
+                dummy_vbo_stream = i;
+                break;
+            }
+        }
+    }
+    /* there are less vertex shader inputs than stream slots,
+     * so if we need a slot for the dummy vbo, we should have found one */
+    assert (!need_dummy_vbo || dummy_vbo_stream != -1);
+
+    for (n = 0; n < vs->num_inputs; ++n) {
+        index = vdecl_index_map[n];
+        if (index >= 0) {
+            ve[n] = vdecl->elems[index];
+            b = ve[n].vertex_buffer_index;
+            state->stream_usage_mask |= 1 << b;
+            /* XXX wine just uses 1 here: */
+            if (state->stream_freq[b] & D3DSTREAMSOURCE_INSTANCEDATA)
+                ve[n].instance_divisor = state->stream_freq[b] & 0x7FFFFF;
+        } else {
+            /* if the vertex declaration is incomplete compared to what the
+             * vertex shader needs, we bind a dummy vbo with 0 0 0 0.
+             * This is not precised by the spec, but is the behaviour
+             * tested on win */
+            ve[n].vertex_buffer_index = dummy_vbo_stream;
+            ve[n].src_format = PIPE_FORMAT_R32G32B32A32_FLOAT;
+            ve[n].src_offset = 0;
+            ve[n].instance_divisor = 0;
+        }
+    }
+
+    if (state->dummy_vbo_bound_at != dummy_vbo_stream) {
+        if (state->dummy_vbo_bound_at >= 0)
+            state->changed.vtxbuf |= 1 << state->dummy_vbo_bound_at;
+        if (dummy_vbo_stream >= 0) {
+            state->changed.vtxbuf |= 1 << dummy_vbo_stream;
+            state->vbo_bound_done = FALSE;
+        }
+        state->dummy_vbo_bound_at = dummy_vbo_stream;
+    }
+
+    cso_set_vertex_elements(device->cso_sw, vs->num_inputs, ve);
+}
+
+static void
+update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_vertices)
+{
+    struct pipe_context *pipe = device->pipe;
+    struct pipe_context *pipe_sw = device->pipe_sw;
+    struct nine_state *state = &device->state;
+    struct pipe_vertex_buffer vtxbuf;
+    uint32_t mask = 0xf;
+    unsigned i;
+
+    DBG("mask=%x\n", mask);
+
+    assert (state->dummy_vbo_bound_at < 0);
+    /* TODO: handle dummy_vbo_bound_at */
+
+    for (i = 0; mask; mask >>= 1, ++i) {
+        if (mask & 1) {
+            if (state->vtxbuf[i].buffer) {
+                struct pipe_resource *buf;
+                struct pipe_box box;
+
+                vtxbuf = state->vtxbuf[i];
+
+                DBG("Locking %p (offset %d, length %d)\n", vtxbuf.buffer,
+                    vtxbuf.buffer_offset, num_vertices * vtxbuf.stride);
+
+                u_box_1d(vtxbuf.buffer_offset + start_vertice * vtxbuf.stride,
+                         num_vertices * vtxbuf.stride, &box);
+                buf = vtxbuf.buffer;
+                vtxbuf.user_buffer = pipe->transfer_map(pipe, buf, 0, PIPE_TRANSFER_READ, &box,
+                                                        &(state->transfers_so[i]));
+                vtxbuf.buffer = NULL;
+                if (!device->driver_caps.user_sw_vbufs) {
+                    u_upload_data(device->vertex_sw_uploader,
+                                  0,
+                                  box.width,
+                                  16,
+                                  vtxbuf.user_buffer,
+                                  &(vtxbuf.buffer_offset),
+                                  &(vtxbuf.buffer));
+                    u_upload_unmap(device->vertex_sw_uploader);
+                    vtxbuf.user_buffer = NULL;
+                }
+                pipe_sw->set_vertex_buffers(pipe_sw, i, 1, &vtxbuf);
+                if (vtxbuf.buffer)
+                    pipe_resource_reference(&vtxbuf.buffer, NULL);
+            } else
+                pipe_sw->set_vertex_buffers(pipe_sw, i, 1, NULL);
+        }
+    }
+}
+
+static void
+update_vs_constants_sw(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+    struct pipe_context *pipe_sw = device->pipe_sw;
+
+    DBG("updating\n");
+
+    {
+        struct pipe_constant_buffer cb;
+        const void *buf;
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 4096 * sizeof(float[4]);
+        cb.user_buffer = state->vs_const_f_swvp;
+
+        if (state->vs->lconstf.ranges) {
+            const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
+            const struct nine_range *r = lconstf->ranges;
+            unsigned n = 0;
+            float *dst = device->state.vs_lconstf_temp;
+            float *src = (float *)cb.user_buffer;
+            memcpy(dst, src, 8192 * sizeof(float[4]));
+            while (r) {
+                unsigned p = r->bgn;
+                unsigned c = r->end - r->bgn;
+                memcpy(&dst[p * 4], &lconstf->data[n * 4], c * 4 * sizeof(float));
+                n += c;
+                r = r->next;
+            }
+            cb.user_buffer = dst;
+        }
+
+        buf = cb.user_buffer;
+        if (!device->driver_caps.user_sw_cbufs) {
+            u_upload_data(device->constbuf_sw_uploader,
+                          0,
+                          cb.buffer_size,
+                          16,
+                          cb.user_buffer,
+                          &(cb.buffer_offset),
+                          &(cb.buffer));
+            u_upload_unmap(device->constbuf_sw_uploader);
+            cb.user_buffer = NULL;
+        }
+
+        pipe_sw->set_constant_buffer(pipe_sw, PIPE_SHADER_VERTEX, 0, &cb);
+        if (cb.buffer)
+            pipe_resource_reference(&cb.buffer, NULL);
+
+        cb.user_buffer = (char *)buf + 4096 * sizeof(float[4]);
+        if (!device->driver_caps.user_sw_cbufs) {
+            u_upload_data(device->constbuf_sw_uploader,
+                          0,
+                          cb.buffer_size,
+                          16,
+                          cb.user_buffer,
+                          &(cb.buffer_offset),
+                          &(cb.buffer));
+            u_upload_unmap(device->constbuf_sw_uploader);
+            cb.user_buffer = NULL;
+        }
+
+        pipe_sw->set_constant_buffer(pipe_sw, PIPE_SHADER_VERTEX, 1, &cb);
+        if (cb.buffer)
+            pipe_resource_reference(&cb.buffer, NULL);
+    }
+
+    {
+        struct pipe_constant_buffer cb;
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 2048 * sizeof(float[4]);
+        cb.user_buffer = state->vs_const_i;
+
+        if (!device->driver_caps.user_sw_cbufs) {
+            u_upload_data(device->constbuf_sw_uploader,
+                          0,
+                          cb.buffer_size,
+                          16,
+                          cb.user_buffer,
+                          &(cb.buffer_offset),
+                          &(cb.buffer));
+            u_upload_unmap(device->constbuf_sw_uploader);
+            cb.user_buffer = NULL;
+        }
+
+        pipe_sw->set_constant_buffer(pipe_sw, PIPE_SHADER_VERTEX, 2, &cb);
+        if (cb.buffer)
+            pipe_resource_reference(&cb.buffer, NULL);
+    }
+
+    {
+        struct pipe_constant_buffer cb;
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 512 * sizeof(float[4]);
+        cb.user_buffer = state->vs_const_b;
+
+        if (!device->driver_caps.user_sw_cbufs) {
+            u_upload_data(device->constbuf_sw_uploader,
+                          0,
+                          cb.buffer_size,
+                          16,
+                          cb.user_buffer,
+                          &(cb.buffer_offset),
+                          &(cb.buffer));
+            u_upload_unmap(device->constbuf_sw_uploader);
+            cb.user_buffer = NULL;
+        }
+
+        pipe_sw->set_constant_buffer(pipe_sw, PIPE_SHADER_VERTEX, 3, &cb);
+        if (cb.buffer)
+            pipe_resource_reference(&cb.buffer, NULL);
+    }
+
+    {
+        struct pipe_constant_buffer cb;
+        const D3DVIEWPORT9 *vport = &device->state.viewport;
+        float viewport_data[8] = {(float)vport->Width * 0.5f,
+            (float)vport->Height * -0.5f, vport->MaxZ - vport->MinZ, 0.f,
+            (float)vport->Width * 0.5f + (float)vport->X,
+            (float)vport->Height * 0.5f + (float)vport->Y,
+            vport->MinZ, 0.f};
+
+        cb.buffer = NULL;
+        cb.buffer_offset = 0;
+        cb.buffer_size = 2 * sizeof(float[4]);
+        cb.user_buffer = viewport_data;
+
+        {
+            u_upload_data(device->constbuf_sw_uploader,
+                          0,
+                          cb.buffer_size,
+                          16,
+                          cb.user_buffer,
+                          &(cb.buffer_offset),
+                          &(cb.buffer));
+            u_upload_unmap(device->constbuf_sw_uploader);
+            cb.user_buffer = NULL;
+        }
+
+        pipe_sw->set_constant_buffer(pipe_sw, PIPE_SHADER_VERTEX, 4, &cb);
+        if (cb.buffer)
+            pipe_resource_reference(&cb.buffer, NULL);
+    }
+
+}
+
+void
+nine_state_prepare_draw_sw(struct NineDevice9 *device, struct NineVertexDeclaration9 *vdecl_out,
+                           int start_vertice, int num_vertices, struct pipe_stream_output_info *so)
+{
+    struct nine_state *state = &device->state;
+
+    struct NineVertexShader9 *vs = state->programmable_vs ? device->state.vs : device->ff.vs;
+
+    assert(state->programmable_vs);
+
+    DBG("Preparing draw\n");
+    cso_set_vertex_shader_handle(device->cso_sw,
+                                 NineVertexShader9_GetVariantProcessVertices(vs, vdecl_out, so));
+    update_vertex_elements_sw(device);
+    update_vertex_buffers_sw(device, start_vertice, num_vertices);
+    update_vs_constants_sw(device);
+    DBG("Preparation succeeded\n");
+}
+
+void
+nine_state_after_draw_sw(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+    struct pipe_context *pipe = device->pipe;
+    struct pipe_context *pipe_sw = device->pipe_sw;
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        pipe_sw->set_vertex_buffers(pipe_sw, i, 1, NULL);
+        if (state->transfers_so[i])
+            pipe->transfer_unmap(pipe, state->transfers_so[i]);
+        state->transfers_so[i] = NULL;
+    }
+}
+
+void
+nine_state_destroy_sw(struct NineDevice9 *device)
+{
+    (void) device;
+    /* Everything destroyed with cso */
 }
 
 /*

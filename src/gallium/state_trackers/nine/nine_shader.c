@@ -26,6 +26,7 @@
 #include "device9.h"
 #include "nine_debug.h"
 #include "nine_state.h"
+#include "vertexdeclaration9.h"
 
 #include "util/macros.h"
 #include "util/u_memory.h"
@@ -467,6 +468,7 @@ struct shader_translator
     struct {
         struct ureg_dst *r;
         struct ureg_dst oPos;
+        struct ureg_dst oPos_out; /* the real output when doing streamout */
         struct ureg_dst oFog;
         struct ureg_dst oPts;
         struct ureg_dst oCol[4];
@@ -511,6 +513,9 @@ struct shader_translator
     boolean indirect_const_access;
     boolean failure;
 
+    struct nine_vs_output_info output_info[16];
+    int num_outputs;
+
     struct nine_shader_info *info;
 
     int16_t op_info_map[D3DSIO_BREAKP + 1];
@@ -534,6 +539,17 @@ sm1_instruction_check(const struct sm1_instruction *insn)
             DBG("CRS.mask.w\n");
         }
     }
+}
+
+static void
+nine_record_outputs(struct shader_translator *tx, BYTE Usage, BYTE UsageIndex,
+                    int mask, int output_index)
+{
+    tx->output_info[tx->num_outputs].output_semantic = Usage;
+    tx->output_info[tx->num_outputs].output_semantic_index = UsageIndex;
+    tx->output_info[tx->num_outputs].mask = mask;
+    tx->output_info[tx->num_outputs].output_index = output_index;
+    tx->num_outputs++;
 }
 
 static boolean
@@ -2137,6 +2153,12 @@ DECL_SPECIAL(DCL)
             assert(ureg_dst_is_undef(tx->regs.o[sem.reg.idx]) && "Nine doesn't support yet packing");
             tx->regs.o[sem.reg.idx] = ureg_DECL_output_masked(
                 ureg, tgsi.Name, tgsi.Index, sem.reg.mask, 0, 1);
+            nine_record_outputs(tx, sem.usage, sem.usage_idx, sem.reg.mask, sem.reg.idx);
+            if (tx->info->process_vertices && sem.usage == D3DDECLUSAGE_POSITION && sem.usage_idx == 0) {
+                tx->regs.oPos_out = tx->regs.o[sem.reg.idx];
+                tx->regs.o[sem.reg.idx] = ureg_DECL_temporary(ureg);
+                tx->regs.oPos = tx->regs.o[sem.reg.idx];
+            }
 
             if (tgsi.Name == TGSI_SEMANTIC_PSIZE) {
                 tx->regs.o[sem.reg.idx] = ureg_DECL_temporary(ureg);
@@ -3348,6 +3370,8 @@ tx_ctor(struct shader_translator *tx, struct nine_shader_info *info)
 
     info->version = (tx->version.major << 4) | tx->version.minor;
 
+    tx->num_outputs = 0;
+
     create_op_info_map(tx);
 }
 
@@ -3359,6 +3383,26 @@ tx_dtor(struct shader_translator *tx)
     FREE(tx->lconstf);
     FREE(tx->regs.r);
     FREE(tx);
+}
+
+/* CONST[0].xyz = width/2, -height/2, zmax-zmin
+ * CONST[1].xyz = x+width/2, y+height/2, zmin */
+static void
+shader_add_vs_viewport_transform(struct shader_translator *tx)
+{
+    struct ureg_program *ureg = tx->ureg;
+    struct ureg_src c0 = NINE_CONSTANT_SRC(0);
+    struct ureg_src c1 = NINE_CONSTANT_SRC(1);
+    /* struct ureg_dst pos_tmp = ureg_DECL_temporary(ureg);*/
+
+    c0 = ureg_src_dimension(c0, 4);
+    c1 = ureg_src_dimension(c1, 4);
+    /* TODO: find out when we need to apply the viewport transformation or not.
+     * Likely will be XYZ vs XYZRHW in vdecl_out
+     * ureg_MUL(ureg, ureg_writemask(pos_tmp, TGSI_WRITEMASK_XYZ), ureg_src(tx->regs.oPos), c0);
+     * ureg_ADD(ureg, ureg_writemask(tx->regs.oPos_out, TGSI_WRITEMASK_XYZ), ureg_src(pos_tmp), c1);
+     */
+    ureg_MOV(ureg, ureg_writemask(tx->regs.oPos_out, TGSI_WRITEMASK_XYZ), ureg_src(tx->regs.oPos));
 }
 
 static void
@@ -3412,10 +3456,10 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
     ureg_MOV(ureg, ureg_writemask(oCol0, TGSI_WRITEMASK_W), src_col);
 }
 
-#define GET_CAP(n) device->screen->get_param( \
-      device->screen, PIPE_CAP_##n)
-#define GET_SHADER_CAP(n) device->screen->get_shader_param( \
-      device->screen, info->type, PIPE_SHADER_CAP_##n)
+#define GET_CAP(n) screen->get_param( \
+      screen, PIPE_CAP_##n)
+#define GET_SHADER_CAP(n) screen->get_shader_param( \
+      screen, info->type, PIPE_SHADER_CAP_##n)
 
 HRESULT
 nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
@@ -3423,6 +3467,8 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     struct shader_translator *tx;
     HRESULT hr = D3D_OK;
     const unsigned processor = info->type;
+    struct pipe_screen *screen = info->process_vertices ? device->screen_sw : device->screen;
+    struct pipe_context *pipe = info->process_vertices ? device->pipe_sw : device->pipe;
 
     user_assert(processor != ~0, D3DERR_INVALIDCALL);
 
@@ -3535,6 +3581,9 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
         info->point_size = TRUE;
     }
 
+    if (info->process_vertices)
+        shader_add_vs_viewport_transform(tx);
+
     ureg_END(tx->ureg);
 
     /* record local constants */
@@ -3627,6 +3676,9 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
          ureg_DECL_constant2D(tx->ureg, 0, 511, 3);
     }
 
+    if (info->process_vertices)
+        ureg_DECL_constant2D(tx->ureg, 0, 2, 4); /* Viewport data */
+
     if (debug_get_bool_option("NINE_TGSI_DUMP", FALSE)) {
         unsigned count;
         const struct tgsi_token *toks = ureg_get_tokens(tx->ureg, &count);
@@ -3634,7 +3686,14 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
         ureg_free_tokens(toks);
     }
 
-    info->cso = ureg_create_shader_and_destroy(tx->ureg, device->pipe);
+    if (info->process_vertices) {
+        NineVertexDeclaration9_FillStreamOutputInfo(info->vdecl_out,
+                                                    tx->output_info,
+                                                    tx->num_outputs,
+                                                    &(info->so));
+        info->cso = ureg_create_shader_with_so_and_destroy(tx->ureg, pipe, &(info->so));
+    } else
+        info->cso = ureg_create_shader_and_destroy(tx->ureg, pipe);
     if (!info->cso) {
         hr = D3DERR_DRIVERINTERNALERROR;
         FREE(info->lconstf.data);

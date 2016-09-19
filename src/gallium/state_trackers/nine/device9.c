@@ -152,6 +152,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     list_inithead(&This->managed_textures);
 
     This->screen = pScreen;
+    This->screen_sw = pCTX->ref;
     This->caps = *pCaps;
     This->d3d9 = pD3D9;
     This->params = *pCreationParameters;
@@ -195,9 +196,13 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
     This->pipe = This->screen->context_create(This->screen, NULL, 0);
     if (!This->pipe) { return E_OUTOFMEMORY; } /* guess */
+    This->pipe_sw = This->screen_sw->context_create(This->screen_sw, NULL, 0);
+    if (!This->pipe_sw) { return E_OUTOFMEMORY; }
 
     This->cso = cso_create_context(This->pipe);
     if (!This->cso) { return E_OUTOFMEMORY; } /* also a guess */
+    This->cso_sw = cso_create_context(This->pipe_sw);
+    if (!This->cso_sw) { return E_OUTOFMEMORY; }
 
     /* Create first, it messes up our state. */
     This->hud = hud_create(This->pipe, This->cso); /* NULL result is fine */
@@ -426,10 +431,14 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->driver_caps.user_vbufs = GET_PCAP(USER_VERTEX_BUFFERS);
     This->driver_caps.user_ibufs = GET_PCAP(USER_INDEX_BUFFERS);
     This->driver_caps.user_cbufs = GET_PCAP(USER_CONSTANT_BUFFERS);
+    This->driver_caps.user_sw_vbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_VERTEX_BUFFERS);
+    This->driver_caps.user_sw_cbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
     if (!This->driver_caps.user_vbufs)
         This->vertex_uploader = u_upload_create(This->pipe, 65536,
                                                 PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
+    This->vertex_sw_uploader = u_upload_create(This->pipe_sw, 65536,
+                                            PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_ibufs)
         This->index_uploader = u_upload_create(This->pipe, 128 * 1024,
                                                PIPE_BIND_INDEX_BUFFER, PIPE_USAGE_STREAM);
@@ -438,6 +447,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->constbuf_uploader = u_upload_create(This->pipe, This->vs_const_size,
                                                   PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
     }
+
+    This->constbuf_sw_uploader = u_upload_create(This->pipe_sw, 128 * 1024,
+                                                 PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
 
     This->driver_caps.window_space_position_support = GET_PCAP(TGSI_VS_WINDOW_SPACE_POSITION);
     This->driver_caps.vs_integer = pScreen->get_shader_param(pScreen, PIPE_SHADER_VERTEX, PIPE_SHADER_CAP_INTEGERS);
@@ -457,6 +469,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->update = &This->state;
     nine_update_state(This);
 
+    nine_state_init_sw(This);
+
     ID3DPresentGroup_Release(This->present);
 
     return D3D_OK;
@@ -473,6 +487,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     if (This->pipe && This->cso)
         nine_pipe_context_clear(This);
     nine_ff_fini(This);
+    nine_state_destroy_sw(This);
     nine_state_clear(&This->state, TRUE);
 
     if (This->vertex_uploader)
@@ -481,6 +496,10 @@ NineDevice9_dtor( struct NineDevice9 *This )
         u_upload_destroy(This->index_uploader);
     if (This->constbuf_uploader)
         u_upload_destroy(This->constbuf_uploader);
+    if (This->vertex_sw_uploader)
+        u_upload_destroy(This->vertex_sw_uploader);
+    if (This->constbuf_sw_uploader)
+        u_upload_destroy(This->constbuf_sw_uploader);
 
     nine_bind(&This->record, NULL);
 
@@ -502,13 +521,11 @@ NineDevice9_dtor( struct NineDevice9 *This )
         FREE(This->swapchains);
     }
 
-    /* state stuff */
-    if (This->pipe) {
-        if (This->cso) {
-            cso_destroy_context(This->cso);
-        }
-        if (This->pipe->destroy) { This->pipe->destroy(This->pipe); }
-    }
+    /* Destroy cso first */
+    if (This->cso) { cso_destroy_context(This->cso); }
+    if (This->cso_sw) { cso_destroy_context(This->cso_sw); }
+    if (This->pipe && This->pipe->destroy) { This->pipe->destroy(This->pipe); }
+    if (This->pipe_sw && This->pipe_sw->destroy) { This->pipe_sw->destroy(This->pipe_sw); }
 
     if (This->present) { ID3DPresentGroup_Release(This->present); }
     if (This->d3d9) { IDirect3D9_Release(This->d3d9); }
@@ -3166,9 +3183,6 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
     return D3D_OK;
 }
 
-/* TODO: Write to pDestBuffer directly if vertex declaration contains
- * only f32 formats.
- */
 HRESULT NINE_WINAPI
 NineDevice9_ProcessVertices( struct NineDevice9 *This,
                              UINT SrcStartIndex,
@@ -3178,33 +3192,69 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
                              IDirect3DVertexDeclaration9 *pVertexDecl,
                              DWORD Flags )
 {
-    struct pipe_screen *screen = This->screen;
+    struct pipe_screen *screen_sw = This->screen_sw;
+    struct pipe_context *pipe_sw = This->pipe_sw;
     struct NineVertexDeclaration9 *vdecl = NineVertexDeclaration9(pVertexDecl);
+    struct NineVertexBuffer9 *dst = NineVertexBuffer9(pDestBuffer);
     struct NineVertexShader9 *vs;
     struct pipe_resource *resource;
+    struct pipe_transfer *transfer = NULL;
+    struct pipe_stream_output_info so;
     struct pipe_stream_output_target *target;
     struct pipe_draw_info draw;
+    struct pipe_box box;
+    unsigned offsets[1] = {0};
     HRESULT hr;
-    unsigned buffer_offset, buffer_size;
+    unsigned buffer_size;
+    void *map;
 
     DBG("This=%p SrcStartIndex=%u DestIndex=%u VertexCount=%u "
         "pDestBuffer=%p pVertexDecl=%p Flags=%d\n",
         This, SrcStartIndex, DestIndex, VertexCount, pDestBuffer,
         pVertexDecl, Flags);
 
-    if (!screen->get_param(screen, PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS))
-        STUB(D3DERR_INVALIDCALL);
+    if (!screen_sw->get_param(screen_sw, PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS)) {
+        DBG("ProcessVertices not supported\n");
+        return D3DERR_INVALIDCALL;
+    }
 
-    nine_update_state(This);
 
-    /* TODO: Create shader with stream output. */
-    STUB(D3DERR_INVALIDCALL);
-    struct NineVertexBuffer9 *dst = NineVertexBuffer9(pDestBuffer);
+    vs = This->state.programmable_vs ? This->state.vs : This->ff.vs;
+    /* Note: version is 0 for ff */
+    user_assert(vdecl || (vs->byte_code.version < 0x30 && dst->desc.FVF),
+                D3DERR_INVALIDCALL);
+    if (!vdecl) {
+        DWORD FVF = dst->desc.FVF;
+        vdecl = util_hash_table_get(This->ff.ht_fvf, &FVF);
+        if (!vdecl) {
+            hr = NineVertexDeclaration9_new_from_fvf(This, FVF, &vdecl);
+            if (FAILED(hr))
+                return hr;
+            vdecl->fvf = FVF;
+            util_hash_table_set(This->ff.ht_fvf, &vdecl->fvf, vdecl);
+            NineUnknown_ConvertRefToBind(NineUnknown(vdecl));
+        }
+    }
 
-    vs = This->state.vs ? This->state.vs : This->ff.vs;
+    /* Flags: Can be 0 or D3DPV_DONOTCOPYDATA, and/or lock flags
+     * D3DPV_DONOTCOPYDATA -> Has effect only for ff. In particular
+     * if not set, everything from src will be used, and dst
+     * must match exactly the ff vs outputs.
+     * TODO: Handle all the checks, etc for ff */
+    user_assert(vdecl->position_t || This->state.programmable_vs,
+                D3DERR_INVALIDCALL);
 
-    buffer_size = VertexCount * vs->so->stride[0];
-    if (1) {
+    /* TODO: Support vs < 3 and ff */
+    user_assert(vs->byte_code.version == 0x30,
+                D3DERR_INVALIDCALL);
+    /* TODO: Not hardcode the constant buffers for swvp */
+    user_assert(This->may_swvp,
+                D3DERR_INVALIDCALL);
+
+    nine_state_prepare_draw_sw(This, vdecl, SrcStartIndex, VertexCount, &so);
+
+    buffer_size = VertexCount * so.stride[0] * 4;
+    {
         struct pipe_resource templ;
 
         memset(&templ, 0, sizeof(templ));
@@ -3217,49 +3267,50 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
         templ.height0 = templ.depth0 = templ.array_size = 1;
         templ.last_level = templ.nr_samples = 0;
 
-        resource = This->screen->resource_create(This->screen, &templ);
+        resource = screen_sw->resource_create(screen_sw, &templ);
         if (!resource)
             return E_OUTOFMEMORY;
-        buffer_offset = 0;
-    } else {
-        /* SO matches vertex declaration */
-        resource = NineVertexBuffer9_GetResource(dst);
-        buffer_offset = DestIndex * vs->so->stride[0];
     }
-    target = This->pipe->create_stream_output_target(This->pipe, resource,
-                                                     buffer_offset,
-                                                     buffer_size);
+    target = pipe_sw->create_stream_output_target(pipe_sw, resource,
+                                                  0, buffer_size);
     if (!target) {
         pipe_resource_reference(&resource, NULL);
         return D3DERR_DRIVERINTERNALERROR;
     }
 
-    if (!vdecl) {
-        hr = NineVertexDeclaration9_new_from_fvf(This, dst->desc.FVF, &vdecl);
-        if (FAILED(hr))
-            goto out;
-    }
-
     init_draw_info(&draw, This, D3DPT_POINTLIST, VertexCount);
     draw.instance_count = 1;
     draw.indexed = FALSE;
-    draw.start = SrcStartIndex;
+    draw.start = 0;
     draw.index_bias = 0;
-    draw.min_index = SrcStartIndex;
-    draw.max_index = SrcStartIndex + VertexCount - 1;
+    draw.min_index = 0;
+    draw.max_index = VertexCount - 1;
 
-    This->pipe->set_stream_output_targets(This->pipe, 1, &target, 0);
-    This->pipe->draw_vbo(This->pipe, &draw);
-    This->pipe->set_stream_output_targets(This->pipe, 0, NULL, 0);
-    This->pipe->stream_output_target_destroy(This->pipe, target);
+
+    pipe_sw->set_stream_output_targets(pipe_sw, 1, &target, offsets);
+
+    pipe_sw->draw_vbo(pipe_sw, &draw);
+
+    pipe_sw->set_stream_output_targets(pipe_sw, 0, NULL, 0);
+    pipe_sw->stream_output_target_destroy(pipe_sw, target);
+
+    u_box_1d(0, VertexCount * so.stride[0] * 4, &box);
+    map = pipe_sw->transfer_map(pipe_sw, resource, 0, PIPE_TRANSFER_READ, &box,
+                                &transfer);
+    if (!map) {
+        hr = D3DERR_DRIVERINTERNALERROR;
+        goto out;
+    }
 
     hr = NineVertexDeclaration9_ConvertStreamOutput(vdecl,
                                                     dst, DestIndex, VertexCount,
-                                                    resource, vs->so);
+                                                    map, &so);
+    if (transfer)
+        pipe_sw->transfer_unmap(pipe_sw, transfer);
+
 out:
+    nine_state_after_draw_sw(This);
     pipe_resource_reference(&resource, NULL);
-    if (!pVertexDecl)
-        NineUnknown_Release(NineUnknown(vdecl));
     return hr;
 }
 
