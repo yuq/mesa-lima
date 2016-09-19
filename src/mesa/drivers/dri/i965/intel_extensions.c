@@ -330,6 +330,7 @@ intelInitExtensions(struct gl_context *ctx)
        */
       if (ctx->API == API_OPENGL_CORE) {
          ctx->Extensions.ARB_shader_subroutine = true;
+         ctx->Extensions.ARB_shader_viewport_layer_array = true;
          ctx->Extensions.ARB_viewport_array = true;
          ctx->Extensions.AMD_vertex_shader_viewport_index = true;
       }

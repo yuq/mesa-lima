@@ -1000,11 +1000,13 @@ builtin_variable_generator::generate_vs_special_vars()
       add_system_value(SYSTEM_VALUE_BASE_INSTANCE, int_t, "gl_BaseInstanceARB");
       add_system_value(SYSTEM_VALUE_DRAW_ID, int_t, "gl_DrawIDARB");
    }
-   if (state->AMD_vertex_shader_layer_enable) {
+   if (state->AMD_vertex_shader_layer_enable ||
+       state->ARB_shader_viewport_layer_array_enable) {
       var = add_output(VARYING_SLOT_LAYER, int_t, "gl_Layer");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
-   if (state->AMD_vertex_shader_viewport_index_enable) {
+   if (state->AMD_vertex_shader_viewport_index_enable ||
+       state->ARB_shader_viewport_layer_array_enable) {
       var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
       var->data.interpolation = INTERP_MODE_FLAT;
    }
@@ -1066,6 +1068,8 @@ builtin_variable_generator::generate_tcs_special_vars()
 void
 builtin_variable_generator::generate_tes_special_vars()
 {
+   ir_variable *var;
+
    add_system_value(SYSTEM_VALUE_PRIMITIVE_ID, int_t, "gl_PrimitiveID");
    add_system_value(SYSTEM_VALUE_VERTICES_IN, int_t, "gl_PatchVerticesIn");
    add_system_value(SYSTEM_VALUE_TESS_COORD, vec3_t, "gl_TessCoord");
@@ -1073,6 +1077,12 @@ builtin_variable_generator::generate_tes_special_vars()
                     "gl_TessLevelOuter");
    add_system_value(SYSTEM_VALUE_TESS_LEVEL_INNER, array(float_t, 2),
                     "gl_TessLevelInner");
+   if (state->ARB_shader_viewport_layer_array_enable) {
+      var = add_output(VARYING_SLOT_LAYER, int_t, "gl_Layer");
+      var->data.interpolation = INTERP_MODE_FLAT;
+      var = add_output(VARYING_SLOT_VIEWPORT, int_t, "gl_ViewportIndex");
+      var->data.interpolation = INTERP_MODE_FLAT;
+   }
 }
 
 
