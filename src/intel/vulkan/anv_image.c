@@ -512,6 +512,18 @@ anv_image_view_init(struct anv_image_view *iview,
       .depth  = anv_minify(image->extent.depth , range->baseMipLevel),
    };
 
+   if (image->type == VK_IMAGE_TYPE_3D &&
+       usage_mask != VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
+      /* Meta renders to 3D texture slices.  When it does so, it passes
+       * usage_mask == VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.  Since meta is the
+       * only thing that uses a non-zero usage_mask, this lets us easily
+       * detect the one case where we actually want an array range used for
+       * 3-D textures.
+       */
+      isl_view.base_array_layer = 0;
+      isl_view.array_len = iview->extent.depth;
+   }
+
    isl_surf_usage_flags_t cube_usage;
    if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE ||
        pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
@@ -572,10 +584,6 @@ anv_image_view_init(struct anv_image_view *iview,
          isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
          isl_view.format = isl_lower_storage_image_format(&device->info,
                                                           isl_view.format);
-         if (image->type == VK_IMAGE_TYPE_3D) {
-            isl_view.base_array_layer = 0;
-            isl_view.array_len = iview->extent.depth;
-         }
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,
                              .surf = &surface->isl,
