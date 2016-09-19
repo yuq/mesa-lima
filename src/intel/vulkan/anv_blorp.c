@@ -918,9 +918,9 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
       assert(src_iview->aspect_mask == dst_iview->aspect_mask);
       resolve_image(&batch, src_iview->image,
-                    src_iview->base_mip, src_iview->base_layer,
+                    src_iview->isl.base_level, src_iview->isl.base_array_layer,
                     dst_iview->image,
-                    dst_iview->base_mip, dst_iview->base_layer,
+                    dst_iview->isl.base_level, dst_iview->isl.base_array_layer,
                     src_iview->aspect_mask,
                     render_area.offset.x, render_area.offset.y,
                     render_area.offset.x, render_area.offset.y,

@@ -1235,9 +1235,9 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          db.SurfacePitch         = image->depth_surface.isl.row_pitch - 1;
          db.Height               = image->extent.height - 1;
          db.Width                = image->extent.width - 1;
-         db.LOD                  = iview->base_mip;
+         db.LOD                  = iview->isl.base_level;
          db.Depth                = image->array_size - 1; /* FIXME: 3-D */
-         db.MinimumArrayElement  = iview->base_layer;
+         db.MinimumArrayElement  = iview->isl.base_array_layer;
 
 #if GEN_GEN >= 8
          db.SurfaceQPitch =

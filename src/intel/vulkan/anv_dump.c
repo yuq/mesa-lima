@@ -426,7 +426,8 @@ anv_dump_add_framebuffer(struct anv_cmd_buffer *cmd_buffer,
                                           dump_idx, i, suffix);
 
          dump_add_image(cmd_buffer, (struct anv_image *)iview->image, aspect,
-                        iview->base_mip, iview->base_layer, filename);
+                        iview->isl.base_level, iview->isl.base_array_layer,
+                        filename);
       }
    }
 

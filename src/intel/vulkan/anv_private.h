@@ -1724,10 +1724,10 @@ struct anv_image_view {
    struct anv_bo *bo;
    uint32_t offset; /**< Offset into bo. */
 
+   struct isl_view isl;
+
    VkImageAspectFlags aspect_mask;
    VkFormat vk_format;
-   uint32_t base_layer;
-   uint32_t base_mip;
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
 
    /** RENDER_SURFACE_STATE when using image as a color render target. */

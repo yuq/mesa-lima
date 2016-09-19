@@ -485,10 +485,7 @@ anv_image_view_init(struct anv_image_view *iview,
    struct anv_format format = anv_get_format(&device->info, pCreateInfo->format,
                                              range->aspectMask, image->tiling);
 
-   iview->base_layer = range->baseArrayLayer;
-   iview->base_mip = range->baseMipLevel;
-
-   struct isl_view isl_view = {
+   iview->isl = (struct isl_view) {
       .format = format.isl_format,
       .base_level = range->baseMipLevel,
       .levels = anv_get_levelCount(image, range),
@@ -520,26 +517,26 @@ anv_image_view_init(struct anv_image_view *iview,
        * detect the one case where we actually want an array range used for
        * 3-D textures.
        */
-      isl_view.base_array_layer = 0;
-      isl_view.array_len = iview->extent.depth;
+      iview->isl.base_array_layer = 0;
+      iview->isl.array_len = iview->extent.depth;
    }
 
-   isl_surf_usage_flags_t cube_usage;
    if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE ||
        pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY) {
-      cube_usage = ISL_SURF_USAGE_CUBE_BIT;
+      iview->isl.usage = ISL_SURF_USAGE_CUBE_BIT;
    } else {
-      cube_usage = 0;
+      iview->isl.usage = 0;
    }
 
    if (image->usage & usage_mask & VK_IMAGE_USAGE_SAMPLED_BIT) {
       iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      isl_view.usage = cube_usage | ISL_SURF_USAGE_TEXTURE_BIT;
+      struct isl_view view = iview->isl;
+      view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
       isl_surf_fill_state(&device->isl_dev,
                           iview->sampler_surface_state.map,
                           .surf = &surface->isl,
-                          .view = &isl_view,
+                          .view = &view,
                           .mocs = device->default_mocs);
 
       if (!device->info.has_llc)
@@ -559,14 +556,15 @@ anv_image_view_init(struct anv_image_view *iview,
     * remove a lot of hacks.
     */
    if ((image->usage & usage_mask & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
-       isl_format_supports_rendering(&device->info, isl_view.format)) {
+       isl_format_supports_rendering(&device->info, format.isl_format)) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
-      isl_view.usage = cube_usage | ISL_SURF_USAGE_RENDER_TARGET_BIT;
+      struct isl_view view = iview->isl;
+      view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
       isl_surf_fill_state(&device->isl_dev,
                           iview->color_rt_surface_state.map,
                           .surf = &surface->isl,
-                          .view = &isl_view,
+                          .view = &view,
                           .mocs = device->default_mocs);
 
       if (!device->info.has_llc)
@@ -581,13 +579,14 @@ anv_image_view_init(struct anv_image_view *iview,
 
       if (isl_has_matching_typed_storage_image_format(&device->info,
                                                       format.isl_format)) {
-         isl_view.usage = cube_usage | ISL_SURF_USAGE_STORAGE_BIT;
-         isl_view.format = isl_lower_storage_image_format(&device->info,
-                                                          isl_view.format);
+         struct isl_view view = iview->isl;
+         view.usage |= ISL_SURF_USAGE_STORAGE_BIT;
+         view.format = isl_lower_storage_image_format(&device->info,
+                                                      format.isl_format);
          isl_surf_fill_state(&device->isl_dev,
                              iview->storage_surface_state.map,
                              .surf = &surface->isl,
-                             .view = &isl_view,
+                             .view = &view,
                              .mocs = device->default_mocs);
       } else {
          anv_fill_buffer_surface_state(device, iview->storage_surface_state,
@@ -598,7 +597,7 @@ anv_image_view_init(struct anv_image_view *iview,
 
       isl_surf_fill_image_param(&device->isl_dev,
                                 &iview->storage_image_param,
-                                &surface->isl, &isl_view);
+                                &surface->isl, &iview->isl);
 
       if (!device->info.has_llc)
          anv_state_clflush(iview->storage_surface_state);
