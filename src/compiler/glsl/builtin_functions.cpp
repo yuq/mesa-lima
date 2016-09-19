@@ -585,10 +585,6 @@ public:
 private:
    void *mem_ctx;
 
-   /** Global variables used by built-in functions. */
-   ir_variable *gl_ModelViewProjectionMatrix;
-   ir_variable *gl_Vertex;
-
    void create_shader();
    void create_intrinsics();
    void create_builtins();
@@ -905,9 +901,7 @@ enum image_function_flags {
  *  @{
  */
 builtin_builder::builtin_builder()
-   : shader(NULL),
-     gl_ModelViewProjectionMatrix(NULL),
-     gl_Vertex(NULL)
+   : shader(NULL)
 {
    mem_ctx = NULL;
 }
@@ -974,16 +968,6 @@ builtin_builder::create_shader()
     */
    shader = _mesa_new_shader(0, MESA_SHADER_VERTEX);
    shader->symbols = new(mem_ctx) glsl_symbol_table;
-
-   gl_ModelViewProjectionMatrix =
-      new(mem_ctx) ir_variable(glsl_type::mat4_type,
-                               "gl_ModelViewProjectionMatrix",
-                               ir_var_uniform);
-
-   shader->symbols->add_variable(gl_ModelViewProjectionMatrix);
-
-   gl_Vertex = in_var(glsl_type::vec4_type, "gl_Vertex");
-   shader->symbols->add_variable(gl_Vertex);
 }
 
 /** @} */
@@ -3978,15 +3962,9 @@ builtin_builder::_ftransform()
 {
    MAKE_SIG(glsl_type::vec4_type, compatibility_vs_only, 0);
 
-   body.emit(ret(new(mem_ctx) ir_expression(ir_binop_mul,
-      glsl_type::vec4_type,
-      var_ref(gl_ModelViewProjectionMatrix),
-      var_ref(gl_Vertex))));
-
-   /* FINISHME: Once the ir_expression() constructor handles type inference
-    *           for matrix operations, we can simplify this to:
-    *
-    *    body.emit(ret(mul(gl_ModelViewProjectionMatrix, gl_Vertex)));
+   /* ftransform() refers to global variables, and is always emitted
+    * directly by ast_function.cpp.  Just emit a prototype here so we
+    * can recognize calls to it.
     */
    return sig;
 }
