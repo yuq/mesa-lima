@@ -222,12 +222,6 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 
    svga_update_state_retry( svga, SVGA_STATE_NEED_SWTNL );
 
-#ifdef DEBUG
-   if (svga->curr.vs->base.id == svga->debug.disable_shader ||
-       svga->curr.fs->base.id == svga->debug.disable_shader)
-      goto done;
-#endif
-
    if (svga->state.sw.need_swtnl) {
       svga->hud.num_fallbacks++;  /* for SVGA_QUERY_NUM_FALLBACKS */
       if (!needed_swtnl) {

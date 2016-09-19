@@ -441,8 +441,6 @@ struct svga_context
       /* incremented for each shader */
       unsigned shader_id;
 
-      unsigned disable_shader;
-
       boolean no_line_width;
       boolean force_hw_line_stipple;
 
