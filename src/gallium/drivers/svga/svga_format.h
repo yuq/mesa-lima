@@ -63,7 +63,7 @@ svga_translate_vertex_format_vgpu10(enum pipe_format format,
                                     unsigned *vf_flags);
 
 enum SVGA3dSurfaceFormat
-svga_translate_format(struct svga_screen *ss,
+svga_translate_format(const struct svga_screen *ss,
                       enum pipe_format format,
                       unsigned bind);
 
