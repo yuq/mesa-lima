@@ -271,11 +271,14 @@ vlVdpPresentationQueueDisplay(VdpPresentationQueue presentation_queue,
    }
 
    vscreen->set_next_timestamp(vscreen, earliest_presentation_time);
+
+   // flush before calling flush_frontbuffer so that rendering is flushed
+   //  to back buffer so the texture can be copied in flush_frontbuffer
+   pipe->screen->fence_reference(pipe->screen, &surf->fence, NULL);
+   pipe->flush(pipe, &surf->fence, 0);
    pipe->screen->flush_frontbuffer(pipe->screen, tex, 0, 0,
                                    vscreen->get_private(vscreen), NULL);
 
-   pipe->screen->fence_reference(pipe->screen, &surf->fence, NULL);
-   pipe->flush(pipe, &surf->fence, 0);
    pq->last_surf = surf;
 
    if (dump_window == -1) {
