@@ -321,10 +321,14 @@ vlVaPutSurface(VADriverContextP ctx, VASurfaceID surface_id, void* draw, short s
       return status;
    }
 
+   /* flush before calling flush_frontbuffer so that rendering is flushed
+    * to back buffer so the texture can be copied in flush_frontbuffer
+    */
+   drv->pipe->flush(drv->pipe, NULL, 0);
+
    screen->flush_frontbuffer(screen, tex, 0, 0,
                              vscreen->get_private(vscreen), NULL);
 
-   drv->pipe->flush(drv->pipe, NULL, 0);
 
    pipe_resource_reference(&tex, NULL);
    pipe_surface_reference(&surf_draw, NULL);
