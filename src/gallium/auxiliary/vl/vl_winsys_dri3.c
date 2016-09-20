@@ -49,6 +49,7 @@
 struct vl_dri3_buffer
 {
    struct pipe_resource *texture;
+   struct pipe_resource *linear_texture;
 
    uint32_t pixmap;
    uint32_t sync_fence;
@@ -69,6 +70,8 @@ struct vl_dri3_screen
    xcb_present_event_t eid;
    xcb_special_event_t *special_event;
 
+   struct pipe_context *pipe;
+
    struct vl_dri3_buffer *back_buffers[BACK_BUFFER_NUM];
    int cur_back;
 
@@ -82,6 +85,7 @@ struct vl_dri3_screen
    int64_t last_ust, ns_frame, last_msc, next_msc;
 
    bool flushed;
+   bool is_different_gpu;
 };
 
 static void
@@ -102,6 +106,8 @@ dri3_free_back_buffer(struct vl_dri3_screen *scrn,
    xcb_sync_destroy_fence(scrn->conn, buffer->sync_fence);
    xshmfence_unmap_shm(buffer->shm_fence);
    pipe_resource_reference(&buffer->texture, NULL);
+   if (buffer->linear_texture)
+       pipe_resource_reference(&buffer->linear_texture, NULL);
    FREE(buffer);
 }
 
@@ -209,7 +215,7 @@ dri3_alloc_back_buffer(struct vl_dri3_screen *scrn)
    xcb_sync_fence_t sync_fence;
    struct xshmfence *shm_fence;
    int buffer_fd, fence_fd;
-   struct pipe_resource templ;
+   struct pipe_resource templ, *pixmap_buffer_texture;
    struct winsys_handle whandle;
    unsigned usage;
 
@@ -226,8 +232,7 @@ dri3_alloc_back_buffer(struct vl_dri3_screen *scrn)
       goto close_fd;
 
    memset(&templ, 0, sizeof(templ));
-   templ.bind = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW |
-                PIPE_BIND_SCANOUT | PIPE_BIND_SHARED;
+   templ.bind = PIPE_BIND_RENDER_TARGET | PIPE_BIND_SAMPLER_VIEW;
    templ.format = PIPE_FORMAT_B8G8R8X8_UNORM;
    templ.target = PIPE_TEXTURE_2D;
    templ.last_level = 0;
@@ -235,16 +240,34 @@ dri3_alloc_back_buffer(struct vl_dri3_screen *scrn)
    templ.height0 = scrn->height;
    templ.depth0 = 1;
    templ.array_size = 1;
-   buffer->texture = scrn->base.pscreen->resource_create(scrn->base.pscreen,
-                                                         &templ);
-   if (!buffer->texture)
-      goto unmap_shm;
 
+   if (scrn->is_different_gpu) {
+      buffer->texture = scrn->base.pscreen->resource_create(scrn->base.pscreen,
+                                                            &templ);
+      if (!buffer->texture)
+         goto unmap_shm;
+
+      templ.bind |= PIPE_BIND_SCANOUT | PIPE_BIND_SHARED |
+                    PIPE_BIND_LINEAR;
+      buffer->linear_texture = scrn->base.pscreen->resource_create(scrn->base.pscreen,
+                                                                  &templ);
+      pixmap_buffer_texture = buffer->linear_texture;
+
+      if (!buffer->linear_texture)
+         goto no_linear_texture;
+   } else {
+      templ.bind |= PIPE_BIND_SCANOUT | PIPE_BIND_SHARED;
+      buffer->texture = scrn->base.pscreen->resource_create(scrn->base.pscreen,
+                                                            &templ);
+      if (!buffer->texture)
+         goto unmap_shm;
+      pixmap_buffer_texture = buffer->texture;
+   }
    memset(&whandle, 0, sizeof(whandle));
    whandle.type= DRM_API_HANDLE_TYPE_FD;
    usage = PIPE_HANDLE_USAGE_EXPLICIT_FLUSH | PIPE_HANDLE_USAGE_READ;
    scrn->base.pscreen->resource_get_handle(scrn->base.pscreen, NULL,
-                                           buffer->texture, &whandle,
+                                           pixmap_buffer_texture, &whandle,
                                            usage);
    buffer_fd = whandle.handle;
    buffer->pitch = whandle.stride;
@@ -271,6 +294,8 @@ dri3_alloc_back_buffer(struct vl_dri3_screen *scrn)
 
    return buffer;
 
+no_linear_texture:
+   pipe_resource_reference(&buffer->texture, NULL);
 unmap_shm:
    xshmfence_unmap_shm(shm_fence);
 close_fd:
@@ -474,6 +499,7 @@ vl_dri3_flush_frontbuffer(struct pipe_screen *screen,
    struct vl_dri3_screen *scrn = (struct vl_dri3_screen *)context_private;
    uint32_t options = XCB_PRESENT_OPTION_NONE;
    struct vl_dri3_buffer *back;
+   struct pipe_box src_box;
 
    back = scrn->back_buffers[scrn->cur_back];
    if (!back)
@@ -485,6 +511,16 @@ vl_dri3_flush_frontbuffer(struct pipe_screen *screen,
             return;
    }
 
+   if (scrn->is_different_gpu) {
+      u_box_origin_2d(scrn->width, scrn->height, &src_box);
+      scrn->pipe->resource_copy_region(scrn->pipe,
+                                       back->linear_texture,
+                                       0, 0, 0, 0,
+                                       back->texture,
+                                       0, &src_box);
+
+      scrn->pipe->flush(scrn->pipe, NULL, 0);
+   }
    xshmfence_reset(back->shm_fence);
    back->busy = true;
 
@@ -622,6 +658,7 @@ vl_dri3_screen_destroy(struct vl_screen *vscreen)
       xcb_discard_reply(scrn->conn, cookie.sequence);
       xcb_unregister_for_special_event(scrn->conn, scrn->special_event);
    }
+   scrn->pipe->destroy(scrn->pipe);
    scrn->base.pscreen->destroy(scrn->base.pscreen);
    pipe_loader_release(&scrn->base.dev, 1);
    FREE(scrn);
@@ -638,7 +675,6 @@ vl_dri3_screen_create(Display *display, int screen)
    xcb_dri3_open_reply_t *open_reply;
    xcb_get_geometry_cookie_t geom_cookie;
    xcb_get_geometry_reply_t *geom_reply;
-   int is_different_gpu;
    int fd;
 
    assert(display);
@@ -677,10 +713,7 @@ vl_dri3_screen_create(Display *display, int screen)
    fcntl(fd, F_SETFD, FD_CLOEXEC);
    free(open_reply);
 
-   fd = loader_get_user_preferred_fd(fd, &is_different_gpu);
-   /* TODO support different GPU */
-   if (is_different_gpu)
-      goto close_fd;
+   fd = loader_get_user_preferred_fd(fd, &scrn->is_different_gpu);
 
    geom_cookie = xcb_get_geometry(scrn->conn, RootWindow(display, screen));
    geom_reply = xcb_get_geometry_reply(scrn->conn, geom_cookie, NULL);
@@ -699,6 +732,11 @@ vl_dri3_screen_create(Display *display, int screen)
    if (!scrn->base.pscreen)
       goto release_pipe;
 
+   scrn->pipe = scrn->base.pscreen->context_create(scrn->base.pscreen,
+                                                   &scrn->base, 0);
+   if (!scrn->pipe)
+       goto no_context;
+
    scrn->base.destroy = vl_dri3_screen_destroy;
    scrn->base.texture_from_drawable = vl_dri3_screen_texture_from_drawable;
    scrn->base.get_dirty_area = vl_dri3_screen_get_dirty_area;
@@ -709,6 +747,8 @@ vl_dri3_screen_create(Display *display, int screen)
 
    return &scrn->base;
 
+no_context:
+   scrn->base.pscreen->destroy(scrn->base.pscreen);
 release_pipe:
    if (scrn->base.dev) {
       pipe_loader_release(&scrn->base.dev, 1);
