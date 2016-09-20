@@ -44,6 +44,8 @@
 #include "swr_state.h"
 #include "swr_screen.h"
 
+using namespace SwrJit;
+
 static unsigned
 locate_linkage(ubyte name, ubyte index, struct tgsi_shader_info *info);
 

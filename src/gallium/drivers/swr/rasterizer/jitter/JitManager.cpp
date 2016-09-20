@@ -72,6 +72,7 @@
 #endif
 
 using namespace llvm;
+using namespace SwrJit;
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Contructor for JitManager.

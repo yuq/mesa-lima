@@ -35,6 +35,8 @@
 #include <tuple>
 
 //#define FETCH_DUMP_VERTEX 1
+using namespace llvm;
+using namespace SwrJit;
 
 bool isComponentEnabled(ComponentEnable enableMask, uint8_t component);
 
