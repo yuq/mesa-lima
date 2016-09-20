@@ -996,28 +996,13 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
    return offset;
 }
 
-struct surface_state_info {
-   unsigned num_dwords;
-   unsigned ss_align; /* Required alignment of RENDER_SURFACE_STATE in bytes */
-   unsigned reloc_dw;
-   unsigned aux_reloc_dw;
-};
-
-static const struct surface_state_info surface_state_infos[] = {
-   [6] = {6,  32, 1,  0},
-   [7] = {8,  32, 1,  6},
-   [8] = {13, 64, 8,  10},
-   [9] = {16, 64, 8,  10},
-};
-
 static void
 blorp_emit_surface_state(struct blorp_batch *batch,
                          const struct brw_blorp_surface_info *surface,
-                         uint32_t *state, uint32_t state_offset,
+                         void *state, uint32_t state_offset,
                          bool is_render_target)
 {
-   const struct surface_state_info ss_info = surface_state_infos[GEN_GEN];
-
+   const struct isl_device *isl_dev = batch->blorp->isl_dev;
    struct isl_surf surf = surface->surf;
 
    if (surf.dim == ISL_SURF_DIM_1D &&
@@ -1039,7 +1024,7 @@ blorp_emit_surface_state(struct blorp_batch *batch,
                        .aux_surf = &surface->aux_surf, .aux_usage = aux_usage,
                        .mocs = mocs, .clear_color = surface->clear_color);
 
-   blorp_surface_reloc(batch, state_offset + ss_info.reloc_dw * 4,
+   blorp_surface_reloc(batch, state_offset + isl_dev->ss.addr_offset,
                        surface->addr, 0);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
@@ -1048,8 +1033,9 @@ blorp_emit_surface_state(struct blorp_batch *batch,
        * surface buffer addresses are always 4K page alinged.
        */
       assert((surface->aux_addr.offset & 0xfff) == 0);
-      blorp_surface_reloc(batch, state_offset + ss_info.aux_reloc_dw * 4,
-                          surface->aux_addr, state[ss_info.aux_reloc_dw]);
+      uint32_t *aux_addr = state + isl_dev->ss.aux_addr_offset;
+      blorp_surface_reloc(batch, state_offset + isl_dev->ss.aux_addr_offset,
+                          surface->aux_addr, *aux_addr);
    }
 }
 
@@ -1087,14 +1073,13 @@ static void
 blorp_emit_surface_states(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
+   const struct isl_device *isl_dev = batch->blorp->isl_dev;
    uint32_t bind_offset, surface_offsets[2];
    void *surface_maps[2];
 
-   const unsigned ss_size = GENX(RENDER_SURFACE_STATE_length) * 4;
-   const unsigned ss_align = GENX(RENDER_SURFACE_STATE_length) > 8 ? 64 : 32;
-
    unsigned num_surfaces = 1 + params->src.enabled;
-   blorp_alloc_binding_table(batch, num_surfaces, ss_size, ss_align,
+   blorp_alloc_binding_table(batch, num_surfaces,
+                             isl_dev->ss.size, isl_dev->ss.align,
                              &bind_offset, surface_offsets, surface_maps);
 
    if (params->dst.enabled) {

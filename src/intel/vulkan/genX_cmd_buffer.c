@@ -622,14 +622,10 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
                         struct anv_state state, struct anv_bo *bo,
                         uint32_t offset)
 {
-   /* The address goes in SURFACE_STATE dword 1 for gens < 8 and dwords 8 and
-    * 9 for gen8+.  We only write the first dword for gen8+ here and rely on
-    * the initial state to set the high bits to 0. */
-
-   const uint32_t dword = GEN_GEN < 8 ? 1 : 8;
+   const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
 
    anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                      state.offset + dword * 4, bo, offset);
+                      state.offset + isl_dev->ss.addr_offset, bo, offset);
 }
 
 static struct anv_state

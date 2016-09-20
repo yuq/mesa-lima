@@ -46,6 +46,20 @@ __isl_finishme(const char *file, int line, const char *fmt, ...)
    fprintf(stderr, "%s:%d: FINISHME: %s\n", file, line, buf);
 }
 
+static const struct {
+   uint8_t size;
+   uint8_t align;
+   uint8_t addr_offset;
+   uint8_t aux_addr_offset;
+} ss_infos[] = {
+   [4] = {24, 32,  4},
+   [5] = {24, 32,  4},
+   [6] = {24, 32,  4},
+   [7] = {32, 32,  4, 24},
+   [8] = {52, 64, 32, 40},
+   [9] = {64, 64, 32, 40},
+};
+
 void
 isl_device_init(struct isl_device *dev,
                 const struct gen_device_info *info,
@@ -67,6 +81,11 @@ isl_device_init(struct isl_device *dev,
       assert(info->has_hiz_and_separate_stencil);
    if (info->must_use_separate_stencil)
       assert(ISL_DEV_USE_SEPARATE_STENCIL(dev));
+
+   dev->ss.size = ss_infos[ISL_DEV_GEN(dev)].size;
+   dev->ss.align = ss_infos[ISL_DEV_GEN(dev)].align;
+   dev->ss.addr_offset = ss_infos[ISL_DEV_GEN(dev)].addr_offset;
+   dev->ss.aux_addr_offset = ss_infos[ISL_DEV_GEN(dev)].aux_addr_offset;
 }
 
 /**

@@ -620,7 +620,9 @@ anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
 struct anv_state
 anv_cmd_buffer_alloc_surface_state(struct anv_cmd_buffer *cmd_buffer)
 {
-   return anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+   struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
+   return anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
+                                 isl_dev->ss.size, isl_dev->ss.align);
 }
 
 struct anv_state
