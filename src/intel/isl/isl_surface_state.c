@@ -258,6 +258,9 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
    s.IntegerSurfaceFormat = isl_format_has_int_channel(s.SurfaceFormat);
 #endif
 
+   assert(info->surf->logical_level0_px.width > 0 &&
+          info->surf->logical_level0_px.height > 0);
+
    s.Width = info->surf->logical_level0_px.width - 1;
    s.Height = info->surf->logical_level0_px.height - 1;
 
