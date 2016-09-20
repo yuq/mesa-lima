@@ -26,6 +26,7 @@
 #include "svga_context.h"
 #include "svga_debug.h"
 #include "svga_cmd.h"
+#include "svga_format.h"
 #include "svga_resource_buffer.h"
 #include "svga_resource_texture.h"
 #include "svga_surface.h"
@@ -209,6 +210,27 @@ svga_resource_copy_region(struct pipe_context *pipe,
 
 
 /**
+ * Are the given pipe formats compatible, in terms of vgpu10's
+ * PredCopyRegion() command?
+ */
+static bool
+formats_compatible(const struct svga_screen *ss,
+                   enum pipe_format src_fmt,
+                   enum pipe_format dst_fmt)
+{
+   SVGA3dSurfaceFormat src_svga_fmt, dst_svga_fmt;
+
+   src_svga_fmt = svga_translate_format(ss, src_fmt, PIPE_BIND_SAMPLER_VIEW);
+   dst_svga_fmt = svga_translate_format(ss, dst_fmt, PIPE_BIND_SAMPLER_VIEW);
+
+   src_svga_fmt = svga_typeless_format(src_svga_fmt);
+   dst_svga_fmt = svga_typeless_format(dst_svga_fmt);
+
+   return src_svga_fmt == dst_svga_fmt;
+}
+
+
+/**
  * The state tracker implements some resource copies with blits (for
  * GL_ARB_copy_image).  This function checks if we should really do the blit
  * with a VGPU10 CopyRegion command or software fallback (for incompatible
@@ -248,11 +270,9 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
        blit_info->scissor_enable)
       return false;
 
-   /* check that src/dst surface formats are compatible for
-      the VGPU device.*/
-   return util_is_format_compatible(
-        util_format_description(blit_info->src.resource->format),
-        util_format_description(blit_info->dst.resource->format));
+   return formats_compatible(svga_screen(svga->pipe.screen),
+                             blit_info->src.resource->format,
+                             blit_info->dst.resource->format);
 }
 
 
