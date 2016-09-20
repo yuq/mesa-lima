@@ -975,12 +975,22 @@ svga_texture_create(struct pipe_screen *screen,
       tex->key.flags |= SVGA3D_SURFACE_BIND_SHADER_RESOURCE;
 
       if (!(bindings & PIPE_BIND_RENDER_TARGET)) {
-         /* Also check if the format is renderable */
+         /* Also check if the format is color renderable */
          if (screen->is_format_supported(screen, template->format,
                                          template->target,
                                          template->nr_samples,
                                          PIPE_BIND_RENDER_TARGET)) {
             bindings |= PIPE_BIND_RENDER_TARGET;
+         }
+      }
+
+      if (!(bindings & PIPE_BIND_DEPTH_STENCIL)) {
+         /* Also check if the format is depth/stencil renderable */
+         if (screen->is_format_supported(screen, template->format,
+                                         template->target,
+                                         template->nr_samples,
+                                         PIPE_BIND_DEPTH_STENCIL)) {
+            bindings |= PIPE_BIND_DEPTH_STENCIL;
          }
       }
    }
