@@ -1012,6 +1012,12 @@ void anv_CmdFillBuffer(
 
    meta_clear_begin(&saved_state, cmd_buffer);
 
+   if (fillSize == VK_WHOLE_SIZE) {
+      fillSize = dst_buffer->size - dstOffset;
+      /* Make sure fillSize is a multiple of 4 */
+      fillSize -= fillSize & 3;
+   }
+
    VkFormat format;
    int bs;
    if ((fillSize & 15) == 0 && (dstOffset & 15) == 0) {
