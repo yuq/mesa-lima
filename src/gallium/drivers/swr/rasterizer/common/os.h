@@ -38,6 +38,11 @@
 #include <intrin.h>
 #include <cstdint>
 
+#if defined(MemoryFence)
+// Windows.h defines MemoryFence as _mm_mfence, but this conflicts with llvm::sys::MemoryFence
+#undef MemoryFence
+#endif
+
 #define OSALIGN(RWORD, WIDTH) __declspec(align(WIDTH)) RWORD
 #define THREAD __declspec(thread)
 #define INLINE __forceinline
@@ -211,6 +216,7 @@ void AlignedFree(void* p)
 #define sprintf_s sprintf
 #define strcpy_s(dst,size,src) strncpy(dst,src,size)
 #define GetCurrentProcessId getpid
+pid_t gettid(void);
 #define GetCurrentThreadId gettid
 
 #define CreateDirectory(name, pSecurity) mkdir(name, 0777)
