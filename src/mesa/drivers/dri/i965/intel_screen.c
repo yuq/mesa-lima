@@ -1431,6 +1431,7 @@ static void
 set_max_gl_versions(struct intel_screen *screen)
 {
    __DRIscreen *dri_screen = screen->driScrnPriv;
+   const bool has_astc = screen->devinfo->gen >= 9;
 
    switch (screen->devinfo->gen) {
    case 9:
@@ -1438,7 +1439,7 @@ set_max_gl_versions(struct intel_screen *screen)
       dri_screen->max_gl_core_version = 44;
       dri_screen->max_gl_compat_version = 30;
       dri_screen->max_gl_es1_version = 11;
-      dri_screen->max_gl_es2_version = 31;
+      dri_screen->max_gl_es2_version = has_astc ? 32 : 31;
       break;
    case 7:
       dri_screen->max_gl_core_version = 33;
