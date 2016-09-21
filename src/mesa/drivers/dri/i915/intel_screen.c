@@ -748,6 +748,9 @@ i915_query_renderer_integer(__DRIscreen *psp, int param, unsigned int *value)
    case __DRI2_RENDERER_UNIFIED_MEMORY_ARCHITECTURE:
       value[0] = 1;
       return 0;
+   case __DRI2_RENDERER_HAS_TEXTURE_3D:
+      value[0] = 1;
+      return 0;
    default:
       return driQueryRendererIntegerCommon(psp, param, value);
    }
