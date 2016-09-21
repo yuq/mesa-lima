@@ -250,7 +250,7 @@ GLES3.1, GLSL ES 3.1 -- all DONE: i965/hsw+, nvc0, radeonsi
       glGetBooleani_v - restrict to GLES enums
       gl_HelperInvocation support                       DONE (i965, r600)
 
-GLES3.2, GLSL ES 3.2:
+GLES3.2, GLSL ES 3.2 -- all DONE: i965/gen9+
 
   GL_EXT_color_buffer_float                             DONE (all drivers)
   GL_KHR_blend_equation_advanced                        DONE (i965)
