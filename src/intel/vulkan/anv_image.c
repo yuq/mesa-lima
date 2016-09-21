@@ -41,9 +41,6 @@ choose_isl_surf_usage(VkImageUsageFlags vk_usage,
 {
    isl_surf_usage_flags_t isl_usage = 0;
 
-   /* FINISHME: Support aux surfaces */
-   isl_usage |= ISL_SURF_USAGE_DISABLE_AUX_BIT;
-
    if (vk_usage & VK_IMAGE_USAGE_SAMPLED_BIT)
       isl_usage |= ISL_SURF_USAGE_TEXTURE_BIT;
 
@@ -62,7 +59,6 @@ choose_isl_surf_usage(VkImageUsageFlags vk_usage,
     */
    switch (aspect) {
    case VK_IMAGE_ASPECT_DEPTH_BIT:
-      isl_usage &= ~ISL_SURF_USAGE_DISABLE_AUX_BIT;
       isl_usage |= ISL_SURF_USAGE_DEPTH_BIT;
       break;
    case VK_IMAGE_ASPECT_STENCIL_BIT:
