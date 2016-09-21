@@ -165,7 +165,6 @@ svga_resource_copy_region(struct pipe_context *pipe,
       /* vgpu10 */
       if (util_format_is_compressed(src_tex->format) ==
           util_format_is_compressed(dst_tex->format) &&
-          !util_format_is_depth_and_stencil(src_tex->format) &&
           stex->handle != dtex->handle &&
           svga_resource_type(src_tex->target) ==
           svga_resource_type(dst_tex->target)) {
@@ -260,9 +259,11 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
        blit_info->src.box.height != blit_info->dst.box.height)
       return false;
 
-   /* depth/stencil copies not supported at this time */
-   if (blit_info->mask != PIPE_MASK_RGBA)
-      return false;
+   /* For depth+stencil formats, copy with maks != PIPE_MASK_ZS is not
+    * supported */
+   if (util_format_is_depth_and_stencil(blit_info->src.format) &&
+      blit_info->mask != (PIPE_MASK_ZS))
+     return false;
 
    if (blit_info->alpha_blend || blit_info->render_condition_enable ||
        blit_info->scissor_enable)
