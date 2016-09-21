@@ -151,6 +151,8 @@ private:
     OSALIGNLINE(volatile LONG) mWorkItemsConsumed { 0 };
 };
 
+typedef void(*PFN_DISPATCH)(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId, void*& pSpillFillBuffer);
+
 //////////////////////////////////////////////////////////////////////////
 /// DispatchQueue - work queue for dispatch
 //////////////////////////////////////////////////////////////////////////
@@ -161,7 +163,7 @@ public:
 
     //////////////////////////////////////////////////////////////////////////
     /// @brief Setup the producer consumer counts.
-    void initialize(uint32_t totalTasks, void* pTaskData)
+    void initialize(uint32_t totalTasks, void* pTaskData, PFN_DISPATCH pfnDispatch)
     {
         // The available and outstanding counts start with total tasks.
         // At the start there are N tasks available and outstanding.
@@ -173,6 +175,7 @@ public:
         mTasksOutstanding = totalTasks;
 
         mpTaskData = pTaskData;
+        mPfnDispatch = pfnDispatch;
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -226,7 +229,16 @@ public:
         return mpTaskData;
     }
 
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Dispatches a unit of work
+    void dispatch(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroupId, void*& pSpillFillBuffer)
+    {
+        SWR_ASSERT(mPfnDispatch != nullptr);
+        mPfnDispatch(pDC, workerId, threadGroupId, pSpillFillBuffer);
+    }
+
     void* mpTaskData{ nullptr };        // The API thread will set this up and the callback task function will interpet this.
+    PFN_DISPATCH mPfnDispatch{ nullptr };      // Function to call per dispatch
 
     OSALIGNLINE(volatile LONG) mTasksAvailable{ 0 };
     OSALIGNLINE(volatile LONG) mTasksOutstanding{ 0 };

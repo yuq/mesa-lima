@@ -1425,7 +1425,7 @@ void SwrDispatch(
     uint32_t totalThreadGroups = threadGroupCountX * threadGroupCountY * threadGroupCountZ;
     uint32_t dcIndex = pDC->drawId % KNOB_MAX_DRAWS_IN_FLIGHT;
     pDC->pDispatch = &pContext->pDispatchQueueArray[dcIndex];
-    pDC->pDispatch->initialize(totalThreadGroups, pTaskData);
+    pDC->pDispatch->initialize(totalThreadGroups, pTaskData, &ProcessComputeBE);
 
     QueueDispatch(pContext);
     AR_API_END(APIDispatch, threadGroupCountX * threadGroupCountY * threadGroupCountZ);

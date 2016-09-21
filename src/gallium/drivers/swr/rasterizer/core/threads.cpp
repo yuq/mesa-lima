@@ -670,8 +670,7 @@ void WorkOnCompute(
             uint32_t threadGroupId = 0;
             while (queue.getWork(threadGroupId))
             {
-                ProcessComputeBE(pDC, workerId, threadGroupId, pSpillFillBuffer);
-
+                queue.dispatch(pDC, workerId, threadGroupId, pSpillFillBuffer);
                 queue.finishedWork();
             }
         }
