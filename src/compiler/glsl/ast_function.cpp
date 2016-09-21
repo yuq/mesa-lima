@@ -2143,6 +2143,25 @@ ast_function_expression::hir(exec_list *instructions,
          /* an error has already been emitted */
          value = ir_rvalue::error_value(ctx);
       } else {
+         if (state->stage == MESA_SHADER_TESS_CTRL &&
+             sig->is_builtin() && strcmp(func_name, "barrier") == 0) {
+            if (state->current_function == NULL ||
+                strcmp(state->current_function->function_name(), "main") != 0) {
+               _mesa_glsl_error(&loc, state,
+                                "barrier() may only be used in main()");
+            }
+
+            if (state->found_return) {
+               _mesa_glsl_error(&loc, state,
+                                "barrier() may not be used after return");
+            }
+
+            if (instructions != &state->current_function->body) {
+               _mesa_glsl_error(&loc, state,
+                                "barrier() may not be used in control flow");
+            }
+         }
+
          value = generate_call(instructions, sig,
                                &actual_parameters, sub_var, array_idx, state);
          if (!value) {
