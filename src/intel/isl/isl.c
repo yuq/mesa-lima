@@ -1448,9 +1448,14 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
    assert(surf->samples == 1 && surf->msaa_layout == ISL_MSAA_LAYOUT_NONE);
    assert(ISL_DEV_GEN(dev) >= 7);
 
-   assert(ISL_DEV_GEN(dev) >= 8 || surf->dim == ISL_SURF_DIM_2D);
+   if (surf->usage & ISL_SURF_USAGE_DISABLE_AUX_BIT)
+      return false;
 
-   assert(surf->logical_level0_px.depth == 1);
+   if (ISL_DEV_GEN(dev) <= 8 && surf->dim != ISL_SURF_DIM_2D)
+      return false;
+
+   if (isl_format_is_compressed(surf->format))
+      return false;
 
    /* TODO: More conditions where it can fail. */
 
