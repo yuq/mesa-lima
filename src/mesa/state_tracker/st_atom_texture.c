@@ -59,6 +59,11 @@ swizzle_swizzle(unsigned swizzle1, unsigned swizzle2)
 {
    unsigned i, swz[4];
 
+   if (swizzle1 == SWIZZLE_XYZW) {
+      /* identity swizzle, no change to swizzle2 */
+      return swizzle2;
+   }
+
    for (i = 0; i < 4; i++) {
       unsigned s = GET_SWZ(swizzle1, i);
       switch (s) {
