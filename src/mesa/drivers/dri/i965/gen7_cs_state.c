@@ -284,7 +284,7 @@ gen7_upload_cs_push_constants(struct brw_context *brw)
       (struct brw_compute_program *) brw->compute_program;
 
    if (cp) {
-      /* CACHE_NEW_CS_PROG */
+      /* BRW_NEW_CS_PROG_DATA */
       struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
 
       _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_COMPUTE);
@@ -299,6 +299,7 @@ const struct brw_tracked_state gen7_cs_push_constants = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
              BRW_NEW_COMPUTE_PROGRAM |
+             BRW_NEW_CS_PROG_DATA |
              BRW_NEW_PUSH_CONSTANT_ALLOCATION,
    },
    .emit = gen7_upload_cs_push_constants,
