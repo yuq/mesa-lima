@@ -58,6 +58,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     struct pipe_surface *surf;
     struct pipe_context *pipe = pParams->device->pipe;
     bool allocate = !pContainer && pDesc->Format != D3DFMT_NULL;
+    D3DMULTISAMPLE_TYPE multisample_type;
 
     DBG("This=%p pDevice=%p pResource=%p Level=%u Layer=%u pDesc=%p\n",
         This, pParams->device, pResource, Level, Layer, pDesc);
@@ -82,6 +83,18 @@ NineSurface9_ctor( struct NineSurface9 *This,
 
     This->data = (uint8_t *)user_buffer;
 
+    multisample_type = pDesc->MultiSampleType;
+
+    /* Map MultiSampleQuality to MultiSampleType */
+    hr = d3dmultisample_type_check(pParams->device->screen,
+                                   pDesc->Format,
+                                   &multisample_type,
+                                   pDesc->MultiSampleQuality,
+                                   NULL);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
     /* TODO: this is (except width and height) duplicate from
      * container info (in the pContainer case). Some refactoring is
      * needed to avoid duplication */
@@ -92,7 +105,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     This->base.info.depth0 = 1;
     This->base.info.last_level = 0;
     This->base.info.array_size = 1;
-    This->base.info.nr_samples = pDesc->MultiSampleType;
+    This->base.info.nr_samples = multisample_type;
     This->base.info.usage = PIPE_USAGE_DEFAULT;
     This->base.info.bind = PIPE_BIND_SAMPLER_VIEW; /* StretchRect */
 
@@ -721,7 +734,7 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
 
     This->desc.Width = This->base.info.width0 = resource->width0;
     This->desc.Height = This->base.info.height0 = resource->height0;
-    This->desc.MultiSampleType = This->base.info.nr_samples = resource->nr_samples;
+    This->base.info.nr_samples = resource->nr_samples;
 
     This->stride = nine_format_get_stride(This->base.info.format,
                                           This->desc.Width);

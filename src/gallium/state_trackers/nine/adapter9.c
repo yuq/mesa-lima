@@ -401,16 +401,30 @@ NineAdapter9_CheckDeviceMultiSampleType( struct NineAdapter9 *This,
         bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
 
     pf = d3d9_to_pipe_format_checked(screen, SurfaceFormat, PIPE_TEXTURE_2D,
+                                     0, PIPE_BIND_SAMPLER_VIEW, FALSE, FALSE);
+
+    if (pf == PIPE_FORMAT_NONE && SurfaceFormat != D3DFMT_NULL) {
+        DBG("%s not available.\n", d3dformat_to_string(SurfaceFormat));
+        return D3DERR_INVALIDCALL;
+    }
+
+    pf = d3d9_to_pipe_format_checked(screen, SurfaceFormat, PIPE_TEXTURE_2D,
                                      MultiSampleType, bind, FALSE, FALSE);
 
-    if (pf == PIPE_FORMAT_NONE) {
+    if (pf == PIPE_FORMAT_NONE && SurfaceFormat != D3DFMT_NULL) {
         DBG("%s with %u samples not available.\n",
             d3dformat_to_string(SurfaceFormat), MultiSampleType);
         return D3DERR_NOTAVAILABLE;
     }
 
-    if (pQualityLevels)
-        *pQualityLevels = 1; /* gallium doesn't have quality levels */
+    if (pQualityLevels) {
+        /* NONMASKABLE MultiSampleType might have more than one quality level,
+         * while MASKABLE MultiSampleTypes have only one level.
+         * Advertise quality levels and map each level to a sample count. */
+         (void ) d3dmultisample_type_check(screen, SurfaceFormat,
+                 &MultiSampleType, D3DMULTISAMPLE_16_SAMPLES, pQualityLevels);
+         DBG("advertising %u quality levels\n", *pQualityLevels);
+    }
 
     return D3D_OK;
 }

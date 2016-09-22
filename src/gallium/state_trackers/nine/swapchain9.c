@@ -120,6 +120,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     BOOL has_present_buffers = FALSE;
     int depth;
     unsigned i, oldBufferCount, newBufferCount;
+    D3DMULTISAMPLE_TYPE multisample_type;
 
     DBG("This=%p pParams=%p\n", This, pParams);
     user_assert(pParams != NULL, E_POINTER);
@@ -204,15 +205,26 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     newBufferCount = pParams->BackBufferCount +
                      (pParams->SwapEffect != D3DSWAPEFFECT_COPY);
 
+    multisample_type = pParams->MultiSampleType;
+
+    /* Map MultiSampleQuality to MultiSampleType */
+    hr = d3dmultisample_type_check(This->screen, pParams->BackBufferFormat,
+                                   &multisample_type,
+                                   pParams->MultiSampleQuality,
+                                   NULL);
+    if (FAILED(hr)) {
+        return hr;
+    }
+
     pf = d3d9_to_pipe_format_checked(This->screen, pParams->BackBufferFormat,
-                                     PIPE_TEXTURE_2D, pParams->MultiSampleType,
+                                     PIPE_TEXTURE_2D, multisample_type,
                                      PIPE_BIND_RENDER_TARGET, FALSE, FALSE);
 
     if (This->actx->linear_framebuffer ||
         (pf != PIPE_FORMAT_B8G8R8X8_UNORM &&
         pf != PIPE_FORMAT_B8G8R8A8_UNORM) ||
         pParams->SwapEffect != D3DSWAPEFFECT_DISCARD ||
-        pParams->MultiSampleType >= 2 ||
+        multisample_type >= 2 ||
         (This->actx->ref && This->actx->ref == This->screen))
         has_present_buffers = TRUE;
 
@@ -239,7 +251,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     desc.Type = D3DRTYPE_SURFACE;
     desc.Pool = D3DPOOL_DEFAULT;
     desc.MultiSampleType = pParams->MultiSampleType;
-    desc.MultiSampleQuality = 0;
+    desc.MultiSampleQuality = pParams->MultiSampleQuality;
     desc.Width = pParams->BackBufferWidth;
     desc.Height = pParams->BackBufferHeight;
 
@@ -279,7 +291,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
 
     for (i = 0; i < newBufferCount; ++i) {
         tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
-        tmplt.nr_samples = pParams->MultiSampleType;
+        tmplt.nr_samples = multisample_type;
         if (!has_present_buffers)
             tmplt.bind |= NINE_BIND_PRESENTBUFFER_FLAGS;
         tmplt.format = d3d9_to_pipe_format_checked(This->screen,
@@ -297,6 +309,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         if (pParams->Flags & D3DPRESENTFLAG_LOCKABLE_BACKBUFFER)
             resource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
         if (This->buffers[i]) {
+            NineSurface9_SetMultiSampleType(This->buffers[i], desc.MultiSampleType);
             NineSurface9_SetResourceResize(This->buffers[i], resource);
             if (has_present_buffers)
                 pipe_resource_reference(&resource, NULL);
@@ -336,7 +349,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
          * If it fails with PIPE_BIND_SAMPLER_VIEW, then the app check for texture support
          * would fail too, so we are fine. */
         tmplt.bind |= PIPE_BIND_SAMPLER_VIEW;
-        tmplt.nr_samples = pParams->MultiSampleType;
+        tmplt.nr_samples = multisample_type;
         tmplt.format = d3d9_to_pipe_format_checked(This->screen,
                                                    pParams->AutoDepthStencilFormat,
                                                    PIPE_TEXTURE_2D,
@@ -362,6 +375,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             return D3DERR_OUTOFVIDEOMEMORY;
         }
         if (This->zsbuf) {
+            NineSurface9_SetMultiSampleType(This->zsbuf, desc.MultiSampleType);
             NineSurface9_SetResourceResize(This->zsbuf, resource);
             pipe_resource_reference(&resource, NULL);
         } else {

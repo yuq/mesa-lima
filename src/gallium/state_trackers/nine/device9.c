@@ -1653,7 +1653,8 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
         clamped = !!xy;
     }
 
-    ms = (dst->desc.MultiSampleType | 1) != (src->desc.MultiSampleType | 1);
+    ms = (dst->desc.MultiSampleType != src->desc.MultiSampleType) ||
+         (dst->desc.MultiSampleQuality != src->desc.MultiSampleQuality);
 
     if (clamped || scaled || (blit.dst.format != blit.src.format) || ms) {
         DBG("using pipe->blit()\n");
@@ -1826,6 +1827,11 @@ NineDevice9_SetRenderTarget( struct NineDevice9 *This,
         This->state.scissor.maxy = rt->desc.Height;
 
         This->state.changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
+
+        if (This->state.rt[0] &&
+            (This->state.rt[0]->desc.MultiSampleType == D3DMULTISAMPLE_NONMASKABLE) !=
+            (rt->desc.MultiSampleType == D3DMULTISAMPLE_NONMASKABLE))
+            This->state.changed.group |= NINE_STATE_SAMPLE_MASK;
     }
 
     if (This->state.rt[i] != NineSurface9(pRenderTarget)) {

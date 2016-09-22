@@ -348,6 +348,61 @@ d3d9_to_pipe_format_checked(struct pipe_screen *screen,
     return PIPE_FORMAT_NONE;
 }
 
+/* The quality levels are vendor dependent, so we set our own.
+ * Every quality level has its own sample count and sample
+ * position matrix.
+ * The exact mapping might differ from system to system but thats OK,
+ * as there's no way to gather more information about quality levels
+ * in D3D9.
+ * In case of NONMASKABLE multisample map every quality-level
+ * to a MASKABLE MultiSampleType:
+ *  0: no MSAA
+ *  1: 2x MSAA
+ *  2: 4x MSAA
+ *  ...
+ *  If the requested quality level is not available to nearest
+ *  matching quality level is used.
+ *  If no multisample is available the function sets
+ *  multisample to D3DMULTISAMPLE_NONE and returns zero.
+ */
+static inline HRESULT
+d3dmultisample_type_check(struct pipe_screen *screen,
+                          D3DFORMAT format,
+                          D3DMULTISAMPLE_TYPE *multisample,
+                          DWORD multisamplequality,
+                          DWORD *levels)
+{
+    unsigned bind, i;
+
+    assert(multisample);
+
+    if (levels)
+        *levels = 1;
+
+    if (*multisample == D3DMULTISAMPLE_NONMASKABLE) {
+        if (depth_stencil_format(format))
+            bind = d3d9_get_pipe_depth_format_bindings(format);
+        else /* render-target */
+            bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
+
+        *multisample = 0;
+        for (i = D3DMULTISAMPLE_2_SAMPLES; i < D3DMULTISAMPLE_16_SAMPLES &&
+            multisamplequality; ++i) {
+            if (d3d9_to_pipe_format_checked(screen, format, PIPE_TEXTURE_2D,
+                    i, bind, FALSE, FALSE) != PIPE_FORMAT_NONE) {
+                multisamplequality--;
+                if (levels)
+                    (*levels)++;
+                *multisample = i;
+            }
+        }
+    }
+    /* Make sure to get an exact match */
+    if (multisamplequality)
+        return D3DERR_INVALIDCALL;
+    return D3D_OK;
+}
+
 static inline const char *
 d3dformat_to_string(D3DFORMAT fmt)
 {

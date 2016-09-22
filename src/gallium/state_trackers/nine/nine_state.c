@@ -1088,7 +1088,11 @@ nine_update_state(struct NineDevice9 *device)
             pipe->set_blend_color(pipe, &color);
         }
         if (group & NINE_STATE_SAMPLE_MASK) {
-            pipe->set_sample_mask(pipe, state->rs[D3DRS_MULTISAMPLEMASK]);
+            if (state->rt[0]->desc.MultiSampleType == D3DMULTISAMPLE_NONMASKABLE) {
+                pipe->set_sample_mask(pipe, ~0);
+            } else {
+                pipe->set_sample_mask(pipe, state->rs[D3DRS_MULTISAMPLEMASK]);
+            }
         }
         if (group & NINE_STATE_STENCIL_REF) {
             struct pipe_stencil_ref ref;
