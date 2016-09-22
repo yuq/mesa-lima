@@ -35,8 +35,9 @@ genX(compute_pipeline_create)(
     VkPipeline*                                 pPipeline)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_physical_device *physical_device =
+   const struct anv_physical_device *physical_device =
       &device->instance->physicalDevice;
+   const struct gen_device_info *devinfo = &physical_device->info;
    struct anv_pipeline *pipeline;
    VkResult result;
 
@@ -120,7 +121,7 @@ genX(compute_pipeline_create)(
       vfe.GPGPUMode              = true;
 #endif
       vfe.MaximumNumberofThreads =
-         physical_device->max_cs_threads * subslices - 1;
+         devinfo->max_cs_threads * subslices - 1;
       vfe.NumberofURBEntries     = GEN_GEN <= 7 ? 0 : 2;
       vfe.ResetGatewayTimer      = true;
 #if GEN_GEN <= 8

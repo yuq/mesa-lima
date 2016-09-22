@@ -924,8 +924,9 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
    if (size == 0) {
       /* We own the lock.  Allocate a buffer */
 
-      struct anv_physical_device *physical_device =
+      const struct anv_physical_device *physical_device =
          &device->instance->physicalDevice;
+      const struct gen_device_info *devinfo = &physical_device->info;
 
       /* WaCSScratchSize:hsw
        *
@@ -944,14 +945,14 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
        */
       const unsigned subslices = MAX2(physical_device->subslice_total, 1);
       const unsigned scratch_ids_per_subslice =
-         device->info.is_haswell ? 16 * 8 : physical_device->max_cs_threads;
+         device->info.is_haswell ? 16 * 8 : devinfo->max_cs_threads;
 
       uint32_t max_threads[] = {
-         [MESA_SHADER_VERTEX]           = physical_device->max_vs_threads,
-         [MESA_SHADER_TESS_CTRL]        = physical_device->max_hs_threads,
-         [MESA_SHADER_TESS_EVAL]        = physical_device->max_ds_threads,
-         [MESA_SHADER_GEOMETRY]         = physical_device->max_gs_threads,
-         [MESA_SHADER_FRAGMENT]         = physical_device->max_wm_threads,
+         [MESA_SHADER_VERTEX]           = devinfo->max_vs_threads,
+         [MESA_SHADER_TESS_CTRL]        = devinfo->max_hs_threads,
+         [MESA_SHADER_TESS_EVAL]        = devinfo->max_ds_threads,
+         [MESA_SHADER_GEOMETRY]         = devinfo->max_gs_threads,
+         [MESA_SHADER_FRAGMENT]         = devinfo->max_wm_threads,
          [MESA_SHADER_COMPUTE]          = scratch_ids_per_subslice * subslices,
       };
 

@@ -135,12 +135,6 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
-   device->max_vs_threads = device->info.max_vs_threads;
-   device->max_hs_threads = device->info.max_hs_threads;
-   device->max_ds_threads = device->info.max_ds_threads;
-   device->max_gs_threads = device->info.max_gs_threads;
-   device->max_wm_threads = device->info.max_wm_threads;
-
    /* GENs prior to 8 do not support EU/Subslice info */
    if (device->info.gen >= 8) {
       device->subslice_total = anv_gem_get_param(fd, I915_PARAM_SUBSLICE_TOTAL);
@@ -161,13 +155,11 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (device->info.is_cherryview &&
        device->subslice_total > 0 && device->eu_total > 0) {
       /* Logical CS threads = EUs per subslice * 7 threads per EU */
-      device->max_cs_threads = device->eu_total / device->subslice_total * 7;
+      uint32_t max_cs_threads = device->eu_total / device->subslice_total * 7;
 
       /* Fuse configurations may give more threads than expected, never less. */
-      if (device->max_cs_threads < device->info.max_cs_threads)
-         device->max_cs_threads = device->info.max_cs_threads;
-   } else {
-      device->max_cs_threads = device->info.max_cs_threads;
+      if (max_cs_threads > device->info.max_cs_threads)
+         device->info.max_cs_threads = max_cs_threads;
    }
 
    close(fd);
@@ -537,11 +529,11 @@ void anv_GetPhysicalDeviceProperties(
       .maxFragmentCombinedOutputResources       = 8,
       .maxComputeSharedMemorySize               = 32768,
       .maxComputeWorkGroupCount                 = { 65535, 65535, 65535 },
-      .maxComputeWorkGroupInvocations           = 16 * pdevice->max_cs_threads,
+      .maxComputeWorkGroupInvocations           = 16 * devinfo->max_cs_threads,
       .maxComputeWorkGroupSize = {
-         16 * pdevice->max_cs_threads,
-         16 * pdevice->max_cs_threads,
-         16 * pdevice->max_cs_threads,
+         16 * devinfo->max_cs_threads,
+         16 * devinfo->max_cs_threads,
+         16 * devinfo->max_cs_threads,
       },
       .subPixelPrecisionBits                    = 4 /* FIXME */,
       .subTexelPrecisionBits                    = 4 /* FIXME */,
