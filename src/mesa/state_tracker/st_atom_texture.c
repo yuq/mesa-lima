@@ -299,12 +299,10 @@ st_create_texture_sampler_view_from_stobj(struct st_context *st,
       templ.target = gl_target_to_pipe(stObj->base.Target);
    }
 
-   if (swizzle != SWIZZLE_NOOP) {
-      templ.swizzle_r = GET_SWZ(swizzle, 0);
-      templ.swizzle_g = GET_SWZ(swizzle, 1);
-      templ.swizzle_b = GET_SWZ(swizzle, 2);
-      templ.swizzle_a = GET_SWZ(swizzle, 3);
-   }
+   templ.swizzle_r = GET_SWZ(swizzle, 0);
+   templ.swizzle_g = GET_SWZ(swizzle, 1);
+   templ.swizzle_b = GET_SWZ(swizzle, 2);
+   templ.swizzle_a = GET_SWZ(swizzle, 3);
 
    return st->pipe->create_sampler_view(st->pipe, stObj->pt, &templ);
 }
