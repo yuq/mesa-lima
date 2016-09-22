@@ -92,7 +92,7 @@
 #define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
 #endif
 
-#define NUM_ATTRIBS 10
+#define NUM_ATTRIBS 12
 
 static void
 dri_set_background_context(void *loaderPrivate)
@@ -457,6 +457,7 @@ static const struct dri2_extension_match optional_core_extensions[] = {
    { __DRI2_RENDERER_QUERY, 1, offsetof(struct dri2_egl_display, rendererQuery) },
    { __DRI2_INTEROP, 1, offsetof(struct dri2_egl_display, interop) },
    { __DRI_IMAGE, 1, offsetof(struct dri2_egl_display, image) },
+   { __DRI2_FLUSH_CONTROL, 1, offsetof(struct dri2_egl_display, flush_control) },
    { NULL, 0, 0 }
 };
 
@@ -766,6 +767,9 @@ dri2_setup_screen(_EGLDisplay *disp)
       }
 #endif
    }
+
+   if (dri2_dpy->flush_control)
+      disp->Extensions.KHR_context_flush_control = EGL_TRUE;
 }
 
 void
@@ -1225,6 +1229,11 @@ dri2_fill_context_attribs(struct dri2_egl_context *dri2_ctx,
 
       ctx_attribs[pos++] = __DRI_CTX_ATTRIB_PRIORITY;
       ctx_attribs[pos++] = val;
+   }
+
+   if (dri2_ctx->base.ReleaseBehavior == EGL_CONTEXT_RELEASE_BEHAVIOR_NONE_KHR) {
+      ctx_attribs[pos++] = __DRI_CTX_ATTRIB_RELEASE_BEHAVIOR;
+      ctx_attribs[pos++] = __DRI_CTX_RELEASE_BEHAVIOR_NONE;
    }
 
    *num_attribs = pos;

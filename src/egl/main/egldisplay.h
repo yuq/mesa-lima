@@ -112,6 +112,7 @@ struct _egl_extensions
 
    EGLBoolean KHR_cl_event2;
    EGLBoolean KHR_config_attribs;
+   EGLBoolean KHR_context_flush_control;
    EGLBoolean KHR_create_context;
    EGLBoolean KHR_fence_sync;
    EGLBoolean KHR_get_all_proc_addresses;
