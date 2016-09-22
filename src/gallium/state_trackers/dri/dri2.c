@@ -1055,8 +1055,10 @@ dri2_query_image(__DRIimage *image, int attrib, int *value)
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FD:
       whandle.type= DRM_API_HANDLE_TYPE_FD;
-      image->texture->screen->resource_get_handle(image->texture->screen,
-         NULL, image->texture, &whandle, usage);
+      if (!image->texture->screen->resource_get_handle(image->texture->screen,
+            NULL, image->texture, &whandle, usage))
+         return GL_FALSE;
+
       *value = whandle.handle;
       return GL_TRUE;
    case __DRI_IMAGE_ATTRIB_FORMAT:
