@@ -288,7 +288,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
 
     AR_BEGIN(BEStoreTiles, pDC->drawId);
 
-#ifdef KNOB_ENABLE_RDTSC
+#if defined(KNOB_ENABLE_RDTSC) || defined(KNOB_ENABLE_AR)
     uint32_t numTiles = 0;
 #endif
     SWR_FORMAT srcFormat;

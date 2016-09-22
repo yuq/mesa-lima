@@ -1295,7 +1295,7 @@ void ProcessDraw(
         fetchInfo.StartVertex = work.startVertex;
     }
 
-#ifdef KNOB_ENABLE_RDTSC
+#if defined(KNOB_ENABLE_RDTSC) || defined(KNOB_ENABLE_AR)
     uint32_t numPrims = GetNumPrims(state.topology, work.numVerts);
 #endif
 

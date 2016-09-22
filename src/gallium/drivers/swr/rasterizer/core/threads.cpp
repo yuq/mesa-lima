@@ -718,6 +718,11 @@ DWORD workerThreadMain(LPVOID pData)
     //    the worker can safely increment its oldestDraw counter and move on to the next draw.
     std::unique_lock<std::mutex> lock(pContext->WaitLock, std::defer_lock);
 
+    // Suspend thread immediately. SwrCreateContext or QueueWork will wake this up again.
+    lock.lock();
+    pContext->FifosNotEmpty.wait(lock);
+    lock.unlock();
+
     auto threadHasWork = [&](uint32_t curDraw) { return curDraw != pContext->dcRing.GetHead(); };
 
     uint32_t curDrawBE = 0;

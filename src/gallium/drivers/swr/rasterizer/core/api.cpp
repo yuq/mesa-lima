@@ -55,6 +55,11 @@ static INLINE SWR_CONTEXT* GetContext(HANDLE hContext)
     return (SWR_CONTEXT*)hContext;
 }
 
+void WakeAllThreads(SWR_CONTEXT *pContext)
+{
+    pContext->FifosNotEmpty.notify_all();
+}
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create SWR Context.
 /// @param pCreateInfo - pointer to creation info.
@@ -154,17 +159,14 @@ HANDLE SwrCreateContext(
 
     pCreateInfo->contextSaveSize = sizeof(API_STATE);
 
+    WakeAllThreads(pContext);
+
     return (HANDLE)pContext;
 }
 
 void CopyState(DRAW_STATE& dst, const DRAW_STATE& src)
 {
     memcpy(&dst.state, &src.state, sizeof(API_STATE));
-}
-
-void WakeAllThreads(SWR_CONTEXT *pContext)
-{
-    pContext->FifosNotEmpty.notify_all();
 }
 
 template<bool IsDraw>
