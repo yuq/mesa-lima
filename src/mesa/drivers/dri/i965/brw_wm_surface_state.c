@@ -1143,6 +1143,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
       for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
          struct gl_renderbuffer *rb = fb->_ColorDrawBuffers[i];
          const struct intel_renderbuffer *irb = intel_renderbuffer(rb);
+         /* BRW_NEW_FS_PROG_DATA */
          const unsigned surf_index =
             brw->wm.prog_data->binding_table.render_target_read_start + i;
          uint32_t *surf_offset = &brw->wm.base.surf_offset[surf_index];
@@ -1210,7 +1211,8 @@ const struct brw_tracked_state brw_renderbuffer_read_surfaces = {
    .dirty = {
       .mesa = _NEW_BUFFERS,
       .brw = BRW_NEW_BATCH |
-             BRW_NEW_FRAGMENT_PROGRAM,
+             BRW_NEW_FRAGMENT_PROGRAM |
+             BRW_NEW_FS_PROG_DATA,
    },
    .emit = update_renderbuffer_read_surfaces,
 };
