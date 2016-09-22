@@ -1247,6 +1247,9 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
    struct dri2_egl_config *dri2_config = dri2_egl_config(conf);
    const __DRIconfig *dri_config;
    int api;
+   unsigned error;
+   unsigned num_attribs = NUM_ATTRIBS;
+   uint32_t ctx_attribs[NUM_ATTRIBS];
 
    (void) drv;
 
@@ -1339,15 +1342,11 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
    else
       dri_config = NULL;
 
+   if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
+                                  &num_attribs))
+      goto cleanup;
+
    if (dri2_dpy->image_driver) {
-      unsigned error;
-      unsigned num_attribs = NUM_ATTRIBS;
-      uint32_t ctx_attribs[NUM_ATTRIBS];
-
-      if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
-                                        &num_attribs))
-         goto cleanup;
-
       dri2_ctx->dri_context =
          dri2_dpy->image_driver->createContextAttribs(dri2_dpy->dri_screen,
                                                       api,
@@ -1360,14 +1359,6 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
       dri2_create_context_attribs_error(error);
    } else if (dri2_dpy->dri2) {
       if (dri2_dpy->dri2->base.version >= 3) {
-         unsigned error;
-         unsigned num_attribs = NUM_ATTRIBS;
-         uint32_t ctx_attribs[NUM_ATTRIBS];
-
-         if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
-                                        &num_attribs))
-            goto cleanup;
-
          dri2_ctx->dri_context =
             dri2_dpy->dri2->createContextAttribs(dri2_dpy->dri_screen,
                                                  api,
@@ -1389,14 +1380,6 @@ dri2_create_context(_EGLDriver *drv, _EGLDisplay *disp, _EGLConfig *conf,
    } else {
       assert(dri2_dpy->swrast);
       if (dri2_dpy->swrast->base.version >= 3) {
-         unsigned error;
-         unsigned num_attribs = NUM_ATTRIBS;
-         uint32_t ctx_attribs[NUM_ATTRIBS];
-
-         if (!dri2_fill_context_attribs(dri2_ctx, dri2_dpy, ctx_attribs,
-                                        &num_attribs))
-            goto cleanup;
-
          dri2_ctx->dri_context =
             dri2_dpy->swrast->createContextAttribs(dri2_dpy->dri_screen,
                                                    api,
