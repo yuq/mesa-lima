@@ -61,6 +61,7 @@ const struct brw_tracked_state gen7_tes_push_constants = {
 static void
 gen7_upload_ds_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct brw_stage_state *stage_state = &brw->tes.base;
    /* BRW_NEW_TESS_PROGRAMS */
    bool active = brw->tess_eval_program;
@@ -70,7 +71,7 @@ gen7_upload_ds_state(struct brw_context *brw)
    const struct brw_vue_prog_data *vue_prog_data = &tes_prog_data->base;
    const struct brw_stage_prog_data *prog_data = &vue_prog_data->base;
 
-   const unsigned thread_count = (brw->max_ds_threads - 1) <<
+   const unsigned thread_count = (devinfo->max_ds_threads - 1) <<
       (brw->is_haswell ? HSW_DS_MAX_THREADS_SHIFT : GEN7_DS_MAX_THREADS_SHIFT);
 
    if (active) {

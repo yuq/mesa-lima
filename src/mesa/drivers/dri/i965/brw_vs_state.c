@@ -39,6 +39,7 @@
 static void
 brw_upload_vs_unit(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct brw_stage_state *stage_state = &brw->vs.base;
 
    struct brw_vs_unit_state *vs;
@@ -137,7 +138,7 @@ brw_upload_vs_unit(struct brw_context *brw)
    vs->thread4.urb_entry_allocation_size = brw->urb.vsize - 1;
 
    vs->thread4.max_threads = CLAMP(brw->urb.nr_vs_entries / 2,
-				   1, brw->max_vs_threads) - 1;
+				   1, devinfo->max_vs_threads) - 1;
 
    if (brw->gen == 5)
       vs->vs5.sampler_count = 0; /* hardware requirement */

@@ -98,6 +98,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                     struct brw_gs_prog_key *key)
 {
    struct brw_compiler *compiler = brw->screen->compiler;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_data prog_data;
    bool start_busy = false;
@@ -105,7 +106,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   assign_gs_binding_table_offsets(&brw->screen->devinfo, prog,
+   assign_gs_binding_table_offsets(devinfo, prog,
                                    &gp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
@@ -139,7 +140,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
       ((1 << gp->program.Base.CullDistanceArraySize) - 1) <<
       gp->program.Base.ClipDistanceArraySize;
 
-   brw_compute_vue_map(&brw->screen->devinfo,
+   brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog->SeparateShader);
 
@@ -184,7 +185,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    /* Scratch space is used for register spilling */
    brw_alloc_stage_scratch(brw, stage_state,
                            prog_data.base.base.total_scratch,
-                           brw->max_gs_threads);
+                           devinfo->max_gs_threads);
 
    brw_upload_cache(&brw->cache, BRW_CACHE_GS_PROG,
                     key, sizeof(*key),

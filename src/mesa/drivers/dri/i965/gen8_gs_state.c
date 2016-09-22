@@ -29,6 +29,7 @@
 static void
 gen8_upload_gs_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_state *stage_state = &brw->gs.base;
    /* BRW_NEW_GEOMETRY_PROGRAM */
@@ -97,9 +98,9 @@ gen8_upload_gs_state(struct brw_context *brw)
       }
 
       if (brw->gen < 9)
-         dw7 |= (brw->max_gs_threads / 2 - 1) << HSW_GS_MAX_THREADS_SHIFT;
+         dw7 |= (devinfo->max_gs_threads / 2 - 1) << HSW_GS_MAX_THREADS_SHIFT;
       else
-         dw8 |= brw->max_gs_threads - 1;
+         dw8 |= devinfo->max_gs_threads - 1;
 
       /* DW7 */
       OUT_BATCH(dw7);

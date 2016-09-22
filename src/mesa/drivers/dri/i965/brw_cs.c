@@ -57,6 +57,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
                     struct brw_compute_program *cp,
                     struct brw_cs_prog_key *key)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    const GLuint *program;
    void *mem_ctx = ralloc_context(NULL);
@@ -84,7 +85,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       prog_data.base.total_shared = prog->Comp.SharedSize;
    }
 
-   assign_cs_binding_table_offsets(&brw->screen->devinfo, prog,
+   assign_cs_binding_table_offsets(devinfo, prog,
                                    &cp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
@@ -166,7 +167,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
     * number of threads per subslice.
     */
    const unsigned scratch_ids_per_subslice =
-      brw->is_haswell ? 16 * 8 : brw->max_cs_threads;
+      brw->is_haswell ? 16 * 8 : devinfo->max_cs_threads;
 
    brw_alloc_stage_scratch(brw, &brw->cs.base,
                            prog_data.base.total_scratch,

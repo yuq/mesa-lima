@@ -149,6 +149,7 @@ gen7_upload_ps_state(struct brw_context *brw,
                      bool enable_dual_src_blend, unsigned sample_mask,
                      unsigned fast_clear_op)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint32_t dw2, dw4, dw5, ksp0, ksp2;
    const int max_threads_shift = brw->is_haswell ?
       HSW_PS_MAX_THREADS_SHIFT : IVB_PS_MAX_THREADS_SHIFT;
@@ -171,7 +172,7 @@ gen7_upload_ps_state(struct brw_context *brw,
    if (brw->is_haswell)
       dw4 |= SET_FIELD(sample_mask, HSW_PS_SAMPLE_MASK);
 
-   dw4 |= (brw->max_wm_threads - 1) << max_threads_shift;
+   dw4 |= (devinfo->max_wm_threads - 1) << max_threads_shift;
 
    if (prog_data->base.nr_params > 0)
       dw4 |= GEN7_PS_PUSH_CONSTANT_ENABLE;

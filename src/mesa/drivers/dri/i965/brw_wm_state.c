@@ -75,6 +75,7 @@ brw_color_buffer_write_enabled(struct brw_context *brw)
 static void
 brw_upload_wm_unit(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
    const struct gl_fragment_program *fp = brw->fragment_program;
@@ -178,7 +179,7 @@ brw_upload_wm_unit(struct brw_context *brw)
    wm->wm5.program_uses_killpixel =
       prog_data->uses_kill || ctx->Color.AlphaEnabled;
 
-   wm->wm5.max_threads = brw->max_wm_threads - 1;
+   wm->wm5.max_threads = devinfo->max_wm_threads - 1;
 
    /* _NEW_BUFFERS | _NEW_COLOR */
    if (brw_color_buffer_write_enabled(brw) ||
@@ -270,4 +271,3 @@ const struct brw_tracked_state brw_wm_unit = {
    },
    .emit = brw_upload_wm_unit,
 };
-

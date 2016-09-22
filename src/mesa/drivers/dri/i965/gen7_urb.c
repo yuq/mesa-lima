@@ -276,14 +276,14 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
     *  greater than or equal to 192."
     */
    unsigned vs_min_entries =
-      tess_present && brw->gen == 8 ? 192 : brw->urb.min_vs_entries;
+      tess_present && brw->gen == 8 ? 192 : devinfo->urb.min_vs_entries;
    /* Min VS Entries isn't a multiple of 8 on Cherryview/Broxton; round up */
    vs_min_entries = ALIGN(vs_min_entries, vs_granularity);
 
    unsigned vs_chunks =
       DIV_ROUND_UP(vs_min_entries * vs_entry_size_bytes, chunk_size_bytes);
    unsigned vs_wants =
-      DIV_ROUND_UP(brw->urb.max_vs_entries * vs_entry_size_bytes,
+      DIV_ROUND_UP(devinfo->urb.max_vs_entries * vs_entry_size_bytes,
                    chunk_size_bytes) - vs_chunks;
 
    unsigned gs_chunks = 0;
@@ -299,7 +299,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
        */
       gs_chunks = DIV_ROUND_UP(MAX2(gs_granularity, 2) * gs_entry_size_bytes,
                                chunk_size_bytes);
-      gs_wants = DIV_ROUND_UP(brw->urb.max_gs_entries * gs_entry_size_bytes,
+      gs_wants = DIV_ROUND_UP(devinfo->urb.max_gs_entries * gs_entry_size_bytes,
                               chunk_size_bytes) - gs_chunks;
    }
 
@@ -320,7 +320,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
          DIV_ROUND_UP(devinfo->urb.min_ds_entries * ds_entry_size_bytes,
                       chunk_size_bytes);
       ds_wants =
-         DIV_ROUND_UP(brw->urb.max_ds_entries * ds_entry_size_bytes,
+         DIV_ROUND_UP(devinfo->urb.max_ds_entries * ds_entry_size_bytes,
                       chunk_size_bytes) - ds_chunks;
    }
 
@@ -377,10 +377,10 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    /* Since we rounded up when computing *_wants, this may be slightly more
     * than the maximum allowed amount, so correct for that.
     */
-   nr_vs_entries = MIN2(nr_vs_entries, brw->urb.max_vs_entries);
-   nr_hs_entries = MIN2(nr_hs_entries, brw->urb.max_hs_entries);
-   nr_ds_entries = MIN2(nr_ds_entries, brw->urb.max_ds_entries);
-   nr_gs_entries = MIN2(nr_gs_entries, brw->urb.max_gs_entries);
+   nr_vs_entries = MIN2(nr_vs_entries, devinfo->urb.max_vs_entries);
+   nr_hs_entries = MIN2(nr_hs_entries, devinfo->urb.max_hs_entries);
+   nr_ds_entries = MIN2(nr_ds_entries, devinfo->urb.max_ds_entries);
+   nr_gs_entries = MIN2(nr_gs_entries, devinfo->urb.max_gs_entries);
 
    /* Ensure that we program a multiple of the granularity. */
    nr_vs_entries = ROUND_DOWN_TO(nr_vs_entries, vs_granularity);

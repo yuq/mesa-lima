@@ -29,6 +29,7 @@
 static void
 upload_gs_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct brw_stage_state *stage_state = &brw->gs.base;
    const int max_threads_shift = brw->is_haswell ?
       HSW_GS_MAX_THREADS_SHIFT : GEN6_GS_MAX_THREADS_SHIFT;
@@ -107,7 +108,7 @@ upload_gs_state(struct brw_context *brw)
        * Bridge this will get the order close to correct but not perfect.
        */
       uint32_t dw5 =
-         ((brw->max_gs_threads - 1) << max_threads_shift) |
+         ((devinfo->max_gs_threads - 1) << max_threads_shift) |
          (brw->gs.prog_data->control_data_header_size_hwords <<
           GEN7_GS_CONTROL_DATA_HEADER_SIZE_SHIFT) |
          ((brw->gs.prog_data->invocations - 1) <<

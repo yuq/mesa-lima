@@ -64,6 +64,7 @@ const struct brw_tracked_state gen7_tcs_push_constants = {
 static void
 gen7_upload_hs_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct brw_stage_state *stage_state = &brw->tcs.base;
    /* BRW_NEW_TESS_PROGRAMS */
    bool active = brw->tess_eval_program;
@@ -77,7 +78,7 @@ gen7_upload_hs_state(struct brw_context *brw)
                           GEN7_HS_SAMPLER_COUNT) |
                 SET_FIELD(prog_data->base.binding_table.size_bytes / 4,
                           GEN7_HS_BINDING_TABLE_ENTRY_COUNT) |
-                (brw->max_hs_threads - 1));
+                (devinfo->max_hs_threads - 1));
       OUT_BATCH(GEN7_HS_ENABLE |
                 GEN7_HS_STATISTICS_ENABLE |
                 SET_FIELD(brw->tcs.prog_data->instances - 1,

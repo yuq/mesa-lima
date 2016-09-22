@@ -806,19 +806,17 @@ brw_initialize_cs_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct intel_screen *screen = brw->screen;
-   const struct gen_device_info *devinfo = &screen->devinfo;
+   struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    /* FINISHME: Do this for all platforms that the kernel supports */
    if (brw->is_cherryview &&
        screen->subslice_total > 0 && screen->eu_total > 0) {
       /* Logical CS threads = EUs per subslice * 7 threads per EU */
-      brw->max_cs_threads = screen->eu_total / screen->subslice_total * 7;
+      uint32_t max_cs_threads = screen->eu_total / screen->subslice_total * 7;
 
       /* Fuse configurations may give more threads than expected, never less. */
-      if (brw->max_cs_threads < devinfo->max_cs_threads)
-         brw->max_cs_threads = devinfo->max_cs_threads;
-   } else {
-      brw->max_cs_threads = devinfo->max_cs_threads;
+      if (max_cs_threads > devinfo->max_cs_threads)
+         devinfo->max_cs_threads = max_cs_threads;
    }
 
    /* Maximum number of scalar compute shader invocations that can be run in
@@ -830,7 +828,7 @@ brw_initialize_cs_context_constants(struct brw_context *brw)
     * threads. With SIMD32 and 64 threads, Haswell still provides twice the
     * required the number of invocation needed for ARB_compute_shader.
     */
-   const unsigned max_threads = MIN2(64, brw->max_cs_threads);
+   const unsigned max_threads = MIN2(64, devinfo->max_cs_threads);
    const uint32_t max_invocations = 32 * max_threads;
    ctx->Const.MaxComputeWorkGroupSize[0] = max_invocations;
    ctx->Const.MaxComputeWorkGroupSize[1] = max_invocations;
@@ -1078,17 +1076,7 @@ brwCreateContext(gl_api api,
    if (brw->gen >= 6)
       brw_blorp_init(brw);
 
-   brw->max_vs_threads = devinfo->max_vs_threads;
-   brw->max_hs_threads = devinfo->max_hs_threads;
-   brw->max_ds_threads = devinfo->max_ds_threads;
-   brw->max_gs_threads = devinfo->max_gs_threads;
-   brw->max_wm_threads = devinfo->max_wm_threads;
    brw->urb.size = devinfo->urb.size;
-   brw->urb.min_vs_entries = devinfo->urb.min_vs_entries;
-   brw->urb.max_vs_entries = devinfo->urb.max_vs_entries;
-   brw->urb.max_hs_entries = devinfo->urb.max_hs_entries;
-   brw->urb.max_ds_entries = devinfo->urb.max_ds_entries;
-   brw->urb.max_gs_entries = devinfo->urb.max_gs_entries;
 
    if (brw->gen == 6)
       brw->urb.gs_present = false;

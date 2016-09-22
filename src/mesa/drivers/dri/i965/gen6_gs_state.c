@@ -69,6 +69,8 @@ const struct brw_tracked_state gen6_gs_push_constants = {
 static void
 upload_gs_state_for_tf(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
+
    BEGIN_BATCH(7);
    OUT_BATCH(_3DSTATE_GS << 16 | (7 - 2));
    OUT_BATCH(brw->ff_gs.prog_offset);
@@ -76,7 +78,7 @@ upload_gs_state_for_tf(struct brw_context *brw)
    OUT_BATCH(0); /* no scratch space */
    OUT_BATCH((2 << GEN6_GS_DISPATCH_START_GRF_SHIFT) |
              (brw->ff_gs.prog_data->urb_read_length << GEN6_GS_URB_READ_LENGTH_SHIFT));
-   OUT_BATCH(((brw->max_gs_threads - 1) << GEN6_GS_MAX_THREADS_SHIFT) |
+   OUT_BATCH(((devinfo->max_gs_threads - 1) << GEN6_GS_MAX_THREADS_SHIFT) |
              GEN6_GS_STATISTICS_ENABLE |
              GEN6_GS_SO_STATISTICS_ENABLE |
              GEN6_GS_RENDERING_ENABLE);
@@ -91,6 +93,7 @@ upload_gs_state_for_tf(struct brw_context *brw)
 static void
 upload_gs_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    /* BRW_NEW_GEOMETRY_PROGRAM */
    bool active = brw->geometry_program;
    /* BRW_NEW_GS_PROG_DATA */
@@ -153,7 +156,7 @@ upload_gs_state(struct brw_context *brw)
                 (prog_data->base.dispatch_grf_start_reg <<
                  GEN6_GS_DISPATCH_START_GRF_SHIFT));
 
-      OUT_BATCH(((brw->max_gs_threads - 1) << GEN6_GS_MAX_THREADS_SHIFT) |
+      OUT_BATCH(((devinfo->max_gs_threads - 1) << GEN6_GS_MAX_THREADS_SHIFT) |
                 GEN6_GS_STATISTICS_ENABLE |
                 GEN6_GS_SO_STATISTICS_ENABLE |
                 GEN6_GS_RENDERING_ENABLE);

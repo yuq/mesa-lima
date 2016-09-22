@@ -32,6 +32,7 @@
 static void
 upload_vs_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_state *stage_state = &brw->vs.base;
    uint32_t floating_point_mode = 0;
@@ -71,7 +72,7 @@ upload_vs_state(struct brw_context *brw)
 
    uint32_t simd8_enable = prog_data->dispatch_mode == DISPATCH_MODE_SIMD8 ?
       GEN8_VS_SIMD8_ENABLE : 0;
-   OUT_BATCH(((brw->max_vs_threads - 1) << HSW_VS_MAX_THREADS_SHIFT) |
+   OUT_BATCH(((devinfo->max_vs_threads - 1) << HSW_VS_MAX_THREADS_SHIFT) |
              GEN6_VS_STATISTICS_ENABLE |
              simd8_enable |
              GEN6_VS_ENABLE);

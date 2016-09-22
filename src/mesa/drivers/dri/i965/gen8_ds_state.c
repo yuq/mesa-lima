@@ -29,6 +29,7 @@
 static void
 gen8_upload_ds_state(struct brw_context *brw)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    const struct brw_stage_state *stage_state = &brw->tes.base;
    /* BRW_NEW_TESS_PROGRAMS */
@@ -64,7 +65,7 @@ gen8_upload_ds_state(struct brw_context *brw)
 
       OUT_BATCH(GEN7_DS_ENABLE |
                 GEN7_DS_STATISTICS_ENABLE |
-                (brw->max_ds_threads - 1) << HSW_DS_MAX_THREADS_SHIFT |
+                (devinfo->max_ds_threads - 1) << HSW_DS_MAX_THREADS_SHIFT |
                 (vue_prog_data->dispatch_mode == DISPATCH_MODE_SIMD8 ?
                  GEN7_DS_SIMD8_DISPATCH_ENABLE : 0) |
                 (tes_prog_data->domain == BRW_TESS_DOMAIN_TRI ?

@@ -91,6 +91,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
                     struct brw_vs_prog_key *key)
 {
    const struct brw_compiler *compiler = brw->screen->compiler;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    GLuint program_size;
    const GLuint *program;
    struct brw_vs_prog_data prog_data;
@@ -112,7 +113,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    mem_ctx = ralloc_context(NULL);
 
    brw_assign_common_binding_table_offsets(MESA_SHADER_VERTEX,
-                                           &brw->screen->devinfo,
+                                           devinfo,
                                            prog, &vp->program.Base,
                                            &prog_data.base.base, 0);
 
@@ -160,7 +161,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
       ((1 << vp->program.Base.CullDistanceArraySize) - 1) <<
       vp->program.Base.ClipDistanceArraySize;
 
-   brw_compute_vue_map(&brw->screen->devinfo,
+   brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog ? prog->SeparateShader ||
                               prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]
@@ -222,7 +223,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    /* Scratch space is used for register spilling */
    brw_alloc_stage_scratch(brw, &brw->vs.base,
                            prog_data.base.base.total_scratch,
-                           brw->max_vs_threads);
+                           devinfo->max_vs_threads);
 
    brw_upload_cache(&brw->cache, BRW_CACHE_VS_PROG,
 		    key, sizeof(struct brw_vs_prog_key),

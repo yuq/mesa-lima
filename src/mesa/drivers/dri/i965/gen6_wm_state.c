@@ -80,6 +80,7 @@ gen6_upload_wm_state(struct brw_context *brw,
                      bool line_stipple_enable, bool polygon_stipple_enable,
                      bool statistic_enable)
 {
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint32_t dw2, dw4, dw5, dw6, ksp0, ksp2;
 
    /* We can't fold this into gen6_upload_wm_push_constants(), because
@@ -130,7 +131,7 @@ gen6_upload_wm_state(struct brw_context *brw,
    dw2 |= ((prog_data->base.binding_table.size_bytes / 4) <<
            GEN6_WM_BINDING_TABLE_ENTRY_COUNT_SHIFT);
 
-   dw5 |= (brw->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
+   dw5 |= (devinfo->max_wm_threads - 1) << GEN6_WM_MAX_THREADS_SHIFT;
 
    if (prog_data->dispatch_8)
       dw5 |= GEN6_WM_8_DISPATCH_ENABLE;
