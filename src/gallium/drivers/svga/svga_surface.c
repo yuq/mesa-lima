@@ -426,14 +426,12 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
                   "same resource used in shaderResource and renderTarget 0x%x\n",
                   s->handle);
          s = create_backed_surface_view(svga, s);
-         if (!s)
-            goto done;
-
+         /* s may be null here if the function failed */
          break;
       }
    }
 
-   if (s->view_id == SVGA3D_INVALID_ID) {
+   if (s && s->view_id == SVGA3D_INVALID_ID) {
       SVGA3dResourceType resType;
       SVGA3dRenderTargetViewDesc desc;
 
@@ -478,14 +476,13 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
       if (ret != PIPE_OK) {
          util_bitmask_clear(svga->surface_view_id_bm, s->view_id);
          s->view_id = SVGA3D_INVALID_ID;
-         goto done;
+         s = NULL;
       }
    }
    
-done:
    SVGA_STATS_TIME_POP(svga_sws(svga));
 
-   return &s->base;
+   return s ? &s->base : NULL;
 }
 
 
