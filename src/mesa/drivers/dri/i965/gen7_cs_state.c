@@ -46,7 +46,7 @@ brw_upload_cs_state(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->cs.base;
    struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
    struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
-   const struct gen_device_info *devinfo = brw->screen->devinfo;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
 
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
       brw_emit_buffer_surface_state(

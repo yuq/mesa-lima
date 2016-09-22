@@ -112,7 +112,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    mem_ctx = ralloc_context(NULL);
 
    brw_assign_common_binding_table_offsets(MESA_SHADER_VERTEX,
-                                           brw->screen->devinfo,
+                                           &brw->screen->devinfo,
                                            prog, &vp->program.Base,
                                            &prog_data.base.base, 0);
 
@@ -160,7 +160,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
       ((1 << vp->program.Base.CullDistanceArraySize) - 1) <<
       vp->program.Base.ClipDistanceArraySize;
 
-   brw_compute_vue_map(brw->screen->devinfo,
+   brw_compute_vue_map(&brw->screen->devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog ? prog->SeparateShader ||
                               prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]

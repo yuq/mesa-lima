@@ -365,8 +365,8 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
                                           VkFormat format,
                                           VkFormatProperties *out_properties)
 {
-   int gen = physical_device->info->gen * 10;
-   if (physical_device->info->is_haswell)
+   int gen = physical_device->info.gen * 10;
+   if (physical_device->info.is_haswell)
       gen += 5;
 
    VkFormatFeatureFlags linear = 0, tiled = 0, buffer = 0;
@@ -374,25 +374,25 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
       /* Nothing to do here */
    } else if (vk_format_is_depth_or_stencil(format)) {
       tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      if (physical_device->info->gen >= 8)
+      if (physical_device->info.gen >= 8)
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
 
       tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
                VK_FORMAT_FEATURE_BLIT_DST_BIT;
    } else {
       struct anv_format linear_fmt, tiled_fmt;
-      linear_fmt = anv_get_format(physical_device->info, format,
+      linear_fmt = anv_get_format(&physical_device->info, format,
                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                   VK_IMAGE_TILING_LINEAR);
-      tiled_fmt = anv_get_format(physical_device->info, format,
+      tiled_fmt = anv_get_format(&physical_device->info, format,
                                  VK_IMAGE_ASPECT_COLOR_BIT,
                                  VK_IMAGE_TILING_OPTIMAL);
 
-      linear = get_image_format_properties(physical_device->info,
+      linear = get_image_format_properties(&physical_device->info,
                                            linear_fmt.isl_format, linear_fmt);
-      tiled = get_image_format_properties(physical_device->info,
+      tiled = get_image_format_properties(&physical_device->info,
                                           linear_fmt.isl_format, tiled_fmt);
-      buffer = get_buffer_format_properties(physical_device->info,
+      buffer = get_buffer_format_properties(&physical_device->info,
                                             linear_fmt.isl_format);
 
       /* XXX: We handle 3-channel formats by switching them out for RGBX or

@@ -40,7 +40,7 @@
 struct intel_screen
 {
    int deviceID;
-   const struct gen_device_info *devinfo;
+   struct gen_device_info devinfo;
 
    __DRIscreen *driScrnPriv;
 

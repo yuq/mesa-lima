@@ -487,21 +487,20 @@ static const struct gen_device_info gen_device_info_kbl_gt4 = {
    .num_slices = 3,
 };
 
-const struct gen_device_info *
-gen_get_device_info(int devid)
+const bool
+gen_get_device_info(int devid, struct gen_device_info *devinfo)
 {
-   const struct gen_device_info *devinfo;
    switch (devid) {
 #undef CHIPSET
 #define CHIPSET(id, family, name) \
-   case id: devinfo = &gen_device_info_##family; break;
+      case id: *devinfo = gen_device_info_##family; break;
 #include "pci_ids/i965_pci_ids.h"
    default:
       fprintf(stderr, "i965_dri.so does not support the 0x%x PCI ID.\n", devid);
-      return NULL;
+      return false;
    }
 
-   return devinfo;
+   return true;
 }
 
 const char *

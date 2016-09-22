@@ -1088,7 +1088,7 @@ intelCreateBuffer(__DRIscreen *dri_screen,
    if (mesaVis->depthBits == 24) {
       assert(mesaVis->stencilBits == 8);
 
-      if (screen->devinfo->has_hiz_and_separate_stencil) {
+      if (screen->devinfo.has_hiz_and_separate_stencil) {
          rb = intel_create_private_renderbuffer(MESA_FORMAT_Z24_UNORM_X8_UINT,
                                                 num_samples);
          _mesa_add_renderbuffer(fb, BUFFER_DEPTH, &rb->Base.Base);
@@ -1141,7 +1141,7 @@ intelDestroyBuffer(__DRIdrawable * driDrawPriv)
 static void
 intel_detect_sseu(struct intel_screen *screen)
 {
-   assert(screen->devinfo->gen >= 8);
+   assert(screen->devinfo.gen >= 8);
    int ret;
 
    screen->subslice_total = -1;
@@ -1278,13 +1278,13 @@ intel_supported_msaa_modes(const struct intel_screen  *screen)
    static const int gen6_modes[] = {4, 0, -1};
    static const int gen4_modes[] = {0, -1};
 
-   if (screen->devinfo->gen >= 9) {
+   if (screen->devinfo.gen >= 9) {
       return gen9_modes;
-   } else if (screen->devinfo->gen >= 8) {
+   } else if (screen->devinfo.gen >= 8) {
       return gen8_modes;
-   } else if (screen->devinfo->gen >= 7) {
+   } else if (screen->devinfo.gen >= 7) {
       return gen7_modes;
-   } else if (screen->devinfo->gen == 6) {
+   } else if (screen->devinfo.gen == 6) {
       return gen6_modes;
    } else {
       return gen4_modes;
@@ -1309,7 +1309,7 @@ intel_screen_make_configs(__DRIscreen *dri_screen)
    static const uint8_t multisample_samples[2]  = {4, 8};
 
    struct intel_screen *screen = dri_screen->driverPrivate;
-   const struct gen_device_info *devinfo = screen->devinfo;
+   const struct gen_device_info *devinfo = &screen->devinfo;
    uint8_t depth_bits[4], stencil_bits[4];
    __DRIconfig **configs = NULL;
 
@@ -1431,9 +1431,9 @@ static void
 set_max_gl_versions(struct intel_screen *screen)
 {
    __DRIscreen *dri_screen = screen->driScrnPriv;
-   const bool has_astc = screen->devinfo->gen >= 9;
+   const bool has_astc = screen->devinfo.gen >= 9;
 
-   switch (screen->devinfo->gen) {
+   switch (screen->devinfo.gen) {
    case 9:
    case 8:
       dri_screen->max_gl_core_version = 44;
@@ -1445,7 +1445,7 @@ set_max_gl_versions(struct intel_screen *screen)
       dri_screen->max_gl_core_version = 33;
       dri_screen->max_gl_compat_version = 30;
       dri_screen->max_gl_es1_version = 11;
-      dri_screen->max_gl_es2_version = screen->devinfo->is_haswell ? 31 : 30;
+      dri_screen->max_gl_es2_version = screen->devinfo.is_haswell ? 31 : 30;
       break;
    case 6:
       dri_screen->max_gl_core_version = 33;
@@ -1573,8 +1573,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
        return false;
 
    screen->deviceID = drm_intel_bufmgr_gem_get_devid(screen->bufmgr);
-   screen->devinfo = gen_get_device_info(screen->deviceID);
-   if (!screen->devinfo)
+   if (!gen_get_device_info(screen->deviceID, &screen->devinfo))
       return false;
 
    brw_process_intel_debug_variable();
@@ -1582,7 +1581,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    if (INTEL_DEBUG & DEBUG_BUFMGR)
       dri_bufmgr_set_debug(screen->bufmgr, true);
 
-   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && screen->devinfo->gen < 7) {
+   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && screen->devinfo.gen < 7) {
       fprintf(stderr,
               "shader_time debugging requires gen7 (Ivybridge) or better.\n");
       INTEL_DEBUG &= ~DEBUG_SHADER_TIME;
@@ -1632,10 +1631,10 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->hw_has_timestamp = intel_detect_timestamp(screen);
 
    /* GENs prior to 8 do not support EU/Subslice info */
-   if (screen->devinfo->gen >= 8) {
+   if (screen->devinfo.gen >= 8) {
       intel_detect_sseu(screen);
-   } else if (screen->devinfo->gen == 7) {
-      screen->subslice_total = 1 << (screen->devinfo->gt - 1);
+   } else if (screen->devinfo.gen == 7) {
+      screen->subslice_total = 1 << (screen->devinfo.gt - 1);
    }
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
@@ -1659,7 +1658,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
     *
     * Don't even try on pre-Gen6, since we don't attempt to use contexts there.
     */
-   if (screen->devinfo->gen >= 6) {
+   if (screen->devinfo.gen >= 6) {
       struct drm_i915_reset_stats stats;
       memset(&stats, 0, sizeof(stats));
 
@@ -1678,20 +1677,20 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
     * MI_MATH GPR registers, and version 7 in order to use
     * MI_LOAD_REGISTER_REG (which all users of MI_MATH use).
     */
-   screen->has_mi_math_and_lrr = screen->devinfo->gen >= 8 ||
-                                      (screen->devinfo->is_haswell &&
+   screen->has_mi_math_and_lrr = screen->devinfo.gen >= 8 ||
+                                      (screen->devinfo.is_haswell &&
                                        screen->cmd_parser_version >= 7);
 
    dri_screen->extensions = !screen->has_context_reset_notification
       ? screenExtensions : intelRobustScreenExtensions;
 
    screen->compiler = brw_compiler_create(screen,
-                                               screen->devinfo);
+                                          &screen->devinfo);
    screen->compiler->shader_debug_log = shader_debug_log_mesa;
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
    screen->program_id = 1;
 
-   if (screen->devinfo->has_resource_streamer) {
+   if (screen->devinfo.has_resource_streamer) {
       screen->has_resource_streamer =
         intel_get_boolean(screen, I915_PARAM_HAS_RESOURCE_STREAMER);
    }

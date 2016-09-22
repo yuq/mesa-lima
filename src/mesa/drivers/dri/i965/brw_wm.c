@@ -97,7 +97,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (!prog)
       prog_data.base.use_alt_mode = true;
 
-   assign_fs_binding_table_offsets(brw->screen->devinfo, prog,
+   assign_fs_binding_table_offsets(&brw->screen->devinfo, prog,
                                    &fp->program.Base, key, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the

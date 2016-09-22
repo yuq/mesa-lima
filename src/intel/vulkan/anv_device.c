@@ -77,19 +77,18 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
 
    device->name = gen_get_device_name(device->chipset_id);
-   device->info = gen_get_device_info(device->chipset_id);
-   if (!device->info) {
+   if (!gen_get_device_info(device->chipset_id, &device->info)) {
       result = vk_error(VK_ERROR_INCOMPATIBLE_DRIVER);
       goto fail;
    }
 
-   if (device->info->is_haswell) {
+   if (device->info.is_haswell) {
       fprintf(stderr, "WARNING: Haswell Vulkan support is incomplete\n");
-   } else if (device->info->gen == 7 && !device->info->is_baytrail) {
+   } else if (device->info.gen == 7 && !device->info.is_baytrail) {
       fprintf(stderr, "WARNING: Ivy Bridge Vulkan support is incomplete\n");
-   } else if (device->info->gen == 7 && device->info->is_baytrail) {
+   } else if (device->info.gen == 7 && device->info.is_baytrail) {
       fprintf(stderr, "WARNING: Bay Trail Vulkan support is incomplete\n");
-   } else if (device->info->gen >= 8) {
+   } else if (device->info.gen >= 8) {
       /* Broadwell, Cherryview, Skylake, Broxton, Kabylake is as fully
        * supported as anything */
    } else {
@@ -99,7 +98,7 @@ anv_physical_device_init(struct anv_physical_device *device,
    }
 
    device->cmd_parser_version = -1;
-   if (device->info->gen == 7) {
+   if (device->info.gen == 7) {
       device->cmd_parser_version =
          anv_gem_get_param(fd, I915_PARAM_CMD_PARSER_VERSION);
       if (device->cmd_parser_version == -1) {
@@ -127,7 +126,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   if (!device->info->has_llc &&
+   if (!device->info.has_llc &&
        anv_gem_get_param(fd, I915_PARAM_MMAP_VERSION) < 1) {
       result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
                          "kernel missing wc mmap");
@@ -136,14 +135,14 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
-   device->max_vs_threads = device->info->max_vs_threads;
-   device->max_hs_threads = device->info->max_hs_threads;
-   device->max_ds_threads = device->info->max_ds_threads;
-   device->max_gs_threads = device->info->max_gs_threads;
-   device->max_wm_threads = device->info->max_wm_threads;
+   device->max_vs_threads = device->info.max_vs_threads;
+   device->max_hs_threads = device->info.max_hs_threads;
+   device->max_ds_threads = device->info.max_ds_threads;
+   device->max_gs_threads = device->info.max_gs_threads;
+   device->max_wm_threads = device->info.max_wm_threads;
 
    /* GENs prior to 8 do not support EU/Subslice info */
-   if (device->info->gen >= 8) {
+   if (device->info.gen >= 8) {
       device->subslice_total = anv_gem_get_param(fd, I915_PARAM_SUBSLICE_TOTAL);
       device->eu_total = anv_gem_get_param(fd, I915_PARAM_EU_TOTAL);
 
@@ -155,27 +154,27 @@ anv_physical_device_init(struct anv_physical_device *device,
          fprintf(stderr, "WARNING: Kernel 4.1 required to properly"
                          " query GPU properties.\n");
       }
-   } else if (device->info->gen == 7) {
-      device->subslice_total = 1 << (device->info->gt - 1);
+   } else if (device->info.gen == 7) {
+      device->subslice_total = 1 << (device->info.gt - 1);
    }
 
-   if (device->info->is_cherryview &&
+   if (device->info.is_cherryview &&
        device->subslice_total > 0 && device->eu_total > 0) {
       /* Logical CS threads = EUs per subslice * 7 threads per EU */
       device->max_cs_threads = device->eu_total / device->subslice_total * 7;
 
       /* Fuse configurations may give more threads than expected, never less. */
-      if (device->max_cs_threads < device->info->max_cs_threads)
-         device->max_cs_threads = device->info->max_cs_threads;
+      if (device->max_cs_threads < device->info.max_cs_threads)
+         device->max_cs_threads = device->info.max_cs_threads;
    } else {
-      device->max_cs_threads = device->info->max_cs_threads;
+      device->max_cs_threads = device->info.max_cs_threads;
    }
 
    close(fd);
 
    brw_process_intel_debug_variable();
 
-   device->compiler = brw_compiler_create(NULL, device->info);
+   device->compiler = brw_compiler_create(NULL, &device->info);
    if (device->compiler == NULL) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail;
@@ -188,7 +187,7 @@ anv_physical_device_init(struct anv_physical_device *device,
        goto fail;
 
    /* XXX: Actually detect bit6 swizzling */
-   isl_device_init(&device->isl_dev, device->info, swizzled);
+   isl_device_init(&device->isl_dev, &device->info, swizzled);
 
    return VK_SUCCESS;
 
@@ -237,7 +236,7 @@ static const VkExtensionProperties device_extensions[] = {
 };
 
 static void *
-default_alloc_func(void *pUserData, size_t size, size_t align, 
+default_alloc_func(void *pUserData, size_t size, size_t align,
                    VkSystemAllocationScope allocationScope)
 {
    return malloc(size);
@@ -428,9 +427,9 @@ void anv_GetPhysicalDeviceFeatures(
       .alphaToOne                               = true,
       .multiViewport                            = true,
       .samplerAnisotropy                        = false, /* FINISHME */
-      .textureCompressionETC2                   = pdevice->info->gen >= 8 ||
-                                                  pdevice->info->is_baytrail,
-      .textureCompressionASTC_LDR               = pdevice->info->gen >= 9, /* FINISHME CHV */
+      .textureCompressionETC2                   = pdevice->info.gen >= 8 ||
+                                                  pdevice->info.is_baytrail,
+      .textureCompressionASTC_LDR               = pdevice->info.gen >= 9, /* FINISHME CHV */
       .textureCompressionBC                     = true,
       .occlusionQueryPrecise                    = true,
       .pipelineStatisticsQuery                  = false,
@@ -473,7 +472,7 @@ void anv_GetPhysicalDeviceProperties(
     VkPhysicalDeviceProperties*                 pProperties)
 {
    ANV_FROM_HANDLE(anv_physical_device, pdevice, physicalDevice);
-   const struct gen_device_info *devinfo = pdevice->info;
+   const struct gen_device_info *devinfo = &pdevice->info;
 
    const float time_stamp_base = devinfo->gen >= 9 ? 83.333 : 80.0;
 
@@ -645,7 +644,7 @@ void anv_GetPhysicalDeviceMemoryProperties(
     */
    heap_size = 3 * physical_device->aperture_size / 4;
 
-   if (physical_device->info->has_llc) {
+   if (physical_device->info.has_llc) {
       /* Big core GPUs share LLC with the CPU and thus one memory type can be
        * both cached and coherent at the same time.
        */
@@ -861,7 +860,7 @@ VkResult anv_CreateDevice(
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
-   anv_set_dispatch_devinfo(physical_device->info);
+   anv_set_dispatch_devinfo(&physical_device->info);
 
    device = anv_alloc2(&physical_device->instance->alloc, pAllocator,
                        sizeof(*device), 8,
@@ -891,7 +890,7 @@ VkResult anv_CreateDevice(
       goto fail_fd;
    }
 
-   device->info = *physical_device->info;
+   device->info = physical_device->info;
    device->isl_dev = physical_device->isl_dev;
 
    /* On Broadwell and later, we can use batch chaining to more efficiently

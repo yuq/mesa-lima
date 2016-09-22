@@ -84,7 +84,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       prog_data.base.total_shared = prog->Comp.SharedSize;
    }
 
-   assign_cs_binding_table_offsets(brw->screen->devinfo, prog,
+   assign_cs_binding_table_offsets(&brw->screen->devinfo, prog,
                                    &cp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the

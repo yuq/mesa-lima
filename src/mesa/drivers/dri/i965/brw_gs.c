@@ -105,7 +105,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   assign_gs_binding_table_offsets(brw->screen->devinfo, prog,
+   assign_gs_binding_table_offsets(&brw->screen->devinfo, prog,
                                    &gp->program.Base, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
@@ -139,7 +139,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
       ((1 << gp->program.Base.CullDistanceArraySize) - 1) <<
       gp->program.Base.ClipDistanceArraySize;
 
-   brw_compute_vue_map(brw->screen->devinfo,
+   brw_compute_vue_map(&brw->screen->devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog->SeparateShader);
 

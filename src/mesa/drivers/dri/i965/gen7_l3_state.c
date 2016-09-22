@@ -58,7 +58,7 @@ get_pipeline_state_l3_weights(const struct brw_context *brw)
       needs_slm |= prog_data && prog_data->total_shared;
    }
 
-   return gen_get_default_l3_weights(brw->screen->devinfo,
+   return gen_get_default_l3_weights(&brw->screen->devinfo,
                                      needs_dc, needs_slm);
 }
 
@@ -197,7 +197,7 @@ setup_l3_config(struct brw_context *brw, const struct gen_l3_config *cfg)
 static void
 update_urb_size(struct brw_context *brw, const struct gen_l3_config *cfg)
 {
-   const struct gen_device_info *devinfo = brw->screen->devinfo;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const unsigned sz = gen_get_l3_config_urb_size(devinfo, cfg);
 
    if (brw->urb.size != sz) {
@@ -230,7 +230,7 @@ emit_l3_state(struct brw_context *brw)
 
    if (dw > dw_threshold && brw->can_do_pipelined_register_writes) {
       const struct gen_l3_config *const cfg =
-         gen_get_l3_config(brw->screen->devinfo, w);
+         gen_get_l3_config(&brw->screen->devinfo, w);
 
       setup_l3_config(brw, cfg);
       update_urb_size(brw, cfg);
@@ -292,7 +292,7 @@ const struct brw_tracked_state gen7_l3_state = {
 void
 gen7_restore_default_l3_config(struct brw_context *brw)
 {
-   const struct gen_device_info *devinfo = brw->screen->devinfo;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    const struct gen_l3_config *const cfg = gen_get_default_l3_config(devinfo);
 
    if (cfg != brw->l3.config && brw->can_do_pipelined_register_writes) {

@@ -59,7 +59,7 @@ static void compile_sf_prog( struct brw_context *brw,
    mem_ctx = ralloc_context(NULL);
    /* Begin the compilation:
     */
-   brw_init_codegen(brw->screen->devinfo, &c.func, mem_ctx);
+   brw_init_codegen(&brw->screen->devinfo, &c.func, mem_ctx);
 
    c.key = *key;
    c.vue_map = brw->vue_map_geom_out;
@@ -118,7 +118,7 @@ static void compile_sf_prog( struct brw_context *brw,
 
    if (unlikely(INTEL_DEBUG & DEBUG_SF)) {
       fprintf(stderr, "sf:\n");
-      brw_disassemble(brw->screen->devinfo,
+      brw_disassemble(&brw->screen->devinfo,
                       c.func.store, 0, program_size, stderr);
       fprintf(stderr, "\n");
    }

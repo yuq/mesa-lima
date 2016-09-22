@@ -207,7 +207,7 @@ intel_texture_view_requires_resolve(struct brw_context *brw,
 
    const uint32_t brw_format = brw_format_for_mesa_format(intel_tex->_Format);
 
-   if (isl_format_supports_lossless_compression(brw->screen->devinfo,
+   if (isl_format_supports_lossless_compression(&brw->screen->devinfo,
                                                 brw_format))
       return false;
 
@@ -806,7 +806,7 @@ brw_initialize_cs_context_constants(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct intel_screen *screen = brw->screen;
-   const struct gen_device_info *devinfo = screen->devinfo;
+   const struct gen_device_info *devinfo = &screen->devinfo;
 
    /* FINISHME: Do this for all platforms that the kernel supports */
    if (brw->is_cherryview &&
@@ -919,7 +919,7 @@ brwCreateContext(gl_api api,
 {
    struct gl_context *shareCtx = (struct gl_context *) sharedContextPrivate;
    struct intel_screen *screen = driContextPriv->driScreenPriv->driverPrivate;
-   const struct gen_device_info *devinfo = screen->devinfo;
+   const struct gen_device_info *devinfo = &screen->devinfo;
    struct dd_function_table functions;
 
    /* Only allow the __DRI_CTX_FLAG_ROBUST_BUFFER_ACCESS flag if the kernel

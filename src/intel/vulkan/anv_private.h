@@ -564,7 +564,7 @@ struct anv_physical_device {
     uint32_t                                    chipset_id;
     char                                        path[20];
     const char *                                name;
-    const struct gen_device_info *              info;
+    struct gen_device_info                      info;
     uint64_t                                    aperture_size;
     struct brw_compiler *                       compiler;
     struct isl_device                           isl_dev;

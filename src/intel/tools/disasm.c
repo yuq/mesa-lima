@@ -101,7 +101,9 @@ gen_disasm_create(int pciid)
    if (gd == NULL)
       return NULL;
 
-   gd->devinfo = *gen_get_device_info(pciid);
+   if (!gen_get_device_info(pciid, &gd->devinfo))
+      return NULL;
+
    brw_init_compaction_tables(&gd->devinfo);
 
    return gd;

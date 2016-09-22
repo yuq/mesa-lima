@@ -94,7 +94,7 @@ brw_emit_surface_state(struct brw_context *brw,
    surf.dim = get_isl_surf_dim(target);
 
    const enum isl_dim_layout dim_layout =
-      get_isl_dim_layout(brw->screen->devinfo, mt->tiling, target);
+      get_isl_dim_layout(&brw->screen->devinfo, mt->tiling, target);
 
    if (surf.dim_layout != dim_layout) {
       /* The layout of the specified texture target is not compatible with the
@@ -441,7 +441,7 @@ brw_texture_view_sane(const struct brw_context *brw,
    if (!intel_miptree_is_lossless_compressed(brw, mt))
       return true;
 
-   if (isl_format_supports_lossless_compression(brw->screen->devinfo,
+   if (isl_format_supports_lossless_compression(&brw->screen->devinfo,
                                                 format))
       return true;
 
@@ -1075,7 +1075,7 @@ brw_update_renderbuffer_surfaces(struct brw_context *brw,
          const uint32_t surf_index = render_target_start + i;
          const int flags = (_mesa_geometric_layers(fb) > 0 ?
                               INTEL_RENDERBUFFER_LAYERED : 0) |
-                           (brw->draw_aux_buffer_disabled[i] ? 
+                           (brw->draw_aux_buffer_disabled[i] ?
                               INTEL_AUX_BUFFER_DISABLED : 0);
 
 	 if (intel_renderbuffer(fb->_ColorDrawBuffers[i])) {
@@ -1150,7 +1150,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
          if (irb) {
             const unsigned format = brw->render_target_format[
                _mesa_get_render_format(ctx, intel_rb_format(irb))];
-            assert(isl_format_supports_sampling(brw->screen->devinfo,
+            assert(isl_format_supports_sampling(&brw->screen->devinfo,
                                                 format));
 
             /* Override the target of the texture if the render buffer is a
@@ -1577,7 +1577,7 @@ const struct brw_tracked_state brw_cs_image_surfaces = {
 static uint32_t
 get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
 {
-   const struct gen_device_info *devinfo = brw->screen->devinfo;
+   const struct gen_device_info *devinfo = &brw->screen->devinfo;
    uint32_t hw_format = brw_format_for_mesa_format(format);
    if (access == GL_WRITE_ONLY) {
       return hw_format;
