@@ -1840,10 +1840,12 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
    /* _NEW_PROGRAM */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+   /* BRW_NEW_CS_PROG_DATA */
+   const struct brw_cs_prog_data *cs_prog_data = brw->cs.prog_data;
 
-   if (prog && brw->cs.prog_data->uses_num_work_groups) {
+   if (prog && cs_prog_data->uses_num_work_groups) {
       const unsigned surf_idx =
-         brw->cs.prog_data->binding_table.work_groups_start;
+         cs_prog_data->binding_table.work_groups_start;
       uint32_t *surf_offset = &brw->cs.base.surf_offset[surf_idx];
       drm_intel_bo *bo;
       uint32_t bo_offset;
@@ -1872,6 +1874,7 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
 const struct brw_tracked_state brw_cs_work_groups_surface = {
    .dirty = {
       .brw = BRW_NEW_BLORP |
+             BRW_NEW_CS_PROG_DATA |
              BRW_NEW_CS_WORK_GROUPS
    },
    .emit = brw_upload_cs_work_groups_surface,
