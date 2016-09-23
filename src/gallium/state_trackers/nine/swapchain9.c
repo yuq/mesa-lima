@@ -353,27 +353,31 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         if (tmplt.format == PIPE_FORMAT_NONE)
             return D3DERR_INVALIDCALL;
 
-        resource = This->screen->resource_create(This->screen, &tmplt);
-        if (!resource) {
-            DBG("Failed to create pipe_resource for depth buffer.\n");
-            return D3DERR_OUTOFVIDEOMEMORY;
-        }
         if (This->zsbuf) {
+            resource = This->screen->resource_create(This->screen, &tmplt);
+            if (!resource) {
+                DBG("Failed to create pipe_resource for depth buffer.\n");
+                return D3DERR_OUTOFVIDEOMEMORY;
+            }
+
             NineSurface9_SetMultiSampleType(This->zsbuf, desc.MultiSampleType);
             NineSurface9_SetResourceResize(This->zsbuf, resource);
             pipe_resource_reference(&resource, NULL);
         } else {
-            /* XXX wine thinks the container of this should be the device */
-            desc.Format = pParams->AutoDepthStencilFormat;
-            desc.Usage = D3DUSAGE_DEPTHSTENCIL;
-            hr = NineSurface9_new(pDevice, NineUnknown(pDevice), resource, NULL, 0,
-                                  0, 0, &desc, &This->zsbuf);
-            pipe_resource_reference(&resource, NULL);
+            hr = NineDevice9_CreateDepthStencilSurface(pDevice,
+                                                       pParams->BackBufferWidth,
+                                                       pParams->BackBufferHeight,
+                                                       pParams->AutoDepthStencilFormat,
+                                                       pParams->MultiSampleType,
+                                                       pParams->MultiSampleQuality,
+                                                       0,
+                                                       (IDirect3DSurface9 **)&This->zsbuf,
+                                                       NULL);
             if (FAILED(hr)) {
                 DBG("Failed to create ZS surface.\n");
                 return hr;
             }
-            This->zsbuf->base.base.forward = FALSE;
+            NineUnknown_ConvertRefToBind(NineUnknown(This->zsbuf));
         }
     }
 
@@ -493,7 +497,7 @@ NineSwapChain9_dtor( struct NineSwapChain9 *This )
         }
     }
     if (This->zsbuf)
-        NineUnknown_Destroy(NineUnknown(This->zsbuf));
+        NineUnknown_Unbind(NineUnknown(This->zsbuf));
 
     if (This->present)
         ID3DPresent_Release(This->present);
