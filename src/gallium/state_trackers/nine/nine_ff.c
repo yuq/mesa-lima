@@ -316,14 +316,15 @@ build_vs_add_input(struct vs_build_ctx *vs, uint16_t ndecl)
 /* NOTE: dst may alias src */
 static inline void
 ureg_normalize3(struct ureg_program *ureg,
-                struct ureg_dst dst, struct ureg_src src,
-                struct ureg_dst tmp)
+                struct ureg_dst dst, struct ureg_src src)
 {
+    struct ureg_dst tmp = ureg_DECL_temporary(ureg);
     struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
 
     ureg_DP3(ureg, tmp_x, src, src);
     ureg_RSQ(ureg, tmp_x, _X(tmp));
     ureg_MUL(ureg, dst, src, _X(tmp));
+    ureg_release_temporary(ureg, tmp);
 }
 
 static void *
@@ -332,15 +333,11 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     const struct nine_ff_vs_key *key = vs->key;
     struct ureg_program *ureg = ureg_create(PIPE_SHADER_VERTEX);
     struct ureg_dst oPos, oCol[2], oPsz, oFog;
-    struct ureg_dst rVtx, rNrm;
-    struct ureg_dst r[8];
     struct ureg_dst AR;
-    struct ureg_dst tmp, tmp_x, tmp_y, tmp_z;
     unsigned i, c;
     unsigned label[32], l = 0;
-    unsigned num_r = 8;
-    boolean need_rNrm = key->lighting || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
-    boolean need_rVtx = key->lighting || key->fog_mode || key->pointscale;
+    boolean need_aNrm = key->lighting || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
+    boolean need_aVtx = key->lighting || key->fog_mode || key->pointscale;
     const unsigned texcoord_sn = get_texcoord_sn(device->screen);
 
     vs->ureg = ureg;
@@ -349,13 +346,13 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     for (i = 0; i < 8 * 3; i += 3) {
         switch ((key->tc_gen >> i) & 0x3) {
         case NINED3DTSS_TCI_CAMERASPACENORMAL:
-            need_rNrm = TRUE;
+            need_aNrm = TRUE;
             break;
         case NINED3DTSS_TCI_CAMERASPACEPOSITION:
-            need_rVtx = TRUE;
+            need_aVtx = TRUE;
             break;
         case NINED3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR:
-            need_rVtx = need_rNrm = TRUE;
+            need_aVtx = need_aNrm = TRUE;
             break;
         default:
             break;
@@ -368,7 +365,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     vs->aVtx = build_vs_add_input(vs,
         key->position_t ? NINE_DECLUSAGE_POSITIONT : NINE_DECLUSAGE_POSITION);
 
-    if (need_rNrm)
+    if (need_aNrm)
         vs->aNrm = build_vs_add_input(vs, NINE_DECLUSAGE_NORMAL);
 
     vs->aCol[0] = ureg_imm1f(ureg, 1.0f);
@@ -427,32 +424,27 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         oPsz = ureg_writemask(oPsz, TGSI_WRITEMASK_X);
     }
 
-    /* Declare TEMPs:
-     */
-    for (i = 0; i < num_r; ++i)
-        r[i] = ureg_DECL_temporary(ureg);
-    tmp = r[0];
-    tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
-    tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
-    tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
     if (key->lighting || key->vertexblend)
         AR = ureg_DECL_address(ureg);
-
-    rVtx = ureg_writemask(r[1], TGSI_WRITEMASK_XYZ);
-    rNrm = ureg_writemask(r[2], TGSI_WRITEMASK_XYZ);
 
     /* === Vertex transformation / vertex blending:
      */
     if (key->vertextween) {
+        struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
         assert(!key->vertexblend);
-        ureg_LRP(ureg, r[2], _XXXX(_CONST(30)), vs->aVtx, vs->aVtx1);
-        if (need_rNrm)
-            ureg_LRP(ureg, r[3], _XXXX(_CONST(30)), vs->aNrm, vs->aNrm1);
-        vs->aVtx = ureg_src(r[2]);
-        vs->aNrm = ureg_src(r[3]);
+        ureg_LRP(ureg, aVtx_dst, _XXXX(_CONST(30)), vs->aVtx, vs->aVtx1);
+        vs->aVtx = ureg_src(aVtx_dst);
+        if (need_aNrm) {
+            struct ureg_dst aNrm_dst = ureg_DECL_temporary(ureg);
+            ureg_LRP(ureg, aNrm_dst, _XXXX(_CONST(30)), vs->aNrm, vs->aNrm1);
+            vs->aNrm = ureg_src(aNrm_dst);
+        }
     }
 
     if (key->vertexblend) {
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
+        struct ureg_dst sum_blendweights = ureg_DECL_temporary(ureg);
         struct ureg_src cWM[4];
 
         for (i = 224; i <= 255; ++i)
@@ -464,8 +456,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_ARL(ureg, AR, ureg_src(tmp));
         }
 
-        ureg_MOV(ureg, r[2], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 0.0f));
-        ureg_MOV(ureg, r[3], ureg_imm4f(ureg, 1.0f, 1.0f, 1.0f, 1.0f));
+        ureg_MOV(ureg, aVtx_dst, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 0.0f));
+        ureg_MOV(ureg, sum_blendweights, ureg_imm4f(ureg, 1.0f, 1.0f, 1.0f, 1.0f));
 
         for (i = 0; i < key->vertexblend; ++i) {
             for (c = 0; c < 4; ++c) {
@@ -481,27 +473,33 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
             if (i < (key->vertexblend - 1)) {
                 /* accumulate weighted position value */
-                ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(r[2]));
+                ureg_MAD(ureg, aVtx_dst, ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(aVtx_dst));
                 /* subtract weighted position value for last value */
-                ureg_SUB(ureg, r[3], ureg_src(r[3]), ureg_scalar(vs->aWgt, i));
+                ureg_SUB(ureg, sum_blendweights, ureg_src(sum_blendweights), ureg_scalar(vs->aWgt, i));
             }
         }
 
         /* the last weighted position is always 1 - sum_of_previous_weights */
-        ureg_MAD(ureg, r[2], ureg_src(tmp), ureg_scalar(ureg_src(r[3]), key->vertexblend - 1), ureg_src(r[2]));
+        ureg_MAD(ureg, aVtx_dst, ureg_src(tmp), ureg_scalar(ureg_src(sum_blendweights), key->vertexblend - 1), ureg_src(aVtx_dst));
 
         /* multiply by VIEW_PROJ */
-        ureg_MUL(ureg, tmp, _X(r[2]), _CONST(8));
-        ureg_MAD(ureg, tmp, _Y(r[2]), _CONST(9),  ureg_src(tmp));
-        ureg_MAD(ureg, tmp, _Z(r[2]), _CONST(10), ureg_src(tmp));
-        ureg_MAD(ureg, oPos, _W(r[2]), _CONST(11), ureg_src(tmp));
+        ureg_MUL(ureg, tmp, _X(aVtx_dst), _CONST(8));
+        ureg_MAD(ureg, tmp, _Y(aVtx_dst), _CONST(9),  ureg_src(tmp));
+        ureg_MAD(ureg, tmp, _Z(aVtx_dst), _CONST(10), ureg_src(tmp));
+        ureg_MAD(ureg, oPos, _W(aVtx_dst), _CONST(11), ureg_src(tmp));
 
-        if (need_rVtx)
-            vs->aVtx = ureg_src(r[2]);
+        if (need_aVtx)
+            vs->aVtx = ureg_src(aVtx_dst);
+
+        ureg_release_temporary(ureg, tmp);
+        ureg_release_temporary(ureg, sum_blendweights);
+        if (!need_aVtx)
+            ureg_release_temporary(ureg, aVtx_dst);
     } else
     if (key->position_t && device->driver_caps.window_space_position_support) {
         ureg_MOV(ureg, oPos, vs->aVtx);
     } else if (key->position_t) {
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
         /* vs->aVtx contains the coordinates buffer wise.
         * later in the pipeline, clipping, viewport and division
         * by w (rhw = 1/w) are going to be applied, so do the reverse
@@ -519,60 +517,74 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         /* multiply X, Y, Z by w */
         ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _W(tmp));
         ureg_MOV(ureg, oPos, ureg_src(tmp));
+        ureg_release_temporary(ureg, tmp);
     } else {
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
         /* position = vertex * WORLD_VIEW_PROJ */
         ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), _CONST(0));
         ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), _CONST(1), ureg_src(tmp));
         ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), _CONST(2), ureg_src(tmp));
         ureg_MAD(ureg, oPos, _WWWW(vs->aVtx), _CONST(3), ureg_src(tmp));
+        ureg_release_temporary(ureg, tmp);
     }
 
-    if (need_rVtx) {
-        ureg_MUL(ureg, rVtx, _XXXX(vs->aVtx), _CONST(4));
-        ureg_MAD(ureg, rVtx, _YYYY(vs->aVtx), _CONST(5), ureg_src(rVtx));
-        ureg_MAD(ureg, rVtx, _ZZZZ(vs->aVtx), _CONST(6), ureg_src(rVtx));
-        ureg_MAD(ureg, rVtx, _WWWW(vs->aVtx), _CONST(7), ureg_src(rVtx));
+    if (need_aVtx) {
+        struct ureg_dst aVtx_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+        ureg_MUL(ureg, aVtx_dst, _XXXX(vs->aVtx), _CONST(4));
+        ureg_MAD(ureg, aVtx_dst, _YYYY(vs->aVtx), _CONST(5), ureg_src(aVtx_dst));
+        ureg_MAD(ureg, aVtx_dst, _ZZZZ(vs->aVtx), _CONST(6), ureg_src(aVtx_dst));
+        ureg_MAD(ureg, aVtx_dst, _WWWW(vs->aVtx), _CONST(7), ureg_src(aVtx_dst));
+        vs->aVtx = ureg_src(aVtx_dst);
     }
-    if (need_rNrm) {
-        ureg_MUL(ureg, rNrm, _XXXX(vs->aNrm), _CONST(16));
-        ureg_MAD(ureg, rNrm, _YYYY(vs->aNrm), _CONST(17), ureg_src(rNrm));
-        ureg_MAD(ureg, rNrm, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(rNrm));
+    if (need_aNrm) {
+        struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+        ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
+        ureg_MAD(ureg, aNrm_dst, _YYYY(vs->aNrm), _CONST(17), ureg_src(aNrm_dst));
+        ureg_MAD(ureg, aNrm_dst, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(aNrm_dst));
         if (key->normalizenormals)
-           ureg_normalize3(ureg, rNrm, ureg_src(rNrm), tmp);
+           ureg_normalize3(ureg, aNrm_dst, ureg_src(aNrm_dst));
+        vs->aNrm = ureg_src(aNrm_dst);
     }
-    /* NOTE: don't use vs->aVtx, vs->aNrm after this line */
 
     /* === Process point size:
      */
-    if (key->vertexpointsize) {
-        struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
-        ureg_MAX(ureg, tmp_z, _XXXX(vs->aPsz), _XXXX(cPsz1));
-        ureg_MIN(ureg, tmp_z, _Z(tmp), _YYYY(cPsz1));
-    } else if (key->pointscale) {
-        struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
-        ureg_MOV(ureg, tmp_z, _ZZZZ(cPsz1));
-    }
+    if (key->vertexpointsize || key->pointscale) {
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
+        struct ureg_dst tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
+        struct ureg_dst tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
+        if (key->vertexpointsize) {
+            struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
+            ureg_MAX(ureg, tmp_z, _XXXX(vs->aPsz), _XXXX(cPsz1));
+            ureg_MIN(ureg, tmp_z, _Z(tmp), _YYYY(cPsz1));
+        } else {
+            struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
+            ureg_MOV(ureg, tmp_z, _ZZZZ(cPsz1));
+        }
 
-    if (key->pointscale) {
-        struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
-        struct ureg_src cPsz2 = ureg_DECL_constant(ureg, 27);
+        if (key->pointscale) {
+            struct ureg_src cPsz1 = ureg_DECL_constant(ureg, 26);
+            struct ureg_src cPsz2 = ureg_DECL_constant(ureg, 27);
 
-        ureg_DP3(ureg, tmp_x, ureg_src(r[1]), ureg_src(r[1]));
-        ureg_RSQ(ureg, tmp_y, _X(tmp));
-        ureg_MUL(ureg, tmp_y, _Y(tmp), _X(tmp));
-        ureg_CMP(ureg, tmp_y, ureg_negate(_Y(tmp)), _Y(tmp), ureg_imm1f(ureg, 0.0f));
-        ureg_MAD(ureg, tmp_x, _Y(tmp), _YYYY(cPsz2), _XXXX(cPsz2));
-        ureg_MAD(ureg, tmp_x, _Y(tmp), _X(tmp), _WWWW(cPsz1));
-        ureg_RSQ(ureg, tmp_x, _X(tmp));
-        ureg_MUL(ureg, tmp_x, _X(tmp), _Z(tmp));
-        ureg_MUL(ureg, tmp_x, _X(tmp), _WWWW(_CONST(100)));
-        ureg_MAX(ureg, tmp_x, _X(tmp), _XXXX(cPsz1));
-        ureg_MIN(ureg, tmp_z, _X(tmp), _YYYY(cPsz1));
-    }
-    if (key->vertexpointsize || key->pointscale)
+            ureg_DP3(ureg, tmp_x, vs->aVtx, vs->aVtx);
+            ureg_RSQ(ureg, tmp_y, _X(tmp));
+            ureg_MUL(ureg, tmp_y, _Y(tmp), _X(tmp));
+            ureg_CMP(ureg, tmp_y, ureg_negate(_Y(tmp)), _Y(tmp), ureg_imm1f(ureg, 0.0f));
+            ureg_MAD(ureg, tmp_x, _Y(tmp), _YYYY(cPsz2), _XXXX(cPsz2));
+            ureg_MAD(ureg, tmp_x, _Y(tmp), _X(tmp), _WWWW(cPsz1));
+            ureg_RSQ(ureg, tmp_x, _X(tmp));
+            ureg_MUL(ureg, tmp_x, _X(tmp), _Z(tmp));
+            ureg_MUL(ureg, tmp_x, _X(tmp), _WWWW(_CONST(100)));
+            ureg_MAX(ureg, tmp_x, _X(tmp), _XXXX(cPsz1));
+            ureg_MIN(ureg, tmp_z, _X(tmp), _YYYY(cPsz1));
+        }
+
         ureg_MOV(ureg, oPsz, _Z(tmp));
+        ureg_release_temporary(ureg, tmp);
+    }
 
     for (i = 0; i < 8; ++i) {
+        struct ureg_dst tmp, tmp_x;
         struct ureg_dst oTex, input_coord, transformed, t;
         unsigned c, writemask;
         const unsigned tci = (key->tc_gen >> (i * 3)) & 0x7;
@@ -584,8 +596,10 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         if (tci == NINED3DTSS_TCI_DISABLE)
             continue;
         oTex = ureg_DECL_output(ureg, texcoord_sn, i);
-        input_coord = r[5];
-        transformed = r[6];
+        tmp = ureg_DECL_temporary(ureg);
+        tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
+        input_coord = ureg_DECL_temporary(ureg);
+        transformed = ureg_DECL_temporary(ureg);
 
         /* Get the coordinate */
         switch (tci) {
@@ -596,21 +610,21 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MOV(ureg, input_coord, vs->aTex[idx]);
             break;
         case NINED3DTSS_TCI_CAMERASPACENORMAL:
-            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(rNrm));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), vs->aNrm);
             ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
             dim_input = 4;
             break;
         case NINED3DTSS_TCI_CAMERASPACEPOSITION:
-            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(rVtx));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), vs->aVtx);
             ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
             dim_input = 4;
             break;
         case NINED3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR:
             tmp.WriteMask = TGSI_WRITEMASK_XYZ;
-            ureg_DP3(ureg, tmp_x, ureg_src(rVtx), ureg_src(rNrm));
-            ureg_MUL(ureg, tmp, ureg_src(rNrm), _X(tmp));
+            ureg_DP3(ureg, tmp_x, vs->aVtx, vs->aNrm);
+            ureg_MUL(ureg, tmp, vs->aNrm, _X(tmp));
             ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_src(tmp));
-            ureg_SUB(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(rVtx), ureg_src(tmp));
+            ureg_SUB(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), vs->aVtx, ureg_src(tmp));
             ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
             dim_input = 4;
             tmp.WriteMask = TGSI_WRITEMASK_XYZW;
@@ -627,6 +641,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         /* dim_output == 0 => do not transform the components.
          * XYZRHW also disables transformation */
         if (!dim_output || key->position_t) {
+            ureg_release_temporary(ureg, transformed);
             transformed = input_coord;
             writemask = TGSI_WRITEMASK_XYZW;
         } else {
@@ -648,9 +663,12 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
                 }
             }
             writemask = (1 << dim_output) - 1;
+            ureg_release_temporary(ureg, input_coord);
         }
 
         ureg_MOV(ureg, ureg_writemask(oTex, writemask), ureg_src(transformed));
+        ureg_release_temporary(ureg, transformed);
+        ureg_release_temporary(ureg, tmp);
     }
 
     /* === Lighting:
@@ -695,18 +713,22 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      * specular += light.specular * atten * powFact;
      */
     if (key->lighting) {
-        struct ureg_dst rAtt = ureg_writemask(r[1], TGSI_WRITEMASK_W);
-        struct ureg_dst rHit = ureg_writemask(r[3], TGSI_WRITEMASK_XYZ);
-        struct ureg_dst rMid = ureg_writemask(r[4], TGSI_WRITEMASK_XYZ);
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
+        struct ureg_dst tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
+        struct ureg_dst tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
+        struct ureg_dst rAtt = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_W);
+        struct ureg_dst rHit = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+        struct ureg_dst rMid = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
 
-        struct ureg_dst rCtr = ureg_writemask(r[2], TGSI_WRITEMASK_W);
+        struct ureg_dst rCtr = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_W);
 
         struct ureg_dst AL = ureg_writemask(AR, TGSI_WRITEMASK_X);
 
         /* Light.*.Alpha is not used. */
-        struct ureg_dst rD = ureg_writemask(r[5], TGSI_WRITEMASK_XYZ);
-        struct ureg_dst rA = ureg_writemask(r[6], TGSI_WRITEMASK_XYZ);
-        struct ureg_dst rS = ureg_writemask(r[7], TGSI_WRITEMASK_XYZ);
+        struct ureg_dst rD = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+        struct ureg_dst rA = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+        struct ureg_dst rS = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
 
         struct ureg_src mtlP = _XXXX(MATERIAL_CONST(4));
 
@@ -750,7 +772,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             /* hitDir = light.position - eyeVtx
              * d = length(hitDir)
              */
-            ureg_SUB(ureg, rHit, cLPos, ureg_src(rVtx));
+            ureg_SUB(ureg, rHit, cLPos, vs->aVtx);
             ureg_DP3(ureg, tmp_x, ureg_src(rHit), ureg_src(rHit));
             ureg_RSQ(ureg, tmp_y, _X(tmp));
             ureg_MUL(ureg, tmp_x, _X(tmp), _Y(tmp)); /* length */
@@ -767,7 +789,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_ENDIF(ureg);
 
         /* normalize hitDir */
-        ureg_normalize3(ureg, rHit, ureg_src(rHit), tmp);
+        ureg_normalize3(ureg, rHit, ureg_src(rHit));
 
         /* if (SPOT light) */
         ureg_SEQ(ureg, tmp_x, cLKind, ureg_imm1f(ureg, D3DLIGHT_SPOT));
@@ -796,19 +818,19 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_ENDIF(ureg);
 
         /* directional factors, let's not use LIT because of clarity */
-        ureg_DP3(ureg, ureg_saturate(tmp_x), ureg_src(rNrm), ureg_src(rHit));
+        ureg_DP3(ureg, ureg_saturate(tmp_x), vs->aNrm, ureg_src(rHit));
         ureg_MOV(ureg, tmp_y, ureg_imm1f(ureg, 0.0f));
         ureg_IF(ureg, _X(tmp), &label[l++]);
         {
             /* midVec = normalize(hitDir + eyeDir) */
             if (key->localviewer) {
-                ureg_normalize3(ureg, rMid, ureg_src(rVtx), tmp);
+                ureg_normalize3(ureg, rMid, vs->aVtx);
                 ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_src(rMid));
             } else {
                 ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
             }
-            ureg_normalize3(ureg, rMid, ureg_src(rMid), tmp);
-            ureg_DP3(ureg, ureg_saturate(tmp_y), ureg_src(rNrm), ureg_src(rMid));
+            ureg_normalize3(ureg, rMid, ureg_src(rMid));
+            ureg_DP3(ureg, ureg_saturate(tmp_y), vs->aNrm, ureg_src(rMid));
             ureg_POW(ureg, tmp_y, _Y(tmp), mtlP);
 
             ureg_MUL(ureg, tmp_x, _W(rAtt), _X(tmp)); /* dp3(normal,hitDir) * att */
@@ -862,15 +884,26 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
         }
         ureg_MUL(ureg, oCol[1], ureg_src(rS), vs->mtlS);
+        ureg_release_temporary(ureg, rAtt);
+        ureg_release_temporary(ureg, rHit);
+        ureg_release_temporary(ureg, rMid);
+        ureg_release_temporary(ureg, rCtr);
+        ureg_release_temporary(ureg, rD);
+        ureg_release_temporary(ureg, rA);
+        ureg_release_temporary(ureg, rS);
+        ureg_release_temporary(ureg, rAtt);
+        ureg_release_temporary(ureg, tmp);
     } else
     /* COLOR */
     if (key->darkness) {
         if (key->mtl_emissive == 0 && key->mtl_ambient == 0) {
             ureg_MAD(ureg, oCol[0], vs->mtlD, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), _CONST(19));
         } else {
+            struct ureg_dst tmp = ureg_DECL_temporary(ureg);
             ureg_MAD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_XYZ), vs->mtlA, _CONST(25), vs->mtlE);
             ureg_ADD(ureg, ureg_writemask(tmp,     TGSI_WRITEMASK_W), vs->mtlA, vs->mtlE);
             ureg_ADD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), vs->mtlD, _W(tmp));
+            ureg_release_temporary(ureg, tmp);
         }
         ureg_MUL(ureg, oCol[1], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), vs->mtlS);
     } else {
@@ -883,15 +916,18 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
      * exp(x) = ex2(log2(e) * x)
      */
     if (key->fog_mode) {
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
+        struct ureg_dst tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
         if (key->position_t) {
             ureg_MOV(ureg, ureg_saturate(tmp_x), ureg_scalar(vs->aCol[1], TGSI_SWIZZLE_W));
         } else
         if (key->fog_range) {
-            ureg_DP3(ureg, tmp_x, ureg_src(rVtx), ureg_src(rVtx));
+            ureg_DP3(ureg, tmp_x, vs->aVtx, vs->aVtx);
             ureg_RSQ(ureg, tmp_z, _X(tmp));
             ureg_MUL(ureg, tmp_z, _Z(tmp), _X(tmp));
         } else {
-            ureg_MOV(ureg, tmp_z, ureg_abs(_Z(rVtx)));
+            ureg_MOV(ureg, tmp_z, ureg_abs(_ZZZZ(vs->aVtx)));
         }
 
         if (key->fog_mode == D3DFOG_EXP) {
@@ -910,6 +946,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MUL(ureg, ureg_saturate(tmp_x), _X(tmp), _YYYY(_CONST(28)));
         }
         ureg_MOV(ureg, oFog, _X(tmp));
+        ureg_release_temporary(ureg, tmp);
     } else if (key->fog && !(key->passthrough & (1 << NINE_DECLUSAGE_FOG))) {
         ureg_MOV(ureg, oFog, ureg_scalar(vs->aCol[1], TGSI_SWIZZLE_W));
     }
