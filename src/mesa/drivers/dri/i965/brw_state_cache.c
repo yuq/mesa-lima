@@ -366,6 +366,8 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
       for (c = cache->items[i]; c; c = next) {
 	 next = c->next;
          if (c->cache_id == BRW_CACHE_VS_PROG ||
+             c->cache_id == BRW_CACHE_TCS_PROG ||
+             c->cache_id == BRW_CACHE_TES_PROG ||
              c->cache_id == BRW_CACHE_GS_PROG ||
              c->cache_id == BRW_CACHE_FS_PROG ||
              c->cache_id == BRW_CACHE_CS_PROG) {
