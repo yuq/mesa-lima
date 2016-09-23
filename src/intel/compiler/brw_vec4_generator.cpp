@@ -1946,16 +1946,28 @@ generate_code(struct brw_codegen *p,
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-         dst.hstride = BRW_HORIZONTAL_STRIDE_2;
-         dst.width = BRW_WIDTH_4;
+         /* When converting from DF->F, we set destination's stride as 2 as an
+          * aligment requirement. But in IVB/BYT, each DF implicitly writes
+          * two floats, being the first one the converted value. So we don't
+          * need to explicitly set stride 2, but 1.
+          */
+         struct brw_reg spread_dst;
+         if (devinfo->gen == 7 && !devinfo->is_haswell)
+            spread_dst = stride(dst, 8, 4, 1);
+         else
+            spread_dst = stride(dst, 8, 4, 2);
+
          src[0].vstride = BRW_VERTICAL_STRIDE_4;
          src[0].width = BRW_WIDTH_4;
-         brw_MOV(p, dst, src[0]);
+         brw_MOV(p, spread_dst, src[0]);
 
-         struct brw_reg dst_as_src = dst;
-         dst.hstride = BRW_HORIZONTAL_STRIDE_1;
-         dst.width = BRW_WIDTH_8;
-         brw_MOV(p, dst, dst_as_src);
+         /* As we have set horizontal stride 1 instead of 2 in IVB/BYT, we
+          * need to fix it here to have the expected value.
+          */
+         if (devinfo->gen == 7 && !devinfo->is_haswell)
+            spread_dst = stride(dst, 8, 4, 2);
+
+         brw_MOV(p, dst, spread_dst);
 
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          break;
