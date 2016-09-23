@@ -57,7 +57,8 @@ struct nine_ff_vs_key
             uint32_t color1in_one : 1;
             uint32_t fog : 1;
             uint32_t specular_enable : 1;
-            uint32_t pad1 : 6;
+            uint32_t normalizenormals : 1;
+            uint32_t pad1 : 5;
             uint32_t tc_dim_input: 16; /* 8 * 2 bits */
             uint32_t pad2 : 16;
             uint32_t tc_dim_output: 24; /* 8 * 3 bits */
@@ -536,7 +537,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_MUL(ureg, rNrm, _XXXX(vs->aNrm), _CONST(16));
         ureg_MAD(ureg, rNrm, _YYYY(vs->aNrm), _CONST(17), ureg_src(rNrm));
         ureg_MAD(ureg, rNrm, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(rNrm));
-        ureg_normalize3(ureg, rNrm, ureg_src(rNrm), tmp);
+        if (key->normalizenormals)
+           ureg_normalize3(ureg, rNrm, ureg_src(rNrm), tmp);
     }
     /* NOTE: don't use vs->aVtx, vs->aNrm after this line */
 
@@ -1540,6 +1542,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
 
     key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
     key.specular_enable = !!state->rs[D3DRS_SPECULARENABLE];
+    key.normalizenormals = !!state->rs[D3DRS_NORMALIZENORMALS];
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE];
