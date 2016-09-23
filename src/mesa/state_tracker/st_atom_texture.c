@@ -271,6 +271,58 @@ last_layer(const struct st_texture_object *stObj)
    return stObj->pt->array_size - 1;
 }
 
+
+/**
+ * Determine the format for the texture sampler view.
+ */
+static enum pipe_format
+get_sampler_view_format(struct st_context *st,
+                        const struct st_texture_object *stObj,
+                        const struct gl_sampler_object *samp)
+{
+   enum pipe_format format;
+
+   if (stObj->base.Target == GL_TEXTURE_BUFFER) {
+      format =
+         st_mesa_format_to_pipe_format(st, stObj->base._BufferObjectFormat);
+   }
+   else {
+      format =
+         stObj->surface_based ? stObj->surface_format : stObj->pt->format;
+
+      if (util_format_is_depth_and_stencil(format)) {
+         if (stObj->base.StencilSampling) {
+            format = util_format_stencil_only(format);
+         }
+         else {
+            GLenum baseFormat = _mesa_texture_base_format(&stObj->base);
+            if (baseFormat == GL_STENCIL_INDEX) {
+               format = util_format_stencil_only(format);
+            }
+         }
+      }
+      else {
+         /* If sRGB decoding is off, use the linear format */
+         if (samp->sRGBDecode == GL_SKIP_DECODE_EXT) {
+            format = util_format_linear(format);
+         }
+
+         /* Use R8_UNORM for video formats */
+         switch (format) {
+         case PIPE_FORMAT_NV12:
+         case PIPE_FORMAT_IYUV:
+            format = PIPE_FORMAT_R8_UNORM;
+            break;
+         default:
+            break;
+         }
+      }
+   }
+
+   return format;
+}
+
+
 static struct pipe_sampler_view *
 st_create_texture_sampler_view_from_stobj(struct st_context *st,
 					  struct st_texture_object *stObj,
@@ -322,22 +374,12 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
                                        unsigned glsl_version)
 {
    struct pipe_sampler_view **sv;
-   const struct st_texture_image *firstImage;
+
    if (!stObj || !stObj->pt) {
       return NULL;
    }
 
    sv = st_texture_get_sampler_view(st, stObj);
-
-   if (util_format_is_depth_and_stencil(format)) {
-      if (stObj->base.StencilSampling)
-         format = util_format_stencil_only(format);
-      else {
-         firstImage = st_texture_image_const(_mesa_base_tex_image(&stObj->base));
-         if (firstImage->base._BaseFormat == GL_STENCIL_INDEX)
-            format = util_format_stencil_only(format);
-      }
-   }
 
    /* if sampler view has changed dereference it */
    if (*sv) {
@@ -395,29 +437,7 @@ update_single_texture(struct st_context *st,
       return GL_FALSE;
    }
 
-   /* Determine the format of the texture sampler view */
-   if (texObj->Target == GL_TEXTURE_BUFFER) {
-      view_format =
-         st_mesa_format_to_pipe_format(st, stObj->base._BufferObjectFormat);
-   }
-   else {
-      view_format =
-         stObj->surface_based ? stObj->surface_format : stObj->pt->format;
-
-      /* If sRGB decoding is off, use the linear format */
-      if (samp->sRGBDecode == GL_SKIP_DECODE_EXT) {
-         view_format = util_format_linear(view_format);
-      }
-   }
-
-   switch (view_format) {
-   case PIPE_FORMAT_NV12:
-   case PIPE_FORMAT_IYUV:
-      view_format = PIPE_FORMAT_R8_UNORM;
-      break;
-   default:
-      break;
-   }
+   view_format = get_sampler_view_format(st, stObj, samp);
 
    *sampler_view =
       st_get_texture_sampler_view_from_stobj(st, stObj, view_format,
