@@ -1691,19 +1691,19 @@ link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
 
    for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
       if (linked_shader->info.TransformFeedback.BufferStride[j]) {
-         prog->TransformFeedback.BufferStride[j] =
+         prog->LinkedTransformFeedback.BufferStride[j] =
             linked_shader->info.TransformFeedback.BufferStride[j];
 
          /* We will validate doubles at a later stage */
-         if (prog->TransformFeedback.BufferStride[j] % 4) {
+         if (prog->LinkedTransformFeedback.BufferStride[j] % 4) {
             linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
                          "multiple of 4 or if its applied to a type that is "
                          "or contains a double a multiple of 8.",
-                         prog->TransformFeedback.BufferStride[j]);
+                         prog->LinkedTransformFeedback.BufferStride[j]);
             return;
          }
 
-         if (prog->TransformFeedback.BufferStride[j] / 4 >
+         if (prog->LinkedTransformFeedback.BufferStride[j] / 4 >
              ctx->Const.MaxTransformFeedbackInterleavedComponents) {
             linker_error(prog,
                          "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
