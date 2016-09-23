@@ -277,8 +277,10 @@ pipe_loader_sw_release(struct pipe_loader_device **dev)
       util_dl_close(sdev->lib);
 #endif
 
+#ifdef HAVE_PIPE_LOADER_KMS
    if (sdev->fd != -1)
       close(sdev->fd);
+#endif
 
    FREE(sdev);
    *dev = NULL;
