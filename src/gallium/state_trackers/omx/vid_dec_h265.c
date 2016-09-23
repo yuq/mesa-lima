@@ -33,7 +33,7 @@
 #include "entrypoint.h"
 #include "vid_dec.h"
 
-#define DPB_MAX_SIZE 16
+#define DPB_MAX_SIZE 32
 #define MAX_NUM_REF_PICS 16
 
 enum {
