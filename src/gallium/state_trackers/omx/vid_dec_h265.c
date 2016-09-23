@@ -594,6 +594,8 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
    rps = priv->codec_data.h265.rps;
 
    if (rps) {
+      unsigned bf = 0, af = 0;
+
       priv->picture.h265.NumDeltaPocsOfRefRpsIdx = rps->num_delta_poc;
       for (i = 0; i < rps->num_pics; ++i) {
          priv->picture.h265.PicOrderCntVal[i] =
@@ -609,11 +611,10 @@ static void vid_dec_h265_EndFrame(vid_dec_PrivateType *priv)
          if (rps->used[i]) {
             if (i < rps->num_neg_pics) {
                priv->picture.h265.NumPocStCurrBefore++;
-               priv->picture.h265.RefPicSetStCurrBefore[i] = i;
+               priv->picture.h265.RefPicSetStCurrBefore[bf++] = i;
             } else {
-               int j = i - rps->num_neg_pics;
                priv->picture.h265.NumPocStCurrAfter++;
-               priv->picture.h265.RefPicSetStCurrAfter[j] = i;
+               priv->picture.h265.RefPicSetStCurrAfter[af++] = i;
             }
          }
       }
