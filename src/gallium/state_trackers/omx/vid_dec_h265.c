@@ -342,9 +342,11 @@ static void seq_parameter_set(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp)
    if (sps->chroma_format_idc == 3)
       sps->separate_colour_plane_flag = vl_rbsp_u(rbsp, 1);
 
-   sps->pic_width_in_luma_samples = vl_rbsp_ue(rbsp);
+   priv->codec_data.h265.pic_width_in_luma_samples =
+      sps->pic_width_in_luma_samples = vl_rbsp_ue(rbsp);
 
-   sps->pic_height_in_luma_samples = vl_rbsp_ue(rbsp);
+   priv->codec_data.h265.pic_height_in_luma_samples =
+      sps->pic_height_in_luma_samples = vl_rbsp_ue(rbsp);
 
    /* conformance_window_flag */
    if (vl_rbsp_u(rbsp, 1)) {
@@ -525,16 +527,13 @@ static void vid_dec_h265_BeginFrame(vid_dec_PrivateType *priv)
 
    if (!priv->codec) {
       struct pipe_video_codec templat = {};
-      omx_base_video_PortType *port;
 
-      port = (omx_base_video_PortType *)
-         priv->ports[OMX_BASE_FILTER_INPUTPORT_INDEX];
       templat.profile = priv->profile;
       templat.entrypoint = PIPE_VIDEO_ENTRYPOINT_BITSTREAM;
       templat.chroma_format = PIPE_VIDEO_CHROMA_FORMAT_420;
       templat.expect_chunked_decode = true;
-      templat.width = align(port->sPortParam.format.video.nFrameWidth, 4);
-      templat.height = align(port->sPortParam.format.video.nFrameHeight, 4);
+      templat.width = priv->codec_data.h265.pic_width_in_luma_samples;
+      templat.height = priv->codec_data.h265.pic_height_in_luma_samples;
       templat.level =  priv->codec_data.h265.level_idc;
       priv->codec = priv->pipe->create_video_codec(priv->pipe, &templat);
    }
