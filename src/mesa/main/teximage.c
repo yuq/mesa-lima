@@ -5034,13 +5034,17 @@ _mesa_validate_texbuffer_format(const struct gl_context *ctx,
 }
 
 
-void
-_mesa_texture_buffer_range(struct gl_context *ctx,
-                           struct gl_texture_object *texObj,
-                           GLenum internalFormat,
-                           struct gl_buffer_object *bufObj,
-                           GLintptr offset, GLsizeiptr size,
-                           const char *caller)
+/**
+ * Do work common to glTexBuffer, glTexBufferRange, glTextureBuffer
+ * and glTextureBufferRange, including some error checking.
+ */
+static void
+texture_buffer_range(struct gl_context *ctx,
+                     struct gl_texture_object *texObj,
+                     GLenum internalFormat,
+                     struct gl_buffer_object *bufObj,
+                     GLintptr offset, GLsizeiptr size,
+                     const char *caller)
 {
    mesa_format format;
 
@@ -5177,8 +5181,8 @@ _mesa_TexBuffer(GLenum target, GLenum internalFormat, GLuint buffer)
    if (!texObj)
       return;
 
-   _mesa_texture_buffer_range(ctx, texObj, internalFormat, bufObj, 0,
-                              buffer ? -1 : 0, "glTexBuffer");
+   texture_buffer_range(ctx, texObj, internalFormat, bufObj, 0,
+                        buffer ? -1 : 0, "glTexBuffer");
 }
 
 
@@ -5224,8 +5228,8 @@ _mesa_TexBufferRange(GLenum target, GLenum internalFormat, GLuint buffer,
    if (!texObj)
       return;
 
-   _mesa_texture_buffer_range(ctx, texObj, internalFormat, bufObj,
-                              offset, size, "glTexBufferRange");
+   texture_buffer_range(ctx, texObj, internalFormat, bufObj,
+                        offset, size, "glTexBufferRange");
 }
 
 void GLAPIENTRY
@@ -5251,8 +5255,8 @@ _mesa_TextureBuffer(GLuint texture, GLenum internalFormat, GLuint buffer)
    if (!check_texture_buffer_target(ctx, texObj->Target, "glTextureBuffer"))
       return;
 
-   _mesa_texture_buffer_range(ctx, texObj, internalFormat,
-                              bufObj, 0, buffer ? -1 : 0, "glTextureBuffer");
+   texture_buffer_range(ctx, texObj, internalFormat,
+                        bufObj, 0, buffer ? -1 : 0, "glTextureBuffer");
 }
 
 void GLAPIENTRY
@@ -5296,8 +5300,8 @@ _mesa_TextureBufferRange(GLuint texture, GLenum internalFormat, GLuint buffer,
        "glTextureBufferRange"))
       return;
 
-   _mesa_texture_buffer_range(ctx, texObj, internalFormat,
-                              bufObj, offset, size, "glTextureBufferRange");
+   texture_buffer_range(ctx, texObj, internalFormat,
+                        bufObj, offset, size, "glTextureBufferRange");
 }
 
 GLboolean
