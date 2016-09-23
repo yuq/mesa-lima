@@ -241,7 +241,7 @@ get_texture_format_swizzle(const struct st_context *st,
 static boolean
 check_sampler_swizzle(const struct st_context *st,
                       const struct st_texture_object *stObj,
-		      struct pipe_sampler_view *sv, unsigned glsl_version)
+		      const struct pipe_sampler_view *sv, unsigned glsl_version)
 {
    unsigned swizzle = get_texture_format_swizzle(st, stObj, glsl_version);
 
@@ -252,7 +252,8 @@ check_sampler_swizzle(const struct st_context *st,
 }
 
 
-static unsigned last_level(struct st_texture_object *stObj)
+static unsigned
+last_level(const struct st_texture_object *stObj)
 {
    unsigned ret = MIN2(stObj->base.MinLevel + stObj->base._MaxLevel,
                        stObj->pt->last_level);
@@ -261,7 +262,8 @@ static unsigned last_level(struct st_texture_object *stObj)
    return ret;
 }
 
-static unsigned last_layer(struct st_texture_object *stObj)
+static unsigned
+last_layer(const struct st_texture_object *stObj)
 {
    if (stObj->base.Immutable && stObj->pt->array_size > 1)
       return MIN2(stObj->base.MinLayer + stObj->base.NumLayers - 1,
