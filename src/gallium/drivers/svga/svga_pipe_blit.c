@@ -86,6 +86,28 @@ copy_region_vgpu10(struct svga_context *svga, struct pipe_resource *src_tex,
 }
 
 
+/**
+ * For some texture types, we need to move the z (slice) coordinate
+ * to the layer value.  For example, to select the z=3 slice of a 2D ARRAY
+ * texture, we need to use layer=3 and set z=0.
+ */
+static void
+adjust_z_layer(enum pipe_texture_target target,
+               int z_in, unsigned *layer_out, unsigned *z_out)
+{
+   if (target == PIPE_TEXTURE_CUBE ||
+       target == PIPE_TEXTURE_2D_ARRAY ||
+       target == PIPE_TEXTURE_1D_ARRAY) {
+      *layer_out = z_in;
+      *z_out = 0;
+   }
+   else {
+      *layer_out = 0;
+      *z_out = z_in;
+   }
+}
+
+
 static void
 svga_resource_copy_region(struct pipe_context *pipe,
                           struct pipe_resource *dst_tex,
@@ -136,32 +158,8 @@ svga_resource_copy_region(struct pipe_context *pipe,
    stex = svga_texture(src_tex);
    dtex = svga_texture(dst_tex);
 
-   if (src_tex->target == PIPE_TEXTURE_CUBE ||
-       src_tex->target == PIPE_TEXTURE_2D_ARRAY ||
-       src_tex->target == PIPE_TEXTURE_1D_ARRAY) {
-      src_face_layer = src_box->z;
-      src_z = 0;
-      assert(src_box->depth == 1);
-   }
-   else {
-      src_face_layer = 0;
-      src_z = src_box->z;
-   }
-
-   if (dst_tex->target == PIPE_TEXTURE_CUBE ||
-       dst_tex->target == PIPE_TEXTURE_2D_ARRAY ||
-       dst_tex->target == PIPE_TEXTURE_1D_ARRAY) {
-      dst_face_layer = dstz;
-      dst_z = 0;
-      assert(src_box->depth == 1);
-   }
-   else {
-      dst_face_layer = 0;
-      dst_z = dstz;
-   }
-
-   stex = svga_texture(src_tex);
-   dtex = svga_texture(dst_tex);
+   adjust_z_layer(src_tex->target, src_box->z, &src_face_layer, &src_z);
+   adjust_z_layer(dst_tex->target, dstz, &dst_face_layer, &dst_z);
 
    if (svga_have_vgpu10(svga)) {
       /* vgpu10 */
@@ -295,25 +293,11 @@ svga_blit(struct pipe_context *pipe,
    if (can_blit_via_copy_region_vgpu10(svga, blit_info)) {
       unsigned src_face, src_z, dst_face, dst_z;
 
-      if (blit.src.resource->target == PIPE_TEXTURE_CUBE) {
-         src_face = blit.src.box.z;
-         src_z = 0;
-         assert(blit.src.box.depth == 1);
-      }
-      else {
-         src_face = 0;
-         src_z = blit.src.box.z;
-      }
+      adjust_z_layer(blit.src.resource->target, blit.src.box.z,
+                     &src_face, &src_z);
 
-      if (blit.dst.resource->target == PIPE_TEXTURE_CUBE) {
-         dst_face = blit.dst.box.z;
-         dst_z = 0;
-         assert(blit.src.box.depth == 1);
-      }
-      else {
-         dst_face = 0;
-         dst_z = blit.dst.box.z;
-      }
+      adjust_z_layer(blit.dst.resource->target, blit.dst.box.z,
+                     &dst_face, &dst_z);
 
       copy_region_vgpu10(svga,
                          blit.src.resource,
