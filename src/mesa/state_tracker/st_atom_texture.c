@@ -211,11 +211,11 @@ get_texture_format_swizzle(const struct st_context *st,
        */
       if (_mesa_is_gles3(st->ctx) &&
           util_format_is_depth_or_stencil(stObj->pt->format)) {
-         const struct st_texture_image *firstImage =
-            st_texture_image_const(_mesa_base_tex_image(&stObj->base));
-         if (firstImage->base.InternalFormat != GL_DEPTH_COMPONENT &&
-             firstImage->base.InternalFormat != GL_DEPTH_STENCIL &&
-             firstImage->base.InternalFormat != GL_STENCIL_INDEX)
+         const struct gl_texture_image *firstImage =
+            _mesa_base_tex_image(&stObj->base);
+         if (firstImage->InternalFormat != GL_DEPTH_COMPONENT &&
+             firstImage->InternalFormat != GL_DEPTH_STENCIL &&
+             firstImage->InternalFormat != GL_STENCIL_INDEX)
             depth_mode = GL_RED;
       }
       tex_swizzle = compute_texture_format_swizzle(baseFormat,
