@@ -656,7 +656,7 @@ static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
    struct pipe_h265_sps *sps;
    bool first_slice_segment_in_pic_flag;
    bool dependent_slice_segment_flag = false;
-   struct ref_pic_set *rps = NULL;
+   struct ref_pic_set *rps;
    unsigned poc_lsb, poc_msb, slice_prev_poc;
    unsigned max_poc_lsb, prev_poc_lsb, prev_poc_msb;
    unsigned num_st_rps;
@@ -789,7 +789,9 @@ static void slice_header(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
 
       rps = (struct ref_pic_set *)
          priv->codec_data.h265.ref_pic_set_list + idx;
-   }
+   } else
+      rps = (struct ref_pic_set *)
+         priv->codec_data.h265.ref_pic_set_list;
 
    if (is_bla_picture(nal_unit_type)) {
       rps->num_neg_pics = 0;
