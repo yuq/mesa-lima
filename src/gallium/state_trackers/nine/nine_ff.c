@@ -430,7 +430,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     /* Declare TEMPs:
      */
     for (i = 0; i < num_r; ++i)
-        r[i] = ureg_DECL_local_temporary(ureg);
+        r[i] = ureg_DECL_temporary(ureg);
     tmp = r[0];
     tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
     tmp_y = ureg_writemask(tmp, TGSI_WRITEMASK_Y);
@@ -1237,7 +1237,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
 
     /* Declare all TEMPs we might need, serious drivers have a register allocator. */
     for (i = 0; i < ARRAY_SIZE(ps.r); ++i)
-        ps.r[i] = ureg_DECL_local_temporary(ureg);
+        ps.r[i] = ureg_DECL_temporary(ureg);
     ps.rCur = ps.r[0];
     ps.rTmp = ps.r[1];
     ps.rTex = ps.r[2];
