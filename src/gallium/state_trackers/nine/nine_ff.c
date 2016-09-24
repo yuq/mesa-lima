@@ -1537,6 +1537,8 @@ nine_ff_get_vs(struct NineDevice9 *device)
     struct vs_build_ctx bld;
     struct nine_ff_vs_key key;
     unsigned s, i;
+    boolean has_indexes = false;
+    boolean has_weights = false;
     char input_texture_coord[8];
 
     assert(sizeof(key) <= sizeof(key.value32));
@@ -1559,7 +1561,13 @@ nine_ff_get_vs(struct NineDevice9 *device)
                 key.color0in_one = 0;
             else if (usage == NINE_DECLUSAGE_i(COLOR, 1))
                 key.color1in_zero = 0;
-            else if (usage == NINE_DECLUSAGE_PSIZE)
+            else if (usage == NINE_DECLUSAGE_i(BLENDINDICES, 0)) {
+                has_indexes = true;
+                key.passthrough |= 1 << usage;
+            } else if (usage == NINE_DECLUSAGE_i(BLENDWEIGHT, 0)) {
+                has_weights = true;
+                key.passthrough |= 1 << usage;
+            } else if (usage == NINE_DECLUSAGE_PSIZE)
                 key.vertexpointsize = 1;
             else if (usage % NINE_DECLUSAGE_COUNT == NINE_DECLUSAGE_TEXCOORD) {
                 s = usage / NINE_DECLUSAGE_COUNT;
@@ -1600,7 +1608,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
     key.normalizenormals = !!state->rs[D3DRS_NORMALIZENORMALS];
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
-        key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE];
+        key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE] && has_indexes;
 
         switch (state->rs[D3DRS_VERTEXBLEND]) {
         case D3DVBF_0WEIGHTS: key.vertexblend = key.vertexblend_indexed; break;
@@ -1612,6 +1620,8 @@ nine_ff_get_vs(struct NineDevice9 *device)
             assert(!"invalid D3DVBF");
             break;
         }
+        if (!has_weights && state->rs[D3DRS_VERTEXBLEND] != D3DVBF_0WEIGHTS)
+            key.vertexblend = 0; /* TODO: if key.vertexblend_indexed, perhaps it should use 1.0 as weight, or revert to D3DVBF_0WEIGHTS */
     }
 
     for (s = 0; s < 8; ++s) {
