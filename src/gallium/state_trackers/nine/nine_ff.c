@@ -54,7 +54,7 @@ struct nine_ff_vs_key
             uint32_t fog_mode : 2;
             uint32_t fog_range : 1;
             uint32_t color0in_one : 1;
-            uint32_t color1in_one : 1;
+            uint32_t color1in_zero : 1;
             uint32_t fog : 1;
             uint32_t specular_enable : 1;
             uint32_t normalizenormals : 1;
@@ -369,14 +369,14 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         vs->aNrm = build_vs_add_input(vs, NINE_DECLUSAGE_NORMAL);
 
     vs->aCol[0] = ureg_imm1f(ureg, 1.0f);
-    vs->aCol[1] = ureg_imm1f(ureg, 1.0f);
+    vs->aCol[1] = ureg_imm1f(ureg, 0.0f);
 
     if (key->lighting || key->darkness) {
         const unsigned mask = key->mtl_diffuse | key->mtl_specular |
                               key->mtl_ambient | key->mtl_emissive;
         if ((mask & 0x1) && !key->color0in_one)
             vs->aCol[0] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 0));
-        if ((mask & 0x2) && !key->color1in_one)
+        if ((mask & 0x2) && !key->color1in_zero)
             vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 1));
 
         vs->mtlD = MATERIAL_CONST(1);
@@ -393,7 +393,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         if (key->mtl_emissive == 2) vs->mtlE = vs->aCol[1];
     } else {
         if (!key->color0in_one) vs->aCol[0] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 0));
-        if (!key->color1in_one) vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 1));
+        if (!key->color1in_zero) vs->aCol[1] = build_vs_add_input(vs, NINE_DECLUSAGE_i(COLOR, 1));
     }
 
     if (key->vertexpointsize)
@@ -1557,7 +1557,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
     /* FIXME: this shouldn't be NULL, but it is on init */
     if (state->vdecl) {
         key.color0in_one = 1;
-        key.color1in_one = 1;
+        key.color1in_zero = 1;
         for (i = 0; i < state->vdecl->nelems; i++) {
             uint16_t usage = state->vdecl->usage_map[i];
             if (usage == NINE_DECLUSAGE_POSITIONT)
@@ -1565,7 +1565,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
             else if (usage == NINE_DECLUSAGE_i(COLOR, 0))
                 key.color0in_one = 0;
             else if (usage == NINE_DECLUSAGE_i(COLOR, 1))
-                key.color1in_one = 0;
+                key.color1in_zero = 0;
             else if (usage == NINE_DECLUSAGE_PSIZE)
                 key.vertexpointsize = 1;
             else if (usage % NINE_DECLUSAGE_COUNT == NINE_DECLUSAGE_TEXCOORD) {
