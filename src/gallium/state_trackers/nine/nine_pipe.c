@@ -220,9 +220,17 @@ nine_convert_sampler_state(struct cso_context *ctx, int idx, const DWORD *ss)
         samp.min_mip_filter = PIPE_TEX_MIPFILTER_NONE;
     }
     samp.max_lod = 15.0f;
-    samp.wrap_s = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSU]);
-    samp.wrap_t = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSV]);
-    samp.wrap_r = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSW]);
+
+    if (ss[NINED3DSAMP_CUBETEX]) {
+        /* Cube textures are always clamped to edge on D3D */
+        samp.wrap_s = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+        samp.wrap_t = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+        samp.wrap_r = PIPE_TEX_WRAP_CLAMP_TO_EDGE;
+    } else {
+        samp.wrap_s = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSU]);
+        samp.wrap_t = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSV]);
+        samp.wrap_r = d3dtextureaddress_to_pipe_tex_wrap(ss[D3DSAMP_ADDRESSW]);
+    }
     samp.min_img_filter = (ss[D3DSAMP_MINFILTER] == D3DTEXF_POINT && !ss[NINED3DSAMP_SHADOW]) ? PIPE_TEX_FILTER_NEAREST : PIPE_TEX_FILTER_LINEAR;
     samp.mag_img_filter = (ss[D3DSAMP_MAGFILTER] == D3DTEXF_POINT && !ss[NINED3DSAMP_SHADOW]) ? PIPE_TEX_FILTER_NEAREST : PIPE_TEX_FILTER_LINEAR;
     if (ss[D3DSAMP_MINFILTER] == D3DTEXF_ANISOTROPIC ||

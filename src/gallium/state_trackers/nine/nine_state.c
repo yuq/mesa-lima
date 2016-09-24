@@ -714,6 +714,13 @@ update_sampler_derived(struct nine_state *state, unsigned s)
         state->samp[s][NINED3DSAMP_SHADOW] = state->texture[s]->shadow;
     }
 
+    if (state->samp[s][NINED3DSAMP_CUBETEX] !=
+        (NineResource9(state->texture[s])->type == D3DRTYPE_CUBETEXTURE)) {
+        changed = TRUE;
+        state->samp[s][NINED3DSAMP_CUBETEX] =
+                NineResource9(state->texture[s])->type == D3DRTYPE_CUBETEXTURE;
+    }
+
     if (state->samp[s][D3DSAMP_MIPFILTER] != D3DTEXF_NONE) {
         int lod = state->samp[s][D3DSAMP_MAXMIPLEVEL] - state->texture[s]->managed.lod;
         if (lod < 0)
@@ -1264,7 +1271,8 @@ static const DWORD nine_samp_state_defaults[NINED3DSAMP_LAST + 1] =
     [D3DSAMP_ELEMENTINDEX] = 0,
     [D3DSAMP_DMAPOFFSET] = 0,
     [NINED3DSAMP_MINLOD] = 0,
-    [NINED3DSAMP_SHADOW] = 0
+    [NINED3DSAMP_SHADOW] = 0,
+    [NINED3DSAMP_CUBETEX] = 0
 };
 
 void nine_state_restore_non_cso(struct NineDevice9 *device)
