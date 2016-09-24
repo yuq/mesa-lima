@@ -26,7 +26,7 @@
 
 #define DBG_CHANNEL DBG_FF
 
-#define NINE_FF_NUM_VS_CONST 256
+#define NINE_FF_NUM_VS_CONST 192
 #define NINE_FF_NUM_PS_CONST 24
 
 struct fvec4
@@ -266,10 +266,10 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[152..155] D3DTS_TEXTURE6
  * CONST[156..159] D3DTS_TEXTURE7
  *
- * CONST[224] D3DTS_WORLDMATRIX[0] * D3DTS_VIEW
- * CONST[228] D3DTS_WORLDMATRIX[1] * D3DTS_VIEW
+ * CONST[160] D3DTS_WORLDMATRIX[0] * D3DTS_VIEW
+ * CONST[164] D3DTS_WORLDMATRIX[1] * D3DTS_VIEW
  * ...
- * CONST[252] D3DTS_WORLDMATRIX[7] * D3DTS_VIEW
+ * CONST[188] D3DTS_WORLDMATRIX[7] * D3DTS_VIEW
  */
 struct vs_build_ctx
 {
@@ -460,12 +460,12 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         struct ureg_dst sum_blendweights = ureg_DECL_temporary(ureg);
         struct ureg_src cWM[4];
 
-        for (i = 224; i <= 255; ++i)
+        for (i = 160; i <= 191; ++i)
             ureg_DECL_constant(ureg, i);
 
         /* translate world matrix index to constant file index */
         if (key->vertexblend_indexed) {
-            ureg_MAD(ureg, tmp, vs->aInd, ureg_imm1f(ureg, 4.0f), ureg_imm1f(ureg, 224.0f));
+            ureg_MAD(ureg, tmp, vs->aInd, ureg_imm1f(ureg, 4.0f), ureg_imm1f(ureg, 160.0f));
             ureg_ARL(ureg, AR, ureg_src(tmp));
         }
 
@@ -474,7 +474,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         for (i = 0; i < key->vertexblend; ++i) {
             for (c = 0; c < 4; ++c) {
-                cWM[c] = ureg_src_register(TGSI_FILE_CONSTANT, (224 + i * 4) * !key->vertexblend_indexed + c);
+                cWM[c] = ureg_src_register(TGSI_FILE_CONSTANT, (160 + i * 4) * !key->vertexblend_indexed + c);
                 if (key->vertexblend_indexed)
                     cWM[c] = ureg_src_indirect(cWM[c], ureg_scalar(ureg_src(AR), i));
             }
@@ -1782,13 +1782,13 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
 
         /* V and W matrix */
         M[3] = *GET_D3DTS(VIEW);
-        M[56] = M[1];
+        M[40] = M[1];
     }
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         /* load other world matrices */
         for (i = 1; i <= 7; ++i) {
-            nine_d3d_matrix_matrix_mul(&M[56 + i], GET_D3DTS(WORLDMATRIX(i)), GET_D3DTS(VIEW));
+            nine_d3d_matrix_matrix_mul(&M[40 + i], GET_D3DTS(WORLDMATRIX(i)), GET_D3DTS(VIEW));
         }
     }
 
