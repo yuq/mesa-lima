@@ -538,11 +538,11 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         if (key->vertextween) {
             struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
-            ureg_LRP(ureg, aVtx_dst, _XXXX(_CONST(30)), vs->aVtx, vs->aVtx1);
+            ureg_LRP(ureg, aVtx_dst, _XXXX(_CONST(30)), vs->aVtx1, vs->aVtx);
             vs->aVtx = ureg_src(aVtx_dst);
             if (need_aNrm) {
                 struct ureg_dst aNrm_dst = ureg_DECL_temporary(ureg);
-                ureg_LRP(ureg, aNrm_dst, _XXXX(_CONST(30)), vs->aNrm, vs->aNrm1);
+                ureg_LRP(ureg, aNrm_dst, _XXXX(_CONST(30)), vs->aNrm1, vs->aNrm);
                 vs->aNrm = ureg_src(aNrm_dst);
             }
         }
