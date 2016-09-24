@@ -1696,9 +1696,6 @@ struct gl_transform_feedback_info
    struct gl_transform_feedback_varying_info *Varyings;
    GLint NumVarying;
 
-   /** Global xfb_stride out qualifier if any */
-   GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
-
    struct gl_transform_feedback_buffer Buffers[MAX_FEEDBACK_BUFFERS];
 };
 
@@ -2743,6 +2740,8 @@ struct gl_shader_program
     */
    struct {
       GLenum BufferMode;
+      /** Global xfb_stride out qualifier if any */
+      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
       GLuint NumVarying;
       GLchar **VaryingNames;  /**< Array [NumVarying] of char * */
    } TransformFeedback;

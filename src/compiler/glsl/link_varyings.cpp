@@ -1136,11 +1136,11 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
       /* Apply any xfb_stride global qualifiers */
       if (has_xfb_qualifiers) {
          for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-            if (prog->LinkedTransformFeedback.BufferStride[j]) {
+            if (prog->TransformFeedback.BufferStride[j]) {
                buffers |= 1 << j;
                explicit_stride[j] = true;
                prog->LinkedTransformFeedback.Buffers[j].Stride =
-                  prog->LinkedTransformFeedback.BufferStride[j] / 4;
+                  prog->TransformFeedback.BufferStride[j] / 4;
             }
          }
       }
