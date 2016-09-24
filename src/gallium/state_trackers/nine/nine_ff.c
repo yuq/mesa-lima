@@ -56,9 +56,8 @@ struct nine_ff_vs_key
             uint32_t color0in_one : 1;
             uint32_t color1in_zero : 1;
             uint32_t fog : 1;
-            uint32_t specular_enable : 1;
             uint32_t normalizenormals : 1;
-            uint32_t pad1 : 5;
+            uint32_t pad1 : 6;
             uint32_t tc_dim_input: 16; /* 8 * 2 bits */
             uint32_t pad2 : 16;
             uint32_t tc_dim_output: 24; /* 8 * 3 bits */
@@ -904,13 +903,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W  ), vs->mtlA, vs->mtlE);
         }
 
-        if (key->specular_enable) {
-            /* add oCol[1] to oCol[0] */
-            ureg_MAD(ureg, tmp, ureg_src(rD), vs->mtlD, ureg_src(tmp));
-            ureg_MAD(ureg, oCol[0], ureg_src(rS), vs->mtlS, ureg_src(tmp));
-        } else {
-            ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
-        }
+        ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
         ureg_MUL(ureg, oCol[1], ureg_src(rS), vs->mtlS);
         ureg_release_temporary(ureg, rAtt);
         ureg_release_temporary(ureg, rHit);
@@ -1603,7 +1596,6 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.fog_range = state->rs[D3DRS_RANGEFOGENABLE];
 
     key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
-    key.specular_enable = !!state->rs[D3DRS_SPECULARENABLE];
     key.normalizenormals = !!state->rs[D3DRS_NORMALIZENORMALS];
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
@@ -1741,6 +1733,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
     }
 
     key.projected = nine_ff_get_projected_key(state);
+    key.specular = !!state->rs[D3DRS_SPECULARENABLE];
 
     for (; s < 8; ++s)
         key.ts[s].colorop = key.ts[s].alphaop = D3DTOP_DISABLE;
