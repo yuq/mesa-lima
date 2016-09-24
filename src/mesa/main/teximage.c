@@ -3571,8 +3571,15 @@ formats_differ_in_component_sizes(mesa_format f1, mesa_format f2)
    return GL_FALSE;
 }
 
+
+/**
+ * Check if the given texture format and size arguments match those
+ * of the texture image.
+ * \param return true if arguments match, false otherwise.
+ */
 static bool
-can_avoid_reallocation(struct gl_texture_image *texImage, GLenum internalFormat,
+can_avoid_reallocation(const struct gl_texture_image *texImage,
+                       GLenum internalFormat,
                        mesa_format texFormat, GLint x, GLint y, GLsizei width,
                        GLsizei height, GLint border)
 {
