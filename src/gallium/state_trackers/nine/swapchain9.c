@@ -85,6 +85,7 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
     D3DWindowBuffer *ret;
     struct winsys_handle whandle;
     int stride, dmaBufFd;
+    HRESULT hr;
 
     memset(&whandle, 0, sizeof(whandle));
     whandle.type = DRM_API_HANDLE_TYPE_FD;
@@ -96,14 +97,20 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
                                           PIPE_HANDLE_USAGE_READ);
     stride = whandle.stride;
     dmaBufFd = whandle.handle;
-    ID3DPresent_NewD3DWindowBufferFromDmaBuf(This->present,
-                                             dmaBufFd,
-                                             resource->width0,
-                                             resource->height0,
-                                             stride,
-                                             depth,
-                                             32,
-                                             &ret);
+    hr = ID3DPresent_NewD3DWindowBufferFromDmaBuf(This->present,
+                                                  dmaBufFd,
+                                                  resource->width0,
+                                                  resource->height0,
+                                                  stride,
+                                                  depth,
+                                                  32,
+                                                  &ret);
+    assert (SUCCEEDED(hr));
+
+    if (FAILED(hr)) {
+        ERR("Failed to create new D3DWindowBufferFromDmaBuf\n");
+        return NULL;
+    }
     return ret;
 }
 
@@ -339,6 +346,9 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
         }
         This->present_handles[i] = D3DWindowBuffer_create(This, resource, depth, false);
         pipe_resource_reference(&resource, NULL);
+        if (!This->present_handles[i]) {
+            return D3DERR_DRIVERINTERNALERROR;
+        }
     }
     if (pParams->EnableAutoDepthStencil) {
         tmplt.bind = d3d9_get_pipe_depth_format_bindings(pParams->AutoDepthStencilFormat);
