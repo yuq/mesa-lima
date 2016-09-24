@@ -919,9 +919,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         struct ureg_dst tmp = ureg_DECL_temporary(ureg);
         struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
         struct ureg_dst tmp_z = ureg_writemask(tmp, TGSI_WRITEMASK_Z);
-        if (key->position_t) {
-            ureg_MOV(ureg, ureg_saturate(tmp_x), ureg_scalar(vs->aCol[1], TGSI_SWIZZLE_W));
-        } else
         if (key->fog_range) {
             ureg_DP3(ureg, tmp_x, vs->aVtx, vs->aVtx);
             ureg_RSQ(ureg, tmp_z, _X(tmp));
@@ -941,7 +938,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MUL(ureg, tmp_x, _X(tmp), ureg_imm1f(ureg, -1.442695f));
             ureg_EX2(ureg, tmp_x, _X(tmp));
         } else
-        if (key->fog_mode == D3DFOG_LINEAR && !key->position_t) {
+        if (key->fog_mode == D3DFOG_LINEAR) {
             ureg_SUB(ureg, tmp_x, _XXXX(_CONST(28)), _Z(tmp));
             ureg_MUL(ureg, ureg_saturate(tmp_x), _X(tmp), _YYYY(_CONST(28)));
         }
@@ -1573,9 +1570,9 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.mtl_emissive = state->rs[D3DRS_EMISSIVEMATERIALSOURCE];
     }
     key.fog = !!state->rs[D3DRS_FOGENABLE];
-    key.fog_mode = state->rs[D3DRS_FOGENABLE] ? state->rs[D3DRS_FOGVERTEXMODE] : 0;
+    key.fog_mode = (!key.position_t && state->rs[D3DRS_FOGENABLE]) ? state->rs[D3DRS_FOGVERTEXMODE] : 0;
     if (key.fog_mode)
-        key.fog_range = !key.position_t && state->rs[D3DRS_RANGEFOGENABLE];
+        key.fog_range = state->rs[D3DRS_RANGEFOGENABLE];
 
     key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
     key.specular_enable = !!state->rs[D3DRS_SPECULARENABLE];
