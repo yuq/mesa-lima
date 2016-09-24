@@ -201,7 +201,7 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  *
  * CONST[ 0.. 3] D3DTS_WORLD * D3DTS_VIEW * D3DTS_PROJECTION
  * CONST[ 4.. 7] D3DTS_WORLD * D3DTS_VIEW
- * CONST[ 8..11] D3DTS_VIEW * D3DTS_PROJECTION
+ * CONST[ 8..11] D3DTS_PROJECTION
  * CONST[12..15] D3DTS_VIEW
  * CONST[16..18] Normal matrix
  *
@@ -266,10 +266,10 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[152..155] D3DTS_TEXTURE6
  * CONST[156..159] D3DTS_TEXTURE7
  *
- * CONST[224] D3DTS_WORLDMATRIX[0]
- * CONST[228] D3DTS_WORLDMATRIX[1]
+ * CONST[224] D3DTS_WORLDMATRIX[0] * D3DTS_VIEW
+ * CONST[228] D3DTS_WORLDMATRIX[1] * D3DTS_VIEW
  * ...
- * CONST[252] D3DTS_WORLDMATRIX[7]
+ * CONST[252] D3DTS_WORLDMATRIX[7] * D3DTS_VIEW
  */
 struct vs_build_ctx
 {
@@ -509,14 +509,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         if (!need_aVtx)
             ureg_release_temporary(ureg, aVtx_dst);
 
-        if (need_aVtx) {
-            struct ureg_dst aVtx_dst2 = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
-            ureg_MUL(ureg, aVtx_dst2, _XXXX(vs->aVtx), _CONST(4));
-            ureg_MAD(ureg, aVtx_dst2, _YYYY(vs->aVtx), _CONST(5), ureg_src(aVtx_dst2));
-            ureg_MAD(ureg, aVtx_dst2, _ZZZZ(vs->aVtx), _CONST(6), ureg_src(aVtx_dst2));
-            ureg_MAD(ureg, aVtx_dst2, _WWWW(vs->aVtx), _CONST(7), ureg_src(aVtx_dst2));
-            vs->aVtx = ureg_src(aVtx_dst2);
-        }
         if (need_aNrm) {
             struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
             ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
@@ -1785,18 +1777,19 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
         nine_d3d_matrix_inverse_3x3(&T, &M[1]);
         nine_d3d_matrix_transpose(&M[4], &T);
 
-        /* VP matrix */
-        nine_d3d_matrix_matrix_mul(&M[2], GET_D3DTS(VIEW), GET_D3DTS(PROJECTION));
+        /* P matrix */
+        M[2] = *GET_D3DTS(PROJECTION);
 
         /* V and W matrix */
         M[3] = *GET_D3DTS(VIEW);
-        M[56] = *GET_D3DTS(WORLD);
+        M[56] = M[1];
     }
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         /* load other world matrices */
-        for (i = 1; i <= 7; ++i)
-            M[56 + i] = *GET_D3DTS(WORLDMATRIX(i));
+        for (i = 1; i <= 7; ++i) {
+            nine_d3d_matrix_matrix_mul(&M[56 + i], GET_D3DTS(WORLDMATRIX(i)), GET_D3DTS(VIEW));
+        }
     }
 
     device->ff.vs_const[30 * 4] = asfloat(state->rs[D3DRS_TWEENFACTOR]);
