@@ -26,7 +26,7 @@
 
 #define DBG_CHANNEL DBG_FF
 
-#define NINE_FF_NUM_VS_CONST 192
+#define NINE_FF_NUM_VS_CONST 196
 #define NINE_FF_NUM_PS_CONST 24
 
 struct fvec4
@@ -269,7 +269,7 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[160] D3DTS_WORLDMATRIX[0] * D3DTS_VIEW
  * CONST[164] D3DTS_WORLDMATRIX[1] * D3DTS_VIEW
  * ...
- * CONST[188] D3DTS_WORLDMATRIX[7] * D3DTS_VIEW
+ * CONST[192] D3DTS_WORLDMATRIX[8] * D3DTS_VIEW
  */
 struct vs_build_ctx
 {
@@ -460,7 +460,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         struct ureg_dst sum_blendweights = ureg_DECL_temporary(ureg);
         struct ureg_src cWM[4];
 
-        for (i = 160; i <= 191; ++i)
+        for (i = 160; i <= 195; ++i)
             ureg_DECL_constant(ureg, i);
 
         /* translate world matrix index to constant file index */
@@ -1787,7 +1787,7 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         /* load other world matrices */
-        for (i = 1; i <= 7; ++i) {
+        for (i = 1; i <= 8; ++i) {
             nine_d3d_matrix_matrix_mul(&M[40 + i], GET_D3DTS(WORLDMATRIX(i)), GET_D3DTS(VIEW));
         }
     }

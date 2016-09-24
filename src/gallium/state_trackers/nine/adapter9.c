@@ -782,7 +782,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
     pCaps->MaxActiveLights = NINE_MAX_LIGHTS_ACTIVE; /* like GL_LIGHTi */
     pCaps->MaxUserClipPlanes = PIPE_MAX_CLIP_PLANES;
     pCaps->MaxVertexBlendMatrices = 4; /* 1 vec4 BLENDWEIGHT/INDICES input */
-    pCaps->MaxVertexBlendMatrixIndex = 7; /* D3DTS_WORLDMATRIX(0..7) */
+    pCaps->MaxVertexBlendMatrixIndex = 8; /* D3DTS_WORLDMATRIX(0..8) */
 
     pCaps->MaxPointSize = screen->get_paramf(screen, PIPE_CAPF_MAX_POINT_WIDTH);
 
