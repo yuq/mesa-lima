@@ -1585,10 +1585,11 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.lighting = 0;
     }
     if ((key.lighting | key.darkness) && state->rs[D3DRS_COLORVERTEX]) {
-        key.mtl_diffuse = state->rs[D3DRS_DIFFUSEMATERIALSOURCE];
-        key.mtl_ambient = state->rs[D3DRS_AMBIENTMATERIALSOURCE];
-        key.mtl_specular = state->rs[D3DRS_SPECULARMATERIALSOURCE];
-        key.mtl_emissive = state->rs[D3DRS_EMISSIVEMATERIALSOURCE];
+        uint32_t mask = (key.color0in_one ? 0 : 1) | (key.color1in_zero ? 0 : 2);
+        key.mtl_diffuse = state->rs[D3DRS_DIFFUSEMATERIALSOURCE] & mask;
+        key.mtl_ambient = state->rs[D3DRS_AMBIENTMATERIALSOURCE] & mask;
+        key.mtl_specular = state->rs[D3DRS_SPECULARMATERIALSOURCE] & mask;
+        key.mtl_emissive = state->rs[D3DRS_EMISSIVEMATERIALSOURCE] & mask;
     }
     key.fog = !!state->rs[D3DRS_FOGENABLE];
     key.fog_mode = (!key.position_t && state->rs[D3DRS_FOGENABLE]) ? state->rs[D3DRS_FOGVERTEXMODE] : 0;
