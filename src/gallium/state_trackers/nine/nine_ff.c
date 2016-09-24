@@ -429,19 +429,32 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
     /* === Vertex transformation / vertex blending:
      */
-    if (key->vertextween) {
-        struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
-        assert(!key->vertexblend);
-        ureg_LRP(ureg, aVtx_dst, _XXXX(_CONST(30)), vs->aVtx, vs->aVtx1);
-        vs->aVtx = ureg_src(aVtx_dst);
-        if (need_aNrm) {
-            struct ureg_dst aNrm_dst = ureg_DECL_temporary(ureg);
-            ureg_LRP(ureg, aNrm_dst, _XXXX(_CONST(30)), vs->aNrm, vs->aNrm1);
-            vs->aNrm = ureg_src(aNrm_dst);
-        }
-    }
 
-    if (key->vertexblend) {
+    if (key->position_t) {
+        if (device->driver_caps.window_space_position_support) {
+            ureg_MOV(ureg, oPos, vs->aVtx);
+        } else {
+            struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+            /* vs->aVtx contains the coordinates buffer wise.
+            * later in the pipeline, clipping, viewport and division
+            * by w (rhw = 1/w) are going to be applied, so do the reverse
+            * of these transformations (except clipping) to have the good
+            * position at the end.*/
+            ureg_MOV(ureg, tmp, vs->aVtx);
+            /* X from [X_min, X_min + width] to [-1, 1], same for Y. Z to [0, 1] */
+            ureg_SUB(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _CONST(101));
+            ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _CONST(100));
+            ureg_SUB(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XY), ureg_src(tmp), ureg_imm1f(ureg, 1.0f));
+            /* Y needs to be reversed */
+            ureg_MOV(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), ureg_negate(ureg_src(tmp)));
+            /* inverse rhw */
+            ureg_RCP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W), _W(tmp));
+            /* multiply X, Y, Z by w */
+            ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _W(tmp));
+            ureg_MOV(ureg, oPos, ureg_src(tmp));
+            ureg_release_temporary(ureg, tmp);
+        }
+    } else if (key->vertexblend) {
         struct ureg_dst tmp = ureg_DECL_temporary(ureg);
         struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
         struct ureg_dst sum_blendweights = ureg_DECL_temporary(ureg);
@@ -495,55 +508,62 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_release_temporary(ureg, sum_blendweights);
         if (!need_aVtx)
             ureg_release_temporary(ureg, aVtx_dst);
-    } else
-    if (key->position_t && device->driver_caps.window_space_position_support) {
-        ureg_MOV(ureg, oPos, vs->aVtx);
-    } else if (key->position_t) {
-        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
-        /* vs->aVtx contains the coordinates buffer wise.
-        * later in the pipeline, clipping, viewport and division
-        * by w (rhw = 1/w) are going to be applied, so do the reverse
-        * of these transformations (except clipping) to have the good
-        * position at the end.*/
-        ureg_MOV(ureg, tmp, vs->aVtx);
-        /* X from [X_min, X_min + width] to [-1, 1], same for Y. Z to [0, 1] */
-        ureg_SUB(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _CONST(101));
-        ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _CONST(100));
-        ureg_SUB(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XY), ureg_src(tmp), ureg_imm1f(ureg, 1.0f));
-        /* Y needs to be reversed */
-        ureg_MOV(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), ureg_negate(ureg_src(tmp)));
-        /* inverse rhw */
-        ureg_RCP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W), _W(tmp));
-        /* multiply X, Y, Z by w */
-        ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _W(tmp));
-        ureg_MOV(ureg, oPos, ureg_src(tmp));
-        ureg_release_temporary(ureg, tmp);
+
+        if (need_aVtx) {
+            struct ureg_dst aVtx_dst2 = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+            ureg_MUL(ureg, aVtx_dst2, _XXXX(vs->aVtx), _CONST(4));
+            ureg_MAD(ureg, aVtx_dst2, _YYYY(vs->aVtx), _CONST(5), ureg_src(aVtx_dst2));
+            ureg_MAD(ureg, aVtx_dst2, _ZZZZ(vs->aVtx), _CONST(6), ureg_src(aVtx_dst2));
+            ureg_MAD(ureg, aVtx_dst2, _WWWW(vs->aVtx), _CONST(7), ureg_src(aVtx_dst2));
+            vs->aVtx = ureg_src(aVtx_dst2);
+        }
+        if (need_aNrm) {
+            struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+            ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
+            ureg_MAD(ureg, aNrm_dst, _YYYY(vs->aNrm), _CONST(17), ureg_src(aNrm_dst));
+            ureg_MAD(ureg, aNrm_dst, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(aNrm_dst));
+            if (key->normalizenormals)
+               ureg_normalize3(ureg, aNrm_dst, ureg_src(aNrm_dst));
+            vs->aNrm = ureg_src(aNrm_dst);
+        }
     } else {
         struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+
+        if (key->vertextween) {
+            struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
+            ureg_LRP(ureg, aVtx_dst, _XXXX(_CONST(30)), vs->aVtx, vs->aVtx1);
+            vs->aVtx = ureg_src(aVtx_dst);
+            if (need_aNrm) {
+                struct ureg_dst aNrm_dst = ureg_DECL_temporary(ureg);
+                ureg_LRP(ureg, aNrm_dst, _XXXX(_CONST(30)), vs->aNrm, vs->aNrm1);
+                vs->aNrm = ureg_src(aNrm_dst);
+            }
+        }
+
         /* position = vertex * WORLD_VIEW_PROJ */
         ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), _CONST(0));
         ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), _CONST(1), ureg_src(tmp));
         ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), _CONST(2), ureg_src(tmp));
         ureg_MAD(ureg, oPos, _WWWW(vs->aVtx), _CONST(3), ureg_src(tmp));
         ureg_release_temporary(ureg, tmp);
-    }
 
-    if (need_aVtx) {
-        struct ureg_dst aVtx_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
-        ureg_MUL(ureg, aVtx_dst, _XXXX(vs->aVtx), _CONST(4));
-        ureg_MAD(ureg, aVtx_dst, _YYYY(vs->aVtx), _CONST(5), ureg_src(aVtx_dst));
-        ureg_MAD(ureg, aVtx_dst, _ZZZZ(vs->aVtx), _CONST(6), ureg_src(aVtx_dst));
-        ureg_MAD(ureg, aVtx_dst, _WWWW(vs->aVtx), _CONST(7), ureg_src(aVtx_dst));
-        vs->aVtx = ureg_src(aVtx_dst);
-    }
-    if (need_aNrm) {
-        struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
-        ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
-        ureg_MAD(ureg, aNrm_dst, _YYYY(vs->aNrm), _CONST(17), ureg_src(aNrm_dst));
-        ureg_MAD(ureg, aNrm_dst, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(aNrm_dst));
-        if (key->normalizenormals)
-           ureg_normalize3(ureg, aNrm_dst, ureg_src(aNrm_dst));
-        vs->aNrm = ureg_src(aNrm_dst);
+        if (need_aVtx) {
+            struct ureg_dst aVtx_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+            ureg_MUL(ureg, aVtx_dst, _XXXX(vs->aVtx), _CONST(4));
+            ureg_MAD(ureg, aVtx_dst, _YYYY(vs->aVtx), _CONST(5), ureg_src(aVtx_dst));
+            ureg_MAD(ureg, aVtx_dst, _ZZZZ(vs->aVtx), _CONST(6), ureg_src(aVtx_dst));
+            ureg_MAD(ureg, aVtx_dst, _WWWW(vs->aVtx), _CONST(7), ureg_src(aVtx_dst));
+            vs->aVtx = ureg_src(aVtx_dst);
+        }
+        if (need_aNrm) {
+            struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+            ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
+            ureg_MAD(ureg, aNrm_dst, _YYYY(vs->aNrm), _CONST(17), ureg_src(aNrm_dst));
+            ureg_MAD(ureg, aNrm_dst, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(aNrm_dst));
+            if (key->normalizenormals)
+               ureg_normalize3(ureg, aNrm_dst, ureg_src(aNrm_dst));
+            vs->aNrm = ureg_src(aNrm_dst);
+        }
     }
 
     /* === Process point size:
