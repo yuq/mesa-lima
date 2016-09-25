@@ -1825,7 +1825,7 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
         nine_d3d_matrix_matrix_mul(&M[0], &M[1], GET_D3DTS(PROJECTION));
 
         /* normal matrix == transpose(inverse(WV)) */
-        nine_d3d_matrix_inverse_3x3(&T, &M[1]);
+        nine_d3d_matrix_inverse(&T, &M[1]);
         nine_d3d_matrix_transpose(&M[4], &T);
 
         /* P matrix */
@@ -2445,6 +2445,11 @@ nine_d3d_matrix_inverse(D3DMATRIX *D, const D3DMATRIX *M)
         M->m[2][0] * D->m[0][2] +
         M->m[3][0] * D->m[0][3];
 
+    if (det < 1e-30) {/* non inversible */
+        *D = *M; /* wine tests */
+        return;
+    }
+
     det = 1.0 / det;
 
     for (i = 0; i < 4; i++)
@@ -2463,23 +2468,4 @@ nine_d3d_matrix_inverse(D3DMATRIX *D, const D3DMATRIX *M)
                 DBG("Matrix inversion check FAILED !\n");
     }
 #endif
-}
-
-/* TODO: don't use 4x4 inverse, unless this gets all nicely inlined ? */
-void
-nine_d3d_matrix_inverse_3x3(D3DMATRIX *D, const D3DMATRIX *M)
-{
-    D3DMATRIX T;
-    unsigned i, j;
-
-    for (i = 0; i < 3; ++i)
-    for (j = 0; j < 3; ++j)
-        T.m[i][j] = M->m[i][j];
-    for (i = 0; i < 3; ++i) {
-        T.m[i][3] = 0.0f;
-        T.m[3][i] = 0.0f;
-    }
-    T.m[3][3] = 1.0f;
-
-    nine_d3d_matrix_inverse(D, &T);
 }
