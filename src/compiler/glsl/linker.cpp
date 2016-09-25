@@ -4560,9 +4560,7 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
       return false;
 
    update_array_sizes(prog);
-   link_assign_uniform_locations(prog, ctx->Const.UniformBooleanTrue,
-                                 num_explicit_uniform_locs,
-                                 ctx->Const.MaxUserAssignableUniformLocations);
+   link_assign_uniform_locations(prog, ctx, num_explicit_uniform_locs);
    link_assign_atomic_counter_resources(ctx, prog);
 
    link_calculate_subroutine_compat(prog);
