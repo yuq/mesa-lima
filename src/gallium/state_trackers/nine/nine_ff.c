@@ -651,11 +651,14 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             break;
         case NINED3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR:
             tmp.WriteMask = TGSI_WRITEMASK_XYZ;
-            ureg_DP3(ureg, tmp_x, vs->aVtx, vs->aNrm);
+            aVtx_normed = ureg_DECL_temporary(ureg);
+            ureg_normalize3(ureg, aVtx_normed, vs->aVtx);
+            ureg_DP3(ureg, tmp_x, ureg_src(aVtx_normed), vs->aNrm);
             ureg_MUL(ureg, tmp, vs->aNrm, _X(tmp));
             ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_src(tmp));
-            ureg_SUB(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), vs->aVtx, ureg_src(tmp));
+            ureg_SUB(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(aVtx_normed), ureg_src(tmp));
             ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
+            ureg_release_temporary(ureg, aVtx_normed);
             dim_input = 4;
             tmp.WriteMask = TGSI_WRITEMASK_XYZW;
             break;
