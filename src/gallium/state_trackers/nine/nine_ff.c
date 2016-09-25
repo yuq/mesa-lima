@@ -1076,7 +1076,6 @@ struct ps_build_ctx
 
     struct ureg_src vC[2]; /* DIFFUSE, SPECULAR */
     struct ureg_src vT[8]; /* TEXCOORD[i] */
-    struct ureg_dst r[6];  /* TEMPs */
     struct ureg_dst rCur; /* D3DTA_CURRENT */
     struct ureg_dst rMod;
     struct ureg_src rCurSrc;
@@ -1090,7 +1089,6 @@ struct ps_build_ctx
     struct {
         unsigned index;
         unsigned index_pre_mod;
-        unsigned num_regs;
     } stage;
 };
 
@@ -1127,7 +1125,7 @@ ps_get_ts_arg(struct ps_build_ctx *ps, unsigned ta)
         break;
     }
     if (ta & D3DTA_COMPLEMENT) {
-        struct ureg_dst dst = ps->r[ps->stage.num_regs++];
+        struct ureg_dst dst = ureg_DECL_temporary(ps->ureg);
         ureg_SUB(ps->ureg, dst, ureg_imm1f(ps->ureg, 1.0f), reg);
         reg = ureg_src(dst);
     }
@@ -1192,8 +1190,8 @@ static void
 ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct ureg_src *arg)
 {
     struct ureg_program *ureg = ps->ureg;
-    struct ureg_dst tmp = ps->r[ps->stage.num_regs];
-    struct ureg_dst tmp2 = ps->r[ps->stage.num_regs+1];
+    struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+    struct ureg_dst tmp2 = ureg_DECL_temporary(ureg);
     struct ureg_dst tmp_x = ureg_writemask(tmp, TGSI_WRITEMASK_X);
 
     tmp.WriteMask = dst.WriteMask;
@@ -1302,6 +1300,8 @@ ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct u
         assert(!"invalid D3DTOP");
         break;
     }
+    ureg_release_temporary(ureg, tmp);
+    ureg_release_temporary(ureg, tmp2);
 }
 
 static void *
@@ -1310,7 +1310,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     struct ps_build_ctx ps;
     struct ureg_program *ureg = ureg_create(PIPE_SHADER_FRAGMENT);
     struct ureg_dst oCol;
-    unsigned i, s;
+    unsigned s;
     const unsigned texcoord_sn = get_texcoord_sn(device->screen);
 
     memset(&ps, 0, sizeof(ps));
@@ -1319,12 +1319,9 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
 
     ps.vC[0] = ureg_DECL_fs_input(ureg, TGSI_SEMANTIC_COLOR, 0, TGSI_INTERPOLATE_COLOR);
 
-    /* Declare all TEMPs we might need, serious drivers have a register allocator. */
-    for (i = 0; i < ARRAY_SIZE(ps.r); ++i)
-        ps.r[i] = ureg_DECL_temporary(ureg);
-    ps.rCur = ps.r[0];
-    ps.rTmp = ps.r[1];
-    ps.rTex = ps.r[2];
+    ps.rCur = ureg_DECL_temporary(ureg);
+    ps.rTmp = ureg_DECL_temporary(ureg);
+    ps.rTex = ureg_DECL_temporary(ureg);
     ps.rCurSrc = ureg_src(ps.rCur);
     ps.rTmpSrc = ureg_src(ps.rTmp);
     ps.rTexSrc = ureg_src(ps.rTex);
@@ -1387,7 +1384,6 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             key->ts[s].alphaop == D3DTOP_DISABLE)
             continue;
         ps.stage.index = s;
-        ps.stage.num_regs = 3;
 
         DBG("STAGE[%u]: colorop=%s alphaop=%s\n", s,
             nine_D3DTOP_to_str(key->ts[s].colorop),
@@ -1474,7 +1470,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
         dst = ps_get_ts_dst(&ps, key->ts[s].resultarg ? D3DTA_TEMP : D3DTA_CURRENT);
 
         if (ps.stage.index_pre_mod == ps.stage.index) {
-            ps.rMod = ps.r[ps.stage.num_regs++];
+            ps.rMod = ureg_DECL_temporary(ureg);
             ureg_MUL(ureg, ps.rMod, ps.rCurSrc, ps.rTexSrc);
         }
 
