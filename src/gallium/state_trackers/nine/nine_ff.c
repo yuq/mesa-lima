@@ -888,16 +888,15 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_normalize3(ureg, rMid, ureg_src(rMid));
             ureg_DP3(ureg, ureg_saturate(tmp_y), vs->aNrm, ureg_src(rMid));
             ureg_POW(ureg, tmp_y, _Y(tmp), mtlP);
-
-            ureg_MUL(ureg, tmp_x, _W(rAtt), _X(tmp)); /* dp3(normal,hitDir) * att */
             ureg_MUL(ureg, tmp_y, _W(rAtt), _Y(tmp)); /* power factor * att */
-            ureg_MAD(ureg, rD, cLColD, _X(tmp), ureg_src(rD)); /* accumulate diffuse */
             ureg_MAD(ureg, rS, cLColS, _Y(tmp), ureg_src(rS)); /* accumulate specular */
         }
         ureg_fixup_label(ureg, label[l-1], ureg_get_instruction_number(ureg));
         ureg_ENDIF(ureg);
 
         ureg_MAD(ureg, rA, cLColA, _W(rAtt), ureg_src(rA)); /* accumulate ambient */
+        ureg_MUL(ureg, tmp_x, _W(rAtt), _X(tmp)); /* dp3(normal,hitDir) * att */
+        ureg_MAD(ureg, rD, cLColD, _X(tmp), ureg_src(rD)); /* accumulate diffuse */
 
         /* break if this was the last light */
         ureg_IF(ureg, cLLast, &label[l++]);
