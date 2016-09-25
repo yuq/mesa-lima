@@ -1152,13 +1152,77 @@ link_setup_uniform_remap_tables(struct gl_context *ctx,
    }
 }
 
+static void
+link_assign_uniform_storage(struct gl_context *ctx,
+                            struct gl_shader_program *prog,
+                            const unsigned num_data_slots,
+                            unsigned num_explicit_uniform_locs)
+{
+   /* On the outside chance that there were no uniforms, bail out.
+    */
+   if (prog->NumUniformStorage == 0)
+      return;
+
+   unsigned int boolean_true = ctx->Const.UniformBooleanTrue;
+
+   prog->UniformStorage = rzalloc_array(prog, struct gl_uniform_storage,
+                                        prog->NumUniformStorage);
+   union gl_constant_value *data = rzalloc_array(prog->UniformStorage,
+                                                 union gl_constant_value,
+                                                 num_data_slots);
+#ifndef NDEBUG
+   union gl_constant_value *data_end = &data[num_data_slots];
+#endif
+
+   parcel_out_uniform_storage parcel(prog, prog->UniformHash,
+                                     prog->UniformStorage, data);
+
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (prog->_LinkedShaders[i] == NULL)
+         continue;
+
+      parcel.start_shader((gl_shader_stage)i);
+
+      foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
+         ir_variable *const var = node->as_variable();
+
+         if ((var == NULL) || (var->data.mode != ir_var_uniform &&
+                               var->data.mode != ir_var_shader_storage))
+            continue;
+
+         parcel.set_and_process(var);
+      }
+
+      prog->_LinkedShaders[i]->active_samplers = parcel.shader_samplers_used;
+      prog->_LinkedShaders[i]->shadow_samplers = parcel.shader_shadow_samplers;
+
+      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) ==
+                    sizeof(parcel.targets));
+      memcpy(prog->_LinkedShaders[i]->SamplerTargets, parcel.targets,
+             sizeof(prog->_LinkedShaders[i]->SamplerTargets));
+   }
+
+#ifndef NDEBUG
+   for (unsigned i = 0; i < prog->NumUniformStorage; i++) {
+      assert(prog->UniformStorage[i].storage != NULL ||
+             prog->UniformStorage[i].builtin ||
+             prog->UniformStorage[i].is_shader_storage ||
+             prog->UniformStorage[i].block_index != -1);
+   }
+
+   assert(parcel.values == data_end);
+#endif
+
+   link_setup_uniform_remap_tables(ctx, prog, num_explicit_uniform_locs);
+
+   link_set_uniform_initializers(prog, boolean_true);
+}
+
 void
 link_assign_uniform_locations(struct gl_shader_program *prog,
                               struct gl_context *ctx,
                               unsigned int num_explicit_uniform_locs)
 {
-   unsigned int boolean_true = ctx->Const.UniformBooleanTrue;
-
    ralloc_free(prog->UniformStorage);
    prog->UniformStorage = NULL;
    prog->NumUniformStorage = 0;
@@ -1224,70 +1288,12 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    }
 
    prog->NumUniformStorage = uniform_size.num_active_uniforms;
-   const unsigned num_data_slots = uniform_size.num_values;
-   const unsigned hidden_uniforms = uniform_size.num_hidden_uniforms;
+   prog->NumHiddenUniforms = uniform_size.num_hidden_uniforms;
 
    /* assign hidden uniforms a slot id */
    hiddenUniforms->iterate(assign_hidden_uniform_slot_id, &uniform_size);
    delete hiddenUniforms;
 
-   /* On the outside chance that there were no uniforms, bail out.
-    */
-   if (prog->NumUniformStorage == 0)
-      return;
-
-   prog->UniformStorage = rzalloc_array(prog, struct gl_uniform_storage,
-                                        prog->NumUniformStorage);
-   union gl_constant_value *data = rzalloc_array(prog->UniformStorage,
-                                                 union gl_constant_value,
-                                                 num_data_slots);
-#ifndef NDEBUG
-   union gl_constant_value *data_end = &data[num_data_slots];
-#endif
-
-   parcel_out_uniform_storage parcel(prog, prog->UniformHash,
-                                     prog->UniformStorage, data);
-
-   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (prog->_LinkedShaders[i] == NULL)
-         continue;
-
-      parcel.start_shader((gl_shader_stage)i);
-
-      foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
-         ir_variable *const var = node->as_variable();
-
-         if ((var == NULL) || (var->data.mode != ir_var_uniform &&
-                               var->data.mode != ir_var_shader_storage))
-            continue;
-
-         parcel.set_and_process(var);
-      }
-
-      prog->_LinkedShaders[i]->active_samplers = parcel.shader_samplers_used;
-      prog->_LinkedShaders[i]->shadow_samplers = parcel.shader_shadow_samplers;
-
-      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) ==
-                    sizeof(parcel.targets));
-      memcpy(prog->_LinkedShaders[i]->SamplerTargets, parcel.targets,
-             sizeof(prog->_LinkedShaders[i]->SamplerTargets));
-   }
-
-#ifndef NDEBUG
-   for (unsigned i = 0; i < prog->NumUniformStorage; i++) {
-      assert(prog->UniformStorage[i].storage != NULL ||
-             prog->UniformStorage[i].builtin ||
-             prog->UniformStorage[i].is_shader_storage ||
-             prog->UniformStorage[i].block_index != -1);
-   }
-
-   assert(parcel.values == data_end);
-#endif
-
-   prog->NumHiddenUniforms = hidden_uniforms;
-   link_setup_uniform_remap_tables(ctx, prog, num_explicit_uniform_locs);
-
-   link_set_uniform_initializers(prog, boolean_true);
-
-   return;
+   link_assign_uniform_storage(ctx, prog, uniform_size.num_values,
+                               num_explicit_uniform_locs);
 }
