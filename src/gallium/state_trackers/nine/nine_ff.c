@@ -1584,6 +1584,8 @@ nine_ff_get_vs(struct NineDevice9 *device)
     key.passthrough &= ~((1 << NINE_DECLUSAGE_POSITION) | (1 << NINE_DECLUSAGE_PSIZE) |
                          (1 << NINE_DECLUSAGE_TEXCOORD) | (1 << NINE_DECLUSAGE_POSITIONT) |
                          (1 << NINE_DECLUSAGE_TESSFACTOR) | (1 << NINE_DECLUSAGE_SAMPLE));
+    if (!key.position_t)
+        key.passthrough = 0;
     key.pointscale = !!state->rs[D3DRS_POINTSCALEENABLE];
 
     key.lighting = !!state->rs[D3DRS_LIGHTING] &&  state->ff.num_lights_active;
