@@ -704,7 +704,7 @@ struct ast_type_qualifier {
    ast_layout_expression *local_size[3];
 
    /** Tessellation evaluation shader: vertex spacing (equal, fractional even/odd) */
-   GLenum vertex_spacing;
+   enum gl_tess_spacing vertex_spacing;
 
    /** Tessellation evaluation shader: vertex ordering (CW or CCW) */
    GLenum ordering;

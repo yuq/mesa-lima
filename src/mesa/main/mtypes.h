@@ -2279,11 +2279,9 @@ struct gl_shader_info
        * in this shader.
        */
       GLenum PrimitiveMode;
-      /**
-       * GL_EQUAL, GL_FRACTIONAL_ODD, GL_FRACTIONAL_EVEN, or 0 if it's not set
-       * in this shader.
-       */
-      GLenum Spacing;
+
+      enum gl_tess_spacing Spacing;
+
       /**
        * GL_CW, GL_CCW, or 0 if it's not set in this shader.
        */

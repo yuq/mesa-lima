@@ -838,8 +838,22 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!has_tess)
          break;
       if (check_tes_query(ctx, shProg)) {
-         *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
-            info.TessEval.Spacing;
+         const struct gl_linked_shader *tes =
+            shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL];
+         switch (tes->info.TessEval.Spacing) {
+         case TESS_SPACING_EQUAL:
+            *params = GL_EQUAL;
+            break;
+         case TESS_SPACING_FRACTIONAL_ODD:
+            *params = GL_FRACTIONAL_ODD;
+            break;
+         case TESS_SPACING_FRACTIONAL_EVEN:
+            *params = GL_FRACTIONAL_EVEN;
+            break;
+         case TESS_SPACING_UNSPECIFIED:
+            *params = 0;
+            break;
+         }
       }
       return;
    case GL_TESS_GEN_VERTEX_ORDER:

@@ -331,7 +331,7 @@ brw_tcs_populate_key(struct brw_context *brw,
    key->tes_primitive_mode = tep->program.info.tes.primitive_mode;
    key->quads_workaround = brw->gen < 9 &&
                            tep->program.info.tes.primitive_mode == GL_QUADS &&
-                           tep->program.info.tes.spacing == GL_EQUAL;
+                           tep->program.info.tes.spacing == TESS_SPACING_EQUAL;
 
    if (tcp) {
       key->program_string_id = tcp->id;
@@ -403,7 +403,7 @@ brw_tcs_precompile(struct gl_context *ctx,
       key.tes_primitive_mode = tes->info.TessEval.PrimitiveMode;
       key.quads_workaround = brw->gen < 9 &&
                              tes->info.TessEval.PrimitiveMode == GL_QUADS &&
-                             tes->info.TessEval.Spacing == GL_EQUAL;
+                             tes->info.TessEval.Spacing == TESS_SPACING_EQUAL;
    } else {
       btep = NULL;
       key.tes_primitive_mode = GL_TRIANGLES;

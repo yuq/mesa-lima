@@ -1463,11 +1463,11 @@ layout_qualifier_id:
       if (!$$.flags.i) {
          static const struct {
             const char *s;
-            GLenum e;
+            enum gl_tess_spacing e;
          } map[] = {
-                 { "equal_spacing", GL_EQUAL },
-                 { "fractional_odd_spacing", GL_FRACTIONAL_ODD },
-                 { "fractional_even_spacing", GL_FRACTIONAL_EVEN },
+                 { "equal_spacing", TESS_SPACING_EQUAL },
+                 { "fractional_odd_spacing", TESS_SPACING_FRACTIONAL_ODD },
+                 { "fractional_even_spacing", TESS_SPACING_FRACTIONAL_EVEN },
          };
          for (unsigned i = 0; i < ARRAY_SIZE(map); i++) {
             if (match_layout_qualifier($1, map[i].s, state) == 0) {

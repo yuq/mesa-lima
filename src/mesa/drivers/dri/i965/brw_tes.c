@@ -93,19 +93,13 @@ brw_codegen_tes_prog(struct brw_context *brw,
    brw_assign_common_binding_table_offsets(devinfo, &tep->program,
                                            &prog_data.base.base, 0);
 
-   switch (tep->program.info.tes.spacing) {
-   case GL_EQUAL:
-      prog_data.partitioning = BRW_TESS_PARTITIONING_INTEGER;
-      break;
-   case GL_FRACTIONAL_ODD:
-      prog_data.partitioning = BRW_TESS_PARTITIONING_ODD_FRACTIONAL;
-      break;
-   case GL_FRACTIONAL_EVEN:
-      prog_data.partitioning = BRW_TESS_PARTITIONING_EVEN_FRACTIONAL;
-      break;
-   default:
-      unreachable("invalid domain shader spacing");
-   }
+   STATIC_ASSERT(BRW_TESS_PARTITIONING_INTEGER == TESS_SPACING_EQUAL - 1);
+   STATIC_ASSERT(BRW_TESS_PARTITIONING_ODD_FRACTIONAL ==
+                 TESS_SPACING_FRACTIONAL_ODD - 1);
+   STATIC_ASSERT(BRW_TESS_PARTITIONING_EVEN_FRACTIONAL ==
+                 TESS_SPACING_FRACTIONAL_EVEN - 1);
+
+   prog_data.partitioning = tep->program.info.tes.spacing - 1;
 
    switch (tep->program.info.tes.primitive_mode) {
    case GL_QUADS:

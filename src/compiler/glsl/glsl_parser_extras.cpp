@@ -1732,7 +1732,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       if (state->in_qualifier->flags.q.prim_type)
          shader->info.TessEval.PrimitiveMode = state->in_qualifier->prim_type;
 
-      shader->info.TessEval.Spacing = 0;
+      shader->info.TessEval.Spacing = TESS_SPACING_UNSPECIFIED;
       if (state->in_qualifier->flags.q.vertex_spacing)
          shader->info.TessEval.Spacing = state->in_qualifier->vertex_spacing;
 

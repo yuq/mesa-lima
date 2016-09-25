@@ -1607,21 +1607,14 @@ st_translate_tesseval_program(struct st_context *st,
       ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE,
                     sttep->Base.info.tes.primitive_mode);
 
-   switch (sttep->Base.info.tes.spacing) {
-   case GL_EQUAL:
-      ureg_property(ureg, TGSI_PROPERTY_TES_SPACING, PIPE_TESS_SPACING_EQUAL);
-      break;
-   case GL_FRACTIONAL_EVEN:
-      ureg_property(ureg, TGSI_PROPERTY_TES_SPACING,
-                    PIPE_TESS_SPACING_FRACTIONAL_EVEN);
-      break;
-   case GL_FRACTIONAL_ODD:
-      ureg_property(ureg, TGSI_PROPERTY_TES_SPACING,
-                    PIPE_TESS_SPACING_FRACTIONAL_ODD);
-      break;
-   default:
-      assert(0);
-   }
+   STATIC_ASSERT((TESS_SPACING_EQUAL + 1) % 3 == PIPE_TESS_SPACING_EQUAL);
+   STATIC_ASSERT((TESS_SPACING_FRACTIONAL_ODD + 1) % 3 ==
+                 PIPE_TESS_SPACING_FRACTIONAL_ODD);
+   STATIC_ASSERT((TESS_SPACING_FRACTIONAL_EVEN + 1) % 3 ==
+                 PIPE_TESS_SPACING_FRACTIONAL_EVEN);
+
+   ureg_property(ureg, TGSI_PROPERTY_TES_SPACING,
+                 (sttep->Base.info.tes.spacing + 1) % 3);
 
    ureg_property(ureg, TGSI_PROPERTY_TES_VERTEX_ORDER_CW,
                  !sttep->Base.info.tes.ccw);
