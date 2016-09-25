@@ -2751,10 +2751,10 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
     case D3DTSS_BUMPENVMAT00:
         bumpmap_index = 4 * Stage;
         break;
-    case D3DTSS_BUMPENVMAT10:
+    case D3DTSS_BUMPENVMAT01:
         bumpmap_index = 4 * Stage + 1;
         break;
-    case D3DTSS_BUMPENVMAT01:
+    case D3DTSS_BUMPENVMAT10:
         bumpmap_index = 4 * Stage + 2;
         break;
     case D3DTSS_BUMPENVMAT11:
