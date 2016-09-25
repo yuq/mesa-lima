@@ -1429,9 +1429,11 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
                 if (dim == 4)
                     ureg_TXP(ureg, ps.rTex, target, texture_coord, ps.s[s]);
                 else {
-                    ureg_RCP(ureg, ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X), ureg_scalar(texture_coord, dim-1));
-                    ureg_MUL(ureg, ps.rTmp, _XXXX(ps.rTmpSrc), texture_coord);
+                    struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+                    ureg_RCP(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(texture_coord, dim-1));
+                    ureg_MUL(ureg, ps.rTmp, _X(tmp), texture_coord);
                     ureg_TEX(ureg, ps.rTex, target, ps.rTmpSrc, ps.s[s]);
+                    ureg_release_temporary(ureg, tmp);
                 }
             } else {
                 ureg_TEX(ureg, ps.rTex, target, texture_coord, ps.s[s]);
