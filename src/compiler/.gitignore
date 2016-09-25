@@ -4,3 +4,4 @@ subtest-cr
 subtest-cr-lf
 subtest-lf
 subtest-lf-cr
+spirv2nir
