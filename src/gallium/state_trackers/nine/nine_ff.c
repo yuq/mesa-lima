@@ -343,7 +343,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
     /* Check which inputs we should transform. */
     for (i = 0; i < 8 * 3; i += 3) {
-        switch ((key->tc_gen >> i) & 0x3) {
+        switch ((key->tc_gen >> i) & 0x7) {
         case NINED3DTSS_TCI_CAMERASPACENORMAL:
             need_aNrm = TRUE;
             break;
