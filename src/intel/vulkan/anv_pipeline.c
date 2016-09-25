@@ -219,7 +219,6 @@ static const uint32_t vk_to_gen_primitive_type[] = {
    [VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY]     = _3DPRIM_LINESTRIP_ADJ,
    [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY]  = _3DPRIM_TRILIST_ADJ,
    [VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY] = _3DPRIM_TRISTRIP_ADJ,
-/*   [VK_PRIMITIVE_TOPOLOGY_PATCH_LIST]                = _3DPRIM_PATCHLIST_1 */
 };
 
 static void
@@ -1099,8 +1098,14 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
 
    const VkPipelineInputAssemblyStateCreateInfo *ia_info =
       pCreateInfo->pInputAssemblyState;
+   const VkPipelineTessellationStateCreateInfo *tess_info =
+      pCreateInfo->pTessellationState;
    pipeline->primitive_restart = ia_info->primitiveRestartEnable;
-   pipeline->topology = vk_to_gen_primitive_type[ia_info->topology];
+
+   if (anv_pipeline_has_stage(pipeline, MESA_SHADER_TESS_EVAL))
+      pipeline->topology = _3DPRIM_PATCHLIST(tess_info->patchControlPoints);
+   else
+      pipeline->topology = vk_to_gen_primitive_type[ia_info->topology];
 
    return VK_SUCCESS;
 
