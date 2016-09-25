@@ -39,6 +39,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#define WORD_SIZE 4
+
 int main(int argc, char **argv)
 {
    int fd = open(argv[1], O_RDONLY);
@@ -49,9 +51,15 @@ int main(int argc, char **argv)
    }
 
    off_t len = lseek(fd, 0, SEEK_END);
+   if (len % WORD_SIZE != 0)
+   {
+      fprintf(stderr, "File length isn't a multiple of the word size\n");
+      fprintf(stderr, "Are you sure this is a valid SPIR-V shader?\n");
+      close(fd);
+      return 1;
+   }
 
-   assert(len % 4 == 0);
-   size_t word_count = len / 4;
+   size_t word_count = len / WORD_SIZE;
 
    const void *map = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
    assert(map != NULL);
