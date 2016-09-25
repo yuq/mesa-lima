@@ -787,7 +787,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         /* Light.*.Alpha is not used. */
         struct ureg_dst rD = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
         struct ureg_dst rA = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
-        struct ureg_dst rS = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
+        struct ureg_dst rS = ureg_DECL_temporary(ureg);
 
         struct ureg_src mtlP = _XXXX(MATERIAL_CONST(4));
 
@@ -915,10 +915,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         /* Set alpha factors of illumination to 1.0 for the multiplications. */
         rD.WriteMask = TGSI_WRITEMASK_W; rD.Saturate = 0;
-        rS.WriteMask = TGSI_WRITEMASK_W; rS.Saturate = 0;
         rA.WriteMask = TGSI_WRITEMASK_W; rA.Saturate = 0;
         ureg_MOV(ureg, rD, ureg_imm1f(ureg, 1.0f));
-        ureg_MOV(ureg, rS, ureg_imm1f(ureg, 1.0f));
 
         /* Apply to material:
          *
@@ -959,7 +957,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_ADD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), vs->mtlD, _W(tmp));
             ureg_release_temporary(ureg, tmp);
         }
-        ureg_MUL(ureg, oCol[1], ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), vs->mtlS);
+        ureg_MOV(ureg, oCol[1], ureg_imm1f(ureg, 0.0f));
     } else {
         ureg_MOV(ureg, oCol[0], vs->aCol[0]);
         ureg_MOV(ureg, oCol[1], vs->aCol[1]);
