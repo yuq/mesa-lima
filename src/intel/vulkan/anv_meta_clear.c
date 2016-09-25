@@ -752,28 +752,24 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
    meta_clear_end(&saved_state, cmd_buffer);
 }
 
-static void
-anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
-                    struct anv_image *image,
-                    VkImageLayout image_layout,
-                    VkClearValue clear_value,
-                    uint32_t range_count,
-                    const VkImageSubresourceRange *ranges)
+void anv_CmdClearDepthStencilImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     image_h,
+    VkImageLayout                               imageLayout,
+    const VkClearDepthStencilValue*             pDepthStencil,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*              pRanges)
 {
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, image, image_h);
+   struct anv_meta_saved_state saved_state;
+
+   meta_clear_begin(&saved_state, cmd_buffer);
+
    VkDevice device_h = anv_device_to_handle(cmd_buffer->device);
 
-   VkFormat vk_format = image->vk_format;
-   if (vk_format == VK_FORMAT_E5B9G9R9_UFLOAT_PACK32) {
-      /* We can't actually render to this format so we have to work around it
-       * by manually unpacking and using R32_UINT.
-       */
-      clear_value.color.uint32[0] =
-         float3_to_rgb9e5(clear_value.color.float32);
-      vk_format = VK_FORMAT_R32_UINT;
-   }
-
-   for (uint32_t r = 0; r < range_count; r++) {
-      const VkImageSubresourceRange *range = &ranges[r];
+   for (uint32_t r = 0; r < rangeCount; r++) {
+      const VkImageSubresourceRange *range = &pRanges[r];
       for (uint32_t l = 0; l < anv_get_levelCount(image, range); ++l) {
          const uint32_t layer_count = image->type == VK_IMAGE_TYPE_3D ?
                                       anv_minify(image->extent.depth, l) :
@@ -785,7 +781,7 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                   .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
                   .image = anv_image_to_handle(image),
                   .viewType = anv_meta_get_view_type(image),
-                  .format = vk_format,
+                  .format = image->vk_format,
                   .subresourceRange = {
                      .aspectMask = range->aspectMask,
                      .baseMipLevel = range->baseMipLevel + l,
@@ -812,13 +808,18 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                &fb);
 
             VkAttachmentDescription att_desc = {
-               .format = vk_format,
+               .format = image->vk_format,
                .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
                .stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
                .stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE,
-               .initialLayout = image_layout,
-               .finalLayout = image_layout,
+               .initialLayout = imageLayout,
+               .finalLayout = imageLayout,
+            };
+
+            const VkAttachmentReference att_ref = {
+               .attachment = 0,
+               .layout = imageLayout,
             };
 
             VkSubpassDescription subpass_desc = {
@@ -827,22 +828,10 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
                .colorAttachmentCount = 0,
                .pColorAttachments = NULL,
                .pResolveAttachments = NULL,
-               .pDepthStencilAttachment = NULL,
+               .pDepthStencilAttachment = &att_ref,
                .preserveAttachmentCount = 0,
                .pPreserveAttachments = NULL,
             };
-
-            const VkAttachmentReference att_ref = {
-               .attachment = 0,
-               .layout = image_layout,
-            };
-
-            if (range->aspectMask & VK_IMAGE_ASPECT_COLOR_BIT) {
-               subpass_desc.colorAttachmentCount = 1;
-               subpass_desc.pColorAttachments = &att_ref;
-            } else {
-               subpass_desc.pDepthStencilAttachment = &att_ref;
-            }
 
             VkRenderPass pass;
             anv_CreateRenderPass(device_h,
@@ -876,7 +865,9 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
             VkClearAttachment clear_att = {
                .aspectMask = range->aspectMask,
                .colorAttachment = 0,
-               .clearValue = clear_value,
+               .clearValue = {
+                  .depthStencil = *pDepthStencil,
+               },
             };
 
             VkClearRect clear_rect = {
@@ -898,25 +889,6 @@ anv_cmd_clear_image(struct anv_cmd_buffer *cmd_buffer,
          }
       }
    }
-}
-
-void anv_CmdClearDepthStencilImage(
-    VkCommandBuffer                             commandBuffer,
-    VkImage                                     image_h,
-    VkImageLayout                               imageLayout,
-    const VkClearDepthStencilValue*             pDepthStencil,
-    uint32_t                                    rangeCount,
-    const VkImageSubresourceRange*              pRanges)
-{
-   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   ANV_FROM_HANDLE(anv_image, image, image_h);
-   struct anv_meta_saved_state saved_state;
-
-   meta_clear_begin(&saved_state, cmd_buffer);
-
-   anv_cmd_clear_image(cmd_buffer, image, imageLayout,
-                       (VkClearValue) { .depthStencil = *pDepthStencil },
-                       rangeCount, pRanges);
 
    meta_clear_end(&saved_state, cmd_buffer);
 }
