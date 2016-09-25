@@ -771,7 +771,7 @@ NineAdapter9_GetDeviceCaps( struct NineAdapter9 *This,
         pCaps->MaxSimultaneousTextures = NINE_MAX_SAMPLERS_PS;
 
     pCaps->VertexProcessingCaps = D3DVTXPCAPS_TEXGEN |
-                                  /*D3DVTXPCAPS_TEXGEN_SPHEREMAP |*/
+                                  D3DVTXPCAPS_TEXGEN_SPHEREMAP |
                                   D3DVTXPCAPS_MATERIALSOURCE7 |
                                   D3DVTXPCAPS_DIRECTIONALLIGHTS |
                                   D3DVTXPCAPS_POSITIONALLIGHTS |

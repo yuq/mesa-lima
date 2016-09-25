@@ -353,6 +353,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         case NINED3DTSS_TCI_CAMERASPACEREFLECTIONVECTOR:
             need_aVtx = need_aNrm = TRUE;
             break;
+        case NINED3DTSS_TCI_SPHEREMAP:
+            need_aVtx = need_aNrm = TRUE;
+            break;
         default:
             break;
         }
@@ -611,8 +614,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     }
 
     for (i = 0; i < 8; ++i) {
-        struct ureg_dst tmp, tmp_x;
-        struct ureg_dst oTex, input_coord, transformed, t;
+        struct ureg_dst tmp, tmp_x, tmp2;
+        struct ureg_dst oTex, input_coord, transformed, t, aVtx_normed;
         unsigned c, writemask;
         const unsigned tci = (key->tc_gen >> (i * 3)) & 0x7;
         const unsigned idx = (key->tc_idx >> (i * 3)) & 0x7;
@@ -657,7 +660,30 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             tmp.WriteMask = TGSI_WRITEMASK_XYZW;
             break;
         case NINED3DTSS_TCI_SPHEREMAP:
-            assert(!"TODO");
+            /* Implement the formula of GL_SPHERE_MAP */
+            tmp.WriteMask = TGSI_WRITEMASK_XYZ;
+            aVtx_normed = ureg_DECL_temporary(ureg);
+            tmp2 = ureg_DECL_temporary(ureg);
+            ureg_normalize3(ureg, aVtx_normed, vs->aVtx);
+            ureg_DP3(ureg, tmp_x, ureg_src(aVtx_normed), vs->aNrm);
+            ureg_MUL(ureg, tmp, vs->aNrm, _X(tmp));
+            ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_src(tmp));
+            ureg_SUB(ureg, tmp, ureg_src(aVtx_normed), ureg_src(tmp));
+            /* now tmp = normed(Vtx) - 2 dot3(normed(Vtx), Nrm) Nrm */
+            ureg_MOV(ureg, ureg_writemask(tmp2, TGSI_WRITEMASK_XYZ), ureg_src(tmp));
+            ureg_MUL(ureg, tmp2, ureg_src(tmp2), ureg_src(tmp2));
+            ureg_DP3(ureg, ureg_writemask(tmp2, TGSI_WRITEMASK_X), ureg_src(tmp2), ureg_src(tmp2));
+            ureg_RSQ(ureg, ureg_writemask(tmp2, TGSI_WRITEMASK_X), ureg_src(tmp2));
+            ureg_MUL(ureg, ureg_writemask(tmp2, TGSI_WRITEMASK_X), ureg_src(tmp2), ureg_imm1f(ureg, 0.5f));
+            /* tmp2 = 0.5 / sqrt(tmp.x^2 + tmp.y^2 + (tmp.z+1)^2)
+             * TODO: z coordinates are a bit different gl vs d3d, should the formula be adapted ? */
+            ureg_MUL(ureg, tmp, ureg_src(tmp), _X(tmp2));
+            ureg_ADD(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XY), ureg_src(tmp), ureg_imm1f(ureg, 0.5f));
+            ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_ZW), ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f));
+            ureg_release_temporary(ureg, aVtx_normed);
+            ureg_release_temporary(ureg, tmp2);
+            dim_input = 4;
+            tmp.WriteMask = TGSI_WRITEMASK_XYZW;
             break;
         default:
             assert(0);
