@@ -47,6 +47,7 @@ struct nir_spirv_specialization {
 struct nir_spirv_supported_extensions {
    bool float64;
    bool image_ms_array;
+   bool tessellation;
 };
 
 nir_function *spirv_to_nir(const uint32_t *words, size_t word_count,

@@ -2602,8 +2602,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
          break;
 
       case SpvCapabilityGeometryStreams:
-      case SpvCapabilityTessellation:
-      case SpvCapabilityTessellationPointSize:
       case SpvCapabilityLinkage:
       case SpvCapabilityVector16:
       case SpvCapabilityFloat16Buffer:
@@ -2644,6 +2642,11 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
 
       case SpvCapabilityImageMSArray:
          spv_check_supported(image_ms_array, cap);
+         break;
+
+      case SpvCapabilityTessellation:
+      case SpvCapabilityTessellationPointSize:
+         spv_check_supported(tessellation, cap);
          break;
       }
       break;
