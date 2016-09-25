@@ -37,10 +37,17 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdio.h>
 
 int main(int argc, char **argv)
 {
    int fd = open(argv[1], O_RDONLY);
+   if (fd < 0)
+   {
+      fprintf(stderr, "Failed to open %s\n", argv[1]);
+      return 1;
+   }
+
    off_t len = lseek(fd, 0, SEEK_END);
 
    assert(len % 4 == 0);
@@ -52,4 +59,6 @@ int main(int argc, char **argv)
    nir_function *func = spirv_to_nir(map, word_count, NULL, 0,
                                      MESA_SHADER_FRAGMENT, "main", NULL);
    nir_print_shader(func->shader, stderr);
+
+   return 0;
 }
