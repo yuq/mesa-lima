@@ -1326,6 +1326,11 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     ps.rTmpSrc = ureg_src(ps.rTmp);
     ps.rTexSrc = ureg_src(ps.rTex);
 
+    /* Initial values */
+    ureg_MOV(ureg, ps.rCur, ureg_imm1f(ureg, 0.0f));
+    ureg_MOV(ureg, ps.rTmp, ureg_imm1f(ureg, 0.0f));
+    ureg_MOV(ureg, ps.rTex, ureg_imm1f(ureg, 0.0f));
+
     for (s = 0; s < 8; ++s) {
         ps.s[s] = ureg_src_undef();
 
