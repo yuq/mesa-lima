@@ -55,9 +55,10 @@ struct nine_ff_vs_key
             uint32_t fog_range : 1;
             uint32_t color0in_one : 1;
             uint32_t color1in_zero : 1;
+            uint32_t has_normal : 1;
             uint32_t fog : 1;
             uint32_t normalizenormals : 1;
-            uint32_t pad1 : 6;
+            uint32_t pad1 : 5;
             uint32_t tc_dim_input: 16; /* 8 * 2 bits */
             uint32_t pad2 : 16;
             uint32_t tc_dim_output: 24; /* 8 * 3 bits */
@@ -336,6 +337,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     unsigned i, c;
     unsigned label[32], l = 0;
     boolean need_aNrm = key->lighting || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
+    boolean has_aNrm = need_aNrm && key->has_normal;
     boolean need_aVtx = key->lighting || key->fog_mode || key->pointscale;
     const unsigned texcoord_sn = get_texcoord_sn(device->screen);
 
@@ -367,7 +369,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     vs->aVtx = build_vs_add_input(vs,
         key->position_t ? NINE_DECLUSAGE_POSITIONT : NINE_DECLUSAGE_POSITION);
 
-    if (need_aNrm)
+    vs->aNrm = ureg_imm1f(ureg, 0.0f);
+    if (has_aNrm)
         vs->aNrm = build_vs_add_input(vs, NINE_DECLUSAGE_NORMAL);
 
     vs->aCol[0] = ureg_imm1f(ureg, 1.0f);
@@ -490,7 +493,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), cWM[2], ureg_src(tmp));
             ureg_MAD(ureg, tmp, _WWWW(vs->aVtx), cWM[3], ureg_src(tmp));
 
-            if (need_aNrm) {
+            if (has_aNrm) {
                 /* Note: the spec says the transpose of the inverse of the
                  * WorldView matrices should be used, but all tests show
                  * otherwise.
@@ -503,7 +506,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             if (i < (key->vertexblend - 1)) {
                 /* accumulate weighted position value */
                 ureg_MAD(ureg, aVtx_dst, ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(aVtx_dst));
-                if (need_aNrm)
+                if (has_aNrm)
                     ureg_MAD(ureg, aNrm_dst, ureg_src(tmp2), ureg_scalar(vs->aWgt, i), ureg_src(aNrm_dst));
                 /* subtract weighted position value for last value */
                 ureg_SUB(ureg, sum_blendweights, ureg_src(sum_blendweights), ureg_scalar(vs->aWgt, i));
@@ -512,7 +515,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         /* the last weighted position is always 1 - sum_of_previous_weights */
         ureg_MAD(ureg, aVtx_dst, ureg_src(tmp), ureg_scalar(ureg_src(sum_blendweights), key->vertexblend - 1), ureg_src(aVtx_dst));
-        if (need_aNrm)
+        if (has_aNrm)
             ureg_MAD(ureg, aNrm_dst, ureg_src(tmp2), ureg_scalar(ureg_src(sum_blendweights), key->vertexblend - 1), ureg_src(aNrm_dst));
 
         /* multiply by VIEW_PROJ */
@@ -530,7 +533,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         if (!need_aVtx)
             ureg_release_temporary(ureg, aVtx_dst);
 
-        if (need_aNrm) {
+        if (has_aNrm) {
             if (key->normalizenormals)
                ureg_normalize3(ureg, aNrm_dst, ureg_src(aNrm_dst));
             vs->aNrm = ureg_src(aNrm_dst);
@@ -543,7 +546,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
             ureg_LRP(ureg, aVtx_dst, _XXXX(_CONST(30)), vs->aVtx1, vs->aVtx);
             vs->aVtx = ureg_src(aVtx_dst);
-            if (need_aNrm) {
+            if (has_aNrm) {
                 struct ureg_dst aNrm_dst = ureg_DECL_temporary(ureg);
                 ureg_LRP(ureg, aNrm_dst, _XXXX(_CONST(30)), vs->aNrm1, vs->aNrm);
                 vs->aNrm = ureg_src(aNrm_dst);
@@ -565,7 +568,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_MAD(ureg, aVtx_dst, _WWWW(vs->aVtx), _CONST(7), ureg_src(aVtx_dst));
             vs->aVtx = ureg_src(aVtx_dst);
         }
-        if (need_aNrm) {
+        if (has_aNrm) {
             struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
             ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
             ureg_MAD(ureg, aNrm_dst, _YYYY(vs->aNrm), _CONST(17), ureg_src(aNrm_dst));
@@ -875,27 +878,30 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         /* directional factors, let's not use LIT because of clarity */
 
-        if (key->localviewer) {
-            ureg_normalize3(ureg, rMid, vs->aVtx);
-            ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_src(rMid));
-        } else {
-            ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
+        if (has_aNrm) {
+            if (key->localviewer) {
+                ureg_normalize3(ureg, rMid, vs->aVtx);
+                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_src(rMid));
+            } else {
+                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
+            }
+            ureg_normalize3(ureg, rMid, ureg_src(rMid));
+            ureg_DP3(ureg, ureg_saturate(tmp_y), vs->aNrm, ureg_src(rMid));
+            ureg_IF(ureg, _Y(tmp), &label[l++]);
+            {
+                ureg_POW(ureg, tmp_y, _Y(tmp), mtlP);
+                ureg_MUL(ureg, tmp_y, _W(rAtt), _Y(tmp)); /* power factor * att */
+                ureg_MAD(ureg, rS, cLColS, _Y(tmp), ureg_src(rS)); /* accumulate specular */
+            }
+            ureg_fixup_label(ureg, label[l-1], ureg_get_instruction_number(ureg));
+            ureg_ENDIF(ureg);
+
+            ureg_DP3(ureg, ureg_saturate(tmp_x), vs->aNrm, ureg_src(rHit));
+            ureg_MUL(ureg, tmp_x, _W(rAtt), _X(tmp)); /* dp3(normal,hitDir) * att */
+            ureg_MAD(ureg, rD, cLColD, _X(tmp), ureg_src(rD)); /* accumulate diffuse */
         }
-        ureg_normalize3(ureg, rMid, ureg_src(rMid));
-        ureg_DP3(ureg, ureg_saturate(tmp_y), vs->aNrm, ureg_src(rMid));
-        ureg_IF(ureg, _Y(tmp), &label[l++]);
-        {
-            ureg_POW(ureg, tmp_y, _Y(tmp), mtlP);
-            ureg_MUL(ureg, tmp_y, _W(rAtt), _Y(tmp)); /* power factor * att */
-            ureg_MAD(ureg, rS, cLColS, _Y(tmp), ureg_src(rS)); /* accumulate specular */
-        }
-        ureg_fixup_label(ureg, label[l-1], ureg_get_instruction_number(ureg));
-        ureg_ENDIF(ureg);
 
         ureg_MAD(ureg, rA, cLColA, _W(rAtt), ureg_src(rA)); /* accumulate ambient */
-        ureg_DP3(ureg, ureg_saturate(tmp_x), vs->aNrm, ureg_src(rHit));
-        ureg_MUL(ureg, tmp_x, _W(rAtt), _X(tmp)); /* dp3(normal,hitDir) * att */
-        ureg_MAD(ureg, rD, cLColD, _X(tmp), ureg_src(rD)); /* accumulate diffuse */
 
         /* break if this was the last light */
         ureg_IF(ureg, cLLast, &label[l++]);
@@ -1596,6 +1602,9 @@ nine_ff_get_vs(struct NineDevice9 *device)
                 key.passthrough |= 1 << usage;
             } else if (usage == NINE_DECLUSAGE_i(BLENDWEIGHT, 0)) {
                 has_weights = true;
+                key.passthrough |= 1 << usage;
+            } else if (usage == NINE_DECLUSAGE_i(NORMAL, 0)) {
+                key.has_normal = 1;
                 key.passthrough |= 1 << usage;
             } else if (usage == NINE_DECLUSAGE_PSIZE)
                 key.vertexpointsize = 1;
