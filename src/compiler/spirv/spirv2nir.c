@@ -38,6 +38,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <errno.h>
+#include <string.h>
 
 #define WORD_SIZE 4
 
@@ -62,7 +64,13 @@ int main(int argc, char **argv)
    size_t word_count = len / WORD_SIZE;
 
    const void *map = mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
-   assert(map != NULL);
+   if (map == MAP_FAILED)
+   {
+      fprintf(stderr, "Failed to mmap the file: errno=%d, %s\n",
+              errno, strerror(errno));
+      close(fd);
+      return 1;
+   }
 
    nir_function *func = spirv_to_nir(map, word_count, NULL, 0,
                                      MESA_SHADER_FRAGMENT, "main", NULL);
