@@ -2753,8 +2753,13 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break; /* Nothing to do with this */
 
    case SpvExecutionModeOutputVertices:
-      assert(b->shader->stage == MESA_SHADER_GEOMETRY);
-      b->shader->info->gs.vertices_out = mode->literals[0];
+      if (b->shader->stage == MESA_SHADER_TESS_CTRL ||
+          b->shader->stage == MESA_SHADER_TESS_EVAL) {
+         b->shader->info->tess.tcs_vertices_out = mode->literals[0];
+      } else {
+         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
+         b->shader->info->gs.vertices_out = mode->literals[0];
+      }
       break;
 
    case SpvExecutionModeInputPoints:
@@ -2764,11 +2769,14 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
    case SpvExecutionModeInputTrianglesAdjacency:
    case SpvExecutionModeQuads:
    case SpvExecutionModeIsolines:
-      if (b->shader->stage == MESA_SHADER_GEOMETRY) {
+      if (b->shader->stage == MESA_SHADER_TESS_CTRL ||
+          b->shader->stage == MESA_SHADER_TESS_EVAL) {
+         b->shader->info->tess.primitive_mode =
+            gl_primitive_from_spv_execution_mode(mode->exec_mode);
+      } else {
+         assert(b->shader->stage == MESA_SHADER_GEOMETRY);
          b->shader->info->gs.vertices_in =
             vertices_in_from_spv_execution_mode(mode->exec_mode);
-      } else {
-         assert(!"Tesselation shaders not yet supported");
       }
       break;
 
@@ -2781,12 +2789,39 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
       break;
 
    case SpvExecutionModeSpacingEqual:
+      assert(b->shader->stage == MESA_SHADER_TESS_CTRL ||
+             b->shader->stage == MESA_SHADER_TESS_EVAL);
+      b->shader->info->tess.spacing = TESS_SPACING_EQUAL;
+      break;
    case SpvExecutionModeSpacingFractionalEven:
+      assert(b->shader->stage == MESA_SHADER_TESS_CTRL ||
+             b->shader->stage == MESA_SHADER_TESS_EVAL);
+      b->shader->info->tess.spacing = TESS_SPACING_FRACTIONAL_EVEN;
+      break;
    case SpvExecutionModeSpacingFractionalOdd:
+      assert(b->shader->stage == MESA_SHADER_TESS_CTRL ||
+             b->shader->stage == MESA_SHADER_TESS_EVAL);
+      b->shader->info->tess.spacing = TESS_SPACING_FRACTIONAL_ODD;
+      break;
    case SpvExecutionModeVertexOrderCw:
+      assert(b->shader->stage == MESA_SHADER_TESS_CTRL ||
+             b->shader->stage == MESA_SHADER_TESS_EVAL);
+      /* Vulkan's notion of CCW seems to match the hardware backends,
+       * but be the opposite of OpenGL.  Currently NIR follows GL semantics,
+       * so we set it backwards here.
+       */
+      b->shader->info->tess.ccw = true;
+      break;
    case SpvExecutionModeVertexOrderCcw:
+      assert(b->shader->stage == MESA_SHADER_TESS_CTRL ||
+             b->shader->stage == MESA_SHADER_TESS_EVAL);
+      /* Backwards; see above */
+      b->shader->info->tess.ccw = false;
+      break;
    case SpvExecutionModePointMode:
-      assert(!"TODO: Add tessellation metadata");
+      assert(b->shader->stage == MESA_SHADER_TESS_CTRL ||
+             b->shader->stage == MESA_SHADER_TESS_EVAL);
+      b->shader->info->tess.point_mode = true;
       break;
 
    case SpvExecutionModePixelCenterInteger:
