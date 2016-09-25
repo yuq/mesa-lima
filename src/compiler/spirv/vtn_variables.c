@@ -938,10 +938,19 @@ vtn_get_builtin_location(struct vtn_builder *b,
          unreachable("invalid stage for SpvBuiltInViewportIndex");
       break;
    case SpvBuiltInTessLevelOuter:
+      *location = VARYING_SLOT_TESS_LEVEL_OUTER;
+      break;
    case SpvBuiltInTessLevelInner:
+      *location = VARYING_SLOT_TESS_LEVEL_INNER;
+      break;
    case SpvBuiltInTessCoord:
+      *location = SYSTEM_VALUE_TESS_COORD;
+      set_mode_system_value(mode);
+      break;
    case SpvBuiltInPatchVertices:
-      unreachable("no tessellation support");
+      *location = SYSTEM_VALUE_VERTICES_IN;
+      set_mode_system_value(mode);
+      break;
    case SpvBuiltInFragCoord:
       *location = VARYING_SLOT_POS;
       assert(*mode == nir_var_shader_in);
@@ -1055,6 +1064,11 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       vtn_get_builtin_location(b, builtin, &nir_var->data.location, &mode);
       nir_var->data.mode = mode;
 
+      if (builtin == SpvBuiltInTessLevelOuter ||
+          builtin == SpvBuiltInTessLevelInner) {
+         nir_var->data.compact = true;
+      }
+
       if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
          nir_var->data.origin_upper_left = b->origin_upper_left;
 
@@ -1079,7 +1093,7 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       break; /* Do nothing with these here */
 
    case SpvDecorationPatch:
-      vtn_warn("Tessellation not yet supported");
+      nir_var->data.patch = true;
       break;
 
    case SpvDecorationLocation:
@@ -1119,6 +1133,15 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
 }
 
 static void
+var_is_patch_cb(struct vtn_builder *b, struct vtn_value *val, int member,
+                const struct vtn_decoration *dec, void *out_is_patch)
+{
+   if (dec->decoration == SpvDecorationPatch) {
+      *((bool *) out_is_patch) = true;
+   }
+}
+
+static void
 var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                   const struct vtn_decoration *dec, void *void_var)
 {
@@ -1135,6 +1158,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationInputAttachmentIndex:
       vtn_var->input_attachment_index = dec->literals[0];
       return;
+   case SpvDecorationPatch:
+      vtn_var->patch = true;
+      break;
    default:
       break;
    }
@@ -1165,7 +1191,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
       } else if (vtn_var->mode == vtn_variable_mode_input ||
                  vtn_var->mode == vtn_variable_mode_output) {
          is_vertex_input = false;
-         location += VARYING_SLOT_VAR0;
+         location += vtn_var->patch ? VARYING_SLOT_PATCH0 : VARYING_SLOT_VAR0;
       } else {
          unreachable("Location must be on input or output variable");
       }
@@ -1210,6 +1236,24 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                 vtn_var->mode == vtn_variable_mode_push_constant);
       }
    }
+}
+
+static bool
+is_per_vertex_inout(const struct vtn_variable *var, gl_shader_stage stage)
+{
+   if (var->patch || !glsl_type_is_array(var->type->type))
+      return false;
+
+   if (var->mode == vtn_variable_mode_input) {
+      return stage == MESA_SHADER_TESS_CTRL ||
+             stage == MESA_SHADER_TESS_EVAL ||
+             stage == MESA_SHADER_GEOMETRY;
+   }
+
+   if (var->mode == vtn_variable_mode_output)
+      return stage == MESA_SHADER_TESS_CTRL;
+
+   return false;
 }
 
 void
@@ -1311,6 +1355,9 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
       case vtn_variable_mode_input:
       case vtn_variable_mode_output: {
+         var->patch = false;
+         vtn_foreach_decoration(b, val, var_is_patch_cb, &var->patch);
+
          /* For inputs and outputs, we immediately split structures.  This
           * is for a couple of reasons.  For one, builtins may all come in
           * a struct and we really want those split out into separate
@@ -1321,8 +1368,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
          int array_length = -1;
          struct vtn_type *interface_type = var->type;
-         if (b->shader->stage == MESA_SHADER_GEOMETRY &&
-             glsl_type_is_array(var->type->type)) {
+         if (is_per_vertex_inout(var, b->shader->stage)) {
             /* In Geometry shaders (and some tessellation), inputs come
              * in per-vertex arrays.  However, some builtins come in
              * non-per-vertex, hence the need for the is_array check.  In

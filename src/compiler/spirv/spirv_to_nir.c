@@ -525,7 +525,6 @@ struct_member_decoration_cb(struct vtn_builder *b,
       break;
 
    case SpvDecorationPatch:
-      vtn_warn("Tessellation not yet supported");
       break;
 
    case SpvDecorationSpecId:
