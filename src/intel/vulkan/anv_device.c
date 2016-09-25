@@ -445,7 +445,7 @@ void anv_GetPhysicalDeviceFeatures(
       .imageCubeArray                           = true,
       .independentBlend                         = true,
       .geometryShader                           = true,
-      .tessellationShader                       = false,
+      .tessellationShader                       = true,
       .sampleRateShading                        = true,
       .dualSrcBlend                             = true,
       .logicOp                                  = true,
