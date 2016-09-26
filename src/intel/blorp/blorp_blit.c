@@ -1838,8 +1838,11 @@ blorp_copy(struct blorp_batch *batch,
            uint32_t src_width, uint32_t src_height)
 {
    struct blorp_params params;
-   blorp_params_init(&params);
 
+   if (src_width == 0 || src_height == 0)
+      return;
+
+   blorp_params_init(&params);
    brw_blorp_surface_info_init(batch->blorp, &params.src, src_surf, src_level,
                                src_layer, ISL_FORMAT_UNSUPPORTED, false);
    brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
