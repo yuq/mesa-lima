@@ -194,7 +194,7 @@ genX(graphics_pipeline_create)(
          vs.SamplerCount                  = 0;
 
          vs.BindingTableEntryCount =
-            vs_prog_data->base.base.binding_table.size_bytes / 4,
+            vs_prog_data->base.base.binding_table.size_bytes / 4;
 
          vs.ThreadDispatchPriority        = false;
          vs.FloatingPointMode             = IEEE754;
