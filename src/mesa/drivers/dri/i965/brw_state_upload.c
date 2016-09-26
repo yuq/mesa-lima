@@ -655,6 +655,7 @@ static struct dirty_bit_map brw_bits[] = {
    DEFINE_BIT(BRW_NEW_URB_SIZE),
    DEFINE_BIT(BRW_NEW_CC_STATE),
    DEFINE_BIT(BRW_NEW_BLORP),
+   DEFINE_BIT(BRW_NEW_VIEWPORT_COUNT),
    {0, 0, 0}
 };
 
@@ -696,6 +697,8 @@ static inline void
 brw_upload_programs(struct brw_context *brw,
                     enum brw_pipeline pipeline)
 {
+   struct gl_context *ctx = &brw->ctx;
+
    if (pipeline == BRW_RENDER_PIPELINE) {
       brw_upload_vs_prog(brw);
       brw_upload_tess_programs(brw);
@@ -721,6 +724,14 @@ brw_upload_programs(struct brw_context *brw,
       if (old_slots != brw->vue_map_geom_out.slots_valid ||
           old_separate != brw->vue_map_geom_out.separate)
          brw->ctx.NewDriverState |= BRW_NEW_VUE_MAP_GEOM_OUT;
+
+      if ((old_slots ^ brw->vue_map_geom_out.slots_valid) &
+          VARYING_BIT_VIEWPORT) {
+         ctx->NewDriverState |= BRW_NEW_VIEWPORT_COUNT;
+         brw->clip.viewport_count =
+            (brw->vue_map_geom_out.slots_valid & VARYING_BIT_VIEWPORT) ?
+            ctx->Const.MaxViewports : 1;
+      }
 
       if (brw->gen < 6) {
          brw_setup_vue_interpolation(brw);

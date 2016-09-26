@@ -226,6 +226,7 @@ enum brw_state_id {
    BRW_STATE_URB_SIZE,
    BRW_STATE_CC_STATE,
    BRW_STATE_BLORP,
+   BRW_STATE_VIEWPORT_COUNT,
    BRW_NUM_STATE_BITS
 };
 
@@ -294,6 +295,7 @@ enum brw_state_id {
 #define BRW_NEW_PROGRAM_CACHE           (1ull << BRW_STATE_PROGRAM_CACHE)
 #define BRW_NEW_STATE_BASE_ADDRESS      (1ull << BRW_STATE_STATE_BASE_ADDRESS)
 #define BRW_NEW_VUE_MAP_GEOM_OUT        (1ull << BRW_STATE_VUE_MAP_GEOM_OUT)
+#define BRW_NEW_VIEWPORT_COUNT          (1ull << BRW_STATE_VIEWPORT_COUNT)
 #define BRW_NEW_TRANSFORM_FEEDBACK      (1ull << BRW_STATE_TRANSFORM_FEEDBACK)
 #define BRW_NEW_RASTERIZER_DISCARD      (1ull << BRW_STATE_RASTERIZER_DISCARD)
 #define BRW_NEW_STATS_WM                (1ull << BRW_STATE_STATS_WM)
@@ -1160,6 +1162,13 @@ struct brw_context
        * instead of vp_bo.
        */
       uint32_t vp_offset;
+
+      /**
+       * The number of viewports to use.  If gl_ViewportIndex is written,
+       * we can have up to ctx->Const.MaxViewports viewports.  If not,
+       * the viewport index is always 0, so we can only emit one.
+       */
+      uint8_t viewport_count;
    } clip;
 
 

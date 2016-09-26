@@ -157,6 +157,9 @@ upload_clip_state(struct brw_context *brw)
 
    dw2 |= GEN6_CLIP_GB_TEST;
 
+   /* BRW_NEW_VIEWPORT_COUNT */
+   const unsigned viewport_count = brw->clip.viewport_count;
+
    /* We need to disable guardband clipping if the guardband (which we always
     * program to the maximum screen-space bounding box of 8K x 8K) will be
     * smaller than the viewport.
@@ -180,7 +183,7 @@ upload_clip_state(struct brw_context *brw)
     * "objects must have a screenspace bounding box not exceeding 8K in the X
     * or Y direction" restriction.  Instead, they're clipped.
     */
-   for (unsigned i = 0; i < ctx->Const.MaxViewports; i++) {
+   for (unsigned i = 0; i < viewport_count; i++) {
       if (ctx->ViewportArray[i].Width > 8192 ||
           ctx->ViewportArray[i].Height > 8192) {
          dw2 &= ~GEN6_CLIP_GB_TEST;
@@ -203,7 +206,7 @@ upload_clip_state(struct brw_context *brw)
       const float fb_width = (float)_mesa_geometric_width(fb);
       const float fb_height = (float)_mesa_geometric_height(fb);
 
-      for (unsigned i = 0; i < ctx->Const.MaxViewports; i++) {
+      for (unsigned i = 0; i < viewport_count; i++) {
          if (ctx->ViewportArray[i].X != 0 ||
              ctx->ViewportArray[i].Y != 0 ||
              ctx->ViewportArray[i].Width != fb_width ||
@@ -236,11 +239,6 @@ upload_clip_state(struct brw_context *brw)
    if (!brw_is_drawing_points(brw) && !brw_is_drawing_lines(brw))
       dw2 |= GEN6_CLIP_XY_TEST;
 
-   /* BRW_NEW_VUE_MAP_GEOM_OUT */
-   const int max_vp_index =
-      (brw->vue_map_geom_out.slots_valid & VARYING_BIT_VIEWPORT) != 0 ?
-      ctx->Const.MaxViewports : 1;
-
    BEGIN_BATCH(4);
    OUT_BATCH(_3DSTATE_CLIP << 16 | (4 - 2));
    OUT_BATCH(dw1);
@@ -250,7 +248,7 @@ upload_clip_state(struct brw_context *brw)
    OUT_BATCH(U_FIXED(0.125, 3) << GEN6_CLIP_MIN_POINT_WIDTH_SHIFT |
              U_FIXED(255.875, 3) << GEN6_CLIP_MAX_POINT_WIDTH_SHIFT |
              (_mesa_geometric_layers(fb) > 0 ? 0 : GEN6_CLIP_FORCE_ZERO_RTAINDEX) |
-             ((max_vp_index - 1) & GEN6_CLIP_MAX_VP_INDEX_MASK));
+             ((viewport_count - 1) & GEN6_CLIP_MAX_VP_INDEX_MASK));
    ADVANCE_BATCH();
 }
 
@@ -268,7 +266,7 @@ const struct brw_tracked_state gen6_clip_state = {
                BRW_NEW_PRIMITIVE |
                BRW_NEW_RASTERIZER_DISCARD |
                BRW_NEW_TES_PROG_DATA |
-               BRW_NEW_VUE_MAP_GEOM_OUT,
+               BRW_NEW_VIEWPORT_COUNT,
    },
    .emit = upload_clip_state,
 };
