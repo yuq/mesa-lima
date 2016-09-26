@@ -111,6 +111,12 @@ vlVaSyncSurface(VADriverContextP ctx, VASurfaceID render_target)
       return VA_STATUS_ERROR_INVALID_SURFACE;
    }
 
+   if (!surf->feedback) {
+      // No outstanding operation: nothing to do.
+      pipe_mutex_unlock(drv->mutex);
+      return VA_STATUS_SUCCESS;
+   }
+
    context = handle_table_get(drv->htab, surf->ctx);
    if (!context) {
       pipe_mutex_unlock(drv->mutex);
@@ -126,6 +132,7 @@ vlVaSyncSurface(VADriverContextP ctx, VASurfaceID render_target)
       if (frame_diff < 2)
          context->decoder->flush(context->decoder);
       context->decoder->get_feedback(context->decoder, surf->feedback, &(surf->coded_buf->coded_size));
+      surf->feedback = NULL;
    }
    pipe_mutex_unlock(drv->mutex);
    return VA_STATUS_SUCCESS;
