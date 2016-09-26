@@ -202,6 +202,8 @@ genX(graphics_pipeline_create)(
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.KernelStartPointer0           = pipeline->ps_ksp0;
+         ps.KernelStartPointer1           = 0;
+         ps.KernelStartPointer2           = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
 
          ps.ScratchSpaceBasePointer = (struct anv_address) {
             .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
@@ -235,9 +237,6 @@ genX(graphics_pipeline_create)(
          /* Haswell requires the sample mask to be set in this packet as well as
           * in 3DSTATE_SAMPLE_MASK; the values should match. */
          /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
-
-         ps.KernelStartPointer1           = 0;
-         ps.KernelStartPointer2           = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
       }
 
       uint32_t samples = pCreateInfo->pMultisampleState ?
