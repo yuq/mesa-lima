@@ -237,6 +237,9 @@ genX(graphics_pipeline_create)(
          /* Haswell requires the sample mask to be set in this packet as well as
           * in 3DSTATE_SAMPLE_MASK; the values should match. */
          /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
+#if GEN_IS_HASWELL
+         ps.SampleMask                    = 0xff;
+#endif
       }
 
       uint32_t samples = pCreateInfo->pMultisampleState ?
