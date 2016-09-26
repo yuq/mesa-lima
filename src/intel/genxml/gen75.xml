@@ -1365,7 +1365,7 @@
     </field>
     <field name="Floating Point Mode" start="80" end="80" type="uint">
       <value name="IEEE-754" value="0"/>
-      <value name="alternate" value="1"/>
+      <value name="Alternate" value="1"/>
     </field>
     <field name="Illegal Opcode Exception Enable" start="77" end="77" type="bool"/>
     <field name="GS accesses UAV" start="76" end="76" type="uint"/>
@@ -1436,7 +1436,7 @@
     </field>
     <field name="Floating Point Mode" start="48" end="48" type="uint">
       <value name="IEEE-754" value="0"/>
-      <value name="alternate" value="1"/>
+      <value name="Alternate" value="1"/>
     </field>
     <field name="Illegal Opcode Exception Enable" start="45" end="45" type="bool"/>
     <field name="Software Exception Enable" start="44" end="44" type="bool"/>
@@ -1572,7 +1572,7 @@
     </field>
     <field name="Floating Point Mode" start="80" end="80" type="uint">
       <value name="IEEE-754" value="0"/>
-      <value name="Alt" value="1"/>
+      <value name="Alternate" value="1"/>
     </field>
     <field name="Rounding Mode" start="78" end="79" type="uint">
       <value name="RTNE" value="0"/>
