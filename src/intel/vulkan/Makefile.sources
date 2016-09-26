@@ -65,6 +65,7 @@ VULKAN_GENERATED_FILES := \
 GEN7_FILES := \
 	genX_cmd_buffer.c \
 	genX_blorp_exec.c \
+	genX_gpu_memcpy.c \
 	genX_pipeline.c \
 	gen7_cmd_buffer.c \
 	genX_state.c
@@ -72,6 +73,7 @@ GEN7_FILES := \
 GEN75_FILES := \
 	genX_cmd_buffer.c \
 	genX_blorp_exec.c \
+	genX_gpu_memcpy.c \
 	genX_pipeline.c \
 	gen7_cmd_buffer.c \
 	genX_state.c
@@ -79,6 +81,7 @@ GEN75_FILES := \
 GEN8_FILES := \
 	genX_cmd_buffer.c \
 	genX_blorp_exec.c \
+	genX_gpu_memcpy.c \
 	genX_pipeline.c \
 	gen8_cmd_buffer.c \
 	genX_state.c
@@ -86,6 +89,7 @@ GEN8_FILES := \
 GEN9_FILES := \
 	genX_cmd_buffer.c \
 	genX_blorp_exec.c \
+	genX_gpu_memcpy.c \
 	genX_pipeline.c \
 	gen8_cmd_buffer.c \
 	genX_state.c
