@@ -1347,6 +1347,40 @@ brw_compile_tes(const struct brw_compiler *compiler,
    prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
    prog_data->base.urb_read_length = 0;
 
+   STATIC_ASSERT(BRW_TESS_PARTITIONING_INTEGER == TESS_SPACING_EQUAL - 1);
+   STATIC_ASSERT(BRW_TESS_PARTITIONING_ODD_FRACTIONAL ==
+                 TESS_SPACING_FRACTIONAL_ODD - 1);
+   STATIC_ASSERT(BRW_TESS_PARTITIONING_EVEN_FRACTIONAL ==
+                 TESS_SPACING_FRACTIONAL_EVEN - 1);
+
+   prog_data->partitioning =
+      (enum brw_tess_partitioning) (nir->info->tes.spacing - 1);
+
+   switch (nir->info->tes.primitive_mode) {
+   case GL_QUADS:
+      prog_data->domain = BRW_TESS_DOMAIN_QUAD;
+      break;
+   case GL_TRIANGLES:
+      prog_data->domain = BRW_TESS_DOMAIN_TRI;
+      break;
+   case GL_ISOLINES:
+      prog_data->domain = BRW_TESS_DOMAIN_ISOLINE;
+      break;
+   default:
+      unreachable("invalid domain shader primitive mode");
+   }
+
+   if (nir->info->tes.point_mode) {
+      prog_data->output_topology = BRW_TESS_OUTPUT_TOPOLOGY_POINT;
+   } else if (nir->info->tes.primitive_mode == GL_ISOLINES) {
+      prog_data->output_topology = BRW_TESS_OUTPUT_TOPOLOGY_LINE;
+   } else {
+      /* Hardware winding order is backwards from OpenGL */
+      prog_data->output_topology =
+         nir->info->tes.ccw ? BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW
+                            : BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW;
+   }
+
    if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
       fprintf(stderr, "TES Input ");
       brw_print_vue_map(stderr, &input_vue_map);

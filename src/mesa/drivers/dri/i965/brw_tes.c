@@ -93,39 +93,6 @@ brw_codegen_tes_prog(struct brw_context *brw,
    brw_assign_common_binding_table_offsets(devinfo, &tep->program,
                                            &prog_data.base.base, 0);
 
-   STATIC_ASSERT(BRW_TESS_PARTITIONING_INTEGER == TESS_SPACING_EQUAL - 1);
-   STATIC_ASSERT(BRW_TESS_PARTITIONING_ODD_FRACTIONAL ==
-                 TESS_SPACING_FRACTIONAL_ODD - 1);
-   STATIC_ASSERT(BRW_TESS_PARTITIONING_EVEN_FRACTIONAL ==
-                 TESS_SPACING_FRACTIONAL_EVEN - 1);
-
-   prog_data.partitioning = nir->info->tes.spacing - 1;
-
-   switch (nir->info->tes.primitive_mode) {
-   case GL_QUADS:
-      prog_data.domain = BRW_TESS_DOMAIN_QUAD;
-      break;
-   case GL_TRIANGLES:
-      prog_data.domain = BRW_TESS_DOMAIN_TRI;
-      break;
-   case GL_ISOLINES:
-      prog_data.domain = BRW_TESS_DOMAIN_ISOLINE;
-      break;
-   default:
-      unreachable("invalid domain shader primitive mode");
-   }
-
-   if (nir->info->tes.point_mode) {
-      prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_POINT;
-   } else if (nir->info->tes.primitive_mode == GL_ISOLINES) {
-      prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_LINE;
-   } else {
-      /* Hardware winding order is backwards from OpenGL */
-      prog_data.output_topology =
-         nir->info->tes.ccw ? BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW
-                            : BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW;
-   }
-
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
