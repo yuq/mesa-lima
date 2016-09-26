@@ -1571,7 +1571,7 @@
       <value name="High" value="1"/>
     </field>
     <field name="Floating Point Mode" start="80" end="80" type="uint">
-      <value name="IEEE-745" value="0"/>
+      <value name="IEEE-754" value="0"/>
       <value name="Alt" value="1"/>
     </field>
     <field name="Rounding Mode" start="78" end="79" type="uint">
