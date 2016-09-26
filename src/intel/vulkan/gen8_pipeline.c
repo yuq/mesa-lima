@@ -171,6 +171,7 @@ genX(graphics_pipeline_create)(
    }
 
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
+   assert(!vs_prog_data->base.base.use_alt_mode);
    /* Skip the VUE header and position slots */
    offset = 1;
    length = (vs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
