@@ -65,26 +65,24 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
 }
 
 /**
- * Returns true if we're processing a stage whose inputs are arrays indexed
- * by a vertex number (such as geometry shader inputs).
+ * Return true if the given variable is a per-vertex input/output array.
+ * (such as geometry shader inputs).
  */
-static bool
-is_per_vertex_input(struct lower_io_state *state, nir_variable *var)
+bool
+nir_is_per_vertex_io(nir_variable *var, gl_shader_stage stage)
 {
-   gl_shader_stage stage = state->builder.shader->stage;
+   if (var->data.patch || !glsl_type_is_array(var->type))
+      return false;
 
-   return var->data.mode == nir_var_shader_in && !var->data.patch &&
-          (stage == MESA_SHADER_TESS_CTRL ||
-           stage == MESA_SHADER_TESS_EVAL ||
-           stage == MESA_SHADER_GEOMETRY);
-}
+   if (var->data.mode == nir_var_shader_in)
+      return stage == MESA_SHADER_GEOMETRY ||
+             stage == MESA_SHADER_TESS_CTRL ||
+             stage == MESA_SHADER_TESS_EVAL;
 
-static bool
-is_per_vertex_output(struct lower_io_state *state, nir_variable *var)
-{
-   gl_shader_stage stage = state->builder.shader->stage;
-   return var->data.mode == nir_var_shader_out && !var->data.patch &&
-          stage == MESA_SHADER_TESS_CTRL;
+   if (var->data.mode == nir_var_shader_out)
+      return stage == MESA_SHADER_TESS_CTRL;
+
+   return false;
 }
 
 static nir_ssa_def *
@@ -396,8 +394,7 @@ nir_lower_io_block(nir_block *block,
 
       b->cursor = nir_before_instr(instr);
 
-      const bool per_vertex =
-         is_per_vertex_input(state, var) || is_per_vertex_output(state, var);
+      const bool per_vertex = nir_is_per_vertex_io(var, b->shader->stage);
 
       nir_ssa_def *offset;
       nir_ssa_def *vertex_index = NULL;
