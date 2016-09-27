@@ -199,6 +199,8 @@ struct _egl_api
                                 struct mesa_glinterop_export_out *out);
 };
 
+EGLint _eglConvertIntsToAttribs(const EGLint *int_list,
+                                EGLAttrib **out_attrib_list);
 
 #ifdef __cplusplus
 }

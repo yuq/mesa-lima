@@ -251,6 +251,47 @@ _eglUnlockDisplay(_EGLDisplay *dpy)
 }
 
 
+/**
+ * Convert an attribute list from EGLint[] to EGLAttrib[].
+ *
+ * Return an EGL error code. The output parameter out_attrib_list is modified
+ * only on success.
+ */
+EGLint
+_eglConvertIntsToAttribs(const EGLint *int_list, EGLAttrib **out_attrib_list)
+{
+   size_t len = 0;
+   EGLAttrib *attrib_list;
+
+   if (int_list) {
+      while (int_list[2*len] != EGL_NONE)
+         ++len;
+   }
+
+   if (len == 0) {
+      *out_attrib_list = NULL;
+      return EGL_SUCCESS;
+   }
+
+   if (2*len + 1 > SIZE_MAX / sizeof(EGLAttrib))
+      return EGL_BAD_ALLOC;
+
+   attrib_list = malloc((2*len + 1) * sizeof(EGLAttrib));
+   if (!attrib_list)
+      return EGL_BAD_ALLOC;
+
+   for (size_t i = 0; i < len; ++i) {
+      attrib_list[2*i + 0] = int_list[2*i + 0];
+      attrib_list[2*i + 1] = int_list[2*i + 1];
+   }
+
+   attrib_list[2*len] = EGL_NONE;
+
+   *out_attrib_list = attrib_list;
+   return EGL_SUCCESS;
+}
+
+
 static EGLint *
 _eglConvertAttribsToInt(const EGLAttrib *attr_list)
 {
