@@ -331,7 +331,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 						   struct r600_query_hw *query)
 {
 	unsigned buf_size = MAX2(query->result_size,
-				 ctx->screen->info.gart_page_size);
+				 ctx->screen->info.min_alloc_size);
 
 	/* Queries are normally read by the CPU after
 	 * being written by the gpu, hence staging is probably a good
