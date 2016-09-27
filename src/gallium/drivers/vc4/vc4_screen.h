@@ -28,6 +28,7 @@
 #include "os/os_thread.h"
 #include "state_tracker/drm_driver.h"
 #include "util/list.h"
+#include "util/slab.h"
 
 struct vc4_bo;
 
@@ -63,6 +64,8 @@ struct vc4_screen {
          * if we know the job's already done.
          */
         uint64_t finished_seqno;
+
+        struct slab_parent_pool transfer_pool;
 
         struct vc4_bo_cache {
                 /** List of struct vc4_bo freed, by age. */

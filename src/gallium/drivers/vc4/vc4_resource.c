@@ -120,7 +120,7 @@ vc4_resource_transfer_unmap(struct pipe_context *pctx,
         }
 
         pipe_resource_reference(&ptrans->resource, NULL);
-        slab_free_st(&vc4->transfer_pool, ptrans);
+        slab_free(&vc4->transfer_pool, ptrans);
 }
 
 static struct pipe_resource *
@@ -196,7 +196,7 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
         if (usage & PIPE_TRANSFER_WRITE)
                 rsc->writes++;
 
-        trans = slab_alloc_st(&vc4->transfer_pool);
+        trans = slab_alloc(&vc4->transfer_pool);
         if (!trans)
                 return NULL;
 

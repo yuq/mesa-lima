@@ -98,6 +98,7 @@ vc4_screen_destroy(struct pipe_screen *pscreen)
 
         util_hash_table_destroy(screen->bo_handles);
         vc4_bufmgr_destroy(pscreen);
+        slab_destroy_parent(&screen->transfer_pool);
         close(screen->fd);
         ralloc_free(pscreen);
 }
@@ -613,6 +614,8 @@ vc4_screen_create(int fd)
 
         if (!vc4_get_chip_info(screen))
                 goto fail;
+
+        slab_create_parent(&screen->transfer_pool, sizeof(struct vc4_transfer), 16);
 
         vc4_fence_init(screen);
 

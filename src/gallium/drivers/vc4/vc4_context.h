@@ -297,7 +297,7 @@ struct vc4_context {
          */
         struct hash_table *write_jobs;
 
-        struct slab_mempool transfer_pool;
+        struct slab_child_pool transfer_pool;
         struct blitter_context *blitter;
 
         /** bitfield of VC4_DIRTY_* */
