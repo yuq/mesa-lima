@@ -1393,8 +1393,6 @@ dri2CreateDisplay(Display * dpy)
    else
       pdp->loader_extensions[i++] = &dri2LoaderExtension.base;
    
-   pdp->loader_extensions[i++] = &systemTimeExtension.base;
-
    pdp->loader_extensions[i++] = &dri2UseInvalidate.base;
 
    pdp->loader_extensions[i++] = NULL;

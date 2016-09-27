@@ -511,7 +511,6 @@ const __DRIuseInvalidateExtension dri3UseInvalidate = {
 
 static const __DRIextension *loader_extensions[] = {
    &imageLoaderExtension.base,
-   &systemTimeExtension.base,
    &dri3UseInvalidate.base,
    NULL
 };
