@@ -234,7 +234,7 @@ brw_emit_pipe_control_write(struct brw_context *brw, uint32_t flags,
 void
 brw_emit_depth_stall_flushes(struct brw_context *brw)
 {
-   assert(brw->gen >= 6 && brw->gen <= 9);
+   assert(brw->gen >= 6);
 
    /* Starting on BDW, these pipe controls are unnecessary.
     *
