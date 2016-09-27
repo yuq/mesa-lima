@@ -776,8 +776,9 @@ brw_initialize_context_constants(struct brw_context *brw)
       ctx->Const.MaxViewportHeight = 32768;
    }
 
-   /* ARB_viewport_array */
-   if (brw->gen >= 6 && ctx->API == API_OPENGL_CORE) {
+   /* ARB_viewport_array, OES_viewport_array */
+   if ((brw->gen >= 6 && ctx->API == API_OPENGL_CORE) ||
+       (brw->gen >= 8  && ctx->API == API_OPENGLES2)) {
       ctx->Const.MaxViewports = GEN6_NUM_VIEWPORTS;
       ctx->Const.ViewportSubpixelBits = 0;
 
