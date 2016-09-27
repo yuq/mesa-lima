@@ -547,6 +547,8 @@ virgl_destroy_screen(struct pipe_screen *screen)
    struct virgl_screen *vscreen = virgl_screen(screen);
    struct virgl_winsys *vws = vscreen->vws;
 
+   slab_destroy_parent(&vscreen->texture_transfer_pool);
+
    if (vws)
       vws->destroy(vws);
    FREE(vscreen);
@@ -580,6 +582,8 @@ virgl_create_screen(struct virgl_winsys *vws)
    vws->get_caps(vws, &screen->caps);
 
    screen->refcnt = 1;
+
+   slab_create_parent(&screen->texture_transfer_pool, sizeof(struct virgl_transfer), 16);
 
    util_format_s3tc_init();
    return &screen->base;
