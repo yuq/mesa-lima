@@ -138,6 +138,8 @@ fd_screen_destroy(struct pipe_screen *pscreen)
 
 	fd_bc_fini(&screen->batch_cache);
 
+	slab_destroy_parent(&screen->transfer_pool);
+
 	pipe_mutex_destroy(screen->lock);
 
 	free(screen);
@@ -695,6 +697,8 @@ fd_screen_create(struct fd_device *dev)
 
 	pscreen->fence_reference = fd_screen_fence_ref;
 	pscreen->fence_finish = fd_screen_fence_finish;
+
+	slab_create_parent(&screen->transfer_pool, sizeof(struct fd_transfer), 16);
 
 	util_format_s3tc_init();
 

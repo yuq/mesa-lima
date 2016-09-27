@@ -34,6 +34,7 @@
 
 #include "pipe/p_screen.h"
 #include "util/u_memory.h"
+#include "util/slab.h"
 #include "os/os_thread.h"
 
 #include "freedreno_batch_cache.h"
@@ -54,6 +55,8 @@ struct fd_screen {
 
 	/* place for winsys to stash it's own stuff: */
 	void *winsys_priv;
+
+	struct slab_parent_pool transfer_pool;
 
 	uint32_t gmemsize_bytes;
 	uint32_t device_id;

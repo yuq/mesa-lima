@@ -121,7 +121,7 @@ struct fd_context {
 	struct primconvert_context *primconvert;
 
 	/* slab for pipe_transfer allocations: */
-	struct slab_mempool transfer_pool;
+	struct slab_child_pool transfer_pool;
 
 	/* slabs for fd_hw_sample and fd_hw_sample_period allocations: */
 	struct slab_mempool sample_pool;

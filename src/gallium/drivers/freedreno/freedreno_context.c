@@ -121,7 +121,7 @@ fd_context_destroy(struct pipe_context *pctx)
 	if (ctx->primconvert)
 		util_primconvert_destroy(ctx->primconvert);
 
-	slab_destroy(&ctx->transfer_pool);
+	slab_destroy_child(&ctx->transfer_pool);
 
 	for (i = 0; i < ARRAY_SIZE(ctx->pipe); i++) {
 		struct fd_vsc_pipe *pipe = &ctx->pipe[i];
@@ -265,8 +265,7 @@ fd_context_init(struct fd_context *ctx, struct pipe_screen *pscreen,
 		ctx->batch = fd_bc_alloc_batch(&screen->batch_cache, ctx);
 	}
 
-	slab_create(&ctx->transfer_pool, sizeof(struct fd_transfer),
-			16);
+	slab_create_child(&ctx->transfer_pool, &screen->transfer_pool);
 
 	fd_draw_init(pctx);
 	fd_resource_context_init(pctx);
