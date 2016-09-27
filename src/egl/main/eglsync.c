@@ -26,6 +26,7 @@
  **************************************************************************/
 
 
+#include <inttypes.h>
 #include <string.h>
 
 #include "eglsync.h"
@@ -75,8 +76,8 @@ _eglParseSyncAttribList64(_EGLSync *sync, const EGLAttrib *attrib_list)
       return EGL_SUCCESS;
 
    for (i = 0; attrib_list[i] != EGL_NONE; i++) {
-      EGLint attr = attrib_list[i++];
-      EGLint val = attrib_list[i];
+      EGLAttrib attr = attrib_list[i++];
+      EGLAttrib val = attrib_list[i];
 
       switch (attr) {
       case EGL_CL_EVENT_HANDLE_KHR:
@@ -92,7 +93,7 @@ _eglParseSyncAttribList64(_EGLSync *sync, const EGLAttrib *attrib_list)
       }
 
       if (err != EGL_SUCCESS) {
-         _eglLog(_EGL_DEBUG, "bad sync attribute 0x%04x", attr);
+         _eglLog(_EGL_DEBUG, "bad sync attribute 0x%" PRIxPTR, attr);
          break;
       }
    }
