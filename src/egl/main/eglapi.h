@@ -135,8 +135,7 @@ struct _egl_api
                                  _EGLImage *image);
 
    _EGLSync *(*CreateSyncKHR)(_EGLDriver *drv, _EGLDisplay *dpy, EGLenum type,
-                              const EGLint *attrib_list,
-                              const EGLAttrib *attrib_list64);
+                              const EGLAttrib *attrib_list);
    EGLBoolean (*DestroySyncKHR)(_EGLDriver *drv, _EGLDisplay *dpy,
                                 _EGLSync *sync);
    EGLint (*ClientWaitSyncKHR)(_EGLDriver *drv, _EGLDisplay *dpy,

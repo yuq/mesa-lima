@@ -39,37 +39,7 @@
  * Parse the list of sync attributes and return the proper error code.
  */
 static EGLint
-_eglParseSyncAttribList(_EGLSync *sync, const EGLint *attrib_list)
-{
-   EGLint i;
-
-   if (!attrib_list)
-      return EGL_SUCCESS;
-
-   for (i = 0; attrib_list[i] != EGL_NONE; i++) {
-      EGLint attr = attrib_list[i++];
-      EGLint val = attrib_list[i];
-      EGLint err = EGL_SUCCESS;
-
-      switch (attr) {
-      default:
-         (void) val;
-         err = EGL_BAD_ATTRIBUTE;
-         break;
-      }
-
-      if (err != EGL_SUCCESS) {
-         _eglLog(_EGL_DEBUG, "bad sync attribute 0x%04x", attr);
-         return err;
-      }
-   }
-
-   return EGL_SUCCESS;
-}
-
-
-static EGLint
-_eglParseSyncAttribList64(_EGLSync *sync, const EGLAttrib *attrib_list)
+_eglParseSyncAttribList(_EGLSync *sync, const EGLAttrib *attrib_list)
 {
    EGLint i;
 
@@ -106,7 +76,7 @@ _eglParseSyncAttribList64(_EGLSync *sync, const EGLAttrib *attrib_list)
 
 EGLBoolean
 _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
-             const EGLint *attrib_list, const EGLAttrib *attrib_list64)
+             const EGLAttrib *attrib_list)
 {
    EGLint err;
 
@@ -122,11 +92,7 @@ _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
       sync->SyncCondition = EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR;
    }
 
-   if (attrib_list64)
-      err = _eglParseSyncAttribList64(sync, attrib_list64);
-   else
-      err = _eglParseSyncAttribList(sync, attrib_list);
-
+   err = _eglParseSyncAttribList(sync, attrib_list);
    if (err != EGL_SUCCESS)
       return _eglError(err, "eglCreateSyncKHR");
 

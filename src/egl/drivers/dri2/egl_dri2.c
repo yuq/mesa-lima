@@ -2509,8 +2509,7 @@ dri2_egl_unref_sync(struct dri2_egl_display *dri2_dpy,
 
 static _EGLSync *
 dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
-                 EGLenum type, const EGLint *attrib_list,
-                 const EGLAttrib *attrib_list64)
+                 EGLenum type, const EGLAttrib *attrib_list)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
@@ -2525,8 +2524,7 @@ dri2_create_sync(_EGLDriver *drv, _EGLDisplay *dpy,
       return NULL;
    }
 
-   if (!_eglInitSync(&dri2_sync->base, dpy, type, attrib_list,
-                     attrib_list64)) {
+   if (!_eglInitSync(&dri2_sync->base, dpy, type, attrib_list)) {
       free(dri2_sync);
       return NULL;
    }
