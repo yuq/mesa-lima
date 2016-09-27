@@ -100,7 +100,7 @@ static void r300_destroy_context(struct pipe_context* context)
     rc_destroy_regalloc_state(&r300->fs_regalloc_state);
 
     /* XXX: No way to tell if this was initialized or not? */
-    slab_destroy(&r300->pool_transfers);
+    slab_destroy_child(&r300->pool_transfers);
 
     /* Free the structs allocated in r300_setup_atoms() */
     if (r300->aa_state.state) {
@@ -385,8 +385,7 @@ struct pipe_context* r300_create_context(struct pipe_screen* screen,
 
     r300->context.destroy = r300_destroy_context;
 
-    slab_create(&r300->pool_transfers,
-                     sizeof(struct pipe_transfer), 64);
+    slab_create_child(&r300->pool_transfers, &r300screen->pool_transfers);
 
     r300->ctx = rws->ctx_create(rws);
     if (!r300->ctx)
