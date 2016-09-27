@@ -24,6 +24,7 @@
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 #include "util/u_format.h"
+#include "util/u_atomic.h"
 
 extern "C" {
 #include "util/u_transfer.h"
@@ -352,9 +353,9 @@ swr_UpdateStats(HANDLE hPrivateContext, const SWR_STATS *pStats)
    if (!pDC)
       return;
 
-   struct swr_context *ctx = (struct swr_context *)pDC->swr_ctx;
+   struct swr_query_result *pqr = (struct swr_query_result *)pDC->pStats;
 
-   SWR_STATS *pSwrStats = &ctx->stats;
+   SWR_STATS *pSwrStats = &pqr->core;
 
    pSwrStats->DepthPassCount += pStats->DepthPassCount;
    pSwrStats->PsInvocations += pStats->PsInvocations;
@@ -369,22 +370,24 @@ swr_UpdateStatsFE(HANDLE hPrivateContext, const SWR_STATS_FE *pStats)
    if (!pDC)
       return;
 
-   struct swr_context *ctx = (struct swr_context *)pDC->swr_ctx;
+   struct swr_query_result *pqr = (struct swr_query_result *)pDC->pStats;
 
-   SWR_STATS_FE *pSwrStats = &ctx->statsFE;
-   pSwrStats->IaVertices += pStats->IaVertices;
-   pSwrStats->IaPrimitives += pStats->IaPrimitives;
-   pSwrStats->VsInvocations += pStats->VsInvocations;
-   pSwrStats->HsInvocations += pStats->HsInvocations;
-   pSwrStats->DsInvocations += pStats->DsInvocations;
-   pSwrStats->GsInvocations += pStats->GsInvocations;
-   pSwrStats->CInvocations += pStats->CInvocations;
-   pSwrStats->CPrimitives += pStats->CPrimitives;
-   pSwrStats->GsPrimitives += pStats->GsPrimitives;
+   SWR_STATS_FE *pSwrStats = &pqr->coreFE;
+   p_atomic_add(&pSwrStats->IaVertices, pStats->IaVertices);
+   p_atomic_add(&pSwrStats->IaPrimitives, pStats->IaPrimitives);
+   p_atomic_add(&pSwrStats->VsInvocations, pStats->VsInvocations);
+   p_atomic_add(&pSwrStats->HsInvocations, pStats->HsInvocations);
+   p_atomic_add(&pSwrStats->DsInvocations, pStats->DsInvocations);
+   p_atomic_add(&pSwrStats->GsInvocations, pStats->GsInvocations);
+   p_atomic_add(&pSwrStats->CInvocations, pStats->CInvocations);
+   p_atomic_add(&pSwrStats->CPrimitives, pStats->CPrimitives);
+   p_atomic_add(&pSwrStats->GsPrimitives, pStats->GsPrimitives);
 
    for (unsigned i = 0; i < 4; i++) {
-      pSwrStats->SoPrimStorageNeeded[i] += pStats->SoPrimStorageNeeded[i];
-      pSwrStats->SoNumPrimsWritten[i] += pStats->SoNumPrimsWritten[i];
+      p_atomic_add(&pSwrStats->SoPrimStorageNeeded[i],
+            pStats->SoPrimStorageNeeded[i]);
+      p_atomic_add(&pSwrStats->SoNumPrimsWritten[i],
+            pStats->SoNumPrimsWritten[i]);
    }
 }
 

@@ -71,48 +71,6 @@ swr_destroy_query(struct pipe_context *pipe, struct pipe_query *q)
 }
 
 
-static void
-swr_gather_stats(struct pipe_context *pipe, struct swr_query *pq)
-{
-   struct swr_context *ctx = swr_context(pipe);
-
-   assert(pq->result);
-   struct swr_query_result *result = pq->result;
-   boolean enable_stats = pq->enable_stats;
-
-   /* A few results don't require the core, so don't involve it */
-   switch (pq->type) {
-   case PIPE_QUERY_TIMESTAMP:
-   case PIPE_QUERY_TIME_ELAPSED:
-      result->timestamp = swr_get_timestamp(pipe->screen);
-      break;
-   case PIPE_QUERY_TIMESTAMP_DISJOINT:
-   case PIPE_QUERY_GPU_FINISHED:
-      /* nothing to do here */
-      break;
-   default:
-      /* TODO: should fence instead of stalling pipeline */
-      SwrWaitForIdle(ctx->swrContext);
-      memcpy(&result->core, &ctx->stats, sizeof(result->core));
-      memcpy(&result->coreFE, &ctx->statsFE, sizeof(result->coreFE));
-
-#if 0
-      if (!pq->fence) {
-         struct swr_screen *screen = swr_screen(pipe->screen);
-         swr_fence_reference(pipe->screen, &pq->fence, screen->flush_fence);
-      }
-      swr_fence_submit(ctx, pq->fence);
-#endif
-
-      /* Only change stat collection if there are no active queries */
-      if (ctx->active_queries == 0)
-         SwrEnableStats(ctx->swrContext, enable_stats);
-
-      break;
-   }
-}
-
-
 static boolean
 swr_get_query_result(struct pipe_context *pipe,
                      struct pipe_query *q,
@@ -120,8 +78,6 @@ swr_get_query_result(struct pipe_context *pipe,
                      union pipe_query_result *result)
 {
    struct swr_query *pq = swr_query(q);
-   struct swr_query_result *start = &pq->start;
-   struct swr_query_result *end = &pq->end;
    unsigned index = pq->index;
 
    if (pq->fence) {
@@ -132,40 +88,37 @@ swr_get_query_result(struct pipe_context *pipe,
       swr_fence_reference(pipe->screen, &pq->fence, NULL);
    }
 
-   /* XXX: Need to handle counter rollover */
-
+   /* All values are reset to 0 at swr_begin_query, except starting timestamp.
+    * Counters become simply end values.  */
    switch (pq->type) {
    /* Booleans */
    case PIPE_QUERY_OCCLUSION_PREDICATE:
-      result->b = end->core.DepthPassCount != start->core.DepthPassCount;
+      result->b = pq->result.core.DepthPassCount != 0;
       break;
    case PIPE_QUERY_GPU_FINISHED:
       result->b = TRUE;
       break;
    /* Counters */
    case PIPE_QUERY_OCCLUSION_COUNTER:
-      result->u64 = end->core.DepthPassCount - start->core.DepthPassCount;
+      result->u64 = pq->result.core.DepthPassCount;
       break;
    case PIPE_QUERY_TIMESTAMP:
    case PIPE_QUERY_TIME_ELAPSED:
-      result->u64 = end->timestamp - start->timestamp;
+      result->u64 = pq->result.timestamp_end - pq->result.timestamp_start;
       break;
    case PIPE_QUERY_PRIMITIVES_GENERATED:
-      result->u64 = end->coreFE.IaPrimitives - start->coreFE.IaPrimitives;
+      result->u64 = pq->result.coreFE.IaPrimitives;
       break;
    case PIPE_QUERY_PRIMITIVES_EMITTED:
-      result->u64 = end->coreFE.SoNumPrimsWritten[index]
-         - start->coreFE.SoNumPrimsWritten[index];
+      result->u64 = pq->result.coreFE.SoNumPrimsWritten[index];
       break;
    /* Structures */
    case PIPE_QUERY_SO_STATISTICS: {
       struct pipe_query_data_so_statistics *so_stats = &result->so_statistics;
-      struct SWR_STATS_FE *start = &pq->start.coreFE;
-      struct SWR_STATS_FE *end = &pq->end.coreFE;
       so_stats->num_primitives_written =
-         end->SoNumPrimsWritten[index] - start->SoNumPrimsWritten[index];
+         pq->result.coreFE.SoNumPrimsWritten[index];
       so_stats->primitives_storage_needed =
-         end->SoPrimStorageNeeded[index] - start->SoPrimStorageNeeded[index];
+         pq->result.coreFE.SoPrimStorageNeeded[index];
    } break;
    case PIPE_QUERY_TIMESTAMP_DISJOINT:
       /* os_get_time_nano returns nanoseconds */
@@ -175,29 +128,23 @@ swr_get_query_result(struct pipe_context *pipe,
    case PIPE_QUERY_PIPELINE_STATISTICS: {
       struct pipe_query_data_pipeline_statistics *p_stats =
          &result->pipeline_statistics;
-      struct SWR_STATS *start = &pq->start.core;
-      struct SWR_STATS *end = &pq->end.core;
-      struct SWR_STATS_FE *startFE = &pq->start.coreFE;
-      struct SWR_STATS_FE *endFE = &pq->end.coreFE;
-      p_stats->ia_vertices = endFE->IaVertices - startFE->IaVertices;
-      p_stats->ia_primitives = endFE->IaPrimitives - startFE->IaPrimitives;
-      p_stats->vs_invocations = endFE->VsInvocations - startFE->VsInvocations;
-      p_stats->gs_invocations = endFE->GsInvocations - startFE->GsInvocations;
-      p_stats->gs_primitives = endFE->GsPrimitives - startFE->GsPrimitives;
-      p_stats->c_invocations = endFE->CPrimitives - startFE->CPrimitives;
-      p_stats->c_primitives = endFE->CPrimitives - startFE->CPrimitives;
-      p_stats->ps_invocations = end->PsInvocations - start->PsInvocations;
-      p_stats->hs_invocations = endFE->HsInvocations - startFE->HsInvocations;
-      p_stats->ds_invocations = endFE->DsInvocations - startFE->DsInvocations;
-      p_stats->cs_invocations = end->CsInvocations - start->CsInvocations;
+      p_stats->ia_vertices = pq->result.coreFE.IaVertices;
+      p_stats->ia_primitives = pq->result.coreFE.IaPrimitives;
+      p_stats->vs_invocations = pq->result.coreFE.VsInvocations;
+      p_stats->gs_invocations = pq->result.coreFE.GsInvocations;
+      p_stats->gs_primitives = pq->result.coreFE.GsPrimitives;
+      p_stats->c_invocations = pq->result.coreFE.CPrimitives;
+      p_stats->c_primitives = pq->result.coreFE.CPrimitives;
+      p_stats->ps_invocations = pq->result.core.PsInvocations;
+      p_stats->hs_invocations = pq->result.coreFE.HsInvocations;
+      p_stats->ds_invocations = pq->result.coreFE.DsInvocations;
+      p_stats->cs_invocations = pq->result.core.CsInvocations;
     } break;
    case PIPE_QUERY_SO_OVERFLOW_PREDICATE: {
-      struct SWR_STATS_FE *start = &pq->start.coreFE;
-      struct SWR_STATS_FE *end = &pq->end.coreFE;
       uint64_t num_primitives_written =
-         end->SoNumPrimsWritten[index] - start->SoNumPrimsWritten[index];
+         pq->result.coreFE.SoNumPrimsWritten[index];
       uint64_t primitives_storage_needed =
-         end->SoPrimStorageNeeded[index] - start->SoPrimStorageNeeded[index];
+         pq->result.coreFE.SoPrimStorageNeeded[index];
       result->b = num_primitives_written > primitives_storage_needed;
    }
       break;
@@ -215,21 +162,27 @@ swr_begin_query(struct pipe_context *pipe, struct pipe_query *q)
    struct swr_context *ctx = swr_context(pipe);
    struct swr_query *pq = swr_query(q);
 
-   assert(!pq->enable_stats && "swr_begin_query: Query is already active!");
-
    /* Initialize Results */
-   memset(&pq->start, 0, sizeof(pq->start));
-   memset(&pq->end, 0, sizeof(pq->end));
+   memset(&pq->result, 0, sizeof(pq->result));
+   switch (pq->type) {
+   case PIPE_QUERY_TIMESTAMP:
+      /* nothing to do */
+      break;
+   case PIPE_QUERY_TIME_ELAPSED:
+      pq->result.timestamp_start = swr_get_timestamp(pipe->screen);
+      break;
+   default:
+      /* Core counters required.  Update draw context with location to
+       * store results. */
+      swr_update_draw_context(ctx, &pq->result);
 
-   /* Gather start stats and enable SwrCore counters */
-   pq->result = &pq->start;
-   pq->enable_stats = TRUE;
-   swr_gather_stats(pipe, pq);
+      /* Only change stat collection if there are no active queries */
+      if (ctx->active_queries == 0)
+         SwrEnableStats(ctx->swrContext, TRUE);
+      break;
+   }
+
    ctx->active_queries++;
-
-   /* override start timestamp to 0 for TIMESTAMP query */
-   if (pq->type == PIPE_QUERY_TIMESTAMP)
-      pq->start.timestamp = 0;
 
    return true;
 }
@@ -244,10 +197,27 @@ swr_end_query(struct pipe_context *pipe, struct pipe_query *q)
           && "swr_end_query, there are no active queries!");
    ctx->active_queries--;
 
-   /* Gather end stats and disable SwrCore counters */
-   pq->result = &pq->end;
-   pq->enable_stats = FALSE;
-   swr_gather_stats(pipe, pq);
+   switch (pq->type) {
+   case PIPE_QUERY_TIMESTAMP:
+   case PIPE_QUERY_TIME_ELAPSED:
+      pq->result.timestamp_end = swr_get_timestamp(pipe->screen);
+      break;
+   default:
+      /* Stats are updated asynchronously, a fence is used to signal
+       * completion. */
+      if (!pq->fence) {
+         struct swr_screen *screen = swr_screen(pipe->screen);
+         swr_fence_reference(pipe->screen, &pq->fence, screen->flush_fence);
+      }
+      swr_fence_submit(ctx, pq->fence);
+
+      /* Only change stat collection if there are no active queries */
+      if (ctx->active_queries == 0)
+         SwrEnableStats(ctx->swrContext, FALSE);
+
+      break;
+   }
+
    return true;
 }
 
