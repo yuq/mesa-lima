@@ -1395,8 +1395,18 @@ _eglCreateSync(_EGLDisplay *disp, EGLenum type, const EGLint *attrib_list,
 
    _EGL_CHECK_DISPLAY(disp, EGL_NO_SYNC_KHR, drv);
 
-   if (!disp->Extensions.KHR_cl_event2 && is64)
-      RETURN_EGL_EVAL(disp, EGL_NO_SYNC_KHR);
+   if (!disp->Extensions.KHR_cl_event2 && is64) {
+      /* There exist two EGLAttrib variants of eglCreateSync*:
+       * eglCreateSync64KHR which requires EGL_KHR_cl_event2, and eglCreateSync
+       * which requires EGL 1.5. Here we use the presence of EGL_KHR_cl_event2
+       * support as a proxy for EGL 1.5 support, even though that's not
+       * entirely correct (though _eglComputeVersion does the same).
+       *
+       * The EGL spec provides no guidance on how to handle unsupported
+       * functions. EGL_BAD_MATCH seems reasonable.
+       */
+      RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_NO_SYNC_KHR);
+   }
 
    /* return an error if the client API doesn't support GL_OES_EGL_sync */
    if (!ctx || ctx->Resource.Display != disp ||
