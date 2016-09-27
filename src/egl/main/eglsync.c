@@ -110,12 +110,6 @@ _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
 {
    EGLint err;
 
-   if (!(type == EGL_SYNC_REUSABLE_KHR && dpy->Extensions.KHR_reusable_sync) &&
-       !(type == EGL_SYNC_FENCE_KHR && dpy->Extensions.KHR_fence_sync) &&
-       !(type == EGL_SYNC_CL_EVENT_KHR && dpy->Extensions.KHR_cl_event2 &&
-         attrib_list64))
-      return _eglError(EGL_BAD_ATTRIBUTE, "eglCreateSyncKHR");
-
    _eglInitResource(&sync->Resource, sizeof(*sync), dpy);
    sync->Type = type;
    sync->SyncStatus = EGL_UNSIGNALED_KHR;
