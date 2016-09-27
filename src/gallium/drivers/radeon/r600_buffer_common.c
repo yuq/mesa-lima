@@ -511,6 +511,7 @@ r600_alloc_buffer_struct(struct pipe_screen *screen,
 	rbuffer = MALLOC_STRUCT(r600_resource);
 
 	rbuffer->b.b = *templ;
+	rbuffer->b.b.next = NULL;
 	pipe_reference_init(&rbuffer->b.b.reference, 1);
 	rbuffer->b.b.screen = screen;
 	rbuffer->b.vtbl = &r600_buffer_vtbl;
