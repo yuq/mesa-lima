@@ -268,7 +268,8 @@ genX(graphics_pipeline_create)(
 
          wm.MultisampleRasterizationMode        = samples > 1 ?
                                                   MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
-         wm.MultisampleDispatchMode             = wm_prog_data->persample_dispatch ?
+         wm.MultisampleDispatchMode             = ((samples == 1) ||
+                                                   (samples > 1 && wm_prog_data->persample_dispatch)) ?
                                                   MSDISPMODE_PERSAMPLE : MSDISPMODE_PERPIXEL;
       }
    }
