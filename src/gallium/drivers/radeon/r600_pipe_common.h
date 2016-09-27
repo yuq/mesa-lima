@@ -370,6 +370,8 @@ struct r600_common_screen {
 	bool				has_cp_dma;
 	bool				has_streamout;
 
+	struct slab_parent_pool		pool_transfers;
+
 	/* Texture filter settings. */
 	int				force_aniso; /* -1 = disabled */
 
@@ -542,7 +544,7 @@ struct r600_common_context {
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_zeroed_memory;
-	struct slab_mempool	pool_transfers;
+	struct slab_child_pool		pool_transfers;
 
 	/* Current unaccounted memory usage. */
 	uint64_t			vram;

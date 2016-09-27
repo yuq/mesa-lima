@@ -488,8 +488,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen,
 			      unsigned context_flags)
 {
-	slab_create(&rctx->pool_transfers,
-			 sizeof(struct r600_transfer), 64);
+	slab_create_child(&rctx->pool_transfers, &rscreen->pool_transfers);
 
 	rctx->screen = rscreen;
 	rctx->ws = rscreen->ws;
@@ -590,7 +589,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 		u_upload_destroy(rctx->uploader);
 	}
 
-	slab_destroy(&rctx->pool_transfers);
+	slab_destroy_child(&rctx->pool_transfers);
 
 	if (rctx->allocator_zeroed_memory) {
 		u_suballocator_destroy(rctx->allocator_zeroed_memory);
@@ -1183,6 +1182,8 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 	rscreen->chip_class = rscreen->info.chip_class;
 	rscreen->debug_flags = debug_get_flags_option("R600_DEBUG", common_debug_options, 0);
 
+	slab_create_parent(&rscreen->pool_transfers, sizeof(struct r600_transfer), 64);
+
 	rscreen->force_aniso = MIN2(16, debug_get_num_option("R600_TEX_ANISO", -1));
 	if (rscreen->force_aniso >= 0) {
 		printf("radeon: Forcing anisotropy filter to %ix\n",
@@ -1241,6 +1242,8 @@ void r600_destroy_common_screen(struct r600_common_screen *rscreen)
 	pipe_mutex_destroy(rscreen->gpu_load_mutex);
 	pipe_mutex_destroy(rscreen->aux_context_lock);
 	rscreen->aux_context->destroy(rscreen->aux_context);
+
+	slab_destroy_parent(&rscreen->pool_transfers);
 
 	rscreen->ws->destroy(rscreen->ws);
 	FREE(rscreen);
