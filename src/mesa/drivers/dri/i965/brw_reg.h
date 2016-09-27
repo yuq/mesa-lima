@@ -520,14 +520,6 @@ sechalf(struct brw_reg reg)
 }
 
 static inline struct brw_reg
-suboffset(struct brw_reg reg, unsigned delta)
-{
-   reg.subnr += delta * type_sz(reg.type);
-   return reg;
-}
-
-
-static inline struct brw_reg
 offset(struct brw_reg reg, unsigned delta)
 {
    reg.nr += delta;
@@ -544,6 +536,11 @@ byte_offset(struct brw_reg reg, unsigned bytes)
    return reg;
 }
 
+static inline struct brw_reg
+suboffset(struct brw_reg reg, unsigned delta)
+{
+   return byte_offset(reg, delta * type_sz(reg.type));
+}
 
 /** Construct unsigned word[16] register */
 static inline struct brw_reg
