@@ -557,6 +557,8 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
                       amdgpu_bo_slab_free))
       goto fail_cache;
 
+   ws->info.min_alloc_size = 1 << AMDGPU_SLAB_MIN_SIZE_LOG2;
+
    /* init reference */
    pipe_reference_init(&ws->reference, 1);
 

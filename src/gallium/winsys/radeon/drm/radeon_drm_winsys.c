@@ -774,6 +774,10 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
                            radeon_bo_slab_alloc,
                            radeon_bo_slab_free))
             goto fail_cache;
+
+        ws->info.min_alloc_size = 1 << RADEON_SLAB_MIN_SIZE_LOG2;
+    } else {
+        ws->info.min_alloc_size = ws->info.gart_page_size;
     }
 
     if (ws->gen >= DRV_R600) {
