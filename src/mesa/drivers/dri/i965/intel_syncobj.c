@@ -52,8 +52,8 @@ struct brw_fence {
    bool signalled;
 };
 
-struct intel_gl_sync_object {
-   struct gl_sync_object Base;
+struct brw_gl_sync {
+   struct gl_sync_object gl;
    struct brw_fence fence;
 };
 
@@ -169,80 +169,80 @@ brw_fence_server_wait(struct brw_context *brw, struct brw_fence *fence)
 }
 
 static struct gl_sync_object *
-intel_gl_new_sync_object(struct gl_context *ctx, GLuint id)
+brw_gl_new_sync(struct gl_context *ctx, GLuint id)
 {
-   struct intel_gl_sync_object *sync;
+   struct brw_gl_sync *sync;
 
    sync = calloc(1, sizeof(*sync));
    if (!sync)
       return NULL;
 
-   return &sync->Base;
+   return &sync->gl;
 }
 
 static void
-intel_gl_delete_sync_object(struct gl_context *ctx, struct gl_sync_object *s)
+brw_gl_delete_sync(struct gl_context *ctx, struct gl_sync_object *_sync)
 {
-   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
+   struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
    brw_fence_finish(&sync->fence);
    free(sync);
 }
 
 static void
-intel_gl_fence_sync(struct gl_context *ctx, struct gl_sync_object *s,
-                    GLenum condition, GLbitfield flags)
+brw_gl_fence_sync(struct gl_context *ctx, struct gl_sync_object *_sync,
+                  GLenum condition, GLbitfield flags)
 {
    struct brw_context *brw = brw_context(ctx);
-   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
+   struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
    brw_fence_init(brw, &sync->fence);
    brw_fence_insert(brw, &sync->fence);
 }
 
 static void
-intel_gl_client_wait_sync(struct gl_context *ctx, struct gl_sync_object *s,
-                          GLbitfield flags, GLuint64 timeout)
+brw_gl_client_wait_sync(struct gl_context *ctx, struct gl_sync_object *_sync,
+                        GLbitfield flags, GLuint64 timeout)
 {
    struct brw_context *brw = brw_context(ctx);
-   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
+   struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
    if (brw_fence_client_wait(brw, &sync->fence, timeout))
-      s->StatusFlag = 1;
+      sync->gl.StatusFlag = 1;
 }
 
 static void
-intel_gl_server_wait_sync(struct gl_context *ctx, struct gl_sync_object *s,
+brw_gl_server_wait_sync(struct gl_context *ctx, struct gl_sync_object *_sync,
                           GLbitfield flags, GLuint64 timeout)
 {
    struct brw_context *brw = brw_context(ctx);
-   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
+   struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
    brw_fence_server_wait(brw, &sync->fence);
 }
 
 static void
-intel_gl_check_sync(struct gl_context *ctx, struct gl_sync_object *s)
+brw_gl_check_sync(struct gl_context *ctx, struct gl_sync_object *_sync)
 {
-   struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
+   struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
    if (brw_fence_has_completed(&sync->fence))
-      s->StatusFlag = 1;
+      sync->gl.StatusFlag = 1;
 }
 
 void
-intel_init_syncobj_functions(struct dd_function_table *functions)
+brw_init_syncobj_functions(struct dd_function_table *functions)
 {
-   functions->NewSyncObject = intel_gl_new_sync_object;
-   functions->DeleteSyncObject = intel_gl_delete_sync_object;
-   functions->FenceSync = intel_gl_fence_sync;
-   functions->CheckSync = intel_gl_check_sync;
-   functions->ClientWaitSync = intel_gl_client_wait_sync;
-   functions->ServerWaitSync = intel_gl_server_wait_sync;
+   functions->NewSyncObject = brw_gl_new_sync;
+   functions->DeleteSyncObject = brw_gl_delete_sync;
+   functions->FenceSync = brw_gl_fence_sync;
+   functions->CheckSync = brw_gl_check_sync;
+   functions->ClientWaitSync = brw_gl_client_wait_sync;
+   functions->ServerWaitSync = brw_gl_server_wait_sync;
 }
 
 static void *
-intel_dri_create_fence(__DRIcontext *ctx)
+brw_dri_create_fence(__DRIcontext *ctx)
 {
    struct brw_context *brw = ctx->driverPrivate;
    struct brw_fence *fence;
@@ -258,7 +258,7 @@ intel_dri_create_fence(__DRIcontext *ctx)
 }
 
 static void
-intel_dri_destroy_fence(__DRIscreen *dri_screen, void *driver_fence)
+brw_dri_destroy_fence(__DRIscreen *dri_screen, void *driver_fence)
 {
    struct brw_fence *fence = driver_fence;
 
@@ -267,8 +267,8 @@ intel_dri_destroy_fence(__DRIscreen *dri_screen, void *driver_fence)
 }
 
 static GLboolean
-intel_dri_client_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags,
-                           uint64_t timeout)
+brw_dri_client_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags,
+                         uint64_t timeout)
 {
    struct brw_fence *fence = driver_fence;
 
@@ -276,7 +276,7 @@ intel_dri_client_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags
 }
 
 static void
-intel_dri_server_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags)
+brw_dri_server_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags)
 {
    struct brw_fence *fence = driver_fence;
 
@@ -292,9 +292,9 @@ intel_dri_server_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags
 const __DRI2fenceExtension intelFenceExtension = {
    .base = { __DRI2_FENCE, 1 },
 
-   .create_fence = intel_dri_create_fence,
-   .destroy_fence = intel_dri_destroy_fence,
-   .client_wait_sync = intel_dri_client_wait_sync,
-   .server_wait_sync = intel_dri_server_wait_sync,
+   .create_fence = brw_dri_create_fence,
+   .destroy_fence = brw_dri_destroy_fence,
+   .client_wait_sync = brw_dri_client_wait_sync,
+   .server_wait_sync = brw_dri_server_wait_sync,
    .get_fence_from_cl_event = NULL,
 };

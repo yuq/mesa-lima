@@ -444,7 +444,7 @@ brw_init_driver_functions(struct brw_context *brw,
    intelInitBufferFuncs(functions);
    intelInitPixelFuncs(functions);
    intelInitBufferObjectFuncs(functions);
-   intel_init_syncobj_functions(functions);
+   brw_init_syncobj_functions(functions);
    brw_init_object_purgeable_functions(functions);
 
    brwInitFragProgFuncs( functions );

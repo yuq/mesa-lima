@@ -1604,7 +1604,7 @@ extern int intel_translate_stencil_op(GLenum op);
 extern int intel_translate_logic_op(GLenum opcode);
 
 /* intel_syncobj.c */
-void intel_init_syncobj_functions(struct dd_function_table *functions);
+void brw_init_syncobj_functions(struct dd_function_table *functions);
 
 /* gen6_sol.c */
 struct gl_transform_feedback_object *
