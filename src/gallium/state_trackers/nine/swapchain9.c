@@ -781,6 +781,7 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
 
     if (This->base.device->ex) {
         if (NineSwapChain9_GetOccluded(This)) {
+            DBG("Present is occluded. Returning S_PRESENT_OCCLUDED.\n");
             return S_PRESENT_OCCLUDED;
         }
     } else {
@@ -789,6 +790,7 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
             This->base.device->device_needs_reset = TRUE;
         }
         if (This->base.device->device_needs_reset) {
+            DBG("Device is lost. Returning D3DERR_DEVICELOST.\n");
             return D3DERR_DEVICELOST;
         }
     }
