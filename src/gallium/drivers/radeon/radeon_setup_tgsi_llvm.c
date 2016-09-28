@@ -878,11 +878,17 @@ static void else_emit(const struct lp_build_tgsi_action *action,
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_branch *current_branch = get_current_branch(ctx);
+	LLVMBasicBlockRef endif_block;
 
-	emit_default_branch(gallivm->builder, current_branch->endif_block);
+	endif_block = LLVMAppendBasicBlockInContext(gallivm->context,
+						    ctx->main_fn, "ENDIF");
+	emit_default_branch(gallivm->builder, endif_block);
+
 	current_branch->has_else = 1;
-	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->else_block);
-	set_basicblock_name(current_branch->else_block, "else", bld_base->pc);
+	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->next_block);
+	set_basicblock_name(current_branch->next_block, "else", bld_base->pc);
+
+	current_branch->next_block = endif_block;
 }
 
 static void endif_emit(const struct lp_build_tgsi_action *action,
@@ -893,17 +899,10 @@ static void endif_emit(const struct lp_build_tgsi_action *action,
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_branch *current_branch = get_current_branch(ctx);
 
-	emit_default_branch(gallivm->builder, current_branch->endif_block);
+	emit_default_branch(gallivm->builder, current_branch->next_block);
+	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->next_block);
+	set_basicblock_name(current_branch->next_block, "endif", bld_base->pc);
 
-	/* Need to fixup an empty else block if there was no ELSE opcode. */
-	if (!LLVMGetBasicBlockTerminator(current_branch->else_block)) {
-		LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->else_block);
-		LLVMBuildBr(gallivm->builder, current_branch->endif_block);
-		set_basicblock_name(current_branch->else_block, "empty_else", bld_base->pc);
-	}
-
-	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->endif_block);
-	set_basicblock_name(current_branch->endif_block, "endif", bld_base->pc);
 	ctx->branch_depth--;
 }
 
@@ -929,14 +928,12 @@ static void if_cond_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBasicBlockRef if_block, else_block, endif_block;
+	LLVMBasicBlockRef if_block, else_block;
 
-	endif_block = LLVMAppendBasicBlockInContext(gallivm->context,
-						ctx->main_fn, "ENDIF");
+	else_block = LLVMAppendBasicBlockInContext(gallivm->context,
+						   ctx->main_fn, "ELSE");
 	if_block = LLVMInsertBasicBlockInContext(gallivm->context,
-						endif_block, "IF");
-	else_block = LLVMInsertBasicBlockInContext(gallivm->context,
-						endif_block, "ELSE");
+						else_block, "IF");
 	set_basicblock_name(if_block, "if", bld_base->pc);
 	LLVMBuildCondBr(gallivm->builder, cond, if_block, else_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, if_block);
@@ -953,9 +950,7 @@ static void if_cond_emit(const struct lp_build_tgsi_action *action,
 		ctx->branch_depth_max = new_max;
 	}
 
-	ctx->branch[ctx->branch_depth - 1].endif_block = endif_block;
-	ctx->branch[ctx->branch_depth - 1].if_block = if_block;
-	ctx->branch[ctx->branch_depth - 1].else_block = else_block;
+	ctx->branch[ctx->branch_depth - 1].next_block = else_block;
 	ctx->branch[ctx->branch_depth - 1].has_else = 0;
 }
 

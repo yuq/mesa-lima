@@ -41,9 +41,7 @@
 #define RADEON_LLVM_MAX_SYSTEM_VALUES 4
 
 struct radeon_llvm_branch {
-	LLVMBasicBlockRef endif_block;
-	LLVMBasicBlockRef if_block;
-	LLVMBasicBlockRef else_block;
+	LLVMBasicBlockRef next_block;
 	unsigned has_else;
 };
 
