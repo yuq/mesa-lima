@@ -257,6 +257,10 @@ number_to_human_readable(uint64_t num, uint64_t max_value,
    static const char *hz_units[] =
       {" Hz", " KHz", " MHz", " GHz"};
    static const char *percent_units[] = {"%"};
+   static const char *dbm_units[] = {" (-dBm)"};
+   static const char *temperature_units[] = {" C"};
+   static const char *volt_units[] = {" mV", " V"};
+   static const char *amp_units[] = {" mA", " A"};
 
    const char **units;
    unsigned max_unit;
@@ -268,6 +272,22 @@ number_to_human_readable(uint64_t num, uint64_t max_value,
    case PIPE_DRIVER_QUERY_TYPE_MICROSECONDS:
       max_unit = ARRAY_SIZE(time_units)-1;
       units = time_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_VOLTS:
+      max_unit = ARRAY_SIZE(volt_units)-1;
+      units = volt_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_AMPS:
+      max_unit = ARRAY_SIZE(amp_units)-1;
+      units = amp_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_DBM:
+      max_unit = ARRAY_SIZE(dbm_units)-1;
+      units = dbm_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_TEMPERATURE:
+      max_unit = ARRAY_SIZE(temperature_units)-1;
+      units = temperature_units;
       break;
    case PIPE_DRIVER_QUERY_TYPE_PERCENTAGE:
       max_unit = ARRAY_SIZE(percent_units)-1;
@@ -993,6 +1013,9 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       }
 
       /* Add a graph. */
+#if HAVE_GALLIUM_EXTRA_HUD || HAVE_LIBSENSORS
+      char arg_name[64];
+#endif
       /* IF YOU CHANGE THIS, UPDATE print_help! */
       if (strcmp(name, "fps") == 0) {
          hud_fps_graph_install(pane);
@@ -1003,6 +1026,48 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       else if (sscanf(name, "cpu%u%s", &i, s) == 1) {
          hud_cpu_graph_install(pane, i);
       }
+#if HAVE_GALLIUM_EXTRA_HUD
+      else if (sscanf(name, "nic-rx-%s", arg_name) == 1) {
+         hud_nic_graph_install(pane, arg_name, NIC_DIRECTION_RX);
+      }
+      else if (sscanf(name, "nic-tx-%s", arg_name) == 1) {
+         hud_nic_graph_install(pane, arg_name, NIC_DIRECTION_TX);
+      }
+      else if (sscanf(name, "nic-rssi-%s", arg_name) == 1) {
+         hud_nic_graph_install(pane, arg_name, NIC_RSSI_DBM);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_DBM;
+      }
+      else if (sscanf(name, "diskstat-rd-%s", arg_name) == 1) {
+         hud_diskstat_graph_install(pane, arg_name, DISKSTAT_RD);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_BYTES;
+      }
+      else if (sscanf(name, "diskstat-wr-%s", arg_name) == 1) {
+         hud_diskstat_graph_install(pane, arg_name, DISKSTAT_WR);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_BYTES;
+      }
+#endif
+#if HAVE_LIBSENSORS
+      else if (sscanf(name, "sensors_temp_cu-%s", arg_name) == 1) {
+         hud_sensors_temp_graph_install(pane, arg_name,
+                                        SENSORS_TEMP_CURRENT);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_TEMPERATURE;
+      }
+      else if (sscanf(name, "sensors_temp_cr-%s", arg_name) == 1) {
+         hud_sensors_temp_graph_install(pane, arg_name,
+                                        SENSORS_TEMP_CRITICAL);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_TEMPERATURE;
+      }
+      else if (sscanf(name, "sensors_volt_cu-%s", arg_name) == 1) {
+         hud_sensors_temp_graph_install(pane, arg_name,
+                                        SENSORS_VOLTAGE_CURRENT);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_VOLTS;
+      }
+      else if (sscanf(name, "sensors_curr_cu-%s", arg_name) == 1) {
+         hud_sensors_temp_graph_install(pane, arg_name,
+                                        SENSORS_CURRENT_CURRENT);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_AMPS;
+      }
+#endif
       else if (strcmp(name, "samples-passed") == 0 &&
                has_occlusion_query(hud->pipe->screen)) {
          hud_pipe_query_install(&hud->batch_query, pane, hud->pipe,
@@ -1211,6 +1276,14 @@ print_help(struct pipe_screen *screen)
       puts("    ds-invocations");
       puts("    cs-invocations");
    }
+
+#if HAVE_GALLIUM_EXTRA_HUD
+   hud_get_num_disks(1);
+   hud_get_num_nics(1);
+#endif
+#if HAVE_LIBSENSORS
+   hud_get_num_sensors(1);
+#endif
 
    if (screen->get_driver_query_info){
       boolean skipping = false;

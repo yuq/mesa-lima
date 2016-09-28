@@ -91,6 +91,7 @@ XCBGLX_REQUIRED=1.8.1
 XSHMFENCE_REQUIRED=1.1
 XVMC_REQUIRED=1.0.6
 PYTHON_MAKO_REQUIRED=0.8.0
+LIBSENSORS_REQUIRED=4.0.0
 
 dnl Check for progs
 AC_PROG_CPP
@@ -871,6 +872,32 @@ AC_ARG_ENABLE([dri],
     [enable_dri="$enableval"],
     [enable_dri=yes])
 
+AC_ARG_ENABLE([gallium-extra-hud],
+    [AS_HELP_STRING([--enable-gallium-extra-hud],
+        [enable HUD block/NIC I/O HUD stats support @<:@default=disabled@:>@])],
+    [enable_gallium_extra_hud="$enableval"],
+    [enable_gallium_extra_hud=no])
+AM_CONDITIONAL(HAVE_GALLIUM_EXTRA_HUD, test "x$enable_gallium_extra_hud" = xyes)
+if test "x$enable_gallium_extra_hud" = xyes ; then
+    DEFINES="${DEFINES} -DHAVE_GALLIUM_EXTRA_HUD=1"
+fi
+
+#TODO: no pkgconfig .pc available for libsensors.
+#PKG_CHECK_MODULES([LIBSENSORS], [libsensors >= $LIBSENSORS_REQUIRED], [enable_lmsensors=yes], [enable_lmsensors=no])
+AC_ARG_ENABLE([lmsensors],
+    [AS_HELP_STRING([--enable-lmsensors],
+        [enable HUD lmsensor support @<:@default=disabled@:>@])],
+    [enable_lmsensors="$enableval"],
+    [enable_lmsensors=no])
+AM_CONDITIONAL(HAVE_LIBSENSORS, test "x$enable_lmsensors" = xyes)
+if test "x$enable_lmsensors" = xyes ; then
+    DEFINES="${DEFINES} -DHAVE_LIBSENSORS=1"
+    LIBSENSORS_LDFLAGS="-lsensors"
+else
+    LIBSENSORS_LDFLAGS=""
+fi
+AC_SUBST(LIBSENSORS_LDFLAGS)
+
 case "$host_os" in
 linux*)
     dri3_default=yes
@@ -1124,6 +1151,8 @@ AM_CONDITIONAL(HAVE_DRISW_KMS, test "x$have_drisw_kms" = xyes )
 AM_CONDITIONAL(HAVE_DRI2, test "x$enable_dri" = xyes -a "x$dri_platform" = xdrm -a "x$have_libdrm" = xyes )
 AM_CONDITIONAL(HAVE_DRI3, test "x$enable_dri3" = xyes -a "x$dri_platform" = xdrm -a "x$have_libdrm" = xyes )
 AM_CONDITIONAL(HAVE_APPLEDRI, test "x$enable_dri" = xyes -a "x$dri_platform" = xapple )
+AM_CONDITIONAL(HAVE_LMSENSORS, test "x$enable_lmsensors" = xyes )
+AM_CONDITIONAL(HAVE_GALLIUM_EXTRA_HUD, test "x$enable_gallium_extra_hud" = xyes )
 AM_CONDITIONAL(HAVE_WINDOWSDRI, test "x$enable_dri" = xyes -a "x$dri_platform" = xwindows )
 
 AC_ARG_ENABLE([shared-glapi],
@@ -2889,6 +2918,19 @@ if test -n "$with_gallium_drivers"; then
     echo "        Gallium st:      $gallium_st"
 else
     echo "        Gallium:         no"
+fi
+
+echo ""
+if test "x$enable_gallium_extra_hud" != xyes; then
+    echo "        HUD extra stats: no"
+else
+    echo "        HUD extra stats: yes"
+fi
+
+if test "x$enable_lmsensors" != xyes; then
+    echo "        HUD lmsensors:   no"
+else
+    echo "        HUD lmsensors:   yes"
 fi
 
 dnl Shader cache

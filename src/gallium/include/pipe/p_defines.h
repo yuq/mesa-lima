@@ -965,6 +965,10 @@ enum pipe_driver_query_type
    PIPE_DRIVER_QUERY_TYPE_BYTES,
    PIPE_DRIVER_QUERY_TYPE_MICROSECONDS,
    PIPE_DRIVER_QUERY_TYPE_HZ,
+   PIPE_DRIVER_QUERY_TYPE_DBM,
+   PIPE_DRIVER_QUERY_TYPE_TEMPERATURE,
+   PIPE_DRIVER_QUERY_TYPE_VOLTS,
+   PIPE_DRIVER_QUERY_TYPE_AMPS,
 };
 
 /* Whether an average value per frame or a cumulative value should be
