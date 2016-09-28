@@ -28,7 +28,7 @@
 
 extern bool
 link_function_calls(gl_shader_program *prog, gl_linked_shader *main,
-		    gl_shader **shader_list, unsigned num_shaders);
+                    gl_shader **shader_list, unsigned num_shaders);
 
 extern void
 link_invalidate_variable_locations(exec_list *ir);
@@ -44,9 +44,9 @@ link_set_uniform_initializers(struct gl_shader_program *prog,
 
 extern int
 link_cross_validate_uniform_block(void *mem_ctx,
-				  struct gl_uniform_block **linked_blocks,
-				  unsigned int *num_linked_blocks,
-				  struct gl_uniform_block *new_block);
+                                  struct gl_uniform_block **linked_blocks,
+                                  unsigned int *num_linked_blocks,
+                                  struct gl_uniform_block *new_block);
 
 extern void
 link_uniform_blocks(void *mem_ctx,
