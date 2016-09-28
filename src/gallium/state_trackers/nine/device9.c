@@ -1464,6 +1464,8 @@ NineDevice9_GetRenderTargetData( struct NineDevice9 *This,
     user_assert(src->desc.Width == dst->desc.Width, D3DERR_INVALIDCALL);
     user_assert(src->desc.Height == dst->desc.Height, D3DERR_INVALIDCALL);
 
+    user_assert(src->desc.Format != D3DFMT_NULL, D3DERR_INVALIDCALL);
+
     NineSurface9_CopyDefaultToMem(dst, src);
 
     return D3D_OK;
