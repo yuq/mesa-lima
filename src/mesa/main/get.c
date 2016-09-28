@@ -405,6 +405,12 @@ static const int extra_ARB_viewport_array_or_oes_geometry_shader[] = {
    EXTRA_END
 };
 
+static const int extra_ARB_viewport_array_or_oes_viewport_array[] = {
+   EXT(ARB_viewport_array),
+   EXT(OES_viewport_array),
+   EXTRA_END
+};
+
 static const int extra_ARB_gpu_shader5_or_oes_geometry_shader[] = {
    EXT(ARB_gpu_shader5),
    EXTRA_EXT_ES_GS,
