@@ -42,6 +42,14 @@
 #include <llvm-c/Core.h>
 #include <llvm-c/Transforms/Scalar.h>
 
+/* Data for if/else/endif and bgnloop/endloop control flow structures.
+ */
+struct radeon_llvm_flow {
+	/* Loop exit or next part of if/else/endif. */
+	LLVMBasicBlockRef next_block;
+	LLVMBasicBlockRef loop_entry_block;
+};
+
 LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 			  enum tgsi_opcode_type type)
 {
@@ -105,15 +113,43 @@ LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
 	return index;
 }
 
-static struct radeon_llvm_loop *get_current_loop(struct radeon_llvm_context *ctx)
+static struct radeon_llvm_flow *
+get_current_flow(struct radeon_llvm_context *ctx)
 {
-	return ctx->loop_depth > 0 ? ctx->loop + (ctx->loop_depth - 1) : NULL;
+	if (ctx->flow_depth > 0)
+		return &ctx->flow[ctx->flow_depth - 1];
+	return NULL;
 }
 
-static struct radeon_llvm_branch *get_current_branch(struct radeon_llvm_context *ctx)
+static struct radeon_llvm_flow *
+get_innermost_loop(struct radeon_llvm_context *ctx)
 {
-	return ctx->branch_depth > 0 ?
-			ctx->branch + (ctx->branch_depth - 1) : NULL;
+	for (unsigned i = ctx->flow_depth; i > 0; --i) {
+		if (ctx->flow[i - 1].loop_entry_block)
+			return &ctx->flow[i - 1];
+	}
+	return NULL;
+}
+
+static struct radeon_llvm_flow *
+push_flow(struct radeon_llvm_context *ctx)
+{
+	struct radeon_llvm_flow *flow;
+
+	if (ctx->flow_depth >= ctx->flow_depth_max) {
+		unsigned new_max = MAX2(ctx->flow_depth << 1, RADEON_LLVM_INITIAL_CF_DEPTH);
+		ctx->flow = REALLOC(ctx->flow,
+				    ctx->flow_depth_max * sizeof(*ctx->flow),
+				    new_max * sizeof(*ctx->flow));
+		ctx->flow_depth_max = new_max;
+	}
+
+	flow = &ctx->flow[ctx->flow_depth];
+	ctx->flow_depth++;
+
+	flow->next_block = NULL;
+	flow->loop_entry_block = NULL;
+	return flow;
 }
 
 unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
@@ -823,30 +859,14 @@ static void bgnloop_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBasicBlockRef loop_block;
-	LLVMBasicBlockRef endloop_block;
-	endloop_block = LLVMAppendBasicBlockInContext(gallivm->context,
+	struct radeon_llvm_flow *flow = push_flow(ctx);
+	flow->next_block = LLVMAppendBasicBlockInContext(gallivm->context,
 						ctx->main_fn, "ENDLOOP");
-	loop_block = LLVMInsertBasicBlockInContext(gallivm->context,
-						endloop_block, "LOOP");
-	set_basicblock_name(loop_block, "loop", bld_base->pc);
-	LLVMBuildBr(gallivm->builder, loop_block);
-	LLVMPositionBuilderAtEnd(gallivm->builder, loop_block);
-
-	if (++ctx->loop_depth > ctx->loop_depth_max) {
-		unsigned new_max = ctx->loop_depth_max << 1;
-
-		if (!new_max)
-			new_max = RADEON_LLVM_INITIAL_CF_DEPTH;
-
-		ctx->loop = REALLOC(ctx->loop, ctx->loop_depth_max *
-				    sizeof(ctx->loop[0]),
-				    new_max * sizeof(ctx->loop[0]));
-		ctx->loop_depth_max = new_max;
-	}
-
-	ctx->loop[ctx->loop_depth - 1].loop_block = loop_block;
-	ctx->loop[ctx->loop_depth - 1].endloop_block = endloop_block;
+	flow->loop_entry_block = LLVMInsertBasicBlockInContext(gallivm->context,
+						flow->next_block, "LOOP");
+	set_basicblock_name(flow->loop_entry_block, "loop", bld_base->pc);
+	LLVMBuildBr(gallivm->builder, flow->loop_entry_block);
+	LLVMPositionBuilderAtEnd(gallivm->builder, flow->loop_entry_block);
 }
 
 static void brk_emit(const struct lp_build_tgsi_action *action,
@@ -855,9 +875,9 @@ static void brk_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct radeon_llvm_loop *current_loop = get_current_loop(ctx);
+	struct radeon_llvm_flow *flow = get_innermost_loop(ctx);
 
-	LLVMBuildBr(gallivm->builder, current_loop->endloop_block);
+	LLVMBuildBr(gallivm->builder, flow->next_block);
 }
 
 static void cont_emit(const struct lp_build_tgsi_action *action,
@@ -866,9 +886,9 @@ static void cont_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct radeon_llvm_loop *current_loop = get_current_loop(ctx);
+	struct radeon_llvm_flow *flow = get_innermost_loop(ctx);
 
-	LLVMBuildBr(gallivm->builder, current_loop->loop_block);
+	LLVMBuildBr(gallivm->builder, flow->loop_entry_block);
 }
 
 static void else_emit(const struct lp_build_tgsi_action *action,
@@ -877,14 +897,15 @@ static void else_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct radeon_llvm_branch *current_branch = get_current_branch(ctx);
+	struct radeon_llvm_flow *current_branch = get_current_flow(ctx);
 	LLVMBasicBlockRef endif_block;
+
+	assert(!current_branch->loop_entry_block);
 
 	endif_block = LLVMAppendBasicBlockInContext(gallivm->context,
 						    ctx->main_fn, "ENDIF");
 	emit_default_branch(gallivm->builder, endif_block);
 
-	current_branch->has_else = 1;
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->next_block);
 	set_basicblock_name(current_branch->next_block, "else", bld_base->pc);
 
@@ -897,13 +918,15 @@ static void endif_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct radeon_llvm_branch *current_branch = get_current_branch(ctx);
+	struct radeon_llvm_flow *current_branch = get_current_flow(ctx);
+
+	assert(!current_branch->loop_entry_block);
 
 	emit_default_branch(gallivm->builder, current_branch->next_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->next_block);
 	set_basicblock_name(current_branch->next_block, "endif", bld_base->pc);
 
-	ctx->branch_depth--;
+	ctx->flow_depth--;
 }
 
 static void endloop_emit(const struct lp_build_tgsi_action *action,
@@ -912,13 +935,15 @@ static void endloop_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	struct radeon_llvm_loop *current_loop = get_current_loop(ctx);
+	struct radeon_llvm_flow *current_loop = get_current_flow(ctx);
 
-	emit_default_branch(gallivm->builder, current_loop->loop_block);
+	assert(current_loop->loop_entry_block);
 
-	LLVMPositionBuilderAtEnd(gallivm->builder, current_loop->endloop_block);
-	set_basicblock_name(current_loop->endloop_block, "endloop", bld_base->pc);
-	ctx->loop_depth--;
+	emit_default_branch(gallivm->builder, current_loop->loop_entry_block);
+
+	LLVMPositionBuilderAtEnd(gallivm->builder, current_loop->next_block);
+	set_basicblock_name(current_loop->next_block, "endloop", bld_base->pc);
+	ctx->flow_depth--;
 }
 
 static void if_cond_emit(const struct lp_build_tgsi_action *action,
@@ -928,30 +953,16 @@ static void if_cond_emit(const struct lp_build_tgsi_action *action,
 {
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBasicBlockRef if_block, else_block;
+	struct radeon_llvm_flow *flow = push_flow(ctx);
+	LLVMBasicBlockRef if_block;
 
-	else_block = LLVMAppendBasicBlockInContext(gallivm->context,
+	flow->next_block = LLVMAppendBasicBlockInContext(gallivm->context,
 						   ctx->main_fn, "ELSE");
 	if_block = LLVMInsertBasicBlockInContext(gallivm->context,
-						else_block, "IF");
+						flow->next_block, "IF");
 	set_basicblock_name(if_block, "if", bld_base->pc);
-	LLVMBuildCondBr(gallivm->builder, cond, if_block, else_block);
+	LLVMBuildCondBr(gallivm->builder, cond, if_block, flow->next_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, if_block);
-
-	if (++ctx->branch_depth > ctx->branch_depth_max) {
-		unsigned new_max = ctx->branch_depth_max << 1;
-
-		if (!new_max)
-			new_max = RADEON_LLVM_INITIAL_CF_DEPTH;
-
-		ctx->branch = REALLOC(ctx->branch, ctx->branch_depth_max *
-				      sizeof(ctx->branch[0]),
-				      new_max * sizeof(ctx->branch[0]));
-		ctx->branch_depth_max = new_max;
-	}
-
-	ctx->branch[ctx->branch_depth - 1].next_block = else_block;
-	ctx->branch[ctx->branch_depth - 1].has_else = 0;
 }
 
 static void if_emit(const struct lp_build_tgsi_action *action,
@@ -2133,10 +2144,7 @@ void radeon_llvm_dispose(struct radeon_llvm_context *ctx)
 	FREE(ctx->temps);
 	ctx->temps = NULL;
 	ctx->temps_count = 0;
-	FREE(ctx->loop);
-	ctx->loop = NULL;
-	ctx->loop_depth_max = 0;
-	FREE(ctx->branch);
-	ctx->branch = NULL;
-	ctx->branch_depth_max = 0;
+	FREE(ctx->flow);
+	ctx->flow = NULL;
+	ctx->flow_depth_max = 0;
 }

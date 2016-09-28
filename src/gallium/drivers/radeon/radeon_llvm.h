@@ -40,15 +40,7 @@
 
 #define RADEON_LLVM_MAX_SYSTEM_VALUES 4
 
-struct radeon_llvm_branch {
-	LLVMBasicBlockRef next_block;
-	unsigned has_else;
-};
-
-struct radeon_llvm_loop {
-	LLVMBasicBlockRef loop_block;
-	LLVMBasicBlockRef endloop_block;
-};
+struct radeon_llvm_flow;
 
 struct radeon_llvm_context {
 	struct lp_build_tgsi_soa_context soa;
@@ -90,13 +82,9 @@ struct radeon_llvm_context {
 
 	/*=== Private Members ===*/
 
-	struct radeon_llvm_branch *branch;
-	struct radeon_llvm_loop *loop;
-
-	unsigned branch_depth;
-	unsigned branch_depth_max;
-	unsigned loop_depth;
-	unsigned loop_depth_max;
+	struct radeon_llvm_flow *flow;
+	unsigned flow_depth;
+	unsigned flow_depth_max;
 
 	struct tgsi_array_info *temp_arrays;
 	LLVMValueRef *temp_array_allocas;
