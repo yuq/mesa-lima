@@ -128,7 +128,8 @@ void radeon_llvm_dispose(struct radeon_llvm_context *ctx);
 
 unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan);
 
-void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx);
+void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx,
+				 bool run_verifier);
 
 void build_tgsi_intrinsic_nomem(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,

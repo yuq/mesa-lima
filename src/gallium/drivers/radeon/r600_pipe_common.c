@@ -622,6 +622,7 @@ static const struct debug_named_value common_debug_options[] = {
 	{ "notgsi", DBG_NO_TGSI, "Don't print the TGSI"},
 	{ "noasm", DBG_NO_ASM, "Don't print disassembled shaders"},
 	{ "preoptir", DBG_PREOPT_IR, "Print the LLVM IR before initial optimizations" },
+	{ "checkir", DBG_CHECK_IR, "Enable additional sanity checks on shader IR" },
 
 	{ "testdma", DBG_TEST_DMA, "Invoke SDMA tests and exit." },
 
@@ -1264,6 +1265,12 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 	default:
 		return false;
 	}
+}
+
+bool r600_extra_shader_checks(struct r600_common_screen *rscreen, unsigned processor)
+{
+	return (rscreen->debug_flags & DBG_CHECK_IR) ||
+	       r600_can_dump_shader(rscreen, processor);
 }
 
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,

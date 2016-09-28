@@ -2114,7 +2114,8 @@ void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
 	LLVMPositionBuilderAtEnd(ctx->gallivm.builder, main_fn_body);
 }
 
-void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx)
+void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx,
+				 bool run_verifier)
 {
 	struct gallivm_state *gallivm = ctx->soa.bld_base.base.gallivm;
 	const char *triple = LLVMGetTarget(gallivm->module);
@@ -2126,6 +2127,9 @@ void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx)
 
 	target_library_info = gallivm_create_target_library_info(triple);
 	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
+
+	if (run_verifier)
+		LLVMAddVerifierPass(gallivm->passmgr);
 
 	/* This pass should eliminate all the load and store instructions */
 	LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);

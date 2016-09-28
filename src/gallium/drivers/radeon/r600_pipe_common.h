@@ -78,6 +78,7 @@
 #define DBG_NO_TGSI		(1 << 13)
 #define DBG_NO_ASM		(1 << 14)
 #define DBG_PREOPT_IR		(1 << 15)
+#define DBG_CHECK_IR		(1 << 16)
 /* gaps */
 #define DBG_TEST_DMA		(1 << 20)
 /* Bits 21-31 are reserved for the r600g driver. */
@@ -716,6 +717,8 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 void r600_common_context_cleanup(struct r600_common_context *rctx);
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor);
+bool r600_extra_shader_checks(struct r600_common_screen *rscreen,
+			      unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
 			      uint64_t offset, uint64_t size, unsigned value,
 			      enum r600_coherency coher);

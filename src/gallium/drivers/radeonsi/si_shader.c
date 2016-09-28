@@ -6345,7 +6345,9 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 		LLVMDumpModule(bld_base->base.gallivm->module);
 
-	radeon_llvm_finalize_module(&ctx->radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx->radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_GEOMETRY));
 
 	r = si_compile_llvm(sscreen, &ctx->shader->binary,
 			    &ctx->shader->config, ctx->tm,
@@ -6629,7 +6631,9 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	    r600_can_dump_shader(&sscreen->b, ctx.type))
 		LLVMDumpModule(mod);
 
-	radeon_llvm_finalize_module(&ctx.radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx.radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, ctx.type));
 
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
 			    mod, debug, ctx.type, "TGSI shader");
@@ -6890,7 +6894,9 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 
 	/* Compile. */
 	si_llvm_build_ret(&ctx, ret);
-	radeon_llvm_finalize_module(&ctx.radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx.radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_VERTEX));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
 			    gallivm->module, debug, ctx.type,
@@ -6962,7 +6968,9 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
-	radeon_llvm_finalize_module(&ctx.radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx.radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_VERTEX));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
 			    gallivm->module, debug, ctx.type,
@@ -7115,7 +7123,9 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
-	radeon_llvm_finalize_module(&ctx.radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx.radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_TESS_CTRL));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
 			    gallivm->module, debug, ctx.type,
@@ -7399,7 +7409,9 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 
 	/* Compile. */
 	si_llvm_build_ret(&ctx, ret);
-	radeon_llvm_finalize_module(&ctx.radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx.radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
 			    gallivm->module, debug, ctx.type,
@@ -7519,7 +7531,9 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
-	radeon_llvm_finalize_module(&ctx.radeon_bld);
+	radeon_llvm_finalize_module(
+		&ctx.radeon_bld,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
 			    gallivm->module, debug, ctx.type,
