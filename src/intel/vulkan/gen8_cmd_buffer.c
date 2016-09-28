@@ -350,15 +350,19 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
       assert(cmd_state->render_area.offset.x == 0 &&
              cmd_state->render_area.offset.y == 0);
 
+   bool depth_clear;
+   bool stencil_clear;
+
    /* This variable corresponds to the Pixel Dim column in the table below */
    struct isl_extent2d px_dim;
 
    /* Validate that we can perform the HZ operation and that it's necessary. */
    switch (op) {
    case BLORP_HIZ_OP_DEPTH_CLEAR:
-      if (cmd_buffer->state.pass->attachments[ds].load_op !=
-          VK_ATTACHMENT_LOAD_OP_CLEAR)
-         return;
+      stencil_clear = VK_IMAGE_ASPECT_STENCIL_BIT &
+                  cmd_state->attachments[ds].pending_clear_aspects;
+      depth_clear = VK_IMAGE_ASPECT_DEPTH_BIT &
+                    cmd_state->attachments[ds].pending_clear_aspects;
 
       /* Apply alignment restrictions. Despite the BDW PRM mentioning this is
        * only needed for a depth buffer surface type of D16_UNORM, testing
@@ -396,7 +400,7 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
       px_dim = (struct isl_extent2d) { .w = 8, .h = 4};
 #endif
 
-      if (!full_surface_op) {
+      if (depth_clear && !full_surface_op) {
          /* Fast depth clears clear an entire sample block at a time. As a
           * result, the rectangle must be aligned to the pixel dimensions of
           * a sample block for a successful operation.
@@ -409,15 +413,25 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
           */
          if (cmd_state->render_area.offset.x % px_dim.w ||
              cmd_state->render_area.offset.y % px_dim.h)
-            return;
+            depth_clear = false;
          if (cmd_state->render_area.offset.x +
              cmd_state->render_area.extent.width != iview->extent.width &&
              cmd_state->render_area.extent.width % px_dim.w)
-            return;
+            depth_clear = false;
          if (cmd_state->render_area.offset.y +
              cmd_state->render_area.extent.height != iview->extent.height &&
              cmd_state->render_area.extent.height % px_dim.h)
+            depth_clear = false;
+      }
+
+      if (!depth_clear) {
+         if (stencil_clear) {
+            /* Stencil has no alignment requirements */
+            px_dim = (struct isl_extent2d) { .w = 1, .h = 1};
+         } else {
+            /* Nothing to clear */
             return;
+         }
       }
       break;
    case BLORP_HIZ_OP_DEPTH_RESOLVE:
@@ -448,10 +462,8 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_WM_HZ_OP), hzp) {
       switch (op) {
       case BLORP_HIZ_OP_DEPTH_CLEAR:
-         hzp.StencilBufferClearEnable = VK_IMAGE_ASPECT_STENCIL_BIT &
-                            cmd_state->attachments[ds].pending_clear_aspects;
-         hzp.DepthBufferClearEnable = VK_IMAGE_ASPECT_DEPTH_BIT &
-                            cmd_state->attachments[ds].pending_clear_aspects;
+         hzp.StencilBufferClearEnable = stencil_clear;
+         hzp.DepthBufferClearEnable = depth_clear;
          hzp.FullSurfaceDepthandStencilClear = full_surface_op;
          hzp.StencilClearValue =
             cmd_state->attachments[ds].clear_value.depthStencil.stencil & 0xff;
@@ -503,16 +515,24 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_WM_HZ_OP), hzp);
 
+   /* Perform clear specific flushing and state updates */
    if (op == BLORP_HIZ_OP_DEPTH_CLEAR) {
-      if (!full_surface_op) {
+      if (depth_clear && !full_surface_op) {
          anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
             pc.DepthStallEnable = true;
             pc.DepthCacheFlushEnable = true;
          }
       }
 
-      /* Mark aspects as cleared */
-      cmd_state->attachments[ds].pending_clear_aspects = 0;
+      /* Remove cleared aspects from the pending mask */
+      if (stencil_clear) {
+         cmd_state->attachments[ds].pending_clear_aspects &=
+            ~VK_IMAGE_ASPECT_STENCIL_BIT;
+      }
+      if (depth_clear) {
+         cmd_state->attachments[ds].pending_clear_aspects &=
+            ~VK_IMAGE_ASPECT_DEPTH_BIT;
+      }
    }
 }
 
