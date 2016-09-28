@@ -1602,7 +1602,7 @@ eglGetSyncAttribKHR(EGLDisplay dpy, EGLSync sync, EGLint attribute, EGLint *valu
    EGLBoolean result;
 
    if (!value)
-      RETURN_EGL_ERROR(NULL, EGL_BAD_PARAMETER, EGL_FALSE);
+      RETURN_EGL_ERROR(disp, EGL_BAD_PARAMETER, EGL_FALSE);
 
    attrib = *value;
    result = _eglGetSyncAttribCommon(disp, s, attribute, &attrib);
