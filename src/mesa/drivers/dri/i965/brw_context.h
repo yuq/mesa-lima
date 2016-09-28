@@ -1603,7 +1603,7 @@ extern int intel_translate_compare_func(GLenum func);
 extern int intel_translate_stencil_op(GLenum op);
 extern int intel_translate_logic_op(GLenum opcode);
 
-/* intel_syncobj.c */
+/* brw_sync.c */
 void brw_init_syncobj_functions(struct dd_function_table *functions);
 
 /* gen6_sol.c */
