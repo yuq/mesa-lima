@@ -843,6 +843,25 @@ static void set_basicblock_name(LLVMBasicBlockRef bb, const char *base, int pc)
 	LLVMSetValueName(LLVMBasicBlockAsValue(bb), buf);
 }
 
+/* Append a basic block at the level of the parent flow.
+ */
+static LLVMBasicBlockRef append_basic_block(struct radeon_llvm_context *ctx,
+					    const char *name)
+{
+	struct gallivm_state *gallivm = &ctx->gallivm;
+
+	assert(ctx->flow_depth >= 1);
+
+	if (ctx->flow_depth >= 2) {
+		struct radeon_llvm_flow *flow = &ctx->flow[ctx->flow_depth - 2];
+
+		return LLVMInsertBasicBlockInContext(gallivm->context,
+						     flow->next_block, name);
+	}
+
+	return LLVMAppendBasicBlockInContext(gallivm->context, ctx->main_fn, name);
+}
+
 /* Emit a branch to the given default target for the current block if
  * applicable -- that is, if the current block does not already contain a
  * branch from a break or continue.
@@ -860,10 +879,8 @@ static void bgnloop_emit(const struct lp_build_tgsi_action *action,
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *flow = push_flow(ctx);
-	flow->next_block = LLVMAppendBasicBlockInContext(gallivm->context,
-						ctx->main_fn, "ENDLOOP");
-	flow->loop_entry_block = LLVMInsertBasicBlockInContext(gallivm->context,
-						flow->next_block, "LOOP");
+	flow->loop_entry_block = append_basic_block(ctx, "LOOP");
+	flow->next_block = append_basic_block(ctx, "ENDLOOP");
 	set_basicblock_name(flow->loop_entry_block, "loop", bld_base->pc);
 	LLVMBuildBr(gallivm->builder, flow->loop_entry_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, flow->loop_entry_block);
@@ -902,8 +919,7 @@ static void else_emit(const struct lp_build_tgsi_action *action,
 
 	assert(!current_branch->loop_entry_block);
 
-	endif_block = LLVMAppendBasicBlockInContext(gallivm->context,
-						    ctx->main_fn, "ENDIF");
+	endif_block = append_basic_block(ctx, "ENDIF");
 	emit_default_branch(gallivm->builder, endif_block);
 
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->next_block);
@@ -956,10 +972,8 @@ static void if_cond_emit(const struct lp_build_tgsi_action *action,
 	struct radeon_llvm_flow *flow = push_flow(ctx);
 	LLVMBasicBlockRef if_block;
 
-	flow->next_block = LLVMAppendBasicBlockInContext(gallivm->context,
-						   ctx->main_fn, "ELSE");
-	if_block = LLVMInsertBasicBlockInContext(gallivm->context,
-						flow->next_block, "IF");
+	if_block = append_basic_block(ctx, "IF");
+	flow->next_block = append_basic_block(ctx, "ELSE");
 	set_basicblock_name(if_block, "if", bld_base->pc);
 	LLVMBuildCondBr(gallivm->builder, cond, if_block, flow->next_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, if_block);
