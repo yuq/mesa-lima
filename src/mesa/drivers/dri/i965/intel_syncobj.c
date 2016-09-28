@@ -58,10 +58,20 @@ struct intel_gl_sync_object {
 };
 
 static void
+brw_fence_init(struct brw_context *brw, struct brw_fence *fence)
+{
+   fence->brw = brw;
+   fence->batch_bo = NULL;
+   mtx_init(&fence->mutex, mtx_plain);
+}
+
+static void
 brw_fence_finish(struct brw_fence *fence)
 {
    if (fence->batch_bo)
       drm_intel_bo_unreference(fence->batch_bo);
+
+   mtx_destroy(&fence->mutex);
 }
 
 static void
@@ -186,6 +196,7 @@ intel_gl_fence_sync(struct gl_context *ctx, struct gl_sync_object *s,
    struct brw_context *brw = brw_context(ctx);
    struct intel_gl_sync_object *sync = (struct intel_gl_sync_object *)s;
 
+   brw_fence_init(brw, &sync->fence);
    brw_fence_insert(brw, &sync->fence);
 }
 
@@ -240,8 +251,7 @@ intel_dri_create_fence(__DRIcontext *ctx)
    if (!fence)
       return NULL;
 
-   mtx_init(&fence->mutex, mtx_plain);
-   fence->brw = brw;
+   brw_fence_init(brw, fence);
    brw_fence_insert(brw, fence);
 
    return fence;
