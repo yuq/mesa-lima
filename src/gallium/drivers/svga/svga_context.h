@@ -589,6 +589,8 @@ struct svga_context
       SVGA3dQueryId query_id;
       boolean cond;
    } pred;
+
+   boolean render_condition;
 };
 
 /* A flag for each state_tracker state object:

@@ -265,7 +265,8 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
       blit_info->mask != (PIPE_MASK_ZS))
      return false;
 
-   if (blit_info->alpha_blend || blit_info->render_condition_enable ||
+   if (blit_info->alpha_blend ||
+       (svga->render_condition && blit_info->render_condition_enable) ||
        blit_info->scissor_enable)
       return false;
 

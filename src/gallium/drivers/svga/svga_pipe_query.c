@@ -1242,6 +1242,8 @@ svga_render_condition(struct pipe_context *pipe, struct pipe_query *q,
       svga->pred.query_id = queryId;
       svga->pred.cond = condition;
    }
+
+   svga->render_condition = (sq != NULL);
 }
 
 
