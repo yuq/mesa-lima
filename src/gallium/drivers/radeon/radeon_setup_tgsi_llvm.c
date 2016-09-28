@@ -796,6 +796,17 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 	}
 }
 
+static void set_basicblock_name(LLVMBasicBlockRef bb, const char *base, int pc)
+{
+	char buf[32];
+	/* Subtract 1 so that the number shown is that of the corresponding
+	 * opcode in the TGSI dump, e.g. an if block has the same suffix as
+	 * the instruction number of the corresponding TGSI IF.
+	 */
+	snprintf(buf, sizeof(buf), "%s%d", base, pc - 1);
+	LLVMSetValueName(LLVMBasicBlockAsValue(bb), buf);
+}
+
 /* Emit a branch to the given default target for the current block if
  * applicable -- that is, if the current block does not already contain a
  * branch from a break or continue.
@@ -818,6 +829,7 @@ static void bgnloop_emit(const struct lp_build_tgsi_action *action,
 						ctx->main_fn, "ENDLOOP");
 	loop_block = LLVMInsertBasicBlockInContext(gallivm->context,
 						endloop_block, "LOOP");
+	set_basicblock_name(loop_block, "loop", bld_base->pc);
 	LLVMBuildBr(gallivm->builder, loop_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, loop_block);
 
@@ -870,6 +882,7 @@ static void else_emit(const struct lp_build_tgsi_action *action,
 	emit_default_branch(gallivm->builder, current_branch->endif_block);
 	current_branch->has_else = 1;
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->else_block);
+	set_basicblock_name(current_branch->else_block, "else", bld_base->pc);
 }
 
 static void endif_emit(const struct lp_build_tgsi_action *action,
@@ -886,9 +899,11 @@ static void endif_emit(const struct lp_build_tgsi_action *action,
 	if (!LLVMGetBasicBlockTerminator(current_branch->else_block)) {
 		LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->else_block);
 		LLVMBuildBr(gallivm->builder, current_branch->endif_block);
+		set_basicblock_name(current_branch->else_block, "empty_else", bld_base->pc);
 	}
 
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->endif_block);
+	set_basicblock_name(current_branch->endif_block, "endif", bld_base->pc);
 	ctx->branch_depth--;
 }
 
@@ -903,6 +918,7 @@ static void endloop_emit(const struct lp_build_tgsi_action *action,
 	emit_default_branch(gallivm->builder, current_loop->loop_block);
 
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_loop->endloop_block);
+	set_basicblock_name(current_loop->endloop_block, "endloop", bld_base->pc);
 	ctx->loop_depth--;
 }
 
@@ -921,6 +937,7 @@ static void if_cond_emit(const struct lp_build_tgsi_action *action,
 						endif_block, "IF");
 	else_block = LLVMInsertBasicBlockInContext(gallivm->context,
 						endif_block, "ELSE");
+	set_basicblock_name(if_block, "if", bld_base->pc);
 	LLVMBuildCondBr(gallivm->builder, cond, if_block, else_block);
 	LLVMPositionBuilderAtEnd(gallivm->builder, if_block);
 
