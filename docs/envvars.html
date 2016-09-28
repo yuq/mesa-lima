@@ -235,6 +235,21 @@ Setting to "tgsi", for example, will print all the TGSI shaders.
 See src/mesa/state_tracker/st_debug.c for other options.
 </ul>
 
+<h3>Clover state tracker environment variables</h3>
+
+<ul>
+<li>CLOVER_EXTRA_BUILD_OPTIONS - allows specifying additional compiler and linker
+    options. Specified options are appended after the options set by the OpenCL
+    program in clBuildProgram.
+<li>CLOVER_EXTRA_COMPILE_OPTIONS - allows specifying additional compiler
+    options. Specified options are appended after the options set by the OpenCL
+    program in clCompileProgram.
+<li>CLOVER_EXTRA_LINK_OPTIONS - allows specifying additional linker
+    options. Specified options are appended after the options set by the OpenCL
+    program in clLinkProgram.
+</ul>
+
+
 <h3>Softpipe driver environment variables</h3>
 <ul>
 <li>SOFTPIPE_DUMP_FS - if set, the softpipe driver will print fragment shaders

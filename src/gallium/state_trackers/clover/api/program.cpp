@@ -22,6 +22,7 @@
 
 #include "api/util.hpp"
 #include "core/program.hpp"
+#include "util/u_debug.h"
 
 #include <sstream>
 
@@ -177,7 +178,8 @@ clBuildProgram(cl_program d_prog, cl_uint num_devs,
    auto &prog = obj(d_prog);
    auto devs = (d_devs ? objs(d_devs, num_devs) :
                 ref_vector<device>(prog.context().devices()));
-   auto opts = (p_opts ? p_opts : "");
+   const auto opts = std::string(p_opts ? p_opts : "") + " " +
+                     debug_get_option("CLOVER_EXTRA_BUILD_OPTIONS", "");
 
    validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
 
@@ -202,7 +204,8 @@ clCompileProgram(cl_program d_prog, cl_uint num_devs,
    auto &prog = obj(d_prog);
    auto devs = (d_devs ? objs(d_devs, num_devs) :
                 ref_vector<device>(prog.context().devices()));
-   auto opts = (p_opts ? p_opts : "");
+   const auto opts = std::string(p_opts ? p_opts : "") + " " +
+                     debug_get_option("CLOVER_EXTRA_COMPILE_OPTIONS", "");
    header_map headers;
 
    validate_build_common(prog, num_devs, d_devs, pfn_notify, user_data);
@@ -271,7 +274,8 @@ clLinkProgram(cl_context d_ctx, cl_uint num_devs, const cl_device_id *d_devs,
               void (*pfn_notify) (cl_program, void *), void *user_data,
               cl_int *r_errcode) try {
    auto &ctx = obj(d_ctx);
-   auto opts = (p_opts ? p_opts : "");
+   const auto opts = std::string(p_opts ? p_opts : "") + " " +
+                     debug_get_option("CLOVER_EXTRA_LINK_OPTIONS", "");
    auto progs = objs(d_progs, num_progs);
    auto prog = create<program>(ctx);
    auto devs = validate_link_devices(progs,
