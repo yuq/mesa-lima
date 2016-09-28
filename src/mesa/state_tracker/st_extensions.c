@@ -1199,6 +1199,8 @@ void st_init_extensions(struct pipe_screen *screen,
       }
    }
 
+   extensions->KHR_robustness = extensions->ARB_robust_buffer_access_behavior;
+
    /* If we support ES 3.1, we support the ES3_1_compatibility ext. However
     * there's no clean way of telling whether we would support ES 3.1 from
     * here, so copy the condition from compute_version_es2 here. A lot of
