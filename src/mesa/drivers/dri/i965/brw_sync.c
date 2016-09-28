@@ -258,27 +258,27 @@ brw_dri_create_fence(__DRIcontext *ctx)
 }
 
 static void
-brw_dri_destroy_fence(__DRIscreen *dri_screen, void *driver_fence)
+brw_dri_destroy_fence(__DRIscreen *dri_screen, void *_fence)
 {
-   struct brw_fence *fence = driver_fence;
+   struct brw_fence *fence = _fence;
 
    brw_fence_finish(fence);
    free(fence);
 }
 
 static GLboolean
-brw_dri_client_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags,
+brw_dri_client_wait_sync(__DRIcontext *ctx, void *_fence, unsigned flags,
                          uint64_t timeout)
 {
-   struct brw_fence *fence = driver_fence;
+   struct brw_fence *fence = _fence;
 
    return brw_fence_client_wait(fence->brw, fence, timeout);
 }
 
 static void
-brw_dri_server_wait_sync(__DRIcontext *ctx, void *driver_fence, unsigned flags)
+brw_dri_server_wait_sync(__DRIcontext *ctx, void *_fence, unsigned flags)
 {
-   struct brw_fence *fence = driver_fence;
+   struct brw_fence *fence = _fence;
 
    /* We might be called here with a NULL fence as a result of WaitSyncKHR
     * on a EGL_KHR_reusable_sync fence. Nothing to do here in such case.
