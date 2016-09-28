@@ -796,6 +796,16 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 	}
 }
 
+/* Emit a branch to the given default target for the current block if
+ * applicable -- that is, if the current block does not already contain a
+ * branch from a break or continue.
+ */
+static void emit_default_branch(LLVMBuilderRef builder, LLVMBasicBlockRef target)
+{
+	if (!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(builder)))
+		 LLVMBuildBr(builder, target);
+}
+
 static void bgnloop_emit(const struct lp_build_tgsi_action *action,
 			 struct lp_build_tgsi_context *bld_base,
 			 struct lp_build_emit_data *emit_data)
@@ -856,28 +866,8 @@ static void else_emit(const struct lp_build_tgsi_action *action,
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_branch *current_branch = get_current_branch(ctx);
-	LLVMBasicBlockRef current_block = LLVMGetInsertBlock(gallivm->builder);
 
-	/* We need to add a terminator to the current block if the previous
-	 * instruction was an ENDIF.Example:
-	 * IF
-	 *   [code]
-	 *   IF
-	 *     [code]
-	 *   ELSE
-	 *    [code]
-	 *   ENDIF <--
-	 * ELSE<--
-	 *   [code]
-	 * ENDIF
-	 */
-
-	if (current_block != current_branch->if_block) {
-		LLVMBuildBr(gallivm->builder, current_branch->endif_block);
-	}
-	if (!LLVMGetBasicBlockTerminator(current_branch->if_block)) {
-		LLVMBuildBr(gallivm->builder, current_branch->endif_block);
-	}
+	emit_default_branch(gallivm->builder, current_branch->endif_block);
 	current_branch->has_else = 1;
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->else_block);
 }
@@ -889,23 +879,12 @@ static void endif_emit(const struct lp_build_tgsi_action *action,
 	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_branch *current_branch = get_current_branch(ctx);
-	LLVMBasicBlockRef current_block = LLVMGetInsertBlock(gallivm->builder);
 
-	/* If we have consecutive ENDIF instructions, then the first ENDIF
-	 * will not have a terminator, so we need to add one. */
-	if (current_block != current_branch->if_block
-			&& current_block != current_branch->else_block
-			&& !LLVMGetBasicBlockTerminator(current_block)) {
+	emit_default_branch(gallivm->builder, current_branch->endif_block);
 
-		 LLVMBuildBr(gallivm->builder, current_branch->endif_block);
-	}
+	/* Need to fixup an empty else block if there was no ELSE opcode. */
 	if (!LLVMGetBasicBlockTerminator(current_branch->else_block)) {
 		LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->else_block);
-		LLVMBuildBr(gallivm->builder, current_branch->endif_block);
-	}
-
-	if (!LLVMGetBasicBlockTerminator(current_branch->if_block)) {
-		LLVMPositionBuilderAtEnd(gallivm->builder, current_branch->if_block);
 		LLVMBuildBr(gallivm->builder, current_branch->endif_block);
 	}
 
@@ -921,9 +900,7 @@ static void endloop_emit(const struct lp_build_tgsi_action *action,
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_loop *current_loop = get_current_loop(ctx);
 
-	if (!LLVMGetBasicBlockTerminator(LLVMGetInsertBlock(gallivm->builder))) {
-		 LLVMBuildBr(gallivm->builder, current_loop->loop_block);
-	}
+	emit_default_branch(gallivm->builder, current_loop->loop_block);
 
 	LLVMPositionBuilderAtEnd(gallivm->builder, current_loop->endloop_block);
 	ctx->loop_depth--;
