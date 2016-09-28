@@ -63,7 +63,7 @@ using namespace ir_builder;
 
 static void
 detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
-			       exec_list *instructions);
+                               exec_list *instructions);
 static void
 remove_per_vertex_blocks(exec_list *instructions,
                          _mesa_glsl_parse_state *state, ir_variable_mode mode);
@@ -883,7 +883,7 @@ validate_assignment(struct _mesa_glsl_parse_state *state,
    /* Check for implicit conversion in GLSL 1.20 */
    if (apply_implicit_conversion(lhs->type, rhs, state)) {
       if (rhs->type == lhs->type)
-	 return rhs;
+         return rhs;
    }
 
    _mesa_glsl_error(&loc, state,
@@ -1029,11 +1029,11 @@ get_lvalue_copy(exec_list *instructions, ir_rvalue *lvalue)
    ir_variable *var;
 
    var = new(ctx) ir_variable(lvalue->type, "_post_incdec_tmp",
-			      ir_var_temporary);
+                              ir_var_temporary);
    instructions->push_tail(var);
 
    instructions->push_tail(new(ctx) ir_assignment(new(ctx) ir_dereference_variable(var),
-						  lvalue));
+                                                  lvalue));
 
    return new(ctx) ir_dereference_variable(var);
 }
@@ -1160,11 +1160,11 @@ do_comparison(void *mem_ctx, int operation, ir_rvalue *op0, ir_rvalue *op1)
  */
 ir_rvalue *
 get_scalar_boolean_operand(exec_list *instructions,
-			   struct _mesa_glsl_parse_state *state,
-			   ast_expression *parent_expr,
-			   int operand,
-			   const char *operand_name,
-			   bool *error_emitted)
+                           struct _mesa_glsl_parse_state *state,
+                           ast_expression *parent_expr,
+                           int operand,
+                           const char *operand_name,
+                           bool *error_emitted)
 {
    ast_expression *expr = parent_expr->subexpressions[operand];
    void *ctx = state;
@@ -1457,8 +1457,8 @@ ast_expression::do_hir(exec_list *instructions,
        * in a scalar boolean.  See page 57 of the GLSL 1.50 spec.
        */
       assert(type->is_error()
-	     || ((type->base_type == GLSL_TYPE_BOOL)
-		 && type->is_scalar()));
+             || ((type->base_type == GLSL_TYPE_BOOL)
+                 && type->is_scalar()));
 
       result = new(ctx) ir_expression(operations[this->oper], type,
                                       op[0], op[1]);
@@ -3401,9 +3401,9 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
          ? "origin_upper_left" : "pixel_center_integer";
 
       _mesa_glsl_error(loc, state,
-		       "layout qualifier `%s' can only be applied to "
-		       "fragment shader input `gl_FragCoord'",
-		       qual_string);
+                       "layout qualifier `%s' can only be applied to "
+                       "fragment shader input `gl_FragCoord'",
+                       qual_string);
    }
 
    if (qual->flags.q.explicit_location) {
@@ -3717,7 +3717,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
    else if (qual->flags.q.in)
       var->data.mode = is_parameter ? ir_var_function_in : ir_var_shader_in;
    else if (qual->flags.q.attribute
-	    || (qual->flags.q.varying && (state->stage == MESA_SHADER_FRAGMENT)))
+            || (qual->flags.q.varying && (state->stage == MESA_SHADER_FRAGMENT)))
       var->data.mode = ir_var_shader_in;
    else if (qual->flags.q.out)
       var->data.mode = is_parameter ? ir_var_function_out : ir_var_shader_out;
@@ -4013,9 +4013,9 @@ get_variable_being_redeclared(ir_variable *var, YYLTYPE loc,
  */
 ir_rvalue *
 process_initializer(ir_variable *var, ast_declaration *decl,
-		    ast_fully_specified_type *type,
-		    exec_list *initializer_instructions,
-		    struct _mesa_glsl_parse_state *state)
+                    ast_fully_specified_type *type,
+                    exec_list *initializer_instructions,
+                    struct _mesa_glsl_parse_state *state)
 {
    ir_rvalue *result = NULL;
 
@@ -4600,7 +4600,7 @@ ast_declarator_list::hir(exec_list *instructions,
        * confusing error.
        */
       assert(this->type->specifier->structure == NULL || decl_type != NULL
-	     || state->error);
+             || state->error);
 
       if (decl_type == NULL) {
          _mesa_glsl_error(&loc, state,
@@ -4752,7 +4752,7 @@ ast_declarator_list::hir(exec_list *instructions,
       }
 
       apply_type_qualifier_to_variable(& this->type->qualifier, var, state,
-				       & loc, false);
+                                       & loc, false);
       apply_layout_qualifier_to_variable(&this->type->qualifier, var, state,
                                          &loc);
 
@@ -5418,8 +5418,8 @@ ast_function::hir(exec_list *instructions,
        state->is_version(120, 100)) {
       YYLTYPE loc = this->get_location();
       _mesa_glsl_error(&loc, state,
-		       "declaration of function `%s' not allowed within "
-		       "function body", name);
+                       "declaration of function `%s' not allowed within "
+                       "function body", name);
    }
 
    validate_identifier(name, this->get_location(), state);
@@ -6094,9 +6094,7 @@ ast_switch_statement::test_to_hir(exec_list *instructions,
     */
    test_expression->set_is_lhs(true);
    /* Cache value of test expression. */
-   ir_rvalue *const test_val =
-      test_expression->hir(instructions,
-			   state);
+   ir_rvalue *const test_val = test_expression->hir(instructions, state);
 
    state->switch_state.test_var = new(ctx) ir_variable(test_val->type,
                                                        "switch_test_tmp",
@@ -7858,7 +7856,7 @@ ast_interface_block::hir(exec_list *instructions,
 
 ir_rvalue *
 ast_tcs_output_layout::hir(exec_list *instructions,
-			  struct _mesa_glsl_parse_state *state)
+                           struct _mesa_glsl_parse_state *state)
 {
    YYLTYPE loc = this->get_location();
 
@@ -7876,10 +7874,10 @@ ast_tcs_output_layout::hir(exec_list *instructions,
     */
    if (state->tcs_output_size != 0 && state->tcs_output_size != num_vertices) {
       _mesa_glsl_error(&loc, state,
-		       "this tessellation control shader output layout "
-		       "specifies %u vertices, but a previous output "
-		       "is declared with size %u",
-		       num_vertices, state->tcs_output_size);
+                       "this tessellation control shader output layout "
+                       "specifies %u vertices, but a previous output "
+                       "is declared with size %u",
+                       num_vertices, state->tcs_output_size);
       return NULL;
    }
 
@@ -7891,21 +7889,21 @@ ast_tcs_output_layout::hir(exec_list *instructions,
    foreach_in_list (ir_instruction, node, instructions) {
       ir_variable *var = node->as_variable();
       if (var == NULL || var->data.mode != ir_var_shader_out)
-	 continue;
+         continue;
 
       /* Note: Not all tessellation control shader output are arrays. */
       if (!var->type->is_unsized_array() || var->data.patch)
          continue;
 
       if (var->data.max_array_access >= (int)num_vertices) {
-	 _mesa_glsl_error(&loc, state,
-			  "this tessellation control shader output layout "
-			  "specifies %u vertices, but an access to element "
-			  "%u of output `%s' already exists", num_vertices,
-			  var->data.max_array_access, var->name);
+         _mesa_glsl_error(&loc, state,
+                          "this tessellation control shader output layout "
+                          "specifies %u vertices, but an access to element "
+                          "%u of output `%s' already exists", num_vertices,
+                          var->data.max_array_access, var->name);
       } else {
-	 var->type = glsl_type::get_array_instance(var->type->fields.array,
-						   num_vertices);
+         var->type = glsl_type::get_array_instance(var->type->fields.array,
+                                                   num_vertices);
       }
    }
 
@@ -8093,9 +8091,9 @@ detect_conflicting_assignments(struct _mesa_glsl_parse_state *state,
          gl_FragColor_assigned = true;
       else if (strcmp(var->name, "gl_FragData") == 0)
          gl_FragData_assigned = true;
-	else if (strcmp(var->name, "gl_SecondaryFragColorEXT") == 0)
+        else if (strcmp(var->name, "gl_SecondaryFragColorEXT") == 0)
          gl_FragSecondaryColor_assigned = true;
-	else if (strcmp(var->name, "gl_SecondaryFragDataEXT") == 0)
+        else if (strcmp(var->name, "gl_SecondaryFragDataEXT") == 0)
          gl_FragSecondaryData_assigned = true;
       else if (!is_gl_identifier(var->name)) {
          if (state->stage == MESA_SHADER_FRAGMENT &&
