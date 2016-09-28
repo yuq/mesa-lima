@@ -455,9 +455,6 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
          hzp.FullSurfaceDepthandStencilClear = full_surface_op;
          hzp.StencilClearValue =
             cmd_state->attachments[ds].clear_value.depthStencil.stencil & 0xff;
-
-         /* Mark aspects as cleared */
-         cmd_state->attachments[ds].pending_clear_aspects = 0;
          break;
       case BLORP_HIZ_OP_DEPTH_RESOLVE:
          hzp.DepthBufferResolveEnable = true;
@@ -506,11 +503,16 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_WM_HZ_OP), hzp);
 
-   if (!full_surface_op && op == BLORP_HIZ_OP_DEPTH_CLEAR) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.DepthStallEnable = true;
-         pc.DepthCacheFlushEnable = true;
+   if (op == BLORP_HIZ_OP_DEPTH_CLEAR) {
+      if (!full_surface_op) {
+         anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
+            pc.DepthStallEnable = true;
+            pc.DepthCacheFlushEnable = true;
+         }
       }
+
+      /* Mark aspects as cleared */
+      cmd_state->attachments[ds].pending_clear_aspects = 0;
    }
 }
 
