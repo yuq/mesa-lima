@@ -52,7 +52,9 @@ set_viewport_no_notify(struct gl_context *ctx, unsigned idx,
     *     determined by calling GetFloatv with the symbolic constant
     *     VIEWPORT_BOUNDS_RANGE (see section 6.1)."
     */
-   if (ctx->Extensions.ARB_viewport_array) {
+   if (ctx->Extensions.ARB_viewport_array ||
+       (ctx->Extensions.OES_viewport_array &&
+        _mesa_is_gles31(ctx))) {
       x = CLAMP(x,
                 ctx->Const.ViewportBounds.Min, ctx->Const.ViewportBounds.Max);
       y = CLAMP(y,
