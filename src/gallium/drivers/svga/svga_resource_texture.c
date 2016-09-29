@@ -1427,6 +1427,7 @@ svga_texture_transfer_unmap_upload(struct svga_context *svga,
    struct svga_winsys_surface *srcsurf;
    struct svga_winsys_surface *dstsurf;
    struct pipe_resource *texture = st->base.resource;
+   struct svga_texture *tex = svga_texture(texture);
    enum pipe_error ret; 
    unsigned subResource;
    unsigned numMipLevels;
@@ -1468,6 +1469,9 @@ svga_texture_transfer_unmap_upload(struct svga_context *svga,
          assert(ret == PIPE_OK);
       }
       offset += st->base.layer_stride;
+
+      /* Set rendered-to flag */
+      svga_set_texture_rendered_to(tex, layer, st->base.level);
    }
 
    pipe_resource_reference(&st->upload.buf, NULL);
