@@ -57,6 +57,28 @@ enum {
    NAL_UNIT_TYPE_PPS = 34,
 };
 
+static const uint8_t Default_8x8_Intra[64] = {
+   16, 16, 16, 16, 17, 18, 21, 24,
+   16, 16, 16, 16, 17, 19, 22, 25,
+   16, 16, 17, 18, 20, 22, 25, 29,
+   16, 16, 18, 21, 24, 27, 31, 36,
+   17, 17, 20, 24, 30, 35, 41, 47,
+   18, 19, 22, 27, 35, 44, 54, 65,
+   21, 22, 25, 31, 41, 54, 70, 88,
+   24, 25, 29, 36, 47, 65, 88, 115
+};
+
+static const uint8_t Default_8x8_Inter[64] = {
+   16, 16, 16, 16, 17, 18, 20, 24,
+   16, 16, 16, 17, 18, 20, 24, 25,
+   16, 16, 17, 18, 20, 24, 25, 28,
+   16, 17, 18, 20, 24, 25, 28, 33,
+   17, 18, 20, 24, 25, 28, 33, 41,
+   18, 20, 24, 25, 28, 33, 41, 54,
+   20, 24, 25, 28, 33, 41, 54, 71,
+   24, 25, 28, 33, 41, 54, 71, 91
+};
+
 struct dpb_list {
    struct list_head list;
    struct pipe_video_buffer *buffer;
@@ -188,10 +210,80 @@ static unsigned profile_tier_level(struct vl_rbsp *rbsp,
    return level_idc;
 }
 
-static void scaling_list_data(void)
+static void scaling_list_data(vid_dec_PrivateType *priv,
+                              struct vl_rbsp *rbsp, struct pipe_h265_sps *sps)
 {
-   /* TODO */
-   assert(0);
+   unsigned size_id, matrix_id;
+   unsigned scaling_list_len[4] = { 16, 64, 64, 64 };
+   uint8_t scaling_list4x4[6][64] = {  };
+   int i;
+
+   uint8_t (*scaling_list_data[4])[6][64] = {
+        (uint8_t (*)[6][64])scaling_list4x4,
+        (uint8_t (*)[6][64])sps->ScalingList8x8,
+        (uint8_t (*)[6][64])sps->ScalingList16x16,
+        (uint8_t (*)[6][64])sps->ScalingList32x32
+   };
+   uint8_t (*scaling_list_dc_coeff[2])[6] = {
+      (uint8_t (*)[6])sps->ScalingListDCCoeff16x16,
+      (uint8_t (*)[6])sps->ScalingListDCCoeff32x32
+   };
+
+   for (size_id = 0; size_id < 4; ++size_id) {
+
+      for (matrix_id = 0; matrix_id < ((size_id == 3) ? 2 : 6); ++matrix_id) {
+         bool scaling_list_pred_mode_flag = vl_rbsp_u(rbsp, 1);
+
+         if (!scaling_list_pred_mode_flag) {
+            /* scaling_list_pred_matrix_id_delta */;
+            unsigned matrix_id_with_delta = matrix_id - vl_rbsp_ue(rbsp);
+
+            if (matrix_id != matrix_id_with_delta) {
+               memcpy((*scaling_list_data[size_id])[matrix_id],
+                      (*scaling_list_data[size_id])[matrix_id_with_delta],
+                      scaling_list_len[size_id]);
+               if (size_id > 1)
+                  (*scaling_list_dc_coeff[size_id - 2])[matrix_id] =
+                     (*scaling_list_dc_coeff[size_id - 2])[matrix_id_with_delta];
+            } else {
+               const uint8_t *d;
+
+               if (size_id == 0)
+                  memset((*scaling_list_data[0])[matrix_id], 16, 16);
+               else {
+                  if (size_id < 3)
+                     d = (matrix_id < 3) ? Default_8x8_Intra : Default_8x8_Inter;
+                  else
+                     d = (matrix_id < 1) ? Default_8x8_Intra : Default_8x8_Inter;
+                  memcpy((*scaling_list_data[size_id])[matrix_id], d,
+                         scaling_list_len[size_id]);
+               }
+               if (size_id > 1)
+                  (*scaling_list_dc_coeff[size_id - 2])[matrix_id] = 16;
+            }
+         } else {
+            int next_coef = 8;
+            int coef_num = MIN2(64, (1 << (4 + (size_id << 1))));
+
+            if (size_id > 1) {
+               /* scaling_list_dc_coef_minus8 */
+               next_coef = vl_rbsp_se(rbsp) + 8;
+               (*scaling_list_dc_coeff[size_id - 2])[matrix_id] = next_coef;
+            }
+
+            for (i = 0; i < coef_num; ++i) {
+               /* scaling_list_delta_coef */
+               next_coef = (next_coef + vl_rbsp_se(rbsp) + 256) % 256;
+               (*scaling_list_data[size_id])[matrix_id][i] = next_coef;
+            }
+         }
+      }
+   }
+
+   for (i = 0; i < 6; ++i)
+      memcpy(sps->ScalingList4x4[i], scaling_list4x4[i], 16);
+
+   return;
 }
 
 static void st_ref_pic_set(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp,
@@ -385,7 +477,7 @@ static void seq_parameter_set(vid_dec_PrivateType *priv, struct vl_rbsp *rbsp)
    if (sps->scaling_list_enabled_flag)
       /* sps_scaling_list_data_present_flag */
       if (vl_rbsp_u(rbsp, 1))
-         scaling_list_data();
+         scaling_list_data(priv, rbsp, sps);
 
    sps->amp_enabled_flag = vl_rbsp_u(rbsp, 1);
    sps->sample_adaptive_offset_enabled_flag = vl_rbsp_u(rbsp, 1);
@@ -508,7 +600,7 @@ static void picture_parameter_set(vid_dec_PrivateType *priv,
 
    /* pps_scaling_list_data_present_flag */
    if (vl_rbsp_u(rbsp, 1))
-      scaling_list_data();
+      scaling_list_data(priv, rbsp, sps);
 
    pps->lists_modification_present_flag = vl_rbsp_u(rbsp, 1);
    pps->log2_parallel_merge_level_minus2 = vl_rbsp_ue(rbsp);
