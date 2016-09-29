@@ -948,7 +948,7 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
 
       clip.MinimumPointWidth = 0.125;
       clip.MaximumPointWidth = 255.875;
-      clip.MaximumVPIndex    = vp_info->viewportCount - 1;
+      clip.MaximumVPIndex    = (vp_info ? vp_info->viewportCount : 1) - 1;
 
 #if GEN_GEN == 7
       clip.FrontWinding            = vk_to_gen_front_face[rs_info->frontFace];
