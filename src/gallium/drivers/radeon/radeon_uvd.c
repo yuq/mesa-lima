@@ -123,6 +123,7 @@ static void send_cmd(struct ruvd_decoder *dec, unsigned cmd,
 		set_reg(dec, RUVD_GPCOM_VCPU_DATA0, addr);
 		set_reg(dec, RUVD_GPCOM_VCPU_DATA1, addr >> 32);
 	} else {
+		off += dec->ws->buffer_get_virtual_address(buf);
 		set_reg(dec, RUVD_GPCOM_VCPU_DATA0, off);
 		set_reg(dec, RUVD_GPCOM_VCPU_DATA1, reloc_idx * 4);
 	}
