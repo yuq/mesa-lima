@@ -1636,7 +1636,7 @@ static void emit_lsb(const struct lp_build_tgsi_action *action,
 		 *
 		 * The hardware already implements the correct behavior.
 		 */
-		lp_build_const_int32(gallivm, 1)
+		LLVMConstInt(LLVMInt1TypeInContext(gallivm->context), 1, 0)
 	};
 
 	emit_data->output[emit_data->chan] =
@@ -1655,7 +1655,7 @@ static void emit_umsb(const struct lp_build_tgsi_action *action,
 	LLVMValueRef args[2] = {
 		emit_data->args[0],
 		/* Don't generate code for handling zero: */
-		lp_build_const_int32(gallivm, 1)
+		LLVMConstInt(LLVMInt1TypeInContext(gallivm->context), 1, 0)
 	};
 
 	LLVMValueRef msb =
