@@ -2141,7 +2141,7 @@ DECL_SPECIAL(DCL)
             ureg_DECL_vs_input(ureg, sem.reg.idx);
             assert(sem.reg.idx < ARRAY_SIZE(tx->info->input_map));
             tx->info->input_map[sem.reg.idx] = sm1_to_nine_declusage(&sem);
-            tx->info->num_inputs = sem.reg.idx + 1;
+            tx->info->num_inputs = MAX2(tx->info->num_inputs, sem.reg.idx + 1);
             /* NOTE: preserving order in case of indirect access */
         } else
         if (tx->version.major >= 3) {
