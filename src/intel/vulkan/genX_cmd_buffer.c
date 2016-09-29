@@ -2159,8 +2159,8 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
             db.SurfaceType       = SURFTYPE_2D;
          }
          db.SurfaceFormat        = D32_FLOAT;
-         db.Width                = fb->width - 1;
-         db.Height               = fb->height - 1;
+         db.Width                = MAX2(fb->width, 1) - 1;
+         db.Height               = MAX2(fb->height, 1) - 1;
          db.StencilWriteEnable   = has_stencil;
       }
    }
