@@ -549,6 +549,7 @@ void rvce_add_buffer(struct rvce_encoder *enc, struct pb_buffer *buf,
 		RVCE_CS(addr >> 32);
 		RVCE_CS(addr);
 	} else {
+		offset += enc->ws->buffer_get_virtual_address(buf);
 		RVCE_CS(reloc_idx * 4);
 		RVCE_CS(offset);
 	}
