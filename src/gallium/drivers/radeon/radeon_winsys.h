@@ -506,6 +506,9 @@ struct radeon_winsys {
     /**
      * Return the virtual address of a buffer.
      *
+     * When virtual memory is not in use, this is the offset relative to the
+     * relocation base (non-zero for sub-allocated buffers).
+     *
      * \param buf       A winsys buffer object
      * \return          virtual address
      */
