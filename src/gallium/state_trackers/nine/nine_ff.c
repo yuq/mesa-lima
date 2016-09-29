@@ -456,7 +456,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         }
     } else if (key->vertexblend) {
         struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        struct ureg_dst tmp2 = ureg_DECL_temporary(ureg);
         struct ureg_dst aVtx_dst = ureg_DECL_temporary(ureg);
+        struct ureg_dst aNrm_dst = ureg_DECL_temporary(ureg);
         struct ureg_dst sum_blendweights = ureg_DECL_temporary(ureg);
         struct ureg_src cWM[4];
 
@@ -470,6 +472,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         }
 
         ureg_MOV(ureg, aVtx_dst, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 0.0f));
+        ureg_MOV(ureg, aNrm_dst, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 0.0f));
         ureg_MOV(ureg, sum_blendweights, ureg_imm4f(ureg, 1.0f, 1.0f, 1.0f, 1.0f));
 
         for (i = 0; i < key->vertexblend; ++i) {
@@ -478,15 +481,28 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
                 if (key->vertexblend_indexed)
                     cWM[c] = ureg_src_indirect(cWM[c], ureg_scalar(ureg_src(AR), i));
             }
+
             /* multiply by WORLD(index) */
             ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), cWM[0]);
             ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), cWM[1], ureg_src(tmp));
             ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), cWM[2], ureg_src(tmp));
             ureg_MAD(ureg, tmp, _WWWW(vs->aVtx), cWM[3], ureg_src(tmp));
 
+            if (need_aNrm) {
+                /* Note: the spec says the transpose of the inverse of the
+                 * WorldView matrices should be used, but all tests show
+                 * otherwise.
+                 * Only case unknown: D3DVBF_0WEIGHTS */
+                ureg_MUL(ureg, tmp2, _XXXX(vs->aNrm), cWM[0]);
+                ureg_MAD(ureg, tmp2, _YYYY(vs->aNrm), cWM[1], ureg_src(tmp2));
+                ureg_MAD(ureg, tmp2, _ZZZZ(vs->aNrm), cWM[2], ureg_src(tmp2));
+            }
+
             if (i < (key->vertexblend - 1)) {
                 /* accumulate weighted position value */
                 ureg_MAD(ureg, aVtx_dst, ureg_src(tmp), ureg_scalar(vs->aWgt, i), ureg_src(aVtx_dst));
+                if (need_aNrm)
+                    ureg_MAD(ureg, aNrm_dst, ureg_src(tmp2), ureg_scalar(vs->aWgt, i), ureg_src(aNrm_dst));
                 /* subtract weighted position value for last value */
                 ureg_SUB(ureg, sum_blendweights, ureg_src(sum_blendweights), ureg_scalar(vs->aWgt, i));
             }
@@ -494,6 +510,8 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
         /* the last weighted position is always 1 - sum_of_previous_weights */
         ureg_MAD(ureg, aVtx_dst, ureg_src(tmp), ureg_scalar(ureg_src(sum_blendweights), key->vertexblend - 1), ureg_src(aVtx_dst));
+        if (need_aNrm)
+            ureg_MAD(ureg, aNrm_dst, ureg_src(tmp2), ureg_scalar(ureg_src(sum_blendweights), key->vertexblend - 1), ureg_src(aNrm_dst));
 
         /* multiply by VIEW_PROJ */
         ureg_MUL(ureg, tmp, _X(aVtx_dst), _CONST(8));
@@ -505,19 +523,17 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             vs->aVtx = ureg_src(aVtx_dst);
 
         ureg_release_temporary(ureg, tmp);
+        ureg_release_temporary(ureg, tmp2);
         ureg_release_temporary(ureg, sum_blendweights);
         if (!need_aVtx)
             ureg_release_temporary(ureg, aVtx_dst);
 
         if (need_aNrm) {
-            struct ureg_dst aNrm_dst = ureg_writemask(ureg_DECL_temporary(ureg), TGSI_WRITEMASK_XYZ);
-            ureg_MUL(ureg, aNrm_dst, _XXXX(vs->aNrm), _CONST(16));
-            ureg_MAD(ureg, aNrm_dst, _YYYY(vs->aNrm), _CONST(17), ureg_src(aNrm_dst));
-            ureg_MAD(ureg, aNrm_dst, _ZZZZ(vs->aNrm), _CONST(18), ureg_src(aNrm_dst));
             if (key->normalizenormals)
                ureg_normalize3(ureg, aNrm_dst, ureg_src(aNrm_dst));
             vs->aNrm = ureg_src(aNrm_dst);
-        }
+        } else
+            ureg_release_temporary(ureg, aNrm_dst);
     } else {
         struct ureg_dst tmp = ureg_DECL_temporary(ureg);
 
