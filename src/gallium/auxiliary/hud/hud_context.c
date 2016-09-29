@@ -261,6 +261,7 @@ number_to_human_readable(uint64_t num, uint64_t max_value,
    static const char *temperature_units[] = {" C"};
    static const char *volt_units[] = {" mV", " V"};
    static const char *amp_units[] = {" mA", " A"};
+   static const char *watt_units[] = {" mW", " W"};
 
    const char **units;
    unsigned max_unit;
@@ -300,6 +301,10 @@ number_to_human_readable(uint64_t num, uint64_t max_value,
    case PIPE_DRIVER_QUERY_TYPE_HZ:
       max_unit = ARRAY_SIZE(hz_units)-1;
       units = hz_units;
+      break;
+   case PIPE_DRIVER_QUERY_TYPE_WATTS:
+      max_unit = ARRAY_SIZE(watt_units)-1;
+      units = watt_units;
       break;
    default:
       if (max_value == 100) {
@@ -1066,6 +1071,11 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
          hud_sensors_temp_graph_install(pane, arg_name,
                                         SENSORS_CURRENT_CURRENT);
          pane->type = PIPE_DRIVER_QUERY_TYPE_AMPS;
+      }
+      else if (sscanf(name, "sensors_pow_cu-%s", arg_name) == 1) {
+         hud_sensors_temp_graph_install(pane, arg_name,
+                                        SENSORS_POWER_CURRENT);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_WATTS;
       }
 #endif
       else if (strcmp(name, "samples-passed") == 0 &&

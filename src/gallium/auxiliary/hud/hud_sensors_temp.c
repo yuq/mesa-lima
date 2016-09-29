@@ -119,6 +119,15 @@ get_sensor_values(struct sensors_temp_info *sti)
       if (sf)
          sti->critical = get_value(sti->chip, sf);
       break;
+   case SENSORS_POWER_CURRENT:
+      sf = sensors_get_subfeature(sti->chip, sti->feature,
+                                  SENSORS_SUBFEATURE_POWER_INPUT);
+      if (sf) {
+         /* Sensors API returns in WATTs, even though driver is reporting mW,
+          * convert back to mW */
+         sti->current = get_value(sti->chip, sf) * 1000;
+      }
+      break;
    }
 
    sf = sensors_get_subfeature(sti->chip, sti->feature,
@@ -173,6 +182,9 @@ query_sti_load(struct hud_graph *gr)
          case SENSORS_CURRENT_CURRENT:
             hud_graph_add_value(gr, (uint64_t) sti->current);
             break;
+         case SENSORS_POWER_CURRENT:
+            hud_graph_add_value(gr, (uint64_t) sti->current);
+            break;
          }
 
          sti->last_time = now;
@@ -217,6 +229,7 @@ hud_sensors_temp_graph_install(struct hud_pane *pane, const char *dev_name,
           mode == SENSORS_VOLTAGE_CURRENT ? "VOLTS" :
           mode == SENSORS_CURRENT_CURRENT ? "AMPS" :
           mode == SENSORS_TEMP_CURRENT ? "CU" :
+          mode == SENSORS_POWER_CURRENT ? "POWER" :
           mode == SENSORS_TEMP_CRITICAL ? "CR" : "UNDEFINED");
 #endif
 
@@ -234,6 +247,7 @@ hud_sensors_temp_graph_install(struct hud_pane *pane, const char *dev_name,
            sti->mode == SENSORS_VOLTAGE_CURRENT ? "Volts" :
            sti->mode == SENSORS_CURRENT_CURRENT ? "Amps" :
            sti->mode == SENSORS_TEMP_CURRENT ? "Curr" :
+           sti->mode == SENSORS_POWER_CURRENT ? "Pow" :
            sti->mode == SENSORS_TEMP_CRITICAL ? "Crit" : "Unkn");
 
    gr->query_data = sti;
@@ -255,6 +269,9 @@ hud_sensors_temp_graph_install(struct hud_pane *pane, const char *dev_name,
       break;
    case SENSORS_CURRENT_CURRENT:
       hud_pane_set_max_value(pane, 5000);
+      break;
+   case SENSORS_POWER_CURRENT:
+      hud_pane_set_max_value(pane, 5000 /* mW */);
       break;
    }
 }
@@ -303,19 +320,27 @@ build_sensor_list(void)
          /* Create a 'current' and 'critical' object pair.
           * Ignore sensor if its not temperature based.
           */
-         if (feature->type == SENSORS_FEATURE_TEMP) {
+         switch(feature->type) {
+         case SENSORS_FEATURE_TEMP:
             create_object(name, featurename, chip, feature,
                           SENSORS_TEMP_CURRENT);
             create_object(name, featurename, chip, feature,
                           SENSORS_TEMP_CRITICAL);
-         }
-         if (feature->type == SENSORS_FEATURE_IN) {
+            break;
+         case SENSORS_FEATURE_IN:
             create_object(name, featurename, chip, feature,
                           SENSORS_VOLTAGE_CURRENT);
-         }
-         if (feature->type == SENSORS_FEATURE_CURR) {
+            break;
+         case SENSORS_FEATURE_CURR:
             create_object(name, featurename, chip, feature,
                           SENSORS_CURRENT_CURRENT);
+            break;
+         case SENSORS_FEATURE_POWER:
+            create_object(name, featurename, chip, feature,
+                          SENSORS_POWER_CURRENT);
+            break;
+         default:
+            break;
          }
          free(featurename);
       }
@@ -361,6 +386,9 @@ hud_get_num_sensors(bool displayhelp)
             break;
          case SENSORS_CURRENT_CURRENT:
             snprintf(line, sizeof(line), "    sensors_curr_cu-%s", sti->name);
+            break;
+         case SENSORS_POWER_CURRENT:
+            snprintf(line, sizeof(line), "    sensors_pow_cu-%s", sti->name);
             break;
          }
 

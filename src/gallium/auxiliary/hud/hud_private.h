@@ -124,6 +124,7 @@ int hud_get_num_sensors(bool displayhelp);
 #define SENSORS_TEMP_CRITICAL    2
 #define SENSORS_VOLTAGE_CURRENT  3
 #define SENSORS_CURRENT_CURRENT  4
+#define SENSORS_POWER_CURRENT    5
 void hud_sensors_temp_graph_install(struct hud_pane *pane, const char *dev_name,
                                     unsigned int mode);
 #endif
