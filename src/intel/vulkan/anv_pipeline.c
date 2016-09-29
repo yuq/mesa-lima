@@ -953,8 +953,7 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
    struct anv_subpass *subpass = NULL;
 
    /* Assert that all required members of VkGraphicsPipelineCreateInfo are
-    * present, as explained by the Vulkan (20 Oct 2015, git-aa308cb), Section
-    * 4.2 Graphics Pipeline.
+    * present.  See the Vulkan 1.0.28 spec, Section 9.2 Graphics Pipelines.
     */
    assert(info->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
 
@@ -969,14 +968,17 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
    assert(info->stageCount >= 1);
    assert(info->pVertexInputState);
    assert(info->pInputAssemblyState);
-   assert(info->pViewportState);
    assert(info->pRasterizationState);
+   if (!info->pRasterizationState->rasterizerDiscardEnable) {
+      assert(info->pViewportState);
+      assert(info->pMultisampleState);
 
-   if (subpass && subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED)
-      assert(info->pDepthStencilState);
+      if (subpass && subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED)
+         assert(info->pDepthStencilState);
 
-   if (subpass && subpass->color_count > 0)
-      assert(info->pColorBlendState);
+      if (subpass && subpass->color_count > 0)
+         assert(info->pColorBlendState);
+   }
 
    for (uint32_t i = 0; i < info->stageCount; ++i) {
       switch (info->pStages[i].stage) {
