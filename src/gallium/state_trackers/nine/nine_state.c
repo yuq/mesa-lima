@@ -466,7 +466,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     struct NineSurface9 *rt0 = state->rt[0];
     unsigned w = rt0->desc.Width;
     unsigned h = rt0->desc.Height;
-    D3DMULTISAMPLE_TYPE nr_samples = rt0->desc.MultiSampleType;
+    unsigned nr_samples = rt0->base.info.nr_samples;
     unsigned ps_mask = state->ps ? state->ps->rt_mask : 1;
     unsigned mask = is_clear ? 0xf : ps_mask;
     const int sRGB = state->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
@@ -489,7 +489,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     if (rt0->desc.Format == D3DFMT_NULL && state->ds) {
         w = state->ds->desc.Width;
         h = state->ds->desc.Height;
-        nr_samples = state->ds->desc.MultiSampleType;
+        nr_samples = state->ds->base.info.nr_samples;
     }
 
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
@@ -497,7 +497,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
 
         if (rt && rt->desc.Format != D3DFMT_NULL && (mask & (1 << i)) &&
             rt->desc.Width == w && rt->desc.Height == h &&
-            rt->desc.MultiSampleType == nr_samples) {
+            rt->base.info.nr_samples == nr_samples) {
             fb->cbufs[i] = NineSurface9_GetSurface(rt, sRGB);
             state->rt_mask |= 1 << i;
             fb->nr_cbufs = i + 1;
@@ -517,7 +517,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
 
     if (state->ds && state->ds->desc.Width >= w &&
         state->ds->desc.Height >= h &&
-        state->ds->desc.MultiSampleType == nr_samples) {
+        state->ds->base.info.nr_samples == nr_samples) {
         fb->zsbuf = NineSurface9_GetSurface(state->ds, 0);
     } else {
         fb->zsbuf = NULL;
