@@ -159,7 +159,7 @@ HANDLE SwrCreateContext(
 
     pCreateInfo->contextSaveSize = sizeof(API_STATE);
 
-    WakeAllThreads(pContext);
+    StartThreadPool(pContext, &pContext->threadPool);
 
     return (HANDLE)pContext;
 }

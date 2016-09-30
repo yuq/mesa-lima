@@ -718,11 +718,6 @@ DWORD workerThreadMain(LPVOID pData)
     //    the worker can safely increment its oldestDraw counter and move on to the next draw.
     std::unique_lock<std::mutex> lock(pContext->WaitLock, std::defer_lock);
 
-    // Suspend thread immediately. SwrCreateContext or QueueWork will wake this up again.
-    lock.lock();
-    pContext->FifosNotEmpty.wait(lock);
-    lock.unlock();
-
     auto threadHasWork = [&](uint32_t curDraw) { return curDraw != pContext->dcRing.GetHead(); };
 
     uint32_t curDrawBE = 0;
@@ -807,7 +802,11 @@ DWORD workerThreadInit(LPVOID pData)
 }
 template<> DWORD workerThreadInit<false, false>(LPVOID pData) = delete;
 
-void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
+//////////////////////////////////////////////////////////////////////////
+/// @brief Creates thread pool info but doesn't launch threads.
+/// @param pContext - pointer to context
+/// @param pPool - pointer to thread pool object.
+void CreateThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
 {
     bindThread(pContext, 0);
 
@@ -953,7 +952,6 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
             pPool->pThreadData[workerId].htId = 0;
             pPool->pThreadData[workerId].pContext = pContext;
             pPool->pThreadData[workerId].forceBindProcGroup = bForceBindProcGroup;
-            pPool->pThreads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
 
             pContext->NumBEThreads++;
             pContext->NumFEThreads++;
@@ -999,7 +997,6 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
                     pPool->pThreadData[workerId].htId = t;
                     pPool->pThreadData[workerId].pContext = pContext;
 
-                    pPool->pThreads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
                     pContext->NumBEThreads++;
                     pContext->NumFEThreads++;
 
@@ -1007,9 +1004,31 @@ void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
                 }
             }
         }
+        SWR_ASSERT(workerId == pContext->NumWorkerThreads);
     }
 }
 
+//////////////////////////////////////////////////////////////////////////
+/// @brief Launches worker threads in thread pool.
+/// @param pContext - pointer to context
+/// @param pPool - pointer to thread pool object.
+void StartThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool)
+{
+    if (pContext->threadInfo.SINGLE_THREADED)
+    {
+        return;
+    }
+
+    for (uint32_t workerId = 0; workerId < pContext->NumWorkerThreads; ++workerId)
+    {
+        pPool->pThreads[workerId] = new std::thread(workerThreadInit<true, true>, &pPool->pThreadData[workerId]);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Destroys thread pool.
+/// @param pContext - pointer to context
+/// @param pPool - pointer to thread pool object.
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool)
 {
     if (!pContext->threadInfo.SINGLE_THREADED)

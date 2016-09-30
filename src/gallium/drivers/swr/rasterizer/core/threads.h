@@ -60,6 +60,7 @@ struct THREAD_POOL
 typedef std::unordered_set<uint32_t> TileSet;
 
 void CreateThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
+void StartThreadPool(SWR_CONTEXT* pContext, THREAD_POOL* pPool);
 void DestroyThreadPool(SWR_CONTEXT *pContext, THREAD_POOL *pPool);
 
 // Expose FE and BE worker functions to the API thread if single threaded
