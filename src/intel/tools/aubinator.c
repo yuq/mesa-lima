@@ -49,7 +49,6 @@
 #define CSI "\e["
 #define HEADER CSI "37;44m"
 #define NORMAL CSI "0m"
-#define CLEAR_TO_EOL CSI "0K"
 
 /* options */
 
@@ -722,7 +721,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
       }
       length = gen_group_get_length(inst, p);
 
-      const char *color, *reset_color = CLEAR_TO_EOL NORMAL;
+      const char *color, *reset_color = NORMAL;
       uint64_t offset;
 
       if (option_full_decode)
@@ -740,7 +739,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
       else
          offset = 0;
 
-      printf("%s0x%08"PRIx64":  0x%08x:  %s%s\n",
+      printf("%s0x%08"PRIx64":  0x%08x:  %-80s%s\n",
              color, offset, p[0],
              gen_group_get_name(inst), reset_color);
 
@@ -1014,7 +1013,7 @@ setup_pager(void)
    if (pid == 0) {
       close(fds[1]);
       dup2(fds[0], 0);
-      execlp("less", "less", "-rFi", NULL);
+      execlp("less", "less", "-FRSi", NULL);
    }
 
    close(fds[0]);
