@@ -1283,12 +1283,133 @@
 #define   S_008F14_MIN_LOD(x)                                         (((unsigned)(x) & 0xFFF) << 8)
 #define   G_008F14_MIN_LOD(x)                                         (((x) >> 8) & 0xFFF)
 #define   C_008F14_MIN_LOD                                            0xFFF000FF
-#define   S_008F14_DATA_FORMAT(x)                                     (((unsigned)(x) & 0x3F) << 20)
-#define   G_008F14_DATA_FORMAT(x)                                     (((x) >> 20) & 0x3F)
-#define   C_008F14_DATA_FORMAT                                        0xFC0FFFFF
-#define   S_008F14_NUM_FORMAT(x)                                      (((unsigned)(x) & 0x0F) << 26)
-#define   G_008F14_NUM_FORMAT(x)                                      (((x) >> 26) & 0x0F)
-#define   C_008F14_NUM_FORMAT                                         0xC3FFFFFF
+#define   S_008F14_DATA_FORMAT_GFX9(x)                                (((unsigned)(x) & 0x3F) << 20)
+#define   G_008F14_DATA_FORMAT_GFX9(x)                                (((x) >> 20) & 0x3F)
+#define   C_008F14_DATA_FORMAT_GFX9                                   0xFC0FFFFF
+#define     V_008F14_IMG_DATA_FORMAT_INVALID                        0x00
+#define     V_008F14_IMG_DATA_FORMAT_8                              0x01
+#define     V_008F14_IMG_DATA_FORMAT_16                             0x02
+#define     V_008F14_IMG_DATA_FORMAT_8_8                            0x03
+#define     V_008F14_IMG_DATA_FORMAT_32                             0x04
+#define     V_008F14_IMG_DATA_FORMAT_16_16                          0x05
+#define     V_008F14_IMG_DATA_FORMAT_10_11_11                       0x06
+#define     V_008F14_IMG_DATA_FORMAT_11_11_10                       0x07
+#define     V_008F14_IMG_DATA_FORMAT_10_10_10_2                     0x08
+#define     V_008F14_IMG_DATA_FORMAT_2_10_10_10                     0x09
+#define     V_008F14_IMG_DATA_FORMAT_8_8_8_8                        0x0A
+#define     V_008F14_IMG_DATA_FORMAT_32_32                          0x0B
+#define     V_008F14_IMG_DATA_FORMAT_16_16_16_16                    0x0C
+#define     V_008F14_IMG_DATA_FORMAT_32_32_32                       0x0D
+#define     V_008F14_IMG_DATA_FORMAT_32_32_32_32                    0x0E
+#define     V_008F14_IMG_DATA_FORMAT_RESERVED_15                    0x0F
+#define     V_008F14_IMG_DATA_FORMAT_5_6_5                          0x10
+#define     V_008F14_IMG_DATA_FORMAT_1_5_5_5                        0x11
+#define     V_008F14_IMG_DATA_FORMAT_5_5_5_1                        0x12
+#define     V_008F14_IMG_DATA_FORMAT_4_4_4_4                        0x13
+#define     V_008F14_IMG_DATA_FORMAT_8_24                           0x14
+#define     V_008F14_IMG_DATA_FORMAT_24_8                           0x15
+#define     V_008F14_IMG_DATA_FORMAT_X24_8_32                       0x16
+#define     V_008F14_IMG_DATA_FORMAT_8_AS_8_8_8_8                   0x17
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RGB                       0x18
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RGBA                      0x19
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_R                         0x1A
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RG                        0x1B
+#define     V_008F14_IMG_DATA_FORMAT_ETC2_RGBA1                     0x1C
+#define     V_008F14_IMG_DATA_FORMAT_RESERVED_29                    0x1D
+#define     V_008F14_IMG_DATA_FORMAT_RESERVED_30                    0x1E
+#define     V_008F14_IMG_DATA_FORMAT_6E4                            0x1F
+#define     V_008F14_IMG_DATA_FORMAT_GB_GR                          0x20
+#define     V_008F14_IMG_DATA_FORMAT_BG_RG                          0x21
+#define     V_008F14_IMG_DATA_FORMAT_5_9_9_9                        0x22
+#define     V_008F14_IMG_DATA_FORMAT_BC1                            0x23
+#define     V_008F14_IMG_DATA_FORMAT_BC2                            0x24
+#define     V_008F14_IMG_DATA_FORMAT_BC3                            0x25
+#define     V_008F14_IMG_DATA_FORMAT_BC4                            0x26
+#define     V_008F14_IMG_DATA_FORMAT_BC5                            0x27
+#define     V_008F14_IMG_DATA_FORMAT_BC6                            0x28
+#define     V_008F14_IMG_DATA_FORMAT_BC7                            0x29
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_32_32                    0x2A
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_16_16_16_16_GFX9         0x2B
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_32_32_32_32_GFX9         0x2C
+#define     V_008F14_IMG_DATA_FORMAT_FMASK                          0x2D /* NUM_FORMAT selects the format */
+#define     V_008F14_IMG_DATA_FORMAT_ASTC_2D_LDR                    0x2E /* NUM_FORMAT selects the block size */
+#define     V_008F14_IMG_DATA_FORMAT_ASTC_2D_HDR                    0x2F /* ditto */
+#define     V_008F14_IMG_DATA_FORMAT_ASTC_2D_LDR_SRGB               0x30 /* ditto */
+#define     V_008F14_IMG_DATA_FORMAT_ASTC_3D_LDR                    0x31 /* ditto */
+#define     V_008F14_IMG_DATA_FORMAT_ASTC_3D_HDR                    0x32 /* ditto */
+#define     V_008F14_IMG_DATA_FORMAT_ASTC_3D_LDR_SRGB               0x33 /* ditto */
+#define     V_008F14_IMG_DATA_FORMAT_N_IN_16                        0x34
+#define     V_008F14_IMG_DATA_FORMAT_N_IN_16_16                     0x35
+#define     V_008F14_IMG_DATA_FORMAT_N_IN_16_16_16_16               0x36
+#define     V_008F14_IMG_DATA_FORMAT_N_IN_16_AS_16_16_16_16         0x37
+#define     V_008F14_IMG_DATA_FORMAT_RESERVED_56                    0x38
+#define     V_008F14_IMG_DATA_FORMAT_4_4                            0x39
+#define     V_008F14_IMG_DATA_FORMAT_6_5_5                          0x3A
+#define     V_008F14_IMG_DATA_S8_16                                 0x3B
+#define     V_008F14_IMG_DATA_S8_32                                 0x3C
+#define     V_008F14_IMG_DATA_FORMAT_8_AS_32                        0x3D
+#define     V_008F14_IMG_DATA_FORMAT_8_AS_32_32                     0x3E
+#define     V_008F14_IMG_DATA_FORMAT_32_AS_32_32_32_32              0x3F
+#define   S_008F14_NUM_FORMAT_GFX9(x)                                 (((unsigned)(x) & 0x0F) << 26)
+#define   G_008F14_NUM_FORMAT_GFX9(x)                                 (((x) >> 26) & 0x0F)
+#define   C_008F14_NUM_FORMAT_GFX9                                    0xC3FFFFFF
+#define     V_008F14_IMG_NUM_FORMAT_UNORM                           0x00
+#define     V_008F14_IMG_NUM_FORMAT_SNORM                           0x01
+#define     V_008F14_IMG_NUM_FORMAT_USCALED                         0x02
+#define     V_008F14_IMG_NUM_FORMAT_SSCALED                         0x03
+#define     V_008F14_IMG_NUM_FORMAT_UINT                            0x04
+#define     V_008F14_IMG_NUM_FORMAT_SINT                            0x05
+#define     V_008F14_IMG_NUM_FORMAT_RESERVED_6                      0x06
+#define     V_008F14_IMG_NUM_FORMAT_FLOAT                           0x07
+#define     V_008F14_IMG_NUM_FORMAT_METADATA                        0x08
+#define     V_008F14_IMG_NUM_FORMAT_SRGB                            0x09
+#define     V_008F14_IMG_NUM_FORMAT_UNORM_UINT                      0x0A
+#define   S_008F14_NUM_FORMAT_FMASK(x)                                (((unsigned)(x) & 0x0F) << 26)
+#define   G_008F14_NUM_FORMAT_FMASK(x)                                (((x) >> 26) & 0x0F)
+#define   C_008F14_NUM_FORMAT_FMASK                                   0xC3FFFFFF
+#define     V_008F14_IMG_FMASK_8_2_1                                0x00
+#define     V_008F14_IMG_FMASK_8_4_1                                0x01
+#define     V_008F14_IMG_FMASK_8_8_1                                0x02
+#define     V_008F14_IMG_FMASK_8_2_2                                0x03
+#define     V_008F14_IMG_FMASK_8_4_2                                0x04
+#define     V_008F14_IMG_FMASK_8_4_4                                0x05
+#define     V_008F14_IMG_FMASK_16_16_1                              0x06
+#define     V_008F14_IMG_FMASK_16_8_2                               0x07
+#define     V_008F14_IMG_FMASK_32_16_2                              0x08
+#define     V_008F14_IMG_FMASK_32_8_4                               0x09
+#define     V_008F14_IMG_FMASK_32_8_8                               0x0A
+#define     V_008F14_IMG_FMASK_64_16_4                              0x0B
+#define     V_008F14_IMG_FMASK_64_16_8                              0x0C
+#define   S_008F14_NUM_FORMAT_ASTC_2D(x)                              (((unsigned)(x) & 0x0F) << 26)
+#define   G_008F14_NUM_FORMAT_ASTC_2D(x)                              (((x) >> 26) & 0x0F)
+#define   C_008F14_NUM_FORMAT_ASTC_2D                               0xC3FFFFFF
+#define     V_008F14_IMG_ASTC_2D_4x4                                0x00
+#define     V_008F14_IMG_ASTC_2D_5x4                                0x01
+#define     V_008F14_IMG_ASTC_2D_5x5                                0x02
+#define     V_008F14_IMG_ASTC_2D_6x5                                0x03
+#define     V_008F14_IMG_ASTC_2D_6x6                                0x04
+#define     V_008F14_IMG_ASTC_2D_8x5                                0x05
+#define     V_008F14_IMG_ASTC_2D_8x6                                0x06
+#define     V_008F14_IMG_ASTC_2D_8x8                                0x07
+#define     V_008F14_IMG_ASTC_2D_10x5                               0x08
+#define     V_008F14_IMG_ASTC_2D_10x6                               0x09
+#define     V_008F14_IMG_ASTC_2D_10x8                               0x0A
+#define     V_008F14_IMG_ASTC_2D_10x10                              0x0B
+#define     V_008F14_IMG_ASTC_2D_12x10                              0x0C
+#define     V_008F14_IMG_ASTC_2D_12x12                              0x0D
+#define   S_008F14_NUM_FORMAT_ASTC_3D(x)                              (((unsigned)(x) & 0x0F) << 26)
+#define   G_008F14_NUM_FORMAT_ASTC_3D(x)                              (((x) >> 26) & 0x0F)
+#define   C_008F14_NUM_FORMAT_ASTC_3D                               0xC3FFFFFF
+#define     V_008F14_IMG_ASTC_3D_3x3x3                              0x00
+#define     V_008F14_IMG_ASTC_3D_4x3x3                              0x01
+#define     V_008F14_IMG_ASTC_3D_4x4x3                              0x02
+#define     V_008F14_IMG_ASTC_3D_4x4x4                              0x03
+#define     V_008F14_IMG_ASTC_3D_5x4x4                              0x04
+#define     V_008F14_IMG_ASTC_3D_5x5x4                              0x05
+#define     V_008F14_IMG_ASTC_3D_5x5x5                              0x06
+#define     V_008F14_IMG_ASTC_3D_6x5x5                              0x07
+#define     V_008F14_IMG_ASTC_3D_6x6x5                              0x08
+#define     V_008F14_IMG_ASTC_3D_6x6x6                              0x09
 #define   S_008F14_NV(x)                                              (((unsigned)(x) & 0x1) << 30)
 #define   G_008F14_NV(x)                                              (((x) >> 30) & 0x1)
 #define   C_008F14_NV                                                 0xBFFFFFFF
@@ -7126,6 +7247,10 @@
 #define   S_028C74_RESOURCE_TYPE(x)                                   (((unsigned)(x) & 0x03) << 28)
 #define   G_028C74_RESOURCE_TYPE(x)                                   (((x) >> 28) & 0x03)
 #define   C_028C74_RESOURCE_TYPE                                      0xCFFFFFFF
+#define     V_028C74_1D                                             0
+#define     V_028C74_2D                                             1
+#define     V_028C74_3D                                             2
+#define     V_028C74_RESERVED                                       3
 #define   S_028C74_RB_ALIGNED(x)                                      (((unsigned)(x) & 0x1) << 30)
 #define   G_028C74_RB_ALIGNED(x)                                      (((x) >> 30) & 0x1)
 #define   C_028C74_RB_ALIGNED                                         0xBFFFFFFF

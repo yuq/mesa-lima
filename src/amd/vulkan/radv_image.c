@@ -297,8 +297,8 @@ si_make_texture_descriptor(struct radv_device *device,
 		depth = image->array_size / 6;
 
 	state[0] = 0;
-	state[1] = (S_008F14_DATA_FORMAT(data_format) |
-		    S_008F14_NUM_FORMAT(num_format));
+	state[1] = (S_008F14_DATA_FORMAT_GFX6(data_format) |
+		    S_008F14_NUM_FORMAT_GFX6(num_format));
 	state[2] = (S_008F18_WIDTH(width - 1) |
 		    S_008F18_HEIGHT(height - 1));
 	state[3] = (S_008F1C_DST_SEL_X(radv_map_swizzle(swizzle[0])) |
@@ -359,8 +359,8 @@ si_make_texture_descriptor(struct radv_device *device,
 
 		fmask_state[0] = va >> 8;
 		fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
-			S_008F14_DATA_FORMAT(fmask_format) |
-			S_008F14_NUM_FORMAT(V_008F14_IMG_NUM_FORMAT_UINT);
+			S_008F14_DATA_FORMAT_GFX6(fmask_format) |
+			S_008F14_NUM_FORMAT_GFX6(V_008F14_IMG_NUM_FORMAT_UINT);
 		fmask_state[2] = S_008F18_WIDTH(width - 1) |
 			S_008F18_HEIGHT(height - 1);
 		fmask_state[3] = S_008F1C_DST_SEL_X(V_008F1C_SQ_SEL_X) |

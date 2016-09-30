@@ -2064,9 +2064,9 @@
 #define   S_008F14_MIN_LOD(x)                                         (((unsigned)(x) & 0xFFF) << 8)
 #define   G_008F14_MIN_LOD(x)                                         (((x) >> 8) & 0xFFF)
 #define   C_008F14_MIN_LOD                                            0xFFF000FF
-#define   S_008F14_DATA_FORMAT(x)                                     (((unsigned)(x) & 0x3F) << 20)
-#define   G_008F14_DATA_FORMAT(x)                                     (((x) >> 20) & 0x3F)
-#define   C_008F14_DATA_FORMAT                                        0xFC0FFFFF
+#define   S_008F14_DATA_FORMAT_GFX6(x)                                (((unsigned)(x) & 0x3F) << 20)
+#define   G_008F14_DATA_FORMAT_GFX6(x)                                (((x) >> 20) & 0x3F)
+#define   C_008F14_DATA_FORMAT_GFX6                                   0xFC0FFFFF
 #define     V_008F14_IMG_DATA_FORMAT_INVALID                        0x00
 #define     V_008F14_IMG_DATA_FORMAT_8                              0x01
 #define     V_008F14_IMG_DATA_FORMAT_16                             0x02
@@ -2109,8 +2109,8 @@
 #define     V_008F14_IMG_DATA_FORMAT_BC5                            0x27
 #define     V_008F14_IMG_DATA_FORMAT_BC6                            0x28
 #define     V_008F14_IMG_DATA_FORMAT_BC7                            0x29
-#define     V_008F14_IMG_DATA_FORMAT_16_AS_16_16_16_16              0x2A /* stoney+ */
-#define     V_008F14_IMG_DATA_FORMAT_16_AS_32_32_32_32              0x2B /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_16_16_16_16_GFX6         0x2A /* stoney+ */
+#define     V_008F14_IMG_DATA_FORMAT_16_AS_32_32_32_32_GFX6         0x2B /* stoney+ */
 #define     V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F1                   0x2C
 #define     V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F1                   0x2D
 #define     V_008F14_IMG_DATA_FORMAT_FMASK8_S8_F1                   0x2E
@@ -2131,9 +2131,9 @@
 #define     V_008F14_IMG_DATA_FORMAT_32_AS_8                        0x3D /* not on stoney */
 #define     V_008F14_IMG_DATA_FORMAT_32_AS_8_8                      0x3E /* not on stoney */
 #define     V_008F14_IMG_DATA_FORMAT_32_AS_32_32_32_32              0x3F
-#define   S_008F14_NUM_FORMAT(x)                                      (((unsigned)(x) & 0x0F) << 26)
-#define   G_008F14_NUM_FORMAT(x)                                      (((x) >> 26) & 0x0F)
-#define   C_008F14_NUM_FORMAT                                         0xC3FFFFFF
+#define   S_008F14_NUM_FORMAT_GFX6(x)                                 (((unsigned)(x) & 0x0F) << 26)
+#define   G_008F14_NUM_FORMAT_GFX6(x)                                 (((x) >> 26) & 0x0F)
+#define   C_008F14_NUM_FORMAT_GFX6                                    0xC3FFFFFF
 #define     V_008F14_IMG_NUM_FORMAT_UNORM                           0x00
 #define     V_008F14_IMG_NUM_FORMAT_SNORM                           0x01
 #define     V_008F14_IMG_NUM_FORMAT_USCALED                         0x02
@@ -2144,10 +2144,10 @@
 #define     V_008F14_IMG_NUM_FORMAT_FLOAT                           0x07
 #define     V_008F14_IMG_NUM_FORMAT_RESERVED_8                      0x08
 #define     V_008F14_IMG_NUM_FORMAT_SRGB                            0x09
-#define     V_008F14_IMG_NUM_FORMAT_UBNORM                          0x0A
-#define     V_008F14_IMG_NUM_FORMAT_UBNORM_OGL                      0x0B
-#define     V_008F14_IMG_NUM_FORMAT_UBINT                           0x0C
-#define     V_008F14_IMG_NUM_FORMAT_UBSCALED                        0x0D
+#define     V_008F14_IMG_NUM_FORMAT_UBNORM                          0x0A /* not on VI+ */
+#define     V_008F14_IMG_NUM_FORMAT_UBNORM_OGL                      0x0B /* not on VI+ */
+#define     V_008F14_IMG_NUM_FORMAT_UBINT                           0x0C /* not on VI+ */
+#define     V_008F14_IMG_NUM_FORMAT_UBSCALED                        0x0D /* not on VI+ */
 #define     V_008F14_IMG_NUM_FORMAT_RESERVED_14                     0x0E
 #define     V_008F14_IMG_NUM_FORMAT_RESERVED_15                     0x0F
 /* CIK */

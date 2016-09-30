@@ -1710,7 +1710,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 					      LLVMConstInt(ctx->i32, 0x14000000, false), "");
 
 		/* replace the NUM FORMAT in the descriptor */
-		tmp2 = LLVMBuildAnd(ctx->builder, tmp2, LLVMConstInt(ctx->i32, C_008F14_NUM_FORMAT, false), "");
+		tmp2 = LLVMBuildAnd(ctx->builder, tmp2, LLVMConstInt(ctx->i32, C_008F14_NUM_FORMAT_GFX6, false), "");
 		tmp2 = LLVMBuildOr(ctx->builder, tmp2, tmp, "");
 
 		args->resource = LLVMBuildInsertElement(ctx->builder, args->resource, tmp2, ctx->i32one, "");
