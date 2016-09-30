@@ -332,7 +332,6 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &brw_gs_samplers,
    &gen8_multisample_state,
 
-   &gen8_disable_stages,
    &gen8_vs_state,
    &gen8_hs_state,
    &gen7_te_state,
@@ -411,6 +410,19 @@ brw_upload_initial_gpu_state(struct brw_context *brw)
 
    if (brw->gen >= 8) {
       gen8_emit_3dstate_sample_pattern(brw);
+
+      BEGIN_BATCH(5);
+      OUT_BATCH(_3DSTATE_WM_HZ_OP << 16 | (5 - 2));
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+
+      BEGIN_BATCH(2);
+      OUT_BATCH(_3DSTATE_WM_CHROMAKEY << 16 | (2 - 2));
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
    }
 }
 

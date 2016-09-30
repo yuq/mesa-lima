@@ -149,7 +149,6 @@ extern const struct brw_tracked_state gen7_wm_state;
 extern const struct brw_tracked_state gen7_hw_binding_tables;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
-extern const struct brw_tracked_state gen8_disable_stages;
 extern const struct brw_tracked_state gen8_ds_state;
 extern const struct brw_tracked_state gen8_gs_state;
 extern const struct brw_tracked_state gen8_hs_state;
