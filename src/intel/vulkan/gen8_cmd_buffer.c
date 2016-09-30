@@ -481,9 +481,10 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
          hzp.ClearRectangleXMax = align_u32(iview->extent.width, 8);
          hzp.ClearRectangleYMax = align_u32(iview->extent.height, 4);
       } else {
-         /* This clear rectangle is aligned */
+         /* Contrary to the HW docs both fields are inclusive */
          hzp.ClearRectangleXMin = cmd_state->render_area.offset.x;
          hzp.ClearRectangleYMin = cmd_state->render_area.offset.y;
+         /* Contrary to the HW docs both fields are exclusive */
          hzp.ClearRectangleXMax = cmd_state->render_area.offset.x +
             align_u32(cmd_state->render_area.extent.width, px_dim.width);
          hzp.ClearRectangleYMax = cmd_state->render_area.offset.y +
