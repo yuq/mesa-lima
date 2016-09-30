@@ -35,6 +35,9 @@ struct gl_context;
 struct gl_transform_feedback_object;
 
 
+extern GLboolean
+_mesa_valid_to_render(struct gl_context *ctx, const char *where);
+
 extern bool
 _mesa_is_valid_prim_mode(struct gl_context *ctx, GLenum mode);
 

@@ -152,9 +152,6 @@ _mesa_get_dispatch(struct gl_context *ctx);
 extern void
 _mesa_set_context_lost_dispatch(struct gl_context *ctx);
 
-extern GLboolean
-_mesa_valid_to_render(struct gl_context *ctx, const char *where);
-
 
 
 /** \name Miscellaneous */
