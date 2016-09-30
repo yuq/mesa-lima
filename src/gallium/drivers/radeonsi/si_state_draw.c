@@ -473,18 +473,21 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
 
 	/* Draw state. */
-	if (prim != sctx->last_prim ||
-	    ia_multi_vgt_param != sctx->last_multi_vgt_param) {
-		if (sctx->b.chip_class >= CIK) {
+	if (ia_multi_vgt_param != sctx->last_multi_vgt_param) {
+		if (sctx->b.chip_class >= CIK)
 			radeon_set_context_reg_idx(cs, R_028AA8_IA_MULTI_VGT_PARAM, 1, ia_multi_vgt_param);
-			radeon_set_uconfig_reg_idx(cs, R_030908_VGT_PRIMITIVE_TYPE, 1, prim);
-		} else {
-			radeon_set_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
+		else
 			radeon_set_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
-		}
+
+		sctx->last_multi_vgt_param = ia_multi_vgt_param;
+	}
+	if (prim != sctx->last_prim) {
+		if (sctx->b.chip_class >= CIK)
+			radeon_set_uconfig_reg_idx(cs, R_030908_VGT_PRIMITIVE_TYPE, 1, prim);
+		else
+			radeon_set_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
 
 		sctx->last_prim = prim;
-		sctx->last_multi_vgt_param = ia_multi_vgt_param;
 	}
 
 	if (gs_out_prim != sctx->last_gs_out_prim) {
