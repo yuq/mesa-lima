@@ -63,6 +63,7 @@ C_SOURCES := \
 	hud/hud_context.h \
 	hud/hud_cpu.c \
 	hud/hud_nic.c \
+	hud/hud_cpufreq.c \
 	hud/hud_diskstat.c \
 	hud/hud_sensors_temp.c \
 	hud/hud_driver_query.c \

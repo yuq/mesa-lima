@@ -116,6 +116,12 @@ int hud_get_num_disks(bool displayhelp);
 #define DISKSTAT_WR 2
 void hud_diskstat_graph_install(struct hud_pane *pane, const char *dev_name,
                                 unsigned int mode);
+
+int hud_get_num_cpufreq(bool displayhelp);
+#define CPUFREQ_MINIMUM     1
+#define CPUFREQ_CURRENT     2
+#define CPUFREQ_MAXIMUM     3
+void hud_cpufreq_graph_install(struct hud_pane *pane, int cpu_index, unsigned int mode);
 #endif
 
 #if HAVE_LIBSENSORS

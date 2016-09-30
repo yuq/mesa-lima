@@ -1044,6 +1044,18 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
          hud_diskstat_graph_install(pane, arg_name, DISKSTAT_WR);
          pane->type = PIPE_DRIVER_QUERY_TYPE_BYTES;
       }
+      else if (sscanf(name, "cpufreq-min-cpu%u", &i) == 1) {
+         hud_cpufreq_graph_install(pane, i, CPUFREQ_MINIMUM);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_HZ;
+      }
+      else if (sscanf(name, "cpufreq-cur-cpu%u", &i) == 1) {
+         hud_cpufreq_graph_install(pane, i, CPUFREQ_CURRENT);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_HZ;
+      }
+      else if (sscanf(name, "cpufreq-max-cpu%u", &i) == 1) {
+         hud_cpufreq_graph_install(pane, i, CPUFREQ_MAXIMUM);
+         pane->type = PIPE_DRIVER_QUERY_TYPE_HZ;
+      }
 #endif
 #if HAVE_LIBSENSORS
       else if (sscanf(name, "sensors_temp_cu-%s", arg_name) == 1) {
@@ -1284,6 +1296,7 @@ print_help(struct pipe_screen *screen)
 #if HAVE_GALLIUM_EXTRA_HUD
    hud_get_num_disks(1);
    hud_get_num_nics(1);
+   hud_get_num_cpufreq(1);
 #endif
 #if HAVE_LIBSENSORS
    hud_get_num_sensors(1);
