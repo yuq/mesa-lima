@@ -599,7 +599,7 @@ __glXInitializeVisualConfigFromTags(struct glx_config * config, int count,
     *     GLXPbuffer drawables."
     */
    if (config->floatMode)
-      config->drawableType &= ~(GLX_WINDOW_BIT|GLX_PIXMAP_BIT);
+      config->drawableType &= GLX_PBUFFER_BIT;
 }
 
 static struct glx_config *
