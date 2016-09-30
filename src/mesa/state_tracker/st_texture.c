@@ -428,19 +428,17 @@ struct pipe_sampler_view **
 st_texture_get_sampler_view(struct st_context *st,
                             struct st_texture_object *stObj)
 {
-   struct pipe_sampler_view *used = NULL, **free = NULL;
+   struct pipe_sampler_view **free = NULL;
    GLuint i;
 
    for (i = 0; i < stObj->num_sampler_views; ++i) {
       struct pipe_sampler_view **sv = &stObj->sampler_views[i];
       /* Is the array entry used ? */
       if (*sv) {
-         /* Yes, check if it's the right one */
-         if ((*sv)->context == st->pipe)
+         /* check if the context matches */
+         if ((*sv)->context == st->pipe) {
             return sv;
-
-         /* Wasn't the right one, but remember it as template */
-         used = *sv;
+         }
       } else {
          /* Found a free slot, remember that */
          free = sv;
@@ -458,9 +456,7 @@ st_texture_get_sampler_view(struct st_context *st,
       *free = NULL;
    }
 
-   /* Add just any sampler view to be used as a template */
-   if (used)
-      pipe_sampler_view_reference(free, used);
+   assert(*free == NULL);
 
    return free;
 }
@@ -512,4 +508,6 @@ st_texture_free_sampler_views(struct st_texture_object *stObj)
     * those two headers we can trash the heap.
     */
    FREE(stObj->sampler_views);
+   stObj->sampler_views = NULL;
+   stObj->num_sampler_views = 0;
 }

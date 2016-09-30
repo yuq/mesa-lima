@@ -107,6 +107,11 @@ struct st_texture_object
     * views and surfaces instead of pt->format.
     */
    enum pipe_format surface_format;
+
+   /** The glsl version of the shader seen during the previous validation */
+   unsigned prev_glsl_version;
+   /** The value of the sampler's sRGBDecode state at the previous validation */
+   GLenum prev_sRGBDecode;
 };
 
 

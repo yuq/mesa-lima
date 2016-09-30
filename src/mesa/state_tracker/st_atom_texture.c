@@ -370,7 +370,7 @@ st_create_texture_sampler_view_from_stobj(struct st_context *st,
 static struct pipe_sampler_view *
 st_get_texture_sampler_view_from_stobj(struct st_context *st,
                                        struct st_texture_object *stObj,
-				       enum pipe_format format,
+                                       const struct gl_sampler_object *samp,
                                        unsigned glsl_version)
 {
    struct pipe_sampler_view **sv;
@@ -381,33 +381,41 @@ st_get_texture_sampler_view_from_stobj(struct st_context *st,
 
    sv = st_texture_get_sampler_view(st, stObj);
 
-   /* if sampler view has changed dereference it */
    if (*sv) {
-      if (check_sampler_swizzle(st, stObj, *sv, glsl_version) ||
-	  (format != (*sv)->format) ||
-          gl_target_to_pipe(stObj->base.Target) != (*sv)->target ||
-          stObj->base.MinLevel + stObj->base.BaseLevel != (*sv)->u.tex.first_level ||
-          last_level(stObj) != (*sv)->u.tex.last_level ||
-          stObj->base.MinLayer != (*sv)->u.tex.first_layer ||
-          last_layer(stObj) != (*sv)->u.tex.last_layer) {
-	 pipe_sampler_view_reference(sv, NULL);
+      /* Debug check: make sure that the sampler view's parameters are
+       * what they're supposed to be.
+       */
+      struct pipe_sampler_view *view = *sv;
+      assert(!check_sampler_swizzle(st, stObj, view, glsl_version));
+      assert(get_sampler_view_format(st, stObj, samp) == view->format);
+      assert(gl_target_to_pipe(stObj->base.Target) == view->target);
+      if (stObj->base.Target == GL_TEXTURE_BUFFER) {
+         unsigned base = stObj->base.BufferOffset;
+         unsigned size = MIN2(stObj->pt->width0 - base,
+                              (unsigned) stObj->base.BufferSize);
+         assert(view->u.buf.offset == base);
+         assert(view->u.buf.size == size);
+      }
+      else {
+         assert(stObj->base.MinLevel + stObj->base.BaseLevel ==
+                view->u.tex.first_level);
+         assert(last_level(stObj) == view->u.tex.last_level);
+         assert(stObj->base.MinLayer == view->u.tex.first_layer);
+         assert(last_layer(stObj) == view->u.tex.last_layer);
       }
    }
+   else {
+      /* create new sampler view */
+      enum pipe_format format = get_sampler_view_format(st, stObj, samp);
 
-   if (!*sv) {
       *sv = st_create_texture_sampler_view_from_stobj(st, stObj,
                                                       format, glsl_version);
 
-   } else if ((*sv)->context != st->pipe) {
-      /* Recreate view in correct context, use existing view as template */
-      struct pipe_sampler_view *new_sv =
-         st->pipe->create_sampler_view(st->pipe, stObj->pt, *sv);
-      pipe_sampler_view_reference(sv, NULL);
-      *sv = new_sv;
    }
 
    return *sv;
 }
+
 
 static GLboolean
 update_single_texture(struct st_context *st,
@@ -418,7 +426,6 @@ update_single_texture(struct st_context *st,
    const struct gl_sampler_object *samp;
    struct gl_texture_object *texObj;
    struct st_texture_object *stObj;
-   enum pipe_format view_format;
    GLboolean retval;
 
    samp = _mesa_get_samplerobj(ctx, texUnit);
@@ -437,11 +444,20 @@ update_single_texture(struct st_context *st,
       return GL_FALSE;
    }
 
-   view_format = get_sampler_view_format(st, stObj, samp);
+   /* Check a few pieces of state outside the texture object to see if we
+    * need to force revalidation.
+    */
+   if (stObj->prev_glsl_version != glsl_version ||
+       stObj->prev_sRGBDecode != samp->sRGBDecode) {
+
+      st_texture_release_all_sampler_views(st, stObj);
+
+      stObj->prev_glsl_version = glsl_version;
+      stObj->prev_sRGBDecode = samp->sRGBDecode;
+   }
 
    *sampler_view =
-      st_get_texture_sampler_view_from_stobj(st, stObj, view_format,
-                                             glsl_version);
+      st_get_texture_sampler_view_from_stobj(st, stObj, samp, glsl_version);
    return GL_TRUE;
 }
 
