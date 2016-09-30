@@ -279,8 +279,6 @@ was_tex_rendered_to(struct pipe_resource *resource,
 static inline boolean
 need_tex_readback(struct pipe_transfer *transfer)
 {
-   struct svga_texture *t = svga_texture(transfer->resource);
-
    if (transfer->usage & PIPE_TRANSFER_READ)
       return TRUE;
 
@@ -605,7 +603,8 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       map = svga_texture_transfer_map_dma(svga, st);
    }
    else {
-      boolean can_upload = svga_texture_transfer_map_can_upload(svga, st);
+      boolean can_use_upload = tex->can_use_upload &&
+                               !(st->base.usage & PIPE_TRANSFER_READ);
       boolean was_rendered_to = was_tex_rendered_to(texture, &st->base);
 
       /* If the texture was already rendered to and upload buffer
@@ -614,19 +613,19 @@ svga_texture_transfer_map(struct pipe_context *pipe,
        * we'll first try to map directly to the GB surface, if it is blocked,
        * then we'll try the upload buffer.
        */
-      if (was_rendered_to && can_upload) {
+      if (was_rendered_to && can_use_upload) {
          map = svga_texture_transfer_map_upload(svga, st);
       }
       else {
          unsigned orig_usage = st->base.usage;
 
-         /* try direct map to the GB surface */
-         if (can_upload)
+         /* First try directly map to the GB surface */
+         if (can_use_upload)
             st->base.usage |= PIPE_TRANSFER_DONTBLOCK;
          map = svga_texture_transfer_map_direct(svga, st);
          st->base.usage = orig_usage;
 
-         if (!map && can_upload) {
+         if (!map && can_use_upload) {
             /* if direct map with DONTBLOCK fails, then try upload to the
              * texture upload buffer.
              */
@@ -634,7 +633,9 @@ svga_texture_transfer_map(struct pipe_context *pipe,
          }
       }
 
-      /* if upload fails, then try direct map again without DONTBLOCK */
+      /* If upload fails, then try direct map again without forcing it
+       * to DONTBLOCK.
+       */
       if (!map) {
          map = svga_texture_transfer_map_direct(svga, st);
       }
@@ -1115,6 +1116,11 @@ svga_texture_create(struct pipe_screen *screen,
                    (debug_reference_descriptor)debug_describe_resource, 0);
 
    tex->size = util_resource_size(template);
+
+   /* Determine if texture upload buffer can be used to upload this texture */
+   tex->can_use_upload = svga_texture_transfer_map_can_upload(svgascreen,
+                                                              &tex->b.b);
+
    svgascreen->hud.total_resource_bytes += tex->size;
    svgascreen->hud.num_resources++;
 
@@ -1327,15 +1333,10 @@ svga_texture_transfer_map_upload_destroy(struct svga_context *svga)
  * Returns true if this transfer map request can use the upload buffer.
  */
 boolean
-svga_texture_transfer_map_can_upload(struct svga_context *svga,
-                                     struct svga_transfer *st)
+svga_texture_transfer_map_can_upload(const struct svga_screen *svgascreen,
+                                     const struct pipe_resource *texture)
 {
-   struct pipe_resource *texture = st->base.resource;
-
-   if (svga_sws(svga)->have_transfer_from_buffer_cmd == FALSE)
-      return FALSE;
-
-   if (st->base.usage & PIPE_TRANSFER_READ)
+   if (svgascreen->sws->have_transfer_from_buffer_cmd == FALSE)
       return FALSE;
 
    /* TransferFromBuffer command is not well supported with multi-samples surface */
@@ -1348,19 +1349,6 @@ svga_texture_transfer_map_can_upload(struct svga_context *svga,
        */ 
       if (texture->target == PIPE_TEXTURE_3D)
           return FALSE;
-
-#ifdef DEBUG
-      {
-         struct svga_texture *tex = svga_texture(texture);
-         unsigned blockw, blockh, bytesPerBlock;
-
-         svga_format_size(tex->key.format, &blockw, &blockh, &bytesPerBlock);
-
-         /* dest box must start on block boundary */
-         assert((st->base.box.x % blockw) == 0);
-         assert((st->base.box.y % blockh) == 0);
-      }
-#endif
    }
    else if (texture->format == PIPE_FORMAT_R9G9B9E5_FLOAT) {
       return FALSE;
@@ -1427,6 +1415,19 @@ svga_texture_transfer_map_upload(struct svga_context *svga,
 
    upload_size = st->base.layer_stride * st->base.box.depth;
    upload_size = align(upload_size, 16);
+
+#ifdef DEBUG
+   if (util_format_is_compressed(texture->format)) {
+      struct svga_texture *tex = svga_texture(texture);
+      unsigned blockw, blockh, bytesPerBlock;
+
+      svga_format_size(tex->key.format, &blockw, &blockh, &bytesPerBlock);
+
+      /* dest box must start on block boundary */
+      assert((st->base.box.x % blockw) == 0);
+      assert((st->base.box.y % blockh) == 0);
+   }
+#endif
 
    /* If the upload size exceeds the default buffer size, the
     * upload buffer manager code will try to allocate a new buffer

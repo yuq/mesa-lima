@@ -83,6 +83,11 @@ struct svga_texture
     */
    boolean imported;
 
+   /**
+    * Whether texture upload buffer can be used on this texture
+    */
+   boolean can_use_upload;
+
    unsigned size;  /**< Approximate size in bytes */
 
    /** array indexed by cube face or 3D/array slice, one bit per mipmap level */
@@ -278,8 +283,8 @@ void
 svga_texture_transfer_map_upload_destroy(struct svga_context *svga);
 
 boolean
-svga_texture_transfer_map_can_upload(struct svga_context *svga,
-                                     struct svga_transfer *st);
+svga_texture_transfer_map_can_upload(const struct svga_screen *svgascreen,
+                                     const struct pipe_resource *pt);
 
 void *
 svga_texture_transfer_map_upload(struct svga_context *svga,
