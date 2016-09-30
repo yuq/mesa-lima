@@ -3414,14 +3414,13 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	if (flags & PIPE_BARRIER_FRAMEBUFFER)
 		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
 
-	if (flags & (PIPE_BARRIER_MAPPED_BUFFER |
-		     PIPE_BARRIER_FRAMEBUFFER |
+	if (flags & (PIPE_BARRIER_FRAMEBUFFER |
 		     PIPE_BARRIER_INDIRECT_BUFFER)) {
 		/* Not sure if INV_GLOBAL_L2 is the best thing here.
 		 *
 		 * We need to make sure that TC L1 & L2 are written back to
-		 * memory, because neither CPU accesses nor CB fetches consider
-		 * TC, but there's no need to invalidate any TC cache lines. */
+		 * memory, because CB fetches don't consider TC, but there's
+		 * no need to invalidate any TC cache lines. */
 		sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
 	}
 }
