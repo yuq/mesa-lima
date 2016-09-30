@@ -692,3 +692,18 @@ last_level for layers range from first_layer through last_layer.
 It returns TRUE if mipmap generation succeeds, otherwise it
 returns FALSE. Mipmap generation may fail when it is not supported
 for particular texture types or formats.
+
+Device resets
+^^^^^^^^^^^^^
+
+The state tracker can query or request notifications of when the GPU
+is reset for whatever reason (application error, driver error). When
+a GPU reset happens, the context becomes unusable and all related state
+should be considered lost and undefined. Despite that, context
+notifications are single-shot, i.e. subsequent calls to
+``get_device_reset_status`` will return PIPE_NO_RESET.
+
+* ``get_device_reset_status`` queries whether a device reset has happened
+  since the last call or since the last notification by callback.
+* ``set_device_reset_callback`` sets a callback which will be called when
+  a device reset is detected. The callback is only called synchronously.

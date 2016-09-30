@@ -831,6 +831,25 @@ struct pipe_debug_callback
 };
 
 /**
+ * Structure that contains a callback for device reset messages from the driver
+ * back to the state tracker.
+ *
+ * The callback must not be called from driver-created threads.
+ */
+struct pipe_device_reset_callback
+{
+   /**
+    * Callback for the driver to report when a device reset is detected.
+    *
+    * \param data   user-supplied data pointer
+    * \param status PIPE_*_RESET
+    */
+   void (*reset)(void *data, enum pipe_reset_status status);
+
+   void *data;
+};
+
+/**
  * Information about memory usage. All sizes are in kilobytes.
  */
 struct pipe_memory_info
