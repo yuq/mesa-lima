@@ -252,9 +252,31 @@ svga_texture_destroy(struct pipe_screen *screen,
 
 
 /**
+ * Determine if the resource was rendered to
+ */
+static inline boolean
+was_tex_rendered_to(struct pipe_resource *resource,
+                    const struct pipe_transfer *transfer)
+{
+   unsigned face;
+
+   if (resource->target == PIPE_TEXTURE_CUBE) {
+      assert(transfer->box.depth == 1);
+      face = transfer->box.z;
+   }
+   else {
+      face = 0;
+   }
+
+   return svga_was_texture_rendered_to(svga_texture(resource),
+                                       face, transfer->level);
+}
+
+
+/**
  * Determine if we need to read back a texture image before mapping it.
  */
-static boolean
+static inline boolean
 need_tex_readback(struct pipe_transfer *transfer)
 {
    struct svga_texture *t = svga_texture(transfer->resource);
@@ -264,18 +286,7 @@ need_tex_readback(struct pipe_transfer *transfer)
 
    if ((transfer->usage & PIPE_TRANSFER_WRITE) &&
        ((transfer->usage & PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE) == 0)) {
-      unsigned face;
-
-      if (transfer->resource->target == PIPE_TEXTURE_CUBE) {
-         assert(transfer->box.depth == 1);
-         face = transfer->box.z;
-      }
-      else {
-         face = 0;
-      }
-      if (svga_was_texture_rendered_to(t, face, transfer->level)) {
-         return TRUE;
-      }
+      return was_tex_rendered_to(transfer->resource, transfer);
    }
 
    return FALSE;
@@ -404,15 +415,6 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
    unsigned w, h, nblocksx, nblocksy;
    unsigned usage = st->base.usage;
 
-   /* we'll directly access the guest-backed surface */
-   w = u_minify(texture->width0, level);
-   h = u_minify(texture->height0, level);
-   nblocksx = util_format_get_nblocksx(texture->format, w);
-   nblocksy = util_format_get_nblocksy(texture->format, h);
-   st->hw_nblocksy = nblocksy;
-   st->base.stride = nblocksx*util_format_get_blocksize(texture->format);
-   st->base.layer_stride = st->base.stride * nblocksy;
-
    if (need_tex_readback(transfer)) {
       enum pipe_error ret;
 
@@ -432,7 +434,6 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
       (void) ret;
 
       svga_context_flush(svga, NULL);
-
       /*
        * Note: if PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE were specified
        * we could potentially clear the flag for all faces/layers/mips.
@@ -456,6 +457,15 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
          }
       }
    }
+
+   /* we'll directly access the guest-backed surface */
+   w = u_minify(texture->width0, level);
+   h = u_minify(texture->height0, level);
+   nblocksx = util_format_get_nblocksx(texture->format, w);
+   nblocksy = util_format_get_nblocksy(texture->format, h);
+   st->hw_nblocksy = nblocksy;
+   st->base.stride = nblocksx*util_format_get_blocksize(texture->format);
+   st->base.layer_stride = st->base.stride * nblocksy;
 
    /*
     * Begin mapping code
@@ -513,7 +523,6 @@ svga_texture_transfer_map_direct(struct svga_context *svga,
                                                st->base.box.x,
                                                st->base.box.y,
                                                st->base.box.z);
-
       return (void *) (map + offset);
    }
 }
@@ -596,13 +605,37 @@ svga_texture_transfer_map(struct pipe_context *pipe,
       map = svga_texture_transfer_map_dma(svga, st);
    }
    else {
-      if (svga_texture_transfer_map_can_upload(svga, st)) {
-         /* upload to the texture upload buffer */
+      boolean can_upload = svga_texture_transfer_map_can_upload(svga, st);
+      boolean was_rendered_to = was_tex_rendered_to(texture, &st->base);
+
+      /* If the texture was already rendered to and upload buffer
+       * is supported, then we will use upload buffer to
+       * avoid the need to read back the texture content; otherwise,
+       * we'll first try to map directly to the GB surface, if it is blocked,
+       * then we'll try the upload buffer.
+       */
+      if (was_rendered_to && can_upload) {
          map = svga_texture_transfer_map_upload(svga, st);
       }
+      else {
+         unsigned orig_usage = st->base.usage;
 
+         /* try direct map to the GB surface */
+         if (can_upload)
+            st->base.usage |= PIPE_TRANSFER_DONTBLOCK;
+         map = svga_texture_transfer_map_direct(svga, st);
+         st->base.usage = orig_usage;
+
+         if (!map && can_upload) {
+            /* if direct map with DONTBLOCK fails, then try upload to the
+             * texture upload buffer.
+             */
+            map = svga_texture_transfer_map_upload(svga, st);
+         }
+      }
+
+      /* if upload fails, then try direct map again without DONTBLOCK */
       if (!map) {
-         /* map directly to the GBS surface */
          map = svga_texture_transfer_map_direct(svga, st);
       }
    }
@@ -1298,9 +1331,6 @@ svga_texture_transfer_map_can_upload(struct svga_context *svga,
                                      struct svga_transfer *st)
 {
    struct pipe_resource *texture = st->base.resource;
-
-   if (!svga_have_vgpu10(svga))
-      return FALSE;
 
    if (svga_sws(svga)->have_transfer_from_buffer_cmd == FALSE)
       return FALSE;
