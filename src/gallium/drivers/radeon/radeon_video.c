@@ -66,8 +66,14 @@ bool rvid_create_buffer(struct pipe_screen *screen, struct rvid_buffer *buffer,
 {
 	memset(buffer, 0, sizeof(*buffer));
 	buffer->usage = usage;
+
+	/* Hardware buffer placement restrictions require the kernel to be
+	 * able to move buffers around individually, so request a
+	 * non-sub-allocated buffer.
+	 */
 	buffer->res = (struct r600_resource *)
-		pipe_buffer_create(screen, PIPE_BIND_CUSTOM, usage, size);
+		pipe_buffer_create(screen, PIPE_BIND_CUSTOM | PIPE_BIND_SHARED,
+				   usage, size);
 
 	return buffer->res != NULL;
 }
