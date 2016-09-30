@@ -932,6 +932,24 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
    Instruction *newi = i;
 
    switch (i->op) {
+   case OP_SPLIT: {
+      bld.setPosition(i, false);
+
+      uint8_t size = i->getDef(0)->reg.size;
+      uint32_t mask = (1ULL << size) - 1;
+      assert(size <= 32);
+
+      uint64_t val = imm0.reg.data.u64;
+      for (int8_t d = 0; i->defExists(d); ++d) {
+         Value *def = i->getDef(d);
+         assert(def->reg.size == size);
+
+         newi = bld.mkMov(def, bld.mkImm((uint32_t)(val & mask)), TYPE_U32);
+         val >>= size;
+      }
+      delete_Instruction(prog, i);
+      break;
+   }
    case OP_MUL:
       if (i->dType == TYPE_F32)
          tryCollapseChainedMULs(i, s, imm0);
