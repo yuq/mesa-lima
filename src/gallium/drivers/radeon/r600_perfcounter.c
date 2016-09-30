@@ -115,6 +115,14 @@ static void r600_pc_query_destroy(struct r600_common_context *ctx,
 	r600_query_hw_destroy(ctx, rquery);
 }
 
+static bool r600_pc_query_prepare_buffer(struct r600_common_context *ctx,
+					 struct r600_query_hw *hwquery,
+					 struct r600_resource *buffer)
+{
+	/* no-op */
+	return true;
+}
+
 static void r600_pc_query_emit_start(struct r600_common_context *ctx,
 				     struct r600_query_hw *hwquery,
 				     struct r600_resource *buffer, uint64_t va)
@@ -215,6 +223,7 @@ static struct r600_query_ops batch_query_ops = {
 };
 
 static struct r600_query_hw_ops batch_query_hw_ops = {
+	.prepare_buffer = r600_pc_query_prepare_buffer,
 	.emit_start = r600_pc_query_emit_start,
 	.emit_stop = r600_pc_query_emit_stop,
 	.clear_result = r600_pc_query_clear_result,
