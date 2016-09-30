@@ -248,7 +248,7 @@ static void si_parse_set_reg_packet(FILE *f, uint32_t *ib, unsigned count,
 }
 
 static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
-				  int trace_id)
+				  int trace_id, enum chip_class chip_class)
 {
 	unsigned count = PKT_COUNT_G(ib[0]);
 	unsigned op = PKT3_IT_OPCODE_G(ib[0]);
@@ -299,9 +299,15 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		print_named_value(f, "POLL_INTERVAL", ib[6], 16);
 		break;
 	case PKT3_SURFACE_SYNC:
-		si_dump_reg(f, R_0085F0_CP_COHER_CNTL, ib[1], ~0);
-		si_dump_reg(f, R_0085F4_CP_COHER_SIZE, ib[2], ~0);
-		si_dump_reg(f, R_0085F8_CP_COHER_BASE, ib[3], ~0);
+		if (chip_class >= CIK) {
+			si_dump_reg(f, R_0301F0_CP_COHER_CNTL, ib[1], ~0);
+			si_dump_reg(f, R_0301F4_CP_COHER_SIZE, ib[2], ~0);
+			si_dump_reg(f, R_0301F8_CP_COHER_BASE, ib[3], ~0);
+		} else {
+			si_dump_reg(f, R_0085F0_CP_COHER_CNTL, ib[1], ~0);
+			si_dump_reg(f, R_0085F4_CP_COHER_SIZE, ib[2], ~0);
+			si_dump_reg(f, R_0085F8_CP_COHER_BASE, ib[3], ~0);
+		}
 		print_named_value(f, "POLL_INTERVAL", ib[4], 16);
 		break;
 	case PKT3_EVENT_WRITE:
@@ -421,7 +427,7 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
  *			and executed by the CP, typically read from a buffer
  */
 static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
-			const char *name)
+			const char *name, enum chip_class chip_class)
 {
 	fprintf(f, "------------------ %s begin ------------------\n", name);
 
@@ -430,7 +436,8 @@ static void si_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
 
 		switch (type) {
 		case 3:
-			ib = si_parse_packet3(f, ib, &num_dw, trace_id);
+			ib = si_parse_packet3(f, ib, &num_dw, trace_id,
+					      chip_class);
 			break;
 		case 2:
 			/* type-2 nop */
@@ -525,15 +532,15 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 
 	if (sctx->init_config)
 		si_parse_ib(f, sctx->init_config->pm4, sctx->init_config->ndw,
-			    -1, "IB2: Init config");
+			    -1, "IB2: Init config", sctx->b.chip_class);
 
 	if (sctx->init_config_gs_rings)
 		si_parse_ib(f, sctx->init_config_gs_rings->pm4,
 			    sctx->init_config_gs_rings->ndw,
-			    -1, "IB2: Init GS rings");
+			    -1, "IB2: Init GS rings", sctx->b.chip_class);
 
 	si_parse_ib(f, sctx->last_gfx.ib, sctx->last_gfx.num_dw,
-		    last_trace_id, "IB");
+		    last_trace_id, "IB", sctx->b.chip_class);
 }
 
 static const char *priority_to_string(enum radeon_bo_priority priority)
