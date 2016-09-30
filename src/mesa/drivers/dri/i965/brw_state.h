@@ -57,7 +57,6 @@ extern const struct brw_tracked_state brw_invariant_state;
 extern const struct brw_tracked_state brw_fs_samplers;
 extern const struct brw_tracked_state brw_gs_unit;
 extern const struct brw_tracked_state brw_line_stipple;
-extern const struct brw_tracked_state brw_aa_line_parameters;
 extern const struct brw_tracked_state brw_binding_table_pointers;
 extern const struct brw_tracked_state brw_depthbuffer;
 extern const struct brw_tracked_state brw_polygon_stipple_offset;

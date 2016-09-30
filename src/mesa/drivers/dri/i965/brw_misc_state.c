@@ -793,37 +793,6 @@ const struct brw_tracked_state brw_polygon_stipple_offset = {
 };
 
 /**
- * AA Line parameters
- */
-static void
-upload_aa_line_parameters(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-
-   if (!ctx->Line.SmoothFlag)
-      return;
-
-   /* Original Gen4 doesn't have 3DSTATE_AA_LINE_PARAMETERS. */
-   if (brw->gen == 4 && !brw->is_g4x)
-      return;
-
-   BEGIN_BATCH(3);
-   OUT_BATCH(_3DSTATE_AA_LINE_PARAMETERS << 16 | (3 - 2));
-   /* use legacy aa line coverage computation */
-   OUT_BATCH(0);
-   OUT_BATCH(0);
-   ADVANCE_BATCH();
-}
-
-const struct brw_tracked_state brw_aa_line_parameters = {
-   .dirty = {
-      .mesa = _NEW_LINE,
-      .brw = BRW_NEW_CONTEXT,
-   },
-   .emit = upload_aa_line_parameters
-};
-
-/**
  * Line stipple packet
  */
 static void
@@ -1023,6 +992,16 @@ brw_upload_invariant_state(struct brw_context *brw)
    } else {
       BEGIN_BATCH(2);
       OUT_BATCH(CMD_STATE_SIP << 16 | (2 - 2));
+      OUT_BATCH(0);
+      ADVANCE_BATCH();
+   }
+
+   /* Original Gen4 doesn't have 3DSTATE_AA_LINE_PARAMETERS. */
+   if (!is_965) {
+      BEGIN_BATCH(3);
+      OUT_BATCH(_3DSTATE_AA_LINE_PARAMETERS << 16 | (3 - 2));
+      /* use legacy aa line coverage computation */
+      OUT_BATCH(0);
       OUT_BATCH(0);
       ADVANCE_BATCH();
    }

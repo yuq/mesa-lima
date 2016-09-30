@@ -90,7 +90,6 @@ static const struct brw_tracked_state *gen4_atoms[] =
    &brw_polygon_stipple_offset,
 
    &brw_line_stipple,
-   &brw_aa_line_parameters,
 
    &brw_psp_urb_cbs,
 
@@ -160,7 +159,6 @@ static const struct brw_tracked_state *gen6_atoms[] =
    &brw_polygon_stipple_offset,
 
    &brw_line_stipple,
-   &brw_aa_line_parameters,
 
    &brw_drawing_rect,
 
@@ -251,7 +249,6 @@ static const struct brw_tracked_state *gen7_render_atoms[] =
    &brw_polygon_stipple_offset,
 
    &brw_line_stipple,
-   &brw_aa_line_parameters,
 
    &brw_drawing_rect,
 
@@ -360,7 +357,6 @@ static const struct brw_tracked_state *gen8_render_atoms[] =
    &brw_polygon_stipple_offset,
 
    &brw_line_stipple,
-   &brw_aa_line_parameters,
 
    &brw_drawing_rect,
 
