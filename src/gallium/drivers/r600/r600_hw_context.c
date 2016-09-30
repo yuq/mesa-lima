@@ -258,6 +258,9 @@ void r600_context_gfx_flush(void *context, unsigned flags,
 	if (!radeon_emitted(cs, ctx->b.initial_gfx_cs_size))
 		return;
 
+	if (r600_check_device_reset(&ctx->b))
+		return;
+
 	r600_preflush_suspend_features(&ctx->b);
 
 	/* flush the framebuffer cache */

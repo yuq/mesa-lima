@@ -484,6 +484,36 @@ static void r600_set_debug_callback(struct pipe_context *ctx,
 		memset(&rctx->debug, 0, sizeof(rctx->debug));
 }
 
+static void r600_set_device_reset_callback(struct pipe_context *ctx,
+					   const struct pipe_device_reset_callback *cb)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+
+	if (cb)
+		rctx->device_reset_callback = *cb;
+	else
+		memset(&rctx->device_reset_callback, 0,
+		       sizeof(rctx->device_reset_callback));
+}
+
+bool r600_check_device_reset(struct r600_common_context *rctx)
+{
+	enum pipe_reset_status status;
+
+	if (!rctx->device_reset_callback.reset)
+		return false;
+
+	if (!rctx->b.get_device_reset_status)
+		return false;
+
+	status = rctx->b.get_device_reset_status(&rctx->b);
+	if (status == PIPE_NO_RESET)
+		return false;
+
+	rctx->device_reset_callback.reset(rctx->device_reset_callback.data, status);
+	return true;
+}
+
 bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen,
 			      unsigned context_flags)
@@ -526,6 +556,8 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 			rctx->ws->query_value(rctx->ws,
 					      RADEON_GPU_RESET_COUNTER);
 	}
+
+	rctx->b.set_device_reset_callback = r600_set_device_reset_callback;
 
 	r600_init_context_texture_functions(rctx);
 	r600_init_viewport_functions(rctx);

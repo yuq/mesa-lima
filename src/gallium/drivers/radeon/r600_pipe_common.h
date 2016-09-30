@@ -619,6 +619,7 @@ struct r600_common_context {
 	} dcc_stats[5];
 
 	struct pipe_debug_callback	debug;
+	struct pipe_device_reset_callback device_reset_callback;
 
 	void				*query_result_shader;
 
@@ -733,6 +734,7 @@ void r600_dma_emit_wait_idle(struct r600_common_context *rctx);
 void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
 		    struct radeon_saved_cs *saved);
 void radeon_clear_saved_cs(struct radeon_saved_cs *saved);
+bool r600_check_device_reset(struct r600_common_context *rctx);
 
 /* r600_gpu_load.c */
 void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
