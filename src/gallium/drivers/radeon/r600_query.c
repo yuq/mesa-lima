@@ -616,6 +616,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 				       uint64_t va)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	uint64_t fence_va = 0;
 
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
@@ -626,8 +627,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) & 0xFFFF);
 
-		va += ctx->max_db * 16 - 8;
-		r600_gfx_write_fence(ctx, va, 0, 0x80000000);
+		fence_va = va + ctx->max_db * 16 - 8;
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -650,8 +650,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, 0);
 		radeon_emit(cs, 0);
 
-		va += 8;
-		r600_gfx_write_fence(ctx, va, 0, 0x80000000);
+		fence_va = va + 8;
 		break;
 	case PIPE_QUERY_PIPELINE_STATISTICS: {
 		unsigned sample_size = (query->result_size - 8) / 2;
@@ -662,8 +661,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) & 0xFFFF);
 
-		va += sample_size;
-		r600_gfx_write_fence(ctx, va, 0, 0x80000000);
+		fence_va = va + sample_size;
 		break;
 	}
 	default:
@@ -671,6 +669,9 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 	}
 	r600_emit_reloc(ctx, &ctx->gfx, query->buffer.buf, RADEON_USAGE_WRITE,
 			RADEON_PRIO_QUERY);
+
+	if (fence_va)
+		r600_gfx_write_fence(ctx, query->buffer.buf, fence_va, 0, 0x80000000);
 }
 
 static void r600_query_hw_emit_stop(struct r600_common_context *ctx,

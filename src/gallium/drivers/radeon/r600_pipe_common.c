@@ -80,7 +80,7 @@ void radeon_shader_binary_clean(struct radeon_shader_binary *b)
  * pipe_context
  */
 
-void r600_gfx_write_fence(struct r600_common_context *ctx,
+void r600_gfx_write_fence(struct r600_common_context *ctx, struct r600_resource *buf,
 			  uint64_t va, uint32_t old_value, uint32_t new_value)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
@@ -106,6 +106,8 @@ void r600_gfx_write_fence(struct r600_common_context *ctx,
 	radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
 	radeon_emit(cs, new_value); /* immediate data */
 	radeon_emit(cs, 0); /* unused */
+
+	r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);
 }
 
 unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen)
@@ -114,6 +116,9 @@ unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen)
 
 	if (screen->chip_class == CIK)
 		dwords *= 2;
+
+	if (!screen->info.has_virtual_memory)
+		dwords += 2;
 
 	return dwords;
 }
