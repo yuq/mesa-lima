@@ -141,19 +141,9 @@ static void st_glFinish(struct gl_context *ctx)
 }
 
 
-/**
- * Query information about GPU resets observed by this context
- *
- * Called via \c dd_function_table::GetGraphicsResetStatus.
- */
 static GLenum
-st_get_graphics_reset_status(struct gl_context *ctx)
+gl_reset_status_from_pipe_reset_status(enum pipe_reset_status status)
 {
-   struct st_context *st = st_context(ctx);
-   enum pipe_reset_status status;
-
-   status = st->pipe->get_device_reset_status(st->pipe);
-
    switch (status) {
    case PIPE_NO_RESET:
       return GL_NO_ERROR;
@@ -167,6 +157,23 @@ st_get_graphics_reset_status(struct gl_context *ctx)
       assert(0);
       return GL_NO_ERROR;
    }
+}
+
+
+/**
+ * Query information about GPU resets observed by this context
+ *
+ * Called via \c dd_function_table::GetGraphicsResetStatus.
+ */
+static GLenum
+st_get_graphics_reset_status(struct gl_context *ctx)
+{
+   struct st_context *st = st_context(ctx);
+   enum pipe_reset_status status;
+
+   status = st->pipe->get_device_reset_status(st->pipe);
+
+   return gl_reset_status_from_pipe_reset_status(status);
 }
 
 
