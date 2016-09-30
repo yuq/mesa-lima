@@ -24,9 +24,24 @@
 #include "anv_private.h"
 #include "vk_format_info.h"
 
-#define RGBA ISL_SWIZZLE(RED, GREEN, BLUE, ALPHA)
-#define BGRA ISL_SWIZZLE(BLUE, GREEN, RED, ALPHA)
-#define RGB1 ISL_SWIZZLE(RED, GREEN, BLUE, ONE)
+/*
+ * gcc-4 and earlier don't allow compound literals where a constant
+ * is required in -std=c99/gnu99 mode, so we can't use ISL_SWIZZLE()
+ * here. -std=c89/gnu89 would allow it, but we depend on c99 features
+ * so using -std=c89/gnu89 is not an option. Starting from gcc-5
+ * compound literals can also be considered constant in -std=c99/gnu99
+ * mode.
+ */
+#define _ISL_SWIZZLE(r, g, b, a) { \
+      ISL_CHANNEL_SELECT_##r, \
+      ISL_CHANNEL_SELECT_##g, \
+      ISL_CHANNEL_SELECT_##b, \
+      ISL_CHANNEL_SELECT_##a, \
+}
+
+#define RGBA _ISL_SWIZZLE(RED, GREEN, BLUE, ALPHA)
+#define BGRA _ISL_SWIZZLE(BLUE, GREEN, RED, ALPHA)
+#define RGB1 _ISL_SWIZZLE(RED, GREEN, BLUE, ONE)
 
 #define swiz_fmt(__vk_fmt, __hw_fmt, __swizzle)     \
    [__vk_fmt] = { \
@@ -276,7 +291,7 @@ anv_get_format(const struct gen_device_info *devinfo, VkFormat vk_format,
          format.isl_format = rgbx;
       } else {
          format.isl_format = isl_format_rgb_to_rgba(format.isl_format);
-         format.swizzle = RGB1;
+         format.swizzle = ISL_SWIZZLE(RED, GREEN, BLUE, ONE);
       }
    }
 
