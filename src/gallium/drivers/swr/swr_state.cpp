@@ -1318,6 +1318,8 @@ swr_update_derived(struct pipe_context *pipe,
                swr_convert_depth_func(ctx->depth_stencil->alpha.func);
             compileState.alphaTestFormat = ALPHA_TEST_FLOAT32; // xxx
 
+            compileState.Canonicalize();
+            
             PFN_BLEND_JIT_FUNC func = NULL;
             auto search = ctx->blendJIT->find(compileState);
             if (search != ctx->blendJIT->end()) {
