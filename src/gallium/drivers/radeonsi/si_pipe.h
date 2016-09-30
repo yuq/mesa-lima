@@ -316,7 +316,6 @@ struct si_context {
 	int			last_gs_out_prim;
 	int			last_prim;
 	int			last_multi_vgt_param;
-	int			last_ls_hs_config;
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
 	int			last_vtx_reuse_depth;

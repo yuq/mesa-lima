@@ -108,7 +108,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	unsigned input_patch_size, output_patch_size, output_patch0_offset;
 	unsigned perpatch_output_offset, lds_size, ls_rsrc2;
 	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
-	unsigned offchip_layout, hardware_lds_size;
+	unsigned offchip_layout, hardware_lds_size, ls_hs_config;
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
@@ -224,6 +224,17 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	/* Set them for TES. */
 	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 1);
 	radeon_emit(cs, offchip_layout);
+
+	ls_hs_config = S_028B58_NUM_PATCHES(*num_patches) |
+		       S_028B58_HS_NUM_INPUT_CP(num_tcs_input_cp) |
+		       S_028B58_HS_NUM_OUTPUT_CP(num_tcs_output_cp);
+
+	if (sctx->b.chip_class >= CIK)
+		radeon_set_context_reg_idx(cs, R_028B58_VGT_LS_HS_CONFIG, 2,
+					   ls_hs_config);
+	else
+		radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG,
+				       ls_hs_config);
 }
 
 static unsigned si_num_prims_for_vertices(const struct pipe_draw_info *info)
@@ -380,24 +391,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 					     max_primgroup_in_wave : 0);
 }
 
-static unsigned si_get_ls_hs_config(struct si_context *sctx,
-				    const struct pipe_draw_info *info,
-				    unsigned num_patches)
-{
-	unsigned num_output_cp;
-
-	if (!sctx->tes_shader.cso)
-		return 0;
-
-	num_output_cp = sctx->tcs_shader.cso ?
-		sctx->tcs_shader.cso->info.properties[TGSI_PROPERTY_TCS_VERTICES_OUT] :
-		info->vertices_per_patch;
-
-	return S_028B58_NUM_PATCHES(num_patches) |
-		S_028B58_HS_NUM_INPUT_CP(info->vertices_per_patch) |
-		S_028B58_HS_NUM_OUTPUT_CP(num_output_cp);
-}
-
 static void si_emit_scratch_reloc(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
@@ -453,7 +446,7 @@ static void si_emit_draw_registers(struct si_context *sctx,
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned prim = si_conv_pipe_prim(info->mode);
 	unsigned gs_out_prim = si_conv_prim_to_gs_out(sctx->current_rast_prim);
-	unsigned ia_multi_vgt_param, ls_hs_config, num_patches = 0;
+	unsigned ia_multi_vgt_param, num_patches = 0;
 
 	/* Polaris needs different VTX_REUSE_DEPTH settings depending on
 	 * whether the "fractional odd" tessellation spacing is used.
@@ -478,25 +471,20 @@ static void si_emit_draw_registers(struct si_context *sctx,
 		si_emit_derived_tess_state(sctx, info, &num_patches);
 
 	ia_multi_vgt_param = si_get_ia_multi_vgt_param(sctx, info, num_patches);
-	ls_hs_config = si_get_ls_hs_config(sctx, info, num_patches);
 
 	/* Draw state. */
 	if (prim != sctx->last_prim ||
-	    ia_multi_vgt_param != sctx->last_multi_vgt_param ||
-	    ls_hs_config != sctx->last_ls_hs_config) {
+	    ia_multi_vgt_param != sctx->last_multi_vgt_param) {
 		if (sctx->b.chip_class >= CIK) {
 			radeon_set_context_reg_idx(cs, R_028AA8_IA_MULTI_VGT_PARAM, 1, ia_multi_vgt_param);
-			radeon_set_context_reg_idx(cs, R_028B58_VGT_LS_HS_CONFIG, 2, ls_hs_config);
 			radeon_set_uconfig_reg_idx(cs, R_030908_VGT_PRIMITIVE_TYPE, 1, prim);
 		} else {
 			radeon_set_config_reg(cs, R_008958_VGT_PRIMITIVE_TYPE, prim);
 			radeon_set_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
-			radeon_set_context_reg(cs, R_028B58_VGT_LS_HS_CONFIG, ls_hs_config);
 		}
 
 		sctx->last_prim = prim;
 		sctx->last_multi_vgt_param = ia_multi_vgt_param;
-		sctx->last_ls_hs_config = ls_hs_config;
 	}
 
 	if (gs_out_prim != sctx->last_gs_out_prim) {
