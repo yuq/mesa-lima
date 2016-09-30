@@ -1643,40 +1643,40 @@ struct gl_transform_feedback_varying_info
  */
 struct gl_transform_feedback_output
 {
-   unsigned OutputRegister;
-   unsigned OutputBuffer;
-   unsigned NumComponents;
-   unsigned StreamId;
+   uint32_t OutputRegister;
+   uint32_t OutputBuffer;
+   uint32_t NumComponents;
+   uint32_t StreamId;
 
    /** offset (in DWORDs) of this output within the interleaved structure */
-   unsigned DstOffset;
+   uint32_t DstOffset;
 
    /**
     * Offset into the output register of the data to output.  For example,
     * if NumComponents is 2 and ComponentOffset is 1, then the data to
     * offset is in the y and z components of the output register.
     */
-   unsigned ComponentOffset;
+   uint32_t ComponentOffset;
 };
 
 
 struct gl_transform_feedback_buffer
 {
-   unsigned Binding;
+   uint32_t Binding;
 
-   unsigned NumVaryings;
+   uint32_t NumVaryings;
 
    /**
     * Total number of components stored in each buffer.  This may be used by
     * hardware back-ends to determine the correct stride when interleaving
     * multiple transform feedback outputs in the same buffer.
     */
-   unsigned Stride;
+   uint32_t Stride;
 
    /**
     * Which transform feedback stream this buffer binding is associated with.
     */
-   unsigned Stream;
+   uint32_t Stream;
 };
 
 
