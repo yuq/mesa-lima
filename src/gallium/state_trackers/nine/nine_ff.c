@@ -1755,7 +1755,12 @@ nine_ff_get_ps(struct NineDevice9 *device)
             break;
         }
 
-        if (state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE)
+        if (state->ff.tex_stage[s][D3DTSS_COLORARG0] == D3DTA_TEXTURE ||
+            state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE ||
+            state->ff.tex_stage[s][D3DTSS_COLORARG2] == D3DTA_TEXTURE ||
+            state->ff.tex_stage[s][D3DTSS_ALPHAARG0] == D3DTA_TEXTURE ||
+            state->ff.tex_stage[s][D3DTSS_ALPHAARG1] == D3DTA_TEXTURE ||
+            state->ff.tex_stage[s][D3DTSS_ALPHAARG2] == D3DTA_TEXTURE)
             sampler_mask |= (1 << s);
 
         if (key.ts[s].colorop != D3DTOP_DISABLE) {
