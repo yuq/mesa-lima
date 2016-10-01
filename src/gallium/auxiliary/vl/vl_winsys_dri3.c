@@ -85,7 +85,7 @@ struct vl_dri3_screen
    int64_t last_ust, ns_frame, last_msc, next_msc;
 
    bool flushed;
-   bool is_different_gpu;
+   int is_different_gpu;
 };
 
 static void
