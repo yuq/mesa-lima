@@ -2490,6 +2490,7 @@ void nir_lower_two_sided_color(nir_shader *shader);
 void nir_lower_clamp_color_outputs(nir_shader *shader);
 
 void nir_lower_passthrough_edgeflags(nir_shader *shader);
+void nir_lower_tes_patch_vertices(nir_shader *tes, unsigned patch_vertices);
 
 typedef struct nir_lower_wpos_ytransform_options {
    int state_tokens[5];
