@@ -1724,7 +1724,8 @@ VOID ElemLib::SetClearComps(
 BOOL_32 ElemLib::IsBlockCompressed(
     AddrFormat format)  ///< [in] Format
 {
-    return format >= ADDR_FMT_BC1 && format <= ADDR_FMT_BC7;
+    return (((format >= ADDR_FMT_BC1) && (format <= ADDR_FMT_BC7)) ||
+            ((format >= ADDR_FMT_ASTC_4x4) && (format <= ADDR_FMT_ASTC_12x12)));
 }
 
 
