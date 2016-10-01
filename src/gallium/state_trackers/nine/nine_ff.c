@@ -58,7 +58,8 @@ struct nine_ff_vs_key
             uint32_t has_normal : 1;
             uint32_t fog : 1;
             uint32_t normalizenormals : 1;
-            uint32_t pad1 : 5;
+            uint32_t ucp : 1;
+            uint32_t pad1 : 4;
             uint32_t tc_dim_input: 16; /* 8 * 2 bits */
             uint32_t pad2 : 16;
             uint32_t tc_dim_output: 24; /* 8 * 3 bits */
@@ -202,7 +203,7 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[ 0.. 3] D3DTS_WORLD * D3DTS_VIEW * D3DTS_PROJECTION
  * CONST[ 4.. 7] D3DTS_WORLD * D3DTS_VIEW
  * CONST[ 8..11] D3DTS_PROJECTION
- * CONST[12..15] D3DTS_VIEW
+ * CONST[12..15] D3DTS_VIEW^(-1)
  * CONST[16..18] Normal matrix
  *
  * CONST[19]      MATERIAL.Emissive + Material.Ambient * RS.Ambient
@@ -338,7 +339,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     unsigned label[32], l = 0;
     boolean need_aNrm = key->lighting || key->passthrough & (1 << NINE_DECLUSAGE_NORMAL);
     boolean has_aNrm = need_aNrm && key->has_normal;
-    boolean need_aVtx = key->lighting || key->fog_mode || key->pointscale;
+    boolean need_aVtx = key->lighting || key->fog_mode || key->pointscale || key->ucp;
     const unsigned texcoord_sn = get_texcoord_sn(device->screen);
 
     vs->ureg = ureg;
@@ -1047,6 +1048,17 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         (void) 0; /* TODO: replace z of position output ? */
     }
 
+    /* ucp for ff applies on world coordinates.
+     * aVtx is in worldview coordinates. */
+    if (key->ucp) {
+        struct ureg_dst clipVect = ureg_DECL_output(ureg, TGSI_SEMANTIC_CLIPVERTEX, 0);
+        struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        ureg_MUL(ureg, tmp, _XXXX(vs->aVtx), _CONST(12));
+        ureg_MAD(ureg, tmp, _YYYY(vs->aVtx), _CONST(13),  ureg_src(tmp));
+        ureg_MAD(ureg, tmp, _ZZZZ(vs->aVtx), _CONST(14), ureg_src(tmp));
+        ureg_ADD(ureg, clipVect, _CONST(15), ureg_src(tmp));
+        ureg_release_temporary(ureg, tmp);
+    }
 
     if (key->position_t && device->driver_caps.window_space_position_support)
         ureg_property(ureg, TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION, TRUE);
@@ -1645,6 +1657,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
 
     key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
     key.normalizenormals = !!state->rs[D3DRS_NORMALIZENORMALS];
+    key.ucp = !!state->rs[D3DRS_CLIPPLANEENABLE];
 
     if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE] && has_indexes;
@@ -1840,7 +1853,7 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
         M[2] = *GET_D3DTS(PROJECTION);
 
         /* V and W matrix */
-        M[3] = *GET_D3DTS(VIEW);
+        nine_d3d_matrix_inverse(&M[3], GET_D3DTS(VIEW));
         M[40] = M[1];
     }
 
