@@ -350,19 +350,26 @@ get_tcs_out_current_patch_data_offset(struct si_shader_context *ctx)
 			    "");
 }
 
+static LLVMValueRef build_gep0(struct si_shader_context *ctx,
+			       LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	LLVMValueRef indices[2] = {
+		LLVMConstInt(ctx->i32, 0, 0),
+		index,
+	};
+	return LLVMBuildGEP(ctx->radeon_bld.gallivm.builder, base_ptr,
+			    indices, 2, "");
+}
+
 static void build_indexed_store(struct si_shader_context *ctx,
 				LLVMValueRef base_ptr, LLVMValueRef index,
 				LLVMValueRef value)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMValueRef indices[2], pointer;
 
-	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = index;
-
-	pointer = LLVMBuildGEP(gallivm->builder, base_ptr, indices, 2, "");
-	LLVMBuildStore(gallivm->builder, value, pointer);
+	LLVMBuildStore(gallivm->builder, value,
+		       build_gep0(ctx, base_ptr, index));
 }
 
 /**
@@ -380,12 +387,9 @@ static LLVMValueRef build_indexed_load(struct si_shader_context *ctx,
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->radeon_bld.soa.bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMValueRef indices[2], pointer;
+	LLVMValueRef pointer;
 
-	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = index;
-
-	pointer = LLVMBuildGEP(gallivm->builder, base_ptr, indices, 2, "");
+	pointer = build_gep0(ctx, base_ptr, index);
 	if (uniform)
 		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
 	return LLVMBuildLoad(gallivm->builder, pointer, "");
@@ -5003,8 +5007,7 @@ static void si_llvm_emit_ddxy(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	unsigned opcode = inst->Instruction.Opcode;
-	LLVMValueRef indices[2];
-	LLVMValueRef store_ptr, load_ptr0, load_ptr1;
+	LLVMValueRef store_ptr, load_ptr0, load_ptr1, thread_id;
 	LLVMValueRef tl, trbl, result[4];
 	LLVMValueRef tl_tid, trbl_tid;
 	unsigned swizzle[4];
@@ -5012,10 +5015,8 @@ static void si_llvm_emit_ddxy(
 	int idx;
 	unsigned mask;
 
-	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = get_thread_id(ctx);
-	store_ptr = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				 indices, 2, "");
+	thread_id = get_thread_id(ctx);;
+	store_ptr = build_gep0(ctx, ctx->lds, thread_id);
 
 	if (opcode == TGSI_OPCODE_DDX_FINE)
 		mask = TID_MASK_LEFT;
@@ -5024,19 +5025,15 @@ static void si_llvm_emit_ddxy(
 	else
 		mask = TID_MASK_TOP_LEFT;
 
-	tl_tid = LLVMBuildAnd(gallivm->builder, indices[1],
+	tl_tid = LLVMBuildAnd(gallivm->builder, thread_id,
 				lp_build_const_int32(gallivm, mask), "");
-	indices[1] = tl_tid;
-	load_ptr0 = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				 indices, 2, "");
+	load_ptr0 = build_gep0(ctx, ctx->lds, tl_tid);
 
 	/* for DDX we want to next X pixel, DDY next Y pixel. */
 	idx = (opcode == TGSI_OPCODE_DDX || opcode == TGSI_OPCODE_DDX_FINE) ? 1 : 2;
-	trbl_tid = LLVMBuildAdd(gallivm->builder, indices[1],
+	trbl_tid = LLVMBuildAdd(gallivm->builder, tl_tid,
 				  lp_build_const_int32(gallivm, idx), "");
-	indices[1] = trbl_tid;
-	load_ptr1 = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				 indices, 2, "");
+	load_ptr1 = build_gep0(ctx, ctx->lds, trbl_tid);
 
 	for (c = 0; c < 4; ++c) {
 		unsigned i;
@@ -5095,39 +5092,30 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMValueRef indices[2];
 	LLVMValueRef store_ptr, load_ptr_x, load_ptr_y, load_ptr_ddx, load_ptr_ddy, temp, temp2;
-	LLVMValueRef tl, tr, bl, result[4];
+	LLVMValueRef tl, tr, bl, result[4], thread_id;
 	unsigned c;
 
-	indices[0] = bld_base->uint_bld.zero;
-	indices[1] = get_thread_id(ctx);
-	store_ptr = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				 indices, 2, "");
+	thread_id = get_thread_id(ctx);
+	store_ptr = build_gep0(ctx, ctx->lds, thread_id);
 
-	temp = LLVMBuildAnd(gallivm->builder, indices[1],
+	temp = LLVMBuildAnd(gallivm->builder, thread_id,
 			    lp_build_const_int32(gallivm, TID_MASK_LEFT), "");
 
-	temp2 = LLVMBuildAnd(gallivm->builder, indices[1],
+	temp2 = LLVMBuildAnd(gallivm->builder, thread_id,
 			     lp_build_const_int32(gallivm, TID_MASK_TOP), "");
 
-	indices[1] = temp;
-	load_ptr_x = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				  indices, 2, "");
+	load_ptr_x = build_gep0(ctx, ctx->lds, temp);
 
-	indices[1] = temp2;
-	load_ptr_y = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				  indices, 2, "");
+	load_ptr_y = build_gep0(ctx, ctx->lds, temp2);
 
-	indices[1] = LLVMBuildAdd(gallivm->builder, temp,
-				  lp_build_const_int32(gallivm, 1), "");
-	load_ptr_ddx = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				   indices, 2, "");
+	load_ptr_ddx = build_gep0(ctx, ctx->lds,
+				  LLVMBuildAdd(gallivm->builder, temp,
+					       lp_build_const_int32(gallivm, 1), ""));
 
-	indices[1] = LLVMBuildAdd(gallivm->builder, temp2,
-				  lp_build_const_int32(gallivm, 2), "");
-	load_ptr_ddy = LLVMBuildGEP(gallivm->builder, ctx->lds,
-				   indices, 2, "");
+	load_ptr_ddy = build_gep0(ctx, ctx->lds,
+				  LLVMBuildAdd(gallivm->builder, temp2,
+					       lp_build_const_int32(gallivm, 2), ""));
 
 	for (c = 0; c < 2; ++c) {
 		LLVMValueRef store_val;
