@@ -3304,11 +3304,14 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 		for (i = 0; i < count; i++) {
 			const struct pipe_vertex_buffer *src = buffers + i;
 			struct pipe_vertex_buffer *dsti = dst + i;
+			struct pipe_resource *buf = src->buffer;
 
-			pipe_resource_reference(&dsti->buffer, src->buffer);
+			pipe_resource_reference(&dsti->buffer, buf);
 			dsti->buffer_offset = src->buffer_offset;
 			dsti->stride = src->stride;
-			r600_context_add_resource_size(ctx, src->buffer);
+			r600_context_add_resource_size(ctx, buf);
+			if (buf)
+				r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
 		}
 	} else {
 		for (i = 0; i < count; i++) {
@@ -3324,9 +3327,13 @@ static void si_set_index_buffer(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context *)ctx;
 
 	if (ib) {
-		pipe_resource_reference(&sctx->index_buffer.buffer, ib->buffer);
+		struct pipe_resource *buf = ib->buffer;
+
+		pipe_resource_reference(&sctx->index_buffer.buffer, buf);
 	        memcpy(&sctx->index_buffer, ib, sizeof(*ib));
-		r600_context_add_resource_size(ctx, ib->buffer);
+		r600_context_add_resource_size(ctx, buf);
+		if (buf)
+			r600_resource(buf)->bind_history |= PIPE_BIND_INDEX_BUFFER;
 	} else {
 		pipe_resource_reference(&sctx->index_buffer.buffer, NULL);
 	}

@@ -414,7 +414,9 @@ static void si_set_sampler_view(struct si_context *sctx,
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
 
-		if (rtex->resource.b.b.target != PIPE_BUFFER) {
+		if (rtex->resource.b.b.target == PIPE_BUFFER) {
+			rtex->resource.bind_history |= PIPE_BIND_SAMPLER_VIEW;
+		} else {
 			bool is_separate_stencil =
 				rtex->db_compatible &&
 				rview->is_stencil_sampler;
@@ -640,6 +642,7 @@ static void si_set_shader_image(struct si_context *ctx,
 					  view->u.buf.size,
 					  descs->list + slot * 8);
 		images->compressed_colortex_mask &= ~(1 << slot);
+		res->bind_history |= PIPE_BIND_SHADER_IMAGE;
 	} else {
 		static const unsigned char swizzle[4] = { 0, 1, 2, 3 };
 		struct r600_texture *tex = (struct r600_texture *)res;
@@ -1032,6 +1035,8 @@ static void si_set_constant_buffer(struct si_context *sctx,
 		} else {
 			pipe_resource_reference(&buffer, input->buffer);
 			va = r600_resource(buffer)->gpu_address + input->buffer_offset;
+			/* Only track usage for non-user buffers. */
+			r600_resource(buffer)->bind_history |= PIPE_BIND_CONSTANT_BUFFER;
 		}
 
 		/* Set the descriptor. */
@@ -1157,6 +1162,8 @@ static void si_set_shader_buffers(struct pipe_context *ctx,
 		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx, buf,
 						    buffers->shader_usage,
 						    buffers->priority, true);
+		buf->bind_history |= PIPE_BIND_SHADER_BUFFER;
+
 		buffers->enabled_mask |= 1u << slot;
 		descs->dirty_mask |= 1u << slot;
 		sctx->descriptors_dirty |=
@@ -1363,6 +1370,8 @@ static void si_set_streamout_targets(struct pipe_context *ctx,
 							    buffers->shader_usage,
 							    RADEON_PRIO_SHADER_RW_BUFFER,
 							    true);
+			r600_resource(buffer)->bind_history |= PIPE_BIND_STREAM_OUTPUT;
+
 			buffers->enabled_mask |= 1u << bufidx;
 		} else {
 			/* Clear the descriptor and unset the resource. */

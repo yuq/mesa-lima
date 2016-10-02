@@ -180,6 +180,7 @@ struct r600_resource {
 	unsigned			bo_alignment;
 	enum radeon_bo_domain		domains;
 	enum radeon_bo_flag		flags;
+	unsigned			bind_history;
 
 	/* The buffer range which is initialized (with a write transfer,
 	 * streamout, DMA, or as a random access target). The rest of
