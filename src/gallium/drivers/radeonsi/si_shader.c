@@ -5014,9 +5014,10 @@ static void si_llvm_emit_ddxy(
 	unsigned c;
 	int idx;
 	unsigned mask;
+	bool has_ds_bpermute = HAVE_LLVM >= 0x0309 &&
+			       ctx->screen->b.chip_class >= VI;
 
 	thread_id = get_thread_id(ctx);;
-	store_ptr = build_gep0(ctx, ctx->lds, thread_id);
 
 	if (opcode == TGSI_OPCODE_DDX_FINE)
 		mask = TID_MASK_LEFT;
@@ -5027,13 +5028,17 @@ static void si_llvm_emit_ddxy(
 
 	tl_tid = LLVMBuildAnd(gallivm->builder, thread_id,
 				lp_build_const_int32(gallivm, mask), "");
-	load_ptr0 = build_gep0(ctx, ctx->lds, tl_tid);
 
 	/* for DDX we want to next X pixel, DDY next Y pixel. */
 	idx = (opcode == TGSI_OPCODE_DDX || opcode == TGSI_OPCODE_DDX_FINE) ? 1 : 2;
 	trbl_tid = LLVMBuildAdd(gallivm->builder, tl_tid,
 				  lp_build_const_int32(gallivm, idx), "");
-	load_ptr1 = build_gep0(ctx, ctx->lds, trbl_tid);
+
+	if (!has_ds_bpermute) {
+		store_ptr = build_gep0(ctx, ctx->lds, thread_id);
+		load_ptr0 = build_gep0(ctx, ctx->lds, tl_tid);
+		load_ptr1 = build_gep0(ctx, ctx->lds, trbl_tid);
+	}
 
 	for (c = 0; c < 4; ++c) {
 		unsigned i;
@@ -5054,8 +5059,7 @@ static void si_llvm_emit_ddxy(
 				lp_build_emit_fetch(bld_base, inst, 0, c),
 						ctx->i32, "");
 
-		if ((HAVE_LLVM >= 0x0309) && ctx->screen->b.family >= CHIP_TONGA) {
-
+		if (has_ds_bpermute) {
 	                args[0] = LLVMBuildMul(gallivm->builder, tl_tid,
                                         lp_build_const_int32(gallivm, 4), "");
 			args[1] = val;
