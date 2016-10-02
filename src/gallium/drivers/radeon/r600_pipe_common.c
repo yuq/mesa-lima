@@ -601,26 +601,6 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	rctx->ws->fence_reference(&rctx->last_sdma_fence, NULL);
 }
 
-void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
-{
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_resource *rr = (struct r600_resource *)r;
-
-	if (!r) {
-		return;
-	}
-
-	/*
-	 * The idea is to compute a gross estimate of memory requirement of
-	 * each draw call. After each draw call, memory will be precisely
-	 * accounted. So the uncertainty is only on the current draw call.
-	 * In practice this gave very good estimate (+/- 10% of the target
-	 * memory limit).
-	 */
-	rctx->vram += rr->vram_usage;
-	rctx->gtt += rr->gart_usage;
-}
-
 /*
  * pipe_screen
  */

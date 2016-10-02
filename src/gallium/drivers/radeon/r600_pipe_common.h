@@ -718,7 +718,6 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen,
 			      unsigned context_flags);
 void r600_common_context_cleanup(struct r600_common_context *rctx);
-void r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r);
 bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 			  unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
@@ -855,6 +854,19 @@ static inline void
 r600_texture_reference(struct r600_texture **ptr, struct r600_texture *res)
 {
 	pipe_resource_reference((struct pipe_resource **)ptr, &res->resource.b.b);
+}
+
+static inline void
+r600_context_add_resource_size(struct pipe_context *ctx, struct pipe_resource *r)
+{
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+	struct r600_resource *res = (struct r600_resource *)r;
+
+	if (res) {
+		/* Add memory usage for need_gfx_cs_space */
+		rctx->vram += res->vram_usage;
+		rctx->gtt += res->gart_usage;
+	}
 }
 
 static inline bool r600_get_strmout_en(struct r600_common_context *rctx)
