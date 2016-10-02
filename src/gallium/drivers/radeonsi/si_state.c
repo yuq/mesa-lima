@@ -2950,16 +2950,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	view->base.reference.count = 1;
 	view->base.context = ctx;
 
-	/* NULL resource, obey swizzle (only ZERO and ONE make sense). */
-	if (!texture) {
-		view->state[3] = S_008F1C_DST_SEL_X(si_map_swizzle(state->swizzle_r)) |
-				 S_008F1C_DST_SEL_Y(si_map_swizzle(state->swizzle_g)) |
-				 S_008F1C_DST_SEL_Z(si_map_swizzle(state->swizzle_b)) |
-				 S_008F1C_DST_SEL_W(si_map_swizzle(state->swizzle_a)) |
-				 S_008F1C_TYPE(V_008F1C_SQ_RSRC_IMG_1D);
-		return &view->base;
-	}
-
+	assert(texture);
 	pipe_resource_reference(&view->base.texture, texture);
 
 	if (state->format == PIPE_FORMAT_X24S8_UINT ||

@@ -410,10 +410,11 @@ static void si_set_sampler_view(struct si_context *sctx,
 		struct r600_texture *rtex = (struct r600_texture *)view->texture;
 		uint32_t *desc = descs->list + slot * 16;
 
+		assert(rtex); /* views with texture == NULL aren't supported */
 		pipe_sampler_view_reference(&views->views[slot], view);
 		memcpy(desc, rview->state, 8*4);
 
-		if (view->texture && view->texture->target != PIPE_BUFFER) {
+		if (rtex->resource.b.b.target != PIPE_BUFFER) {
 			bool is_separate_stencil =
 				rtex->db_compatible &&
 				rview->is_stencil_sampler;
@@ -427,7 +428,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 						       desc);
 		}
 
-		if (view->texture && view->texture->target != PIPE_BUFFER &&
+		if (rtex->resource.b.b.target != PIPE_BUFFER &&
 		    rtex->fmask.size) {
 			memcpy(desc + 8,
 			       rview->fmask_state, 8*4);
