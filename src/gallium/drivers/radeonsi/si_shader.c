@@ -5005,19 +5005,14 @@ static void si_llvm_emit_ddxy(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	unsigned opcode = inst->Instruction.Opcode;
-	LLVMValueRef store_ptr, load_ptr0, load_ptr1, thread_id;
-	LLVMValueRef tl, trbl, result[4];
-	LLVMValueRef tl_tid, trbl_tid;
-	unsigned swizzle[4];
-	unsigned c;
+	unsigned opcode = emit_data->info->opcode;
+	LLVMValueRef thread_id, tl, trbl, tl_tid, trbl_tid, val, args[2];
 	int idx;
 	unsigned mask;
 	bool has_ds_bpermute = HAVE_LLVM >= 0x0309 &&
 			       ctx->screen->b.chip_class >= VI;
 
-	thread_id = get_thread_id(ctx);;
+	thread_id = get_thread_id(ctx);
 
 	if (opcode == TGSI_OPCODE_DDX_FINE)
 		mask = TID_MASK_LEFT;
@@ -5034,55 +5029,38 @@ static void si_llvm_emit_ddxy(
 	trbl_tid = LLVMBuildAdd(gallivm->builder, tl_tid,
 				  lp_build_const_int32(gallivm, idx), "");
 
-	if (!has_ds_bpermute) {
+	val = LLVMBuildBitCast(gallivm->builder, emit_data->args[0], ctx->i32, "");
+
+	if (has_ds_bpermute) {
+		args[0] = LLVMBuildMul(gallivm->builder, tl_tid,
+				       lp_build_const_int32(gallivm, 4), "");
+		args[1] = val;
+		tl = lp_build_intrinsic(gallivm->builder,
+					"llvm.amdgcn.ds.bpermute", ctx->i32,
+					args, 2, LLVMReadNoneAttribute);
+
+		args[0] = LLVMBuildMul(gallivm->builder, trbl_tid,
+				       lp_build_const_int32(gallivm, 4), "");
+		trbl = lp_build_intrinsic(gallivm->builder,
+					  "llvm.amdgcn.ds.bpermute", ctx->i32,
+					  args, 2, LLVMReadNoneAttribute);
+	} else {
+		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
+
 		store_ptr = build_gep0(ctx, ctx->lds, thread_id);
 		load_ptr0 = build_gep0(ctx, ctx->lds, tl_tid);
 		load_ptr1 = build_gep0(ctx, ctx->lds, trbl_tid);
+
+		LLVMBuildStore(gallivm->builder, val, store_ptr);
+		tl = LLVMBuildLoad(gallivm->builder, load_ptr0, "");
+		trbl = LLVMBuildLoad(gallivm->builder, load_ptr1, "");
 	}
 
-	for (c = 0; c < 4; ++c) {
-		unsigned i;
-		LLVMValueRef val;
-		LLVMValueRef args[2];
+	tl = LLVMBuildBitCast(gallivm->builder, tl, ctx->f32, "");
+	trbl = LLVMBuildBitCast(gallivm->builder, trbl,	ctx->f32, "");
 
-		swizzle[c] = tgsi_util_get_full_src_register_swizzle(&inst->Src[0], c);
-		for (i = 0; i < c; ++i) {
-			if (swizzle[i] == swizzle[c]) {
-				result[c] = result[i];
-				break;
-			}
-		}
-		if (i != c)
-			continue;
-
-		val = LLVMBuildBitCast(gallivm->builder,
-				lp_build_emit_fetch(bld_base, inst, 0, c),
-						ctx->i32, "");
-
-		if (has_ds_bpermute) {
-	                args[0] = LLVMBuildMul(gallivm->builder, tl_tid,
-                                        lp_build_const_int32(gallivm, 4), "");
-			args[1] = val;
-			tl = lp_build_intrinsic(gallivm->builder,
-					"llvm.amdgcn.ds.bpermute", ctx->i32,
-					args, 2, LLVMReadNoneAttribute);
-
-	                args[0] = LLVMBuildMul(gallivm->builder, trbl_tid,
-                                        lp_build_const_int32(gallivm, 4), "");
-			trbl = lp_build_intrinsic(gallivm->builder,
-					"llvm.amdgcn.ds.bpermute", ctx->i32,
-					args, 2, LLVMReadNoneAttribute);
-		} else {
-			LLVMBuildStore(gallivm->builder, val, store_ptr);
-			tl = LLVMBuildLoad(gallivm->builder, load_ptr0, "");
-			trbl = LLVMBuildLoad(gallivm->builder, load_ptr1, "");
-		}
-		tl = LLVMBuildBitCast(gallivm->builder, tl, ctx->f32, "");
-		trbl = LLVMBuildBitCast(gallivm->builder, trbl,	ctx->f32, "");
-		result[c] = LLVMBuildFSub(gallivm->builder, trbl, tl, "");
-	}
-
-	emit_data->output[0] = lp_build_gather_values(gallivm, result, 4);
+	emit_data->output[emit_data->chan] =
+		LLVMBuildFSub(gallivm->builder, trbl, tl, "");
 }
 
 /*
