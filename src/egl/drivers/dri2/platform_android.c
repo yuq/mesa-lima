@@ -29,6 +29,7 @@
 
 #include <errno.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include <xf86drm.h>
 
 #if ANDROID_VERSION >= 0x402
@@ -830,7 +831,7 @@ droid_open_device(void)
       fd = -1;
    }
 
-   return (fd >= 0) ? dup(fd) : -1;
+   return (fd >= 0) ? fcntl(fd, F_DUPFD_CLOEXEC, 3) : -1;
 }
 
 /* support versions < JellyBean */
