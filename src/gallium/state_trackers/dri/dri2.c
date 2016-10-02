@@ -30,6 +30,7 @@
 
 #include <xf86drm.h>
 #include <dlfcn.h>
+#include <fcntl.h>
 #include "GL/mesa_glinterop.h"
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
@@ -1877,7 +1878,7 @@ dri2_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (screen->fd < 0 || (fd = dup(screen->fd)) < 0)
+   if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
    if (pipe_loader_drm_probe_fd(&screen->dev, fd))
@@ -1960,7 +1961,7 @@ dri_kms_init_screen(__DRIscreen * sPriv)
 
    sPriv->driverPrivate = (void *)screen;
 
-   if (screen->fd < 0 || (fd = dup(screen->fd)) < 0)
+   if (screen->fd < 0 || (fd = fcntl(screen->fd, F_DUPFD_CLOEXEC, 3)) < 0)
       goto free_screen;
 
    if (pipe_loader_sw_probe_kms(&screen->dev, fd))
