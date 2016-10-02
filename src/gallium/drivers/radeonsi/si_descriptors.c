@@ -349,6 +349,17 @@ static void si_sampler_views_begin_new_cs(struct si_context *sctx,
 	}
 }
 
+/* Set buffer descriptor fields that can be changed by reallocations. */
+static void si_set_buf_desc_address(struct r600_resource *buf,
+				    uint64_t offset, uint32_t *state)
+{
+	uint64_t va = buf->gpu_address + offset;
+
+	state[0] = va;
+	state[1] &= C_008F04_BASE_ADDRESS_HI;
+	state[1] |= S_008F04_BASE_ADDRESS_HI(va >> 32);
+}
+
 /* Set texture descriptor fields that can be changed by reallocations.
  *
  * \param tex			texture
@@ -416,6 +427,10 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 		if (rtex->resource.b.b.target == PIPE_BUFFER) {
 			rtex->resource.bind_history |= PIPE_BIND_SAMPLER_VIEW;
+
+			si_set_buf_desc_address(&rtex->resource,
+						view->u.buf.offset,
+						desc + 4);
 		} else {
 			bool is_separate_stencil =
 				rtex->db_compatible &&
@@ -621,6 +636,7 @@ static void si_set_shader_image(struct si_context *ctx,
 	struct si_images_info *images = &ctx->images[shader];
 	struct si_descriptors *descs = si_image_descriptors(ctx, shader);
 	struct r600_resource *res;
+	uint32_t *desc = descs->list + slot * 8;
 
 	if (!view || !view->resource) {
 		si_disable_shader_image(ctx, shader, slot);
@@ -641,6 +657,8 @@ static void si_set_shader_image(struct si_context *ctx,
 					  view->u.buf.offset,
 					  view->u.buf.size,
 					  descs->list + slot * 8);
+		si_set_buf_desc_address(res, view->u.buf.offset, desc + 4);
+
 		images->compressed_colortex_mask &= ~(1 << slot);
 		res->bind_history |= PIPE_BIND_SHADER_IMAGE;
 	} else {
@@ -648,7 +666,6 @@ static void si_set_shader_image(struct si_context *ctx,
 		struct r600_texture *tex = (struct r600_texture *)res;
 		unsigned level = view->u.tex.level;
 		unsigned width, height, depth;
-		uint32_t *desc = descs->list + slot * 8;
 		bool uses_dcc = tex->dcc_offset &&
 				tex->surface.level[level].dcc_enabled;
 
@@ -1407,11 +1424,8 @@ static void si_desc_reset_buffer_offset(struct pipe_context *ctx,
 	uint64_t offset_within_buffer = old_desc_va - old_buf_va;
 
 	/* Update the descriptor. */
-	uint64_t va = r600_resource(new_buf)->gpu_address + offset_within_buffer;
-
-	desc[0] = va;
-	desc[1] = (desc[1] & C_008F04_BASE_ADDRESS_HI) |
-		  S_008F04_BASE_ADDRESS_HI(va >> 32);
+	si_set_buf_desc_address(r600_resource(new_buf), offset_within_buffer,
+				desc);
 }
 
 /* INTERNAL CONST BUFFERS */
@@ -1491,7 +1505,6 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	uint64_t old_va = rbuffer->gpu_address;
 	unsigned num_elems = sctx->vertex_elements ?
 				       sctx->vertex_elements->count : 0;
-	struct si_sampler_view *view;
 
 	/* Reallocate the buffer in the same pipe_resource. */
 	r600_alloc_resource(&sctx->screen->b, rbuffer);
@@ -1564,12 +1577,6 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	}
 
 	if (rbuffer->bind_history & PIPE_BIND_SAMPLER_VIEW) {
-		/* Texture buffers - update virtual addresses in sampler view descriptors. */
-		LIST_FOR_EACH_ENTRY(view, &sctx->b.texture_buffers, list) {
-			if (view->base.texture == buf) {
-				si_desc_reset_buffer_offset(ctx, &view->state[4], old_va, buf);
-			}
-		}
 		/* Texture buffers - update bindings. */
 		for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
 			struct si_sampler_views *views = &sctx->samplers[shader].views;

@@ -2661,7 +2661,6 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 {
 	const struct util_format_description *desc;
 	int first_non_void;
-	uint64_t va;
 	unsigned stride;
 	unsigned num_records;
 	unsigned num_format, data_format;
@@ -2669,7 +2668,6 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 	desc = util_format_description(format);
 	first_non_void = util_format_get_first_non_void_channel(format);
 	stride = desc->block.bits / 8;
-	va = buf->gpu_address + offset;
 	num_format = si_translate_buffer_numformat(&screen->b.b, desc, first_non_void);
 	data_format = si_translate_buffer_dataformat(&screen->b.b, desc, first_non_void);
 
@@ -2679,9 +2677,8 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 	if (screen->b.chip_class >= VI)
 		num_records *= stride;
 
-	state[4] = va;
-	state[5] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
-		   S_008F04_STRIDE(stride);
+	state[4] = 0;
+	state[5] = S_008F04_STRIDE(stride);
 	state[6] = num_records;
 	state[7] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
 		   S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
@@ -2967,8 +2964,6 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 					  state->u.buf.offset,
 					  state->u.buf.size,
 					  view->state);
-
-		LIST_ADDTAIL(&view->list, &sctx->b.texture_buffers);
 		return &view->base;
 	}
 
@@ -3080,9 +3075,6 @@ static void si_sampler_view_destroy(struct pipe_context *ctx,
 				    struct pipe_sampler_view *state)
 {
 	struct si_sampler_view *view = (struct si_sampler_view *)state;
-
-	if (state->texture && state->texture->target == PIPE_BUFFER)
-		LIST_DELINIT(&view->list);
 
 	pipe_resource_reference(&state->texture, NULL);
 	FREE(view);
