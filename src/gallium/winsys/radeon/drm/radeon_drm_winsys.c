@@ -43,6 +43,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <radeon_surface.h>
 
 #ifndef RADEON_INFO_ACTIVE_CU_COUNT
@@ -751,7 +752,7 @@ radeon_drm_winsys_create(int fd, radeon_screen_create_t screen_create)
         return NULL;
     }
 
-    ws->fd = dup(fd);
+    ws->fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
     if (!do_winsys_init(ws))
         goto fail1;

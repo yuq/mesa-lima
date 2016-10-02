@@ -867,7 +867,7 @@ virgl_drm_screen_create(int fd)
       virgl_screen(pscreen)->refcnt++;
    } else {
       struct virgl_winsys *vws;
-      int dup_fd = dup(fd);
+      int dup_fd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
       vws = virgl_drm_winsys_create(dup_fd);
 

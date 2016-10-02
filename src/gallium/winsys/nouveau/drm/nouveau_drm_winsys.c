@@ -1,5 +1,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 #include "util/u_format.h"
@@ -91,7 +92,7 @@ nouveau_drm_screen_create(int fd)
 	 * nouveau_device_wrap does not close the fd in case of a device
 	 * creation error.
 	 */
-	dupfd = dup(fd);
+	dupfd = fcntl(fd, F_DUPFD_CLOEXEC, 3);
 
 	ret = nouveau_drm_new(dupfd, &drm);
 	if (ret)
