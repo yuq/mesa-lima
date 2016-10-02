@@ -83,6 +83,7 @@ struct si_screen {
 	unsigned			tess_offchip_block_dw_size;
 	bool				has_distributed_tess;
 	bool				has_draw_indirect_multi;
+	bool				has_ds_bpermute;
 
 	/* Whether shaders are monolithic (1-part) or separate (3-part). */
 	bool				use_monolithic_shaders;

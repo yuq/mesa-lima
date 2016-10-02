@@ -817,6 +817,9 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		 sscreen->b.info.pfp_fw_version >= 121 &&
 		 sscreen->b.info.me_fw_version >= 87);
 
+	sscreen->has_ds_bpermute = HAVE_LLVM >= 0x0309 &&
+				   sscreen->b.chip_class >= VI;
+
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
 	pipe_mutex_init(sscreen->shader_parts_mutex);

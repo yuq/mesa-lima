@@ -5009,8 +5009,6 @@ static void si_llvm_emit_ddxy(
 	LLVMValueRef thread_id, tl, trbl, tl_tid, trbl_tid, val, args[2];
 	int idx;
 	unsigned mask;
-	bool has_ds_bpermute = HAVE_LLVM >= 0x0309 &&
-			       ctx->screen->b.chip_class >= VI;
 
 	thread_id = get_thread_id(ctx);
 
@@ -5031,7 +5029,7 @@ static void si_llvm_emit_ddxy(
 
 	val = LLVMBuildBitCast(gallivm->builder, emit_data->args[0], ctx->i32, "");
 
-	if (has_ds_bpermute) {
+	if (ctx->screen->has_ds_bpermute) {
 		args[0] = LLVMBuildMul(gallivm->builder, tl_tid,
 				       lp_build_const_int32(gallivm, 4), "");
 		args[1] = val;
@@ -5738,7 +5736,8 @@ static void create_function(struct si_shader_context *ctx)
 		for (; i < num_params; ++i)
 			shader->info.num_input_vgprs += llvm_get_type_size(params[i]) / 4;
 
-	if (bld_base->info &&
+	if (!ctx->screen->has_ds_bpermute &&
+	    bld_base->info &&
 	    (bld_base->info->opcode_count[TGSI_OPCODE_DDX] > 0 ||
 	     bld_base->info->opcode_count[TGSI_OPCODE_DDY] > 0 ||
 	     bld_base->info->opcode_count[TGSI_OPCODE_DDX_FINE] > 0 ||
