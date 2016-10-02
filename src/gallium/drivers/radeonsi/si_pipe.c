@@ -22,7 +22,6 @@
  */
 
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "si_public.h"
 #include "sid.h"
 

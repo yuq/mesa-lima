@@ -27,7 +27,6 @@
 
 #include "radeon/r600_cs.h"
 #include "radeon/r600_query.h"
-#include "radeon/r600_pipe_common.h"
 #include "util/u_memory.h"
 
 #include "si_pipe.h"

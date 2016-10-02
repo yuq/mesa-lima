@@ -25,13 +25,11 @@
 #include "tgsi/tgsi_parse.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
-#include "radeon/r600_pipe_common.h"
 #include "radeon/radeon_elf_util.h"
 
 #include "amd_kernel_code_t.h"
 #include "radeon/r600_cs.h"
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "sid.h"
 
 #define MAX_GLOBAL_BUFFERS 20

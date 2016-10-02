@@ -57,13 +57,10 @@
 
 #include "radeon/r600_cs.h"
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "sid.h"
 
 #include "util/u_format.h"
-#include "util/u_math.h"
 #include "util/u_memory.h"
-#include "util/u_suballoc.h"
 #include "util/u_upload_mgr.h"
 
 

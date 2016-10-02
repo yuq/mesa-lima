@@ -31,25 +31,20 @@
 #include "gallivm/lp_bld_intr.h"
 #include "gallivm/lp_bld_logic.h"
 #include "gallivm/lp_bld_arit.h"
-#include "gallivm/lp_bld_bitarit.h"
 #include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_misc.h"
-#include "radeon/r600_cs.h"
 #include "radeon/radeon_llvm.h"
 #include "radeon/radeon_elf_util.h"
 #include "radeon/radeon_llvm_emit.h"
 #include "util/u_memory.h"
 #include "util/u_string.h"
-#include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_build.h"
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_dump.h"
 
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "sid.h"
 
-#include <errno.h>
 
 static const char *scratch_rsrc_dword0_symbol =
 	"SCRATCH_RSRC_DWORD0";

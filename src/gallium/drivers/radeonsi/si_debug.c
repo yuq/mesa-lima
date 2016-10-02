@@ -25,7 +25,6 @@
  */
 
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "sid.h"
 #include "sid_tables.h"
 #include "radeon/radeon_elf_util.h"

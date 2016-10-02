@@ -25,7 +25,6 @@
  */
 
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "sid.h"
 #include "radeon/r600_cs.h"
 #include "radeon/r600_query.h"
@@ -34,7 +33,6 @@
 #include "util/u_format.h"
 #include "util/u_format_s3tc.h"
 #include "util/u_memory.h"
-#include "util/u_pstipple.h"
 #include "util/u_resource.h"
 
 /* Initialize an external atom (owned by ../radeon). */

@@ -27,9 +27,6 @@
 
 #include "sid.h"
 #include "si_pipe.h"
-#include "radeon/r600_cs.h"
-
-#include "util/u_format.h"
 
 static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 				    struct pipe_resource *dst,

@@ -26,7 +26,6 @@
  */
 
 #include "si_pipe.h"
-#include "si_shader.h"
 #include "sid.h"
 #include "radeon/r600_cs.h"
 
@@ -36,7 +35,6 @@
 #include "util/u_hash.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
-#include "util/u_simple_shaders.h"
 
 /* SHADER_CACHE */
 
