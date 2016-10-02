@@ -733,6 +733,8 @@ static inline unsigned nine_format_get_level_alloc_size(enum pipe_format format,
     if (is_ATI1_ATI2(format)) {
         /* For "unknown" formats like ATIx use width * height bytes */
         size = w * h;
+    } else if (format == PIPE_FORMAT_NONE) { /* D3DFMT_NULL */
+        size = w * h * 4;
     } else {
         size = nine_format_get_stride(format, w) *
             util_format_get_nblocksy(format, h);
