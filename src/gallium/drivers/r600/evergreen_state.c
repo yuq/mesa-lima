@@ -648,7 +648,7 @@ texture_buffer_sampler_view(struct r600_context *rctx,
 	view->tex_resource_words[7] = S_03001C_TYPE(V_03001C_SQ_TEX_VTX_VALID_BUFFER);
 
 	if (tmp->resource.gpu_address)
-		LIST_ADDTAIL(&view->list, &rctx->b.texture_buffers);
+		LIST_ADDTAIL(&view->list, &rctx->texture_buffers);
 	return &view->base;
 }
 

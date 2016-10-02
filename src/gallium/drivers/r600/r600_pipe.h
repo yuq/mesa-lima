@@ -501,6 +501,11 @@ struct r600_context {
 	unsigned			zwritemask;
 	int					ps_iter_samples;
 
+	/* The list of all texture buffer objects in this context.
+	 * This list is walked when a buffer is invalidated/reallocated and
+	 * the GPU addresses are updated. */
+	struct list_head		texture_buffers;
+
 	/* Index buffer. */
 	struct pipe_index_buffer	index_buffer;
 

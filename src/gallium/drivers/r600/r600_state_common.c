@@ -2829,7 +2829,7 @@ static void r600_invalidate_buffer(struct pipe_context *ctx, struct pipe_resourc
 	}
 
 	/* Texture buffer objects - update the virtual addresses in descriptors. */
-	LIST_FOR_EACH_ENTRY(view, &rctx->b.texture_buffers, list) {
+	LIST_FOR_EACH_ENTRY(view, &rctx->texture_buffers, list) {
 		if (view->base.texture == &rbuffer->b.b) {
 			uint64_t offset = view->base.u.buf.offset;
 			uint64_t va = rbuffer->gpu_address + offset;

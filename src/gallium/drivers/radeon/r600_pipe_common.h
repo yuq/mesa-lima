@@ -615,11 +615,6 @@ struct r600_common_context {
 		bool				query_active;
 	} dcc_stats[5];
 
-	/* The list of all texture buffer objects in this context.
-	 * This list is walked when a buffer is invalidated/reallocated and
-	 * the GPU addresses are updated. */
-	struct list_head		texture_buffers;
-
 	struct pipe_debug_callback	debug;
 
 	void				*query_result_shader;

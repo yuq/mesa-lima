@@ -528,8 +528,6 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 					      RADEON_GPU_RESET_COUNTER);
 	}
 
-	LIST_INITHEAD(&rctx->texture_buffers);
-
 	r600_init_context_texture_functions(rctx);
 	r600_init_viewport_functions(rctx);
 	r600_streamout_init(rctx);
