@@ -5074,56 +5074,14 @@ static LLVMValueRef si_llvm_emit_ddxy_interp(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMValueRef store_ptr, load_ptr_x, load_ptr_y, load_ptr_ddx, load_ptr_ddy, temp, temp2;
-	LLVMValueRef tl, tr, bl, result[4], thread_id;
-	unsigned c;
+	LLVMValueRef result[4], a;
+	unsigned i;
 
-	thread_id = get_thread_id(ctx);
-	store_ptr = build_gep0(ctx, ctx->lds, thread_id);
-
-	temp = LLVMBuildAnd(gallivm->builder, thread_id,
-			    lp_build_const_int32(gallivm, TID_MASK_LEFT), "");
-
-	temp2 = LLVMBuildAnd(gallivm->builder, thread_id,
-			     lp_build_const_int32(gallivm, TID_MASK_TOP), "");
-
-	load_ptr_x = build_gep0(ctx, ctx->lds, temp);
-
-	load_ptr_y = build_gep0(ctx, ctx->lds, temp2);
-
-	load_ptr_ddx = build_gep0(ctx, ctx->lds,
-				  LLVMBuildAdd(gallivm->builder, temp,
-					       lp_build_const_int32(gallivm, 1), ""));
-
-	load_ptr_ddy = build_gep0(ctx, ctx->lds,
-				  LLVMBuildAdd(gallivm->builder, temp2,
-					       lp_build_const_int32(gallivm, 2), ""));
-
-	for (c = 0; c < 2; ++c) {
-		LLVMValueRef store_val;
-		LLVMValueRef c_ll = lp_build_const_int32(gallivm, c);
-
-		store_val = LLVMBuildExtractElement(gallivm->builder,
-						    interp_ij, c_ll, "");
-		LLVMBuildStore(gallivm->builder,
-			       store_val,
-			       store_ptr);
-
-		tl = LLVMBuildLoad(gallivm->builder, load_ptr_x, "");
-		tl = LLVMBuildBitCast(gallivm->builder, tl, ctx->f32, "");
-
-		tr = LLVMBuildLoad(gallivm->builder, load_ptr_ddx, "");
-		tr = LLVMBuildBitCast(gallivm->builder, tr, ctx->f32, "");
-
-		result[c] = LLVMBuildFSub(gallivm->builder, tr, tl, "");
-
-		tl = LLVMBuildLoad(gallivm->builder, load_ptr_y, "");
-		tl = LLVMBuildBitCast(gallivm->builder, tl, ctx->f32, "");
-
-		bl = LLVMBuildLoad(gallivm->builder, load_ptr_ddy, "");
-		bl = LLVMBuildBitCast(gallivm->builder, bl, ctx->f32, "");
-
-		result[c + 2] = LLVMBuildFSub(gallivm->builder, bl, tl, "");
+	for (i = 0; i < 2; i++) {
+		a = LLVMBuildExtractElement(gallivm->builder, interp_ij,
+					    LLVMConstInt(ctx->i32, i, 0), "");
+		result[i] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_DDX, a);
+		result[2+i] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_DDY, a);
 	}
 
 	return lp_build_gather_values(gallivm, result, 4);
