@@ -1503,114 +1503,127 @@ static void si_invalidate_buffer(struct pipe_context *ctx, struct pipe_resource 
 	 */
 
 	/* Vertex buffers. */
-	for (i = 0; i < num_elems; i++) {
-		int vb = sctx->vertex_elements->elements[i].vertex_buffer_index;
+	if (rbuffer->bind_history & PIPE_BIND_VERTEX_BUFFER) {
+		for (i = 0; i < num_elems; i++) {
+			int vb = sctx->vertex_elements->elements[i].vertex_buffer_index;
 
-		if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
-			continue;
-		if (!sctx->vertex_buffer[vb].buffer)
-			continue;
+			if (vb >= ARRAY_SIZE(sctx->vertex_buffer))
+				continue;
+			if (!sctx->vertex_buffer[vb].buffer)
+				continue;
 
-		if (sctx->vertex_buffer[vb].buffer == buf) {
-			sctx->vertex_buffers_dirty = true;
-			break;
+			if (sctx->vertex_buffer[vb].buffer == buf) {
+				sctx->vertex_buffers_dirty = true;
+				break;
+			}
 		}
 	}
 
 	/* Streamout buffers. (other internal buffers can't be invalidated) */
-	for (i = SI_VS_STREAMOUT_BUF0; i <= SI_VS_STREAMOUT_BUF3; i++) {
-		struct si_buffer_resources *buffers = &sctx->rw_buffers;
-		struct si_descriptors *descs =
-			&sctx->descriptors[SI_DESCS_RW_BUFFERS];
+	if (rbuffer->bind_history & PIPE_BIND_STREAM_OUTPUT) {
+		for (i = SI_VS_STREAMOUT_BUF0; i <= SI_VS_STREAMOUT_BUF3; i++) {
+			struct si_buffer_resources *buffers = &sctx->rw_buffers;
+			struct si_descriptors *descs =
+				&sctx->descriptors[SI_DESCS_RW_BUFFERS];
 
-		if (buffers->buffers[i] != buf)
-			continue;
+			if (buffers->buffers[i] != buf)
+				continue;
 
-		si_desc_reset_buffer_offset(ctx, descs->list + i*4,
-					    old_va, buf);
-		descs->dirty_mask |= 1u << i;
-		sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
+			si_desc_reset_buffer_offset(ctx, descs->list + i*4,
+						    old_va, buf);
+			descs->dirty_mask |= 1u << i;
+			sctx->descriptors_dirty |= 1u << SI_DESCS_RW_BUFFERS;
 
-		radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
-						    rbuffer, buffers->shader_usage,
-						    RADEON_PRIO_SHADER_RW_BUFFER,
-						    true);
+			radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+							    rbuffer, buffers->shader_usage,
+							    RADEON_PRIO_SHADER_RW_BUFFER,
+							    true);
 
-		/* Update the streamout state. */
-		if (sctx->b.streamout.begin_emitted)
-			r600_emit_streamout_end(&sctx->b);
-		sctx->b.streamout.append_bitmask =
-				sctx->b.streamout.enabled_mask;
-		r600_streamout_buffers_dirty(&sctx->b);
+			/* Update the streamout state. */
+			if (sctx->b.streamout.begin_emitted)
+				r600_emit_streamout_end(&sctx->b);
+			sctx->b.streamout.append_bitmask =
+					sctx->b.streamout.enabled_mask;
+			r600_streamout_buffers_dirty(&sctx->b);
+		}
 	}
 
 	/* Constant and shader buffers. */
-	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
-		si_reset_buffer_resources(sctx, &sctx->const_buffers[shader],
-					  si_const_buffer_descriptors_idx(shader),
-					  buf, old_va);
-		si_reset_buffer_resources(sctx, &sctx->shader_buffers[shader],
-					  si_shader_buffer_descriptors_idx(shader),
-					  buf, old_va);
+	if (rbuffer->bind_history & PIPE_BIND_CONSTANT_BUFFER) {
+		for (shader = 0; shader < SI_NUM_SHADERS; shader++)
+			si_reset_buffer_resources(sctx, &sctx->const_buffers[shader],
+						  si_const_buffer_descriptors_idx(shader),
+						  buf, old_va);
 	}
 
-	/* Texture buffers - update virtual addresses in sampler view descriptors. */
-	LIST_FOR_EACH_ENTRY(view, &sctx->b.texture_buffers, list) {
-		if (view->base.texture == buf) {
-			si_desc_reset_buffer_offset(ctx, &view->state[4], old_va, buf);
+	if (rbuffer->bind_history & PIPE_BIND_SHADER_BUFFER) {
+		for (shader = 0; shader < SI_NUM_SHADERS; shader++)
+			si_reset_buffer_resources(sctx, &sctx->shader_buffers[shader],
+						  si_shader_buffer_descriptors_idx(shader),
+						  buf, old_va);
+	}
+
+	if (rbuffer->bind_history & PIPE_BIND_SAMPLER_VIEW) {
+		/* Texture buffers - update virtual addresses in sampler view descriptors. */
+		LIST_FOR_EACH_ENTRY(view, &sctx->b.texture_buffers, list) {
+			if (view->base.texture == buf) {
+				si_desc_reset_buffer_offset(ctx, &view->state[4], old_va, buf);
+			}
 		}
-	}
-	/* Texture buffers - update bindings. */
-	for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
-		struct si_sampler_views *views = &sctx->samplers[shader].views;
-		struct si_descriptors *descs =
-			si_sampler_descriptors(sctx, shader);
-		unsigned mask = views->enabled_mask;
+		/* Texture buffers - update bindings. */
+		for (shader = 0; shader < SI_NUM_SHADERS; shader++) {
+			struct si_sampler_views *views = &sctx->samplers[shader].views;
+			struct si_descriptors *descs =
+				si_sampler_descriptors(sctx, shader);
+			unsigned mask = views->enabled_mask;
 
-		while (mask) {
-			unsigned i = u_bit_scan(&mask);
-			if (views->views[i]->texture == buf) {
-				si_desc_reset_buffer_offset(ctx,
-							    descs->list +
-							    i * 16 + 4,
-							    old_va, buf);
-				descs->dirty_mask |= 1u << i;
-				sctx->descriptors_dirty |=
-					1u << si_sampler_descriptors_idx(shader);
+			while (mask) {
+				unsigned i = u_bit_scan(&mask);
+				if (views->views[i]->texture == buf) {
+					si_desc_reset_buffer_offset(ctx,
+								    descs->list +
+								    i * 16 + 4,
+								    old_va, buf);
+					descs->dirty_mask |= 1u << i;
+					sctx->descriptors_dirty |=
+						1u << si_sampler_descriptors_idx(shader);
 
-				radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
-								    rbuffer, RADEON_USAGE_READ,
-								    RADEON_PRIO_SAMPLER_BUFFER,
-								    true);
+					radeon_add_to_buffer_list_check_mem(&sctx->b, &sctx->b.gfx,
+									    rbuffer, RADEON_USAGE_READ,
+									    RADEON_PRIO_SAMPLER_BUFFER,
+									    true);
+				}
 			}
 		}
 	}
 
 	/* Shader images */
-	for (shader = 0; shader < SI_NUM_SHADERS; ++shader) {
-		struct si_images_info *images = &sctx->images[shader];
-		struct si_descriptors *descs =
-			si_image_descriptors(sctx, shader);
-		unsigned mask = images->enabled_mask;
+	if (rbuffer->bind_history & PIPE_BIND_SHADER_IMAGE) {
+		for (shader = 0; shader < SI_NUM_SHADERS; ++shader) {
+			struct si_images_info *images = &sctx->images[shader];
+			struct si_descriptors *descs =
+				si_image_descriptors(sctx, shader);
+			unsigned mask = images->enabled_mask;
 
-		while (mask) {
-			unsigned i = u_bit_scan(&mask);
+			while (mask) {
+				unsigned i = u_bit_scan(&mask);
 
-			if (images->views[i].resource == buf) {
-				if (images->views[i].access & PIPE_IMAGE_ACCESS_WRITE)
-					si_mark_image_range_valid(&images->views[i]);
+				if (images->views[i].resource == buf) {
+					if (images->views[i].access & PIPE_IMAGE_ACCESS_WRITE)
+						si_mark_image_range_valid(&images->views[i]);
 
-				si_desc_reset_buffer_offset(
-					ctx, descs->list + i * 8 + 4,
-					old_va, buf);
-				descs->dirty_mask |= 1u << i;
-				sctx->descriptors_dirty |=
-					1u << si_image_descriptors_idx(shader);
+					si_desc_reset_buffer_offset(
+						ctx, descs->list + i * 8 + 4,
+						old_va, buf);
+					descs->dirty_mask |= 1u << i;
+					sctx->descriptors_dirty |=
+						1u << si_image_descriptors_idx(shader);
 
-				radeon_add_to_buffer_list_check_mem(
-					&sctx->b, &sctx->b.gfx, rbuffer,
-					RADEON_USAGE_READWRITE,
-					RADEON_PRIO_SAMPLER_BUFFER, true);
+					radeon_add_to_buffer_list_check_mem(
+						&sctx->b, &sctx->b.gfx, rbuffer,
+						RADEON_USAGE_READWRITE,
+						RADEON_PRIO_SAMPLER_BUFFER, true);
+				}
 			}
 		}
 	}
