@@ -94,7 +94,7 @@ struct gen_device_info
     */
    unsigned num_slices;
    unsigned max_vs_threads;   /**< Maximum Vertex Shader threads */
-   unsigned max_hs_threads;   /**< Maximum Hull Shader threads */
+   unsigned max_tcs_threads;  /**< Maximum Hull Shader threads */
    unsigned max_ds_threads;   /**< Maximum Domain Shader threads */
    unsigned max_gs_threads;   /**< Maximum Geometry Shader threads. */
    /**
@@ -135,7 +135,7 @@ struct gen_device_info
       unsigned size;
       unsigned min_vs_entries;
       unsigned max_vs_entries;
-      unsigned max_hs_entries;
+      unsigned max_tcs_entries;
       unsigned min_ds_entries;
       unsigned max_ds_entries;
       unsigned max_gs_entries;

@@ -298,7 +298,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    /* Scratch space is used for register spilling */
    brw_alloc_stage_scratch(brw, stage_state,
                            prog_data.base.base.total_scratch,
-                           devinfo->max_hs_threads);
+                           devinfo->max_tcs_threads);
 
    brw_upload_cache(&brw->cache, BRW_CACHE_TCS_PROG,
                     key, sizeof(*key),

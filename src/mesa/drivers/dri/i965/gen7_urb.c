@@ -313,7 +313,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
          DIV_ROUND_UP(hs_granularity * hs_entry_size_bytes,
                       chunk_size_bytes);
       hs_wants =
-         DIV_ROUND_UP(devinfo->urb.max_hs_entries * hs_entry_size_bytes,
+         DIV_ROUND_UP(devinfo->urb.max_tcs_entries * hs_entry_size_bytes,
                       chunk_size_bytes) - hs_chunks;
 
       ds_chunks =
@@ -378,7 +378,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
     * than the maximum allowed amount, so correct for that.
     */
    nr_vs_entries = MIN2(nr_vs_entries, devinfo->urb.max_vs_entries);
-   nr_hs_entries = MIN2(nr_hs_entries, devinfo->urb.max_hs_entries);
+   nr_hs_entries = MIN2(nr_hs_entries, devinfo->urb.max_tcs_entries);
    nr_ds_entries = MIN2(nr_ds_entries, devinfo->urb.max_ds_entries);
    nr_gs_entries = MIN2(nr_gs_entries, devinfo->urb.max_gs_entries);
 

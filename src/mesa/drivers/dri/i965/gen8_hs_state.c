@@ -45,7 +45,7 @@ gen8_upload_hs_state(struct brw_context *brw)
                           GEN7_HS_BINDING_TABLE_ENTRY_COUNT));
       OUT_BATCH(GEN7_HS_ENABLE |
                 GEN7_HS_STATISTICS_ENABLE |
-                (devinfo->max_hs_threads - 1) << GEN8_HS_MAX_THREADS_SHIFT |
+                (devinfo->max_tcs_threads - 1) << GEN8_HS_MAX_THREADS_SHIFT |
                 SET_FIELD(brw->tcs.prog_data->instances - 1,
                           GEN7_HS_INSTANCE_COUNT));
       OUT_BATCH(stage_state->prog_offset);
