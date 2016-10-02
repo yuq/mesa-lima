@@ -217,7 +217,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
    /* Scratch space is used for register spilling */
    brw_alloc_stage_scratch(brw, stage_state,
                            prog_data.base.base.total_scratch,
-                           devinfo->max_ds_threads);
+                           devinfo->max_tes_threads);
 
    brw_upload_cache(&brw->cache, BRW_CACHE_TES_PROG,
                     key, sizeof(*key),

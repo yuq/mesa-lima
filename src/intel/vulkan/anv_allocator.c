@@ -950,7 +950,7 @@ anv_scratch_pool_alloc(struct anv_device *device, struct anv_scratch_pool *pool,
       uint32_t max_threads[] = {
          [MESA_SHADER_VERTEX]           = devinfo->max_vs_threads,
          [MESA_SHADER_TESS_CTRL]        = devinfo->max_tcs_threads,
-         [MESA_SHADER_TESS_EVAL]        = devinfo->max_ds_threads,
+         [MESA_SHADER_TESS_EVAL]        = devinfo->max_tes_threads,
          [MESA_SHADER_GEOMETRY]         = devinfo->max_gs_threads,
          [MESA_SHADER_FRAGMENT]         = devinfo->max_wm_threads,
          [MESA_SHADER_COMPUTE]          = scratch_ids_per_subslice * subslices,
