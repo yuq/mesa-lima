@@ -1455,6 +1455,8 @@ NineDevice9_GetRenderTargetData( struct NineDevice9 *This,
     DBG("This=%p pRenderTarget=%p pDestSurface=%p\n",
         This, pRenderTarget, pDestSurface);
 
+    user_assert(pRenderTarget && pDestSurface, D3DERR_INVALIDCALL);
+
     user_assert(dst->desc.Pool == D3DPOOL_SYSTEMMEM, D3DERR_INVALIDCALL);
     user_assert(src->desc.Pool == D3DPOOL_DEFAULT, D3DERR_INVALIDCALL);
 
