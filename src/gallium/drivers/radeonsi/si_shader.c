@@ -152,18 +152,10 @@ static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
  */
 #define VS_EPILOG_PRIMID_LOC 2
 
-#define PERSPECTIVE_BASE 0
-#define LINEAR_BASE 9
-
-#define SAMPLE_OFFSET 0
-#define CENTER_OFFSET 2
-#define CENTROID_OFSET 4
-
-#define USE_SGPR_MAX_SUFFIX_LEN 5
-#define CONST_ADDR_SPACE 2
-#define LOCAL_ADDR_SPACE 3
-#define USER_SGPR_ADDR_SPACE 8
-
+enum {
+	CONST_ADDR_SPACE = 2,
+	LOCAL_ADDR_SPACE = 3,
+};
 
 #define SENDMSG_GS 2
 #define SENDMSG_GS_DONE 3
