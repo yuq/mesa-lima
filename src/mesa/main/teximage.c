@@ -5046,6 +5046,8 @@ texture_buffer_range(struct gl_context *ctx,
                      GLintptr offset, GLsizeiptr size,
                      const char *caller)
 {
+   GLintptr oldOffset = texObj->BufferOffset;
+   GLsizeiptr oldSize = texObj->BufferSize;
    mesa_format format;
 
    /* NOTE: ARB_texture_buffer_object has interactions with
@@ -5077,6 +5079,17 @@ texture_buffer_range(struct gl_context *ctx,
       texObj->BufferSize = size;
    }
    _mesa_unlock_texture(ctx, texObj);
+
+   if (ctx->Driver.TexParameter) {
+      if (offset != oldOffset) {
+         ctx->Driver.TexParameter(ctx, texObj, GL_TEXTURE_BUFFER_OFFSET,
+                                  (const GLfloat *) &offset);
+      }
+      if (size != oldSize) {
+         ctx->Driver.TexParameter(ctx, texObj, GL_TEXTURE_BUFFER_SIZE,
+                                  (const GLfloat *) &size);
+      }
+   }
 
    ctx->NewDriverState |= ctx->DriverFlags.NewTextureBuffer;
 
