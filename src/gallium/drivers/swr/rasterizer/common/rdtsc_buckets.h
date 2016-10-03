@@ -55,17 +55,6 @@ public:
     void ClearThreads()
     {
         mThreadMutex.lock();
-        // close out the threadviz files if threadviz is enabled
-        if (KNOB_BUCKETS_ENABLE_THREADVIZ)
-        {
-            for (auto& thread : mThreads)
-            {
-                if (thread.vizFile != nullptr)
-                {
-                    fclose(thread.vizFile);
-                }
-            }
-        }
         mThreads.clear();
         mThreadMutex.unlock();
     }
@@ -87,9 +76,6 @@ public:
     /// @param desc - description of the bucket
     /// @return unique id
     UINT RegisterBucket(const BUCKET_DESC& desc);
-
-    // dump threadviz data
-    void DumpThreadViz();
 
     // print report
     void PrintReport(const std::string& filename);
@@ -134,17 +120,6 @@ public:
 
         uint64_t tsc = __rdtsc();
 
-        // if threadviz is enabled, only need to dump start info to threads viz file
-        if (mThreadViz)
-        {
-            SWR_ASSERT(bt.vizFile != nullptr);
-            if (mBuckets[id].enableThreadViz)
-            {
-                VIZ_START_DATA data{ VIZ_START, id, tsc };
-                Serialize(bt.vizFile, data);
-            }
-        }
-        else
         {
             if (bt.pCurrent->children.size() < mBuckets.size())
             {
@@ -176,16 +151,6 @@ public:
 
         uint64_t tsc = __rdtsc();
 
-        if (mThreadViz)
-        {
-            SWR_ASSERT(bt.vizFile != nullptr);
-            if (mBuckets[id].enableThreadViz)
-            {
-                VIZ_STOP_DATA data{ VIZ_STOP, tsc };
-                Serialize(bt.vizFile, data);
-            }
-        }
-        else
         {
             if (bt.pCurrent->start == 0) return;
             SWR_ASSERT(bt.pCurrent->id == id, "Mismatched buckets detected");
@@ -209,7 +174,6 @@ public:
         BUCKET_THREAD& bt = mThreads[tlsThreadId];
 
         // don't record events for threadviz
-        if (!mThreadViz)
         {
             if (bt.pCurrent->children.size() < mBuckets.size())
             {
@@ -240,8 +204,6 @@ private:
 
     std::mutex mThreadMutex;
 
-    // enable threadviz
-    bool mThreadViz{ false };
     std::string mThreadVizDir;
 
 };
