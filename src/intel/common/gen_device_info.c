@@ -487,7 +487,7 @@ static const struct gen_device_info gen_device_info_kbl_gt4 = {
    .num_slices = 3,
 };
 
-const bool
+bool
 gen_get_device_info(int devid, struct gen_device_info *devinfo)
 {
    switch (devid) {

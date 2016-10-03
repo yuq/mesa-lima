@@ -143,5 +143,5 @@ struct gen_device_info
    /** @} */
 };
 
-const bool gen_get_device_info(int devid, struct gen_device_info *devinfo);
+bool gen_get_device_info(int devid, struct gen_device_info *devinfo);
 const char *gen_get_device_name(int devid);
