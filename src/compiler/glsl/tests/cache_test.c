@@ -30,6 +30,7 @@
 #include <ftw.h>
 #include <errno.h>
 #include <stdarg.h>
+#include <inttypes.h>
 
 #include "util/mesa-sha1.h"
 #include "util/disk_cache.h"
@@ -42,7 +43,8 @@ static void
 expect_equal(uint64_t actual, uint64_t expected, const char *test)
 {
    if (actual != expected) {
-      fprintf(stderr, "Error: Test '%s' failed: Expected=%ld, Actual=%ld\n",
+      fprintf(stderr, "Error: Test '%s' failed: Expected=%" PRIu64
+              ", Actual=%" PRIu64 "\n",
               test, expected, actual);
       error = true;
    }
