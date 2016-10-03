@@ -124,6 +124,9 @@ fixup_shader_state(struct fd_context *ctx, struct ir3_shader_key *key)
 		if (last_key->half_precision != key->half_precision)
 			ctx->dirty |= FD_SHADER_DIRTY_FP;
 
+		if (last_key->ucp_enables != key->ucp_enables)
+			ctx->dirty |= FD_SHADER_DIRTY_FP | FD_SHADER_DIRTY_VP;
+
 		fd3_ctx->last_key = *key;
 	}
 }
