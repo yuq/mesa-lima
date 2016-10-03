@@ -232,7 +232,7 @@ genX(graphics_pipeline_create)(
             wm_prog_data->base.dispatch_grf_start_reg,
          ps.DispatchGRFStartRegisterforConstantSetupData1 = 0,
          ps.DispatchGRFStartRegisterforConstantSetupData2 =
-            wm_prog_data->dispatch_grf_start_reg_2,
+            wm_prog_data->dispatch_grf_start_reg_2;
 
          /* Haswell requires the sample mask to be set in this packet as well as
           * in 3DSTATE_SAMPLE_MASK; the values should match. */
