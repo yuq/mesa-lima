@@ -3031,8 +3031,9 @@ check_textarget(struct gl_context *ctx, int dims, GLenum target,
       err = dims != 3;
       break;
    default:
-      err = true;
-      break;
+      _mesa_error(ctx, GL_INVALID_ENUM,
+                  "%s(unknown textarget 0x%x)", caller, textarget);
+      return false;
    }
 
    if (err) {
