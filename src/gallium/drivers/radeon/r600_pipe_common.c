@@ -94,7 +94,7 @@ void r600_gfx_write_fence(struct r600_common_context *ctx, struct r600_resource 
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 				EVENT_INDEX(5));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
+		radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(1));
 		radeon_emit(cs, old_value); /* immediate data */
 		radeon_emit(cs, 0); /* unused */
 	}
@@ -103,7 +103,7 @@ void r600_gfx_write_fence(struct r600_common_context *ctx, struct r600_resource 
 	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 			EVENT_INDEX(5));
 	radeon_emit(cs, va);
-	radeon_emit(cs, (va >> 32) | EOP_DATA_SEL(1));
+	radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(1));
 	radeon_emit(cs, new_value); /* immediate data */
 	radeon_emit(cs, 0); /* unused */
 

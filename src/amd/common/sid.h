@@ -7761,7 +7761,7 @@
 #define     V_028A90_FLUSH_HS_OUTPUT                                0x11
 #define     V_028A90_FLUSH_LS_OUTPUT                                0x12
 #define     V_028A90_CACHE_FLUSH_AND_INV_TS_EVENT                   0x14
-#define     V_028A90_ZPASS_DONE                                     0x15 /* not on CIK */
+#define     V_028A90_ZPASS_DONE                                     0x15
 #define     V_028A90_CACHE_FLUSH_AND_INV_EVENT                      0x16
 #define     V_028A90_PERFCOUNTER_START                              0x17
 #define     V_028A90_PERFCOUNTER_STOP                               0x18

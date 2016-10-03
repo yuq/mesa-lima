@@ -560,7 +560,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (3 << 29) | ((va >> 32) & 0xFFFF));
+		radeon_emit(cs, EOP_DATA_SEL(3) | ((va >> 32) & 0xFFFF));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, 0);
 		break;
@@ -646,7 +646,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (3 << 29) | ((va >> 32) & 0xFFFF));
+		radeon_emit(cs, EOP_DATA_SEL(3) | ((va >> 32) & 0xFFFF));
 		radeon_emit(cs, 0);
 		radeon_emit(cs, 0);
 
