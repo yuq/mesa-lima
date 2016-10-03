@@ -771,7 +771,7 @@ private:
    bool coalesce(ArrayList&);
    bool doCoalesce(ArrayList&, unsigned int mask);
    void calculateSpillWeights();
-   void simplify();
+   bool simplify();
    bool selectRegisters();
    void cleanup(const bool success);
 
@@ -1305,7 +1305,7 @@ GCRA::simplifyNode(RIG_Node *node)
             (node->degree < node->degreeLimit) ? "" : "(spill)");
 }
 
-void
+bool
 GCRA::simplify()
 {
    for (;;) {
@@ -1330,11 +1330,11 @@ GCRA::simplify()
          }
          if (isinf(bestScore)) {
             ERROR("no viable spill candidates left\n");
-            break;
+            return false;
          }
          simplifyNode(best);
       } else {
-         break;
+         return true;
       }
    }
 }
@@ -1493,7 +1493,9 @@ GCRA::allocateRegisters(ArrayList& insns)
 
    buildRIG(insns);
    calculateSpillWeights();
-   simplify();
+   ret = simplify();
+   if (!ret)
+      goto out;
 
    ret = selectRegisters();
    if (!ret) {
