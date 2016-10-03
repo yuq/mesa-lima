@@ -781,7 +781,7 @@ vec4_visitor::emit_pull_constant_load_reg(dst_reg dst,
       else
          emit(pull);
 
-      dst_reg index_reg = retype(offset(dst_reg(header), 1),
+      dst_reg index_reg = retype(byte_offset(dst_reg(header), REG_SIZE),
                                  offset_reg.type);
       pull = MOV(writemask(index_reg, WRITEMASK_X), offset_reg);
 

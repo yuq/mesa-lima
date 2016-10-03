@@ -182,8 +182,9 @@ vec4_visitor::opt_cse_local(bblock_t *block)
                                            NULL), inst->dst.type);
 
                for (unsigned i = 0; i < regs_written(entry->generator); ++i) {
-                  vec4_instruction *copy = MOV(offset(entry->generator->dst, i),
-                                               offset(entry->tmp, i));
+                  vec4_instruction *copy =
+                     MOV(byte_offset(entry->generator->dst, i * REG_SIZE),
+                         byte_offset(entry->tmp, i * REG_SIZE));
                   copy->force_writemask_all =
                      entry->generator->force_writemask_all;
                   entry->generator->insert_after(block, copy);
@@ -197,8 +198,9 @@ vec4_visitor::opt_cse_local(bblock_t *block)
                assert(inst->dst.type == entry->tmp.type);
 
                for (unsigned i = 0; i < regs_written(inst); ++i) {
-                  vec4_instruction *copy = MOV(offset(inst->dst, i),
-                                               offset(entry->tmp, i));
+                  vec4_instruction *copy =
+                     MOV(byte_offset(inst->dst, i * REG_SIZE),
+                         byte_offset(entry->tmp, i * REG_SIZE));
                   copy->force_writemask_all = inst->force_writemask_all;
                   inst->insert_before(block, copy);
                }

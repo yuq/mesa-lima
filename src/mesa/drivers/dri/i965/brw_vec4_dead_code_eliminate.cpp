@@ -61,8 +61,9 @@ vec4_visitor::dead_code_eliminate()
             if (inst->dst.file == VGRF) {
                for (unsigned i = 0; i < regs_written(inst); i++) {
                   for (int c = 0; c < 4; c++)
-                     result_live[c] |= BITSET_TEST(
-                        live, var_from_reg(alloc, offset(inst->dst, i), c));
+                     result_live[c] |= BITSET_TEST(live,
+                        var_from_reg(alloc,
+                                     byte_offset(inst->dst, i * REG_SIZE), c));
                }
             } else {
                for (unsigned c = 0; c < 4; c++)
@@ -113,8 +114,11 @@ vec4_visitor::dead_code_eliminate()
             for (unsigned i = 0; i < regs_written(inst); i++) {
                for (int c = 0; c < 4; c++) {
                   if (inst->dst.writemask & (1 << c)) {
-                     BITSET_CLEAR(live, var_from_reg(alloc,
-                                                     offset(inst->dst, i), c));
+                     BITSET_CLEAR(live,
+                                  var_from_reg(alloc,
+                                               byte_offset(inst->dst,
+                                                           i * REG_SIZE),
+                                               c));
                   }
                }
             }
@@ -135,7 +139,9 @@ vec4_visitor::dead_code_eliminate()
                for (unsigned j = 0; j < regs_read(inst, i); j++) {
                   for (int c = 0; c < 4; c++) {
                      BITSET_SET(live, var_from_reg(alloc,
-                                                   offset(inst->src[i], j), c));
+                                                   byte_offset(inst->src[i],
+                                                               j * REG_SIZE),
+                                                   c));
                   }
                }
             }

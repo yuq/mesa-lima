@@ -240,7 +240,8 @@ vec4_tcs_visitor::emit_urb_write(const src_reg &value,
    inst = emit(TCS_OPCODE_SET_OUTPUT_URB_OFFSETS, dst_reg(message),
                brw_imm_ud(writemask), indirect_offset);
    inst->force_writemask_all = true;
-   inst = emit(MOV(offset(dst_reg(retype(message, value.type)), 1), value));
+   inst = emit(MOV(byte_offset(dst_reg(retype(message, value.type)), REG_SIZE),
+                   value));
    inst->force_writemask_all = true;
 
    inst = emit(TCS_OPCODE_URB_WRITE, dst_null_f(), message);

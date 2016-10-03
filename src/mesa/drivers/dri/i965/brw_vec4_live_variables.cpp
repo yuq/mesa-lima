@@ -79,7 +79,9 @@ vec4_live_variables::setup_def_use()
                for (unsigned j = 0; j < regs_read(inst, i); j++) {
                   for (int c = 0; c < 4; c++) {
                      const unsigned v =
-                        var_from_reg(alloc, offset(inst->src[i], j), c);
+                        var_from_reg(alloc,
+                                     byte_offset(inst->src[i], j * REG_SIZE),
+                                     c);
                      if (!BITSET_TEST(bd->def, v))
                         BITSET_SET(bd->use, v);
                   }
@@ -103,7 +105,8 @@ vec4_live_variables::setup_def_use()
                for (int c = 0; c < 4; c++) {
                   if (inst->dst.writemask & (1 << c)) {
                      const unsigned v =
-                        var_from_reg(alloc, offset(inst->dst, i), c);
+                        var_from_reg(alloc,
+                                     byte_offset(inst->dst, i * REG_SIZE), c);
                      if (!BITSET_TEST(bd->use, v))
                         BITSET_SET(bd->def, v);
                   }
@@ -260,7 +263,8 @@ vec4_visitor::calculate_live_intervals()
             for (unsigned j = 0; j < regs_read(inst, i); j++) {
                for (int c = 0; c < 4; c++) {
                   const unsigned v =
-                     var_from_reg(alloc, offset(inst->src[i], j), c);
+                     var_from_reg(alloc,
+                                  byte_offset(inst->src[i], j * REG_SIZE), c);
                   start[v] = MIN2(start[v], ip);
                   end[v] = ip;
                }
@@ -273,7 +277,8 @@ vec4_visitor::calculate_live_intervals()
             for (int c = 0; c < 4; c++) {
                if (inst->dst.writemask & (1 << c)) {
                   const unsigned v =
-                     var_from_reg(alloc, offset(inst->dst, i), c);
+                     var_from_reg(alloc,
+                                  byte_offset(inst->dst, i * REG_SIZE), c);
                   start[v] = MIN2(start[v], ip);
                   end[v] = ip;
                }
