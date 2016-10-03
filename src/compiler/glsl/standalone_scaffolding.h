@@ -42,6 +42,10 @@ extern "C" void
 _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
                        struct gl_shader *sh);
 
+extern "C" void
+_mesa_reference_program_(struct gl_context *ctx, struct gl_program **ptr,
+                         struct gl_program *prog);
+
 extern "C" struct gl_shader *
 _mesa_new_shader(GLuint name, gl_shader_stage stage);
 
