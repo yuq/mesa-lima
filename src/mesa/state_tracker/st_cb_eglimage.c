@@ -35,6 +35,8 @@
 #include "st_texture.h"
 #include "st_format.h"
 #include "st_manager.h"
+#include "st_sampler_view.h"
+
 
 /**
  * Return the base format just like _mesa_base_fbo_format does.

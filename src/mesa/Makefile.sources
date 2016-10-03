@@ -510,6 +510,8 @@ STATETRACKER_FILES = \
 	state_tracker/st_pbo.h \
 	state_tracker/st_program.c \
 	state_tracker/st_program.h \
+	state_tracker/st_sampler_view.c \
+	state_tracker/st_sampler_view.h \
 	state_tracker/st_scissor.c \
 	state_tracker/st_scissor.h \
 	state_tracker/st_texture.c \
