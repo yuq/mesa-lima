@@ -60,6 +60,49 @@ retype(src_reg reg, enum brw_reg_type type)
    return reg;
 }
 
+namespace detail {
+
+static inline void
+add_byte_offset(backend_reg *reg, unsigned bytes)
+{
+   switch (reg->file) {
+      case BAD_FILE:
+         break;
+      case VGRF:
+      case ATTR:
+      case UNIFORM:
+         reg->offset += bytes;
+         assert(reg->offset % 16 == 0);
+         break;
+      case MRF: {
+         const unsigned suboffset = reg->offset + bytes;
+         reg->nr += suboffset / REG_SIZE;
+         reg->offset = suboffset % REG_SIZE;
+         assert(reg->offset % 16 == 0);
+         break;
+      }
+      case ARF:
+      case FIXED_GRF: {
+         const unsigned suboffset = reg->subnr + bytes;
+         reg->nr += suboffset / REG_SIZE;
+         reg->subnr = suboffset % REG_SIZE;
+         assert(reg->subnr % 16 == 0);
+         break;
+      }
+      default:
+         assert(bytes == 0);
+   }
+}
+
+} /* namepace detail */
+
+static inline src_reg
+byte_offset(src_reg reg, unsigned bytes)
+{
+   detail::add_byte_offset(&reg, bytes);
+   return reg;
+}
+
 static inline src_reg
 offset(src_reg reg, unsigned delta)
 {
@@ -126,6 +169,13 @@ static inline dst_reg
 retype(dst_reg reg, enum brw_reg_type type)
 {
    reg.type = type;
+   return reg;
+}
+
+static inline dst_reg
+byte_offset(dst_reg reg, unsigned bytes)
+{
+   detail::add_byte_offset(&reg, bytes);
    return reg;
 }
 
