@@ -52,14 +52,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <GL/glx.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/* Forward declarations to avoid inclusion of GL/glx.h */
-typedef struct _XDisplay Display;
-typedef struct __GLXcontextRec *GLXContext;
 
 /* Forward declarations to avoid inclusion of EGL/egl.h */
 typedef void *EGLDisplay;
