@@ -104,12 +104,11 @@ byte_offset(src_reg reg, unsigned bytes)
 }
 
 static inline src_reg
-offset(src_reg reg, unsigned delta)
+offset(src_reg reg, unsigned width, unsigned delta)
 {
-   assert(delta == 0 ||
-          (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
-   reg.offset += delta * (reg.file == UNIFORM ? 16 : REG_SIZE);
-   return reg;
+   const unsigned stride = (reg.file == UNIFORM ? 0 : 4);
+   const unsigned num_components = MAX2(width / 4 * stride, 4);
+   return byte_offset(reg, num_components * type_sz(reg.type) * delta);
 }
 
 /**
@@ -180,12 +179,11 @@ byte_offset(dst_reg reg, unsigned bytes)
 }
 
 static inline dst_reg
-offset(dst_reg reg, unsigned delta)
+offset(dst_reg reg, unsigned width, unsigned delta)
 {
-   assert(delta == 0 ||
-          (reg.file != ARF && reg.file != FIXED_GRF && reg.file != IMM));
-   reg.offset += delta * (reg.file == UNIFORM ? 16 : REG_SIZE);
-   return reg;
+   const unsigned stride = (reg.file == UNIFORM ? 0 : 4);
+   const unsigned num_components = MAX2(width / 4 * stride, 4);
+   return byte_offset(reg, num_components * type_sz(reg.type) * delta);
 }
 
 static inline dst_reg
