@@ -80,10 +80,27 @@ void radeon_shader_binary_clean(struct radeon_shader_binary *b)
  * pipe_context
  */
 
-void r600_gfx_write_fence(struct r600_common_context *ctx, struct r600_resource *buf,
-			  uint64_t va, uint32_t old_value, uint32_t new_value)
+/**
+ * Write an EOP event.
+ *
+ * \param event		EVENT_TYPE_*
+ * \param event_flags	Optional cache flush flags (TC)
+ * \param data_sel	1 = fence, 3 = timestamp
+ * \param buf		Buffer
+ * \param va		GPU address
+ * \param old_value	Previous fence value (for a bug workaround)
+ * \param new_value	Fence value to write for this event.
+ */
+void r600_gfx_write_event_eop(struct r600_common_context *ctx,
+			      unsigned event, unsigned event_flags,
+			      unsigned data_sel,
+			      struct r600_resource *buf, uint64_t va,
+			      uint32_t old_fence, uint32_t new_fence)
 {
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
+	unsigned op = EVENT_TYPE(event) |
+		      EVENT_INDEX(5) |
+		      event_flags;
 
 	if (ctx->chip_class == CIK) {
 		/* Two EOP events are required to make all engines go idle
@@ -91,20 +108,18 @@ void r600_gfx_write_fence(struct r600_common_context *ctx, struct r600_resource 
 		 * is written.
 		 */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
-				EVENT_INDEX(5));
+		radeon_emit(cs, op);
 		radeon_emit(cs, va);
-		radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(1));
-		radeon_emit(cs, old_value); /* immediate data */
+		radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+		radeon_emit(cs, old_fence); /* immediate data */
 		radeon_emit(cs, 0); /* unused */
 	}
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-	radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
-			EVENT_INDEX(5));
+	radeon_emit(cs, op);
 	radeon_emit(cs, va);
-	radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(1));
-	radeon_emit(cs, new_value); /* immediate data */
+	radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+	radeon_emit(cs, new_fence); /* immediate data */
 	radeon_emit(cs, 0); /* unused */
 
 	r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE, RADEON_PRIO_QUERY);

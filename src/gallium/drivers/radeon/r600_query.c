@@ -671,7 +671,8 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 			RADEON_PRIO_QUERY);
 
 	if (fence_va)
-		r600_gfx_write_fence(ctx, query->buffer.buf, fence_va, 0, 0x80000000);
+		r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS, 0, 1,
+					 query->buffer.buf, fence_va, 0, 0x80000000);
 }
 
 static void r600_query_hw_emit_stop(struct r600_common_context *ctx,

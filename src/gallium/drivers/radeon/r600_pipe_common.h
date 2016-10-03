@@ -705,8 +705,11 @@ r600_invalidate_resource(struct pipe_context *ctx,
 			 struct pipe_resource *resource);
 
 /* r600_common_pipe.c */
-void r600_gfx_write_fence(struct r600_common_context *ctx, struct r600_resource *buf,
-			  uint64_t va, uint32_t old_value, uint32_t new_value);
+void r600_gfx_write_event_eop(struct r600_common_context *ctx,
+			      unsigned event, unsigned event_flags,
+			      unsigned data_sel,
+			      struct r600_resource *buf, uint64_t va,
+			      uint32_t old_fence, uint32_t new_fence);
 unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen);
 void r600_gfx_wait_fence(struct r600_common_context *ctx,
 			 uint64_t va, uint32_t ref, uint32_t mask);
