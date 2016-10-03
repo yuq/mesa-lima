@@ -82,7 +82,11 @@ copy_region_vgpu10(struct svga_context *svga, struct pipe_resource *src_tex,
       assert(ret == PIPE_OK);
    }
 
+   /* Mark the texture subresource as defined. */
    svga_define_texture_level(dtex, dst_face, dst_level);
+
+   /* Mark the texture subresource as rendered-to. */
+   svga_set_texture_rendered_to(dtex, dst_face, dst_level);
 }
 
 
