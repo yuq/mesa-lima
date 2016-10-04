@@ -5208,7 +5208,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 
 	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
-	for (chan = 0; chan < 2; chan++) {
+	for (chan = 0; chan < 4; chan++) {
 		LLVMValueRef args[4];
 		LLVMValueRef llvm_chan;
 		unsigned schan;
