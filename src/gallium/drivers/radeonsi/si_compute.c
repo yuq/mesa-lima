@@ -208,6 +208,7 @@ static void si_set_global_binding(
 static void si_initialize_compute(struct si_context *sctx)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	uint64_t bc_va;
 
 	radeon_set_sh_reg_seq(cs, R_00B810_COMPUTE_START_X, 3);
 	radeon_emit(cs, 0);
@@ -240,6 +241,17 @@ static void si_initialize_compute(struct si_context *sctx)
 
 		radeon_set_sh_reg(cs, R_00B82C_COMPUTE_MAX_WAVE_ID,
 		                  0x190 /* Default value */);
+	}
+
+	/* Set the pointer to border colors. */
+	bc_va = sctx->border_color_buffer->gpu_address;
+
+	if (sctx->b.chip_class >= CIK) {
+		radeon_set_uconfig_reg_seq(cs, R_030E00_TA_CS_BC_BASE_ADDR, 2);
+		radeon_emit(cs, bc_va >> 8);  /* R_030E00_TA_CS_BC_BASE_ADDR */
+		radeon_emit(cs, bc_va >> 40); /* R_030E04_TA_CS_BC_BASE_ADDR_HI */
+	} else {
+		radeon_set_config_reg(cs, R_00950C_TA_CS_BC_BASE_ADDR, bc_va >> 8);
 	}
 
 	sctx->cs_shader_state.emitted_program = NULL;
