@@ -364,7 +364,7 @@ brw_upload_tcs_prog(struct brw_context *brw)
    /* BRW_NEW_TESS_PROGRAMS */
    struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
-   struct brw_tess_eval_program *tep =
+   MAYBE_UNUSED struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
    assert(tep);
 
