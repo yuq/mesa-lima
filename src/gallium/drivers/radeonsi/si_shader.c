@@ -7285,54 +7285,6 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 		}
 	}
 
-	/* Interpolate colors. */
-	for (i = 0; i < 2; i++) {
-		unsigned writemask = (key->ps_prolog.colors_read >> (i * 4)) & 0xf;
-		unsigned face_vgpr = key->ps_prolog.num_input_sgprs +
-				     key->ps_prolog.face_vgpr_index;
-		LLVMValueRef interp[2], color[4];
-		LLVMValueRef interp_ij = NULL, prim_mask = NULL, face = NULL;
-
-		if (!writemask)
-			continue;
-
-		/* If the interpolation qualifier is not CONSTANT (-1). */
-		if (key->ps_prolog.color_interp_vgpr_index[i] != -1) {
-			unsigned interp_vgpr = key->ps_prolog.num_input_sgprs +
-					       key->ps_prolog.color_interp_vgpr_index[i];
-
-			/* Get the (i,j) updated by bc_optimize handling. */
-			interp[0] = LLVMBuildExtractValue(gallivm->builder, ret,
-							  interp_vgpr, "");
-			interp[1] = LLVMBuildExtractValue(gallivm->builder, ret,
-							  interp_vgpr + 1, "");
-			interp_ij = lp_build_gather_values(gallivm, interp, 2);
-			interp_ij = LLVMBuildBitCast(gallivm->builder, interp_ij,
-						     ctx.v2i32, "");
-		}
-
-		/* Use the absolute location of the input. */
-		prim_mask = LLVMGetParam(func, SI_PS_NUM_USER_SGPR);
-
-		if (key->ps_prolog.states.color_two_side) {
-			face = LLVMGetParam(func, face_vgpr);
-			face = LLVMBuildBitCast(gallivm->builder, face, ctx.i32, "");
-		}
-
-		interp_fs_input(&ctx,
-				key->ps_prolog.color_attr_index[i],
-				TGSI_SEMANTIC_COLOR, i,
-				key->ps_prolog.num_interp_inputs,
-				key->ps_prolog.colors_read, interp_ij,
-				prim_mask, face, color);
-
-		while (writemask) {
-			unsigned chan = u_bit_scan(&writemask);
-			ret = LLVMBuildInsertValue(gallivm->builder, ret, color[chan],
-						   num_params++, "");
-		}
-	}
-
 	/* Force per-sample interpolation. */
 	if (key->ps_prolog.states.force_persp_sample_interp) {
 		unsigned i, base = key->ps_prolog.num_input_sgprs;
@@ -7399,6 +7351,54 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 		for (i = 0; i < 2; i++)
 			ret = LLVMBuildInsertValue(gallivm->builder, ret,
 						   linear_center[i], base + 10 + i, "");
+	}
+
+	/* Interpolate colors. */
+	for (i = 0; i < 2; i++) {
+		unsigned writemask = (key->ps_prolog.colors_read >> (i * 4)) & 0xf;
+		unsigned face_vgpr = key->ps_prolog.num_input_sgprs +
+				     key->ps_prolog.face_vgpr_index;
+		LLVMValueRef interp[2], color[4];
+		LLVMValueRef interp_ij = NULL, prim_mask = NULL, face = NULL;
+
+		if (!writemask)
+			continue;
+
+		/* If the interpolation qualifier is not CONSTANT (-1). */
+		if (key->ps_prolog.color_interp_vgpr_index[i] != -1) {
+			unsigned interp_vgpr = key->ps_prolog.num_input_sgprs +
+					       key->ps_prolog.color_interp_vgpr_index[i];
+
+			/* Get the (i,j) updated by bc_optimize handling. */
+			interp[0] = LLVMBuildExtractValue(gallivm->builder, ret,
+							  interp_vgpr, "");
+			interp[1] = LLVMBuildExtractValue(gallivm->builder, ret,
+							  interp_vgpr + 1, "");
+			interp_ij = lp_build_gather_values(gallivm, interp, 2);
+			interp_ij = LLVMBuildBitCast(gallivm->builder, interp_ij,
+						     ctx.v2i32, "");
+		}
+
+		/* Use the absolute location of the input. */
+		prim_mask = LLVMGetParam(func, SI_PS_NUM_USER_SGPR);
+
+		if (key->ps_prolog.states.color_two_side) {
+			face = LLVMGetParam(func, face_vgpr);
+			face = LLVMBuildBitCast(gallivm->builder, face, ctx.i32, "");
+		}
+
+		interp_fs_input(&ctx,
+				key->ps_prolog.color_attr_index[i],
+				TGSI_SEMANTIC_COLOR, i,
+				key->ps_prolog.num_interp_inputs,
+				key->ps_prolog.colors_read, interp_ij,
+				prim_mask, face, color);
+
+		while (writemask) {
+			unsigned chan = u_bit_scan(&writemask);
+			ret = LLVMBuildInsertValue(gallivm->builder, ret, color[chan],
+						   num_params++, "");
+		}
 	}
 
 	/* Tell LLVM to insert WQM instruction sequence when needed. */
