@@ -387,6 +387,17 @@ fi
 AM_CONDITIONAL([SSE41_SUPPORTED], [test x$SSE41_SUPPORTED = x1])
 AC_SUBST([SSE41_CFLAGS], $SSE41_CFLAGS)
 
+dnl Check for new-style atomic builtins
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+int main() {
+    int n;
+    return __atomic_load_n(&n, __ATOMIC_ACQUIRE);
+}]])], GCC_ATOMIC_BUILTINS_SUPPORTED=1)
+if test "x$GCC_ATOMIC_BUILTINS_SUPPORTED" = x1; then
+    DEFINES="$DEFINES -DUSE_GCC_ATOMIC_BUILTINS"
+fi
+AM_CONDITIONAL([GCC_ATOMIC_BUILTINS_SUPPORTED], [test x$GCC_ATOMIC_BUILTINS_SUPPORTED = x1])
+
 dnl Check for Endianness
 AC_C_BIGENDIAN(
    little_endian=no,
