@@ -626,6 +626,7 @@ struct brw_vue_prog_data {
    GLuint urb_read_length;
    GLuint total_grf;
 
+   uint32_t clip_distance_mask;
    uint32_t cull_distance_mask;
 
    /* Used for calculating urb partitions.  In the VS, this is the size of the

@@ -1376,6 +1376,8 @@ brw_compile_tes(const struct brw_compiler *compiler,
       return NULL;
    }
 
+   prog_data->base.clip_distance_mask =
+      ((1 << nir->info->clip_distance_array_size) - 1);
    prog_data->base.cull_distance_mask =
       ((1 << nir->info->cull_distance_array_size) - 1) <<
       nir->info->clip_distance_array_size;

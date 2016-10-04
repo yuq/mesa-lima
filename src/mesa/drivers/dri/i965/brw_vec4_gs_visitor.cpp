@@ -621,6 +621,8 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    brw_nir_lower_vue_outputs(shader, is_scalar);
    shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
+   prog_data->base.clip_distance_mask =
+      ((1 << shader->info->clip_distance_array_size) - 1);
    prog_data->base.cull_distance_mask =
       ((1 << shader->info->cull_distance_array_size) - 1) <<
       shader->info->clip_distance_array_size;

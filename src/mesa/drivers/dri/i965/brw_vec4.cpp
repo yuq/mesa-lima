@@ -2121,6 +2121,8 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 
    const unsigned *assembly = NULL;
 
+   prog_data->base.clip_distance_mask =
+      ((1 << shader->info->clip_distance_array_size) - 1);
    prog_data->base.cull_distance_mask =
       ((1 << shader->info->cull_distance_array_size) - 1) <<
       shader->info->clip_distance_array_size;
