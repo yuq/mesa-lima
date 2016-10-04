@@ -2443,10 +2443,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityInterpolationFunction:
       case SpvCapabilityMultiViewport:
       case SpvCapabilitySampleRateShading:
-         break;
-
       case SpvCapabilityClipDistance:
       case SpvCapabilityCullDistance:
+         break;
+
       case SpvCapabilityGeometryStreams:
       case SpvCapabilityTessellation:
       case SpvCapabilityTessellationPointSize:
