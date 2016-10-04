@@ -1110,7 +1110,11 @@ dd_after_draw(struct dd_context *dctx, struct dd_call *call)
       case DD_DUMP_ALL_CALLS:
          if (!dscreen->no_flush)
             pipe->flush(pipe, NULL, 0);
-         dd_write_report(dctx, call, 0, false);
+         dd_write_report(dctx, call,
+                         PIPE_DUMP_CURRENT_STATES |
+                         PIPE_DUMP_CURRENT_SHADERS |
+                         PIPE_DUMP_LAST_COMMAND_BUFFER,
+                         false);
          break;
       case DD_DUMP_APITRACE_CALL:
          if (dscreen->apitrace_dump_call ==
