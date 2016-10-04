@@ -76,10 +76,6 @@ struct NineDevice9
     boolean is_recording;
     boolean in_scene;
 
-    boolean prefer_user_constbuf;
-
-    struct pipe_resource *constbuf_vs;
-    struct pipe_resource *constbuf_ps;
     uint16_t vs_const_size;
     uint16_t ps_const_size;
     uint16_t max_vs_const_f;

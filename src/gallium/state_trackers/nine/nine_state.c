@@ -79,157 +79,6 @@ prepare_rasterizer(struct NineDevice9 *device)
 }
 
 static void
-prepare_ps_constants_userbuf(struct NineDevice9 *device);
-
-#define DO_UPLOAD_CONST_F(buf,p,c,d) \
-    do { \
-        DBG("upload ConstantF [%u .. %u]\n", x, (x) + (c) - 1); \
-        box.x = (p) * 4 * sizeof(float); \
-        box.width = (c) * 4 * sizeof(float); \
-        pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, &((d)[p * 4])); \
-    } while(0)
-
-/* OK, this is a bit ugly ... */
-static void
-upload_constants(struct NineDevice9 *device, unsigned shader_type)
-{
-    struct pipe_context *pipe = device->pipe;
-    struct pipe_resource *buf;
-    struct pipe_box box;
-    const void *data;
-    const float *const_f;
-    const int *const_i;
-    const BOOL *const_b;
-    uint32_t data_b[NINE_MAX_CONST_B];
-    uint16_t dirty_i;
-    uint16_t dirty_b;
-    const unsigned usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE;
-    unsigned x = 0; /* silence warning */
-    unsigned i, c;
-    struct nine_range *r, *p, *lconstf_ranges;
-    float *lconstf_data;
-
-    box.y = 0;
-    box.z = 0;
-    box.height = 1;
-    box.depth = 1;
-
-    if (shader_type == PIPE_SHADER_VERTEX) {
-        DBG("VS\n");
-        buf = device->constbuf_vs;
-
-        const_f = device->state.vs_const_f;
-        for (p = r = device->state.changed.vs_const_f; r; p = r, r = r->next)
-            DO_UPLOAD_CONST_F(buf, r->bgn, r->end - r->bgn, const_f);
-        if (p) {
-            nine_range_pool_put_chain(&device->range_pool,
-                                      device->state.changed.vs_const_f, p);
-            device->state.changed.vs_const_f = NULL;
-        }
-
-        dirty_i = device->state.changed.vs_const_i;
-        device->state.changed.vs_const_i = 0;
-        const_i = &device->state.vs_const_i[0][0];
-
-        dirty_b = device->state.changed.vs_const_b;
-        device->state.changed.vs_const_b = 0;
-        const_b = device->state.vs_const_b;
-
-        lconstf_ranges = device->state.vs->lconstf.ranges;
-        lconstf_data = device->state.vs->lconstf.data;
-
-        device->state.changed.group &= ~NINE_STATE_VS_CONST;
-    } else {
-        DBG("PS\n");
-        /* features only implemented on the userbuf path */
-        if (device->state.ps->bumpenvmat_needed || (
-            device->state.ps->byte_code.version < 0x30 &&
-            device->state.rs[D3DRS_FOGENABLE])) {
-            device->prefer_user_constbuf = TRUE;
-            prepare_ps_constants_userbuf(device);
-            return;
-        }
-        buf = device->constbuf_ps;
-
-        const_f = device->state.ps_const_f;
-        for (p = r = device->state.changed.ps_const_f; r; p = r, r = r->next)
-            DO_UPLOAD_CONST_F(buf, r->bgn, r->end - r->bgn, const_f);
-        if (p) {
-            nine_range_pool_put_chain(&device->range_pool,
-                                      device->state.changed.ps_const_f, p);
-            device->state.changed.ps_const_f = NULL;
-        }
-
-        dirty_i = device->state.changed.ps_const_i;
-        device->state.changed.ps_const_i = 0;
-        const_i = &device->state.ps_const_i[0][0];
-
-        dirty_b = device->state.changed.ps_const_b;
-        device->state.changed.ps_const_b = 0;
-        const_b = device->state.ps_const_b;
-
-        lconstf_ranges = NULL;
-        lconstf_data = NULL;
-
-        device->state.changed.group &= ~NINE_STATE_PS_CONST;
-    }
-
-    /* write range from min to max changed, it's not much data */
-    /* bool1 */
-    if (dirty_b) {
-       c = util_last_bit(dirty_b);
-       i = ffs(dirty_b) - 1;
-       x = buf->width0 - (NINE_MAX_CONST_B - i) * 4;
-       c -= i;
-       memcpy(data_b, &(const_b[i]), c * sizeof(uint32_t));
-       box.x = x;
-       box.width = c * 4;
-       DBG("upload ConstantB [%u .. %u]\n", x, x + c - 1);
-       pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data_b);
-    }
-
-    /* int4 */
-    for (c = 0, i = 0; dirty_i; i++, dirty_i >>= 1) {
-        if (dirty_i & 1) {
-            if (!c)
-                x = i;
-            ++c;
-        } else
-        if (c) {
-            DBG("upload ConstantI [%u .. %u]\n", x, x + c - 1);
-            data = &const_i[x * 4];
-            box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
-            box.x += x * 4 * sizeof(int);
-            box.width = c * 4 * sizeof(int);
-            c = 0;
-            pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data);
-        }
-    }
-    if (c) {
-        DBG("upload ConstantI [%u .. %u]\n", x, x + c - 1);
-        data = &const_i[x * 4];
-        box.x  = buf->width0 - (NINE_MAX_CONST_I * 4 + NINE_MAX_CONST_B) * 4;
-        box.x += x * 4 * sizeof(int);
-        box.width = c * 4 * sizeof(int);
-        pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data);
-    }
-
-    /* TODO: only upload these when shader itself changes */
-    if (lconstf_ranges) {
-        unsigned n = 0;
-        struct nine_range *r = lconstf_ranges;
-        while (r) {
-            box.x = r->bgn * 4 * sizeof(float);
-            n += r->end - r->bgn;
-            box.width = (r->end - r->bgn) * 4 * sizeof(float);
-            data = &lconstf_data[4 * n];
-            pipe->buffer_subdata(pipe, buf, usage, box.x, box.width, data);
-            r = r->next;
-        }
-    }
-}
-
-static void
 prepare_vs_constants_userbuf(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
@@ -1026,17 +875,10 @@ nine_update_state(struct NineDevice9 *device)
             prepare_rasterizer(device);
         if (group & (NINE_STATE_TEXTURE | NINE_STATE_SAMPLER))
             update_textures_and_samplers(device);
-        if (device->prefer_user_constbuf) {
-            if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->programmable_vs)
-                prepare_vs_constants_userbuf(device);
-            if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
-                prepare_ps_constants_userbuf(device);
-        } else {
-            if ((group & NINE_STATE_VS_CONST) && state->programmable_vs)
-                upload_constants(device, PIPE_SHADER_VERTEX);
-            if ((group & NINE_STATE_PS_CONST) && state->ps)
-                upload_constants(device, PIPE_SHADER_FRAGMENT);
-        }
+        if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS)) && state->programmable_vs)
+            prepare_vs_constants_userbuf(device);
+        if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
+            prepare_ps_constants_userbuf(device);
     }
 
     if (state->changed.vtxbuf)
@@ -1316,23 +1158,6 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     if (!is_reset) {
         state->dummy_vbo_bound_at = -1;
         state->vbo_bound_done = FALSE;
-    }
-
-    if (!device->prefer_user_constbuf) {
-        /* fill cb_vs and cb_ps for the non user constbuf path */
-        struct pipe_constant_buffer cb;
-
-        cb.buffer_offset = 0;
-        cb.buffer_size = device->vs_const_size;
-        cb.buffer = device->constbuf_vs;
-        cb.user_buffer = NULL;
-        state->pipe.cb_vs = cb;
-
-        cb.buffer_size = device->ps_const_size;
-        cb.buffer = device->constbuf_ps;
-        state->pipe.cb_ps = cb;
-
-        state->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
     }
 }
 

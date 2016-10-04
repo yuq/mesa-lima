@@ -302,9 +302,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
     /* Create constant buffers. */
     {
-        struct pipe_resource tmpl;
         unsigned max_const_vs, max_const_ps;
-        memset(&tmpl, 0, sizeof(tmpl));
 
         /* vs 3.0: >= 256 float constants, but for cards with exactly 256 slots,
          * we have to take in some more slots for int and bool*/
@@ -336,29 +334,6 @@ NineDevice9_ctor( struct NineDevice9 *This,
             strstr(pScreen->get_name(pScreen), "ATI")) {
             This->driver_bugs.buggy_barycentrics = TRUE;
         }
-
-        /* Disable NV path for now, needs some fixes */
-        This->prefer_user_constbuf = TRUE;
-
-        tmpl.target = PIPE_BUFFER;
-        tmpl.format = PIPE_FORMAT_R8_UNORM;
-        tmpl.height0 = 1;
-        tmpl.depth0 = 1;
-        tmpl.array_size = 1;
-        tmpl.last_level = 0;
-        tmpl.nr_samples = 0;
-        tmpl.usage = PIPE_USAGE_DYNAMIC;
-        tmpl.bind = PIPE_BIND_CONSTANT_BUFFER;
-        tmpl.flags = 0;
-
-        tmpl.width0 = This->vs_const_size;
-        This->constbuf_vs = pScreen->resource_create(pScreen, &tmpl);
-
-        tmpl.width0 = This->ps_const_size;
-        This->constbuf_ps = pScreen->resource_create(pScreen, &tmpl);
-
-        if (!This->constbuf_vs || !This->constbuf_ps)
-            return E_OUTOFMEMORY;
     }
 
     /* allocate dummy texture/sampler for when there are missing ones bound */
@@ -479,8 +454,6 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     pipe_sampler_view_reference(&This->dummy_sampler_view, NULL);
     pipe_resource_reference(&This->dummy_texture, NULL);
-    pipe_resource_reference(&This->constbuf_vs, NULL);
-    pipe_resource_reference(&This->constbuf_ps, NULL);
     pipe_resource_reference(&This->dummy_vbo, NULL);
     FREE(This->state.vs_const_f);
     FREE(This->state.ps_const_f);
