@@ -835,48 +835,51 @@ handle_trace_block(struct gen_spec *spec, uint32_t *p)
 }
 
 struct aub_file {
-   char *filename;
-   int fd;
-   struct stat sb;
+   FILE *stream;
+
    uint32_t *map, *end, *cursor;
+   uint32_t *mem_end;
 };
 
 static struct aub_file *
 aub_file_open(const char *filename)
 {
    struct aub_file *file;
+   struct stat sb;
+   int fd;
 
-   file = malloc(sizeof *file);
-   file->filename = strdup(filename);
-   file->fd = open(file->filename, O_RDONLY);
-   if (file->fd == -1) {
-      fprintf(stderr, "open %s failed: %s\n", file->filename, strerror(errno));
+   file = calloc(1, sizeof *file);
+   fd = open(filename, O_RDONLY);
+   if (fd == -1) {
+      fprintf(stderr, "open %s failed: %s\n", filename, strerror(errno));
       exit(EXIT_FAILURE);
    }
 
-   if (fstat(file->fd, &file->sb) == -1) {
+   if (fstat(fd, &sb) == -1) {
       fprintf(stderr, "stat failed: %s\n", strerror(errno));
       exit(EXIT_FAILURE);
    }
 
-   file->map = mmap(NULL, file->sb.st_size,
-                    PROT_READ, MAP_SHARED, file->fd, 0);
+   file->map = mmap(NULL, sb.st_size,
+                    PROT_READ, MAP_SHARED, fd, 0);
    if (file->map == MAP_FAILED) {
       fprintf(stderr, "mmap failed: %s\n", strerror(errno));
       exit(EXIT_FAILURE);
    }
 
    file->cursor = file->map;
-   file->end = file->map + file->sb.st_size / 4;
+   file->end = file->map + sb.st_size / 4;
 
-   /* mmap a terabyte for our gtt space. */
-   gtt_size = 1ul << 40;
-   gtt = mmap(NULL, gtt_size, PROT_READ | PROT_WRITE,
-              MAP_PRIVATE | MAP_ANONYMOUS |  MAP_NORESERVE, -1, 0);
-   if (gtt == MAP_FAILED) {
-      fprintf(stderr, "failed to alloc gtt space: %s\n", strerror(errno));
-      exit(1);
-   }
+   return file;
+}
+
+static struct aub_file *
+aub_file_stdin(void)
+{
+   struct aub_file *file;
+
+   file = calloc(1, sizeof *file);
+   file->stream = stdin;
 
    return file;
 }
@@ -926,11 +929,20 @@ struct {
    { "bxt", MAKE_GEN(9, 0) }
 };
 
-static void
+enum {
+   AUB_ITEM_DECODE_OK,
+   AUB_ITEM_DECODE_FAILED,
+   AUB_ITEM_DECODE_NEED_MORE_DATA,
+};
+
+static int
 aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
 {
-   uint32_t *p, h, device, data_type;
+   uint32_t *p, h, device, data_type, *new_cursor;
    int header_length, payload_size, bias;
+
+   if (file->end - file->cursor < 12)
+      return AUB_ITEM_DECODE_NEED_MORE_DATA;
 
    p = file->cursor;
    h = *p;
@@ -947,8 +959,7 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
       printf("unknown opcode %d at %td/%td\n",
              OPCODE(h), file->cursor - file->map,
              file->end - file->map);
-      file->cursor = file->end;
-      return;
+      return AUB_ITEM_DECODE_FAILED;
    }
 
    payload_size = 0;
@@ -960,9 +971,22 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
       payload_size = p[4];
       handle_trace_block(spec, p);
       break;
+   default:
+      break;
+   }
+
+   new_cursor = p + header_length + bias + payload_size / 4;
+   if (new_cursor > file->end)
+      return AUB_ITEM_DECODE_NEED_MORE_DATA;
+
+   switch (h & 0xffff0000) {
+   case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_HEADER):
+      break;
+   case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK):
+      handle_trace_block(spec, p);
+      break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BMP):
       break;
-
    case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_VERSION):
       printf("version block: dw1 %08x\n", p[1]);
       device = (p[1] >> 8) & 0xff;
@@ -988,13 +1012,57 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
              "subopcode=0x%x (%08x)\n", TYPE(h), OPCODE(h), SUBOPCODE(h), h);
       break;
    }
-   file->cursor = p + header_length + bias + payload_size / 4;
+   file->cursor = new_cursor;
+
+   return AUB_ITEM_DECODE_OK;
 }
 
 static int
 aub_file_more_stuff(struct aub_file *file)
 {
-   return file->cursor < file->end;
+   return file->cursor < file->end || (file->stream && !feof(file->stream));
+}
+
+#define AUB_READ_BUFFER_SIZE (4096)
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+
+static void
+aub_file_data_grow(struct aub_file *file)
+{
+   size_t old_size = (file->mem_end - file->map) * 4;
+   size_t new_size = MAX(old_size * 2, AUB_READ_BUFFER_SIZE);
+   uint32_t *new_start = realloc(file->map, new_size);
+
+   file->cursor = new_start + (file->cursor - file->map);
+   file->end = new_start + (file->end - file->map);
+   file->map = new_start;
+   file->mem_end = file->map + (new_size / 4);
+}
+
+static bool
+aub_file_data_load(struct aub_file *file)
+{
+   size_t r;
+
+   if (file->stream == NULL)
+      return false;
+
+   /* First remove any consumed data */
+   if (file->cursor > file->map) {
+      memmove(file->map, file->cursor,
+              (file->end - file->cursor) * 4);
+      file->end -= file->cursor - file->map;
+      file->cursor = file->map;
+   }
+
+   /* Then load some new data in */
+   if ((file->mem_end - file->end) < (AUB_READ_BUFFER_SIZE / 4))
+      aub_file_data_grow(file);
+
+   r = fread(file->end, 1, (file->mem_end - file->end) * 4, file->stream);
+   file->end += r / 4;
+
+   return r != 0;
 }
 
 static void
@@ -1028,8 +1096,8 @@ static void
 print_help(const char *progname, FILE *file)
 {
    fprintf(file,
-           "Usage: %s [OPTION]... FILE\n"
-           "Decode aub file contents.\n\n"
+           "Usage: %s [OPTION]... [FILE]\n"
+           "Decode aub file contents from either FILE or the standard input.\n\n"
            "A valid --gen option must be provided.\n\n"
            "      --help          display this help and exit\n"
            "      --gen=platform  decode for given platform (ivb, byt, hsw, bdw, chv, skl, kbl or bxt)\n"
@@ -1145,15 +1213,40 @@ int main(int argc, char *argv[])
    if (spec == NULL || disasm == NULL)
       exit(EXIT_FAILURE);
 
-   if (input_file == NULL) {
-       print_help(input_file, stderr);
-       exit(EXIT_FAILURE);
-   } else {
-       file = aub_file_open(input_file);
+   if (input_file == NULL)
+      file = aub_file_stdin();
+   else
+      file = aub_file_open(input_file);
+
+   /* mmap a terabyte for our gtt space. */
+   gtt_size = 1ul << 40;
+   gtt = mmap(NULL, gtt_size, PROT_READ | PROT_WRITE,
+              MAP_PRIVATE | MAP_ANONYMOUS |  MAP_NORESERVE, -1, 0);
+   if (gtt == MAP_FAILED) {
+      fprintf(stderr, "failed to alloc gtt space: %s\n", strerror(errno));
+      exit(EXIT_FAILURE);
    }
 
-   while (aub_file_more_stuff(file))
-      aub_file_decode_batch(file, spec);
+   while (aub_file_more_stuff(file)) {
+      switch (aub_file_decode_batch(file, spec)) {
+      case AUB_ITEM_DECODE_OK:
+         break;
+      case AUB_ITEM_DECODE_NEED_MORE_DATA:
+         if (!file->stream) {
+            file->cursor = file->end;
+            break;
+         }
+         if (aub_file_more_stuff(file) && !aub_file_data_load(file)) {
+            fprintf(stderr, "failed to load data from stdin\n");
+            exit(EXIT_FAILURE);
+         }
+         break;
+      default:
+         fprintf(stderr, "failed to parse aubdump data\n");
+         exit(EXIT_FAILURE);
+      }
+   }
+
 
    fflush(stdout);
    /* close the stdout which is opened to write the output */
