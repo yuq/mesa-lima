@@ -2262,9 +2262,8 @@ gen7_block_read_scratch(struct brw_codegen *p,
                         int num_regs,
                         unsigned offset)
 {
-   const struct gen_device_info *devinfo = p->devinfo;
    brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
-   assert(brw_inst_pred_control(devinfo, insn) == BRW_PREDICATE_NONE);
+   assert(brw_inst_pred_control(p->devinfo, insn) == BRW_PREDICATE_NONE);
 
    brw_set_dest(p, insn, retype(dest, BRW_REGISTER_TYPE_UW));
 
