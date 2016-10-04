@@ -1376,6 +1376,10 @@ brw_compile_tes(const struct brw_compiler *compiler,
       return NULL;
    }
 
+   prog_data->base.cull_distance_mask =
+      ((1 << nir->info->cull_distance_array_size) - 1) <<
+      nir->info->clip_distance_array_size;
+
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
 

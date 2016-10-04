@@ -2121,6 +2121,10 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
 
    const unsigned *assembly = NULL;
 
+   prog_data->base.cull_distance_mask =
+      ((1 << shader->info->cull_distance_array_size) - 1) <<
+      shader->info->clip_distance_array_size;
+
    unsigned nr_attributes = _mesa_bitcount_64(prog_data->inputs_read);
 
    /* gl_VertexID and gl_InstanceID are system values, but arrive via an

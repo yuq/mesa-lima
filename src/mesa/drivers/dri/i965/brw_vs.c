@@ -156,10 +156,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
       prog_data.inputs_read |= VERT_BIT_EDGEFLAG;
    }
 
-   prog_data.base.cull_distance_mask =
-      ((1 << vp->program.CullDistanceArraySize) - 1) <<
-      vp->program.ClipDistanceArraySize;
-
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
                        prog ? prog->SeparateShader ||
