@@ -941,7 +941,7 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
       bias = 1;
       break;
    default:
-      printf("unknown opcode %d at %ld/%ld\n",
+      printf("unknown opcode %d at %td/%td\n",
              OPCODE(h), file->cursor - file->map,
              file->end - file->map);
       file->cursor = file->end;
