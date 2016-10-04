@@ -1054,7 +1054,7 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
          is_vertex_input = false;
          location += VARYING_SLOT_VAR0;
       } else {
-         assert(!"Location must be on input or output variable");
+         unreachable("Location must be on input or output variable");
       }
 
       if (vtn_var->var) {
