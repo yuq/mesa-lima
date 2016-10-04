@@ -30,6 +30,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
@@ -96,7 +97,7 @@ print_dword_val(struct gen_field_iterator *iter, uint64_t offset,
    const int dword = f->start / 32;
 
    if (*dword_num != dword) {
-      printf("0x%08lx:  0x%08x : Dword %d\n",
+      printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
              offset + 4 * dword,  iter->p[dword], dword);
       *dword_num = dword;
    }
@@ -296,10 +297,10 @@ handle_media_interface_descriptor_load(struct gen_spec *spec, uint32_t *p)
 
       start = instruction_base + descriptors[0];
       if (!valid_offset(start)) {
-         printf("kernel: %08lx <not valid>\n", start);
+         printf("kernel: %08"PRIx64" <not valid>\n", start);
          continue;
       } else {
-         printf("kernel: %08lx\n", start);
+         printf("kernel: %08"PRIx64"\n", start);
       }
 
       insns = (struct brw_instruction *) (gtt + start);
@@ -397,7 +398,7 @@ handle_3dstate_vs(struct gen_spec *spec, uint32_t *p)
    }
 
    if (vs_enable) {
-      printf("instruction_base %08lx, start %08lx\n",
+      printf("instruction_base %08"PRIx64", start %08"PRIx64"\n",
              instruction_base, start);
 
       insns = (struct brw_instruction *) (gtt + instruction_base + start);
@@ -421,7 +422,7 @@ handle_3dstate_hs(struct gen_spec *spec, uint32_t *p)
    hs_enable = p[2] & 0x80000000;
 
    if (hs_enable) {
-      printf("instruction_base %08lx, start %08lx\n",
+      printf("instruction_base %08"PRIx64", start %08"PRIx64"\n",
              instruction_base, start);
 
       insns = (struct brw_instruction *) (gtt + instruction_base + start);
@@ -739,7 +740,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
       else
          offset = 0;
 
-      printf("%s0x%08lx:  0x%08x:  %s%s\n",
+      printf("%s0x%08"PRIx64":  0x%08x:  %s%s\n",
              color, offset, p[0],
              gen_group_get_name(inst), reset_color);
 
@@ -754,7 +755,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
             if (dword_num > 0)
                 token = print_iterator_values(&iter, &idx);
             if (token != NULL) {
-                printf("0x%08lx:  0x%08x : Dword %d\n",
+                printf("0x%08"PRIx64":  0x%08x : Dword %d\n",
                        offset + 4 * idx, p[idx], idx);
                 handle_struct_decode(spec,token, &p[idx]);
                 token = NULL;
@@ -971,7 +972,7 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_NEW_AUB, SUBOPCODE_MEM_WRITE):
       printf("memory write block (dwords %d):\n", h & 0xffff);
-      printf("  address 0x%lx\n", *(uint64_t *) &p[1]);
+      printf("  address 0x%"PRIx64"\n", *(uint64_t *) &p[1]);
       data_type = (p[3] >> 20) & 0xff;
       if (data_type != 0)
          printf("  data type 0x%x\n", data_type);

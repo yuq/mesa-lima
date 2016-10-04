@@ -27,6 +27,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <expat.h>
+#include <inttypes.h>
 
 #include <util/macros.h>
 
@@ -529,11 +530,11 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    case GEN_TYPE_UNKNOWN:
    case GEN_TYPE_INT:
       snprintf(iter->value, sizeof(iter->value),
-               "%ld", field(v.qw, f->start, f->end));
+               "%"PRId64, field(v.qw, f->start, f->end));
       break;
    case GEN_TYPE_UINT:
       snprintf(iter->value, sizeof(iter->value),
-               "%lu", field(v.qw, f->start, f->end));
+               "%"PRIu64, field(v.qw, f->start, f->end));
       break;
    case GEN_TYPE_BOOL:
       snprintf(iter->value, sizeof(iter->value),
@@ -545,7 +546,7 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    case GEN_TYPE_ADDRESS:
    case GEN_TYPE_OFFSET:
       snprintf(iter->value, sizeof(iter->value),
-               "0x%08lx", field_address(v.qw, f->start, f->end));
+               "0x%08"PRIx64, field_address(v.qw, f->start, f->end));
       break;
    case GEN_TYPE_STRUCT:
       snprintf(iter->value, sizeof(iter->value),
