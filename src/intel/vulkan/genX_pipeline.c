@@ -805,6 +805,19 @@ emit_cb_state(struct anv_pipeline *pipeline,
    }
 }
 
+/**
+ * Get the brw_vue_prog_data for the last stage which outputs VUEs.
+ */
+static inline struct brw_vue_prog_data *
+get_last_vue_prog_data(struct anv_pipeline *pipeline)
+{
+   for (int s = MESA_SHADER_GEOMETRY; s >= 0; s--) {
+      if (pipeline->shaders[s])
+         return (struct brw_vue_prog_data *) pipeline->shaders[s]->prog_data;
+   }
+   return NULL;
+}
+
 static void
 emit_3dstate_clip(struct anv_pipeline *pipeline,
                   const VkPipelineViewportStateCreateInfo *vp_info,
@@ -832,6 +845,11 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
       clip.FrontWinding            = vk_to_gen_front_face[rs_info->frontFace];
       clip.CullMode                = vk_to_gen_cullmode[rs_info->cullMode];
       clip.ViewportZClipTestEnable = !pipeline->depth_clamp_enable;
+      const struct brw_vue_prog_data *last = get_last_vue_prog_data(pipeline);
+      if (last) {
+         clip.UserClipDistanceClipTestEnableBitmask = last->clip_distance_mask;
+         clip.UserClipDistanceCullTestEnableBitmask = last->cull_distance_mask;
+      }
 #else
       clip.NonPerspectiveBarycentricEnable = wm_prog_data ?
          (wm_prog_data->barycentric_interp_modes & 0x38) != 0 : 0;
@@ -934,9 +952,10 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
       vs.VertexURBEntryOutputReadOffset = get_urb_output_offset();
       vs.VertexURBEntryOutputLength     = get_urb_output_length(vs_bin);
 
-     /* TODO */
-      vs.UserClipDistanceClipTestEnableBitmask = 0;
-      vs.UserClipDistanceCullTestEnableBitmask = 0;
+      vs.UserClipDistanceClipTestEnableBitmask =
+         vs_prog_data->base.clip_distance_mask;
+      vs.UserClipDistanceCullTestEnableBitmask =
+         vs_prog_data->base.cull_distance_mask;
 #endif
 
       vs.PerThreadScratchSpace   = get_scratch_space(vs_bin);
@@ -1007,9 +1026,10 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
       gs.VertexURBEntryOutputReadOffset = get_urb_output_offset();
       gs.VertexURBEntryOutputLength     = get_urb_output_length(gs_bin);
 
-     /* TODO */
-      gs.UserClipDistanceClipTestEnableBitmask = 0;
-      gs.UserClipDistanceCullTestEnableBitmask = 0;
+      gs.UserClipDistanceClipTestEnableBitmask =
+         gs_prog_data->base.clip_distance_mask;
+      gs.UserClipDistanceCullTestEnableBitmask =
+         gs_prog_data->base.cull_distance_mask;
 #endif
 
       gs.PerThreadScratchSpace   = get_scratch_space(gs_bin);
