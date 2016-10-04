@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <getopt.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -1040,30 +1041,13 @@ print_help(const char *progname, FILE *file)
            progname);
 }
 
-static bool
-is_prefix(const char *arg, const char *prefix, const char **value)
-{
-   int l = strlen(prefix);
-
-   if (strncmp(arg, prefix, l) == 0 && (arg[l] == '\0' || arg[l] == '=')) {
-      if (arg[l] == '=')
-         *value = arg + l + 1;
-      else
-         *value = NULL;
-
-      return true;
-   }
-
-   return false;
-}
-
 int main(int argc, char *argv[])
 {
    struct gen_spec *spec;
    struct aub_file *file;
-   int i;
-   bool found_arg_gen = false, pager = true;
-   const char *value, *input_file;
+   int c, i;
+   bool help = false, pager = true;
+   const char *input_file = NULL;
    char gen_file[256], gen_val[24];
    const struct {
       const char *name;
@@ -1080,54 +1064,46 @@ int main(int argc, char *argv[])
       { "kbl", 0x591D, 9, 0 }, /* Intel(R) Kabylake GT2 */
       { "bxt", 0x0A84, 9, 0 }  /* Intel(R) HD Graphics (Broxton) */
    }, *gen = NULL;
+   const struct option aubinator_opts[] = {
+      { "help",       no_argument,       (int *) &help,                 true },
+      { "no-pager",   no_argument,       (int *) &pager,                false },
+      { "no-offsets", no_argument,       (int *) &option_print_offsets, false },
+      { "gen",        required_argument, NULL,                          'g' },
+      { "headers",    no_argument,       (int *) &option_full_decode,   false },
+      { "color",      required_argument, NULL,                          'c' },
+      { NULL,         0,                 NULL,                          0 }
+   };
 
-   if (argc == 1) {
-      print_help(argv[0], stderr);
-      exit(EXIT_FAILURE);
-   }
-
-   for (i = 1; i < argc; ++i) {
-      if (strcmp(argv[i], "--no-pager") == 0) {
-         pager = false;
-      } else if (strcmp(argv[i], "--no-offsets") == 0) {
-         option_print_offsets = false;
-      } else if (is_prefix(argv[i], "--gen", &value)) {
-         if (value == NULL) {
-            fprintf(stderr, "option '--gen' requires an argument\n");
-            exit(EXIT_FAILURE);
-         }
-         found_arg_gen = true;
-         snprintf(gen_val, sizeof(gen_val), "%s", value);
-      } else if (strcmp(argv[i], "--headers") == 0) {
-         option_full_decode = false;
-      } else if (is_prefix(argv[i], "--color", &value)) {
-         if (value == NULL || strcmp(value, "always") == 0)
+   i = 0;
+   while ((c = getopt_long(argc, argv, "", aubinator_opts, &i)) != -1) {
+      switch (c) {
+      case 'g':
+         snprintf(gen_val, sizeof(gen_val), "%s", optarg);
+         break;
+      case 'c':
+         if (optarg == NULL || strcmp(optarg, "always") == 0)
             option_color = COLOR_ALWAYS;
-         else if (strcmp(value, "never") == 0)
+         else if (strcmp(optarg, "never") == 0)
             option_color = COLOR_NEVER;
-         else if (strcmp(value, "auto") == 0)
+         else if (strcmp(optarg, "auto") == 0)
             option_color = COLOR_AUTO;
          else {
-            fprintf(stderr, "invalid value for --color: %s", value);
+            fprintf(stderr, "invalid value for --color: %s", optarg);
             exit(EXIT_FAILURE);
          }
-      } else if (strcmp(argv[i], "--help") == 0) {
-         print_help(argv[0], stdout);
-         exit(EXIT_SUCCESS);
-      } else {
-         if (argv[i][0] == '-') {
-            fprintf(stderr, "unknown option %s\n", argv[i]);
-            exit(EXIT_FAILURE);
-         }
-         input_file = argv[i];
+         break;
+      default:
          break;
       }
    }
 
-   if (!found_arg_gen) {
-      fprintf(stderr, "argument --gen is required\n");
-      exit(EXIT_FAILURE);
+   if (help || argc == 1) {
+      print_help(argv[0], stderr);
+      exit(0);
    }
+
+   if (optind < argc)
+      input_file = argv[optind];
 
    for (i = 0; i < ARRAY_SIZE(gens); i++) {
       if (!strcmp(gen_val, gens[i].name)) {
