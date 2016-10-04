@@ -7857,21 +7857,22 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug)
 {
-	struct si_shader *mainp = shader->selector->main_shader_part;
+	struct si_shader_selector *sel = shader->selector;
+	struct si_shader *mainp = sel->main_shader_part;
 	int r;
 
 	/* LS, ES, VS are compiled on demand if the main part hasn't been
 	 * compiled for that stage.
 	 */
 	if (!mainp ||
-	    (shader->selector->type == PIPE_SHADER_VERTEX &&
+	    (sel->type == PIPE_SHADER_VERTEX &&
 	     (shader->key.vs.as_es != mainp->key.vs.as_es ||
 	      shader->key.vs.as_ls != mainp->key.vs.as_ls)) ||
-	    (shader->selector->type == PIPE_SHADER_TESS_EVAL &&
+	    (sel->type == PIPE_SHADER_TESS_EVAL &&
 	     shader->key.tes.as_es != mainp->key.tes.as_es) ||
-	    (shader->selector->type == PIPE_SHADER_TESS_CTRL &&
+	    (sel->type == PIPE_SHADER_TESS_CTRL &&
 	     shader->key.tcs.epilog.inputs_to_copy) ||
-	    shader->selector->type == PIPE_SHADER_COMPUTE) {
+	    sel->type == PIPE_SHADER_COMPUTE) {
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).
 		 */
@@ -7905,7 +7906,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		shader->info.nr_param_exports = mainp->info.nr_param_exports;
 
 		/* Select prologs and/or epilogs. */
-		switch (shader->selector->type) {
+		switch (sel->type) {
 		case PIPE_SHADER_VERTEX:
 			if (!si_shader_select_vs_parts(sscreen, tm, shader, debug))
 				return -1;
@@ -7946,7 +7947,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	}
 
 	si_fix_num_sgprs(shader);
-	si_shader_dump(sscreen, shader, debug, shader->selector->info.processor,
+	si_shader_dump(sscreen, shader, debug, sel->info.processor,
 		       stderr);
 
 	/* Upload. */
