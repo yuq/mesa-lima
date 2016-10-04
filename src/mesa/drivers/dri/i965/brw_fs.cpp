@@ -5866,7 +5866,7 @@ fs_visitor::allocate_registers(bool allow_spilling)
    schedule_instructions(SCHEDULE_POST);
 
    if (last_scratch > 0) {
-      unsigned max_scratch_size = 2 * 1024 * 1024;
+      MAYBE_UNUSED unsigned max_scratch_size = 2 * 1024 * 1024;
 
       prog_data->total_scratch = brw_get_scratch_size(last_scratch);
 
