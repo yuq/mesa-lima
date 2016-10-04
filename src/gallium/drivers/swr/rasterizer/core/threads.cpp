@@ -565,8 +565,6 @@ bool WorkOnFifoBE(
 /// @brief Called when FE work is complete for this DC.
 INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
-    _ReadWriteBarrier();
-
     if (pContext->pfnUpdateStatsFE && GetApiState(pDC).enableStats)
     {
         pContext->pfnUpdateStatsFE(GetPrivateState(pDC), &pDC->dynState.statsFE);
@@ -584,8 +582,9 @@ INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
         }
     }
 
+    // Ensure all streaming writes are globally visible before marking this FE done
+    _mm_mfence();
     pDC->doneFE = true;
-
     InterlockedDecrement((volatile LONG*)&pContext->drawsOutstandingFE);
 }
 
@@ -673,6 +672,9 @@ void WorkOnCompute(
                 queue.dispatch(pDC, workerId, threadGroupId, pSpillFillBuffer);
                 queue.finishedWork();
             }
+
+            // Ensure all streaming writes are globally visible before moving onto the next draw
+            _mm_mfence();
         }
     }
 }

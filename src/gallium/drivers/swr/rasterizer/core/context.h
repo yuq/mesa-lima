@@ -161,7 +161,7 @@ enum WORK_TYPE
     SHUTDOWN,
 };
 
-struct BE_WORK
+OSALIGNSIMD(struct) BE_WORK
 {
     WORK_TYPE type;
     PFN_WORK_FUNC pfnWork;

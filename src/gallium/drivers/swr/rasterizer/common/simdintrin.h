@@ -114,6 +114,7 @@ OSALIGNSIMD(union) simdvector
 #define _simd_round_ps _mm256_round_ps
 #define _simd_castpd_ps _mm256_castpd_ps
 #define _simd_broadcast_ps(a) _mm256_broadcast_ps((const __m128*)(a))
+#define _simd_stream_ps _mm256_stream_ps
 
 #define _simd_load_sd _mm256_load_sd
 #define _simd_movemask_pd _mm256_movemask_pd
