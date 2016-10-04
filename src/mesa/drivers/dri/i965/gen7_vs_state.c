@@ -75,7 +75,7 @@ upload_vs_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen7_vs_state = {
    .dirty = {
-      .mesa  = _NEW_TRANSFORM,
+      .mesa  = 0,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
