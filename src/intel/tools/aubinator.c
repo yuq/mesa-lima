@@ -1048,21 +1048,19 @@ int main(int argc, char *argv[])
    int c, i;
    bool help = false, pager = true;
    const char *input_file = NULL;
-   char gen_file[256], gen_val[24];
+   char gen_val[24];
    const struct {
       const char *name;
       int pci_id;
-      int major;
-      int minor;
    } gens[] = {
-      { "ivb", 0x0166, 7, 0 }, /* Intel(R) Ivybridge Mobile GT2 */
-      { "hsw", 0x0416, 7, 5 }, /* Intel(R) Haswell Mobile GT2 */
-      { "byt", 0x0155, 7, 5 }, /* Intel(R) Bay Trail */
-      { "bdw", 0x1616, 8, 0 }, /* Intel(R) HD Graphics 5500 (Broadwell GT2) */
-      { "chv", 0x22B3, 8, 0 }, /* Intel(R) HD Graphics (Cherryview) */
-      { "skl", 0x1912, 9, 0 }, /* Intel(R) HD Graphics 530 (Skylake GT2) */
-      { "kbl", 0x591D, 9, 0 }, /* Intel(R) Kabylake GT2 */
-      { "bxt", 0x0A84, 9, 0 }  /* Intel(R) HD Graphics (Broxton) */
+      { "ivb", 0x0166 }, /* Intel(R) Ivybridge Mobile GT2 */
+      { "hsw", 0x0416 }, /* Intel(R) Haswell Mobile GT2 */
+      { "byt", 0x0155 }, /* Intel(R) Bay Trail */
+      { "bdw", 0x1616 }, /* Intel(R) HD Graphics 5500 (Broadwell GT2) */
+      { "chv", 0x22B3 }, /* Intel(R) HD Graphics (Cherryview) */
+      { "skl", 0x1912 }, /* Intel(R) HD Graphics 530 (Skylake GT2) */
+      { "kbl", 0x591D }, /* Intel(R) Kabylake GT2 */
+      { "bxt", 0x0A84 }  /* Intel(R) HD Graphics (Broxton) */
    }, *gen = NULL;
    const struct option aubinator_opts[] = {
       { "help",       no_argument,       (int *) &help,                 true },
@@ -1073,6 +1071,7 @@ int main(int argc, char *argv[])
       { "color",      required_argument, NULL,                          'c' },
       { NULL,         0,                 NULL,                          0 }
    };
+   struct gen_device_info devinfo;
 
    i = 0;
    while ((c = getopt_long(argc, argv, "", aubinator_opts, &i)) != -1) {
@@ -1118,6 +1117,13 @@ int main(int argc, char *argv[])
       exit(EXIT_FAILURE);
    }
 
+   if (!gen_get_device_info(gen->pci_id, &devinfo)) {
+      fprintf(stderr, "can't find device information: pci_id=0x%x name=%s\n",
+              gen->pci_id, gen->name);
+      exit(EXIT_FAILURE);
+   }
+
+
    /* Do this before we redirect stdout to pager. */
    if (option_color == COLOR_AUTO)
       option_color = isatty(1) ? COLOR_ALWAYS : COLOR_NEVER;
@@ -1125,14 +1131,7 @@ int main(int argc, char *argv[])
    if (isatty(1) && pager)
       setup_pager();
 
-   if (gen->minor > 0) {
-      snprintf(gen_file, sizeof(gen_file), "../genxml/gen%d%d.xml",
-               gen->major, gen->minor);
-   } else {
-      snprintf(gen_file, sizeof(gen_file), "../genxml/gen%d.xml", gen->major);
-   }
-
-   spec = gen_spec_load(gen_file);
+   spec = gen_spec_load(&devinfo);
    disasm = gen_disasm_create(gen->pci_id);
 
    if (input_file == NULL) {
