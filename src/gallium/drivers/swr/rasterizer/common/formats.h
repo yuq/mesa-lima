@@ -216,6 +216,7 @@ enum SWR_FORMAT
     R8G8B8_UINT = 0x1C8,
     R8G8B8_SINT = 0x1C9,
     NUM_SWR_FORMATS = 0x1CA,
+    RAW = 0x1FF,
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -248,6 +249,11 @@ extern const SWR_FORMAT_INFO gFormatInfo[];
 /// @param format - SWR format
 INLINE const SWR_FORMAT_INFO& GetFormatInfo(SWR_FORMAT format)
 {
+    if (format == RAW)
+    {
+        format = NUM_SWR_FORMATS;
+    }
+    SWR_ASSERT(format <= NUM_SWR_FORMATS, "Invalid Surface Format: %d", format);
     return gFormatInfo[format];
 }
 

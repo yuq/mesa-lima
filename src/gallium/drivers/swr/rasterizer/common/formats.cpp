@@ -6082,4 +6082,27 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         1, // bcWidth
         1, // bcHeight
     },
+    // <---- Add new "supported" formats here!
+
+
+    // ... skip a long range ...
+    // RAW (0x1ff)
+    {
+        "RAW",
+        { SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, },
+        { 0, 0, 0, 0 }, // Defaults for missing components
+        { 0, 1, 2, 3 }, // Swizzle
+        { 32, 0, 0, 0 }, // Bits per component
+        32, // Bits per element
+        4, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        false, // isLuminance
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
+    }
 };
