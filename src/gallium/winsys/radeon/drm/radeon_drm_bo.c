@@ -1339,6 +1339,16 @@ static uint64_t radeon_winsys_bo_va(struct pb_buffer *buf)
     return ((struct radeon_bo*)buf)->va;
 }
 
+static unsigned radeon_winsys_bo_get_reloc_offset(struct pb_buffer *buf)
+{
+    struct radeon_bo *bo = radeon_bo(buf);
+
+    if (bo->handle)
+        return 0;
+
+    return bo->va - bo->u.slab.real->va;
+}
+
 void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws)
 {
     ws->base.buffer_set_metadata = radeon_bo_set_metadata;
@@ -1352,5 +1362,6 @@ void radeon_drm_bo_init_functions(struct radeon_drm_winsys *ws)
     ws->base.buffer_is_user_ptr = radeon_winsys_bo_is_user_ptr;
     ws->base.buffer_get_handle = radeon_winsys_bo_get_handle;
     ws->base.buffer_get_virtual_address = radeon_winsys_bo_va;
+    ws->base.buffer_get_reloc_offset = radeon_winsys_bo_get_reloc_offset;
     ws->base.buffer_get_initial_domain = radeon_bo_get_initial_domain;
 }

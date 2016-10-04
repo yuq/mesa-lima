@@ -515,6 +515,18 @@ struct radeon_winsys {
     uint64_t (*buffer_get_virtual_address)(struct pb_buffer *buf);
 
     /**
+     * Return the offset of this buffer relative to the relocation base.
+     * This is only non-zero for sub-allocated buffers.
+     *
+     * This is only supported in the radeon winsys, since amdgpu uses virtual
+     * addresses in submissions even for the video engines.
+     *
+     * \param buf      A winsys buffer object
+     * \return         the offset for relocations
+     */
+    unsigned (*buffer_get_reloc_offset)(struct pb_buffer *buf);
+
+    /**
      * Query the initial placement of the buffer from the kernel driver.
      */
     enum radeon_bo_domain (*buffer_get_initial_domain)(struct pb_buffer *buf);
