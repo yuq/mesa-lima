@@ -47,6 +47,30 @@ CLEANFILES = $(BUILT_SOURCES)
 
 SUBDIRS = . gtest util mapi/glapi/gen mapi
 
+if HAVE_OPENGL
+gldir = $(includedir)/GL
+gl_HEADERS = \
+  $(top_srcdir)/include/GL/gl.h \
+  $(top_srcdir)/include/GL/glext.h \
+  $(top_srcdir)/include/GL/glcorearb.h \
+  $(top_srcdir)/include/GL/gl_mangle.h
+endif
+
+if HAVE_GLX
+glxdir = $(includedir)/GL
+glx_HEADERS = \
+  $(top_srcdir)/include/GL/glx.h \
+  $(top_srcdir)/include/GL/glxext.h \
+  $(top_srcdir)/include/GL/glx_mangle.h
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = mesa/gl.pc
+endif
+
+if HAVE_COMMON_OSMESA
+osmesadir = $(includedir)/GL
+osmesa_HEADERS = $(top_srcdir)/include/GL/osmesa.h
+endif
+
 # include only conditionally ?
 SUBDIRS += compiler
 
