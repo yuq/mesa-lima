@@ -693,6 +693,40 @@ static void si_shader_ps(struct si_shader *shader)
 	       G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
 	       G_0286CC_LINEAR_CENTROID_ENA(input_ena) ||
 	       G_0286CC_LINE_STIPPLE_TEX_ENA(input_ena));
+	/* POS_W_FLOAT_ENA requires one of the perspective weights. */
+	assert(!G_0286CC_POS_W_FLOAT_ENA(input_ena) ||
+	       G_0286CC_PERSP_SAMPLE_ENA(input_ena) ||
+	       G_0286CC_PERSP_CENTER_ENA(input_ena) ||
+	       G_0286CC_PERSP_CENTROID_ENA(input_ena) ||
+	       G_0286CC_PERSP_PULL_MODEL_ENA(input_ena));
+
+	/* Validate interpolation optimization flags (read as implications). */
+	assert(!shader->key.ps.prolog.bc_optimize_for_persp ||
+	       (G_0286CC_PERSP_CENTER_ENA(input_ena) &&
+		G_0286CC_PERSP_CENTROID_ENA(input_ena)));
+	assert(!shader->key.ps.prolog.bc_optimize_for_linear ||
+	       (G_0286CC_LINEAR_CENTER_ENA(input_ena) &&
+		G_0286CC_LINEAR_CENTROID_ENA(input_ena)));
+	assert(!shader->key.ps.prolog.force_persp_center_interp ||
+	       (!G_0286CC_PERSP_SAMPLE_ENA(input_ena) &&
+		!G_0286CC_PERSP_CENTROID_ENA(input_ena)));
+	assert(!shader->key.ps.prolog.force_linear_center_interp ||
+	       (!G_0286CC_LINEAR_SAMPLE_ENA(input_ena) &&
+		!G_0286CC_LINEAR_CENTROID_ENA(input_ena)));
+	assert(!shader->key.ps.prolog.force_persp_sample_interp ||
+	       (!G_0286CC_PERSP_CENTER_ENA(input_ena) &&
+		!G_0286CC_PERSP_CENTROID_ENA(input_ena)));
+	assert(!shader->key.ps.prolog.force_linear_sample_interp ||
+	       (!G_0286CC_LINEAR_CENTER_ENA(input_ena) &&
+		!G_0286CC_LINEAR_CENTROID_ENA(input_ena)));
+
+	/* Validate cases when the optimizations are off (read as implications). */
+	assert(shader->key.ps.prolog.bc_optimize_for_persp ||
+	       !G_0286CC_PERSP_CENTER_ENA(input_ena) ||
+	       !G_0286CC_PERSP_CENTROID_ENA(input_ena));
+	assert(shader->key.ps.prolog.bc_optimize_for_linear ||
+	       !G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
+	       !G_0286CC_LINEAR_CENTROID_ENA(input_ena));
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
