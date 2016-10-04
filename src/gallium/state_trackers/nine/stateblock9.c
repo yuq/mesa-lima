@@ -30,6 +30,9 @@
 
 /* XXX TODO: handling of lights is broken */
 
+#define VS_CONST_I_SIZE (NINE_MAX_CONST_I * sizeof(int[4]))
+#define VS_CONST_B_SIZE (NINE_MAX_CONST_B * sizeof(BOOL))
+
 HRESULT
 NineStateBlock9_ctor( struct NineStateBlock9 *This,
                       struct NineUnknownParams *pParams,
@@ -46,7 +49,10 @@ NineStateBlock9_ctor( struct NineStateBlock9 *This,
 
     This->state.vs_const_f = MALLOC(This->base.device->vs_const_size);
     This->state.ps_const_f = MALLOC(This->base.device->ps_const_size);
-    if (!This->state.vs_const_f || !This->state.ps_const_f)
+    This->state.vs_const_i = MALLOC(VS_CONST_I_SIZE);
+    This->state.vs_const_b = MALLOC(VS_CONST_B_SIZE);
+    if (!This->state.vs_const_f || !This->state.ps_const_f ||
+        !This->state.vs_const_i || !This->state.vs_const_b)
         return E_OUTOFMEMORY;
 
     return D3D_OK;
@@ -63,6 +69,8 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
 
     FREE(state->vs_const_f);
     FREE(state->ps_const_f);
+    FREE(state->vs_const_i);
+    FREE(state->vs_const_b);
 
     FREE(state->ff.light);
 
@@ -131,8 +139,8 @@ nine_state_copy_common(struct nine_state *dst,
                                    pool);
         }
         for (r = mask->changed.vs_const_i; r; r = r->next) {
-            memcpy(&dst->vs_const_i[r->bgn],
-                   &src->vs_const_i[r->bgn],
+            memcpy(&dst->vs_const_i[r->bgn * 4],
+                   &src->vs_const_i[r->bgn * 4],
                    (r->end - r->bgn) * 4 * sizeof(int));
             if (apply)
                 nine_ranges_insert(&dst->changed.vs_const_i, r->bgn, r->end,
@@ -365,8 +373,8 @@ nine_state_copy_common_all(struct nine_state *dst,
         if (apply)
             nine_ranges_insert(&dst->changed.vs_const_f, r->bgn, r->end, pool);
 
-        memcpy(dst->vs_const_i, src->vs_const_i, sizeof(dst->vs_const_i));
-        memcpy(dst->vs_const_b, src->vs_const_b, sizeof(dst->vs_const_b));
+        memcpy(dst->vs_const_i, src->vs_const_i, VS_CONST_I_SIZE);
+        memcpy(dst->vs_const_b, src->vs_const_b, VS_CONST_B_SIZE);
         if (apply) {
             r = help->changed.vs_const_i;
             nine_ranges_insert(&dst->changed.vs_const_i, r->bgn, r->end, pool);

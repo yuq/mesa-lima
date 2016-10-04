@@ -157,8 +157,8 @@ struct nine_state
      */
     struct NineVertexShader9 *vs;
     float *vs_const_f;
-    int    vs_const_i[NINE_MAX_CONST_I][4];
-    BOOL   vs_const_b[NINE_MAX_CONST_B];
+    int   *vs_const_i;
+    BOOL  *vs_const_b;
     float *vs_lconstf_temp;
     BOOL programmable_vs;
 

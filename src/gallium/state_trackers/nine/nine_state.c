@@ -93,13 +93,13 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
 
     if (state->changed.vs_const_i) {
         int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
-        memcpy(idst, state->vs_const_i, sizeof(state->vs_const_i));
+        memcpy(idst, state->vs_const_i, NINE_MAX_CONST_I * sizeof(int[4]));
         state->changed.vs_const_i = 0;
     }
     if (state->changed.vs_const_b) {
         int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
         uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
-        memcpy(bdst, state->vs_const_b, sizeof(state->vs_const_b));
+        memcpy(bdst, state->vs_const_b, NINE_MAX_CONST_B * sizeof(BOOL));
         state->changed.vs_const_b = 0;
     }
 

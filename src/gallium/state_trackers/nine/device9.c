@@ -326,8 +326,11 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->state.ps_const_f = CALLOC(This->ps_const_size, 1);
         This->state.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
         This->state.ps_lconstf_temp = CALLOC(This->ps_const_size,1);
+        This->state.vs_const_i = CALLOC(NINE_MAX_CONST_I * sizeof(int[4]), 1);
+        This->state.vs_const_b = CALLOC(NINE_MAX_CONST_B * sizeof(BOOL), 1);
         if (!This->state.vs_const_f || !This->state.ps_const_f ||
-            !This->state.vs_lconstf_temp || !This->state.ps_lconstf_temp)
+            !This->state.vs_lconstf_temp || !This->state.ps_lconstf_temp ||
+            !This->state.vs_const_i || !This->state.vs_const_b)
             return E_OUTOFMEMORY;
 
         if (strstr(pScreen->get_name(pScreen), "AMD") ||
@@ -459,6 +462,8 @@ NineDevice9_dtor( struct NineDevice9 *This )
     FREE(This->state.ps_const_f);
     FREE(This->state.vs_lconstf_temp);
     FREE(This->state.ps_lconstf_temp);
+    FREE(This->state.vs_const_i);
+    FREE(This->state.vs_const_b);
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
@@ -3438,19 +3443,19 @@ NineDevice9_SetVertexShaderConstantI( struct NineDevice9 *This,
 
     if (This->driver_caps.vs_integer) {
         if (!This->is_recording) {
-            if (!memcmp(&state->vs_const_i[StartRegister][0], pConstantData,
-                        Vector4iCount * sizeof(state->vs_const_i[0])))
+            if (!memcmp(&state->vs_const_i[4 * StartRegister], pConstantData,
+                        Vector4iCount * sizeof(int[4])))
                 return D3D_OK;
         }
-        memcpy(&state->vs_const_i[StartRegister][0],
+        memcpy(&state->vs_const_i[4 * StartRegister],
                pConstantData,
-               Vector4iCount * sizeof(state->vs_const_i[0]));
+               Vector4iCount * sizeof(int[4]));
     } else {
         for (i = 0; i < Vector4iCount; i++) {
-            state->vs_const_i[StartRegister+i][0] = fui((float)(pConstantData[4*i]));
-            state->vs_const_i[StartRegister+i][1] = fui((float)(pConstantData[4*i+1]));
-            state->vs_const_i[StartRegister+i][2] = fui((float)(pConstantData[4*i+2]));
-            state->vs_const_i[StartRegister+i][3] = fui((float)(pConstantData[4*i+3]));
+            state->vs_const_i[4 * (StartRegister + i)] = fui((float)(pConstantData[4 * i]));
+            state->vs_const_i[4 * (StartRegister + i) + 1] = fui((float)(pConstantData[4 * i + 1]));
+            state->vs_const_i[4 * (StartRegister + i) + 2] = fui((float)(pConstantData[4 * i + 2]));
+            state->vs_const_i[4 * (StartRegister + i) + 3] = fui((float)(pConstantData[4 * i + 3]));
         }
     }
 
@@ -3477,14 +3482,14 @@ NineDevice9_GetVertexShaderConstantI( struct NineDevice9 *This,
 
     if (This->driver_caps.vs_integer) {
         memcpy(pConstantData,
-               &state->vs_const_i[StartRegister][0],
-               Vector4iCount * sizeof(state->vs_const_i[0]));
+               &state->vs_const_i[4 * StartRegister],
+               Vector4iCount * sizeof(int[4]));
     } else {
         for (i = 0; i < Vector4iCount; i++) {
-            pConstantData[4*i] = (int32_t) uif(state->vs_const_i[StartRegister+i][0]);
-            pConstantData[4*i+1] = (int32_t) uif(state->vs_const_i[StartRegister+i][1]);
-            pConstantData[4*i+2] = (int32_t) uif(state->vs_const_i[StartRegister+i][2]);
-            pConstantData[4*i+3] = (int32_t) uif(state->vs_const_i[StartRegister+i][3]);
+            pConstantData[4 * i] = (int32_t) uif(state->vs_const_i[4 * (StartRegister + i)]);
+            pConstantData[4 * i + 1] = (int32_t) uif(state->vs_const_i[4 * (StartRegister + i) + 1]);
+            pConstantData[4 * i + 2] = (int32_t) uif(state->vs_const_i[4 * (StartRegister + i) + 2]);
+            pConstantData[4 * i + 3] = (int32_t) uif(state->vs_const_i[4 * (StartRegister + i) + 3]);
         }
     }
 
