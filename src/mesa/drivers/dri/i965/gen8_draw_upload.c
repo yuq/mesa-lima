@@ -34,6 +34,7 @@
 #include "intel_batchbuffer.h"
 #include "intel_buffer_objects.h"
 
+#ifndef NDEBUG
 static bool
 is_passthru_format(uint32_t format)
 {
@@ -47,6 +48,7 @@ is_passthru_format(uint32_t format)
       return false;
    }
 }
+#endif
 
 static void
 gen8_emit_vertices(struct brw_context *brw)
