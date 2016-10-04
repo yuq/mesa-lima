@@ -807,7 +807,7 @@ handle_trace_block(struct gen_spec *spec, uint32_t *p)
       if (address_space != AUB_TRACE_MEMTYPE_GTT)
          break;
       if (gtt_size < offset + size) {
-         fprintf(stderr, "overflow gtt space: %s", strerror(errno));
+         fprintf(stderr, "overflow gtt space: %s\n", strerror(errno));
          exit(EXIT_FAILURE);
       }
       memcpy((char *) gtt + offset, data, size);
@@ -849,19 +849,19 @@ aub_file_open(const char *filename)
    file->filename = strdup(filename);
    file->fd = open(file->filename, O_RDONLY);
    if (file->fd == -1) {
-      fprintf(stderr, "open %s failed: %s", file->filename, strerror(errno));
+      fprintf(stderr, "open %s failed: %s\n", file->filename, strerror(errno));
       exit(EXIT_FAILURE);
    }
 
    if (fstat(file->fd, &file->sb) == -1) {
-      fprintf(stderr, "stat failed: %s", strerror(errno));
+      fprintf(stderr, "stat failed: %s\n", strerror(errno));
       exit(EXIT_FAILURE);
    }
 
    file->map = mmap(NULL, file->sb.st_size,
                     PROT_READ, MAP_SHARED, file->fd, 0);
    if (file->map == MAP_FAILED) {
-      fprintf(stderr, "mmap failed: %s", strerror(errno));
+      fprintf(stderr, "mmap failed: %s\n", strerror(errno));
       exit(EXIT_FAILURE);
    }
 
@@ -873,7 +873,7 @@ aub_file_open(const char *filename)
    gtt = mmap(NULL, gtt_size, PROT_READ | PROT_WRITE,
               MAP_PRIVATE | MAP_ANONYMOUS |  MAP_NORESERVE, -1, 0);
    if (gtt == MAP_FAILED) {
-      fprintf(stderr, "failed to alloc gtt space: %s", strerror(errno));
+      fprintf(stderr, "failed to alloc gtt space: %s\n", strerror(errno));
       exit(1);
    }
 
