@@ -150,8 +150,8 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info->num_textures = util_last_bit(sh->Program->SamplersUsed);
    shader->info->num_ubos = sh->NumUniformBlocks;
    shader->info->num_ssbos = sh->NumShaderStorageBlocks;
-   shader->info->uses_clip_distance_out =
-      sh->Program->ClipDistanceArraySize != 0;
+   shader->info->clip_distance_array_size = sh->Program->ClipDistanceArraySize;
+   shader->info->cull_distance_array_size = sh->Program->CullDistanceArraySize;
    shader->info->separate_shader = shader_prog->SeparateShader;
    shader->info->has_transform_feedback_varyings =
       shader_prog->TransformFeedback.NumVarying > 0;

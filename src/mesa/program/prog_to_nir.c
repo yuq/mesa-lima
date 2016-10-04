@@ -1054,7 +1054,8 @@ prog_to_nir(const struct gl_program *prog,
    s->info->num_ssbos = 0;
    s->info->num_images = 0;
    s->info->uses_texture_gather = false;
-   s->info->uses_clip_distance_out = false;
+   s->info->clip_distance_array_size = 0;
+   s->info->cull_distance_array_size = 0;
    s->info->separate_shader = false;
 
 fail:

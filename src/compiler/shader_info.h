@@ -67,8 +67,11 @@ typedef struct shader_info {
    /* Whether or not this shader ever uses textureGather() */
    bool uses_texture_gather;
 
-   /* Whether or not this shader uses the gl_ClipDistance output */
-   bool uses_clip_distance_out;
+   /* The size of the gl_ClipDistance[] array, if declared. */
+   unsigned clip_distance_array_size;
+
+   /* The size of the gl_CullDistance[] array, if declared. */
+   unsigned cull_distance_array_size;
 
    /* Whether or not separate shader objects were used */
    bool separate_shader;
