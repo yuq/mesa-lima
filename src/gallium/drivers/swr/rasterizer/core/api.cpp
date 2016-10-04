@@ -1108,6 +1108,10 @@ void DrawInstanced(
         pState->rastState.cullMode = SWR_CULLMODE_NONE;
         pState->forceFront = true;
     }
+    else if (topology == TOP_RECT_LIST)
+    {
+        pState->rastState.cullMode = SWR_CULLMODE_NONE;
+    }
 
     int draw = 0;
     while (remainingVerts)
@@ -1242,6 +1246,10 @@ void DrawIndexedInstance(
     {
         pState->rastState.cullMode = SWR_CULLMODE_NONE;
         pState->forceFront = true;
+    }
+    else if (topology == TOP_RECT_LIST)
+    {
+        pState->rastState.cullMode = SWR_CULLMODE_NONE;
     }
 
     while (remainingIndices)
