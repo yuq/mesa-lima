@@ -4,7 +4,6 @@ Intel Vulkan ToDo
 Missing Features:
  - FP64
  - Tessellation
- - Cull and Clip Distance
  - Image Gather Extended
  - Storage Image Without Format
  - Investigate CTS failures on HSW
