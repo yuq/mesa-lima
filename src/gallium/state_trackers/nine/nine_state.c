@@ -143,6 +143,24 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
         nine_range_pool_put_chain(&device->range_pool, r, p);
         device->state.changed.vs_const_f = NULL;
     }
+
+    if (device->state.changed.vs_const_i) {
+        struct nine_range *r = device->state.changed.vs_const_i;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.vs_const_i = NULL;
+    }
+
+    if (device->state.changed.vs_const_b) {
+        struct nine_range *r = device->state.changed.vs_const_b;
+        struct nine_range *p = r;
+        while (p->next)
+            p = p->next;
+        nine_range_pool_put_chain(&device->range_pool, r, p);
+        device->state.changed.vs_const_b = NULL;
+    }
     state->changed.group &= ~NINE_STATE_VS_CONST;
     state->commit |= NINE_STATE_COMMIT_CONST_VS;
 }

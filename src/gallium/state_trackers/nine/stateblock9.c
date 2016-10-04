@@ -76,6 +76,14 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
         for (r = This->state.changed.vs_const_f; r->next; r = r->next);
         nine_range_pool_put_chain(pool, This->state.changed.vs_const_f, r);
     }
+    if (This->state.changed.vs_const_i) {
+        for (r = This->state.changed.vs_const_i; r->next; r = r->next);
+        nine_range_pool_put_chain(pool, This->state.changed.vs_const_i, r);
+    }
+    if (This->state.changed.vs_const_b) {
+        for (r = This->state.changed.vs_const_b; r->next; r = r->next);
+        nine_range_pool_put_chain(pool, This->state.changed.vs_const_b, r);
+    }
 
     NineUnknown_dtor(&This->base);
 }
@@ -122,21 +130,21 @@ nine_state_copy_common(struct nine_state *dst,
                 nine_ranges_insert(&dst->changed.vs_const_f, r->bgn, r->end,
                                    pool);
         }
-        if (mask->changed.vs_const_i) {
-            uint16_t m = mask->changed.vs_const_i;
-            for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
-                if (m & 1)
-                    memcpy(dst->vs_const_i[i], src->vs_const_i[i], 4 * sizeof(int));
+        for (r = mask->changed.vs_const_i; r; r = r->next) {
+            memcpy(&dst->vs_const_i[r->bgn],
+                   &src->vs_const_i[r->bgn],
+                   (r->end - r->bgn) * 4 * sizeof(int));
             if (apply)
-                dst->changed.vs_const_i |= mask->changed.vs_const_i;
+                nine_ranges_insert(&dst->changed.vs_const_i, r->bgn, r->end,
+                                   pool);
         }
-        if (mask->changed.vs_const_b) {
-            uint16_t m = mask->changed.vs_const_b;
-            for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
-                if (m & 1)
-                    dst->vs_const_b[i] = src->vs_const_b[i];
+        for (r = mask->changed.vs_const_b; r; r = r->next) {
+            memcpy(&dst->vs_const_b[r->bgn],
+                   &src->vs_const_b[r->bgn],
+                   (r->end - r->bgn) * sizeof(int));
             if (apply)
-                dst->changed.vs_const_b |= mask->changed.vs_const_b;
+                nine_ranges_insert(&dst->changed.vs_const_b, r->bgn, r->end,
+                                   pool);
         }
     }
 
@@ -360,8 +368,10 @@ nine_state_copy_common_all(struct nine_state *dst,
         memcpy(dst->vs_const_i, src->vs_const_i, sizeof(dst->vs_const_i));
         memcpy(dst->vs_const_b, src->vs_const_b, sizeof(dst->vs_const_b));
         if (apply) {
-            dst->changed.vs_const_i |= src->changed.vs_const_i;
-            dst->changed.vs_const_b |= src->changed.vs_const_b;
+            r = help->changed.vs_const_i;
+            nine_ranges_insert(&dst->changed.vs_const_i, r->bgn, r->end, pool);
+            r = help->changed.vs_const_b;
+            nine_ranges_insert(&dst->changed.vs_const_b, r->bgn, r->end, pool);
         }
     }
 

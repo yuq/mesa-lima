@@ -2487,8 +2487,10 @@ NineDevice9_CreateStateBlock( struct NineDevice9 *This,
               nine_render_states_vertex, sizeof(dst->changed.rs));
        nine_ranges_insert(&dst->changed.vs_const_f, 0, This->max_vs_const_f,
                           &This->range_pool);
-       dst->changed.vs_const_i = 0xffff;
-       dst->changed.vs_const_b = 0xffff;
+       nine_ranges_insert(&dst->changed.vs_const_i, 0, NINE_MAX_CONST_I,
+                          &This->range_pool);
+       nine_ranges_insert(&dst->changed.vs_const_b, 0, NINE_MAX_CONST_B,
+                          &This->range_pool);
        for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
            dst->changed.sampler[s] |= 1 << D3DSAMP_DMAPOFFSET;
        if (This->state.ff.num_lights) {
@@ -3452,7 +3454,9 @@ NineDevice9_SetVertexShaderConstantI( struct NineDevice9 *This,
         }
     }
 
-    state->changed.vs_const_i |= ((1 << Vector4iCount) - 1) << StartRegister;
+    nine_ranges_insert(&state->changed.vs_const_i,
+                       StartRegister, StartRegister + Vector4iCount,
+                       &This->range_pool);
     state->changed.group |= NINE_STATE_VS_CONST;
 
     return D3D_OK;
@@ -3517,7 +3521,9 @@ NineDevice9_SetVertexShaderConstantB( struct NineDevice9 *This,
     for (i = 0; i < BoolCount; i++)
         state->vs_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
 
-    state->changed.vs_const_b |= ((1 << BoolCount) - 1) << StartRegister;
+    nine_ranges_insert(&state->changed.vs_const_b,
+                       StartRegister, StartRegister + BoolCount,
+                       &This->range_pool);
     state->changed.group |= NINE_STATE_VS_CONST;
 
     return D3D_OK;

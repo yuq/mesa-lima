@@ -137,10 +137,10 @@ struct nine_state
         uint16_t sampler[NINE_MAX_SAMPLERS];
         struct nine_range *vs_const_f;
         struct nine_range *ps_const_f;
-        uint16_t vs_const_i; /* NINE_MAX_CONST_I == 16 */
-        uint16_t ps_const_i;
-        uint16_t vs_const_b; /* NINE_MAX_CONST_B == 16 */
-        uint16_t ps_const_b;
+        struct nine_range *vs_const_i;
+        uint16_t ps_const_i; /* NINE_MAX_CONST_I == 16 */
+        struct nine_range *vs_const_b;
+        uint16_t ps_const_b; /* NINE_MAX_CONST_B == 16 */
         uint8_t ucp;
     } changed;
 
