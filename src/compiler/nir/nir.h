@@ -230,6 +230,13 @@ typedef struct nir_variable {
       unsigned location_frac:2;
 
       /**
+       * If true, this variable represents an array of scalars that should
+       * be tightly packed.  In other words, consecutive array elements
+       * should be stored one component apart, rather than one slot apart.
+       */
+      bool compact:1;
+
+      /**
        * Whether this is a fragment shader output implicitly initialized with
        * the previous contents of the specified render target at the
        * framebuffer location corresponding to this shader invocation.

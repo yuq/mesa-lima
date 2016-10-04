@@ -88,7 +88,8 @@ nir_is_per_vertex_io(nir_variable *var, gl_shader_stage stage)
 static nir_ssa_def *
 get_io_offset(nir_builder *b, nir_deref_var *deref,
               nir_ssa_def **vertex_index,
-              int (*type_size)(const struct glsl_type *))
+              int (*type_size)(const struct glsl_type *),
+              unsigned *component)
 {
    nir_deref *tail = &deref->deref;
 
@@ -104,6 +105,19 @@ get_io_offset(nir_builder *b, nir_deref_var *deref,
          vtx = nir_iadd(b, vtx, nir_ssa_for_src(b, deref_array->indirect, 1));
       }
       *vertex_index = vtx;
+   }
+
+   if (deref->var->data.compact) {
+      assert(tail->child->deref_type == nir_deref_type_array);
+      assert(glsl_type_is_scalar(glsl_without_array(deref->var->type)));
+      nir_deref_array *deref_array = nir_deref_as_array(tail->child);
+      /* We always lower indirect dereferences for "compact" array vars. */
+      assert(deref_array->deref_array_type == nir_deref_array_type_direct);
+
+      const unsigned total_offset = *component + deref_array->base_offset;
+      const unsigned slot_offset = total_offset / 4;
+      *component = total_offset % 4;
+      return nir_imm_int(b, type_size(glsl_vec4_type()) * slot_offset);
    }
 
    /* Just emit code and let constant-folding go to town */
@@ -143,7 +157,8 @@ get_io_offset(nir_builder *b, nir_deref_var *deref,
 
 static nir_intrinsic_instr *
 lower_load(nir_intrinsic_instr *intrin, struct lower_io_state *state,
-           nir_ssa_def *vertex_index, nir_ssa_def *offset)
+           nir_ssa_def *vertex_index, nir_ssa_def *offset,
+           unsigned component)
 {
    const nir_shader *nir = state->builder.shader;
    nir_variable *var = intrin->variables[0]->var;
@@ -194,7 +209,7 @@ lower_load(nir_intrinsic_instr *intrin, struct lower_io_state *state,
 
    nir_intrinsic_set_base(load, var->data.driver_location);
    if (mode == nir_var_shader_in || mode == nir_var_shader_out)
-      nir_intrinsic_set_component(load, var->data.location_frac);
+      nir_intrinsic_set_component(load, component);
 
    if (load->intrinsic == nir_intrinsic_load_uniform)
       nir_intrinsic_set_range(load, state->type_size(var->type));
@@ -214,7 +229,8 @@ lower_load(nir_intrinsic_instr *intrin, struct lower_io_state *state,
 
 static nir_intrinsic_instr *
 lower_store(nir_intrinsic_instr *intrin, struct lower_io_state *state,
-            nir_ssa_def *vertex_index, nir_ssa_def *offset)
+            nir_ssa_def *vertex_index, nir_ssa_def *offset,
+            unsigned component)
 {
    nir_variable *var = intrin->variables[0]->var;
    nir_variable_mode mode = var->data.mode;
@@ -236,7 +252,7 @@ lower_store(nir_intrinsic_instr *intrin, struct lower_io_state *state,
    nir_intrinsic_set_base(store, var->data.driver_location);
 
    if (mode == nir_var_shader_out)
-      nir_intrinsic_set_component(store, var->data.location_frac);
+      nir_intrinsic_set_component(store, component);
 
    nir_intrinsic_set_write_mask(store, nir_intrinsic_write_mask(intrin));
 
@@ -289,7 +305,7 @@ lower_atomic(nir_intrinsic_instr *intrin, struct lower_io_state *state,
 
 static nir_intrinsic_instr *
 lower_interpolate_at(nir_intrinsic_instr *intrin, struct lower_io_state *state,
-                     nir_ssa_def *offset)
+                     nir_ssa_def *offset, unsigned component)
 {
    nir_variable *var = intrin->variables[0]->var;
 
@@ -297,7 +313,7 @@ lower_interpolate_at(nir_intrinsic_instr *intrin, struct lower_io_state *state,
 
    /* Ignore interpolateAt() for flat variables - flat is flat. */
    if (var->data.interpolation == INTERP_MODE_FLAT)
-      return lower_load(intrin, state, NULL, offset);
+      return lower_load(intrin, state, NULL, offset, component);
 
    nir_intrinsic_op bary_op;
    switch (intrin->intrinsic) {
@@ -333,7 +349,7 @@ lower_interpolate_at(nir_intrinsic_instr *intrin, struct lower_io_state *state,
    load->num_components = intrin->num_components;
 
    nir_intrinsic_set_base(load, var->data.driver_location);
-   nir_intrinsic_set_component(load, var->data.location_frac);
+   nir_intrinsic_set_component(load, component);
 
    load->src[0] = nir_src_for_ssa(&bary_setup->dest.ssa);
    load->src[1] = nir_src_for_ssa(offset);
@@ -398,20 +414,23 @@ nir_lower_io_block(nir_block *block,
 
       nir_ssa_def *offset;
       nir_ssa_def *vertex_index = NULL;
+      unsigned component_offset = var->data.location_frac;
 
       offset = get_io_offset(b, intrin->variables[0],
                              per_vertex ? &vertex_index : NULL,
-                             state->type_size);
+                             state->type_size, &component_offset);
 
       nir_intrinsic_instr *replacement;
 
       switch (intrin->intrinsic) {
       case nir_intrinsic_load_var:
-         replacement = lower_load(intrin, state, vertex_index, offset);
+         replacement = lower_load(intrin, state, vertex_index, offset,
+                                  component_offset);
          break;
 
       case nir_intrinsic_store_var:
-         replacement = lower_store(intrin, state, vertex_index, offset);
+         replacement = lower_store(intrin, state, vertex_index, offset,
+                                   component_offset);
          break;
 
       case nir_intrinsic_var_atomic_add:
@@ -432,7 +451,8 @@ nir_lower_io_block(nir_block *block,
       case nir_intrinsic_interp_var_at_sample:
       case nir_intrinsic_interp_var_at_offset:
          assert(vertex_index == NULL);
-         replacement = lower_interpolate_at(intrin, state, offset);
+         replacement = lower_interpolate_at(intrin, state, offset,
+                                            component_offset);
          break;
 
       default:

@@ -432,7 +432,8 @@ print_var_decl(nir_variable *var, print_state *state)
          loc = buf;
       }
 
-      fprintf(fp, " (%s, %u)", loc, var->data.driver_location);
+      fprintf(fp, " (%s, %u)%s", loc, var->data.driver_location,
+              var->data.compact ? " compact" : "");
    }
 
    if (var->constant_initializer) {

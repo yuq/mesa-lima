@@ -94,8 +94,11 @@ mark_whole_variable(nir_shader *shader, nir_variable *var)
        var->data.mode == nir_var_shader_in)
       is_vertex_input = true;
 
-   set_io_mask(shader, var, 0,
-               glsl_count_attribute_slots(type, is_vertex_input));
+   const unsigned slots =
+      var->data.compact ? DIV_ROUND_UP(glsl_get_length(type), 4)
+                        : glsl_count_attribute_slots(type, is_vertex_input);
+
+   set_io_mask(shader, var, 0, slots);
 }
 
 static unsigned
@@ -150,7 +153,7 @@ try_mask_partial_io(nir_shader *shader, nir_deref_var *deref)
     * here marking the entire variable as used.
     */
    if (!(glsl_type_is_matrix(type) ||
-         (glsl_type_is_array(type) &&
+         (glsl_type_is_array(type) && !var->data.compact &&
           (glsl_type_is_numeric(glsl_without_array(type)) ||
            glsl_type_is_boolean(glsl_without_array(type)))))) {
 

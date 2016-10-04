@@ -329,6 +329,7 @@ nir_visitor::visit(ir_variable *ir)
    var->data.explicit_index = ir->data.explicit_index;
    var->data.explicit_binding = ir->data.explicit_binding;
    var->data.has_initializer = ir->data.has_initializer;
+   var->data.compact = false;
    var->data.location_frac = ir->data.location_frac;
 
    switch (ir->data.depth_layout) {
