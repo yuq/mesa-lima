@@ -99,6 +99,11 @@ vc4_screen_destroy(struct pipe_screen *pscreen)
         util_hash_table_destroy(screen->bo_handles);
         vc4_bufmgr_destroy(pscreen);
         slab_destroy_parent(&screen->transfer_pool);
+
+#if USE_VC4_SIMULATOR
+        vc4_simulator_destroy(screen);
+#endif
+
         close(screen->fd);
         ralloc_free(pscreen);
 }

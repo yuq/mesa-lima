@@ -423,6 +423,7 @@ void vc4_program_init(struct pipe_context *pctx);
 void vc4_program_fini(struct pipe_context *pctx);
 void vc4_query_init(struct pipe_context *pctx);
 void vc4_simulator_init(struct vc4_screen *screen);
+void vc4_simulator_destroy(struct vc4_screen *screen);
 int vc4_simulator_flush(struct vc4_context *vc4,
                         struct drm_vc4_submit_cl *args,
                         struct vc4_job *job);

@@ -32,6 +32,8 @@
 #include "vc4_simulator_validate.h"
 #include "simpenrose/simpenrose.h"
 
+static mtx_t exec_mutex = _MTX_INITIALIZER_NP;
+
 /* A marker placed just after each BO, then checked after rendering to make
  * sure it's still there.
  */
@@ -318,12 +320,27 @@ vc4_simulator_flush(struct vc4_context *vc4,
         return 0;
 }
 
+static void *sim_mem_base = NULL;
+static int sim_mem_refcount = 0;
+static ssize_t sim_mem_size = 256 * 1024 * 1024;
+
 void
 vc4_simulator_init(struct vc4_screen *screen)
 {
-        screen->simulator_mem_size = 256 * 1024 * 1024;
-        screen->simulator_mem_base = ralloc_size(screen,
-                                                 screen->simulator_mem_size);
+        mtx_lock(&exec_mutex);
+        if (sim_mem_refcount++) {
+                screen->simulator_mem_size = sim_mem_size;
+                screen->simulator_mem_base = sim_mem_base;
+                mtx_unlock(&exec_mutex);
+                return;
+        }
+
+        sim_mem_base = calloc(sim_mem_size, 1);
+        if (!sim_mem_base)
+                abort();
+
+        screen->simulator_mem_size = sim_mem_size;
+        screen->simulator_mem_base = sim_mem_base;
 
         /* We supply our own memory so that we can have more aperture
          * available (256MB instead of simpenrose's default 64MB).
@@ -339,6 +356,19 @@ vc4_simulator_init(struct vc4_screen *screen)
          * flush), so it had better be big.
          */
         simpenrose_supply_overflow_mem(0, OVERFLOW_SIZE);
+
+        mtx_unlock(&exec_mutex);
+}
+
+void
+vc4_simulator_destroy(struct vc4_screen *screen)
+{
+        mtx_lock(&exec_mutex);
+        if (!--sim_mem_refcount) {
+                free(sim_mem_base);
+                sim_mem_base = NULL;
+        }
+        mtx_unlock(&exec_mutex);
 }
 
 #endif /* USE_VC4_SIMULATOR */
