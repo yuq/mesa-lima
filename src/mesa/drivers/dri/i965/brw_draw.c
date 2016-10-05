@@ -102,8 +102,8 @@ brw_set_prim(struct brw_context *brw, const struct _mesa_prim *prim)
       brw->ctx.NewDriverState |= BRW_NEW_PRIMITIVE;
 
       if (reduced_prim[prim->mode] != brw->reduced_primitive) {
-	 brw->reduced_primitive = reduced_prim[prim->mode];
-	 brw->ctx.NewDriverState |= BRW_NEW_REDUCED_PRIMITIVE;
+         brw->reduced_primitive = reduced_prim[prim->mode];
+         brw->ctx.NewDriverState |= BRW_NEW_REDUCED_PRIMITIVE;
       }
    }
 }
@@ -568,9 +568,9 @@ brw_try_draw_prims(struct gl_context *ctx,
          brw->ctx.NewDriverState |= BRW_NEW_VERTICES;
 
       if (brw->gen < 6)
-	 brw_set_prim(brw, &prims[i]);
+         brw_set_prim(brw, &prims[i]);
       else
-	 gen6_set_prim(brw, &prims[i]);
+         gen6_set_prim(brw, &prims[i]);
 
 retry:
 
@@ -580,8 +580,8 @@ retry:
        * brw->ctx.NewDriverState.
        */
       if (brw->ctx.NewDriverState) {
-	 brw->no_batch_wrap = true;
-	 brw_upload_render_state(brw);
+         brw->no_batch_wrap = true;
+         brw_upload_render_state(brw);
       }
 
       brw_emit_prim(brw, &prims[i], brw->primitive, xfb_obj, stream);
@@ -589,17 +589,17 @@ retry:
       brw->no_batch_wrap = false;
 
       if (dri_bufmgr_check_aperture_space(&brw->batch.bo, 1)) {
-	 if (!fail_next) {
-	    intel_batchbuffer_reset_to_saved(brw);
-	    intel_batchbuffer_flush(brw);
-	    fail_next = true;
-	    goto retry;
-	 } else {
+         if (!fail_next) {
+            intel_batchbuffer_reset_to_saved(brw);
+            intel_batchbuffer_flush(brw);
+            fail_next = true;
+            goto retry;
+         } else {
             int ret = intel_batchbuffer_flush(brw);
             WARN_ONCE(ret == -ENOSPC,
                       "i965: Single primitive emit exceeded "
                       "available aperture space\n");
-	 }
+         }
       }
 
       /* Now that we know we haven't run out of aperture space, we can safely
