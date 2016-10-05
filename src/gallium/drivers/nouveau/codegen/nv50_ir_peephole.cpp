@@ -1037,12 +1037,15 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
       }
       break;
    case OP_ADD:
+   case OP_SUB:
       if (i->usesFlags())
          break;
       if (imm0.isInteger(0)) {
          if (s == 0) {
             i->setSrc(0, i->getSrc(1));
             i->src(0).mod = i->src(1).mod;
+            if (i->op == OP_SUB)
+               i->src(0).mod = i->src(0).mod ^ Modifier(NV50_IR_MOD_NEG);
          }
          i->setSrc(1, NULL);
          i->op = i->src(0).mod.getOp();
