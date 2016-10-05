@@ -572,7 +572,7 @@ void anv_GetPhysicalDeviceProperties(
       .storageImageSampleCounts                 = VK_SAMPLE_COUNT_1_BIT,
       .maxSampleMaskWords                       = 1,
       .timestampComputeAndGraphics              = false,
-      .timestampPeriod                          = time_stamp_base / (1000 * 1000 * 1000),
+      .timestampPeriod                          = time_stamp_base,
       .maxClipDistances                         = 0 /* FIXME */,
       .maxCullDistances                         = 0 /* FIXME */,
       .maxCombinedClipAndCullDistances          = 0 /* FIXME */,
