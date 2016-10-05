@@ -1145,7 +1145,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
        brw->fragment_program &&
-       brw->fragment_program->Base.OutputsRead) {
+       brw->fragment_program->Base.nir->info.outputs_read) {
       /* _NEW_BUFFERS */
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 

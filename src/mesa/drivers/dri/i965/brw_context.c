@@ -31,6 +31,7 @@
   */
 
 
+#include "compiler/nir/nir.h"
 #include "main/api_exec.h"
 #include "main/context.h"
 #include "main/fbobject.h"
@@ -304,7 +305,7 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
    /* Resolve color buffers for non-coherent framebuffer fetch. */
    if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
        ctx->FragmentProgram._Current &&
-       ctx->FragmentProgram._Current->Base.OutputsRead) {
+       ctx->FragmentProgram._Current->Base.nir->info.outputs_read) {
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 
       for (unsigned i = 0; i < fb->_NumColorDrawBuffers; i++) {
