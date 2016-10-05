@@ -328,8 +328,10 @@ brw_tcs_populate_key(struct brw_context *brw,
    memset(key, 0, sizeof(*key));
 
    if (brw->tess_ctrl_program) {
-      per_vertex_slots |= brw->tess_ctrl_program->Base.OutputsWritten;
-      per_patch_slots |= brw->tess_ctrl_program->Base.PatchOutputsWritten;
+      per_vertex_slots |=
+         brw->tess_ctrl_program->Base.nir->info.outputs_written;
+      per_patch_slots |=
+         brw->tess_ctrl_program->Base.nir->info.patch_outputs_written;
    }
 
    if (brw->gen < 8 || !tcp)
@@ -424,8 +426,8 @@ brw_tcs_precompile(struct gl_context *ctx,
       key.tes_primitive_mode = GL_TRIANGLES;
    }
 
-   key.outputs_written = prog->OutputsWritten;
-   key.patch_outputs_written = prog->PatchOutputsWritten;
+   key.outputs_written = prog->nir->info.outputs_written;
+   key.patch_outputs_written = prog->nir->info.patch_outputs_written;
 
    success = brw_codegen_tcs_prog(brw, shader_prog, btcp, &key);
 

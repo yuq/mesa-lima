@@ -149,8 +149,9 @@ brw_codegen_vs_prog(struct brw_context *brw,
                                  &prog_data.base.base);
    }
 
-   GLbitfield64 outputs_written =
-      brw_vs_outputs_written(brw, key, vp->program.Base.OutputsWritten);
+   uint64_t outputs_written =
+      brw_vs_outputs_written(brw, key,
+                             vp->program.Base.nir->info.outputs_written);
    prog_data.inputs_read = vp->program.Base.InputsRead;
 
    if (key->copy_edgeflag) {
@@ -339,8 +340,9 @@ brw_vs_populate_key(struct brw_context *brw,
       }
    }
 
-   if (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
-                               VARYING_BIT_BFC0 | VARYING_BIT_BFC1)) {
+   if (prog->nir->info.outputs_written &
+       (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
+        VARYING_BIT_BFC1)) {
       /* _NEW_LIGHT | _NEW_BUFFERS */
       key->clamp_vertex_color = ctx->Light._ClampVertexColor;
    }
@@ -399,8 +401,9 @@ brw_vs_precompile(struct gl_context *ctx,
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
    key.program_string_id = bvp->id;
    key.clamp_vertex_color =
-      (prog->OutputsWritten & (VARYING_BIT_COL0 | VARYING_BIT_COL1 |
-                               VARYING_BIT_BFC0 | VARYING_BIT_BFC1));
+      (prog->nir->info.outputs_written &
+       (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
+        VARYING_BIT_BFC1));
 
    success = brw_codegen_vs_prog(brw, shader_prog, bvp, &key);
 

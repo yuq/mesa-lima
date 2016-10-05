@@ -37,6 +37,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "brw_wm.h"
+#include "compiler/nir/nir.h"
 
 /***********************************************************************
  * WM unit - fragment programs and rasterization
@@ -53,11 +54,11 @@ brw_color_buffer_write_enabled(struct brw_context *brw)
    /* _NEW_BUFFERS */
    for (i = 0; i < ctx->DrawBuffer->_NumColorDrawBuffers; i++) {
       struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[i];
+      uint64_t outputs_written = fp->Base.nir->info.outputs_written;
 
       /* _NEW_COLOR */
-      if (rb &&
-	  (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_COLOR) ||
-	   fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DATA0 + i)) &&
+      if (rb && (outputs_written & BITFIELD64_BIT(FRAG_RESULT_COLOR) ||
+	         outputs_written & BITFIELD64_BIT(FRAG_RESULT_DATA0 + i)) &&
 	  (ctx->Color.ColorMask[i][0] ||
 	   ctx->Color.ColorMask[i][1] ||
 	   ctx->Color.ColorMask[i][2] ||
@@ -167,7 +168,7 @@ brw_upload_wm_unit(struct brw_context *brw)
 
    /* BRW_NEW_FRAGMENT_PROGRAM */
    wm->wm5.program_uses_depth = prog_data->uses_src_depth;
-   wm->wm5.program_computes_depth = (fp->Base.OutputsWritten &
+   wm->wm5.program_computes_depth = (fp->Base.nir->info.outputs_written &
 				     BITFIELD64_BIT(FRAG_RESULT_DEPTH)) != 0;
    /* _NEW_BUFFERS
     * Override for NULL depthbuffer case, required by the Pixel Shader Computed

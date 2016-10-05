@@ -250,8 +250,10 @@ brw_tes_populate_key(struct brw_context *brw,
     * be stored in the Patch URB Entry as well.
     */
    if (brw->tess_ctrl_program) {
-      per_vertex_slots |= brw->tess_ctrl_program->Base.OutputsWritten;
-      per_patch_slots |= brw->tess_ctrl_program->Base.PatchOutputsWritten;
+      per_vertex_slots |=
+         brw->tess_ctrl_program->Base.nir->info.outputs_written;
+      per_patch_slots |=
+         brw->tess_ctrl_program->Base.nir->info.patch_outputs_written;
    }
 
    /* Ignore gl_TessLevelInner/Outer - we treat them as system values,
@@ -318,8 +320,8 @@ brw_tes_precompile(struct gl_context *ctx,
    if (shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
       struct gl_program *tcp =
          shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
-      key.inputs_read |= tcp->OutputsWritten;
-      key.patch_inputs_read |= tcp->PatchOutputsWritten;
+      key.inputs_read |= tcp->nir->info.outputs_written;
+      key.patch_inputs_read |= tcp->nir->info.patch_outputs_written;
    }
 
    /* Ignore gl_TessLevelInner/Outer - they're system values. */

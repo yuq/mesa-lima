@@ -453,8 +453,10 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
          lookup |= IZ_PS_KILL_ALPHATEST_BIT;
       }
 
-      if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+      if (fp->program.Base.nir->info.outputs_written &
+          BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
          lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
+      }
 
       /* _NEW_DEPTH */
       if (ctx->Depth.Test)
@@ -602,11 +604,13 @@ brw_fs_precompile(struct gl_context *ctx,
 
    memset(&key, 0, sizeof(key));
 
+   uint64_t outputs_written = fp->Base.nir->info.outputs_written;
+
    if (brw->gen < 6) {
       if (fp->Base.nir->info.fs.uses_discard)
          key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
 
-      if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+      if (outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
          key.iz_lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
 
       /* Just assume depth testing. */
@@ -620,7 +624,7 @@ brw_fs_precompile(struct gl_context *ctx,
 
    brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
 
-   key.nr_color_regions = _mesa_bitcount_64(fp->Base.OutputsWritten &
+   key.nr_color_regions = _mesa_bitcount_64(outputs_written &
          ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |
            BITFIELD64_BIT(FRAG_RESULT_STENCIL) |
            BITFIELD64_BIT(FRAG_RESULT_SAMPLE_MASK)));
