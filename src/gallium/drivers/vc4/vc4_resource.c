@@ -419,9 +419,11 @@ vc4_setup_slices(struct vc4_resource *rsc)
                                 [VC4_TILING_FORMAT_T] = 'T'
                         };
                         fprintf(stderr,
-                                "rsc setup %p (format %d), %dx%d: "
+                                "rsc setup %p (format %s: vc4 %d), %dx%d: "
                                 "level %d (%c) -> %dx%d, stride %d@0x%08x\n",
-                                rsc, rsc->vc4_format,
+                                rsc,
+                                util_format_short_name(prsc->format),
+                                rsc->vc4_format,
                                 prsc->width0, prsc->height0,
                                 i, tiling_chars[slice->tiling],
                                 level_width, level_height,
