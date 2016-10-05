@@ -306,8 +306,8 @@ vec4_visitor::get_nir_src(const nir_src &src, enum brw_reg_type type,
       reg = nir_ssa_values[src.ssa->index];
    }
    else {
-     reg = dst_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
-                               src.reg.indirect);
+      reg = dst_reg_for_nir_reg(this, src.reg.reg, src.reg.base_offset,
+                                src.reg.indirect);
    }
 
    reg = retype(reg, type);
