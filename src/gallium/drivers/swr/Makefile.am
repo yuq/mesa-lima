@@ -60,7 +60,8 @@ BUILT_SOURCES = \
 	rasterizer/jitter/builder_x86.cpp \
 	rasterizer/archrast/gen_ar_event.h \
 	rasterizer/archrast/gen_ar_event.cpp \
-	rasterizer/archrast/gen_ar_eventhandler.h
+	rasterizer/archrast/gen_ar_eventhandler.h \
+	rasterizer/archrast/gen_ar_eventhandlerfile.h
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
@@ -136,6 +137,14 @@ rasterizer/archrast/gen_ar_eventhandler.h: rasterizer/scripts/gen_archrast.py ra
 		--proto $(srcdir)/rasterizer/archrast/events.proto \
 		--output rasterizer/archrast/gen_ar_eventhandler.h \
 		--gen_eventhandler_h
+
+rasterizer/archrast/gen_ar_eventhandlerfile.h: rasterizer/scripts/gen_archrast.py rasterizer/scripts/templates/ar_eventhandlerfile_h.template rasterizer/archrast/events.proto
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) \
+		$(srcdir)/rasterizer/scripts/gen_archrast.py \
+		--proto $(srcdir)/rasterizer/archrast/events.proto \
+		--output rasterizer/archrast/gen_ar_eventhandlerfile.h \
+		--gen_eventhandlerfile_h
 
 COMMON_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \

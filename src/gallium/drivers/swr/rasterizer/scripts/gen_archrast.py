@@ -103,6 +103,7 @@ def parse_protos(filename):
         protos['enums'] = {}
         protos['enum_names'] = []
 
+        eventId = 0
         raw_text = []
         while idx < len(lines):
             line = lines[idx].rstrip()
@@ -112,10 +113,12 @@ def parse_protos(filename):
             match = re.match(r"(\s*)event(\s*)(\w+)", line)
 
             if match:
+                eventId += 1
                 event_name = match.group(3)
                 protos['event_names'].append(event_name)
 
                 protos['events'][event_name] = {}
+                protos['events'][event_name]['event_id'] = eventId
                 idx = parse_event_fields(lines, idx, protos['events'][event_name])
 
             # search for enums.
@@ -139,6 +142,7 @@ def main():
     parser.add_argument("--gen_event_h", "-geh", help="Generate event header", action="store_true", default=False)
     parser.add_argument("--gen_event_cpp", "-gec", help="Generate event cpp", action="store_true", default=False)
     parser.add_argument("--gen_eventhandler_h", "-gehh", help="Generate eventhandler header", action="store_true", default=False)
+    parser.add_argument("--gen_eventhandlerfile_h", "-gehf", help="Generate eventhandler header for writing to files", action="store_true", default=False)
     args = parser.parse_args()
 
     proto_filename = args.proto
@@ -186,6 +190,17 @@ def main():
         write_template_to_file(template_file, output_fullpath,
                 filename=output_filename,
                 event_header="gen_ar_event.h",   # todo: fix this!
+                protos=protos)
+
+    # Generate event handler header
+    if args.gen_eventhandlerfile_h:
+        curdir = os.path.dirname(os.path.abspath(__file__))
+        template_file = os.sep.join([curdir, 'templates', 'ar_eventhandlerfile_h.template'])
+        output_fullpath = os.sep.join([output_dir, output_filename])
+
+        write_template_to_file(template_file, output_fullpath,
+                filename=output_filename,
+                event_header="gen_ar_eventhandler.h",   # todo: fix this!
                 protos=protos)
 
     return 0
