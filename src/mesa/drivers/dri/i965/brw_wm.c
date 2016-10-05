@@ -448,8 +448,10 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
     */
    if (brw->gen < 6) {
       /* _NEW_COLOR */
-      if (fp->program.UsesKill || ctx->Color.AlphaEnabled)
+      if (fp->program.Base.nir->info.fs.uses_discard ||
+          ctx->Color.AlphaEnabled) {
 	 lookup |= IZ_PS_KILL_ALPHATEST_BIT;
+      }
 
       if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
 	 lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
@@ -601,7 +603,7 @@ brw_fs_precompile(struct gl_context *ctx,
    memset(&key, 0, sizeof(key));
 
    if (brw->gen < 6) {
-      if (fp->UsesKill)
+      if (fp->Base.nir->info.fs.uses_discard)
          key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
 
       if (fp->Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
