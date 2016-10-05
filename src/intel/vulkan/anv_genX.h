@@ -36,9 +36,6 @@ struct anv_state
 genX(cmd_buffer_alloc_null_surface_state)(struct anv_cmd_buffer *cmd_buffer,
                                           struct anv_framebuffer *fb);
 
-void genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
-                                  struct anv_subpass *subpass);
-
 void genX(cmd_buffer_apply_pipe_flushes)(struct anv_cmd_buffer *cmd_buffer);
 
 void genX(flush_pipeline_select_3d)(struct anv_cmd_buffer *cmd_buffer);

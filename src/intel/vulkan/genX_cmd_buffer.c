@@ -1296,10 +1296,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp);
 }
 
-/**
- * @see anv_cmd_buffer_set_subpass()
- */
-void
+static void
 genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
 {
