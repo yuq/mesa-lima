@@ -356,7 +356,8 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* gather4's channel select for green from RG32F is broken; requires
           * a shader w/a on IVB; fixable with just SCS on HSW.
           */
-         if (brw->gen == 7 && !brw->is_haswell && prog->UsesGather) {
+         if (brw->gen == 7 && !brw->is_haswell &&
+             prog->nir->info.uses_texture_gather) {
             if (img->InternalFormat == GL_RG32F)
                key->gather_channel_quirk_mask |= 1 << s;
          }
@@ -364,7 +365,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* Gen6's gather4 is broken for UINT/SINT; we treat them as
           * UNORM/FLOAT instead and fix it in the shader.
           */
-         if (brw->gen == 6 && prog->UsesGather) {
+         if (brw->gen == 6 && prog->nir->info.uses_texture_gather) {
             key->gen6_gather_wa[s] = gen6_gather_workaround(img->InternalFormat);
          }
 

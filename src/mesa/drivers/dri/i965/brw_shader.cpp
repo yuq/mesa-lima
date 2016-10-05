@@ -1212,7 +1212,7 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
       stage_prog_data->binding_table.shader_time_start = 0xd0d0d0d0;
    }
 
-   if (prog->UsesGather) {
+   if (prog->nir->info.uses_texture_gather) {
       if (devinfo->gen >= 8) {
          stage_prog_data->binding_table.gather_texture_start =
             stage_prog_data->binding_table.texture_start;

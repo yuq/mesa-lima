@@ -30,6 +30,7 @@
   */
 
 
+#include "compiler/nir/nir.h"
 #include "main/context.h"
 #include "main/blend.h"
 #include "main/mtypes.h"
@@ -1289,15 +1290,15 @@ brw_update_texture_surfaces(struct brw_context *brw)
     * allows the surface format to be overriden for only the
     * gather4 messages. */
    if (brw->gen < 8) {
-      if (vs && vs->UsesGather)
+      if (vs && vs->nir->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, vs, &brw->vs.base, true, 0);
-      if (tcs && tcs->UsesGather)
+      if (tcs && tcs->nir->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, true, 0);
-      if (tes && tes->UsesGather)
+      if (tes && tes->nir->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, tes, &brw->tes.base, true, 0);
-      if (gs && gs->UsesGather)
+      if (gs && gs->nir->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, gs, &brw->gs.base, true, 0);
-      if (fs && fs->UsesGather)
+      if (fs && fs->nir->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, fs, &brw->wm.base, true, 0);
    }
 
@@ -1342,7 +1343,7 @@ brw_update_cs_texture_surfaces(struct brw_context *brw)
     * gather4 messages.
     */
    if (brw->gen < 8) {
-      if (cs && cs->UsesGather)
+      if (cs && cs->nir->info.uses_texture_gather)
          update_stage_texture_surfaces(brw, cs, &brw->cs.base, true, 0);
    }
 
