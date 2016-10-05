@@ -195,6 +195,7 @@ struct qinst {
         struct qreg dst;
         struct qreg *src;
         bool sf;
+        bool cond_is_exec_mask;
         uint8_t cond;
 };
 
@@ -835,11 +836,13 @@ qir_ROT_MUL(struct vc4_compile *c, struct qreg val, uint32_t rot)
                                                 QPU_SMALL_IMM_MUL_ROT + rot)));
 }
 
-static inline void
+static inline struct qinst *
 qir_MOV_cond(struct vc4_compile *c, uint8_t cond,
              struct qreg dest, struct qreg src)
 {
-        qir_MOV_dest(c, dest, src)->cond = cond;
+        struct qinst *mov = qir_MOV_dest(c, dest, src);
+        mov->cond = cond;
+        return mov;
 }
 
 static inline struct qinst *

@@ -169,8 +169,11 @@ ntq_store_dest(struct vc4_compile *c, nir_dest *dest, int chan,
                  * channel is active.
                  */
                 if (c->execute.file != QFILE_NULL) {
+                        struct qinst *mov;
+
                         qir_SF(c, c->execute);
-                        qir_MOV_cond(c, QPU_COND_ZS, qregs[chan], result);
+                        mov = qir_MOV_cond(c, QPU_COND_ZS, qregs[chan], result);
+                        mov->cond_is_exec_mask = true;
                 } else {
                         qir_MOV_dest(c, qregs[chan], result);
                 }

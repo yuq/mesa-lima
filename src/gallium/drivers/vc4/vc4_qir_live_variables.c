@@ -113,8 +113,17 @@ qir_setup_def(struct vc4_compile *c, struct qblock *block, int ip,
         if (BITSET_TEST(block->use, var) || BITSET_TEST(block->def, var))
                 return;
 
-        /* Easy, common case: unconditional full register update. */
-        if (inst->cond == QPU_COND_ALWAYS && !inst->dst.pack) {
+        /* Easy, common case: unconditional full register update.
+         *
+         * We treat conditioning on the exec mask as the same as not being
+         * conditional.  This makes sure that if the register gets set on
+         * either side of an if, it is treated as being screened off before
+         * the if.  Otherwise, if there was no intervening def, its live
+         * interval doesn't extend back to the start of he program, and if too
+         * many registers did that we'd fail to register allocate.
+         */
+        if ((inst->cond == QPU_COND_ALWAYS ||
+             inst->cond_is_exec_mask) && !inst->dst.pack) {
                 BITSET_SET(block->def, var);
                 return;
         }
