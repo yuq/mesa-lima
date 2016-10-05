@@ -444,11 +444,21 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
          */
         assert(start_draw_calls_queued == job->draw_calls_queued);
 
-        if (vc4->zsa && vc4->zsa->base.depth.enabled) {
-                job->resolve |= PIPE_CLEAR_DEPTH;
+        if (vc4->zsa && vc4->framebuffer.zsbuf) {
+                struct vc4_resource *rsc =
+                        vc4_resource(vc4->framebuffer.zsbuf->texture);
+
+                if (vc4->zsa->base.depth.enabled) {
+                        job->resolve |= PIPE_CLEAR_DEPTH;
+                        rsc->initialized_buffers = PIPE_CLEAR_DEPTH;
+                }
+
+                if (vc4->zsa->base.stencil[0].enabled) {
+                        job->resolve |= PIPE_CLEAR_STENCIL;
+                        rsc->initialized_buffers |= PIPE_CLEAR_STENCIL;
+                }
         }
-        if (vc4->zsa && vc4->zsa->base.stencil[0].enabled)
-                job->resolve |= PIPE_CLEAR_STENCIL;
+
         job->resolve |= PIPE_CLEAR_COLOR0;
 
         if (vc4_debug & VC4_DEBUG_ALWAYS_FLUSH)
@@ -482,38 +492,50 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
                 job = vc4_get_job_for_fbo(vc4);
         }
 
-        /* Clearing ZS will clear both Z and stencil, so if we're trying to
-         * clear just one then we need to draw a quad to do it instead.
-         */
-        if ((buffers & PIPE_CLEAR_DEPTHSTENCIL) != 0 &&
-            (buffers & PIPE_CLEAR_DEPTHSTENCIL) != PIPE_CLEAR_DEPTHSTENCIL &&
-            util_format_is_depth_and_stencil(vc4->framebuffer.zsbuf->format)) {
-                perf_debug("Partial clear of Z+stencil buffer, drawing a quad "
-                           "instead of fast clearing\n");
-                vc4_blitter_save(vc4);
-                util_blitter_clear(vc4->blitter,
-                                   vc4->framebuffer.width,
-                                   vc4->framebuffer.height,
-                                   1,
-                                   buffers & PIPE_CLEAR_DEPTHSTENCIL,
-                                   NULL, depth, stencil);
-                buffers &= ~PIPE_CLEAR_DEPTHSTENCIL;
-                if (!buffers)
-                        return;
-        }
-
         if (buffers & PIPE_CLEAR_COLOR0) {
+                struct vc4_resource *rsc =
+                        vc4_resource(vc4->framebuffer.cbufs[0]->texture);
+
                 job->clear_color[0] = job->clear_color[1] =
                         pack_rgba(vc4->framebuffer.cbufs[0]->format,
                                   color->f);
+                rsc->initialized_buffers |= (buffers & PIPE_CLEAR_COLOR0);
         }
 
         if (buffers & PIPE_CLEAR_DEPTHSTENCIL) {
+                struct vc4_resource *rsc =
+                        vc4_resource(vc4->framebuffer.zsbuf->texture);
+                unsigned zsclear = buffers & PIPE_CLEAR_DEPTHSTENCIL;
+
+                /* Clearing ZS will clear both Z and stencil, so if we're
+                 * trying to clear just one then we need to draw a quad to do
+                 * it instead.
+                 */
+                if ((zsclear == PIPE_CLEAR_DEPTH ||
+                     zsclear == PIPE_CLEAR_STENCIL) &&
+                    (rsc->initialized_buffers & ~zsclear) &&
+                    util_format_is_depth_and_stencil(vc4->framebuffer.zsbuf->format)) {
+                        perf_debug("Partial clear of Z+stencil buffer, "
+                                   "drawing a quad instead of fast clearing\n");
+                        vc4_blitter_save(vc4);
+                        util_blitter_clear(vc4->blitter,
+                                           vc4->framebuffer.width,
+                                           vc4->framebuffer.height,
+                                           1,
+                                           zsclear,
+                                           NULL, depth, stencil);
+                        buffers &= ~zsclear;
+                        if (!buffers)
+                                return;
+                }
+
                 /* Though the depth buffer is stored with Z in the high 24,
                  * for this field we just need to store it in the low 24.
                  */
                 job->clear_depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM, depth);
                 job->clear_stencil = stencil;
+
+                rsc->initialized_buffers |= zsclear;
         }
 
         job->draw_min_x = 0;

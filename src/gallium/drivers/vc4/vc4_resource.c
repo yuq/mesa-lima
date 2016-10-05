@@ -193,8 +193,10 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                         vc4_flush_jobs_writing_resource(vc4, prsc);
         }
 
-        if (usage & PIPE_TRANSFER_WRITE)
+        if (usage & PIPE_TRANSFER_WRITE) {
                 rsc->writes++;
+                rsc->initialized_buffers = ~0;
+        }
 
         trans = slab_alloc(&vc4->transfer_pool);
         if (!trans)

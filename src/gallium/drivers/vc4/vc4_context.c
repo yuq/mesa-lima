@@ -70,6 +70,10 @@ static void
 vc4_invalidate_resource(struct pipe_context *pctx, struct pipe_resource *prsc)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
+        struct vc4_resource *rsc = vc4_resource(prsc);
+
+        rsc->initialized_buffers = 0;
+
         struct hash_entry *entry = _mesa_hash_table_search(vc4->write_jobs,
                                                            prsc);
         if (!entry)
