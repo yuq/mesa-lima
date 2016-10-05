@@ -106,8 +106,10 @@ wl_drm_format_for_vk_format(VkFormat vk_format, bool alpha)
    case VK_FORMAT_B5G5R5A1_UNORM:
       return alpha ? WL_DRM_FORMAT_XRGB1555 : WL_DRM_FORMAT_XRGB1555;
 #endif
+   case VK_FORMAT_B8G8R8_UNORM:
    case VK_FORMAT_B8G8R8_SRGB:
       return WL_DRM_FORMAT_BGRX8888;
+   case VK_FORMAT_B8G8R8A8_UNORM:
    case VK_FORMAT_B8G8R8A8_SRGB:
       return alpha ? WL_DRM_FORMAT_ARGB8888 : WL_DRM_FORMAT_XRGB8888;
 #if 0
@@ -163,9 +165,11 @@ drm_handle_format(void *data, struct wl_drm *drm, uint32_t wl_format)
 #endif
    case WL_DRM_FORMAT_XRGB8888:
       wsi_wl_display_add_vk_format(display, VK_FORMAT_B8G8R8_SRGB);
+      wsi_wl_display_add_vk_format(display, VK_FORMAT_B8G8R8_UNORM);
       /* fallthrough */
    case WL_DRM_FORMAT_ARGB8888:
       wsi_wl_display_add_vk_format(display, VK_FORMAT_B8G8R8A8_SRGB);
+      wsi_wl_display_add_vk_format(display, VK_FORMAT_B8G8R8A8_UNORM);
       break;
 #if 0
    case WL_DRM_FORMAT_ARGB2101010:
