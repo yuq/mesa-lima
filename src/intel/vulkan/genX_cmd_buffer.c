@@ -1305,6 +1305,8 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
+
+   anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
 void genX(CmdBeginRenderPass)(
@@ -1324,7 +1326,6 @@ void genX(CmdBeginRenderPass)(
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
    genX(cmd_buffer_set_subpass)(cmd_buffer, pass->subpasses);
-   anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
 void genX(CmdNextSubpass)(
@@ -1337,7 +1338,6 @@ void genX(CmdNextSubpass)(
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
    genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
-   anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
 
 void genX(CmdEndRenderPass)(
