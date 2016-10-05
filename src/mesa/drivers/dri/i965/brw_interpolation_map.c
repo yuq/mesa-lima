@@ -22,6 +22,7 @@
  */
 
 #include "brw_state.h"
+#include "compiler/nir/nir.h"
 
 static char const *get_qual_name(int mode)
 {
@@ -72,7 +73,7 @@ brw_setup_vue_interpolation(struct brw_context *brw)
       if (varying == VARYING_SLOT_BFC0 || varying == VARYING_SLOT_BFC1)
          frag_attrib = varying - VARYING_SLOT_BFC0 + VARYING_SLOT_COL0;
 
-      if (!(fprog->Base.InputsRead & BITFIELD64_BIT(frag_attrib)))
+      if (!(fprog->Base.nir->info.inputs_read & BITFIELD64_BIT(frag_attrib)))
          continue;
 
       enum glsl_interp_mode mode = fprog->InterpQualifier[frag_attrib];

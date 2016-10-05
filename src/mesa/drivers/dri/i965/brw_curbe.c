@@ -50,6 +50,7 @@
  */
 
 
+#include "compiler/nir/nir.h"
 #include "main/context.h"
 #include "main/macros.h"
 #include "main/enums.h"
@@ -324,7 +325,8 @@ emit:
     * BRW_NEW_FRAGMENT_PROGRAM
     */
    if (brw->gen == 4 && !brw->is_g4x &&
-       (brw->fragment_program->Base.InputsRead & (1 << VARYING_SLOT_POS))) {
+       (brw->fragment_program->Base.nir->info.inputs_read &
+        (1 << VARYING_SLOT_POS))) {
       BEGIN_BATCH(2);
       OUT_BATCH(_3DSTATE_GLOBAL_DEPTH_OFFSET_CLAMP << 16 | (2 - 2));
       OUT_BATCH(0);

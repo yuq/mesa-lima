@@ -29,7 +29,7 @@
   *   Keith Whitwell <keithw@vmware.com>
   */
 
-
+#include "compiler/nir/nir.h"
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "main/enums.h"
@@ -192,8 +192,11 @@ brw_upload_sf_prog(struct brw_context *brw)
    if (key.do_point_sprite) {
       key.point_sprite_coord_replace = ctx->Point.CoordReplace & 0xff;
    }
-   if (brw->fragment_program->Base.InputsRead & BITFIELD64_BIT(VARYING_SLOT_PNTC))
+   if (brw->fragment_program->Base.nir->info.inputs_read &
+       BITFIELD64_BIT(VARYING_SLOT_PNTC)) {
       key.do_point_coord = 1;
+   }
+
    /*
     * Window coordinates in a FBO are inverted, which means point
     * sprite origin must be inverted, too.

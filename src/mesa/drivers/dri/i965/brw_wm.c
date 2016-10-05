@@ -543,9 +543,11 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    }
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */
-   if (brw->gen < 6 || _mesa_bitcount_64(fp->program.Base.InputsRead &
-                                         BRW_FS_VARYING_INPUT_MASK) > 16)
+   if (brw->gen < 6 ||
+       _mesa_bitcount_64(fp->program.Base.nir->info.inputs_read &
+                         BRW_FS_VARYING_INPUT_MASK) > 16) {
       key->input_slots_valid = brw->vue_map_geom_out.slots_valid;
+   }
 
 
    /* _NEW_COLOR | _NEW_BUFFERS */
@@ -618,9 +620,11 @@ brw_fs_precompile(struct gl_context *ctx,
       key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
    }
 
-   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.InputsRead &
-                                         BRW_FS_VARYING_INPUT_MASK) > 16)
-      key.input_slots_valid = fp->Base.InputsRead | VARYING_BIT_POS;
+   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.nir->info.inputs_read &
+                                         BRW_FS_VARYING_INPUT_MASK) > 16) {
+      key.input_slots_valid =
+         fp->Base.nir->info.inputs_read | VARYING_BIT_POS;
+   }
 
    brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
 

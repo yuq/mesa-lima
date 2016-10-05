@@ -302,7 +302,7 @@ brw_merge_inputs(struct brw_context *brw,
    }
 
    if (brw->gen < 8 && !brw->is_haswell) {
-      GLbitfield64 mask = ctx->VertexProgram._Current->Base.InputsRead;
+      uint64_t mask = ctx->VertexProgram._Current->Base.nir->info.inputs_read;
       /* Prior to Haswell, the hardware can't natively support GL_FIXED or
        * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
        */

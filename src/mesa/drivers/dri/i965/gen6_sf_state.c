@@ -29,6 +29,7 @@
 #include "brw_state.h"
 #include "brw_defines.h"
 #include "brw_util.h"
+#include "compiler/nir/nir.h"
 #include "main/macros.h"
 #include "main/fbobject.h"
 #include "main/framebuffer.h"
@@ -176,7 +177,8 @@ calculate_attr_overrides(const struct brw_context *brw,
     * - VARYING_SLOT_{PSIZ,LAYER} and VARYING_SLOT_POS on gen6+
     */
 
-   bool fs_needs_vue_header = brw->fragment_program->Base.InputsRead &
+   bool fs_needs_vue_header =
+      brw->fragment_program->Base.nir->info.inputs_read &
       (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
 
    *urb_entry_read_offset = fs_needs_vue_header ? 0 : 1;

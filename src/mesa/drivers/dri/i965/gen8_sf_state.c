@@ -21,6 +21,7 @@
  * IN THE SOFTWARE.
  */
 
+#include "compiler/nir/nir.h"
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_defines.h"
@@ -94,8 +95,10 @@ upload_sbe(struct brw_context *brw)
       /* prepare the active component dwords */
       int input_index = 0;
       for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-         if (!(brw->fragment_program->Base.InputsRead & BITFIELD64_BIT(attr)))
+         if (!(brw->fragment_program->Base.nir->info.inputs_read &
+               BITFIELD64_BIT(attr))) {
             continue;
+         }
 
          assert(input_index < 32);
 

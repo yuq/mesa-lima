@@ -316,8 +316,10 @@ void
 brw_tcs_populate_key(struct brw_context *brw,
                      struct brw_tcs_prog_key *key)
 {
-   uint64_t per_vertex_slots = brw->tess_eval_program->Base.InputsRead;
-   uint32_t per_patch_slots = brw->tess_eval_program->Base.PatchInputsRead;
+   uint64_t per_vertex_slots =
+      brw->tess_eval_program->Base.nir->info.inputs_read;
+   uint32_t per_patch_slots =
+      brw->tess_eval_program->Base.nir->info.patch_inputs_read;
 
    struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
@@ -353,7 +355,7 @@ brw_tcs_populate_key(struct brw_context *brw,
       /* _NEW_TEXTURE */
       brw_populate_sampler_prog_key_data(&brw->ctx, prog, &key->tex);
    } else {
-      key->outputs_written = tep->program.Base.InputsRead;
+      key->outputs_written = tep->program.Base.nir->info.inputs_read;
    }
 }
 
