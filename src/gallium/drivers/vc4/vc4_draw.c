@@ -489,7 +489,7 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
             (buffers & PIPE_CLEAR_DEPTHSTENCIL) != PIPE_CLEAR_DEPTHSTENCIL &&
             util_format_is_depth_and_stencil(vc4->framebuffer.zsbuf->format)) {
                 perf_debug("Partial clear of Z+stencil buffer, drawing a quad "
-                           "instead of fast clearing");
+                           "instead of fast clearing\n");
                 vc4_blitter_save(vc4);
                 util_blitter_clear(vc4->blitter,
                                    vc4->framebuffer.width,
