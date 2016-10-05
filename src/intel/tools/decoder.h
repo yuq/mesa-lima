@@ -39,6 +39,8 @@ static inline uint32_t gen_make_gen(uint32_t major, uint32_t minor)
 
 struct gen_group *gen_spec_find_struct(struct gen_spec *spec, const char *name);
 struct gen_spec *gen_spec_load(const struct gen_device_info *devinfo);
+struct gen_spec *gen_spec_load_from_path(const struct gen_device_info *devinfo,
+                                         const char *path);
 uint32_t gen_spec_get_gen(struct gen_spec *spec);
 struct gen_group *gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p);
 struct gen_group *gen_spec_find_register(struct gen_spec *spec, uint32_t offset);

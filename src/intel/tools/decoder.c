@@ -482,6 +482,70 @@ gen_spec_load(const struct gen_device_info *devinfo)
    return ctx.spec;
 }
 
+struct gen_spec *
+gen_spec_load_from_path(const struct gen_device_info *devinfo,
+                        const char *path)
+{
+   struct parser_context ctx;
+   size_t len, filename_len = strlen(path) + 20;
+   char *filename = malloc(filename_len);
+   void *buf;
+   FILE *input;
+
+   len = snprintf(filename, filename_len, "%s/gen%i.xml",
+                  path, devinfo_to_gen(devinfo));
+   assert(len < filename_len);
+
+   input = fopen(filename, "r");
+   if (input == NULL) {
+      fprintf(stderr, "failed to open xml description\n");
+      free(filename);
+      return NULL;
+   }
+
+   memset(&ctx, 0, sizeof ctx);
+   ctx.parser = XML_ParserCreate(NULL);
+   XML_SetUserData(ctx.parser, &ctx);
+   if (ctx.parser == NULL) {
+      fprintf(stderr, "failed to create parser\n");
+      free(filename);
+      return NULL;
+   }
+
+   XML_SetElementHandler(ctx.parser, start_element, end_element);
+   XML_SetCharacterDataHandler(ctx.parser, character_data);
+   ctx.loc.filename = filename;
+   ctx.spec = xzalloc(sizeof(*ctx.spec));
+
+   do {
+      buf = XML_GetBuffer(ctx.parser, XML_BUFFER_SIZE);
+      len = fread(buf, 1, XML_BUFFER_SIZE, input);
+      if (len < 0) {
+         fprintf(stderr, "fread: %m\n");
+         fclose(input);
+         free(filename);
+         return NULL;
+      }
+      if (XML_ParseBuffer(ctx.parser, len, len == 0) == 0) {
+         fprintf(stderr,
+                 "Error parsing XML at line %ld col %ld: %s\n",
+                 XML_GetCurrentLineNumber(ctx.parser),
+                 XML_GetCurrentColumnNumber(ctx.parser),
+                 XML_ErrorString(XML_GetErrorCode(ctx.parser)));
+         fclose(input);
+         free(filename);
+         return NULL;
+      }
+   } while (len > 0);
+
+   XML_ParserFree(ctx.parser);
+
+   fclose(input);
+   free(filename);
+
+   return ctx.spec;
+}
+
 struct gen_group *
 gen_spec_find_instruction(struct gen_spec *spec, const uint32_t *p)
 {

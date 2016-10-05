@@ -1037,7 +1037,8 @@ print_help(const char *progname, FILE *file)
            "      --color[=WHEN]  colorize the output; WHEN can be 'auto' (default\n"
            "                        if omitted), 'always', or 'never'\n"
            "      --no-pager      don't launch pager\n"
-           "      --no-offsets    don't print instruction offsets\n",
+           "      --no-offsets    don't print instruction offsets\n"
+           "      --xml=DIR       load hardware xml description from directory DIR\n",
            progname);
 }
 
@@ -1047,7 +1048,7 @@ int main(int argc, char *argv[])
    struct aub_file *file;
    int c, i;
    bool help = false, pager = true;
-   const char *input_file = NULL;
+   char *input_file = NULL, *xml_path = NULL;
    char gen_val[24];
    const struct {
       const char *name;
@@ -1069,6 +1070,7 @@ int main(int argc, char *argv[])
       { "gen",        required_argument, NULL,                          'g' },
       { "headers",    no_argument,       (int *) &option_full_decode,   false },
       { "color",      required_argument, NULL,                          'c' },
+      { "xml",        required_argument, NULL,                          'x' },
       { NULL,         0,                 NULL,                          0 }
    };
    struct gen_device_info devinfo;
@@ -1090,6 +1092,9 @@ int main(int argc, char *argv[])
             fprintf(stderr, "invalid value for --color: %s", optarg);
             exit(EXIT_FAILURE);
          }
+         break;
+      case 'x':
+         xml_path = strdup(optarg);
          break;
       default:
          break;
@@ -1131,8 +1136,14 @@ int main(int argc, char *argv[])
    if (isatty(1) && pager)
       setup_pager();
 
-   spec = gen_spec_load(&devinfo);
+   if (xml_path == NULL)
+      spec = gen_spec_load(&devinfo);
+   else
+      spec = gen_spec_load_from_path(&devinfo, xml_path);
    disasm = gen_disasm_create(gen->pci_id);
+
+   if (spec == NULL || disasm == NULL)
+      exit(EXIT_FAILURE);
 
    if (input_file == NULL) {
        print_help(input_file, stderr);
@@ -1147,6 +1158,7 @@ int main(int argc, char *argv[])
    fflush(stdout);
    /* close the stdout which is opened to write the output */
    close(1);
+   free(xml_path);
 
    wait(NULL);
 
