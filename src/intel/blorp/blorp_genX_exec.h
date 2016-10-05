@@ -171,8 +171,8 @@ blorp_emit_vertex_data(struct blorp_batch *batch,
                        uint32_t *size)
 {
    const float vertices[] = {
-      /* v0 */ (float)params->x0, (float)params->y1,
-      /* v1 */ (float)params->x1, (float)params->y1,
+      /* v0 */ (float)params->x1, (float)params->y1,
+      /* v1 */ (float)params->x0, (float)params->y1,
       /* v2 */ (float)params->x0, (float)params->y0,
    };
 
@@ -287,7 +287,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
     *   v2 ------ implied
     *    |        |
     *    |        |
-    *   v0 ----- v1
+    *   v1 ----- v0
     *
     * Since the VS is disabled, the clipper loads each VUE directly from
     * the URB. This is controlled by the 3DSTATE_VERTEX_BUFFERS and
