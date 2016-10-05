@@ -1174,7 +1174,11 @@ VOID ElemLib::AdjustSurfaceInfo(
                 bBCnFormat = TRUE;
                 // fall through
             case ADDR_PACKED_ASTC:
+            case ADDR_PACKED_ETC2_128BPP:
                 packedBits = 128;
+                break;
+            case ADDR_PACKED_ETC2_64BPP:
+                packedBits = 64;
                 break;
             case ADDR_ROUND_BY_HALF:  // Fall through
             case ADDR_ROUND_TRUNCATE: // Fall through
@@ -1296,7 +1300,11 @@ VOID ElemLib::RestoreSurfaceInfo(
         case ADDR_PACKED_BC5:
             // fall through
         case ADDR_PACKED_ASTC:
+        case ADDR_PACKED_ETC2_128BPP:
             originalBits = 128;
+            break;
+        case ADDR_PACKED_ETC2_64BPP:
+            originalBits = 64;
             break;
         case ADDR_ROUND_BY_HALF:  // Fall through
         case ADDR_ROUND_TRUNCATE: // Fall through
@@ -1490,6 +1498,20 @@ UINT_32 ElemLib::GetBitsPerPixel(
             expandX = 4;
             expandY = 4;
             bpp = 128;
+            break;
+
+        case ADDR_FMT_ETC2_64BPP:
+            elemMode = ADDR_PACKED_ETC2_64BPP;
+            expandX  = 4;
+            expandY  = 4;
+            bpp      = 64;
+            break;
+
+        case ADDR_FMT_ETC2_128BPP:
+            elemMode = ADDR_PACKED_ETC2_128BPP;
+            expandX  = 4;
+            expandY  = 4;
+            bpp      = 128;
             break;
 
         case ADDR_FMT_ASTC_4x4:
@@ -1725,7 +1747,7 @@ BOOL_32 ElemLib::IsBlockCompressed(
     AddrFormat format)  ///< [in] Format
 {
     return (((format >= ADDR_FMT_BC1) && (format <= ADDR_FMT_BC7)) ||
-            ((format >= ADDR_FMT_ASTC_4x4) && (format <= ADDR_FMT_ASTC_12x12)));
+            ((format >= ADDR_FMT_ASTC_4x4) && (format <= ADDR_FMT_ETC2_128BPP)));
 }
 
 

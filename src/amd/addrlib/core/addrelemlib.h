@@ -115,30 +115,32 @@ enum NumberType
 enum ElemMode
 {
     // These formats allow both packing an unpacking
-    ADDR_ROUND_BY_HALF,     // add 1/2 and truncate when packing this element
-    ADDR_ROUND_TRUNCATE,    // truncate toward 0 for sign/mag, else toward neg
-    ADDR_ROUND_DITHER,      // Pack by dithering -- requires (x,y) position
+    ADDR_ROUND_BY_HALF,      // add 1/2 and truncate when packing this element
+    ADDR_ROUND_TRUNCATE,     // truncate toward 0 for sign/mag, else toward neg
+    ADDR_ROUND_DITHER,       // Pack by dithering -- requires (x,y) position
 
     // These formats only allow unpacking, no packing
-    ADDR_UNCOMPRESSED,      // Elements are not compressed: one data element per pixel/texel
-    ADDR_EXPANDED,          // Elements are split up and stored in multiple data elements
-    ADDR_PACKED_STD,        // Elements are compressed into ExpandX by ExpandY data elements
-    ADDR_PACKED_REV,        // Like ADDR_PACKED, but X order of pixels is reverved
-    ADDR_PACKED_GBGR,       // Elements are compressed 4:2:2 in G1B_G0R order (high to low)
-    ADDR_PACKED_BGRG,       // Elements are compressed 4:2:2 in BG1_RG0 order (high to low)
-    ADDR_PACKED_BC1,        // Each data element is uncompressed to a 4x4 pixel/texel array
-    ADDR_PACKED_BC2,        // Each data element is uncompressed to a 4x4 pixel/texel array
-    ADDR_PACKED_BC3,        // Each data element is uncompressed to a 4x4 pixel/texel array
-    ADDR_PACKED_BC4,        // Each data element is uncompressed to a 4x4 pixel/texel array
-    ADDR_PACKED_BC5,        // Each data element is uncompressed to a 4x4 pixel/texel array
-    ADDR_PACKED_ASTC,
+    ADDR_UNCOMPRESSED,       // Elements are not compressed: one data element per pixel/texel
+    ADDR_EXPANDED,           // Elements are split up and stored in multiple data elements
+    ADDR_PACKED_STD,         // Elements are compressed into ExpandX by ExpandY data elements
+    ADDR_PACKED_REV,         // Like ADDR_PACKED, but X order of pixels is reverved
+    ADDR_PACKED_GBGR,        // Elements are compressed 4:2:2 in G1B_G0R order (high to low)
+    ADDR_PACKED_BGRG,        // Elements are compressed 4:2:2 in BG1_RG0 order (high to low)
+    ADDR_PACKED_BC1,         // Each data element is uncompressed to a 4x4 pixel/texel array
+    ADDR_PACKED_BC2,         // Each data element is uncompressed to a 4x4 pixel/texel array
+    ADDR_PACKED_BC3,         // Each data element is uncompressed to a 4x4 pixel/texel array
+    ADDR_PACKED_BC4,         // Each data element is uncompressed to a 4x4 pixel/texel array
+    ADDR_PACKED_BC5,         // Each data element is uncompressed to a 4x4 pixel/texel array
+    ADDR_PACKED_ETC2_64BPP,  // ETC2 formats that use 64bpp to represent each 4x4 block
+    ADDR_PACKED_ETC2_128BPP, // ETC2 formats that use 128bpp to represent each 4x4 block
+    ADDR_PACKED_ASTC,        // Various ASTC formats, all are 128bpp with varying block sizes
 
     // These formats provide various kinds of compression
-    ADDR_ZPLANE_R5XX,       // Compressed Zplane using r5xx architecture format
-    ADDR_ZPLANE_R6XX,       // Compressed Zplane using r6xx architecture format
+    ADDR_ZPLANE_R5XX,        // Compressed Zplane using r5xx architecture format
+    ADDR_ZPLANE_R6XX,        // Compressed Zplane using r6xx architecture format
     //@@ Fill in the compression modes
 
-    ADDR_END_ELEMENT        // Used for range comparisons
+    ADDR_END_ELEMENT         // Used for range comparisons
 };
 
 enum DepthPlanarType
