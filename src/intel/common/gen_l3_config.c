@@ -257,7 +257,9 @@ get_l3_way_size(const struct gen_device_info *devinfo)
    if (devinfo->is_baytrail)
       return 2;
 
-   else if (devinfo->is_cherryview || devinfo->gt == 1)
+   else if (devinfo->gt == 1 ||
+            devinfo->is_cherryview ||
+            devinfo->is_broxton)
       return 4;
 
    else
