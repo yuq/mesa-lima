@@ -179,10 +179,10 @@ brw_codegen_wm_prog(struct brw_context *brw,
       fprintf(stderr, "\n");
 
    brw_upload_cache(&brw->cache, BRW_CACHE_FS_PROG,
-		    key, sizeof(struct brw_wm_prog_key),
-		    program, program_size,
-		    &prog_data, sizeof(prog_data),
-		    &brw->wm.base.prog_offset, &brw->wm.base.prog_data);
+                    key, sizeof(struct brw_wm_prog_key),
+                    program, program_size,
+                    &prog_data, sizeof(prog_data),
+                    &brw->wm.base.prog_offset, &brw->wm.base.prog_data);
 
    ralloc_free(mem_ctx);
 
@@ -313,8 +313,8 @@ gen6_gather_workaround(GLenum internalformat)
 
 void
 brw_populate_sampler_prog_key_data(struct gl_context *ctx,
-				   const struct gl_program *prog,
-				   struct brw_sampler_prog_key_data *key)
+                                   const struct gl_program *prog,
+                                   struct brw_sampler_prog_key_data *key)
 {
    struct brw_context *brw = brw_context(ctx);
    GLbitfield mask = prog->SamplersUsed;
@@ -328,9 +328,9 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
       const struct gl_texture_unit *unit = &ctx->Texture.Unit[unit_id];
 
       if (unit->_Current && unit->_Current->Target != GL_TEXTURE_BUFFER) {
-	 const struct gl_texture_object *t = unit->_Current;
-	 const struct gl_texture_image *img = t->Image[0][t->BaseLevel];
-	 struct gl_sampler_object *sampler = _mesa_get_samplerobj(ctx, unit_id);
+         const struct gl_texture_object *t = unit->_Current;
+         const struct gl_texture_image *img = t->Image[0][t->BaseLevel];
+         struct gl_sampler_object *sampler = _mesa_get_samplerobj(ctx, unit_id);
 
          const bool alpha_depth = t->DepthMode == GL_ALPHA &&
             (img->_BaseFormat == GL_DEPTH_COMPONENT ||
@@ -342,16 +342,16 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          if (alpha_depth || (brw->gen < 8 && !brw->is_haswell))
             key->swizzles[s] = brw_get_texture_swizzle(ctx, t);
 
-	 if (brw->gen < 8 &&
+         if (brw->gen < 8 &&
              sampler->MinFilter != GL_NEAREST &&
-	     sampler->MagFilter != GL_NEAREST) {
-	    if (sampler->WrapS == GL_CLAMP)
-	       key->gl_clamp_mask[0] |= 1 << s;
-	    if (sampler->WrapT == GL_CLAMP)
-	       key->gl_clamp_mask[1] |= 1 << s;
-	    if (sampler->WrapR == GL_CLAMP)
-	       key->gl_clamp_mask[2] |= 1 << s;
-	 }
+             sampler->MagFilter != GL_NEAREST) {
+            if (sampler->WrapS == GL_CLAMP)
+               key->gl_clamp_mask[0] |= 1 << s;
+            if (sampler->WrapT == GL_CLAMP)
+               key->gl_clamp_mask[1] |= 1 << s;
+            if (sampler->WrapR == GL_CLAMP)
+               key->gl_clamp_mask[2] |= 1 << s;
+         }
 
          /* gather4's channel select for green from RG32F is broken; requires
           * a shader w/a on IVB; fixable with just SCS on HSW.
@@ -450,26 +450,26 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
       /* _NEW_COLOR */
       if (fp->program.Base.nir->info.fs.uses_discard ||
           ctx->Color.AlphaEnabled) {
-	 lookup |= IZ_PS_KILL_ALPHATEST_BIT;
+         lookup |= IZ_PS_KILL_ALPHATEST_BIT;
       }
 
       if (fp->program.Base.OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
-	 lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
+         lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
 
       /* _NEW_DEPTH */
       if (ctx->Depth.Test)
-	 lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
+         lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
 
       if (ctx->Depth.Test && ctx->Depth.Mask) /* ?? */
-	 lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
+         lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
 
       /* _NEW_STENCIL | _NEW_BUFFERS */
       if (ctx->Stencil._Enabled) {
-	 lookup |= IZ_STENCIL_TEST_ENABLE_BIT;
+         lookup |= IZ_STENCIL_TEST_ENABLE_BIT;
 
-	 if (ctx->Stencil.WriteMask[0] ||
-	     ctx->Stencil.WriteMask[ctx->Stencil._BackFace])
-	    lookup |= IZ_STENCIL_WRITE_ENABLE_BIT;
+         if (ctx->Stencil.WriteMask[0] ||
+             ctx->Stencil.WriteMask[ctx->Stencil._BackFace])
+            lookup |= IZ_STENCIL_WRITE_ENABLE_BIT;
       }
       key->iz_lookup = lookup;
    }
@@ -479,24 +479,24 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    /* _NEW_LINE, _NEW_POLYGON, BRW_NEW_REDUCED_PRIMITIVE */
    if (ctx->Line.SmoothFlag) {
       if (brw->reduced_primitive == GL_LINES) {
-	 line_aa = AA_ALWAYS;
+         line_aa = AA_ALWAYS;
       }
       else if (brw->reduced_primitive == GL_TRIANGLES) {
-	 if (ctx->Polygon.FrontMode == GL_LINE) {
-	    line_aa = AA_SOMETIMES;
+         if (ctx->Polygon.FrontMode == GL_LINE) {
+            line_aa = AA_SOMETIMES;
 
-	    if (ctx->Polygon.BackMode == GL_LINE ||
-		(ctx->Polygon.CullFlag &&
-		 ctx->Polygon.CullFaceMode == GL_BACK))
-	       line_aa = AA_ALWAYS;
-	 }
-	 else if (ctx->Polygon.BackMode == GL_LINE) {
-	    line_aa = AA_SOMETIMES;
+            if (ctx->Polygon.BackMode == GL_LINE ||
+                (ctx->Polygon.CullFlag &&
+                 ctx->Polygon.CullFaceMode == GL_BACK))
+               line_aa = AA_ALWAYS;
+         }
+         else if (ctx->Polygon.BackMode == GL_LINE) {
+            line_aa = AA_SOMETIMES;
 
-	    if ((ctx->Polygon.CullFlag &&
-		 ctx->Polygon.CullFaceMode == GL_FRONT))
-	       line_aa = AA_ALWAYS;
-	 }
+            if ((ctx->Polygon.CullFlag &&
+                 ctx->Polygon.CullFaceMode == GL_FRONT))
+               line_aa = AA_ALWAYS;
+         }
       }
    }
 
@@ -580,8 +580,8 @@ brw_upload_wm_prog(struct brw_context *brw)
    brw_wm_populate_key(brw, &key);
 
    if (!brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
-			 &key, sizeof(key),
-			 &brw->wm.base.prog_offset,
+                         &key, sizeof(key),
+                         &brw->wm.base.prog_offset,
                          &brw->wm.base.prog_data)) {
       bool success = brw_codegen_wm_prog(brw, current, fp, &key);
       (void) success;
