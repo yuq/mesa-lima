@@ -36,6 +36,7 @@
 
 bool error = false;
 
+#ifdef ENABLE_SHADER_CACHE
 void
 _mesa_warning(void *ctx, const char *fmt, ...);
 
@@ -397,10 +398,12 @@ test_put_key_and_get_key(void)
 
    cache_destroy(cache);
 }
+#endif /* ENABLE_SHADER_CACHE */
 
 int
 main(void)
 {
+#ifdef ENABLE_SHADER_CACHE
    int err;
 
    test_cache_create();
@@ -411,6 +414,7 @@ main(void)
 
    err = rmrf_local(CACHE_TEST_TMP);
    expect_equal(err, 0, "Removing " CACHE_TEST_TMP " again");
+#endif /* ENABLE_SHADER_CACHE */
 
    return error ? 1 : 0;
 }
