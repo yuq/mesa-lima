@@ -677,7 +677,7 @@ nvc0_program_translate(struct nvc0_program *prog, uint16_t chipset,
                       info->bin.instructions, info->bin.codeSize);
 
 #ifdef DEBUG
-   if (debug_get_option("NV50_PROG_CHIPSET", NULL))
+   if (debug_get_option("NV50_PROG_CHIPSET", NULL) && info->dbgFlags)
       nvc0_program_dump(prog);
 #endif
 
