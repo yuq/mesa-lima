@@ -892,6 +892,13 @@ void st_init_extensions(struct pipe_screen *screen,
       extensions->AMD_vertex_shader_layer = GL_TRUE;
    }
 
+   if (consts->GLSLVersion >= 140) {
+      if (screen->get_param(screen, PIPE_CAP_TGSI_ARRAY_COMPONENTS) &&
+         screen->get_shader_param(screen, PIPE_SHADER_FRAGMENT,
+                                   PIPE_SHADER_CAP_PREFERRED_IR) == PIPE_SHADER_IR_TGSI)
+         extensions->ARB_enhanced_layouts = GL_TRUE;
+   }
+
    if (consts->GLSLVersion >= 130) {
       consts->NativeIntegers = GL_TRUE;
       consts->MaxClipPlanes = 8;

@@ -265,6 +265,7 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_FAKE_SW_MSAA:
       return 1;
    case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
+   case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
       return 1;
 
    case PIPE_CAP_VENDOR_ID:
@@ -336,7 +337,6 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_WINDOW_RECTANGLES:
    case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
    case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
-   case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
       return 0;
    }
    /* should only get here on unhandled cases */

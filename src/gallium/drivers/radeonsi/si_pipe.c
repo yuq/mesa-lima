@@ -409,6 +409,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_STRING_MARKER:
 	case PIPE_CAP_CLEAR_TEXTURE:
 	case PIPE_CAP_CULL_DISTANCE:
+	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
@@ -458,7 +459,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_PRIMITIVE_RESTART_FOR_PATCHES:
 	case PIPE_CAP_TGSI_VOTE:
 	case PIPE_CAP_MAX_WINDOW_RECTANGLES:
-	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 		return 0;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
