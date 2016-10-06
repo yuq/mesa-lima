@@ -181,7 +181,6 @@ nir_opt_peephole_select_block(nir_block *block, void *mem_ctx, unsigned limit)
     */
 
    nir_block *prev_block = nir_cf_node_as_block(nir_cf_node_prev(prev_node));
-   assert(prev_block->cf_node.type == nir_cf_node_block);
 
    /* First, we move the remaining instructions from the blocks to the
     * block before.  We have already guaranteed that this is safe by

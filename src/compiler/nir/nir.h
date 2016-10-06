@@ -2147,7 +2147,6 @@ nir_after_cf_node_and_phis(nir_cf_node *node)
       return nir_after_block(nir_cf_node_as_block(node));
 
    nir_block *block = nir_cf_node_as_block(nir_cf_node_next(node));
-   assert(block->cf_node.type == nir_cf_node_block);
 
    return nir_after_phis(block);
 }

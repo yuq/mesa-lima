@@ -112,7 +112,6 @@ lower_instr(nir_intrinsic_instr *instr,
 
    nir_deref *tail = &instr->variables[0]->deref;
    while (tail->child != NULL) {
-      assert(tail->child->deref_type == nir_deref_type_array);
       nir_deref_array *deref_array = nir_deref_as_array(tail->child);
       tail = tail->child;
 

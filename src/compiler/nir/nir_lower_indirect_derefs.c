@@ -35,8 +35,6 @@ emit_indirect_load_store(nir_builder *b, nir_intrinsic_instr *orig_instr,
                          int start, int end,
                          nir_ssa_def **dest, nir_ssa_def *src)
 {
-   assert(arr_parent->child &&
-          arr_parent->child->deref_type == nir_deref_type_array);
    nir_deref_array *arr = nir_deref_as_array(arr_parent->child);
    assert(arr->deref_array_type == nir_deref_array_type_indirect);
    assert(arr->indirect.is_ssa);

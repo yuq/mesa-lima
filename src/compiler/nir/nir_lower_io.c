@@ -143,7 +143,6 @@ get_io_offset(nir_builder *b, nir_deref_var *deref,
     */
    if (vertex_index != NULL) {
       tail = tail->child;
-      assert(tail->deref_type == nir_deref_type_array);
       nir_deref_array *deref_array = nir_deref_as_array(tail);
 
       nir_ssa_def *vtx = nir_imm_int(b, deref_array->base_offset);
