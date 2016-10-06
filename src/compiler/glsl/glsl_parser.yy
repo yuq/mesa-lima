@@ -2957,14 +2957,14 @@ layout_defaults:
    | layout_in_defaults
    {
       $$ = NULL;
-      if (!$1.merge_into_in_qualifier(& @1, state, $$, true)) {
+      if (!$1.merge_into_in_qualifier(& @1, state, $$)) {
          YYERROR;
       }
    }
    | layout_out_defaults
    {
       $$ = NULL;
-      if (!$1.merge_into_out_qualifier(& @1, state, $$, true)) {
+      if (!$1.merge_into_out_qualifier(& @1, state, $$)) {
          YYERROR;
       }
    }

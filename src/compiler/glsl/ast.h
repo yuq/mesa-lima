@@ -767,7 +767,7 @@ struct ast_type_qualifier {
     */
    bool merge_into_out_qualifier(YYLTYPE *loc,
                                  _mesa_glsl_parse_state *state,
-                                 ast_node* &node, bool create_node);
+                                 ast_node* &node);
 
    /**
     * Validate current qualifier against the global in one.
@@ -780,7 +780,7 @@ struct ast_type_qualifier {
     */
    bool merge_into_in_qualifier(YYLTYPE *loc,
                                 _mesa_glsl_parse_state *state,
-                                ast_node* &node, bool create_node);
+                                ast_node* &node);
 
    bool validate_flags(YYLTYPE *loc,
                        _mesa_glsl_parse_state *state,

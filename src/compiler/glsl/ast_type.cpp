@@ -514,7 +514,7 @@ ast_type_qualifier::validate_out_qualifier(YYLTYPE *loc,
 bool
 ast_type_qualifier::merge_into_out_qualifier(YYLTYPE *loc,
                                              _mesa_glsl_parse_state *state,
-                                             ast_node* &node, bool create_node)
+                                             ast_node* &node)
 {
    const bool r = state->out_qualifier->merge_qualifier(loc, state,
                                                         *this, false);
@@ -525,8 +525,7 @@ ast_type_qualifier::merge_into_out_qualifier(YYLTYPE *loc,
       state->out_qualifier->flags.q.explicit_stream = 0;
       break;
    case MESA_SHADER_TESS_CTRL:
-      if (create_node)
-         node = new(state->linalloc) ast_tcs_output_layout(*loc);
+      node = new(state->linalloc) ast_tcs_output_layout(*loc);
       break;
    default:
       break;
@@ -627,7 +626,7 @@ ast_type_qualifier::validate_in_qualifier(YYLTYPE *loc,
 bool
 ast_type_qualifier::merge_into_in_qualifier(YYLTYPE *loc,
                                             _mesa_glsl_parse_state *state,
-                                            ast_node* &node, bool create_node)
+                                            ast_node* &node)
 {
    bool r = true;
    void *lin_ctx = state->linalloc;
@@ -636,8 +635,7 @@ ast_type_qualifier::merge_into_in_qualifier(YYLTYPE *loc,
     * more repeated nodes will be created as we will have the flag set.
     */
    if (state->stage == MESA_SHADER_GEOMETRY
-       && this->flags.q.prim_type && !state->in_qualifier->flags.q.prim_type
-       && create_node) {
+       && this->flags.q.prim_type && !state->in_qualifier->flags.q.prim_type) {
       node = new(lin_ctx) ast_gs_input_layout(*loc, this->prim_type);
    }
 
@@ -653,8 +651,8 @@ ast_type_qualifier::merge_into_in_qualifier(YYLTYPE *loc,
     * into HIR.
     */
    if (state->in_qualifier->flags.q.local_size) {
-      if (create_node)
-         node = new(lin_ctx) ast_cs_input_layout(*loc, state->in_qualifier->local_size);
+      node = new(lin_ctx) ast_cs_input_layout(*loc,
+                                              state->in_qualifier->local_size);
       state->in_qualifier->flags.q.local_size = 0;
       for (int i = 0; i < 3; i++)
          state->in_qualifier->local_size[i] = NULL;
