@@ -782,6 +782,12 @@ struct ast_type_qualifier {
                                 _mesa_glsl_parse_state *state,
                                 ast_node* &node);
 
+   /**
+    * Push pending layout qualifiers to the global values.
+    */
+   bool push_to_global(YYLTYPE *loc,
+                       _mesa_glsl_parse_state *state);
+
    bool validate_flags(YYLTYPE *loc,
                        _mesa_glsl_parse_state *state,
                        const ast_type_qualifier &allowed_flags,
