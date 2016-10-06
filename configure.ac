@@ -2549,7 +2549,7 @@ if test -n "$with_gallium_drivers"; then
     done
 fi
 
-if test "x$HAVE_RADEON_VULKAN" != "x0"; then
+if test "x$HAVE_RADEON_VULKAN" = "xyes"; then
     radeon_llvm_check "radv" "3" "9" "0"
 fi
 
