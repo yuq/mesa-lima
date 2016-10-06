@@ -918,6 +918,8 @@ static struct qreg ntq_emit_bcsel(struct vc4_compile *c, nir_alu_instr *instr,
 {
         if (!instr->src[0].src.is_ssa)
                 goto out;
+        if (instr->src[0].src.ssa->parent_instr->type != nir_instr_type_alu)
+                goto out;
         nir_alu_instr *compare =
                 nir_instr_as_alu(instr->src[0].src.ssa->parent_instr);
         if (!compare)
