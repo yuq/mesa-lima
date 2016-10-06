@@ -3323,7 +3323,7 @@ LocalCSE::visit(BasicBlock *bb)
       for (ir = bb->getFirst(); ir; ir = ir->next)
          ir->serial = serial++;
 
-      for (ir = bb->getEntry(); ir; ir = next) {
+      for (ir = bb->getFirst(); ir; ir = next) {
          int s;
          Value *src = NULL;
 
