@@ -59,11 +59,13 @@ struct gl_shader_program;
  * Note that you have to be a bit careful as the generated cast function
  * destroys constness.
  */
-#define NIR_DEFINE_CAST(name, in_type, out_type, field)  \
-static inline out_type *                                 \
-name(const in_type *parent)                              \
-{                                                        \
-   return exec_node_data(out_type, parent, field);       \
+#define NIR_DEFINE_CAST(name, in_type, out_type, field, \
+                        type_field, type_value)         \
+static inline out_type *                                \
+name(const in_type *parent)                             \
+{                                                       \
+   assert(parent && parent->type_field == type_value);  \
+   return exec_node_data(out_type, parent, field);      \
 }
 
 struct nir_function;
@@ -841,9 +843,12 @@ typedef struct {
    unsigned index;
 } nir_deref_struct;
 
-NIR_DEFINE_CAST(nir_deref_as_var, nir_deref, nir_deref_var, deref)
-NIR_DEFINE_CAST(nir_deref_as_array, nir_deref, nir_deref_array, deref)
-NIR_DEFINE_CAST(nir_deref_as_struct, nir_deref, nir_deref_struct, deref)
+NIR_DEFINE_CAST(nir_deref_as_var, nir_deref, nir_deref_var, deref,
+                deref_type, nir_deref_type_var)
+NIR_DEFINE_CAST(nir_deref_as_array, nir_deref, nir_deref_array, deref,
+                deref_type, nir_deref_type_array)
+NIR_DEFINE_CAST(nir_deref_as_struct, nir_deref, nir_deref_struct, deref,
+                deref_type, nir_deref_type_struct)
 
 /* Returns the last deref in the chain. */
 static inline nir_deref *
@@ -1409,16 +1414,25 @@ typedef struct {
    struct exec_list entries;
 } nir_parallel_copy_instr;
 
-NIR_DEFINE_CAST(nir_instr_as_alu, nir_instr, nir_alu_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_call, nir_instr, nir_call_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_jump, nir_instr, nir_jump_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_tex, nir_instr, nir_tex_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_intrinsic, nir_instr, nir_intrinsic_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_load_const, nir_instr, nir_load_const_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_ssa_undef, nir_instr, nir_ssa_undef_instr, instr)
-NIR_DEFINE_CAST(nir_instr_as_phi, nir_instr, nir_phi_instr, instr)
+NIR_DEFINE_CAST(nir_instr_as_alu, nir_instr, nir_alu_instr, instr,
+                type, nir_instr_type_alu)
+NIR_DEFINE_CAST(nir_instr_as_call, nir_instr, nir_call_instr, instr,
+                type, nir_instr_type_call)
+NIR_DEFINE_CAST(nir_instr_as_jump, nir_instr, nir_jump_instr, instr,
+                type, nir_instr_type_jump)
+NIR_DEFINE_CAST(nir_instr_as_tex, nir_instr, nir_tex_instr, instr,
+                type, nir_instr_type_tex)
+NIR_DEFINE_CAST(nir_instr_as_intrinsic, nir_instr, nir_intrinsic_instr, instr,
+                type, nir_instr_type_intrinsic)
+NIR_DEFINE_CAST(nir_instr_as_load_const, nir_instr, nir_load_const_instr, instr,
+                type, nir_instr_type_load_const)
+NIR_DEFINE_CAST(nir_instr_as_ssa_undef, nir_instr, nir_ssa_undef_instr, instr,
+                type, nir_instr_type_ssa_undef)
+NIR_DEFINE_CAST(nir_instr_as_phi, nir_instr, nir_phi_instr, instr,
+                type, nir_instr_type_phi)
 NIR_DEFINE_CAST(nir_instr_as_parallel_copy, nir_instr,
-                nir_parallel_copy_instr, instr)
+                nir_parallel_copy_instr, instr,
+                type, nir_instr_type_parallel_copy)
 
 /*
  * Control flow
@@ -1660,10 +1674,14 @@ nir_cf_node_is_last(const nir_cf_node *node)
    return exec_node_is_tail_sentinel(node->node.next);
 }
 
-NIR_DEFINE_CAST(nir_cf_node_as_block, nir_cf_node, nir_block, cf_node)
-NIR_DEFINE_CAST(nir_cf_node_as_if, nir_cf_node, nir_if, cf_node)
-NIR_DEFINE_CAST(nir_cf_node_as_loop, nir_cf_node, nir_loop, cf_node)
-NIR_DEFINE_CAST(nir_cf_node_as_function, nir_cf_node, nir_function_impl, cf_node)
+NIR_DEFINE_CAST(nir_cf_node_as_block, nir_cf_node, nir_block, cf_node,
+                type, nir_cf_node_block)
+NIR_DEFINE_CAST(nir_cf_node_as_if, nir_cf_node, nir_if, cf_node,
+                type, nir_cf_node_if)
+NIR_DEFINE_CAST(nir_cf_node_as_loop, nir_cf_node, nir_loop, cf_node,
+                type, nir_cf_node_loop)
+NIR_DEFINE_CAST(nir_cf_node_as_function, nir_cf_node,
+                nir_function_impl, cf_node, type, nir_cf_node_function)
 
 typedef enum {
    nir_parameter_in,
