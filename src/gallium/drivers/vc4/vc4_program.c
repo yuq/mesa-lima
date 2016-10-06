@@ -1777,11 +1777,9 @@ ntq_emit_if(struct vc4_compile *c, nir_if *if_stmt)
                 return;
         }
 
-        nir_cf_node *nir_first_else_node = nir_if_first_else_node(if_stmt);
-        nir_cf_node *nir_last_else_node = nir_if_last_else_node(if_stmt);
-        nir_block *nir_else_block = nir_cf_node_as_block(nir_first_else_node);
+        nir_block *nir_else_block = nir_if_first_else_block(if_stmt);
         bool empty_else_block =
-                (nir_first_else_node == nir_last_else_node  &&
+                (nir_else_block == nir_if_last_else_block(if_stmt) &&
                  exec_list_is_empty(&nir_else_block->instr_list));
 
         struct qblock *then_block = qir_new_block(c);

@@ -157,16 +157,13 @@ nir_opt_peephole_select_block(nir_block *block, void *mem_ctx, unsigned limit)
       return false;
 
    nir_if *if_stmt = nir_cf_node_as_if(prev_node);
-   nir_cf_node *then_node = nir_if_first_then_node(if_stmt);
-   nir_cf_node *else_node = nir_if_first_else_node(if_stmt);
+   nir_block *then_block = nir_if_first_then_block(if_stmt);
+   nir_block *else_block = nir_if_first_else_block(if_stmt);
 
    /* We can only have one block in each side ... */
-   if (nir_if_last_then_node(if_stmt) != then_node ||
-       nir_if_last_else_node(if_stmt) != else_node)
+   if (nir_if_last_then_block(if_stmt) != then_block ||
+       nir_if_last_else_block(if_stmt) != else_block)
       return false;
-
-   nir_block *then_block = nir_cf_node_as_block(then_node);
-   nir_block *else_block = nir_cf_node_as_block(else_node);
 
    /* ... and those blocks must only contain "allowed" instructions. */
    unsigned count = 0;

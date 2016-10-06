@@ -1646,10 +1646,10 @@ nir_block_cf_tree_next(nir_block *block)
    case nir_cf_node_if: {
       /* Are we at the end of the if? Go to the beginning of the else */
       nir_if *if_stmt = nir_cf_node_as_if(parent);
-      if (&block->cf_node == nir_if_last_then_node(if_stmt))
-         return nir_cf_node_as_block(nir_if_first_else_node(if_stmt));
+      if (block == nir_if_last_then_block(if_stmt))
+         return nir_if_first_else_block(if_stmt);
 
-      assert(&block->cf_node == nir_if_last_else_node(if_stmt));
+      assert(block == nir_if_last_else_block(if_stmt));
       /* fall through */
    }
 
@@ -1682,10 +1682,10 @@ nir_block_cf_tree_prev(nir_block *block)
    case nir_cf_node_if: {
       /* Are we at the beginning of the else? Go to the end of the if */
       nir_if *if_stmt = nir_cf_node_as_if(parent);
-      if (&block->cf_node == nir_if_first_else_node(if_stmt))
-         return nir_cf_node_as_block(nir_if_last_then_node(if_stmt));
+      if (block == nir_if_first_else_block(if_stmt))
+         return nir_if_last_then_block(if_stmt);
 
-      assert(&block->cf_node == nir_if_first_then_node(if_stmt));
+      assert(block == nir_if_first_then_block(if_stmt));
       /* fall through */
    }
 
@@ -1710,12 +1710,12 @@ nir_block *nir_cf_node_cf_tree_first(nir_cf_node *node)
 
    case nir_cf_node_if: {
       nir_if *if_stmt = nir_cf_node_as_if(node);
-      return nir_cf_node_as_block(nir_if_first_then_node(if_stmt));
+      return nir_if_first_then_block(if_stmt);
    }
 
    case nir_cf_node_loop: {
       nir_loop *loop = nir_cf_node_as_loop(node);
-      return nir_cf_node_as_block(nir_loop_first_cf_node(loop));
+      return nir_loop_first_block(loop);
    }
 
    case nir_cf_node_block: {
@@ -1737,12 +1737,12 @@ nir_block *nir_cf_node_cf_tree_last(nir_cf_node *node)
 
    case nir_cf_node_if: {
       nir_if *if_stmt = nir_cf_node_as_if(node);
-      return nir_cf_node_as_block(nir_if_last_else_node(if_stmt));
+      return nir_if_last_else_block(if_stmt);
    }
 
    case nir_cf_node_loop: {
       nir_loop *loop = nir_cf_node_as_loop(node);
-      return nir_cf_node_as_block(nir_loop_last_cf_node(loop));
+      return nir_loop_last_block(loop);
    }
 
    case nir_cf_node_block: {
