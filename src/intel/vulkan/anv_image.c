@@ -28,6 +28,7 @@
 #include <fcntl.h>
 
 #include "anv_private.h"
+#include "util/debug.h"
 
 #include "vk_format_info.h"
 
@@ -60,6 +61,7 @@ choose_isl_surf_usage(VkImageUsageFlags vk_usage,
       default:
          unreachable("bad VkImageAspect");
       case VK_IMAGE_ASPECT_DEPTH_BIT:
+         isl_usage &= ~ISL_SURF_USAGE_DISABLE_AUX_BIT;
          isl_usage |= ISL_SURF_USAGE_DEPTH_BIT;
          break;
       case VK_IMAGE_ASPECT_STENCIL_BIT:
@@ -97,6 +99,16 @@ get_surface(struct anv_image *image, VkImageAspectFlags aspect)
    case VK_IMAGE_ASPECT_STENCIL_BIT:
       return &image->stencil_surface;
    }
+}
+
+static void
+add_surface(struct anv_image *image, struct anv_surface *surf)
+{
+   assert(surf->isl.size > 0); /* isl surface must be initialized */
+
+   surf->offset = align_u32(image->size, surf->isl.alignment);
+   image->size = surf->offset + surf->isl.size;
+   image->alignment = MAX(image->alignment, surf->isl.alignment);
 }
 
 /**
@@ -160,9 +172,28 @@ make_surface(const struct anv_device *dev,
     */
    assert(ok);
 
-   anv_surf->offset = align_u32(image->size, anv_surf->isl.alignment);
-   image->size = anv_surf->offset + anv_surf->isl.size;
-   image->alignment = MAX(image->alignment, anv_surf->isl.alignment);
+   add_surface(image, anv_surf);
+
+   /* Add a HiZ surface to a depth buffer that will be used for rendering.
+    */
+   if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT &&
+       (image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+
+      /* Allow the user to control HiZ enabling. Disable by default on gen7
+       * because resolves are not currently implemented pre-BDW.
+       */
+      if (!env_var_as_boolean("INTEL_VK_HIZ", dev->info.gen >= 8)) {
+         anv_finishme("Implement gen7 HiZ");
+      } else if (vk_info->mipLevels > 1) {
+         anv_finishme("Test multi-LOD HiZ");
+      } else if (dev->info.gen == 8 && vk_info->samples > 1) {
+         anv_finishme("Test gen8 multisampled HiZ");
+      } else {
+         isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
+                               &image->hiz_surface.isl);
+         add_surface(image, &image->hiz_surface);
+      }
+   }
 
    return VK_SUCCESS;
 }
