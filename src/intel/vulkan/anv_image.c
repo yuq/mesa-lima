@@ -317,11 +317,12 @@ anv_DestroyImage(VkDevice _device, VkImage _image,
 }
 
 VkResult anv_BindImageMemory(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     VkImage                                     _image,
     VkDeviceMemory                              _memory,
     VkDeviceSize                                memoryOffset)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
    ANV_FROM_HANDLE(anv_image, image, _image);
 
@@ -331,6 +332,34 @@ VkResult anv_BindImageMemory(
    } else {
       image->bo = NULL;
       image->offset = 0;
+   }
+
+   if (anv_image_has_hiz(image)) {
+
+      /* The offset and size must be a multiple of 4K or else the
+       * anv_gem_mmap call below will return NULL.
+       */
+      assert((image->offset + image->hiz_surface.offset) % 4096 == 0);
+      assert(image->hiz_surface.isl.size % 4096 == 0);
+
+      /* HiZ surfaces need to have their memory cleared to 0 before they
+       * can be used.  If we let it have garbage data, it can cause GPU
+       * hangs on some hardware.
+       */
+      void *map = anv_gem_mmap(device, image->bo->gem_handle,
+                               image->offset + image->hiz_surface.offset,
+                               image->hiz_surface.isl.size,
+                               device->info.has_llc ? 0 : I915_MMAP_WC);
+
+      /* If anv_gem_mmap returns NULL, it's likely that the kernel was
+       * not able to find space on the host to create a proper mapping.
+       */
+      if (map == NULL)
+         return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+      memset(map, 0, image->hiz_surface.isl.size);
+
+      anv_gem_munmap(map, image->hiz_surface.isl.size);
    }
 
    return VK_SUCCESS;
