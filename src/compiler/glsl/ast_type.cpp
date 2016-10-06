@@ -196,7 +196,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.max_vertices) {
-      if (this->max_vertices) {
+      if (this->max_vertices && !is_single_layout_merge) {
          this->max_vertices->merge_qualifier(q.max_vertices);
       } else {
          this->max_vertices = q.max_vertices;
@@ -213,7 +213,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.invocations) {
-      if (this->invocations) {
+      if (this->invocations && !is_single_layout_merge) {
          this->invocations->merge_qualifier(q.invocations);
       } else {
          this->invocations = q.invocations;
@@ -262,7 +262,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          unsigned buff_idx;
          if (process_qualifier_constant(state, loc, "xfb_buffer",
                                         this->xfb_buffer, &buff_idx)) {
-            if (state->out_qualifier->out_xfb_stride[buff_idx]) {
+            if (state->out_qualifier->out_xfb_stride[buff_idx]
+                && !is_single_layout_merge) {
                state->out_qualifier->out_xfb_stride[buff_idx]->merge_qualifier(
                   new(state->linalloc) ast_layout_expression(*loc, this->xfb_stride));
             } else {
@@ -274,7 +275,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.vertices) {
-      if (this->vertices) {
+      if (this->vertices && !is_single_layout_merge) {
          this->vertices->merge_qualifier(q.vertices);
       } else {
          this->vertices = q.vertices;
@@ -312,7 +313,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 
    for (int i = 0; i < 3; i++) {
       if (q.flags.q.local_size & (1 << i)) {
-         if (this->local_size[i]) {
+         if (this->local_size[i] && !is_single_layout_merge) {
             this->local_size[i]->merge_qualifier(q.local_size[i]);
          } else {
             this->local_size[i] = q.local_size[i];
