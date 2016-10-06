@@ -1648,6 +1648,7 @@ anv_pipeline_setup_l3_config(struct anv_pipeline *pipeline, bool needs_slm);
  * Subsurface of an anv_image.
  */
 struct anv_surface {
+   /** Valid only if isl_surf::size > 0. */
    struct isl_surf isl;
 
    /**
@@ -1694,6 +1695,7 @@ struct anv_image {
 
       struct {
          struct anv_surface depth_surface;
+         struct anv_surface hiz_surface;
          struct anv_surface stencil_surface;
       };
    };
