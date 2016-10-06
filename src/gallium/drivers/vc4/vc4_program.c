@@ -2518,7 +2518,7 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         qir_compile_destroy(c);
 
         struct vc4_key *dup_key;
-        dup_key = ralloc_size(shader, key_size);
+        dup_key = rzalloc_size(shader, key_size); /* TODO: don't use rzalloc */
         memcpy(dup_key, key, key_size);
         _mesa_hash_table_insert(ht, dup_key, shader);
 

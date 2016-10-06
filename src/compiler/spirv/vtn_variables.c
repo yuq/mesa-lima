@@ -35,7 +35,8 @@ vtn_access_chain_extend(struct vtn_builder *b, struct vtn_access_chain *old,
    struct vtn_access_chain *chain;
 
    unsigned new_len = old->length + new_ids;
-   chain = ralloc_size(b, sizeof(*chain) + new_len * sizeof(chain->link[0]));
+   /* TODO: don't use rzalloc */
+   chain = rzalloc_size(b, sizeof(*chain) + new_len * sizeof(chain->link[0]));
 
    chain->var = old->var;
    chain->length = new_len;

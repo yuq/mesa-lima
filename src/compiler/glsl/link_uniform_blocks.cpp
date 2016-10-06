@@ -310,7 +310,7 @@ create_buffer_blocks(void *mem_ctx, struct gl_context *ctx,
    /* Allocate storage to hold all of the information related to uniform
     * blocks that can be queried through the API.
     */
-   struct gl_uniform_block *blocks = ralloc_array(mem_ctx, gl_uniform_block, num_blocks);
+   struct gl_uniform_block *blocks = rzalloc_array(mem_ctx, gl_uniform_block, num_blocks);
    gl_uniform_buffer_variable *variables =
       ralloc_array(blocks, gl_uniform_buffer_variable, num_variables);
 

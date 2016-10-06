@@ -49,7 +49,7 @@ struct YYLTYPE;
  */
 class ast_node {
 public:
-   DECLARE_RALLOC_CXX_OPERATORS(ast_node);
+   DECLARE_RZALLOC_CXX_OPERATORS(ast_node);
 
    /**
     * Print an AST node in something approximating the original GLSL code

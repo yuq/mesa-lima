@@ -6639,8 +6639,8 @@ ast_process_struct_or_iface_block_members(exec_list *instructions,
     * the types to HIR.  This ensures that structure definitions embedded in
     * other structure definitions or in interface blocks are processed.
     */
-   glsl_struct_field *const fields = ralloc_array(state, glsl_struct_field,
-                                                  decl_count);
+   glsl_struct_field *const fields = rzalloc_array(state, glsl_struct_field,
+                                                   decl_count);
 
    bool first_member = true;
    bool first_member_has_explicit_location = false;

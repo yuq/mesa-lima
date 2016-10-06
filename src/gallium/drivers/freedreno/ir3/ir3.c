@@ -40,7 +40,7 @@
  */
 void * ir3_alloc(struct ir3 *shader, int sz)
 {
-	return ralloc_size(shader, sz);
+	return rzalloc_size(shader, sz); /* TODO: don't use rzalloc */
 }
 
 struct ir3 * ir3_create(struct ir3_compiler *compiler,

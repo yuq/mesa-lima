@@ -28,7 +28,7 @@
 void
 vc4_init_cl(void *mem_ctx, struct vc4_cl *cl)
 {
-        cl->base = ralloc_size(mem_ctx, 1);
+        cl->base = rzalloc_size(mem_ctx, 1); /* TODO: don't use rzalloc */
         cl->next = cl->base;
         cl->size = 0;
 }
