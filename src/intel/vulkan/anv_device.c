@@ -1008,10 +1008,11 @@ VkResult anv_EnumerateInstanceExtensionProperties(
       return VK_SUCCESS;
    }
 
-   assert(*pPropertyCount >= ARRAY_SIZE(global_extensions));
+   *pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(global_extensions));
+   typed_memcpy(pProperties, global_extensions, *pPropertyCount);
 
-   *pPropertyCount = ARRAY_SIZE(global_extensions);
-   memcpy(pProperties, global_extensions, sizeof(global_extensions));
+   if (*pPropertyCount < ARRAY_SIZE(global_extensions))
+      return VK_INCOMPLETE;
 
    return VK_SUCCESS;
 }
@@ -1027,10 +1028,11 @@ VkResult anv_EnumerateDeviceExtensionProperties(
       return VK_SUCCESS;
    }
 
-   assert(*pPropertyCount >= ARRAY_SIZE(device_extensions));
+   *pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(device_extensions));
+   typed_memcpy(pProperties, device_extensions, *pPropertyCount);
 
-   *pPropertyCount = ARRAY_SIZE(device_extensions);
-   memcpy(pProperties, device_extensions, sizeof(device_extensions));
+   if (*pPropertyCount < ARRAY_SIZE(device_extensions))
+      return VK_INCOMPLETE;
 
    return VK_SUCCESS;
 }
