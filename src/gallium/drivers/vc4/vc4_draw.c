@@ -514,7 +514,7 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
                  */
                 if ((zsclear == PIPE_CLEAR_DEPTH ||
                      zsclear == PIPE_CLEAR_STENCIL) &&
-                    (rsc->initialized_buffers & ~zsclear) &&
+                    (rsc->initialized_buffers & ~(zsclear | job->cleared)) &&
                     util_format_is_depth_and_stencil(vc4->framebuffer.zsbuf->format)) {
                         perf_debug("Partial clear of Z+stencil buffer, "
                                    "drawing a quad instead of fast clearing\n");
@@ -533,8 +533,12 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
                 /* Though the depth buffer is stored with Z in the high 24,
                  * for this field we just need to store it in the low 24.
                  */
-                job->clear_depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM, depth);
-                job->clear_stencil = stencil;
+                if (buffers & PIPE_CLEAR_DEPTH) {
+                        job->clear_depth = util_pack_z(PIPE_FORMAT_Z24X8_UNORM,
+                                                       depth);
+                }
+                if (buffers & PIPE_CLEAR_STENCIL)
+                        job->clear_stencil = stencil;
 
                 rsc->initialized_buffers |= zsclear;
         }
