@@ -2132,6 +2132,92 @@ AlgebraicOpt::visit(BasicBlock *bb)
 
 // =============================================================================
 
+// ADD(SHL(a, b), c) -> SHLADD(a, b, c)
+class LateAlgebraicOpt : public Pass
+{
+private:
+   virtual bool visit(Instruction *);
+
+   void handleADD(Instruction *);
+   bool tryADDToSHLADD(Instruction *);
+};
+
+void
+LateAlgebraicOpt::handleADD(Instruction *add)
+{
+   Value *src0 = add->getSrc(0);
+   Value *src1 = add->getSrc(1);
+
+   if (src0->reg.file != FILE_GPR || src1->reg.file != FILE_GPR)
+      return;
+
+   if (prog->getTarget()->isOpSupported(OP_SHLADD, add->dType))
+      tryADDToSHLADD(add);
+}
+
+// ADD(SHL(a, b), c) -> SHLADD(a, b, c)
+bool
+LateAlgebraicOpt::tryADDToSHLADD(Instruction *add)
+{
+   Value *src0 = add->getSrc(0);
+   Value *src1 = add->getSrc(1);
+   ImmediateValue imm;
+   Instruction *shl;
+   Modifier mod[2];
+   Value *src;
+   int s;
+
+   if (add->saturate || add->usesFlags() || typeSizeof(add->dType) == 8
+       || isFloatType(add->dType))
+      return false;
+
+   if (src0->getUniqueInsn() && src0->getUniqueInsn()->op == OP_SHL)
+      s = 0;
+   else
+   if (src1->getUniqueInsn() && src1->getUniqueInsn()->op == OP_SHL)
+      s = 1;
+   else
+      return false;
+
+   src = add->getSrc(s);
+   shl = src->getUniqueInsn();
+
+   if (shl->bb != add->bb || shl->usesFlags() || shl->subOp)
+      return false;
+
+   if (!shl->src(1).getImmediate(imm))
+      return false;
+
+   mod[0] = add->src(0).mod;
+   mod[1] = add->src(1).mod;
+
+   add->op = OP_SHLADD;
+   add->setSrc(2, add->src(!s));
+   add->src(2).mod = mod[s];
+
+   add->setSrc(0, shl->getSrc(0));
+   add->setSrc(1, new_ImmediateValue(shl->bb->getProgram(), imm.reg.data.u32));
+   add->src(1).mod = Modifier(0);
+
+   return true;
+}
+
+bool
+LateAlgebraicOpt::visit(Instruction *i)
+{
+   switch (i->op) {
+   case OP_ADD:
+      handleADD(i);
+      break;
+   default:
+      break;
+   }
+
+   return true;
+}
+
+// =============================================================================
+
 static inline void
 updateLdStOffset(Instruction *ldst, int32_t offset, Function *fn)
 {
@@ -3436,6 +3522,7 @@ Program::optimizeSSA(int level)
    RUN_PASS(2, AlgebraicOpt, run);
    RUN_PASS(2, ModifierFolding, run); // before load propagation -> less checks
    RUN_PASS(1, ConstantFolding, foldAll);
+   RUN_PASS(2, LateAlgebraicOpt, run);
    RUN_PASS(1, LoadPropagation, run);
    RUN_PASS(1, IndirectPropagation, run);
    RUN_PASS(2, MemoryOpt, run);
