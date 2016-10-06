@@ -711,6 +711,10 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 #endif
 
+   /* Render targets live in the same binding table as fragment descriptors */
+   if (cmd_buffer->state.dirty & ANV_CMD_DIRTY_RENDER_TARGETS)
+      cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+
    /* We emit the binding tables and sampler tables first, then emit push
     * constants and then finally emit binding table and sampler table
     * pointers.  It has to happen in this order, since emitting the binding
@@ -1301,7 +1305,7 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
 {
    cmd_buffer->state.subpass = subpass;
 
-   cmd_buffer->state.descriptors_dirty |= VK_SHADER_STAGE_FRAGMENT_BIT;
+   cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 }
