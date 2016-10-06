@@ -46,8 +46,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#define LOCAL_DEBUG 0
-
 struct stat_s
 {
    /* Read */
@@ -188,12 +186,6 @@ hud_diskstat_graph_install(struct hud_pane *pane, const char *dev_name,
    int num_devs = hud_get_num_disks(0);
    if (num_devs <= 0)
       return;
-
-#if LOCAL_DEBUG
-   printf("%s(%s, %s) - Creating HUD object\n", __func__, dev_name,
-          mode == DISKSTAT_RD ? "RD" :
-          mode == DISKSTAT_WR ? "WR" : "UNDEFINED");
-#endif
 
    dsi = find_dsi_by_name(dev_name, mode);
    if (!dsi)

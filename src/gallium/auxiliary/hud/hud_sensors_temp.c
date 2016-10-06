@@ -44,8 +44,6 @@
 #include <unistd.h>
 #include <sensors/sensors.h>
 
-#define LOCAL_DEBUG 0
-
 /* TODO: We don't handle dynamic sensor discovery / arrival or removal.
  * Static globals specific to this HUD category.
  */
@@ -139,12 +137,6 @@ get_sensor_values(struct sensors_temp_info *sti)
                                SENSORS_SUBFEATURE_TEMP_MAX);
    if (sf)
       sti->max = get_value(sti->chip, sf);
-#if LOCAL_DEBUG
-   printf("%s.%s.current = %.1f\n", sti->chipname, sti->featurename,
-          sti->current);
-   printf("%s.%s.critical = %.1f\n", sti->chipname, sti->featurename,
-          sti->critical);
-#endif
 }
 
 static struct sensors_temp_info *
@@ -224,14 +216,6 @@ hud_sensors_temp_graph_install(struct hud_pane *pane, const char *dev_name,
    int num_devs = hud_get_num_sensors(0);
    if (num_devs <= 0)
       return;
-#if LOCAL_DEBUG
-   printf("%s(%s, %s) - Creating HUD object\n", __func__, dev_name,
-          mode == SENSORS_VOLTAGE_CURRENT ? "VOLTS" :
-          mode == SENSORS_CURRENT_CURRENT ? "AMPS" :
-          mode == SENSORS_TEMP_CURRENT ? "CU" :
-          mode == SENSORS_POWER_CURRENT ? "POWER" :
-          mode == SENSORS_TEMP_CRITICAL ? "CR" : "UNDEFINED");
-#endif
 
    sti = find_sti_by_name(dev_name, mode);
    if (!sti)
@@ -281,9 +265,6 @@ create_object(const char *chipname, const char *featurename,
              const sensors_chip_name *chip, const sensors_feature *feature,
              int mode)
 {
-#if LOCAL_DEBUG
-   printf("%03d: %s.%s\n", gsensors_temp_count, chipname, featurename);
-#endif
    struct sensors_temp_info *sti = CALLOC_STRUCT(sensors_temp_info);
 
    sti->mode = mode;

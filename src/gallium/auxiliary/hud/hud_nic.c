@@ -48,8 +48,6 @@
 #include <sys/ioctl.h>
 #include <linux/wireless.h>
 
-#define LOCAL_DEBUG 0
-
 struct nic_info
 {
    struct list_head list;
@@ -168,13 +166,6 @@ query_nic_rssi(const struct nic_info *nic, uint64_t *leveldBm)
    *leveldBm = ((char) stats.qual.level * -1);
 
    close(sockfd);
-
-#if LOCAL_DEBUG
-   printf("NIC signal level%s is %d%s.\n",
-          (stats.qual.updated & IW_QUAL_DBM ? " (in dBm)" : ""),
-          (char) stats.qual.level,
-          (stats.qual.updated & IW_QUAL_LEVEL_UPDATED ? " (updated)" : ""));
-#endif
 }
 
 static void
@@ -267,13 +258,6 @@ hud_nic_graph_install(struct hud_pane *pane, const char *nic_name,
    int num_nics = hud_get_num_nics(0);
    if (num_nics <= 0)
       return;
-
-#if LOCAL_DEBUG
-   printf("%s(%s, %s) - Creating HUD object\n", __func__, nic_name,
-          mode == NIC_DIRECTION_RX ? "RX" :
-          mode == NIC_DIRECTION_TX ? "TX" :
-          mode == NIC_RSSI_DBM ? "RSSI" : "UNDEFINED");
-#endif
 
    nic = find_nic_by_name(nic_name, mode);
    if (!nic)

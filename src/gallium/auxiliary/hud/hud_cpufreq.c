@@ -46,8 +46,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#define LOCAL_DEBUG 0
-
 struct cpufreq_info
 {
    struct list_head list;
@@ -138,13 +136,6 @@ hud_cpufreq_graph_install(struct hud_pane *pane, int cpu_index,
    int num_cpus = hud_get_num_cpufreq(0);
    if (num_cpus <= 0)
       return;
-
-#if LOCAL_DEBUG
-   printf("%s(%d, %s) - Creating HUD object\n", __func__, cpu_index,
-          mode == CPUFREQ_MINIMUM ? "MIN" :
-          mode == CPUFREQ_CURRENT ? "CUR" :
-          mode == CPUFREQ_MAXIMUM ? "MAX" : "UNDEFINED");
-#endif
 
    cfi = find_cfi_by_index(cpu_index, mode);
    if (!cfi)
