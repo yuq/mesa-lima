@@ -70,7 +70,7 @@ vc4_get_draw_cl_space(struct vc4_job *job, int vert_count)
  * Does the initial bining command list setup for drawing to a given FBO.
  */
 static void
-vc4_start_draw(struct vc4_context *vc4, int vert_count)
+vc4_start_draw(struct vc4_context *vc4)
 {
         struct vc4_job *job = vc4->job;
 
@@ -305,7 +305,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 vc4->dirty |= VC4_DIRTY_PRIM_MODE;
         }
 
-        vc4_start_draw(vc4, info->count);
+        vc4_start_draw(vc4);
         vc4_update_compiled_shaders(vc4, info->mode);
 
         uint32_t start_draw_calls_queued = job->draw_calls_queued;
@@ -545,7 +545,7 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
         job->cleared |= buffers;
         job->resolve |= buffers;
 
-        vc4_start_draw(vc4, 0);
+        vc4_start_draw(vc4);
 }
 
 static void
