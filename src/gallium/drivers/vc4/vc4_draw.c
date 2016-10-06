@@ -32,6 +32,8 @@
 #include "vc4_context.h"
 #include "vc4_resource.h"
 
+#define VC4_HW_2116_COUNT		0x1ef0
+
 static void
 vc4_get_draw_cl_space(struct vc4_job *job, int vert_count)
 {
@@ -108,7 +110,6 @@ vc4_start_draw(struct vc4_context *vc4)
                      VC4_PRIMITIVE_LIST_FORMAT_TYPE_TRIANGLES));
 
         job->needs_flush = true;
-        job->draw_calls_queued++;
         job->draw_width = vc4->framebuffer.width;
         job->draw_height = vc4->framebuffer.height;
 
@@ -264,12 +265,12 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
  * tiles with VC4_PACKET_RETURN_FROM_LIST.
  */
 static void
-vc4_hw_2116_workaround(struct pipe_context *pctx)
+vc4_hw_2116_workaround(struct pipe_context *pctx, int vert_count)
 {
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_job *job = vc4_get_job_for_fbo(vc4);
 
-        if (job->draw_calls_queued == 0x1ef0) {
+        if (job->draw_calls_queued + vert_count / 65535 >= VC4_HW_2116_COUNT) {
                 perf_debug("Flushing batch due to HW-2116 workaround "
                            "(too many draw calls per scene\n");
                 vc4_job_submit(vc4, job);
@@ -294,7 +295,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         vc4_predraw_check_textures(pctx, &vc4->verttex);
         vc4_predraw_check_textures(pctx, &vc4->fragtex);
 
-        vc4_hw_2116_workaround(pctx);
+        vc4_hw_2116_workaround(pctx, info->count);
 
         struct vc4_job *job = vc4_get_job_for_fbo(vc4);
 
@@ -308,7 +309,6 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         vc4_start_draw(vc4);
         vc4_update_compiled_shaders(vc4, info->mode);
 
-        uint32_t start_draw_calls_queued = job->draw_calls_queued;
         vc4_emit_state(pctx);
 
         if ((vc4->dirty & (VC4_DIRTY_VTXBUF |
@@ -362,6 +362,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 cl_u32(&bcl, info->count);
                 cl_reloc(job, &job->bcl, &bcl, rsc->bo, offset);
                 cl_u32(&bcl, vc4->max_index);
+                job->draw_calls_queued++;
 
                 if (vc4->indexbuf.index_size == 4 || vc4->indexbuf.user_buffer)
                         pipe_resource_reference(&prsc, NULL);
@@ -430,6 +431,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         cl_u8(&bcl, info->mode);
                         cl_u32(&bcl, this_count);
                         cl_u32(&bcl, start);
+                        job->draw_calls_queued++;
 
                         count -= step;
                         extra_index_bias += start + step;
@@ -438,11 +440,10 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         }
         cl_end(&job->bcl, bcl);
 
-        /* No flushes of the job should have happened between when we started
-         * emitting state for our draw and when we just emitted our draw's
-         * primitives.
+        /* We shouldn't have tripped the HW_2116 bug with the GFXH-515
+         * workaround.
          */
-        assert(start_draw_calls_queued == job->draw_calls_queued);
+        assert(job->draw_calls_queued <= VC4_HW_2116_COUNT);
 
         if (vc4->zsa && vc4->framebuffer.zsbuf) {
                 struct vc4_resource *rsc =
