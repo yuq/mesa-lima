@@ -217,6 +217,9 @@ ADDR_E_RETURNCODE Lib::Create(
                         break;
                 }
                 break;
+            case CIASICIDGFXENGINE_ARCTICISLAND:
+                pLib = Gfx9HwlInit(&client);
+                break;
             default:
                 ADDR_ASSERT_ALWAYS();
                 break;

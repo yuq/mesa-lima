@@ -56,6 +56,10 @@
 #define CIASICIDGFXENGINE_SOUTHERNISLAND 0x0000000A
 #endif
 
+#ifndef CIASICIDGFXENGINE_ARCTICISLAND
+#define CIASICIDGFXENGINE_ARCTICISLAND 0x0000000D
+#endif
+
 namespace Addr
 {
 
@@ -68,6 +72,8 @@ enum PipeInterleave
 {
     ADDR_PIPEINTERLEAVE_256B = 256,
     ADDR_PIPEINTERLEAVE_512B = 512,
+    ADDR_PIPEINTERLEAVE_1KB  = 1024,
+    ADDR_PIPEINTERLEAVE_2KB  = 2048,
 };
 
 /**
@@ -257,6 +263,7 @@ private:
 
 Lib* SiHwlInit  (const Client* pClient);
 Lib* CiHwlInit  (const Client* pClient);
+Lib* Gfx9HwlInit(const Client* pClient);
 
 } // Addr
 

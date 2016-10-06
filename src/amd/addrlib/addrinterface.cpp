@@ -32,6 +32,7 @@
 */
 #include "addrinterface.h"
 #include "addrlib1.h"
+#include "addrlib2.h"
 
 #include "addrcommon.h"
 
@@ -1070,3 +1071,517 @@ ADDR_E_RETURNCODE ADDR_API AddrGetMaxAlignments(
 
     return returnCode;
 }
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                    Surface functions for Addr2
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   Addr2ComputeSurfaceInfo
+*
+*   @brief
+*       Calculate surface width/height/depth/alignments and suitable tiling mode
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeSurfaceInfo(
+    ADDR_HANDLE                                hLib, ///< address lib handle
+    const ADDR2_COMPUTE_SURFACE_INFO_INPUT*    pIn,  ///< [in] surface information
+    ADDR2_COMPUTE_SURFACE_INFO_OUTPUT*         pOut) ///< [out] surface parameters and alignments
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeSurfaceInfo(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeSurfaceAddrFromCoord
+*
+*   @brief
+*       Compute surface address according to coordinates
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeSurfaceAddrFromCoord(
+    ADDR_HANDLE                                         hLib, ///< address lib handle
+    const ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT*    pIn,  ///< [in] surface info and coordinates
+    ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT*         pOut) ///< [out] surface address
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeSurfaceAddrFromCoord(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeSurfaceCoordFromAddr
+*
+*   @brief
+*       Compute coordinates according to surface address
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeSurfaceCoordFromAddr(
+    ADDR_HANDLE                                         hLib, ///< address lib handle
+    const ADDR2_COMPUTE_SURFACE_COORDFROMADDR_INPUT*    pIn,  ///< [in] surface info and address
+    ADDR2_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT*         pOut) ///< [out] coordinates
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeSurfaceCoordFromAddr(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                   HTile functions for Addr2
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   Addr2ComputeHtileInfo
+*
+*   @brief
+*       Compute Htile pitch, height, base alignment and size in bytes
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeHtileInfo(
+    ADDR_HANDLE                              hLib, ///< address lib handle
+    const ADDR2_COMPUTE_HTILE_INFO_INPUT*    pIn,  ///< [in] Htile information
+    ADDR2_COMPUTE_HTILE_INFO_OUTPUT*         pOut) ///< [out] Htile pitch, height and size in bytes
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeHtileInfo(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeHtileAddrFromCoord
+*
+*   @brief
+*       Compute Htile address according to coordinates (of depth buffer)
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeHtileAddrFromCoord(
+    ADDR_HANDLE                                       hLib, ///< address lib handle
+    const ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*    pIn,  ///< [in] Htile info and coordinates
+    ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*         pOut) ///< [out] Htile address
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeHtileAddrFromCoord(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeHtileCoordFromAddr
+*
+*   @brief
+*       Compute coordinates within depth buffer (1st pixel of a micro tile) according to
+*       Htile address
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeHtileCoordFromAddr(
+    ADDR_HANDLE                                       hLib, ///< address lib handle
+    const ADDR2_COMPUTE_HTILE_COORDFROMADDR_INPUT*    pIn,  ///< [in] Htile info and address
+    ADDR2_COMPUTE_HTILE_COORDFROMADDR_OUTPUT*         pOut) ///< [out] Htile coordinates
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeHtileCoordFromAddr(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     C-mask functions for Addr2
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   Addr2ComputeCmaskInfo
+*
+*   @brief
+*       Compute Cmask pitch, height, base alignment and size in bytes from color buffer
+*       info
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeCmaskInfo(
+    ADDR_HANDLE                              hLib, ///< address lib handle
+    const ADDR2_COMPUTE_CMASK_INFO_INPUT*    pIn,  ///< [in] Cmask pitch and height
+    ADDR2_COMPUTE_CMASK_INFO_OUTPUT*         pOut) ///< [out] Cmask pitch, height and size in bytes
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeCmaskInfo(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeCmaskAddrFromCoord
+*
+*   @brief
+*       Compute Cmask address according to coordinates (of MSAA color buffer)
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeCmaskAddrFromCoord(
+    ADDR_HANDLE                                       hLib, ///< address lib handle
+    const ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*    pIn,  ///< [in] Cmask info and coordinates
+    ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*         pOut) ///< [out] Cmask address
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeCmaskAddrFromCoord(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeCmaskCoordFromAddr
+*
+*   @brief
+*       Compute coordinates within color buffer (1st pixel of a micro tile) according to
+*       Cmask address
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeCmaskCoordFromAddr(
+    ADDR_HANDLE                                       hLib, ///< address lib handle
+    const ADDR2_COMPUTE_CMASK_COORDFROMADDR_INPUT*    pIn,  ///< [in] Cmask info and address
+    ADDR2_COMPUTE_CMASK_COORDFROMADDR_OUTPUT*         pOut) ///< [out] Cmask coordinates
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeCmaskCoordFromAddr(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     F-mask functions for Addr2
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   Addr2ComputeFmaskInfo
+*
+*   @brief
+*       Compute Fmask pitch/height/depth/alignments and size in bytes
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeFmaskInfo(
+    ADDR_HANDLE                              hLib, ///< address lib handle
+    const ADDR2_COMPUTE_FMASK_INFO_INPUT*    pIn,  ///< [in] Fmask information
+    ADDR2_COMPUTE_FMASK_INFO_OUTPUT*         pOut) ///< [out] Fmask pitch and height
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeFmaskInfo(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeFmaskAddrFromCoord
+*
+*   @brief
+*       Compute Fmask address according to coordinates (x,y,slice,sample,plane)
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeFmaskAddrFromCoord(
+    ADDR_HANDLE                                       hLib, ///< address lib handle
+    const ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*    pIn,  ///< [in] Fmask info and coordinates
+    ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT*         pOut) ///< [out] Fmask address
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeFmaskAddrFromCoord(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+/**
+****************************************************************************************************
+*   Addr2ComputeFmaskCoordFromAddr
+*
+*   @brief
+*       Compute coordinates (x,y,slice,sample,plane) according to Fmask address
+*
+*   @return
+*       ADDR_OK if successful, otherwise an error code of ADDR_E_RETURNCODE
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeFmaskCoordFromAddr(
+    ADDR_HANDLE                                       hLib, ///< address lib handle
+    const ADDR2_COMPUTE_FMASK_COORDFROMADDR_INPUT*    pIn,  ///< [in] Fmask info and address
+    ADDR2_COMPUTE_FMASK_COORDFROMADDR_OUTPUT*         pOut) ///< [out] Fmask coordinates
+{
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    ADDR_E_RETURNCODE returnCode = ADDR_OK;
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeFmaskCoordFromAddr(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     DCC key functions for Addr2
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   Addr2ComputeDccInfo
+*
+*   @brief
+*       Compute DCC key size, base alignment based on color surface size, tile info or tile index
+*
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeDccInfo(
+    ADDR_HANDLE                           hLib,   ///< handle of addrlib
+    const ADDR2_COMPUTE_DCCINFO_INPUT*    pIn,    ///< [in] input
+    ADDR2_COMPUTE_DCCINFO_OUTPUT*         pOut)   ///< [out] output
+{
+    ADDR_E_RETURNCODE returnCode;
+
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputeDccInfo(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+/**
+****************************************************************************************************
+*   Addr2ComputePipeBankXor
+*
+*   @brief
+*       Calculate a valid bank pipe xor value for client to use.
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputePipeBankXor(
+    ADDR_HANDLE                            hLib, ///< handle of addrlib
+    const ADDR2_COMPUTE_PIPEBANKXOR_INPUT* pIn,  ///< [in] input
+    ADDR2_COMPUTE_PIPEBANKXOR_OUTPUT*      pOut) ///< [out] output
+{
+    ADDR_E_RETURNCODE returnCode;
+
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->ComputePipeBankXor(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+
+/**
+****************************************************************************************************
+*   Addr2GetPreferredSurfaceSetting
+*
+*   @brief
+*       Suggest a preferred setting for client driver to program HW register
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2GetPreferredSurfaceSetting(
+    ADDR_HANDLE                                   hLib, ///< handle of addrlib
+    const ADDR2_GET_PREFERRED_SURF_SETTING_INPUT* pIn,  ///< [in] input
+    ADDR2_GET_PREFERRED_SURF_SETTING_OUTPUT*      pOut) ///< [out] output
+{
+    ADDR_E_RETURNCODE returnCode;
+
+    V2::Lib* pLib = V2::Lib::GetLib(hLib);
+
+    if (pLib != NULL)
+    {
+        returnCode = pLib->Addr2GetPreferredSurfaceSetting(pIn, pOut);
+    }
+    else
+    {
+        returnCode = ADDR_ERROR;
+    }
+
+    return returnCode;
+}
+

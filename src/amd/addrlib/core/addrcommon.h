@@ -210,6 +210,7 @@ enum LibClass
     R800_ADDRLIB = 0x8,
     SI_ADDRLIB   = 0xa,
     CI_ADDRLIB   = 0xb,
+    AI_ADDRLIB   = 0xd,
 };
 
 /**
@@ -231,6 +232,7 @@ enum ChipFamily
     ADDR_CHIP_FAMILY_SI,
     ADDR_CHIP_FAMILY_CI,
     ADDR_CHIP_FAMILY_VI,
+    ADDR_CHIP_FAMILY_AI,
 };
 
 /**
@@ -584,10 +586,231 @@ static inline VOID SafeAssign(
 
 /**
 ****************************************************************************************************
+*   RoundHalf
+*
+*   @brief
+*       return (x + 1) / 2
+****************************************************************************************************
+*/
+static inline UINT_32 RoundHalf(
+    UINT_32     x)     ///< [in] input value
+{
+    ADDR_ASSERT(x != 0);
+
+#if 1
+    return (x >> 1) + (x & 1);
+#else
+    return (x + 1) >> 1;
+#endif
+}
+
+/**
+****************************************************************************************************
+*   SumGeo
+*
+*   @brief
+*       Calculate sum of a geometric progression whose ratio is 1/2
+****************************************************************************************************
+*/
+static inline UINT_32 SumGeo(
+    UINT_32     base,   ///< [in] First term in the geometric progression
+    UINT_32     num)    ///< [in] Number of terms to be added into sum
+{
+    ADDR_ASSERT(base > 0);
+
+    UINT_32 sum = 0;
+    UINT_32 i = 0;
+    for (; (i < num) && (base > 1); i++)
+    {
+        sum += base;
+        base = RoundHalf(base);
+    }
+    sum += num - i;
+
+    return sum;
+}
+
+/**
+****************************************************************************************************
+*   GetBit
+*
+*   @brief
+*       Extract bit N value (0 or 1) of a UINT32 value.
+****************************************************************************************************
+*/
+static inline UINT_32 GetBit(
+    UINT_32     u32,   ///< [in] UINT32 value
+    UINT_32     pos)   ///< [in] bit position from LSB, valid range is [0..31]
+{
+    ADDR_ASSERT(pos <= 31);
+
+    return (u32 >> pos) & 0x1;
+}
+
+/**
+****************************************************************************************************
+*   GetBits
+*
+*   @brief
+*       Copy 'bitsNum' bits from src start from srcStartPos into destination from dstStartPos
+*       srcStartPos: 0~31 for UINT_32
+*       bitsNum    : 1~32 for UINT_32
+*       srcStartPos: 0~31 for UINT_32
+*                                                                 src start position
+*                                                                          |
+*       src : b[31] b[30] b[29] ... ... ... ... ... ... ... ... b[end]..b[beg] ... b[1] b[0]
+*                                   || Bits num || copy length  || Bits num ||
+*       dst : b[31] b[30] b[29] ... b[end]..b[beg] ... ... ... ... ... ... ... ... b[1] b[0]
+*                                              |
+*                                     dst start position
+****************************************************************************************************
+*/
+static inline UINT_32 GetBits(
+    UINT_32 src,
+    UINT_32 srcStartPos,
+    UINT_32 bitsNum,
+    UINT_32 dstStartPos)
+{
+    ADDR_ASSERT((srcStartPos < 32) && (dstStartPos < 32) && (bitsNum > 0));
+    ADDR_ASSERT((bitsNum + dstStartPos <= 32) && (bitsNum + srcStartPos <= 32));
+
+    return ((src >> srcStartPos) << (32 - bitsNum)) >> (32 - bitsNum - dstStartPos);
+}
+
+/**
+****************************************************************************************************
+*   MortonGen2d
+*
+*   @brief
+*       Generate 2D Morton interleave code with num lowest bits in each channel
+****************************************************************************************************
+*/
+static inline UINT_32 MortonGen2d(
+    UINT_32     x,     ///< [in] First channel
+    UINT_32     y,     ///< [in] Second channel
+    UINT_32     num)   ///< [in] Number of bits extracted from each channel
+{
+    UINT_32 mort = 0;
+
+    for (UINT_32 i = 0; i < num; i++)
+    {
+        mort |= (GetBit(y, i) << (2 * i));
+        mort |= (GetBit(x, i) << (2 * i + 1));
+    }
+
+    return mort;
+}
+
+/**
+****************************************************************************************************
+*   MortonGen3d
+*
+*   @brief
+*       Generate 3D Morton interleave code with num lowest bits in each channel
+****************************************************************************************************
+*/
+static inline UINT_32 MortonGen3d(
+    UINT_32     x,     ///< [in] First channel
+    UINT_32     y,     ///< [in] Second channel
+    UINT_32     z,     ///< [in] Third channel
+    UINT_32     num)   ///< [in] Number of bits extracted from each channel
+{
+    UINT_32 mort = 0;
+
+    for (UINT_32 i = 0; i < num; i++)
+    {
+        mort |= (GetBit(z, i) << (3 * i));
+        mort |= (GetBit(y, i) << (3 * i + 1));
+        mort |= (GetBit(x, i) << (3 * i + 2));
+    }
+
+    return mort;
+}
+
+/**
+****************************************************************************************************
+*   ReverseBitVector
+*
+*   @brief
+*       Return reversed lowest num bits of v
+****************************************************************************************************
+*/
+static inline UINT_32 ReverseBitVector(
+    UINT_32     v,     ///< [in] Reverse operation base value
+    UINT_32     num)   ///< [in] Number of bits used in reverse operation
+{
+    UINT_32 reverse = 0;
+
+    for (UINT_32 i = 0; i < num; i++)
+    {
+        reverse |= (GetBit(v, num - 1 - i) << i);
+    }
+
+    return reverse;
+}
+
+/**
+****************************************************************************************************
+*   FoldXor2d
+*
+*   @brief
+*       Xor bit vector v[num-1]v[num-2]...v[1]v[0] with v[num]v[num+1]...v[2*num-2]v[2*num-1]
+****************************************************************************************************
+*/
+static inline UINT_32 FoldXor2d(
+    UINT_32     v,     ///< [in] Xor operation base value
+    UINT_32     num)   ///< [in] Number of bits used in fold xor operation
+{
+    return (v & ((1 << num) - 1)) ^ ReverseBitVector(v >> num, num);
+}
+
+/**
+****************************************************************************************************
+*   DeMort
+*
+*   @brief
+*       Return v[0] | v[2] | v[4] | v[6]... | v[2*num - 2]
+****************************************************************************************************
+*/
+static inline UINT_32 DeMort(
+    UINT_32     v,     ///< [in] DeMort operation base value
+    UINT_32     num)   ///< [in] Number of bits used in fold DeMort operation
+{
+    UINT_32 d = 0;
+
+    for (UINT_32 i = 0; i < num; i++)
+    {
+        d |= ((v & (1 << (i << 1))) >> i);
+    }
+
+    return d;
+}
+
+/**
+****************************************************************************************************
+*   FoldXor3d
+*
+*   @brief
+*       v[0]...v[num-1] ^ v[3*num-1]v[3*num-3]...v[num+2]v[num] ^ v[3*num-2]...v[num+1]v[num-1]
+****************************************************************************************************
+*/
+static inline UINT_32 FoldXor3d(
+    UINT_32     v,     ///< [in] Xor operation base value
+    UINT_32     num)   ///< [in] Number of bits used in fold xor operation
+{
+    UINT_32 t = v & ((1 << num) - 1);
+    t ^= ReverseBitVector(DeMort(v >> num, num), num);
+    t ^= ReverseBitVector(DeMort(v >> (num + 1), num), num);
+
+    return t;
+}
+
+/**
+****************************************************************************************************
 *   InitChannel
 *
 *   @brief
-*       Get channel initialization value
+*       Set channel initialization value via a return value
 ****************************************************************************************************
 */
 static inline ADDR_CHANNEL_SETTING InitChannel(
@@ -601,6 +824,69 @@ static inline ADDR_CHANNEL_SETTING InitChannel(
     t.index = index;
 
     return t;
+}
+
+/**
+****************************************************************************************************
+*   InitChannel
+*
+*   @brief
+*       Set channel initialization value via channel pointer
+****************************************************************************************************
+*/
+static inline VOID InitChannel(
+    UINT_32     valid,              ///< [in] valid setting
+    UINT_32     channel,            ///< [in] channel setting
+    UINT_32     index,              ///< [in] index setting
+    ADDR_CHANNEL_SETTING *pChanSet) ///< [out] channel setting to be initialized
+{
+    pChanSet->valid = valid;
+    pChanSet->channel = channel;
+    pChanSet->index = index;
+}
+
+
+/**
+****************************************************************************************************
+*   InitChannel
+*
+*   @brief
+*       Set channel initialization value via another channel
+****************************************************************************************************
+*/
+static inline VOID InitChannel(
+    ADDR_CHANNEL_SETTING *pChanDst, ///< [in] channel setting to be copied from
+    ADDR_CHANNEL_SETTING *pChanSrc) ///< [out] channel setting to be initialized
+{
+    pChanDst->valid = pChanSrc->valid;
+    pChanDst->channel = pChanSrc->channel;
+    pChanDst->index = pChanSrc->channel;
+}
+
+/**
+****************************************************************************************************
+*   GetMaxValidChannelIndex
+*
+*   @brief
+*       Get max valid index for a specific channel
+****************************************************************************************************
+*/
+static inline UINT_32 GetMaxValidChannelIndex(
+    ADDR_CHANNEL_SETTING *pChanSet, ///< [in] channel setting to be initialized
+    UINT_32     searchCount,        ///< [in] number of channel setting to be searched
+    UINT_32     channel)            ///< [in] channel to be searched
+{
+    UINT_32 index = 0;
+
+    for (UINT_32 i = 0; i < searchCount; i++)
+    {
+        if (pChanSet[i].valid && (pChanSet[i].channel == channel))
+        {
+            index = Max(index, static_cast<UINT_32>(pChanSet[i].index));
+        }
+    }
+
+    return index;
 }
 
 } // Addr

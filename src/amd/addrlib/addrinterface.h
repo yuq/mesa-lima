@@ -347,6 +347,9 @@ typedef struct _ADDR_REGISTER_VALUE
                                  ///< CI registers-------------------------------------------------
     const UINT_32* pMacroTileConfig;    ///< Global macro tile mode table
     UINT_32  noOfMacroEntries;   ///< Number of entries in pMacroTileConfig
+
+                                 ///< GFX9 HW parameters
+    UINT_32  blockVarSizeLog2;   ///< SW_VAR_* block size
 } ADDR_REGISTER_VALUE;
 
 /**
@@ -2316,10 +2319,1161 @@ ADDR_E_RETURNCODE ADDR_API AddrGetMaxAlignments(
     ADDR_HANDLE                     hLib,
     ADDR_GET_MAX_ALINGMENTS_OUTPUT* pOut);
 
+
+
+/**
+****************************************************************************************************
+*                                Address library interface version 2
+*                                    available from Gfx9 hardware
+****************************************************************************************************
+*     Addr2ComputeSurfaceInfo()
+*     Addr2ComputeSurfaceAddrFromCoord()
+*     Addr2ComputeSurfaceCoordFromAddr()
+
+*     Addr2ComputeHtileInfo()
+*     Addr2ComputeHtileAddrFromCoord()
+*     Addr2ComputeHtileCoordFromAddr()
+*
+*     Addr2ComputeCmaskInfo()
+*     Addr2ComputeCmaskAddrFromCoord()
+*     Addr2ComputeCmaskCoordFromAddr()
+*
+*     Addr2ComputeFmaskInfo()
+*     Addr2ComputeFmaskAddrFromCoord()
+*     Addr2ComputeFmaskCoordFromAddr()
+*
+*     Addr2ComputeDccInfo()
+*
+**/
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                    Surface functions for Gfx9
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   ADDR2_SURFACE_FLAGS
+*
+*   @brief
+*       Surface flags
+****************************************************************************************************
+*/
+typedef union _ADDR2_SURFACE_FLAGS
+{
+    struct
+    {
+        UINT_32 color         :  1; ///< This resource is a color buffer, can be used with RTV
+        UINT_32 depth         :  1; ///< Thie resource is a depth buffer, can be used with DSV
+        UINT_32 stencil       :  1; ///< Thie resource is a stencil buffer, can be used with DSV
+        UINT_32 fmask         :  1; ///< This is an fmask surface
+        UINT_32 overlay       :  1; ///< This is an overlay surface
+        UINT_32 display       :  1; ///< This resource is displable, can be used with DRV
+        UINT_32 prt           :  1; ///< This is a partially resident texture
+        UINT_32 qbStereo      :  1; ///< This is a quad buffer stereo surface
+        UINT_32 interleaved   :  1; ///< Special flag for interleaved YUV surface padding
+        UINT_32 texture       :  1; ///< This resource can be used with SRV
+        UINT_32 unordered     :  1; ///< This resource can be used with UAV
+        UINT_32 rotated       :  1; ///< This resource is rotated and displable
+        UINT_32 needEquation  :  1; ///< This resource needs equation to be generated if possible
+        UINT_32 opt4space     :  1; ///< This resource should be optimized for space
+        UINT_32 minimizeAlign :  1; ///< This resource should use minimum alignment
+        UINT_32 reserved      : 17; ///< Reserved bits
+    };
+
+    UINT_32 value;
+} ADDR2_SURFACE_FLAGS;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_SURFACE_INFO_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeSurfaceInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_SURFACE_INFO_INPUT
+{
+    UINT_32               size;              ///< Size of this structure in bytes
+
+    ADDR2_SURFACE_FLAGS   flags;             ///< Surface flags
+    AddrSwizzleMode       swizzleMode;       ///< Swizzle Mode for Gfx9
+    AddrResourceType      resourceType;      ///< Surface type
+    AddrFormat            format;            ///< Surface format
+    UINT_32               bpp;               ///< bits per pixel
+    UINT_32               width;             ///< Width (of mip0), in pixels
+    UINT_32               height;            ///< Height (of mip0), in pixels
+    UINT_32               numSlices;         ///< Number surface slice/depth (of mip0),
+    UINT_32               numMipLevels;      ///< Total mipmap levels.
+    UINT_32               numSamples;        ///< Number of samples
+    UINT_32               numFrags;          ///< Number of fragments, leave it zero or the same as
+                                             ///  number of samples for normal AA; Set it to the
+                                             ///  number of fragments for EQAA
+    UINT_32               pitchInElement;    ///< Pitch in elements (blocks for compressed formats)
+    UINT_32               sliceAlign;        ///< Required slice size in bytes
+} ADDR2_COMPUTE_SURFACE_INFO_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_MIP_INFO
+*
+*   @brief
+*       Structure that contains information for mip level
+*
+****************************************************************************************************
+*/
+typedef struct _ADDR2_MIP_INFO
+{
+    UINT_32             pitch;              ///< Pitch in elements
+    UINT_32             height;             ///< Padded height in elements
+    UINT_32             depth;              ///< Padded depth
+    UINT_32             offset;             ///< Offset in bytes from mip base
+
+    UINT_32             equationIndex;      ///< Equation index in the equation table
+    UINT_32             mipOffsetXBytes;    ///< Mip start position offset in byte in X direction
+    UINT_32             mipOffsetYPixel;    ///< Mip start position offset in pixel in Y direction
+    UINT_32             mipOffsetZPixel;    ///< Mip start position offset in pixel in Z direction
+    UINT_32             postSwizzleOffset;  ///< Offset which is used to be added directly onto
+                                            ///  the address calculated by equation
+} ADDR2_MIP_INFO;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_SURFACE_INFO_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeSurfInfo
+*   @note
+        Element: AddrLib unit for computing. e.g. BCn: 4x4 blocks; R32B32B32: 32bit with 3x pitch
+        Pixel: Original pixel
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_SURFACE_INFO_OUTPUT
+{
+    UINT_32             size;                 ///< Size of this structure in bytes
+
+    UINT_32             pitch;                ///< Pitch in elements (blocks for compressed formats)
+    UINT_32             height;               ///< Padded height (of mip0) in elements
+    UINT_32             numSlices;            ///< Padded depth for 3d resource
+                                              ///< or padded number of slices for 2d array resource
+    UINT_32             mipChainPitch;        ///< Pitch (of total mip chain) in elements
+    UINT_32             mipChainHeight;       ///< Padded height (of total mip chain) in elements
+    UINT_32             mipChainSlice;        ///< Padded depth (of total mip chain)
+    UINT_32             sliceSize;            ///< Slice (total mip chain) size in bytes
+    UINT_64             surfSize;             ///< Surface (total mip chain) size in bytes
+    UINT_32             baseAlign;            ///< Base address alignment
+    UINT_32             bpp;                  ///< Bits per elements
+                                              ///  (e.g. blocks for BCn, 1/3 for 96bit)
+    UINT_32             pixelMipChainPitch;   ///< Mip chain pitch in original pixels
+    UINT_32             pixelMipChainHeight;  ///< Mip chain height in original pixels
+    UINT_32             pixelPitch;           ///< Pitch in original pixels
+    UINT_32             pixelHeight;          ///< Height in original pixels
+    UINT_32             pixelBits;            ///< Original bits per pixel, passed from input
+
+    UINT_32             blockWidth;           ///< Width in element inside one block
+    UINT_32             blockHeight;          ///< Height in element inside one block
+    UINT_32             blockSlices;          ///< Slice number inside one block
+                                              ///< Prt tile is one block, its width/height/slice
+                                              ///< equals to blcok width/height/slice
+
+    BOOL_32             epitchIsHeight;       ///< Whether to use height to program epitch register
+    /// Stereo info
+    ADDR_QBSTEREOINFO*  pStereoInfo;          ///< Stereo info, needed if qbStereo flag is TRUE
+    /// Mip info
+    ADDR2_MIP_INFO*     pMipInfo;             ///< Pointer to mip information array
+                                              ///  if it is not NULL, the array is assumed to
+                                              ///  contain numMipLevels entries
+
+    UINT_32             equationIndex;        ///< Equation index in the equation table of mip0
+    BOOL_32             firstMipInTail;       ///< If whole mipchain falls into mip tail block
+} ADDR2_COMPUTE_SURFACE_INFO_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeSurfaceInfo
+*
+*   @brief
+*       Compute surface width/height/slices/alignments and suitable tiling mode
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeSurfaceInfo(
+    ADDR_HANDLE                                hLib,
+    const ADDR2_COMPUTE_SURFACE_INFO_INPUT*    pIn,
+    ADDR2_COMPUTE_SURFACE_INFO_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeSurfaceAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT
+{
+    UINT_32             size;            ///< Size of this structure in bytes
+
+    UINT_32             x;               ///< X coordinate
+    UINT_32             y;               ///< Y coordinate
+    UINT_32             slice;           ///< Slice index
+    UINT_32             sample;          ///< Sample index, use fragment index for EQAA
+    UINT_32             mipId;           ///< the mip ID in mip chain
+
+    AddrSwizzleMode     swizzleMode;     ///< Swizzle mode for Gfx9
+    ADDR2_SURFACE_FLAGS flags;           ///< Surface flags
+    AddrResourceType    resourceType;    ///< Surface type
+    UINT_32             bpp;             ///< Bits per pixel
+    UINT_32             unalignedWidth;  ///< Surface original width (of mip0)
+    UINT_32             unalignedHeight; ///< Surface original height (of mip0)
+    UINT_32             numSlices;       ///< Surface original slices (of mip0)
+    UINT_32             numMipLevels;    ///< Total mipmap levels
+    UINT_32             numSamples;      ///< Number of samples
+    UINT_32             numFrags;        ///< Number of fragments, leave it zero or the same as
+                                         ///  number of samples for normal AA; Set it to the
+                                         ///  number of fragments for EQAA
+
+    UINT_32             pipeBankXor;     ///< Combined swizzle used to do bank/pipe rotation
+    UINT_32             pitchInElement;  ///< Pitch in elements (blocks for compressed formats)
+} ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeSurfaceAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT
+{
+    UINT_32    size;             ///< Size of this structure in bytes
+
+    UINT_64    addr;             ///< Byte address
+    UINT_32    bitPosition;      ///< Bit position within surfaceAddr, 0-7.
+                                 ///  For surface bpp < 8, e.g. FMT_1.
+    UINT_32    prtBlockIndex;    ///< Index of a PRT tile (64K block)
+} ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeSurfaceAddrFromCoord
+*
+*   @brief
+*       Compute surface address from a given coordinate.
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeSurfaceAddrFromCoord(
+    ADDR_HANDLE                                         hLib,
+    const ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_INPUT*    pIn,
+    ADDR2_COMPUTE_SURFACE_ADDRFROMCOORD_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_SURFACE_COORDFROMADDR_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeSurfaceCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_SURFACE_COORDFROMADDR_INPUT
+{
+    UINT_32             size;            ///< Size of this structure in bytes
+
+    UINT_64             addr;            ///< Address in bytes
+    UINT_32             bitPosition;     ///< Bit position in addr. 0-7. for surface bpp < 8,
+                                         ///  e.g. FMT_1;
+
+    AddrSwizzleMode     swizzleMode;     ///< Swizzle mode for Gfx9
+    ADDR2_SURFACE_FLAGS flags;           ///< Surface flags
+    AddrResourceType    resourceType;    ///< Surface type
+    UINT_32             bpp;             ///< Bits per pixel
+    UINT_32             unalignedWidth;  ///< Surface original width (of mip0)
+    UINT_32             unalignedHeight; ///< Surface original height (of mip0)
+    UINT_32             numSlices;       ///< Surface original slices (of mip0)
+    UINT_32             numMipLevels;    ///< Total mipmap levels.
+    UINT_32             numSamples;      ///< Number of samples
+    UINT_32             numFrags;        ///< Number of fragments, leave it zero or the same as
+                                         ///  number of samples for normal AA; Set it to the
+                                         ///  number of fragments for EQAA
+
+    UINT_32             pipeBankXor;     ///< Combined swizzle used to do bank/pipe rotation
+    UINT_32             pitchInElement;  ///< Pitch in elements (blocks for compressed formats)
+} ADDR2_COMPUTE_SURFACE_COORDFROMADDR_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeSurfaceCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT
+{
+    UINT_32    size;       ///< Size of this structure in bytes
+
+    UINT_32    x;          ///< X coordinate
+    UINT_32    y;          ///< Y coordinate
+    UINT_32    slice;      ///< Index of slices
+    UINT_32    sample;     ///< Index of samples, means fragment index for EQAA
+    UINT_32    mipId;      ///< mipmap level id
+} ADDR2_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeSurfaceCoordFromAddr
+*
+*   @brief
+*       Compute coordinate from a given surface address
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeSurfaceCoordFromAddr(
+    ADDR_HANDLE                                         hLib,
+    const ADDR2_COMPUTE_SURFACE_COORDFROMADDR_INPUT*    pIn,
+    ADDR2_COMPUTE_SURFACE_COORDFROMADDR_OUTPUT*         pOut);
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                   HTile functions for Gfx9
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   ADDR2_META_FLAGS
+*
+*   @brief
+*       Metadata flags
+****************************************************************************************************
+*/
+typedef union _ADDR2_META_FLAGS
+{
+    struct
+    {
+        UINT_32 pipeAligned :  1;    ///< if Metadata being pipe aligned
+        UINT_32 rbAligned   :  1;    ///< if Metadata being RB aligned
+        UINT_32 linear      :  1;    ///< if Metadata linear, GFX9 does not suppord this!
+        UINT_32 reserved    : 29;    ///< Reserved bits
+    };
+
+    UINT_32 value;
+} ADDR2_META_FLAGS;
+
+/**
+****************************************************************************************************
+*   ADDR2_META_MIP_INFO
+*
+*   @brief
+*       Structure to store per mip metadata information
+****************************************************************************************************
+*/
+typedef struct _ADDR2_META_MIP_INFO
+{
+    BOOL_32    inMiptail;
+    UINT_32    startX;
+    UINT_32    startY;
+    UINT_32    startZ;
+    UINT_32    width;
+    UINT_32    height;
+    UINT_32    depth;
+} ADDR2_META_MIP_INFO;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_HTILE_INFO_INPUT
+*
+*   @brief
+*       Input structure of Addr2ComputeHtileInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_HTILE_INFO_INPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+
+    ADDR2_META_FLAGS    hTileFlags;         ///< HTILE flags
+    ADDR2_SURFACE_FLAGS depthFlags;         ///< Depth surface flags
+    AddrSwizzleMode     swizzleMode;        ///< Depth surface swizzle mode
+    UINT_32             unalignedWidth;     ///< Depth surface original width (of mip0)
+    UINT_32             unalignedHeight;    ///< Depth surface original height (of mip0)
+    UINT_32             numSlices;          ///< Number of slices of depth surface (of mip0)
+    UINT_32             numMipLevels;       ///< Total mipmap levels of color surface
+} ADDR2_COMPUTE_HTILE_INFO_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_HTILE_INFO_OUTPUT
+*
+*   @brief
+*       Output structure of Addr2ComputeHtileInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_HTILE_INFO_OUTPUT
+{
+    UINT_32    size;                ///< Size of this structure in bytes
+
+    UINT_32    pitch;               ///< Pitch in pixels of depth buffer represented in this
+                                    ///  HTile buffer. This might be larger than original depth
+                                    ///  buffer pitch when called with an unaligned pitch.
+    UINT_32    height;              ///< Height in pixels, as above
+    UINT_32    baseAlign;           ///< Base alignment
+    UINT_32    sliceSize;           ///< Slice size, in bytes.
+    UINT_32    htileBytes;          ///< Size of HTILE buffer, in bytes
+    UINT_32    metaBlkWidth;        ///< Meta block width
+    UINT_32    metaBlkHeight;       ///< Meta block height
+    UINT_32    metaBlkNumPerSlice;  ///< Number of metablock within one slice
+
+    ADDR2_META_MIP_INFO* pMipInfo;  ///< HTILE mip information
+} ADDR2_COMPUTE_HTILE_INFO_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeHtileInfo
+*
+*   @brief
+*       Compute Htile pitch, height, base alignment and size in bytes
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeHtileInfo(
+    ADDR_HANDLE                              hLib,
+    const ADDR2_COMPUTE_HTILE_INFO_INPUT*    pIn,
+    ADDR2_COMPUTE_HTILE_INFO_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeHtileAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_INPUT
+{
+    UINT_32             size;                ///< Size of this structure in bytes
+
+    UINT_32             x;                   ///< X coordinate
+    UINT_32             y;                   ///< Y coordinate
+    UINT_32             slice;               ///< Index of slices
+    UINT_32             mipId;               ///< mipmap level id
+
+    ADDR2_META_FLAGS    hTileFlags;          ///< HTILE flags
+    ADDR2_SURFACE_FLAGS depthflags;          ///< Depth surface flags
+    AddrSwizzleMode     swizzleMode;         ///< Depth surface swizzle mode
+    UINT_32             bpp;                 ///< Depth surface bits per pixel
+    UINT_32             unalignedWidth;      ///< Depth surface original width (of mip0)
+    UINT_32             unalignedHeight;     ///< Depth surface original height (of mip0)
+    UINT_32             numSlices;           ///< Depth surface original depth (of mip0)
+    UINT_32             numMipLevels;        ///< Depth surface total mipmap levels
+    UINT_32             numSamples;          ///< Depth surface number of samples
+    UINT_32             pipeXor;             ///< Pipe xor setting
+} ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeHtileAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT
+{
+    UINT_32    size;    ///< Size of this structure in bytes
+
+    UINT_64    addr;    ///< Address in bytes
+} ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeHtileAddrFromCoord
+*
+*   @brief
+*       Compute Htile address according to coordinates (of depth buffer)
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeHtileAddrFromCoord(
+    ADDR_HANDLE                                       hLib,
+    const ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_INPUT*    pIn,
+    ADDR2_COMPUTE_HTILE_ADDRFROMCOORD_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_HTILE_COORDFROMADDR_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeHtileCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_HTILE_COORDFROMADDR_INPUT
+{
+    UINT_32             size;                ///< Size of this structure in bytes
+
+    UINT_64             addr;                ///< Address
+
+    ADDR2_META_FLAGS    hTileFlags;          ///< HTILE flags
+    ADDR2_SURFACE_FLAGS depthFlags;          ///< Depth surface flags
+    AddrSwizzleMode     swizzleMode;         ///< Depth surface swizzle mode
+    UINT_32             bpp;                 ///< Depth surface bits per pixel
+    UINT_32             unalignedWidth;      ///< Depth surface original width (of mip0)
+    UINT_32             unalignedHeight;     ///< Depth surface original height (of mip0)
+    UINT_32             numSlices;           ///< Depth surface original depth (of mip0)
+    UINT_32             numMipLevels;        ///< Depth surface total mipmap levels
+    UINT_32             numSamples;          ///< Depth surface number of samples
+    UINT_32             pipeXor;             ///< Pipe xor setting
+} ADDR2_COMPUTE_HTILE_COORDFROMADDR_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_HTILE_COORDFROMADDR_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeHtileCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_HTILE_COORDFROMADDR_OUTPUT
+{
+    UINT_32    size;        ///< Size of this structure in bytes
+
+    UINT_32    x;           ///< X coordinate
+    UINT_32    y;           ///< Y coordinate
+    UINT_32    slice;       ///< Index of slices
+    UINT_32    mipId;       ///< mipmap level id
+} ADDR2_COMPUTE_HTILE_COORDFROMADDR_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeHtileCoordFromAddr
+*
+*   @brief
+*       Compute coordinates within depth buffer (1st pixel of a micro tile) according to
+*       Htile address
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeHtileCoordFromAddr(
+    ADDR_HANDLE                                       hLib,
+    const ADDR2_COMPUTE_HTILE_COORDFROMADDR_INPUT*    pIn,
+    ADDR2_COMPUTE_HTILE_COORDFROMADDR_OUTPUT*         pOut);
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     C-mask functions for Gfx9
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_CMASK_INFO_INPUT
+*
+*   @brief
+*       Input structure of Addr2ComputeCmaskInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_CMASKINFO_INPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+
+    ADDR2_META_FLAGS    cMaskFlags;         ///< CMASK flags
+    ADDR2_SURFACE_FLAGS colorFlags;         ///< Color surface flags
+    AddrResourceType    resourceType;       ///< Color surface type
+    AddrSwizzleMode     swizzleMode;        ///< FMask surface swizzle mode
+    UINT_32             unalignedWidth;     ///< Color surface original width
+    UINT_32             unalignedHeight;    ///< Color surface original height
+    UINT_32             numSlices;          ///< Number of slices of color buffer
+} ADDR2_COMPUTE_CMASK_INFO_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_CMASK_INFO_OUTPUT
+*
+*   @brief
+*       Output structure of Addr2ComputeCmaskInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_CMASK_INFO_OUTPUT
+{
+    UINT_32    size;          ///< Size of this structure in bytes
+
+    UINT_32    pitch;         ///< Pitch in pixels of color buffer which
+                              ///  this Cmask matches. The size might be larger than
+                              ///  original color buffer pitch when called with
+                              ///  an unaligned pitch.
+    UINT_32    height;        ///< Height in pixels, as above
+    UINT_32    baseAlign;     ///< Base alignment
+    UINT_32    sliceSize;     ///< Slice size, in bytes.
+    UINT_32    cmaskBytes;    ///< Size in bytes of CMask buffer
+    UINT_32    metaBlkWidth;  ///< Meta block width
+    UINT_32    metaBlkHeight; ///< Meta block height
+
+    UINT_32    metaBlkNumPerSlice; ///< Number of metablock within one slice
+} ADDR2_COMPUTE_CMASK_INFO_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeCmaskInfo
+*
+*   @brief
+*       Compute Cmask pitch, height, base alignment and size in bytes from color buffer
+*       info
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeCmaskInfo(
+    ADDR_HANDLE                              hLib,
+    const ADDR2_COMPUTE_CMASK_INFO_INPUT*    pIn,
+    ADDR2_COMPUTE_CMASK_INFO_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeCmaskAddrFromCoord
+*
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_INPUT
+{
+    UINT_32             size;                ///< Size of this structure in bytes
+
+    UINT_32             x;                   ///< X coordinate
+    UINT_32             y;                   ///< Y coordinate
+    UINT_32             slice;               ///< Index of slices
+
+    ADDR2_META_FLAGS    cMaskFlags;          ///< CMASK flags
+    ADDR2_SURFACE_FLAGS colorFlags;          ///< Color surface flags
+    AddrResourceType    resourceType;        ///< Color surface type
+    AddrSwizzleMode     swizzleMode;         ///< FMask surface swizzle mode
+
+    UINT_32             unalignedWidth;      ///< Color surface original width (of mip0)
+    UINT_32             unalignedHeight;     ///< Color surface original height (of mip0)
+    UINT_32             numSlices;           ///< Color surface original slices (of mip0)
+
+    UINT_32             numSamples;          ///< Color surfae sample number
+    UINT_32             numFrags;            ///< Color surface fragment number
+
+    UINT_32             pipeXor;             ///< pipe Xor setting
+} ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeCmaskAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT
+{
+    UINT_32    size;           ///< Size of this structure in bytes
+
+    UINT_64    addr;           ///< CMASK address in bytes
+    UINT_32    bitPosition;    ///< Bit position within addr, 0 or 4
+} ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeCmaskAddrFromCoord
+*
+*   @brief
+*       Compute Cmask address according to coordinates (of MSAA color buffer)
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeCmaskAddrFromCoord(
+    ADDR_HANDLE                                      hLib,
+    const ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_INPUT*   pIn,
+    ADDR2_COMPUTE_CMASK_ADDRFROMCOORD_OUTPUT*        pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_CMASK_COORDFROMADDR_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeCmaskCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_CMASK_COORDFROMADDR_INPUT
+{
+    UINT_32             size;                ///< Size of this structure in bytes
+
+    UINT_64             addr;                ///< CMASK address in bytes
+    UINT_32             bitPosition;         ///< Bit position within addr, 0 or 4
+
+    ADDR2_META_FLAGS    cMaskFlags;          ///< CMASK flags
+    ADDR2_SURFACE_FLAGS colorFlags;          ///< Color surface flags
+    AddrResourceType    resourceType;        ///< Color surface type
+    AddrSwizzleMode     swizzleMode;         ///< FMask surface swizzle mode
+
+    UINT_32             unalignedWidth;      ///< Color surface original width (of mip0)
+    UINT_32             unalignedHeight;     ///< Color surface original height (of mip0)
+    UINT_32             numSlices;           ///< Color surface original slices (of mip0)
+    UINT_32             numMipLevels;        ///< Color surface total mipmap levels.
+} ADDR2_COMPUTE_CMASK_COORDFROMADDR_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_CMASK_COORDFROMADDR_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeCmaskCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_CMASK_COORDFROMADDR_OUTPUT
+{
+    UINT_32    size;        ///< Size of this structure in bytes
+
+    UINT_32    x;           ///< X coordinate
+    UINT_32    y;           ///< Y coordinate
+    UINT_32    slice;       ///< Index of slices
+    UINT_32    mipId;       ///< mipmap level id
+} ADDR2_COMPUTE_CMASK_COORDFROMADDR_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeCmaskCoordFromAddr
+*
+*   @brief
+*       Compute coordinates within color buffer (1st pixel of a micro tile) according to
+*       Cmask address
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeCmaskCoordFromAddr(
+    ADDR_HANDLE                                       hLib,
+    const ADDR2_COMPUTE_CMASK_COORDFROMADDR_INPUT*    pIn,
+    ADDR2_COMPUTE_CMASK_COORDFROMADDR_OUTPUT*         pOut);
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     F-mask functions for Gfx9
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   ADDR2_FMASK_FLAGS
+*
+*   @brief
+*       FMASK flags
+****************************************************************************************************
+*/
+typedef union _ADDR2_FMASK_FLAGS
+{
+    struct
+    {
+        UINT_32 resolved :  1;    ///< TRUE if this is a resolved fmask, used by H/W clients
+                                  ///  by H/W clients. S/W should always set it to FALSE.
+        UINT_32 reserved : 31;    ///< Reserved for future use.
+    };
+
+    UINT_32 value;
+} ADDR2_FMASK_FLAGS;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_FMASK_INFO_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeFmaskInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_FMASK_INFO_INPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+
+    AddrSwizzleMode     swizzleMode;        ///< FMask surface swizzle mode
+    UINT_32             unalignedWidth;     ///< Color surface original width
+    UINT_32             unalignedHeight;    ///< Color surface original height
+    UINT_32             numSlices;          ///< Number of slices/depth
+    UINT_32             numSamples;         ///< Number of samples
+    UINT_32             numFrags;           ///< Number of fragments, leave it zero or the same as
+                                            ///  number of samples for normal AA; Set it to the
+                                            ///  number of fragments for EQAA
+    ADDR2_FMASK_FLAGS   fMaskFlags;         ///< FMASK flags
+} ADDR2_COMPUTE_FMASK_INFO_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_FMASK_INFO_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeFmaskInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_FMASK_INFO_OUTPUT
+{
+    UINT_32    size;           ///< Size of this structure in bytes
+
+    UINT_32    pitch;          ///< Pitch of fmask in pixels
+    UINT_32    height;         ///< Height of fmask in pixels
+    UINT_32    baseAlign;      ///< Base alignment
+    UINT_32    numSlices;      ///< Slices of fmask
+    UINT_32    fmaskBytes;     ///< Size of fmask in bytes
+    UINT_32    bpp;            ///< Bits per pixel of FMASK is: number of bit planes
+    UINT_32    numSamples;     ///< Number of samples
+    UINT_32    sliceSize;      ///< Size of slice in bytes
+} ADDR2_COMPUTE_FMASK_INFO_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeFmaskInfo
+*
+*   @brief
+*       Compute Fmask pitch/height/slices/alignments and size in bytes
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeFmaskInfo(
+    ADDR_HANDLE                              hLib,
+    const ADDR2_COMPUTE_FMASK_INFO_INPUT*    pIn,
+    ADDR2_COMPUTE_FMASK_INFO_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeFmaskAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_INPUT
+{
+    UINT_32            size;               ///< Size of this structure in bytes
+
+    AddrSwizzleMode    swizzleMode;        ///< FMask surface swizzle mode
+    UINT_32            x;                  ///< X coordinate
+    UINT_32            y;                  ///< Y coordinate
+    UINT_32            slice;              ///< Slice index
+    UINT_32            sample;             ///< Sample index (fragment index for EQAA)
+    UINT_32            plane;              ///< Plane number
+
+    UINT_32            unalignedWidth;     ///< Color surface original width
+    UINT_32            unalignedHeight;    ///< Color surface original height
+    UINT_32            numSamples;         ///< Number of samples
+    UINT_32            numFrags;           ///< Number of fragments, leave it zero or the same as
+                                   ///  number of samples for normal AA; Set it to the
+                                   ///  number of fragments for EQAA
+    UINT_32            tileSwizzle;        ///< Combined swizzle used to do bank/pipe rotation
+
+    ADDR2_FMASK_FLAGS  fMaskFlags; ///< FMASK flags
+} ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeFmaskAddrFromCoord
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT
+{
+    UINT_32    size;           ///< Size of this structure in bytes
+
+    UINT_64    addr;           ///< Fmask address
+    UINT_32    bitPosition;    ///< Bit position within fmaskAddr, 0-7.
+} ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeFmaskAddrFromCoord
+*
+*   @brief
+*       Compute Fmask address according to coordinates (x,y,slice,sample,plane)
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeFmaskAddrFromCoord(
+    ADDR_HANDLE                                       hLib,
+    const ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_INPUT*    pIn,
+    ADDR2_COMPUTE_FMASK_ADDRFROMCOORD_OUTPUT*         pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_FMASK_COORDFROMADDR_INPUT
+*
+*   @brief
+*       Input structure for Addr2ComputeFmaskCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_FMASK_COORDFROMADDR_INPUT
+{
+    UINT_32            size;               ///< Size of this structure in bytes
+
+    UINT_64            addr;               ///< Address
+    UINT_32            bitPosition;        ///< Bit position within addr, 0-7.
+    AddrSwizzleMode    swizzleMode;        ///< FMask surface swizzle mode
+
+    UINT_32            unalignedWidth;     ///< Color surface original width
+    UINT_32            unalignedHeight;    ///< Color surface original height
+    UINT_32            numSamples;         ///< Number of samples
+    UINT_32            numFrags;           ///< Number of fragments
+
+    UINT_32            tileSwizzle;        ///< Combined swizzle used to do bank/pipe rotation
+
+    ADDR2_FMASK_FLAGS  fMaskFlags; ///< FMASK flags
+} ADDR2_COMPUTE_FMASK_COORDFROMADDR_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_FMASK_COORDFROMADDR_OUTPUT
+*
+*   @brief
+*       Output structure for Addr2ComputeFmaskCoordFromAddr
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_FMASK_COORDFROMADDR_OUTPUT
+{
+    UINT_32    size;      ///< Size of this structure in bytes
+
+    UINT_32    x;         ///< X coordinate
+    UINT_32    y;         ///< Y coordinate
+    UINT_32    slice;     ///< Slice index
+    UINT_32    sample;    ///< Sample index (fragment index for EQAA)
+    UINT_32    plane;     ///< Plane number
+} ADDR2_COMPUTE_FMASK_COORDFROMADDR_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeFmaskCoordFromAddr
+*
+*   @brief
+*       Compute FMASK coordinate from an given address
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeFmaskCoordFromAddr(
+    ADDR_HANDLE                                       hLib,
+    const ADDR2_COMPUTE_FMASK_COORDFROMADDR_INPUT*    pIn,
+    ADDR2_COMPUTE_FMASK_COORDFROMADDR_OUTPUT*         pOut);
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     DCC key functions for Gfx9
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   _ADDR2_COMPUTE_DCCINFO_INPUT
+*
+*   @brief
+*       Input structure of Addr2ComputeDccInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_DCCINFO_INPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+
+    ADDR2_META_FLAGS    dccKeyFlags;        ///< DCC key flags
+    ADDR2_SURFACE_FLAGS colorFlags;         ///< Color surface flags
+    AddrResourceType    resourceType;       ///< Color surface type
+    AddrSwizzleMode     swizzleMode;        ///< Color surface swizzle mode
+    UINT_32             bpp;                ///< bits per pixel
+    UINT_32             unalignedWidth;     ///< Color surface original width (of mip0)
+    UINT_32             unalignedHeight;    ///< Color surface original height (of mip0)
+    UINT_32             numSlices;          ///< Number of slices, of color surface (of mip0)
+    UINT_32             numFrags;           ///< Fragment number of color surface
+    UINT_32             numMipLevels;       ///< Total mipmap levels of color surface
+    UINT_32             dataSurfaceSize;    ///< The padded size of all slices and mip levels
+                                            ///< useful in meta linear case
+} ADDR2_COMPUTE_DCCINFO_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_DCCINFO_OUTPUT
+*
+*   @brief
+*       Output structure of Addr2ComputeDccInfo
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_DCCINFO_OUTPUT
+{
+    UINT_32    size;               ///< Size of this structure in bytes
+
+    UINT_32    dccRamBaseAlign;    ///< Base alignment of dcc key
+    UINT_32    dccRamSize;         ///< Size of dcc key
+
+    UINT_32    pitch;              ///< DCC surface mip chain pitch
+    UINT_32    height;             ///< DCC surface mip chain height
+    UINT_32    depth;              ///< DCC surface mip chain depth
+
+    UINT_32    compressBlkWidth;   ///< DCC compress block width
+    UINT_32    compressBlkHeight;  ///< DCC compress block height
+    UINT_32    compressBlkDepth;   ///< DCC compress block depth
+
+    UINT_32    metaBlkWidth;       ///< DCC meta block width
+    UINT_32    metaBlkHeight;      ///< DCC meta block height
+    UINT_32    metaBlkDepth;       ///< DCC meta block depth
+
+    UINT_32    fastClearSizePerSlice;   ///< Size of DCC within a slice should be fast cleared
+    UINT_32    metaBlkNumPerSlice;      ///< Number of metablock within one slice
+
+    ADDR2_META_MIP_INFO* pMipInfo;      ///< DCC mip information
+} ADDR2_COMPUTE_DCCINFO_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputeDccInfo
+*
+*   @brief
+*       Compute DCC key size, base alignment
+*       info
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputeDccInfo(
+    ADDR_HANDLE                           hLib,
+    const ADDR2_COMPUTE_DCCINFO_INPUT*    pIn,
+    ADDR2_COMPUTE_DCCINFO_OUTPUT*         pOut);
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//                                     Misc functions for Gfx9
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_PIPEBANKXOR_INPUT
+*
+*   @brief
+*       Input structure of Addr2ComputePipebankXor
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_PIPEBANKXOR_INPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+    UINT_32             surfIndex;          ///< Input surface index
+    ADDR2_SURFACE_FLAGS flags;              ///< Surface flag
+    AddrSwizzleMode     swizzleMode;        ///< Surface swizzle mode
+    AddrResourceType    resourceType;       ///< Surface resource type
+} ADDR2_COMPUTE_PIPEBANKXOR_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_COMPUTE_PIPEBANKXOR_OUTPUT
+*
+*   @brief
+*       Output structure of Addr2ComputePipebankXor
+****************************************************************************************************
+*/
+typedef struct _ADDR2_COMPUTE_PIPEBANKXOR_OUTPUT
+{
+    UINT_32             size;               ///< Size of this structure in bytes
+    UINT_32             pipeBankXor;        ///< Pipe bank xor
+} ADDR2_COMPUTE_PIPEBANKXOR_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2ComputePipeBankXor
+*
+*   @brief
+*       Calculate a valid bank pipe xor value for client to use.
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2ComputePipeBankXor(
+    ADDR_HANDLE                            hLib,
+    const ADDR2_COMPUTE_PIPEBANKXOR_INPUT* pIn,
+    ADDR2_COMPUTE_PIPEBANKXOR_OUTPUT*      pOut);
+
+
+
+/**
+****************************************************************************************************
+*   ADDR2_BLOCK_SET
+*
+*   @brief
+*       Bit field that define block type
+****************************************************************************************************
+*/
+typedef union _ADDR2_BLOCK_SET
+{
+    struct
+    {
+        UINT_32 micro       : 1;   // 256B block for 2D resource
+        UINT_32 macro4KB    : 1;   // 4KB for 2D/3D resource
+        UINT_32 macro64KB   : 1;   // 64KB for 2D/3D resource
+        UINT_32 var         : 1;   // VAR block
+        UINT_32 linear      : 1;   // Linear block
+        UINT_32 reserved    : 27;
+    };
+
+    UINT_32 value;
+} ADDR2_BLOCK_SET;
+
+/**
+****************************************************************************************************
+*   ADDR2_GET_PREFERRED_SURF_SETTING_INPUT
+*
+*   @brief
+*       Input structure of Addr2GetPreferredSurfaceSetting
+****************************************************************************************************
+*/
+typedef struct _ADDR2_GET_PREFERRED_SURF_SETTING_INPUT
+{
+    UINT_32               size;              ///< Size of this structure in bytes
+
+    ADDR2_SURFACE_FLAGS   flags;             ///< Surface flags
+    AddrResourceType      resourceType;      ///< Surface type
+    AddrFormat            format;            ///< Surface format
+    AddrResrouceLocation  resourceLoction;   ///< Surface heap choice
+    ADDR2_BLOCK_SET       forbiddenBlock;    ///< Client can use it to disable some block setting
+                                             ///< such as linear for DXTn, tiled for YUV
+    BOOL_32               noXor;             ///< Do not use xor mode for this resource
+    UINT_32               bpp;               ///< bits per pixel
+    UINT_32               width;             ///< Width (of mip0), in pixels
+    UINT_32               height;            ///< Height (of mip0), in pixels
+    UINT_32               numSlices;         ///< Number surface slice/depth (of mip0),
+    UINT_32               numMipLevels;      ///< Total mipmap levels.
+    UINT_32               numSamples;        ///< Number of samples
+    UINT_32               numFrags;          ///< Number of fragments, leave it zero or the same as
+                                             ///  number of samples for normal AA; Set it to the
+                                             ///  number of fragments for EQAA
+    UINT_32               maxAlign;          ///< maximum base/size alignment requested by client
+} ADDR2_GET_PREFERRED_SURF_SETTING_INPUT;
+
+/**
+****************************************************************************************************
+*   ADDR2_GET_PREFERRED_SURF_SETTING_OUTPUT
+*
+*   @brief
+*       Output structure of Addr2GetPreferredSurfaceSetting
+****************************************************************************************************
+*/
+typedef struct _ADDR2_GET_PREFERRED_SURF_SETTING_OUTPUT
+{
+    UINT_32               size;              ///< Size of this structure in bytes
+
+    AddrSwizzleMode       swizzleMode;       ///< Suggested swizzle mode to be used
+    AddrResourceType      resourceType;      ///< Suggested resource type to program HW
+    ADDR2_BLOCK_SET       validBlockSet;     ///< Valid block type bit conbination
+    BOOL_32               canXor;            ///< If client can use xor on a valid macro block type
+} ADDR2_GET_PREFERRED_SURF_SETTING_OUTPUT;
+
+/**
+****************************************************************************************************
+*   Addr2GetPreferredSurfaceSetting
+*
+*   @brief
+*       Suggest a preferred setting for client driver to program HW register
+****************************************************************************************************
+*/
+ADDR_E_RETURNCODE ADDR_API Addr2GetPreferredSurfaceSetting(
+    ADDR_HANDLE                                   hLib,
+    const ADDR2_GET_PREFERRED_SURF_SETTING_INPUT* pIn,
+    ADDR2_GET_PREFERRED_SURF_SETTING_OUTPUT*      pOut);
+
 #if defined(__cplusplus)
 }
 #endif
 
 #endif // __ADDR_INTERFACE_H__
-
-
