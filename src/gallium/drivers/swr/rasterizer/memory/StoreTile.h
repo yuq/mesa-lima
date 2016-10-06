@@ -728,7 +728,7 @@ struct OptStoreRasterTile : StoreRasterTile<TTraits, SrcFormat, DstFormat>
 /// OptStoreRasterTile - SWR_TILE_MODE_NONE specialization for 8bpp
 //////////////////////////////////////////////////////////////////////////
 template<SWR_FORMAT SrcFormat, SWR_FORMAT DstFormat>
-struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 8>, SrcFormat, DstFormat >
+struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 8>, SrcFormat, DstFormat>
 {
     typedef StoreRasterTile<TilingTraits<SWR_TILE_NONE, 8>, SrcFormat, DstFormat> GenericStoreTile;
     static const size_t SRC_BYTES_PER_PIXEL = FormatTraits<SrcFormat>::bpp / 8;
@@ -781,7 +781,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 8>, SrcFormat, DstFormat 
 /// OptStoreRasterTile - SWR_TILE_MODE_NONE specialization for 16bpp
 //////////////////////////////////////////////////////////////////////////
 template<SWR_FORMAT SrcFormat, SWR_FORMAT DstFormat>
-struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 16>, SrcFormat, DstFormat >
+struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 16>, SrcFormat, DstFormat>
 {
     typedef StoreRasterTile<TilingTraits<SWR_TILE_NONE, 16>, SrcFormat, DstFormat> GenericStoreTile;
     static const size_t SRC_BYTES_PER_PIXEL = FormatTraits<SrcFormat>::bpp / 8;
@@ -834,7 +834,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 16>, SrcFormat, DstFormat
 /// OptStoreRasterTile - SWR_TILE_MODE_NONE specialization for 32bpp
 //////////////////////////////////////////////////////////////////////////
 template<SWR_FORMAT SrcFormat, SWR_FORMAT DstFormat>
-struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 32>, SrcFormat, DstFormat >
+struct OptStoreRasterTile< TilingTraits<SWR_TILE_NONE, 32>, SrcFormat, DstFormat>
 {
     typedef StoreRasterTile<TilingTraits<SWR_TILE_NONE, 32>, SrcFormat, DstFormat> GenericStoreTile;
     static const size_t SRC_BYTES_PER_PIXEL = FormatTraits<SrcFormat>::bpp / 8;
@@ -1499,139 +1499,152 @@ struct StoreMacroTile
 
 //////////////////////////////////////////////////////////////////////////
 /// InitStoreTilesTable - Helper for setting up the tables.
-template <SWR_TILE_MODE TileModeT, size_t NumTileModesT, size_t ArraySizeT>
+template <SWR_TILE_MODE TTileMode, size_t NumTileModesT, size_t ArraySizeT>
 void InitStoreTilesTableColor_Half1(
     PFN_STORE_TILES (&table)[NumTileModesT][ArraySizeT])
 {
-    table[TileModeT][R32G32B32A32_FLOAT]        = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, R32G32B32A32_FLOAT>::Store;
-    table[TileModeT][R32G32B32A32_SINT]         = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, R32G32B32A32_SINT>::Store;
-    table[TileModeT][R32G32B32A32_UINT]         = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, R32G32B32A32_UINT>::Store;
-    table[TileModeT][R32G32B32X32_FLOAT]        = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, R32G32B32X32_FLOAT>::Store;
-    table[TileModeT][R32G32B32_FLOAT]           = StoreMacroTile<TilingTraits<TileModeT, 96>, R32G32B32A32_FLOAT, R32G32B32_FLOAT>::Store;
-    table[TileModeT][R32G32B32_SINT]            = StoreMacroTile<TilingTraits<TileModeT, 96>, R32G32B32A32_FLOAT, R32G32B32_SINT>::Store;
-    table[TileModeT][R32G32B32_UINT]            = StoreMacroTile<TilingTraits<TileModeT, 96>, R32G32B32A32_FLOAT, R32G32B32_UINT>::Store;
-    table[TileModeT][R16G16B16A16_UNORM]        = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16A16_UNORM>::Store;
-    table[TileModeT][R16G16B16A16_SNORM]        = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16A16_SNORM>::Store;
-    table[TileModeT][R16G16B16A16_SINT]         = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16A16_SINT>::Store;
-    table[TileModeT][R16G16B16A16_UINT]         = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16A16_UINT>::Store;
-    table[TileModeT][R16G16B16A16_FLOAT]        = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16A16_FLOAT>::Store;
-    table[TileModeT][R32G32_FLOAT]              = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R32G32_FLOAT>::Store;
-    table[TileModeT][R32G32_SINT]               = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R32G32_SINT>::Store;
-    table[TileModeT][R32G32_UINT]               = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R32G32_UINT>::Store;
-    table[TileModeT][R16G16B16X16_UNORM]        = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16X16_UNORM>::Store;
-    table[TileModeT][R16G16B16X16_FLOAT]        = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, R16G16B16X16_FLOAT>::Store;
-    table[TileModeT][B8G8R8A8_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B8G8R8A8_UNORM>::Store;
-    table[TileModeT][B8G8R8A8_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B8G8R8A8_UNORM_SRGB>::Store;
-    
-    // 101010_2, 565, 555_1, and 444_4 formats force generic store tile for now
-    table[TileModeT][R10G10B10A2_UNORM]         = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R10G10B10A2_UNORM>::StoreGeneric;
-    table[TileModeT][R10G10B10A2_UNORM_SRGB]    = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R10G10B10A2_UNORM_SRGB>::StoreGeneric;
-    table[TileModeT][R10G10B10A2_UINT]          = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R10G10B10A2_UINT>::StoreGeneric;
-
-    table[TileModeT][R8G8B8A8_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8A8_UNORM>::Store;
-    table[TileModeT][R8G8B8A8_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8A8_UNORM_SRGB>::Store;
-    table[TileModeT][R8G8B8A8_SNORM]            = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8A8_SNORM>::Store;
-    table[TileModeT][R8G8B8A8_SINT]             = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8A8_SINT>::Store;
-    table[TileModeT][R8G8B8A8_UINT]             = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8A8_UINT>::Store;
-    table[TileModeT][R16G16_UNORM]              = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R16G16_UNORM>::Store;
-    table[TileModeT][R16G16_SNORM]              = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R16G16_SNORM>::Store;
-    table[TileModeT][R16G16_SINT]               = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R16G16_SINT>::Store;
-    table[TileModeT][R16G16_UINT]               = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R16G16_UINT>::Store;
-    table[TileModeT][R16G16_FLOAT]              = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R16G16_FLOAT>::Store;
-    
-    // 101010_2, 565, 555_1, and 444_4 formats force generic store tile for now
-    table[TileModeT][B10G10R10A2_UNORM]         = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10A2_UNORM>::StoreGeneric;
-    table[TileModeT][B10G10R10A2_UNORM_SRGB]    = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10A2_UNORM_SRGB>::StoreGeneric;
-    table[TileModeT][R11G11B10_FLOAT]           = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R11G11B10_FLOAT>::StoreGeneric;
-
-    table[TileModeT][R32_SINT]                  = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R32_SINT>::Store;
-    table[TileModeT][R32_UINT]                  = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R32_UINT>::Store;
-    table[TileModeT][R32_FLOAT]                 = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R32_FLOAT>::Store;
-    table[TileModeT][A32_FLOAT]                 = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, A32_FLOAT>::Store;
-    table[TileModeT][B8G8R8X8_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B8G8R8X8_UNORM>::Store;
-    table[TileModeT][B8G8R8X8_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B8G8R8X8_UNORM_SRGB>::Store;
-    table[TileModeT][R8G8B8X8_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8X8_UNORM>::Store;
-    table[TileModeT][R8G8B8X8_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R8G8B8X8_UNORM_SRGB>::Store;
+    table[TTileMode][R32G32B32A32_FLOAT]            = StoreMacroTile<TilingTraits<TTileMode, 128>, R32G32B32A32_FLOAT, R32G32B32A32_FLOAT>::Store;
+    table[TTileMode][R32G32B32A32_SINT]             = StoreMacroTile<TilingTraits<TTileMode, 128>, R32G32B32A32_FLOAT, R32G32B32A32_SINT>::Store;
+    table[TTileMode][R32G32B32A32_UINT]             = StoreMacroTile<TilingTraits<TTileMode, 128>, R32G32B32A32_FLOAT, R32G32B32A32_UINT>::Store;
+    table[TTileMode][R32G32B32X32_FLOAT]            = StoreMacroTile<TilingTraits<TTileMode, 128>, R32G32B32A32_FLOAT, R32G32B32X32_FLOAT>::Store;
+    table[TTileMode][R32G32B32A32_SSCALED]          = StoreMacroTile<TilingTraits<TTileMode, 128>, R32G32B32A32_FLOAT, R32G32B32A32_SSCALED>::Store;
+    table[TTileMode][R32G32B32A32_USCALED]          = StoreMacroTile<TilingTraits<TTileMode, 128>, R32G32B32A32_FLOAT, R32G32B32A32_USCALED>::Store;
+    table[TTileMode][R32G32B32_FLOAT]               = StoreMacroTile<TilingTraits<TTileMode, 96>, R32G32B32A32_FLOAT, R32G32B32_FLOAT>::Store;
+    table[TTileMode][R32G32B32_SINT]                = StoreMacroTile<TilingTraits<TTileMode, 96>, R32G32B32A32_FLOAT, R32G32B32_SINT>::Store;
+    table[TTileMode][R32G32B32_UINT]                = StoreMacroTile<TilingTraits<TTileMode, 96>, R32G32B32A32_FLOAT, R32G32B32_UINT>::Store;
+    table[TTileMode][R32G32B32_SSCALED]             = StoreMacroTile<TilingTraits<TTileMode, 96>, R32G32B32A32_FLOAT, R32G32B32_SSCALED>::Store;
+    table[TTileMode][R32G32B32_USCALED]             = StoreMacroTile<TilingTraits<TTileMode, 96>, R32G32B32A32_FLOAT, R32G32B32_USCALED>::Store;
+    table[TTileMode][R16G16B16A16_UNORM]            = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_UNORM>::Store;
+    table[TTileMode][R16G16B16A16_SNORM]            = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_SNORM>::Store;
+    table[TTileMode][R16G16B16A16_SINT]             = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_SINT>::Store;
+    table[TTileMode][R16G16B16A16_UINT]             = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_UINT>::Store;
+    table[TTileMode][R16G16B16A16_FLOAT]            = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_FLOAT>::Store;
+    table[TTileMode][R32G32_FLOAT]                  = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R32G32_FLOAT>::Store;
+    table[TTileMode][R32G32_SINT]                   = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R32G32_SINT>::Store;
+    table[TTileMode][R32G32_UINT]                   = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R32G32_UINT>::Store;
+    table[TTileMode][R32_FLOAT_X8X24_TYPELESS]      = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R32_FLOAT_X8X24_TYPELESS>::Store;
+    table[TTileMode][X32_TYPELESS_G8X24_UINT]       = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, X32_TYPELESS_G8X24_UINT>::Store;
+    table[TTileMode][R16G16B16X16_UNORM]            = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16X16_UNORM>::Store;
+    table[TTileMode][R16G16B16X16_FLOAT]            = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16X16_FLOAT>::Store;
+    table[TTileMode][R16G16B16A16_SSCALED]          = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_SSCALED>::Store;
+    table[TTileMode][R16G16B16A16_USCALED]          = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R16G16B16A16_USCALED>::Store;
+    table[TTileMode][R32G32_SSCALED]                = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R32G32_SSCALED>::Store;
+    table[TTileMode][R32G32_USCALED]                = StoreMacroTile<TilingTraits<TTileMode, 64>, R32G32B32A32_FLOAT, R32G32_USCALED>::Store;
+    table[TTileMode][B8G8R8A8_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B8G8R8A8_UNORM>::Store;
+    table[TTileMode][B8G8R8A8_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B8G8R8A8_UNORM_SRGB>::Store;
+    table[TTileMode][R10G10B10A2_UNORM]             = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_UNORM>::StoreGeneric;
+    table[TTileMode][R10G10B10A2_UNORM_SRGB]        = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_UNORM_SRGB>::StoreGeneric;
+    table[TTileMode][R10G10B10A2_UINT]              = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_UINT>::StoreGeneric;
+    table[TTileMode][R8G8B8A8_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_UNORM>::Store;
+    table[TTileMode][R8G8B8A8_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_UNORM_SRGB>::Store;
+    table[TTileMode][R8G8B8A8_SNORM]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_SNORM>::Store;
+    table[TTileMode][R8G8B8A8_SINT]                 = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_SINT>::Store;
+    table[TTileMode][R8G8B8A8_UINT]                 = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_UINT>::Store;
+    table[TTileMode][R16G16_UNORM]                  = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_UNORM>::Store;
+    table[TTileMode][R16G16_SNORM]                  = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_SNORM>::Store;
+    table[TTileMode][R16G16_SINT]                   = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_SINT>::Store;
+    table[TTileMode][R16G16_UINT]                   = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_UINT>::Store;
+    table[TTileMode][R16G16_FLOAT]                  = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_FLOAT>::Store;
+    table[TTileMode][B10G10R10A2_UNORM]             = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_UNORM>::StoreGeneric;
+    table[TTileMode][B10G10R10A2_UNORM_SRGB]        = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_UNORM_SRGB>::StoreGeneric;
+    table[TTileMode][R11G11B10_FLOAT]               = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R11G11B10_FLOAT>::StoreGeneric;
+    table[TTileMode][R10G10B10_FLOAT_A2_UNORM]      = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10_FLOAT_A2_UNORM>::StoreGeneric;
+    table[TTileMode][R32_SINT]                      = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R32_SINT>::Store;
+    table[TTileMode][R32_UINT]                      = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R32_UINT>::Store;
+    table[TTileMode][R32_FLOAT]                     = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R32_FLOAT>::Store;
+    table[TTileMode][R24_UNORM_X8_TYPELESS]         = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R24_UNORM_X8_TYPELESS>::StoreGeneric;
+    table[TTileMode][X24_TYPELESS_G8_UINT]          = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, X24_TYPELESS_G8_UINT>::StoreGeneric;
+    table[TTileMode][A32_FLOAT]                     = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, A32_FLOAT>::Store;
+    table[TTileMode][B8G8R8X8_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B8G8R8X8_UNORM>::Store;
+    table[TTileMode][B8G8R8X8_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B8G8R8X8_UNORM_SRGB>::Store;
+    table[TTileMode][R8G8B8X8_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8X8_UNORM>::Store;
+    table[TTileMode][R8G8B8X8_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8X8_UNORM_SRGB>::Store;
 }
 
-template <SWR_TILE_MODE TileModeT, size_t NumTileModesT, size_t ArraySizeT>
+template <SWR_TILE_MODE TTileMode, size_t NumTileModesT, size_t ArraySizeT>
 void InitStoreTilesTableColor_Half2(
     PFN_STORE_TILES(&table)[NumTileModesT][ArraySizeT])
 {
-    // 101010_2, 565, 555_1, and 444_4 formats force generic store tile for now
-    table[TileModeT][B10G10R10X2_UNORM]         = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10X2_UNORM>::StoreGeneric;
-    table[TileModeT][B5G6R5_UNORM]              = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM>::Store;
-    table[TileModeT][B5G6R5_UNORM_SRGB]         = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM_SRGB>::StoreGeneric;
-    table[TileModeT][B5G5R5A1_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G5R5A1_UNORM>::StoreGeneric;
-    table[TileModeT][B5G5R5A1_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G5R5A1_UNORM_SRGB>::StoreGeneric;
-    table[TileModeT][B4G4R4A4_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B4G4R4A4_UNORM>::StoreGeneric;
-    table[TileModeT][B4G4R4A4_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B4G4R4A4_UNORM_SRGB>::StoreGeneric;
-
-    table[TileModeT][R8G8_UNORM]                = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R8G8_UNORM>::Store;
-    table[TileModeT][R8G8_SNORM]                = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R8G8_SNORM>::Store;
-    table[TileModeT][R8G8_SINT]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R8G8_SINT>::Store;
-    table[TileModeT][R8G8_UINT]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R8G8_UINT>::Store;
-    table[TileModeT][R16_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R16_UNORM>::Store;
-    table[TileModeT][R16_SNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R16_SNORM>::Store;
-    table[TileModeT][R16_SINT]                  = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R16_SINT>::Store;
-    table[TileModeT][R16_UINT]                  = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R16_UINT>::Store;
-    table[TileModeT][R16_FLOAT]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, R16_FLOAT>::Store;
-    table[TileModeT][A16_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, A16_UNORM>::Store;
-    table[TileModeT][A16_FLOAT]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, A16_FLOAT>::Store;
-    
-    // 101010_2, 565, 555_1, and 444_4 formats force generic store tile for now
-    table[TileModeT][B5G5R5X1_UNORM]            = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G5R5X1_UNORM>::StoreGeneric;
-    table[TileModeT][B5G5R5X1_UNORM_SRGB]       = StoreMacroTile<TilingTraits<TileModeT, 16>, R32G32B32A32_FLOAT, B5G5R5X1_UNORM_SRGB>::StoreGeneric;
-
-    table[TileModeT][R8_UNORM]                  = StoreMacroTile<TilingTraits<TileModeT, 8>, R32G32B32A32_FLOAT, R8_UNORM>::Store;
-    table[TileModeT][R8_SNORM]                  = StoreMacroTile<TilingTraits<TileModeT, 8>, R32G32B32A32_FLOAT, R8_SNORM>::Store;
-    table[TileModeT][R8_SINT]                   = StoreMacroTile<TilingTraits<TileModeT, 8>, R32G32B32A32_FLOAT, R8_SINT>::Store;
-    table[TileModeT][R8_UINT]                   = StoreMacroTile<TilingTraits<TileModeT, 8>, R32G32B32A32_FLOAT, R8_UINT>::Store;
-    table[TileModeT][A8_UNORM]                  = StoreMacroTile<TilingTraits<TileModeT, 8>, R32G32B32A32_FLOAT, A8_UNORM>::Store;
-    table[TileModeT][BC1_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, BC1_UNORM>::Store;
-    table[TileModeT][BC2_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, BC2_UNORM>::Store;
-    table[TileModeT][BC3_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, BC3_UNORM>::Store;
-    table[TileModeT][BC4_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, BC4_UNORM>::Store;
-    table[TileModeT][BC5_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, BC5_UNORM>::Store;
-    table[TileModeT][BC1_UNORM_SRGB]            = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, BC1_UNORM_SRGB>::Store;
-    table[TileModeT][BC2_UNORM_SRGB]            = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, BC2_UNORM_SRGB>::Store;
-    table[TileModeT][BC3_UNORM_SRGB]            = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, BC3_UNORM_SRGB>::Store;
-    table[TileModeT][R8G8B8_UNORM]              = StoreMacroTile<TilingTraits<TileModeT, 24>, R32G32B32A32_FLOAT, R8G8B8_UNORM>::Store;
-    table[TileModeT][R8G8B8_SNORM]              = StoreMacroTile<TilingTraits<TileModeT, 24>, R32G32B32A32_FLOAT, R8G8B8_SNORM>::Store;
-    table[TileModeT][BC4_SNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 64>, R32G32B32A32_FLOAT, BC4_SNORM>::Store;
-    table[TileModeT][BC5_SNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 128>, R32G32B32A32_FLOAT, BC5_SNORM>::Store;
-    table[TileModeT][R16G16B16_FLOAT]           = StoreMacroTile<TilingTraits<TileModeT, 48>, R32G32B32A32_FLOAT, R16G16B16_FLOAT>::Store;
-    table[TileModeT][R16G16B16_UNORM]           = StoreMacroTile<TilingTraits<TileModeT, 48>, R32G32B32A32_FLOAT, R16G16B16_UNORM>::Store;
-    table[TileModeT][R16G16B16_SNORM]           = StoreMacroTile<TilingTraits<TileModeT, 48>, R32G32B32A32_FLOAT, R16G16B16_SNORM>::Store;
-    table[TileModeT][R8G8B8_UNORM_SRGB]         = StoreMacroTile<TilingTraits<TileModeT, 24>, R32G32B32A32_FLOAT, R8G8B8_UNORM_SRGB>::Store;
-    table[TileModeT][R16G16B16_UINT]            = StoreMacroTile<TilingTraits<TileModeT, 48>, R32G32B32A32_FLOAT, R16G16B16_UINT>::Store;
-    table[TileModeT][R16G16B16_SINT]            = StoreMacroTile<TilingTraits<TileModeT, 48>, R32G32B32A32_FLOAT, R16G16B16_SINT>::Store;
-
-    // 101010_2, 565, 555_1, and 444_4 formats force generic store tile for now
-    table[TileModeT][R10G10B10A2_SNORM]         = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R10G10B10A2_SNORM>::StoreGeneric;
-    table[TileModeT][R10G10B10A2_SINT]          = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, R10G10B10A2_SINT>::StoreGeneric;
-    table[TileModeT][B10G10R10A2_SNORM]         = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10A2_SNORM>::StoreGeneric;
-    table[TileModeT][B10G10R10A2_UINT]          = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10A2_UINT>::StoreGeneric;
-    table[TileModeT][B10G10R10A2_SINT]          = StoreMacroTile<TilingTraits<TileModeT, 32>, R32G32B32A32_FLOAT, B10G10R10A2_SINT>::StoreGeneric;
-
-    table[TileModeT][R8G8B8_UINT]               = StoreMacroTile<TilingTraits<TileModeT, 24>, R32G32B32A32_FLOAT, R8G8B8_UINT>::Store;
-    table[TileModeT][R8G8B8_SINT]               = StoreMacroTile<TilingTraits<TileModeT, 24>, R32G32B32A32_FLOAT, R8G8B8_SINT>::Store;
+    table[TTileMode][R9G9B9E5_SHAREDEXP]            = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R9G9B9E5_SHAREDEXP>::StoreGeneric;
+    table[TTileMode][B10G10R10X2_UNORM]             = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10X2_UNORM>::StoreGeneric;
+    table[TTileMode][R10G10B10X2_USCALED]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10X2_USCALED>::StoreGeneric;
+    table[TTileMode][R8G8B8A8_SSCALED]              = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_SSCALED>::Store;
+    table[TTileMode][R8G8B8A8_USCALED]              = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R8G8B8A8_USCALED>::Store;
+    table[TTileMode][R16G16_SSCALED]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_SSCALED>::Store;
+    table[TTileMode][R16G16_USCALED]                = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R16G16_USCALED>::Store;
+    table[TTileMode][R32_SSCALED]                   = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R32_SSCALED>::Store;
+    table[TTileMode][R32_USCALED]                   = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R32_USCALED>::Store;
+    table[TTileMode][B5G6R5_UNORM]                  = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM>::Store;
+    table[TTileMode][B5G6R5_UNORM_SRGB]             = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B5G6R5_UNORM_SRGB>::StoreGeneric;
+    table[TTileMode][B5G5R5A1_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B5G5R5A1_UNORM>::StoreGeneric;
+    table[TTileMode][B5G5R5A1_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B5G5R5A1_UNORM_SRGB>::StoreGeneric;
+    table[TTileMode][B4G4R4A4_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B4G4R4A4_UNORM>::StoreGeneric;
+    table[TTileMode][B4G4R4A4_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B4G4R4A4_UNORM_SRGB>::StoreGeneric;
+    table[TTileMode][R8G8_UNORM]                    = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R8G8_UNORM>::Store;
+    table[TTileMode][R8G8_SNORM]                    = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R8G8_SNORM>::Store;
+    table[TTileMode][R8G8_SINT]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R8G8_SINT>::Store;
+    table[TTileMode][R8G8_UINT]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R8G8_UINT>::Store;
+    table[TTileMode][R16_UNORM]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_UNORM>::Store;
+    table[TTileMode][R16_SNORM]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_SNORM>::Store;
+    table[TTileMode][R16_SINT]                      = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_SINT>::Store;
+    table[TTileMode][R16_UINT]                      = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_UINT>::Store;
+    table[TTileMode][R16_FLOAT]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_FLOAT>::Store;
+    table[TTileMode][A16_UNORM]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, A16_UNORM>::Store;
+    table[TTileMode][A16_FLOAT]                     = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, A16_FLOAT>::Store;
+    table[TTileMode][B5G5R5X1_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B5G5R5X1_UNORM>::StoreGeneric;
+    table[TTileMode][B5G5R5X1_UNORM_SRGB]           = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, B5G5R5X1_UNORM_SRGB>::StoreGeneric;
+    table[TTileMode][R8G8_SSCALED]                  = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R8G8_SSCALED>::Store;
+    table[TTileMode][R8G8_USCALED]                  = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R8G8_USCALED>::Store;
+    table[TTileMode][R16_SSCALED]                   = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_SSCALED>::Store;
+    table[TTileMode][R16_USCALED]                   = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, R16_USCALED>::Store;
+    table[TTileMode][A1B5G5R5_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, A1B5G5R5_UNORM>::StoreGeneric;
+    table[TTileMode][A4B4G4R4_UNORM]                = StoreMacroTile<TilingTraits<TTileMode, 16>, R32G32B32A32_FLOAT, A4B4G4R4_UNORM>::StoreGeneric;
+    table[TTileMode][R8_UNORM]                      = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, R8_UNORM>::Store;
+    table[TTileMode][R8_SNORM]                      = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, R8_SNORM>::Store;
+    table[TTileMode][R8_SINT]                       = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, R8_SINT>::Store;
+    table[TTileMode][R8_UINT]                       = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, R8_UINT>::Store;
+    table[TTileMode][A8_UNORM]                      = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, A8_UNORM>::Store;
+    table[TTileMode][R8_SSCALED]                    = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, R8_SSCALED>::Store;
+    table[TTileMode][R8_USCALED]                    = StoreMacroTile<TilingTraits<TTileMode, 8>, R32G32B32A32_FLOAT, R8_USCALED>::Store;
+    table[TTileMode][R8G8B8_UNORM]                  = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_UNORM>::Store;
+    table[TTileMode][R8G8B8_SNORM]                  = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_SNORM>::Store;
+    table[TTileMode][R8G8B8_SSCALED]                = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_SSCALED>::Store;
+    table[TTileMode][R8G8B8_USCALED]                = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_USCALED>::Store;
+    table[TTileMode][R16G16B16_FLOAT]               = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_FLOAT>::Store;
+    table[TTileMode][R16G16B16_UNORM]               = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_UNORM>::Store;
+    table[TTileMode][R16G16B16_SNORM]               = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_SNORM>::Store;
+    table[TTileMode][R16G16B16_SSCALED]             = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_SSCALED>::Store;
+    table[TTileMode][R16G16B16_USCALED]             = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_USCALED>::Store;
+    table[TTileMode][R8G8B8_UNORM_SRGB]             = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_UNORM_SRGB>::Store;
+    table[TTileMode][R16G16B16_UINT]                = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_UINT>::Store;
+    table[TTileMode][R16G16B16_SINT]                = StoreMacroTile<TilingTraits<TTileMode, 48>, R32G32B32A32_FLOAT, R16G16B16_SINT>::Store;
+    table[TTileMode][R10G10B10A2_SNORM]             = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_SNORM>::StoreGeneric;
+    table[TTileMode][R10G10B10A2_USCALED]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_USCALED>::StoreGeneric;
+    table[TTileMode][R10G10B10A2_SSCALED]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_SSCALED>::StoreGeneric;
+    table[TTileMode][R10G10B10A2_SINT]              = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, R10G10B10A2_SINT>::StoreGeneric;
+    table[TTileMode][B10G10R10A2_SNORM]             = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_SNORM>::StoreGeneric;
+    table[TTileMode][B10G10R10A2_USCALED]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_USCALED>::StoreGeneric;
+    table[TTileMode][B10G10R10A2_SSCALED]           = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_SSCALED>::StoreGeneric;
+    table[TTileMode][B10G10R10A2_UINT]              = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_UINT>::StoreGeneric;
+    table[TTileMode][B10G10R10A2_SINT]              = StoreMacroTile<TilingTraits<TTileMode, 32>, R32G32B32A32_FLOAT, B10G10R10A2_SINT>::StoreGeneric;
+    table[TTileMode][R8G8B8_UINT]                   = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_UINT>::Store;
+    table[TTileMode][R8G8B8_SINT]                   = StoreMacroTile<TilingTraits<TTileMode, 24>, R32G32B32A32_FLOAT, R8G8B8_SINT>::Store;
 }
 
 //////////////////////////////////////////////////////////////////////////
 /// INIT_STORE_TILES_TABLE - Helper macro for setting up the tables.
-template <SWR_TILE_MODE TileModeT, size_t NumTileModes, size_t ArraySizeT>
+template <SWR_TILE_MODE TTileMode, size_t NumTileModes, size_t ArraySizeT>
 void InitStoreTilesTableDepth(
     PFN_STORE_TILES(&table)[NumTileModes][ArraySizeT])
 {
-    table[TileModeT][R32_FLOAT]                 = StoreMacroTile<TilingTraits<TileModeT, 32>, R32_FLOAT, R32_FLOAT>::Store;
-    table[TileModeT][R24_UNORM_X8_TYPELESS]     = StoreMacroTile<TilingTraits<TileModeT, 32>, R32_FLOAT, R24_UNORM_X8_TYPELESS>::Store;
-    table[TileModeT][R16_UNORM]                 = StoreMacroTile<TilingTraits<TileModeT, 16>, R32_FLOAT, R16_UNORM>::Store;
+   table[TTileMode][R32_FLOAT]                      = StoreMacroTile<TilingTraits<TTileMode, 32>, R32_FLOAT, R32_FLOAT>::Store;
+   table[TTileMode][R24_UNORM_X8_TYPELESS]          = StoreMacroTile<TilingTraits<TTileMode, 32>, R32_FLOAT, R24_UNORM_X8_TYPELESS>::Store;
+   table[TTileMode][R16_UNORM]                      = StoreMacroTile<TilingTraits<TTileMode, 16>, R32_FLOAT, R16_UNORM>::Store;
 }
 
-template <SWR_TILE_MODE TileModeT, size_t NumTileModes, size_t ArraySizeT>
+template <SWR_TILE_MODE TTileMode, size_t NumTileModes, size_t ArraySizeT>
 void InitStoreTilesTableStencil(
     PFN_STORE_TILES(&table)[NumTileModes][ArraySizeT])
 {
-    table[TileModeT][R8_UINT]                   = StoreMacroTile<TilingTraits<TileModeT, 8>, R8_UINT, R8_UINT>::Store;
+    table[TTileMode][R8_UINT]                       = StoreMacroTile<TilingTraits<TTileMode, 8>, R8_UINT, R8_UINT>::Store;
 }
