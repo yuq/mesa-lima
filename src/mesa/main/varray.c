@@ -133,7 +133,7 @@ vertex_attrib_binding(struct gl_context *ctx,
                       GLuint attribIndex,
                       GLuint bindingIndex)
 {
-   struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attribIndex];
+   struct gl_array_attributes *array = &vao->VertexAttrib[attribIndex];
 
    if (!_mesa_is_bufferobj(vao->VertexBinding[bindingIndex].BufferObj))
      vao->VertexAttribBufferMask &= ~VERT_BIT(attribIndex);
@@ -278,7 +278,7 @@ _mesa_update_array_format(struct gl_context *ctx,
                           GLboolean integer, GLboolean doubles,
                           GLuint relativeOffset, bool flush_vertices)
 {
-   struct gl_vertex_attrib_array *const array = &vao->VertexAttrib[attrib];
+   struct gl_array_attributes *const array = &vao->VertexAttrib[attrib];
    GLint elementSize;
 
    assert(size <= 4);
@@ -465,7 +465,7 @@ update_array(struct gl_context *ctx,
              GLboolean normalized, GLboolean integer, GLboolean doubles,
              const GLvoid *ptr)
 {
-   struct gl_vertex_attrib_array *array;
+   struct gl_array_attributes *array;
    GLsizei effectiveStride;
 
    /* Page 407 (page 423 of the PDF) of the OpenGL 3.0 spec says:
@@ -905,7 +905,7 @@ get_vertex_array_attrib(struct gl_context *ctx,
                         GLuint index, GLenum pname,
                         const char *caller)
 {
-   const struct gl_vertex_attrib_array *array;
+   const struct gl_array_attributes *array;
 
    if (index >= ctx->Const.Program[MESA_SHADER_VERTEX].MaxAttribs) {
       _mesa_error(ctx, GL_INVALID_VALUE, "%s(index=%u)", caller, index);
@@ -2327,8 +2327,8 @@ _mesa_copy_client_array(struct gl_context *ctx,
 
 void
 _mesa_copy_vertex_attrib_array(struct gl_context *ctx,
-                               struct gl_vertex_attrib_array *dst,
-                               const struct gl_vertex_attrib_array *src)
+                               struct gl_array_attributes *dst,
+                               const struct gl_array_attributes *src)
 {
    dst->Size           = src->Size;
    dst->Type           = src->Type;
@@ -2369,7 +2369,7 @@ _mesa_print_arrays(struct gl_context *ctx)
 
    unsigned i;
    for (i = 0; i < VERT_ATTRIB_MAX; ++i) {
-      const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[i];
+      const struct gl_array_attributes *array = &vao->VertexAttrib[i];
       if (!array->Enabled)
          continue;
 

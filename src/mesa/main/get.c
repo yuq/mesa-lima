@@ -607,7 +607,7 @@ static void
 find_custom_value(struct gl_context *ctx, const struct value_desc *d, union value *v)
 {
    struct gl_buffer_object **buffer_obj;
-   struct gl_vertex_attrib_array *array;
+   struct gl_array_attributes *array;
    GLuint unit, *p;
 
    switch (d->pname) {

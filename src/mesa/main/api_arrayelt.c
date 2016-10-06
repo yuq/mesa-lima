@@ -48,7 +48,7 @@
 typedef void (GLAPIENTRY *array_func)( const void * );
 
 typedef struct {
-   const struct gl_vertex_attrib_array *array;
+   const struct gl_array_attributes *array;
    const struct gl_vertex_buffer_binding *binding;
    int offset;
 } AEarray;
@@ -56,7 +56,7 @@ typedef struct {
 typedef void (GLAPIENTRY *attrib_func)( GLuint indx, const void *data );
 
 typedef struct {
-   const struct gl_vertex_attrib_array *array;
+   const struct gl_array_attributes *array;
    const struct gl_vertex_buffer_binding *binding;
    attrib_func func;
    GLuint index;
@@ -1613,7 +1613,7 @@ _ae_update_state(struct gl_context *ctx)
    }
 
    for (i = 0; i < ctx->Const.MaxTextureCoordUnits; i++) {
-      struct gl_vertex_attrib_array *attribArray =
+      struct gl_array_attributes *attribArray =
          &vao->VertexAttrib[VERT_ATTRIB_TEX(i)];
       if (attribArray->Enabled) {
          /* NOTE: we use generic glVertexAttribNV functions here.
@@ -1633,7 +1633,7 @@ _ae_update_state(struct gl_context *ctx)
 
    /* generic vertex attribute arrays */
    for (i = 1; i < VERT_ATTRIB_GENERIC_MAX; i++) {  /* skip zero! */
-      struct gl_vertex_attrib_array *attribArray =
+      struct gl_array_attributes *attribArray =
          &vao->VertexAttrib[VERT_ATTRIB_GENERIC(i)];
       if (attribArray->Enabled) {
          GLint intOrNorm;

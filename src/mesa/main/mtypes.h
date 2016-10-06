@@ -1351,7 +1351,7 @@ struct gl_client_array
 
 
 /**
- * Vertex attribute array as seen by the client.
+ * Attributes to describe a vertex array.
  *
  * Contains the size, type, format and normalization flag,
  * along with the index of a vertex buffer binding point.
@@ -1363,7 +1363,7 @@ struct gl_client_array
  * and VERTEX_BINDING_STRIDE to the same value, while
  * glBindVertexBuffer() will only set VERTEX_BINDING_STRIDE.
  */
-struct gl_vertex_attrib_array
+struct gl_array_attributes
 {
    GLint Size;              /**< Components per element (1,2,3,4) */
    GLenum Type;             /**< Datatype: GL_FLOAT, GL_INT, etc */
@@ -1441,7 +1441,7 @@ struct gl_vertex_array_object
    struct gl_client_array _VertexAttrib[VERT_ATTRIB_MAX];
 
    /** Vertex attribute arrays */
-   struct gl_vertex_attrib_array VertexAttrib[VERT_ATTRIB_MAX];
+   struct gl_array_attributes VertexAttrib[VERT_ATTRIB_MAX];
 
    /** Vertex buffer bindings */
    struct gl_vertex_buffer_binding VertexBinding[VERT_ATTRIB_MAX];

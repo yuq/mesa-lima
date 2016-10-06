@@ -235,7 +235,7 @@ init_array(struct gl_context *ctx,
            struct gl_vertex_array_object *vao,
            GLuint index, GLint size, GLint type)
 {
-   struct gl_vertex_attrib_array *array = &vao->VertexAttrib[index];
+   struct gl_array_attributes *array = &vao->VertexAttrib[index];
    struct gl_vertex_buffer_binding *binding = &vao->VertexBinding[index];
 
    array->Size = size;
@@ -353,7 +353,7 @@ _mesa_update_vao_client_arrays(struct gl_context *ctx,
       const int attrib = u_bit_scan64(&arrays);
 
       struct gl_client_array *client_array;
-      struct gl_vertex_attrib_array *attrib_array;
+      struct gl_array_attributes *attrib_array;
       struct gl_vertex_buffer_binding *buffer_binding;
 
       attrib_array = &vao->VertexAttrib[attrib];
@@ -377,7 +377,7 @@ _mesa_all_varyings_in_vbos(const struct gl_vertex_array_object *vao)
        * attrib arrays at once
        */
       const int i = ffsll(mask) - 1;
-      const struct gl_vertex_attrib_array *attrib_array =
+      const struct gl_array_attributes *attrib_array =
          &vao->VertexAttrib[i];
       const struct gl_vertex_buffer_binding *buffer_binding =
          &vao->VertexBinding[attrib_array->BufferBindingIndex];
@@ -408,7 +408,7 @@ _mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
 
    while (mask) {
       const int i = ffsll(mask) - 1;
-      const struct gl_vertex_attrib_array *attrib_array =
+      const struct gl_array_attributes *attrib_array =
          &vao->VertexAttrib[i];
       const struct gl_vertex_buffer_binding *buffer_binding =
          &vao->VertexBinding[attrib_array->BufferBindingIndex];

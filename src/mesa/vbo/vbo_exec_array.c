@@ -51,7 +51,7 @@ static void
 check_array_data(struct gl_context *ctx, struct gl_vertex_array_object *vao,
                  GLuint attrib, GLuint j)
 {
-   const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attrib];
+   const struct gl_array_attributes *array = &vao->VertexAttrib[attrib];
    if (array->Enabled) {
       const struct gl_vertex_buffer_binding *binding =
          &vao->VertexBinding[array->BufferBindingIndex];
@@ -103,7 +103,7 @@ static void
 unmap_array_buffer(struct gl_context *ctx, struct gl_vertex_array_object *vao,
                    GLuint attrib)
 {
-   const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attrib];
+   const struct gl_array_attributes *array = &vao->VertexAttrib[attrib];
    if (array->Enabled) {
       const struct gl_vertex_buffer_binding *binding =
          &vao->VertexBinding[array->BufferBindingIndex];
@@ -196,7 +196,7 @@ print_draw_arrays(struct gl_context *ctx,
 
    unsigned i;
    for (i = 0; i < VERT_ATTRIB_MAX; ++i) {
-      const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[i];
+      const struct gl_array_attributes *array = &vao->VertexAttrib[i];
       if (!array->Enabled)
          continue;
 
@@ -245,7 +245,7 @@ recalculate_input_bindings(struct gl_context *ctx)
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
-   const struct gl_vertex_attrib_array *array = ctx->Array.VAO->VertexAttrib;
+   const struct gl_array_attributes *array = ctx->Array.VAO->VertexAttrib;
    struct gl_client_array *vertexAttrib = ctx->Array.VAO->_VertexAttrib;
    const struct gl_client_array **inputs = &exec->array.inputs[0];
    GLbitfield64 const_inputs = 0x0;
