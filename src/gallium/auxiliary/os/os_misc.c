@@ -128,8 +128,11 @@ os_get_total_physical_memory(uint64_t *size)
    const long phys_pages = sysconf(_SC_PHYS_PAGES);
    const long page_size = sysconf(_SC_PAGE_SIZE);
 
-   *size = phys_pages * page_size;
-   return (phys_pages > 0 && page_size > 0);
+   if (phys_pages <= 0 || page_size <= 0)
+      return false;
+
+   *size = (int64_t)phys_pages * (int64_t)page_size;
+   return true;
 #elif defined(PIPE_OS_APPLE) || defined(PIPE_OS_BSD)
    size_t len = sizeof(*size);
    int mib[2];
@@ -153,8 +156,11 @@ os_get_total_physical_memory(uint64_t *size)
    status_t ret;
 
    ret = get_system_info(&info);
-   *size = info.max_pages * B_PAGE_SIZE;
-   return (ret == B_OK);
+   if (ret != B_OK || info.max_pages <= 0)
+      return false;
+
+   *size = (int64_t)info.max_pages * (int64_t)B_PAGE_SIZE;
+   return true;
 #elif defined(PIPE_OS_WINDOWS)
    MEMORYSTATUSEX status;
    BOOL ret;
