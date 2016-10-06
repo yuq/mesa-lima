@@ -1660,12 +1660,19 @@ vec4_visitor::dump_instruction(backend_instruction *be_inst, FILE *file)
 
 
 static inline struct brw_reg
-attribute_to_hw_reg(int attr, bool interleaved)
+attribute_to_hw_reg(int attr, brw_reg_type type, bool interleaved)
 {
-   if (interleaved)
-      return stride(brw_vec4_grf(attr / 2, (attr % 2) * 4), 0, 4, 1);
-   else
-      return brw_vec8_grf(attr, 0);
+   struct brw_reg reg;
+
+   unsigned width = REG_SIZE / 2 / MAX2(4, type_sz(type));
+   if (interleaved) {
+      reg = stride(brw_vecn_grf(width, attr / 2, (attr % 2) * 4), 0, width, 1);
+   } else {
+      reg = brw_vecn_grf(width, attr, 0);
+   }
+
+   reg.type = type;
+   return reg;
 }
 
 
@@ -1699,9 +1706,9 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
           */
          assert(grf != 0);
 
-         struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
+         struct brw_reg reg =
+            attribute_to_hw_reg(grf, inst->src[i].type, interleaved);
          reg.swizzle = inst->src[i].swizzle;
-         reg.type = inst->src[i].type;
          if (inst->src[i].abs)
             reg = brw_abs(reg);
          if (inst->src[i].negate)
