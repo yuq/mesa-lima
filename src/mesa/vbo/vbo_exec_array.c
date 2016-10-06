@@ -54,7 +54,7 @@ check_array_data(struct gl_context *ctx, struct gl_vertex_array_object *vao,
    const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attrib];
    if (array->Enabled) {
       const struct gl_vertex_buffer_binding *binding =
-         &vao->VertexBinding[array->VertexBinding];
+         &vao->VertexBinding[array->BufferBindingIndex];
       struct gl_buffer_object *bo = binding->BufferObj;
       const void *data = array->Ptr;
       if (_mesa_is_bufferobj(bo)) {
@@ -106,7 +106,7 @@ unmap_array_buffer(struct gl_context *ctx, struct gl_vertex_array_object *vao,
    const struct gl_vertex_attrib_array *array = &vao->VertexAttrib[attrib];
    if (array->Enabled) {
       const struct gl_vertex_buffer_binding *binding =
-         &vao->VertexBinding[array->VertexBinding];
+         &vao->VertexBinding[array->BufferBindingIndex];
       struct gl_buffer_object *bo = binding->BufferObj;
       if (_mesa_is_bufferobj(bo) && _mesa_bufferobj_mapped(bo, MAP_INTERNAL)) {
          ctx->Driver.UnmapBuffer(ctx, bo, MAP_INTERNAL);
@@ -201,7 +201,7 @@ print_draw_arrays(struct gl_context *ctx,
          continue;
 
       const struct gl_vertex_buffer_binding *binding =
-         &vao->VertexBinding[array->VertexBinding];
+         &vao->VertexBinding[array->BufferBindingIndex];
       struct gl_buffer_object *bufObj = binding->BufferObj;
 
       printf("attr %s: size %d stride %d  enabled %d  "

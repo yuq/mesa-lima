@@ -1376,7 +1376,7 @@ struct gl_vertex_attrib_array
    GLboolean Integer;       /**< Fixed-point values are not converted to floats */
    GLboolean Doubles;       /**< double precision values are not converted to floats */
    GLuint _ElementSize;     /**< Size of each element in bytes */
-   GLuint VertexBinding;    /**< Vertex buffer binding */
+   GLuint BufferBindingIndex;    /**< Vertex buffer binding */
 };
 
 

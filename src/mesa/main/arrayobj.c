@@ -249,7 +249,7 @@ init_array(struct gl_context *ctx,
    array->Integer = GL_FALSE;
    array->Doubles = GL_FALSE;
    array->_ElementSize = size * _mesa_sizeof_type(type);
-   array->VertexBinding = index;
+   array->BufferBindingIndex = index;
 
    binding->Offset = 0;
    binding->Stride = array->_ElementSize;
@@ -357,7 +357,7 @@ _mesa_update_vao_client_arrays(struct gl_context *ctx,
       struct gl_vertex_buffer_binding *buffer_binding;
 
       attrib_array = &vao->VertexAttrib[attrib];
-      buffer_binding = &vao->VertexBinding[attrib_array->VertexBinding];
+      buffer_binding = &vao->VertexBinding[attrib_array->BufferBindingIndex];
       client_array = &vao->_VertexAttrib[attrib];
 
       _mesa_update_client_array(ctx, client_array, attrib_array,
@@ -380,7 +380,7 @@ _mesa_all_varyings_in_vbos(const struct gl_vertex_array_object *vao)
       const struct gl_vertex_attrib_array *attrib_array =
          &vao->VertexAttrib[i];
       const struct gl_vertex_buffer_binding *buffer_binding =
-         &vao->VertexBinding[attrib_array->VertexBinding];
+         &vao->VertexBinding[attrib_array->BufferBindingIndex];
 
       /* Only enabled arrays shall appear in the _Enabled bitmask */
       assert(attrib_array->Enabled);
@@ -411,7 +411,7 @@ _mesa_all_buffers_are_unmapped(const struct gl_vertex_array_object *vao)
       const struct gl_vertex_attrib_array *attrib_array =
          &vao->VertexAttrib[i];
       const struct gl_vertex_buffer_binding *buffer_binding =
-         &vao->VertexBinding[attrib_array->VertexBinding];
+         &vao->VertexBinding[attrib_array->BufferBindingIndex];
 
       /* Only enabled arrays shall appear in the _Enabled bitmask */
       assert(attrib_array->Enabled);
