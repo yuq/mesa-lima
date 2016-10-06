@@ -437,9 +437,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return HAVE_LLVM >= 0x0309 ? 4 : 0;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
-		if (pscreen->get_shader_param(pscreen, PIPE_SHADER_COMPUTE,
-		                              PIPE_SHADER_CAP_SUPPORTED_IRS) &
-		    (1 << PIPE_SHADER_IR_TGSI))
+		if (si_have_tgsi_compute(sscreen))
 			return 430;
 		return HAVE_LLVM >= 0x0309 ? 420 :
 		       HAVE_LLVM >= 0x0307 ? 410 : 330;
