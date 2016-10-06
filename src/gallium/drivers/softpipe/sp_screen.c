@@ -230,6 +230,12 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
       if (!os_get_total_physical_memory(&system_memory))
          return 0;
 
+      if (sizeof(void *) == 4)
+         /* Cap to 2 GB on 32 bits system. We do this because softpipe does
+          * eat application memory, which is quite limited on 32 bits. App
+          * shouldn't expect too much available memory. */
+         system_memory = MIN2(system_memory, 2048 << 20);
+
       return (int)(system_memory >> 20);
    }
    case PIPE_CAP_UMA:
