@@ -1203,6 +1203,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
    const bool has_depth = image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
+   const bool has_hiz = image != NULL && anv_image_has_hiz(image);
    const bool has_stencil =
       image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
 
@@ -1215,7 +1216,12 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          db.SurfaceType                   = SURFTYPE_2D;
          db.DepthWriteEnable              = true;
          db.StencilWriteEnable            = has_stencil;
-         db.HierarchicalDepthBufferEnable = false;
+
+         if (cmd_buffer->state.pass->subpass_count == 1) {
+            db.HierarchicalDepthBufferEnable = has_hiz;
+         } else {
+            anv_finishme("Multiple-subpass HiZ not implemented");
+         }
 
          db.SurfaceFormat = isl_surf_get_depth_format(&device->isl_dev,
                                                       &image->depth_surface.isl);
@@ -1267,6 +1273,33 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
+   if (has_hiz) {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hdb) {
+         hdb.HierarchicalDepthBufferObjectControlState = GENX(MOCS);
+         hdb.SurfacePitch = image->hiz_surface.isl.row_pitch - 1;
+         hdb.SurfaceBaseAddress = (struct anv_address) {
+            .bo = image->bo,
+            .offset = image->offset + image->hiz_surface.offset,
+         };
+#if GEN_GEN >= 8
+         /* From the SKL PRM Vol2a:
+          *
+          *    The interpretation of this field is dependent on Surface Type
+          *    as follows:
+          *    - SURFTYPE_1D: distance in pixels between array slices
+          *    - SURFTYPE_2D/CUBE: distance in rows between array slices
+          *    - SURFTYPE_3D: distance in rows between R - slices
+          */
+         hdb.SurfaceQPitch =
+            image->hiz_surface.isl.dim == ISL_SURF_DIM_1D ?
+               isl_surf_get_array_pitch_el(&image->hiz_surface.isl) >> 2 :
+               isl_surf_get_array_pitch_el_rows(&image->hiz_surface.isl) >> 2;
+#endif
+      }
+   } else {
+      anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hdb);
+   }
+
    /* Emit 3DSTATE_STENCIL_BUFFER */
    if (has_stencil) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
@@ -1289,9 +1322,6 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
    }
 
-   /* Disable hierarchial depth buffers. */
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hz);
-
    /* Clear the clear params. */
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp);
 }
@@ -1305,6 +1335,7 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
+   genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_HIZ_RESOLVE);
 
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
@@ -1345,6 +1376,7 @@ void genX(CmdEndRenderPass)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
+   genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_DEPTH_RESOLVE);
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
 
 #ifndef NDEBUG

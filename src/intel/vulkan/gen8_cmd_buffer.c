@@ -417,6 +417,10 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
    if (iview == NULL || !anv_image_has_hiz(iview->image))
       return;
 
+   /* FINISHME: Implement multi-subpass HiZ */
+   if (cmd_buffer->state.pass->subpass_count > 1)
+      return;
+
    const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
 
    /* Section 7.4. of the Vulkan 1.0.27 spec states:
