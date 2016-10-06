@@ -76,7 +76,7 @@ TEST_F(nir_cf_test, delete_break_in_loop)
     * }
     */
    nir_block *block_0 = nir_start_block(b.impl);
-   nir_block *block_1 = nir_cf_node_as_block(nir_loop_first_cf_node(loop));
+   nir_block *block_1 = nir_loop_first_block(loop);
    nir_block *block_2 = nir_cf_node_as_block(nir_cf_node_next(&loop->cf_node));
    nir_block *block_3 = b.impl->end_block;
    ASSERT_EQ(nir_cf_node_block, block_0->cf_node.type);
