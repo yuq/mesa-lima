@@ -174,7 +174,7 @@ void ProcessStoreTiles(
     // store tiles
     BE_WORK work;
     work.type = STORETILES;
-    work.pfnWork = ProcessStoreTileBE;
+    work.pfnWork = ProcessStoreTilesBE;
     work.desc.storeTiles = *pDesc;
 
     for (uint32_t y = macroTileYMin; y <= macroTileYMax; ++y)

@@ -280,19 +280,15 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
     }
 }
 
-
-void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
+void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, STORE_TILES_DESC* pDesc, 
+    SWR_RENDERTARGET_ATTACHMENT attachment)
 {
-    STORE_TILES_DESC *pDesc = (STORE_TILES_DESC*)pData;
     SWR_CONTEXT *pContext = pDC->pContext;
 
     AR_BEGIN(BEStoreTiles, pDC->drawId);
 
-#if defined(KNOB_ENABLE_RDTSC) || defined(KNOB_ENABLE_AR)
-    uint32_t numTiles = 0;
-#endif
     SWR_FORMAT srcFormat;
-    switch (pDesc->attachment)
+    switch (attachment)
     {
     case SWR_ATTACHMENT_COLOR0:
     case SWR_ATTACHMENT_COLOR1:
@@ -304,14 +300,14 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
     case SWR_ATTACHMENT_COLOR7: srcFormat = KNOB_COLOR_HOT_TILE_FORMAT; break;
     case SWR_ATTACHMENT_DEPTH: srcFormat = KNOB_DEPTH_HOT_TILE_FORMAT; break;
     case SWR_ATTACHMENT_STENCIL: srcFormat = KNOB_STENCIL_HOT_TILE_FORMAT; break;
-    default: SWR_ASSERT(false, "Unknown attachment: %d", pDesc->attachment); srcFormat = KNOB_COLOR_HOT_TILE_FORMAT; break;
+    default: SWR_ASSERT(false, "Unknown attachment: %d", attachment); srcFormat = KNOB_COLOR_HOT_TILE_FORMAT; break;
     }
 
     uint32_t x, y;
     MacroTileMgr::getTileIndices(macroTile, x, y);
 
     // Only need to store the hottile if it's been rendered to...
-    HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, pDesc->attachment, false);
+    HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, attachment, false);
     if (pHotTile)
     {
         // clear if clear is pending (i.e., not rendered to), then mark as dirty for store.
@@ -320,7 +316,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[srcFormat];
             SWR_ASSERT(pfnClearTiles != nullptr);
 
-            pfnClearTiles(pDC, pDesc->attachment, macroTile, pHotTile->clearData, pDesc->rect);
+            pfnClearTiles(pDC, attachment, macroTile, pHotTile->clearData, pDesc->rect);
         }
 
         if (pHotTile->state == HOTTILE_DIRTY || pDesc->postStoreTileState == (SWR_TILE_STATE)HOTTILE_DIRTY)
@@ -329,7 +325,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
             int32_t destY = KNOB_MACROTILE_Y_DIM * y;
 
             pContext->pfnStoreTile(GetPrivateState(pDC), srcFormat,
-                pDesc->attachment, destX, destY, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
+                attachment, destX, destY, pHotTile->renderTargetArrayIndex, pHotTile->pBuffer);
         }
         
 
@@ -338,9 +334,21 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
             pHotTile->state = (HOTTILE_STATE)pDesc->postStoreTileState;
         }
     }
-    AR_END(BEStoreTiles, numTiles);
+    AR_END(BEStoreTiles, 1);
 }
 
+void ProcessStoreTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
+{
+    STORE_TILES_DESC *pDesc = (STORE_TILES_DESC*)pData;
+
+    unsigned long rt = 0;
+    uint32_t mask = pDesc->attachmentMask;
+    while (_BitScanForward(&rt, mask))
+    {
+        mask &= ~(1 << rt);
+        ProcessStoreTileBE(pDC, workerId, macroTile, pDesc, (SWR_RENDERTARGET_ATTACHMENT)rt);
+    }
+}
 
 void ProcessDiscardInvalidateTilesBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, void *pData)
 {

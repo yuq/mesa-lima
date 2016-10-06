@@ -1445,7 +1445,7 @@ void SwrDispatch(
 // described by pState
 void SWR_API SwrStoreTiles(
     HANDLE hContext,
-    SWR_RENDERTARGET_ATTACHMENT attachment,
+    uint32_t attachmentMask,
     SWR_TILE_STATE postStoreTileState,
     const SWR_RECT& storeRect)
 {
@@ -1461,7 +1461,7 @@ void SWR_API SwrStoreTiles(
 
     pDC->FeWork.type = STORETILES;
     pDC->FeWork.pfnWork = ProcessStoreTiles;
-    pDC->FeWork.desc.storeTiles.attachment = attachment;
+    pDC->FeWork.desc.storeTiles.attachmentMask = attachmentMask;
     pDC->FeWork.desc.storeTiles.postStoreTileState = postStoreTileState;
     pDC->FeWork.desc.storeTiles.rect = storeRect;
     pDC->FeWork.desc.storeTiles.rect &= g_MaxScissorRect;

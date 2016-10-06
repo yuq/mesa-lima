@@ -137,7 +137,7 @@ struct SYNC_DESC
 
 struct STORE_TILES_DESC
 {
-    SWR_RENDERTARGET_ATTACHMENT attachment;
+    uint32_t attachmentMask;
     SWR_TILE_STATE postStoreTileState;
     SWR_RECT rect;
 };

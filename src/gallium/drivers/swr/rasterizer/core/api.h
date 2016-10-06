@@ -543,7 +543,7 @@ enum SWR_TILE_STATE
 /// @todo Add a good description for what attachments are and when and why you would use the different SWR_TILE_STATEs.
 void SWR_API SwrStoreTiles(
     HANDLE hContext,
-    SWR_RENDERTARGET_ATTACHMENT attachment,
+    uint32_t attachmentMask,
     SWR_TILE_STATE postStoreTileState,
     const SWR_RECT& storeRect);
 

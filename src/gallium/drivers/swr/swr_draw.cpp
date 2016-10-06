@@ -262,7 +262,7 @@ swr_store_render_target(struct pipe_context *pipe,
       SWR_RECT full_rect =
          {0, 0, (int32_t)renderTarget->width, (int32_t)renderTarget->height};
       SwrStoreTiles(ctx->swrContext,
-                    (enum SWR_RENDERTARGET_ATTACHMENT)attachment,
+                    1 << attachment,
                     post_tile_state,
                     full_rect);
    }
