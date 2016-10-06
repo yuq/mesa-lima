@@ -180,10 +180,6 @@ radv_amdgpu_cs_create(struct radeon_winsys *ws,
 static void radv_amdgpu_cs_grow(struct radeon_winsys_cs *_cs, size_t min_size)
 {
 	struct radv_amdgpu_cs *cs = radv_amdgpu_cs(_cs);
-	uint64_t ib_size = MAX2(min_size * 4 + 16, cs->base.max_dw * 4 * 2);
-
-	/* max that fits in the chain size field. */
-	ib_size = MIN2(ib_size, 0xfffff);
 
 	if (cs->failed) {
 		cs->base.cdw = 0;
@@ -191,6 +187,8 @@ static void radv_amdgpu_cs_grow(struct radeon_winsys_cs *_cs, size_t min_size)
 	}
 
 	if (!cs->ws->use_ib_bos) {
+		uint64_t ib_size = MAX2((cs->base.cdw + min_size) * 4 + 16,
+					cs->base.max_dw * 4 * 2);
 		uint32_t *new_buf = realloc(cs->base.buf, ib_size);
 		if (new_buf) {
 			cs->base.buf = new_buf;
@@ -201,6 +199,11 @@ static void radv_amdgpu_cs_grow(struct radeon_winsys_cs *_cs, size_t min_size)
 		}
 		return;
 	}
+
+	uint64_t ib_size = MAX2(min_size * 4 + 16, cs->base.max_dw * 4 * 2);
+
+	/* max that fits in the chain size field. */
+	ib_size = MIN2(ib_size, 0xfffff);
 
 	while (!cs->base.cdw || (cs->base.cdw & 7) != 4)
 		cs->base.buf[cs->base.cdw++] = 0xffff1000;
