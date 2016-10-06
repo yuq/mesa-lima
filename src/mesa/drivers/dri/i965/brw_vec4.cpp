@@ -1687,8 +1687,8 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
 {
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (int i = 0; i < 3; i++) {
-	 if (inst->src[i].file != ATTR)
-	    continue;
+         if (inst->src[i].file != ATTR)
+            continue;
 
          int grf = attribute_map[inst->src[i].nr +
                                  inst->src[i].offset / REG_SIZE];
@@ -1699,13 +1699,13 @@ vec4_visitor::lower_attributes_to_hw_regs(const int *attribute_map,
           */
          assert(grf != 0);
 
-	 struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
-	 reg.swizzle = inst->src[i].swizzle;
+         struct brw_reg reg = attribute_to_hw_reg(grf, interleaved);
+         reg.swizzle = inst->src[i].swizzle;
          reg.type = inst->src[i].type;
-	 if (inst->src[i].abs)
-	    reg = brw_abs(reg);
-	 if (inst->src[i].negate)
-	    reg = negate(reg);
+         if (inst->src[i].abs)
+            reg = brw_abs(reg);
+         if (inst->src[i].negate)
+            reg = negate(reg);
 
          inst->src[i] = reg;
       }
