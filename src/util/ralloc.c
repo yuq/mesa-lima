@@ -110,18 +110,6 @@ ralloc_context(const void *ctx)
 void *
 ralloc_size(const void *ctx, size_t size)
 {
-   /* ralloc_size was originally implemented using calloc, which meant some
-    * code accidentally relied on its zero filling behavior.
-    *
-    * TODO: Make ralloc_size not zero fill memory, and cleanup any code that
-    * should instead be using rzalloc.
-    */
-   return rzalloc_size(ctx, size);
-}
-
-void *
-rzalloc_size(const void *ctx, size_t size)
-{
    void *block = malloc(size + sizeof(ralloc_header));
    ralloc_header *info;
    ralloc_header *parent;
@@ -140,9 +128,6 @@ rzalloc_size(const void *ctx, size_t size)
    info->next = NULL;
    info->destructor = NULL;
 
-   /* memset the allocation except for ralloc_header */
-   memset(&info[1], 0, size);
-
    parent = ctx != NULL ? get_header(ctx) : NULL;
 
    add_child(parent, info);
@@ -152,6 +137,17 @@ rzalloc_size(const void *ctx, size_t size)
 #endif
 
    return PTR_FROM_HEADER(info);
+}
+
+void *
+rzalloc_size(const void *ctx, size_t size)
+{
+   void *ptr = ralloc_size(ctx, size);
+
+   if (likely(ptr))
+      memset(ptr, 0, size);
+
+   return ptr;
 }
 
 /* helper function - assumes ptr != NULL */
