@@ -1421,26 +1421,6 @@ VkResult anv_BindBufferMemory(
    return VK_SUCCESS;
 }
 
-VkResult anv_BindImageMemory(
-    VkDevice                                    device,
-    VkImage                                     _image,
-    VkDeviceMemory                              _memory,
-    VkDeviceSize                                memoryOffset)
-{
-   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
-   ANV_FROM_HANDLE(anv_image, image, _image);
-
-   if (mem) {
-      image->bo = &mem->bo;
-      image->offset = memoryOffset;
-   } else {
-      image->bo = NULL;
-      image->offset = 0;
-   }
-
-   return VK_SUCCESS;
-}
-
 VkResult anv_QueueBindSparse(
     VkQueue                                     queue,
     uint32_t                                    bindInfoCount,

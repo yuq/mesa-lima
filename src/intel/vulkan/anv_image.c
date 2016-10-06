@@ -316,6 +316,26 @@ anv_DestroyImage(VkDevice _device, VkImage _image,
    anv_free2(&device->alloc, pAllocator, anv_image_from_handle(_image));
 }
 
+VkResult anv_BindImageMemory(
+    VkDevice                                    device,
+    VkImage                                     _image,
+    VkDeviceMemory                              _memory,
+    VkDeviceSize                                memoryOffset)
+{
+   ANV_FROM_HANDLE(anv_device_memory, mem, _memory);
+   ANV_FROM_HANDLE(anv_image, image, _image);
+
+   if (mem) {
+      image->bo = &mem->bo;
+      image->offset = memoryOffset;
+   } else {
+      image->bo = NULL;
+      image->offset = 0;
+   }
+
+   return VK_SUCCESS;
+}
+
 static void
 anv_surface_get_subresource_layout(struct anv_image *image,
                                    struct anv_surface *surface,
