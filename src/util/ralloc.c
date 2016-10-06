@@ -122,13 +122,27 @@ ralloc_size(const void *ctx, size_t size)
 void *
 rzalloc_size(const void *ctx, size_t size)
 {
-   void *block = calloc(1, size + sizeof(ralloc_header));
+   void *block = malloc(size + sizeof(ralloc_header));
    ralloc_header *info;
    ralloc_header *parent;
 
    if (unlikely(block == NULL))
       return NULL;
+
    info = (ralloc_header *) block;
+   /* measurements have shown that calloc is slower (because of
+    * the multiplication overflow checking?), so clear things
+    * manually
+    */
+   info->parent = NULL;
+   info->child = NULL;
+   info->prev = NULL;
+   info->next = NULL;
+   info->destructor = NULL;
+
+   /* memset the allocation except for ralloc_header */
+   memset(&info[1], 0, size);
+
    parent = ctx != NULL ? get_header(ctx) : NULL;
 
    add_child(parent, info);
