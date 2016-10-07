@@ -490,13 +490,16 @@ VkResult anv_GetPipelineCacheData(
    p += align_u32(sizeof(*count), 8);
    *count = 0;
 
+   VkResult result = VK_SUCCESS;
    if (cache->cache) {
       struct hash_entry *entry;
       hash_table_foreach(cache->cache, entry) {
          struct anv_shader_bin *shader = entry->data;
          size_t data_size = anv_shader_bin_data_size(entry->data);
-         if (p + data_size > end)
+         if (p + data_size > end) {
+            result = VK_INCOMPLETE;
             break;
+         }
 
          anv_shader_bin_write_data(shader, p);
          p += data_size;
@@ -507,7 +510,7 @@ VkResult anv_GetPipelineCacheData(
 
    *pDataSize = p - pData;
 
-   return VK_SUCCESS;
+   return result;
 }
 
 VkResult anv_MergePipelineCaches(
