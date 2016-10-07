@@ -143,7 +143,7 @@ const struct vk_format_description *vk_format_description(VkFormat format);
 /**
  * Return total bits needed for the pixel format per block.
  */
-static inline uint
+static inline unsigned
 vk_format_get_blocksizebits(VkFormat format)
 {
 	const struct vk_format_description *desc = vk_format_description(format);
@@ -159,11 +159,11 @@ vk_format_get_blocksizebits(VkFormat format)
 /**
  * Return bytes per block (not pixel) for the given format.
  */
-static inline uint
+static inline unsigned
 vk_format_get_blocksize(VkFormat format)
 {
-	uint bits = vk_format_get_blocksizebits(format);
-	uint bytes = bits / 8;
+	unsigned bits = vk_format_get_blocksizebits(format);
+	unsigned bytes = bits / 8;
 
 	assert(bits % 8 == 0);
 	assert(bytes > 0);
@@ -174,7 +174,7 @@ vk_format_get_blocksize(VkFormat format)
 	return bytes;
 }
 
-static inline uint
+static inline unsigned
 vk_format_get_blockwidth(VkFormat format)
 {
 	const struct vk_format_description *desc = vk_format_description(format);
@@ -187,7 +187,7 @@ vk_format_get_blockwidth(VkFormat format)
 	return desc->block.width;
 }
 
-static inline uint
+static inline unsigned
 vk_format_get_blockheight(VkFormat format)
 {
 	const struct vk_format_description *desc = vk_format_description(format);
@@ -402,10 +402,10 @@ vk_format_stencil_only(VkFormat format)
 	return VK_FORMAT_S8_UINT;
 }
 
-static inline uint
+static inline unsigned
 vk_format_get_component_bits(VkFormat format,
 			     enum vk_format_colorspace colorspace,
-			     uint component)
+			     unsigned component)
 {
 	const struct vk_format_description *desc = vk_format_description(format);
 	enum vk_format_colorspace desc_colorspace;
