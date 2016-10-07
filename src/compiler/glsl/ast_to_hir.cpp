@@ -2585,6 +2585,20 @@ select_gles_precision(unsigned qual_precision,
                           type->name);
       }
    }
+
+
+   /* Section 4.1.7.3 (Atomic Counters) of the GLSL ES 3.10 spec says:
+    *
+    *    "The default precision of all atomic types is highp. It is an error to
+    *    declare an atomic type with a different precision or to specify the
+    *    default precision for an atomic type to be lowp or mediump."
+    */
+   if (type->base_type == GLSL_TYPE_ATOMIC_UINT &&
+       precision != ast_precision_high) {
+      _mesa_glsl_error(loc, state,
+                       "atomic_uint can only have highp precision qualifier");
+   }
+
    return precision;
 }
 
