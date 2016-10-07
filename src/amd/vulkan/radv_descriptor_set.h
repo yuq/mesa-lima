@@ -1,6 +1,6 @@
 /*
  * Copyright © 2016 Bas Nieuwenhuizen
-  *
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
  * to deal in the Software without restriction, including without limitation
@@ -20,7 +20,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_DESCRIPTOR_SET_H
+#define RADV_DESCRIPTOR_SET_H
 
 #include <vulkan/vulkan.h>
 
@@ -79,3 +81,5 @@ struct radv_pipeline_layout {
 
    unsigned char sha1[20];
 };
+
+#endif /* RADV_DESCRIPTOR_SET_H */

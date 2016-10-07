@@ -25,8 +25,12 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_AMDGPU_BO_H
+#define RADV_AMDGPU_BO_H
+
 #include "radv_amdgpu_winsys.h"
+
 struct radv_amdgpu_winsys_bo {
 	amdgpu_bo_handle bo;
 	amdgpu_va_handle va_handle;
@@ -48,3 +52,4 @@ struct radv_amdgpu_winsys_bo *radv_amdgpu_winsys_bo(struct radeon_winsys_bo *bo)
 
 void radv_amdgpu_bo_init_functions(struct radv_amdgpu_winsys *ws);
 
+#endif /* RADV_AMDGPU_BO_H */

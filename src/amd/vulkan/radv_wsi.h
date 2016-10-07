@@ -23,7 +23,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef RADV_WSI_H
+#define RADV_WSI_H
 
 #include "radv_private.h"
 
@@ -77,3 +78,5 @@ VkResult radv_x11_init_wsi(struct radv_physical_device *physical_device);
 void radv_x11_finish_wsi(struct radv_physical_device *physical_device);
 VkResult radv_wl_init_wsi(struct radv_physical_device *physical_device);
 void radv_wl_finish_wsi(struct radv_physical_device *physical_device);
+
+#endif /* RADV_WSI_H */

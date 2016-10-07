@@ -21,9 +21,13 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_AMDGPU_SURFACE_H
+#define RADV_AMDGPU_SURFACE_H
 
 #include <amdgpu.h>
 
 void radv_amdgpu_surface_init_functions(struct radv_amdgpu_winsys *ws);
 ADDR_HANDLE radv_amdgpu_addr_create(struct amdgpu_gpu_info *amdinfo, int family, int rev_id, enum chip_class chip_class);
+
+#endif /* RADV_AMDGPU_SURFACE_H */

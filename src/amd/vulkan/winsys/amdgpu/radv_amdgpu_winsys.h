@@ -24,7 +24,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_AMDGPU_WINSYS_H
+#define RADV_AMDGPU_WINSYS_H
 
 #include "radv_radeon_winsys.h"
 #include "addrlib/addrinterface.h"
@@ -55,3 +57,5 @@ radv_amdgpu_winsys(struct radeon_winsys *base)
 {
 	return (struct radv_amdgpu_winsys*)base;
 }
+
+#endif /* RADV_AMDGPU_WINSYS_H */

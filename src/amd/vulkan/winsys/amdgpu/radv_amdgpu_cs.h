@@ -25,7 +25,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_AMDGPU_CS_H
+#define RADV_AMDGPU_CS_H
 
 #include <string.h>
 #include <stdint.h>
@@ -49,3 +51,5 @@ radv_amdgpu_ctx(struct radeon_winsys_ctx *base)
 }
 
 void radv_amdgpu_cs_init_functions(struct radv_amdgpu_winsys *ws);
+
+#endif /* RADV_AMDGPU_CS_H */

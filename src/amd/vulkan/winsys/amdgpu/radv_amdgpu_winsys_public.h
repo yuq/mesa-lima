@@ -25,6 +25,10 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_AMDGPU_WINSYS_PUBLIC_H
+#define RADV_AMDGPU_WINSYS_PUBLIC_H
 
 struct radeon_winsys *radv_amdgpu_winsys_create(int fd);
+
+#endif /* RADV_AMDGPU_WINSYS_PUBLIC_H */

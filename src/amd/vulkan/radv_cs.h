@@ -21,7 +21,9 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+
+#ifndef RADV_CS_H
+#define RADV_CS_H
 
 #include <string.h>
 #include <stdint.h>
@@ -115,3 +117,5 @@ static inline void radeon_set_uconfig_reg_idx(struct radeon_winsys_cs *cs,
 	radeon_emit(cs, (reg - CIK_UCONFIG_REG_OFFSET) >> 2 | (idx << 28));
 	radeon_emit(cs, value);
 }
+
+#endif /* RADV_CS_H */

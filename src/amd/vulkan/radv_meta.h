@@ -23,7 +23,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef RADV_META_H
+#define RADV_META_H
 
 #include "radv_private.h"
 
@@ -188,3 +189,5 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* RADV_META_H */

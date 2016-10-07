@@ -25,7 +25,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef RADV_PRIVATE_H
+#define RADV_PRIVATE_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -1400,3 +1401,4 @@ RADV_DEFINE_STRUCT_CASTS(radv_common, VkBufferMemoryBarrier)
 RADV_DEFINE_STRUCT_CASTS(radv_common, VkImageMemoryBarrier)
 
 
+#endif /* RADV_PRIVATE_H */

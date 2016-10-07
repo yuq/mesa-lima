@@ -21,12 +21,16 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef RADV_DEVICE_INFO_H
+#define RADV_DEVICE_INFO_H
 
 #include <amdgpu.h>
 
 #include "radv_radeon_winsys.h"
+
 struct radv_device_info {
 	uint32_t pci_id;
 	enum chip_class chip_class;
 };
+
+#endif /* RADV_DEVICE_INFO_H */
