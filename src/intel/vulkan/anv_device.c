@@ -418,7 +418,7 @@ void anv_GetPhysicalDeviceFeatures(
       .largePoints                              = true,
       .alphaToOne                               = true,
       .multiViewport                            = true,
-      .samplerAnisotropy                        = false, /* FINISHME */
+      .samplerAnisotropy                        = true,
       .textureCompressionETC2                   = pdevice->info.gen >= 8 ||
                                                   pdevice->info.is_baytrail,
       .textureCompressionASTC_LDR               = pdevice->info.gen >= 9, /* FINISHME CHV */
