@@ -421,7 +421,7 @@ bool ralloc_vasprintf_append(char **str, const char *fmt, va_list args);
  *
  * which is more idiomatic in C++ than calling ralloc.
  */
-#define DECLARE_RALLOC_CXX_OPERATORS(TYPE)                               \
+#define DECLARE_ALLOC_CXX_OPERATORS_TEMPLATE(TYPE, ALLOC_FUNC)           \
 private:                                                                 \
    static void _ralloc_destructor(void *p)                               \
    {                                                                     \
@@ -430,7 +430,7 @@ private:                                                                 \
 public:                                                                  \
    static void* operator new(size_t size, void *mem_ctx)                 \
    {                                                                     \
-      void *p = ralloc_size(mem_ctx, size);                              \
+      void *p = ALLOC_FUNC(mem_ctx, size);                               \
       assert(p != NULL);                                                 \
       if (!HAS_TRIVIAL_DESTRUCTOR(TYPE))                                 \
          ralloc_set_destructor(p, _ralloc_destructor);                   \
@@ -448,5 +448,10 @@ public:                                                                  \
       ralloc_free(p);                                                    \
    }
 
+#define DECLARE_RALLOC_CXX_OPERATORS(type) \
+   DECLARE_ALLOC_CXX_OPERATORS_TEMPLATE(type, ralloc_size)
+
+#define DECLARE_RZALLOC_CXX_OPERATORS(type) \
+   DECLARE_ALLOC_CXX_OPERATORS_TEMPLATE(type, rzalloc_size)
 
 #endif
