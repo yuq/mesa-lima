@@ -809,6 +809,65 @@ void anv_CmdClearColorImage(
    blorp_batch_finish(&batch);
 }
 
+void anv_CmdClearDepthStencilImage(
+    VkCommandBuffer                             commandBuffer,
+    VkImage                                     image_h,
+    VkImageLayout                               imageLayout,
+    const VkClearDepthStencilValue*             pDepthStencil,
+    uint32_t                                    rangeCount,
+    const VkImageSubresourceRange*              pRanges)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_image, image, image_h);
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf depth, stencil;
+   if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+      get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_DEPTH_BIT,
+                                   &depth);
+   } else {
+      memset(&depth, 0, sizeof(depth));
+   }
+
+   if (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
+      get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_STENCIL_BIT,
+                                   &stencil);
+   } else {
+      memset(&stencil, 0, sizeof(stencil));
+   }
+
+   for (unsigned r = 0; r < rangeCount; r++) {
+      if (pRanges[r].aspectMask == 0)
+         continue;
+
+      bool clear_depth = pRanges[r].aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT;
+      bool clear_stencil = pRanges[r].aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT;
+
+      unsigned base_layer = pRanges[r].baseArrayLayer;
+      unsigned layer_count = pRanges[r].layerCount;
+
+      for (unsigned i = 0; i < pRanges[r].levelCount; i++) {
+         const unsigned level = pRanges[r].baseMipLevel + i;
+         const unsigned level_width = anv_minify(image->extent.width, level);
+         const unsigned level_height = anv_minify(image->extent.height, level);
+
+         if (image->type == VK_IMAGE_TYPE_3D)
+            layer_count = anv_minify(image->extent.depth, level);
+
+         blorp_clear_depth_stencil(&batch, &depth, &stencil,
+                                   level, base_layer, layer_count,
+                                   0, 0, level_width, level_height,
+                                   clear_depth, pDepthStencil->depth,
+                                   clear_stencil ? 0xff : 0,
+                                   pDepthStencil->stencil);
+      }
+   }
+
+   blorp_batch_finish(&batch);
+}
+
 static void
 resolve_image(struct blorp_batch *batch,
               const struct anv_image *src_image,
