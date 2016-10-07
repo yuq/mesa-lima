@@ -49,7 +49,7 @@ struct YYLTYPE;
  */
 class ast_node {
 public:
-   DECLARE_RZALLOC_CXX_OPERATORS(ast_node);
+   DECLARE_LINEAR_ZALLOC_CXX_OPERATORS(ast_node);
 
    /**
     * Print an AST node in something approximating the original GLSL code
@@ -775,7 +775,7 @@ class ast_declarator_list;
 
 class ast_struct_specifier : public ast_node {
 public:
-   ast_struct_specifier(const char *identifier,
+   ast_struct_specifier(void *lin_ctx, const char *identifier,
 			ast_declarator_list *declarator_list);
    virtual void print(void) const;
 

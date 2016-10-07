@@ -1635,7 +1635,7 @@ ast_struct_specifier::print(void) const
 }
 
 
-ast_struct_specifier::ast_struct_specifier(const char *identifier,
+ast_struct_specifier::ast_struct_specifier(void *lin_ctx, const char *identifier,
 					   ast_declarator_list *declarator_list)
 {
    if (identifier == NULL) {
@@ -1647,7 +1647,7 @@ ast_struct_specifier::ast_struct_specifier(const char *identifier,
       count = anon_count++;
       mtx_unlock(&mutex);
 
-      identifier = ralloc_asprintf(this, "#anon_struct_%04x", count);
+      identifier = linear_asprintf(lin_ctx, "#anon_struct_%04x", count);
    }
    name = identifier;
    this->declarations.push_degenerate_list_at_head(&declarator_list->link);

@@ -264,10 +264,10 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
                                         this->xfb_buffer, &buff_idx)) {
             if (state->out_qualifier->out_xfb_stride[buff_idx]) {
                state->out_qualifier->out_xfb_stride[buff_idx]->merge_qualifier(
-                  new(state) ast_layout_expression(*loc, this->xfb_stride));
+                  new(state->linalloc) ast_layout_expression(*loc, this->xfb_stride));
             } else {
                state->out_qualifier->out_xfb_stride[buff_idx] =
-                  new(state) ast_layout_expression(*loc, this->xfb_stride);
+                  new(state->linalloc) ast_layout_expression(*loc, this->xfb_stride);
             }
          }
       }
@@ -363,7 +363,6 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
                                         const ast_type_qualifier &q,
                                         ast_node* &node, bool create_node)
 {
-   void *mem_ctx = state;
    const bool r = this->merge_qualifier(loc, state, q, false);
    ast_type_qualifier valid_out_mask;
    valid_out_mask.flags.i = 0;
@@ -396,7 +395,7 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
       valid_out_mask.flags.q.prim_type = 1;
    } else if (state->stage == MESA_SHADER_TESS_CTRL) {
       if (create_node) {
-         node = new(mem_ctx) ast_tcs_output_layout(*loc);
+         node = new(state->linalloc) ast_tcs_output_layout(*loc);
       }
       valid_out_mask.flags.q.vertices = 1;
       valid_out_mask.flags.q.explicit_xfb_buffer = 1;
@@ -436,7 +435,7 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
                                        const ast_type_qualifier &q,
                                        ast_node* &node, bool create_node)
 {
-   void *mem_ctx = state;
+   void *lin_ctx = state->linalloc;
    bool create_gs_ast = false;
    bool create_cs_ast = false;
    ast_type_qualifier valid_in_mask;
@@ -580,9 +579,9 @@ ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
 
    if (create_node) {
       if (create_gs_ast) {
-         node = new(mem_ctx) ast_gs_input_layout(*loc, q.prim_type);
+         node = new(lin_ctx) ast_gs_input_layout(*loc, q.prim_type);
       } else if (create_cs_ast) {
-         node = new(mem_ctx) ast_cs_input_layout(*loc, q.local_size);
+         node = new(lin_ctx) ast_cs_input_layout(*loc, q.local_size);
       }
    }
 

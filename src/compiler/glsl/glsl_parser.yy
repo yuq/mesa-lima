@@ -432,42 +432,42 @@ variable_identifier:
 primary_expression:
    variable_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_identifier, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.identifier = $1;
    }
    | INTCONSTANT
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_int_constant, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.int_constant = $1;
    }
    | UINTCONSTANT
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_uint_constant, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.uint_constant = $1;
    }
    | FLOATCONSTANT
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_float_constant, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.float_constant = $1;
    }
    | DOUBLECONSTANT
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_double_constant, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.double_constant = $1;
    }
    | BOOLCONSTANT
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_bool_constant, NULL, NULL, NULL);
       $$->set_location(@1);
       $$->primary_expression.bool_constant = $1;
@@ -482,7 +482,7 @@ postfix_expression:
    primary_expression
    | postfix_expression '[' integer_expression ']'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_array_index, $1, $3, NULL);
       $$->set_location_range(@1, @4);
    }
@@ -492,20 +492,20 @@ postfix_expression:
    }
    | postfix_expression DOT_TOK FIELD_SELECTION
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_field_selection, $1, NULL, NULL);
       $$->set_location_range(@1, @3);
       $$->primary_expression.identifier = $3;
    }
    | postfix_expression INC_OP
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_post_inc, $1, NULL, NULL);
       $$->set_location_range(@1, @2);
    }
    | postfix_expression DEC_OP
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_post_dec, $1, NULL, NULL);
       $$->set_location_range(@1, @2);
    }
@@ -558,13 +558,13 @@ function_call_header:
 function_identifier:
    type_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_function_expression($1);
       $$->set_location(@1);
       }
    | postfix_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_function_expression($1);
       $$->set_location(@1);
       }
@@ -579,19 +579,19 @@ unary_expression:
    postfix_expression
    | INC_OP unary_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_pre_inc, $2, NULL, NULL);
       $$->set_location(@1);
    }
    | DEC_OP unary_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_pre_dec, $2, NULL, NULL);
       $$->set_location(@1);
    }
    | unary_operator unary_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression($1, $2, NULL, NULL);
       $$->set_location_range(@1, @2);
    }
@@ -609,19 +609,19 @@ multiplicative_expression:
    unary_expression
    | multiplicative_expression '*' unary_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_mul, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | multiplicative_expression '/' unary_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_div, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | multiplicative_expression '%' unary_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_mod, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -631,13 +631,13 @@ additive_expression:
    multiplicative_expression
    | additive_expression '+' multiplicative_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_add, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | additive_expression '-' multiplicative_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_sub, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -647,13 +647,13 @@ shift_expression:
    additive_expression
    | shift_expression LEFT_OP additive_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_lshift, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | shift_expression RIGHT_OP additive_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_rshift, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -663,25 +663,25 @@ relational_expression:
    shift_expression
    | relational_expression '<' shift_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_less, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | relational_expression '>' shift_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_greater, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | relational_expression LE_OP shift_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_lequal, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | relational_expression GE_OP shift_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_gequal, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -691,13 +691,13 @@ equality_expression:
    relational_expression
    | equality_expression EQ_OP relational_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_equal, $1, $3);
       $$->set_location_range(@1, @3);
    }
    | equality_expression NE_OP relational_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_nequal, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -707,7 +707,7 @@ and_expression:
    equality_expression
    | and_expression '&' equality_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_bit_and, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -717,7 +717,7 @@ exclusive_or_expression:
    and_expression
    | exclusive_or_expression '^' and_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_bit_xor, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -727,7 +727,7 @@ inclusive_or_expression:
    exclusive_or_expression
    | inclusive_or_expression '|' exclusive_or_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_bit_or, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -737,7 +737,7 @@ logical_and_expression:
    inclusive_or_expression
    | logical_and_expression AND_OP inclusive_or_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_logic_and, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -747,7 +747,7 @@ logical_xor_expression:
    logical_and_expression
    | logical_xor_expression XOR_OP logical_and_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_logic_xor, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -757,7 +757,7 @@ logical_or_expression:
    logical_xor_expression
    | logical_or_expression OR_OP logical_xor_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_bin(ast_logic_or, $1, $3);
       $$->set_location_range(@1, @3);
    }
@@ -767,7 +767,7 @@ conditional_expression:
    logical_or_expression
    | logical_or_expression '?' expression ':' assignment_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression(ast_conditional, $1, $3, $5);
       $$->set_location_range(@1, @5);
    }
@@ -777,7 +777,7 @@ assignment_expression:
    conditional_expression
    | unary_expression assignment_operator assignment_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression($2, $1, $3, NULL);
       $$->set_location_range(@1, @3);
    }
@@ -804,7 +804,7 @@ expression:
    }
    | expression ',' assignment_expression
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       if ($1->oper != ast_sequence) {
          $$ = new(ctx) ast_expression(ast_sequence, NULL, NULL, NULL);
          $$->set_location_range(@1, @3);
@@ -867,7 +867,7 @@ function_header_with_parameters:
 function_header:
    fully_specified_type variable_identifier '('
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_function();
       $$->set_location(@2);
       $$->return_type = $1;
@@ -885,7 +885,7 @@ function_header:
 parameter_declarator:
    type_specifier any_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_parameter_declarator();
       $$->set_location_range(@1, @2);
       $$->type = new(ctx) ast_fully_specified_type();
@@ -896,7 +896,7 @@ parameter_declarator:
    }
    | type_specifier any_identifier array_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_parameter_declarator();
       $$->set_location_range(@1, @3);
       $$->type = new(ctx) ast_fully_specified_type();
@@ -916,7 +916,7 @@ parameter_declaration:
    }
    | parameter_qualifier parameter_type_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_parameter_declarator();
       $$->set_location(@2);
       $$->type = new(ctx) ast_fully_specified_type();
@@ -1004,7 +1004,7 @@ init_declarator_list:
    single_declaration
    | init_declarator_list ',' any_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($3, NULL, NULL);
       decl->set_location(@3);
 
@@ -1014,7 +1014,7 @@ init_declarator_list:
    }
    | init_declarator_list ',' any_identifier array_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($3, $4, NULL);
       decl->set_location_range(@3, @4);
 
@@ -1024,7 +1024,7 @@ init_declarator_list:
    }
    | init_declarator_list ',' any_identifier array_specifier '=' initializer
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($3, $4, $6);
       decl->set_location_range(@3, @4);
 
@@ -1034,7 +1034,7 @@ init_declarator_list:
    }
    | init_declarator_list ',' any_identifier '=' initializer
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($3, NULL, $5);
       decl->set_location(@3);
 
@@ -1048,14 +1048,14 @@ init_declarator_list:
 single_declaration:
    fully_specified_type
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       /* Empty declaration list is valid. */
       $$ = new(ctx) ast_declarator_list($1);
       $$->set_location(@1);
    }
    | fully_specified_type any_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, NULL, NULL);
       decl->set_location(@2);
 
@@ -1066,7 +1066,7 @@ single_declaration:
    }
    | fully_specified_type any_identifier array_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, $3, NULL);
       decl->set_location_range(@2, @3);
 
@@ -1077,7 +1077,7 @@ single_declaration:
    }
    | fully_specified_type any_identifier array_specifier '=' initializer
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, $3, $5);
       decl->set_location_range(@2, @3);
 
@@ -1088,7 +1088,7 @@ single_declaration:
    }
    | fully_specified_type any_identifier '=' initializer
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, NULL, $4);
       decl->set_location(@2);
 
@@ -1099,7 +1099,7 @@ single_declaration:
    }
    | INVARIANT variable_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, NULL, NULL);
       decl->set_location(@2);
 
@@ -1111,7 +1111,7 @@ single_declaration:
    }
    | PRECISE variable_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, NULL, NULL);
       decl->set_location(@2);
 
@@ -1126,14 +1126,14 @@ single_declaration:
 fully_specified_type:
    type_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_fully_specified_type();
       $$->set_location(@1);
       $$->specifier = $1;
    }
    | type_qualifier type_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_fully_specified_type();
       $$->set_location_range(@1, @2);
       $$->qualifier = $1;
@@ -1513,7 +1513,7 @@ layout_qualifier_id:
    | any_identifier '=' constant_expression
    {
       memset(& $$, 0, sizeof($$));
-      void *ctx = state;
+      void *ctx = state->linalloc;
 
       if ($3->oper != ast_int_constant &&
           $3->oper != ast_uint_constant &&
@@ -1735,7 +1735,7 @@ subroutine_qualifier:
 subroutine_type_list:
    any_identifier
    {
-        void *ctx = state;
+        void *ctx = state->linalloc;
         ast_declaration *decl = new(ctx)  ast_declaration($1, NULL, NULL);
         decl->set_location(@1);
 
@@ -1744,7 +1744,7 @@ subroutine_type_list:
    }
    | subroutine_type_list ',' any_identifier
    {
-        void *ctx = state;
+        void *ctx = state->linalloc;
         ast_declaration *decl = new(ctx)  ast_declaration($3, NULL, NULL);
         decl->set_location(@3);
 
@@ -2065,7 +2065,7 @@ memory_qualifier:
 array_specifier:
    '[' ']'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_array_specifier(@1, new(ctx) ast_expression(
                                                   ast_unsized_array_dim, NULL,
                                                   NULL, NULL));
@@ -2073,13 +2073,13 @@ array_specifier:
    }
    | '[' constant_expression ']'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_array_specifier(@1, $2);
       $$->set_location_range(@1, @3);
    }
    | array_specifier '[' ']'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = $1;
 
       if (state->check_arrays_of_arrays_allowed(& @1)) {
@@ -2109,19 +2109,19 @@ type_specifier:
 type_specifier_nonarray:
    basic_type_specifier_nonarray
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_type_specifier($1);
       $$->set_location(@1);
    }
    | struct_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_type_specifier($1);
       $$->set_location(@1);
    }
    | TYPE_IDENTIFIER
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_type_specifier($1);
       $$->set_location(@1);
    }
@@ -2265,15 +2265,15 @@ precision_qualifier:
 struct_specifier:
    STRUCT any_identifier '{' struct_declaration_list '}'
    {
-      void *ctx = state;
-      $$ = new(ctx) ast_struct_specifier($2, $4);
+      void *ctx = state->linalloc;
+      $$ = new(ctx) ast_struct_specifier(ctx, $2, $4);
       $$->set_location_range(@2, @5);
       state->symbols->add_type($2, glsl_type::void_type);
    }
    | STRUCT '{' struct_declaration_list '}'
    {
-      void *ctx = state;
-      $$ = new(ctx) ast_struct_specifier(NULL, $3);
+      void *ctx = state->linalloc;
+      $$ = new(ctx) ast_struct_specifier(ctx, NULL, $3);
       $$->set_location_range(@2, @4);
    }
    ;
@@ -2294,7 +2294,7 @@ struct_declaration_list:
 struct_declaration:
    fully_specified_type struct_declarator_list ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_fully_specified_type *const type = $1;
       type->set_location(@1);
 
@@ -2326,13 +2326,13 @@ struct_declarator_list:
 struct_declarator:
    any_identifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_declaration($1, NULL, NULL);
       $$->set_location(@1);
    }
    | any_identifier array_specifier
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_declaration($1, $2, NULL);
       $$->set_location_range(@1, @2);
    }
@@ -2353,7 +2353,7 @@ initializer:
 initializer_list:
    initializer
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_aggregate_initializer();
       $$->set_location(@1);
       $$->expressions.push_tail(& $1->link);
@@ -2387,7 +2387,7 @@ simple_statement:
 compound_statement:
    '{' '}'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_compound_statement(true, NULL);
       $$->set_location_range(@1, @2);
    }
@@ -2397,7 +2397,7 @@ compound_statement:
    }
    statement_list '}'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_compound_statement(true, $3);
       $$->set_location_range(@1, @4);
       state->symbols->pop_scope();
@@ -2412,13 +2412,13 @@ statement_no_new_scope:
 compound_statement_no_new_scope:
    '{' '}'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_compound_statement(false, NULL);
       $$->set_location_range(@1, @2);
    }
    | '{' statement_list '}'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_compound_statement(false, $2);
       $$->set_location_range(@1, @3);
    }
@@ -2449,13 +2449,13 @@ statement_list:
 expression_statement:
    ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_statement(NULL);
       $$->set_location(@1);
    }
    | expression ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_expression_statement($1);
       $$->set_location(@1);
    }
@@ -2464,8 +2464,8 @@ expression_statement:
 selection_statement:
    IF '(' expression ')' selection_rest_statement
    {
-      $$ = new(state) ast_selection_statement($3, $5.then_statement,
-                                              $5.else_statement);
+      $$ = new(state->linalloc) ast_selection_statement($3, $5.then_statement,
+                                                        $5.else_statement);
       $$->set_location_range(@1, @5);
    }
    ;
@@ -2490,7 +2490,7 @@ condition:
    }
    | fully_specified_type any_identifier '=' initializer
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_declaration *decl = new(ctx) ast_declaration($2, NULL, $4);
       ast_declarator_list *declarator = new(ctx) ast_declarator_list($1);
       decl->set_location_range(@2, @4);
@@ -2508,7 +2508,7 @@ condition:
 switch_statement:
    SWITCH '(' expression ')' switch_body
    {
-      $$ = new(state) ast_switch_statement($3, $5);
+      $$ = new(state->linalloc) ast_switch_statement($3, $5);
       $$->set_location_range(@1, @5);
    }
    ;
@@ -2516,12 +2516,12 @@ switch_statement:
 switch_body:
    '{' '}'
    {
-      $$ = new(state) ast_switch_body(NULL);
+      $$ = new(state->linalloc) ast_switch_body(NULL);
       $$->set_location_range(@1, @2);
    }
    | '{' case_statement_list '}'
    {
-      $$ = new(state) ast_switch_body($2);
+      $$ = new(state->linalloc) ast_switch_body($2);
       $$->set_location_range(@1, @3);
    }
    ;
@@ -2529,12 +2529,12 @@ switch_body:
 case_label:
    CASE expression ':'
    {
-      $$ = new(state) ast_case_label($2);
+      $$ = new(state->linalloc) ast_case_label($2);
       $$->set_location(@2);
    }
    | DEFAULT ':'
    {
-      $$ = new(state) ast_case_label(NULL);
+      $$ = new(state->linalloc) ast_case_label(NULL);
       $$->set_location(@2);
    }
    ;
@@ -2542,7 +2542,7 @@ case_label:
 case_label_list:
    case_label
    {
-      ast_case_label_list *labels = new(state) ast_case_label_list();
+      ast_case_label_list *labels = new(state->linalloc) ast_case_label_list();
 
       labels->labels.push_tail(& $1->link);
       $$ = labels;
@@ -2558,7 +2558,7 @@ case_label_list:
 case_statement:
    case_label_list statement
    {
-      ast_case_statement *stmts = new(state) ast_case_statement($1);
+      ast_case_statement *stmts = new(state->linalloc) ast_case_statement($1);
       stmts->set_location(@2);
 
       stmts->stmts.push_tail(& $2->link);
@@ -2574,7 +2574,7 @@ case_statement:
 case_statement_list:
    case_statement
    {
-      ast_case_statement_list *cases= new(state) ast_case_statement_list();
+      ast_case_statement_list *cases= new(state->linalloc) ast_case_statement_list();
       cases->set_location(@1);
 
       cases->cases.push_tail(& $1->link);
@@ -2590,21 +2590,21 @@ case_statement_list:
 iteration_statement:
    WHILE '(' condition ')' statement_no_new_scope
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_iteration_statement(ast_iteration_statement::ast_while,
                                             NULL, $3, NULL, $5);
       $$->set_location_range(@1, @4);
    }
    | DO statement WHILE '(' expression ')' ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_iteration_statement(ast_iteration_statement::ast_do_while,
                                             NULL, $5, NULL, $2);
       $$->set_location_range(@1, @6);
    }
    | FOR '(' for_init_statement for_rest_statement ')' statement_no_new_scope
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_iteration_statement(ast_iteration_statement::ast_for,
                                             $3, $4.cond, $4.rest, $6);
       $$->set_location_range(@1, @6);
@@ -2641,31 +2641,31 @@ for_rest_statement:
 jump_statement:
    CONTINUE ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_jump_statement(ast_jump_statement::ast_continue, NULL);
       $$->set_location(@1);
    }
    | BREAK ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_jump_statement(ast_jump_statement::ast_break, NULL);
       $$->set_location(@1);
    }
    | RETURN ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_jump_statement(ast_jump_statement::ast_return, NULL);
       $$->set_location(@1);
    }
    | RETURN expression ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_jump_statement(ast_jump_statement::ast_return, $2);
       $$->set_location_range(@1, @2);
    }
    | DISCARD ';' // Fragment shader only.
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_jump_statement(ast_jump_statement::ast_discard, NULL);
       $$->set_location(@1);
    }
@@ -2681,7 +2681,7 @@ external_declaration:
 function_definition:
    function_prototype compound_statement_no_new_scope
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       $$ = new(ctx) ast_function_definition();
       $$->set_location_range(@1, @2);
       $$->prototype = $1;
@@ -2787,16 +2787,16 @@ interface_qualifier:
 instance_name_opt:
    /* empty */
    {
-      $$ = new(state) ast_interface_block(NULL, NULL);
+      $$ = new(state->linalloc) ast_interface_block(NULL, NULL);
    }
    | NEW_IDENTIFIER
    {
-      $$ = new(state) ast_interface_block($1, NULL);
+      $$ = new(state->linalloc) ast_interface_block($1, NULL);
       $$->set_location(@1);
    }
    | NEW_IDENTIFIER array_specifier
    {
-      $$ = new(state) ast_interface_block($1, $2);
+      $$ = new(state->linalloc) ast_interface_block($1, $2);
       $$->set_location_range(@1, @2);
    }
    ;
@@ -2817,7 +2817,7 @@ member_list:
 member_declaration:
    fully_specified_type struct_declarator_list ';'
    {
-      void *ctx = state;
+      void *ctx = state->linalloc;
       ast_fully_specified_type *type = $1;
       type->set_location(@1);
 

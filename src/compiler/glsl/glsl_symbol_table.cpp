@@ -106,6 +106,7 @@ glsl_symbol_table::glsl_symbol_table()
    this->separate_function_namespace = false;
    this->table = _mesa_symbol_table_ctor();
    this->mem_ctx = ralloc_context(NULL);
+   this->linalloc = linear_alloc_parent(this->mem_ctx, 0);
 }
 
 glsl_symbol_table::~glsl_symbol_table()
@@ -207,7 +208,7 @@ bool glsl_symbol_table::add_default_precision_qualifier(const char *type_name,
 {
    char *name = ralloc_asprintf(mem_ctx, "#default_precision_%s", type_name);
 
-   ast_type_specifier *default_specifier = new(mem_ctx) ast_type_specifier(name);
+   ast_type_specifier *default_specifier = new(linalloc) ast_type_specifier(name);
    default_specifier->default_precision = precision;
 
    symbol_table_entry *entry =
