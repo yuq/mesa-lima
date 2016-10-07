@@ -465,6 +465,7 @@ update_array(struct gl_context *ctx,
              GLboolean normalized, GLboolean integer, GLboolean doubles,
              const GLvoid *ptr)
 {
+   struct gl_vertex_array_object *vao = ctx->Array.VAO;
    struct gl_array_attributes *array;
    GLsizei effectiveStride;
 
@@ -478,8 +479,7 @@ update_array(struct gl_context *ctx,
     *
     * The check for VBOs is handled below.
     */
-   if (ctx->API == API_OPENGL_CORE
-       && (ctx->Array.VAO == ctx->Array.DefaultVAO)) {
+   if (ctx->API == API_OPENGL_CORE && (vao == ctx->Array.DefaultVAO)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(no array object bound)",
                   func);
       return;
@@ -509,29 +509,29 @@ update_array(struct gl_context *ctx,
     *       to the ARRAY_BUFFER buffer object binding point (see section
     *       2.9.6), and the pointer argument is not NULL."
     */
-   if (ptr != NULL && ctx->Array.VAO->ARBsemantics &&
+   if (ptr != NULL && vao->ARBsemantics &&
        !_mesa_is_bufferobj(ctx->Array.ArrayBufferObj)) {
       _mesa_error(ctx, GL_INVALID_OPERATION, "%s(non-VBO array)", func);
       return;
    }
 
-   if (!update_array_format(ctx, func, ctx->Array.VAO, attrib,
+   if (!update_array_format(ctx, func, vao, attrib,
                             legalTypesMask, sizeMin, sizeMax,
                             size, type, normalized, integer, doubles, 0)) {
       return;
    }
 
    /* Reset the vertex attrib binding */
-   vertex_attrib_binding(ctx, ctx->Array.VAO, attrib, attrib);
+   vertex_attrib_binding(ctx, vao, attrib, attrib);
 
    /* The Stride and Ptr fields are not set by update_array_format() */
-   array = &ctx->Array.VAO->VertexAttrib[attrib];
+   array = &vao->VertexAttrib[attrib];
    array->Stride = stride;
    array->Ptr = (const GLvoid *) ptr;
 
    /* Update the vertex buffer binding */
    effectiveStride = stride != 0 ? stride : array->_ElementSize;
-   _mesa_bind_vertex_buffer(ctx, ctx->Array.VAO, attrib,
+   _mesa_bind_vertex_buffer(ctx, vao, attrib,
                             ctx->Array.ArrayBufferObj, (GLintptr) ptr,
                             effectiveStride);
 }
