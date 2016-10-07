@@ -1805,7 +1805,8 @@ struct anv_query_pool {
    struct anv_bo                                bo;
 };
 
-void *anv_lookup_entrypoint(const char *name);
+void *anv_lookup_entrypoint(const struct gen_device_info *devinfo,
+                            const char *name);
 
 void anv_dump_image_to_ppm(struct anv_device *device,
                            struct anv_image *image, unsigned miplevel,

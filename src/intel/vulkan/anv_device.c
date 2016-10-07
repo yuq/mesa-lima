@@ -682,7 +682,7 @@ PFN_vkVoidFunction anv_GetInstanceProcAddr(
     VkInstance                                  instance,
     const char*                                 pName)
 {
-   return anv_lookup_entrypoint(pName);
+   return anv_lookup_entrypoint(NULL, pName);
 }
 
 /* With version 1+ of the loader interface the ICD should expose
@@ -702,10 +702,11 @@ VKAPI_ATTR PFN_vkVoidFunction VKAPI_CALL vk_icdGetInstanceProcAddr(
 }
 
 PFN_vkVoidFunction anv_GetDeviceProcAddr(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const char*                                 pName)
 {
-   return anv_lookup_entrypoint(pName);
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   return anv_lookup_entrypoint(&device->info, pName);
 }
 
 static VkResult
@@ -853,8 +854,6 @@ VkResult anv_CreateDevice(
       if (!found)
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
-
-   anv_set_dispatch_devinfo(&physical_device->info);
 
    device = anv_alloc2(&physical_device->instance->alloc, pAllocator,
                        sizeof(*device), 8,
