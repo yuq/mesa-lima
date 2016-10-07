@@ -703,6 +703,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 
 	case TGSI_FILE_OUTPUT:
 	{
+		char name[16] = "";
 		unsigned idx;
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
@@ -710,9 +711,13 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			if (ctx->soa.outputs[idx][0])
 				continue;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
+#ifdef DEBUG
+				snprintf(name, sizeof(name), "OUT%d.%c",
+					 idx, "xyzw"[chan % 4]);
+#endif
 				ctx->soa.outputs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
-					ctx->soa.bld_base.base.elem_type, "");
+					ctx->soa.bld_base.base.elem_type, name);
 			}
 		}
 		break;
