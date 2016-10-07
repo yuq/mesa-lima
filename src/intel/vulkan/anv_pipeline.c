@@ -267,7 +267,6 @@ populate_gs_prog_key(const struct gen_device_info *devinfo,
 static void
 populate_wm_prog_key(const struct gen_device_info *devinfo,
                      const VkGraphicsPipelineCreateInfo *info,
-                     const struct anv_graphics_pipeline_create_info *extra,
                      struct brw_wm_prog_key *key)
 {
    ANV_FROM_HANDLE(anv_render_pass, render_pass, info->renderPass);
@@ -284,12 +283,8 @@ populate_wm_prog_key(const struct gen_device_info *devinfo,
    /* XXX Vulkan doesn't appear to specify */
    key->clamp_fragment_color = false;
 
-   if (extra && extra->color_attachment_count >= 0) {
-      key->nr_color_regions = extra->color_attachment_count;
-   } else {
-      key->nr_color_regions =
-         render_pass->subpasses[info->subpass].color_count;
-   }
+   key->nr_color_regions =
+      render_pass->subpasses[info->subpass].color_count;
 
    key->replicate_alpha = key->nr_color_regions > 1 &&
                           info->pMultisampleState &&
@@ -605,7 +600,6 @@ static VkResult
 anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
                         struct anv_pipeline_cache *cache,
                         const VkGraphicsPipelineCreateInfo *info,
-                        const struct anv_graphics_pipeline_create_info *extra,
                         struct anv_shader_module *module,
                         const char *entrypoint,
                         const VkSpecializationInfo *spec_info)
@@ -617,7 +611,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    struct anv_shader_bin *bin = NULL;
    unsigned char sha1[20];
 
-   populate_wm_prog_key(&pipeline->device->info, info, extra, &key);
+   populate_wm_prog_key(&pipeline->device->info, info, &key);
 
    if (cache) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint,
@@ -675,11 +669,6 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
          num_rts += array_len;
       }
 
-      if (pipeline->use_repclear) {
-         assert(num_rts == 1);
-         key.nr_color_regions = 1;
-      }
-
       if (num_rts == 0) {
          /* If we have no render targets, we need a null render target */
          rt_bindings[0] = (struct anv_pipeline_binding) {
@@ -707,8 +696,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       unsigned code_size;
       const unsigned *shader_code =
          brw_compile_fs(compiler, NULL, mem_ctx, &key, &prog_data, nir,
-                        NULL, -1, -1, true, pipeline->use_repclear,
-                        &code_size, NULL);
+                        NULL, -1, -1, true, false, &code_size, NULL);
       if (shader_code == NULL) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1015,7 +1003,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
                   struct anv_device *device,
                   struct anv_pipeline_cache *cache,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                  const struct anv_graphics_pipeline_create_info *extra,
                   const VkAllocationCallbacks *alloc)
 {
    VkResult result;
@@ -1042,8 +1029,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    copy_non_dynamic_state(pipeline, pCreateInfo);
    pipeline->depth_clamp_enable = pCreateInfo->pRasterizationState &&
                                   pCreateInfo->pRasterizationState->depthClampEnable;
-
-   pipeline->use_repclear = extra && extra->use_repclear;
 
    pipeline->needs_data_cache = false;
 
@@ -1089,7 +1074,7 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    }
 
    if (modules[MESA_SHADER_FRAGMENT]) {
-      result = anv_pipeline_compile_fs(pipeline, cache, pCreateInfo, extra,
+      result = anv_pipeline_compile_fs(pipeline, cache, pCreateInfo,
                                        modules[MESA_SHADER_FRAGMENT],
                                        pStages[MESA_SHADER_FRAGMENT]->pName,
                                        pStages[MESA_SHADER_FRAGMENT]->pSpecializationInfo);
@@ -1097,26 +1082,14 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
          goto compile_fail;
    }
 
-   if (!(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT)) {
-      /* Vertex is only optional if disable_vs is set */
-      assert(extra->disable_vs);
-   }
+   assert(pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT);
 
    anv_pipeline_setup_l3_config(pipeline, false);
 
    const VkPipelineVertexInputStateCreateInfo *vi_info =
       pCreateInfo->pVertexInputState;
 
-   uint64_t inputs_read;
-   if (extra && extra->disable_vs) {
-      /* If the VS is disabled, just assume the user knows what they're
-       * doing and apply the layout blindly.  This can only come from
-       * meta, so this *should* be safe.
-       */
-      inputs_read = ~0ull;
-   } else {
-      inputs_read = get_vs_prog_data(pipeline)->inputs_read;
-   }
+   const uint64_t inputs_read = get_vs_prog_data(pipeline)->inputs_read;
 
    pipeline->vb_used = 0;
    for (uint32_t i = 0; i < vi_info->vertexAttributeDescriptionCount; i++) {
@@ -1152,9 +1125,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
    pipeline->primitive_restart = ia_info->primitiveRestartEnable;
    pipeline->topology = vk_to_gen_primitive_type[ia_info->topology];
 
-   if (extra && extra->use_rectlist)
-      pipeline->topology = _3DPRIM_RECTLIST;
-
    return VK_SUCCESS;
 
 compile_fail:
@@ -1173,7 +1143,6 @@ anv_graphics_pipeline_create(
    VkDevice _device,
    VkPipelineCache _cache,
    const VkGraphicsPipelineCreateInfo *pCreateInfo,
-   const struct anv_graphics_pipeline_create_info *extra,
    const VkAllocationCallbacks *pAllocator,
    VkPipeline *pPipeline)
 {
@@ -1183,13 +1152,13 @@ anv_graphics_pipeline_create(
    switch (device->info.gen) {
    case 7:
       if (device->info.is_haswell)
-         return gen75_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
+         return gen75_graphics_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
       else
-         return gen7_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
+         return gen7_graphics_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
    case 8:
-      return gen8_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
+      return gen8_graphics_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
    case 9:
-      return gen9_graphics_pipeline_create(_device, cache, pCreateInfo, extra, pAllocator, pPipeline);
+      return gen9_graphics_pipeline_create(_device, cache, pCreateInfo, pAllocator, pPipeline);
    default:
       unreachable("unsupported gen\n");
    }
@@ -1210,7 +1179,7 @@ VkResult anv_CreateGraphicsPipelines(
       result = anv_graphics_pipeline_create(_device,
                                             pipelineCache,
                                             &pCreateInfos[i],
-                                            NULL, pAllocator, &pPipelines[i]);
+                                            pAllocator, &pPipelines[i]);
       if (result != VK_SUCCESS) {
          for (unsigned j = 0; j < i; j++) {
             anv_DestroyPipeline(_device, pPipelines[j], pAllocator);

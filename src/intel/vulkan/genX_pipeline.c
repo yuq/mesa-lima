@@ -86,8 +86,6 @@ genX(compute_pipeline_create)(
       return result;
    }
 
-   pipeline->use_repclear = false;
-
    const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
 
    anv_pipeline_setup_l3_config(pipeline, cs_prog_data->base.total_shared > 0);

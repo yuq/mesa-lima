@@ -56,26 +56,14 @@ vertex_element_comp_control(enum isl_format format, unsigned comp)
 
 static void
 emit_vertex_input(struct anv_pipeline *pipeline,
-                  const VkPipelineVertexInputStateCreateInfo *info,
-                  const struct anv_graphics_pipeline_create_info *extra)
+                  const VkPipelineVertexInputStateCreateInfo *info)
 {
    const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
 
-   uint32_t elements;
-   if (extra && extra->disable_vs) {
-      /* If the VS is disabled, just assume the user knows what they're
-       * doing and apply the layout blindly.  This can only come from
-       * meta, so this *should* be safe.
-       */
-      elements = 0;
-      for (uint32_t i = 0; i < info->vertexAttributeDescriptionCount; i++)
-         elements |= (1 << info->pVertexAttributeDescriptions[i].location);
-   } else {
-      /* Pull inputs_read out of the VS prog data */
-      uint64_t inputs_read = vs_prog_data->inputs_read;
-      assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
-      elements = inputs_read >> VERT_ATTRIB_GENERIC0;
-   }
+   /* Pull inputs_read out of the VS prog data */
+   const uint64_t inputs_read = vs_prog_data->inputs_read;
+   assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
+   const uint32_t elements = inputs_read >> VERT_ATTRIB_GENERIC0;
 
 #if GEN_GEN >= 8
    /* On BDW+, we only need to allocate space for base ids.  Setting up
@@ -488,14 +476,13 @@ emit_rs_state(struct anv_pipeline *pipeline,
               const VkPipelineRasterizationStateCreateInfo *rs_info,
               const VkPipelineMultisampleStateCreateInfo *ms_info,
               const struct anv_render_pass *pass,
-              const struct anv_subpass *subpass,
-              const struct anv_graphics_pipeline_create_info *extra)
+              const struct anv_subpass *subpass)
 {
    struct GENX(3DSTATE_SF) sf = {
       GENX(3DSTATE_SF_header),
    };
 
-   sf.ViewportTransformEnable = !(extra && extra->use_rectlist);
+   sf.ViewportTransformEnable = true;
    sf.StatisticsEnable = true;
    sf.TriangleStripListProvokingVertexSelect = 0;
    sf.LineStripListProvokingVertexSelect = 0;
@@ -528,7 +515,7 @@ emit_rs_state(struct anv_pipeline *pipeline,
    raster.CullMode = vk_to_gen_cullmode[rs_info->cullMode];
    raster.FrontFaceFillMode = vk_to_gen_fillmode[rs_info->polygonMode];
    raster.BackFaceFillMode = vk_to_gen_fillmode[rs_info->polygonMode];
-   raster.ScissorRectangleEnable = !(extra && extra->use_rectlist);
+   raster.ScissorRectangleEnable = true;
 
 #if GEN_GEN >= 9
    /* GEN9+ splits ViewportZClipTestEnable into near and far enable bits */
@@ -932,13 +919,12 @@ emit_cb_state(struct anv_pipeline *pipeline,
 static void
 emit_3dstate_clip(struct anv_pipeline *pipeline,
                   const VkPipelineViewportStateCreateInfo *vp_info,
-                  const VkPipelineRasterizationStateCreateInfo *rs_info,
-                  const struct anv_graphics_pipeline_create_info *extra)
+                  const VkPipelineRasterizationStateCreateInfo *rs_info)
 {
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    (void) wm_prog_data;
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_CLIP), clip) {
-      clip.ClipEnable               = !(extra && extra->use_rectlist);
+      clip.ClipEnable               = true;
       clip.EarlyCullEnable          = true;
       clip.APIMode                  = APIMODE_D3D,
       clip.ViewportXYClipTestEnable = true;

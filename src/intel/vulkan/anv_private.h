@@ -1458,7 +1458,6 @@ struct anv_pipeline {
 
    struct anv_pipeline_layout *                 layout;
 
-   bool                                         use_repclear;
    bool                                         needs_data_cache;
 
    struct anv_shader_bin *                      shaders[MESA_SHADER_STAGES];
@@ -1526,23 +1525,10 @@ ANV_DECL_GET_PROG_DATA_FUNC(gs, MESA_SHADER_GEOMETRY)
 ANV_DECL_GET_PROG_DATA_FUNC(wm, MESA_SHADER_FRAGMENT)
 ANV_DECL_GET_PROG_DATA_FUNC(cs, MESA_SHADER_COMPUTE)
 
-struct anv_graphics_pipeline_create_info {
-   /**
-    * If non-negative, overrides the color attachment count of the pipeline's
-    * subpass.
-    */
-   int8_t color_attachment_count;
-
-   bool                                         use_repclear;
-   bool                                         disable_vs;
-   bool                                         use_rectlist;
-};
-
 VkResult
 anv_pipeline_init(struct anv_pipeline *pipeline, struct anv_device *device,
                   struct anv_pipeline_cache *cache,
                   const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                  const struct anv_graphics_pipeline_create_info *extra,
                   const VkAllocationCallbacks *alloc);
 
 VkResult
@@ -1557,7 +1543,6 @@ VkResult
 anv_graphics_pipeline_create(VkDevice device,
                              VkPipelineCache cache,
                              const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                             const struct anv_graphics_pipeline_create_info *extra,
                              const VkAllocationCallbacks *alloc,
                              VkPipeline *pPipeline);
 

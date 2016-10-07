@@ -70,7 +70,6 @@ VkResult
 genX(graphics_pipeline_create)(VkDevice _device,
                                struct anv_pipeline_cache *cache,
                                const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                               const struct anv_graphics_pipeline_create_info *extra,
                                const VkAllocationCallbacks *alloc,
                                VkPipeline *pPipeline);
 

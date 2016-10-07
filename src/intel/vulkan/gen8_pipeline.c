@@ -36,8 +36,7 @@
 
 static void
 emit_ia_state(struct anv_pipeline *pipeline,
-              const VkPipelineInputAssemblyStateCreateInfo *info,
-              const struct anv_graphics_pipeline_create_info *extra)
+              const VkPipelineInputAssemblyStateCreateInfo *info)
 {
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_TOPOLOGY), vft) {
       vft.PrimitiveTopologyType = pipeline->topology;
@@ -49,7 +48,6 @@ genX(graphics_pipeline_create)(
     VkDevice                                    _device,
     struct anv_pipeline_cache *                 cache,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    const struct anv_graphics_pipeline_create_info *extra,
     const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
 {
@@ -71,19 +69,19 @@ genX(graphics_pipeline_create)(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    result = anv_pipeline_init(pipeline, device, cache,
-                              pCreateInfo, extra, pAllocator);
+                              pCreateInfo, pAllocator);
    if (result != VK_SUCCESS) {
       anv_free2(&device->alloc, pAllocator, pipeline);
       return result;
    }
 
    assert(pCreateInfo->pVertexInputState);
-   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
+   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
    assert(pCreateInfo->pInputAssemblyState);
-   emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState, extra);
+   emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState);
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
-                 pCreateInfo->pMultisampleState, pass, subpass, extra);
+                 pCreateInfo->pMultisampleState, pass, subpass);
    emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
    emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
@@ -92,7 +90,7 @@ genX(graphics_pipeline_create)(
    emit_urb_setup(pipeline);
 
    emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
-                     pCreateInfo->pRasterizationState, extra);
+                     pCreateInfo->pRasterizationState);
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
@@ -179,7 +177,7 @@ genX(graphics_pipeline_create)(
    uint32_t vs_start = pipeline->vs_simd8 != NO_KERNEL ? pipeline->vs_simd8 :
                                                          pipeline->vs_vec4;
 
-   if (vs_start == NO_KERNEL || (extra && extra->disable_vs)) {
+   if (vs_start == NO_KERNEL) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.FunctionEnable = false;
          /* Even if VS is disabled, SBE still gets the amount of

@@ -39,7 +39,6 @@ genX(graphics_pipeline_create)(
     VkDevice                                    _device,
     struct anv_pipeline_cache *                 cache,
     const VkGraphicsPipelineCreateInfo*         pCreateInfo,
-    const struct anv_graphics_pipeline_create_info *extra,
     const VkAllocationCallbacks*                pAllocator,
     VkPipeline*                                 pPipeline)
 {
@@ -60,18 +59,18 @@ genX(graphics_pipeline_create)(
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    result = anv_pipeline_init(pipeline, device, cache,
-                              pCreateInfo, extra, pAllocator);
+                              pCreateInfo, pAllocator);
    if (result != VK_SUCCESS) {
       anv_free2(&device->alloc, pAllocator, pipeline);
       return result;
    }
 
    assert(pCreateInfo->pVertexInputState);
-   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState, extra);
+   emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
 
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
-                 pCreateInfo->pMultisampleState, pass, subpass, extra);
+                 pCreateInfo->pMultisampleState, pass, subpass);
 
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
 
@@ -81,7 +80,7 @@ genX(graphics_pipeline_create)(
    emit_urb_setup(pipeline);
 
    emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
-                     pCreateInfo->pRasterizationState, extra);
+                     pCreateInfo->pRasterizationState);
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
    emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
@@ -107,7 +106,7 @@ genX(graphics_pipeline_create)(
       gen7_emit_vs_workaround_flush(brw);
 #endif
 
-   if (pipeline->vs_vec4 == NO_KERNEL || (extra && extra->disable_vs))
+   if (pipeline->vs_vec4 == NO_KERNEL)
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs);
    else
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
@@ -133,7 +132,7 @@ genX(graphics_pipeline_create)(
 
    const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
-   if (pipeline->gs_kernel == NO_KERNEL || (extra && extra->disable_vs)) {
+   if (pipeline->gs_kernel == NO_KERNEL) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
