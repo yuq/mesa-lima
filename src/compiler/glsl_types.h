@@ -955,10 +955,12 @@ struct glsl_struct_field {
    unsigned implicit_sized_array:1;
 #ifdef __cplusplus
    glsl_struct_field(const struct glsl_type *_type, const char *_name)
-      : type(_type), name(_name), location(-1), interpolation(0), centroid(0),
+      : type(_type), name(_name), location(-1), offset(0), xfb_buffer(0),
+        xfb_stride(0), interpolation(0), centroid(0),
         sample(0), matrix_layout(GLSL_MATRIX_LAYOUT_INHERITED), patch(0),
         precision(GLSL_PRECISION_NONE), image_read_only(0), image_write_only(0),
-        image_coherent(0), image_volatile(0), image_restrict(0)
+        image_coherent(0), image_volatile(0), image_restrict(0),
+        explicit_xfb_buffer(0), implicit_sized_array(0)
    {
       /* empty */
    }

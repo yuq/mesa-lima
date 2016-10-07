@@ -123,26 +123,9 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
                                          glsl_struct_field, length);
 
    for (i = 0; i < length; i++) {
-      this->fields.structure[i].type = fields[i].type;
+      this->fields.structure[i] = fields[i];
       this->fields.structure[i].name = ralloc_strdup(this->fields.structure,
                                                      fields[i].name);
-      this->fields.structure[i].location = fields[i].location;
-      this->fields.structure[i].offset = fields[i].offset;
-      this->fields.structure[i].interpolation = fields[i].interpolation;
-      this->fields.structure[i].centroid = fields[i].centroid;
-      this->fields.structure[i].sample = fields[i].sample;
-      this->fields.structure[i].matrix_layout = fields[i].matrix_layout;
-      this->fields.structure[i].patch = fields[i].patch;
-      this->fields.structure[i].image_read_only = fields[i].image_read_only;
-      this->fields.structure[i].image_write_only = fields[i].image_write_only;
-      this->fields.structure[i].image_coherent = fields[i].image_coherent;
-      this->fields.structure[i].image_volatile = fields[i].image_volatile;
-      this->fields.structure[i].image_restrict = fields[i].image_restrict;
-      this->fields.structure[i].precision = fields[i].precision;
-      this->fields.structure[i].explicit_xfb_buffer =
-         fields[i].explicit_xfb_buffer;
-      this->fields.structure[i].xfb_buffer = fields[i].xfb_buffer;
-      this->fields.structure[i].xfb_stride = fields[i].xfb_stride;
    }
 
    mtx_unlock(&glsl_type::mutex);
@@ -169,26 +152,9 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    this->fields.structure = ralloc_array(this->mem_ctx,
                                          glsl_struct_field, length);
    for (i = 0; i < length; i++) {
-      this->fields.structure[i].type = fields[i].type;
+      this->fields.structure[i] = fields[i];
       this->fields.structure[i].name = ralloc_strdup(this->fields.structure,
                                                      fields[i].name);
-      this->fields.structure[i].location = fields[i].location;
-      this->fields.structure[i].offset = fields[i].offset;
-      this->fields.structure[i].interpolation = fields[i].interpolation;
-      this->fields.structure[i].centroid = fields[i].centroid;
-      this->fields.structure[i].sample = fields[i].sample;
-      this->fields.structure[i].matrix_layout = fields[i].matrix_layout;
-      this->fields.structure[i].patch = fields[i].patch;
-      this->fields.structure[i].image_read_only = fields[i].image_read_only;
-      this->fields.structure[i].image_write_only = fields[i].image_write_only;
-      this->fields.structure[i].image_coherent = fields[i].image_coherent;
-      this->fields.structure[i].image_volatile = fields[i].image_volatile;
-      this->fields.structure[i].image_restrict = fields[i].image_restrict;
-      this->fields.structure[i].precision = fields[i].precision;
-      this->fields.structure[i].explicit_xfb_buffer =
-         fields[i].explicit_xfb_buffer;
-      this->fields.structure[i].xfb_buffer = fields[i].xfb_buffer;
-      this->fields.structure[i].xfb_stride = fields[i].xfb_stride;
    }
 
    mtx_unlock(&glsl_type::mutex);
