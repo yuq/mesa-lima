@@ -2201,6 +2201,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="3"/>
     <field name="Stencil Buffer Enable" start="63" end="63" type="uint"/>
     <field name="Stencil Buffer Object Control State" start="54" end="60" type="MEMORY_OBJECT_CONTROL_STATE"/>
+    <field name="Stencil Buffer MOCS" start="54" end="60" type="uint"/>
     <field name="Surface Pitch" start="32" end="48" type="uint"/>
     <field name="Surface Base Address" start="64" end="127" type="address"/>
     <field name="Surface QPitch" start="128" end="142" type="uint"/>
