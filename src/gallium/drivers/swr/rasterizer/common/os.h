@@ -249,4 +249,10 @@ typedef MEGABYTE    GIGABYTE[1024];
 
 #include "common/swr_assert.h"
 
+#ifdef __GNUC__
+#define ATTR_UNUSED __attribute__((unused))
+#else
+#define ATTR_UNUSED
+#endif
+
 #endif//__SWR_OS_H__
