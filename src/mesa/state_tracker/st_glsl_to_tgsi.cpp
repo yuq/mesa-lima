@@ -2458,9 +2458,9 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
 static void
 shrink_array_declarations(struct array_decl *arrays, unsigned count,
-                          GLbitfield64 usage_mask,
+                          GLbitfield64* usage_mask,
                           GLbitfield64 double_usage_mask,
-                          GLbitfield patch_usage_mask)
+                          GLbitfield* patch_usage_mask)
 {
    unsigned i;
    int j;
@@ -2474,12 +2474,12 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
       /* Shrink the beginning. */
       for (j = 0; j < (int)decl->array_size; j++) {
          if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
-            if (patch_usage_mask &
+            if (*patch_usage_mask &
                 BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
                break;
          }
          else {
-            if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
+            if (*usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
                break;
             if (double_usage_mask & BITFIELD64_BIT(decl->mesa_index+j-1))
                break;
@@ -2493,18 +2493,34 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
       /* Shrink the end. */
       for (j = decl->array_size-1; j >= 0; j--) {
          if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
-            if (patch_usage_mask &
+            if (*patch_usage_mask &
                 BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
                break;
          }
          else {
-            if (usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
+            if (*usage_mask & BITFIELD64_BIT(decl->mesa_index+j))
                break;
             if (double_usage_mask & BITFIELD64_BIT(decl->mesa_index+j-1))
                break;
          }
 
          decl->array_size--;
+      }
+
+      /* When not all entries of an array are accessed, we mark them as used
+       * here anyway, to ensure that the input/output mapping logic doesn't get
+       * confused.
+       *
+       * TODO This happens when an array isn't used via indirect access, which
+       * some game ports do (at least eON-based). There is an optimization
+       * opportunity here by replacing the array declaration with non-array
+       * declarations of those slots that are actually used.
+       */
+      for (j = 1; j < (int)decl->array_size; ++j) {
+         if (decl->mesa_index >= VARYING_SLOT_PATCH0)
+            *patch_usage_mask |= BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j);
+         else
+            *usage_mask |= BITFIELD64_BIT(decl->mesa_index + j);
       }
    }
 }
@@ -6633,9 +6649,9 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    shrink_array_declarations(v->input_arrays, v->num_input_arrays,
-                             prog->InputsRead, prog->DoubleInputsRead, prog->PatchInputsRead);
+                             &prog->InputsRead, prog->DoubleInputsRead, &prog->PatchInputsRead);
    shrink_array_declarations(v->output_arrays, v->num_output_arrays,
-                             prog->OutputsWritten, 0ULL, prog->PatchOutputsWritten);
+                             &prog->OutputsWritten, 0ULL, &prog->PatchOutputsWritten);
    count_resources(v, prog);
 
    /* The GLSL IR won't be needed anymore. */
