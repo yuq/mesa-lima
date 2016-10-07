@@ -413,6 +413,14 @@ void SWR_API SwrSetBackendState(
     SWR_BACKEND_STATE *pState);
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Set depth bounds state
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param pState - Pointer to state.
+void SWR_API SwrSetDepthBoundsState(
+    HANDLE hContext,
+    SWR_DEPTH_BOUNDS_STATE *pState);
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Set pixel shader state
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param pState - Pointer to state.

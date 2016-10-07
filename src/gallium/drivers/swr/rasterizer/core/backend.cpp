@@ -501,10 +501,22 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 simdmask clipCoverageMask = coverageMask & MASK;
                 // interpolate user clip distance if available
-                if(rastState.clipDistanceMask)
+                if (rastState.clipDistanceMask)
                 {
                     clipCoverageMask &= ~ComputeUserClipMask(rastState.clipDistanceMask, work.pUserClipBuffer,
-                                                             psContext.vI.center, psContext.vJ.center);
+                        psContext.vI.center, psContext.vJ.center);
+                }
+
+                if (state.depthHottileEnable && state.depthBoundsState.depthBoundsTestEnable)
+                {
+                    static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
+
+                    const simdscalar z = _simd_load_ps(reinterpret_cast<const float *>(pDepthBase));
+
+                    const float minz = state.depthBoundsState.depthBoundsTestMinValue;
+                    const float maxz = state.depthBoundsState.depthBoundsTestMaxValue;
+
+                    clipCoverageMask &= CalcDepthBoundsAcceptMask(z, minz, maxz);
                 }
 
                 simdscalar vCoverageMask = vMask(clipCoverageMask);
@@ -724,13 +736,25 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                             psContext.vI.sample, psContext.vJ.sample);
                     }
 
-                    simdscalar vCoverageMask = vMask(coverageMask);
-                    simdscalar depthPassMask = vCoverageMask;
-                    simdscalar stencilPassMask = vCoverageMask;
-
                     // offset depth/stencil buffers current sample
                     uint8_t *pDepthSample = pDepthBase + RasterTileDepthOffset(sample);
                     uint8_t *pStencilSample = pStencilBase + RasterTileStencilOffset(sample);
+
+                    if (state.depthHottileEnable && state.depthBoundsState.depthBoundsTestEnable)
+                    {
+                        static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
+
+                        const simdscalar z = _simd_load_ps(reinterpret_cast<const float *>(pDepthSample));
+
+                        const float minz = state.depthBoundsState.depthBoundsTestMinValue;
+                        const float maxz = state.depthBoundsState.depthBoundsTestMaxValue;
+
+                        coverageMask &= CalcDepthBoundsAcceptMask(z, minz, maxz);
+                    }
+
+                    simdscalar vCoverageMask = vMask(coverageMask);
+                    simdscalar depthPassMask = vCoverageMask;
+                    simdscalar stencilPassMask = vCoverageMask;
 
                     // Early-Z?
                     if (T::bCanEarlyZ)
@@ -802,6 +826,8 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                 }
                 work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             }
+
+Endtile:
             AR_BEGIN(BEEndTile, pDC->drawId);
             if(T::InputCoverage == SWR_INPUT_COVERAGE_INNER_CONSERVATIVE)
             {
@@ -1113,12 +1139,24 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                             psContext.vI.sample, psContext.vJ.sample);
                     }
 
-                    simdscalar vCoverageMask = vMask(coverageMask);
-                    simdscalar stencilPassMask = vCoverageMask;
-
                     // offset depth/stencil buffers current sample
                     uint8_t *pDepthSample = pDepthBase + RasterTileDepthOffset(sample);
                     uint8_t *pStencilSample = pStencilBase + RasterTileStencilOffset(sample);
+
+                    if (state.depthHottileEnable && state.depthBoundsState.depthBoundsTestEnable)
+                    {
+                        static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
+
+                        const simdscalar z = _simd_load_ps(reinterpret_cast<const float *>(pDepthSample));
+
+                        const float minz = state.depthBoundsState.depthBoundsTestMinValue;
+                        const float maxz = state.depthBoundsState.depthBoundsTestMaxValue;
+
+                        coverageMask &= CalcDepthBoundsAcceptMask(z, minz, maxz);
+                    }
+
+                    simdscalar vCoverageMask = vMask(coverageMask);
+                    simdscalar stencilPassMask = vCoverageMask;
 
                     AR_BEGIN(BEEarlyDepthTest, pDC->drawId);
                     simdscalar depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
@@ -1131,6 +1169,8 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                     uint32_t statCount = _mm_popcnt_u32(statMask);
                     UPDATE_STAT(DepthPassCount, statCount);
                 }
+
+Endtile:
                 work.coverageMask[sample] >>= (SIMD_TILE_Y_DIM * SIMD_TILE_X_DIM);
             }
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;

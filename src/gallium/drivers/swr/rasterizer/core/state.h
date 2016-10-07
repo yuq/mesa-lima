@@ -1079,3 +1079,12 @@ struct SWR_PS_STATE
     uint32_t forceEarlyZ        : 1;    // force execution of early depth/stencil test
 
 };
+
+// depth bounds state
+struct SWR_DEPTH_BOUNDS_STATE
+{
+    bool    depthBoundsTestEnable;
+    float   depthBoundsTestMinValue;
+    float   depthBoundsTestMaxValue;
+};
+

@@ -286,6 +286,8 @@ OSALIGNLINE(struct) API_STATE
     // Backend state
     SWR_BACKEND_STATE       backendState;
 
+    SWR_DEPTH_BOUNDS_STATE  depthBoundsState;
+
     // PS - Pixel shader state
     SWR_PS_STATE            psState;
 

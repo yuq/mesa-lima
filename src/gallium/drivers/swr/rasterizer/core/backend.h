@@ -410,6 +410,14 @@ INLINE void CalcCentroidBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CON
     psContext.vOneOverW.centroid = vplaneps(coeffs.vAOneOverW, coeffs.vBOneOverW, coeffs.vCOneOverW, psContext.vI.centroid, psContext.vJ.centroid);
 }
 
+INLINE simdmask CalcDepthBoundsAcceptMask(simdscalar z, float minz, float maxz)
+{
+    const simdscalar minzMask = _simd_cmpge_ps(z, _simd_set1_ps(minz));
+    const simdscalar maxzMask = _simd_cmple_ps(z, _simd_set1_ps(maxz));
+
+    return _simd_movemask_ps(_simd_and_ps(minzMask, maxzMask));
+}
+
 template<typename T>
 INLINE uint32_t GetNumOMSamples(SWR_MULTISAMPLE_COUNT blendSampleCount)
 {
@@ -489,6 +497,18 @@ struct PixelRateZTestLoop
             // offset depth/stencil buffers current sample
             uint8_t *pDepthSample = pDepthBase + RasterTileDepthOffset(sample);
             uint8_t * pStencilSample = pStencilBase + RasterTileStencilOffset(sample);
+
+            if (state.depthHottileEnable && state.depthBoundsState.depthBoundsTestEnable)
+            {
+                static_assert(KNOB_DEPTH_HOT_TILE_FORMAT == R32_FLOAT, "Unsupported depth hot tile format");
+
+                const simdscalar z = _simd_load_ps(reinterpret_cast<const float *>(pDepthSample));
+
+                const float minz = state.depthBoundsState.depthBoundsTestMinValue;
+                const float maxz = state.depthBoundsState.depthBoundsTestMaxValue;
+
+                vCoverageMask[sample] = _simd_and_ps(vCoverageMask[sample], vMask(CalcDepthBoundsAcceptMask(z, minz, maxz)));
+            }
 
             // ZTest for this sample
             ///@todo Need to uncomment out this bucket.

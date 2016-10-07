@@ -422,6 +422,10 @@ void SetupDefaultState(SWR_CONTEXT *pContext)
 
     pState->rastState.cullMode = SWR_CULLMODE_NONE;
     pState->rastState.frontWinding = SWR_FRONTWINDING_CCW;
+
+    pState->depthBoundsState.depthBoundsTestEnable = false;
+    pState->depthBoundsState.depthBoundsTestMinValue = 0.0f;
+    pState->depthBoundsState.depthBoundsTestMaxValue = 1.0f;
 }
 
 void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint64_t userData2, uint64_t userData3)
@@ -626,6 +630,15 @@ void SwrSetBackendState(
     API_STATE* pState = GetDrawState(GetContext(hContext));
 
     pState->backendState = *pBEState;
+}
+
+void SwrSetDepthBoundsState(
+    HANDLE hContext,
+    SWR_DEPTH_BOUNDS_STATE *pDBState)
+{
+    API_STATE* pState = GetDrawState(GetContext(hContext));
+
+    pState->depthBoundsState = *pDBState;
 }
 
 void SwrSetPixelShaderState(
