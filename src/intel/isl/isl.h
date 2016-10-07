@@ -358,7 +358,7 @@ enum isl_format {
     * actual hardware formats *must* come before these in the list.
     */
 
-   /* Formats for color compression surfaces */
+   /* Formats for auxiliary surfaces */
    ISL_FORMAT_HIZ,
    ISL_FORMAT_MCS_2X,
    ISL_FORMAT_MCS_4X,
