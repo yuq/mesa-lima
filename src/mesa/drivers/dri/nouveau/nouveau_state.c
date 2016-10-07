@@ -395,8 +395,7 @@ nouveau_tex_env(struct gl_context *ctx, GLenum target, GLenum pname,
 
 static void
 nouveau_tex_parameter(struct gl_context *ctx,
-		      struct gl_texture_object *t, GLenum pname,
-		      const GLfloat *params)
+		      struct gl_texture_object *t, GLenum pname)
 {
 	switch (pname) {
 	case GL_TEXTURE_MAG_FILTER:
