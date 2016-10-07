@@ -353,6 +353,14 @@ The integer capabilities:
   32-bit. If set to off, that means that a B5G6R5 + Z24 or RGBA8 + Z16
   combination will require a driver fallback, and should not be
   advertised in the GLX/EGL config list.
+* ``PIPE_CAP_TGSI_ARRAY_COMPONENTS``: If true, the driver interprets the
+  UsageMask of input and output declarations and allows declaring arrays
+  in overlapping ranges. The components must be a contiguous range, e.g. a
+  UsageMask of  xy or yzw is allowed, but xz or yw isn't. Declarations with
+  overlapping locations must have matching semantic names and indices, and
+  equal interpolation qualifiers.
+  Components may overlap, notably when the gaps in an array of dvec3 are
+  filled in.
 
 
 .. _pipe_capf:
