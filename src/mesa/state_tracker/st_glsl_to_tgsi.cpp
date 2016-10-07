@@ -2868,19 +2868,28 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
          } else
             l.writemask = WRITEMASK_XYZW;
       }
-   } else if (ir->lhs->type->is_scalar() &&
-              !ir->lhs->type->is_64bit() &&
-              ir->lhs->variable_referenced()->data.mode == ir_var_shader_out) {
-      /* FINISHME: This hack makes writing to gl_FragDepth, which lives in the
-       * FINISHME: W component of fragment shader output zero, work correctly.
-       */
-      l.writemask = WRITEMASK_XYZW;
    } else {
       int swizzles[4];
       int first_enabled_chan = 0;
       int rhs_chan = 0;
+      ir_variable *variable = ir->lhs->variable_referenced();
 
-      l.writemask = ir->write_mask;
+      if (shader->Stage == MESA_SHADER_FRAGMENT &&
+          variable->data.mode == ir_var_shader_out &&
+          (variable->data.location == FRAG_RESULT_DEPTH ||
+           variable->data.location == FRAG_RESULT_STENCIL)) {
+         assert(ir->lhs->type->is_scalar());
+         assert(ir->write_mask == WRITEMASK_X);
+
+         if (variable->data.location == FRAG_RESULT_DEPTH)
+            l.writemask = WRITEMASK_Z;
+         else {
+            assert(variable->data.location == FRAG_RESULT_STENCIL);
+            l.writemask = WRITEMASK_Y;
+         }
+      } else {
+         l.writemask = ir->write_mask;
+      }
 
       for (int i = 0; i < 4; i++) {
          if (l.writemask & (1 << i)) {
