@@ -914,42 +914,45 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
                                const struct blorp_params *params)
 {
 #if GEN_GEN >= 8
+   struct GENX(3DSTATE_WM_DEPTH_STENCIL) ds = {
+      GENX(3DSTATE_WM_DEPTH_STENCIL_header),
+   };
+#else
+   struct GENX(DEPTH_STENCIL_STATE) ds = { 0 };
+#endif
 
-   /* On gen8+, DEPTH_STENCIL state is simply an instruction */
-   blorp_emit(batch, GENX(3DSTATE_WM_DEPTH_STENCIL), ds);
-   return 0;
-
-#else /* GEN_GEN <= 7 */
+   ds.DepthBufferWriteEnable = params->depth.addr.buffer != NULL;
 
    /* See the following sections of the Sandy Bridge PRM, Volume 1, Part2:
     *   - 7.5.3.1 Depth Buffer Clear
     *   - 7.5.3.2 Depth Buffer Resolve
     *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
     */
-   struct GENX(DEPTH_STENCIL_STATE) ds = {
-      .DepthBufferWriteEnable = true,
-   };
-
    if (params->hiz_op == BLORP_HIZ_OP_DEPTH_RESOLVE) {
       ds.DepthTestEnable = true;
       ds.DepthTestFunction = COMPAREFUNCTION_NEVER;
    }
 
+#if GEN_GEN >= 8
+   uint32_t offset = 0;
+   uint32_t *dw = blorp_emit_dwords(batch,
+                                    GENX(3DSTATE_WM_DEPTH_STENCIL_length));
+   GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, dw, &ds);
+#else
    uint32_t offset;
    void *state = blorp_alloc_dynamic_state(batch, AUB_TRACE_DEPTH_STENCIL_STATE,
                                            GENX(DEPTH_STENCIL_STATE_length) * 4,
                                            64, &offset);
    GENX(DEPTH_STENCIL_STATE_pack)(NULL, state, &ds);
+#endif
 
-#if GEN_GEN >= 7
+#if GEN_GEN == 7
    blorp_emit(batch, GENX(3DSTATE_DEPTH_STENCIL_STATE_POINTERS), sp) {
       sp.PointertoDEPTH_STENCIL_STATE = offset;
    }
 #endif
 
    return offset;
-
-#endif /* GEN_GEN */
 }
 
 struct surface_state_info {
