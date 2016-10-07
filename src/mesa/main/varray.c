@@ -527,7 +527,7 @@ update_array(struct gl_context *ctx,
    /* The Stride and Ptr fields are not set by update_array_format() */
    array = &vao->VertexAttrib[attrib];
    array->Stride = stride;
-   array->Ptr = (const GLvoid *) ptr;
+   array->Ptr = ptr;
 
    /* Update the vertex buffer binding */
    effectiveStride = stride != 0 ? stride : array->_ElementSize;
