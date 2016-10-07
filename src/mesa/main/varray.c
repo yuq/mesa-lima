@@ -333,6 +333,9 @@ update_array_format(struct gl_context *ctx,
    GLbitfield typeBit;
    GLenum format = GL_RGBA;
 
+   /* at most, one of these bools can be true */
+   assert((int) normalized + (int) integer + (int) doubles <= 1);
+
    if (ctx->Array.LegalTypesMask == 0 || ctx->Array.LegalTypesMaskAPI != ctx->API) {
       /* Compute the LegalTypesMask only once, unless the context API has
        * changed, in which case we want to compute it again.  We can't do this
