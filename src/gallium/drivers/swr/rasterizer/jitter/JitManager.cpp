@@ -239,9 +239,12 @@ bool JitManager::SetupModuleFromIR(const uint8_t *pIR)
     SMDiagnostic Err;
     std::unique_ptr<Module> newModule = parseIR(pMem.get()->getMemBufferRef(), Err, mContext);
 
+    SWR_REL_ASSERT(
+        !(newModule == nullptr),
+        "Parse failed!\n"
+        "%s", Err.getMessage().data());
     if (newModule == nullptr)
     {
-        SWR_ASSERT(0, "Parse failed! Check Err for details.");
         return false;
     }
 
