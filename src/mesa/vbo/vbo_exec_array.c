@@ -128,11 +128,11 @@ check_draw_elements_data(struct gl_context *ctx, GLsizei count, GLenum elemType,
    GLint i;
    GLuint k;
 
-   if (_mesa_is_bufferobj(ctx->Array.VAO->IndexBufferObj)) {
+   if (_mesa_is_bufferobj(vao->IndexBufferObj)) {
       elemMap = ctx->Driver.MapBufferRange(ctx, 0,
-					   ctx->Array.VAO->IndexBufferObj->Size,
+					   vao->IndexBufferObj->Size,
 					   GL_MAP_READ_BIT,
-					   ctx->Array.VAO->IndexBufferObj,
+					   vao->IndexBufferObj,
                                            MAP_INTERNAL);
       elements = ADD_POINTERS(elements, elemMap);
    }
@@ -162,8 +162,7 @@ check_draw_elements_data(struct gl_context *ctx, GLsizei count, GLenum elemType,
    }
 
    if (_mesa_is_bufferobj(vao->IndexBufferObj)) {
-      ctx->Driver.UnmapBuffer(ctx, ctx->Array.VAO->IndexBufferObj,
-                              MAP_INTERNAL);
+      ctx->Driver.UnmapBuffer(ctx, vao->IndexBufferObj, MAP_INTERNAL);
    }
 
    for (k = 0; k < VERT_ATTRIB_MAX; k++) {
