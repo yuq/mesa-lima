@@ -181,6 +181,8 @@ struct blorp_params
    uint32_t x1;
    uint32_t y1;
    float z;
+   uint8_t stencil_mask;
+   uint8_t stencil_ref;
    struct brw_blorp_surface_info depth;
    struct brw_blorp_surface_info stencil;
    uint32_t depth_format;

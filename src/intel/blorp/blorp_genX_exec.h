@@ -891,11 +891,17 @@ static uint32_t
 blorp_emit_color_calc_state(struct blorp_batch *batch,
                             const struct blorp_params *params)
 {
+   struct GENX(COLOR_CALC_STATE) cc = { 0 };
+
+#if GEN_GEN <= 8
+   cc.StencilReferenceValue = params->stencil_ref;
+#endif
+
    uint32_t offset;
    void *state = blorp_alloc_dynamic_state(batch, AUB_TRACE_CC_STATE,
                                            GENX(COLOR_CALC_STATE_length) * 4,
                                            64, &offset);
-   memset(state, 0, GENX(COLOR_CALC_STATE_length) * 4);
+   GENX(COLOR_CALC_STATE_pack)(NULL, state, &cc);
 
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_CC_STATE_POINTERS), sp) {
@@ -921,16 +927,44 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
    struct GENX(DEPTH_STENCIL_STATE) ds = { 0 };
 #endif
 
-   ds.DepthBufferWriteEnable = params->depth.addr.buffer != NULL;
+   if (params->depth.addr.buffer) {
+      ds.DepthBufferWriteEnable = true;
 
-   /* See the following sections of the Sandy Bridge PRM, Volume 1, Part2:
-    *   - 7.5.3.1 Depth Buffer Clear
-    *   - 7.5.3.2 Depth Buffer Resolve
-    *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
-    */
-   if (params->hiz_op == BLORP_HIZ_OP_DEPTH_RESOLVE) {
-      ds.DepthTestEnable = true;
-      ds.DepthTestFunction = COMPAREFUNCTION_NEVER;
+      switch (params->hiz_op) {
+      case BLORP_HIZ_OP_NONE:
+         ds.DepthTestEnable = true;
+         ds.DepthTestFunction = COMPAREFUNCTION_ALWAYS;
+         break;
+
+      /* See the following sections of the Sandy Bridge PRM, Volume 2, Part1:
+       *   - 7.5.3.1 Depth Buffer Clear
+       *   - 7.5.3.2 Depth Buffer Resolve
+       *   - 7.5.3.3 Hierarchical Depth Buffer Resolve
+       */
+      case BLORP_HIZ_OP_DEPTH_RESOLVE:
+         ds.DepthTestEnable = true;
+         ds.DepthTestFunction = COMPAREFUNCTION_NEVER;
+         break;
+
+      case BLORP_HIZ_OP_DEPTH_CLEAR:
+      case BLORP_HIZ_OP_HIZ_RESOLVE:
+         ds.DepthTestEnable = false;
+         break;
+      }
+   }
+
+   if (params->stencil.addr.buffer) {
+      ds.StencilBufferWriteEnable = true;
+      ds.StencilTestEnable = true;
+      ds.DoubleSidedStencilEnable = false;
+
+      ds.StencilTestFunction = COMPAREFUNCTION_ALWAYS;
+      ds.StencilPassDepthPassOp = STENCILOP_REPLACE;
+
+      ds.StencilWriteMask = params->stencil_mask;
+#if GEN_GEN >= 9
+      ds.StencilReferenceValue = params->stencil_ref;
+#endif
    }
 
 #if GEN_GEN >= 8
@@ -1186,8 +1220,8 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
 
    if (params->wm_prog_data) {
       blend_state_offset = blorp_emit_blend_state(batch, params);
-      color_calc_state_offset = blorp_emit_color_calc_state(batch, params);
    }
+   color_calc_state_offset = blorp_emit_color_calc_state(batch, params);
    depth_stencil_state_offset = blorp_emit_depth_stencil_state(batch, params);
 
 #if GEN_GEN <= 6
