@@ -174,9 +174,9 @@ blorp_emit_vertex_data(struct blorp_batch *batch,
                        uint32_t *size)
 {
    const float vertices[] = {
-      /* v0 */ (float)params->x1, (float)params->y1,
-      /* v1 */ (float)params->x0, (float)params->y1,
-      /* v2 */ (float)params->x0, (float)params->y0,
+      /* v0 */ (float)params->x1, (float)params->y1, params->z,
+      /* v1 */ (float)params->x0, (float)params->y1, params->z,
+      /* v2 */ (float)params->x0, (float)params->y0, params->z,
    };
 
    void *data = blorp_alloc_vertex_buffer(batch, sizeof(vertices), addr);
@@ -228,7 +228,7 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    uint32_t size;
    blorp_emit_vertex_data(batch, params, &vb[0].BufferStartingAddress, &size);
    vb[0].VertexBufferIndex = 0;
-   vb[0].BufferPitch = 2 * sizeof(float);
+   vb[0].BufferPitch = 3 * sizeof(float);
    vb[0].VertexBufferMOCS = batch->blorp->mocs.vb;
 #if GEN_GEN >= 7
    vb[0].AddressModifyEnable = true;
@@ -347,11 +347,11 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 
    ve[1].VertexBufferIndex = 0;
    ve[1].Valid = true;
-   ve[1].SourceElementFormat = ISL_FORMAT_R32G32_FLOAT;
+   ve[1].SourceElementFormat = ISL_FORMAT_R32G32B32_FLOAT;
    ve[1].SourceElementOffset = 0;
    ve[1].Component0Control = VFCOMP_STORE_SRC;
    ve[1].Component1Control = VFCOMP_STORE_SRC;
-   ve[1].Component2Control = VFCOMP_STORE_0;
+   ve[1].Component2Control = VFCOMP_STORE_SRC;
    ve[1].Component3Control = VFCOMP_STORE_1_FP;
 
    for (unsigned i = 0; i < num_varyings; ++i) {
