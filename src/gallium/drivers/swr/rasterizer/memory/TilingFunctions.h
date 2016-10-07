@@ -565,6 +565,8 @@ uint32_t ComputeSurfaceOffset(uint32_t x, uint32_t y, uint32_t z, uint32_t array
     return (uint32_t) NULL;
 }
 
+typedef void*(*PFN_COMPUTESURFADDR)(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, const SWR_SURFACE_STATE*);
+
 //////////////////////////////////////////////////////////////////////////
 /// @brief Computes surface address at the given location and lod
 /// @param x - x location in pixels
@@ -573,7 +575,7 @@ uint32_t ComputeSurfaceOffset(uint32_t x, uint32_t y, uint32_t z, uint32_t array
 /// @param array - array slice for 1D and 2D surfaces
 /// @param lod - level of detail
 /// @param pState - pointer to the surface state
-template<bool UseCachedOffsets>
+template<bool UseCachedOffsets, bool IsRead>
 INLINE
 void* ComputeSurfaceAddress(uint32_t x, uint32_t y, uint32_t z, uint32_t array, uint32_t sampleNum, uint32_t lod, const SWR_SURFACE_STATE *pState)
 {

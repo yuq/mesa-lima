@@ -121,6 +121,18 @@ MEMORY_CXX_SOURCES := \
 	rasterizer/memory/ClearTile.cpp \
 	rasterizer/memory/Convert.h \
 	rasterizer/memory/LoadTile.cpp \
+	rasterizer/memory/LoadTile.h \
+	rasterizer/memory/LoadTile_Linear.cpp \
+	rasterizer/memory/LoadTile_TileX.cpp \
+	rasterizer/memory/LoadTile_TileY.cpp \
 	rasterizer/memory/StoreTile.cpp \
+	rasterizer/memory/StoreTile.h \
+	rasterizer/memory/StoreTile_Linear2.cpp \
+	rasterizer/memory/StoreTile_Linear.cpp \
+	rasterizer/memory/StoreTile_TileW.cpp \
+	rasterizer/memory/StoreTile_TileX2.cpp \
+	rasterizer/memory/StoreTile_TileX.cpp \
+	rasterizer/memory/StoreTile_TileY2.cpp \
+	rasterizer/memory/StoreTile_TileY.cpp \
 	rasterizer/memory/TilingFunctions.h \
 	rasterizer/memory/tilingtraits.h
