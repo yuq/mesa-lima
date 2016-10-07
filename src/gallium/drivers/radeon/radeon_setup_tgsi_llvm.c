@@ -680,7 +680,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	{
 		unsigned idx;
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
-			if (ctx->load_input) {
+			if (ctx->load_input &&
+			    ctx->input_decls[idx].Declaration.File != TGSI_FILE_INPUT) {
 				ctx->input_decls[idx] = *decl;
 
 				if (bld_base->info->processor != PIPE_SHADER_FRAGMENT)
@@ -706,6 +707,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
 			assert(idx < RADEON_LLVM_MAX_OUTPUTS);
+			if (ctx->soa.outputs[idx][0])
+				continue;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 				ctx->soa.outputs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
