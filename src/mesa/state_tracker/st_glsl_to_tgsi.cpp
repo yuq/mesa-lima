@@ -340,25 +340,38 @@ public:
 static st_src_reg undef_src = st_src_reg(PROGRAM_UNDEFINED, 0, GLSL_TYPE_ERROR);
 static st_dst_reg undef_dst = st_dst_reg(PROGRAM_UNDEFINED, SWIZZLE_NOOP, GLSL_TYPE_ERROR);
 
-struct array_decl {
+struct inout_decl {
    unsigned mesa_index;
-   unsigned array_id;
-   unsigned array_size;
-   enum glsl_base_type array_type;
+   unsigned array_id; /* TGSI ArrayID; 1-based: 0 means not an array */
+   unsigned size;
+   enum glsl_base_type base_type;
+   ubyte usage_mask; /* GLSL-style usage-mask,  i.e. single bit per double */
 };
 
-static enum glsl_base_type
-find_array_type(struct array_decl *arrays, unsigned count, unsigned array_id)
+static struct inout_decl *
+find_inout_array(struct inout_decl *decls, unsigned count, unsigned array_id)
 {
-   unsigned i;
+   assert(array_id != 0);
 
-   for (i = 0; i < count; i++) {
-      struct array_decl *decl = &arrays[i];
+   for (unsigned i = 0; i < count; i++) {
+      struct inout_decl *decl = &decls[i];
 
       if (array_id == decl->array_id) {
-         return decl->array_type;
+         return decl;
       }
    }
+
+   return NULL;
+}
+
+static enum glsl_base_type
+find_array_type(struct inout_decl *decls, unsigned count, unsigned array_id)
+{
+   if (!array_id)
+      return GLSL_TYPE_ERROR;
+   struct inout_decl *decl = find_inout_array(decls, count, array_id);
+   if (decl)
+      return decl->base_type;
    return GLSL_TYPE_ERROR;
 }
 
@@ -386,9 +399,11 @@ public:
    unsigned max_num_arrays;
    unsigned next_array;
 
-   struct array_decl input_arrays[PIPE_MAX_SHADER_INPUTS];
+   struct inout_decl inputs[4 * PIPE_MAX_SHADER_INPUTS];
+   unsigned num_inputs;
    unsigned num_input_arrays;
-   struct array_decl output_arrays[PIPE_MAX_SHADER_OUTPUTS];
+   struct inout_decl outputs[4 * PIPE_MAX_SHADER_OUTPUTS];
+   unsigned num_outputs;
    unsigned num_output_arrays;
 
    int num_address_regs;
@@ -736,7 +751,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    for (j = 0; j < 2; j++) {
       dst_is_64bit[j] = glsl_base_type_is_64bit(inst->dst[j].type);
       if (!dst_is_64bit[j] && inst->dst[j].file == PROGRAM_OUTPUT && inst->dst[j].type == GLSL_TYPE_ARRAY) {
-         enum glsl_base_type type = find_array_type(this->output_arrays, this->num_output_arrays, inst->dst[j].array_id);
+         enum glsl_base_type type = find_array_type(this->outputs, this->num_outputs, inst->dst[j].array_id);
          if (glsl_base_type_is_64bit(type))
             dst_is_64bit[j] = true;
       }
@@ -2324,15 +2339,15 @@ glsl_to_tgsi_visitor::visit(ir_swizzle *ir)
  * for patch inputs), so only the array element type is considered.
  */
 static bool
-is_inout_array(unsigned stage, ir_variable *var, bool *is_2d)
+is_inout_array(unsigned stage, ir_variable *var, bool *remove_array)
 {
    const glsl_type *type = var->type;
+
+   *remove_array = false;
 
    if ((stage == MESA_SHADER_VERTEX && var->data.mode == ir_var_shader_in) ||
        (stage == MESA_SHADER_FRAGMENT && var->data.mode == ir_var_shader_out))
       return false;
-
-   *is_2d = false;
 
    if (((stage == MESA_SHADER_GEOMETRY && var->data.mode == ir_var_shader_in) ||
         (stage == MESA_SHADER_TESS_EVAL && var->data.mode == ir_var_shader_in) ||
@@ -2342,7 +2357,7 @@ is_inout_array(unsigned stage, ir_variable *var, bool *is_2d)
          return false; /* a system value probably */
 
       type = var->type->fields.array;
-      *is_2d = true;
+      *remove_array = true;
    }
 
    return type->is_array() || type->is_matrix();
@@ -2353,7 +2368,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 {
    variable_storage *entry = find_variable_storage(ir->var);
    ir_variable *var = ir->var;
-   bool is_2d;
+   bool remove_array;
 
    if (!entry) {
       switch (var->data.mode) {
@@ -2362,7 +2377,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
                                                var->data.param_index);
          this->variables.push_tail(entry);
          break;
-      case ir_var_shader_in:
+      case ir_var_shader_in: {
          /* The linker assigns locations for varyings and attributes,
           * including deprecated builtins (like gl_Color), user-assign
           * generic attributes (glBindVertexLocation), and
@@ -2370,63 +2385,75 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
           */
          assert(var->data.location != -1);
 
-         if (is_inout_array(shader->Stage, var, &is_2d)) {
-            struct array_decl *decl = &input_arrays[num_input_arrays];
+         const glsl_type *type_without_array = var->type->without_array();
+         struct inout_decl *decl = &inputs[num_inputs];
+         unsigned num_components;
+         num_inputs++;
 
-            decl->mesa_index = var->data.location;
+         if (type_without_array->vector_elements)
+            num_components = type_without_array->vector_elements;
+         else
+            num_components = 4;
+
+         decl->mesa_index = var->data.location;
+         decl->base_type = type_without_array->base_type;
+         decl->usage_mask = u_bit_consecutive(0, num_components);
+
+         if (is_inout_array(shader->Stage, var, &remove_array)) {
             decl->array_id = num_input_arrays + 1;
-            if (is_2d) {
-               decl->array_size = type_size(var->type->fields.array);
-               decl->array_type = var->type->fields.array->without_array()->base_type;
-            } else {
-               decl->array_size = type_size(var->type);
-               decl->array_type = var->type->without_array()->base_type;
-            }
             num_input_arrays++;
+         } else {
+            decl->array_id = 0;
+         }
 
-            entry = new(mem_ctx) variable_storage(var,
-                                                  PROGRAM_INPUT,
-                                                  var->data.location,
-                                                  decl->array_id);
-         }
-         else {
-            entry = new(mem_ctx) variable_storage(var,
-                                                  PROGRAM_INPUT,
-                                                  var->data.location);
-         }
+         if (remove_array)
+            decl->size = type_size(var->type->fields.array);
+         else
+            decl->size = type_size(var->type);
+
+         entry = new(mem_ctx) variable_storage(var,
+                                               PROGRAM_INPUT,
+                                               decl->mesa_index,
+                                               decl->array_id);
          this->variables.push_tail(entry);
          break;
-      case ir_var_shader_out:
+      }
+      case ir_var_shader_out: {
          assert(var->data.location != -1);
 
-         if (is_inout_array(shader->Stage, var, &is_2d)) {
-            struct array_decl *decl = &output_arrays[num_output_arrays];
+         const glsl_type *type_without_array = var->type->without_array();
+         struct inout_decl *decl = &outputs[num_outputs];
+         unsigned num_components;
+         num_outputs++;
 
-            decl->mesa_index = var->data.location;
+         if (type_without_array->vector_elements)
+            num_components = type_without_array->vector_elements;
+         else
+            num_components = 4;
+
+         decl->mesa_index = var->data.location + FRAG_RESULT_MAX * var->data.index;
+         decl->base_type = type_without_array->base_type;
+         decl->usage_mask = u_bit_consecutive(0, num_components);
+
+         if (is_inout_array(shader->Stage, var, &remove_array)) {
             decl->array_id = num_output_arrays + 1;
-            if (is_2d) {
-               decl->array_size = type_size(var->type->fields.array);
-               decl->array_type = var->type->fields.array->without_array()->base_type;
-            } else {
-               decl->array_size = type_size(var->type);
-               decl->array_type = var->type->without_array()->base_type;
-            }
             num_output_arrays++;
+         } else {
+            decl->array_id = 0;
+         }
 
-            entry = new(mem_ctx) variable_storage(var,
-                                                  PROGRAM_OUTPUT,
-                                                  var->data.location,
-                                                  decl->array_id);
-         }
-         else {
-            entry = new(mem_ctx) variable_storage(var,
-                                                  PROGRAM_OUTPUT,
-                                                  var->data.location
-                                                  + FRAG_RESULT_MAX *
-                                                    var->data.index);
-         }
+         if (remove_array)
+            decl->size = type_size(var->type->fields.array);
+         else
+            decl->size = type_size(var->type);
+
+         entry = new(mem_ctx) variable_storage(var,
+                                               PROGRAM_OUTPUT,
+                                               decl->mesa_index,
+                                               decl->array_id);
          this->variables.push_tail(entry);
          break;
+      }
       case ir_var_system_value:
          entry = new(mem_ctx) variable_storage(var,
                                                PROGRAM_SYSTEM_VALUE,
@@ -2457,7 +2484,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 }
 
 static void
-shrink_array_declarations(struct array_decl *arrays, unsigned count,
+shrink_array_declarations(struct inout_decl *decls, unsigned count,
                           GLbitfield64* usage_mask,
                           GLbitfield64 double_usage_mask,
                           GLbitfield* patch_usage_mask)
@@ -2469,10 +2496,12 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
     * of the arrays. For example, mat4[3] where only mat[1] is used.
     */
    for (i = 0; i < count; i++) {
-      struct array_decl *decl = &arrays[i];
+      struct inout_decl *decl = &decls[i];
+      if (!decl->array_id)
+         continue;
 
       /* Shrink the beginning. */
-      for (j = 0; j < (int)decl->array_size; j++) {
+      for (j = 0; j < (int)decl->size; j++) {
          if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
             if (*patch_usage_mask &
                 BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
@@ -2486,12 +2515,12 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
          }
 
          decl->mesa_index++;
-         decl->array_size--;
+         decl->size--;
          j--;
       }
 
       /* Shrink the end. */
-      for (j = decl->array_size-1; j >= 0; j--) {
+      for (j = decl->size-1; j >= 0; j--) {
          if (decl->mesa_index >= VARYING_SLOT_PATCH0) {
             if (*patch_usage_mask &
                 BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j))
@@ -2504,7 +2533,7 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
                break;
          }
 
-         decl->array_size--;
+         decl->size--;
       }
 
       /* When not all entries of an array are accessed, we mark them as used
@@ -2516,7 +2545,7 @@ shrink_array_declarations(struct array_decl *arrays, unsigned count,
        * opportunity here by replacing the array declaration with non-array
        * declarations of those slots that are actually used.
        */
-      for (j = 1; j < (int)decl->array_size; ++j) {
+      for (j = 1; j < (int)decl->size; ++j) {
          if (decl->mesa_index >= VARYING_SLOT_PATCH0)
             *patch_usage_mask |= BITFIELD64_BIT(decl->mesa_index - VARYING_SLOT_PATCH0 + j);
          else
@@ -4341,6 +4370,8 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    array_sizes = NULL;
    max_num_arrays = 0;
    next_array = 0;
+   num_inputs = 0;
+   num_outputs = 0;
    num_input_arrays = 0;
    num_output_arrays = 0;
    next_signature_id = 1;
@@ -5213,8 +5244,10 @@ struct st_translate {
    struct ureg_src shared_memory;
    struct tgsi_texture_offset tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
    unsigned *array_sizes;
-   struct array_decl *input_arrays;
-   struct array_decl *output_arrays;
+   struct inout_decl *input_decls;
+   unsigned num_input_decls;
+   struct inout_decl *output_decls;
+   unsigned num_output_decls;
 
    const GLuint *inputMapping;
    const GLuint *outputMapping;
@@ -5443,13 +5476,15 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
          return t->outputs[t->outputMapping[index]];
       }
       else {
-         struct array_decl *decl = &t->output_arrays[array_id-1];
+         struct inout_decl *decl = find_inout_array(t->output_decls, t->num_output_decls, array_id);
          unsigned mesa_index = decl->mesa_index;
          int slot = t->outputMapping[mesa_index];
 
          assert(slot != -1 && t->outputs[slot].File == TGSI_FILE_OUTPUT);
-         assert(t->outputs[slot].ArrayID == array_id);
-         return ureg_dst_array_offset(t->outputs[slot], index - mesa_index);
+
+         struct ureg_dst dst = t->outputs[slot];
+         dst.ArrayID = array_id;
+         return ureg_dst_array_offset(dst, index - mesa_index);
       }
 
    case PROGRAM_ADDRESS:
@@ -5506,13 +5541,15 @@ src_register(struct st_translate *t, const st_src_reg *reg)
          return t->inputs[t->inputMapping[index] + double_reg2];
       }
       else {
-         struct array_decl *decl = &t->input_arrays[reg->array_id-1];
+         struct inout_decl *decl = find_inout_array(t->input_decls, t->num_input_decls, reg->array_id);
          unsigned mesa_index = decl->mesa_index;
          int slot = t->inputMapping[mesa_index];
 
          assert(slot != -1 && t->inputs[slot].File == TGSI_FILE_INPUT);
-         assert(t->inputs[slot].ArrayID == reg->array_id);
-         return ureg_src_array_offset(t->inputs[slot], index + double_reg2 - mesa_index);
+
+         struct ureg_src src = t->inputs[slot];
+         src.ArrayID = reg->array_id;
+         return ureg_src_array_offset(src, index + double_reg2 - mesa_index);
       }
 
    case PROGRAM_ADDRESS:
@@ -6007,25 +6044,6 @@ emit_face_var(struct gl_context *ctx, struct st_translate *t)
    t->inputs[t->inputMapping[VARYING_SLOT_FACE]] = ureg_src(face_temp);
 }
 
-static bool
-find_array(unsigned attr, struct array_decl *arrays, unsigned count,
-           unsigned *array_id, unsigned *array_size)
-{
-   unsigned i;
-
-   for (i = 0; i < count; i++) {
-      struct array_decl *decl = &arrays[i];
-
-      if (attr == decl->mesa_index) {
-         *array_id = decl->array_id;
-         *array_size = decl->array_size;
-         assert(*array_size);
-         return true;
-      }
-   }
-   return false;
-}
-
 static void
 emit_compute_block_size(const struct gl_program *program,
                         struct ureg_program *ureg) {
@@ -6109,48 +6127,36 @@ st_translate_program(
     */
    switch (procType) {
    case PIPE_SHADER_FRAGMENT:
-      for (i = 0; i < numInputs; i++) {
-         unsigned array_id = 0;
-         unsigned array_size;
-
-         if (find_array(inputSlotToAttr[i], program->input_arrays,
-                        program->num_input_arrays, &array_id, &array_size)) {
-            /* We've found an array. Declare it so. */
-            t->inputs[i] = ureg_DECL_fs_input_cyl_centroid(ureg,
-                              inputSemanticName[i], inputSemanticIndex[i],
-                              interpMode[i], 0, interpLocation[i],
-                              array_id, array_size);
-
-            GLuint base_attr = inputSlotToAttr[i];
-            while (i + 1 < numInputs &&
-                   inputSlotToAttr[i + 1] < base_attr + array_size)
-               ++i;
-         }
-         else {
-            t->inputs[i] = ureg_DECL_fs_input_cyl_centroid(ureg,
-                              inputSemanticName[i], inputSemanticIndex[i],
-                              interpMode[i], 0, interpLocation[i], 0, 1);
-         }
-      }
-      break;
    case PIPE_SHADER_GEOMETRY:
    case PIPE_SHADER_TESS_EVAL:
    case PIPE_SHADER_TESS_CTRL:
-      for (i = 0; i < numInputs; i++) {
-         unsigned array_id = 0;
-         unsigned array_size;
+      for (i = 0; i < program->num_inputs; ++i) {
+         struct inout_decl *decl = &program->inputs[i];
+         unsigned slot = inputMapping[decl->mesa_index];
+         struct ureg_src src;
+         ubyte tgsi_usage_mask = decl->usage_mask;
 
-         if (find_array(inputSlotToAttr[i], program->input_arrays,
-                        program->num_input_arrays, &array_id, &array_size)) {
-            /* We've found an array. Declare it so. */
-            t->inputs[i] = ureg_DECL_input(ureg, inputSemanticName[i],
-                                           inputSemanticIndex[i],
-                                           array_id, array_size);
-            i += array_size - 1;
+         if (glsl_base_type_is_64bit(decl->base_type)) {
+            if (tgsi_usage_mask == 1)
+               tgsi_usage_mask = TGSI_WRITEMASK_XY;
+            else if (tgsi_usage_mask == 2)
+               tgsi_usage_mask = TGSI_WRITEMASK_ZW;
+            else
+               tgsi_usage_mask = TGSI_WRITEMASK_XYZW;
          }
-         else {
-            t->inputs[i] = ureg_DECL_input(ureg, inputSemanticName[i],
-                                           inputSemanticIndex[i], 0, 1);
+
+         src = ureg_DECL_fs_input_cyl_centroid_layout(ureg,
+                  inputSemanticName[slot], inputSemanticIndex[slot],
+                  interpMode ? interpMode[slot] : 0, 0, interpLocation ? interpLocation[slot] : 0,
+                  slot, tgsi_usage_mask, decl->array_id, decl->size);
+
+         for (unsigned j = 0; j < decl->size; ++j) {
+            if (t->inputs[slot + j].File != TGSI_FILE_INPUT) {
+               /* The ArrayID is set up in dst_register */
+               t->inputs[slot + j] = src;
+               t->inputs[slot + j].ArrayID = 0;
+               t->inputs[slot + j].Index += j;
+            }
          }
       }
       break;
@@ -6176,23 +6182,32 @@ st_translate_program(
    case PIPE_SHADER_TESS_EVAL:
    case PIPE_SHADER_TESS_CTRL:
    case PIPE_SHADER_VERTEX:
-      for (i = 0; i < numOutputs; i++) {
-         unsigned array_id = 0;
-         unsigned array_size;
+      for (i = 0; i < program->num_outputs; ++i) {
+         struct inout_decl *decl = &program->outputs[i];
+         unsigned slot = outputMapping[decl->mesa_index];
+         struct ureg_dst dst;
+         ubyte tgsi_usage_mask = decl->usage_mask;
 
-         if (find_array(outputSlotToAttr[i], program->output_arrays,
-                        program->num_output_arrays, &array_id, &array_size)) {
-            /* We've found an array. Declare it so. */
-            t->outputs[i] = ureg_DECL_output_array(ureg,
-                                                   outputSemanticName[i],
-                                                   outputSemanticIndex[i],
-                                                   array_id, array_size);
-            i += array_size - 1;
+         if (glsl_base_type_is_64bit(decl->base_type)) {
+            if (tgsi_usage_mask == 1)
+               tgsi_usage_mask = TGSI_WRITEMASK_XY;
+            else if (tgsi_usage_mask == 2)
+               tgsi_usage_mask = TGSI_WRITEMASK_ZW;
+            else
+               tgsi_usage_mask = TGSI_WRITEMASK_XYZW;
          }
-         else {
-            t->outputs[i] = ureg_DECL_output(ureg,
-                                             outputSemanticName[i],
-                                             outputSemanticIndex[i]);
+
+         dst = ureg_DECL_output_layout(ureg,
+                     outputSemanticName[slot], outputSemanticIndex[slot],
+                     slot, tgsi_usage_mask, decl->array_id, decl->size);
+
+         for (unsigned j = 0; j < decl->size; ++j) {
+            if (t->outputs[slot + j].File != TGSI_FILE_OUTPUT) {
+               /* The ArrayID is set up in dst_register */
+               t->outputs[slot + j] = dst;
+               t->outputs[slot + j].ArrayID = 0;
+               t->outputs[slot + j].Index += j;
+            }
          }
       }
       break;
@@ -6315,8 +6330,10 @@ st_translate_program(
    }
 
    t->array_sizes = program->array_sizes;
-   t->input_arrays = program->input_arrays;
-   t->output_arrays = program->output_arrays;
+   t->input_decls = program->inputs;
+   t->num_input_decls = program->num_inputs;
+   t->output_decls = program->outputs;
+   t->num_output_decls = program->num_outputs;
 
    /* Emit constants and uniforms.  TGSI uses a single index space for these,
     * so we put all the translated regs in t->constants.
@@ -6648,9 +6665,9 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    prog->NumInstructions = 0;
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
-   shrink_array_declarations(v->input_arrays, v->num_input_arrays,
+   shrink_array_declarations(v->inputs, v->num_inputs,
                              &prog->InputsRead, prog->DoubleInputsRead, &prog->PatchInputsRead);
-   shrink_array_declarations(v->output_arrays, v->num_output_arrays,
+   shrink_array_declarations(v->outputs, v->num_outputs,
                              &prog->OutputsWritten, 0ULL, &prog->PatchOutputsWritten);
    count_resources(v, prog);
 
