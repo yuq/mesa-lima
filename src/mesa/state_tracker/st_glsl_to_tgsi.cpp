@@ -255,6 +255,7 @@ public:
    ir_instruction *ir;
    GLboolean cond_update;
    bool saturate;
+   bool is_64bit_expanded;
    st_src_reg sampler; /**< sampler register */
    int sampler_base;
    int sampler_array_size; /**< 1-based size of sampler array, 1 if not array */
@@ -670,6 +671,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    inst->src[1] = src1;
    inst->src[2] = src2;
    inst->src[3] = src3;
+   inst->is_64bit_expanded = false;
    inst->ir = ir;
    inst->dead_mask = 0;
    /* default to float, for paths where this is not initialized
@@ -790,6 +792,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
             dinst->prev = NULL;
          }
          this->instructions.push_tail(dinst);
+         dinst->is_64bit_expanded = true;
 
          /* modify the destination if we are splitting */
          for (j = 0; j < 2; j++) {
@@ -2908,6 +2911,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
    } else if (ir->rhs->as_expression() &&
               this->instructions.get_tail() &&
               ir->rhs == ((glsl_to_tgsi_instruction *)this->instructions.get_tail())->ir &&
+              !((glsl_to_tgsi_instruction *)this->instructions.get_tail())->is_64bit_expanded &&
               type_size(ir->lhs->type) == 1 &&
               l.writemask == ((glsl_to_tgsi_instruction *)this->instructions.get_tail())->dst[0].writemask) {
       /* To avoid emitting an extra MOV when assigning an expression to a
