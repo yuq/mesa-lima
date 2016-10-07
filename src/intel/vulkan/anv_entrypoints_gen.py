@@ -222,7 +222,7 @@ anv_set_dispatch_devinfo(const struct gen_device_info *devinfo)
    dispatch_devinfo = *devinfo;
 }
 
-void * __attribute__ ((noinline))
+static void * __attribute__ ((noinline))
 anv_resolve_entrypoint(uint32_t index)
 {
    if (dispatch_devinfo.gen == 0) {

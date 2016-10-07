@@ -497,17 +497,7 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
                                       gl_shader_stage stage,
                                       unsigned per_thread_scratch);
 
-void *anv_resolve_entrypoint(uint32_t index);
-
 extern struct anv_dispatch_table dtable;
-
-#define ANV_CALL(func) ({ \
-   if (dtable.func == NULL) { \
-      size_t idx = offsetof(struct anv_dispatch_table, func) / sizeof(void *); \
-      dtable.entrypoints[idx] = anv_resolve_entrypoint(idx); \
-   } \
-   dtable.func; \
-})
 
 static inline void *
 anv_alloc(const VkAllocationCallbacks *alloc,

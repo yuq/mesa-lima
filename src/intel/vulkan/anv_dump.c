@@ -112,7 +112,11 @@ dump_image_do_blit(struct anv_device *device, struct dump_image *image,
                    VkImageAspectFlagBits aspect,
                    unsigned miplevel, unsigned array_layer)
 {
-   ANV_CALL(CmdPipelineBarrier)(anv_cmd_buffer_to_handle(cmd_buffer),
+   PFN_vkCmdPipelineBarrier CmdPipelineBarrier =
+      (void *)anv_GetDeviceProcAddr(anv_device_to_handle(device),
+                                    "vkCmdPipelineBarrier");
+
+   CmdPipelineBarrier(anv_cmd_buffer_to_handle(cmd_buffer),
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       0, 0, NULL, 0, NULL, 1,
@@ -169,7 +173,7 @@ dump_image_do_blit(struct anv_device *device, struct dump_image *image,
 
    src->usage = old_usage;
 
-   ANV_CALL(CmdPipelineBarrier)(anv_cmd_buffer_to_handle(cmd_buffer),
+   CmdPipelineBarrier(anv_cmd_buffer_to_handle(cmd_buffer),
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       VK_PIPELINE_STAGE_TRANSFER_BIT,
       0, 0, NULL, 0, NULL, 1,
