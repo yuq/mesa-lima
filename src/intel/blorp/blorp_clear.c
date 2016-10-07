@@ -306,6 +306,75 @@ blorp_clear(struct blorp_batch *batch,
 }
 
 void
+blorp_clear_depth_stencil(struct blorp_batch *batch,
+                          const struct blorp_surf *depth,
+                          const struct blorp_surf *stencil,
+                          uint32_t level, uint32_t start_layer,
+                          uint32_t num_layers,
+                          uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
+                          bool clear_depth, float depth_value,
+                          uint8_t stencil_mask, uint8_t stencil_value)
+{
+   struct blorp_params params;
+   blorp_params_init(&params);
+
+   params.x0 = x0;
+   params.y0 = y0;
+   params.x1 = x1;
+   params.y1 = y1;
+
+   while (num_layers > 0) {
+      params.num_layers = num_layers;
+
+      if (stencil_mask) {
+         brw_blorp_surface_info_init(batch->blorp, &params.stencil, stencil,
+                                     level, start_layer,
+                                     ISL_FORMAT_UNSUPPORTED, true);
+         params.stencil_mask = stencil_mask;
+         params.stencil_ref = stencil_value;
+
+         params.dst.surf.samples = params.stencil.surf.samples;
+         params.dst.surf.logical_level0_px =
+            params.stencil.surf.logical_level0_px;
+         params.dst.view = params.depth.view;
+
+         /* We may be restricted on the number of layers we can bind at any
+          * one time.  In particular, Sandy Bridge has a maximum number of
+          * layers of 512 but a maximum 3D texture size is much larger.
+          */
+         if (params.stencil.view.array_len < params.num_layers)
+            params.num_layers = params.stencil.view.array_len;
+      }
+
+      if (clear_depth) {
+         brw_blorp_surface_info_init(batch->blorp, &params.depth, depth,
+                                     level, start_layer,
+                                     ISL_FORMAT_UNSUPPORTED, true);
+         params.z = depth_value;
+         params.depth_format =
+            isl_format_get_depth_format(depth->surf->format, false);
+
+         params.dst.surf.samples = params.depth.surf.samples;
+         params.dst.surf.logical_level0_px =
+            params.depth.surf.logical_level0_px;
+         params.dst.view = params.depth.view;
+
+         /* We may be restricted on the number of layers we can bind at any
+          * one time.  In particular, Sandy Bridge has a maximum number of
+          * layers of 512 but a maximum 3D texture size is much larger.
+          */
+         if (params.depth.view.array_len < params.num_layers)
+            params.num_layers = params.depth.view.array_len;
+      }
+
+      batch->blorp->exec(batch, &params);
+
+      start_layer += params.num_layers;
+      num_layers -= params.num_layers;
+   }
+}
+
+void
 blorp_ccs_resolve(struct blorp_batch *batch,
                   struct blorp_surf *surf, enum isl_format format)
 {

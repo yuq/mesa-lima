@@ -135,6 +135,16 @@ blorp_clear(struct blorp_batch *batch,
             const bool color_write_disable[4]);
 
 void
+blorp_clear_depth_stencil(struct blorp_batch *batch,
+                          const struct blorp_surf *depth,
+                          const struct blorp_surf *stencil,
+                          uint32_t level, uint32_t start_layer,
+                          uint32_t num_layers,
+                          uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
+                          bool clear_depth, float depth_value,
+                          uint8_t stencil_mask, uint8_t stencil_value);
+
+void
 blorp_ccs_resolve(struct blorp_batch *batch,
                   struct blorp_surf *surf, enum isl_format format);
 
