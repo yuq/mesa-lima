@@ -779,6 +779,17 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
    }
 
    blorp_emit(batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
+
+   /* 3DSTATE_CLEAR_PARAMS
+    *
+    * From the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE_CLEAR_PARAMS:
+    *   [DevSNB] 3DSTATE_CLEAR_PARAMS packet must follow the DEPTH_BUFFER_STATE
+    *   packet when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
+    */
+   blorp_emit(batch, GENX(3DSTATE_CLEAR_PARAMS), clear) {
+      clear.DepthClearValueValid = true;
+      clear.DepthClearValue = params->depth.clear_color.u32[0];
+   }
 }
 
 static uint32_t
@@ -1206,17 +1217,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
       }
       blorp_emit(batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hiz);
       blorp_emit(batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
-   }
-
-   /* 3DSTATE_CLEAR_PARAMS
-    *
-    * From the Sandybridge PRM, Volume 2, Part 1, Section 3DSTATE_CLEAR_PARAMS:
-    *   [DevSNB] 3DSTATE_CLEAR_PARAMS packet must follow the DEPTH_BUFFER_STATE
-    *   packet when HiZ is enabled and the DEPTH_BUFFER_STATE changes.
-    */
-   blorp_emit(batch, GENX(3DSTATE_CLEAR_PARAMS), clear) {
-      clear.DepthClearValueValid = true;
-      clear.DepthClearValue = params->depth.clear_color.u32[0];
+      blorp_emit(batch, GENX(3DSTATE_CLEAR_PARAMS), clear);
    }
 
    blorp_emit(batch, GENX(3DPRIMITIVE), prim) {
