@@ -214,22 +214,22 @@ for layer in [ "anv", "gen7", "gen75", "gen8", "gen9" ]:
     print "};\n"
 
 print """
-static const struct gen_device_info *dispatch_devinfo;
+static struct gen_device_info dispatch_devinfo;
 
 void
 anv_set_dispatch_devinfo(const struct gen_device_info *devinfo)
 {
-   dispatch_devinfo = devinfo;
+   dispatch_devinfo = *devinfo;
 }
 
 void * __attribute__ ((noinline))
 anv_resolve_entrypoint(uint32_t index)
 {
-   if (dispatch_devinfo == NULL) {
+   if (dispatch_devinfo.gen == 0) {
       return anv_layer.entrypoints[index];
    }
 
-   switch (dispatch_devinfo->gen) {
+   switch (dispatch_devinfo.gen) {
    case 9:
       if (gen9_layer.entrypoints[index])
          return gen9_layer.entrypoints[index];
@@ -239,7 +239,7 @@ anv_resolve_entrypoint(uint32_t index)
          return gen8_layer.entrypoints[index];
       /* fall through */
    case 7:
-      if (dispatch_devinfo->is_haswell && gen75_layer.entrypoints[index])
+      if (dispatch_devinfo.is_haswell && gen75_layer.entrypoints[index])
          return gen75_layer.entrypoints[index];
 
       if (gen7_layer.entrypoints[index])
