@@ -155,5 +155,18 @@ void anv_GetRenderAreaGranularity(
     VkRenderPass                                renderPass,
     VkExtent2D*                                 pGranularity)
 {
+   ANV_FROM_HANDLE(anv_render_pass, pass, renderPass);
+
+   /* This granularity satisfies HiZ fast clear alignment requirements
+    * for all sample counts.
+    */
+   for (unsigned i = 0; i < pass->subpass_count; ++i) {
+      if (pass->subpasses[i].depth_stencil_attachment !=
+          VK_ATTACHMENT_UNUSED) {
+         *pGranularity = (VkExtent2D) { .width = 8, .height = 4 };
+         return;
+      }
+   }
+
    *pGranularity = (VkExtent2D) { 1, 1 };
 }

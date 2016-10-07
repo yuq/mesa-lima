@@ -1322,8 +1322,27 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb);
    }
 
-   /* Clear the clear params. */
-   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp);
+   /* From the IVB PRM Vol2P1, 11.5.5.4 3DSTATE_CLEAR_PARAMS:
+    *
+    *    3DSTATE_CLEAR_PARAMS must always be programmed in the along with
+    *    the other Depth/Stencil state commands(i.e. 3DSTATE_DEPTH_BUFFER,
+    *    3DSTATE_STENCIL_BUFFER, or 3DSTATE_HIER_DEPTH_BUFFER)
+    *
+    * Testing also shows that some variant of this restriction may exist HSW+.
+    * On BDW+, it is not possible to emit 2 of these packets consecutively when
+    * both have DepthClearValueValid set. An analysis of such state programming
+    * on SKL showed that the GPU doesn't register the latter packet's clear
+    * value.
+    */
+   anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp) {
+      if (has_hiz) {
+         cp.DepthClearValueValid = true;
+         const uint32_t ds =
+            cmd_buffer->state.subpass->depth_stencil_attachment;
+         cp.DepthClearValue =
+            cmd_buffer->state.attachments[ds].clear_value.depthStencil.depth;
+      }
+   }
 }
 
 static void
@@ -1336,6 +1355,7 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
    genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_HIZ_RESOLVE);
+   genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_DEPTH_CLEAR);
 
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
