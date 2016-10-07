@@ -136,9 +136,9 @@ vertex_attrib_binding(struct gl_context *ctx,
    struct gl_array_attributes *array = &vao->VertexAttrib[attribIndex];
 
    if (!_mesa_is_bufferobj(vao->VertexBinding[bindingIndex].BufferObj))
-     vao->VertexAttribBufferMask &= ~VERT_BIT(attribIndex);
+      vao->VertexAttribBufferMask &= ~VERT_BIT(attribIndex);
    else
-     vao->VertexAttribBufferMask |= VERT_BIT(attribIndex);
+      vao->VertexAttribBufferMask |= VERT_BIT(attribIndex);
 
    if (array->BufferBindingIndex != bindingIndex) {
       const GLbitfield64 array_bit = VERT_BIT(attribIndex);
