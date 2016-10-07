@@ -162,44 +162,7 @@ genX(blorp_exec)(struct blorp_batch *batch,
 
    genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
 
-   if (cmd_buffer->state.current_pipeline != _3D) {
-#if GEN_GEN <= 7
-      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
-       * PIPELINE_SELECT [DevBWR+]":
-       *
-       *   Project: DEVSNB+
-       *
-       *   Software must ensure all the write caches are flushed through a
-       *   stalling PIPE_CONTROL command followed by another PIPE_CONTROL
-       *   command to invalidate read only caches prior to programming
-       *   MI_PIPELINE_SELECT command to change the Pipeline Select Mode.
-       */
-      blorp_emit(batch, GENX(PIPE_CONTROL), pc) {
-         pc.RenderTargetCacheFlushEnable  = true;
-         pc.DepthCacheFlushEnable         = true;
-         pc.DCFlushEnable                 = true;
-         pc.PostSyncOperation             = NoWrite;
-         pc.CommandStreamerStallEnable    = true;
-      }
-
-      blorp_emit(batch, GENX(PIPE_CONTROL), pc) {
-         pc.TextureCacheInvalidationEnable   = true;
-         pc.ConstantCacheInvalidationEnable  = true;
-         pc.StateCacheInvalidationEnable     = true;
-         pc.InstructionCacheInvalidateEnable = true;
-         pc.PostSyncOperation                = NoWrite;
-      }
-#endif
-
-      blorp_emit(batch, GENX(PIPELINE_SELECT), ps) {
-#if GEN_GEN >= 9
-         ps.MaskBits = 3;
-#endif
-         ps.PipelineSelection = _3D;
-      }
-
-      cmd_buffer->state.current_pipeline = _3D;
-   }
+   genX(flush_pipeline_select_3d)(cmd_buffer);
 
    blorp_exec(batch, params);
 
