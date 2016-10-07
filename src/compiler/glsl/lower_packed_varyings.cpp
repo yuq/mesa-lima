@@ -639,8 +639,12 @@ lower_packed_varyings_visitor::get_packed_varying_deref(
        * first time we visit each component.
        */
       if (this->gs_input_vertices == 0 || vertex_index == 0) {
-         ralloc_asprintf_append((char **) &this->packed_varyings[slot]->name,
-                                ",%s", name);
+         ir_variable *var = this->packed_varyings[slot];
+
+         if (var->is_name_ralloced())
+            ralloc_asprintf_append((char **) &var->name, ",%s", name);
+         else
+            var->name = ralloc_asprintf(var, "%s,%s", var->name, name);
       }
    }
 

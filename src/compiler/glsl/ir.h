@@ -599,7 +599,8 @@ public:
 
    inline bool is_name_ralloced() const
    {
-      return this->name != ir_variable::tmp_name;
+      return this->name != ir_variable::tmp_name &&
+             this->name != this->name_storage;
    }
 
    /**
@@ -624,6 +625,16 @@ public:
     */
    const char *name;
 
+private:
+   /**
+    * If the name length fits into name_storage, it's used, otherwise
+    * the name is ralloc'd. shader-db mining showed that 70% of variables
+    * fit here. This is a win over ralloc where only ralloc_header has
+    * 20 bytes on 64-bit (28 bytes with DEBUG), and we can also skip malloc.
+    */
+   char name_storage[16];
+
+public:
    struct ir_variable_data {
 
       /**
