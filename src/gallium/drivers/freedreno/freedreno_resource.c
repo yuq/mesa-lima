@@ -133,6 +133,9 @@ fd_try_shadow_resource(struct fd_context *ctx, struct fd_resource *rsc,
 	struct pipe_resource *prsc = &rsc->base.b;
 	bool fallback = false;
 
+	if (prsc->next)
+		return false;
+
 	/* TODO: somehow munge dimensions and format to copy unsupported
 	 * render target format to something that is supported?
 	 */
