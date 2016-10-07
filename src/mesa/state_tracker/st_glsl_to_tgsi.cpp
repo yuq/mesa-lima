@@ -67,19 +67,34 @@ class st_dst_reg;
 
 static int swizzle_for_size(int size);
 
+static int swizzle_for_type(const glsl_type *type, int component = 0)
+{
+   unsigned num_elements = 4;
+
+   if (type) {
+      type = type->without_array();
+      if (type->is_scalar() || type->is_vector() || type->is_matrix())
+         num_elements = type->vector_elements;
+   }
+
+   int swizzle = swizzle_for_size(num_elements);
+   assert(num_elements + component <= 4);
+
+   swizzle += component * MAKE_SWIZZLE4(1, 1, 1, 1);
+   return swizzle;
+}
+
 /**
  * This struct is a corresponding struct to TGSI ureg_src.
  */
 class st_src_reg {
 public:
-   st_src_reg(gl_register_file file, int index, const glsl_type *type)
+   st_src_reg(gl_register_file file, int index, const glsl_type *type,
+              int component = 0)
    {
       this->file = file;
       this->index = index;
-      if (type && (type->is_scalar() || type->is_vector() || type->is_matrix()))
-         this->swizzle = swizzle_for_size(type->vector_elements);
-      else
-         this->swizzle = SWIZZLE_XYZW;
+      this->swizzle = swizzle_for_type(type, component);
       this->negate = 0;
       this->index2D = 0;
       this->type = type ? type->base_type : GLSL_TYPE_ERROR;
@@ -279,13 +294,19 @@ class variable_storage : public exec_node {
 public:
    variable_storage(ir_variable *var, gl_register_file file, int index,
                     unsigned array_id = 0)
-      : file(file), index(index), var(var), array_id(array_id)
+      : file(file), index(index), component(0), var(var), array_id(array_id)
    {
       /* empty */
    }
 
    gl_register_file file;
    int index;
+
+   /* Explicit component location. This is given in terms of the GLSL-style
+    * swizzles where each double is a single component, i.e. for 64-bit types
+    * it can only be 0 or 1.
+    */
+   int component;
    ir_variable *var; /* variable that maps to this, if any */
    unsigned array_id;
 };
@@ -2387,9 +2408,12 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
          const glsl_type *type_without_array = var->type->without_array();
          struct inout_decl *decl = &inputs[num_inputs];
+         unsigned component = var->data.location_frac;
          unsigned num_components;
          num_inputs++;
 
+         if (type_without_array->is_64bit())
+            component = component / 2;
          if (type_without_array->vector_elements)
             num_components = type_without_array->vector_elements;
          else
@@ -2397,7 +2421,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
          decl->mesa_index = var->data.location;
          decl->base_type = type_without_array->base_type;
-         decl->usage_mask = u_bit_consecutive(0, num_components);
+         decl->usage_mask = u_bit_consecutive(component, num_components);
 
          if (is_inout_array(shader->Stage, var, &remove_array)) {
             decl->array_id = num_input_arrays + 1;
@@ -2415,6 +2439,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
                                                PROGRAM_INPUT,
                                                decl->mesa_index,
                                                decl->array_id);
+         entry->component = component;
+
          this->variables.push_tail(entry);
          break;
       }
@@ -2423,9 +2449,12 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
          const glsl_type *type_without_array = var->type->without_array();
          struct inout_decl *decl = &outputs[num_outputs];
+         unsigned component = var->data.location_frac;
          unsigned num_components;
          num_outputs++;
 
+         if (type_without_array->is_64bit())
+            component = component / 2;
          if (type_without_array->vector_elements)
             num_components = type_without_array->vector_elements;
          else
@@ -2433,7 +2462,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
          decl->mesa_index = var->data.location + FRAG_RESULT_MAX * var->data.index;
          decl->base_type = type_without_array->base_type;
-         decl->usage_mask = u_bit_consecutive(0, num_components);
+         decl->usage_mask = u_bit_consecutive(component, num_components);
 
          if (is_inout_array(shader->Stage, var, &remove_array)) {
             decl->array_id = num_output_arrays + 1;
@@ -2451,6 +2480,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
                                                PROGRAM_OUTPUT,
                                                decl->mesa_index,
                                                decl->array_id);
+         entry->component = component;
+
          this->variables.push_tail(entry);
          break;
       }
@@ -2475,7 +2506,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
       }
    }
 
-   this->result = st_src_reg(entry->file, entry->index, var->type);
+   this->result = st_src_reg(entry->file, entry->index, var->type, entry->component);
    this->result.array_id = entry->array_id;
    if (this->shader->Stage == MESA_SHADER_VERTEX && var->data.mode == ir_var_shader_in && var->type->is_double())
       this->result.is_double_vertex_input = true;
@@ -2639,12 +2670,6 @@ glsl_to_tgsi_visitor::visit(ir_dereference_array *ir)
       }
    }
 
-   /* If the type is smaller than a vec4, replicate the last channel out. */
-   if (ir->type->is_scalar() || ir->type->is_vector())
-      src.swizzle = swizzle_for_size(ir->type->vector_elements);
-   else
-      src.swizzle = SWIZZLE_NOOP;
-
    /* Change the register type to the element type of the array. */
    src.type = ir->type->base_type;
 
@@ -2682,7 +2707,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_record *ir)
  * ir_dereference handler.
  */
 static st_dst_reg
-get_assignment_lhs(ir_dereference *ir, glsl_to_tgsi_visitor *v)
+get_assignment_lhs(ir_dereference *ir, glsl_to_tgsi_visitor *v, int *component)
 {
    /* The LHS must be a dereference.  If the LHS is a variable indexed array
     * access of a vector, it must be separated into a series conditional moves
@@ -2694,10 +2719,12 @@ get_assignment_lhs(ir_dereference *ir, glsl_to_tgsi_visitor *v)
       assert(!deref_array->array->type->is_vector());
    }
 
-   /* Use the rvalue deref handler for the most part.  We'll ignore
-    * swizzles in it and write swizzles using writemask, though.
+   /* Use the rvalue deref handler for the most part.  We write swizzles using
+    * the writemask, but we do extract the base component for enhanced layouts
+    * from the source swizzle.
     */
    ir->accept(v);
+   *component = GET_SWZ(v->result.swizzle, 0);
    return st_dst_reg(v->result);
 }
 
@@ -2882,13 +2909,14 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
 void
 glsl_to_tgsi_visitor::visit(ir_assignment *ir)
 {
+   int dst_component;
    st_dst_reg l;
    st_src_reg r;
 
    ir->rhs->accept(this);
    r = this->result;
 
-   l = get_assignment_lhs(ir->lhs, this);
+   l = get_assignment_lhs(ir->lhs, this, &dst_component);
 
    {
       int swizzles[4];
@@ -2928,6 +2956,8 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
             break;
          }
       }
+
+      l.writemask = l.writemask << dst_component;
 
       /* Swizzle a small RHS vector into the channels being written.
        *
