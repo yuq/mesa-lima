@@ -401,12 +401,7 @@ scan_declaration(struct tgsi_shader_info *info,
          info->input_cylindrical_wrap[reg] = (ubyte)fulldecl->Interp.CylindricalWrap;
 
          /* Vertex shaders can have inputs with holes between them. */
-         if (info->processor == PIPE_SHADER_VERTEX)
-            info->num_inputs = MAX2(info->num_inputs, reg + 1);
-         else {
-            info->num_inputs++;
-            assert(reg < info->num_inputs);
-         }
+         info->num_inputs = MAX2(info->num_inputs, reg + 1);
 
          if (semName == TGSI_SEMANTIC_PRIMID)
             info->uses_primid = TRUE;
@@ -456,8 +451,7 @@ scan_declaration(struct tgsi_shader_info *info,
       else if (file == TGSI_FILE_OUTPUT) {
          info->output_semantic_name[reg] = (ubyte) semName;
          info->output_semantic_index[reg] = (ubyte) semIndex;
-         info->num_outputs++;
-         assert(reg < info->num_outputs);
+         info->num_outputs = MAX2(info->num_outputs, reg + 1);
 
          if (semName == TGSI_SEMANTIC_COLOR)
             info->colors_written |= 1 << semIndex;
