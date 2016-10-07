@@ -590,69 +590,6 @@ struct anv_instance {
 VkResult anv_init_wsi(struct anv_physical_device *physical_device);
 void anv_finish_wsi(struct anv_physical_device *physical_device);
 
-struct anv_meta_state {
-   VkAllocationCallbacks alloc;
-
-   /**
-    * Use array element `i` for images with `2^i` samples.
-    */
-   struct {
-      /**
-       * Pipeline N is used to clear color attachment N of the current
-       * subpass.
-       *
-       * HACK: We use one pipeline per color attachment to work around the
-       * compiler's inability to dynamically set the render target index of
-       * the render target write message.
-       */
-      struct anv_pipeline *color_pipelines[MAX_RTS];
-
-      struct anv_pipeline *depth_only_pipeline;
-      struct anv_pipeline *stencil_only_pipeline;
-      struct anv_pipeline *depthstencil_pipeline;
-   } clear[1 + MAX_SAMPLES_LOG2];
-
-   struct {
-      VkRenderPass render_pass;
-
-      /** Pipeline that blits from a 1D image. */
-      VkPipeline pipeline_1d_src;
-
-      /** Pipeline that blits from a 2D image. */
-      VkPipeline pipeline_2d_src;
-
-      /** Pipeline that blits from a 3D image. */
-      VkPipeline pipeline_3d_src;
-
-      VkPipelineLayout                          pipeline_layout;
-      VkDescriptorSetLayout                     ds_layout;
-   } blit;
-
-   struct {
-      VkRenderPass render_pass;
-
-      VkPipelineLayout                          img_p_layout;
-      VkDescriptorSetLayout                     img_ds_layout;
-      VkPipelineLayout                          buf_p_layout;
-      VkDescriptorSetLayout                     buf_ds_layout;
-
-      /* Pipelines indexed by source and destination type.  See the
-       * blit2d_src_type and blit2d_dst_type enums in anv_meta_blit2d.c to
-       * see what these mean.
-       */
-      VkPipeline pipelines[2][3];
-   } blit2d;
-
-   struct {
-      /** Pipeline [i] resolves an image with 2^(i+1) samples.  */
-      VkPipeline                                pipelines[MAX_SAMPLES_LOG2];
-
-      VkRenderPass                              pass;
-      VkPipelineLayout                          pipeline_layout;
-      VkDescriptorSetLayout                     ds_layout;
-   } resolve;
-};
-
 struct anv_queue {
     VK_LOADER_DATA                              _loader_data;
 
@@ -711,8 +648,6 @@ struct anv_device {
     struct anv_state_pool                       surface_state_pool;
 
     struct anv_bo                               workaround_bo;
-
-    struct anv_meta_state                       meta_state;
 
     struct anv_pipeline_cache                   blorp_shader_cache;
     struct blorp_context                        blorp;
@@ -1883,8 +1818,6 @@ struct anv_render_pass {
    struct anv_subpass                           subpasses[0];
 };
 
-extern struct anv_render_pass anv_meta_dummy_renderpass;
-
 struct anv_query_pool_slot {
    uint64_t begin;
    uint64_t end;
@@ -1896,9 +1829,6 @@ struct anv_query_pool {
    uint32_t                                     slots;
    struct anv_bo                                bo;
 };
-
-VkResult anv_device_init_meta(struct anv_device *device);
-void anv_device_finish_meta(struct anv_device *device);
 
 void *anv_lookup_entrypoint(const char *name);
 

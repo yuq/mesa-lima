@@ -942,10 +942,6 @@ VkResult anv_CreateDevice(
    if (result != VK_SUCCESS)
       goto fail_fd;
 
-   result = anv_device_init_meta(device);
-   if (result != VK_SUCCESS)
-      goto fail_fd;
-
    anv_device_init_blorp(device);
 
    anv_device_init_border_colors(device);
@@ -971,8 +967,6 @@ void anv_DestroyDevice(
    anv_queue_finish(&device->queue);
 
    anv_device_finish_blorp(device);
-
-   anv_device_finish_meta(device);
 
 #ifdef HAVE_VALGRIND
    /* We only need to free these to prevent valgrind errors.  The backing
