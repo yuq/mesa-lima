@@ -432,11 +432,16 @@ blorp_emit_sf_config(struct blorp_batch *batch,
 
    blorp_emit(batch, GENX(3DSTATE_SBE), sbe) {
       sbe.VertexURBEntryReadOffset = 1;
-      sbe.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
-      sbe.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
+      if (prog_data) {
+         sbe.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
+         sbe.VertexURBEntryReadLength = brw_blorp_get_urb_length(prog_data);
+         sbe.ConstantInterpolationEnable = prog_data->flat_inputs;
+      } else {
+         sbe.NumberofSFOutputAttributes = 0;
+         sbe.VertexURBEntryReadLength = 1;
+      }
       sbe.ForceVertexURBEntryReadLength = true;
       sbe.ForceVertexURBEntryReadOffset = true;
-      sbe.ConstantInterpolationEnable = prog_data->flat_inputs;
 
 #if GEN_GEN >= 9
       for (unsigned i = 0; i < 32; i++)
@@ -520,17 +525,19 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          ps.BindingTableEntryCount = 1;
       }
 
-      ps.DispatchGRFStartRegisterForConstantSetupData0 =
-         prog_data->first_curbe_grf_0;
-      ps.DispatchGRFStartRegisterForConstantSetupData2 =
-         prog_data->first_curbe_grf_2;
+      if (prog_data) {
+         ps.DispatchGRFStartRegisterForConstantSetupData0 =
+            prog_data->first_curbe_grf_0;
+         ps.DispatchGRFStartRegisterForConstantSetupData2 =
+            prog_data->first_curbe_grf_2;
 
-      ps._8PixelDispatchEnable = prog_data->dispatch_8;
-      ps._16PixelDispatchEnable = prog_data->dispatch_16;
+         ps._8PixelDispatchEnable = prog_data->dispatch_8;
+         ps._16PixelDispatchEnable = prog_data->dispatch_16;
 
-      ps.KernelStartPointer0 = params->wm_prog_kernel;
-      ps.KernelStartPointer2 =
-         params->wm_prog_kernel + prog_data->ksp_offset_2;
+         ps.KernelStartPointer0 = params->wm_prog_kernel;
+         ps.KernelStartPointer2 =
+            params->wm_prog_kernel + prog_data->ksp_offset_2;
+      }
 
       /* 3DSTATE_PS expects the number of threads per PSD, which is always 64;
        * it implicitly scales for different GT levels (which have some # of
@@ -567,15 +574,14 @@ blorp_emit_ps_config(struct blorp_batch *batch,
    }
 
    blorp_emit(batch, GENX(3DSTATE_PS_EXTRA), psx) {
-      psx.PixelShaderValid = true;
+      if (prog_data) {
+         psx.PixelShaderValid = true;
+         psx.AttributeEnable = prog_data->num_varying_inputs > 0;
+         psx.PixelShaderIsPerSample = prog_data->persample_msaa_dispatch;
+      }
 
       if (params->src.enabled)
          psx.PixelShaderKillsPixel = true;
-
-      psx.AttributeEnable = prog_data->num_varying_inputs > 0;
-
-      if (prog_data && prog_data->persample_msaa_dispatch)
-         psx.PixelShaderIsPerSample = true;
    }
 
 #elif GEN_GEN >= 7
