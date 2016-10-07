@@ -2842,33 +2842,7 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
 
    l = get_assignment_lhs(ir->lhs, this);
 
-   /* FINISHME: This should really set to the correct maximal writemask for each
-    * FINISHME: component written (in the loops below).  This case can only
-    * FINISHME: occur for matrices, arrays, and structures.
-    */
-   if (ir->write_mask == 0) {
-      assert(!ir->lhs->type->is_scalar() && !ir->lhs->type->is_vector());
-
-      if (ir->lhs->type->is_array() || ir->lhs->type->without_array()->is_matrix()) {
-         if (ir->lhs->type->without_array()->is_64bit()) {
-            switch (ir->lhs->type->without_array()->vector_elements) {
-            case 1:
-               l.writemask = WRITEMASK_X;
-               break;
-            case 2:
-               l.writemask = WRITEMASK_XY;
-               break;
-            case 3:
-               l.writemask = WRITEMASK_XYZ;
-               break;
-            case 4:
-               l.writemask = WRITEMASK_XYZW;
-               break;
-            }
-         } else
-            l.writemask = WRITEMASK_XYZW;
-      }
-   } else {
+   {
       int swizzles[4];
       int first_enabled_chan = 0;
       int rhs_chan = 0;
@@ -2886,6 +2860,15 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
          else {
             assert(variable->data.location == FRAG_RESULT_STENCIL);
             l.writemask = WRITEMASK_Y;
+         }
+      } else if (ir->write_mask == 0) {
+         assert(!ir->lhs->type->is_scalar() && !ir->lhs->type->is_vector());
+
+         if (ir->lhs->type->is_array() || ir->lhs->type->is_matrix()) {
+            unsigned num_elements = ir->lhs->type->without_array()->vector_elements;
+            l.writemask = u_bit_consecutive(0, num_elements);
+         } else {
+            l.writemask = WRITEMASK_XYZW;
          }
       } else {
          l.writemask = ir->write_mask;
