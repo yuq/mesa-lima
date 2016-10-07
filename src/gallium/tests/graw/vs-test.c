@@ -82,6 +82,7 @@ static void init_fs_constbuf( void )
    struct pipe_resource templat;
    struct pipe_box box;
 
+   memset(&templat, 0, sizeof(templat));
    templat.target = PIPE_BUFFER;
    templat.format = PIPE_FORMAT_R8_UNORM;
    templat.width0 = sizeof(constants);
@@ -281,6 +282,7 @@ static void init_tex( void )
    tex2d[1][1][3] = 255;
 #endif
 
+   memset(&templat, 0, sizeof(templat));
    templat.target = PIPE_TEXTURE_2D;
    templat.format = PIPE_FORMAT_B8G8R8A8_UNORM;
    templat.width0 = SIZE;
@@ -390,6 +392,7 @@ static void init( void )
    if (ctx == NULL)
       exit(3);
 
+   memset(&templat, 0, sizeof(templat));
    templat.target = PIPE_TEXTURE_2D;
    templat.format = formats[i];
    templat.width0 = WIDTH;

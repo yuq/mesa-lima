@@ -43,6 +43,7 @@ graw_util_create_window(struct graw_info *info,
    int i;
 
    memset(info, 0, sizeof(*info));
+   memset(&resource_temp, 0, sizeof(resource_temp));
 
    /* It's hard to say whether window or screen should be created
     * first.  Different environments would prefer one or the other.
@@ -224,6 +225,7 @@ graw_util_create_tex2d(const struct graw_info *info,
    struct pipe_resource temp, *tex;
    struct pipe_box box;
 
+   memset(&temp, 0, sizeof(temp));
    temp.target = PIPE_TEXTURE_2D;
    temp.format = format;
    temp.width0 = width;

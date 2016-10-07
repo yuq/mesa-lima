@@ -1361,6 +1361,7 @@ bool r600_init_flushed_depth_texture(struct pipe_context *ctx,
 		}
 	}
 
+	memset(&resource, 0, sizeof(resource));
 	resource.target = texture->target;
 	resource.format = pipe_format;
 	resource.width0 = texture->width0;
