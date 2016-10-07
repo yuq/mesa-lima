@@ -174,11 +174,9 @@ void slab_destroy_child(struct slab_child_pool *pool)
 static bool
 slab_add_new_page(struct slab_child_pool *pool)
 {
-   struct slab_page_header *page;
-   unsigned i;
+   struct slab_page_header *page = malloc(sizeof(struct slab_page_header) +
+      pool->parent->num_elements * pool->parent->element_size);
 
-   page = malloc(sizeof(struct slab_page_header) +
-                 pool->parent->num_elements * pool->parent->element_size);
    if (!page)
       return false;
 
