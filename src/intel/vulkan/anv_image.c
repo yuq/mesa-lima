@@ -376,14 +376,9 @@ void anv_GetImageSubresourceLayout(
 }
 
 static struct anv_state
-alloc_surface_state(struct anv_device *device,
-                    struct anv_cmd_buffer *cmd_buffer)
+alloc_surface_state(struct anv_device *device)
 {
-      if (cmd_buffer) {
-         return anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-      } else {
-         return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
-      }
+   return anv_state_pool_alloc(&device->surface_state_pool, 64, 64);
 }
 
 static enum isl_channel_select
@@ -405,13 +400,22 @@ remap_swizzle(VkComponentSwizzle swizzle, VkComponentSwizzle component,
    }
 }
 
-void
-anv_image_view_init(struct anv_image_view *iview,
-                    struct anv_device *device,
-                    const VkImageViewCreateInfo* pCreateInfo,
-                    struct anv_cmd_buffer *cmd_buffer)
+
+VkResult
+anv_CreateImageView(VkDevice _device,
+                    const VkImageViewCreateInfo *pCreateInfo,
+                    const VkAllocationCallbacks *pAllocator,
+                    VkImageView *pView)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
+   struct anv_image_view *iview;
+
+   iview = anv_alloc2(&device->alloc, pAllocator, sizeof(*iview), 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (iview == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
 
    assert(range->layerCount > 0);
@@ -484,7 +488,7 @@ anv_image_view_init(struct anv_image_view *iview,
    }
 
    if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-      iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
+      iview->sampler_surface_state = alloc_surface_state(device);
 
       struct isl_view view = iview->isl;
       view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
@@ -501,7 +505,7 @@ anv_image_view_init(struct anv_image_view *iview,
    }
 
    if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-      iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
+      iview->color_rt_surface_state = alloc_surface_state(device);
 
       struct isl_view view = iview->isl;
       view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
@@ -519,7 +523,7 @@ anv_image_view_init(struct anv_image_view *iview,
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
    if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-      iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
+      iview->storage_surface_state = alloc_surface_state(device);
 
       if (isl_has_matching_typed_storage_image_format(&device->info,
                                                       format.isl_format)) {
@@ -548,25 +552,8 @@ anv_image_view_init(struct anv_image_view *iview,
    } else {
       iview->storage_surface_state.alloc_size = 0;
    }
-}
 
-VkResult
-anv_CreateImageView(VkDevice _device,
-                    const VkImageViewCreateInfo *pCreateInfo,
-                    const VkAllocationCallbacks *pAllocator,
-                    VkImageView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_image_view *view;
-
-   view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
-                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (view == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   anv_image_view_init(view, device, pCreateInfo, NULL);
-
-   *pView = anv_image_view_to_handle(view);
+   *pView = anv_image_view_to_handle(iview);
 
    return VK_SUCCESS;
 }
@@ -597,12 +584,20 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
 }
 
 
-void anv_buffer_view_init(struct anv_buffer_view *view,
-                          struct anv_device *device,
-                          const VkBufferViewCreateInfo* pCreateInfo,
-                          struct anv_cmd_buffer *cmd_buffer)
+VkResult
+anv_CreateBufferView(VkDevice _device,
+                     const VkBufferViewCreateInfo *pCreateInfo,
+                     const VkAllocationCallbacks *pAllocator,
+                     VkBufferView *pView)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer, buffer, pCreateInfo->buffer);
+   struct anv_buffer_view *view;
+
+   view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
+                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (!view)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
    /* TODO: Handle the format swizzle? */
 
@@ -617,7 +612,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
    view->range = align_down_npot_u32(view->range, format_bs);
 
    if (buffer->usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
-      view->surface_state = alloc_surface_state(device, cmd_buffer);
+      view->surface_state = alloc_surface_state(device);
 
       anv_fill_buffer_surface_state(device, view->surface_state,
                                     view->format,
@@ -627,7 +622,7 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
    }
 
    if (buffer->usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
-      view->storage_surface_state = alloc_surface_state(device, cmd_buffer);
+      view->storage_surface_state = alloc_surface_state(device);
 
       enum isl_format storage_format =
          isl_has_matching_typed_storage_image_format(&device->info,
@@ -647,23 +642,6 @@ void anv_buffer_view_init(struct anv_buffer_view *view,
    } else {
       view->storage_surface_state = (struct anv_state){ 0 };
    }
-}
-
-VkResult
-anv_CreateBufferView(VkDevice _device,
-                     const VkBufferViewCreateInfo *pCreateInfo,
-                     const VkAllocationCallbacks *pAllocator,
-                     VkBufferView *pView)
-{
-   ANV_FROM_HANDLE(anv_device, device, _device);
-   struct anv_buffer_view *view;
-
-   view = anv_alloc2(&device->alloc, pAllocator, sizeof(*view), 8,
-                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (!view)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   anv_buffer_view_init(view, device, pCreateInfo, NULL);
 
    *pView = anv_buffer_view_to_handle(view);
 

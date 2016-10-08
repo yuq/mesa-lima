@@ -1669,11 +1669,6 @@ anv_image_has_hiz(const struct anv_image *image)
           image->hiz_surface.isl.size > 0;
 }
 
-void anv_image_view_init(struct anv_image_view *view,
-                         struct anv_device *device,
-                         const VkImageViewCreateInfo* pCreateInfo,
-                         struct anv_cmd_buffer *cmd_buffer);
-
 struct anv_buffer_view {
    enum isl_format format; /**< VkBufferViewCreateInfo::format */
    struct anv_bo *bo;
@@ -1685,11 +1680,6 @@ struct anv_buffer_view {
 
    struct brw_image_param storage_image_param;
 };
-
-void anv_buffer_view_init(struct anv_buffer_view *view,
-                          struct anv_device *device,
-                          const VkBufferViewCreateInfo* pCreateInfo,
-                          struct anv_cmd_buffer *cmd_buffer);
 
 enum isl_format
 anv_isl_format_for_descriptor_type(VkDescriptorType type);
