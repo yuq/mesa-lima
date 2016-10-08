@@ -1525,13 +1525,6 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
                         const char *entrypoint,
                         const VkSpecializationInfo *spec_info);
 
-VkResult
-anv_graphics_pipeline_create(VkDevice device,
-                             VkPipelineCache cache,
-                             const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                             const VkAllocationCallbacks *alloc,
-                             VkPipeline *pPipeline);
-
 struct anv_format {
    enum isl_format isl_format:16;
    struct isl_swizzle swizzle;

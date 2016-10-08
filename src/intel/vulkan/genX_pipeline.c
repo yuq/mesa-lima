@@ -26,8 +26,8 @@
 #include "genxml/gen_macros.h"
 #include "genxml/genX_pack.h"
 
-VkResult
-genX(compute_pipeline_create)(
+static VkResult
+compute_pipeline_create(
     VkDevice                                    _device,
     struct anv_pipeline_cache *                 cache,
     const VkComputePipelineCreateInfo*          pCreateInfo,
@@ -130,6 +130,65 @@ genX(compute_pipeline_create)(
    }
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
+
+   return VK_SUCCESS;
+}
+
+VkResult genX(CreateGraphicsPipelines)(
+    VkDevice                                    _device,
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkGraphicsPipelineCreateInfo*         pCreateInfos,
+    const VkAllocationCallbacks*                pAllocator,
+    VkPipeline*                                 pPipelines)
+{
+   ANV_FROM_HANDLE(anv_pipeline_cache, pipeline_cache, pipelineCache);
+
+   VkResult result = VK_SUCCESS;
+
+   unsigned i = 0;
+   for (; i < count; i++) {
+      result = genX(graphics_pipeline_create)(_device,
+                                              pipeline_cache,
+                                              &pCreateInfos[i],
+                                              pAllocator, &pPipelines[i]);
+      if (result != VK_SUCCESS) {
+         for (unsigned j = 0; j < i; j++) {
+            anv_DestroyPipeline(_device, pPipelines[j], pAllocator);
+         }
+
+         return result;
+      }
+   }
+
+   return VK_SUCCESS;
+}
+
+VkResult genX(CreateComputePipelines)(
+    VkDevice                                    _device,
+    VkPipelineCache                             pipelineCache,
+    uint32_t                                    count,
+    const VkComputePipelineCreateInfo*          pCreateInfos,
+    const VkAllocationCallbacks*                pAllocator,
+    VkPipeline*                                 pPipelines)
+{
+   ANV_FROM_HANDLE(anv_pipeline_cache, pipeline_cache, pipelineCache);
+
+   VkResult result = VK_SUCCESS;
+
+   unsigned i = 0;
+   for (; i < count; i++) {
+      result = compute_pipeline_create(_device, pipeline_cache,
+                                       &pCreateInfos[i],
+                                       pAllocator, &pPipelines[i]);
+      if (result != VK_SUCCESS) {
+         for (unsigned j = 0; j < i; j++) {
+            anv_DestroyPipeline(_device, pPipelines[j], pAllocator);
+         }
+
+         return result;
+      }
+   }
 
    return VK_SUCCESS;
 }
