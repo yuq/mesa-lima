@@ -513,7 +513,17 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
          return;
       break;
    case BLORP_HIZ_OP_HIZ_RESOLVE:
-      if (cmd_buffer->state.pass->attachments[ds].load_op !=
+      /* If the render area covers the entire surface *and* load_op is either
+       * CLEAR or DONT_CARE then the previous contents of the depth buffer
+       * will be entirely discarded.  In this case, we can skip the HiZ
+       * resolve.
+       *
+       * If the render area is not the full surface, we need to do
+       * the resolve because otherwise data outside the render area may get
+       * garbled by the resolve at the end of the render pass.
+       */
+      if (full_surface_op &&
+          cmd_buffer->state.pass->attachments[ds].load_op !=
           VK_ATTACHMENT_LOAD_OP_LOAD)
          return;
       break;
