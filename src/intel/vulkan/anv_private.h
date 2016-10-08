@@ -1672,8 +1672,7 @@ anv_image_has_hiz(const struct anv_image *image)
 void anv_image_view_init(struct anv_image_view *view,
                          struct anv_device *device,
                          const VkImageViewCreateInfo* pCreateInfo,
-                         struct anv_cmd_buffer *cmd_buffer,
-                         VkImageUsageFlags usage_mask);
+                         struct anv_cmd_buffer *cmd_buffer);
 
 struct anv_buffer_view {
    enum isl_format format; /**< VkBufferViewCreateInfo::format */

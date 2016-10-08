@@ -56,27 +56,31 @@ choose_isl_surf_usage(VkImageUsageFlags vk_usage,
    if (vk_usage & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT)
       isl_usage |= ISL_SURF_USAGE_CUBE_BIT;
 
-   if (vk_usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-      switch (aspect) {
-      default:
-         unreachable("bad VkImageAspect");
-      case VK_IMAGE_ASPECT_DEPTH_BIT:
-         isl_usage &= ~ISL_SURF_USAGE_DISABLE_AUX_BIT;
-         isl_usage |= ISL_SURF_USAGE_DEPTH_BIT;
-         break;
-      case VK_IMAGE_ASPECT_STENCIL_BIT:
-         isl_usage |= ISL_SURF_USAGE_STENCIL_BIT;
-         break;
-      }
+   /* Even if we're only using it for transfer operations, clears to depth and
+    * stencil images happen as depth and stencil so they need the right ISL
+    * usage bits or else things will fall apart.
+    */
+   switch (aspect) {
+   case VK_IMAGE_ASPECT_DEPTH_BIT:
+      isl_usage &= ~ISL_SURF_USAGE_DISABLE_AUX_BIT;
+      isl_usage |= ISL_SURF_USAGE_DEPTH_BIT;
+      break;
+   case VK_IMAGE_ASPECT_STENCIL_BIT:
+      isl_usage |= ISL_SURF_USAGE_STENCIL_BIT;
+      break;
+   case VK_IMAGE_ASPECT_COLOR_BIT:
+      break;
+   default:
+      unreachable("bad VkImageAspect");
    }
 
    if (vk_usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
-      /* Meta implements transfers by sampling from the source image. */
+      /* blorp implements transfers by sampling from the source image. */
       isl_usage |= ISL_SURF_USAGE_TEXTURE_BIT;
    }
 
    if (vk_usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
-      /* Meta implements transfers by rendering into the destination image. */
+      /* blorp implements transfers by rendering into the destination image. */
       isl_usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
    }
 
@@ -198,47 +202,6 @@ make_surface(const struct anv_device *dev,
    return VK_SUCCESS;
 }
 
-/**
- * Parameter @a format is required and overrides VkImageCreateInfo::format.
- */
-static VkImageUsageFlags
-anv_image_get_full_usage(const VkImageCreateInfo *info,
-                         VkImageAspectFlags aspects)
-{
-   VkImageUsageFlags usage = info->usage;
-
-   if (info->samples > 1 &&
-       (usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)) {
-      /* Meta will resolve the image by binding it as a texture. */
-      usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-   }
-
-   if (usage & VK_IMAGE_USAGE_TRANSFER_SRC_BIT) {
-      /* Meta will transfer from the image by binding it as a texture. */
-      usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-   }
-
-   if (usage & VK_IMAGE_USAGE_TRANSFER_DST_BIT) {
-      /* For non-clear transfer operations, meta will transfer to the image by
-       * binding it as a color attachment, even if the image format is not
-       * a color format.
-       */
-      usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-      if (aspects & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
-         /* vkCmdClearDepthStencilImage() only requires that
-          * VK_IMAGE_USAGE_TRANSFER_SRC_BIT be set. In particular, it does
-          * not require VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT. Meta
-          * clears the image, though, by binding it as a depthstencil
-          * attachment.
-          */
-         usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-      }
-   }
-
-   return usage;
-}
-
 VkResult
 anv_image_create(VkDevice _device,
                  const struct anv_image_create_info *create_info,
@@ -272,7 +235,7 @@ anv_image_create(VkDevice _device,
    image->levels = pCreateInfo->mipLevels;
    image->array_size = pCreateInfo->arrayLayers;
    image->samples = pCreateInfo->samples;
-   image->usage = anv_image_get_full_usage(pCreateInfo, image->aspects);
+   image->usage = pCreateInfo->usage;
    image->tiling = pCreateInfo->tiling;
 
    uint32_t b;
@@ -446,8 +409,7 @@ void
 anv_image_view_init(struct anv_image_view *iview,
                     struct anv_device *device,
                     const VkImageViewCreateInfo* pCreateInfo,
-                    struct anv_cmd_buffer *cmd_buffer,
-                    VkImageUsageFlags usage_mask)
+                    struct anv_cmd_buffer *cmd_buffer)
 {
    ANV_FROM_HANDLE(anv_image, image, pCreateInfo->image);
    const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
@@ -509,14 +471,7 @@ anv_image_view_init(struct anv_image_view *iview,
       .depth  = anv_minify(image->extent.depth , range->baseMipLevel),
    };
 
-   if (image->type == VK_IMAGE_TYPE_3D &&
-       usage_mask != VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-      /* Meta renders to 3D texture slices.  When it does so, it passes
-       * usage_mask == VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.  Since meta is the
-       * only thing that uses a non-zero usage_mask, this lets us easily
-       * detect the one case where we actually want an array range used for
-       * 3-D textures.
-       */
+   if (image->type == VK_IMAGE_TYPE_3D) {
       iview->isl.base_array_layer = 0;
       iview->isl.array_len = iview->extent.depth;
    }
@@ -528,7 +483,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->isl.usage = 0;
    }
 
-   if (image->usage & usage_mask & VK_IMAGE_USAGE_SAMPLED_BIT) {
+   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
       iview->sampler_surface_state = alloc_surface_state(device, cmd_buffer);
 
       struct isl_view view = iview->isl;
@@ -545,18 +500,7 @@ anv_image_view_init(struct anv_image_view *iview,
       iview->sampler_surface_state.alloc_size = 0;
    }
 
-   /* This is kind-of hackish.  It is possible, due to get_full_usage above,
-    * to get a surface state with a non-renderable format but with
-    * VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT.  This happens in particular for
-    * formats which aren't renderable but where we want to use Vulkan copy
-    * commands so VK_IMAGE_USAGE_TRANSFER_DST_BIT is set.  In the case of a
-    * copy, meta will use a format that we can render to, but most of the rest
-    * of the time, we don't want to create those surface states.  Once we
-    * start using blorp for copies, this problem will go away and we can
-    * remove a lot of hacks.
-    */
-   if ((image->usage & usage_mask & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
-       isl_format_supports_rendering(&device->info, format.isl_format)) {
+   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
       iview->color_rt_surface_state = alloc_surface_state(device, cmd_buffer);
 
       struct isl_view view = iview->isl;
@@ -574,7 +518,7 @@ anv_image_view_init(struct anv_image_view *iview,
    }
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
-   if (image->usage & usage_mask & VK_IMAGE_USAGE_STORAGE_BIT) {
+   if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device, cmd_buffer);
 
       if (isl_has_matching_typed_storage_image_format(&device->info,
@@ -620,7 +564,7 @@ anv_CreateImageView(VkDevice _device,
    if (view == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   anv_image_view_init(view, device, pCreateInfo, NULL, ~0);
+   anv_image_view_init(view, device, pCreateInfo, NULL);
 
    *pView = anv_image_view_to_handle(view);
 
@@ -750,20 +694,8 @@ anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
 {
    switch (aspect_mask) {
    case VK_IMAGE_ASPECT_COLOR_BIT:
-      /* Dragons will eat you.
-       *
-       * Meta attaches all destination surfaces as color render targets. Guess
-       * what surface the Meta Dragons really want.
-       */
-      if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
-         return &image->depth_surface;
-      } else if (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
-         return &image->stencil_surface;
-      } else {
-         assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
-         return &image->color_surface;
-      }
-      break;
+      assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+      return &image->color_surface;
    case VK_IMAGE_ASPECT_DEPTH_BIT:
       assert(image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
       return &image->depth_surface;
