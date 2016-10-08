@@ -67,13 +67,24 @@ void blorp_init(struct blorp_context *blorp, void *driver_ctx,
                 struct isl_device *isl_dev);
 void blorp_finish(struct blorp_context *blorp);
 
+enum blorp_batch_flags {
+   /**
+    * This flag indicates that blorp should *not* re-emit the depth and
+    * stencil buffer packets.  Instead, the driver guarantees that all depth
+    * and stencil images passed in will match what is currently set in the
+    * hardware.
+    */
+   BLORP_BATCH_NO_EMIT_DEPTH_STENCIL = (1 << 0),
+};
+
 struct blorp_batch {
    struct blorp_context *blorp;
    void *driver_batch;
+   enum blorp_batch_flags flags;
 };
 
 void blorp_batch_init(struct blorp_context *blorp, struct blorp_batch *batch,
-                      void *driver_batch);
+                      void *driver_batch, enum blorp_batch_flags flags);
 void blorp_batch_finish(struct blorp_batch *batch);
 
 struct blorp_address {

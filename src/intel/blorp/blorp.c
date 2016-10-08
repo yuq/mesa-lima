@@ -45,10 +45,12 @@ blorp_finish(struct blorp_context *blorp)
 
 void
 blorp_batch_init(struct blorp_context *blorp,
-                 struct blorp_batch *batch, void *driver_batch)
+                 struct blorp_batch *batch, void *driver_batch,
+                 enum blorp_batch_flags flags)
 {
    batch->blorp = blorp;
    batch->driver_batch = driver_batch;
+   batch->flags = flags;
 }
 
 void

@@ -1343,7 +1343,8 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
 
    blorp_emit_viewport_state(batch, params);
 
-   blorp_emit_depth_stencil_config(batch, params);
+   if (!(batch->flags & BLORP_BATCH_NO_EMIT_DEPTH_STENCIL))
+      blorp_emit_depth_stencil_config(batch, params);
 
    blorp_emit(batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType = SEQUENTIAL;

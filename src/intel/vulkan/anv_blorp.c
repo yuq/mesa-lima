@@ -182,7 +182,7 @@ void anv_CmdCopyImage(
    ANV_FROM_HANDLE(anv_image, dst_image, dstImage);
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (unsigned r = 0; r < regionCount; r++) {
       VkOffset3D srcOffset =
@@ -244,7 +244,7 @@ copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
                      bool buffer_to_image)
 {
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    struct {
       struct blorp_surf surf;
@@ -404,7 +404,7 @@ void anv_CmdBlitImage(
    }
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (unsigned r = 0; r < regionCount; r++) {
       const VkImageSubresourceLayers *src_res = &pRegions[r].srcSubresource;
@@ -575,7 +575,7 @@ void anv_CmdCopyBuffer(
    ANV_FROM_HANDLE(anv_buffer, dst_buffer, dstBuffer);
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (unsigned r = 0; r < regionCount; r++) {
       uint64_t src_offset = src_buffer->offset + pRegions[r].srcOffset;
@@ -636,7 +636,7 @@ void anv_CmdUpdateBuffer(
    ANV_FROM_HANDLE(anv_buffer, dst_buffer, dstBuffer);
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    /* We can't quite grab a full block because the state stream needs a
     * little data at the top to build its linked list.
@@ -685,7 +685,7 @@ void anv_CmdFillBuffer(
    struct isl_surf isl_surf;
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    if (fillSize == VK_WHOLE_SIZE) {
       fillSize = dst_buffer->size - dstOffset;
@@ -767,7 +767,7 @@ void anv_CmdClearColorImage(
    static const bool color_write_disable[4] = { false, false, false, false };
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    union isl_color_value clear_color;
    memcpy(clear_color.u32, pColor->uint32, sizeof(pColor->uint32));
@@ -857,7 +857,7 @@ void anv_CmdResolveImage(
    ANV_FROM_HANDLE(anv_image, dst_image, dstImage);
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (uint32_t r = 0; r < regionCount; r++) {
       assert(pRegions[r].srcSubresource.aspectMask ==
@@ -902,7 +902,7 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
       return;
 
    struct blorp_batch batch;
-   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer);
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
       uint32_t src_att = subpass->color_attachments[i];

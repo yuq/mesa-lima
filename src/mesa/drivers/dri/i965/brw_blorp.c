@@ -388,7 +388,7 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
    };
 
    struct blorp_batch batch;
-   blorp_batch_init(&brw->blorp, &batch, brw);
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_blit(&batch, &src_surf, src_level,
               physical_to_logical_layer(src_mt, src_layer),
               brw_blorp_to_isl_format(brw, src_format, false), src_isl_swizzle,
@@ -447,7 +447,7 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
                           &dst_level, &tmp_surfs[2]);
 
    struct blorp_batch batch;
-   blorp_batch_init(&brw->blorp, &batch, brw);
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_copy(&batch, &src_surf, src_level, src_layer,
               &dst_surf, dst_level, dst_layer,
               src_x, src_y, dst_x, dst_y, src_width, src_height);
@@ -852,7 +852,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
           irb->mt, irb->mt_level, irb->mt_layer, num_layers);
 
       struct blorp_batch batch;
-      blorp_batch_init(&brw->blorp, &batch, brw);
+      blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_fast_clear(&batch, &surf,
                        (enum isl_format)brw->render_target_format[format],
                        level, irb_logical_mt_layer(irb), num_layers,
@@ -872,7 +872,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       memcpy(clear_color.f32, ctx->Color.ClearColor.f, sizeof(float) * 4);
 
       struct blorp_batch batch;
-      blorp_batch_init(&brw->blorp, &batch, brw);
+      blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_clear(&batch, &surf,
                   (enum isl_format)brw->render_target_format[format],
                   ISL_SWIZZLE_IDENTITY,
@@ -944,7 +944,7 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
    blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
 
    struct blorp_batch batch;
-   blorp_batch_init(&brw->blorp, &batch, brw);
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_ccs_resolve(&batch, &surf,
                      brw_blorp_to_isl_format(brw, format, true));
    blorp_batch_finish(&batch);
@@ -966,7 +966,7 @@ gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
 
    struct blorp_batch batch;
-   blorp_batch_init(&brw->blorp, &batch, brw);
+   blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_gen6_hiz_op(&batch, &surf, level, layer, op);
    blorp_batch_finish(&batch);
 }
