@@ -57,7 +57,6 @@ VkResult anv_CreateShaderModule(
    if (module == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   module->nir = NULL;
    module->size = pCreateInfo->codeSize;
    memcpy(module->data, pCreateInfo->pCode, module->size);
 
@@ -100,81 +99,67 @@ anv_shader_compile_to_nir(struct anv_device *device,
    const nir_shader_compiler_options *nir_options =
       compiler->glsl_compiler_options[stage].NirOptions;
 
-   nir_shader *nir;
-   nir_function *entry_point;
-   if (module->nir) {
-      /* Some things such as our meta clear/blit code will give us a NIR
-       * shader directly.  In that case, we just ignore the SPIR-V entirely
-       * and just use the NIR shader */
-      nir = module->nir;
-      nir->options = nir_options;
-      nir_validate_shader(nir);
+   uint32_t *spirv = (uint32_t *) module->data;
+   assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
+   assert(module->size % 4 == 0);
 
-      assert(exec_list_length(&nir->functions) == 1);
-      struct exec_node *node = exec_list_get_head(&nir->functions);
-      entry_point = exec_node_data(nir_function, node, node);
-   } else {
-      uint32_t *spirv = (uint32_t *) module->data;
-      assert(spirv[0] == SPIR_V_MAGIC_NUMBER);
-      assert(module->size % 4 == 0);
+   uint32_t num_spec_entries = 0;
+   struct nir_spirv_specialization *spec_entries = NULL;
+   if (spec_info && spec_info->mapEntryCount > 0) {
+      num_spec_entries = spec_info->mapEntryCount;
+      spec_entries = malloc(num_spec_entries * sizeof(*spec_entries));
+      for (uint32_t i = 0; i < num_spec_entries; i++) {
+         VkSpecializationMapEntry entry = spec_info->pMapEntries[i];
+         const void *data = spec_info->pData + entry.offset;
+         assert(data + entry.size <= spec_info->pData + spec_info->dataSize);
 
-      uint32_t num_spec_entries = 0;
-      struct nir_spirv_specialization *spec_entries = NULL;
-      if (spec_info && spec_info->mapEntryCount > 0) {
-         num_spec_entries = spec_info->mapEntryCount;
-         spec_entries = malloc(num_spec_entries * sizeof(*spec_entries));
-         for (uint32_t i = 0; i < num_spec_entries; i++) {
-            VkSpecializationMapEntry entry = spec_info->pMapEntries[i];
-            const void *data = spec_info->pData + entry.offset;
-            assert(data + entry.size <= spec_info->pData + spec_info->dataSize);
-
-            spec_entries[i].id = spec_info->pMapEntries[i].constantID;
-            spec_entries[i].data = *(const uint32_t *)data;
-         }
+         spec_entries[i].id = spec_info->pMapEntries[i].constantID;
+         spec_entries[i].data = *(const uint32_t *)data;
       }
+   }
 
-      entry_point = spirv_to_nir(spirv, module->size / 4,
-                                 spec_entries, num_spec_entries,
-                                 stage, entrypoint_name, nir_options);
-      nir = entry_point->shader;
-      assert(nir->stage == stage);
-      nir_validate_shader(nir);
+   nir_function *entry_point =
+      spirv_to_nir(spirv, module->size / 4,
+                   spec_entries, num_spec_entries,
+                   stage, entrypoint_name, nir_options);
+   nir_shader *nir = entry_point->shader;
+   assert(nir->stage == stage);
+   nir_validate_shader(nir);
 
-      free(spec_entries);
+   free(spec_entries);
 
-      if (stage == MESA_SHADER_FRAGMENT) {
-         nir_lower_wpos_center(nir);
-         nir_validate_shader(nir);
-      }
-
-      nir_lower_returns(nir);
-      nir_validate_shader(nir);
-
-      nir_inline_functions(nir);
-      nir_validate_shader(nir);
-
-      /* Pick off the single entrypoint that we want */
-      foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
-         if (func != entry_point)
-            exec_node_remove(&func->node);
-      }
-      assert(exec_list_length(&nir->functions) == 1);
-      entry_point->name = ralloc_strdup(entry_point, "main");
-
-      nir_remove_dead_variables(nir, nir_var_shader_in);
-      nir_remove_dead_variables(nir, nir_var_shader_out);
-      nir_remove_dead_variables(nir, nir_var_system_value);
-      nir_validate_shader(nir);
-
-      nir_propagate_invariant(nir);
-      nir_validate_shader(nir);
-
-      nir_lower_io_to_temporaries(entry_point->shader, entry_point->impl,
-                                  true, false);
-
-      nir_lower_system_values(nir);
+   if (stage == MESA_SHADER_FRAGMENT) {
+      nir_lower_wpos_center(nir);
       nir_validate_shader(nir);
    }
+
+   nir_lower_returns(nir);
+   nir_validate_shader(nir);
+
+   nir_inline_functions(nir);
+   nir_validate_shader(nir);
+
+   /* Pick off the single entrypoint that we want */
+   foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
+      if (func != entry_point)
+         exec_node_remove(&func->node);
+   }
+   assert(exec_list_length(&nir->functions) == 1);
+   entry_point->name = ralloc_strdup(entry_point, "main");
+
+   nir_remove_dead_variables(nir, nir_var_shader_in);
+   nir_remove_dead_variables(nir, nir_var_shader_out);
+   nir_remove_dead_variables(nir, nir_var_system_value);
+   nir_validate_shader(nir);
+
+   nir_propagate_invariant(nir);
+   nir_validate_shader(nir);
+
+   nir_lower_io_to_temporaries(entry_point->shader, entry_point->impl,
+                               true, false);
+
+   nir_lower_system_values(nir);
+   nir_validate_shader(nir);
 
    /* Vulkan uses the separate-shader linking model */
    nir->info.separate_shader = true;
@@ -471,8 +456,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
       void *mem_ctx = ralloc_context(NULL);
 
-      if (module->nir == NULL)
-         ralloc_steal(mem_ctx, nir);
+      ralloc_steal(mem_ctx, nir);
 
       prog_data.inputs_read = nir->info.inputs_read;
 
@@ -560,8 +544,7 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
       void *mem_ctx = ralloc_context(NULL);
 
-      if (module->nir == NULL)
-         ralloc_steal(mem_ctx, nir);
+      ralloc_steal(mem_ctx, nir);
 
       brw_compute_vue_map(&pipeline->device->info,
                           &prog_data.base.vue_map,
@@ -690,8 +673,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
       void *mem_ctx = ralloc_context(NULL);
 
-      if (module->nir == NULL)
-         ralloc_steal(mem_ctx, nir);
+      ralloc_steal(mem_ctx, nir);
 
       unsigned code_size;
       const unsigned *shader_code =
@@ -763,8 +745,7 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
       void *mem_ctx = ralloc_context(NULL);
 
-      if (module->nir == NULL)
-         ralloc_steal(mem_ctx, nir);
+      ralloc_steal(mem_ctx, nir);
 
       unsigned code_size;
       const unsigned *shader_code =

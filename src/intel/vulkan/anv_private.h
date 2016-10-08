@@ -1346,11 +1346,7 @@ struct anv_event {
    struct anv_state                             state;
 };
 
-struct nir_shader;
-
 struct anv_shader_module {
-   struct nir_shader *                          nir;
-
    unsigned char                                sha1[20];
    uint32_t                                     size;
    char                                         data[0];
