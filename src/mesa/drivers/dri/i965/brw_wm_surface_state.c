@@ -86,7 +86,8 @@ brw_emit_surface_state(struct brw_context *brw,
                        unsigned read_domains, unsigned write_domains)
 {
    const struct surface_state_info ss_info = surface_state_infos[brw->gen];
-   uint32_t tile_x = 0, tile_y = 0;
+   uint32_t tile_x = mt->level[0].slice[0].x_offset;
+   uint32_t tile_y = mt->level[0].slice[0].y_offset;
    uint32_t offset = mt->offset;
 
    struct isl_surf surf;
@@ -109,6 +110,7 @@ brw_emit_surface_state(struct brw_context *brw,
        */
       assert(brw->has_surface_tile_offset);
       assert(view.levels == 1 && view.array_len == 1);
+      assert(tile_x == 0 && tile_y == 0);
 
       offset += intel_miptree_get_tile_offsets(mt, view.base_level,
                                                view.base_array_layer,
