@@ -981,6 +981,87 @@ void anv_CmdClearAttachments(
    blorp_batch_finish(&batch);
 }
 
+static bool
+subpass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
+{
+   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
+
+   for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
+      uint32_t a = cmd_state->subpass->color_attachments[i];
+      if (cmd_state->attachments[a].pending_clear_aspects) {
+         return true;
+      }
+   }
+
+   if (ds != VK_ATTACHMENT_UNUSED &&
+       cmd_state->attachments[ds].pending_clear_aspects) {
+      return true;
+   }
+
+   return false;
+}
+
+void
+anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
+{
+   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+
+   if (!subpass_needs_clear(cmd_buffer))
+      return;
+
+   /* Because this gets called within a render pass, we tell blorp not to
+    * trash our depth and stencil buffers.
+    */
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer,
+                    BLORP_BATCH_NO_EMIT_DEPTH_STENCIL);
+
+   VkClearRect clear_rect = {
+      .rect = cmd_buffer->state.render_area,
+      .baseArrayLayer = 0,
+      .layerCount = cmd_buffer->state.framebuffer->layers,
+   };
+
+   for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
+      const uint32_t a = cmd_state->subpass->color_attachments[i];
+
+      if (!cmd_state->attachments[a].pending_clear_aspects)
+         continue;
+
+      assert(cmd_state->attachments[a].pending_clear_aspects ==
+             VK_IMAGE_ASPECT_COLOR_BIT);
+
+      VkClearAttachment clear_att = {
+         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+         .colorAttachment = i, /* Use attachment index relative to subpass */
+         .clearValue = cmd_state->attachments[a].clear_value,
+      };
+
+      clear_color_attachment(cmd_buffer, &batch, &clear_att, 1, &clear_rect);
+
+      cmd_state->attachments[a].pending_clear_aspects = 0;
+   }
+
+   const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
+
+   if (ds != VK_ATTACHMENT_UNUSED &&
+       cmd_state->attachments[ds].pending_clear_aspects) {
+
+      VkClearAttachment clear_att = {
+         .aspectMask = cmd_state->attachments[ds].pending_clear_aspects,
+         .clearValue = cmd_state->attachments[ds].clear_value,
+      };
+
+      clear_depth_stencil_attachment(cmd_buffer, &batch,
+                                     &clear_att, 1, &clear_rect);
+
+      cmd_state->attachments[ds].pending_clear_aspects = 0;
+   }
+
+   blorp_batch_finish(&batch);
+}
+
 static void
 resolve_image(struct blorp_batch *batch,
               const struct anv_image *src_image,
