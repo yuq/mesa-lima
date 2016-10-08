@@ -513,7 +513,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
    blorp_emit(batch, GENX(3DSTATE_WM), wm);
 
    blorp_emit(batch, GENX(3DSTATE_PS), ps) {
-      if (params->src.addr.buffer) {
+      if (params->src.enabled) {
          ps.SamplerCount = 1; /* Up to 4 samplers */
          ps.BindingTableEntryCount = 2;
       } else {
@@ -569,7 +569,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
    blorp_emit(batch, GENX(3DSTATE_PS_EXTRA), psx) {
       psx.PixelShaderValid = true;
 
-      if (params->src.addr.buffer)
+      if (params->src.enabled)
          psx.PixelShaderKillsPixel = true;
 
       psx.AttributeEnable = prog_data->num_varying_inputs > 0;
@@ -600,7 +600,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
       if (prog_data)
          wm.ThreadDispatchEnable = true;
 
-      if (params->src.addr.buffer)
+      if (params->src.enabled)
          wm.PixelShaderKillPixel = true;
 
       if (params->dst.surf.samples > 1) {
@@ -643,7 +643,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          ps._16PixelDispatchEnable = true;
       }
 
-      if (params->src.addr.buffer)
+      if (params->src.enabled)
          ps.SamplerCount = 1; /* Up to 4 samplers */
 
       switch (params->fast_clear_op) {
@@ -700,7 +700,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          wm.NumberofSFOutputAttributes = prog_data->num_varying_inputs;
       }
 
-      if (params->src.addr.buffer) {
+      if (params->src.enabled) {
          wm.SamplerCount = 1; /* Up to 4 samplers */
          wm.PixelShaderKillPixel = true; /* TODO: temporarily smash on */
       }
@@ -750,15 +750,15 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
 
    blorp_emit(batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
 #if GEN_GEN >= 7
-      db.DepthWriteEnable = params->depth.addr.buffer != NULL;
-      db.StencilWriteEnable = params->stencil.addr.buffer != NULL;
+      db.DepthWriteEnable = params->depth.enabled;
+      db.StencilWriteEnable = params->stencil.enabled;
 #endif
 
 #if GEN_GEN <= 6
       db.SeparateStencilBufferEnable = true;
 #endif
 
-      if (params->depth.addr.buffer) {
+      if (params->depth.enabled) {
          db.SurfaceFormat = params->depth_format;
          db.SurfaceType = isl_to_gen_ds_surftype[params->depth.surf.dim];
 
@@ -787,7 +787,7 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
 
          db.SurfaceBaseAddress = params->depth.addr;
          db.DepthBufferMOCS = mocs;
-      } else if (params->stencil.addr.buffer) {
+      } else if (params->stencil.enabled) {
          db.SurfaceFormat = D32_FLOAT;
          db.SurfaceType = isl_to_gen_ds_surftype[params->stencil.surf.dim];
 
@@ -817,7 +817,7 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
    }
 
    blorp_emit(batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
-      if (params->stencil.addr.buffer) {
+      if (params->stencil.enabled) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
          sb.StencilBufferEnable = true;
 #endif
@@ -927,7 +927,7 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
    struct GENX(DEPTH_STENCIL_STATE) ds = { 0 };
 #endif
 
-   if (params->depth.addr.buffer) {
+   if (params->depth.enabled) {
       ds.DepthBufferWriteEnable = true;
 
       switch (params->hiz_op) {
@@ -953,7 +953,7 @@ blorp_emit_depth_stencil_state(struct blorp_batch *batch,
       }
    }
 
-   if (params->stencil.addr.buffer) {
+   if (params->stencil.enabled) {
       ds.StencilBufferWriteEnable = true;
       ds.StencilTestEnable = true;
       ds.DoubleSidedStencilEnable = false;
@@ -1056,14 +1056,14 @@ blorp_emit_surface_states(struct blorp_batch *batch,
    const unsigned ss_size = GENX(RENDER_SURFACE_STATE_length) * 4;
    const unsigned ss_align = GENX(RENDER_SURFACE_STATE_length) > 8 ? 64 : 32;
 
-   unsigned num_surfaces = 1 + (params->src.addr.buffer != NULL);
+   unsigned num_surfaces = 1 + params->src.enabled;
    blorp_alloc_binding_table(batch, num_surfaces, ss_size, ss_align,
                              &bind_offset, surface_offsets, surface_maps);
 
    blorp_emit_surface_state(batch, &params->dst,
                             surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
                             surface_offsets[BLORP_RENDERBUFFER_BT_INDEX], true);
-   if (params->src.addr.buffer) {
+   if (params->src.enabled) {
       blorp_emit_surface_state(batch, &params->src,
                                surface_maps[BLORP_TEXTURE_BT_INDEX],
                                surface_offsets[BLORP_TEXTURE_BT_INDEX], false);
@@ -1261,7 +1261,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    if (params->wm_prog_data)
       blorp_emit_surface_states(batch, params);
 
-   if (params->src.addr.buffer)
+   if (params->src.enabled)
       blorp_emit_sampler_state(batch, params);
 
    blorp_emit_3dstate_multisample(batch, params);

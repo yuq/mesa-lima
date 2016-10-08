@@ -53,6 +53,8 @@ enum blorp_fast_clear_op {
 
 struct brw_blorp_surface_info
 {
+   bool enabled;
+
    struct isl_surf surf;
    struct blorp_address addr;
 

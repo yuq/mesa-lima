@@ -64,6 +64,8 @@ brw_blorp_surface_info_init(struct blorp_context *blorp,
                             unsigned int level, unsigned int layer,
                             enum isl_format format, bool is_render_target)
 {
+   info->enabled = true;
+
    if (format == ISL_FORMAT_UNSUPPORTED)
       format = surf->surf->format;
 
