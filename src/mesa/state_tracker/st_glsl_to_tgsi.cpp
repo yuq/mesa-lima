@@ -5668,60 +5668,24 @@ translate_src(struct st_translate *t, const st_src_reg *src_reg)
 
 static struct tgsi_texture_offset
 translate_tex_offset(struct st_translate *t,
-                     const st_src_reg *in_offset, int idx)
+                     const st_src_reg *in_offset)
 {
    struct tgsi_texture_offset offset;
-   struct ureg_src imm_src;
-   struct ureg_dst dst;
-   int array;
+   struct ureg_src src = translate_src(t, in_offset);
 
-   switch (in_offset->file) {
-   case PROGRAM_IMMEDIATE:
-      assert(in_offset->index >= 0 && in_offset->index < t->num_immediates);
-      imm_src = t->immediates[in_offset->index];
+   offset.File = src.File;
+   offset.Index = src.Index;
+   offset.SwizzleX = src.SwizzleX;
+   offset.SwizzleY = src.SwizzleY;
+   offset.SwizzleZ = src.SwizzleZ;
+   offset.Padding = 0;
 
-      offset.File = imm_src.File;
-      offset.Index = imm_src.Index;
-      offset.SwizzleX = imm_src.SwizzleX;
-      offset.SwizzleY = imm_src.SwizzleY;
-      offset.SwizzleZ = imm_src.SwizzleZ;
-      offset.Padding = 0;
-      break;
-   case PROGRAM_INPUT:
-      imm_src = t->inputs[t->inputMapping[in_offset->index]];
-      offset.File = imm_src.File;
-      offset.Index = imm_src.Index;
-      offset.SwizzleX = GET_SWZ(in_offset->swizzle, 0);
-      offset.SwizzleY = GET_SWZ(in_offset->swizzle, 1);
-      offset.SwizzleZ = GET_SWZ(in_offset->swizzle, 2);
-      offset.Padding = 0;
-      break;
-   case PROGRAM_TEMPORARY:
-      imm_src = ureg_src(t->temps[in_offset->index]);
-      offset.File = imm_src.File;
-      offset.Index = imm_src.Index;
-      offset.SwizzleX = GET_SWZ(in_offset->swizzle, 0);
-      offset.SwizzleY = GET_SWZ(in_offset->swizzle, 1);
-      offset.SwizzleZ = GET_SWZ(in_offset->swizzle, 2);
-      offset.Padding = 0;
-      break;
-   case PROGRAM_ARRAY:
-      array = in_offset->index >> 16;
+   assert(!src.Indirect);
+   assert(!src.DimIndirect);
+   assert(!src.Dimension);
+   assert(!src.Absolute); /* those shouldn't be used with integers anyway */
+   assert(!src.Negate);
 
-      assert(array >= 0);
-      assert(array < (int)t->num_temp_arrays);
-
-      dst = t->arrays[array];
-      offset.File = dst.File;
-      offset.Index = dst.Index + (in_offset->index & 0xFFFF) - 0x8000;
-      offset.SwizzleX = GET_SWZ(in_offset->swizzle, 0);
-      offset.SwizzleY = GET_SWZ(in_offset->swizzle, 1);
-      offset.SwizzleZ = GET_SWZ(in_offset->swizzle, 2);
-      offset.Padding = 0;
-      break;
-   default:
-      break;
-   }
    return offset;
 }
 
@@ -5785,7 +5749,7 @@ compile_tgsi_instruction(struct st_translate *t,
             ureg_src_indirect(src[num_src], ureg_src(t->address[2]));
       num_src++;
       for (i = 0; i < (int)inst->tex_offset_num_offset; i++) {
-         texoffsets[i] = translate_tex_offset(t, &inst->tex_offsets[i], i);
+         texoffsets[i] = translate_tex_offset(t, &inst->tex_offsets[i]);
       }
       tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
 
