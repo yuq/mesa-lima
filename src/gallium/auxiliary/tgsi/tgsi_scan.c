@@ -339,6 +339,18 @@ scan_instruction(struct tgsi_shader_info *info,
                   info->images_writemask = info->images_declared;
                else
                   info->images_writemask |= 1 << src->Register.Index;
+            } else if (src->Register.File == TGSI_FILE_BUFFER) {
+               if (src->Register.Indirect)
+                  info->shader_buffers_atomic = info->shader_buffers_declared;
+               else
+                  info->shader_buffers_atomic |= 1 << src->Register.Index;
+            }
+         } else {
+            if (src->Register.File == TGSI_FILE_BUFFER) {
+               if (src->Register.Indirect)
+                  info->shader_buffers_load = info->shader_buffers_declared;
+               else
+                  info->shader_buffers_load |= 1 << src->Register.Index;
             }
          }
       }
@@ -366,6 +378,11 @@ scan_instruction(struct tgsi_shader_info *info,
                info->images_writemask = info->images_declared;
             else
                info->images_writemask |= 1 << dst->Register.Index;
+         } else if (dst->Register.File == TGSI_FILE_BUFFER) {
+            if (dst->Register.Indirect)
+               info->shader_buffers_store = info->shader_buffers_declared;
+            else
+               info->shader_buffers_store |= 1 << dst->Register.Index;
          }
       }
    }
@@ -427,6 +444,8 @@ scan_declaration(struct tgsi_shader_info *info,
          info->const_buffers_declared |= 1u << buffer;
       } else if (file == TGSI_FILE_IMAGE) {
          info->images_declared |= 1u << reg;
+      } else if (file == TGSI_FILE_BUFFER) {
+         info->shader_buffers_declared |= 1u << reg;
       } else if (file == TGSI_FILE_INPUT) {
          info->input_semantic_name[reg] = (ubyte) semName;
          info->input_semantic_index[reg] = (ubyte) semIndex;

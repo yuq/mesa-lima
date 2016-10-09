@@ -133,6 +133,10 @@ struct tgsi_shader_info
     * Bitmask indicating which declared image is a buffer.
     */
    unsigned images_buffers;
+   unsigned shader_buffers_declared; /**< bitmask of declared shader buffers */
+   unsigned shader_buffers_load; /**< bitmask of shader buffers using loads */
+   unsigned shader_buffers_store; /**< bitmask of shader buffers using stores */
+   unsigned shader_buffers_atomic; /**< bitmask of shader buffers using atomics */
    /**
     * Bitmask indicating which register files are accessed with
     * indirect addressing.  The bits are (1 << TGSI_FILE_x), etc.
