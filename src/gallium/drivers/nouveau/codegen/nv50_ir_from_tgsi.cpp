@@ -3465,10 +3465,13 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       if (!isEndOfSubroutine(ip + 1)) {
          // insert a PRERET at the entry if this is an early return
          // (only needed for sharing code in the epilogue)
-         BasicBlock *pos = getBB();
-         setPosition(BasicBlock::get(func->cfg.getRoot()), false);
-         mkFlow(OP_PRERET, leave, CC_ALWAYS, NULL)->fixed = 1;
-         setPosition(pos, true);
+         BasicBlock *root = BasicBlock::get(func->cfg.getRoot());
+         if (root->getEntry() == NULL || root->getEntry()->op != OP_PRERET) {
+            BasicBlock *pos = getBB();
+            setPosition(root, false);
+            mkFlow(OP_PRERET, leave, CC_ALWAYS, NULL)->fixed = 1;
+            setPosition(pos, true);
+         }
       }
       mkFlow(OP_RET, NULL, CC_ALWAYS, NULL)->fixed = 1;
       bb->cfg.attach(&leave->cfg, Graph::Edge::CROSS);
