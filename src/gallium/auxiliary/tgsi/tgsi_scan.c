@@ -334,9 +334,12 @@ scan_instruction(struct tgsi_shader_info *info,
          if (tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_store) {
             info->writes_memory = TRUE;
 
-            if (src->Register.File == TGSI_FILE_IMAGE &&
-                !src->Register.Indirect)
-               info->images_writemask |= 1 << src->Register.Index;
+            if (src->Register.File == TGSI_FILE_IMAGE) {
+               if (src->Register.Indirect)
+                  info->images_writemask = info->images_declared;
+               else
+                  info->images_writemask |= 1 << src->Register.Index;
+            }
          }
       }
    }
@@ -358,9 +361,12 @@ scan_instruction(struct tgsi_shader_info *info,
          is_mem_inst = true;
          info->writes_memory = TRUE;
 
-         if (dst->Register.File == TGSI_FILE_IMAGE &&
-             !dst->Register.Indirect)
-            info->images_writemask |= 1 << dst->Register.Index;
+         if (dst->Register.File == TGSI_FILE_IMAGE) {
+            if (dst->Register.Indirect)
+               info->images_writemask = info->images_declared;
+            else
+               info->images_writemask |= 1 << dst->Register.Index;
+         }
       }
    }
 
@@ -419,8 +425,9 @@ scan_declaration(struct tgsi_shader_info *info,
          info->const_file_max[buffer] =
             MAX2(info->const_file_max[buffer], (int)reg);
          info->const_buffers_declared |= 1u << buffer;
-      }
-      else if (file == TGSI_FILE_INPUT) {
+      } else if (file == TGSI_FILE_IMAGE) {
+         info->images_declared |= 1u << reg;
+      } else if (file == TGSI_FILE_INPUT) {
          info->input_semantic_name[reg] = (ubyte) semName;
          info->input_semantic_index[reg] = (ubyte) semIndex;
          info->input_interpolate[reg] = (ubyte)fulldecl->Interp.Interpolate;

@@ -122,6 +122,8 @@ struct tgsi_shader_info
    unsigned culldist_writemask;
    unsigned num_written_culldistance;
    unsigned num_written_clipdistance;
+
+   unsigned images_declared; /**< bitmask of declared images */
    /**
     * Bitmask indicating which images are written to (STORE / ATOM*).
     * Indirect image accesses are not reflected in this mask.
