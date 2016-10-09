@@ -245,6 +245,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         struct pipe_box box;
         unsigned char *data;
 
+        memset(&tmpl, 0, sizeof(tmpl));
         tmpl.target = PIPE_BUFFER;
         tmpl.format = PIPE_FORMAT_R8_UNORM;
         tmpl.width0 = 16; /* 4 floats */
@@ -277,6 +278,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->cursor.hotspot.y = -1;
     {
         struct pipe_resource tmpl;
+        memset(&tmpl, 0, sizeof(tmpl));
         tmpl.target = PIPE_TEXTURE_2D;
         tmpl.format = PIPE_FORMAT_R8G8B8A8_UNORM;
         tmpl.width0 = 64;
@@ -298,6 +300,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     {
         struct pipe_resource tmpl;
         unsigned max_const_vs, max_const_ps;
+        memset(&tmpl, 0, sizeof(tmpl));
 
         /* vs 3.0: >= 256 float constants, but for cards with exactly 256 slots,
          * we have to take in some more slots for int and bool*/
@@ -359,6 +362,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         struct pipe_resource tmplt;
         struct pipe_sampler_view templ;
         struct pipe_sampler_state samp;
+        memset(&tmplt, 0, sizeof(tmplt));
         memset(&samp, 0, sizeof(samp));
 
         tmplt.target = PIPE_TEXTURE_2D;
@@ -1119,6 +1123,7 @@ create_zs_or_rt_surface(struct NineDevice9 *This,
     user_assert(Width && Height, D3DERR_INVALIDCALL);
     user_assert(Pool != D3DPOOL_MANAGED, D3DERR_INVALIDCALL);
 
+    memset(&templ, 0, sizeof(templ));
     templ.target = PIPE_TEXTURE_2D;
     templ.width0 = Width;
     templ.height0 = Height;
@@ -3183,6 +3188,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
     if (1) {
         struct pipe_resource templ;
 
+        memset(&templ, 0, sizeof(templ));
         templ.target = PIPE_BUFFER;
         templ.format = PIPE_FORMAT_R8_UNORM;
         templ.width0 = buffer_size;
