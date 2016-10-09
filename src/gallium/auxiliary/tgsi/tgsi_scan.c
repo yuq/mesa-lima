@@ -54,6 +54,16 @@ is_memory_file(unsigned file)
 }
 
 
+static bool
+is_mem_query_inst(unsigned opcode)
+{
+   return opcode == TGSI_OPCODE_RESQ ||
+          opcode == TGSI_OPCODE_TXQ ||
+          opcode == TGSI_OPCODE_TXQS ||
+          opcode == TGSI_OPCODE_TXQ_LZ ||
+          opcode == TGSI_OPCODE_LODQ;
+}
+
 /**
  * Is the opcode a "true" texture instruction which samples from a
  * texture map?
@@ -61,10 +71,7 @@ is_memory_file(unsigned file)
 static bool
 is_texture_inst(unsigned opcode)
 {
-   return (opcode != TGSI_OPCODE_TXQ &&
-           opcode != TGSI_OPCODE_TXQS &&
-           opcode != TGSI_OPCODE_TXQ_LZ &&
-           opcode != TGSI_OPCODE_LODQ &&
+   return (!is_mem_query_inst(opcode) &&
            tgsi_get_opcode_info(opcode)->is_tex);
 }
 
@@ -320,7 +327,8 @@ scan_instruction(struct tgsi_shader_info *info,
          }
       }
 
-      if (is_memory_file(src->Register.File)) {
+      if (is_memory_file(src->Register.File) &&
+          !is_mem_query_inst(fullinst->Instruction.Opcode)) {
          is_mem_inst = true;
 
          if (tgsi_get_opcode_info(fullinst->Instruction.Opcode)->is_store) {
