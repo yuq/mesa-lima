@@ -240,6 +240,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_ROBUST_BUFFER_ACCESS_BEHAVIOR:
    case PIPE_CAP_TGSI_VOTE:
    case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
+   case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
       return 1;
    case PIPE_CAP_COMPUTE:
       return (class_3d < GP100_3D_CLASS);
@@ -272,7 +273,6 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_PCI_DEVICE:
    case PIPE_CAP_PCI_FUNCTION:
    case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
-   case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
