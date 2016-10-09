@@ -62,6 +62,10 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
 bool
 brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
                       GLbitfield mask, bool partial_clear, bool encode_srgb);
+void
+brw_blorp_clear_depth_stencil(struct brw_context *brw,
+                              struct gl_framebuffer *fb,
+                              GLbitfield mask, bool partial_clear);
 
 void
 brw_blorp_resolve_color(struct brw_context *brw,

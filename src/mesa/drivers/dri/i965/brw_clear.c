@@ -235,6 +235,12 @@ brw_clear(struct gl_context *ctx, GLbitfield mask)
       }
    }
 
+   if (brw->gen >= 6 && (mask & BUFFER_BITS_DEPTH_STENCIL)) {
+      brw_blorp_clear_depth_stencil(brw, fb, mask, partial_clear);
+      debug_mask("blorp depth/stencil", mask & BUFFER_BITS_DEPTH_STENCIL);
+      mask &= ~BUFFER_BITS_DEPTH_STENCIL;
+   }
+
    GLbitfield tri_mask = mask & (BUFFER_BITS_COLOR |
 				 BUFFER_BIT_STENCIL |
 				 BUFFER_BIT_DEPTH);
