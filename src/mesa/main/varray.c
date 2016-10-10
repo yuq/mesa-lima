@@ -102,6 +102,7 @@ type_to_bit(const struct gl_context *ctx, GLenum type)
    case GL_UNSIGNED_INT:
       return UNSIGNED_INT_BIT;
    case GL_HALF_FLOAT:
+   case GL_HALF_FLOAT_OES:
       if (ctx->Extensions.ARB_half_float_vertex)
          return HALF_BIT;
       else
@@ -236,8 +237,10 @@ get_legal_types_mask(const struct gl_context *ctx)
          legalTypesMask &= ~(UNSIGNED_INT_BIT |
                              INT_BIT |
                              UNSIGNED_INT_2_10_10_10_REV_BIT |
-                             INT_2_10_10_10_REV_BIT |
-                             HALF_BIT);
+                             INT_2_10_10_10_REV_BIT);
+
+         if (!_mesa_has_OES_vertex_half_float(ctx))
+            legalTypesMask &= ~HALF_BIT;
       }
    }
    else {

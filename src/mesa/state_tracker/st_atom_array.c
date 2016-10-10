@@ -212,6 +212,7 @@ st_pipe_vertex_format(GLenum type, GLuint size, GLenum format,
 {
    assert((type >= GL_BYTE && type <= GL_DOUBLE) ||
           type == GL_FIXED || type == GL_HALF_FLOAT ||
+          type == GL_HALF_FLOAT_OES ||
           type == GL_INT_2_10_10_10_REV ||
           type == GL_UNSIGNED_INT_2_10_10_10_REV ||
           type == GL_UNSIGNED_INT_10F_11F_11F_REV);
@@ -281,7 +282,8 @@ st_pipe_vertex_format(GLenum type, GLuint size, GLenum format,
       switch (type) {
       case GL_DOUBLE: return double_types[size-1];
       case GL_FLOAT: return float_types[size-1];
-      case GL_HALF_FLOAT: return half_float_types[size-1];
+      case GL_HALF_FLOAT:
+      case GL_HALF_FLOAT_OES: return half_float_types[size-1];
       case GL_INT: return int_types_norm[size-1];
       case GL_SHORT: return short_types_norm[size-1];
       case GL_BYTE: return byte_types_norm[size-1];
@@ -296,7 +298,8 @@ st_pipe_vertex_format(GLenum type, GLuint size, GLenum format,
       switch (type) {
       case GL_DOUBLE: return double_types[size-1];
       case GL_FLOAT: return float_types[size-1];
-      case GL_HALF_FLOAT: return half_float_types[size-1];
+      case GL_HALF_FLOAT:
+      case GL_HALF_FLOAT_OES: return half_float_types[size-1];
       case GL_INT: return int_types_scale[size-1];
       case GL_SHORT: return short_types_scale[size-1];
       case GL_BYTE: return byte_types_scale[size-1];

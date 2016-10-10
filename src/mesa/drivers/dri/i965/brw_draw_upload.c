@@ -290,6 +290,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       case GL_DOUBLE: return double_types(brw, size, glarray->Doubles);
       case GL_FLOAT: return float_types[size];
       case GL_HALF_FLOAT:
+      case GL_HALF_FLOAT_OES:
          if (brw->gen < 6 && size == 3)
             return half_float_types[4];
          else
@@ -368,6 +369,7 @@ brw_get_vertex_surface_type(struct brw_context *brw,
       case GL_DOUBLE: return double_types(brw, size, glarray->Doubles);
       case GL_FLOAT: return float_types[size];
       case GL_HALF_FLOAT:
+      case GL_HALF_FLOAT_OES:
          if (brw->gen < 6 && size == 3)
             return half_float_types[4];
          else
