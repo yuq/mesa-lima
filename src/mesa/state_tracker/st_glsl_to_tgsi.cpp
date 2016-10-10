@@ -527,7 +527,7 @@ public:
                                       st_src_reg src2 = undef_src,
                                       st_src_reg src3 = undef_src);
 
-   unsigned get_opcode(ir_instruction *ir, unsigned op,
+   unsigned get_opcode(unsigned op,
                     st_dst_reg dst,
                     st_src_reg src0, st_src_reg src1);
 
@@ -669,7 +669,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    int num_reladdr = 0, i, j;
    bool dst_is_64bit[2];
 
-   op = get_opcode(ir, op, dst, src0, src1);
+   op = get_opcode(op, dst, src0, src1);
 
    /* If we have to do relative addressing, we want to load the ARL
     * reg directly for one of the regs, and preload the other reladdr
@@ -900,7 +900,7 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
  * based on the operands and input opcode, then emits the result.
  */
 unsigned
-glsl_to_tgsi_visitor::get_opcode(ir_instruction *ir, unsigned op,
+glsl_to_tgsi_visitor::get_opcode(unsigned op,
                                  st_dst_reg dst,
                                  st_src_reg src0, st_src_reg src1)
 {
