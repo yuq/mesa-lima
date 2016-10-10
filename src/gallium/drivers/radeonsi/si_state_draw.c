@@ -696,6 +696,19 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	}
 }
 
+static void si_emit_surface_sync(struct r600_common_context *rctx,
+				 unsigned cp_coher_cntl)
+{
+	struct radeon_winsys_cs *cs = rctx->gfx.cs;
+
+	/* ACQUIRE_MEM is only required on a compute ring. */
+	radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
+	radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+	radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
+	radeon_emit(cs, 0);               /* CP_COHER_BASE */
+	radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
+}
+
 void si_emit_cache_flush(struct si_context *sctx)
 {
 	struct r600_common_context *rctx = &sctx->b;
@@ -714,15 +727,6 @@ void si_emit_cache_flush(struct si_context *sctx)
 		cp_coher_cntl |= S_0085F0_SH_ICACHE_ACTION_ENA(1);
 	if (rctx->flags & SI_CONTEXT_INV_SMEM_L1)
 		cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
-
-	if (rctx->flags & SI_CONTEXT_INV_VMEM_L1)
-		cp_coher_cntl |= S_0085F0_TCL1_ACTION_ENA(1);
-	if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
-		cp_coher_cntl |= S_0085F0_TC_ACTION_ENA(1);
-
-		if (rctx->chip_class >= VI)
-			cp_coher_cntl |= S_0301F0_TC_WB_ACTION_ENA(1);
-	}
 
 	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
 		cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
@@ -806,22 +810,61 @@ void si_emit_cache_flush(struct si_context *sctx)
 	/* Make sure ME is idle (it executes most packets) before continuing.
 	 * This prevents read-after-write hazards between PFP and ME.
 	 */
-	if (cp_coher_cntl || (rctx->flags & SI_CONTEXT_CS_PARTIAL_FLUSH)) {
+	if (cp_coher_cntl ||
+	    (rctx->flags & (SI_CONTEXT_CS_PARTIAL_FLUSH |
+			    SI_CONTEXT_INV_VMEM_L1 |
+			    SI_CONTEXT_INV_GLOBAL_L2 |
+			    SI_CONTEXT_WRITEBACK_GLOBAL_L2))) {
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
 
-	/* When one of the DEST_BASE flags is set, SURFACE_SYNC waits for idle.
-	 * Therefore, it should be last. Done in PFP.
+	/* When one of the CP_COHER_CNTL.DEST_BASE flags is set, SURFACE_SYNC
+	 * waits for idle. Therefore, it should be last. SURFACE_SYNC is done
+	 * in PFP.
+	 *
+	 * cp_coher_cntl should contain all necessary flags except TC flags
+	 * at this point.
+	 *
+	 * SI-CIK don't support L2 write-back.
 	 */
-	if (cp_coher_cntl) {
-		/* ACQUIRE_MEM is only required on a compute ring. */
-		radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
-		radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-		radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
-		radeon_emit(cs, 0);               /* CP_COHER_BASE */
-		radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
+	if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2 ||
+	    (rctx->chip_class <= CIK &&
+	     (rctx->flags & SI_CONTEXT_WRITEBACK_GLOBAL_L2))) {
+		/* Invalidate L1 & L2. (L1 is always invalidated)
+		 * WB must be set on VI+ when TC_ACTION is set.
+		 */
+		si_emit_surface_sync(rctx, cp_coher_cntl |
+				     S_0085F0_TC_ACTION_ENA(1) |
+				     S_0301F0_TC_WB_ACTION_ENA(rctx->chip_class >= VI));
+		cp_coher_cntl = 0;
+	} else {
+		/* L1 invalidation and L2 writeback must be done separately,
+		 * because both operations can't be done together.
+		 */
+		if (rctx->flags & SI_CONTEXT_WRITEBACK_GLOBAL_L2) {
+			/* WB = write-back
+			 * NC = apply to non-coherent MTYPEs
+			 *      (i.e. MTYPE <= 1, which is what we use everywhere)
+			 *
+			 * WB doesn't work without NC.
+			 */
+			si_emit_surface_sync(rctx, cp_coher_cntl |
+					     S_0301F0_TC_WB_ACTION_ENA(1) |
+					     S_0301F0_TC_NC_ACTION_ENA(1));
+			cp_coher_cntl = 0;
+		}
+		if (rctx->flags & SI_CONTEXT_INV_VMEM_L1) {
+			/* Invalidate per-CU VMEM L1. */
+			si_emit_surface_sync(rctx, cp_coher_cntl |
+					     S_0085F0_TCL1_ACTION_ENA(1));
+			cp_coher_cntl = 0;
+		}
 	}
+
+	/* If TC flushes haven't cleared this... */
+	if (cp_coher_cntl)
+		si_emit_surface_sync(rctx, cp_coher_cntl);
 
 	if (rctx->flags & R600_CONTEXT_START_PIPELINE_STATS) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
