@@ -494,6 +494,8 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(KHR_no_config_context);
    _EGL_CHECK_EXTENSION(KHR_reusable_sync);
    _EGL_CHECK_EXTENSION(KHR_surfaceless_context);
+   if (dpy->Extensions.EXT_swap_buffers_with_damage)
+      _eglAppendExtension(&exts, "EGL_KHR_swap_buffers_with_damage");
    _EGL_CHECK_EXTENSION(KHR_wait_sync);
 
    if (dpy->Extensions.KHR_no_config_context)
@@ -1150,17 +1152,14 @@ eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 }
 
 
-static EGLBoolean EGLAPIENTRY
-eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
-                            EGLint *rects, EGLint n_rects)
+static EGLBoolean
+eglSwapBuffersWithDamageCommon(_EGLDisplay *disp, _EGLSurface *surf,
+                               EGLint *rects, EGLint n_rects)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLSurface *surf = _eglLookupSurface(surface, disp);
    _EGLDriver *drv;
    EGLBoolean ret;
 
-   _EGL_FUNC_START(disp, EGL_OBJECT_SURFACE_KHR, surf, EGL_FALSE);
    _EGL_CHECK_SURFACE(disp, surf, EGL_FALSE, drv);
 
    /* surface must be bound to current context in EGL 1.4 */
@@ -1174,6 +1173,26 @@ eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
    ret = drv->API.SwapBuffersWithDamageEXT(drv, disp, surf, rects, n_rects);
 
    RETURN_EGL_EVAL(disp, ret);
+}
+
+static EGLBoolean EGLAPIENTRY
+eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
+                            EGLint *rects, EGLint n_rects)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSurface *surf = _eglLookupSurface(surface, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_SURFACE_KHR, surf, EGL_FALSE);
+   return eglSwapBuffersWithDamageCommon(disp, surf, rects, n_rects);
+}
+
+static EGLBoolean EGLAPIENTRY
+eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface surface,
+                            EGLint *rects, EGLint n_rects)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSurface *surf = _eglLookupSurface(surface, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_SURFACE_KHR, surf, EGL_FALSE);
+   return eglSwapBuffersWithDamageCommon(disp, surf, rects, n_rects);
 }
 
 EGLBoolean EGLAPIENTRY
@@ -2262,6 +2281,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreateWaylandBufferFromImageWL", (_EGLProc) eglCreateWaylandBufferFromImageWL },
       { "eglPostSubBufferNV", (_EGLProc) eglPostSubBufferNV },
       { "eglSwapBuffersWithDamageEXT", (_EGLProc) eglSwapBuffersWithDamageEXT },
+      { "eglSwapBuffersWithDamageKHR", (_EGLProc) eglSwapBuffersWithDamageKHR },
       { "eglGetPlatformDisplayEXT", (_EGLProc) eglGetPlatformDisplayEXT },
       { "eglCreatePlatformWindowSurfaceEXT", (_EGLProc) eglCreatePlatformWindowSurfaceEXT },
       { "eglCreatePlatformPixmapSurfaceEXT", (_EGLProc) eglCreatePlatformPixmapSurfaceEXT },
