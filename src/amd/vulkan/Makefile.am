@@ -129,9 +129,12 @@ BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES) dev_icd.json radv_timestamp.h
 EXTRA_DIST = \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
-	radv_entrypoints_gen.py \
 	dev_icd.json.in \
-	radeon_icd.json
+	radeon_icd.json \
+	radv_entrypoints_gen.py \
+	vk_format_layout.csv \
+	vk_format_parse.py \
+	vk_format_table.py
 
 libvulkan_radeon_la_LIBADD = $(VULKAN_LIB_DEPS) $(top_builddir)/src/amd/addrlib/libamdgpu_addrlib.la
 
