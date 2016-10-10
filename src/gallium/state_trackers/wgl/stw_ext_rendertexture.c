@@ -129,6 +129,12 @@ wglBindTexImageARB(HPBUFFERARB hPbuffer, int iBuffer)
     * we do here.
     */
 
+   if (!curctx) {
+      debug_printf("No rendering context in wglBindTexImageARB()\n");
+      SetLastError(ERROR_INVALID_OPERATION);
+      return FALSE;
+   }
+
    fb = stw_framebuffer_from_HPBUFFERARB(hPbuffer);
    if (!fb) {
       debug_printf("Invalid pbuffer handle in wglBindTexImageARB()\n");
