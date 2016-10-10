@@ -820,11 +820,11 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
          // Either there is 1 offset, which goes into the 2 low bytes of the
          // first source, or there are 4 offsets, which go into 2 sources (8
          // values, 1 byte each).
-         Value *offs[2] = {NULL, NULL};
+         Value *offs[2] = {bld.getScratch(), bld.getScratch()};
          for (n = 0; n < i->tex.useOffsets; n++) {
             for (c = 0; c < 2; ++c) {
                if ((n % 2) == 0 && c == 0)
-                  offs[n / 2] = i->offset[n][c].get();
+                  bld.mkMov(offs[n / 2], i->offset[n][c].get());
                else
                   bld.mkOp3(OP_INSBF, TYPE_U32,
                             offs[n / 2],
