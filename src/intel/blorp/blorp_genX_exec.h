@@ -780,6 +780,11 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
          db.MinimumArrayElement = params->depth.view.base_array_layer;
 
          db.SurfacePitch = params->depth.surf.row_pitch - 1;
+#if GEN_GEN >= 8
+         db.SurfaceQPitch =
+            isl_surf_get_array_pitch_el_rows(&params->depth.surf) >> 2,
+#endif
+
          db.SurfaceBaseAddress = params->depth.addr;
          db.DepthBufferMOCS = mocs;
       } else {
@@ -804,6 +809,10 @@ blorp_emit_depth_stencil_config(struct blorp_batch *batch,
          hiz.SurfacePitch = params->depth.aux_surf.row_pitch - 1;
          hiz.SurfaceBaseAddress = params->depth.aux_addr;
          hiz.HierarchicalDepthBufferMOCS = mocs;
+#if GEN_GEN >= 8
+         hiz.SurfaceQPitch =
+            isl_surf_get_array_pitch_sa_rows(&params->depth.aux_surf) >> 2;
+#endif
       }
    }
 
