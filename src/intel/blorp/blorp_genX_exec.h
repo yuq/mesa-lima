@@ -1053,6 +1053,36 @@ blorp_emit_surface_state(struct blorp_batch *batch,
 }
 
 static void
+blorp_emit_null_surface_state(struct blorp_batch *batch,
+                              const struct brw_blorp_surface_info *surface,
+                              uint32_t *state)
+{
+   struct GENX(RENDER_SURFACE_STATE) ss = {
+      .SurfaceType = SURFTYPE_NULL,
+      .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
+      .Width = surface->surf.logical_level0_px.width - 1,
+      .Height = surface->surf.logical_level0_px.height - 1,
+      .MIPCountLOD = surface->view.base_level,
+      .MinimumArrayElement = surface->view.base_array_layer,
+      .Depth = surface->view.array_len - 1,
+      .RenderTargetViewExtent = surface->view.array_len - 1,
+      .NumberofMultisamples = ffs(surface->surf.samples) - 1,
+
+#if GEN_GEN >= 7
+      .SurfaceArray = surface->surf.dim != ISL_SURF_DIM_3D,
+#endif
+
+#if GEN_GEN >= 8
+      .TileMode = YMAJOR,
+#else
+      .TiledSurface = true,
+#endif
+   };
+
+   GENX(RENDER_SURFACE_STATE_pack)(NULL, state, &ss);
+}
+
+static void
 blorp_emit_surface_states(struct blorp_batch *batch,
                           const struct blorp_params *params)
 {
@@ -1066,9 +1096,19 @@ blorp_emit_surface_states(struct blorp_batch *batch,
    blorp_alloc_binding_table(batch, num_surfaces, ss_size, ss_align,
                              &bind_offset, surface_offsets, surface_maps);
 
-   blorp_emit_surface_state(batch, &params->dst,
-                            surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
-                            surface_offsets[BLORP_RENDERBUFFER_BT_INDEX], true);
+   if (params->dst.enabled) {
+      blorp_emit_surface_state(batch, &params->dst,
+                               surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
+                               surface_offsets[BLORP_RENDERBUFFER_BT_INDEX],
+                               true);
+   } else {
+      assert(params->depth.enabled || params->stencil.enabled);
+      const struct brw_blorp_surface_info *surface =
+         params->depth.enabled ? &params->depth : &params->stencil;
+      blorp_emit_null_surface_state(batch, surface,
+                                    surface_maps[BLORP_RENDERBUFFER_BT_INDEX]);
+   }
+
    if (params->src.enabled) {
       blorp_emit_surface_state(batch, &params->src,
                                surface_maps[BLORP_TEXTURE_BT_INDEX],
@@ -1264,8 +1304,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    blorp_emit(batch, GENX(3DSTATE_CONSTANT_GS), gs);
    blorp_emit(batch, GENX(3DSTATE_CONSTANT_PS), ps);
 
-   if (params->wm_prog_data)
-      blorp_emit_surface_states(batch, params);
+   blorp_emit_surface_states(batch, params);
 
    if (params->src.enabled)
       blorp_emit_sampler_state(batch, params);
