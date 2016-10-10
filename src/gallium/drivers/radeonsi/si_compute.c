@@ -701,7 +701,7 @@ static void si_launch_grid(
 
 		/* The hw doesn't read the indirect buffer via TC L2. */
 		if (r600_resource(info->indirect)->TC_L2_dirty) {
-			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
+			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
 			r600_resource(info->indirect)->TC_L2_dirty = false;
 		}
 	}
