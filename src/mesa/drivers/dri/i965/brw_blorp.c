@@ -175,6 +175,10 @@ blorp_surf_for_miptree(struct brw_context *brw,
       }
    }
 
+   if (surf->aux_usage == ISL_AUX_USAGE_HIZ &&
+       !intel_miptree_level_has_hiz(mt, *level))
+      surf->aux_usage = ISL_AUX_USAGE_NONE;
+
    if (surf->aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
        * surface.  Without one, it does nothing.
@@ -1035,6 +1039,8 @@ intel_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
    struct blorp_surf surf;
    blorp_surf_for_miptree(brw, &surf, mt, true, false, 0,
                           &level, start_layer, num_layers, isl_tmp);
+
+   assert(surf.aux_usage == ISL_AUX_USAGE_HIZ);
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
