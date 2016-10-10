@@ -3366,6 +3366,7 @@ static void si_texture_barrier(struct pipe_context *ctx)
 			 SI_CONTEXT_CS_PARTIAL_FLUSH;
 }
 
+/* This only ensures coherency for shader image/buffer stores. */
 static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -3392,9 +3393,9 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	}
 
 	if (flags & PIPE_BARRIER_INDEX_BUFFER) {
-		sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1;
-
-		/* Indices are read through TC L2 since VI. */
+		/* Indices are read through TC L2 since VI.
+		 * L1 isn't used.
+		 */
 		if (sctx->screen->b.chip_class <= CIK)
 			sctx->b.flags |= SI_CONTEXT_INV_GLOBAL_L2;
 	}
