@@ -97,12 +97,66 @@ event End
     uint32_t count;
 };
 
-event DrawIndexedInstance
+event DrawInstancedEvent
 {
-    PRIMITIVE_TOPOLOGY topology;
+    uint32_t id;
+    uint32_t topology;
+    uint32_t numVertices;
+    int32_t  startVertex;
+    uint32_t numInstances;
+    uint32_t startInstance;
+};
+
+event DrawIndexedInstancedEvent
+{
+    uint32_t id;
+    uint32_t topology;
     uint32_t numIndices;
     int32_t  indexOffset;
     int32_t  baseVertex;
     uint32_t numInstances;
     uint32_t startInstance;
+};
+
+event DispatchEvent
+{
+    uint32_t id;
+    uint32_t threadGroupCountX;
+    uint32_t threadGroupCountY;
+    uint32_t threadGroupCountZ;
+};
+
+event FrameEndEvent
+{
+    uint32_t frameId;
+    uint32_t nextDrawId;
+};
+
+event FrontendStatsEvent
+{
+    uint64_t IaVertices;
+    uint64_t IaPrimitives;
+    uint64_t VsInvocations;
+    uint64_t HsInvocations;
+    uint64_t DsInvocations;
+    uint64_t GsInvocations;
+    uint64_t GsPrimitives;
+    uint64_t CInvocations;
+    uint64_t CPrimitives;
+    uint64_t SoPrimStorageNeeded0;
+    uint64_t SoPrimStorageNeeded1;
+    uint64_t SoPrimStorageNeeded2;
+    uint64_t SoPrimStorageNeeded3;
+    uint64_t SoNumPrimsWritten0;
+    uint64_t SoNumPrimsWritten1;
+    uint64_t SoNumPrimsWritten2;
+    uint64_t SoNumPrimsWritten3;
+};
+
+event BackendStatsEvent
+{
+    uint64_t DepthPassCount;
+    uint64_t PsInvocations;
+    uint64_t CsInvocations;
+
 };
