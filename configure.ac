@@ -1719,6 +1719,9 @@ if test -n "$with_vulkan_drivers"; then
         xradeon)
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             HAVE_RADEON_VULKAN=yes;
+            if test "x$with_sha1" == "x"; then
+                AC_MSG_ERROR([radv vulkan driver requires SHA1])
+            fi
 	    ;;
         *)
             AC_MSG_ERROR([Vulkan driver '$driver' does not exist])
