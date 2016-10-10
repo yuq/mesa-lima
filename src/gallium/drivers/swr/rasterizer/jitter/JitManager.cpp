@@ -111,47 +111,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
 
     StringRef hostCPUName;
 
-    // force JIT to use the same CPU arch as the rest of swr
-    if(mArch.AVX512F())
-    {
-        assert(0 && "Implement AVX512 jitter");
-        hostCPUName = sys::getHostCPUName();
-        if (mVWidth == 0)
-        {
-            mVWidth = 16;
-        }
-    }
-    else if(mArch.AVX2())
-    {
-        hostCPUName = StringRef("core-avx2");
-        if (mVWidth == 0)
-        {
-            mVWidth = 8;
-        }
-    }
-    else if(mArch.AVX())
-    {
-        if (mArch.F16C())
-        {
-            hostCPUName = StringRef("core-avx-i");
-        }
-        else
-        {
-            hostCPUName = StringRef("corei7-avx");
-        }
-        if (mVWidth == 0)
-        {
-            mVWidth = 8;
-        }
-    }
-    else
-    {
-        hostCPUName = sys::getHostCPUName();
-        if (mVWidth == 0)
-        {
-            mVWidth = 8; // 4?
-        }
-    }
+    hostCPUName = sys::getHostCPUName();
 
     EB.setMCPU(hostCPUName);
 
