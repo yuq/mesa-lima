@@ -560,6 +560,7 @@ public:
                           unsigned *index,
                           st_src_reg *indirect,
                           unsigned *location);
+   st_src_reg canonicalize_gather_offset(st_src_reg offset);
 
    bool try_emit_mad(ir_expression *ir,
               int mul_operand);
@@ -3970,6 +3971,20 @@ glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
    }
 }
 
+st_src_reg
+glsl_to_tgsi_visitor::canonicalize_gather_offset(st_src_reg offset)
+{
+   if (offset.reladdr || offset.reladdr2) {
+      st_src_reg tmp = get_temp(glsl_type::ivec2_type);
+      st_dst_reg tmp_dst = st_dst_reg(tmp);
+      tmp_dst.writemask = WRITEMASK_XY;
+      emit_asm(NULL, TGSI_OPCODE_MOV, tmp_dst, offset);
+      return tmp;
+   }
+
+   return offset;
+}
+
 void
 glsl_to_tgsi_visitor::visit(ir_texture *ir)
 {
@@ -4095,9 +4110,10 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
                offset[i].index += i * type_size(elt_type);
                offset[i].type = elt_type->base_type;
                offset[i].swizzle = swizzle_for_size(elt_type->vector_elements);
+               offset[i] = canonicalize_gather_offset(offset[i]);
             }
          } else {
-            offset[0] = this->result;
+            offset[0] = canonicalize_gather_offset(this->result);
          }
       }
       break;
