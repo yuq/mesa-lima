@@ -37,6 +37,8 @@
 
 #include "amd/common/sid.h"
 
+DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
+
 /* FENCES */
 
 static struct pipe_fence_handle *
@@ -142,6 +144,9 @@ amdgpu_cs_get_next_fence(struct radeon_winsys_cs *rcs)
 {
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
    struct pipe_fence_handle *fence = NULL;
+
+   if (debug_get_option_noop())
+      return NULL;
 
    if (cs->next_fence) {
       amdgpu_fence_reference(&fence, cs->next_fence);
@@ -1068,8 +1073,6 @@ void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
    if (util_queue_is_initialized(&ws->cs_queue))
       util_queue_job_wait(&cs->flush_completed);
 }
-
-DEBUG_GET_ONCE_BOOL_OPTION(noop, "RADEON_NOOP", false)
 
 static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
                            unsigned flags,
