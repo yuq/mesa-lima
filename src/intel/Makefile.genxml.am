@@ -35,7 +35,7 @@ $(GENXML_GENERATED_FILES): genxml/gen_pack_header.py
 %_xml.h:  %.xml Makefile
 	$(MKDIR_GEN)
 	$(AM_V_GEN) echo -n "static const uint8_t " > $@; \
-	sed -e 's,_xml.h,,' <<< "`basename $@`_xml[] = {" >> $@; \
+	echo "`basename $@`_xml[] = {" | sed -e 's,_xml.h,,' >> $@; \
 	cat $< | $(XXD) -i >> $@; \
 	echo "};" >> $@
 
