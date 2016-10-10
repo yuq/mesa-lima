@@ -1905,8 +1905,10 @@ GCRA::resolveSplitsAndMerges()
          // their registers should be identical.
          if (v->getInsn()->op == OP_PHI || v->getInsn()->op == OP_UNION) {
             Instruction *phi = v->getInsn();
-            for (int phis = 0; phi->srcExists(phis); ++phis)
+            for (int phis = 0; phi->srcExists(phis); ++phis) {
                phi->getSrc(phis)->join = v;
+               phi->getSrc(phis)->reg.data.id = v->reg.data.id;
+            }
          }
          reg += v->reg.size;
       }
