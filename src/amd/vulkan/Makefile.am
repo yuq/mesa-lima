@@ -160,9 +160,3 @@ dev_icd.json : dev_icd.json.in
 		< $(srcdir)/dev_icd.json.in > $@
 
 include $(top_srcdir)/install-lib-links.mk
-
-noinst_HEADERS =
-
-LDADD = \
-	$(PTHREAD_LIBS) -lm -lstdc++
-
