@@ -315,7 +315,7 @@ bool CheckDependency(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t lastReti
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Update client stats.
-INLINE void UpdateClientStats(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+INLINE void UpdateClientStats(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEXT* pDC)
 {
     if ((pContext->pfnUpdateStats == nullptr) || (GetApiState(pDC).enableStats == false))
     {
@@ -334,12 +334,13 @@ INLINE void UpdateClientStats(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
         stats.CsInvocations  += dynState.pStats[i].CsInvocations;
     }
 
+
     pContext->pfnUpdateStats(GetPrivateState(pDC), &stats);
 }
 
-INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEXT* pDC)
 {
-    UpdateClientStats(pContext, pDC);
+    UpdateClientStats(pContext, workerId, pDC);
 
     if (pDC->retireCallback.pfnCallbackFunc)
     {
@@ -350,14 +351,14 @@ INLINE void ExecuteCallbacks(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 }
 
 // inlined-only version
-INLINE int32_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+INLINE int32_t CompleteDrawContextInl(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEXT* pDC)
 {
     int32_t result = InterlockedDecrement((volatile LONG*)&pDC->threadsDone);
     SWR_ASSERT(result >= 0);
 
     if (result == 0)
     {
-        ExecuteCallbacks(pContext, pDC);
+        ExecuteCallbacks(pContext, workerId, pDC);
 
         // Cleanup memory allocations
         pDC->pArena->Reset(true);
@@ -381,10 +382,10 @@ INLINE int32_t CompleteDrawContextInl(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 // available to other translation modules
 int32_t CompleteDrawContext(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
 {
-    return CompleteDrawContextInl(pContext, pDC);
+    return CompleteDrawContextInl(pContext, 0, pDC);
 }
 
-INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint32_t& curDrawBE, uint32_t& drawEnqueued)
+INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint32_t workerId, uint32_t& curDrawBE, uint32_t& drawEnqueued)
 {
     // increment our current draw id to the first incomplete draw
     drawEnqueued = GetEnqueuedDraw(pContext);
@@ -402,7 +403,7 @@ INLINE bool FindFirstIncompleteDraw(SWR_CONTEXT* pContext, uint32_t& curDrawBE, 
         if (isWorkComplete)
         {
             curDrawBE++;
-            CompleteDrawContextInl(pContext, pDC);
+            CompleteDrawContextInl(pContext, workerId, pDC);
         }
         else
         {
@@ -442,7 +443,7 @@ bool WorkOnFifoBE(
     // Find the first incomplete draw that has pending work. If no such draw is found then
     // return. FindFirstIncompleteDraw is responsible for incrementing the curDrawBE.
     uint32_t drawEnqueued = 0;
-    if (FindFirstIncompleteDraw(pContext, curDrawBE, drawEnqueued) == false)
+    if (FindFirstIncompleteDraw(pContext, workerId, curDrawBE, drawEnqueued) == false)
     {
         return false;
     }
@@ -537,7 +538,7 @@ bool WorkOnFifoBE(
                 {
                     // We can increment the current BE and safely move to next draw since we know this draw is complete.
                     curDrawBE++;
-                    CompleteDrawContextInl(pContext, pDC);
+                    CompleteDrawContextInl(pContext, workerId, pDC);
 
                     lastRetiredDraw++;
 
@@ -563,11 +564,20 @@ bool WorkOnFifoBE(
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Called when FE work is complete for this DC.
-INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, DRAW_CONTEXT* pDC)
+INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEXT* pDC)
 {
     if (pContext->pfnUpdateStatsFE && GetApiState(pDC).enableStats)
     {
-        pContext->pfnUpdateStatsFE(GetPrivateState(pDC), &pDC->dynState.statsFE);
+        SWR_STATS_FE& stats = pDC->dynState.statsFE;
+
+        AR_EVENT(FrontendStatsEvent(
+            stats.IaVertices, stats.IaPrimitives, stats.VsInvocations, stats.HsInvocations,
+            stats.DsInvocations, stats.GsInvocations, stats.GsPrimitives, stats.CInvocations, stats.CPrimitives,
+            stats.SoPrimStorageNeeded[0], stats.SoPrimStorageNeeded[1], stats.SoPrimStorageNeeded[2], stats.SoPrimStorageNeeded[3],
+            stats.SoNumPrimsWritten[0], stats.SoNumPrimsWritten[1], stats.SoNumPrimsWritten[2], stats.SoNumPrimsWritten[3]
+        ));
+
+        pContext->pfnUpdateStatsFE(GetPrivateState(pDC), &stats);
     }
 
     if (pContext->pfnUpdateSoWriteOffset)
@@ -598,7 +608,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE)
         DRAW_CONTEXT *pDC = &pContext->dcRing[dcSlot];
         if (pDC->isCompute || pDC->doneFE || pDC->FeLock)
         {
-            CompleteDrawContextInl(pContext, pDC);
+            CompleteDrawContextInl(pContext, workerId, pDC);
             curDrawFE++;
         }
         else
@@ -621,7 +631,7 @@ void WorkOnFifoFE(SWR_CONTEXT *pContext, uint32_t workerId, uint32_t &curDrawFE)
                 // successfully grabbed the DC, now run the FE
                 pDC->FeWork.pfnWork(pContext, pDC, workerId, &pDC->FeWork.desc);
 
-                CompleteDrawFE(pContext, pDC);
+                CompleteDrawFE(pContext, workerId, pDC);
             }
         }
         curDraw++;
@@ -641,7 +651,7 @@ void WorkOnCompute(
     uint32_t& curDrawBE)
 {
     uint32_t drawEnqueued = 0;
-    if (FindFirstIncompleteDraw(pContext, curDrawBE, drawEnqueued) == false)
+    if (FindFirstIncompleteDraw(pContext, workerId, curDrawBE, drawEnqueued) == false)
     {
         return;
     }

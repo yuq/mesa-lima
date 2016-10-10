@@ -34,6 +34,19 @@
 
 namespace ArchRast
 {
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Event handler that saves stat events to event files. This
+    ///        handler filters out unwanted events.
+    class EventHandlerStatsFile : public EventHandlerFile
+    {
+    public:
+        EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id) {}
+
+        // These are events that we're not interested in saving in stats event files.
+        virtual void handle(Start& event) {}
+        virtual void handle(End& event) {}
+    };
+
     static EventManager* FromHandle(HANDLE hThreadContext)
     {
         return reinterpret_cast<EventManager*>(hThreadContext);
@@ -47,7 +60,7 @@ namespace ArchRast
         uint32_t id = counter.fetch_add(1);
 
         EventManager* pManager = new EventManager();
-        EventHandler* pHandler = new EventHandlerFile(id);
+        EventHandler* pHandler = new EventHandlerStatsFile(id);
 
         if (pManager && pHandler)
         {
