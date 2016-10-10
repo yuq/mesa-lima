@@ -334,9 +334,12 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	unsigned array_count = 0;
 	unsigned sgpr_count = 0, user_sgpr_count;
 	unsigned i;
+
+	/* 1 for each descriptor set */
 	for (unsigned i = 0; i < 4; ++i)
 		arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
 
+	/* 1 for push constants and dynamic descriptors */
 	arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
 
 	array_count = arg_idx;
@@ -351,7 +354,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		arg_types[arg_idx++] = LLVMVectorType(ctx->i32, 3);
 		break;
 	case MESA_SHADER_VERTEX:
-		arg_types[arg_idx++] = const_array(ctx->v16i8, 16);
+		arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* vertex buffers */
 		arg_types[arg_idx++] = ctx->i32; // base vertex
 		arg_types[arg_idx++] = ctx->i32; // start instance
 		user_sgpr_count = sgpr_count = arg_idx;
@@ -361,7 +364,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		arg_types[arg_idx++] = ctx->i32; // instance id
 		break;
 	case MESA_SHADER_FRAGMENT:
-		arg_types[arg_idx++] = const_array(ctx->f32, 32);
+		arg_types[arg_idx++] = const_array(ctx->f32, 32); /* sample positions */
 		user_sgpr_count = arg_idx;
 		arg_types[arg_idx++] = ctx->i32; /* prim mask */
 		sgpr_count = arg_idx;
