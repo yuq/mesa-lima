@@ -4195,10 +4195,15 @@ static void atomic_emit(
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.buffer.atomic.%s", action->intr_name);
 	} else {
+		LLVMValueRef coords;
 		char coords_type[8];
 
-		build_type_name_for_intr(LLVMTypeOf(emit_data->args[1]),
-				    coords_type, sizeof(coords_type));
+		if (inst->Instruction.Opcode == TGSI_OPCODE_ATOMCAS)
+			coords = emit_data->args[2];
+		else
+			coords = emit_data->args[1];
+
+		build_type_name_for_intr(coords, coords_type, sizeof(coords_type));
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.image.atomic.%s.%s",
 			 action->intr_name, coords_type);
