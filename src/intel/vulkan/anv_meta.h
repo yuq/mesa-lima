@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef ANV_META_H
+#define ANV_META_H
 
 #include "anv_private.h"
 
@@ -67,3 +68,5 @@ anv_meta_get_iview_layer(const struct anv_image *dest_image,
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* ANV_META_H */

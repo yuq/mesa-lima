@@ -22,6 +22,10 @@
  */
 
 /*
+ * NOTE: The header can be included multiple times, from the same file.
+ */
+
+/*
  * Gen-specific function declarations.  This header must *not* be included
  * directly.  Instead, it is included multiple times by gen8_private.h.
  * 

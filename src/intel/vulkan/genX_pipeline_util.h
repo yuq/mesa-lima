@@ -21,6 +21,9 @@
  * IN THE SOFTWARE.
  */
 
+#ifndef GENX_PIPELINE_UTIL_H
+#define GENX_PIPELINE_UTIL_H
+
 #include "common/gen_l3_config.h"
 #include "common/gen_sample_positions.h"
 #include "vk_format_info.h"
@@ -969,3 +972,5 @@ emit_3dstate_streamout(struct anv_pipeline *pipeline,
       so.RenderingDisable = rs_info->rasterizerDiscardEnable;
    }
 }
+
+#endif /* GENX_PIPELINE_UTIL_H */

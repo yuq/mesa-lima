@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef ANV_WSI_H
+#define ANV_WSI_H
 
 #include "anv_private.h"
 
@@ -76,3 +77,5 @@ VkResult anv_x11_init_wsi(struct anv_physical_device *physical_device);
 void anv_x11_finish_wsi(struct anv_physical_device *physical_device);
 VkResult anv_wl_init_wsi(struct anv_physical_device *physical_device);
 void anv_wl_finish_wsi(struct anv_physical_device *physical_device);
+
+#endif /* ANV_WSI_H */

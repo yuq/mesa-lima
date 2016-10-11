@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef ANV_PRIVATE_H
+#define ANV_PRIVATE_H
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -2009,3 +2010,5 @@ ANV_DEFINE_STRUCT_CASTS(anv_common, VkImageMemoryBarrier)
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* ANV_PRIVATE_H */
