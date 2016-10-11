@@ -513,7 +513,7 @@ ureg_DECL_constant2D(struct ureg_program *ureg,
 }
 
 
-/* A one-dimensional, depricated version of ureg_DECL_constant2D().
+/* A one-dimensional, deprecated version of ureg_DECL_constant2D().
  *
  * Constant operands declared with this function must be addressed
  * with a one-dimensional index.
