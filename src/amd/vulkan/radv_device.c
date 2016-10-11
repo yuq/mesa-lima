@@ -74,8 +74,10 @@ radv_physical_device_init(struct radv_physical_device *device,
 	}
 	device->ws->query_info(device->ws, &device->rad_info);
 	result = radv_init_wsi(device);
-	if (result != VK_SUCCESS)
+	if (result != VK_SUCCESS) {
+		device->ws->destroy(device->ws);
 		goto fail;
+	}
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
