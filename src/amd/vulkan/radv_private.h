@@ -308,14 +308,6 @@ void *radv_lookup_entrypoint(const char *name);
 
 extern struct radv_dispatch_table dtable;
 
-#define RADV_CALL(func) ({						\
-			if (dtable.func == NULL) {			\
-				size_t idx = offsetof(struct radv_dispatch_table, func) / sizeof(void *); \
-				dtable.entrypoints[idx] = radv_resolve_entrypoint(idx); \
-			}						\
-			dtable.func;					\
-		})
-
 static inline void *
 radv_alloc(const VkAllocationCallbacks *alloc,
 	   size_t size, size_t align,

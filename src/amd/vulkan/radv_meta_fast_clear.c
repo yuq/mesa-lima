@@ -312,7 +312,7 @@ create_pipeline(struct radv_device *device,
 
 	goto cleanup;
 cleanup_cmask:
-	RADV_CALL(DestroyPipeline)(device_h, device->meta_state.fast_clear_flush.cmask_eliminate_pipeline, &device->meta_state.alloc);
+	radv_DestroyPipeline(device_h, device->meta_state.fast_clear_flush.cmask_eliminate_pipeline, &device->meta_state.alloc);
 cleanup:
 	ralloc_free(fs_module.nir);
 	return result;
@@ -327,17 +327,17 @@ radv_device_finish_meta_fast_clear_flush_state(struct radv_device *device)
 	const VkAllocationCallbacks *alloc = &device->meta_state.alloc;
 
 	if (pass_h)
-		RADV_CALL(DestroyRenderPass)(device_h, pass_h,
+		radv_DestroyRenderPass(device_h, pass_h,
 					     &device->meta_state.alloc);
 
 	VkPipeline pipeline_h = state->fast_clear_flush.cmask_eliminate_pipeline;
 	if (pipeline_h) {
-		RADV_CALL(DestroyPipeline)(device_h, pipeline_h, alloc);
+		radv_DestroyPipeline(device_h, pipeline_h, alloc);
 	}
 
 	pipeline_h = state->fast_clear_flush.fmask_decompress_pipeline;
 	if (pipeline_h) {
-		RADV_CALL(DestroyPipeline)(device_h, pipeline_h, alloc);
+		radv_DestroyPipeline(device_h, pipeline_h, alloc);
 	}
 }
 
@@ -446,7 +446,7 @@ emit_fast_clear_flush(struct radv_cmd_buffer *cmd_buffer,
 				     pipeline_h);
 	}
 
-	RADV_CALL(CmdDraw)(cmd_buffer_h, 3, 1, 0, 0);
+	radv_CmdDraw(cmd_buffer_h, 3, 1, 0, 0);
 	cmd_buffer->state.flush_bits |= (RADV_CMD_FLAG_FLUSH_AND_INV_CB |
 					 RADV_CMD_FLAG_FLUSH_AND_INV_CB_META);
 	si_emit_cache_flush(cmd_buffer);
@@ -503,7 +503,7 @@ radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 			      &cmd_buffer->pool->alloc,
 			      &fb_h);
 
-	RADV_CALL(CmdBeginRenderPass)(cmd_buffer_h,
+	radv_CmdBeginRenderPass(cmd_buffer_h,
 				      &(VkRenderPassBeginInfo) {
 					      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 						      .renderPass = cmd_buffer->device->meta_state.fast_clear_flush.pass,
@@ -526,7 +526,7 @@ radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 	emit_fast_clear_flush(cmd_buffer,
 			      &(VkExtent2D) { image->extent.width, image->extent.height },
 			      image->fmask.size > 0);
-	RADV_CALL(CmdEndRenderPass)(cmd_buffer_h);
+	radv_CmdEndRenderPass(cmd_buffer_h);
 
 	radv_DestroyFramebuffer(device_h, fb_h,
 				&cmd_buffer->pool->alloc);
