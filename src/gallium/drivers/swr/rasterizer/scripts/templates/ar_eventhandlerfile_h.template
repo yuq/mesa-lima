@@ -83,7 +83,7 @@ namespace ArchRast
 % for name in protos['event_names']:
         virtual void handle(${name}& event)
         {
-            write(${protos['events'][name]['event_id']}, (char*)&event, sizeof(event));
+            write(${protos['events'][name]['event_id']}, (char*)&event.data, sizeof(event.data));
         }
 % endfor
 

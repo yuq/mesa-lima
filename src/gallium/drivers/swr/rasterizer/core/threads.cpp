@@ -570,7 +570,7 @@ INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEX
     {
         SWR_STATS_FE& stats = pDC->dynState.statsFE;
 
-        AR_EVENT(FrontendStatsEvent(
+        AR_EVENT(FrontendStatsEvent(pDC->drawId,
             stats.IaVertices, stats.IaPrimitives, stats.VsInvocations, stats.HsInvocations,
             stats.DsInvocations, stats.GsInvocations, stats.GsPrimitives, stats.CInvocations, stats.CPrimitives,
             stats.SoPrimStorageNeeded[0], stats.SoPrimStorageNeeded[1], stats.SoPrimStorageNeeded[2], stats.SoPrimStorageNeeded[3],

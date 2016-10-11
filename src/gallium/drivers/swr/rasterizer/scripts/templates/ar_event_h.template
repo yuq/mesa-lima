@@ -56,9 +56,10 @@ namespace ArchRast
 % for name in protos['event_names']:
 
     //////////////////////////////////////////////////////////////////////////
-    /// ${name}
+    /// ${name}Data
     //////////////////////////////////////////////////////////////////////////
-    struct ${name} : Event
+#pragma pack(push, 1)
+    struct ${name}Data
     {<%
         field_names = protos['events'][name]['field_names']
         field_types = protos['events'][name]['field_types'] %>
@@ -66,6 +67,17 @@ namespace ArchRast
         % for i in range(len(field_names)):
         ${field_types[i]} ${field_names[i]};
         % endfor
+    };
+#pragma pack(pop)
+
+    //////////////////////////////////////////////////////////////////////////
+    /// ${name}
+    //////////////////////////////////////////////////////////////////////////
+    struct ${name} : Event
+    {<%
+        field_names = protos['events'][name]['field_names']
+        field_types = protos['events'][name]['field_types'] %>
+        ${name}Data data;
 
         // Constructor
         ${name}(
@@ -79,7 +91,7 @@ namespace ArchRast
         % endfor
         {
         % for i in range(len(field_names)):
-            this->${field_names[i]} = ${field_names[i]};
+            data.${field_names[i]} = ${field_names[i]};
         % endfor
         }
 
