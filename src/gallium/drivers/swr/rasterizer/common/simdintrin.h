@@ -296,6 +296,7 @@ __m256i _simdemu_sllv_epi32(__m256i vA, __m256i vCount)
 #define _simd_cmplt_epi32 _simdemu_cmplt_epi32
 #define _simd_cmpgt_epi32 _simdemu_cmpgt_epi32
 #define _simd_or_si _simdemu_or_si
+#define _simd_xor_si _simdemu_xor_si
 #define _simd_castps_si _mm256_castps_si256
 #define _simd_adds_epu8 _simdemu_adds_epu8
 #define _simd_subs_epu8 _simdemu_subs_epu8
@@ -327,6 +328,7 @@ SIMD_EMU_EPI(_simdemu_cmpeq_epi32, _mm_cmpeq_epi32)
 SIMD_EMU_EPI(_simdemu_cmplt_epi32, _mm_cmplt_epi32)
 SIMD_EMU_EPI(_simdemu_cmpgt_epi32, _mm_cmpgt_epi32)
 SIMD_EMU_EPI(_simdemu_or_si, _mm_or_si128)
+SIMD_EMU_EPI(_simdemu_xor_si, _mm_xor_si128)
 SIMD_EMU_EPI(_simdemu_adds_epu8, _mm_adds_epu8)
 SIMD_EMU_EPI(_simdemu_subs_epu8, _mm_subs_epu8)
 SIMD_EMU_EPI(_simdemu_add_epi8, _mm_add_epi8)
@@ -339,6 +341,8 @@ SIMD_EMU_EPI(_simdemu_cmpeq_epi16, _mm_cmpeq_epi16)
 
 #define _simd_unpacklo_epi32(a, b) _mm256_castps_si256(_mm256_unpacklo_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
 #define _simd_unpackhi_epi32(a, b) _mm256_castps_si256(_mm256_unpackhi_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
+#define _simd_unpacklo_epi64(a, b) _mm256_castpd_si256(_mm256_unpacklo_pd(_mm256_castsi256_pd(a), _mm256_castsi256_pd(b)))
+#define _simd_unpackhi_epi64(a, b) _mm256_castpd_si256(_mm256_unpackhi_pd(_mm256_castsi256_pd(a), _mm256_castsi256_pd(b)))
 
 #define _simd_slli_epi32(a,i) _simdemu_slli_epi32(a,i)
 #define _simd_srai_epi32(a,i) _simdemu_srai_epi32(a,i)
@@ -433,6 +437,63 @@ int _simdemu_movemask_epi8(__m256i a)
 
     return (resHi << 16) | resLo;
 }
+
+INLINE
+__m256i _simd_cvtepu8_epi32(__m128i a)
+{
+    __m128i resultlo = _mm_cvtepu8_epi32(a);
+    __m128i resulthi = _mm_shuffle_epi8(a, _mm_set_epi32(0x80808007, 0x80808006, 0x80808005, 0x80808004));
+
+    __m256i result = _mm256_castsi128_si256(resultlo);
+
+    return _mm256_insertf128_si256(result, resulthi, 1);
+}
+
+INLINE
+__m256i _simd_cvtepu16_epi32(__m128i a)
+{
+    __m128i resultlo = _mm_cvtepu16_epi32(a);
+    __m128i resulthi = _mm_shuffle_epi8(a, _mm_set_epi32(0x80800F0E, 0x80800D0C, 0x80800B0A, 0x80800908));
+
+    __m256i result = _mm256_castsi128_si256(resultlo);
+
+    return _mm256_insertf128_si256(result, resulthi, 1);
+}
+
+INLINE
+__m256i _simd_packus_epi32(__m256i a, __m256i b)
+{
+    __m128i alo = _mm256_extractf128_si256(a, 0);
+    __m128i ahi = _mm256_extractf128_si256(a, 1);
+
+    __m128i blo = _mm256_extractf128_si256(b, 0);
+    __m128i bhi = _mm256_extractf128_si256(b, 1);
+
+    __m128i resultlo = _mm_packus_epi32(alo, blo);
+    __m128i resulthi = _mm_packus_epi32(ahi, bhi);
+
+    __m256i result = _mm256_castsi128_si256(resultlo);
+
+    return _mm256_insertf128_si256(result, resulthi, 1);
+}
+
+INLINE
+__m256i _simd_packs_epi32(__m256i a, __m256i b)
+{
+    __m128i alo = _mm256_extractf128_si256(a, 0);
+    __m128i ahi = _mm256_extractf128_si256(a, 1);
+
+    __m128i blo = _mm256_extractf128_si256(b, 0);
+    __m128i bhi = _mm256_extractf128_si256(b, 1);
+
+    __m128i resultlo = _mm_packs_epi32(alo, blo);
+    __m128i resulthi = _mm_packs_epi32(ahi, bhi);
+
+    __m256i result = _mm256_castsi128_si256(resultlo);
+
+    return _mm256_insertf128_si256(result, resulthi, 1);
+}
+
 #else
 
 #define _simd_mul_epi32 _mm256_mul_epi32
@@ -450,10 +511,13 @@ int _simdemu_movemask_epi8(__m256i a)
 #define _simd_cmplt_epi32(a,b) _mm256_cmpgt_epi32(b,a)
 #define _simd_cmpgt_epi32(a,b) _mm256_cmpgt_epi32(a,b)
 #define _simd_or_si _mm256_or_si256
+#define _simd_xor_si _mm256_xor_si256
 #define _simd_castps_si _mm256_castps_si256
 
 #define _simd_unpacklo_epi32 _mm256_unpacklo_epi32
 #define _simd_unpackhi_epi32 _mm256_unpackhi_epi32
+#define _simd_unpacklo_epi64 _mm256_unpacklo_epi64
+#define _simd_unpackhi_epi64 _mm256_unpackhi_epi64
 
 #define _simd_srli_si(a,i) _simdemu_srli_si128<i>(a)
 #define _simd_slli_epi32 _mm256_slli_epi32
@@ -479,19 +543,23 @@ int _simdemu_movemask_epi8(__m256i a)
 #define _simd_cmpeq_epi16  _mm256_cmpeq_epi16
 #define _simd_movemask_epi8 _mm256_movemask_epi8
 #define _simd_permute_ps _mm256_permutevar8x32_ps
+#define _simd_permute_epi32 _mm256_permutevar8x32_epi32
 #define _simd_srlv_epi32 _mm256_srlv_epi32
 #define _simd_sllv_epi32 _mm256_sllv_epi32
+#define _simd_cvtepu8_epi32 _mm256_cvtepu8_epi32
+#define _simd_cvtepu16_epi32 _mm256_cvtepu16_epi32
+#define _simd_packus_epi32 _mm256_packus_epi32
+#define _simd_packs_epi32 _mm256_packs_epi32
 
-INLINE
-simdscalari _simd_permute_epi32(simdscalari a, simdscalari index)
-{
-    return _simd_castps_si(_mm256_permutevar8x32_ps(_mm256_castsi256_ps(a), index));
-}
 #endif
 
-#define _simd_permute_128 _mm256_permute2f128_si256
-#define _simd_shuffleps_epi32(vA, vB, imm) _mm256_castps_si256(_mm256_shuffle_ps(_mm256_castsi256_ps(vA), _mm256_castsi256_ps(vB), imm))
+#define _simd_permute2f128_ps _mm256_permute2f128_ps
+#define _simd_permute2f128_pd _mm256_permute2f128_pd
+#define _simd_permute2f128_si _mm256_permute2f128_si256
 #define _simd_shuffle_ps _mm256_shuffle_ps
+#define _simd_shuffle_pd _mm256_shuffle_pd
+#define _simd_shuffle_epi32(a, b, imm8) _mm256_castps_si256(_mm256_shuffle_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b), imm8))
+#define _simd_shuffle_epi64(a, b, imm8) _mm256_castps_si256(_mm256_shuffle_pd(_mm256_castsi256_pd(a), _mm256_castsi256_pd(b), imm8))
 #define _simd_set1_epi32 _mm256_set1_epi32
 #define _simd_set_epi32 _mm256_set_epi32
 #define _simd_set1_epi8 _mm256_set1_epi8
@@ -505,7 +573,6 @@ simdscalari _simd_permute_epi32(simdscalari a, simdscalari index)
 #define _simd_sub_ps _mm256_sub_ps
 #define _simd_testz_ps _mm256_testz_ps
 #define _simd_xor_ps _mm256_xor_ps
-
 
 INLINE
 simdscalari _simd_blendv_epi32(simdscalari a, simdscalari b, simdscalar mask)
@@ -1056,16 +1123,6 @@ INLINE simdscalar _simd_shuffle_ps(simdscalar a, simdscalar b, const int imm8)
 
     result.lo = _mm256_shuffle_ps(a.lo, b.lo, imm8);
     result.hi = _mm256_shuffle_ps(a.hi, b.hi, imm8);
-
-    return result;
-}
-
-INLINE simdscalari _simd_permute_128(simdscalari a, simdscalari b, const int imm8)
-{
-    simdscalari result;
-
-    result.lo = _mm256_permute2x128_si256(a.lo, b.lo, imm8);
-    result.hi = _mm256_permute2x128_si256(a.hi, b.hi, imm8);
 
     return result;
 }

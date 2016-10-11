@@ -101,21 +101,59 @@ void ClearRasterTile(uint8_t *pTileBuffer, simdvector &value)
     auto lambda = [&](int32_t comp)
     {
         FormatTraits<format>::storeSOA(comp, pTileBuffer, value.v[comp]);
+
         pTileBuffer += (KNOB_SIMD_WIDTH * FormatTraits<format>::GetBPC(comp) / 8);
     };
 
     const uint32_t numIter = (KNOB_TILE_Y_DIM / SIMD_TILE_Y_DIM) * (KNOB_TILE_X_DIM / SIMD_TILE_X_DIM);
+
     for (uint32_t i = 0; i < numIter; ++i)
     {
         UnrollerL<0, FormatTraits<format>::numComps, 1>::step(lambda);
     }
 }
 
+#if USE_8x2_TILE_BACKEND
+template<SWR_FORMAT format>
+void ClearRasterTile(uint8_t *pTileBuffer, simd16vector &value)
+{
+    auto lambda = [&](int32_t comp)
+    {
+        FormatTraits<format>::storeSOA(comp, pTileBuffer, value.v[comp]);
+
+        pTileBuffer += (KNOB_SIMD16_WIDTH * FormatTraits<format>::GetBPC(comp) / 8);
+    };
+
+    const uint32_t numIter = (KNOB_TILE_Y_DIM / SIMD16_TILE_Y_DIM) * (KNOB_TILE_X_DIM / SIMD16_TILE_X_DIM);
+
+    for (uint32_t i = 0; i < numIter; ++i)
+    {
+        UnrollerL<0, FormatTraits<format>::numComps, 1>::step(lambda);
+    }
+}
+
+#endif
 template<SWR_FORMAT format>
 INLINE void ClearMacroTile(DRAW_CONTEXT *pDC, SWR_RENDERTARGET_ATTACHMENT rt, uint32_t macroTile, DWORD clear[4], const SWR_RECT& rect)
 {
     // convert clear color to hottile format
     // clear color is in RGBA float/uint32
+#if USE_8x2_TILE_BACKEND
+    simd16vector vClear;
+    for (uint32_t comp = 0; comp < FormatTraits<format>::numComps; ++comp)
+    {
+        simd16scalar vComp;
+        vComp = _simd16_load1_ps((const float*)&clear[comp]);
+        if (FormatTraits<format>::isNormalized(comp))
+        {
+            vComp = _simd16_mul_ps(vComp, _simd16_set1_ps(FormatTraits<format>::fromFloat(comp)));
+            vComp = _simd16_castsi_ps(_simd16_cvtps_epi32(vComp));
+        }
+        vComp = FormatTraits<format>::pack(comp, vComp);
+        vClear.v[FormatTraits<format>::swizzle(comp)] = vComp;
+    }
+
+#else
     simdvector vClear;
     for (uint32_t comp = 0; comp < FormatTraits<format>::numComps; ++comp)
     {
@@ -130,6 +168,7 @@ INLINE void ClearMacroTile(DRAW_CONTEXT *pDC, SWR_RENDERTARGET_ATTACHMENT rt, ui
         vClear.v[FormatTraits<format>::swizzle(comp)] = vComp;
     }
 
+#endif
     uint32_t tileX, tileY;
     MacroTileMgr::getTileIndices(macroTile, tileX, tileY);
 
@@ -471,6 +510,10 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
+#if USE_8x2_TILE_BACKEND
+            const bool useAlternateOffset = ((xx & SIMD_TILE_X_DIM) != 0);
+
+#endif
             if(coverageMask & MASK)
             {
                 psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
@@ -578,7 +621,11 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 // output merger
                 AR_BEGIN(BEOutputMerger, pDC->drawId);
+#if USE_8x2_TILE_BACKEND
+                OutputMerger(psContext, pColorBase, 0, pBlendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, pPSState->numRenderTargets, useAlternateOffset);
+#else
                 OutputMerger(psContext, pColorBase, 0, pBlendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, pPSState->numRenderTargets);
+#endif
 
                 // do final depth write after all pixel kills
                 if (!pPSState->forceEarlyZ)
@@ -599,10 +646,20 @@ Endtile:
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
 
-            for(uint32_t rt = 0; rt < NumRT; ++rt)
+#if USE_8x2_TILE_BACKEND
+            if (useAlternateOffset)
+            {
+                for (uint32_t rt = 0; rt < NumRT; ++rt)
+                {
+                    pColorBase[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                }
+            }
+#else
+            for (uint32_t rt = 0; rt < NumRT; ++rt)
             {
                 pColorBase[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
+#endif
             AR_END(BEEndTile, 0);
         }
     }
@@ -675,6 +732,10 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
         
         for (uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
+#if USE_8x2_TILE_BACKEND
+            const bool useAlternateOffset = ((xx & SIMD_TILE_X_DIM) != 0);
+
+#endif
             psContext.vX.UL = _simd_add_ps(vULOffsetsX, _simd_set1_ps((float)xx));
             // pixel center
             psContext.vX.center = _simd_add_ps(vCenterOffsetsX, _simd_set1_ps((float)xx));
@@ -814,7 +875,11 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                     // output merger
                     AR_BEGIN(BEOutputMerger, pDC->drawId);
+#if USE_8x2_TILE_BACKEND
+                    OutputMerger(psContext, pColorBase, sample, pBlendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, pPSState->numRenderTargets, useAlternateOffset);
+#else
                     OutputMerger(psContext, pColorBase, sample, pBlendState, state.pfnBlendFunc, vCoverageMask, depthPassMask, pPSState->numRenderTargets);
+#endif
 
                     // do final depth write after all pixel kills
                     if (!pPSState->forceEarlyZ)
@@ -837,10 +902,20 @@ Endtile:
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
 
+#if USE_8x2_TILE_BACKEND
+            if (useAlternateOffset)
+            {
+                for (uint32_t rt = 0; rt < NumRT; ++rt)
+                {
+                    pColorBase[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                }
+            }
+#else
             for (uint32_t rt = 0; rt < NumRT; ++rt)
             {
                 pColorBase[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
+#endif
             AR_END(BEEndTile, 0);
         }
     }
@@ -913,6 +988,10 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
         psContext.vY.center = _simd_add_ps(vCenterOffsetsY, _simd_set1_ps((float)yy));
         for(uint32_t xx = x; xx < x + KNOB_TILE_X_DIM; xx += SIMD_TILE_X_DIM)
         {
+#if USE_8x2_TILE_BACKEND
+            const bool useAlternateOffset = ((xx & SIMD_TILE_X_DIM) != 0);
+
+#endif
             simdscalar activeLanes;
             if(!(work.anyCoveredSamples & MASK)) {goto Endtile;};
             activeLanes = vMask(work.anyCoveredSamples & MASK);
@@ -1030,7 +1109,11 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 }
                 
                 // broadcast the results of the PS to all passing pixels
+#if USE_8x2_TILE_BACKEND
+                OutputMerger(psContext, pColorBase, sample, pBlendState, state.pfnBlendFunc, coverageMask, depthMask, pPSState->numRenderTargets, useAlternateOffset);
+#else
                 OutputMerger(psContext, pColorBase, sample, pBlendState, state.pfnBlendFunc, coverageMask, depthMask, pPSState->numRenderTargets);
+#endif
 
                 if(!pPSState->forceEarlyZ && !T::bForcedSampleCount)
                 {
@@ -1057,10 +1140,20 @@ Endtile:
             pDepthBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBase += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
 
+#if USE_8x2_TILE_BACKEND
+            if (useAlternateOffset)
+            {
+                for (uint32_t rt = 0; rt < NumRT; ++rt)
+                {
+                    pColorBase[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                }
+            }
+#else
             for(uint32_t rt = 0; rt < NumRT; ++rt)
             {
                 pColorBase[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
+#endif
             AR_END(BEEndTile, 0);
         }
     }

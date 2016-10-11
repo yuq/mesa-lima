@@ -643,6 +643,78 @@ INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_N
     }
 }
 
+#if USE_8x2_TILE_BACKEND
+INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
+    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT, bool useAlternateOffset)
+{
+    assert(sample == 0); // will need up upate Raster Tile Color Offsets to support more than single sample here..
+
+    // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
+    uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
+
+    if (useAlternateOffset)
+    {
+        rasterTileColorOffset += sizeof(simdscalar);
+    }
+
+    simdvector blendSrc;
+    simdvector blendOut;
+
+    for (uint32_t rt = 0; rt < NumRT; ++rt)
+    {
+        simdscalar *pColorSample = reinterpret_cast<simdscalar *>(pColorBase[rt] + rasterTileColorOffset);
+
+        const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
+        // pfnBlendFunc may not update all channels.  Initialize with PS output.
+        /// TODO: move this into the blend JIT.
+        blendOut = psContext.shaded[rt];
+
+        blendSrc[0] = pColorSample[0];
+        blendSrc[1] = pColorSample[2];
+        blendSrc[2] = pColorSample[4];
+        blendSrc[3] = pColorSample[6];
+
+        // Blend outputs and update coverage mask for alpha test
+        if (pfnBlendFunc[rt] != nullptr)
+        {
+            pfnBlendFunc[rt](
+                pBlendState,
+                psContext.shaded[rt],
+                psContext.shaded[1],
+                sample,
+                reinterpret_cast<uint8_t *>(&blendSrc),
+                blendOut,
+                &psContext.oMask,
+                reinterpret_cast<simdscalari *>(&coverageMask));
+        }
+
+        // final write mask 
+        simdscalari outputMask = _simd_castps_si(_simd_and_ps(coverageMask, depthPassMask));
+
+        ///@todo can only use maskstore fast path if bpc is 32. Assuming hot tile is RGBA32_FLOAT.
+        static_assert(KNOB_COLOR_HOT_TILE_FORMAT == R32G32B32A32_FLOAT, "Unsupported hot tile format");
+
+        // store with color mask
+        if (!pRTBlend->writeDisableRed)
+        {
+            _simd_maskstore_ps(reinterpret_cast<float *>(&pColorSample[0]), outputMask, blendOut.x);
+        }
+        if (!pRTBlend->writeDisableGreen)
+        {
+            _simd_maskstore_ps(reinterpret_cast<float *>(&pColorSample[2]), outputMask, blendOut.y);
+        }
+        if (!pRTBlend->writeDisableBlue)
+        {
+            _simd_maskstore_ps(reinterpret_cast<float *>(&pColorSample[4]), outputMask, blendOut.z);
+        }
+        if (!pRTBlend->writeDisableAlpha)
+        {
+            _simd_maskstore_ps(reinterpret_cast<float *>(&pColorSample[6]), outputMask, blendOut.w);
+        }
+    }
+}
+
+#endif
 template<uint32_t sampleCountT = SWR_MULTISAMPLE_1X, uint32_t samplePattern = SWR_MSAA_STANDARD_PATTERN,
          uint32_t coverage = 0, uint32_t centroid = 0, uint32_t forced = 0, uint32_t canEarlyZ = 0>
 struct SwrBackendTraits

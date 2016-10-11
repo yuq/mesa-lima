@@ -39,6 +39,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define ENABLE_AVX512_SIMD16    0
+#define USE_8x2_TILE_BACKEND    0
 
 ///////////////////////////////////////////////////////////////////////////////
 // Architecture validation
@@ -145,7 +146,7 @@
 #endif
 
 #if ENABLE_AVX512_SIMD16
-#if KNOB_SIMD16_WIDTH==16 && KNOB_TILE_X_DIM < 4
+#if KNOB_SIMD16_WIDTH == 16 && KNOB_TILE_X_DIM < 8
 #error "incompatible width/tile dimensions"
 #endif
 #endif
@@ -162,8 +163,8 @@
 
 #if ENABLE_AVX512_SIMD16
 #if KNOB_SIMD16_WIDTH == 16
-#define SIMD16_TILE_X_DIM 4
-#define SIMD16_TILE_Y_DIM 4
+#define SIMD16_TILE_X_DIM 8
+#define SIMD16_TILE_Y_DIM 2
 #else
 #error "Invalid simd width"
 #endif
