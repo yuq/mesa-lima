@@ -1233,6 +1233,12 @@ void si_init_shader_selector_async(void *job, int thread_index)
 			key.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
 			break;
 		case PIPE_SHADER_FRAGMENT:
+			key.ps.prolog.bc_optimize_for_persp =
+				sel->info.uses_persp_center &&
+				sel->info.uses_persp_centroid;
+			key.ps.prolog.bc_optimize_for_linear =
+				sel->info.uses_linear_center &&
+				sel->info.uses_linear_centroid;
 			key.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
 			for (i = 0; i < 8; i++)
 				if (sel->info.colors_written & (1 << i))
