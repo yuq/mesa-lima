@@ -758,8 +758,6 @@ radv_image_view_init(struct radv_image_view *iview,
 	const VkImageSubresourceRange *range = &pCreateInfo->subresourceRange;
 	bool is_stencil = false;
 	switch (image->type) {
-	default:
-		unreachable("bad VkImageType");
 	case VK_IMAGE_TYPE_1D:
 	case VK_IMAGE_TYPE_2D:
 		assert(range->baseArrayLayer + radv_get_layerCount(image, range) - 1 <= image->array_size);
@@ -768,6 +766,8 @@ radv_image_view_init(struct radv_image_view *iview,
 		assert(range->baseArrayLayer + radv_get_layerCount(image, range) - 1
 		       <= radv_minify(image->extent.depth, range->baseMipLevel));
 		break;
+	default:
+		unreachable("bad VkImageType");
 	}
 	iview->image = image;
 	iview->bo = image->bo;
@@ -842,7 +842,7 @@ void radv_image_set_optimal_micro_tile_mode(struct radv_device *device,
 			case 16:
                             image->surface.tiling_index[0] = 11;
                             break;
-		default: /* 32, 64 */
+			default: /* 32, 64 */
                             image->surface.tiling_index[0] = 12;
                             break;
 			}
