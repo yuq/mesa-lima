@@ -39,7 +39,6 @@
 #include <valgrind.h>
 #include <memcheck.h>
 #define VG(x) x
-#define __gen_validate_value(x) VALGRIND_CHECK_MEM_IS_DEFINED(&(x), sizeof(x))
 #else
 #define VG(x)
 #endif
@@ -222,16 +221,6 @@ void radv_loge_v(const char *format, va_list va);
 		})
 #else
 #define radv_assert(x)
-#endif
-
-/**
- * If a block of code is annotated with radv_validate, then the block runs only
- * in debug builds.
- */
-#ifdef DEBUG
-#define radv_validate if (1)
-#else
-#define radv_validate if (0)
 #endif
 
 void radv_abortf(const char *format, ...) radv_noreturn radv_printflike(1, 2);
