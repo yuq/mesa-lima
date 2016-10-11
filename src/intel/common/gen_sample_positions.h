@@ -20,7 +20,8 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
-#pragma once
+#ifndef GEN_SAMPLE_POSITIONS_H
+#define GEN_SAMPLE_POSITIONS_H
 
 #define GEN_SAMPLE_POS_1X(prefix) \
 prefix##0XOffset   = 0.5; \
@@ -93,3 +94,5 @@ prefix##14XOffset  = 0.8750; \
 prefix##14YOffset  = 0.9375; \
 prefix##15XOffset  = 0.0625; \
 prefix##15YOffset  = 0.0000;
+
+#endif /* GEN_SAMPLE_POSITIONS_H */

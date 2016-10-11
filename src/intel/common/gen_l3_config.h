@@ -21,6 +21,9 @@
  * IN THE SOFTWARE.
  */
 
+#ifndef GEN_L3_CONFIG_H
+#define GEN_L3_CONFIG_H
+
 #include <stdio.h>
 
 #include "gen_device_info.h"
@@ -88,3 +91,5 @@ gen_get_l3_config_urb_size(const struct gen_device_info *devinfo,
                            const struct gen_l3_config *cfg);
 
 void gen_dump_l3_config(const struct gen_l3_config *cfg, FILE *fp);
+
+#endif /* GEN_L3_CONFIG_H */

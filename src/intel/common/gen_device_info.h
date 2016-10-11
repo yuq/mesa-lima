@@ -22,7 +22,9 @@
   *
   */
 
-#pragma once
+#ifndef GEN_DEVICE_INFO_H
+#define GEN_DEVICE_INFO_H
+
 #include <stdbool.h>
 
 /**
@@ -145,3 +147,5 @@ struct gen_device_info
 
 bool gen_get_device_info(int devid, struct gen_device_info *devinfo);
 const char *gen_get_device_name(int devid);
+
+#endif /* GEN_DEVICE_INFO_H */
