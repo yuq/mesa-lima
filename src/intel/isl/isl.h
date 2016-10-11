@@ -1154,16 +1154,6 @@ isl_tiling_is_std_y(enum isl_tiling tiling)
    return (1u << tiling) & ISL_TILING_STD_Y_MASK;
 }
 
-bool
-isl_tiling_get_info(const struct isl_device *dev,
-                    enum isl_tiling tiling,
-                    uint32_t format_bpb,
-                    struct isl_tile_info *info);
-bool
-isl_surf_choose_tiling(const struct isl_device *dev,
-                       const struct isl_surf_init_info *restrict info,
-                       enum isl_tiling *tiling);
-
 struct isl_extent2d ATTRIBUTE_CONST
 isl_get_interleaved_msaa_px_size_sa(uint32_t samples);
 
