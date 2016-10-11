@@ -131,7 +131,7 @@ os_get_total_physical_memory(uint64_t *size)
    if (phys_pages <= 0 || page_size <= 0)
       return false;
 
-   *size = (int64_t)phys_pages * (int64_t)page_size;
+   *size = (uint64_t)phys_pages * (uint64_t)page_size;
    return true;
 #elif defined(PIPE_OS_APPLE) || defined(PIPE_OS_BSD)
    size_t len = sizeof(*size);
@@ -159,7 +159,7 @@ os_get_total_physical_memory(uint64_t *size)
    if (ret != B_OK || info.max_pages <= 0)
       return false;
 
-   *size = (int64_t)info.max_pages * (int64_t)B_PAGE_SIZE;
+   *size = (uint64_t)info.max_pages * (uint64_t)B_PAGE_SIZE;
    return true;
 #elif defined(PIPE_OS_WINDOWS)
    MEMORYSTATUSEX status;
