@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef DECODER_H
+#define DECODER_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -103,3 +104,5 @@ void gen_field_iterator_init(struct gen_field_iterator *iter,
                              struct gen_group *group, const uint32_t *p);
 
 bool gen_field_iterator_next(struct gen_field_iterator *iter);
+
+#endif /* DECODER_H */
