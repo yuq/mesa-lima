@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef BLORP_PRIV_H
+#define BLORP_PRIV_H
 
 #include <stdint.h>
 
@@ -314,3 +315,5 @@ brw_blorp_compile_nir_shader(struct blorp_context *blorp, struct nir_shader *nir
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif /* __cplusplus */
+
+#endif /* BLORP_PRIV_H */

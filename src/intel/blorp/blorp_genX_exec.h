@@ -21,6 +21,9 @@
  * IN THE SOFTWARE.
  */
 
+#ifndef BLORP_GENX_EXEC_H
+#define BLORP_GENX_EXEC_H
+
 #include "blorp_priv.h"
 #include "common/gen_device_info.h"
 #include "common/gen_sample_positions.h"
@@ -1223,3 +1226,5 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
       prim.InstanceCount = params->num_layers;
    }
 }
+
+#endif /* BLORP_GENX_EXEC_H */

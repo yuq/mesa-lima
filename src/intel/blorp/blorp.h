@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef BLORP_H
+#define BLORP_H
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -162,3 +163,5 @@ blorp_gen6_hiz_op(struct blorp_batch *batch,
 #ifdef __cplusplus
 } /* end extern "C" */
 #endif /* __cplusplus */
+
+#endif /* BLORP_H */
