@@ -1626,7 +1626,6 @@ glXCreateNewContext(Display * dpy, GLXFBConfig fbconfig,
                     int renderType, GLXContext shareList, Bool allowDirect)
 {
    struct glx_config *config = (struct glx_config *) fbconfig;
-   int screen = DefaultScreen(dpy);
    struct glx_config **config_list;
    int list_size;
    unsigned i;
@@ -1637,7 +1636,7 @@ glXCreateNewContext(Display * dpy, GLXFBConfig fbconfig,
    }
 
    config_list = (struct glx_config **)
-      glXGetFBConfigs(dpy, screen, &list_size);
+      glXGetFBConfigs(dpy, config->screen, &list_size);
 
    for (i = 0; i < list_size; i++) {
        if (config_list[i] == config)
