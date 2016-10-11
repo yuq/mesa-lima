@@ -3347,17 +3347,39 @@ static LLVMValueRef get_buffer_size(
  * Given the i32 or vNi32 \p type, generate the textual name (e.g. for use with
  * intrinsic names).
  */
-static void build_int_type_name(
+static void build_type_name_for_intr(
 	LLVMTypeRef type,
 	char *buf, unsigned bufsize)
 {
-	assert(bufsize >= 6);
+	LLVMTypeRef elem_type = type;
 
-	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind)
-		snprintf(buf, bufsize, "v%ui32",
-			 LLVMGetVectorSize(type));
-	else
-		strcpy(buf, "i32");
+	assert(bufsize >= 8);
+
+	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind) {
+		int ret = snprintf(buf, bufsize, "v%u",
+					LLVMGetVectorSize(type));
+		if (ret < 0) {
+			char *type_name = LLVMPrintTypeToString(type);
+			fprintf(stderr, "Error building type name for: %s\n",
+				type_name);
+			return;
+		}
+		elem_type = LLVMGetElementType(type);
+		buf += ret;
+		bufsize -= ret;
+	}
+	switch (LLVMGetTypeKind(elem_type)) {
+	default: break;
+	case LLVMIntegerTypeKind:
+		snprintf(buf, bufsize, "i%d", LLVMGetIntTypeWidth(elem_type));
+		break;
+	case LLVMFloatTypeKind:
+		snprintf(buf, bufsize, "f32");
+		break;
+	case LLVMDoubleTypeKind:
+		snprintf(buf, bufsize, "f64");
+		break;
+	}
 }
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
@@ -3744,7 +3766,7 @@ static void get_image_intr_name(const char *base_name,
 {
 	char coords_type_name[8];
 
-	build_int_type_name(coords_type, coords_type_name,
+	build_type_name_for_intr(coords_type, coords_type_name,
 			    sizeof(coords_type_name));
 
 	snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
@@ -4144,7 +4166,7 @@ static void atomic_emit(
 	} else {
 		char coords_type[8];
 
-		build_int_type_name(LLVMTypeOf(emit_data->args[1]),
+		build_type_name_for_intr(LLVMTypeOf(emit_data->args[1]),
 				    coords_type, sizeof(coords_type));
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.image.atomic.%s.%s",
@@ -4918,7 +4940,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 
 	/* Add the type and suffixes .c, .o if needed. */
-	build_int_type_name(LLVMTypeOf(emit_data->args[0]), type, sizeof(type));
+	build_type_name_for_intr(LLVMTypeOf(emit_data->args[0]), type, sizeof(type));
 	sprintf(intr_name, "%s%s%s%s.%s",
 		name, is_shadow ? ".c" : "", infix,
 		has_offset ? ".o" : "", type);
