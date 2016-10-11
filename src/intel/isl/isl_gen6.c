@@ -35,7 +35,7 @@ gen6_choose_msaa_layout(const struct isl_device *dev,
 
    if (info->samples == 1) {
       *msaa_layout = ISL_MSAA_LAYOUT_NONE;
-      return false;
+      return true;
    }
 
    if (!isl_format_supports_multisampling(dev->info, info->format))
