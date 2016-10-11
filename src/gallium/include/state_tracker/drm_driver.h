@@ -91,18 +91,12 @@ struct drm_driver_descriptor
    const char *name;
 
    /**
-    * Kernel driver name, as accepted by drmOpenByName.
-    */
-   const char *driver_name;
-
-   /**
     * Create a pipe srcreen.
     *
     * This function does any wrapping of the screen.
     * For example wrapping trace or rbug debugging drivers around it.
     */
    struct pipe_screen* (*create_screen)(int drm_fd);
-
 
    /**
     * Return a configuration value.
@@ -119,10 +113,9 @@ extern struct drm_driver_descriptor driver_descriptor;
 /**
  * Instantiate a drm_driver_descriptor struct.
  */
-#define DRM_DRIVER_DESCRIPTOR(name_str, driver_name_str, func, conf) \
+#define DRM_DRIVER_DESCRIPTOR(name_str, func, conf) \
 struct drm_driver_descriptor driver_descriptor = {             \
    .name = name_str,                                           \
-   .driver_name = driver_name_str,                             \
    .create_screen = func,                                      \
    .configuration = (conf),				       \
 };
