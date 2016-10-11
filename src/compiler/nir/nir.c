@@ -35,7 +35,7 @@ nir_shader_create(void *mem_ctx,
                   const nir_shader_compiler_options *options,
                   shader_info *si)
 {
-   nir_shader *shader = ralloc(mem_ctx, nir_shader);
+   nir_shader *shader = rzalloc(mem_ctx, nir_shader);
 
    exec_list_make_empty(&shader->uniforms);
    exec_list_make_empty(&shader->inputs);
@@ -336,7 +336,7 @@ nir_function_impl_create(nir_function *function)
 nir_block *
 nir_block_create(nir_shader *shader)
 {
-   nir_block *block = ralloc(shader, nir_block);
+   nir_block *block = rzalloc(shader, nir_block);
 
    cf_init(&block->cf_node, nir_cf_node_block);
 
