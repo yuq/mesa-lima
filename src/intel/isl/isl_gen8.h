@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "isl_priv.h"
+#include "isl.h"
 
 #ifdef __cplusplus
 extern "C" {
