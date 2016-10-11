@@ -86,7 +86,7 @@ struct drm_conf_ret {
 struct drm_driver_descriptor
 {
    /**
-    * Identifying sufix/prefix of the binary, used by egl.
+    * Identifying prefix/suffix of the binary, used by the pipe-loader.
     */
    const char *name;
 
