@@ -367,7 +367,7 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	struct radv_shader_variant *variant;
 	nir_shader *nir;
 	void *code = NULL;
-	unsigned code_size;
+	unsigned code_size = 0;
 
 	if (module->nir)
 		_mesa_sha1_compute(module->nir->info.name,
