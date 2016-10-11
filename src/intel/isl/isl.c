@@ -253,10 +253,10 @@ isl_surf_choose_tiling(const struct isl_device *dev,
    }
 
    if (ISL_DEV_GEN(dev) >= 6) {
-      gen6_filter_tiling(dev, info, &tiling_flags);
+      isl_gen6_filter_tiling(dev, info, &tiling_flags);
    } else {
       isl_finishme("%s: gen%u", __func__, ISL_DEV_GEN(dev));
-      gen6_filter_tiling(dev, info, &tiling_flags);
+      isl_gen6_filter_tiling(dev, info, &tiling_flags);
    }
 
    #define CHOOSE(__tiling) \
@@ -300,13 +300,13 @@ isl_choose_msaa_layout(const struct isl_device *dev,
                  enum isl_msaa_layout *msaa_layout)
 {
    if (ISL_DEV_GEN(dev) >= 8) {
-      return gen8_choose_msaa_layout(dev, info, tiling, msaa_layout);
+      return isl_gen8_choose_msaa_layout(dev, info, tiling, msaa_layout);
    } else if (ISL_DEV_GEN(dev) >= 7) {
-      return gen7_choose_msaa_layout(dev, info, tiling, msaa_layout);
+      return isl_gen7_choose_msaa_layout(dev, info, tiling, msaa_layout);
    } else if (ISL_DEV_GEN(dev) >= 6) {
-      return gen6_choose_msaa_layout(dev, info, tiling, msaa_layout);
+      return isl_gen6_choose_msaa_layout(dev, info, tiling, msaa_layout);
    } else {
-      return gen4_choose_msaa_layout(dev, info, tiling, msaa_layout);
+      return isl_gen4_choose_msaa_layout(dev, info, tiling, msaa_layout);
    }
 }
 
@@ -471,20 +471,20 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
    }
 
    if (ISL_DEV_GEN(dev) >= 9) {
-      gen9_choose_image_alignment_el(dev, info, tiling, dim_layout,
-                                     msaa_layout, image_align_el);
+      isl_gen9_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                         msaa_layout, image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 8) {
-      gen8_choose_image_alignment_el(dev, info, tiling, dim_layout,
-                                     msaa_layout, image_align_el);
+      isl_gen8_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                         msaa_layout, image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 7) {
-      gen7_choose_image_alignment_el(dev, info, tiling, dim_layout,
-                                     msaa_layout, image_align_el);
+      isl_gen7_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                          msaa_layout, image_align_el);
    } else if (ISL_DEV_GEN(dev) >= 6) {
-      gen6_choose_image_alignment_el(dev, info, tiling, dim_layout,
-                                     msaa_layout, image_align_el);
+      isl_gen6_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                         msaa_layout, image_align_el);
    } else {
-      gen4_choose_image_alignment_el(dev, info, tiling, dim_layout,
-                                     msaa_layout, image_align_el);
+      isl_gen4_choose_image_alignment_el(dev, info, tiling, dim_layout,
+                                         msaa_layout, image_align_el);
    }
 }
 
