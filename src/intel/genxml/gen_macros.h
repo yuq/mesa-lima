@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef GEN_MACROS_H
+#define GEN_MACROS_H
 
 /* Macros for handling per-gen compilation.
  *
@@ -87,3 +88,5 @@
 #else
 #  error "Need to add prefixing macros for this gen"
 #endif
+
+#endif /* GEN_MACROS_H */

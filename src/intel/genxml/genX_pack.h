@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef GENX_PACK_H
+#define GENX_PACK_H
 
 #ifndef GEN_VERSIONx10
 #  error "The GEN_VERSIONx10 macro must be defined"
@@ -46,3 +47,5 @@
 #else
 #  error "Need to add a pack header include for this gen"
 #endif
+
+#endif /* GENX_PACK_H */
