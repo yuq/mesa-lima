@@ -32,6 +32,7 @@
 #include "radv_private.h"
 #include "util/strtod.h"
 
+#include <xf86drm.h>
 #include <amdgpu.h>
 #include <amdgpu_drm.h>
 #include "amdgpu_id.h"
@@ -55,12 +56,27 @@ radv_physical_device_init(struct radv_physical_device *device,
 			  const char *path)
 {
 	VkResult result;
+	drmVersionPtr version;
 	int fd;
 
 	fd = open(path, O_RDWR | O_CLOEXEC);
 	if (fd < 0)
 		return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
 				 "failed to open %s: %m", path);
+
+	version = drmGetVersion(fd);
+	if (!version) {
+		close(fd);
+		return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
+				 "failed to get version %s: %m", path);
+	}
+
+	if (strcmp(version->name, "amdgpu")) {
+		drmFreeVersion(version);
+		close(fd);
+		return VK_ERROR_INCOMPATIBLE_DRIVER;
+	}
+	drmFreeVersion(version);
 
 	device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	device->instance = instance;
