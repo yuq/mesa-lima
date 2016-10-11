@@ -337,13 +337,13 @@ radv_amdgpu_winsys_create(int fd)
 
 	ws = calloc(1, sizeof(struct radv_amdgpu_winsys));
 	if (!ws)
-		return NULL;
+		goto fail;
 
 	ws->dev = dev;
 	ws->info.drm_major = drm_major;
 	ws->info.drm_minor = drm_minor;
 	if (!do_winsys_init(ws, fd))
-		goto fail;
+		goto winsys_fail;
 
 	ws->debug_all_bos = getenv("RADV_DEBUG_ALL_BOS") ? true : false;
 	LIST_INITHEAD(&ws->global_bo_list);
@@ -355,6 +355,10 @@ radv_amdgpu_winsys_create(int fd)
 	radv_amdgpu_surface_init_functions(ws);
 
 	return &ws->base;
+
+winsys_fail:
+	free(ws);
 fail:
+	amdgpu_device_deinitialize(dev);
 	return NULL;
 }
