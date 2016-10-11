@@ -3575,16 +3575,29 @@ static void image_append_args(
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
 	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
+	LLVMValueRef r128 = i1false;
+	LLVMValueRef da = tgsi_is_array_image(target) ? i1true : i1false;
+	LLVMValueRef glc =
+		inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE) ?
+		i1true : i1false;
+	LLVMValueRef slc = i1false;
+	LLVMValueRef lwe = i1false;
 
-	emit_data->args[emit_data->arg_count++] = i1false; /* r128 */
-	emit_data->args[emit_data->arg_count++] =
-		tgsi_is_array_image(target) ? i1true : i1false; /* da */
-	if (!atomic) {
-		emit_data->args[emit_data->arg_count++] =
-			inst->Memory.Qualifier & (TGSI_MEMORY_COHERENT | TGSI_MEMORY_VOLATILE) ?
-			i1true : i1false; /* glc */
+	if (atomic || (HAVE_LLVM <= 0x0309)) {
+		emit_data->args[emit_data->arg_count++] = r128;
+		emit_data->args[emit_data->arg_count++] = da;
+		if (!atomic) {
+			emit_data->args[emit_data->arg_count++] = glc;
+		}
+		emit_data->args[emit_data->arg_count++] = slc;
+		return;
 	}
-	emit_data->args[emit_data->arg_count++] = i1false; /* slc */
+
+	/* HAVE_LLVM >= 0x0400 */
+	emit_data->args[emit_data->arg_count++] = glc;
+	emit_data->args[emit_data->arg_count++] = slc;
+	emit_data->args[emit_data->arg_count++] = lwe;
+	emit_data->args[emit_data->arg_count++] = da;
 }
 
 /**
@@ -3761,7 +3774,9 @@ static void load_emit_memory(
 }
 
 static void get_image_intr_name(const char *base_name,
+				LLVMTypeRef data_type,
 				LLVMTypeRef coords_type,
+				LLVMTypeRef rsrc_type,
 				char *out_name, unsigned out_len)
 {
 	char coords_type_name[8];
@@ -3769,7 +3784,19 @@ static void get_image_intr_name(const char *base_name,
 	build_type_name_for_intr(coords_type, coords_type_name,
 			    sizeof(coords_type_name));
 
-	snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
+	if (HAVE_LLVM <= 0x0309) {
+		snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
+	} else {
+		char data_type_name[8];
+		char rsrc_type_name[8];
+
+		build_type_name_for_intr(data_type, data_type_name,
+					sizeof(data_type_name));
+		build_type_name_for_intr(rsrc_type, rsrc_type_name,
+					sizeof(rsrc_type_name));
+		snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
+			 data_type_name, coords_type_name, rsrc_type_name);
+	}
 }
 
 static void load_emit(
@@ -3781,7 +3808,7 @@ static void load_emit(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
-	char intrinsic_name[32];
+	char intrinsic_name[64];
 
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		load_emit_memory(ctx, emit_data);
@@ -3804,7 +3831,9 @@ static void load_emit(
 				LLVMReadOnlyAttribute);
 	} else {
 		get_image_intr_name("llvm.amdgcn.image.load",
-				LLVMTypeOf(emit_data->args[0]),
+				emit_data->dst_type,		/* vdata */
+				LLVMTypeOf(emit_data->args[0]), /* coords */
+				LLVMTypeOf(emit_data->args[1]), /* rsrc */
 				intrinsic_name, sizeof(intrinsic_name));
 
 		emit_data->output[emit_data->chan] =
@@ -3981,7 +4010,7 @@ static void store_emit(
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned target = inst->Memory.Texture;
-	char intrinsic_name[32];
+	char intrinsic_name[64];
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
 		store_emit_memory(ctx, emit_data);
@@ -4003,7 +4032,9 @@ static void store_emit(
 			emit_data->arg_count, 0);
 	} else {
 		get_image_intr_name("llvm.amdgcn.image.store",
-				LLVMTypeOf(emit_data->args[1]),
+				LLVMTypeOf(emit_data->args[0]), /* vdata */
+				LLVMTypeOf(emit_data->args[1]), /* coords */
+				LLVMTypeOf(emit_data->args[2]), /* rsrc */
 				intrinsic_name, sizeof(intrinsic_name));
 
 		emit_data->output[emit_data->chan] =
