@@ -88,7 +88,7 @@ struct drm_driver_descriptor
    /**
     * Identifying prefix/suffix of the binary, used by the pipe-loader.
     */
-   const char *name;
+   const char *driver_name;
 
    /**
     * Create a pipe srcreen.
@@ -113,9 +113,9 @@ extern struct drm_driver_descriptor driver_descriptor;
 /**
  * Instantiate a drm_driver_descriptor struct.
  */
-#define DRM_DRIVER_DESCRIPTOR(name_str, func, conf) \
+#define DRM_DRIVER_DESCRIPTOR(driver_name_str, func, conf) \
 struct drm_driver_descriptor driver_descriptor = {             \
-   .name = name_str,                                           \
+   .driver_name = driver_name_str,                             \
    .create_screen = func,                                      \
    .configuration = (conf),				       \
 };
