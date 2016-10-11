@@ -28,7 +28,10 @@
 #include "ac_nir_to_llvm.h"
 
 struct cache_entry {
-	unsigned char sha1[20];
+	union {
+		unsigned char sha1[20];
+		uint32_t sha1_dw[5];
+	};
 	uint32_t code_size;
 	struct ac_shader_variant_info variant_info;
 	struct ac_shader_config config;
@@ -185,7 +188,7 @@ radv_pipeline_cache_set_entry(struct radv_pipeline_cache *cache,
 			      struct cache_entry *entry)
 {
 	const uint32_t mask = cache->table_size - 1;
-	const uint32_t start = (*(uint32_t *) entry->sha1);
+	const uint32_t start = entry->sha1_dw[0];
 
 	/* We'll always be able to insert when we get here. */
 	assert(cache->kernel_count < cache->table_size / 2);
