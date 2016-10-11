@@ -1705,6 +1705,13 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       lp_build_printf(gallivm, " --- io %d = %p, loop counter %d\n",
                       io_itr, io, lp_loop.counter);
 #endif
+
+      for (j = draw->pt.nr_vertex_elements; j < PIPE_MAX_SHADER_INPUTS; j++) {
+         for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
+            inputs[j][i] = lp_build_zero(gallivm, vs_type);
+         }
+      }
+
       for (i = 0; i < vector_length; ++i) {
          LLVMValueRef vert_index =
             LLVMBuildAdd(builder,
