@@ -1635,6 +1635,26 @@ trace_context_texture_subdata(struct pipe_context *_context,
                             data, stride, layer_stride);
 }
 
+static void
+trace_context_invalidate_resource(struct pipe_context *_context,
+                                  struct pipe_resource *_resource)
+{
+   struct trace_context *tr_context = trace_context(_context);
+   struct trace_resource *tr_res = trace_resource(_resource);
+   struct pipe_context *context = tr_context->pipe;
+   struct pipe_resource *resource = tr_res->resource;
+
+   assert(resource->screen == context->screen);
+
+   trace_dump_call_begin("pipe_context", "invalidate_resource");
+
+   trace_dump_arg(ptr, context);
+   trace_dump_arg(ptr, resource);
+
+   trace_dump_call_end();
+
+   context->invalidate_resource(context, resource);
+}
 
 static void
 trace_context_render_condition(struct pipe_context *_context,
@@ -1917,6 +1937,7 @@ trace_context_create(struct trace_screen *tr_scr,
    TR_CTX_INIT(transfer_flush_region);
    TR_CTX_INIT(buffer_subdata);
    TR_CTX_INIT(texture_subdata);
+   TR_CTX_INIT(invalidate_resource);
 
 #undef TR_CTX_INIT
 
