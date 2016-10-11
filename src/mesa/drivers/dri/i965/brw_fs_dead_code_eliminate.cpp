@@ -42,8 +42,8 @@ fs_visitor::dead_code_eliminate()
    calculate_live_intervals();
 
    int num_vars = live_intervals->num_vars;
-   BITSET_WORD *live = ralloc_array(NULL, BITSET_WORD, BITSET_WORDS(num_vars));
-   BITSET_WORD *flag_live = ralloc_array(NULL, BITSET_WORD, 1);
+   BITSET_WORD *live = rzalloc_array(NULL, BITSET_WORD, BITSET_WORDS(num_vars));
+   BITSET_WORD *flag_live = rzalloc_array(NULL, BITSET_WORD, 1);
 
    foreach_block_reverse_safe(block, cfg) {
       memcpy(live, live_intervals->block_data[block->num].liveout,
