@@ -3738,6 +3738,18 @@ static void load_emit_memory(
 	emit_data->output[emit_data->chan] = lp_build_gather_values(gallivm, channels, 4);
 }
 
+static void get_image_intr_name(const char *base_name,
+				LLVMTypeRef coords_type,
+				char *out_name, unsigned out_len)
+{
+	char coords_type_name[8];
+
+	build_int_type_name(coords_type, coords_type_name,
+			    sizeof(coords_type_name));
+
+	snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
+}
+
 static void load_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -3748,7 +3760,6 @@ static void load_emit(
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	char intrinsic_name[32];
-	char coords_type[8];
 
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		load_emit_memory(ctx, emit_data);
@@ -3770,11 +3781,9 @@ static void load_emit(
 				emit_data->args, emit_data->arg_count,
 				LLVMReadOnlyAttribute);
 	} else {
-		build_int_type_name(LLVMTypeOf(emit_data->args[0]),
-				    coords_type, sizeof(coords_type));
-
-		snprintf(intrinsic_name, sizeof(intrinsic_name),
-			 "llvm.amdgcn.image.load.%s", coords_type);
+		get_image_intr_name("llvm.amdgcn.image.load",
+				LLVMTypeOf(emit_data->args[0]),
+				intrinsic_name, sizeof(intrinsic_name));
 
 		emit_data->output[emit_data->chan] =
 			lp_build_intrinsic(
@@ -3951,7 +3960,6 @@ static void store_emit(
 	const struct tgsi_full_instruction * inst = emit_data->inst;
 	unsigned target = inst->Memory.Texture;
 	char intrinsic_name[32];
-	char coords_type[8];
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
 		store_emit_memory(ctx, emit_data);
@@ -3972,10 +3980,9 @@ static void store_emit(
 			emit_data->dst_type, emit_data->args,
 			emit_data->arg_count, 0);
 	} else {
-		build_int_type_name(LLVMTypeOf(emit_data->args[1]),
-				    coords_type, sizeof(coords_type));
-		snprintf(intrinsic_name, sizeof(intrinsic_name),
-			 "llvm.amdgcn.image.store.%s", coords_type);
+		get_image_intr_name("llvm.amdgcn.image.store",
+				LLVMTypeOf(emit_data->args[1]),
+				intrinsic_name, sizeof(intrinsic_name));
 
 		emit_data->output[emit_data->chan] =
 			lp_build_intrinsic(
