@@ -262,7 +262,7 @@ public:
                      src_reg offset_value,
                      src_reg mcs,
                      uint32_t surface, src_reg surface_reg,
-                     uint32_t sampler, src_reg sampler_reg);
+                     src_reg sampler_reg);
 
    src_reg emit_mcs_fetch(const glsl_type *coordinate_type, src_reg coordinate,
                           src_reg surface);

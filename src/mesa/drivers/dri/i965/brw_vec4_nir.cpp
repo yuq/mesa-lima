@@ -1967,7 +1967,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
                 shadow_comparitor,
                 lod, lod2, sample_index,
                 constant_offset, offset_value, mcs,
-                texture, texture_reg, sampler, sampler_reg);
+                texture, texture_reg, sampler_reg);
 }
 
 void

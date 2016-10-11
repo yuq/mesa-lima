@@ -73,7 +73,6 @@ brw_shader_precompile(struct gl_context *ctx,
 
 static void
 brw_lower_packing_builtins(struct brw_context *brw,
-                           gl_shader_stage shader_type,
                            exec_list *ir)
 {
    /* Gens < 7 don't have instructions to convert to or from half-precision,
@@ -105,7 +104,7 @@ process_glsl_ir(struct brw_context *brw,
    /* lower_packing_builtins() inserts arithmetic instructions, so it
     * must precede lower_instructions().
     */
-   brw_lower_packing_builtins(brw, shader->Stage, shader->ir);
+   brw_lower_packing_builtins(brw, shader->ir);
    do_mat_op_to_vec(shader->ir);
 
    unsigned instructions_to_lower = (DIV_TO_MUL_RCP |

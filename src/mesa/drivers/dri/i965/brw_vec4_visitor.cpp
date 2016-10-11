@@ -909,7 +909,6 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
                            src_reg mcs,
                            uint32_t surface,
                            src_reg surface_reg,
-                           uint32_t sampler,
                            src_reg sampler_reg)
 {
    /* The sampler can only meaningfully compute LOD for fragment shader
@@ -1141,7 +1140,7 @@ vec4_visitor::emit_gen6_gather_wa(uint8_t wa, dst_reg dst)
 }
 
 void
-vec4_visitor::gs_emit_vertex(int stream_id)
+vec4_visitor::gs_emit_vertex(int /* stream_id */)
 {
    unreachable("not reached");
 }
