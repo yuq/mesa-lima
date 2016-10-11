@@ -37,6 +37,7 @@
 #include "radv_amdgpu_cs.h"
 #include "radv_amdgpu_bo.h"
 #include "radv_amdgpu_surface.h"
+
 #define CIK_TILE_MODE_COLOR_2D			14
 
 #define CIK__GB_TILE_MODE__PIPE_CONFIG(x)        (((x) >> 6) & 0x1f)
@@ -338,7 +339,6 @@ radv_amdgpu_winsys_create(int fd)
 	if (!ws)
 		return NULL;
 
-
 	ws->dev = dev;
 	ws->info.drm_major = drm_major;
 	ws->info.drm_minor = drm_minor;
@@ -353,6 +353,7 @@ radv_amdgpu_winsys_create(int fd)
 	radv_amdgpu_bo_init_functions(ws);
 	radv_amdgpu_cs_init_functions(ws);
 	radv_amdgpu_surface_init_functions(ws);
+
 	return &ws->base;
 fail:
 	return NULL;

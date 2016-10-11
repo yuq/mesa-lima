@@ -84,6 +84,7 @@ static bool radv_amdgpu_fence_wait(struct radeon_winsys *_ws,
 	unsigned flags = absolute ? AMDGPU_QUERY_FENCE_TIMEOUT_IS_ABSOLUTE : 0;
 	int r;
 	uint32_t expired = 0;
+
 	/* Now use the libdrm query. */
 	r = amdgpu_cs_query_fence_status(fence,
 					 timeout,
@@ -95,16 +96,16 @@ static bool radv_amdgpu_fence_wait(struct radeon_winsys *_ws,
 		return false;
 	}
 
-	if (expired) {
+	if (expired)
 		return true;
-	}
-	return false;
 
+	return false;
 }
 
 static void radv_amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
 {
 	struct radv_amdgpu_cs *cs = radv_amdgpu_cs(rcs);
+
 	if (cs->ib_buffer)
 		cs->ws->base.buffer_destroy(cs->ib_buffer);
 	else
@@ -112,6 +113,7 @@ static void radv_amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
 
 	for (unsigned i = 0; i < cs->num_old_ib_buffers; ++i)
 		cs->ws->base.buffer_destroy(cs->old_ib_buffers[i]);
+
 	free(cs->old_ib_buffers);
 	free(cs->handles);
 	free(cs->priorities);
@@ -121,9 +123,9 @@ static void radv_amdgpu_cs_destroy(struct radeon_winsys_cs *rcs)
 static boolean radv_amdgpu_init_cs(struct radv_amdgpu_cs *cs,
 				   enum ring_type ring_type)
 {
-	for (int i = 0; i < ARRAY_SIZE(cs->buffer_hash_table); ++i) {
+	for (int i = 0; i < ARRAY_SIZE(cs->buffer_hash_table); ++i)
 		cs->buffer_hash_table[i] = -1;
-	}
+
 	return true;
 }
 
@@ -297,7 +299,7 @@ static int radv_amdgpu_cs_find_buffer(struct radv_amdgpu_cs *cs,
 	if (index == -1)
 		return -1;
 
-	if(cs->handles[index] == bo)
+	if (cs->handles[index] == bo)
 		return index;
 
 	for (unsigned i = 0; i < cs->num_buffers; ++i) {
@@ -306,6 +308,7 @@ static int radv_amdgpu_cs_find_buffer(struct radv_amdgpu_cs *cs,
 			return i;
 		}
 	}
+
 	return -1;
 }
 
@@ -455,6 +458,7 @@ static int radv_amdgpu_create_bo_list(struct radv_amdgpu_winsys *ws,
 		free(handles);
 		free(priorities);
 	}
+
 	return r;
 }
 
