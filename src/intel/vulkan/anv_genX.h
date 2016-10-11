@@ -27,10 +27,14 @@
 
 /*
  * Gen-specific function declarations.  This header must *not* be included
- * directly.  Instead, it is included multiple times by gen8_private.h.
+ * directly.  Instead, it is included multiple times by anv_private.h.
  * 
  * In this header file, the usual genx() macro is available.
  */
+
+#ifndef ANV_PRIVATE_H
+#error This file is included by means other than anv_private.h
+#endif
 
 VkResult genX(init_device_state)(struct anv_device *device);
 
