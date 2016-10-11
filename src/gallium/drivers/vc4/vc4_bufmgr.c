@@ -148,28 +148,17 @@ vc4_bo_alloc(struct vc4_screen *screen, uint32_t size, const char *name)
         bo->name = name;
         bo->private = true;
 
+ retry:
+        ;
+
         bool cleared_and_retried = false;
-retry:
-        if (!using_vc4_simulator) {
-                struct drm_vc4_create_bo create;
-                memset(&create, 0, sizeof(create));
+        struct drm_vc4_create_bo create = {
+                .size = size
+        };
 
-                create.size = size;
+        ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_CREATE_BO, &create);
+        bo->handle = create.handle;
 
-                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_CREATE_BO, &create);
-                bo->handle = create.handle;
-        } else {
-                struct drm_mode_create_dumb create;
-                memset(&create, 0, sizeof(create));
-
-                create.width = 128;
-                create.bpp = 8;
-                create.height = (size + 127) / 128;
-
-                ret = drmIoctl(screen->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
-                bo->handle = create.handle;
-                assert(create.size >= size);
-        }
         if (ret != 0) {
                 if (!list_empty(&screen->bo_cache.time_list) &&
                     !cleared_and_retried) {
@@ -223,7 +212,7 @@ vc4_bo_free(struct vc4_bo *bo)
         struct drm_gem_close c;
         memset(&c, 0, sizeof(c));
         c.handle = bo->handle;
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_GEM_CLOSE, &c);
+        int ret = vc4_ioctl(screen->fd, DRM_IOCTL_GEM_CLOSE, &c);
         if (ret != 0)
                 fprintf(stderr, "close object %d: %s\n", bo->handle, strerror(errno));
 
@@ -380,7 +369,7 @@ vc4_bo_open_name(struct vc4_screen *screen, uint32_t name,
         struct drm_gem_open o = {
                 .name = name
         };
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_GEM_OPEN, &o);
+        int ret = vc4_ioctl(screen->fd, DRM_IOCTL_GEM_OPEN, &o);
         if (ret) {
                 fprintf(stderr, "Failed to open bo %d: %s\n",
                         name, strerror(errno));
@@ -447,30 +436,15 @@ vc4_bo_alloc_shader(struct vc4_screen *screen, const void *data, uint32_t size)
         bo->name = "code";
         bo->private = false; /* Make sure it doesn't go back to the cache. */
 
-        if (!using_vc4_simulator) {
-                struct drm_vc4_create_shader_bo create = {
-                        .size = size,
-                        .data = (uintptr_t)data,
-                };
+        struct drm_vc4_create_shader_bo create = {
+                .size = size,
+                .data = (uintptr_t)data,
+        };
 
-                ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_CREATE_SHADER_BO,
-                               &create);
-                bo->handle = create.handle;
-        } else {
-                struct drm_mode_create_dumb create;
-                memset(&create, 0, sizeof(create));
+        ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_CREATE_SHADER_BO,
+                        &create);
+        bo->handle = create.handle;
 
-                create.width = 128;
-                create.bpp = 8;
-                create.height = (size + 127) / 128;
-
-                ret = drmIoctl(screen->fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
-                bo->handle = create.handle;
-                assert(create.size >= size);
-
-                vc4_bo_map(bo);
-                memcpy(bo->map, data, size);
-        }
         if (ret != 0) {
                 fprintf(stderr, "create shader ioctl failure\n");
                 abort();
@@ -492,7 +466,7 @@ vc4_bo_flink(struct vc4_bo *bo, uint32_t *name)
         struct drm_gem_flink flink = {
                 .handle = bo->handle,
         };
-        int ret = drmIoctl(bo->screen->fd, DRM_IOCTL_GEM_FLINK, &flink);
+        int ret = vc4_ioctl(bo->screen->fd, DRM_IOCTL_GEM_FLINK, &flink);
         if (ret) {
                 fprintf(stderr, "Failed to flink bo %d: %s\n",
                         bo->handle, strerror(errno));
@@ -508,14 +482,11 @@ vc4_bo_flink(struct vc4_bo *bo, uint32_t *name)
 
 static int vc4_wait_seqno_ioctl(int fd, uint64_t seqno, uint64_t timeout_ns)
 {
-        if (using_vc4_simulator)
-                return 0;
-
         struct drm_vc4_wait_seqno wait = {
                 .seqno = seqno,
                 .timeout_ns = timeout_ns,
         };
-        int ret = drmIoctl(fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
+        int ret = vc4_ioctl(fd, DRM_IOCTL_VC4_WAIT_SEQNO, &wait);
         if (ret == -1)
                 return -errno;
         else
@@ -553,14 +524,11 @@ vc4_wait_seqno(struct vc4_screen *screen, uint64_t seqno, uint64_t timeout_ns,
 
 static int vc4_wait_bo_ioctl(int fd, uint32_t handle, uint64_t timeout_ns)
 {
-        if (using_vc4_simulator)
-                return 0;
-
         struct drm_vc4_wait_bo wait = {
                 .handle = handle,
                 .timeout_ns = timeout_ns,
         };
-        int ret = drmIoctl(fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
+        int ret = vc4_ioctl(fd, DRM_IOCTL_VC4_WAIT_BO, &wait);
         if (ret == -1)
                 return -errno;
         else
@@ -602,19 +570,11 @@ vc4_bo_map_unsynchronized(struct vc4_bo *bo)
         if (bo->map)
                 return bo->map;
 
-        if (!using_vc4_simulator) {
-                struct drm_vc4_mmap_bo map;
-                memset(&map, 0, sizeof(map));
-                map.handle = bo->handle;
-                ret = drmIoctl(bo->screen->fd, DRM_IOCTL_VC4_MMAP_BO, &map);
-                offset = map.offset;
-        } else {
-                struct drm_mode_map_dumb map;
-                memset(&map, 0, sizeof(map));
-                map.handle = bo->handle;
-                ret = drmIoctl(bo->screen->fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
-                offset = map.offset;
-        }
+        struct drm_vc4_mmap_bo map;
+        memset(&map, 0, sizeof(map));
+        map.handle = bo->handle;
+        ret = vc4_ioctl(bo->screen->fd, DRM_IOCTL_VC4_MMAP_BO, &map);
+        offset = map.offset;
         if (ret != 0) {
                 fprintf(stderr, "map ioctl failure\n");
                 abort();

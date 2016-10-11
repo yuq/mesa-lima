@@ -23,6 +23,8 @@
 
 #ifdef USE_VC4_SIMULATOR
 
+#include <sys/mman.h>
+#include "xf86drm.h"
 #include "util/u_memory.h"
 #include "util/ralloc.h"
 
@@ -318,6 +320,143 @@ vc4_simulator_flush(struct vc4_context *vc4,
         }
 
         return 0;
+}
+
+/**
+ * Simulated ioctl(fd, DRM_VC4_CREATE_BO) implementation.
+ *
+ * Making a VC4 BO is just a matter of making a corresponding BO on the host.
+ */
+static int
+vc4_simulator_create_bo_ioctl(int fd, struct drm_vc4_create_bo *args)
+{
+        int ret;
+        struct drm_mode_create_dumb create = {
+                .width = 128,
+                .bpp = 8,
+                .height = (args->size + 127) / 128,
+        };
+
+        ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
+        assert(create.size >= args->size);
+
+        args->handle = create.handle;
+
+        return ret;
+}
+
+/**
+ * Simulated ioctl(fd, DRM_VC4_CREATE_SHADER_BO) implementation.
+ *
+ * In simulation we defer shader validation until exec time.  Just make a host
+ * BO and memcpy the contents in.
+ */
+static int
+vc4_simulator_create_shader_bo_ioctl(int fd,
+                                     struct drm_vc4_create_shader_bo *args)
+{
+        int ret;
+        struct drm_mode_create_dumb create = {
+                .width = 128,
+                .bpp = 8,
+                .height = (args->size + 127) / 128,
+        };
+
+        ret = drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create);
+        if (ret)
+                return ret;
+        assert(create.size >= args->size);
+
+        args->handle = create.handle;
+
+        struct drm_mode_map_dumb map = {
+                .handle = create.handle
+        };
+        ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
+        if (ret)
+                return ret;
+
+        void *shader = mmap(NULL, args->size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                            fd, map.offset);
+        memcpy(shader, (void *)(uintptr_t)args->data, args->size);
+        munmap(shader, args->size);
+
+        return 0;
+}
+
+/**
+ * Simulated ioctl(fd, DRM_VC4_MMAP_BO) implementation.
+ *
+ * We just pass this straight through to dumb mmap.
+ */
+static int
+vc4_simulator_mmap_bo_ioctl(int fd, struct drm_vc4_mmap_bo *args)
+{
+        int ret;
+        struct drm_mode_map_dumb map = {
+                .handle = args->handle,
+        };
+
+        ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &map);
+        args->offset = map.offset;
+
+        return ret;
+}
+
+static int
+vc4_simulator_get_param_ioctl(int fd, struct drm_vc4_get_param *args)
+{
+        switch (args->param) {
+        case DRM_VC4_PARAM_SUPPORTS_BRANCHES:
+                args->value = true;
+                return 0;
+
+        case DRM_VC4_PARAM_V3D_IDENT0:
+                args->value = 0x02000000;
+                return 0;
+
+        case DRM_VC4_PARAM_V3D_IDENT1:
+                args->value = 0x00000001;
+                return 0;
+
+        default:
+                fprintf(stderr, "Unknown DRM_IOCTL_VC4_GET_PARAM(%lld)\n",
+                        (long long)args->value);
+                abort();
+        };
+}
+
+int
+vc4_simulator_ioctl(int fd, unsigned long request, void *args)
+{
+        switch (request) {
+        case DRM_IOCTL_VC4_CREATE_BO:
+                return vc4_simulator_create_bo_ioctl(fd, args);
+        case DRM_IOCTL_VC4_CREATE_SHADER_BO:
+                return vc4_simulator_create_shader_bo_ioctl(fd, args);
+        case DRM_IOCTL_VC4_MMAP_BO:
+                return vc4_simulator_mmap_bo_ioctl(fd, args);
+
+        case DRM_IOCTL_VC4_WAIT_BO:
+        case DRM_IOCTL_VC4_WAIT_SEQNO:
+                /* We do all of the vc4 rendering synchronously, so we just
+                 * return immediately on the wait ioctls.  This ignores any
+                 * native rendering to the host BO, so it does mean we race on
+                 * front buffer rendering.
+                 */
+                return 0;
+
+        case DRM_IOCTL_VC4_GET_PARAM:
+                return vc4_simulator_get_param_ioctl(fd, args);
+
+        case DRM_IOCTL_GEM_OPEN:
+        case DRM_IOCTL_GEM_CLOSE:
+        case DRM_IOCTL_GEM_FLINK:
+                return drmIoctl(fd, request, args);
+        default:
+                fprintf(stderr, "Unknown ioctl 0x%08x\n", (int)request);
+                abort();
+        }
 }
 
 static void *sim_mem_base = NULL;

@@ -528,14 +528,10 @@ static int handle_compare(void *key1, void *key2)
 static bool
 vc4_supports_branches(struct vc4_screen *screen)
 {
-#if USE_VC4_SIMULATOR
-        return true;
-#endif
-
         struct drm_vc4_get_param p = {
                 .param = DRM_VC4_PARAM_SUPPORTS_BRANCHES,
         };
-        int ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &p);
+        int ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &p);
 
         if (ret != 0)
                 return false;
@@ -546,11 +542,6 @@ vc4_supports_branches(struct vc4_screen *screen)
 static bool
 vc4_get_chip_info(struct vc4_screen *screen)
 {
-#if USE_VC4_SIMULATOR
-        screen->v3d_ver = 21;
-        return true;
-#endif
-
         struct drm_vc4_get_param ident0 = {
                 .param = DRM_VC4_PARAM_V3D_IDENT0,
         };
@@ -559,7 +550,7 @@ vc4_get_chip_info(struct vc4_screen *screen)
         };
         int ret;
 
-        ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &ident0);
+        ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &ident0);
         if (ret != 0) {
                 if (errno == EINVAL) {
                         /* Backwards compatibility with 2835 kernels which
@@ -573,7 +564,7 @@ vc4_get_chip_info(struct vc4_screen *screen)
                         return false;
                 }
         }
-        ret = drmIoctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &ident1);
+        ret = vc4_ioctl(screen->fd, DRM_IOCTL_VC4_GET_PARAM, &ident1);
         if (ret != 0) {
                 fprintf(stderr, "Couldn't get V3D IDENT1: %s\n",
                         strerror(errno));

@@ -38,9 +38,6 @@
 #include "vc4_qpu.h"
 #include "vc4_qir.h"
 #include "mesa/state_tracker/st_glsl_types.h"
-#ifdef USE_VC4_SIMULATOR
-#include "simpenrose/simpenrose.h"
-#endif
 
 static struct qreg
 ntq_get_src(struct vc4_compile *c, nir_src src, int i);
