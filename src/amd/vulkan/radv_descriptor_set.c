@@ -113,6 +113,7 @@ VkResult radv_CreateDescriptorSetLayout(
 			alignment = 16;
 			break;
 		default:
+			unreachable("unknown descriptor type\n");
 			break;
 		}
 
