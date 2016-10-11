@@ -192,7 +192,8 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 			     struct radeon_surf *surface,
 			     const struct pipe_resource *ptex,
 			     unsigned array_mode,
-			     bool is_flushed_depth)
+			     bool is_flushed_depth,
+			     bool tc_compatible_htile)
 {
 	const struct util_format_description *desc =
 		util_format_description(ptex->format);
@@ -256,11 +257,22 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	if (!is_flushed_depth && is_depth) {
 		surface->flags |= RADEON_SURF_ZBUFFER;
 
+		if (tc_compatible_htile &&
+		    array_mode == RADEON_SURF_MODE_2D) {
+			/* TC-compatible HTILE only supports Z32_FLOAT.
+			 * Promote Z16 to Z32. DB->CB copies will convert
+			 * the format for transfers.
+			 */
+			surface->bpe = 4;
+			surface->flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
+		}
+
 		if (is_stencil) {
 			surface->flags |= RADEON_SURF_SBUFFER |
 					  RADEON_SURF_HAS_SBUFFER_MIPTREE;
 		}
 	}
+
 	if (rscreen->chip_class >= SI) {
 		surface->flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
 	}
@@ -904,6 +916,7 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	rtex->htile.height = height;
 	rtex->htile.xalign = cl_width * 8;
 	rtex->htile.yalign = cl_height * 8;
+	rtex->htile.alignment = base_align;
 
 	return (util_max_layer(&rtex->resource.b.b, 0) + 1) *
 		align(slice_bytes, base_align);
@@ -912,21 +925,34 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 					struct r600_texture *rtex)
 {
-	unsigned htile_size = r600_texture_get_htile_size(rscreen, rtex);
+	uint64_t htile_size, alignment;
+	uint32_t clear_value;
+
+	if (rtex->tc_compatible_htile) {
+		htile_size = rtex->surface.htile_size;
+		alignment = rtex->surface.htile_alignment;
+		clear_value = 0x0000030F;
+	} else {
+		htile_size = r600_texture_get_htile_size(rscreen, rtex);
+		alignment = rtex->htile.alignment;
+		clear_value = 0;
+	}
 
 	if (!htile_size)
 		return;
 
 	rtex->htile_buffer = (struct r600_resource*)
-			     pipe_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
-						PIPE_USAGE_DEFAULT, htile_size);
+			     r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
+							PIPE_USAGE_DEFAULT,
+							htile_size, alignment);
 	if (rtex->htile_buffer == NULL) {
 		/* this is not a fatal error as we can still keep rendering
 		 * without htile buffer */
 		R600_ERR("Failed to create buffer object for htile buffer.\n");
 	} else {
-		r600_screen_clear_buffer(rscreen, &rtex->htile_buffer->b.b, 0,
-					 htile_size, 0, R600_COHERENCY_NONE);
+		r600_screen_clear_buffer(rscreen, &rtex->htile_buffer->b.b,
+					 0, htile_size, clear_value,
+					 R600_COHERENCY_NONE);
 	}
 }
 
@@ -967,10 +993,11 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 
 	if (rtex->htile_buffer)
 		fprintf(f, "  HTile: size=%u, alignment=%u, pitch=%u, height=%u, "
-			"xalign=%u, yalign=%u\n",
+			"xalign=%u, yalign=%u, TC_compatible = %u\n",
 			rtex->htile_buffer->b.b.width0,
 			rtex->htile_buffer->buf->alignment, rtex->htile.pitch,
-			rtex->htile.height, rtex->htile.xalign, rtex->htile.yalign);
+			rtex->htile.height, rtex->htile.xalign, rtex->htile.yalign,
+			rtex->tc_compatible_htile);
 
 	if (rtex->dcc_offset) {
 		fprintf(f, "  DCC: offset=%"PRIu64", size=%"PRIu64", alignment=%"PRIu64"\n",
@@ -1053,6 +1080,16 @@ r600_texture_create_object(struct pipe_screen *screen,
 		FREE(rtex);
 		return NULL;
 	}
+
+	rtex->tc_compatible_htile = rtex->surface.htile_size != 0;
+	assert(!!(rtex->surface.flags & RADEON_SURF_TC_COMPATIBLE_HTILE) ==
+	       rtex->tc_compatible_htile);
+
+	/* TC-compatible HTILE only supports Z32_FLOAT. */
+	if (rtex->tc_compatible_htile)
+		rtex->db_render_format = PIPE_FORMAT_Z32_FLOAT;
+	else
+		rtex->db_render_format = base->format;
 
 	/* Tiled depth textures utilize the non-displayable tile order.
 	 * This must be done after r600_setup_surface.
@@ -1241,11 +1278,20 @@ struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
 	struct radeon_surf surface = {0};
+	bool is_flushed_depth = templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH;
+	bool tc_compatible_htile =
+		rscreen->chip_class >= VI &&
+		(templ->flags & PIPE_RESOURCE_FLAG_TEXTURING_MORE_LIKELY) &&
+		!(rscreen->debug_flags & DBG_NO_HYPERZ) &&
+		!is_flushed_depth &&
+		templ->nr_samples <= 1 && /* TC-compat HTILE is less efficient with MSAA */
+		util_format_is_depth_or_stencil(templ->format);
+
 	int r;
 
 	r = r600_init_surface(rscreen, &surface, templ,
 			      r600_choose_tiling(rscreen, templ),
-			      templ->flags & R600_RESOURCE_FLAG_FLUSHED_DEPTH);
+			      is_flushed_depth, tc_compatible_htile);
 	if (r) {
 		return NULL;
 	}
@@ -1296,7 +1342,8 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	else
 		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
 
-	r = r600_init_surface(rscreen, &surface, templ, array_mode, false);
+	r = r600_init_surface(rscreen, &surface, templ, array_mode,
+			      false, false);
 	if (r) {
 		return NULL;
 	}

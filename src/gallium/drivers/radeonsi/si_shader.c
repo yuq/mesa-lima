@@ -4607,12 +4607,26 @@ static void tex_fetch_args(
 
 	/* Pack depth comparison value */
 	if (tgsi_is_shadow_target(target) && opcode != TGSI_OPCODE_LODQ) {
+		LLVMValueRef z;
+
 		if (target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
-			address[count++] = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
+			z = lp_build_emit_fetch(bld_base, inst, 1, TGSI_CHAN_X);
 		} else {
 			assert(ref_pos >= 0);
-			address[count++] = coords[ref_pos];
+			z = coords[ref_pos];
 		}
+
+		/* TC-compatible HTILE promotes Z16 and Z24 to Z32_FLOAT,
+		 * so the depth comparison value isn't clamped for Z16 and
+		 * Z24 anymore. Do it manually here.
+		 *
+		 * It's unnecessary if the original texture format was
+		 * Z32_FLOAT, but we don't know that here.
+		 */
+		if (ctx->screen->b.chip_class == VI)
+			z = radeon_llvm_saturate(bld_base, z);
+
+		address[count++] = z;
 	}
 
 	/* Pack user derivatives */

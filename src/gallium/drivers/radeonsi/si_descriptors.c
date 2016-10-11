@@ -399,6 +399,9 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 		state[7] = ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 			    tex->dcc_offset +
 			    base_level_info->dcc_offset) >> 8;
+	} else if (tex->tc_compatible_htile) {
+		state[6] |= S_008F28_COMPRESSION_EN(1);
+		state[7] = tex->htile_buffer->gpu_address >> 8;
 	}
 }
 
@@ -508,8 +511,10 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 		if (views[i]->texture && views[i]->texture->target != PIPE_BUFFER) {
 			struct r600_texture *rtex =
 				(struct r600_texture*)views[i]->texture;
+			struct si_sampler_view *rview = (struct si_sampler_view *)views[i];
 
-			if (rtex->db_compatible) {
+			if (rtex->db_compatible &&
+			    (!rtex->tc_compatible_htile || rview->is_stencil_sampler)) {
 				samplers->depth_texture_mask |= 1u << slot;
 			} else {
 				samplers->depth_texture_mask &= ~(1u << slot);

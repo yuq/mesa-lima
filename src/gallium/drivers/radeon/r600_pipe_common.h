@@ -245,6 +245,7 @@ struct r600_htile_info {
 	unsigned height;
 	unsigned xalign;
 	unsigned yalign;
+	unsigned alignment;
 };
 
 struct r600_texture {
@@ -252,6 +253,7 @@ struct r600_texture {
 
 	uint64_t			size;
 	unsigned			num_level0_transfers;
+	enum pipe_format		db_render_format;
 	bool				is_depth;
 	bool				db_compatible;
 	bool				can_sample_z;
@@ -273,6 +275,7 @@ struct r600_texture {
 	/* Depth buffer compression and fast clear. */
 	struct r600_htile_info		htile;
 	struct r600_resource		*htile_buffer;
+	bool				tc_compatible_htile;
 	bool				depth_cleared; /* if it was cleared at least once */
 	float				depth_clear_value;
 	bool				stencil_cleared; /* if it was cleared at least once */

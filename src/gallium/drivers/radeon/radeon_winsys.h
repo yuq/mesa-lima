@@ -278,6 +278,7 @@ enum radeon_feature_id {
 #define RADEON_SURF_HAS_TILE_MODE_INDEX         (1 << 20)
 #define RADEON_SURF_FMASK                       (1 << 21)
 #define RADEON_SURF_DISABLE_DCC                 (1 << 22)
+#define RADEON_SURF_TC_COMPATIBLE_HTILE         (1 << 23)
 
 #define RADEON_SURF_GET(v, field)   (((v) >> RADEON_SURF_ ## field ## _SHIFT) & RADEON_SURF_ ## field ## _MASK)
 #define RADEON_SURF_SET(v, field)   (((v) & RADEON_SURF_ ## field ## _MASK) << RADEON_SURF_ ## field ## _SHIFT)
@@ -344,6 +345,9 @@ struct radeon_surf {
 
     uint64_t                    dcc_size;
     uint64_t                    dcc_alignment;
+    /* TC-compatible HTILE only. */
+    uint64_t                    htile_size;
+    uint64_t                    htile_alignment;
 };
 
 struct radeon_bo_list_item {

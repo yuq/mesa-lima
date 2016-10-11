@@ -686,6 +686,9 @@ static void si_update_poly_offset_state(struct si_context *sctx)
 	if (!rs || !rs->uses_poly_offset || !sctx->framebuffer.state.zsbuf)
 		return;
 
+	/* Use the user format, not db_render_format, so that the polygon
+	 * offset behaves as expected by applications.
+	 */
 	switch (sctx->framebuffer.state.zsbuf->texture->format) {
 	case PIPE_FORMAT_Z16_UNORM:
 		si_pm4_bind_state(sctx, poly_offset, &rs->pm4_poly_offset[0]);
@@ -2140,7 +2143,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	uint64_t z_offs, s_offs;
 	uint32_t db_htile_data_base, db_htile_surface;
 
-	format = si_translate_dbformat(rtex->resource.b.b.format);
+	format = si_translate_dbformat(rtex->db_render_format);
 
 	if (format == V_028040_Z_INVALID) {
 		R600_ERR("Invalid DB format: %d, disabling DB.\n", rtex->resource.b.b.format);
@@ -2151,7 +2154,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	z_offs += rtex->surface.level[level].offset;
 	s_offs += rtex->surface.stencil_level[level].offset;
 
-	db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(1);
+	db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(!rtex->tc_compatible_htile);
 
 	z_info = S_028040_FORMAT(format);
 	if (rtex->resource.b.b.nr_samples > 1) {
@@ -2208,13 +2211,37 @@ static void si_init_depth_surface(struct si_context *sctx,
 			 */
 			if (rtex->resource.b.b.nr_samples <= 1)
 				s_info |= S_028044_ALLOW_EXPCLEAR(1);
-		} else
-			/* Use all of the htile_buffer for depth if there's no stencil. */
+		} else if (!rtex->tc_compatible_htile) {
+			/* Use all of the htile_buffer for depth if there's no stencil.
+			 * This must not be set when TC-compatible HTILE is enabled
+			 * due to a hw bug.
+			 */
 			s_info |= S_028044_TILE_STENCIL_DISABLE(1);
+		}
 
 		uint64_t va = rtex->htile_buffer->gpu_address;
 		db_htile_data_base = va >> 8;
 		db_htile_surface = S_028ABC_FULL_CACHE(1);
+
+		if (rtex->tc_compatible_htile) {
+			db_htile_surface |= S_028ABC_TC_COMPATIBLE(1);
+
+			switch (rtex->resource.b.b.nr_samples) {
+			case 0:
+			case 1:
+				z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(5);
+				break;
+			case 2:
+			case 4:
+				z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(3);
+				break;
+			case 8:
+				z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(2);
+				break;
+			default:
+				assert(0);
+			}
+		}
 	} else {
 		db_htile_data_base = 0;
 		db_htile_surface = 0;
@@ -2356,6 +2383,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 	if (state->zsbuf) {
 		surf = (struct r600_surface*)state->zsbuf;
+		rtex = (struct r600_texture*)surf->base.texture;
 
 		if (!surf->depth_initialized) {
 			si_init_depth_surface(sctx, surf);
@@ -3021,6 +3049,9 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	surflevel = tmp->surface.level;
 
 	if (tmp->db_compatible) {
+		if (!view->is_stencil_sampler)
+			pipe_format = tmp->db_render_format;
+
 		switch (pipe_format) {
 		case PIPE_FORMAT_Z32_FLOAT_S8X24_UINT:
 			pipe_format = PIPE_FORMAT_Z32_FLOAT;

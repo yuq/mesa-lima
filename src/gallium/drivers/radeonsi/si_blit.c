@@ -332,6 +332,8 @@ si_flush_depth_texture(struct si_context *sctx,
 		}
 	}
 
+	assert(!tex->tc_compatible_htile || levels_z == 0);
+
 	/* We may have to allocate the flushed texture here when called from
 	 * si_decompress_subresource.
 	 */
@@ -699,7 +701,10 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 	    zsbuf->u.tex.level == 0 &&
 	    zsbuf->u.tex.first_layer == 0 &&
 	    zsbuf->u.tex.last_layer == util_max_layer(&zstex->resource.b.b, 0)) {
-		if (buffers & PIPE_CLEAR_DEPTH) {
+		/* TC-compatible HTILE only supports depth clears to 0 or 1. */
+		if (buffers & PIPE_CLEAR_DEPTH &&
+		    (!zstex->tc_compatible_htile ||
+		     depth == 0 || depth == 1)) {
 			/* Need to disable EXPCLEAR temporarily if clearing
 			 * to a new value. */
 			if (!zstex->depth_cleared || zstex->depth_clear_value != depth) {
@@ -713,7 +718,9 @@ static void si_clear(struct pipe_context *ctx, unsigned buffers,
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
 
-		if (buffers & PIPE_CLEAR_STENCIL) {
+		/* TC-compatible HTILE only supports stencil clears to 0. */
+		if (buffers & PIPE_CLEAR_STENCIL &&
+		    (!zstex->tc_compatible_htile || stencil == 0)) {
 			stencil &= 0xff;
 
 			/* Need to disable EXPCLEAR temporarily if clearing
