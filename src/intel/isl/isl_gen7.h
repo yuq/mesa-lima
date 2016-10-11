@@ -21,7 +21,8 @@
  *  IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef ISL_GEN7_H
+#define ISL_GEN7_H
 
 #include "isl.h"
 
@@ -51,3 +52,5 @@ isl_gen7_choose_image_alignment_el(const struct isl_device *dev,
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* ISL_GEN7_H */

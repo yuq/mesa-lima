@@ -21,7 +21,8 @@
  *  IN THE SOFTWARE.
  */
 
-#pragma once
+#ifndef ISL_PRIV_H
+#define ISL_PRIV_H
 
 #include <assert.h>
 #include <strings.h>
@@ -197,3 +198,5 @@ isl_gen8_buffer_fill_state_s(void *state,
 void
 isl_gen9_buffer_fill_state_s(void *state,
                              const struct isl_buffer_fill_state_info *restrict info);
+
+#endif /* ISL_PRIV_H */

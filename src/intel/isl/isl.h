@@ -35,7 +35,8 @@
  *    - functions
  */
 
-#pragma once
+#ifndef ISL_H
+#define ISL_H
 
 #include <assert.h>
 #include <stdbool.h>
@@ -1477,3 +1478,5 @@ isl_surf_get_depth_format(const struct isl_device *dev,
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* ISL_H */
