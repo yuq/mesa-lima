@@ -45,7 +45,6 @@
 #endif
 
 #include <amdgpu.h>
-#include "radv_device_info.h"
 #include "compiler/shader_enums.h"
 #include "util/macros.h"
 #include "util/list.h"

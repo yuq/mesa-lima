@@ -125,14 +125,9 @@ if opt_header:
     print "   };\n"
     print "};\n"
 
-    print "void radv_set_dispatch_devinfo(const struct radv_device_info *info);\n"
-
     for type, name, args, num, h in entrypoints:
         print_guard_start(name)
         print "%s radv_%s%s;" % (type, name, args)
-        print "%s vi_%s%s;" % (type, name, args)
-        print "%s cik_%s%s;" % (type, name, args)
-        print "%s si_%s%s;" % (type, name, args)
         print "%s radv_validate_%s%s;" % (type, name, args)
         print_guard_end(name)
     exit()
@@ -201,7 +196,7 @@ print """
  */
 """
 
-for layer in [ "radv", "validate", "si", "cik", "vi" ]:
+for layer in [ "radv", "validate" ]:
     for type, name, args, num, h in entrypoints:
         print_guard_start(name)
         print "%s %s_%s%s __attribute__ ((weak));" % (type, layer, name, args)
@@ -235,42 +230,13 @@ determine_validate(void)
       enable_validate = atoi(s);
 }
 
-static const struct radv_device_info *dispatch_devinfo;
-
-void
-radv_set_dispatch_devinfo(const struct radv_device_info *devinfo)
-{
-   dispatch_devinfo = devinfo;
-}
-
 void * __attribute__ ((noinline))
 radv_resolve_entrypoint(uint32_t index)
 {
    if (enable_validate && validate_layer.entrypoints[index])
       return validate_layer.entrypoints[index];
 
-   if (dispatch_devinfo == NULL) {
-      return radv_layer.entrypoints[index];
-   }
-
-   switch (dispatch_devinfo->chip_class) {
-   case VI:
-      if (vi_layer.entrypoints[index])
-         return vi_layer.entrypoints[index];
-      /* fall through */
-   case CIK:
-      if (cik_layer.entrypoints[index])
-         return cik_layer.entrypoints[index];
-      /* fall through */
-   case SI:
-      if (si_layer.entrypoints[index])
-         return si_layer.entrypoints[index];
-      /* fall through */
-   case 0:
-      return radv_layer.entrypoints[index];
-   default:
-      unreachable("unsupported gen\\n");
-   }
+   return radv_layer.entrypoints[index];
 }
 """
 
