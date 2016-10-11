@@ -183,8 +183,6 @@ blorp_emit_urb_config(struct blorp_batch *batch,
        brw->urb.vsize >= vs_entry_size)
       return;
 
-   brw->ctx.NewDriverState |= BRW_NEW_URB_SIZE;
-
    gen7_upload_urb(brw, vs_entry_size, false, false);
 #elif GEN_GEN == 6
    gen6_upload_urb(brw, vs_entry_size, false, 0);

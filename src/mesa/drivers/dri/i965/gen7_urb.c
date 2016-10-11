@@ -236,7 +236,8 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
 const struct brw_tracked_state gen7_urb = {
    .dirty = {
       .mesa = 0,
-      .brw = BRW_NEW_CONTEXT |
+      .brw = BRW_NEW_BLORP |
+             BRW_NEW_CONTEXT |
              BRW_NEW_URB_SIZE |
              BRW_NEW_GS_PROG_DATA |
              BRW_NEW_TCS_PROG_DATA |
