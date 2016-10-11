@@ -155,9 +155,7 @@ static bool
 gen7_format_needs_valign2(const struct isl_device *dev,
                           enum isl_format format)
 {
-   /* This workaround applies only to gen7 */
-   if (ISL_DEV_GEN(dev) > 7)
-      return false;
+   assert(ISL_DEV_GEN(dev) == 7);
 
    /* From the Ivybridge PRM (2012-05-31), Volume 4, Part 1, Section 2.12.1,
     * RENDER_SURFACE_STATE Surface Vertical Alignment:
@@ -391,6 +389,8 @@ isl_gen7_choose_image_alignment_el(const struct isl_device *dev,
                                    enum isl_msaa_layout msaa_layout,
                                    struct isl_extent3d *image_align_el)
 {
+   assert(ISL_DEV_GEN(dev) == 7);
+
    /* Handled by isl_choose_image_alignment_el */
    assert(info->format != ISL_FORMAT_HIZ);
 
