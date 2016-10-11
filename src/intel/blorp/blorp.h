@@ -169,7 +169,8 @@ blorp_clear_attachments(struct blorp_batch *batch,
 
 void
 blorp_ccs_resolve(struct blorp_batch *batch,
-                  struct blorp_surf *surf, enum isl_format format);
+                  struct blorp_surf *surf, uint32_t level, uint32_t layer,
+                  enum isl_format format);
 
 /**
  * For an overview of the HiZ operations, see the following sections of the

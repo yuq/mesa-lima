@@ -945,7 +945,7 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
-   blorp_ccs_resolve(&batch, &surf,
+   blorp_ccs_resolve(&batch, &surf, 0 /* level */, 0 /* layer */,
                      brw_blorp_to_isl_format(brw, format, true));
    blorp_batch_finish(&batch);
 

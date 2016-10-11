@@ -542,13 +542,18 @@ blorp_clear_attachments(struct blorp_batch *batch,
 
 void
 blorp_ccs_resolve(struct blorp_batch *batch,
-                  struct blorp_surf *surf, enum isl_format format)
+                  struct blorp_surf *surf, uint32_t level, uint32_t layer,
+                  enum isl_format format)
 {
    struct blorp_params params;
    blorp_params_init(&params);
 
+   /* Layered and mipmapped fast clear is only available from Gen8 onwards. */
+   assert(ISL_DEV_GEN(batch->blorp->isl_dev) >= 8 ||
+          (level == 0 && layer == 0));
+
    brw_blorp_surface_info_init(batch->blorp, &params.dst, surf,
-                               0 /* level */, 0 /* layer */, format, true);
+                               level, layer, format, true);
 
    /* From the Ivy Bridge PRM, Vol2 Part1 11.9 "Render Target Resolve":
     *
