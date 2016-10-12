@@ -53,8 +53,17 @@ fd_context_flush(struct pipe_context *pctx, struct pipe_fence_handle **fence,
 		fd_bc_flush(&ctx->screen->batch_cache, ctx);
 	}
 
-	if (fence)
+	if (fence) {
+		/* if there hasn't been any rendering submitted yet, we might not
+		 * have actually created a fence
+		 */
+		if (!ctx->last_fence || ctx->batch->needs_out_fence_fd) {
+			ctx->batch->needs_flush = true;
+			fd_gmem_render_noop(ctx->batch);
+			fd_batch_reset(ctx->batch);
+		}
 		fd_fence_ref(pctx->screen, fence, ctx->last_fence);
+	}
 }
 
 /**

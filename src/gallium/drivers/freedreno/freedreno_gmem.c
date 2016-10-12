@@ -359,6 +359,20 @@ render_sysmem(struct fd_batch *batch)
 	fd_reset_wfi(batch);
 }
 
+static void
+flush_ring(struct fd_batch *batch)
+{
+	struct fd_context *ctx = batch->ctx;
+	int out_fence_fd = -1;
+
+	fd_ringbuffer_flush2(batch->gmem, batch->in_fence_fd,
+			batch->needs_out_fence_fd ? &out_fence_fd : NULL);
+
+	fd_fence_ref(&ctx->screen->base, &ctx->last_fence, NULL);
+	ctx->last_fence = fd_fence_create(ctx,
+			fd_ringbuffer_timestamp(batch->gmem), out_fence_fd);
+}
+
 void
 fd_gmem_render_tiles(struct fd_batch *batch)
 {
@@ -399,13 +413,22 @@ fd_gmem_render_tiles(struct fd_batch *batch)
 		ctx->stats.batch_gmem++;
 	}
 
-	int out_fence_fd = -1;
-	fd_ringbuffer_flush2(batch->gmem, batch->in_fence_fd,
-			batch->needs_out_fence_fd ? &out_fence_fd : NULL);
+	flush_ring(batch);
+}
 
-	fd_fence_ref(&ctx->screen->base, &ctx->last_fence, NULL);
-	ctx->last_fence = fd_fence_create(ctx,
-			fd_ringbuffer_timestamp(batch->gmem), out_fence_fd);
+/* special case for when we need to create a fence but have no rendering
+ * to flush.. just emit a no-op string-marker packet.
+ */
+void
+fd_gmem_render_noop(struct fd_batch *batch)
+{
+	struct fd_context *ctx = batch->ctx;
+	struct pipe_context *pctx = &ctx->base;
+
+	pctx->emit_string_marker(pctx, "noop", 4);
+	/* emit IB to drawcmds (which contain the string marker): */
+	ctx->emit_ib(batch->gmem, batch->draw);
+	flush_ring(batch);
 }
 
 /* tile needs restore if it isn't completely contained within the
