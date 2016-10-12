@@ -393,6 +393,11 @@ _eglGetPlatformDisplayCommon(EGLenum platform, void *native_display,
                                   attrib_list);
       break;
 #endif
+#ifdef HAVE_SURFACELESS_PLATFORM
+   case EGL_PLATFORM_SURFACELESS_MESA:
+      dpy = _eglGetSurfacelessDisplay(native_display, attrib_list);
+      break;
+#endif
    default:
       RETURN_EGL_ERROR(NULL, EGL_BAD_PARAMETER, NULL);
    }
@@ -837,10 +842,29 @@ _eglCreateWindowSurfaceCommon(_EGLDisplay *disp, EGLConfig config,
    _EGLSurface *surf;
    EGLSurface ret;
 
-   _EGL_CHECK_CONFIG(disp, conf, EGL_NO_SURFACE, drv);
 
    if (native_window == NULL)
       RETURN_EGL_ERROR(disp, EGL_BAD_NATIVE_WINDOW, EGL_NO_SURFACE);
+
+#ifdef HAVE_SURFACELESS_PLATFORM
+   if (disp->Platform == _EGL_PLATFORM_SURFACELESS) {
+      /* From the EGL_MESA_platform_surfaceless spec (v1):
+       *
+       *    eglCreatePlatformWindowSurface fails when called with a <display>
+       *    that belongs to the surfaceless platform. It returns
+       *    EGL_NO_SURFACE and generates EGL_BAD_NATIVE_WINDOW. The
+       *    justification for this unconditional failure is that the
+       *    surfaceless platform has no native windows, and therefore the
+       *    <native_window> parameter is always invalid.
+       *
+       * This check must occur before checking the EGLConfig, which emits
+       * EGL_BAD_CONFIG.
+       */
+      RETURN_EGL_ERROR(disp, EGL_BAD_NATIVE_WINDOW, EGL_NO_SURFACE);
+   }
+#endif
+
+   _EGL_CHECK_CONFIG(disp, conf, EGL_NO_SURFACE, drv);
 
    surf = drv->API.CreateWindowSurface(drv, disp, conf, native_window,
                                        attrib_list);
@@ -942,6 +966,22 @@ _eglCreatePixmapSurfaceCommon(_EGLDisplay *disp, EGLConfig config,
    _EGLDriver *drv;
    _EGLSurface *surf;
    EGLSurface ret;
+
+#if HAVE_SURFACELESS_PLATFORM
+   if (disp->Platform == _EGL_PLATFORM_SURFACELESS) {
+      /* From the EGL_MESA_platform_surfaceless spec (v1):
+       *
+       *   [Like eglCreatePlatformWindowSurface,] eglCreatePlatformPixmapSurface
+       *   also fails when called with a <display> that belongs to the
+       *   surfaceless platform.  It returns EGL_NO_SURFACE and generates
+       *   EGL_BAD_NATIVE_PIXMAP.
+       *
+       * This check must occur before checking the EGLConfig, which emits
+       * EGL_BAD_CONFIG.
+       */
+      RETURN_EGL_ERROR(disp, EGL_BAD_NATIVE_PIXMAP, EGL_NO_SURFACE);
+   }
+#endif
 
    _EGL_CHECK_CONFIG(disp, conf, EGL_NO_SURFACE, drv);
    surf = drv->API.CreatePixmapSurface(drv, disp, conf, native_pixmap,

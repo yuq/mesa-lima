@@ -62,6 +62,9 @@ struct _egl_global _eglGlobal =
 #ifdef HAVE_DRM_PLATFORM
    " EGL_MESA_platform_gbm"
 #endif
+#ifdef HAVE_SURFACELESS_PLATFORM
+   " EGL_MESA_platform_surfaceless"
+#endif
    " EGL_KHR_client_get_all_proc_addresses"
    " EGL_KHR_debug",
 

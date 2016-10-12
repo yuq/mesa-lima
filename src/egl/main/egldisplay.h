@@ -274,6 +274,11 @@ _eglGetWaylandDisplay(struct wl_display *native_display,
                       const EGLint *attrib_list);
 #endif
 
+#ifdef HAVE_SURFACELESS_PLATFORM
+_EGLDisplay*
+_eglGetSurfacelessDisplay(void *native_display,
+                          const EGLint *attrib_list);
+#endif
 
 #ifdef __cplusplus
 }
