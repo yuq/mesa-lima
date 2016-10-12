@@ -808,10 +808,10 @@ static void si_shader_ps(struct si_shader *shader)
 		       S_00B02C_USER_SGPR(SI_PS_NUM_USER_SGPR) |
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 
-	/* Prefer RE_Z if the shader is complex enough. The requirement is either:
-	 * - the shader uses at least 2 VMEM instructions, or
-	 * - the code size is at least 50 2-dword instructions or 100 1-dword
-	 *   instructions.
+	/* DON'T USE EARLY_Z_THEN_RE_Z !!!
+	 *
+	 * It decreases performance by 15% in DiRT: Showdown on Ultra settings.
+	 * And it has pretty complex shaders.
 	 *
 	 * Shaders with side effects that must execute independently of the
 	 * depth test require LATE_Z.
@@ -819,9 +819,6 @@ static void si_shader_ps(struct si_shader *shader)
 	if (info->writes_memory &&
 	    !info->properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
 		shader->z_order = V_02880C_LATE_Z;
-	else if (info->num_memory_instructions >= 2 ||
-	         shader->binary.code_size > 100*4)
-		shader->z_order = V_02880C_EARLY_Z_THEN_RE_Z;
 	else
 		shader->z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
 }
