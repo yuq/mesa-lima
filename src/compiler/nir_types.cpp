@@ -185,6 +185,12 @@ glsl_type_is_array(const struct glsl_type *type)
 }
 
 bool
+glsl_type_is_array_of_arrays(const struct glsl_type *type)
+{
+   return type->is_array_of_arrays();
+}
+
+bool
 glsl_type_is_struct(const struct glsl_type *type)
 {
    return type->is_record() || type->is_interface();
