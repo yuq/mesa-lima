@@ -349,6 +349,8 @@ vc4_bo_open_handle(struct vc4_screen *screen,
         bo->private = false;
 
 #ifdef USE_VC4_SIMULATOR
+        vc4_simulator_open_from_handle(screen->fd, winsys_stride,
+                                       bo->handle, bo->size);
         vc4_bo_map(bo);
         bo->simulator_winsys_map = bo->map;
         bo->simulator_winsys_stride = winsys_stride;

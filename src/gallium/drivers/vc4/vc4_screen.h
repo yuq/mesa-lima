@@ -47,6 +47,8 @@ struct vc4_bo;
 #define VC4_MAX_MIP_LEVELS 12
 #define VC4_MAX_TEXTURE_SAMPLERS 16
 
+struct vc4_simulator_file;
+
 struct vc4_screen {
         struct pipe_screen base;
         int fd;
@@ -83,6 +85,8 @@ struct vc4_screen {
         uint32_t bo_size;
         uint32_t bo_count;
         bool has_control_flow;
+
+        struct vc4_simulator_file *sim_file;
 };
 
 static inline struct vc4_screen *

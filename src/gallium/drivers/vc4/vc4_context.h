@@ -429,6 +429,8 @@ int vc4_simulator_flush(struct vc4_context *vc4,
                         struct drm_vc4_submit_cl *args,
                         struct vc4_job *job);
 int vc4_simulator_ioctl(int fd, unsigned long request, void *arg);
+void vc4_simulator_open_from_handle(int fd, uint32_t winsys_stride,
+                                    int handle, uint32_t size);
 
 static inline int
 vc4_ioctl(int fd, unsigned long request, void *arg)
