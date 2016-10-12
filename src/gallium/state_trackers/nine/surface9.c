@@ -187,8 +187,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
 
     This->stride = nine_format_get_stride(This->base.info.format, pDesc->Width);
 
-    if (pDesc->Usage & D3DUSAGE_DYNAMIC)
-        pResource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
+    if (This->base.resource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
+        This->base.resource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
 
     /* TODO: investigate what else exactly needs to be cleared */
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
