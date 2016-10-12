@@ -405,9 +405,10 @@ out:
 }
 
 
-struct ureg_dst 
-ureg_DECL_output_masked(struct ureg_program *ureg,
-                        unsigned name,
+struct ureg_dst
+ureg_DECL_output_layout(struct ureg_program *ureg,
+                        unsigned semantic_name,
+                        unsigned semantic_index,
                         unsigned index,
                         unsigned usage_mask,
                         unsigned array_id,
@@ -418,22 +419,24 @@ ureg_DECL_output_masked(struct ureg_program *ureg,
    assert(usage_mask != 0);
 
    for (i = 0; i < ureg->nr_outputs; i++) {
-      if (ureg->output[i].semantic_name == name &&
-          ureg->output[i].semantic_index == index) {
-         assert(ureg->output[i].array_id == array_id);
-         ureg->output[i].usage_mask |= usage_mask;
-         goto out;
+      if (ureg->output[i].semantic_name == semantic_name &&
+          ureg->output[i].semantic_index == semantic_index) {
+         if (ureg->output[i].array_id == array_id) {
+            ureg->output[i].usage_mask |= usage_mask;
+            goto out;
+         }
+         assert((ureg->output[i].usage_mask & usage_mask) == 0);
       }
    }
 
    if (ureg->nr_outputs < UREG_MAX_OUTPUT) {
-      ureg->output[i].semantic_name = name;
-      ureg->output[i].semantic_index = index;
+      ureg->output[i].semantic_name = semantic_name;
+      ureg->output[i].semantic_index = semantic_index;
       ureg->output[i].usage_mask = usage_mask;
-      ureg->output[i].first = ureg->nr_output_regs;
-      ureg->output[i].last = ureg->nr_output_regs + array_size - 1;
+      ureg->output[i].first = index;
+      ureg->output[i].last = index + array_size - 1;
       ureg->output[i].array_id = array_id;
-      ureg->nr_output_regs += array_size;
+      ureg->nr_output_regs = MAX2(ureg->nr_output_regs, index + array_size);
       ureg->nr_outputs++;
    }
    else {
@@ -443,6 +446,19 @@ ureg_DECL_output_masked(struct ureg_program *ureg,
 out:
    return ureg_dst_array_register(TGSI_FILE_OUTPUT, ureg->output[i].first,
                                   array_id);
+}
+
+
+struct ureg_dst
+ureg_DECL_output_masked(struct ureg_program *ureg,
+                        unsigned name,
+                        unsigned index,
+                        unsigned usage_mask,
+                        unsigned array_id,
+                        unsigned array_size)
+{
+   return ureg_DECL_output_layout(ureg, name, index,
+                                  ureg->nr_output_regs, usage_mask, array_id, array_size);
 }
 
 
