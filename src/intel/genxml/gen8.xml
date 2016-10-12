@@ -358,6 +358,18 @@
     <field name="Filter Coefficient" start="0" end="7" type="s1.6"/>
   </struct>
 
+  <struct name="SAMPLER_BORDER_COLOR_STATE" length="4">
+    <field name="Border Color Float Red" start="0" end="31" type="float"/>
+    <field name="Border Color Float Green" start="32" end="63" type="float"/>
+    <field name="Border Color Float Blue" start="64" end="95" type="float"/>
+    <field name="Border Color Float Alpha" start="96" end="127" type="float"/>
+
+    <field name="Border Color 32bit Red" start="0" end="31" type="uint"/>
+    <field name="Border Color 32bit Green" start="32" end="63" type="uint"/>
+    <field name="Border Color 32bit Blue" start="64" end="95" type="uint"/>
+    <field name="Border Color 32bit Alpha" start="96" end="127" type="uint"/>
+  </struct>
+
   <struct name="SAMPLER_STATE" length="4">
     <field name="Sampler Disable" start="31" end="31" type="bool"/>
     <field name="Texture Border Color Mode" start="29" end="29" type="uint">

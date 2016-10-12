@@ -372,6 +372,38 @@
     <field name="MOCS" start="176" end="179" type="uint"/>
   </struct>
 
+  <struct name="SAMPLER_BORDER_COLOR_STATE" length="12">
+    <field name="Border Color Unorm Red" start="0" end="7" type="uint"/>
+    <field name="Border Color Unorm Green" start="8" end="15" type="uint"/>
+    <field name="Border Color Unorm Blue" start="16" end="23" type="uint"/>
+    <field name="Border Color Unorm Alpha" start="24" end="31" type="uint"/>
+
+    <field name="Border Color Float Red" start="32" end="63" type="float"/>
+    <field name="Border Color Float Green" start="64" end="95" type="float"/>
+    <field name="Border Color Float Blue" start="96" end="127" type="float"/>
+    <field name="Border Color Float Alpha" start="128" end="159" type="float"/>
+
+    <field name="Border Color Float16 Red" start="160" end="175" type="uint"/>
+    <field name="Border Color Float16 Green" start="176" end="191" type="uint"/>
+    <field name="Border Color Float16 Blue" start="192" end="207" type="uint"/>
+    <field name="Border Color Float16 Alpha" start="208" end="223" type="uint"/>
+
+    <field name="Border Color Unorm16 Red" start="224" end="239" type="uint"/>
+    <field name="Border Color Unorm16 Green" start="240" end="255" type="uint"/>
+    <field name="Border Color Unorm16 Blue" start="256" end="271" type="uint"/>
+    <field name="Border Color Unorm16 Alpha" start="272" end="287" type="uint"/>
+
+    <field name="Border Color Snorm16 Red" start="288" end="303" type="int"/>
+    <field name="Border Color Snorm16 Green" start="304" end="319" type="int"/>
+    <field name="Border Color Snorm16 Blue" start="320" end="335" type="int"/>
+    <field name="Border Color Snorm16 Alpha" start="336" end="351" type="int"/>
+
+    <field name="Border Color Snorm8 Red" start="352" end="359" type="int"/>
+    <field name="Border Color Snorm8 Green" start="360" end="367" type="int"/>
+    <field name="Border Color Snorm8 Blue" start="368" end="375" type="int"/>
+    <field name="Border Color Snorm8 Alpha" start="376" end="383" type="int"/>
+  </struct>
+
   <struct name="SAMPLER_STATE" length="4">
     <field name="Sampler Disable" start="31" end="31" type="bool"/>
     <field name="Texture Border Color Mode" start="29" end="29" type="uint">

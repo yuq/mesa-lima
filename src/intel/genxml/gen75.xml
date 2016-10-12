@@ -438,6 +438,28 @@
     <field name="Resource Min LOD" start="224" end="235" type="u4.8"/>
   </struct>
 
+  <struct name="SAMPLER_BORDER_COLOR_STATE" length="20">
+    <field name="Border Color Float Red" start="0" end="31" type="float"/>
+    <field name="Border Color Float Green" start="32" end="63" type="float"/>
+    <field name="Border Color Float Blue" start="64" end="95" type="float"/>
+    <field name="Border Color Float Alpha" start="96" end="127" type="float"/>
+
+    <field name="Border Color 8bit Red" start="512" end="519" type="uint"/>
+    <field name="Border Color 8bit Green" start="520" end="527" type="uint"/>
+    <field name="Border Color 8bit Blue" start="528" end="535" type="uint"/>
+    <field name="Border Color 8bit Alpha" start="536" end="543" type="uint"/>
+
+    <field name="Border Color 16bit Red" start="512" end="527" type="uint"/>
+    <field name="Border Color 16bit Green" start="528" end="543" type="uint"/>
+    <field name="Border Color 16bit Blue" start="576" end="591" type="uint"/>
+    <field name="Border Color 16bit Alpha" start="592" end="607" type="uint"/>
+
+    <field name="Border Color 32bit Red" start="512" end="543" type="uint"/>
+    <field name="Border Color 32bit Green" start="544" end="575" type="uint"/>
+    <field name="Border Color 32bit Blue" start="576" end="607" type="uint"/>
+    <field name="Border Color 32bit Alpha" start="608" end="639" type="uint"/>
+  </struct>
+
   <struct name="SAMPLER_STATE" length="4">
     <field name="Sampler Disable" start="31" end="31" type="bool"/>
     <field name="Texture Border Color Mode" start="29" end="29" type="uint">
