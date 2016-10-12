@@ -3925,9 +3925,7 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028AC0_DB_SRESULTS_COMPARE_STATE0, 0x0);
 	si_pm4_set_reg(pm4, R_028AC4_DB_SRESULTS_COMPARE_STATE1, 0x0);
 	si_pm4_set_reg(pm4, R_028AC8_DB_PRELOAD_CONTROL, 0x0);
-	si_pm4_set_reg(pm4, R_02800C_DB_RENDER_OVERRIDE,
-		       S_02800C_FORCE_HIS_ENABLE0(V_02800C_FORCE_DISABLE) |
-		       S_02800C_FORCE_HIS_ENABLE1(V_02800C_FORCE_DISABLE));
+	si_pm4_set_reg(pm4, R_02800C_DB_RENDER_OVERRIDE, 0);
 
 	si_pm4_set_reg(pm4, R_028400_VGT_MAX_VTX_INDX, ~0);
 	si_pm4_set_reg(pm4, R_028404_VGT_MIN_VTX_INDX, 0);
