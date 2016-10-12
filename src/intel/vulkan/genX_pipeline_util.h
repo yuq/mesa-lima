@@ -126,8 +126,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
        * VERTEX_BUFFER_STATE which we emit later.
        */
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING), vfi) {
-         vfi.InstancingEnable = pipeline->instancing_enable[desc->binding],
-         vfi.VertexElementIndex = slot,
+         vfi.InstancingEnable = pipeline->instancing_enable[desc->binding];
+         vfi.VertexElementIndex = slot;
          /* Vulkan so far doesn't have an instance divisor, so
           * this is always 1 (ignored if not instancing). */
          vfi.InstanceDataStepRate = 1;

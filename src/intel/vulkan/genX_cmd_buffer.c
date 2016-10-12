@@ -80,8 +80,8 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
 
       sba.DynamicStateBaseAddress =
          (struct anv_address) { &device->dynamic_state_block_pool.bo, 0 };
-      sba.DynamicStateMemoryObjectControlState = GENX(MOCS),
-      sba.DynamicStateBaseAddressModifyEnable = true,
+      sba.DynamicStateMemoryObjectControlState = GENX(MOCS);
+      sba.DynamicStateBaseAddressModifyEnable = true;
 
       sba.IndirectObjectBaseAddress = (struct anv_address) { NULL, 0 };
       sba.IndirectObjectMemoryObjectControlState = GENX(MOCS);
@@ -1230,7 +1230,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
             .bo = image->bo,
             .offset = image->offset + image->depth_surface.offset,
          };
-         db.DepthBufferObjectControlState = GENX(MOCS),
+         db.DepthBufferObjectControlState = GENX(MOCS);
 
          db.SurfacePitch         = image->depth_surface.isl.row_pitch - 1;
          db.Height               = image->extent.height - 1;
@@ -1241,7 +1241,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
 #if GEN_GEN >= 8
          db.SurfaceQPitch =
-            isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2,
+            isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2;
 #endif
          db.RenderTargetViewExtent = 1 - 1;
       }
@@ -1304,14 +1304,14 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    if (has_stencil) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_STENCIL_BUFFER), sb) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
-         sb.StencilBufferEnable = true,
+         sb.StencilBufferEnable = true;
 #endif
-         sb.StencilBufferObjectControlState = GENX(MOCS),
+         sb.StencilBufferObjectControlState = GENX(MOCS);
 
-         sb.SurfacePitch = image->stencil_surface.isl.row_pitch - 1,
+         sb.SurfacePitch = image->stencil_surface.isl.row_pitch - 1;
 
 #if GEN_GEN >= 8
-         sb.SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2,
+         sb.SurfaceQPitch = isl_surf_get_array_pitch_el_rows(&image->stencil_surface.isl) >> 2;
 #endif
          sb.SurfaceBaseAddress = (struct anv_address) {
             .bo = image->bo,
@@ -1515,8 +1515,8 @@ void genX(CmdWriteTimestamp)(
    default:
       /* Everything else is bottom-of-pipe */
       anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
-         pc.DestinationAddressType  = DAT_PPGTT,
-         pc.PostSyncOperation       = WriteTimestamp,
+         pc.DestinationAddressType  = DAT_PPGTT;
+         pc.PostSyncOperation       = WriteTimestamp;
          pc.Address = (struct anv_address) { &pool->bo, offset };
       }
       break;
