@@ -248,7 +248,7 @@ extern const SWR_FORMAT_INFO gFormatInfo[NUM_SWR_FORMATS];
 /// @param format - SWR format
 INLINE const SWR_FORMAT_INFO& GetFormatInfo(SWR_FORMAT format)
 {
-    SWR_ASSERT(format <= NUM_SWR_FORMATS, "Invalid Surface Format: %d", format);
+    SWR_ASSERT(format < NUM_SWR_FORMATS, "Invalid Surface Format: %d", format);
     SWR_ASSERT(gFormatInfo[format].name != nullptr, "Invalid Surface Format: %d", format);
     return gFormatInfo[format];
 }
