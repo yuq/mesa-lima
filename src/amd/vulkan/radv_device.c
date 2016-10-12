@@ -295,6 +295,8 @@ VkResult radv_EnumeratePhysicalDevices(
 	} else if (*pPhysicalDeviceCount >= 1) {
 		pPhysicalDevices[0] = radv_physical_device_to_handle(&instance->physicalDevice);
 		*pPhysicalDeviceCount = 1;
+	} else if (*pPhysicalDeviceCount < instance->physicalDeviceCount) {
+		return VK_INCOMPLETE;
 	} else {
 		*pPhysicalDeviceCount = 0;
 	}
