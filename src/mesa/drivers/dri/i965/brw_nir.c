@@ -96,7 +96,7 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
 }
 
 static bool
-remap_vs_attrs(nir_block *block, struct nir_shader_info *nir_info)
+remap_vs_attrs(nir_block *block, shader_info *nir_info)
 {
    nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)

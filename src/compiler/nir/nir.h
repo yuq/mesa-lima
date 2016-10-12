@@ -37,6 +37,7 @@
 #include "util/macros.h"
 #include "compiler/nir_types.h"
 #include "compiler/shader_enums.h"
+#include "compiler/shader_info.h"
 #include <stdio.h>
 
 #include "nir_opcodes.h"
@@ -1783,101 +1784,6 @@ typedef struct nir_shader_compiler_options {
    bool use_interpolated_input_intrinsics;
 } nir_shader_compiler_options;
 
-typedef struct nir_shader_info {
-   const char *name;
-
-   /* Descriptive name provided by the client; may be NULL */
-   const char *label;
-
-   /* Number of textures used by this shader */
-   unsigned num_textures;
-   /* Number of uniform buffers used by this shader */
-   unsigned num_ubos;
-   /* Number of atomic buffers used by this shader */
-   unsigned num_abos;
-   /* Number of shader storage buffers used by this shader */
-   unsigned num_ssbos;
-   /* Number of images used by this shader */
-   unsigned num_images;
-
-   /* Which inputs are actually read */
-   uint64_t inputs_read;
-   /* Which inputs are actually read and are double */
-   uint64_t double_inputs_read;
-   /* Which outputs are actually written */
-   uint64_t outputs_written;
-   /* Which outputs are actually read */
-   uint64_t outputs_read;
-   /* Which system values are actually read */
-   uint64_t system_values_read;
-
-   /* Which patch inputs are actually read */
-   uint32_t patch_inputs_read;
-   /* Which patch outputs are actually written */
-   uint32_t patch_outputs_written;
-
-   /* Whether or not this shader ever uses textureGather() */
-   bool uses_texture_gather;
-
-   /* Whether or not this shader uses the gl_ClipDistance output */
-   bool uses_clip_distance_out;
-
-   /* Whether or not separate shader objects were used */
-   bool separate_shader;
-
-   /** Was this shader linked with any transform feedback varyings? */
-   bool has_transform_feedback_varyings;
-
-   union {
-      struct {
-         /** The number of vertices recieves per input primitive */
-         unsigned vertices_in;
-
-         /** The output primitive type (GL enum value) */
-         unsigned output_primitive;
-
-         /** The maximum number of vertices the geometry shader might write. */
-         unsigned vertices_out;
-
-         /** 1 .. MAX_GEOMETRY_SHADER_INVOCATIONS */
-         unsigned invocations;
-
-         /** Whether or not this shader uses EndPrimitive */
-         bool uses_end_primitive;
-
-         /** Whether or not this shader uses non-zero streams */
-         bool uses_streams;
-      } gs;
-
-      struct {
-         bool uses_discard;
-
-         /**
-          * Whether any inputs are declared with the "sample" qualifier.
-          */
-         bool uses_sample_qualifier;
-
-         /**
-          * Whether early fragment tests are enabled as defined by
-          * ARB_shader_image_load_store.
-          */
-         bool early_fragment_tests;
-
-         /** gl_FragDepth layout for ARB_conservative_depth. */
-         enum gl_frag_depth_layout depth_layout;
-      } fs;
-
-      struct {
-         unsigned local_size[3];
-      } cs;
-
-      struct {
-         /** The number of vertices in the TCS output patch. */
-         unsigned vertices_out;
-      } tcs;
-   };
-} nir_shader_info;
-
 typedef struct nir_shader {
    /** list of uniforms (nir_variable) */
    struct exec_list uniforms;
@@ -1899,7 +1805,7 @@ typedef struct nir_shader {
    const struct nir_shader_compiler_options *options;
 
    /** Various bits of compile-time information about a given shader */
-   struct nir_shader_info info;
+   struct shader_info info;
 
    /** list of global variables in the shader (nir_variable) */
    struct exec_list globals;
