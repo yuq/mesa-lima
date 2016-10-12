@@ -49,7 +49,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include
 
-AM_CFLAGS = $(VISIBILITY_FLAGS) \
+AM_CFLAGS = \
+	$(VISIBILITY_CFLAGS) \
 	$(PTHREAD_CFLAGS) \
 	$(LLVM_CFLAGS)
 
