@@ -3361,11 +3361,6 @@ tx_ctor(struct shader_translator *tx, struct nine_shader_info *info)
     for (i = 0; i < ARRAY_SIZE(tx->regs.vT); ++i)
         tx->regs.vT[i] = ureg_src_undef();
 
-    for (i = 0; i < ARRAY_SIZE(tx->lconsti); ++i)
-        tx->lconsti[i].idx = -1;
-    for (i = 0; i < ARRAY_SIZE(tx->lconstb); ++i)
-        tx->lconstb[i].idx = -1;
-
     sm1_read_version(tx);
 
     info->version = (tx->version.major << 4) | tx->version.minor;
