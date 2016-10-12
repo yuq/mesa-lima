@@ -261,4 +261,5 @@ EXTRA_DIST = \
 	rasterizer/scripts/templates/knobs.template \
 	rasterizer/scripts/templates/ar_event_h.template \
 	rasterizer/scripts/templates/ar_event_cpp.template \
-	rasterizer/scripts/templates/ar_eventhandler_h.template
+	rasterizer/scripts/templates/ar_eventhandler_h.template \
+	rasterizer/scripts/templates/ar_eventhandlerfile_h.template
