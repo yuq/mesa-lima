@@ -2163,7 +2163,6 @@ LateAlgebraicOpt::tryADDToSHLADD(Instruction *add)
    Value *src1 = add->getSrc(1);
    ImmediateValue imm;
    Instruction *shl;
-   Modifier mod[2];
    Value *src;
    int s;
 
@@ -2182,20 +2181,19 @@ LateAlgebraicOpt::tryADDToSHLADD(Instruction *add)
    src = add->getSrc(s);
    shl = src->getUniqueInsn();
 
-   if (shl->bb != add->bb || shl->usesFlags() || shl->subOp)
+   if (shl->bb != add->bb || shl->usesFlags() || shl->subOp || shl->src(0).mod)
       return false;
 
    if (!shl->src(1).getImmediate(imm))
       return false;
 
-   mod[0] = add->src(0).mod;
-   mod[1] = add->src(1).mod;
-
    add->op = OP_SHLADD;
    add->setSrc(2, add->src(!s));
-   add->src(2).mod = mod[s];
-
+   // SHL can't have any modifiers, but the ADD source may have had
+   // one. Preserve it.
    add->setSrc(0, shl->getSrc(0));
+   if (s == 1)
+      add->src(0).mod = add->src(1).mod;
    add->setSrc(1, new_ImmediateValue(shl->bb->getProgram(), imm.reg.data.u32));
    add->src(1).mod = Modifier(0);
 
