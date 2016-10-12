@@ -115,16 +115,45 @@ vlVaGetConfigAttributes(VADriverContextP ctx, VAProfile profile, VAEntrypoint en
 
    for (i = 0; i < num_attribs; ++i) {
       unsigned int value;
-      switch (attrib_list[i].type) {
-      case VAConfigAttribRTFormat:
-         value = VA_RT_FORMAT_YUV420;
-         break;
-      case VAConfigAttribRateControl:
-         value = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR;
-         break;
-      default:
+      if (entrypoint == VAEntrypointVLD) {
+         switch (attrib_list[i].type) {
+         case VAConfigAttribRTFormat:
+            value = VA_RT_FORMAT_YUV420;
+            break;
+         default:
+            value = VA_ATTRIB_NOT_SUPPORTED;
+            break;
+         }
+      } else if (entrypoint == VAEntrypointEncSlice) {
+         switch (attrib_list[i].type) {
+         case VAConfigAttribRTFormat:
+            value = VA_RT_FORMAT_YUV420;
+            break;
+         case VAConfigAttribRateControl:
+            value = VA_RC_CQP | VA_RC_CBR | VA_RC_VBR;
+            break;
+         case VAConfigAttribEncPackedHeaders:
+            value = 0;
+            break;
+         case VAConfigAttribEncMaxRefFrames:
+            value = 1;
+            break;
+         default:
+            value = VA_ATTRIB_NOT_SUPPORTED;
+            break;
+         }
+      } else if (entrypoint == VAEntrypointVideoProc) {
+         switch (attrib_list[i].type) {
+         case VAConfigAttribRTFormat:
+            value = (VA_RT_FORMAT_YUV420 |
+                     VA_RT_FORMAT_RGB32);
+            break;
+         default:
+            value = VA_ATTRIB_NOT_SUPPORTED;
+            break;
+         }
+      } else {
          value = VA_ATTRIB_NOT_SUPPORTED;
-         break;
       }
       attrib_list[i].value = value;
    }
