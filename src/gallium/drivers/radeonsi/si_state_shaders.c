@@ -807,20 +807,6 @@ static void si_shader_ps(struct si_shader *shader)
 		       S_00B02C_EXTRA_LDS_SIZE(shader->config.lds_size) |
 		       S_00B02C_USER_SGPR(SI_PS_NUM_USER_SGPR) |
 		       S_00B32C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
-
-	/* DON'T USE EARLY_Z_THEN_RE_Z !!!
-	 *
-	 * It decreases performance by 15% in DiRT: Showdown on Ultra settings.
-	 * And it has pretty complex shaders.
-	 *
-	 * Shaders with side effects that must execute independently of the
-	 * depth test require LATE_Z.
-	 */
-	if (info->writes_memory &&
-	    !info->properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
-		shader->z_order = V_02880C_LATE_Z;
-	else
-		shader->z_order = V_02880C_EARLY_Z_THEN_LATE_Z;
 }
 
 static void si_shader_init_pm4_state(struct si_screen *sscreen,
@@ -1371,12 +1357,38 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		break;
 	}
 
-	if (sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL])
-		sel->db_shader_control |= S_02880C_DEPTH_BEFORE_SHADER(1);
+	/* Z_ORDER, EXEC_ON_HIER_FAIL and EXEC_ON_NOOP should be set as following:
+	 *
+	 *   | early Z/S | writes_mem | allow_ReZ? |      Z_ORDER       | EXEC_ON_HIER_FAIL | EXEC_ON_NOOP
+	 * --|-----------|------------|------------|--------------------|-------------------|-------------
+	 * 1a|   false   |   false    |   true     | EarlyZ_Then_ReZ    |         0         |     0
+	 * 1b|   false   |   false    |   false    | EarlyZ_Then_LateZ  |         0         |     0
+	 * 2 |   false   |   true     |   n/a      |       LateZ        |         1         |     0
+	 * 3 |   true    |   false    |   n/a      | EarlyZ_Then_LateZ  |         0         |     0
+	 * 4 |   true    |   true     |   n/a      | EarlyZ_Then_LateZ  |         0         |     1
+	 *
+	 * In cases 3 and 4, HW will force Z_ORDER to EarlyZ regardless of what's set in the register.
+	 * In case 2, NOOP_CULL is a don't care field. In case 2, 3 and 4, ReZ doesn't make sense.
+	 *
+	 * Don't use ReZ without profiling !!!
+	 *
+	 * ReZ decreases performance by 15% in DiRT: Showdown on Ultra settings, which has pretty complex
+	 * shaders.
+	 */
+	if (sel->info.properties[TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL]) {
+		/* Cases 3, 4. */
+		sel->db_shader_control |= S_02880C_DEPTH_BEFORE_SHADER(1) |
+					  S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z) |
+					  S_02880C_EXEC_ON_NOOP(sel->info.writes_memory);
+	} else if (sel->info.writes_memory) {
+		/* Case 2. */
+		sel->db_shader_control |= S_02880C_Z_ORDER(V_02880C_LATE_Z) |
+					  S_02880C_EXEC_ON_HIER_FAIL(1);
+	} else {
+		/* Case 1. */
+		sel->db_shader_control |= S_02880C_Z_ORDER(V_02880C_EARLY_Z_THEN_LATE_Z);
+	}
 
-	if (sel->info.writes_memory)
-		sel->db_shader_control |= S_02880C_EXEC_ON_HIER_FAIL(1) |
-					  S_02880C_EXEC_ON_NOOP(1);
 	pipe_mutex_init(sel->mutex);
 	util_queue_fence_init(&sel->ready);
 
@@ -2213,8 +2225,7 @@ bool si_update_shaders(struct si_context *sctx)
 
 		db_shader_control =
 			sctx->ps_shader.cso->db_shader_control |
-			S_02880C_KILL_ENABLE(si_get_alpha_test_func(sctx) != PIPE_FUNC_ALWAYS) |
-			S_02880C_Z_ORDER(sctx->ps_shader.current->z_order);
+			S_02880C_KILL_ENABLE(si_get_alpha_test_func(sctx) != PIPE_FUNC_ALWAYS);
 
 		if (si_pm4_state_changed(sctx, ps) || si_pm4_state_changed(sctx, vs) ||
 		    sctx->sprite_coord_enable != rs->sprite_coord_enable ||
