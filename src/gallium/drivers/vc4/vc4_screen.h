@@ -55,9 +55,6 @@ struct vc4_screen {
 
         const char *name;
 
-        void *simulator_mem_base;
-        uint32_t simulator_mem_size;
-
         /** The last seqno we've completed a wait for.
          *
          * This lets us slightly optimize our waits by skipping wait syscalls

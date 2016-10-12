@@ -34,7 +34,17 @@
 #include "vc4_simulator_validate.h"
 #include "simpenrose/simpenrose.h"
 
-static mtx_t exec_mutex = _MTX_INITIALIZER_NP;
+/** Global (across GEM fds) state for the simulator */
+static struct vc4_simulator_state {
+        mtx_t mutex;
+
+        void *mem;
+        ssize_t mem_size;
+
+        int refcount;
+} sim_state = {
+        .mutex = _MTX_INITIALIZER_NP,
+};
 
 /* A marker placed just after each BO, then checked after rendering to make
  * sure it's still there.
@@ -46,8 +56,6 @@ static mtx_t exec_mutex = _MTX_INITIALIZER_NP;
 static struct drm_gem_cma_object *
 vc4_wrap_bo_with_cma(struct drm_device *dev, struct vc4_bo *bo)
 {
-        struct vc4_context *vc4 = dev->vc4;
-        struct vc4_screen *screen = vc4->screen;
         struct drm_vc4_bo *drm_bo = CALLOC_STRUCT(drm_vc4_bo);
         struct drm_gem_cma_object *obj = &drm_bo->base;
         uint32_t size = align(bo->size, 4096);
@@ -55,12 +63,12 @@ vc4_wrap_bo_with_cma(struct drm_device *dev, struct vc4_bo *bo)
         drm_bo->bo = bo;
         obj->base.size = size;
         obj->base.dev = dev;
-        obj->vaddr = screen->simulator_mem_base + dev->simulator_mem_next;
+        obj->vaddr = sim_state.mem + dev->simulator_mem_next;
         obj->paddr = simpenrose_hw_addr(obj->vaddr);
 
         dev->simulator_mem_next += size + sizeof(uint32_t);
         dev->simulator_mem_next = align(dev->simulator_mem_next, 4096);
-        assert(dev->simulator_mem_next <= screen->simulator_mem_size);
+        assert(dev->simulator_mem_next <= sim_state.mem_size);
 
         *(uint32_t *)(obj->vaddr + bo->size) = BO_SENTINEL;
 
@@ -226,7 +234,6 @@ int
 vc4_simulator_flush(struct vc4_context *vc4,
                     struct drm_vc4_submit_cl *args, struct vc4_job *job)
 {
-        struct vc4_screen *screen = vc4->screen;
         struct vc4_surface *csurf = vc4_surface(vc4->framebuffer.cbufs[0]);
         struct vc4_resource *ctex = csurf ? vc4_resource(csurf->base.texture) : NULL;
         uint32_t winsys_stride = ctex ? ctex->bo->simulator_winsys_stride : 0;
@@ -271,7 +278,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
 
         if (vc4_debug & VC4_DEBUG_CL) {
                 fprintf(stderr, "RCL:\n");
-                vc4_dump_cl(screen->simulator_mem_base + exec.ct1ca,
+                vc4_dump_cl(sim_state.mem + exec.ct1ca,
                             exec.ct1ea - exec.ct1ca, true);
         }
 
@@ -283,7 +290,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
                         fprintf(stderr, "Binning returned %d flushes, should be 1.\n",
                                 bfc);
                         fprintf(stderr, "Relocated binning command list:\n");
-                        vc4_dump_cl(screen->simulator_mem_base + exec.ct0ca,
+                        vc4_dump_cl(sim_state.mem + exec.ct0ca,
                                     exec.ct0ea - exec.ct0ca, false);
                         abort();
                 }
@@ -293,7 +300,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
                 fprintf(stderr, "Rendering returned %d frames, should be 1.\n",
                         rfc);
                 fprintf(stderr, "Relocated render command list:\n");
-                vc4_dump_cl(screen->simulator_mem_base + exec.ct1ca,
+                vc4_dump_cl(sim_state.mem + exec.ct1ca,
                             exec.ct1ea - exec.ct1ca, true);
                 abort();
         }
@@ -459,33 +466,24 @@ vc4_simulator_ioctl(int fd, unsigned long request, void *args)
         }
 }
 
-static void *sim_mem_base = NULL;
-static int sim_mem_refcount = 0;
-static ssize_t sim_mem_size = 256 * 1024 * 1024;
-
 void
 vc4_simulator_init(struct vc4_screen *screen)
 {
-        mtx_lock(&exec_mutex);
-        if (sim_mem_refcount++) {
-                screen->simulator_mem_size = sim_mem_size;
-                screen->simulator_mem_base = sim_mem_base;
-                mtx_unlock(&exec_mutex);
+        mtx_lock(&sim_state.mutex);
+        if (sim_state.refcount++) {
+                mtx_unlock(&sim_state.mutex);
                 return;
         }
 
-        sim_mem_base = calloc(sim_mem_size, 1);
-        if (!sim_mem_base)
+        sim_state.mem_size = 256 * 1024 * 1024;
+        sim_state.mem = calloc(sim_state.mem_size, 1);
+        if (!sim_state.mem)
                 abort();
-
-        screen->simulator_mem_size = sim_mem_size;
-        screen->simulator_mem_base = sim_mem_base;
 
         /* We supply our own memory so that we can have more aperture
          * available (256MB instead of simpenrose's default 64MB).
          */
-        simpenrose_init_hardware_supply_mem(screen->simulator_mem_base,
-                                            screen->simulator_mem_size);
+        simpenrose_init_hardware_supply_mem(sim_state.mem, sim_state.mem_size);
 
         /* Carve out low memory for tile allocation overflow.  The kernel
          * should be automatically handling overflow memory setup on real
@@ -496,18 +494,18 @@ vc4_simulator_init(struct vc4_screen *screen)
          */
         simpenrose_supply_overflow_mem(0, OVERFLOW_SIZE);
 
-        mtx_unlock(&exec_mutex);
+        mtx_unlock(&sim_state.mutex);
 }
 
 void
 vc4_simulator_destroy(struct vc4_screen *screen)
 {
-        mtx_lock(&exec_mutex);
-        if (!--sim_mem_refcount) {
-                free(sim_mem_base);
-                sim_mem_base = NULL;
+        mtx_lock(&sim_state.mutex);
+        if (!--sim_state.refcount) {
+                free(sim_state.mem);
+                /* No memsetting it, because it contains the mutex. */
         }
-        mtx_unlock(&exec_mutex);
+        mtx_unlock(&sim_state.mutex);
 }
 
 #endif /* USE_VC4_SIMULATOR */
