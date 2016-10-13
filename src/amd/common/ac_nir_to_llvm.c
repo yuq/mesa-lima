@@ -2296,13 +2296,73 @@ static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
 	return res;
 }
 
+static void build_type_name_for_intr(
+        LLVMTypeRef type,
+        char *buf, unsigned bufsize)
+{
+        LLVMTypeRef elem_type = type;
+
+        assert(bufsize >= 8);
+
+        if (LLVMGetTypeKind(type) == LLVMVectorTypeKind) {
+                int ret = snprintf(buf, bufsize, "v%u",
+                                        LLVMGetVectorSize(type));
+                if (ret < 0) {
+                        char *type_name = LLVMPrintTypeToString(type);
+                        fprintf(stderr, "Error building type name for: %s\n",
+                                type_name);
+                        return;
+                }
+                elem_type = LLVMGetElementType(type);
+                buf += ret;
+                bufsize -= ret;
+        }
+        switch (LLVMGetTypeKind(elem_type)) {
+        default: break;
+        case LLVMIntegerTypeKind:
+                snprintf(buf, bufsize, "i%d", LLVMGetIntTypeWidth(elem_type));
+                break;
+        case LLVMFloatTypeKind:
+                snprintf(buf, bufsize, "f32");
+                break;
+        case LLVMDoubleTypeKind:
+                snprintf(buf, bufsize, "f64");
+                break;
+        }
+}
+
+static void get_image_intr_name(const char *base_name,
+                                LLVMTypeRef data_type,
+                                LLVMTypeRef coords_type,
+                                LLVMTypeRef rsrc_type,
+                                char *out_name, unsigned out_len)
+{
+        char coords_type_name[8];
+
+        build_type_name_for_intr(coords_type, coords_type_name,
+                            sizeof(coords_type_name));
+
+        if (HAVE_LLVM <= 0x0309) {
+                snprintf(out_name, out_len, "%s.%s", base_name, coords_type_name);
+        } else {
+                char data_type_name[8];
+                char rsrc_type_name[8];
+
+                build_type_name_for_intr(data_type, data_type_name,
+                                        sizeof(data_type_name));
+                build_type_name_for_intr(rsrc_type, rsrc_type_name,
+                                        sizeof(rsrc_type_name));
+                snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
+                         data_type_name, coords_type_name, rsrc_type_name);
+        }
+}
+
 static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
 				     nir_intrinsic_instr *instr)
 {
 	LLVMValueRef params[7];
 	LLVMValueRef res;
-	char intrinsic_name[32];
-	char coords_type[8];
+	char intrinsic_name[64];
 	const nir_variable *var = instr->variables[0]->var;
 	const struct glsl_type *type = var->type;
 	if(instr->variables[0]->deref.child)
@@ -2322,23 +2382,35 @@ static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
 		res = trim_vector(ctx, res, instr->dest.ssa.num_components);
 		res = to_integer(ctx, res);
 	} else {
-		bool da = glsl_sampler_type_is_array(type) ||
-		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
+		bool is_da = glsl_sampler_type_is_array(type) ||
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
 		bool add_frag_pos = glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_SUBPASS;
+		LLVMValueRef da = is_da ? ctx->i32one : ctx->i32zero;
+		LLVMValueRef glc = LLVMConstInt(ctx->i1, 0, false);
+		LLVMValueRef slc = LLVMConstInt(ctx->i1, 0, false);
 
 		params[0] = get_image_coords(ctx, instr, add_frag_pos);
 		params[1] = get_sampler_desc(ctx, instr->variables[0], DESC_IMAGE);
 		params[2] = LLVMConstInt(ctx->i32, 15, false); /* dmask */
-		params[3] = LLVMConstInt(ctx->i1, 0, false);  /* r128 */
-		params[4] = da ? ctx->i32one : ctx->i32zero; /* da */
-		params[5] = LLVMConstInt(ctx->i1, 0, false);  /* glc */
-		params[6] = LLVMConstInt(ctx->i1, 0, false);  /* slc */
+		if (HAVE_LLVM <= 0x0309) {
+			params[3] = LLVMConstInt(ctx->i1, 0, false);  /* r128 */
+			params[4] = da;
+			params[5] = glc;
+			params[6] = slc;
+		} else {
+			LLVMValueRef lwe = LLVMConstInt(ctx->i1, 0, false);
+			params[3] = glc;
+			params[4] = slc;
+			params[5] = lwe;
+			params[6] = da;
+		}
 
-		build_int_type_name(LLVMTypeOf(params[0]),
-				coords_type, sizeof(coords_type));
+		get_image_intr_name("llvm.amdgcn.image.load",
+				    ctx->v4f32, /* vdata */
+				    LLVMTypeOf(params[0]), /* coords */
+				    LLVMTypeOf(params[1]), /* rsrc */
+				    intrinsic_name, sizeof(intrinsic_name));
 
-		snprintf(intrinsic_name, sizeof(intrinsic_name),
-			"llvm.amdgcn.image.load.%s", coords_type);
 		res = emit_llvm_intrinsic(ctx, intrinsic_name, ctx->v4f32,
 					params, 7, LLVMReadOnlyAttribute);
 	}
@@ -2349,8 +2421,7 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 			      nir_intrinsic_instr *instr)
 {
 	LLVMValueRef params[8];
-	char intrinsic_name[32];
-	char coords_type[8];
+	char intrinsic_name[64];
 	const nir_variable *var = instr->variables[0]->var;
 	LLVMValueRef i1false = LLVMConstInt(ctx->i1, 0, 0);
 	LLVMValueRef i1true = LLVMConstInt(ctx->i1, 1, 0);
@@ -2370,23 +2441,35 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 		emit_llvm_intrinsic(ctx, "llvm.amdgcn.buffer.store.format.v4f32", ctx->voidt,
 				    params, 6, 0);
 	} else {
-		bool da = glsl_sampler_type_is_array(type) ||
-		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
+		bool is_da = glsl_sampler_type_is_array(type) ||
+			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
+		LLVMValueRef da = is_da ? i1true : i1false;
+		LLVMValueRef glc = i1false;
+		LLVMValueRef slc = i1false;
 
-		params[0] = get_src(ctx, instr->src[2]);
+		params[0] = to_float(ctx, get_src(ctx, instr->src[2]));
 		params[1] = get_image_coords(ctx, instr, false); /* coords */
 		params[2] = get_sampler_desc(ctx, instr->variables[0], DESC_IMAGE);
 		params[3] = LLVMConstInt(ctx->i32, 15, false); /* dmask */
-		params[4] = i1false;  /* r128 */
-		params[5] = da ? i1true : i1false; /* da */
-		params[6] = i1false;  /* glc */
-		params[7] = i1false;  /* slc */
+		if (HAVE_LLVM <= 0x0309) {
+			params[4] = i1false;  /* r128 */
+			params[5] = da;
+			params[6] = glc;
+			params[7] = slc;
+		} else {
+			LLVMValueRef lwe = i1false;
+			params[4] = glc;
+			params[5] = slc;
+			params[6] = lwe;
+			params[7] = da;
+		}
 
-		build_int_type_name(LLVMTypeOf(params[1]),
-				    coords_type, sizeof(coords_type));
+		get_image_intr_name("llvm.amdgcn.image.store",
+				    LLVMTypeOf(params[0]), /* vdata */
+				    LLVMTypeOf(params[1]), /* coords */
+				    LLVMTypeOf(params[2]), /* rsrc */
+				    intrinsic_name, sizeof(intrinsic_name));
 
-		snprintf(intrinsic_name, sizeof(intrinsic_name),
-			 "llvm.amdgcn.image.store.%s", coords_type);
 		emit_llvm_intrinsic(ctx, intrinsic_name, ctx->voidt,
 				    params, 8, 0);
 	}
