@@ -57,7 +57,8 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define IMM_BUFFER_NAME 0xaabbccdd
 
 
-static void reset_attrfv( struct vbo_exec_context *exec );
+static void
+vbo_reset_all_attr(struct vbo_exec_context *exec);
 
 
 /**
@@ -304,7 +305,7 @@ vbo_exec_wrap_upgrade_vertex(struct vbo_exec_context *exec,
    if (!_mesa_inside_begin_end(ctx) &&
        !oldSize && lastcount > 8 && exec->vtx.vertex_size) {
       vbo_exec_copy_to_current( exec );
-      reset_attrfv( exec );
+      vbo_reset_all_attr(exec);
    }
 
    /* Fix up sizes:
@@ -630,7 +631,7 @@ vbo_exec_FlushVertices_internal(struct vbo_exec_context *exec, GLboolean unmap)
 
    if (exec->vtx.vertex_size) {
       vbo_exec_copy_to_current( exec );
-      reset_attrfv( exec );
+      vbo_reset_all_attr(exec);
    }
 }
 
@@ -1286,7 +1287,8 @@ vbo_reset_attr(struct vbo_exec_context *exec, GLuint attr)
    exec->vtx.active_sz[attr] = 0;
 }
 
-static void reset_attrfv( struct vbo_exec_context *exec )
+static void
+vbo_reset_all_attr(struct vbo_exec_context *exec)
 {
    while (exec->vtx.enabled) {
       const int i = u_bit_scan64(&exec->vtx.enabled);
