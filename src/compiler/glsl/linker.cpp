@@ -4525,8 +4525,8 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
          return false;
       }
 
-      tfeedback_decls = ralloc_array(mem_ctx, tfeedback_decl,
-                                     num_tfeedback_decls);
+      tfeedback_decls = rzalloc_array(mem_ctx, tfeedback_decl,
+                                      num_tfeedback_decls);
       if (!parse_tfeedback_decls(ctx, prog, mem_ctx, num_tfeedback_decls,
                                  varying_names, tfeedback_decls))
          return false;

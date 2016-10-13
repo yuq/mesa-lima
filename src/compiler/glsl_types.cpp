@@ -149,8 +149,8 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    init_ralloc_type_ctx();
    assert(name != NULL);
    this->name = ralloc_strdup(this->mem_ctx, name);
-   this->fields.structure = ralloc_array(this->mem_ctx,
-                                         glsl_struct_field, length);
+   this->fields.structure = rzalloc_array(this->mem_ctx,
+                                          glsl_struct_field, length);
    for (i = 0; i < length; i++) {
       this->fields.structure[i] = fields[i];
       this->fields.structure[i].name = ralloc_strdup(this->fields.structure,
