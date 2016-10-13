@@ -2373,8 +2373,8 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 		bool da = glsl_sampler_type_is_array(type) ||
 		          glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
 
-		params[0] = get_src(ctx, instr->src[2]); /* coords */
-		params[1] = get_image_coords(ctx, instr, false);
+		params[0] = get_src(ctx, instr->src[2]);
+		params[1] = get_image_coords(ctx, instr, false); /* coords */
 		params[2] = get_sampler_desc(ctx, instr->variables[0], DESC_IMAGE);
 		params[3] = LLVMConstInt(ctx->i32, 15, false); /* dmask */
 		params[4] = i1false;  /* r128 */
