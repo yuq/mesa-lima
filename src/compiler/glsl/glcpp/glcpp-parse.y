@@ -1351,6 +1351,7 @@ glcpp_parser_create(glcpp_extension_iterator extensions, void *state, gl_api api
                                              _mesa_key_string_equal);
    parser->active = NULL;
    parser->lexing_directive = 0;
+   parser->lexing_version_directive = 0;
    parser->space_tokens = 1;
    parser->last_token_was_newline = 0;
    parser->last_token_was_space = 0;
@@ -1381,6 +1382,8 @@ glcpp_parser_create(glcpp_extension_iterator extensions, void *state, gl_api api
    parser->new_line_number = 1;
    parser->has_new_source_number = 0;
    parser->new_source_number = 0;
+
+   parser->is_gles = false;
 
    return parser;
 }
