@@ -588,7 +588,7 @@ static void
 wsi_wl_image_finish(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
                     const VkAllocationCallbacks* pAllocator)
 {
-   VkDevice vk_device = anv_device_to_handle(chain->base.device);
+   VkDevice vk_device = chain->base.device;
    anv_FreeMemory(vk_device, anv_device_memory_to_handle(image->memory),
                   pAllocator);
    anv_DestroyImage(vk_device, anv_image_to_handle(image->image),
@@ -615,7 +615,8 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
                   const VkSwapchainCreateInfoKHR *pCreateInfo,
                   const VkAllocationCallbacks* pAllocator)
 {
-   VkDevice vk_device = anv_device_to_handle(chain->base.device);
+   VkDevice vk_device = chain->base.device;
+   struct anv_device *device = anv_device_from_handle(vk_device);
    VkResult result;
 
    VkImage vk_image;
@@ -674,7 +675,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
    if (result != VK_SUCCESS)
       goto fail_mem;
 
-   int ret = anv_gem_set_tiling(chain->base.device,
+   int ret = anv_gem_set_tiling(device,
                                 image->memory->bo.gem_handle,
                                 surface->isl.row_pitch, I915_TILING_X);
    if (ret) {
@@ -683,7 +684,7 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
       goto fail_mem;
    }
 
-   int fd = anv_gem_handle_to_fd(chain->base.device,
+   int fd = anv_gem_handle_to_fd(device,
                                  image->memory->bo.gem_handle);
    if (fd == -1) {
       /* FINISHME: Choose a better error. */
@@ -720,13 +721,13 @@ wsi_wl_swapchain_destroy(struct anv_swapchain *anv_chain,
                          const VkAllocationCallbacks *pAllocator)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;
-
+   struct anv_device *device = anv_device_from_handle(chain->base.device);
    for (uint32_t i = 0; i < chain->image_count; i++) {
       if (chain->images[i].buffer)
          wsi_wl_image_finish(chain, &chain->images[i], pAllocator);
    }
 
-   vk_free2(&chain->base.device->alloc, pAllocator, chain);
+   vk_free2(&device->alloc, pAllocator, chain);
 
    return VK_SUCCESS;
 }
@@ -763,7 +764,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   chain->base.device = device;
+   chain->base.device = anv_device_to_handle(device);
    chain->base.destroy = wsi_wl_swapchain_destroy;
    chain->base.get_images = wsi_wl_swapchain_get_images;
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;

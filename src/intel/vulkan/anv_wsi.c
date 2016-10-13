@@ -207,7 +207,7 @@ VkResult anv_QueuePresentKHR(
    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
       ANV_FROM_HANDLE(anv_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
 
-      assert(swapchain->device == queue->device);
+      assert(anv_device_from_handle(swapchain->device) == queue->device);
 
       if (swapchain->fences[0] == VK_NULL_HANDLE) {
          result = anv_CreateFence(anv_device_to_handle(queue->device),

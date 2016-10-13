@@ -51,8 +51,8 @@ struct anv_wsi_interface {
 };
 
 struct anv_swapchain {
-   struct anv_device *device;
 
+   VkDevice device;
    VkAllocationCallbacks alloc;
 
    VkFence fences[3];

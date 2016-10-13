@@ -844,8 +844,7 @@ x11_image_finish(struct x11_swapchain *chain,
    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   x11_anv_free_image(anv_device_to_handle(chain->base.device),
-                      pAllocator,
+   x11_anv_free_image(chain->base.device, pAllocator,
                       image->image, image->memory);
 }
 
@@ -854,13 +853,13 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
                       const VkAllocationCallbacks *pAllocator)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-
+   struct anv_device *device = anv_device_from_handle(chain->base.device);
    for (uint32_t i = 0; i < chain->image_count; i++)
       x11_image_finish(chain, pAllocator, &chain->images[i]);
 
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
-   vk_free2(&chain->base.device->alloc, pAllocator, chain);
+   vk_free2(&device->alloc, pAllocator, chain);
 
    return VK_SUCCESS;
 }
@@ -895,7 +894,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   chain->base.device = device;
+   chain->base.device = anv_device_to_handle(device);
    chain->base.destroy = x11_swapchain_destroy;
    chain->base.get_images = x11_get_images;
    chain->base.acquire_next_image = x11_acquire_next_image;
