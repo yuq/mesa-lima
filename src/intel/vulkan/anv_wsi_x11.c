@@ -46,14 +46,14 @@ struct wsi_x11 {
 };
 
 static struct wsi_x11_connection *
-wsi_x11_connection_create(struct anv_physical_device *device,
+wsi_x11_connection_create(const VkAllocationCallbacks *alloc,
                           xcb_connection_t *conn)
 {
    xcb_query_extension_cookie_t dri3_cookie, pres_cookie;
    xcb_query_extension_reply_t *dri3_reply, *pres_reply;
 
    struct wsi_x11_connection *wsi_conn =
-      vk_alloc(&device->instance->alloc, sizeof(*wsi_conn), 8,
+      vk_alloc(alloc, sizeof(*wsi_conn), 8,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!wsi_conn)
       return NULL;
@@ -66,7 +66,7 @@ wsi_x11_connection_create(struct anv_physical_device *device,
    if (dri3_reply == NULL || pres_reply == NULL) {
       free(dri3_reply);
       free(pres_reply);
-      vk_free(&device->instance->alloc, wsi_conn);
+      vk_free(alloc, wsi_conn);
       return NULL;
    }
 
@@ -80,18 +80,19 @@ wsi_x11_connection_create(struct anv_physical_device *device,
 }
 
 static void
-wsi_x11_connection_destroy(struct anv_physical_device *device,
+wsi_x11_connection_destroy(const VkAllocationCallbacks *alloc,
                            struct wsi_x11_connection *conn)
 {
-   vk_free(&device->instance->alloc, conn);
+   vk_free(alloc, conn);
 }
 
 static struct wsi_x11_connection *
-wsi_x11_get_connection(struct anv_physical_device *device,
+wsi_x11_get_connection(struct anv_wsi_interface **wsi_dev,
+                       const VkAllocationCallbacks *alloc,
                        xcb_connection_t *conn)
 {
    struct wsi_x11 *wsi =
-      (struct wsi_x11 *)device->wsi[VK_ICD_WSI_PLATFORM_XCB];
+      (struct wsi_x11 *)wsi_dev[VK_ICD_WSI_PLATFORM_XCB];
 
    pthread_mutex_lock(&wsi->mutex);
 
@@ -103,14 +104,14 @@ wsi_x11_get_connection(struct anv_physical_device *device,
       pthread_mutex_unlock(&wsi->mutex);
 
       struct wsi_x11_connection *wsi_conn =
-         wsi_x11_connection_create(device, conn);
+         wsi_x11_connection_create(alloc, conn);
 
       pthread_mutex_lock(&wsi->mutex);
 
       entry = _mesa_hash_table_search(wsi->connections, conn);
       if (entry) {
          /* Oops, someone raced us to it */
-         wsi_x11_connection_destroy(device, wsi_conn);
+         wsi_x11_connection_destroy(alloc, wsi_conn);
       } else {
          entry = _mesa_hash_table_insert(wsi->connections, conn, wsi_conn);
       }
@@ -241,7 +242,7 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
 
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(device, connection);
+      wsi_x11_get_connection(device->wsi, &device->instance->alloc, connection);
 
    if (!wsi_conn->has_dri3) {
       fprintf(stderr, "vulkan: No DRI3 support\n");
@@ -298,7 +299,7 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
    xcb_window_t window = x11_surface_get_window(icd_surface);
 
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(device, conn);
+      wsi_x11_get_connection(device->wsi, &device->instance->alloc, conn);
    if (!wsi_conn)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
