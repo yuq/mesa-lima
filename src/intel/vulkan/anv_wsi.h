@@ -30,7 +30,8 @@ struct anv_swapchain;
 
 struct anv_wsi_interface {
    VkResult (*get_support)(VkIcdSurfaceBase *surface,
-                           struct anv_physical_device *device,
+                           struct anv_wsi_device *wsi_device,
+                           const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
                            VkBool32* pSupported);
    VkResult (*get_capabilities)(VkIcdSurfaceBase *surface,

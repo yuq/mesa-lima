@@ -81,7 +81,9 @@ VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
    struct anv_wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_support(surface, device, queueFamilyIndex, pSupported);
+   return iface->get_support(surface, &device->wsi_device,
+                             &device->instance->alloc,
+                             queueFamilyIndex, pSupported);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceCapabilitiesKHR(

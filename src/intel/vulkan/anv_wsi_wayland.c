@@ -332,7 +332,8 @@ VkBool32 anv_GetPhysicalDeviceWaylandPresentationSupportKHR(
 
 static VkResult
 wsi_wl_surface_get_support(VkIcdSurfaceBase *surface,
-                           struct anv_physical_device *device,
+                           struct anv_wsi_device *wsi_device,
+                           const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
                            VkBool32* pSupported)
 {

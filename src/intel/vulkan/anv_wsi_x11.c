@@ -306,7 +306,8 @@ x11_surface_get_window(VkIcdSurfaceBase *icd_surface)
 
 static VkResult
 x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
-                        struct anv_physical_device *device,
+                        struct anv_wsi_device *wsi_device,
+                        const VkAllocationCallbacks *alloc,
                         uint32_t queueFamilyIndex,
                         VkBool32* pSupported)
 {
@@ -314,7 +315,7 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
    xcb_window_t window = x11_surface_get_window(icd_surface);
 
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(&device->wsi_device, &device->instance->alloc, conn);
+      wsi_x11_get_connection(wsi_device, alloc, conn);
    if (!wsi_conn)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
