@@ -599,7 +599,6 @@ x11_acquire_next_image(struct radv_swapchain *radv_chain,
 
 static VkResult
 x11_queue_present(struct radv_swapchain *radv_chain,
-                  struct radv_queue *queue,
                   uint32_t image_index)
 {
 	struct x11_swapchain *chain = (struct x11_swapchain *)radv_chain;

@@ -67,7 +67,6 @@ struct radv_swapchain {
 				       uint64_t timeout, VkSemaphore semaphore,
 				       uint32_t *image_index);
 	VkResult (*queue_present)(struct radv_swapchain *swap_chain,
-				  struct radv_queue *queue,
 				  uint32_t image_index);
 };
 

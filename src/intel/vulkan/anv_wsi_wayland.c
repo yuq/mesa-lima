@@ -554,7 +554,6 @@ static const struct wl_callback_listener frame_listener = {
 
 static VkResult
 wsi_wl_swapchain_queue_present(struct anv_swapchain *anv_chain,
-                               struct anv_queue *queue,
                                uint32_t image_index)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;

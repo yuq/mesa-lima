@@ -594,7 +594,6 @@ x11_acquire_next_image(struct anv_swapchain *anv_chain,
 
 static VkResult
 x11_queue_present(struct anv_swapchain *anv_chain,
-                  struct anv_queue *queue,
                   uint32_t image_index)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;

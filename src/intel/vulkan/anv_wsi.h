@@ -66,7 +66,6 @@ struct anv_swapchain {
                                   uint64_t timeout, VkSemaphore semaphore,
                                   uint32_t *image_index);
    VkResult (*queue_present)(struct anv_swapchain *swap_chain,
-                             struct anv_queue *queue,
                              uint32_t image_index);
 };
 
