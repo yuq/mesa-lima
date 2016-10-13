@@ -1874,24 +1874,6 @@ static LLVMValueRef fetch_constant(
 	buf = reg->Register.Dimension ? reg->Dimension.Index : 0;
 	idx = reg->Register.Index * 4 + swizzle;
 
-	if (!reg->Register.Indirect && !reg->Dimension.Indirect) {
-		LLVMValueRef c0, c1, desc;
-
-		desc = load_const_buffer_desc(ctx, buf);
-		c0 = buffer_load_const(ctx, desc,
-				       LLVMConstInt(ctx->i32, idx * 4, 0));
-
-		if (!tgsi_type_is_64bit(type))
-			return bitcast(bld_base, type, c0);
-		else {
-			c1 = buffer_load_const(ctx, desc,
-					       LLVMConstInt(ctx->i32,
-							    (idx + 1) * 4, 0));
-			return radeon_llvm_emit_fetch_64bit(bld_base, type,
-							    c0, c1);
-		}
-	}
-
 	if (reg->Register.Dimension && reg->Dimension.Indirect) {
 		LLVMValueRef ptr = LLVMGetParam(ctx->radeon_bld.main_fn, SI_PARAM_CONST_BUFFERS);
 		LLVMValueRef index;
@@ -1902,11 +1884,15 @@ static LLVMValueRef fetch_constant(
 	} else
 		bufp = load_const_buffer_desc(ctx, buf);
 
-	addr = ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
-	addr = LLVMBuildLoad(base->gallivm->builder, addr, "load addr reg");
-	addr = lp_build_mul_imm(&bld_base->uint_bld, addr, 16);
-	addr = lp_build_add(&bld_base->uint_bld, addr,
-			    lp_build_const_int32(base->gallivm, idx * 4));
+	if (reg->Register.Indirect) {
+		addr = ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
+		addr = LLVMBuildLoad(base->gallivm->builder, addr, "load addr reg");
+		addr = lp_build_mul_imm(&bld_base->uint_bld, addr, 16);
+		addr = lp_build_add(&bld_base->uint_bld, addr,
+				    lp_build_const_int32(base->gallivm, idx * 4));
+	} else {
+		addr = LLVMConstInt(ctx->i32, idx * 4, 0);
+	}
 
 	result = buffer_load_const(ctx, bufp, addr);
 
@@ -1914,12 +1900,9 @@ static LLVMValueRef fetch_constant(
 		result = bitcast(bld_base, type, result);
 	else {
 		LLVMValueRef addr2, result2;
-		addr2 = ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
-		addr2 = LLVMBuildLoad(base->gallivm->builder, addr2, "load addr reg2");
-		addr2 = lp_build_mul_imm(&bld_base->uint_bld, addr2, 16);
-		addr2 = lp_build_add(&bld_base->uint_bld, addr2,
-				     lp_build_const_int32(base->gallivm, (idx + 1) * 4));
 
+		addr2 = lp_build_add(&bld_base->uint_bld, addr,
+				     LLVMConstInt(ctx->i32, 4, 0));
 		result2 = buffer_load_const(ctx, bufp, addr2);
 
 		result = radeon_llvm_emit_fetch_64bit(bld_base, type,
