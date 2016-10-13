@@ -1914,11 +1914,11 @@ static LLVMValueRef fetch_constant(
 		result = bitcast(bld_base, type, result);
 	else {
 		LLVMValueRef addr2, result2;
-		addr2 = ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle + 1];
+		addr2 = ctx->radeon_bld.soa.addr[ireg->Index][ireg->Swizzle];
 		addr2 = LLVMBuildLoad(base->gallivm->builder, addr2, "load addr reg2");
 		addr2 = lp_build_mul_imm(&bld_base->uint_bld, addr2, 16);
 		addr2 = lp_build_add(&bld_base->uint_bld, addr2,
-				     lp_build_const_int32(base->gallivm, idx * 4));
+				     lp_build_const_int32(base->gallivm, (idx + 1) * 4));
 
 		result2 = buffer_load_const(ctx, bufp, addr2);
 
