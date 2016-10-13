@@ -418,7 +418,7 @@ vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr,
        * zeros.  Don't need to flush or wrap.
        */
       for (i = newSize; i <= exec->vtx.attrsz[attr]; i++)
-        exec->vtx.attrptr[attr][i-1] = id[i-1];
+         exec->vtx.attrptr[attr][i-1] = id[i-1];
    }
 
    exec->vtx.active_sz[attr] = newSize;
