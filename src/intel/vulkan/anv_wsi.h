@@ -70,8 +70,10 @@ struct anv_swapchain {
 ANV_DEFINE_NONDISP_HANDLE_CASTS(_VkIcdSurfaceBase, VkSurfaceKHR)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swapchain, VkSwapchainKHR)
 
-VkResult anv_x11_init_wsi(struct anv_physical_device *physical_device);
-void anv_x11_finish_wsi(struct anv_physical_device *physical_device);
+VkResult anv_x11_init_wsi(struct anv_wsi_device *wsi_device,
+                          const VkAllocationCallbacks *alloc);
+void anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
+                        const VkAllocationCallbacks *alloc);
 VkResult anv_wl_init_wsi(struct anv_physical_device *physical_device);
 void anv_wl_finish_wsi(struct anv_physical_device *physical_device);
 

@@ -897,12 +897,13 @@ fail_register:
 }
 
 VkResult
-anv_x11_init_wsi(struct anv_physical_device *device)
+anv_x11_init_wsi(struct anv_wsi_device *wsi_device,
+                 const VkAllocationCallbacks *alloc)
 {
    struct wsi_x11 *wsi;
    VkResult result;
 
-   wsi = vk_alloc(&device->instance->alloc, sizeof(*wsi), 8,
+   wsi = vk_alloc(alloc, sizeof(*wsi), 8,
                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!wsi) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -934,33 +935,34 @@ anv_x11_init_wsi(struct anv_physical_device *device)
    wsi->base.get_present_modes = x11_surface_get_present_modes;
    wsi->base.create_swapchain = x11_surface_create_swapchain;
 
-   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XCB] = &wsi->base;
-   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XLIB] = &wsi->base;
+   wsi_device->wsi[VK_ICD_WSI_PLATFORM_XCB] = &wsi->base;
+   wsi_device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = &wsi->base;
 
    return VK_SUCCESS;
 
 fail_mutex:
    pthread_mutex_destroy(&wsi->mutex);
 fail_alloc:
-   vk_free(&device->instance->alloc, wsi);
+   vk_free(alloc, wsi);
 fail:
-   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
-   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XLIB] = NULL;
+   wsi_device->wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
+   wsi_device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = NULL;
 
    return result;
 }
 
 void
-anv_x11_finish_wsi(struct anv_physical_device *device)
+anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
+                   const VkAllocationCallbacks *alloc)
 {
    struct wsi_x11 *wsi =
-      (struct wsi_x11 *)device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XCB];
+      (struct wsi_x11 *)wsi_device->wsi[VK_ICD_WSI_PLATFORM_XCB];
 
    if (wsi) {
       _mesa_hash_table_destroy(wsi->connections, NULL);
 
       pthread_mutex_destroy(&wsi->mutex);
 
-      vk_free(&device->instance->alloc, wsi);
+      vk_free(alloc, wsi);
    }
 }

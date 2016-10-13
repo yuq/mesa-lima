@@ -31,7 +31,7 @@ anv_init_wsi(struct anv_physical_device *physical_device)
    memset(physical_device->wsi_device.wsi, 0, sizeof(physical_device->wsi_device.wsi));
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
-   result = anv_x11_init_wsi(physical_device);
+   result = anv_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
    if (result != VK_SUCCESS)
       return result;
 #endif
@@ -40,7 +40,7 @@ anv_init_wsi(struct anv_physical_device *physical_device)
    result = anv_wl_init_wsi(physical_device);
    if (result != VK_SUCCESS) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
-      anv_x11_finish_wsi(physical_device);
+      anv_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
 #endif
       return result;
    }
@@ -56,7 +56,7 @@ anv_finish_wsi(struct anv_physical_device *physical_device)
    anv_wl_finish_wsi(physical_device);
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-   anv_x11_finish_wsi(physical_device);
+   anv_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
 #endif
 }
 
