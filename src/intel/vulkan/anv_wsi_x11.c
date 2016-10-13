@@ -87,12 +87,12 @@ wsi_x11_connection_destroy(const VkAllocationCallbacks *alloc,
 }
 
 static struct wsi_x11_connection *
-wsi_x11_get_connection(struct anv_wsi_interface **wsi_dev,
+wsi_x11_get_connection(struct anv_wsi_device *wsi_dev,
                        const VkAllocationCallbacks *alloc,
                        xcb_connection_t *conn)
 {
    struct wsi_x11 *wsi =
-      (struct wsi_x11 *)wsi_dev[VK_ICD_WSI_PLATFORM_XCB];
+      (struct wsi_x11 *)wsi_dev->wsi[VK_ICD_WSI_PLATFORM_XCB];
 
    pthread_mutex_lock(&wsi->mutex);
 
@@ -242,7 +242,7 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
 
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(device->wsi, &device->instance->alloc, connection);
+      wsi_x11_get_connection(&device->wsi_device, &device->instance->alloc, connection);
 
    if (!wsi_conn->has_dri3) {
       fprintf(stderr, "vulkan: No DRI3 support\n");
@@ -299,7 +299,7 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
    xcb_window_t window = x11_surface_get_window(icd_surface);
 
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(device->wsi, &device->instance->alloc, conn);
+      wsi_x11_get_connection(&device->wsi_device, &device->instance->alloc, conn);
    if (!wsi_conn)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -934,8 +934,8 @@ anv_x11_init_wsi(struct anv_physical_device *device)
    wsi->base.get_present_modes = x11_surface_get_present_modes;
    wsi->base.create_swapchain = x11_surface_create_swapchain;
 
-   device->wsi[VK_ICD_WSI_PLATFORM_XCB] = &wsi->base;
-   device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = &wsi->base;
+   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XCB] = &wsi->base;
+   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XLIB] = &wsi->base;
 
    return VK_SUCCESS;
 
@@ -944,8 +944,8 @@ fail_mutex:
 fail_alloc:
    vk_free(&device->instance->alloc, wsi);
 fail:
-   device->wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
-   device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = NULL;
+   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
+   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XLIB] = NULL;
 
    return result;
 }
@@ -954,7 +954,7 @@ void
 anv_x11_finish_wsi(struct anv_physical_device *device)
 {
    struct wsi_x11 *wsi =
-      (struct wsi_x11 *)device->wsi[VK_ICD_WSI_PLATFORM_XCB];
+      (struct wsi_x11 *)device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_XCB];
 
    if (wsi) {
       _mesa_hash_table_destroy(wsi->connections, NULL);

@@ -286,11 +286,11 @@ fail:
 }
 
 static struct wsi_wl_display *
-wsi_wl_get_display(struct anv_physical_device *device,
+wsi_wl_get_display(struct anv_wsi_device *wsi_device,
                    struct wl_display *wl_display)
 {
    struct wsi_wayland *wsi =
-      (struct wsi_wayland *)device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
+      (struct wsi_wayland *)wsi_device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
 
    pthread_mutex_lock(&wsi->mutex);
 
@@ -327,7 +327,7 @@ VkBool32 anv_GetPhysicalDeviceWaylandPresentationSupportKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
 
-   return wsi_wl_get_display(physical_device, display) != NULL;
+   return wsi_wl_get_display(&physical_device->wsi_device, display) != NULL;
 }
 
 static VkResult
@@ -380,7 +380,7 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
 {
    VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
    struct wsi_wl_display *display =
-      wsi_wl_get_display(device, surface->display);
+      wsi_wl_get_display(&device->wsi_device, surface->display);
 
    uint32_t count = u_vector_length(&display->formats);
 
@@ -785,7 +785,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       chain->images[i].buffer = NULL;
    chain->queue = NULL;
 
-   chain->display = wsi_wl_get_display(&device->instance->physicalDevice,
+   chain->display = wsi_wl_get_display(&device->instance->physicalDevice.wsi_device,
                                        surface->display);
    if (!chain->display) {
       result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
@@ -856,7 +856,7 @@ anv_wl_init_wsi(struct anv_physical_device *device)
    wsi->base.get_present_modes = wsi_wl_surface_get_present_modes;
    wsi->base.create_swapchain = wsi_wl_surface_create_swapchain;
 
-   device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = &wsi->base;
+   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = &wsi->base;
 
    return VK_SUCCESS;
 
@@ -866,7 +866,7 @@ fail_mutex:
 fail_alloc:
    vk_free(&device->instance->alloc, wsi);
 fail:
-   device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = NULL;
+   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = NULL;
 
    return result;
 }
@@ -875,7 +875,7 @@ void
 anv_wl_finish_wsi(struct anv_physical_device *device)
 {
    struct wsi_wayland *wsi =
-      (struct wsi_wayland *)device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
+      (struct wsi_wayland *)device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
 
    if (wsi) {
       _mesa_hash_table_destroy(wsi->displays, NULL);

@@ -455,6 +455,10 @@ extern struct anv_dispatch_table dtable;
 
 #define VK_ICD_WSI_PLATFORM_MAX 5
 
+struct anv_wsi_device {
+    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
+};
+
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
 
@@ -471,7 +475,7 @@ struct anv_physical_device {
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
 
-    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
+    struct anv_wsi_device                       wsi_device;
 };
 
 struct anv_instance {
