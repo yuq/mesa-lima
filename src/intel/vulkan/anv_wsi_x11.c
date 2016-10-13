@@ -494,8 +494,8 @@ VkResult anv_CreateXlibSurfaceKHR(
 }
 
 struct x11_image {
-   struct anv_image *                        image;
-   struct anv_device_memory *                memory;
+   VkImage image;
+   VkDeviceMemory memory;
    xcb_pixmap_t                              pixmap;
    bool                                      busy;
    struct xshmfence *                        shm_fence;
@@ -532,7 +532,7 @@ x11_get_images(struct anv_swapchain *anv_chain,
 
    assert(chain->image_count <= *pCount);
    for (uint32_t i = 0; i < chain->image_count; i++)
-      pSwapchainImages[i] = anv_image_to_handle(chain->images[i].image);
+      pSwapchainImages[i] = chain->images[i].image;
 
    *pCount = chain->image_count;
 
@@ -656,11 +656,15 @@ x11_anv_create_image(VkDevice device_h,
                      struct x11_swapchain *chain,
                      const VkSwapchainCreateInfoKHR *pCreateInfo,
                      const VkAllocationCallbacks* pAllocator,
-                     struct x11_image *image,
+                     VkImage *image_p,
+                     VkDeviceMemory *memory_p,
+                     uint32_t *size,
                      uint32_t *row_pitch, int *fd_p)
 {
-   VkImage image_h;
    struct anv_device *device = anv_device_from_handle(device_h);
+   VkImage image_h;
+   struct anv_image *image;
+
    VkResult result;
    result = anv_image_create(anv_device_to_handle(device),
       &(struct anv_image_create_info) {
@@ -690,14 +694,15 @@ x11_anv_create_image(VkDevice device_h,
    if (result != VK_SUCCESS)
       return result;
 
-   image->image = anv_image_from_handle(image_h);
-   assert(vk_format_is_color(image->image->vk_format));
+   image = anv_image_from_handle(image_h);
+   assert(vk_format_is_color(image->vk_format));
 
    VkDeviceMemory memory_h;
+   struct anv_device_memory *memory;
    result = anv_AllocateMemory(anv_device_to_handle(device),
       &(VkMemoryAllocateInfo) {
          .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-         .allocationSize = image->image->size,
+         .allocationSize = image->size,
          .memoryTypeIndex = 0,
       },
       NULL /* XXX: pAllocator */,
@@ -705,16 +710,16 @@ x11_anv_create_image(VkDevice device_h,
    if (result != VK_SUCCESS)
       goto fail_create_image;
 
-   image->memory = anv_device_memory_from_handle(memory_h);
-   image->memory->bo.is_winsys_bo = true;
+   memory = anv_device_memory_from_handle(memory_h);
+   memory->bo.is_winsys_bo = true;
 
    anv_BindImageMemory(VK_NULL_HANDLE, image_h, memory_h, 0);
 
-   struct anv_surface *surface = &image->image->color_surface;
+   struct anv_surface *surface = &image->color_surface;
    assert(surface->isl.tiling == ISL_TILING_X);
 
    *row_pitch = surface->isl.row_pitch;
-   int ret = anv_gem_set_tiling(device, image->memory->bo.gem_handle,
+   int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
                                 surface->isl.row_pitch, I915_TILING_X);
    if (ret) {
       /* FINISHME: Choose a better error. */
@@ -723,7 +728,7 @@ x11_anv_create_image(VkDevice device_h,
       goto fail_alloc_memory;
    }
 
-   int fd = anv_gem_handle_to_fd(device, image->memory->bo.gem_handle);
+   int fd = anv_gem_handle_to_fd(device, memory->bo.gem_handle);
    if (fd == -1) {
       /* FINISHME: Choose a better error. */
       result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
@@ -731,28 +736,28 @@ x11_anv_create_image(VkDevice device_h,
       goto fail_alloc_memory;
    }
 
+   *image_p = image_h;
+   *memory_p = memory_h;
    *fd_p = fd;
+   *size = image->size;
    return VK_SUCCESS;
 fail_alloc_memory:
-   anv_FreeMemory(anv_device_to_handle(chain->base.device),
-                  anv_device_memory_to_handle(image->memory), pAllocator);
+   anv_FreeMemory(device_h, memory_h, pAllocator);
 
 fail_create_image:
-   anv_DestroyImage(anv_device_to_handle(chain->base.device),
-                    anv_image_to_handle(image->image), pAllocator);
+   anv_DestroyImage(device_h, image_h, pAllocator);
    return result;
 }
 
 static void
 x11_anv_free_image(VkDevice device,
-                   struct x11_image *image,
                    const VkAllocationCallbacks* pAllocator)
+                   VkImage image_h,
+                   VkDeviceMemory memory_h)
 {
-   anv_DestroyImage(device,
-                    anv_image_to_handle(image->image), pAllocator);
+   anv_DestroyImage(device, image_h, pAllocator);
 
-   anv_FreeMemory(device,
-                  anv_device_memory_to_handle(image->memory), pAllocator);
+   anv_FreeMemory(device, memory_h, pAllocator);
 }
 
 static VkResult
@@ -767,17 +772,26 @@ x11_image_init(VkDevice device_h, struct x11_swapchain *chain,
    uint32_t bpp = 32;
    uint32_t depth = 24;
    int fd;
-   result = x11_anv_create_image(device_h, chain,
-                                 pCreateInfo, pAllocator, image, &row_pitch, &fd);
+   uint32_t size;
+
+   result = x11_anv_create_image(device_h,
+                                 pCreateInfo,
+                                 pAllocator,
+                                 &image->image,
+                                 &image->memory,
+                                 &size,
+                                 &row_pitch,
+                                 &fd);
    if (result != VK_SUCCESS)
       return result;
+
    image->pixmap = xcb_generate_id(chain->conn);
 
    cookie =
       xcb_dri3_pixmap_from_buffer_checked(chain->conn,
                                           image->pixmap,
                                           chain->window,
-                                          image->image->size,
+                                          size,
                                           pCreateInfo->imageExtent.width,
                                           pCreateInfo->imageExtent.height,
                                           row_pitch,
@@ -811,7 +825,8 @@ fail_pixmap:
    cookie = xcb_free_pixmap(chain->conn, image->pixmap);
    xcb_discard_reply(chain->conn, cookie.sequence);
 
-   x11_anv_free_image(device_h, image, pAllocator);
+   x11_anv_free_image(device_h, pAllocator,
+                      image->image, image->memory);
    return result;
 }
 
@@ -830,7 +845,8 @@ x11_image_finish(struct x11_swapchain *chain,
    xcb_discard_reply(chain->conn, cookie.sequence);
 
    x11_anv_free_image(anv_device_to_handle(chain->base.device),
-                      image, pAllocator);
+                      pAllocator,
+                      image->image, image->memory);
 }
 
 static VkResult
