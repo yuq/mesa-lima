@@ -37,7 +37,7 @@ struct anv_wsi_interface {
    VkResult (*get_capabilities)(VkIcdSurfaceBase *surface,
                                 VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
    VkResult (*get_formats)(VkIcdSurfaceBase *surface,
-                           struct anv_physical_device *device,
+                           struct anv_wsi_device *wsi_device,
                            uint32_t* pSurfaceFormatCount,
                            VkSurfaceFormatKHR* pSurfaceFormats);
    VkResult (*get_present_modes)(VkIcdSurfaceBase *surface,

@@ -375,13 +375,13 @@ wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
 
 static VkResult
 wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
-                           struct anv_physical_device *device,
+                           struct anv_wsi_device *wsi_device,
                            uint32_t* pSurfaceFormatCount,
                            VkSurfaceFormatKHR* pSurfaceFormats)
 {
    VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
    struct wsi_wl_display *display =
-      wsi_wl_get_display(&device->wsi_device, surface->display);
+      wsi_wl_get_display(wsi_device, surface->display);
 
    uint32_t count = u_vector_length(&display->formats);
 

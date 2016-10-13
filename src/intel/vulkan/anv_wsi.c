@@ -108,7 +108,7 @@ VkResult anv_GetPhysicalDeviceSurfaceFormatsKHR(
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
    struct anv_wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
-   return iface->get_formats(surface, device, pSurfaceFormatCount,
+   return iface->get_formats(surface, &device->wsi_device, pSurfaceFormatCount,
                              pSurfaceFormats);
 }
 

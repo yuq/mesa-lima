@@ -401,7 +401,7 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
 
 static VkResult
 x11_surface_get_formats(VkIcdSurfaceBase *surface,
-                        struct anv_physical_device *device,
+                        struct anv_wsi_device *wsi_device,
                         uint32_t *pSurfaceFormatCount,
                         VkSurfaceFormatKHR *pSurfaceFormats)
 {
