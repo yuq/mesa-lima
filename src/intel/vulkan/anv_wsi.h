@@ -34,7 +34,6 @@ struct anv_wsi_interface {
                            uint32_t queueFamilyIndex,
                            VkBool32* pSupported);
    VkResult (*get_capabilities)(VkIcdSurfaceBase *surface,
-                                struct anv_physical_device *device,
                                 VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
    VkResult (*get_formats)(VkIcdSurfaceBase *surface,
                            struct anv_physical_device *device,

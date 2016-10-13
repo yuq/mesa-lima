@@ -348,7 +348,6 @@ static const VkPresentModeKHR present_modes[] = {
 
 static VkResult
 wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
-                                struct anv_physical_device *device,
                                 VkSurfaceCapabilitiesKHR* caps)
 {
    caps->minImageCount = MIN_NUM_IMAGES;

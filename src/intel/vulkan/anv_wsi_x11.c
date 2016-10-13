@@ -325,7 +325,6 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
 
 static VkResult
 x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
-                             struct anv_physical_device *device,
                              VkSurfaceCapabilitiesKHR *caps)
 {
    xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
