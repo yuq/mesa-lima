@@ -869,8 +869,9 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
 
             } else {
                /* some opcodes are special case in what they use as sources
-                  - F2D is a float src0, DLDEXP is integer src1 */
-               if (op == TGSI_OPCODE_F2D ||
+                  - [FUI]2D/[UI]2I64 is a float/[u]int src0, DLDEXP is integer src1 */
+               if (op == TGSI_OPCODE_F2D || op == TGSI_OPCODE_U2D || op == TGSI_OPCODE_I2D ||
+                   op == TGSI_OPCODE_I2I64 || op == TGSI_OPCODE_U2I64 ||
                    op == TGSI_OPCODE_DLDEXP ||
                    (op == TGSI_OPCODE_UCMP && dst_is_64bit[0])) {
                   dinst->src[j].swizzle = MAKE_SWIZZLE4(swz, swz, swz, swz);
