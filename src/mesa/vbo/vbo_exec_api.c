@@ -1275,7 +1275,11 @@ void vbo_exec_FlushVertices( struct gl_context *ctx, GLuint flags )
 #endif
 }
 
-void vbo_reset_attr(struct vbo_exec_context *exec, GLuint attr)
+/**
+ * Reset the vertex attribute by setting its size to zero.
+ */
+static void
+vbo_reset_attr(struct vbo_exec_context *exec, GLuint attr)
 {
    exec->vtx.attrsz[attr] = 0;
    exec->vtx.attrtype[attr] = GL_FLOAT;
