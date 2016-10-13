@@ -56,6 +56,7 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
       info->cs.local_size[0] = cp->LocalSize[0];
       info->cs.local_size[1] = cp->LocalSize[1];
       info->cs.local_size[2] = cp->LocalSize[2];
+      info->cs.shared_size = cp->SharedSize;
       break;
    }
 

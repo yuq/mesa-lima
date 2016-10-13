@@ -118,6 +118,11 @@ typedef struct shader_info {
 
       struct {
          unsigned local_size[3];
+
+         /**
+          * Size of shared variables accessed by the compute shader.
+          */
+         unsigned shared_size;
       } cs;
 
       struct {
