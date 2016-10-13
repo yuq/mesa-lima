@@ -403,7 +403,6 @@ x11_surface_get_formats(VkIcdSurfaceBase *surface,
 
 static VkResult
 x11_surface_get_present_modes(VkIcdSurfaceBase *surface,
-                              struct anv_physical_device *device,
                               uint32_t *pPresentModeCount,
                               VkPresentModeKHR *pPresentModes)
 {

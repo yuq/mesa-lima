@@ -407,7 +407,6 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
 
 static VkResult
 wsi_wl_surface_get_present_modes(VkIcdSurfaceBase *surface,
-                                 struct anv_physical_device *device,
                                  uint32_t* pPresentModeCount,
                                  VkPresentModeKHR* pPresentModes)
 {

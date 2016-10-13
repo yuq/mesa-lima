@@ -120,7 +120,7 @@ VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
    struct anv_wsi_interface *iface = device->wsi[surface->platform];
 
-   return iface->get_present_modes(surface, device, pPresentModeCount,
+   return iface->get_present_modes(surface, pPresentModeCount,
                                    pPresentModes);
 }
 
