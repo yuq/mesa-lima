@@ -284,26 +284,48 @@ vc4_resource_transfer_map(struct pipe_context *pctx,
                         return NULL;
 
                 /* We need to align the box to utile boundaries, since that's
-                 * what load/store operate on.
+                 * what load/store operates on.  This may cause us to need to
+                 * read out the original contents in that border area.  Right
+                 * now we just read out the entire contents, including the
+                 * middle area that will just get overwritten.
                  */
-                uint32_t orig_width = ptrans->box.width;
-                uint32_t orig_height = ptrans->box.height;
                 uint32_t box_start_x = ptrans->box.x & (utile_w - 1);
                 uint32_t box_start_y = ptrans->box.y & (utile_h - 1);
-                ptrans->box.width += box_start_x;
-                ptrans->box.x -= box_start_x;
-                ptrans->box.height += box_start_y;
-                ptrans->box.y -= box_start_y;
-                ptrans->box.width = align(ptrans->box.width, utile_w);
-                ptrans->box.height = align(ptrans->box.height, utile_h);
+                bool needs_load = (usage & PIPE_TRANSFER_READ) != 0;
+
+                if (box_start_x) {
+                        ptrans->box.width += box_start_x;
+                        ptrans->box.x -= box_start_x;
+                        needs_load = true;
+                }
+                if (box_start_y) {
+                        ptrans->box.height += box_start_y;
+                        ptrans->box.y -= box_start_y;
+                        needs_load = true;
+                }
+                if (ptrans->box.width & (utile_w - 1)) {
+                        /* We only need to force a load if our border region
+                         * we're extending into is actually part of the
+                         * texture.
+                         */
+                        uint32_t slice_width = u_minify(prsc->width0, level);
+                        if (ptrans->box.x + ptrans->box.width != slice_width)
+                                needs_load = true;
+                        ptrans->box.width = align(ptrans->box.width, utile_w);
+                }
+                if (ptrans->box.height & (utile_h - 1)) {
+                        uint32_t slice_height = u_minify(prsc->height0, level);
+                        if (ptrans->box.y + ptrans->box.height != slice_height)
+                                needs_load = true;
+                        ptrans->box.height = align(ptrans->box.height, utile_h);
+                }
 
                 ptrans->stride = ptrans->box.width * rsc->cpp;
                 ptrans->layer_stride = ptrans->stride * ptrans->box.height;
 
                 trans->map = malloc(ptrans->layer_stride * ptrans->box.depth);
-                if (usage & PIPE_TRANSFER_READ ||
-                    ptrans->box.width != orig_width ||
-                    ptrans->box.height != orig_height) {
+
+                if (needs_load) {
                         vc4_load_tiled_image(trans->map, ptrans->stride,
                                              buf + slice->offset +
                                              ptrans->box.z * rsc->cube_map_stride,
