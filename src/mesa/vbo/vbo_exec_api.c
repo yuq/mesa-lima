@@ -423,6 +423,7 @@ vbo_exec_fixup_vertex(struct gl_context *ctx, GLuint attr,
    }
 
    exec->vtx.active_sz[attr] = newSize;
+   exec->vtx.attrtype[attr] = newType;
 
    /* Does setting NeedFlush belong here?  Necessitates resetting
     * vtxfmt on each flush (otherwise flags won't get reset
@@ -479,7 +480,7 @@ do {									\
       if (N>1) dest[1] = V1;						\
       if (N>2) dest[2] = V2;						\
       if (N>3) dest[3] = V3;						\
-      exec->vtx.attrtype[A] = T;					\
+      assert(exec->vtx.attrtype[A] == T);                               \
    }									\
 									\
    if ((A) == 0) {							\
