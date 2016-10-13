@@ -4203,7 +4203,7 @@ static void atomic_emit(
 		else
 			coords = emit_data->args[1];
 
-		build_type_name_for_intr(coords, coords_type, sizeof(coords_type));
+		build_type_name_for_intr(LLVMTypeOf(coords), coords_type, sizeof(coords_type));
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.image.atomic.%s.%s",
 			 action->intr_name, coords_type);
