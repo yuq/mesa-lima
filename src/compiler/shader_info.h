@@ -121,6 +121,13 @@ typedef struct shader_info {
          /** The number of vertices in the TCS output patch. */
          unsigned vertices_out;
       } tcs;
+
+      struct {
+         uint32_t primitive_mode; /* GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
+         uint32_t spacing;        /* GL_EQUAL, GL_FRACTIONAL_EVEN, GL_FRACTIONAL_ODD */
+         uint32_t vertex_order;   /* GL_CW or GL_CCW */
+         bool point_mode;
+      } tes;
    };
 } shader_info;
 
