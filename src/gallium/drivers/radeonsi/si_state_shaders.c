@@ -1015,33 +1015,73 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 	}
 }
 
+static void si_build_shader_variant(void *job, int thread_index)
+{
+	struct si_shader *shader = (struct si_shader *)job;
+	struct si_shader_selector *sel = shader->selector;
+	struct si_screen *sscreen = sel->screen;
+	LLVMTargetMachineRef tm;
+	struct pipe_debug_callback *debug = &sel->debug;
+	int r;
+
+	if (thread_index >= 0) {
+		assert(thread_index < ARRAY_SIZE(sscreen->tm));
+		tm = sscreen->tm[thread_index];
+		if (!debug->async)
+			debug = NULL;
+	} else {
+		tm = sel->tm;
+	}
+
+	r = si_shader_create(sscreen, tm, shader, debug);
+	if (unlikely(r)) {
+		R600_ERR("Failed to build shader variant (type=%u) %d\n",
+			 sel->type, r);
+		shader->compilation_failed = true;
+		return;
+	}
+
+	if (sel->is_debug_context) {
+		FILE *f = open_memstream(&shader->shader_log,
+					 &shader->shader_log_size);
+		if (f) {
+			si_shader_dump(sscreen, shader, NULL, sel->type, f);
+			fclose(f);
+		}
+	}
+
+	si_shader_init_pm4_state(sscreen, shader);
+}
+
 /* Select the hw shader variant depending on the current state. */
 static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
 				     struct si_shader_key *key,
-				     LLVMTargetMachineRef tm,
-				     struct pipe_debug_callback *debug,
-				     bool wait,
-				     bool is_debug_context)
+				     int thread_index)
 {
 	static const struct si_shader_key zeroed;
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
-	int r;
-
+again:
 	/* Check if we don't need to change anything.
 	 * This path is also used for most shaders that don't need multiple
 	 * variants, it will cost just a computation of the key and this
 	 * test. */
-	if (likely(current && memcmp(&current->key, key, sizeof(*key)) == 0))
+	if (likely(current &&
+		   memcmp(&current->key, key, sizeof(*key)) == 0 &&
+		   (!current->is_optimized ||
+		    util_queue_fence_is_signalled(&current->optimized_ready))))
 		return 0;
 
 	/* This must be done before the mutex is locked, because async GS
 	 * compilation calls this function too, and therefore must enter
 	 * the mutex first.
+	 *
+	 * Only wait if we are in a draw call. Don't wait if we are
+	 * in a compiler thread.
 	 */
-	if (wait)
+	if (thread_index < 0)
 		util_queue_job_wait(&sel->ready);
 
 	pipe_mutex_lock(sel->mutex);
@@ -1051,6 +1091,22 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 		/* Don't check the "current" shader. We checked it above. */
 		if (current != iter &&
 		    memcmp(&iter->key, key, sizeof(*key)) == 0) {
+			/* If it's an optimized shader and its compilation has
+			 * been started but isn't done, use the unoptimized
+			 * shader so as not to cause a stall due to compilation.
+			 */
+			if (iter->is_optimized &&
+			    !util_queue_fence_is_signalled(&iter->optimized_ready)) {
+				memset(&key->opt, 0, sizeof(key->opt));
+				pipe_mutex_unlock(sel->mutex);
+				goto again;
+			}
+
+			if (iter->compilation_failed) {
+				pipe_mutex_unlock(sel->mutex);
+				return -1; /* skip the draw call */
+			}
+
 			state->current = iter;
 			pipe_mutex_unlock(sel->mutex);
 			return 0;
@@ -1065,31 +1121,21 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 	}
 	shader->selector = sel;
 	shader->key = *key;
+
+	/* Monolithic-only shaders don't make a distinction between optimized
+	 * and unoptimized. */
 	shader->is_monolithic =
 		!sel->main_shader_part ||
 		sel->main_shader_part->key.as_ls != key->as_ls ||
 		sel->main_shader_part->key.as_es != key->as_es ||
+		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0 ||
 		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
 
-	r = si_shader_create(sscreen, tm, shader, debug);
-	if (unlikely(r)) {
-		R600_ERR("Failed to build shader variant (type=%u) %d\n",
-			 sel->type, r);
-		FREE(shader);
-		pipe_mutex_unlock(sel->mutex);
-		return r;
-	}
-
-	if (is_debug_context) {
-		FILE *f = open_memstream(&shader->shader_log,
-					 &shader->shader_log_size);
-		if (f) {
-			si_shader_dump(sscreen, shader, NULL, sel->type, f);
-			fclose(f);
-		}
-	}
-
-	si_shader_init_pm4_state(sscreen, shader);
+	shader->is_optimized =
+		!sscreen->use_monolithic_shaders &&
+		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0;
+	if (shader->is_optimized)
+		util_queue_fence_init(&shader->optimized_ready);
 
 	if (!sel->last_variant) {
 		sel->first_variant = shader;
@@ -1098,9 +1144,29 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 		sel->last_variant->next_variant = shader;
 		sel->last_variant = shader;
 	}
-	state->current = shader;
+
+	/* If it's an optimized shader, compile it asynchronously. */
+	if (shader->is_optimized &&
+	    thread_index < 0) {
+		/* Compile it asynchronously. */
+		util_queue_add_job(&sscreen->shader_compiler_queue,
+				   shader, &shader->optimized_ready,
+				   si_build_shader_variant, NULL);
+
+		/* Use the default (unoptimized) shader for now. */
+		memset(&key->opt, 0, sizeof(key->opt));
+		pipe_mutex_unlock(sel->mutex);
+		goto again;
+	}
+
+	assert(!shader->is_optimized);
+	si_build_shader_variant(shader, thread_index);
+
+	if (!shader->compilation_failed)
+		state->current = shader;
+
 	pipe_mutex_unlock(sel->mutex);
-	return 0;
+	return shader->compilation_failed ? -1 : 0;
 }
 
 static int si_shader_select(struct pipe_context *ctx,
@@ -1110,9 +1176,7 @@ static int si_shader_select(struct pipe_context *ctx,
 	struct si_shader_key key;
 
 	si_shader_selector_key(ctx, state->cso, &key);
-	return si_shader_select_with_key(sctx->screen, state, &key,
-					 sctx->tm, &sctx->b.debug, true,
-					 sctx->is_debug);
+	return si_shader_select_with_key(sctx->screen, state, &key, -1);
 }
 
 static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
@@ -1247,8 +1311,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 			break;
 		}
 
-		if (si_shader_select_with_key(sscreen, &state, &key, tm, debug,
-					      false, sel->is_debug_context))
+		if (si_shader_select_with_key(sscreen, &state, &key, thread_index))
 			fprintf(stderr, "radeonsi: can't create a monolithic shader\n");
 	}
 
@@ -1524,6 +1587,11 @@ static void si_bind_ps_shader(struct pipe_context *ctx, void *state)
 
 static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 {
+	if (shader->is_optimized) {
+		util_queue_job_wait(&shader->optimized_ready);
+		util_queue_fence_destroy(&shader->optimized_ready);
+	}
+
 	if (shader->pm4) {
 		switch (shader->selector->type) {
 		case PIPE_SHADER_VERTEX:
