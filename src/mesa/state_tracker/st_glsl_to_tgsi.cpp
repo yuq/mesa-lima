@@ -2110,8 +2110,35 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
          cbuf.index = const_offset / 16;
       }
       else {
+         ir_expression *offset_expr = ir->operands[1]->as_expression();
+         st_src_reg offset = op[1];
+
+         /* The OpenGL spec is written in such a way that accesses with
+          * non-constant offset are almost always vec4-aligned. The only
+          * exception to this are members of structs in arrays of structs:
+          * each struct in an array of structs is at least vec4-aligned,
+          * but single-element and [ui]vec2 members of the struct may be at
+          * an offset that is not a multiple of 16 bytes.
+          *
+          * Here, we extract that offset, relying on previous passes to always
+          * generate offset expressions of the form (+ expr constant_offset).
+          *
+          * Note that the std430 layout, which allows more cases of alignment
+          * less than vec4 in arrays, is not supported for uniform blocks, so
+          * we do not have to deal with it here.
+          */
+         if (offset_expr && offset_expr->operation == ir_binop_add) {
+            const_offset_ir = offset_expr->operands[1]->as_constant();
+            if (const_offset_ir) {
+               const_offset = const_offset_ir->value.u[0];
+               cbuf.index = const_offset / 16;
+               offset_expr->operands[0]->accept(this);
+               offset = this->result;
+            }
+         }
+
          /* Relative/variable index into constant buffer */
-         emit_asm(ir, TGSI_OPCODE_USHR, st_dst_reg(index_reg), op[1],
+         emit_asm(ir, TGSI_OPCODE_USHR, st_dst_reg(index_reg), offset,
               st_src_reg_for_int(4));
          cbuf.reladdr = ralloc(mem_ctx, st_src_reg);
          memcpy(cbuf.reladdr, &index_reg, sizeof(index_reg));
