@@ -165,6 +165,10 @@ void ir_print_visitor::visit(ir_variable *ir)
 {
    fprintf(f, "(declare ");
 
+   char binding[32] = {0};
+   if (ir->data.binding)
+      snprintf(binding, sizeof(binding), "binding=%i ", ir->data.binding);
+
    char loc[32] = {0};
    if (ir->data.location != -1)
       snprintf(loc, sizeof(loc), "location=%i ", ir->data.location);
@@ -187,8 +191,8 @@ void ir_print_visitor::visit(ir_variable *ir)
    const char *const interp[] = { "", "smooth", "flat", "noperspective" };
    STATIC_ASSERT(ARRAY_SIZE(interp) == INTERP_MODE_COUNT);
 
-   fprintf(f, "(%s%s%s%s%s%s%s%s%s%s) ",
-           loc, component, cent, samp, patc, inv, prec, mode[ir->data.mode],
+   fprintf(f, "(%s%s%s%s%s%s%s%s%s%s%s) ",
+           binding, loc, component, cent, samp, patc, inv, prec, mode[ir->data.mode],
            stream[ir->data.stream],
            interp[ir->data.interpolation]);
 
