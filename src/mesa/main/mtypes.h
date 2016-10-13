@@ -43,6 +43,7 @@
 #include "glapi/glapi.h"
 #include "math/m_matrix.h"	/* GLmatrix */
 #include "compiler/shader_enums.h"
+#include "compiler/shader_info.h"
 #include "main/formats.h"       /* MESA_FORMAT_COUNT */
 #include "compiler/glsl/list.h"
 #include "util/bitscan.h"
@@ -1918,6 +1919,8 @@ struct gl_program
    struct prog_instruction *Instructions;
 
    struct nir_shader *nir;
+
+   struct shader_info info;
 
    GLbitfield64 InputsRead;     /**< Bitmask of which input regs are read */
    GLbitfield64 DoubleInputsRead;     /**< Bitmask of which input regs are read  and are doubles */

@@ -1019,6 +1019,12 @@ prog_to_nir(const struct gl_program *prog,
    c->prog = prog;
 
    nir_builder_init_simple_shader(&c->build, NULL, stage, options);
+
+   /* Use the shader_info from gl_program rather than the one nir_builder
+    * created for us. nir_sweep should clean up the other one for us.
+    */
+   c->build.shader->info = (shader_info *) &prog->info;
+
    s = c->build.shader;
 
    if (prog->Parameters->NumParameters > 0) {
