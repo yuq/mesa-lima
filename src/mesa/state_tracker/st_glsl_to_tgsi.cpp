@@ -552,7 +552,8 @@ public:
                           unsigned *array_size,
                           unsigned *base,
                           unsigned *index,
-                          st_src_reg *reladdr);
+                          st_src_reg *reladdr,
+                          bool opaque);
   void calc_deref_offsets(ir_dereference *head,
                           ir_dereference *tail,
                           unsigned *array_elements,
@@ -3254,7 +3255,7 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
    st_src_reg offset;
    unsigned array_size = 0, base = 0, index = 0;
 
-   get_deref_offsets(deref, &array_size, &base, &index, &offset);
+   get_deref_offsets(deref, &array_size, &base, &index, &offset, false);
 
    if (offset.file != PROGRAM_UNDEFINED) {
       emit_asm(ir, TGSI_OPCODE_MUL, st_dst_reg(offset),
@@ -3585,7 +3586,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    st_src_reg image(PROGRAM_IMAGE, 0, GLSL_TYPE_UINT);
 
    get_deref_offsets(img, &sampler_array_size, &sampler_base,
-                     (unsigned int *)&image.index, &reladdr);
+                     (unsigned int *)&image.index, &reladdr, true);
    if (reladdr.file != PROGRAM_UNDEFINED) {
       image.reladdr = ralloc(mem_ctx, st_src_reg);
       *image.reladdr = reladdr;
@@ -3967,7 +3968,8 @@ glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
                                         unsigned *array_size,
                                         unsigned *base,
                                         unsigned *index,
-                                        st_src_reg *reladdr)
+                                        st_src_reg *reladdr,
+                                        bool opaque)
 {
    GLuint shader = _mesa_program_enum_to_shader_stage(this->prog->Target);
    unsigned location = 0;
@@ -3992,7 +3994,8 @@ glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
       *array_size = 1;
    }
 
-   if (location != 0xffffffff) {
+   if (opaque) {
+      assert(location != 0xffffffff);
       *base += this->shader_program->UniformStorage[location].opaque[shader].index;
       *index += this->shader_program->UniformStorage[location].opaque[shader].index;
    }
@@ -4246,7 +4249,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    }
 
    get_deref_offsets(ir->sampler, &sampler_array_size, &sampler_base,
-                     &sampler_index, &reladdr);
+                     &sampler_index, &reladdr, true);
    if (reladdr.file != PROGRAM_UNDEFINED)
       emit_arl(ir, sampler_reladdr, reladdr);
 
