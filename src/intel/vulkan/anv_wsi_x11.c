@@ -233,16 +233,15 @@ visual_has_alpha(xcb_visualtype_t *visual, unsigned depth)
    return (all_mask & ~rgb_mask) != 0;
 }
 
-VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
-    VkPhysicalDevice                            physicalDevice,
+static VkBool32 anv_get_physical_device_xcb_presentation_support(
+    struct anv_wsi_device *wsi_device,
+    VkAllocationCallbacks *alloc,
     uint32_t                                    queueFamilyIndex,
     xcb_connection_t*                           connection,
     xcb_visualid_t                              visual_id)
 {
-   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
-
    struct wsi_x11_connection *wsi_conn =
-      wsi_x11_get_connection(&device->wsi_device, &device->instance->alloc, connection);
+      wsi_x11_get_connection(wsi_device, alloc, connection);
 
    if (!wsi_conn->has_dri3) {
       fprintf(stderr, "vulkan: No DRI3 support\n");
@@ -259,16 +258,32 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
    return true;
 }
 
+VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t                                    queueFamilyIndex,
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id)
+{
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+
+   return anv_get_physical_device_xcb_presentation_support(
+      &device->wsi_device,
+      &device->instance->alloc,
+      queueFamilyIndex, connection, visual_id);
+}
+
 VkBool32 anv_GetPhysicalDeviceXlibPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
     uint32_t                                    queueFamilyIndex,
     Display*                                    dpy,
     VisualID                                    visualID)
 {
-   return anv_GetPhysicalDeviceXcbPresentationSupportKHR(physicalDevice,
-                                                         queueFamilyIndex,
-                                                         XGetXCBConnection(dpy),
-                                                         visualID);
+   ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
+
+   return anv_get_physical_device_xcb_presentation_support(
+      &device->wsi_device,
+      &device->instance->alloc,
+      queueFamilyIndex, XGetXCBConnection(dpy), visualID);
 }
 
 static xcb_connection_t*
