@@ -573,7 +573,7 @@ void SWR_API SwrClearRenderTarget(
     const SWR_RECT& clearRect);
 
 //////////////////////////////////////////////////////////////////////////
-/// @brief SwrSetRastyState
+/// @brief SwrSetRastState
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param pRastState - New SWR_RASTSTATE used for SwrDraw* commands
 void SWR_API SwrSetRastState(
