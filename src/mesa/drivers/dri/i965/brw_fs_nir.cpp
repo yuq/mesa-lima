@@ -87,18 +87,9 @@ fs_visitor::nir_setup_outputs()
    nir_outputs = bld.vgrf(BRW_REGISTER_TYPE_F, nir->num_outputs);
 
    nir_foreach_variable(var, &nir->outputs) {
-      switch (stage) {
-      case MESA_SHADER_VERTEX:
-      case MESA_SHADER_TESS_EVAL:
-      case MESA_SHADER_GEOMETRY: {
-         fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
-         unsigned location = var->data.location;
-         nir_setup_single_output_varying(&reg, var->type, &location);
-         break;
-      }
-      default:
-         unreachable("unhandled shader stage");
-      }
+      fs_reg reg = offset(nir_outputs, bld, var->data.driver_location);
+      unsigned location = var->data.location;
+      nir_setup_single_output_varying(&reg, var->type, &location);
    }
 }
 
