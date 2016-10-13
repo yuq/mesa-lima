@@ -523,6 +523,7 @@ wsi_wl_swapchain_acquire_next_image(struct anv_swapchain *anv_chain,
          if (!chain->images[i].busy) {
             /* We found a non-busy image */
             *image_index = i;
+            chain->images[image_index].busy = true;
             return VK_SUCCESS;
          }
       }
