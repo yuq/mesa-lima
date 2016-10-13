@@ -130,7 +130,7 @@ static unsigned get_tc_l2_flag(struct si_context *sctx, enum r600_coherency cohe
 
 static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst,
 			      struct pipe_resource *src, unsigned byte_count,
-			      uint64_t remaining_size,
+			      uint64_t remaining_size, unsigned user_flags,
 			      bool *is_first, unsigned *packet_flags)
 {
 	/* Count memory usage in so that need_cs_space can take it into account. */
@@ -138,7 +138,8 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	if (src)
 		r600_context_add_resource_size(&sctx->b.b, src);
 
-	si_need_cs_space(sctx);
+	if (!(user_flags & SI_CPDMA_SKIP_CHECK_CS_SPACE))
+		si_need_cs_space(sctx);
 
 	/* This must be done after need_cs_space. */
 	radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
@@ -152,10 +153,10 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	/* Flush the caches for the first copy only.
 	 * Also wait for the previous CP DMA operations.
 	 */
-	if (sctx->b.flags)
+	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC) && sctx->b.flags)
 		si_emit_cache_flush(sctx);
 
-	if (*is_first)
+	if (!(user_flags & SI_CPDMA_SKIP_SYNC_BEFORE) && *is_first)
 		*packet_flags |= CP_DMA_RAW_WAIT;
 
 	*is_first = false;
@@ -163,7 +164,8 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 	/* Do the synchronization after the last dma, so that all data
 	 * is written to memory.
 	 */
-	if (byte_count == remaining_size)
+	if (!(user_flags & SI_CPDMA_SKIP_SYNC_AFTER) &&
+	    byte_count == remaining_size)
 		*packet_flags |= CP_DMA_SYNC;
 }
 
@@ -227,7 +229,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
 		unsigned dma_flags = tc_l2_flag  | CP_DMA_CLEAR;
 
-		si_cp_dma_prepare(sctx, dst, NULL, byte_count, size,
+		si_cp_dma_prepare(sctx, dst, NULL, byte_count, size, 0,
 				  &is_first, &dma_flags);
 
 		/* Emit the clear packet. */
@@ -252,7 +254,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
  * \param size  Remaining size to the CP DMA alignment.
  */
 static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
-				     bool *is_first)
+				     unsigned user_flags, bool *is_first)
 {
 	uint64_t va;
 	unsigned dma_flags = 0;
@@ -275,7 +277,7 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 	}
 
 	si_cp_dma_prepare(sctx, &sctx->scratch_buffer->b.b,
-			  &sctx->scratch_buffer->b.b, size, size,
+			  &sctx->scratch_buffer->b.b, size, size, user_flags,
 			  is_first, &dma_flags);
 
 	va = sctx->scratch_buffer->gpu_address;
@@ -283,9 +285,15 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 		       R600_COHERENCY_SHADER);
 }
 
+/**
+ * Do memcpy between buffers using CP DMA.
+ *
+ * \param user_flags	bitmask of SI_CPDMA_*
+ */
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
-		    uint64_t dst_offset, uint64_t src_offset, unsigned size)
+		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
+		    unsigned user_flags)
 {
 	uint64_t main_dst_offset, main_src_offset;
 	unsigned skipped_size = 0;
@@ -329,8 +337,9 @@ void si_copy_buffer(struct si_context *sctx,
 	}
 
 	/* Flush the caches. */
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-	                 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
+	if (!(user_flags & SI_CPDMA_SKIP_GFX_SYNC))
+		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 	/* This is the main part doing the copying. Src is always aligned. */
 	main_dst_offset = dst_offset + skipped_size;
@@ -342,7 +351,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 		si_cp_dma_prepare(sctx, dst, src, byte_count,
 				  size + skipped_size + realign_size,
-				  &is_first, &dma_flags);
+				  user_flags, &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, main_dst_offset, main_src_offset,
 			       byte_count, dma_flags, R600_COHERENCY_SHADER);
@@ -357,7 +366,7 @@ void si_copy_buffer(struct si_context *sctx,
 		unsigned dma_flags = tc_l2_flag;
 
 		si_cp_dma_prepare(sctx, dst, src, skipped_size,
-				  skipped_size + realign_size,
+				  skipped_size + realign_size, user_flags,
 				  &is_first, &dma_flags);
 
 		si_emit_cp_dma(sctx, dst_offset, src_offset, skipped_size,
@@ -366,7 +375,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 	/* Finally, realign the engine if the size wasn't aligned. */
 	if (realign_size)
-		si_cp_dma_realign_engine(sctx, realign_size,
+		si_cp_dma_realign_engine(sctx, realign_size, user_flags,
 					 &is_first);
 
 	if (tc_l2_flag)

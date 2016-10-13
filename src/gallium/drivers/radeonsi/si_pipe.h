@@ -372,9 +372,15 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			     const struct pipe_box *src_box);
 
 /* si_cp_dma.c */
+#define SI_CPDMA_SKIP_CHECK_CS_SPACE	(1 << 0) /* don't call need_cs_space */
+#define SI_CPDMA_SKIP_SYNC_AFTER	(1 << 1) /* don't wait for DMA after the copy */
+#define SI_CPDMA_SKIP_SYNC_BEFORE	(1 << 2) /* don't wait for DMA before the copy (RAW hazards) */
+#define SI_CPDMA_SKIP_GFX_SYNC		(1 << 3) /* don't flush caches and don't wait for PS/CS */
+
 void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
-		    uint64_t dst_offset, uint64_t src_offset, unsigned size);
+		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
+		    unsigned user_flags);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
