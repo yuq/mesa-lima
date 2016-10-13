@@ -154,6 +154,13 @@ KNOBS = [
     }],
 
 
+    ['DEBUG_OUTPUT_DIR', {
+        'type'      : 'std::string',
+        'default'   : '/tmp/Rast/DebugOutput',
+        'desc'      : ['Output directory for debug data.'],
+        'category'  : 'debug',
+    }],
+
     ['TOSS_DRAW', {
         'type'      : 'bool',
         'default'   : 'false',
