@@ -1147,7 +1147,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
    /* BRW_NEW_FRAGMENT_PROGRAM */
    if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
        brw->fragment_program &&
-       brw->fragment_program->Base.nir->info.outputs_read) {
+       brw->fragment_program->Base.nir->info->outputs_read) {
       /* _NEW_BUFFERS */
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 
@@ -1292,15 +1292,15 @@ brw_update_texture_surfaces(struct brw_context *brw)
     * allows the surface format to be overriden for only the
     * gather4 messages. */
    if (brw->gen < 8) {
-      if (vs && vs->nir->info.uses_texture_gather)
+      if (vs && vs->nir->info->uses_texture_gather)
          update_stage_texture_surfaces(brw, vs, &brw->vs.base, true, 0);
-      if (tcs && tcs->nir->info.uses_texture_gather)
+      if (tcs && tcs->nir->info->uses_texture_gather)
          update_stage_texture_surfaces(brw, tcs, &brw->tcs.base, true, 0);
-      if (tes && tes->nir->info.uses_texture_gather)
+      if (tes && tes->nir->info->uses_texture_gather)
          update_stage_texture_surfaces(brw, tes, &brw->tes.base, true, 0);
-      if (gs && gs->nir->info.uses_texture_gather)
+      if (gs && gs->nir->info->uses_texture_gather)
          update_stage_texture_surfaces(brw, gs, &brw->gs.base, true, 0);
-      if (fs && fs->nir->info.uses_texture_gather)
+      if (fs && fs->nir->info->uses_texture_gather)
          update_stage_texture_surfaces(brw, fs, &brw->wm.base, true, 0);
    }
 
@@ -1345,7 +1345,7 @@ brw_update_cs_texture_surfaces(struct brw_context *brw)
     * gather4 messages.
     */
    if (brw->gen < 8) {
-      if (cs && cs->nir->info.uses_texture_gather)
+      if (cs && cs->nir->info->uses_texture_gather)
          update_stage_texture_surfaces(brw, cs, &brw->cs.base, true, 0);
    }
 

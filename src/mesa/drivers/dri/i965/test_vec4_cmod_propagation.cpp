@@ -102,7 +102,8 @@ void cmod_propagation_test::SetUp()
    prog_data = (struct brw_vue_prog_data *)calloc(1, sizeof(*prog_data));
    compiler->devinfo = devinfo;
 
-   nir_shader *shader = nir_shader_create(NULL, MESA_SHADER_VERTEX, NULL);
+   nir_shader *shader =
+      nir_shader_create(NULL, MESA_SHADER_VERTEX, NULL, NULL);
 
    v = new cmod_propagation_vec4_visitor(compiler, shader, prog_data);
 

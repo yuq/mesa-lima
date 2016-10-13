@@ -32,7 +32,8 @@
 nir_shader *
 nir_shader_create(void *mem_ctx,
                   gl_shader_stage stage,
-                  const nir_shader_compiler_options *options)
+                  const nir_shader_compiler_options *options,
+                  shader_info *si)
 {
    nir_shader *shader = ralloc(mem_ctx, nir_shader);
 
@@ -42,7 +43,8 @@ nir_shader_create(void *mem_ctx,
    exec_list_make_empty(&shader->shared);
 
    shader->options = options;
-   memset(&shader->info, 0, sizeof(shader->info));
+
+   shader->info = si ? si : rzalloc(shader, shader_info);
 
    exec_list_make_empty(&shader->functions);
    exec_list_make_empty(&shader->registers);

@@ -56,8 +56,8 @@ build_color_shaders(struct nir_shader **out_vs,
 	nir_builder_init_simple_shader(&vs_b, NULL, MESA_SHADER_VERTEX, NULL);
 	nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
 
-	vs_b.shader->info.name = ralloc_strdup(vs_b.shader, "meta_clear_color_vs");
-	fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "meta_clear_color_fs");
+	vs_b.shader->info->name = ralloc_strdup(vs_b.shader, "meta_clear_color_vs");
+	fs_b.shader->info->name = ralloc_strdup(fs_b.shader, "meta_clear_color_fs");
 
 	const struct glsl_type *position_type = glsl_vec4_type();
 	const struct glsl_type *color_type = glsl_vec4_type();
@@ -458,8 +458,8 @@ build_depthstencil_shader(struct nir_shader **out_vs, struct nir_shader **out_fs
 	nir_builder_init_simple_shader(&vs_b, NULL, MESA_SHADER_VERTEX, NULL);
 	nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
 
-	vs_b.shader->info.name = ralloc_strdup(vs_b.shader, "meta_clear_depthstencil_vs");
-	fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "meta_clear_depthstencil_fs");
+	vs_b.shader->info->name = ralloc_strdup(vs_b.shader, "meta_clear_depthstencil_vs");
+	fs_b.shader->info->name = ralloc_strdup(fs_b.shader, "meta_clear_depthstencil_fs");
 	const struct glsl_type *position_type = glsl_vec4_type();
 
 	nir_variable *vs_in_pos =

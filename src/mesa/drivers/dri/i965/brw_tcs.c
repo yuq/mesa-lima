@@ -50,10 +50,10 @@ create_passthrough_tcs(const struct brw_compiler *compiler,
    nir_ssa_def *invoc_id =
       nir_load_system_value(&b, nir_intrinsic_load_invocation_id, 0);
 
-   nir->info.inputs_read = key->outputs_written;
-   nir->info.outputs_written = key->outputs_written;
-   nir->info.tcs.vertices_out = key->input_vertices;
-   nir->info.name = ralloc_strdup(nir, "passthrough");
+   nir->info->inputs_read = key->outputs_written;
+   nir->info->outputs_written = key->outputs_written;
+   nir->info->tcs.vertices_out = key->input_vertices;
+   nir->info->name = ralloc_strdup(nir, "passthrough");
    nir->num_uniforms = 8 * sizeof(uint32_t);
 
    var = nir_variable_create(nir, nir_var_uniform, glsl_vec4_type(), "hdr_0");
@@ -317,9 +317,9 @@ brw_tcs_populate_key(struct brw_context *brw,
                      struct brw_tcs_prog_key *key)
 {
    uint64_t per_vertex_slots =
-      brw->tess_eval_program->Base.nir->info.inputs_read;
+      brw->tess_eval_program->Base.nir->info->inputs_read;
    uint32_t per_patch_slots =
-      brw->tess_eval_program->Base.nir->info.patch_inputs_read;
+      brw->tess_eval_program->Base.nir->info->patch_inputs_read;
 
    struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
@@ -331,9 +331,9 @@ brw_tcs_populate_key(struct brw_context *brw,
 
    if (brw->tess_ctrl_program) {
       per_vertex_slots |=
-         brw->tess_ctrl_program->Base.nir->info.outputs_written;
+         brw->tess_ctrl_program->Base.nir->info->outputs_written;
       per_patch_slots |=
-         brw->tess_ctrl_program->Base.nir->info.patch_outputs_written;
+         brw->tess_ctrl_program->Base.nir->info->patch_outputs_written;
    }
 
    if (brw->gen < 8 || !tcp)
@@ -355,7 +355,7 @@ brw_tcs_populate_key(struct brw_context *brw,
       /* _NEW_TEXTURE */
       brw_populate_sampler_prog_key_data(&brw->ctx, prog, &key->tex);
    } else {
-      key->outputs_written = tep->program.Base.nir->info.inputs_read;
+      key->outputs_written = tep->program.Base.nir->info->inputs_read;
    }
 }
 
@@ -428,8 +428,8 @@ brw_tcs_precompile(struct gl_context *ctx,
       key.tes_primitive_mode = GL_TRIANGLES;
    }
 
-   key.outputs_written = prog->nir->info.outputs_written;
-   key.patch_outputs_written = prog->nir->info.patch_outputs_written;
+   key.outputs_written = prog->nir->info->outputs_written;
+   key.patch_outputs_written = prog->nir->info->patch_outputs_written;
 
    success = brw_codegen_tcs_prog(brw, shader_prog, btcp, &key);
 

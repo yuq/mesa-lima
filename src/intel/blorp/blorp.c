@@ -224,7 +224,7 @@ brw_blorp_compile_nir_shader(struct blorp_context *blorp, struct nir_shader *nir
    prog_data->persample_msaa_dispatch = wm_prog_data.persample_dispatch;
    prog_data->flat_inputs = wm_prog_data.flat_inputs;
    prog_data->num_varying_inputs = wm_prog_data.num_varying_inputs;
-   prog_data->inputs_read = nir->info.inputs_read;
+   prog_data->inputs_read = nir->info->inputs_read;
 
    assert(wm_prog_data.base.nr_params == 0);
 

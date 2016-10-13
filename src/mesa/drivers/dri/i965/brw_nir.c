@@ -220,7 +220,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
       nir_foreach_function(function, nir) {
          if (function->impl) {
             nir_foreach_block(block, function->impl) {
-               remap_vs_attrs(block, &nir->info);
+               remap_vs_attrs(block, nir->info);
             }
          }
       }

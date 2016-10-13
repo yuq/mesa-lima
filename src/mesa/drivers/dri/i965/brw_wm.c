@@ -61,7 +61,7 @@ assign_fs_binding_table_offsets(const struct gen_device_info *devinfo,
                                               shader_prog, prog, &prog_data->base,
                                               next_binding_table_offset);
 
-   if (prog->nir->info.outputs_read && !key->coherent_fb_fetch) {
+   if (prog->nir->info->outputs_read && !key->coherent_fb_fetch) {
       prog_data->binding_table.render_target_read_start =
          next_binding_table_offset;
       next_binding_table_offset += key->nr_color_regions;
@@ -357,7 +357,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
           * a shader w/a on IVB; fixable with just SCS on HSW.
           */
          if (brw->gen == 7 && !brw->is_haswell &&
-             prog->nir->info.uses_texture_gather) {
+             prog->nir->info->uses_texture_gather) {
             if (img->InternalFormat == GL_RG32F)
                key->gather_channel_quirk_mask |= 1 << s;
          }
@@ -365,7 +365,7 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
          /* Gen6's gather4 is broken for UINT/SINT; we treat them as
           * UNORM/FLOAT instead and fix it in the shader.
           */
-         if (brw->gen == 6 && prog->nir->info.uses_texture_gather) {
+         if (brw->gen == 6 && prog->nir->info->uses_texture_gather) {
             key->gen6_gather_wa[s] = gen6_gather_workaround(img->InternalFormat);
          }
 
@@ -448,12 +448,12 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
     */
    if (brw->gen < 6) {
       /* _NEW_COLOR */
-      if (fp->program.Base.nir->info.fs.uses_discard ||
+      if (fp->program.Base.nir->info->fs.uses_discard ||
           ctx->Color.AlphaEnabled) {
          lookup |= IZ_PS_KILL_ALPHATEST_BIT;
       }
 
-      if (fp->program.Base.nir->info.outputs_written &
+      if (fp->program.Base.nir->info->outputs_written &
           BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
          lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
       }
@@ -544,7 +544,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */
    if (brw->gen < 6 ||
-       _mesa_bitcount_64(fp->program.Base.nir->info.inputs_read &
+       _mesa_bitcount_64(fp->program.Base.nir->info->inputs_read &
                          BRW_FS_VARYING_INPUT_MASK) > 16) {
       key->input_slots_valid = brw->vue_map_geom_out.slots_valid;
    }
@@ -606,10 +606,10 @@ brw_fs_precompile(struct gl_context *ctx,
 
    memset(&key, 0, sizeof(key));
 
-   uint64_t outputs_written = fp->Base.nir->info.outputs_written;
+   uint64_t outputs_written = fp->Base.nir->info->outputs_written;
 
    if (brw->gen < 6) {
-      if (fp->Base.nir->info.fs.uses_discard)
+      if (fp->Base.nir->info->fs.uses_discard)
          key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
 
       if (outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
@@ -620,10 +620,10 @@ brw_fs_precompile(struct gl_context *ctx,
       key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
    }
 
-   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.nir->info.inputs_read &
+   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.nir->info->inputs_read &
                                          BRW_FS_VARYING_INPUT_MASK) > 16) {
       key.input_slots_valid =
-         fp->Base.nir->info.inputs_read | VARYING_BIT_POS;
+         fp->Base.nir->info->inputs_read | VARYING_BIT_POS;
    }
 
    brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);

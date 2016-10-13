@@ -224,7 +224,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 	}
 
 	/* Vulkan uses the separate-shader linking model */
-	nir->info.separate_shader = true;
+	nir->info->separate_shader = true;
 
 	//   nir = brw_preprocess_nir(compiler, nir);
 
@@ -370,8 +370,8 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	unsigned code_size = 0;
 
 	if (module->nir)
-		_mesa_sha1_compute(module->nir->info.name,
-				   strlen(module->nir->info.name),
+		_mesa_sha1_compute(module->nir->info->name,
+				   strlen(module->nir->info->name),
 				   module->sha1);
 
 	radv_hash_shader(sha1, module, entrypoint, spec_info, layout, key);
@@ -1216,7 +1216,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 	if (!modules[MESA_SHADER_FRAGMENT]) {
 		nir_builder fs_b;
 		nir_builder_init_simple_shader(&fs_b, NULL, MESA_SHADER_FRAGMENT, NULL);
-		fs_b.shader->info.name = ralloc_strdup(fs_b.shader, "noop_fs");
+		fs_b.shader->info->name = ralloc_strdup(fs_b.shader, "noop_fs");
 		fs_m.nir = fs_b.shader;
 		modules[MESA_SHADER_FRAGMENT] = &fs_m;
 	}

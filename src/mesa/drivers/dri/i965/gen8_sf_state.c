@@ -95,7 +95,7 @@ upload_sbe(struct brw_context *brw)
       /* prepare the active component dwords */
       int input_index = 0;
       for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-         if (!(brw->fragment_program->Base.nir->info.inputs_read &
+         if (!(brw->fragment_program->Base.nir->info->inputs_read &
                BITFIELD64_BIT(attr))) {
             continue;
          }

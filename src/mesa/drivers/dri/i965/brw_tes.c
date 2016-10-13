@@ -235,9 +235,9 @@ brw_tes_populate_key(struct brw_context *brw,
 {
 
    uint64_t per_vertex_slots =
-      brw->tess_eval_program->Base.nir->info.inputs_read;
+      brw->tess_eval_program->Base.nir->info->inputs_read;
    uint32_t per_patch_slots =
-      brw->tess_eval_program->Base.nir->info.patch_inputs_read;
+      brw->tess_eval_program->Base.nir->info->patch_inputs_read;
 
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
@@ -253,9 +253,9 @@ brw_tes_populate_key(struct brw_context *brw,
     */
    if (brw->tess_ctrl_program) {
       per_vertex_slots |=
-         brw->tess_ctrl_program->Base.nir->info.outputs_written;
+         brw->tess_ctrl_program->Base.nir->info->outputs_written;
       per_patch_slots |=
-         brw->tess_ctrl_program->Base.nir->info.patch_outputs_written;
+         brw->tess_ctrl_program->Base.nir->info->patch_outputs_written;
    }
 
    /* Ignore gl_TessLevelInner/Outer - we treat them as system values,
@@ -316,14 +316,14 @@ brw_tes_precompile(struct gl_context *ctx,
    memset(&key, 0, sizeof(key));
 
    key.program_string_id = btep->id;
-   key.inputs_read = prog->nir->info.inputs_read;
-   key.patch_inputs_read = prog->nir->info.patch_inputs_read;
+   key.inputs_read = prog->nir->info->inputs_read;
+   key.patch_inputs_read = prog->nir->info->patch_inputs_read;
 
    if (shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
       struct gl_program *tcp =
          shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
-      key.inputs_read |= tcp->nir->info.outputs_written;
-      key.patch_inputs_read |= tcp->nir->info.patch_outputs_written;
+      key.inputs_read |= tcp->nir->info->outputs_written;
+      key.patch_inputs_read |= tcp->nir->info->patch_outputs_written;
    }
 
    /* Ignore gl_TessLevelInner/Outer - they're system values. */

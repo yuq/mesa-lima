@@ -698,7 +698,7 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
    stage_name = _mesa_shader_stage_to_string(stage);
    stage_abbrev = _mesa_shader_stage_to_abbrev(stage);
    is_passthrough_shader =
-      nir->info.name && strcmp(nir->info.name, "passthrough") == 0;
+      nir->info->name && strcmp(nir->info->name, "passthrough") == 0;
 }
 
 bool
@@ -1212,7 +1212,7 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
       stage_prog_data->binding_table.shader_time_start = 0xd0d0d0d0;
    }
 
-   if (prog->nir->info.uses_texture_gather) {
+   if (prog->nir->info->uses_texture_gather) {
       if (devinfo->gen >= 8) {
          stage_prog_data->binding_table.gather_texture_start =
             stage_prog_data->binding_table.texture_start;
@@ -1351,13 +1351,13 @@ brw_compile_tes(const struct brw_compiler *compiler,
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_EVAL];
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
-   nir->info.inputs_read = key->inputs_read;
-   nir->info.patch_inputs_read = key->patch_inputs_read;
+   nir->info->inputs_read = key->inputs_read;
+   nir->info->patch_inputs_read = key->patch_inputs_read;
 
    struct brw_vue_map input_vue_map;
    brw_compute_tess_vue_map(&input_vue_map,
-                            nir->info.inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                            nir->info.patch_inputs_read);
+                            nir->info->inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+                            nir->info->patch_inputs_read);
 
    nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
    brw_nir_lower_tes_inputs(nir, &input_vue_map);
@@ -1365,8 +1365,8 @@ brw_compile_tes(const struct brw_compiler *compiler,
    nir = brw_postprocess_nir(nir, compiler->devinfo, is_scalar);
 
    brw_compute_vue_map(devinfo, &prog_data->base.vue_map,
-                       nir->info.outputs_written,
-                       nir->info.separate_shader);
+                       nir->info->outputs_written,
+                       nir->info->separate_shader);
 
    unsigned output_size_bytes = prog_data->base.vue_map.num_slots * 4 * 4;
 
@@ -1380,7 +1380,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
 
-   bool need_patch_header = nir->info.system_values_read &
+   bool need_patch_header = nir->info->system_values_read &
       (BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_OUTER) |
        BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_INNER));
 
@@ -1417,9 +1417,9 @@ brw_compile_tes(const struct brw_compiler *compiler,
       if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
          g.enable_debug(ralloc_asprintf(mem_ctx,
                                         "%s tessellation evaluation shader %s",
-                                        nir->info.label ? nir->info.label
+                                        nir->info->label ? nir->info->label
                                                         : "unnamed",
-                                        nir->info.name));
+                                        nir->info->name));
       }
 
       g.generate_code(v.cfg, 8);

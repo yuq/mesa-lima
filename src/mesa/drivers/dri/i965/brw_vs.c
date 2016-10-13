@@ -151,8 +151,8 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    uint64_t outputs_written =
       brw_vs_outputs_written(brw, key,
-                             vp->program.Base.nir->info.outputs_written);
-   prog_data.inputs_read = vp->program.Base.nir->info.inputs_read;
+                             vp->program.Base.nir->info->outputs_written);
+   prog_data.inputs_read = vp->program.Base.nir->info->inputs_read;
 
    if (key->copy_edgeflag) {
       prog_data.inputs_read |= VERT_BIT_EDGEFLAG;
@@ -340,7 +340,7 @@ brw_vs_populate_key(struct brw_context *brw,
       }
    }
 
-   if (prog->nir->info.outputs_written &
+   if (prog->nir->info->outputs_written &
        (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
         VARYING_BIT_BFC1)) {
       /* _NEW_LIGHT | _NEW_BUFFERS */
@@ -401,7 +401,7 @@ brw_vs_precompile(struct gl_context *ctx,
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
    key.program_string_id = bvp->id;
    key.clamp_vertex_color =
-      (prog->nir->info.outputs_written &
+      (prog->nir->info->outputs_written &
        (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
         VARYING_BIT_BFC1));
 

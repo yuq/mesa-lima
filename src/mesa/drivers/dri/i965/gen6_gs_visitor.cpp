@@ -64,7 +64,7 @@ gen6_gs_visitor::emit_prolog()
    this->vertex_output = src_reg(this,
                                  glsl_type::uint_type,
                                  (prog_data->vue_map.num_slots + 1) *
-                                 nir->info.gs.vertices_out);
+                                 nir->info->gs.vertices_out);
    this->vertex_output_offset = src_reg(this, glsl_type::uint_type);
    emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_ud(0u)));
 
@@ -178,7 +178,7 @@ gen6_gs_visitor::gs_emit_vertex(int stream_id)
    dst_reg dst(this->vertex_output);
    dst.reladdr = ralloc(mem_ctx, src_reg);
    memcpy(dst.reladdr, &this->vertex_output_offset, sizeof(src_reg));
-   if (nir->info.gs.output_primitive == GL_POINTS) {
+   if (nir->info->gs.output_primitive == GL_POINTS) {
       /* If we are outputting points, then every vertex has PrimStart and
        * PrimEnd set.
        */
@@ -207,7 +207,7 @@ gen6_gs_visitor::gs_end_primitive()
    /* Calling EndPrimitive() is optional for point output. In this case we set
     * the PrimEnd flag when we process EmitVertex().
     */
-   if (nir->info.gs.output_primitive == GL_POINTS)
+   if (nir->info->gs.output_primitive == GL_POINTS)
       return;
 
    /* Otherwise we know that the last vertex we have processed was the last
@@ -219,7 +219,7 @@ gen6_gs_visitor::gs_end_primitive()
     * comparison below (hence the num_output_vertices + 1 in the comparison
     * below).
     */
-   unsigned num_output_vertices = nir->info.gs.vertices_out;
+   unsigned num_output_vertices = nir->info->gs.vertices_out;
    emit(CMP(dst_null_ud(), this->vertex_count,
             brw_imm_ud(num_output_vertices + 1), BRW_CONDITIONAL_L));
    vec4_instruction *inst = emit(CMP(dst_null_ud(),
@@ -323,7 +323,7 @@ gen6_gs_visitor::emit_thread_end()
     * first_vertex is not zero. This is only relevant for outputs other than
     * points because in the point case we set PrimEnd on all vertices.
     */
-   if (nir->info.gs.output_primitive != GL_POINTS) {
+   if (nir->info->gs.output_primitive != GL_POINTS) {
       emit(CMP(dst_null_ud(), this->first_vertex, brw_imm_ud(0u), BRW_CONDITIONAL_Z));
       emit(IF(BRW_PREDICATE_NORMAL));
       gs_end_primitive();
@@ -625,7 +625,7 @@ gen6_gs_visitor::xfb_write()
    emit(BRW_OPCODE_ENDIF);
 
    /* Write transform feedback data for all processed vertices. */
-   for (int i = 0; i < (int)nir->info.gs.vertices_out; i++) {
+   for (int i = 0; i < (int)nir->info->gs.vertices_out; i++) {
       emit(MOV(dst_reg(sol_temp), brw_imm_d(i)));
       emit(CMP(dst_null_d(), sol_temp, this->vertex_count,
                BRW_CONDITIONAL_L));

@@ -1988,7 +1988,7 @@ vec4_visitor::run()
       if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER) && this_progress) {  \
          char filename[64];                                            \
          snprintf(filename, 64, "%s-%s-%02d-%02d-" #pass,              \
-                  stage_abbrev, nir->info.name, iteration, pass_num);  \
+                  stage_abbrev, nir->info->name, iteration, pass_num); \
                                                                        \
          backend_shader::dump_instructions(filename);                  \
       }                                                                \
@@ -2001,7 +2001,7 @@ vec4_visitor::run()
    if (unlikely(INTEL_DEBUG & DEBUG_OPTIMIZER)) {
       char filename[64];
       snprintf(filename, 64, "%s-%s-00-00-start",
-               stage_abbrev, nir->info.name);
+               stage_abbrev, nir->info->name);
 
       backend_shader::dump_instructions(filename);
    }
@@ -2126,7 +2126,7 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    /* gl_VertexID and gl_InstanceID are system values, but arrive via an
     * incoming vertex attribute.  So, add an extra slot.
     */
-   if (shader->info.system_values_read &
+   if (shader->info->system_values_read &
        (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
         BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
         BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
@@ -2135,13 +2135,14 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    }
 
    /* gl_DrawID has its very own vec4 */
-   if (shader->info.system_values_read & BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID)) {
+   if (shader->info->system_values_read &
+       BITFIELD64_BIT(SYSTEM_VALUE_DRAW_ID)) {
       nr_attributes++;
    }
 
    unsigned nr_attribute_slots =
       nr_attributes +
-      _mesa_bitcount_64(shader->info.double_inputs_read);
+      _mesa_bitcount_64(shader->info->double_inputs_read);
 
    /* The 3DSTATE_VS documentation lists the lower bound on "Vertex URB Entry
     * Read Length" as 1 in vec4 mode, and 0 in SIMD8 mode.  Empirically, in
@@ -2190,8 +2191,9 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
       if (INTEL_DEBUG & DEBUG_VS) {
          const char *debug_name =
             ralloc_asprintf(mem_ctx, "%s vertex shader %s",
-                            shader->info.label ? shader->info.label : "unnamed",
-                            shader->info.name);
+                            shader->info->label ? shader->info->label :
+                               "unnamed",
+                            shader->info->name);
 
          g.enable_debug(debug_name);
       }

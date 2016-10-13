@@ -2045,8 +2045,8 @@ generate_code(struct brw_codegen *p,
 
    if (unlikely(debug_flag)) {
       fprintf(stderr, "Native code for %s %s shader %s:\n",
-              nir->info.label ? nir->info.label : "unnamed",
-              _mesa_shader_stage_to_string(nir->stage), nir->info.name);
+              nir->info->label ? nir->info->label : "unnamed",
+              _mesa_shader_stage_to_string(nir->stage), nir->info->name);
 
       fprintf(stderr, "%s vec4 shader: %d instructions. %d loops. %u cycles. %d:%d "
                       "spills:fills. Compacted %d to %d bytes (%.0f%%)\n",

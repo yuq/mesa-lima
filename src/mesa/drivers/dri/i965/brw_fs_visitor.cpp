@@ -36,8 +36,8 @@ fs_reg *
 fs_visitor::emit_vs_system_value(int location)
 {
    fs_reg *reg = new(this->mem_ctx)
-      fs_reg(ATTR, 4 * (_mesa_bitcount_64(nir->info.inputs_read) +
-                        _mesa_bitcount_64(nir->info.double_inputs_read)),
+      fs_reg(ATTR, 4 * (_mesa_bitcount_64(nir->info->inputs_read) +
+                        _mesa_bitcount_64(nir->info->double_inputs_read)),
              BRW_REGISTER_TYPE_D);
    struct brw_vs_prog_data *vs_prog_data = brw_vs_prog_data(prog_data);
 
@@ -61,7 +61,7 @@ fs_visitor::emit_vs_system_value(int location)
       vs_prog_data->uses_instanceid = true;
       break;
    case SYSTEM_VALUE_DRAW_ID:
-      if (nir->info.system_values_read &
+      if (nir->info->system_values_read &
           (BITFIELD64_BIT(SYSTEM_VALUE_BASE_VERTEX) |
            BITFIELD64_BIT(SYSTEM_VALUE_BASE_INSTANCE) |
            BITFIELD64_BIT(SYSTEM_VALUE_VERTEX_ID_ZERO_BASE) |
@@ -415,13 +415,13 @@ fs_visitor::emit_single_fb_write(const fs_builder &bld,
    fs_reg src_depth, src_stencil;
 
    if (source_depth_to_render_target) {
-      if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
+      if (nir->info->outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
          src_depth = frag_depth;
       else
          src_depth = fs_reg(brw_vec8_grf(payload.source_depth_reg, 0));
    }
 
-   if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL))
+   if (nir->info->outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL))
       src_stencil = frag_stencil;
 
    const fs_reg sources[] = {
@@ -460,7 +460,7 @@ fs_visitor::emit_fb_writes()
       limit_dispatch_width(8, "Depth writes unsupported in SIMD16+ mode.\n");
    }
 
-   if (nir->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL)) {
+   if (nir->info->outputs_written & BITFIELD64_BIT(FRAG_RESULT_STENCIL)) {
       /* From the 'Render Target Write message' section of the docs:
        * "Output Stencil is not supported with SIMD16 Render Target Write
        * Messages."

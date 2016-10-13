@@ -178,7 +178,7 @@ calculate_attr_overrides(const struct brw_context *brw,
     */
 
    bool fs_needs_vue_header =
-      brw->fragment_program->Base.nir->info.inputs_read &
+      brw->fragment_program->Base.nir->info->inputs_read &
       (VARYING_BIT_LAYER | VARYING_BIT_VIEWPORT);
 
    *urb_entry_read_offset = fs_needs_vue_header ? 0 : 1;

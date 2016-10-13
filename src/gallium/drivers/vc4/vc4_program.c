@@ -1282,7 +1282,7 @@ emit_frag_end(struct vc4_compile *c)
         }
 
         uint32_t discard_cond = QPU_COND_ALWAYS;
-        if (c->s->info.fs.uses_discard) {
+        if (c->s->info->fs.uses_discard) {
                 qir_SF(c, c->discard);
                 discard_cond = QPU_COND_ZS;
         }
@@ -2062,7 +2062,7 @@ ntq_emit_impl(struct vc4_compile *c, nir_function_impl *impl)
 static void
 nir_to_qir(struct vc4_compile *c)
 {
-        if (c->stage == QSTAGE_FRAG && c->s->info.fs.uses_discard)
+        if (c->stage == QSTAGE_FRAG && c->s->info->fs.uses_discard)
                 c->discard = qir_MOV(c, qir_uniform_ui(c, 0));
 
         ntq_setup_inputs(c);
@@ -2463,7 +2463,7 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
 
                 /* Note: the temporary clone in c->s has been freed. */
                 nir_shader *orig_shader = key->shader_state->base.ir.nir;
-                if (orig_shader->info.outputs_written & (1 << FRAG_RESULT_DEPTH))
+                if (orig_shader->info->outputs_written & (1 << FRAG_RESULT_DEPTH))
                         shader->disable_early_z = true;
         } else {
                 shader->num_inputs = c->num_inputs;

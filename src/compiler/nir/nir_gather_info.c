@@ -30,7 +30,7 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, nir_shader *shader)
    case nir_intrinsic_discard:
    case nir_intrinsic_discard_if:
       assert(shader->stage == MESA_SHADER_FRAGMENT);
-      shader->info.fs.uses_discard = true;
+      shader->info->fs.uses_discard = true;
       break;
 
    case nir_intrinsic_load_front_face:
@@ -47,14 +47,14 @@ gather_intrinsic_info(nir_intrinsic_instr *instr, nir_shader *shader)
    case nir_intrinsic_load_local_invocation_index:
    case nir_intrinsic_load_work_group_id:
    case nir_intrinsic_load_num_work_groups:
-      shader->info.system_values_read |=
+      shader->info->system_values_read |=
          (1 << nir_system_value_from_intrinsic(instr->intrinsic));
       break;
 
    case nir_intrinsic_end_primitive:
    case nir_intrinsic_end_primitive_with_counter:
       assert(shader->stage == MESA_SHADER_GEOMETRY);
-      shader->info.gs.uses_end_primitive = 1;
+      shader->info->gs.uses_end_primitive = 1;
       break;
 
    default:
@@ -66,7 +66,7 @@ static void
 gather_tex_info(nir_tex_instr *instr, nir_shader *shader)
 {
    if (instr->op == nir_texop_tg4)
-      shader->info.uses_texture_gather = true;
+      shader->info->uses_texture_gather = true;
 }
 
 static void
@@ -127,26 +127,26 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
           shader->stage == MESA_SHADER_COMPUTE);
 
    bool uses_sample_qualifier = false;
-   shader->info.inputs_read = 0;
+   shader->info->inputs_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->inputs) {
-      shader->info.inputs_read |= get_io_mask(var, shader->stage);
+      shader->info->inputs_read |= get_io_mask(var, shader->stage);
       uses_sample_qualifier |= var->data.sample;
    }
 
    if (shader->stage == MESA_SHADER_FRAGMENT)
-      shader->info.fs.uses_sample_qualifier = uses_sample_qualifier;
+      shader->info->fs.uses_sample_qualifier = uses_sample_qualifier;
 
    /* TODO: Some day we may need to add stream support to NIR */
-   shader->info.outputs_written = 0;
+   shader->info->outputs_written = 0;
    foreach_list_typed(nir_variable, var, node, &shader->outputs)
-      shader->info.outputs_written |= get_io_mask(var, shader->stage);
+      shader->info->outputs_written |= get_io_mask(var, shader->stage);
 
-   shader->info.system_values_read = 0;
+   shader->info->system_values_read = 0;
    foreach_list_typed(nir_variable, var, node, &shader->system_values)
-      shader->info.system_values_read |= get_io_mask(var, shader->stage);
+      shader->info->system_values_read |= get_io_mask(var, shader->stage);
 
-   shader->info.num_textures = 0;
-   shader->info.num_images = 0;
+   shader->info->num_textures = 0;
+   shader->info->num_images = 0;
    nir_foreach_variable(var, &shader->uniforms) {
       const struct glsl_type *type = var->type;
       unsigned count = 1;
@@ -156,9 +156,9 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
       }
 
       if (glsl_type_is_image(type)) {
-         shader->info.num_images += count;
+         shader->info->num_images += count;
       } else if (glsl_type_is_sampler(type)) {
-         shader->info.num_textures += count;
+         shader->info->num_textures += count;
       }
    }
 

@@ -56,7 +56,7 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
 
    nir_builder b;
    nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
-   b.shader->info.name = ralloc_strdup(b.shader, "BLORP-clear");
+   b.shader->info->name = ralloc_strdup(b.shader, "BLORP-clear");
 
    nir_variable *v_color = nir_variable_create(b.shader, nir_var_shader_in,
                                                glsl_vec4_type(), "v_color");

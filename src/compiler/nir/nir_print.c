@@ -1143,11 +1143,11 @@ nir_print_shader_annotated(nir_shader *shader, FILE *fp,
 
    fprintf(fp, "shader: %s\n", gl_shader_stage_name(shader->stage));
 
-   if (shader->info.name)
-      fprintf(fp, "name: %s\n", shader->info.name);
+   if (shader->info->name)
+      fprintf(fp, "name: %s\n", shader->info->name);
 
-   if (shader->info.label)
-      fprintf(fp, "label: %s\n", shader->info.label);
+   if (shader->info->label)
+      fprintf(fp, "label: %s\n", shader->info->label);
 
    fprintf(fp, "inputs: %u\n", shader->num_inputs);
    fprintf(fp, "outputs: %u\n", shader->num_outputs);

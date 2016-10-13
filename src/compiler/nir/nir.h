@@ -1805,7 +1805,7 @@ typedef struct nir_shader {
    const struct nir_shader_compiler_options *options;
 
    /** Various bits of compile-time information about a given shader */
-   struct shader_info info;
+   struct shader_info *info;
 
    /** list of global variables in the shader (nir_variable) */
    struct exec_list globals;
@@ -1848,7 +1848,8 @@ nir_shader_get_entrypoint(nir_shader *shader)
 
 nir_shader *nir_shader_create(void *mem_ctx,
                               gl_shader_stage stage,
-                              const nir_shader_compiler_options *options);
+                              const nir_shader_compiler_options *options,
+                              shader_info *si);
 
 /** creates a register, including assigning it an index and adding it to the list */
 nir_register *nir_global_reg_create(nir_shader *shader);

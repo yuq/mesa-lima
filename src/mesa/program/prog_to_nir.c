@@ -1044,23 +1044,23 @@ prog_to_nir(const struct gl_program *prog,
 
    ptn_add_output_stores(c);
 
-   s->info.name = ralloc_asprintf(s, "ARB%d", prog->Id);
-   s->info.num_textures = util_last_bit(prog->SamplersUsed);
-   s->info.num_ubos = 0;
-   s->info.num_abos = 0;
-   s->info.num_ssbos = 0;
-   s->info.num_images = 0;
-   s->info.inputs_read = prog->InputsRead;
-   s->info.outputs_written = prog->OutputsWritten;
-   s->info.system_values_read = prog->SystemValuesRead;
-   s->info.uses_texture_gather = false;
-   s->info.uses_clip_distance_out = false;
-   s->info.separate_shader = false;
+   s->info->name = ralloc_asprintf(s, "ARB%d", prog->Id);
+   s->info->num_textures = util_last_bit(prog->SamplersUsed);
+   s->info->num_ubos = 0;
+   s->info->num_abos = 0;
+   s->info->num_ssbos = 0;
+   s->info->num_images = 0;
+   s->info->inputs_read = prog->InputsRead;
+   s->info->outputs_written = prog->OutputsWritten;
+   s->info->system_values_read = prog->SystemValuesRead;
+   s->info->uses_texture_gather = false;
+   s->info->uses_clip_distance_out = false;
+   s->info->separate_shader = false;
 
    if (stage == MESA_SHADER_FRAGMENT) {
       struct gl_fragment_program *fp = (struct gl_fragment_program *)prog;
 
-      s->info.fs.uses_discard = fp->UsesKill;
+      s->info->fs.uses_discard = fp->UsesKill;
    }
 
 fail:
