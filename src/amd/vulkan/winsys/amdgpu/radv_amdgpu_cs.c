@@ -187,12 +187,22 @@ static void radv_amdgpu_cs_grow(struct radeon_winsys_cs *_cs, size_t min_size)
 	}
 
 	if (!cs->ws->use_ib_bos) {
-		uint64_t ib_size = MAX2((cs->base.cdw + min_size) * 4 + 16,
-					cs->base.max_dw * 4 * 2);
-		uint32_t *new_buf = realloc(cs->base.buf, ib_size);
+		const uint64_t limit_dws = 0xffff8;
+		uint64_t ib_dws = MAX2(cs->base.cdw + min_size,
+				       MIN2(cs->base.max_dw * 2, limit_dws));
+
+		/* The total ib size cannot exceed limit_dws dwords. */
+		if (ib_dws > limit_dws)
+		{
+			cs->failed = true;
+			cs->base.cdw = 0;
+			return;
+		}
+
+		uint32_t *new_buf = realloc(cs->base.buf, ib_dws * 4);
 		if (new_buf) {
 			cs->base.buf = new_buf;
-			cs->base.max_dw = ib_size / 4;
+			cs->base.max_dw = ib_dws;
 		} else {
 			cs->failed = true;
 			cs->base.cdw = 0;
