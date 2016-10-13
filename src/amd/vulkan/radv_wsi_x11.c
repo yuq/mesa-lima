@@ -579,6 +579,7 @@ x11_acquire_next_image(struct radv_swapchain *radv_chain,
 				/* We found a non-busy image */
 				xshmfence_await(chain->images[i].shm_fence);
 				*image_index = i;
+				chain->images[i].busy = true;
 				return VK_SUCCESS;
 			}
 		}
