@@ -434,20 +434,14 @@ x11_surface_get_present_modes(VkIcdSurfaceBase *surface,
    return VK_SUCCESS;
 }
 
-VkResult anv_CreateXcbSurfaceKHR(
-    VkInstance                                  _instance,
-    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkSurfaceKHR*                               pSurface)
+static VkResult anv_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
+                                       const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+                                       VkSurfaceKHR *pSurface)
 {
-   ANV_FROM_HANDLE(anv_instance, instance, _instance);
-
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR);
-
    VkIcdSurfaceXcb *surface;
 
-   surface = vk_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
-                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   surface = vk_alloc(pAllocator, sizeof *surface, 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (surface == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -456,7 +450,43 @@ VkResult anv_CreateXcbSurfaceKHR(
    surface->window = pCreateInfo->window;
 
    *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
+   return VK_SUCCESS;
+}
 
+VkResult anv_CreateXcbSurfaceKHR(
+    VkInstance                                  _instance,
+    const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkSurfaceKHR*                               pSurface)
+{
+   ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   const VkAllocationCallbacks *alloc;
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR);
+
+   if (pAllocator)
+     alloc = pAllocator;
+   else
+     alloc = &instance->alloc;
+
+   return anv_create_xcb_surface(alloc, pCreateInfo, pSurface);
+}
+
+static VkResult anv_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
+                                        const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+                                        VkSurfaceKHR *pSurface)
+{
+   VkIcdSurfaceXlib *surface;
+
+   surface = vk_alloc(pAllocator, sizeof *surface, 8,
+                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (surface == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   surface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
+   surface->dpy = pCreateInfo->dpy;
+   surface->window = pCreateInfo->window;
+
+   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
    return VK_SUCCESS;
 }
 
@@ -467,23 +497,16 @@ VkResult anv_CreateXlibSurfaceKHR(
     VkSurfaceKHR*                               pSurface)
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
+   const VkAllocationCallbacks *alloc;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR);
 
-   VkIcdSurfaceXlib *surface;
+   if (pAllocator)
+     alloc = pAllocator;
+   else
+     alloc = &instance->alloc;
 
-   surface = vk_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
-                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (surface == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
-
-   surface->base.platform = VK_ICD_WSI_PLATFORM_XLIB;
-   surface->dpy = pCreateInfo->dpy;
-   surface->window = pCreateInfo->window;
-
-   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
-
-   return VK_SUCCESS;
+   return anv_create_xlib_surface(alloc, pCreateInfo, pSurface);
 }
 
 struct x11_image {
