@@ -112,7 +112,7 @@ add_surface(struct anv_image *image, struct anv_surface *surf)
 
    surf->offset = align_u32(image->size, surf->isl.alignment);
    image->size = surf->offset + surf->isl.size;
-   image->alignment = MAX(image->alignment, surf->isl.alignment);
+   image->alignment = MAX2(image->alignment, surf->isl.alignment);
 }
 
 /**

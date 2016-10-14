@@ -82,9 +82,6 @@ extern "C" {
 #define anv_noreturn __attribute__((__noreturn__))
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
 static inline uint32_t
 align_down_npot_u32(uint32_t v, uint32_t a)
 {
@@ -126,7 +123,7 @@ anv_minify(uint32_t n, uint32_t levels)
    if (unlikely(n == 0))
       return 0;
    else
-      return MAX(n >> levels, 1);
+      return MAX2(n >> levels, 1);
 }
 
 static inline float
