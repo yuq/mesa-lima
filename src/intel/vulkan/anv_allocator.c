@@ -272,7 +272,7 @@ anv_block_pool_init(struct anv_block_pool *pool,
    if (ftruncate(pool->fd, BLOCK_POOL_MEMFD_SIZE) == -1)
       return;
 
-   anv_vector_init(&pool->mmap_cleanups,
+   u_vector_init(&pool->mmap_cleanups,
                    round_to_power_of_two(sizeof(struct anv_mmap_cleanup)), 128);
 
    pool->state.next = 0;
@@ -289,14 +289,14 @@ anv_block_pool_finish(struct anv_block_pool *pool)
 {
    struct anv_mmap_cleanup *cleanup;
 
-   anv_vector_foreach(cleanup, &pool->mmap_cleanups) {
+   u_vector_foreach(cleanup, &pool->mmap_cleanups) {
       if (cleanup->map)
          munmap(cleanup->map, cleanup->size);
       if (cleanup->gem_handle)
          anv_gem_close(pool->device, cleanup->gem_handle);
    }
 
-   anv_vector_finish(&pool->mmap_cleanups);
+   u_vector_finish(&pool->mmap_cleanups);
 
    close(pool->fd);
 }
@@ -420,7 +420,7 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
    assert(center_bo_offset >= pool->back_state.end);
    assert(size - center_bo_offset >= pool->state.end);
 
-   cleanup = anv_vector_add(&pool->mmap_cleanups);
+   cleanup = u_vector_add(&pool->mmap_cleanups);
    if (!cleanup)
       goto fail;
    *cleanup = ANV_MMAP_CLEANUP_INIT;

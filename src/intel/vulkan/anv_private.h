@@ -46,6 +46,7 @@
 #include "brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"
+#include "util/u_vector.h"
 
 /* Pre-declarations needed for WSI entrypoints */
 struct wl_surface;
@@ -241,51 +242,6 @@ void anv_abortfv(const char *format, va_list va) anv_noreturn;
  * wraparound.
  */
 
-struct anv_vector {
-   uint32_t head;
-   uint32_t tail;
-   uint32_t element_size;
-   uint32_t size;
-   void *data;
-};
-
-int anv_vector_init(struct anv_vector *queue, uint32_t element_size, uint32_t size);
-void *anv_vector_add(struct anv_vector *queue);
-void *anv_vector_remove(struct anv_vector *queue);
-
-static inline int
-anv_vector_length(struct anv_vector *queue)
-{
-   return (queue->head - queue->tail) / queue->element_size;
-}
-
-static inline void *
-anv_vector_head(struct anv_vector *vector)
-{
-   assert(vector->tail < vector->head);
-   return (void *)((char *)vector->data +
-                   ((vector->head - vector->element_size) &
-                    (vector->size - 1)));
-}
-
-static inline void *
-anv_vector_tail(struct anv_vector *vector)
-{
-   return (void *)((char *)vector->data + (vector->tail & (vector->size - 1)));
-}
-
-static inline void
-anv_vector_finish(struct anv_vector *queue)
-{
-   free(queue->data);
-}
-
-#define anv_vector_foreach(elem, queue)                                  \
-   static_assert(__builtin_types_compatible_p(__typeof__(queue), struct anv_vector *), ""); \
-   for (uint32_t __anv_vector_offset = (queue)->tail;                                \
-        elem = (queue)->data + (__anv_vector_offset & ((queue)->size - 1)), __anv_vector_offset < (queue)->head; \
-        __anv_vector_offset += (queue)->element_size)
-
 struct anv_bo {
    uint32_t gem_handle;
 
@@ -364,7 +320,7 @@ struct anv_block_pool {
     * Array of mmaps and gem handles owned by the block pool, reclaimed when
     * the block pool is destroyed.
     */
-   struct anv_vector mmap_cleanups;
+   struct u_vector mmap_cleanups;
 
    uint32_t block_size;
 
@@ -1236,13 +1192,13 @@ struct anv_cmd_buffer {
     *
     * initialized by anv_cmd_buffer_init_batch_bo_chain()
     */
-   struct anv_vector                            seen_bbos;
+   struct u_vector                            seen_bbos;
 
    /* A vector of int32_t's for every block of binding tables.
     *
     * initialized by anv_cmd_buffer_init_batch_bo_chain()
     */
-   struct anv_vector                            bt_blocks;
+   struct u_vector                            bt_blocks;
    uint32_t                                     bt_next;
    struct anv_reloc_list                        surface_relocs;
 

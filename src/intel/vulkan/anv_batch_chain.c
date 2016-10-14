@@ -434,7 +434,7 @@ anv_cmd_buffer_surface_base_address(struct anv_cmd_buffer *cmd_buffer)
 {
    return (struct anv_address) {
       .bo = &cmd_buffer->device->surface_state_block_pool.bo,
-      .offset = *(int32_t *)anv_vector_head(&cmd_buffer->bt_blocks),
+      .offset = *(int32_t *)u_vector_head(&cmd_buffer->bt_blocks),
    };
 }
 
@@ -494,7 +494,7 @@ anv_cmd_buffer_chain_batch(struct anv_batch *batch, void *_data)
    if (result != VK_SUCCESS)
       return result;
 
-   struct anv_batch_bo **seen_bbo = anv_vector_add(&cmd_buffer->seen_bbos);
+   struct anv_batch_bo **seen_bbo = u_vector_add(&cmd_buffer->seen_bbos);
    if (seen_bbo == NULL) {
       anv_batch_bo_destroy(new_bbo, cmd_buffer);
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -528,7 +528,7 @@ anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
 {
    struct anv_block_pool *block_pool =
        &cmd_buffer->device->surface_state_block_pool;
-   int32_t *bt_block = anv_vector_head(&cmd_buffer->bt_blocks);
+   int32_t *bt_block = u_vector_head(&cmd_buffer->bt_blocks);
    struct anv_state state;
 
    state.alloc_size = align_u32(entries * 4, 32);
@@ -567,7 +567,7 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
    struct anv_block_pool *block_pool =
        &cmd_buffer->device->surface_state_block_pool;
 
-   int32_t *offset = anv_vector_add(&cmd_buffer->bt_blocks);
+   int32_t *offset = u_vector_add(&cmd_buffer->bt_blocks);
    if (offset == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -603,15 +603,15 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    anv_batch_bo_start(batch_bo, &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
-   int success = anv_vector_init(&cmd_buffer->seen_bbos,
+   int success = u_vector_init(&cmd_buffer->seen_bbos,
                                  sizeof(struct anv_bo *),
                                  8 * sizeof(struct anv_bo *));
    if (!success)
       goto fail_batch_bo;
 
-   *(struct anv_batch_bo **)anv_vector_add(&cmd_buffer->seen_bbos) = batch_bo;
+   *(struct anv_batch_bo **)u_vector_add(&cmd_buffer->seen_bbos) = batch_bo;
 
-   success = anv_vector_init(&cmd_buffer->bt_blocks, sizeof(int32_t),
+   success = u_vector_init(&cmd_buffer->bt_blocks, sizeof(int32_t),
                              8 * sizeof(int32_t));
    if (!success)
       goto fail_seen_bbos;
@@ -630,9 +630,9 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 
  fail_bt_blocks:
-   anv_vector_finish(&cmd_buffer->bt_blocks);
+   u_vector_finish(&cmd_buffer->bt_blocks);
  fail_seen_bbos:
-   anv_vector_finish(&cmd_buffer->seen_bbos);
+   u_vector_finish(&cmd_buffer->seen_bbos);
  fail_batch_bo:
    anv_batch_bo_destroy(batch_bo, cmd_buffer);
 
@@ -643,15 +643,15 @@ void
 anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
    int32_t *bt_block;
-   anv_vector_foreach(bt_block, &cmd_buffer->bt_blocks) {
+   u_vector_foreach(bt_block, &cmd_buffer->bt_blocks) {
       anv_block_pool_free(&cmd_buffer->device->surface_state_block_pool,
                           *bt_block);
    }
-   anv_vector_finish(&cmd_buffer->bt_blocks);
+   u_vector_finish(&cmd_buffer->bt_blocks);
 
    anv_reloc_list_finish(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc);
 
-   anv_vector_finish(&cmd_buffer->seen_bbos);
+   u_vector_finish(&cmd_buffer->seen_bbos);
 
    /* Destroy all of the batch buffers */
    list_for_each_entry_safe(struct anv_batch_bo, bbo,
@@ -679,12 +679,12 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
                       &cmd_buffer->batch,
                       GEN8_MI_BATCH_BUFFER_START_length * 4);
 
-   while (anv_vector_length(&cmd_buffer->bt_blocks) > 1) {
-      int32_t *bt_block = anv_vector_remove(&cmd_buffer->bt_blocks);
+   while (u_vector_length(&cmd_buffer->bt_blocks) > 1) {
+      int32_t *bt_block = u_vector_remove(&cmd_buffer->bt_blocks);
       anv_block_pool_free(&cmd_buffer->device->surface_state_block_pool,
                           *bt_block);
    }
-   assert(anv_vector_length(&cmd_buffer->bt_blocks) == 1);
+   assert(u_vector_length(&cmd_buffer->bt_blocks) == 1);
    cmd_buffer->bt_next = 0;
 
    cmd_buffer->surface_relocs.num_relocs = 0;
@@ -693,7 +693,7 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->seen_bbos.head = 0;
    cmd_buffer->seen_bbos.tail = 0;
 
-   *(struct anv_batch_bo **)anv_vector_add(&cmd_buffer->seen_bbos) =
+   *(struct anv_batch_bo **)u_vector_add(&cmd_buffer->seen_bbos) =
       anv_cmd_buffer_current_batch_bo(cmd_buffer);
 }
 
@@ -760,7 +760,7 @@ anv_cmd_buffer_add_seen_bbos(struct anv_cmd_buffer *cmd_buffer,
                              struct list_head *list)
 {
    list_for_each_entry(struct anv_batch_bo, bbo, list, link) {
-      struct anv_batch_bo **bbo_ptr = anv_vector_add(&cmd_buffer->seen_bbos);
+      struct anv_batch_bo **bbo_ptr = u_vector_add(&cmd_buffer->seen_bbos);
       if (bbo_ptr == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
@@ -1064,7 +1064,7 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
     * relocations to the validate list.
     */
    struct anv_batch_bo **bbo;
-   anv_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
+   u_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
       adjust_relocations_to_block_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        &(*bbo)->last_ss_pool_bo_offset);
 
@@ -1100,14 +1100,14 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
     * the correct indices in the object array.  We have to do this after we
     * reorder the list above as some of the indices may have changed.
     */
-   anv_vector_foreach(bbo, &cmd_buffer->seen_bbos)
+   u_vector_foreach(bbo, &cmd_buffer->seen_bbos)
       anv_cmd_buffer_process_relocs(cmd_buffer, &(*bbo)->relocs);
 
    anv_cmd_buffer_process_relocs(cmd_buffer, &cmd_buffer->surface_relocs);
 
    if (!cmd_buffer->device->info.has_llc) {
       __builtin_ia32_mfence();
-      anv_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
+      u_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
          for (uint32_t i = 0; i < (*bbo)->length; i += CACHELINE_SIZE)
             __builtin_ia32_clflush((*bbo)->bo.map + i);
       }
