@@ -27,11 +27,8 @@
 #include <xcb/dri3.h>
 #include <xcb/present.h>
 
-#include "anv_private.h"
 #include "wsi_common_x11.h"
-
-#include "vk_format_info.h"
-#include "util/hash_table.h"
+#include "anv_private.h"
 
 VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
     VkPhysicalDevice                            physicalDevice,
@@ -41,7 +38,7 @@ VkBool32 anv_GetPhysicalDeviceXcbPresentationSupportKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
 
-   return anv_get_physical_device_xcb_presentation_support(
+   return wsi_get_physical_device_xcb_presentation_support(
       &device->wsi_device,
       &device->instance->alloc,
       queueFamilyIndex, connection, visual_id);
@@ -55,7 +52,7 @@ VkBool32 anv_GetPhysicalDeviceXlibPresentationSupportKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
 
-   return anv_get_physical_device_xcb_presentation_support(
+   return wsi_get_physical_device_xcb_presentation_support(
       &device->wsi_device,
       &device->instance->alloc,
       queueFamilyIndex, XGetXCBConnection(dpy), visualID);
@@ -76,7 +73,7 @@ VkResult anv_CreateXcbSurfaceKHR(
    else
      alloc = &instance->alloc;
 
-   return anv_create_xcb_surface(alloc, pCreateInfo, pSurface);
+   return wsi_create_xcb_surface(alloc, pCreateInfo, pSurface);
 }
 
 VkResult anv_CreateXlibSurfaceKHR(
@@ -95,5 +92,5 @@ VkResult anv_CreateXlibSurfaceKHR(
    else
      alloc = &instance->alloc;
 
-   return anv_create_xlib_surface(alloc, pCreateInfo, pSurface);
+   return wsi_create_xlib_surface(alloc, pCreateInfo, pSurface);
 }

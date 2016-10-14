@@ -25,7 +25,7 @@
 #include "wsi_common.h"
 #include "vk_format_info.h"
 
-static const struct anv_wsi_callbacks anv_wsi_cbs = {
+static const struct wsi_callbacks wsi_cbs = {
    .get_phys_device_format_properties = anv_GetPhysicalDeviceFormatProperties,
 };
 
@@ -37,18 +37,18 @@ anv_init_wsi(struct anv_physical_device *physical_device)
    memset(physical_device->wsi_device.wsi, 0, sizeof(physical_device->wsi_device.wsi));
 
 #ifdef VK_USE_PLATFORM_XCB_KHR
-   result = anv_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
+   result = wsi_x11_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
    if (result != VK_SUCCESS)
       return result;
 #endif
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-   result = anv_wl_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc,
+   result = wsi_wl_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc,
                             anv_physical_device_to_handle(physical_device),
-                            &anv_wsi_cbs);
+                            &wsi_cbs);
    if (result != VK_SUCCESS) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
-      anv_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
+      wsi_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
 #endif
       return result;
    }
@@ -61,10 +61,10 @@ void
 anv_finish_wsi(struct anv_physical_device *physical_device)
 {
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
-   anv_wl_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
+   wsi_wl_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
 #endif
 #ifdef VK_USE_PLATFORM_XCB_KHR
-   anv_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
+   wsi_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);
 #endif
 }
 
@@ -87,7 +87,7 @@ VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->wsi_device.wsi[surface->platform];
+   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
    return iface->get_support(surface, &device->wsi_device,
                              &device->instance->alloc,
@@ -101,7 +101,7 @@ VkResult anv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->wsi_device.wsi[surface->platform];
+   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
    return iface->get_capabilities(surface, pSurfaceCapabilities);
 }
@@ -114,7 +114,7 @@ VkResult anv_GetPhysicalDeviceSurfaceFormatsKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->wsi_device.wsi[surface->platform];
+   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
    return iface->get_formats(surface, &device->wsi_device, pSurfaceFormatCount,
                              pSurfaceFormats);
@@ -128,7 +128,7 @@ VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
 {
    ANV_FROM_HANDLE(anv_physical_device, device, physicalDevice);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
-   struct anv_wsi_interface *iface = device->wsi_device.wsi[surface->platform];
+   struct wsi_interface *iface = device->wsi_device.wsi[surface->platform];
 
    return iface->get_present_modes(surface, pPresentModeCount,
                                    pPresentModes);
@@ -245,7 +245,7 @@ x11_anv_wsi_image_free(VkDevice device,
    anv_FreeMemory(device, memory_h, pAllocator);
 }
 
-static const struct anv_wsi_image_fns anv_wsi_image_fns = {
+static const struct wsi_image_fns anv_wsi_image_fns = {
    .create_wsi_image = x11_anv_wsi_image_create,
    .free_wsi_image = x11_anv_wsi_image_free,
 };
@@ -258,9 +258,9 @@ VkResult anv_CreateSwapchainKHR(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, pCreateInfo->surface);
-   struct anv_wsi_interface *iface =
+   struct wsi_interface *iface =
       device->instance->physicalDevice.wsi_device.wsi[surface->platform];
-   struct anv_swapchain *swapchain;
+   struct wsi_swapchain *swapchain;
    const VkAllocationCallbacks *alloc;
 
    if (pAllocator)
@@ -280,7 +280,7 @@ VkResult anv_CreateSwapchainKHR(
    for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++)
       swapchain->fences[i] = VK_NULL_HANDLE;
 
-   *pSwapchain = anv_swapchain_to_handle(swapchain);
+   *pSwapchain = wsi_swapchain_to_handle(swapchain);
 
    return VK_SUCCESS;
 }
@@ -291,7 +291,7 @@ void anv_DestroySwapchainKHR(
     const VkAllocationCallbacks*                 pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
-   ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
+   ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
    const VkAllocationCallbacks *alloc;
 
    if (pAllocator)
@@ -312,7 +312,7 @@ VkResult anv_GetSwapchainImagesKHR(
     uint32_t*                                    pSwapchainImageCount,
     VkImage*                                     pSwapchainImages)
 {
-   ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
+   ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
 
    return swapchain->get_images(swapchain, pSwapchainImageCount,
                                 pSwapchainImages);
@@ -326,7 +326,7 @@ VkResult anv_AcquireNextImageKHR(
     VkFence                                      fence,
     uint32_t*                                    pImageIndex)
 {
-   ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
+   ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
 
    return swapchain->acquire_next_image(swapchain, timeout, semaphore,
                                         pImageIndex);
@@ -340,7 +340,7 @@ VkResult anv_QueuePresentKHR(
    VkResult result;
 
    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
-      ANV_FROM_HANDLE(anv_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
+      ANV_FROM_HANDLE(wsi_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
 
       assert(anv_device_from_handle(swapchain->device) == queue->device);
 

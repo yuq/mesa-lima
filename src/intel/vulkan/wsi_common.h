@@ -30,8 +30,8 @@
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_icd.h>
 
-struct anv_wsi_device;
-struct anv_wsi_image_fns {
+struct wsi_device;
+struct wsi_image_fns {
    VkResult (*create_wsi_image)(VkDevice device_h,
                                 const VkSwapchainCreateInfoKHR *pCreateInfo,
                                 const VkAllocationCallbacks *pAllocator,
@@ -47,34 +47,34 @@ struct anv_wsi_image_fns {
                           VkDeviceMemory memory_h);
 };
 
-struct anv_swapchain {
+struct wsi_swapchain {
 
    VkDevice device;
    VkAllocationCallbacks alloc;
-   const struct anv_wsi_image_fns *image_fns;
+   const struct wsi_image_fns *image_fns;
    VkFence fences[3];
 
-   VkResult (*destroy)(struct anv_swapchain *swapchain,
+   VkResult (*destroy)(struct wsi_swapchain *swapchain,
                        const VkAllocationCallbacks *pAllocator);
-   VkResult (*get_images)(struct anv_swapchain *swapchain,
+   VkResult (*get_images)(struct wsi_swapchain *swapchain,
                           uint32_t *pCount, VkImage *pSwapchainImages);
-   VkResult (*acquire_next_image)(struct anv_swapchain *swap_chain,
+   VkResult (*acquire_next_image)(struct wsi_swapchain *swap_chain,
                                   uint64_t timeout, VkSemaphore semaphore,
                                   uint32_t *image_index);
-   VkResult (*queue_present)(struct anv_swapchain *swap_chain,
+   VkResult (*queue_present)(struct wsi_swapchain *swap_chain,
                              uint32_t image_index);
 };
 
-struct anv_wsi_interface {
+struct wsi_interface {
    VkResult (*get_support)(VkIcdSurfaceBase *surface,
-                           struct anv_wsi_device *wsi_device,
+                           struct wsi_device *wsi_device,
                            const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
                            VkBool32* pSupported);
    VkResult (*get_capabilities)(VkIcdSurfaceBase *surface,
                                 VkSurfaceCapabilitiesKHR* pSurfaceCapabilities);
    VkResult (*get_formats)(VkIcdSurfaceBase *surface,
-                           struct anv_wsi_device *wsi_device,
+                           struct wsi_device *wsi_device,
                            uint32_t* pSurfaceFormatCount,
                            VkSurfaceFormatKHR* pSurfaceFormats);
    VkResult (*get_present_modes)(VkIcdSurfaceBase *surface,
@@ -82,20 +82,20 @@ struct anv_wsi_interface {
                                  VkPresentModeKHR* pPresentModes);
    VkResult (*create_swapchain)(VkIcdSurfaceBase *surface,
                                 VkDevice device,
-                                struct anv_wsi_device *wsi_device,
+                                struct wsi_device *wsi_device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
-                                const struct anv_wsi_image_fns *image_fns,
-                                struct anv_swapchain **swapchain);
+                                const struct wsi_image_fns *image_fns,
+                                struct wsi_swapchain **swapchain);
 };
 
 #define VK_ICD_WSI_PLATFORM_MAX 5
 
-struct anv_wsi_device {
-    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
+struct wsi_device {
+    struct wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
 };
 
-struct anv_wsi_callbacks {
+struct wsi_callbacks {
    void (*get_phys_device_format_properties)(VkPhysicalDevice physicalDevice,
                                              VkFormat format,
                                              VkFormatProperties *pFormatProperties);
@@ -116,16 +116,18 @@ struct anv_wsi_callbacks {
    }
 
 WSI_DEFINE_NONDISP_HANDLE_CASTS(_VkIcdSurfaceBase, VkSurfaceKHR)
-WSI_DEFINE_NONDISP_HANDLE_CASTS(anv_swapchain, VkSwapchainKHR)
-VkResult anv_x11_init_wsi(struct anv_wsi_device *wsi_device,
+WSI_DEFINE_NONDISP_HANDLE_CASTS(wsi_swapchain, VkSwapchainKHR)
+
+VkResult wsi_x11_init_wsi(struct wsi_device *wsi_device,
                           const VkAllocationCallbacks *alloc);
-void anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
+void wsi_x11_finish_wsi(struct wsi_device *wsi_device,
                         const VkAllocationCallbacks *alloc);
-VkResult anv_wl_init_wsi(struct anv_wsi_device *wsi_device,
+VkResult wsi_wl_init_wsi(struct wsi_device *wsi_device,
                          const VkAllocationCallbacks *alloc,
                          VkPhysicalDevice physical_device,
-                         const struct anv_wsi_callbacks *cbs);
-void anv_wl_finish_wsi(struct anv_wsi_device *wsi_device,
+                         const struct wsi_callbacks *cbs);
+void wsi_wl_finish_wsi(struct wsi_device *wsi_device,
                        const VkAllocationCallbacks *alloc);
+
 
 #endif

@@ -473,7 +473,7 @@ struct anv_physical_device {
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
 
-    struct anv_wsi_device                       wsi_device;
+    struct wsi_device                       wsi_device;
 };
 
 struct anv_instance {

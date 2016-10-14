@@ -47,7 +47,7 @@ struct wsi_x11_connection {
 };
 
 struct wsi_x11 {
-   struct anv_wsi_interface base;
+   struct wsi_interface base;
 
    pthread_mutex_t                              mutex;
    /* Hash table of xcb_connection -> wsi_x11_connection mappings */
@@ -96,7 +96,7 @@ wsi_x11_connection_destroy(const VkAllocationCallbacks *alloc,
 }
 
 static struct wsi_x11_connection *
-wsi_x11_get_connection(struct anv_wsi_device *wsi_dev,
+wsi_x11_get_connection(struct wsi_device *wsi_dev,
 		       const VkAllocationCallbacks *alloc,
                        xcb_connection_t *conn)
 {
@@ -242,8 +242,8 @@ visual_has_alpha(xcb_visualtype_t *visual, unsigned depth)
    return (all_mask & ~rgb_mask) != 0;
 }
 
-VkBool32 anv_get_physical_device_xcb_presentation_support(
-    struct anv_wsi_device *wsi_device,
+VkBool32 wsi_get_physical_device_xcb_presentation_support(
+    struct wsi_device *wsi_device,
     VkAllocationCallbacks *alloc,
     uint32_t                                    queueFamilyIndex,
     xcb_connection_t*                           connection,
@@ -287,7 +287,7 @@ x11_surface_get_window(VkIcdSurfaceBase *icd_surface)
 
 static VkResult
 x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
-                        struct anv_wsi_device *wsi_device,
+                        struct wsi_device *wsi_device,
                         const VkAllocationCallbacks *alloc,
                         uint32_t queueFamilyIndex,
                         VkBool32* pSupported)
@@ -382,7 +382,7 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
 
 static VkResult
 x11_surface_get_formats(VkIcdSurfaceBase *surface,
-                        struct anv_wsi_device *wsi_device,
+                        struct wsi_device *wsi_device,
                         uint32_t *pSurfaceFormatCount,
                         VkSurfaceFormatKHR *pSurfaceFormats)
 {
@@ -415,7 +415,7 @@ x11_surface_get_present_modes(VkIcdSurfaceBase *surface,
    return VK_SUCCESS;
 }
 
-VkResult anv_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
+VkResult wsi_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
 				const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
 				VkSurfaceKHR *pSurface)
 {
@@ -434,7 +434,7 @@ VkResult anv_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
    return VK_SUCCESS;
 }
 
-VkResult anv_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
+VkResult wsi_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
 				 const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
 				 VkSurfaceKHR *pSurface)
 {
@@ -463,7 +463,7 @@ struct x11_image {
 };
 
 struct x11_swapchain {
-   struct anv_swapchain                        base;
+   struct wsi_swapchain                        base;
 
    xcb_connection_t *                           conn;
    xcb_window_t                                 window;
@@ -480,7 +480,7 @@ struct x11_swapchain {
 };
 
 static VkResult
-x11_get_images(struct anv_swapchain *anv_chain,
+x11_get_images(struct wsi_swapchain *anv_chain,
                uint32_t* pCount, VkImage *pSwapchainImages)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
@@ -536,7 +536,7 @@ x11_handle_dri3_present_event(struct x11_swapchain *chain,
 }
 
 static VkResult
-x11_acquire_next_image(struct anv_swapchain *anv_chain,
+x11_acquire_next_image(struct wsi_swapchain *anv_chain,
                        uint64_t timeout,
                        VkSemaphore semaphore,
                        uint32_t *image_index)
@@ -568,7 +568,7 @@ x11_acquire_next_image(struct anv_swapchain *anv_chain,
 }
 
 static VkResult
-x11_queue_present(struct anv_swapchain *anv_chain,
+x11_queue_present(struct wsi_swapchain *anv_chain,
                   uint32_t image_index)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
@@ -703,7 +703,7 @@ x11_image_finish(struct x11_swapchain *chain,
 }
 
 static VkResult
-x11_swapchain_destroy(struct anv_swapchain *anv_chain,
+x11_swapchain_destroy(struct wsi_swapchain *anv_chain,
                       const VkAllocationCallbacks *pAllocator)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
@@ -720,11 +720,11 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
 static VkResult
 x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                              VkDevice device,
-                             struct anv_wsi_device *wsi_device,
+                             struct wsi_device *wsi_device,
                              const VkSwapchainCreateInfoKHR *pCreateInfo,
                              const VkAllocationCallbacks* pAllocator,
-                             const struct anv_wsi_image_fns *image_fns,
-                             struct anv_swapchain **swapchain_out)
+                             const struct wsi_image_fns *image_fns,
+                             struct wsi_swapchain **swapchain_out)
 {
    struct x11_swapchain *chain;
    xcb_void_cookie_t cookie;
@@ -813,7 +813,7 @@ fail_register:
 }
 
 VkResult
-anv_x11_init_wsi(struct anv_wsi_device *wsi_device,
+wsi_x11_init_wsi(struct wsi_device *wsi_device,
                  const VkAllocationCallbacks *alloc)
 {
    struct wsi_x11 *wsi;
@@ -868,7 +868,7 @@ fail:
 }
 
 void
-anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
+wsi_x11_finish_wsi(struct wsi_device *wsi_device,
                    const VkAllocationCallbacks *alloc)
 {
    struct wsi_x11 *wsi =
