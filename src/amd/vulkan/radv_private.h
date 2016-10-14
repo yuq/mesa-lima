@@ -242,8 +242,6 @@ void *radv_lookup_entrypoint(const char *name);
 
 extern struct radv_dispatch_table dtable;
 
-struct radv_wsi_interaface;
-
 #define VK_ICD_WSI_PLATFORM_MAX 5
 
 struct radv_physical_device {
