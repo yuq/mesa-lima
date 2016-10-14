@@ -38,6 +38,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
+	-I$(top_srcdir)/src/vulkan/wsi \
 	-I$(top_srcdir)/src/amd \
 	-I$(top_srcdir)/src/amd/common \
 	-I$(top_builddir)/src/compiler \
@@ -93,6 +94,7 @@ libvulkan_common_la_SOURCES = $(VULKAN_SOURCES)
 
 VULKAN_LIB_DEPS += \
 	libvulkan_common.la \
+	$(top_builddir)/src/vulkan/wsi/libvulkan_wsi.la \
 	$(top_builddir)/src/amd/common/libamd_common.la \
 	$(top_builddir)/src/amd/addrlib/libamdgpu_addrlib.la \
 	$(top_builddir)/src/compiler/nir/libnir.la \

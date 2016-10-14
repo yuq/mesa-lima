@@ -59,7 +59,6 @@ VULKAN_FILES := \
 	radv_util.c \
 	radv_util.h \
 	radv_wsi.c \
-	radv_wsi.h \
 	si_cmd_buffer.c \
 	vk_format_table.c \
 	vk_format.h \

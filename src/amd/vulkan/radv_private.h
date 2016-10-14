@@ -70,6 +70,7 @@ typedef uint32_t xcb_window_t;
 
 #include "radv_entrypoints.h"
 
+#include "wsi_common.h"
 
 #define MAX_VBS         32
 #define MAX_VERTEX_ATTRIBS 32
@@ -242,8 +243,6 @@ void *radv_lookup_entrypoint(const char *name);
 
 extern struct radv_dispatch_table dtable;
 
-#define VK_ICD_WSI_PLATFORM_MAX 5
-
 struct radv_physical_device {
 	VK_LOADER_DATA                              _loader_data;
 
@@ -259,7 +258,7 @@ struct radv_physical_device {
 	uint32_t                    pci_vendor_id;
 	uint32_t                    pci_device_id;
 
-	struct radv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
+	struct wsi_device                       wsi_device;
 };
 
 struct radv_instance {
