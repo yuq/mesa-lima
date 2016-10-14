@@ -148,6 +148,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
       return 16;
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+   case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
       return vscreen->caps.caps.v1.bset.streamout_pause_resume;
    case PIPE_CAP_START_INSTANCE:
       return vscreen->caps.caps.v1.bset.start_instance;

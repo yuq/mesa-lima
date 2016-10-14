@@ -244,6 +244,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
                 /* Stream output. */
         case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
         case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+        case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
         case PIPE_CAP_MAX_STREAM_OUTPUT_SEPARATE_COMPONENTS:
         case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:
                 return 0;

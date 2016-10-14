@@ -399,6 +399,7 @@ ilo_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:
       return ILO_MAX_SO_BINDINGS;
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+   case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
       if (ilo_dev_gen(&is->dev) >= ILO_GEN(7))
          return is->dev.has_gen7_sol_reset;
       else

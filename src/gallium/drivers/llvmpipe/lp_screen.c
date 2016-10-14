@@ -200,6 +200,7 @@ llvmpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
       return 2048;
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+   case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
       return 1;
    case PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS:
       return 0;

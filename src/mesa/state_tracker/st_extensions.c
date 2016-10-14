@@ -615,7 +615,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_texture_view),                 PIPE_CAP_SAMPLER_VIEW_TARGET              },
       { o(ARB_timer_query),                  PIPE_CAP_QUERY_TIMESTAMP                  },
       { o(ARB_transform_feedback2),          PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME       },
-      { o(ARB_transform_feedback3),          PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME       },
+      { o(ARB_transform_feedback3),          PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS },
 
       { o(EXT_blend_equation_separate),      PIPE_CAP_BLEND_EQUATION_SEPARATE          },
       { o(EXT_depth_bounds_test),            PIPE_CAP_DEPTH_BOUNDS_TEST                },

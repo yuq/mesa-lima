@@ -479,6 +479,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
 		return sscreen->b.has_streamout ? 4 : 0;
 	case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+	case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
 		return sscreen->b.has_streamout ? 1 : 0;
 	case PIPE_CAP_MAX_STREAM_OUTPUT_SEPARATE_COMPONENTS:
 	case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:

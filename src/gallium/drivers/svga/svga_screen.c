@@ -298,6 +298,7 @@ svga_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_MAX_STREAM_OUTPUT_INTERLEAVED_COMPONENTS:
       return sws->have_vgpu10 ? SVGA3D_MAX_STREAMOUT_DECLS : 0;
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+   case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
       return 0;
    case PIPE_CAP_TEXTURE_MULTISAMPLE:
       return svgascreen->ms_samples ? 1 : 0;

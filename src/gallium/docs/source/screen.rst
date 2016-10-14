@@ -361,6 +361,9 @@ The integer capabilities:
   equal interpolation qualifiers.
   Components may overlap, notably when the gaps in an array of dvec3 are
   filled in.
+* ``PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS``: Whether interleaved stream
+  output mode is able to interleave across buffers. This is required for
+  ARB_transform_feedback3.
 
 
 .. _pipe_capf:

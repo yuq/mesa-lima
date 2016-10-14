@@ -307,6 +307,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 			return PIPE_MAX_SO_BUFFERS;
 		return 0;
 	case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
+	case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
 		if (is_ir3(screen))
 			return 1;
 		return 0;
