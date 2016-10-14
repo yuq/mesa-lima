@@ -198,7 +198,7 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
          struct dri2_egl_config *dri2_conf;
 
          dri2_conf = dri2_add_config(dpy, dri2_dpy->driver_configs[i],
-               count + 1, EGL_PBUFFER_BIT, NULL, visuals[i].rgba_masks);
+               count + 1, EGL_PBUFFER_BIT, NULL, visuals[j].rgba_masks);
 
          if (dri2_conf) {
             count++;
