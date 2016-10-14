@@ -2378,12 +2378,6 @@ _mesa_glsl_release_builtin_functions(void);
 extern void
 reparent_ir(exec_list *list, void *mem_ctx);
 
-struct glsl_symbol_table;
-
-extern void
-import_prototypes(const exec_list *source, exec_list *dest,
-		  struct glsl_symbol_table *symbols, void *mem_ctx);
-
 extern void
 do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
                       gl_shader_stage shader_stage);
