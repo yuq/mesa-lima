@@ -32,7 +32,7 @@
 #define MIN_NUM_IMAGES 2
 
 struct wsi_wl_display {
-   struct anv_physical_device                  *physical_device;
+   VkPhysicalDevice physical_device;
    struct wl_display *                          display;
    struct wl_drm *                              drm;
 
@@ -45,7 +45,8 @@ struct wsi_wl_display {
 struct wsi_wayland {
    struct anv_wsi_interface                     base;
 
-   struct anv_physical_device *                 physical_device;
+   const VkAllocationCallbacks *alloc;
+   VkPhysicalDevice physical_device;
 
    pthread_mutex_t                              mutex;
    /* Hash table of wl_display -> wsi_wl_display mappings */
@@ -64,7 +65,7 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
    /* Don't add formats that aren't renderable. */
    VkFormatProperties props;
    anv_GetPhysicalDeviceFormatProperties(
-      anv_physical_device_to_handle(display->physical_device), format, &props);
+      display->physical_device, format, &props);
    if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
       return;
 
@@ -233,15 +234,15 @@ wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
    u_vector_finish(&display->formats);
    if (display->drm)
       wl_drm_destroy(display->drm);
-   vk_free(&wsi->physical_device->instance->alloc, display);
+   vk_free(wsi->alloc, display);
 }
 
 static struct wsi_wl_display *
 wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 {
    struct wsi_wl_display *display =
-      vk_alloc(&wsi->physical_device->instance->alloc, sizeof(*display), 8,
-                VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+      vk_alloc(wsi->alloc, sizeof(*display), 8,
+               VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!display)
       return NULL;
 
@@ -756,20 +757,22 @@ fail:
 }
 
 VkResult
-anv_wl_init_wsi(struct anv_physical_device *device)
+anv_wl_init_wsi(struct anv_wsi_device *wsi_device,
+                const VkAllocationCallbacks *alloc,
+                VkPhysicalDevice physical_device)
 {
    struct wsi_wayland *wsi;
    VkResult result;
 
-   wsi = vk_alloc(&device->instance->alloc, sizeof(*wsi), 8,
+   wsi = vk_alloc(alloc, sizeof(*wsi), 8,
                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!wsi) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
       goto fail;
    }
 
-   wsi->physical_device = device;
-
+   wsi->physical_device = physical_device;
+   wsi->alloc = alloc;
    int ret = pthread_mutex_init(&wsi->mutex, NULL);
    if (ret != 0) {
       if (ret == ENOMEM) {
@@ -795,7 +798,7 @@ anv_wl_init_wsi(struct anv_physical_device *device)
    wsi->base.get_present_modes = wsi_wl_surface_get_present_modes;
    wsi->base.create_swapchain = wsi_wl_surface_create_swapchain;
 
-   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = &wsi->base;
+   wsi_device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = &wsi->base;
 
    return VK_SUCCESS;
 
@@ -803,24 +806,25 @@ fail_mutex:
    pthread_mutex_destroy(&wsi->mutex);
 
 fail_alloc:
-   vk_free(&device->instance->alloc, wsi);
+   vk_free(alloc, wsi);
 fail:
-   device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = NULL;
+   wsi_device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = NULL;
 
    return result;
 }
 
 void
-anv_wl_finish_wsi(struct anv_physical_device *device)
+anv_wl_finish_wsi(struct anv_wsi_device *wsi_device,
+                  const VkAllocationCallbacks *alloc)
 {
    struct wsi_wayland *wsi =
-      (struct wsi_wayland *)device->wsi_device.wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
+      (struct wsi_wayland *)wsi_device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
 
    if (wsi) {
       _mesa_hash_table_destroy(wsi->displays, NULL);
 
       pthread_mutex_destroy(&wsi->mutex);
 
-      vk_free(&device->instance->alloc, wsi);
+      vk_free(alloc, wsi);
    }
 }

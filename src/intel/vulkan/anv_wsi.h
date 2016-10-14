@@ -93,7 +93,10 @@ VkResult anv_x11_init_wsi(struct anv_wsi_device *wsi_device,
                           const VkAllocationCallbacks *alloc);
 void anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
                         const VkAllocationCallbacks *alloc);
-VkResult anv_wl_init_wsi(struct anv_physical_device *physical_device);
-void anv_wl_finish_wsi(struct anv_physical_device *physical_device);
 
+VkResult anv_wl_init_wsi(struct anv_wsi_device *wsi_device,
+                         const VkAllocationCallbacks *alloc,
+                         VkPhysicalDevice physical_device);
+void anv_wl_finish_wsi(struct anv_wsi_device *wsi_device,
+                       const VkAllocationCallbacks *alloc);
 #endif /* ANV_WSI_H */
