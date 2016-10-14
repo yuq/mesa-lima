@@ -48,11 +48,6 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "vbo_noop.h"
 
 
-#ifdef ERROR
-#undef ERROR
-#endif
-
-
 /** ID/name for immediate-mode VBO */
 #define IMM_BUFFER_NAME 0xaabbccdd
 
@@ -514,6 +509,8 @@ do {									\
    }                                                                    \
 } while (0)
 
+
+#undef ERROR
 #define ERROR(err) _mesa_error( ctx, err, __func__ )
 #define TAG(x) vbo_##x
 
