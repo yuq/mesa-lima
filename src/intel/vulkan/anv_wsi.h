@@ -60,7 +60,8 @@ struct anv_wsi_interface {
                                  uint32_t* pPresentModeCount,
                                  VkPresentModeKHR* pPresentModes);
    VkResult (*create_swapchain)(VkIcdSurfaceBase *surface,
-                                struct anv_device *device,
+                                VkDevice device,
+                                struct anv_wsi_device *wsi_device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
                                 const struct anv_wsi_image_fns *image_fns,

@@ -422,14 +422,6 @@ wsi_wl_surface_get_present_modes(VkIcdSurfaceBase *surface,
    return VK_SUCCESS;
 }
 
-static VkResult
-wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *surface,
-                                struct anv_device *device,
-                                const VkSwapchainCreateInfoKHR* pCreateInfo,
-                                const VkAllocationCallbacks* pAllocator,
-                                const struct anv_wsi_image_fns *image_fns,
-                                struct anv_swapchain **swapchain);
-
 VkResult anv_CreateWaylandSurfaceKHR(
     VkInstance                                  _instance,
     const VkWaylandSurfaceCreateInfoKHR*        pCreateInfo,
@@ -650,7 +642,7 @@ wsi_wl_swapchain_destroy(struct anv_swapchain *anv_chain,
                          const VkAllocationCallbacks *pAllocator)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)anv_chain;
-   struct anv_device *device = anv_device_from_handle(chain->base.device);
+
    for (uint32_t i = 0; i < chain->image_count; i++) {
       if (chain->images[i].buffer)
          chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
@@ -658,14 +650,15 @@ wsi_wl_swapchain_destroy(struct anv_swapchain *anv_chain,
                                                chain->images[i].memory);
    }
 
-   vk_free2(&device->alloc, pAllocator, chain);
+   vk_free(pAllocator, chain);
 
    return VK_SUCCESS;
 }
 
 static VkResult
 wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
-                                struct anv_device *device,
+                                VkDevice device,
+                                struct anv_wsi_device *wsi_device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
                                 const struct anv_wsi_image_fns *image_fns,
@@ -691,12 +684,12 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-   chain = vk_alloc2(&device->alloc, pAllocator, size, 8,
+   chain = vk_alloc(pAllocator, size, 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   chain->base.device = anv_device_to_handle(device);
+   chain->base.device = device;
    chain->base.destroy = wsi_wl_swapchain_destroy;
    chain->base.get_images = wsi_wl_swapchain_get_images;
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;
@@ -719,7 +712,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       chain->images[i].buffer = NULL;
    chain->queue = NULL;
 
-   chain->display = wsi_wl_get_display(&device->instance->physicalDevice.wsi_device,
+   chain->display = wsi_wl_get_display(wsi_device,
                                        surface->display);
    if (!chain->display) {
       result = vk_error(VK_ERROR_INITIALIZATION_FAILED);

@@ -253,17 +253,21 @@ VkResult anv_CreateSwapchainKHR(
    struct anv_wsi_interface *iface =
       device->instance->physicalDevice.wsi_device.wsi[surface->platform];
    struct anv_swapchain *swapchain;
+   const VkAllocationCallbacks *alloc;
 
-   VkResult result = iface->create_swapchain(surface, device, pCreateInfo,
-                                             pAllocator, &anv_wsi_image_fns,
+   if (pAllocator)
+     alloc = pAllocator;
+   else
+     alloc = &device->alloc;
+   VkResult result = iface->create_swapchain(surface, _device,
+                                             &device->instance->physicalDevice.wsi_device,
+                                             pCreateInfo,
+                                             alloc, &anv_wsi_image_fns,
                                              &swapchain);
    if (result != VK_SUCCESS)
       return result;
 
-   if (pAllocator)
-      swapchain->alloc = *pAllocator;
-   else
-      swapchain->alloc = device->alloc;
+   swapchain->alloc = *alloc;
 
    for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++)
       swapchain->fences[i] = VK_NULL_HANDLE;
@@ -274,18 +278,24 @@ VkResult anv_CreateSwapchainKHR(
 }
 
 void anv_DestroySwapchainKHR(
-    VkDevice                                     device,
+    VkDevice                                     _device,
     VkSwapchainKHR                               _swapchain,
     const VkAllocationCallbacks*                 pAllocator)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_swapchain, swapchain, _swapchain);
+   const VkAllocationCallbacks *alloc;
 
+   if (pAllocator)
+     alloc = pAllocator;
+   else
+     alloc = &device->alloc;
    for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++) {
       if (swapchain->fences[i] != VK_NULL_HANDLE)
-         anv_DestroyFence(device, swapchain->fences[i], pAllocator);
+         anv_DestroyFence(_device, swapchain->fences[i], pAllocator);
    }
 
-   swapchain->destroy(swapchain, pAllocator);
+   swapchain->destroy(swapchain, alloc);
 }
 
 VkResult anv_GetSwapchainImagesKHR(

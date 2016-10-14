@@ -434,14 +434,6 @@ x11_surface_get_present_modes(VkIcdSurfaceBase *surface,
    return VK_SUCCESS;
 }
 
-static VkResult
-x11_surface_create_swapchain(VkIcdSurfaceBase *surface,
-                             struct anv_device *device,
-                             const VkSwapchainCreateInfoKHR* pCreateInfo,
-                             const VkAllocationCallbacks* pAllocator,
-                             const struct anv_wsi_image_fns *image_fns,
-                             struct anv_swapchain **swapchain);
-
 VkResult anv_CreateXcbSurfaceKHR(
     VkInstance                                  _instance,
     const VkXcbSurfaceCreateInfoKHR*            pCreateInfo,
@@ -747,20 +739,20 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
                       const VkAllocationCallbacks *pAllocator)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-   struct anv_device *device = anv_device_from_handle(chain->base.device);
    for (uint32_t i = 0; i < chain->image_count; i++)
       x11_image_finish(chain, pAllocator, &chain->images[i]);
 
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
-   vk_free2(&device->alloc, pAllocator, chain);
+   vk_free(pAllocator, chain);
 
    return VK_SUCCESS;
 }
 
 static VkResult
 x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
-                             struct anv_device *device,
+                             VkDevice device,
+                             struct anv_wsi_device *wsi_device,
                              const VkSwapchainCreateInfoKHR *pCreateInfo,
                              const VkAllocationCallbacks* pAllocator,
                              const struct anv_wsi_image_fns *image_fns,
@@ -784,12 +776,12 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-   chain = vk_alloc2(&device->alloc, pAllocator, size, 8,
+   chain = vk_alloc(pAllocator, size, 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
-   chain->base.device = anv_device_to_handle(device);
+   chain->base.device = device;
    chain->base.destroy = x11_swapchain_destroy;
    chain->base.get_images = x11_get_images;
    chain->base.acquire_next_image = x11_acquire_next_image;
@@ -830,7 +822,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 
    uint32_t image = 0;
    for (; image < chain->image_count; image++) {
-      result = x11_image_init(anv_device_to_handle(device), chain, pCreateInfo, pAllocator,
+      result = x11_image_init(device, chain, pCreateInfo, pAllocator,
                               &chain->images[image]);
       if (result != VK_SUCCESS)
          goto fail_init_images;
@@ -847,7 +839,7 @@ fail_init_images:
 fail_register:
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
-   vk_free2(&device->alloc, pAllocator, chain);
+   vk_free(pAllocator, chain);
 
    return result;
 }
