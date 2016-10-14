@@ -496,10 +496,23 @@ vc4_clear(struct pipe_context *pctx, unsigned buffers,
         if (buffers & PIPE_CLEAR_COLOR0) {
                 struct vc4_resource *rsc =
                         vc4_resource(vc4->framebuffer.cbufs[0]->texture);
+                uint32_t clear_color;
 
-                job->clear_color[0] = job->clear_color[1] =
-                        pack_rgba(vc4->framebuffer.cbufs[0]->format,
-                                  color->f);
+                if (vc4_rt_format_is_565(vc4->framebuffer.cbufs[0]->format)) {
+                        /* In 565 mode, the hardware will be packing our color
+                         * for us.
+                         */
+                        clear_color = pack_rgba(PIPE_FORMAT_R8G8B8A8_UNORM,
+                                                color->f);
+                } else {
+                        /* Otherwise, we need to do this packing because we
+                         * support multiple swizzlings of RGBA8888.
+                         */
+                        clear_color =
+                                pack_rgba(vc4->framebuffer.cbufs[0]->format,
+                                          color->f);
+                }
+                job->clear_color[0] = job->clear_color[1] = clear_color;
                 rsc->initialized_buffers |= (buffers & PIPE_CLEAR_COLOR0);
         }
 
