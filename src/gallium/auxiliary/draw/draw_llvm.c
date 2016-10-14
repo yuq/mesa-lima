@@ -689,6 +689,11 @@ generate_fetch(struct gallivm_state *gallivm,
    LLVMValueRef ofbit = NULL;
    struct lp_build_if_state if_ctx;
 
+   if (velem->src_format == PIPE_FORMAT_NONE) {
+      *res = lp_build_const_vec(gallivm, lp_float32_vec4_type(), 0);
+      return;
+   }
+
    if (velem->instance_divisor) {
       /* Index is equal to the start instance plus the number of current 
        * instance divided by the divisor. In this case we compute it as:
@@ -1706,12 +1711,6 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
                       io_itr, io, lp_loop.counter);
 #endif
 
-      for (j = draw->pt.nr_vertex_elements; j < PIPE_MAX_SHADER_INPUTS; j++) {
-         for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
-            inputs[j][i] = lp_build_zero(gallivm, vs_type);
-         }
-      }
-
       for (i = 0; i < vector_length; ++i) {
          LLVMValueRef vert_index =
             LLVMBuildAdd(builder,
@@ -1765,7 +1764,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
             gallivm->builder, true_index_array, true_index,
             lp_build_const_int32(gallivm, i), "");
 
-         for (j = 0; j < draw->pt.nr_vertex_elements; ++j) {
+         for (j = 0; j < key->nr_vertex_elements; ++j) {
             struct pipe_vertex_element *velem = &draw->pt.vertex_element[j];
             LLVMValueRef vb_index =
                lp_build_const_int32(gallivm, velem->vertex_buffer_index);
@@ -1776,7 +1775,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
          }
       }
       convert_to_soa(gallivm, aos_attribs, inputs,
-                     draw->pt.nr_vertex_elements, vs_type);
+                     key->nr_vertex_elements, vs_type);
 
       /* In the paths with elts vertex id has to be unaffected by the
        * index bias and because indices inside our elements array have
@@ -1873,15 +1872,6 @@ draw_llvm_make_variant_key(struct draw_llvm *llvm, char *store)
 
    key->clamp_vertex_color = llvm->draw->rasterizer->clamp_vertex_color; /**/
 
-   /* Presumably all variants of the shader should have the same
-    * number of vertex elements - ie the number of shader inputs.
-    * NOTE: we NEED to store the needed number of needed inputs
-    * here, not the number of provided elements to match keysize
-    * (and the offset of sampler state in the key).
-    */
-   key->nr_vertex_elements = llvm->draw->vs.vertex_shader->info.file_max[TGSI_FILE_INPUT] + 1;
-   assert(key->nr_vertex_elements <= llvm->draw->pt.nr_vertex_elements);
-
    /* will have to rig this up properly later */
    key->clip_xy = llvm->draw->clip_xy;
    key->clip_z = llvm->draw->clip_z;
@@ -1907,13 +1897,34 @@ draw_llvm_make_variant_key(struct draw_llvm *llvm, char *store)
       key->nr_sampler_views = key->nr_samplers;
    }
 
-   draw_sampler = draw_llvm_variant_key_samplers(key);
+   /* Presumably all variants of the shader should have the same
+    * number of vertex elements - ie the number of shader inputs.
+    * NOTE: we NEED to store the needed number of needed inputs
+    * here, not the number of provided elements to match keysize
+    * (and the offset of sampler state in the key).
+    * If we have excess number of vertex elements, this is valid,
+    * but the excess ones don't matter.
+    * If we don't have enough vertex elements (which looks not really
+    * valid but we'll handle it gracefully) fill out missing ones with
+    * zero (we'll recognize these later by PIPE_FORMAT_NONE).
+    */
+   key->nr_vertex_elements =
+      llvm->draw->vs.vertex_shader->info.file_max[TGSI_FILE_INPUT] + 1;
 
+   if (llvm->draw->pt.nr_vertex_elements < key->nr_vertex_elements) {
+      debug_printf("draw: vs with %d inputs but only have %d vertex elements\n",
+                   key->nr_vertex_elements, llvm->draw->pt.nr_vertex_elements);
+      memset(key->vertex_element, 0,
+             sizeof(struct pipe_vertex_element) * key->nr_vertex_elements);
+   }
    memcpy(key->vertex_element,
           llvm->draw->pt.vertex_element,
-          sizeof(struct pipe_vertex_element) * key->nr_vertex_elements);
+          sizeof(struct pipe_vertex_element) *
+             MIN2(key->nr_vertex_elements, llvm->draw->pt.nr_vertex_elements));
 
-   memset(draw_sampler, 0, MAX2(key->nr_samplers, key->nr_sampler_views) * sizeof *draw_sampler);
+   draw_sampler = draw_llvm_variant_key_samplers(key);
+   memset(draw_sampler, 0,
+          MAX2(key->nr_samplers, key->nr_sampler_views) * sizeof *draw_sampler);
 
    for (i = 0 ; i < key->nr_samplers; i++) {
       lp_sampler_static_sampler_state(&draw_sampler[i].sampler_state,
