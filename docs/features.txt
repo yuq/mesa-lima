@@ -206,19 +206,19 @@ GL 4.4, GLSL 4.40 -- all DONE: i965/gen8+, nvc0, radeonsi
   GL_ARB_texture_stencil8                               DONE (i965/hsw+, nv50, r600, llvmpipe, softpipe, swr)
   GL_ARB_vertex_type_10f_11f_11f_rev                    DONE (i965, nv50, r600, llvmpipe, softpipe, swr)
 
-GL 4.5, GLSL 4.50 -- all DONE: nvc0
+GL 4.5, GLSL 4.50 -- all DONE: nvc0, radeonsi
 
-  GL_ARB_ES3_1_compatibility                            DONE (i965/hsw+, radeonsi)
-  GL_ARB_clip_control                                   DONE (i965, nv50, r600, radeonsi, llvmpipe, softpipe, swr)
-  GL_ARB_conditional_render_inverted                    DONE (i965, nv50, r600, radeonsi, llvmpipe, softpipe, swr)
-  GL_ARB_cull_distance                                  DONE (i965, nv50, radeonsi, llvmpipe, softpipe, swr)
-  GL_ARB_derivative_control                             DONE (i965, nv50, r600, radeonsi)
+  GL_ARB_ES3_1_compatibility                            DONE (i965/hsw+)
+  GL_ARB_clip_control                                   DONE (i965, nv50, r600, llvmpipe, softpipe, swr)
+  GL_ARB_conditional_render_inverted                    DONE (i965, nv50, r600, llvmpipe, softpipe, swr)
+  GL_ARB_cull_distance                                  DONE (i965, nv50, llvmpipe, softpipe, swr)
+  GL_ARB_derivative_control                             DONE (i965, nv50, r600)
   GL_ARB_direct_state_access                            DONE (all drivers)
   GL_ARB_get_texture_sub_image                          DONE (all drivers)
-  GL_ARB_shader_texture_image_samples                   DONE (i965, nv50, r600, radeonsi)
-  GL_ARB_texture_barrier                                DONE (i965, nv50, r600, radeonsi)
+  GL_ARB_shader_texture_image_samples                   DONE (i965, nv50, r600)
+  GL_ARB_texture_barrier                                DONE (i965, nv50, r600)
   GL_KHR_context_flush_control                          DONE (all - but needs GLX/EGL extension to be useful)
-  GL_KHR_robustness                                     DONE (i965, radeonsi)
+  GL_KHR_robustness                                     DONE (i965)
   GL_EXT_shader_integer_mix                             DONE (all drivers that support GLSL)
 
 These are the extensions cherry-picked to make GLES 3.1
