@@ -71,7 +71,7 @@ void radv_DestroySurfaceKHR(
 	RADV_FROM_HANDLE(radv_instance, instance, _instance);
 	RADV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
 
-	radv_free2(&instance->alloc, pAllocator, surface);
+	vk_free2(&instance->alloc, pAllocator, surface);
 }
 
 VkResult radv_GetPhysicalDeviceSurfaceSupportKHR(

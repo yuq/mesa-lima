@@ -47,7 +47,9 @@
 #include "compiler/shader_enums.h"
 #include "util/macros.h"
 #include "util/list.h"
+#include "util/vk_alloc.h"
 #include "main/macros.h"
+
 #include "radv_radeon_winsys.h"
 #include "ac_binary.h"
 #include "ac_nir_to_llvm.h"
@@ -239,51 +241,6 @@ void *radv_resolve_entrypoint(uint32_t index);
 void *radv_lookup_entrypoint(const char *name);
 
 extern struct radv_dispatch_table dtable;
-
-static inline void *
-radv_alloc(const VkAllocationCallbacks *alloc,
-	   size_t size, size_t align,
-	   VkSystemAllocationScope scope)
-{
-	return alloc->pfnAllocation(alloc->pUserData, size, align, scope);
-}
-
-static inline void *
-radv_realloc(const VkAllocationCallbacks *alloc,
-	     void *ptr, size_t size, size_t align,
-	     VkSystemAllocationScope scope)
-{
-	return alloc->pfnReallocation(alloc->pUserData, ptr, size, align, scope);
-}
-
-static inline void
-radv_free(const VkAllocationCallbacks *alloc, void *data)
-{
-	alloc->pfnFree(alloc->pUserData, data);
-}
-
-static inline void *
-radv_alloc2(const VkAllocationCallbacks *parent_alloc,
-	    const VkAllocationCallbacks *alloc,
-	    size_t size, size_t align,
-	    VkSystemAllocationScope scope)
-{
-	if (alloc)
-		return radv_alloc(alloc, size, align, scope);
-	else
-		return radv_alloc(parent_alloc, size, align, scope);
-}
-
-static inline void
-radv_free2(const VkAllocationCallbacks *parent_alloc,
-	   const VkAllocationCallbacks *alloc,
-	   void *data)
-{
-	if (alloc)
-		radv_free(alloc, data);
-	else
-		radv_free(parent_alloc, data);
-}
 
 struct radv_wsi_interaface;
 

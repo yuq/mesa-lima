@@ -231,14 +231,14 @@ wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
 	u_vector_finish(&display->formats);
 	if (display->drm)
 		wl_drm_destroy(display->drm);
-	radv_free(&wsi->physical_device->instance->alloc, display);
+	vk_free(&wsi->physical_device->instance->alloc, display);
 }
 
 static struct wsi_wl_display *
 wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 {
 	struct wsi_wl_display *display =
-		radv_alloc(&wsi->physical_device->instance->alloc, sizeof(*display), 8,
+		vk_alloc(&wsi->physical_device->instance->alloc, sizeof(*display), 8,
 			   VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 	if (!display)
 		return NULL;
@@ -440,7 +440,7 @@ VkResult radv_CreateWaylandSurfaceKHR(
 
 	VkIcdSurfaceWayland *surface;
 
-	surface = radv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
+	surface = vk_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
 			      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (surface == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -719,7 +719,7 @@ wsi_wl_swapchain_destroy(struct radv_swapchain *radv_chain,
 			wsi_wl_image_finish(chain, &chain->images[i], pAllocator);
 	}
 
-	radv_free2(&chain->base.device->alloc, pAllocator, chain);
+	vk_free2(&chain->base.device->alloc, pAllocator, chain);
 
 	return VK_SUCCESS;
 }
@@ -751,7 +751,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 		num_images = MAX2(num_images, 4);
 
 	size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-	chain = radv_alloc2(&device->alloc, pAllocator, size, 8,
+	chain = vk_alloc2(&device->alloc, pAllocator, size, 8,
 			    VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (chain == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -816,7 +816,7 @@ radv_wl_init_wsi(struct radv_physical_device *device)
 	struct wsi_wayland *wsi;
 	VkResult result;
 
-	wsi = radv_alloc(&device->instance->alloc, sizeof(*wsi), 8,
+	wsi = vk_alloc(&device->instance->alloc, sizeof(*wsi), 8,
 			 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 	if (!wsi) {
 		result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -858,7 +858,7 @@ fail_mutex:
 	pthread_mutex_destroy(&wsi->mutex);
 
 fail_alloc:
-	radv_free(&device->instance->alloc, wsi);
+	vk_free(&device->instance->alloc, wsi);
 fail:
 	device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND] = NULL;
 
@@ -876,6 +876,6 @@ radv_wl_finish_wsi(struct radv_physical_device *device)
 
 		pthread_mutex_destroy(&wsi->mutex);
 
-		radv_free(&device->instance->alloc, wsi);
+		vk_free(&device->instance->alloc, wsi);
 	}
 }

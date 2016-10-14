@@ -119,7 +119,7 @@ static VkResult radv_create_cmd_buffer(
 	struct radv_cmd_buffer *cmd_buffer;
 	VkResult result;
 
-	cmd_buffer = radv_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
+	cmd_buffer = vk_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
 				VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (cmd_buffer == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -154,7 +154,7 @@ static VkResult radv_create_cmd_buffer(
 	return VK_SUCCESS;
 
 fail:
-	radv_free(&cmd_buffer->pool->alloc, cmd_buffer);
+	vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 
 	return result;
 }
@@ -1134,7 +1134,7 @@ radv_cmd_state_setup_attachments(struct radv_cmd_buffer *cmd_buffer,
 		return;
 	}
 
-	state->attachments = radv_alloc(&cmd_buffer->pool->alloc,
+	state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
 					pass->attachment_count *
 					sizeof(state->attachments[0]),
 					8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1215,7 +1215,7 @@ radv_cmd_buffer_destroy(struct radv_cmd_buffer *cmd_buffer)
 	if (cmd_buffer->upload.upload_bo)
 		cmd_buffer->device->ws->buffer_destroy(cmd_buffer->upload.upload_bo);
 	cmd_buffer->device->ws->cs_destroy(cmd_buffer->cs);
-	radv_free(&cmd_buffer->pool->alloc, cmd_buffer);
+	vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
 
 void radv_FreeCommandBuffers(
@@ -1675,7 +1675,7 @@ VkResult radv_CreateCommandPool(
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	struct radv_cmd_pool *pool;
 
-	pool = radv_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
+	pool = vk_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
 			   VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (pool == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1709,7 +1709,7 @@ void radv_DestroyCommandPool(
 		radv_cmd_buffer_destroy(cmd_buffer);
 	}
 
-	radv_free2(&device->alloc, pAllocator, pool);
+	vk_free2(&device->alloc, pAllocator, pool);
 }
 
 VkResult radv_ResetCommandPool(
@@ -2075,7 +2075,7 @@ void radv_CmdEndRenderPass(
 		                      (VkAttachmentReference){i, layout});
 	}
 
-	radv_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
+	vk_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
 
 	cmd_buffer->state.pass = NULL;
 	cmd_buffer->state.subpass = NULL;
