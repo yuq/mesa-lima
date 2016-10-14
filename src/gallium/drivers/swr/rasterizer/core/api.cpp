@@ -112,9 +112,11 @@ HANDLE SwrCreateContext(
     pContext->ppScratch = new uint8_t*[pContext->NumWorkerThreads];
     pContext->pStats = new SWR_STATS[pContext->NumWorkerThreads];
 
+#if KNOB_ENABLE_AR
     // Setup ArchRast thread contexts which includes +1 for API thread.
     pContext->pArContext = new HANDLE[pContext->NumWorkerThreads+1];
     pContext->pArContext[pContext->NumWorkerThreads] = ArchRast::CreateThreadContext();
+#endif
 
     // Allocate scratch space for workers.
     ///@note We could lazily allocate this but its rather small amount of memory.
@@ -131,8 +133,10 @@ HANDLE SwrCreateContext(
         pContext->ppScratch[i] = (uint8_t*)AlignedMalloc(32 * sizeof(KILOBYTE), KNOB_SIMD_WIDTH * 4);
 #endif
 
+#if KNOB_ENABLE_AR
         // Initialize worker thread context for ArchRast.
         pContext->pArContext[i] = ArchRast::CreateThreadContext();
+#endif
     }
 
     // State setup AFTER context is fully initialized
@@ -379,7 +383,9 @@ void SwrDestroyContext(HANDLE hContext)
         AlignedFree(pContext->ppScratch[i]);
 #endif
 
+#if KNOB_ENABLE_AR
         ArchRast::DestroyThreadContext(pContext->pArContext[i]);
+#endif
     }
 
     delete[] pContext->ppScratch;
