@@ -28,6 +28,22 @@
 
 struct anv_swapchain;
 
+struct anv_wsi_image_fns {
+   VkResult (*create_wsi_image)(VkDevice device_h,
+                                const VkSwapchainCreateInfoKHR *pCreateInfo,
+                                const VkAllocationCallbacks *pAllocator,
+                                VkImage *image_p,
+                                VkDeviceMemory *memory_p,
+                                uint32_t *size_p,
+                                uint32_t *offset_p,
+                                uint32_t *row_pitch_p,
+                                int *fd_p);
+   void (*free_wsi_image)(VkDevice device,
+                          const VkAllocationCallbacks *pAllocator,
+                          VkImage image_h,
+                          VkDeviceMemory memory_h);
+};
+
 struct anv_wsi_interface {
    VkResult (*get_support)(VkIcdSurfaceBase *surface,
                            struct anv_wsi_device *wsi_device,
@@ -47,6 +63,7 @@ struct anv_wsi_interface {
                                 struct anv_device *device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
+                                const struct anv_wsi_image_fns *image_fns,
                                 struct anv_swapchain **swapchain);
 };
 
@@ -54,7 +71,7 @@ struct anv_swapchain {
 
    VkDevice device;
    VkAllocationCallbacks alloc;
-
+   const struct anv_wsi_image_fns *image_fns;
    VkFence fences[3];
 
    VkResult (*destroy)(struct anv_swapchain *swapchain,

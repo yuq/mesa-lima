@@ -22,7 +22,7 @@
  */
 
 #include "anv_wsi.h"
-
+#include "vk_format_info.h"
 VkResult
 anv_init_wsi(struct anv_physical_device *physical_device)
 {
@@ -126,6 +126,122 @@ VkResult anv_GetPhysicalDeviceSurfacePresentModesKHR(
                                    pPresentModes);
 }
 
+
+static VkResult
+x11_anv_wsi_image_create(VkDevice device_h,
+                         const VkSwapchainCreateInfoKHR *pCreateInfo,
+                         const VkAllocationCallbacks* pAllocator,
+                         VkImage *image_p,
+                         VkDeviceMemory *memory_p,
+                         uint32_t *size,
+                         uint32_t *offset,
+                         uint32_t *row_pitch, int *fd_p)
+{
+   struct anv_device *device = anv_device_from_handle(device_h);
+   VkImage image_h;
+   struct anv_image *image;
+
+   VkResult result;
+   result = anv_image_create(anv_device_to_handle(device),
+      &(struct anv_image_create_info) {
+         .isl_tiling_flags = ISL_TILING_X_BIT,
+         .stride = 0,
+         .vk_info =
+      &(VkImageCreateInfo) {
+         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+         .imageType = VK_IMAGE_TYPE_2D,
+         .format = pCreateInfo->imageFormat,
+         .extent = {
+            .width = pCreateInfo->imageExtent.width,
+            .height = pCreateInfo->imageExtent.height,
+            .depth = 1
+         },
+         .mipLevels = 1,
+         .arrayLayers = 1,
+         .samples = 1,
+         /* FIXME: Need a way to use X tiling to allow scanout */
+         .tiling = VK_IMAGE_TILING_OPTIMAL,
+         .usage = (pCreateInfo->imageUsage |
+                   VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+         .flags = 0,
+      }},
+      NULL,
+      &image_h);
+   if (result != VK_SUCCESS)
+      return result;
+
+   image = anv_image_from_handle(image_h);
+   assert(vk_format_is_color(image->vk_format));
+
+   VkDeviceMemory memory_h;
+   struct anv_device_memory *memory;
+   result = anv_AllocateMemory(anv_device_to_handle(device),
+      &(VkMemoryAllocateInfo) {
+         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+         .allocationSize = image->size,
+         .memoryTypeIndex = 0,
+      },
+      NULL /* XXX: pAllocator */,
+      &memory_h);
+   if (result != VK_SUCCESS)
+      goto fail_create_image;
+
+   memory = anv_device_memory_from_handle(memory_h);
+   memory->bo.is_winsys_bo = true;
+
+   anv_BindImageMemory(VK_NULL_HANDLE, image_h, memory_h, 0);
+
+   struct anv_surface *surface = &image->color_surface;
+   assert(surface->isl.tiling == ISL_TILING_X);
+
+   *row_pitch = surface->isl.row_pitch;
+   int ret = anv_gem_set_tiling(device, memory->bo.gem_handle,
+                                surface->isl.row_pitch, I915_TILING_X);
+   if (ret) {
+      /* FINISHME: Choose a better error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                         "set_tiling failed: %m");
+      goto fail_alloc_memory;
+   }
+
+   int fd = anv_gem_handle_to_fd(device, memory->bo.gem_handle);
+   if (fd == -1) {
+      /* FINISHME: Choose a better error. */
+      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
+                         "handle_to_fd failed: %m");
+      goto fail_alloc_memory;
+   }
+
+   *image_p = image_h;
+   *memory_p = memory_h;
+   *fd_p = fd;
+   *size = image->size;
+   *offset = image->offset;
+   return VK_SUCCESS;
+fail_alloc_memory:
+   anv_FreeMemory(device_h, memory_h, pAllocator);
+
+fail_create_image:
+   anv_DestroyImage(device_h, image_h, pAllocator);
+   return result;
+}
+
+static void
+x11_anv_wsi_image_free(VkDevice device,
+                       const VkAllocationCallbacks* pAllocator,
+                       VkImage image_h,
+                       VkDeviceMemory memory_h)
+{
+   anv_DestroyImage(device, image_h, pAllocator);
+
+   anv_FreeMemory(device, memory_h, pAllocator);
+}
+
+static const struct anv_wsi_image_fns anv_wsi_image_fns = {
+   .create_wsi_image = x11_anv_wsi_image_create,
+   .free_wsi_image = x11_anv_wsi_image_free,
+};
+
 VkResult anv_CreateSwapchainKHR(
     VkDevice                                     _device,
     const VkSwapchainCreateInfoKHR*              pCreateInfo,
@@ -139,7 +255,8 @@ VkResult anv_CreateSwapchainKHR(
    struct anv_swapchain *swapchain;
 
    VkResult result = iface->create_swapchain(surface, device, pCreateInfo,
-                                             pAllocator, &swapchain);
+                                             pAllocator, &anv_wsi_image_fns,
+                                             &swapchain);
    if (result != VK_SUCCESS)
       return result;
 

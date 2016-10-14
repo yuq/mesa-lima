@@ -427,6 +427,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *surface,
                                 struct anv_device *device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
+                                const struct anv_wsi_image_fns *image_fns,
                                 struct anv_swapchain **swapchain);
 
 VkResult anv_CreateWaylandSurfaceKHR(
@@ -456,8 +457,8 @@ VkResult anv_CreateWaylandSurfaceKHR(
 }
 
 struct wsi_wl_image {
-   struct anv_image *                           image;
-   struct anv_device_memory *                   memory;
+   VkImage image;
+   VkDeviceMemory memory;
    struct wl_buffer *                           buffer;
    bool                                         busy;
 };
@@ -493,7 +494,7 @@ wsi_wl_swapchain_get_images(struct anv_swapchain *anv_chain,
 
    assert(chain->image_count <= *pCount);
    for (uint32_t i = 0; i < chain->image_count; i++)
-      pSwapchainImages[i] = anv_image_to_handle(chain->images[i].image);
+      pSwapchainImages[i] = chain->images[i].image;
 
    *pCount = chain->image_count;
 
@@ -585,17 +586,6 @@ wsi_wl_swapchain_queue_present(struct anv_swapchain *anv_chain,
 }
 
 static void
-wsi_wl_image_finish(struct wsi_wl_swapchain *chain, struct wsi_wl_image *image,
-                    const VkAllocationCallbacks* pAllocator)
-{
-   VkDevice vk_device = chain->base.device;
-   anv_FreeMemory(vk_device, anv_device_memory_to_handle(image->memory),
-                  pAllocator);
-   anv_DestroyImage(vk_device, anv_image_to_handle(image->image),
-                    pAllocator);
-}
-
-static void
 buffer_handle_release(void *data, struct wl_buffer *buffer)
 {
    struct wsi_wl_image *image = data;
@@ -616,89 +606,30 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
                   const VkAllocationCallbacks* pAllocator)
 {
    VkDevice vk_device = chain->base.device;
-   struct anv_device *device = anv_device_from_handle(vk_device);
    VkResult result;
-
-   VkImage vk_image;
-   result = anv_image_create(vk_device,
-      &(struct anv_image_create_info) {
-         .isl_tiling_flags = ISL_TILING_X_BIT,
-         .stride = 0,
-         .vk_info =
-      &(VkImageCreateInfo) {
-         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-         .imageType = VK_IMAGE_TYPE_2D,
-         .format = chain->vk_format,
-         .extent = {
-            .width = chain->extent.width,
-            .height = chain->extent.height,
-            .depth = 1
-         },
-         .mipLevels = 1,
-         .arrayLayers = 1,
-         .samples = 1,
-         /* FIXME: Need a way to use X tiling to allow scanout */
-         .tiling = VK_IMAGE_TILING_OPTIMAL,
-         .usage = (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT |
-                   pCreateInfo->imageUsage),
-         .flags = 0,
-      }},
-      pAllocator,
-      &vk_image);
-
+   int fd;
+   uint32_t size;
+   uint32_t row_pitch;
+   uint32_t offset;
+   result = chain->base.image_fns->create_wsi_image(vk_device,
+                                                    pCreateInfo,
+                                                    pAllocator,
+                                                    &image->image,
+                                                    &image->memory,
+                                                    &size,
+                                                    &offset,
+                                                    &row_pitch,
+                                                    &fd);
    if (result != VK_SUCCESS)
       return result;
-
-   image->image = anv_image_from_handle(vk_image);
-   assert(vk_format_is_color(image->image->vk_format));
-
-   struct anv_surface *surface = &image->image->color_surface;
-
-   VkDeviceMemory vk_memory;
-   result = anv_AllocateMemory(vk_device,
-      &(VkMemoryAllocateInfo) {
-         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-         .allocationSize = image->image->size,
-         .memoryTypeIndex = 0,
-      },
-      pAllocator,
-      &vk_memory);
-
-   if (result != VK_SUCCESS)
-      goto fail_image;
-
-   image->memory = anv_device_memory_from_handle(vk_memory);
-   image->memory->bo.is_winsys_bo = true;
-
-   result = anv_BindImageMemory(vk_device, vk_image, vk_memory, 0);
-
-   if (result != VK_SUCCESS)
-      goto fail_mem;
-
-   int ret = anv_gem_set_tiling(device,
-                                image->memory->bo.gem_handle,
-                                surface->isl.row_pitch, I915_TILING_X);
-   if (ret) {
-      /* FINISHME: Choose a better error. */
-      result = vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-      goto fail_mem;
-   }
-
-   int fd = anv_gem_handle_to_fd(device,
-                                 image->memory->bo.gem_handle);
-   if (fd == -1) {
-      /* FINISHME: Choose a better error. */
-      result = vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-      goto fail_mem;
-   }
 
    image->buffer = wl_drm_create_prime_buffer(chain->display->drm,
                                               fd, /* name */
                                               chain->extent.width,
                                               chain->extent.height,
                                               chain->drm_format,
-                                              surface->offset,
-                                              surface->isl.row_pitch,
+                                              offset,
+                                              row_pitch,
                                               0, 0, 0, 0 /* unused */);
    wl_display_roundtrip(chain->display->display);
    close(fd);
@@ -708,10 +639,8 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
 
    return VK_SUCCESS;
 
-fail_mem:
-   anv_FreeMemory(vk_device, vk_memory, pAllocator);
-fail_image:
-   anv_DestroyImage(vk_device, vk_image, pAllocator);
+   chain->base.image_fns->free_wsi_image(vk_device, pAllocator,
+                                         image->image, image->memory);
 
    return result;
 }
@@ -724,7 +653,9 @@ wsi_wl_swapchain_destroy(struct anv_swapchain *anv_chain,
    struct anv_device *device = anv_device_from_handle(chain->base.device);
    for (uint32_t i = 0; i < chain->image_count; i++) {
       if (chain->images[i].buffer)
-         wsi_wl_image_finish(chain, &chain->images[i], pAllocator);
+         chain->base.image_fns->free_wsi_image(chain->base.device, pAllocator,
+                                               chain->images[i].image,
+                                               chain->images[i].memory);
    }
 
    vk_free2(&device->alloc, pAllocator, chain);
@@ -737,6 +668,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                                 struct anv_device *device,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
+                                const struct anv_wsi_image_fns *image_fns,
                                 struct anv_swapchain **swapchain_out)
 {
    VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
@@ -769,7 +701,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.get_images = wsi_wl_swapchain_get_images;
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;
    chain->base.queue_present = wsi_wl_swapchain_queue_present;
-
+   chain->base.image_fns = image_fns;
    chain->surface = surface->surface;
    chain->extent = pCreateInfo->imageExtent;
    chain->vk_format = pCreateInfo->imageFormat;
