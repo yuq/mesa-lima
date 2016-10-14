@@ -293,7 +293,7 @@ VkResult anv_CreateInstance(
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
-   instance = anv_alloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
+   instance = vk_alloc2(&default_alloc, pAllocator, sizeof(*instance), 8,
                          VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!instance)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -333,7 +333,7 @@ void anv_DestroyInstance(
 
    _mesa_locale_fini();
 
-   anv_free(&instance->alloc, instance);
+   vk_free(&instance->alloc, instance);
 }
 
 VkResult anv_EnumeratePhysicalDevices(
@@ -855,7 +855,7 @@ VkResult anv_CreateDevice(
          return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
    }
 
-   device = anv_alloc2(&physical_device->instance->alloc, pAllocator,
+   device = vk_alloc2(&physical_device->instance->alloc, pAllocator,
                        sizeof(*device), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
    if (!device)
@@ -952,7 +952,7 @@ VkResult anv_CreateDevice(
  fail_fd:
    close(device->fd);
  fail_device:
-   anv_free(&device->alloc, device);
+   vk_free(&device->alloc, device);
 
    return result;
 }
@@ -990,7 +990,7 @@ void anv_DestroyDevice(
 
    pthread_mutex_destroy(&device->mutex);
 
-   anv_free(&device->alloc, device);
+   vk_free(&device->alloc, device);
 }
 
 VkResult anv_EnumerateInstanceExtensionProperties(
@@ -1175,7 +1175,7 @@ VkResult anv_AllocateMemory(
 
    /* FINISHME: Fail if allocation request exceeds heap size. */
 
-   mem = anv_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
+   mem = vk_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
                     VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (mem == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1194,7 +1194,7 @@ VkResult anv_AllocateMemory(
    return VK_SUCCESS;
 
  fail:
-   anv_free2(&device->alloc, pAllocator, mem);
+   vk_free2(&device->alloc, pAllocator, mem);
 
    return result;
 }
@@ -1216,7 +1216,7 @@ void anv_FreeMemory(
    if (mem->bo.gem_handle != 0)
       anv_gem_close(device, mem->bo.gem_handle);
 
-   anv_free2(&device->alloc, pAllocator, mem);
+   vk_free2(&device->alloc, pAllocator, mem);
 }
 
 VkResult anv_MapMemory(
@@ -1707,7 +1707,7 @@ VkResult anv_CreateBuffer(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO);
 
-   buffer = anv_alloc2(&device->alloc, pAllocator, sizeof(*buffer), 8,
+   buffer = vk_alloc2(&device->alloc, pAllocator, sizeof(*buffer), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1730,7 +1730,7 @@ void anv_DestroyBuffer(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_buffer, buffer, _buffer);
 
-   anv_free2(&device->alloc, pAllocator, buffer);
+   vk_free2(&device->alloc, pAllocator, buffer);
 }
 
 void
@@ -1757,7 +1757,7 @@ void anv_DestroySampler(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_sampler, sampler, _sampler);
 
-   anv_free2(&device->alloc, pAllocator, sampler);
+   vk_free2(&device->alloc, pAllocator, sampler);
 }
 
 VkResult anv_CreateFramebuffer(
@@ -1773,7 +1773,7 @@ VkResult anv_CreateFramebuffer(
 
    size_t size = sizeof(*framebuffer) +
                  sizeof(struct anv_image_view *) * pCreateInfo->attachmentCount;
-   framebuffer = anv_alloc2(&device->alloc, pAllocator, size, 8,
+   framebuffer = vk_alloc2(&device->alloc, pAllocator, size, 8,
                             VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (framebuffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -1801,5 +1801,5 @@ void anv_DestroyFramebuffer(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_framebuffer, fb, _fb);
 
-   anv_free2(&device->alloc, pAllocator, fb);
+   vk_free2(&device->alloc, pAllocator, fb);
 }

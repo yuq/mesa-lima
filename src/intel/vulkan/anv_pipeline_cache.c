@@ -65,7 +65,7 @@ anv_shader_bin_create(struct anv_device *device,
                           bind_map->surface_count, bind_map->sampler_count);
 
    struct anv_shader_bin *shader =
-      anv_alloc(&device->alloc, size, 8, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
+      vk_alloc(&device->alloc, size, 8, VK_SYSTEM_ALLOCATION_SCOPE_DEVICE);
    if (!shader)
       return NULL;
 
@@ -108,7 +108,7 @@ anv_shader_bin_destroy(struct anv_device *device,
 {
    assert(shader->ref_cnt == 0);
    anv_state_pool_free(&device->instruction_state_pool, shader->kernel);
-   anv_free(&device->alloc, shader);
+   vk_free(&device->alloc, shader);
 }
 
 static size_t
@@ -417,7 +417,7 @@ VkResult anv_CreatePipelineCache(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO);
    assert(pCreateInfo->flags == 0);
 
-   cache = anv_alloc2(&device->alloc, pAllocator,
+   cache = vk_alloc2(&device->alloc, pAllocator,
                        sizeof(*cache), 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (cache == NULL)
@@ -445,7 +445,7 @@ void anv_DestroyPipelineCache(
 
    anv_pipeline_cache_finish(cache);
 
-   anv_free2(&device->alloc, pAllocator, cache);
+   vk_free2(&device->alloc, pAllocator, cache);
 }
 
 VkResult anv_GetPipelineCacheData(

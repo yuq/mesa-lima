@@ -159,7 +159,7 @@ VkResult genX(CreateSampler)(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO);
 
-   sampler = anv_alloc2(&device->alloc, pAllocator, sizeof(*sampler), 8,
+   sampler = vk_alloc2(&device->alloc, pAllocator, sizeof(*sampler), 8,
                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (!sampler)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);

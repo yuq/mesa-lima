@@ -63,7 +63,7 @@ genX(graphics_pipeline_create)(
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
 
-   pipeline = anv_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
+   pipeline = vk_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
                          VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pipeline == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -71,7 +71,7 @@ genX(graphics_pipeline_create)(
    result = anv_pipeline_init(pipeline, device, cache,
                               pCreateInfo, pAllocator);
    if (result != VK_SUCCESS) {
-      anv_free2(&device->alloc, pAllocator, pipeline);
+      vk_free2(&device->alloc, pAllocator, pipeline);
       return result;
    }
 

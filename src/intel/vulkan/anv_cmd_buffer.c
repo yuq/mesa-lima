@@ -137,7 +137,7 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
    state->need_query_wa = true;
 
    if (state->attachments != NULL) {
-      anv_free(&cmd_buffer->pool->alloc, state->attachments);
+      vk_free(&cmd_buffer->pool->alloc, state->attachments);
       state->attachments = NULL;
    }
 
@@ -154,14 +154,14 @@ anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
    struct anv_cmd_state *state = &cmd_buffer->state;
    ANV_FROM_HANDLE(anv_render_pass, pass, info->renderPass);
 
-   anv_free(&cmd_buffer->pool->alloc, state->attachments);
+   vk_free(&cmd_buffer->pool->alloc, state->attachments);
 
    if (pass->attachment_count == 0) {
       state->attachments = NULL;
       return;
    }
 
-   state->attachments = anv_alloc(&cmd_buffer->pool->alloc,
+   state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
                                   pass->attachment_count *
                                        sizeof(state->attachments[0]),
                                   8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -207,12 +207,12 @@ anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
    struct anv_push_constants **ptr = &cmd_buffer->state.push_constants[stage];
 
    if (*ptr == NULL) {
-      *ptr = anv_alloc(&cmd_buffer->pool->alloc, size, 8,
+      *ptr = vk_alloc(&cmd_buffer->pool->alloc, size, 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
       if (*ptr == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
    } else if ((*ptr)->size < size) {
-      *ptr = anv_realloc(&cmd_buffer->pool->alloc, *ptr, size, 8,
+      *ptr = vk_realloc(&cmd_buffer->pool->alloc, *ptr, size, 8,
                          VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
       if (*ptr == NULL)
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -231,7 +231,7 @@ static VkResult anv_create_cmd_buffer(
    struct anv_cmd_buffer *cmd_buffer;
    VkResult result;
 
-   cmd_buffer = anv_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
+   cmd_buffer = vk_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
                           VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (cmd_buffer == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -265,7 +265,7 @@ static VkResult anv_create_cmd_buffer(
    return VK_SUCCESS;
 
  fail:
-   anv_free(&cmd_buffer->pool->alloc, cmd_buffer);
+   vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 
    return result;
 }
@@ -305,8 +305,8 @@ anv_cmd_buffer_destroy(struct anv_cmd_buffer *cmd_buffer)
    anv_state_stream_finish(&cmd_buffer->surface_state_stream);
    anv_state_stream_finish(&cmd_buffer->dynamic_state_stream);
 
-   anv_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
-   anv_free(&cmd_buffer->pool->alloc, cmd_buffer);
+   vk_free(&cmd_buffer->pool->alloc, cmd_buffer->state.attachments);
+   vk_free(&cmd_buffer->pool->alloc, cmd_buffer);
 }
 
 void anv_FreeCommandBuffers(
@@ -771,7 +771,7 @@ VkResult anv_CreateCommandPool(
    ANV_FROM_HANDLE(anv_device, device, _device);
    struct anv_cmd_pool *pool;
 
-   pool = anv_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
+   pool = vk_alloc2(&device->alloc, pAllocator, sizeof(*pool), 8,
                      VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pool == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -801,7 +801,7 @@ void anv_DestroyCommandPool(
       anv_cmd_buffer_destroy(cmd_buffer);
    }
 
-   anv_free2(&device->alloc, pAllocator, pool);
+   vk_free2(&device->alloc, pAllocator, pool);
 }
 
 VkResult anv_ResetCommandPool(

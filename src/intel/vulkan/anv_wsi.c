@@ -68,7 +68,7 @@ void anv_DestroySurfaceKHR(
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
 
-   anv_free2(&instance->alloc, pAllocator, surface);
+   vk_free2(&instance->alloc, pAllocator, surface);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(

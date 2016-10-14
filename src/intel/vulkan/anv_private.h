@@ -47,6 +47,7 @@
 #include "util/macros.h"
 #include "util/list.h"
 #include "util/u_vector.h"
+#include "util/vk_alloc.h"
 
 /* Pre-declarations needed for WSI entrypoints */
 struct wl_surface;
@@ -451,51 +452,6 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
                                       unsigned per_thread_scratch);
 
 extern struct anv_dispatch_table dtable;
-
-static inline void *
-anv_alloc(const VkAllocationCallbacks *alloc,
-          size_t size, size_t align,
-          VkSystemAllocationScope scope)
-{
-   return alloc->pfnAllocation(alloc->pUserData, size, align, scope);
-}
-
-static inline void *
-anv_realloc(const VkAllocationCallbacks *alloc,
-            void *ptr, size_t size, size_t align,
-            VkSystemAllocationScope scope)
-{
-   return alloc->pfnReallocation(alloc->pUserData, ptr, size, align, scope);
-}
-
-static inline void
-anv_free(const VkAllocationCallbacks *alloc, void *data)
-{
-   alloc->pfnFree(alloc->pUserData, data);
-}
-
-static inline void *
-anv_alloc2(const VkAllocationCallbacks *parent_alloc,
-           const VkAllocationCallbacks *alloc,
-           size_t size, size_t align,
-           VkSystemAllocationScope scope)
-{
-   if (alloc)
-      return anv_alloc(alloc, size, align, scope);
-   else
-      return anv_alloc(parent_alloc, size, align, scope);
-}
-
-static inline void
-anv_free2(const VkAllocationCallbacks *parent_alloc,
-          const VkAllocationCallbacks *alloc,
-          void *data)
-{
-   if (alloc)
-      anv_free(alloc, data);
-   else
-      anv_free(parent_alloc, data);
-}
 
 struct anv_wsi_interaface;
 

@@ -53,7 +53,7 @@ wsi_x11_connection_create(struct anv_physical_device *device,
    xcb_query_extension_reply_t *dri3_reply, *pres_reply;
 
    struct wsi_x11_connection *wsi_conn =
-      anv_alloc(&device->instance->alloc, sizeof(*wsi_conn), 8,
+      vk_alloc(&device->instance->alloc, sizeof(*wsi_conn), 8,
                 VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!wsi_conn)
       return NULL;
@@ -66,7 +66,7 @@ wsi_x11_connection_create(struct anv_physical_device *device,
    if (dri3_reply == NULL || pres_reply == NULL) {
       free(dri3_reply);
       free(pres_reply);
-      anv_free(&device->instance->alloc, wsi_conn);
+      vk_free(&device->instance->alloc, wsi_conn);
       return NULL;
    }
 
@@ -83,7 +83,7 @@ static void
 wsi_x11_connection_destroy(struct anv_physical_device *device,
                            struct wsi_x11_connection *conn)
 {
-   anv_free(&device->instance->alloc, conn);
+   vk_free(&device->instance->alloc, conn);
 }
 
 static struct wsi_x11_connection *
@@ -438,7 +438,7 @@ VkResult anv_CreateXcbSurfaceKHR(
 
    VkIcdSurfaceXcb *surface;
 
-   surface = anv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
+   surface = vk_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (surface == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -464,7 +464,7 @@ VkResult anv_CreateXlibSurfaceKHR(
 
    VkIcdSurfaceXlib *surface;
 
-   surface = anv_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
+   surface = vk_alloc2(&instance->alloc, pAllocator, sizeof *surface, 8,
                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (surface == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -800,7 +800,7 @@ x11_swapchain_destroy(struct anv_swapchain *anv_chain,
 
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
-   anv_free2(&chain->base.device->alloc, pAllocator, chain);
+   vk_free2(&chain->base.device->alloc, pAllocator, chain);
 
    return VK_SUCCESS;
 }
@@ -830,7 +830,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
       num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
-   chain = anv_alloc2(&device->alloc, pAllocator, size, 8,
+   chain = vk_alloc2(&device->alloc, pAllocator, size, 8,
                       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (chain == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -893,7 +893,7 @@ fail_init_images:
 fail_register:
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
-   anv_free2(&device->alloc, pAllocator, chain);
+   vk_free2(&device->alloc, pAllocator, chain);
 
    return result;
 }
@@ -904,7 +904,7 @@ anv_x11_init_wsi(struct anv_physical_device *device)
    struct wsi_x11 *wsi;
    VkResult result;
 
-   wsi = anv_alloc(&device->instance->alloc, sizeof(*wsi), 8,
+   wsi = vk_alloc(&device->instance->alloc, sizeof(*wsi), 8,
                    VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
    if (!wsi) {
       result = vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -944,7 +944,7 @@ anv_x11_init_wsi(struct anv_physical_device *device)
 fail_mutex:
    pthread_mutex_destroy(&wsi->mutex);
 fail_alloc:
-   anv_free(&device->instance->alloc, wsi);
+   vk_free(&device->instance->alloc, wsi);
 fail:
    device->wsi[VK_ICD_WSI_PLATFORM_XCB] = NULL;
    device->wsi[VK_ICD_WSI_PLATFORM_XLIB] = NULL;
@@ -963,6 +963,6 @@ anv_x11_finish_wsi(struct anv_physical_device *device)
 
       pthread_mutex_destroy(&wsi->mutex);
 
-      anv_free(&device->instance->alloc, wsi);
+      vk_free(&device->instance->alloc, wsi);
    }
 }

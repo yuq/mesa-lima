@@ -51,7 +51,7 @@ VkResult anv_CreateShaderModule(
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO);
    assert(pCreateInfo->flags == 0);
 
-   module = anv_alloc2(&device->alloc, pAllocator,
+   module = vk_alloc2(&device->alloc, pAllocator,
                        sizeof(*module) + pCreateInfo->codeSize, 8,
                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (module == NULL)
@@ -75,7 +75,7 @@ void anv_DestroyShaderModule(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_shader_module, module, _module);
 
-   anv_free2(&device->alloc, pAllocator, module);
+   vk_free2(&device->alloc, pAllocator, module);
 }
 
 #define SPIR_V_MAGIC_NUMBER 0x07230203
@@ -199,7 +199,7 @@ void anv_DestroyPipeline(
          anv_shader_bin_unref(device, pipeline->shaders[s]);
    }
 
-   anv_free2(&device->alloc, pAllocator, pipeline);
+   vk_free2(&device->alloc, pAllocator, pipeline);
 }
 
 static const uint32_t vk_to_gen_primitive_type[] = {
