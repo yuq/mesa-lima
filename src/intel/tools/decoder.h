@@ -99,6 +99,15 @@ struct gen_field {
    struct gen_type type;
    bool has_default;
    uint32_t default_value;
+
+   struct gen_value **values;
+   uint32_t n_values;
+   uint32_t n_allocated_values;
+};
+
+struct gen_value {
+   char *name;
+   uint64_t value;
 };
 
 void gen_field_iterator_init(struct gen_field_iterator *iter,

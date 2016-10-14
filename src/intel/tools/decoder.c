@@ -303,6 +303,21 @@ create_field(struct parser_context *ctx, const char **atts)
    return field;
 }
 
+static struct gen_value *
+create_value(struct parser_context *ctx, const char **atts)
+{
+   struct gen_value *value = xzalloc(sizeof(*value));
+
+   for (int i = 0; atts[i]; i += 2) {
+      if (strcmp(atts[i], "name") == 0)
+         value->name = xstrdup(atts[i + 1]);
+      else if (strcmp(atts[i], "value") == 0)
+         value->value = strtoul(atts[i + 1], NULL, 0);
+   }
+
+   return value;
+}
+
 static void
 start_element(void *data, const char *element_name, const char **atts)
 {
@@ -352,6 +367,22 @@ start_element(void *data, const char *element_name, const char **atts)
       } while (ctx->group->group_count > 0);
    } else if (strcmp(element_name, "enum") == 0) {
    } else if (strcmp(element_name, "value") == 0) {
+      if (ctx->nfields > 0) {
+         struct gen_field *field = ctx->fields[ctx->nfields - 1];
+         if (field->n_allocated_values <= field->n_values) {
+            if (field->n_allocated_values == 0) {
+               field->n_allocated_values = 2;
+               field->values =
+                  xzalloc(sizeof(field->values[0]) * field->n_allocated_values);
+            } else {
+               field->n_allocated_values *= 2;
+               field->values =
+                  realloc(field->values,
+                          sizeof(field->values[0]) * field->n_allocated_values);
+            }
+         }
+         field->values[field->n_values++] = create_value(ctx, atts);
+      }
    }
 }
 
