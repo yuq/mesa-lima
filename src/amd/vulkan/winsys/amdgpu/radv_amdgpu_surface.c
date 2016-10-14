@@ -256,7 +256,7 @@ static int radv_compute_level(ADDR_HANDLE addrlib,
 			surf_level->dcc_fast_clear_size = AddrDccOut->dccFastClearSize;
 			surf_level->dcc_enabled = true;
 			surf->dcc_size = surf_level->dcc_offset + AddrDccOut->dccRamSize;
-			surf->dcc_alignment = MAX(surf->dcc_alignment, AddrDccOut->dccRamBaseAlign);
+			surf->dcc_alignment = MAX2(surf->dcc_alignment, AddrDccOut->dccRamBaseAlign);
 		}
 	}
 

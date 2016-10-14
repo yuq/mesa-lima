@@ -45,7 +45,7 @@ VkResult radv_CreateDescriptorSetLayout(
 	uint32_t max_binding = 0;
 	uint32_t immutable_sampler_count = 0;
 	for (uint32_t j = 0; j < pCreateInfo->bindingCount; j++) {
-		max_binding = MAX(max_binding, pCreateInfo->pBindings[j].binding);
+		max_binding = MAX2(max_binding, pCreateInfo->pBindings[j].binding);
 		if (pCreateInfo->pBindings[j].pImmutableSamplers)
 			immutable_sampler_count += pCreateInfo->pBindings[j].descriptorCount;
 	}

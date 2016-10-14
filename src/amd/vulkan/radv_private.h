@@ -85,9 +85,6 @@ typedef uint32_t xcb_window_t;
 #define radv_noreturn __attribute__((__noreturn__))
 #define radv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-
 static inline uint32_t
 align_u32(uint32_t v, uint32_t a)
 {
@@ -141,7 +138,7 @@ radv_minify(uint32_t n, uint32_t levels)
 	if (unlikely(n == 0))
 		return 0;
 	else
-		return MAX(n >> levels, 1);
+		return MAX2(n >> levels, 1);
 }
 static inline float
 radv_clamp_f(float f, float min, float max)

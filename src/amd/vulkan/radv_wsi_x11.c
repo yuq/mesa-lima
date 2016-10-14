@@ -823,7 +823,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 	 *  4) One to render to
 	 */
 	if (pCreateInfo->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-		num_images = MAX(num_images, 4);
+		num_images = MAX2(num_images, 4);
 
 	size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
 	chain = radv_alloc2(&device->alloc, pAllocator, size, 8,
