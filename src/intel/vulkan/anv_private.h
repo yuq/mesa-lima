@@ -453,8 +453,6 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
 
 extern struct anv_dispatch_table dtable;
 
-struct anv_wsi_interaface;
-
 #define VK_ICD_WSI_PLATFORM_MAX 5
 
 struct anv_physical_device {
