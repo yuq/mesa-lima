@@ -156,6 +156,7 @@ struct intel_screen
 #define intel_get_rb_region                 old_intel_get_rb_region
 #define intel_renderbuffer_set_draw_offset  old_intel_renderbuffer_set_draw_offset
 #define intel_miptree_create_for_image_buffer old_intel_miptree_create_for_image_buffer
+#define intelFenceExtension                 old_intelFenceExtension
 
 extern void intelDestroyContext(__DRIcontext * driContextPriv);
 
