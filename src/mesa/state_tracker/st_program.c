@@ -558,27 +558,6 @@ st_get_vp_variant(struct st_context *st,
 }
 
 
-static unsigned
-st_translate_interp(enum glsl_interp_mode glsl_qual, bool is_color)
-{
-   switch (glsl_qual) {
-   case INTERP_MODE_NONE:
-      if (is_color)
-         return TGSI_INTERPOLATE_COLOR;
-      return TGSI_INTERPOLATE_PERSPECTIVE;
-   case INTERP_MODE_SMOOTH:
-      return TGSI_INTERPOLATE_PERSPECTIVE;
-   case INTERP_MODE_FLAT:
-      return TGSI_INTERPOLATE_CONSTANT;
-   case INTERP_MODE_NOPERSPECTIVE:
-      return TGSI_INTERPOLATE_LINEAR;
-   default:
-      assert(0 && "unexpected interp mode in st_translate_interp()");
-      return TGSI_INTERPOLATE_PERSPECTIVE;
-   }
-}
-
-
 /**
  * Translate a Mesa fragment shader into a TGSI shader.
  */
@@ -660,14 +639,14 @@ st_translate_fragment_program(struct st_context *st,
          case VARYING_SLOT_COL0:
             input_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
             input_semantic_index[slot] = 0;
-            interpMode[slot] = st_translate_interp(stfp->Base.InterpQualifier[attr],
-                                                   TRUE);
+            interpMode[slot] = stfp->glsl_to_tgsi ?
+               TGSI_INTERPOLATE_COUNT : TGSI_INTERPOLATE_COLOR;
             break;
          case VARYING_SLOT_COL1:
             input_semantic_name[slot] = TGSI_SEMANTIC_COLOR;
             input_semantic_index[slot] = 1;
-            interpMode[slot] = st_translate_interp(stfp->Base.InterpQualifier[attr],
-                                                   TRUE);
+            interpMode[slot] = stfp->glsl_to_tgsi ?
+               TGSI_INTERPOLATE_COUNT : TGSI_INTERPOLATE_COLOR;
             break;
          case VARYING_SLOT_FOGC:
             input_semantic_name[slot] = TGSI_SEMANTIC_FOG;
@@ -743,8 +722,8 @@ st_translate_fragment_program(struct st_context *st,
             if (st->needs_texcoord_semantic) {
                input_semantic_name[slot] = TGSI_SEMANTIC_TEXCOORD;
                input_semantic_index[slot] = attr - VARYING_SLOT_TEX0;
-               interpMode[slot] =
-                  st_translate_interp(stfp->Base.InterpQualifier[attr], FALSE);
+               interpMode[slot] = stfp->glsl_to_tgsi ?
+                  TGSI_INTERPOLATE_COUNT : TGSI_INTERPOLATE_PERSPECTIVE;
                break;
             }
             /* fall through */
@@ -766,9 +745,10 @@ st_translate_fragment_program(struct st_context *st,
             input_semantic_index[slot] = st_get_generic_varying_index(st, attr);
             if (attr == VARYING_SLOT_PNTC)
                interpMode[slot] = TGSI_INTERPOLATE_LINEAR;
-            else
-               interpMode[slot] = st_translate_interp(stfp->Base.InterpQualifier[attr],
-                                                      FALSE);
+            else {
+               interpMode[slot] = stfp->glsl_to_tgsi ?
+                  TGSI_INTERPOLATE_COUNT : TGSI_INTERPOLATE_PERSPECTIVE;
+            }
             break;
          }
       }

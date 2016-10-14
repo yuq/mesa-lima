@@ -338,6 +338,7 @@ struct inout_decl {
    unsigned mesa_index;
    unsigned array_id; /* TGSI ArrayID; 1-based: 0 means not an array */
    unsigned size;
+   enum glsl_interp_mode interp;
    enum glsl_base_type base_type;
    ubyte usage_mask; /* GLSL-style usage-mask,  i.e. single bit per double */
 };
@@ -2420,6 +2421,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
             num_components = 4;
 
          decl->mesa_index = var->data.location;
+         decl->interp = (glsl_interp_mode) var->data.interpolation;
          decl->base_type = type_without_array->base_type;
          decl->usage_mask = u_bit_consecutive(component, num_components);
 
@@ -5894,6 +5896,26 @@ sort_inout_decls_by_slot(struct inout_decl *decls,
    std::sort(decls, decls + count, sorter);
 }
 
+static unsigned
+st_translate_interp(enum glsl_interp_mode glsl_qual, GLuint varying)
+{
+   switch (glsl_qual) {
+   case INTERP_MODE_NONE:
+      if (varying == VARYING_SLOT_COL0 || varying == VARYING_SLOT_COL1)
+         return TGSI_INTERPOLATE_COLOR;
+      return TGSI_INTERPOLATE_PERSPECTIVE;
+   case INTERP_MODE_SMOOTH:
+      return TGSI_INTERPOLATE_PERSPECTIVE;
+   case INTERP_MODE_FLAT:
+      return TGSI_INTERPOLATE_CONSTANT;
+   case INTERP_MODE_NOPERSPECTIVE:
+      return TGSI_INTERPOLATE_LINEAR;
+   default:
+      assert(0 && "unexpected interp mode in st_translate_interp()");
+      return TGSI_INTERPOLATE_PERSPECTIVE;
+   }
+}
+
 /**
  * Translate intermediate IR (glsl_to_tgsi_instruction) to TGSI format.
  * \param program  the program to translate
@@ -5983,9 +6005,17 @@ st_translate_program(
                tgsi_usage_mask = TGSI_WRITEMASK_XYZW;
          }
 
+         unsigned interp_mode = 0;
+         if (procType == PIPE_SHADER_FRAGMENT) {
+            assert(interpMode);
+            interp_mode = interpMode[slot] != TGSI_INTERPOLATE_COUNT ?
+               interpMode[slot] :
+               st_translate_interp(decl->interp, inputSlotToAttr[slot]);
+         }
+
          src = ureg_DECL_fs_input_cyl_centroid_layout(ureg,
                   inputSemanticName[slot], inputSemanticIndex[slot],
-                  interpMode ? interpMode[slot] : 0, 0, interpLocation ? interpLocation[slot] : 0,
+                  interp_mode, 0, interpLocation ? interpLocation[slot] : 0,
                   slot, tgsi_usage_mask, decl->array_id, decl->size);
 
          for (unsigned j = 0; j < decl->size; ++j) {
