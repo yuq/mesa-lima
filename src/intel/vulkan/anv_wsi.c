@@ -21,7 +21,8 @@
  * IN THE SOFTWARE.
  */
 
-#include "anv_wsi.h"
+#include "anv_private.h"
+#include "wsi_common.h"
 #include "vk_format_info.h"
 
 static const struct anv_wsi_callbacks anv_wsi_cbs = {

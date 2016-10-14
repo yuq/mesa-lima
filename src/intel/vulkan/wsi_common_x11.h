@@ -20,40 +20,23 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
  * IN THE SOFTWARE.
  */
+#ifndef WSI_COMMON_X11_H
+#define WSI_COMMON_X11_H
 
-#include <wayland-client.h>
-#include <wayland-drm-client-protocol.h>
+#include "wsi_common.h"
 
-#include "vk_format_info.h"
-#include <util/hash_table.h>
-
-#include "anv_private.h"
-#include "wsi_common_wayland.h"
-
-VkBool32 anv_GetPhysicalDeviceWaylandPresentationSupportKHR(
-    VkPhysicalDevice                            physicalDevice,
+VkBool32 anv_get_physical_device_xcb_presentation_support(
+    struct anv_wsi_device *wsi_device,
+    VkAllocationCallbacks *alloc,
     uint32_t                                    queueFamilyIndex,
-    struct wl_display*                          display)
-{
-   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+    xcb_connection_t*                           connection,
+    xcb_visualid_t                              visual_id);
 
-   return wsi_wl_get_presentation_support(&physical_device->wsi_device, display);
-}
+VkResult anv_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
+				const VkXcbSurfaceCreateInfoKHR *pCreateInfo,
+				VkSurfaceKHR *pSurface);
 
-VkResult anv_CreateWaylandSurfaceKHR(
-    VkInstance                                  _instance,
-    const VkWaylandSurfaceCreateInfoKHR*        pCreateInfo,
-    const VkAllocationCallbacks*                pAllocator,
-    VkSurfaceKHR*                               pSurface)
-{
-   ANV_FROM_HANDLE(anv_instance, instance, _instance);
-   const VkAllocationCallbacks *alloc;
-   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR);
-
-   if (pAllocator)
-      alloc = pAllocator;
-   else
-      alloc = &instance->alloc;
-
-   return anv_create_wl_surface(alloc, pCreateInfo, pSurface);
-}
+VkResult anv_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
+				 const VkXlibSurfaceCreateInfoKHR *pCreateInfo,
+				 VkSurfaceKHR *pSurface);
+#endif

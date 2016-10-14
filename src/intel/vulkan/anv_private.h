@@ -66,6 +66,8 @@ struct gen_l3_config;
 #include "brw_context.h"
 #include "isl/isl.h"
 
+#include "wsi_common.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -454,10 +456,6 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
 extern struct anv_dispatch_table dtable;
 
 #define VK_ICD_WSI_PLATFORM_MAX 5
-
-struct anv_wsi_device {
-    struct anv_wsi_interface *                  wsi[VK_ICD_WSI_PLATFORM_MAX];
-};
 
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
