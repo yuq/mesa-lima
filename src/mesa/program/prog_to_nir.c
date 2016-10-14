@@ -904,8 +904,6 @@ setup_registers_and_variables(struct ptn_compile *c)
          struct gl_fragment_program *fp =
             (struct gl_fragment_program *) c->prog;
 
-         var->data.interpolation = fp->InterpQualifier[i];
-
          if (i == VARYING_SLOT_POS) {
             var->data.origin_upper_left = fp->OriginUpperLeft;
             var->data.pixel_center_integer = fp->PixelCenterInteger;
