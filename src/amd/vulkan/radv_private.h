@@ -238,59 +238,6 @@ void radv_abortfv(const char *format, va_list va) radv_noreturn;
 		return;					\
 	} while (0)
 
-/**
- * A dynamically growable, circular buffer.  Elements are added at head and
- * removed from tail. head and tail are free-running uint32_t indices and we
- * only compute the modulo with size when accessing the array.  This way,
- * number of bytes in the queue is always head - tail, even in case of
- * wraparound.
- */
-
-struct radv_vector {
-   uint32_t head;
-   uint32_t tail;
-   uint32_t element_size;
-   uint32_t size;
-   void *data;
-};
-
-int radv_vector_init(struct radv_vector *queue, uint32_t element_size, uint32_t size);
-void *radv_vector_add(struct radv_vector *queue);
-void *radv_vector_remove(struct radv_vector *queue);
-
-static inline int
-radv_vector_length(struct radv_vector *queue)
-{
-   return (queue->head - queue->tail) / queue->element_size;
-}
-
-static inline void *
-radv_vector_head(struct radv_vector *vector)
-{
-   assert(vector->tail < vector->head);
-   return (void *)((char *)vector->data +
-                   ((vector->head - vector->element_size) &
-                    (vector->size - 1)));
-}
-
-static inline void *
-radv_vector_tail(struct radv_vector *vector)
-{
-   return (void *)((char *)vector->data + (vector->tail & (vector->size - 1)));
-}
-
-static inline void
-radv_vector_finish(struct radv_vector *queue)
-{
-   free(queue->data);
-}
-
-#define radv_vector_foreach(elem, queue)                                  \
-   static_assert(__builtin_types_compatible_p(__typeof__(queue), struct radv_vector *), ""); \
-   for (uint32_t __radv_vector_offset = (queue)->tail;                                \
-        elem = (queue)->data + (__radv_vector_offset & ((queue)->size - 1)), __radv_vector_offset < (queue)->head; \
-        __radv_vector_offset += (queue)->element_size)
-
 void *radv_resolve_entrypoint(uint32_t index);
 void *radv_lookup_entrypoint(const char *name);
 

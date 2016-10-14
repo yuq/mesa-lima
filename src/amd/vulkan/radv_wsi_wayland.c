@@ -30,7 +30,7 @@
 
 #include "vk_format.h"
 #include <util/hash_table.h>
-
+#include <util/u_vector.h>
 #define MIN_NUM_IMAGES 2
 
 struct wsi_wl_display {
@@ -39,7 +39,7 @@ struct wsi_wl_display {
 	struct wl_drm *                              drm;
 
 	/* Vector of VkFormats supported */
-	struct radv_vector                            formats;
+	struct u_vector                            formats;
 
 	uint32_t                                     capabilities;
 };
@@ -59,7 +59,7 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
 {
 	/* Don't add a format that's already in the list */
 	VkFormat *f;
-	radv_vector_foreach(f, &display->formats)
+	u_vector_foreach(f, &display->formats)
 		if (*f == format)
 			return;
 
@@ -70,7 +70,7 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
 	if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
 		return;
 
-	f = radv_vector_add(&display->formats);
+	f = u_vector_add(&display->formats);
 	if (f)
 		*f = format;
 }
@@ -228,7 +228,7 @@ static const struct wl_registry_listener registry_listener = {
 static void
 wsi_wl_display_destroy(struct wsi_wayland *wsi, struct wsi_wl_display *display)
 {
-	radv_vector_finish(&display->formats);
+	u_vector_finish(&display->formats);
 	if (display->drm)
 		wl_drm_destroy(display->drm);
 	radv_free(&wsi->physical_device->instance->alloc, display);
@@ -248,7 +248,7 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
 	display->display = wl_display;
 	display->physical_device = wsi->physical_device;
 
-	if (!radv_vector_init(&display->formats, sizeof(VkFormat), 8))
+	if (!u_vector_init(&display->formats, sizeof(VkFormat), 8))
 		goto fail;
 
 	struct wl_registry *registry = wl_display_get_registry(wl_display);
@@ -381,7 +381,7 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
 	struct wsi_wl_display *display =
 		wsi_wl_get_display(device, surface->display);
 
-	uint32_t count = radv_vector_length(&display->formats);
+	uint32_t count = u_vector_length(&display->formats);
 
 	if (pSurfaceFormats == NULL) {
 		*pSurfaceFormatCount = count;
@@ -392,7 +392,7 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
 	*pSurfaceFormatCount = count;
 
 	VkFormat *f;
-	radv_vector_foreach(f, &display->formats) {
+	u_vector_foreach(f, &display->formats) {
 		*(pSurfaceFormats++) = (VkSurfaceFormatKHR) {
 			.format = *f,
 			/* TODO: We should get this from the compositor somehow */
