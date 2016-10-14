@@ -58,6 +58,7 @@
 #include "main/shaderobj.h"
 #include "ir.h"
 #include "ir_builder.h"
+#include "builtin_functions.h"
 
 using namespace ir_builder;
 

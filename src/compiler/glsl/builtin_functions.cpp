@@ -61,6 +61,7 @@
 #include "glsl_parser_extras.h"
 #include "program/prog_instruction.h"
 #include <math.h>
+#include "builtin_functions.h"
 
 #define M_PIf   ((float) M_PI)
 #define M_PI_2f ((float) M_PI_2)

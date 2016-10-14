@@ -20,6 +20,7 @@ LIBGLSL_FILES = \
 	glsl/blob.c \
 	glsl/blob.h \
 	glsl/builtin_functions.cpp \
+	glsl/builtin_functions.h \
 	glsl/builtin_types.cpp \
 	glsl/builtin_variables.cpp \
 	glsl/glsl_parser_extras.cpp \

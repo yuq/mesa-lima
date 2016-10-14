@@ -30,6 +30,7 @@
 #include "main/uniforms.h"
 #include "program/prog_statevars.h"
 #include "program/prog_instruction.h"
+#include "builtin_functions.h"
 
 using namespace ir_builder;
 

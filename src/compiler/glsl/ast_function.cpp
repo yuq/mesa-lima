@@ -27,6 +27,7 @@
 #include "ir.h"
 #include "main/core.h" /* for MIN2 */
 #include "main/shaderobj.h"
+#include "builtin_functions.h"
 
 static ir_rvalue *
 convert_component(ir_rvalue *src, const glsl_type *desired_type);

@@ -2384,25 +2384,6 @@ _mesa_glsl_initialize_derived_variables(struct gl_context *ctx,
                                         gl_shader *shader);
 
 extern void
-_mesa_glsl_initialize_builtin_functions();
-
-extern ir_function_signature *
-_mesa_glsl_find_builtin_function(_mesa_glsl_parse_state *state,
-                                 const char *name, exec_list *actual_parameters);
-
-extern ir_function *
-_mesa_glsl_find_builtin_function_by_name(const char *name);
-
-extern gl_shader *
-_mesa_glsl_get_builtin_function_shader(void);
-
-extern ir_function_signature *
-_mesa_get_main_function_signature(glsl_symbol_table *symbols);
-
-extern void
-_mesa_glsl_release_builtin_functions(void);
-
-extern void
 reparent_ir(exec_list *list, void *mem_ctx);
 
 extern void

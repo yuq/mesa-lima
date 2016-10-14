@@ -41,6 +41,7 @@
 #include "linker.h"
 #include "glsl_parser_extras.h"
 #include "ir_builder_print_visitor.h"
+#include "builtin_functions.h"
 #include "opt_add_neg_to_sub.h"
 
 class dead_variable_visitor : public ir_hierarchical_visitor {

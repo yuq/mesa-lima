@@ -80,6 +80,7 @@
 #include "ir_optimization.h"
 #include "ir_rvalue_visitor.h"
 #include "ir_uniform.h"
+#include "builtin_functions.h"
 
 #include "main/shaderobj.h"
 #include "main/enums.h"
