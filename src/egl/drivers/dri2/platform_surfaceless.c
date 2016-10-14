@@ -193,7 +193,7 @@ surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
    unsigned int count, i, j;
 
    count = 0;
-   for (i = 0; i < dri2_dpy->driver_configs[i]; i++) {
+   for (i = 0; dri2_dpy->driver_configs[i] != NULL; i++) {
       for (j = 0; j < ARRAY_SIZE(visuals); j++) {
          struct dri2_egl_config *dri2_conf;
 
