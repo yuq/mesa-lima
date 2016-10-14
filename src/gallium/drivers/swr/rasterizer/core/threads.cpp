@@ -761,12 +761,8 @@ DWORD workerThreadMain(LPVOID pData)
                 continue;
             }
 
-            AR_BEGIN(WorkerWaitForThreadEvent, 0);
-
             pContext->FifosNotEmpty.wait(lock);
             lock.unlock();
-
-            AR_END(WorkerWaitForThreadEvent, 0);
         }
 
         if (IsBEThread)

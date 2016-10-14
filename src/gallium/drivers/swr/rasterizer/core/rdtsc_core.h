@@ -90,7 +90,6 @@ enum CORE_BUCKETS
     BEOutputMerger,
     BEStoreTiles,
     BEEndTile,
-    WorkerWaitForThreadEvent,
 
     NumBuckets
 };
