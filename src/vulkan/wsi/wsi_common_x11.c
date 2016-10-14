@@ -27,12 +27,15 @@
 #include <xcb/dri3.h>
 #include <xcb/present.h>
 
-#include "util/hash_table.h"
+#include "util/macros.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+
+#include "util/hash_table.h"
+
 #include "wsi_common.h"
 #include "wsi_common_x11.h"
 

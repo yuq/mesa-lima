@@ -2631,6 +2631,8 @@ VA_MINOR=`$PKG_CONFIG --modversion libva | $SED -n 's/.*\.\(.*\)\..*$/\1/p'`
 AC_SUBST([VA_MAJOR], $VA_MAJOR)
 AC_SUBST([VA_MINOR], $VA_MINOR)
 
+AM_CONDITIONAL(HAVE_VULKAN_COMMON, test "x$VULKAN_DRIVERS" != "x")
+
 AC_SUBST([XVMC_MAJOR], 1)
 AC_SUBST([XVMC_MINOR], 0)
 
@@ -2789,7 +2791,8 @@ AC_CONFIG_FILES([Makefile
 		src/mesa/drivers/x11/Makefile
 		src/mesa/main/tests/Makefile
 		src/util/Makefile
-		src/util/tests/hash_table/Makefile])
+		src/util/tests/hash_table/Makefile
+		src/vulkan/wsi/Makefile])
 
 AC_OUTPUT
 

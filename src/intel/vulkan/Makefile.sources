@@ -42,19 +42,14 @@ VULKAN_FILES := \
 	anv_query.c \
 	anv_util.c \
 	anv_wsi.c \
-	wsi_common.h \
 	genX_pipeline_util.h \
 	vk_format_info.h
 
 VULKAN_WSI_WAYLAND_FILES := \
-	anv_wsi_wayland.c \
-	wsi_common_wayland.c \
-	wsi_common_wayland.h
+	anv_wsi_wayland.c
 
 VULKAN_WSI_X11_FILES := \
-	anv_wsi_x11.c \
-	wsi_common_x11.c \
-	wsi_common_x11.h
+	anv_wsi_x11.c
 
 VULKAN_GEM_FILES := \
 	anv_gem.c

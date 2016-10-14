@@ -115,6 +115,10 @@ if HAVE_INTEL_DRIVERS
 SUBDIRS += intel/tools
 endif
 
+if HAVE_VULKAN_COMMON
+SUBDIRS += vulkan/wsi
+endif
+
 ## Requires the i965 compiler (part of mesa) and wayland-drm
 if HAVE_INTEL_VULKAN
 SUBDIRS += intel/vulkan
