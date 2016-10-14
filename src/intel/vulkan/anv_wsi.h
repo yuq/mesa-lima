@@ -89,6 +89,12 @@ struct anv_swapchain {
 ANV_DEFINE_NONDISP_HANDLE_CASTS(_VkIcdSurfaceBase, VkSurfaceKHR)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_swapchain, VkSwapchainKHR)
 
+struct anv_wsi_callbacks {
+   void (*get_phys_device_format_properties)(VkPhysicalDevice physicalDevice,
+                                             VkFormat format,
+                                             VkFormatProperties *pFormatProperties);
+};
+
 VkResult anv_x11_init_wsi(struct anv_wsi_device *wsi_device,
                           const VkAllocationCallbacks *alloc);
 void anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
@@ -96,7 +102,8 @@ void anv_x11_finish_wsi(struct anv_wsi_device *wsi_device,
 
 VkResult anv_wl_init_wsi(struct anv_wsi_device *wsi_device,
                          const VkAllocationCallbacks *alloc,
-                         VkPhysicalDevice physical_device);
+                         VkPhysicalDevice physical_device,
+                         const struct anv_wsi_callbacks *cbs);
 void anv_wl_finish_wsi(struct anv_wsi_device *wsi_device,
                        const VkAllocationCallbacks *alloc);
 #endif /* ANV_WSI_H */

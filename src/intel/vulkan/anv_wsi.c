@@ -23,6 +23,11 @@
 
 #include "anv_wsi.h"
 #include "vk_format_info.h"
+
+static const struct anv_wsi_callbacks anv_wsi_cbs = {
+   .get_phys_device_format_properties = anv_GetPhysicalDeviceFormatProperties,
+};
+
 VkResult
 anv_init_wsi(struct anv_physical_device *physical_device)
 {
@@ -38,7 +43,8 @@ anv_init_wsi(struct anv_physical_device *physical_device)
 
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
    result = anv_wl_init_wsi(&physical_device->wsi_device, &physical_device->instance->alloc,
-                            anv_physical_device_to_handle(physical_device));
+                            anv_physical_device_to_handle(physical_device),
+                            &anv_wsi_cbs);
    if (result != VK_SUCCESS) {
 #ifdef VK_USE_PLATFORM_XCB_KHR
       anv_x11_finish_wsi(&physical_device->wsi_device, &physical_device->instance->alloc);

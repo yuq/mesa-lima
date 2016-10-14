@@ -31,11 +31,13 @@
 
 #define MIN_NUM_IMAGES 2
 
+struct wsi_wayland;
+
 struct wsi_wl_display {
-   VkPhysicalDevice physical_device;
    struct wl_display *                          display;
    struct wl_drm *                              drm;
 
+   struct wsi_wayland *wsi_wl;
    /* Vector of VkFormats supported */
    struct u_vector                            formats;
 
@@ -51,6 +53,8 @@ struct wsi_wayland {
    pthread_mutex_t                              mutex;
    /* Hash table of wl_display -> wsi_wl_display mappings */
    struct hash_table *                          displays;
+
+   const struct anv_wsi_callbacks *cbs;
 };
 
 static void
@@ -64,8 +68,9 @@ wsi_wl_display_add_vk_format(struct wsi_wl_display *display, VkFormat format)
 
    /* Don't add formats that aren't renderable. */
    VkFormatProperties props;
-   anv_GetPhysicalDeviceFormatProperties(
-      display->physical_device, format, &props);
+
+   display->wsi_wl->cbs->get_phys_device_format_properties(display->wsi_wl->physical_device,
+                                                           format, &props);
    if (!(props.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT))
       return;
 
@@ -249,7 +254,7 @@ wsi_wl_display_create(struct wsi_wayland *wsi, struct wl_display *wl_display)
    memset(display, 0, sizeof(*display));
 
    display->display = wl_display;
-   display->physical_device = wsi->physical_device;
+   display->wsi_wl = wsi;
 
    if (!u_vector_init(&display->formats, sizeof(VkFormat), 8))
       goto fail;
@@ -759,7 +764,8 @@ fail:
 VkResult
 anv_wl_init_wsi(struct anv_wsi_device *wsi_device,
                 const VkAllocationCallbacks *alloc,
-                VkPhysicalDevice physical_device)
+                VkPhysicalDevice physical_device,
+                const struct anv_wsi_callbacks *cbs)
 {
    struct wsi_wayland *wsi;
    VkResult result;
@@ -773,6 +779,7 @@ anv_wl_init_wsi(struct anv_wsi_device *wsi_device,
 
    wsi->physical_device = physical_device;
    wsi->alloc = alloc;
+   wsi->cbs = cbs;
    int ret = pthread_mutex_init(&wsi->mutex, NULL);
    if (ret != 0) {
       if (ret == ENOMEM) {
