@@ -594,11 +594,14 @@ gen_group_get_length(struct gen_group *group, const uint32_t *p)
 
 void
 gen_field_iterator_init(struct gen_field_iterator *iter,
-                        struct gen_group *group, const uint32_t *p)
+                        struct gen_group *group,
+                        const uint32_t *p,
+                        bool print_colors)
 {
    iter->group = group;
    iter->p = p;
    iter->i = 0;
+   iter->print_colors = print_colors;
 }
 
 bool
@@ -632,10 +635,13 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
       snprintf(iter->value, sizeof(iter->value),
                "%"PRIu64, field(v.qw, f->start, f->end));
       break;
-   case GEN_TYPE_BOOL:
+   case GEN_TYPE_BOOL: {
+      const char *true_string =
+         iter->print_colors ? "\e[0;35mtrue\e[0m" : "true";
       snprintf(iter->value, sizeof(iter->value),
-               "%s", field(v.qw, f->start, f->end) ? "true" : "false");
+               "%s", field(v.qw, f->start, f->end) ? true_string : "false");
       break;
+   }
    case GEN_TYPE_FLOAT:
       snprintf(iter->value, sizeof(iter->value), "%f", v.f);
       break;

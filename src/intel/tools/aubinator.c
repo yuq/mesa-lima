@@ -139,7 +139,8 @@ decode_structure(struct gen_spec *spec, struct gen_group *strct,
    else
       offset = 0;
 
-   gen_field_iterator_init(&iter, strct, p);
+   gen_field_iterator_init(&iter, strct, p,
+                           option_color == COLOR_ALWAYS);
    while (gen_field_iterator_next(&iter)) {
       idx = 0;
       print_dword_val(&iter, offset, &dword_num);
@@ -755,7 +756,8 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
          struct gen_field_iterator iter;
          char *token = NULL;
          int idx = 0, dword_num = 0;
-         gen_field_iterator_init(&iter, inst, p);
+         gen_field_iterator_init(&iter, inst, p,
+                                 option_color == COLOR_ALWAYS);
          while (gen_field_iterator_next(&iter)) {
             idx = 0;
             print_dword_val(&iter, offset, &dword_num);

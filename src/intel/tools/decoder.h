@@ -55,6 +55,7 @@ struct gen_field_iterator {
    char value[128];
    const uint32_t *p;
    int i;
+   bool print_colors;
 };
 
 struct gen_group {
@@ -101,7 +102,9 @@ struct gen_field {
 };
 
 void gen_field_iterator_init(struct gen_field_iterator *iter,
-                             struct gen_group *group, const uint32_t *p);
+                             struct gen_group *group,
+                             const uint32_t *p,
+                             bool print_colors);
 
 bool gen_field_iterator_next(struct gen_field_iterator *iter);
 
