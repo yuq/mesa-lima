@@ -53,6 +53,7 @@ struct gen_field_iterator {
    struct gen_group *group;
    const char *name;
    char value[128];
+   char description[128];
    const uint32_t *p;
    int i;
    bool print_colors;

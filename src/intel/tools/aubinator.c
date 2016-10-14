@@ -111,7 +111,12 @@ print_iterator_values(struct gen_field_iterator *iter, int *idx)
 {
     char *token = NULL;
     if (strstr(iter->value, "struct") == NULL) {
-        printf("    %s: %s\n", iter->name, iter->value);
+       if (strlen(iter->description) > 0) {
+          printf("    %s: %s (%s)\n",
+                 iter->name, iter->value, iter->description);
+       } else {
+          printf("    %s: %s\n", iter->name, iter->value);
+       }
     } else {
         token = strtok(iter->value, " ");
         if (token != NULL) {

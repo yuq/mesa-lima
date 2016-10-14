@@ -635,6 +635,19 @@ gen_field_iterator_init(struct gen_field_iterator *iter,
    iter->print_colors = print_colors;
 }
 
+static void
+gen_field_write_value(char *str, size_t max_length,
+                      struct gen_field *field,
+                      uint64_t value)
+{
+   for (int i = 0; i < field->n_values; i++) {
+      if (field->values[i]->value == value) {
+         strncpy(str, field->values[i]->name, max_length);
+         return;
+      }
+   }
+}
+
 bool
 gen_field_iterator_next(struct gen_field_iterator *iter)
 {
@@ -656,16 +669,26 @@ gen_field_iterator_next(struct gen_field_iterator *iter)
    else
       v.qw = iter->p[index];
 
+   iter->description[0] = '\0';
+
    switch (f->type.kind) {
    case GEN_TYPE_UNKNOWN:
-   case GEN_TYPE_INT:
+   case GEN_TYPE_INT: {
+      uint64_t value = field(v.qw, f->start, f->end);
       snprintf(iter->value, sizeof(iter->value),
-               "%"PRId64, field(v.qw, f->start, f->end));
+               "%"PRId64, value);
+      gen_field_write_value(iter->description, sizeof(iter->description),
+                            f, value);
       break;
-   case GEN_TYPE_UINT:
+   }
+   case GEN_TYPE_UINT: {
+      uint64_t value = field(v.qw, f->start, f->end);
       snprintf(iter->value, sizeof(iter->value),
-               "%"PRIu64, field(v.qw, f->start, f->end));
+               "%"PRIu64, value);
+      gen_field_write_value(iter->description, sizeof(iter->description),
+                            f, value);
       break;
+   }
    case GEN_TYPE_BOOL: {
       const char *true_string =
          iter->print_colors ? "\e[0;35mtrue\e[0m" : "true";
