@@ -468,16 +468,20 @@ static void setup_scratch_rsrc_user_sgprs(struct si_context *sctx,
 	/* Disable address clamping */
 	uint32_t scratch_dword2 = 0xffffffff;
 	uint32_t scratch_dword3 =
-		S_008F0C_ELEMENT_SIZE(max_private_element_size) |
 		S_008F0C_INDEX_STRIDE(3) |
 		S_008F0C_ADD_TID_ENABLE(1);
 
+	if (sctx->b.chip_class >= GFX9) {
+		assert(max_private_element_size == 1); /* always 4 bytes on GFX9 */
+	} else {
+		scratch_dword3 |= S_008F0C_ELEMENT_SIZE(max_private_element_size);
 
-	if (sctx->screen->b.chip_class < VI) {
-		/* BUF_DATA_FORMAT is ignored, but it cannot be
-		   BUF_DATA_FORMAT_INVALID. */
-		scratch_dword3 |=
-			S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_8);
+		if (sctx->b.chip_class < VI) {
+			/* BUF_DATA_FORMAT is ignored, but it cannot be
+			 * BUF_DATA_FORMAT_INVALID. */
+			scratch_dword3 |=
+				S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_8);
+		}
 	}
 
 	radeon_set_sh_reg_seq(cs, R_00B900_COMPUTE_USER_DATA_0 +
