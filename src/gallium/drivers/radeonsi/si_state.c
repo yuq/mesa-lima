@@ -1425,7 +1425,8 @@ static uint32_t si_translate_texformat(struct pipe_screen *screen,
 	}
 
 	if (desc->layout == UTIL_FORMAT_LAYOUT_ETC &&
-	    sscreen->b.family == CHIP_STONEY) {
+	    (sscreen->b.family == CHIP_STONEY ||
+	     sscreen->b.chip_class >= GFX9)) {
 		switch (format) {
 		case PIPE_FORMAT_ETC1_RGB8:
 		case PIPE_FORMAT_ETC2_RGB8:
