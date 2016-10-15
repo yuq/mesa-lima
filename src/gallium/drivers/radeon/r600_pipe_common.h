@@ -201,7 +201,7 @@ struct r600_cmask_info {
 	uint64_t size;
 	unsigned alignment;
 	unsigned slice_tile_max;
-	unsigned base_address_reg;
+	uint64_t base_address_reg;
 };
 
 struct r600_texture {
@@ -293,6 +293,7 @@ struct r600_surface {
 	unsigned cb_color_pitch;	/* EG and later */
 	unsigned cb_color_slice;	/* EG and later */
 	unsigned cb_color_attrib;	/* EG and later */
+	unsigned cb_color_attrib2;	/* GFX9 and later */
 	unsigned cb_dcc_control;	/* VI and later */
 	unsigned cb_color_fmask;	/* CB_COLORn_FMASK (EG and later) or CB_COLORn_FRAG (r600) */
 	unsigned cb_color_fmask_slice;	/* EG and later */
