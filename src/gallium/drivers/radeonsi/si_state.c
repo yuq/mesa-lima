@@ -3171,43 +3171,70 @@ si_make_texture_descriptor(struct si_screen *screen,
 
 	/* Initialize the sampler view for FMASK. */
 	if (tex->fmask.size) {
-		uint32_t fmask_format;
+		uint32_t data_format, num_format;
 
 		va = tex->resource.gpu_address + tex->fmask.offset;
 
-		switch (res->nr_samples) {
-		case 2:
-			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F2;
-			break;
-		case 4:
-			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F4;
-			break;
-		case 8:
-			fmask_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F8;
-			break;
-		default:
-			assert(0);
-			fmask_format = V_008F14_IMG_DATA_FORMAT_INVALID;
+		if (screen->b.chip_class >= GFX9) {
+			data_format = V_008F14_IMG_DATA_FORMAT_FMASK;
+			switch (res->nr_samples) {
+			case 2:
+				num_format = V_008F14_IMG_FMASK_8_2_2;
+				break;
+			case 4:
+				num_format = V_008F14_IMG_FMASK_8_4_4;
+				break;
+			case 8:
+				num_format = V_008F14_IMG_FMASK_32_8_8;
+				break;
+			default:
+				assert(0);
+			}
+		} else {
+			switch (res->nr_samples) {
+			case 2:
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S2_F2;
+				break;
+			case 4:
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK8_S4_F4;
+				break;
+			case 8:
+				data_format = V_008F14_IMG_DATA_FORMAT_FMASK32_S8_F8;
+				break;
+			default:
+				assert(0);
+			}
+			num_format = V_008F14_IMG_NUM_FORMAT_UINT;
 		}
 
 		fmask_state[0] = va >> 8;
 		fmask_state[1] = S_008F14_BASE_ADDRESS_HI(va >> 40) |
-				 S_008F14_DATA_FORMAT_GFX6(fmask_format) |
-				 S_008F14_NUM_FORMAT_GFX6(V_008F14_IMG_NUM_FORMAT_UINT);
+				 S_008F14_DATA_FORMAT_GFX6(data_format) |
+				 S_008F14_NUM_FORMAT_GFX6(num_format);
 		fmask_state[2] = S_008F18_WIDTH(width - 1) |
 				 S_008F18_HEIGHT(height - 1);
 		fmask_state[3] = S_008F1C_DST_SEL_X(V_008F1C_SQ_SEL_X) |
 				 S_008F1C_DST_SEL_Y(V_008F1C_SQ_SEL_X) |
 				 S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
 				 S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
-				 S_008F1C_TILING_INDEX(tex->fmask.tile_mode_index) |
 				 S_008F1C_TYPE(si_tex_dim(res->target, target, 0));
-		fmask_state[4] = S_008F20_DEPTH(depth - 1) |
-				 S_008F20_PITCH_GFX6(tex->fmask.pitch_in_pixels - 1);
-		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer) |
-				 S_008F24_LAST_ARRAY(last_layer);
+		fmask_state[4] = 0;
+		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer);
 		fmask_state[6] = 0;
 		fmask_state[7] = 0;
+
+		if (screen->b.chip_class >= GFX9) {
+			fmask_state[3] |= S_008F1C_SW_MODE(tex->surface.u.gfx9.fmask.swizzle_mode);
+			fmask_state[4] |= S_008F20_DEPTH(last_layer) |
+					  S_008F20_PITCH_GFX9(tex->surface.u.gfx9.fmask.epitch);
+			fmask_state[5] |= S_008F24_META_PIPE_ALIGNED(tex->surface.u.gfx9.cmask.pipe_aligned) |
+					  S_008F24_META_RB_ALIGNED(tex->surface.u.gfx9.cmask.rb_aligned);
+		} else {
+			fmask_state[3] |= S_008F1C_TILING_INDEX(tex->fmask.tile_mode_index);
+			fmask_state[4] |= S_008F20_DEPTH(depth - 1) |
+					  S_008F20_PITCH_GFX6(tex->fmask.pitch_in_pixels - 1);
+			fmask_state[5] |= S_008F24_LAST_ARRAY(last_layer);
+		}
 	}
 }
 
