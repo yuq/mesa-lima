@@ -83,7 +83,11 @@ namespace ArchRast
 % for name in protos['event_names']:
         virtual void handle(${name}& event)
         {
+% if protos['events'][name]['num_fields'] == 0:
+            write(${protos['events'][name]['event_id']}, (char*)&event.data, 0);
+% else:
             write(${protos['events'][name]['event_id']}, (char*)&event.data, sizeof(event.data));
+%endif
         }
 % endfor
 

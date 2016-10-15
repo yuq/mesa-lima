@@ -97,6 +97,14 @@ event End
     uint32_t count;
 };
 
+event ThreadStartApiEvent
+{
+};
+
+event ThreadStartWorkerEvent
+{
+};
+
 event DrawInstancedEvent
 {
     uint32_t drawId;

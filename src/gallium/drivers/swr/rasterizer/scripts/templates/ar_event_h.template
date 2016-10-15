@@ -86,9 +86,10 @@ namespace ArchRast
             ${field_types[i]} ${field_names[i]},
             % endif
             % if i == len(field_names)-1:
-            ${field_types[i]} ${field_names[i]})
+            ${field_types[i]} ${field_names[i]}
             % endif
         % endfor
+        )
         {
         % for i in range(len(field_names)):
             data.${field_names[i]} = ${field_names[i]};
