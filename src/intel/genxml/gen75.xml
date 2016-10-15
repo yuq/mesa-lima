@@ -364,7 +364,7 @@
       <value name="HALIGN_4" value="0"/>
       <value name="HALIGN_8" value="1"/>
     </field>
-    <field name="Tiled Surface" start="14" end="14" type="uint"/>
+    <field name="Tiled Surface" start="14" end="14" type="bool"/>
     <field name="Tile Walk" start="13" end="13" type="uint">
       <value name="TILEWALK_XMAJOR" value="0"/>
       <value name="TILEWALK_YMAJOR" value="1"/>

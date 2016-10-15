@@ -349,7 +349,7 @@
     </field>
     <field name="Depth" start="117" end="127" type="uint"/>
     <field name="Surface Pitch" start="99" end="115" type="uint"/>
-    <field name="Tiled Surface" start="97" end="97" type="uint"/>
+    <field name="Tiled Surface" start="97" end="97" type="bool"/>
     <field name="Tile Walk" start="96" end="96" type="uint">
       <value name="TILEWALK_XMAJOR" value="0"/>
       <value name="TILEWALK_YMAJOR" value="1"/>
@@ -929,7 +929,7 @@
       <value name="SURFTYPE_CUBE" value="3"/>
       <value name="SURFTYPE_NULL" value="7"/>
     </field>
-    <field name="Tiled Surface" start="59" end="59" type="uint"/>
+    <field name="Tiled Surface" start="59" end="59" type="bool"/>
     <field name="Tile Walk" start="58" end="58" type="uint">
       <value name="TILEWALK_YMAJOR" value="1"/>
     </field>
