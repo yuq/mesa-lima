@@ -4802,7 +4802,8 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 
 	/* The hardware needs special lowering for Gather4 with integer formats. */
-	if (opcode == TGSI_OPCODE_TG4) {
+	if (ctx->screen->b.chip_class <= VI &&
+	    opcode == TGSI_OPCODE_TG4) {
 		struct tgsi_shader_info *info = &ctx->shader->selector->info;
 		/* This will also work with non-constant indexing because of how
 		 * glsl_to_tgsi works and we intent to preserve that behavior.
