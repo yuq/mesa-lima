@@ -1960,10 +1960,10 @@
       <value name="TRAILING" value="1"/>
     </field>
     <field name="SO Statistics Enable" start="57" end="57" type="bool"/>
-    <field name="SO Buffer Enable [3]" start="43" end="43" type="uint"/>
-    <field name="SO Buffer Enable [2]" start="42" end="42" type="uint"/>
-    <field name="SO Buffer Enable [1]" start="41" end="41" type="uint"/>
-    <field name="SO Buffer Enable [0]" start="40" end="40" type="uint"/>
+    <field name="SO Buffer Enable [3]" start="43" end="43" type="bool"/>
+    <field name="SO Buffer Enable [2]" start="42" end="42" type="bool"/>
+    <field name="SO Buffer Enable [1]" start="41" end="41" type="bool"/>
+    <field name="SO Buffer Enable [0]" start="40" end="40" type="bool"/>
     <field name="Stream 3 Vertex Read Offset" start="93" end="93" type="uint"/>
     <field name="Stream 3 Vertex Read Length" start="88" end="92" type="uint"/>
     <field name="Stream 2 Vertex Read Offset" start="85" end="85" type="uint"/>
