@@ -2025,7 +2025,7 @@
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="6"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="3"/>
-    <field name="Stencil Buffer Enable" start="63" end="63" type="uint"/>
+    <field name="Stencil Buffer Enable" start="63" end="63" type="bool"/>
     <field name="Stencil Buffer Object Control State" start="54" end="60" type="MEMORY_OBJECT_CONTROL_STATE"/>
     <field name="Stencil Buffer MOCS" start="54" end="60" type="uint"/>
     <field name="Surface Pitch" start="32" end="48" type="uint"/>
