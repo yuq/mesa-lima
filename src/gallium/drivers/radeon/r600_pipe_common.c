@@ -779,6 +779,7 @@ static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 	case CHIP_POLARIS11: return "AMD POLARIS11";
 	case CHIP_POLARIS12: return "AMD POLARIS12";
 	case CHIP_STONEY: return "AMD STONEY";
+	case CHIP_VEGA10: return "AMD VEGA10";
 	default: return "AMD unknown";
 	}
 }

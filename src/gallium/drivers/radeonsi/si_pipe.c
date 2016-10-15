@@ -751,7 +751,9 @@ static void si_handle_env_var_force_family(struct si_screen *sscreen)
 			/* Override family and chip_class. */
 			sscreen->b.family = sscreen->b.info.family = i;
 
-			if (i >= CHIP_TONGA)
+			if (i >= CHIP_VEGA10)
+				sscreen->b.chip_class = sscreen->b.info.chip_class = GFX9;
+			else if (i >= CHIP_TONGA)
 				sscreen->b.chip_class = sscreen->b.info.chip_class = VI;
 			else if (i >= CHIP_BONAIRE)
 				sscreen->b.chip_class = sscreen->b.info.chip_class = CIK;

@@ -219,7 +219,9 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
       goto fail;
    }
 
-   if (ws->info.family >= CHIP_TONGA)
+   if (ws->info.family >= CHIP_VEGA10)
+      ws->info.chip_class = GFX9;
+   else if (ws->info.family >= CHIP_TONGA)
       ws->info.chip_class = VI;
    else if (ws->info.family >= CHIP_BONAIRE)
       ws->info.chip_class = CIK;
@@ -303,6 +305,9 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    case CHIP_POLARIS12:
       ws->family = FAMILY_VI;
       ws->rev_id = VI_POLARIS12_V_A0;
+   case CHIP_VEGA10:
+      ws->family = FAMILY_AI;
+      ws->rev_id = AI_VEGA10_P_A0;
       break;
    default:
       fprintf(stderr, "amdgpu: Unknown family.\n");
