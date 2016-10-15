@@ -778,6 +778,8 @@ void si_emit_cache_flush(struct si_context *sctx)
 	struct r600_common_context *rctx = &sctx->b;
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
 	uint32_t cp_coher_cntl = 0;
+	uint32_t flush_cb_db = rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
+					      SI_CONTEXT_FLUSH_AND_INV_DB);
 
 	if (rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
 			   SI_CONTEXT_FLUSH_AND_INV_DB))
@@ -796,30 +798,34 @@ void si_emit_cache_flush(struct si_context *sctx)
 	if (rctx->flags & SI_CONTEXT_INV_SMEM_L1)
 		cp_coher_cntl |= S_0085F0_SH_KCACHE_ACTION_ENA(1);
 
+	if (rctx->chip_class <= VI) {
+		if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
+			cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
+					 S_0085F0_CB0_DEST_BASE_ENA(1) |
+					 S_0085F0_CB1_DEST_BASE_ENA(1) |
+					 S_0085F0_CB2_DEST_BASE_ENA(1) |
+					 S_0085F0_CB3_DEST_BASE_ENA(1) |
+					 S_0085F0_CB4_DEST_BASE_ENA(1) |
+					 S_0085F0_CB5_DEST_BASE_ENA(1) |
+					 S_0085F0_CB6_DEST_BASE_ENA(1) |
+					 S_0085F0_CB7_DEST_BASE_ENA(1);
+
+			/* Necessary for DCC */
+			if (rctx->chip_class == VI)
+				r600_gfx_write_event_eop(rctx, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
+							 0, 0, NULL, 0, 0, 0);
+		}
+		if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB)
+			cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
+					 S_0085F0_DB_DEST_BASE_ENA(1);
+	}
+
 	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB) {
-		cp_coher_cntl |= S_0085F0_CB_ACTION_ENA(1) |
-				 S_0085F0_CB0_DEST_BASE_ENA(1) |
-			         S_0085F0_CB1_DEST_BASE_ENA(1) |
-			         S_0085F0_CB2_DEST_BASE_ENA(1) |
-			         S_0085F0_CB3_DEST_BASE_ENA(1) |
-			         S_0085F0_CB4_DEST_BASE_ENA(1) |
-			         S_0085F0_CB5_DEST_BASE_ENA(1) |
-			         S_0085F0_CB6_DEST_BASE_ENA(1) |
-			         S_0085F0_CB7_DEST_BASE_ENA(1);
-
-		/* Necessary for DCC */
-		if (rctx->chip_class == VI)
-			r600_gfx_write_event_eop(rctx, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
-						 0, 0, NULL, 0, 0, 0);
-
 		/* Flush CMASK/FMASK/DCC. SURFACE_SYNC will wait for idle. */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
 	}
 	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB) {
-		cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
-				 S_0085F0_DB_DEST_BASE_ENA(1);
-
 		/* Flush HTILE. SURFACE_SYNC will wait for idle. */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
@@ -829,8 +835,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 	 * VS and PS waits are unnecessary if SURFACE_SYNC is going to wait
 	 * for everything including CB/DB cache flushes.
 	 */
-	if (!(rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
-			     SI_CONTEXT_FLUSH_AND_INV_DB))) {
+	if (!flush_cb_db) {
 		if (rctx->flags & SI_CONTEXT_PS_PARTIAL_FLUSH) {
 			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 			radeon_emit(cs, EVENT_TYPE(V_028A90_PS_PARTIAL_FLUSH) | EVENT_INDEX(4));
@@ -864,6 +869,62 @@ void si_emit_cache_flush(struct si_context *sctx)
 		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_STREAMOUT_SYNC) | EVENT_INDEX(0));
 	}
 
+	/* GFX9: Wait for idle if we're flushing CB or DB. ACQUIRE_MEM doesn't
+	 * wait for idle on GFX9. We have to use a TS event.
+	 */
+	if (sctx->b.chip_class >= GFX9 && flush_cb_db) {
+		struct r600_resource *rbuf = NULL;
+		uint64_t va;
+		unsigned offset = 0, tc_flags, cb_db_event;
+
+		/* Set the CB/DB flush event. */
+		switch (flush_cb_db) {
+		case SI_CONTEXT_FLUSH_AND_INV_CB:
+			cb_db_event = V_028A90_FLUSH_AND_INV_CB_DATA_TS;
+			break;
+		case SI_CONTEXT_FLUSH_AND_INV_DB:
+			cb_db_event = V_028A90_FLUSH_AND_INV_DB_DATA_TS;
+			break;
+		default:
+			/* both CB & DB */
+			cb_db_event = V_028A90_CACHE_FLUSH_AND_INV_TS_EVENT;
+		}
+
+		/* TC    | TC_WB         = invalidate L2 data
+		 * TC_MD | TC_WB         = invalidate L2 metadata
+		 * TC    | TC_WB | TC_MD = invalidate L2 data & metadata
+		 *
+		 * The metadata cache must always be invalidated for coherency
+		 * between CB/DB and shaders. (metadata = HTILE, CMASK, DCC)
+		 *
+		 * TC must be invalidated on GFX9 only if the CB/DB surface is
+		 * not pipe-aligned. If the surface is RB-aligned, it might not
+		 * strictly be pipe-aligned since RB alignment takes precendence.
+		 */
+		tc_flags = EVENT_TC_WB_ACTION_ENA |
+			   EVENT_TC_MD_ACTION_ENA;
+
+		/* Ideally flush TC together with CB/DB. */
+		if (rctx->flags & SI_CONTEXT_INV_GLOBAL_L2) {
+			tc_flags |= EVENT_TC_ACTION_ENA |
+				    EVENT_TCL1_ACTION_ENA;
+
+			/* Clear the flags. */
+			rctx->flags &= ~(SI_CONTEXT_INV_GLOBAL_L2 |
+					 SI_CONTEXT_WRITEBACK_GLOBAL_L2 |
+					 SI_CONTEXT_INV_VMEM_L1);
+		}
+
+		/* Allocate memory for the fence. */
+		u_suballocator_alloc(rctx->allocator_zeroed_memory, 4, 4,
+				     &offset, (struct pipe_resource**)&rbuf);
+		va = rbuf->gpu_address + offset;
+
+		r600_gfx_write_event_eop(rctx, cb_db_event, tc_flags, 1,
+					 rbuf, va, 0, 1);
+		r600_gfx_wait_fence(rctx, va, 1, 0xffffffff);
+	}
+
 	/* Make sure ME is idle (it executes most packets) before continuing.
 	 * This prevents read-after-write hazards between PFP and ME.
 	 */
@@ -876,9 +937,9 @@ void si_emit_cache_flush(struct si_context *sctx)
 		radeon_emit(cs, 0);
 	}
 
-	/* When one of the CP_COHER_CNTL.DEST_BASE flags is set, SURFACE_SYNC
-	 * waits for idle. Therefore, it should be last. SURFACE_SYNC is done
-	 * in PFP.
+	/* SI-CI-VI only:
+	 *   When one of the CP_COHER_CNTL.DEST_BASE flags is set, SURFACE_SYNC
+	 *   waits for idle, so it should be last. SURFACE_SYNC is done in PFP.
 	 *
 	 * cp_coher_cntl should contain all necessary flags except TC flags
 	 * at this point.
