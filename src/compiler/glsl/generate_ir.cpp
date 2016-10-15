@@ -20,34 +20,14 @@
  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  * DEALINGS IN THE SOFTWARE.
  */
+#include "ir_builder.h"
+#include "builtin_functions.h"
+#include "program/prog_instruction.h" /* for SWIZZLE_X, &c. */
 
-#ifndef BULITIN_FUNCTIONS_H
-#define BULITIN_FUNCTIONS_H
-
-extern void
-_mesa_glsl_initialize_builtin_functions();
-
-extern ir_function_signature *
-_mesa_glsl_find_builtin_function(_mesa_glsl_parse_state *state,
-                                 const char *name, exec_list *actual_parameters);
-
-extern ir_function *
-_mesa_glsl_find_builtin_function_by_name(const char *name);
-
-extern gl_shader *
-_mesa_glsl_get_builtin_function_shader(void);
-
-extern ir_function_signature *
-_mesa_get_main_function_signature(glsl_symbol_table *symbols);
-
-extern void
-_mesa_glsl_release_builtin_functions(void);
+using namespace ir_builder;
 
 namespace generate_ir {
 
-ir_function_signature *
-umul64(void *mem_ctx, builtin_available_predicate avail);
+#include "builtin_int64.h"
 
 }
-
-#endif /* BULITIN_FUNCTIONS_H */

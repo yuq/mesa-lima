@@ -21,8 +21,10 @@ LIBGLSL_FILES = \
 	glsl/blob.h \
 	glsl/builtin_functions.cpp \
 	glsl/builtin_functions.h \
+	glsl/builtin_int64.h \
 	glsl/builtin_types.cpp \
 	glsl/builtin_variables.cpp \
+	glsl/generate_ir.cpp \
 	glsl/glsl_parser_extras.cpp \
 	glsl/glsl_parser_extras.h \
 	glsl/glsl_symbol_table.cpp \

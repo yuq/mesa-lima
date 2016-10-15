@@ -576,6 +576,11 @@ vote(const _mesa_glsl_parse_state *state)
    return state->ARB_shader_group_vote_enable;
 }
 
+static bool
+integer_functions_supported(const _mesa_glsl_parse_state *state)
+{
+   return state->extensions->MESA_shader_integer_functions;
+}
 /** @} */
 
 /******************************************************************************/
@@ -3093,6 +3098,10 @@ builtin_builder::create_builtins()
    add_function("anyInvocationARB", _vote(ir_unop_vote_any), NULL);
    add_function("allInvocationsARB", _vote(ir_unop_vote_all), NULL);
    add_function("allInvocationsEqualARB", _vote(ir_unop_vote_eq), NULL);
+
+   add_function("__builtin_umul64",
+                generate_ir::umul64(mem_ctx, integer_functions_supported),
+                NULL);
 
 #undef F
 #undef FI
