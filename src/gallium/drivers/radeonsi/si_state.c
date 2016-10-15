@@ -3289,7 +3289,7 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 			  S_008F38_XY_MIN_FILTER(eg_tex_filter(state->min_img_filter, max_aniso)) |
 			  S_008F38_MIP_FILTER(si_tex_mipfilter(state->min_mip_filter)) |
 			  S_008F38_MIP_POINT_PRECLAMP(1) |
-			  S_008F38_DISABLE_LSB_CEIL(1) |
+			  S_008F38_DISABLE_LSB_CEIL(sctx->b.chip_class <= VI) |
 			  S_008F38_FILTER_PREC_FIX(1) |
 			  S_008F38_ANISO_OVERRIDE(sctx->b.chip_class >= VI));
 	rstate->val[3] = S_008F3C_BORDER_COLOR_PTR(border_color_index) |
