@@ -4053,12 +4053,15 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 
 	/* Dwords [2:9] contain the image descriptor. */
 	memcpy(&md->metadata[2], desc, sizeof(desc));
+	md->size_metadata = 10 * 4;
 
 	/* Dwords [10:..] contain the mipmap level offsets. */
-	for (i = 0; i <= res->last_level; i++)
-		md->metadata[10+i] = rtex->surface.u.legacy.level[i].offset >> 8;
+	if (rscreen->chip_class <= VI) {
+		for (i = 0; i <= res->last_level; i++)
+			md->metadata[10+i] = rtex->surface.u.legacy.level[i].offset >> 8;
 
-	md->size_metadata = (11 + res->last_level) * 4;
+		md->size_metadata += (1 + res->last_level) * 4;
+	}
 }
 
 static void si_apply_opaque_metadata(struct r600_common_screen *rscreen,
