@@ -731,6 +731,7 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
+	case CHIP_VEGA10:
 		sscreen->gs_table_depth = 32;
 		return true;
 	default:

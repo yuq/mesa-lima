@@ -429,9 +429,9 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	    dsty % 8 == 0 &&
 	    srcx % 8 == 0 &&
 	    srcy % 8 == 0 &&
-	    /* this can either be equal, or display->rotated (VI only) */
+	    /* this can either be equal, or display->rotated (VI+ only) */
 	    (src_micro_mode == dst_micro_mode ||
-	     (sctx->b.chip_class == VI &&
+	     (sctx->b.chip_class >= VI &&
 	      src_micro_mode == V_009910_ADDR_SURF_DISPLAY_MICRO_TILING &&
 	      dst_micro_mode == V_009910_ADDR_SURF_ROTATED_MICRO_TILING))) {
 		assert(src_pitch % 8 == 0);
