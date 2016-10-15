@@ -1006,17 +1006,6 @@ update_managed_buffers(struct NineDevice9 *device)
     }
 }
 
-void
-nine_update_state_framebuffer_clear(struct NineDevice9 *device)
-{
-    struct nine_state *state = &device->state;
-
-    validate_textures(device);
-
-    if (state->changed.group & NINE_STATE_FB)
-        update_framebuffer(device, TRUE);
-}
-
 boolean
 nine_update_state(struct NineDevice9 *device)
 {
@@ -1130,6 +1119,161 @@ nine_update_state(struct NineDevice9 *device)
     DBG("finished\n");
 
     return TRUE;
+}
+
+static void
+nine_update_state_framebuffer_clear(struct NineDevice9 *device)
+{
+    struct nine_state *state = &device->state;
+
+    validate_textures(device);
+
+    if (state->changed.group & NINE_STATE_FB)
+        update_framebuffer(device, TRUE);
+}
+
+/* Checks were already done before the call */
+void
+nine_context_clear_fb(struct NineDevice9 *device,
+              DWORD Count,
+              const D3DRECT *pRects,
+              DWORD Flags,
+              D3DCOLOR Color,
+              float Z,
+              DWORD Stencil)
+{
+    const int sRGB = device->state.rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
+    struct pipe_surface *cbuf, *zsbuf;
+    struct pipe_context *pipe = device->pipe;
+    struct NineSurface9 *zsbuf_surf = device->state.ds;
+    struct NineSurface9 *rt;
+    unsigned bufs = 0;
+    unsigned r, i;
+    union pipe_color_union rgba;
+    unsigned rt_mask = 0;
+    D3DRECT rect;
+
+    nine_update_state_framebuffer_clear(device);
+
+    if (Flags & D3DCLEAR_TARGET) bufs |= PIPE_CLEAR_COLOR;
+    /* Ignore Z buffer if not bound */
+    if (device->context.pipe.fb.zsbuf != NULL) {
+        if (Flags & D3DCLEAR_ZBUFFER) bufs |= PIPE_CLEAR_DEPTH;
+        if (Flags & D3DCLEAR_STENCIL) bufs |= PIPE_CLEAR_STENCIL;
+    }
+    if (!bufs)
+        return;
+    d3dcolor_to_pipe_color_union(&rgba, Color);
+
+    rect.x1 = device->state.viewport.X;
+    rect.y1 = device->state.viewport.Y;
+    rect.x2 = device->state.viewport.Width + rect.x1;
+    rect.y2 = device->state.viewport.Height + rect.y1;
+
+    /* Both rectangles apply, which is weird, but that's D3D9. */
+    if (device->state.rs[D3DRS_SCISSORTESTENABLE]) {
+        rect.x1 = MAX2(rect.x1, device->state.scissor.minx);
+        rect.y1 = MAX2(rect.y1, device->state.scissor.miny);
+        rect.x2 = MIN2(rect.x2, device->state.scissor.maxx);
+        rect.y2 = MIN2(rect.y2, device->state.scissor.maxy);
+    }
+
+    if (Count) {
+        /* Maybe apps like to specify a large rect ? */
+        if (pRects[0].x1 <= rect.x1 && pRects[0].x2 >= rect.x2 &&
+            pRects[0].y1 <= rect.y1 && pRects[0].y2 >= rect.y2) {
+            DBG("First rect covers viewport.\n");
+            Count = 0;
+            pRects = NULL;
+        }
+    }
+
+    if (rect.x1 >= device->context.pipe.fb.width || rect.y1 >= device->context.pipe.fb.height)
+        return;
+
+    for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
+        if (device->state.rt[i] && device->state.rt[i]->desc.Format != D3DFMT_NULL)
+            rt_mask |= 1 << i;
+    }
+
+    /* fast path, clears everything at once */
+    if (!Count &&
+        (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == device->context.rt_mask)) &&
+        rect.x1 == 0 && rect.y1 == 0 &&
+        /* Case we clear only render target. Check clear region vs rt. */
+        ((!(bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
+         rect.x2 >= device->context.pipe.fb.width &&
+         rect.y2 >= device->context.pipe.fb.height) ||
+        /* Case we clear depth buffer (and eventually rt too).
+         * depth buffer size is always >= rt size. Compare to clear region */
+        ((bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
+         rect.x2 >= zsbuf_surf->desc.Width &&
+         rect.y2 >= zsbuf_surf->desc.Height))) {
+        DBG("Clear fast path\n");
+        pipe->clear(pipe, bufs, &rgba, Z, Stencil);
+        return;
+    }
+
+    if (!Count) {
+        Count = 1;
+        pRects = &rect;
+    }
+
+    for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
+        rt = device->state.rt[i];
+        if (!rt || rt->desc.Format == D3DFMT_NULL ||
+            !(bufs & PIPE_CLEAR_COLOR))
+            continue; /* save space, compiler should hoist this */
+        cbuf = NineSurface9_GetSurface(rt, sRGB);
+        for (r = 0; r < Count; ++r) {
+            /* Don't trust users to pass these in the right order. */
+            unsigned x1 = MIN2(pRects[r].x1, pRects[r].x2);
+            unsigned y1 = MIN2(pRects[r].y1, pRects[r].y2);
+            unsigned x2 = MAX2(pRects[r].x1, pRects[r].x2);
+            unsigned y2 = MAX2(pRects[r].y1, pRects[r].y2);
+#ifndef NINE_LAX
+            /* Drop negative rectangles (like wine expects). */
+            if (pRects[r].x1 > pRects[r].x2) continue;
+            if (pRects[r].y1 > pRects[r].y2) continue;
+#endif
+
+            x1 = MAX2(x1, rect.x1);
+            y1 = MAX2(y1, rect.y1);
+            x2 = MIN3(x2, rect.x2, rt->desc.Width);
+            y2 = MIN3(y2, rect.y2, rt->desc.Height);
+
+            DBG("Clearing (%u..%u)x(%u..%u)\n", x1, x2, y1, y2);
+            pipe->clear_render_target(pipe, cbuf, &rgba,
+                                      x1, y1, x2 - x1, y2 - y1, false);
+        }
+    }
+    if (!(bufs & PIPE_CLEAR_DEPTHSTENCIL))
+        return;
+
+    bufs &= PIPE_CLEAR_DEPTHSTENCIL;
+
+    for (r = 0; r < Count; ++r) {
+        unsigned x1 = MIN2(pRects[r].x1, pRects[r].x2);
+        unsigned y1 = MIN2(pRects[r].y1, pRects[r].y2);
+        unsigned x2 = MAX2(pRects[r].x1, pRects[r].x2);
+        unsigned y2 = MAX2(pRects[r].y1, pRects[r].y2);
+#ifndef NINE_LAX
+        /* Drop negative rectangles. */
+        if (pRects[r].x1 > pRects[r].x2) continue;
+        if (pRects[r].y1 > pRects[r].y2) continue;
+#endif
+
+        x1 = MIN2(x1, rect.x1);
+        y1 = MIN2(y1, rect.y1);
+        x2 = MIN3(x2, rect.x2, zsbuf_surf->desc.Width);
+        y2 = MIN3(y2, rect.y2, zsbuf_surf->desc.Height);
+
+        zsbuf = NineSurface9_GetSurface(zsbuf_surf, 0);
+        assert(zsbuf);
+        pipe->clear_depth_stencil(pipe, zsbuf, bufs, Z, Stencil,
+                                  x1, y1, x2 - x1, y2 - y1, false);
+    }
+    return;
 }
 
 /* State defaults */
