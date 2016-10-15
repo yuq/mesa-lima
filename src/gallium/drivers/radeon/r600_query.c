@@ -651,7 +651,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) & 0xFFFF);
+		radeon_emit(cs, va >> 32);
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -660,7 +660,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(event_type_for_stream(query)) | EVENT_INDEX(3));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) & 0xFFFF);
+		radeon_emit(cs, va >> 32);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		r600_gfx_write_event_eop(ctx, EVENT_TYPE_BOTTOM_OF_PIPE_TS,
@@ -670,7 +670,7 @@ static void r600_query_hw_do_emit_start(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_PIPELINESTAT) | EVENT_INDEX(2));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) & 0xFFFF);
+		radeon_emit(cs, va >> 32);
 		break;
 	default:
 		assert(0);
@@ -727,7 +727,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_ZPASS_DONE) | EVENT_INDEX(1));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) & 0xFFFF);
+		radeon_emit(cs, va >> 32);
 
 		fence_va = va + ctx->screen->info.num_render_backends * 16 - 8;
 		break;
@@ -739,7 +739,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(event_type_for_stream(query)) | EVENT_INDEX(3));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) & 0xFFFF);
+		radeon_emit(cs, va >> 32);
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		va += 8;
@@ -756,7 +756,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_SAMPLE_PIPELINESTAT) | EVENT_INDEX(2));
 		radeon_emit(cs, va);
-		radeon_emit(cs, (va >> 32) & 0xFFFF);
+		radeon_emit(cs, va >> 32);
 
 		fence_va = va + sample_size;
 		break;
@@ -841,12 +841,21 @@ static void r600_emit_query_predication(struct r600_common_context *ctx,
 	/* emit predicate packets for all data blocks */
 	for (qbuf = &query->buffer; qbuf; qbuf = qbuf->previous) {
 		unsigned results_base = 0;
-		uint64_t va = qbuf->buf->gpu_address;
+		uint64_t va_base = qbuf->buf->gpu_address;
 
 		while (results_base < qbuf->results_end) {
-			radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
-			radeon_emit(cs, va + results_base);
-			radeon_emit(cs, op | (((va + results_base) >> 32) & 0xFF));
+			uint64_t va = va_base + results_base;
+
+			if (ctx->chip_class >= GFX9) {
+				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 2, 0));
+				radeon_emit(cs, op);
+				radeon_emit(cs, va);
+				radeon_emit(cs, va >> 32);
+			} else {
+				radeon_emit(cs, PKT3(PKT3_SET_PREDICATION, 1, 0));
+				radeon_emit(cs, va);
+				radeon_emit(cs, op | ((va >> 32) & 0xFF));
+			}
 			r600_emit_reloc(ctx, &ctx->gfx, qbuf->buf, RADEON_USAGE_READ,
 					RADEON_PRIO_QUERY);
 			results_base += query->result_size;
