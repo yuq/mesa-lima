@@ -110,26 +110,37 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 		      EVENT_INDEX(5) |
 		      event_flags;
 
-	if (ctx->chip_class == CIK ||
-	    ctx->chip_class == VI) {
-		/* Two EOP events are required to make all engines go idle
-		 * (and optional cache flushes executed) before the timestamp
-		 * is written.
-		 */
+	if (ctx->chip_class >= GFX9) {
+		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 6, 0));
+		radeon_emit(cs, op);
+		radeon_emit(cs, EOP_DATA_SEL(data_sel));
+		radeon_emit(cs, va);		/* address lo */
+		radeon_emit(cs, va >> 32);	/* address hi */
+		radeon_emit(cs, new_fence);	/* immediate data lo */
+		radeon_emit(cs, 0); /* immediate data hi */
+		radeon_emit(cs, 0); /* unused */
+	} else {
+		if (ctx->chip_class == CIK ||
+		    ctx->chip_class == VI) {
+			/* Two EOP events are required to make all engines go idle
+			 * (and optional cache flushes executed) before the timestamp
+			 * is written.
+			 */
+			radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+			radeon_emit(cs, op);
+			radeon_emit(cs, va);
+			radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
+			radeon_emit(cs, old_fence); /* immediate data */
+			radeon_emit(cs, 0); /* unused */
+		}
+
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 		radeon_emit(cs, op);
 		radeon_emit(cs, va);
 		radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
-		radeon_emit(cs, old_fence); /* immediate data */
+		radeon_emit(cs, new_fence); /* immediate data */
 		radeon_emit(cs, 0); /* unused */
 	}
-
-	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-	radeon_emit(cs, op);
-	radeon_emit(cs, va);
-	radeon_emit(cs, ((va >> 32) & 0xffff) | EOP_DATA_SEL(data_sel));
-	radeon_emit(cs, new_fence); /* immediate data */
-	radeon_emit(cs, 0); /* unused */
 
 	if (buf)
 		r600_emit_reloc(ctx, &ctx->gfx, buf, RADEON_USAGE_WRITE,
