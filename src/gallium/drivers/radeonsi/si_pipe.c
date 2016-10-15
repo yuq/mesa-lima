@@ -452,6 +452,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return HAVE_LLVM >= 0x0309 ? 4 : 0;
 
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
+		if (sscreen->b.chip_class >= GFX9)
+			return 140;
 		if (si_have_tgsi_compute(sscreen))
 			return 450;
 		return HAVE_LLVM >= 0x0309 ? 420 : 410;
@@ -576,9 +578,12 @@ static int si_get_shader_param(struct pipe_screen* pscreen,
 	{
 	case PIPE_SHADER_FRAGMENT:
 	case PIPE_SHADER_VERTEX:
+		break;
 	case PIPE_SHADER_GEOMETRY:
 	case PIPE_SHADER_TESS_CTRL:
 	case PIPE_SHADER_TESS_EVAL:
+		if (sscreen->b.chip_class >= GFX9)
+			return 0;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		switch (param) {
