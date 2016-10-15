@@ -1695,10 +1695,7 @@
   <instruction name="MI_CLFLUSH" bias="2">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="39"/>
-    <field name="Use Global GTT" start="22" end="22" type="uint">
-      <value name="Per Process Graphics Address" value="0"/>
-      <value name="Global Graphics Address" value="1"/>
-    </field>
+    <field name="Use Global GTT" start="22" end="22" type="bool"/>
     <field name="DWord Length" start="0" end="5" type="uint" default="0"/>
     <field name="Page Base Address" start="44" end="63" type="address"/>
     <field name="Starting Cacheline Offset" start="38" end="43" type="uint"/>
@@ -1710,7 +1707,7 @@
   <instruction name="MI_CONDITIONAL_BATCH_BUFFER_END" bias="2" length="2">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="54"/>
-    <field name="Use Global GTT" start="22" end="22" type="uint" default="0"/>
+    <field name="Use Global GTT" start="22" end="22" type="bool"/>
     <field name="Compare Semaphore" start="21" end="21" type="uint" default="0"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
     <field name="Compare Data Dword" start="32" end="63" type="uint"/>
@@ -1798,7 +1795,7 @@
   <instruction name="MI_STORE_DATA_IMM" bias="2" length="4">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="32"/>
-    <field name="Use Global GTT" start="22" end="22" type="uint"/>
+    <field name="Use Global GTT" start="22" end="22" type="bool"/>
     <field name="DWord Length" start="0" end="5" type="uint" default="2"/>
     <field name="Address" start="66" end="95" type="uint"/>
     <field name="Core Mode Enable" start="64" end="64" type="uint"/>
@@ -1818,7 +1815,7 @@
   <instruction name="MI_STORE_REGISTER_MEM" bias="2" length="3">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="36"/>
-    <field name="Use Global GTT" start="22" end="22" type="uint"/>
+    <field name="Use Global GTT" start="22" end="22" type="bool"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
     <field name="Register Address" start="34" end="54" type="offset"/>
     <field name="Memory Address" start="66" end="95" type="address"/>
