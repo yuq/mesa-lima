@@ -28,9 +28,6 @@
 #include "sid.h"
 #include "radeon/r600_cs.h"
 
-/* The max number of bytes to copy per packet. */
-#define CP_DMA_MAX_BYTE_COUNT	((1 << 21) - SI_CPDMA_ALIGNMENT)
-
 /* Set this if you want the ME to wait until CP DMA is done.
  * It should be set on the last CP DMA packet. */
 #define CP_DMA_SYNC		(1 << 0)
@@ -42,6 +39,18 @@
 #define CP_DMA_USE_L2		(1 << 2) /* CIK+ */
 #define CP_DMA_CLEAR		(1 << 3)
 
+/* The max number of bytes that can be copied per packet. */
+static inline unsigned cp_dma_max_byte_count(struct si_context *sctx)
+{
+	unsigned max = sctx->b.chip_class >= GFX9 ?
+			       S_414_BYTE_COUNT_GFX9(~0u) :
+			       S_414_BYTE_COUNT_GFX6(~0u);
+
+	/* make it aligned for optimal performance */
+	return max & ~(SI_CPDMA_ALIGNMENT - 1);
+}
+
+
 /* Emit a CP DMA packet to do a copy from one buffer to another, or to clear
  * a buffer. The size must fit in bits [20:0]. If CP_DMA_CLEAR is set, src_va is a 32-bit
  * clear value.
@@ -51,22 +60,33 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 			   enum r600_coherency coher)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	uint32_t header = 0, command = S_414_BYTE_COUNT_GFX6(size);
+	uint32_t header = 0, command = 0;
 
 	assert(size);
-	assert(size <= CP_DMA_MAX_BYTE_COUNT);
+	assert(size <= cp_dma_max_byte_count(sctx));
+
+	if (sctx->b.chip_class >= GFX9)
+		command |= S_414_BYTE_COUNT_GFX9(size);
+	else
+		command |= S_414_BYTE_COUNT_GFX6(size);
 
 	/* Sync flags. */
 	if (flags & CP_DMA_SYNC)
 		header |= S_411_CP_SYNC(1);
-	else
-		command |= S_414_DISABLE_WR_CONFIRM_GFX6(1);
+	else {
+		if (sctx->b.chip_class >= GFX9)
+			command |= S_414_DISABLE_WR_CONFIRM_GFX9(1);
+		else
+			command |= S_414_DISABLE_WR_CONFIRM_GFX6(1);
+	}
 
 	if (flags & CP_DMA_RAW_WAIT)
 		command |= S_414_RAW_WAIT(1);
 
 	/* Src and dst flags. */
-	if (flags & CP_DMA_USE_L2)
+	if (sctx->b.chip_class >= GFX9 && src_va == dst_va)
+		header |= S_411_DSL_SEL(V_411_NOWHERE); /* prefetch only */
+	else if (flags & CP_DMA_USE_L2)
 		header |= S_411_DSL_SEL(V_411_DST_ADDR_TC_L2);
 
 	if (flags & CP_DMA_CLEAR)
@@ -229,7 +249,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
 		while (dma_clear_size) {
-			unsigned byte_count = MIN2(dma_clear_size, CP_DMA_MAX_BYTE_COUNT);
+			unsigned byte_count = MIN2(dma_clear_size, cp_dma_max_byte_count(sctx));
 			unsigned dma_flags = tc_l2_flag  | CP_DMA_CLEAR;
 
 			si_cp_dma_prepare(sctx, dst, NULL, byte_count, dma_clear_size, 0,
@@ -367,7 +387,7 @@ void si_copy_buffer(struct si_context *sctx,
 
 	while (size) {
 		unsigned dma_flags = tc_l2_flag;
-		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
+		unsigned byte_count = MIN2(size, cp_dma_max_byte_count(sctx));
 
 		si_cp_dma_prepare(sctx, dst, src, byte_count,
 				  size + skipped_size + realign_size,

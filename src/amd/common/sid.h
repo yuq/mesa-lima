@@ -224,6 +224,7 @@
 #define     S_411_DSL_SEL(x)		(((unsigned)(x) & 0x3) << 20)
 #define       V_411_DST_ADDR		0
 #define       V_411_GDS			1 /* program DAS to 1 as well */
+#define       V_411_NOWHERE		2 /* new for GFX9 */
 #define       V_411_DST_ADDR_TC_L2	3 /* new for CIK */
 #define     S_411_SRC_ADDR_HI(x)	((x) & 0xffff)
 #define   R_412_CP_DMA_WORD2		0x412 /* 0x[packet number][word index] */
