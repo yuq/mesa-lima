@@ -1687,6 +1687,12 @@ fs_visitor::assign_gs_urb_setup()
 void
 fs_visitor::split_virtual_grfs()
 {
+   /* Compact the register file so we eliminate dead vgrfs.  This
+    * only defines split points for live registers, so if we have
+    * too large dead registers they will hit assertions later.
+    */
+   compact_virtual_grfs();
+
    int num_vars = this->alloc.count;
 
    /* Count the total number of registers */
