@@ -2033,6 +2033,7 @@ void
 nine_ff_update(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     struct pipe_constant_buffer cb;
 
     DBG("vs=%p ps=%p\n", device->state.vs, device->state.ps);
@@ -2062,19 +2063,19 @@ nine_ff_update(struct NineDevice9 *device)
         cb.buffer_size = NINE_FF_NUM_VS_CONST * 4 * sizeof(float);
 
         if (!device->driver_caps.user_cbufs) {
-            state->pipe.cb_vs_ff.buffer_size = cb.buffer_size;
+            context->pipe.cb_vs_ff.buffer_size = cb.buffer_size;
             u_upload_data(device->constbuf_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
-                          &state->pipe.cb_vs_ff.buffer_offset,
-                          &state->pipe.cb_vs_ff.buffer);
+                          &context->pipe.cb_vs_ff.buffer_offset,
+                          &context->pipe.cb_vs_ff.buffer);
             u_upload_unmap(device->constbuf_uploader);
-            state->pipe.cb_vs_ff.user_buffer = NULL;
+            context->pipe.cb_vs_ff.user_buffer = NULL;
         } else
-            state->pipe.cb_vs_ff = cb;
-        state->commit |= NINE_STATE_COMMIT_CONST_VS;
+            context->pipe.cb_vs_ff = cb;
+        context->commit |= NINE_STATE_COMMIT_CONST_VS;
     }
 
     if (!device->state.ps) {
@@ -2086,19 +2087,19 @@ nine_ff_update(struct NineDevice9 *device)
         cb.buffer_size = NINE_FF_NUM_PS_CONST * 4 * sizeof(float);
 
         if (!device->driver_caps.user_cbufs) {
-            state->pipe.cb_ps_ff.buffer_size = cb.buffer_size;
+            context->pipe.cb_ps_ff.buffer_size = cb.buffer_size;
             u_upload_data(device->constbuf_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
-                          &state->pipe.cb_ps_ff.buffer_offset,
-                          &state->pipe.cb_ps_ff.buffer);
+                          &context->pipe.cb_ps_ff.buffer_offset,
+                          &context->pipe.cb_ps_ff.buffer);
             u_upload_unmap(device->constbuf_uploader);
-            state->pipe.cb_ps_ff.user_buffer = NULL;
+            context->pipe.cb_ps_ff.user_buffer = NULL;
         } else
-            state->pipe.cb_ps_ff = cb;
-        state->commit |= NINE_STATE_COMMIT_CONST_PS;
+            context->pipe.cb_ps_ff = cb;
+        context->commit |= NINE_STATE_COMMIT_CONST_PS;
     }
 
     device->state.changed.group &= ~NINE_STATE_FF;

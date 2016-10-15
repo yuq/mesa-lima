@@ -1961,7 +1961,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
 
     if (Flags & D3DCLEAR_TARGET) bufs |= PIPE_CLEAR_COLOR;
     /* Ignore Z buffer if not bound */
-    if (This->state.fb.zsbuf != NULL) {
+    if (This->context.pipe.fb.zsbuf != NULL) {
         if (Flags & D3DCLEAR_ZBUFFER) bufs |= PIPE_CLEAR_DEPTH;
         if (Flags & D3DCLEAR_STENCIL) bufs |= PIPE_CLEAR_STENCIL;
     }
@@ -1992,7 +1992,7 @@ NineDevice9_Clear( struct NineDevice9 *This,
         }
     }
 
-    if (rect.x1 >= This->state.fb.width || rect.y1 >= This->state.fb.height)
+    if (rect.x1 >= This->context.pipe.fb.width || rect.y1 >= This->context.pipe.fb.height)
         return D3D_OK;
 
     for (i = 0; i < This->caps.NumSimultaneousRTs; ++i) {
@@ -2002,12 +2002,12 @@ NineDevice9_Clear( struct NineDevice9 *This,
 
     /* fast path, clears everything at once */
     if (!Count &&
-        (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == This->state.rt_mask)) &&
+        (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == This->context.rt_mask)) &&
         rect.x1 == 0 && rect.y1 == 0 &&
         /* Case we clear only render target. Check clear region vs rt. */
         ((!(bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
-         rect.x2 >= This->state.fb.width &&
-         rect.y2 >= This->state.fb.height) ||
+         rect.x2 >= This->context.pipe.fb.width &&
+         rect.y2 >= This->context.pipe.fb.height) ||
         /* Case we clear depth buffer (and eventually rt too).
          * depth buffer size is always >= rt size. Compare to clear region */
         ((bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
@@ -2721,6 +2721,7 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
                                   DWORD Value )
 {
     struct nine_state *state = This->update;
+    struct nine_context *context = &This->context;
     int bumpmap_index = -1;
 
     DBG("Stage=%u Type=%u Value=%08x\n", Stage, Type, Value);
@@ -2756,8 +2757,8 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
         break;
     }
 
-    if (bumpmap_index >= 0) {
-        state->bumpmap_vars[bumpmap_index] = Value;
+    if (bumpmap_index >= 0 && !This->is_recording) {
+        context->bumpmap_vars[bumpmap_index] = Value;
         state->changed.group |= NINE_STATE_PS_CONST;
     }
 
@@ -3324,6 +3325,7 @@ NineDevice9_SetVertexDeclaration( struct NineDevice9 *This,
                                   IDirect3DVertexDeclaration9 *pDecl )
 {
     struct nine_state *state = This->update;
+    struct nine_context *context = &This->context;
     BOOL was_programmable_vs = This->state.programmable_vs;
 
     DBG("This=%p pDecl=%p\n", This, pDecl);
@@ -3335,7 +3337,7 @@ NineDevice9_SetVertexDeclaration( struct NineDevice9 *This,
 
     This->state.programmable_vs = This->state.vs && !(This->state.vdecl && This->state.vdecl->position_t);
     if (likely(!This->is_recording) && was_programmable_vs != This->state.programmable_vs) {
-        state->commit |= NINE_STATE_COMMIT_CONST_VS;
+        context->commit |= NINE_STATE_COMMIT_CONST_VS;
         state->changed.group |= NINE_STATE_VS;
     }
 
@@ -3410,6 +3412,7 @@ NineDevice9_SetVertexShader( struct NineDevice9 *This,
                              IDirect3DVertexShader9 *pShader )
 {
     struct nine_state *state = This->update;
+    struct nine_context *context = &This->context;
     BOOL was_programmable_vs = This->state.programmable_vs;
 
     DBG("This=%p pShader=%p\n", This, pShader);
@@ -3423,7 +3426,7 @@ NineDevice9_SetVertexShader( struct NineDevice9 *This,
 
     /* ff -> non-ff: commit back non-ff constants */
     if (!was_programmable_vs && This->state.programmable_vs)
-        state->commit |= NINE_STATE_COMMIT_CONST_VS;
+        context->commit |= NINE_STATE_COMMIT_CONST_VS;
 
     state->changed.group |= NINE_STATE_VS;
 
@@ -3794,6 +3797,7 @@ NineDevice9_SetPixelShader( struct NineDevice9 *This,
                             IDirect3DPixelShader9 *pShader )
 {
     struct nine_state *state = This->update;
+    struct nine_context *context = &This->context;
     unsigned old_mask = state->ps ? state->ps->rt_mask : 1;
     unsigned mask;
 
@@ -3804,7 +3808,7 @@ NineDevice9_SetPixelShader( struct NineDevice9 *This,
 
     /* ff -> non-ff: commit back non-ff constants */
     if (!state->ps && pShader)
-        state->commit |= NINE_STATE_COMMIT_CONST_PS;
+        context->commit |= NINE_STATE_COMMIT_CONST_PS;
 
     nine_bind(&state->ps, pShader);
 

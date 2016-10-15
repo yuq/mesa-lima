@@ -173,12 +173,8 @@ struct nine_state
     int    ps_const_i[NINE_MAX_CONST_I][4];
     BOOL   ps_const_b[NINE_MAX_CONST_B];
     float *ps_lconstf_temp;
-    uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
 
-    struct {
-        void *vs;
-        void *ps;
-    } cso;
+    uint32_t samplers_shadow;
 
     struct NineVertexDeclaration9 *vdecl;
 
@@ -190,8 +186,6 @@ struct nine_state
     uint32_t stream_usage_mask; /* derived from VS and vdecl */
 
     struct pipe_clip_state clip;
-    struct pipe_framebuffer_state fb;
-    uint8_t rt_mask;
 
     DWORD rs[NINED3DRS_COUNT];
     DWORD rs_advertised[NINED3DRS_COUNT]; /* the ones apps get with GetRenderState */
@@ -200,12 +194,6 @@ struct nine_state
 
     DWORD samp[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
     DWORD samp_advertised[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
-    uint32_t samplers_shadow;
-    uint8_t bound_samplers_mask_vs;
-    uint16_t bound_samplers_mask_ps;
-
-    int dummy_vbo_bound_at; /* -1 = not bound , >= 0 = bound index */
-    boolean vbo_bound_done;
 
     struct {
         struct {
@@ -228,9 +216,27 @@ struct nine_state
 
         DWORD tex_stage[NINE_MAX_TEXTURE_STAGES][NINED3DTSS_COUNT];
     } ff;
+};
+
+struct nine_context {
+    uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
+
+    struct {
+        void *vs;
+        void *ps;
+    } cso;
+
+    uint8_t rt_mask;
+
+    uint8_t bound_samplers_mask_vs;
+    uint16_t bound_samplers_mask_ps;
+
+    int dummy_vbo_bound_at; /* -1 = not bound , >= 0 = bound index */
+    boolean vbo_bound_done;
 
     uint32_t commit;
     struct {
+        struct pipe_framebuffer_state fb;
         struct pipe_depth_stencil_alpha_state dsa;
         struct pipe_rasterizer_state rast;
         struct pipe_blend_state blend;
@@ -243,8 +249,9 @@ struct nine_state
         struct pipe_constant_buffer cb_vs_ff;
         struct pipe_constant_buffer cb_ps_ff;
     } pipe;
+};
 
-    /* sw */
+struct nine_state_sw_internal {
     struct pipe_transfer *transfers_so[4];
 };
 

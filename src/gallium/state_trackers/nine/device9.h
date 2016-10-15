@@ -71,6 +71,8 @@ struct NineDevice9
     struct NineStateBlock9 *record;
     struct nine_state *update; /* state to update (&state / &record->state) */
     struct nine_state state;   /* device state */
+    struct nine_context context;
+    struct nine_state_sw_internal state_sw_internal;
 
     struct list_head update_buffers;
     struct list_head update_textures;

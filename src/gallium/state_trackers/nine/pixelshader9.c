@@ -97,7 +97,7 @@ NinePixelShader9_dtor( struct NinePixelShader9 *This )
 
         do {
             if (var->cso) {
-                if (This->base.device->state.cso.ps == var->cso)
+                if (This->base.device->context.cso.ps == var->cso)
                     pipe->bind_fs_state(pipe, NULL);
                 pipe->delete_fs_state(pipe, var->cso);
             }
@@ -105,7 +105,7 @@ NinePixelShader9_dtor( struct NinePixelShader9 *This )
         } while (var);
 
         if (This->ff_cso) {
-            if (This->ff_cso == This->base.device->state.cso.ps)
+            if (This->ff_cso == This->base.device->context.cso.ps)
                 pipe->bind_fs_state(pipe, NULL);
             pipe->delete_fs_state(pipe, This->ff_cso);
         }

@@ -116,7 +116,7 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
 
         do {
             if (var->cso) {
-                if (This->base.device->state.cso.vs == var->cso)
+                if (This->base.device->context.cso.vs == var->cso)
                     pipe->bind_vs_state(pipe, NULL);
                 pipe->delete_vs_state(pipe, var->cso);
             }
@@ -131,7 +131,7 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
         }
 
         if (This->ff_cso) {
-            if (This->ff_cso == This->base.device->state.cso.vs)
+            if (This->ff_cso == This->base.device->context.cso.vs)
                 pipe->bind_vs_state(pipe, NULL);
             pipe->delete_vs_state(pipe, This->ff_cso);
         }
