@@ -754,12 +754,23 @@ static void si_emit_surface_sync(struct r600_common_context *rctx,
 {
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
 
-	/* ACQUIRE_MEM is only required on a compute ring. */
-	radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
-	radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-	radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
-	radeon_emit(cs, 0);               /* CP_COHER_BASE */
-	radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
+	if (rctx->chip_class >= GFX9) {
+		/* Flush caches and wait for the caches to assert idle. */
+		radeon_emit(cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0));
+		radeon_emit(cs, cp_coher_cntl);	/* CP_COHER_CNTL */
+		radeon_emit(cs, 0xffffffff);	/* CP_COHER_SIZE */
+		radeon_emit(cs, 0xffffff);	/* CP_COHER_SIZE_HI */
+		radeon_emit(cs, 0);		/* CP_COHER_BASE */
+		radeon_emit(cs, 0);		/* CP_COHER_BASE_HI */
+		radeon_emit(cs, 0x0000000A);	/* POLL_INTERVAL */
+	} else {
+		/* ACQUIRE_MEM is only required on a compute ring. */
+		radeon_emit(cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
+		radeon_emit(cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+		radeon_emit(cs, 0xffffffff);      /* CP_COHER_SIZE */
+		radeon_emit(cs, 0);               /* CP_COHER_BASE */
+		radeon_emit(cs, 0x0000000A);      /* POLL_INTERVAL */
+	}
 }
 
 void si_emit_cache_flush(struct si_context *sctx)
