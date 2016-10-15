@@ -224,10 +224,13 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		if (tc_compatible_htile &&
 		    array_mode == RADEON_SURF_MODE_2D) {
 			/* TC-compatible HTILE only supports Z32_FLOAT.
-			 * Promote Z16 to Z32. DB->CB copies will convert
+			 * GFX9 also supports Z16_UNORM.
+			 * On VI, promote Z16 to Z32. DB->CB copies will convert
 			 * the format for transfers.
 			 */
-			bpe = 4;
+			if (rscreen->chip_class == VI)
+				bpe = 4;
+
 			flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
 		}
 
@@ -1011,11 +1014,18 @@ r600_texture_create_object(struct pipe_screen *screen,
 				    (rtex->surface.flags &
 				     RADEON_SURF_TC_COMPATIBLE_HTILE);
 
-	/* TC-compatible HTILE only supports Z32_FLOAT. */
-	if (rtex->tc_compatible_htile)
-		rtex->db_render_format = PIPE_FORMAT_Z32_FLOAT;
-	else
+	/* TC-compatible HTILE:
+	 * - VI only supports Z32_FLOAT.
+	 * - GFX9 only supports Z32_FLOAT and Z16_UNORM. */
+	if (rtex->tc_compatible_htile) {
+		if (rscreen->chip_class >= GFX9 &&
+		    base->format == PIPE_FORMAT_Z16_UNORM)
+			rtex->db_render_format = base->format;
+		else
+			rtex->db_render_format = PIPE_FORMAT_Z32_FLOAT;
+	} else {
 		rtex->db_render_format = base->format;
+	}
 
 	/* Tiled depth textures utilize the non-displayable tile order.
 	 * This must be done after r600_setup_surface.
