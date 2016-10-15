@@ -58,6 +58,7 @@
 #include "radeon/r600_cs.h"
 #include "si_pipe.h"
 #include "sid.h"
+#include "gfx9d.h"
 
 #include "util/u_format.h"
 #include "util/u_memory.h"
@@ -376,41 +377,88 @@ static void si_set_buf_desc_address(struct r600_resource *buf,
  * \param is_stencil		select between separate Z & Stencil
  * \param state			descriptor to update
  */
-void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
+void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
+				    struct r600_texture *tex,
 				    const struct legacy_surf_level *base_level_info,
 				    unsigned base_level, unsigned first_level,
 				    unsigned block_width, bool is_stencil,
 				    uint32_t *state)
 {
-	uint64_t va;
-	unsigned pitch = base_level_info->nblk_x * block_width;
+	uint64_t va, meta_va = 0;
 
 	if (tex->is_depth && !r600_can_sample_zs(tex, is_stencil)) {
 		tex = tex->flushed_depth_texture;
 		is_stencil = false;
 	}
 
-	va = tex->resource.gpu_address + base_level_info->offset;
+	va = tex->resource.gpu_address;
 
-	state[1] &= C_008F14_BASE_ADDRESS_HI;
-	state[3] &= C_008F1C_TILING_INDEX;
-	state[4] &= C_008F20_PITCH_GFX6;
-	state[6] &= C_008F28_COMPRESSION_EN;
-
-	state[0] = va >> 8;
-	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
-	state[3] |= S_008F1C_TILING_INDEX(si_tile_mode_index(tex, base_level,
-							     is_stencil));
-	state[4] |= S_008F20_PITCH_GFX6(pitch - 1);
+	if (sscreen->b.chip_class >= GFX9) {
+		/* Only stencil_offset needs to be added here. */
+		if (is_stencil)
+			va += tex->surface.u.gfx9.stencil_offset;
+	} else {
+		va += base_level_info->offset;
+	}
 
 	if (tex->dcc_offset && first_level < tex->surface.num_dcc_levels) {
+		meta_va = (!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
+			  tex->dcc_offset;
+
+		if (sscreen->b.chip_class <= VI)
+			meta_va += base_level_info->dcc_offset;
+	} else if (tex->tc_compatible_htile && !is_stencil) {
+		meta_va = tex->htile_buffer->gpu_address;
+	}
+
+	state[0] = va >> 8;
+	state[1] &= C_008F14_BASE_ADDRESS_HI;
+	state[1] |= S_008F14_BASE_ADDRESS_HI(va >> 40);
+
+	state[6] &= C_008F28_COMPRESSION_EN;
+	state[7] = 0;
+
+	if (meta_va) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
-		state[7] = ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
-			    tex->dcc_offset +
-			    base_level_info->dcc_offset) >> 8;
-	} else if (tex->tc_compatible_htile) {
-		state[6] |= S_008F28_COMPRESSION_EN(1);
-		state[7] = tex->htile_buffer->gpu_address >> 8;
+		state[7] = meta_va >> 8;
+	}
+
+	if (sscreen->b.chip_class >= GFX9) {
+		state[3] &= C_008F1C_SW_MODE;
+		state[4] &= C_008F20_PITCH_GFX9;
+
+		if (is_stencil) {
+			state[3] |= S_008F1C_SW_MODE(tex->surface.u.gfx9.stencil.swizzle_mode);
+			state[4] |= S_008F20_PITCH_GFX9(tex->surface.u.gfx9.stencil.epitch);
+		} else {
+			state[3] |= S_008F1C_SW_MODE(tex->surface.u.gfx9.surf.swizzle_mode);
+			state[4] |= S_008F20_PITCH_GFX9(tex->surface.u.gfx9.surf.epitch);
+		}
+
+		state[5] &= C_008F24_META_DATA_ADDRESS &
+			    C_008F24_META_PIPE_ALIGNED &
+			    C_008F24_META_RB_ALIGNED;
+		if (meta_va) {
+			struct gfx9_surf_meta_flags meta;
+
+			if (tex->dcc_offset)
+				meta = tex->surface.u.gfx9.dcc;
+			else
+				meta = tex->surface.u.gfx9.htile;
+
+			state[5] |= S_008F24_META_DATA_ADDRESS(meta_va >> 40) |
+				    S_008F24_META_PIPE_ALIGNED(meta.pipe_aligned) |
+				    S_008F24_META_RB_ALIGNED(meta.rb_aligned);
+		}
+	} else {
+		/* SI-CI-VI */
+		unsigned pitch = base_level_info->nblk_x * block_width;
+		unsigned index = si_tile_mode_index(tex, base_level, is_stencil);
+
+		state[3] &= C_008F1C_TILING_INDEX;
+		state[3] |= S_008F1C_TILING_INDEX(index);
+		state[4] &= C_008F20_PITCH_GFX6;
+		state[4] |= S_008F20_PITCH_GFX6(pitch - 1);
 	}
 }
 
@@ -445,7 +493,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 				rtex->db_compatible &&
 				rview->is_stencil_sampler;
 
-			si_set_mutable_tex_desc_fields(rtex,
+			si_set_mutable_tex_desc_fields(sctx->screen, rtex,
 						       rview->base_level_info,
 						       rview->base_level,
 						       rview->base.u.tex.first_level,
@@ -746,7 +794,8 @@ static void si_set_shader_image(struct si_context *ctx,
 					   view->u.tex.last_layer,
 					   width, height, depth,
 					   desc, NULL);
-		si_set_mutable_tex_desc_fields(tex, &tex->surface.u.legacy.level[level],
+		si_set_mutable_tex_desc_fields(screen, tex,
+					       &tex->surface.u.legacy.level[level],
 					       level, level,
 					       util_format_get_blockwidth(view->format),
 					       false, desc);
