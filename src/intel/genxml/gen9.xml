@@ -1516,7 +1516,7 @@
     <field name="Output Vertex Size" start="215" end="220" type="uint"/>
     <field name="Output Topology" start="209" end="214" type="uint" prefix="OUTPUT"/>
     <field name="Vertex URB Entry Read Length" start="203" end="208" type="uint"/>
-    <field name="Include Vertex Handles" start="202" end="202" type="uint"/>
+    <field name="Include Vertex Handles" start="202" end="202" type="bool"/>
     <field name="Vertex URB Entry Read Offset" start="196" end="201" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="192" end="195" type="uint"/>
     <field name="Control Data Header Size" start="244" end="247" type="uint"/>
@@ -1529,7 +1529,7 @@
     </field>
     <field name="Statistics Enable" start="234" end="234" type="bool"/>
     <field name="Invocations Increment Value" start="229" end="233" type="uint"/>
-    <field name="Include Primitive ID" start="228" end="228" type="uint"/>
+    <field name="Include Primitive ID" start="228" end="228" type="bool"/>
     <field name="Hint" start="227" end="227" type="uint"/>
     <field name="Reorder Mode" start="226" end="226" type="uint">
       <value name="LEADING" value="0"/>
@@ -1597,7 +1597,7 @@
     <field name="Single Program Flow" start="251" end="251" type="bool"/>
     <field name="Vector Mask Enable" start="250" end="250" type="bool"/>
     <field name="Accesses UAV" start="249" end="249" type="bool"/>
-    <field name="Include Vertex Handles" start="248" end="248" type="uint"/>
+    <field name="Include Vertex Handles" start="248" end="248" type="bool"/>
     <field name="Dispatch GRF Start Register For URB Data" start="243" end="247" type="uint"/>
     <field name="Dispatch Mode" start="241" end="242" type="uint" prefix="DISPATCH_MODE">
       <value name="SINGLE_PATCH" value="0"/>
