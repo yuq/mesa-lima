@@ -183,9 +183,11 @@ static void si_dump_debug_registers(struct si_context *sctx, FILE *f)
 	si_dump_mmapped_reg(sctx, f, R_00803C_GRBM_STATUS_SE3);
 	si_dump_mmapped_reg(sctx, f, R_00D034_SDMA0_STATUS_REG);
 	si_dump_mmapped_reg(sctx, f, R_00D834_SDMA1_STATUS_REG);
-	si_dump_mmapped_reg(sctx, f, R_000E50_SRBM_STATUS);
-	si_dump_mmapped_reg(sctx, f, R_000E4C_SRBM_STATUS2);
-	si_dump_mmapped_reg(sctx, f, R_000E54_SRBM_STATUS3);
+	if (sctx->b.chip_class <= VI) {
+		si_dump_mmapped_reg(sctx, f, R_000E50_SRBM_STATUS);
+		si_dump_mmapped_reg(sctx, f, R_000E4C_SRBM_STATUS2);
+		si_dump_mmapped_reg(sctx, f, R_000E54_SRBM_STATUS3);
+	}
 	si_dump_mmapped_reg(sctx, f, R_008680_CP_STAT);
 	si_dump_mmapped_reg(sctx, f, R_008674_CP_STALLED_STAT1);
 	si_dump_mmapped_reg(sctx, f, R_008678_CP_STALLED_STAT2);
