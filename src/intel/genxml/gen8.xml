@@ -3068,11 +3068,8 @@
     </field>
     <field name="Store Data Index" start="53" end="53" type="uint"/>
     <field name="Command Streamer Stall Enable" start="52" end="52" type="bool"/>
-    <field name="Global Snapshot Count Reset" start="51" end="51" type="uint">
-      <value name="Don't Reset" value="0"/>
-      <value name="Reset" value="1"/>
-    </field>
-    <field name="TLB Invalidate" start="50" end="50" type="uint"/>
+    <field name="Global Snapshot Count Reset" start="51" end="51" type="bool"/>
+    <field name="TLB Invalidate" start="50" end="50" type="bool"/>
     <field name="Generic Media State Clear" start="48" end="48" type="bool"/>
     <field name="Post Sync Operation" start="46" end="47" type="uint">
       <value name="No Write" value="0"/>
