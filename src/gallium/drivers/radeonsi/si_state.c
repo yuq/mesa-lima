@@ -26,6 +26,7 @@
 
 #include "si_pipe.h"
 #include "sid.h"
+#include "gfx9d.h"
 #include "radeon/r600_cs.h"
 #include "radeon/r600_query.h"
 
@@ -4131,9 +4132,15 @@ static void si_init_config(struct si_context *sctx)
 	si_pm4_set_reg(pm4, R_028AC8_DB_PRELOAD_CONTROL, 0x0);
 	si_pm4_set_reg(pm4, R_02800C_DB_RENDER_OVERRIDE, 0);
 
-	si_pm4_set_reg(pm4, R_028400_VGT_MAX_VTX_INDX, ~0);
-	si_pm4_set_reg(pm4, R_028404_VGT_MIN_VTX_INDX, 0);
-	si_pm4_set_reg(pm4, R_028408_VGT_INDX_OFFSET, 0);
+	if (sctx->b.chip_class >= GFX9) {
+		si_pm4_set_reg(pm4, R_030920_VGT_MAX_VTX_INDX, ~0);
+		si_pm4_set_reg(pm4, R_030924_VGT_MIN_VTX_INDX, 0);
+		si_pm4_set_reg(pm4, R_030928_VGT_INDX_OFFSET, 0);
+	} else {
+		si_pm4_set_reg(pm4, R_028400_VGT_MAX_VTX_INDX, ~0);
+		si_pm4_set_reg(pm4, R_028404_VGT_MIN_VTX_INDX, 0);
+		si_pm4_set_reg(pm4, R_028408_VGT_INDX_OFFSET, 0);
+	}
 
 	if (sctx->b.chip_class >= CIK) {
 		/* If this is 0, Bonaire can hang even if GS isn't being used.
@@ -4144,9 +4151,13 @@ static void si_init_config(struct si_context *sctx)
 			       S_028A44_ES_VERTS_PER_SUBGRP(64) |
 			       S_028A44_GS_PRIMS_PER_SUBGRP(4));
 
-		si_pm4_set_reg(pm4, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xffff));
-		si_pm4_set_reg(pm4, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, 0);
-		si_pm4_set_reg(pm4, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xffff));
+		if (sctx->b.chip_class >= GFX9) {
+			si_pm4_set_reg(pm4, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, S_00B41C_CU_EN(0xffff));
+		} else {
+			si_pm4_set_reg(pm4, R_00B51C_SPI_SHADER_PGM_RSRC3_LS, S_00B51C_CU_EN(0xffff));
+			si_pm4_set_reg(pm4, R_00B41C_SPI_SHADER_PGM_RSRC3_HS, 0);
+			si_pm4_set_reg(pm4, R_00B31C_SPI_SHADER_PGM_RSRC3_ES, S_00B31C_CU_EN(0xffff));
+		}
 		si_pm4_set_reg(pm4, R_00B21C_SPI_SHADER_PGM_RSRC3_GS, S_00B21C_CU_EN(0xffff));
 
 		if (sscreen->b.info.num_good_compute_units /
@@ -4209,6 +4220,21 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_028084_TA_BC_BASE_ADDR_HI, border_color_va >> 40);
 	si_pm4_add_bo(pm4, sctx->border_color_buffer, RADEON_USAGE_READ,
 		      RADEON_PRIO_BORDER_COLORS);
+
+	if (sctx->b.chip_class >= GFX9) {
+		si_pm4_set_reg(pm4, R_028060_DB_DFSM_CONTROL, 0);
+		si_pm4_set_reg(pm4, R_028064_DB_RENDER_FILTER, 0);
+		/* TODO: We can use this to disable RBs for rendering to GART: */
+		si_pm4_set_reg(pm4, R_02835C_PA_SC_TILE_STEERING_OVERRIDE, 0);
+		si_pm4_set_reg(pm4, R_02883C_PA_SU_OVER_RASTERIZATION_CNTL, 0);
+		/* TODO: Enable the binner: */
+		si_pm4_set_reg(pm4, R_028C44_PA_SC_BINNER_CNTL_0,
+			       S_028C44_BINNING_MODE(V_028C44_DISABLE_BINNING_USE_LEGACY_SC));
+		si_pm4_set_reg(pm4, R_028C48_PA_SC_BINNER_CNTL_1, 0);
+		si_pm4_set_reg(pm4, R_028C4C_PA_SC_CONSERVATIVE_RASTERIZATION_CNTL,
+			       S_028C4C_NULL_SQUAD_AA_MASK_ENABLE(1));
+		si_pm4_set_reg(pm4, R_030968_VGT_INSTANCE_BASE_ID, 0);
+	}
 
 	si_pm4_upload_indirect_buffer(sctx, pm4);
 	sctx->init_config = pm4;

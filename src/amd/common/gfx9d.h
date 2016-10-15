@@ -7101,6 +7101,10 @@
 #define   S_028C44_BINNING_MODE(x)                                    (((unsigned)(x) & 0x03) << 0)
 #define   G_028C44_BINNING_MODE(x)                                    (((x) >> 0) & 0x03)
 #define   C_028C44_BINNING_MODE                                       0xFFFFFFFC
+#define     V_028C44_BINNING_ALLOWED					0
+#define     V_028C44_FORCE_BINNING_ON					1
+#define     V_028C44_DISABLE_BINNING_USE_NEW_SC				2
+#define     V_028C44_DISABLE_BINNING_USE_LEGACY_SC			3
 #define   S_028C44_BIN_SIZE_X(x)                                      (((unsigned)(x) & 0x1) << 2)
 #define   G_028C44_BIN_SIZE_X(x)                                      (((x) >> 2) & 0x1)
 #define   C_028C44_BIN_SIZE_X                                         0xFFFFFFFB
