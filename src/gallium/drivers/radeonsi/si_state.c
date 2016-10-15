@@ -762,6 +762,7 @@ static uint32_t si_translate_fill(uint32_t func)
 static void *si_create_rs_state(struct pipe_context *ctx,
 				const struct pipe_rasterizer_state *state)
 {
+	struct si_screen *sscreen = ((struct si_context *)ctx)->screen;
 	struct si_state_rasterizer *rs = CALLOC_STRUCT(si_state_rasterizer);
 	struct si_pm4_state *pm4 = &rs->pm4;
 	unsigned tmp, i;
@@ -830,7 +831,8 @@ static void *si_create_rs_state(struct pipe_context *ctx,
 		       S_028A48_MSAA_ENABLE(state->multisample ||
 					    state->poly_smooth ||
 					    state->line_smooth) |
-		       S_028A48_VPORT_SCISSOR_ENABLE(1));
+		       S_028A48_VPORT_SCISSOR_ENABLE(1) |
+		       S_028A48_ALTERNATE_RBS_PER_TILE(sscreen->b.chip_class >= GFX9));
 
 	si_pm4_set_reg(pm4, R_028BE4_PA_SU_VTX_CNTL,
 		       S_028BE4_PIX_CENTER(state->half_pixel_center) |
@@ -2683,7 +2685,7 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 		unsigned small_prim_filter_cntl =
 			S_028830_SMALL_PRIM_FILTER_ENABLE(1) |
-			S_028830_LINE_FILTER_DISABLE(1); /* line bug */
+			S_028830_LINE_FILTER_DISABLE(sctx->b.chip_class == VI); /* line bug */
 
 		/* The alternative of setting sample locations to 0 would
 		 * require a DB flush to avoid Z errors, see
