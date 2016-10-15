@@ -307,17 +307,19 @@ struct r600_surface {
 	struct r600_resource *cb_buffer_cmask; /* Used for CMASK relocations. R600 only */
 
 	/* DB registers. */
+	uint64_t db_depth_base;		/* DB_Z_READ/WRITE_BASE (EG and later) or DB_DEPTH_BASE (r600) */
+	uint64_t db_stencil_base;	/* EG and later */
+	uint64_t db_htile_data_base;
 	unsigned db_depth_info;		/* R600 only, then SI and later */
 	unsigned db_z_info;		/* EG and later */
-	unsigned db_depth_base;		/* DB_Z_READ/WRITE_BASE (EG and later) or DB_DEPTH_BASE (r600) */
+	unsigned db_z_info2;		/* GFX9+ */
 	unsigned db_depth_view;
 	unsigned db_depth_size;
 	unsigned db_depth_slice;	/* EG and later */
-	unsigned db_stencil_base;	/* EG and later */
 	unsigned db_stencil_info;	/* EG and later */
+	unsigned db_stencil_info2;	/* GFX9+ */
 	unsigned db_prefetch_limit;	/* R600 only */
 	unsigned db_htile_surface;
-	unsigned db_htile_data_base;
 	unsigned db_preload_control;	/* EG and later */
 };
 
