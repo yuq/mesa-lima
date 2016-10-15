@@ -50,6 +50,9 @@
 #define FIND_MSB_TO_FLOAT_CAST    0x40000
 #define IMUL_HIGH_TO_MUL          0x80000
 
+/* Opertaions for lower_64bit_integer_instructions() */
+#define MUL64                     (1U << 0)
+
 /**
  * \see class lower_packing_builtins_visitor
  */
@@ -162,3 +165,6 @@ void propagate_invariance(exec_list *instructions);
 ir_rvalue *
 compare_index_block(exec_list *instructions, ir_variable *index,
 		    unsigned base, unsigned components, void *mem_ctx);
+
+bool lower_64bit_integer_instructions(exec_list *instructions,
+                                      unsigned what_to_lower);
