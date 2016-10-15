@@ -265,7 +265,7 @@
 
   <struct name="INTERFACE_DESCRIPTOR_DATA" length="8">
     <field name="Kernel Start Pointer" start="6" end="31" type="offset"/>
-    <field name="Single Program Flow" start="50" end="50" type="uint"/>
+    <field name="Single Program Flow" start="50" end="50" type="bool"/>
     <field name="Thread Priority" start="49" end="49" type="uint">
       <value name="Normal Priority" value="0"/>
       <value name="High Priority" value="1"/>
@@ -990,7 +990,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="17"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="5"/>
     <field name="Kernel Start Pointer" start="38" end="63" type="offset"/>
-    <field name="Single Program Flow (SPF)" start="95" end="95" type="uint"/>
+    <field name="Single Program Flow" start="95" end="95" type="bool"/>
     <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
     <field name="Sampler Count" start="91" end="93" type="uint">
       <value name="No Samplers" value="0"/>
@@ -1407,7 +1407,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="20"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="7"/>
     <field name="Kernel Start Pointer[0]" start="38" end="63" type="offset"/>
-    <field name="Single Program Flow (SPF)" start="95" end="95" type="uint"/>
+    <field name="Single Program Flow" start="95" end="95" type="bool"/>
     <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
     <field name="Sampler Count" start="91" end="93" type="uint"/>
     <field name="Binding Table Entry Count" start="82" end="89" type="uint"/>

@@ -298,7 +298,7 @@
 
   <struct name="INTERFACE_DESCRIPTOR_DATA" length="8">
     <field name="Kernel Start Pointer" start="6" end="31" type="offset"/>
-    <field name="Single Program Flow" start="50" end="50" type="uint"/>
+    <field name="Single Program Flow" start="50" end="50" type="bool"/>
     <field name="Thread Priority" start="49" end="49" type="uint">
       <value name="Normal Priority" value="0"/>
       <value name="High Priority" value="1"/>
@@ -1349,7 +1349,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="17"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="5"/>
     <field name="Kernel Start Pointer" start="38" end="63" type="offset"/>
-    <field name="Single Program Flow (SPF)" start="95" end="95" type="uint"/>
+    <field name="Single Program Flow" start="95" end="95" type="bool"/>
     <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
     <field name="Sampler Count" start="91" end="93" type="uint">
       <value name="No Samplers" value="0"/>
@@ -1447,7 +1447,7 @@
     <field name="Kernel Start Pointer" start="102" end="127" type="offset"/>
     <field name="Scratch Space Base Pointer" start="138" end="159" type="address"/>
     <field name="Per-Thread Scratch Space" start="128" end="131" type="uint"/>
-    <field name="Single Program Flow" start="187" end="187" type="uint"/>
+    <field name="Single Program Flow" start="187" end="187" type="bool"/>
     <field name="Vector Mask Enable" start="186" end="186" type="bool"/>
     <field name="HS accesses UAV" start="185" end="185" type="bool"/>
     <field name="Include Vertex Handles" start="184" end="184" type="uint"/>
@@ -1559,7 +1559,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="32"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="6"/>
     <field name="Kernel Start Pointer[0]" start="38" end="63" type="offset"/>
-    <field name="Single Program Flow (SPF)" start="95" end="95" type="uint"/>
+    <field name="Single Program Flow" start="95" end="95" type="bool"/>
     <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
     <field name="Sampler Count" start="91" end="93" type="uint"/>
     <field name="Denormal Mode" start="90" end="90" type="uint">

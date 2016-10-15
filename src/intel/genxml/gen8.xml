@@ -192,7 +192,7 @@
       <value name="Ftz" value="0"/>
       <value name="SetByKernel" value="1"/>
     </field>
-    <field name="Single Program Flow" start="82" end="82" type="uint"/>
+    <field name="Single Program Flow" start="82" end="82" type="bool"/>
     <field name="Thread Priority" start="81" end="81" type="uint">
       <value name="Normal Priority" value="0"/>
       <value name="High Priority" value="1"/>
@@ -1386,7 +1386,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="17"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="8"/>
     <field name="Kernel Start Pointer" start="38" end="95" type="offset"/>
-    <field name="Single Program Flow" start="127" end="127" type="uint"/>
+    <field name="Single Program Flow" start="127" end="127" type="bool"/>
     <field name="Vector Mask Enable" start="126" end="126" type="bool"/>
     <field name="Sampler Count" start="123" end="125" type="uint">
       <value name="No Samplers" value="0"/>
@@ -1581,7 +1581,7 @@
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="32"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="10"/>
     <field name="Kernel Start Pointer 0" start="38" end="95" type="offset"/>
-    <field name="Single Program Flow" start="127" end="127" type="uint"/>
+    <field name="Single Program Flow" start="127" end="127" type="bool"/>
     <field name="Vector Mask Enable" start="126" end="126" type="bool"/>
     <field name="Sampler Count" start="123" end="125" type="uint">
       <value name="No Samplers" value="0"/>
