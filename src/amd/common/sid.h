@@ -50,7 +50,16 @@
 		 * 4 - *S_PARTIAL_FLUSH
 		 * 5 - TS events
 		 */
-#define EVENT_WRITE_INV_L2                   0x100000
+
+/* EVENT_WRITE_EOP (SI-VI) & RELEASE_MEM (GFX9) */
+#define EVENT_TCL1_VOL_ACTION_ENA		(1 << 12)
+#define EVENT_TC_VOL_ACTION_ENA			(1 << 13)
+#define EVENT_TC_WB_ACTION_ENA			(1 << 15)
+#define EVENT_TCL1_ACTION_ENA			(1 << 16)
+#define EVENT_TC_ACTION_ENA			(1 << 17)
+#define EVENT_TC_NC_ACTION_ENA			(1 << 19) /* GFX9+ */
+#define EVENT_TC_WC_ACTION_ENA			(1 << 20) /* GFX9+ */
+#define EVENT_TC_MD_ACTION_ENA			(1 << 21) /* GFX9+ */
 
 
 #define PREDICATION_OP_CLEAR 0x0
@@ -92,7 +101,7 @@
 #define     CONTEXT_CONTROL_LOAD_ENABLE(x)     (((unsigned)(x) & 0x1) << 31)
 #define     CONTEXT_CONTROL_LOAD_CE_RAM(x)     (((unsigned)(x) & 0x1) << 28)
 #define     CONTEXT_CONTROL_SHADOW_ENABLE(x)   (((unsigned)(x) & 0x1) << 31)
-#define PKT3_INDEX_TYPE                        0x2A
+#define PKT3_INDEX_TYPE                        0x2A /* not on GFX9 */
 #define PKT3_DRAW_INDIRECT_MULTI               0x2C
 #define   R_2C3_DRAW_INDEX_LOC                  0x2C3
 #define     S_2C3_COUNT_INDIRECT_ENABLE(x)      (((unsigned)(x) & 0x1) << 30)
@@ -153,13 +162,14 @@
 #define PKT3_ME_INITIALIZE                     0x44 /* not on CIK */
 #define PKT3_COND_WRITE                        0x45
 #define PKT3_EVENT_WRITE                       0x46
-#define PKT3_EVENT_WRITE_EOP                   0x47
+#define PKT3_EVENT_WRITE_EOP                   0x47 /* not on GFX9 */
 /* CP DMA bug: Any use of CP_DMA.DST_SEL=TC must be avoided when EOS packets
  * are used. Use DST_SEL=MC instead. For prefetch, use SRC_SEL=TC and
  * DST_SEL=MC. Only CIK chips are affected.
  */
-/*#define PKT3_EVENT_WRITE_EOS                   0x48*/ /* fix CP DMA before uncommenting */
-#define PKT3_RELEASE_MEM                       0x49
+/* fix CP DMA before uncommenting: */
+/*#define PKT3_EVENT_WRITE_EOS                   0x48*/ /* not on GFX9 */
+#define PKT3_RELEASE_MEM                       0x49 /* GFX9+ (any ring) or GFX8 (compute ring only) */
 #define PKT3_ONE_REG_WRITE                     0x57 /* not on CIK */
 #define PKT3_ACQUIRE_MEM                       0x58 /* new for CIK */
 #define PKT3_SET_CONFIG_REG                    0x68
@@ -221,14 +231,15 @@
 #define   R_413_CP_DMA_WORD3		0x413 /* 0x[packet number][word index] */
 #define     S_413_DST_ADDR_HI(x)	((x) & 0xffff)
 #define   R_414_COMMAND			0x414
-#define     S_414_BYTE_COUNT(x)		((x) & 0x1fffff)
-#define     S_414_DISABLE_WR_CONFIRM(x)	(((unsigned)(x) & 0x1) << 21)
-#define     S_414_SRC_SWAP(x)		(((unsigned)(x) & 0x3) << 22)
+#define     S_414_BYTE_COUNT_GFX6(x)	((x) & 0x1fffff)
+#define     S_414_BYTE_COUNT_GFX9(x)	((x) & 0x3ffffff)
+#define     S_414_DISABLE_WR_CONFIRM_GFX6(x) (((unsigned)(x) & 0x1) << 21) /* not on GFX9 */
+#define     S_414_SRC_SWAP(x)		(((unsigned)(x) & 0x3) << 22) /* not on GFX9 */
 #define       V_414_NONE		0
 #define       V_414_8_IN_16		1
 #define       V_414_8_IN_32		2
 #define       V_414_8_IN_64		3
-#define     S_414_DST_SWAP(x)		(((unsigned)(x) & 0x3) << 24)
+#define     S_414_DST_SWAP(x)		(((unsigned)(x) & 0x3) << 24) /* not on GFX9 */
 #define       V_414_NONE		0
 #define       V_414_8_IN_16		1
 #define       V_414_8_IN_32		2
@@ -246,6 +257,7 @@
 #define       V_414_INCREMENT		0
 #define       V_414_NO_INCREMENT	1
 #define     S_414_RAW_WAIT(x)		(((unsigned)(x) & 0x1) << 30)
+#define     S_414_DISABLE_WR_CONFIRM_GFX9(x) (((unsigned)(x) & 0x1) << 31)
 
 #define PKT3_DMA_DATA					0x50 /* new for CIK */
 /* 1. header

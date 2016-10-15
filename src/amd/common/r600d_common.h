@@ -63,6 +63,7 @@
 		 * 3 - send 64bit GPU counter value
 		 * 4 - send 64bit sys counter value
 		 */
+#define PKT3_RELEASE_MEM                       0x49 /* GFX9+ */
 #define PKT3_SET_CONFIG_REG		       0x68
 #define PKT3_SET_CONTEXT_REG		       0x69
 #define PKT3_STRMOUT_BASE_UPDATE	       0x72 /* r700 only */

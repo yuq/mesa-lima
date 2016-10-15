@@ -51,7 +51,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 			   enum r600_coherency coher)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	uint32_t header = 0, command = S_414_BYTE_COUNT(size);
+	uint32_t header = 0, command = S_414_BYTE_COUNT_GFX6(size);
 
 	assert(size);
 	assert(size <= CP_DMA_MAX_BYTE_COUNT);
@@ -60,7 +60,7 @@ static void si_emit_cp_dma(struct si_context *sctx, uint64_t dst_va,
 	if (flags & CP_DMA_SYNC)
 		header |= S_411_CP_SYNC(1);
 	else
-		command |= S_414_DISABLE_WR_CONFIRM(1);
+		command |= S_414_DISABLE_WR_CONFIRM_GFX6(1);
 
 	if (flags & CP_DMA_RAW_WAIT)
 		command |= S_414_RAW_WAIT(1);
