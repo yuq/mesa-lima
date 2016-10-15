@@ -497,7 +497,8 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		return 30;
 
 	case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
-		return PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_R600;
+		return sscreen->b.chip_class <= VI ?
+			PIPE_QUIRK_TEXTURE_BORDER_COLOR_SWIZZLE_R600 : 0;
 
 	/* Stream output. */
 	case PIPE_CAP_MAX_STREAM_OUTPUT_SEPARATE_COMPONENTS:

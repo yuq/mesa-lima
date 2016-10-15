@@ -2932,6 +2932,35 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 		   S_008F0C_DATA_FORMAT(data_format);
 }
 
+static unsigned gfx9_border_color_swizzle(const unsigned char swizzle[4])
+{
+	unsigned bc_swizzle = V_008F20_BC_SWIZZLE_XYZW;
+
+	if (swizzle[3] == PIPE_SWIZZLE_X) {
+		/* For the pre-defined border color values (white, opaque
+		 * black, transparent black), the only thing that matters is
+		 * that the alpha channel winds up in the correct place
+		 * (because the RGB channels are all the same) so either of
+		 * these enumerations will work.
+		 */
+		if (swizzle[2] == PIPE_SWIZZLE_Y)
+			bc_swizzle = V_008F20_BC_SWIZZLE_WZYX;
+		else
+			bc_swizzle = V_008F20_BC_SWIZZLE_WXYZ;
+	} else if (swizzle[0] == PIPE_SWIZZLE_X) {
+		if (swizzle[1] == PIPE_SWIZZLE_Y)
+			bc_swizzle = V_008F20_BC_SWIZZLE_XYZW;
+		else
+			bc_swizzle = V_008F20_BC_SWIZZLE_XWYZ;
+	} else if (swizzle[1] == PIPE_SWIZZLE_X) {
+		bc_swizzle = V_008F20_BC_SWIZZLE_YXWZ;
+	} else if (swizzle[2] == PIPE_SWIZZLE_X) {
+		bc_swizzle = V_008F20_BC_SWIZZLE_ZYXW;
+	}
+
+	return bc_swizzle;
+}
+
 /**
  * Build the sampler view descriptor for a texture.
  */
@@ -3097,13 +3126,32 @@ si_make_texture_descriptor(struct si_screen *screen,
 		    S_008F1C_LAST_LEVEL(res->nr_samples > 1 ?
 					util_logbase2(res->nr_samples) :
 					last_level) |
-		    S_008F1C_POW2_PAD(res->last_level > 0) |
 		    S_008F1C_TYPE(type));
-	state[4] = S_008F20_DEPTH(depth - 1);
-	state[5] = (S_008F24_BASE_ARRAY(first_layer) |
-		    S_008F24_LAST_ARRAY(last_layer));
+	state[4] = 0;
+	state[5] = S_008F24_BASE_ARRAY(first_layer);
 	state[6] = 0;
 	state[7] = 0;
+
+	if (screen->b.chip_class >= GFX9) {
+		unsigned bc_swizzle = gfx9_border_color_swizzle(desc->swizzle);
+
+		/* Depth is the the last accessible layer on Gfx9.
+		 * The hw doesn't need to know the total number of layers.
+		 */
+		if (type == V_008F1C_SQ_RSRC_IMG_3D)
+			state[4] |= S_008F20_DEPTH(depth - 1);
+		else
+			state[4] |= S_008F20_DEPTH(last_layer);
+
+		state[4] |= S_008F20_BC_SWIZZLE(bc_swizzle);
+		state[5] |= S_008F24_MAX_MIP(res->nr_samples > 1 ?
+					     util_logbase2(res->nr_samples) :
+					     tex->resource.b.b.last_level);
+	} else {
+		state[3] |= S_008F1C_POW2_PAD(res->last_level > 0);
+		state[4] |= S_008F20_DEPTH(depth - 1);
+		state[5] |= S_008F24_LAST_ARRAY(last_layer);
+	}
 
 	if (tex->dcc_offset) {
 		unsigned swap = r600_translate_colorswap(pipe_format, false);

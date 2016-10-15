@@ -1466,6 +1466,12 @@
 #define   S_008F20_BC_SWIZZLE(x)                                      (((unsigned)(x) & 0x07) << 29)
 #define   G_008F20_BC_SWIZZLE(x)                                      (((x) >> 29) & 0x07)
 #define   C_008F20_BC_SWIZZLE                                         0x1FFFFFFF
+#define     V_008F20_BC_SWIZZLE_XYZW					0
+#define     V_008F20_BC_SWIZZLE_XWYZ					1
+#define     V_008F20_BC_SWIZZLE_WZYX					2
+#define     V_008F20_BC_SWIZZLE_WXYZ					3
+#define     V_008F20_BC_SWIZZLE_ZYXW					4
+#define     V_008F20_BC_SWIZZLE_YXWZ					5
 #define R_008F24_SQ_IMG_RSRC_WORD5                                      0x008F24
 #define   S_008F24_BASE_ARRAY(x)                                      (((unsigned)(x) & 0x1FFF) << 0)
 #define   G_008F24_BASE_ARRAY(x)                                      (((x) >> 0) & 0x1FFF)
