@@ -27,6 +27,7 @@
 #include "si_pipe.h"
 #include "radeon/r600_cs.h"
 #include "sid.h"
+#include "gfx9d.h"
 
 #include "util/u_index_modify.h"
 #include "util/u_upload_mgr.h"
@@ -379,7 +380,9 @@ si_get_init_multi_vgt_param(struct si_screen *sscreen,
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
 		S_028AA8_WD_SWITCH_ON_EOP(sscreen->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
 		S_028AA8_MAX_PRIMGRP_IN_WAVE(sscreen->b.chip_class >= VI ?
-					     max_primgroup_in_wave : 0);
+					     max_primgroup_in_wave : 0) |
+		S_030960_EN_INST_OPT_BASIC(sscreen->b.chip_class >= GFX9) |
+		S_030960_EN_INST_OPT_ADV(sscreen->b.chip_class >= GFX9);
 }
 
 void si_init_ia_multi_vgt_param_table(struct si_context *sctx)
@@ -506,7 +509,9 @@ static void si_emit_draw_registers(struct si_context *sctx,
 
 	/* Draw state. */
 	if (ia_multi_vgt_param != sctx->last_multi_vgt_param) {
-		if (sctx->b.chip_class >= CIK)
+		if (sctx->b.chip_class >= GFX9)
+			radeon_set_uconfig_reg_idx(cs, R_030960_IA_MULTI_VGT_PARAM, 4, ia_multi_vgt_param);
+		else if (sctx->b.chip_class >= CIK)
 			radeon_set_context_reg_idx(cs, R_028AA8_IA_MULTI_VGT_PARAM, 1, ia_multi_vgt_param);
 		else
 			radeon_set_context_reg(cs, R_028AA8_IA_MULTI_VGT_PARAM, ia_multi_vgt_param);
@@ -529,7 +534,13 @@ static void si_emit_draw_registers(struct si_context *sctx,
 
 	/* Primitive restart. */
 	if (info->primitive_restart != sctx->last_primitive_restart_en) {
-		radeon_set_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN, info->primitive_restart);
+		if (sctx->b.chip_class >= GFX9)
+			radeon_set_uconfig_reg(cs, R_03092C_VGT_MULTI_PRIM_IB_RESET_EN,
+					       info->primitive_restart);
+		else
+			radeon_set_context_reg(cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
+					       info->primitive_restart);
+
 		sctx->last_primitive_restart_en = info->primitive_restart;
 
 	}
@@ -578,26 +589,34 @@ static void si_emit_draw_packets(struct si_context *sctx,
 	/* draw packet */
 	if (info->indexed) {
 		if (ib->index_size != sctx->last_index_size) {
-			radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+			unsigned index_type;
 
 			/* index type */
 			switch (ib->index_size) {
 			case 1:
-				radeon_emit(cs, V_028A7C_VGT_INDEX_8);
+				index_type = V_028A7C_VGT_INDEX_8;
 				break;
 			case 2:
-				radeon_emit(cs, V_028A7C_VGT_INDEX_16 |
-					    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
-						     V_028A7C_VGT_DMA_SWAP_16_BIT : 0));
+				index_type = V_028A7C_VGT_INDEX_16 |
+					     (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
+						      V_028A7C_VGT_DMA_SWAP_16_BIT : 0);
 				break;
 			case 4:
-				radeon_emit(cs, V_028A7C_VGT_INDEX_32 |
-					    (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
-						     V_028A7C_VGT_DMA_SWAP_32_BIT : 0));
+				index_type = V_028A7C_VGT_INDEX_32 |
+					     (SI_BIG_ENDIAN && sctx->b.chip_class <= CIK ?
+						      V_028A7C_VGT_DMA_SWAP_32_BIT : 0);
 				break;
 			default:
 				assert(!"unreachable");
 				return;
+			}
+
+			if (sctx->b.chip_class >= GFX9) {
+				radeon_set_uconfig_reg_idx(cs, R_03090C_VGT_INDEX_TYPE,
+							   2, index_type);
+			} else {
+				radeon_emit(cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
+				radeon_emit(cs, index_type);
 			}
 
 			sctx->last_index_size = ib->index_size;
@@ -718,7 +737,7 @@ static void si_emit_draw_packets(struct si_context *sctx,
 			radeon_emit(cs, PKT3(PKT3_DRAW_INDEX_2, 4, render_cond_bit));
 			radeon_emit(cs, index_max_size);
 			radeon_emit(cs, index_va);
-			radeon_emit(cs, (index_va >> 32UL) & 0xFF);
+			radeon_emit(cs, index_va >> 32);
 			radeon_emit(cs, info->count);
 			radeon_emit(cs, V_0287F0_DI_SRC_SEL_DMA);
 		} else {
