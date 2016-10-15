@@ -2698,7 +2698,7 @@
       <value name="2nd level batch" value="1"/>
     </field>
     <field name="Add Offset Enable" start="16" end="16" type="bool"/>
-    <field name="Predication Enable" start="15" end="15" type="uint"/>
+    <field name="Predication Enable" start="15" end="15" type="bool"/>
     <field name="Resource Streamer Enable" start="10" end="10" type="bool"/>
     <field name="Address Space Indicator" start="8" end="8" type="uint" prefix="ASI">
       <value name="GGTT" value="0"/>
