@@ -150,7 +150,7 @@ void si_pm4_emit(struct si_context *sctx, struct si_pm4_state *state)
 
 		radeon_emit(cs, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
 		radeon_emit(cs, ib->gpu_address);
-		radeon_emit(cs, (ib->gpu_address >> 32) & 0xffff);
+		radeon_emit(cs, ib->gpu_address >> 32);
 		radeon_emit(cs, (ib->b.b.width0 >> 2) & 0xfffff);
 	}
 }
