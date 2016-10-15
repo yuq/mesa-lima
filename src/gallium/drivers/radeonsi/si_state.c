@@ -2217,33 +2217,33 @@ static void si_init_depth_surface(struct si_context *sctx,
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
 	struct radeon_surf_level *levelinfo = &rtex->surface.level[level];
-	unsigned format;
-	uint32_t z_info, s_info, db_depth_info;
-	uint64_t z_offs, s_offs;
-	uint32_t db_htile_data_base, db_htile_surface;
+	unsigned format, stencil_format;
+	uint32_t z_info, s_info;
 
 	format = si_translate_dbformat(rtex->db_render_format);
+	stencil_format = rtex->surface.flags & RADEON_SURF_SBUFFER ?
+				 V_028044_STENCIL_8 : V_028044_STENCIL_INVALID;
 
-	if (format == V_028040_Z_INVALID) {
-		R600_ERR("Invalid DB format: %d, disabling DB.\n", rtex->resource.b.b.format);
-	}
 	assert(format != V_028040_Z_INVALID);
+	if (format == V_028040_Z_INVALID)
+		R600_ERR("Invalid DB format: %d, disabling DB.\n", rtex->resource.b.b.format);
 
-	s_offs = z_offs = rtex->resource.gpu_address;
-	z_offs += rtex->surface.level[level].offset;
-	s_offs += rtex->surface.stencil_level[level].offset;
+	surf->db_depth_view = S_028008_SLICE_START(surf->base.u.tex.first_layer) |
+			      S_028008_SLICE_MAX(surf->base.u.tex.last_layer);
+	surf->db_htile_data_base = 0;
+	surf->db_htile_surface = 0;
 
-	db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(!rtex->tc_compatible_htile);
+	assert(levelinfo->nblk_x % 8 == 0 && levelinfo->nblk_y % 8 == 0);
 
-	z_info = S_028040_FORMAT(format);
-	if (rtex->resource.b.b.nr_samples > 1) {
-		z_info |= S_028040_NUM_SAMPLES(util_logbase2(rtex->resource.b.b.nr_samples));
-	}
+	surf->db_depth_base = (rtex->resource.gpu_address +
+			       rtex->surface.level[level].offset) >> 8;
+	surf->db_stencil_base = (rtex->resource.gpu_address +
+				 rtex->surface.stencil_level[level].offset) >> 8;
 
-	if (rtex->surface.flags & RADEON_SURF_SBUFFER)
-		s_info = S_028044_FORMAT(V_028044_STENCIL_8);
-	else
-		s_info = S_028044_FORMAT(V_028044_STENCIL_INVALID);
+	z_info = S_028040_FORMAT(format) |
+		 S_028040_NUM_SAMPLES(util_logbase2(rtex->resource.b.b.nr_samples));
+	s_info = S_028044_FORMAT(stencil_format);
+	surf->db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(!rtex->tc_compatible_htile);
 
 	if (sctx->b.chip_class >= CIK) {
 		struct radeon_info *info = &sctx->screen->b.info;
@@ -2254,7 +2254,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 		unsigned stencil_tile_mode = info->si_tile_mode_array[stencil_index];
 		unsigned macro_mode = info->cik_macrotile_mode_array[macro_index];
 
-		db_depth_info |=
+		surf->db_depth_info |=
 			S_02803C_ARRAY_MODE(G_009910_ARRAY_MODE(tile_mode)) |
 			S_02803C_PIPE_CONFIG(G_009910_PIPE_CONFIG(tile_mode)) |
 			S_02803C_BANK_WIDTH(G_009990_BANK_WIDTH(macro_mode)) |
@@ -2270,8 +2270,12 @@ static void si_init_depth_surface(struct si_context *sctx,
 		s_info |= S_028044_TILE_MODE_INDEX(tile_mode_index);
 	}
 
-	/* HiZ aka depth buffer htile */
-	/* use htile only for first level */
+	surf->db_depth_size = S_028058_PITCH_TILE_MAX((levelinfo->nblk_x / 8) - 1) |
+			      S_028058_HEIGHT_TILE_MAX((levelinfo->nblk_y / 8) - 1);
+	surf->db_depth_slice = S_02805C_SLICE_TILE_MAX((levelinfo->nblk_x *
+							levelinfo->nblk_y) / 64 - 1);
+
+	/* Only use HTILE for the first level. */
 	if (rtex->htile_buffer && !level) {
 		z_info |= S_028040_TILE_SURFACE_ENABLE(1) |
 			  S_028040_ALLOW_EXPCLEAR(1);
@@ -2298,49 +2302,23 @@ static void si_init_depth_surface(struct si_context *sctx,
 			s_info |= S_028044_TILE_STENCIL_DISABLE(1);
 		}
 
-		uint64_t va = rtex->htile_buffer->gpu_address;
-		db_htile_data_base = va >> 8;
-		db_htile_surface = S_028ABC_FULL_CACHE(1);
+		surf->db_htile_data_base = rtex->htile_buffer->gpu_address >> 8;
+		surf->db_htile_surface = S_028ABC_FULL_CACHE(1);
 
 		if (rtex->tc_compatible_htile) {
-			db_htile_surface |= S_028ABC_TC_COMPATIBLE(1);
+			surf->db_htile_surface |= S_028ABC_TC_COMPATIBLE(1);
 
-			switch (rtex->resource.b.b.nr_samples) {
-			case 0:
-			case 1:
+			if (rtex->resource.b.b.nr_samples <= 1)
 				z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(5);
-				break;
-			case 2:
-			case 4:
+			else if (rtex->resource.b.b.nr_samples <= 4)
 				z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(3);
-				break;
-			case 8:
+			else
 				z_info |= S_028040_DECOMPRESS_ON_N_ZPLANES(2);
-				break;
-			default:
-				assert(0);
-			}
 		}
-	} else {
-		db_htile_data_base = 0;
-		db_htile_surface = 0;
 	}
 
-	assert(levelinfo->nblk_x % 8 == 0 && levelinfo->nblk_y % 8 == 0);
-
-	surf->db_depth_view = S_028008_SLICE_START(surf->base.u.tex.first_layer) |
-			      S_028008_SLICE_MAX(surf->base.u.tex.last_layer);
-	surf->db_htile_data_base = db_htile_data_base;
-	surf->db_depth_info = db_depth_info;
 	surf->db_z_info = z_info;
 	surf->db_stencil_info = s_info;
-	surf->db_depth_base = z_offs >> 8;
-	surf->db_stencil_base = s_offs >> 8;
-	surf->db_depth_size = S_028058_PITCH_TILE_MAX((levelinfo->nblk_x / 8) - 1) |
-			      S_028058_HEIGHT_TILE_MAX((levelinfo->nblk_y / 8) - 1);
-	surf->db_depth_slice = S_02805C_SLICE_TILE_MAX((levelinfo->nblk_x *
-							levelinfo->nblk_y) / 64 - 1);
-	surf->db_htile_surface = db_htile_surface;
 
 	surf->depth_initialized = true;
 }
