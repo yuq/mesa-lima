@@ -59,7 +59,10 @@ vec4_gs_visitor::make_reg_for_system_value(int location)
    switch (location) {
    case SYSTEM_VALUE_INVOCATION_ID:
       this->current_annotation = "initialize gl_InvocationID";
-      emit(GS_OPCODE_GET_INSTANCE_ID, *reg);
+      if (gs_prog_data->invocations > 1)
+         emit(GS_OPCODE_GET_INSTANCE_ID, *reg);
+      else
+         emit(MOV(*reg, brw_imm_ud(0)));
       break;
    default:
       unreachable("not reached");
