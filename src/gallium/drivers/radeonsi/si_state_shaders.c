@@ -27,6 +27,7 @@
 
 #include "si_pipe.h"
 #include "sid.h"
+#include "gfx9d.h"
 #include "radeon/r600_cs.h"
 
 #include "tgsi/tgsi_parse.h"
@@ -465,7 +466,7 @@ static void si_shader_ls(struct si_shader *shader)
 			   S_00B52C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 }
 
-static void si_shader_hs(struct si_shader *shader)
+static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
 	uint64_t va;
@@ -486,7 +487,7 @@ static void si_shader_hs(struct si_shader *shader)
 		       S_00B428_FLOAT_MODE(shader->config.float_mode));
 	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
 		       S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
-		       S_00B42C_OC_LDS_EN(1) |
+		       S_00B42C_OC_LDS_EN(sscreen->b.chip_class <= VI) |
 		       S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
 }
 
@@ -932,7 +933,7 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 			si_shader_vs(sscreen, shader, NULL);
 		break;
 	case PIPE_SHADER_TESS_CTRL:
-		si_shader_hs(shader);
+		si_shader_hs(sscreen, shader);
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (shader->key.as_es)
@@ -2126,8 +2127,11 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	/* Some rings don't have to be allocated if shaders don't use them.
 	 * (e.g. no varyings between ES and GS or GS and VS)
+	 *
+	 * GFX9 doesn't have the ESGS ring.
 	 */
-	bool update_esgs = esgs_ring_size &&
+	bool update_esgs = sctx->b.chip_class <= VI &&
+			   esgs_ring_size &&
 			   (!sctx->esgs_ring ||
 			    sctx->esgs_ring->width0 < esgs_ring_size);
 	bool update_gsvs = gsvs_ring_size &&
@@ -2165,9 +2169,11 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 		return false;
 
 	if (sctx->b.chip_class >= CIK) {
-		if (sctx->esgs_ring)
+		if (sctx->esgs_ring) {
+			assert(sctx->b.chip_class <= VI);
 			si_pm4_set_reg(pm4, R_030900_VGT_ESGS_RING_SIZE,
 				       sctx->esgs_ring->width0 / 256);
+		}
 		if (sctx->gsvs_ring)
 			si_pm4_set_reg(pm4, R_030904_VGT_GSVS_RING_SIZE,
 				       sctx->gsvs_ring->width0 / 256);
@@ -2196,6 +2202,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	/* Set ring bindings. */
 	if (sctx->esgs_ring) {
+		assert(sctx->b.chip_class <= VI);
 		si_set_ring_buffer(&sctx->b.b, SI_ES_RING_ESGS,
 				   sctx->esgs_ring, 0, sctx->esgs_ring->width0,
 				   true, true, 4, 64, 0);
@@ -2432,6 +2439,9 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 			       S_030938_SIZE(sctx->tf_ring->width0 / 4));
 		si_pm4_set_reg(sctx->init_config, R_030940_VGT_TF_MEMORY_BASE,
 			       r600_resource(sctx->tf_ring)->gpu_address >> 8);
+		if (sctx->b.chip_class >= GFX9)
+			si_pm4_set_reg(sctx->init_config, R_030944_VGT_TF_MEMORY_BASE_HI,
+				       r600_resource(sctx->tf_ring)->gpu_address >> 40);
 		si_pm4_set_reg(sctx->init_config, R_03093C_VGT_HS_OFFCHIP_PARAM,
 		             S_03093C_OFFCHIP_BUFFERING(max_offchip_buffers) |
 		             S_03093C_OFFCHIP_GRANULARITY(offchip_granularity));
