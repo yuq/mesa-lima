@@ -1350,7 +1350,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="5"/>
     <field name="Kernel Start Pointer" start="38" end="63" type="offset"/>
     <field name="Single Program Flow" start="95" end="95" type="bool"/>
-    <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
+    <field name="Vector Mask Enable" start="94" end="94" type="bool"/>
     <field name="Sampler Count" start="91" end="93" type="uint">
       <value name="No Samplers" value="0"/>
       <value name="1-4 Samplers" value="1"/>
@@ -1560,7 +1560,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="6"/>
     <field name="Kernel Start Pointer[0]" start="38" end="63" type="offset"/>
     <field name="Single Program Flow" start="95" end="95" type="bool"/>
-    <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
+    <field name="Vector Mask Enable" start="94" end="94" type="bool"/>
     <field name="Sampler Count" start="91" end="93" type="uint"/>
     <field name="Denormal Mode" start="90" end="90" type="uint">
       <value name="FTZ" value="0"/>
@@ -2115,7 +2115,7 @@
     <field name="DWord Length" start="0" end="7" type="uint" default="4"/>
     <field name="Kernel Start Pointer" start="38" end="63" type="offset"/>
     <field name="Single Vertex Dispatch" start="95" end="95" type="bool"/>
-    <field name="Vector Mask Enable (VME)" start="94" end="94" type="uint"/>
+    <field name="Vector Mask Enable" start="94" end="94" type="bool"/>
     <field name="Sampler Count" start="91" end="93" type="uint">
       <value name="No Samplers" value="0"/>
       <value name="1-4 Samplers" value="1"/>
