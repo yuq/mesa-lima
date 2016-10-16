@@ -5323,7 +5323,6 @@ struct st_translate {
    struct ureg_src images[PIPE_MAX_SHADER_IMAGES];
    struct ureg_src systemValues[SYSTEM_VALUE_MAX];
    struct ureg_src shared_memory;
-   struct tgsi_texture_offset tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
    unsigned *array_sizes;
    struct inout_decl *input_decls;
    unsigned num_input_decls;
