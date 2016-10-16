@@ -393,7 +393,7 @@ NineAdapter9_CheckDeviceMultiSampleType( struct NineAdapter9 *This,
         /* In error cases return only 1 quality level supported */
         *pQualityLevels = 1;
     }
-    user_assert(MultiSampleType < D3DMULTISAMPLE_16_SAMPLES, D3DERR_INVALIDCALL);
+    user_assert(MultiSampleType <= D3DMULTISAMPLE_16_SAMPLES, D3DERR_INVALIDCALL);
 
     hr = NineAdapter9_GetScreen(This, DeviceType, &screen);
     if (FAILED(hr))
