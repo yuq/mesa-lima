@@ -90,8 +90,9 @@ static int swizzle_for_type(const glsl_type *type, int component = 0)
 class st_src_reg {
 public:
    st_src_reg(gl_register_file file, int index, const glsl_type *type,
-              int component = 0)
+              int component = 0, unsigned array_id = 0)
    {
+      assert(file != PROGRAM_ARRAY || array_id != 0);
       this->file = file;
       this->index = index;
       this->swizzle = swizzle_for_type(type, component);
@@ -102,12 +103,13 @@ public:
       this->reladdr2 = NULL;
       this->has_index2 = false;
       this->double_reg2 = false;
-      this->array_id = 0;
+      this->array_id = array_id;
       this->is_double_vertex_input = false;
    }
 
    st_src_reg(gl_register_file file, int index, enum glsl_base_type type)
    {
+      assert(file != PROGRAM_ARRAY); /* need array_id > 0 */
       this->type = type;
       this->file = file;
       this->index = index;
@@ -124,6 +126,7 @@ public:
 
    st_src_reg(gl_register_file file, int index, enum glsl_base_type type, int index2D)
    {
+      assert(file != PROGRAM_ARRAY); /* need array_id > 0 */
       this->type = type;
       this->file = file;
       this->index = index;
@@ -179,6 +182,7 @@ class st_dst_reg {
 public:
    st_dst_reg(gl_register_file file, int writemask, enum glsl_base_type type, int index)
    {
+      assert(file != PROGRAM_ARRAY); /* need array_id > 0 */
       this->file = file;
       this->index = index;
       this->index2D = 0;
@@ -192,6 +196,7 @@ public:
 
    st_dst_reg(gl_register_file file, int writemask, enum glsl_base_type type)
    {
+      assert(file != PROGRAM_ARRAY); /* need array_id > 0 */
       this->file = file;
       this->index = 0;
       this->index2D = 0;
@@ -296,7 +301,7 @@ public:
                     unsigned array_id = 0)
       : file(file), index(index), component(0), var(var), array_id(array_id)
    {
-      /* empty */
+      assert(file != PROGRAM_ARRAY || array_id != 0);
    }
 
    gl_register_file file;
@@ -1264,7 +1269,8 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
       }
 
       src.file = PROGRAM_ARRAY;
-      src.index = next_array << 16 | 0x8000;
+      src.index = 0;
+      src.array_id = next_array + 1;
       array_sizes[next_array] = type_size(type);
       ++next_array;
 
@@ -1339,7 +1345,8 @@ glsl_to_tgsi_visitor::visit(ir_variable *ir)
 
          dst = st_dst_reg(get_temp(ir->type));
 
-         storage = new(mem_ctx) variable_storage(ir, dst.file, dst.index);
+         storage = new(mem_ctx) variable_storage(ir, dst.file, dst.index,
+                                                 dst.array_id);
 
          this->variables.push_tail(storage);
       }
@@ -2524,7 +2531,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
       case ir_var_temporary:
          st_src_reg src = get_temp(var->type);
 
-         entry = new(mem_ctx) variable_storage(var, src.file, src.index);
+         entry = new(mem_ctx) variable_storage(var, src.file, src.index,
+                                               src.array_id);
          this->variables.push_tail(entry);
 
          break;
@@ -2536,8 +2544,8 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
       }
    }
 
-   this->result = st_src_reg(entry->file, entry->index, var->type, entry->component);
-   this->result.array_id = entry->array_id;
+   this->result = st_src_reg(entry->file, entry->index, var->type,
+                             entry->component, entry->array_id);
    if (this->shader->Stage == MESA_SHADER_VERTEX && var->data.mode == ir_var_shader_in && var->type->is_double())
       this->result.is_double_vertex_input = true;
    if (!native_integers)
@@ -5527,16 +5535,14 @@ dst_register(struct st_translate *t, gl_register_file file, unsigned index,
       return t->temps[index];
 
    case PROGRAM_ARRAY:
-      array = index >> 16;
-
-      assert(array < t->num_temp_arrays);
+      assert(array_id && array_id <= t->num_temp_arrays);
+      array = array_id - 1;
 
       if (ureg_dst_is_undef(t->arrays[array]))
          t->arrays[array] = ureg_DECL_array_temporary(
             t->ureg, t->array_sizes[array], TRUE);
 
-      return ureg_dst_array_offset(t->arrays[array],
-                                   (int)(index & 0xFFFF) - 0x8000);
+      return ureg_dst_array_offset(t->arrays[array], index);
 
    case PROGRAM_OUTPUT:
       if (!array_id) {
