@@ -581,7 +581,6 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
     /* Textures */
     if (src->changed.texture) {
         uint32_t m = src->changed.texture;
-        dst->changed.texture |= m;
 
         dst->samplers_shadow &= ~m;
 

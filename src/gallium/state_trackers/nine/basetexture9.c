@@ -210,9 +210,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
             unsigned s;
             for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
                 if (state->texture[s] == This)
-                    state->changed.texture |= 1 << s;
-            if (state->changed.texture)
-                state->changed.group |= NINE_STATE_TEXTURE;
+                    state->changed.group |= NINE_STATE_TEXTURE;
         }
 
         /* Allocate a new resource */

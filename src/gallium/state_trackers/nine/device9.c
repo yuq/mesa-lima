@@ -2482,7 +2482,8 @@ NineDevice9_SetTexture( struct NineDevice9 *This,
     }
     nine_bind(&state->texture[Stage], pTexture);
 
-    state->changed.texture |= 1 << Stage;
+    if (This->is_recording)
+        state->changed.texture |= 1 << Stage;
     state->changed.group |= NINE_STATE_TEXTURE;
 
     return D3D_OK;

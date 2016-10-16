@@ -859,8 +859,6 @@ update_textures_and_samplers(struct NineDevice9 *device)
 
     if (commit_samplers)
         cso_single_sampler_done(device->cso, PIPE_SHADER_VERTEX);
-
-    state->changed.texture = 0;
 }
 
 /* State commit only */
@@ -1670,7 +1668,6 @@ void nine_state_restore_non_cso(struct NineDevice9 *device)
     state->changed.group = NINE_STATE_ALL;
     state->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
-    state->changed.texture = NINE_PS_SAMPLERS_MASK | NINE_VS_SAMPLERS_MASK;
     context->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
 }
 
@@ -1718,7 +1715,6 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     state->changed.group = NINE_STATE_ALL;
     state->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
-    state->changed.texture = NINE_PS_SAMPLERS_MASK | NINE_VS_SAMPLERS_MASK;
 
     state->ff.changed.transform[0] = ~0;
     state->ff.changed.transform[D3DTS_WORLD / 32] |= 1 << (D3DTS_WORLD % 32);

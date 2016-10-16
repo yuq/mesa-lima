@@ -138,7 +138,7 @@ struct nine_state
         uint32_t rs[(NINED3DRS_COUNT + 31) / 32]; /* stateblocks only */
         uint32_t vtxbuf;
         uint32_t stream_freq;
-        uint32_t texture;
+        uint32_t texture; /* stateblocks only */
         uint16_t sampler[NINE_MAX_SAMPLERS];
         struct nine_range *vs_const_f;
         struct nine_range *ps_const_f;
