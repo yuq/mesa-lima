@@ -668,9 +668,9 @@ update_vertex_elements(struct NineDevice9 *device)
 
     if (context->dummy_vbo_bound_at != dummy_vbo_stream) {
         if (context->dummy_vbo_bound_at >= 0)
-            state->changed.vtxbuf |= 1 << context->dummy_vbo_bound_at;
+            context->changed.vtxbuf |= 1 << context->dummy_vbo_bound_at;
         if (dummy_vbo_stream >= 0) {
-            state->changed.vtxbuf |= 1 << dummy_vbo_stream;
+            context->changed.vtxbuf |= 1 << dummy_vbo_stream;
             context->vbo_bound_done = FALSE;
         }
         context->dummy_vbo_bound_at = dummy_vbo_stream;
@@ -686,9 +686,8 @@ update_vertex_buffers(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
     struct nine_context *context = &device->context;
-    struct nine_state *state = &device->state;
     struct pipe_vertex_buffer dummy_vtxbuf;
-    uint32_t mask = state->changed.vtxbuf;
+    uint32_t mask = context->changed.vtxbuf;
     unsigned i;
 
     DBG("mask=%x\n", mask);
@@ -708,14 +707,14 @@ update_vertex_buffers(struct NineDevice9 *device)
 
     for (i = 0; mask; mask >>= 1, ++i) {
         if (mask & 1) {
-            if (state->vtxbuf[i].buffer)
-                pipe->set_vertex_buffers(pipe, i, 1, &state->vtxbuf[i]);
+            if (context->vtxbuf[i].buffer)
+                pipe->set_vertex_buffers(pipe, i, 1, &context->vtxbuf[i]);
             else
                 pipe->set_vertex_buffers(pipe, i, 1, NULL);
         }
     }
 
-    state->changed.vtxbuf = 0;
+    context->changed.vtxbuf = 0;
 }
 
 static inline boolean
@@ -1064,7 +1063,7 @@ nine_update_state(struct NineDevice9 *device)
             prepare_ps_constants_userbuf(device);
     }
 
-    if (state->changed.vtxbuf)
+    if (context->changed.vtxbuf)
         update_vertex_buffers(device);
 
     if (context->commit & NINE_STATE_COMMIT_BLEND)
@@ -1241,6 +1240,26 @@ nine_context_set_texture(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_stream_source(struct NineDevice9 *device,
+                               UINT StreamNumber,
+                               struct NineVertexBuffer9 *pVBuf9,
+                               UINT OffsetInBytes,
+                               UINT Stride)
+{
+    struct nine_context *context = &device->context;
+    const unsigned i = StreamNumber;
+
+    context->changed.vtxbuf |= 1 << StreamNumber;
+
+    if (pVBuf9) {
+        context->vtxbuf[i].stride = Stride;
+        context->vtxbuf[i].buffer_offset = OffsetInBytes;
+    }
+    pipe_resource_reference(&context->vtxbuf[i].buffer,
+                            pVBuf9 ? NineVertexBuffer9_GetResource(pVBuf9) : NULL);
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1271,6 +1290,22 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
                 context->samplers_shadow |= tex->shadow << s;
             nine_bind(&context->texture[s], src->texture[s]);
         }
+    }
+
+    /* Vertex buffers */
+    if (src->changed.vtxbuf | src->changed.stream_freq) {
+        uint32_t m = src->changed.vtxbuf | src->changed.stream_freq;
+        for (i = 0; m; ++i, m >>= 1) {
+            if (src->changed.vtxbuf & (1 << i)) {
+                if (src->stream[i]) {
+                    context->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset;
+                    pipe_resource_reference(&context->vtxbuf[i].buffer,
+                        src->stream[i] ? NineVertexBuffer9_GetResource(src->stream[i]) : NULL);
+                    context->vtxbuf[i].stride = src->vtxbuf[i].stride;
+                }
+            }
+        }
+        context->changed.vtxbuf |= src->changed.vtxbuf;
     }
 }
 
@@ -1702,7 +1737,7 @@ void nine_state_restore_non_cso(struct NineDevice9 *device)
     struct nine_context *context = &device->context;
 
     state->changed.group = NINE_STATE_ALL;
-    state->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
+    context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
     context->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
 }
@@ -1749,7 +1784,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     /* Set changed flags to initialize driver.
      */
     state->changed.group = NINE_STATE_ALL;
-    state->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
+    context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
 
     state->ff.changed.transform[0] = ~0;
@@ -1780,10 +1815,9 @@ nine_state_clear(struct nine_state *state, const boolean device)
     nine_bind(&state->vs, NULL);
     nine_bind(&state->ps, NULL);
     nine_bind(&state->vdecl, NULL);
-    for (i = 0; i < PIPE_MAX_ATTRIBS; ++i) {
+    for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
         nine_bind(&state->stream[i], NULL);
-        pipe_resource_reference(&state->vtxbuf[i].buffer, NULL);
-    }
+
     nine_bind(&state->idxbuf, NULL);
     for (i = 0; i < NINE_MAX_SAMPLERS; ++i) {
         if (device &&
@@ -1798,6 +1832,9 @@ void
 nine_context_clear(struct nine_context *context)
 {
     unsigned i;
+
+    for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
+        pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
 
     for (i = 0; i < NINE_MAX_SAMPLERS; ++i)
         nine_bind(&context->texture[i], NULL);
@@ -1922,11 +1959,12 @@ update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_
 
     for (i = 0; mask; mask >>= 1, ++i) {
         if (mask & 1) {
-            if (state->vtxbuf[i].buffer) {
+            if (state->stream[i]) {
                 struct pipe_resource *buf;
                 struct pipe_box box;
 
                 vtxbuf = state->vtxbuf[i];
+                vtxbuf.buffer = NineVertexBuffer9_GetResource(state->stream[i]);
 
                 DBG("Locking %p (offset %d, length %d)\n", vtxbuf.buffer,
                     vtxbuf.buffer_offset, num_vertices * vtxbuf.stride);

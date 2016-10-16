@@ -3404,22 +3404,29 @@ NineDevice9_SetStreamSource( struct NineDevice9 *This,
     user_assert(StreamNumber < This->caps.MaxStreams, D3DERR_INVALIDCALL);
     user_assert(Stride <= This->caps.MaxStreamStride, D3DERR_INVALIDCALL);
 
-    if (likely(!This->is_recording)) {
-        if (state->stream[i] == NineVertexBuffer9(pStreamData) &&
-            state->vtxbuf[i].stride == Stride &&
-            state->vtxbuf[i].buffer_offset == OffsetInBytes)
-            return D3D_OK;
-    }
-    nine_bind(&state->stream[i], pStreamData);
-
-    state->changed.vtxbuf |= 1 << StreamNumber;
-
-    if (pStreamData) {
+    if (unlikely(This->is_recording)) {
+        nine_bind(&state->stream[i], pStreamData);
+        state->changed.vtxbuf |= 1 << StreamNumber;
         state->vtxbuf[i].stride = Stride;
         state->vtxbuf[i].buffer_offset = OffsetInBytes;
+        return D3D_OK;
     }
-    pipe_resource_reference(&state->vtxbuf[i].buffer,
-                            pStreamData ? NineVertexBuffer9_GetResource(pVBuf9) : NULL);
+
+    if (state->stream[i] == NineVertexBuffer9(pStreamData) &&
+        state->vtxbuf[i].stride == Stride &&
+        state->vtxbuf[i].buffer_offset == OffsetInBytes)
+        return D3D_OK;
+
+    state->vtxbuf[i].stride = Stride;
+    state->vtxbuf[i].buffer_offset = OffsetInBytes;
+
+    nine_bind(&state->stream[i], pStreamData);
+
+    nine_context_set_stream_source(This,
+                                   StreamNumber,
+                                   pVBuf9,
+                                   OffsetInBytes,
+                                   Stride);
 
     return D3D_OK;
 }

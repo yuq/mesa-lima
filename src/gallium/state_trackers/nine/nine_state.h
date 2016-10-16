@@ -136,7 +136,7 @@ struct nine_state
     struct {
         uint32_t group;
         uint32_t rs[(NINED3DRS_COUNT + 31) / 32]; /* stateblocks only */
-        uint32_t vtxbuf;
+        uint32_t vtxbuf; /* stateblocks only */
         uint32_t stream_freq;
         uint32_t texture; /* stateblocks only */
         uint16_t sampler[NINE_MAX_SAMPLERS];
@@ -178,7 +178,7 @@ struct nine_state
 
     struct NineIndexBuffer9   *idxbuf;
     struct NineVertexBuffer9  *stream[PIPE_MAX_ATTRIBS];
-    struct pipe_vertex_buffer  vtxbuf[PIPE_MAX_ATTRIBS];
+    struct pipe_vertex_buffer  vtxbuf[PIPE_MAX_ATTRIBS]; /* vtxbuf.buffer unused */
     UINT stream_freq[PIPE_MAX_ATTRIBS];
     uint32_t stream_instancedata_mask; /* derived from stream_freq */
 
@@ -215,6 +215,10 @@ struct nine_state
 };
 
 struct nine_context {
+    struct {
+        uint32_t vtxbuf;
+    } changed;
+
     uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
 
     struct {
@@ -224,6 +228,7 @@ struct nine_context {
 
     uint8_t rt_mask;
 
+    struct pipe_vertex_buffer vtxbuf[PIPE_MAX_ATTRIBS];
     uint32_t stream_usage_mask; /* derived from VS and vdecl */
 
     DWORD rs[NINED3DRS_COUNT];
@@ -279,6 +284,13 @@ void
 nine_context_set_texture(struct NineDevice9 *device,
                          DWORD Stage,
                          struct NineBaseTexture9 *tex);
+
+void
+nine_context_set_stream_source(struct NineDevice9 *device,
+                               UINT StreamNumber,
+                               struct NineVertexBuffer9 *pVBuf9,
+                               UINT OffsetInBytes,
+                               UINT Stride);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,
