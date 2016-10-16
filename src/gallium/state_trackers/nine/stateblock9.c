@@ -225,8 +225,7 @@ nine_state_copy_common(struct NineDevice9 *device,
         while (m) {
             const int r = ffs(m) - 1;
             m &= ~(1 << r);
-            dst->rs[i * 32 + r] = src->rs[i * 32 + r];
-            DBG("State %d %s = %d\n", i * 32 + r, nine_d3drs_to_string(i * 32 + r), (int)src->rs[i * 32 + r]);
+            DBG("State %d %s = %d\n", i * 32 + r, nine_d3drs_to_string(i * 32 + r), (int)src->rs_advertised[i * 32 + r]);
             dst->rs_advertised[i * 32 + r] = src->rs_advertised[i * 32 + r];
         }
     }
@@ -438,7 +437,6 @@ nine_state_copy_common_all(struct NineDevice9 *device,
     }
 
     /* Render states. */
-    memcpy(dst->rs, src->rs, sizeof(dst->rs));
     memcpy(dst->rs_advertised, src->rs_advertised, sizeof(dst->rs_advertised));
     if (apply)
         memcpy(dst->changed.rs, src->changed.rs, sizeof(dst->changed.rs));
@@ -571,6 +569,8 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
         nine_state_copy_common_all(device, dst, src, src, TRUE, pool, MaxStreams);
     else
         nine_state_copy_common(device, dst, src, src, TRUE, pool);
+
+    nine_context_apply_stateblock(&device->context, src);
 
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
         NineDevice9_SetVertexDeclaration(This->base.device, (IDirect3DVertexDeclaration9 *)src->vdecl);

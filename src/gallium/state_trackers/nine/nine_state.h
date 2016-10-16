@@ -135,7 +135,7 @@ struct nine_state
 {
     struct {
         uint32_t group;
-        uint32_t rs[(NINED3DRS_COUNT + 31) / 32];
+        uint32_t rs[(NINED3DRS_COUNT + 31) / 32]; /* stateblocks only */
         uint32_t vtxbuf;
         uint32_t stream_freq;
         uint32_t texture;
@@ -187,7 +187,6 @@ struct nine_state
 
     struct pipe_clip_state clip;
 
-    DWORD rs[NINED3DRS_COUNT];
     DWORD rs_advertised[NINED3DRS_COUNT]; /* the ones apps get with GetRenderState */
 
     struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS]; /* PS, DMAP, VS */
@@ -228,6 +227,8 @@ struct nine_context {
 
     uint8_t rt_mask;
 
+    DWORD rs[NINED3DRS_COUNT];
+
     uint8_t bound_samplers_mask_vs;
     uint16_t bound_samplers_mask_ps;
 
@@ -266,11 +267,45 @@ extern const uint32_t nine_render_states_vertex[(NINED3DRS_COUNT + 31) / 32];
 
 struct NineDevice9;
 
-boolean nine_update_state(struct NineDevice9 *);
+void
+nine_context_set_render_state(struct NineDevice9 *device,
+                              D3DRENDERSTATETYPE State,
+                              DWORD Value);
+
 void
 nine_context_clear_fb(struct NineDevice9 *device, DWORD Count,
                       const D3DRECT *pRects, DWORD Flags,
                       D3DCOLOR Color, float Z, DWORD Stencil);
+
+void
+nine_context_draw_primitive(struct NineDevice9 *device,
+                            D3DPRIMITIVETYPE PrimitiveType,
+                            UINT StartVertex,
+                            UINT PrimitiveCount);
+
+void
+nine_context_draw_indexed_primitive(struct NineDevice9 *device,
+                                    D3DPRIMITIVETYPE PrimitiveType,
+                                    INT BaseVertexIndex,
+                                    UINT MinVertexIndex,
+                                    UINT NumVertices,
+                                    UINT StartIndex,
+                                    UINT PrimitiveCount);
+
+void
+nine_context_draw_primitive_from_vtxbuf(struct NineDevice9 *device,
+                                        D3DPRIMITIVETYPE PrimitiveType,
+                                        UINT PrimitiveCount,
+                                        struct pipe_vertex_buffer *vtxbuf);
+
+void
+nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *device,
+                                                       D3DPRIMITIVETYPE PrimitiveType,
+                                                       UINT MinVertexIndex,
+                                                       UINT NumVertices,
+                                                       UINT PrimitiveCount,
+                                                       struct pipe_vertex_buffer *vbuf,
+                                                       struct pipe_index_buffer *ibuf);
 
 void nine_state_restore_non_cso(struct NineDevice9 *device);
 void nine_state_set_defaults(struct NineDevice9 *, const D3DCAPS9 *,

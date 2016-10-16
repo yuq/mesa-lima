@@ -32,6 +32,7 @@
 #include "pixelshader9.h"
 #include "nine_pipe.h"
 #include "nine_ff.h"
+#include "nine_limits.h"
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 #include "cso_cache/cso_context.h"
@@ -47,7 +48,7 @@
 static inline DWORD
 check_multisample(struct NineDevice9 *device)
 {
-    DWORD *rs = device->state.rs;
+    DWORD *rs = device->context.rs;
     DWORD new_value = (rs[D3DRS_ZENABLE] || rs[D3DRS_STENCILENABLE]) &&
                       device->state.rt[0]->desc.MultiSampleType >= 1 &&
                       rs[D3DRS_MULTISAMPLEANTIALIAS];
@@ -63,21 +64,21 @@ check_multisample(struct NineDevice9 *device)
 static inline void
 prepare_blend(struct NineDevice9 *device)
 {
-    nine_convert_blend_state(&device->context.pipe.blend, device->state.rs);
+    nine_convert_blend_state(&device->context.pipe.blend, device->context.rs);
     device->context.commit |= NINE_STATE_COMMIT_BLEND;
 }
 
 static inline void
 prepare_dsa(struct NineDevice9 *device)
 {
-    nine_convert_dsa_state(&device->context.pipe.dsa, device->state.rs);
+    nine_convert_dsa_state(&device->context.pipe.dsa, device->context.rs);
     device->context.commit |= NINE_STATE_COMMIT_DSA;
 }
 
 static inline void
 prepare_rasterizer(struct NineDevice9 *device)
 {
-    nine_convert_rasterizer_state(device, &device->context.pipe.rast, device->state.rs);
+    nine_convert_rasterizer_state(device, &device->context.pipe.rast, device->context.rs);
     device->context.commit |= NINE_STATE_COMMIT_RASTERIZER;
 }
 
@@ -350,19 +351,19 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     }
 
     if (state->ps->byte_code.version < 0x30 &&
-        state->rs[D3DRS_FOGENABLE]) {
+        context->rs[D3DRS_FOGENABLE]) {
         float *dst = &state->ps_lconstf_temp[4 * 32];
         if (cb.user_buffer != state->ps_lconstf_temp) {
             memcpy(state->ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
             cb.user_buffer = state->ps_lconstf_temp;
         }
 
-        d3dcolor_to_rgba(dst, state->rs[D3DRS_FOGCOLOR]);
-        if (state->rs[D3DRS_FOGTABLEMODE] == D3DFOG_LINEAR) {
-            dst[4] = asfloat(state->rs[D3DRS_FOGEND]);
-            dst[5] = 1.0f / (asfloat(state->rs[D3DRS_FOGEND]) - asfloat(state->rs[D3DRS_FOGSTART]));
-        } else if (state->rs[D3DRS_FOGTABLEMODE] != D3DFOG_NONE) {
-            dst[4] = asfloat(state->rs[D3DRS_FOGDENSITY]);
+        d3dcolor_to_rgba(dst, context->rs[D3DRS_FOGCOLOR]);
+        if (context->rs[D3DRS_FOGTABLEMODE] == D3DFOG_LINEAR) {
+            dst[4] = asfloat(context->rs[D3DRS_FOGEND]);
+            dst[5] = 1.0f / (asfloat(context->rs[D3DRS_FOGEND]) - asfloat(context->rs[D3DRS_FOGSTART]));
+        } else if (context->rs[D3DRS_FOGTABLEMODE] != D3DFOG_NONE) {
+            dst[4] = asfloat(context->rs[D3DRS_FOGDENSITY]);
         }
         cb.buffer_size = 4 * 4 * 34;
     }
@@ -419,8 +420,8 @@ prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
         context->cso.vs = vs->ff_cso;
     }
 
-    if (state->rs[NINED3DRS_VSPOINTSIZE] != vs->point_size) {
-        state->rs[NINED3DRS_VSPOINTSIZE] = vs->point_size;
+    if (context->rs[NINED3DRS_VSPOINTSIZE] != vs->point_size) {
+        context->rs[NINED3DRS_VSPOINTSIZE] = vs->point_size;
         changed_group |= NINE_STATE_RASTERIZER;
     }
 
@@ -442,7 +443,7 @@ prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
     int has_key_changed = 0;
 
     if (likely(ps))
-        has_key_changed = NinePixelShader9_UpdateKey(ps, state);
+        has_key_changed = NinePixelShader9_UpdateKey(ps, state, context);
 
     if (!shader_changed && !has_key_changed)
         return 0;
@@ -480,7 +481,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     unsigned nr_samples = rt0->base.info.nr_samples;
     unsigned ps_mask = state->ps ? state->ps->rt_mask : 1;
     unsigned mask = is_clear ? 0xf : ps_mask;
-    const int sRGB = state->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
+    const int sRGB = context->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
 
     DBG("\n");
 
@@ -1006,7 +1007,7 @@ update_managed_buffers(struct NineDevice9 *device)
     }
 }
 
-boolean
+static void
 nine_update_state(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
@@ -1095,19 +1096,19 @@ nine_update_state(struct NineDevice9 *device)
             commit_scissor(device);
         if (group & NINE_STATE_BLEND_COLOR) {
             struct pipe_blend_color color;
-            d3dcolor_to_rgba(&color.color[0], state->rs[D3DRS_BLENDFACTOR]);
+            d3dcolor_to_rgba(&color.color[0], context->rs[D3DRS_BLENDFACTOR]);
             pipe->set_blend_color(pipe, &color);
         }
         if (group & NINE_STATE_SAMPLE_MASK) {
             if (state->rt[0]->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE) {
                 pipe->set_sample_mask(pipe, ~0);
             } else {
-                pipe->set_sample_mask(pipe, state->rs[D3DRS_MULTISAMPLEMASK]);
+                pipe->set_sample_mask(pipe, context->rs[D3DRS_MULTISAMPLEMASK]);
             }
         }
         if (group & NINE_STATE_STENCIL_REF) {
             struct pipe_stencil_ref ref;
-            ref.ref_value[0] = state->rs[D3DRS_STENCILREF];
+            ref.ref_value[0] = context->rs[D3DRS_STENCILREF];
             ref.ref_value[1] = ref.ref_value[0];
             pipe->set_stencil_ref(pipe, &ref);
         }
@@ -1117,8 +1118,126 @@ nine_update_state(struct NineDevice9 *device)
         (NINE_STATE_FF | NINE_STATE_VS_CONST | NINE_STATE_PS_CONST);
 
     DBG("finished\n");
+}
 
-    return TRUE;
+#define RESZ_CODE 0x7fa05000
+
+static void
+NineDevice9_ResolveZ( struct NineDevice9 *device )
+{
+    struct nine_state *state = &device->state;
+    const struct util_format_description *desc;
+    struct NineSurface9 *source = state->ds;
+    struct NineBaseTexture9 *destination = state->texture[0];
+    struct pipe_resource *src, *dst;
+    struct pipe_blit_info blit;
+
+    DBG("RESZ resolve\n");
+
+    if (!source || !destination ||
+        destination->base.type != D3DRTYPE_TEXTURE)
+        return;
+
+    src = source->base.resource;
+    dst = destination->base.resource;
+
+    if (!src || !dst)
+        return;
+
+    /* check dst is depth format. we know already for src */
+    desc = util_format_description(dst->format);
+    if (desc->colorspace != UTIL_FORMAT_COLORSPACE_ZS)
+        return;
+
+    memset(&blit, 0, sizeof(blit));
+    blit.src.resource = src;
+    blit.src.level = 0;
+    blit.src.format = src->format;
+    blit.src.box.z = 0;
+    blit.src.box.depth = 1;
+    blit.src.box.x = 0;
+    blit.src.box.y = 0;
+    blit.src.box.width = src->width0;
+    blit.src.box.height = src->height0;
+
+    blit.dst.resource = dst;
+    blit.dst.level = 0;
+    blit.dst.format = dst->format;
+    blit.dst.box.z = 0;
+    blit.dst.box.depth = 1;
+    blit.dst.box.x = 0;
+    blit.dst.box.y = 0;
+    blit.dst.box.width = dst->width0;
+    blit.dst.box.height = dst->height0;
+
+    blit.mask = PIPE_MASK_ZS;
+    blit.filter = PIPE_TEX_FILTER_NEAREST;
+    blit.scissor_enable = FALSE;
+
+    device->pipe->blit(device->pipe, &blit);
+}
+
+#define ALPHA_TO_COVERAGE_ENABLE   MAKEFOURCC('A', '2', 'M', '1')
+#define ALPHA_TO_COVERAGE_DISABLE  MAKEFOURCC('A', '2', 'M', '0')
+
+
+void
+nine_context_set_render_state(struct NineDevice9 *device,
+                              D3DRENDERSTATETYPE State,
+                              DWORD Value)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    /* Amd hacks (equivalent to GL extensions) */
+    if (unlikely(State == D3DRS_POINTSIZE)) {
+        if (Value == RESZ_CODE) {
+            NineDevice9_ResolveZ(device);
+            return;
+        }
+
+        if (Value == ALPHA_TO_COVERAGE_ENABLE ||
+            Value == ALPHA_TO_COVERAGE_DISABLE) {
+            context->rs[NINED3DRS_ALPHACOVERAGE] = (Value == ALPHA_TO_COVERAGE_ENABLE);
+            state->changed.group |= NINE_STATE_BLEND;
+            return;
+        }
+    }
+
+    /* NV hack */
+    if (unlikely(State == D3DRS_ADAPTIVETESS_Y)) {
+        if (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && context->rs[NINED3DRS_ALPHACOVERAGE])) {
+            context->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC) ? 3 : 0;
+            context->rs[NINED3DRS_ALPHACOVERAGE] &= context->rs[D3DRS_ALPHATESTENABLE] ? 3 : 2;
+            state->changed.group |= NINE_STATE_BLEND;
+            return;
+        }
+    }
+    if (unlikely(State == D3DRS_ALPHATESTENABLE && (context->rs[NINED3DRS_ALPHACOVERAGE] & 2))) {
+        DWORD alphacoverage_prev = context->rs[NINED3DRS_ALPHACOVERAGE];
+        context->rs[NINED3DRS_ALPHACOVERAGE] = (Value ? 3 : 2);
+        if (context->rs[NINED3DRS_ALPHACOVERAGE] != alphacoverage_prev)
+            state->changed.group |= NINE_STATE_BLEND;
+    }
+
+    context->rs[State] = nine_fix_render_state_value(State, Value);
+    state->changed.group |= nine_render_state_group[State];
+}
+
+void
+nine_context_apply_stateblock(struct nine_context *dst,
+                              const struct nine_state *src)
+{
+    int i;
+
+    for (i = 0; i < ARRAY_SIZE(src->changed.rs); ++i) {
+        uint32_t m = src->changed.rs[i];
+        while (m) {
+            const int r = ffs(m) - 1;
+            m &= ~(1 << r);
+            dst->rs[i * 32 + r] = nine_fix_render_state_value(i * 32 + r, src->rs_advertised[i * 32 + r]);
+        }
+    }
 }
 
 static void
@@ -1142,7 +1261,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
               float Z,
               DWORD Stencil)
 {
-    const int sRGB = device->state.rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
+    const int sRGB = device->context.rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
     struct pipe_surface *cbuf, *zsbuf;
     struct pipe_context *pipe = device->pipe;
     struct NineSurface9 *zsbuf_surf = device->state.ds;
@@ -1171,7 +1290,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
     rect.y2 = device->state.viewport.Height + rect.y1;
 
     /* Both rectangles apply, which is weird, but that's D3D9. */
-    if (device->state.rs[D3DRS_SCISSORTESTENABLE]) {
+    if (device->context.rs[D3DRS_SCISSORTESTENABLE]) {
         rect.x1 = MAX2(rect.x1, device->state.scissor.minx);
         rect.y1 = MAX2(rect.y1, device->state.scissor.miny);
         rect.x2 = MIN2(rect.x2, device->state.scissor.maxx);
@@ -1274,6 +1393,115 @@ nine_context_clear_fb(struct NineDevice9 *device,
                                   x1, y1, x2 - x1, y2 - y1, false);
     }
     return;
+}
+
+
+static inline void
+init_draw_info(struct pipe_draw_info *info,
+               struct NineDevice9 *dev, D3DPRIMITIVETYPE type, UINT count)
+{
+    info->mode = d3dprimitivetype_to_pipe_prim(type);
+    info->count = prim_count_to_vertex_count(type, count);
+    info->start_instance = 0;
+    info->instance_count = 1;
+    if (dev->state.stream_instancedata_mask & dev->state.stream_usage_mask)
+        info->instance_count = MAX2(dev->state.stream_freq[0] & 0x7FFFFF, 1);
+    info->primitive_restart = FALSE;
+    info->restart_index = 0;
+    info->count_from_stream_output = NULL;
+    info->indirect = NULL;
+    info->indirect_params = NULL;
+}
+
+void
+nine_context_draw_primitive(struct NineDevice9 *device,
+                            D3DPRIMITIVETYPE PrimitiveType,
+                            UINT StartVertex,
+                            UINT PrimitiveCount)
+{
+    struct pipe_draw_info info;
+
+    nine_update_state(device);
+
+    init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
+    info.indexed = FALSE;
+    info.start = StartVertex;
+    info.index_bias = 0;
+    info.min_index = info.start;
+    info.max_index = info.count - 1;
+
+    device->pipe->draw_vbo(device->pipe, &info);
+}
+
+void
+nine_context_draw_indexed_primitive(struct NineDevice9 *device,
+                                    D3DPRIMITIVETYPE PrimitiveType,
+                                    INT BaseVertexIndex,
+                                    UINT MinVertexIndex,
+                                    UINT NumVertices,
+                                    UINT StartIndex,
+                                    UINT PrimitiveCount)
+{
+    struct pipe_draw_info info;
+
+    nine_update_state(device);
+
+    init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
+    info.indexed = TRUE;
+    info.start = StartIndex;
+    info.index_bias = BaseVertexIndex;
+    /* These don't include index bias: */
+    info.min_index = MinVertexIndex;
+    info.max_index = MinVertexIndex + NumVertices - 1;
+
+    device->pipe->draw_vbo(device->pipe, &info);
+}
+
+void
+nine_context_draw_primitive_from_vtxbuf(struct NineDevice9 *device,
+                                        D3DPRIMITIVETYPE PrimitiveType,
+                                        UINT PrimitiveCount,
+                                        struct pipe_vertex_buffer *vtxbuf)
+{
+    struct pipe_draw_info info;
+
+    nine_update_state(device);
+
+    init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
+    info.indexed = FALSE;
+    info.start = 0;
+    info.index_bias = 0;
+    info.min_index = 0;
+    info.max_index = info.count - 1;
+
+    device->pipe->set_vertex_buffers(device->pipe, 0, 1, vtxbuf);
+
+    device->pipe->draw_vbo(device->pipe, &info);
+}
+
+void
+nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *device,
+                                                       D3DPRIMITIVETYPE PrimitiveType,
+                                                       UINT MinVertexIndex,
+                                                       UINT NumVertices,
+                                                       UINT PrimitiveCount,
+                                                       struct pipe_vertex_buffer *vbuf,
+                                                       struct pipe_index_buffer *ibuf)
+{
+    struct pipe_draw_info info;
+
+    nine_update_state(device);
+
+    init_draw_info(&info, device, PrimitiveType, PrimitiveCount);
+    info.indexed = TRUE;
+    info.start = 0;
+    info.index_bias = 0;
+    info.min_index = MinVertexIndex;
+    info.max_index = MinVertexIndex + NumVertices - 1;
+    device->pipe->set_vertex_buffers(device->pipe, 0, 1, vbuf);
+    device->pipe->set_index_buffer(device->pipe, ibuf);
+
+    device->pipe->draw_vbo(device->pipe, &info);
 }
 
 /* State defaults */
@@ -1456,7 +1684,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
 
     /* Initialize defaults.
      */
-    memcpy(state->rs, nine_render_state_defaults, sizeof(state->rs));
+    memcpy(context->rs, nine_render_state_defaults, sizeof(context->rs));
 
     for (s = 0; s < ARRAY_SIZE(state->ff.tex_stage); ++s) {
         memcpy(&state->ff.tex_stage[s], nine_tex_stage_state_defaults,
@@ -1481,9 +1709,9 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
 
     /* Cap dependent initial state:
      */
-    state->rs[D3DRS_POINTSIZE_MAX] = fui(caps->MaxPointSize);
+    context->rs[D3DRS_POINTSIZE_MAX] = fui(caps->MaxPointSize);
 
-    memcpy(state->rs_advertised, state->rs, sizeof(state->rs));
+    memcpy(state->rs_advertised, context->rs, sizeof(context->rs));
 
     /* Set changed flags to initialize driver.
      */

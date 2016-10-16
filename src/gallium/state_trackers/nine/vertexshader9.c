@@ -186,9 +186,9 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
         info.const_b_base = NINE_CONST_B_BASE(device->max_vs_const_f) / 16;
         info.byte_code = This->byte_code.tokens;
         info.sampler_mask_shadow = key & 0xf;
-        info.fog_enable = device->state.rs[D3DRS_FOGENABLE];
-        info.point_size_min = asfloat(device->state.rs[D3DRS_POINTSIZE_MIN]);
-        info.point_size_max = asfloat(device->state.rs[D3DRS_POINTSIZE_MAX]);
+        info.fog_enable = device->context.rs[D3DRS_FOGENABLE];
+        info.point_size_min = asfloat(device->context.rs[D3DRS_POINTSIZE_MIN]);
+        info.point_size_max = asfloat(device->context.rs[D3DRS_POINTSIZE_MAX]);
         info.swvp_on = device->swvp;
         info.process_vertices = false;
 

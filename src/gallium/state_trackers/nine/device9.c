@@ -106,10 +106,10 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
     This->state.scissor.maxy = refSurf->desc.Height;
 
     if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil) {
-        This->state.rs[D3DRS_ZENABLE] = TRUE;
+        nine_context_set_render_state(This, D3DRS_ZENABLE, TRUE);
         This->state.rs_advertised[D3DRS_ZENABLE] = TRUE;
     }
-    if (This->state.rs[D3DRS_ZENABLE])
+    if (This->state.rs_advertised[D3DRS_ZENABLE])
         NineDevice9_SetDepthStencilSurface(
             This, (IDirect3DSurface9 *)This->swapchains[0]->zsbuf);
 }
@@ -2221,64 +2221,6 @@ NineDevice9_GetClipPlane( struct NineDevice9 *This,
     return D3D_OK;
 }
 
-#define RESZ_CODE 0x7fa05000
-
-static HRESULT
-NineDevice9_ResolveZ( struct NineDevice9 *This )
-{
-    struct nine_state *state = &This->state;
-    const struct util_format_description *desc;
-    struct NineSurface9 *source = state->ds;
-    struct NineBaseTexture9 *destination = state->texture[0];
-    struct pipe_resource *src, *dst;
-    struct pipe_blit_info blit;
-
-    DBG("RESZ resolve\n");
-
-    user_assert(source && destination &&
-                destination->base.type == D3DRTYPE_TEXTURE, D3DERR_INVALIDCALL);
-
-    src = source->base.resource;
-    dst = destination->base.resource;
-
-    user_assert(src && dst, D3DERR_INVALIDCALL);
-
-    /* check dst is depth format. we know already for src */
-    desc = util_format_description(dst->format);
-    user_assert(desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS, D3DERR_INVALIDCALL);
-
-    memset(&blit, 0, sizeof(blit));
-    blit.src.resource = src;
-    blit.src.level = 0;
-    blit.src.format = src->format;
-    blit.src.box.z = 0;
-    blit.src.box.depth = 1;
-    blit.src.box.x = 0;
-    blit.src.box.y = 0;
-    blit.src.box.width = src->width0;
-    blit.src.box.height = src->height0;
-
-    blit.dst.resource = dst;
-    blit.dst.level = 0;
-    blit.dst.format = dst->format;
-    blit.dst.box.z = 0;
-    blit.dst.box.depth = 1;
-    blit.dst.box.x = 0;
-    blit.dst.box.y = 0;
-    blit.dst.box.width = dst->width0;
-    blit.dst.box.height = dst->height0;
-
-    blit.mask = PIPE_MASK_ZS;
-    blit.filter = PIPE_TEX_FILTER_NEAREST;
-    blit.scissor_enable = FALSE;
-
-    This->pipe->blit(This->pipe, &blit);
-    return D3D_OK;
-}
-
-#define ALPHA_TO_COVERAGE_ENABLE   MAKEFOURCC('A', '2', 'M', '1')
-#define ALPHA_TO_COVERAGE_DISABLE  MAKEFOURCC('A', '2', 'M', '0')
-
 HRESULT NINE_WINAPI
 NineDevice9_SetRenderState( struct NineDevice9 *This,
                             D3DRENDERSTATETYPE State,
@@ -2291,43 +2233,19 @@ NineDevice9_SetRenderState( struct NineDevice9 *This,
 
     user_assert(State < D3DRS_COUNT, D3DERR_INVALIDCALL);
 
-    if (state->rs_advertised[State] == Value && likely(!This->is_recording))
+    if (unlikely(This->is_recording)) {
+        state->rs_advertised[State] = Value;
+        /* only need to record changed render states for stateblocks */
+        state->changed.rs[State / 32] |= 1 << (State % 32);
+        state->changed.group |= nine_render_state_group[State];
+        return D3D_OK;
+    }
+
+    if (state->rs_advertised[State] == Value)
         return D3D_OK;
 
     state->rs_advertised[State] = Value;
-
-    /* Amd hacks (equivalent to GL extensions) */
-    if (unlikely(State == D3DRS_POINTSIZE)) {
-        if (Value == RESZ_CODE)
-            return NineDevice9_ResolveZ(This);
-
-        if (Value == ALPHA_TO_COVERAGE_ENABLE ||
-            Value == ALPHA_TO_COVERAGE_DISABLE) {
-            state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == ALPHA_TO_COVERAGE_ENABLE);
-            state->changed.group |= NINE_STATE_BLEND;
-            return D3D_OK;
-        }
-    }
-
-    /* NV hack */
-    if (unlikely(State == D3DRS_ADAPTIVETESS_Y)) {
-        if (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && state->rs[NINED3DRS_ALPHACOVERAGE])) {
-            state->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC) ? 3 : 0;
-            state->rs[NINED3DRS_ALPHACOVERAGE] &= state->rs[D3DRS_ALPHATESTENABLE] ? 3 : 2;
-            state->changed.group |= NINE_STATE_BLEND;
-            return D3D_OK;
-        }
-    }
-    if (unlikely(State == D3DRS_ALPHATESTENABLE && (state->rs[NINED3DRS_ALPHACOVERAGE] & 2))) {
-        DWORD alphacoverage_prev = state->rs[NINED3DRS_ALPHACOVERAGE];
-        state->rs[NINED3DRS_ALPHACOVERAGE] = (Value ? 3 : 2);
-        if (state->rs[NINED3DRS_ALPHACOVERAGE] != alphacoverage_prev)
-            state->changed.group |= NINE_STATE_BLEND;
-    }
-
-    state->rs[State] = nine_fix_render_state_value(State, Value);
-    state->changed.rs[State / 32] |= 1 << (State % 32);
-    state->changed.group |= nine_render_state_group[State];
+    nine_context_set_render_state(This, State, Value);
 
     return D3D_OK;
 }
@@ -2717,7 +2635,7 @@ NineDevice9_ValidateDevice( struct NineDevice9 *This,
         }
     }
     if (state->ds &&
-        (state->rs[D3DRS_ZENABLE] || state->rs[D3DRS_STENCILENABLE])) {
+        (state->rs_advertised[D3DRS_ZENABLE] || state->rs_advertised[D3DRS_STENCILENABLE])) {
         if (w != 0 &&
             (state->ds->desc.Width != w || state->ds->desc.Height != h))
             return D3DERR_CONFLICTINGRENDERSTATE;
@@ -2821,44 +2739,16 @@ NineDevice9_GetNPatchMode( struct NineDevice9 *This )
     STUB(0);
 }
 
-static inline void
-init_draw_info(struct pipe_draw_info *info,
-               struct NineDevice9 *dev, D3DPRIMITIVETYPE type, UINT count)
-{
-    info->mode = d3dprimitivetype_to_pipe_prim(type);
-    info->count = prim_count_to_vertex_count(type, count);
-    info->start_instance = 0;
-    info->instance_count = 1;
-    if (dev->state.stream_instancedata_mask & dev->state.stream_usage_mask)
-        info->instance_count = MAX2(dev->state.stream_freq[0] & 0x7FFFFF, 1);
-    info->primitive_restart = FALSE;
-    info->restart_index = 0;
-    info->count_from_stream_output = NULL;
-    info->indirect = NULL;
-    info->indirect_params = NULL;
-}
-
 HRESULT NINE_WINAPI
 NineDevice9_DrawPrimitive( struct NineDevice9 *This,
                            D3DPRIMITIVETYPE PrimitiveType,
                            UINT StartVertex,
                            UINT PrimitiveCount )
 {
-    struct pipe_draw_info info;
-
     DBG("iface %p, PrimitiveType %u, StartVertex %u, PrimitiveCount %u\n",
         This, PrimitiveType, StartVertex, PrimitiveCount);
 
-    nine_update_state(This);
-
-    init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
-    info.indexed = FALSE;
-    info.start = StartVertex;
-    info.index_bias = 0;
-    info.min_index = info.start;
-    info.max_index = info.count - 1;
-
-    This->pipe->draw_vbo(This->pipe, &info);
+    nine_context_draw_primitive(This, PrimitiveType, StartVertex, PrimitiveCount);
 
     return D3D_OK;
 }
@@ -2872,8 +2762,6 @@ NineDevice9_DrawIndexedPrimitive( struct NineDevice9 *This,
                                   UINT StartIndex,
                                   UINT PrimitiveCount )
 {
-    struct pipe_draw_info info;
-
     DBG("iface %p, PrimitiveType %u, BaseVertexIndex %u, MinVertexIndex %u "
         "NumVertices %u, StartIndex %u, PrimitiveCount %u\n",
         This, PrimitiveType, BaseVertexIndex, MinVertexIndex, NumVertices,
@@ -2882,17 +2770,9 @@ NineDevice9_DrawIndexedPrimitive( struct NineDevice9 *This,
     user_assert(This->state.idxbuf, D3DERR_INVALIDCALL);
     user_assert(This->state.vdecl, D3DERR_INVALIDCALL);
 
-    nine_update_state(This);
-
-    init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
-    info.indexed = TRUE;
-    info.start = StartIndex;
-    info.index_bias = BaseVertexIndex;
-    /* These don't include index bias: */
-    info.min_index = MinVertexIndex;
-    info.max_index = MinVertexIndex + NumVertices - 1;
-
-    This->pipe->draw_vbo(This->pipe, &info);
+    nine_context_draw_indexed_primitive(This, PrimitiveType, BaseVertexIndex,
+                                        MinVertexIndex, NumVertices, StartIndex,
+                                        PrimitiveCount);
 
     return D3D_OK;
 }
@@ -2905,7 +2785,6 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
                              UINT VertexStreamZeroStride )
 {
     struct pipe_vertex_buffer vtxbuf;
-    struct pipe_draw_info info;
 
     DBG("iface %p, PrimitiveType %u, PrimitiveCount %u, data %p, stride %u\n",
         This, PrimitiveType, PrimitiveCount,
@@ -2915,15 +2794,6 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
                 D3DERR_INVALIDCALL);
     user_assert(PrimitiveCount, D3D_OK);
 
-    nine_update_state(This);
-
-    init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
-    info.indexed = FALSE;
-    info.start = 0;
-    info.index_bias = 0;
-    info.min_index = 0;
-    info.max_index = info.count - 1;
-
     vtxbuf.stride = VertexStreamZeroStride;
     vtxbuf.buffer_offset = 0;
     vtxbuf.buffer = NULL;
@@ -2932,7 +2802,7 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
     if (!This->driver_caps.user_vbufs) {
         u_upload_data(This->vertex_uploader,
                       0,
-                      (info.max_index + 1) * VertexStreamZeroStride, /* XXX */
+                      (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * VertexStreamZeroStride, /* XXX */
                       4,
                       vtxbuf.user_buffer,
                       &vtxbuf.buffer_offset,
@@ -2941,15 +2811,13 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
         vtxbuf.user_buffer = NULL;
     }
 
-    This->pipe->set_vertex_buffers(This->pipe, 0, 1, &vtxbuf);
+    nine_context_draw_primitive_from_vtxbuf(This, PrimitiveType, PrimitiveCount, &vtxbuf);
 
-    This->pipe->draw_vbo(This->pipe, &info);
+    pipe_resource_reference(&vtxbuf.buffer, NULL);
 
     NineDevice9_PauseRecording(This);
     NineDevice9_SetStreamSource(This, 0, NULL, 0, 0);
     NineDevice9_ResumeRecording(This);
-
-    pipe_resource_reference(&vtxbuf.buffer, NULL);
 
     return D3D_OK;
 }
@@ -2965,7 +2833,6 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                                     const void *pVertexStreamZeroData,
                                     UINT VertexStreamZeroStride )
 {
-    struct pipe_draw_info info;
     struct pipe_vertex_buffer vbuf;
     struct pipe_index_buffer ibuf;
 
@@ -2982,15 +2849,6 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
                 IndexDataFormat == D3DFMT_INDEX32, D3DERR_INVALIDCALL);
     user_assert(PrimitiveCount, D3D_OK);
 
-    nine_update_state(This);
-
-    init_draw_info(&info, This, PrimitiveType, PrimitiveCount);
-    info.indexed = TRUE;
-    info.start = 0;
-    info.index_bias = 0;
-    info.min_index = MinVertexIndex;
-    info.max_index = MinVertexIndex + NumVertices - 1;
-
     vbuf.stride = VertexStreamZeroStride;
     vbuf.buffer_offset = 0;
     vbuf.buffer = NULL;
@@ -3002,11 +2860,10 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
     ibuf.user_buffer = pIndexData;
 
     if (!This->driver_caps.user_vbufs) {
-        const unsigned base = info.min_index * VertexStreamZeroStride;
+        const unsigned base = MinVertexIndex * VertexStreamZeroStride;
         u_upload_data(This->vertex_uploader,
                       base,
-                      (info.max_index -
-                       info.min_index + 1) * VertexStreamZeroStride, /* XXX */
+                      NumVertices * VertexStreamZeroStride, /* XXX */
                       4,
                       (const uint8_t *)vbuf.user_buffer + base,
                       &vbuf.buffer_offset,
@@ -3019,7 +2876,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
     if (!This->driver_caps.user_ibufs) {
         u_upload_data(This->index_uploader,
                       0,
-                      info.count * ibuf.index_size,
+                      (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * ibuf.index_size,
                       4,
                       ibuf.user_buffer,
                       &ibuf.offset,
@@ -3028,10 +2885,12 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         ibuf.user_buffer = NULL;
     }
 
-    This->pipe->set_vertex_buffers(This->pipe, 0, 1, &vbuf);
-    This->pipe->set_index_buffer(This->pipe, &ibuf);
-
-    This->pipe->draw_vbo(This->pipe, &info);
+    nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(This, PrimitiveType,
+                                                           MinVertexIndex,
+                                                           NumVertices,
+                                                           PrimitiveCount,
+                                                           &vbuf,
+                                                           &ibuf);
 
     pipe_resource_reference(&vbuf.buffer, NULL);
     pipe_resource_reference(&ibuf.buffer, NULL);
@@ -3139,7 +2998,14 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
         return D3DERR_DRIVERINTERNALERROR;
     }
 
-    init_draw_info(&draw, This, D3DPT_POINTLIST, VertexCount);
+    draw.mode = PIPE_PRIM_POINTS;
+    draw.count = VertexCount;
+    draw.start_instance = 0;
+    draw.primitive_restart = FALSE;
+    draw.restart_index = 0;
+    draw.count_from_stream_output = NULL;
+    draw.indirect = NULL;
+    draw.indirect_params = NULL;
     draw.instance_count = 1;
     draw.indexed = FALSE;
     draw.start = 0;

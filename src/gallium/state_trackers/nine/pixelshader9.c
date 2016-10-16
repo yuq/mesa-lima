@@ -159,8 +159,8 @@ NinePixelShader9_GetVariant( struct NinePixelShader9 *This )
         info.byte_code = This->byte_code.tokens;
         info.sampler_mask_shadow = key & 0xffff;
         info.sampler_ps1xtypes = key;
-        info.fog_enable = device->state.rs[D3DRS_FOGENABLE];
-        info.fog_mode = device->state.rs[D3DRS_FOGTABLEMODE];
+        info.fog_enable = device->context.rs[D3DRS_FOGENABLE];
+        info.fog_mode = device->context.rs[D3DRS_FOGTABLEMODE];
         info.force_color_in_centroid = key >> 34 & 1;
         info.projected = (key >> 48) & 0xffff;
         info.process_vertices = false;

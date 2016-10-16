@@ -1559,6 +1559,7 @@ static struct NineVertexShader9 *
 nine_ff_get_vs(struct NineDevice9 *device)
 {
     const struct nine_state *state = &device->state;
+    const struct nine_context *context = &device->context;
     struct NineVertexShader9 *vs;
     enum pipe_error err;
     struct vs_build_ctx bld;
@@ -1616,34 +1617,34 @@ nine_ff_get_vs(struct NineDevice9 *device)
                          (1 << NINE_DECLUSAGE_TESSFACTOR) | (1 << NINE_DECLUSAGE_SAMPLE));
     if (!key.position_t)
         key.passthrough = 0;
-    key.pointscale = !!state->rs[D3DRS_POINTSCALEENABLE];
+    key.pointscale = !!context->rs[D3DRS_POINTSCALEENABLE];
 
-    key.lighting = !!state->rs[D3DRS_LIGHTING] &&  state->ff.num_lights_active;
-    key.darkness = !!state->rs[D3DRS_LIGHTING] && !state->ff.num_lights_active;
+    key.lighting = !!context->rs[D3DRS_LIGHTING] &&  state->ff.num_lights_active;
+    key.darkness = !!context->rs[D3DRS_LIGHTING] && !state->ff.num_lights_active;
     if (key.position_t) {
         key.darkness = 0; /* |= key.lighting; */ /* XXX ? */
         key.lighting = 0;
     }
-    if ((key.lighting | key.darkness) && state->rs[D3DRS_COLORVERTEX]) {
+    if ((key.lighting | key.darkness) && context->rs[D3DRS_COLORVERTEX]) {
         uint32_t mask = (key.color0in_one ? 0 : 1) | (key.color1in_zero ? 0 : 2);
-        key.mtl_diffuse = state->rs[D3DRS_DIFFUSEMATERIALSOURCE] & mask;
-        key.mtl_ambient = state->rs[D3DRS_AMBIENTMATERIALSOURCE] & mask;
-        key.mtl_specular = state->rs[D3DRS_SPECULARMATERIALSOURCE] & mask;
-        key.mtl_emissive = state->rs[D3DRS_EMISSIVEMATERIALSOURCE] & mask;
+        key.mtl_diffuse = context->rs[D3DRS_DIFFUSEMATERIALSOURCE] & mask;
+        key.mtl_ambient = context->rs[D3DRS_AMBIENTMATERIALSOURCE] & mask;
+        key.mtl_specular = context->rs[D3DRS_SPECULARMATERIALSOURCE] & mask;
+        key.mtl_emissive = context->rs[D3DRS_EMISSIVEMATERIALSOURCE] & mask;
     }
-    key.fog = !!state->rs[D3DRS_FOGENABLE];
-    key.fog_mode = (!key.position_t && state->rs[D3DRS_FOGENABLE]) ? state->rs[D3DRS_FOGVERTEXMODE] : 0;
+    key.fog = !!context->rs[D3DRS_FOGENABLE];
+    key.fog_mode = (!key.position_t && context->rs[D3DRS_FOGENABLE]) ? context->rs[D3DRS_FOGVERTEXMODE] : 0;
     if (key.fog_mode)
-        key.fog_range = state->rs[D3DRS_RANGEFOGENABLE];
+        key.fog_range = context->rs[D3DRS_RANGEFOGENABLE];
 
-    key.localviewer = !!state->rs[D3DRS_LOCALVIEWER];
-    key.normalizenormals = !!state->rs[D3DRS_NORMALIZENORMALS];
-    key.ucp = !!state->rs[D3DRS_CLIPPLANEENABLE];
+    key.localviewer = !!context->rs[D3DRS_LOCALVIEWER];
+    key.normalizenormals = !!context->rs[D3DRS_NORMALIZENORMALS];
+    key.ucp = !!context->rs[D3DRS_CLIPPLANEENABLE];
 
-    if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
-        key.vertexblend_indexed = !!state->rs[D3DRS_INDEXEDVERTEXBLENDENABLE] && has_indexes;
+    if (context->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
+        key.vertexblend_indexed = !!context->rs[D3DRS_INDEXEDVERTEXBLENDENABLE] && has_indexes;
 
-        switch (state->rs[D3DRS_VERTEXBLEND]) {
+        switch (context->rs[D3DRS_VERTEXBLEND]) {
         case D3DVBF_0WEIGHTS: key.vertexblend = key.vertexblend_indexed; break;
         case D3DVBF_1WEIGHTS: key.vertexblend = 2; break;
         case D3DVBF_2WEIGHTS: key.vertexblend = 3; break;
@@ -1653,7 +1654,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
             assert(!"invalid D3DVBF");
             break;
         }
-        if (!has_weights && state->rs[D3DRS_VERTEXBLEND] != D3DVBF_0WEIGHTS)
+        if (!has_weights && context->rs[D3DRS_VERTEXBLEND] != D3DVBF_0WEIGHTS)
             key.vertexblend = 0; /* TODO: if key.vertexblend_indexed, perhaps it should use 1.0 as weight, or revert to D3DVBF_0WEIGHTS */
     }
 
@@ -1714,6 +1715,7 @@ static struct NinePixelShader9 *
 nine_ff_get_ps(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     D3DMATRIX *projection_matrix = GET_D3DTS(PROJECTION);
     struct NinePixelShader9 *ps;
     enum pipe_error err;
@@ -1817,13 +1819,13 @@ nine_ff_get_ps(struct NineDevice9 *device)
         key.ts[s-1].resultarg = 0;
 
     key.projected = nine_ff_get_projected_key(state);
-    key.specular = !!state->rs[D3DRS_SPECULARENABLE];
+    key.specular = !!context->rs[D3DRS_SPECULARENABLE];
 
     for (; s < 8; ++s)
         key.ts[s].colorop = key.ts[s].alphaop = D3DTOP_DISABLE;
-    if (state->rs[D3DRS_FOGENABLE])
-        key.fog_mode = state->rs[D3DRS_FOGTABLEMODE];
-    key.fog = !!state->rs[D3DRS_FOGENABLE];
+    if (context->rs[D3DRS_FOGENABLE])
+        key.fog_mode = context->rs[D3DRS_FOGTABLEMODE];
+    key.fog = !!context->rs[D3DRS_FOGENABLE];
     /* Pixel fog (with WFOG advertised): source is either Z or W.
      * W is the source if vs ff is used, and the
      * projection matrix is not orthogonal.
@@ -1859,6 +1861,7 @@ static void
 nine_ff_load_vs_transforms(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     D3DMATRIX T;
     D3DMATRIX *M = (D3DMATRIX *)device->ff.vs_const;
     unsigned i;
@@ -1885,20 +1888,21 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
         M[40] = M[1];
     }
 
-    if (state->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
+    if (context->rs[D3DRS_VERTEXBLEND] != D3DVBF_DISABLE) {
         /* load other world matrices */
         for (i = 1; i <= 8; ++i) {
             nine_d3d_matrix_matrix_mul(&M[40 + i], GET_D3DTS(WORLDMATRIX(i)), GET_D3DTS(VIEW));
         }
     }
 
-    device->ff.vs_const[30 * 4] = asfloat(state->rs[D3DRS_TWEENFACTOR]);
+    device->ff.vs_const[30 * 4] = asfloat(context->rs[D3DRS_TWEENFACTOR]);
 }
 
 static void
 nine_ff_load_lights(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     struct fvec4 *dst = (struct fvec4 *)device->ff.vs_const;
     unsigned l;
 
@@ -1910,7 +1914,7 @@ nine_ff_load_lights(struct NineDevice9 *device)
         memcpy(&dst[22], &mtl->Specular, 4 * sizeof(float));
         dst[23].x = mtl->Power;
         memcpy(&dst[24], &mtl->Emissive, 4 * sizeof(float));
-        d3dcolor_to_rgba(&dst[25].x, state->rs[D3DRS_AMBIENT]);
+        d3dcolor_to_rgba(&dst[25].x, context->rs[D3DRS_AMBIENT]);
         dst[19].x = dst[25].x * mtl->Ambient.r + mtl->Emissive.r;
         dst[19].y = dst[25].y * mtl->Ambient.g + mtl->Emissive.g;
         dst[19].z = dst[25].z * mtl->Ambient.b + mtl->Emissive.b;
@@ -1944,21 +1948,22 @@ static void
 nine_ff_load_point_and_fog_params(struct NineDevice9 *device)
 {
     const struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     struct fvec4 *dst = (struct fvec4 *)device->ff.vs_const;
 
     if (!(state->changed.group & NINE_STATE_FF_OTHER))
         return;
-    dst[26].x = asfloat(state->rs[D3DRS_POINTSIZE_MIN]);
-    dst[26].y = asfloat(state->rs[D3DRS_POINTSIZE_MAX]);
-    dst[26].z = asfloat(state->rs[D3DRS_POINTSIZE]);
-    dst[26].w = asfloat(state->rs[D3DRS_POINTSCALE_A]);
-    dst[27].x = asfloat(state->rs[D3DRS_POINTSCALE_B]);
-    dst[27].y = asfloat(state->rs[D3DRS_POINTSCALE_C]);
-    dst[28].x = asfloat(state->rs[D3DRS_FOGEND]);
-    dst[28].y = 1.0f / (asfloat(state->rs[D3DRS_FOGEND]) - asfloat(state->rs[D3DRS_FOGSTART]));
+    dst[26].x = asfloat(context->rs[D3DRS_POINTSIZE_MIN]);
+    dst[26].y = asfloat(context->rs[D3DRS_POINTSIZE_MAX]);
+    dst[26].z = asfloat(context->rs[D3DRS_POINTSIZE]);
+    dst[26].w = asfloat(context->rs[D3DRS_POINTSCALE_A]);
+    dst[27].x = asfloat(context->rs[D3DRS_POINTSCALE_B]);
+    dst[27].y = asfloat(context->rs[D3DRS_POINTSCALE_C]);
+    dst[28].x = asfloat(context->rs[D3DRS_FOGEND]);
+    dst[28].y = 1.0f / (asfloat(context->rs[D3DRS_FOGEND]) - asfloat(context->rs[D3DRS_FOGSTART]));
     if (isinf(dst[28].y))
         dst[28].y = 0.0f;
-    dst[28].z = asfloat(state->rs[D3DRS_FOGDENSITY]);
+    dst[28].z = asfloat(context->rs[D3DRS_FOGDENSITY]);
 }
 
 static void
@@ -1980,6 +1985,7 @@ static void
 nine_ff_load_ps_params(struct NineDevice9 *device)
 {
     const struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     struct fvec4 *dst = (struct fvec4 *)device->ff.ps_const;
     unsigned s;
 
@@ -2003,11 +2009,11 @@ nine_ff_load_ps_params(struct NineDevice9 *device)
         }
     }
 
-    d3dcolor_to_rgba(&dst[20].x, state->rs[D3DRS_TEXTUREFACTOR]);
-    d3dcolor_to_rgba(&dst[21].x, state->rs[D3DRS_FOGCOLOR]);
-    dst[22].x = asfloat(state->rs[D3DRS_FOGEND]);
-    dst[22].y = 1.0f / (asfloat(state->rs[D3DRS_FOGEND]) - asfloat(state->rs[D3DRS_FOGSTART]));
-    dst[22].z = asfloat(state->rs[D3DRS_FOGDENSITY]);
+    d3dcolor_to_rgba(&dst[20].x, context->rs[D3DRS_TEXTUREFACTOR]);
+    d3dcolor_to_rgba(&dst[21].x, context->rs[D3DRS_FOGCOLOR]);
+    dst[22].x = asfloat(context->rs[D3DRS_FOGEND]);
+    dst[22].y = 1.0f / (asfloat(context->rs[D3DRS_FOGEND]) - asfloat(context->rs[D3DRS_FOGSTART]));
+    dst[22].z = asfloat(context->rs[D3DRS_FOGDENSITY]);
 }
 
 static void

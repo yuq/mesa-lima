@@ -65,7 +65,8 @@ NinePixelShader9( void *data )
 
 static inline BOOL
 NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
-                            struct nine_state *state )
+                            struct nine_state *state,
+                            struct nine_context *context )
 {
     uint16_t samplers_shadow;
     uint32_t samplers_ps1_types;
@@ -89,8 +90,8 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
     }
 
     if (ps->byte_code.version < 0x30) {
-        key |= ((uint64_t)state->rs[D3DRS_FOGENABLE]) << 32;
-        key |= ((uint64_t)state->rs[D3DRS_FOGTABLEMODE]) << 33;
+        key |= ((uint64_t)context->rs[D3DRS_FOGENABLE]) << 32;
+        key |= ((uint64_t)context->rs[D3DRS_FOGTABLEMODE]) << 33;
     }
 
     /* centroid interpolation automatically used for color ps inputs */
