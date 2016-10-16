@@ -570,7 +570,7 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
     else
         nine_state_copy_common(device, dst, src, src, TRUE, pool);
 
-    nine_context_apply_stateblock(&device->context, src);
+    nine_context_apply_stateblock(device, src);
 
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
         NineDevice9_SetVertexDeclaration(This->base.device, (IDirect3DVertexDeclaration9 *)src->vdecl);
@@ -582,8 +582,6 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
     if (src->changed.texture) {
         uint32_t m = src->changed.texture;
 
-        dst->samplers_shadow &= ~m;
-
         for (s = 0; m; ++s, m >>= 1) {
             struct NineBaseTexture9 *tex = src->texture[s];
             if (!(m & 1))
@@ -592,7 +590,6 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
                 tex->bind_count++;
                 if ((tex->managed.dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
                     list_add(&tex->list, &This->base.device->update_textures);
-                dst->samplers_shadow |= tex->shadow << s;
             }
             if (src->texture[s])
                 src->texture[s]->bind_count--;

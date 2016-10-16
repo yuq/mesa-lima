@@ -174,8 +174,6 @@ struct nine_state
     BOOL   ps_const_b[NINE_MAX_CONST_B];
     float *ps_lconstf_temp;
 
-    uint32_t samplers_shadow;
-
     struct NineVertexDeclaration9 *vdecl;
 
     struct NineIndexBuffer9   *idxbuf;
@@ -229,6 +227,8 @@ struct nine_context {
 
     DWORD rs[NINED3DRS_COUNT];
 
+    uint32_t samplers_shadow;
+
     uint8_t bound_samplers_mask_vs;
     uint16_t bound_samplers_mask_ps;
 
@@ -271,6 +271,15 @@ void
 nine_context_set_render_state(struct NineDevice9 *device,
                               D3DRENDERSTATETYPE State,
                               DWORD Value);
+
+void
+nine_context_set_texture(struct NineDevice9 *device,
+                         DWORD Stage,
+                         struct NineBaseTexture9 *tex);
+
+void
+nine_context_apply_stateblock(struct NineDevice9 *device,
+                              const struct nine_state *src);
 
 void
 nine_context_clear_fb(struct NineDevice9 *device, DWORD Count,

@@ -1223,9 +1223,25 @@ nine_context_set_render_state(struct NineDevice9 *device,
 }
 
 void
-nine_context_apply_stateblock(struct nine_context *dst,
+nine_context_set_texture(struct NineDevice9 *device,
+                         DWORD Stage,
+                         struct NineBaseTexture9 *tex)
+{
+    struct nine_context *context = &device->context;
+    struct nine_state *state = &device->state;
+
+    context->samplers_shadow &= ~(1 << Stage);
+    if (tex)
+        context->samplers_shadow |= tex->shadow << Stage;
+
+    state->changed.group |= NINE_STATE_TEXTURE;
+}
+
+void
+nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
+    struct nine_context *context = &device->context;
     int i;
 
     for (i = 0; i < ARRAY_SIZE(src->changed.rs); ++i) {
@@ -1233,7 +1249,24 @@ nine_context_apply_stateblock(struct nine_context *dst,
         while (m) {
             const int r = ffs(m) - 1;
             m &= ~(1 << r);
-            dst->rs[i * 32 + r] = nine_fix_render_state_value(i * 32 + r, src->rs_advertised[i * 32 + r]);
+            context->rs[i * 32 + r] = nine_fix_render_state_value(i * 32 + r, src->rs_advertised[i * 32 + r]);
+        }
+    }
+
+    /* Textures */
+    if (src->changed.texture) {
+        uint32_t m = src->changed.texture;
+        unsigned s;
+
+        context->samplers_shadow &= ~m;
+
+        for (s = 0; m; ++s, m >>= 1) {
+            struct NineBaseTexture9 *tex = src->texture[s];
+            if (!(m & 1))
+                continue;
+            if (tex)
+                context->samplers_shadow |= tex->shadow << s;
+            /* nine_bind(&state->texture[s], src->texture[s]); Already bound by NineStateBlock9_Apply */
         }
     }
 }

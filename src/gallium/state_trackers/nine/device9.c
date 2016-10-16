@@ -2450,6 +2450,7 @@ NineDevice9_SetTexture( struct NineDevice9 *This,
 {
     struct nine_state *state = This->update;
     struct NineBaseTexture9 *tex = NineBaseTexture9(pTexture);
+    struct NineBaseTexture9 *old;
 
     DBG("This=%p Stage=%u pTexture=%p\n", This, Stage, pTexture);
 
@@ -2463,28 +2464,29 @@ NineDevice9_SetTexture( struct NineDevice9 *This,
     if (Stage >= D3DDMAPSAMPLER)
         Stage = Stage - D3DDMAPSAMPLER + NINE_MAX_SAMPLERS_PS;
 
-    if (!This->is_recording) {
-        struct NineBaseTexture9 *old = state->texture[Stage];
-        if (old == tex)
-            return D3D_OK;
-
-        state->samplers_shadow &= ~(1 << Stage);
-        if (tex) {
-            state->samplers_shadow |= tex->shadow << Stage;
-
-            if ((tex->managed.dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
-                list_add(&tex->list, &This->update_textures);
-
-            tex->bind_count++;
-        }
-        if (old)
-            old->bind_count--;
-    }
-    nine_bind(&state->texture[Stage], pTexture);
-
-    if (This->is_recording)
+    if (This->is_recording) {
         state->changed.texture |= 1 << Stage;
-    state->changed.group |= NINE_STATE_TEXTURE;
+        state->changed.group |= NINE_STATE_TEXTURE;
+        nine_bind(&state->texture[Stage], pTexture);
+        return D3D_OK;
+    }
+
+    old = state->texture[Stage];
+    if (old == tex)
+        return D3D_OK;
+
+    if (tex) {
+        if ((tex->managed.dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
+            list_add(&tex->list, &This->update_textures);
+
+        tex->bind_count++;
+    }
+    if (old)
+        old->bind_count--;
+
+    nine_context_set_texture(This, Stage, tex);
+
+    nine_bind(&state->texture[Stage], pTexture);
 
     return D3D_OK;
 }

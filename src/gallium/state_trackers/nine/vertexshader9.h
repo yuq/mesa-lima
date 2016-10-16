@@ -80,13 +80,12 @@ static inline BOOL
 NineVertexShader9_UpdateKey( struct NineVertexShader9 *vs,
                              struct NineDevice9 *device )
 {
-    struct nine_state *state = &(device->state);
     struct nine_context *context = &(device->context);
     uint8_t samplers_shadow;
     uint64_t key;
     BOOL res;
 
-    samplers_shadow = (uint8_t)((state->samplers_shadow & NINE_VS_SAMPLERS_MASK) >> NINE_SAMPLER_VS(0));
+    samplers_shadow = (uint8_t)((context->samplers_shadow & NINE_VS_SAMPLERS_MASK) >> NINE_SAMPLER_VS(0));
     samplers_shadow &= vs->sampler_mask;
     key = samplers_shadow;
 

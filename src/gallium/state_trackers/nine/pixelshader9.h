@@ -85,7 +85,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
         }
         key = samplers_ps1_types;
     } else {
-        samplers_shadow = (uint16_t)((state->samplers_shadow & NINE_PS_SAMPLERS_MASK) >> NINE_SAMPLER_PS(0));
+        samplers_shadow = (uint16_t)((context->samplers_shadow & NINE_PS_SAMPLERS_MASK) >> NINE_SAMPLER_PS(0));
         key = samplers_shadow & ps->sampler_mask;
     }
 
