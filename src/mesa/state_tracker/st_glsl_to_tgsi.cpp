@@ -272,9 +272,8 @@ public:
 
    st_dst_reg dst[2];
    st_src_reg src[4];
-   st_src_reg sampler; /**< sampler register */
+   st_src_reg resource; /**< sampler or buffer register */
    st_src_reg tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
-   st_src_reg buffer; /**< buffer register */
 
    /** Pointer to the ir source this tree came from for debugging */
    ir_instruction *ir;
@@ -2312,7 +2311,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
          *buffer.reladdr = op[0];
          emit_arl(ir, sampler_reladdr, op[0]);
       }
-      emit_asm(ir, TGSI_OPCODE_RESQ, result_dst)->buffer = buffer;
+      emit_asm(ir, TGSI_OPCODE_RESQ, result_dst)->resource = buffer;
       break;
    }
 
@@ -3342,7 +3341,7 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
       inst = emit_asm(ir, opcode, dst, offset, data, data2);
    }
 
-   inst->buffer = buffer;
+   inst->resource = buffer;
 }
 
 void
@@ -3455,13 +3454,13 @@ glsl_to_tgsi_visitor::visit_ssbo_intrinsic(ir_call *ir)
     */
    unsigned op = inst->op;
    do {
-      inst->buffer = buffer;
+      inst->resource = buffer;
       if (access)
          inst->buffer_access = access->value.u[0];
       inst = (glsl_to_tgsi_instruction *)inst->get_prev();
       if (inst->op == TGSI_OPCODE_UADD)
          inst = (glsl_to_tgsi_instruction *)inst->get_prev();
-   } while (inst && inst->op == op && inst->buffer.file == PROGRAM_UNDEFINED);
+   } while (inst && inst->op == op && inst->resource.file == PROGRAM_UNDEFINED);
 }
 
 void
@@ -3528,7 +3527,7 @@ glsl_to_tgsi_visitor::visit_shared_intrinsic(ir_call *ir)
 
    if (ir->callee->intrinsic_id == ir_intrinsic_shared_load) {
       inst = emit_asm(ir, TGSI_OPCODE_LOAD, dst, off);
-      inst->buffer = buffer;
+      inst->resource = buffer;
    } else if (ir->callee->intrinsic_id == ir_intrinsic_shared_store) {
       param = param->get_next();
       ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
@@ -3541,7 +3540,7 @@ glsl_to_tgsi_visitor::visit_shared_intrinsic(ir_call *ir)
 
       dst.type = this->result.type;
       inst = emit_asm(ir, TGSI_OPCODE_STORE, dst, off, this->result);
-      inst->buffer = buffer;
+      inst->resource = buffer;
    } else {
       param = param->get_next();
       ir_rvalue *val = ((ir_instruction *)param)->as_rvalue();
@@ -3584,7 +3583,7 @@ glsl_to_tgsi_visitor::visit_shared_intrinsic(ir_call *ir)
       }
 
       inst = emit_asm(ir, opcode, dst, off, data, data2);
-      inst->buffer = buffer;
+      inst->resource = buffer;
    }
 }
 
@@ -3715,7 +3714,7 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
          inst->dst[0].writemask = WRITEMASK_XYZW;
    }
 
-   inst->buffer = image;
+   inst->resource = image;
    inst->sampler_array_size = sampler_array_size;
    inst->sampler_base = sampler_base;
 
@@ -4300,13 +4299,13 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    if (ir->shadow_comparitor)
       inst->tex_shadow = GL_TRUE;
 
-   inst->sampler.index = sampler_index;
+   inst->resource.index = sampler_index;
    inst->sampler_array_size = sampler_array_size;
    inst->sampler_base = sampler_base;
 
    if (reladdr.file != PROGRAM_UNDEFINED) {
-      inst->sampler.reladdr = ralloc(mem_ctx, st_src_reg);
-      memcpy(inst->sampler.reladdr, &reladdr, sizeof(reladdr));
+      inst->resource.reladdr = ralloc(mem_ctx, st_src_reg);
+      memcpy(inst->resource.reladdr, &reladdr, sizeof(reladdr));
    }
 
    if (ir->offset) {
@@ -4523,23 +4522,23 @@ count_resources(glsl_to_tgsi_visitor *v, gl_program *prog)
                st_translate_texture_target(inst->tex_target, inst->tex_shadow);
 
             if (inst->tex_shadow) {
-               prog->ShadowSamplers |= 1 << (inst->sampler.index + i);
+               prog->ShadowSamplers |= 1 << (inst->resource.index + i);
             }
          }
       }
 
       if (inst->tex_target == TEXTURE_EXTERNAL_INDEX)
-         prog->ExternalSamplersUsed |= 1 << inst->sampler.index;
+         prog->ExternalSamplersUsed |= 1 << inst->resource.index;
 
-      if (inst->buffer.file != PROGRAM_UNDEFINED && (
+      if (inst->resource.file != PROGRAM_UNDEFINED && (
                 is_resource_instruction(inst->op) ||
                 inst->op == TGSI_OPCODE_STORE)) {
-         if (inst->buffer.file == PROGRAM_BUFFER) {
-            v->buffers_used |= 1 << inst->buffer.index;
-         } else if (inst->buffer.file == PROGRAM_MEMORY) {
+         if (inst->resource.file == PROGRAM_BUFFER) {
+            v->buffers_used |= 1 << inst->resource.index;
+         } else if (inst->resource.file == PROGRAM_MEMORY) {
             v->use_shared_memory = true;
          } else {
-            assert(inst->buffer.file == PROGRAM_IMAGE);
+            assert(inst->resource.file == PROGRAM_IMAGE);
             for (int i = 0; i < inst->sampler_array_size; i++) {
                unsigned idx = inst->sampler_base + i;
                v->images_used |= 1 << idx;
@@ -5801,9 +5800,9 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_TXL2:
    case TGSI_OPCODE_TG4:
    case TGSI_OPCODE_LODQ:
-      src[num_src] = t->samplers[inst->sampler.index];
+      src[num_src] = t->samplers[inst->resource.index];
       assert(src[num_src].File != TGSI_FILE_NULL);
-      if (inst->sampler.reladdr)
+      if (inst->resource.reladdr)
          src[num_src] =
             ureg_src_indirect(src[num_src], ureg_src(t->address[2]));
       num_src++;
@@ -5835,15 +5834,15 @@ compile_tgsi_instruction(struct st_translate *t,
       for (i = num_src - 1; i >= 0; i--)
          src[i + 1] = src[i];
       num_src++;
-      if (inst->buffer.file == PROGRAM_MEMORY) {
+      if (inst->resource.file == PROGRAM_MEMORY) {
          src[0] = t->shared_memory;
-      } else if (inst->buffer.file == PROGRAM_BUFFER) {
-         src[0] = t->buffers[inst->buffer.index];
+      } else if (inst->resource.file == PROGRAM_BUFFER) {
+         src[0] = t->buffers[inst->resource.index];
       } else {
-         src[0] = t->images[inst->buffer.index];
+         src[0] = t->images[inst->resource.index];
          tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
       }
-      if (inst->buffer.reladdr)
+      if (inst->resource.reladdr)
          src[0] = ureg_src_indirect(src[0], ureg_src(t->address[2]));
       assert(src[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
@@ -5852,16 +5851,16 @@ compile_tgsi_instruction(struct st_translate *t,
       break;
 
    case TGSI_OPCODE_STORE:
-      if (inst->buffer.file == PROGRAM_MEMORY) {
+      if (inst->resource.file == PROGRAM_MEMORY) {
          dst[0] = ureg_dst(t->shared_memory);
-      } else if (inst->buffer.file == PROGRAM_BUFFER) {
-         dst[0] = ureg_dst(t->buffers[inst->buffer.index]);
+      } else if (inst->resource.file == PROGRAM_BUFFER) {
+         dst[0] = ureg_dst(t->buffers[inst->resource.index]);
       } else {
-         dst[0] = ureg_dst(t->images[inst->buffer.index]);
+         dst[0] = ureg_dst(t->images[inst->resource.index]);
          tex_target = st_translate_texture_target(inst->tex_target, inst->tex_shadow);
       }
       dst[0] = ureg_writemask(dst[0], inst->dst[0].writemask);
-      if (inst->buffer.reladdr)
+      if (inst->resource.reladdr)
          dst[0] = ureg_dst_indirect(dst[0], ureg_src(t->address[2]));
       assert(dst[0].File != TGSI_FILE_NULL);
       ureg_memory_insn(ureg, inst->op, dst, num_dst, src, num_src,
