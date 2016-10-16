@@ -559,10 +559,8 @@ public:
                           unsigned *index,
                           st_src_reg *reladdr,
                           bool opaque);
-  void calc_deref_offsets(ir_dereference *head,
-                          ir_dereference *tail,
+  void calc_deref_offsets(ir_dereference *tail,
                           unsigned *array_elements,
-                          unsigned *base,
                           unsigned *index,
                           st_src_reg *indirect,
                           unsigned *location);
@@ -3913,10 +3911,8 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
 }
 
 void
-glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *head,
-                                         ir_dereference *tail,
+glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *tail,
                                          unsigned *array_elements,
-                                         unsigned *base,
                                          unsigned *index,
                                          st_src_reg *indirect,
                                          unsigned *location)
@@ -3927,7 +3923,7 @@ glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *head,
       const glsl_type *struct_type = deref_record->record->type;
       int field_index = deref_record->record->type->field_index(deref_record->field);
 
-      calc_deref_offsets(head, deref_record->record->as_dereference(), array_elements, base, index, indirect, location);
+      calc_deref_offsets(deref_record->record->as_dereference(), array_elements, index, indirect, location);
 
       assert(field_index >= 0);
       *location += struct_type->record_location_offset(field_index);
@@ -3964,7 +3960,7 @@ glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *head,
 
       *array_elements *= deref_arr->array->type->length;
 
-      calc_deref_offsets(head, deref_arr->array->as_dereference(), array_elements, base, index, indirect, location);
+      calc_deref_offsets(deref_arr->array->as_dereference(), array_elements, index, indirect, location);
       break;
    }
    default:
@@ -3992,7 +3988,7 @@ glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
 
    assert(var);
    location = var->data.location;
-   calc_deref_offsets(ir, ir, array_size, base, index, reladdr, &location);
+   calc_deref_offsets(ir, array_size, index, reladdr, &location);
 
    /*
     * If we end up with no indirect then adjust the base to the index,
