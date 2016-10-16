@@ -263,8 +263,6 @@ void st_init_limits(struct pipe_screen *screen,
          pc->MediumInt = pc->HighInt = pc->LowInt;
       }
 
-      options->EmitNoNoise = TRUE;
-
       /* TODO: make these more fine-grained if anyone needs it */
       options->MaxIfDepth =
          screen->get_shader_param(screen, sh,
