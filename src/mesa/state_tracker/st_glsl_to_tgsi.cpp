@@ -5139,10 +5139,6 @@ glsl_to_tgsi_visitor::renumber_registers(void)
 }
 
 /* ------------------------- TGSI conversion stuff -------------------------- */
-struct label {
-   unsigned branch_target;
-   unsigned token;
-};
 
 /**
  * Intermediate state used during shader translation.
@@ -5176,25 +5172,7 @@ struct st_translate {
    const GLuint *inputMapping;
    const GLuint *outputMapping;
 
-   /* For every instruction that contains a label, keep
-    * details so that we can go back afterwards and emit the correct
-    * tgsi instruction number for each label.
-    */
-   struct label *labels;
-   unsigned labels_size;
-   unsigned labels_count;
-
-   /* Keep a record of the tgsi instruction number that each mesa
-    * instruction starts at, will be used to fix up labels after
-    * translation.
-    */
-   unsigned *insn;
-   unsigned insn_size;
-   unsigned insn_count;
-
    unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
-
-   boolean error;
 };
 
 /** Map Mesa's SYSTEM_VALUE_x to TGSI_SEMANTIC_x */
@@ -5264,53 +5242,6 @@ _mesa_sysval_to_semantic(unsigned sysval)
       assert(!"Unexpected SYSTEM_VALUE_ enum");
       return TGSI_SEMANTIC_COUNT;
    }
-}
-
-
-/**
- * Make note of a branch to a label in the TGSI code.
- * After we've emitted all instructions, we'll go over the list
- * of labels built here and patch the TGSI code with the actual
- * location of each label.
- */
-static unsigned *get_label(struct st_translate *t, unsigned branch_target)
-{
-   unsigned i;
-
-   if (t->labels_count + 1 >= t->labels_size) {
-      t->labels_size = 1 << (util_logbase2(t->labels_size) + 1);
-      t->labels = (struct label *)realloc(t->labels,
-                                          t->labels_size * sizeof(struct label));
-      if (t->labels == NULL) {
-         static unsigned dummy;
-         t->error = TRUE;
-         return &dummy;
-      }
-   }
-
-   i = t->labels_count++;
-   t->labels[i].branch_target = branch_target;
-   return &t->labels[i].token;
-}
-
-/**
- * Called prior to emitting the TGSI code for each instruction.
- * Allocate additional space for instructions if needed.
- * Update the insn[] array so the next glsl_to_tgsi_instruction points to
- * the next TGSI instruction.
- */
-static void set_insn_start(struct st_translate *t, unsigned start)
-{
-   if (t->insn_count + 1 >= t->insn_size) {
-      t->insn_size = 1 << (util_logbase2(t->insn_size) + 1);
-      t->insn = (unsigned *)realloc(t->insn, t->insn_size * sizeof(t->insn[0]));
-      if (t->insn == NULL) {
-         t->error = TRUE;
-         return;
-      }
-   }
-
-   t->insn[t->insn_count++] = start;
 }
 
 /**
@@ -5613,10 +5544,7 @@ compile_tgsi_instruction(struct st_translate *t,
    case TGSI_OPCODE_IF:
    case TGSI_OPCODE_UIF:
       assert(num_dst == 0);
-      ureg_label_insn(ureg,
-                      inst->op,
-                      src, num_src,
-                      get_label(t, 0));
+      ureg_insn(ureg, inst->op, NULL, 0, src, num_src);
       return;
 
    case TGSI_OPCODE_TEX:
@@ -6343,17 +6271,8 @@ st_translate_program(
 
    /* Emit each instruction in turn:
     */
-   foreach_in_list(glsl_to_tgsi_instruction, inst, &program->instructions) {
-      set_insn_start(t, ureg_get_instruction_number(ureg));
+   foreach_in_list(glsl_to_tgsi_instruction, inst, &program->instructions)
       compile_tgsi_instruction(t, inst);
-   }
-
-   /* Fix up all emitted labels:
-    */
-   for (i = 0; i < t->labels_count; i++) {
-      ureg_fixup_label(ureg, t->labels[i].token,
-                       t->insn[t->labels[i].branch_target]);
-   }
 
    /* Set the next shader stage hint for VS and TES. */
    switch (procType) {
@@ -6395,17 +6314,10 @@ out:
    if (t) {
       free(t->arrays);
       free(t->temps);
-      free(t->insn);
-      free(t->labels);
       free(t->constants);
       t->num_constants = 0;
       free(t->immediates);
       t->num_immediates = 0;
-
-      if (t->error) {
-         debug_printf("%s: translate error flag set\n", __func__);
-      }
-
       FREE(t);
    }
 
