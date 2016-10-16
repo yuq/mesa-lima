@@ -1068,24 +1068,10 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 	lp_build_context_init(&bld_base->base, &ctx->gallivm, type);
 	lp_build_context_init(&ctx->soa.bld_base.uint_bld, &ctx->gallivm, lp_uint_type(type));
 	lp_build_context_init(&ctx->soa.bld_base.int_bld, &ctx->gallivm, lp_int_type(type));
-	{
-		struct lp_type dbl_type;
-		dbl_type = type;
-		dbl_type.width *= 2;
-		lp_build_context_init(&ctx->soa.bld_base.dbl_bld, &ctx->gallivm, dbl_type);
-	}
-	{
-		struct lp_type dtype;
-		dtype = lp_uint_type(type);
-		dtype.width *= 2;
-		lp_build_context_init(&ctx->soa.bld_base.uint64_bld, &ctx->gallivm, dtype);
-	}
-	{
-		struct lp_type dtype;
-		dtype = lp_int_type(type);
-		dtype.width *= 2;
-		lp_build_context_init(&ctx->soa.bld_base.int64_bld, &ctx->gallivm, dtype);
-	}
+	type.width *= 2;
+	lp_build_context_init(&ctx->soa.bld_base.dbl_bld, &ctx->gallivm, type);
+	lp_build_context_init(&ctx->soa.bld_base.uint64_bld, &ctx->gallivm, lp_uint_type(type));
+	lp_build_context_init(&ctx->soa.bld_base.int64_bld, &ctx->gallivm, lp_int_type(type));
 
 	bld_base->soa = 1;
 	bld_base->emit_store = radeon_llvm_emit_store;
