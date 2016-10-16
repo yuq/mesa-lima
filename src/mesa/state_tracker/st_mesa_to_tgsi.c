@@ -51,13 +51,6 @@
                            (1 << PROGRAM_CONSTANT) |     \
                            (1 << PROGRAM_UNIFORM))
 
-
-struct label {
-   unsigned branch_target;
-   unsigned token;
-};
-
-
 /**
  * Intermediate state used during shader translation.
  */
@@ -75,75 +68,8 @@ struct st_translate {
    const GLuint *inputMapping;
    const GLuint *outputMapping;
 
-   /* For every instruction that contains a label (eg CALL), keep
-    * details so that we can go back afterwards and emit the correct
-    * tgsi instruction number for each label.
-    */
-   struct label *labels;
-   unsigned labels_size;
-   unsigned labels_count;
-
-   /* Keep a record of the tgsi instruction number that each mesa
-    * instruction starts at, will be used to fix up labels after
-    * translation.
-    */
-   unsigned *insn;
-   unsigned insn_size;
-   unsigned insn_count;
-
    unsigned procType;  /**< PIPE_SHADER_VERTEX/FRAGMENT */
-
-   boolean error;
 };
-
-
-/**
- * Make note of a branch to a label in the TGSI code.
- * After we've emitted all instructions, we'll go over the list
- * of labels built here and patch the TGSI code with the actual
- * location of each label.
- */
-static unsigned *get_label( struct st_translate *t,
-                            unsigned branch_target )
-{
-   unsigned i;
-
-   if (t->labels_count + 1 >= t->labels_size) {
-      t->labels_size = 1 << (util_logbase2(t->labels_size) + 1);
-      t->labels = realloc(t->labels, t->labels_size * sizeof t->labels[0]);
-      if (t->labels == NULL) {
-         static unsigned dummy;
-         t->error = TRUE;
-         return &dummy;
-      }
-   }
-
-   i = t->labels_count++;
-   t->labels[i].branch_target = branch_target;
-   return &t->labels[i].token;
-}
-
-
-/**
- * Called prior to emitting the TGSI code for each Mesa instruction.
- * Allocate additional space for instructions if needed.
- * Update the insn[] array so the next Mesa instruction points to
- * the next TGSI instruction.
- */
-static void set_insn_start( struct st_translate *t,
-                            unsigned start )
-{
-   if (t->insn_count + 1 >= t->insn_size) {
-      t->insn_size = 1 << (util_logbase2(t->insn_size) + 1);
-      t->insn = realloc(t->insn, t->insn_size * sizeof t->insn[0]);
-      if (t->insn == NULL) {
-         t->error = TRUE;
-         return;
-      }
-   }
-
-   t->insn[t->insn_count++] = start;
-}
 
 
 /**
@@ -1095,27 +1021,10 @@ st_translate_mesa_program(
 
    /* Emit each instruction in turn:
     */
-   for (i = 0; i < program->NumInstructions; i++) {
-      set_insn_start( t, ureg_get_instruction_number( ureg ));
+   for (i = 0; i < program->NumInstructions; i++)
       compile_instruction(ctx, t, &program->Instructions[i]);
-   }
-
-   /* Fix up all emitted labels:
-    */
-   for (i = 0; i < t->labels_count; i++) {
-      ureg_fixup_label( ureg,
-                        t->labels[i].token,
-                        t->insn[t->labels[i].branch_target] );
-   }
 
 out:
-   free(t->insn);
-   free(t->labels);
    free(t->constants);
-
-   if (t->error) {
-      debug_printf("%s: translate error flag set\n", __func__);
-   }
-
    return ret;
 }
