@@ -467,7 +467,6 @@ NineDevice9_ctor( struct NineDevice9 *This,
     }
 
     This->update = &This->state;
-    nine_update_state(This);
 
     nine_state_init_sw(This);
 
