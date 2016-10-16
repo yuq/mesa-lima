@@ -159,23 +159,24 @@ public:
 
    explicit st_src_reg(st_dst_reg reg);
 
-   gl_register_file file; /**< PROGRAM_* from Mesa */
-   int index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
-   int index2D;
-   GLuint swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
-   int negate; /**< NEGATE_XYZW mask from mesa */
-   enum glsl_base_type type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
-   /** Register index should be offset by the integer in this reg. */
-   st_src_reg *reladdr;
-   st_src_reg *reladdr2;
-   bool has_index2;
+   int16_t index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
+   int16_t index2D;
+   uint16_t swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
+   int negate:4; /**< NEGATE_XYZW mask from mesa */
+   enum glsl_base_type type:4; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   unsigned has_index2:1;
+   gl_register_file file:5; /**< PROGRAM_* from Mesa */
    /*
     * Is this the second half of a double register pair?
     * currently used for input mapping only.
     */
-   bool double_reg2;
-   unsigned array_id;
-   bool is_double_vertex_input;
+   unsigned double_reg2:1;
+   unsigned is_double_vertex_input:1;
+   unsigned array_id:10;
+
+   /** Register index should be offset by the integer in this reg. */
+   st_src_reg *reladdr;
+   st_src_reg *reladdr2;
 };
 
 class st_dst_reg {
@@ -223,16 +224,17 @@ public:
 
    explicit st_dst_reg(st_src_reg reg);
 
-   gl_register_file file; /**< PROGRAM_* from Mesa */
-   int index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
-   int index2D;
-   int writemask; /**< Bitfield of WRITEMASK_[XYZW] */
-   enum glsl_base_type type; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   int16_t index; /**< temporary index, VERT_ATTRIB_*, VARYING_SLOT_*, etc. */
+   int16_t index2D;
+   gl_register_file file:5; /**< PROGRAM_* from Mesa */
+   unsigned writemask:4; /**< Bitfield of WRITEMASK_[XYZW] */
+   enum glsl_base_type type:4; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   unsigned has_index2:1;
+   unsigned array_id:10;
+
    /** Register index should be offset by the integer in this reg. */
    st_src_reg *reladdr;
    st_src_reg *reladdr2;
-   bool has_index2;
-   unsigned array_id;
 };
 
 st_src_reg::st_src_reg(st_dst_reg reg)
@@ -452,7 +454,7 @@ public:
    variable_storage *find_variable_storage(ir_variable *var);
 
    int add_constant(gl_register_file file, gl_constant_value values[8],
-                    int size, int datatype, GLuint *swizzle_out);
+                    int size, int datatype, uint16_t *swizzle_out);
 
    function_entry *get_function_signature(ir_function_signature *sig);
 
@@ -556,12 +558,12 @@ public:
    void get_deref_offsets(ir_dereference *ir,
                           unsigned *array_size,
                           unsigned *base,
-                          unsigned *index,
+                          uint16_t *index,
                           st_src_reg *reladdr,
                           bool opaque);
   void calc_deref_offsets(ir_dereference *tail,
                           unsigned *array_elements,
-                          unsigned *index,
+                          uint16_t *index,
                           st_src_reg *indirect,
                           unsigned *location);
    st_src_reg canonicalize_gather_offset(st_src_reg offset);
@@ -1109,11 +1111,15 @@ glsl_to_tgsi_visitor::emit_arl(ir_instruction *ir,
 int
 glsl_to_tgsi_visitor::add_constant(gl_register_file file,
                                    gl_constant_value values[8], int size, int datatype,
-                                   GLuint *swizzle_out)
+                                   uint16_t *swizzle_out)
 {
    if (file == PROGRAM_CONSTANT) {
-      return _mesa_add_typed_unnamed_constant(this->prog->Parameters, values,
-                                              size, datatype, swizzle_out);
+      GLuint swizzle = swizzle_out ? *swizzle_out : 0;
+      int result = _mesa_add_typed_unnamed_constant(this->prog->Parameters, values,
+                                                    size, datatype, &swizzle);
+      if (swizzle_out)
+         *swizzle_out = swizzle;
+      return result;
    }
 
    assert(file == PROGRAM_IMMEDIATE);
@@ -3260,7 +3266,8 @@ glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
 
    /* Calculate the surface offset */
    st_src_reg offset;
-   unsigned array_size = 0, base = 0, index = 0;
+   unsigned array_size = 0, base = 0;
+   uint16_t index = 0;
 
    get_deref_offsets(deref, &array_size, &base, &index, &offset, false);
 
@@ -3593,7 +3600,8 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
    st_src_reg image(PROGRAM_IMAGE, 0, GLSL_TYPE_UINT);
 
    get_deref_offsets(img, &sampler_array_size, &sampler_base,
-                     (unsigned int *)&image.index, &reladdr, true);
+                     (uint16_t*)&image.index, &reladdr, true);
+
    if (reladdr.file != PROGRAM_UNDEFINED) {
       image.reladdr = ralloc(mem_ctx, st_src_reg);
       *image.reladdr = reladdr;
@@ -3913,7 +3921,7 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
 void
 glsl_to_tgsi_visitor::calc_deref_offsets(ir_dereference *tail,
                                          unsigned *array_elements,
-                                         unsigned *index,
+                                         uint16_t *index,
                                          st_src_reg *indirect,
                                          unsigned *location)
 {
@@ -3972,7 +3980,7 @@ void
 glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
                                         unsigned *array_size,
                                         unsigned *base,
-                                        unsigned *index,
+                                        uint16_t *index,
                                         st_src_reg *reladdr,
                                         bool opaque)
 {
@@ -4030,7 +4038,8 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    glsl_to_tgsi_instruction *inst = NULL;
    unsigned opcode = TGSI_OPCODE_NOP;
    const glsl_type *sampler_type = ir->sampler->type;
-   unsigned sampler_array_size = 1, sampler_index = 0, sampler_base = 0;
+   unsigned sampler_array_size = 1, sampler_base = 0;
+   uint16_t sampler_index = 0;
    bool is_cube_array = false;
    unsigned i;
 
