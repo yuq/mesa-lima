@@ -131,7 +131,8 @@ SUBDIRS += gallium
 endif
 
 EXTRA_DIST = \
-	getopt hgl SConscript
+	getopt hgl SConscript \
+	$(top_srcdir)/include/GL/mesa_glinterop.h
 
 AM_CFLAGS = $(VISIBILITY_CFLAGS)
 AM_CXXFLAGS = $(VISIBILITY_CXXFLAGS)
