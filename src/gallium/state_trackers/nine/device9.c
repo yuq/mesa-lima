@@ -3469,19 +3469,20 @@ NineDevice9_SetStreamSourceFreq( struct NineDevice9 *This,
                   (Setting & D3DSTREAMSOURCE_INDEXEDDATA)), D3DERR_INVALIDCALL);
     user_assert(Setting, D3DERR_INVALIDCALL);
 
-    if (likely(!This->is_recording) && state->stream_freq[StreamNumber] == Setting)
+    if (unlikely(This->is_recording)) {
+        state->stream_freq[StreamNumber] = Setting;
+        state->changed.stream_freq |= 1 << StreamNumber;
+        if (StreamNumber != 0)
+            state->changed.group |= NINE_STATE_STREAMFREQ;
+        return D3D_OK;
+    }
+
+    if (state->stream_freq[StreamNumber] == Setting)
         return D3D_OK;
 
     state->stream_freq[StreamNumber] = Setting;
 
-    if (Setting & D3DSTREAMSOURCE_INSTANCEDATA)
-        state->stream_instancedata_mask |= 1 << StreamNumber;
-    else
-        state->stream_instancedata_mask &= ~(1 << StreamNumber);
-
-    state->changed.stream_freq |= 1 << StreamNumber; /* Used for stateblocks */
-    if (StreamNumber != 0)
-        state->changed.group |= NINE_STATE_STREAMFREQ;
+    nine_context_set_stream_source_freq(This, StreamNumber, Setting);
     return D3D_OK;
 }
 

@@ -677,8 +677,6 @@ update_vertex_elements(struct NineDevice9 *device)
     }
 
     cso_set_vertex_elements(device->cso, vs->num_inputs, ve);
-
-    state->changed.stream_freq = 0;
 }
 
 static void
@@ -1260,6 +1258,25 @@ nine_context_set_stream_source(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_stream_source_freq(struct NineDevice9 *device,
+                                    UINT StreamNumber,
+                                    UINT Setting)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    context->stream_freq[StreamNumber] = Setting;
+
+    if (Setting & D3DSTREAMSOURCE_INSTANCEDATA)
+        context->stream_instancedata_mask |= 1 << StreamNumber;
+    else
+        context->stream_instancedata_mask &= ~(1 << StreamNumber);
+
+    if (StreamNumber != 0)
+        state->changed.group |= NINE_STATE_STREAMFREQ;
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1303,6 +1320,13 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
                         src->stream[i] ? NineVertexBuffer9_GetResource(src->stream[i]) : NULL);
                     context->vtxbuf[i].stride = src->vtxbuf[i].stride;
                 }
+            }
+            if (src->changed.stream_freq & (1 << i)) {
+                context->stream_freq[i] = src->stream_freq[i];
+                if (src->stream_freq[i] & D3DSTREAMSOURCE_INSTANCEDATA)
+                    context->stream_instancedata_mask |= 1 << i;
+                else
+                    context->stream_instancedata_mask &= ~(1 << i);
             }
         }
         context->changed.vtxbuf |= src->changed.vtxbuf;
@@ -1473,8 +1497,8 @@ init_draw_info(struct pipe_draw_info *info,
     info->count = prim_count_to_vertex_count(type, count);
     info->start_instance = 0;
     info->instance_count = 1;
-    if (dev->state.stream_instancedata_mask & dev->context.stream_usage_mask)
-        info->instance_count = MAX2(dev->state.stream_freq[0] & 0x7FFFFF, 1);
+    if (dev->context.stream_instancedata_mask & dev->context.stream_usage_mask)
+        info->instance_count = MAX2(dev->context.stream_freq[0] & 0x7FFFFF, 1);
     info->primitive_restart = FALSE;
     info->restart_index = 0;
     info->count_from_stream_output = NULL;

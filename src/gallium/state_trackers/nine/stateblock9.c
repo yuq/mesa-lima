@@ -282,9 +282,6 @@ nine_state_copy_common(struct NineDevice9 *device,
             if (mask->changed.stream_freq & (1 << i))
                 dst->stream_freq[i] = src->stream_freq[i];
         }
-        dst->stream_instancedata_mask &= ~mask->changed.stream_freq;
-        dst->stream_instancedata_mask |=
-            src->stream_instancedata_mask & mask->changed.stream_freq;
         if (apply) {
             dst->changed.vtxbuf |= mask->changed.vtxbuf;
             dst->changed.stream_freq |= mask->changed.stream_freq;
@@ -466,7 +463,6 @@ nine_state_copy_common_all(struct NineDevice9 *device,
             }
             dst->stream_freq[i] = src->stream_freq[i];
         }
-        dst->stream_instancedata_mask = src->stream_instancedata_mask;
         if (apply) {
             dst->changed.vtxbuf = (1ULL << MaxStreams) - 1;
             dst->changed.stream_freq = (1ULL << MaxStreams) - 1;
