@@ -273,7 +273,7 @@ public:
    st_dst_reg dst[2];
    st_src_reg src[4];
    st_src_reg resource; /**< sampler or buffer register */
-   st_src_reg tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
+   st_src_reg *tex_offsets;
 
    /** Pointer to the ir source this tree came from for debugging */
    ir_instruction *ir;
@@ -4309,6 +4309,9 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    }
 
    if (ir->offset) {
+      if (!inst->tex_offsets)
+         inst->tex_offsets = rzalloc_array(inst, st_src_reg, MAX_GLSL_TEXTURE_OFFSET);
+
       for (i = 0; i < MAX_GLSL_TEXTURE_OFFSET && offset[i].file != PROGRAM_UNDEFINED; i++)
          inst->tex_offsets[i] = offset[i];
       inst->tex_offset_num_offset = i;
