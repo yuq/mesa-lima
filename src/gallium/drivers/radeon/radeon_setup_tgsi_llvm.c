@@ -152,11 +152,6 @@ push_flow(struct radeon_llvm_context *ctx)
 	return flow;
 }
 
-unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
-{
-	return (index * 4) + chan;
-}
-
 static LLVMValueRef emit_swizzle(struct lp_build_tgsi_context *bld_base,
 				 LLVMValueRef value,
 				 unsigned swizzle_x,
