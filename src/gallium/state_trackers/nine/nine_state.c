@@ -1413,7 +1413,6 @@ update_vertex_elements_sw(struct NineDevice9 *device)
     BOOL need_dummy_vbo = FALSE;
     struct pipe_vertex_element ve[PIPE_MAX_ATTRIBS];
 
-    state->stream_usage_mask = 0;
     memset(vdecl_index_map, -1, 16);
     memset(used_streams, 0, device->caps.MaxStreams);
     vs = state->programmable_vs ? device->state.vs : device->ff.vs;
@@ -1456,7 +1455,6 @@ update_vertex_elements_sw(struct NineDevice9 *device)
         if (index >= 0) {
             ve[n] = vdecl->elems[index];
             b = ve[n].vertex_buffer_index;
-            state->stream_usage_mask |= 1 << b;
             /* XXX wine just uses 1 here: */
             if (state->stream_freq[b] & D3DSTREAMSOURCE_INSTANCEDATA)
                 ve[n].instance_divisor = state->stream_freq[b] & 0x7FFFFF;
