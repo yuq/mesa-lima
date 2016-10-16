@@ -110,11 +110,6 @@ LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
 				     LLVMValueRef index,
 				     unsigned num);
 
-void radeon_llvm_emit_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
-					  struct lp_build_emit_data *emit_data,
-					  LLVMValueRef *coords_arg,
-					  LLVMValueRef *derivs_arg);
-
 void radeon_llvm_context_init(struct radeon_llvm_context *ctx,
                               const char *triple,
 			      const struct tgsi_shader_info *info,
@@ -130,10 +125,6 @@ unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan);
 
 void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx,
 				 bool run_verifier);
-
-void build_tgsi_intrinsic_nomem(const struct lp_build_tgsi_action *action,
-				struct lp_build_tgsi_context *bld_base,
-				struct lp_build_emit_data *emit_data);
 
 LLVMValueRef radeon_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
 					  enum tgsi_opcode_type type,

@@ -42,6 +42,7 @@
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_dump.h"
 
+#include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "sid.h"
 
@@ -4659,7 +4660,7 @@ static void tex_fetch_args(
 	    target == TGSI_TEXTURE_CUBE_ARRAY ||
 	    target == TGSI_TEXTURE_SHADOWCUBE ||
 	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY)
-		radeon_llvm_emit_prepare_cube_coords(bld_base, emit_data, coords, derivs);
+		si_prepare_cube_coords(bld_base, emit_data, coords, derivs);
 
 	if (opcode == TGSI_OPCODE_TXD)
 		for (int i = 0; i < num_deriv_channels * 2; i++)
@@ -6510,6 +6511,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 		&ctx->radeon_bld, "amdgcn--",
 		(shader && shader->selector) ? &shader->selector->info : NULL,
 		(shader && shader->selector) ? shader->selector->tokens : NULL);
+	si_shader_context_init_alu(&ctx->radeon_bld.soa.bld_base);
 	ctx->tm = tm;
 	ctx->screen = sscreen;
 	if (shader && shader->selector)
@@ -6593,11 +6595,6 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	bld_base->op_actions[TGSI_OPCODE_EMIT].emit = si_llvm_emit_vertex;
 	bld_base->op_actions[TGSI_OPCODE_ENDPRIM].emit = si_llvm_emit_primitive;
 	bld_base->op_actions[TGSI_OPCODE_BARRIER].emit = si_llvm_emit_barrier;
-
-	bld_base->op_actions[TGSI_OPCODE_MAX].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_MAX].intr_name = "llvm.maxnum.f32";
-	bld_base->op_actions[TGSI_OPCODE_MIN].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_MIN].intr_name = "llvm.minnum.f32";
 }
 
 int si_compile_tgsi_shader(struct si_screen *sscreen,
