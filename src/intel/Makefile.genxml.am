@@ -34,7 +34,10 @@ $(GENXML_GENERATED_FILES): genxml/gen_pack_header.py
 # xxd generates variable names based on the path of the input file. We
 # prefer to generate our own name here, so it doesn't vary from
 # in/out-of-tree builds.
-%_xml.h:  %.xml Makefile
+
+$(GENXML_GENERATED_FILES): Makefile
+
+.xml_xml.h:
 	$(MKDIR_GEN)
 	$(AM_V_GEN) echo -n "static const uint8_t " > $@; \
 	echo "$(@F)_xml[] = {" | sed -e 's,_xml.h,,' >> $@; \
