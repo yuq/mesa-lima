@@ -486,6 +486,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     nine_ff_fini(This);
     nine_state_destroy_sw(This);
     nine_state_clear(&This->state, TRUE);
+    nine_context_clear(&This->context);
 
     if (This->vertex_uploader)
         u_upload_destroy(This->vertex_uploader);
@@ -856,6 +857,7 @@ NineDevice9_Reset( struct NineDevice9 *This,
 
     nine_pipe_context_clear(This);
     nine_state_clear(&This->state, TRUE);
+    nine_context_clear(&This->context);
 
     NineDevice9_SetDefaultState(This, TRUE);
     NineDevice9_SetRenderTarget(

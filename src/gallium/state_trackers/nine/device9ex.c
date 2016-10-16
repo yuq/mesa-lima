@@ -259,6 +259,7 @@ NineDevice9Ex_Reset( struct NineDevice9Ex *This,
 
     nine_pipe_context_clear((struct NineDevice9 *)This);
     nine_state_clear(&This->base.state, TRUE);
+    nine_context_clear(&This->base.context);
 
     NineDevice9_SetDefaultState((struct NineDevice9 *)This, TRUE);
     NineDevice9_SetRenderTarget(

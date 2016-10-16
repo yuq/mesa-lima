@@ -73,7 +73,7 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
     struct nine_range *r;
     struct nine_range_pool *pool = &This->base.device->range_pool;
 
-    nine_state_clear(state, FALSE);
+    nine_state_clear(state, false);
 
     FREE(state->vs_const_f);
     FREE(state->ps_const_f);
