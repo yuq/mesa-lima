@@ -2880,6 +2880,7 @@ glsl_to_tgsi_visitor::emit_block_mov(ir_assignment *ir, const struct glsl_type *
 
    assert(type->is_scalar() || type->is_vector());
 
+   l->type = type->base_type;
    r->type = type->base_type;
    if (cond) {
       st_src_reg l_src = st_src_reg(*l);
