@@ -2941,10 +2941,12 @@ glsl_to_tgsi_visitor::visit(ir_assignment *ir)
       } else if (ir->write_mask == 0) {
          assert(!ir->lhs->type->is_scalar() && !ir->lhs->type->is_vector());
 
-         if (ir->lhs->type->is_array() || ir->lhs->type->is_matrix()) {
-            unsigned num_elements = ir->lhs->type->without_array()->vector_elements;
+         unsigned num_elements = ir->lhs->type->without_array()->vector_elements;
+
+         if (num_elements) {
             l.writemask = u_bit_consecutive(0, num_elements);
          } else {
+            /* The type is a struct or an array of (array of) structs. */
             l.writemask = WRITEMASK_XYZW;
          }
       } else {
