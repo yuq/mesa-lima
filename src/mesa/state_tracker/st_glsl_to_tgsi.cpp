@@ -291,7 +291,6 @@ public:
    unsigned dead_mask:4; /**< Used in dead code elimination */
    unsigned buffer_access:3; /**< buffer access type */
 
-   class function_entry *function; /* Set on TGSI_OPCODE_CAL or TGSI_OPCODE_BGNSUB */
    const struct tgsi_opcode_info *info;
 };
 
@@ -329,38 +328,6 @@ public:
    gl_constant_value values[4];
    int size32; /**< Number of 32-bit components (1-4) */
    int type; /**< GL_DOUBLE, GL_FLOAT, GL_INT, GL_BOOL, or GL_UNSIGNED_INT */
-};
-
-class function_entry : public exec_node {
-public:
-   ir_function_signature *sig;
-
-   /**
-    * identifier of this function signature used by the program.
-    *
-    * At the point that TGSI instructions for function calls are
-    * generated, we don't know the address of the first instruction of
-    * the function body.  So we make the BranchTarget that is called a
-    * small integer and rewrite them during set_branchtargets().
-    */
-   int sig_id;
-
-   /**
-    * Pointer to first instruction of the function body.
-    *
-    * Set during function body emits after main() is processed.
-    */
-   glsl_to_tgsi_instruction *bgn_inst;
-
-   /**
-    * Index of the first instruction of the function body in actual TGSI.
-    *
-    * Set after conversion from glsl_to_tgsi_instruction to TGSI.
-    */
-   int inst;
-
-   /** Storage for the return value. */
-   st_src_reg return_reg;
 };
 
 static st_src_reg undef_src = st_src_reg(PROGRAM_UNDEFINED, 0, GLSL_TYPE_ERROR);
@@ -411,8 +378,6 @@ public:
    glsl_to_tgsi_visitor();
    ~glsl_to_tgsi_visitor();
 
-   function_entry *current_function;
-
    struct gl_context *ctx;
    struct gl_program *prog;
    struct gl_shader_program *shader_program;
@@ -453,8 +418,6 @@ public:
 
    int add_constant(gl_register_file file, gl_constant_value values[8],
                     int size, int datatype, uint16_t *swizzle_out);
-
-   function_entry *get_function_signature(ir_function_signature *sig);
 
    st_src_reg get_temp(const glsl_type *type);
    void reladdr_to_temp(ir_instruction *ir, st_src_reg *reg, int *num_reladdr);
@@ -510,10 +473,6 @@ public:
    /** List of immediate_storage */
    exec_list immediates;
    unsigned num_immediates;
-
-   /** List of function_entry */
-   exec_list function_signatures;
-   int next_signature_id;
 
    /** List of glsl_to_tgsi_instruction */
    exec_list instructions;
@@ -722,8 +681,6 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
     * (since 0==UINT which is likely wrong):
     */
    inst->tex_type = GLSL_TYPE_FLOAT;
-
-   inst->function = NULL;
 
    /* Update indirect addressing status used by TGSI */
    if (dst.reladdr || dst.reladdr2) {
@@ -3219,42 +3176,6 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
                                      &this->result.swizzle);
 }
 
-function_entry *
-glsl_to_tgsi_visitor::get_function_signature(ir_function_signature *sig)
-{
-   foreach_in_list_use_after(function_entry, entry, &this->function_signatures) {
-      if (entry->sig == sig)
-         return entry;
-   }
-
-   entry = ralloc(mem_ctx, function_entry);
-   entry->sig = sig;
-   entry->sig_id = this->next_signature_id++;
-   entry->bgn_inst = NULL;
-
-   /* Allocate storage for all the parameters. */
-   foreach_in_list(ir_variable, param, &sig->parameters) {
-      variable_storage *storage;
-
-      storage = find_variable_storage(param);
-      assert(!storage);
-
-      st_src_reg src = get_temp(param->type);
-
-      storage = new(mem_ctx) variable_storage(param, src.file, src.index);
-      this->variables.push_tail(storage);
-   }
-
-   if (!sig->return_type->is_void()) {
-      entry->return_reg = get_temp(sig->return_type);
-   } else {
-      entry->return_reg = undef_src;
-   }
-
-   this->function_signatures.push_tail(entry);
-   return entry;
-}
-
 void
 glsl_to_tgsi_visitor::visit_atomic_counter_intrinsic(ir_call *ir)
 {
@@ -3765,16 +3686,10 @@ glsl_to_tgsi_visitor::visit_image_intrinsic(ir_call *ir)
 void
 glsl_to_tgsi_visitor::visit(ir_call *ir)
 {
-   glsl_to_tgsi_instruction *call_inst;
    ir_function_signature *sig = ir->callee;
-   function_entry *entry;
-   int i;
 
    /* Filter out intrinsics */
    switch (sig->intrinsic_id) {
-   case ir_intrinsic_invalid:
-      break;
-
    case ir_intrinsic_atomic_counter_read:
    case ir_intrinsic_atomic_counter_increment:
    case ir_intrinsic_atomic_counter_predecrement:
@@ -3839,6 +3754,7 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
       visit_image_intrinsic(ir);
       return;
 
+   case ir_intrinsic_invalid:
    case ir_intrinsic_generic_load:
    case ir_intrinsic_generic_store:
    case ir_intrinsic_generic_atomic_add:
@@ -3852,71 +3768,6 @@ glsl_to_tgsi_visitor::visit(ir_call *ir)
    case ir_intrinsic_shader_clock:
       unreachable("Invalid intrinsic");
    }
-
-   entry = get_function_signature(sig);
-   /* Process in parameters. */
-   foreach_two_lists(formal_node, &sig->parameters,
-                     actual_node, &ir->actual_parameters) {
-      ir_rvalue *param_rval = (ir_rvalue *) actual_node;
-      ir_variable *param = (ir_variable *) formal_node;
-
-      if (param->data.mode == ir_var_function_in ||
-          param->data.mode == ir_var_function_inout) {
-         variable_storage *storage = find_variable_storage(param);
-         assert(storage);
-
-         param_rval->accept(this);
-         st_src_reg r = this->result;
-
-         st_dst_reg l;
-         l.file = storage->file;
-         l.index = storage->index;
-         l.reladdr = NULL;
-         l.writemask = WRITEMASK_XYZW;
-
-         for (i = 0; i < type_size(param->type); i++) {
-            emit_asm(ir, TGSI_OPCODE_MOV, l, r);
-            l.index++;
-            r.index++;
-         }
-      }
-   }
-
-   /* Emit call instruction */
-   call_inst = emit_asm(ir, TGSI_OPCODE_CAL);
-   call_inst->function = entry;
-
-   /* Process out parameters. */
-   foreach_two_lists(formal_node, &sig->parameters,
-                     actual_node, &ir->actual_parameters) {
-      ir_rvalue *param_rval = (ir_rvalue *) actual_node;
-      ir_variable *param = (ir_variable *) formal_node;
-
-      if (param->data.mode == ir_var_function_out ||
-          param->data.mode == ir_var_function_inout) {
-         variable_storage *storage = find_variable_storage(param);
-         assert(storage);
-
-         st_src_reg r;
-         r.file = storage->file;
-         r.index = storage->index;
-         r.reladdr = NULL;
-         r.swizzle = SWIZZLE_NOOP;
-         r.negate = 0;
-
-         param_rval->accept(this);
-         st_dst_reg l = st_dst_reg(this->result);
-
-         for (i = 0; i < type_size(param->type); i++) {
-            emit_asm(ir, TGSI_OPCODE_MOV, l, r);
-            l.index++;
-            r.index++;
-         }
-      }
-   }
-
-   /* Process return value. */
-   this->result = entry->return_reg;
 }
 
 void
@@ -4358,23 +4209,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
 void
 glsl_to_tgsi_visitor::visit(ir_return *ir)
 {
-   if (ir->get_value()) {
-      st_dst_reg l;
-      int i;
-
-      assert(current_function);
-
-      ir->get_value()->accept(this);
-      st_src_reg r = this->result;
-
-      l = st_dst_reg(current_function->return_reg);
-
-      for (i = 0; i < type_size(current_function->sig->return_type); i++) {
-         emit_asm(ir, TGSI_OPCODE_MOV, l, r);
-         l.index++;
-         r.index++;
-      }
-   }
+   assert(!ir->get_value());
 
    emit_asm(ir, TGSI_OPCODE_RET);
 }
@@ -4468,9 +4303,7 @@ glsl_to_tgsi_visitor::glsl_to_tgsi_visitor()
    num_outputs = 0;
    num_input_arrays = 0;
    num_output_arrays = 0;
-   next_signature_id = 1;
    num_immediates = 0;
-   current_function = NULL;
    num_address_regs = 0;
    samplers_used = 0;
    buffers_used = 0;
@@ -4617,10 +4450,8 @@ glsl_to_tgsi_visitor::simplify_cmp(void)
       if (inst->dst[0].reladdr || inst->dst[0].reladdr2 ||
           inst->dst[1].reladdr || inst->dst[1].reladdr2 ||
           tgsi_get_opcode_info(inst->op)->is_branch ||
-          inst->op == TGSI_OPCODE_BGNSUB ||
           inst->op == TGSI_OPCODE_CONT ||
           inst->op == TGSI_OPCODE_END ||
-          inst->op == TGSI_OPCODE_ENDSUB ||
           inst->op == TGSI_OPCODE_RET) {
          break;
       }
@@ -5345,7 +5176,7 @@ struct st_translate {
    const GLuint *inputMapping;
    const GLuint *outputMapping;
 
-   /* For every instruction that contains a label (eg CALL), keep
+   /* For every instruction that contains a label, keep
     * details so that we can go back afterwards and emit the correct
     * tgsi instruction number for each label.
     */
@@ -5777,7 +5608,6 @@ compile_tgsi_instruction(struct st_translate *t,
 
    switch(inst->op) {
    case TGSI_OPCODE_BGNLOOP:
-   case TGSI_OPCODE_CAL:
    case TGSI_OPCODE_ELSE:
    case TGSI_OPCODE_ENDLOOP:
    case TGSI_OPCODE_IF:
@@ -5786,8 +5616,7 @@ compile_tgsi_instruction(struct st_translate *t,
       ureg_label_insn(ureg,
                       inst->op,
                       src, num_src,
-                      get_label(t,
-                                inst->op == TGSI_OPCODE_CAL ? inst->function->sig_id : 0));
+                      get_label(t, 0));
       return;
 
    case TGSI_OPCODE_TEX:
@@ -6597,7 +6426,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    glsl_to_tgsi_visitor* v;
    struct gl_program *prog;
    GLenum target = _mesa_shader_stage_to_program(shader->Stage);
-   bool progress;
    struct gl_shader_compiler_options *options =
          &ctx->Const.ShaderCompilerOptions[shader->Stage];
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
@@ -6632,33 +6460,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    /* Emit intermediate IR for main(). */
    visit_exec_list(shader->ir, v);
-
-   /* Now emit bodies for any functions that were used. */
-   do {
-      progress = GL_FALSE;
-
-      foreach_in_list(function_entry, entry, &v->function_signatures) {
-         if (!entry->bgn_inst) {
-            v->current_function = entry;
-
-            entry->bgn_inst = v->emit_asm(NULL, TGSI_OPCODE_BGNSUB);
-            entry->bgn_inst->function = entry;
-
-            visit_exec_list(&entry->sig->body, v);
-
-            glsl_to_tgsi_instruction *last;
-            last = (glsl_to_tgsi_instruction *)v->instructions.get_tail();
-            if (last->op != TGSI_OPCODE_RET)
-               v->emit_asm(NULL, TGSI_OPCODE_RET);
-
-            glsl_to_tgsi_instruction *end;
-            end = v->emit_asm(NULL, TGSI_OPCODE_ENDSUB);
-            end->function = entry;
-
-            progress = GL_TRUE;
-         }
-      }
-   } while (progress);
 
 #if 0
    /* Print out some information (for debugging purposes) used by the
