@@ -505,26 +505,10 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_ABS;
    case OPCODE_ADD:
       return TGSI_OPCODE_ADD;
-   case OPCODE_BGNLOOP:
-      return TGSI_OPCODE_BGNLOOP;
-   case OPCODE_BGNSUB:
-      return TGSI_OPCODE_BGNSUB;
-   case OPCODE_BRK:
-      return TGSI_OPCODE_BRK;
-   case OPCODE_CAL:
-      return TGSI_OPCODE_CAL;
    case OPCODE_CMP:
       return TGSI_OPCODE_CMP;
-   case OPCODE_CONT:
-      return TGSI_OPCODE_CONT;
    case OPCODE_COS:
       return TGSI_OPCODE_COS;
-   case OPCODE_DDX:
-      return TGSI_OPCODE_DDX;
-   case OPCODE_DDY:
-      return TGSI_OPCODE_DDY;
-   case OPCODE_DP2:
-      return TGSI_OPCODE_DP2;
    case OPCODE_DP3:
       return TGSI_OPCODE_DP3;
    case OPCODE_DP4:
@@ -533,14 +517,6 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_DPH;
    case OPCODE_DST:
       return TGSI_OPCODE_DST;
-   case OPCODE_ELSE:
-      return TGSI_OPCODE_ELSE;
-   case OPCODE_ENDIF:
-      return TGSI_OPCODE_ENDIF;
-   case OPCODE_ENDLOOP:
-      return TGSI_OPCODE_ENDLOOP;
-   case OPCODE_ENDSUB:
-      return TGSI_OPCODE_ENDSUB;
    case OPCODE_EX2:
       return TGSI_OPCODE_EX2;
    case OPCODE_EXP:
@@ -549,10 +525,6 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_FLR;
    case OPCODE_FRC:
       return TGSI_OPCODE_FRC;
-   case OPCODE_IF:
-      return TGSI_OPCODE_IF;
-   case OPCODE_TRUNC:
-      return TGSI_OPCODE_TRUNC;
    case OPCODE_KIL:
       return TGSI_OPCODE_KILL_IF;
    case OPCODE_LG2:
@@ -573,14 +545,10 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_MOV;
    case OPCODE_MUL:
       return TGSI_OPCODE_MUL;
-   case OPCODE_NOP:
-      return TGSI_OPCODE_NOP;
    case OPCODE_POW:
       return TGSI_OPCODE_POW;
    case OPCODE_RCP:
       return TGSI_OPCODE_RCP;
-   case OPCODE_RET:
-      return TGSI_OPCODE_RET;
    case OPCODE_SCS:
       return TGSI_OPCODE_SCS;
    case OPCODE_SGE:
@@ -589,18 +557,12 @@ translate_opcode( unsigned op )
       return TGSI_OPCODE_SIN;
    case OPCODE_SLT:
       return TGSI_OPCODE_SLT;
-   case OPCODE_SSG:
-      return TGSI_OPCODE_SSG;
    case OPCODE_SUB:
       return TGSI_OPCODE_SUB;
    case OPCODE_TEX:
       return TGSI_OPCODE_TEX;
    case OPCODE_TXB:
       return TGSI_OPCODE_TXB;
-   case OPCODE_TXD:
-      return TGSI_OPCODE_TXD;
-   case OPCODE_TXL:
-      return TGSI_OPCODE_TXL;
    case OPCODE_TXP:
       return TGSI_OPCODE_TXP;
    case OPCODE_XPD:
@@ -643,29 +605,8 @@ compile_instruction(
       emit_swz( t, dst[0], &inst->SrcReg[0] );
       return;
 
-   case OPCODE_BGNLOOP:
-   case OPCODE_CAL:
-   case OPCODE_ELSE:
-   case OPCODE_ENDLOOP:
-      debug_assert(num_dst == 0);
-      ureg_label_insn( ureg,
-                       translate_opcode( inst->Opcode ),
-                       src, num_src,
-                       get_label( t, inst->BranchTarget ));
-      return;
-
-   case OPCODE_IF:
-      debug_assert(num_dst == 0);
-      ureg_label_insn( ureg,
-                       ctx->Const.NativeIntegers ? TGSI_OPCODE_UIF : TGSI_OPCODE_IF,
-                       src, num_src,
-                       get_label( t, inst->BranchTarget ));
-      return;
-
    case OPCODE_TEX:
    case OPCODE_TXB:
-   case OPCODE_TXD:
-   case OPCODE_TXL:
    case OPCODE_TXP:
       src[num_src++] = t->samplers[inst->TexSrcUnit];
       ureg_tex_insn( ureg,
@@ -691,19 +632,6 @@ compile_instruction(
                  translate_opcode( inst->Opcode ), 
                  dst, num_dst, 
                  src, num_src );
-      break;
-
-   case OPCODE_NOISE1:
-   case OPCODE_NOISE2:
-   case OPCODE_NOISE3:
-   case OPCODE_NOISE4:
-      /* At some point, a motivated person could add a better
-       * implementation of noise.  Currently not even the nvidia
-       * binary drivers do anything more than this.  In any case, the
-       * place to do this is in the GL state tracker, not the poor
-       * driver.
-       */
-      ureg_MOV( ureg, dst[0], ureg_imm1f(ureg, 0.5) );
       break;
 
    case OPCODE_RSQ:
