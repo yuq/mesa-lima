@@ -270,28 +270,27 @@ class glsl_to_tgsi_instruction : public exec_node {
 public:
    DECLARE_RALLOC_CXX_OPERATORS(glsl_to_tgsi_instruction)
 
-   unsigned op;
    st_dst_reg dst[2];
    st_src_reg src[4];
+   st_src_reg sampler; /**< sampler register */
+   st_src_reg tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
+   st_src_reg buffer; /**< buffer register */
+
    /** Pointer to the ir source this tree came from for debugging */
    ir_instruction *ir;
-   GLboolean cond_update;
-   bool saturate;
-   bool is_64bit_expanded;
-   st_src_reg sampler; /**< sampler register */
-   int sampler_base;
-   int sampler_array_size; /**< 1-based size of sampler array, 1 if not array */
-   int tex_target; /**< One of TEXTURE_*_INDEX */
-   glsl_base_type tex_type;
-   GLboolean tex_shadow;
-   unsigned image_format;
 
-   st_src_reg tex_offsets[MAX_GLSL_TEXTURE_OFFSET];
-   unsigned tex_offset_num_offset;
-   int dead_mask; /**< Used in dead code elimination */
-
-   st_src_reg buffer; /**< buffer register */
-   unsigned buffer_access; /**< buffer access type */
+   unsigned op:8; /**< TGSI opcode */
+   unsigned saturate:1;
+   unsigned is_64bit_expanded:1;
+   unsigned sampler_base:5;
+   unsigned sampler_array_size:6; /**< 1-based size of sampler array, 1 if not array */
+   unsigned tex_target:4; /**< One of TEXTURE_*_INDEX */
+   glsl_base_type tex_type:4;
+   unsigned tex_shadow:1;
+   unsigned image_format:9;
+   unsigned tex_offset_num_offset:3;
+   unsigned dead_mask:4; /**< Used in dead code elimination */
+   unsigned buffer_access:3; /**< buffer access type */
 
    class function_entry *function; /* Set on TGSI_OPCODE_CAL or TGSI_OPCODE_BGNSUB */
    const struct tgsi_opcode_info *info;
@@ -705,6 +704,9 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
       num_reladdr--;
    }
    assert(num_reladdr == 0);
+
+   /* inst->op has only 8 bits. */
+   STATIC_ASSERT(TGSI_OPCODE_LAST <= 255);
 
    inst->op = op;
    inst->info = tgsi_get_opcode_info(op);
