@@ -2006,12 +2006,6 @@ struct gl_fragment_program
 
    /**
     * Bitfield indicating, for each fragment shader input, 1 if that input
-    * uses centroid interpolation, 0 otherwise.  Unused inputs are 0.
-    */
-   GLbitfield64 IsCentroid;
-
-   /**
-    * Bitfield indicating, for each fragment shader input, 1 if that input
     * uses sample interpolation, 0 otherwise.  Unused inputs are 0.
     */
    GLbitfield64 IsSample;
