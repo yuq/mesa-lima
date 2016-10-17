@@ -1294,12 +1294,6 @@ anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
       (offsetof(struct anv_push_constants, field) + \
        sizeof(cmd_buffer->state.push_constants[0]->field)))
 
-VkResult anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
-                                           unsigned stage, struct anv_state *bt_state);
-VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,
-                                      unsigned stage, struct anv_state *state);
-uint32_t anv_cmd_buffer_flush_descriptor_sets(struct anv_cmd_buffer *cmd_buffer);
-
 struct anv_state anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
                                              const void *data, uint32_t size, uint32_t alignment);
 struct anv_state anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
