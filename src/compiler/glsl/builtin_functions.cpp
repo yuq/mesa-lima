@@ -3099,6 +3099,10 @@ builtin_builder::create_builtins()
    add_function("allInvocationsARB", _vote(ir_unop_vote_all), NULL);
    add_function("allInvocationsEqualARB", _vote(ir_unop_vote_eq), NULL);
 
+   add_function("__builtin_sign64",
+                generate_ir::sign64(mem_ctx, integer_functions_supported),
+                NULL);
+
    add_function("__builtin_umul64",
                 generate_ir::umul64(mem_ctx, integer_functions_supported),
                 NULL);

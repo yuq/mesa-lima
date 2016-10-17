@@ -17,3 +17,14 @@ umul64(uvec2 a, uvec2 b)
 
    return result;
 }
+
+ivec2
+sign64(ivec2 a)
+{
+   ivec2 result;
+
+   result.y = a.y >> 31;
+   result.x = result.y | int((a.x | a.y) != 0);
+
+   return result;
+}

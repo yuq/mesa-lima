@@ -28,3 +28,29 @@ umul64(void *mem_ctx, builtin_available_predicate avail)
    sig->replace_parameters(&sig_parameters);
    return sig;
 }
+ir_function_signature *
+sign64(void *mem_ctx, builtin_available_predicate avail)
+{
+   ir_function_signature *const sig =
+      new(mem_ctx) ir_function_signature(glsl_type::ivec2_type, avail);
+   ir_factory body(&sig->body, mem_ctx);
+   sig->is_defined = true;
+
+   exec_list sig_parameters;
+
+   ir_variable *const r0007 = new(mem_ctx) ir_variable(glsl_type::ivec2_type, "a", ir_var_function_in);
+   sig_parameters.push_tail(r0007);
+   ir_variable *const r0008 = new(mem_ctx) ir_variable(glsl_type::ivec2_type, "result", ir_var_auto);
+   body.emit(r0008);
+   body.emit(assign(r0008, rshift(swizzle_y(r0007), body.constant(int(31))), 0x02));
+
+   ir_expression *const r0009 = bit_or(swizzle_x(r0007), swizzle_y(r0007));
+   ir_expression *const r000A = nequal(r0009, body.constant(int(0)));
+   ir_expression *const r000B = expr(ir_unop_b2i, r000A);
+   body.emit(assign(r0008, bit_or(swizzle_y(r0008), r000B), 0x01));
+
+   body.emit(ret(r0008));
+
+   sig->replace_parameters(&sig_parameters);
+   return sig;
+}
