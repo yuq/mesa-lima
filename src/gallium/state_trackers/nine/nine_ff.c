@@ -1578,11 +1578,11 @@ nine_ff_get_vs(struct NineDevice9 *device)
     bld.key = &key;
 
     /* FIXME: this shouldn't be NULL, but it is on init */
-    if (state->vdecl) {
+    if (context->vdecl) {
         key.color0in_one = 1;
         key.color1in_zero = 1;
-        for (i = 0; i < state->vdecl->nelems; i++) {
-            uint16_t usage = state->vdecl->usage_map[i];
+        for (i = 0; i < context->vdecl->nelems; i++) {
+            uint16_t usage = context->vdecl->usage_map[i];
             if (usage == NINE_DECLUSAGE_POSITIONT)
                 key.position_t = 1;
             else if (usage == NINE_DECLUSAGE_i(COLOR, 0))
@@ -1603,7 +1603,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
             else if (usage % NINE_DECLUSAGE_COUNT == NINE_DECLUSAGE_TEXCOORD) {
                 s = usage / NINE_DECLUSAGE_COUNT;
                 if (s < 8)
-                    input_texture_coord[s] = nine_decltype_get_dim(state->vdecl->decls[i].Type);
+                    input_texture_coord[s] = nine_decltype_get_dim(context->vdecl->decls[i].Type);
                 else
                     DBG("FF given texture coordinate >= 8. Ignoring\n");
             } else if (usage < NINE_DECLUSAGE_NONE)
@@ -1818,7 +1818,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
     if (s >= 1)
         key.ts[s-1].resultarg = 0;
 
-    key.projected = nine_ff_get_projected_key(state);
+    key.projected = nine_ff_get_projected_key(state, context);
     key.specular = !!context->rs[D3DRS_SPECULARENABLE];
 
     for (; s < 8; ++s)

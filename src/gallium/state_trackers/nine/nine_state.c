@@ -597,7 +597,7 @@ update_vertex_elements(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
-    const struct NineVertexDeclaration9 *vdecl = device->state.vdecl;
+    const struct NineVertexDeclaration9 *vdecl = device->context.vdecl;
     const struct NineVertexShader9 *vs;
     unsigned n, b, i;
     int index;
@@ -1277,6 +1277,25 @@ nine_context_set_stream_source_freq(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_vertex_declaration(struct NineDevice9 *device,
+                                    struct NineVertexDeclaration9 *vdecl)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    BOOL was_programmable_vs = device->state.programmable_vs;
+
+    nine_bind(&context->vdecl, vdecl);
+
+    device->state.programmable_vs = device->state.vs && !(device->context.vdecl && device->context.vdecl->position_t);
+    if (was_programmable_vs != device->state.programmable_vs) {
+        context->commit |= NINE_STATE_COMMIT_CONST_VS;
+        state->changed.group |= NINE_STATE_VS;
+    }
+
+    state->changed.group |= NINE_STATE_VDECL;
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1331,6 +1350,12 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         }
         context->changed.vtxbuf |= src->changed.vtxbuf;
     }
+
+    /* Vertex declaration */
+    if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
+        nine_context_set_vertex_declaration(device, src->vdecl);
+
+    device->state.programmable_vs = device->state.vs && !(context->vdecl && context->vdecl->position_t);
 }
 
 static void
@@ -1857,6 +1882,7 @@ nine_context_clear(struct nine_context *context)
 {
     unsigned i;
 
+    nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
         pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
 

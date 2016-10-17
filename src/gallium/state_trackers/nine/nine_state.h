@@ -227,6 +227,8 @@ struct nine_context {
 
     uint8_t rt_mask;
 
+    struct NineVertexDeclaration9 *vdecl;
+
     struct pipe_vertex_buffer vtxbuf[PIPE_MAX_ATTRIBS];
     UINT stream_freq[PIPE_MAX_ATTRIBS];
     uint32_t stream_instancedata_mask; /* derived from stream_freq */
@@ -297,6 +299,10 @@ void
 nine_context_set_stream_source_freq(struct NineDevice9 *device,
                                     UINT StreamNumber,
                                     UINT Setting);
+
+void
+nine_context_set_vertex_declaration(struct NineDevice9 *device,
+                                    struct NineVertexDeclaration9 *vdecl);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,

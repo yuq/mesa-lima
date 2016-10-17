@@ -62,20 +62,20 @@ nine_decltype_get_dim(BYTE type)
 }
 
 static inline uint16_t
-nine_ff_get_projected_key(struct nine_state *state)
+nine_ff_get_projected_key(struct nine_state *state, struct nine_context *context)
 {
     unsigned s, i;
     uint16_t projected = 0;
     char input_texture_coord[8];
     memset(&input_texture_coord, 0, sizeof(input_texture_coord));
 
-    if (state->vdecl) {
-        for (i = 0; i < state->vdecl->nelems; i++) {
-            uint16_t usage = state->vdecl->usage_map[i];
+    if (context->vdecl) {
+        for (i = 0; i < context->vdecl->nelems; i++) {
+            uint16_t usage = context->vdecl->usage_map[i];
             if (usage % NINE_DECLUSAGE_COUNT == NINE_DECLUSAGE_TEXCOORD) {
                 s = usage / NINE_DECLUSAGE_COUNT;
                 if (s < 8)
-                    input_texture_coord[s] = nine_decltype_get_dim(state->vdecl->decls[i].Type);
+                    input_texture_coord[s] = nine_decltype_get_dim(context->vdecl->decls[i].Type);
             }
         }
     }

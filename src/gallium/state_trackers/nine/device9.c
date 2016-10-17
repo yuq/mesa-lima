@@ -3068,23 +3068,22 @@ NineDevice9_SetVertexDeclaration( struct NineDevice9 *This,
                                   IDirect3DVertexDeclaration9 *pDecl )
 {
     struct nine_state *state = This->update;
-    struct nine_context *context = &This->context;
-    BOOL was_programmable_vs = This->state.programmable_vs;
+    struct NineVertexDeclaration9 *vdecl = NineVertexDeclaration9(pDecl);
 
     DBG("This=%p pDecl=%p\n", This, pDecl);
 
-    if (likely(!This->is_recording) && state->vdecl == NineVertexDeclaration9(pDecl))
+    if (unlikely(This->is_recording)) {
+        nine_bind(&state->vdecl, vdecl);
+        state->changed.group |= NINE_STATE_VDECL;
         return D3D_OK;
-
-    nine_bind(&state->vdecl, pDecl);
-
-    This->state.programmable_vs = This->state.vs && !(This->state.vdecl && This->state.vdecl->position_t);
-    if (likely(!This->is_recording) && was_programmable_vs != This->state.programmable_vs) {
-        context->commit |= NINE_STATE_COMMIT_CONST_VS;
-        state->changed.group |= NINE_STATE_VS;
     }
 
-    state->changed.group |= NINE_STATE_VDECL;
+    if (state->vdecl == vdecl)
+        return D3D_OK;
+
+    nine_bind(&state->vdecl, vdecl);
+
+    nine_context_set_vertex_declaration(This, vdecl);
 
     return D3D_OK;
 }
@@ -3165,7 +3164,7 @@ NineDevice9_SetVertexShader( struct NineDevice9 *This,
 
     nine_bind(&state->vs, pShader);
 
-    This->state.programmable_vs = This->state.vs && !(This->state.vdecl && This->state.vdecl->position_t);
+    This->state.programmable_vs = This->state.vs && !(This->context.vdecl && This->context.vdecl->position_t);
 
     /* ff -> non-ff: commit back non-ff constants */
     if (!was_programmable_vs && This->state.programmable_vs)

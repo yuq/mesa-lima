@@ -99,7 +99,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
         key |= ((uint64_t)1) << 34;
 
     if (unlikely(ps->byte_code.version < 0x14)) {
-        projected = nine_ff_get_projected_key(state);
+        projected = nine_ff_get_projected_key(state, context);
         key |= ((uint64_t) projected) << 48;
     }
 

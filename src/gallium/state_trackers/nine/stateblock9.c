@@ -567,10 +567,7 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
     nine_context_apply_stateblock(device, src);
 
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
-        NineDevice9_SetVertexDeclaration(This->base.device, (IDirect3DVertexDeclaration9 *)src->vdecl);
-
-    /* Recomputing it is needed if we changed vs but not vdecl */
-    dst->programmable_vs = dst->vs && !(dst->vdecl && dst->vdecl->position_t);
+        nine_bind(&dst->vdecl, src->vdecl);
 
     /* Textures */
     if (src->changed.texture) {
