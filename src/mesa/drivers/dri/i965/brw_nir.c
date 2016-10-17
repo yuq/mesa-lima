@@ -485,6 +485,8 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    /* Get rid of split copies */
    nir = nir_optimize(nir, is_scalar);
 
+   OPT_V(nir_lower_clip_cull_distance_arrays);
+
    OPT(nir_remove_dead_variables, nir_var_local);
 
    return nir;
