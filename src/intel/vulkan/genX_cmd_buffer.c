@@ -150,6 +150,101 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+VkResult
+genX(BeginCommandBuffer)(
+    VkCommandBuffer                             commandBuffer,
+    const VkCommandBufferBeginInfo*             pBeginInfo)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+
+   /* If this is the first vkBeginCommandBuffer, we must *initialize* the
+    * command buffer's state. Otherwise, we must *reset* its state. In both
+    * cases we reset it.
+    *
+    * From the Vulkan 1.0 spec:
+    *
+    *    If a command buffer is in the executable state and the command buffer
+    *    was allocated from a command pool with the
+    *    VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT flag set, then
+    *    vkBeginCommandBuffer implicitly resets the command buffer, behaving
+    *    as if vkResetCommandBuffer had been called with
+    *    VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT not set. It then puts
+    *    the command buffer in the recording state.
+    */
+   anv_cmd_buffer_reset(cmd_buffer);
+
+   cmd_buffer->usage_flags = pBeginInfo->flags;
+
+   assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY ||
+          !(cmd_buffer->usage_flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT));
+
+   genX(cmd_buffer_emit_state_base_address)(cmd_buffer);
+
+   if (cmd_buffer->usage_flags &
+       VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
+      cmd_buffer->state.framebuffer =
+         anv_framebuffer_from_handle(pBeginInfo->pInheritanceInfo->framebuffer);
+      cmd_buffer->state.pass =
+         anv_render_pass_from_handle(pBeginInfo->pInheritanceInfo->renderPass);
+      cmd_buffer->state.subpass =
+         &cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
+
+      cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
+   }
+
+   return VK_SUCCESS;
+}
+
+VkResult
+genX(EndCommandBuffer)(
+    VkCommandBuffer                             commandBuffer)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   struct anv_device *device = cmd_buffer->device;
+
+   anv_cmd_buffer_end_batch_buffer(cmd_buffer);
+
+   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
+      /* The algorithm used to compute the validate list is not threadsafe as
+       * it uses the bo->index field.  We have to lock the device around it.
+       * Fortunately, the chances for contention here are probably very low.
+       */
+      pthread_mutex_lock(&device->mutex);
+      anv_cmd_buffer_prepare_execbuf(cmd_buffer);
+      pthread_mutex_unlock(&device->mutex);
+   }
+
+   return VK_SUCCESS;
+}
+
+void
+genX(CmdExecuteCommands)(
+    VkCommandBuffer                             commandBuffer,
+    uint32_t                                    commandBufferCount,
+    const VkCommandBuffer*                      pCmdBuffers)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, primary, commandBuffer);
+
+   assert(primary->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+   for (uint32_t i = 0; i < commandBufferCount; i++) {
+      ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
+
+      assert(secondary->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+      anv_cmd_buffer_add_secondary(primary, secondary);
+   }
+
+   /* Each of the secondary command buffers will use its own state base
+    * address.  We need to re-emit state base address for the primary after
+    * all of the secondaries are done.
+    *
+    * TODO: Maybe we want to make this a dirty bit to avoid extra state base
+    * address calls?
+    */
+   genX(cmd_buffer_emit_state_base_address)(primary);
+}
+
 #define IVB_L3SQCREG1_SQGHPCI_DEFAULT     0x00730000
 #define VLV_L3SQCREG1_SQGHPCI_DEFAULT     0x00d30000
 #define HSW_L3SQCREG1_SQGHPCI_DEFAULT     0x00610000

@@ -251,6 +251,13 @@ anv_dump_image_to_ppm(struct anv_device *device,
    VkDevice vk_device = anv_device_to_handle(device);
    MAYBE_UNUSED VkResult result;
 
+   PFN_vkBeginCommandBuffer BeginCommandBuffer =
+      (void *)anv_GetDeviceProcAddr(anv_device_to_handle(device),
+                                    "vkBeginCommandBuffer");
+   PFN_vkEndCommandBuffer EndCommandBuffer =
+      (void *)anv_GetDeviceProcAddr(anv_device_to_handle(device),
+                                    "vkEndCommandBuffer");
+
    const uint32_t width = anv_minify(image->extent.width, miplevel);
    const uint32_t height = anv_minify(image->extent.height, miplevel);
 
@@ -276,7 +283,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
       }, &cmd);
    assert(result == VK_SUCCESS);
 
-   result = anv_BeginCommandBuffer(cmd,
+   result = BeginCommandBuffer(cmd,
       &(VkCommandBufferBeginInfo) {
          .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
          .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
@@ -286,7 +293,7 @@ anv_dump_image_to_ppm(struct anv_device *device,
    dump_image_do_blit(device, &dump, anv_cmd_buffer_from_handle(cmd), image,
                       aspect, miplevel, array_layer);
 
-   result = anv_EndCommandBuffer(cmd);
+   result = EndCommandBuffer(cmd);
    assert(result == VK_SUCCESS);
 
    VkFence fence;
