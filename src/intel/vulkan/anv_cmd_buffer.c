@@ -1180,6 +1180,15 @@ void anv_CmdExecuteCommands(
 
       anv_cmd_buffer_add_secondary(primary, secondary);
    }
+
+   /* Each of the secondary command buffers will use its own state base
+    * address.  We need to re-emit state base address for the primary after
+    * all of the secondaries are done.
+    *
+    * TODO: Maybe we want to make this a dirty bit to avoid extra state base
+    * address calls?
+    */
+   anv_cmd_buffer_emit_state_base_address(primary);
 }
 
 VkResult anv_CreateCommandPool(

@@ -777,7 +777,6 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
    switch (secondary->exec_mode) {
    case ANV_CMD_BUFFER_EXEC_MODE_EMIT:
       anv_batch_emit_batch(&primary->batch, &secondary->batch);
-      anv_cmd_buffer_emit_state_base_address(primary);
       break;
    case ANV_CMD_BUFFER_EXEC_MODE_GROW_AND_EMIT: {
       struct anv_batch_bo *bbo = anv_cmd_buffer_current_batch_bo(primary);
@@ -785,7 +784,6 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
       anv_batch_bo_grow(primary, bbo, &primary->batch, length,
                         GEN8_MI_BATCH_BUFFER_START_length * 4);
       anv_batch_emit_batch(&primary->batch, &secondary->batch);
-      anv_cmd_buffer_emit_state_base_address(primary);
       break;
    }
    case ANV_CMD_BUFFER_EXEC_MODE_CHAIN: {
@@ -826,8 +824,6 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
             p += CACHELINE_SIZE;
          }
       }
-
-      anv_cmd_buffer_emit_state_base_address(primary);
       break;
    }
    case ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN: {
@@ -851,8 +847,6 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
 
       anv_batch_bo_continue(last_bbo, &primary->batch,
                             GEN8_MI_BATCH_BUFFER_START_length * 4);
-
-      anv_cmd_buffer_emit_state_base_address(primary);
       break;
    }
    default:
