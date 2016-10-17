@@ -787,8 +787,6 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
          continue;
 
       for (j = 0; j < ARRAY_SIZE(visuals); j++) {
-         int format_count = 0;
-
          config_attrs[1] = visuals[j].format;
          config_attrs[3] = visuals[j].format;
 
