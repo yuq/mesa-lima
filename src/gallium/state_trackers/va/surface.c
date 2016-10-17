@@ -419,7 +419,7 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config_id,
    /* vlVaCreateConfig returns PIPE_VIDEO_PROFILE_UNKNOWN
     * only for VAEntrypointVideoProc. */
    if (config->profile == PIPE_VIDEO_PROFILE_UNKNOWN) {
-      if (config->rt_format == VA_RT_FORMAT_RGB32) {
+      if (config->rt_format & VA_RT_FORMAT_RGB32) {
          for (j = 0; j < ARRAY_SIZE(vpp_surface_formats); ++j) {
             attribs[i].type = VASurfaceAttribPixelFormat;
             attribs[i].value.type = VAGenericValueTypeInteger;
@@ -427,7 +427,8 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config_id,
             attribs[i].value.value.i = PipeFormatToVaFourcc(vpp_surface_formats[j]);
             i++;
          }
-      } else if (config->rt_format == VA_RT_FORMAT_YUV420) {
+      }
+      if (config->rt_format & VA_RT_FORMAT_YUV420) {
          attribs[i].type = VASurfaceAttribPixelFormat;
          attribs[i].value.type = VAGenericValueTypeInteger;
          attribs[i].flags = VA_SURFACE_ATTRIB_GETTABLE | VA_SURFACE_ATTRIB_SETTABLE;

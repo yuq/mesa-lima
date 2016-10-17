@@ -195,6 +195,11 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
             }
          }
       }
+
+      /* Default value if not specified in the input attributes. */
+      if (!config->rt_format)
+         config->rt_format = VA_RT_FORMAT_YUV420 | VA_RT_FORMAT_RGB32;
+
       pipe_mutex_lock(drv->mutex);
       *config_id = handle_table_add(drv->htab, config);
       pipe_mutex_unlock(drv->mutex);
@@ -255,6 +260,10 @@ vlVaCreateConfig(VADriverContextP ctx, VAProfile profile, VAEntrypoint entrypoin
          }
       }
    }
+
+   /* Default value if not specified in the input attributes. */
+   if (!config->rt_format)
+      config->rt_format = VA_RT_FORMAT_YUV420;
 
    pipe_mutex_lock(drv->mutex);
    *config_id = handle_table_add(drv->htab, config);
