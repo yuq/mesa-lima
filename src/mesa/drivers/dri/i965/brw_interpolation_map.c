@@ -93,7 +93,8 @@ brw_setup_vue_interpolation(struct brw_vue_map *vue_map, nir_shader *nir,
       }
    }
 
-   if (unlikely(INTEL_DEBUG & DEBUG_VUE)) {
+   bool debug = false;
+   if (debug) {
       fprintf(stderr, "VUE map:\n");
       for (int i = 0; i < vue_map->num_slots; i++) {
          int varying = vue_map->slot_to_varying[i];
