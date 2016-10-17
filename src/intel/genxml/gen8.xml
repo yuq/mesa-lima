@@ -214,7 +214,7 @@
     </field>
     <field name="Binding Table Pointer" start="133" end="143" type="offset"/>
     <field name="Binding Table Entry Count" start="128" end="132" type="uint"/>
-    <field name="Constant/Indirect URB Entry Read Length" start="176" end="191" type="uint"/>
+    <field name="Constant URB Entry Read Length" start="176" end="191" type="uint"/>
     <field name="Constant URB Entry Read Offset" start="160" end="175" type="uint"/>
     <field name="Rounding Mode" start="214" end="215" type="uint">
       <value name="RTNE" value="0"/>
