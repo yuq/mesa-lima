@@ -28,6 +28,8 @@
 #ifndef _GBM_DRI_INTERNAL_H_
 #define _GBM_DRI_INTERNAL_H_
 
+#include <xf86drm.h>
+#include <string.h>
 #include <sys/mman.h>
 #include "gbmint.h"
 #include "c11/threads.h"
