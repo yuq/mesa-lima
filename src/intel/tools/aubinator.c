@@ -50,8 +50,9 @@
 #define AUB_MI_BATCH_BUFFER_END (0x0500 << 16)
 
 #define CSI "\e["
-#define HEADER CSI "37;44m"
-#define NORMAL CSI "0m"
+#define BLUE_HEADER  CSI "0;44m"
+#define GREEN_HEADER CSI "1;42m"
+#define NORMAL       CSI "0m"
 
 /* options */
 
@@ -727,9 +728,13 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
       const char *color, *reset_color = NORMAL;
       uint64_t offset;
 
-      if (option_full_decode)
-         color = HEADER;
-      else
+      if (option_full_decode) {
+         if ((p[0] & 0xffff0000) == AUB_MI_BATCH_BUFFER_START ||
+             (p[0] & 0xffff0000) == AUB_MI_BATCH_BUFFER_END)
+            color = GREEN_HEADER;
+         else
+            color = BLUE_HEADER;
+      } else
          color = NORMAL;
 
       if (option_color == COLOR_NEVER) {
