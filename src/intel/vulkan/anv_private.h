@@ -1286,6 +1286,14 @@ void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 
 VkResult anv_cmd_buffer_reset(struct anv_cmd_buffer *cmd_buffer);
 
+VkResult
+anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
+                                          gl_shader_stage stage, uint32_t size);
+#define anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, field) \
+   anv_cmd_buffer_ensure_push_constants_size(cmd_buffer, stage, \
+      (offsetof(struct anv_push_constants, field) + \
+       sizeof(cmd_buffer->state.push_constants[0]->field)))
+
 VkResult anv_cmd_buffer_emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                            unsigned stage, struct anv_state *bt_state);
 VkResult anv_cmd_buffer_emit_samplers(struct anv_cmd_buffer *cmd_buffer,

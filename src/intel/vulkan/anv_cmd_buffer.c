@@ -200,7 +200,7 @@ anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-static VkResult
+VkResult
 anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
                                           gl_shader_stage stage, uint32_t size)
 {
@@ -221,11 +221,6 @@ anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
 
    return VK_SUCCESS;
 }
-
-#define anv_cmd_buffer_ensure_push_constant_field(cmd_buffer, stage, field) \
-   anv_cmd_buffer_ensure_push_constants_size(cmd_buffer, stage, \
-      (offsetof(struct anv_push_constants, field) + \
-       sizeof(cmd_buffer->state.push_constants[0]->field)))
 
 static VkResult anv_create_cmd_buffer(
     struct anv_device *                         device,
