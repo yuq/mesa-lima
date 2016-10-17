@@ -578,6 +578,9 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    }
 
    context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
+   if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE &&
+       context->desc.h264enc.p_remain == 1)
+      context->decoder->flush(context->decoder);
    pipe_mutex_unlock(drv->mutex);
    return VA_STATUS_SUCCESS;
 }
