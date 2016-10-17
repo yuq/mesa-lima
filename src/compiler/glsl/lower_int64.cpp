@@ -361,6 +361,13 @@ lower_64bit_visitor::handle_rvalue(ir_rvalue **rvalue)
    assert(ir != NULL);
 
    switch (ir->operation) {
+   case ir_unop_sign:
+      if (lowering(SIGN64)) {
+         *rvalue = handle_op(ir, "__builtin_sign64", generate_ir::sign64);
+         this->progress = true;
+      }
+      break;
+
    case ir_binop_mul:
       if (lowering(MUL64)) {
          *rvalue = handle_op(ir, "__builtin_umul64", generate_ir::umul64);
