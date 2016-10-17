@@ -1319,8 +1319,6 @@ void gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
                                          bool depth_clamp_enable);
 void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
-void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
-
 void anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
                                      const VkRenderPassBeginInfo *info);
 

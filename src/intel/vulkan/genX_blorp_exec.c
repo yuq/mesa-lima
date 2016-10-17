@@ -97,7 +97,7 @@ blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
       /* Re-emit state base addresses so we get the new surface state base
        * address before we start emitting binding tables etc.
        */
-      anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+      genX(cmd_buffer_emit_state_base_address)(cmd_buffer);
 
       bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
                                                     &state_offset);
