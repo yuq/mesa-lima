@@ -85,7 +85,7 @@ nine_ff_get_projected_key(struct nine_state *state, struct nine_context *context
         unsigned dim = state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
         unsigned proj = !!(state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & D3DTTFF_PROJECTED);
 
-        if (!state->vs) {
+        if (!context->vs) {
             if (dim > 4)
                 dim = input_texture_coord[s];
 

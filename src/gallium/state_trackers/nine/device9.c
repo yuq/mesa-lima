@@ -2928,6 +2928,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
     struct pipe_stream_output_target *target;
     struct pipe_draw_info draw;
     struct pipe_box box;
+    bool programmable_vs = This->state.vs && !(This->state.vdecl && This->state.vdecl->position_t);
     unsigned offsets[1] = {0};
     HRESULT hr;
     unsigned buffer_size;
@@ -2944,7 +2945,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
     }
 
 
-    vs = This->state.programmable_vs ? This->state.vs : This->ff.vs;
+    vs = programmable_vs ? This->state.vs : This->ff.vs;
     /* Note: version is 0 for ff */
     user_assert(vdecl || (vs->byte_code.version < 0x30 && dst->desc.FVF),
                 D3DERR_INVALIDCALL);
@@ -2966,7 +2967,7 @@ NineDevice9_ProcessVertices( struct NineDevice9 *This,
      * if not set, everything from src will be used, and dst
      * must match exactly the ff vs outputs.
      * TODO: Handle all the checks, etc for ff */
-    user_assert(vdecl->position_t || This->state.programmable_vs,
+    user_assert(vdecl->position_t || programmable_vs,
                 D3DERR_INVALIDCALL);
 
     /* TODO: Support vs < 3 and ff */
@@ -3154,23 +3155,22 @@ NineDevice9_SetVertexShader( struct NineDevice9 *This,
                              IDirect3DVertexShader9 *pShader )
 {
     struct nine_state *state = This->update;
-    struct nine_context *context = &This->context;
-    BOOL was_programmable_vs = This->state.programmable_vs;
+    struct NineVertexShader9 *vs_shader = (struct NineVertexShader9*)pShader;
 
     DBG("This=%p pShader=%p\n", This, pShader);
 
-    if (!This->is_recording && state->vs == (struct NineVertexShader9*)pShader)
+    if (unlikely(This->is_recording)) {
+        nine_bind(&state->vs, vs_shader);
+        state->changed.group |= NINE_STATE_VS;
+        return D3D_OK;
+    }
+
+    if (state->vs == vs_shader)
       return D3D_OK;
 
-    nine_bind(&state->vs, pShader);
+    nine_bind(&state->vs, vs_shader);
 
-    This->state.programmable_vs = This->state.vs && !(This->context.vdecl && This->context.vdecl->position_t);
-
-    /* ff -> non-ff: commit back non-ff constants */
-    if (!was_programmable_vs && This->state.programmable_vs)
-        context->commit |= NINE_STATE_COMMIT_CONST_VS;
-
-    state->changed.group |= NINE_STATE_VS;
+    nine_context_set_vertex_shader(This, vs_shader);
 
     return D3D_OK;
 }

@@ -1832,7 +1832,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
      * Tests on Win 10 seem to indicate _34
      * and _33 are checked against 0, 1. */
     if (key.fog_mode && key.fog)
-        key.fog_source = !state->programmable_vs &&
+        key.fog_source = !context->programmable_vs &&
             !(projection_matrix->_34 == 0.0f &&
               projection_matrix->_44 == 1.0f);
 
@@ -2042,10 +2042,10 @@ nine_ff_update(struct NineDevice9 *device)
     struct nine_context *context = &device->context;
     struct pipe_constant_buffer cb;
 
-    DBG("vs=%p ps=%p\n", device->state.vs, device->state.ps);
+    DBG("vs=%p ps=%p\n", context->vs, device->state.ps);
 
     /* NOTE: the only reference belongs to the hash table */
-    if (!state->programmable_vs) {
+    if (!context->programmable_vs) {
         device->ff.vs = nine_ff_get_vs(device);
         device->state.changed.group |= NINE_STATE_VS;
     }
@@ -2054,7 +2054,7 @@ nine_ff_update(struct NineDevice9 *device)
         device->state.changed.group |= NINE_STATE_PS;
     }
 
-    if (!state->programmable_vs) {
+    if (!context->programmable_vs) {
         nine_ff_load_vs_transforms(device);
         nine_ff_load_tex_matrices(device);
         nine_ff_load_lights(device);

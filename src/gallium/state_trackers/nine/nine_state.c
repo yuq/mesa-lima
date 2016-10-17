@@ -95,8 +95,8 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         cb.buffer_size = 4096 * sizeof(float[4]);
         cb.user_buffer = state->vs_const_f_swvp;
 
-        if (state->vs->lconstf.ranges) {
-            const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
+        if (context->vs->lconstf.ranges) {
+            const struct nine_lconstf *lconstf = &(context->vs->lconstf);
             const struct nine_range *r = lconstf->ranges;
             unsigned n = 0;
             float *dst = device->state.vs_lconstf_temp;
@@ -234,7 +234,7 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     struct pipe_constant_buffer cb;
     cb.buffer = NULL;
     cb.buffer_offset = 0;
-    cb.buffer_size = device->state.vs->const_used_size;
+    cb.buffer_size = context->vs->const_used_size;
     cb.user_buffer = device->state.vs_const_f;
 
     if (device->swvp) {
@@ -274,9 +274,9 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     if (!cb.buffer_size)
         return;
 
-    if (device->state.vs->lconstf.ranges) {
+    if (context->vs->lconstf.ranges) {
         /* TODO: Can we make it so that we don't have to copy everything ? */
-        const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;
+        const struct nine_lconstf *lconstf =  &(context->vs->lconstf);
         const struct nine_range *r = lconstf->ranges;
         unsigned n = 0;
         float *dst = device->state.vs_lconstf_temp;
@@ -400,20 +400,19 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
 static inline uint32_t
 prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
-    struct NineVertexShader9 *vs = state->vs;
+    struct NineVertexShader9 *vs = context->vs;
     uint32_t changed_group = 0;
     int has_key_changed = 0;
 
-    if (likely(state->programmable_vs))
+    if (likely(context->programmable_vs))
         has_key_changed = NineVertexShader9_UpdateKey(vs, device);
 
     if (!shader_changed && !has_key_changed)
         return 0;
 
     /* likely because we dislike FF */
-    if (likely(state->programmable_vs)) {
+    if (likely(context->programmable_vs)) {
         context->cso.vs = NineVertexShader9_GetVariant(vs);
     } else {
         vs = device->ff.vs;
@@ -610,7 +609,7 @@ update_vertex_elements(struct NineDevice9 *device)
     context->stream_usage_mask = 0;
     memset(vdecl_index_map, -1, 16);
     memset(used_streams, 0, device->caps.MaxStreams);
-    vs = state->programmable_vs ? device->state.vs : device->ff.vs;
+    vs = context->programmable_vs ? context->vs : device->ff.vs;
 
     if (vdecl) {
         for (n = 0; n < vs->num_inputs; ++n) {
@@ -810,7 +809,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
         cso_single_sampler_done(device->cso, PIPE_SHADER_FRAGMENT);
 
     commit_samplers = FALSE;
-    sampler_mask = state->programmable_vs ? state->vs->sampler_mask : 0;
+    sampler_mask = context->programmable_vs ? context->vs->sampler_mask : 0;
     context->bound_samplers_mask_vs = 0;
     for (num_textures = 0, i = 0; i < NINE_MAX_SAMPLERS_VS; ++i) {
         const unsigned s = NINE_SAMPLER_VS(i);
@@ -901,7 +900,7 @@ commit_vs_constants(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
 
-    if (unlikely(!device->state.programmable_vs))
+    if (unlikely(!device->context.programmable_vs))
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe.cb_vs_ff);
     else {
         if (device->swvp) {
@@ -1022,7 +1021,7 @@ nine_update_state(struct NineDevice9 *device)
     update_managed_buffers(device);
 
     /* ff_update may change VS/PS dirty bits */
-    if (unlikely(!state->programmable_vs || !state->ps))
+    if (unlikely(!context->programmable_vs || !state->ps))
         nine_ff_update(device);
     group = state->changed.group;
 
@@ -1055,7 +1054,7 @@ nine_update_state(struct NineDevice9 *device)
             prepare_rasterizer(device);
         if (group & (NINE_STATE_TEXTURE | NINE_STATE_SAMPLER))
             update_textures_and_samplers(device);
-        if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS | NINE_STATE_SWVP)) && state->programmable_vs)
+        if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS | NINE_STATE_SWVP)) && context->programmable_vs)
             prepare_vs_constants_userbuf(device);
         if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
             prepare_ps_constants_userbuf(device);
@@ -1282,17 +1281,36 @@ nine_context_set_vertex_declaration(struct NineDevice9 *device,
 {
     struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
-    BOOL was_programmable_vs = device->state.programmable_vs;
+    BOOL was_programmable_vs = context->programmable_vs;
 
     nine_bind(&context->vdecl, vdecl);
 
-    device->state.programmable_vs = device->state.vs && !(device->context.vdecl && device->context.vdecl->position_t);
-    if (was_programmable_vs != device->state.programmable_vs) {
+    context->programmable_vs = context->vs && !(context->vdecl && context->vdecl->position_t);
+    if (was_programmable_vs != context->programmable_vs) {
         context->commit |= NINE_STATE_COMMIT_CONST_VS;
         state->changed.group |= NINE_STATE_VS;
     }
 
     state->changed.group |= NINE_STATE_VDECL;
+}
+
+void
+nine_context_set_vertex_shader(struct NineDevice9 *device,
+                               struct NineVertexShader9 *pShader)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    BOOL was_programmable_vs = context->programmable_vs;
+
+    nine_bind(&context->vs, pShader);
+
+    context->programmable_vs = context->vs && !(context->vdecl && context->vdecl->position_t);
+
+    /* ff -> non-ff: commit back non-ff constants */
+    if (!was_programmable_vs && context->programmable_vs)
+        context->commit |= NINE_STATE_COMMIT_CONST_VS;
+
+    state->changed.group |= NINE_STATE_VS;
 }
 
 void
@@ -1355,7 +1373,11 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
         nine_context_set_vertex_declaration(device, src->vdecl);
 
-    device->state.programmable_vs = device->state.vs && !(context->vdecl && context->vdecl->position_t);
+    /* Vertex shader */
+    if (src->changed.group & NINE_STATE_VS)
+        nine_bind(&context->vs, src->vs);
+
+    context->programmable_vs = context->vs && !(context->vdecl && context->vdecl->position_t);
 }
 
 static void
@@ -1882,6 +1904,7 @@ nine_context_clear(struct nine_context *context)
 {
     unsigned i;
 
+    nine_bind(&context->vs, NULL);
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
         pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
@@ -1932,10 +1955,11 @@ update_vertex_elements_sw(struct NineDevice9 *device)
     int dummy_vbo_stream = -1;
     BOOL need_dummy_vbo = FALSE;
     struct pipe_vertex_element ve[PIPE_MAX_ATTRIBS];
+    bool programmable_vs = state->vs && !(state->vdecl && state->vdecl->position_t);
 
     memset(vdecl_index_map, -1, 16);
     memset(used_streams, 0, device->caps.MaxStreams);
-    vs = state->programmable_vs ? device->state.vs : device->ff.vs;
+    vs = programmable_vs ? device->state.vs : device->ff.vs;
 
     if (vdecl) {
         for (n = 0; n < vs->num_inputs; ++n) {
@@ -2202,10 +2226,10 @@ nine_state_prepare_draw_sw(struct NineDevice9 *device, struct NineVertexDeclarat
                            int start_vertice, int num_vertices, struct pipe_stream_output_info *so)
 {
     struct nine_state *state = &device->state;
+    bool programmable_vs = state->vs && !(state->vdecl && state->vdecl->position_t);
+    struct NineVertexShader9 *vs = programmable_vs ? device->state.vs : device->ff.vs;
 
-    struct NineVertexShader9 *vs = state->programmable_vs ? device->state.vs : device->ff.vs;
-
-    assert(state->programmable_vs);
+    assert(programmable_vs);
 
     DBG("Preparing draw\n");
     cso_set_vertex_shader_handle(device->cso_sw,

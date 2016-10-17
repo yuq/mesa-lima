@@ -166,7 +166,6 @@ struct nine_state
     int   *vs_const_i;
     BOOL  *vs_const_b;
     float *vs_lconstf_temp;
-    BOOL programmable_vs;
 
     struct NinePixelShader9 *ps;
     float *ps_const_f;
@@ -226,6 +225,9 @@ struct nine_context {
     } cso;
 
     uint8_t rt_mask;
+
+    struct NineVertexShader9 *vs;
+    BOOL programmable_vs;
 
     struct NineVertexDeclaration9 *vdecl;
 
@@ -303,6 +305,10 @@ nine_context_set_stream_source_freq(struct NineDevice9 *device,
 void
 nine_context_set_vertex_declaration(struct NineDevice9 *device,
                                     struct NineVertexDeclaration9 *vdecl);
+
+void
+nine_context_set_vertex_shader(struct NineDevice9 *device,
+                               struct NineVertexShader9 *pShader);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,
