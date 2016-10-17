@@ -1154,15 +1154,16 @@ vec4_visitor::gs_end_primitive()
 void
 vec4_visitor::emit_ndc_computation()
 {
-   if (output_reg[VARYING_SLOT_POS].file == BAD_FILE)
+   if (output_reg[VARYING_SLOT_POS][0].file == BAD_FILE)
       return;
 
    /* Get the position */
-   src_reg pos = src_reg(output_reg[VARYING_SLOT_POS]);
+   src_reg pos = src_reg(output_reg[VARYING_SLOT_POS][0]);
 
    /* Build ndc coords, which are (x/w, y/w, z/w, 1/w) */
    dst_reg ndc = dst_reg(this, glsl_type::vec4_type);
-   output_reg[BRW_VARYING_SLOT_NDC] = ndc;
+   output_reg[BRW_VARYING_SLOT_NDC][0] = ndc;
+   output_num_components[BRW_VARYING_SLOT_NDC][0] = 4;
 
    current_annotation = "NDC";
    dst_reg ndc_w = ndc;
@@ -1182,7 +1183,7 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
 {
    if (devinfo->gen < 6 &&
        ((prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) ||
-        output_reg[VARYING_SLOT_CLIP_DIST0].file != BAD_FILE ||
+        output_reg[VARYING_SLOT_CLIP_DIST0][0].file != BAD_FILE ||
         devinfo->has_negative_rhw_bug)) {
       dst_reg header1 = dst_reg(this, glsl_type::uvec4_type);
       dst_reg header1_w = header1;
@@ -1191,23 +1192,23 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
       emit(MOV(header1, brw_imm_ud(0u)));
 
       if (prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) {
-	 src_reg psiz = src_reg(output_reg[VARYING_SLOT_PSIZ]);
+	 src_reg psiz = src_reg(output_reg[VARYING_SLOT_PSIZ][0]);
 
 	 current_annotation = "Point size";
 	 emit(MUL(header1_w, psiz, brw_imm_f((float)(1 << 11))));
 	 emit(AND(header1_w, src_reg(header1_w), brw_imm_d(0x7ff << 8)));
       }
 
-      if (output_reg[VARYING_SLOT_CLIP_DIST0].file != BAD_FILE) {
+      if (output_reg[VARYING_SLOT_CLIP_DIST0][0].file != BAD_FILE) {
          current_annotation = "Clipping flags";
          dst_reg flags0 = dst_reg(this, glsl_type::uint_type);
          dst_reg flags1 = dst_reg(this, glsl_type::uint_type);
 
-         emit(CMP(dst_null_f(), src_reg(output_reg[VARYING_SLOT_CLIP_DIST0]), brw_imm_f(0.0f), BRW_CONDITIONAL_L));
+         emit(CMP(dst_null_f(), src_reg(output_reg[VARYING_SLOT_CLIP_DIST0][0]), brw_imm_f(0.0f), BRW_CONDITIONAL_L));
          emit(VS_OPCODE_UNPACK_FLAGS_SIMD4X2, flags0, brw_imm_d(0));
          emit(OR(header1_w, src_reg(header1_w), src_reg(flags0)));
 
-         emit(CMP(dst_null_f(), src_reg(output_reg[VARYING_SLOT_CLIP_DIST1]), brw_imm_f(0.0f), BRW_CONDITIONAL_L));
+         emit(CMP(dst_null_f(), src_reg(output_reg[VARYING_SLOT_CLIP_DIST1][0]), brw_imm_f(0.0f), BRW_CONDITIONAL_L));
          emit(VS_OPCODE_UNPACK_FLAGS_SIMD4X2, flags1, brw_imm_d(0));
          emit(SHL(flags1, src_reg(flags1), brw_imm_d(4)));
          emit(OR(header1_w, src_reg(header1_w), src_reg(flags1)));
@@ -1223,15 +1224,15 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
        * clipped against all fixed planes.
        */
       if (devinfo->has_negative_rhw_bug &&
-          output_reg[BRW_VARYING_SLOT_NDC].file != BAD_FILE) {
-         src_reg ndc_w = src_reg(output_reg[BRW_VARYING_SLOT_NDC]);
+          output_reg[BRW_VARYING_SLOT_NDC][0].file != BAD_FILE) {
+         src_reg ndc_w = src_reg(output_reg[BRW_VARYING_SLOT_NDC][0]);
          ndc_w.swizzle = BRW_SWIZZLE_WWWW;
          emit(CMP(dst_null_f(), ndc_w, brw_imm_f(0.0f), BRW_CONDITIONAL_L));
          vec4_instruction *inst;
          inst = emit(OR(header1_w, src_reg(header1_w), brw_imm_ud(1u << 6)));
          inst->predicate = BRW_PREDICATE_NORMAL;
-         output_reg[BRW_VARYING_SLOT_NDC].type = BRW_REGISTER_TYPE_F;
-         inst = emit(MOV(output_reg[BRW_VARYING_SLOT_NDC], brw_imm_f(0.0f)));
+         output_reg[BRW_VARYING_SLOT_NDC][0].type = BRW_REGISTER_TYPE_F;
+         inst = emit(MOV(output_reg[BRW_VARYING_SLOT_NDC][0], brw_imm_f(0.0f)));
          inst->predicate = BRW_PREDICATE_NORMAL;
       }
 
@@ -1243,7 +1244,7 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
       if (prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) {
          dst_reg reg_w = reg;
          reg_w.writemask = WRITEMASK_W;
-         src_reg reg_as_src = src_reg(output_reg[VARYING_SLOT_PSIZ]);
+         src_reg reg_as_src = src_reg(output_reg[VARYING_SLOT_PSIZ][0]);
          reg_as_src.type = reg_w.type;
          reg_as_src.swizzle = brw_swizzle_for_size(1);
          emit(MOV(reg_w, reg_as_src));
@@ -1252,58 +1253,45 @@ vec4_visitor::emit_psiz_and_flags(dst_reg reg)
          dst_reg reg_y = reg;
          reg_y.writemask = WRITEMASK_Y;
          reg_y.type = BRW_REGISTER_TYPE_D;
-         output_reg[VARYING_SLOT_LAYER].type = reg_y.type;
-         emit(MOV(reg_y, src_reg(output_reg[VARYING_SLOT_LAYER])));
+         output_reg[VARYING_SLOT_LAYER][0].type = reg_y.type;
+         emit(MOV(reg_y, src_reg(output_reg[VARYING_SLOT_LAYER][0])));
       }
       if (prog_data->vue_map.slots_valid & VARYING_BIT_VIEWPORT) {
          dst_reg reg_z = reg;
          reg_z.writemask = WRITEMASK_Z;
          reg_z.type = BRW_REGISTER_TYPE_D;
-         output_reg[VARYING_SLOT_VIEWPORT].type = reg_z.type;
-         emit(MOV(reg_z, src_reg(output_reg[VARYING_SLOT_VIEWPORT])));
+         output_reg[VARYING_SLOT_VIEWPORT][0].type = reg_z.type;
+         emit(MOV(reg_z, src_reg(output_reg[VARYING_SLOT_VIEWPORT][0])));
       }
    }
 }
 
 vec4_instruction *
-vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying)
-{
-   assert(varying < VARYING_SLOT_MAX);
-   assert(output_reg[varying].type == reg.type);
-   current_annotation = output_reg_annotation[varying];
-   if (output_reg[varying].file != BAD_FILE) {
-      return emit(MOV(reg, src_reg(output_reg[varying])));
-   } else
-      return NULL;
-}
-
-void
 vec4_visitor::emit_generic_urb_slot(dst_reg reg, int varying, int component)
 {
    assert(varying < VARYING_SLOT_MAX);
-   assert(varying >= VARYING_SLOT_VAR0);
-   varying = varying - VARYING_SLOT_VAR0;
 
-   unsigned num_comps = output_generic_num_components[varying][component];
+   unsigned num_comps = output_num_components[varying][component];
    if (num_comps == 0)
-      return;
+      return NULL;
 
-   assert(output_generic_reg[varying][component].type == reg.type);
+   assert(output_reg[varying][component].type == reg.type);
    current_annotation = output_reg_annotation[varying];
-   if (output_generic_reg[varying][component].file != BAD_FILE) {
-      src_reg src = src_reg(output_generic_reg[varying][component]);
+   if (output_reg[varying][component].file != BAD_FILE) {
+      src_reg src = src_reg(output_reg[varying][component]);
       src.swizzle = BRW_SWZ_COMP_OUTPUT(component);
       reg.writemask =
          brw_writemask_for_component_packing(num_comps, component);
-      emit(MOV(reg, src));
+      return emit(MOV(reg, src));
    }
+   return NULL;
 }
 
 void
 vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
 {
    reg.type = BRW_REGISTER_TYPE_F;
-   output_reg[varying].type = reg.type;
+   output_reg[varying][0].type = reg.type;
 
    switch (varying) {
    case VARYING_SLOT_PSIZ:
@@ -1315,13 +1303,13 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
    }
    case BRW_VARYING_SLOT_NDC:
       current_annotation = "NDC";
-      if (output_reg[BRW_VARYING_SLOT_NDC].file != BAD_FILE)
-         emit(MOV(reg, src_reg(output_reg[BRW_VARYING_SLOT_NDC])));
+      if (output_reg[BRW_VARYING_SLOT_NDC][0].file != BAD_FILE)
+         emit(MOV(reg, src_reg(output_reg[BRW_VARYING_SLOT_NDC][0])));
       break;
    case VARYING_SLOT_POS:
       current_annotation = "gl_Position";
-      if (output_reg[VARYING_SLOT_POS].file != BAD_FILE)
-         emit(MOV(reg, src_reg(output_reg[VARYING_SLOT_POS])));
+      if (output_reg[VARYING_SLOT_POS][0].file != BAD_FILE)
+         emit(MOV(reg, src_reg(output_reg[VARYING_SLOT_POS][0])));
       break;
    case VARYING_SLOT_EDGE:
       /* This is present when doing unfilled polygons.  We're supposed to copy
@@ -1338,12 +1326,8 @@ vec4_visitor::emit_urb_slot(dst_reg reg, int varying)
       /* No need to write to this slot */
       break;
    default:
-      if (varying >= VARYING_SLOT_VAR0) {
-         for (int i = 0; i < 4; i++) {
-            emit_generic_urb_slot(reg, varying, i);
-         }
-      } else {
-         emit_generic_urb_slot(reg, varying);
+      for (int i = 0; i < 4; i++) {
+         emit_generic_urb_slot(reg, varying, i);
       }
       break;
    }
@@ -1795,8 +1779,7 @@ vec4_visitor::vec4_visitor(const struct brw_compiler *compiler,
    this->current_annotation = NULL;
    memset(this->output_reg_annotation, 0, sizeof(this->output_reg_annotation));
 
-   memset(this->output_generic_num_components, 0,
-          sizeof(this->output_generic_num_components));
+   memset(this->output_num_components, 0, sizeof(this->output_num_components));
 
    this->virtual_grf_start = NULL;
    this->virtual_grf_end = NULL;

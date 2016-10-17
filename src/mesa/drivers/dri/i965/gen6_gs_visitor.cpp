@@ -412,7 +412,7 @@ gen6_gs_visitor::emit_thread_end()
 
                /* Copy this slot to the appropriate message register */
                dst_reg reg = dst_reg(MRF, mrf);
-               reg.type = output_reg[varying].type;
+               reg.type = output_reg[varying][0].type;
                data.type = reg.type;
                vec4_instruction *inst = emit(MOV(reg, data));
                inst->force_writemask_all = true;
@@ -688,7 +688,7 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
          int offset = get_vertex_output_offset_for_varying(vertex, varying);
          emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_d(offset)));
          memcpy(data.reladdr, &this->vertex_output_offset, sizeof(src_reg));
-         data.type = output_reg[varying].type;
+         data.type = output_reg[varying][0].type;
 
          /* PSIZ, LAYER and VIEWPORT are packed in different channels of the
           * same slot, so make sure we write the appropriate channel
