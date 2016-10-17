@@ -338,6 +338,7 @@ struct inout_decl {
    unsigned mesa_index;
    unsigned array_id; /* TGSI ArrayID; 1-based: 0 means not an array */
    unsigned size;
+   unsigned interp_loc;
    enum glsl_interp_mode interp;
    enum glsl_base_type base_type;
    ubyte usage_mask; /* GLSL-style usage-mask,  i.e. single bit per double */
@@ -2385,6 +2386,17 @@ is_inout_array(unsigned stage, ir_variable *var, bool *remove_array)
    return type->is_array() || type->is_matrix();
 }
 
+static unsigned
+st_translate_interp_loc(ir_variable *var)
+{
+   if (var->data.centroid)
+      return TGSI_INTERPOLATE_LOC_CENTROID;
+   else if (var->data.sample)
+      return TGSI_INTERPOLATE_LOC_SAMPLE;
+   else
+      return TGSI_INTERPOLATE_LOC_CENTER;
+}
+
 void
 glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 {
@@ -2422,6 +2434,7 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
 
          decl->mesa_index = var->data.location;
          decl->interp = (glsl_interp_mode) var->data.interpolation;
+         decl->interp_loc = st_translate_interp_loc(var);
          decl->base_type = type_without_array->base_type;
          decl->usage_mask = u_bit_consecutive(component, num_components);
 
@@ -5926,7 +5939,6 @@ st_translate_interp(enum glsl_interp_mode glsl_qual, GLuint varying)
  * \param inputSemanticIndex  the semantic index (ex: which texcoord) for
  *                            each input
  * \param interpMode  the TGSI_INTERPOLATE_LINEAR/PERSP mode for each input
- * \param interpLocation the TGSI_INTERPOLATE_LOC_* location for each input
  * \param numOutputs  number of output registers used
  * \param outputMapping  maps Mesa fragment program outputs to TGSI
  *                       generic outputs
@@ -5949,7 +5961,6 @@ st_translate_program(
    const ubyte inputSemanticName[],
    const ubyte inputSemanticIndex[],
    const GLuint interpMode[],
-   const GLuint interpLocation[],
    GLuint numOutputs,
    const GLuint outputMapping[],
    const GLuint outputSlotToAttr[],
@@ -6006,17 +6017,20 @@ st_translate_program(
          }
 
          unsigned interp_mode = 0;
+         unsigned interp_location = 0;
          if (procType == PIPE_SHADER_FRAGMENT) {
             assert(interpMode);
             interp_mode = interpMode[slot] != TGSI_INTERPOLATE_COUNT ?
                interpMode[slot] :
                st_translate_interp(decl->interp, inputSlotToAttr[slot]);
+
+            interp_location = decl->interp_loc;
          }
 
          src = ureg_DECL_fs_input_cyl_centroid_layout(ureg,
                   inputSemanticName[slot], inputSemanticIndex[slot],
-                  interp_mode, 0, interpLocation ? interpLocation[slot] : 0,
-                  slot, tgsi_usage_mask, decl->array_id, decl->size);
+                  interp_mode, 0, interp_location, slot, tgsi_usage_mask,
+                  decl->array_id, decl->size);
 
          for (unsigned j = 0; j < decl->size; ++j) {
             if (t->inputs[slot + j].File != TGSI_FILE_INPUT) {

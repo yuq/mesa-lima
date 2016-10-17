@@ -425,7 +425,6 @@ st_translate_vertex_program(struct st_context *st,
                                    NULL, /* input semantic name */
                                    NULL, /* input semantic index */
                                    NULL, /* interp mode */
-                                   NULL, /* interp location */
                                    /* outputs */
                                    num_outputs,
                                    stvp->result_to_output,
@@ -569,7 +568,6 @@ st_translate_fragment_program(struct st_context *st,
    GLuint inputMapping[VARYING_SLOT_MAX];
    GLuint inputSlotToAttr[VARYING_SLOT_MAX];
    GLuint interpMode[PIPE_MAX_SHADER_INPUTS];  /* XXX size? */
-   GLuint interpLocation[PIPE_MAX_SHADER_INPUTS];
    GLuint attr;
    GLbitfield64 inputsRead;
    struct ureg_program *ureg;
@@ -623,12 +621,6 @@ st_translate_fragment_program(struct st_context *st,
 
          inputMapping[attr] = slot;
          inputSlotToAttr[slot] = attr;
-         if (stfp->Base.IsCentroid & BITFIELD64_BIT(attr))
-            interpLocation[slot] = TGSI_INTERPOLATE_LOC_CENTROID;
-         else if (stfp->Base.IsSample & BITFIELD64_BIT(attr))
-            interpLocation[slot] = TGSI_INTERPOLATE_LOC_SAMPLE;
-         else
-            interpLocation[slot] = TGSI_INTERPOLATE_LOC_CENTER;
 
          switch (attr) {
          case VARYING_SLOT_POS:
@@ -888,7 +880,6 @@ st_translate_fragment_program(struct st_context *st,
                            input_semantic_name,
                            input_semantic_index,
                            interpMode,
-                           interpLocation,
                            /* outputs */
                            fs_num_outputs,
                            outputMapping,
@@ -1458,7 +1449,6 @@ st_translate_program_common(struct st_context *st,
                         inputSlotToAttr,
                         input_semantic_name,
                         input_semantic_index,
-                        NULL,
                         NULL,
                         /* outputs */
                         num_outputs,
