@@ -45,26 +45,32 @@ struct radeon_shader_binary;
 
 struct radeon_llvm_flow;
 
-struct radeon_llvm_context {
+struct si_shader_context {
 	struct lp_build_tgsi_soa_context soa;
+	struct gallivm_state gallivm;
+	struct si_shader *shader;
+	struct si_screen *screen;
 
-	/*=== Front end configuration ===*/
-
-	/* Instructions that are not described by any of the TGSI opcodes. */
+	unsigned type; /* PIPE_SHADER_* specifies the type of shader. */
+	bool is_gs_copy_shader;
+	/* Whether to generate the optimized shader variant compiled as a whole
+	 * (without a prolog and epilog)
+	 */
+	bool is_monolithic;
 
 	/** This function is responsible for initilizing the inputs array and will be
 	  * called once for each input declared in the TGSI shader.
 	  */
-	void (*load_input)(struct radeon_llvm_context *,
+	void (*load_input)(struct si_shader_context *,
 			   unsigned input_index,
 			   const struct tgsi_full_declaration *decl,
 			   LLVMValueRef out[4]);
 
-	void (*load_system_value)(struct radeon_llvm_context *,
+	void (*load_system_value)(struct si_shader_context *,
 				  unsigned index,
 				  const struct tgsi_full_declaration *decl);
 
-	void (*declare_memory_region)(struct radeon_llvm_context *,
+	void (*declare_memory_region)(struct si_shader_context *,
 				      const struct tgsi_full_declaration *decl);
 
 	/** This array contains the input values for the shader.  Typically these
@@ -83,8 +89,6 @@ struct radeon_llvm_context {
 	unsigned temps_count;
 	LLVMValueRef system_values[RADEON_LLVM_MAX_SYSTEM_VALUES];
 
-	/*=== Private Members ===*/
-
 	struct radeon_llvm_flow *flow;
 	unsigned flow_depth;
 	unsigned flow_depth_max;
@@ -97,16 +101,63 @@ struct radeon_llvm_context {
 	LLVMValueRef main_fn;
 	LLVMTypeRef return_type;
 
+	int param_streamout_config;
+	int param_streamout_write_index;
+	int param_streamout_offset[4];
+	int param_vertex_id;
+	int param_rel_auto_id;
+	int param_vs_prim_id;
+	int param_instance_id;
+	int param_vertex_index0;
+	int param_tes_u;
+	int param_tes_v;
+	int param_tes_rel_patch_id;
+	int param_tes_patch_id;
+	int param_es2gs_offset;
+	int param_oc_lds;
+
+	/* Sets a bit if the dynamic HS control word was 0x80000000. The bit is
+	 * 0x800000 for VS, 0x1 for ES.
+	 */
+	int param_tess_offchip;
+
+	LLVMTargetMachineRef tm;
+
+	unsigned invariant_load_md_kind;
+	unsigned range_md_kind;
+	unsigned uniform_md_kind;
 	unsigned fpmath_md_kind;
 	LLVMValueRef fpmath_md_2p5_ulp;
+	LLVMValueRef empty_md;
 
-	struct gallivm_state gallivm;
+	/* Preloaded descriptors. */
+	LLVMValueRef esgs_ring;
+	LLVMValueRef gsvs_ring[4];
+
+	LLVMValueRef lds;
+	LLVMValueRef gs_next_vertex[4];
+	LLVMValueRef return_value;
+
+	LLVMTypeRef voidt;
+	LLVMTypeRef i1;
+	LLVMTypeRef i8;
+	LLVMTypeRef i32;
+	LLVMTypeRef i64;
+	LLVMTypeRef i128;
+	LLVMTypeRef f32;
+	LLVMTypeRef v16i8;
+	LLVMTypeRef v2i32;
+	LLVMTypeRef v4i32;
+	LLVMTypeRef v4f32;
+	LLVMTypeRef v8i32;
+
+	LLVMValueRef shared_memory;
 };
 
-static inline struct radeon_llvm_context *
-radeon_llvm_context(struct lp_build_tgsi_context *bld_base)
+static inline struct si_shader_context *
+si_shader_context(struct lp_build_tgsi_context *bld_base)
 {
-	return (struct radeon_llvm_context*)bld_base;
+	return (struct si_shader_context*)bld_base;
 }
 
 void radeon_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
@@ -124,22 +175,22 @@ LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 LLVMValueRef bitcast(struct lp_build_tgsi_context *bld_base,
 		     enum tgsi_opcode_type type, LLVMValueRef value);
 
-LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
+LLVMValueRef radeon_llvm_bound_index(struct si_shader_context *ctx,
 				     LLVMValueRef index,
 				     unsigned num);
 
-void radeon_llvm_context_init(struct radeon_llvm_context *ctx,
+void radeon_llvm_context_init(struct si_shader_context *ctx,
                               const char *triple,
 			      const struct tgsi_shader_info *info,
 			      const struct tgsi_token *tokens);
 
-void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
+void radeon_llvm_create_func(struct si_shader_context *ctx,
 			     LLVMTypeRef *return_types, unsigned num_return_elems,
 			     LLVMTypeRef *ParamTypes, unsigned ParamCount);
 
-void radeon_llvm_dispose(struct radeon_llvm_context *ctx);
+void radeon_llvm_dispose(struct si_shader_context *ctx);
 
-void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx,
+void radeon_llvm_finalize_module(struct si_shader_context *ctx,
 				 bool run_verifier);
 
 LLVMValueRef radeon_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,

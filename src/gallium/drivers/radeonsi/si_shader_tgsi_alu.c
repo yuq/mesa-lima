@@ -695,7 +695,7 @@ static void emit_fdiv(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	emit_data->output[emit_data->chan] =
 		LLVMBuildFDiv(bld_base->base.gallivm->builder,

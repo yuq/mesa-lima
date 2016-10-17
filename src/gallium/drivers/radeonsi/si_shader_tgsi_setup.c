@@ -285,7 +285,7 @@ LLVMValueRef bitcast(struct lp_build_tgsi_context *bld_base,
  * Return a value that is equal to the given i32 \p index if it lies in [0,num)
  * or an undefined value in the same interval otherwise.
  */
-LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
+LLVMValueRef radeon_llvm_bound_index(struct si_shader_context *ctx,
 				     LLVMValueRef index,
 				     unsigned num)
 {
@@ -311,7 +311,7 @@ LLVMValueRef radeon_llvm_bound_index(struct radeon_llvm_context *ctx,
 }
 
 static struct radeon_llvm_flow *
-get_current_flow(struct radeon_llvm_context *ctx)
+get_current_flow(struct si_shader_context *ctx)
 {
 	if (ctx->flow_depth > 0)
 		return &ctx->flow[ctx->flow_depth - 1];
@@ -319,7 +319,7 @@ get_current_flow(struct radeon_llvm_context *ctx)
 }
 
 static struct radeon_llvm_flow *
-get_innermost_loop(struct radeon_llvm_context *ctx)
+get_innermost_loop(struct si_shader_context *ctx)
 {
 	for (unsigned i = ctx->flow_depth; i > 0; --i) {
 		if (ctx->flow[i - 1].loop_entry_block)
@@ -329,7 +329,7 @@ get_innermost_loop(struct radeon_llvm_context *ctx)
 }
 
 static struct radeon_llvm_flow *
-push_flow(struct radeon_llvm_context *ctx)
+push_flow(struct si_shader_context *ctx)
 {
 	struct radeon_llvm_flow *flow;
 
@@ -380,7 +380,7 @@ get_temp_array_id(struct lp_build_tgsi_context *bld_base,
 		  unsigned reg_index,
 		  const struct tgsi_ind_register *reg)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	unsigned num_arrays = ctx->soa.bld_base.info->array_max[TGSI_FILE_TEMPORARY];
 	unsigned i;
 
@@ -402,7 +402,7 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 		unsigned File, unsigned reg_index,
 		const struct tgsi_ind_register *reg)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct tgsi_declaration_range range;
 
 	if (File == TGSI_FILE_TEMPORARY) {
@@ -438,7 +438,7 @@ emit_array_index(struct lp_build_tgsi_soa_context *bld,
  * must be used.
  */
 static LLVMValueRef
-get_pointer_into_array(struct radeon_llvm_context *ctx,
+get_pointer_into_array(struct si_shader_context *ctx,
 		       unsigned file,
 		       unsigned swizzle,
 		       unsigned reg_index,
@@ -556,7 +556,7 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 		      unsigned reg_index,
 		      const struct tgsi_ind_register *reg_indirect)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
@@ -592,7 +592,7 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 		     unsigned reg_index,
 		     const struct tgsi_ind_register *reg_indirect)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
@@ -639,7 +639,7 @@ LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				    enum tgsi_opcode_type type,
 				    unsigned swizzle)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef result = NULL, ptr, ptr2;
@@ -737,7 +737,7 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 				       enum tgsi_opcode_type type,
 				       unsigned swizzle)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 
 	LLVMValueRef cval = ctx->system_values[reg->Register.Index];
@@ -751,7 +751,7 @@ static LLVMValueRef fetch_system_value(struct lp_build_tgsi_context *bld_base,
 static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			     const struct tgsi_full_declaration *decl)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	unsigned first, last, i;
 	switch(decl->Declaration.File) {
@@ -944,7 +944,7 @@ void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			    const struct tgsi_opcode_info *info,
 			    LLVMValueRef dst[4])
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
 	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
@@ -1045,7 +1045,7 @@ static void set_basicblock_name(LLVMBasicBlockRef bb, const char *base, int pc)
 
 /* Append a basic block at the level of the parent flow.
  */
-static LLVMBasicBlockRef append_basic_block(struct radeon_llvm_context *ctx,
+static LLVMBasicBlockRef append_basic_block(struct si_shader_context *ctx,
 					    const char *name)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -1076,7 +1076,7 @@ static void bgnloop_emit(const struct lp_build_tgsi_action *action,
 			 struct lp_build_tgsi_context *bld_base,
 			 struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *flow = push_flow(ctx);
 	flow->loop_entry_block = append_basic_block(ctx, "LOOP");
@@ -1090,7 +1090,7 @@ static void brk_emit(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *flow = get_innermost_loop(ctx);
 
@@ -1101,7 +1101,7 @@ static void cont_emit(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *flow = get_innermost_loop(ctx);
 
@@ -1112,7 +1112,7 @@ static void else_emit(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *current_branch = get_current_flow(ctx);
 	LLVMBasicBlockRef endif_block;
@@ -1132,7 +1132,7 @@ static void endif_emit(const struct lp_build_tgsi_action *action,
 		       struct lp_build_tgsi_context *bld_base,
 		       struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *current_branch = get_current_flow(ctx);
 
@@ -1149,7 +1149,7 @@ static void endloop_emit(const struct lp_build_tgsi_action *action,
 			 struct lp_build_tgsi_context *bld_base,
 			 struct lp_build_emit_data *emit_data)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *current_loop = get_current_flow(ctx);
 
@@ -1167,7 +1167,7 @@ static void if_cond_emit(const struct lp_build_tgsi_action *action,
 			 struct lp_build_emit_data *emit_data,
 			 LLVMValueRef cond)
 {
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct radeon_llvm_flow *flow = push_flow(ctx);
 	LLVMBasicBlockRef if_block;
@@ -1211,7 +1211,7 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 			   const struct tgsi_full_immediate *imm)
 {
 	unsigned i;
-	struct radeon_llvm_context *ctx = radeon_llvm_context(bld_base);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	for (i = 0; i < 4; ++i) {
 		ctx->soa.immediates[ctx->soa.num_immediates][i] =
@@ -1221,7 +1221,7 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 	ctx->soa.num_immediates++;
 }
 
-void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *triple,
+void radeon_llvm_context_init(struct si_shader_context *ctx, const char *triple,
 			      const struct tgsi_shader_info *info,
 			      const struct tgsi_token *tokens)
 {
@@ -1302,7 +1302,7 @@ void radeon_llvm_context_init(struct radeon_llvm_context *ctx, const char *tripl
 	bld_base->op_actions[TGSI_OPCODE_ENDLOOP].emit = endloop_emit;
 }
 
-void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
+void radeon_llvm_create_func(struct si_shader_context *ctx,
 			     LLVMTypeRef *return_types, unsigned num_return_elems,
 			     LLVMTypeRef *ParamTypes, unsigned ParamCount)
 {
@@ -1325,7 +1325,7 @@ void radeon_llvm_create_func(struct radeon_llvm_context *ctx,
 	LLVMPositionBuilderAtEnd(ctx->gallivm.builder, main_fn_body);
 }
 
-void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx,
+void radeon_llvm_finalize_module(struct si_shader_context *ctx,
 				 bool run_verifier)
 {
 	struct gallivm_state *gallivm = ctx->soa.bld_base.base.gallivm;
@@ -1362,7 +1362,7 @@ void radeon_llvm_finalize_module(struct radeon_llvm_context *ctx,
 	gallivm_dispose_target_library_info(target_library_info);
 }
 
-void radeon_llvm_dispose(struct radeon_llvm_context *ctx)
+void radeon_llvm_dispose(struct si_shader_context *ctx)
 {
 	LLVMDisposeModule(ctx->soa.bld_base.base.gallivm->module);
 	LLVMContextDispose(ctx->soa.bld_base.base.gallivm->context);
