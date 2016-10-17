@@ -485,7 +485,7 @@ static LLVMValueRef get_bounded_indirect_index(struct si_shader_context *ctx,
 	if (HAVE_LLVM <= 0x0308)
 		return LLVMGetUndef(ctx->i32);
 
-	return radeon_llvm_bound_index(ctx, result, num);
+	return si_llvm_bound_index(ctx, result, num);
 }
 
 
@@ -876,7 +876,7 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	value2 = build_buffer_load(ctx, buffer, 1, NULL, base, offset,
 	                           swizzle * 4 + 4, 1, 0);
 
-	return radeon_llvm_emit_fetch_64bit(bld_base, type, value, value2);
+	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 }
 
 /**
@@ -913,7 +913,7 @@ static LLVMValueRef lds_load(struct lp_build_tgsi_context *bld_base,
 		dw_addr = lp_build_add(&bld_base->uint_bld, dw_addr,
 				       lp_build_const_int32(gallivm, swizzle + 1));
 		value2 = build_indexed_load(ctx, ctx->lds, dw_addr, false);
-		return radeon_llvm_emit_fetch_64bit(bld_base, type, value, value2);
+		return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 	}
 
 	return LLVMBuildBitCast(gallivm->builder, value,
@@ -1015,7 +1015,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	 */
 	if (reg->Register.File != TGSI_FILE_OUTPUT ||
 	    (dst[0] && LLVMGetTypeKind(LLVMTypeOf(dst[0])) == LLVMVectorTypeKind)) {
-		radeon_llvm_emit_store(bld_base, inst, info, dst);
+		si_llvm_emit_store(bld_base, inst, info, dst);
 		return;
 	}
 
@@ -1041,7 +1041,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef value = dst[chan_index];
 
 		if (inst->Instruction.Saturate)
-			value = radeon_llvm_saturate(bld_base, value);
+			value = si_llvm_saturate(bld_base, value);
 
 		lds_store(bld_base, chan_index, dw_addr, value);
 
@@ -1134,8 +1134,8 @@ static LLVMValueRef fetch_input_gs(
 					    "llvm.SI.buffer.load.dword.i32.i32",
 					    ctx->i32, args, 9,
 					    LLVMReadOnlyAttribute);
-		return radeon_llvm_emit_fetch_64bit(bld_base, type,
-						    value, value2);
+		return si_llvm_emit_fetch_64bit(bld_base, type,
+						value, value2);
 	}
 	return LLVMBuildBitCast(gallivm->builder,
 				value,
@@ -1833,8 +1833,8 @@ static LLVMValueRef fetch_constant(
 				     LLVMConstInt(ctx->i32, 4, 0));
 		result2 = buffer_load_const(ctx, bufp, addr2);
 
-		result = radeon_llvm_emit_fetch_64bit(bld_base, type,
-						      result, result2);
+		result = si_llvm_emit_fetch_64bit(bld_base, type,
+						  result, result2);
 	}
 	return result;
 }
@@ -1951,7 +1951,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 
 	case V_028714_SPI_SHADER_UNORM16_ABGR:
 		for (chan = 0; chan < 4; chan++) {
-			val[chan] = radeon_llvm_saturate(bld_base, values[chan]);
+			val[chan] = si_llvm_saturate(bld_base, values[chan]);
 			val[chan] = LLVMBuildFMul(builder, val[chan],
 						  lp_build_const_float(gallivm, 65535), "");
 			val[chan] = LLVMBuildFAdd(builder, val[chan],
@@ -2796,7 +2796,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 			for (j = 0; j < 4; j++) {
 				addr = ctx->soa.outputs[i][j];
 				val = LLVMBuildLoad(gallivm->builder, addr, "");
-				val = radeon_llvm_saturate(bld_base, val);
+				val = si_llvm_saturate(bld_base, val);
 				LLVMBuildStore(gallivm->builder, val, addr);
 			}
 		}
@@ -2949,7 +2949,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 	/* Clamp color */
 	if (ctx->shader->key.ps.epilog.clamp_color)
 		for (i = 0; i < 4; i++)
-			color[i] = radeon_llvm_saturate(bld_base, color[i]);
+			color[i] = si_llvm_saturate(bld_base, color[i]);
 
 	/* Alpha to one */
 	if (ctx->shader->key.ps.epilog.alpha_to_one)
@@ -4535,7 +4535,7 @@ static void tex_fetch_args(
 		 * Z32_FLOAT, but we don't know that here.
 		 */
 		if (ctx->screen->b.chip_class == VI)
-			z = radeon_llvm_saturate(bld_base, z);
+			z = si_llvm_saturate(bld_base, z);
 
 		address[count++] = z;
 	}
@@ -5371,9 +5371,9 @@ static void si_create_function(struct si_shader_context *ctx,
 {
 	int i;
 
-	radeon_llvm_create_func(ctx, returns, num_returns,
-				params, num_params);
-	radeon_llvm_shader_type(ctx->main_fn, ctx->type);
+	si_llvm_create_func(ctx, returns, num_returns,
+			    params, num_params);
+	si_llvm_shader_type(ctx->main_fn, ctx->type);
 	ctx->return_value = LLVMGetUndef(ctx->return_type);
 
 	for (i = 0; i <= last_sgpr; ++i) {
@@ -5695,16 +5695,16 @@ static void create_function(struct si_shader_context *ctx)
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
 	if (ctx->type == PIPE_SHADER_FRAGMENT &&
 	    !ctx->is_monolithic) {
-		radeon_llvm_add_attribute(ctx->main_fn,
-					  "InitialPSInputAddr",
-					  S_0286D0_PERSP_SAMPLE_ENA(1) |
-					  S_0286D0_PERSP_CENTER_ENA(1) |
-					  S_0286D0_PERSP_CENTROID_ENA(1) |
-					  S_0286D0_LINEAR_SAMPLE_ENA(1) |
-					  S_0286D0_LINEAR_CENTER_ENA(1) |
-					  S_0286D0_LINEAR_CENTROID_ENA(1) |
-					  S_0286D0_FRONT_FACE_ENA(1) |
-					  S_0286D0_POS_FIXED_PT_ENA(1));
+		si_llvm_add_attribute(ctx->main_fn,
+				      "InitialPSInputAddr",
+				      S_0286D0_PERSP_SAMPLE_ENA(1) |
+				      S_0286D0_PERSP_CENTER_ENA(1) |
+				      S_0286D0_PERSP_CENTROID_ENA(1) |
+				      S_0286D0_LINEAR_SAMPLE_ENA(1) |
+				      S_0286D0_LINEAR_CENTER_ENA(1) |
+				      S_0286D0_LINEAR_CENTROID_ENA(1) |
+				      S_0286D0_FRONT_FACE_ENA(1) |
+				      S_0286D0_POS_FIXED_PT_ENA(1));
 	} else if (ctx->type == PIPE_SHADER_COMPUTE) {
 		const unsigned *properties = shader->selector->info.properties;
 		unsigned max_work_group_size =
@@ -5719,9 +5719,9 @@ static void create_function(struct si_shader_context *ctx)
 			max_work_group_size = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
 		}
 
-		radeon_llvm_add_attribute(ctx->main_fn,
-		                          "amdgpu-max-work-group-size",
-		                          max_work_group_size);
+		si_llvm_add_attribute(ctx->main_fn,
+				      "amdgpu-max-work-group-size",
+				      max_work_group_size);
 	}
 
 	shader->info.num_input_sgprs = 0;
@@ -6230,7 +6230,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 	}
 
 	if (!si_replace_shader(count, binary)) {
-		r = radeon_llvm_compile(mod, binary, tm, debug);
+		r = si_llvm_compile(mod, binary, tm, debug);
 		if (r)
 			return r;
 	}
@@ -6346,7 +6346,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 		LLVMDumpModule(bld_base->base.gallivm->module);
 
-	radeon_llvm_finalize_module(ctx,
+	si_llvm_finalize_module(ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_GEOMETRY));
 
 	r = si_compile_llvm(sscreen, &ctx->shader->binary,
@@ -6362,7 +6362,7 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		r = si_shader_binary_upload(sscreen, ctx->shader);
 	}
 
-	radeon_llvm_dispose(ctx);
+	si_llvm_dispose(ctx);
 
 	FREE(outputs);
 	return r;
@@ -6433,7 +6433,7 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	struct lp_build_tgsi_action tmpl = {};
 
 	memset(ctx, 0, sizeof(*ctx));
-	radeon_llvm_context_init(
+	si_llvm_context_init(
 		ctx, "amdgcn--",
 		(shader && shader->selector) ? &shader->selector->info : NULL,
 		(shader && shader->selector) ? shader->selector->tokens : NULL);
@@ -6627,7 +6627,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	    r600_can_dump_shader(&sscreen->b, ctx.type))
 		LLVMDumpModule(mod);
 
-	radeon_llvm_finalize_module(&ctx,
+	si_llvm_finalize_module(&ctx,
 				    r600_extra_shader_checks(&sscreen->b, ctx.type));
 
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
@@ -6637,7 +6637,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		goto out;
 	}
 
-	radeon_llvm_dispose(&ctx);
+	si_llvm_dispose(&ctx);
 
 	/* Validate SGPR and VGPR usage for compute to detect compiler bugs.
 	 * LLVM 3.9svn has this bug.
@@ -6894,7 +6894,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 
 	/* Compile. */
 	si_llvm_build_ret(&ctx, ret);
-	radeon_llvm_finalize_module(&ctx,
+	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_VERTEX));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -6902,7 +6902,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 			    "Vertex Shader Prolog"))
 		status = false;
 
-	radeon_llvm_dispose(&ctx);
+	si_llvm_dispose(&ctx);
 	return status;
 }
 
@@ -6967,7 +6967,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
-	radeon_llvm_finalize_module(&ctx,
+	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_VERTEX));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -6975,7 +6975,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 			    "Vertex Shader Epilog"))
 		status = false;
 
-	radeon_llvm_dispose(&ctx);
+	si_llvm_dispose(&ctx);
 	return status;
 }
 
@@ -7121,7 +7121,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
-	radeon_llvm_finalize_module(&ctx,
+	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_TESS_CTRL));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -7129,7 +7129,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 			    "Tessellation Control Shader Epilog"))
 		status = false;
 
-	radeon_llvm_dispose(&ctx);
+	si_llvm_dispose(&ctx);
 	return status;
 }
 
@@ -7406,7 +7406,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 
 	/* Compile. */
 	si_llvm_build_ret(&ctx, ret);
-	radeon_llvm_finalize_module(&ctx,
+	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -7414,7 +7414,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 			    "Fragment Shader Prolog"))
 		status = false;
 
-	radeon_llvm_dispose(&ctx);
+	si_llvm_dispose(&ctx);
 	return status;
 }
 
@@ -7469,7 +7469,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	/* Create the function. */
 	si_create_function(&ctx, NULL, 0, params, num_params, last_sgpr);
 	/* Disable elimination of unused inputs. */
-	radeon_llvm_add_attribute(ctx.main_fn,
+	si_llvm_add_attribute(ctx.main_fn,
 				  "InitialPSInputAddr", 0xffffff);
 
 	/* Process colors. */
@@ -7527,7 +7527,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
-	radeon_llvm_finalize_module(&ctx,
+	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
 
 	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
@@ -7535,7 +7535,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 			    "Fragment Shader Epilog"))
 		status = false;
 
-	radeon_llvm_dispose(&ctx);
+	si_llvm_dispose(&ctx);
 	return status;
 }
 

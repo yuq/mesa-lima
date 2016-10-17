@@ -126,7 +126,7 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 {
 	const char *triple = "amdgcn--";
 
-	return LLVMCreateTargetMachine(radeon_llvm_get_r600_target(triple), triple,
+	return LLVMCreateTargetMachine(si_llvm_get_amdgpu_target(triple), triple,
 				       r600_get_llvm_processor_name(sscreen->b.family),
 #if HAVE_LLVM >= 0x0308
 				       sscreen->b.debug_flags & DBG_SI_SCHED ?

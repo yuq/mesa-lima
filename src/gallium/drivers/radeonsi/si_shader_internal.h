@@ -43,7 +43,7 @@ struct radeon_shader_binary;
 
 #define RADEON_LLVM_MAX_SYSTEM_VALUES 4
 
-struct radeon_llvm_flow;
+struct si_llvm_flow;
 
 struct si_shader_context {
 	struct lp_build_tgsi_soa_context soa;
@@ -89,7 +89,7 @@ struct si_shader_context {
 	unsigned temps_count;
 	LLVMValueRef system_values[RADEON_LLVM_MAX_SYSTEM_VALUES];
 
-	struct radeon_llvm_flow *flow;
+	struct si_llvm_flow *flow;
 	unsigned flow_depth;
 	unsigned flow_depth_max;
 
@@ -160,14 +160,14 @@ si_shader_context(struct lp_build_tgsi_context *bld_base)
 	return (struct si_shader_context*)bld_base;
 }
 
-void radeon_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
-void radeon_llvm_shader_type(LLVMValueRef F, unsigned type);
+void si_llvm_add_attribute(LLVMValueRef F, const char *name, int value);
+void si_llvm_shader_type(LLVMValueRef F, unsigned type);
 
-LLVMTargetRef radeon_llvm_get_r600_target(const char *triple);
+LLVMTargetRef si_llvm_get_amdgpu_target(const char *triple);
 
-unsigned radeon_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
-			     LLVMTargetMachineRef tm,
-			     struct pipe_debug_callback *debug);
+unsigned si_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
+			 LLVMTargetMachineRef tm,
+			 struct pipe_debug_callback *debug);
 
 LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 			  enum tgsi_opcode_type type);
@@ -175,41 +175,41 @@ LLVMTypeRef tgsi2llvmtype(struct lp_build_tgsi_context *bld_base,
 LLVMValueRef bitcast(struct lp_build_tgsi_context *bld_base,
 		     enum tgsi_opcode_type type, LLVMValueRef value);
 
-LLVMValueRef radeon_llvm_bound_index(struct si_shader_context *ctx,
-				     LLVMValueRef index,
-				     unsigned num);
+LLVMValueRef si_llvm_bound_index(struct si_shader_context *ctx,
+				 LLVMValueRef index,
+				 unsigned num);
 
-void radeon_llvm_context_init(struct si_shader_context *ctx,
-                              const char *triple,
-			      const struct tgsi_shader_info *info,
-			      const struct tgsi_token *tokens);
+void si_llvm_context_init(struct si_shader_context *ctx,
+			  const char *triple,
+			  const struct tgsi_shader_info *info,
+			  const struct tgsi_token *tokens);
 
-void radeon_llvm_create_func(struct si_shader_context *ctx,
-			     LLVMTypeRef *return_types, unsigned num_return_elems,
-			     LLVMTypeRef *ParamTypes, unsigned ParamCount);
+void si_llvm_create_func(struct si_shader_context *ctx,
+			 LLVMTypeRef *return_types, unsigned num_return_elems,
+			 LLVMTypeRef *ParamTypes, unsigned ParamCount);
 
-void radeon_llvm_dispose(struct si_shader_context *ctx);
+void si_llvm_dispose(struct si_shader_context *ctx);
 
-void radeon_llvm_finalize_module(struct si_shader_context *ctx,
-				 bool run_verifier);
+void si_llvm_finalize_module(struct si_shader_context *ctx,
+			     bool run_verifier);
 
-LLVMValueRef radeon_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
-					  enum tgsi_opcode_type type,
-					  LLVMValueRef ptr,
-					  LLVMValueRef ptr2);
+LLVMValueRef si_llvm_emit_fetch_64bit(struct lp_build_tgsi_context *bld_base,
+				      enum tgsi_opcode_type type,
+				      LLVMValueRef ptr,
+				      LLVMValueRef ptr2);
 
-LLVMValueRef radeon_llvm_saturate(struct lp_build_tgsi_context *bld_base,
-                                  LLVMValueRef value);
+LLVMValueRef si_llvm_saturate(struct lp_build_tgsi_context *bld_base,
+			      LLVMValueRef value);
 
-LLVMValueRef radeon_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
-				    const struct tgsi_full_src_register *reg,
-				    enum tgsi_opcode_type type,
-				    unsigned swizzle);
+LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
+				const struct tgsi_full_src_register *reg,
+				enum tgsi_opcode_type type,
+				unsigned swizzle);
 
-void radeon_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
-			    const struct tgsi_full_instruction *inst,
-			    const struct tgsi_opcode_info *info,
-			    LLVMValueRef dst[4]);
+void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
+			const struct tgsi_full_instruction *inst,
+			const struct tgsi_opcode_info *info,
+			LLVMValueRef dst[4]);
 
 void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base);
 void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
