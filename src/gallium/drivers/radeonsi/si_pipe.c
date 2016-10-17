@@ -23,9 +23,9 @@
 
 #include "si_pipe.h"
 #include "si_public.h"
+#include "si_shader_internal.h"
 #include "sid.h"
 
-#include "radeon/radeon_llvm_emit.h"
 #include "radeon/radeon_uvd.h"
 #include "util/u_memory.h"
 #include "util/u_suballoc.h"

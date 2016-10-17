@@ -25,8 +25,4 @@ C_SOURCES := \
 
 LLVM_C_FILES := \
 	radeon_elf_util.c \
-	radeon_elf_util.h \
-	radeon_llvm_emit.c \
-	radeon_llvm_emit.h \
-	radeon_llvm.h \
-	radeon_setup_tgsi_llvm.c
+	radeon_elf_util.h

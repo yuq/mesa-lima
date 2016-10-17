@@ -26,7 +26,6 @@
 #include "gallivm/lp_bld_intr.h"
 #include "gallivm/lp_bld_gather.h"
 #include "tgsi/tgsi_parse.h"
-#include "radeon/radeon_llvm.h"
 
 static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 			       struct lp_build_emit_data *emit_data)
