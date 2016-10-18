@@ -32,8 +32,7 @@ gen7_upload_tcs_push_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tcs.base;
    /* BRW_NEW_TESS_PROGRAMS */
-   const struct brw_tess_ctrl_program *tcp =
-      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
+   const struct brw_program *tcp = brw_program_const(brw->tess_ctrl_program);
    bool active = brw->tess_eval_program;
 
    if (active) {

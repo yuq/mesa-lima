@@ -41,8 +41,7 @@ brw_upload_tes_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tes.base;
 
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_tess_eval_program *dp =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   struct brw_program *dp = (struct brw_program *) brw->tess_eval_program;
 
    if (!dp)
       return;

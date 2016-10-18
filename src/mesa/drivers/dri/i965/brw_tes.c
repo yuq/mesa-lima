@@ -79,7 +79,7 @@ brw_tes_debug_recompile(struct brw_context *brw,
 static bool
 brw_codegen_tes_prog(struct brw_context *brw,
                      struct gl_shader_program *shader_prog,
-                     struct brw_tess_eval_program *tep,
+                     struct brw_program *tep,
                      struct brw_tes_prog_key *key)
 {
    const struct brw_compiler *compiler = brw->screen->compiler;
@@ -233,10 +233,8 @@ void
 brw_tes_populate_key(struct brw_context *brw,
                      struct brw_tes_prog_key *key)
 {
-   struct brw_tess_ctrl_program *tcp =
-      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
-   struct brw_tess_eval_program *tep =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
+   struct brw_program *tep = (struct brw_program *) brw->tess_eval_program;
    struct gl_program *prog = &tep->program;
 
    uint64_t per_vertex_slots = prog->info.inputs_read;
@@ -275,8 +273,7 @@ brw_upload_tes_prog(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tes.base;
    struct brw_tes_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_tess_eval_program *tep =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   struct brw_program *tep = (struct brw_program *) brw->tess_eval_program;
 
    if (!brw_state_dirty(brw,
                         _NEW_TEXTURE,
@@ -308,7 +305,7 @@ brw_tes_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->tes.base.prog_data;
    bool success;
 
-   struct brw_tess_eval_program *btep = brw_tess_eval_program(prog);
+   struct brw_program *btep = brw_program(prog);
 
    memset(&key, 0, sizeof(key));
 

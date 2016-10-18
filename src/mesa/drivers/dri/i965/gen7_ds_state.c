@@ -32,8 +32,7 @@ gen7_upload_tes_push_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->tes.base;
    /* BRW_NEW_TESS_PROGRAMS */
-   const struct brw_tess_eval_program *tep =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   const struct brw_program *tep = brw_program_const(brw->tess_eval_program);
 
    if (tep) {
       /* BRW_NEW_TES_PROG_DATA */

@@ -334,20 +334,6 @@ struct brw_program {
 };
 
 
-/** Subclass of Mesa tessellation control program */
-struct brw_tess_ctrl_program {
-   struct gl_program program;
-   unsigned id;  /**< serial no. to identify tess ctrl progs, never re-used */
-};
-
-
-/** Subclass of Mesa tessellation evaluation program */
-struct brw_tess_eval_program {
-   struct gl_program program;
-   unsigned id;  /**< serial no. to identify tess eval progs, never re-used */
-};
-
-
 /** Subclass of Mesa fragment program */
 struct brw_fragment_program {
    struct gl_program program;
@@ -1702,18 +1688,6 @@ static inline const struct brw_program *
 brw_program_const(const struct gl_program *p)
 {
    return (const struct brw_program *) p;
-}
-
-static inline struct brw_tess_ctrl_program *
-brw_tess_ctrl_program(struct gl_program *p)
-{
-   return (struct brw_tess_ctrl_program *) p;
-}
-
-static inline struct brw_tess_eval_program *
-brw_tess_eval_program(struct gl_program *p)
-{
-   return (struct brw_tess_eval_program *) p;
 }
 
 static inline struct brw_fragment_program *

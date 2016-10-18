@@ -165,7 +165,7 @@ brw_tcs_debug_recompile(struct brw_context *brw,
 static bool
 brw_codegen_tcs_prog(struct brw_context *brw,
                      struct gl_shader_program *shader_prog,
-                     struct brw_tess_ctrl_program *tcp,
+                     struct brw_program *tcp,
                      struct brw_tcs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -316,10 +316,8 @@ void
 brw_tcs_populate_key(struct brw_context *brw,
                      struct brw_tcs_prog_key *key)
 {
-   struct brw_tess_ctrl_program *tcp =
-      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
-   struct brw_tess_eval_program *tep =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
+   struct brw_program *tep = (struct brw_program *) brw->tess_eval_program;
    struct gl_program *tes_prog = &tep->program;
 
    uint64_t per_vertex_slots = tes_prog->info.inputs_read;
@@ -363,10 +361,9 @@ brw_upload_tcs_prog(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tcs.base;
    struct brw_tcs_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_tess_ctrl_program *tcp =
-      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
-   MAYBE_UNUSED struct brw_tess_eval_program *tep =
-      (struct brw_tess_eval_program *) brw->tess_eval_program;
+   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
+   MAYBE_UNUSED struct brw_program *tep =
+      (struct brw_program *) brw->tess_eval_program;
    assert(tep);
 
    if (!brw_state_dirty(brw,
@@ -400,7 +397,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->tcs.base.prog_data;
    bool success;
 
-   struct brw_tess_ctrl_program *btcp = brw_tess_ctrl_program(prog);
+   struct brw_program *btcp = brw_program(prog);
    const struct gl_linked_shader *tes =
       shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
 

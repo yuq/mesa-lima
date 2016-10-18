@@ -41,8 +41,7 @@ brw_upload_tcs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->tcs.base;
 
    /* BRW_NEW_TESS_PROGRAMS */
-   struct brw_tess_ctrl_program *tcp =
-      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
+   struct brw_program *tcp = (struct brw_program *) brw->tess_ctrl_program;
 
    if (!tcp)
       return;
