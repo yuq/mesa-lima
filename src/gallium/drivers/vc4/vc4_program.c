@@ -137,10 +137,33 @@ ntq_init_ssa_def(struct vc4_compile *c, nir_ssa_def *def)
         return qregs;
 }
 
+/**
+ * This function is responsible for getting QIR results into the associated
+ * storage for a NIR instruction.
+ *
+ * If it's a NIR SSA def, then we just set the associated hash table entry to
+ * the new result.
+ *
+ * If it's a NIR reg, then we need to update the existing qreg assigned to the
+ * NIR destination with the incoming value.  To do that without introducing
+ * new MOVs, we require that the incoming qreg either be a uniform, or be
+ * SSA-defined by the previous QIR instruction in the block and rewritable by
+ * this function.  That lets us sneak ahead and insert the SF flag beforehand
+ * (knowing that the previous instruction doesn't depend on flags) and rewrite
+ * its destination to be the NIR reg's destination
+ */
 static void
 ntq_store_dest(struct vc4_compile *c, nir_dest *dest, int chan,
                struct qreg result)
 {
+        struct qinst *last_inst = NULL;
+        if (!list_empty(&c->cur_block->instructions))
+                last_inst = (struct qinst *)c->cur_block->instructions.prev;
+
+        assert(result.file == QFILE_UNIF ||
+               (result.file == QFILE_TEMP &&
+                last_inst && last_inst == c->defs[result.index]));
+
         if (dest->is_ssa) {
                 assert(chan < dest->ssa.num_components);
 
@@ -162,17 +185,34 @@ ntq_store_dest(struct vc4_compile *c, nir_dest *dest, int chan,
                         _mesa_hash_table_search(c->def_ht, reg);
                 struct qreg *qregs = entry->data;
 
-                /* Conditionally move the result to the destination if the
-                 * channel is active.
+                /* Insert a MOV if the source wasn't an SSA def in the
+                 * previous instruction.
+                 */
+                if (result.file == QFILE_UNIF) {
+                        result = qir_MOV(c, result);
+                        last_inst = c->defs[result.index];
+                }
+
+                /* We know they're both temps, so just rewrite index. */
+                c->defs[last_inst->dst.index] = NULL;
+                last_inst->dst.index = qregs[chan].index;
+
+                /* If we're in control flow, then make this update of the reg
+                 * conditional on the execution mask.
                  */
                 if (c->execute.file != QFILE_NULL) {
-                        struct qinst *mov;
+                        last_inst->dst.index = qregs[chan].index;
 
+                        /* Set the flags to the current exec mask.  To insert
+                         * the SF, we temporarily remove our SSA instruction.
+                         */
+                        list_del(&last_inst->link);
                         qir_SF(c, c->execute);
-                        mov = qir_MOV_cond(c, QPU_COND_ZS, qregs[chan], result);
-                        mov->cond_is_exec_mask = true;
-                } else {
-                        qir_MOV_dest(c, qregs[chan], result);
+                        list_addtail(&last_inst->link,
+                                     &c->cur_block->instructions);
+
+                        last_inst->cond = QPU_COND_ZS;
+                        last_inst->cond_is_exec_mask = true;
                 }
         }
 }
@@ -326,19 +366,16 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
         struct qreg tex = qir_TEX_RESULT(c);
         c->num_texture_samples++;
 
-        struct qreg dest[4];
         enum pipe_format format = c->key->tex[unit].format;
         if (util_format_is_depth_or_stencil(format)) {
                 struct qreg scaled = ntq_scale_depth_texture(c, tex);
                 for (int i = 0; i < 4; i++)
-                        dest[i] = scaled;
+                        ntq_store_dest(c, &instr->dest, i, qir_MOV(c, scaled));
         } else {
                 for (int i = 0; i < 4; i++)
-                        dest[i] = qir_UNPACK_8_F(c, tex, i);
+                        ntq_store_dest(c, &instr->dest, i,
+                                       qir_UNPACK_8_F(c, tex, i));
         }
-
-        for (int i = 0; i < 4; i++)
-                ntq_store_dest(c, &instr->dest, i, dest[i]);
 }
 
 static void
@@ -502,8 +539,9 @@ ntq_ffract(struct vc4_compile *c, struct qreg src)
         struct qreg trunc = qir_ITOF(c, qir_FTOI(c, src));
         struct qreg diff = qir_FSUB(c, src, trunc);
         qir_SF(c, diff);
-        return qir_SEL(c, QPU_COND_NS,
-                       qir_FADD(c, diff, qir_uniform_f(c, 1.0)), diff);
+        return qir_MOV(c, qir_SEL(c, QPU_COND_NS,
+                                  qir_FADD(c, diff, qir_uniform_f(c, 1.0)),
+                                  diff));
 }
 
 /**
@@ -520,8 +558,9 @@ ntq_ffloor(struct vc4_compile *c, struct qreg src)
          */
         qir_SF(c, qir_FSUB(c, src, trunc));
 
-        return qir_SEL(c, QPU_COND_NS,
-                       qir_FSUB(c, trunc, qir_uniform_f(c, 1.0)), trunc);
+        return qir_MOV(c, qir_SEL(c, QPU_COND_NS,
+                                  qir_FSUB(c, trunc, qir_uniform_f(c, 1.0)),
+                                  trunc));
 }
 
 /**
@@ -538,8 +577,9 @@ ntq_fceil(struct vc4_compile *c, struct qreg src)
          */
         qir_SF(c, qir_FSUB(c, trunc, src));
 
-        return qir_SEL(c, QPU_COND_NS,
-                       qir_FADD(c, trunc, qir_uniform_f(c, 1.0)), trunc);
+        return qir_MOV(c, qir_SEL(c, QPU_COND_NS,
+                                  qir_FADD(c, trunc, qir_uniform_f(c, 1.0)),
+                                  trunc));
 }
 
 static struct qreg
@@ -620,7 +660,7 @@ ntq_fsign(struct vc4_compile *c, struct qreg src)
         qir_MOV_dest(c, t, qir_uniform_f(c, 0.0));
         qir_MOV_dest(c, t, qir_uniform_f(c, 1.0))->cond = QPU_COND_ZC;
         qir_MOV_dest(c, t, qir_uniform_f(c, -1.0))->cond = QPU_COND_NS;
-        return t;
+        return qir_MOV(c, t);
 }
 
 static void
@@ -799,7 +839,7 @@ ntq_emit_pack_unorm_4x8(struct vc4_compile *c, nir_alu_instr *instr)
                 qir_PACK_8_F(c, result, src, i);
         }
 
-        ntq_store_dest(c, &instr->dest.dest, 0, result);
+        ntq_store_dest(c, &instr->dest.dest, 0, qir_MOV(c, result));
 }
 
 /** Handles sign-extended bitfield extracts for 16 bits. */
@@ -905,6 +945,9 @@ ntq_emit_comparison(struct vc4_compile *c, struct qreg *dest,
                 break;
         }
 
+        /* Make the temporary for nir_store_dest(). */
+        *dest = qir_MOV(c, *dest);
+
         return true;
 }
 
@@ -931,7 +974,7 @@ static struct qreg ntq_emit_bcsel(struct vc4_compile *c, nir_alu_instr *instr,
 
 out:
         qir_SF(c, src[0]);
-        return qir_SEL(c, QPU_COND_NS, src[1], src[2]);
+        return qir_MOV(c, qir_SEL(c, QPU_COND_NS, src[1], src[2]));
 }
 
 static struct qreg
@@ -950,9 +993,9 @@ ntq_fddx(struct vc4_compile *c, struct qreg src)
         qir_SF(c, qir_AND(c, qir_reg(QFILE_QPU_ELEMENT, 0),
                           qir_uniform_ui(c, 1)));
 
-        return qir_SEL(c, QPU_COND_ZS,
-                       qir_FSUB(c, from_right, src),
-                       qir_FSUB(c, src, from_left));
+        return qir_MOV(c, qir_SEL(c, QPU_COND_ZS,
+                                  qir_FSUB(c, from_right, src),
+                                  qir_FSUB(c, src, from_left)));
 }
 
 static struct qreg
@@ -969,9 +1012,9 @@ ntq_fddy(struct vc4_compile *c, struct qreg src)
                           qir_reg(QFILE_QPU_ELEMENT, 0),
                           qir_uniform_ui(c, 2)));
 
-        return qir_SEL(c, QPU_COND_ZS,
-                       qir_FSUB(c, from_top, src),
-                       qir_FSUB(c, src, from_bottom));
+        return qir_MOV(c, qir_SEL(c, QPU_COND_ZS,
+                                  qir_FSUB(c, from_top, src),
+                                  qir_FSUB(c, src, from_bottom)));
 }
 
 static void
@@ -992,7 +1035,8 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
                         srcs[i] = ntq_get_src(c, instr->src[i].src,
                                               instr->src[i].swizzle[0]);
                 for (int i = 0; i < nir_op_infos[instr->op].num_inputs; i++)
-                        ntq_store_dest(c, &instr->dest.dest, i, srcs[i]);
+                        ntq_store_dest(c, &instr->dest.dest, i,
+                                       qir_MOV(c, srcs[i]));
                 return;
         }
 
@@ -1058,9 +1102,9 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
         case nir_op_i2b:
         case nir_op_f2b:
                 qir_SF(c, src[0]);
-                result = qir_SEL(c, QPU_COND_ZC,
-                                 qir_uniform_ui(c, ~0),
-                                 qir_uniform_ui(c, 0));
+                result = qir_MOV(c, qir_SEL(c, QPU_COND_ZC,
+                                            qir_uniform_ui(c, ~0),
+                                            qir_uniform_ui(c, 0)));
                 break;
 
         case nir_op_iadd:
@@ -1124,7 +1168,7 @@ ntq_emit_alu(struct vc4_compile *c, nir_alu_instr *instr)
                 break;
         case nir_op_fcsel:
                 qir_SF(c, src[0]);
-                result = qir_SEL(c, QPU_COND_ZC, src[1], src[2]);
+                result = qir_MOV(c, qir_SEL(c, QPU_COND_ZC, src[1], src[2]));
                 break;
 
         case nir_op_frcp:
@@ -1687,12 +1731,12 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                                 }
                         }
                         ntq_store_dest(c, &instr->dest, 0,
-                                       c->color_reads[sample_index]);
+                                       qir_MOV(c, c->color_reads[sample_index]));
                 } else {
                         offset = nir_intrinsic_base(instr) + const_offset->u32[0];
                         int comp = nir_intrinsic_component(instr);
                         ntq_store_dest(c, &instr->dest, 0,
-                                       c->inputs[offset * 4 + comp]);
+                                       qir_MOV(c, c->inputs[offset * 4 + comp]));
                 }
                 break;
 
