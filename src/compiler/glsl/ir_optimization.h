@@ -53,6 +53,7 @@
 /* Opertaions for lower_64bit_integer_instructions() */
 #define MUL64                     (1U << 0)
 #define SIGN64                    (1U << 1)
+#define DIV64                     (1U << 2)
 
 /**
  * \see class lower_packing_builtins_visitor
