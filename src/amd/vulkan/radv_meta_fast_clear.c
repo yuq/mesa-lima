@@ -33,7 +33,6 @@
  */
 struct vertex_attrs {
 	float position[2]; /**< 3DPRIM_RECTLIST */
-	float tex_position[2];
 };
 
 /* passthrough vertex shader */
@@ -45,8 +44,6 @@ build_nir_vs(void)
 	nir_builder b;
 	nir_variable *a_position;
 	nir_variable *v_position;
-	nir_variable *a_tex_position;
-	nir_variable *v_tex_position;
 
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_VERTEX, NULL);
 	b.shader->info.name = ralloc_strdup(b.shader, "meta_fast_clear_vs");
@@ -59,16 +56,7 @@ build_nir_vs(void)
 					 "gl_Position");
 	v_position->data.location = VARYING_SLOT_POS;
 
-	a_tex_position = nir_variable_create(b.shader, nir_var_shader_in, vec4,
-					     "a_tex_position");
-	a_tex_position->data.location = VERT_ATTRIB_GENERIC1;
-
-	v_tex_position = nir_variable_create(b.shader, nir_var_shader_out, vec4,
-					     "v_tex_position");
-	v_tex_position->data.location = VARYING_SLOT_VAR0;
-
 	nir_copy_var(&b, v_position, a_position);
-	nir_copy_var(&b, v_tex_position, a_tex_position);
 
 	return b.shader;
 }
@@ -77,24 +65,11 @@ build_nir_vs(void)
 static nir_shader *
 build_nir_fs(void)
 {
-	const struct glsl_type *vec4 = glsl_vec4_type();
 	nir_builder b;
-	nir_variable *v_tex_position; /* vec4, varying texture coordinate */
-	nir_variable *f_color; /* vec4, fragment output color */
 
 	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_FRAGMENT, NULL);
 	b.shader->info.name = ralloc_asprintf(b.shader,
-					      "meta_fast_clear_fs");
-
-	v_tex_position = nir_variable_create(b.shader, nir_var_shader_in, vec4,
-					     "v_tex_position");
-	v_tex_position->data.location = VARYING_SLOT_VAR0;
-
-	f_color = nir_variable_create(b.shader, nir_var_shader_out, vec4,
-				      "f_color");
-	f_color->data.location = FRAG_RESULT_DATA0;
-
-	nir_copy_var(&b, f_color, v_tex_position);
+					      "meta_fast_clear_noop_fs");
 
 	return b.shader;
 }
@@ -187,7 +162,7 @@ create_pipeline(struct radv_device *device,
 				.inputRate = VK_VERTEX_INPUT_RATE_VERTEX
 			},
 		},
-		.vertexAttributeDescriptionCount = 2,
+		.vertexAttributeDescriptionCount = 1,
 		.pVertexAttributeDescriptions = (VkVertexInputAttributeDescription[]) {
 			{
 				/* Position */
@@ -195,13 +170,6 @@ create_pipeline(struct radv_device *device,
 				.binding = 0,
 				.format = VK_FORMAT_R32G32_SFLOAT,
 				.offset = offsetof(struct vertex_attrs, position),
-			},
-			{
-				/* Texture Coordinate */
-				.location = 1,
-				.binding = 0,
-				.format = VK_FORMAT_R32G32_SFLOAT,
-				.offset = offsetof(struct vertex_attrs, tex_position),
 			},
 		}
 	};
@@ -389,27 +357,15 @@ emit_fast_clear_flush(struct radv_cmd_buffer *cmd_buffer,
 				0,
 				0,
 			},
-			.tex_position = {
-				0,
-				0,
-			},
 		},
 		{
 			.position = {
 				0,
 				resolve_extent->height,
 			},
-			.tex_position = {
-				0,
-				resolve_extent->height,
-			},
 		},
 		{
 			.position = {
-				resolve_extent->width,
-				0,
-			},
-			.tex_position = {
 				resolve_extent->width,
 				0,
 			},
