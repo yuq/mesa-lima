@@ -2296,22 +2296,21 @@ gallium_require_llvm() {
     fi
 }
 
-dnl This is for Glamor. Skip this if OpenGL is disabled.
-require_egl_drm() {
-    if test "x$enable_opengl" = xno; then
-        return 0
-    fi
-
+dnl
+dnl DRM is needed by X, Wayland, and offscreen rendering.
+dnl Surfaceless is an alternative for the last one.
+dnl
+require_basic_egl() {
     case "$with_egl_platforms" in
-        *drm*)
+        *drm*|*surfaceless*)
             ;;
-         *)
-            AC_MSG_ERROR([--with-egl-platforms=drm is required to build the $1 driver.])
+        *)
+            AC_MSG_ERROR([$1 requires one of these:
+                  1) --with-egl-platforms=drm (X, Wayland, offscreen rendering based on DRM)
+                  2) --with-egl-platforms=surfaceless (offscreen only)
+                  Recommended options: drm,x11])
             ;;
     esac
-    if test "x$enable_gbm" != xyes; then
-            AC_MSG_ERROR([--enable-gbm is required to build the $1 driver.])
-    fi
 }
 
 radeon_llvm_check() {
@@ -2427,7 +2426,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             require_libdrm "radeonsi"
             radeon_gallium_llvm_check "radeonsi" "3" "6" "0"
-            require_egl_drm "radeonsi"
+            require_basic_egl "radeonsi"
             ;;
         xnouveau)
             HAVE_GALLIUM_NOUVEAU=yes
@@ -2478,7 +2477,7 @@ if test -n "$with_gallium_drivers"; then
         xvirgl)
             HAVE_GALLIUM_VIRGL=yes
             require_libdrm "virgl"
-            require_egl_drm "virgl"
+            require_basic_egl "virgl"
             ;;
         *)
             AC_MSG_ERROR([Unknown Gallium driver: $driver])
