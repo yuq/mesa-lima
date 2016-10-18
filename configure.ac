@@ -955,9 +955,16 @@ AC_ARG_ENABLE([xa],
     [enable_xa=no])
 AC_ARG_ENABLE([gbm],
    [AS_HELP_STRING([--enable-gbm],
-         [enable gbm library @<:@default=auto@:>@])],
+         [enable gbm library @<:@default=yes except cygwin@:>@])],
    [enable_gbm="$enableval"],
-   [enable_gbm=auto])
+   [case "$host_os" in
+       cygwin*)
+          enable_gbm=no
+          ;;
+       *)
+          enable_gbm=yes
+          ;;
+    esac])
 AC_ARG_ENABLE([nine],
     [AS_HELP_STRING([--enable-nine],
         [enable build of the nine Direct3D9 API @<:@default=no@:>@])],
@@ -1755,14 +1762,6 @@ AC_SUBST([OSMESA_PC_LIB_PRIV])
 dnl
 dnl gbm configuration
 dnl
-if test "x$enable_gbm" = xauto; then
-    case "$with_egl_platforms" in
-        *drm*)
-            enable_gbm=yes ;;
-         *)
-            enable_gbm=no ;;
-    esac
-fi
 if test "x$enable_gbm" = xyes; then
     if test "x$enable_dri" = xyes; then
         if test "x$enable_shared_glapi" = xno; then
