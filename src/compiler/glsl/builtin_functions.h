@@ -46,6 +46,12 @@ _mesa_glsl_release_builtin_functions(void);
 namespace generate_ir {
 
 ir_function_signature *
+udiv64(void *mem_ctx, builtin_available_predicate avail);
+
+ir_function_signature *
+idiv64(void *mem_ctx, builtin_available_predicate avail);
+
+ir_function_signature *
 umul64(void *mem_ctx, builtin_available_predicate avail);
 
 ir_function_signature *
