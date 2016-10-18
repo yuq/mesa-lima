@@ -348,13 +348,6 @@ struct gen4_fragment_program {
 };
 
 
-/** Subclass of Mesa compute program */
-struct brw_compute_program {
-   struct gl_program program;
-   unsigned id;  /**< serial no. to identify compute progs, never re-used */
-};
-
-
 struct brw_shader {
    struct gl_linked_shader base;
 
@@ -1681,12 +1674,6 @@ static inline const struct brw_program *
 brw_program_const(const struct gl_program *p)
 {
    return (const struct brw_program *) p;
-}
-
-static inline struct brw_compute_program *
-brw_compute_program(struct gl_program *p)
-{
-   return (struct brw_compute_program *) p;
 }
 
 /**

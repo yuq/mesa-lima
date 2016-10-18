@@ -133,7 +133,8 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    case GL_VERTEX_PROGRAM_ARB:
    case GL_TESS_CONTROL_PROGRAM_NV:
    case GL_TESS_EVALUATION_PROGRAM_NV:
-   case GL_GEOMETRY_PROGRAM_NV: {
+   case GL_GEOMETRY_PROGRAM_NV:
+   case GL_COMPUTE_PROGRAM_NV: {
       struct brw_program *prog = CALLOC_STRUCT(brw_program);
       if (prog) {
 	 prog->id = get_new_program_id(brw->screen);
@@ -161,17 +162,6 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       }
       else
 	 return NULL;
-   }
-
-   case GL_COMPUTE_PROGRAM_NV: {
-      struct brw_compute_program *prog = CALLOC_STRUCT(brw_compute_program);
-      if (prog) {
-         prog->id = get_new_program_id(brw->screen);
-
-         return _mesa_init_gl_program(&prog->program, target, id);
-      } else {
-         return NULL;
-      }
    }
 
    default:

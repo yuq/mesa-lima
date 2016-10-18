@@ -54,7 +54,7 @@ assign_cs_binding_table_offsets(const struct gen_device_info *devinfo,
 static bool
 brw_codegen_cs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
-                    struct brw_compute_program *cp,
+                    struct brw_program *cp,
                     struct brw_cs_prog_key *key)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
@@ -191,8 +191,7 @@ brw_cs_populate_key(struct brw_context *brw, struct brw_cs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_COMPUTE_PROGRAM */
-   const struct brw_compute_program *cp =
-      (struct brw_compute_program *) brw->compute_program;
+   const struct brw_program *cp = (struct brw_program *) brw->compute_program;
    const struct gl_program *prog = (struct gl_program *) cp;
 
    memset(key, 0, sizeof(*key));
@@ -210,8 +209,7 @@ brw_upload_cs_prog(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    struct brw_cs_prog_key key;
-   struct brw_compute_program *cp = (struct brw_compute_program *)
-      brw->compute_program;
+   struct brw_program *cp = (struct brw_program *) brw->compute_program;
 
    if (!cp)
       return;
@@ -246,7 +244,7 @@ brw_cs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_cs_prog_key key;
 
-   struct brw_compute_program *bcp = brw_compute_program(prog);
+   struct brw_program *bcp = brw_program(prog);
 
    memset(&key, 0, sizeof(key));
    key.program_string_id = bcp->id;
