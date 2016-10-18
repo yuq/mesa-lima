@@ -1063,7 +1063,15 @@ cross_validate_globals(struct gl_shader_program *prog,
             return;
          }
 
-         if (prog->IsES && existing->data.precision != var->data.precision) {
+         /* Only in GLSL ES 3.10, the precision qualifier should not match
+          * between block members defined in matched block names within a
+          * shader interface.
+          *
+          * In GLSL ES 3.00 and ES 3.20, precision qualifier for each block
+          * member should match.
+          */
+         if (prog->IsES && (prog->Version != 310 || !var->get_interface_type()) &&
+             existing->data.precision != var->data.precision) {
             linker_error(prog, "declarations for %s `%s` have "
                          "mismatching precision qualifiers\n",
                          mode_string(var), var->name);

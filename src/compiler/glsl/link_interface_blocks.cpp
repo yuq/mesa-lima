@@ -112,8 +112,11 @@ intrastage_match(ir_variable *a,
        * don't force their types to match.  They might mismatch due to the two
        * shaders using different GLSL versions, and that's ok.
        */
-      if (a->data.how_declared != ir_var_declared_implicitly ||
-          b->data.how_declared != ir_var_declared_implicitly)
+      if ((a->data.how_declared != ir_var_declared_implicitly ||
+           b->data.how_declared != ir_var_declared_implicitly) &&
+          (!prog->IsES || prog->Version != 310 ||
+           interstage_member_mismatch(prog, a->get_interface_type(),
+                                      b->get_interface_type())))
          return false;
    }
 
