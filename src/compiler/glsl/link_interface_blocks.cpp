@@ -36,52 +36,6 @@
 namespace {
 
 /**
- * Check if two interfaces match, according to intrastage interface matching
- * rules.  If they do, and the first interface uses an unsized array, it will
- * be updated to reflect the array size declared in the second interface.
- */
-bool
-intrastage_match(ir_variable *a,
-                 ir_variable *b,
-                 struct gl_shader_program *prog)
-{
-   /* Types must match. */
-   if (a->get_interface_type() != b->get_interface_type()) {
-      /* Exception: if both the interface blocks are implicitly declared,
-       * don't force their types to match.  They might mismatch due to the two
-       * shaders using different GLSL versions, and that's ok.
-       */
-      if (a->data.how_declared != ir_var_declared_implicitly ||
-          b->data.how_declared != ir_var_declared_implicitly)
-         return false;
-   }
-
-   /* Presence/absence of interface names must match. */
-   if (a->is_interface_instance() != b->is_interface_instance())
-      return false;
-
-   /* For uniforms, instance names need not match.  For shader ins/outs,
-    * it's not clear from the spec whether they need to match, but
-    * Mesa's implementation relies on them matching.
-    */
-   if (a->is_interface_instance() && b->data.mode != ir_var_uniform &&
-       b->data.mode != ir_var_shader_storage &&
-       strcmp(a->name, b->name) != 0) {
-      return false;
-   }
-
-   /* If a block is an array then it must match across the shader.
-    * Unsized arrays are also processed and matched agaist sized arrays.
-    */
-   if (b->type != a->type &&
-       (b->is_interface_instance() || a->is_interface_instance()) &&
-       !validate_intrastage_arrays(prog, b, a))
-      return false;
-
-   return true;
-}
-
-/**
  * Return true if interface members mismatch and its not allowed by GLSL.
  */
 static bool
@@ -140,6 +94,52 @@ interstage_member_mismatch(struct gl_shader_program *prog,
    }
 
    return false;
+}
+
+/**
+ * Check if two interfaces match, according to intrastage interface matching
+ * rules.  If they do, and the first interface uses an unsized array, it will
+ * be updated to reflect the array size declared in the second interface.
+ */
+bool
+intrastage_match(ir_variable *a,
+                 ir_variable *b,
+                 struct gl_shader_program *prog)
+{
+   /* Types must match. */
+   if (a->get_interface_type() != b->get_interface_type()) {
+      /* Exception: if both the interface blocks are implicitly declared,
+       * don't force their types to match.  They might mismatch due to the two
+       * shaders using different GLSL versions, and that's ok.
+       */
+      if (a->data.how_declared != ir_var_declared_implicitly ||
+          b->data.how_declared != ir_var_declared_implicitly)
+         return false;
+   }
+
+   /* Presence/absence of interface names must match. */
+   if (a->is_interface_instance() != b->is_interface_instance())
+      return false;
+
+   /* For uniforms, instance names need not match.  For shader ins/outs,
+    * it's not clear from the spec whether they need to match, but
+    * Mesa's implementation relies on them matching.
+    */
+   if (a->is_interface_instance() && b->data.mode != ir_var_uniform &&
+       b->data.mode != ir_var_shader_storage &&
+       strcmp(a->name, b->name) != 0) {
+      return false;
+   }
+
+   /* If a block is an array then it must match across the shader.
+    * Unsized arrays are also processed and matched agaist sized arrays.
+    */
+   if (b->type != a->type &&
+       (b->is_interface_instance() || a->is_interface_instance()) &&
+       !validate_intrastage_arrays(prog, b, a))
+      return false;
+
+   return true;
 }
 
 /**
