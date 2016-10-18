@@ -42,8 +42,7 @@ gen6_upload_wm_push_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->wm.base;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_fragment_program *fp =
-      brw_fragment_program_const(brw->fragment_program);
+   const struct brw_program *fp = brw_program_const(brw->fragment_program);
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
 

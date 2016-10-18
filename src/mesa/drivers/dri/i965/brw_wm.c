@@ -76,7 +76,7 @@ assign_fs_binding_table_offsets(const struct gen_device_info *devinfo,
 bool
 brw_codegen_wm_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
-                    struct brw_fragment_program *fp,
+                    struct brw_program *fp,
                     struct brw_wm_prog_key *key,
                     struct brw_vue_map *vue_map)
 {
@@ -438,8 +438,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct brw_fragment_program *fp =
-      (struct brw_fragment_program *) brw->fragment_program;
+   const struct brw_program *fp = brw_program_const(brw->fragment_program);
    const struct gl_program *prog = (struct gl_program *) brw->fragment_program;
    GLuint lookup = 0;
    GLuint line_aa;
@@ -574,8 +573,7 @@ brw_upload_wm_prog(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    struct gl_shader_program *current = ctx->_Shader->_CurrentFragmentProgram;
    struct brw_wm_prog_key key;
-   struct brw_fragment_program *fp = (struct brw_fragment_program *)
-      brw->fragment_program;
+   struct brw_program *fp = (struct brw_program *) brw->fragment_program;
 
    if (!brw_wm_state_dirty(brw))
       return;
@@ -601,7 +599,7 @@ brw_fs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_wm_prog_key key;
 
-   struct brw_fragment_program *bfp = brw_fragment_program(prog);
+   struct brw_program *bfp = brw_program(prog);
 
    memset(&key, 0, sizeof(key));
 

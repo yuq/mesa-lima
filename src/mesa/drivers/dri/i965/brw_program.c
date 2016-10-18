@@ -145,13 +145,13 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
    }
 
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct brw_fragment_program *prog;
+      struct brw_program *prog;
       if (brw->gen < 6) {
          struct gen4_fragment_program *g4_prog =
             CALLOC_STRUCT(gen4_fragment_program);
          prog = &g4_prog->base;
       } else {
-         prog = CALLOC_STRUCT(brw_fragment_program);
+         prog = CALLOC_STRUCT(brw_program);
       }
 
       if (prog) {
@@ -198,9 +198,9 @@ brwProgramStringNotify(struct gl_context *ctx,
 
    switch (target) {
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct brw_fragment_program *newFP = brw_fragment_program(prog);
-      const struct brw_fragment_program *curFP =
-         brw_fragment_program_const(brw->fragment_program);
+      struct brw_program *newFP = brw_program(prog);
+      const struct brw_program *curFP =
+         brw_program_const(brw->fragment_program);
 
       if (newFP == curFP)
 	 brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;

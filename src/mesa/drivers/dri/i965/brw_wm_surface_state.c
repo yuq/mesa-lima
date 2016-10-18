@@ -832,8 +832,7 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
 {
    struct brw_stage_state *stage_state = &brw->wm.base;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   struct brw_fragment_program *fp =
-      (struct brw_fragment_program *) brw->fragment_program;
+   struct brw_program *fp = (struct brw_program *) brw->fragment_program;
    /* BRW_NEW_FS_PROG_DATA */
    struct brw_stage_prog_data *prog_data = brw->wm.base.prog_data;
 

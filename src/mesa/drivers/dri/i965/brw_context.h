@@ -334,15 +334,8 @@ struct brw_program {
 };
 
 
-/** Subclass of Mesa fragment program */
-struct brw_fragment_program {
-   struct gl_program program;
-   GLuint id;  /**< serial no. to identify frag progs, never re-used */
-};
-
-
 struct gen4_fragment_program {
-   struct brw_fragment_program base;
+   struct brw_program base;
 
    bool contains_flat_varying;
    bool contains_noperspective_varying;
@@ -1688,18 +1681,6 @@ static inline const struct brw_program *
 brw_program_const(const struct gl_program *p)
 {
    return (const struct brw_program *) p;
-}
-
-static inline struct brw_fragment_program *
-brw_fragment_program(struct gl_program *p)
-{
-   return (struct brw_fragment_program *) p;
-}
-
-static inline const struct brw_fragment_program *
-brw_fragment_program_const(const struct gl_program *p)
-{
-   return (const struct brw_fragment_program *) p;
 }
 
 static inline struct brw_compute_program *
