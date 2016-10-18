@@ -218,13 +218,16 @@ gen8_upload_ps_blend(struct brw_context *brw)
    if (brw_color_buffer_write_enabled(brw))
       dw1 |= GEN8_PS_BLEND_HAS_WRITEABLE_RT;
 
-   /* _NEW_COLOR */
-   if (ctx->Color.AlphaEnabled)
-      dw1 |= GEN8_PS_BLEND_ALPHA_TEST_ENABLE;
+   if(!buffer0_is_integer) {
+      /* _NEW_COLOR */
+      if (ctx->Color.AlphaEnabled)
+         dw1 |= GEN8_PS_BLEND_ALPHA_TEST_ENABLE;
 
-   /* _NEW_MULTISAMPLE */
-   if (_mesa_is_multisample_enabled(ctx) && ctx->Multisample.SampleAlphaToCoverage)
-      dw1 |= GEN8_PS_BLEND_ALPHA_TO_COVERAGE_ENABLE;
+      /* _NEW_MULTISAMPLE */
+      if (_mesa_is_multisample_enabled(ctx) &&
+          ctx->Multisample.SampleAlphaToCoverage)
+         dw1 |= GEN8_PS_BLEND_ALPHA_TO_COVERAGE_ENABLE;
+   }
 
    /* Used for implementing the following bit of GL_EXT_texture_integer:
     * "Per-fragment operations that require floating-point color
