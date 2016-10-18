@@ -40,17 +40,6 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
    info->uses_texture_gather = sh->Program->UsesGather;
 
    switch (sh->Stage) {
-   case MESA_SHADER_TESS_EVAL: {
-      struct gl_tess_eval_program *tep =
-         (struct gl_tess_eval_program *)sh->Program;
-
-      info->tes.primitive_mode = tep->PrimitiveMode;
-      info->tes.spacing = tep->Spacing;
-      info->tes.vertex_order = tep->VertexOrder;
-      info->tes.point_mode = tep->PointMode;
-      break;
-   }
-
    case MESA_SHADER_GEOMETRY:
       info->gs.vertices_in = shader_prog->Geom.VerticesIn;
       info->gs.output_primitive = sh->info.Geom.OutputType;
