@@ -6397,7 +6397,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    v->have_fma = pscreen->get_shader_param(pscreen, ptarget,
                                            PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED);
 
-   _mesa_copy_linked_program_data(shader_program, shader);
    _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
                                                prog->Parameters);
 
@@ -6467,6 +6466,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    prog->NumInstructions = 0;
 
    do_set_program_inouts(shader->ir, prog, shader->Stage);
+   _mesa_copy_linked_program_data(shader_program, shader);
    shrink_array_declarations(v->inputs, v->num_inputs,
                              &prog->InputsRead, prog->DoubleInputsRead, &prog->PatchInputsRead);
    shrink_array_declarations(v->outputs, v->num_outputs,

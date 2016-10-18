@@ -231,9 +231,11 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       prog->Parameters = _mesa_new_parameter_list();
 
-      _mesa_copy_linked_program_data(shProg, shader);
-
       process_glsl_ir(brw, shProg, shader);
+
+      do_set_program_inouts(shader->ir, prog, shader->Stage);
+
+      _mesa_copy_linked_program_data(shProg, shader);
 
       /* Make a pass over the IR to add state references for any built-in
        * uniforms that are used.  This has to be done now (during linking).
@@ -257,8 +259,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                                       (gl_state_index *) slots[i].tokens);
          }
       }
-
-      do_set_program_inouts(shader->ir, prog, shader->Stage);
 
       prog->SamplersUsed = shader->active_samplers;
       prog->ShadowSamplers = shader->shadow_samplers;

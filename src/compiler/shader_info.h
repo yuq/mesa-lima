@@ -124,6 +124,13 @@ typedef struct shader_info {
    };
 } shader_info;
 
+struct gl_shader_program;
+struct gl_linked_shader;
+
+void
+copy_shader_info(const struct gl_shader_program *shader_prog,
+                 struct gl_linked_shader *sh);
+
 #ifdef __cplusplus
 }
 #endif

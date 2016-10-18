@@ -2218,6 +2218,8 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
    default:
       break;
    }
+
+   copy_shader_info(src, dst_sh);
 }
 
 /**
