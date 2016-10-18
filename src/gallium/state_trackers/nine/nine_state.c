@@ -715,32 +715,32 @@ update_vertex_buffers(struct NineDevice9 *device)
 }
 
 static inline boolean
-update_sampler_derived(struct nine_state *state, struct nine_context *context, unsigned s)
+update_sampler_derived(struct nine_context *context, unsigned s)
 {
     boolean changed = FALSE;
 
-    if (state->samp[s][NINED3DSAMP_SHADOW] != context->texture[s]->shadow) {
+    if (context->samp[s][NINED3DSAMP_SHADOW] != context->texture[s]->shadow) {
         changed = TRUE;
-        state->samp[s][NINED3DSAMP_SHADOW] = context->texture[s]->shadow;
+        context->samp[s][NINED3DSAMP_SHADOW] = context->texture[s]->shadow;
     }
 
-    if (state->samp[s][NINED3DSAMP_CUBETEX] !=
+    if (context->samp[s][NINED3DSAMP_CUBETEX] !=
         (NineResource9(context->texture[s])->type == D3DRTYPE_CUBETEXTURE)) {
         changed = TRUE;
-        state->samp[s][NINED3DSAMP_CUBETEX] =
+        context->samp[s][NINED3DSAMP_CUBETEX] =
                 NineResource9(context->texture[s])->type == D3DRTYPE_CUBETEXTURE;
     }
 
-    if (state->samp[s][D3DSAMP_MIPFILTER] != D3DTEXF_NONE) {
-        int lod = state->samp[s][D3DSAMP_MAXMIPLEVEL] - context->texture[s]->managed.lod;
+    if (context->samp[s][D3DSAMP_MIPFILTER] != D3DTEXF_NONE) {
+        int lod = context->samp[s][D3DSAMP_MAXMIPLEVEL] - context->texture[s]->managed.lod;
         if (lod < 0)
             lod = 0;
-        if (state->samp[s][NINED3DSAMP_MINLOD] != lod) {
+        if (context->samp[s][NINED3DSAMP_MINLOD] != lod) {
             changed = TRUE;
-            state->samp[s][NINED3DSAMP_MINLOD] = lod;
+            context->samp[s][NINED3DSAMP_MINLOD] = lod;
         }
     } else {
-        state->changed.sampler[s] &= ~0x300; /* lod changes irrelevant */
+        context->changed.sampler[s] &= ~0x300; /* lod changes irrelevant */
     }
 
     return changed;
@@ -773,15 +773,15 @@ update_textures_and_samplers(struct NineDevice9 *device)
         }
 
         if (context->texture[s]) {
-            sRGB = state->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
+            sRGB = context->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
             view[i] = NineBaseTexture9_GetSamplerView(context->texture[s], sRGB);
             num_textures = i + 1;
 
-            if (update_sampler_derived(state, context, s) || (state->changed.sampler[s] & 0x05fe)) {
-                state->changed.sampler[s] = 0;
+            if (update_sampler_derived(context, s) || (context->changed.sampler[s] & 0x05fe)) {
+                context->changed.sampler[s] = 0;
                 commit_samplers = TRUE;
-                nine_convert_sampler_state(device->cso, s, state->samp[s]);
+                nine_convert_sampler_state(device->cso, s, context->samp[s]);
             }
         } else {
             /* Bind dummy sampler. We do not bind dummy sampler when
@@ -797,7 +797,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
                                s - NINE_SAMPLER_PS(0), &device->dummy_sampler_state);
 
             commit_samplers = TRUE;
-            state->changed.sampler[s] = ~0;
+            context->changed.sampler[s] = ~0;
         }
 
         context->bound_samplers_mask_ps |= (1 << s);
@@ -821,15 +821,15 @@ update_textures_and_samplers(struct NineDevice9 *device)
         }
 
         if (context->texture[s]) {
-            sRGB = state->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
+            sRGB = context->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
             view[i] = NineBaseTexture9_GetSamplerView(context->texture[s], sRGB);
             num_textures = i + 1;
 
-            if (update_sampler_derived(state, context, s) || (state->changed.sampler[s] & 0x05fe)) {
-                state->changed.sampler[s] = 0;
+            if (update_sampler_derived(context, s) || (context->changed.sampler[s] & 0x05fe)) {
+                context->changed.sampler[s] = 0;
                 commit_samplers = TRUE;
-                nine_convert_sampler_state(device->cso, s, state->samp[s]);
+                nine_convert_sampler_state(device->cso, s, context->samp[s]);
             }
         } else {
             /* Bind dummy sampler. We do not bind dummy sampler when
@@ -845,7 +845,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
                                s - NINE_SAMPLER_VS(0), &device->dummy_sampler_state);
 
             commit_samplers = TRUE;
-            state->changed.sampler[s] = ~0;
+            context->changed.sampler[s] = ~0;
         }
 
         context->bound_samplers_mask_vs |= (1 << s);
@@ -1237,6 +1237,23 @@ nine_context_set_texture(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_sampler_state(struct NineDevice9 *device,
+                               DWORD Sampler,
+                               D3DSAMPLERSTATETYPE Type,
+                               DWORD Value)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    if (unlikely(!nine_check_sampler_state_value(Type, Value)))
+        return;
+
+    context->samp[Sampler][Type] = Value;
+    state->changed.group |= NINE_STATE_SAMPLER;
+    context->changed.sampler[Sampler] |= 1 << Type;
+}
+
+void
 nine_context_set_stream_source(struct NineDevice9 *device,
                                UINT StreamNumber,
                                struct NineVertexBuffer9 *pVBuf9,
@@ -1343,6 +1360,22 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
             if (tex)
                 context->samplers_shadow |= tex->shadow << s;
             nine_bind(&context->texture[s], src->texture[s]);
+        }
+    }
+
+    /* Sampler state */
+    if (src->changed.group & NINE_STATE_SAMPLER) {
+        unsigned s;
+
+        for (s = 0; s < NINE_MAX_SAMPLERS; ++s) {
+            uint32_t m = src->changed.sampler[s];
+            while (m) {
+                const int i = ffs(m) - 1;
+                m &= ~(1 << i);
+                if (nine_check_sampler_state_value(i, src->samp_advertised[s][i]))
+                    context->samp[s][i] = src->samp_advertised[s][i];
+            }
+            context->changed.sampler[s] |= src->changed.sampler[s];
         }
     }
 
@@ -1834,9 +1867,9 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     state->ff.tex_stage[0][D3DTSS_ALPHAOP] = D3DTOP_SELECTARG1;
     memset(&context->bumpmap_vars, 0, sizeof(context->bumpmap_vars));
 
-    for (s = 0; s < ARRAY_SIZE(state->samp); ++s) {
-        memcpy(&state->samp[s], nine_samp_state_defaults,
-               sizeof(state->samp[s]));
+    for (s = 0; s < NINE_MAX_SAMPLERS; ++s) {
+        memcpy(&context->samp[s], nine_samp_state_defaults,
+               sizeof(context->samp[s]));
         memcpy(&state->samp_advertised[s], nine_samp_state_defaults,
                sizeof(state->samp_advertised[s]));
     }
@@ -1866,8 +1899,8 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
         state->viewport.MaxZ = 1.0f;
     }
 
-    for (s = 0; s < ARRAY_SIZE(state->changed.sampler); ++s)
-        state->changed.sampler[s] = ~0;
+    for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
+        context->changed.sampler[s] = ~0;
 
     if (!is_reset) {
         context->dummy_vbo_bound_at = -1;

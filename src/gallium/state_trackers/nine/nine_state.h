@@ -42,12 +42,14 @@
 #define NINED3DRS_MULTISAMPLE  (D3DRS_BLENDOPALPHA + 4)
 
 #define D3DRS_LAST       D3DRS_BLENDOPALPHA
+#define D3DSAMP_LAST     D3DSAMP_DMAPOFFSET
 #define NINED3DRS_LAST   NINED3DRS_MULTISAMPLE /* 214 */
 #define NINED3DSAMP_LAST NINED3DSAMP_CUBETEX /* 16 */
 #define NINED3DTSS_LAST  D3DTSS_CONSTANT
 #define NINED3DTS_LAST   D3DTS_WORLDMATRIX(255)
 
 #define D3DRS_COUNT       (D3DRS_LAST + 1)
+#define D3DSAMP_COUNT     (D3DSAMP_LAST + 1)
 #define NINED3DRS_COUNT   (NINED3DRS_LAST + 1)
 #define NINED3DSAMP_COUNT (NINED3DSAMP_LAST + 1)
 #define NINED3DTSS_COUNT  (NINED3DTSS_LAST + 1)
@@ -139,7 +141,7 @@ struct nine_state
         uint32_t vtxbuf; /* stateblocks only */
         uint32_t stream_freq; /* stateblocks only */
         uint32_t texture; /* stateblocks only */
-        uint16_t sampler[NINE_MAX_SAMPLERS];
+        uint16_t sampler[NINE_MAX_SAMPLERS]; /* stateblocks only */
         struct nine_range *vs_const_f;
         struct nine_range *ps_const_f;
         struct nine_range *vs_const_i;
@@ -186,8 +188,7 @@ struct nine_state
 
     struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS]; /* PS, DMAP, VS */
 
-    DWORD samp[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
-    DWORD samp_advertised[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
+    DWORD samp_advertised[NINE_MAX_SAMPLERS][D3DSAMP_COUNT];
 
     struct {
         struct {
@@ -214,6 +215,7 @@ struct nine_state
 
 struct nine_context {
     struct {
+        uint16_t sampler[NINE_MAX_SAMPLERS];
         uint32_t vtxbuf;
     } changed;
 
@@ -239,6 +241,8 @@ struct nine_context {
     DWORD rs[NINED3DRS_COUNT];
 
     struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS];
+
+    DWORD samp[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
 
     uint32_t samplers_shadow;
 
@@ -289,6 +293,12 @@ void
 nine_context_set_texture(struct NineDevice9 *device,
                          DWORD Stage,
                          struct NineBaseTexture9 *tex);
+
+void
+nine_context_set_sampler_state(struct NineDevice9 *device,
+                               DWORD Sampler,
+                               D3DSAMPLERSTATETYPE Type,
+                               DWORD Value);
 
 void
 nine_context_set_stream_source(struct NineDevice9 *device,

@@ -246,7 +246,6 @@ nine_state_copy_common(struct NineDevice9 *device,
     if (mask->changed.group & NINE_STATE_SAMPLER) {
         for (s = 0; s < NINE_MAX_SAMPLERS; ++s) {
             if (mask->changed.sampler[s] == 0x3ffe) {
-                memcpy(&dst->samp[s], &src->samp[s], sizeof(dst->samp[s]));
                 memcpy(&dst->samp_advertised[s], &src->samp_advertised[s], sizeof(dst->samp_advertised[s]));
             } else {
                 uint32_t m = mask->changed.sampler[s];
@@ -254,7 +253,6 @@ nine_state_copy_common(struct NineDevice9 *device,
                 while (m) {
                     const int i = ffs(m) - 1;
                     m &= ~(1 << i);
-                    dst->samp[s][i] = src->samp[s][i];
                     dst->samp_advertised[s][i] = src->samp_advertised[s][i];
                 }
             }
@@ -444,7 +442,6 @@ nine_state_copy_common_all(struct NineDevice9 *device,
         dst->changed.ucp = src->changed.ucp;
 
     /* Sampler state. */
-    memcpy(dst->samp, src->samp, sizeof(dst->samp));
     memcpy(dst->samp_advertised, src->samp_advertised, sizeof(dst->samp_advertised));
     if (apply)
         memcpy(dst->changed.sampler,
