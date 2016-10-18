@@ -2560,7 +2560,7 @@ CodeEmitterGM107::emitTEX()
 
    if (insn->tex.rIndirectSrc >= 0) {
       emitInsn (0xdeb80000);
-      emitField(0x35, 2, lodm);
+      emitField(0x25, 2, lodm);
       emitField(0x24, 1, insn->tex.useOffsets == 1);
    } else {
       emitInsn (0xc0380000);
