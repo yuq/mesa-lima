@@ -131,7 +131,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
 
    switch (target) {
    case GL_VERTEX_PROGRAM_ARB: {
-      struct brw_vertex_program *prog = CALLOC_STRUCT(brw_vertex_program);
+      struct brw_program *prog = CALLOC_STRUCT(brw_program);
       if (prog) {
 	 prog->id = get_new_program_id(brw->screen);
 
@@ -244,9 +244,9 @@ brwProgramStringNotify(struct gl_context *ctx,
       break;
    }
    case GL_VERTEX_PROGRAM_ARB: {
-      struct brw_vertex_program *newVP = brw_vertex_program(prog);
-      const struct brw_vertex_program *curVP =
-         brw_vertex_program_const(brw->vertex_program);
+      struct brw_program *newVP = brw_program(prog);
+      const struct brw_program *curVP =
+         brw_program_const(brw->vertex_program);
 
       if (newVP == curVP)
 	 brw->ctx.NewDriverState |= BRW_NEW_VERTEX_PROGRAM;

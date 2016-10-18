@@ -87,7 +87,7 @@ brw_vs_outputs_written(struct brw_context *brw, struct brw_vs_prog_key *key,
 bool
 brw_codegen_vs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
-                    struct brw_vertex_program *vp,
+                    struct brw_program *vp,
                     struct brw_vs_prog_key *key)
 {
    const struct brw_compiler *compiler = brw->screen->compiler;
@@ -307,8 +307,7 @@ brw_vs_populate_key(struct brw_context *brw,
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_vertex_program *vp =
-      (struct brw_vertex_program *)brw->vertex_program;
+   struct brw_program *vp = (struct brw_program *)brw->vertex_program;
    struct gl_program *prog = (struct gl_program *) brw->vertex_program;
 
    memset(key, 0, sizeof(*key));
@@ -360,8 +359,7 @@ brw_upload_vs_prog(struct brw_context *brw)
    struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
    struct brw_vs_prog_key key;
    /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_vertex_program *vp =
-      (struct brw_vertex_program *)brw->vertex_program;
+   struct brw_program *vp = (struct brw_program *)brw->vertex_program;
 
    if (!brw_vs_state_dirty(brw))
       return;
@@ -389,7 +387,7 @@ brw_vs_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->vs.base.prog_data;
    bool success;
 
-   struct brw_vertex_program *bvp = brw_vertex_program(prog);
+   struct brw_program *bvp = brw_program(prog);
 
    memset(&key, 0, sizeof(key));
 

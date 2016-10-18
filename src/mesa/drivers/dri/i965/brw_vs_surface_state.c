@@ -113,8 +113,7 @@ brw_upload_vs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->vs.base;
 
    /* BRW_NEW_VERTEX_PROGRAM */
-   struct brw_vertex_program *vp =
-      (struct brw_vertex_program *) brw->vertex_program;
+   struct brw_program *vp = (struct brw_program *) brw->vertex_program;
 
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;

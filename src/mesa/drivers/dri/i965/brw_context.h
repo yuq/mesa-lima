@@ -326,8 +326,9 @@ struct brw_state_flags {
    uint64_t brw;
 };
 
-/** Subclass of Mesa vertex program */
-struct brw_vertex_program {
+
+/** Subclass of Mesa program */
+struct brw_program {
    struct gl_program program;
    GLuint id;
 };
@@ -1698,16 +1699,16 @@ brw_context( struct gl_context *ctx )
    return (struct brw_context *)ctx;
 }
 
-static inline struct brw_vertex_program *
-brw_vertex_program(struct gl_program *p)
+static inline struct brw_program *
+brw_program(struct gl_program *p)
 {
-   return (struct brw_vertex_program *) p;
+   return (struct brw_program *) p;
 }
 
-static inline const struct brw_vertex_program *
-brw_vertex_program_const(const struct gl_program *p)
+static inline const struct brw_program *
+brw_program_const(const struct gl_program *p)
 {
-   return (const struct brw_vertex_program *) p;
+   return (const struct brw_program *) p;
 }
 
 static inline struct brw_tess_ctrl_program *

@@ -40,8 +40,7 @@ gen6_upload_vs_push_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->vs.base;
 
    /* _BRW_NEW_VERTEX_PROGRAM */
-   const struct brw_vertex_program *vp =
-      brw_vertex_program_const(brw->vertex_program);
+   const struct brw_program *vp = brw_program_const(brw->vertex_program);
    /* BRW_NEW_VS_PROG_DATA */
    const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
 
