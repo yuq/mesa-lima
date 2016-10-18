@@ -34,7 +34,7 @@ extern "C" {
 
 struct ra_regs;
 struct nir_shader;
-struct brw_geometry_program;
+struct brw_program;
 union gl_constant_value;
 
 struct brw_compiler {

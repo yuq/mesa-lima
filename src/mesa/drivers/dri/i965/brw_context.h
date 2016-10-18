@@ -348,13 +348,6 @@ struct brw_tess_eval_program {
 };
 
 
-/** Subclass of Mesa geometry program */
-struct brw_geometry_program {
-   struct gl_program program;
-   unsigned id;  /**< serial no. to identify geom progs, never re-used */
-};
-
-
 /** Subclass of Mesa fragment program */
 struct brw_fragment_program {
    struct gl_program program;
@@ -1721,12 +1714,6 @@ static inline struct brw_tess_eval_program *
 brw_tess_eval_program(struct gl_program *p)
 {
    return (struct brw_tess_eval_program *) p;
-}
-
-static inline struct brw_geometry_program *
-brw_geometry_program(struct gl_program *p)
-{
-   return (struct brw_geometry_program *) p;
 }
 
 static inline struct brw_fragment_program *

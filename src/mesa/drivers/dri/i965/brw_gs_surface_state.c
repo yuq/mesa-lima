@@ -41,8 +41,7 @@ brw_upload_gs_pull_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->gs.base;
 
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   struct brw_geometry_program *gp =
-      (struct brw_geometry_program *) brw->geometry_program;
+   struct brw_program *gp = (struct brw_program *) brw->geometry_program;
 
    if (!gp)
       return;

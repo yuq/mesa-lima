@@ -94,7 +94,7 @@ assign_gs_binding_table_offsets(const struct gen_device_info *devinfo,
 bool
 brw_codegen_gs_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
-                    struct brw_geometry_program *gp,
+                    struct brw_program *gp,
                     struct brw_gs_prog_key *key)
 {
    struct brw_compiler *compiler = brw->screen->compiler;
@@ -210,8 +210,7 @@ brw_gs_populate_key(struct brw_context *brw,
                     struct brw_gs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
-   struct brw_geometry_program *gp =
-      (struct brw_geometry_program *) brw->geometry_program;
+   struct brw_program *gp = (struct brw_program *) brw->geometry_program;
 
    memset(key, 0, sizeof(*key));
 
@@ -229,8 +228,7 @@ brw_upload_gs_prog(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_key key;
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   struct brw_geometry_program *gp =
-      (struct brw_geometry_program *) brw->geometry_program;
+   struct brw_program *gp = (struct brw_program *) brw->geometry_program;
 
    if (!brw_gs_state_dirty(brw))
       return;
@@ -275,7 +273,7 @@ brw_gs_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->gs.base.prog_data;
    bool success;
 
-   struct brw_geometry_program *bgp = brw_geometry_program(prog);
+   struct brw_program *bgp = brw_program(prog);
 
    memset(&key, 0, sizeof(key));
 

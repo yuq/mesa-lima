@@ -37,8 +37,7 @@ gen6_upload_gs_push_constants(struct brw_context *brw)
    struct brw_stage_state *stage_state = &brw->gs.base;
 
    /* BRW_NEW_GEOMETRY_PROGRAM */
-   const struct brw_geometry_program *gp =
-      (struct brw_geometry_program *) brw->geometry_program;
+   const struct brw_program *gp = brw_program_const(brw->geometry_program);
 
    if (gp) {
       /* BRW_NEW_GS_PROG_DATA */
