@@ -1093,6 +1093,7 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
       break;
    case TGSI_PROPERTY_FS_COORD_ORIGIN:
    case TGSI_PROPERTY_FS_COORD_PIXEL_CENTER:
+   case TGSI_PROPERTY_FS_DEPTH_LAYOUT:
       // we don't care
       break;
    case TGSI_PROPERTY_VS_PROHIBIT_UCPS:
