@@ -54,6 +54,7 @@
 #define MUL64                     (1U << 0)
 #define SIGN64                    (1U << 1)
 #define DIV64                     (1U << 2)
+#define MOD64                     (1U << 3)
 
 /**
  * \see class lower_packing_builtins_visitor

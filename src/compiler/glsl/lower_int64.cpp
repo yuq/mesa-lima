@@ -379,6 +379,17 @@ lower_64bit_visitor::handle_rvalue(ir_rvalue **rvalue)
       }
       break;
 
+   case ir_binop_mod:
+      if (lowering(MOD64)) {
+         if (ir->type->base_type == GLSL_TYPE_UINT64) {
+            *rvalue = handle_op(ir, "__builtin_umod64", generate_ir::umod64);
+         } else {
+            *rvalue = handle_op(ir, "__builtin_imod64", generate_ir::imod64);
+         }
+         this->progress = true;
+      }
+      break;
+
    case ir_binop_mul:
       if (lowering(MUL64)) {
          *rvalue = handle_op(ir, "__builtin_umul64", generate_ir::umul64);
