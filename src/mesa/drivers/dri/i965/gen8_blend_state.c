@@ -212,6 +212,7 @@ gen8_upload_ps_blend(struct brw_context *brw)
 
    /* _NEW_BUFFERS */
    struct gl_renderbuffer *rb = ctx->DrawBuffer->_ColorDrawBuffers[0];
+   const bool buffer0_is_integer = ctx->DrawBuffer->_IntegerBuffers & 0x1;
 
    /* BRW_NEW_FRAGMENT_PROGRAM | _NEW_BUFFERS | _NEW_COLOR */
    if (brw_color_buffer_write_enabled(brw))
@@ -236,11 +237,7 @@ gen8_upload_ps_blend(struct brw_context *brw)
     *  integer format, the SAMPLE_ALPHA_TO_COVERAGE and SAMPLE_ALPHA_TO_ONE
     *  operations are skipped."
     */
-   GLenum rb_type =
-      rb ? _mesa_get_format_datatype(rb->Format) : GL_UNSIGNED_NORMALIZED;
-
-   if (rb && rb_type != GL_INT && rb_type != GL_UNSIGNED_INT &&
-       (ctx->Color.BlendEnabled & 1)) {
+   if (rb && !buffer0_is_integer && (ctx->Color.BlendEnabled & 1)) {
       GLenum eqRGB = ctx->Color.Blend[0].EquationRGB;
       GLenum eqA = ctx->Color.Blend[0].EquationA;
       GLenum srcRGB = ctx->Color.Blend[0].SrcRGB;
