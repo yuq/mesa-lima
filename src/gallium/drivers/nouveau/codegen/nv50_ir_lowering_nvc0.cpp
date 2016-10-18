@@ -751,6 +751,16 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
          i->tex.rIndirectSrc = 0;
          i->tex.sIndirectSrc = -1;
       }
+      // Move the indirect reference to right after the coords
+      else if (i->tex.rIndirectSrc >= 0 && chipset >= NVISA_GM107_CHIPSET) {
+         Value *hnd = i->getIndirectR();
+
+         i->setIndirectR(NULL);
+         i->moveSources(arg, 1);
+         i->setSrc(arg, hnd);
+         i->tex.rIndirectSrc = 0;
+         i->tex.sIndirectSrc = -1;
+      }
    } else
    // (nvc0) generate and move the tsc/tic/array source to the front
    if (i->tex.target.isArray() || i->tex.rIndirectSrc >= 0 || i->tex.sIndirectSrc >= 0) {
