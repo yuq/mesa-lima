@@ -1046,14 +1046,14 @@ lp_build_mul(struct lp_build_context *bld,
       struct lp_type wide_type = lp_wider_type(type);
       LLVMValueRef al, ah, bl, bh, abl, abh, ab;
 
-      lp_build_unpack2(bld->gallivm, type, wide_type, a, &al, &ah);
-      lp_build_unpack2(bld->gallivm, type, wide_type, b, &bl, &bh);
+      lp_build_unpack2_native(bld->gallivm, type, wide_type, a, &al, &ah);
+      lp_build_unpack2_native(bld->gallivm, type, wide_type, b, &bl, &bh);
 
       /* PMULLW, PSRLW, PADDW */
       abl = lp_build_mul_norm(bld->gallivm, wide_type, al, bl);
       abh = lp_build_mul_norm(bld->gallivm, wide_type, ah, bh);
 
-      ab = lp_build_pack2(bld->gallivm, wide_type, type, abl, abh);
+      ab = lp_build_pack2_native(bld->gallivm, wide_type, type, abl, abh);
 
       return ab;
    }
@@ -1350,9 +1350,9 @@ lp_build_lerp(struct lp_build_context *bld,
 
       lp_build_context_init(&wide_bld, bld->gallivm, wide_type);
 
-      lp_build_unpack2(bld->gallivm, type, wide_type, x,  &xl,  &xh);
-      lp_build_unpack2(bld->gallivm, type, wide_type, v0, &v0l, &v0h);
-      lp_build_unpack2(bld->gallivm, type, wide_type, v1, &v1l, &v1h);
+      lp_build_unpack2_native(bld->gallivm, type, wide_type, x,  &xl,  &xh);
+      lp_build_unpack2_native(bld->gallivm, type, wide_type, v0, &v0l, &v0h);
+      lp_build_unpack2_native(bld->gallivm, type, wide_type, v1, &v1l, &v1h);
 
       /*
        * Lerp both halves.
@@ -1363,7 +1363,7 @@ lp_build_lerp(struct lp_build_context *bld,
       resl = lp_build_lerp_simple(&wide_bld, xl, v0l, v1l, flags);
       resh = lp_build_lerp_simple(&wide_bld, xh, v0h, v1h, flags);
 
-      res = lp_build_pack2(bld->gallivm, wide_type, type, resl, resh);
+      res = lp_build_pack2_native(bld->gallivm, wide_type, type, resl, resh);
    } else {
       res = lp_build_lerp_simple(bld, x, v0, v1, flags);
    }
