@@ -85,7 +85,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
    const struct brw_compiler *compiler = brw->screen->compiler;
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct brw_stage_state *stage_state = &brw->tes.base;
-   nir_shader *nir = tep->program.Base.nir;
+   nir_shader *nir = tep->program.nir;
    struct brw_tes_prog_data prog_data;
    bool start_busy = false;
    double start_time = 0;
@@ -93,10 +93,10 @@ brw_codegen_tes_prog(struct brw_context *brw,
    memset(&prog_data, 0, sizeof(prog_data));
 
    brw_assign_common_binding_table_offsets(MESA_SHADER_TESS_EVAL, devinfo,
-                                           shader_prog, &tep->program.Base,
+                                           shader_prog, &tep->program,
                                            &prog_data.base.base, 0);
 
-   switch (tep->program.Base.info.tes.spacing) {
+   switch (tep->program.info.tes.spacing) {
    case GL_EQUAL:
       prog_data.partitioning = BRW_TESS_PARTITIONING_INTEGER;
       break;
@@ -110,7 +110,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
       unreachable("invalid domain shader spacing");
    }
 
-   switch (tep->program.Base.info.tes.primitive_mode) {
+   switch (tep->program.info.tes.primitive_mode) {
    case GL_QUADS:
       prog_data.domain = BRW_TESS_DOMAIN_QUAD;
       break;
@@ -124,13 +124,13 @@ brw_codegen_tes_prog(struct brw_context *brw,
       unreachable("invalid domain shader primitive mode");
    }
 
-   if (tep->program.Base.info.tes.point_mode) {
+   if (tep->program.info.tes.point_mode) {
       prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_POINT;
-   } else if (tep->program.Base.info.tes.primitive_mode == GL_ISOLINES) {
+   } else if (tep->program.info.tes.primitive_mode == GL_ISOLINES) {
       prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_LINE;
    } else {
       /* Hardware winding order is backwards from OpenGL */
-      switch (tep->program.Base.info.tes.vertex_order) {
+      switch (tep->program.info.tes.vertex_order) {
       case GL_CCW:
          prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW;
          break;
@@ -164,10 +164,10 @@ brw_codegen_tes_prog(struct brw_context *brw,
    prog_data.base.base.nr_image_params = tes->NumImages;
 
    prog_data.base.cull_distance_mask =
-      ((1 << tep->program.Base.CullDistanceArraySize) - 1) <<
-      tep->program.Base.ClipDistanceArraySize;
+      ((1 << tep->program.CullDistanceArraySize) - 1) <<
+      tep->program.ClipDistanceArraySize;
 
-   brw_nir_setup_glsl_uniforms(nir, shader_prog, &tep->program.Base,
+   brw_nir_setup_glsl_uniforms(nir, shader_prog, &tep->program,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);
 
@@ -237,7 +237,7 @@ brw_tes_populate_key(struct brw_context *brw,
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
-   struct gl_program *prog = &tep->program.Base;
+   struct gl_program *prog = &tep->program;
 
    uint64_t per_vertex_slots = prog->info.inputs_read;
    uint32_t per_patch_slots = prog->info.patch_inputs_read;
@@ -308,8 +308,7 @@ brw_tes_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->tes.base.prog_data;
    bool success;
 
-   struct gl_tess_eval_program *tep = (struct gl_tess_eval_program *)prog;
-   struct brw_tess_eval_program *btep = brw_tess_eval_program(tep);
+   struct brw_tess_eval_program *btep = brw_tess_eval_program(prog);
 
    memset(&key, 0, sizeof(key));
 

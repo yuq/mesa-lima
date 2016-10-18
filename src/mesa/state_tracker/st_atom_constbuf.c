@@ -212,7 +212,7 @@ static void update_tes_constants(struct st_context *st )
    struct gl_program_parameter_list *params;
 
    if (tep) {
-      params = tep->Base.Base.Parameters;
+      params = tep->Base.Parameters;
       st_upload_constants( st, params, MESA_SHADER_TESS_EVAL );
    }
 }

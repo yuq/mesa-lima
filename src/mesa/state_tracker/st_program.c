@@ -1629,13 +1629,13 @@ st_translate_tesseval_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
-   if (sttep->Base.Base.info.tes.primitive_mode == GL_ISOLINES)
+   if (sttep->Base.info.tes.primitive_mode == GL_ISOLINES)
       ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE, GL_LINES);
    else
       ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE,
-                    sttep->Base.Base.info.tes.primitive_mode);
+                    sttep->Base.info.tes.primitive_mode);
 
-   switch (sttep->Base.Base.info.tes.spacing) {
+   switch (sttep->Base.info.tes.spacing) {
    case GL_EQUAL:
       ureg_property(ureg, TGSI_PROPERTY_TES_SPACING, PIPE_TESS_SPACING_EQUAL);
       break;
@@ -1652,11 +1652,11 @@ st_translate_tesseval_program(struct st_context *st,
    }
 
    ureg_property(ureg, TGSI_PROPERTY_TES_VERTEX_ORDER_CW,
-                 sttep->Base.Base.info.tes.vertex_order == GL_CW);
+                 sttep->Base.info.tes.vertex_order == GL_CW);
    ureg_property(ureg, TGSI_PROPERTY_TES_POINT_MODE,
-                 sttep->Base.Base.info.tes.point_mode);
+                 sttep->Base.info.tes.point_mode);
 
-   st_translate_program_common(st, &sttep->Base.Base, sttep->glsl_to_tgsi,
+   st_translate_program_common(st, &sttep->Base, sttep->glsl_to_tgsi,
                                ureg, PIPE_SHADER_TESS_EVAL, &sttep->tgsi);
 
    free_glsl_to_tgsi_visitor(sttep->glsl_to_tgsi);

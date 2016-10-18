@@ -274,11 +274,11 @@ struct st_tessctrl_program
 
 
 /**
- * Derived from Mesa gl_tess_eval_program:
+ * Derived from Mesa gl_program:
  */
 struct st_tesseval_program
 {
-   struct gl_tess_eval_program Base;  /**< The Mesa tess eval program */
+   struct gl_program Base;  /**< The Mesa tess eval program */
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
@@ -327,7 +327,7 @@ st_tessctrl_program( struct gl_program *tcp )
 }
 
 static inline struct st_tesseval_program *
-st_tesseval_program( struct gl_tess_eval_program *tep )
+st_tesseval_program( struct gl_program *tep )
 {
    return (struct st_tesseval_program *)tep;
 }

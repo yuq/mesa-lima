@@ -211,7 +211,7 @@ static void update_raster_state( struct st_context *st )
          if (ctx->GeometryProgram._Current)
             last = &ctx->GeometryProgram._Current->Base;
          else if (ctx->TessEvalProgram._Current)
-            last = &ctx->TessEvalProgram._Current->Base;
+            last = ctx->TessEvalProgram._Current;
          else if (ctx->VertexProgram._Current)
             last = &ctx->VertexProgram._Current->Base;
          if (last)

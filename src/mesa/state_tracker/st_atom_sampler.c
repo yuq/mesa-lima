@@ -352,7 +352,7 @@ update_samplers(struct st_context *st)
    if (ctx->TessEvalProgram._Current) {
       update_shader_samplers(st,
                              PIPE_SHADER_TESS_EVAL,
-                             &ctx->TessEvalProgram._Current->Base,
+                             ctx->TessEvalProgram._Current,
                              ctx->Const.Program[MESA_SHADER_TESS_EVAL].MaxTextureImageUnits,
                              st->state.samplers[PIPE_SHADER_TESS_EVAL],
                              &st->state.num_samplers[PIPE_SHADER_TESS_EVAL]);

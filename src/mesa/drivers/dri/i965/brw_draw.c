@@ -456,7 +456,7 @@ brw_try_draw_prims(struct gl_context *ctx,
    brw->gs.base.sampler_count = ctx->GeometryProgram._Current ?
       util_last_bit(ctx->GeometryProgram._Current->Base.SamplersUsed) : 0;
    brw->tes.base.sampler_count = ctx->TessEvalProgram._Current ?
-      util_last_bit(ctx->TessEvalProgram._Current->Base.SamplersUsed) : 0;
+      util_last_bit(ctx->TessEvalProgram._Current->SamplersUsed) : 0;
    brw->tcs.base.sampler_count = ctx->TessCtrlProgram._Current ?
       util_last_bit(ctx->TessCtrlProgram._Current->SamplersUsed) : 0;
    brw->vs.base.sampler_count =

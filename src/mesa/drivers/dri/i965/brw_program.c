@@ -179,7 +179,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
          prog->id = get_new_program_id(brw->screen);
 
-         return _mesa_init_gl_program(&prog->program.Base, target, id);
+         return _mesa_init_gl_program(&prog->program, target, id);
       } else {
          return NULL;
       }

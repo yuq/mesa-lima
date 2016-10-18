@@ -111,7 +111,7 @@ update_program(struct gl_context *ctx)
    const struct gl_fragment_program *prevFP = ctx->FragmentProgram._Current;
    const struct gl_geometry_program *prevGP = ctx->GeometryProgram._Current;
    const struct gl_program *prevTCP = ctx->TessCtrlProgram._Current;
-   const struct gl_tess_eval_program *prevTEP = ctx->TessEvalProgram._Current;
+   const struct gl_program *prevTEP = ctx->TessEvalProgram._Current;
    const struct gl_compute_program *prevCP = ctx->ComputeProgram._Current;
    GLbitfield new_state = 0x0;
 
@@ -196,13 +196,12 @@ update_program(struct gl_context *ctx)
    if (tesProg && tesProg->LinkStatus
        && tesProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]) {
       /* Use GLSL tessellation evaluation shader */
-      _mesa_reference_tesseprog(ctx, &ctx->TessEvalProgram._Current,
-         gl_tess_eval_program(
-            tesProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->Program));
+      _mesa_reference_program(ctx, &ctx->TessEvalProgram._Current,
+         tesProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->Program);
    }
    else {
       /* No tessellation evaluation program */
-      _mesa_reference_tesseprog(ctx, &ctx->TessEvalProgram._Current, NULL);
+      _mesa_reference_program(ctx, &ctx->TessEvalProgram._Current, NULL);
    }
 
    if (tcsProg && tcsProg->LinkStatus
@@ -275,7 +274,7 @@ update_program(struct gl_context *ctx)
       new_state |= _NEW_PROGRAM;
       if (ctx->Driver.BindProgram) {
          ctx->Driver.BindProgram(ctx, GL_TESS_EVALUATION_PROGRAM_NV,
-                            (struct gl_program *) ctx->TessEvalProgram._Current);
+                                 ctx->TessEvalProgram._Current);
       }
    }
 

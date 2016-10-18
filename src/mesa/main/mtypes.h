@@ -1998,19 +1998,6 @@ struct gl_vertex_program
 };
 
 
-/** Tessellation evaluation program object */
-struct gl_tess_eval_program
-{
-   struct gl_program Base;   /**< base class */
-
-   /* input layout */
-   GLenum PrimitiveMode; /* GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
-   GLenum Spacing;       /* GL_EQUAL, GL_FRACTIONAL_EVEN, GL_FRACTIONAL_ODD */
-   GLenum VertexOrder;   /* GL_CW or GL_CCW */
-   bool PointMode;
-};
-
-
 /** Geometry program object */
 struct gl_geometry_program
 {
@@ -2136,7 +2123,7 @@ struct gl_tess_ctrl_program_state
 struct gl_tess_eval_program_state
 {
    /** Currently bound and valid shader. */
-   struct gl_tess_eval_program *_Current;
+   struct gl_program *_Current;
 };
 
 /**
@@ -2774,7 +2761,7 @@ struct gl_shader_program
    struct {
       /**
        * True if gl_ClipDistance is written to.  Copied into
-       * gl_tess_eval_program by _mesa_copy_linked_program_data().
+       * gl_program by _mesa_copy_linked_program_data().
        */
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */

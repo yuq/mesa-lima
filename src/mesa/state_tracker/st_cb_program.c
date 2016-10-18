@@ -75,7 +75,7 @@ st_new_program(struct gl_context *ctx, GLenum target, GLuint id)
    }
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct st_tesseval_program *prog = ST_CALLOC_STRUCT(st_tesseval_program);
-      return _mesa_init_gl_program(&prog->Base.Base, target, id);
+      return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_COMPUTE_PROGRAM_NV: {
       struct st_compute_program *prog = ST_CALLOC_STRUCT(st_compute_program);
@@ -146,7 +146,7 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
          struct st_tesseval_program *sttep =
             (struct st_tesseval_program *) prog;
 
-         st_release_basic_variants(st, sttep->Base.Base.Target,
+         st_release_basic_variants(st, sttep->Base.Target,
                                    &sttep->variants, &sttep->tgsi);
 
          if (sttep->glsl_to_tgsi)
@@ -233,8 +233,8 @@ st_program_string_notify( struct gl_context *ctx,
       struct st_tesseval_program *sttep =
          (struct st_tesseval_program *) prog;
 
-      st_release_basic_variants(st, sttep->Base.Base.Target,
-                                &sttep->variants, &sttep->tgsi);
+      st_release_basic_variants(st, sttep->Base.Target, &sttep->variants,
+                                &sttep->tgsi);
       if (!st_translate_tesseval_program(st, sttep))
          return false;
 

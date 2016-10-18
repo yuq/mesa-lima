@@ -283,7 +283,7 @@ update_tep( struct st_context *st )
    }
 
    sttep = st_tesseval_program(st->ctx->TessEvalProgram._Current);
-   assert(sttep->Base.Base.Target == GL_TESS_EVALUATION_PROGRAM_NV);
+   assert(sttep->Base.Target == GL_TESS_EVALUATION_PROGRAM_NV);
 
    st->tep_variant = st_get_basic_variant(st, PIPE_SHADER_TESS_EVAL,
                                           &sttep->tgsi, &sttep->variants);
