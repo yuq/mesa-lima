@@ -2017,9 +2017,13 @@ AC_ARG_WITH([egl-platforms],
         "x11,drm" @<:@default=auto@:>@])],
     [with_egl_platforms="$withval"],
     [if test "x$enable_egl" = xyes; then
-	with_egl_platforms="x11"
+        if test "x$enable_gbm" = xyes; then
+           with_egl_platforms="x11,drm"
+        else
+           with_egl_platforms="x11"
+        fi
     else
-	with_egl_platforms=""
+        with_egl_platforms=""
     fi])
 
 if test "x$with_egl_platforms" != "x" -a "x$enable_egl" != xyes; then
