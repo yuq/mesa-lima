@@ -2870,6 +2870,11 @@ if test "$enable_egl" = yes; then
 
     echo "        EGL drivers:    $egl_drivers"
 fi
+if test "x$enable_gbm" = xyes; then
+    echo "        GBM:             yes"
+else
+    echo "        GBM:             no"
+fi
 
 # Vulkan
 echo ""
