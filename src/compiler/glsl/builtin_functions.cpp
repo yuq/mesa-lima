@@ -3103,12 +3103,20 @@ builtin_builder::create_builtins()
                 generate_ir::idiv64(mem_ctx, integer_functions_supported),
                 NULL);
 
+   add_function("__builtin_imod64",
+                generate_ir::imod64(mem_ctx, integer_functions_supported),
+                NULL);
+
    add_function("__builtin_sign64",
                 generate_ir::sign64(mem_ctx, integer_functions_supported),
                 NULL);
 
    add_function("__builtin_udiv64",
                 generate_ir::udiv64(mem_ctx, integer_functions_supported),
+                NULL);
+
+   add_function("__builtin_umod64",
+                generate_ir::umod64(mem_ctx, integer_functions_supported),
                 NULL);
 
    add_function("__builtin_umul64",

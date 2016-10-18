@@ -52,6 +52,12 @@ ir_function_signature *
 idiv64(void *mem_ctx, builtin_available_predicate avail);
 
 ir_function_signature *
+umod64(void *mem_ctx, builtin_available_predicate avail);
+
+ir_function_signature *
+imod64(void *mem_ctx, builtin_available_predicate avail);
+
+ir_function_signature *
 umul64(void *mem_ctx, builtin_available_predicate avail);
 
 ir_function_signature *

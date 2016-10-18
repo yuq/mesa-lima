@@ -101,3 +101,21 @@ idiv64(ivec2 _n, ivec2 _d)
 
    return negate ? unpackInt2x32(-int64_t(packUint2x32(quot))) : ivec2(quot);
 }
+
+uvec2
+umod64(uvec2 n, uvec2 d)
+{
+   return udivmod64(n, d).zw;
+}
+
+ivec2
+imod64(ivec2 _n, ivec2 _d)
+{
+   const bool negate = (_n.y < 0) != (_d.y < 0);
+   uvec2 n = unpackUint2x32(uint64_t(abs(packInt2x32(_n))));
+   uvec2 d = unpackUint2x32(uint64_t(abs(packInt2x32(_d))));
+
+   uvec2 rem = udivmod64(n, d).zy;
+
+   return negate ? unpackInt2x32(-int64_t(packUint2x32(rem))) : ivec2(rem);
+}
