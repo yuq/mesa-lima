@@ -725,9 +725,6 @@ struct ast_type_qualifier {
     */
    glsl_base_type image_base_type;
 
-   /** Flag to know if this represents a default value for a qualifier */
-   bool is_default_qualifier;
-
    /**
     * Return true if and only if an interpolation qualifier is present.
     */
@@ -747,6 +744,11 @@ struct ast_type_qualifier {
     * Return whether an auxiliary storage qualifier is present.
     */
    bool has_auxiliary_storage() const;
+
+   /**
+    * Return true if and only if a memory qualifier is present.
+    */
+   bool has_memory() const;
 
    bool merge_qualifier(YYLTYPE *loc,
 			_mesa_glsl_parse_state *state,
@@ -1139,6 +1141,7 @@ public:
    virtual ir_rvalue *hir(exec_list *instructions,
 			  struct _mesa_glsl_parse_state *state);
 
+   ast_type_qualifier default_layout;
    ast_type_qualifier layout;
    const char *block_name;
 

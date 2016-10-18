@@ -276,12 +276,10 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->default_uniform_qualifier = new(this) ast_type_qualifier();
    this->default_uniform_qualifier->flags.q.shared = 1;
    this->default_uniform_qualifier->flags.q.column_major = 1;
-   this->default_uniform_qualifier->is_default_qualifier = true;
 
    this->default_shader_storage_qualifier = new(this) ast_type_qualifier();
    this->default_shader_storage_qualifier->flags.q.shared = 1;
    this->default_shader_storage_qualifier->flags.q.column_major = 1;
-   this->default_shader_storage_qualifier->is_default_qualifier = true;
 
    this->fs_uses_gl_fragcoord = false;
    this->fs_redeclares_gl_fragcoord = false;
@@ -1003,22 +1001,22 @@ _mesa_ast_process_interface_block(YYLTYPE *locp,
     */
    uint64_t block_interface_qualifier = q.flags.i;
 
-   block->layout.flags.i |= block_interface_qualifier;
+   block->default_layout.flags.i |= block_interface_qualifier;
 
    if (state->stage == MESA_SHADER_GEOMETRY &&
        state->has_explicit_attrib_stream() &&
-       block->layout.flags.q.out) {
+       block->default_layout.flags.q.out) {
       /* Assign global layout's stream value. */
-      block->layout.flags.q.stream = 1;
-      block->layout.flags.q.explicit_stream = 0;
-      block->layout.stream = state->out_qualifier->stream;
+      block->default_layout.flags.q.stream = 1;
+      block->default_layout.flags.q.explicit_stream = 0;
+      block->default_layout.stream = state->out_qualifier->stream;
    }
 
-   if (state->has_enhanced_layouts() && block->layout.flags.q.out) {
+   if (state->has_enhanced_layouts() && block->default_layout.flags.q.out) {
       /* Assign global layout's xfb_buffer value. */
-      block->layout.flags.q.xfb_buffer = 1;
-      block->layout.flags.q.explicit_xfb_buffer = 0;
-      block->layout.xfb_buffer = state->out_qualifier->xfb_buffer;
+      block->default_layout.flags.q.xfb_buffer = 1;
+      block->default_layout.flags.q.explicit_xfb_buffer = 0;
+      block->default_layout.xfb_buffer = state->out_qualifier->xfb_buffer;
    }
 
    foreach_list_typed (ast_declarator_list, member, link, &block->declarations) {

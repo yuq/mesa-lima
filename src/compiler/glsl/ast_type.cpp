@@ -107,6 +107,15 @@ ast_type_qualifier::has_auxiliary_storage() const
           || this->flags.q.patch;
 }
 
+bool ast_type_qualifier::has_memory() const
+{
+   return this->flags.q.coherent
+          || this->flags.q._volatile
+          || this->flags.q.restrict_flag
+          || this->flags.q.read_only
+          || this->flags.q.write_only;
+}
+
 /**
  * This function merges both duplicate identifies within a single layout and
  * multiple layout qualifiers on a single variable declaration. The

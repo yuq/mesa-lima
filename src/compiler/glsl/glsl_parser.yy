@@ -838,6 +838,14 @@ declaration:
    }
    | interface_block
    {
+      ast_interface_block *block = (ast_interface_block *) $1;
+      if (block->layout.has_layout() || block->layout.has_memory()) {
+         if (!block->default_layout.merge_qualifier(& @1, state, block->layout, false)) {
+            YYERROR;
+         }
+      }
+      block->layout = block->default_layout;
+
       $$ = $1;
    }
    ;
@@ -2705,17 +2713,16 @@ interface_block:
    {
       ast_interface_block *block = (ast_interface_block *) $2;
 
-      if (!state->has_420pack_or_es31() && block->layout.has_layout() &&
-          !block->layout.is_default_qualifier) {
+      if (!state->has_420pack_or_es31() && block->layout.has_layout()) {
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
          YYERROR;
       }
 
-      if (!block->layout.merge_qualifier(& @1, state, $1, false)) {
+      if (!$1.merge_qualifier(& @1, state, block->layout, false)) {
          YYERROR;
       }
 
-      block->layout.is_default_qualifier = false;
+      block->layout = $1;
 
       $$ = block;
    }
@@ -2723,14 +2730,15 @@ interface_block:
    {
       ast_interface_block *block = (ast_interface_block *)$2;
 
-      if (!block->layout.flags.q.buffer) {
+      if (!block->default_layout.flags.q.buffer) {
             _mesa_glsl_error(& @1, state,
                              "memory qualifiers can only be used in the "
                              "declaration of shader storage blocks");
       }
-      if (!block->layout.merge_qualifier(& @1, state, $1, false)) {
+      if (!$1.merge_qualifier(& @1, state, block->layout, false)) {
          YYERROR;
       }
+      block->layout = $1;
       $$ = block;
    }
    ;
@@ -2741,9 +2749,9 @@ basic_interface_block:
       ast_interface_block *const block = $6;
 
       if ($1.flags.q.uniform) {
-         block->layout = *state->default_uniform_qualifier;
+         block->default_layout = *state->default_uniform_qualifier;
       } else if ($1.flags.q.buffer) {
-         block->layout = *state->default_shader_storage_qualifier;
+         block->default_layout = *state->default_shader_storage_qualifier;
       }
       block->block_name = $2;
       block->declarations.push_degenerate_list_at_head(& $4->link);
