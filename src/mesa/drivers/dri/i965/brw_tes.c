@@ -96,7 +96,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
                                            shader_prog, &tep->program.Base,
                                            &prog_data.base.base, 0);
 
-   switch (tep->program.Spacing) {
+   switch (tep->program.Base.info.tes.spacing) {
    case GL_EQUAL:
       prog_data.partitioning = BRW_TESS_PARTITIONING_INTEGER;
       break;
@@ -110,7 +110,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
       unreachable("invalid domain shader spacing");
    }
 
-   switch (tep->program.PrimitiveMode) {
+   switch (tep->program.Base.info.tes.primitive_mode) {
    case GL_QUADS:
       prog_data.domain = BRW_TESS_DOMAIN_QUAD;
       break;
@@ -124,13 +124,13 @@ brw_codegen_tes_prog(struct brw_context *brw,
       unreachable("invalid domain shader primitive mode");
    }
 
-   if (tep->program.PointMode) {
+   if (tep->program.Base.info.tes.point_mode) {
       prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_POINT;
-   } else if (tep->program.PrimitiveMode == GL_ISOLINES) {
+   } else if (tep->program.Base.info.tes.primitive_mode == GL_ISOLINES) {
       prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_LINE;
    } else {
       /* Hardware winding order is backwards from OpenGL */
-      switch (tep->program.VertexOrder) {
+      switch (tep->program.Base.info.tes.vertex_order) {
       case GL_CCW:
          prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW;
          break;

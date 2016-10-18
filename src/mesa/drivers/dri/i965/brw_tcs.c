@@ -341,10 +341,10 @@ brw_tcs_populate_key(struct brw_context *brw,
    /* We need to specialize our code generation for tessellation levels
     * based on the domain the DS is expecting to tessellate.
     */
-   key->tes_primitive_mode = tep->program.PrimitiveMode;
+   key->tes_primitive_mode = tep->program.Base.info.tes.primitive_mode;
    key->quads_workaround = brw->gen < 9 &&
-                           tep->program.PrimitiveMode == GL_QUADS &&
-                           tep->program.Spacing == GL_EQUAL;
+                           tep->program.Base.info.tes.primitive_mode == GL_QUADS &&
+                           tep->program.Base.info.tes.spacing == GL_EQUAL;
 
    if (tcp) {
       key->program_string_id = tcp->id;
