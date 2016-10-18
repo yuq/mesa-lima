@@ -3026,10 +3026,6 @@ decompress_texture_image(struct gl_context *ctx,
       assert(!"No compressed 1D textures.");
       return false;
 
-   case GL_TEXTURE_3D:
-      assert(!"No compressed 3D textures.");
-      return false;
-
    case GL_TEXTURE_CUBE_MAP_ARRAY:
       faceTarget = GL_TEXTURE_CUBE_MAP_POSITIVE_X + (slice % 6);
       break;
