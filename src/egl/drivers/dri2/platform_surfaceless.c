@@ -178,6 +178,17 @@ dri2_surfaceless_create_pbuffer_surface(_EGLDriver *drv, _EGLDisplay *disp,
 }
 
 static EGLBoolean
+surfaceless_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
+{
+   assert(!surf || surf->Type == EGL_PBUFFER_BIT);
+
+   /* From the EGL 1.5 spec:
+    *    If surface is a [...] pbuffer surface, eglSwapBuffers has no effect.
+    */
+   return EGL_TRUE;
+}
+
+static EGLBoolean
 surfaceless_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
 {
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
@@ -223,6 +234,7 @@ static struct dri2_egl_display_vtbl dri2_surfaceless_display_vtbl = {
    .destroy_surface = surfaceless_destroy_surface,
    .create_image = dri2_create_image_khr,
    .swap_interval = dri2_fallback_swap_interval,
+   .swap_buffers = surfaceless_swap_buffers,
    .swap_buffers_with_damage = dri2_fallback_swap_buffers_with_damage,
    .swap_buffers_region = dri2_fallback_swap_buffers_region,
    .post_sub_buffer = dri2_fallback_post_sub_buffer,
