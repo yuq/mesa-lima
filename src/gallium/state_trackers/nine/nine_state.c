@@ -88,18 +88,18 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
     struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
-    if (state->changed.vs_const_f || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_f || state->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
         cb.buffer_offset = 0;
         cb.buffer_size = 4096 * sizeof(float[4]);
-        cb.user_buffer = state->vs_const_f_swvp;
+        cb.user_buffer = context->vs_const_f_swvp;
 
         if (context->vs->lconstf.ranges) {
             const struct nine_lconstf *lconstf = &(context->vs->lconstf);
             const struct nine_range *r = lconstf->ranges;
             unsigned n = 0;
-            float *dst = device->state.vs_lconstf_temp;
+            float *dst = context->vs_lconstf_temp;
             float *src = (float *)cb.user_buffer;
             memcpy(dst, src, cb.buffer_size);
             while (r) {
@@ -123,30 +123,34 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         context->pipe.cb1_swvp.buffer_offset = cb.buffer_offset;
         context->pipe.cb1_swvp.buffer_size = cb.buffer_size;
         context->pipe.cb1_swvp.user_buffer = cb.user_buffer;
+
+        context->changed.vs_const_f = 0;
     }
 
-    if (state->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
         cb.buffer_offset = 0;
         cb.buffer_size = 2048 * sizeof(float[4]);
-        cb.user_buffer = state->vs_const_i;
+        cb.user_buffer = context->vs_const_i;
 
         context->pipe.cb2_swvp.buffer_offset = cb.buffer_offset;
         context->pipe.cb2_swvp.buffer_size = cb.buffer_size;
         context->pipe.cb2_swvp.user_buffer = cb.user_buffer;
+        context->changed.vs_const_i = 0;
     }
 
-    if (state->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
         cb.buffer_offset = 0;
         cb.buffer_size = 512 * sizeof(float[4]);
-        cb.user_buffer = state->vs_const_b;
+        cb.user_buffer = context->vs_const_b;
 
         context->pipe.cb3_swvp.buffer_offset = cb.buffer_offset;
         context->pipe.cb3_swvp.buffer_size = cb.buffer_size;
         context->pipe.cb3_swvp.user_buffer = cb.user_buffer;
+        context->changed.vs_const_b = 0;
     }
 
     if (!device->driver_caps.user_cbufs) {
@@ -195,33 +199,6 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         cb->user_buffer = NULL;
     }
 
-    if (device->state.changed.vs_const_f) {
-        struct nine_range *r = device->state.changed.vs_const_f;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_f = NULL;
-    }
-
-    if (device->state.changed.vs_const_i) {
-        struct nine_range *r = device->state.changed.vs_const_i;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_i = NULL;
-    }
-
-    if (device->state.changed.vs_const_b) {
-        struct nine_range *r = device->state.changed.vs_const_b;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_b = NULL;
-    }
-
     state->changed.group &= ~NINE_STATE_VS_CONST;
     context->commit |= NINE_STATE_COMMIT_CONST_VS;
 }
@@ -235,40 +212,24 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     cb.buffer = NULL;
     cb.buffer_offset = 0;
     cb.buffer_size = context->vs->const_used_size;
-    cb.user_buffer = device->state.vs_const_f;
+    cb.user_buffer = context->vs_const_f;
 
     if (device->swvp) {
         prepare_vs_constants_userbuf_swvp(device);
         return;
     }
 
-    if (state->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
-        int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
-        memcpy(idst, state->vs_const_i, NINE_MAX_CONST_I * sizeof(int[4]));
+    if (context->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
+        int *idst = (int *)&context->vs_const_f[4 * device->max_vs_const_f];
+        memcpy(idst, context->vs_const_i, NINE_MAX_CONST_I * sizeof(int[4]));
+        context->changed.vs_const_i = 0;
     }
 
-    if (state->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
-        int *idst = (int *)&state->vs_const_f[4 * device->max_vs_const_f];
+    if (context->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
+        int *idst = (int *)&context->vs_const_f[4 * device->max_vs_const_f];
         uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
-        memcpy(bdst, state->vs_const_b, NINE_MAX_CONST_B * sizeof(BOOL));
-    }
-
-    if (device->state.changed.vs_const_i) {
-        struct nine_range *r = device->state.changed.vs_const_i;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_i = NULL;
-    }
-
-    if (device->state.changed.vs_const_b) {
-        struct nine_range *r = device->state.changed.vs_const_b;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_b = NULL;
+        memcpy(bdst, context->vs_const_b, NINE_MAX_CONST_B * sizeof(BOOL));
+        context->changed.vs_const_b = 0;
     }
 
     if (!cb.buffer_size)
@@ -279,7 +240,7 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
         const struct nine_lconstf *lconstf =  &(context->vs->lconstf);
         const struct nine_range *r = lconstf->ranges;
         unsigned n = 0;
-        float *dst = device->state.vs_lconstf_temp;
+        float *dst = context->vs_lconstf_temp;
         float *src = (float *)cb.user_buffer;
         memcpy(dst, src, cb.buffer_size);
         while (r) {
@@ -306,14 +267,7 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     } else
         context->pipe.cb_vs = cb;
 
-    if (device->state.changed.vs_const_f) {
-        struct nine_range *r = device->state.changed.vs_const_f;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.vs_const_f = NULL;
-    }
+    context->changed.vs_const_f = 0;
 
     state->changed.group &= ~NINE_STATE_VS_CONST;
     context->commit |= NINE_STATE_COMMIT_CONST_VS;
@@ -328,34 +282,34 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     cb.buffer = NULL;
     cb.buffer_offset = 0;
     cb.buffer_size = device->state.ps->const_used_size;
-    cb.user_buffer = device->state.ps_const_f;
+    cb.user_buffer = context->ps_const_f;
 
-    if (state->changed.ps_const_i) {
-        int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
-        memcpy(idst, state->ps_const_i, sizeof(state->ps_const_i));
-        state->changed.ps_const_i = 0;
+    if (context->changed.ps_const_i) {
+        int *idst = (int *)&context->ps_const_f[4 * device->max_ps_const_f];
+        memcpy(idst, context->ps_const_i, sizeof(context->ps_const_i));
+        context->changed.ps_const_i = 0;
     }
-    if (state->changed.ps_const_b) {
-        int *idst = (int *)&state->ps_const_f[4 * device->max_ps_const_f];
+    if (context->changed.ps_const_b) {
+        int *idst = (int *)&context->ps_const_f[4 * device->max_ps_const_f];
         uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
-        memcpy(bdst, state->ps_const_b, sizeof(state->ps_const_b));
-        state->changed.ps_const_b = 0;
+        memcpy(bdst, context->ps_const_b, sizeof(context->ps_const_b));
+        context->changed.ps_const_b = 0;
     }
 
     /* Upload special constants needed to implement PS1.x instructions like TEXBEM,TEXBEML and BEM */
     if (device->state.ps->bumpenvmat_needed) {
-        memcpy(device->state.ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
-        memcpy(&device->state.ps_lconstf_temp[4 * 8], &device->context.bumpmap_vars, sizeof(device->context.bumpmap_vars));
+        memcpy(context->ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
+        memcpy(&context->ps_lconstf_temp[4 * 8], &device->context.bumpmap_vars, sizeof(device->context.bumpmap_vars));
 
-        cb.user_buffer = device->state.ps_lconstf_temp;
+        cb.user_buffer = context->ps_lconstf_temp;
     }
 
     if (state->ps->byte_code.version < 0x30 &&
         context->rs[D3DRS_FOGENABLE]) {
-        float *dst = &state->ps_lconstf_temp[4 * 32];
-        if (cb.user_buffer != state->ps_lconstf_temp) {
-            memcpy(state->ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
-            cb.user_buffer = state->ps_lconstf_temp;
+        float *dst = &context->ps_lconstf_temp[4 * 32];
+        if (cb.user_buffer != context->ps_lconstf_temp) {
+            memcpy(context->ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
+            cb.user_buffer = context->ps_lconstf_temp;
         }
 
         d3dcolor_to_rgba(dst, context->rs[D3DRS_FOGCOLOR]);
@@ -385,14 +339,8 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     } else
         context->pipe.cb_ps = cb;
 
-    if (device->state.changed.ps_const_f) {
-        struct nine_range *r = device->state.changed.ps_const_f;
-        struct nine_range *p = r;
-        while (p->next)
-            p = p->next;
-        nine_range_pool_put_chain(&device->range_pool, r, p);
-        device->state.changed.ps_const_f = NULL;
-    }
+    context->changed.ps_const_f = 0;
+
     state->changed.group &= ~NINE_STATE_PS_CONST;
     context->commit |= NINE_STATE_COMMIT_CONST_PS;
 }
@@ -1331,6 +1279,139 @@ nine_context_set_vertex_shader(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_vertex_shader_constant_f(struct NineDevice9 *device,
+                                          UINT StartRegister,
+                                          const float *pConstantData,
+                                          UINT Vector4fCount)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    float *vs_const_f = device->may_swvp ? context->vs_const_f_swvp : context->vs_const_f;
+
+    memcpy(&vs_const_f[StartRegister * 4],
+           pConstantData,
+           Vector4fCount * 4 * sizeof(context->vs_const_f[0]));
+
+    if (device->may_swvp) {
+        Vector4fCount = MIN2(StartRegister + Vector4fCount, NINE_MAX_CONST_F) - StartRegister;
+        if (StartRegister < NINE_MAX_CONST_F)
+            memcpy(&context->vs_const_f[StartRegister * 4],
+                   pConstantData,
+                   Vector4fCount * 4 * sizeof(context->vs_const_f[0]));
+    }
+
+    context->changed.vs_const_f = TRUE;
+    state->changed.group |= NINE_STATE_VS_CONST;
+}
+
+
+void
+nine_context_set_vertex_shader_constant_i(struct NineDevice9 *device,
+                                          UINT StartRegister,
+                                          const int *pConstantData,
+                                          UINT Vector4iCount)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    int i;
+
+    if (device->driver_caps.vs_integer) {
+        memcpy(&context->vs_const_i[4 * StartRegister],
+               pConstantData,
+               Vector4iCount * sizeof(int[4]));
+    } else {
+        for (i = 0; i < Vector4iCount; i++) {
+            context->vs_const_i[4 * (StartRegister + i)] = fui((float)(pConstantData[4 * i]));
+            context->vs_const_i[4 * (StartRegister + i) + 1] = fui((float)(pConstantData[4 * i + 1]));
+            context->vs_const_i[4 * (StartRegister + i) + 2] = fui((float)(pConstantData[4 * i + 2]));
+            context->vs_const_i[4 * (StartRegister + i) + 3] = fui((float)(pConstantData[4 * i + 3]));
+        }
+    }
+
+    context->changed.vs_const_i = TRUE;
+    state->changed.group |= NINE_STATE_VS_CONST;
+}
+
+void
+nine_context_set_vertex_shader_constant_b(struct NineDevice9 *device,
+                                          UINT StartRegister,
+                                          const BOOL *pConstantData,
+                                          UINT BoolCount)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    int i;
+    uint32_t bool_true = device->driver_caps.vs_integer ? 0xFFFFFFFF : fui(1.0f);
+
+    for (i = 0; i < BoolCount; i++)
+        context->vs_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
+
+    context->changed.vs_const_b = TRUE;
+    state->changed.group |= NINE_STATE_VS_CONST;
+}
+
+void
+nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,
+                                        UINT StartRegister,
+                                        const float *pConstantData,
+                                        UINT Vector4fCount)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    memcpy(&context->ps_const_f[StartRegister * 4],
+           pConstantData,
+           Vector4fCount * 4 * sizeof(context->ps_const_f[0]));
+
+    context->changed.ps_const_f = TRUE;
+    state->changed.group |= NINE_STATE_PS_CONST;
+}
+
+void
+nine_context_set_pixel_shader_constant_i(struct NineDevice9 *device,
+                                         UINT StartRegister,
+                                         const int *pConstantData,
+                                         UINT Vector4iCount)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    int i;
+
+    if (device->driver_caps.ps_integer) {
+        memcpy(&context->ps_const_i[StartRegister][0],
+               pConstantData,
+               Vector4iCount * sizeof(context->ps_const_i[0]));
+    } else {
+        for (i = 0; i < Vector4iCount; i++) {
+            context->ps_const_i[StartRegister+i][0] = fui((float)(pConstantData[4*i]));
+            context->ps_const_i[StartRegister+i][1] = fui((float)(pConstantData[4*i+1]));
+            context->ps_const_i[StartRegister+i][2] = fui((float)(pConstantData[4*i+2]));
+            context->ps_const_i[StartRegister+i][3] = fui((float)(pConstantData[4*i+3]));
+        }
+    }
+    context->changed.ps_const_i = TRUE;
+    state->changed.group |= NINE_STATE_PS_CONST;
+}
+
+void
+nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
+                                         UINT StartRegister,
+                                         const BOOL *pConstantData,
+                                         UINT BoolCount)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    int i;
+    uint32_t bool_true = device->driver_caps.ps_integer ? 0xFFFFFFFF : fui(1.0f);
+
+    for (i = 0; i < BoolCount; i++)
+        context->ps_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
+
+    context->changed.ps_const_b = TRUE;
+    state->changed.group |= NINE_STATE_PS_CONST;
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1411,6 +1492,70 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         nine_bind(&context->vs, src->vs);
 
     context->programmable_vs = context->vs && !(context->vdecl && context->vdecl->position_t);
+
+    /* Vertex constants */
+    if (src->changed.group & NINE_STATE_VS_CONST) {
+        struct nine_range *r;
+        if (device->may_swvp) {
+            for (r = src->changed.vs_const_f; r; r = r->next) {
+                int bgn = r->bgn;
+                int end = r->end;
+                memcpy(&context->vs_const_f_swvp[bgn * 4],
+                       &src->vs_const_f[bgn * 4],
+                       (end - bgn) * 4 * sizeof(float));
+                if (bgn < device->max_vs_const_f) {
+                    end = MIN2(end, device->max_vs_const_f);
+                    memcpy(&context->vs_const_f[bgn * 4],
+                           &src->vs_const_f[bgn * 4],
+                           (end - bgn) * 4 * sizeof(float));
+                }
+            }
+        } else {
+            for (r = src->changed.vs_const_f; r; r = r->next) {
+                memcpy(&context->vs_const_f[r->bgn * 4],
+                       &src->vs_const_f[r->bgn * 4],
+                       (r->end - r->bgn) * 4 * sizeof(float));
+            }
+        }
+        for (r = src->changed.vs_const_i; r; r = r->next) {
+            memcpy(&context->vs_const_i[r->bgn * 4],
+                   &src->vs_const_i[r->bgn * 4],
+                   (r->end - r->bgn) * 4 * sizeof(int));
+        }
+        for (r = src->changed.vs_const_b; r; r = r->next) {
+            memcpy(&context->vs_const_b[r->bgn],
+                   &src->vs_const_b[r->bgn],
+                   (r->end - r->bgn) * sizeof(int));
+        }
+        context->changed.vs_const_f = !!src->changed.vs_const_f;
+        context->changed.vs_const_i = !!src->changed.vs_const_i;
+        context->changed.vs_const_b = !!src->changed.vs_const_b;
+    }
+
+    /* Pixel constants */
+    if (src->changed.group & NINE_STATE_PS_CONST) {
+        struct nine_range *r;
+        for (r = src->changed.ps_const_f; r; r = r->next) {
+            memcpy(&context->ps_const_f[r->bgn * 4],
+                   &src->ps_const_f[r->bgn * 4],
+                   (r->end - r->bgn) * 4 * sizeof(float));
+        }
+        if (src->changed.ps_const_i) {
+            uint16_t m = src->changed.ps_const_i;
+            for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
+                if (m & 1)
+                    memcpy(context->ps_const_i[i], src->ps_const_i[i], 4 * sizeof(int));
+        }
+        if (src->changed.ps_const_b) {
+            uint16_t m = src->changed.ps_const_b;
+            for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
+                if (m & 1)
+                    context->ps_const_b[i] = src->ps_const_b[i];
+        }
+        context->changed.ps_const_f = !!src->changed.ps_const_f;
+        context->changed.ps_const_i = !!src->changed.ps_const_i;
+        context->changed.ps_const_b = !!src->changed.ps_const_b;
+    }
 }
 
 static void
@@ -1874,10 +2019,20 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
                sizeof(state->samp_advertised[s]));
     }
 
-    if (state->vs_const_f)
-        memset(state->vs_const_f, 0, device->vs_const_size);
-    if (state->ps_const_f)
-        memset(state->ps_const_f, 0, device->ps_const_size);
+    memset(state->vs_const_f, 0, VS_CONST_F_SIZE(device));
+    memset(context->vs_const_f, 0, device->vs_const_size);
+    if (context->vs_const_f_swvp)
+        memset(context->vs_const_f_swvp, 0, NINE_MAX_CONST_F_SWVP * sizeof(float[4]));
+    memset(state->vs_const_i, 0, VS_CONST_I_SIZE(device));
+    memset(context->vs_const_i, 0, VS_CONST_I_SIZE(device));
+    memset(state->vs_const_b, 0, VS_CONST_B_SIZE(device));
+    memset(context->vs_const_b, 0, VS_CONST_B_SIZE(device));
+    memset(state->ps_const_f, 0, device->ps_const_size);
+    memset(context->ps_const_f, 0, device->ps_const_size);
+    memset(state->ps_const_i, 0, sizeof(state->ps_const_i));
+    memset(context->ps_const_i, 0, sizeof(context->ps_const_i));
+    memset(state->ps_const_b, 0, sizeof(state->ps_const_b));
+    memset(context->ps_const_b, 0, sizeof(context->ps_const_b));
 
     /* Cap dependent initial state:
      */
@@ -2117,7 +2272,7 @@ update_vs_constants_sw(struct NineDevice9 *device)
         cb.buffer = NULL;
         cb.buffer_offset = 0;
         cb.buffer_size = 4096 * sizeof(float[4]);
-        cb.user_buffer = state->vs_const_f_swvp;
+        cb.user_buffer = state->vs_const_f;
 
         if (state->vs->lconstf.ranges) {
             const struct nine_lconstf *lconstf =  &device->state.vs->lconstf;

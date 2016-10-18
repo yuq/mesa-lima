@@ -116,6 +116,10 @@
     ((nconstf)        * 4 * sizeof(float) + \
      NINE_MAX_CONST_I * 4 * sizeof(int))
 
+#define VS_CONST_F_SIZE(device) (device->may_swvp ? (NINE_MAX_CONST_F_SWVP * sizeof(float[4])) : (NINE_MAX_CONST_F * sizeof(float[4])))
+#define VS_CONST_I_SIZE(device) (device->may_swvp ? (NINE_MAX_CONST_I_SWVP * sizeof(int[4])) : (NINE_MAX_CONST_I * sizeof(int[4])))
+#define VS_CONST_B_SIZE(device) (device->may_swvp ? (NINE_MAX_CONST_B_SWVP * sizeof(BOOL)) : (NINE_MAX_CONST_B * sizeof(BOOL)))
+
 
 #define NINE_MAX_TEXTURE_STAGES 8
 
@@ -142,11 +146,11 @@ struct nine_state
         uint32_t stream_freq; /* stateblocks only */
         uint32_t texture; /* stateblocks only */
         uint16_t sampler[NINE_MAX_SAMPLERS]; /* stateblocks only */
-        struct nine_range *vs_const_f;
-        struct nine_range *ps_const_f;
-        struct nine_range *vs_const_i;
+        struct nine_range *vs_const_f; /* stateblocks only */
+        struct nine_range *ps_const_f; /* stateblocks only */
+        struct nine_range *vs_const_i; /* stateblocks only */
         uint16_t ps_const_i; /* NINE_MAX_CONST_I == 16 */
-        struct nine_range *vs_const_b;
+        struct nine_range *vs_const_b; /* stateblocks only */
         uint16_t ps_const_b; /* NINE_MAX_CONST_B == 16 */
         uint8_t ucp;
     } changed;
@@ -164,16 +168,14 @@ struct nine_state
      */
     struct NineVertexShader9 *vs;
     float *vs_const_f;
-    float *vs_const_f_swvp;
     int   *vs_const_i;
     BOOL  *vs_const_b;
-    float *vs_lconstf_temp;
+    float *vs_lconstf_temp; /* ProcessVertices */
 
     struct NinePixelShader9 *ps;
     float *ps_const_f;
     int    ps_const_i[NINE_MAX_CONST_I][4];
     BOOL   ps_const_b[NINE_MAX_CONST_B];
-    float *ps_lconstf_temp;
 
     struct NineVertexDeclaration9 *vdecl;
 
@@ -217,6 +219,12 @@ struct nine_context {
     struct {
         uint16_t sampler[NINE_MAX_SAMPLERS];
         uint32_t vtxbuf;
+        BOOL vs_const_f;
+        BOOL vs_const_i;
+        BOOL vs_const_b;
+        BOOL ps_const_f;
+        BOOL ps_const_i;
+        BOOL ps_const_b;
     } changed;
 
     uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
@@ -230,6 +238,16 @@ struct nine_context {
 
     struct NineVertexShader9 *vs;
     BOOL programmable_vs;
+    float *vs_const_f;
+    float *vs_const_f_swvp;
+    int   *vs_const_i;
+    BOOL  *vs_const_b;
+    float *vs_lconstf_temp;
+
+    float *ps_const_f;
+    int    ps_const_i[NINE_MAX_CONST_I][4];
+    BOOL   ps_const_b[NINE_MAX_CONST_B];
+    float *ps_lconstf_temp;
 
     struct NineVertexDeclaration9 *vdecl;
 
@@ -319,6 +337,42 @@ nine_context_set_vertex_declaration(struct NineDevice9 *device,
 void
 nine_context_set_vertex_shader(struct NineDevice9 *device,
                                struct NineVertexShader9 *pShader);
+
+void
+nine_context_set_vertex_shader_constant_f(struct NineDevice9 *device,
+                                          UINT StartRegister,
+                                          const float *pConstantData,
+                                          UINT Vector4fCount);
+
+void
+nine_context_set_vertex_shader_constant_i(struct NineDevice9 *device,
+                                          UINT StartRegister,
+                                          const int *pConstantData,
+                                          UINT Vector4iCount);
+
+void
+nine_context_set_vertex_shader_constant_b(struct NineDevice9 *device,
+                                          UINT StartRegister,
+                                          const BOOL *pConstantData,
+                                          UINT BoolCount);
+
+void
+nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,
+                                        UINT StartRegister,
+                                        const float *pConstantData,
+                                        UINT Vector4fCount);
+
+void
+nine_context_set_pixel_shader_constant_i(struct NineDevice9 *device,
+                                         UINT StartRegister,
+                                         const int *pConstantData,
+                                         UINT Vector4iCount);
+
+void
+nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
+                                         UINT StartRegister,
+                                         const BOOL *pConstantData,
+                                         UINT BoolCount);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,

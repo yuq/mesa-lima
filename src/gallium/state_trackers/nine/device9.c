@@ -345,24 +345,36 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->ps_const_size = max_const_ps * sizeof(float[4]);
         /* Include space for I,B constants for user constbuf. */
         if (This->may_swvp) {
-            This->state.vs_const_f_swvp = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
-            if (!This->state.vs_const_f_swvp)
+            This->state.vs_const_f = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
+            This->context.vs_const_f_swvp = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
+            if (!This->context.vs_const_f_swvp)
                 return E_OUTOFMEMORY;
             This->state.vs_lconstf_temp = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
+            This->context.vs_lconstf_temp = CALLOC(NINE_MAX_CONST_F_SWVP * sizeof(float[4]),1);
             This->state.vs_const_i = CALLOC(NINE_MAX_CONST_I_SWVP * sizeof(int[4]), 1);
+            This->context.vs_const_i = CALLOC(NINE_MAX_CONST_I_SWVP * sizeof(int[4]), 1);
             This->state.vs_const_b = CALLOC(NINE_MAX_CONST_B_SWVP * sizeof(BOOL), 1);
+            This->context.vs_const_b = CALLOC(NINE_MAX_CONST_B_SWVP * sizeof(BOOL), 1);
         } else {
-            This->state.vs_const_f_swvp = NULL;
+            This->state.vs_const_f = CALLOC(NINE_MAX_CONST_F * sizeof(float[4]), 1);
+            This->context.vs_const_f_swvp = NULL;
             This->state.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
+            This->context.vs_lconstf_temp = CALLOC(This->vs_const_size,1);
             This->state.vs_const_i = CALLOC(NINE_MAX_CONST_I * sizeof(int[4]), 1);
+            This->context.vs_const_i = CALLOC(NINE_MAX_CONST_I * sizeof(int[4]), 1);
             This->state.vs_const_b = CALLOC(NINE_MAX_CONST_B * sizeof(BOOL), 1);
+            This->context.vs_const_b = CALLOC(NINE_MAX_CONST_B * sizeof(BOOL), 1);
         }
-        This->state.vs_const_f = CALLOC(This->vs_const_size, 1);
+        This->context.vs_const_f = CALLOC(This->vs_const_size, 1);
         This->state.ps_const_f = CALLOC(This->ps_const_size, 1);
-        This->state.ps_lconstf_temp = CALLOC(This->ps_const_size,1);
-        if (!This->state.vs_const_f || !This->state.ps_const_f ||
-            !This->state.vs_lconstf_temp || !This->state.ps_lconstf_temp ||
-            !This->state.vs_const_i || !This->state.vs_const_b)
+        This->context.ps_const_f = CALLOC(This->ps_const_size, 1);
+        This->context.ps_lconstf_temp = CALLOC(This->ps_const_size,1);
+        if (!This->state.vs_const_f || !This->context.vs_const_f ||
+            !This->state.ps_const_f || !This->context.ps_const_f ||
+            !This->state.vs_lconstf_temp || !This->context.vs_lconstf_temp ||
+            !This->context.ps_lconstf_temp ||
+            !This->state.vs_const_i || !This->context.vs_const_i ||
+            !This->state.vs_const_b || !This->context.vs_const_b)
             return E_OUTOFMEMORY;
 
         if (strstr(pScreen->get_name(pScreen), "AMD") ||
@@ -505,12 +517,17 @@ NineDevice9_dtor( struct NineDevice9 *This )
     pipe_resource_reference(&This->dummy_texture, NULL);
     pipe_resource_reference(&This->dummy_vbo, NULL);
     FREE(This->state.vs_const_f);
+    FREE(This->context.vs_const_f);
     FREE(This->state.ps_const_f);
+    FREE(This->context.ps_const_f);
     FREE(This->state.vs_lconstf_temp);
-    FREE(This->state.ps_lconstf_temp);
+    FREE(This->context.vs_lconstf_temp);
+    FREE(This->context.ps_lconstf_temp);
     FREE(This->state.vs_const_i);
+    FREE(This->context.vs_const_i);
     FREE(This->state.vs_const_b);
-    FREE(This->state.vs_const_f_swvp);
+    FREE(This->context.vs_const_b);
+    FREE(This->context.vs_const_f_swvp);
 
     pipe_resource_reference(&This->cursor.image, NULL);
     FREE(This->cursor.hw_upload_temp);
@@ -3195,7 +3212,7 @@ NineDevice9_SetVertexShaderConstantF( struct NineDevice9 *This,
                                       UINT Vector4fCount )
 {
     struct nine_state *state = This->update;
-    float *vs_const_f = This->may_swvp ? state->vs_const_f_swvp : state->vs_const_f;
+    float *vs_const_f = state->vs_const_f;
 
     DBG("This=%p StartRegister=%u pConstantData=%p Vector4fCount=%u\n",
         This, StartRegister, pConstantData, Vector4fCount);
@@ -3207,29 +3224,29 @@ NineDevice9_SetVertexShaderConstantF( struct NineDevice9 *This,
        return D3D_OK;
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
-    if (!This->is_recording) {
-        if (!memcmp(&vs_const_f[StartRegister * 4], pConstantData,
-                    Vector4fCount * 4 * sizeof(state->vs_const_f[0])))
-            return D3D_OK;
+    if (unlikely(This->is_recording)) {
+        memcpy(&vs_const_f[StartRegister * 4],
+               pConstantData,
+               Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
+
+        nine_ranges_insert(&state->changed.vs_const_f,
+                           StartRegister, StartRegister + Vector4fCount,
+                           &This->range_pool);
+
+        state->changed.group |= NINE_STATE_VS_CONST;
+
+        return D3D_OK;
     }
+
+    if (!memcmp(&vs_const_f[StartRegister * 4], pConstantData,
+                Vector4fCount * 4 * sizeof(state->vs_const_f[0])))
+        return D3D_OK;
 
     memcpy(&vs_const_f[StartRegister * 4],
            pConstantData,
            Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
 
-    nine_ranges_insert(&state->changed.vs_const_f,
-                       StartRegister, StartRegister + Vector4fCount,
-                       &This->range_pool);
-
-    if (This->may_swvp) {
-        Vector4fCount = MIN2(StartRegister + Vector4fCount, NINE_MAX_CONST_F) - StartRegister;
-        if (StartRegister < NINE_MAX_CONST_F)
-            memcpy(&state->vs_const_f[StartRegister * 4],
-                   pConstantData,
-                   Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
-    }
-
-    state->changed.group |= NINE_STATE_VS_CONST;
+    nine_context_set_vertex_shader_constant_f(This, StartRegister, pConstantData, Vector4fCount);
 
     return D3D_OK;
 }
@@ -3241,14 +3258,13 @@ NineDevice9_GetVertexShaderConstantF( struct NineDevice9 *This,
                                       UINT Vector4fCount )
 {
     const struct nine_state *state = &This->state;
-    float *vs_const_f = This->may_swvp ? state->vs_const_f_swvp : state->vs_const_f;
 
     user_assert(StartRegister                  < This->caps.MaxVertexShaderConst, D3DERR_INVALIDCALL);
     user_assert(StartRegister + Vector4fCount <= This->caps.MaxVertexShaderConst, D3DERR_INVALIDCALL);
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
     memcpy(pConstantData,
-           &vs_const_f[StartRegister * 4],
+           &state->vs_const_f[StartRegister * 4],
            Vector4fCount * 4 * sizeof(state->vs_const_f[0]));
 
     return D3D_OK;
@@ -3290,10 +3306,13 @@ NineDevice9_SetVertexShaderConstantI( struct NineDevice9 *This,
         }
     }
 
-    nine_ranges_insert(&state->changed.vs_const_i,
-                       StartRegister, StartRegister + Vector4iCount,
-                       &This->range_pool);
-    state->changed.group |= NINE_STATE_VS_CONST;
+    if (unlikely(This->is_recording)) {
+        nine_ranges_insert(&state->changed.vs_const_i,
+                           StartRegister, StartRegister + Vector4iCount,
+                           &This->range_pool);
+        state->changed.group |= NINE_STATE_VS_CONST;
+    } else
+        nine_context_set_vertex_shader_constant_i(This, StartRegister, pConstantData, Vector4iCount);
 
     return D3D_OK;
 }
@@ -3361,10 +3380,13 @@ NineDevice9_SetVertexShaderConstantB( struct NineDevice9 *This,
     for (i = 0; i < BoolCount; i++)
         state->vs_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
 
-    nine_ranges_insert(&state->changed.vs_const_b,
-                       StartRegister, StartRegister + BoolCount,
-                       &This->range_pool);
-    state->changed.group |= NINE_STATE_VS_CONST;
+    if (unlikely(This->is_recording)) {
+        nine_ranges_insert(&state->changed.vs_const_b,
+                           StartRegister, StartRegister + BoolCount,
+                           &This->range_pool);
+        state->changed.group |= NINE_STATE_VS_CONST;
+    } else
+        nine_context_set_vertex_shader_constant_b(This, StartRegister, pConstantData, BoolCount);
 
     return D3D_OK;
 }
@@ -3604,21 +3626,28 @@ NineDevice9_SetPixelShaderConstantF( struct NineDevice9 *This,
        return D3D_OK;
     user_assert(pConstantData, D3DERR_INVALIDCALL);
 
-    if (!This->is_recording) {
-        if (!memcmp(&state->ps_const_f[StartRegister * 4], pConstantData,
-                    Vector4fCount * 4 * sizeof(state->ps_const_f[0])))
-            return D3D_OK;
+    if (unlikely(This->is_recording)) {
+        memcpy(&state->ps_const_f[StartRegister * 4],
+               pConstantData,
+               Vector4fCount * 4 * sizeof(state->ps_const_f[0]));
+
+        nine_ranges_insert(&state->changed.ps_const_f,
+                           StartRegister, StartRegister + Vector4fCount,
+                           &This->range_pool);
+
+        state->changed.group |= NINE_STATE_PS_CONST;
+        return D3D_OK;
     }
+
+    if (!memcmp(&state->ps_const_f[StartRegister * 4], pConstantData,
+                Vector4fCount * 4 * sizeof(state->ps_const_f[0])))
+        return D3D_OK;
 
     memcpy(&state->ps_const_f[StartRegister * 4],
            pConstantData,
            Vector4fCount * 4 * sizeof(state->ps_const_f[0]));
 
-    nine_ranges_insert(&state->changed.ps_const_f,
-                       StartRegister, StartRegister + Vector4fCount,
-                       &This->range_pool);
-
-    state->changed.group |= NINE_STATE_PS_CONST;
+    nine_context_set_pixel_shader_constant_f(This, StartRegister, pConstantData, Vector4fCount);
 
     return D3D_OK;
 }
@@ -3675,8 +3704,12 @@ NineDevice9_SetPixelShaderConstantI( struct NineDevice9 *This,
             state->ps_const_i[StartRegister+i][3] = fui((float)(pConstantData[4*i+3]));
         }
     }
-    state->changed.ps_const_i |= ((1 << Vector4iCount) - 1) << StartRegister;
-    state->changed.group |= NINE_STATE_PS_CONST;
+
+    if (unlikely(This->is_recording)) {
+        state->changed.ps_const_i |= ((1 << Vector4iCount) - 1) << StartRegister;
+        state->changed.group |= NINE_STATE_PS_CONST;
+    } else
+        nine_context_set_pixel_shader_constant_i(This, StartRegister, pConstantData, Vector4iCount);
 
     return D3D_OK;
 }
@@ -3740,8 +3773,11 @@ NineDevice9_SetPixelShaderConstantB( struct NineDevice9 *This,
     for (i = 0; i < BoolCount; i++)
         state->ps_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
 
-    state->changed.ps_const_b |= ((1 << BoolCount) - 1) << StartRegister;
-    state->changed.group |= NINE_STATE_PS_CONST;
+    if (unlikely(This->is_recording)) {
+        state->changed.ps_const_b |= ((1 << BoolCount) - 1) << StartRegister;
+        state->changed.group |= NINE_STATE_PS_CONST;
+    } else
+        nine_context_set_pixel_shader_constant_b(This, StartRegister, pConstantData, BoolCount);
 
     return D3D_OK;
 }

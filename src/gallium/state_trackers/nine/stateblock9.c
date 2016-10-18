@@ -30,10 +30,6 @@
 
 /* XXX TODO: handling of lights is broken */
 
-#define VS_CONST_I_SIZE(device) (device->may_swvp ? (NINE_MAX_CONST_I_SWVP * sizeof(int[4])) : (NINE_MAX_CONST_I * sizeof(int[4])))
-#define VS_CONST_B_SIZE(device) (device->may_swvp ? (NINE_MAX_CONST_B_SWVP * sizeof(BOOL)) : (NINE_MAX_CONST_B * sizeof(BOOL)))
-#define VS_CONST_F_SWVP_SIZE    (NINE_MAX_CONST_F_SWVP * sizeof(float[4]))
-
 HRESULT
 NineStateBlock9_ctor( struct NineStateBlock9 *This,
                       struct NineUnknownParams *pParams,
@@ -48,20 +44,13 @@ NineStateBlock9_ctor( struct NineStateBlock9 *This,
 
     This->type = type;
 
-    This->state.vs_const_f = MALLOC(This->base.device->vs_const_size);
+    This->state.vs_const_f = MALLOC(VS_CONST_F_SIZE(This->base.device));
     This->state.ps_const_f = MALLOC(This->base.device->ps_const_size);
     This->state.vs_const_i = MALLOC(VS_CONST_I_SIZE(This->base.device));
     This->state.vs_const_b = MALLOC(VS_CONST_B_SIZE(This->base.device));
     if (!This->state.vs_const_f || !This->state.ps_const_f ||
         !This->state.vs_const_i || !This->state.vs_const_b)
         return E_OUTOFMEMORY;
-
-    if (This->base.device->may_swvp) {
-        This->state.vs_const_f_swvp = MALLOC(VS_CONST_F_SWVP_SIZE);
-        if (!This->state.vs_const_f_swvp)
-            return E_OUTOFMEMORY;
-    } else
-        This->state.vs_const_f_swvp = NULL;
 
     return D3D_OK;
 }
@@ -79,7 +68,6 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
     FREE(state->ps_const_f);
     FREE(state->vs_const_i);
     FREE(state->vs_const_b);
-    FREE(state->vs_const_f_swvp);
 
     FREE(state->ff.light);
 
@@ -138,51 +126,28 @@ nine_state_copy_common(struct NineDevice9 *device,
      * Various possibilities for optimization here, like creating a per-SB
      * constant buffer, or memcmp'ing for changes.
      * Will do that later depending on what works best for specific apps.
+     *
+     * Note: Currently when we apply stateblocks, it's always on the device state.
+     * Should it affect recording stateblocks ? Since it's on device state, there
+     * is no need to copy which ranges are dirty. If it turns out we should affect
+     * recording stateblocks, the info should be copied.
      */
     if (mask->changed.group & NINE_STATE_VS_CONST) {
         struct nine_range *r;
-        if (device->may_swvp) {
-            for (r = mask->changed.vs_const_f; r; r = r->next) {
-                int bgn = r->bgn;
-                int end = r->end;
-                memcpy(&dst->vs_const_f_swvp[bgn * 4],
-                       &src->vs_const_f_swvp[bgn * 4],
-                       (end - bgn) * 4 * sizeof(float));
-                if (apply)
-                    nine_ranges_insert(&dst->changed.vs_const_f, bgn, end,
-                                       pool);
-                if (bgn < device->max_vs_const_f) {
-                    end = MIN2(end, device->max_vs_const_f);
-                    memcpy(&dst->vs_const_f[bgn * 4],
-                           &src->vs_const_f[bgn * 4],
-                           (end - bgn) * 4 * sizeof(float));
-                }
-            }
-        } else {
-            for (r = mask->changed.vs_const_f; r; r = r->next) {
-                memcpy(&dst->vs_const_f[r->bgn * 4],
-                       &src->vs_const_f[r->bgn * 4],
-                       (r->end - r->bgn) * 4 * sizeof(float));
-                if (apply)
-                    nine_ranges_insert(&dst->changed.vs_const_f, r->bgn, r->end,
-                                       pool);
-            }
+        for (r = mask->changed.vs_const_f; r; r = r->next) {
+            memcpy(&dst->vs_const_f[r->bgn * 4],
+                   &src->vs_const_f[r->bgn * 4],
+                   (r->end - r->bgn) * 4 * sizeof(float));
         }
         for (r = mask->changed.vs_const_i; r; r = r->next) {
             memcpy(&dst->vs_const_i[r->bgn * 4],
                    &src->vs_const_i[r->bgn * 4],
                    (r->end - r->bgn) * 4 * sizeof(int));
-            if (apply)
-                nine_ranges_insert(&dst->changed.vs_const_i, r->bgn, r->end,
-                                   pool);
         }
         for (r = mask->changed.vs_const_b; r; r = r->next) {
             memcpy(&dst->vs_const_b[r->bgn],
                    &src->vs_const_b[r->bgn],
                    (r->end - r->bgn) * sizeof(int));
-            if (apply)
-                nine_ranges_insert(&dst->changed.vs_const_b, r->bgn, r->end,
-                                   pool);
         }
     }
 
@@ -193,25 +158,18 @@ nine_state_copy_common(struct NineDevice9 *device,
             memcpy(&dst->ps_const_f[r->bgn * 4],
                    &src->ps_const_f[r->bgn * 4],
                    (r->end - r->bgn) * 4 * sizeof(float));
-            if (apply)
-                nine_ranges_insert(&dst->changed.ps_const_f, r->bgn, r->end,
-                                   pool);
         }
         if (mask->changed.ps_const_i) {
             uint16_t m = mask->changed.ps_const_i;
             for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
                 if (m & 1)
                     memcpy(dst->ps_const_i[i], src->ps_const_i[i], 4 * sizeof(int));
-            if (apply)
-                dst->changed.ps_const_i |= mask->changed.ps_const_i;
         }
         if (mask->changed.ps_const_b) {
             uint16_t m = mask->changed.ps_const_b;
             for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
                 if (m & 1)
                     dst->ps_const_b[i] = src->ps_const_b[i];
-            if (apply)
-                dst->changed.ps_const_b |= mask->changed.ps_const_b;
         }
     }
 
@@ -395,23 +353,11 @@ nine_state_copy_common_all(struct NineDevice9 *device,
      * Will do that later depending on what works best for specific apps.
      */
     if (1) {
-        struct nine_range *r = help->changed.vs_const_f;
         memcpy(&dst->vs_const_f[0],
-               &src->vs_const_f[0], device->max_vs_const_f * 4 * sizeof(float));
-        if (device->may_swvp)
-            memcpy(dst->vs_const_f_swvp,
-                   src->vs_const_f_swvp, VS_CONST_F_SWVP_SIZE);
-        if (apply)
-            nine_ranges_insert(&dst->changed.vs_const_f, r->bgn, r->end, pool);
+               &src->vs_const_f[0], VS_CONST_F_SIZE(device));
 
         memcpy(dst->vs_const_i, src->vs_const_i, VS_CONST_I_SIZE(device));
         memcpy(dst->vs_const_b, src->vs_const_b, VS_CONST_B_SIZE(device));
-        if (apply) {
-            r = help->changed.vs_const_i;
-            nine_ranges_insert(&dst->changed.vs_const_i, r->bgn, r->end, pool);
-            r = help->changed.vs_const_b;
-            nine_ranges_insert(&dst->changed.vs_const_b, r->bgn, r->end, pool);
-        }
     }
 
     /* Pixel constants. */
@@ -419,15 +365,9 @@ nine_state_copy_common_all(struct NineDevice9 *device,
         struct nine_range *r = help->changed.ps_const_f;
         memcpy(&dst->ps_const_f[0],
                &src->ps_const_f[0], (r->end - r->bgn) * 4 * sizeof(float));
-        if (apply)
-            nine_ranges_insert(&dst->changed.ps_const_f, r->bgn, r->end, pool);
 
         memcpy(dst->ps_const_i, src->ps_const_i, sizeof(dst->ps_const_i));
         memcpy(dst->ps_const_b, src->ps_const_b, sizeof(dst->ps_const_b));
-        if (apply) {
-            dst->changed.ps_const_i |= src->changed.ps_const_i;
-            dst->changed.ps_const_b |= src->changed.ps_const_b;
-        }
     }
 
     /* Render states. */
