@@ -2078,11 +2078,6 @@ struct gl_compute_program
     * Size of shared variables accessed by the compute shader.
     */
    unsigned SharedSize;
-
-   /**
-    * Whether a variable work group size has been specified.
-    */
-   bool LocalSizeVariable;
 };
 
 
