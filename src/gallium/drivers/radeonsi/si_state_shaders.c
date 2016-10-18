@@ -1567,7 +1567,7 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 				     unsigned index, unsigned interpolate)
 {
 	struct tgsi_shader_info *vsinfo = &vs->selector->info;
-	unsigned j, ps_input_cntl = 0;
+	unsigned j, offset, ps_input_cntl = 0;
 
 	if (interpolate == TGSI_INTERPOLATE_CONSTANT ||
 	    (interpolate == TGSI_INTERPOLATE_COLOR && sctx->flatshade))
@@ -1582,7 +1582,20 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 	for (j = 0; j < vsinfo->num_outputs; j++) {
 		if (name == vsinfo->output_semantic_name[j] &&
 		    index == vsinfo->output_semantic_index[j]) {
-			ps_input_cntl |= S_028644_OFFSET(vs->info.vs_output_param_offset[j]);
+			offset = vs->info.vs_output_param_offset[j];
+
+			if (offset <= EXP_PARAM_OFFSET_31) {
+				/* The input is loaded from parameter memory. */
+				ps_input_cntl |= S_028644_OFFSET(offset);
+			} else if (!G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
+				/* The input is a DEFAULT_VAL constant. */
+				assert(offset >= EXP_PARAM_DEFAULT_VAL_0000 &&
+				       offset <= EXP_PARAM_DEFAULT_VAL_1111);
+
+				offset -= EXP_PARAM_DEFAULT_VAL_0000;
+				ps_input_cntl = S_028644_OFFSET(0x20) |
+						S_028644_DEFAULT_VAL(offset);
+			}
 			break;
 		}
 	}
