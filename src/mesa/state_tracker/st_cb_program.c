@@ -79,7 +79,7 @@ st_new_program(struct gl_context *ctx, GLenum target, GLuint id)
    }
    case GL_COMPUTE_PROGRAM_NV: {
       struct st_compute_program *prog = ST_CALLOC_STRUCT(st_compute_program);
-      return _mesa_init_gl_program(&prog->Base.Base, target, id);
+      return _mesa_init_gl_program(&prog->Base, target, id);
    }
    default:
       assert(0);

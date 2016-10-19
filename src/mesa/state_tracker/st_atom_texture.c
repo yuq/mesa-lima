@@ -285,7 +285,7 @@ update_compute_textures(struct st_context *st)
    if (ctx->ComputeProgram._Current) {
       update_textures(st,
                       MESA_SHADER_COMPUTE,
-                      &ctx->ComputeProgram._Current->Base,
+                      ctx->ComputeProgram._Current,
                       ctx->Const.Program[MESA_SHADER_COMPUTE].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_COMPUTE],
                       &st->state.num_sampler_views[PIPE_SHADER_COMPUTE]);

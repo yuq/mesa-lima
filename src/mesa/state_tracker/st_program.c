@@ -211,7 +211,7 @@ st_release_cp_variants(struct st_context *st, struct st_compute_program *stcp)
 
    for (v = *variants; v; ) {
       struct st_basic_variant *next = v->next;
-      delete_basic_variant(st, v, stcp->Base.Base.Target);
+      delete_basic_variant(st, v, stcp->Base.Target);
       v = next;
    }
 
@@ -1681,12 +1681,12 @@ st_translate_compute_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
-   st_translate_program_common(st, &stcp->Base.Base, stcp->glsl_to_tgsi, ureg,
+   st_translate_program_common(st, &stcp->Base, stcp->glsl_to_tgsi, ureg,
                                PIPE_SHADER_COMPUTE, &prog);
 
    stcp->tgsi.ir_type = PIPE_SHADER_IR_TGSI;
    stcp->tgsi.prog = prog.tokens;
-   stcp->tgsi.req_local_mem = stcp->Base.Base.info.cs.shared_size;
+   stcp->tgsi.req_local_mem = stcp->Base.info.cs.shared_size;
    stcp->tgsi.req_private_mem = 0;
    stcp->tgsi.req_input_mem = 0;
 

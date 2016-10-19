@@ -288,11 +288,11 @@ struct st_tesseval_program
 
 
 /**
- * Derived from Mesa gl_compute_program:
+ * Derived from Mesa gl_program:
  */
 struct st_compute_program
 {
-   struct gl_compute_program Base;  /**< The Mesa compute program */
+   struct gl_program Base;  /**< The Mesa compute program */
    struct pipe_compute_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
@@ -333,7 +333,7 @@ st_tesseval_program( struct gl_program *tep )
 }
 
 static inline struct st_compute_program *
-st_compute_program( struct gl_compute_program *cp )
+st_compute_program( struct gl_program *cp )
 {
    return (struct st_compute_program *)cp;
 }

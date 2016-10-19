@@ -365,7 +365,7 @@ struct brw_fragment_program {
 
 /** Subclass of Mesa compute program */
 struct brw_compute_program {
-   struct gl_compute_program program;
+   struct gl_program program;
    unsigned id;  /**< serial no. to identify compute progs, never re-used */
 };
 
@@ -1011,7 +1011,7 @@ struct brw_context
    const struct gl_program *tess_ctrl_program;
    const struct gl_program *tess_eval_program;
    const struct gl_fragment_program *fragment_program;
-   const struct gl_compute_program *compute_program;
+   const struct gl_program *compute_program;
 
    /**
     * Number of samples in ctx->DrawBuffer, updated by BRW_NEW_NUM_SAMPLES so
@@ -1760,7 +1760,7 @@ brw_fragment_program_const(const struct gl_fragment_program *p)
 }
 
 static inline struct brw_compute_program *
-brw_compute_program(struct gl_compute_program *p)
+brw_compute_program(struct gl_program *p)
 {
    return (struct brw_compute_program *) p;
 }

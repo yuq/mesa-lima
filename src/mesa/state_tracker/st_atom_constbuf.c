@@ -229,7 +229,7 @@ static void update_cs_constants(struct st_context *st )
    struct gl_program_parameter_list *params;
 
    if (cp) {
-      params = cp->Base.Base.Parameters;
+      params = cp->Base.Parameters;
       st_upload_constants( st, params, MESA_SHADER_COMPUTE );
    }
 }

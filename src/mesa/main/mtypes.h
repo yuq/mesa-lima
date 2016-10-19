@@ -2025,23 +2025,6 @@ struct gl_fragment_program
 };
 
 
-/** Compute program object */
-struct gl_compute_program
-{
-   struct gl_program Base;   /**< base class */
-
-   /**
-    * Size specified using local_size_{x,y,z}.
-    */
-   unsigned LocalSize[3];
-
-   /**
-    * Size of shared variables accessed by the compute shader.
-    */
-   unsigned SharedSize;
-};
-
-
 /**
  * State common to vertex and fragment programs.
  */
@@ -2154,7 +2137,7 @@ struct gl_compute_program_state
    /** Currently enabled and valid program (including internal programs
     * and compiled shader programs).
     */
-   struct gl_compute_program *_Current;
+   struct gl_program *_Current;
 };
 
 
@@ -2782,7 +2765,7 @@ struct gl_shader_program
    } Vert;
 
    /**
-    * Compute shader state - copied into gl_compute_program by
+    * Compute shader state - copied into gl_program by
     * _mesa_copy_linked_program_data().
     */
    struct {

@@ -222,13 +222,10 @@ _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
    case GL_VERTEX_PROGRAM_ARB: /* == GL_VERTEX_PROGRAM_NV */
    case GL_GEOMETRY_PROGRAM_NV:
    case GL_TESS_CONTROL_PROGRAM_NV:
-   case GL_TESS_EVALUATION_PROGRAM_NV: {
+   case GL_TESS_EVALUATION_PROGRAM_NV:
+   case GL_COMPUTE_PROGRAM_NV: {
       struct gl_program *prog = CALLOC_STRUCT(gl_program);
       return _mesa_init_gl_program(prog, target, id);
-   }
-   case GL_COMPUTE_PROGRAM_NV: {
-      struct gl_compute_program *prog = CALLOC_STRUCT(gl_compute_program);
-      return _mesa_init_gl_program(&prog->Base, target, id);
    }
    default:
       _mesa_problem(ctx, "bad target in _mesa_new_program");

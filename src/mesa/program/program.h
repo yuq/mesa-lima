@@ -98,15 +98,6 @@ _mesa_reference_fragprog(struct gl_context *ctx,
                            (struct gl_program *) prog);
 }
 
-static inline void
-_mesa_reference_compprog(struct gl_context *ctx,
-                         struct gl_compute_program **ptr,
-                         struct gl_compute_program *prog)
-{
-   _mesa_reference_program(ctx, (struct gl_program **) ptr,
-                           (struct gl_program *) prog);
-}
-
 extern  GLboolean
 _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count);
 
@@ -185,18 +176,6 @@ static inline const struct gl_fragment_program *
 gl_fragment_program_const(const struct gl_program *prog)
 {
    return (const struct gl_fragment_program *) prog;
-}
-
-static inline struct gl_compute_program *
-gl_compute_program(struct gl_program *prog)
-{
-   return (struct gl_compute_program *) prog;
-}
-
-static inline const struct gl_compute_program *
-gl_compute_program_const(const struct gl_program *prog)
-{
-   return (const struct gl_compute_program *) prog;
 }
 
 #ifdef __cplusplus

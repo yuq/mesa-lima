@@ -312,7 +312,7 @@ update_cp( struct st_context *st )
    }
 
    stcp = st_compute_program(st->ctx->ComputeProgram._Current);
-   assert(stcp->Base.Base.Target == GL_COMPUTE_PROGRAM_NV);
+   assert(stcp->Base.Target == GL_COMPUTE_PROGRAM_NV);
 
    st->cp_variant = st_get_cp_variant(st, &stcp->tgsi, &stcp->variants);
 

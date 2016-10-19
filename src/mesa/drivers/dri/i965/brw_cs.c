@@ -85,14 +85,13 @@ brw_codegen_cs_prog(struct brw_context *brw,
       prog_data.base.total_shared = prog->Comp.SharedSize;
    }
 
-   assign_cs_binding_table_offsets(devinfo, prog,
-                                   &cp->program.Base, &prog_data);
+   assign_cs_binding_table_offsets(devinfo, prog, &cp->program, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = cp->program.Base.nir->num_uniforms / 4;
+   int param_count = cp->program.nir->num_uniforms / 4;
 
    /* The backend also sometimes add a param for the thread local id. */
    prog_data.thread_local_id_index = param_count++;
@@ -108,7 +107,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
    prog_data.base.nr_params = param_count;
    prog_data.base.nr_image_params = cs->base.NumImages;
 
-   brw_nir_setup_glsl_uniforms(cp->program.Base.nir, prog, &cp->program.Base,
+   brw_nir_setup_glsl_uniforms(cp->program.nir, prog, &cp->program,
                                &prog_data.base, true);
 
    if (unlikely(brw->perf_debug)) {
@@ -118,16 +117,16 @@ brw_codegen_cs_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      brw_dump_ir("compute", prog, &cs->base, &cp->program.Base);
+      brw_dump_ir("compute", prog, &cs->base, &cp->program);
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &cp->program.Base, ST_CS);
+      st_index = brw_get_shader_time_index(brw, prog, &cp->program, ST_CS);
 
    char *error_str;
-   program = brw_compile_cs(brw->screen->compiler, brw, mem_ctx,
-                            key, &prog_data, cp->program.Base.nir,
-                            st_index, &program_size, &error_str);
+   program = brw_compile_cs(brw->screen->compiler, brw, mem_ctx, key,
+                            &prog_data, cp->program.nir, st_index,
+                            &program_size, &error_str);
    if (program == NULL) {
       prog->LinkStatus = false;
       ralloc_strcat(&prog->InfoLog, error_str);
@@ -221,7 +220,7 @@ brw_upload_cs_prog(struct brw_context *brw)
       return;
 
    brw->cs.base.sampler_count =
-      util_last_bit(ctx->ComputeProgram._Current->Base.SamplersUsed);
+      util_last_bit(ctx->ComputeProgram._Current->SamplersUsed);
 
    brw_cs_populate_key(brw, &key);
 
@@ -247,8 +246,7 @@ brw_cs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_cs_prog_key key;
 
-   struct gl_compute_program *cp = (struct gl_compute_program *) prog;
-   struct brw_compute_program *bcp = brw_compute_program(cp);
+   struct brw_compute_program *bcp = brw_compute_program(prog);
 
    memset(&key, 0, sizeof(key));
    key.program_string_id = bcp->id;

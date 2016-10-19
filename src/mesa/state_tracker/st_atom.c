@@ -178,7 +178,7 @@ void st_validate_state( struct st_context *st, enum st_pipeline pipeline )
 
    case ST_PIPELINE_COMPUTE: {
       struct st_compute_program *old_cp = st->cp;
-      struct gl_compute_program *new_cp = ctx->ComputeProgram._Current;
+      struct gl_program *new_cp = ctx->ComputeProgram._Current;
 
       if (new_cp != &old_cp->Base) {
          if (old_cp)
