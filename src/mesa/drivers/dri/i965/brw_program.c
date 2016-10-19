@@ -154,7 +154,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
 	 prog->id = get_new_program_id(brw->screen);
 
-	 return _mesa_init_gl_program(&prog->program.Base, target, id);
+	 return _mesa_init_gl_program(&prog->program, target, id);
       }
       else
 	 return NULL;
@@ -228,8 +228,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 
    switch (target) {
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct gl_fragment_program *fprog = (struct gl_fragment_program *) prog;
-      struct brw_fragment_program *newFP = brw_fragment_program(fprog);
+      struct brw_fragment_program *newFP = brw_fragment_program(prog);
       const struct brw_fragment_program *curFP =
          brw_fragment_program_const(brw->fragment_program);
 

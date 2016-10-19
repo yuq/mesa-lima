@@ -191,7 +191,7 @@ brw_upload_sf_prog(struct brw_context *brw)
    if (key.do_point_sprite) {
       key.point_sprite_coord_replace = ctx->Point.CoordReplace & 0xff;
    }
-   if (brw->fragment_program->Base.info.inputs_read &
+   if (brw->fragment_program->info.inputs_read &
        BITFIELD64_BIT(VARYING_SLOT_PNTC)) {
       key.do_point_coord = 1;
    }
@@ -203,7 +203,7 @@ brw_upload_sf_prog(struct brw_context *brw)
    if ((ctx->Point.SpriteOrigin == GL_LOWER_LEFT) != render_to_fbo)
       key.sprite_origin_lower_left = true;
 
-   const struct gl_fragment_program *fprog = brw->fragment_program;
+   const struct gl_program *fprog = brw->fragment_program;
    if (fprog) {
       assert(brw->gen < 6);
       struct gen4_fragment_program *p = (struct gen4_fragment_program *) fprog;

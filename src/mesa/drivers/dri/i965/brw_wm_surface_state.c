@@ -839,7 +839,7 @@ brw_upload_wm_pull_constants(struct brw_context *brw)
 
    _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_FRAGMENT);
    /* _NEW_PROGRAM_CONSTANTS */
-   brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &fp->program.Base,
+   brw_upload_pull_constants(brw, BRW_NEW_SURFACES, &fp->program,
                              stage_state, prog_data);
 }
 
@@ -1146,7 +1146,7 @@ update_renderbuffer_read_surfaces(struct brw_context *brw)
 
    /* BRW_NEW_FRAGMENT_PROGRAM */
    if (!ctx->Extensions.MESA_shader_framebuffer_fetch &&
-       brw->fragment_program && brw->fragment_program->Base.info.outputs_read) {
+       brw->fragment_program && brw->fragment_program->info.outputs_read) {
       /* _NEW_BUFFERS */
       const struct gl_framebuffer *fb = ctx->DrawBuffer;
 

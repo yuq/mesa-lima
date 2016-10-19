@@ -99,14 +99,14 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (!prog)
       prog_data.base.use_alt_mode = true;
 
-   assign_fs_binding_table_offsets(devinfo, prog,
-                                   &fp->program.Base, key, &prog_data);
+   assign_fs_binding_table_offsets(devinfo, prog, &fp->program, key,
+                                   &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
     * by the state cache.
     */
-   int param_count = fp->program.Base.nir->num_uniforms / 4;
+   int param_count = fp->program.nir->num_uniforms / 4;
    if (fs)
       prog_data.base.nr_image_params = fs->base.NumImages;
    /* The backend also sometimes adds params for texture size. */
@@ -121,10 +121,10 @@ brw_codegen_wm_prog(struct brw_context *brw,
    prog_data.base.nr_params = param_count;
 
    if (prog) {
-      brw_nir_setup_glsl_uniforms(fp->program.Base.nir, prog, &fp->program.Base,
+      brw_nir_setup_glsl_uniforms(fp->program.nir, prog, &fp->program,
                                   &prog_data.base, true);
    } else {
-      brw_nir_setup_arb_uniforms(fp->program.Base.nir, &fp->program.Base,
+      brw_nir_setup_arb_uniforms(fp->program.nir, &fp->program,
                                  &prog_data.base);
    }
 
@@ -135,18 +135,18 @@ brw_codegen_wm_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_WM))
-      brw_dump_ir("fragment", prog, fs ? &fs->base : NULL, &fp->program.Base);
+      brw_dump_ir("fragment", prog, fs ? &fs->base : NULL, &fp->program);
 
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
-      st_index8 = brw_get_shader_time_index(brw, prog, &fp->program.Base, ST_FS8);
-      st_index16 = brw_get_shader_time_index(brw, prog, &fp->program.Base, ST_FS16);
+      st_index8 = brw_get_shader_time_index(brw, prog, &fp->program, ST_FS8);
+      st_index16 = brw_get_shader_time_index(brw, prog, &fp->program, ST_FS16);
    }
 
    char *error_str = NULL;
    program = brw_compile_fs(brw->screen->compiler, brw, mem_ctx,
-                            key, &prog_data, fp->program.Base.nir,
-                            &fp->program.Base, st_index8, st_index16,
+                            key, &prog_data, fp->program.nir,
+                            &fp->program, st_index8, st_index16,
                             true, brw->use_rep_send, vue_map,
                             &program_size, &error_str);
 
@@ -601,8 +601,7 @@ brw_fs_precompile(struct gl_context *ctx,
    struct brw_context *brw = brw_context(ctx);
    struct brw_wm_prog_key key;
 
-   struct gl_fragment_program *fp = (struct gl_fragment_program *) prog;
-   struct brw_fragment_program *bfp = brw_fragment_program(fp);
+   struct brw_fragment_program *bfp = brw_fragment_program(prog);
 
    memset(&key, 0, sizeof(key));
 
@@ -625,7 +624,7 @@ brw_fs_precompile(struct gl_context *ctx,
       key.input_slots_valid = prog->info.inputs_read | VARYING_BIT_POS;
    }
 
-   brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
+   brw_setup_tex_for_precompile(brw, &key.tex, prog);
 
    key.nr_color_regions = _mesa_bitcount_64(outputs_written &
          ~(BITFIELD64_BIT(FRAG_RESULT_DEPTH) |

@@ -123,7 +123,7 @@ struct save_state
    GLboolean VertexProgramEnabled;
    struct gl_program *VertexProgram;
    GLboolean FragmentProgramEnabled;
-   struct gl_fragment_program *FragmentProgram;
+   struct gl_program *FragmentProgram;
    GLboolean ATIFragmentShaderEnabled;
    struct gl_shader_program *Shader[MESA_SHADER_STAGES];
    struct gl_shader_program *ActiveShader;

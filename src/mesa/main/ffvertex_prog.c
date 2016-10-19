@@ -148,11 +148,10 @@ static GLboolean check_active_shininess( struct gl_context *ctx,
 
 static void make_state_key( struct gl_context *ctx, struct state_key *key )
 {
-   const struct gl_fragment_program *fp;
+   const struct gl_program *fp = ctx->FragmentProgram._Current;
    GLbitfield mask;
 
    memset(key, 0, sizeof(struct state_key));
-   fp = ctx->FragmentProgram._Current;
 
    /* This now relies on texenvprogram.c being active:
     */
@@ -160,7 +159,7 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
 
    key->need_eye_coords = ctx->_NeedEyeCoords;
 
-   key->fragprog_inputs_read = fp->Base.InputsRead;
+   key->fragprog_inputs_read = fp->InputsRead;
    key->varying_vp_inputs = ctx->varying_vp_inputs;
 
    if (ctx->RenderMode == GL_FEEDBACK) {

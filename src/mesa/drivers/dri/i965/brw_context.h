@@ -356,7 +356,7 @@ struct brw_geometry_program {
 
 /** Subclass of Mesa fragment program */
 struct brw_fragment_program {
-   struct gl_fragment_program program;
+   struct gl_program program;
    GLuint id;  /**< serial no. to identify frag progs, never re-used */
 };
 
@@ -996,7 +996,7 @@ struct brw_context
    const struct gl_program *geometry_program;
    const struct gl_program *tess_ctrl_program;
    const struct gl_program *tess_eval_program;
-   const struct gl_fragment_program *fragment_program;
+   const struct gl_program *fragment_program;
    const struct gl_program *compute_program;
 
    /**
@@ -1729,13 +1729,13 @@ brw_geometry_program(struct gl_program *p)
 }
 
 static inline struct brw_fragment_program *
-brw_fragment_program(struct gl_fragment_program *p)
+brw_fragment_program(struct gl_program *p)
 {
    return (struct brw_fragment_program *) p;
 }
 
 static inline const struct brw_fragment_program *
-brw_fragment_program_const(const struct gl_fragment_program *p)
+brw_fragment_program_const(const struct gl_program *p)
 {
    return (const struct brw_fragment_program *) p;
 }

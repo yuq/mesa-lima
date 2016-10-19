@@ -452,7 +452,7 @@ brw_try_draw_prims(struct gl_context *ctx,
     * index.
     */
    brw->wm.base.sampler_count =
-      util_last_bit(ctx->FragmentProgram._Current->Base.SamplersUsed);
+      util_last_bit(ctx->FragmentProgram._Current->SamplersUsed);
    brw->gs.base.sampler_count = ctx->GeometryProgram._Current ?
       util_last_bit(ctx->GeometryProgram._Current->SamplersUsed) : 0;
    brw->tes.base.sampler_count = ctx->TessEvalProgram._Current ?

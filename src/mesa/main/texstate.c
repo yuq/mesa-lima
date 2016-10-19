@@ -705,7 +705,7 @@ update_texture_state( struct gl_context *ctx )
          prog[i] = ctx->_Shader->CurrentProgram[i]->_LinkedShaders[i]->Program;
       } else {
          if (i == MESA_SHADER_FRAGMENT && ctx->FragmentProgram._Enabled)
-            prog[i] = &ctx->FragmentProgram.Current->Base;
+            prog[i] = ctx->FragmentProgram.Current;
          else
             prog[i] = NULL;
       }

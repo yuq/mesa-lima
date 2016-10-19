@@ -901,12 +901,9 @@ setup_registers_and_variables(struct ptn_compile *c)
       var->data.index = 0;
 
       if (c->prog->Target == GL_FRAGMENT_PROGRAM_ARB) {
-         struct gl_fragment_program *fp =
-            (struct gl_fragment_program *) c->prog;
-
          if (i == VARYING_SLOT_POS) {
-            var->data.origin_upper_left = fp->OriginUpperLeft;
-            var->data.pixel_center_integer = fp->PixelCenterInteger;
+            var->data.origin_upper_left = c->prog->OriginUpperLeft;
+            var->data.pixel_center_integer = c->prog->PixelCenterInteger;
          } else if (i == VARYING_SLOT_FOGC) {
             /* fogcoord is defined as <f, 0.0, 0.0, 1.0>.  Make the actual
              * input variable a float, and create a local containing the

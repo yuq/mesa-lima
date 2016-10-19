@@ -136,11 +136,11 @@ struct st_fp_variant
 
 
 /**
- * Derived from Mesa gl_fragment_program:
+ * Derived from Mesa gl_program:
  */
 struct st_fragment_program
 {
-   struct gl_fragment_program Base;
+   struct gl_program Base;
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    struct ati_fragment_shader *ati_fs;
@@ -197,7 +197,7 @@ struct st_vp_variant
 
 
 /**
- * Derived from Mesa gl_fragment_program:
+ * Derived from Mesa gl_program:
  */
 struct st_vertex_program
 {
@@ -302,7 +302,7 @@ struct st_compute_program
 
 
 static inline struct st_fragment_program *
-st_fragment_program( struct gl_fragment_program *fp )
+st_fragment_program( struct gl_program *fp )
 {
    return (struct st_fragment_program *)fp;
 }

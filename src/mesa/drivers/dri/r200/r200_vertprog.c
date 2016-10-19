@@ -1206,8 +1206,8 @@ r200NewProgram(struct gl_context *ctx, GLenum target, GLuint id)
       return _mesa_init_gl_program(&vp->mesa_program, target, id);
    }
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct gl_fragment_program *prog = CALLOC_STRUCT(gl_fragment_program);
-      return _mesa_init_gl_program(&prog->Base, target, id);
+      struct gl_program *prog = CALLOC_STRUCT(gl_program);
+      return _mesa_init_gl_program(prog, target, id);
    }
    default:
       _mesa_problem(ctx, "Bad target in r200NewProgram");

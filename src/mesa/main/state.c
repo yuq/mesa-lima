@@ -72,7 +72,7 @@ update_program_enables(struct gl_context *ctx)
    ctx->VertexProgram._Enabled = ctx->VertexProgram.Enabled
       && ctx->VertexProgram.Current->Instructions;
    ctx->FragmentProgram._Enabled = ctx->FragmentProgram.Enabled
-      && ctx->FragmentProgram.Current->Base.Instructions;
+      && ctx->FragmentProgram.Current->Instructions;
    ctx->ATIFragmentShader._Enabled = ctx->ATIFragmentShader.Enabled
       && ctx->ATIFragmentShader.Current->Instructions[0];
 }
@@ -108,7 +108,7 @@ update_program(struct gl_context *ctx)
    const struct gl_shader_program *csProg =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    const struct gl_program *prevVP = ctx->VertexProgram._Current;
-   const struct gl_fragment_program *prevFP = ctx->FragmentProgram._Current;
+   const struct gl_program *prevFP = ctx->FragmentProgram._Current;
    const struct gl_program *prevGP = ctx->GeometryProgram._Current;
    const struct gl_program *prevTCP = ctx->TessCtrlProgram._Current;
    const struct gl_program *prevTEP = ctx->TessEvalProgram._Current;
@@ -138,20 +138,20 @@ update_program(struct gl_context *ctx)
       _mesa_reference_shader_program(ctx,
                                      &ctx->_Shader->_CurrentFragmentProgram,
 				     fsProg);
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._Current,
-                               gl_fragment_program(fsProg->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program));
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._TexEnvProgram,
-			       NULL);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._Current,
+                              fsProg->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
+                              NULL);
    }
    else if (ctx->FragmentProgram._Enabled) {
       /* Use user-defined fragment program */
       _mesa_reference_shader_program(ctx,
                                      &ctx->_Shader->_CurrentFragmentProgram,
 				     NULL);
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._Current,
-                               ctx->FragmentProgram.Current);
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._TexEnvProgram,
-			       NULL);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._Current,
+                              ctx->FragmentProgram.Current);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
+			      NULL);
    }
    else if (ctx->ATIFragmentShader._Enabled &&
             ctx->ATIFragmentShader.Current->Program) {
@@ -159,10 +159,10 @@ update_program(struct gl_context *ctx)
       _mesa_reference_shader_program(ctx,
                                      &ctx->_Shader->_CurrentFragmentProgram,
                                      NULL);
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._Current,
-                               gl_fragment_program(ctx->ATIFragmentShader.Current->Program));
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._TexEnvProgram,
-                               NULL);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._Current,
+                              ctx->ATIFragmentShader.Current->Program);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
+                              NULL);
    }
    else if (ctx->FragmentProgram._MaintainTexEnvProgram) {
       /* Use fragment program generated from fixed-function state */
@@ -171,16 +171,16 @@ update_program(struct gl_context *ctx)
       _mesa_reference_shader_program(ctx,
                                      &ctx->_Shader->_CurrentFragmentProgram,
 				     f);
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._Current,
-			       gl_fragment_program(f->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program));
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._TexEnvProgram,
-			       gl_fragment_program(f->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program));
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._Current,
+			      f->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
+			      f->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program);
    }
    else {
       /* No fragment program */
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._Current, NULL);
-      _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._TexEnvProgram,
-			       NULL);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._Current, NULL);
+      _mesa_reference_program(ctx, &ctx->FragmentProgram._TexEnvProgram,
+			      NULL);
    }
 
    if (gsProg && gsProg->LinkStatus
@@ -258,7 +258,7 @@ update_program(struct gl_context *ctx)
       new_state |= _NEW_PROGRAM;
       if (ctx->Driver.BindProgram) {
          ctx->Driver.BindProgram(ctx, GL_FRAGMENT_PROGRAM_ARB,
-                          (struct gl_program *) ctx->FragmentProgram._Current);
+                                 ctx->FragmentProgram._Current);
       }
    }
 
@@ -316,7 +316,7 @@ update_program_constants(struct gl_context *ctx)
 
    if (ctx->FragmentProgram._Current) {
       const struct gl_program_parameter_list *params =
-         ctx->FragmentProgram._Current->Base.Parameters;
+         ctx->FragmentProgram._Current->Parameters;
       if (params && params->StateFlags & ctx->NewState) {
          new_state |= _NEW_PROGRAM_CONSTANTS;
       }

@@ -48,7 +48,7 @@ brw_color_buffer_write_enabled(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct gl_program *fp = &brw->fragment_program->Base;
+   const struct gl_program *fp = brw->fragment_program;
    unsigned i;
 
    /* _NEW_BUFFERS */
@@ -79,7 +79,7 @@ brw_upload_wm_unit(struct brw_context *brw)
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   const struct gl_program *fp = &brw->fragment_program->Base;
+   const struct gl_program *fp = brw->fragment_program;
    /* BRW_NEW_FS_PROG_DATA */
    const struct brw_wm_prog_data *prog_data =
       brw_wm_prog_data(brw->wm.base.prog_data);

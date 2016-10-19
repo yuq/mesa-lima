@@ -39,16 +39,7 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
    info->system_values_read = sh->Program->SystemValuesRead;
    info->uses_texture_gather = sh->Program->UsesGather;
 
-   switch (sh->Stage) {
-   case MESA_SHADER_FRAGMENT: {
-      struct gl_fragment_program *fp =
-         (struct gl_fragment_program *)sh->Program;
-
-      info->fs.early_fragment_tests = sh->info.EarlyFragmentTests;
-      break;
-   }
-
-   default:
-      break; /* No stage-specific info */
+   if (sh->Stage == MESA_SHADER_FRAGMENT) {
+      sh->Program->info.fs.early_fragment_tests = sh->info.EarlyFragmentTests;
    }
 }

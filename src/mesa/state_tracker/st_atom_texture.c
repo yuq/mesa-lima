@@ -222,7 +222,7 @@ update_fragment_textures(struct st_context *st)
 
    update_textures(st,
                    MESA_SHADER_FRAGMENT,
-                   &ctx->FragmentProgram._Current->Base,
+                   ctx->FragmentProgram._Current,
                    ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits,
                    st->state.sampler_views[PIPE_SHADER_FRAGMENT],
                    &st->state.num_sampler_views[PIPE_SHADER_FRAGMENT]);

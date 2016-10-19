@@ -573,8 +573,8 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
 
       if (ctx->Extensions.ARB_fragment_program) {
          save->FragmentProgramEnabled = ctx->FragmentProgram.Enabled;
-         _mesa_reference_fragprog(ctx, &save->FragmentProgram,
-				  ctx->FragmentProgram.Current);
+         _mesa_reference_program(ctx, &save->FragmentProgram,
+                                 ctx->FragmentProgram.Current);
          _mesa_set_enable(ctx, GL_FRAGMENT_PROGRAM_ARB, GL_FALSE);
       }
 
@@ -953,9 +953,9 @@ _mesa_meta_end(struct gl_context *ctx)
       if (ctx->Extensions.ARB_fragment_program) {
          _mesa_set_enable(ctx, GL_FRAGMENT_PROGRAM_ARB,
                           save->FragmentProgramEnabled);
-         _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current,
-                                  save->FragmentProgram);
-	 _mesa_reference_fragprog(ctx, &save->FragmentProgram, NULL);
+         _mesa_reference_program(ctx, &ctx->FragmentProgram.Current,
+                                 save->FragmentProgram);
+         _mesa_reference_program(ctx, &save->FragmentProgram, NULL);
       }
 
       if (ctx->Extensions.ATI_fragment_shader) {

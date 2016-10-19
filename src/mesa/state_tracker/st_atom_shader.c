@@ -114,7 +114,7 @@ update_fp( struct st_context *st )
 
    assert(st->ctx->FragmentProgram._Current);
    stfp = st_fragment_program(st->ctx->FragmentProgram._Current);
-   assert(stfp->Base.Base.Target == GL_FRAGMENT_PROGRAM_ARB);
+   assert(stfp->Base.Target == GL_FRAGMENT_PROGRAM_ARB);
 
    memset(&key, 0, sizeof(key));
    key.st = st->has_shareable_shaders ? NULL : st;
@@ -143,7 +143,7 @@ update_fp( struct st_context *st )
       }
    }
 
-   key.external = st_get_external_sampler_key(st, &stfp->Base.Base);
+   key.external = st_get_external_sampler_key(st, &stfp->Base);
 
    st->fp_variant = st_get_fp_variant(st, stfp, &key);
 

@@ -244,16 +244,15 @@ _mesa_insert_mvp_code(struct gl_context *ctx, struct gl_program *vprog)
  * to vertex programs too.
  */
 void
-_mesa_append_fog_code(struct gl_context *ctx,
-		      struct gl_fragment_program *fprog, GLenum fog_mode,
-		      GLboolean saturate)
+_mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
+                      GLenum fog_mode, GLboolean saturate)
 {
    static const gl_state_index fogPStateOpt[STATE_LENGTH]
       = { STATE_INTERNAL, STATE_FOG_PARAMS_OPTIMIZED, 0, 0, 0 };
    static const gl_state_index fogColorState[STATE_LENGTH]
       = { STATE_FOG_COLOR, 0, 0, 0, 0};
    struct prog_instruction *newInst, *inst;
-   const GLuint origLen = fprog->Base.NumInstructions;
+   const GLuint origLen = fprog->NumInstructions;
    const GLuint newLen = origLen + 5;
    GLuint i;
    GLint fogPRefOpt, fogColorRef; /* state references */
@@ -265,7 +264,7 @@ _mesa_append_fog_code(struct gl_context *ctx,
       return;
    }
 
-   if (!(fprog->Base.OutputsWritten & (1 << FRAG_RESULT_COLOR))) {
+   if (!(fprog->OutputsWritten & (1 << FRAG_RESULT_COLOR))) {
       /* program doesn't output color, so nothing to do */
       return;
    }
@@ -279,23 +278,23 @@ _mesa_append_fog_code(struct gl_context *ctx,
    }
 
    /* Copy orig instructions into new instruction buffer */
-   _mesa_copy_instructions(newInst, fprog->Base.Instructions, origLen);
+   _mesa_copy_instructions(newInst, fprog->Instructions, origLen);
 
    /* PARAM fogParamsRefOpt = internal optimized fog params; */
    fogPRefOpt
-      = _mesa_add_state_reference(fprog->Base.Parameters, fogPStateOpt);
+      = _mesa_add_state_reference(fprog->Parameters, fogPStateOpt);
    /* PARAM fogColorRef = state.fog.color; */
    fogColorRef
-      = _mesa_add_state_reference(fprog->Base.Parameters, fogColorState);
+      = _mesa_add_state_reference(fprog->Parameters, fogColorState);
 
    /* TEMP colorTemp; */
-   colorTemp = fprog->Base.NumTemporaries++;
+   colorTemp = fprog->NumTemporaries++;
    /* TEMP fogFactorTemp; */
-   fogFactorTemp = fprog->Base.NumTemporaries++;
+   fogFactorTemp = fprog->NumTemporaries++;
 
    /* Scan program to find where result.color is written */
    inst = newInst;
-   for (i = 0; i < fprog->Base.NumInstructions; i++) {
+   for (i = 0; i < fprog->NumInstructions; i++) {
       if (inst->Opcode == OPCODE_END)
          break;
       if (inst->DstReg.File == PROGRAM_OUTPUT &&
@@ -404,13 +403,13 @@ _mesa_append_fog_code(struct gl_context *ctx,
    inst++;
 
    /* free old instructions */
-   _mesa_free_instructions(fprog->Base.Instructions, origLen);
+   _mesa_free_instructions(fprog->Instructions, origLen);
 
    /* install new instructions */
-   fprog->Base.Instructions = newInst;
-   fprog->Base.NumInstructions = inst - newInst;
-   fprog->Base.InputsRead |= VARYING_BIT_FOGC;
-   assert(fprog->Base.OutputsWritten & (1 << FRAG_RESULT_COLOR));
+   fprog->Instructions = newInst;
+   fprog->NumInstructions = inst - newInst;
+   fprog->InputsRead |= VARYING_BIT_FOGC;
+   assert(fprog->OutputsWritten & (1 << FRAG_RESULT_COLOR));
 }
 
 

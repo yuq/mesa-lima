@@ -149,7 +149,7 @@ brw_upload_clip_prog(struct brw_context *brw)
    /* Populate the key:
     */
 
-   const struct gl_fragment_program *fprog = brw->fragment_program;
+   const struct gl_program *fprog = brw->fragment_program;
    if (fprog) {
       assert(brw->gen < 6);
       struct gen4_fragment_program *p = (struct gen4_fragment_program *) fprog;

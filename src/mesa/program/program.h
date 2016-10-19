@@ -89,15 +89,6 @@ _mesa_reference_program(struct gl_context *ctx,
       _mesa_reference_program_(ctx, ptr, prog);
 }
 
-static inline void
-_mesa_reference_fragprog(struct gl_context *ctx,
-                         struct gl_fragment_program **ptr,
-                         struct gl_fragment_program *prog)
-{
-   _mesa_reference_program(ctx, (struct gl_program **) ptr,
-                           (struct gl_program *) prog);
-}
-
 extern  GLboolean
 _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count);
 
@@ -115,7 +106,7 @@ _mesa_find_free_register(const GLboolean used[],
 
 extern GLint
 _mesa_get_min_invocations_per_fragment(struct gl_context *ctx,
-                                       const struct gl_fragment_program *prog,
+                                       const struct gl_program *prog,
                                        bool ignore_sample_qualifier);
 
 static inline GLuint
@@ -163,19 +154,6 @@ _mesa_shader_stage_to_program(unsigned stage)
 
    assert(!"Unexpected shader stage in _mesa_shader_stage_to_program");
    return GL_VERTEX_PROGRAM_ARB;
-}
-
-
-static inline struct gl_fragment_program *
-gl_fragment_program(struct gl_program *prog)
-{
-   return (struct gl_fragment_program *) prog;
-}
-
-static inline const struct gl_fragment_program *
-gl_fragment_program_const(const struct gl_program *prog)
-{
-   return (const struct gl_fragment_program *) prog;
 }
 
 #ifdef __cplusplus

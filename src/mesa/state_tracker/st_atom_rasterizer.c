@@ -63,7 +63,7 @@ static void update_raster_state( struct st_context *st )
    struct gl_context *ctx = st->ctx;
    struct pipe_rasterizer_state *raster = &st->state.rasterizer;
    const struct gl_program *vertProg = ctx->VertexProgram._Current;
-   const struct gl_fragment_program *fragProg = ctx->FragmentProgram._Current;
+   const struct gl_program *fragProg = ctx->FragmentProgram._Current;
 
    memset(raster, 0, sizeof(*raster));
 
@@ -183,7 +183,7 @@ static void update_raster_state( struct st_context *st )
       raster->sprite_coord_enable = ctx->Point.CoordReplace &
          ((1u << MAX_TEXTURE_COORD_UNITS) - 1);
       if (!st->needs_texcoord_semantic &&
-          fragProg->Base.InputsRead & VARYING_BIT_PNTC) {
+          fragProg->InputsRead & VARYING_BIT_PNTC) {
          raster->sprite_coord_enable |=
             1 << st_get_generic_varying_index(st, VARYING_SLOT_PNTC);
       }

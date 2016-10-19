@@ -955,8 +955,8 @@ intelChooseRenderState(struct gl_context * ctx)
         ctx->Polygon.OffsetFill) ? DD_TRI_OFFSET : 0) |
       (ctx->Line.StippleFlag ? DD_LINE_STIPPLE : 0) |
       (ctx->Point._Attenuated ? DD_POINT_ATTEN : 0);
-   const struct gl_fragment_program *fprog = ctx->FragmentProgram._Current;
-   bool have_wpos = (fprog && (fprog->Base.InputsRead & VARYING_BIT_POS));
+   const struct gl_program *fprog = ctx->FragmentProgram._Current;
+   bool have_wpos = (fprog && (fprog->InputsRead & VARYING_BIT_POS));
    GLuint index = 0;
 
    if (INTEL_DEBUG & DEBUG_STATE)

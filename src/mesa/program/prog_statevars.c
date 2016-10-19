@@ -373,14 +373,14 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
                COPY_4V(value, ctx->FragmentProgram.Parameters[idx]);
                return;
             case STATE_LOCAL:
-               if (!ctx->FragmentProgram.Current->Base.LocalParams) {
-                  ctx->FragmentProgram.Current->Base.LocalParams =
+               if (!ctx->FragmentProgram.Current->LocalParams) {
+                  ctx->FragmentProgram.Current->LocalParams =
                      calloc(MAX_PROGRAM_LOCAL_PARAMS, sizeof(float[4]));
-                  if (!ctx->FragmentProgram.Current->Base.LocalParams)
+                  if (!ctx->FragmentProgram.Current->LocalParams)
                      return;
                }
 
-               COPY_4V(value, ctx->FragmentProgram.Current->Base.LocalParams[idx]);
+               COPY_4V(value, ctx->FragmentProgram.Current->LocalParams[idx]);
                return;
             default:
                _mesa_problem(ctx, "Bad state switch in _mesa_fetch_state()");

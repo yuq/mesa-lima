@@ -160,7 +160,7 @@ const struct st_tracked_state st_update_vs_constants = {
 static void update_fs_constants(struct st_context *st )
 {
    struct st_fragment_program *fp = st->fp;
-   struct gl_program_parameter_list *params = fp->Base.Base.Parameters;
+   struct gl_program_parameter_list *params = fp->Base.Parameters;
 
    st_upload_constants( st, params, MESA_SHADER_FRAGMENT );
 }

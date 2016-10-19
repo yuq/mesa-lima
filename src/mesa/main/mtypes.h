@@ -1937,13 +1937,13 @@ struct gl_program
 
    GLboolean UsesGather; /**< Does this program use gather4 at all? */
 
-   /**
-    * For vertex and geometry shaders, true if the program uses the
-    * gl_ClipDistance output.  Ignored for fragment shaders.
-    */
+   /* Vertex and geometry shaders fields */
    unsigned ClipDistanceArraySize;
    unsigned CullDistanceArraySize;
 
+   /* Fragement shader only fields */
+   GLboolean OriginUpperLeft;
+   GLboolean PixelCenterInteger;
 
    /** Named parameters, constants, etc. from program text */
    struct gl_program_parameter_list *Parameters;
@@ -1992,23 +1992,6 @@ struct gl_program
     * programs.
     */
    GLboolean IsPositionInvariant;
-};
-
-
-/** Fragment program object */
-struct gl_fragment_program
-{
-   struct gl_program Base;   /**< base class */
-   GLboolean UsesKill;          /**< shader uses KIL instruction */
-   GLboolean OriginUpperLeft;
-   GLboolean PixelCenterInteger;
-   enum gl_frag_depth_layout FragDepthLayout;
-
-   /**
-    * Bitfield indicating, for each fragment shader input, 1 if that input
-    * uses sample interpolation, 0 otherwise.  Unused inputs are 0.
-    */
-   GLbitfield64 IsSample;
 };
 
 
@@ -2095,13 +2078,13 @@ struct gl_fragment_program_state
 {
    GLboolean Enabled;     /**< User-set fragment program enable flag */
    GLboolean _Enabled;    /**< Enabled and _valid_ user program? */
-   struct gl_fragment_program *Current;  /**< User-bound fragment program */
+   struct gl_program *Current;  /**< User-bound fragment program */
 
    /** Currently enabled and valid fragment program (including internal
     * programs, user-defined fragment programs and GLSL fragment shaders).
     * This is the program we must use when rendering.
     */
-   struct gl_fragment_program *_Current;
+   struct gl_program *_Current;
 
    GLfloat Parameters[MAX_PROGRAM_ENV_PARAMS][4]; /**< Env params */
 
@@ -2109,7 +2092,7 @@ struct gl_fragment_program_state
    GLboolean _MaintainTexEnvProgram;
 
    /** Program to emulate fixed-function texture env/combine (see above) */
-   struct gl_fragment_program *_TexEnvProgram;
+   struct gl_program *_TexEnvProgram;
 
    /** Cache of fixed-function programs */
    struct gl_program_cache *Cache;
@@ -3063,7 +3046,7 @@ struct gl_shared_state
    /*@{*/
    struct _mesa_HashTable *Programs; /**< All vertex/fragment programs */
    struct gl_program *DefaultVertexProgram;
-   struct gl_fragment_program *DefaultFragmentProgram;
+   struct gl_program *DefaultFragmentProgram;
    /*@}*/
 
    /* GL_ATI_fragment_shader */
