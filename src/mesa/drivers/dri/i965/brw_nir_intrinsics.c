@@ -116,7 +116,7 @@ lower_cs_intrinsics_convert_block(struct lower_intrinsics_state *state,
          uvec3.u32[2] = size[2];
          nir_ssa_def *mod_val = nir_build_imm(b, 3, 32, uvec3);
 
-         sysval = nir_imod(b, nir_idiv(b, local_index, div_val), mod_val);
+         sysval = nir_umod(b, nir_udiv(b, local_index, div_val), mod_val);
          break;
       }
 
