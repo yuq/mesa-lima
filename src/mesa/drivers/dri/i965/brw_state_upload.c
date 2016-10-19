@@ -734,13 +734,12 @@ brw_upload_programs(struct brw_context *brw,
             ctx->Const.MaxViewports : 1;
       }
 
+      brw_upload_wm_prog(brw);
+
       if (brw->gen < 6) {
-         brw_setup_vue_interpolation(brw);
          brw_upload_clip_prog(brw);
          brw_upload_sf_prog(brw);
       }
-
-      brw_upload_wm_prog(brw);
    } else if (pipeline == BRW_COMPUTE_PIPELINE) {
       brw_upload_cs_prog(brw);
    }

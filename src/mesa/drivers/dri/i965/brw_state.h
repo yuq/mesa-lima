@@ -396,9 +396,6 @@ void gen7_enable_hw_binding_tables(struct brw_context *brw);
 void gen7_disable_hw_binding_tables(struct brw_context *brw);
 void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 
-/* brw_interpolation_map.c */
-void brw_setup_vue_interpolation(struct brw_context *brw);
-
 /* brw_clip.c */
 void brw_upload_clip_prog(struct brw_context *brw);
 

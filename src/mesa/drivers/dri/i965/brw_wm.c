@@ -77,7 +77,8 @@ bool
 brw_codegen_wm_prog(struct brw_context *brw,
                     struct gl_shader_program *prog,
                     struct brw_fragment_program *fp,
-                    struct brw_wm_prog_key *key)
+                    struct brw_wm_prog_key *key,
+                    struct brw_vue_map *vue_map)
 {
    const struct gen_device_info *devinfo = &brw->screen->devinfo;
    struct gl_context *ctx = &brw->ctx;
@@ -146,8 +147,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
    program = brw_compile_fs(brw->screen->compiler, brw, mem_ctx,
                             key, &prog_data, fp->program.Base.nir,
                             &fp->program.Base, st_index8, st_index16,
-                            true, brw->use_rep_send,
+                            true, brw->use_rep_send, vue_map,
                             &program_size, &error_str);
+
    if (program == NULL) {
       if (prog) {
          prog->LinkStatus = false;
@@ -587,7 +589,8 @@ brw_upload_wm_prog(struct brw_context *brw)
                          &key, sizeof(key),
                          &brw->wm.base.prog_offset,
                          &brw->wm.base.prog_data)) {
-      bool success = brw_codegen_wm_prog(brw, current, fp, &key);
+      bool success = brw_codegen_wm_prog(brw, current, fp, &key,
+                                         &brw->vue_map_geom_out);
       (void) success;
       assert(success);
    }
@@ -641,7 +644,14 @@ brw_fs_precompile(struct gl_context *ctx,
    uint32_t old_prog_offset = brw->wm.base.prog_offset;
    struct brw_stage_prog_data *old_prog_data = brw->wm.base.prog_data;
 
-   bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key);
+   struct brw_vue_map vue_map;
+   if (brw->gen < 6) {
+      brw_compute_vue_map(&brw->screen->devinfo, &vue_map,
+                          fp->Base.nir->info->inputs_read | VARYING_BIT_POS,
+                          false);
+   }
+
+   bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key, &vue_map);
 
    brw->wm.base.prog_offset = old_prog_offset;
    brw->wm.base.prog_data = old_prog_data;

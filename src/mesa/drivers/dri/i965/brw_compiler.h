@@ -575,6 +575,12 @@ void brw_compute_tess_vue_map(struct brw_vue_map *const vue_map,
                               const GLbitfield64 slots_valid,
                               const GLbitfield is_patch);
 
+/* brw_interpolation_map.c */
+void brw_setup_vue_interpolation(struct brw_vue_map *vue_map,
+                                 struct nir_shader *nir,
+                                 struct gl_program *prog,
+                                 const struct gen_device_info *devinfo);
+
 enum shader_dispatch_mode {
    DISPATCH_MODE_4X1_SINGLE = 0,
    DISPATCH_MODE_4X2_DUAL_INSTANCE = 1,
@@ -834,7 +840,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                int shader_time_index8,
                int shader_time_index16,
                bool allow_spilling,
-               bool use_rep_send,
+               bool use_rep_send, struct brw_vue_map *vue_map,
                unsigned *final_assembly_size,
                char **error_str);
 

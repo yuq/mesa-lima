@@ -280,7 +280,8 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
 }
 
 void
-brw_nir_lower_fs_inputs(nir_shader *nir,
+brw_nir_lower_fs_inputs(nir_shader *nir, struct brw_vue_map *vue_map,
+                        struct gl_program *prog,
                         const struct gen_device_info *devinfo,
                         const struct brw_wm_prog_key *key)
 {
@@ -309,6 +310,11 @@ brw_nir_lower_fs_inputs(nir_shader *nir,
          var->data.centroid = false;
          var->data.sample = false;
       }
+   }
+
+   if (devinfo->gen < 6) {
+      assert(prog); /* prog will be NULL when called from Vulkan */
+      brw_setup_vue_interpolation(vue_map, nir, prog, devinfo);
    }
 
    nir_lower_io_options lower_io_options = 0;

@@ -363,6 +363,20 @@ struct brw_fragment_program {
 };
 
 
+struct gen4_fragment_program {
+   struct brw_fragment_program base;
+
+   bool contains_flat_varying;
+   bool contains_noperspective_varying;
+
+   /*
+    * Mapping of varying slots to interpolation modes.
+    * Used Gen4/5 by the clip|sf|wm stages.
+    */
+   unsigned char interp_mode[BRW_VARYING_SLOT_COUNT];
+};
+
+
 /** Subclass of Mesa compute program */
 struct brw_compute_program {
    struct gl_program program;
@@ -383,32 +397,6 @@ struct brw_shader {
 #define BRW_FS_VARYING_INPUT_MASK \
    (BITFIELD64_RANGE(0, VARYING_SLOT_MAX) & \
     ~VARYING_BIT_POS & ~VARYING_BIT_FACE)
-
-
-/*
- * Mapping of VUE map slots to interpolation modes.
- */
-struct interpolation_mode_map {
-   unsigned char mode[BRW_VARYING_SLOT_COUNT];
-};
-
-static inline bool brw_any_flat_varyings(struct interpolation_mode_map *map)
-{
-   for (int i = 0; i < BRW_VARYING_SLOT_COUNT; i++)
-      if (map->mode[i] == INTERP_MODE_FLAT)
-         return true;
-
-   return false;
-}
-
-static inline bool brw_any_noperspective_varyings(struct interpolation_mode_map *map)
-{
-   for (int i = 0; i < BRW_VARYING_SLOT_COUNT; i++)
-      if (map->mode[i] == INTERP_MODE_NOPERSPECTIVE)
-         return true;
-
-   return false;
-}
 
 
 struct brw_sf_prog_data {
@@ -1272,11 +1260,6 @@ struct brw_context
 
    uint32_t render_target_format[MESA_FORMAT_COUNT];
    bool format_supported_as_render_target[MESA_FORMAT_COUNT];
-
-   /* Interpolation modes, one byte per vue slot.
-    * Used Gen4/5 by the clip|sf|wm stages. Ignored on Gen6+.
-    */
-   struct interpolation_mode_map interpolation_mode;
 
    /* PrimitiveRestart */
    struct {

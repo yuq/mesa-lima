@@ -211,9 +211,9 @@ brw_blorp_compile_nir_shader(struct blorp_context *blorp, struct nir_shader *nir
    nir_lower_io(nir, nir_var_uniform, nir_uniform_type_size, 0);
 
    const unsigned *program =
-      brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx,
-                     wm_key, &wm_prog_data, nir,
-                     NULL, -1, -1, false, use_repclear, program_size, NULL);
+      brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx, wm_key,
+                     &wm_prog_data, nir, NULL, -1, -1, false, use_repclear,
+                     NULL, program_size, NULL);
 
    /* Copy the relavent bits of wm_prog_data over into the blorp prog data */
    prog_data->dispatch_8 = wm_prog_data.dispatch_8;
