@@ -617,17 +617,6 @@ cmd_buffer_alloc_push_constants(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
 }
 
-static void
-add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
-                        struct anv_state state, struct anv_bo *bo,
-                        uint32_t offset)
-{
-   const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
-
-   anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                      state.offset + isl_dev->ss.addr_offset, bo, offset);
-}
-
 static struct anv_state
 alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
                          struct anv_framebuffer *fb)
@@ -714,7 +703,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                     format, bo_offset, 12, 1);
 
       bt_map[0] = surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
+      anv_cmd_buffer_add_surface_state_reloc(cmd_buffer, surface_state,
+                                             bo, bo_offset);
    }
 
    if (map->surface_count == 0)
@@ -747,8 +737,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
             assert(iview->color_rt_surface_state.alloc_size);
             surface_state = iview->color_rt_surface_state;
-            add_surface_state_reloc(cmd_buffer, iview->color_rt_surface_state,
-                                    iview->bo, iview->offset);
+            anv_cmd_buffer_add_surface_state_reloc(cmd_buffer, surface_state,
+                                                   iview->bo, iview->offset);
          } else {
             /* Null render target */
             struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
@@ -822,7 +812,8 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       }
 
       bt_map[bias + s] = surface_state.offset + state_offset;
-      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
+      anv_cmd_buffer_add_surface_state_reloc(cmd_buffer, surface_state,
+                                             bo, bo_offset);
    }
    assert(image == map->image_count);
 
