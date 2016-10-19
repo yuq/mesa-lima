@@ -2201,11 +2201,9 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       break;
    }
    case MESA_SHADER_COMPUTE: {
-      struct gl_compute_program *dst_cp = (struct gl_compute_program *) dst;
-      int i;
-      for (i = 0; i < 3; i++)
-         dst_cp->LocalSize[i] = src->Comp.LocalSize[i];
-      dst_cp->SharedSize = src->Comp.SharedSize;
+      for (int i = 0; i < 3; i++)
+         dst->info.cs.local_size[i] = src->Comp.LocalSize[i];
+      dst->info.cs.shared_size = src->Comp.SharedSize;
       break;
    }
    default:
