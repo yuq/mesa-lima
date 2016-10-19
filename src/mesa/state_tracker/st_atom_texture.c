@@ -253,7 +253,7 @@ update_tessctrl_textures(struct st_context *st)
    if (ctx->TessCtrlProgram._Current) {
       update_textures(st,
                       MESA_SHADER_TESS_CTRL,
-                      &ctx->TessCtrlProgram._Current->Base,
+                      ctx->TessCtrlProgram._Current,
                       ctx->Const.Program[MESA_SHADER_TESS_CTRL].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_TESS_CTRL],
                       &st->state.num_sampler_views[PIPE_SHADER_TESS_CTRL]);

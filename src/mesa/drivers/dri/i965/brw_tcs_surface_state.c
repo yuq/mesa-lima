@@ -52,7 +52,7 @@ brw_upload_tcs_pull_constants(struct brw_context *brw)
 
    _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_TESS_CTRL);
    /* _NEW_PROGRAM_CONSTANTS */
-   brw_upload_pull_constants(brw, BRW_NEW_TCS_CONSTBUF, &tcp->program.Base,
+   brw_upload_pull_constants(brw, BRW_NEW_TCS_CONSTBUF, &tcp->program,
                              stage_state, prog_data);
 }
 

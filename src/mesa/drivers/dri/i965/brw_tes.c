@@ -251,7 +251,7 @@ brw_tes_populate_key(struct brw_context *brw,
     * be stored in the Patch URB Entry as well.
     */
    if (tcp) {
-      struct gl_program *tcp_prog = &tcp->program.Base;
+      struct gl_program *tcp_prog = &tcp->program;
       per_vertex_slots |= tcp_prog->info.outputs_written;
       per_patch_slots |= tcp_prog->info.patch_outputs_written;
    }

@@ -228,8 +228,8 @@ _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_TESS_CONTROL_PROGRAM_NV: {
-      struct gl_tess_ctrl_program *prog = CALLOC_STRUCT(gl_tess_ctrl_program);
-      return _mesa_init_gl_program(&prog->Base, target, id);
+      struct gl_program *prog = CALLOC_STRUCT(gl_program);
+      return _mesa_init_gl_program(prog, target, id);
    }
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct gl_tess_eval_program *prog = CALLOC_STRUCT(gl_tess_eval_program);

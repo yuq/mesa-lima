@@ -1605,10 +1605,10 @@ st_translate_tessctrl_program(struct st_context *st,
       return false;
 
    ureg_property(ureg, TGSI_PROPERTY_TCS_VERTICES_OUT,
-                 sttcp->Base.Base.info.tcs.vertices_out);
+                 sttcp->Base.info.tcs.vertices_out);
 
-   st_translate_program_common(st, &sttcp->Base.Base, sttcp->glsl_to_tgsi,
-                               ureg, PIPE_SHADER_TESS_CTRL, &sttcp->tgsi);
+   st_translate_program_common(st, &sttcp->Base, sttcp->glsl_to_tgsi, ureg,
+                               PIPE_SHADER_TESS_CTRL, &sttcp->tgsi);
 
    free_glsl_to_tgsi_visitor(sttcp->glsl_to_tgsi);
    sttcp->glsl_to_tgsi = NULL;

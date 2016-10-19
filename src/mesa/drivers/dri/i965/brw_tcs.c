@@ -178,7 +178,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    double start_time = 0;
 
    if (tcp) {
-      nir = tcp->program.Base.nir;
+      nir = tcp->program.nir;
    } else {
       /* Create a dummy nir_shader.  We won't actually use NIR code to
        * generate assembly (it's easier to generate assembly directly),
@@ -211,14 +211,14 @@ brw_codegen_tcs_prog(struct brw_context *brw,
 
    if (tcs) {
       brw_assign_common_binding_table_offsets(MESA_SHADER_TESS_CTRL, devinfo,
-                                              shader_prog, &tcp->program.Base,
+                                              shader_prog, &tcp->program,
                                               &prog_data.base.base, 0);
 
       prog_data.base.base.image_param =
          rzalloc_array(NULL, struct brw_image_param, tcs->NumImages);
       prog_data.base.base.nr_image_params = tcs->NumImages;
 
-      brw_nir_setup_glsl_uniforms(nir, shader_prog, &tcp->program.Base,
+      brw_nir_setup_glsl_uniforms(nir, shader_prog, &tcp->program,
                                   &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_TESS_CTRL]);
    } else {
@@ -320,7 +320,6 @@ brw_tcs_populate_key(struct brw_context *brw,
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
-   struct gl_program *prog = &tcp->program.Base;
    struct gl_program *tes_prog = &tep->program.Base;
 
    uint64_t per_vertex_slots = tes_prog->info.inputs_read;
@@ -329,6 +328,7 @@ brw_tcs_populate_key(struct brw_context *brw,
    memset(key, 0, sizeof(*key));
 
    if (tcp) {
+      struct gl_program *prog = &tcp->program;
       per_vertex_slots |= prog->info.outputs_written;
       per_patch_slots |= prog->info.patch_outputs_written;
    }
@@ -350,7 +350,7 @@ brw_tcs_populate_key(struct brw_context *brw,
       key->program_string_id = tcp->id;
 
       /* _NEW_TEXTURE */
-      brw_populate_sampler_prog_key_data(&brw->ctx, prog, &key->tex);
+      brw_populate_sampler_prog_key_data(&brw->ctx, &tcp->program, &key->tex);
    } else {
       key->outputs_written = tes_prog->info.inputs_read;
    }
@@ -400,8 +400,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->tcs.base.prog_data;
    bool success;
 
-   struct gl_tess_ctrl_program *tcp = (struct gl_tess_ctrl_program *)prog;
-   struct brw_tess_ctrl_program *btcp = brw_tess_ctrl_program(tcp);
+   struct brw_tess_ctrl_program *btcp = brw_tess_ctrl_program(prog);
    const struct gl_linked_shader *tes =
       shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
 

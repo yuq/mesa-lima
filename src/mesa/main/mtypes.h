@@ -1998,16 +1998,6 @@ struct gl_vertex_program
 };
 
 
-/** Tessellation control program object */
-struct gl_tess_ctrl_program
-{
-   struct gl_program Base;   /**< base class */
-
-   /* output layout */
-   GLint VerticesOut;
-};
-
-
 /** Tessellation evaluation program object */
 struct gl_tess_eval_program
 {
@@ -2133,7 +2123,7 @@ struct gl_vertex_program_state
 struct gl_tess_ctrl_program_state
 {
    /** Currently bound and valid shader. */
-   struct gl_tess_ctrl_program *_Current;
+   struct gl_program *_Current;
 
    GLint patch_vertices;
    GLfloat patch_default_outer_level[4];

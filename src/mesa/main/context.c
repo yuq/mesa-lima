@@ -1297,7 +1297,7 @@ _mesa_free_context_data( struct gl_context *ctx )
    _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current, NULL);
    _mesa_reference_vertprog(ctx, &ctx->VertexProgram._TnlProgram, NULL);
 
-   _mesa_reference_tesscprog(ctx, &ctx->TessCtrlProgram._Current, NULL);
+   _mesa_reference_program(ctx, &ctx->TessCtrlProgram._Current, NULL);
    _mesa_reference_tesseprog(ctx, &ctx->TessEvalProgram._Current, NULL);
    _mesa_reference_geomprog(ctx, &ctx->GeometryProgram._Current, NULL);
 

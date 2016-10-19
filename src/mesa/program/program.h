@@ -125,16 +125,6 @@ _mesa_reference_compprog(struct gl_context *ctx,
                            (struct gl_program *) prog);
 }
 
-
-static inline void
-_mesa_reference_tesscprog(struct gl_context *ctx,
-                         struct gl_tess_ctrl_program **ptr,
-                         struct gl_tess_ctrl_program *prog)
-{
-   _mesa_reference_program(ctx, (struct gl_program **) ptr,
-                           (struct gl_program *) prog);
-}
-
 static inline void
 _mesa_reference_tesseprog(struct gl_context *ctx,
                          struct gl_tess_eval_program **ptr,
@@ -266,19 +256,6 @@ gl_compute_program_const(const struct gl_program *prog)
 {
    return (const struct gl_compute_program *) prog;
 }
-
-static inline struct gl_tess_ctrl_program *
-gl_tess_ctrl_program(struct gl_program *prog)
-{
-   return (struct gl_tess_ctrl_program *) prog;
-}
-
-static inline const struct gl_tess_ctrl_program *
-gl_tess_ctrl_program_const(const struct gl_program *prog)
-{
-   return (const struct gl_tess_ctrl_program *) prog;
-}
-
 
 static inline struct gl_tess_eval_program *
 gl_tess_eval_program(struct gl_program *prog)

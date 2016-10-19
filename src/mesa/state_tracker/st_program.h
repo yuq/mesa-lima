@@ -260,11 +260,11 @@ struct st_geometry_program
 
 
 /**
- * Derived from Mesa gl_tess_ctrl_program:
+ * Derived from Mesa gl_program:
  */
 struct st_tessctrl_program
 {
-   struct gl_tess_ctrl_program Base;  /**< The Mesa tess ctrl program */
+   struct gl_program Base;  /**< The Mesa tess ctrl program */
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
@@ -321,7 +321,7 @@ st_geometry_program( struct gl_geometry_program *gp )
 }
 
 static inline struct st_tessctrl_program *
-st_tessctrl_program( struct gl_tess_ctrl_program *tcp )
+st_tessctrl_program( struct gl_program *tcp )
 {
    return (struct st_tessctrl_program *)tcp;
 }

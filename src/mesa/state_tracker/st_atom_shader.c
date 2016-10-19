@@ -254,7 +254,7 @@ update_tcp( struct st_context *st )
    }
 
    sttcp = st_tessctrl_program(st->ctx->TessCtrlProgram._Current);
-   assert(sttcp->Base.Base.Target == GL_TESS_CONTROL_PROGRAM_NV);
+   assert(sttcp->Base.Target == GL_TESS_CONTROL_PROGRAM_NV);
 
    st->tcp_variant = st_get_basic_variant(st, PIPE_SHADER_TESS_CTRL,
                                           &sttcp->tgsi, &sttcp->variants);

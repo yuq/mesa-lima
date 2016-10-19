@@ -195,7 +195,7 @@ static void update_tcs_constants(struct st_context *st )
    struct gl_program_parameter_list *params;
 
    if (tcp) {
-      params = tcp->Base.Base.Parameters;
+      params = tcp->Base.Parameters;
       st_upload_constants( st, params, MESA_SHADER_TESS_CTRL );
    }
 }
