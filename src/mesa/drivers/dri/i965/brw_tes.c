@@ -233,15 +233,14 @@ void
 brw_tes_populate_key(struct brw_context *brw,
                      struct brw_tes_prog_key *key)
 {
-
-   uint64_t per_vertex_slots =
-      brw->tess_eval_program->Base.nir->info->inputs_read;
-   uint32_t per_patch_slots =
-      brw->tess_eval_program->Base.nir->info->patch_inputs_read;
-
+   struct brw_tess_ctrl_program *tcp =
+      (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
    struct gl_program *prog = &tep->program.Base;
+
+   uint64_t per_vertex_slots = prog->info.inputs_read;
+   uint32_t per_patch_slots = prog->info.patch_inputs_read;
 
    memset(key, 0, sizeof(*key));
 
@@ -251,11 +250,10 @@ brw_tes_populate_key(struct brw_context *brw,
     * TES (possibly for cross-thread communication).  These need to
     * be stored in the Patch URB Entry as well.
     */
-   if (brw->tess_ctrl_program) {
-      per_vertex_slots |=
-         brw->tess_ctrl_program->Base.nir->info->outputs_written;
-      per_patch_slots |=
-         brw->tess_ctrl_program->Base.nir->info->patch_outputs_written;
+   if (tcp) {
+      struct gl_program *tcp_prog = &tcp->program.Base;
+      per_vertex_slots |= tcp_prog->info.outputs_written;
+      per_patch_slots |= tcp_prog->info.patch_outputs_written;
    }
 
    /* Ignore gl_TessLevelInner/Outer - we treat them as system values,

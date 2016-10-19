@@ -316,24 +316,21 @@ void
 brw_tcs_populate_key(struct brw_context *brw,
                      struct brw_tcs_prog_key *key)
 {
-   uint64_t per_vertex_slots =
-      brw->tess_eval_program->Base.nir->info->inputs_read;
-   uint32_t per_patch_slots =
-      brw->tess_eval_program->Base.nir->info->patch_inputs_read;
-
    struct brw_tess_ctrl_program *tcp =
       (struct brw_tess_ctrl_program *) brw->tess_ctrl_program;
    struct brw_tess_eval_program *tep =
       (struct brw_tess_eval_program *) brw->tess_eval_program;
    struct gl_program *prog = &tcp->program.Base;
+   struct gl_program *tes_prog = &tep->program.Base;
+
+   uint64_t per_vertex_slots = tes_prog->info.inputs_read;
+   uint32_t per_patch_slots = tes_prog->info.patch_inputs_read;
 
    memset(key, 0, sizeof(*key));
 
-   if (brw->tess_ctrl_program) {
-      per_vertex_slots |=
-         brw->tess_ctrl_program->Base.nir->info->outputs_written;
-      per_patch_slots |=
-         brw->tess_ctrl_program->Base.nir->info->patch_outputs_written;
+   if (tcp) {
+      per_vertex_slots |= prog->info.outputs_written;
+      per_patch_slots |= prog->info.patch_outputs_written;
    }
 
    if (brw->gen < 8 || !tcp)
@@ -355,7 +352,7 @@ brw_tcs_populate_key(struct brw_context *brw,
       /* _NEW_TEXTURE */
       brw_populate_sampler_prog_key_data(&brw->ctx, prog, &key->tex);
    } else {
-      key->outputs_written = tep->program.Base.nir->info->inputs_read;
+      key->outputs_written = tes_prog->info.inputs_read;
    }
 }
 
