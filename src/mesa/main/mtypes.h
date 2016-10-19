@@ -2005,13 +2005,6 @@ struct gl_fragment_program
    enum gl_frag_depth_layout FragDepthLayout;
 
    /**
-    * GLSL interpolation qualifier associated with each fragment shader input.
-    * For inputs that do not have an interpolation qualifier specified in
-    * GLSL, the value is INTERP_MODE_NONE.
-    */
-   enum glsl_interp_mode InterpQualifier[VARYING_SLOT_MAX];
-
-   /**
     * Bitfield indicating, for each fragment shader input, 1 if that input
     * uses centroid interpolation, 0 otherwise.  Unused inputs are 0.
     */

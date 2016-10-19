@@ -26,8 +26,8 @@
  *
  * Sets the InputsRead and OutputsWritten of Mesa programs.
  *
- * Additionally, for fragment shaders, sets the InterpQualifier array, and the
- * IsCentroid and IsSample bitfields.
+ * Additionally, for fragment shaders, sets the IsCentroid and IsSample
+ * bitfields.
  *
  * Mesa programs (gl_program, not gl_shader_program) have a set of
  * flags indicating which varyings are read and written.  Computing
@@ -125,8 +125,6 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
 
          if (stage == MESA_SHADER_FRAGMENT) {
             gl_fragment_program *fprog = (gl_fragment_program *) prog;
-            fprog->InterpQualifier[idx] =
-               (glsl_interp_mode) var->data.interpolation;
             if (var->data.centroid)
                fprog->IsCentroid |= bitfield;
             if (var->data.sample)
@@ -445,7 +443,6 @@ do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
    prog->SystemValuesRead = 0;
    if (shader_stage == MESA_SHADER_FRAGMENT) {
       gl_fragment_program *fprog = (gl_fragment_program *) prog;
-      memset(fprog->InterpQualifier, 0, sizeof(fprog->InterpQualifier));
       fprog->IsCentroid = 0;
       fprog->IsSample = 0;
       fprog->UsesKill = false;
