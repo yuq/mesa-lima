@@ -135,7 +135,7 @@ vertex_attrib_binding(struct gl_context *ctx,
 {
    struct gl_array_attributes *array = &vao->VertexAttrib[attribIndex];
 
-   if (!_mesa_is_bufferobj(vao->VertexBinding[bindingIndex].BufferObj))
+   if (!_mesa_is_bufferobj(vao->BufferBinding[bindingIndex].BufferObj))
       vao->VertexAttribBufferMask &= ~VERT_BIT(attribIndex);
    else
       vao->VertexAttribBufferMask |= VERT_BIT(attribIndex);
@@ -145,8 +145,8 @@ vertex_attrib_binding(struct gl_context *ctx,
 
       FLUSH_VERTICES(ctx, _NEW_ARRAY);
 
-      vao->VertexBinding[array->BufferBindingIndex]._BoundArrays &= ~array_bit;
-      vao->VertexBinding[bindingIndex]._BoundArrays |= array_bit;
+      vao->BufferBinding[array->BufferBindingIndex]._BoundArrays &= ~array_bit;
+      vao->BufferBinding[bindingIndex]._BoundArrays |= array_bit;
 
       array->BufferBindingIndex = bindingIndex;
 
@@ -166,7 +166,7 @@ _mesa_bind_vertex_buffer(struct gl_context *ctx,
                          struct gl_buffer_object *vbo,
                          GLintptr offset, GLsizei stride)
 {
-   struct gl_vertex_buffer_binding *binding = &vao->VertexBinding[index];
+   struct gl_vertex_buffer_binding *binding = &vao->BufferBinding[index];
 
    if (binding->BufferObj != vbo ||
        binding->Offset != offset ||
@@ -200,7 +200,7 @@ vertex_binding_divisor(struct gl_context *ctx,
                        GLuint divisor)
 {
    struct gl_vertex_buffer_binding *binding =
-      &vao->VertexBinding[bindingIndex];
+      &vao->BufferBinding[bindingIndex];
 
    if (binding->InstanceDivisor != divisor) {
       FLUSH_VERTICES(ctx, _NEW_ARRAY);
@@ -931,7 +931,7 @@ get_vertex_array_attrib(struct gl_context *ctx,
    case GL_VERTEX_ATTRIB_ARRAY_NORMALIZED_ARB:
       return array->Normalized;
    case GL_VERTEX_ATTRIB_ARRAY_BUFFER_BINDING_ARB:
-      return vao->VertexBinding[array->BufferBindingIndex].BufferObj->Name;
+      return vao->BufferBinding[array->BufferBindingIndex].BufferObj->Name;
    case GL_VERTEX_ATTRIB_ARRAY_INTEGER:
       if ((_mesa_is_desktop_gl(ctx)
            && (ctx->Version >= 30 || ctx->Extensions.EXT_gpu_shader4))
@@ -947,7 +947,7 @@ get_vertex_array_attrib(struct gl_context *ctx,
    case GL_VERTEX_ATTRIB_ARRAY_DIVISOR_ARB:
       if ((_mesa_is_desktop_gl(ctx) && ctx->Extensions.ARB_instanced_arrays)
           || _mesa_is_gles3(ctx)) {
-         return vao->VertexBinding[array->BufferBindingIndex].InstanceDivisor;
+         return vao->BufferBinding[array->BufferBindingIndex].InstanceDivisor;
       }
       goto error;
    case GL_VERTEX_ATTRIB_BINDING:
@@ -1188,16 +1188,16 @@ _mesa_GetVertexArrayIndexediv(GLuint vaobj, GLuint index,
     */
    switch (pname) {
    case GL_VERTEX_BINDING_OFFSET:
-      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].Offset;
+      params[0] = vao->BufferBinding[VERT_ATTRIB_GENERIC(index)].Offset;
       break;
    case GL_VERTEX_BINDING_STRIDE:
-      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].Stride;
+      params[0] = vao->BufferBinding[VERT_ATTRIB_GENERIC(index)].Stride;
       break;
    case GL_VERTEX_BINDING_DIVISOR:
-      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].InstanceDivisor;
+      params[0] = vao->BufferBinding[VERT_ATTRIB_GENERIC(index)].InstanceDivisor;
       break;
    case GL_VERTEX_BINDING_BUFFER:
-      params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].BufferObj->Name;
+      params[0] = vao->BufferBinding[VERT_ATTRIB_GENERIC(index)].BufferObj->Name;
       break;
    default:
       params[0] = get_vertex_array_attrib(ctx, vao, index, pname,
@@ -1256,7 +1256,7 @@ _mesa_GetVertexArrayIndexed64iv(GLuint vaobj, GLuint index,
       return;
    }
 
-   params[0] = vao->VertexBinding[VERT_ATTRIB_GENERIC(index)].Offset;
+   params[0] = vao->BufferBinding[VERT_ATTRIB_GENERIC(index)].Offset;
 }
 
 
@@ -1742,8 +1742,8 @@ vertex_array_vertex_buffer(struct gl_context *ctx,
    }
 
    if (buffer ==
-       vao->VertexBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj->Name) {
-      vbo = vao->VertexBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj;
+       vao->BufferBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj->Name) {
+      vbo = vao->BufferBinding[VERT_ATTRIB_GENERIC(bindingIndex)].BufferObj;
    } else if (buffer != 0) {
       vbo = _mesa_lookup_bufferobj(ctx, buffer);
 
@@ -1919,7 +1919,7 @@ vertex_array_vertex_buffers(struct gl_context *ctx,
 
       if (buffers[i]) {
          struct gl_vertex_buffer_binding *binding =
-            &vao->VertexBinding[VERT_ATTRIB_GENERIC(first + i)];
+            &vao->BufferBinding[VERT_ATTRIB_GENERIC(first + i)];
 
          if (buffers[i] == binding->BufferObj->Name)
             vbo = binding->BufferObj;
@@ -2377,7 +2377,7 @@ _mesa_print_arrays(struct gl_context *ctx)
          continue;
 
       const struct gl_vertex_buffer_binding *binding =
-         &vao->VertexBinding[array->BufferBindingIndex];
+         &vao->BufferBinding[array->BufferBindingIndex];
       const struct gl_buffer_object *bo = binding->BufferObj;
 
       fprintf(stderr, "  %s: Ptr=%p, Type=%s, Size=%d, ElemSize=%u, "

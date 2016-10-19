@@ -1203,10 +1203,10 @@ unbind(struct gl_context *ctx,
        struct gl_vertex_array_object *vao, unsigned index,
        struct gl_buffer_object *obj)
 {
-   if (vao->VertexBinding[index].BufferObj == obj) {
+   if (vao->BufferBinding[index].BufferObj == obj) {
       _mesa_bind_vertex_buffer(ctx, vao, index, ctx->Shared->NullBufferObj,
-                               vao->VertexBinding[index].Offset,
-                               vao->VertexBinding[index].Stride);
+                               vao->BufferBinding[index].Offset,
+                               vao->BufferBinding[index].Stride);
    }
 }
 
@@ -1304,7 +1304,7 @@ _mesa_DeleteBuffers(GLsizei n, const GLuint *ids)
          _mesa_buffer_unmap_all_mappings(ctx, bufObj);
 
          /* unbind any vertex pointers bound to this buffer */
-         for (j = 0; j < ARRAY_SIZE(vao->VertexBinding); j++) {
+         for (j = 0; j < ARRAY_SIZE(vao->BufferBinding); j++) {
             unbind(ctx, vao, j, bufObj);
          }
 
