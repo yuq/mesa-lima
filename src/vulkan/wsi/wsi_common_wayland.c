@@ -635,11 +635,15 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
    wl_display_roundtrip(chain->display->display);
    close(fd);
 
+   if (!image->buffer)
+      goto fail_image;
+
    wl_proxy_set_queue((struct wl_proxy *)image->buffer, chain->queue);
    wl_buffer_add_listener(image->buffer, &buffer_listener, image);
 
    return VK_SUCCESS;
 
+fail_image:
    chain->base.image_fns->free_wsi_image(vk_device, pAllocator,
                                          image->image, image->memory);
 
