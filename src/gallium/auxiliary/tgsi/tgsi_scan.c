@@ -271,6 +271,18 @@ scan_instruction(struct tgsi_shader_info *info,
       if (src->Register.Indirect) {
          info->indirect_files |= (1 << src->Register.File);
          info->indirect_files_read |= (1 << src->Register.File);
+
+         /* record indirect constant buffer indexing */
+         if (src->Register.File == TGSI_FILE_CONSTANT) {
+            if (src->Register.Dimension) {
+               if (src->Dimension.Indirect)
+                  info->const_buffers_indirect = info->const_buffers_declared;
+               else
+                  info->const_buffers_indirect |= 1u << src->Dimension.Index;
+            } else {
+               info->const_buffers_indirect |= 1;
+            }
+         }
       }
 
       /* Texture samplers */
@@ -392,6 +404,7 @@ scan_declaration(struct tgsi_shader_info *info,
 
          info->const_file_max[buffer] =
             MAX2(info->const_file_max[buffer], (int)reg);
+         info->const_buffers_declared |= 1u << buffer;
       }
       else if (file == TGSI_FILE_INPUT) {
          info->input_semantic_name[reg] = (ubyte) semName;

@@ -64,6 +64,7 @@ struct tgsi_shader_info
    uint file_count[TGSI_FILE_COUNT];  /**< number of declared registers */
    int file_max[TGSI_FILE_COUNT];  /**< highest index of declared registers */
    int const_file_max[PIPE_MAX_CONSTANT_BUFFERS];
+   unsigned const_buffers_declared; /**< bitmask of declared const buffers */
    unsigned samplers_declared; /**< bitmask of declared samplers */
    ubyte sampler_targets[PIPE_MAX_SHADER_SAMPLER_VIEWS];  /**< TGSI_TEXTURE_x values */
    ubyte sampler_type[PIPE_MAX_SHADER_SAMPLER_VIEWS]; /**< TGSI_RETURN_TYPE_x */
@@ -141,6 +142,7 @@ struct tgsi_shader_info
     */
    unsigned indirect_files_read;
    unsigned indirect_files_written;
+   unsigned const_buffers_indirect; /**< const buffers using indirect addressing */
 
    unsigned properties[TGSI_PROPERTY_COUNT]; /* index with TGSI_PROPERTY_ */
 
