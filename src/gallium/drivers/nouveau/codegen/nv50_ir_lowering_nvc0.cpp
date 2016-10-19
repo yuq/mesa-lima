@@ -115,6 +115,38 @@ NVC0LegalizeSSA::handleFTZ(Instruction *i)
    i->ftz = true;
 }
 
+void
+NVC0LegalizeSSA::handleTEXLOD(TexInstruction *i)
+{
+   if (i->tex.target.isMS())
+      return;
+
+   ImmediateValue lod;
+
+   // The LOD argument comes right after the coordinates (before depth bias,
+   // offsets, etc).
+   int arg = i->tex.target.getArgCount();
+
+   // SM30+ stores the indirect handle as a separate arg, which comes before
+   // the LOD.
+   if (prog->getTarget()->getChipset() >= NVISA_GK104_CHIPSET &&
+       i->tex.rIndirectSrc >= 0)
+      arg++;
+   // SM20 stores indirect handle combined with array coordinate
+   if (prog->getTarget()->getChipset() < NVISA_GK104_CHIPSET &&
+       !i->tex.target.isArray() &&
+       i->tex.rIndirectSrc >= 0)
+      arg++;
+
+   if (!i->src(arg).getImmediate(lod) || !lod.isInteger(0))
+      return;
+
+   if (i->op == OP_TXL)
+      i->op = OP_TEX;
+   i->tex.levelZero = true;
+   i->moveSources(arg + 1, -1);
+}
+
 bool
 NVC0LegalizeSSA::visit(Function *fn)
 {
@@ -128,20 +160,24 @@ NVC0LegalizeSSA::visit(BasicBlock *bb)
    Instruction *next;
    for (Instruction *i = bb->getEntry(); i; i = next) {
       next = i->next;
-      if (i->sType == TYPE_F32) {
-         if (prog->getType() != Program::TYPE_COMPUTE)
-            handleFTZ(i);
-         continue;
-      }
+
+      if (i->sType == TYPE_F32 && prog->getType() != Program::TYPE_COMPUTE)
+         handleFTZ(i);
+
       switch (i->op) {
       case OP_DIV:
       case OP_MOD:
-         handleDIV(i);
+         if (i->sType != TYPE_F32)
+            handleDIV(i);
          break;
       case OP_RCP:
       case OP_RSQ:
          if (i->dType == TYPE_F64)
             handleRCPRSQ(i);
+         break;
+      case OP_TXL:
+      case OP_TXF:
+         handleTEXLOD(i->asTex());
          break;
       default:
          break;
