@@ -633,7 +633,7 @@ alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
                          struct anv_framebuffer *fb)
 {
    struct anv_state state =
-      anv_state_stream_alloc(&cmd_buffer->surface_state_stream, 64, 64);
+      anv_cmd_buffer_alloc_surface_state(cmd_buffer);
 
    struct GENX(RENDER_SURFACE_STATE) null_ss = {
       .SurfaceType = SURFTYPE_NULL,
