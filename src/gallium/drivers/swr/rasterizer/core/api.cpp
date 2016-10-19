@@ -317,7 +317,10 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
 
         SWR_ASSERT(pCurDrawContext->pArena->IsEmpty() == true);
 
+        // Reset dependency
         pCurDrawContext->dependent = false;
+        pCurDrawContext->dependentFE = false;
+
         pCurDrawContext->pContext = pContext;
         pCurDrawContext->isCompute = false; // Dispatch has to set this to true.
 

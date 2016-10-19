@@ -404,7 +404,8 @@ struct DRAW_CONTEXT
     CachingArena*   pArena;
 
     uint32_t        drawId;
-    bool            dependent;
+    bool            dependentFE;    // Frontend work is dependent on all previous FE
+    bool            dependent;      // Backend work is dependent on all previous BE
     bool            isCompute;      // Is this DC a compute context?
     bool            cleanupState;   // True if this is the last draw using an entry in the state ring.
     volatile bool   doneFE;         // Is FE work done for this draw?
