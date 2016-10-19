@@ -1964,18 +1964,11 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       convertSurfaceFormat(su);
 
    if (su->op == OP_SUREDB || su->op == OP_SUREDP) {
-      Value *pred = su->getSrc(2);
-      CondCode cc = CC_NOT_P;
-      if (su->getPredicate()) {
-         pred = bld.getScratch(1, FILE_PREDICATE);
-         cc = su->cc;
-         if (cc == CC_NOT_P) {
-            bld.mkOp2(OP_OR, TYPE_U8, pred, su->getPredicate(), su->getSrc(2));
-         } else {
-            bld.mkOp2(OP_AND, TYPE_U8, pred, su->getPredicate(), su->getSrc(2));
-            pred->getInsn()->src(1).mod = Modifier(NV50_IR_MOD_NOT);
-         }
-      }
+      assert(su->getPredicate());
+      Value *pred =
+         bld.mkOp2v(OP_OR, TYPE_U8, bld.getScratch(1, FILE_PREDICATE),
+                    su->getPredicate(), su->getSrc(2));
+
       Instruction *red = bld.mkOp(OP_ATOM, su->dType, bld.getSSA());
       red->subOp = su->subOp;
       red->setSrc(0, bld.mkSymbol(FILE_MEMORY_GLOBAL, 0, TYPE_U32, 0));
@@ -1988,8 +1981,8 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       // performed
       Instruction *mov = bld.mkMov(bld.getSSA(), bld.loadImm(NULL, 0));
 
-      assert(cc == CC_NOT_P);
-      red->setPredicate(cc, pred);
+      assert(su->cc == CC_NOT_P);
+      red->setPredicate(su->cc, pred);
       mov->setPredicate(CC_P, pred);
 
       bld.mkOp2(OP_UNION, TYPE_U32, su->getDef(0),
