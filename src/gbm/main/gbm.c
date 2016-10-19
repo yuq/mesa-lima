@@ -181,6 +181,17 @@ gbm_bo_get_format(struct gbm_bo *bo)
    return bo->format;
 }
 
+/** Get the gbm device used to create the buffer object
+ *
+ * \param bo The buffer object
+ * \return Returns the gbm device with which the buffer object was created
+ */
+GBM_EXPORT struct gbm_device *
+gbm_bo_get_device(struct gbm_bo *bo)
+{
+	return bo->gbm;
+}
+
 /** Get the handle of the buffer object
  *
  * This is stored in the platform generic union gbm_bo_handle type. However
@@ -230,17 +241,6 @@ GBM_EXPORT int
 gbm_bo_write(struct gbm_bo *bo, const void *buf, size_t count)
 {
    return bo->gbm->bo_write(bo, buf, count);
-}
-
-/** Get the gbm device used to create the buffer object
- *
- * \param bo The buffer object
- * \return Returns the gbm device with which the buffer object was created
- */
-GBM_EXPORT struct gbm_device *
-gbm_bo_get_device(struct gbm_bo *bo)
-{
-	return bo->gbm;
 }
 
 /** Set the user data associated with a buffer object
