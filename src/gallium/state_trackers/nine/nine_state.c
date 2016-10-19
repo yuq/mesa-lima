@@ -837,8 +837,8 @@ static inline void
 commit_index_buffer(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
-    if (device->state.idxbuf)
-        pipe->set_index_buffer(pipe, &device->state.idxbuf->buffer);
+    if (device->context.idxbuf.buffer)
+        pipe->set_index_buffer(pipe, &device->context.idxbuf);
     else
         pipe->set_index_buffer(pipe, NULL);
 }
@@ -1241,6 +1241,26 @@ nine_context_set_stream_source_freq(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_indices(struct NineDevice9 *device,
+                         struct NineIndexBuffer9 *idxbuf)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    const struct pipe_index_buffer *pipe_idxbuf;
+
+    if (idxbuf) {
+        pipe_idxbuf = NineIndexBuffer9_GetBuffer(idxbuf);
+        context->idxbuf.index_size = pipe_idxbuf->index_size;
+        pipe_resource_reference(&context->idxbuf.buffer, pipe_idxbuf->buffer);
+        context->idxbuf.offset = pipe_idxbuf->offset;
+        context->idxbuf.user_buffer = NULL;
+    } else
+        pipe_resource_reference(&context->idxbuf.buffer, NULL);
+
+    state->changed.group |= NINE_STATE_IDXBUF;
+}
+
+void
 nine_context_set_vertex_declaration(struct NineDevice9 *device,
                                     struct NineVertexDeclaration9 *vdecl)
 {
@@ -1482,6 +1502,10 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         }
         context->changed.vtxbuf |= src->changed.vtxbuf;
     }
+
+    /* Index buffer */
+    if (src->changed.group & NINE_STATE_IDXBUF)
+        nine_context_set_indices(device, src->idxbuf);
 
     /* Vertex declaration */
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
@@ -2096,6 +2120,7 @@ nine_context_clear(struct nine_context *context)
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
         pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
+    pipe_resource_reference(&context->idxbuf.buffer, NULL);
 
     for (i = 0; i < NINE_MAX_SAMPLERS; ++i)
         nine_bind(&context->texture[i], NULL);

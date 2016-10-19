@@ -256,6 +256,8 @@ struct nine_context {
     uint32_t stream_instancedata_mask; /* derived from stream_freq */
     uint32_t stream_usage_mask; /* derived from VS and vdecl */
 
+    struct pipe_index_buffer idxbuf;
+
     DWORD rs[NINED3DRS_COUNT];
 
     struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS];
@@ -329,6 +331,10 @@ void
 nine_context_set_stream_source_freq(struct NineDevice9 *device,
                                     UINT StreamNumber,
                                     UINT Setting);
+
+void
+nine_context_set_indices(struct NineDevice9 *device,
+                         struct NineIndexBuffer9 *idxbuf);
 
 void
 nine_context_set_vertex_declaration(struct NineDevice9 *device,

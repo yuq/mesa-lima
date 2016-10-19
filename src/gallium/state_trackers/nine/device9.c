@@ -3526,15 +3526,21 @@ NineDevice9_SetIndices( struct NineDevice9 *This,
                         IDirect3DIndexBuffer9 *pIndexData )
 {
     struct nine_state *state = This->update;
+    struct NineIndexBuffer9 *idxbuf = NineIndexBuffer9(pIndexData);
 
     DBG("This=%p pIndexData=%p\n", This, pIndexData);
 
-    if (likely(!This->is_recording))
-        if (state->idxbuf == NineIndexBuffer9(pIndexData))
-            return D3D_OK;
-    nine_bind(&state->idxbuf, pIndexData);
+    if (unlikely(This->is_recording)) {
+        nine_bind(&state->idxbuf, idxbuf);
+        state->changed.group |= NINE_STATE_IDXBUF;
+        return D3D_OK;
+    }
 
-    state->changed.group |= NINE_STATE_IDXBUF;
+    if (state->idxbuf == idxbuf)
+        return D3D_OK;
+    nine_bind(&state->idxbuf, idxbuf);
+
+    nine_context_set_indices(This, idxbuf);
 
     return D3D_OK;
 }
