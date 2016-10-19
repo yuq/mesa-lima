@@ -6379,6 +6379,9 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    prog = ctx->Driver.NewProgram(ctx, target, shader_program->Name);
    if (!prog)
       return NULL;
+
+   _mesa_reference_program(ctx, &shader->Program, prog);
+
    prog->Parameters = _mesa_new_parameter_list();
    v = new glsl_to_tgsi_visitor();
    v->ctx = ctx;
@@ -6394,7 +6397,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    v->have_fma = pscreen->get_shader_param(pscreen, ptarget,
                                            PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED);
 
-   _mesa_copy_linked_program_data(shader->Stage, shader_program, prog);
+   _mesa_copy_linked_program_data(shader_program, shader);
    _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
                                                prog->Parameters);
 
@@ -6485,8 +6488,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       v->wpos_transform_const = _mesa_add_state_reference(prog->Parameters,
                                                           wposTransformState);
    }
-
-   _mesa_reference_program(ctx, &shader->Program, prog);
 
    /* Avoid reallocation of the program parameter list, because the uniform
     * storage is only associated with the original parameter list.

@@ -226,9 +226,12 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
                                 0);
       if (!prog)
         return false;
+
+      _mesa_reference_program(ctx, &shader->Program, prog);
+
       prog->Parameters = _mesa_new_parameter_list();
 
-      _mesa_copy_linked_program_data((gl_shader_stage) stage, shProg, prog);
+      _mesa_copy_linked_program_data(shProg, shader);
 
       process_glsl_ir(brw, shProg, shader);
 
@@ -260,8 +263,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       prog->SamplersUsed = shader->active_samplers;
       prog->ShadowSamplers = shader->shadow_samplers;
       _mesa_update_shader_textures_used(shProg, prog);
-
-      _mesa_reference_program(ctx, &shader->Program, prog);
 
       brw_add_texrect_params(prog);
 

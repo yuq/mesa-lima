@@ -378,9 +378,11 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    if (!prog)
       return NULL;
 
+   _mesa_reference_program(ctx, &shader->Program, prog);
+
    prog->Parameters = _mesa_new_parameter_list();
 
-   _mesa_copy_linked_program_data(shader->Stage, shader_program, prog);
+   _mesa_copy_linked_program_data(shader_program, shader);
    _mesa_generate_parameters_list_for_uniforms(shader_program, shader,
                                                prog->Parameters);
 
@@ -425,8 +427,6 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    prog->ShadowSamplers = shader->shadow_samplers;
    prog->ExternalSamplersUsed = gl_external_samplers(shader);
    _mesa_update_shader_textures_used(shader_program, prog);
-
-   _mesa_reference_program(ctx, &shader->Program, prog);
 
    /* Avoid reallocation of the program parameter list, because the uniform
     * storage is only associated with the original parameter list.
