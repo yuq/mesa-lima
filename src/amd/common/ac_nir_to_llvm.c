@@ -3410,6 +3410,9 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 				   txf_address, txf_count, 0xf);
 
 		result = build_tex_intrinsic(ctx, instr, &txf_info);
+
+		result = LLVMBuildExtractElement(ctx->builder, result, ctx->i32zero, "");
+		result = LLVMBuildICmp(ctx->builder, LLVMIntEQ, result, ctx->i32zero, "");
 		goto write_result;
 	}
 
