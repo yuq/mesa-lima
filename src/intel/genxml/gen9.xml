@@ -3449,4 +3449,20 @@
     <field name="All Allocation" start="25" end="31" type="uint"/>
   </register>
 
+  <register name="SO_WRITE_OFFSET0" length="1" num="0x5280">
+    <field name="Write Offset" start="2" end="31" type="offset"/>
+  </register>
+
+  <register name="SO_WRITE_OFFSET1" length="1" num="0x5284">
+    <field name="Write Offset" start="2" end="31" type="offset"/>
+  </register>
+
+  <register name="SO_WRITE_OFFSET2" length="1" num="0x5288">
+    <field name="Write Offset" start="2" end="31" type="offset"/>
+  </register>
+
+  <register name="SO_WRITE_OFFSET3" length="1" num="0x528c">
+    <field name="Write Offset" start="2" end="31" type="offset"/>
+  </register>
+
 </genxml>
