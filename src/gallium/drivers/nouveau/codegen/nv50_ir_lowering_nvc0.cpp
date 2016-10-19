@@ -598,7 +598,6 @@ NVC0LegalizePostRA::visit(BasicBlock *bb)
 NVC0LoweringPass::NVC0LoweringPass(Program *prog) : targ(prog->getTarget())
 {
    bld.setProgram(prog);
-   gMemBase = NULL;
 }
 
 bool
@@ -1979,9 +1978,7 @@ NVC0LoweringPass::handleSurfaceOpNVE4(TexInstruction *su)
       }
       Instruction *red = bld.mkOp(OP_ATOM, su->dType, bld.getSSA());
       red->subOp = su->subOp;
-      if (!gMemBase)
-         gMemBase = bld.mkSymbol(FILE_MEMORY_GLOBAL, 0, TYPE_U32, 0);
-      red->setSrc(0, gMemBase);
+      red->setSrc(0, bld.mkSymbol(FILE_MEMORY_GLOBAL, 0, TYPE_U32, 0));
       red->setSrc(1, su->getSrc(3));
       if (su->subOp == NV50_IR_SUBOP_ATOM_CAS)
          red->setSrc(2, su->getSrc(4));
