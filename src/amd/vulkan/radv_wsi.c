@@ -280,18 +280,25 @@ VkResult radv_CreateSwapchainKHR(
 }
 
 void radv_DestroySwapchainKHR(
-	VkDevice                                     device,
+	VkDevice                                     _device,
 	VkSwapchainKHR                               _swapchain,
 	const VkAllocationCallbacks*                 pAllocator)
 {
+	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
+	const VkAllocationCallbacks *alloc;
+
+	if (pAllocator)
+		alloc = pAllocator;
+	else
+		alloc = &device->alloc;
 
 	for (unsigned i = 0; i < ARRAY_SIZE(swapchain->fences); i++) {
 		if (swapchain->fences[i] != VK_NULL_HANDLE)
-			radv_DestroyFence(device, swapchain->fences[i], pAllocator);
+			radv_DestroyFence(_device, swapchain->fences[i], pAllocator);
 	}
 
-	swapchain->destroy(swapchain, pAllocator);
+	swapchain->destroy(swapchain, alloc);
 }
 
 VkResult radv_GetSwapchainImagesKHR(
