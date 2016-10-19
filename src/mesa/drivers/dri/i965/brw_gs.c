@@ -134,7 +134,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 
-   uint64_t outputs_written = gp->program.Base.nir->info->outputs_written;
+   uint64_t outputs_written = gp->program.Base.info.outputs_written;
 
    prog_data.base.cull_distance_mask =
       ((1 << gp->program.Base.CullDistanceArraySize) - 1) <<
