@@ -326,8 +326,8 @@ nine_state_copy_common(struct NineDevice9 *device,
              * "dst->ff.light[i] = src->ff.light[i];" later,
              * which is what we want in that case. */
             if (mask != dst) {
-                for (i = src->ff.num_lights; i < num_lights; ++i)
-                    src->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+                for (i = dst->ff.num_lights; i < num_lights; ++i)
+                    dst->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
             }
             dst->ff.num_lights = num_lights;
         }
