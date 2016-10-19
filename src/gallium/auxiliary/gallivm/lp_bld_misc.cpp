@@ -77,6 +77,7 @@
 
 #include <llvm/Support/TargetSelect.h>
 
+#include <llvm/IR/CallSite.h>
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CBindingWrapping.h>
@@ -706,5 +707,25 @@ lp_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes)
    llvm::AttrBuilder B;
    B.addDereferenceableAttr(bytes);
    A->addAttr(llvm::AttributeSet::get(A->getContext(), A->getArgNo() + 1,  B));
+#endif
+}
+
+extern "C" LLVMValueRef
+lp_get_called_value(LLVMValueRef call)
+{
+#if HAVE_LLVM >= 0x0309
+	return LLVMGetCalledValue(call);
+#else
+	return llvm::wrap(llvm::CallSite(llvm::unwrap<llvm::Instruction>(call)).getCalledValue());
+#endif
+}
+
+extern "C" bool
+lp_is_function(LLVMValueRef v)
+{
+#if HAVE_LLVM >= 0x0309
+	return LLVMGetValueKind(v) == LLVMFunctionValueKind;
+#else
+	return llvm::isa<llvm::Function>(llvm::unwrap(v));
 #endif
 }

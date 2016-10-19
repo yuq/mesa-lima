@@ -76,6 +76,12 @@ lp_free_memory_manager(LLVMMCJITMemoryManagerRef memorymgr);
 extern void
 lp_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes);
 
+extern LLVMValueRef
+lp_get_called_value(LLVMValueRef call);
+
+extern bool
+lp_is_function(LLVMValueRef v);
+
 #ifdef __cplusplus
 }
 #endif
