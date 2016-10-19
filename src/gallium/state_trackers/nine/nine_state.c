@@ -50,7 +50,7 @@ check_multisample(struct NineDevice9 *device)
 {
     DWORD *rs = device->context.rs;
     DWORD new_value = (rs[D3DRS_ZENABLE] || rs[D3DRS_STENCILENABLE]) &&
-                      device->state.rt[0]->desc.MultiSampleType >= 1 &&
+                      device->context.rt[0]->desc.MultiSampleType >= 1 &&
                       rs[D3DRS_MULTISAMPLEANTIALIAS];
     if (rs[NINED3DRS_MULTISAMPLE] != new_value) {
         rs[NINED3DRS_MULTISAMPLE] = new_value;
@@ -422,7 +422,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     struct nine_context *context = &device->context;
     struct pipe_framebuffer_state *fb = &context->pipe.fb;
     unsigned i;
-    struct NineSurface9 *rt0 = state->rt[0];
+    struct NineSurface9 *rt0 = context->rt[0];
     unsigned w = rt0->desc.Width;
     unsigned h = rt0->desc.Height;
     unsigned nr_samples = rt0->base.info.nr_samples;
@@ -452,7 +452,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     }
 
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
-        struct NineSurface9 *rt = state->rt[i];
+        struct NineSurface9 *rt = context->rt[i];
 
         if (rt && rt->desc.Format != D3DFMT_NULL && (mask & (1 << i)) &&
             rt->desc.Width == w && rt->desc.Height == h &&
@@ -1042,7 +1042,7 @@ nine_update_state(struct NineDevice9 *device)
             pipe->set_blend_color(pipe, &color);
         }
         if (group & NINE_STATE_SAMPLE_MASK) {
-            if (state->rt[0]->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE) {
+            if (context->rt[0]->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE) {
                 pipe->set_sample_mask(pipe, ~0);
             } else {
                 pipe->set_sample_mask(pipe, context->rs[D3DRS_MULTISAMPLEMASK]);
@@ -1432,6 +1432,31 @@ nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_render_target(struct NineDevice9 *device,
+                               DWORD RenderTargetIndex,
+                               struct NineSurface9 *rt)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    const unsigned i = RenderTargetIndex;
+
+    if (i == 0) {
+        /* viewport and scissor changes */
+        state->changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
+
+        if (context->rt[0] &&
+            (context->rt[0]->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE) !=
+            (rt->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE))
+            state->changed.group |= NINE_STATE_SAMPLE_MASK;
+    }
+
+    if (context->rt[i] != rt) {
+       nine_bind(&context->rt[i], rt);
+       state->changed.group |= NINE_STATE_FB;
+    }
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1603,7 +1628,8 @@ nine_context_clear_fb(struct NineDevice9 *device,
               float Z,
               DWORD Stencil)
 {
-    const int sRGB = device->context.rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
+    struct nine_context *context = &device->context;
+    const int sRGB = context->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
     struct pipe_surface *cbuf, *zsbuf;
     struct pipe_context *pipe = device->pipe;
     struct NineSurface9 *zsbuf_surf = device->state.ds;
@@ -1618,7 +1644,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
 
     if (Flags & D3DCLEAR_TARGET) bufs |= PIPE_CLEAR_COLOR;
     /* Ignore Z buffer if not bound */
-    if (device->context.pipe.fb.zsbuf != NULL) {
+    if (context->pipe.fb.zsbuf != NULL) {
         if (Flags & D3DCLEAR_ZBUFFER) bufs |= PIPE_CLEAR_DEPTH;
         if (Flags & D3DCLEAR_STENCIL) bufs |= PIPE_CLEAR_STENCIL;
     }
@@ -1632,7 +1658,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
     rect.y2 = device->state.viewport.Height + rect.y1;
 
     /* Both rectangles apply, which is weird, but that's D3D9. */
-    if (device->context.rs[D3DRS_SCISSORTESTENABLE]) {
+    if (context->rs[D3DRS_SCISSORTESTENABLE]) {
         rect.x1 = MAX2(rect.x1, device->state.scissor.minx);
         rect.y1 = MAX2(rect.y1, device->state.scissor.miny);
         rect.x2 = MIN2(rect.x2, device->state.scissor.maxx);
@@ -1649,22 +1675,22 @@ nine_context_clear_fb(struct NineDevice9 *device,
         }
     }
 
-    if (rect.x1 >= device->context.pipe.fb.width || rect.y1 >= device->context.pipe.fb.height)
+    if (rect.x1 >= context->pipe.fb.width || rect.y1 >= context->pipe.fb.height)
         return;
 
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
-        if (device->state.rt[i] && device->state.rt[i]->desc.Format != D3DFMT_NULL)
+        if (context->rt[i] && context->rt[i]->desc.Format != D3DFMT_NULL)
             rt_mask |= 1 << i;
     }
 
     /* fast path, clears everything at once */
     if (!Count &&
-        (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == device->context.rt_mask)) &&
+        (!(bufs & PIPE_CLEAR_COLOR) || (rt_mask == context->rt_mask)) &&
         rect.x1 == 0 && rect.y1 == 0 &&
         /* Case we clear only render target. Check clear region vs rt. */
         ((!(bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
-         rect.x2 >= device->context.pipe.fb.width &&
-         rect.y2 >= device->context.pipe.fb.height) ||
+         rect.x2 >= context->pipe.fb.width &&
+         rect.y2 >= context->pipe.fb.height) ||
         /* Case we clear depth buffer (and eventually rt too).
          * depth buffer size is always >= rt size. Compare to clear region */
         ((bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
@@ -1681,7 +1707,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
     }
 
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
-        rt = device->state.rt[i];
+        rt = context->rt[i];
         if (!rt || rt->desc.Format == D3DFMT_NULL ||
             !(bufs & PIPE_CLEAR_COLOR))
             continue; /* save space, compiler should hoist this */
@@ -2116,6 +2142,8 @@ nine_context_clear(struct nine_context *context)
 {
     unsigned i;
 
+    for (i = 0; i < ARRAY_SIZE(context->rt); ++i)
+       nine_bind(&context->rt[i], NULL);
     nine_bind(&context->vs, NULL);
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)

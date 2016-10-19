@@ -255,6 +255,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         if (FAILED(hr))
             return hr;
         NineUnknown_ConvertRefToBind(NineUnknown(This->state.rt[i]));
+        nine_bind(&This->context.rt[i], This->state.rt[i]);
     }
 
     /* Initialize a dummy VBO to be used when a vertex declaration does not
@@ -1857,19 +1858,12 @@ NineDevice9_SetRenderTarget( struct NineDevice9 *This,
         This->state.scissor.miny = 0;
         This->state.scissor.maxx = rt->desc.Width;
         This->state.scissor.maxy = rt->desc.Height;
-
-        This->state.changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
-
-        if (This->state.rt[0] &&
-            (This->state.rt[0]->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE) !=
-            (rt->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE))
-            This->state.changed.group |= NINE_STATE_SAMPLE_MASK;
     }
 
-    if (This->state.rt[i] != NineSurface9(pRenderTarget)) {
-       nine_bind(&This->state.rt[i], pRenderTarget);
-       This->state.changed.group |= NINE_STATE_FB;
-    }
+    if (This->state.rt[i] != NineSurface9(pRenderTarget))
+        nine_bind(&This->state.rt[i], pRenderTarget);
+
+    nine_context_set_render_target(This, i, rt);
     return D3D_OK;
 }
 

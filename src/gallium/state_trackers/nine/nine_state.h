@@ -229,6 +229,8 @@ struct nine_context {
 
     uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
 
+    struct NineSurface9 *rt[NINE_MAX_SIMULTANEOUS_RENDERTARGETS];
+
     struct {
         void *vs;
         void *ps;
@@ -379,6 +381,11 @@ nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
                                          UINT StartRegister,
                                          const BOOL *pConstantData,
                                          UINT BoolCount);
+
+void
+nine_context_set_render_target(struct NineDevice9 *device,
+                               DWORD RenderTargetIndex,
+                               struct NineSurface9 *rt);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,
