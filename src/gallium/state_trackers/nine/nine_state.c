@@ -824,7 +824,7 @@ commit_scissor(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
 
-    pipe->set_scissor_states(pipe, 0, 1, &device->state.scissor);
+    pipe->set_scissor_states(pipe, 0, 1, &device->context.scissor);
 }
 
 static inline void
@@ -1441,7 +1441,12 @@ nine_context_set_render_target(struct NineDevice9 *device,
     const unsigned i = RenderTargetIndex;
 
     if (i == 0) {
-        /* viewport and scissor changes */
+        context->scissor.minx = 0;
+        context->scissor.miny = 0;
+        context->scissor.maxx = rt->desc.Width;
+        context->scissor.maxy = rt->desc.Height;
+
+        /* viewport changes */
         state->changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
 
         if (context->rt[0] &&
@@ -1454,6 +1459,17 @@ nine_context_set_render_target(struct NineDevice9 *device,
        nine_bind(&context->rt[i], rt);
        state->changed.group |= NINE_STATE_FB;
     }
+}
+
+void
+nine_context_set_scissor(struct NineDevice9 *device,
+                         const struct pipe_scissor_state *scissor)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    context->scissor = *scissor;
+    state->changed.group |= NINE_STATE_SCISSOR;
 }
 
 void
@@ -1605,6 +1621,10 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         context->changed.ps_const_i = !!src->changed.ps_const_i;
         context->changed.ps_const_b = !!src->changed.ps_const_b;
     }
+
+    /* Scissor */
+    if (src->changed.group & NINE_STATE_SCISSOR)
+        context->scissor = src->scissor;
 }
 
 static void
@@ -1659,10 +1679,10 @@ nine_context_clear_fb(struct NineDevice9 *device,
 
     /* Both rectangles apply, which is weird, but that's D3D9. */
     if (context->rs[D3DRS_SCISSORTESTENABLE]) {
-        rect.x1 = MAX2(rect.x1, device->state.scissor.minx);
-        rect.y1 = MAX2(rect.y1, device->state.scissor.miny);
-        rect.x2 = MIN2(rect.x2, device->state.scissor.maxx);
-        rect.y2 = MIN2(rect.y2, device->state.scissor.maxy);
+        rect.x1 = MAX2(rect.x1, context->scissor.minx);
+        rect.y1 = MAX2(rect.y1, context->scissor.miny);
+        rect.x2 = MIN2(rect.x2, context->scissor.maxx);
+        rect.y2 = MIN2(rect.y2, context->scissor.maxy);
     }
 
     if (Count) {

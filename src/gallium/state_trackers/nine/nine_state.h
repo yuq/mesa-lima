@@ -238,6 +238,8 @@ struct nine_context {
 
     uint8_t rt_mask;
 
+    struct pipe_scissor_state scissor;
+
     struct NineVertexShader9 *vs;
     BOOL programmable_vs;
     float *vs_const_f;
@@ -381,6 +383,10 @@ nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
                                          UINT StartRegister,
                                          const BOOL *pConstantData,
                                          UINT BoolCount);
+
+void
+nine_context_set_scissor(struct NineDevice9 *device,
+                         const struct pipe_scissor_state *scissor);
 
 void
 nine_context_set_render_target(struct NineDevice9 *device,

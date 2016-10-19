@@ -105,6 +105,8 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
     This->state.scissor.maxx = refSurf->desc.Width;
     This->state.scissor.maxy = refSurf->desc.Height;
 
+    nine_context_set_scissor(This, &This->state.scissor);
+
     if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil) {
         nine_context_set_render_state(This, D3DRS_ZENABLE, TRUE);
         This->state.rs_advertised[D3DRS_ZENABLE] = TRUE;
@@ -2711,7 +2713,10 @@ NineDevice9_SetScissorRect( struct NineDevice9 *This,
     state->scissor.maxx = pRect->right;
     state->scissor.maxy = pRect->bottom;
 
-    state->changed.group |= NINE_STATE_SCISSOR;
+    if (unlikely(This->is_recording))
+        state->changed.group |= NINE_STATE_SCISSOR;
+    else
+        nine_context_set_scissor(This, &state->scissor);
 
     return D3D_OK;
 }
