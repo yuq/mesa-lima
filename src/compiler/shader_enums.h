@@ -491,7 +491,7 @@ const char *gl_system_value_name(gl_system_value sysval);
  * shader input in GLSL.
  *
  * Note: INTERP_MODE_NONE must be 0 so that memsetting the
- * gl_fragment_program data structure to 0 causes the default behavior.
+ * ir_variable data structure to 0 causes the default behavior.
  */
 enum glsl_interp_mode
 {
