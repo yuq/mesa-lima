@@ -2854,6 +2854,41 @@ nine_state_set_light(struct nine_ff_state *ff_state, DWORD Index,
     return D3D_OK;
 }
 
+HRESULT
+nine_state_light_enable(struct nine_ff_state *ff_state, uint32_t *change_group,
+                        DWORD Index, BOOL Enable)
+{
+    unsigned i;
+
+    user_assert(Index < ff_state->num_lights, D3DERR_INVALIDCALL);
+
+    for (i = 0; i < ff_state->num_lights_active; ++i) {
+        if (ff_state->active_light[i] == Index)
+            break;
+    }
+
+    if (Enable) {
+        if (i < ff_state->num_lights_active)
+            return D3D_OK;
+        /* XXX wine thinks this should still succeed:
+         */
+        user_assert(i < NINE_MAX_LIGHTS_ACTIVE, D3DERR_INVALIDCALL);
+
+        ff_state->active_light[i] = Index;
+        ff_state->num_lights_active++;
+    } else {
+        if (i == ff_state->num_lights_active)
+            return D3D_OK;
+        --ff_state->num_lights_active;
+        for (; i < ff_state->num_lights_active; ++i)
+            ff_state->active_light[i] = ff_state->active_light[i + 1];
+    }
+
+    *change_group |= NINE_STATE_FF_LIGHTING;
+
+    return D3D_OK;
+}
+
 #define D3DRS_TO_STRING_CASE(n) case D3DRS_##n: return "D3DRS_"#n
 const char *nine_d3drs_to_string(DWORD State)
 {

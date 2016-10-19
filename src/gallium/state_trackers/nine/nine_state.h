@@ -465,6 +465,10 @@ nine_state_access_transform(struct nine_ff_state *, D3DTRANSFORMSTATETYPE,
 HRESULT
 nine_state_set_light(struct nine_ff_state *, DWORD, const D3DLIGHT9 *);
 
+HRESULT
+nine_state_light_enable(struct nine_ff_state *, uint32_t *,
+                        DWORD, BOOL);
+
 const char *nine_d3drs_to_string(DWORD State);
 
 #endif /* _NINE_STATE_H_ */

@@ -2123,7 +2123,6 @@ NineDevice9_LightEnable( struct NineDevice9 *This,
                          BOOL Enable )
 {
     struct nine_state *state = This->update;
-    unsigned i;
 
     DBG("This=%p Index=%u Enable=%i\n", This, Index, Enable);
 
@@ -2139,30 +2138,8 @@ NineDevice9_LightEnable( struct NineDevice9 *This,
         light.Direction.z = 1.0f;
         NineDevice9_SetLight(This, Index, &light);
     }
-    user_assert(Index < state->ff.num_lights, D3DERR_INVALIDCALL);
 
-    for (i = 0; i < state->ff.num_lights_active; ++i) {
-        if (state->ff.active_light[i] == Index)
-            break;
-    }
-
-    if (Enable) {
-        if (i < state->ff.num_lights_active)
-            return D3D_OK;
-        /* XXX wine thinks this should still succeed:
-         */
-        user_assert(i < NINE_MAX_LIGHTS_ACTIVE, D3DERR_INVALIDCALL);
-
-        state->ff.active_light[i] = Index;
-        state->ff.num_lights_active++;
-    } else {
-        if (i == state->ff.num_lights_active)
-            return D3D_OK;
-        --state->ff.num_lights_active;
-        for (; i < state->ff.num_lights_active; ++i)
-            state->ff.active_light[i] = state->ff.active_light[i + 1];
-    }
-    state->changed.group |= NINE_STATE_FF_LIGHTING;
+    nine_state_light_enable(&state->ff, &state->changed.group, Index, Enable);
 
     return D3D_OK;
 }
