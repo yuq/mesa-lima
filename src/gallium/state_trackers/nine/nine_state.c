@@ -494,7 +494,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
 static void
 update_viewport(struct NineDevice9 *device)
 {
-    const D3DVIEWPORT9 *vport = &device->state.viewport;
+    const D3DVIEWPORT9 *vport = &device->context.viewport;
     struct pipe_viewport_state pvport;
 
     /* D3D coordinates are:
@@ -1441,12 +1441,18 @@ nine_context_set_render_target(struct NineDevice9 *device,
     const unsigned i = RenderTargetIndex;
 
     if (i == 0) {
+        context->viewport.X = 0;
+        context->viewport.Y = 0;
+        context->viewport.Width = rt->desc.Width;
+        context->viewport.Height = rt->desc.Height;
+        context->viewport.MinZ = 0.0f;
+        context->viewport.MaxZ = 1.0f;
+
         context->scissor.minx = 0;
         context->scissor.miny = 0;
         context->scissor.maxx = rt->desc.Width;
         context->scissor.maxy = rt->desc.Height;
 
-        /* viewport changes */
         state->changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
 
         if (context->rt[0] &&
@@ -1459,6 +1465,17 @@ nine_context_set_render_target(struct NineDevice9 *device,
        nine_bind(&context->rt[i], rt);
        state->changed.group |= NINE_STATE_FB;
     }
+}
+
+void
+nine_context_set_viewport(struct NineDevice9 *device,
+                          const D3DVIEWPORT9 *viewport)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    context->viewport = *viewport;
+    state->changed.group |= NINE_STATE_VIEWPORT;
 }
 
 void
@@ -1622,6 +1639,10 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         context->changed.ps_const_b = !!src->changed.ps_const_b;
     }
 
+    /* Viewport */
+    if (src->changed.group & NINE_STATE_VIEWPORT)
+        context->viewport = src->viewport;
+
     /* Scissor */
     if (src->changed.group & NINE_STATE_SCISSOR)
         context->scissor = src->scissor;
@@ -1672,10 +1693,10 @@ nine_context_clear_fb(struct NineDevice9 *device,
         return;
     d3dcolor_to_pipe_color_union(&rgba, Color);
 
-    rect.x1 = device->state.viewport.X;
-    rect.y1 = device->state.viewport.Y;
-    rect.x2 = device->state.viewport.Width + rect.x1;
-    rect.y2 = device->state.viewport.Height + rect.y1;
+    rect.x1 = context->viewport.X;
+    rect.y1 = context->viewport.Y;
+    rect.x2 = context->viewport.Width + rect.x1;
+    rect.y2 = context->viewport.Height + rect.y1;
 
     /* Both rectangles apply, which is weird, but that's D3D9. */
     if (context->rs[D3DRS_SCISSORTESTENABLE]) {
@@ -2120,8 +2141,8 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     state->ff.changed.transform[D3DTS_WORLD / 32] |= 1 << (D3DTS_WORLD % 32);
 
     if (!is_reset) {
-        state->viewport.MinZ = 0.0f;
-        state->viewport.MaxZ = 1.0f;
+        state->viewport.MinZ = context->viewport.MinZ = 0.0f;
+        state->viewport.MaxZ = context->viewport.MaxZ = 1.0f;
     }
 
     for (s = 0; s < NINE_MAX_SAMPLERS; ++s)

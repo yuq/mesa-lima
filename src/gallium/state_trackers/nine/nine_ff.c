@@ -2019,7 +2019,7 @@ nine_ff_load_ps_params(struct NineDevice9 *device)
 static void
 nine_ff_load_viewport_info(struct NineDevice9 *device)
 {
-    D3DVIEWPORT9 *viewport = &device->state.viewport;
+    D3DVIEWPORT9 *viewport = &device->context.viewport;
     struct fvec4 *dst = (struct fvec4 *)device->ff.vs_const;
     float diffZ = viewport->MaxZ - viewport->MinZ;
 

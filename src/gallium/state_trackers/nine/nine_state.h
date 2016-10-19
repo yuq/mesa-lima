@@ -238,6 +238,8 @@ struct nine_context {
 
     uint8_t rt_mask;
 
+    D3DVIEWPORT9 viewport;
+
     struct pipe_scissor_state scissor;
 
     struct NineVertexShader9 *vs;
@@ -383,6 +385,10 @@ nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
                                          UINT StartRegister,
                                          const BOOL *pConstantData,
                                          UINT BoolCount);
+
+void
+nine_context_set_viewport(struct NineDevice9 *device,
+                          const D3DVIEWPORT9 *viewport);
 
 void
 nine_context_set_scissor(struct NineDevice9 *device,

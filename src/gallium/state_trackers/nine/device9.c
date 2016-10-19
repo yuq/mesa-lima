@@ -100,6 +100,8 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
     This->state.viewport.Width = refSurf->desc.Width;
     This->state.viewport.Height = refSurf->desc.Height;
 
+    nine_context_set_viewport(This, &This->state.viewport);
+
     This->state.scissor.minx = 0;
     This->state.scissor.miny = 0;
     This->state.scissor.maxx = refSurf->desc.Width;
@@ -2025,7 +2027,7 @@ NineDevice9_SetViewport( struct NineDevice9 *This,
         pViewport->MinZ, pViewport->MaxZ);
 
     state->viewport = *pViewport;
-    state->changed.group |= NINE_STATE_VIEWPORT;
+    nine_context_set_viewport(This, pViewport);
 
     return D3D_OK;
 }
