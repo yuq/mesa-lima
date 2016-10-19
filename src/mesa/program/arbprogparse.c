@@ -119,7 +119,7 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
    program->OriginUpperLeft = state.option.OriginUpperLeft;
    program->PixelCenterInteger = state.option.PixelCenterInteger;
 
-   program->UsesKill            = state.fragment.UsesKill;
+   program->Base.info.fs.uses_discard = state.fragment.UsesKill;
 
    free(program->Base.Instructions);
    program->Base.Instructions = prog.Instructions;

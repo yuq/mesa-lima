@@ -2926,8 +2926,7 @@ get_mesa_program(struct gl_context *ctx,
 
    /* Set the gl_FragDepth layout. */
    if (target == GL_FRAGMENT_PROGRAM_ARB) {
-      struct gl_fragment_program *fp = (struct gl_fragment_program *)prog;
-      fp->FragDepthLayout = shader_program->FragDepthLayout;
+      prog->info.fs.depth_layout = shader_program->FragDepthLayout;
    }
 
    _mesa_reference_program(ctx, &shader->Program, prog);

@@ -226,7 +226,7 @@ _swrast_update_deferred_texture(struct gl_context *ctx)
          /* Z comes from fragment program/shader */
          swrast->_DeferredTexture = GL_FALSE;
       }
-      else if (use_fprog && fprog->UsesKill) {
+      else if (use_fprog && fprog->Base.info.fs.uses_discard) {
          swrast->_DeferredTexture = GL_FALSE;
       }
       else if (ctx->Query.CurrentOcclusionObject) {

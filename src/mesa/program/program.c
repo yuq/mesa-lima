@@ -521,7 +521,7 @@ _mesa_get_min_invocations_per_fragment(struct gl_context *ctx,
        * "Use of the "sample" qualifier on a fragment shader input
        *  forces per-sample shading"
        */
-      if (prog->IsSample && !ignore_sample_qualifier)
+      if (prog->Base.info.fs.uses_sample_qualifier && !ignore_sample_qualifier)
          return MAX2(_mesa_geometric_samples(ctx->DrawBuffer), 1);
 
       if (prog->Base.SystemValuesRead & (SYSTEM_BIT_SAMPLE_ID |

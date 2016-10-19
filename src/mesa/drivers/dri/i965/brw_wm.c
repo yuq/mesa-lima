@@ -450,13 +450,11 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
     */
    if (brw->gen < 6) {
       /* _NEW_COLOR */
-      if (fp->program.Base.nir->info->fs.uses_discard ||
-          ctx->Color.AlphaEnabled) {
+      if (prog->info.fs.uses_discard || ctx->Color.AlphaEnabled) {
          lookup |= IZ_PS_KILL_ALPHATEST_BIT;
       }
 
-      if (fp->program.Base.nir->info->outputs_written &
-          BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
+      if (prog->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
          lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
       }
 
@@ -545,9 +543,8 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    }
 
    /* BRW_NEW_VUE_MAP_GEOM_OUT */
-   if (brw->gen < 6 ||
-       _mesa_bitcount_64(fp->program.Base.nir->info->inputs_read &
-                         BRW_FS_VARYING_INPUT_MASK) > 16) {
+   if (brw->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &
+                                         BRW_FS_VARYING_INPUT_MASK) > 16) {
       key->input_slots_valid = brw->vue_map_geom_out.slots_valid;
    }
 
@@ -609,10 +606,10 @@ brw_fs_precompile(struct gl_context *ctx,
 
    memset(&key, 0, sizeof(key));
 
-   uint64_t outputs_written = fp->Base.nir->info->outputs_written;
+   uint64_t outputs_written = prog->info.outputs_written;
 
    if (brw->gen < 6) {
-      if (fp->Base.nir->info->fs.uses_discard)
+      if (prog->info.fs.uses_discard)
          key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
 
       if (outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
@@ -623,10 +620,9 @@ brw_fs_precompile(struct gl_context *ctx,
       key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
    }
 
-   if (brw->gen < 6 || _mesa_bitcount_64(fp->Base.nir->info->inputs_read &
+   if (brw->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &
                                          BRW_FS_VARYING_INPUT_MASK) > 16) {
-      key.input_slots_valid =
-         fp->Base.nir->info->inputs_read | VARYING_BIT_POS;
+      key.input_slots_valid = prog->info.inputs_read | VARYING_BIT_POS;
    }
 
    brw_setup_tex_for_precompile(brw, &key.tex, &fp->Base);
@@ -647,7 +643,7 @@ brw_fs_precompile(struct gl_context *ctx,
    struct brw_vue_map vue_map;
    if (brw->gen < 6) {
       brw_compute_vue_map(&brw->screen->devinfo, &vue_map,
-                          fp->Base.nir->info->inputs_read | VARYING_BIT_POS,
+                          prog->info.inputs_read | VARYING_BIT_POS,
                           false);
    }
 

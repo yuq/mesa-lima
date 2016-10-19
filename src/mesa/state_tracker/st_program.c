@@ -844,8 +844,8 @@ st_translate_fragment_program(struct st_context *st,
    if (write_all == GL_TRUE)
       ureg_property(ureg, TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS, 1);
 
-   if (stfp->Base.FragDepthLayout != FRAG_DEPTH_LAYOUT_NONE) {
-      switch (stfp->Base.FragDepthLayout) {
+   if (stfp->Base.Base.info.fs.depth_layout != FRAG_DEPTH_LAYOUT_NONE) {
+      switch (stfp->Base.Base.info.fs.depth_layout) {
       case FRAG_DEPTH_LAYOUT_ANY:
          ureg_property(ureg, TGSI_PROPERTY_FS_DEPTH_LAYOUT,
                        TGSI_FS_DEPTH_LAYOUT_ANY);

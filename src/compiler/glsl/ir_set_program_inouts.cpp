@@ -26,8 +26,6 @@
  *
  * Sets the InputsRead and OutputsWritten of Mesa programs.
  *
- * Additionally, for fragment shaders, set the IsSample bitfield.
- *
  * Mesa programs (gl_program, not gl_shader_program) have a set of
  * flags indicating which varyings are read and written.  Computing
  * which are actually read from some sort of backend code can be
@@ -123,9 +121,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
             prog->DoubleInputsRead |= bitfield;
 
          if (stage == MESA_SHADER_FRAGMENT) {
-            gl_fragment_program *fprog = (gl_fragment_program *) prog;
-            if (var->data.sample)
-               fprog->IsSample |= bitfield;
+            prog->info.fs.uses_sample_qualifier |= var->data.sample;
          }
       } else if (var->data.mode == ir_var_system_value) {
          prog->SystemValuesRead |= bitfield;
@@ -411,8 +407,7 @@ ir_set_program_inouts_visitor::visit_enter(ir_discard *)
    /* discards are only allowed in fragment shaders. */
    assert(this->shader_stage == MESA_SHADER_FRAGMENT);
 
-   gl_fragment_program *fprog = (gl_fragment_program *) prog;
-   fprog->UsesKill = true;
+   prog->info.fs.uses_discard = true;
 
    return visit_continue;
 }
@@ -439,9 +434,8 @@ do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
    prog->PatchOutputsWritten = 0;
    prog->SystemValuesRead = 0;
    if (shader_stage == MESA_SHADER_FRAGMENT) {
-      gl_fragment_program *fprog = (gl_fragment_program *) prog;
-      fprog->IsSample = 0;
-      fprog->UsesKill = false;
+      prog->info.fs.uses_sample_qualifier = false;
+      prog->info.fs.uses_discard = false;
    }
    visit_list_elements(&v, instructions);
 }

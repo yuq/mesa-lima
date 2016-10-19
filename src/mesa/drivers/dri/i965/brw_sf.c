@@ -191,7 +191,7 @@ brw_upload_sf_prog(struct brw_context *brw)
    if (key.do_point_sprite) {
       key.point_sprite_coord_replace = ctx->Point.CoordReplace & 0xff;
    }
-   if (brw->fragment_program->Base.nir->info->inputs_read &
+   if (brw->fragment_program->Base.info.inputs_read &
        BITFIELD64_BIT(VARYING_SLOT_PNTC)) {
       key.do_point_coord = 1;
    }

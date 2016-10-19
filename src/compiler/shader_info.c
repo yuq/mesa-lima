@@ -44,10 +44,7 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
       struct gl_fragment_program *fp =
          (struct gl_fragment_program *)sh->Program;
 
-      info->fs.uses_discard = fp->UsesKill;
-      info->fs.uses_sample_qualifier = fp->IsSample != 0;
       info->fs.early_fragment_tests = sh->info.EarlyFragmentTests;
-      info->fs.depth_layout = fp->FragDepthLayout;
       break;
    }
 
