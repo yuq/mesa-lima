@@ -419,12 +419,6 @@ radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 	VkDevice device_h = radv_device_to_handle(cmd_buffer->device);
 	VkCommandBuffer cmd_buffer_h = radv_cmd_buffer_to_handle(cmd_buffer);
 
-	if (!image->cmask.size)
-		return;
-
-	if (!cmd_buffer->device->allow_fast_clears)
-		return;
-
 	radv_meta_save_pass(&saved_pass_state, cmd_buffer);
 	radv_meta_save_graphics_reset_vport_scissor(&saved_state, cmd_buffer);
 
