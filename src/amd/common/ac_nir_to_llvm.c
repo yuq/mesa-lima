@@ -3092,7 +3092,8 @@ static void tex_fetch_ptrs(struct nir_to_llvm_context *ctx,
 		else
 			*samp_ptr = get_sampler_desc(ctx, instr->texture, DESC_SAMPLER);
 	}
-	if (fmask_ptr && !instr->sampler && instr->op == nir_texop_txf_ms)
+	if (fmask_ptr && !instr->sampler && (instr->op == nir_texop_txf_ms ||
+					     instr->op == nir_texop_samples_identical))
 		*fmask_ptr = get_sampler_desc(ctx, instr->texture, DESC_FMASK);
 }
 
@@ -3405,14 +3406,27 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		txf_address[3] = ctx->i32zero;
 
 		set_tex_fetch_args(ctx, &txf_info, instr, nir_texop_txf,
-				   res_ptr, samp_ptr,
+				   fmask_ptr, NULL,
 				   txf_address, txf_count, 0xf);
 
 		result = build_tex_intrinsic(ctx, instr, &txf_info);
 		goto write_result;
 	}
 
-	/* TODO sample FMASK magic */
+	/* Adjust the sample index according to FMASK.
+	 *
+	 * For uncompressed MSAA surfaces, FMASK should return 0x76543210,
+	 * which is the identity mapping. Each nibble says which physical sample
+	 * should be fetched to get that sample.
+	 *
+	 * For example, 0x11111100 means there are only 2 samples stored and
+	 * the second sample covers 3/4 of the pixel. When reading samples 0
+	 * and 1, return physical sample 0 (determined by the first two 0s
+	 * in FMASK), otherwise return physical sample 1.
+	 *
+	 * The sample index should be adjusted as follows:
+	 *   sample_index = (fmask >> (sample_index * 4)) & 0xF;
+	 */
 	if (instr->sampler_dim == GLSL_SAMPLER_DIM_MS) {
 		LLVMValueRef txf_address[4];
 		struct ac_tex_info txf_info = { 0 };
@@ -3424,7 +3438,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		txf_address[3] = ctx->i32zero;
 
 		set_tex_fetch_args(ctx, &txf_info, instr, nir_texop_txf,
-				   res_ptr, samp_ptr,
+				   fmask_ptr, NULL,
 				   txf_address, txf_count, 0xf);
 
 		result = build_tex_intrinsic(ctx, instr, &txf_info);
