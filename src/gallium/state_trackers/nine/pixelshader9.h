@@ -94,7 +94,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
     }
 
     /* centroid interpolation automatically used for color ps inputs */
-    if (state->rt[0]->desc.MultiSampleType > 1)
+    if (state->rt[0]->base.info.nr_samples)
         key |= ((uint64_t)1) << 34;
 
     if (unlikely(ps->byte_code.version < 0x14)) {
