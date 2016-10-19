@@ -285,6 +285,9 @@ scan_instruction(struct tgsi_shader_info *info,
          }
       }
 
+      if (src->Register.Dimension && src->Dimension.Indirect)
+         info->dim_indirect_files |= 1u << src->Register.File;
+
       /* Texture samplers */
       if (src->Register.File == TGSI_FILE_SAMPLER) {
          const unsigned index = src->Register.Index;
@@ -337,6 +340,9 @@ scan_instruction(struct tgsi_shader_info *info,
          info->indirect_files |= (1 << dst->Register.File);
          info->indirect_files_written |= (1 << dst->Register.File);
       }
+
+      if (dst->Register.Dimension && dst->Dimension.Indirect)
+         info->dim_indirect_files |= 1u << dst->Register.File;
 
       if (is_memory_file(dst->Register.File)) {
          assert(fullinst->Instruction.Opcode == TGSI_OPCODE_STORE);
