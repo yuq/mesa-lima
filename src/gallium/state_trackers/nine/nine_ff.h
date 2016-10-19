@@ -62,7 +62,7 @@ nine_decltype_get_dim(BYTE type)
 }
 
 static inline uint16_t
-nine_ff_get_projected_key(struct nine_state *state, struct nine_context *context)
+nine_ff_get_projected_key(struct nine_context *context)
 {
     unsigned s, i;
     uint16_t projected = 0;
@@ -81,9 +81,9 @@ nine_ff_get_projected_key(struct nine_state *state, struct nine_context *context
     }
 
     for (s = 0; s < 8; ++s) {
-        unsigned gen = (state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] >> 16) + 1;
-        unsigned dim = state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
-        unsigned proj = !!(state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & D3DTTFF_PROJECTED);
+        unsigned gen = (context->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] >> 16) + 1;
+        unsigned dim = context->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
+        unsigned proj = !!(context->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & D3DTTFF_PROJECTED);
 
         if (!context->vs) {
             if (dim > 4)

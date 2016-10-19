@@ -1558,7 +1558,6 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
 static struct NineVertexShader9 *
 nine_ff_get_vs(struct NineDevice9 *device)
 {
-    const struct nine_state *state = &device->state;
     const struct nine_context *context = &device->context;
     struct NineVertexShader9 *vs;
     enum pipe_error err;
@@ -1619,8 +1618,8 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.passthrough = 0;
     key.pointscale = !!context->rs[D3DRS_POINTSCALEENABLE];
 
-    key.lighting = !!context->rs[D3DRS_LIGHTING] &&  state->ff.num_lights_active;
-    key.darkness = !!context->rs[D3DRS_LIGHTING] && !state->ff.num_lights_active;
+    key.lighting = !!context->rs[D3DRS_LIGHTING] &&  context->ff.num_lights_active;
+    key.darkness = !!context->rs[D3DRS_LIGHTING] && !context->ff.num_lights_active;
     if (key.position_t) {
         key.darkness = 0; /* |= key.lighting; */ /* XXX ? */
         key.lighting = 0;
@@ -1659,8 +1658,8 @@ nine_ff_get_vs(struct NineDevice9 *device)
     }
 
     for (s = 0; s < 8; ++s) {
-        unsigned gen = (state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] >> 16) + 1;
-        unsigned idx = state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] & 7;
+        unsigned gen = (context->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] >> 16) + 1;
+        unsigned idx = context->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] & 7;
         unsigned dim;
 
         if (key.position_t && gen > NINED3DTSS_TCI_PASSTHRU)
@@ -1673,7 +1672,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
         key.tc_idx |= idx << (s * 3);
         key.tc_dim_input |= ((input_texture_coord[idx]-1) & 0x3) << (s * 2);
 
-        dim = state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
+        dim = context->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
         if (dim > 4)
             dim = input_texture_coord[idx];
         if (dim == 1) /* NV behaviour */
@@ -1708,13 +1707,12 @@ nine_ff_get_vs(struct NineDevice9 *device)
     return vs;
 }
 
-#define GET_D3DTS(n) nine_state_access_transform(&state->ff, D3DTS_##n, FALSE)
+#define GET_D3DTS(n) nine_state_access_transform(&context->ff, D3DTS_##n, FALSE)
 #define IS_D3DTS_DIRTY(s,n) ((s)->ff.changed.transform[(D3DTS_##n) / 32] & (1 << ((D3DTS_##n) % 32)))
 
 static struct NinePixelShader9 *
 nine_ff_get_ps(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     D3DMATRIX *projection_matrix = GET_D3DTS(PROJECTION);
     struct NinePixelShader9 *ps;
@@ -1727,8 +1725,8 @@ nine_ff_get_ps(struct NineDevice9 *device)
 
     memset(&key, 0, sizeof(key));
     for (s = 0; s < 8; ++s) {
-        key.ts[s].colorop = state->ff.tex_stage[s][D3DTSS_COLOROP];
-        key.ts[s].alphaop = state->ff.tex_stage[s][D3DTSS_ALPHAOP];
+        key.ts[s].colorop = context->ff.tex_stage[s][D3DTSS_COLOROP];
+        key.ts[s].alphaop = context->ff.tex_stage[s][D3DTSS_ALPHAOP];
         const uint8_t used_c = ps_d3dtop_args_mask(key.ts[s].colorop);
         const uint8_t used_a = ps_d3dtop_args_mask(key.ts[s].alphaop);
         /* MSDN says D3DTOP_DISABLE disables this and all subsequent stages.
@@ -1740,11 +1738,11 @@ nine_ff_get_ps(struct NineDevice9 *device)
         }
 
         if (!context->texture[s] &&
-            ((state->ff.tex_stage[s][D3DTSS_COLORARG0] == D3DTA_TEXTURE &&
+            ((context->ff.tex_stage[s][D3DTSS_COLORARG0] == D3DTA_TEXTURE &&
               used_c & 0x1) ||
-             (state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE &&
+             (context->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE &&
               used_c & 0x2) ||
-             (state->ff.tex_stage[s][D3DTSS_COLORARG2] == D3DTA_TEXTURE &&
+             (context->ff.tex_stage[s][D3DTSS_COLORARG2] == D3DTA_TEXTURE &&
               used_c & 0x4))) {
             /* Tested on Windows: Invalid texture read disables the stage
              * and the subsequent ones, but only for colorop. For alpha,
@@ -1755,34 +1753,34 @@ nine_ff_get_ps(struct NineDevice9 *device)
             break;
         }
 
-        if (state->ff.tex_stage[s][D3DTSS_COLORARG0] == D3DTA_TEXTURE ||
-            state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE ||
-            state->ff.tex_stage[s][D3DTSS_COLORARG2] == D3DTA_TEXTURE ||
-            state->ff.tex_stage[s][D3DTSS_ALPHAARG0] == D3DTA_TEXTURE ||
-            state->ff.tex_stage[s][D3DTSS_ALPHAARG1] == D3DTA_TEXTURE ||
-            state->ff.tex_stage[s][D3DTSS_ALPHAARG2] == D3DTA_TEXTURE)
+        if (context->ff.tex_stage[s][D3DTSS_COLORARG0] == D3DTA_TEXTURE ||
+            context->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE ||
+            context->ff.tex_stage[s][D3DTSS_COLORARG2] == D3DTA_TEXTURE ||
+            context->ff.tex_stage[s][D3DTSS_ALPHAARG0] == D3DTA_TEXTURE ||
+            context->ff.tex_stage[s][D3DTSS_ALPHAARG1] == D3DTA_TEXTURE ||
+            context->ff.tex_stage[s][D3DTSS_ALPHAARG2] == D3DTA_TEXTURE)
             sampler_mask |= (1 << s);
 
         if (key.ts[s].colorop != D3DTOP_DISABLE) {
-            if (used_c & 0x1) key.ts[s].colorarg0 = state->ff.tex_stage[s][D3DTSS_COLORARG0];
-            if (used_c & 0x2) key.ts[s].colorarg1 = state->ff.tex_stage[s][D3DTSS_COLORARG1];
-            if (used_c & 0x4) key.ts[s].colorarg2 = state->ff.tex_stage[s][D3DTSS_COLORARG2];
-            if (used_c & 0x1) key.colorarg_b4[0] |= (state->ff.tex_stage[s][D3DTSS_COLORARG0] >> 4) << s;
-            if (used_c & 0x1) key.colorarg_b5[0] |= (state->ff.tex_stage[s][D3DTSS_COLORARG0] >> 5) << s;
-            if (used_c & 0x2) key.colorarg_b4[1] |= (state->ff.tex_stage[s][D3DTSS_COLORARG1] >> 4) << s;
-            if (used_c & 0x2) key.colorarg_b5[1] |= (state->ff.tex_stage[s][D3DTSS_COLORARG1] >> 5) << s;
-            if (used_c & 0x4) key.colorarg_b4[2] |= (state->ff.tex_stage[s][D3DTSS_COLORARG2] >> 4) << s;
-            if (used_c & 0x4) key.colorarg_b5[2] |= (state->ff.tex_stage[s][D3DTSS_COLORARG2] >> 5) << s;
+            if (used_c & 0x1) key.ts[s].colorarg0 = context->ff.tex_stage[s][D3DTSS_COLORARG0];
+            if (used_c & 0x2) key.ts[s].colorarg1 = context->ff.tex_stage[s][D3DTSS_COLORARG1];
+            if (used_c & 0x4) key.ts[s].colorarg2 = context->ff.tex_stage[s][D3DTSS_COLORARG2];
+            if (used_c & 0x1) key.colorarg_b4[0] |= (context->ff.tex_stage[s][D3DTSS_COLORARG0] >> 4) << s;
+            if (used_c & 0x1) key.colorarg_b5[0] |= (context->ff.tex_stage[s][D3DTSS_COLORARG0] >> 5) << s;
+            if (used_c & 0x2) key.colorarg_b4[1] |= (context->ff.tex_stage[s][D3DTSS_COLORARG1] >> 4) << s;
+            if (used_c & 0x2) key.colorarg_b5[1] |= (context->ff.tex_stage[s][D3DTSS_COLORARG1] >> 5) << s;
+            if (used_c & 0x4) key.colorarg_b4[2] |= (context->ff.tex_stage[s][D3DTSS_COLORARG2] >> 4) << s;
+            if (used_c & 0x4) key.colorarg_b5[2] |= (context->ff.tex_stage[s][D3DTSS_COLORARG2] >> 5) << s;
         }
         if (key.ts[s].alphaop != D3DTOP_DISABLE) {
-            if (used_a & 0x1) key.ts[s].alphaarg0 = state->ff.tex_stage[s][D3DTSS_ALPHAARG0];
-            if (used_a & 0x2) key.ts[s].alphaarg1 = state->ff.tex_stage[s][D3DTSS_ALPHAARG1];
-            if (used_a & 0x4) key.ts[s].alphaarg2 = state->ff.tex_stage[s][D3DTSS_ALPHAARG2];
-            if (used_a & 0x1) key.alphaarg_b4[0] |= (state->ff.tex_stage[s][D3DTSS_ALPHAARG0] >> 4) << s;
-            if (used_a & 0x2) key.alphaarg_b4[1] |= (state->ff.tex_stage[s][D3DTSS_ALPHAARG1] >> 4) << s;
-            if (used_a & 0x4) key.alphaarg_b4[2] |= (state->ff.tex_stage[s][D3DTSS_ALPHAARG2] >> 4) << s;
+            if (used_a & 0x1) key.ts[s].alphaarg0 = context->ff.tex_stage[s][D3DTSS_ALPHAARG0];
+            if (used_a & 0x2) key.ts[s].alphaarg1 = context->ff.tex_stage[s][D3DTSS_ALPHAARG1];
+            if (used_a & 0x4) key.ts[s].alphaarg2 = context->ff.tex_stage[s][D3DTSS_ALPHAARG2];
+            if (used_a & 0x1) key.alphaarg_b4[0] |= (context->ff.tex_stage[s][D3DTSS_ALPHAARG0] >> 4) << s;
+            if (used_a & 0x2) key.alphaarg_b4[1] |= (context->ff.tex_stage[s][D3DTSS_ALPHAARG1] >> 4) << s;
+            if (used_a & 0x4) key.alphaarg_b4[2] |= (context->ff.tex_stage[s][D3DTSS_ALPHAARG2] >> 4) << s;
         }
-        key.ts[s].resultarg = state->ff.tex_stage[s][D3DTSS_RESULTARG] == D3DTA_TEMP;
+        key.ts[s].resultarg = context->ff.tex_stage[s][D3DTSS_RESULTARG] == D3DTA_TEMP;
 
         if (context->texture[s]) {
             switch (context->texture[s]->base.type) {
@@ -1818,7 +1816,7 @@ nine_ff_get_ps(struct NineDevice9 *device)
     if (s >= 1)
         key.ts[s-1].resultarg = 0;
 
-    key.projected = nine_ff_get_projected_key(state, context);
+    key.projected = nine_ff_get_projected_key(context);
     key.specular = !!context->rs[D3DRS_SPECULARENABLE];
 
     for (; s < 8; ++s)
@@ -1860,7 +1858,6 @@ nine_ff_get_ps(struct NineDevice9 *device)
 static void
 nine_ff_load_vs_transforms(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     D3DMATRIX T;
     D3DMATRIX *M = (D3DMATRIX *)device->ff.vs_const;
@@ -1869,9 +1866,9 @@ nine_ff_load_vs_transforms(struct NineDevice9 *device)
     /* TODO: make this nicer, and only upload the ones we need */
     /* TODO: use ff.vs_const as storage of W, V, P matrices */
 
-    if (IS_D3DTS_DIRTY(state, WORLD) ||
-        IS_D3DTS_DIRTY(state, VIEW) ||
-        IS_D3DTS_DIRTY(state, PROJECTION)) {
+    if (IS_D3DTS_DIRTY(context, WORLD) ||
+        IS_D3DTS_DIRTY(context, VIEW) ||
+        IS_D3DTS_DIRTY(context, PROJECTION)) {
         /* WVP, WV matrices */
         nine_d3d_matrix_matrix_mul(&M[1], GET_D3DTS(WORLD), GET_D3DTS(VIEW));
         nine_d3d_matrix_matrix_mul(&M[0], &M[1], GET_D3DTS(PROJECTION));
@@ -1907,7 +1904,7 @@ nine_ff_load_lights(struct NineDevice9 *device)
     unsigned l;
 
     if (state->changed.group & NINE_STATE_FF_MATERIAL) {
-        const D3DMATERIAL9 *mtl = &state->ff.material;
+        const D3DMATERIAL9 *mtl = &context->ff.material;
 
         memcpy(&dst[20], &mtl->Diffuse, 4 * sizeof(float));
         memcpy(&dst[21], &mtl->Ambient, 4 * sizeof(float));
@@ -1923,8 +1920,8 @@ nine_ff_load_lights(struct NineDevice9 *device)
     if (!(state->changed.group & NINE_STATE_FF_LIGHTING))
         return;
 
-    for (l = 0; l < state->ff.num_lights_active; ++l) {
-        const D3DLIGHT9 *light = &state->ff.light[state->ff.active_light[l]];
+    for (l = 0; l < context->ff.num_lights_active; ++l) {
+        const D3DLIGHT9 *light = &context->ff.light[context->ff.active_light[l]];
 
         dst[32 + l * 8].x = light->Type;
         dst[32 + l * 8].y = light->Attenuation0;
@@ -1940,7 +1937,7 @@ nine_ff_load_lights(struct NineDevice9 *device)
         dst[38 + l * 8].x = cosf(light->Theta * 0.5f);
         dst[38 + l * 8].y = cosf(light->Phi * 0.5f);
         dst[38 + l * 8].z = 1.0f / (dst[38 + l * 8].x - dst[38 + l * 8].y);
-        dst[39 + l * 8].w = (l + 1) == state->ff.num_lights_active;
+        dst[39 + l * 8].w = (l + 1) == context->ff.num_lights_active;
     }
 }
 
@@ -1969,15 +1966,15 @@ nine_ff_load_point_and_fog_params(struct NineDevice9 *device)
 static void
 nine_ff_load_tex_matrices(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
     D3DMATRIX *M = (D3DMATRIX *)device->ff.vs_const;
     unsigned s;
 
-    if (!(state->ff.changed.transform[0] & 0xff0000))
+    if (!(context->ff.changed.transform[0] & 0xff0000))
         return;
     for (s = 0; s < 8; ++s) {
-        if (IS_D3DTS_DIRTY(state, TEXTURE0 + s))
-            nine_d3d_matrix_transpose(&M[32 + s], nine_state_access_transform(&state->ff, D3DTS_TEXTURE0 + s, FALSE));
+        if (IS_D3DTS_DIRTY(context, TEXTURE0 + s))
+            nine_d3d_matrix_transpose(&M[32 + s], nine_state_access_transform(&context->ff, D3DTS_TEXTURE0 + s, FALSE));
     }
 }
 
@@ -1993,19 +1990,19 @@ nine_ff_load_ps_params(struct NineDevice9 *device)
         return;
 
     for (s = 0; s < 8; ++s)
-        d3dcolor_to_rgba(&dst[s].x, state->ff.tex_stage[s][D3DTSS_CONSTANT]);
+        d3dcolor_to_rgba(&dst[s].x, context->ff.tex_stage[s][D3DTSS_CONSTANT]);
 
     for (s = 0; s < 8; ++s) {
-        dst[8 + s].x = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVMAT00]);
-        dst[8 + s].y = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVMAT01]);
-        dst[8 + s].z = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVMAT10]);
-        dst[8 + s].w = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVMAT11]);
+        dst[8 + s].x = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVMAT00]);
+        dst[8 + s].y = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVMAT01]);
+        dst[8 + s].z = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVMAT10]);
+        dst[8 + s].w = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVMAT11]);
         if (s & 1) {
-            dst[16 + s / 2].z = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
-            dst[16 + s / 2].w = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
+            dst[16 + s / 2].z = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
+            dst[16 + s / 2].w = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
         } else {
-            dst[16 + s / 2].x = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
-            dst[16 + s / 2].y = asfloat(state->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
+            dst[16 + s / 2].x = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVLSCALE]);
+            dst[16 + s / 2].y = asfloat(context->ff.tex_stage[s][D3DTSS_BUMPENVLOFFSET]);
         }
     }
 
@@ -2038,7 +2035,6 @@ nine_ff_load_viewport_info(struct NineDevice9 *device)
 void
 nine_ff_update(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     struct pipe_constant_buffer cb;
 
@@ -2061,7 +2057,7 @@ nine_ff_update(struct NineDevice9 *device)
         nine_ff_load_point_and_fog_params(device);
         nine_ff_load_viewport_info(device);
 
-        memset(state->ff.changed.transform, 0, sizeof(state->ff.changed.transform));
+        memset(context->ff.changed.transform, 0, sizeof(context->ff.changed.transform));
 
         cb.buffer_offset = 0;
         cb.buffer = NULL;

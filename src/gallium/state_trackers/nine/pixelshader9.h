@@ -65,7 +65,6 @@ NinePixelShader9( void *data )
 
 static inline BOOL
 NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
-                            struct nine_state *state,
                             struct nine_context *context )
 {
     uint16_t samplers_shadow;
@@ -99,7 +98,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
         key |= ((uint64_t)1) << 34;
 
     if (unlikely(ps->byte_code.version < 0x14)) {
-        projected = nine_ff_get_projected_key(state, context);
+        projected = nine_ff_get_projected_key(context);
         key |= ((uint64_t) projected) << 48;
     }
 

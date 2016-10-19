@@ -139,7 +139,7 @@
 
 struct nine_ff_state {
     struct {
-        uint32_t tex_stage[NINE_MAX_TEXTURE_STAGES][(NINED3DTSS_COUNT + 31) / 32];
+        uint32_t tex_stage[NINE_MAX_TEXTURE_STAGES][(NINED3DTSS_COUNT + 31) / 32]; /* stateblocks only */
         uint32_t transform[(NINED3DTS_COUNT + 31) / 32];
     } changed;
 
@@ -280,6 +280,8 @@ struct nine_context {
     int dummy_vbo_bound_at; /* -1 = not bound , >= 0 = bound index */
     boolean vbo_bound_done;
 
+    struct nine_ff_state ff;
+
     uint32_t commit;
     struct {
         struct pipe_framebuffer_state fb;
@@ -395,6 +397,31 @@ nine_context_set_viewport(struct NineDevice9 *device,
 void
 nine_context_set_scissor(struct NineDevice9 *device,
                          const struct pipe_scissor_state *scissor);
+
+void
+nine_context_set_transform(struct NineDevice9 *device,
+                           D3DTRANSFORMSTATETYPE State,
+                           const D3DMATRIX *pMatrix);
+
+void
+nine_context_set_material(struct NineDevice9 *device,
+                          const D3DMATERIAL9 *pMaterial);
+
+void
+nine_context_set_light(struct NineDevice9 *device,
+                       DWORD Index,
+                       const D3DLIGHT9 *pLight);
+
+void
+nine_context_light_enable(struct NineDevice9 *device,
+                          DWORD Index,
+                          BOOL Enable);
+
+void
+nine_context_set_texture_stage_state(struct NineDevice9 *device,
+                                     DWORD Stage,
+                                     D3DTEXTURESTAGESTATETYPE Type,
+                                     DWORD Value);
 
 void
 nine_context_set_render_target(struct NineDevice9 *device,

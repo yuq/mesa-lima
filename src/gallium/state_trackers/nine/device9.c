@@ -1982,8 +1982,11 @@ NineDevice9_SetTransform( struct NineDevice9 *This,
     user_assert(M, D3DERR_INVALIDCALL);
 
     *M = *pMatrix;
-    state->ff.changed.transform[State / 32] |= 1 << (State % 32);
-    state->changed.group |= NINE_STATE_FF;
+    if (unlikely(This->is_recording)) {
+        state->ff.changed.transform[State / 32] |= 1 << (State % 32);
+        state->changed.group |= NINE_STATE_FF;
+    } else
+        nine_context_set_transform(This, State, pMatrix);
 
     return D3D_OK;
 }
@@ -2053,7 +2056,10 @@ NineDevice9_SetMaterial( struct NineDevice9 *This,
     user_assert(pMaterial, E_POINTER);
 
     state->ff.material = *pMaterial;
-    state->changed.group |= NINE_STATE_FF_MATERIAL;
+    if (unlikely(This->is_recording))
+        state->changed.group |= NINE_STATE_FF_MATERIAL;
+    else
+        nine_context_set_material(This, pMaterial);
 
     return D3D_OK;
 }
@@ -2095,7 +2101,10 @@ NineDevice9_SetLight( struct NineDevice9 *This,
         DBG("Warning: all D3DLIGHT9.Attenuation[i] are 0\n");
     }
 
-    state->changed.group |= NINE_STATE_FF_LIGHTING;
+    if (unlikely(This->is_recording))
+        state->changed.group |= NINE_STATE_FF_LIGHTING;
+    else
+        nine_context_set_light(This, Index, pLight);
 
     return D3D_OK;
 }
@@ -2140,6 +2149,8 @@ NineDevice9_LightEnable( struct NineDevice9 *This,
     }
 
     nine_state_light_enable(&state->ff, &state->changed.group, Index, Enable);
+    if (likely(!This->is_recording))
+        nine_context_light_enable(This, Index, Enable);
 
     return D3D_OK;
 }
@@ -2492,8 +2503,6 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
                                   DWORD Value )
 {
     struct nine_state *state = This->update;
-    struct nine_context *context = &This->context;
-    int bumpmap_index = -1;
 
     DBG("Stage=%u Type=%u Value=%08x\n", Stage, Type, Value);
     nine_dump_D3DTSS_value(DBG_FF, Type, Value);
@@ -2502,39 +2511,14 @@ NineDevice9_SetTextureStageState( struct NineDevice9 *This,
     user_assert(Type < ARRAY_SIZE(state->ff.tex_stage[0]), D3DERR_INVALIDCALL);
 
     state->ff.tex_stage[Stage][Type] = Value;
-    switch (Type) {
-    case D3DTSS_BUMPENVMAT00:
-        bumpmap_index = 4 * Stage;
-        break;
-    case D3DTSS_BUMPENVMAT01:
-        bumpmap_index = 4 * Stage + 1;
-        break;
-    case D3DTSS_BUMPENVMAT10:
-        bumpmap_index = 4 * Stage + 2;
-        break;
-    case D3DTSS_BUMPENVMAT11:
-        bumpmap_index = 4 * Stage + 3;
-        break;
-    case D3DTSS_BUMPENVLSCALE:
-        bumpmap_index = 4 * 8 + 2 * Stage;
-        break;
-    case D3DTSS_BUMPENVLOFFSET:
-        bumpmap_index = 4 * 8 + 2 * Stage + 1;
-        break;
-    case D3DTSS_TEXTURETRANSFORMFLAGS:
-        state->changed.group |= NINE_STATE_PS1X_SHADER;
-        break;
-    default:
-        break;
-    }
 
-    if (bumpmap_index >= 0 && !This->is_recording) {
-        context->bumpmap_vars[bumpmap_index] = Value;
-        state->changed.group |= NINE_STATE_PS_CONST;
-    }
-
-    state->changed.group |= NINE_STATE_FF_PSSTAGES;
-    state->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);
+    if (unlikely(This->is_recording)) {
+        if (Type == D3DTSS_TEXTURETRANSFORMFLAGS)
+            state->changed.group |= NINE_STATE_PS1X_SHADER;
+        state->changed.group |= NINE_STATE_FF_PSSTAGES;
+        state->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);
+    } else
+        nine_context_set_texture_stage_state(This, Stage, Type, Value);
 
     return D3D_OK;
 }

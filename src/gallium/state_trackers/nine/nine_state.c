@@ -390,7 +390,7 @@ prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
     int has_key_changed = 0;
 
     if (likely(ps))
-        has_key_changed = NinePixelShader9_UpdateKey(ps, state, context);
+        has_key_changed = NinePixelShader9_UpdateKey(ps, context);
 
     if (!shader_changed && !has_key_changed)
         return 0;
@@ -1490,6 +1490,100 @@ nine_context_set_scissor(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_transform(struct NineDevice9 *device,
+                           D3DTRANSFORMSTATETYPE State,
+                           const D3DMATRIX *pMatrix)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    D3DMATRIX *M = nine_state_access_transform(&context->ff, State, TRUE);
+
+    *M = *pMatrix;
+    context->ff.changed.transform[State / 32] |= 1 << (State % 32);
+    state->changed.group |= NINE_STATE_FF;
+}
+
+void
+nine_context_set_material(struct NineDevice9 *device,
+                          const D3DMATERIAL9 *pMaterial)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    context->ff.material = *pMaterial;
+    state->changed.group |= NINE_STATE_FF_MATERIAL;
+}
+
+void
+nine_context_set_light(struct NineDevice9 *device,
+                       DWORD Index,
+                       const D3DLIGHT9 *pLight)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    (void)nine_state_set_light(&context->ff, Index, pLight);
+    state->changed.group |= NINE_STATE_FF_LIGHTING;
+}
+
+void
+nine_context_light_enable(struct NineDevice9 *device,
+                          DWORD Index,
+                          BOOL Enable)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    nine_state_light_enable(&context->ff, &state->changed.group, Index, Enable);
+}
+
+void
+nine_context_set_texture_stage_state(struct NineDevice9 *device,
+                                     DWORD Stage,
+                                     D3DTEXTURESTAGESTATETYPE Type,
+                                     DWORD Value)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    int bumpmap_index = -1;
+
+    context->ff.tex_stage[Stage][Type] = Value;
+    switch (Type) {
+    case D3DTSS_BUMPENVMAT00:
+        bumpmap_index = 4 * Stage;
+        break;
+    case D3DTSS_BUMPENVMAT01:
+        bumpmap_index = 4 * Stage + 1;
+        break;
+    case D3DTSS_BUMPENVMAT10:
+        bumpmap_index = 4 * Stage + 2;
+        break;
+    case D3DTSS_BUMPENVMAT11:
+        bumpmap_index = 4 * Stage + 3;
+        break;
+    case D3DTSS_BUMPENVLSCALE:
+        bumpmap_index = 4 * 8 + 2 * Stage;
+        break;
+    case D3DTSS_BUMPENVLOFFSET:
+        bumpmap_index = 4 * 8 + 2 * Stage + 1;
+        break;
+    case D3DTSS_TEXTURETRANSFORMFLAGS:
+        state->changed.group |= NINE_STATE_PS1X_SHADER;
+        break;
+    default:
+        break;
+    }
+
+    if (bumpmap_index >= 0) {
+        context->bumpmap_vars[bumpmap_index] = Value;
+        state->changed.group |= NINE_STATE_PS_CONST;
+    }
+
+    state->changed.group |= NINE_STATE_FF_PSSTAGES;
+    context->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1646,6 +1740,61 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
     /* Scissor */
     if (src->changed.group & NINE_STATE_SCISSOR)
         context->scissor = src->scissor;
+
+    if (!(src->changed.group & NINE_STATE_FF))
+        return;
+
+    /* Fixed function state. */
+
+    if (src->changed.group & NINE_STATE_FF_MATERIAL)
+        context->ff.material = src->ff.material;
+
+    if (src->changed.group & NINE_STATE_FF_PSSTAGES) {
+        unsigned s;
+        for (s = 0; s < NINE_MAX_TEXTURE_STAGES; ++s) {
+            for (i = 0; i < NINED3DTSS_COUNT; ++i)
+                if (src->ff.changed.tex_stage[s][i / 32] & (1 << (i % 32)))
+                    context->ff.tex_stage[s][i] = src->ff.tex_stage[s][i];
+        }
+    }
+    if (src->changed.group & NINE_STATE_FF_LIGHTING) {
+        unsigned num_lights = MAX2(context->ff.num_lights, src->ff.num_lights);
+        /* Can happen if the stateblock had recorded the creation of
+         * new lights. */
+        if (context->ff.num_lights < num_lights) {
+            context->ff.light = REALLOC(context->ff.light,
+                                    context->ff.num_lights * sizeof(D3DLIGHT9),
+                                    num_lights * sizeof(D3DLIGHT9));
+            memset(&context->ff.light[context->ff.num_lights], 0, (num_lights - context->ff.num_lights) * sizeof(D3DLIGHT9));
+            for (i = context->ff.num_lights; i < num_lights; ++i)
+                context->ff.light[i].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+            context->ff.num_lights = num_lights;
+        }
+        /* src->ff.num_lights < num_lights has been handled before */
+        assert (src->ff.num_lights == num_lights);
+
+        for (i = 0; i < num_lights; ++i)
+            if (src->ff.light[i].Type != NINED3DLIGHT_INVALID)
+                context->ff.light[i] = src->ff.light[i];
+
+        memcpy(context->ff.active_light, src->ff.active_light, sizeof(src->ff.active_light) );
+        context->ff.num_lights_active = src->ff.num_lights_active;
+    }
+    if (src->changed.group & NINE_STATE_FF_VSTRANSF) {
+        for (i = 0; i < ARRAY_SIZE(src->ff.changed.transform); ++i) {
+            unsigned s;
+            if (!src->ff.changed.transform[i])
+                continue;
+            for (s = i * 32; s < (i * 32 + 32); ++s) {
+                if (!(src->ff.changed.transform[i] & (1 << (s % 32))))
+                    continue;
+                *nine_state_access_transform(&context->ff, s, TRUE) =
+                    *nine_state_access_transform( /* const because !alloc */
+                        (struct nine_ff_state *)&src->ff, s, FALSE);
+            }
+            context->ff.changed.transform[i] |= src->ff.changed.transform[i];
+        }
+    }
 }
 
 static void
@@ -2101,6 +2250,11 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     }
     state->ff.tex_stage[0][D3DTSS_COLOROP] = D3DTOP_MODULATE;
     state->ff.tex_stage[0][D3DTSS_ALPHAOP] = D3DTOP_SELECTARG1;
+
+    for (s = 0; s < ARRAY_SIZE(state->ff.tex_stage); ++s)
+        memcpy(&context->ff.tex_stage[s], state->ff.tex_stage[s],
+               sizeof(state->ff.tex_stage[s]));
+
     memset(&context->bumpmap_vars, 0, sizeof(context->bumpmap_vars));
 
     for (s = 0; s < NINE_MAX_SAMPLERS; ++s) {
@@ -2137,8 +2291,8 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
     context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
 
-    state->ff.changed.transform[0] = ~0;
-    state->ff.changed.transform[D3DTS_WORLD / 32] |= 1 << (D3DTS_WORLD % 32);
+    context->ff.changed.transform[0] = ~0;
+    context->ff.changed.transform[D3DTS_WORLD / 32] |= 1 << (D3DTS_WORLD % 32);
 
     if (!is_reset) {
         state->viewport.MinZ = context->viewport.MinZ = 0.0f;
