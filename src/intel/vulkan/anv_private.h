@@ -1083,6 +1083,8 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
  * The clear value is valid only if there exists a pending clear.
  */
 struct anv_attachment_state {
+   struct anv_state                             color_rt_state;
+
    VkImageAspectFlags                           pending_clear_aspects;
    VkClearValue                                 clear_value;
 };
@@ -1122,6 +1124,19 @@ struct anv_cmd_state {
     * valid only when recording a render pass instance.
     */
    struct anv_attachment_state *                attachments;
+
+   /**
+    * Surface states for color render targets.  These are stored in a single
+    * flat array.  For depth-stencil attachments, the surface state is simply
+    * left blank.
+    */
+   struct anv_state                             render_pass_states;
+
+   /**
+    * A null surface state of the right size to match the framebuffer.  This
+    * is one of the states in render_pass_states.
+    */
+   struct anv_state                             null_surface_state;
 
    struct {
       struct anv_buffer *                       index_buffer;
@@ -1249,8 +1264,10 @@ void gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
                                          bool depth_clamp_enable);
 void gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer);
 
-void anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
-                                     const VkRenderPassBeginInfo *info);
+void anv_cmd_buffer_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
+                                      struct anv_render_pass *pass,
+                                      struct anv_framebuffer *framebuffer,
+                                      const VkClearValue *clear_values);
 
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
@@ -1570,9 +1587,6 @@ struct anv_image_view {
    VkImageAspectFlags aspect_mask;
    VkFormat vk_format;
    VkExtent3D extent; /**< Extent of VkImageViewCreateInfo::baseMipLevel. */
-
-   /** RENDER_SURFACE_STATE when using image as a color render target. */
-   struct anv_state color_rt_surface_state;
 
    /** RENDER_SURFACE_STATE when using image as a sampler surface. */
    struct anv_state sampler_surface_state;

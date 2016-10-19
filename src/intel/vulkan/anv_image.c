@@ -504,23 +504,6 @@ anv_CreateImageView(VkDevice _device,
       iview->sampler_surface_state.alloc_size = 0;
    }
 
-   if (image->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) {
-      iview->color_rt_surface_state = alloc_surface_state(device);
-
-      struct isl_view view = iview->isl;
-      view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
-      isl_surf_fill_state(&device->isl_dev,
-                          iview->color_rt_surface_state.map,
-                          .surf = &surface->isl,
-                          .view = &view,
-                          .mocs = device->default_mocs);
-
-      if (!device->info.has_llc)
-         anv_state_clflush(iview->color_rt_surface_state);
-   } else {
-      iview->color_rt_surface_state.alloc_size = 0;
-   }
-
    /* NOTE: This one needs to go last since it may stomp isl_view.format */
    if (image->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
       iview->storage_surface_state = alloc_surface_state(device);
@@ -564,11 +547,6 @@ anv_DestroyImageView(VkDevice _device, VkImageView _iview,
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_image_view, iview, _iview);
-
-   if (iview->color_rt_surface_state.alloc_size > 0) {
-      anv_state_pool_free(&device->surface_state_pool,
-                          iview->color_rt_surface_state);
-   }
 
    if (iview->sampler_surface_state.alloc_size > 0) {
       anv_state_pool_free(&device->surface_state_pool,

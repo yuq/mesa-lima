@@ -144,62 +144,6 @@ anv_cmd_state_reset(struct anv_cmd_buffer *cmd_buffer)
    state->gen7.index_buffer = NULL;
 }
 
-/**
- * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
- */
-void
-anv_cmd_state_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
-                                const VkRenderPassBeginInfo *info)
-{
-   struct anv_cmd_state *state = &cmd_buffer->state;
-   ANV_FROM_HANDLE(anv_render_pass, pass, info->renderPass);
-
-   vk_free(&cmd_buffer->pool->alloc, state->attachments);
-
-   if (pass->attachment_count == 0) {
-      state->attachments = NULL;
-      return;
-   }
-
-   state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
-                                  pass->attachment_count *
-                                       sizeof(state->attachments[0]),
-                                  8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
-   if (state->attachments == NULL) {
-      /* FIXME: Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
-      abort();
-   }
-
-   for (uint32_t i = 0; i < pass->attachment_count; ++i) {
-      struct anv_render_pass_attachment *att = &pass->attachments[i];
-      VkImageAspectFlags att_aspects = vk_format_aspects(att->format);
-      VkImageAspectFlags clear_aspects = 0;
-
-      if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
-         /* color attachment */
-         if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            clear_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
-         }
-      } else {
-         /* depthstencil attachment */
-         if ((att_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-             att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
-         }
-         if ((att_aspects & VK_IMAGE_ASPECT_STENCIL_BIT) &&
-             att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
-            clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
-         }
-      }
-
-      state->attachments[i].pending_clear_aspects = clear_aspects;
-      if (clear_aspects) {
-         assert(info->clearValueCount > i);
-         state->attachments[i].clear_value = info->pClearValues[i];
-      }
-   }
-}
-
 VkResult
 anv_cmd_buffer_ensure_push_constants_size(struct anv_cmd_buffer *cmd_buffer,
                                           gl_shader_stage stage, uint32_t size)

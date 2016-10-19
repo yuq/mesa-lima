@@ -25,6 +25,7 @@
 #include <stdbool.h>
 
 #include "anv_private.h"
+#include "vk_format_info.h"
 
 #include "common/gen_l3_config.h"
 #include "genxml/gen_macros.h"
@@ -150,6 +151,142 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+/**
+ * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
+ */
+static void
+genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
+                                   struct anv_render_pass *pass,
+                                   struct anv_framebuffer *framebuffer,
+                                   const VkClearValue *clear_values)
+{
+   const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
+   struct anv_cmd_state *state = &cmd_buffer->state;
+
+   vk_free(&cmd_buffer->pool->alloc, state->attachments);
+
+   if (pass->attachment_count == 0) {
+      state->attachments = NULL;
+      return;
+   }
+
+   state->attachments = vk_alloc(&cmd_buffer->pool->alloc,
+                                 pass->attachment_count *
+                                      sizeof(state->attachments[0]),
+                                 8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (state->attachments == NULL) {
+      /* FIXME: Propagate VK_ERROR_OUT_OF_HOST_MEMORY to vkEndCommandBuffer */
+      abort();
+   }
+
+   bool need_null_state = false;
+   for (uint32_t s = 0; s < pass->subpass_count; ++s) {
+      if (pass->subpasses[s].color_count == 0) {
+         need_null_state = true;
+         break;
+      }
+   }
+
+   unsigned num_states = need_null_state;
+   for (uint32_t i = 0; i < pass->attachment_count; ++i) {
+      if (vk_format_is_color(pass->attachments[i].format))
+         num_states++;
+   }
+
+   const uint32_t ss_stride = align_u32(isl_dev->ss.size, isl_dev->ss.align);
+   state->render_pass_states =
+      anv_state_stream_alloc(&cmd_buffer->surface_state_stream,
+                             num_states * ss_stride, isl_dev->ss.align);
+
+   struct anv_state next_state = state->render_pass_states;
+   next_state.alloc_size = isl_dev->ss.size;
+
+   if (need_null_state) {
+      state->null_surface_state = next_state;
+      next_state.offset += ss_stride;
+      next_state.map += ss_stride;
+   }
+
+   for (uint32_t i = 0; i < pass->attachment_count; ++i) {
+      if (vk_format_is_color(pass->attachments[i].format)) {
+         state->attachments[i].color_rt_state = next_state;
+         next_state.offset += ss_stride;
+         next_state.map += ss_stride;
+      }
+   }
+   assert(next_state.offset == state->render_pass_states.offset +
+                               state->render_pass_states.alloc_size);
+
+   if (framebuffer) {
+      assert(pass->attachment_count == framebuffer->attachment_count);
+
+      if (need_null_state) {
+         struct GENX(RENDER_SURFACE_STATE) null_ss = {
+            .SurfaceType = SURFTYPE_NULL,
+            .SurfaceArray = framebuffer->layers > 0,
+            .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
+#if GEN_GEN >= 8
+            .TileMode = YMAJOR,
+#else
+            .TiledSurface = true,
+#endif
+            .Width = framebuffer->width - 1,
+            .Height = framebuffer->height - 1,
+            .Depth = framebuffer->layers - 1,
+            .RenderTargetViewExtent = framebuffer->layers - 1,
+         };
+         GENX(RENDER_SURFACE_STATE_pack)(NULL, state->null_surface_state.map,
+                                         &null_ss);
+      }
+
+      for (uint32_t i = 0; i < pass->attachment_count; ++i) {
+         struct anv_render_pass_attachment *att = &pass->attachments[i];
+         VkImageAspectFlags att_aspects = vk_format_aspects(att->format);
+         VkImageAspectFlags clear_aspects = 0;
+
+         if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
+            /* color attachment */
+            if (att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+               clear_aspects |= VK_IMAGE_ASPECT_COLOR_BIT;
+            }
+         } else {
+            /* depthstencil attachment */
+            if ((att_aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
+                att->load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+               clear_aspects |= VK_IMAGE_ASPECT_DEPTH_BIT;
+            }
+            if ((att_aspects & VK_IMAGE_ASPECT_STENCIL_BIT) &&
+                att->stencil_load_op == VK_ATTACHMENT_LOAD_OP_CLEAR) {
+               clear_aspects |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            }
+         }
+
+         state->attachments[i].pending_clear_aspects = clear_aspects;
+         if (clear_aspects)
+            state->attachments[i].clear_value = clear_values[i];
+
+         struct anv_image_view *iview = framebuffer->attachments[i];
+         assert(iview->vk_format == att->format);
+
+         if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
+            struct isl_view view = iview->isl;
+            view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
+            isl_surf_fill_state(isl_dev,
+                                state->attachments[i].color_rt_state.map,
+                                .surf = &iview->image->color_surface.isl,
+                                .view = &view,
+                                .mocs = cmd_buffer->device->default_mocs);
+
+            anv_cmd_buffer_add_surface_state_reloc(cmd_buffer,
+               state->attachments[i].color_rt_state, iview->bo, iview->offset);
+         }
+      }
+
+      if (!cmd_buffer->device->info.has_llc)
+         anv_state_clflush(state->render_pass_states);
+   }
+}
+
 VkResult
 genX(BeginCommandBuffer)(
     VkCommandBuffer                             commandBuffer,
@@ -189,6 +326,9 @@ genX(BeginCommandBuffer)(
       cmd_buffer->state.subpass =
          &cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
 
+      genX(cmd_buffer_setup_attachments)(cmd_buffer, cmd_buffer->state.pass,
+                                         NULL, NULL);
+
       cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
    }
 
@@ -220,6 +360,22 @@ genX(CmdExecuteCommands)(
       ANV_FROM_HANDLE(anv_cmd_buffer, secondary, pCmdBuffers[i]);
 
       assert(secondary->level == VK_COMMAND_BUFFER_LEVEL_SECONDARY);
+
+      if (secondary->usage_flags &
+          VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
+         /* If we're continuing a render pass from the primary, we need to
+          * copy the surface states for the current subpass into the storage
+          * we allocated for them in BeginCommandBuffer.
+          */
+         struct anv_bo *ss_bo = &primary->device->surface_state_block_pool.bo;
+         struct anv_state src_state = primary->state.render_pass_states;
+         struct anv_state dst_state = secondary->state.render_pass_states;
+         assert(src_state.alloc_size == dst_state.alloc_size);
+
+         genX(cmd_buffer_gpu_memcpy)(primary, ss_bo, dst_state.offset,
+                                     ss_bo, src_state.offset,
+                                     src_state.alloc_size);
+      }
 
       anv_cmd_buffer_add_secondary(primary, secondary);
    }
@@ -617,43 +773,11 @@ cmd_buffer_alloc_push_constants(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.push_constants_dirty |= VK_SHADER_STAGE_ALL_GRAPHICS;
 }
 
-static struct anv_state
-alloc_null_surface_state(struct anv_cmd_buffer *cmd_buffer,
-                         struct anv_framebuffer *fb)
-{
-   struct anv_state state =
-      anv_cmd_buffer_alloc_surface_state(cmd_buffer);
-
-   struct GENX(RENDER_SURFACE_STATE) null_ss = {
-      .SurfaceType = SURFTYPE_NULL,
-      .SurfaceArray = fb->layers > 0,
-      .SurfaceFormat = ISL_FORMAT_R8G8B8A8_UNORM,
-#if GEN_GEN >= 8
-      .TileMode = YMAJOR,
-#else
-      .TiledSurface = true,
-#endif
-      .Width = fb->width - 1,
-      .Height = fb->height - 1,
-      .Depth = fb->layers - 1,
-      .RenderTargetViewExtent = fb->layers - 1,
-   };
-
-   GENX(RENDER_SURFACE_STATE_pack)(NULL, state.map, &null_ss);
-
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(state);
-
-   return state;
-}
-
-
 static VkResult
 emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                    gl_shader_stage stage,
                    struct anv_state *bt_state)
 {
-   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
    struct anv_pipeline *pipeline;
    uint32_t bias, state_offset;
@@ -732,17 +856,10 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          assert(stage == MESA_SHADER_FRAGMENT);
          assert(binding->binding == 0);
          if (binding->index < subpass->color_count) {
-            const struct anv_image_view *iview =
-               fb->attachments[subpass->color_attachments[binding->index]];
-
-            assert(iview->color_rt_surface_state.alloc_size);
-            surface_state = iview->color_rt_surface_state;
-            anv_cmd_buffer_add_surface_state_reloc(cmd_buffer, surface_state,
-                                                   iview->bo, iview->offset);
+            const unsigned att = subpass->color_attachments[binding->index];
+            surface_state = cmd_buffer->state.attachments[att].color_rt_state;
          } else {
-            /* Null render target */
-            struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
-            surface_state = alloc_null_surface_state(cmd_buffer, fb);
+            surface_state = cmd_buffer->state.null_surface_state;
          }
 
          bt_map[bias + s] = surface_state.offset + state_offset;
@@ -1811,7 +1928,8 @@ void genX(CmdBeginRenderPass)(
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
    cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
-   anv_cmd_state_setup_attachments(cmd_buffer, pRenderPassBegin);
+   genX(cmd_buffer_setup_attachments)(cmd_buffer, pass, framebuffer,
+                                      pRenderPassBegin->pClearValues);
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
