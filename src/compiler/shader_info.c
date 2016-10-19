@@ -40,16 +40,6 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
    info->uses_texture_gather = sh->Program->UsesGather;
 
    switch (sh->Stage) {
-   case MESA_SHADER_GEOMETRY:
-      info->gs.vertices_in = shader_prog->Geom.VerticesIn;
-      info->gs.output_primitive = sh->info.Geom.OutputType;
-      info->gs.input_primitive = sh->info.Geom.InputType;
-      info->gs.vertices_out = sh->info.Geom.VerticesOut;
-      info->gs.invocations = sh->info.Geom.Invocations;
-      info->gs.uses_end_primitive = shader_prog->Geom.UsesEndPrimitive;
-      info->gs.uses_streams = shader_prog->Geom.UsesStreams;
-      break;
-
    case MESA_SHADER_FRAGMENT: {
       struct gl_fragment_program *fp =
          (struct gl_fragment_program *)sh->Program;

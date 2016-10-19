@@ -2184,17 +2184,15 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       break;
    }
    case MESA_SHADER_GEOMETRY: {
-      struct gl_geometry_program *dst_gp = (struct gl_geometry_program *) dst;
-
-      dst_gp->VerticesIn = src->Geom.VerticesIn;
-      dst_gp->VerticesOut = dst_sh->info.Geom.VerticesOut;
-      dst_gp->Invocations = dst_sh->info.Geom.Invocations;
-      dst_gp->InputType = dst_sh->info.Geom.InputType;
-      dst_gp->OutputType = dst_sh->info.Geom.OutputType;
+      dst->info.gs.vertices_in = src->Geom.VerticesIn;
+      dst->info.gs.vertices_out = dst_sh->info.Geom.VerticesOut;
+      dst->info.gs.invocations = dst_sh->info.Geom.Invocations;
+      dst->info.gs.input_primitive = dst_sh->info.Geom.InputType;
+      dst->info.gs.output_primitive = dst_sh->info.Geom.OutputType;
       dst->ClipDistanceArraySize = src->Geom.ClipDistanceArraySize;
       dst->CullDistanceArraySize = src->Geom.CullDistanceArraySize;
-      dst_gp->UsesEndPrimitive = src->Geom.UsesEndPrimitive;
-      dst_gp->UsesStreams = src->Geom.UsesStreams;
+      dst->info.gs.uses_end_primitive = src->Geom.UsesEndPrimitive;
+      dst->info.gs.uses_streams = src->Geom.UsesStreams;
       break;
    }
    case MESA_SHADER_FRAGMENT: {
