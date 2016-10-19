@@ -2073,6 +2073,7 @@ NineDevice9_SetLight( struct NineDevice9 *This,
                       const D3DLIGHT9 *pLight )
 {
     struct nine_state *state = This->update;
+    HRESULT hr;
 
     DBG("This=%p Index=%u pLight=%p\n", This, Index, pLight);
     if (pLight)
@@ -2083,27 +2084,10 @@ NineDevice9_SetLight( struct NineDevice9 *This,
 
     user_assert(Index < NINE_MAX_LIGHTS, D3DERR_INVALIDCALL); /* sanity */
 
-    if (Index >= state->ff.num_lights) {
-        unsigned n = state->ff.num_lights;
-        unsigned N = Index + 1;
+    hr = nine_state_set_light(&state->ff, Index, pLight);
+    if (hr != D3D_OK)
+        return hr;
 
-        state->ff.light = REALLOC(state->ff.light, n * sizeof(D3DLIGHT9),
-                                                   N * sizeof(D3DLIGHT9));
-        if (!state->ff.light)
-            return E_OUTOFMEMORY;
-        state->ff.num_lights = N;
-
-        for (; n < Index; ++n) {
-            memset(&state->ff.light[n], 0, sizeof(D3DLIGHT9));
-            state->ff.light[n].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
-        }
-    }
-    state->ff.light[Index] = *pLight;
-
-    if (pLight->Type == D3DLIGHT_SPOT && pLight->Theta >= pLight->Phi) {
-        DBG("Warning: clamping D3DLIGHT9.Theta\n");
-        state->ff.light[Index].Theta = state->ff.light[Index].Phi;
-    }
     if (pLight->Type != D3DLIGHT_DIRECTIONAL &&
         pLight->Attenuation0 == 0.0f &&
         pLight->Attenuation1 == 0.0f &&

@@ -462,6 +462,9 @@ D3DMATRIX *
 nine_state_access_transform(struct nine_ff_state *, D3DTRANSFORMSTATETYPE,
                             boolean alloc);
 
+HRESULT
+nine_state_set_light(struct nine_ff_state *, DWORD, const D3DLIGHT9 *);
+
 const char *nine_d3drs_to_string(DWORD State);
 
 #endif /* _NINE_STATE_H_ */

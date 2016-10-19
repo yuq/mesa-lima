@@ -2826,6 +2826,34 @@ nine_state_access_transform(struct nine_ff_state *ff_state, D3DTRANSFORMSTATETYP
     return &ff_state->transform[index];
 }
 
+HRESULT
+nine_state_set_light(struct nine_ff_state *ff_state, DWORD Index,
+                     const D3DLIGHT9 *pLight)
+{
+    if (Index >= ff_state->num_lights) {
+        unsigned n = ff_state->num_lights;
+        unsigned N = Index + 1;
+
+        ff_state->light = REALLOC(ff_state->light, n * sizeof(D3DLIGHT9),
+                                                   N * sizeof(D3DLIGHT9));
+        if (!ff_state->light)
+            return E_OUTOFMEMORY;
+        ff_state->num_lights = N;
+
+        for (; n < Index; ++n) {
+            memset(&ff_state->light[n], 0, sizeof(D3DLIGHT9));
+            ff_state->light[n].Type = (D3DLIGHTTYPE)NINED3DLIGHT_INVALID;
+        }
+    }
+    ff_state->light[Index] = *pLight;
+
+    if (pLight->Type == D3DLIGHT_SPOT && pLight->Theta >= pLight->Phi) {
+        DBG("Warning: clamping D3DLIGHT9.Theta\n");
+        ff_state->light[Index].Theta = ff_state->light[Index].Phi;
+    }
+    return D3D_OK;
+}
+
 #define D3DRS_TO_STRING_CASE(n) case D3DRS_##n: return "D3DRS_"#n
 const char *nine_d3drs_to_string(DWORD State)
 {
