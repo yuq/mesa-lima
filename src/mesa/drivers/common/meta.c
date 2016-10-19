@@ -566,8 +566,8 @@ _mesa_meta_begin(struct gl_context *ctx, GLbitfield state)
 
       if (ctx->Extensions.ARB_vertex_program) {
          save->VertexProgramEnabled = ctx->VertexProgram.Enabled;
-         _mesa_reference_vertprog(ctx, &save->VertexProgram,
-				  ctx->VertexProgram.Current);
+         _mesa_reference_program(ctx, &save->VertexProgram,
+                                 ctx->VertexProgram.Current);
          _mesa_set_enable(ctx, GL_VERTEX_PROGRAM_ARB, GL_FALSE);
       }
 
@@ -945,9 +945,9 @@ _mesa_meta_end(struct gl_context *ctx)
       if (ctx->Extensions.ARB_vertex_program) {
          _mesa_set_enable(ctx, GL_VERTEX_PROGRAM_ARB,
                           save->VertexProgramEnabled);
-         _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current, 
-                                  save->VertexProgram);
-	 _mesa_reference_vertprog(ctx, &save->VertexProgram, NULL);
+         _mesa_reference_program(ctx, &ctx->VertexProgram.Current,
+                                 save->VertexProgram);
+         _mesa_reference_program(ctx, &save->VertexProgram, NULL);
       }
 
       if (ctx->Extensions.ARB_fragment_program) {

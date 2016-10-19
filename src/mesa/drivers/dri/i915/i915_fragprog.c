@@ -1148,8 +1148,8 @@ i915NewProgram(struct gl_context * ctx, GLenum target, GLuint id)
 {
    switch (target) {
    case GL_VERTEX_PROGRAM_ARB: {
-      struct gl_vertex_program *prog = CALLOC_STRUCT(gl_vertex_program);
-      return _mesa_init_gl_program(&prog->Base, target, id);
+      struct gl_program *prog = CALLOC_STRUCT(gl_program);
+      return _mesa_init_gl_program(prog, target, id);
    }
 
    case GL_FRAGMENT_PROGRAM_ARB:{

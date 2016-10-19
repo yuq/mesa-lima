@@ -131,7 +131,7 @@ void
 _tnl_InvalidateState( struct gl_context *ctx, GLuint new_state )
 {
    TNLcontext *tnl = TNL_CONTEXT(ctx);
-   const struct gl_vertex_program *vp = ctx->VertexProgram._Current;
+   const struct gl_program *vp = ctx->VertexProgram._Current;
    const struct gl_fragment_program *fp = ctx->FragmentProgram._Current;
    GLuint i;
 
@@ -183,7 +183,7 @@ _tnl_InvalidateState( struct gl_context *ctx, GLuint new_state )
    if (vp) {
       GLuint i;
       for (i = 0; i < MAX_VARYING; i++) {
-	 if (vp->Base.OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_VAR0 + i)) {
+	 if (vp->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_VAR0 + i)) {
             tnl->render_inputs_bitset |= BITFIELD64_BIT(_TNL_ATTRIB_GENERIC(i));
          }
       }

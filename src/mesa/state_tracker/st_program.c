@@ -250,11 +250,11 @@ st_translate_vertex_program(struct st_context *st,
     * and TGSI generic input indexes, plus input attrib semantic info.
     */
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
-      if ((stvp->Base.Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
+      if ((stvp->Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
          input_to_index[attr] = stvp->num_inputs;
          stvp->index_to_input[stvp->num_inputs] = attr;
          stvp->num_inputs++;
-         if ((stvp->Base.Base.DoubleInputsRead & BITFIELD64_BIT(attr)) != 0) {
+         if ((stvp->Base.DoubleInputsRead & BITFIELD64_BIT(attr)) != 0) {
             /* add placeholder for second part of a double attribute */
             stvp->index_to_input[stvp->num_inputs] = ST_DOUBLE_ATTRIB_PLACEHOLDER;
             stvp->num_inputs++;
@@ -268,7 +268,7 @@ st_translate_vertex_program(struct st_context *st,
    /* Compute mapping of vertex program outputs to slots.
     */
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      if ((stvp->Base.Base.OutputsWritten & BITFIELD64_BIT(attr)) == 0) {
+      if ((stvp->Base.OutputsWritten & BITFIELD64_BIT(attr)) == 0) {
          stvp->result_to_output[attr] = ~0;
       }
       else {
@@ -367,7 +367,7 @@ st_translate_vertex_program(struct st_context *st,
 
    /* ARB_vp: */
    if (!stvp->glsl_to_tgsi && !stvp->shader_program) {
-      _mesa_remove_output_reads(&stvp->Base.Base, PROGRAM_OUTPUT);
+      _mesa_remove_output_reads(&stvp->Base, PROGRAM_OUTPUT);
 
       /* This determines which states will be updated when the assembly
        * shader is bound.
@@ -376,15 +376,14 @@ st_translate_vertex_program(struct st_context *st,
                               ST_NEW_RASTERIZER |
                               ST_NEW_VERTEX_ARRAYS;
 
-      if (stvp->Base.Base.Parameters->NumParameters)
+      if (stvp->Base.Parameters->NumParameters)
          stvp->affected_states |= ST_NEW_VS_CONSTANTS;
 
       /* No samplers are allowed in ARB_vp. */
    }
 
    if (stvp->shader_program) {
-      nir_shader *nir = st_glsl_to_nir(st, &stvp->Base.Base,
-                                       stvp->shader_program,
+      nir_shader *nir = st_glsl_to_nir(st, &stvp->Base, stvp->shader_program,
                                        MESA_SHADER_VERTEX);
 
       stvp->tgsi.type = PIPE_SHADER_IR_NIR;
@@ -400,16 +399,16 @@ st_translate_vertex_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
-   if (stvp->Base.Base.ClipDistanceArraySize)
+   if (stvp->Base.ClipDistanceArraySize)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
-                    stvp->Base.Base.ClipDistanceArraySize);
-   if (stvp->Base.Base.CullDistanceArraySize)
+                    stvp->Base.ClipDistanceArraySize);
+   if (stvp->Base.CullDistanceArraySize)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CULLDIST_ENABLED,
-                    stvp->Base.Base.CullDistanceArraySize);
+                    stvp->Base.CullDistanceArraySize);
 
    if (ST_DEBUG & DEBUG_MESA) {
-      _mesa_print_program(&stvp->Base.Base);
-      _mesa_print_program_parameters(st->ctx, &stvp->Base.Base);
+      _mesa_print_program(&stvp->Base);
+      _mesa_print_program_parameters(st->ctx, &stvp->Base);
       debug_printf("\n");
    }
 
@@ -418,7 +417,7 @@ st_translate_vertex_program(struct st_context *st,
                                    PIPE_SHADER_VERTEX,
                                    ureg,
                                    stvp->glsl_to_tgsi,
-                                   &stvp->Base.Base,
+                                   &stvp->Base,
                                    /* inputs */
                                    stvp->num_inputs,
                                    input_to_index,
@@ -444,7 +443,7 @@ st_translate_vertex_program(struct st_context *st,
       error = st_translate_mesa_program(st->ctx,
                                         PIPE_SHADER_VERTEX,
                                         ureg,
-                                        &stvp->Base.Base,
+                                        &stvp->Base,
                                         /* inputs */
                                         stvp->num_inputs,
                                         input_to_index,
@@ -459,7 +458,7 @@ st_translate_vertex_program(struct st_context *st,
 
    if (error) {
       debug_printf("%s: failed to translate Mesa program:\n", __func__);
-      _mesa_print_program(&stvp->Base.Base);
+      _mesa_print_program(&stvp->Base);
       debug_assert(0);
       return false;
    }
@@ -489,7 +488,7 @@ st_create_vp_variant(struct st_context *st,
       if (key->passthrough_edgeflags)
          NIR_PASS_V(vpv->tgsi.ir.nir, nir_lower_passthrough_edgeflags);
 
-      st_finalize_nir(st, &stvp->Base.Base, vpv->tgsi.ir.nir);
+      st_finalize_nir(st, &stvp->Base, vpv->tgsi.ir.nir);
 
       vpv->driver_shader = pipe->create_vs_state(pipe, &vpv->tgsi);
       /* driver takes ownership of IR: */
@@ -1913,7 +1912,7 @@ st_print_current_vertex_program(void)
          (struct st_vertex_program *) ctx->VertexProgram._Current;
       struct st_vp_variant *stv;
 
-      debug_printf("Vertex program %u\n", stvp->Base.Base.Id);
+      debug_printf("Vertex program %u\n", stvp->Base.Id);
 
       for (stv = stvp->variants; stv; stv = stv->next) {
          debug_printf("variant %p\n", stv);

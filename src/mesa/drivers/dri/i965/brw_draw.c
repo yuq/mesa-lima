@@ -302,7 +302,7 @@ brw_merge_inputs(struct brw_context *brw,
    }
 
    if (brw->gen < 8 && !brw->is_haswell) {
-      uint64_t mask = ctx->VertexProgram._Current->Base.info.inputs_read;
+      uint64_t mask = ctx->VertexProgram._Current->info.inputs_read;
       /* Prior to Haswell, the hardware can't natively support GL_FIXED or
        * 2_10_10_10_REV vertex formats.  Set appropriate workaround flags.
        */
@@ -460,7 +460,7 @@ brw_try_draw_prims(struct gl_context *ctx,
    brw->tcs.base.sampler_count = ctx->TessCtrlProgram._Current ?
       util_last_bit(ctx->TessCtrlProgram._Current->SamplersUsed) : 0;
    brw->vs.base.sampler_count =
-      util_last_bit(ctx->VertexProgram._Current->Base.SamplersUsed);
+      util_last_bit(ctx->VertexProgram._Current->SamplersUsed);
 
    intel_prepare_render(brw);
    brw_predraw_set_aux_buffers(brw);

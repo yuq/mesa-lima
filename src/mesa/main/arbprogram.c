@@ -59,7 +59,7 @@ _mesa_BindProgramARB(GLenum target, GLuint id)
 
    /* Error-check target and get curProg */
    if (target == GL_VERTEX_PROGRAM_ARB && ctx->Extensions.ARB_vertex_program) {
-      curProg = &ctx->VertexProgram.Current->Base;
+      curProg = ctx->VertexProgram.Current;
    }
    else if (target == GL_FRAGMENT_PROGRAM_ARB
             && ctx->Extensions.ARB_fragment_program) {
@@ -79,7 +79,7 @@ _mesa_BindProgramARB(GLenum target, GLuint id)
       /* Bind a default program */
       newProg = NULL;
       if (target == GL_VERTEX_PROGRAM_ARB)
-         newProg = &ctx->Shared->DefaultVertexProgram->Base;
+         newProg = ctx->Shared->DefaultVertexProgram;
       else
          newProg = &ctx->Shared->DefaultFragmentProgram->Base;
    }
@@ -114,8 +114,7 @@ _mesa_BindProgramARB(GLenum target, GLuint id)
 
    /* bind newProg */
    if (target == GL_VERTEX_PROGRAM_ARB) {
-      _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current,
-                               gl_vertex_program(newProg));
+      _mesa_reference_program(ctx, &ctx->VertexProgram.Current, newProg);
    }
    else if (target == GL_FRAGMENT_PROGRAM_ARB) {
       _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current,
@@ -160,7 +159,7 @@ _mesa_DeleteProgramsARB(GLsizei n, const GLuint *ids)
             switch (prog->Target) {
             case GL_VERTEX_PROGRAM_ARB:
                if (ctx->VertexProgram.Current &&
-                   ctx->VertexProgram.Current->Base.Id == ids[i]) {
+                   ctx->VertexProgram.Current->Id == ids[i]) {
                   /* unbind this currently bound program */
                   _mesa_BindProgramARB(prog->Target, 0);
                }
@@ -257,7 +256,7 @@ get_local_param_pointer(struct gl_context *ctx, const char *func,
 
    if (target == GL_VERTEX_PROGRAM_ARB
        && ctx->Extensions.ARB_vertex_program) {
-      prog = &(ctx->VertexProgram.Current->Base);
+      prog = ctx->VertexProgram.Current;
       maxParams = ctx->Const.Program[MESA_SHADER_VERTEX].MaxLocalParams;
    }
    else if (target == GL_FRAGMENT_PROGRAM_ARB
@@ -336,10 +335,10 @@ _mesa_ProgramStringARB(GLenum target, GLenum format, GLsizei len,
    }
 
    if (target == GL_VERTEX_PROGRAM_ARB && ctx->Extensions.ARB_vertex_program) {
-      struct gl_vertex_program *prog = ctx->VertexProgram.Current;
+      struct gl_program *prog = ctx->VertexProgram.Current;
       _mesa_parse_arb_vertex_program(ctx, target, string, len, prog);
 
-      base = & prog->Base;
+      base = prog;
    }
    else if (target == GL_FRAGMENT_PROGRAM_ARB
             && ctx->Extensions.ARB_fragment_program) {
@@ -657,7 +656,7 @@ _mesa_GetProgramivARB(GLenum target, GLenum pname, GLint *params)
 
    if (target == GL_VERTEX_PROGRAM_ARB
        && ctx->Extensions.ARB_vertex_program) {
-      prog = &(ctx->VertexProgram.Current->Base);
+      prog = ctx->VertexProgram.Current;
       limits = &ctx->Const.Program[MESA_SHADER_VERTEX];
    }
    else if (target == GL_FRAGMENT_PROGRAM_ARB
@@ -838,7 +837,7 @@ _mesa_GetProgramStringARB(GLenum target, GLenum pname, GLvoid *string)
    GET_CURRENT_CONTEXT(ctx);
 
    if (target == GL_VERTEX_PROGRAM_ARB) {
-      prog = &(ctx->VertexProgram.Current->Base);
+      prog = ctx->VertexProgram.Current;
    }
    else if (target == GL_FRAGMENT_PROGRAM_ARB) {
       prog = &(ctx->FragmentProgram.Current->Base);

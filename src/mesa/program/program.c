@@ -87,8 +87,8 @@ _mesa_init_program(struct gl_context *ctx)
    ctx->VertexProgram.PointSizeEnabled =
       (ctx->API == API_OPENGLES2) ? GL_TRUE : GL_FALSE;
    ctx->VertexProgram.TwoSideEnabled = GL_FALSE;
-   _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current,
-                            ctx->Shared->DefaultVertexProgram);
+   _mesa_reference_program(ctx, &ctx->VertexProgram.Current,
+                           ctx->Shared->DefaultVertexProgram);
    assert(ctx->VertexProgram.Current);
    ctx->VertexProgram.Cache = _mesa_new_program_cache();
 
@@ -112,7 +112,7 @@ _mesa_init_program(struct gl_context *ctx)
 void
 _mesa_free_program_data(struct gl_context *ctx)
 {
-   _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current, NULL);
+   _mesa_reference_program(ctx, &ctx->VertexProgram.Current, NULL);
    _mesa_delete_program_cache(ctx, ctx->VertexProgram.Cache);
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current, NULL);
    _mesa_delete_shader_cache(ctx, ctx->FragmentProgram.Cache);
@@ -137,8 +137,8 @@ _mesa_free_program_data(struct gl_context *ctx)
 void
 _mesa_update_default_objects_program(struct gl_context *ctx)
 {
-   _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current,
-                            ctx->Shared->DefaultVertexProgram);
+   _mesa_reference_program(ctx, &ctx->VertexProgram.Current,
+                           ctx->Shared->DefaultVertexProgram);
    assert(ctx->VertexProgram.Current);
 
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current,
@@ -215,14 +215,11 @@ struct gl_program *
 _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
 {
    switch (target) {
-   case GL_VERTEX_PROGRAM_ARB: { /* == GL_VERTEX_PROGRAM_NV */
-      struct gl_vertex_program *prog = CALLOC_STRUCT(gl_vertex_program);
-      return _mesa_init_gl_program(&prog->Base, target, id);
-   }
    case GL_FRAGMENT_PROGRAM_ARB: {
       struct gl_fragment_program *prog = CALLOC_STRUCT(gl_fragment_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
+   case GL_VERTEX_PROGRAM_ARB: /* == GL_VERTEX_PROGRAM_NV */
    case GL_GEOMETRY_PROGRAM_NV:
    case GL_TESS_CONTROL_PROGRAM_NV:
    case GL_TESS_EVALUATION_PROGRAM_NV: {

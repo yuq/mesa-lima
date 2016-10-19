@@ -201,7 +201,7 @@ struct st_vp_variant
  */
 struct st_vertex_program
 {
-   struct gl_vertex_program Base;  /**< The Mesa vertex program */
+   struct gl_program Base;  /**< The Mesa vertex program */
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
@@ -309,7 +309,7 @@ st_fragment_program( struct gl_fragment_program *fp )
 
 
 static inline struct st_vertex_program *
-st_vertex_program( struct gl_vertex_program *vp )
+st_vertex_program( struct gl_program *vp )
 {
    return (struct st_vertex_program *)vp;
 }

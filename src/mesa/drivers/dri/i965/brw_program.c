@@ -135,7 +135,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
       if (prog) {
 	 prog->id = get_new_program_id(brw->screen);
 
-	 return _mesa_init_gl_program(&prog->program.Base, target, id);
+	 return _mesa_init_gl_program(&prog->program, target, id);
       }
       else
 	 return NULL;
@@ -213,6 +213,8 @@ brwProgramStringNotify(struct gl_context *ctx,
 		       GLenum target,
 		       struct gl_program *prog)
 {
+   assert(target == GL_VERTEX_PROGRAM_ARB || !prog->IsPositionInvariant);
+
    struct brw_context *brw = brw_context(ctx);
    const struct brw_compiler *compiler = brw->screen->compiler;
 
@@ -235,8 +237,7 @@ brwProgramStringNotify(struct gl_context *ctx,
       break;
    }
    case GL_VERTEX_PROGRAM_ARB: {
-      struct gl_vertex_program *vprog = (struct gl_vertex_program *) prog;
-      struct brw_vertex_program *newVP = brw_vertex_program(vprog);
+      struct brw_vertex_program *newVP = brw_vertex_program(prog);
       const struct brw_vertex_program *curVP =
          brw_vertex_program_const(brw->vertex_program);
 

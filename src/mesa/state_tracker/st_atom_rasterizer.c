@@ -62,7 +62,7 @@ static void update_raster_state( struct st_context *st )
 {
    struct gl_context *ctx = st->ctx;
    struct pipe_rasterizer_state *raster = &st->state.rasterizer;
-   const struct gl_vertex_program *vertProg = ctx->VertexProgram._Current;
+   const struct gl_program *vertProg = ctx->VertexProgram._Current;
    const struct gl_fragment_program *fragProg = ctx->FragmentProgram._Current;
 
    memset(raster, 0, sizeof(*raster));
@@ -194,8 +194,8 @@ static void update_raster_state( struct st_context *st )
    /* ST_NEW_VERTEX_PROGRAM
     */
    if (vertProg) {
-      if (vertProg->Base.Id == 0) {
-         if (vertProg->Base.OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_PSIZ)) {
+      if (vertProg->Id == 0) {
+         if (vertProg->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_PSIZ)) {
             /* generated program which emits point size */
             raster->point_size_per_vertex = TRUE;
          }
@@ -213,7 +213,7 @@ static void update_raster_state( struct st_context *st )
          else if (ctx->TessEvalProgram._Current)
             last = ctx->TessEvalProgram._Current;
          else if (ctx->VertexProgram._Current)
-            last = &ctx->VertexProgram._Current->Base;
+            last = ctx->VertexProgram._Current;
          if (last)
             raster->point_size_per_vertex =
                !!(last->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_PSIZ));

@@ -1987,13 +1987,10 @@ struct gl_program
    GLuint NumNativeTexInstructions;
    GLuint NumNativeTexIndirections;
    /*@}*/
-};
 
-
-/** Vertex program object */
-struct gl_vertex_program
-{
-   struct gl_program Base;   /**< base class */
+   /** Used by ARB assembly-style programs. Can only be true for vertex
+    * programs.
+    */
    GLboolean IsPositionInvariant;
 };
 
@@ -2066,13 +2063,13 @@ struct gl_vertex_program_state
    GLboolean TwoSideEnabled;     /**< GL_VERTEX_PROGRAM_TWO_SIDE_ARB/NV */
    /** Computed two sided lighting for fixed function/programs. */
    GLboolean _TwoSideEnabled;
-   struct gl_vertex_program *Current;  /**< User-bound vertex program */
+   struct gl_program *Current;  /**< User-bound vertex program */
 
    /** Currently enabled and valid vertex program (including internal
     * programs, user-defined vertex programs and GLSL vertex shaders).
     * This is the program we must use when rendering.
     */
-   struct gl_vertex_program *_Current;
+   struct gl_program *_Current;
 
    GLfloat Parameters[MAX_PROGRAM_ENV_PARAMS][4]; /**< Env params */
 
@@ -2080,7 +2077,7 @@ struct gl_vertex_program_state
    GLboolean _MaintainTnlProgram;
 
    /** Program to emulate fixed-function T&L (see above) */
-   struct gl_vertex_program *_TnlProgram;
+   struct gl_program *_TnlProgram;
 
    /** Cache of fixed-function programs */
    struct gl_program_cache *Cache;
@@ -2775,7 +2772,7 @@ struct gl_shader_program
    /** Vertex shader state */
    struct {
       /**
-       * True if gl_ClipDistance is written to.  Copied into gl_vertex_program
+       * True if gl_ClipDistance is written to.  Copied into gl_program
        * by _mesa_copy_linked_program_data().
        */
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
@@ -3095,7 +3092,7 @@ struct gl_shared_state
     */
    /*@{*/
    struct _mesa_HashTable *Programs; /**< All vertex/fragment programs */
-   struct gl_vertex_program *DefaultVertexProgram;
+   struct gl_program *DefaultVertexProgram;
    struct gl_fragment_program *DefaultFragmentProgram;
    /*@}*/
 

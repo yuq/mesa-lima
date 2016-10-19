@@ -160,7 +160,7 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
 void
 _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
 			       const GLvoid *str, GLsizei len,
-			       struct gl_vertex_program *program)
+			       struct gl_program *program)
 {
    struct gl_program prog;
    struct asm_parser_state state;
@@ -180,37 +180,37 @@ _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
    if ((ctx->_Shader->Flags & GLSL_NO_OPT) == 0)
       _mesa_optimize_program(ctx, &prog);
 
-   free(program->Base.String);
+   free(program->String);
 
    /* Copy the relevant contents of the arb_program struct into the 
     * vertex_program struct.
     */
-   program->Base.String          = prog.String;
-   program->Base.NumInstructions = prog.NumInstructions;
-   program->Base.NumTemporaries  = prog.NumTemporaries;
-   program->Base.NumParameters   = prog.NumParameters;
-   program->Base.NumAttributes   = prog.NumAttributes;
-   program->Base.NumAddressRegs  = prog.NumAddressRegs;
-   program->Base.NumNativeInstructions = prog.NumNativeInstructions;
-   program->Base.NumNativeTemporaries = prog.NumNativeTemporaries;
-   program->Base.NumNativeParameters = prog.NumNativeParameters;
-   program->Base.NumNativeAttributes = prog.NumNativeAttributes;
-   program->Base.NumNativeAddressRegs = prog.NumNativeAddressRegs;
-   program->Base.InputsRead     = prog.InputsRead;
-   program->Base.OutputsWritten = prog.OutputsWritten;
-   program->Base.IndirectRegisterFiles = prog.IndirectRegisterFiles;
+   program->String          = prog.String;
+   program->NumInstructions = prog.NumInstructions;
+   program->NumTemporaries  = prog.NumTemporaries;
+   program->NumParameters   = prog.NumParameters;
+   program->NumAttributes   = prog.NumAttributes;
+   program->NumAddressRegs  = prog.NumAddressRegs;
+   program->NumNativeInstructions = prog.NumNativeInstructions;
+   program->NumNativeTemporaries = prog.NumNativeTemporaries;
+   program->NumNativeParameters = prog.NumNativeParameters;
+   program->NumNativeAttributes = prog.NumNativeAttributes;
+   program->NumNativeAddressRegs = prog.NumNativeAddressRegs;
+   program->InputsRead     = prog.InputsRead;
+   program->OutputsWritten = prog.OutputsWritten;
+   program->IndirectRegisterFiles = prog.IndirectRegisterFiles;
    program->IsPositionInvariant = (state.option.PositionInvariant)
       ? GL_TRUE : GL_FALSE;
 
-   free(program->Base.Instructions);
-   program->Base.Instructions = prog.Instructions;
+   free(program->Instructions);
+   program->Instructions = prog.Instructions;
 
-   if (program->Base.Parameters)
-      _mesa_free_parameter_list(program->Base.Parameters);
-   program->Base.Parameters = prog.Parameters; 
+   if (program->Parameters)
+      _mesa_free_parameter_list(program->Parameters);
+   program->Parameters = prog.Parameters;
 
 #if DEBUG_VP
-   printf("____________Vertex program %u __________\n", program->Base.Id);
-   _mesa_print_program(&program->Base);
+   printf("____________Vertex program %u __________\n", program->Id);
+   _mesa_print_program(program);
 #endif
 }

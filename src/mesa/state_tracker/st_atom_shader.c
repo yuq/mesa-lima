@@ -175,7 +175,7 @@ update_vp( struct st_context *st )
     */
    assert(st->ctx->VertexProgram._Current);
    stvp = st_vertex_program(st->ctx->VertexProgram._Current);
-   assert(stvp->Base.Base.Target == GL_VERTEX_PROGRAM_ARB);
+   assert(stvp->Base.Target == GL_VERTEX_PROGRAM_ARB);
 
    memset(&key, 0, sizeof key);
    key.st = st->has_shareable_shaders ? NULL : st;
@@ -190,7 +190,7 @@ update_vp( struct st_context *st )
 
    key.clamp_color = st->clamp_vert_color_in_shader &&
                      st->ctx->Light._ClampVertexColor &&
-                     (stvp->Base.Base.OutputsWritten &
+                     (stvp->Base.OutputsWritten &
                       (VARYING_SLOT_COL0 |
                        VARYING_SLOT_COL1 |
                        VARYING_SLOT_BFC0 |

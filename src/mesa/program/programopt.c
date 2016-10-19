@@ -46,10 +46,10 @@
  * May be used to implement the position_invariant option.
  */
 static void
-_mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_vertex_program *vprog)
+_mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
 {
    struct prog_instruction *newInst;
-   const GLuint origLen = vprog->Base.NumInstructions;
+   const GLuint origLen = vprog->NumInstructions;
    const GLuint newLen = origLen + 4;
    GLuint i;
 
@@ -66,8 +66,7 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_vertex_program *vpro
    GLint mvpRef[4];
 
    for (i = 0; i < 4; i++) {
-      mvpRef[i] = _mesa_add_state_reference(vprog->Base.Parameters,
-                                            mvpState[i]);
+      mvpRef[i] = _mesa_add_state_reference(vprog->Parameters, mvpState[i]);
    }
 
    /* Alloc storage for new instructions */
@@ -100,24 +99,24 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_vertex_program *vpro
    }
 
    /* Append original instructions after new instructions */
-   _mesa_copy_instructions (newInst + 4, vprog->Base.Instructions, origLen);
+   _mesa_copy_instructions (newInst + 4, vprog->Instructions, origLen);
 
    /* free old instructions */
-   _mesa_free_instructions(vprog->Base.Instructions, origLen);
+   _mesa_free_instructions(vprog->Instructions, origLen);
 
    /* install new instructions */
-   vprog->Base.Instructions = newInst;
-   vprog->Base.NumInstructions = newLen;
-   vprog->Base.InputsRead |= VERT_BIT_POS;
-   vprog->Base.OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
+   vprog->Instructions = newInst;
+   vprog->NumInstructions = newLen;
+   vprog->InputsRead |= VERT_BIT_POS;
+   vprog->OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
 
 
 static void
-_mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_vertex_program *vprog)
+_mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
 {
    struct prog_instruction *newInst;
-   const GLuint origLen = vprog->Base.NumInstructions;
+   const GLuint origLen = vprog->NumInstructions;
    const GLuint newLen = origLen + 4;
    GLuint hposTemp;
    GLuint i;
@@ -135,8 +134,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_vertex_program *vpro
    GLint mvpRef[4];
 
    for (i = 0; i < 4; i++) {
-      mvpRef[i] = _mesa_add_state_reference(vprog->Base.Parameters,
-                                            mvpState[i]);
+      mvpRef[i] = _mesa_add_state_reference(vprog->Parameters, mvpState[i]);
    }
 
    /* Alloc storage for new instructions */
@@ -148,7 +146,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_vertex_program *vpro
    }
 
    /* TEMP hposTemp; */
-   hposTemp = vprog->Base.NumTemporaries++;
+   hposTemp = vprog->NumTemporaries++;
 
    /*
     * Generated instructions:
@@ -202,21 +200,21 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_vertex_program *vpro
 
 
    /* Append original instructions after new instructions */
-   _mesa_copy_instructions (newInst + 4, vprog->Base.Instructions, origLen);
+   _mesa_copy_instructions (newInst + 4, vprog->Instructions, origLen);
 
    /* free old instructions */
-   _mesa_free_instructions(vprog->Base.Instructions, origLen);
+   _mesa_free_instructions(vprog->Instructions, origLen);
 
    /* install new instructions */
-   vprog->Base.Instructions = newInst;
-   vprog->Base.NumInstructions = newLen;
-   vprog->Base.InputsRead |= VERT_BIT_POS;
-   vprog->Base.OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
+   vprog->Instructions = newInst;
+   vprog->NumInstructions = newLen;
+   vprog->InputsRead |= VERT_BIT_POS;
+   vprog->OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
 
 
 void
-_mesa_insert_mvp_code(struct gl_context *ctx, struct gl_vertex_program *vprog)
+_mesa_insert_mvp_code(struct gl_context *ctx, struct gl_program *vprog)
 {
    if (ctx->Const.ShaderCompilerOptions[MESA_SHADER_VERTEX].OptimizeForAOS)
       _mesa_insert_mvp_dp4_code( ctx, vprog );

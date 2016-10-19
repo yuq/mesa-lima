@@ -142,7 +142,7 @@ void st_upload_constants( struct st_context *st,
 static void update_vs_constants(struct st_context *st )
 {
    struct st_vertex_program *vp = st->vp;
-   struct gl_program_parameter_list *params = vp->Base.Base.Parameters;
+   struct gl_program_parameter_list *params = vp->Base.Parameters;
 
    st_upload_constants( st, params, MESA_SHADER_VERTEX );
 }

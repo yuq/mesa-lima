@@ -328,7 +328,7 @@ update_samplers(struct st_context *st)
 
    update_shader_samplers(st,
                           PIPE_SHADER_VERTEX,
-                          &ctx->VertexProgram._Current->Base,
+                          ctx->VertexProgram._Current,
                           ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits,
                           st->state.samplers[PIPE_SHADER_VERTEX],
                           &st->state.num_samplers[PIPE_SHADER_VERTEX]);

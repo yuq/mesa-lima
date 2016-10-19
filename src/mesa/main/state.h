@@ -61,7 +61,7 @@ _mesa_need_secondary_color(const struct gl_context *ctx)
 
    if (ctx->VertexProgram._Current &&
        (ctx->VertexProgram._Current != ctx->VertexProgram._TnlProgram) &&
-       (ctx->VertexProgram._Current->Base.InputsRead & VERT_BIT_COLOR1))
+       (ctx->VertexProgram._Current->InputsRead & VERT_BIT_COLOR1))
       return GL_TRUE;
 
    if (ctx->FragmentProgram._Current &&

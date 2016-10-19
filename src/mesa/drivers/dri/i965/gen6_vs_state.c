@@ -46,8 +46,8 @@ gen6_upload_vs_push_constants(struct brw_context *brw)
    const struct brw_stage_prog_data *prog_data = brw->vs.base.prog_data;
 
    _mesa_shader_write_subroutine_indices(&brw->ctx, MESA_SHADER_VERTEX);
-   gen6_upload_push_constants(brw, &vp->program.Base, prog_data,
-                              stage_state, AUB_TRACE_VS_CONSTANTS);
+   gen6_upload_push_constants(brw, &vp->program, prog_data, stage_state,
+                              AUB_TRACE_VS_CONSTANTS);
 
    if (brw->gen >= 7) {
       if (brw->gen == 7 && !brw->is_haswell && !brw->is_baytrail)

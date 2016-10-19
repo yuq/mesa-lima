@@ -741,7 +741,7 @@ check_context_limits(struct gl_context *ctx)
 
    /* check that we don't exceed the size of various bitfields */
    assert(VARYING_SLOT_MAX <=
-	  (8 * sizeof(ctx->VertexProgram._Current->Base.OutputsWritten)));
+	  (8 * sizeof(ctx->VertexProgram._Current->OutputsWritten)));
    assert(VARYING_SLOT_MAX <=
 	  (8 * sizeof(ctx->FragmentProgram._Current->Base.InputsRead)));
 
@@ -1293,9 +1293,9 @@ _mesa_free_context_data( struct gl_context *ctx )
    _mesa_reference_framebuffer(&ctx->DrawBuffer, NULL);
    _mesa_reference_framebuffer(&ctx->ReadBuffer, NULL);
 
-   _mesa_reference_vertprog(ctx, &ctx->VertexProgram.Current, NULL);
-   _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current, NULL);
-   _mesa_reference_vertprog(ctx, &ctx->VertexProgram._TnlProgram, NULL);
+   _mesa_reference_program(ctx, &ctx->VertexProgram.Current, NULL);
+   _mesa_reference_program(ctx, &ctx->VertexProgram._Current, NULL);
+   _mesa_reference_program(ctx, &ctx->VertexProgram._TnlProgram, NULL);
 
    _mesa_reference_program(ctx, &ctx->TessCtrlProgram._Current, NULL);
    _mesa_reference_program(ctx, &ctx->TessEvalProgram._Current, NULL);

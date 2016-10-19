@@ -256,7 +256,7 @@ brw_upload_constant_buffer(struct brw_context *brw)
 
    /* vertex shader constants */
    if (brw->curbe.vs_size) {
-      _mesa_load_state_parameters(ctx, brw->vertex_program->Base.Parameters);
+      _mesa_load_state_parameters(ctx, brw->vertex_program->Parameters);
 
       GLuint offset = brw->curbe.vs_start * 16;
 

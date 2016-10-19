@@ -207,7 +207,7 @@ update_vertex_textures(struct st_context *st)
    if (ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits > 0) {
       update_textures(st,
                       MESA_SHADER_VERTEX,
-                      &ctx->VertexProgram._Current->Base,
+                      ctx->VertexProgram._Current,
                       ctx->Const.Program[MESA_SHADER_VERTEX].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_VERTEX],
                       &st->state.num_sampler_views[PIPE_SHADER_VERTEX]);

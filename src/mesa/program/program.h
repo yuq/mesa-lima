@@ -90,15 +90,6 @@ _mesa_reference_program(struct gl_context *ctx,
 }
 
 static inline void
-_mesa_reference_vertprog(struct gl_context *ctx,
-                         struct gl_vertex_program **ptr,
-                         struct gl_vertex_program *prog)
-{
-   _mesa_reference_program(ctx, (struct gl_program **) ptr,
-                           (struct gl_program *) prog);
-}
-
-static inline void
 _mesa_reference_fragprog(struct gl_context *ctx,
                          struct gl_fragment_program **ptr,
                          struct gl_fragment_program *prog)
@@ -184,10 +175,6 @@ _mesa_shader_stage_to_program(unsigned stage)
 }
 
 
-/* Cast wrappers from gl_program to derived program types.
- * (e.g. gl_vertex_program)
- */
-
 static inline struct gl_fragment_program *
 gl_fragment_program(struct gl_program *prog)
 {
@@ -198,19 +185,6 @@ static inline const struct gl_fragment_program *
 gl_fragment_program_const(const struct gl_program *prog)
 {
    return (const struct gl_fragment_program *) prog;
-}
-
-
-static inline struct gl_vertex_program *
-gl_vertex_program(struct gl_program *prog)
-{
-   return (struct gl_vertex_program *) prog;
-}
-
-static inline const struct gl_vertex_program *
-gl_vertex_program_const(const struct gl_program *prog)
-{
-   return (const struct gl_vertex_program *) prog;
 }
 
 static inline struct gl_compute_program *

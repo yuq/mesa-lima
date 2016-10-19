@@ -70,7 +70,7 @@ update_program_enables(struct gl_context *ctx)
     * GLSL shaders not relevant here.
     */
    ctx->VertexProgram._Enabled = ctx->VertexProgram.Enabled
-      && ctx->VertexProgram.Current->Base.Instructions;
+      && ctx->VertexProgram.Current->Instructions;
    ctx->FragmentProgram._Enabled = ctx->FragmentProgram.Enabled
       && ctx->FragmentProgram.Current->Base.Instructions;
    ctx->ATIFragmentShader._Enabled = ctx->ATIFragmentShader.Enabled
@@ -107,7 +107,7 @@ update_program(struct gl_context *ctx)
       ctx->_Shader->CurrentProgram[MESA_SHADER_FRAGMENT];
    const struct gl_shader_program *csProg =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
-   const struct gl_vertex_program *prevVP = ctx->VertexProgram._Current;
+   const struct gl_program *prevVP = ctx->VertexProgram._Current;
    const struct gl_fragment_program *prevFP = ctx->FragmentProgram._Current;
    const struct gl_program *prevGP = ctx->GeometryProgram._Current;
    const struct gl_program *prevTCP = ctx->TessCtrlProgram._Current;
@@ -222,24 +222,24 @@ update_program(struct gl_context *ctx)
    if (vsProg && vsProg->LinkStatus
        && vsProg->_LinkedShaders[MESA_SHADER_VERTEX]) {
       /* Use GLSL vertex shader */
-      _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current,
-			       gl_vertex_program(vsProg->_LinkedShaders[MESA_SHADER_VERTEX]->Program));
+      _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
+                              vsProg->_LinkedShaders[MESA_SHADER_VERTEX]->Program);
    }
    else if (ctx->VertexProgram._Enabled) {
       /* Use user-defined vertex program */
-      _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current,
-                               ctx->VertexProgram.Current);
+      _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
+                              ctx->VertexProgram.Current);
    }
    else if (ctx->VertexProgram._MaintainTnlProgram) {
       /* Use vertex program generated from fixed-function state */
-      _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current,
-                               _mesa_get_fixed_func_vertex_program(ctx));
-      _mesa_reference_vertprog(ctx, &ctx->VertexProgram._TnlProgram,
-                               ctx->VertexProgram._Current);
+      _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
+                              _mesa_get_fixed_func_vertex_program(ctx));
+      _mesa_reference_program(ctx, &ctx->VertexProgram._TnlProgram,
+                              ctx->VertexProgram._Current);
    }
    else {
       /* no vertex program */
-      _mesa_reference_vertprog(ctx, &ctx->VertexProgram._Current, NULL);
+      _mesa_reference_program(ctx, &ctx->VertexProgram._Current, NULL);
    }
 
    if (csProg && csProg->LinkStatus
@@ -290,7 +290,7 @@ update_program(struct gl_context *ctx)
       new_state |= _NEW_PROGRAM;
       if (ctx->Driver.BindProgram) {
          ctx->Driver.BindProgram(ctx, GL_VERTEX_PROGRAM_ARB,
-                            (struct gl_program *) ctx->VertexProgram._Current);
+                                 ctx->VertexProgram._Current);
       }
    }
 
@@ -328,7 +328,7 @@ update_program_constants(struct gl_context *ctx)
 
    if (ctx->VertexProgram._Current) {
       const struct gl_program_parameter_list *params =
-         ctx->VertexProgram._Current->Base.Parameters;
+         ctx->VertexProgram._Current->Parameters;
       if (params && params->StateFlags & ctx->NewState) {
          new_state |= _NEW_PROGRAM_CONSTANTS;
       }
