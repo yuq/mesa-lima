@@ -293,8 +293,6 @@ nine_state_copy_common(struct NineDevice9 *device,
     WARN_ONCE("Fixed function state not handled properly by StateBlocks.\n");
 
     /* Fixed function state. */
-    if (apply)
-        dst->ff.changed.group |= src->ff.changed.group;
 
     if (mask->changed.group & NINE_STATE_FF_MATERIAL)
         dst->ff.material = src->ff.material;
@@ -480,9 +478,6 @@ nine_state_copy_common_all(struct NineDevice9 *device,
     WARN_ONCE("Fixed function state not handled properly by StateBlocks.\n");
 
     /* Fixed function state. */
-    if (apply)
-        dst->ff.changed.group = src->ff.changed.group;
-
     dst->ff.material = src->ff.material;
 
     memcpy(dst->ff.tex_stage, src->ff.tex_stage, sizeof(dst->ff.tex_stage));

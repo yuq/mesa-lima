@@ -209,7 +209,6 @@ struct nine_state
 
     struct {
         struct {
-            uint32_t group;
             uint32_t tex_stage[NINE_MAX_TEXTURE_STAGES][(NINED3DTSS_COUNT + 31) / 32];
             uint32_t transform[(NINED3DTS_COUNT + 31) / 32];
         } changed;
