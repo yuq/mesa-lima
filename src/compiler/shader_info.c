@@ -40,10 +40,6 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
    info->uses_texture_gather = sh->Program->UsesGather;
 
    switch (sh->Stage) {
-   case MESA_SHADER_TESS_CTRL:
-      info->tcs.vertices_out = sh->info.TessCtrl.VerticesOut;
-      break;
-
    case MESA_SHADER_GEOMETRY:
       info->gs.vertices_in = shader_prog->Geom.VerticesIn;
       info->gs.output_primitive = sh->info.Geom.OutputType;

@@ -2171,9 +2171,7 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       dst->CullDistanceArraySize = src->Vert.CullDistanceArraySize;
       break;
    case MESA_SHADER_TESS_CTRL: {
-      struct gl_tess_ctrl_program *dst_tcp =
-         (struct gl_tess_ctrl_program *) dst;
-      dst_tcp->VerticesOut = dst_sh->info.TessCtrl.VerticesOut;
+      dst->info.tcs.vertices_out = dst_sh->info.TessCtrl.VerticesOut;
       break;
    }
    case MESA_SHADER_TESS_EVAL: {
