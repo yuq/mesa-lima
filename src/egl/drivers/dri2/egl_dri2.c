@@ -2808,10 +2808,8 @@ dri2_load(_EGLDriver *drv)
    const char *libname = "libglapi.0.dylib";
 #elif defined(__CYGWIN__)
    const char *libname = "cygglapi-0.dll";
-#elif defined(__linux__)
-   const char *libname = "libglapi.so.0";
 #else
-#error Unknown glapi provider for this platform
+   const char *libname = "libglapi.so.0";
 #endif
    void *handle;
 
