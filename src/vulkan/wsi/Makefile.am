@@ -8,7 +8,7 @@ noinst_LTLIBRARIES = libvulkan_wsi.la
 AM_CPPFLAGS = \
 	$(DEFINES) \
 	-I$(top_srcdir)/include \
-	-I$(top_builddir)/src \
+	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include
 
