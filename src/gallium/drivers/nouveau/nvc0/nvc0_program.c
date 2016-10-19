@@ -509,11 +509,14 @@ nvc0_program_create_tfb_state(const struct nv50_ir_prog_info *info,
    for (i = 0; i < pso->num_outputs; ++i) {
       unsigned s = pso->output[i].start_component;
       unsigned p = pso->output[i].dst_offset;
+      const unsigned r = pso->output[i].register_index;
       b = pso->output[i].output_buffer;
 
+      if (r >= info->numOutputs)
+         continue;
+
       for (c = 0; c < pso->output[i].num_components; ++c)
-         tfb->varying_index[b][p++] =
-            info->out[pso->output[i].register_index].slot[s + c];
+         tfb->varying_index[b][p++] = info->out[r].slot[s + c];
 
       tfb->varying_count[b] = MAX2(tfb->varying_count[b], p);
       tfb->stream[b] = pso->output[i].stream;

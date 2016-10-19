@@ -307,6 +307,9 @@ nv50_program_create_strmout_state(const struct nv50_ir_prog_info *info,
       const unsigned r = pso->output[i].register_index;
       b = pso->output[i].output_buffer;
 
+      if (r >= info->numOutputs)
+         continue;
+
       for (c = 0; c < pso->output[i].num_components; ++c)
          so->map[base[b] + p + c] = info->out[r].slot[s + c];
    }
