@@ -5861,17 +5861,14 @@ emit_face_var(struct gl_context *ctx, struct st_translate *t)
 }
 
 static void
-emit_compute_block_size(const struct gl_program *program,
+emit_compute_block_size(const struct gl_program *prog,
                         struct ureg_program *ureg) {
-   const struct gl_compute_program *cp =
-      (const struct gl_compute_program *)program;
-
    ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH,
-                       cp->LocalSize[0]);
+                 prog->info.cs.local_size[0]);
    ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT,
-                       cp->LocalSize[1]);
+                 prog->info.cs.local_size[1]);
    ureg_property(ureg, TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH,
-                       cp->LocalSize[2]);
+                 prog->info.cs.local_size[2]);
 }
 
 struct sort_inout_decls {
