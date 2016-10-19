@@ -1520,11 +1520,14 @@ st_translate_geometry_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
-   ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM, stgp->Base.InputType);
-   ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM, stgp->Base.OutputType);
+   ureg_property(ureg, TGSI_PROPERTY_GS_INPUT_PRIM,
+                 stgp->Base.Base.info.gs.input_primitive);
+   ureg_property(ureg, TGSI_PROPERTY_GS_OUTPUT_PRIM,
+                 stgp->Base.Base.info.gs.output_primitive);
    ureg_property(ureg, TGSI_PROPERTY_GS_MAX_OUTPUT_VERTICES,
-                 stgp->Base.VerticesOut);
-   ureg_property(ureg, TGSI_PROPERTY_GS_INVOCATIONS, stgp->Base.Invocations);
+                 stgp->Base.Base.info.gs.vertices_out);
+   ureg_property(ureg, TGSI_PROPERTY_GS_INVOCATIONS,
+                 stgp->Base.Base.info.gs.invocations);
 
    st_translate_program_common(st, &stgp->Base.Base, stgp->glsl_to_tgsi, ureg,
                                PIPE_SHADER_GEOMETRY, &stgp->tgsi);
