@@ -1708,7 +1708,7 @@ nine_ff_get_vs(struct NineDevice9 *device)
     return vs;
 }
 
-#define GET_D3DTS(n) nine_state_access_transform(state, D3DTS_##n, FALSE)
+#define GET_D3DTS(n) nine_state_access_transform(&state->ff, D3DTS_##n, FALSE)
 #define IS_D3DTS_DIRTY(s,n) ((s)->ff.changed.transform[(D3DTS_##n) / 32] & (1 << ((D3DTS_##n) % 32)))
 
 static struct NinePixelShader9 *
@@ -1977,7 +1977,7 @@ nine_ff_load_tex_matrices(struct NineDevice9 *device)
         return;
     for (s = 0; s < 8; ++s) {
         if (IS_D3DTS_DIRTY(state, TEXTURE0 + s))
-            nine_d3d_matrix_transpose(&M[32 + s], nine_state_access_transform(state, D3DTS_TEXTURE0 + s, FALSE));
+            nine_d3d_matrix_transpose(&M[32 + s], nine_state_access_transform(&state->ff, D3DTS_TEXTURE0 + s, FALSE));
     }
 }
 

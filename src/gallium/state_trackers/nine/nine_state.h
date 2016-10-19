@@ -137,6 +137,28 @@
 #define NINE_PS_SAMPLERS_MASK 0x00ffff
 #define NINE_VS_SAMPLERS_MASK 0x1e0000
 
+struct nine_ff_state {
+    struct {
+        uint32_t tex_stage[NINE_MAX_TEXTURE_STAGES][(NINED3DTSS_COUNT + 31) / 32];
+        uint32_t transform[(NINED3DTS_COUNT + 31) / 32];
+    } changed;
+
+    D3DMATRIX *transform; /* access only via nine_state_access_transform */
+    unsigned num_transforms;
+
+    /* XXX: Do state blocks just change the set of active lights or do we
+     * have to store which lights have been disabled, too ?
+     */
+    D3DLIGHT9 *light;
+    uint16_t active_light[NINE_MAX_LIGHTS_ACTIVE]; /* 8 */
+    unsigned num_lights;
+    unsigned num_lights_active;
+
+    D3DMATERIAL9 material;
+
+    DWORD tex_stage[NINE_MAX_TEXTURE_STAGES][NINED3DTSS_COUNT];
+};
+
 struct nine_state
 {
     struct {
@@ -192,27 +214,7 @@ struct nine_state
 
     DWORD samp_advertised[NINE_MAX_SAMPLERS][D3DSAMP_COUNT];
 
-    struct {
-        struct {
-            uint32_t tex_stage[NINE_MAX_TEXTURE_STAGES][(NINED3DTSS_COUNT + 31) / 32];
-            uint32_t transform[(NINED3DTS_COUNT + 31) / 32];
-        } changed;
-
-        D3DMATRIX *transform; /* access only via nine_state_access_transform */
-        unsigned num_transforms;
-
-        /* XXX: Do state blocks just change the set of active lights or do we
-         * have to store which lights have been disabled, too ?
-         */
-        D3DLIGHT9 *light;
-        uint16_t active_light[NINE_MAX_LIGHTS_ACTIVE]; /* 8 */
-        unsigned num_lights;
-        unsigned num_lights_active;
-
-        D3DMATERIAL9 material;
-
-        DWORD tex_stage[NINE_MAX_TEXTURE_STAGES][NINED3DTSS_COUNT];
-    } ff;
+    struct nine_ff_state ff;
 };
 
 struct nine_context {
@@ -457,7 +459,7 @@ void nine_state_destroy_sw(struct NineDevice9 *device);
  * Therefore, do not modify if you set alloc to FALSE !
  */
 D3DMATRIX *
-nine_state_access_transform(struct nine_state *, D3DTRANSFORMSTATETYPE,
+nine_state_access_transform(struct nine_ff_state *, D3DTRANSFORMSTATETYPE,
                             boolean alloc);
 
 const char *nine_d3drs_to_string(DWORD State);

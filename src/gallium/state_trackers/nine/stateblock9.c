@@ -316,9 +316,9 @@ nine_state_copy_common(struct NineDevice9 *device,
             for (s = i * 32; s < (i * 32 + 32); ++s) {
                 if (!(mask->ff.changed.transform[i] & (1 << (s % 32))))
                     continue;
-                *nine_state_access_transform(dst, s, TRUE) =
+                *nine_state_access_transform(&dst->ff, s, TRUE) =
                     *nine_state_access_transform( /* const because !alloc */
-                        (struct nine_state *)src, s, FALSE);
+                        (struct nine_ff_state *)&src->ff, s, FALSE);
             }
             if (apply)
                 dst->ff.changed.transform[i] |= mask->ff.changed.transform[i];

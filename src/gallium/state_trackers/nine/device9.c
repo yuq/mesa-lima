@@ -1975,7 +1975,7 @@ NineDevice9_SetTransform( struct NineDevice9 *This,
                           const D3DMATRIX *pMatrix )
 {
     struct nine_state *state = This->update;
-    D3DMATRIX *M = nine_state_access_transform(state, State, TRUE);
+    D3DMATRIX *M = nine_state_access_transform(&state->ff, State, TRUE);
 
     DBG("This=%p State=%d pMatrix=%p\n", This, State, pMatrix);
 
@@ -1993,7 +1993,7 @@ NineDevice9_GetTransform( struct NineDevice9 *This,
                           D3DTRANSFORMSTATETYPE State,
                           D3DMATRIX *pMatrix )
 {
-    D3DMATRIX *M = nine_state_access_transform(&This->state, State, FALSE);
+    D3DMATRIX *M = nine_state_access_transform(&This->state.ff, State, FALSE);
     user_assert(M, D3DERR_INVALIDCALL);
     *pMatrix = *M;
     return D3D_OK;
@@ -2006,7 +2006,7 @@ NineDevice9_MultiplyTransform( struct NineDevice9 *This,
 {
     struct nine_state *state = This->update;
     D3DMATRIX T;
-    D3DMATRIX *M = nine_state_access_transform(state, State, TRUE);
+    D3DMATRIX *M = nine_state_access_transform(&state->ff, State, TRUE);
 
     DBG("This=%p State=%d pMatrix=%p\n", This, State, pMatrix);
 

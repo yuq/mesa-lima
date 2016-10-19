@@ -2783,7 +2783,7 @@ const uint32_t nine_render_state_group[NINED3DRS_LAST + 1] =
 /* Misc */
 
 D3DMATRIX *
-nine_state_access_transform(struct nine_state *state, D3DTRANSFORMSTATETYPE t,
+nine_state_access_transform(struct nine_ff_state *ff_state, D3DTRANSFORMSTATETYPE t,
                             boolean alloc)
 {
     static D3DMATRIX Identity = { .m[0] = { 1, 0, 0, 0 },
@@ -2810,20 +2810,20 @@ nine_state_access_transform(struct nine_state *state, D3DTRANSFORMSTATETYPE t,
         break;
     }
 
-    if (index >= state->ff.num_transforms) {
+    if (index >= ff_state->num_transforms) {
         unsigned N = index + 1;
-        unsigned n = state->ff.num_transforms;
+        unsigned n = ff_state->num_transforms;
 
         if (!alloc)
             return &Identity;
-        state->ff.transform = REALLOC(state->ff.transform,
+        ff_state->transform = REALLOC(ff_state->transform,
                                       n * sizeof(D3DMATRIX),
                                       N * sizeof(D3DMATRIX));
         for (; n < N; ++n)
-            state->ff.transform[n] = Identity;
-        state->ff.num_transforms = N;
+            ff_state->transform[n] = Identity;
+        ff_state->num_transforms = N;
     }
-    return &state->ff.transform[index];
+    return &ff_state->transform[index];
 }
 
 #define D3DRS_TO_STRING_CASE(n) case D3DRS_##n: return "D3DRS_"#n
