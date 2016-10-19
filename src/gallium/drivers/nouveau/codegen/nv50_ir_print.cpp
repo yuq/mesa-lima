@@ -231,6 +231,11 @@ static const char *emitOpStr[] =
    "", "restart"
 };
 
+static const char *cctlOpStr[] =
+{
+   "", "", "", "", "", "iv", "ivall"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -601,6 +606,10 @@ void Instruction::print() const
       case OP_EMIT:
          if (subOp < ARRAY_SIZE(emitOpStr))
             PRINT("%s ", emitOpStr[subOp]);
+         break;
+      case OP_CCTL:
+         if (subOp < ARRAY_SIZE(cctlOpStr))
+            PRINT("%s ", cctlOpStr[subOp]);
          break;
       default:
          if (subOp)
