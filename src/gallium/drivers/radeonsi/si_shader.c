@@ -6609,10 +6609,9 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 			if (LLVMGetInstructionOpcode(cur) != LLVMCall)
 				continue;
 
-			LLVMValueRef callee = LLVMGetCalledValue(cur);
-			LLVMValueKind kind = LLVMGetValueKind(callee);
+			LLVMValueRef callee = lp_get_called_value(cur);
 
-			if (kind != LLVMFunctionValueKind)
+			if (!lp_is_function(callee))
 				continue;
 
 			const char *name = LLVMGetValueName(callee);
