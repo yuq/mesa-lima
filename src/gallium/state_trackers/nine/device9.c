@@ -92,25 +92,18 @@ NineDevice9_SetDefaultState( struct NineDevice9 *This, boolean is_reset )
 
     nine_state_set_defaults(This, &This->caps, is_reset);
 
+    refSurf = This->swapchains[0]->buffers[0];
+    assert(refSurf);
+
     This->state.viewport.X = 0;
     This->state.viewport.Y = 0;
-    This->state.viewport.Width = 0;
-    This->state.viewport.Height = 0;
+    This->state.viewport.Width = refSurf->desc.Width;
+    This->state.viewport.Height = refSurf->desc.Height;
 
     This->state.scissor.minx = 0;
     This->state.scissor.miny = 0;
-    This->state.scissor.maxx = 0xffff;
-    This->state.scissor.maxy = 0xffff;
-
-    if (This->nswapchains && This->swapchains[0]->params.BackBufferCount)
-        refSurf = This->swapchains[0]->buffers[0];
-
-    if (refSurf) {
-        This->state.viewport.Width = refSurf->desc.Width;
-        This->state.viewport.Height = refSurf->desc.Height;
-        This->state.scissor.maxx = refSurf->desc.Width;
-        This->state.scissor.maxy = refSurf->desc.Height;
-    }
+    This->state.scissor.maxx = refSurf->desc.Width;
+    This->state.scissor.maxy = refSurf->desc.Height;
 
     if (This->nswapchains && This->swapchains[0]->params.EnableAutoDepthStencil) {
         This->state.rs[D3DRS_ZENABLE] = TRUE;
