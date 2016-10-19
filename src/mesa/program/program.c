@@ -223,10 +223,7 @@ _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
       struct gl_fragment_program *prog = CALLOC_STRUCT(gl_fragment_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
-   case GL_GEOMETRY_PROGRAM_NV: {
-      struct gl_geometry_program *prog = CALLOC_STRUCT(gl_geometry_program);
-      return _mesa_init_gl_program(&prog->Base, target, id);
-   }
+   case GL_GEOMETRY_PROGRAM_NV:
    case GL_TESS_CONTROL_PROGRAM_NV:
    case GL_TESS_EVALUATION_PROGRAM_NV: {
       struct gl_program *prog = CALLOC_STRUCT(gl_program);

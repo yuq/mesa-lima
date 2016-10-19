@@ -336,7 +336,7 @@ update_samplers(struct st_context *st)
    if (ctx->GeometryProgram._Current) {
       update_shader_samplers(st,
                              PIPE_SHADER_GEOMETRY,
-                             &ctx->GeometryProgram._Current->Base,
+                             ctx->GeometryProgram._Current,
                              ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits,
                              st->state.samplers[PIPE_SHADER_GEOMETRY],
                              &st->state.num_samplers[PIPE_SHADER_GEOMETRY]);

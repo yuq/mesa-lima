@@ -1998,22 +1998,6 @@ struct gl_vertex_program
 };
 
 
-/** Geometry program object */
-struct gl_geometry_program
-{
-   struct gl_program Base;   /**< base class */
-
-   GLint VerticesIn;
-   GLint VerticesOut;
-   GLint Invocations;
-   GLenum InputType;  /**< GL_POINTS, GL_LINES, GL_LINES_ADJACENCY_ARB,
-                           GL_TRIANGLES, or GL_TRIANGLES_ADJACENCY_ARB */
-   GLenum OutputType; /**< GL_POINTS, GL_LINE_STRIP or GL_TRIANGLE_STRIP */
-   bool UsesEndPrimitive;
-   bool UsesStreams;
-};
-
-
 /** Fragment program object */
 struct gl_fragment_program
 {
@@ -2134,7 +2118,7 @@ struct gl_geometry_program_state
    /** Currently enabled and valid program (including internal programs
     * and compiled shader programs).
     */
-   struct gl_geometry_program *_Current;
+   struct gl_program *_Current;
 };
 
 /**
@@ -2770,7 +2754,7 @@ struct gl_shader_program
    } TessEval;
 
    /**
-    * Geometry shader state - copied into gl_geometry_program by
+    * Geometry shader state - copied into gl_program by
     * _mesa_copy_linked_program_data().
     */
    struct {
@@ -2778,7 +2762,7 @@ struct gl_shader_program
 
       /**
        * True if gl_ClipDistance is written to.  Copied into
-       * gl_geometry_program by _mesa_copy_linked_program_data().
+       * gl_program by _mesa_copy_linked_program_data().
        */
       GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
                                          0 if not present. */

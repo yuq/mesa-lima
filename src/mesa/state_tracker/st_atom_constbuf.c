@@ -178,7 +178,7 @@ static void update_gs_constants(struct st_context *st )
    struct gl_program_parameter_list *params;
 
    if (gp) {
-      params = gp->Base.Base.Parameters;
+      params = gp->Base.Parameters;
       st_upload_constants( st, params, MESA_SHADER_GEOMETRY );
    }
 }

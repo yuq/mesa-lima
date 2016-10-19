@@ -209,7 +209,7 @@ static void update_raster_state( struct st_context *st )
          /* We have to check the last bound stage and see if it writes psize */
          struct gl_program *last = NULL;
          if (ctx->GeometryProgram._Current)
-            last = &ctx->GeometryProgram._Current->Base;
+            last = ctx->GeometryProgram._Current;
          else if (ctx->TessEvalProgram._Current)
             last = ctx->TessEvalProgram._Current;
          else if (ctx->VertexProgram._Current)

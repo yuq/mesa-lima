@@ -1299,7 +1299,7 @@ _mesa_free_context_data( struct gl_context *ctx )
 
    _mesa_reference_program(ctx, &ctx->TessCtrlProgram._Current, NULL);
    _mesa_reference_program(ctx, &ctx->TessEvalProgram._Current, NULL);
-   _mesa_reference_geomprog(ctx, &ctx->GeometryProgram._Current, NULL);
+   _mesa_reference_program(ctx, &ctx->GeometryProgram._Current, NULL);
 
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram.Current, NULL);
    _mesa_reference_fragprog(ctx, &ctx->FragmentProgram._Current, NULL);

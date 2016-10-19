@@ -72,7 +72,7 @@ static void check_program_state( struct st_context *st )
    struct gl_vertex_program *new_vp = ctx->VertexProgram._Current;
    struct gl_program *new_tcp = ctx->TessCtrlProgram._Current;
    struct gl_program *new_tep = ctx->TessEvalProgram._Current;
-   struct gl_geometry_program *new_gp = ctx->GeometryProgram._Current;
+   struct gl_program *new_gp = ctx->GeometryProgram._Current;
    struct gl_fragment_program *new_fp = ctx->FragmentProgram._Current;
    uint64_t dirty = 0;
 

@@ -246,11 +246,11 @@ struct st_basic_variant
 
 
 /**
- * Derived from Mesa gl_geometry_program:
+ * Derived from Mesa gl_program:
  */
 struct st_geometry_program
 {
-   struct gl_geometry_program Base;  /**< The Mesa geometry program */
+   struct gl_program Base;  /**< The Mesa geometry program */
    struct pipe_shader_state tgsi;
    struct glsl_to_tgsi_visitor* glsl_to_tgsi;
    uint64_t affected_states; /**< ST_NEW_* flags to mark dirty when binding */
@@ -315,7 +315,7 @@ st_vertex_program( struct gl_vertex_program *vp )
 }
 
 static inline struct st_geometry_program *
-st_geometry_program( struct gl_geometry_program *gp )
+st_geometry_program( struct gl_program *gp )
 {
    return (struct st_geometry_program *)gp;
 }

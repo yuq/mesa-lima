@@ -67,7 +67,7 @@ st_new_program(struct gl_context *ctx, GLenum target, GLuint id)
    }
    case GL_GEOMETRY_PROGRAM_NV: {
       struct st_geometry_program *prog = ST_CALLOC_STRUCT(st_geometry_program);
-      return _mesa_init_gl_program(&prog->Base.Base, target, id);
+      return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_TESS_CONTROL_PROGRAM_NV: {
       struct st_tessctrl_program *prog = ST_CALLOC_STRUCT(st_tessctrl_program);
@@ -111,8 +111,8 @@ st_delete_program(struct gl_context *ctx, struct gl_program *prog)
          struct st_geometry_program *stgp =
             (struct st_geometry_program *) prog;
 
-         st_release_basic_variants(st, stgp->Base.Base.Target,
-                                   &stgp->variants, &stgp->tgsi);
+         st_release_basic_variants(st, stgp->Base.Target, &stgp->variants,
+                                   &stgp->tgsi);
          
          if (stgp->glsl_to_tgsi)
             free_glsl_to_tgsi_visitor(stgp->glsl_to_tgsi);
@@ -199,8 +199,8 @@ st_program_string_notify( struct gl_context *ctx,
    else if (target == GL_GEOMETRY_PROGRAM_NV) {
       struct st_geometry_program *stgp = (struct st_geometry_program *) prog;
 
-      st_release_basic_variants(st, stgp->Base.Base.Target,
-                                &stgp->variants, &stgp->tgsi);
+      st_release_basic_variants(st, stgp->Base.Target, &stgp->variants,
+                                &stgp->tgsi);
       if (!st_translate_geometry_program(st, stgp))
          return false;
 

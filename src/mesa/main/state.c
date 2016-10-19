@@ -109,7 +109,7 @@ update_program(struct gl_context *ctx)
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    const struct gl_vertex_program *prevVP = ctx->VertexProgram._Current;
    const struct gl_fragment_program *prevFP = ctx->FragmentProgram._Current;
-   const struct gl_geometry_program *prevGP = ctx->GeometryProgram._Current;
+   const struct gl_program *prevGP = ctx->GeometryProgram._Current;
    const struct gl_program *prevTCP = ctx->TessCtrlProgram._Current;
    const struct gl_program *prevTEP = ctx->TessEvalProgram._Current;
    const struct gl_compute_program *prevCP = ctx->ComputeProgram._Current;
@@ -186,11 +186,11 @@ update_program(struct gl_context *ctx)
    if (gsProg && gsProg->LinkStatus
        && gsProg->_LinkedShaders[MESA_SHADER_GEOMETRY]) {
       /* Use GLSL geometry shader */
-      _mesa_reference_geomprog(ctx, &ctx->GeometryProgram._Current,
-			       gl_geometry_program(gsProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program));
+      _mesa_reference_program(ctx, &ctx->GeometryProgram._Current,
+                              gsProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program);
    } else {
       /* No geometry program */
-      _mesa_reference_geomprog(ctx, &ctx->GeometryProgram._Current, NULL);
+      _mesa_reference_program(ctx, &ctx->GeometryProgram._Current, NULL);
    }
 
    if (tesProg && tesProg->LinkStatus
@@ -266,7 +266,7 @@ update_program(struct gl_context *ctx)
       new_state |= _NEW_PROGRAM;
       if (ctx->Driver.BindProgram) {
          ctx->Driver.BindProgram(ctx, GL_GEOMETRY_PROGRAM_NV,
-                            (struct gl_program *) ctx->GeometryProgram._Current);
+                                 ctx->GeometryProgram._Current);
       }
    }
 

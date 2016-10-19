@@ -106,8 +106,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   assign_gs_binding_table_offsets(devinfo, prog,
-                                   &gp->program.Base, &prog_data);
+   assign_gs_binding_table_offsets(devinfo, prog, &gp->program, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
@@ -119,7 +118,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
     */
    struct gl_linked_shader *gs = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
    struct brw_shader *bgs = (struct brw_shader *) gs;
-   int param_count = gp->program.Base.nir->num_uniforms / 4;
+   int param_count = gp->program.nir->num_uniforms / 4;
 
    prog_data.base.base.param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
@@ -130,15 +129,15 @@ brw_codegen_gs_prog(struct brw_context *brw,
    prog_data.base.base.nr_params = param_count;
    prog_data.base.base.nr_image_params = gs->NumImages;
 
-   brw_nir_setup_glsl_uniforms(gp->program.Base.nir, prog, &gp->program.Base,
+   brw_nir_setup_glsl_uniforms(gp->program.nir, prog, &gp->program,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 
-   uint64_t outputs_written = gp->program.Base.info.outputs_written;
+   uint64_t outputs_written = gp->program.info.outputs_written;
 
    prog_data.base.cull_distance_mask =
-      ((1 << gp->program.Base.CullDistanceArraySize) - 1) <<
-      gp->program.Base.ClipDistanceArraySize;
+      ((1 << gp->program.CullDistanceArraySize) - 1) <<
+      gp->program.ClipDistanceArraySize;
 
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
@@ -213,14 +212,13 @@ brw_gs_populate_key(struct brw_context *brw,
    struct gl_context *ctx = &brw->ctx;
    struct brw_geometry_program *gp =
       (struct brw_geometry_program *) brw->geometry_program;
-   struct gl_program *prog = &gp->program.Base;
 
    memset(key, 0, sizeof(*key));
 
    key->program_string_id = gp->id;
 
    /* _NEW_TEXTURE */
-   brw_populate_sampler_prog_key_data(ctx, prog, &key->tex);
+   brw_populate_sampler_prog_key_data(ctx, &gp->program, &key->tex);
 }
 
 void
@@ -277,8 +275,7 @@ brw_gs_precompile(struct gl_context *ctx,
    struct brw_stage_prog_data *old_prog_data = brw->gs.base.prog_data;
    bool success;
 
-   struct gl_geometry_program *gp = (struct gl_geometry_program *) prog;
-   struct brw_geometry_program *bgp = brw_geometry_program(gp);
+   struct brw_geometry_program *bgp = brw_geometry_program(prog);
 
    memset(&key, 0, sizeof(key));
 

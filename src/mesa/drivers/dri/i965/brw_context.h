@@ -351,7 +351,7 @@ struct brw_tess_eval_program {
 
 /** Subclass of Mesa geometry program */
 struct brw_geometry_program {
-   struct gl_geometry_program program;
+   struct gl_program program;
    unsigned id;  /**< serial no. to identify geom progs, never re-used */
 };
 
@@ -1007,7 +1007,7 @@ struct brw_context
    /* Active vertex program:
     */
    const struct gl_vertex_program *vertex_program;
-   const struct gl_geometry_program *geometry_program;
+   const struct gl_program *geometry_program;
    const struct gl_program *tess_ctrl_program;
    const struct gl_program *tess_eval_program;
    const struct gl_fragment_program *fragment_program;
@@ -1742,7 +1742,7 @@ brw_tess_eval_program(struct gl_program *p)
 }
 
 static inline struct brw_geometry_program *
-brw_geometry_program(struct gl_geometry_program *p)
+brw_geometry_program(struct gl_program *p)
 {
    return (struct brw_geometry_program *) p;
 }

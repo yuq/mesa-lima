@@ -237,7 +237,7 @@ update_geometry_textures(struct st_context *st)
    if (ctx->GeometryProgram._Current) {
       update_textures(st,
                       MESA_SHADER_GEOMETRY,
-                      &ctx->GeometryProgram._Current->Base,
+                      ctx->GeometryProgram._Current,
                       ctx->Const.Program[MESA_SHADER_GEOMETRY].MaxTextureImageUnits,
                       st->state.sampler_views[PIPE_SHADER_GEOMETRY],
                       &st->state.num_sampler_views[PIPE_SHADER_GEOMETRY]);
