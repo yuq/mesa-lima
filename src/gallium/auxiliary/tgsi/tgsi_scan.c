@@ -368,6 +368,22 @@ scan_instruction(struct tgsi_shader_info *info,
                        is_interp_instruction, &is_mem_inst);
    }
 
+   if (fullinst->Instruction.Texture) {
+      for (i = 0; i < fullinst->Texture.NumOffsets; i++) {
+         struct tgsi_full_src_register src = {};
+
+         src.Register.File = fullinst->TexOffsets[i].File;
+         src.Register.Index = fullinst->TexOffsets[i].Index;
+         src.Register.SwizzleX = fullinst->TexOffsets[i].SwizzleX;
+         src.Register.SwizzleY = fullinst->TexOffsets[i].SwizzleY;
+         src.Register.SwizzleZ = fullinst->TexOffsets[i].SwizzleZ;
+
+         /* The usage mask is suboptimal but should be safe. */
+         scan_src_operand(info, fullinst, &src, 0, TGSI_WRITEMASK_XYZ,
+                          false, &is_mem_inst);
+      }
+   }
+
    /* check for indirect register writes */
    for (i = 0; i < fullinst->Instruction.NumDstRegs; i++) {
       const struct tgsi_full_dst_register *dst = &fullinst->Dst[i];
