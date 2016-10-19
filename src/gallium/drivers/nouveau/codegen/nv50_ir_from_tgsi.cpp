@@ -182,6 +182,7 @@ public:
 
    // mask of used components of source s
    unsigned int srcMask(unsigned int s) const;
+   unsigned int texOffsetMask() const;
 
    SrcRegister getSrc(unsigned int s) const
    {
@@ -233,6 +234,35 @@ public:
 private:
    const struct tgsi_full_instruction *insn;
 };
+
+unsigned int Instruction::texOffsetMask() const
+{
+   const struct tgsi_instruction_texture *tex = &insn->Texture;
+   assert(insn->Instruction.Texture);
+
+   switch (tex->Texture) {
+   case TGSI_TEXTURE_BUFFER:
+   case TGSI_TEXTURE_1D:
+   case TGSI_TEXTURE_SHADOW1D:
+   case TGSI_TEXTURE_1D_ARRAY:
+   case TGSI_TEXTURE_SHADOW1D_ARRAY:
+      return 0x1;
+   case TGSI_TEXTURE_2D:
+   case TGSI_TEXTURE_SHADOW2D:
+   case TGSI_TEXTURE_2D_ARRAY:
+   case TGSI_TEXTURE_SHADOW2D_ARRAY:
+   case TGSI_TEXTURE_RECT:
+   case TGSI_TEXTURE_SHADOWRECT:
+   case TGSI_TEXTURE_2D_MSAA:
+   case TGSI_TEXTURE_2D_ARRAY_MSAA:
+      return 0x3;
+   case TGSI_TEXTURE_3D:
+      return 0x7;
+   default:
+      assert(!"Unexpected texture target");
+      return 0xf;
+   }
+}
 
 unsigned int Instruction::srcMask(unsigned int s) const
 {
@@ -955,6 +985,9 @@ private:
    int inferSysValDirection(unsigned sn) const;
    bool scanDeclaration(const struct tgsi_full_declaration *);
    bool scanInstruction(const struct tgsi_full_instruction *);
+   void scanInstructionSrc(const Instruction& insn,
+                           const Instruction::SrcRegister& src,
+                           unsigned mask);
    void scanProperty(const struct tgsi_full_property *);
    void scanImmediate(const struct tgsi_full_immediate *);
 
@@ -1365,6 +1398,61 @@ inline bool Source::isEdgeFlagPassthrough(const Instruction& insn) const
       insn.getSrc(0).getFile() == TGSI_FILE_INPUT;
 }
 
+void Source::scanInstructionSrc(const Instruction& insn,
+                                const Instruction::SrcRegister& src,
+                                unsigned mask)
+{
+   if (src.getFile() == TGSI_FILE_TEMPORARY) {
+      if (src.isIndirect(0))
+         indirectTempArrays.insert(src.getArrayId());
+   } else
+   if (src.getFile() == TGSI_FILE_BUFFER ||
+       src.getFile() == TGSI_FILE_IMAGE ||
+       (src.getFile() == TGSI_FILE_MEMORY &&
+        memoryFiles[src.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
+      info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
+         0x1 : 0x2;
+   } else
+   if (src.getFile() == TGSI_FILE_OUTPUT) {
+      if (src.isIndirect(0)) {
+         // We don't know which one is accessed, just mark everything for
+         // reading. This is an extremely unlikely occurrence.
+         for (unsigned i = 0; i < info->numOutputs; ++i)
+            info->out[i].oread = 1;
+      } else {
+         info->out[src.getIndex(0)].oread = 1;
+      }
+   }
+   if (src.getFile() != TGSI_FILE_INPUT)
+      return;
+
+   if (src.isIndirect(0)) {
+      for (unsigned i = 0; i < info->numInputs; ++i)
+         info->in[i].mask = 0xf;
+   } else {
+      const int i = src.getIndex(0);
+      for (unsigned c = 0; c < 4; ++c) {
+         if (!(mask & (1 << c)))
+            continue;
+         int k = src.getSwizzle(c);
+         if (k <= TGSI_SWIZZLE_W)
+            info->in[i].mask |= 1 << k;
+      }
+      switch (info->in[i].sn) {
+      case TGSI_SEMANTIC_PSIZE:
+      case TGSI_SEMANTIC_PRIMID:
+      case TGSI_SEMANTIC_FOG:
+         info->in[i].mask &= 0x1;
+         break;
+      case TGSI_SEMANTIC_PCOORD:
+         info->in[i].mask &= 0x3;
+         break;
+      default:
+         break;
+      }
+   }
+}
+
 bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
 {
    Instruction insn(inst);
@@ -1397,66 +1485,19 @@ bool Source::scanInstruction(const struct tgsi_full_instruction *inst)
             indirectTempArrays.insert(dst.getArrayId());
       } else
       if (dst.getFile() == TGSI_FILE_BUFFER ||
-          dst.getFile() == TGSI_FILE_IMAGE || 
+          dst.getFile() == TGSI_FILE_IMAGE ||
           (dst.getFile() == TGSI_FILE_MEMORY &&
            memoryFiles[dst.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
          info->io.globalAccess |= 0x2;
       }
    }
 
-   for (unsigned s = 0; s < insn.srcCount(); ++s) {
-      Instruction::SrcRegister src = insn.getSrc(s);
-      if (src.getFile() == TGSI_FILE_TEMPORARY) {
-         if (src.isIndirect(0))
-            indirectTempArrays.insert(src.getArrayId());
-      } else
-      if (src.getFile() == TGSI_FILE_BUFFER ||
-          src.getFile() == TGSI_FILE_IMAGE ||
-          (src.getFile() == TGSI_FILE_MEMORY &&
-           memoryFiles[src.getIndex(0)].mem_type == TGSI_MEMORY_TYPE_GLOBAL)) {
-         info->io.globalAccess |= (insn.getOpcode() == TGSI_OPCODE_LOAD) ?
-               0x1 : 0x2;
-      } else
-      if (src.getFile() == TGSI_FILE_OUTPUT) {
-         if (src.isIndirect(0)) {
-            // We don't know which one is accessed, just mark everything for
-            // reading. This is an extremely unlikely occurrence.
-            for (unsigned i = 0; i < info->numOutputs; ++i)
-               info->out[i].oread = 1;
-         } else {
-            info->out[src.getIndex(0)].oread = 1;
-         }
-      }
-      if (src.getFile() != TGSI_FILE_INPUT)
-         continue;
-      unsigned mask = insn.srcMask(s);
+   for (unsigned s = 0; s < insn.srcCount(); ++s)
+      scanInstructionSrc(insn, insn.getSrc(s), insn.srcMask(s));
 
-      if (src.isIndirect(0)) {
-         for (unsigned i = 0; i < info->numInputs; ++i)
-            info->in[i].mask = 0xf;
-      } else {
-         const int i = src.getIndex(0);
-         for (unsigned c = 0; c < 4; ++c) {
-            if (!(mask & (1 << c)))
-               continue;
-            int k = src.getSwizzle(c);
-            if (k <= TGSI_SWIZZLE_W)
-               info->in[i].mask |= 1 << k;
-         }
-         switch (info->in[i].sn) {
-         case TGSI_SEMANTIC_PSIZE:
-         case TGSI_SEMANTIC_PRIMID:
-         case TGSI_SEMANTIC_FOG:
-            info->in[i].mask &= 0x1;
-            break;
-         case TGSI_SEMANTIC_PCOORD:
-            info->in[i].mask &= 0x3;
-            break;
-         default:
-            break;
-         }
-      }
-   }
+   for (unsigned s = 0; s < insn.getNumTexOffsets(); ++s)
+      scanInstructionSrc(insn, insn.getTexOffset(s), insn.texOffsetMask());
+
    return true;
 }
 
