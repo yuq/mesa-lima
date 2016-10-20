@@ -142,16 +142,16 @@ ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws)
    return addrCreateOutput.hLib;
 }
 
-static int compute_level(struct amdgpu_winsys *ws,
-                         const struct pipe_resource *tex,
-                         struct radeon_surf *surf, bool is_stencil,
-                         unsigned level, bool compressed,
-                         ADDR_COMPUTE_SURFACE_INFO_INPUT *AddrSurfInfoIn,
-                         ADDR_COMPUTE_SURFACE_INFO_OUTPUT *AddrSurfInfoOut,
-                         ADDR_COMPUTE_DCCINFO_INPUT *AddrDccIn,
-                         ADDR_COMPUTE_DCCINFO_OUTPUT *AddrDccOut,
-                         ADDR_COMPUTE_HTILE_INFO_INPUT *AddrHtileIn,
-                         ADDR_COMPUTE_HTILE_INFO_OUTPUT *AddrHtileOut)
+static int gfx6_compute_level(struct amdgpu_winsys *ws,
+                              const struct pipe_resource *tex,
+                              struct radeon_surf *surf, bool is_stencil,
+                              unsigned level, bool compressed,
+                              ADDR_COMPUTE_SURFACE_INFO_INPUT *AddrSurfInfoIn,
+                              ADDR_COMPUTE_SURFACE_INFO_OUTPUT *AddrSurfInfoOut,
+                              ADDR_COMPUTE_DCCINFO_INPUT *AddrDccIn,
+                              ADDR_COMPUTE_DCCINFO_OUTPUT *AddrDccOut,
+                              ADDR_COMPUTE_HTILE_INFO_INPUT *AddrHtileIn,
+                              ADDR_COMPUTE_HTILE_INFO_OUTPUT *AddrHtileOut)
 {
    struct legacy_surf_level *surf_level;
    ADDR_E_RETURNCODE ret;
@@ -271,8 +271,8 @@ static int compute_level(struct amdgpu_winsys *ws,
 #define   G_009910_MICRO_TILE_MODE(x)          (((x) >> 0) & 0x03)
 #define   G_009910_MICRO_TILE_MODE_NEW(x)      (((x) >> 22) & 0x07)
 
-static void set_micro_tile_mode(struct radeon_surf *surf,
-                                struct radeon_info *info)
+static void gfx6_set_micro_tile_mode(struct radeon_surf *surf,
+                                     struct radeon_info *info)
 {
    uint32_t tile_mode = info->si_tile_mode_array[surf->u.legacy.tiling_index[0]];
 
@@ -296,11 +296,11 @@ static unsigned cik_get_macro_tile_index(struct radeon_surf *surf)
 	return index;
 }
 
-static int amdgpu_surface_init(struct radeon_winsys *rws,
-                               const struct pipe_resource *tex,
-                               unsigned flags, unsigned bpe,
-                               enum radeon_surf_mode mode,
-                               struct radeon_surf *surf)
+static int gfx6_surface_init(struct radeon_winsys *rws,
+                             const struct pipe_resource *tex,
+                             unsigned flags, unsigned bpe,
+                             enum radeon_surf_mode mode,
+                             struct radeon_surf *surf)
 {
    struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
    unsigned level;
@@ -497,16 +497,16 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
 
    /* Calculate texture layout information. */
    for (level = 0; level <= tex->last_level; level++) {
-      r = compute_level(ws, tex, surf, false, level, compressed,
-                        &AddrSurfInfoIn, &AddrSurfInfoOut,
-                        &AddrDccIn, &AddrDccOut, &AddrHtileIn, &AddrHtileOut);
+      r = gfx6_compute_level(ws, tex, surf, false, level, compressed,
+                             &AddrSurfInfoIn, &AddrSurfInfoOut,
+                             &AddrDccIn, &AddrDccOut, &AddrHtileIn, &AddrHtileOut);
       if (r)
          return r;
 
       if (level == 0) {
          surf->surf_alignment = AddrSurfInfoOut.baseAlign;
          surf->u.legacy.pipe_config = AddrSurfInfoOut.pTileInfo->pipeConfig - 1;
-         set_micro_tile_mode(surf, &ws->info);
+         gfx6_set_micro_tile_mode(surf, &ws->info);
 
          /* For 2D modes only. */
          if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
@@ -532,9 +532,10 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
       AddrTileInfoIn.tileSplitBytes = surf->u.legacy.stencil_tile_split;
 
       for (level = 0; level <= tex->last_level; level++) {
-         r = compute_level(ws, tex, surf, true, level, compressed,
-                           &AddrSurfInfoIn, &AddrSurfInfoOut, &AddrDccIn, &AddrDccOut,
-                           NULL, NULL);
+         r = gfx6_compute_level(ws, tex, surf, true, level, compressed,
+                                &AddrSurfInfoIn, &AddrSurfInfoOut,
+                                &AddrDccIn, &AddrDccOut,
+                                NULL, NULL);
          if (r)
             return r;
 
@@ -574,5 +575,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
 
 void amdgpu_surface_init_functions(struct amdgpu_winsys *ws)
 {
-   ws->base.surface_init = amdgpu_surface_init;
+   if (ws->info.chip_class >= GFX9)
+      ws->base.surface_init = NULL;
+   else
+      ws->base.surface_init = gfx6_surface_init;
 }
