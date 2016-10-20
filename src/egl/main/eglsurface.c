@@ -284,7 +284,7 @@ _eglInitSurface(_EGLSurface *surf, _EGLDisplay *dpy, EGLint type,
 
    if ((conf->SurfaceType & type) == 0) {
       /* The config can't be used to create a surface of this type */
-      _eglError(EGL_BAD_CONFIG, func);
+      _eglError(EGL_BAD_MATCH, func);
       return EGL_FALSE;
    }
 
