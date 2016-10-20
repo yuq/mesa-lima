@@ -2197,6 +2197,7 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
    }
    case MESA_SHADER_FRAGMENT: {
       dst->info.fs.depth_layout = src->FragDepthLayout;
+      dst->info.fs.early_fragment_tests = dst_sh->info.EarlyFragmentTests;
       break;
    }
    case MESA_SHADER_COMPUTE: {

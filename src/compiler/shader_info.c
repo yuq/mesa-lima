@@ -38,8 +38,4 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
    info->patch_outputs_written = sh->Program->PatchOutputsWritten;
    info->system_values_read = sh->Program->SystemValuesRead;
    info->uses_texture_gather = sh->Program->UsesGather;
-
-   if (sh->Stage == MESA_SHADER_FRAGMENT) {
-      sh->Program->info.fs.early_fragment_tests = sh->info.EarlyFragmentTests;
-   }
 }
