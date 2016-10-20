@@ -211,6 +211,20 @@ _mesa_symbol_table_add_symbol(struct _mesa_symbol_table *table,
    return 0;
 }
 
+int
+_mesa_symbol_table_replace_symbol(struct _mesa_symbol_table *table,
+                                  const char *name,
+                                  void *declaration)
+{
+    struct symbol *sym = find_symbol(table, name);
+
+    /* If the symbol doesn't exist, it cannot be replaced. */
+    if (sym == NULL)
+       return -1;
+
+    sym->data = declaration;
+    return 0;
+}
 
 int
 _mesa_symbol_table_add_global_symbol(struct _mesa_symbol_table *table,
