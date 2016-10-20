@@ -1,5 +1,4 @@
 
-#include "util/u_format.h"
 #include "util/u_framebuffer.h"
 #include "util/u_math.h"
 #include "util/u_viewport.h"
@@ -672,25 +671,6 @@ nvc0_validate_zsa_fb(struct nvc0_context *nvc0)
 }
 
 static void
-nvc0_validate_blend_fb(struct nvc0_context *nvc0)
-{
-   struct nouveau_pushbuf *push = nvc0->base.pushbuf;
-   struct pipe_framebuffer_state *fb = &nvc0->framebuffer;
-   uint32_t ms = 0;
-
-   if ((!fb->nr_cbufs || !fb->cbufs[0] ||
-        !util_format_is_pure_integer(fb->cbufs[0]->format)) && nvc0->blend) {
-      if (nvc0->blend->pipe.alpha_to_coverage)
-         ms |= NVC0_3D_MULTISAMPLE_CTRL_ALPHA_TO_COVERAGE;
-      if (nvc0->blend->pipe.alpha_to_one)
-         ms |= NVC0_3D_MULTISAMPLE_CTRL_ALPHA_TO_ONE;
-   }
-
-   BEGIN_NVC0(push, NVC0_3D(MULTISAMPLE_CTRL), 1);
-   PUSH_DATA (push, ms);
-}
-
-static void
 nvc0_validate_rast_fb(struct nvc0_context *nvc0)
 {
    struct nouveau_pushbuf *push = nvc0->base.pushbuf;
@@ -792,7 +772,6 @@ validate_list_3d[] = {
     { nvc0_validate_fp_zsa_rast,   NVC0_NEW_3D_FRAGPROG | NVC0_NEW_3D_ZSA |
                                    NVC0_NEW_3D_RASTERIZER },
     { nvc0_validate_zsa_fb,        NVC0_NEW_3D_ZSA | NVC0_NEW_3D_FRAMEBUFFER },
-    { nvc0_validate_blend_fb,      NVC0_NEW_3D_BLEND | NVC0_NEW_3D_FRAMEBUFFER },
     { nvc0_validate_rast_fb,       NVC0_NEW_3D_RASTERIZER | NVC0_NEW_3D_FRAMEBUFFER },
     { nvc0_validate_clip,          NVC0_NEW_3D_CLIP | NVC0_NEW_3D_RASTERIZER |
                                    NVC0_NEW_3D_VERTPROG |

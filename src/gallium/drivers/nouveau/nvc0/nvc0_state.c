@@ -91,6 +91,7 @@ nvc0_blend_state_create(struct pipe_context *pipe,
    struct nvc0_blend_stateobj *so = CALLOC_STRUCT(nvc0_blend_stateobj);
    int i;
    int r; /* reference */
+   uint32_t ms;
    uint8_t blend_en = 0;
    bool indep_masks = false;
    bool indep_funcs = false;
@@ -175,6 +176,15 @@ nvc0_blend_state_create(struct pipe_context *pipe,
          SB_DATA    (so, nvc0_colormask(cso->rt[0].colormask));
       }
    }
+
+   ms = 0;
+   if (cso->alpha_to_coverage)
+      ms |= NVC0_3D_MULTISAMPLE_CTRL_ALPHA_TO_COVERAGE;
+   if (cso->alpha_to_one)
+      ms |= NVC0_3D_MULTISAMPLE_CTRL_ALPHA_TO_ONE;
+
+   SB_BEGIN_3D(so, MULTISAMPLE_CTRL, 1);
+   SB_DATA    (so, ms);
 
    assert(so->size <= ARRAY_SIZE(so->state));
    return so;
