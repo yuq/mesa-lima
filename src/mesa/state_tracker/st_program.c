@@ -1427,7 +1427,7 @@ st_translate_program_common(struct st_context *st,
 
    /* Also add patch outputs. */
    for (attr = 0; attr < 32; attr++) {
-      if (prog->PatchOutputsWritten & (1u << attr)) {
+      if (prog->info.patch_outputs_written & (1u << attr)) {
          GLuint slot = num_outputs++;
          GLuint patch_attr = VARYING_SLOT_PATCH0 + attr;
 
