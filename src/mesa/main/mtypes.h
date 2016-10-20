@@ -1923,7 +1923,6 @@ struct gl_program
    struct shader_info info;
 
    GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
-   GLbitfield64 OutputsRead; /**< Bitmask of which output regs are read */
    GLbitfield PatchInputsRead;  /**< VAR[0..31] usage for patch inputs (user-defined only) */
    GLbitfield PatchOutputsWritten; /**< VAR[0..31] usage for patch outputs (user-defined only) */
    GLbitfield SystemValuesRead;   /**< Bitmask of SYSTEM_VALUE_x inputs used */
