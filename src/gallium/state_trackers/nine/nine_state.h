@@ -174,7 +174,7 @@ struct nine_state
         uint16_t ps_const_i; /* NINE_MAX_CONST_I == 16 */
         struct nine_range *vs_const_b; /* stateblocks only */
         uint16_t ps_const_b; /* NINE_MAX_CONST_B == 16 */
-        uint8_t ucp;
+        uint8_t ucp; /* stateblocks only */
     } changed;
 
     struct NineSurface9 *rt[NINE_MAX_SIMULTANEOUS_RENDERTARGETS];
@@ -227,6 +227,7 @@ struct nine_context {
         BOOL ps_const_f;
         BOOL ps_const_i;
         BOOL ps_const_b;
+        BOOL ucp;
     } changed;
 
     uint32_t bumpmap_vars[6 * NINE_MAX_TEXTURE_STAGES];
@@ -267,6 +268,8 @@ struct nine_context {
     uint32_t stream_usage_mask; /* derived from VS and vdecl */
 
     struct pipe_index_buffer idxbuf;
+
+    struct pipe_clip_state clip;
 
     DWORD rs[NINED3DRS_COUNT];
 
@@ -437,6 +440,11 @@ nine_context_set_render_target(struct NineDevice9 *device,
 void
 nine_context_set_depth_stencil(struct NineDevice9 *device,
                                struct NineSurface9 *ds);
+
+void
+nine_context_set_clip_plane(struct NineDevice9 *device,
+                            DWORD Index,
+                            const float *pPlane);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,

@@ -2193,7 +2193,10 @@ NineDevice9_SetClipPlane( struct NineDevice9 *This,
     user_assert(Index < PIPE_MAX_CLIP_PLANES, D3DERR_INVALIDCALL);
 
     memcpy(&state->clip.ucp[Index][0], pPlane, sizeof(state->clip.ucp[0]));
-    state->changed.ucp |= 1 << Index;
+    if (unlikely(This->is_recording))
+        state->changed.ucp |= 1 << Index;
+    else
+        nine_context_set_clip_plane(This, Index, pPlane);
 
     return D3D_OK;
 }

@@ -1026,9 +1026,9 @@ nine_update_state(struct NineDevice9 *device)
 
     context->commit = 0;
 
-    if (unlikely(state->changed.ucp)) {
-        pipe->set_clip_state(pipe, &state->clip);
-        state->changed.ucp = 0;
+    if (unlikely(context->changed.ucp)) {
+        pipe->set_clip_state(pipe, &context->clip);
+        context->changed.ucp = FALSE;
     }
 
     if (unlikely(group & NINE_STATE_RARE)) {
@@ -1616,6 +1616,17 @@ nine_context_set_texture_stage_state(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_clip_plane(struct NineDevice9 *device,
+                            DWORD Index,
+                            const float *pPlane)
+{
+    struct nine_context *context = &device->context;
+
+    memcpy(&context->clip.ucp[Index][0], pPlane, sizeof(context->clip.ucp[0]));
+    context->changed.ucp = TRUE;
+}
+
+void
 nine_context_apply_stateblock(struct NineDevice9 *device,
                               const struct nine_state *src)
 {
@@ -1776,6 +1787,15 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
     /* Scissor */
     if (src->changed.group & NINE_STATE_SCISSOR)
         context->scissor = src->scissor;
+
+    /* User Clip Planes */
+    if (src->changed.ucp) {
+        for (i = 0; i < PIPE_MAX_CLIP_PLANES; ++i)
+            if (src->changed.ucp & (1 << i))
+                memcpy(context->clip.ucp[i],
+                       src->clip.ucp[i], sizeof(src->clip.ucp[0]));
+        context->changed.ucp = TRUE;
+    }
 
     if (!(src->changed.group & NINE_STATE_FF))
         return;
@@ -2263,7 +2283,7 @@ void nine_state_restore_non_cso(struct NineDevice9 *device)
 
     state->changed.group = NINE_STATE_ALL;
     context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
-    state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
+    context->changed.ucp = TRUE;
     context->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
 }
 
@@ -2325,7 +2345,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
      */
     state->changed.group = NINE_STATE_ALL;
     context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
-    state->changed.ucp = (1 << PIPE_MAX_CLIP_PLANES) - 1;
+    context->changed.ucp = TRUE;
 
     context->ff.changed.transform[0] = ~0;
     context->ff.changed.transform[D3DTS_WORLD / 32] |= 1 << (D3DTS_WORLD % 32);
