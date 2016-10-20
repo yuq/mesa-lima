@@ -85,10 +85,9 @@ prepare_rasterizer(struct NineDevice9 *device)
 static void
 prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
-    if (context->changed.vs_const_f || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_f || context->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
         cb.buffer_offset = 0;
@@ -127,7 +126,7 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         context->changed.vs_const_f = 0;
     }
 
-    if (context->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_i || context->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
         cb.buffer_offset = 0;
@@ -140,7 +139,7 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         context->changed.vs_const_i = 0;
     }
 
-    if (context->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_b || context->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
         cb.buffer_offset = 0;
@@ -199,14 +198,13 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         cb->user_buffer = NULL;
     }
 
-    state->changed.group &= ~NINE_STATE_VS_CONST;
+    context->changed.group &= ~NINE_STATE_VS_CONST;
     context->commit |= NINE_STATE_COMMIT_CONST_VS;
 }
 
 static void
 prepare_vs_constants_userbuf(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     struct pipe_constant_buffer cb;
     cb.buffer = NULL;
@@ -219,13 +217,13 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
         return;
     }
 
-    if (context->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_i || context->changed.group & NINE_STATE_SWVP) {
         int *idst = (int *)&context->vs_const_f[4 * device->max_vs_const_f];
         memcpy(idst, context->vs_const_i, NINE_MAX_CONST_I * sizeof(int[4]));
         context->changed.vs_const_i = 0;
     }
 
-    if (context->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
+    if (context->changed.vs_const_b || context->changed.group & NINE_STATE_SWVP) {
         int *idst = (int *)&context->vs_const_f[4 * device->max_vs_const_f];
         uint32_t *bdst = (uint32_t *)&idst[4 * NINE_MAX_CONST_I];
         memcpy(bdst, context->vs_const_b, NINE_MAX_CONST_B * sizeof(BOOL));
@@ -269,14 +267,13 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
 
     context->changed.vs_const_f = 0;
 
-    state->changed.group &= ~NINE_STATE_VS_CONST;
+    context->changed.group &= ~NINE_STATE_VS_CONST;
     context->commit |= NINE_STATE_COMMIT_CONST_VS;
 }
 
 static void
 prepare_ps_constants_userbuf(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     struct pipe_constant_buffer cb;
     cb.buffer = NULL;
@@ -341,7 +338,7 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
 
     context->changed.ps_const_f = 0;
 
-    state->changed.group &= ~NINE_STATE_PS_CONST;
+    context->changed.group &= ~NINE_STATE_PS_CONST;
     context->commit |= NINE_STATE_COMMIT_CONST_PS;
 }
 
@@ -417,7 +414,6 @@ static void
 update_framebuffer(struct NineDevice9 *device, bool is_clear)
 {
     struct pipe_context *pipe = device->pipe;
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     struct pipe_framebuffer_state *fb = &context->pipe.fb;
     unsigned i;
@@ -487,7 +483,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     pipe->set_framebuffer_state(pipe, fb); /* XXX: cso ? */
 
     if (is_clear && context->rt_mask == ps_mask)
-        state->changed.group &= ~NINE_STATE_FB;
+        context->changed.group &= ~NINE_STATE_FB;
 }
 
 static void
@@ -541,7 +537,6 @@ update_viewport(struct NineDevice9 *device)
 static void
 update_vertex_elements(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     const struct NineVertexDeclaration9 *vdecl = device->context.vdecl;
     const struct NineVertexShader9 *vs;
@@ -598,8 +593,8 @@ update_vertex_elements(struct NineDevice9 *device)
             b = ve[n].vertex_buffer_index;
             context->stream_usage_mask |= 1 << b;
             /* XXX wine just uses 1 here: */
-            if (state->stream_freq[b] & D3DSTREAMSOURCE_INSTANCEDATA)
-                ve[n].instance_divisor = state->stream_freq[b] & 0x7FFFFF;
+            if (context->stream_freq[b] & D3DSTREAMSOURCE_INSTANCEDATA)
+                ve[n].instance_divisor = context->stream_freq[b] & 0x7FFFFF;
         } else {
             /* if the vertex declaration is incomplete compared to what the
              * vertex shader needs, we bind a dummy vbo with 0 0 0 0.
@@ -951,11 +946,10 @@ static void
 nine_update_state(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     uint32_t group;
 
-    DBG("changed state groups: %x\n", state->changed.group);
+    DBG("changed state groups: %x\n", context->changed.group);
 
     /* NOTE: We may want to use the cso cache for everything, or let
      * NineDevice9.RestoreNonCSOState actually set the states, then we wouldn't
@@ -969,7 +963,7 @@ nine_update_state(struct NineDevice9 *device)
     /* ff_update may change VS/PS dirty bits */
     if (unlikely(!context->programmable_vs || !context->ps))
         nine_ff_update(device);
-    group = state->changed.group;
+    group = context->changed.group;
 
     if (group & (NINE_STATE_SHADER_CHANGE_VS | NINE_STATE_SHADER_CHANGE_PS)) {
         if (group & NINE_STATE_SHADER_CHANGE_VS)
@@ -1054,7 +1048,7 @@ nine_update_state(struct NineDevice9 *device)
         }
     }
 
-    device->state.changed.group &=
+    context->changed.group &=
         (NINE_STATE_FF | NINE_STATE_VS_CONST | NINE_STATE_PS_CONST);
 
     DBG("finished\n");
@@ -1126,7 +1120,6 @@ nine_context_set_render_state(struct NineDevice9 *device,
                               D3DRENDERSTATETYPE State,
                               DWORD Value)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     /* Amd hacks (equivalent to GL extensions) */
@@ -1139,7 +1132,7 @@ nine_context_set_render_state(struct NineDevice9 *device,
         if (Value == ALPHA_TO_COVERAGE_ENABLE ||
             Value == ALPHA_TO_COVERAGE_DISABLE) {
             context->rs[NINED3DRS_ALPHACOVERAGE] = (Value == ALPHA_TO_COVERAGE_ENABLE);
-            state->changed.group |= NINE_STATE_BLEND;
+            context->changed.group |= NINE_STATE_BLEND;
             return;
         }
     }
@@ -1149,7 +1142,7 @@ nine_context_set_render_state(struct NineDevice9 *device,
         if (Value == D3DFMT_ATOC || (Value == D3DFMT_UNKNOWN && context->rs[NINED3DRS_ALPHACOVERAGE])) {
             context->rs[NINED3DRS_ALPHACOVERAGE] = (Value == D3DFMT_ATOC) ? 3 : 0;
             context->rs[NINED3DRS_ALPHACOVERAGE] &= context->rs[D3DRS_ALPHATESTENABLE] ? 3 : 2;
-            state->changed.group |= NINE_STATE_BLEND;
+            context->changed.group |= NINE_STATE_BLEND;
             return;
         }
     }
@@ -1157,11 +1150,11 @@ nine_context_set_render_state(struct NineDevice9 *device,
         DWORD alphacoverage_prev = context->rs[NINED3DRS_ALPHACOVERAGE];
         context->rs[NINED3DRS_ALPHACOVERAGE] = (Value ? 3 : 2);
         if (context->rs[NINED3DRS_ALPHACOVERAGE] != alphacoverage_prev)
-            state->changed.group |= NINE_STATE_BLEND;
+            context->changed.group |= NINE_STATE_BLEND;
     }
 
     context->rs[State] = nine_fix_render_state_value(State, Value);
-    state->changed.group |= nine_render_state_group[State];
+    context->changed.group |= nine_render_state_group[State];
 }
 
 void
@@ -1170,7 +1163,6 @@ nine_context_set_texture(struct NineDevice9 *device,
                          struct NineBaseTexture9 *tex)
 {
     struct nine_context *context = &device->context;
-    struct nine_state *state = &device->state;
 
     context->samplers_shadow &= ~(1 << Stage);
     if (tex)
@@ -1178,7 +1170,7 @@ nine_context_set_texture(struct NineDevice9 *device,
 
     nine_bind(&context->texture[Stage], tex);
 
-    state->changed.group |= NINE_STATE_TEXTURE;
+    context->changed.group |= NINE_STATE_TEXTURE;
 }
 
 void
@@ -1187,14 +1179,13 @@ nine_context_set_sampler_state(struct NineDevice9 *device,
                                D3DSAMPLERSTATETYPE Type,
                                DWORD Value)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     if (unlikely(!nine_check_sampler_state_value(Type, Value)))
         return;
 
     context->samp[Sampler][Type] = Value;
-    state->changed.group |= NINE_STATE_SAMPLER;
+    context->changed.group |= NINE_STATE_SAMPLER;
     context->changed.sampler[Sampler] |= 1 << Type;
 }
 
@@ -1223,7 +1214,6 @@ nine_context_set_stream_source_freq(struct NineDevice9 *device,
                                     UINT StreamNumber,
                                     UINT Setting)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     context->stream_freq[StreamNumber] = Setting;
@@ -1234,14 +1224,13 @@ nine_context_set_stream_source_freq(struct NineDevice9 *device,
         context->stream_instancedata_mask &= ~(1 << StreamNumber);
 
     if (StreamNumber != 0)
-        state->changed.group |= NINE_STATE_STREAMFREQ;
+        context->changed.group |= NINE_STATE_STREAMFREQ;
 }
 
 void
 nine_context_set_indices(struct NineDevice9 *device,
                          struct NineIndexBuffer9 *idxbuf)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     const struct pipe_index_buffer *pipe_idxbuf;
 
@@ -1254,14 +1243,13 @@ nine_context_set_indices(struct NineDevice9 *device,
     } else
         pipe_resource_reference(&context->idxbuf.buffer, NULL);
 
-    state->changed.group |= NINE_STATE_IDXBUF;
+    context->changed.group |= NINE_STATE_IDXBUF;
 }
 
 void
 nine_context_set_vertex_declaration(struct NineDevice9 *device,
                                     struct NineVertexDeclaration9 *vdecl)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     BOOL was_programmable_vs = context->programmable_vs;
 
@@ -1270,17 +1258,16 @@ nine_context_set_vertex_declaration(struct NineDevice9 *device,
     context->programmable_vs = context->vs && !(context->vdecl && context->vdecl->position_t);
     if (was_programmable_vs != context->programmable_vs) {
         context->commit |= NINE_STATE_COMMIT_CONST_VS;
-        state->changed.group |= NINE_STATE_VS;
+        context->changed.group |= NINE_STATE_VS;
     }
 
-    state->changed.group |= NINE_STATE_VDECL;
+    context->changed.group |= NINE_STATE_VDECL;
 }
 
 void
 nine_context_set_vertex_shader(struct NineDevice9 *device,
                                struct NineVertexShader9 *pShader)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     BOOL was_programmable_vs = context->programmable_vs;
 
@@ -1292,7 +1279,7 @@ nine_context_set_vertex_shader(struct NineDevice9 *device,
     if (!was_programmable_vs && context->programmable_vs)
         context->commit |= NINE_STATE_COMMIT_CONST_VS;
 
-    state->changed.group |= NINE_STATE_VS;
+    context->changed.group |= NINE_STATE_VS;
 }
 
 void
@@ -1301,7 +1288,6 @@ nine_context_set_vertex_shader_constant_f(struct NineDevice9 *device,
                                           const float *pConstantData,
                                           UINT Vector4fCount)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     float *vs_const_f = device->may_swvp ? context->vs_const_f_swvp : context->vs_const_f;
 
@@ -1318,7 +1304,7 @@ nine_context_set_vertex_shader_constant_f(struct NineDevice9 *device,
     }
 
     context->changed.vs_const_f = TRUE;
-    state->changed.group |= NINE_STATE_VS_CONST;
+    context->changed.group |= NINE_STATE_VS_CONST;
 }
 
 
@@ -1328,7 +1314,6 @@ nine_context_set_vertex_shader_constant_i(struct NineDevice9 *device,
                                           const int *pConstantData,
                                           UINT Vector4iCount)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     int i;
 
@@ -1346,7 +1331,7 @@ nine_context_set_vertex_shader_constant_i(struct NineDevice9 *device,
     }
 
     context->changed.vs_const_i = TRUE;
-    state->changed.group |= NINE_STATE_VS_CONST;
+    context->changed.group |= NINE_STATE_VS_CONST;
 }
 
 void
@@ -1355,7 +1340,6 @@ nine_context_set_vertex_shader_constant_b(struct NineDevice9 *device,
                                           const BOOL *pConstantData,
                                           UINT BoolCount)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     int i;
     uint32_t bool_true = device->driver_caps.vs_integer ? 0xFFFFFFFF : fui(1.0f);
@@ -1364,14 +1348,13 @@ nine_context_set_vertex_shader_constant_b(struct NineDevice9 *device,
         context->vs_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
 
     context->changed.vs_const_b = TRUE;
-    state->changed.group |= NINE_STATE_VS_CONST;
+    context->changed.group |= NINE_STATE_VS_CONST;
 }
 
 void
 nine_context_set_pixel_shader(struct NineDevice9 *device,
                               struct NinePixelShader9* ps)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     unsigned old_mask = context->ps ? context->ps->rt_mask : 1;
     unsigned mask;
@@ -1382,13 +1365,13 @@ nine_context_set_pixel_shader(struct NineDevice9 *device,
 
     nine_bind(&context->ps, ps);
 
-    state->changed.group |= NINE_STATE_PS;
+    context->changed.group |= NINE_STATE_PS;
 
     mask = context->ps ? context->ps->rt_mask : 1;
     /* We need to update cbufs if the pixel shader would
      * write to different render targets */
     if (mask != old_mask)
-        state->changed.group |= NINE_STATE_FB;
+        context->changed.group |= NINE_STATE_FB;
 }
 
 void
@@ -1397,7 +1380,6 @@ nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,
                                         const float *pConstantData,
                                         UINT Vector4fCount)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     memcpy(&context->ps_const_f[StartRegister * 4],
@@ -1405,7 +1387,7 @@ nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,
            Vector4fCount * 4 * sizeof(context->ps_const_f[0]));
 
     context->changed.ps_const_f = TRUE;
-    state->changed.group |= NINE_STATE_PS_CONST;
+    context->changed.group |= NINE_STATE_PS_CONST;
 }
 
 void
@@ -1414,7 +1396,6 @@ nine_context_set_pixel_shader_constant_i(struct NineDevice9 *device,
                                          const int *pConstantData,
                                          UINT Vector4iCount)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     int i;
 
@@ -1431,7 +1412,7 @@ nine_context_set_pixel_shader_constant_i(struct NineDevice9 *device,
         }
     }
     context->changed.ps_const_i = TRUE;
-    state->changed.group |= NINE_STATE_PS_CONST;
+    context->changed.group |= NINE_STATE_PS_CONST;
 }
 
 void
@@ -1440,7 +1421,6 @@ nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
                                          const BOOL *pConstantData,
                                          UINT BoolCount)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     int i;
     uint32_t bool_true = device->driver_caps.ps_integer ? 0xFFFFFFFF : fui(1.0f);
@@ -1449,7 +1429,7 @@ nine_context_set_pixel_shader_constant_b(struct NineDevice9 *device,
         context->ps_const_b[StartRegister + i] = pConstantData[i] ? bool_true : 0;
 
     context->changed.ps_const_b = TRUE;
-    state->changed.group |= NINE_STATE_PS_CONST;
+    context->changed.group |= NINE_STATE_PS_CONST;
 }
 
 void
@@ -1457,7 +1437,6 @@ nine_context_set_render_target(struct NineDevice9 *device,
                                DWORD RenderTargetIndex,
                                struct NineSurface9 *rt)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     const unsigned i = RenderTargetIndex;
 
@@ -1474,17 +1453,17 @@ nine_context_set_render_target(struct NineDevice9 *device,
         context->scissor.maxx = rt->desc.Width;
         context->scissor.maxy = rt->desc.Height;
 
-        state->changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
+        context->changed.group |= NINE_STATE_VIEWPORT | NINE_STATE_SCISSOR | NINE_STATE_MULTISAMPLE;
 
         if (context->rt[0] &&
             (context->rt[0]->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE) !=
             (rt->desc.MultiSampleType <= D3DMULTISAMPLE_NONMASKABLE))
-            state->changed.group |= NINE_STATE_SAMPLE_MASK;
+            context->changed.group |= NINE_STATE_SAMPLE_MASK;
     }
 
     if (context->rt[i] != rt) {
        nine_bind(&context->rt[i], rt);
-       state->changed.group |= NINE_STATE_FB;
+       context->changed.group |= NINE_STATE_FB;
     }
 }
 
@@ -1492,33 +1471,30 @@ void
 nine_context_set_depth_stencil(struct NineDevice9 *device,
                                struct NineSurface9 *ds)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     nine_bind(&context->ds, ds);
-    state->changed.group |= NINE_STATE_FB;
+    context->changed.group |= NINE_STATE_FB;
 }
 
 void
 nine_context_set_viewport(struct NineDevice9 *device,
                           const D3DVIEWPORT9 *viewport)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     context->viewport = *viewport;
-    state->changed.group |= NINE_STATE_VIEWPORT;
+    context->changed.group |= NINE_STATE_VIEWPORT;
 }
 
 void
 nine_context_set_scissor(struct NineDevice9 *device,
                          const struct pipe_scissor_state *scissor)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     context->scissor = *scissor;
-    state->changed.group |= NINE_STATE_SCISSOR;
+    context->changed.group |= NINE_STATE_SCISSOR;
 }
 
 void
@@ -1526,24 +1502,22 @@ nine_context_set_transform(struct NineDevice9 *device,
                            D3DTRANSFORMSTATETYPE State,
                            const D3DMATRIX *pMatrix)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     D3DMATRIX *M = nine_state_access_transform(&context->ff, State, TRUE);
 
     *M = *pMatrix;
     context->ff.changed.transform[State / 32] |= 1 << (State % 32);
-    state->changed.group |= NINE_STATE_FF;
+    context->changed.group |= NINE_STATE_FF;
 }
 
 void
 nine_context_set_material(struct NineDevice9 *device,
                           const D3DMATERIAL9 *pMaterial)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     context->ff.material = *pMaterial;
-    state->changed.group |= NINE_STATE_FF_MATERIAL;
+    context->changed.group |= NINE_STATE_FF_MATERIAL;
 }
 
 void
@@ -1551,11 +1525,10 @@ nine_context_set_light(struct NineDevice9 *device,
                        DWORD Index,
                        const D3DLIGHT9 *pLight)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
     (void)nine_state_set_light(&context->ff, Index, pLight);
-    state->changed.group |= NINE_STATE_FF_LIGHTING;
+    context->changed.group |= NINE_STATE_FF_LIGHTING;
 }
 
 void
@@ -1563,10 +1536,9 @@ nine_context_light_enable(struct NineDevice9 *device,
                           DWORD Index,
                           BOOL Enable)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
-    nine_state_light_enable(&context->ff, &state->changed.group, Index, Enable);
+    nine_state_light_enable(&context->ff, &context->changed.group, Index, Enable);
 }
 
 void
@@ -1575,7 +1547,6 @@ nine_context_set_texture_stage_state(struct NineDevice9 *device,
                                      D3DTEXTURESTAGESTATETYPE Type,
                                      DWORD Value)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     int bumpmap_index = -1;
 
@@ -1600,7 +1571,7 @@ nine_context_set_texture_stage_state(struct NineDevice9 *device,
         bumpmap_index = 4 * 8 + 2 * Stage + 1;
         break;
     case D3DTSS_TEXTURETRANSFORMFLAGS:
-        state->changed.group |= NINE_STATE_PS1X_SHADER;
+        context->changed.group |= NINE_STATE_PS1X_SHADER;
         break;
     default:
         break;
@@ -1608,10 +1579,10 @@ nine_context_set_texture_stage_state(struct NineDevice9 *device,
 
     if (bumpmap_index >= 0) {
         context->bumpmap_vars[bumpmap_index] = Value;
-        state->changed.group |= NINE_STATE_PS_CONST;
+        context->changed.group |= NINE_STATE_PS_CONST;
     }
 
-    state->changed.group |= NINE_STATE_FF_PSSTAGES;
+    context->changed.group |= NINE_STATE_FF_PSSTAGES;
     context->ff.changed.tex_stage[Stage][Type / 32] |= 1 << (Type % 32);
 }
 
@@ -1632,6 +1603,8 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
 {
     struct nine_context *context = &device->context;
     int i;
+
+    context->changed.group |= src->changed.group;
 
     for (i = 0; i < ARRAY_SIZE(src->changed.rs); ++i) {
         uint32_t m = src->changed.rs[i];
@@ -1856,11 +1829,11 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
 static void
 nine_update_state_framebuffer_clear(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
 
     validate_textures(device);
 
-    if (state->changed.group & NINE_STATE_FB)
+    if (context->changed.group & NINE_STATE_FB)
         update_framebuffer(device, TRUE);
 }
 
@@ -2278,10 +2251,9 @@ static const DWORD nine_samp_state_defaults[NINED3DSAMP_LAST + 1] =
 
 void nine_state_restore_non_cso(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
 
-    state->changed.group = NINE_STATE_ALL;
+    context->changed.group = NINE_STATE_ALL;
     context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     context->changed.ucp = TRUE;
     context->commit |= NINE_STATE_COMMIT_CONST_VS | NINE_STATE_COMMIT_CONST_PS;
@@ -2343,7 +2315,7 @@ nine_state_set_defaults(struct NineDevice9 *device, const D3DCAPS9 *caps,
 
     /* Set changed flags to initialize driver.
      */
-    state->changed.group = NINE_STATE_ALL;
+    context->changed.group = NINE_STATE_ALL;
     context->changed.vtxbuf = (1ULL << device->caps.MaxStreams) - 1;
     context->changed.ucp = TRUE;
 

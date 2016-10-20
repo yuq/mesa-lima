@@ -2690,7 +2690,7 @@ NineDevice9_SetSoftwareVertexProcessing( struct NineDevice9 *This,
 {
     if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING) {
         This->swvp = bSoftware;
-        This->state.changed.group |= NINE_STATE_SWVP;
+        This->context.changed.group |= NINE_STATE_SWVP;
         return D3D_OK;
     } else
         return D3DERR_INVALIDCALL; /* msdn. TODO: check in practice */

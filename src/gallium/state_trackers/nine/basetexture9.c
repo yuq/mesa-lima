@@ -207,11 +207,12 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
         if (This->bind_count) {
             /* mark state dirty */
             struct nine_state *state = &This->base.base.device->state;
+            struct nine_context *context = &This->base.base.device->context;
             unsigned s;
             for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
                 /* Dirty tracking is done in device9 state, not nine_context. */
                 if (state->texture[s] == This)
-                    state->changed.group |= NINE_STATE_TEXTURE;
+                    context->changed.group |= NINE_STATE_TEXTURE;
         }
 
         /* Allocate a new resource */
