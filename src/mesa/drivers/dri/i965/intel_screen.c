@@ -323,7 +323,8 @@ static boolean intel_lookup_fourcc(int dri_format, int *fourcc)
 }
 
 static __DRIimage *
-intel_allocate_image(int dri_format, void *loaderPrivate)
+intel_allocate_image(struct intel_screen *screen, int dri_format,
+                     void *loaderPrivate)
 {
     __DRIimage *image;
 
@@ -331,6 +332,7 @@ intel_allocate_image(int dri_format, void *loaderPrivate)
     if (image == NULL)
 	return NULL;
 
+    image->screen = screen;
     image->dri_format = dri_format;
     image->offset = 0;
 
@@ -381,7 +383,7 @@ intel_create_image_from_name(__DRIscreen *dri_screen,
     __DRIimage *image;
     int cpp;
 
-    image = intel_allocate_image(format, loaderPrivate);
+    image = intel_allocate_image(screen, format, loaderPrivate);
     if (image == NULL)
        return NULL;
 
@@ -557,7 +559,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
    if (use & __DRI_IMAGE_USE_LINEAR)
       tiling = I915_TILING_NONE;
 
-   image = intel_allocate_image(format, loaderPrivate);
+   image = intel_allocate_image(screen, format, loaderPrivate);
    if (image == NULL)
       return NULL;
 
@@ -740,9 +742,11 @@ intel_create_image_from_fds(__DRIscreen *dri_screen,
       return NULL;
 
    if (f->nplanes == 1)
-      image = intel_allocate_image(f->planes[0].dri_format, loaderPrivate);
+      image = intel_allocate_image(screen, f->planes[0].dri_format,
+                                   loaderPrivate);
    else
-      image = intel_allocate_image(__DRI_IMAGE_FORMAT_NONE, loaderPrivate);
+      image = intel_allocate_image(screen, __DRI_IMAGE_FORMAT_NONE,
+                                   loaderPrivate);
 
    if (image == NULL)
       return NULL;
@@ -845,7 +849,7 @@ intel_from_planar(__DRIimage *parent, int plane, void *loaderPrivate)
     offset = parent->offsets[index];
     stride = parent->strides[index];
 
-    image = intel_allocate_image(dri_format, loaderPrivate);
+    image = intel_allocate_image(parent->screen, dri_format, loaderPrivate);
     if (image == NULL)
        return NULL;
 
