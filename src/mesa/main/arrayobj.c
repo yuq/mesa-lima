@@ -351,14 +351,11 @@ _mesa_update_vao_client_arrays(struct gl_context *ctx,
 
    while (arrays) {
       const int attrib = u_bit_scan64(&arrays);
-
-      struct gl_client_array *client_array;
-      struct gl_array_attributes *attrib_array;
-      struct gl_vertex_buffer_binding *buffer_binding;
-
-      attrib_array = &vao->VertexAttrib[attrib];
-      buffer_binding = &vao->BufferBinding[attrib_array->BufferBindingIndex];
-      client_array = &vao->_VertexAttrib[attrib];
+      struct gl_client_array *client_array = &vao->_VertexAttrib[attrib];
+      const struct gl_array_attributes *attrib_array =
+         &vao->VertexAttrib[attrib];
+      const struct gl_vertex_buffer_binding *buffer_binding =
+         &vao->BufferBinding[attrib_array->BufferBindingIndex];
 
       _mesa_update_client_array(ctx, client_array, attrib_array,
                                 buffer_binding);
