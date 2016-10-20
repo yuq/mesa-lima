@@ -204,7 +204,7 @@ run_program(struct gl_context *ctx, SWspan *span, GLuint start, GLuint end)
 {
    SWcontext *swrast = SWRAST_CONTEXT(ctx);
    const struct gl_program *program = ctx->FragmentProgram._Current;
-   const GLbitfield64 outputsWritten = program->OutputsWritten;
+   const GLbitfield64 outputsWritten = program->info.outputs_written;
    struct gl_program_machine *machine = &swrast->FragProgMachine;
    GLuint i;
 
@@ -271,12 +271,12 @@ _swrast_exec_fragment_program( struct gl_context *ctx, SWspan *span )
 
    run_program(ctx, span, 0, span->end);
 
-   if (program->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_COLOR)) {
+   if (program->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_COLOR)) {
       span->interpMask &= ~SPAN_RGBA;
       span->arrayMask |= SPAN_RGBA;
    }
 
-   if (program->OutputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
+   if (program->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
       span->interpMask &= ~SPAN_Z;
       span->arrayMask |= SPAN_Z;
    }

@@ -6509,7 +6509,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
                              prog->info.double_inputs_read,
                              &prog->PatchInputsRead);
    shrink_array_declarations(v->outputs, v->num_outputs,
-                             &prog->OutputsWritten, 0ULL, &prog->PatchOutputsWritten);
+                             &prog->info.outputs_written, 0ULL,
+                             &prog->PatchOutputsWritten);
    count_resources(v, prog);
 
    /* The GLSL IR won't be needed anymore. */

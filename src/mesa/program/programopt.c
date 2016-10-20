@@ -108,7 +108,7 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
    vprog->Instructions = newInst;
    vprog->NumInstructions = newLen;
    vprog->info.inputs_read |= VERT_BIT_POS;
-   vprog->OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
+   vprog->info.outputs_written |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
 
 
@@ -209,7 +209,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
    vprog->Instructions = newInst;
    vprog->NumInstructions = newLen;
    vprog->info.inputs_read |= VERT_BIT_POS;
-   vprog->OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
+   vprog->info.outputs_written |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
 
 
@@ -264,7 +264,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
       return;
    }
 
-   if (!(fprog->OutputsWritten & (1 << FRAG_RESULT_COLOR))) {
+   if (!(fprog->info.outputs_written & (1 << FRAG_RESULT_COLOR))) {
       /* program doesn't output color, so nothing to do */
       return;
    }
@@ -409,7 +409,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    fprog->Instructions = newInst;
    fprog->NumInstructions = inst - newInst;
    fprog->info.inputs_read |= VARYING_BIT_FOGC;
-   assert(fprog->OutputsWritten & (1 << FRAG_RESULT_COLOR));
+   assert(fprog->info.outputs_written & (1 << FRAG_RESULT_COLOR));
 }
 
 

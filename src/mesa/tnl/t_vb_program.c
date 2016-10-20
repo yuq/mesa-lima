@@ -304,7 +304,7 @@ run_vp( struct gl_context *ctx, struct tnl_pipeline_stage *stage )
    /* make list of outputs to save some time below */
    numOutputs = 0;
    for (i = 0; i < VARYING_SLOT_MAX; i++) {
-      if (program->OutputsWritten & BITFIELD64_BIT(i)) {
+      if (program->info.outputs_written & BITFIELD64_BIT(i)) {
          outputs[numOutputs++] = i;
       }
    }
@@ -378,7 +378,7 @@ run_vp( struct gl_context *ctx, struct tnl_pipeline_stage *stage )
       }
 
       /* FOGC is a special case.  Fragment shader expects (f,0,0,1) */
-      if (program->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_FOGC)) {
+      if (program->info.outputs_written & BITFIELD64_BIT(VARYING_SLOT_FOGC)) {
          store->results[VARYING_SLOT_FOGC].data[i][1] = 0.0;
          store->results[VARYING_SLOT_FOGC].data[i][2] = 0.0;
          store->results[VARYING_SLOT_FOGC].data[i][3] = 1.0;
@@ -443,7 +443,8 @@ run_vp( struct gl_context *ctx, struct tnl_pipeline_stage *stage )
    }
 
    for (i = 0; i < ctx->Const.MaxVarying; i++) {
-      if (program->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_VAR0 + i)) {
+      if (program->info.outputs_written &
+          BITFIELD64_BIT(VARYING_SLOT_VAR0 + i)) {
          /* Note: varying results get put into the generic attributes */
 	 VB->AttribPtr[VERT_ATTRIB_GENERIC0+i]
             = &store->results[VARYING_SLOT_VAR0 + i];

@@ -548,7 +548,7 @@ st_init_atifs_prog(struct gl_context *ctx, struct gl_program *prog)
       {STATE_FOG_COLOR, 0, 0, 0, 0};
 
    prog->info.inputs_read = 0;
-   prog->OutputsWritten = BITFIELD64_BIT(FRAG_RESULT_COLOR);
+   prog->info.outputs_written = BITFIELD64_BIT(FRAG_RESULT_COLOR);
    prog->SamplersUsed = 0;
    prog->Parameters = _mesa_new_parameter_list();
 

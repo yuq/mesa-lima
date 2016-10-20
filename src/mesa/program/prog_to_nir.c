@@ -945,11 +945,11 @@ setup_registers_and_variables(struct ptn_compile *c)
    }
 
    /* Create output registers and variables. */
-   int max_outputs = util_last_bit(c->prog->OutputsWritten);
+   int max_outputs = util_last_bit(c->prog->info.outputs_written);
    c->output_regs = rzalloc_array(c, nir_register *, max_outputs);
 
    for (int i = 0; i < max_outputs; i++) {
-      if (!(c->prog->OutputsWritten & BITFIELD64_BIT(i)))
+      if (!(c->prog->info.outputs_written & BITFIELD64_BIT(i)))
          continue;
 
       /* Since we can't load from outputs in the IR, we make temporaries
@@ -1051,7 +1051,6 @@ prog_to_nir(const struct gl_program *prog,
    s->info->num_abos = 0;
    s->info->num_ssbos = 0;
    s->info->num_images = 0;
-   s->info->outputs_written = prog->OutputsWritten;
    s->info->system_values_read = prog->SystemValuesRead;
    s->info->uses_texture_gather = false;
    s->info->uses_clip_distance_out = false;

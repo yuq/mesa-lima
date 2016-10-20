@@ -370,7 +370,7 @@ static GLbitfield get_fp_input_mask( struct gl_context *ctx )
       else
          vprog = ctx->VertexProgram.Current;
 
-      vp_outputs = vprog->OutputsWritten;
+      vp_outputs = vprog->info.outputs_written;
 
       /* These get generated in the setup routine regardless of the
        * vertex program:

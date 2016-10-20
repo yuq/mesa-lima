@@ -461,7 +461,7 @@ static struct ureg register_input( struct tnl_program *p, GLuint input )
  */
 static struct ureg register_output( struct tnl_program *p, GLuint output )
 {
-   p->program->OutputsWritten |= BITFIELD64_BIT(output);
+   p->program->info.outputs_written |= BITFIELD64_BIT(output);
    return make_ureg(PROGRAM_OUTPUT, output);
 }
 
@@ -1640,7 +1640,7 @@ create_new_program( const struct state_key *key,
    p.program->NumAttributes = p.program->NumAddressRegs = 0;
    p.program->Parameters = _mesa_new_parameter_list();
    p.program->info.inputs_read = 0;
-   p.program->OutputsWritten = 0;
+   p.program->info.outputs_written = 0;
 
    build_tnl_program( &p );
 }

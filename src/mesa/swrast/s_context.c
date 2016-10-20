@@ -221,7 +221,8 @@ _swrast_update_deferred_texture(struct gl_context *ctx)
    else {
       GLboolean use_fprog = _swrast_use_fragment_program(ctx);
       const struct gl_program *fprog = ctx->FragmentProgram._Current;
-      if (use_fprog && (fprog->OutputsWritten & (1 << FRAG_RESULT_DEPTH))) {
+      if (use_fprog &&
+          (fprog->info.outputs_written & (1 << FRAG_RESULT_DEPTH))) {
          /* Z comes from fragment program/shader */
          swrast->_DeferredTexture = GL_FALSE;
       }

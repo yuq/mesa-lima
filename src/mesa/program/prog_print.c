@@ -874,7 +874,8 @@ _mesa_fprint_program_parameters(FILE *f,
    fprintf(f, "InputsRead: %" PRIx64 " (0b%s)\n",
            (uint64_t) prog->info.inputs_read, binary(prog->info.inputs_read));
    fprintf(f, "OutputsWritten: %" PRIx64 " (0b%s)\n",
-           (uint64_t) prog->OutputsWritten, binary(prog->OutputsWritten));
+           (uint64_t) prog->info.outputs_written,
+           binary(prog->info.outputs_written));
    fprintf(f, "NumInstructions=%d\n", prog->NumInstructions);
    fprintf(f, "NumTemporaries=%d\n", prog->NumTemporaries);
    fprintf(f, "NumParameters=%d\n", prog->NumParameters);

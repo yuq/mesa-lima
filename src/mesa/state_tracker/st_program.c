@@ -269,7 +269,7 @@ st_translate_vertex_program(struct st_context *st,
    /* Compute mapping of vertex program outputs to slots.
     */
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      if ((stvp->Base.OutputsWritten & BITFIELD64_BIT(attr)) == 0) {
+      if ((stvp->Base.info.outputs_written & BITFIELD64_BIT(attr)) == 0) {
          stvp->result_to_output[attr] = ~0;
       }
       else {
@@ -754,7 +754,7 @@ st_translate_fragment_program(struct st_context *st,
     * Semantics and mapping for outputs
     */
    {
-      GLbitfield64 outputsWritten = stfp->Base.OutputsWritten;
+      GLbitfield64 outputsWritten = stfp->Base.info.outputs_written;
 
       /* if z is written, emit that first */
       if (outputsWritten & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
@@ -1325,7 +1325,7 @@ st_translate_program_common(struct st_context *st,
     * mapping and the semantic information for each output.
     */
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      if (prog->OutputsWritten & BITFIELD64_BIT(attr)) {
+      if (prog->info.outputs_written & BITFIELD64_BIT(attr)) {
          GLuint slot = num_outputs++;
 
          outputMapping[attr] = slot;

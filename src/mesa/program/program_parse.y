@@ -594,7 +594,7 @@ maskedDstReg: dstReg optionalMask
 		 YYERROR;
 	      }
 
-	      state->prog->OutputsWritten |= BITFIELD64_BIT($$.Index);
+              state->prog->info.outputs_written |= BITFIELD64_BIT($$.Index);
 	   }
 	}
 	;

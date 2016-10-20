@@ -190,7 +190,7 @@ update_vp( struct st_context *st )
 
    key.clamp_color = st->clamp_vert_color_in_shader &&
                      st->ctx->Light._ClampVertexColor &&
-                     (stvp->Base.OutputsWritten &
+                     (stvp->Base.info.outputs_written &
                       (VARYING_SLOT_COL0 |
                        VARYING_SLOT_COL1 |
                        VARYING_SLOT_BFC0 |

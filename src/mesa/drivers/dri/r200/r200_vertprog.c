@@ -425,14 +425,14 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    }
 #endif
 
-   if ((mesa_vp->OutputsWritten &
+   if ((mesa_vp->info.outputs_written &
       ~((1 << VARYING_SLOT_POS) | (1 << VARYING_SLOT_COL0) | (1 << VARYING_SLOT_COL1) |
       (1 << VARYING_SLOT_FOGC) | (1 << VARYING_SLOT_TEX0) | (1 << VARYING_SLOT_TEX1) |
       (1 << VARYING_SLOT_TEX2) | (1 << VARYING_SLOT_TEX3) | (1 << VARYING_SLOT_TEX4) |
       (1 << VARYING_SLOT_TEX5) | (1 << VARYING_SLOT_PSIZ))) != 0) {
       if (R200_DEBUG & RADEON_FALLBACKS) {
 	 fprintf(stderr, "can't handle vert prog outputs 0x%llx\n",
-                 (unsigned long long) mesa_vp->OutputsWritten);
+                 (unsigned long long) mesa_vp->info.outputs_written);
       }
       return GL_FALSE;
    }
@@ -447,13 +447,14 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
 /* FIXME: is changing the prog safe to do here? */
    if (mesa_vp->IsPositionInvariant &&
       /* make sure we only do this once */
-       !(mesa_vp->OutputsWritten & (1 << VARYING_SLOT_POS))) {
+       !(mesa_vp->info.outputs_written & (1 << VARYING_SLOT_POS))) {
 	 _mesa_insert_mvp_code(ctx, mesa_vp);
       }
 
    /* for fogc, can't change mesa_vp, as it would hose swtnl, and exp with
       base e isn't directly available neither. */
-   if ((mesa_vp->OutputsWritten & (1 << VARYING_SLOT_FOGC)) && !vp->fogpidx) {
+   if ((mesa_vp->info.outputs_written & (1 << VARYING_SLOT_FOGC)) &&
+       !vp->fogpidx) {
       struct gl_program_parameter_list *paramList;
       gl_state_index tokens[STATE_LENGTH] = { STATE_FOG_PARAMS, 0, 0, 0, 0 };
       paramList = mesa_vp->Parameters;
@@ -575,7 +576,7 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
       }
    }
 
-   if (!(mesa_vp->OutputsWritten & (1 << VARYING_SLOT_POS))) {
+   if (!(mesa_vp->info.outputs_written & (1 << VARYING_SLOT_POS))) {
       if (R200_DEBUG & RADEON_FALLBACKS) {
 	 fprintf(stderr, "can't handle vert prog without position output\n");
       }

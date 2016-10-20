@@ -1313,7 +1313,7 @@ _swrast_write_rgba_span( struct gl_context *ctx, SWspan *span)
       const struct gl_program *fp = ctx->FragmentProgram._Current;
       const GLboolean multiFragOutputs = 
          _swrast_use_fragment_program(ctx)
-         && fp->OutputsWritten >= (1 << FRAG_RESULT_DATA0);
+         && fp->info.outputs_written >= (1 << FRAG_RESULT_DATA0);
       /* Save srcColorType because convert_color_type() can change it */
       const GLenum srcColorType = span->array->ChanType;
       GLuint buf;

@@ -195,7 +195,8 @@ static void update_raster_state( struct st_context *st )
     */
    if (vertProg) {
       if (vertProg->Id == 0) {
-         if (vertProg->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_PSIZ)) {
+         if (vertProg->info.outputs_written &
+             BITFIELD64_BIT(VARYING_SLOT_PSIZ)) {
             /* generated program which emits point size */
             raster->point_size_per_vertex = TRUE;
          }
@@ -216,7 +217,8 @@ static void update_raster_state( struct st_context *st )
             last = ctx->VertexProgram._Current;
          if (last)
             raster->point_size_per_vertex =
-               !!(last->OutputsWritten & BITFIELD64_BIT(VARYING_SLOT_PSIZ));
+               !!(last->info.outputs_written &
+                  BITFIELD64_BIT(VARYING_SLOT_PSIZ));
       }
    }
    if (!raster->point_size_per_vertex) {

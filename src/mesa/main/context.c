@@ -741,7 +741,7 @@ check_context_limits(struct gl_context *ctx)
 
    /* check that we don't exceed the size of various bitfields */
    assert(VARYING_SLOT_MAX <=
-	  (8 * sizeof(ctx->VertexProgram._Current->OutputsWritten)));
+	  (8 * sizeof(ctx->VertexProgram._Current->info.outputs_written)));
    assert(VARYING_SLOT_MAX <=
 	  (8 * sizeof(ctx->FragmentProgram._Current->info.inputs_read)));
 
