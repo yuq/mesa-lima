@@ -413,13 +413,13 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
       return GL_FALSE;
 
 #if 0
-   if ((mesa_vp->InputsRead &
+   if ((mesa_vp->info.inputs_read &
       ~(VERT_BIT_POS | VERT_BIT_NORMAL | VERT_BIT_COLOR0 | VERT_BIT_COLOR1 |
       VERT_BIT_FOG | VERT_BIT_TEX0 | VERT_BIT_TEX1 | VERT_BIT_TEX2 |
       VERT_BIT_TEX3 | VERT_BIT_TEX4 | VERT_BIT_TEX5)) != 0) {
       if (R200_DEBUG & RADEON_FALLBACKS) {
 	 fprintf(stderr, "can't handle vert prog inputs 0x%x\n",
-	    mesa_vp->InputsRead);
+	    mesa_vp->info.inputs_read);
       }
       return GL_FALSE;
    }
@@ -491,42 +491,42 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    Haven't seen attr 14 used, maybe that's for the hw pointsize vec1 (which is
    not possibe to use with vertex progs as it is lacking in vert prog specification) */
 /* may look different when using idx buf / input_route instead of se_vtx_fmt? */
-   if (mesa_vp->InputsRead & VERT_BIT_POS) {
+   if (mesa_vp->info.inputs_read & VERT_BIT_POS) {
       vp->inputs[VERT_ATTRIB_POS] = 0;
       vp->inputmap_rev[0] = VERT_ATTRIB_POS;
       free_inputs &= ~(1 << 0);
       array_count++;
    }
-   if (mesa_vp->InputsRead & VERT_BIT_WEIGHT) {
+   if (mesa_vp->info.inputs_read & VERT_BIT_WEIGHT) {
       vp->inputs[VERT_ATTRIB_WEIGHT] = 12;
       vp->inputmap_rev[1] = VERT_ATTRIB_WEIGHT;
       array_count++;
    }
-   if (mesa_vp->InputsRead & VERT_BIT_NORMAL) {
+   if (mesa_vp->info.inputs_read & VERT_BIT_NORMAL) {
       vp->inputs[VERT_ATTRIB_NORMAL] = 1;
       vp->inputmap_rev[2] = VERT_ATTRIB_NORMAL;
       array_count++;
    }
-   if (mesa_vp->InputsRead & VERT_BIT_COLOR0) {
+   if (mesa_vp->info.inputs_read & VERT_BIT_COLOR0) {
       vp->inputs[VERT_ATTRIB_COLOR0] = 2;
       vp->inputmap_rev[4] = VERT_ATTRIB_COLOR0;
       free_inputs &= ~(1 << 2);
       array_count++;
    }
-   if (mesa_vp->InputsRead & VERT_BIT_COLOR1) {
+   if (mesa_vp->info.inputs_read & VERT_BIT_COLOR1) {
       vp->inputs[VERT_ATTRIB_COLOR1] = 3;
       vp->inputmap_rev[5] = VERT_ATTRIB_COLOR1;
       free_inputs &= ~(1 << 3);
       array_count++;
    }
-   if (mesa_vp->InputsRead & VERT_BIT_FOG) {
+   if (mesa_vp->info.inputs_read & VERT_BIT_FOG) {
       vp->inputs[VERT_ATTRIB_FOG] = 15; array_count++;
       vp->inputmap_rev[3] = VERT_ATTRIB_FOG;
       array_count++;
    }
    /* VERT_ATTRIB_TEX0-5 */
    for (i = 0; i <= 5; i++) {
-      if (mesa_vp->InputsRead & VERT_BIT_TEX(i)) {
+      if (mesa_vp->info.inputs_read & VERT_BIT_TEX(i)) {
 	 vp->inputs[VERT_ATTRIB_TEX(i)] = i + 6;
 	 vp->inputmap_rev[8 + i] = VERT_ATTRIB_TEX(i);
 	 free_inputs &= ~(1 << (i + 6));
@@ -535,7 +535,7 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    }
    /* using VERT_ATTRIB_TEX6/7 would be illegal */
    for (; i < VERT_ATTRIB_TEX_MAX; i++) {
-      if (mesa_vp->InputsRead & VERT_BIT_TEX(i)) {
+      if (mesa_vp->info.inputs_read & VERT_BIT_TEX(i)) {
           if (R200_DEBUG & RADEON_FALLBACKS) {
               fprintf(stderr, "texture attribute %d in vert prog\n", i);
           }
@@ -546,7 +546,7 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    for (i = 0; i < VERT_ATTRIB_GENERIC_MAX; i++) {
       int j;
    /* completely ignore aliasing? */
-      if (mesa_vp->InputsRead & VERT_BIT_GENERIC(i)) {
+      if (mesa_vp->info.inputs_read & VERT_BIT_GENERIC(i)) {
 	 array_count++;
 	 if (array_count > 12) {
 	    if (R200_DEBUG & RADEON_FALLBACKS) {

@@ -6099,13 +6099,13 @@ st_translate_program(
       if (program->shader->info.EarlyFragmentTests)
          ureg_property(ureg, TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL, 1);
 
-      if (proginfo->InputsRead & VARYING_BIT_POS) {
+      if (proginfo->info.inputs_read & VARYING_BIT_POS) {
           /* Must do this after setting up t->inputs. */
           emit_wpos(st_context(ctx), t, proginfo, ureg,
                     program->wpos_transform_const);
       }
 
-      if (proginfo->InputsRead & VARYING_BIT_FACE)
+      if (proginfo->info.inputs_read & VARYING_BIT_FACE)
          emit_face_var(ctx, t);
 
       for (i = 0; i < numOutputs; i++) {
@@ -6505,7 +6505,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    _mesa_copy_linked_program_data(shader_program, shader);
    shrink_array_declarations(v->inputs, v->num_inputs,
-                             &prog->InputsRead, prog->DoubleInputsRead, &prog->PatchInputsRead);
+                             &prog->info.inputs_read, prog->DoubleInputsRead, &prog->PatchInputsRead);
    shrink_array_declarations(v->outputs, v->num_outputs,
                              &prog->OutputsWritten, 0ULL, &prog->PatchOutputsWritten);
    count_resources(v, prog);
@@ -6516,7 +6516,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    /* This must be done before the uniform storage is associated. */
    if (shader->Stage == MESA_SHADER_FRAGMENT &&
-       (prog->InputsRead & VARYING_BIT_POS ||
+       (prog->info.inputs_read & VARYING_BIT_POS ||
         prog->SystemValuesRead & (1 << SYSTEM_VALUE_FRAG_COORD))) {
       static const gl_state_index wposTransformState[STATE_LENGTH] = {
          STATE_INTERNAL, STATE_FB_WPOS_Y_TRANSFORM

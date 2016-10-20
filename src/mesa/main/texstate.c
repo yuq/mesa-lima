@@ -599,7 +599,7 @@ update_program_texture_state(struct gl_context *ctx, struct gl_program **prog,
    if (prog[MESA_SHADER_FRAGMENT]) {
       const GLuint coordMask = (1 << MAX_TEXTURE_COORD_UNITS) - 1;
       ctx->Texture._EnabledCoordUnits |=
-         (prog[MESA_SHADER_FRAGMENT]->InputsRead >> VARYING_SLOT_TEX0) &
+         (prog[MESA_SHADER_FRAGMENT]->info.inputs_read >> VARYING_SLOT_TEX0) &
          coordMask;
    }
 }

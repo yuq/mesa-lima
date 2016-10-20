@@ -752,7 +752,7 @@ srcReg: USED_IDENTIFIER /* temporaryReg | progParamSingle */
 	      break;
 	   case at_attrib:
 	      set_src_reg(& $$, PROGRAM_INPUT, s->attrib_binding);
-	      state->prog->InputsRead |= BITFIELD64_BIT($$.Base.Index);
+              state->prog->info.inputs_read |= BITFIELD64_BIT($$.Base.Index);
 
 	      if (!validate_inputs(& @1, state)) {
 		 YYERROR;
@@ -767,7 +767,7 @@ srcReg: USED_IDENTIFIER /* temporaryReg | progParamSingle */
 	| attribBinding
 	{
 	   set_src_reg(& $$, PROGRAM_INPUT, $1);
-	   state->prog->InputsRead |= BITFIELD64_BIT($$.Base.Index);
+           state->prog->info.inputs_read |= BITFIELD64_BIT($$.Base.Index);
 
 	   if (!validate_inputs(& @1, state)) {
 	      YYERROR;
@@ -2218,7 +2218,7 @@ set_src_reg_swz(struct asm_src_register *r, gl_register_file file, GLint index,
 int
 validate_inputs(struct YYLTYPE *locp, struct asm_parser_state *state)
 {
-   const GLbitfield64 inputs = state->prog->InputsRead | state->InputsBound;
+   const GLbitfield64 inputs = state->prog->info.inputs_read | state->InputsBound;
 
    if (((inputs & VERT_BIT_FF_ALL) & (inputs >> VERT_ATTRIB_GENERIC0)) != 0) {
       yyerror(locp, state, "illegal use of generic attribute and name attribute");
@@ -2588,7 +2588,8 @@ _mesa_parse_arb_program(struct gl_context *ctx, GLenum target, const GLubyte *st
    state->prog->NumInstructions++;
 
    state->prog->NumParameters = state->prog->Parameters->NumParameters;
-   state->prog->NumAttributes = _mesa_bitcount_64(state->prog->InputsRead);
+   state->prog->NumAttributes =
+      _mesa_bitcount_64(state->prog->info.inputs_read);
 
    /*
     * Initialize native counts to logical counts.  The device driver may

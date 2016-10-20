@@ -107,7 +107,7 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
    program->NumNativeAluInstructions = prog.NumAluInstructions;
    program->NumNativeTexInstructions = prog.NumTexInstructions;
    program->NumNativeTexIndirections = prog.NumTexIndirections;
-   program->InputsRead      = prog.InputsRead;
+   program->info.inputs_read      = prog.info.inputs_read;
    program->OutputsWritten  = prog.OutputsWritten;
    program->IndirectRegisterFiles = prog.IndirectRegisterFiles;
    for (i = 0; i < MAX_TEXTURE_IMAGE_UNITS; i++) {
@@ -196,7 +196,7 @@ _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
    program->NumNativeParameters = prog.NumNativeParameters;
    program->NumNativeAttributes = prog.NumNativeAttributes;
    program->NumNativeAddressRegs = prog.NumNativeAddressRegs;
-   program->InputsRead     = prog.InputsRead;
+   program->info.inputs_read     = prog.info.inputs_read;
    program->OutputsWritten = prog.OutputsWritten;
    program->IndirectRegisterFiles = prog.IndirectRegisterFiles;
    program->IsPositionInvariant = (state.option.PositionInvariant)

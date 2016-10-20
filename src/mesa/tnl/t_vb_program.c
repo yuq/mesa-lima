@@ -347,7 +347,7 @@ run_vp( struct gl_context *ctx, struct tnl_pipeline_stage *stage )
 
       /* the vertex array case */
       for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
-	 if (program->InputsRead & BITFIELD64_BIT(attr)) {
+	 if (program->info.inputs_read & BITFIELD64_BIT(attr)) {
 	    const GLubyte *ptr = (const GLubyte*) VB->AttribPtr[attr]->data;
 	    const GLuint size = VB->AttribPtr[attr]->size;
 	    const GLuint stride = VB->AttribPtr[attr]->stride;

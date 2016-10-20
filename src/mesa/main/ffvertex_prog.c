@@ -159,7 +159,7 @@ static void make_state_key( struct gl_context *ctx, struct state_key *key )
 
    key->need_eye_coords = ctx->_NeedEyeCoords;
 
-   key->fragprog_inputs_read = fp->InputsRead;
+   key->fragprog_inputs_read = fp->info.inputs_read;
    key->varying_vp_inputs = ctx->varying_vp_inputs;
 
    if (ctx->RenderMode == GL_FEEDBACK) {
@@ -447,7 +447,7 @@ static struct ureg register_input( struct tnl_program *p, GLuint input )
    assert(input < VERT_ATTRIB_MAX);
 
    if (p->state->varying_vp_inputs & VERT_BIT(input)) {
-      p->program->InputsRead |= VERT_BIT(input);
+      p->program->info.inputs_read |= VERT_BIT(input);
       return make_ureg(PROGRAM_INPUT, input);
    }
    else {
@@ -1639,7 +1639,7 @@ create_new_program( const struct state_key *key,
    p.program->NumParameters =
    p.program->NumAttributes = p.program->NumAddressRegs = 0;
    p.program->Parameters = _mesa_new_parameter_list();
-   p.program->InputsRead = 0;
+   p.program->info.inputs_read = 0;
    p.program->OutputsWritten = 0;
 
    build_tnl_program( &p );

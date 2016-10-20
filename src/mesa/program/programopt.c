@@ -107,7 +107,7 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
    /* install new instructions */
    vprog->Instructions = newInst;
    vprog->NumInstructions = newLen;
-   vprog->InputsRead |= VERT_BIT_POS;
+   vprog->info.inputs_read |= VERT_BIT_POS;
    vprog->OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
 
@@ -208,7 +208,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
    /* install new instructions */
    vprog->Instructions = newInst;
    vprog->NumInstructions = newLen;
-   vprog->InputsRead |= VERT_BIT_POS;
+   vprog->info.inputs_read |= VERT_BIT_POS;
    vprog->OutputsWritten |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
 
@@ -238,7 +238,7 @@ _mesa_insert_mvp_code(struct gl_context *ctx, struct gl_program *vprog)
  * \param saturate True if writes to color outputs should be clamped to [0, 1]
  *
  * \note
- * This function sets \c VARYING_BIT_FOGC in \c fprog->Base.InputsRead.
+ * This function sets \c VARYING_BIT_FOGC in \c fprog->info.inputs_read.
  *
  * \todo With a little work, this function could be adapted to add fog code
  * to vertex programs too.
@@ -408,7 +408,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    /* install new instructions */
    fprog->Instructions = newInst;
    fprog->NumInstructions = inst - newInst;
-   fprog->InputsRead |= VARYING_BIT_FOGC;
+   fprog->info.inputs_read |= VARYING_BIT_FOGC;
    assert(fprog->OutputsWritten & (1 << FRAG_RESULT_COLOR));
 }
 
@@ -592,10 +592,10 @@ _mesa_program_fragment_position_to_sysval(struct gl_program *prog)
    GLuint i;
 
    if (prog->Target != GL_FRAGMENT_PROGRAM_ARB ||
-       !(prog->InputsRead & BITFIELD64_BIT(VARYING_SLOT_POS)))
+       !(prog->info.inputs_read & BITFIELD64_BIT(VARYING_SLOT_POS)))
       return;
 
-   prog->InputsRead &= ~BITFIELD64_BIT(VARYING_SLOT_POS);
+   prog->info.inputs_read &= ~BITFIELD64_BIT(VARYING_SLOT_POS);
    prog->SystemValuesRead |= 1 << SYSTEM_VALUE_FRAG_COORD;
 
    for (i = 0; i < prog->NumInstructions; i++) {

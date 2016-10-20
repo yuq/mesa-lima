@@ -265,7 +265,7 @@ _swrast_exec_fragment_program( struct gl_context *ctx, SWspan *span )
    const struct gl_program *program = ctx->FragmentProgram._Current;
 
    /* incoming colors should be floats */
-   if (program->InputsRead & VARYING_BIT_COL0) {
+   if (program->info.inputs_read & VARYING_BIT_COL0) {
       assert(span->array->ChanType == GL_FLOAT);
    }
 

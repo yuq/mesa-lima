@@ -743,7 +743,7 @@ check_context_limits(struct gl_context *ctx)
    assert(VARYING_SLOT_MAX <=
 	  (8 * sizeof(ctx->VertexProgram._Current->OutputsWritten)));
    assert(VARYING_SLOT_MAX <=
-	  (8 * sizeof(ctx->FragmentProgram._Current->InputsRead)));
+	  (8 * sizeof(ctx->FragmentProgram._Current->info.inputs_read)));
 
    /* shader-related checks */
    assert(ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxLocalParams <= MAX_PROGRAM_LOCAL_PARAMS);

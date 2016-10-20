@@ -1032,7 +1032,7 @@ fixup_depth_write(struct i915_fragment_program *p)
 static void
 check_texcoord_mapping(struct i915_fragment_program *p)
 {
-   GLbitfield64 inputs = p->FragProg.InputsRead;
+   GLbitfield64 inputs = p->FragProg.info.inputs_read;
    unsigned unit = 0;
 
    for (unsigned i = 0; i < p->ctx->Const.MaxTextureCoordUnits; i++) {
@@ -1059,7 +1059,7 @@ check_texcoord_mapping(struct i915_fragment_program *p)
 static void
 check_wpos(struct i915_fragment_program *p)
 {
-   GLbitfield64 inputs = p->FragProg.InputsRead;
+   GLbitfield64 inputs = p->FragProg.info.inputs_read;
    GLint i;
    unsigned unit = 0;
 
@@ -1257,7 +1257,7 @@ i915ValidateFragmentProgram(struct i915_context *i915)
    struct i915_fragment_program *p =
       (struct i915_fragment_program *) ctx->FragmentProgram._Current;
 
-   const GLbitfield64 inputsRead = p->FragProg.InputsRead;
+   const GLbitfield64 inputsRead = p->FragProg.info.inputs_read;
    GLuint s4 = i915->state.Ctx[I915_CTXREG_LIS4] & ~S4_VFMT_MASK;
    GLuint s2 = S2_TEXCOORD_NONE;
    int i, offset = 0;

@@ -24,13 +24,13 @@
 /**
  * \file ir_set_program_inouts.cpp
  *
- * Sets the InputsRead and OutputsWritten of Mesa programs.
+ * Sets the inputs_read and OutputsWritten of Mesa programs.
  *
  * Mesa programs (gl_program, not gl_shader_program) have a set of
  * flags indicating which varyings are read and written.  Computing
  * which are actually read from some sort of backend code can be
  * tricky when variable array indexing involved.  So this pass
- * provides support for setting InputsRead and OutputsWritten right
+ * provides support for setting inputs_read and OutputsWritten right
  * from the GLSL IR.
  */
 
@@ -83,10 +83,10 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
 {
    /* As of GLSL 1.20, varyings can only be floats, floating-point
     * vectors or matrices, or arrays of them.  For Mesa programs using
-    * InputsRead/OutputsWritten, everything but matrices uses one
+    * inputs_read/OutputsWritten, everything but matrices uses one
     * slot, while matrices use a slot per column.  Presumably
     * something doing a more clever packing would use something other
-    * than InputsRead/OutputsWritten.
+    * than inputs_read/OutputsWritten.
     */
 
    for (int i = 0; i < len; i++) {
@@ -113,7 +113,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
          if (is_patch_generic)
             prog->PatchInputsRead |= bitfield;
          else
-            prog->InputsRead |= bitfield;
+            prog->info.inputs_read |= bitfield;
 
          /* double inputs read is only for vertex inputs */
          if (stage == MESA_SHADER_VERTEX &&
@@ -426,7 +426,7 @@ do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
 {
    ir_set_program_inouts_visitor v(prog, shader_stage);
 
-   prog->InputsRead = 0;
+   prog->info.inputs_read = 0;
    prog->OutputsWritten = 0;
    prog->SecondaryOutputsWritten = 0;
    prog->OutputsRead = 0;

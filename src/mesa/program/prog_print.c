@@ -208,7 +208,7 @@ arb_input_attrib_string(GLuint index, GLenum progType)
 
 
 /**
- * Print a vertex program's InputsRead field in human-readable format.
+ * Print a vertex program's inputs_read field in human-readable format.
  * For debugging.
  */
 void
@@ -226,7 +226,7 @@ _mesa_print_vp_inputs(GLbitfield inputs)
 
 
 /**
- * Print a fragment program's InputsRead field in human-readable format.
+ * Print a fragment program's inputs_read field in human-readable format.
  * For debugging.
  */
 void
@@ -872,7 +872,7 @@ _mesa_fprint_program_parameters(FILE *f,
    GLuint i;
 
    fprintf(f, "InputsRead: %" PRIx64 " (0b%s)\n",
-           (uint64_t) prog->InputsRead, binary(prog->InputsRead));
+           (uint64_t) prog->info.inputs_read, binary(prog->info.inputs_read));
    fprintf(f, "OutputsWritten: %" PRIx64 " (0b%s)\n",
            (uint64_t) prog->OutputsWritten, binary(prog->OutputsWritten));
    fprintf(f, "NumInstructions=%d\n", prog->NumInstructions);

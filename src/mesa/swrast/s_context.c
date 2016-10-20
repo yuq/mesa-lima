@@ -499,7 +499,7 @@ _swrast_update_active_attribs(struct gl_context *ctx)
     */
    if (_swrast_use_fragment_program(ctx)) {
       /* fragment program/shader */
-      attribsMask = ctx->FragmentProgram._Current->InputsRead;
+      attribsMask = ctx->FragmentProgram._Current->info.inputs_read;
       attribsMask &= ~VARYING_BIT_POS; /* WPOS is always handled specially */
    }
    else if (ctx->ATIFragmentShader._Enabled) {

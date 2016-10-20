@@ -250,7 +250,7 @@ st_translate_vertex_program(struct st_context *st,
     * and TGSI generic input indexes, plus input attrib semantic info.
     */
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
-      if ((stvp->Base.InputsRead & BITFIELD64_BIT(attr)) != 0) {
+      if ((stvp->Base.info.inputs_read & BITFIELD64_BIT(attr)) != 0) {
          input_to_index[attr] = stvp->num_inputs;
          stvp->index_to_input[stvp->num_inputs] = attr;
          stvp->num_inputs++;
@@ -614,7 +614,7 @@ st_translate_fragment_program(struct st_context *st,
    /*
     * Convert Mesa program inputs to TGSI input register semantics.
     */
-   inputsRead = stfp->Base.InputsRead;
+   inputsRead = stfp->Base.info.inputs_read;
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
       if ((inputsRead & BITFIELD64_BIT(attr)) != 0) {
          const GLuint slot = fs_num_inputs++;
@@ -1225,7 +1225,7 @@ st_translate_program_common(struct st_context *st,
     * Convert Mesa program inputs to TGSI input register semantics.
     */
    for (attr = 0; attr < VARYING_SLOT_MAX; attr++) {
-      if ((prog->InputsRead & BITFIELD64_BIT(attr)) != 0) {
+      if ((prog->info.inputs_read & BITFIELD64_BIT(attr)) != 0) {
          const GLuint slot = num_inputs++;
 
          inputMapping[attr] = slot;

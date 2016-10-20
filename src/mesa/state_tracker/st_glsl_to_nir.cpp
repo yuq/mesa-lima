@@ -80,7 +80,7 @@ st_nir_assign_vs_in_locations(struct gl_program *prog, nir_shader *nir)
 
    /* TODO de-duplicate w/ similar code in st_translate_vertex_program()? */
    for (attr = 0; attr < VERT_ATTRIB_MAX; attr++) {
-      if ((prog->InputsRead & BITFIELD64_BIT(attr)) != 0) {
+      if ((prog->info.inputs_read & BITFIELD64_BIT(attr)) != 0) {
          input_to_index[attr] = num_inputs;
          num_inputs++;
          if ((prog->DoubleInputsRead & BITFIELD64_BIT(attr)) != 0) {

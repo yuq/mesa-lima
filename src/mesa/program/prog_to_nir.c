@@ -889,9 +889,9 @@ setup_registers_and_variables(struct ptn_compile *c)
    struct nir_shader *shader = b->shader;
 
    /* Create input variables. */
-   const int num_inputs = util_last_bit64(c->prog->InputsRead);
+   const int num_inputs = util_last_bit64(c->prog->info.inputs_read);
    for (int i = 0; i < num_inputs; i++) {
-      if (!(c->prog->InputsRead & BITFIELD64_BIT(i)))
+      if (!(c->prog->info.inputs_read & BITFIELD64_BIT(i)))
          continue;
 
       nir_variable *var =
@@ -1051,7 +1051,6 @@ prog_to_nir(const struct gl_program *prog,
    s->info->num_abos = 0;
    s->info->num_ssbos = 0;
    s->info->num_images = 0;
-   s->info->inputs_read = prog->InputsRead;
    s->info->outputs_written = prog->OutputsWritten;
    s->info->system_values_read = prog->SystemValuesRead;
    s->info->uses_texture_gather = false;
