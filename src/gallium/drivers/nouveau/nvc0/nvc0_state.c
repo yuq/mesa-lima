@@ -685,6 +685,10 @@ nvc0_cp_state_create(struct pipe_context *pipe,
 
    prog->pipe.tokens = tgsi_dup_tokens((const struct tgsi_token *)cso->prog);
 
+   prog->translated = nvc0_program_translate(
+      prog, nvc0_context(pipe)->screen->base.device->chipset,
+      &nouveau_context(pipe)->debug);
+
    return (void *)prog;
 }
 
