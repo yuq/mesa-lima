@@ -30,7 +30,6 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
 {
    shader_info *info = &sh->Program->info;
 
-   info->double_inputs_read = sh->Program->DoubleInputsRead;
    info->outputs_written = sh->Program->OutputsWritten;
    info->outputs_read = sh->Program->OutputsRead;
    info->patch_inputs_read = sh->Program->PatchInputsRead;
