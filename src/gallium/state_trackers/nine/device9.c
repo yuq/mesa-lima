@@ -3526,28 +3526,25 @@ NineDevice9_SetPixelShader( struct NineDevice9 *This,
                             IDirect3DPixelShader9 *pShader )
 {
     struct nine_state *state = This->update;
-    struct nine_context *context = &This->context;
-    unsigned old_mask = state->ps ? state->ps->rt_mask : 1;
-    unsigned mask;
+    struct NinePixelShader9 *ps = (struct NinePixelShader9*)pShader;
 
     DBG("This=%p pShader=%p\n", This, pShader);
 
-    if (!This->is_recording && state->ps == (struct NinePixelShader9*)pShader)
-      return D3D_OK;
+    if (unlikely(This->is_recording)) {
+        /* Technically we need NINE_STATE_FB only
+         * if the ps mask changes, but put it always
+         * to be safe */
+        nine_bind(&state->ps, pShader);
+        state->changed.group |= NINE_STATE_PS | NINE_STATE_FB;
+        return D3D_OK;
+    }
 
-    /* ff -> non-ff: commit back non-ff constants */
-    if (!state->ps && pShader)
-        context->commit |= NINE_STATE_COMMIT_CONST_PS;
+    if (state->ps == ps)
+        return D3D_OK;
 
-    nine_bind(&state->ps, pShader);
+    nine_bind(&state->ps, ps);
 
-    state->changed.group |= NINE_STATE_PS;
-
-    mask = state->ps ? state->ps->rt_mask : 1;
-    /* We need to update cbufs if the pixel shader would
-     * write to different render targets */
-    if (mask != old_mask)
-        state->changed.group |= NINE_STATE_FB;
+    nine_context_set_pixel_shader(This, ps);
 
     return D3D_OK;
 }

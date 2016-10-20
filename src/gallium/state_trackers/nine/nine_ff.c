@@ -2038,14 +2038,14 @@ nine_ff_update(struct NineDevice9 *device)
     struct nine_context *context = &device->context;
     struct pipe_constant_buffer cb;
 
-    DBG("vs=%p ps=%p\n", context->vs, device->state.ps);
+    DBG("vs=%p ps=%p\n", context->vs, context->ps);
 
     /* NOTE: the only reference belongs to the hash table */
     if (!context->programmable_vs) {
         device->ff.vs = nine_ff_get_vs(device);
         device->state.changed.group |= NINE_STATE_VS;
     }
-    if (!device->state.ps) {
+    if (!context->ps) {
         device->ff.ps = nine_ff_get_ps(device);
         device->state.changed.group |= NINE_STATE_PS;
     }
@@ -2080,7 +2080,7 @@ nine_ff_update(struct NineDevice9 *device)
         context->commit |= NINE_STATE_COMMIT_CONST_VS;
     }
 
-    if (!device->state.ps) {
+    if (!context->ps) {
         nine_ff_load_ps_params(device);
 
         cb.buffer_offset = 0;

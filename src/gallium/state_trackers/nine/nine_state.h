@@ -253,6 +253,7 @@ struct nine_context {
     BOOL  *vs_const_b;
     float *vs_lconstf_temp;
 
+    struct NinePixelShader9 *ps;
     float *ps_const_f;
     int    ps_const_i[NINE_MAX_CONST_I][4];
     BOOL   ps_const_b[NINE_MAX_CONST_B];
@@ -372,6 +373,10 @@ nine_context_set_vertex_shader_constant_b(struct NineDevice9 *device,
                                           UINT StartRegister,
                                           const BOOL *pConstantData,
                                           UINT BoolCount);
+
+void
+nine_context_set_pixel_shader(struct NineDevice9 *device,
+                              struct NinePixelShader9* ps);
 
 void
 nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,

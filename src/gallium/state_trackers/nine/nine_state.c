@@ -281,7 +281,7 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     struct pipe_constant_buffer cb;
     cb.buffer = NULL;
     cb.buffer_offset = 0;
-    cb.buffer_size = device->state.ps->const_used_size;
+    cb.buffer_size = context->ps->const_used_size;
     cb.user_buffer = context->ps_const_f;
 
     if (context->changed.ps_const_i) {
@@ -297,14 +297,14 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
     }
 
     /* Upload special constants needed to implement PS1.x instructions like TEXBEM,TEXBEML and BEM */
-    if (device->state.ps->bumpenvmat_needed) {
+    if (context->ps->bumpenvmat_needed) {
         memcpy(context->ps_lconstf_temp, cb.user_buffer, cb.buffer_size);
         memcpy(&context->ps_lconstf_temp[4 * 8], &device->context.bumpmap_vars, sizeof(device->context.bumpmap_vars));
 
         cb.user_buffer = context->ps_lconstf_temp;
     }
 
-    if (state->ps->byte_code.version < 0x30 &&
+    if (context->ps->byte_code.version < 0x30 &&
         context->rs[D3DRS_FOGENABLE]) {
         float *dst = &context->ps_lconstf_temp[4 * 32];
         if (cb.user_buffer != context->ps_lconstf_temp) {
@@ -383,9 +383,8 @@ prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
 static inline uint32_t
 prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
-    struct NinePixelShader9 *ps = state->ps;
+    struct NinePixelShader9 *ps = context->ps;
     uint32_t changed_group = 0;
     int has_key_changed = 0;
 
@@ -426,7 +425,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
     unsigned w = rt0->desc.Width;
     unsigned h = rt0->desc.Height;
     unsigned nr_samples = rt0->base.info.nr_samples;
-    unsigned ps_mask = state->ps ? state->ps->rt_mask : 1;
+    unsigned ps_mask = context->ps ? context->ps->rt_mask : 1;
     unsigned mask = is_clear ? 0xf : ps_mask;
     const int sRGB = context->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
 
@@ -698,13 +697,12 @@ update_sampler_derived(struct nine_context *context, unsigned s)
 static void
 update_textures_and_samplers(struct NineDevice9 *device)
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     struct pipe_sampler_view *view[NINE_MAX_SAMPLERS];
     unsigned num_textures;
     unsigned i;
     boolean commit_samplers;
-    uint16_t sampler_mask = state->ps ? state->ps->sampler_mask :
+    uint16_t sampler_mask = context->ps ? context->ps->sampler_mask :
                             device->ff.ps->sampler_mask;
 
     /* TODO: Can we reduce iterations here ? */
@@ -867,7 +865,7 @@ commit_ps_constants(struct NineDevice9 *device)
 {
     struct pipe_context *pipe = device->pipe;
 
-    if (unlikely(!device->state.ps))
+    if (unlikely(!device->context.ps))
         pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe.cb_ps_ff);
     else
         pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe.cb_ps);
@@ -969,7 +967,7 @@ nine_update_state(struct NineDevice9 *device)
     update_managed_buffers(device);
 
     /* ff_update may change VS/PS dirty bits */
-    if (unlikely(!context->programmable_vs || !state->ps))
+    if (unlikely(!context->programmable_vs || !context->ps))
         nine_ff_update(device);
     group = state->changed.group;
 
@@ -1004,7 +1002,7 @@ nine_update_state(struct NineDevice9 *device)
             update_textures_and_samplers(device);
         if ((group & (NINE_STATE_VS_CONST | NINE_STATE_VS | NINE_STATE_SWVP)) && context->programmable_vs)
             prepare_vs_constants_userbuf(device);
-        if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && state->ps)
+        if ((group & (NINE_STATE_PS_CONST | NINE_STATE_PS)) && context->ps)
             prepare_ps_constants_userbuf(device);
     }
 
@@ -1370,6 +1368,30 @@ nine_context_set_vertex_shader_constant_b(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_pixel_shader(struct NineDevice9 *device,
+                              struct NinePixelShader9* ps)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+    unsigned old_mask = context->ps ? context->ps->rt_mask : 1;
+    unsigned mask;
+
+    /* ff -> non-ff: commit back non-ff constants */
+    if (!context->ps && ps)
+        context->commit |= NINE_STATE_COMMIT_CONST_PS;
+
+    nine_bind(&context->ps, ps);
+
+    state->changed.group |= NINE_STATE_PS;
+
+    mask = context->ps ? context->ps->rt_mask : 1;
+    /* We need to update cbufs if the pixel shader would
+     * write to different render targets */
+    if (mask != old_mask)
+        state->changed.group |= NINE_STATE_FB;
+}
+
+void
 nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,
                                         UINT StartRegister,
                                         const float *pConstantData,
@@ -1678,6 +1700,10 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         nine_bind(&context->vs, src->vs);
 
     context->programmable_vs = context->vs && !(context->vdecl && context->vdecl->position_t);
+
+    /* Pixel shader */
+    if (src->changed.group & NINE_STATE_PS)
+        nine_bind(&context->ps, src->ps);
 
     /* Vertex constants */
     if (src->changed.group & NINE_STATE_VS_CONST) {
@@ -2351,6 +2377,7 @@ nine_context_clear(struct nine_context *context)
        nine_bind(&context->rt[i], NULL);
     nine_bind(&context->ds, NULL);
     nine_bind(&context->vs, NULL);
+    nine_bind(&context->ps, NULL);
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)
         pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
