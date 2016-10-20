@@ -6535,14 +6535,12 @@ static bool si_eliminate_const_output(struct si_shader_context *ctx,
 	for (i = 0; i < 4; i++) {
 		LLVMBool loses_info;
 		LLVMValueRef p = LLVMGetOperand(inst, 5 + i);
-		if (!LLVMIsConstant(p))
-			return false;
 
 		/* It's a constant expression. Undef outputs are eliminated too. */
 		if (LLVMIsUndef(p)) {
 			is_zero[i] = true;
 			is_one[i] = true;
-		} else {
+		} else if (LLVMIsAConstantFP(p)) {
 			double a = LLVMConstRealGetDouble(p, &loses_info);
 
 			if (a == 0)
@@ -6551,7 +6549,8 @@ static bool si_eliminate_const_output(struct si_shader_context *ctx,
 				is_one[i] = true;
 			else
 				return false; /* other constant */
-		}
+		} else
+			return false;
 	}
 
 	/* Only certain combinations of 0 and 1 can be eliminated. */
