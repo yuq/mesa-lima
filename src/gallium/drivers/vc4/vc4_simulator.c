@@ -21,6 +21,31 @@
  * IN THE SOFTWARE.
  */
 
+/**
+ * @file vc4_simulator.c
+ *
+ * Implements VC4 simulation on top of a non-VC4 GEM fd.
+ *
+ * This file's goal is to emulate the VC4 ioctls' behavior in the kernel on
+ * top of the simpenrose software simulator.  Generally, VC4 driver BOs have a
+ * GEM-side copy of their contents and a simulator-side memory area that the
+ * GEM contents get copied into during simulation.  Once simulation is done,
+ * the simulator's data is copied back out to the GEM BOs, so that rendering
+ * appears on the screen as if actual hardware rendering had been done.
+ *
+ * One of the limitations of this code is that we shouldn't really need a
+ * GEM-side BO for non-window-system BOs.  However, do we need unique BO
+ * handles for each of our GEM bos so that this file can look up its state
+ * from the handle passed in at submit ioctl time (also, a couple of places
+ * outside of this file still call ioctls directly on the fd).
+ *
+ * Another limitation is that BO import doesn't work unless the underlying
+ * window system's BO size matches what VC4 is going to use, which of course
+ * doesn't work out in practice.  This means that for now, only DRI3 (VC4
+ * makes the winsys BOs) is supported, not DRI2 (window system makes the winys
+ * BOs).
+ */
+
 #ifdef USE_VC4_SIMULATOR
 
 #include <sys/mman.h>
