@@ -199,14 +199,13 @@ vc4_bo_free(struct vc4_bo *bo)
         struct vc4_screen *screen = bo->screen;
 
         if (bo->map) {
-#ifdef USE_VC4_SIMULATOR
-                if (bo->simulator_winsys_map) {
+                if (using_vc4_simulator && bo->name &&
+                    strcmp(bo->name, "winsys") == 0) {
                         free(bo->map);
-                        bo->map = bo->simulator_winsys_map;
+                } else {
+                        munmap(bo->map, bo->size);
+                        VG(VALGRIND_FREELIKE_BLOCK(bo->map, 0));
                 }
-#endif
-                munmap(bo->map, bo->size);
-                VG(VALGRIND_FREELIKE_BLOCK(bo->map, 0));
         }
 
         struct drm_gem_close c;
@@ -351,9 +350,6 @@ vc4_bo_open_handle(struct vc4_screen *screen,
 #ifdef USE_VC4_SIMULATOR
         vc4_simulator_open_from_handle(screen->fd, winsys_stride,
                                        bo->handle, bo->size);
-        vc4_bo_map(bo);
-        bo->simulator_winsys_map = bo->map;
-        bo->simulator_winsys_stride = winsys_stride;
         bo->map = malloc(bo->size);
 #endif
 

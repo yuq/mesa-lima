@@ -73,6 +73,8 @@ struct vc4_simulator_bo {
 
         /** Area for this BO within sim_state->mem */
         struct mem_block *block;
+        void *winsys_map;
+        uint32_t winsys_stride;
 
         int handle;
 };
@@ -143,6 +145,11 @@ static void
 vc4_free_simulator_bo(struct vc4_simulator_bo *sim_bo)
 {
         struct vc4_simulator_file *sim_file = sim_bo->file;
+        struct drm_vc4_bo *bo = &sim_bo->base;
+        struct drm_gem_cma_object *obj = &bo->base;
+
+        if (sim_bo->winsys_map)
+                munmap(sim_bo->winsys_map, obj->base.size);
 
         mtx_lock(&sim_state.mutex);
         u_mmFreeMem(sim_bo->block);
@@ -335,7 +342,8 @@ vc4_simulator_flush(struct vc4_context *vc4,
         struct vc4_simulator_file *file = vc4_get_simulator_file_for_fd(fd);
         struct vc4_surface *csurf = vc4_surface(vc4->framebuffer.cbufs[0]);
         struct vc4_resource *ctex = csurf ? vc4_resource(csurf->base.texture) : NULL;
-        uint32_t winsys_stride = ctex ? ctex->bo->simulator_winsys_stride : 0;
+        struct vc4_simulator_bo *csim_bo = ctex ? vc4_get_simulator_bo(file, ctex->bo->handle) : NULL;
+        uint32_t winsys_stride = ctex ? csim_bo->winsys_stride : 0;
         uint32_t sim_stride = ctex ? ctex->slices[0].stride : 0;
         uint32_t row_len = MIN2(sim_stride, winsys_stride);
         struct vc4_exec_info exec;
@@ -345,7 +353,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
         memset(&exec, 0, sizeof(exec));
         list_inithead(&exec.unref_list);
 
-        if (ctex && ctex->bo->simulator_winsys_map) {
+        if (ctex && csim_bo->winsys_map) {
 #if 0
                 fprintf(stderr, "%dx%d %d %d %d\n",
                         ctex->base.b.width0, ctex->base.b.height0,
@@ -356,7 +364,7 @@ vc4_simulator_flush(struct vc4_context *vc4,
 
                 for (int y = 0; y < ctex->base.b.height0; y++) {
                         memcpy(ctex->bo->map + y * sim_stride,
-                               ctex->bo->simulator_winsys_map + y * winsys_stride,
+                               csim_bo->winsys_map + y * winsys_stride,
                                row_len);
                 }
         }
@@ -414,15 +422,48 @@ vc4_simulator_flush(struct vc4_context *vc4,
                 vc4_free_simulator_bo(sim_bo);
         }
 
-        if (ctex && ctex->bo->simulator_winsys_map) {
+        if (ctex && csim_bo->winsys_map) {
                 for (int y = 0; y < ctex->base.b.height0; y++) {
-                        memcpy(ctex->bo->simulator_winsys_map + y * winsys_stride,
+                        memcpy(csim_bo->winsys_map + y * winsys_stride,
                                ctex->bo->map + y * sim_stride,
                                row_len);
                 }
         }
 
         return 0;
+}
+
+/**
+ * Map the underlying GEM object from the real hardware GEM handle.
+ */
+static void *
+vc4_simulator_map_winsys_bo(int fd, struct vc4_simulator_bo *sim_bo)
+{
+        struct drm_vc4_bo *bo = &sim_bo->base;
+        struct drm_gem_cma_object *obj = &bo->base;
+        int ret;
+        void *map;
+
+        struct drm_mode_map_dumb map_dumb = {
+                .handle = sim_bo->handle,
+        };
+        ret = drmIoctl(fd, DRM_IOCTL_MODE_MAP_DUMB, &map_dumb);
+        if (ret != 0) {
+                fprintf(stderr, "map ioctl failure\n");
+                abort();
+        }
+
+        map = mmap(NULL, obj->base.size, PROT_READ | PROT_WRITE, MAP_SHARED,
+                   fd, map_dumb.offset);
+        if (map == MAP_FAILED) {
+                fprintf(stderr,
+                        "mmap of bo %d (offset 0x%016llx, size %d) failed\n",
+                        sim_bo->handle, (long long)map_dumb.offset,
+                        (int)obj->base.size);
+                abort();
+        }
+
+        return map;
 }
 
 /**
@@ -435,7 +476,11 @@ vc4_simulator_flush(struct vc4_context *vc4,
 void vc4_simulator_open_from_handle(int fd, uint32_t winsys_stride,
                                     int handle, uint32_t size)
 {
-        vc4_create_simulator_bo(fd, handle, size);
+        struct vc4_simulator_bo *sim_bo =
+                vc4_create_simulator_bo(fd, handle, size);
+
+        sim_bo->winsys_stride = winsys_stride;
+        sim_bo->winsys_map = vc4_simulator_map_winsys_bo(fd, sim_bo);
 }
 
 /**
