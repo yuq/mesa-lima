@@ -77,7 +77,9 @@
 
 #include <llvm/Support/TargetSelect.h>
 
+#if HAVE_LLVM >= 0x0305
 #include <llvm/IR/CallSite.h>
+#endif
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/Module.h>
 #include <llvm/Support/CBindingWrapping.h>
@@ -715,8 +717,10 @@ lp_get_called_value(LLVMValueRef call)
 {
 #if HAVE_LLVM >= 0x0309
 	return LLVMGetCalledValue(call);
-#else
+#elif HAVE_LLVM >= 0x0305
 	return llvm::wrap(llvm::CallSite(llvm::unwrap<llvm::Instruction>(call)).getCalledValue());
+#else
+	return NULL; /* radeonsi doesn't support so old LLVM. */
 #endif
 }
 
