@@ -152,8 +152,7 @@ EXTRA_DIST = \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
 	anv_entrypoints_gen.py \
 	dev_icd.json.in \
-	intel_icd.json.in \
-	intel_icd.json
+	intel_icd.json.in
 
 libvulkan_intel_la_LIBADD = $(VULKAN_LIB_DEPS)
 
@@ -168,7 +167,7 @@ libvulkan_intel_la_LDFLAGS = \
 
 
 icdconfdir = @VULKAN_ICD_INSTALL_DIR@
-icdconf_DATA = intel_icd.json
+icdconf_DATA = intel_icd.@host_cpu@.json
 # The following is used for development purposes, by setting VK_ICD_FILENAMES.
 noinst_DATA = dev_icd.json
 
@@ -183,7 +182,7 @@ else
 ICD_DRIVER_PATH="libvulkan_intel.so"
 endif
 
-intel_icd.json : intel_icd.json.in
+intel_icd.@host_cpu@.json : intel_icd.json.in
 	$(AM_V_GEN) $(SED) \
 		-e "s#@ICD_DRIVER_PATH@#${ICD_DRIVER_PATH}#" \
 		< $(srcdir)/intel_icd.json.in > $@

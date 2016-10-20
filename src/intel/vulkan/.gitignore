@@ -3,4 +3,4 @@
 /anv_entrypoints.h
 /anv_timestamp.h
 /dev_icd.json
-/intel_icd.json
+/intel_icd.*.json
