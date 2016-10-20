@@ -1928,8 +1928,6 @@ struct gl_program
    GLbitfield ShadowSamplers; /**< Texture units used for shadow sampling. */
    GLbitfield ExternalSamplersUsed; /**< Texture units used for samplerExternalOES */
 
-   GLboolean UsesGather; /**< Does this program use gather4 at all? */
-
    /* Vertex and geometry shaders fields */
    unsigned ClipDistanceArraySize;
    unsigned CullDistanceArraySize;

@@ -416,7 +416,7 @@ ir_visitor_status
 ir_set_program_inouts_visitor::visit_enter(ir_texture *ir)
 {
    if (ir->op == ir_tg4)
-      prog->UsesGather = true;
+      prog->info.uses_texture_gather = true;
    return visit_continue;
 }
 
