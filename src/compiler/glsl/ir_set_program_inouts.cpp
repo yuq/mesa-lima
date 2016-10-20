@@ -128,7 +128,7 @@ mark(struct gl_program *prog, ir_variable *var, int offset, int len,
       } else {
          assert(var->data.mode == ir_var_shader_out);
          if (is_patch_generic) {
-            prog->PatchOutputsWritten |= bitfield;
+            prog->info.patch_outputs_written |= bitfield;
          } else if (!var->data.read_only) {
             prog->info.outputs_written |= bitfield;
             if (var->data.index > 0)
@@ -431,7 +431,7 @@ do_set_program_inouts(exec_list *instructions, struct gl_program *prog,
    prog->SecondaryOutputsWritten = 0;
    prog->info.outputs_read = 0;
    prog->info.patch_inputs_read = 0;
-   prog->PatchOutputsWritten = 0;
+   prog->info.patch_outputs_written = 0;
    prog->SystemValuesRead = 0;
    if (shader_stage == MESA_SHADER_FRAGMENT) {
       prog->info.fs.uses_sample_qualifier = false;
