@@ -125,7 +125,8 @@ type_to_bit(const struct gl_context *ctx, GLenum type)
 
 
 /**
- * Sets the VertexBinding field in the vertex attribute given by attribIndex.
+ * Sets the BufferBindingIndex field for the vertex attribute given by
+ * attribIndex.
  */
 static void
 vertex_attrib_binding(struct gl_context *ctx,
