@@ -186,24 +186,13 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
 
     surf_winsys_to_drm(&surf_drm, surf_ws);
 
+    if (!(surf_ws->flags & RADEON_SURF_IMPORTED)) {
+       r = radeon_surface_best(ws->surf_man, &surf_drm);
+       if (r)
+          return r;
+    }
+
     r = radeon_surface_init(ws->surf_man, &surf_drm);
-    if (r)
-        return r;
-
-    surf_drm_to_winsys(ws, surf_ws, &surf_drm);
-    return 0;
-}
-
-static int radeon_winsys_surface_best(struct radeon_winsys *rws,
-                                      struct radeon_surf *surf_ws)
-{
-    struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)rws;
-    struct radeon_surface surf_drm;
-    int r;
-
-    surf_winsys_to_drm(&surf_drm, surf_ws);
-
-    r = radeon_surface_best(ws->surf_man, &surf_drm);
     if (r)
         return r;
 
@@ -214,5 +203,4 @@ static int radeon_winsys_surface_best(struct radeon_winsys *rws,
 void radeon_surface_init_functions(struct radeon_drm_winsys *ws)
 {
     ws->base.surface_init = radeon_winsys_surface_init;
-    ws->base.surface_best = radeon_winsys_surface_best;
 }

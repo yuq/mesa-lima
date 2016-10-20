@@ -1296,10 +1296,7 @@ struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 	if (r) {
 		return NULL;
 	}
-	r = rscreen->ws->surface_best(rscreen->ws, &surface);
-	if (r) {
-		return NULL;
-	}
+
 	return (struct pipe_resource *)r600_texture_create_object(screen, templ, 0,
 								  0, NULL, &surface);
 }
@@ -1349,6 +1346,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 		return NULL;
 	}
 
+	surface.flags |= RADEON_SURF_IMPORTED;
 	if (metadata.scanout)
 		surface.flags |= RADEON_SURF_SCANOUT;
 

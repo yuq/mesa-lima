@@ -577,14 +577,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    return 0;
 }
 
-static int amdgpu_surface_best(struct radeon_winsys *rws,
-                               struct radeon_surf *surf)
-{
-   return 0;
-}
-
 void amdgpu_surface_init_functions(struct amdgpu_winsys *ws)
 {
    ws->base.surface_init = amdgpu_surface_init;
-   ws->base.surface_best = amdgpu_surface_best;
 }
