@@ -445,10 +445,10 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
      * but render to depth buffer. We have to not take into account the render
      * target info. TODO: know what should happen when there are several render targers
      * and the first one is D3DFMT_NULL */
-    if (rt0->desc.Format == D3DFMT_NULL && state->ds) {
-        w = state->ds->desc.Width;
-        h = state->ds->desc.Height;
-        nr_samples = state->ds->base.info.nr_samples;
+    if (rt0->desc.Format == D3DFMT_NULL && context->ds) {
+        w = context->ds->desc.Width;
+        h = context->ds->desc.Height;
+        nr_samples = context->ds->base.info.nr_samples;
     }
 
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
@@ -474,10 +474,10 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
         }
     }
 
-    if (state->ds && state->ds->desc.Width >= w &&
-        state->ds->desc.Height >= h &&
-        state->ds->base.info.nr_samples == nr_samples) {
-        fb->zsbuf = NineSurface9_GetSurface(state->ds, 0);
+    if (context->ds && context->ds->desc.Width >= w &&
+        context->ds->desc.Height >= h &&
+        context->ds->base.info.nr_samples == nr_samples) {
+        fb->zsbuf = NineSurface9_GetSurface(context->ds, 0);
     } else {
         fb->zsbuf = NULL;
     }
@@ -1067,10 +1067,9 @@ nine_update_state(struct NineDevice9 *device)
 static void
 NineDevice9_ResolveZ( struct NineDevice9 *device )
 {
-    struct nine_state *state = &device->state;
     struct nine_context *context = &device->context;
     const struct util_format_description *desc;
-    struct NineSurface9 *source = state->ds;
+    struct NineSurface9 *source = context->ds;
     struct NineBaseTexture9 *destination = context->texture[0];
     struct pipe_resource *src, *dst;
     struct pipe_blit_info blit;
@@ -1468,6 +1467,17 @@ nine_context_set_render_target(struct NineDevice9 *device,
 }
 
 void
+nine_context_set_depth_stencil(struct NineDevice9 *device,
+                               struct NineSurface9 *ds)
+{
+    struct nine_state *state = &device->state;
+    struct nine_context *context = &device->context;
+
+    nine_bind(&context->ds, ds);
+    state->changed.group |= NINE_STATE_FB;
+}
+
+void
 nine_context_set_viewport(struct NineDevice9 *device,
                           const D3DVIEWPORT9 *viewport)
 {
@@ -1822,7 +1832,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
     const int sRGB = context->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
     struct pipe_surface *cbuf, *zsbuf;
     struct pipe_context *pipe = device->pipe;
-    struct NineSurface9 *zsbuf_surf = device->state.ds;
+    struct NineSurface9 *zsbuf_surf = context->ds;
     struct NineSurface9 *rt;
     unsigned bufs = 0;
     unsigned r, i;
@@ -2339,6 +2349,7 @@ nine_context_clear(struct nine_context *context)
 
     for (i = 0; i < ARRAY_SIZE(context->rt); ++i)
        nine_bind(&context->rt[i], NULL);
+    nine_bind(&context->ds, NULL);
     nine_bind(&context->vs, NULL);
     nine_bind(&context->vdecl, NULL);
     for (i = 0; i < PIPE_MAX_ATTRIBS; ++i)

@@ -1893,11 +1893,12 @@ HRESULT NINE_WINAPI
 NineDevice9_SetDepthStencilSurface( struct NineDevice9 *This,
                                     IDirect3DSurface9 *pNewZStencil )
 {
+    struct NineSurface9 *ds = NineSurface9(pNewZStencil);
     DBG("This=%p pNewZStencil=%p\n", This, pNewZStencil);
 
-    if (This->state.ds != NineSurface9(pNewZStencil)) {
-        nine_bind(&This->state.ds, pNewZStencil);
-        This->state.changed.group |= NINE_STATE_FB;
+    if (This->state.ds != ds) {
+        nine_bind(&This->state.ds, ds);
+        nine_context_set_depth_stencil(This, ds);
     }
     return D3D_OK;
 }
