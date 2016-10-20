@@ -914,7 +914,7 @@ st_translate_mesa_program(
    /* Declare misc input registers
     */
    {
-      GLbitfield sysInputs = program->SystemValuesRead;
+      GLbitfield sysInputs = program->info.system_values_read;
 
       for (i = 0; sysInputs; i++) {
          if (sysInputs & (1 << i)) {

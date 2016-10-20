@@ -1051,7 +1051,6 @@ prog_to_nir(const struct gl_program *prog,
    s->info->num_abos = 0;
    s->info->num_ssbos = 0;
    s->info->num_images = 0;
-   s->info->system_values_read = prog->SystemValuesRead;
    s->info->uses_texture_gather = false;
    s->info->uses_clip_distance_out = false;
    s->info->separate_shader = false;

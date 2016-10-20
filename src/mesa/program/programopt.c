@@ -596,7 +596,7 @@ _mesa_program_fragment_position_to_sysval(struct gl_program *prog)
       return;
 
    prog->info.inputs_read &= ~BITFIELD64_BIT(VARYING_SLOT_POS);
-   prog->SystemValuesRead |= 1 << SYSTEM_VALUE_FRAG_COORD;
+   prog->info.system_values_read |= 1 << SYSTEM_VALUE_FRAG_COORD;
 
    for (i = 0; i < prog->NumInstructions; i++) {
       struct prog_instruction *inst = prog->Instructions + i;

@@ -30,6 +30,5 @@ copy_shader_info(const struct gl_shader_program *shader_prog,
 {
    shader_info *info = &sh->Program->info;
 
-   info->system_values_read = sh->Program->SystemValuesRead;
    info->uses_texture_gather = sh->Program->UsesGather;
 }
