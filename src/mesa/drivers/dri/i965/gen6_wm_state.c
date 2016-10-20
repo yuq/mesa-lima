@@ -251,9 +251,10 @@ upload_wm_state(struct brw_context *brw)
                                       (ctx->Color.BlendEnabled & 1) &&
                                       ctx->Color.Blend[0]._UsesDualSrc;
 
-   /* _NEW_COLOR, _NEW_MULTISAMPLE */
-   const bool kill_enable = prog_data->uses_kill || ctx->Color.AlphaEnabled ||
-                            ctx->Multisample.SampleAlphaToCoverage ||
+   /* _NEW_COLOR, _NEW_MULTISAMPLE _NEW_BUFFERS */
+   const bool kill_enable = prog_data->uses_kill ||
+                            _mesa_is_alpha_test_enabled(ctx) ||
+                            _mesa_is_alpha_to_coverage_enabled(ctx) ||
                             prog_data->uses_omask;
 
    /* Rendering against the gl-context is always taken into account. */

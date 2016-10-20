@@ -528,7 +528,8 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 
    /* _NEW_MULTISAMPLE, _NEW_COLOR, _NEW_BUFFERS */
    key->replicate_alpha = ctx->DrawBuffer->_NumColorDrawBuffers > 1 &&
-      (ctx->Multisample.SampleAlphaToCoverage || ctx->Color.AlphaEnabled);
+      (_mesa_is_alpha_test_enabled(ctx) ||
+       _mesa_is_alpha_to_coverage_enabled(ctx));
 
    /* _NEW_BUFFERS _NEW_MULTISAMPLE */
    /* Ignore sample qualifier while computing this flag. */
@@ -546,7 +547,6 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
                                          BRW_FS_VARYING_INPUT_MASK) > 16) {
       key->input_slots_valid = brw->vue_map_geom_out.slots_valid;
    }
-
 
    /* _NEW_COLOR | _NEW_BUFFERS */
    /* Pre-gen6, the hardware alpha test always used each render

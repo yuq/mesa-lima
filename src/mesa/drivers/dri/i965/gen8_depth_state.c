@@ -293,10 +293,12 @@ pma_fix_enable(const struct brw_context *brw)
    const bool ps_computes_depth =
       wm_prog_data->computed_depth_mode != BRW_PSCDEPTH_OFF;
 
-   /* BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::PixelShaderKillsPixels
-    * BRW_NEW_FS_PROG_DATA:        3DSTATE_PS_EXTRA::oMask Present to RenderTarget
+   /* BRW_NEW_FS_PROG_DATA:     3DSTATE_PS_EXTRA::PixelShaderKillsPixels
+    * BRW_NEW_FS_PROG_DATA:     3DSTATE_PS_EXTRA::oMask Present to RenderTarget
     * _NEW_MULTISAMPLE:         3DSTATE_PS_BLEND::AlphaToCoverageEnable
     * _NEW_COLOR:               3DSTATE_PS_BLEND::AlphaTestEnable
+    * _NEW_BUFFERS:             3DSTATE_PS_BLEND::AlphaTestEnable
+    *                           3DSTATE_PS_BLEND::AlphaToCoverageEnable
     *
     * 3DSTATE_WM_CHROMAKEY::ChromaKeyKillEnable is always false.
     * 3DSTATE_WM::ForceKillPix != ForceOff is always true.
@@ -304,8 +306,8 @@ pma_fix_enable(const struct brw_context *brw)
    const bool kill_pixel =
       wm_prog_data->uses_kill ||
       wm_prog_data->uses_omask ||
-      (_mesa_is_multisample_enabled(ctx) && ctx->Multisample.SampleAlphaToCoverage) ||
-      ctx->Color.AlphaEnabled;
+      _mesa_is_alpha_test_enabled(ctx) ||
+      _mesa_is_alpha_to_coverage_enabled(ctx);
 
    /* The big formula in CACHE_MODE_1::NP PMA FIX ENABLE. */
    return !wm_force_thread_dispatch &&
