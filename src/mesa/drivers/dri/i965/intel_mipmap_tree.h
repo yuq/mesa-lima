@@ -627,15 +627,15 @@ struct intel_mipmap_tree
    bool r8stencil_needs_update;
 
    /**
-    * \brief MCS miptree.
+    * \brief MCS auxiliary buffer.
     *
-    * This miptree contains the "multisample control surface", which stores
+    * This buffer contains the "multisample control surface", which stores
     * the necessary information to implement compressed MSAA
     * (INTEL_MSAA_FORMAT_CMS) and "fast color clear" behaviour on Gen7+.
     *
-    * NULL if no MCS miptree is in use for this surface.
+    * NULL if no MCS buffer is in use for this surface.
     */
-   struct intel_mipmap_tree *mcs_mt;
+   struct intel_miptree_aux_buffer *mcs_buf;
 
    /**
     * Planes 1 and 2 in case this is a planar surface.

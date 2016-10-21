@@ -143,11 +143,11 @@ brw_emit_surface_state(struct brw_context *brw,
    struct isl_surf *aux_surf = NULL, aux_surf_s;
    uint64_t aux_offset = 0;
    enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
-   if (mt->mcs_mt && !(flags & INTEL_AUX_BUFFER_DISABLED)) {
+   if (mt->mcs_buf && !(flags & INTEL_AUX_BUFFER_DISABLED)) {
       intel_miptree_get_aux_isl_surf(brw, mt, &aux_surf_s, &aux_usage);
       aux_surf = &aux_surf_s;
-      assert(mt->mcs_mt->offset == 0);
-      aux_offset = mt->mcs_mt->bo->offset64;
+      assert(mt->mcs_buf->mt->offset == 0);
+      aux_offset = mt->mcs_buf->mt->bo->offset64;
 
       /* We only really need a clear color if we also have an auxiliary
        * surfacae.  Without one, it does nothing.
@@ -181,7 +181,8 @@ brw_emit_surface_state(struct brw_context *brw,
       assert((aux_offset & 0xfff) == 0);
       drm_intel_bo_emit_reloc(brw->batch.bo,
                               *surf_offset + 4 * ss_info.aux_reloc_dw,
-                              mt->mcs_mt->bo, dw[ss_info.aux_reloc_dw] & 0xfff,
+                              mt->mcs_buf->mt->bo,
+                              dw[ss_info.aux_reloc_dw] & 0xfff,
                               read_domains, write_domains);
    }
 }
@@ -473,7 +474,7 @@ brw_disable_aux_surface(const struct brw_context *brw,
                         const struct intel_mipmap_tree *mt)
 {
    /* Nothing to disable. */
-   if (!mt->mcs_mt)
+   if (!mt->mcs_buf)
       return false;
 
    /* There are special cases only for lossless compression. */

@@ -282,7 +282,7 @@ intel_miptree_is_lossless_compressed(const struct brw_context *brw,
       return false;
 
    /* Compression always requires auxiliary buffer. */
-   if (!mt->mcs_mt)
+   if (!mt->mcs_buf)
       return false;
 
    /* Single sample compression is represented re-using msaa compression
@@ -1019,7 +1019,10 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
             drm_intel_bo_unreference((*mt)->hiz_buf->bo);
          free((*mt)->hiz_buf);
       }
-      intel_miptree_release(&(*mt)->mcs_mt);
+      if ((*mt)->mcs_buf) {
+         intel_miptree_release(&(*mt)->mcs_buf->mt);
+         free((*mt)->mcs_buf);
+      }
       intel_resolve_map_clear(&(*mt)->hiz_map);
 
       intel_miptree_release(&(*mt)->plane[0]);
@@ -1493,10 +1496,51 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   void *data = intel_miptree_map_raw(brw, mt->mcs_mt);
-   memset(data, init_value, mt->mcs_mt->total_height * mt->mcs_mt->pitch);
-   intel_miptree_unmap_raw(mt->mcs_mt);
+   void *data = intel_miptree_map_raw(brw, mt->mcs_buf->mt);
+   memset(data, init_value,
+          mt->mcs_buf->mt->total_height * mt->mcs_buf->mt->pitch);
+   intel_miptree_unmap_raw(mt->mcs_buf->mt);
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
+}
+
+static struct intel_miptree_aux_buffer *
+intel_mcs_miptree_buf_create(struct brw_context *brw,
+                             struct intel_mipmap_tree *mt,
+                             mesa_format format,
+                             unsigned mcs_width,
+                             unsigned mcs_height,
+                             uint32_t layout_flags)
+{
+   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+
+   if (!buf)
+      return NULL;
+
+   /* From the Ivy Bridge PRM, Vol4 Part1 p76, "MCS Base Address":
+    *
+    *     "The MCS surface must be stored as Tile Y."
+    */
+   layout_flags |= MIPTREE_LAYOUT_TILING_Y;
+   buf->mt = miptree_create(brw,
+                            mt->target,
+                            format,
+                            mt->first_level,
+                            mt->last_level,
+                            mcs_width,
+                            mcs_height,
+                            mt->logical_depth0,
+                            0 /* num_samples */,
+                            layout_flags);
+   if (!buf->mt) {
+      free(buf);
+      return NULL;
+   }
+
+   buf->bo = buf->mt->bo;
+   buf->pitch = buf->mt->pitch;
+   buf->qpitch = buf->mt->qpitch;
+
+   return buf;
 }
 
 static bool
@@ -1505,7 +1549,7 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                         GLuint num_samples)
 {
    assert(brw->gen >= 7); /* MCS only used on Gen7+ */
-   assert(mt->mcs_mt == NULL);
+   assert(mt->mcs_buf == NULL);
    assert(!mt->disable_aux_buffers);
 
    /* Choose the correct format for the MCS buffer.  All that really matters
@@ -1538,26 +1582,16 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
       unreachable("Unrecognized sample count in intel_miptree_alloc_mcs");
    };
 
-   /* From the Ivy Bridge PRM, Vol4 Part1 p76, "MCS Base Address":
-    *
-    *     "The MCS surface must be stored as Tile Y."
-    */
-   const uint32_t mcs_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD |
-                              MIPTREE_LAYOUT_TILING_Y;
-   mt->mcs_mt = miptree_create(brw,
-                               mt->target,
-                               format,
-                               mt->first_level,
-                               mt->last_level,
-                               mt->logical_width0,
-                               mt->logical_height0,
-                               mt->logical_depth0,
-                               0 /* num_samples */,
-                               mcs_flags);
+   mt->mcs_buf =
+      intel_mcs_miptree_buf_create(brw, mt,
+                                   format,
+                                   mt->logical_width0,
+                                   mt->logical_height0,
+                                   MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
 
    intel_miptree_init_mcs(brw, mt, 0xFF);
 
-   return mt->mcs_mt;
+   return mt->mcs_buf != NULL;
 }
 
 
@@ -1566,7 +1600,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  struct intel_mipmap_tree *mt,
                                  bool is_lossless_compressed)
 {
-   assert(mt->mcs_mt == NULL);
+   assert(mt->mcs_buf == NULL);
    assert(!mt->disable_aux_buffers);
 
    /* The format of the MCS buffer is opaque to the driver; all that matters
@@ -1600,12 +1634,9 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    unsigned mcs_height =
       ALIGN(mt->logical_height0, height_divisor) / height_divisor;
    assert(mt->logical_depth0 == 1);
-   uint32_t layout_flags = MIPTREE_LAYOUT_TILING_Y;
 
-   if (brw->gen >= 8) {
-      layout_flags |= MIPTREE_LAYOUT_FORCE_HALIGN16;
-   }
-
+   uint32_t layout_flags =
+      (brw->gen >= 8) ? MIPTREE_LAYOUT_FORCE_HALIGN16 : 0;
    /* In case of compression mcs buffer needs to be initialised requiring the
     * buffer to be immediately mapped to cpu space for writing. Therefore do
     * not use the gpu access flag which can cause an unnecessary delay if the
@@ -1614,16 +1645,11 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    if (!is_lossless_compressed)
       layout_flags |= MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
 
-   mt->mcs_mt = miptree_create(brw,
-                               mt->target,
-                               format,
-                               mt->first_level,
-                               mt->last_level,
-                               mcs_width,
-                               mcs_height,
-                               mt->logical_depth0,
-                               0 /* num_samples */,
-                               layout_flags);
+   mt->mcs_buf = intel_mcs_miptree_buf_create(brw, mt,
+                                              format,
+                                              mcs_width,
+                                              mcs_height,
+                                              layout_flags);
 
    /* From Gen9 onwards single-sampled (non-msrt) auxiliary buffers are
     * used for lossless compression which requires similar initialisation
@@ -1644,7 +1670,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
       mt->msaa_layout = INTEL_MSAA_LAYOUT_CMS;
    }
 
-   return mt->mcs_mt;
+   return mt->mcs_buf != NULL;
 }
 
 /**
@@ -2140,9 +2166,9 @@ intel_miptree_make_shareable(struct brw_context *brw,
     */
    assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_NONE);
 
-   if (mt->mcs_mt) {
+   if (mt->mcs_buf) {
       intel_miptree_resolve_color(brw, mt, 0);
-      intel_miptree_release(&mt->mcs_mt);
+      intel_miptree_release(&mt->mcs_buf->mt);
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
    }
 }
@@ -3213,9 +3239,9 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
                                enum isl_aux_usage *usage)
 {
    uint32_t aux_pitch, aux_qpitch;
-   if (mt->mcs_mt) {
-      aux_pitch = mt->mcs_mt->pitch;
-      aux_qpitch = mt->mcs_mt->qpitch;
+   if (mt->mcs_buf) {
+      aux_pitch = mt->mcs_buf->mt->pitch;
+      aux_qpitch = mt->mcs_buf->mt->qpitch;
 
       if (mt->num_samples > 1) {
          assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);

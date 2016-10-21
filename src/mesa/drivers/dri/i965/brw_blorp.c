@@ -176,7 +176,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
    intel_miptree_get_aux_isl_surf(brw, mt, aux_surf, &surf->aux_usage);
 
    /* For textures that are in the RESOLVED state, we ignore the MCS */
-   if (mt->mcs_mt && !is_render_target &&
+   if (mt->mcs_buf && !is_render_target &&
        mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED)
       surf->aux_usage = ISL_AUX_USAGE_NONE;
 
@@ -193,9 +193,9 @@ blorp_surf_for_miptree(struct brw_context *brw,
          .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
       };
 
-      if (mt->mcs_mt) {
-         surf->aux_addr.buffer = mt->mcs_mt->bo;
-         surf->aux_addr.offset = mt->mcs_mt->offset;
+      if (mt->mcs_buf) {
+         surf->aux_addr.buffer = mt->mcs_buf->mt->bo;
+         surf->aux_addr.offset = mt->mcs_buf->mt->offset;
       } else {
          assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
          struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
@@ -826,7 +826,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       /* If the MCS buffer hasn't been allocated yet, we need to allocate
        * it now.
        */
-      if (!irb->mt->mcs_mt) {
+      if (!irb->mt->mcs_buf) {
          assert(!is_lossless_compressed);
          if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
             /* MCS allocation failed--probably this will only happen in
