@@ -178,8 +178,15 @@ struct blorp_params
 
 void blorp_params_init(struct blorp_params *params);
 
+enum blorp_shader_type {
+   BLORP_SHADER_TYPE_BLIT,
+   BLORP_SHADER_TYPE_CLEAR,
+};
+
 struct brw_blorp_blit_prog_key
 {
+   enum blorp_shader_type shader_type; /* Must be BLORP_SHADER_TYPE_BLIT */
+
    /* Number of samples per pixel that have been configured in the surface
     * state for texturing from.
     */

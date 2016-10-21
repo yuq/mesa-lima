@@ -1662,8 +1662,9 @@ blorp_blit(struct blorp_batch *batch,
    params.src.view.swizzle = src_swizzle;
    params.dst.view.swizzle = dst_swizzle;
 
-   struct brw_blorp_blit_prog_key wm_prog_key;
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
+   struct brw_blorp_blit_prog_key wm_prog_key = {
+      .shader_type = BLORP_SHADER_TYPE_BLIT
+   };
 
    /* Scaled blitting or not. */
    wm_prog_key.blit_scaled =
@@ -1852,8 +1853,9 @@ blorp_copy(struct blorp_batch *batch,
    brw_blorp_surface_info_init(batch->blorp, &params.dst, dst_surf, dst_level,
                                dst_layer, ISL_FORMAT_UNSUPPORTED, true);
 
-   struct brw_blorp_blit_prog_key wm_prog_key;
-   memset(&wm_prog_key, 0, sizeof(wm_prog_key));
+   struct brw_blorp_blit_prog_key wm_prog_key = {
+      .shader_type = BLORP_SHADER_TYPE_BLIT
+   };
 
    const struct isl_format_layout *src_fmtl =
       isl_format_get_layout(params.src.surf.format);

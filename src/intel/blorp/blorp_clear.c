@@ -35,6 +35,7 @@
 
 struct brw_blorp_const_color_prog_key
 {
+   enum blorp_shader_type shader_type; /* Must be BLORP_SHADER_TYPE_CLEAR */
    bool use_simd16_replicated_data;
    bool pad[3];
 };
@@ -44,9 +45,10 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
                               struct blorp_params *params,
                               bool use_replicated_data)
 {
-   struct brw_blorp_const_color_prog_key blorp_key;
-   memset(&blorp_key, 0, sizeof(blorp_key));
-   blorp_key.use_simd16_replicated_data = use_replicated_data;
+   const struct brw_blorp_const_color_prog_key blorp_key = {
+      .shader_type = BLORP_SHADER_TYPE_CLEAR,
+      .use_simd16_replicated_data = use_replicated_data,
+   };
 
    if (blorp->lookup_shader(blorp, &blorp_key, sizeof(blorp_key),
                             &params->wm_prog_kernel, &params->wm_prog_data))
