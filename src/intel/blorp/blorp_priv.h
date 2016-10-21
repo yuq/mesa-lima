@@ -122,6 +122,8 @@ struct blorp_surf_offset {
 
 struct brw_blorp_wm_inputs
 {
+   uint32_t clear_color[4];
+
    struct brw_blorp_discard_rect discard_rect;
    struct brw_blorp_rect_grid rect_grid;
    struct brw_blorp_coord_transform coord_transform[2];
@@ -137,6 +139,18 @@ struct brw_blorp_wm_inputs
    /* Pad out to an integral number of registers */
    uint32_t pad[1];
 };
+
+#define BLORP_CREATE_NIR_INPUT(shader, name, type) ({ \
+   nir_variable *input = nir_variable_create((shader), nir_var_shader_in, \
+                                             type, #name); \
+   if ((shader)->stage == MESA_SHADER_FRAGMENT) \
+      input->data.interpolation = INTERP_MODE_FLAT; \
+   input->data.location = VARYING_SLOT_VAR0 + \
+      offsetof(struct brw_blorp_wm_inputs, name) / (4 * sizeof(float)); \
+   input->data.location_frac = \
+      (offsetof(struct brw_blorp_wm_inputs, name) / sizeof(float)) % 4; \
+   input; \
+})
 
 static inline unsigned
 brw_blorp_get_urb_length(const struct brw_wm_prog_data *prog_data)

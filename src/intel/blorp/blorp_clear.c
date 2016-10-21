@@ -60,10 +60,8 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
    nir_builder_init_simple_shader(&b, mem_ctx, MESA_SHADER_FRAGMENT, NULL);
    b.shader->info->name = ralloc_strdup(b.shader, "BLORP-clear");
 
-   nir_variable *v_color = nir_variable_create(b.shader, nir_var_shader_in,
-                                               glsl_vec4_type(), "v_color");
-   v_color->data.location = VARYING_SLOT_VAR0;
-   v_color->data.interpolation = INTERP_MODE_FLAT;
+   nir_variable *v_color =
+      BLORP_CREATE_NIR_INPUT(b.shader, clear_color, glsl_vec4_type());
 
    nir_variable *frag_color = nir_variable_create(b.shader, nir_var_shader_out,
                                                   glsl_vec4_type(),

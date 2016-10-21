@@ -67,13 +67,7 @@ brw_blorp_blit_vars_init(nir_builder *b, struct brw_blorp_blit_vars *v,
     assert(!key->use_kill || !(key->blend && key->blit_scaled));
 
 #define LOAD_INPUT(name, type)\
-   v->v_##name = nir_variable_create(b->shader, nir_var_shader_in, \
-                                     type, #name); \
-   v->v_##name->data.interpolation = INTERP_MODE_FLAT; \
-   v->v_##name->data.location = VARYING_SLOT_VAR0 + \
-      offsetof(struct brw_blorp_wm_inputs, name) / (4 * sizeof(float)); \
-   v->v_##name->data.location_frac = \
-      (offsetof(struct brw_blorp_wm_inputs, name) / sizeof(float)) % 4;
+   v->v_##name = BLORP_CREATE_NIR_INPUT(b->shader, name, type);
 
    LOAD_INPUT(discard_rect, glsl_vec4_type())
    LOAD_INPUT(rect_grid, glsl_vec4_type())
