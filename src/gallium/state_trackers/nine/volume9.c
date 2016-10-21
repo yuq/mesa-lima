@@ -42,7 +42,7 @@ NineVolume9_AllocateData( struct NineVolume9 *This )
     DBG("(%p(This=%p),level=%u) Allocating 0x%x bytes of system memory.\n",
         This->base.container, This, This->level, size);
 
-    This->data = (uint8_t *)align_malloc(size, 32);
+    This->data = (uint8_t *)align_calloc(size, 32);
     if (!This->data)
         return E_OUTOFMEMORY;
     return D3D_OK;
@@ -124,7 +124,7 @@ NineVolume9_ctor( struct NineVolume9 *This,
         This->layer_stride_conversion = util_format_get_2d_size(This->format_conversion,
                                                                 This->stride_conversion,
                                                                 pDesc->Height);
-        This->data_conversion = align_malloc(This->layer_stride_conversion *
+        This->data_conversion = align_calloc(This->layer_stride_conversion *
                                              This->desc.Depth, 32);
         if (!This->data_conversion)
             return E_OUTOFMEMORY;

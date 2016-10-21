@@ -146,7 +146,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
                                                          FALSE,
                                                          TRUE);
     if (This->base.info.format != This->format_conversion) {
-        This->data_conversion = align_malloc(
+        This->data_conversion = align_calloc(
             nine_format_get_level_alloc_size(This->format_conversion,
                                              pDesc->Width,
                                              pDesc->Height,
@@ -160,7 +160,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     if ((allocate && pDesc->Pool != D3DPOOL_DEFAULT) || pDesc->Format == D3DFMT_NULL) {
         /* Ram buffer with no parent. Has to allocate the resource itself */
         assert(!user_buffer);
-        This->data = align_malloc(
+        This->data = align_calloc(
             nine_format_get_level_alloc_size(This->base.info.format,
                                              pDesc->Width,
                                              pDesc->Height,

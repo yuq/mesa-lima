@@ -111,7 +111,7 @@ NineCubeTexture9_ctor( struct NineCubeTexture9 *This,
         face_size = nine_format_get_size_and_offsets(pf, level_offsets,
                                                      EdgeLength, EdgeLength,
                                                      info->last_level);
-        This->managed_buffer = align_malloc(6 * face_size, 32);
+        This->managed_buffer = align_calloc(6 * face_size, 32);
         if (!This->managed_buffer)
             return E_OUTOFMEMORY;
     }

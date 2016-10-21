@@ -161,7 +161,7 @@ NineTexture9_ctor( struct NineTexture9 *This,
          * apps access sublevels of texture even if they locked only first
          * level) */
         level_offsets = alloca(sizeof(unsigned) * (info->last_level + 1));
-        user_buffer = align_malloc(
+        user_buffer = align_calloc(
             nine_format_get_size_and_offsets(pf, level_offsets,
                                              Width, Height,
                                              info->last_level), 32);
