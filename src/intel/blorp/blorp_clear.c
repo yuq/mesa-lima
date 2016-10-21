@@ -76,8 +76,8 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
    struct brw_blorp_prog_data prog_data;
    unsigned program_size;
    const unsigned *program =
-      brw_blorp_compile_nir_shader(blorp, b.shader, &wm_key, use_replicated_data,
-                                   &prog_data, &program_size);
+      blorp_compile_fs(blorp, b.shader, &wm_key, use_replicated_data,
+                       &prog_data, &program_size);
 
    blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
                         program, program_size,
