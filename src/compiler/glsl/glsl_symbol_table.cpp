@@ -213,7 +213,10 @@ bool glsl_symbol_table::add_default_precision_qualifier(const char *type_name,
    symbol_table_entry *entry =
       new(mem_ctx) symbol_table_entry(default_specifier);
 
-   return _mesa_symbol_table_add_symbol(table, name, entry) == 0;
+   if (!get_entry(name))
+      return _mesa_symbol_table_add_symbol(table, name, entry) == 0;
+
+   return _mesa_symbol_table_replace_symbol(table, name, entry) == 0;
 }
 
 void glsl_symbol_table::add_global_function(ir_function *f)
