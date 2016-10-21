@@ -2022,7 +2022,34 @@ intel_miptree_sample_with_hiz(struct brw_context *brw,
       return false;
    }
 
-   return false;
+   if (!mt->hiz_buf) {
+      return false;
+   }
+
+   /* It seems the hardware won't fallback to the depth buffer if some of the
+    * mipmap levels aren't available in the HiZ buffer. So we need all levels
+    * of the texture to be HiZ enabled.
+    */
+   for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
+      if (!intel_miptree_level_has_hiz(mt, level))
+         return false;
+   }
+
+   /* If compressed multisampling is enabled, then we use it for the auxiliary
+    * buffer instead.
+    *
+    * From the BDW PRM (Volume 2d: Command Reference: Structures
+    *                   RENDER_SURFACE_STATE.AuxiliarySurfaceMode):
+    *
+    *  "If this field is set to AUX_HIZ, Number of Multisamples must be
+    *   MULTISAMPLECOUNT_1, and Surface Type cannot be SURFTYPE_3D.
+    *
+    * There is no such blurb for 1D textures, but there is sufficient evidence
+    * that this is broken on SKL+.
+    */
+   return (mt->num_samples <= 1 &&
+           mt->target != GL_TEXTURE_3D &&
+           mt->target != GL_TEXTURE_1D /* gen9+ restriction */);
 }
 
 /**
