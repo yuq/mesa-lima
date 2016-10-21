@@ -157,6 +157,17 @@ blorp_clear_depth_stencil(struct blorp_batch *batch,
                           uint8_t stencil_mask, uint8_t stencil_value);
 
 void
+blorp_clear_attachments(struct blorp_batch *batch,
+                        uint32_t binding_table_offset,
+                        enum isl_format depth_format,
+                        uint32_t num_samples,
+                        uint32_t start_layer, uint32_t num_layers,
+                        uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
+                        bool clear_color, union isl_color_value color_value,
+                        bool clear_depth, float depth_value,
+                        uint8_t stencil_mask, uint8_t stencil_value);
+
+void
 blorp_ccs_resolve(struct blorp_batch *batch,
                   struct blorp_surf *surf, enum isl_format format);
 

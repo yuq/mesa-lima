@@ -207,6 +207,7 @@ void blorp_params_init(struct blorp_params *params);
 enum blorp_shader_type {
    BLORP_SHADER_TYPE_BLIT,
    BLORP_SHADER_TYPE_CLEAR,
+   BLORP_SHADER_TYPE_LAYER_OFFSET_VS,
 };
 
 struct brw_blorp_blit_prog_key

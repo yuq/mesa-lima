@@ -87,6 +87,95 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
    ralloc_free(mem_ctx);
 }
 
+struct layer_offset_vs_key {
+   enum blorp_shader_type shader_type;
+   unsigned num_inputs;
+};
+
+/* In the case of doing attachment clears, we are using a surface state that
+ * is handed to us so we can't set (and don't even know) the base array layer.
+ * In order to do a layered clear in this scenario, we need some way of adding
+ * the base array layer to the instance id.  Unfortunately, our hardware has
+ * no real concept of "base instance", so we have to do it manually in a
+ * vertex shader.
+ */
+static void
+blorp_params_get_layer_offset_vs(struct blorp_context *blorp,
+                                 struct blorp_params *params)
+{
+   struct layer_offset_vs_key blorp_key = {
+      .shader_type = BLORP_SHADER_TYPE_LAYER_OFFSET_VS,
+   };
+
+   if (params->wm_prog_data)
+      blorp_key.num_inputs = params->wm_prog_data->num_varying_inputs;
+
+   if (blorp->lookup_shader(blorp, &blorp_key, sizeof(blorp_key),
+                            &params->vs_prog_kernel, &params->vs_prog_data))
+      return;
+
+   void *mem_ctx = ralloc_context(NULL);
+
+   nir_builder b;
+   nir_builder_init_simple_shader(&b, mem_ctx, MESA_SHADER_VERTEX, NULL);
+   b.shader->info->name = ralloc_strdup(b.shader, "BLORP-layer-offset-vs");
+
+   const struct glsl_type *uvec4_type = glsl_vector_type(GLSL_TYPE_UINT, 4);
+
+   /* First we deal with the header which has instance and base instance */
+   nir_variable *a_header = nir_variable_create(b.shader, nir_var_shader_in,
+                                                uvec4_type, "header");
+   a_header->data.location = VERT_ATTRIB_GENERIC0;
+
+   nir_variable *v_layer = nir_variable_create(b.shader, nir_var_shader_out,
+                                               glsl_int_type(), "layer_id");
+   v_layer->data.location = VARYING_SLOT_LAYER;
+
+   /* Compute the layer id */
+   nir_ssa_def *header = nir_load_var(&b, a_header);
+   nir_ssa_def *base_layer = nir_channel(&b, header, 0);
+   nir_ssa_def *instance = nir_channel(&b, header, 1);
+   nir_store_var(&b, v_layer, nir_iadd(&b, instance, base_layer), 0x1);
+
+   /* Then we copy the vertex from the next slot to VARYING_SLOT_POS */
+   nir_variable *a_vertex = nir_variable_create(b.shader, nir_var_shader_in,
+                                                glsl_vec4_type(), "a_vertex");
+   a_vertex->data.location = VERT_ATTRIB_GENERIC1;
+
+   nir_variable *v_pos = nir_variable_create(b.shader, nir_var_shader_out,
+                                             glsl_vec4_type(), "v_pos");
+   v_pos->data.location = VARYING_SLOT_POS;
+
+   nir_copy_var(&b, v_pos, a_vertex);
+
+   /* Then we copy everything else */
+   for (unsigned i = 0; i < blorp_key.num_inputs; i++) {
+      nir_variable *a_in = nir_variable_create(b.shader, nir_var_shader_in,
+                                               uvec4_type, "input");
+      a_in->data.location = VERT_ATTRIB_GENERIC2 + i;
+
+      nir_variable *v_out = nir_variable_create(b.shader, nir_var_shader_out,
+                                                uvec4_type, "output");
+      v_out->data.location = VARYING_SLOT_VAR0 + i;
+
+      nir_copy_var(&b, v_out, a_in);
+   }
+
+   struct brw_vs_prog_data vs_prog_data;
+   memset(&vs_prog_data, 0, sizeof(vs_prog_data));
+
+   unsigned program_size;
+   const unsigned *program =
+      blorp_compile_vs(blorp, mem_ctx, b.shader, &vs_prog_data, &program_size);
+
+   blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
+                        program, program_size,
+                        &vs_prog_data.base.base, sizeof(vs_prog_data),
+                        &params->vs_prog_kernel, &params->vs_prog_data);
+
+   ralloc_free(mem_ctx);
+}
+
 /* The x0, y0, x1, and y1 parameters must already be populated with the render
  * area of the framebuffer to be cleared.
  */
@@ -224,7 +313,7 @@ blorp_fast_clear(struct blorp_batch *batch,
    params.x1 = x1;
    params.y1 = y1;
 
-   memset(&params.wm_inputs, 0xff, 4*sizeof(float));
+   memset(&params.wm_inputs.clear_color, 0xff, 4*sizeof(float));
    params.fast_clear_op = BLORP_FAST_CLEAR_OP_CLEAR;
 
    get_fast_clear_rect(batch->blorp->isl_dev, surf->aux_surf,
@@ -262,7 +351,7 @@ blorp_clear(struct blorp_batch *batch,
       format = ISL_FORMAT_R32_UINT;
    }
 
-   memcpy(&params.wm_inputs, clear_color.f32, sizeof(float) * 4);
+   memcpy(&params.wm_inputs.clear_color, clear_color.f32, sizeof(float) * 4);
 
    bool use_simd16_replicated_data = true;
 
@@ -379,6 +468,76 @@ blorp_clear_depth_stencil(struct blorp_batch *batch,
       start_layer += params.num_layers;
       num_layers -= params.num_layers;
    }
+}
+
+/** Clear active color/depth/stencili attachments
+ *
+ * This function performs a clear operation on the currently bound
+ * color/depth/stencil attachments.  It is assumed that any information passed
+ * in here is valid, consistent, and in-bounds relative to the currently
+ * attached depth/stencil.  The binding_table_offset parameter is the 32-bit
+ * offset relative to surface state base address where pre-baked binding table
+ * that we are to use lives.  If clear_color is false, binding_table_offset
+ * must point to a binding table with one entry which is a valid null surface
+ * that matches the currently bound depth and stencil.
+ */
+void
+blorp_clear_attachments(struct blorp_batch *batch,
+                        uint32_t binding_table_offset,
+                        enum isl_format depth_format,
+                        uint32_t num_samples,
+                        uint32_t start_layer, uint32_t num_layers,
+                        uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1,
+                        bool clear_color, union isl_color_value color_value,
+                        bool clear_depth, float depth_value,
+                        uint8_t stencil_mask, uint8_t stencil_value)
+{
+   struct blorp_params params;
+   blorp_params_init(&params);
+
+   assert(batch->flags & BLORP_BATCH_NO_EMIT_DEPTH_STENCIL);
+
+   params.x0 = x0;
+   params.y0 = y0;
+   params.x1 = x1;
+   params.y1 = y1;
+
+   params.use_pre_baked_binding_table = true;
+   params.pre_baked_binding_table_offset = binding_table_offset;
+
+   params.num_layers = num_layers;
+   params.num_samples = num_samples;
+
+   if (clear_color) {
+      params.dst.enabled = true;
+
+      memcpy(&params.wm_inputs.clear_color, color_value.f32, sizeof(float) * 4);
+
+      /* Unfortunately, without knowing whether or not our destination surface
+       * is tiled or not, we have to assume it may be linear.  This means no
+       * SIMD16_REPDATA for us. :-(
+       */
+      blorp_params_get_clear_kernel(batch->blorp, &params, false);
+   }
+
+   if (clear_depth) {
+      params.depth.enabled = true;
+
+      params.z = depth_value;
+      params.depth_format = isl_format_get_depth_format(depth_format, false);
+   }
+
+   if (stencil_mask) {
+      params.stencil.enabled = true;
+
+      params.stencil_mask = stencil_mask;
+      params.stencil_ref = stencil_value;
+   }
+
+   blorp_params_get_layer_offset_vs(batch->blorp, &params);
+   params.vs_inputs.base_layer = start_layer;
+
+   batch->blorp->exec(batch, &params);
 }
 
 void
