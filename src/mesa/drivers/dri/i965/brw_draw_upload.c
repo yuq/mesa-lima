@@ -472,7 +472,8 @@ brw_prepare_vertices(struct brw_context *brw)
    while (vs_inputs) {
       GLuint index = ffsll(vs_inputs) - 1;
       struct brw_vertex_element *input = &brw->vb.inputs[index];
-
+      input->is_dual_slot = brw->gen >= 8 &&
+         (vs_prog_data->double_inputs_read & BITFIELD64_BIT(index)) != 0;
       vs_inputs &= ~BITFIELD64_BIT(index);
       brw->vb.enabled[brw->vb.nr_enabled++] = input;
    }

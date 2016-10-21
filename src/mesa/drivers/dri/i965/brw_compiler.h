@@ -641,6 +641,7 @@ struct brw_vs_prog_data {
    struct brw_vue_prog_data base;
 
    GLbitfield64 inputs_read;
+   GLbitfield64 double_inputs_read;
 
    unsigned nr_attributes;
    unsigned nr_attribute_slots;
