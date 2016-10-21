@@ -68,10 +68,6 @@ NineSurface9_ctor( struct NineSurface9 *This,
     /* Make sure there's a Desc */
     assert(pDesc);
 
-    /* D3DUSAGE_DYNAMIC isn't allowed on managed buffers */
-    user_assert(!(pDesc->Usage & D3DUSAGE_DYNAMIC) ||
-                (pDesc->Pool != D3DPOOL_MANAGED), D3DERR_INVALIDCALL);
-
     assert(allocate || pResource || user_buffer ||
            pDesc->Format == D3DFMT_NULL);
     assert(!allocate || (!pResource && !user_buffer));
