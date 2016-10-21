@@ -292,6 +292,24 @@ VkResult anv_ResetCommandBuffer(
    return anv_cmd_buffer_reset(cmd_buffer);
 }
 
+void
+anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer)
+{
+   switch (cmd_buffer->device->info.gen) {
+   case 7:
+      if (cmd_buffer->device->info.is_haswell)
+         return gen75_cmd_buffer_emit_state_base_address(cmd_buffer);
+      else
+         return gen7_cmd_buffer_emit_state_base_address(cmd_buffer);
+   case 8:
+      return gen8_cmd_buffer_emit_state_base_address(cmd_buffer);
+   case 9:
+      return gen9_cmd_buffer_emit_state_base_address(cmd_buffer);
+   default:
+      unreachable("unsupported gen\n");
+   }
+}
+
 void anv_CmdBindPipeline(
     VkCommandBuffer                             commandBuffer,
     VkPipelineBindPoint                         pipelineBindPoint,

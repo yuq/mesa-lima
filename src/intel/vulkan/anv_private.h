@@ -1269,6 +1269,8 @@ void anv_cmd_buffer_setup_attachments(struct anv_cmd_buffer *cmd_buffer,
                                       struct anv_framebuffer *framebuffer,
                                       const VkClearValue *clear_values);
 
+void anv_cmd_buffer_emit_state_base_address(struct anv_cmd_buffer *cmd_buffer);
+
 struct anv_state
 anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
                               gl_shader_stage stage);
