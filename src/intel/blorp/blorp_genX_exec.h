@@ -193,27 +193,34 @@ blorp_emit_input_varying_data(struct blorp_batch *batch,
    const unsigned vec4_size_in_bytes = 4 * sizeof(float);
    const unsigned max_num_varyings =
       DIV_ROUND_UP(sizeof(params->wm_inputs), vec4_size_in_bytes);
-   const unsigned num_varyings = params->wm_prog_data->num_varying_inputs;
+   const unsigned num_varyings =
+      params->wm_prog_data ? params->wm_prog_data->num_varying_inputs : 0;
 
-   *size = num_varyings * vec4_size_in_bytes;
+   *size = 16 + num_varyings * vec4_size_in_bytes;
 
    const uint32_t *const inputs_src = (const uint32_t *)&params->wm_inputs;
    uint32_t *inputs = blorp_alloc_vertex_buffer(batch, *size, addr);
 
-   /* Walk over the attribute slots, determine if the attribute is used by
-    * the program and when necessary copy the values from the input storage to
-    * the vertex data buffer.
-    */
-   for (unsigned i = 0; i < max_num_varyings; i++) {
-      const gl_varying_slot attr = VARYING_SLOT_VAR0 + i;
+   /* Zero data for the VUE header */
+   memset(inputs, 0, 4 * sizeof(uint32_t));
+   inputs += 4;
 
-      const int input_index = params->wm_prog_data->urb_setup[attr];
-      if (input_index < 0)
-         continue;
+   if (params->wm_prog_data) {
+      /* Walk over the attribute slots, determine if the attribute is used by
+       * the program and when necessary copy the values from the input storage
+       * to the vertex data buffer.
+       */
+      for (unsigned i = 0; i < max_num_varyings; i++) {
+         const gl_varying_slot attr = VARYING_SLOT_VAR0 + i;
 
-      memcpy(inputs, inputs_src + i * 4, vec4_size_in_bytes);
+         const int input_index = params->wm_prog_data->urb_setup[attr];
+         if (input_index < 0)
+            continue;
 
-      inputs += 4;
+         memcpy(inputs, inputs_src + i * 4, vec4_size_in_bytes);
+
+         inputs += 4;
+      }
    }
 }
 
@@ -223,8 +230,6 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
 {
    struct GENX(VERTEX_BUFFER_STATE) vb[2];
    memset(vb, 0, sizeof(vb));
-
-   unsigned num_buffers = 1;
 
    uint32_t size;
    blorp_emit_vertex_data(batch, params, &vb[0].BufferStartingAddress, &size);
@@ -242,30 +247,26 @@ blorp_emit_vertex_buffers(struct blorp_batch *batch,
    vb[0].EndAddress.offset += size - 1;
 #endif
 
-   if (params->wm_prog_data && params->wm_prog_data->num_varying_inputs) {
-      blorp_emit_input_varying_data(batch, params,
-                                    &vb[1].BufferStartingAddress, &size);
-      vb[1].VertexBufferIndex = 1;
-      vb[1].BufferPitch = 0;
-      vb[1].VertexBufferMOCS = batch->blorp->mocs.vb;
+   blorp_emit_input_varying_data(batch, params,
+                                 &vb[1].BufferStartingAddress, &size);
+   vb[1].VertexBufferIndex = 1;
+   vb[1].BufferPitch = 0;
+   vb[1].VertexBufferMOCS = batch->blorp->mocs.vb;
 #if GEN_GEN >= 7
-      vb[1].AddressModifyEnable = true;
+   vb[1].AddressModifyEnable = true;
 #endif
 #if GEN_GEN >= 8
-      vb[1].BufferSize = size;
+   vb[1].BufferSize = size;
 #else
-      vb[1].BufferAccessType = INSTANCEDATA;
-      vb[1].EndAddress = vb[1].BufferStartingAddress;
-      vb[1].EndAddress.offset += size - 1;
+   vb[1].BufferAccessType = INSTANCEDATA;
+   vb[1].EndAddress = vb[1].BufferStartingAddress;
+   vb[1].EndAddress.offset += size - 1;
 #endif
-      num_buffers++;
-   }
 
-   const unsigned num_dwords =
-      1 + GENX(VERTEX_BUFFER_STATE_length) * num_buffers;
+   const unsigned num_dwords = 1 + GENX(VERTEX_BUFFER_STATE_length) * 2;
    uint32_t *dw = blorp_emitn(batch, GENX(3DSTATE_VERTEX_BUFFERS), num_dwords);
 
-   for (unsigned i = 0; i < num_buffers; i++) {
+   for (unsigned i = 0; i < 2; i++) {
       GENX(VERTEX_BUFFER_STATE_pack)(batch, dw, &vb[i]);
       dw += GENX(VERTEX_BUFFER_STATE_length);
    }
@@ -328,7 +329,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
     *
     * See the vertex element setup below.
     */
-   ve[0].VertexBufferIndex = 0;
+   ve[0].VertexBufferIndex = 1;
    ve[0].Valid = true;
    ve[0].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
    ve[0].SourceElementOffset = 0;
@@ -359,7 +360,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
       ve[i + 2].VertexBufferIndex = 1;
       ve[i + 2].Valid = true;
       ve[i + 2].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
-      ve[i + 2].SourceElementOffset = i * 4 * sizeof(float);
+      ve[i + 2].SourceElementOffset = 16 + i * 4 * sizeof(float);
       ve[i + 2].Component0Control = VFCOMP_STORE_SRC;
       ve[i + 2].Component1Control = VFCOMP_STORE_SRC;
       ve[i + 2].Component2Control = VFCOMP_STORE_SRC;
