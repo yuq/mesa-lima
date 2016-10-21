@@ -190,6 +190,37 @@ blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
    return program;
 }
 
+const unsigned *
+blorp_compile_vs(struct blorp_context *blorp, void *mem_ctx,
+                 struct nir_shader *nir,
+                 struct brw_vs_prog_data *vs_prog_data,
+                 unsigned *program_size)
+{
+   const struct brw_compiler *compiler = blorp->compiler;
+
+   nir->options =
+      compiler->glsl_compiler_options[MESA_SHADER_VERTEX].NirOptions;
+
+   nir = brw_preprocess_nir(compiler, nir);
+   nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
+
+   vs_prog_data->inputs_read = nir->info->inputs_read;
+
+   brw_compute_vue_map(compiler->devinfo,
+                       &vs_prog_data->base.vue_map,
+                       nir->info->outputs_written,
+                       nir->info->separate_shader);
+
+   struct brw_vs_prog_key vs_key = { 0, };
+
+   const unsigned *program =
+      brw_compile_vs(compiler, blorp->driver_ctx, mem_ctx,
+                     &vs_key, vs_prog_data, nir,
+                     NULL, false, -1, program_size, NULL);
+
+   return program;
+}
+
 void
 blorp_gen6_hiz_op(struct blorp_batch *batch,
                   struct blorp_surf *surf, unsigned level, unsigned layer,

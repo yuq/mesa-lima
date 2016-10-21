@@ -201,8 +201,9 @@ blorp_emit_input_varying_data(struct blorp_batch *batch,
    const uint32_t *const inputs_src = (const uint32_t *)&params->wm_inputs;
    uint32_t *inputs = blorp_alloc_vertex_buffer(batch, *size, addr);
 
-   /* Zero data for the VUE header */
-   memset(inputs, 0, 4 * sizeof(uint32_t));
+   /* Copy in the VS inputs */
+   assert(sizeof(params->vs_inputs) == 16);
+   memcpy(inputs, &params->vs_inputs, sizeof(params->vs_inputs));
    inputs += 4;
 
    if (params->wm_prog_data) {
@@ -333,7 +334,7 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
    ve[0].Valid = true;
    ve[0].SourceElementFormat = ISL_FORMAT_R32G32B32A32_FLOAT;
    ve[0].SourceElementOffset = 0;
-   ve[0].Component0Control = VFCOMP_STORE_0;
+   ve[0].Component0Control = VFCOMP_STORE_SRC;
 
    /* From Gen8 onwards hardware is no more instructed to overwrite components
     * using an element specifier. Instead one has separate 3DSTATE_VF_SGVS
@@ -344,8 +345,8 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
 #else
    ve[0].Component1Control = VFCOMP_STORE_IID;
 #endif
-   ve[0].Component2Control = VFCOMP_STORE_0;
-   ve[0].Component3Control = VFCOMP_STORE_0;
+   ve[0].Component2Control = VFCOMP_STORE_SRC;
+   ve[0].Component3Control = VFCOMP_STORE_SRC;
 
    ve[1].VertexBufferIndex = 0;
    ve[1].Valid = true;
@@ -397,6 +398,35 @@ blorp_emit_vertex_elements(struct blorp_batch *batch,
       topo.PrimitiveTopologyType = _3DPRIM_RECTLIST;
    }
 #endif
+}
+
+static void
+blorp_emit_vs_config(struct blorp_batch *batch,
+                     const struct blorp_params *params)
+{
+   struct brw_vs_prog_data *vs_prog_data = params->vs_prog_data;
+
+   blorp_emit(batch, GENX(3DSTATE_VS), vs) {
+      if (vs_prog_data) {
+         vs.FunctionEnable = true;
+
+         vs.KernelStartPointer = params->vs_prog_kernel;
+
+         vs.DispatchGRFStartRegisterForURBData =
+            vs_prog_data->base.base.dispatch_grf_start_reg;
+         vs.VertexURBEntryReadLength =
+            vs_prog_data->base.urb_read_length;
+         vs.VertexURBEntryReadOffset = 0;
+
+         vs.MaximumNumberofThreads =
+            batch->blorp->isl_dev->info->max_vs_threads - 1;
+
+#if GEN_GEN >= 8
+         vs.SIMD8DispatchEnable =
+            vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
+#endif
+      }
+   }
 }
 
 static void
@@ -1315,7 +1345,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
     *
     * We've already done one at the start of the BLORP operation.
     */
-   blorp_emit(batch, GENX(3DSTATE_VS), vs);
+   blorp_emit_vs_config(batch, params);
 #if GEN_GEN >= 7
    blorp_emit(batch, GENX(3DSTATE_HS), hs);
    blorp_emit(batch, GENX(3DSTATE_TE), te);
