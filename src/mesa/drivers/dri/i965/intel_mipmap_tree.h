@@ -339,6 +339,27 @@ struct intel_miptree_aux_buffer
    drm_intel_bo *bo;
 
    /**
+    * Offset into bo where the surface starts.
+    *
+    * @see intel_mipmap_aux_buffer::bo
+    *
+    * @see RENDER_SURFACE_STATE.AuxiliarySurfaceBaseAddress
+    * @see 3DSTATE_DEPTH_BUFFER.SurfaceBaseAddress
+    * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceBaseAddress
+    * @see 3DSTATE_STENCIL_BUFFER.SurfaceBaseAddress
+    */
+   uint32_t offset;
+
+   /*
+    * Size of the MCS surface.
+    *
+    * This is needed when doing any gtt mapped operations on the buffer (which
+    * will be Y-tiled). It is possible that it will not be the same as bo->size
+    * when the drm allocator rounds up the requested size.
+    */
+   size_t size;
+
+   /**
     * Pitch in bytes.
     *
     * @see RENDER_SURFACE_STATE.AuxiliarySurfacePitch

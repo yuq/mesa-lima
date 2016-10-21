@@ -1020,7 +1020,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
          free((*mt)->hiz_buf);
       }
       if ((*mt)->mcs_buf) {
-         intel_miptree_release(&(*mt)->mcs_buf->mt);
+         drm_intel_bo_unreference((*mt)->mcs_buf->bo);
          free((*mt)->mcs_buf);
       }
       intel_resolve_map_clear(&(*mt)->hiz_map);
@@ -1499,13 +1499,12 @@ intel_miptree_init_mcs(struct brw_context *brw,
    const int ret = brw_bo_map_gtt(brw, mt->mcs_buf->bo, "miptree");
    if (unlikely(ret)) {
       fprintf(stderr, "Failed to map mcs buffer into GTT\n");
-      intel_miptree_release(&mt->mcs_buf->mt);
+      drm_intel_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
       return;
    }
    void *data = mt->mcs_buf->bo->virtual;
-   memset(data, init_value,
-          mt->mcs_buf->mt->total_height * mt->mcs_buf->mt->pitch);
+   memset(data, init_value, mt->mcs_buf->size);
    drm_intel_bo_unmap(mt->mcs_buf->bo);
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
 }
@@ -1519,6 +1518,7 @@ intel_mcs_miptree_buf_create(struct brw_context *brw,
                              uint32_t layout_flags)
 {
    struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   struct intel_mipmap_tree *temp_mt;
 
    if (!buf)
       return NULL;
@@ -1528,7 +1528,7 @@ intel_mcs_miptree_buf_create(struct brw_context *brw,
     *     "The MCS surface must be stored as Tile Y."
     */
    layout_flags |= MIPTREE_LAYOUT_TILING_Y;
-   buf->mt = miptree_create(brw,
+   temp_mt = miptree_create(brw,
                             mt->target,
                             format,
                             mt->first_level,
@@ -1538,14 +1538,23 @@ intel_mcs_miptree_buf_create(struct brw_context *brw,
                             mt->logical_depth0,
                             0 /* num_samples */,
                             layout_flags);
-   if (!buf->mt) {
+   if (!temp_mt) {
       free(buf);
       return NULL;
    }
 
-   buf->bo = buf->mt->bo;
-   buf->pitch = buf->mt->pitch;
-   buf->qpitch = buf->mt->qpitch;
+   buf->bo = temp_mt->bo;
+   buf->offset = temp_mt->offset;
+   buf->size = temp_mt->total_height * temp_mt->pitch;
+   buf->pitch = temp_mt->pitch;
+   buf->qpitch = temp_mt->qpitch;
+
+   /* Just hang on to the BO which backs the AUX buffer; the rest of the miptree
+    * structure should go away. We use miptree create simply as a means to make
+    * sure all the constraints for the buffer are satisfied.
+    */
+   drm_intel_bo_reference(temp_mt->bo);
+   intel_miptree_release(&temp_mt);
 
    return buf;
 }
@@ -3247,8 +3256,8 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
 {
    uint32_t aux_pitch, aux_qpitch;
    if (mt->mcs_buf) {
-      aux_pitch = mt->mcs_buf->mt->pitch;
-      aux_qpitch = mt->mcs_buf->mt->qpitch;
+      aux_pitch = mt->mcs_buf->pitch;
+      aux_qpitch = mt->mcs_buf->qpitch;
 
       if (mt->num_samples > 1) {
          assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);

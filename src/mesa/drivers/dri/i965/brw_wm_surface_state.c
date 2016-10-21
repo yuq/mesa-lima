@@ -146,8 +146,8 @@ brw_emit_surface_state(struct brw_context *brw,
    if (mt->mcs_buf && !(flags & INTEL_AUX_BUFFER_DISABLED)) {
       intel_miptree_get_aux_isl_surf(brw, mt, &aux_surf_s, &aux_usage);
       aux_surf = &aux_surf_s;
-      assert(mt->mcs_buf->mt->offset == 0);
-      aux_offset = mt->mcs_buf->mt->bo->offset64;
+      assert(mt->mcs_buf->offset == 0);
+      aux_offset = mt->mcs_buf->bo->offset64;
 
       /* We only really need a clear color if we also have an auxiliary
        * surfacae.  Without one, it does nothing.
@@ -181,7 +181,7 @@ brw_emit_surface_state(struct brw_context *brw,
       assert((aux_offset & 0xfff) == 0);
       drm_intel_bo_emit_reloc(brw->batch.bo,
                               *surf_offset + 4 * ss_info.aux_reloc_dw,
-                              mt->mcs_buf->mt->bo,
+                              mt->mcs_buf->bo,
                               dw[ss_info.aux_reloc_dw] & 0xfff,
                               read_domains, write_domains);
    }
