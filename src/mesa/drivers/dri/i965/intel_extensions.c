@@ -221,6 +221,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_texture_compression_bptc = true;
       ctx->Extensions.ARB_texture_view = true;
       ctx->Extensions.ARB_shader_storage_buffer_object = true;
+      ctx->Extensions.ARB_vertex_attrib_64bit = true;
       ctx->Extensions.EXT_shader_samples_identical = true;
       ctx->Extensions.OES_primitive_bounding_box = true;
       ctx->Extensions.OES_texture_buffer = true;
@@ -247,7 +248,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;
-      ctx->Extensions.ARB_vertex_attrib_64bit = true;
       ctx->Extensions.OES_geometry_shader = true;
       ctx->Extensions.OES_texture_cube_map_array = true;
       ctx->Extensions.OES_viewport_array = true;
