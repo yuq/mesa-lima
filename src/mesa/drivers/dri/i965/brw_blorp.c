@@ -214,8 +214,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
             }
             assert(hiz_mt->pitch == aux_surf->row_pitch);
          } else {
-            surf->aux_addr.buffer = mt->hiz_buf->bo;
-            surf->aux_addr.offset = 0;
+            surf->aux_addr.buffer = mt->hiz_buf->aux_base.bo;
+            surf->aux_addr.offset = mt->hiz_buf->aux_base.offset;
          }
       }
    } else {

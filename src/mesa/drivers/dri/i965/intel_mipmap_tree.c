@@ -1016,7 +1016,7 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
          if ((*mt)->hiz_buf->mt)
             intel_miptree_release(&(*mt)->hiz_buf->mt);
          else
-            drm_intel_bo_unreference((*mt)->hiz_buf->bo);
+            drm_intel_bo_unreference((*mt)->hiz_buf->aux_base.bo);
          free((*mt)->hiz_buf);
       }
       if ((*mt)->mcs_buf) {
@@ -1727,7 +1727,7 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
  * Helper for intel_miptree_alloc_hiz() that determines the required hiz
  * buffer dimensions and allocates a bo for the hiz buffer.
  */
-static struct intel_miptree_aux_buffer *
+static struct intel_miptree_hiz_buffer *
 intel_gen7_hiz_buf_create(struct brw_context *brw,
                           struct intel_mipmap_tree *mt)
 {
@@ -1735,7 +1735,7 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
    unsigned z_height = mt->logical_height0;
    const unsigned z_depth = MAX2(mt->logical_depth0, 1);
    unsigned hz_width, hz_height;
-   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
 
    if (!buf)
       return NULL;
@@ -1792,20 +1792,21 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
 
    unsigned long pitch;
    uint32_t tiling = I915_TILING_Y;
-   buf->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "hiz",
-                                      hz_width, hz_height, 1,
-                                      &tiling, &pitch,
-                                      BO_ALLOC_FOR_RENDER);
-   if (!buf->bo) {
+   buf->aux_base.bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "hiz",
+                                               hz_width, hz_height, 1,
+                                               &tiling, &pitch,
+                                               BO_ALLOC_FOR_RENDER);
+   if (!buf->aux_base.bo) {
       free(buf);
       return NULL;
    } else if (tiling != I915_TILING_Y) {
-      drm_intel_bo_unreference(buf->bo);
+      drm_intel_bo_unreference(buf->aux_base.bo);
       free(buf);
       return NULL;
    }
 
-   buf->pitch = pitch;
+   buf->aux_base.size = hz_width * hz_height;
+   buf->aux_base.pitch = pitch;
 
    return buf;
 }
@@ -1815,7 +1816,7 @@ intel_gen7_hiz_buf_create(struct brw_context *brw,
  * Helper for intel_miptree_alloc_hiz() that determines the required hiz
  * buffer dimensions and allocates a bo for the hiz buffer.
  */
-static struct intel_miptree_aux_buffer *
+static struct intel_miptree_hiz_buffer *
 intel_gen8_hiz_buf_create(struct brw_context *brw,
                           struct intel_mipmap_tree *mt)
 {
@@ -1823,7 +1824,7 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
    unsigned z_height = mt->logical_height0;
    const unsigned z_depth = MAX2(mt->logical_depth0, 1);
    unsigned hz_width, hz_height;
-   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
 
    if (!buf)
       return NULL;
@@ -1876,42 +1877,43 @@ intel_gen8_hiz_buf_create(struct brw_context *brw,
       Z_i = minify(Z_i, 1);
    }
    /* HZ_QPitch = h0 + max(h1, sum(i=2 to m; h_i)) */
-   buf->qpitch = h0 + MAX2(h1, sum_h_i);
+   buf->aux_base.qpitch = h0 + MAX2(h1, sum_h_i);
 
    if (mt->target == GL_TEXTURE_3D) {
       /* (1/2) * sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i))) */
       hz_height = DIV_ROUND_UP(hz_height_3d_sum, 2);
    } else {
       /* HZ_Height (rows) = ceiling( (HZ_QPitch/2)/8) *8 * Z_Depth */
-      hz_height = DIV_ROUND_UP(buf->qpitch, 2 * 8) * 8 * Z0;
+      hz_height = DIV_ROUND_UP(buf->aux_base.qpitch, 2 * 8) * 8 * Z0;
    }
 
    unsigned long pitch;
    uint32_t tiling = I915_TILING_Y;
-   buf->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "hiz",
-                                      hz_width, hz_height, 1,
-                                      &tiling, &pitch,
-                                      BO_ALLOC_FOR_RENDER);
-   if (!buf->bo) {
+   buf->aux_base.bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "hiz",
+                                               hz_width, hz_height, 1,
+                                               &tiling, &pitch,
+                                               BO_ALLOC_FOR_RENDER);
+   if (!buf->aux_base.bo) {
       free(buf);
       return NULL;
    } else if (tiling != I915_TILING_Y) {
-      drm_intel_bo_unreference(buf->bo);
+      drm_intel_bo_unreference(buf->aux_base.bo);
       free(buf);
       return NULL;
    }
 
-   buf->pitch = pitch;
+   buf->aux_base.size = hz_width * hz_height;
+   buf->aux_base.pitch = pitch;
 
    return buf;
 }
 
 
-static struct intel_miptree_aux_buffer *
+static struct intel_miptree_hiz_buffer *
 intel_hiz_miptree_buf_create(struct brw_context *brw,
                              struct intel_mipmap_tree *mt)
 {
-   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
    uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
 
    if (brw->gen == 6)
@@ -1936,9 +1938,10 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
       return NULL;
    }
 
-   buf->bo = buf->mt->bo;
-   buf->pitch = buf->mt->pitch;
-   buf->qpitch = buf->mt->qpitch;
+   buf->aux_base.bo = buf->mt->bo;
+   buf->aux_base.size = buf->mt->total_height * buf->mt->pitch;
+   buf->aux_base.pitch = buf->mt->pitch;
+   buf->aux_base.qpitch = buf->mt->qpitch;
 
    return buf;
 }
@@ -2184,7 +2187,6 @@ intel_miptree_make_shareable(struct brw_context *brw,
 
    if (mt->mcs_buf) {
       intel_miptree_resolve_color(brw, mt, 0);
-      intel_miptree_release(&mt->mcs_buf->mt);
       mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_NO_MCS;
    }
 }
@@ -3275,8 +3277,8 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
          aux_pitch = mt->hiz_buf->mt->pitch;
          aux_qpitch = mt->hiz_buf->mt->qpitch;
       } else {
-         aux_pitch = mt->hiz_buf->pitch;
-         aux_qpitch = mt->hiz_buf->qpitch;
+         aux_pitch = mt->hiz_buf->aux_base.pitch;
+         aux_qpitch = mt->hiz_buf->aux_base.qpitch;
       }
 
       *usage = ISL_AUX_USAGE_HIZ;

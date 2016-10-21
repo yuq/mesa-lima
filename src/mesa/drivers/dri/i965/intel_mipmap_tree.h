@@ -324,9 +324,6 @@ enum miptree_array_layout {
  * For Gen7+, we always give the hardware the start of the buffer, and let it
  * handle all accesses to the buffer. Therefore we don't need the full miptree
  * layout structure for this buffer.
- *
- * For Gen6, we need a hiz miptree structure for this buffer so we can program
- * offsets to slices & miplevels.
  */
 struct intel_miptree_aux_buffer
 {
@@ -374,6 +371,15 @@ struct intel_miptree_aux_buffer
     * @see 3DSTATE_HIER_DEPTH_BUFFER.SurfaceQPitch
     */
    uint32_t qpitch;
+};
+/**
+ * The HiZ buffer requires extra attributes on earlier GENs. This is easily
+ * contained within an intel_mipmap_tree. To make sure we do not abuse this, we
+ * keep the hiz datastructure separate.
+ */
+struct intel_miptree_hiz_buffer
+{
+   struct intel_miptree_aux_buffer aux_base;
 
    /**
     * Hiz miptree. Used only by Gen6.
@@ -609,7 +615,7 @@ struct intel_mipmap_tree
     * To determine if hiz is enabled, do not check this pointer. Instead, use
     * intel_miptree_slice_has_hiz().
     */
-   struct intel_miptree_aux_buffer *hiz_buf;
+   struct intel_miptree_hiz_buffer *hiz_buf;
 
    /**
     * \brief Map of miptree slices to needed resolves.

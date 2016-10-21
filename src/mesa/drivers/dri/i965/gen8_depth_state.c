@@ -93,10 +93,10 @@ emit_depth_packets(struct brw_context *brw,
       assert(depth_mt);
       BEGIN_BATCH(5);
       OUT_BATCH(GEN7_3DSTATE_HIER_DEPTH_BUFFER << 16 | (5 - 2));
-      OUT_BATCH((depth_mt->hiz_buf->pitch - 1) | mocs_wb << 25);
-      OUT_RELOC64(depth_mt->hiz_buf->bo,
+      OUT_BATCH((depth_mt->hiz_buf->aux_base.pitch - 1) | mocs_wb << 25);
+      OUT_RELOC64(depth_mt->hiz_buf->aux_base.bo,
                   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER, 0);
-      OUT_BATCH(depth_mt->hiz_buf->qpitch >> 2);
+      OUT_BATCH(depth_mt->hiz_buf->aux_base.qpitch >> 2);
       ADVANCE_BATCH();
    }
 
