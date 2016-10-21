@@ -759,7 +759,7 @@ CodeEmitterGK110::emitISAD(const Instruction *i)
 void
 CodeEmitterGK110::emitSHLADD(const Instruction *i)
 {
-   uint8_t addOp = (i->src(2).mod.neg() << 1) | i->src(0).mod.neg();
+   uint8_t addOp = (i->src(0).mod.neg() << 1) | i->src(2).mod.neg();
    const ImmediateValue *imm = i->src(1).get()->asImm();
    assert(imm);
 
