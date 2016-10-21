@@ -197,8 +197,8 @@ blorp_emit_input_varying_data(struct blorp_batch *batch,
 
    *size = num_varyings * vec4_size_in_bytes;
 
-   const float *const inputs_src = (const float *)&params->wm_inputs;
-   float *inputs = blorp_alloc_vertex_buffer(batch, *size, addr);
+   const uint32_t *const inputs_src = (const uint32_t *)&params->wm_inputs;
+   uint32_t *inputs = blorp_alloc_vertex_buffer(batch, *size, addr);
 
    /* Walk over the attribute slots, determine if the attribute is used by
     * the program and when necessary copy the values from the input storage to
