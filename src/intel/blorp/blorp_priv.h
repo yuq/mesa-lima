@@ -169,6 +169,7 @@ struct blorp_params
    enum blorp_fast_clear_op fast_clear_op;
    bool color_write_disable[4];
    struct brw_blorp_wm_inputs wm_inputs;
+   unsigned num_samples;
    unsigned num_draw_buffers;
    unsigned num_layers;
    uint32_t wm_prog_kernel;

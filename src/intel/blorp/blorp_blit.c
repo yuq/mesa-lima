@@ -1609,6 +1609,8 @@ do_blorp_blit(struct blorp_batch *batch,
       wm_prog_key->persample_msaa_dispatch = true;
    }
 
+   params->num_samples = params->dst.surf.samples;
+
    if (params->src.tile_x_sa || params->src.tile_y_sa) {
       assert(wm_prog_key->need_src_offset);
       surf_get_intratile_offset_px(&params->src,

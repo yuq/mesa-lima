@@ -141,6 +141,7 @@ void
 blorp_params_init(struct blorp_params *params)
 {
    memset(params, 0, sizeof(*params));
+   params->num_samples = 1;
    params->num_draw_buffers = 1;
    params->num_layers = 1;
 }
@@ -265,6 +266,7 @@ blorp_gen6_hiz_op(struct blorp_batch *batch,
    params.dst.surf.samples = params.depth.surf.samples;
    params.dst.surf.logical_level0_px = params.depth.surf.logical_level0_px;
    params.depth_format = isl_format_get_depth_format(surf->surf->format, false);
+   params.num_samples = params.depth.surf.samples;
 
    batch->blorp->exec(batch, &params);
 }

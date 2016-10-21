@@ -456,7 +456,7 @@ blorp_emit_sf_config(struct blorp_batch *batch,
       sf.FrontFaceFillMode = FILL_MODE_SOLID;
       sf.BackFaceFillMode = FILL_MODE_SOLID;
 
-      sf.MultisampleRasterizationMode = params->dst.surf.samples > 1 ?
+      sf.MultisampleRasterizationMode = params->num_samples > 1 ?
          MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
 
 #if GEN_GEN == 7
@@ -482,7 +482,7 @@ blorp_emit_sf_config(struct blorp_batch *batch,
       sf.FrontFaceFillMode = FILL_MODE_SOLID;
       sf.BackFaceFillMode = FILL_MODE_SOLID;
 
-      sf.MultisampleRasterizationMode = params->dst.surf.samples > 1 ?
+      sf.MultisampleRasterizationMode = params->num_samples > 1 ?
          MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
 
       sf.VertexURBEntryReadOffset = 1;
@@ -610,7 +610,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
       if (params->src.enabled)
          wm.PixelShaderKillsPixel = true;
 
-      if (params->dst.surf.samples > 1) {
+      if (params->num_samples > 1) {
          wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
          wm.MultisampleDispatchMode =
             (prog_data && prog_data->persample_dispatch) ?
@@ -712,7 +712,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          wm.PixelShaderKillsPixel = true; /* TODO: temporarily smash on */
       }
 
-      if (params->dst.surf.samples > 1) {
+      if (params->num_samples > 1) {
          wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
          wm.MultisampleDispatchMode =
             (prog_data && prog_data->persample_dispatch) ?
@@ -1165,10 +1165,8 @@ static void
 blorp_emit_3dstate_multisample(struct blorp_batch *batch,
                                const struct blorp_params *params)
 {
-   const unsigned samples = params->dst.surf.samples;
-
    blorp_emit(batch, GENX(3DSTATE_MULTISAMPLE), ms) {
-      ms.NumberofMultisamples       = __builtin_ffs(samples) - 1;
+      ms.NumberofMultisamples       = __builtin_ffs(params->num_samples) - 1;
 
 #if GEN_GEN >= 8
       /* The PRM says that this bit is valid only for DX9:
@@ -1181,7 +1179,7 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch,
 #elif GEN_GEN >= 7
       ms.PixelLocation              = PIXLOC_CENTER;
 
-      switch (samples) {
+      switch (params->num_samples) {
       case 1:
          GEN_SAMPLE_POS_1X(ms.Sample);
          break;
@@ -1303,7 +1301,7 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    blorp_emit_3dstate_multisample(batch, params);
 
    blorp_emit(batch, GENX(3DSTATE_SAMPLE_MASK), mask) {
-      mask.SampleMask = (1 << params->dst.surf.samples) - 1;
+      mask.SampleMask = (1 << params->num_samples) - 1;
    }
 
    /* From the BSpec, 3D Pipeline > Geometry > Vertex Shader > State,
