@@ -732,7 +732,6 @@ CodeEmitterNVC0::emitUADD(const Instruction *i)
    }
 }
 
-// TODO: shl-add
 void
 CodeEmitterNVC0::emitIMAD(const Instruction *i)
 {
