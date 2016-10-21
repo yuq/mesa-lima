@@ -280,6 +280,25 @@ gbm_bo_get_handle_for_plane(struct gbm_bo *bo, int plane)
    return bo->gbm->bo_get_handle(bo, plane);
 }
 
+/**
+ * Get the chosen modifier for the buffer object
+ *
+ * This function returns the modifier that was chosen for the object. These
+ * properties may be generic, or platform/implementation dependent.
+ *
+ * \param bo The buffer object
+ * \return Returns the selected modifier (chosen by the implementation) for the
+ * BO.
+ * \sa gbm_bo_create_with_modifiers() where possible modifiers are set
+ * \sa gbm_surface_create_with_modifiers() where possible modifiers are set
+ * \sa define DRM_FORMAT_MOD_* in drm_fourcc.h for possible modifiers
+ */
+GBM_EXPORT uint64_t
+gbm_bo_get_modifier(struct gbm_bo *bo)
+{
+   return bo->gbm->bo_get_modifier(bo);
+}
+
 /** Write data into the buffer object
  *
  * If the buffer object was created with the GBM_BO_USE_WRITE flag,

@@ -39,6 +39,7 @@
 #include <unistd.h>
 #include <dlfcn.h>
 #include <xf86drm.h>
+#include <drm_fourcc.h>
 
 #include <GL/gl.h> /* dri_interface needs GL types */
 #include <GL/internal/dri_interface.h>
@@ -51,6 +52,14 @@
 /* For importing wl_buffer */
 #if HAVE_WAYLAND_PLATFORM
 #include "../../../egl/wayland/wayland-drm/wayland-drm.h"
+#endif
+
+#ifndef DRM_FORMAT_MOD_INVALID
+#define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
+#endif
+
+#ifndef DRM_FORMAT_MOD_LINEAR
+#define DRM_FORMAT_MOD_LINEAR 0
 #endif
 
 static __DRIimage *
@@ -735,6 +744,38 @@ gbm_dri_bo_get_offset(struct gbm_bo *_bo, int plane)
    return (uint32_t)offset;
 }
 
+static uint64_t
+gbm_dri_bo_get_modifier(struct gbm_bo *_bo)
+{
+   struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
+   struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
+
+   if (!dri->image || dri->image->base.version < 14) {
+      errno = ENOSYS;
+      return DRM_FORMAT_MOD_INVALID;
+   }
+
+   /* Dumb buffers have no modifiers */
+   if (!bo->image)
+      return DRM_FORMAT_MOD_LINEAR;
+
+   uint64_t ret = 0;
+   int mod;
+   if (!dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_MODIFIER_UPPER,
+                               &mod))
+      return DRM_FORMAT_MOD_INVALID;
+
+   ret = (uint64_t)mod << 32;
+
+   if (!dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_MODIFIER_LOWER,
+                               &mod))
+      return DRM_FORMAT_MOD_INVALID;
+
+   ret |= mod;
+
+   return ret;
+}
+
 static void
 gbm_dri_bo_destroy(struct gbm_bo *_bo)
 {
@@ -1278,6 +1319,7 @@ dri_device_create(int fd)
    dri->base.base.bo_get_handle = gbm_dri_bo_get_handle_for_plane;
    dri->base.base.bo_get_stride = gbm_dri_bo_get_stride;
    dri->base.base.bo_get_offset = gbm_dri_bo_get_offset;
+   dri->base.base.bo_get_modifier = gbm_dri_bo_get_modifier;
    dri->base.base.bo_destroy = gbm_dri_bo_destroy;
    dri->base.base.destroy = dri_destroy;
    dri->base.base.surface_create = gbm_dri_surface_create;

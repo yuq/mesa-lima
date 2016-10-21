@@ -327,6 +327,9 @@ gbm_bo_get_handle(struct gbm_bo *bo);
 int
 gbm_bo_get_fd(struct gbm_bo *bo);
 
+uint64_t
+gbm_bo_get_modifier(struct gbm_bo *bo);
+
 int
 gbm_bo_get_plane_count(struct gbm_bo *bo);
 
