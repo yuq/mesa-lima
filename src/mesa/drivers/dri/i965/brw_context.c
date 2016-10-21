@@ -254,7 +254,10 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
       tex_obj = intel_texture_object(ctx->Texture.Unit[i]._Current);
       if (!tex_obj || !tex_obj->mt)
 	 continue;
-      intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
+      if (intel_miptree_sample_with_hiz(brw, tex_obj->mt))
+         intel_miptree_all_slices_resolve_hiz(brw, tex_obj->mt);
+      else
+         intel_miptree_all_slices_resolve_depth(brw, tex_obj->mt);
       /* Sampling engine understands lossless compression and resolving
        * those surfaces should be skipped for performance reasons.
        */

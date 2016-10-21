@@ -2009,6 +2009,23 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
 }
 
 /**
+ * Can the miptree sample using the hiz buffer?
+ */
+bool
+intel_miptree_sample_with_hiz(struct brw_context *brw,
+                              struct intel_mipmap_tree *mt)
+{
+   /* It's unclear how well supported sampling from the hiz buffer is on GEN8,
+    * so keep things conservative for now and never enable it unless we're SKL+.
+    */
+   if (brw->gen < 9) {
+      return false;
+   }
+
+   return false;
+}
+
+/**
  * Does the miptree slice have hiz enabled?
  */
 bool
