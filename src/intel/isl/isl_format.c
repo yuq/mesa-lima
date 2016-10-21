@@ -307,34 +307,34 @@ static const struct surface_format_info format_info[] = {
    SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ETC2_EAC_SRGB8_A8)
    SF(90,  x,  x,  x,  x,  x, 75,  x,  x,    x,   R8G8B8_UINT)
    SF(90,  x,  x,  x,  x,  x, 75,  x,  x,    x,   R8G8B8_SINT)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_4X4_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X4_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X5_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X5_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X6_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X5_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X6_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X8_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X5_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X6_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X8_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X10_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X10_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X12_FLT16)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_4X4_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X4_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X5_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X5_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X6_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X5_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X6_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X8_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X5_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X6_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X8_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X10_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X10_U8SRGB)
-   SF(80, 80,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X12_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_4X4_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X4_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X5_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X5_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X6_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X5_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X6_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X8_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X5_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X6_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X8_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X10_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X10_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X12_FLT16)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_4X4_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X4_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_5X5_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X5_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_6X6_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X5_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X6_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_8X8_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X5_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X6_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X8_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_10X10_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X10_U8SRGB)
+   SF(90, 90,  x,  x,  x,  x,  x,  x,  x,    x,   ASTC_LDR_2D_12X12_U8SRGB)
 };
 #undef x
 #undef Y
@@ -379,6 +379,13 @@ isl_format_supports_sampling(const struct gen_device_info *devinfo,
        */
       if (fmtl->txc == ISL_TXC_ETC1 || fmtl->txc == ISL_TXC_ETC2)
          return true;
+   } else if (devinfo->is_cherryview) {
+      const struct isl_format_layout *fmtl = isl_format_get_layout(format);
+      /* Support for ASTC exists on Cherry View even though big-core
+       * GPUs didn't get it until Skylake.
+       */
+      if (fmtl->txc == ISL_TXC_ASTC)
+         return true;
    }
 
    return format_gen(devinfo) >= format_info[format].sampling;
@@ -397,6 +404,13 @@ isl_format_supports_filtering(const struct gen_device_info *devinfo,
        * GPUs didn't get it until Broadwell.
        */
       if (fmtl->txc == ISL_TXC_ETC1 || fmtl->txc == ISL_TXC_ETC2)
+         return true;
+   } else if (devinfo->is_cherryview) {
+      const struct isl_format_layout *fmtl = isl_format_get_layout(format);
+      /* Support for ASTC exists on Cherry View even though big-core
+       * GPUs didn't get it until Skylake.
+       */
+      if (fmtl->txc == ISL_TXC_ASTC)
          return true;
    }
 
