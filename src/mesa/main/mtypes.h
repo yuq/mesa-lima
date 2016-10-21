@@ -2577,6 +2577,7 @@ struct gl_uniform_block
     * cross-validating uniform blocks.
     */
    enum gl_uniform_block_packing _Packing;
+   GLboolean _RowMajor;
 };
 
 /**

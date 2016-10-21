@@ -51,7 +51,7 @@ glsl_type::glsl_type(GLenum gl_type,
    gl_type(gl_type),
    base_type(base_type),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampled_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0), interface_row_major(0),
    vector_elements(vector_elements), matrix_columns(matrix_columns),
    length(0)
 {
@@ -83,7 +83,7 @@ glsl_type::glsl_type(GLenum gl_type, glsl_base_type base_type,
    base_type(base_type),
    sampler_dimensionality(dim), sampler_shadow(shadow),
    sampler_array(array), sampled_type(type), interface_packing(0),
-   length(0)
+   interface_row_major(0), length(0)
 {
    mtx_lock(&glsl_type::mutex);
 
@@ -108,7 +108,7 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
    gl_type(0),
    base_type(GLSL_TYPE_STRUCT),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampled_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0), interface_row_major(0),
    vector_elements(0), matrix_columns(0),
    length(num_fields)
 {
@@ -149,11 +149,13 @@ glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
 }
 
 glsl_type::glsl_type(const glsl_struct_field *fields, unsigned num_fields,
-                     enum glsl_interface_packing packing, const char *name) :
+                     enum glsl_interface_packing packing,
+                     bool row_major, const char *name) :
    gl_type(0),
    base_type(GLSL_TYPE_INTERFACE),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
    sampled_type(0), interface_packing((unsigned) packing),
+   interface_row_major((unsigned) row_major),
    vector_elements(0), matrix_columns(0),
    length(num_fields)
 {
@@ -197,7 +199,7 @@ glsl_type::glsl_type(const glsl_type *return_type,
    gl_type(0),
    base_type(GLSL_TYPE_FUNCTION),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampled_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0), interface_row_major(0),
    vector_elements(0), matrix_columns(0),
    length(num_params)
 {
@@ -229,7 +231,7 @@ glsl_type::glsl_type(const char *subroutine_name) :
    gl_type(0),
    base_type(GLSL_TYPE_SUBROUTINE),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampled_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0), interface_row_major(0),
    vector_elements(1), matrix_columns(1),
    length(0)
 {
@@ -445,7 +447,7 @@ _mesa_glsl_release_types(void)
 glsl_type::glsl_type(const glsl_type *array, unsigned length) :
    base_type(GLSL_TYPE_ARRAY),
    sampler_dimensionality(0), sampler_shadow(0), sampler_array(0),
-   sampled_type(0), interface_packing(0),
+   sampled_type(0), interface_packing(0), interface_row_major(0),
    vector_elements(0), matrix_columns(0),
    length(length), name(NULL)
 {
@@ -882,6 +884,9 @@ glsl_type::record_compare(const glsl_type *b, bool match_locations) const
    if (this->interface_packing != b->interface_packing)
       return false;
 
+   if (this->interface_row_major != b->interface_row_major)
+      return false;
+
    /* From the GLSL 4.20 specification (Sec 4.2):
     *
     *     "Structures must have the same name, sequence of type names, and
@@ -1028,9 +1033,10 @@ const glsl_type *
 glsl_type::get_interface_instance(const glsl_struct_field *fields,
                                   unsigned num_fields,
                                   enum glsl_interface_packing packing,
+                                  bool row_major,
                                   const char *block_name)
 {
-   const glsl_type key(fields, num_fields, packing, block_name);
+   const glsl_type key(fields, num_fields, packing, row_major, block_name);
 
    mtx_lock(&glsl_type::mutex);
 
@@ -1044,7 +1050,7 @@ glsl_type::get_interface_instance(const glsl_struct_field *fields,
    if (entry == NULL) {
       mtx_unlock(&glsl_type::mutex);
       const glsl_type *t = new glsl_type(fields, num_fields,
-                                         packing, block_name);
+                                         packing, row_major, block_name);
       mtx_lock(&glsl_type::mutex);
 
       entry = _mesa_hash_table_insert(interface_types, t, (void *) t);

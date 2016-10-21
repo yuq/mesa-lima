@@ -247,6 +247,7 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
 
       blocks[i].UniformBufferSize = 0;
       blocks[i]._Packing = gl_uniform_block_packing(type->interface_packing);
+      blocks[i]._RowMajor = type->get_interface_row_major();
 
       parcel->process(type, blocks[i].Name);
 
@@ -354,6 +355,7 @@ create_buffer_blocks(void *mem_ctx, struct gl_context *ctx,
             blocks[i].UniformBufferSize = 0;
             blocks[i]._Packing =
                gl_uniform_block_packing(block_type->interface_packing);
+            blocks[i]._RowMajor = block_type->get_interface_row_major();
 
             parcel.process(block_type,
                            b->has_instance_name ? block_type->name : "");
@@ -484,6 +486,9 @@ link_uniform_blocks_are_compatible(const gl_uniform_block *a,
       return false;
 
    if (a->_Packing != b->_Packing)
+      return false;
+
+   if (a->_RowMajor != b->_RowMajor)
       return false;
 
    for (unsigned i = 0; i < a->NumUniforms; i++) {

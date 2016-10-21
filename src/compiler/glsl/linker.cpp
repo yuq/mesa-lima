@@ -1513,9 +1513,10 @@ private:
       }
       glsl_interface_packing packing =
          (glsl_interface_packing) type->interface_packing;
+      bool row_major = (bool) type->interface_row_major;
       const glsl_type *new_ifc_type =
          glsl_type::get_interface_instance(fields, num_fields,
-                                           packing, type->name);
+                                           packing, row_major, type->name);
       delete [] fields;
       return new_ifc_type;
    }
@@ -1543,9 +1544,10 @@ private:
       }
       glsl_interface_packing packing =
          (glsl_interface_packing) ifc_type->interface_packing;
+      bool row_major = (bool) ifc_type->interface_row_major;
       const glsl_type *new_ifc_type =
          glsl_type::get_interface_instance(fields, num_fields, packing,
-                                           ifc_type->name);
+                                           row_major, ifc_type->name);
       delete [] fields;
       for (unsigned i = 0; i < num_fields; i++) {
          if (interface_vars[i] != NULL)

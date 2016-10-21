@@ -7516,6 +7516,8 @@ ast_interface_block::hir(exec_list *instructions,
       glsl_type::get_interface_instance(fields,
                                         num_variables,
                                         packing,
+                                        matrix_layout ==
+                                           GLSL_MATRIX_LAYOUT_ROW_MAJOR,
                                         this->block_name);
 
    unsigned component_size = block_type->contains_double() ? 8 : 4;
