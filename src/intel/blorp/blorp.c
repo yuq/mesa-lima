@@ -155,16 +155,6 @@ brw_blorp_init_wm_prog_key(struct brw_wm_prog_key *wm_key)
       wm_key->tex.swizzles[i] = SWIZZLE_XYZW;
 }
 
-static int
-nir_uniform_type_size(const struct glsl_type *type)
-{
-   /* Only very basic types are allowed */
-   assert(glsl_type_is_vector_or_scalar(type));
-   assert(glsl_get_bit_size(type) == 32);
-
-   return glsl_get_vector_elements(type) * 4;
-}
-
 const unsigned *
 blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
                  struct nir_shader *nir,
@@ -180,6 +170,7 @@ blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
 
    memset(wm_prog_data, 0, sizeof(*wm_prog_data));
 
+   assert(exec_list_is_empty(&nir->uniforms));
    wm_prog_data->base.nr_params = 0;
    wm_prog_data->base.param = NULL;
 
@@ -190,19 +181,6 @@ blorp_compile_fs(struct blorp_context *blorp, void *mem_ctx,
    nir = brw_preprocess_nir(compiler, nir);
    nir_remove_dead_variables(nir, nir_var_shader_in);
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
-
-   /* Uniforms are required to be lowered before going into compile_fs.  For
-    * BLORP, we'll assume that whoever builds the shader sets the location
-    * they want so we just need to lower them and figure out how many we have
-    * in total.
-    */
-   nir->num_uniforms = 0;
-   nir_foreach_variable(var, &nir->uniforms) {
-      var->data.driver_location = var->data.location;
-      unsigned end = var->data.location + nir_uniform_type_size(var->type);
-      nir->num_uniforms = MAX2(nir->num_uniforms, end);
-   }
-   nir_lower_io(nir, nir_var_uniform, nir_uniform_type_size, 0);
 
    const unsigned *program =
       brw_compile_fs(compiler, blorp->driver_ctx, mem_ctx, wm_key,
