@@ -1496,10 +1496,17 @@ intel_miptree_init_mcs(struct brw_context *brw,
     *
     * Note: the clear value for MCS buffers is all 1's, so we memset to 0xff.
     */
-   void *data = intel_miptree_map_raw(brw, mt->mcs_buf->mt);
+   const int ret = brw_bo_map_gtt(brw, mt->mcs_buf->bo, "miptree");
+   if (unlikely(ret)) {
+      fprintf(stderr, "Failed to map mcs buffer into GTT\n");
+      intel_miptree_release(&mt->mcs_buf->mt);
+      free(mt->mcs_buf);
+      return;
+   }
+   void *data = mt->mcs_buf->bo->virtual;
    memset(data, init_value,
           mt->mcs_buf->mt->total_height * mt->mcs_buf->mt->pitch);
-   intel_miptree_unmap_raw(mt->mcs_buf->mt);
+   drm_intel_bo_unmap(mt->mcs_buf->bo);
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_CLEAR;
 }
 
