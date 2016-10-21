@@ -31,14 +31,6 @@
 
 #include "amdgpu_winsys.h"
 
-#ifndef NO_ENTRIES
-#define NO_ENTRIES 32
-#endif
-
-#ifndef NO_MACRO_ENTRIES
-#define NO_MACRO_ENTRIES 16
-#endif
-
 #ifndef CIASICIDGFXENGINE_SOUTHERNISLAND
 #define CIASICIDGFXENGINE_SOUTHERNISLAND 0x0000000A
 #endif
