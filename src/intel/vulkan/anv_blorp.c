@@ -883,6 +883,32 @@ void anv_CmdClearDepthStencilImage(
    blorp_batch_finish(&batch);
 }
 
+struct anv_state
+anv_cmd_buffer_alloc_blorp_binding_table(struct anv_cmd_buffer *cmd_buffer,
+                                         uint32_t num_entries,
+                                         uint32_t *state_offset)
+{
+   struct anv_state bt_state =
+      anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
+                                         state_offset);
+   if (bt_state.map == NULL) {
+      /* We ran out of space.  Grab a new binding table block. */
+      VkResult result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+      assert(result == VK_SUCCESS);
+
+      /* Re-emit state base addresses so we get the new surface state base
+       * address before we start emitting binding tables etc.
+       */
+      anv_cmd_buffer_emit_state_base_address(cmd_buffer);
+
+      bt_state = anv_cmd_buffer_alloc_binding_table(cmd_buffer, num_entries,
+                                                    state_offset);
+      assert(bt_state.map != NULL);
+   }
+
+   return bt_state;
+}
+
 static void
 clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
                        struct blorp_batch *batch,
