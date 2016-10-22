@@ -180,18 +180,19 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
    }
 
    bool need_null_state = false;
-   for (uint32_t s = 0; s < pass->subpass_count; ++s) {
-      if (pass->subpasses[s].color_count == 0) {
+   unsigned num_states = 0;
+   for (uint32_t i = 0; i < pass->attachment_count; ++i) {
+      if (vk_format_is_color(pass->attachments[i].format)) {
+         num_states++;
+      } else {
+         /* We need a null state for any depth-stencil-only subpasses.
+          * Importantly, this includes depth/stencil clears so we create one
+          * whenever we have depth or stencil
+          */
          need_null_state = true;
-         break;
       }
    }
-
-   unsigned num_states = need_null_state;
-   for (uint32_t i = 0; i < pass->attachment_count; ++i) {
-      if (vk_format_is_color(pass->attachments[i].format))
-         num_states++;
-   }
+   num_states += need_null_state;
 
    const uint32_t ss_stride = align_u32(isl_dev->ss.size, isl_dev->ss.align);
    state->render_pass_states =
