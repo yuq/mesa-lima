@@ -909,38 +909,51 @@ anv_cmd_buffer_alloc_blorp_binding_table(struct anv_cmd_buffer *cmd_buffer,
    return bt_state;
 }
 
+static uint32_t
+binding_table_for_surface_state(struct anv_cmd_buffer *cmd_buffer,
+                                struct anv_state surface_state)
+{
+   uint32_t state_offset;
+   struct anv_state bt_state =
+      anv_cmd_buffer_alloc_blorp_binding_table(cmd_buffer, 1, &state_offset);
+
+   uint32_t *bt_map = bt_state.map;
+   bt_map[0] = surface_state.offset + state_offset;
+
+   return bt_state.offset;
+}
+
 static void
 clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
                        struct blorp_batch *batch,
                        const VkClearAttachment *attachment,
                        uint32_t rectCount, const VkClearRect *pRects)
 {
-   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   const uint32_t att = attachment->colorAttachment;
-   const struct anv_image_view *iview =
-      fb->attachments[subpass->color_attachments[att]];
-   const struct anv_image *image = iview->image;
+   const uint32_t color_att = attachment->colorAttachment;
+   const uint32_t att_idx = subpass->color_attachments[color_att];
+   struct anv_render_pass_attachment *pass_att =
+      &cmd_buffer->state.pass->attachments[att_idx];
+   struct anv_attachment_state *att_state =
+      &cmd_buffer->state.attachments[att_idx];
 
-   struct blorp_surf surf;
-   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT, &surf);
+   uint32_t binding_table =
+      binding_table_for_surface_state(cmd_buffer, att_state->color_rt_state);
 
    union isl_color_value clear_color;
    memcpy(clear_color.u32, attachment->clearValue.color.uint32,
           sizeof(clear_color.u32));
 
-   static const bool color_write_disable[4] = { false, false, false, false };
-
    for (uint32_t r = 0; r < rectCount; ++r) {
       const VkOffset2D offset = pRects[r].rect.offset;
       const VkExtent2D extent = pRects[r].rect.extent;
-      blorp_clear(batch, &surf, iview->isl.format, iview->isl.swizzle,
-                  iview->isl.base_level,
-                  iview->isl.base_array_layer + pRects[r].baseArrayLayer,
-                  pRects[r].layerCount,
-                  offset.x, offset.y,
-                  offset.x + extent.width, offset.y + extent.height,
-                  clear_color, color_write_disable);
+      blorp_clear_attachments(batch, binding_table,
+                              ISL_FORMAT_UNSUPPORTED, pass_att->samples,
+                              pRects[r].baseArrayLayer,
+                              pRects[r].layerCount,
+                              offset.x, offset.y,
+                              offset.x + extent.width, offset.y + extent.height,
+                              true, clear_color, false, 0.0f, 0, 0);
    }
 }
 
@@ -950,44 +963,40 @@ clear_depth_stencil_attachment(struct anv_cmd_buffer *cmd_buffer,
                                const VkClearAttachment *attachment,
                                uint32_t rectCount, const VkClearRect *pRects)
 {
-   const struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   static const union isl_color_value color_value = { .u32 = { 0, } };
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   const struct anv_image_view *iview =
-      fb->attachments[subpass->depth_stencil_attachment];
-   const struct anv_image *image = iview->image;
+   const uint32_t att_idx = subpass->depth_stencil_attachment;
+   struct anv_render_pass_attachment *pass_att =
+      &cmd_buffer->state.pass->attachments[att_idx];
 
    bool clear_depth = attachment->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT;
    bool clear_stencil = attachment->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT;
 
-   struct blorp_surf depth, stencil;
+   enum isl_format depth_format = ISL_FORMAT_UNSUPPORTED;
    if (clear_depth) {
-      get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_DEPTH_BIT,
-                                   &depth);
-   } else {
-      memset(&depth, 0, sizeof(depth));
+      depth_format = anv_get_isl_format(&cmd_buffer->device->info,
+                                        pass_att->format,
+                                        VK_IMAGE_ASPECT_DEPTH_BIT,
+                                        VK_IMAGE_TILING_OPTIMAL);
    }
 
-   if (clear_stencil) {
-      get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_STENCIL_BIT,
-                                   &stencil);
-   } else {
-      memset(&stencil, 0, sizeof(stencil));
-   }
+   uint32_t binding_table =
+      binding_table_for_surface_state(cmd_buffer,
+                                      cmd_buffer->state.null_surface_state);
 
    for (uint32_t r = 0; r < rectCount; ++r) {
       const VkOffset2D offset = pRects[r].rect.offset;
       const VkExtent2D extent = pRects[r].rect.extent;
       VkClearDepthStencilValue value = attachment->clearValue.depthStencil;
-      blorp_clear_depth_stencil(batch, &depth, &stencil,
-                                iview->isl.base_level,
-                                iview->isl.base_array_layer +
-                                   pRects[r].baseArrayLayer,
-                                pRects[r].layerCount,
-                                offset.x, offset.y,
-                                offset.x + extent.width,
-                                offset.y + extent.height,
-                                clear_depth, value.depth,
-                                clear_stencil ? 0xff : 0, value.stencil);
+      blorp_clear_attachments(batch, binding_table,
+                              depth_format, pass_att->samples,
+                              pRects[r].baseArrayLayer,
+                              pRects[r].layerCount,
+                              offset.x, offset.y,
+                              offset.x + extent.width, offset.y + extent.height,
+                              false, color_value,
+                              clear_depth, value.depth,
+                              clear_stencil ? 0xff : 0, value.stencil);
    }
 }
 
