@@ -1887,9 +1887,6 @@ type_qualifier:
        * precise qualifiers since these are useful in ARB_separate_shader_objects.
        * There is no clear spec guidance on this either.
        */
-      if (!state->has_420pack_or_es31() && $2.has_layout())
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-
       $$ = $1;
       $$.merge_qualifier(& @1, state, $2, false, $2.has_layout());
    }
@@ -2713,11 +2710,6 @@ interface_block:
    {
       ast_interface_block *block = (ast_interface_block *) $2;
 
-      if (!state->has_420pack_or_es31() && block->layout.has_layout()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      }
-
       if (!$1.merge_qualifier(& @1, state, block->layout, false,
                               block->layout.has_layout())) {
          YYERROR;
@@ -2855,10 +2847,6 @@ layout_uniform_defaults:
    layout_qualifier layout_uniform_defaults
    {
       $$ = $1;
-      if (!state->has_420pack_or_es31()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      }
       if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
          YYERROR;
       }
@@ -2870,10 +2858,6 @@ layout_buffer_defaults:
    layout_qualifier layout_buffer_defaults
    {
       $$ = $1;
-      if (!state->has_420pack_or_es31()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      }
       if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
          YYERROR;
       }
@@ -2885,10 +2869,6 @@ layout_in_defaults:
    layout_qualifier layout_in_defaults
    {
       $$ = $1;
-      if (!state->has_420pack_or_es31()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      }
       if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
          YYERROR;
       }
@@ -2908,10 +2888,6 @@ layout_out_defaults:
    layout_qualifier layout_out_defaults
    {
       $$ = $1;
-      if (!state->has_420pack_or_es31()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      }
       if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
          YYERROR;
       }
