@@ -932,6 +932,10 @@ clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const uint32_t color_att = attachment->colorAttachment;
    const uint32_t att_idx = subpass->color_attachments[color_att];
+
+   if (att_idx == VK_ATTACHMENT_UNUSED)
+      return;
+
    struct anv_render_pass_attachment *pass_att =
       &cmd_buffer->state.pass->attachments[att_idx];
    struct anv_attachment_state *att_state =
@@ -966,6 +970,10 @@ clear_depth_stencil_attachment(struct anv_cmd_buffer *cmd_buffer,
    static const union isl_color_value color_value = { .u32 = { 0, } };
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const uint32_t att_idx = subpass->depth_stencil_attachment;
+
+   if (att_idx == VK_ATTACHMENT_UNUSED)
+      return;
+
    struct anv_render_pass_attachment *pass_att =
       &cmd_buffer->state.pass->attachments[att_idx];
 
