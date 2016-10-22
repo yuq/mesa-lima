@@ -183,15 +183,21 @@ validate_point_mode(YYLTYPE *loc,
 }
 
 /**
- * This function merges both duplicate identifies within a single layout and
- * multiple layout qualifiers on a single variable declaration. The
- * is_single_layout_merge param is used differentiate between the two.
+ * This function merges duplicate layout identifiers.
+ *
+ * It deals with duplicates within a single layout qualifier, among multiple
+ * layout qualifiers on a single declaration and on several declarations for
+ * the same variable.
+ *
+ * The is_single_layout_merge and is_multiple_layouts_merge parameters are
+ * used to differentiate among them.
  */
 bool
 ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
                                     _mesa_glsl_parse_state *state,
                                     const ast_type_qualifier &q,
-                                    bool is_single_layout_merge)
+                                    bool is_single_layout_merge,
+                                    bool is_multiple_layouts_merge)
 {
    bool r = true;
    ast_type_qualifier ubo_mat_mask;
@@ -269,7 +275,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.max_vertices) {
-      if (this->flags.q.max_vertices && !is_single_layout_merge) {
+      if (this->flags.q.max_vertices
+          && !is_single_layout_merge && !is_multiple_layouts_merge) {
          this->max_vertices->merge_qualifier(q.max_vertices);
       } else {
          this->flags.q.max_vertices = 1;
@@ -287,7 +294,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.invocations) {
-      if (this->flags.q.invocations && !is_single_layout_merge) {
+      if (this->flags.q.invocations
+          && !is_single_layout_merge && !is_multiple_layouts_merge) {
          this->invocations->merge_qualifier(q.invocations);
       } else {
          this->flags.q.invocations = 1;
@@ -338,7 +346,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          if (process_qualifier_constant(state, loc, "xfb_buffer",
                                         this->xfb_buffer, &buff_idx)) {
             if (state->out_qualifier->out_xfb_stride[buff_idx]
-                && !is_single_layout_merge) {
+                && !is_single_layout_merge && !is_multiple_layouts_merge) {
                state->out_qualifier->out_xfb_stride[buff_idx]->merge_qualifier(
                   new(state->linalloc) ast_layout_expression(*loc, this->xfb_stride));
             } else {
@@ -350,7 +358,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.vertices) {
-      if (this->flags.q.vertices && !is_single_layout_merge) {
+      if (this->flags.q.vertices
+          && !is_single_layout_merge && !is_multiple_layouts_merge) {
          this->vertices->merge_qualifier(q.vertices);
       } else {
          this->flags.q.vertices = 1;
@@ -386,7 +395,8 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 
    for (int i = 0; i < 3; i++) {
       if (q.flags.q.local_size & (1 << i)) {
-         if (this->local_size[i] && !is_single_layout_merge) {
+         if (this->local_size[i]
+             && !is_single_layout_merge && !is_multiple_layouts_merge) {
             this->local_size[i]->merge_qualifier(q.local_size[i]);
          } else {
             this->local_size[i] = q.local_size[i];

@@ -297,10 +297,10 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %type <node> for_init_statement
 %type <for_rest_statement> for_rest_statement
 %type <node> layout_defaults
-%type <node> layout_uniform_defaults
-%type <node> layout_buffer_defaults
-%type <node> layout_in_defaults
-%type <node> layout_out_defaults
+%type <type_qualifier> layout_uniform_defaults
+%type <type_qualifier> layout_buffer_defaults
+%type <type_qualifier> layout_in_defaults
+%type <type_qualifier> layout_out_defaults
 
 %right THEN ELSE
 %%
@@ -1891,7 +1891,7 @@ type_qualifier:
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
 
       $$ = $1;
-      $$.merge_qualifier(&@1, state, $2, false);
+      $$.merge_qualifier(& @1, state, $2, false, $2.has_layout());
    }
    | subroutine_qualifier type_qualifier
    {
@@ -2718,7 +2718,8 @@ interface_block:
          YYERROR;
       }
 
-      if (!$1.merge_qualifier(& @1, state, block->layout, false)) {
+      if (!$1.merge_qualifier(& @1, state, block->layout, false,
+                              block->layout.has_layout())) {
          YYERROR;
       }
 
@@ -2853,43 +2854,91 @@ member_declaration:
 layout_uniform_defaults:
    layout_qualifier layout_uniform_defaults
    {
-      $$ = NULL;
+      $$ = $1;
       if (!state->has_420pack_or_es31()) {
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
          YYERROR;
-      } else {
-         if (!state->default_uniform_qualifier->
-                merge_qualifier(& @1, state, $1, false)) {
-            YYERROR;
-         }
+      }
+      if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
+         YYERROR;
       }
    }
    | layout_qualifier UNIFORM ';'
-   {
-      if (!state->default_uniform_qualifier->
-             merge_qualifier(& @1, state, $1, false)) {
-         YYERROR;
-      }
-      $$ = NULL;
-   }
    ;
 
 layout_buffer_defaults:
    layout_qualifier layout_buffer_defaults
    {
-      $$ = NULL;
+      $$ = $1;
       if (!state->has_420pack_or_es31()) {
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
          YYERROR;
-      } else {
-         if (!state->default_shader_storage_qualifier->
-                merge_qualifier(& @1, state, $1, false)) {
-            YYERROR;
-         }
+      }
+      if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
+         YYERROR;
       }
    }
    | layout_qualifier BUFFER ';'
+   ;
+
+layout_in_defaults:
+   layout_qualifier layout_in_defaults
    {
+      $$ = $1;
+      if (!state->has_420pack_or_es31()) {
+         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
+         YYERROR;
+      }
+      if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
+         YYERROR;
+      }
+      if (!$$.validate_in_qualifier(& @1, state)) {
+         YYERROR;
+      }
+   }
+   | layout_qualifier IN_TOK ';'
+   {
+      if (!$1.validate_in_qualifier(& @1, state)) {
+         YYERROR;
+      }
+   }
+   ;
+
+layout_out_defaults:
+   layout_qualifier layout_out_defaults
+   {
+      $$ = $1;
+      if (!state->has_420pack_or_es31()) {
+         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
+         YYERROR;
+      }
+      if (!$$.merge_qualifier(& @1, state, $2, false, true)) {
+         YYERROR;
+      }
+      if (!$$.validate_out_qualifier(& @1, state)) {
+         YYERROR;
+      }
+   }
+   | layout_qualifier OUT_TOK ';'
+   {
+      if (!$1.validate_out_qualifier(& @1, state)) {
+         YYERROR;
+      }
+   }
+   ;
+
+layout_defaults:
+   layout_uniform_defaults
+   {
+      $$ = NULL;
+      if (!state->default_uniform_qualifier->
+             merge_qualifier(& @1, state, $1, false)) {
+         YYERROR;
+      }
+   }
+   | layout_buffer_defaults
+   {
+      $$ = NULL;
       if (!state->default_shader_storage_qualifier->
              merge_qualifier(& @1, state, $1, false)) {
          YYERROR;
@@ -2904,72 +2953,19 @@ layout_buffer_defaults:
          _mesa_glsl_error(& @1, state,
                           "binding qualifier cannot be set for default layout");
       }
-
-      $$ = NULL;
    }
-   ;
-
-layout_in_defaults:
-   layout_qualifier layout_in_defaults
+   | layout_in_defaults
    {
       $$ = NULL;
-      if (!state->has_420pack_or_es31()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      } else {
-         if (!$1.validate_in_qualifier(& @1, state)) {
-            YYERROR;
-         }
-         if (!$1.merge_into_in_qualifier(& @1, state, $$, false)) {
-            YYERROR;
-         }
-         $$ = $2;
-      }
-   }
-   | layout_qualifier IN_TOK ';'
-   {
-      $$ = NULL;
-      if (!$1.validate_in_qualifier(& @1, state)) {
-         YYERROR;
-      }
       if (!$1.merge_into_in_qualifier(& @1, state, $$, true)) {
          YYERROR;
       }
    }
-   ;
-
-layout_out_defaults:
-   layout_qualifier layout_out_defaults
+   | layout_out_defaults
    {
       $$ = NULL;
-      if (!state->has_420pack_or_es31()) {
-         _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
-         YYERROR;
-      } else {
-         if (!$1.validate_out_qualifier(& @1, state)) {
-            YYERROR;
-         }
-         if (!$1.merge_into_out_qualifier(& @1, state, $$, false)) {
-            YYERROR;
-         }
-         $$ = $2;
-      }
-   }
-   | layout_qualifier OUT_TOK ';'
-   {
-      $$ = NULL;
-      if (!$1.validate_out_qualifier(& @1, state)) {
-         YYERROR;
-      }
       if (!$1.merge_into_out_qualifier(& @1, state, $$, true)) {
          YYERROR;
       }
    }
-   ;
-
-layout_defaults:
-   layout_uniform_defaults
-   | layout_buffer_defaults
-   | layout_in_defaults
-   | layout_out_defaults
    ;

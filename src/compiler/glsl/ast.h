@@ -753,7 +753,8 @@ struct ast_type_qualifier {
    bool merge_qualifier(YYLTYPE *loc,
 			_mesa_glsl_parse_state *state,
                         const ast_type_qualifier &q,
-                        bool is_single_layout_merge);
+                        bool is_single_layout_merge,
+                        bool is_multiple_layouts_merge = false);
 
    /**
     * Validate current qualifier against the global out one.
