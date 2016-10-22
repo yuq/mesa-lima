@@ -197,6 +197,9 @@ struct blorp_params
    struct brw_vs_prog_data *vs_prog_data;
    uint32_t wm_prog_kernel;
    struct brw_wm_prog_data *wm_prog_data;
+
+   bool use_pre_baked_binding_table;
+   uint32_t pre_baked_binding_table_offset;
 };
 
 void blorp_params_init(struct blorp_params *params);

@@ -1108,28 +1108,32 @@ blorp_emit_surface_states(struct blorp_batch *batch,
    uint32_t bind_offset, surface_offsets[2];
    void *surface_maps[2];
 
-   unsigned num_surfaces = 1 + params->src.enabled;
-   blorp_alloc_binding_table(batch, num_surfaces,
-                             isl_dev->ss.size, isl_dev->ss.align,
-                             &bind_offset, surface_offsets, surface_maps);
-
-   if (params->dst.enabled) {
-      blorp_emit_surface_state(batch, &params->dst,
-                               surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
-                               surface_offsets[BLORP_RENDERBUFFER_BT_INDEX],
-                               true);
+   if (params->use_pre_baked_binding_table) {
+      bind_offset = params->pre_baked_binding_table_offset;
    } else {
-      assert(params->depth.enabled || params->stencil.enabled);
-      const struct brw_blorp_surface_info *surface =
-         params->depth.enabled ? &params->depth : &params->stencil;
-      blorp_emit_null_surface_state(batch, surface,
-                                    surface_maps[BLORP_RENDERBUFFER_BT_INDEX]);
-   }
+      unsigned num_surfaces = 1 + params->src.enabled;
+      blorp_alloc_binding_table(batch, num_surfaces,
+                                isl_dev->ss.size, isl_dev->ss.align,
+                                &bind_offset, surface_offsets, surface_maps);
 
-   if (params->src.enabled) {
-      blorp_emit_surface_state(batch, &params->src,
-                               surface_maps[BLORP_TEXTURE_BT_INDEX],
-                               surface_offsets[BLORP_TEXTURE_BT_INDEX], false);
+      if (params->dst.enabled) {
+         blorp_emit_surface_state(batch, &params->dst,
+                                  surface_maps[BLORP_RENDERBUFFER_BT_INDEX],
+                                  surface_offsets[BLORP_RENDERBUFFER_BT_INDEX],
+                                  true);
+      } else {
+         assert(params->depth.enabled || params->stencil.enabled);
+         const struct brw_blorp_surface_info *surface =
+            params->depth.enabled ? &params->depth : &params->stencil;
+         blorp_emit_null_surface_state(batch, surface,
+                                       surface_maps[BLORP_RENDERBUFFER_BT_INDEX]);
+      }
+
+      if (params->src.enabled) {
+         blorp_emit_surface_state(batch, &params->src,
+                                  surface_maps[BLORP_TEXTURE_BT_INDEX],
+                                  surface_offsets[BLORP_TEXTURE_BT_INDEX], false);
+      }
    }
 
 #if GEN_GEN >= 7
