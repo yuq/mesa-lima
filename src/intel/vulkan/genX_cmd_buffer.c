@@ -319,12 +319,11 @@ genX(BeginCommandBuffer)(
 
    if (cmd_buffer->usage_flags &
        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
-      cmd_buffer->state.framebuffer =
-         anv_framebuffer_from_handle(pBeginInfo->pInheritanceInfo->framebuffer);
       cmd_buffer->state.pass =
          anv_render_pass_from_handle(pBeginInfo->pInheritanceInfo->renderPass);
       cmd_buffer->state.subpass =
          &cmd_buffer->state.pass->subpasses[pBeginInfo->pInheritanceInfo->subpass];
+      cmd_buffer->state.framebuffer = NULL;
 
       genX(cmd_buffer_setup_attachments)(cmd_buffer, cmd_buffer->state.pass,
                                          NULL, NULL);
