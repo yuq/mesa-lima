@@ -327,7 +327,6 @@ struct radeon_surf {
 
     uint64_t                    dcc_size;
     uint32_t                    dcc_alignment;
-    /* TC-compatible HTILE only. */
     uint64_t                    htile_size;
     uint32_t                    htile_alignment;
 };

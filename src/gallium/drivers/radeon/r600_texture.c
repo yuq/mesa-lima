@@ -803,28 +803,30 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 	p_atomic_inc(&rscreen->compressed_colortex_counter);
 }
 
-static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
-					    struct r600_texture *rtex)
+static void r600_texture_get_htile_size(struct r600_common_screen *rscreen,
+					struct r600_texture *rtex)
 {
 	unsigned cl_width, cl_height, width, height;
 	unsigned slice_elements, slice_bytes, pipe_interleave_bytes, base_align;
 	unsigned num_pipes = rscreen->info.num_tile_pipes;
 
+	rtex->surface.htile_size = 0;
+
 	if (rscreen->chip_class <= EVERGREEN &&
 	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 26)
-		return 0;
+		return;
 
 	/* HW bug on R6xx. */
 	if (rscreen->chip_class == R600 &&
 	    (rtex->resource.b.b.width0 > 7680 ||
 	     rtex->resource.b.b.height0 > 7680))
-		return 0;
+		return;
 
 	/* HTILE is broken with 1D tiling on old kernels and CIK. */
 	if (rscreen->chip_class >= CIK &&
 	    rtex->surface.level[0].mode == RADEON_SURF_MODE_1D &&
 	    rscreen->info.drm_major == 2 && rscreen->info.drm_minor < 38)
-		return 0;
+		return;
 
 	/* Overalign HTILE on P2 configs to work around GPU hangs in
 	 * piglit/depthstencil-render-miplevels 585.
@@ -859,7 +861,7 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 		break;
 	default:
 		assert(0);
-		return 0;
+		return;
 	}
 
 	width = align(rtex->resource.b.b.width0, cl_width * 8);
@@ -871,47 +873,40 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	pipe_interleave_bytes = rscreen->info.pipe_interleave_bytes;
 	base_align = num_pipes * pipe_interleave_bytes;
 
-	rtex->htile.pitch = width;
-	rtex->htile.height = height;
-	rtex->htile.xalign = cl_width * 8;
-	rtex->htile.yalign = cl_height * 8;
-	rtex->htile.alignment = base_align;
-
-	return (util_max_layer(&rtex->resource.b.b, 0) + 1) *
+	rtex->surface.htile_alignment = base_align;
+	rtex->surface.htile_size =
+		(util_max_layer(&rtex->resource.b.b, 0) + 1) *
 		align(slice_bytes, base_align);
 }
 
 static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 					struct r600_texture *rtex)
 {
-	uint64_t htile_size, alignment;
 	uint32_t clear_value;
 
 	if (rtex->tc_compatible_htile) {
-		htile_size = rtex->surface.htile_size;
-		alignment = rtex->surface.htile_alignment;
 		clear_value = 0x0000030F;
 	} else {
-		htile_size = r600_texture_get_htile_size(rscreen, rtex);
-		alignment = rtex->htile.alignment;
+		r600_texture_get_htile_size(rscreen, rtex);
 		clear_value = 0;
 	}
 
-	if (!htile_size)
+	if (!rtex->surface.htile_size)
 		return;
 
 	rtex->htile_buffer = (struct r600_resource*)
-			     r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
-							PIPE_USAGE_DEFAULT,
-							htile_size, alignment);
+		r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
+					   PIPE_USAGE_DEFAULT,
+					   rtex->surface.htile_size,
+					   rtex->surface.htile_alignment);
 	if (rtex->htile_buffer == NULL) {
 		/* this is not a fatal error as we can still keep rendering
 		 * without htile buffer */
 		R600_ERR("Failed to create buffer object for htile buffer.\n");
 	} else {
 		r600_screen_clear_buffer(rscreen, &rtex->htile_buffer->b.b,
-					 0, htile_size, clear_value,
-					 R600_COHERENCY_NONE);
+					 0, rtex->surface.htile_size,
+					 clear_value, R600_COHERENCY_NONE);
 	}
 }
 
@@ -951,11 +946,9 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->cmask.yalign, rtex->cmask.slice_tile_max);
 
 	if (rtex->htile_buffer)
-		fprintf(f, "  HTile: size=%u, alignment=%u, pitch=%u, height=%u, "
-			"xalign=%u, yalign=%u, TC_compatible = %u\n",
+		fprintf(f, "  HTile: size=%u, alignment=%u, TC_compatible = %u\n",
 			rtex->htile_buffer->b.b.width0,
-			rtex->htile_buffer->buf->alignment, rtex->htile.pitch,
-			rtex->htile.height, rtex->htile.xalign, rtex->htile.yalign,
+			rtex->htile_buffer->buf->alignment,
 			rtex->tc_compatible_htile);
 
 	if (rtex->dcc_offset) {
