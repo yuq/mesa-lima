@@ -283,7 +283,7 @@ struct si_buffer_resources {
 void si_ce_reinitialize_all_descriptors(struct si_context *sctx);
 void si_ce_enable_loads(struct radeon_winsys_cs *ib);
 void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
-				    const struct radeon_surf_level *base_level_info,
+				    const struct legacy_surf_level *base_level_info,
 				    unsigned base_level, unsigned first_level,
 				    unsigned block_width, bool is_stencil,
 				    uint32_t *state);
@@ -366,9 +366,9 @@ static inline unsigned
 si_tile_mode_index(struct r600_texture *rtex, unsigned level, bool stencil)
 {
 	if (stencil)
-		return rtex->surface.stencil_tiling_index[level];
+		return rtex->surface.u.legacy.stencil_tiling_index[level];
 	else
-		return rtex->surface.tiling_index[level];
+		return rtex->surface.u.legacy.tiling_index[level];
 }
 
 #endif

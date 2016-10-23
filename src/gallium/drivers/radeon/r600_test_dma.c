@@ -277,9 +277,9 @@ void r600_test_dma(struct r600_common_screen *rscreen)
 		printf("%4u: dst = (%5u x %5u x %u, %s), "
 		       " src = (%5u x %5u x %u, %s), bpp = %2u, ",
 		       i, tdst.width0, tdst.height0, tdst.array_size,
-		       array_mode_to_string(rdst->surface.level[0].mode),
+		       array_mode_to_string(rdst->surface.u.legacy.level[0].mode),
 		       tsrc.width0, tsrc.height0, tsrc.array_size,
-		       array_mode_to_string(rsrc->surface.level[0].mode), bpp);
+		       array_mode_to_string(rsrc->surface.u.legacy.level[0].mode), bpp);
 		fflush(stdout);
 
 		/* set src pixels */

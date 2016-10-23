@@ -153,7 +153,7 @@ static int compute_level(struct amdgpu_winsys *ws,
                          ADDR_COMPUTE_HTILE_INFO_INPUT *AddrHtileIn,
                          ADDR_COMPUTE_HTILE_INFO_OUTPUT *AddrHtileOut)
 {
-   struct radeon_surf_level *surf_level;
+   struct legacy_surf_level *surf_level;
    ADDR_E_RETURNCODE ret;
 
    AddrSurfInfoIn->mipLevel = level;
@@ -171,9 +171,9 @@ static int compute_level(struct amdgpu_winsys *ws,
       /* Set the base level pitch. This is needed for calculation
        * of non-zero levels. */
       if (is_stencil)
-         AddrSurfInfoIn->basePitch = surf->stencil_level[0].nblk_x;
+         AddrSurfInfoIn->basePitch = surf->u.legacy.stencil_level[0].nblk_x;
       else
-         AddrSurfInfoIn->basePitch = surf->level[0].nblk_x;
+         AddrSurfInfoIn->basePitch = surf->u.legacy.level[0].nblk_x;
 
       /* Convert blocks to pixels for compressed formats. */
       if (compressed)
@@ -187,7 +187,7 @@ static int compute_level(struct amdgpu_winsys *ws,
       return ret;
    }
 
-   surf_level = is_stencil ? &surf->stencil_level[level] : &surf->level[level];
+   surf_level = is_stencil ? &surf->u.legacy.stencil_level[level] : &surf->u.legacy.level[level];
    surf_level->offset = align64(surf->surf_size, AddrSurfInfoOut->baseAlign);
    surf_level->slice_size = AddrSurfInfoOut->sliceSize;
    surf_level->nblk_x = AddrSurfInfoOut->pitch;
@@ -208,9 +208,9 @@ static int compute_level(struct amdgpu_winsys *ws,
    }
 
    if (is_stencil)
-      surf->stencil_tiling_index[level] = AddrSurfInfoOut->tileIndex;
+      surf->u.legacy.stencil_tiling_index[level] = AddrSurfInfoOut->tileIndex;
    else
-      surf->tiling_index[level] = AddrSurfInfoOut->tileIndex;
+      surf->u.legacy.tiling_index[level] = AddrSurfInfoOut->tileIndex;
 
    surf->surf_size = surf_level->offset + AddrSurfInfoOut->surfSize;
 
@@ -274,7 +274,7 @@ static int compute_level(struct amdgpu_winsys *ws,
 static void set_micro_tile_mode(struct radeon_surf *surf,
                                 struct radeon_info *info)
 {
-   uint32_t tile_mode = info->si_tile_mode_array[surf->tiling_index[0]];
+   uint32_t tile_mode = info->si_tile_mode_array[surf->u.legacy.tiling_index[0]];
 
    if (info->chip_class >= CIK)
       surf->micro_tile_mode = G_009910_MICRO_TILE_MODE_NEW(tile_mode);
@@ -287,7 +287,7 @@ static unsigned cik_get_macro_tile_index(struct radeon_surf *surf)
 	unsigned index, tileb;
 
 	tileb = 8 * 8 * surf->bpe;
-	tileb = MIN2(surf->tile_split, tileb);
+	tileb = MIN2(surf->u.legacy.tile_split, tileb);
 
 	for (index = 0; tileb > 64; index++)
 		tileb >>= 1;
@@ -434,17 +434,18 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    /* Set preferred macrotile parameters. This is usually required
     * for shared resources. This is for 2D tiling only. */
    if (AddrSurfInfoIn.tileMode >= ADDR_TM_2D_TILED_THIN1 &&
-       surf->bankw && surf->bankh && surf->mtilea && surf->tile_split) {
+       surf->u.legacy.bankw && surf->u.legacy.bankh &&
+       surf->u.legacy.mtilea && surf->u.legacy.tile_split) {
       assert(!(flags & RADEON_SURF_FMASK));
 
       /* If any of these parameters are incorrect, the calculation
        * will fail. */
-      AddrTileInfoIn.banks = surf->num_banks;
-      AddrTileInfoIn.bankWidth = surf->bankw;
-      AddrTileInfoIn.bankHeight = surf->bankh;
-      AddrTileInfoIn.macroAspectRatio = surf->mtilea;
-      AddrTileInfoIn.tileSplitBytes = surf->tile_split;
-      AddrTileInfoIn.pipeConfig = surf->pipe_config + 1; /* +1 compared to GB_TILE_MODE */
+      AddrTileInfoIn.banks = surf->u.legacy.num_banks;
+      AddrTileInfoIn.bankWidth = surf->u.legacy.bankw;
+      AddrTileInfoIn.bankHeight = surf->u.legacy.bankh;
+      AddrTileInfoIn.macroAspectRatio = surf->u.legacy.mtilea;
+      AddrTileInfoIn.tileSplitBytes = surf->u.legacy.tile_split;
+      AddrTileInfoIn.pipeConfig = surf->u.legacy.pipe_config + 1; /* +1 compared to GB_TILE_MODE */
       AddrSurfInfoIn.flags.opt4Space = 0;
       AddrSurfInfoIn.pTileInfo = &AddrTileInfoIn;
 
@@ -504,19 +505,19 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
 
       if (level == 0) {
          surf->surf_alignment = AddrSurfInfoOut.baseAlign;
-         surf->pipe_config = AddrSurfInfoOut.pTileInfo->pipeConfig - 1;
+         surf->u.legacy.pipe_config = AddrSurfInfoOut.pTileInfo->pipeConfig - 1;
          set_micro_tile_mode(surf, &ws->info);
 
          /* For 2D modes only. */
          if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
-            surf->bankw = AddrSurfInfoOut.pTileInfo->bankWidth;
-            surf->bankh = AddrSurfInfoOut.pTileInfo->bankHeight;
-            surf->mtilea = AddrSurfInfoOut.pTileInfo->macroAspectRatio;
-            surf->tile_split = AddrSurfInfoOut.pTileInfo->tileSplitBytes;
-            surf->num_banks = AddrSurfInfoOut.pTileInfo->banks;
-            surf->macro_tile_index = AddrSurfInfoOut.macroModeIndex;
+            surf->u.legacy.bankw = AddrSurfInfoOut.pTileInfo->bankWidth;
+            surf->u.legacy.bankh = AddrSurfInfoOut.pTileInfo->bankHeight;
+            surf->u.legacy.mtilea = AddrSurfInfoOut.pTileInfo->macroAspectRatio;
+            surf->u.legacy.tile_split = AddrSurfInfoOut.pTileInfo->tileSplitBytes;
+            surf->u.legacy.num_banks = AddrSurfInfoOut.pTileInfo->banks;
+            surf->u.legacy.macro_tile_index = AddrSurfInfoOut.macroModeIndex;
          } else {
-            surf->macro_tile_index = 0;
+            surf->u.legacy.macro_tile_index = 0;
          }
       }
    }
@@ -528,7 +529,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
       AddrSurfInfoIn.flags.stencil = 1;
       AddrSurfInfoIn.flags.tcCompatible = 0;
       /* This will be ignored if AddrSurfInfoIn.pTileInfo is NULL. */
-      AddrTileInfoIn.tileSplitBytes = surf->stencil_tile_split;
+      AddrTileInfoIn.tileSplitBytes = surf->u.legacy.stencil_tile_split;
 
       for (level = 0; level <= tex->last_level; level++) {
          r = compute_level(ws, tex, surf, true, level, compressed,
@@ -538,13 +539,13 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
             return r;
 
          /* DB uses the depth pitch for both stencil and depth. */
-         if (surf->stencil_level[level].nblk_x != surf->level[level].nblk_x)
-            surf->stencil_adjusted = true;
+         if (surf->u.legacy.stencil_level[level].nblk_x != surf->u.legacy.level[level].nblk_x)
+            surf->u.legacy.stencil_adjusted = true;
 
          if (level == 0) {
             /* For 2D modes only. */
             if (AddrSurfInfoOut.tileMode >= ADDR_TM_2D_TILED_THIN1) {
-               surf->stencil_tile_split =
+               surf->u.legacy.stencil_tile_split =
                      AddrSurfInfoOut.pTileInfo->tileSplitBytes;
             }
          }
@@ -567,7 +568,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    if (surf->htile_size && tex->last_level)
 	   surf->htile_size *= 2;
 
-   surf->is_linear = surf->level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
+   surf->is_linear = surf->u.legacy.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
    return 0;
 }
 

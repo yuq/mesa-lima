@@ -154,7 +154,7 @@ void rvid_join_surfaces(struct radeon_winsys* ws,
 			continue;
 
 		/* choose the smallest bank w/h for now */
-		wh = surfaces[i]->bankw * surfaces[i]->bankh;
+		wh = surfaces[i]->u.legacy.bankw * surfaces[i]->u.legacy.bankh;
 		if (wh < best_wh) {
 			best_wh = wh;
 			best_tiling = i;
@@ -166,15 +166,15 @@ void rvid_join_surfaces(struct radeon_winsys* ws,
 			continue;
 
 		/* copy the tiling parameters */
-		surfaces[i]->bankw = surfaces[best_tiling]->bankw;
-		surfaces[i]->bankh = surfaces[best_tiling]->bankh;
-		surfaces[i]->mtilea = surfaces[best_tiling]->mtilea;
-		surfaces[i]->tile_split = surfaces[best_tiling]->tile_split;
+		surfaces[i]->u.legacy.bankw = surfaces[best_tiling]->u.legacy.bankw;
+		surfaces[i]->u.legacy.bankh = surfaces[best_tiling]->u.legacy.bankh;
+		surfaces[i]->u.legacy.mtilea = surfaces[best_tiling]->u.legacy.mtilea;
+		surfaces[i]->u.legacy.tile_split = surfaces[best_tiling]->u.legacy.tile_split;
 
 		/* adjust the texture layer offsets */
 		off = align(off, surfaces[i]->surf_alignment);
-		for (j = 0; j < ARRAY_SIZE(surfaces[i]->level); ++j)
-			surfaces[i]->level[j].offset += off;
+		for (j = 0; j < ARRAY_SIZE(surfaces[i]->u.legacy.level); ++j)
+			surfaces[i]->u.legacy.level[j].offset += off;
 		off += surfaces[i]->surf_size;
 	}
 

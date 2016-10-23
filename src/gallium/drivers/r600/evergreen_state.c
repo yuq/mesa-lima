@@ -700,14 +700,14 @@ static int evergreen_fill_tex_resource_words(struct r600_context *rctx,
 	unsigned char array_mode = 0, non_disp_tiling = 0;
 	unsigned height, depth, width;
 	unsigned macro_aspect, tile_split, bankh, bankw, nbanks, fmask_bankh;
-	struct radeon_surf_level *surflevel;
+	struct legacy_surf_level *surflevel;
 	unsigned base_level, first_level, last_level;
 	unsigned dim, last_layer;
 	uint64_t va;
 	bool do_endian_swap = FALSE;
 
-	tile_split = tmp->surface.tile_split;
-	surflevel = tmp->surface.level;
+	tile_split = tmp->surface.u.legacy.tile_split;
+	surflevel = tmp->surface.u.legacy.level;
 
 	/* Texturing with separate depth and stencil. */
 	if (tmp->db_compatible) {
@@ -726,8 +726,8 @@ static int evergreen_fill_tex_resource_words(struct r600_context *rctx,
 		case PIPE_FORMAT_S8X24_UINT:
 		case PIPE_FORMAT_X32_S8X24_UINT:
 			params->pipe_format = PIPE_FORMAT_S8_UINT;
-			tile_split = tmp->surface.stencil_tile_split;
-			surflevel = tmp->surface.stencil_level;
+			tile_split = tmp->surface.u.legacy.stencil_tile_split;
+			surflevel = tmp->surface.u.legacy.stencil_level;
 			break;
 		default:;
 		}
@@ -777,9 +777,9 @@ static int evergreen_fill_tex_resource_words(struct r600_context *rctx,
 		array_mode = V_028C70_ARRAY_1D_TILED_THIN1;
 		break;
 	}
-	macro_aspect = tmp->surface.mtilea;
-	bankw = tmp->surface.bankw;
-	bankh = tmp->surface.bankh;
+	macro_aspect = tmp->surface.u.legacy.mtilea;
+	bankw = tmp->surface.u.legacy.bankw;
+	bankh = tmp->surface.u.legacy.bankh;
 	tile_split = eg_tile_split(tile_split);
 	macro_aspect = eg_macro_tile_aspect(macro_aspect);
 	bankw = eg_bank_wh(bankw);
@@ -1092,7 +1092,7 @@ static void evergreen_set_color_surface_common(struct r600_context *rctx,
 	bool blend_clamp = 0, blend_bypass = 0, do_endian_swap = FALSE;
 	int i;
 
-	color->offset = rtex->surface.level[level].offset;
+	color->offset = rtex->surface.u.legacy.level[level].offset;
 	color->view = S_028C6C_SLICE_START(first_layer) |
 			S_028C6C_SLICE_MAX(last_layer);
 
@@ -1100,14 +1100,14 @@ static void evergreen_set_color_surface_common(struct r600_context *rctx,
 	color->offset >>= 8;
 
 	color->dim = 0;
-	pitch = (rtex->surface.level[level].nblk_x) / 8 - 1;
-	slice = (rtex->surface.level[level].nblk_x * rtex->surface.level[level].nblk_y) / 64;
+	pitch = (rtex->surface.u.legacy.level[level].nblk_x) / 8 - 1;
+	slice = (rtex->surface.u.legacy.level[level].nblk_x * rtex->surface.u.legacy.level[level].nblk_y) / 64;
 	if (slice) {
 		slice = slice - 1;
 	}
 
 	color->info = 0;
-	switch (rtex->surface.level[level].mode) {
+	switch (rtex->surface.u.legacy.level[level].mode) {
 	default:
 	case RADEON_SURF_MODE_LINEAR_ALIGNED:
 		color->info = S_028C70_ARRAY_MODE(V_028C70_ARRAY_LINEAR_ALIGNED);
@@ -1122,14 +1122,14 @@ static void evergreen_set_color_surface_common(struct r600_context *rctx,
 		non_disp_tiling = rtex->non_disp_tiling;
 		break;
 	}
-	tile_split = rtex->surface.tile_split;
-	macro_aspect = rtex->surface.mtilea;
-	bankw = rtex->surface.bankw;
-	bankh = rtex->surface.bankh;
+	tile_split = rtex->surface.u.legacy.tile_split;
+	macro_aspect = rtex->surface.u.legacy.mtilea;
+	bankw = rtex->surface.u.legacy.bankw;
+	bankh = rtex->surface.u.legacy.bankh;
 	if (rtex->fmask.size)
 		fmask_bankh = rtex->fmask.bank_height;
 	else
-		fmask_bankh = rtex->surface.bankh;
+		fmask_bankh = rtex->surface.u.legacy.bankh;
 	tile_split = eg_tile_split(tile_split);
 	macro_aspect = eg_macro_tile_aspect(macro_aspect);
 	bankw = eg_bank_wh(bankw);
@@ -1316,7 +1316,7 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	struct r600_screen *rscreen = rctx->screen;
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
-	struct radeon_surf_level *levelinfo = &rtex->surface.level[level];
+	struct legacy_surf_level *levelinfo = &rtex->surface.u.legacy.level[level];
 	uint64_t offset;
 	unsigned format, array_mode;
 	unsigned macro_aspect, tile_split, bankh, bankw, nbanks;
@@ -1326,9 +1326,9 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 	assert(format != ~0);
 
 	offset = rtex->resource.gpu_address;
-	offset += rtex->surface.level[level].offset;
+	offset += rtex->surface.u.legacy.level[level].offset;
 
-	switch (rtex->surface.level[level].mode) {
+	switch (rtex->surface.u.legacy.level[level].mode) {
 	case RADEON_SURF_MODE_2D:
 		array_mode = V_028C70_ARRAY_2D_TILED_THIN1;
 		break;
@@ -1338,10 +1338,10 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 		array_mode = V_028C70_ARRAY_1D_TILED_THIN1;
 		break;
 	}
-	tile_split = rtex->surface.tile_split;
-	macro_aspect = rtex->surface.mtilea;
-	bankw = rtex->surface.bankw;
-	bankh = rtex->surface.bankh;
+	tile_split = rtex->surface.u.legacy.tile_split;
+	macro_aspect = rtex->surface.u.legacy.mtilea;
+	bankw = rtex->surface.u.legacy.bankw;
+	bankh = rtex->surface.u.legacy.bankh;
 	tile_split = eg_tile_split(tile_split);
 	macro_aspect = eg_macro_tile_aspect(macro_aspect);
 	bankw = eg_bank_wh(bankw);
@@ -1372,11 +1372,11 @@ static void evergreen_init_depth_surface(struct r600_context *rctx,
 
 	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
 		uint64_t stencil_offset;
-		unsigned stile_split = rtex->surface.stencil_tile_split;
+		unsigned stile_split = rtex->surface.u.legacy.stencil_tile_split;
 
 		stile_split = eg_tile_split(stile_split);
 
-		stencil_offset = rtex->surface.stencil_level[level].offset;
+		stencil_offset = rtex->surface.u.legacy.stencil_level[level].offset;
 		stencil_offset += rtex->resource.gpu_address;
 
 		surf->db_stencil_base = stencil_offset >> 8;
@@ -3506,8 +3506,8 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 	unsigned sub_cmd, bank_h, bank_w, mt_aspect, nbanks, tile_split, non_disp_tiling = 0;
 	uint64_t base, addr;
 
-	dst_mode = rdst->surface.level[dst_level].mode;
-	src_mode = rsrc->surface.level[src_level].mode;
+	dst_mode = rdst->surface.u.legacy.level[dst_level].mode;
+	src_mode = rsrc->surface.u.legacy.level[src_level].mode;
 	assert(dst_mode != src_mode);
 
 	/* non_disp_tiling bit needs to be set for depth, stencil, and fmask surfaces */
@@ -3523,7 +3523,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 	if (dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED) {
 		/* T2L */
 		array_mode = evergreen_array_mode(src_mode);
-		slice_tile_max = (rsrc->surface.level[src_level].nblk_x * rsrc->surface.level[src_level].nblk_y) / (8*8);
+		slice_tile_max = (rsrc->surface.u.legacy.level[src_level].nblk_x * rsrc->surface.u.legacy.level[src_level].nblk_y) / (8*8);
 		slice_tile_max = slice_tile_max ? slice_tile_max - 1 : 0;
 		/* linear height must be the same as the slice tile max height, it's ok even
 		 * if the linear destination/source have smaller heigh as the size of the
@@ -3535,20 +3535,20 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 		x = src_x;
 		y = src_y;
 		z = src_z;
-		base = rsrc->surface.level[src_level].offset;
-		addr = rdst->surface.level[dst_level].offset;
-		addr += rdst->surface.level[dst_level].slice_size * dst_z;
+		base = rsrc->surface.u.legacy.level[src_level].offset;
+		addr = rdst->surface.u.legacy.level[dst_level].offset;
+		addr += rdst->surface.u.legacy.level[dst_level].slice_size * dst_z;
 		addr += dst_y * pitch + dst_x * bpp;
-		bank_h = eg_bank_wh(rsrc->surface.bankh);
-		bank_w = eg_bank_wh(rsrc->surface.bankw);
-		mt_aspect = eg_macro_tile_aspect(rsrc->surface.mtilea);
-		tile_split = eg_tile_split(rsrc->surface.tile_split);
+		bank_h = eg_bank_wh(rsrc->surface.u.legacy.bankh);
+		bank_w = eg_bank_wh(rsrc->surface.u.legacy.bankw);
+		mt_aspect = eg_macro_tile_aspect(rsrc->surface.u.legacy.mtilea);
+		tile_split = eg_tile_split(rsrc->surface.u.legacy.tile_split);
 		base += rsrc->resource.gpu_address;
 		addr += rdst->resource.gpu_address;
 	} else {
 		/* L2T */
 		array_mode = evergreen_array_mode(dst_mode);
-		slice_tile_max = (rdst->surface.level[dst_level].nblk_x * rdst->surface.level[dst_level].nblk_y) / (8*8);
+		slice_tile_max = (rdst->surface.u.legacy.level[dst_level].nblk_x * rdst->surface.u.legacy.level[dst_level].nblk_y) / (8*8);
 		slice_tile_max = slice_tile_max ? slice_tile_max - 1 : 0;
 		/* linear height must be the same as the slice tile max height, it's ok even
 		 * if the linear destination/source have smaller heigh as the size of the
@@ -3560,14 +3560,14 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 		x = dst_x;
 		y = dst_y;
 		z = dst_z;
-		base = rdst->surface.level[dst_level].offset;
-		addr = rsrc->surface.level[src_level].offset;
-		addr += rsrc->surface.level[src_level].slice_size * src_z;
+		base = rdst->surface.u.legacy.level[dst_level].offset;
+		addr = rsrc->surface.u.legacy.level[src_level].offset;
+		addr += rsrc->surface.u.legacy.level[src_level].slice_size * src_z;
 		addr += src_y * pitch + src_x * bpp;
-		bank_h = eg_bank_wh(rdst->surface.bankh);
-		bank_w = eg_bank_wh(rdst->surface.bankw);
-		mt_aspect = eg_macro_tile_aspect(rdst->surface.mtilea);
-		tile_split = eg_tile_split(rdst->surface.tile_split);
+		bank_h = eg_bank_wh(rdst->surface.u.legacy.bankh);
+		bank_w = eg_bank_wh(rdst->surface.u.legacy.bankw);
+		mt_aspect = eg_macro_tile_aspect(rdst->surface.u.legacy.mtilea);
+		tile_split = eg_tile_split(rdst->surface.u.legacy.tile_split);
 		base += rdst->resource.gpu_address;
 		addr += rsrc->resource.gpu_address;
 	}
@@ -3640,14 +3640,14 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 	dst_y = util_format_get_nblocksy(src->format, dst_y);
 
 	bpp = rdst->surface.bpe;
-	dst_pitch = rdst->surface.level[dst_level].nblk_x * rdst->surface.bpe;
-	src_pitch = rsrc->surface.level[src_level].nblk_x * rsrc->surface.bpe;
+	dst_pitch = rdst->surface.u.legacy.level[dst_level].nblk_x * rdst->surface.bpe;
+	src_pitch = rsrc->surface.u.legacy.level[src_level].nblk_x * rsrc->surface.bpe;
 	src_w = u_minify(rsrc->resource.b.b.width0, src_level);
 	dst_w = u_minify(rdst->resource.b.b.width0, dst_level);
 	copy_height = src_box->height / rsrc->surface.blk_h;
 
-	dst_mode = rdst->surface.level[dst_level].mode;
-	src_mode = rsrc->surface.level[src_level].mode;
+	dst_mode = rdst->surface.u.legacy.level[dst_level].mode;
+	src_mode = rsrc->surface.u.legacy.level[src_level].mode;
 
 	if (src_pitch != dst_pitch || src_box->x || dst_x || src_w != dst_w) {
 		/* FIXME evergreen can do partial blit */
@@ -3678,11 +3678,11 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 		 *   dst_x/y == 0
 		 *   dst_pitch == src_pitch
 		 */
-		src_offset= rsrc->surface.level[src_level].offset;
-		src_offset += rsrc->surface.level[src_level].slice_size * src_box->z;
+		src_offset= rsrc->surface.u.legacy.level[src_level].offset;
+		src_offset += rsrc->surface.u.legacy.level[src_level].slice_size * src_box->z;
 		src_offset += src_y * src_pitch + src_x * bpp;
-		dst_offset = rdst->surface.level[dst_level].offset;
-		dst_offset += rdst->surface.level[dst_level].slice_size * dst_z;
+		dst_offset = rdst->surface.u.legacy.level[dst_level].offset;
+		dst_offset += rdst->surface.u.legacy.level[dst_level].slice_size * dst_z;
 		dst_offset += dst_y * dst_pitch + dst_x * bpp;
 		evergreen_dma_copy_buffer(rctx, dst, src, dst_offset, src_offset,
 					src_box->height * src_pitch);

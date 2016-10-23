@@ -1321,8 +1321,8 @@ error:
 /* calculate top/bottom offset */
 static unsigned texture_offset(struct radeon_surf *surface, unsigned layer)
 {
-	return surface->level[0].offset +
-		layer * surface->level[0].slice_size;
+	return surface->u.legacy.level[0].offset +
+		layer * surface->u.legacy.level[0].slice_size;
 }
 
 /* hw encode the aspect of macro tiles */
@@ -1357,8 +1357,8 @@ static unsigned bank_wh(unsigned bankwh)
 void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
 			  struct radeon_surf *chroma)
 {
-	msg->body.decode.dt_pitch = luma->level[0].nblk_x;
-	switch (luma->level[0].mode) {
+	msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x;
+	switch (luma->u.legacy.level[0].mode) {
 	case RADEON_SURF_MODE_LINEAR_ALIGNED:
 		msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
 		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_LINEAR;
@@ -1386,11 +1386,11 @@ void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
 		msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
 	}
 
-	assert(luma->bankw == chroma->bankw);
-	assert(luma->bankh == chroma->bankh);
-	assert(luma->mtilea == chroma->mtilea);
+	assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
+	assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
+	assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
 
-	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->bankw));
-	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->bankh));
-	msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->mtilea));
+	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->u.legacy.bankw));
+	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->u.legacy.bankh));
+	msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->u.legacy.mtilea));
 }

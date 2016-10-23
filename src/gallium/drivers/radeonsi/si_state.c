@@ -2204,7 +2204,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	/* This must be set for fast clear to work without FMASK. */
 	if (!rtex->fmask.size && sctx->b.chip_class == SI) {
-		unsigned bankh = util_logbase2(rtex->surface.bankh);
+		unsigned bankh = util_logbase2(rtex->surface.u.legacy.bankh);
 		surf->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
 	}
 
@@ -2219,7 +2219,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 {
 	struct r600_texture *rtex = (struct r600_texture*)surf->base.texture;
 	unsigned level = surf->base.u.tex.level;
-	struct radeon_surf_level *levelinfo = &rtex->surface.level[level];
+	struct legacy_surf_level *levelinfo = &rtex->surface.u.legacy.level[level];
 	unsigned format, stencil_format;
 	uint32_t z_info, s_info;
 
@@ -2239,9 +2239,9 @@ static void si_init_depth_surface(struct si_context *sctx,
 	assert(levelinfo->nblk_x % 8 == 0 && levelinfo->nblk_y % 8 == 0);
 
 	surf->db_depth_base = (rtex->resource.gpu_address +
-			       rtex->surface.level[level].offset) >> 8;
+			       rtex->surface.u.legacy.level[level].offset) >> 8;
 	surf->db_stencil_base = (rtex->resource.gpu_address +
-				 rtex->surface.stencil_level[level].offset) >> 8;
+				 rtex->surface.u.legacy.stencil_level[level].offset) >> 8;
 
 	z_info = S_028040_FORMAT(format) |
 		 S_028040_NUM_SAMPLES(util_logbase2(rtex->resource.b.b.nr_samples));
@@ -2250,9 +2250,9 @@ static void si_init_depth_surface(struct si_context *sctx,
 
 	if (sctx->b.chip_class >= CIK) {
 		struct radeon_info *info = &sctx->screen->b.info;
-		unsigned index = rtex->surface.tiling_index[level];
-		unsigned stencil_index = rtex->surface.stencil_tiling_index[level];
-		unsigned macro_index = rtex->surface.macro_tile_index;
+		unsigned index = rtex->surface.u.legacy.tiling_index[level];
+		unsigned stencil_index = rtex->surface.u.legacy.stencil_tiling_index[level];
+		unsigned macro_index = rtex->surface.u.legacy.macro_tile_index;
 		unsigned tile_mode = info->si_tile_mode_array[index];
 		unsigned stencil_tile_mode = info->si_tile_mode_array[stencil_index];
 		unsigned macro_mode = info->cik_macrotile_mode_array[macro_index];
@@ -2506,7 +2506,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 	/* Colorbuffers. */
 	for (i = 0; i < nr_cbufs; i++) {
-		const struct radeon_surf_level *level_info;
+		const struct legacy_surf_level *level_info;
 		unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
 		unsigned cb_color_base, cb_color_fmask, cb_color_attrib;
 		unsigned cb_color_pitch, cb_color_slice, cb_color_fmask_slice;
@@ -2522,7 +2522,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		}
 
 		tex = (struct r600_texture *)cb->base.texture;
-		level_info =  &tex->surface.level[cb->base.u.tex.level];
+		level_info =  &tex->surface.u.legacy.level[cb->base.u.tex.level];
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      &tex->resource, RADEON_USAGE_READWRITE,
 				      tex->resource.b.b.nr_samples > 1 ?
@@ -2599,7 +2599,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		if (sctx->b.chip_class >= VI) /* R_028C94_CB_COLOR0_DCC_BASE */
 			radeon_emit(cs, ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 					 tex->dcc_offset +
-				         tex->surface.level[cb->base.u.tex.level].dcc_offset) >> 8);
+				         tex->surface.u.legacy.level[cb->base.u.tex.level].dcc_offset) >> 8);
 	}
 	for (; i < 8 ; i++)
 		if (sctx->framebuffer.dirty_cbufs & (1 << i))
@@ -3036,7 +3036,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	unsigned height, depth, width;
 	unsigned last_layer = state->u.tex.last_layer;
 	enum pipe_format pipe_format;
-	const struct radeon_surf_level *surflevel;
+	const struct legacy_surf_level *surflevel;
 
 	if (!view)
 		return NULL;
@@ -3120,7 +3120,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		tmp = tmp->flushed_depth_texture;
 	}
 
-	surflevel = tmp->surface.level;
+	surflevel = tmp->surface.u.legacy.level;
 
 	if (tmp->db_compatible) {
 		if (!view->is_stencil_sampler)
@@ -3141,7 +3141,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 		case PIPE_FORMAT_S8X24_UINT:
 		case PIPE_FORMAT_X32_S8X24_UINT:
 			pipe_format = PIPE_FORMAT_S8_UINT;
-			surflevel = tmp->surface.stencil_level;
+			surflevel = tmp->surface.u.legacy.stencil_level;
 			break;
 		default:;
 		}
@@ -3785,7 +3785,7 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 				   res->width0, res->height0, res->depth0,
 				   desc, NULL);
 
-	si_set_mutable_tex_desc_fields(rtex, &rtex->surface.level[0], 0, 0,
+	si_set_mutable_tex_desc_fields(rtex, &rtex->surface.u.legacy.level[0], 0, 0,
 				       rtex->surface.blk_w, false, desc);
 
 	/* Clear the base address and set the relative DCC offset. */
@@ -3798,7 +3798,7 @@ static void si_query_opaque_metadata(struct r600_common_screen *rscreen,
 
 	/* Dwords [10:..] contain the mipmap level offsets. */
 	for (i = 0; i <= res->last_level; i++)
-		md->metadata[10+i] = rtex->surface.level[i].offset >> 8;
+		md->metadata[10+i] = rtex->surface.u.legacy.level[i].offset >> 8;
 
 	md->size_metadata = (11 + res->last_level) * 4;
 }

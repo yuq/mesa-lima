@@ -377,7 +377,7 @@ static void si_set_buf_desc_address(struct r600_resource *buf,
  * \param state			descriptor to update
  */
 void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
-				    const struct radeon_surf_level *base_level_info,
+				    const struct legacy_surf_level *base_level_info,
 				    unsigned base_level, unsigned first_level,
 				    unsigned block_width, bool is_stencil,
 				    uint32_t *state)
@@ -746,7 +746,7 @@ static void si_set_shader_image(struct si_context *ctx,
 					   view->u.tex.last_layer,
 					   width, height, depth,
 					   desc, NULL);
-		si_set_mutable_tex_desc_fields(tex, &tex->surface.level[level],
+		si_set_mutable_tex_desc_fields(tex, &tex->surface.u.legacy.level[level],
 					       level, level,
 					       util_format_get_blockwidth(view->format),
 					       false, desc);

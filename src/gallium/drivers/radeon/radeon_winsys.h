@@ -289,7 +289,7 @@ enum radeon_micro_mode {
 #define RADEON_SURF_IMPORTED                    (1 << 24)
 #define RADEON_SURF_OPTIMIZE_FOR_SPACE          (1 << 25)
 
-struct radeon_surf_level {
+struct legacy_surf_level {
     uint64_t                    offset;
     uint64_t                    slice_size;
     uint64_t                    dcc_offset;
@@ -297,6 +297,30 @@ struct radeon_surf_level {
     uint16_t                    nblk_x;
     uint16_t                    nblk_y;
     enum radeon_surf_mode       mode;
+};
+
+struct legacy_surf_layout {
+    unsigned                    bankw:4;  /* max 8 */
+    unsigned                    bankh:4;  /* max 8 */
+    unsigned                    mtilea:4; /* max 8 */
+    unsigned                    tile_split:13;         /* max 4K */
+    unsigned                    stencil_tile_split:13; /* max 4K */
+    unsigned                    pipe_config:5;      /* max 17 */
+    unsigned                    num_banks:5;        /* max 16 */
+    unsigned                    macro_tile_index:4; /* max 15 */
+
+    /* Whether the depth miptree or stencil miptree as used by the DB are
+     * adjusted from their TC compatible form to ensure depth/stencil
+     * compatibility. If either is true, the corresponding plane cannot be
+     * sampled from.
+     */
+    unsigned                    depth_adjusted:1;
+    unsigned                    stencil_adjusted:1;
+
+    struct legacy_surf_level    level[RADEON_SURF_MAX_LEVELS];
+    struct legacy_surf_level    stencil_level[RADEON_SURF_MAX_LEVELS];
+    uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
+    uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
 };
 
 struct radeon_surf {
@@ -310,6 +334,8 @@ struct radeon_surf {
      */
     unsigned                    num_dcc_levels:4;
     unsigned                    is_linear:1;
+    /* Displayable, thin, depth, rotated. AKA D,S,Z,R swizzle modes. */
+    unsigned                    micro_tile_mode:3;
     uint32_t                    flags;
 
     /* These are return values. Some of them can be set by the caller, but
@@ -324,29 +350,14 @@ struct radeon_surf {
     uint32_t                    dcc_alignment;
     uint32_t                    htile_alignment;
 
-    /* This applies to EG and later. */
-    unsigned                    bankw:4;  /* max 8 */
-    unsigned                    bankh:4;  /* max 8 */
-    unsigned                    mtilea:4; /* max 8 */
-    unsigned                    tile_split:13;         /* max 4K */
-    unsigned                    stencil_tile_split:13; /* max 4K */
-    unsigned                    pipe_config:5;      /* max 17 */
-    unsigned                    num_banks:5;        /* max 16 */
-    unsigned                    macro_tile_index:4; /* max 15 */
-    unsigned                    micro_tile_mode:3; /* displayable, thin, depth, rotated */
-
-    /* Whether the depth miptree or stencil miptree as used by the DB are
-     * adjusted from their TC compatible form to ensure depth/stencil
-     * compatibility. If either is true, the corresponding plane cannot be
-     * sampled from.
-     */
-    unsigned                    depth_adjusted:1;
-    unsigned                    stencil_adjusted:1;
-
-    struct radeon_surf_level    level[RADEON_SURF_MAX_LEVELS];
-    struct radeon_surf_level    stencil_level[RADEON_SURF_MAX_LEVELS];
-    uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
-    uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
+    union {
+        /* R600-VI return values.
+         *
+         * Some of them can be set by the caller if certain parameters are
+         * desirable. The allocator will try to obey them.
+         */
+        struct legacy_surf_layout legacy;
+    } u;
 };
 
 struct radeon_bo_list_item {
