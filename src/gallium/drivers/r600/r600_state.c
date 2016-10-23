@@ -1136,7 +1136,7 @@ static void r600_set_framebuffer_state(struct pipe_context *ctx,
 			rctx->framebuffer.export_16bpc = false;
 		}
 
-		if (rtex->fmask.size && rtex->cmask.size) {
+		if (rtex->fmask.size) {
 			rctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
 	}

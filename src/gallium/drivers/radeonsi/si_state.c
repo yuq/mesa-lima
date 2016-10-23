@@ -2356,7 +2356,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 		if (surf->color_is_int8)
 			sctx->framebuffer.color_is_int8 |= 1 << i;
 
-		if (rtex->fmask.size && rtex->cmask.size) {
+		if (rtex->fmask.size) {
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
 
