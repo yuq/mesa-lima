@@ -298,7 +298,12 @@ struct radeon_surf {
      * changed by the calculator.
      */
     uint64_t                    surf_size;
+    uint64_t                    dcc_size;
+    uint64_t                    htile_size;
+
     uint32_t                    surf_alignment;
+    uint32_t                    dcc_alignment;
+    uint32_t                    htile_alignment;
 
     /* This applies to EG and later. */
     unsigned                    bankw:4;  /* max 8 */
@@ -323,11 +328,6 @@ struct radeon_surf {
     struct radeon_surf_level    stencil_level[RADEON_SURF_MAX_LEVELS];
     uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
     uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
-
-    uint64_t                    dcc_size;
-    uint32_t                    dcc_alignment;
-    uint64_t                    htile_size;
-    uint32_t                    htile_alignment;
 };
 
 struct radeon_bo_list_item {
