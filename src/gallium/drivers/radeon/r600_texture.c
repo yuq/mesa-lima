@@ -929,7 +929,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 		rtex->surface.bpe, rtex->resource.b.b.nr_samples,
 		rtex->surface.flags, util_format_short_name(rtex->resource.b.b.format));
 
-	fprintf(f, "  Layout: size=%"PRIu64", alignment=%"PRIu64", bankw=%u, "
+	fprintf(f, "  Layout: size=%"PRIu64", alignment=%u, bankw=%u, "
 		"bankh=%u, nbanks=%u, mtilea=%u, tilesplit=%u, pipeconfig=%u, scanout=%u\n",
 		rtex->surface.bo_size, rtex->surface.bo_alignment, rtex->surface.bankw,
 		rtex->surface.bankh, rtex->surface.num_banks, rtex->surface.mtilea,
@@ -959,7 +959,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->tc_compatible_htile);
 
 	if (rtex->dcc_offset) {
-		fprintf(f, "  DCC: offset=%"PRIu64", size=%"PRIu64", alignment=%"PRIu64"\n",
+		fprintf(f, "  DCC: offset=%"PRIu64", size=%"PRIu64", alignment=%u\n",
 			rtex->dcc_offset, rtex->surface.dcc_size,
 			rtex->surface.dcc_alignment);
 		for (i = 0; i <= rtex->resource.b.b.last_level; i++)

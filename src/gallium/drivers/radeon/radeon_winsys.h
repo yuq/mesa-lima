@@ -255,7 +255,7 @@ enum radeon_feature_id {
     RADEON_FID_R300_CMASK_ACCESS,
 };
 
-#define RADEON_SURF_MAX_LEVEL                   32
+#define RADEON_SURF_MAX_LEVELS                  15
 
 enum radeon_surf_mode {
     RADEON_SURF_MODE_LINEAR_ALIGNED = 1,
@@ -278,24 +278,24 @@ enum radeon_surf_mode {
 struct radeon_surf_level {
     uint64_t                    offset;
     uint64_t                    slice_size;
-    uint32_t                    npix_x;
-    uint32_t                    npix_y;
-    uint32_t                    npix_z;
-    uint32_t                    nblk_x;
-    uint32_t                    nblk_y;
-    uint32_t                    nblk_z;
-    uint32_t                    pitch_bytes;
-    enum radeon_surf_mode       mode;
     uint64_t                    dcc_offset;
     uint64_t                    dcc_fast_clear_size;
+    uint16_t                    npix_x;
+    uint16_t                    npix_y;
+    uint16_t                    npix_z;
+    uint16_t                    nblk_x;
+    uint16_t                    nblk_y;
+    uint16_t                    nblk_z;
+    uint32_t                    pitch_bytes;
+    enum radeon_surf_mode       mode;
     bool                        dcc_enabled;
 };
 
 struct radeon_surf {
     /* Format properties. */
-    uint32_t                    blk_w;
-    uint32_t                    blk_h;
-    uint32_t                    bpe;
+    unsigned                    blk_w:4;
+    unsigned                    blk_h:4;
+    unsigned                    bpe:5;
     uint32_t                    flags;
 
     /* These are return values. Some of them can be set by the caller, but
@@ -303,35 +303,37 @@ struct radeon_surf {
      * changed by the calculator.
      */
     uint64_t                    bo_size;
-    uint64_t                    bo_alignment;
+    uint32_t                    bo_alignment;
+
     /* This applies to EG and later. */
-    uint32_t                    bankw;
-    uint32_t                    bankh;
-    uint32_t                    mtilea;
-    uint32_t                    tile_split;
-    uint32_t                    stencil_tile_split;
-    struct radeon_surf_level    level[RADEON_SURF_MAX_LEVEL];
-    struct radeon_surf_level    stencil_level[RADEON_SURF_MAX_LEVEL];
-    uint32_t                    tiling_index[RADEON_SURF_MAX_LEVEL];
-    uint32_t                    stencil_tiling_index[RADEON_SURF_MAX_LEVEL];
-    uint32_t                    pipe_config;
-    uint32_t                    num_banks;
-    uint32_t                    macro_tile_index;
-    uint32_t                    micro_tile_mode; /* displayable, thin, depth, rotated */
+    unsigned                    bankw:4;  /* max 8 */
+    unsigned                    bankh:4;  /* max 8 */
+    unsigned                    mtilea:4; /* max 8 */
+    unsigned                    tile_split:13;         /* max 4K */
+    unsigned                    stencil_tile_split:13; /* max 4K */
+    unsigned                    pipe_config:5;      /* max 17 */
+    unsigned                    num_banks:5;        /* max 16 */
+    unsigned                    macro_tile_index:4; /* max 15 */
+    unsigned                    micro_tile_mode:3; /* displayable, thin, depth, rotated */
 
     /* Whether the depth miptree or stencil miptree as used by the DB are
      * adjusted from their TC compatible form to ensure depth/stencil
      * compatibility. If either is true, the corresponding plane cannot be
      * sampled from.
      */
-    bool                        depth_adjusted;
-    bool                        stencil_adjusted;
+    unsigned                    depth_adjusted:1;
+    unsigned                    stencil_adjusted:1;
+
+    struct radeon_surf_level    level[RADEON_SURF_MAX_LEVELS];
+    struct radeon_surf_level    stencil_level[RADEON_SURF_MAX_LEVELS];
+    uint8_t                     tiling_index[RADEON_SURF_MAX_LEVELS];
+    uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
 
     uint64_t                    dcc_size;
-    uint64_t                    dcc_alignment;
+    uint32_t                    dcc_alignment;
     /* TC-compatible HTILE only. */
     uint64_t                    htile_size;
-    uint64_t                    htile_alignment;
+    uint32_t                    htile_alignment;
 };
 
 struct radeon_bo_list_item {
