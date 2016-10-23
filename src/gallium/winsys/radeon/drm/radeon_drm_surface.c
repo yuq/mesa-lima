@@ -112,7 +112,9 @@ static void surf_winsys_to_drm(struct radeon_surface *surf_drm,
     surf_drm->flags = flags;
     surf_drm->flags = RADEON_SURF_CLR(surf_drm->flags, TYPE);
     surf_drm->flags = RADEON_SURF_CLR(surf_drm->flags, MODE);
-    surf_drm->flags |= RADEON_SURF_SET(mode, MODE);
+    surf_drm->flags |= RADEON_SURF_SET(mode, MODE) |
+                       RADEON_SURF_HAS_SBUFFER_MIPTREE |
+                       RADEON_SURF_HAS_TILE_MODE_INDEX;
 
     switch (tex->target) {
     case PIPE_TEXTURE_1D:

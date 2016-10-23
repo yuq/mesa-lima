@@ -233,14 +233,8 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 			flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
 		}
 
-		if (is_stencil) {
-			flags |= RADEON_SURF_SBUFFER |
-				 RADEON_SURF_HAS_SBUFFER_MIPTREE;
-		}
-	}
-
-	if (rscreen->chip_class >= SI) {
-		flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
+		if (is_stencil)
+			flags |= RADEON_SURF_SBUFFER;
 	}
 
 	if (rscreen->chip_class >= VI &&
@@ -604,10 +598,6 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 	fmask.bankh = rtex->surface.bankh;
 	fmask.mtilea = rtex->surface.mtilea;
 	fmask.tile_split = rtex->surface.tile_split;
-
-	if (rscreen->chip_class >= SI) {
-		flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
-	}
 
 	switch (nr_samples) {
 	case 2:
