@@ -28,7 +28,7 @@
  */
 
 #include "radeon_drm_winsys.h"
-
+#include "util/u_format.h"
 #include <radeon_surface.h>
 
 static unsigned cik_get_macro_tile_index(struct radeon_surf *surf)
@@ -97,23 +97,60 @@ static void surf_level_drm_to_winsys(struct radeon_surf_level *level_ws,
 }
 
 static void surf_winsys_to_drm(struct radeon_surface *surf_drm,
+                               const struct pipe_resource *tex,
+                               unsigned flags, unsigned bpe,
+                               enum radeon_surf_mode mode,
                                const struct radeon_surf *surf_ws)
 {
     int i;
 
     memset(surf_drm, 0, sizeof(*surf_drm));
 
-    surf_drm->npix_x = surf_ws->npix_x;
-    surf_drm->npix_y = surf_ws->npix_y;
-    surf_drm->npix_z = surf_ws->npix_z;
-    surf_drm->blk_w = surf_ws->blk_w;
-    surf_drm->blk_h = surf_ws->blk_h;
-    surf_drm->blk_d = surf_ws->blk_d;
-    surf_drm->array_size = surf_ws->array_size;
-    surf_drm->last_level = surf_ws->last_level;
-    surf_drm->bpe = surf_ws->bpe;
-    surf_drm->nsamples = surf_ws->nsamples;
-    surf_drm->flags = surf_ws->flags;
+    surf_drm->npix_x = tex->width0;
+    surf_drm->npix_y = tex->height0;
+    surf_drm->npix_z = tex->depth0;
+    surf_drm->blk_w = util_format_get_blockwidth(tex->format);
+    surf_drm->blk_h = util_format_get_blockheight(tex->format);
+    surf_drm->blk_d = 1;
+    surf_drm->array_size = 1;
+    surf_drm->last_level = tex->last_level;
+    surf_drm->bpe = bpe;
+    surf_drm->nsamples = tex->nr_samples ? tex->nr_samples : 1;
+
+    surf_drm->flags = flags;
+    surf_drm->flags = RADEON_SURF_CLR(surf_drm->flags, TYPE);
+    surf_drm->flags = RADEON_SURF_CLR(surf_drm->flags, MODE);
+    surf_drm->flags |= RADEON_SURF_SET(mode, MODE);
+
+    switch (tex->target) {
+    case PIPE_TEXTURE_1D:
+            surf_drm->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_1D, TYPE);
+            break;
+    case PIPE_TEXTURE_RECT:
+    case PIPE_TEXTURE_2D:
+            surf_drm->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_2D, TYPE);
+            break;
+    case PIPE_TEXTURE_3D:
+            surf_drm->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_3D, TYPE);
+            break;
+    case PIPE_TEXTURE_1D_ARRAY:
+            surf_drm->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_1D_ARRAY, TYPE);
+            surf_drm->array_size = tex->array_size;
+            break;
+    case PIPE_TEXTURE_CUBE_ARRAY: /* cube array layout like 2d array */
+            assert(tex->array_size % 6 == 0);
+            /* fall through */
+    case PIPE_TEXTURE_2D_ARRAY:
+            surf_drm->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_2D_ARRAY, TYPE);
+            surf_drm->array_size = tex->array_size;
+            break;
+    case PIPE_TEXTURE_CUBE:
+            surf_drm->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_CUBEMAP, TYPE);
+            break;
+    case PIPE_BUFFER:
+    default:
+            assert(0);
+    }
 
     surf_drm->bo_size = surf_ws->bo_size;
     surf_drm->bo_alignment = surf_ws->bo_alignment;
@@ -142,16 +179,9 @@ static void surf_drm_to_winsys(struct radeon_drm_winsys *ws,
 
     memset(surf_ws, 0, sizeof(*surf_ws));
 
-    surf_ws->npix_x = surf_drm->npix_x;
-    surf_ws->npix_y = surf_drm->npix_y;
-    surf_ws->npix_z = surf_drm->npix_z;
     surf_ws->blk_w = surf_drm->blk_w;
     surf_ws->blk_h = surf_drm->blk_h;
-    surf_ws->blk_d = surf_drm->blk_d;
-    surf_ws->array_size = surf_drm->array_size;
-    surf_ws->last_level = surf_drm->last_level;
     surf_ws->bpe = surf_drm->bpe;
-    surf_ws->nsamples = surf_drm->nsamples;
     surf_ws->flags = surf_drm->flags;
 
     surf_ws->bo_size = surf_drm->bo_size;
@@ -178,13 +208,16 @@ static void surf_drm_to_winsys(struct radeon_drm_winsys *ws,
 }
 
 static int radeon_winsys_surface_init(struct radeon_winsys *rws,
+                                      const struct pipe_resource *tex,
+                                      unsigned flags, unsigned bpe,
+                                      enum radeon_surf_mode mode,
                                       struct radeon_surf *surf_ws)
 {
     struct radeon_drm_winsys *ws = (struct radeon_drm_winsys*)rws;
     struct radeon_surface surf_drm;
     int r;
 
-    surf_winsys_to_drm(&surf_drm, surf_ws);
+    surf_winsys_to_drm(&surf_drm, tex, flags, bpe, mode, surf_ws);
 
     if (!(surf_ws->flags & RADEON_SURF_IMPORTED)) {
        r = radeon_surface_best(ws->surf_man, &surf_drm);

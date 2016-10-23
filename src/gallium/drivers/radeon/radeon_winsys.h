@@ -263,16 +263,7 @@ enum radeon_surf_mode {
     RADEON_SURF_MODE_2D = 3,
 };
 
-#define RADEON_SURF_TYPE_MASK                   0xFF
-#define RADEON_SURF_TYPE_SHIFT                  0
-#define     RADEON_SURF_TYPE_1D                     0
-#define     RADEON_SURF_TYPE_2D                     1
-#define     RADEON_SURF_TYPE_3D                     2
-#define     RADEON_SURF_TYPE_CUBEMAP                3
-#define     RADEON_SURF_TYPE_1D_ARRAY               4
-#define     RADEON_SURF_TYPE_2D_ARRAY               5
-#define RADEON_SURF_MODE_MASK                   0xFF
-#define RADEON_SURF_MODE_SHIFT                  8
+/* the first 16 bits are reserved for libdrm_radeon, don't use them */
 #define RADEON_SURF_SCANOUT                     (1 << 16)
 #define RADEON_SURF_ZBUFFER                     (1 << 17)
 #define RADEON_SURF_SBUFFER                     (1 << 18)
@@ -283,10 +274,6 @@ enum radeon_surf_mode {
 #define RADEON_SURF_DISABLE_DCC                 (1 << 22)
 #define RADEON_SURF_TC_COMPATIBLE_HTILE         (1 << 23)
 #define RADEON_SURF_IMPORTED                    (1 << 24)
-
-#define RADEON_SURF_GET(v, field)   (((v) >> RADEON_SURF_ ## field ## _SHIFT) & RADEON_SURF_ ## field ## _MASK)
-#define RADEON_SURF_SET(v, field)   (((v) & RADEON_SURF_ ## field ## _MASK) << RADEON_SURF_ ## field ## _SHIFT)
-#define RADEON_SURF_CLR(v, field)   ((v) & ~(RADEON_SURF_ ## field ## _MASK << RADEON_SURF_ ## field ## _SHIFT))
 
 struct radeon_surf_level {
     uint64_t                    offset;
@@ -305,17 +292,10 @@ struct radeon_surf_level {
 };
 
 struct radeon_surf {
-    /* These are inputs to the calculator. */
-    uint32_t                    npix_x;
-    uint32_t                    npix_y;
-    uint32_t                    npix_z;
+    /* Format properties. */
     uint32_t                    blk_w;
     uint32_t                    blk_h;
-    uint32_t                    blk_d;
-    uint32_t                    array_size;
-    uint32_t                    last_level;
     uint32_t                    bpe;
-    uint32_t                    nsamples;
     uint32_t                    flags;
 
     /* These are return values. Some of them can be set by the caller, but
@@ -743,9 +723,16 @@ struct radeon_winsys {
      * Initialize surface
      *
      * \param ws        The winsys this function is called from.
-     * \param surf      Surface structure ptr
+     * \param tex       Input texture description
+     * \param flags     Bitmask of RADEON_SURF_* flags
+     * \param bpe       Bytes per pixel, it can be different for Z buffers.
+     * \param mode      Preferred tile mode. (linear, 1D, or 2D)
+     * \param surf      Output structure
      */
     int (*surface_init)(struct radeon_winsys *ws,
+                        const struct pipe_resource *tex,
+                        unsigned flags, unsigned bpe,
+                        enum radeon_surf_mode mode,
                         struct radeon_surf *surf);
 
     uint64_t (*query_value)(struct radeon_winsys *ws,

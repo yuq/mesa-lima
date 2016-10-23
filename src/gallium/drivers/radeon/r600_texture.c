@@ -203,65 +203,25 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	const struct util_format_description *desc =
 		util_format_description(ptex->format);
 	bool is_depth, is_stencil;
-	int r, i;
+	int r;
+	unsigned i, bpe, flags = 0;
 
 	is_depth = util_format_has_depth(desc);
 	is_stencil = util_format_has_stencil(desc);
 
-	surface->npix_x = ptex->width0;
-	surface->npix_y = ptex->height0;
-	surface->npix_z = ptex->depth0;
-	surface->blk_w = util_format_get_blockwidth(ptex->format);
-	surface->blk_h = util_format_get_blockheight(ptex->format);
-	surface->blk_d = 1;
-	surface->array_size = 1;
-	surface->last_level = ptex->last_level;
-
 	if (rscreen->chip_class >= EVERGREEN && !is_flushed_depth &&
 	    ptex->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT) {
-		surface->bpe = 4; /* stencil is allocated separately on evergreen */
+		bpe = 4; /* stencil is allocated separately on evergreen */
 	} else {
-		surface->bpe = util_format_get_blocksize(ptex->format);
+		bpe = util_format_get_blocksize(ptex->format);
 		/* align byte per element on dword */
-		if (surface->bpe == 3) {
-			surface->bpe = 4;
+		if (bpe == 3) {
+			bpe = 4;
 		}
 	}
 
-	surface->nsamples = ptex->nr_samples ? ptex->nr_samples : 1;
-	surface->flags = RADEON_SURF_SET(array_mode, MODE);
-
-	switch (ptex->target) {
-	case PIPE_TEXTURE_1D:
-		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_1D, TYPE);
-		break;
-	case PIPE_TEXTURE_RECT:
-	case PIPE_TEXTURE_2D:
-		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_2D, TYPE);
-		break;
-	case PIPE_TEXTURE_3D:
-		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_3D, TYPE);
-		break;
-	case PIPE_TEXTURE_1D_ARRAY:
-		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_1D_ARRAY, TYPE);
-		surface->array_size = ptex->array_size;
-		break;
-	case PIPE_TEXTURE_CUBE_ARRAY: /* cube array layout like 2d array */
-		assert(ptex->array_size % 6 == 0);
-	case PIPE_TEXTURE_2D_ARRAY:
-		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_2D_ARRAY, TYPE);
-		surface->array_size = ptex->array_size;
-		break;
-	case PIPE_TEXTURE_CUBE:
-		surface->flags |= RADEON_SURF_SET(RADEON_SURF_TYPE_CUBEMAP, TYPE);
-		break;
-	case PIPE_BUFFER:
-	default:
-		return -EINVAL;
-	}
-
 	if (!is_flushed_depth && is_depth) {
-		surface->flags |= RADEON_SURF_ZBUFFER;
+		flags |= RADEON_SURF_ZBUFFER;
 
 		if (tc_compatible_htile &&
 		    array_mode == RADEON_SURF_MODE_2D) {
@@ -269,24 +229,24 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 			 * Promote Z16 to Z32. DB->CB copies will convert
 			 * the format for transfers.
 			 */
-			surface->bpe = 4;
-			surface->flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
+			bpe = 4;
+			flags |= RADEON_SURF_TC_COMPATIBLE_HTILE;
 		}
 
 		if (is_stencil) {
-			surface->flags |= RADEON_SURF_SBUFFER |
-					  RADEON_SURF_HAS_SBUFFER_MIPTREE;
+			flags |= RADEON_SURF_SBUFFER |
+				 RADEON_SURF_HAS_SBUFFER_MIPTREE;
 		}
 	}
 
 	if (rscreen->chip_class >= SI) {
-		surface->flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
+		flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
 	}
 
 	if (rscreen->chip_class >= VI &&
 	    (ptex->flags & R600_RESOURCE_FLAG_DISABLE_DCC ||
 	     ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT))
-		surface->flags |= RADEON_SURF_DISABLE_DCC;
+		flags |= RADEON_SURF_DISABLE_DCC;
 
 	if (ptex->bind & PIPE_BIND_SCANOUT || is_scanout) {
 		/* This should catch bugs in gallium users setting incorrect flags. */
@@ -294,15 +254,16 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		       ptex->array_size == 1 &&
 		       ptex->depth0 == 1 &&
 		       ptex->last_level == 0 &&
-		       !(surface->flags & RADEON_SURF_Z_OR_SBUFFER));
+		       !(flags & RADEON_SURF_Z_OR_SBUFFER));
 
-		surface->flags |= RADEON_SURF_SCANOUT;
+		flags |= RADEON_SURF_SCANOUT;
 	}
 
 	if (is_imported)
-		surface->flags |= RADEON_SURF_IMPORTED;
+		flags |= RADEON_SURF_IMPORTED;
 
-	r = rscreen->ws->surface_init(rscreen->ws, surface);
+	r = rscreen->ws->surface_init(rscreen->ws, ptex, flags, bpe,
+				      array_mode, surface);
 	if (r) {
 		return r;
 	}
@@ -311,7 +272,7 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		/* old ddx on evergreen over estimate alignment for 1d, only 1 level
 		 * for those
 		 */
-		surface->level[0].nblk_x = pitch_in_bytes_override / surface->bpe;
+		surface->level[0].nblk_x = pitch_in_bytes_override / bpe;
 		surface->level[0].pitch_bytes = pitch_in_bytes_override;
 		surface->level[0].slice_size = pitch_in_bytes_override * surface->level[0].nblk_y;
 	}
@@ -629,35 +590,35 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 				 struct r600_fmask_info *out)
 {
 	/* FMASK is allocated like an ordinary texture. */
-	struct radeon_surf fmask = rtex->surface;
+	struct pipe_resource templ = rtex->resource.b.b;
+	struct radeon_surf fmask = {};
+	unsigned flags, bpe;
 
 	memset(out, 0, sizeof(*out));
 
-	fmask.bo_alignment = 0;
-	fmask.bo_size = 0;
-	fmask.nsamples = 1;
-	fmask.flags |= RADEON_SURF_FMASK;
+	templ.nr_samples = 1;
+	flags = rtex->surface.flags | RADEON_SURF_FMASK;
 
-	/* Force 2D tiling if it wasn't set. This may occur when creating
-	 * FMASK for MSAA resolve on R6xx. On R6xx, the single-sample
-	 * destination buffer must have an FMASK too. */
-	fmask.flags = RADEON_SURF_CLR(fmask.flags, MODE);
-	fmask.flags |= RADEON_SURF_SET(RADEON_SURF_MODE_2D, MODE);
+	/* Use the same parameters and tile mode. */
+	fmask.bankw = rtex->surface.bankw;
+	fmask.bankh = rtex->surface.bankh;
+	fmask.mtilea = rtex->surface.mtilea;
+	fmask.tile_split = rtex->surface.tile_split;
 
 	if (rscreen->chip_class >= SI) {
-		fmask.flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
+		flags |= RADEON_SURF_HAS_TILE_MODE_INDEX;
 	}
 
 	switch (nr_samples) {
 	case 2:
 	case 4:
-		fmask.bpe = 1;
+		bpe = 1;
 		if (rscreen->chip_class <= CAYMAN) {
 			fmask.bankh = 4;
 		}
 		break;
 	case 8:
-		fmask.bpe = 4;
+		bpe = 4;
 		break;
 	default:
 		R600_ERR("Invalid sample count for FMASK allocation.\n");
@@ -668,10 +629,11 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 	 * This can be fixed by writing a separate FMASK allocator specifically
 	 * for R600-R700 asics. */
 	if (rscreen->chip_class <= R700) {
-		fmask.bpe *= 2;
+		bpe *= 2;
 	}
 
-	if (rscreen->ws->surface_init(rscreen->ws, &fmask)) {
+	if (rscreen->ws->surface_init(rscreen->ws, &templ, flags, bpe,
+				      RADEON_SURF_MODE_2D, &fmask)) {
 		R600_ERR("Got error in surface_init while allocating FMASK.\n");
 		return;
 	}
@@ -958,13 +920,13 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 	int i;
 
 	fprintf(f, "  Info: npix_x=%u, npix_y=%u, npix_z=%u, blk_w=%u, "
-		"blk_h=%u, blk_d=%u, array_size=%u, last_level=%u, "
+		"blk_h=%u, array_size=%u, last_level=%u, "
 		"bpe=%u, nsamples=%u, flags=0x%x, %s\n",
-		rtex->surface.npix_x, rtex->surface.npix_y,
-		rtex->surface.npix_z, rtex->surface.blk_w,
-		rtex->surface.blk_h, rtex->surface.blk_d,
-		rtex->surface.array_size, rtex->surface.last_level,
-		rtex->surface.bpe, rtex->surface.nsamples,
+		rtex->resource.b.b.width0, rtex->resource.b.b.height0,
+		rtex->resource.b.b.depth0, rtex->surface.blk_w,
+		rtex->surface.blk_h,
+		rtex->resource.b.b.array_size, rtex->resource.b.b.last_level,
+		rtex->surface.bpe, rtex->resource.b.b.nr_samples,
 		rtex->surface.flags, util_format_short_name(rtex->resource.b.b.format));
 
 	fprintf(f, "  Layout: size=%"PRIu64", alignment=%"PRIu64", bankw=%u, "
