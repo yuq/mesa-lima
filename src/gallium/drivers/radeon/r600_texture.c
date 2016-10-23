@@ -192,12 +192,17 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 			     struct radeon_surf *surface,
 			     const struct pipe_resource *ptex,
 			     unsigned array_mode,
+			     unsigned pitch_in_bytes_override,
+			     unsigned offset,
+			     bool is_imported,
+			     bool is_scanout,
 			     bool is_flushed_depth,
 			     bool tc_compatible_htile)
 {
 	const struct util_format_description *desc =
 		util_format_description(ptex->format);
 	bool is_depth, is_stencil;
+	int r, i;
 
 	is_depth = util_format_has_depth(desc);
 	is_stencil = util_format_has_stencil(desc);
@@ -282,7 +287,7 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	     ptex->format == PIPE_FORMAT_R9G9B9E5_FLOAT))
 		surface->flags |= RADEON_SURF_DISABLE_DCC;
 
-	if (ptex->bind & PIPE_BIND_SCANOUT) {
+	if (ptex->bind & PIPE_BIND_SCANOUT || is_scanout) {
 		/* This should catch bugs in gallium users setting incorrect flags. */
 		assert(surface->nsamples == 1 &&
 		       surface->array_size == 1 &&
@@ -292,37 +297,27 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 
 		surface->flags |= RADEON_SURF_SCANOUT;
 	}
-	return 0;
-}
 
-static int r600_setup_surface(struct pipe_screen *screen,
-			      struct r600_texture *rtex,
-			      unsigned pitch_in_bytes_override,
-			      unsigned offset)
-{
-	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-	unsigned i;
-	int r;
+	if (is_imported)
+		surface->flags |= RADEON_SURF_IMPORTED;
 
-	r = rscreen->ws->surface_init(rscreen->ws, &rtex->surface);
+	r = rscreen->ws->surface_init(rscreen->ws, surface);
 	if (r) {
 		return r;
 	}
 
-	rtex->size = rtex->surface.bo_size;
-
-	if (pitch_in_bytes_override && pitch_in_bytes_override != rtex->surface.level[0].pitch_bytes) {
+	if (pitch_in_bytes_override && pitch_in_bytes_override != surface->level[0].pitch_bytes) {
 		/* old ddx on evergreen over estimate alignment for 1d, only 1 level
 		 * for those
 		 */
-		rtex->surface.level[0].nblk_x = pitch_in_bytes_override / rtex->surface.bpe;
-		rtex->surface.level[0].pitch_bytes = pitch_in_bytes_override;
-		rtex->surface.level[0].slice_size = pitch_in_bytes_override * rtex->surface.level[0].nblk_y;
+		surface->level[0].nblk_x = pitch_in_bytes_override / surface->bpe;
+		surface->level[0].pitch_bytes = pitch_in_bytes_override;
+		surface->level[0].slice_size = pitch_in_bytes_override * surface->level[0].nblk_y;
 	}
 
 	if (offset) {
-		for (i = 0; i < ARRAY_SIZE(rtex->surface.level); ++i)
-			rtex->surface.level[i].offset += offset;
+		for (i = 0; i < ARRAY_SIZE(surface->level); ++i)
+			surface->level[i].offset += offset;
 	}
 	return 0;
 }
@@ -1053,8 +1048,6 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 static struct r600_texture *
 r600_texture_create_object(struct pipe_screen *screen,
 			   const struct pipe_resource *base,
-			   unsigned pitch_in_bytes_override,
-			   unsigned offset,
 			   struct pb_buffer *buf,
 			   struct radeon_surf *surface)
 {
@@ -1077,10 +1070,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->is_depth = util_format_has_depth(util_format_description(rtex->resource.b.b.format));
 
 	rtex->surface = *surface;
-	if (r600_setup_surface(screen, rtex, pitch_in_bytes_override, offset)) {
-		FREE(rtex);
-		return NULL;
-	}
+	rtex->size = rtex->surface.bo_size;
 
 	rtex->tc_compatible_htile = rtex->surface.htile_size != 0;
 	assert(!!(rtex->surface.flags & RADEON_SURF_TC_COMPATIBLE_HTILE) ==
@@ -1291,14 +1281,15 @@ struct pipe_resource *r600_texture_create(struct pipe_screen *screen,
 	int r;
 
 	r = r600_init_surface(rscreen, &surface, templ,
-			      r600_choose_tiling(rscreen, templ),
-			      is_flushed_depth, tc_compatible_htile);
+			      r600_choose_tiling(rscreen, templ), 0, 0,
+			      false, false, is_flushed_depth,
+			      tc_compatible_htile);
 	if (r) {
 		return NULL;
 	}
 
-	return (struct pipe_resource *)r600_texture_create_object(screen, templ, 0,
-								  0, NULL, &surface);
+	return (struct pipe_resource *)
+	       r600_texture_create_object(screen, templ, NULL, &surface);
 }
 
 static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen,
@@ -1340,18 +1331,13 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	else
 		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
 
-	r = r600_init_surface(rscreen, &surface, templ, array_mode,
-			      false, false);
+	r = r600_init_surface(rscreen, &surface, templ, array_mode, stride,
+			      offset, true, metadata.scanout, false, false);
 	if (r) {
 		return NULL;
 	}
 
-	surface.flags |= RADEON_SURF_IMPORTED;
-	if (metadata.scanout)
-		surface.flags |= RADEON_SURF_SCANOUT;
-
-	rtex = r600_texture_create_object(screen, templ, stride,
-					  offset, buf, &surface);
+	rtex = r600_texture_create_object(screen, templ, buf, &surface);
 	if (!rtex)
 		return NULL;
 
