@@ -323,6 +323,41 @@ struct legacy_surf_layout {
     uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
 };
 
+struct gfx9_surf_flags {
+    uint16_t                    swizzle_mode; /* tile mode */
+    uint16_t                    epitch; /* (pitch - 1) or (height - 1) */
+};
+
+struct gfx9_surf_meta_flags {
+    unsigned                    rb_aligned:1;   /* optimal for RBs */
+    unsigned                    pipe_aligned:1; /* optimal for TC */
+};
+
+struct gfx9_surf_layout {
+    struct gfx9_surf_flags      surf;    /* color or depth surface */
+    struct gfx9_surf_flags      fmask;   /* not added to surf_size */
+    struct gfx9_surf_flags      stencil; /* added to surf_size, use stencil_offset */
+
+    struct gfx9_surf_meta_flags dcc;   /* metadata of color */
+    struct gfx9_surf_meta_flags htile; /* metadata of depth and stencil */
+    struct gfx9_surf_meta_flags cmask; /* metadata of fmask */
+
+    /* The size of the 2D plane containing all mipmap levels. */
+    uint64_t                    surf_slice_size;
+    uint16_t                    surf_pitch; /* in blocks */
+    /* Y mipmap level offset in blocks. Only valid for LINEAR. */
+    uint16_t                    surf_ymip_offset[RADEON_SURF_MAX_LEVELS];
+
+    uint16_t                    dcc_pitch_max;  /* (mip chain pitch - 1) */
+
+    uint64_t                    stencil_offset; /* separate stencil */
+    uint64_t                    fmask_size;
+    uint64_t                    cmask_size;
+
+    uint32_t                    fmask_alignment;
+    uint32_t                    cmask_alignment;
+};
+
 struct radeon_surf {
     /* Format properties. */
     unsigned                    blk_w:4;
@@ -357,6 +392,9 @@ struct radeon_surf {
          * desirable. The allocator will try to obey them.
          */
         struct legacy_surf_layout legacy;
+
+        /* GFX9+ return values. */
+        struct gfx9_surf_layout gfx9;
     } u;
 };
 
