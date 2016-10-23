@@ -3023,6 +3023,7 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
 
     user_assert(pVertexStreamZeroData && VertexStreamZeroStride,
                 D3DERR_INVALIDCALL);
+    user_assert(PrimitiveCount, D3D_OK);
 
     nine_update_state(This);
 
@@ -3089,6 +3090,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
     user_assert(VertexStreamZeroStride, D3DERR_INVALIDCALL);
     user_assert(IndexDataFormat == D3DFMT_INDEX16 ||
                 IndexDataFormat == D3DFMT_INDEX32, D3DERR_INVALIDCALL);
+    user_assert(PrimitiveCount, D3D_OK);
 
     nine_update_state(This);
 
