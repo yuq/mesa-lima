@@ -119,6 +119,7 @@ nine_state_copy_common(struct NineDevice9 *device,
 {
     unsigned i, s;
 
+    DBG("apply:%d changed.group: %x\n", (int)apply, (int)mask->changed.group );
     if (apply)
        dst->changed.group |= mask->changed.group;
 
@@ -225,6 +226,7 @@ nine_state_copy_common(struct NineDevice9 *device,
             const int r = ffs(m) - 1;
             m &= ~(1 << r);
             dst->rs[i * 32 + r] = src->rs[i * 32 + r];
+            DBG("State %d %s = %d\n", i * 32 + r, nine_d3drs_to_string(i * 32 + r), (int)src->rs[i * 32 + r]);
             dst->rs_advertised[i * 32 + r] = src->rs_advertised[i * 32 + r];
         }
     }
@@ -232,6 +234,7 @@ nine_state_copy_common(struct NineDevice9 *device,
 
     /* Clip planes. */
     if (mask->changed.ucp) {
+        DBG("ucp: %x\n", mask->changed.ucp);
         for (i = 0; i < PIPE_MAX_CLIP_PLANES; ++i)
             if (mask->changed.ucp & (1 << i))
                 memcpy(dst->clip.ucp[i],
@@ -248,6 +251,7 @@ nine_state_copy_common(struct NineDevice9 *device,
                 memcpy(&dst->samp_advertised[s], &src->samp_advertised[s], sizeof(dst->samp_advertised[s]));
             } else {
                 uint32_t m = mask->changed.sampler[s];
+                DBG("samp %d: changed = %x\n", i, (int)m);
                 while (m) {
                     const int i = ffs(m) - 1;
                     m &= ~(1 << i);
@@ -266,6 +270,7 @@ nine_state_copy_common(struct NineDevice9 *device,
 
     /* Vertex streams. */
     if (mask->changed.vtxbuf | mask->changed.stream_freq) {
+        DBG("vtxbuf/stream_freq: %x/%x\n", mask->changed.vtxbuf, mask->changed.stream_freq);
         uint32_t m = mask->changed.vtxbuf | mask->changed.stream_freq;
         for (i = 0; m; ++i, m >>= 1) {
             if (mask->changed.vtxbuf & (1 << i)) {
