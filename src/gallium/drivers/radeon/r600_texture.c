@@ -37,8 +37,9 @@
 
 static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 				       struct r600_texture *rtex);
-static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
-				   const struct pipe_resource *templ);
+static enum radeon_surf_mode
+r600_choose_tiling(struct r600_common_screen *rscreen,
+		   const struct pipe_resource *templ);
 
 
 bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
@@ -191,7 +192,7 @@ static unsigned r600_texture_get_offset(struct r600_texture *rtex, unsigned leve
 static int r600_init_surface(struct r600_common_screen *rscreen,
 			     struct radeon_surf *surface,
 			     const struct pipe_resource *ptex,
-			     unsigned array_mode,
+			     enum radeon_surf_mode array_mode,
 			     unsigned pitch_in_bytes_override,
 			     unsigned offset,
 			     bool is_imported,
@@ -1200,8 +1201,9 @@ r600_texture_create_object(struct pipe_screen *screen,
 	return rtex;
 }
 
-static unsigned r600_choose_tiling(struct r600_common_screen *rscreen,
-				   const struct pipe_resource *templ)
+static enum radeon_surf_mode
+r600_choose_tiling(struct r600_common_screen *rscreen,
+		   const struct pipe_resource *templ)
 {
 	const struct util_format_description *desc = util_format_description(templ->format);
 	bool force_tiling = templ->flags & R600_RESOURCE_FLAG_FORCE_TILING;

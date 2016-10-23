@@ -257,6 +257,12 @@ enum radeon_feature_id {
 
 #define RADEON_SURF_MAX_LEVEL                   32
 
+enum radeon_surf_mode {
+    RADEON_SURF_MODE_LINEAR_ALIGNED = 1,
+    RADEON_SURF_MODE_1D = 2,
+    RADEON_SURF_MODE_2D = 3,
+};
+
 #define RADEON_SURF_TYPE_MASK                   0xFF
 #define RADEON_SURF_TYPE_SHIFT                  0
 #define     RADEON_SURF_TYPE_1D                     0
@@ -267,9 +273,6 @@ enum radeon_feature_id {
 #define     RADEON_SURF_TYPE_2D_ARRAY               5
 #define RADEON_SURF_MODE_MASK                   0xFF
 #define RADEON_SURF_MODE_SHIFT                  8
-#define     RADEON_SURF_MODE_LINEAR_ALIGNED         1
-#define     RADEON_SURF_MODE_1D                     2
-#define     RADEON_SURF_MODE_2D                     3
 #define RADEON_SURF_SCANOUT                     (1 << 16)
 #define RADEON_SURF_ZBUFFER                     (1 << 17)
 #define RADEON_SURF_SBUFFER                     (1 << 18)
@@ -295,7 +298,7 @@ struct radeon_surf_level {
     uint32_t                    nblk_y;
     uint32_t                    nblk_z;
     uint32_t                    pitch_bytes;
-    uint32_t                    mode;
+    enum radeon_surf_mode       mode;
     uint64_t                    dcc_offset;
     uint64_t                    dcc_fast_clear_size;
     bool                        dcc_enabled;
