@@ -756,7 +756,7 @@ r600_create_sampler_view_custom(struct pipe_context *ctx,
 				       S_038004_TEX_DEPTH(depth - 1) |
 				       S_038004_DATA_FORMAT(format));
 	view->tex_resource_words[2] = tmp->surface.level[offset_level].offset >> 8;
-	if (offset_level >= tmp->surface.last_level) {
+	if (offset_level >= tmp->resource.b.b.last_level) {
 		view->tex_resource_words[3] = tmp->surface.level[offset_level].offset >> 8;
 	} else {
 		view->tex_resource_words[3] = tmp->surface.level[offset_level + 1].offset >> 8;

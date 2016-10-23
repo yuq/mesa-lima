@@ -2108,7 +2108,7 @@ static void si_initialize_color_surface(struct si_context *sctx,
 	if (sctx->b.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = 2;
 
-		if (rtex->surface.nsamples > 1) {
+		if (rtex->resource.b.b.nr_samples > 1) {
 			if (rtex->surface.bpe == 1)
 				max_uncompressed_block_size = 0;
 			else if (rtex->surface.bpe == 2)
@@ -2455,7 +2455,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		tex = (struct r600_texture *)cb->base.texture;
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      &tex->resource, RADEON_USAGE_READWRITE,
-				      tex->surface.nsamples > 1 ?
+				      tex->resource.b.b.nr_samples > 1 ?
 					      RADEON_PRIO_COLOR_BUFFER_MSAA :
 					      RADEON_PRIO_COLOR_BUFFER);
 

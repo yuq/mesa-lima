@@ -1544,7 +1544,7 @@ static void evergreen_emit_framebuffer_state(struct r600_context *rctx, struct r
 					      &rctx->b.gfx,
 					      (struct r600_resource*)cb->base.texture,
 					      RADEON_USAGE_READWRITE,
-					      tex->surface.nsamples > 1 ?
+					      tex->resource.b.b.nr_samples > 1 ?
 						      RADEON_PRIO_COLOR_BUFFER_MSAA :
 						      RADEON_PRIO_COLOR_BUFFER);
 

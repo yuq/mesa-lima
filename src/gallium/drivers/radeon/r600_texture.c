@@ -289,10 +289,10 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 
 	if (ptex->bind & PIPE_BIND_SCANOUT || is_scanout) {
 		/* This should catch bugs in gallium users setting incorrect flags. */
-		assert(surface->nsamples == 1 &&
-		       surface->array_size == 1 &&
-		       surface->npix_z == 1 &&
-		       surface->last_level == 0 &&
+		assert(ptex->nr_samples <= 1 &&
+		       ptex->array_size == 1 &&
+		       ptex->depth0 == 1 &&
+		       ptex->last_level == 0 &&
 		       !(surface->flags & RADEON_SURF_Z_OR_SBUFFER));
 
 		surface->flags |= RADEON_SURF_SCANOUT;
@@ -716,8 +716,8 @@ void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
 	unsigned macro_tile_width = util_next_power_of_two(sqrt_pixels_per_macro_tile);
 	unsigned macro_tile_height = pixels_per_macro_tile / macro_tile_width;
 
-	unsigned pitch_elements = align(rtex->surface.npix_x, macro_tile_width);
-	unsigned height = align(rtex->surface.npix_y, macro_tile_height);
+	unsigned pitch_elements = align(rtex->resource.b.b.width0, macro_tile_width);
+	unsigned height = align(rtex->resource.b.b.height0, macro_tile_height);
 
 	unsigned base_align = num_pipes * pipe_interleave_bytes;
 	unsigned slice_bytes =
@@ -768,8 +768,8 @@ static void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
 
 	unsigned base_align = num_pipes * pipe_interleave_bytes;
 
-	unsigned width = align(rtex->surface.npix_x, cl_width*8);
-	unsigned height = align(rtex->surface.npix_y, cl_height*8);
+	unsigned width = align(rtex->resource.b.b.width0, cl_width*8);
+	unsigned height = align(rtex->resource.b.b.height0, cl_height*8);
 	unsigned slice_elements = (width * height) / (8*8);
 
 	/* Each element of CMASK is a nibble. */
@@ -899,8 +899,8 @@ static unsigned r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 		return 0;
 	}
 
-	width = align(rtex->surface.npix_x, cl_width * 8);
-	height = align(rtex->surface.npix_y, cl_height * 8);
+	width = align(rtex->resource.b.b.width0, cl_width * 8);
+	height = align(rtex->resource.b.b.height0, cl_height * 8);
 
 	slice_elements = (width * height) / (8 * 8);
 	slice_bytes = slice_elements * 4;
@@ -999,7 +999,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 		fprintf(f, "  DCC: offset=%"PRIu64", size=%"PRIu64", alignment=%"PRIu64"\n",
 			rtex->dcc_offset, rtex->surface.dcc_size,
 			rtex->surface.dcc_alignment);
-		for (i = 0; i <= rtex->surface.last_level; i++)
+		for (i = 0; i <= rtex->resource.b.b.last_level; i++)
 			fprintf(f, "  DCCLevel[%i]: enabled=%u, offset=%"PRIu64", "
 				"fast_clear_size=%"PRIu64"\n",
 				i, rtex->surface.level[i].dcc_enabled,
@@ -1007,7 +1007,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 				rtex->surface.level[i].dcc_fast_clear_size);
 	}
 
-	for (i = 0; i <= rtex->surface.last_level; i++)
+	for (i = 0; i <= rtex->resource.b.b.last_level; i++)
 		fprintf(f, "  Level[%i]: offset=%"PRIu64", slice_size=%"PRIu64", "
 			"npix_x=%u, npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
 			"nblk_z=%u, pitch_bytes=%u, mode=%u\n",
@@ -1025,7 +1025,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
 		fprintf(f, "  StencilLayout: tilesplit=%u\n",
 			rtex->surface.stencil_tile_split);
-		for (i = 0; i <= rtex->surface.last_level; i++) {
+		for (i = 0; i <= rtex->resource.b.b.last_level; i++) {
 			fprintf(f, "  StencilLevel[%i]: offset=%"PRIu64", "
 				"slice_size=%"PRIu64", npix_x=%u, "
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
@@ -2141,7 +2141,7 @@ static void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
 	if (!tex->resource.is_shared ||
 	    !(tex->resource.external_usage & PIPE_HANDLE_USAGE_EXPLICIT_FLUSH) ||
 	    tex->resource.b.b.target != PIPE_TEXTURE_2D ||
-	    tex->surface.last_level > 0 ||
+	    tex->resource.b.b.last_level > 0 ||
 	    !tex->surface.dcc_size)
 		return;
 
@@ -2397,12 +2397,12 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 					   struct r600_texture *rtex)
 {
 	if (rtex->resource.is_shared ||
-	    rtex->surface.nsamples <= 1 ||
+	    rtex->resource.b.b.nr_samples <= 1 ||
 	    rtex->surface.micro_tile_mode == rtex->last_msaa_resolve_target_micro_mode)
 		return;
 
 	assert(rtex->surface.level[0].mode == RADEON_SURF_MODE_2D);
-	assert(rtex->surface.last_level == 0);
+	assert(rtex->resource.b.b.last_level == 0);
 
 	/* These magic numbers were copied from addrlib. It doesn't use any
 	 * definitions for them either. They are all 2D_TILED_THIN1 modes with
