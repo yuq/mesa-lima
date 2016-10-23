@@ -2520,7 +2520,10 @@ NineDevice9_CreateStateBlock( struct NineDevice9 *This,
     }
     if (Type == D3DSBT_ALL || Type == D3DSBT_PIXELSTATE) {
        dst->changed.group |=
-          NINE_STATE_PS | NINE_STATE_PS_CONST;
+          NINE_STATE_PS | NINE_STATE_PS_CONST | NINE_STATE_BLEND |
+          NINE_STATE_FF_OTHER | NINE_STATE_FF_PSSTAGES | NINE_STATE_PS_CONST |
+          NINE_STATE_FB | NINE_STATE_DSA | NINE_STATE_MULTISAMPLE |
+          NINE_STATE_RASTERIZER | NINE_STATE_STENCIL_REF;
        /* TODO: texture/sampler state */
        memcpy(dst->changed.rs,
               nine_render_states_pixel, sizeof(dst->changed.rs));
