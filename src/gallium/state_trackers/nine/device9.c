@@ -2524,7 +2524,6 @@ NineDevice9_CreateStateBlock( struct NineDevice9 *This,
           NINE_STATE_FF_OTHER | NINE_STATE_FF_PSSTAGES | NINE_STATE_PS_CONST |
           NINE_STATE_FB | NINE_STATE_DSA | NINE_STATE_MULTISAMPLE |
           NINE_STATE_RASTERIZER | NINE_STATE_STENCIL_REF;
-       /* TODO: texture/sampler state */
        memcpy(dst->changed.rs,
               nine_render_states_pixel, sizeof(dst->changed.rs));
        nine_ranges_insert(&dst->changed.ps_const_f, 0, This->max_ps_const_f,
@@ -2533,6 +2532,10 @@ NineDevice9_CreateStateBlock( struct NineDevice9 *This,
        dst->changed.ps_const_b = 0xffff;
        for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
            dst->changed.sampler[s] |= 0x1ffe;
+       for (s = 0; s < NINE_MAX_TEXTURE_STAGES; ++s) {
+           dst->ff.changed.tex_stage[s][0] |= 0xffffffff;
+           dst->ff.changed.tex_stage[s][1] |= 0xffffffff;
+       }
     }
     if (Type == D3DSBT_ALL) {
        dst->changed.group |=
