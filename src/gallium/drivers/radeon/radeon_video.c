@@ -172,10 +172,10 @@ void rvid_join_surfaces(struct radeon_winsys* ws,
 		surfaces[i]->tile_split = surfaces[best_tiling]->tile_split;
 
 		/* adjust the texture layer offsets */
-		off = align(off, surfaces[i]->bo_alignment);
+		off = align(off, surfaces[i]->surf_alignment);
 		for (j = 0; j < ARRAY_SIZE(surfaces[i]->level); ++j)
 			surfaces[i]->level[j].offset += off;
-		off += surfaces[i]->bo_size;
+		off += surfaces[i]->surf_size;
 	}
 
 	for (i = 0, size = 0, alignment = 0; i < VL_NUM_COMPONENTS; ++i) {

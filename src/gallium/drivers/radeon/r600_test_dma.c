@@ -301,7 +301,7 @@ void r600_test_dma(struct r600_common_screen *rscreen)
 		set_random_pixels(ctx, src, &src_cpu);
 
 		/* clear dst pixels */
-		rctx->clear_buffer(ctx, dst, 0, rdst->surface.bo_size, 0, true);
+		rctx->clear_buffer(ctx, dst, 0, rdst->surface.surf_size, 0, true);
 		memset(dst_cpu.ptr, 0, dst_cpu.layer_stride * tdst.array_size);
 
 		/* preparation */

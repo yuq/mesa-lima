@@ -342,7 +342,7 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 					      (tiled_x + copy_width) % granularity;
 
 		if (start_linear_address < 0 ||
-		    end_linear_address > linear->surface.bo_size)
+		    end_linear_address > linear->surface.surf_size)
 			return false;
 
 		/* Check requirements. */

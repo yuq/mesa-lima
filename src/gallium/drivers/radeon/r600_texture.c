@@ -637,8 +637,8 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 	out->tile_mode_index = fmask.tiling_index[0];
 	out->pitch_in_pixels = fmask.level[0].nblk_x;
 	out->bank_height = fmask.bankh;
-	out->alignment = MAX2(256, fmask.bo_alignment);
-	out->size = fmask.bo_size;
+	out->alignment = MAX2(256, fmask.surf_alignment);
+	out->size = fmask.surf_size;
 }
 
 static void r600_texture_allocate_fmask(struct r600_common_screen *rscreen,
@@ -916,7 +916,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 
 	fprintf(f, "  Layout: size=%"PRIu64", alignment=%u, bankw=%u, "
 		"bankh=%u, nbanks=%u, mtilea=%u, tilesplit=%u, pipeconfig=%u, scanout=%u\n",
-		rtex->surface.bo_size, rtex->surface.bo_alignment, rtex->surface.bankw,
+		rtex->surface.surf_size, rtex->surface.surf_alignment, rtex->surface.bankw,
 		rtex->surface.bankh, rtex->surface.num_banks, rtex->surface.mtilea,
 		rtex->surface.tile_split, rtex->surface.pipe_config,
 		(rtex->surface.flags & RADEON_SURF_SCANOUT) != 0);
@@ -1014,7 +1014,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->is_depth = util_format_has_depth(util_format_description(rtex->resource.b.b.format));
 
 	rtex->surface = *surface;
-	rtex->size = rtex->surface.bo_size;
+	rtex->size = rtex->surface.surf_size;
 
 	rtex->tc_compatible_htile = rtex->surface.htile_size != 0;
 	assert(!!(rtex->surface.flags & RADEON_SURF_TC_COMPATIBLE_HTILE) ==
@@ -1088,7 +1088,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 	/* Now create the backing buffer. */
 	if (!buf) {
 		r600_init_resource_fields(rscreen, resource, rtex->size,
-					  rtex->surface.bo_alignment);
+					  rtex->surface.surf_alignment);
 
 		resource->flags |= RADEON_FLAG_HANDLE;
 

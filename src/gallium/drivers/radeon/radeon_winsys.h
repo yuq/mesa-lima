@@ -297,8 +297,8 @@ struct radeon_surf {
      * they will be treated as hints (e.g. bankw, bankh) and might be
      * changed by the calculator.
      */
-    uint64_t                    bo_size;
-    uint32_t                    bo_alignment;
+    uint64_t                    surf_size;
+    uint32_t                    surf_alignment;
 
     /* This applies to EG and later. */
     unsigned                    bankw:4;  /* max 8 */

@@ -146,8 +146,8 @@ static void surf_winsys_to_drm(struct radeon_surface *surf_drm,
             assert(0);
     }
 
-    surf_drm->bo_size = surf_ws->bo_size;
-    surf_drm->bo_alignment = surf_ws->bo_alignment;
+    surf_drm->bo_size = surf_ws->surf_size;
+    surf_drm->bo_alignment = surf_ws->surf_alignment;
 
     surf_drm->bankw = surf_ws->bankw;
     surf_drm->bankh = surf_ws->bankh;
@@ -178,8 +178,8 @@ static void surf_drm_to_winsys(struct radeon_drm_winsys *ws,
     surf_ws->bpe = surf_drm->bpe;
     surf_ws->flags = surf_drm->flags;
 
-    surf_ws->bo_size = surf_drm->bo_size;
-    surf_ws->bo_alignment = surf_drm->bo_alignment;
+    surf_ws->surf_size = surf_drm->bo_size;
+    surf_ws->surf_alignment = surf_drm->bo_alignment;
 
     surf_ws->bankw = surf_drm->bankw;
     surf_ws->bankh = surf_drm->bankh;
