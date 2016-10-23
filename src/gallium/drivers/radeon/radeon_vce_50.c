@@ -130,7 +130,7 @@ static void encode(struct rvce_encoder *enc)
 		enc->luma->level[0].offset); // inputPictureLumaAddressHi/Lo
 	RVCE_READ(enc->handle, RADEON_DOMAIN_VRAM,
 		enc->chroma->level[0].offset); // inputPictureChromaAddressHi/Lo
-	RVCE_CS(align(enc->luma->npix_y, 16)); // encInputFrameYPitch
+	RVCE_CS(align(enc->luma->level[0].nblk_y, 16)); // encInputFrameYPitch
 	RVCE_CS(enc->luma->level[0].pitch_bytes); // encInputPicLumaPitch
 	RVCE_CS(enc->chroma->level[0].pitch_bytes); // encInputPicChromaPitch
 	if (enc->dual_pipe)
