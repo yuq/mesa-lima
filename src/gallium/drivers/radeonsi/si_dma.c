@@ -234,16 +234,16 @@ static void si_dma_copy(struct pipe_context *ctx,
 	bpp = rdst->surface.bpe;
 	dst_pitch = rdst->surface.level[dst_level].pitch_bytes;
 	src_pitch = rsrc->surface.level[src_level].pitch_bytes;
-	src_w = rsrc->surface.level[src_level].npix_x;
-	dst_w = rdst->surface.level[dst_level].npix_x;
+	src_w = u_minify(rsrc->resource.b.b.width0, src_level);
+	dst_w = u_minify(rdst->resource.b.b.width0, dst_level);
 
 	dst_mode = rdst->surface.level[dst_level].mode;
 	src_mode = rsrc->surface.level[src_level].mode;
 
 	if (src_pitch != dst_pitch || src_box->x || dst_x || src_w != dst_w ||
 	    src_box->width != src_w ||
-	    src_box->height != rsrc->surface.level[src_level].npix_y ||
-	    src_box->height != rdst->surface.level[dst_level].npix_y ||
+	    src_box->height != u_minify(rsrc->resource.b.b.height0, src_level) ||
+	    src_box->height != u_minify(rdst->resource.b.b.height0, dst_level) ||
 	    rsrc->surface.level[src_level].nblk_y !=
 	    rdst->surface.level[dst_level].nblk_y) {
 		/* FIXME si can do partial blit */

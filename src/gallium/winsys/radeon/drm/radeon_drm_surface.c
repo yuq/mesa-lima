@@ -71,12 +71,8 @@ static void surf_level_winsys_to_drm(struct radeon_surface_level *level_drm,
 {
     level_drm->offset = level_ws->offset;
     level_drm->slice_size = level_ws->slice_size;
-    level_drm->npix_x = level_ws->npix_x;
-    level_drm->npix_y = level_ws->npix_y;
-    level_drm->npix_z = level_ws->npix_z;
     level_drm->nblk_x = level_ws->nblk_x;
     level_drm->nblk_y = level_ws->nblk_y;
-    level_drm->nblk_z = level_ws->nblk_z;
     level_drm->pitch_bytes = level_ws->pitch_bytes;
     level_drm->mode = level_ws->mode;
 }
@@ -86,12 +82,8 @@ static void surf_level_drm_to_winsys(struct radeon_surf_level *level_ws,
 {
     level_ws->offset = level_drm->offset;
     level_ws->slice_size = level_drm->slice_size;
-    level_ws->npix_x = level_drm->npix_x;
-    level_ws->npix_y = level_drm->npix_y;
-    level_ws->npix_z = level_drm->npix_z;
     level_ws->nblk_x = level_drm->nblk_x;
     level_ws->nblk_y = level_drm->nblk_y;
-    level_ws->nblk_z = level_drm->nblk_z;
     level_ws->pitch_bytes = level_drm->pitch_bytes;
     level_ws->mode = level_drm->mode;
 }

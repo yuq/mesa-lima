@@ -3381,7 +3381,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 		 * dma packet will be using the copy_height which is always smaller or equal
 		 * to the linear height
 		 */
-		height = rsrc->surface.level[src_level].npix_y;
+		height = u_minify(rsrc->resource.b.b.height0, src_level);
 		detile = 1;
 		x = src_x;
 		y = src_y;
@@ -3406,7 +3406,7 @@ static void evergreen_dma_copy_tile(struct r600_context *rctx,
 		 * dma packet will be using the copy_height which is always smaller or equal
 		 * to the linear height
 		 */
-		height = rdst->surface.level[dst_level].npix_y;
+		height = u_minify(rdst->resource.b.b.height0, dst_level);
 		detile = 0;
 		x = dst_x;
 		y = dst_y;
@@ -3494,8 +3494,8 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 	bpp = rdst->surface.bpe;
 	dst_pitch = rdst->surface.level[dst_level].pitch_bytes;
 	src_pitch = rsrc->surface.level[src_level].pitch_bytes;
-	src_w = rsrc->surface.level[src_level].npix_x;
-	dst_w = rdst->surface.level[dst_level].npix_x;
+	src_w = u_minify(rsrc->resource.b.b.width0, src_level);
+	dst_w = u_minify(rdst->resource.b.b.width0, dst_level);
 	copy_height = src_box->height / rsrc->surface.blk_h;
 
 	dst_mode = rdst->surface.level[dst_level].mode;

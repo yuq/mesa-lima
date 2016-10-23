@@ -192,15 +192,8 @@ static int compute_level(struct amdgpu_winsys *ws,
    surf_level->offset = align64(surf->bo_size, AddrSurfInfoOut->baseAlign);
    surf_level->slice_size = AddrSurfInfoOut->sliceSize;
    surf_level->pitch_bytes = AddrSurfInfoOut->pitch * (is_stencil ? 1 : surf->bpe);
-   surf_level->npix_x = u_minify(tex->width0, level);
-   surf_level->npix_y = u_minify(tex->height0, level);
-   surf_level->npix_z = u_minify(tex->depth0, level);
    surf_level->nblk_x = AddrSurfInfoOut->pitch;
    surf_level->nblk_y = AddrSurfInfoOut->height;
-   if (tex->target == PIPE_TEXTURE_3D)
-      surf_level->nblk_z = AddrSurfInfoOut->depth;
-   else
-      surf_level->nblk_z = 1;
 
    switch (AddrSurfInfoOut->tileMode) {
    case ADDR_TM_LINEAR_ALIGNED:
