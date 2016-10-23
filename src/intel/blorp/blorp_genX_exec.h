@@ -1117,6 +1117,11 @@ blorp_emit_surface_states(struct blorp_batch *batch,
    }
 
 #if GEN_GEN >= 7
+   blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS_VS), bt);
+   blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS_HS), bt);
+   blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS_DS), bt);
+   blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS_GS), bt);
+
    blorp_emit(batch, GENX(3DSTATE_BINDING_TABLE_POINTERS_PS), bt) {
       bt.PointertoPSBindingTable = bind_offset;
    }
