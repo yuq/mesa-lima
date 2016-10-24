@@ -147,7 +147,7 @@ anv_timestamp.h:
 	$(AM_V_GEN) echo "#define ANV_TIMESTAMP \"$(TIMESTAMP_CMD)\"" > $@
 
 BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
-CLEANFILES = $(BUILT_SOURCES) dev_icd.json intel_icd.json
+CLEANFILES = $(BUILT_SOURCES) dev_icd.json intel_icd.@host_cpu@.json
 EXTRA_DIST = \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
 	anv_entrypoints_gen.py \
