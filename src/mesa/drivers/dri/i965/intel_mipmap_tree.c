@@ -3043,6 +3043,34 @@ get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
    unreachable("Invalid texture target");
 }
 
+enum isl_tiling
+intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt)
+{
+   if (mt->format == MESA_FORMAT_S_UINT8) {
+      return ISL_TILING_W;
+   } else {
+      switch (mt->tiling) {
+      case I915_TILING_NONE:
+         return ISL_TILING_LINEAR;
+      case I915_TILING_X:
+         return ISL_TILING_X;
+      case I915_TILING_Y:
+         switch (mt->tr_mode) {
+         case INTEL_MIPTREE_TRMODE_NONE:
+            return ISL_TILING_Y0;
+         case INTEL_MIPTREE_TRMODE_YF:
+            return ISL_TILING_Yf;
+         case INTEL_MIPTREE_TRMODE_YS:
+            return ISL_TILING_Ys;
+         default:
+            unreachable("Invalid tiled resource mode");
+         }
+      default:
+         unreachable("Invalid tiling mode");
+      }
+   }
+}
+
 void
 intel_miptree_get_isl_surf(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt,
@@ -3068,38 +3096,15 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
       surf->msaa_layout = ISL_MSAA_LAYOUT_NONE;
    }
 
+   surf->tiling = intel_miptree_get_isl_tiling(mt);
+
    if (mt->format == MESA_FORMAT_S_UINT8) {
-      surf->tiling = ISL_TILING_W;
       /* The ISL definition of row_pitch matches the surface state pitch field
        * a bit better than intel_mipmap_tree.  In particular, ISL incorporates
        * the factor of 2 for W-tiling in row_pitch.
        */
       surf->row_pitch = 2 * mt->pitch;
    } else {
-      switch (mt->tiling) {
-      case I915_TILING_NONE:
-         surf->tiling = ISL_TILING_LINEAR;
-         break;
-      case I915_TILING_X:
-         surf->tiling = ISL_TILING_X;
-         break;
-      case I915_TILING_Y:
-         switch (mt->tr_mode) {
-         case INTEL_MIPTREE_TRMODE_NONE:
-            surf->tiling = ISL_TILING_Y0;
-            break;
-         case INTEL_MIPTREE_TRMODE_YF:
-            surf->tiling = ISL_TILING_Yf;
-            break;
-         case INTEL_MIPTREE_TRMODE_YS:
-            surf->tiling = ISL_TILING_Ys;
-            break;
-         }
-         break;
-      default:
-         unreachable("Invalid tiling mode");
-      }
-
       surf->row_pitch = mt->pitch;
    }
 

@@ -813,6 +813,9 @@ enum isl_dim_layout
 get_isl_dim_layout(const struct gen_device_info *devinfo, uint32_t tiling,
                    GLenum target);
 
+enum isl_tiling
+intel_miptree_get_isl_tiling(const struct intel_mipmap_tree *mt);
+
 void
 intel_miptree_get_isl_surf(struct brw_context *brw,
                            const struct intel_mipmap_tree *mt,
