@@ -277,8 +277,10 @@ hud_get_num_disks(bool displayhelp)
       /* Add any partitions */
       struct dirent *dpart;
       DIR *pdir = opendir(basename);
-      if (!pdir)
+      if (!pdir) {
+         closedir(dir);
          return 0;
+      }
 
       while ((dpart = readdir(pdir)) != NULL) {
          /* Avoid 'lo' and '..' and '.' */
@@ -298,6 +300,7 @@ hud_get_num_disks(bool displayhelp)
          add_object_part(basename, dpart->d_name, DISKSTAT_WR);
       }
    }
+   closedir(dir);
 
    if (displayhelp) {
       list_for_each_entry(struct diskstat_info, dsi, &gdiskstat_list, list) {

@@ -225,6 +225,7 @@ hud_get_num_cpufreq(bool displayhelp)
       snprintf(fn, sizeof(fn), "%s/cpufreq/scaling_max_freq", basename);
       add_object(dp->d_name, fn, CPUFREQ_MAXIMUM, cpu_index);
    }
+   closedir(dir);
 
    if (displayhelp) {
       list_for_each_entry(struct cpufreq_info, cfi, &gcpufreq_list, list) {

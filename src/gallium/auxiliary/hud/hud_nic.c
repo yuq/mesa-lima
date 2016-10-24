@@ -399,6 +399,7 @@ hud_get_num_nics(bool displayhelp)
       }
 
    }
+   closedir(dir);
 
    list_for_each_entry(struct nic_info, nic, &gnic_list, list) {
       char line[64];
