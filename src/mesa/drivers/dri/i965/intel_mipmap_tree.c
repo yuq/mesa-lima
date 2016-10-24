@@ -2838,12 +2838,6 @@ static bool
 can_blit_slice(struct intel_mipmap_tree *mt,
                unsigned int level, unsigned int slice)
 {
-   uint32_t image_x;
-   uint32_t image_y;
-   intel_miptree_get_image_offset(mt, level, slice, &image_x, &image_y);
-   if (image_x >= 32768 || image_y >= 32768)
-      return false;
-
    /* See intel_miptree_blit() for details on the 32k pitch limit. */
    if (mt->pitch >= 32768)
       return false;
