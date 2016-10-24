@@ -612,11 +612,6 @@ static void vid_dec_h265_BeginFrame(vid_dec_PrivateType *priv)
    if (priv->frame_started)
       return;
 
-   vid_dec_NeedTarget(priv);
-   if (priv->first_buf_in_frame)
-      priv->timestamp = priv->timestamps[0];
-   priv->first_buf_in_frame = false;
-
    if (!priv->codec) {
       struct pipe_video_codec templat = {};
 
@@ -629,6 +624,13 @@ static void vid_dec_h265_BeginFrame(vid_dec_PrivateType *priv)
       templat.level =  priv->codec_data.h265.level_idc;
       priv->codec = priv->pipe->create_video_codec(priv->pipe, &templat);
    }
+
+   vid_dec_NeedTarget(priv);
+
+   if (priv->first_buf_in_frame)
+      priv->timestamp = priv->timestamps[0];
+   priv->first_buf_in_frame = false;
+
    priv->codec->begin_frame(priv->codec, priv->target, &priv->picture.base);
    priv->frame_started = true;
 }
