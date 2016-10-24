@@ -621,7 +621,7 @@ static void vid_dec_FrameDecoded(OMX_COMPONENTTYPE *comp, OMX_BUFFERHEADERTYPE* 
    }
 
    if (input->pInputPortPrivate) {
-      if (output->pInputPortPrivate) {
+      if (output->pInputPortPrivate && !priv->disable_tunnel) {
          struct pipe_video_buffer *tmp, *vbuf, *new_vbuf;
 
          tmp = output->pOutputPortPrivate;
