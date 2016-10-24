@@ -3561,12 +3561,15 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       geni->subOp = tgsi::opcodeToSubOp(tgsi.getOpcode());
       break;
    case TGSI_OPCODE_MEMBAR:
+   {
+      uint32_t level = tgsi.getSrc(0).getValueU32(0, info);
       geni = mkOp(OP_MEMBAR, TYPE_NONE, NULL);
       geni->fixed = 1;
-      if (tgsi.getSrc(0).getValueU32(0, info) & TGSI_MEMBAR_THREAD_GROUP)
+      if (!(level & ~(TGSI_MEMBAR_THREAD_GROUP | TGSI_MEMBAR_SHARED)))
          geni->subOp = NV50_IR_SUBOP_MEMBAR(M, CTA);
       else
          geni->subOp = NV50_IR_SUBOP_MEMBAR(M, GL);
+   }
       break;
    case TGSI_OPCODE_ATOMUADD:
    case TGSI_OPCODE_ATOMXCHG:
