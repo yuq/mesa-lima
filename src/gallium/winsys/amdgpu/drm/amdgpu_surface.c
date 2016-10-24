@@ -387,7 +387,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    /* Set the micro tile type. */
    if (flags & RADEON_SURF_SCANOUT)
       AddrSurfInfoIn.tileType = ADDR_DISPLAYABLE;
-   else if (flags & RADEON_SURF_Z_OR_SBUFFER)
+   else if (flags & (RADEON_SURF_Z_OR_SBUFFER | RADEON_SURF_FMASK))
       AddrSurfInfoIn.tileType = ADDR_DEPTH_SAMPLE_ORDER;
    else
       AddrSurfInfoIn.tileType = ADDR_NON_DISPLAYABLE;
@@ -395,6 +395,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    AddrSurfInfoIn.flags.color = !(flags & RADEON_SURF_Z_OR_SBUFFER);
    AddrSurfInfoIn.flags.depth = (flags & RADEON_SURF_ZBUFFER) != 0;
    AddrSurfInfoIn.flags.cube = tex->target == PIPE_TEXTURE_CUBE;
+   AddrSurfInfoIn.flags.fmask = (flags & RADEON_SURF_FMASK) != 0;
    AddrSurfInfoIn.flags.display = (flags & RADEON_SURF_SCANOUT) != 0;
    AddrSurfInfoIn.flags.pow2Pad = tex->last_level > 0;
    AddrSurfInfoIn.flags.tcCompatible = (flags & RADEON_SURF_TC_COMPATIBLE_HTILE) != 0;
@@ -402,7 +403,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    /* Only degrade the tile mode for space if TC-compatible HTILE hasn't been
     * requested, because TC-compatible HTILE requires 2D tiling.
     */
-   AddrSurfInfoIn.flags.degrade4Space = !AddrSurfInfoIn.flags.tcCompatible;
+   AddrSurfInfoIn.flags.degrade4Space = !AddrSurfInfoIn.flags.tcCompatible &&
+                                        !(flags & RADEON_SURF_FMASK);
 
    /* DCC notes:
     * - If we add MSAA support, keep in mind that CB can't decompress 8bpp
