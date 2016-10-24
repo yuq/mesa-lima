@@ -189,17 +189,6 @@ query_sti_load(struct hud_graph *gr)
    }
 }
 
-static void
-free_query_data(void *p)
-{
-   struct sensors_temp_info *sti = (struct sensors_temp_info *) p;
-   list_del(&sti->list);
-   if (sti->chip)
-      sensors_free_chip_name(sti->chip);
-   FREE(sti);
-   sensors_cleanup();
-}
-
 /**
   * Create and initialize a new object for a specific sensor interface dev.
   * \param  pane  parent context.
@@ -236,11 +225,6 @@ hud_sensors_temp_graph_install(struct hud_pane *pane, const char *dev_name,
 
    gr->query_data = sti;
    gr->query_new_value = query_sti_load;
-
-   /* Don't use free() as our callback as that messes up Gallium's
-    * memory debugger.  Use simple free_query_data() wrapper.
-    */
-   gr->free_query_data = free_query_data;
 
    hud_pane_add_graph(pane, gr);
    switch (sti->mode) {

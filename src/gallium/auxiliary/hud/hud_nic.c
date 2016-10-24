@@ -234,14 +234,6 @@ query_nic_load(struct hud_graph *gr)
    }
 }
 
-static void
-free_query_data(void *p)
-{
-   struct nic_info *nic = (struct nic_info *) p;
-   list_del(&nic->list);
-   FREE(nic);
-}
-
 /**
   * Create and initialize a new object for a specific network interface dev.
   * \param  pane  parent context.
@@ -283,11 +275,6 @@ hud_nic_graph_install(struct hud_pane *pane, const char *nic_name,
 
    gr->query_data = nic;
    gr->query_new_value = query_nic_load;
-
-   /* Don't use free() as our callback as that messes up Gallium's
-    * memory debugger.  Use simple free_query_data() wrapper.
-    */
-   gr->free_query_data = free_query_data;
 
    hud_pane_add_graph(pane, gr);
    hud_pane_set_max_value(pane, 100);

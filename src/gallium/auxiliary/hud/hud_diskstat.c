@@ -162,14 +162,6 @@ query_dsi_load(struct hud_graph *gr)
    }
 }
 
-static void
-free_query_data(void *p)
-{
-   struct diskstat_info *nic = (struct diskstat_info *) p;
-   list_del(&nic->list);
-   FREE(nic);
-}
-
 /**
   * Create and initialize a new object for a specific block I/O device.
   * \param  pane  parent context.
@@ -207,11 +199,6 @@ hud_diskstat_graph_install(struct hud_pane *pane, const char *dev_name,
 
    gr->query_data = dsi;
    gr->query_new_value = query_dsi_load;
-
-   /* Don't use free() as our callback as that messes up Gallium's
-    * memory debugger.  Use simple free_query_data() wrapper.
-    */
-   gr->free_query_data = free_query_data;
 
    hud_pane_add_graph(pane, gr);
    hud_pane_set_max_value(pane, 100);
