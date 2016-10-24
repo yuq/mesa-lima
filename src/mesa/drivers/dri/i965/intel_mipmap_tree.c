@@ -1266,25 +1266,11 @@ intel_get_tile_masks(uint32_t tiling, uint32_t tr_mode, uint32_t cpp,
  */
 uint32_t
 intel_miptree_get_aligned_offset(const struct intel_mipmap_tree *mt,
-                                 uint32_t x, uint32_t y,
-                                 bool map_stencil_as_y_tiled)
+                                 uint32_t x, uint32_t y)
 {
    int cpp = mt->cpp;
    uint32_t pitch = mt->pitch;
    uint32_t tiling = mt->tiling;
-
-   if (map_stencil_as_y_tiled) {
-      tiling = I915_TILING_Y;
-
-      /* When mapping a W-tiled stencil buffer as Y-tiled, each 64-high W-tile
-       * gets transformed into a 32-high Y-tile.  Accordingly, the pitch of
-       * the resulting surface is twice the pitch of the original miptree,
-       * since each row in the Y-tiled view corresponds to two rows in the
-       * actual W-tiled surface.  So we need to correct the pitch before
-       * computing the offsets.
-       */
-      pitch *= 2;
-   }
 
    switch (tiling) {
    default:
@@ -1327,7 +1313,7 @@ intel_miptree_get_tile_offsets(const struct intel_mipmap_tree *mt,
    *tile_x = x & mask_x;
    *tile_y = y & mask_y;
 
-   return intel_miptree_get_aligned_offset(mt, x & ~mask_x, y & ~mask_y, false);
+   return intel_miptree_get_aligned_offset(mt, x & ~mask_x, y & ~mask_y);
 }
 
 static void

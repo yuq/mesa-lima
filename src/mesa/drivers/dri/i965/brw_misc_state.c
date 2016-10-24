@@ -451,14 +451,12 @@ brw_workaround_depthstencil_alignment(struct brw_context *brw,
       brw->depthstencil.depth_offset =
          intel_miptree_get_aligned_offset(depth_mt,
                                           depth_irb->draw_x & ~tile_mask_x,
-                                          depth_irb->draw_y & ~tile_mask_y,
-                                          false);
+                                          depth_irb->draw_y & ~tile_mask_y);
       if (intel_renderbuffer_has_hiz(depth_irb)) {
          brw->depthstencil.hiz_offset =
             intel_miptree_get_aligned_offset(depth_mt,
                                              depth_irb->draw_x & ~tile_mask_x,
-                                             (depth_irb->draw_y & ~tile_mask_y) / 2,
-                                             false);
+                                             (depth_irb->draw_y & ~tile_mask_y) / 2);
       }
    }
    if (stencil_irb) {

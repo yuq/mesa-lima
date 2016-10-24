@@ -123,8 +123,7 @@ apply_gen6_stencil_hiz_offset(struct isl_surf *surf,
    } else {
       *offset = intel_miptree_get_aligned_offset(mt,
                                                  mt->level[lod].level_x,
-                                                 mt->level[lod].level_y,
-                                                 false);
+                                                 mt->level[lod].level_y);
    }
 
    surf->logical_level0_px.width = minify(surf->logical_level0_px.width, lod);
