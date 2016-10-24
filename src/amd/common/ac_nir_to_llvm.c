@@ -3627,7 +3627,9 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 
 	result = build_tex_intrinsic(ctx, instr, &tinfo);
 
-	if (instr->op == nir_texop_query_levels)
+	if (instr->is_shadow)
+		result = LLVMBuildExtractElement(ctx->builder, result, ctx->i32zero, "");
+	else if (instr->op == nir_texop_query_levels)
 		result = LLVMBuildExtractElement(ctx->builder, result, LLVMConstInt(ctx->i32, 3, false), "");
 	else if (instr->op == nir_texop_txs &&
 		 instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
