@@ -585,10 +585,6 @@ intelEmitCopyBlit(struct brw_context *brw,
 
    assert(dst_x < dst_x2);
    assert(dst_y < dst_y2);
-   assert(src_offset + (src_y + h - 1) * abs(src_pitch) +
-          (w * cpp) <= src_buffer->size);
-   assert(dst_offset + (dst_y + h - 1) * abs(dst_pitch) +
-          (w * cpp) <= dst_buffer->size);
 
    BEGIN_BATCH_BLT_TILED(length, dst_y_tiled, src_y_tiled);
    OUT_BATCH(CMD | (length - 2));
