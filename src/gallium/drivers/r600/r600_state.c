@@ -802,26 +802,6 @@ static void r600_set_polygon_stipple(struct pipe_context *ctx,
 {
 }
 
-static struct r600_resource *r600_buffer_create_helper(struct r600_screen *rscreen,
-						       unsigned size, unsigned alignment)
-{
-	struct pipe_resource buffer;
-
-	memset(&buffer, 0, sizeof buffer);
-	buffer.target = PIPE_BUFFER;
-	buffer.format = PIPE_FORMAT_R8_UNORM;
-	buffer.bind = PIPE_BIND_CUSTOM;
-	buffer.usage = PIPE_USAGE_DEFAULT;
-	buffer.flags = 0;
-	buffer.width0 = size;
-	buffer.height0 = 1;
-	buffer.depth0 = 1;
-	buffer.array_size = 1;
-
-	return (struct r600_resource*)
-		r600_buffer_create(&rscreen->b.b, &buffer, alignment);
-}
-
 static void r600_init_color_surface(struct r600_context *rctx,
 				    struct r600_surface *surf,
 				    bool force_cmask_fmask)
@@ -998,7 +978,10 @@ static void r600_init_color_surface(struct r600_context *rctx,
 			void *ptr;
 
 			r600_resource_reference(&rctx->dummy_cmask, NULL);
-			rctx->dummy_cmask = r600_buffer_create_helper(rscreen, cmask.size, cmask.alignment);
+			rctx->dummy_cmask = (struct r600_resource*)
+				r600_aligned_buffer_create(&rscreen->b.b, 0,
+							   PIPE_USAGE_DEFAULT,
+							   cmask.size, cmask.alignment);
 
 			/* Set the contents to 0xCC. */
 			ptr = pipe_buffer_map(&rctx->b.b, &rctx->dummy_cmask->b.b, PIPE_TRANSFER_WRITE, &transfer);
@@ -1012,8 +995,10 @@ static void r600_init_color_surface(struct r600_context *rctx,
 		    rctx->dummy_fmask->b.b.width0 < fmask.size ||
 		    rctx->dummy_fmask->buf->alignment % fmask.alignment != 0) {
 			r600_resource_reference(&rctx->dummy_fmask, NULL);
-			rctx->dummy_fmask = r600_buffer_create_helper(rscreen, fmask.size, fmask.alignment);
-
+			rctx->dummy_fmask = (struct r600_resource*)
+				r600_aligned_buffer_create(&rscreen->b.b, 0,
+							   PIPE_USAGE_DEFAULT,
+							   fmask.size, fmask.alignment);
 		}
 		r600_resource_reference(&surf->cb_buffer_fmask, rctx->dummy_fmask);
 
