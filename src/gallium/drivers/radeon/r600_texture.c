@@ -681,10 +681,6 @@ void r600_texture_get_cmask_info(struct r600_common_screen *rscreen,
 	assert(macro_tile_width % 128 == 0);
 	assert(macro_tile_height % 128 == 0);
 
-	out->pitch = pitch_elements;
-	out->height = height;
-	out->xalign = macro_tile_width;
-	out->yalign = macro_tile_height;
 	out->slice_tile_max = ((pitch_elements * height) / (128*128)) - 1;
 	out->alignment = MAX2(256, base_align);
 	out->size = (util_max_layer(&rtex->resource.b.b, 0) + 1) *
@@ -730,10 +726,6 @@ static void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
 	/* Each element of CMASK is a nibble. */
 	unsigned slice_bytes = slice_elements / 2;
 
-	out->pitch = width;
-	out->height = height;
-	out->xalign = cl_width * 8;
-	out->yalign = cl_height * 8;
 	out->slice_tile_max = (width * height) / (128*128);
 	if (out->slice_tile_max)
 		out->slice_tile_max -= 1;
@@ -931,11 +923,10 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->fmask.slice_tile_max, rtex->fmask.tile_mode_index);
 
 	if (rtex->cmask.size)
-		fprintf(f, "  CMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, pitch=%u, "
-			"height=%u, xalign=%u, yalign=%u, slice_tile_max=%u\n",
+		fprintf(f, "  CMask: offset=%"PRIu64", size=%"PRIu64", alignment=%u, "
+			"slice_tile_max=%u\n",
 			rtex->cmask.offset, rtex->cmask.size, rtex->cmask.alignment,
-			rtex->cmask.pitch, rtex->cmask.height, rtex->cmask.xalign,
-			rtex->cmask.yalign, rtex->cmask.slice_tile_max);
+			rtex->cmask.slice_tile_max);
 
 	if (rtex->htile_buffer)
 		fprintf(f, "  HTile: size=%u, alignment=%u, TC_compatible = %u\n",
