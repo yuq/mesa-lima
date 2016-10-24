@@ -236,6 +236,11 @@ static const char *cctlOpStr[] =
    "", "", "", "", "", "iv", "ivall"
 };
 
+static const char *barOpStr[] =
+{
+   "sync", "arrive", "red and", "red or", "red popc"
+};
+
 static const char *DataTypeStr[] =
 {
    "-",
@@ -610,6 +615,10 @@ void Instruction::print() const
       case OP_CCTL:
          if (subOp < ARRAY_SIZE(cctlOpStr))
             PRINT("%s ", cctlOpStr[subOp]);
+         break;
+      case OP_BAR:
+         if (subOp < ARRAY_SIZE(barOpStr))
+            PRINT("%s ", barOpStr[subOp]);
          break;
       default:
          if (subOp)
