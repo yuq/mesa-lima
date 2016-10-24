@@ -315,6 +315,11 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->cursor.image = pScreen->resource_create(pScreen, &tmpl);
         if (!This->cursor.image)
             return D3DERR_OUTOFVIDEOMEMORY;
+
+        /* For uploading 32x32 (argb) cursor */
+        This->cursor.hw_upload_temp = MALLOC(32 * 4 * 32);
+        if (!This->cursor.hw_upload_temp)
+            return D3DERR_OUTOFVIDEOMEMORY;
     }
 
     /* Create constant buffers. */
@@ -505,6 +510,8 @@ NineDevice9_dtor( struct NineDevice9 *This )
     FREE(This->state.vs_const_i);
     FREE(This->state.vs_const_b);
     FREE(This->state.vs_const_f_swvp);
+
+    FREE(This->cursor.hw_upload_temp);
 
     if (This->swapchains) {
         for (i = 0; i < This->nswapchains; ++i)
@@ -709,11 +716,20 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
                                  lock.pBits, lock.Pitch,
                                  This->cursor.w, This->cursor.h);
 
-        if (hw_cursor)
+        if (hw_cursor) {
+            void *data = lock.pBits;
+            /* SetCursor assumes 32x32 argb with pitch 128 */
+            if (lock.Pitch != 128) {
+                sfmt->unpack_rgba_8unorm(This->cursor.hw_upload_temp, 128,
+                                         lock.pBits, lock.Pitch,
+                                         32, 32);
+                data = This->cursor.hw_upload_temp;
+            }
             hw_cursor = ID3DPresent_SetCursor(This->swapchains[0]->present,
-                                              lock.pBits,
+                                              data,
                                               &This->cursor.hotspot,
                                               This->cursor.visible) == D3D_OK;
+        }
 
         NineSurface9_UnlockRect(surf);
     }

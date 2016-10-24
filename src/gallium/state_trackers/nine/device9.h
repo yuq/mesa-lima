@@ -112,6 +112,7 @@ struct NineDevice9
         POINT pos;
         BOOL visible;
         boolean software;
+        void *hw_upload_temp;
     } cursor;
 
     struct {
