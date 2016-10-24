@@ -956,7 +956,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 	for (i = 0; i <= rtex->resource.b.b.last_level; i++)
 		fprintf(f, "  Level[%i]: offset=%"PRIu64", slice_size=%"PRIu64", "
 			"npix_x=%u, npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
-			"pitch_bytes=%u, mode=%u\n",
+			"pitch_bytes=%u, mode=%u, tiling_index = %u\n",
 			i, rtex->surface.level[i].offset,
 			rtex->surface.level[i].slice_size,
 			u_minify(rtex->resource.b.b.width0, i),
@@ -965,7 +965,8 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			rtex->surface.level[i].nblk_x,
 			rtex->surface.level[i].nblk_y,
 			rtex->surface.level[i].pitch_bytes,
-			rtex->surface.level[i].mode);
+			rtex->surface.level[i].mode,
+			rtex->surface.tiling_index[i]);
 
 	if (rtex->surface.flags & RADEON_SURF_SBUFFER) {
 		fprintf(f, "  StencilLayout: tilesplit=%u\n",
@@ -974,7 +975,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			fprintf(f, "  StencilLevel[%i]: offset=%"PRIu64", "
 				"slice_size=%"PRIu64", npix_x=%u, "
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
-				"pitch_bytes=%u, mode=%u\n",
+				"pitch_bytes=%u, mode=%u, tiling_index = %u\n",
 				i, rtex->surface.stencil_level[i].offset,
 				rtex->surface.stencil_level[i].slice_size,
 				u_minify(rtex->resource.b.b.width0, i),
@@ -983,7 +984,8 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 				rtex->surface.stencil_level[i].nblk_x,
 				rtex->surface.stencil_level[i].nblk_y,
 				rtex->surface.stencil_level[i].pitch_bytes,
-				rtex->surface.stencil_level[i].mode);
+				rtex->surface.stencil_level[i].mode,
+				rtex->surface.stencil_tiling_index[i]);
 		}
 	}
 }
