@@ -593,19 +593,21 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 	templ.nr_samples = 1;
 	flags = rtex->surface.flags | RADEON_SURF_FMASK;
 
-	/* Use the same parameters and tile mode. */
-	fmask.bankw = rtex->surface.bankw;
-	fmask.bankh = rtex->surface.bankh;
-	fmask.mtilea = rtex->surface.mtilea;
-	fmask.tile_split = rtex->surface.tile_split;
+	if (rscreen->chip_class <= CAYMAN) {
+		/* Use the same parameters and tile mode. */
+		fmask.bankw = rtex->surface.bankw;
+		fmask.bankh = rtex->surface.bankh;
+		fmask.mtilea = rtex->surface.mtilea;
+		fmask.tile_split = rtex->surface.tile_split;
+
+		if (nr_samples <= 4)
+			fmask.bankh = 4;
+	}
 
 	switch (nr_samples) {
 	case 2:
 	case 4:
 		bpe = 1;
-		if (rscreen->chip_class <= CAYMAN) {
-			fmask.bankh = 4;
-		}
 		break;
 	case 8:
 		bpe = 4;

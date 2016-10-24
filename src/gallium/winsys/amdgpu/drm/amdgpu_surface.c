@@ -436,6 +436,8 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
     * for shared resources. This is for 2D tiling only. */
    if (AddrSurfInfoIn.tileMode >= ADDR_TM_2D_TILED_THIN1 &&
        surf->bankw && surf->bankh && surf->mtilea && surf->tile_split) {
+      assert(!(flags & RADEON_SURF_FMASK));
+
       /* If any of these parameters are incorrect, the calculation
        * will fail. */
       AddrTileInfoIn.banks = surf->num_banks;
