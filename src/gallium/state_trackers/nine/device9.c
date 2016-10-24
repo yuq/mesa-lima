@@ -511,6 +511,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     FREE(This->state.vs_const_b);
     FREE(This->state.vs_const_f_swvp);
 
+    pipe_resource_reference(&This->cursor.image, NULL);
     FREE(This->cursor.hw_upload_temp);
 
     if (This->swapchains) {
