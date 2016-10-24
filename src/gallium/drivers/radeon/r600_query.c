@@ -338,7 +338,7 @@ static struct r600_resource *r600_new_query_buffer(struct r600_common_context *c
 	 * usage pattern.
 	 */
 	struct r600_resource *buf = (struct r600_resource*)
-		pipe_buffer_create(ctx->b.screen, PIPE_BIND_CUSTOM,
+		pipe_buffer_create(ctx->b.screen, 0,
 				   PIPE_USAGE_STAGING, buf_size);
 	if (!buf)
 		return NULL;
@@ -1580,7 +1580,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 
 	/* create buffer for event data */
 	buffer = (struct r600_resource*)
-		pipe_buffer_create(ctx->b.screen, PIPE_BIND_CUSTOM,
+		pipe_buffer_create(ctx->b.screen, 0,
 				   PIPE_USAGE_STAGING, ctx->max_db*16);
 	if (!buffer)
 		goto err;

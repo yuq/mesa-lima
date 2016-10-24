@@ -159,7 +159,7 @@ void si_begin_new_cs(struct si_context *ctx)
 		/* Create a buffer used for writing trace IDs and initialize it to 0. */
 		assert(!ctx->trace_buf);
 		ctx->trace_buf = (struct r600_resource*)
-				 pipe_buffer_create(ctx->b.b.screen, PIPE_BIND_CUSTOM,
+				 pipe_buffer_create(ctx->b.b.screen, 0,
 						    PIPE_USAGE_STAGING, 4);
 		if (ctx->trace_buf)
 			pipe_buffer_write_nooverlap(&ctx->b.b, &ctx->trace_buf->b.b,

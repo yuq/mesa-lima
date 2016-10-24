@@ -406,8 +406,7 @@ si_resource_create_custom(struct pipe_screen *screen,
 			  unsigned usage, unsigned size)
 {
 	assert(size);
-	return r600_resource(pipe_buffer_create(screen,
-		PIPE_BIND_CUSTOM, usage, size));
+	return r600_resource(pipe_buffer_create(screen, 0, usage, size));
 }
 
 static inline void

@@ -202,8 +202,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 		sctx->ce_suballocator =
 				u_suballocator_create(&sctx->b.b, 1024 * 1024,
-						      PIPE_BIND_CUSTOM,
-						      PIPE_USAGE_DEFAULT, false);
+						      0, PIPE_USAGE_DEFAULT, false);
 		if (!sctx->ce_suballocator)
 			goto fail;
 	}
@@ -217,7 +216,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		goto fail;
 
 	sctx->border_color_buffer = (struct r600_resource*)
-		pipe_buffer_create(screen, PIPE_BIND_CUSTOM, PIPE_USAGE_DEFAULT,
+		pipe_buffer_create(screen, 0, PIPE_USAGE_DEFAULT,
 				   SI_MAX_BORDER_COLORS *
 				   sizeof(*sctx->border_color_table));
 	if (!sctx->border_color_buffer)

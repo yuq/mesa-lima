@@ -1730,7 +1730,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	if (update_esgs) {
 		pipe_resource_reference(&sctx->esgs_ring, NULL);
-		sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
+		sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, 0,
 						     PIPE_USAGE_DEFAULT,
 						     esgs_ring_size);
 		if (!sctx->esgs_ring)
@@ -1739,7 +1739,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	if (update_gsvs) {
 		pipe_resource_reference(&sctx->gsvs_ring, NULL);
-		sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
+		sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, 0,
 						     PIPE_USAGE_DEFAULT,
 						     gsvs_ring_size);
 		if (!sctx->gsvs_ring)
@@ -2008,7 +2008,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	}
 
 	assert(!sctx->tf_ring);
-	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, PIPE_BIND_CUSTOM,
+	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, 0,
 					   PIPE_USAGE_DEFAULT,
 					   32768 * sctx->screen->b.info.max_se);
 	if (!sctx->tf_ring)
@@ -2016,8 +2016,7 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
-	sctx->tess_offchip_ring = pipe_buffer_create(sctx->b.b.screen,
-	                                             PIPE_BIND_CUSTOM,
+	sctx->tess_offchip_ring = pipe_buffer_create(sctx->b.b.screen, 0,
 	                                             PIPE_USAGE_DEFAULT,
 	                                             max_offchip_buffers *
 	                                             sctx->screen->tess_offchip_block_dw_size * 4);

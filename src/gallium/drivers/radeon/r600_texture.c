@@ -879,8 +879,7 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 		return;
 
 	rtex->htile_buffer = (struct r600_resource*)
-		r600_aligned_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
-					   PIPE_USAGE_DEFAULT,
+		r600_aligned_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
 					   rtex->surface.htile_size,
 					   rtex->surface.htile_alignment);
 	if (rtex->htile_buffer == NULL) {
