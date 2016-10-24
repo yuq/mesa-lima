@@ -593,6 +593,12 @@ void r600_texture_get_fmask_info(struct r600_common_screen *rscreen,
 
 	memset(out, 0, sizeof(*out));
 
+	if (rscreen->chip_class >= GFX9) {
+		out->alignment = rtex->surface.u.gfx9.fmask_alignment;
+		out->size = rtex->surface.u.gfx9.fmask_size;
+		return;
+	}
+
 	templ.nr_samples = 1;
 	flags = rtex->surface.flags | RADEON_SURF_FMASK;
 
@@ -698,6 +704,12 @@ static void si_texture_get_cmask_info(struct r600_common_screen *rscreen,
 	unsigned num_pipes = rscreen->info.num_tile_pipes;
 	unsigned cl_width, cl_height;
 
+	if (rscreen->chip_class >= GFX9) {
+		out->alignment = rtex->surface.u.gfx9.cmask_alignment;
+		out->size = rtex->surface.u.gfx9.cmask_size;
+		return;
+	}
+
 	switch (num_pipes) {
 	case 2:
 		cl_width = 32;
@@ -799,6 +811,8 @@ static void r600_texture_get_htile_size(struct r600_common_screen *rscreen,
 	unsigned slice_elements, slice_bytes, pipe_interleave_bytes, base_align;
 	unsigned num_pipes = rscreen->info.num_tile_pipes;
 
+	assert(rscreen->chip_class <= VI);
+
 	rtex->surface.htile_size = 0;
 
 	if (rscreen->chip_class <= EVERGREEN &&
@@ -873,7 +887,7 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 {
 	uint32_t clear_value;
 
-	if (rtex->tc_compatible_htile) {
+	if (rscreen->chip_class >= GFX9 || rtex->tc_compatible_htile) {
 		clear_value = 0x0000030F;
 	} else {
 		r600_texture_get_htile_size(rscreen, rtex);
