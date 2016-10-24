@@ -2321,7 +2321,6 @@ void nir_lower_io_to_temporaries(nir_shader *shader,
 void nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint);
 
 void nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
-                              unsigned base_offset,
                               int (*type_size)(const struct glsl_type *));
 
 typedef enum {

@@ -44,17 +44,9 @@ struct lower_io_state {
 
 void
 nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
-                         unsigned base_offset,
                          int (*type_size)(const struct glsl_type *))
 {
    unsigned location = 0;
-
-   /* There are 32 regular and 32 patch varyings allowed */
-   int locations[64][2];
-   for (unsigned i = 0; i < 64; i++) {
-      for (unsigned j = 0; j < 2; j++)
-         locations[i][j] = -1;
-   }
 
    nir_foreach_variable(var, var_list) {
       /*
@@ -65,44 +57,8 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
           var->interface_type != NULL)
          continue;
 
-      /* Make sure we give the same location to varyings packed with
-       * ARB_enhanced_layouts.
-       */
-      int idx = var->data.location - base_offset;
-      if (base_offset && idx >= 0) {
-         assert(idx < ARRAY_SIZE(locations));
-
-         if (locations[idx][var->data.index] == -1) {
-            var->data.driver_location = location;
-            locations[idx][var->data.index] = location;
-
-            /* A dvec3 can be packed with a double we need special handling
-             * for this as we are packing across two locations.
-             */
-            if (glsl_get_base_type(var->type) == GLSL_TYPE_DOUBLE &&
-                glsl_get_vector_elements(var->type) == 3) {
-               /* Hack around type_size functions that expect vectors to be
-                * padded out to vec4. If a float type is the same size as a
-                * double then the type size is padded to vec4, otherwise
-                * set the offset to two doubles which offsets the location
-                * past the first two components in dvec3 which were stored at
-                * the previous location.
-                */
-               unsigned dsize = type_size(glsl_double_type());
-               unsigned offset =
-                  dsize == type_size(glsl_float_type()) ? dsize : dsize * 2;
-
-               locations[idx + 1][var->data.index] = location + offset;
-            }
-
-            location += type_size(var->type);
-         } else {
-            var->data.driver_location = locations[idx][var->data.index];
-         }
-      } else {
-         var->data.driver_location = location;
-         location += type_size(var->type);
-      }
+      var->data.driver_location = location;
+      location += type_size(var->type);
    }
 
    *size = location;

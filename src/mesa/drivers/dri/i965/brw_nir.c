@@ -380,7 +380,7 @@ brw_nir_lower_fs_outputs(nir_shader *nir)
 void
 brw_nir_lower_cs_shared(nir_shader *nir)
 {
-   nir_assign_var_locations(&nir->shared, &nir->num_shared, 0,
+   nir_assign_var_locations(&nir->shared, &nir->num_shared,
                             type_size_scalar_bytes);
    nir_lower_io(nir, nir_var_shared, type_size_scalar_bytes, 0);
 }
