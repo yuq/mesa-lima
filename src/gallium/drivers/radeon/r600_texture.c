@@ -826,8 +826,9 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 	}
 
 	rtex->cmask_buffer = (struct r600_resource *)
-		pipe_buffer_create(&rscreen->b, PIPE_BIND_CUSTOM,
-				   PIPE_USAGE_DEFAULT, rtex->cmask.size);
+		r600_aligned_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
+					   rtex->cmask.size,
+					   rtex->cmask.alignment);
 	if (rtex->cmask_buffer == NULL) {
 		rtex->cmask.size = 0;
 		return;
