@@ -313,31 +313,49 @@ intel_miptree_blit(struct brw_context *brw,
    dst_x += dst_image_x;
    dst_y += dst_image_y;
 
-   /* The blitter interprets the 16-bit destination x/y as a signed 16-bit
-    * value. The values we're working with are unsigned, so make sure we don't
-    * overflow.
+   /* We need to split the blit into chunks that each fit within the blitter's
+    * restrictions.  We can't use a chunk size of 32768 because we need to
+    * ensure that src_tile_x + chunk_size fits.  We choose 16384 because it's
+    * a nice round power of two, big enough that performance won't suffer, and
+    * small enough to guarantee everything fits.
     */
-   if (src_x >= 32768 || src_y >= 32768 || dst_x >= 32768 || dst_y >= 32768) {
-      perf_debug("Falling back due to >=32k offset [src(%d, %d) dst(%d, %d)]\n",
-                 src_x, src_y, dst_x, dst_y);
-      return false;
-   }
+   const uint32_t max_chunk_size = 16384;
 
-   if (!intelEmitCopyBlit(brw,
-                          src_mt->cpp,
-                          src_flip == dst_flip ? src_mt->pitch : -src_mt->pitch,
-                          src_mt->bo, src_mt->offset,
-                          src_mt->tiling,
-                          src_mt->tr_mode,
-                          dst_mt->pitch,
-                          dst_mt->bo, dst_mt->offset,
-                          dst_mt->tiling,
-                          dst_mt->tr_mode,
-                          src_x, src_y,
-                          dst_x, dst_y,
-                          width, height,
-                          logicop)) {
-      return false;
+   for (uint32_t chunk_x = 0; chunk_x < width; chunk_x += max_chunk_size) {
+      for (uint32_t chunk_y = 0; chunk_y < height; chunk_y += max_chunk_size) {
+         const uint32_t chunk_w = MIN2(max_chunk_size, width - chunk_x);
+         const uint32_t chunk_h = MIN2(max_chunk_size, height - chunk_y);
+
+         uint32_t src_offset, src_tile_x, src_tile_y;
+         get_blit_intratile_offset_el(brw, src_mt,
+                                      src_x + chunk_x, src_y + chunk_y,
+                                      &src_offset, &src_tile_x, &src_tile_y);
+
+         uint32_t dst_offset, dst_tile_x, dst_tile_y;
+         get_blit_intratile_offset_el(brw, dst_mt,
+                                      dst_x + chunk_x, dst_y + chunk_y,
+                                      &dst_offset, &dst_tile_x, &dst_tile_y);
+
+         if (!intelEmitCopyBlit(brw,
+                                src_mt->cpp,
+                                src_flip == dst_flip ? src_mt->pitch :
+                                                       -src_mt->pitch,
+                                src_mt->bo, src_mt->offset + src_offset,
+                                src_mt->tiling,
+                                src_mt->tr_mode,
+                                dst_mt->pitch,
+                                dst_mt->bo, dst_mt->offset + dst_offset,
+                                dst_mt->tiling,
+                                dst_mt->tr_mode,
+                                src_tile_x, src_tile_y,
+                                dst_tile_x, dst_tile_y,
+                                chunk_w, chunk_h,
+                                logicop)) {
+            /* If this is ever going to fail, it will fail on the first chunk */
+            assert(chunk_x == 0 && chunk_y == 0);
+            return false;
+         }
+      }
    }
 
    /* XXX This could be done in a single pass using XY_FULL_MONO_PATTERN_BLT */
