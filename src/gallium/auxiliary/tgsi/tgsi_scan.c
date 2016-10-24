@@ -370,7 +370,7 @@ scan_instruction(struct tgsi_shader_info *info,
 
    if (fullinst->Instruction.Texture) {
       for (i = 0; i < fullinst->Texture.NumOffsets; i++) {
-         struct tgsi_full_src_register src = {};
+         struct tgsi_full_src_register src = {{0}};
 
          src.Register.File = fullinst->TexOffsets[i].File;
          src.Register.Index = fullinst->TexOffsets[i].Index;
