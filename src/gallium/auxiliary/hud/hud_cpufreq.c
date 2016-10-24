@@ -36,6 +36,7 @@
 #include "hud/hud_private.h"
 #include "util/list.h"
 #include "os/os_time.h"
+#include "os/os_thread.h"
 #include "util/u_memory.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -61,6 +62,7 @@ struct cpufreq_info
 
 static int gcpufreq_count = 0;
 static struct list_head gcpufreq_list;
+pipe_static_mutex(gcpufreq_mutex);
 
 static struct cpufreq_info *
 find_cfi_by_index(int cpu_index, int mode)
@@ -186,16 +188,21 @@ hud_get_num_cpufreq(bool displayhelp)
    int cpu_index;
 
    /* Return the number of CPU metrics we support. */
-   if (gcpufreq_count)
+   pipe_mutex_lock(gcpufreq_mutex);
+   if (gcpufreq_count) {
+      pipe_mutex_unlock(gcpufreq_mutex);
       return gcpufreq_count;
+   }
 
    /* Scan /sys/devices.../cpu, for every object type we support, create
     * and persist an object to represent its different metrics.
     */
    list_inithead(&gcpufreq_list);
    DIR *dir = opendir("/sys/devices/system/cpu");
-   if (!dir)
+   if (!dir) {
+      pipe_mutex_unlock(gcpufreq_mutex);
       return 0;
+   }
 
    while ((dp = readdir(dir)) != NULL) {
 
@@ -239,6 +246,7 @@ hud_get_num_cpufreq(bool displayhelp)
       }
    }
 
+   pipe_mutex_unlock(gcpufreq_mutex);
    return gcpufreq_count;
 }
 

@@ -32,6 +32,7 @@
 #include "hud/hud_private.h"
 #include "util/list.h"
 #include "os/os_time.h"
+#include "os/os_thread.h"
 #include "util/u_memory.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -49,6 +50,7 @@
  */
 static int gsensors_temp_count = 0;
 static struct list_head gsensors_temp_list;
+pipe_static_mutex(gsensor_temp_mutex);
 
 struct sensors_temp_info
 {
@@ -322,12 +324,17 @@ int
 hud_get_num_sensors(bool displayhelp)
 {
    /* Return the number of sensors detected. */
-   if (gsensors_temp_count)
+   pipe_mutex_lock(gsensor_temp_mutex);
+   if (gsensors_temp_count) {
+      pipe_mutex_unlock(gsensor_temp_mutex);
       return gsensors_temp_count;
+   }
 
    int ret = sensors_init(NULL);
-   if (ret)
+   if (ret) {
+      pipe_mutex_unlock(gsensor_temp_mutex);
       return 0;
+   }
 
    list_inithead(&gsensors_temp_list);
 
@@ -361,6 +368,7 @@ hud_get_num_sensors(bool displayhelp)
       }
    }
 
+   pipe_mutex_unlock(gsensor_temp_mutex);
    return gsensors_temp_count;
 }
 

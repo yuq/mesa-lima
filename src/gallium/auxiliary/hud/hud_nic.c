@@ -35,6 +35,7 @@
 #include "hud/hud_private.h"
 #include "util/list.h"
 #include "os/os_time.h"
+#include "os/os_thread.h"
 #include "util/u_memory.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -66,6 +67,7 @@ struct nic_info
  */
 static int gnic_count = 0;
 static struct list_head gnic_list;
+pipe_static_mutex(gnic_mutex);
 
 static struct nic_info *
 find_nic_by_name(const char *n, int mode)
@@ -329,16 +331,21 @@ hud_get_num_nics(bool displayhelp)
    char name[64];
 
    /* Return the number if network interfaces. */
-   if (gnic_count)
+   pipe_mutex_lock(gnic_mutex);
+   if (gnic_count) {
+      pipe_mutex_unlock(gnic_mutex);
       return gnic_count;
+   }
 
    /* Scan /sys/block, for every object type we support, create and
     * persist an object to represent its different statistics.
     */
    list_inithead(&gnic_list);
    DIR *dir = opendir("/sys/class/net/");
-   if (!dir)
+   if (!dir) {
+      pipe_mutex_unlock(gnic_mutex);
       return 0;
+   }
 
    while ((dp = readdir(dir)) != NULL) {
 
@@ -412,6 +419,7 @@ hud_get_num_nics(bool displayhelp)
 
    }
 
+   pipe_mutex_unlock(gnic_mutex);
    return gnic_count;
 }
 

@@ -35,6 +35,7 @@
 #include "hud/hud_private.h"
 #include "util/list.h"
 #include "os/os_time.h"
+#include "os/os_thread.h"
 #include "util/u_memory.h"
 #include <stdio.h>
 #include <unistd.h>
@@ -81,6 +82,7 @@ struct diskstat_info
  */
 static int gdiskstat_count = 0;
 static struct list_head gdiskstat_list;
+pipe_static_mutex(gdiskstat_mutex);
 
 static struct diskstat_info *
 find_dsi_by_name(const char *n, int mode)
@@ -244,16 +246,21 @@ hud_get_num_disks(bool displayhelp)
    char name[64];
 
    /* Return the number of block devices and partitions. */
-   if (gdiskstat_count)
+   pipe_mutex_lock(gdiskstat_mutex);
+   if (gdiskstat_count) {
+      pipe_mutex_unlock(gdiskstat_mutex);
       return gdiskstat_count;
+   }
 
    /* Scan /sys/block, for every object type we support, create and
     * persist an object to represent its different statistics.
     */
    list_inithead(&gdiskstat_list);
    DIR *dir = opendir("/sys/block/");
-   if (!dir)
+   if (!dir) {
+      pipe_mutex_unlock(gdiskstat_mutex);
       return 0;
+   }
 
    while ((dp = readdir(dir)) != NULL) {
 
@@ -278,6 +285,7 @@ hud_get_num_disks(bool displayhelp)
       struct dirent *dpart;
       DIR *pdir = opendir(basename);
       if (!pdir) {
+         pipe_mutex_unlock(gdiskstat_mutex);
          closedir(dir);
          return 0;
       }
@@ -312,6 +320,7 @@ hud_get_num_disks(bool displayhelp)
          puts(line);
       }
    }
+   pipe_mutex_unlock(gdiskstat_mutex);
 
    return gdiskstat_count;
 }
