@@ -179,6 +179,42 @@ intel_miptree_blit_compatible_formats(mesa_format src, mesa_format dst)
    return false;
 }
 
+static void
+get_blit_intratile_offset_el(const struct brw_context *brw,
+                             struct intel_mipmap_tree *mt,
+                             uint32_t total_x_offset_el,
+                             uint32_t total_y_offset_el,
+                             uint32_t *base_address_offset,
+                             uint32_t *x_offset_el,
+                             uint32_t *y_offset_el)
+{
+   enum isl_tiling tiling = intel_miptree_get_isl_tiling(mt);
+   isl_tiling_get_intratile_offset_el(&brw->isl_dev,
+                                      tiling, mt->cpp, mt->pitch,
+                                      total_x_offset_el, total_y_offset_el,
+                                      base_address_offset,
+                                      x_offset_el, y_offset_el);
+   if (tiling == ISL_TILING_LINEAR) {
+      /* From the Broadwell PRM docs for XY_SRC_COPY_BLT::SourceBaseAddress:
+       *
+       *    "Base address of the destination surface: X=0, Y=0. Lower 32bits
+       *    of the 48bit addressing. When Src Tiling is enabled (Bit_15
+       *    enabled), this address must be 4KB-aligned. When Tiling is not
+       *    enabled, this address should be CL (64byte) aligned."
+       *
+       * The offsets we get from ISL in the tiled case are already aligned.
+       * In the linear case, we need to do some of our own aligning.
+       */
+      assert(mt->pitch % 64 == 0);
+      uint32_t delta = *base_address_offset & 63;
+      assert(delta % mt->cpp == 0);
+      *base_address_offset -= delta;
+      *x_offset_el += delta / mt->cpp;
+   } else {
+      assert(*base_address_offset % 4096 == 0);
+   }
+}
+
 /**
  * Implements a rectangular block transfer (blit) of pixels between two
  * miptrees.
@@ -804,22 +840,44 @@ intel_miptree_set_alpha_to_one(struct brw_context *brw,
    unsigned length = brw->gen >= 8 ? 7 : 6;
    bool dst_y_tiled = mt->tiling == I915_TILING_Y;
 
-   BEGIN_BATCH_BLT_TILED(length, dst_y_tiled, false);
-   OUT_BATCH(CMD | (length - 2));
-   OUT_BATCH(BR13);
-   OUT_BATCH(SET_FIELD(y, BLT_Y) | SET_FIELD(x, BLT_X));
-   OUT_BATCH(SET_FIELD(y + height, BLT_Y) | SET_FIELD(x + width, BLT_X));
-   if (brw->gen >= 8) {
-      OUT_RELOC64(mt->bo,
-                  I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                  0);
-   } else {
-      OUT_RELOC(mt->bo,
-                I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
-                0);
+   /* We need to split the blit into chunks that each fit within the blitter's
+    * restrictions.  We can't use a chunk size of 32768 because we need to
+    * ensure that src_tile_x + chunk_size fits.  We choose 16384 because it's
+    * a nice round power of two, big enough that performance won't suffer, and
+    * small enough to guarantee everything fits.
+    */
+   const uint32_t max_chunk_size = 16384;
+
+   for (uint32_t chunk_x = 0; chunk_x < width; chunk_x += max_chunk_size) {
+      for (uint32_t chunk_y = 0; chunk_y < height; chunk_y += max_chunk_size) {
+         const uint32_t chunk_w = MIN2(max_chunk_size, width - chunk_x);
+         const uint32_t chunk_h = MIN2(max_chunk_size, height - chunk_y);
+
+         uint32_t offset, tile_x, tile_y;
+         get_blit_intratile_offset_el(brw, mt,
+                                      x + chunk_x, y + chunk_y,
+                                      &offset, &tile_x, &tile_y);
+
+         BEGIN_BATCH_BLT_TILED(length, dst_y_tiled, false);
+         OUT_BATCH(CMD | (length - 2));
+         OUT_BATCH(BR13);
+         OUT_BATCH(SET_FIELD(y + chunk_y, BLT_Y) |
+                   SET_FIELD(x + chunk_x, BLT_X));
+         OUT_BATCH(SET_FIELD(y + chunk_y + chunk_h, BLT_Y) |
+                   SET_FIELD(x + chunk_x + chunk_w, BLT_X));
+         if (brw->gen >= 8) {
+            OUT_RELOC64(mt->bo,
+                        I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                        offset);
+         } else {
+            OUT_RELOC(mt->bo,
+                      I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
+                      offset);
+         }
+         OUT_BATCH(0xffffffff); /* white, but only alpha gets written */
+         ADVANCE_BATCH_TILED(dst_y_tiled, false);
+      }
    }
-   OUT_BATCH(0xffffffff); /* white, but only alpha gets written */
-   ADVANCE_BATCH_TILED(dst_y_tiled, false);
 
    brw_emit_mi_flush(brw);
 }
