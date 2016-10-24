@@ -5977,9 +5977,9 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	assert(!epilog || !epilog->rodata_size);
 
 	r600_resource_reference(&shader->bo, NULL);
-	shader->bo = si_resource_create_custom(&sscreen->b.b,
-					       PIPE_USAGE_IMMUTABLE,
-					       bo_size);
+	shader->bo = (struct r600_resource*)
+		     pipe_buffer_create(&sscreen->b.b, 0,
+					PIPE_USAGE_IMMUTABLE, bo_size);
 	if (!shader->bo)
 		return -ENOMEM;
 

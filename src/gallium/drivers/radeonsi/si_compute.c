@@ -276,9 +276,9 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 	if (scratch_bo_size < scratch_needed) {
 		r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
 
-		sctx->compute_scratch_buffer =
-				si_resource_create_custom(&sctx->screen->b.b,
-                                PIPE_USAGE_DEFAULT, scratch_needed);
+		sctx->compute_scratch_buffer = (struct r600_resource*)
+			pipe_buffer_create(&sctx->screen->b.b, 0,
+					   PIPE_USAGE_DEFAULT, scratch_needed);
 
 		if (!sctx->compute_scratch_buffer)
 			return false;

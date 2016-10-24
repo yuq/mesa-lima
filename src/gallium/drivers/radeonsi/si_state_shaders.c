@@ -1905,8 +1905,8 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 			/* Create a bigger scratch buffer */
 			r600_resource_reference(&sctx->scratch_buffer, NULL);
 
-			sctx->scratch_buffer =
-					si_resource_create_custom(&sctx->screen->b.b,
+			sctx->scratch_buffer = (struct r600_resource*)
+					pipe_buffer_create(&sctx->screen->b.b, 0,
 	                                PIPE_USAGE_DEFAULT, scratch_needed_size);
 			if (!sctx->scratch_buffer)
 				return false;

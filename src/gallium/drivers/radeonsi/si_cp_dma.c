@@ -236,10 +236,9 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size)
 	if (!sctx->scratch_buffer ||
 	    sctx->scratch_buffer->b.b.width0 < scratch_size) {
 		r600_resource_reference(&sctx->scratch_buffer, NULL);
-		sctx->scratch_buffer =
-			si_resource_create_custom(&sctx->screen->b.b,
-						  PIPE_USAGE_DEFAULT,
-						  scratch_size);
+		sctx->scratch_buffer = (struct r600_resource*)
+			pipe_buffer_create(&sctx->screen->b.b, 0,
+					   PIPE_USAGE_DEFAULT, scratch_size);
 		if (!sctx->scratch_buffer)
 			return;
 		sctx->emit_scratch_reloc = true;

@@ -401,14 +401,6 @@ struct pipe_video_buffer *si_video_buffer_create(struct pipe_context *pipe,
  * common helpers
  */
 
-static inline struct r600_resource *
-si_resource_create_custom(struct pipe_screen *screen,
-			  unsigned usage, unsigned size)
-{
-	assert(size);
-	return r600_resource(pipe_buffer_create(screen, 0, usage, size));
-}
-
 static inline void
 si_invalidate_draw_sh_constants(struct si_context *sctx)
 {
