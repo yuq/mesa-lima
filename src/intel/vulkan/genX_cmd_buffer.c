@@ -1850,10 +1850,10 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    if (has_hiz) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_HIER_DEPTH_BUFFER), hdb) {
          hdb.HierarchicalDepthBufferObjectControlState = GENX(MOCS);
-         hdb.SurfacePitch = image->hiz_surface.isl.row_pitch - 1;
+         hdb.SurfacePitch = image->aux_surface.isl.row_pitch - 1;
          hdb.SurfaceBaseAddress = (struct anv_address) {
             .bo = image->bo,
-            .offset = image->offset + image->hiz_surface.offset,
+            .offset = image->offset + image->aux_surface.offset,
          };
 #if GEN_GEN >= 8
          /* From the SKL PRM Vol2a:
@@ -1865,9 +1865,9 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
           *    - SURFTYPE_3D: distance in rows between R - slices
           */
          hdb.SurfaceQPitch =
-            image->hiz_surface.isl.dim == ISL_SURF_DIM_1D ?
-               isl_surf_get_array_pitch_el(&image->hiz_surface.isl) >> 2 :
-               isl_surf_get_array_pitch_el_rows(&image->hiz_surface.isl) >> 2;
+            image->aux_surface.isl.dim == ISL_SURF_DIM_1D ?
+               isl_surf_get_array_pitch_el(&image->aux_surface.isl) >> 2 :
+               isl_surf_get_array_pitch_el_rows(&image->aux_surface.isl) >> 2;
 #endif
       }
    } else {
