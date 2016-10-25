@@ -946,7 +946,7 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
    uint32_t *p, h, device, data_type, *new_cursor;
    int header_length, payload_size, bias;
 
-   if (file->end - file->cursor < 12)
+   if (file->end - file->cursor < 1)
       return AUB_ITEM_DECODE_NEED_MORE_DATA;
 
    p = file->cursor;
@@ -970,9 +970,13 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
    payload_size = 0;
    switch (h & 0xffff0000) {
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_HEADER):
+      if (file->end - file->cursor < 12)
+         return AUB_ITEM_DECODE_NEED_MORE_DATA;
       payload_size = p[12];
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK):
+      if (file->end - file->cursor < 4)
+         return AUB_ITEM_DECODE_NEED_MORE_DATA;
       payload_size = p[4];
       break;
    default:
