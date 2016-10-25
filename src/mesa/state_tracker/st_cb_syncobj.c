@@ -76,24 +76,6 @@ static void st_fence_sync(struct gl_context *ctx, struct gl_sync_object *obj,
    pipe->flush(pipe, &so->fence, PIPE_FLUSH_DEFERRED);
 }
 
-static void st_check_sync(struct gl_context *ctx, struct gl_sync_object *obj)
-{
-   struct pipe_context *pipe = st_context(ctx)->pipe;
-   struct pipe_screen *screen = pipe->screen;
-   struct st_sync_object *so = (struct st_sync_object*)obj;
-
-   /* If the fence doesn't exist, assume it's signalled. */
-   if (!so->fence) {
-      so->b.StatusFlag = GL_TRUE;
-      return;
-   }
-
-   if (screen->fence_finish(screen, pipe, so->fence, 0)) {
-      screen->fence_reference(screen, &so->fence, NULL);
-      so->b.StatusFlag = GL_TRUE;
-   }
-}
-
 static void st_client_wait_sync(struct gl_context *ctx,
                                 struct gl_sync_object *obj,
                                 GLbitfield flags, GLuint64 timeout)
@@ -120,11 +102,15 @@ static void st_client_wait_sync(struct gl_context *ctx,
     * Assume GL_SYNC_FLUSH_COMMANDS_BIT is always set, because applications
     * forget to set it.
     */
-   if (so->fence &&
-       screen->fence_finish(screen, pipe, so->fence, timeout)) {
+   if (screen->fence_finish(screen, pipe, so->fence, timeout)) {
       screen->fence_reference(screen, &so->fence, NULL);
       so->b.StatusFlag = GL_TRUE;
    }
+}
+
+static void st_check_sync(struct gl_context *ctx, struct gl_sync_object *obj)
+{
+   st_client_wait_sync(ctx, obj, 0, 0);
 }
 
 static void st_server_wait_sync(struct gl_context *ctx,
