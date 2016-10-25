@@ -1605,9 +1605,16 @@ _eglCreateSync(_EGLDisplay *disp, EGLenum type, const EGLAttrib *attrib_list,
       RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_NO_SYNC_KHR);
    }
 
+   /* If type is EGL_SYNC_FENCE and no context is current for the bound API
+    * (i.e., eglGetCurrentContext returns EGL_NO_CONTEXT ), an EGL_BAD_MATCH
+    * error is generated.
+    */
+   if (!ctx && type == EGL_SYNC_FENCE_KHR)
+      RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_NO_SYNC_KHR);
+
    /* return an error if the client API doesn't support GL_OES_EGL_sync */
-   if (!ctx || ctx->Resource.Display != disp ||
-       ctx->ClientAPI != EGL_OPENGL_ES_API)
+   if (ctx && (ctx->Resource.Display != disp ||
+       ctx->ClientAPI != EGL_OPENGL_ES_API))
       RETURN_EGL_ERROR(disp, EGL_BAD_MATCH, EGL_NO_SYNC_KHR);
 
    switch (type) {
