@@ -1005,3 +1005,14 @@ _mesa_is_multisample_enabled(const struct gl_context *ctx)
           ctx->DrawBuffer &&
           _mesa_geometric_nonvalidated_samples(ctx->DrawBuffer) > 1;
 }
+
+/**
+ * Is alpha testing enabled and applicable to the currently bound
+ * framebuffer?
+ */
+bool
+_mesa_is_alpha_test_enabled(const struct gl_context *ctx)
+{
+   bool buffer0_is_integer = ctx->DrawBuffer->_IntegerBuffers & 0x1;
+   return (ctx->Color.AlphaEnabled && !buffer0_is_integer);
+}
