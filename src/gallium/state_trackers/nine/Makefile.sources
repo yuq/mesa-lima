@@ -43,6 +43,8 @@ C_SOURCES := \
 	nine_pipe.h \
 	nine_quirk.c \
 	nine_quirk.h \
+	nine_queue.c \
+	nine_queue.h \
 	nine_shader.c \
 	nine_shader.h \
 	nine_state.c \
