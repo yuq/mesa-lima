@@ -3584,6 +3584,7 @@ static gl_shader_variable *
 create_shader_variable(struct gl_shader_program *shProg,
                        const ir_variable *in,
                        const char *name, const glsl_type *type,
+                       const glsl_type *interface_type,
                        bool use_implicit_location, int location,
                        const glsl_type *outermost_struct_type)
 {
@@ -3641,7 +3642,7 @@ create_shader_variable(struct gl_shader_program *shProg,
 
    out->type = type;
    out->outermost_struct_type = outermost_struct_type;
-   out->interface_type = in->get_interface_type();
+   out->interface_type = interface_type;
    out->component = in->data.location_frac;
    out->index = in->data.index;
    out->patch = in->data.patch;
@@ -3651,6 +3652,17 @@ create_shader_variable(struct gl_shader_program *shProg,
    out->precision = in->data.precision;
 
    return out;
+}
+
+static const glsl_type *
+resize_to_max_patch_vertices(const struct gl_context *ctx,
+                             const glsl_type *type)
+{
+   if (!type)
+      return NULL;
+
+   return glsl_type::get_array_instance(type->fields.array,
+                                        ctx->Const.MaxPatchVertices);
 }
 
 static bool
@@ -3699,6 +3711,29 @@ add_shader_variable(const struct gl_context *ctx,
    }
 
    default: {
+      const glsl_type *interface_type = var->get_interface_type();
+
+      /* Unsized (non-patch) TCS output/TES input arrays are implicitly
+       * sized to gl_MaxPatchVertices.  Internally, we shrink them to a
+       * smaller size.
+       *
+       * This can cause trouble with SSO programs.  Since the TCS declares
+       * the number of output vertices, we can always shrink TCS output
+       * arrays.  However, the TES might not be linked with a TCS, in
+       * which case it won't know the size of the patch.  In other words,
+       * the TCS and TES may disagree on the (smaller) array sizes.  This
+       * can result in the resource names differing across stages, causing
+       * SSO validation failures and other cascading issues.
+       *
+       * Expanding the array size to the full gl_MaxPatchVertices fixes
+       * these issues.  It's also what program interface queries expect,
+       * as that is the official size of the array.
+       */
+      if (var->data.tess_varying_implicit_sized_array) {
+         type = resize_to_max_patch_vertices(ctx, type);
+         interface_type = resize_to_max_patch_vertices(ctx, interface_type);
+      }
+
       /* Issue #16 of the ARB_program_interface_query spec says:
        *
        * "* If a variable is a member of an interface block without an
@@ -3711,8 +3746,7 @@ add_shader_variable(const struct gl_context *ctx,
        */
       const char *prefixed_name = (var->data.from_named_ifc_block &&
                                    !is_gl_identifier(var->name))
-         ? ralloc_asprintf(shProg, "%s.%s", var->get_interface_type()->name,
-                           name)
+         ? ralloc_asprintf(shProg, "%s.%s", interface_type->name, name)
          : name;
 
       /* The ARB_program_interface_query spec says:
@@ -3723,6 +3757,7 @@ add_shader_variable(const struct gl_context *ctx,
        */
       gl_shader_variable *sha_v =
          create_shader_variable(shProg, var, prefixed_name, type,
+                                interface_type,
                                 use_implicit_location, location,
                                 outermost_struct_type);
       if (!sha_v)
