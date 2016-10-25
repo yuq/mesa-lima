@@ -686,8 +686,10 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
 
    if (attribs->flags & ST_CONTEXT_FLAG_FORWARD_COMPATIBLE)
       st->ctx->Const.ContextFlags |= GL_CONTEXT_FLAG_FORWARD_COMPATIBLE_BIT;
-   if (attribs->flags & ST_CONTEXT_FLAG_ROBUST_ACCESS)
+   if (attribs->flags & ST_CONTEXT_FLAG_ROBUST_ACCESS) {
       st->ctx->Const.ContextFlags |= GL_CONTEXT_FLAG_ROBUST_ACCESS_BIT_ARB;
+      st->ctx->Const.RobustAccess = GL_TRUE;
+   }
    if (attribs->flags & ST_CONTEXT_FLAG_RESET_NOTIFICATION_ENABLED) {
       st->ctx->Const.ResetStrategy = GL_LOSE_CONTEXT_ON_RESET_ARB;
       st_install_device_reset_callback(st);
