@@ -1125,7 +1125,7 @@ int main(int argc, char *argv[])
    int c, i;
    bool help = false, pager = true;
    char *input_file = NULL, *xml_path = NULL;
-   char gen_val[24];
+   char gen_val[24] = { 0, };
    const struct {
       const char *name;
       int pci_id;
@@ -1193,7 +1193,7 @@ int main(int argc, char *argv[])
    }
 
    if (gen == NULL) {
-      fprintf(stderr, "can't parse gen: %s, expected ivb, byt, hsw, "
+      fprintf(stderr, "can't parse gen: '%s', expected ivb, byt, hsw, "
                              "bdw, chv, skl, kbl or bxt\n", gen_val);
       exit(EXIT_FAILURE);
    }
