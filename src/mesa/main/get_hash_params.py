@@ -343,6 +343,7 @@ descriptor=[
   [ "BLEND_ADVANCED_COHERENT_KHR", "CONTEXT_BOOL(Color.BlendCoherent), extra_KHR_blend_equation_advanced_coherent" ],
 
 # GL_ARB_robustness / GL_KHR_robustness
+  [ "CONTEXT_ROBUST_ACCESS", "CONTEXT_ENUM(Const.RobustAccess), extra_KHR_robustness" ],
   [ "RESET_NOTIFICATION_STRATEGY_ARB", "CONTEXT_ENUM(Const.ResetStrategy), extra_KHR_robustness_or_GL" ],
 ]},
 

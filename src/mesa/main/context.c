@@ -678,6 +678,9 @@ _mesa_init_constants(struct gl_constants *consts, gl_api api)
    /* GL_ARB_robustness */
    consts->ResetStrategy = GL_NO_RESET_NOTIFICATION_ARB;
 
+   /* GL_KHR_robustness */
+   consts->RobustAccess = GL_FALSE;
+
    /* ES 3.0 or ARB_ES3_compatibility */
    consts->MaxElementIndex = 0xffffffffu;
 
