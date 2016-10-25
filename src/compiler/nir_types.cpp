@@ -216,6 +216,24 @@ glsl_sampler_type_is_array(const struct glsl_type *type)
    return type->sampler_array;
 }
 
+bool
+glsl_type_is_dual_slot(const struct glsl_type *type)
+{
+   return type->is_dual_slot();
+}
+
+bool
+glsl_type_is_numeric(const struct glsl_type *type)
+{
+   return type->is_numeric();
+}
+
+bool
+glsl_type_is_boolean(const struct glsl_type *type)
+{
+   return type->is_boolean();
+}
+
 const glsl_type *
 glsl_void_type(void)
 {
