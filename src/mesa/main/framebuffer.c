@@ -994,7 +994,8 @@ _mesa_geometric_nonvalidated_samples(const struct gl_framebuffer *buffer)
       buffer->DefaultGeometry.NumSamples;
 }
 
-bool _mesa_is_multisample_enabled(const struct gl_context *ctx)
+bool
+_mesa_is_multisample_enabled(const struct gl_context *ctx)
 {
    /* The sample count may not be validated by the driver, but when it is set,
     * we know that is in a valid range and no driver should ever validate a
