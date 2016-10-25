@@ -609,12 +609,8 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
     *
     * For SSO pipelines, we use a fixed VUE map layout based on variable
     * locations, so we can rely on rendezvous-by-location making this work.
-    *
-    * However, we need to ignore VARYING_SLOT_PRIMITIVE_ID, as it's not
-    * written by previous stages and shows up via payload magic.
     */
-   GLbitfield64 inputs_read =
-      shader->info->inputs_read & ~VARYING_BIT_PRIMITIVE_ID;
+   GLbitfield64 inputs_read = shader->info->inputs_read;
    brw_compute_vue_map(compiler->devinfo,
                        &c.input_vue_map, inputs_read,
                        shader->info->separate_shader);
@@ -626,8 +622,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    shader = brw_postprocess_nir(shader, compiler->devinfo, is_scalar);
 
    prog_data->include_primitive_id =
-      (shader->info->inputs_read & VARYING_BIT_PRIMITIVE_ID) ||
-      (shader->info->system_values_read & (1 << SYSTEM_VALUE_PRIMITIVE_ID));
+      (shader->info->system_values_read & (1 << SYSTEM_VALUE_PRIMITIVE_ID)) != 0;
 
    prog_data->invocations = shader->info->gs.invocations;
 

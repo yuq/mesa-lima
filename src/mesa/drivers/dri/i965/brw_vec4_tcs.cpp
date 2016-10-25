@@ -461,10 +461,7 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    nir->info->patch_outputs_written = key->patch_outputs_written;
 
    struct brw_vue_map input_vue_map;
-   brw_compute_vue_map(devinfo, &input_vue_map,
-                       nir->info->inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
-                       true);
-
+   brw_compute_vue_map(devinfo, &input_vue_map, nir->info->inputs_read, true);
    brw_compute_tess_vue_map(&vue_prog_data->vue_map,
                             nir->info->outputs_written,
                             nir->info->patch_outputs_written);

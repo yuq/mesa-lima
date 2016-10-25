@@ -1355,8 +1355,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
    nir->info->patch_inputs_read = key->patch_inputs_read;
 
    struct brw_vue_map input_vue_map;
-   brw_compute_tess_vue_map(&input_vue_map,
-                            nir->info->inputs_read & ~VARYING_BIT_PRIMITIVE_ID,
+   brw_compute_tess_vue_map(&input_vue_map, nir->info->inputs_read,
                             nir->info->patch_inputs_read);
 
    nir = brw_nir_apply_sampler_key(nir, devinfo, &key->tex, is_scalar);
