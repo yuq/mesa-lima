@@ -199,8 +199,30 @@ make_surface(const struct anv_device *dev,
          assert(image->aux_surface.isl.size == 0);
          ok = isl_surf_get_ccs_surf(&dev->isl_dev, &anv_surf->isl,
                                     &image->aux_surface.isl);
-         if (ok)
+         if (ok) {
             add_surface(image, &image->aux_surface);
+
+            /* For images created without MUTABLE_FORMAT_BIT set, we know that
+             * they will always be used with the original format.  In
+             * particular, they will always be used with a format that
+             * supports color compression.  This means that it's safe to just
+             * leave compression on at all times for these formats.
+             */
+            if (!(vk_info->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) &&
+                isl_format_supports_lossless_compression(&dev->info, format)) {
+               if (vk_info->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+                  /*
+                   * For now, we leave compression off for anything that may
+                   * be used as a storage image.  This is because accessing
+                   * storage images may involve ccs-incompatible views or even
+                   * untyped messages which don't support compression at all.
+                   */
+                  anv_finishme("Enable CCS for storage images");
+               } else {
+                  image->aux_usage = ISL_AUX_USAGE_CCS_E;
+               }
+            }
+         }
       }
    }
 

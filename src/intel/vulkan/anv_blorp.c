@@ -1253,6 +1253,9 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    const struct anv_image *image = iview->image;
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
 
+   if (image->aux_usage == ISL_AUX_USAGE_CCS_E)
+      return;
+
    struct blorp_surf surf;
    get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
                                 att_state->aux_usage, &surf);
