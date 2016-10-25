@@ -960,25 +960,40 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
 
    case nir_op_ilt:
    case nir_op_ult:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_L);
-      break;
-
    case nir_op_ige:
    case nir_op_uge:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_GE);
-      break;
-
    case nir_op_ieq:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_Z);
-      break;
+   case nir_op_ine: {
+      fs_reg dest = result;
+      if (nir_src_bit_size(instr->src[0].src) > 32) {
+         dest = bld.vgrf(BRW_REGISTER_TYPE_UQ, 1);
+      }
 
-   case nir_op_ine:
-      assert(nir_dest_bit_size(instr->dest.dest) < 64);
-      bld.CMP(result, op[0], op[1], BRW_CONDITIONAL_NZ);
+      brw_conditional_mod cond;
+      switch (instr->op) {
+      case nir_op_ilt:
+      case nir_op_ult:
+         cond = BRW_CONDITIONAL_L;
+         break;
+      case nir_op_ige:
+      case nir_op_uge:
+         cond = BRW_CONDITIONAL_GE;
+         break;
+      case nir_op_ieq:
+         cond = BRW_CONDITIONAL_Z;
+         break;
+      case nir_op_ine:
+         cond = BRW_CONDITIONAL_NZ;
+         break;
+      default:
+         unreachable("bad opcode");
+      }
+      bld.CMP(dest, op[0], op[1], cond);
+      if (nir_src_bit_size(instr->src[0].src) > 32) {
+         bld.MOV(result, subscript(dest, BRW_REGISTER_TYPE_UD, 0));
+      }
       break;
+   }
 
    case nir_op_inot:
       if (devinfo->gen >= 8) {
