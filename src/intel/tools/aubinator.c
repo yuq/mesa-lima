@@ -974,7 +974,6 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK):
       payload_size = p[4];
-      handle_trace_block(spec, p);
       break;
    default:
       break;
