@@ -2246,19 +2246,11 @@ void radv_CmdPipelineBarrier(
 	}
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
-		RADV_FROM_HANDLE(radv_image, image, pImageMemoryBarriers[i].image);
 		src_flags |= pImageMemoryBarriers[i].srcAccessMask;
 		dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
-
-		radv_handle_image_transition(cmd_buffer, image,
-					     pImageMemoryBarriers[i].oldLayout,
-					     pImageMemoryBarriers[i].newLayout,
-					     pImageMemoryBarriers[i].subresourceRange,
-					     0);
 	}
 
 	enum radv_cmd_flush_bits flush_bits = 0;
-
 	for_each_bit(b, src_flags) {
 		switch ((VkAccessFlagBits)(1 << b)) {
 		case VK_ACCESS_SHADER_WRITE_BIT:
@@ -2277,6 +2269,18 @@ void radv_CmdPipelineBarrier(
 			break;
 		}
 	}
+	cmd_buffer->state.flush_bits |= flush_bits;
+
+	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
+		RADV_FROM_HANDLE(radv_image, image, pImageMemoryBarriers[i].image);
+		radv_handle_image_transition(cmd_buffer, image,
+					     pImageMemoryBarriers[i].oldLayout,
+					     pImageMemoryBarriers[i].newLayout,
+					     pImageMemoryBarriers[i].subresourceRange,
+					     0);
+	}
+
+	flush_bits = 0;
 
 	for_each_bit(b, dst_flags) {
 		switch ((VkAccessFlagBits)(1 << b)) {
