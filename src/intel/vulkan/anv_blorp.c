@@ -1194,50 +1194,129 @@ void anv_CmdResolveImage(
    blorp_batch_finish(&batch);
 }
 
+static void
+ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
+                       struct blorp_batch *batch,
+                       uint32_t att)
+{
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
+   struct anv_attachment_state *att_state =
+      &cmd_buffer->state.attachments[att];
+
+   assert(att_state->aux_usage != ISL_AUX_USAGE_CCS_D);
+   if (att_state->aux_usage != ISL_AUX_USAGE_CCS_E)
+      return; /* Nothing to resolve */
+
+   struct anv_render_pass *pass = cmd_buffer->state.pass;
+   struct anv_subpass *subpass = cmd_buffer->state.subpass;
+   unsigned subpass_idx = subpass - pass->subpasses;
+   assert(subpass_idx < pass->subpass_count);
+
+   /* Scan forward to see what all ways this attachment will be used.
+    * Ideally, we would like to resolve in the same subpass as the last write
+    * of a particular attachment.  That way we only resolve once but it's
+    * still hot in the cache.
+    */
+   for (uint32_t s = subpass_idx + 1; s < pass->subpass_count; s++) {
+      enum anv_subpass_usage usage = pass->attachments[att].subpass_usage[s];
+
+      if (usage & (ANV_SUBPASS_USAGE_DRAW | ANV_SUBPASS_USAGE_RESOLVE_DST)) {
+         /* We found another subpass that draws to this attachment.  We'll
+          * wait to resolve until then.
+          */
+         return;
+      }
+   }
+
+   struct anv_image_view *iview = fb->attachments[att];
+   const struct anv_image *image = iview->image;
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT, &surf);
+   surf.aux_surf = &image->aux_surface.isl;
+   surf.aux_addr = (struct blorp_address) {
+      .buffer = image->bo,
+      .offset = image->offset + image->aux_surface.offset,
+   };
+   surf.aux_usage = att_state->aux_usage;
+
+   for (uint32_t layer = 0; layer < fb->layers; layer++) {
+      blorp_ccs_resolve(batch, &surf,
+                        iview->isl.base_level,
+                        iview->isl.base_array_layer + layer,
+                        iview->isl.format,
+                        BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
+   }
+}
+
 void
 anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
 
-   if (!subpass->has_resolve)
-      return;
 
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
 
+   /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
+    *
+    *    "When performing a render target resolve, PIPE_CONTROL with end of
+    *    pipe sync must be delivered."
+    */
+   cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
+
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
-      uint32_t src_att = subpass->color_attachments[i];
-      uint32_t dst_att = subpass->resolve_attachments[i];
+      ccs_resolve_attachment(cmd_buffer, &batch,
+                             subpass->color_attachments[i]);
+   }
 
-      if (dst_att == VK_ATTACHMENT_UNUSED)
-         continue;
+   if (subpass->has_resolve) {
+      for (uint32_t i = 0; i < subpass->color_count; ++i) {
+         uint32_t src_att = subpass->color_attachments[i];
+         uint32_t dst_att = subpass->resolve_attachments[i];
 
-      if (cmd_buffer->state.attachments[dst_att].pending_clear_aspects) {
-         /* From the Vulkan 1.0 spec:
+         if (dst_att == VK_ATTACHMENT_UNUSED)
+            continue;
+
+         if (cmd_buffer->state.attachments[dst_att].pending_clear_aspects) {
+            /* From the Vulkan 1.0 spec:
+             *
+             *    If the first use of an attachment in a render pass is as a
+             *    resolve attachment, then the loadOp is effectively ignored
+             *    as the resolve is guaranteed to overwrite all pixels in the
+             *    render area.
+             */
+            cmd_buffer->state.attachments[dst_att].pending_clear_aspects = 0;
+         }
+
+         struct anv_image_view *src_iview = fb->attachments[src_att];
+         struct anv_image_view *dst_iview = fb->attachments[dst_att];
+
+         const VkRect2D render_area = cmd_buffer->state.render_area;
+
+         assert(src_iview->aspect_mask == dst_iview->aspect_mask);
+         resolve_image(&batch, src_iview->image,
+                       src_iview->isl.base_level,
+                       src_iview->isl.base_array_layer,
+                       dst_iview->image,
+                       dst_iview->isl.base_level,
+                       dst_iview->isl.base_array_layer,
+                       src_iview->aspect_mask,
+                       render_area.offset.x, render_area.offset.y,
+                       render_area.offset.x, render_area.offset.y,
+                       render_area.extent.width, render_area.extent.height);
+
+         /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
           *
-          *    If the first use of an attachment in a render pass is as a
-          *    resolve attachment, then the loadOp is effectively ignored
-          *    as the resolve is guaranteed to overwrite all pixels in the
-          *    render area.
+          *    "When performing a render target resolve, PIPE_CONTROL with end
+          *    of pipe sync must be delivered."
           */
-         cmd_buffer->state.attachments[dst_att].pending_clear_aspects = 0;
+         cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
+
+         ccs_resolve_attachment(cmd_buffer, &batch, dst_att);
       }
-
-      struct anv_image_view *src_iview = fb->attachments[src_att];
-      struct anv_image_view *dst_iview = fb->attachments[dst_att];
-
-      const VkRect2D render_area = cmd_buffer->state.render_area;
-
-      assert(src_iview->aspect_mask == dst_iview->aspect_mask);
-      resolve_image(&batch, src_iview->image,
-                    src_iview->isl.base_level, src_iview->isl.base_array_layer,
-                    dst_iview->image,
-                    dst_iview->isl.base_level, dst_iview->isl.base_array_layer,
-                    src_iview->aspect_mask,
-                    render_area.offset.x, render_area.offset.y,
-                    render_area.offset.x, render_area.offset.y,
-                    render_area.extent.width, render_area.extent.height);
    }
 
    blorp_batch_finish(&batch);

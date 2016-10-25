@@ -176,22 +176,31 @@ make_surface(const struct anv_device *dev,
 
    /* Add a HiZ surface to a depth buffer that will be used for rendering.
     */
-   if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT &&
-       (image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-
+   if (aspect == VK_IMAGE_ASPECT_DEPTH_BIT) {
       /* Allow the user to control HiZ enabling. Disable by default on gen7
        * because resolves are not currently implemented pre-BDW.
        */
-      if (!env_var_as_boolean("INTEL_VK_HIZ", dev->info.gen >= 8)) {
+      if (!(image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+         /* It will never be used as an attachment, HiZ is pointless. */
+      } else if (!env_var_as_boolean("INTEL_VK_HIZ", dev->info.gen >= 8)) {
          anv_finishme("Implement gen7 HiZ");
       } else if (vk_info->mipLevels > 1) {
          anv_finishme("Test multi-LOD HiZ");
       } else if (dev->info.gen == 8 && vk_info->samples > 1) {
          anv_finishme("Test gen8 multisampled HiZ");
       } else {
+         assert(image->aux_surface.isl.size == 0);
          isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
                                &image->aux_surface.isl);
          add_surface(image, &image->aux_surface);
+      }
+   } else if (aspect == VK_IMAGE_ASPECT_COLOR_BIT && vk_info->samples == 1) {
+      if (dev->info.gen >= 9 && !unlikely(INTEL_DEBUG & DEBUG_NO_RBC)) {
+         assert(image->aux_surface.isl.size == 0);
+         ok = isl_surf_get_ccs_surf(&dev->isl_dev, &anv_surf->isl,
+                                    &image->aux_surface.isl);
+         if (ok)
+            add_surface(image, &image->aux_surface);
       }
    }
 

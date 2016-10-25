@@ -165,6 +165,7 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 static void
 add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
                       const struct anv_image_view *iview,
+                      enum isl_aux_usage aux_usage,
                       struct anv_state state)
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
@@ -172,6 +173,41 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
    anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
                       state.offset + isl_dev->ss.addr_offset,
                       iview->bo, iview->offset);
+
+   if (aux_usage != ISL_AUX_USAGE_NONE) {
+      uint32_t aux_offset = iview->offset + iview->image->aux_surface.offset;
+
+      /* On gen7 and prior, the bottom 12 bits of the MCS base address are
+       * used to store other information.  This should be ok, however, because
+       * surface buffer addresses are always 4K page alinged.
+       */
+      assert((aux_offset & 0xfff) == 0);
+      uint32_t *aux_addr_dw = state.map + isl_dev->ss.aux_addr_offset;
+      aux_offset += *aux_addr_dw & 0xfff;
+
+      anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
+                         state.offset + isl_dev->ss.aux_addr_offset,
+                         iview->bo, aux_offset);
+   }
+}
+
+static enum isl_aux_usage
+fb_attachment_get_aux_usage(struct anv_device *device,
+                            struct anv_framebuffer *fb,
+                            uint32_t attachment)
+{
+   struct anv_image_view *iview = fb->attachments[attachment];
+
+   if (iview->image->aux_surface.isl.size == 0)
+      return ISL_AUX_USAGE_NONE; /* No aux surface */
+
+   assert(iview->image->aux_surface.isl.usage & ISL_SURF_USAGE_CCS_BIT);
+
+   if (isl_format_supports_lossless_compression(&device->info,
+                                                iview->isl.format))
+      return ISL_AUX_USAGE_CCS_E;
+
+   return ISL_AUX_USAGE_NONE;
 }
 
 /**
@@ -293,16 +329,24 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          assert(iview->vk_format == att->format);
 
          if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
+            state->attachments[i].aux_usage =
+               fb_attachment_get_aux_usage(cmd_buffer->device, framebuffer, i);
+
             struct isl_view view = iview->isl;
             view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
             isl_surf_fill_state(isl_dev,
                                 state->attachments[i].color_rt_state.map,
                                 .surf = &iview->image->color_surface.isl,
                                 .view = &view,
+                                .aux_surf = &iview->image->aux_surface.isl,
+                                .aux_usage = state->attachments[i].aux_usage,
                                 .mocs = cmd_buffer->device->default_mocs);
 
             add_image_view_relocs(cmd_buffer, iview,
+                                  state->attachments[i].aux_usage,
                                   state->attachments[i].color_rt_state);
+         } else {
+            state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
          }
       }
 
@@ -901,13 +945,15 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          surface_state = desc->image_view->sampler_surface_state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, desc->image_view, surface_state);
+         add_image_view_relocs(cmd_buffer, desc->image_view,
+                               ISL_AUX_USAGE_NONE, surface_state);
          break;
 
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
          surface_state = desc->image_view->storage_surface_state;
          assert(surface_state.alloc_size);
-         add_image_view_relocs(cmd_buffer, desc->image_view, surface_state);
+         add_image_view_relocs(cmd_buffer, desc->image_view,
+                               ISL_AUX_USAGE_NONE, surface_state);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
