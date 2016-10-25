@@ -152,4 +152,7 @@ _mesa_is_multisample_enabled(const struct gl_context *ctx);
 extern bool
 _mesa_is_alpha_test_enabled(const struct gl_context *ctx);
 
+extern bool
+_mesa_is_alpha_to_coverage_enabled(const struct gl_context *ctx);
+
 #endif /* FRAMEBUFFER_H */
