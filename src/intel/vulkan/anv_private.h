@@ -1555,6 +1555,9 @@ struct anv_image {
       };
    };
 
+   /** The aux usage for this surface when outside a render pass */
+   enum isl_aux_usage aux_usage;
+
    struct anv_surface aux_surface;
 };
 

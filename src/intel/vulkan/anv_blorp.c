@@ -169,8 +169,12 @@ get_blorp_surf_for_anv_buffer(struct anv_device *device,
 static void
 get_blorp_surf_for_anv_image(const struct anv_image *image,
                              VkImageAspectFlags aspect,
+                             enum isl_aux_usage aux_usage,
                              struct blorp_surf *blorp_surf)
 {
+   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT)
+      aux_usage = ISL_AUX_USAGE_NONE;
+
    const struct anv_surface *surface =
       anv_image_get_surface_for_aspect_mask(image, aspect);
 
@@ -181,6 +185,15 @@ get_blorp_surf_for_anv_image(const struct anv_image *image,
          .offset = image->offset + surface->offset,
       },
    };
+
+   if (aux_usage != ISL_AUX_USAGE_NONE) {
+      blorp_surf->aux_surf = &image->aux_surface.isl,
+      blorp_surf->aux_addr = (struct blorp_address) {
+         .buffer = image->bo,
+         .offset = image->offset + image->aux_surface.offset,
+      };
+      blorp_surf->aux_usage = aux_usage;
+   }
 }
 
 void anv_CmdCopyImage(
@@ -232,8 +245,10 @@ void anv_CmdCopyImage(
          VkImageAspectFlagBits aspect = (1 << a);
 
          struct blorp_surf src_surf, dst_surf;
-         get_blorp_surf_for_anv_image(src_image, aspect, &src_surf);
-         get_blorp_surf_for_anv_image(dst_image, aspect, &dst_surf);
+         get_blorp_surf_for_anv_image(src_image, aspect, src_image->aux_usage,
+                                      &src_surf);
+         get_blorp_surf_for_anv_image(dst_image, aspect, dst_image->aux_usage,
+                                      &dst_surf);
 
          for (unsigned i = 0; i < layer_count; i++) {
             blorp_copy(&batch, &src_surf, pRegions[r].srcSubresource.mipLevel,
@@ -281,7 +296,8 @@ copy_buffer_to_image(struct anv_cmd_buffer *cmd_buffer,
    for (unsigned r = 0; r < regionCount; r++) {
       const VkImageAspectFlags aspect = pRegions[r].imageSubresource.aspectMask;
 
-      get_blorp_surf_for_anv_image(anv_image, aspect, &image.surf);
+      get_blorp_surf_for_anv_image(anv_image, aspect, anv_image->aux_usage,
+                                   &image.surf);
       image.offset =
          anv_sanitize_image_offset(anv_image->type, pRegions[r].imageOffset);
       image.level = pRegions[r].imageSubresource.mipLevel;
@@ -425,8 +441,10 @@ void anv_CmdBlitImage(
       const VkImageSubresourceLayers *src_res = &pRegions[r].srcSubresource;
       const VkImageSubresourceLayers *dst_res = &pRegions[r].dstSubresource;
 
-      get_blorp_surf_for_anv_image(src_image, src_res->aspectMask, &src);
-      get_blorp_surf_for_anv_image(dst_image, dst_res->aspectMask, &dst);
+      get_blorp_surf_for_anv_image(src_image, src_res->aspectMask,
+                                   src_image->aux_usage, &src);
+      get_blorp_surf_for_anv_image(dst_image, dst_res->aspectMask,
+                                   dst_image->aux_usage, &dst);
 
       struct anv_format src_format =
          anv_get_format(&cmd_buffer->device->info, src_image->vk_format,
@@ -788,7 +806,8 @@ void anv_CmdClearColorImage(
    memcpy(clear_color.u32, pColor->uint32, sizeof(pColor->uint32));
 
    struct blorp_surf surf;
-   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT, &surf);
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                image->aux_usage, &surf);
 
    for (unsigned r = 0; r < rangeCount; r++) {
       if (pRanges[r].aspectMask == 0)
@@ -841,14 +860,14 @@ void anv_CmdClearDepthStencilImage(
    struct blorp_surf depth, stencil;
    if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
       get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_DEPTH_BIT,
-                                   &depth);
+                                   image->aux_usage, &depth);
    } else {
       memset(&depth, 0, sizeof(depth));
    }
 
    if (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT) {
       get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_STENCIL_BIT,
-                                   &stencil);
+                                   ISL_AUX_USAGE_NONE, &stencil);
    } else {
       memset(&stencil, 0, sizeof(stencil));
    }
@@ -1140,8 +1159,10 @@ resolve_image(struct blorp_batch *batch,
       VkImageAspectFlagBits aspect = 1 << a;
 
       struct blorp_surf src_surf, dst_surf;
-      get_blorp_surf_for_anv_image(src_image, aspect, &src_surf);
-      get_blorp_surf_for_anv_image(dst_image, aspect, &dst_surf);
+      get_blorp_surf_for_anv_image(src_image, aspect,
+                                   src_image->aux_usage, &src_surf);
+      get_blorp_surf_for_anv_image(dst_image, aspect,
+                                   dst_image->aux_usage, &dst_surf);
 
       blorp_blit(batch,
                  &src_surf, src_level, src_layer,
@@ -1233,13 +1254,8 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
 
    struct blorp_surf surf;
-   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT, &surf);
-   surf.aux_surf = &image->aux_surface.isl;
-   surf.aux_addr = (struct blorp_address) {
-      .buffer = image->bo,
-      .offset = image->offset + image->aux_surface.offset,
-   };
-   surf.aux_usage = att_state->aux_usage;
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                att_state->aux_usage, &surf);
 
    for (uint32_t layer = 0; layer < fb->layers; layer++) {
       blorp_ccs_resolve(batch, &surf,

@@ -946,14 +946,16 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          surface_state = desc->image_view->sampler_surface_state;
          assert(surface_state.alloc_size);
          add_image_view_relocs(cmd_buffer, desc->image_view,
-                               ISL_AUX_USAGE_NONE, surface_state);
+                               desc->image_view->image->aux_usage,
+                               surface_state);
          break;
 
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
          surface_state = desc->image_view->storage_surface_state;
          assert(surface_state.alloc_size);
          add_image_view_relocs(cmd_buffer, desc->image_view,
-                               ISL_AUX_USAGE_NONE, surface_state);
+                               desc->image_view->image->aux_usage,
+                               surface_state);
 
          struct brw_image_param *image_param =
             &cmd_buffer->state.push_constants[stage]->images[image++];
