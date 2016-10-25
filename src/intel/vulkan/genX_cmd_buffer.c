@@ -151,6 +151,17 @@ genX(cmd_buffer_emit_state_base_address)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+static void
+add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
+                        struct anv_state state,
+                        struct anv_bo *bo, uint32_t offset)
+{
+   const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
+
+   anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
+                      state.offset + isl_dev->ss.addr_offset, bo, offset);
+}
+
 /**
  * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
  */
@@ -278,7 +289,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                 .view = &view,
                                 .mocs = cmd_buffer->device->default_mocs);
 
-            anv_cmd_buffer_add_surface_state_reloc(cmd_buffer,
+            add_surface_state_reloc(cmd_buffer,
                state->attachments[i].color_rt_state, iview->bo, iview->offset);
          }
       }
@@ -827,8 +838,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                     format, bo_offset, 12, 1);
 
       bt_map[0] = surface_state.offset + state_offset;
-      anv_cmd_buffer_add_surface_state_reloc(cmd_buffer, surface_state,
-                                             bo, bo_offset);
+      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
 
    if (map->surface_count == 0)
@@ -929,8 +939,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
       }
 
       bt_map[bias + s] = surface_state.offset + state_offset;
-      anv_cmd_buffer_add_surface_state_reloc(cmd_buffer, surface_state,
-                                             bo, bo_offset);
+      add_surface_state_reloc(cmd_buffer, surface_state, bo, bo_offset);
    }
    assert(image == map->image_count);
 

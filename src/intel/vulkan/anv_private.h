@@ -1245,17 +1245,6 @@ struct anv_state
 anv_cmd_buffer_alloc_dynamic_state(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t size, uint32_t alignment);
 
-static inline void
-anv_cmd_buffer_add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
-                                       struct anv_state state,
-                                       struct anv_bo *bo, uint32_t offset)
-{
-   const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
-
-   anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                      state.offset + isl_dev->ss.addr_offset, bo, offset);
-}
-
 VkResult
 anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer);
 
