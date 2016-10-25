@@ -44,13 +44,6 @@ enum {
    BLORP_NUM_BT_ENTRIES
 };
 
-enum blorp_fast_clear_op {
-   BLORP_FAST_CLEAR_OP_NONE = 0,
-   BLORP_FAST_CLEAR_OP_CLEAR,
-   BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL,
-   BLORP_FAST_CLEAR_OP_RESOLVE_FULL,
-};
-
 struct brw_blorp_surface_info
 {
    bool enabled;

@@ -543,7 +543,8 @@ blorp_clear_attachments(struct blorp_batch *batch,
 void
 blorp_ccs_resolve(struct blorp_batch *batch,
                   struct blorp_surf *surf, uint32_t level, uint32_t layer,
-                  enum isl_format format)
+                  enum isl_format format,
+                  enum blorp_fast_clear_op resolve_op)
 {
    struct blorp_params params;
    blorp_params_init(&params);
@@ -586,14 +587,13 @@ blorp_ccs_resolve(struct blorp_batch *batch,
    params.y1 = ALIGN(params.y1, y_scaledown) / y_scaledown;
 
    if (batch->blorp->isl_dev->info->gen >= 9) {
-      if (params.dst.aux_usage == ISL_AUX_USAGE_CCS_E)
-         params.fast_clear_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
-      else
-         params.fast_clear_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+      assert(resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_FULL ||
+             resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL);
    } else {
       /* Broadwell and earlier do not have a partial resolve */
-      params.fast_clear_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+      assert(resolve_op == BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
    }
+   params.fast_clear_op = resolve_op;
 
    /* Note: there is no need to initialize push constants because it doesn't
     * matter what data gets dispatched to the render target.  However, we must

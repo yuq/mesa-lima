@@ -943,10 +943,23 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
    unsigned level = 0;
    blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
 
+   enum blorp_fast_clear_op resolve_op;
+   if (brw->gen >= 9) {
+      if (surf.aux_usage == ISL_AUX_USAGE_CCS_E)
+         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+      else
+         resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_PARTIAL;
+   } else {
+      assert(surf.aux_usage == ISL_AUX_USAGE_CCS_D);
+      /* Broadwell and earlier do not have a partial resolve */
+      resolve_op = BLORP_FAST_CLEAR_OP_RESOLVE_FULL;
+   }
+
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
    blorp_ccs_resolve(&batch, &surf, 0 /* level */, 0 /* layer */,
-                     brw_blorp_to_isl_format(brw, format, true));
+                     brw_blorp_to_isl_format(brw, format, true),
+                     resolve_op);
    blorp_batch_finish(&batch);
 
    mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_RESOLVED;
