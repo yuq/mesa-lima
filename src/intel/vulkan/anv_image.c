@@ -297,7 +297,7 @@ VkResult anv_BindImageMemory(
       image->offset = 0;
    }
 
-   if (anv_image_has_hiz(image)) {
+   if (image->aux_surface.isl.size > 0) {
 
       /* The offset and size must be a multiple of 4K or else the
        * anv_gem_mmap call below will return NULL.
@@ -305,9 +305,11 @@ VkResult anv_BindImageMemory(
       assert((image->offset + image->aux_surface.offset) % 4096 == 0);
       assert(image->aux_surface.isl.size % 4096 == 0);
 
-      /* HiZ surfaces need to have their memory cleared to 0 before they
-       * can be used.  If we let it have garbage data, it can cause GPU
-       * hangs on some hardware.
+      /* Auxiliary surfaces need to have their memory cleared to 0 before they
+       * can be used.  For CCS surfaces, this puts them in the "resolved"
+       * state so they can be used with CCS enabled before we ever touch it
+       * from the GPU.  For HiZ, we need something valid or else we may get
+       * GPU hangs on some hardware and 0 works fine.
        */
       void *map = anv_gem_mmap(device, image->bo->gem_handle,
                                image->offset + image->aux_surface.offset,
