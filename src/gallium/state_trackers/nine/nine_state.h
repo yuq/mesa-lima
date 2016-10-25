@@ -323,6 +323,9 @@ struct nine_state_sw_internal {
     struct pipe_transfer *transfers_so[4];
 };
 
+struct nine_clipplane {
+    float plane[4];
+};
 /* map D3DRS -> NINE_STATE_x
  */
 extern const uint32_t nine_render_state_group[NINED3DRS_COUNT];
@@ -459,7 +462,7 @@ nine_context_set_depth_stencil(struct NineDevice9 *device,
 void
 nine_context_set_clip_plane(struct NineDevice9 *device,
                             DWORD Index,
-                            const float *pPlane);
+                            struct nine_clipplane *pPlane);
 
 void
 nine_context_set_swvp(struct NineDevice9 *device,

@@ -1676,7 +1676,7 @@ nine_context_set_texture_stage_state(struct NineDevice9 *device,
 void
 nine_context_set_clip_plane(struct NineDevice9 *device,
                             DWORD Index,
-                            const float *pPlane)
+                            struct nine_clipplane *pPlane)
 {
     struct nine_context *context = &device->context;
 
@@ -2052,7 +2052,7 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
     if (src->changed.ucp)
         for (i = 0; i < PIPE_MAX_CLIP_PLANES; ++i)
             if (src->changed.ucp & (1 << i))
-                nine_context_set_clip_plane(device, i, &src->clip.ucp[i][0]);
+                nine_context_set_clip_plane(device, i, (struct nine_clipplane*)&src->clip.ucp[i][0]);
 
     if (!(src->changed.group & NINE_STATE_FF))
         return;

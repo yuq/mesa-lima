@@ -2188,7 +2188,7 @@ NineDevice9_SetClipPlane( struct NineDevice9 *This,
     if (unlikely(This->is_recording))
         state->changed.ucp |= 1 << Index;
     else
-        nine_context_set_clip_plane(This, Index, pPlane);
+        nine_context_set_clip_plane(This, Index, (struct nine_clipplane *)pPlane);
 
     return D3D_OK;
 }
