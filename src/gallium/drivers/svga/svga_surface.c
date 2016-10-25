@@ -461,7 +461,8 @@ svga_validate_surface_view(struct svga_context *svga, struct svga_surface *s)
           * svga_validate_pipe_sampler_view().
           */
          if (view_format == SVGA3D_B8G8R8A8_UNORM &&
-             stex->key.format == SVGA3D_B8G8R8X8_TYPELESS) {
+             (stex->key.format == SVGA3D_B8G8R8X8_UNORM ||
+              stex->key.format == SVGA3D_B8G8R8X8_TYPELESS)) {
             view_format = SVGA3D_B8G8R8X8_UNORM;
          }
 
