@@ -231,6 +231,7 @@ EXT(EXT_primitive_bounding_box              , OES_primitive_bounding_box        
 EXT(EXT_provoking_vertex                    , EXT_provoking_vertex                   , GLL, GLC,  x ,  x , 2009)
 EXT(EXT_read_format_bgra                    , dummy_true                             ,  x ,  x , ES1, ES2, 2009)
 EXT(EXT_rescale_normal                      , dummy_true                             , GLL,  x ,  x ,  x , 1997)
+EXT(EXT_robustness                          , KHR_robustness                         ,  x,   x,   x , ES2, 2011)
 EXT(EXT_secondary_color                     , dummy_true                             , GLL,  x ,  x ,  x , 1999)
 EXT(EXT_separate_shader_objects             , dummy_true                             ,  x ,  x ,  x , ES2, 2013)
 EXT(EXT_separate_specular_color             , dummy_true                             , GLL,  x ,  x ,  x , 1997)
