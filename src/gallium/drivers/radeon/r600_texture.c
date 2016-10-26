@@ -53,8 +53,7 @@ bool r600_prepare_for_dma_blit(struct r600_common_context *rctx,
 	if (!rctx->dma.cs)
 		return false;
 
-	if (util_format_get_blocksizebits(rdst->resource.b.b.format) !=
-	    util_format_get_blocksizebits(rsrc->resource.b.b.format))
+	if (rdst->surface.bpe != rsrc->surface.bpe)
 		return false;
 
 	/* MSAA: Blits don't exist in the real world. */
@@ -181,12 +180,10 @@ static void r600_copy_from_staging_texture(struct pipe_context *ctx, struct r600
 static unsigned r600_texture_get_offset(struct r600_texture *rtex, unsigned level,
 					const struct pipe_box *box)
 {
-	enum pipe_format format = rtex->resource.b.b.format;
-
 	return rtex->surface.level[level].offset +
 	       box->z * rtex->surface.level[level].slice_size +
-	       box->y / util_format_get_blockheight(format) * rtex->surface.level[level].pitch_bytes +
-	       box->x / util_format_get_blockwidth(format) * util_format_get_blocksize(format);
+	       box->y / rtex->surface.blk_h * rtex->surface.level[level].pitch_bytes +
+	       box->x / rtex->surface.blk_w * rtex->surface.bpe;
 }
 
 static int r600_init_surface(struct r600_common_screen *rscreen,
@@ -2195,7 +2192,7 @@ static void evergreen_set_clear_color(struct r600_texture *rtex,
 
 	memset(&uc, 0, sizeof(uc));
 
-	if (util_format_get_blocksizebits(surface_format) == 128) {
+	if (rtex->surface.bpe == 16) {
 		/* DCC fast clear only:
 		 *   CLEAR_WORD0 = R = G = B
 		 *   CLEAR_WORD1 = A
@@ -2502,7 +2499,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			tex->separate_dcc_dirty = true;
 		} else {
 			/* 128-bit formats are unusupported */
-			if (util_format_get_blocksizebits(fb->cbufs[i]->format) > 64) {
+			if (tex->surface.bpe > 8) {
 				continue;
 			}
 
