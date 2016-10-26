@@ -1190,6 +1190,23 @@ nine_context_set_sampler_state(struct NineDevice9 *device,
     context->changed.sampler[Sampler] |= 1 << Type;
 }
 
+static void
+nine_context_set_stream_source_apply(struct NineDevice9 *device,
+                                    UINT StreamNumber,
+                                    struct pipe_resource *res,
+                                    UINT OffsetInBytes,
+                                    UINT Stride)
+{
+    struct nine_context *context = &device->context;
+    const unsigned i = StreamNumber;
+
+    context->vtxbuf[i].stride = Stride;
+    context->vtxbuf[i].buffer_offset = OffsetInBytes;
+    pipe_resource_reference(&context->vtxbuf[i].buffer, res);
+
+    context->changed.vtxbuf |= 1 << StreamNumber;
+}
+
 void
 nine_context_set_stream_source(struct NineDevice9 *device,
                                UINT StreamNumber,
@@ -1197,17 +1214,16 @@ nine_context_set_stream_source(struct NineDevice9 *device,
                                UINT OffsetInBytes,
                                UINT Stride)
 {
-    struct nine_context *context = &device->context;
-    const unsigned i = StreamNumber;
+    struct pipe_resource *res = NULL;
 
-    context->changed.vtxbuf |= 1 << StreamNumber;
+    if (pVBuf9)
+        res = NineVertexBuffer9_GetResource(pVBuf9);
+    /* in the future when there is internal offset, add it
+     * to OffsetInBytes */
 
-    if (pVBuf9) {
-        context->vtxbuf[i].stride = Stride;
-        context->vtxbuf[i].buffer_offset = OffsetInBytes;
-    }
-    pipe_resource_reference(&context->vtxbuf[i].buffer,
-                            pVBuf9 ? NineVertexBuffer9_GetResource(pVBuf9) : NULL);
+    nine_context_set_stream_source_apply(device, StreamNumber,
+                                         res, OffsetInBytes,
+                                         Stride);
 }
 
 void
