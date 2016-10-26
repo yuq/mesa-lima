@@ -1708,32 +1708,47 @@ blorp_blit(struct blorp_batch *batch,
 }
 
 static enum isl_format
-get_copy_format_for_bpb(unsigned bpb)
+get_copy_format_for_bpb(const struct isl_device *isl_dev, unsigned bpb)
 {
-   /* The choice of UNORM and UINT formats is very intentional here.  Most of
-    * the time, we want to use a UINT format to avoid any rounding error in
-    * the blit.  For stencil blits, R8_UINT is required by the hardware.
+   /* The choice of UNORM and UINT formats is very intentional here.  Most
+    * of the time, we want to use a UINT format to avoid any rounding error
+    * in the blit.  For stencil blits, R8_UINT is required by the hardware.
     * (It's the only format allowed in conjunction with W-tiling.)  Also we
     * intentionally use the 4-channel formats whenever we can.  This is so
-    * that, when we do a RGB <-> RGBX copy, the two formats will line up even
-    * though one of them is 3/4 the size of the other.  The choice of UNORM
-    * vs. UINT is also very intentional because Haswell doesn't handle 8 or
-    * 16-bit RGB UINT formats at all so we have to use UNORM there.
+    * that, when we do a RGB <-> RGBX copy, the two formats will line up
+    * even though one of them is 3/4 the size of the other.  The choice of
+    * UNORM vs. UINT is also very intentional because we don't have 8 or
+    * 16-bit RGB UINT formats until Sky Lake so we have to use UNORM there.
     * Fortunately, the only time we should ever use two different formats in
     * the table below is for RGB -> RGBA blits and so we will never have any
     * UNORM/UINT mismatch.
     */
-   switch (bpb) {
-   case 8:  return ISL_FORMAT_R8_UINT;
-   case 16: return ISL_FORMAT_R8G8_UINT;
-   case 24: return ISL_FORMAT_R8G8B8_UNORM;
-   case 32: return ISL_FORMAT_R8G8B8A8_UNORM;
-   case 48: return ISL_FORMAT_R16G16B16_UNORM;
-   case 64: return ISL_FORMAT_R16G16B16A16_UNORM;
-   case 96: return ISL_FORMAT_R32G32B32_UINT;
-   case 128:return ISL_FORMAT_R32G32B32A32_UINT;
-   default:
-      unreachable("Unknown format bpb");
+   if (ISL_DEV_GEN(isl_dev) >= 9) {
+      switch (bpb) {
+      case 8:  return ISL_FORMAT_R8_UINT;
+      case 16: return ISL_FORMAT_R8G8_UINT;
+      case 24: return ISL_FORMAT_R8G8B8_UINT;
+      case 32: return ISL_FORMAT_R8G8B8A8_UINT;
+      case 48: return ISL_FORMAT_R16G16B16_UINT;
+      case 64: return ISL_FORMAT_R16G16B16A16_UINT;
+      case 96: return ISL_FORMAT_R32G32B32_UINT;
+      case 128:return ISL_FORMAT_R32G32B32A32_UINT;
+      default:
+         unreachable("Unknown format bpb");
+      }
+   } else {
+      switch (bpb) {
+      case 8:  return ISL_FORMAT_R8_UINT;
+      case 16: return ISL_FORMAT_R8G8_UINT;
+      case 24: return ISL_FORMAT_R8G8B8_UNORM;
+      case 32: return ISL_FORMAT_R8G8B8A8_UNORM;
+      case 48: return ISL_FORMAT_R16G16B16_UNORM;
+      case 64: return ISL_FORMAT_R16G16B16A16_UNORM;
+      case 96: return ISL_FORMAT_R32G32B32_UINT;
+      case 128:return ISL_FORMAT_R32G32B32A32_UINT;
+      default:
+         unreachable("Unknown format bpb");
+      }
    }
 }
 
@@ -1789,7 +1804,7 @@ surf_convert_to_uncompressed(const struct isl_device *isl_dev,
    info->tile_y_sa /= fmtl->bh;
 
    /* It's now an uncompressed surface so we need an uncompressed format */
-   info->surf.format = get_copy_format_for_bpb(fmtl->bpb);
+   info->surf.format = get_copy_format_for_bpb(isl_dev, fmtl->bpb);
 }
 
 static void
@@ -1809,8 +1824,14 @@ surf_fake_rgb_with_red(const struct isl_device *isl_dev,
    case ISL_FORMAT_R8G8B8_UNORM:
       red_format = ISL_FORMAT_R8_UNORM;
       break;
+   case ISL_FORMAT_R8G8B8_UINT:
+      red_format = ISL_FORMAT_R8_UINT;
+      break;
    case ISL_FORMAT_R16G16B16_UNORM:
       red_format = ISL_FORMAT_R16_UNORM;
+      break;
+   case ISL_FORMAT_R16G16B16_UINT:
+      red_format = ISL_FORMAT_R16_UINT;
       break;
    case ISL_FORMAT_R32G32B32_UINT:
       red_format = ISL_FORMAT_R32_UINT;
@@ -1836,6 +1857,7 @@ blorp_copy(struct blorp_batch *batch,
            uint32_t dst_x, uint32_t dst_y,
            uint32_t src_width, uint32_t src_height)
 {
+   const struct isl_device *isl_dev = batch->blorp->isl_dev;
    struct blorp_params params;
 
    if (src_width == 0 || src_height == 0)
@@ -1856,14 +1878,14 @@ blorp_copy(struct blorp_batch *batch,
    const struct isl_format_layout *dst_fmtl =
       isl_format_get_layout(params.dst.surf.format);
 
-   params.src.view.format = get_copy_format_for_bpb(src_fmtl->bpb);
+   params.src.view.format = get_copy_format_for_bpb(isl_dev, src_fmtl->bpb);
    if (src_fmtl->bw > 1 || src_fmtl->bh > 1) {
       surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.src,
                                    &src_x, &src_y, &src_width, &src_height);
       wm_prog_key.need_src_offset = true;
    }
 
-   params.dst.view.format = get_copy_format_for_bpb(dst_fmtl->bpb);
+   params.dst.view.format = get_copy_format_for_bpb(isl_dev, dst_fmtl->bpb);
    if (dst_fmtl->bw > 1 || dst_fmtl->bh > 1) {
       surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.dst,
                                    &dst_x, &dst_y, NULL, NULL);
