@@ -726,7 +726,7 @@ void
 CodeEmitterGK110::emitIMAD(const Instruction *i)
 {
    uint8_t addOp =
-      (i->src(2).mod.neg() << 1) | (i->src(0).mod.neg() ^ i->src(1).mod.neg());
+      i->src(2).mod.neg() | ((i->src(0).mod.neg() ^ i->src(1).mod.neg()) << 1);
 
    emitForm_21(i, 0x100, 0xa00);
 
