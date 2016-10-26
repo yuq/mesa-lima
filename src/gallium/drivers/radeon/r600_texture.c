@@ -177,14 +177,42 @@ static void r600_copy_from_staging_texture(struct pipe_context *ctx, struct r600
 		       src, 0, &sbox);
 }
 
-static unsigned r600_texture_get_offset(struct r600_texture *rtex, unsigned level,
-					const struct pipe_box *box)
+static unsigned r600_texture_get_offset(struct r600_common_screen *rscreen,
+					struct r600_texture *rtex, unsigned level,
+					const struct pipe_box *box,
+					unsigned *stride,
+					unsigned *layer_stride)
 {
-	return rtex->surface.u.legacy.level[level].offset +
-	       box->z * rtex->surface.u.legacy.level[level].slice_size +
-	       (box->y / rtex->surface.blk_h *
-		rtex->surface.u.legacy.level[level].nblk_x +
-		box->x / rtex->surface.blk_w) * rtex->surface.bpe;
+	if (rscreen->chip_class >= GFX9) {
+		*stride = rtex->surface.u.gfx9.surf_pitch * rtex->surface.bpe;
+		*layer_stride = rtex->surface.u.gfx9.surf_slice_size;
+
+		if (!box)
+			return 0;
+
+		/* Each texture is an array of slices. Each slice is an array
+		 * of mipmap levels. */
+		return box->z * rtex->surface.u.gfx9.surf_slice_size +
+		       ((rtex->surface.u.gfx9.surf_ymip_offset[level] +
+			 box->y / rtex->surface.blk_h) *
+			rtex->surface.u.gfx9.surf_pitch +
+			box->x / rtex->surface.blk_w) * rtex->surface.bpe;
+	} else {
+		*stride = rtex->surface.u.legacy.level[level].nblk_x *
+			  rtex->surface.bpe;
+		*layer_stride = rtex->surface.u.legacy.level[level].slice_size;
+
+		if (!box)
+			return rtex->surface.u.legacy.level[level].offset;
+
+		/* Each texture is an array of mipmap levels. Each level is
+		 * an array of slices. */
+		return rtex->surface.u.legacy.level[level].offset +
+		       box->z * rtex->surface.u.legacy.level[level].slice_size +
+		       (box->y / rtex->surface.blk_h *
+		        rtex->surface.u.legacy.level[level].nblk_x +
+		        box->x / rtex->surface.blk_w) * rtex->surface.bpe;
+	}
 }
 
 static int r600_init_surface(struct r600_common_screen *rscreen,
@@ -1662,8 +1690,12 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 							    0, 0, 0, box->depth, 0, 0);
 				pipe_resource_reference(&temp, NULL);
 			}
-		}
-		else {
+
+			/* Just get the strides. */
+			r600_texture_get_offset(rctx->screen, staging_depth, level, NULL,
+						&trans->transfer.stride,
+						&trans->transfer.layer_stride);
+		} else {
 			/* XXX: only readback the rectangle which is being mapped? */
 			/* XXX: when discard is true, no need to read back from depth texture */
 			if (!r600_init_flushed_depth_texture(ctx, texture, &staging_depth)) {
@@ -1677,12 +1709,12 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 						    box->z, box->z + box->depth - 1,
 						    0, 0);
 
-			offset = r600_texture_get_offset(staging_depth, level, box);
+			offset = r600_texture_get_offset(rctx->screen, staging_depth,
+							 level, box,
+							 &trans->transfer.stride,
+							 &trans->transfer.layer_stride);
 		}
 
-		trans->transfer.stride = staging_depth->surface.u.legacy.level[level].nblk_x *
-					 staging_depth->surface.bpe;
-		trans->transfer.layer_stride = staging_depth->surface.u.legacy.level[level].slice_size;
 		trans->staging = (struct r600_resource*)staging_depth;
 		buf = trans->staging;
 	} else if (use_staging_texture) {
@@ -1702,9 +1734,11 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 			return NULL;
 		}
 		trans->staging = &staging->resource;
-		trans->transfer.stride = staging->surface.u.legacy.level[0].nblk_x *
-					 staging->surface.bpe;
-		trans->transfer.layer_stride = staging->surface.u.legacy.level[0].slice_size;
+
+		/* Just get the strides. */
+		r600_texture_get_offset(rctx->screen, staging, 0, NULL,
+					&trans->transfer.stride,
+					&trans->transfer.layer_stride);
 
 		if (usage & PIPE_TRANSFER_READ)
 			r600_copy_to_staging_texture(ctx, trans);
@@ -1714,10 +1748,9 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		buf = trans->staging;
 	} else {
 		/* the resource is mapped directly */
-		trans->transfer.stride = rtex->surface.u.legacy.level[level].nblk_x *
-					 rtex->surface.bpe;
-		trans->transfer.layer_stride = rtex->surface.u.legacy.level[level].slice_size;
-		offset = r600_texture_get_offset(rtex, level, box);
+		offset = r600_texture_get_offset(rctx->screen, rtex, level, box,
+						 &trans->transfer.stride,
+						 &trans->transfer.layer_stride);
 		buf = &rtex->resource;
 	}
 
