@@ -665,7 +665,40 @@ gbm_dri_bo_get_handle_for_plane(struct gbm_bo *_bo, int plane)
 static uint32_t
 gbm_dri_bo_get_stride(struct gbm_bo *_bo, int plane)
 {
-   return _bo->stride;
+   struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
+   struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
+   __DRIimage *image;
+   int stride = 0;
+
+   if (!dri->image || dri->image->base.version < 11 || !dri->image->fromPlanar) {
+      /* Preserve legacy behavior if plane is 0 */
+      if (plane == 0)
+         return _bo->stride;
+
+      errno = ENOSYS;
+      return 0;
+   }
+
+   if (plane >= get_number_planes(dri, bo->image)) {
+      errno = EINVAL;
+      return 0;
+   }
+
+   if (bo->image == NULL) {
+      assert(plane == 0);
+      return _bo->stride;
+   }
+
+   image = dri->image->fromPlanar(bo->image, plane, NULL);
+   if (image) {
+      dri->image->queryImage(image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
+      dri->image->destroyImage(image);
+   } else {
+      assert(plane == 0);
+      dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_STRIDE, &stride);
+   }
+
+   return (uint32_t)stride;
 }
 
 static void

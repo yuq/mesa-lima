@@ -165,7 +165,20 @@ gbm_bo_get_height(struct gbm_bo *bo)
 GBM_EXPORT uint32_t
 gbm_bo_get_stride(struct gbm_bo *bo)
 {
-   return bo->gbm->bo_get_stride(bo, 0);
+   return gbm_bo_get_stride_for_plane(bo, 0);
+}
+
+/** Get the stride for the given plane
+ *
+ * \param bo The buffer object
+ * \param plane for which you want the stride
+ *
+ * \sa gbm_bo_get_stride()
+ */
+GBM_EXPORT uint32_t
+gbm_bo_get_stride_for_plane(struct gbm_bo *bo, int plane)
+{
+   return bo->gbm->bo_get_stride(bo, plane);
 }
 
 /** Get the format of the buffer object

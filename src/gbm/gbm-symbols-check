@@ -14,6 +14,7 @@ gbm_bo_unmap
 gbm_bo_get_width
 gbm_bo_get_height
 gbm_bo_get_stride
+gbm_bo_get_stride_for_plane
 gbm_bo_get_format
 gbm_bo_get_device
 gbm_bo_get_handle
