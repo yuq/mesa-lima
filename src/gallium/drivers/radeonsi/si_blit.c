@@ -22,7 +22,6 @@
  */
 
 #include "si_pipe.h"
-#include "sid.h"
 #include "util/u_format.h"
 #include "util/u_surface.h"
 
@@ -1065,7 +1064,7 @@ resolve_to_temp:
 		      R600_RESOURCE_FLAG_DISABLE_DCC;
 
 	/* The src and dst microtile modes must be the same. */
-	if (src->surface.micro_tile_mode == V_009910_ADDR_SURF_DISPLAY_MICRO_TILING)
+	if (src->surface.micro_tile_mode == RADEON_MICRO_MODE_DISPLAY)
 		templ.bind = PIPE_BIND_SCANOUT;
 	else
 		templ.bind = 0;

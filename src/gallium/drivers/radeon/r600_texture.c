@@ -2347,13 +2347,13 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 	 */
 	if (rscreen->chip_class >= CIK) {
 		switch (rtex->last_msaa_resolve_target_micro_mode) {
-		case 0: /* displayable */
+		case RADEON_MICRO_MODE_DISPLAY:
 			rtex->surface.tiling_index[0] = 10;
 			break;
-		case 1: /* thin */
+		case RADEON_MICRO_MODE_THIN:
 			rtex->surface.tiling_index[0] = 14;
 			break;
-		case 3: /* rotated */
+		case RADEON_MICRO_MODE_ROTATED:
 			rtex->surface.tiling_index[0] = 28;
 			break;
 		default: /* depth, thick */
@@ -2362,7 +2362,7 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 		}
 	} else { /* SI */
 		switch (rtex->last_msaa_resolve_target_micro_mode) {
-		case 0: /* displayable */
+		case RADEON_MICRO_MODE_DISPLAY:
 			switch (rtex->surface.bpe) {
 			case 1:
                             rtex->surface.tiling_index[0] = 10;
@@ -2375,7 +2375,7 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
                             break;
 			}
 			break;
-		case 1: /* thin */
+		case RADEON_MICRO_MODE_THIN:
 			switch (rtex->surface.bpe) {
 			case 1:
                                 rtex->surface.tiling_index[0] = 14;

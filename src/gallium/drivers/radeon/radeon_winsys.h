@@ -263,6 +263,14 @@ enum radeon_surf_mode {
     RADEON_SURF_MODE_2D = 3,
 };
 
+/* These are defined exactly like GB_TILE_MODEn.MICRO_TILE_MODE_NEW. */
+enum radeon_micro_mode {
+    RADEON_MICRO_MODE_DISPLAY = 0,
+    RADEON_MICRO_MODE_THIN = 1,
+    RADEON_MICRO_MODE_DEPTH = 2,
+    RADEON_MICRO_MODE_ROTATED = 3,
+};
+
 /* the first 16 bits are reserved for libdrm_radeon, don't use them */
 #define RADEON_SURF_SCANOUT                     (1 << 16)
 #define RADEON_SURF_ZBUFFER                     (1 << 17)
