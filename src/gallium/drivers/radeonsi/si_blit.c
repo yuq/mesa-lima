@@ -1012,7 +1012,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	    info->src.box.width == dst_width &&
 	    info->src.box.height == dst_height &&
 	    info->src.box.depth == 1 &&
-	    dst->surface.level[info->dst.level].mode >= RADEON_SURF_MODE_1D &&
+	    !dst->surface.is_linear &&
 	    (!dst->cmask.size || !dst->dirty_level_mask)) { /* dst cannot be fast-cleared */
 		/* Check the last constraint. */
 		if (src->surface.micro_tile_mode != dst->surface.micro_tile_mode) {
@@ -1116,8 +1116,7 @@ static void si_blit(struct pipe_context *ctx,
 	 * resource_copy_region can't do this yet, because dma_copy calls it
 	 * on failure (recursion).
 	 */
-	if (rdst->surface.level[info->dst.level].mode ==
-	    RADEON_SURF_MODE_LINEAR_ALIGNED &&
+	if (rdst->surface.is_linear &&
 	    sctx->b.dma_copy &&
 	    util_can_blit_via_copy_region(info, false)) {
 		sctx->b.dma_copy(ctx, info->dst.resource, info->dst.level,

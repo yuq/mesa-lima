@@ -294,6 +294,7 @@ struct radeon_surf {
      * the first level.
      */
     unsigned                    num_dcc_levels:4;
+    unsigned                    is_linear:1;
     uint32_t                    flags;
 
     /* These are return values. Some of them can be set by the caller, but

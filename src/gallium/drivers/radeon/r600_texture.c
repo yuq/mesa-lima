@@ -425,7 +425,7 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 		return;
 
 	if (rtex->resource.is_shared ||
-	    rtex->surface.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED)
+	    rtex->surface.is_linear)
 		return;
 
 	/* This fails with MSAA, depth, and compressed textures. */
@@ -1406,7 +1406,7 @@ static void r600_texture_invalidate_storage(struct r600_common_context *rctx,
 
 	/* There is no point in discarding depth and tiled buffers. */
 	assert(!rtex->is_depth);
-	assert(rtex->surface.level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED);
+	assert(rtex->surface.is_linear);
 
 	/* Reallocate the buffer in the same pipe_resource. */
 	r600_alloc_resource(rscreen, &rtex->resource);
@@ -1465,7 +1465,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		 * Use the staging texture for uploads if the underlying BO
 		 * is busy.
 		 */
-		if (rtex->surface.level[0].mode >= RADEON_SURF_MODE_1D)
+		if (!rtex->surface.is_linear)
 			use_staging_texture = true;
 		else if (usage & PIPE_TRANSFER_READ)
 			use_staging_texture = (rtex->resource.domains &
@@ -2446,7 +2446,7 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		}
 
 		/* only supported on tiled surfaces */
-		if (tex->surface.level[0].mode < RADEON_SURF_MODE_1D) {
+		if (tex->surface.is_linear) {
 			continue;
 		}
 

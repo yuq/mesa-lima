@@ -2360,7 +2360,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			sctx->framebuffer.compressed_cb_mask |= 1 << i;
 		}
 
-		if (surf->level_info->mode == RADEON_SURF_MODE_LINEAR_ALIGNED)
+		if (rtex->surface.is_linear)
 			sctx->framebuffer.any_dst_linear = true;
 
 		r600_context_add_resource_size(ctx, surf->base.texture);

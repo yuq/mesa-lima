@@ -566,6 +566,7 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
    if (surf->htile_size && tex->last_level)
 	   surf->htile_size *= 2;
 
+   surf->is_linear = surf->level[0].mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
    return 0;
 }
 
