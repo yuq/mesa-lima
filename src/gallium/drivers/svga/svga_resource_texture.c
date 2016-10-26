@@ -1072,17 +1072,14 @@ svga_texture_create(struct pipe_screen *screen,
       goto fail;
    }
 
-   /* The actual allocation is done with a typeless format.  Typeless
+   /* Use typeless formats for sRGB and depth resources.  Typeless
     * formats can be reinterpreted as other formats.  For example,
     * SVGA3D_R8G8B8A8_UNORM_TYPELESS can be interpreted as
     * SVGA3D_R8G8B8A8_UNORM_SRGB or SVGA3D_R8G8B8A8_UNORM.
-    * Do not use typeless formats for SHARED, DISPLAY_TARGET or SCANOUT
-    * buffers.
     */
-   if (svgascreen->sws->have_vgpu10
-       && ((bindings & (PIPE_BIND_SHARED |
-                        PIPE_BIND_DISPLAY_TARGET |
-                        PIPE_BIND_SCANOUT)) == 0)) {
+   if (svgascreen->sws->have_vgpu10 &&
+       (util_format_is_srgb(template->format) ||
+        format_has_depth(template->format))) {
       SVGA3dSurfaceFormat typeless = svga_typeless_format(tex->key.format);
       if (0) {
          debug_printf("Convert resource type %s -> %s (bind 0x%x)\n",
