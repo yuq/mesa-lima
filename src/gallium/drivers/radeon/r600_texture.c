@@ -2435,14 +2435,46 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 	    rtex->surface.micro_tile_mode == rtex->last_msaa_resolve_target_micro_mode)
 		return;
 
-	assert(rtex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
+	assert(rscreen->chip_class >= GFX9 ||
+	       rtex->surface.u.legacy.level[0].mode == RADEON_SURF_MODE_2D);
 	assert(rtex->resource.b.b.last_level == 0);
 
-	/* These magic numbers were copied from addrlib. It doesn't use any
-	 * definitions for them either. They are all 2D_TILED_THIN1 modes with
-	 * different bpp and micro tile mode.
-	 */
-	if (rscreen->chip_class >= CIK) {
+	if (rscreen->chip_class >= GFX9) {
+		/* 4K or larger tiles only. 0 is linear. 1-3 are 256B tiles. */
+		assert(rtex->surface.u.gfx9.surf.swizzle_mode >= 4);
+
+		/* If you do swizzle_mode % 4, you'll get:
+		 *   0 = Depth
+		 *   1 = Standard,
+		 *   2 = Displayable
+		 *   3 = Rotated
+		 *
+		 * Depth-sample order isn't allowed:
+		 */
+		assert(rtex->surface.u.gfx9.surf.swizzle_mode % 4 != 0);
+
+		switch (rtex->last_msaa_resolve_target_micro_mode) {
+		case RADEON_MICRO_MODE_DISPLAY:
+			rtex->surface.u.gfx9.surf.swizzle_mode &= ~0x3;
+			rtex->surface.u.gfx9.surf.swizzle_mode += 2; /* D */
+			break;
+		case RADEON_MICRO_MODE_THIN:
+			rtex->surface.u.gfx9.surf.swizzle_mode &= ~0x3;
+			rtex->surface.u.gfx9.surf.swizzle_mode += 1; /* S */
+			break;
+		case RADEON_MICRO_MODE_ROTATED:
+			rtex->surface.u.gfx9.surf.swizzle_mode &= ~0x3;
+			rtex->surface.u.gfx9.surf.swizzle_mode += 3; /* R */
+			break;
+		default: /* depth */
+			assert(!"unexpected micro mode");
+			return;
+		}
+	} else if (rscreen->chip_class >= CIK) {
+		/* These magic numbers were copied from addrlib. It doesn't use
+		 * any definitions for them either. They are all 2D_TILED_THIN1
+		 * modes with different bpp and micro tile mode.
+		 */
 		switch (rtex->last_msaa_resolve_target_micro_mode) {
 		case RADEON_MICRO_MODE_DISPLAY:
 			rtex->surface.u.legacy.tiling_index[0] = 10;
