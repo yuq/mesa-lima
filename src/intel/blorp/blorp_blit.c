@@ -1761,10 +1761,14 @@ surf_convert_to_uncompressed(const struct isl_device *isl_dev,
    surf_convert_to_single_slice(isl_dev, info);
 
    if (width || height) {
+#ifndef NDEBUG
+      uint32_t right_edge_px = info->tile_x_sa + *x + *width;
+      uint32_t bottom_edge_px = info->tile_y_sa + *y + *height;
       assert(*width % fmtl->bw == 0 ||
-             *x + *width == info->surf.logical_level0_px.width);
+             right_edge_px == info->surf.logical_level0_px.width);
       assert(*height % fmtl->bh == 0 ||
-             *y + *height == info->surf.logical_level0_px.height);
+             bottom_edge_px == info->surf.logical_level0_px.height);
+#endif
       *width = DIV_ROUND_UP(*width, fmtl->bw);
       *height = DIV_ROUND_UP(*height, fmtl->bh);
    }
