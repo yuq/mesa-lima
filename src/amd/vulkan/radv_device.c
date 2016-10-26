@@ -522,19 +522,24 @@ void radv_GetPhysicalDeviceMemoryProperties(
 {
 	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
 
-	pMemoryProperties->memoryTypeCount = 3;
+	pMemoryProperties->memoryTypeCount = 4;
 	pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		.heapIndex = 0,
 	};
 	pMemoryProperties->memoryTypes[1] = (VkMemoryType) {
+		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+		.heapIndex = 1,
+	};
+	pMemoryProperties->memoryTypes[2] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		.heapIndex = 0,
 	};
-	pMemoryProperties->memoryTypes[2] = (VkMemoryType) {
-		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT|
+	pMemoryProperties->memoryTypes[3] = (VkMemoryType) {
+		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
 		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
 		.heapIndex = 1,
@@ -854,7 +859,7 @@ VkResult radv_AllocateMemory(
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
 	uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
-	if (pAllocateInfo->memoryTypeIndex == 2)
+	if (pAllocateInfo->memoryTypeIndex == 1 || pAllocateInfo->memoryTypeIndex == 3)
 		domain = RADEON_DOMAIN_GTT;
 	else
 		domain = RADEON_DOMAIN_VRAM;
@@ -863,6 +868,10 @@ VkResult radv_AllocateMemory(
 		flags |= RADEON_FLAG_NO_CPU_ACCESS;
 	else
 		flags |= RADEON_FLAG_CPU_ACCESS;
+
+	if (pAllocateInfo->memoryTypeIndex == 1)
+		flags |= RADEON_FLAG_GTT_WC;
+
 	mem->bo = device->ws->buffer_create(device->ws, alloc_size, 32768,
 					       domain, flags);
 
