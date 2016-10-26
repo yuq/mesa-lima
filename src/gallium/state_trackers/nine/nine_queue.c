@@ -143,6 +143,10 @@ nine_queue_flush(struct nine_queue_pool* ctx)
     DBG("flushing cmdbuf=%p instr=%d size=%d\n",
            cmdbuf, cmdbuf->num_instr, cmdbuf->offset);
 
+    /* Nothing to flush */
+    if (!cmdbuf->num_instr)
+        return;
+
     /* signal waiting worker */
     pipe_mutex_lock(ctx->mutex_push);
     cmdbuf->full = 1;
@@ -198,6 +202,17 @@ nine_queue_alloc(struct nine_queue_pool* ctx, unsigned space)
     cmdbuf->num_instr ++;
 
     return cmdbuf->mem_pool + offset;
+}
+
+/* Returns the current queue empty state.
+ * TRUE no instructions queued.
+ * FALSE one ore more instructions queued. */
+bool
+nine_queue_isempty(struct nine_queue_pool* ctx)
+{
+    struct nine_cmdbuf *cmdbuf = &ctx->pool[ctx->head];
+
+    return (ctx->tail == ctx->head) && !cmdbuf->num_instr;
 }
 
 struct nine_queue_pool*

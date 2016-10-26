@@ -58,6 +58,7 @@ DRI_CONF_BEGIN
         DRI_CONF_NINE_THREADSUBMIT("false")
         DRI_CONF_NINE_ALLOWDISCARDDELAYEDRELEASE("true")
         DRI_CONF_NINE_TEARFREEDISCARD("false")
+        DRI_CONF_NINE_CSMT(-1)
     DRI_CONF_SECTION_END
 DRI_CONF_END;
 
@@ -300,6 +301,11 @@ drm_create_adapter( int fd,
         ERR("tearfree_discard requires discard_delayed_release\n");
         ctx->base.tearfree_discard = FALSE;
     }
+
+    if (driCheckOption(&userInitOptions, "csmt_force", DRI_INT))
+        ctx->base.csmt_force = driQueryOptioni(&userInitOptions, "csmt_force");
+    else
+        ctx->base.csmt_force = -1;
 
     driDestroyOptionCache(&userInitOptions);
     driDestroyOptionInfo(&defaultInitOptions);

@@ -31,6 +31,7 @@
 #include "nine_helpers.h"
 #include "nine_pipe.h"
 #include "nine_dump.h"
+#include "nine_state.h"
 
 #include "pipe/p_context.h"
 #include "pipe/p_screen.h"

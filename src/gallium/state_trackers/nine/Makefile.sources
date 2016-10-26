@@ -23,6 +23,7 @@ C_SOURCES := \
 	indexbuffer9.h \
 	iunknown.c \
 	iunknown.h \
+	nine_csmt_helper.h \
 	nine_debug.c \
 	nine_debug.h \
 	nine_defines.h \

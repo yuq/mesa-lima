@@ -386,3 +386,8 @@ DRI_CONF_OPT_END
 DRI_CONF_OPT_BEGIN_B(tearfree_discard, def) \
         DRI_CONF_DESC(en,gettext("Whether to make d3d's presentation mode DISCARD (games usually use that mode) Tear Free. If rendering above screen refresh, some frames will get skipped. false by default.")) \
 DRI_CONF_OPT_END
+
+#define DRI_CONF_NINE_CSMT(def) \
+DRI_CONF_OPT_BEGIN(csmt_force, int, def) \
+        DRI_CONF_DESC(en,gettext("If set to 1, force gallium nine CSMT. If set to 0, disable it. By default (-1) CSMT is enabled on known thread-safe drivers.")) \
+DRI_CONF_OPT_END

@@ -39,6 +39,9 @@ nine_queue_flush(struct nine_queue_pool* ctx);
 void *
 nine_queue_alloc(struct nine_queue_pool* ctx, unsigned space);
 
+bool
+nine_queue_isempty(struct nine_queue_pool* ctx);
+
 struct nine_queue_pool*
 nine_queue_create(void);
 

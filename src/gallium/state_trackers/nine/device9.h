@@ -38,6 +38,7 @@ struct pipe_context;
 struct cso_context;
 struct hud_context;
 struct u_upload_mgr;
+struct csmt_context;
 
 struct NineSwapChain9;
 struct NineStateBlock9;
@@ -55,6 +56,10 @@ struct NineDevice9
     struct pipe_screen *screen_sw;
     struct pipe_context *pipe_sw;
     struct cso_context *cso_sw;
+
+    /* CSMT context */
+    struct csmt_context *csmt_ctx;
+    BOOL csmt_active;
 
     /* creation parameters */
     D3DCAPS9 caps;

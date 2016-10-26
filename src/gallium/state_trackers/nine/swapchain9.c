@@ -809,6 +809,8 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
         }
     }
 
+    nine_csmt_process(This->base.device);
+
     hr = present(This, pSourceRect, pDestRect,
                  hDestWindowOverride, pDirtyRegion, dwFlags);
     if (hr == D3DERR_WASSTILLDRAWING)
