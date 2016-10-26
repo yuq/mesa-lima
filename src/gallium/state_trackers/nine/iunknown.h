@@ -25,6 +25,7 @@
 
 #include "pipe/p_compiler.h"
 
+#include "util/u_atomic.h"
 #include "util/u_memory.h"
 
 #include "guid.h"
@@ -127,7 +128,7 @@ NineUnknown_Destroy( struct NineUnknown *This )
 static inline UINT
 NineUnknown_Bind( struct NineUnknown *This )
 {
-    UINT b = ++This->bind;
+    UINT b = p_atomic_inc_return(&This->bind);
     assert(b);
     if (b == 1 && This->container) {
         if (This->container != NineUnknown(This->device))
@@ -139,7 +140,7 @@ NineUnknown_Bind( struct NineUnknown *This )
 static inline UINT
 NineUnknown_Unbind( struct NineUnknown *This )
 {
-    UINT b = --This->bind;
+    UINT b = p_atomic_dec_return(&This->bind);
     if (!b) {
         if (This->container) {
             if (This->container != NineUnknown(This->device))
