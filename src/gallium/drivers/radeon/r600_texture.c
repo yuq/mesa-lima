@@ -2457,8 +2457,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 			continue;
 
 		/* fast color clear with 1D tiling doesn't work on old kernels and CIK */
-		if (tex->surface.level[0].mode == RADEON_SURF_MODE_1D &&
-		    rctx->chip_class >= CIK &&
+		if (rctx->chip_class == CIK &&
+		    tex->surface.level[0].mode == RADEON_SURF_MODE_1D &&
 		    rctx->screen->info.drm_major == 2 &&
 		    rctx->screen->info.drm_minor < 38) {
 			continue;
