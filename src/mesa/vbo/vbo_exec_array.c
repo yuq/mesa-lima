@@ -243,8 +243,8 @@ recalculate_input_bindings(struct gl_context *ctx)
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
    const struct gl_array_attributes *array = ctx->Array.VAO->VertexAttrib;
-   struct gl_client_array *vertexAttrib = ctx->Array.VAO->_VertexAttrib;
-   const struct gl_client_array **inputs = &exec->array.inputs[0];
+   struct gl_vertex_array *vertexAttrib = ctx->Array.VAO->_VertexAttrib;
+   const struct gl_vertex_array **inputs = &exec->array.inputs[0];
    GLbitfield64 const_inputs = 0x0;
    GLuint i;
 

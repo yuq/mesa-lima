@@ -532,7 +532,7 @@ struct brw_vertex_buffer {
    GLuint step_rate;
 };
 struct brw_vertex_element {
-   const struct gl_client_array *glarray;
+   const struct gl_vertex_array *glarray;
 
    int buffer;
 
@@ -1461,7 +1461,7 @@ gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx);
 
 /* brw_draw_upload.c */
 unsigned brw_get_vertex_surface_type(struct brw_context *brw,
-                                     const struct gl_client_array *glarray);
+                                     const struct gl_vertex_array *glarray);
 
 static inline unsigned
 brw_get_index_type(GLenum type)

@@ -135,7 +135,7 @@ static void vbo_bind_vertex_list(struct gl_context *ctx,
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_save_context *save = &vbo->save;
-   struct gl_client_array *arrays = save->arrays;
+   struct gl_vertex_array *arrays = save->arrays;
    GLuint buffer_offset = node->buffer_offset;
    const GLuint *map;
    GLuint attr;

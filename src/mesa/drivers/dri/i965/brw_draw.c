@@ -285,7 +285,7 @@ brw_emit_prim(struct brw_context *brw,
 
 static void
 brw_merge_inputs(struct brw_context *brw,
-                 const struct gl_client_array *arrays[])
+                 const struct gl_vertex_array *arrays[])
 {
    const struct gl_context *ctx = &brw->ctx;
    GLuint i;
@@ -420,7 +420,7 @@ brw_predraw_set_aux_buffers(struct brw_context *brw)
  */
 static void
 brw_try_draw_prims(struct gl_context *ctx,
-                   const struct gl_client_array *arrays[],
+                   const struct gl_vertex_array *arrays[],
                    const struct _mesa_prim *prims,
                    GLuint nr_prims,
                    const struct _mesa_index_buffer *ib,
@@ -631,7 +631,7 @@ brw_draw_prims(struct gl_context *ctx,
                struct gl_buffer_object *indirect)
 {
    struct brw_context *brw = brw_context(ctx);
-   const struct gl_client_array **arrays = ctx->Array._DrawArrays;
+   const struct gl_vertex_array **arrays = ctx->Array._DrawArrays;
    struct brw_transform_feedback_object *xfb_obj =
       (struct brw_transform_feedback_object *) gl_xfb_obj;
 

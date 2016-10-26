@@ -245,7 +245,7 @@ double_types(struct brw_context *brw,
  */
 unsigned
 brw_get_vertex_surface_type(struct brw_context *brw,
-                            const struct gl_client_array *glarray)
+                            const struct gl_vertex_array *glarray)
 {
    int size = glarray->Size;
    const bool is_ivybridge_or_older =
@@ -490,7 +490,7 @@ brw_prepare_vertices(struct brw_context *brw)
 
    for (i = j = 0; i < brw->vb.nr_enabled; i++) {
       struct brw_vertex_element *input = brw->vb.enabled[i];
-      const struct gl_client_array *glarray = input->glarray;
+      const struct gl_vertex_array *glarray = input->glarray;
 
       if (_mesa_is_bufferobj(glarray->BufferObj)) {
 	 struct intel_buffer_object *intel_buffer =
@@ -522,7 +522,7 @@ brw_prepare_vertices(struct brw_context *brw)
 	  */
 	 unsigned k;
 	 for (k = 0; k < i; k++) {
-	    const struct gl_client_array *other = brw->vb.enabled[k]->glarray;
+	    const struct gl_vertex_array *other = brw->vb.enabled[k]->glarray;
 	    if (glarray->BufferObj == other->BufferObj &&
 		glarray->StrideB == other->StrideB &&
 		glarray->InstanceDivisor == other->InstanceDivisor &&

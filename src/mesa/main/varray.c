@@ -2313,8 +2313,8 @@ _mesa_VertexArrayBindingDivisor(GLuint vaobj, GLuint bindingIndex,
  */
 void
 _mesa_copy_client_array(struct gl_context *ctx,
-                        struct gl_client_array *dst,
-                        struct gl_client_array *src)
+                        struct gl_vertex_array *dst,
+                        struct gl_vertex_array *src)
 {
    dst->Size = src->Size;
    dst->Type = src->Type;

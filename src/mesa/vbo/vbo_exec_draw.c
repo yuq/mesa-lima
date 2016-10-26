@@ -174,7 +174,7 @@ vbo_exec_bind_arrays( struct gl_context *ctx )
 {
    struct vbo_context *vbo = vbo_context(ctx);
    struct vbo_exec_context *exec = &vbo->exec;
-   struct gl_client_array *arrays = exec->vtx.arrays;
+   struct gl_vertex_array *arrays = exec->vtx.arrays;
    const GLuint *map;
    GLuint attr;
    GLbitfield64 varying_inputs = 0x0;

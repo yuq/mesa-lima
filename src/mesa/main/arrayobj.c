@@ -340,7 +340,7 @@ remove_array_object(struct gl_context *ctx, struct gl_vertex_array_object *vao)
 
 
 /**
- * Updates the derived gl_client_arrays when a gl_vertex_attrib_array
+ * Updates the derived gl_vertex_arrays when a gl_vertex_attrib_array
  * or a gl_vertex_buffer_binding has changed.
  */
 void
@@ -351,7 +351,7 @@ _mesa_update_vao_client_arrays(struct gl_context *ctx,
 
    while (arrays) {
       const int attrib = u_bit_scan64(&arrays);
-      struct gl_client_array *client_array = &vao->_VertexAttrib[attrib];
+      struct gl_vertex_array *client_array = &vao->_VertexAttrib[attrib];
       const struct gl_array_attributes *attrib_array =
          &vao->VertexAttrib[attrib];
       const struct gl_vertex_buffer_binding *buffer_binding =

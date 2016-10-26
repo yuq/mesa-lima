@@ -120,7 +120,7 @@ static void check_program_state( struct st_context *st )
 
 static void check_attrib_edgeflag(struct st_context *st)
 {
-   const struct gl_client_array **arrays = st->ctx->Array._DrawArrays;
+   const struct gl_vertex_array **arrays = st->ctx->Array._DrawArrays;
    GLboolean vertdata_edgeflags, edgeflag_culls_prims, edgeflags_enabled;
    struct gl_program *vp = st->ctx->VertexProgram._Current;
 

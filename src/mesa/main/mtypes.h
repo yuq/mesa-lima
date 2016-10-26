@@ -1332,9 +1332,11 @@ struct gl_pixelstore_attrib
 
 
 /**
- * Client vertex array attributes
+ * Vertex array information which is derived from gl_array_attributes
+ * and gl_vertex_buffer_binding information.  Used by the VBO module and
+ * device drivers.
  */
-struct gl_client_array
+struct gl_vertex_array
 {
    GLint Size;                  /**< components per element (1,2,3,4) */
    GLenum Type;                 /**< datatype: GL_FLOAT, GL_INT, etc */
@@ -1439,7 +1441,7 @@ struct gl_vertex_array_object
     * This is a legacy data structure created from gl_vertex_attrib_array and
     * gl_vertex_buffer_binding, for compatibility with existing driver code.
     */
-   struct gl_client_array _VertexAttrib[VERT_ATTRIB_MAX];
+   struct gl_vertex_array _VertexAttrib[VERT_ATTRIB_MAX];
 
    /** Vertex attribute arrays */
    struct gl_array_attributes VertexAttrib[VERT_ATTRIB_MAX];
@@ -1530,7 +1532,7 @@ struct gl_array_attrib
     * Vertex arrays as consumed by a driver.
     * The array pointer is set up only by the VBO module.
     */
-   const struct gl_client_array **_DrawArrays; /**< 0..VERT_ATTRIB_MAX-1 */
+   const struct gl_vertex_array **_DrawArrays; /**< 0..VERT_ATTRIB_MAX-1 */
 
    /** Legal array datatypes and the API for which they have been computed */
    GLbitfield LegalTypesMask;
