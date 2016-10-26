@@ -135,18 +135,24 @@ static enum pipe_format get_format_from_bpp(int bpp)
 	}
 }
 
-static const char *array_mode_to_string(unsigned mode)
+static const char *array_mode_to_string(struct r600_common_screen *rscreen,
+					struct radeon_surf *surf)
 {
-	switch (mode) {
-	case RADEON_SURF_MODE_LINEAR_ALIGNED:
-		return "LINEAR_ALIGNED";
-	case RADEON_SURF_MODE_1D:
-		return "1D_TILED_THIN1";
-	case RADEON_SURF_MODE_2D:
-		return "2D_TILED_THIN1";
-	default:
-		assert(0);
+	if (rscreen->chip_class >= GFX9) {
+		/* TODO */
 		return "       UNKNOWN";
+	} else {
+		switch (surf->u.legacy.level[0].mode) {
+		case RADEON_SURF_MODE_LINEAR_ALIGNED:
+			return "LINEAR_ALIGNED";
+		case RADEON_SURF_MODE_1D:
+			return "1D_TILED_THIN1";
+		case RADEON_SURF_MODE_2D:
+			return "2D_TILED_THIN1";
+		default:
+			assert(0);
+			return "       UNKNOWN";
+		}
 	}
 }
 
@@ -277,9 +283,9 @@ void r600_test_dma(struct r600_common_screen *rscreen)
 		printf("%4u: dst = (%5u x %5u x %u, %s), "
 		       " src = (%5u x %5u x %u, %s), bpp = %2u, ",
 		       i, tdst.width0, tdst.height0, tdst.array_size,
-		       array_mode_to_string(rdst->surface.u.legacy.level[0].mode),
+		       array_mode_to_string(rscreen, &rdst->surface),
 		       tsrc.width0, tsrc.height0, tsrc.array_size,
-		       array_mode_to_string(rsrc->surface.u.legacy.level[0].mode), bpp);
+		       array_mode_to_string(rscreen, &rsrc->surface), bpp);
 		fflush(stdout);
 
 		/* set src pixels */
