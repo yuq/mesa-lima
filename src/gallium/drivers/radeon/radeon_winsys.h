@@ -281,7 +281,6 @@ struct radeon_surf_level {
     uint64_t                    dcc_fast_clear_size;
     uint16_t                    nblk_x;
     uint16_t                    nblk_y;
-    uint32_t                    pitch_bytes;
     enum radeon_surf_mode       mode;
 };
 

@@ -182,8 +182,9 @@ static unsigned r600_texture_get_offset(struct r600_texture *rtex, unsigned leve
 {
 	return rtex->surface.level[level].offset +
 	       box->z * rtex->surface.level[level].slice_size +
-	       box->y / rtex->surface.blk_h * rtex->surface.level[level].pitch_bytes +
-	       box->x / rtex->surface.blk_w * rtex->surface.bpe;
+	       (box->y / rtex->surface.blk_h *
+		rtex->surface.level[level].nblk_x +
+		box->x / rtex->surface.blk_w) * rtex->surface.bpe;
 }
 
 static int r600_init_surface(struct r600_common_screen *rscreen,
@@ -259,12 +260,12 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		return r;
 	}
 
-	if (pitch_in_bytes_override && pitch_in_bytes_override != surface->level[0].pitch_bytes) {
+	if (pitch_in_bytes_override &&
+	    pitch_in_bytes_override != surface->level[0].nblk_x * bpe) {
 		/* old ddx on evergreen over estimate alignment for 1d, only 1 level
 		 * for those
 		 */
 		surface->level[0].nblk_x = pitch_in_bytes_override / bpe;
-		surface->level[0].pitch_bytes = pitch_in_bytes_override;
 		surface->level[0].slice_size = pitch_in_bytes_override * surface->level[0].nblk_y;
 	}
 
@@ -291,7 +292,7 @@ static void r600_texture_init_metadata(struct r600_texture *rtex,
 	metadata->tile_split = surface->tile_split;
 	metadata->mtilea = surface->mtilea;
 	metadata->num_banks = surface->num_banks;
-	metadata->stride = surface->level[0].pitch_bytes;
+	metadata->stride = surface->level[0].nblk_x * surface->bpe;
 	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 }
 
@@ -548,7 +549,8 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	}
 
 	return rscreen->ws->buffer_get_handle(res->buf,
-					      rtex->surface.level[0].pitch_bytes,
+					      rtex->surface.level[0].nblk_x *
+					      rtex->surface.bpe,
 					      rtex->surface.level[0].offset,
 					      rtex->surface.level[0].slice_size,
 					      whandle);
@@ -945,7 +947,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 	for (i = 0; i <= rtex->resource.b.b.last_level; i++)
 		fprintf(f, "  Level[%i]: offset=%"PRIu64", slice_size=%"PRIu64", "
 			"npix_x=%u, npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
-			"pitch_bytes=%u, mode=%u, tiling_index = %u\n",
+			"mode=%u, tiling_index = %u\n",
 			i, rtex->surface.level[i].offset,
 			rtex->surface.level[i].slice_size,
 			u_minify(rtex->resource.b.b.width0, i),
@@ -953,7 +955,6 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			u_minify(rtex->resource.b.b.depth0, i),
 			rtex->surface.level[i].nblk_x,
 			rtex->surface.level[i].nblk_y,
-			rtex->surface.level[i].pitch_bytes,
 			rtex->surface.level[i].mode,
 			rtex->surface.tiling_index[i]);
 
@@ -964,7 +965,7 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 			fprintf(f, "  StencilLevel[%i]: offset=%"PRIu64", "
 				"slice_size=%"PRIu64", npix_x=%u, "
 				"npix_y=%u, npix_z=%u, nblk_x=%u, nblk_y=%u, "
-				"pitch_bytes=%u, mode=%u, tiling_index = %u\n",
+				"mode=%u, tiling_index = %u\n",
 				i, rtex->surface.stencil_level[i].offset,
 				rtex->surface.stencil_level[i].slice_size,
 				u_minify(rtex->resource.b.b.width0, i),
@@ -972,7 +973,6 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 				u_minify(rtex->resource.b.b.depth0, i),
 				rtex->surface.stencil_level[i].nblk_x,
 				rtex->surface.stencil_level[i].nblk_y,
-				rtex->surface.stencil_level[i].pitch_bytes,
 				rtex->surface.stencil_level[i].mode,
 				rtex->surface.stencil_tiling_index[i]);
 		}
@@ -1547,7 +1547,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 			offset = r600_texture_get_offset(staging_depth, level, box);
 		}
 
-		trans->transfer.stride = staging_depth->surface.level[level].pitch_bytes;
+		trans->transfer.stride = staging_depth->surface.level[level].nblk_x *
+					 staging_depth->surface.bpe;
 		trans->transfer.layer_stride = staging_depth->surface.level[level].slice_size;
 		trans->staging = (struct r600_resource*)staging_depth;
 		buf = trans->staging;
@@ -1568,7 +1569,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 			return NULL;
 		}
 		trans->staging = &staging->resource;
-		trans->transfer.stride = staging->surface.level[0].pitch_bytes;
+		trans->transfer.stride = staging->surface.level[0].nblk_x *
+					 staging->surface.bpe;
 		trans->transfer.layer_stride = staging->surface.level[0].slice_size;
 
 		if (usage & PIPE_TRANSFER_READ)
@@ -1579,7 +1581,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		buf = trans->staging;
 	} else {
 		/* the resource is mapped directly */
-		trans->transfer.stride = rtex->surface.level[level].pitch_bytes;
+		trans->transfer.stride = rtex->surface.level[level].nblk_x *
+					 rtex->surface.bpe;
 		trans->transfer.layer_stride = rtex->surface.level[level].slice_size;
 		offset = r600_texture_get_offset(rtex, level, box);
 		buf = &rtex->resource;

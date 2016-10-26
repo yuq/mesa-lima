@@ -3492,8 +3492,8 @@ static void evergreen_dma_copy(struct pipe_context *ctx,
 	dst_y = util_format_get_nblocksy(src->format, dst_y);
 
 	bpp = rdst->surface.bpe;
-	dst_pitch = rdst->surface.level[dst_level].pitch_bytes;
-	src_pitch = rsrc->surface.level[src_level].pitch_bytes;
+	dst_pitch = rdst->surface.level[dst_level].nblk_x * rdst->surface.bpe;
+	src_pitch = rsrc->surface.level[src_level].nblk_x * rsrc->surface.bpe;
 	src_w = u_minify(rsrc->resource.b.b.width0, src_level);
 	dst_w = u_minify(rdst->resource.b.b.width0, dst_level);
 	copy_height = src_box->height / rsrc->surface.blk_h;

@@ -134,8 +134,8 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 	unsigned src_tile_mode = info->si_tile_mode_array[src_tile_index];
 	unsigned dst_micro_mode = G_009910_MICRO_TILE_MODE_NEW(dst_tile_mode);
 	unsigned src_micro_mode = G_009910_MICRO_TILE_MODE_NEW(src_tile_mode);
-	unsigned dst_pitch = rdst->surface.level[dst_level].pitch_bytes / bpp;
-	unsigned src_pitch = rsrc->surface.level[src_level].pitch_bytes / bpp;
+	unsigned dst_pitch = rdst->surface.level[dst_level].nblk_x;
+	unsigned src_pitch = rsrc->surface.level[src_level].nblk_x;
 	uint64_t dst_slice_pitch = rdst->surface.level[dst_level].slice_size / bpp;
 	uint64_t src_slice_pitch = rsrc->surface.level[src_level].slice_size / bpp;
 	unsigned dst_width = minify_as_blocks(rdst->resource.b.b.width0,
