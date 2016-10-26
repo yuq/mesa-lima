@@ -662,6 +662,12 @@ gbm_dri_bo_get_handle_for_plane(struct gbm_bo *_bo, int plane)
    return ret;
 }
 
+static uint32_t
+gbm_dri_bo_get_stride(struct gbm_bo *_bo, int plane)
+{
+   return _bo->stride;
+}
+
 static void
 gbm_dri_bo_destroy(struct gbm_bo *_bo)
 {
@@ -1156,6 +1162,7 @@ dri_device_create(int fd)
    dri->base.base.bo_get_fd = gbm_dri_bo_get_fd;
    dri->base.base.bo_get_planes = gbm_dri_bo_get_planes;
    dri->base.base.bo_get_handle = gbm_dri_bo_get_handle_for_plane;
+   dri->base.base.bo_get_stride = gbm_dri_bo_get_stride;
    dri->base.base.bo_destroy = gbm_dri_bo_destroy;
    dri->base.base.destroy = dri_destroy;
    dri->base.base.surface_create = gbm_dri_surface_create;

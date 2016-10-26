@@ -165,7 +165,7 @@ gbm_bo_get_height(struct gbm_bo *bo)
 GBM_EXPORT uint32_t
 gbm_bo_get_stride(struct gbm_bo *bo)
 {
-   return bo->stride;
+   return bo->gbm->bo_get_stride(bo, 0);
 }
 
 /** Get the format of the buffer object
