@@ -78,6 +78,13 @@ struct svga_texture
    struct svga_winsys_surface *handle;
 
    /**
+    * Whether the host side surface is validated, either through the
+    * InvalidateGBSurface command or after the surface is updated
+    * or rendered to.
+    */
+   boolean validated;
+
+   /**
     * Whether the host side surface is imported and not created by this
     * driver.
     */
@@ -195,6 +202,7 @@ svga_define_texture_level(struct svga_texture *tex,
 {
    check_face_level(tex, face, level);
    tex->defined[face] |= 1 << level;
+   tex->validated = TRUE;
 }
 
 
@@ -213,6 +221,7 @@ svga_set_texture_rendered_to(struct svga_texture *tex,
 {
    check_face_level(tex, face, level);
    tex->rendered_to[face] |= 1 << level;
+   tex->validated = TRUE;
 }
 
 

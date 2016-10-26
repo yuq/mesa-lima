@@ -1102,7 +1102,8 @@ svga_texture_create(struct pipe_screen *screen,
 
    SVGA_DBG(DEBUG_DMA, "surface_create for texture\n", tex->handle);
    tex->handle = svga_screen_surface_create(svgascreen, bindings,
-                                            tex->b.b.usage, &tex->key);
+                                            tex->b.b.usage,
+                                            &tex->validated, &tex->key);
    if (!tex->handle) {
       goto fail;
    }
