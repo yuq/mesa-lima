@@ -34,6 +34,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <poll.h>
 #include "util/hash_table.h"
 
 #include "wsi_common.h"
@@ -544,6 +545,26 @@ x11_handle_dri3_present_event(struct x11_swapchain *chain,
    return VK_SUCCESS;
 }
 
+
+static uint64_t wsi_get_current_time(void)
+{
+   uint64_t current_time;
+   struct timespec tv;
+
+   clock_gettime(CLOCK_MONOTONIC, &tv);
+   current_time = tv.tv_nsec + tv.tv_sec*1000000000ull;
+   return current_time;
+}
+
+static uint64_t wsi_get_absolute_timeout(uint64_t timeout)
+{
+   uint64_t current_time = wsi_get_current_time();
+
+   timeout = MIN2(UINT64_MAX - current_time, timeout);
+
+   return current_time + timeout;
+}
+
 static VkResult
 x11_acquire_next_image(struct wsi_swapchain *anv_chain,
                        uint64_t timeout,
@@ -551,7 +572,9 @@ x11_acquire_next_image(struct wsi_swapchain *anv_chain,
                        uint32_t *image_index)
 {
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
-
+   xcb_generic_event_t *event;
+   struct pollfd pfds;
+   uint64_t atimeout;
    while (1) {
       for (uint32_t i = 0; i < chain->image_count; i++) {
          if (!chain->images[i].busy) {
@@ -564,10 +587,39 @@ x11_acquire_next_image(struct wsi_swapchain *anv_chain,
       }
 
       xcb_flush(chain->conn);
-      xcb_generic_event_t *event =
-         xcb_wait_for_special_event(chain->conn, chain->special_event);
-      if (!event)
-         return VK_ERROR_OUT_OF_DATE_KHR;
+
+      if (timeout == UINT64_MAX) {
+         event = xcb_wait_for_special_event(chain->conn, chain->special_event);
+         if (!event)
+            return VK_ERROR_OUT_OF_DATE_KHR;
+      } else {
+         event = xcb_poll_for_special_event(chain->conn, chain->special_event);
+         if (!event) {
+            int ret;
+            if (timeout == 0)
+               return VK_NOT_READY;
+
+            atimeout = wsi_get_absolute_timeout(timeout);
+
+            pfds.fd = xcb_get_file_descriptor(chain->conn);
+            pfds.events = POLLIN;
+            ret = poll(&pfds, 1, timeout / 1000 / 1000);
+            if (ret == 0)
+               return VK_TIMEOUT;
+            if (ret == -1)
+               return VK_ERROR_OUT_OF_DATE_KHR;
+
+            /* If a non-special event happens, the fd will still
+             * poll. So recalculate the timeout now just in case.
+             */
+            uint64_t current_time = wsi_get_current_time();
+            if (atimeout > current_time)
+               timeout = atimeout - current_time;
+            else
+               timeout = 0;
+            continue;
+         }
+      }
 
       VkResult result = x11_handle_dri3_present_event(chain, (void *)event);
       free(event);
