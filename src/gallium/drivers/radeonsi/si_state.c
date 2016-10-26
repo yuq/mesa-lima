@@ -2438,6 +2438,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 	/* Colorbuffers. */
 	for (i = 0; i < nr_cbufs; i++) {
+		const struct radeon_surf_level *level_info;
 		unsigned pitch_tile_max, slice_tile_max, tile_mode_index;
 		unsigned cb_color_base, cb_color_fmask, cb_color_attrib;
 		unsigned cb_color_pitch, cb_color_slice, cb_color_fmask_slice;
@@ -2453,6 +2454,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 		}
 
 		tex = (struct r600_texture *)cb->base.texture;
+		level_info =  &tex->surface.level[cb->base.u.tex.level];
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 				      &tex->resource, RADEON_USAGE_READWRITE,
 				      tex->resource.b.b.nr_samples > 1 ?
@@ -2472,12 +2474,12 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 						  RADEON_PRIO_DCC);
 
 		/* Compute mutable surface parameters. */
-		pitch_tile_max = cb->level_info->nblk_x / 8 - 1;
-		slice_tile_max = cb->level_info->nblk_x *
-				 cb->level_info->nblk_y / 64 - 1;
+		pitch_tile_max = level_info->nblk_x / 8 - 1;
+		slice_tile_max = level_info->nblk_x *
+				 level_info->nblk_y / 64 - 1;
 		tile_mode_index = si_tile_mode_index(tex, cb->base.u.tex.level, false);
 
-		cb_color_base = (tex->resource.gpu_address + cb->level_info->offset) >> 8;
+		cb_color_base = (tex->resource.gpu_address + level_info->offset) >> 8;
 		cb_color_pitch = S_028C64_TILE_MAX(pitch_tile_max);
 		cb_color_slice = S_028C68_TILE_MAX(slice_tile_max);
 		cb_color_attrib = cb->cb_color_attrib |

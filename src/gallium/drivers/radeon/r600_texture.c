@@ -1756,7 +1756,6 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 						unsigned width, unsigned height)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)pipe;
-	struct r600_texture *rtex = (struct r600_texture*)texture;
 	struct r600_surface *surface = CALLOC_STRUCT(r600_surface);
 
 	if (!surface)
@@ -1772,7 +1771,6 @@ struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 	surface->base.width = width;
 	surface->base.height = height;
 	surface->base.u = templ->u;
-	surface->level_info = &rtex->surface.level[templ->u.tex.level];
 
 	if (texture->target != PIPE_BUFFER)
 		vi_dcc_disable_if_incompatible_format(rctx, texture,
