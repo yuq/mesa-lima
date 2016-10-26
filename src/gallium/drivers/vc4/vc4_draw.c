@@ -82,32 +82,28 @@ vc4_start_draw(struct vc4_context *vc4)
         vc4_get_draw_cl_space(job, 0);
 
         struct vc4_cl_out *bcl = cl_start(&job->bcl);
-        //   Tile state data is 48 bytes per tile, I think it can be thrown away
-        //   as soon as binning is finished.
-        cl_u8(&bcl, VC4_PACKET_TILE_BINNING_MODE_CONFIG);
-        cl_u32(&bcl, 0); /* tile alloc addr, filled by kernel */
-        cl_u32(&bcl, 0); /* tile alloc size, filled by kernel */
-        cl_u32(&bcl, 0); /* tile state addr, filled by kernel */
-        cl_u8(&bcl, job->draw_tiles_x);
-        cl_u8(&bcl, job->draw_tiles_y);
-        /* Other flags are filled by kernel. */
-        cl_u8(&bcl, job->msaa ? VC4_BIN_CONFIG_MS_MODE_4X : 0);
+        cl_emit(&bcl, TILE_BINNING_MODE_CONFIGURATION, bin) {
+                bin.width_in_tiles = job->draw_tiles_x;
+                bin.height_in_tiles = job->draw_tiles_y;
+                bin.multisample_mode_4x = job->msaa;
+        }
 
         /* START_TILE_BINNING resets the statechange counters in the hardware,
          * which are what is used when a primitive is binned to a tile to
          * figure out what new state packets need to be written to that tile's
          * command list.
          */
-        cl_u8(&bcl, VC4_PACKET_START_TILE_BINNING);
+        cl_emit(&bcl, START_TILE_BINNING, start);
 
         /* Reset the current compressed primitives format.  This gets modified
          * by VC4_PACKET_GL_INDEXED_PRIMITIVE and
          * VC4_PACKET_GL_ARRAY_PRIMITIVE, so it needs to be reset at the start
          * of every tile.
          */
-        cl_u8(&bcl, VC4_PACKET_PRIMITIVE_LIST_FORMAT);
-        cl_u8(&bcl, (VC4_PRIMITIVE_LIST_FORMAT_16_INDEX |
-                     VC4_PRIMITIVE_LIST_FORMAT_TYPE_TRIANGLES));
+        cl_emit(&bcl, PRIMITIVE_LIST_FORMAT, list) {
+                list.data_type = _16_BIT_INDEX;
+                list.primitive_type = TRIANGLES_LIST;
+        }
 
         job->needs_flush = true;
         job->draw_width = vc4->framebuffer.width;
@@ -221,13 +217,15 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
         cl_end(&job->shader_rec, shader_rec);
 
         struct vc4_cl_out *bcl = cl_start(&job->bcl);
-        /* the actual draw call. */
-        cl_u8(&bcl, VC4_PACKET_GL_SHADER_STATE);
-        assert(vtx->num_elements <= 8);
-        /* Note that number of attributes == 0 in the packet means 8
-         * attributes.  This field also contains the offset into shader_rec.
-         */
-        cl_u32(&bcl, num_elements_emit & 0x7);
+        cl_emit(&bcl, GL_SHADER_STATE, shader_state) {
+                /* Note that number of attributes == 0 in the packet means 8
+                 * attributes.  This field also contains the offset into
+                 * shader_rec.
+                 */
+                assert(vtx->num_elements <= 8);
+                shader_state.number_of_attribute_arrays =
+                        num_elements_emit & 0x7;
+        }
         cl_end(&job->bcl, bcl);
 
         vc4_write_uniforms(vc4, vc4->prog.fs,
@@ -436,10 +434,11 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                                 }
                         }
 
-                        cl_u8(&bcl, VC4_PACKET_GL_ARRAY_PRIMITIVE);
-                        cl_u8(&bcl, info->mode);
-                        cl_u32(&bcl, this_count);
-                        cl_u32(&bcl, start);
+                        cl_emit(&bcl, VERTEX_ARRAY_PRIMITIVES, array) {
+                                array.primitive_mode = info->mode;
+                                array.length = this_count;
+                                array.index_of_first_vertex = start;
+                        }
                         job->draw_calls_queued++;
 
                         count -= step;

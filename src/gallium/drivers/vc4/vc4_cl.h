@@ -40,6 +40,27 @@ struct vc4_job;
  */
 struct vc4_cl_out;
 
+/** A reference to a BO used in the CL packing functions */
+struct vc4_cl_reloc {
+        struct vc4_bo *bo;
+        uint32_t offset;
+};
+
+/* We don't call anything that packs a reloc yet, so don't implement it. */
+static inline void cl_pack_emit_reloc(void *cl, const struct vc4_cl_reloc *reloc)
+{
+        abort();
+}
+
+/* We don't use the data arg yet */
+#define __gen_user_data void
+#define __gen_address_type struct vc4_cl_reloc
+#define __gen_address_offset(reloc) ((reloc)->offset)
+#define __gen_emit_reloc cl_pack_emit_reloc
+
+#include "kernel/vc4_packet.h"
+#include "broadcom/cle/v3d_packet_v21_pack.h"
+
 struct vc4_cl {
         void *base;
         struct vc4_cl_out *next;
@@ -204,5 +225,47 @@ cl_aligned_reloc(struct vc4_job *job, struct vc4_cl *cl,
 }
 
 void cl_ensure_space(struct vc4_cl *cl, uint32_t size);
+
+#define cl_packet_header(packet) V3D21_ ## packet ## _header
+#define cl_packet_length(packet) V3D21_ ## packet ## _length
+#define cl_packet_pack(packet)   V3D21_ ## packet ## _pack
+#define cl_packet_struct(packet)   V3D21_ ## packet
+
+static inline void *
+cl_get_emit_space(struct vc4_cl_out **cl, size_t size)
+{
+        void *addr = *cl;
+        cl_advance(cl, size);
+        return addr;
+}
+
+/* Macro for setting up an emit of a CL struct.  A temporary unpacked struct
+ * is created, which you get to set fields in of the form:
+ *
+ * cl_emit(bcl, FLAT_SHADE_FLAGS, flags) {
+ *     .flags.flat_shade_flags = 1 << 2,
+ * }
+ *
+ * or default values only can be emitted with just:
+ *
+ * cl_emit(bcl, FLAT_SHADE_FLAGS, flags);
+ *
+ * The trick here is that we make a for loop that will execute the body
+ * (either the block or the ';' after the macro invocation) exactly once.
+ * Also, *dst is actually of the wrong type, it's the
+ * uint8_t[cl_packet_length()] in the CL, not a cl_packet_struct(packet).
+ */
+#define cl_emit(cl_out, packet, name)                            \
+        for (struct cl_packet_struct(packet) name = {            \
+                cl_packet_header(packet)                         \
+        },                                                       \
+        *_dst = cl_get_emit_space(cl_out, cl_packet_length(packet)); \
+        __builtin_expect(_dst != NULL, 1);                       \
+        ({                                                       \
+                cl_packet_pack(packet)(NULL, (uint8_t *)_dst, &name);  \
+                VG(VALGRIND_CHECK_MEM_IS_DEFINED(_dst,           \
+                                                 cl_packet_length(packet))); \
+                _dst = NULL;                                     \
+        }))                                                      \
 
 #endif /* VC4_CL_H */

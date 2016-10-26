@@ -378,11 +378,11 @@ vc4_job_submit(struct vc4_context *vc4, struct vc4_job *job)
                  */
                 cl_ensure_space(&job->bcl, 8);
                 struct vc4_cl_out *bcl = cl_start(&job->bcl);
-                cl_u8(&bcl, VC4_PACKET_INCREMENT_SEMAPHORE);
+                cl_emit(&bcl, INCREMENT_SEMAPHORE, incr);
                 /* The FLUSH caps all of our bin lists with a
                  * VC4_PACKET_RETURN.
                  */
-                cl_u8(&bcl, VC4_PACKET_FLUSH);
+                cl_emit(&bcl, FLUSH, flush);
                 cl_end(&job->bcl, bcl);
         }
         struct drm_vc4_submit_cl submit = {
