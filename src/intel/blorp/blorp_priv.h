@@ -225,6 +225,9 @@ struct brw_blorp_blit_prog_key
    /* Actual MSAA layout used by the source image. */
    enum isl_msaa_layout src_layout;
 
+   /* Number of bits per channel in the source image. */
+   uint8_t src_bpc;
+
    /* Number of samples per pixel that have been configured in the render
     * target.
     */
@@ -238,6 +241,9 @@ struct brw_blorp_blit_prog_key
 
    /* Actual MSAA layout used by the destination image. */
    enum isl_msaa_layout dst_layout;
+
+   /* Number of bits per channel in the destination image. */
+   uint8_t dst_bpc;
 
    /* Type of the data to be read from the texture (one of
     * nir_type_(int|uint|float)).

@@ -851,6 +851,66 @@ blorp_nir_manual_blend_bilinear(nir_builder *b, nir_ssa_def *pos,
                       frac_y);
 }
 
+/** Perform a color bit-cast operation
+ *
+ * For copy operations involving CCS, we may need to use different formats for
+ * the source and destination surfaces.  The two formats must both be UINT
+ * formats and must have the same size but may have different bit layouts.
+ * For instance, we may be copying from R8G8B8A8_UINT to R32_UINT or R32_UINT
+ * to R16G16_UINT.  This function generates code to shuffle bits around to get
+ * us from one to the other.
+ */
+static nir_ssa_def *
+bit_cast_color(struct nir_builder *b, nir_ssa_def *color,
+               const struct brw_blorp_blit_prog_key *key)
+{
+   assert(key->texture_data_type == nir_type_uint);
+
+   if (key->dst_bpc > key->src_bpc) {
+      nir_ssa_def *u = nir_ssa_undef(b, 1, 32);
+      nir_ssa_def *dst_chan[2] = { u, u };
+      unsigned shift = 0;
+      unsigned dst_idx = 0;
+      for (unsigned i = 0; i < 4; i++) {
+         nir_ssa_def *shifted = nir_ishl(b, nir_channel(b, color, i),
+                                            nir_imm_int(b, shift));
+         if (shift == 0) {
+            dst_chan[dst_idx] = shifted;
+         } else {
+            dst_chan[dst_idx] = nir_ior(b, dst_chan[dst_idx], shifted);
+         }
+
+         shift += key->src_bpc;
+         if (shift >= key->dst_bpc) {
+            dst_idx++;
+            shift = 0;
+         }
+      }
+
+      return nir_vec4(b, dst_chan[0], dst_chan[1], u, u);
+   } else {
+      assert(key->dst_bpc < key->src_bpc);
+
+      nir_ssa_def *mask = nir_imm_int(b, ~0u >> (32 - key->dst_bpc));
+
+      nir_ssa_def *dst_chan[4];
+      unsigned src_idx = 0;
+      unsigned shift = 0;
+      for (unsigned i = 0; i < 4; i++) {
+         dst_chan[i] = nir_iand(b, nir_ushr(b, nir_channel(b, color, src_idx),
+                                               nir_imm_int(b, shift)),
+                                   mask);
+         shift += key->dst_bpc;
+         if (shift >= key->src_bpc) {
+            src_idx++;
+            shift = 0;
+         }
+      }
+
+      return nir_vec4(b, dst_chan[0], dst_chan[1], dst_chan[2], dst_chan[3]);
+   }
+}
+
 /**
  * Generator for WM programs used in BLORP blits.
  *
@@ -1191,6 +1251,9 @@ brw_blorp_build_nir_shader(struct blorp_context *blorp, void *mem_ctx,
          }
       }
    }
+
+   if (key->dst_bpc != key->src_bpc)
+      color = bit_cast_color(&b, color, key);
 
    if (key->dst_rgb) {
       /* The destination image is bound as a red texture three times as wide
@@ -1752,6 +1815,81 @@ get_copy_format_for_bpb(const struct isl_device *isl_dev, unsigned bpb)
    }
 }
 
+/** Returns a UINT format that is CCS-compatible with the given format
+ *
+ * The PRM's say absolutely nothing about how render compression works.  The
+ * only thing they provide is a list of formats on which it is and is not
+ * supported.  Empirical testing indicates that the compression is only based
+ * on the bit-layout of the format and the channel encoding doesn't matter.
+ * So, while texture views don't work in general, you can create a view as
+ * long as the bit-layout of the formats are the same.
+ *
+ * Fortunately, for every render compression capable format, the UINT format
+ * with the same bit layout also supports render compression.  This means that
+ * we only need to handle UINT formats for copy operations.  In order to do
+ * copies between formats with different bit layouts, we attach both with a
+ * UINT format and use bit_cast_color() to generate code to do the bit-cast
+ * operation between the two bit layouts.
+ */
+static enum isl_format
+get_ccs_compatible_uint_format(const struct isl_format_layout *fmtl)
+{
+   switch (fmtl->format) {
+   case ISL_FORMAT_R32G32B32A32_FLOAT:
+   case ISL_FORMAT_R32G32B32A32_SINT:
+   case ISL_FORMAT_R32G32B32A32_UINT:
+   case ISL_FORMAT_R32G32B32A32_UNORM:
+   case ISL_FORMAT_R32G32B32A32_SNORM:
+      return ISL_FORMAT_R32G32B32A32_UINT;
+
+   case ISL_FORMAT_R16G16B16A16_UNORM:
+   case ISL_FORMAT_R16G16B16A16_SNORM:
+   case ISL_FORMAT_R16G16B16A16_SINT:
+   case ISL_FORMAT_R16G16B16A16_UINT:
+   case ISL_FORMAT_R16G16B16A16_FLOAT:
+   case ISL_FORMAT_R16G16B16X16_UNORM:
+   case ISL_FORMAT_R16G16B16X16_FLOAT:
+      return ISL_FORMAT_R16G16B16A16_UINT;
+
+   case ISL_FORMAT_R32G32_FLOAT:
+   case ISL_FORMAT_R32G32_SINT:
+   case ISL_FORMAT_R32G32_UINT:
+   case ISL_FORMAT_R32G32_UNORM:
+   case ISL_FORMAT_R32G32_SNORM:
+      return ISL_FORMAT_R32G32_UINT;
+
+   case ISL_FORMAT_B8G8R8A8_UNORM:
+   case ISL_FORMAT_B8G8R8A8_UNORM_SRGB:
+   case ISL_FORMAT_R8G8B8A8_UNORM:
+   case ISL_FORMAT_R8G8B8A8_UNORM_SRGB:
+   case ISL_FORMAT_R8G8B8A8_SNORM:
+   case ISL_FORMAT_R8G8B8A8_SINT:
+   case ISL_FORMAT_R8G8B8A8_UINT:
+   case ISL_FORMAT_B8G8R8X8_UNORM:
+   case ISL_FORMAT_B8G8R8X8_UNORM_SRGB:
+   case ISL_FORMAT_R8G8B8X8_UNORM:
+   case ISL_FORMAT_R8G8B8X8_UNORM_SRGB:
+      return ISL_FORMAT_R8G8B8A8_UINT;
+
+   case ISL_FORMAT_R16G16_UNORM:
+   case ISL_FORMAT_R16G16_SNORM:
+   case ISL_FORMAT_R16G16_SINT:
+   case ISL_FORMAT_R16G16_UINT:
+   case ISL_FORMAT_R16G16_FLOAT:
+      return ISL_FORMAT_R16G16_UINT;
+
+   case ISL_FORMAT_R32_SINT:
+   case ISL_FORMAT_R32_UINT:
+   case ISL_FORMAT_R32_FLOAT:
+   case ISL_FORMAT_R32_UNORM:
+   case ISL_FORMAT_R32_SNORM:
+      return ISL_FORMAT_R32_UINT;
+
+   default:
+      unreachable("Not a compressible format");
+   }
+}
+
 static void
 surf_convert_to_uncompressed(const struct isl_device *isl_dev,
                              struct brw_blorp_surface_info *info,
@@ -1878,14 +2016,47 @@ blorp_copy(struct blorp_batch *batch,
    const struct isl_format_layout *dst_fmtl =
       isl_format_get_layout(params.dst.surf.format);
 
-   params.src.view.format = get_copy_format_for_bpb(isl_dev, src_fmtl->bpb);
+   assert(params.src.aux_usage == ISL_AUX_USAGE_NONE ||
+          params.src.aux_usage == ISL_AUX_USAGE_MCS ||
+          params.src.aux_usage == ISL_AUX_USAGE_CCS_E);
+   assert(params.dst.aux_usage == ISL_AUX_USAGE_NONE ||
+          params.dst.aux_usage == ISL_AUX_USAGE_MCS ||
+          params.dst.aux_usage == ISL_AUX_USAGE_CCS_E);
+
+   if (params.dst.aux_usage == ISL_AUX_USAGE_CCS_E) {
+      params.dst.view.format = get_ccs_compatible_uint_format(dst_fmtl);
+      if (params.src.aux_usage == ISL_AUX_USAGE_CCS_E) {
+         params.src.view.format = get_ccs_compatible_uint_format(src_fmtl);
+      } else if (src_fmtl->bpb == dst_fmtl->bpb) {
+         params.src.view.format = params.dst.view.format;
+      } else {
+         params.src.view.format =
+            get_copy_format_for_bpb(isl_dev, src_fmtl->bpb);
+      }
+   } else if (params.src.aux_usage == ISL_AUX_USAGE_CCS_E) {
+      params.src.view.format = get_ccs_compatible_uint_format(src_fmtl);
+      if (src_fmtl->bpb == dst_fmtl->bpb) {
+         params.dst.view.format = params.src.view.format;
+      } else {
+         params.dst.view.format =
+            get_copy_format_for_bpb(isl_dev, dst_fmtl->bpb);
+      }
+   } else {
+      params.dst.view.format = get_copy_format_for_bpb(isl_dev, dst_fmtl->bpb);
+      params.src.view.format = get_copy_format_for_bpb(isl_dev, src_fmtl->bpb);
+   }
+
+   wm_prog_key.src_bpc =
+      isl_format_get_layout(params.src.view.format)->channels.r.bits;
+   wm_prog_key.dst_bpc =
+      isl_format_get_layout(params.dst.view.format)->channels.r.bits;
+
    if (src_fmtl->bw > 1 || src_fmtl->bh > 1) {
       surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.src,
                                    &src_x, &src_y, &src_width, &src_height);
       wm_prog_key.need_src_offset = true;
    }
 
-   params.dst.view.format = get_copy_format_for_bpb(isl_dev, dst_fmtl->bpb);
    if (dst_fmtl->bw > 1 || dst_fmtl->bh > 1) {
       surf_convert_to_uncompressed(batch->blorp->isl_dev, &params.dst,
                                    &dst_x, &dst_y, NULL, NULL);

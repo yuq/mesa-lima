@@ -451,10 +451,12 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
    struct isl_surf tmp_surfs[4];
    struct blorp_surf src_surf, dst_surf;
    blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
-                          (1 << ISL_AUX_USAGE_MCS),
+                          (1 << ISL_AUX_USAGE_MCS) |
+                          (1 << ISL_AUX_USAGE_CCS_E),
                           &src_level, src_layer, 1, &tmp_surfs[0]);
    blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
-                          (1 << ISL_AUX_USAGE_MCS),
+                          (1 << ISL_AUX_USAGE_MCS) |
+                          (1 << ISL_AUX_USAGE_CCS_E),
                           &dst_level, dst_layer, 1, &tmp_surfs[2]);
 
    struct blorp_batch batch;
