@@ -141,6 +141,7 @@ static const VkSurfaceFormatKHR formats[] = {
 };
 
 static const VkPresentModeKHR present_modes[] = {
+   VK_PRESENT_MODE_IMMEDIATE_KHR,
    VK_PRESENT_MODE_MAILBOX_KHR,
 };
 
@@ -643,7 +644,8 @@ x11_queue_present(struct wsi_swapchain *anv_chain,
    int64_t divisor = 0;
    int64_t remainder = 0;
 
-   options |= XCB_PRESENT_OPTION_ASYNC;
+   if (chain->base.present_mode == VK_PRESENT_MODE_IMMEDIATE_KHR)
+      options |= XCB_PRESENT_OPTION_ASYNC;
 
    xshmfence_reset(image->shm_fence);
 
