@@ -559,7 +559,7 @@ wsi_wl_swapchain_queue_present(struct wsi_swapchain *wsi_chain,
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)wsi_chain;
 
-   if (chain->present_mode == VK_PRESENT_MODE_FIFO_KHR) {
+   if (chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR) {
       while (!chain->fifo_ready) {
          int ret = wl_display_dispatch_queue(chain->display->display,
                                              chain->queue);
@@ -572,7 +572,7 @@ wsi_wl_swapchain_queue_present(struct wsi_swapchain *wsi_chain,
    wl_surface_attach(chain->surface, chain->images[image_index].buffer, 0, 0);
    wl_surface_damage(chain->surface, 0, 0, INT32_MAX, INT32_MAX);
 
-   if (chain->present_mode == VK_PRESENT_MODE_FIFO_KHR) {
+   if (chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR) {
       struct wl_callback *frame = wl_surface_frame(chain->surface);
       wl_proxy_set_queue((struct wl_proxy *)frame, chain->queue);
       wl_callback_add_listener(frame, &frame_listener, chain);
@@ -711,12 +711,12 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.acquire_next_image = wsi_wl_swapchain_acquire_next_image;
    chain->base.queue_present = wsi_wl_swapchain_queue_present;
    chain->base.image_fns = image_fns;
+   chain->base.present_mode = pCreateInfo->presentMode;
    chain->surface = surface->surface;
    chain->extent = pCreateInfo->imageExtent;
    chain->vk_format = pCreateInfo->imageFormat;
    chain->drm_format = wl_drm_format_for_vk_format(chain->vk_format, alpha);
 
-   chain->present_mode = pCreateInfo->presentMode;
    chain->fifo_ready = true;
 
    chain->image_count = num_images;

@@ -823,6 +823,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.acquire_next_image = x11_acquire_next_image;
    chain->base.queue_present = x11_queue_present;
    chain->base.image_fns = image_fns;
+   chain->base.present_mode = pCreateInfo->presentMode;
    chain->conn = conn;
    chain->window = window;
    chain->depth = geometry->depth;
