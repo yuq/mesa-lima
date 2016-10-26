@@ -701,6 +701,40 @@ gbm_dri_bo_get_stride(struct gbm_bo *_bo, int plane)
    return (uint32_t)stride;
 }
 
+static int64_t
+gbm_dri_bo_get_offset(struct gbm_bo *_bo, int plane)
+{
+   struct gbm_dri_device *dri = gbm_dri_device(_bo->gbm);
+   struct gbm_dri_bo *bo = gbm_dri_bo(_bo);
+   int offset = 0;
+
+   if (!dri->image || dri->image->base.version < 13 || !dri->image->fromPlanar) {
+      errno = ENOSYS;
+      return -1;
+   }
+
+   if (plane >= get_number_planes(dri, bo->image)) {
+      errno = EINVAL;
+      return -2;
+   }
+
+    /* Dumb images have no offset */
+   if (bo->image == NULL) {
+      assert(plane == 0);
+      return 0;
+   }
+
+   __DRIimage *image = dri->image->fromPlanar(bo->image, plane, NULL);
+   if (image) {
+      dri->image->queryImage(image, __DRI_IMAGE_ATTRIB_OFFSET, &offset);
+      dri->image->destroyImage(image);
+   } else {
+      dri->image->queryImage(bo->image, __DRI_IMAGE_ATTRIB_OFFSET, &offset);
+   }
+
+   return (uint32_t)offset;
+}
+
 static void
 gbm_dri_bo_destroy(struct gbm_bo *_bo)
 {
@@ -1196,6 +1230,7 @@ dri_device_create(int fd)
    dri->base.base.bo_get_planes = gbm_dri_bo_get_planes;
    dri->base.base.bo_get_handle = gbm_dri_bo_get_handle_for_plane;
    dri->base.base.bo_get_stride = gbm_dri_bo_get_stride;
+   dri->base.base.bo_get_offset = gbm_dri_bo_get_offset;
    dri->base.base.bo_destroy = gbm_dri_bo_destroy;
    dri->base.base.destroy = dri_destroy;
    dri->base.base.surface_create = gbm_dri_surface_create;

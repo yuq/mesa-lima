@@ -194,6 +194,21 @@ gbm_bo_get_format(struct gbm_bo *bo)
    return bo->format;
 }
 
+/** Get the offset for the data of the specified plane
+ *
+ * Extra planes, and even the first plane, may have an offset from the start of
+ * the buffer object. This function will provide the offset for the given plane
+ * to be used in various KMS APIs.
+ *
+ * \param bo The buffer object
+ * \return The offset
+ */
+GBM_EXPORT int64_t
+gbm_bo_get_offset(struct gbm_bo *bo, int plane)
+{
+   return bo->gbm->bo_get_offset(bo, plane);
+}
+
 /** Get the gbm device used to create the buffer object
  *
  * \param bo The buffer object
