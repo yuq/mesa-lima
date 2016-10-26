@@ -1145,42 +1145,13 @@ void
 fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
                                                        struct brw_reg dst,
                                                        struct brw_reg index,
-                                                       struct brw_reg offset)
+                                                       struct brw_reg payload)
 {
    assert(index.type == BRW_REGISTER_TYPE_UD);
-
-   assert(offset.file == BRW_GENERAL_REGISTER_FILE);
-   /* Reference just the dword we need, to avoid angering validate_reg(). */
-   offset = brw_vec1_grf(offset.nr, 0);
-
-   /* We use the SIMD4x2 mode because we want to end up with 4 components in
-    * the destination loaded consecutively from the same offset (which appears
-    * in the first component, and the rest are ignored).
-    */
-   dst.width = BRW_WIDTH_4;
-
-   struct brw_reg src = offset;
-   bool header_present = false;
-
-   if (devinfo->gen >= 9) {
-      /* Skylake requires a message header in order to use SIMD4x2 mode. */
-      src = retype(brw_vec4_grf(offset.nr, 0), BRW_REGISTER_TYPE_UD);
-      header_present = true;
-
-      brw_push_insn_state(p);
-      brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-      brw_set_default_exec_size(p, BRW_EXECUTE_8);
-      brw_MOV(p, vec8(src), retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
-      brw_set_default_access_mode(p, BRW_ALIGN_1);
-
-      brw_MOV(p, get_element_ud(src, 2),
-              brw_imm_ud(GEN9_SAMPLER_SIMD_MODE_EXTENSION_SIMD4X2));
-      brw_pop_insn_state(p);
-   }
+   assert(payload.file == BRW_GENERAL_REGISTER_FILE);
 
    if (index.file == BRW_IMMEDIATE_VALUE) {
-
-      uint32_t surf_index = index.ud;
+      const uint32_t surf_index = index.ud;
 
       brw_push_insn_state(p);
       brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
@@ -1189,19 +1160,18 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
       brw_inst_set_exec_size(devinfo, send, BRW_EXECUTE_4);
       brw_pop_insn_state(p);
 
-      brw_set_dest(p, send, retype(dst, BRW_REGISTER_TYPE_UD));
-      brw_set_src0(p, send, src);
-      brw_set_sampler_message(p, send,
+      brw_set_dest(p, send, vec4(retype(dst, BRW_REGISTER_TYPE_UD)));
+      brw_set_src0(p, send, vec4(retype(payload, BRW_REGISTER_TYPE_UD)));
+      brw_set_dp_read_message(p, send,
                               surf_index,
-                              0, /* LD message ignores sampler unit */
-                              GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
-                              1, /* rlen */
-                              inst->mlen,
-                              header_present,
-                              BRW_SAMPLER_SIMD_MODE_SIMD4X2,
-                              0);
-   } else {
+                              BRW_DATAPORT_OWORD_BLOCK_1_OWORDLOW,
+                              GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
+                              GEN6_SFID_DATAPORT_CONSTANT_CACHE,
+                              1, /* mlen */
+                              true, /* header */
+                              1); /* rlen */
 
+   } else {
       struct brw_reg addr = vec1(retype(brw_address_reg(0), BRW_REGISTER_TYPE_UD));
 
       brw_push_insn_state(p);
@@ -1217,16 +1187,18 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 
       /* dst = send(payload, a0.0 | <descriptor>) */
       brw_inst *insn = brw_send_indirect_message(
-         p, BRW_SFID_SAMPLER, dst, src, addr);
-      brw_set_sampler_message(p, insn,
-                              0,
-                              0, /* LD message ignores sampler unit */
-                              GEN5_SAMPLER_MESSAGE_SAMPLE_LD,
-                              1, /* rlen */
-                              inst->mlen,
-                              header_present,
-                              BRW_SAMPLER_SIMD_MODE_SIMD4X2,
-                              0);
+         p, GEN6_SFID_DATAPORT_CONSTANT_CACHE,
+         vec4(retype(dst, BRW_REGISTER_TYPE_UD)),
+         vec4(retype(payload, BRW_REGISTER_TYPE_UD)), addr);
+      brw_inst_set_exec_size(p->devinfo, insn, BRW_EXECUTE_4);
+      brw_set_dp_read_message(p, insn,
+                              0, /* surface */
+                              BRW_DATAPORT_OWORD_BLOCK_1_OWORDLOW,
+                              GEN7_DATAPORT_DC_OWORD_BLOCK_READ,
+                              GEN6_SFID_DATAPORT_CONSTANT_CACHE,
+                              1, /* mlen */
+                              true, /* header */
+                              1); /* rlen */
 
       brw_pop_insn_state(p);
    }

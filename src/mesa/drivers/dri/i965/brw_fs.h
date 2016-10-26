@@ -421,7 +421,7 @@ private:
    void generate_uniform_pull_constant_load_gen7(fs_inst *inst,
                                                  struct brw_reg dst,
                                                  struct brw_reg surf_index,
-                                                 struct brw_reg offset);
+                                                 struct brw_reg payload);
    void generate_varying_pull_constant_load_gen4(fs_inst *inst,
                                                  struct brw_reg dst,
                                                  struct brw_reg index);

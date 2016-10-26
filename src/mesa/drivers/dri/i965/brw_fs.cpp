@@ -3202,44 +3202,18 @@ fs_visitor::lower_uniform_pull_constant_loads()
          continue;
 
       if (devinfo->gen >= 7) {
-         /* The offset arg is a vec4-aligned immediate byte offset. */
-         fs_reg const_offset_reg = inst->src[1];
-         assert(const_offset_reg.file == IMM &&
-                const_offset_reg.type == BRW_REGISTER_TYPE_UD);
-         assert(const_offset_reg.ud % 16 == 0);
+         const fs_builder ubld = fs_builder(this, block, inst).exec_all();
+         const fs_reg payload = ubld.group(8, 0).vgrf(BRW_REGISTER_TYPE_UD);
 
-         fs_reg payload, offset;
-         if (devinfo->gen >= 9) {
-            /* We have to use a message header on Skylake to get SIMD4x2
-             * mode.  Reserve space for the register.
-            */
-            offset = payload = fs_reg(VGRF, alloc.allocate(2));
-            offset.offset += REG_SIZE;
-            inst->mlen = 2;
-         } else {
-            offset = payload = fs_reg(VGRF, alloc.allocate(1));
-            inst->mlen = 1;
-         }
+         ubld.group(8, 0).MOV(payload,
+                              retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
+         ubld.group(1, 0).MOV(component(payload, 2),
+                              brw_imm_ud(inst->src[1].ud / 16));
 
-         /* This is actually going to be a MOV, but since only the first dword
-          * is accessed, we have a special opcode to do just that one.  Note
-          * that this needs to be an operation that will be considered a def
-          * by live variable analysis, or register allocation will explode.
-          */
-         fs_inst *setup = new(mem_ctx) fs_inst(FS_OPCODE_SET_SIMD4X2_OFFSET,
-                                               8, offset, const_offset_reg);
-         setup->force_writemask_all = true;
-
-         setup->ir = inst->ir;
-         setup->annotation = inst->annotation;
-         inst->insert_before(block, setup);
-
-         /* Similarly, this will only populate the first 4 channels of the
-          * result register (since we only use smear values from 0-3), but we
-          * don't tell the optimizer.
-          */
          inst->opcode = FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD_GEN7;
          inst->src[1] = payload;
+         inst->header_size = 1;
+         inst->mlen = 1;
 
          invalidate_live_intervals();
       } else {

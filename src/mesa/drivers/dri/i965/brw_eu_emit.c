@@ -2266,7 +2266,7 @@ gen7_block_read_scratch(struct brw_codegen *p,
 }
 
 /**
- * Read a float[4] vector from the data port Data Cache (const buffer).
+ * Read a float[4] vector from the data port constant cache.
  * Location (in buffer) should be a multiple of 16.
  * Used for fetching shader constants.
  */
@@ -2278,8 +2278,7 @@ void brw_oword_block_read(struct brw_codegen *p,
 {
    const struct gen_device_info *devinfo = p->devinfo;
    const unsigned target_cache =
-      (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
-       devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_SAMPLER_CACHE :
+      (devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_CONSTANT_CACHE :
        BRW_DATAPORT_READ_TARGET_DATA_CACHE);
 
    /* On newer hardware, offset is in units of owords. */
