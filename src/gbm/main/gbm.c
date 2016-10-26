@@ -137,7 +137,7 @@ gbm_create_device(int fd)
  * \return The width of the allocated buffer object
  *
  */
-GBM_EXPORT unsigned int
+GBM_EXPORT uint32_t
 gbm_bo_get_width(struct gbm_bo *bo)
 {
    return bo->width;
@@ -148,7 +148,7 @@ gbm_bo_get_width(struct gbm_bo *bo)
  * \param bo The buffer object
  * \return The height of the allocated buffer object
  */
-GBM_EXPORT unsigned int
+GBM_EXPORT uint32_t
 gbm_bo_get_height(struct gbm_bo *bo)
 {
    return bo->height;
