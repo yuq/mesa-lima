@@ -1,4 +1,5 @@
-# Copyright (C) 2014 Emil Velikov <emil.l.velikov@gmail.com>
+# Copyright © 2016 Intel Corporation
+# Copyright © 2016 Mauro Rossi <issor.oruam@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -17,30 +18,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
+#
 
 LOCAL_PATH := $(call my-dir)
 
-# get C_SOURCES
+# Import variables
 include $(LOCAL_PATH)/Makefile.sources
 
-include $(CLEAR_VARS)
-
-LOCAL_SRC_FILES := \
-	$(C_SOURCES)
-
-LOCAL_GENERATED_SOURCES := $(MESA_GEN_NIR_H)
-
-# We need libmesa_nir to get NIR's generated include directories.
-LOCAL_STATIC_LIBRARIES := \
-	libmesa_nir \
-	libmesa_broadcom_genxml
-
-LOCAL_MODULE := libmesa_pipe_vc4
-
-include $(GALLIUM_COMMON_MK)
-include $(BUILD_STATIC_LIBRARY)
-
-ifneq ($(HAVE_GALLIUM_VC4),)
-GALLIUM_TARGET_DRIVERS += vc4
-$(eval GALLIUM_LIBS += $(LOCAL_MODULE) libmesa_winsys_vc4)
-endif
+include $(LOCAL_PATH)/Android.genxml.mk
