@@ -429,7 +429,7 @@ static void si_blit_decompress_color(struct pipe_context *ctx,
 		/* disable levels without DCC */
 		for (int i = first_level; i <= last_level; i++) {
 			if (!rtex->dcc_offset ||
-			    !rtex->surface.level[i].dcc_enabled)
+			    i >= rtex->surface.num_dcc_levels)
 				level_mask &= ~(1 << i);
 		}
 	} else if (rtex->fmask.size) {
@@ -1029,7 +1029,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		 * This is still the fastest codepath even with this clear.
 		 */
 		if (dst->dcc_offset &&
-		    dst->surface.level[info->dst.level].dcc_enabled) {
+		    info->dst.level < dst->surface.num_dcc_levels) {
 			vi_dcc_clear_level(&sctx->b, dst, info->dst.level,
 					   0xFFFFFFFF);
 			dst->dirty_level_mask &= ~(1 << info->dst.level);

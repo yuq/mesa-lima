@@ -394,7 +394,7 @@ void si_set_mutable_tex_desc_fields(struct r600_texture *tex,
 							     is_stencil));
 	state[4] |= S_008F20_PITCH(pitch - 1);
 
-	if (tex->dcc_offset && tex->surface.level[first_level].dcc_enabled) {
+	if (tex->dcc_offset && first_level < tex->surface.num_dcc_levels) {
 		state[6] |= S_008F28_COMPRESSION_EN(1);
 		state[7] = ((!tex->dcc_separate_buffer ? tex->resource.gpu_address : 0) +
 			    tex->dcc_offset +
@@ -669,7 +669,7 @@ static void si_set_shader_image(struct si_context *ctx,
 		unsigned level = view->u.tex.level;
 		unsigned width, height, depth;
 		bool uses_dcc = tex->dcc_offset &&
-				tex->surface.level[level].dcc_enabled;
+				level < tex->surface.num_dcc_levels;
 
 		assert(!tex->is_depth);
 		assert(tex->fmask.size == 0);

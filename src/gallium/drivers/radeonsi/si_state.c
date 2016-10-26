@@ -2500,7 +2500,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 
 		cb_color_info = cb->cb_color_info | tex->cb_color_info;
 
-		if (tex->dcc_offset && cb->level_info->dcc_enabled) {
+		if (tex->dcc_offset && cb->base.u.tex.level < tex->surface.num_dcc_levels) {
 			bool is_msaa_resolve_dst = state->cbufs[0] &&
 						   state->cbufs[0]->texture->nr_samples > 1 &&
 						   state->cbufs[1] == &cb->base &&

@@ -283,7 +283,6 @@ struct radeon_surf_level {
     uint16_t                    nblk_y;
     uint32_t                    pitch_bytes;
     enum radeon_surf_mode       mode;
-    bool                        dcc_enabled;
 };
 
 struct radeon_surf {
@@ -291,6 +290,11 @@ struct radeon_surf {
     unsigned                    blk_w:4;
     unsigned                    blk_h:4;
     unsigned                    bpe:5;
+    /* Number of mipmap levels where DCC is enabled starting from level 0.
+     * Non-zero levels may be disabled due to alignment constraints, but not
+     * the first level.
+     */
+    unsigned                    num_dcc_levels:4;
     uint32_t                    flags;
 
     /* These are return values. Some of them can be set by the caller, but
