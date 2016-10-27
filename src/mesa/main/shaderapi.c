@@ -2165,6 +2165,8 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
 
    struct gl_program *dst = dst_sh->Program;
 
+   dst->info.num_images = dst_sh->NumImages;
+
    switch (dst_sh->Stage) {
    case MESA_SHADER_VERTEX:
       dst->ClipDistanceArraySize = src->Vert.ClipDistanceArraySize;

@@ -151,7 +151,6 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info->num_ubos = sh->NumUniformBlocks;
    shader->info->num_abos = shader_prog->NumAtomicBuffers;
    shader->info->num_ssbos = sh->NumShaderStorageBlocks;
-   shader->info->num_images = sh->NumImages;
    shader->info->uses_clip_distance_out =
       sh->Program->ClipDistanceArraySize != 0;
    shader->info->separate_shader = shader_prog->SeparateShader;
