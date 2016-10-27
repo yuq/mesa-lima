@@ -6783,8 +6783,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	bld_base = &ctx.soa.bld_base;
 	ctx.load_system_value = declare_system_value;
 
-	if (!si_compile_tgsi_main(&ctx, shader))
-		goto out;
+	if (!si_compile_tgsi_main(&ctx, shader)) {
+		si_llvm_dispose(&ctx);
+		return -1;
+	}
 
 	mod = bld_base->base.gallivm->module;
 
@@ -6802,12 +6804,11 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
 			    mod, debug, ctx.type, "TGSI shader");
+	si_llvm_dispose(&ctx);
 	if (r) {
 		fprintf(stderr, "LLVM failed to compile shader\n");
-		goto out;
+		return r;
 	}
-
-	si_llvm_dispose(&ctx);
 
 	/* Validate SGPR and VGPR usage for compute to detect compiler bugs.
 	 * LLVM 3.9svn has this bug.
@@ -6898,17 +6899,16 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		shader->gs_copy_shader = CALLOC_STRUCT(si_shader);
 		shader->gs_copy_shader->selector = shader->selector;
 		ctx.shader = shader->gs_copy_shader;
-		if ((r = si_generate_gs_copy_shader(sscreen, &ctx,
-						    shader, debug))) {
+		r = si_generate_gs_copy_shader(sscreen, &ctx,
+					       shader, debug);
+		if (r) {
 			free(shader->gs_copy_shader);
 			shader->gs_copy_shader = NULL;
-			goto out;
+			return r;
 		}
 	}
 
-	r = 0;
-out:
-	return r;
+	return 0;
 }
 
 /**
