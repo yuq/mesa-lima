@@ -568,12 +568,6 @@ NineDevice9_GetPipe( struct NineDevice9 *This )
     return This->pipe;
 }
 
-struct cso_context *
-NineDevice9_GetCSO( struct NineDevice9 *This )
-{
-    return This->cso;
-}
-
 const D3DCAPS9 *
 NineDevice9_GetCaps( struct NineDevice9 *This )
 {

@@ -60,7 +60,6 @@ NineSwapChain9_ctor( struct NineSwapChain9 *This,
 
     This->screen = NineDevice9_GetScreen(This->base.device);
     This->pipe = NineDevice9_GetPipe(This->base.device);
-    This->cso = NineDevice9_GetCSO(This->base.device);
     This->implicit = implicit;
     This->actx = pCTX;
     This->present = pPresent;

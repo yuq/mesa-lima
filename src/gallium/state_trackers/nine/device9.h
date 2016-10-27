@@ -201,9 +201,6 @@ NineDevice9_GetScreen( struct NineDevice9 *This );
 struct pipe_context *
 NineDevice9_GetPipe( struct NineDevice9 *This );
 
-struct cso_context *
-NineDevice9_GetCSO( struct NineDevice9 *This );
-
 const D3DCAPS9 *
 NineDevice9_GetCaps( struct NineDevice9 *This );
 

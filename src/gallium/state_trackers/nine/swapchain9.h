@@ -45,7 +45,6 @@ struct NineSwapChain9
     /* G3D stuff */
     struct pipe_screen *screen;
     struct pipe_context *pipe;
-    struct cso_context *cso;
 
     /* presentation backend */
     ID3DPresent *present;
