@@ -1231,9 +1231,9 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
       stage_prog_data->binding_table.abo_start = 0xd0d0d0d0;
    }
 
-   if (shader && shader->NumImages) {
+   if (prog->info.num_images) {
       stage_prog_data->binding_table.image_start = next_binding_table_offset;
-      next_binding_table_offset += shader->NumImages;
+      next_binding_table_offset += prog->info.num_images;
    } else {
       stage_prog_data->binding_table.image_start = 0xd0d0d0d0;
    }

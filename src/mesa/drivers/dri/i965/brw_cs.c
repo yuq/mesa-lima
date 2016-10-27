@@ -103,9 +103,10 @@ brw_codegen_cs_prog(struct brw_context *brw,
    prog_data.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    prog_data.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param, cs->base.NumImages);
+      rzalloc_array(NULL, struct brw_image_param,
+                    cp->program.info.num_images);
    prog_data.base.nr_params = param_count;
-   prog_data.base.nr_image_params = cs->base.NumImages;
+   prog_data.base.nr_image_params = cp->program.info.num_images;
 
    brw_nir_setup_glsl_uniforms(cp->program.nir, prog, &cp->program,
                                &prog_data.base, true);

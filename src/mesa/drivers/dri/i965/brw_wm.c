@@ -107,8 +107,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
     * by the state cache.
     */
    int param_count = fp->program.nir->num_uniforms / 4;
-   if (fs)
-      prog_data.base.nr_image_params = fs->base.NumImages;
+   prog_data.base.nr_image_params = fp->program.info.num_images;
    /* The backend also sometimes adds params for texture size. */
    param_count += 2 * ctx->Const.Program[MESA_SHADER_FRAGMENT].MaxTextureImageUnits;
    prog_data.base.param =

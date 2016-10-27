@@ -129,11 +129,12 @@ brw_upload_tes_image_surfaces(struct brw_context *brw)
    /* BRW_NEW_TESS_PROGRAMS */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_TESS_EVAL];
+   const struct gl_program *tep = brw->tess_eval_program;
 
-   if (prog) {
+   if (tep && prog) {
       /* BRW_NEW_TES_PROG_DATA, BRW_NEW_IMAGE_UNITS */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_TESS_EVAL],
-                                &brw->tes.base, brw->tes.base.prog_data);
+                                tep, &brw->tes.base, brw->tes.base.prog_data);
    }
 }
 

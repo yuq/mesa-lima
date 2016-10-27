@@ -150,8 +150,6 @@ brw_codegen_tes_prog(struct brw_context *brw,
     * padding around uniform values below vec4 size, so the worst case is that
     * every uniform is a float which gets padded to the size of a vec4.
     */
-   struct gl_linked_shader *tes =
-      shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
    int param_count = nir->num_uniforms / 4;
 
    prog_data.base.base.param =
@@ -159,9 +157,10 @@ brw_codegen_tes_prog(struct brw_context *brw,
    prog_data.base.base.pull_param =
       rzalloc_array(NULL, const gl_constant_value *, param_count);
    prog_data.base.base.image_param =
-      rzalloc_array(NULL, struct brw_image_param, tes->NumImages);
+      rzalloc_array(NULL, struct brw_image_param,
+                    tep->program.info.num_images);
    prog_data.base.base.nr_params = param_count;
-   prog_data.base.base.nr_image_params = tes->NumImages;
+   prog_data.base.base.nr_image_params = tep->program.info.num_images;
 
    prog_data.base.cull_distance_mask =
       ((1 << tep->program.CullDistanceArraySize) - 1) <<
@@ -200,6 +199,8 @@ brw_codegen_tes_prog(struct brw_context *brw,
    }
 
    if (unlikely(brw->perf_debug)) {
+      struct gl_linked_shader *tes =
+         shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
       struct brw_shader *btes = (struct brw_shader *) tes;
       if (btes->compiled_once) {
          brw_tes_debug_recompile(brw, shader_prog, key);

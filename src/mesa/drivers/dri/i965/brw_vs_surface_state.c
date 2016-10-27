@@ -195,11 +195,12 @@ brw_upload_vs_image_surfaces(struct brw_context *brw)
    /* BRW_NEW_VERTEX_PROGRAM */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
+   const struct gl_program *vp = brw->vertex_program;
 
-   if (prog) {
+   if (vp && prog) {
       /* BRW_NEW_VS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_VERTEX],
-                                &brw->vs.base, brw->vs.base.prog_data);
+                                vp, &brw->vs.base, brw->vs.base.prog_data);
    }
 }
 

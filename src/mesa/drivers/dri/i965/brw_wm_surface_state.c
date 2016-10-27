@@ -1568,11 +1568,12 @@ brw_upload_cs_image_surfaces(struct brw_context *brw)
    /* _NEW_PROGRAM */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+   const struct gl_program *cp = brw->compute_program;
 
-   if (prog) {
+   if (cp && prog) {
       /* BRW_NEW_CS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                                &brw->cs.base, brw->cs.base.prog_data);
+                                cp, &brw->cs.base, brw->cs.base.prog_data);
    }
 }
 
@@ -1779,13 +1780,15 @@ update_image_surface(struct brw_context *brw,
 void
 brw_upload_image_surfaces(struct brw_context *brw,
                           struct gl_linked_shader *shader,
+                          const struct gl_program *prog,
                           struct brw_stage_state *stage_state,
                           struct brw_stage_prog_data *prog_data)
 {
+   assert(prog);
    struct gl_context *ctx = &brw->ctx;
 
-   if (shader && shader->NumImages) {
-      for (unsigned i = 0; i < shader->NumImages; i++) {
+   if (prog->info.num_images && shader) {
+      for (unsigned i = 0; i < prog->info.num_images; i++) {
          struct gl_image_unit *u = &ctx->ImageUnits[shader->ImageUnits[i]];
          const unsigned surf_idx = prog_data->binding_table.image_start + i;
 
@@ -1810,11 +1813,12 @@ brw_upload_wm_image_surfaces(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
    struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
+   const struct gl_program *wm = brw->fragment_program;
 
-   if (prog) {
+   if (wm && prog) {
       /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
       brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                                &brw->wm.base, brw->wm.base.prog_data);
+                                wm, &brw->wm.base, brw->wm.base.prog_data);
    }
 }
 

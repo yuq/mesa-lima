@@ -1515,6 +1515,7 @@ void brw_upload_abo_surfaces(struct brw_context *brw,
                              struct brw_stage_prog_data *prog_data);
 void brw_upload_image_surfaces(struct brw_context *brw,
                                struct gl_linked_shader *shader,
+                               const struct gl_program *prog,
                                struct brw_stage_state *stage_state,
                                struct brw_stage_prog_data *prog_data);
 
