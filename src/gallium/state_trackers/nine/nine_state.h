@@ -486,6 +486,23 @@ nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *devic
                                                        struct pipe_vertex_buffer *vbuf,
                                                        struct pipe_index_buffer *ibuf);
 
+struct pipe_query *
+nine_context_create_query(struct NineDevice9 *device, unsigned query_type);
+
+void
+nine_context_destroy_query(struct NineDevice9 *device, struct pipe_query *query);
+
+void
+nine_context_begin_query(struct NineDevice9 *device, struct pipe_query *query);
+
+void
+nine_context_end_query(struct NineDevice9 *device, struct pipe_query *query);
+
+boolean
+nine_context_get_query_result(struct NineDevice9 *device, struct pipe_query *query,
+                              boolean flush, boolean wait,
+                              union pipe_query_result *result);
+
 void nine_state_restore_non_cso(struct NineDevice9 *device);
 void nine_state_set_defaults(struct NineDevice9 *, const D3DCAPS9 *,
                              boolean is_reset);

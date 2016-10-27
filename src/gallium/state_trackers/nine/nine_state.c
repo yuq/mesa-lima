@@ -2091,6 +2091,39 @@ nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *devic
     device->pipe->draw_vbo(device->pipe, &info);
 }
 
+struct pipe_query *
+nine_context_create_query(struct NineDevice9 *device, unsigned query_type)
+{
+    return device->pipe->create_query(device->pipe, query_type, 0);
+}
+
+void
+nine_context_destroy_query(struct NineDevice9 *device, struct pipe_query *query)
+{
+    device->pipe->destroy_query(device->pipe, query);
+}
+
+void
+nine_context_begin_query(struct NineDevice9 *device, struct pipe_query *query)
+{
+    (void) device->pipe->begin_query(device->pipe, query);
+}
+
+void
+nine_context_end_query(struct NineDevice9 *device, struct pipe_query *query)
+{
+    (void) device->pipe->end_query(device->pipe, query);
+}
+
+boolean
+nine_context_get_query_result(struct NineDevice9 *device, struct pipe_query *query,
+                              boolean flush, boolean wait,
+                              union pipe_query_result *result)
+{
+    (void) flush;
+    return device->pipe->get_query_result(device->pipe, query, wait, result);
+}
+
 /* State defaults */
 
 static const DWORD nine_render_state_defaults[NINED3DRS_LAST + 1] =
