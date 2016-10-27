@@ -233,8 +233,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       process_glsl_ir(brw, shProg, shader);
 
-      do_set_program_inouts(shader->ir, prog, shader->Stage);
-
       _mesa_copy_linked_program_data(shProg, shader);
 
       /* Make a pass over the IR to add state references for any built-in
