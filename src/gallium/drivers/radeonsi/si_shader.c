@@ -6674,40 +6674,15 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 	}
 }
 
-int si_compile_tgsi_shader(struct si_screen *sscreen,
-			   LLVMTargetMachineRef tm,
-			   struct si_shader *shader,
-			   bool is_monolithic,
-			   struct pipe_debug_callback *debug)
+static bool si_compile_tgsi_main(struct si_shader_context *ctx,
+				 struct si_shader *shader)
 {
 	struct si_shader_selector *sel = shader->selector;
-	struct si_shader_context ctx;
-	struct lp_build_tgsi_context *bld_base;
-	LLVMModuleRef mod;
-	int r = 0;
+	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
 
-	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
-	 * conversion fails. */
-	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
-	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
-		tgsi_dump(sel->tokens, 0);
-		si_dump_streamout(&sel->so);
-	}
-
-	si_init_shader_ctx(&ctx, sscreen, shader, tm);
-	ctx.is_monolithic = is_monolithic;
-
-	memset(shader->info.vs_output_param_offset, 0xff,
-	       sizeof(shader->info.vs_output_param_offset));
-
-	shader->info.uses_instanceid = sel->info.uses_instanceid;
-
-	bld_base = &ctx.soa.bld_base;
-	ctx.load_system_value = declare_system_value;
-
-	switch (ctx.type) {
+	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
-		ctx.load_input = declare_input_vs;
+		ctx->load_input = declare_input_vs;
 		if (shader->key.vs.as_ls)
 			bld_base->emit_epilogue = si_llvm_emit_ls_epilogue;
 		else if (shader->key.vs.as_es)
@@ -6733,47 +6708,84 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		bld_base->emit_epilogue = si_llvm_emit_gs_epilogue;
 		break;
 	case PIPE_SHADER_FRAGMENT:
-		ctx.load_input = declare_input_fs;
-		if (is_monolithic)
+		ctx->load_input = declare_input_fs;
+		if (ctx->is_monolithic)
 			bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
 		break;
 	case PIPE_SHADER_COMPUTE:
-		ctx.declare_memory_region = declare_compute_memory;
+		ctx->declare_memory_region = declare_compute_memory;
 		break;
 	default:
 		assert(!"Unsupported shader type");
-		return -1;
+		return false;
 	}
 
-	create_meta_data(&ctx);
-	create_function(&ctx);
-	preload_ring_buffers(&ctx);
+	create_meta_data(ctx);
+	create_function(ctx);
+	preload_ring_buffers(ctx);
 
-	if (ctx.is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
+	if (ctx->is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
 	    shader->key.ps.prolog.poly_stipple) {
-		LLVMValueRef list = LLVMGetParam(ctx.main_fn,
+		LLVMValueRef list = LLVMGetParam(ctx->main_fn,
 						 SI_PARAM_RW_BUFFERS);
-		si_llvm_emit_polygon_stipple(&ctx, list,
+		si_llvm_emit_polygon_stipple(ctx, list,
 					     SI_PARAM_POS_FIXED_PT);
 	}
 
-	if (ctx.type == PIPE_SHADER_GEOMETRY) {
+	if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
-			ctx.gs_next_vertex[i] =
+			ctx->gs_next_vertex[i] =
 				lp_build_alloca(bld_base->base.gallivm,
-						ctx.i32, "");
+						ctx->i32, "");
 		}
 	}
 
 	if (!lp_build_tgsi_llvm(bld_base, sel->tokens)) {
 		fprintf(stderr, "Failed to translate shader from TGSI to LLVM\n");
-		goto out;
+		return false;
 	}
 
-	si_llvm_build_ret(&ctx, ctx.return_value);
+	si_llvm_build_ret(ctx, ctx->return_value);
+	return true;
+}
+
+int si_compile_tgsi_shader(struct si_screen *sscreen,
+			   LLVMTargetMachineRef tm,
+			   struct si_shader *shader,
+			   bool is_monolithic,
+			   struct pipe_debug_callback *debug)
+{
+	struct si_shader_selector *sel = shader->selector;
+	struct si_shader_context ctx;
+	struct lp_build_tgsi_context *bld_base;
+	LLVMModuleRef mod;
+	int r = -1;
+
+	/* Dump TGSI code before doing TGSI->LLVM conversion in case the
+	 * conversion fails. */
+	if (r600_can_dump_shader(&sscreen->b, sel->info.processor) &&
+	    !(sscreen->b.debug_flags & DBG_NO_TGSI)) {
+		tgsi_dump(sel->tokens, 0);
+		si_dump_streamout(&sel->so);
+	}
+
+	si_init_shader_ctx(&ctx, sscreen, shader, tm);
+	ctx.is_monolithic = is_monolithic;
+
+	memset(shader->info.vs_output_param_offset, 0xff,
+	       sizeof(shader->info.vs_output_param_offset));
+
+	shader->info.uses_instanceid = sel->info.uses_instanceid;
+
+	bld_base = &ctx.soa.bld_base;
+	ctx.load_system_value = declare_system_value;
+
+	if (!si_compile_tgsi_main(&ctx, shader))
+		goto out;
+
 	mod = bld_base->base.gallivm->module;
 
 	/* Dump LLVM IR before any optimization passes */
@@ -6894,6 +6906,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		}
 	}
 
+	r = 0;
 out:
 	return r;
 }
