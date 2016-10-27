@@ -2417,7 +2417,7 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 			unsigned level, unsigned clear_value)
 {
 	struct pipe_resource *dcc_buffer;
-	uint64_t dcc_offset;
+	uint64_t dcc_offset, clear_size;
 
 	assert(rtex->dcc_offset && level < rtex->surface.num_dcc_levels);
 
@@ -2429,10 +2429,18 @@ void vi_dcc_clear_level(struct r600_common_context *rctx,
 		dcc_offset = rtex->dcc_offset;
 	}
 
-	dcc_offset += rtex->surface.u.legacy.level[level].dcc_offset;
+	if (rctx->chip_class >= GFX9) {
+		/* Mipmap level clears aren't implemented. */
+		assert(rtex->resource.b.b.last_level == 0);
+		/* MSAA needs a different clear size. */
+		assert(rtex->resource.b.b.nr_samples <= 1);
+		clear_size = rtex->surface.dcc_size;
+	} else {
+		dcc_offset += rtex->surface.u.legacy.level[level].dcc_offset;
+		clear_size = rtex->surface.u.legacy.level[level].dcc_fast_clear_size;
+	}
 
-	rctx->clear_buffer(&rctx->b, dcc_buffer, dcc_offset,
-			   rtex->surface.u.legacy.level[level].dcc_fast_clear_size,
+	rctx->clear_buffer(&rctx->b, dcc_buffer, dcc_offset, clear_size,
 			   clear_value, R600_COHERENCY_CB_META);
 }
 

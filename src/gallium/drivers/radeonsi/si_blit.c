@@ -1035,6 +1035,11 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 		 */
 		if (dst->dcc_offset &&
 		    info->dst.level < dst->surface.num_dcc_levels) {
+			/* TODO: Implement per-level DCC clears for GFX9. */
+			if (sctx->b.chip_class >= GFX9 &&
+			    info->dst.resource->last_level != 0)
+				goto resolve_to_temp;
+
 			vi_dcc_clear_level(&sctx->b, dst, info->dst.level,
 					   0xFFFFFFFF);
 			dst->dirty_level_mask &= ~(1 << info->dst.level);
