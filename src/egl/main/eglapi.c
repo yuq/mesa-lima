@@ -490,6 +490,8 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(EXT_image_dma_buf_import_modifiers);
    _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
 
+   _EGL_CHECK_EXTENSION(IMG_context_priority);
+
    _EGL_CHECK_EXTENSION(KHR_cl_event2);
    _EGL_CHECK_EXTENSION(KHR_config_attribs);
    _EGL_CHECK_EXTENSION(KHR_create_context);

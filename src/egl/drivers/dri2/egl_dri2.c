@@ -687,6 +687,11 @@ dri2_setup_screen(_EGLDisplay *disp)
    disp->Extensions.KHR_no_config_context = EGL_TRUE;
    disp->Extensions.KHR_surfaceless_context = EGL_TRUE;
 
+   /* Report back to EGL the bitmask of priorities supported */
+   disp->Extensions.IMG_context_priority =
+      dri2_renderer_query_integer(dri2_dpy,
+                                  __DRI2_RENDERER_HAS_CONTEXT_PRIORITY);
+
    if (dri2_renderer_query_integer(dri2_dpy,
                                    __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB))
       disp->Extensions.KHR_gl_colorspace = EGL_TRUE;

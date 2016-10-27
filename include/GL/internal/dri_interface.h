@@ -1782,6 +1782,14 @@ typedef struct __DRIDriverVtableExtensionRec {
  */
 #define __DRI2_RENDERER_HAS_FRAMEBUFFER_SRGB                  0x000c
 
+/* Bitmaks of supported/available context priorities - must match
+ * __EGL_CONTEXT_PRIORITY_LOW_BIT et al
+ */
+#define __DRI2_RENDERER_HAS_CONTEXT_PRIORITY                  0x000d
+#define   __DRI2_RENDERER_HAS_CONTEXT_PRIORITY_LOW            (1 << 0)
+#define   __DRI2_RENDERER_HAS_CONTEXT_PRIORITY_MEDIUM         (1 << 1)
+#define   __DRI2_RENDERER_HAS_CONTEXT_PRIORITY_HIGH           (1 << 2)
+
 typedef struct __DRI2rendererQueryExtensionRec __DRI2rendererQueryExtension;
 struct __DRI2rendererQueryExtensionRec {
    __DRIextension base;
