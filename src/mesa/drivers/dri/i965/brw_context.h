@@ -1240,14 +1240,15 @@ void intel_resolve_for_dri2_flush(struct brw_context *brw,
                                   __DRIdrawable *drawable);
 
 GLboolean brwCreateContext(gl_api api,
-		      const struct gl_config *mesaVis,
-		      __DRIcontext *driContextPriv,
-                      unsigned major_version,
-                      unsigned minor_version,
-                      uint32_t flags,
-                      bool notify_reset,
-                      unsigned *error,
-		      void *sharedContextPrivate);
+                           const struct gl_config *mesaVis,
+                           __DRIcontext *driContextPriv,
+                           unsigned major_version,
+                           unsigned minor_version,
+                           uint32_t flags,
+                           bool notify_reset,
+                           unsigned priority,
+                           unsigned *error,
+                           void *sharedContextPrivate);
 
 /*======================================================================
  * brw_misc_state.c

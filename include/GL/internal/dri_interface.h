@@ -1100,6 +1100,12 @@ struct __DRIdri2LoaderExtensionRec {
 #define __DRI_CTX_RESET_LOSE_CONTEXT		1
 /*@}*/
 
+#define __DRI_CTX_ATTRIB_PRIORITY		4
+
+#define __DRI_CTX_PRIORITY_LOW			0
+#define __DRI_CTX_PRIORITY_MEDIUM		1
+#define __DRI_CTX_PRIORITY_HIGH			2
+
 /**
  * \name Reasons that __DRIdri2Extension::createContextAttribs might fail
  */

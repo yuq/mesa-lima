@@ -956,13 +956,14 @@ i915CreateContext(int api,
 
 static GLboolean
 intelCreateContext(gl_api api,
-		   const struct gl_config * mesaVis,
+                   const struct gl_config * mesaVis,
                    __DRIcontext * driContextPriv,
-		   unsigned major_version,
-		   unsigned minor_version,
-		   uint32_t flags,
+                   unsigned major_version,
+                   unsigned minor_version,
+                   uint32_t flags,
                    bool notify_reset,
-		   unsigned *error,
+                   unsigned priority,
+                   unsigned *error,
                    void *sharedContextPrivate)
 {
    bool success = false;

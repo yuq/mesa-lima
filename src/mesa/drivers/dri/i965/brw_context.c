@@ -820,14 +820,15 @@ brw_process_driconf_options(struct brw_context *brw)
 
 GLboolean
 brwCreateContext(gl_api api,
-	         const struct gl_config *mesaVis,
-		 __DRIcontext *driContextPriv,
+                 const struct gl_config *mesaVis,
+                 __DRIcontext *driContextPriv,
                  unsigned major_version,
                  unsigned minor_version,
                  uint32_t flags,
                  bool notify_reset,
+                 unsigned priority,
                  unsigned *dri_ctx_error,
-	         void *sharedContextPrivate)
+                 void *sharedContextPrivate)
 {
    struct gl_context *shareCtx = (struct gl_context *) sharedContextPrivate;
    struct intel_screen *screen = driContextPriv->driScreenPriv->driverPrivate;
