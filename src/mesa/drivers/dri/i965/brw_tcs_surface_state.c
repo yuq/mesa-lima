@@ -103,11 +103,12 @@ brw_upload_tcs_abo_surfaces(struct brw_context *brw)
    /* _NEW_PROGRAM */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_TESS_CTRL];
+   const struct gl_program *tcp = brw->tess_ctrl_program;
 
-   if (prog) {
+   if (tcp && prog) {
       /* BRW_NEW_TCS_PROG_DATA */
       brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_TESS_CTRL],
-                              &brw->tcs.base, brw->tcs.base.prog_data);
+                              tcp, &brw->tcs.base, brw->tcs.base.prog_data);
    }
 }
 

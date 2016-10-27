@@ -1485,6 +1485,7 @@ const struct brw_tracked_state brw_cs_ubo_surfaces = {
 void
 brw_upload_abo_surfaces(struct brw_context *brw,
                         struct gl_linked_shader *shader,
+                        const struct gl_program *prog,
                         struct brw_stage_state *stage_state,
                         struct brw_stage_prog_data *prog_data)
 {
@@ -1492,8 +1493,9 @@ brw_upload_abo_surfaces(struct brw_context *brw,
    uint32_t *surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.abo_start];
 
-   if (shader && shader->NumAtomicBuffers) {
-      for (unsigned i = 0; i < shader->NumAtomicBuffers; i++) {
+   if (prog->info.num_abos) {
+      assert(shader);
+      for (unsigned i = 0; i < prog->info.num_abos; i++) {
          struct gl_atomic_buffer_binding *binding =
             &ctx->AtomicBufferBindings[shader->AtomicBuffers[i]->Binding];
          struct intel_buffer_object *intel_bo =
@@ -1516,11 +1518,12 @@ brw_upload_wm_abo_surfaces(struct brw_context *brw)
    struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
    struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
+   const struct gl_program *wm = brw->fragment_program;
 
    if (prog) {
       /* BRW_NEW_FS_PROG_DATA */
       brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                              &brw->wm.base, brw->wm.base.prog_data);
+                              wm, &brw->wm.base, brw->wm.base.prog_data);
    }
 }
 
@@ -1542,11 +1545,12 @@ brw_upload_cs_abo_surfaces(struct brw_context *brw)
    /* _NEW_PROGRAM */
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+   const struct gl_program *cp = brw->compute_program;
 
-   if (prog) {
+   if (cp && prog) {
       /* BRW_NEW_CS_PROG_DATA */
       brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                              &brw->cs.base, brw->cs.base.prog_data);
+                              cp, &brw->cs.base, brw->cs.base.prog_data);
    }
 }
 
