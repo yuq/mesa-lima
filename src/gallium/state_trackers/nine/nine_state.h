@@ -517,6 +517,10 @@ nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *devic
                                                        struct pipe_vertex_buffer *vbuf,
                                                        struct pipe_index_buffer *ibuf);
 
+void
+nine_context_blit(struct NineDevice9 *device,
+                  struct pipe_blit_info *blit);
+
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type);
 
