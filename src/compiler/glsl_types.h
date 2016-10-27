@@ -473,14 +473,14 @@ struct glsl_type {
    }
 
    /**
-    * Query whether or not type is an integral type, or for struct and array
-    * types, contains an integral type.
+    * Query whether or not type is an integral type, or for struct, interface
+    * and array types, contains an integral type.
     */
    bool contains_integer() const;
 
    /**
-    * Query whether or not type is a double type, or for struct and array
-    * types, contains a double type.
+    * Query whether or not type is a double type, or for struct, interface and
+    * array types, contains a double type.
     */
    bool contains_double() const;
 
@@ -533,8 +533,8 @@ struct glsl_type {
    }
 
    /**
-    * Query whether or not type is a sampler, or for struct and array
-    * types, contains a sampler.
+    * Query whether or not type is a sampler, or for struct, interface and
+    * array types, contains a sampler.
     */
    bool contains_sampler() const;
 
@@ -544,8 +544,8 @@ struct glsl_type {
    gl_texture_index sampler_index() const;
 
    /**
-    * Query whether or not type is an image, or for struct and array
-    * types, contains an image.
+    * Query whether or not type is an image, or for struct, interface and
+    * array types, contains an image.
     */
    bool contains_image() const;
 

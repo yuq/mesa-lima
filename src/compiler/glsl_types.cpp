@@ -248,7 +248,7 @@ glsl_type::contains_sampler() const
 {
    if (this->is_array()) {
       return this->fields.array->contains_sampler();
-   } else if (this->is_record()) {
+   } else if (this->is_record() || this->is_interface()) {
       for (unsigned int i = 0; i < this->length; i++) {
          if (this->fields.structure[i].type->contains_sampler())
             return true;
@@ -265,7 +265,7 @@ glsl_type::contains_integer() const
 {
    if (this->is_array()) {
       return this->fields.array->contains_integer();
-   } else if (this->is_record()) {
+   } else if (this->is_record() || this->is_interface()) {
       for (unsigned int i = 0; i < this->length; i++) {
          if (this->fields.structure[i].type->contains_integer())
             return true;
@@ -281,7 +281,7 @@ glsl_type::contains_double() const
 {
    if (this->is_array()) {
       return this->fields.array->contains_double();
-   } else if (this->is_record()) {
+   } else if (this->is_record() || this->is_interface()) {
       for (unsigned int i = 0; i < this->length; i++) {
          if (this->fields.structure[i].type->contains_double())
             return true;
@@ -302,6 +302,7 @@ glsl_type::contains_opaque() const {
    case GLSL_TYPE_ARRAY:
       return fields.array->contains_opaque();
    case GLSL_TYPE_STRUCT:
+   case GLSL_TYPE_INTERFACE:
       for (unsigned int i = 0; i < length; i++) {
          if (fields.structure[i].type->contains_opaque())
             return true;
@@ -317,7 +318,7 @@ glsl_type::contains_subroutine() const
 {
    if (this->is_array()) {
       return this->fields.array->contains_subroutine();
-   } else if (this->is_record()) {
+   } else if (this->is_record() || this->is_interface()) {
       for (unsigned int i = 0; i < this->length; i++) {
          if (this->fields.structure[i].type->contains_subroutine())
             return true;
@@ -363,7 +364,7 @@ glsl_type::contains_image() const
 {
    if (this->is_array()) {
       return this->fields.array->contains_image();
-   } else if (this->is_record()) {
+   } else if (this->is_record() || this->is_interface()) {
       for (unsigned int i = 0; i < this->length; i++) {
          if (this->fields.structure[i].type->contains_image())
             return true;
