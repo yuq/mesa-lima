@@ -823,8 +823,11 @@ if test "x$ax_pthread_ok" = xno; then
 fi
 dnl AX_PTHREADS leaves PTHREAD_LIBS empty for gcc and sets PTHREAD_CFLAGS
 dnl to -pthread, which causes problems if we need -lpthread to appear in
-dnl pkgconfig files.
-test -z "$PTHREAD_LIBS" && PTHREAD_LIBS="-lpthread"
+dnl pkgconfig files.  Since Android doesn't have a pthread lib, this check
+dnl is not valid for that platform.
+if test "x$android" = xno; then
+    test -z "$PTHREAD_LIBS" && PTHREAD_LIBS="-lpthread"
+fi
 
 dnl pthread-stubs is mandatory on targets where it exists
 case "$host_os" in
