@@ -3470,7 +3470,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info)
     HRESULT hr = D3D_OK;
     const unsigned processor = info->type;
     struct pipe_screen *screen = info->process_vertices ? device->screen_sw : device->screen;
-    struct pipe_context *pipe = info->process_vertices ? device->pipe_sw : device->pipe;
+    struct pipe_context *pipe = info->process_vertices ? device->pipe_sw : NineDevice9_GetPipe(device);
 
     user_assert(processor != ~0, D3DERR_INVALIDCALL);
 

@@ -683,7 +683,7 @@ NineDevice9_SetCursorProperties( struct NineDevice9 *This,
                                  IDirect3DSurface9 *pCursorBitmap )
 {
     struct NineSurface9 *surf = NineSurface9(pCursorBitmap);
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(This);
     struct pipe_box box;
     struct pipe_transfer *transfer;
     BOOL hw_cursor;
@@ -1524,7 +1524,7 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
                          D3DTEXTUREFILTERTYPE Filter )
 {
     struct pipe_screen *screen = This->screen;
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(This);
     struct NineSurface9 *dst = NineSurface9(pDestSurface);
     struct NineSurface9 *src = NineSurface9(pSourceSurface);
     struct pipe_resource *dst_res = NineSurface9_GetResource(dst);
@@ -1726,7 +1726,7 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
                        const RECT *pRect,
                        D3DCOLOR color )
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(This);
     struct NineSurface9 *surf = NineSurface9(pSurface);
     struct pipe_surface *psurf;
     unsigned x, y, w, h;

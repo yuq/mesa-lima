@@ -35,7 +35,6 @@ struct NineSurface9
     struct NineResource9 base;
 
     /* G3D state */
-    struct pipe_context *pipe;
     struct pipe_transfer *transfer;
     struct pipe_surface *surface[2]; /* created on-demand (linear, sRGB) */
     int lock_count;

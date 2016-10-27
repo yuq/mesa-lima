@@ -34,7 +34,6 @@ struct NineBaseTexture9
     struct list_head list2; /* for managed_textures */
 
     /* g3d */
-    struct pipe_context *pipe;
     struct pipe_sampler_view *view[2]; /* linear and sRGB */
 
     D3DFORMAT format;

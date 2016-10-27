@@ -24,6 +24,7 @@
 #ifndef _NINE_BUFFER9_H_
 #define _NINE_BUFFER9_H_
 
+#include "device9.h"
 #include "resource9.h"
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
@@ -38,7 +39,6 @@ struct NineBuffer9
     struct NineResource9 base;
 
     /* G3D */
-    struct pipe_context *pipe;
     struct pipe_transfer **maps;
     int nmaps, maxmaps;
     UINT size;
@@ -85,7 +85,7 @@ NineBuffer9_Unlock( struct NineBuffer9 *This );
 static inline void
 NineBuffer9_Upload( struct NineBuffer9 *This )
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(This->base.base.device);
 
     assert(This->base.pool == D3DPOOL_MANAGED && This->managed.dirty);
     pipe->buffer_subdata(pipe, This->base.resource, 0,

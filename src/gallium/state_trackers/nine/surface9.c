@@ -56,7 +56,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     HRESULT hr;
     union pipe_color_union rgba = {0};
     struct pipe_surface *surf;
-    struct pipe_context *pipe = pParams->device->pipe;
+    struct pipe_context *pipe;
     bool allocate = !pContainer && pDesc->Format != D3DFMT_NULL;
     D3DMULTISAMPLE_TYPE multisample_type;
 
@@ -172,7 +172,6 @@ NineSurface9_ctor( struct NineSurface9 *This,
     if (FAILED(hr))
         return hr;
 
-    This->pipe = This->base.base.device->pipe;
     This->transfer = NULL;
 
     This->texture = TextureType;
@@ -189,6 +188,7 @@ NineSurface9_ctor( struct NineSurface9 *This,
     /* TODO: investigate what else exactly needs to be cleared */
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
         surf = NineSurface9_GetSurface(This, 0);
+        pipe = NineDevice9_GetPipe(pParams->device);
         pipe->clear_render_target(pipe, surf, &rgba, 0, 0, pDesc->Width, pDesc->Height, false);
     }
 
@@ -219,8 +219,8 @@ NineSurface9_dtor( struct NineSurface9 *This )
 struct pipe_surface *
 NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
 {
-    struct pipe_context *pipe = This->pipe;
-    struct pipe_screen *screen = pipe->screen;
+    struct pipe_context *pipe = NineDevice9_GetPipe(This->base.base.device);
+    struct pipe_screen *screen = NineDevice9_GetScreen(This->base.base.device);
     struct pipe_resource *resource = This->base.resource;
     struct pipe_surface templ;
     enum pipe_format srgb_format;
@@ -384,6 +384,7 @@ NineSurface9_LockRect( struct NineSurface9 *This,
                        DWORD Flags )
 {
     struct pipe_resource *resource = This->base.resource;
+    struct pipe_context *pipe;
     struct pipe_box box;
     unsigned usage;
 
@@ -473,9 +474,10 @@ NineSurface9_LockRect( struct NineSurface9 *This,
         DBG("mapping pipe_resource %p (level=%u usage=%x)\n",
             resource, This->level, usage);
 
-        pLockedRect->pBits = This->pipe->transfer_map(This->pipe, resource,
-                                                      This->level, usage, &box,
-                                                      &This->transfer);
+        pipe = NineDevice9_GetPipe(This->base.base.device);
+        pLockedRect->pBits = pipe->transfer_map(pipe, resource,
+                                                This->level, usage, &box,
+                                                &This->transfer);
         if (!This->transfer) {
             DBG("transfer_map failed\n");
             if (Flags & D3DLOCK_DONOTWAIT)
@@ -497,10 +499,12 @@ NineSurface9_LockRect( struct NineSurface9 *This,
 HRESULT NINE_WINAPI
 NineSurface9_UnlockRect( struct NineSurface9 *This )
 {
+    struct pipe_context *pipe;
     DBG("This=%p lock_count=%u\n", This, This->lock_count);
     user_assert(This->lock_count, D3DERR_INVALIDCALL);
     if (This->transfer) {
-        This->pipe->transfer_unmap(This->pipe, This->transfer);
+        pipe = NineDevice9_GetPipe(This->base.base.device);
+        pipe->transfer_unmap(pipe, This->transfer);
         This->transfer = NULL;
     }
     --This->lock_count;
@@ -512,13 +516,14 @@ NineSurface9_UnlockRect( struct NineSurface9 *This )
 
         u_box_origin_2d(This->desc.Width, This->desc.Height, &box);
 
+        pipe = NineDevice9_GetPipe(This->base.base.device);
         if (!dst) {
-            dst = This->pipe->transfer_map(This->pipe,
-                                           This->base.resource,
-                                           This->level,
-                                           PIPE_TRANSFER_WRITE |
-                                           PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
-                                           &box, &transfer);
+            dst = pipe->transfer_map(pipe,
+                                     This->base.resource,
+                                     This->level,
+                                     PIPE_TRANSFER_WRITE |
+                                     PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
+                                     &box, &transfer);
             if (!dst)
                 return D3D_OK;
         }
@@ -533,7 +538,7 @@ NineSurface9_UnlockRect( struct NineSurface9 *This )
                                      This->desc.Width, This->desc.Height);
 
         if (!This->data)
-            pipe_transfer_unmap(This->pipe, transfer);
+            pipe_transfer_unmap(pipe, transfer);
     }
     return D3D_OK;
 }
@@ -580,7 +585,7 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
                                const POINT *pDestPoint,
                                const RECT *pSourceRect )
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe;
     struct pipe_transfer *transfer = NULL;
     struct pipe_resource *r_dst = This->base.resource;
     struct pipe_box dst_box;
@@ -613,6 +618,7 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
     u_box_2d_zslice(dst_x, dst_y, This->layer,
                     copy_width, copy_height, &dst_box);
 
+    pipe = NineDevice9_GetPipe(This->base.base.device);
     map = pipe->transfer_map(pipe,
                              r_dst,
                              This->level,
@@ -650,7 +656,7 @@ void
 NineSurface9_CopyDefaultToMem( struct NineSurface9 *This,
                                struct NineSurface9 *From )
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe;
     struct pipe_resource *r_src = From->base.resource;
     struct pipe_transfer *transfer;
     struct pipe_box src_box;
@@ -666,6 +672,7 @@ NineSurface9_CopyDefaultToMem( struct NineSurface9 *This,
     u_box_origin_2d(This->desc.Width, This->desc.Height, &src_box);
     src_box.z = From->layer;
 
+    pipe = NineDevice9_GetPipe(This->base.base.device);
     p_src = pipe->transfer_map(pipe, r_src, From->level,
                                PIPE_TRANSFER_READ,
                                &src_box, &transfer);
@@ -690,7 +697,7 @@ HRESULT
 NineSurface9_UploadSelf( struct NineSurface9 *This,
                          const struct pipe_box *damaged )
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe;
     struct pipe_resource *res = This->base.resource;
     uint8_t *ptr;
     struct pipe_box box;
@@ -714,6 +721,7 @@ NineSurface9_UploadSelf( struct NineSurface9 *This,
 
     ptr = NineSurface9_GetSystemMemPointer(This, box.x, box.y);
 
+    pipe = NineDevice9_GetPipe(This->base.base.device);
     pipe->texture_subdata(pipe, res, This->level, 0,
                           &box, ptr, This->stride, 0);
 

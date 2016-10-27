@@ -110,7 +110,7 @@ NineVertexShader9_dtor( struct NineVertexShader9 *This )
     DBG("This=%p\n", This);
 
     if (This->base.device) {
-        struct pipe_context *pipe = This->base.device->pipe;
+        struct pipe_context *pipe = NineDevice9_GetPipe(This->base.device);
         struct nine_shader_variant *var = &This->variant;
         struct nine_shader_variant_so *var_so = &This->variant_so;
 

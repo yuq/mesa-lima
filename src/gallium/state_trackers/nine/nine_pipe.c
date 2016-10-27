@@ -252,7 +252,7 @@ nine_convert_sampler_state(struct cso_context *ctx, int idx, const DWORD *ss)
 void
 nine_pipe_context_clear(struct NineDevice9 *This)
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(This);
     struct cso_context *cso = This->cso;
     pipe->bind_vs_state(pipe, NULL);
     pipe->bind_fs_state(pipe, NULL);

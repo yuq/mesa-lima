@@ -92,7 +92,7 @@ NinePixelShader9_dtor( struct NinePixelShader9 *This )
     DBG("This=%p\n", This);
 
     if (This->base.device) {
-        struct pipe_context *pipe = This->base.device->pipe;
+        struct pipe_context *pipe = NineDevice9_GetPipe(This->base.device);
         struct nine_shader_variant *var = &This->variant;
 
         do {

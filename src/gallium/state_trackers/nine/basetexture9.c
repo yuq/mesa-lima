@@ -65,7 +65,6 @@ NineBaseTexture9_ctor( struct NineBaseTexture9 *This,
         return hr;
 
     This->format = format;
-    This->pipe = pParams->device->pipe;
     This->mipfilter = (Usage & D3DUSAGE_AUTOGENMIPMAP) ?
         D3DTEXF_LINEAR : D3DTEXF_NONE;
     This->managed.lod = 0;
@@ -386,6 +385,7 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 void NINE_WINAPI
 NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 {
+    struct pipe_context *pipe;
     struct pipe_resource *resource;
     unsigned base_level = 0;
     unsigned last_level = This->base.info.last_level - This->managed.lod;
@@ -411,7 +411,8 @@ NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 
     resource = This->base.resource;
 
-    util_gen_mipmap(This->pipe, resource,
+    pipe = NineDevice9_GetPipe(This->base.base.device);
+    util_gen_mipmap(pipe, resource,
                     resource->format, base_level, last_level,
                     first_layer, last_layer, filter);
 
@@ -422,7 +423,7 @@ HRESULT
 NineBaseTexture9_CreatePipeResource( struct NineBaseTexture9 *This,
                                      BOOL CopyData )
 {
-    struct pipe_context *pipe = This->pipe;
+    struct pipe_context *pipe;
     struct pipe_screen *screen = This->base.info.screen;
     struct pipe_resource templ;
     unsigned l, m;
@@ -455,6 +456,7 @@ NineBaseTexture9_CreatePipeResource( struct NineBaseTexture9 *This,
     if (!res)
         return D3DERR_OUTOFVIDEOMEMORY;
     This->base.resource = res;
+    pipe = NineDevice9_GetPipe(This->base.base.device);
 
     if (old && CopyData) { /* Don't return without releasing old ! */
         struct pipe_box box;
@@ -492,8 +494,8 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
                                     const int sRGB )
 {
     const struct util_format_description *desc;
-    struct pipe_context *pipe = This->pipe;
-    struct pipe_screen *screen = pipe->screen;
+    struct pipe_context *pipe;
+    struct pipe_screen *screen = NineDevice9_GetScreen(This->base.base.device);
     struct pipe_resource *resource = This->base.resource;
     struct pipe_sampler_view templ;
     enum pipe_format srgb_format;
@@ -573,6 +575,7 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
     templ.swizzle_a = swizzle[3];
     templ.target = resource->target;
 
+    pipe = NineDevice9_GetPipe(This->base.base.device);
     This->view[sRGB] = pipe->create_sampler_view(pipe, resource, &templ);
 
     DBG("sampler view = %p(resource = %p)\n", This->view[sRGB], resource);

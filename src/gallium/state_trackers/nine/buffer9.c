@@ -57,8 +57,6 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
     This->maxmaps = 1;
     This->size = Size;
 
-    This->pipe = pParams->device->pipe;
-
     info->screen = pParams->device->screen;
     info->target = PIPE_BUFFER;
     info->format = PIPE_FORMAT_R8_UNORM;
@@ -180,6 +178,7 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
                         DWORD Flags )
 {
     struct pipe_box box;
+    struct pipe_context *pipe;
     void *data;
     unsigned usage;
 
@@ -253,8 +252,9 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         This->maps = newmaps;
     }
 
-    data = This->pipe->transfer_map(This->pipe, This->base.resource, 0,
-                                    usage, &box, &This->maps[This->nmaps]);
+    pipe = NineDevice9_GetPipe(This->base.base.device);
+    data = pipe->transfer_map(pipe, This->base.resource, 0,
+                              usage, &box, &This->maps[This->nmaps]);
 
     if (!data) {
         DBG("pipe::transfer_map failed\n"
@@ -278,12 +278,14 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
 HRESULT NINE_WINAPI
 NineBuffer9_Unlock( struct NineBuffer9 *This )
 {
+    struct pipe_context *pipe;
     DBG("This=%p\n", This);
 
     user_assert(This->nmaps > 0, D3DERR_INVALIDCALL);
-    if (This->base.pool != D3DPOOL_MANAGED)
-        This->pipe->transfer_unmap(This->pipe, This->maps[--(This->nmaps)]);
-    else {
+    if (This->base.pool != D3DPOOL_MANAGED) {
+        pipe = NineDevice9_GetPipe(This->base.base.device);
+        pipe->transfer_unmap(pipe, This->maps[--(This->nmaps)]);
+    } else {
         This->nmaps--;
         /* TODO: Fix this to upload at the first draw call needing the data,
          * instead of at the next draw call */
