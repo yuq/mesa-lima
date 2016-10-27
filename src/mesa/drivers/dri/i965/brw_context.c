@@ -524,6 +524,21 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxCombinedShaderOutputResources =
       MAX_IMAGE_UNITS + BRW_MAX_DRAW_BUFFERS;
 
+   /* The timestamp register we can read for glGetTimestamp() is
+    * sometimes only 32 bits, before scaling to nanoseconds (depending
+    * on kernel).
+    *
+    * Once scaled to nanoseconds the timestamp would roll over at a
+    * non-power-of-two, so an application couldn't use
+    * GL_QUERY_COUNTER_BITS to handle rollover correctly.  Instead, we
+    * report 36 bits and truncate at that (rolling over 5 times as
+    * often as the HW counter), and when the 32-bit counter rolls
+    * over, it happens to also be at a rollover in the reported value
+    * from near (1<<36) to 0.
+    *
+    * The low 32 bits rolls over in ~343 seconds.  Our 36-bit result
+    * rolls over every ~69 seconds.
+    */
    ctx->Const.QueryCounterBits.Timestamp = 36;
 
    ctx->Const.MaxTextureCoordUnits = 8; /* Mesa limit */

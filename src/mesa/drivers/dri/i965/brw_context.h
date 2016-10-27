@@ -1298,6 +1298,9 @@ void brw_emit_query_begin(struct brw_context *brw);
 void brw_emit_query_end(struct brw_context *brw);
 void brw_query_counter(struct gl_context *ctx, struct gl_query_object *q);
 bool brw_is_query_pipelined(struct brw_query_object *query);
+uint64_t brw_timebase_scale(struct brw_context *brw, uint64_t gpu_timestamp);
+uint64_t brw_raw_timestamp_delta(struct brw_context *brw,
+                                 uint64_t time0, uint64_t time1);
 
 /** gen6_queryobj.c */
 void gen6_init_queryobj_functions(struct dd_function_table *functions);

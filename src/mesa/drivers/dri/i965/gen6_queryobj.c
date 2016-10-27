@@ -219,30 +219,18 @@ gen6_queryobj_get_results(struct gl_context *ctx,
       /* The query BO contains the starting and ending timestamps.
        * Subtract the two and convert to nanoseconds.
        */
-      query->Base.Result += 80 * (results[1] - results[0]);
+      query->Base.Result = brw_raw_timestamp_delta(brw, results[0], results[1]);
+      query->Base.Result = brw_timebase_scale(brw, query->Base.Result);
       break;
 
    case GL_TIMESTAMP:
-      /* Our timer is a clock that increments every 80ns (regardless of
-       * other clock scaling in the system).  The timestamp register we can
-       * read for glGetTimestamp() masks out the top 32 bits, so we do that
-       * here too to let the two counters be compared against each other.
-       *
-       * If we just multiplied that 32 bits of data by 80, it would roll
-       * over at a non-power-of-two, so an application couldn't use
-       * GL_QUERY_COUNTER_BITS to handle rollover correctly.  Instead, we
-       * report 36 bits and truncate at that (rolling over 5 times as often
-       * as the HW counter), and when the 32-bit counter rolls over, it
-       * happens to also be at a rollover in the reported value from near
-       * (1<<36) to 0.
-       *
-       * The low 32 bits rolls over in ~343 seconds.  Our 36-bit result
-       * rolls over every ~69 seconds.
-       *
-       * The query BO contains a single timestamp value in results[0].
+      /* The query BO contains a single timestamp value in results[0]. */
+      query->Base.Result = brw_timebase_scale(brw, results[0]);
+
+      /* Ensure the scaled timestamp overflows according to
+       * GL_QUERY_COUNTER_BITS
        */
-      query->Base.Result = 80 * (results[0] & 0xffffffff);
-      query->Base.Result &= (1ull << 36) - 1;
+      query->Base.Result &= (1ull << ctx->Const.QueryCounterBits.Timestamp) - 1;
       break;
 
    case GL_SAMPLES_PASSED_ARB:
