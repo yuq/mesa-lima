@@ -6758,6 +6758,22 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	return true;
 }
 
+/**
+ * Compute the PS epilog key, which contains all the information needed to
+ * build the PS epilog function.
+ */
+static void si_get_ps_epilog_key(struct si_shader *shader,
+				 union si_shader_part_key *key)
+{
+	struct tgsi_shader_info *info = &shader->selector->info;
+	memset(key, 0, sizeof(*key));
+	key->ps_epilog.colors_written = info->colors_written;
+	key->ps_epilog.writes_z = info->writes_z;
+	key->ps_epilog.writes_stencil = info->writes_stencil;
+	key->ps_epilog.writes_samplemask = info->writes_samplemask;
+	key->ps_epilog.states = shader->key.ps.epilog;
+}
+
 int si_compile_tgsi_shader(struct si_screen *sscreen,
 			   LLVMTargetMachineRef tm,
 			   struct si_shader *shader,
@@ -7598,36 +7614,26 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 }
 
 /**
- * Compile the pixel shader epilog. This handles everything that must be
+ * Build the pixel shader epilog function. This handles everything that must be
  * emulated for pixel shader exports. (alpha-test, format conversions, etc)
  */
-static bool si_compile_ps_epilog(struct si_screen *sscreen,
-				 LLVMTargetMachineRef tm,
-				 struct pipe_debug_callback *debug,
-				 struct si_shader_part *out)
+static void si_build_ps_epilog_function(struct si_shader_context *ctx,
+					union si_shader_part_key *key)
 {
-	union si_shader_part_key *key = &out->key;
-	struct si_shader shader = {};
-	struct si_shader_context ctx;
-	struct gallivm_state *gallivm = &ctx.gallivm;
-	struct lp_build_tgsi_context *bld_base = &ctx.soa.bld_base;
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
 	LLVMTypeRef params[16+8*4+3];
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
 	int last_sgpr, num_params, i;
-	bool status = true;
 	struct si_ps_exports exp = {};
 
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = PIPE_SHADER_FRAGMENT;
-	shader.key.ps.epilog = key->ps_epilog.states;
-
 	/* Declare input SGPRs. */
-	params[SI_PARAM_RW_BUFFERS] = ctx.i64;
-	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
-	params[SI_PARAM_SAMPLERS] = ctx.i64;
-	params[SI_PARAM_IMAGES] = ctx.i64;
-	params[SI_PARAM_SHADER_BUFFERS] = ctx.i64;
-	params[SI_PARAM_ALPHA_REF] = ctx.f32;
+	params[SI_PARAM_RW_BUFFERS] = ctx->i64;
+	params[SI_PARAM_CONST_BUFFERS] = ctx->i64;
+	params[SI_PARAM_SAMPLERS] = ctx->i64;
+	params[SI_PARAM_IMAGES] = ctx->i64;
+	params[SI_PARAM_SHADER_BUFFERS] = ctx->i64;
+	params[SI_PARAM_ALPHA_REF] = ctx->f32;
 	last_sgpr = SI_PARAM_ALPHA_REF;
 
 	/* Declare input VGPRs. */
@@ -7643,12 +7649,12 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 	assert(num_params <= ARRAY_SIZE(params));
 
 	for (i = last_sgpr + 1; i < num_params; i++)
-		params[i] = ctx.f32;
+		params[i] = ctx->f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, "ps_epilog", NULL, 0, params, num_params, last_sgpr);
+	si_create_function(ctx, "ps_epilog", NULL, 0, params, num_params, last_sgpr);
 	/* Disable elimination of unused inputs. */
-	si_llvm_add_attribute(ctx.main_fn,
+	si_llvm_add_attribute(ctx->main_fn,
 				  "InitialPSInputAddr", 0xffffff);
 
 	/* Process colors. */
@@ -7681,7 +7687,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 		int mrt = u_bit_scan(&colors_written);
 
 		for (i = 0; i < 4; i++)
-			color[i] = LLVMGetParam(ctx.main_fn, vgpr++);
+			color[i] = LLVMGetParam(ctx->main_fn, vgpr++);
 
 		si_export_mrt_color(bld_base, color, mrt,
 				    num_params - 1,
@@ -7690,11 +7696,11 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 
 	/* Process depth, stencil, samplemask. */
 	if (key->ps_epilog.writes_z)
-		depth = LLVMGetParam(ctx.main_fn, vgpr++);
+		depth = LLVMGetParam(ctx->main_fn, vgpr++);
 	if (key->ps_epilog.writes_stencil)
-		stencil = LLVMGetParam(ctx.main_fn, vgpr++);
+		stencil = LLVMGetParam(ctx->main_fn, vgpr++);
 	if (key->ps_epilog.writes_samplemask)
-		samplemask = LLVMGetParam(ctx.main_fn, vgpr++);
+		samplemask = LLVMGetParam(ctx->main_fn, vgpr++);
 
 	if (depth || stencil || samplemask)
 		si_export_mrt_z(bld_base, depth, stencil, samplemask, &exp);
@@ -7702,10 +7708,34 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 		si_export_null(bld_base);
 
 	if (exp.num)
-		si_emit_ps_exports(&ctx, &exp);
+		si_emit_ps_exports(ctx, &exp);
 
 	/* Compile. */
 	LLVMBuildRetVoid(gallivm->builder);
+}
+
+
+/**
+ * Compile the pixel shader epilog to a binary for concatenation.
+ */
+static bool si_compile_ps_epilog(struct si_screen *sscreen,
+				 LLVMTargetMachineRef tm,
+				 struct pipe_debug_callback *debug,
+				 struct si_shader_part *out)
+{
+	union si_shader_part_key *key = &out->key;
+	struct si_shader shader = {};
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.gallivm;
+	bool status = true;
+
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
+	ctx.type = PIPE_SHADER_FRAGMENT;
+	shader.key.ps.epilog = key->ps_epilog.states;
+
+	si_build_ps_epilog_function(&ctx, key);
+
+	/* Compile. */
 	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
 
@@ -7852,12 +7882,7 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	}
 
 	/* Get the epilog. */
-	memset(&epilog_key, 0, sizeof(epilog_key));
-	epilog_key.ps_epilog.colors_written = info->colors_written;
-	epilog_key.ps_epilog.writes_z = info->writes_z;
-	epilog_key.ps_epilog.writes_stencil = info->writes_stencil;
-	epilog_key.ps_epilog.writes_samplemask = info->writes_samplemask;
-	epilog_key.ps_epilog.states = shader->key.ps.epilog;
+	si_get_ps_epilog_key(shader, &epilog_key);
 
 	shader->epilog =
 		si_get_shader_part(sscreen, &sscreen->ps_epilogs,
