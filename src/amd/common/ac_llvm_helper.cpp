@@ -31,13 +31,12 @@
 #  undef DEBUG
 #endif
 
-#include "ac_nir_to_llvm.h"
+#include "ac_llvm_util.h"
 #include <llvm-c/Core.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 
-extern "C" void
-ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes)
+void ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes)
 {
    llvm::Argument *A = llvm::unwrap<llvm::Argument>(val);
    llvm::AttrBuilder B;

@@ -28,4 +28,14 @@
 
 #include "amd_family.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family);
+
+void ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes);
+
+#ifdef __cplusplus
+}
+#endif
