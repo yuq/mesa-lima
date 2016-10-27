@@ -500,6 +500,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
 	bool update_metadata = false;
+	unsigned stride, offset, slice_size;
 
 	/* This is not supported now, but it might be required for OpenCL
 	 * interop in the future.
@@ -553,12 +554,19 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 		res->external_usage = usage;
 	}
 
-	return rscreen->ws->buffer_get_handle(res->buf,
-					      rtex->surface.u.legacy.level[0].nblk_x *
-					      rtex->surface.bpe,
-					      rtex->surface.u.legacy.level[0].offset,
-					      rtex->surface.u.legacy.level[0].slice_size,
-					      whandle);
+	if (rscreen->chip_class >= GFX9) {
+		offset = 0;
+		stride = rtex->surface.u.gfx9.surf_pitch *
+			 rtex->surface.bpe;
+		slice_size = rtex->surface.u.gfx9.surf_slice_size;
+	} else {
+		offset = rtex->surface.u.legacy.level[0].offset;
+		stride = rtex->surface.u.legacy.level[0].nblk_x *
+			 rtex->surface.bpe;
+		slice_size = rtex->surface.u.legacy.level[0].slice_size;
+	}
+	return rscreen->ws->buffer_get_handle(res->buf, stride, offset,
+					      slice_size, whandle);
 }
 
 static void r600_texture_destroy(struct pipe_screen *screen,
