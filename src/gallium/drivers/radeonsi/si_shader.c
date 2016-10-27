@@ -389,7 +389,7 @@ static void declare_input_vs(
 	/* Build the attribute offset */
 	attribute_offset = lp_build_const_int32(gallivm, 0);
 
-	if (!ctx->is_monolithic) {
+	if (!ctx->no_prolog) {
 		buffer_index = LLVMGetParam(radeon_bld->main_fn,
 					    ctx->param_vertex_index0 +
 					    input_index);
@@ -1175,7 +1175,7 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 static unsigned select_interp_param(struct si_shader_context *ctx,
 				    unsigned param)
 {
-	if (!ctx->is_monolithic)
+	if (!ctx->no_prolog)
 		return param;
 
 	if (ctx->shader->key.ps.prolog.force_persp_sample_interp) {
@@ -1336,7 +1336,7 @@ static LLVMValueRef get_interp_param(struct si_shader_context *ctx,
 	LLVMValueRef param = NULL;
 
 	/* Handle PRIM_MASK[31] (bc_optimize). */
-	if (ctx->is_monolithic &&
+	if (ctx->no_prolog &&
 	    ((ctx->shader->key.ps.prolog.bc_optimize_for_persp &&
 	      interp_param_idx == SI_PARAM_PERSP_CENTROID) ||
 	     (ctx->shader->key.ps.prolog.bc_optimize_for_linear &&
@@ -1392,7 +1392,7 @@ static void declare_input_fs(
 	int interp_param_idx;
 
 	/* Get colors from input VGPRs (set by the prolog). */
-	if (!ctx->is_monolithic &&
+	if (!ctx->no_prolog &&
 	    decl->Semantic.Name == TGSI_SEMANTIC_COLOR) {
 		unsigned i = decl->Semantic.Index;
 		unsigned colors_read = shader->selector->info.colors_read;
@@ -2631,7 +2631,7 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	invocation_id = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
 	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
 
-	if (!ctx->is_monolithic) {
+	if (!ctx->no_epilog) {
 		/* Return epilog parameters from this function. */
 		LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 		LLVMValueRef ret = ctx->return_value;
@@ -2816,7 +2816,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 					      "");
 	}
 
-	if (ctx->is_monolithic) {
+	if (ctx->no_epilog) {
 		/* Export PrimitiveID when PS needs it. */
 		if (si_vs_exports_prim_id(ctx->shader)) {
 			outputs[i].name = TGSI_SEMANTIC_PRIMID;
@@ -5533,14 +5533,17 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_vs_prim_id = num_params++] = ctx->i32;
 		params[ctx->param_instance_id = num_params++] = ctx->i32;
 
-		if (!ctx->is_monolithic &&
+		if (!ctx->no_prolog &&
 		    !ctx->is_gs_copy_shader) {
 			/* Vertex load indices. */
 			ctx->param_vertex_index0 = num_params;
 
 			for (i = 0; i < shader->selector->info.num_inputs; i++)
 				params[num_params++] = ctx->i32;
+		}
 
+		if (!ctx->no_epilog &&
+		    !ctx->is_gs_copy_shader) {
 			/* PrimitiveID output. */
 			if (!shader->key.vs.as_es && !shader->key.vs.as_ls)
 				for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
@@ -5562,7 +5565,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_REL_IDS] = ctx->i32;
 		num_params = SI_PARAM_REL_IDS+1;
 
-		if (!ctx->is_monolithic) {
+		if (!ctx->no_epilog) {
 			/* SI_PARAM_TCS_OC_LDS and PARAM_TESS_FACTOR_OFFSET are
 			 * placed after the user SGPRs.
 			 */
@@ -5597,7 +5600,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_tes_patch_id = num_params++] = ctx->i32;
 
 		/* PrimitiveID output. */
-		if (!ctx->is_monolithic && !shader->key.tes.as_es)
+		if (!ctx->no_epilog && !shader->key.tes.as_es)
 			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
 				returns[num_returns++] = ctx->f32;
 		break;
@@ -5641,7 +5644,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_POS_FIXED_PT] = ctx->i32;
 		num_params = SI_PARAM_POS_FIXED_PT+1;
 
-		if (!ctx->is_monolithic) {
+		if (!ctx->no_prolog) {
 			/* Color inputs from the prolog. */
 			if (shader->selector->info.colors_read) {
 				unsigned num_color_elements =
@@ -5651,7 +5654,9 @@ static void create_function(struct si_shader_context *ctx)
 				for (i = 0; i < num_color_elements; i++)
 					params[num_params++] = ctx->f32;
 			}
+		}
 
+		if (!ctx->no_epilog) {
 			/* Outputs for the epilog. */
 			num_return_sgprs = SI_SGPR_ALPHA_REF + 1;
 			num_returns =
@@ -5694,7 +5699,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
 	if (ctx->type == PIPE_SHADER_FRAGMENT &&
-	    !ctx->is_monolithic) {
+	    ctx->separate_prolog) {
 		si_llvm_add_attribute(ctx->main_fn,
 				      "InitialPSInputAddr",
 				      S_0286D0_PERSP_SAMPLE_ENA(1) |
@@ -6709,7 +6714,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		ctx->load_input = declare_input_fs;
-		if (ctx->is_monolithic)
+		if (ctx->no_epilog)
 			bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
@@ -6726,7 +6731,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	create_function(ctx);
 	preload_ring_buffers(ctx);
 
-	if (ctx->is_monolithic && sel->type == PIPE_SHADER_FRAGMENT &&
+	if (ctx->no_prolog && sel->type == PIPE_SHADER_FRAGMENT &&
 	    shader->key.ps.prolog.poly_stipple) {
 		LLVMValueRef list = LLVMGetParam(ctx->main_fn,
 						 SI_PARAM_RW_BUFFERS);
@@ -6773,7 +6778,9 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
-	ctx.is_monolithic = is_monolithic;
+	ctx.no_prolog = is_monolithic;
+	ctx.no_epilog = is_monolithic;
+	ctx.separate_prolog = !is_monolithic;
 
 	memset(shader->info.vs_output_param_offset, 0xff,
 	       sizeof(shader->info.vs_output_param_offset));

@@ -53,10 +53,19 @@ struct si_shader_context {
 
 	unsigned type; /* PIPE_SHADER_* specifies the type of shader. */
 	bool is_gs_copy_shader;
-	/* Whether to generate the optimized shader variant compiled as a whole
-	 * (without a prolog and epilog)
+
+	/* Whether main TGSI code translation should assume that no prolog
+	 * or epilog is present, respectively.
+	 *
+	 * This is used temporarily to indicate a monolithic shader that is
+	 * _not_ assembled from parts via inlining. Will be removed once the
+	 * transition is complete.
 	 */
-	bool is_monolithic;
+	bool no_prolog;
+	bool no_epilog;
+
+	/* Whether the prolog will be compiled separately. */
+	bool separate_prolog;
 
 	/** This function is responsible for initilizing the inputs array and will be
 	  * called once for each input declared in the TGSI shader.
