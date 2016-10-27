@@ -295,8 +295,8 @@ nir_shader_gather_info(nir_shader *shader, nir_function_impl *entrypoint)
       const struct glsl_type *type = var->type;
       unsigned count = 1;
       if (glsl_type_is_array(type)) {
-         count = glsl_get_length(type);
-         type = glsl_get_array_element(type);
+         count = glsl_get_aoa_size(type);
+         type = glsl_without_array(type);
       }
 
       if (glsl_type_is_image(type)) {
