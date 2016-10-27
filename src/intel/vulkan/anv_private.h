@@ -1708,18 +1708,29 @@ struct anv_subpass {
    bool                                         has_resolve;
 };
 
+enum anv_subpass_usage {
+   ANV_SUBPASS_USAGE_DRAW =         (1 << 0),
+   ANV_SUBPASS_USAGE_INPUT =        (1 << 1),
+   ANV_SUBPASS_USAGE_RESOLVE_SRC =  (1 << 2),
+   ANV_SUBPASS_USAGE_RESOLVE_DST =  (1 << 3),
+};
+
 struct anv_render_pass_attachment {
    VkFormat                                     format;
    uint32_t                                     samples;
    VkAttachmentLoadOp                           load_op;
    VkAttachmentStoreOp                          store_op;
    VkAttachmentLoadOp                           stencil_load_op;
+
+   /* An array, indexed by subpass id, of how the attachment will be used. */
+   enum anv_subpass_usage *                     subpass_usage;
 };
 
 struct anv_render_pass {
    uint32_t                                     attachment_count;
    uint32_t                                     subpass_count;
    uint32_t *                                   subpass_attachments;
+   enum anv_subpass_usage *                     subpass_usages;
    struct anv_render_pass_attachment *          attachments;
    struct anv_subpass                           subpasses[0];
 };
