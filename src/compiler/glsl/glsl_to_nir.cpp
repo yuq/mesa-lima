@@ -149,7 +149,6 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
       shader->info->label = ralloc_strdup(shader, shader_prog->Label);
    shader->info->num_textures = util_last_bit(sh->Program->SamplersUsed);
    shader->info->num_ubos = sh->NumUniformBlocks;
-   shader->info->num_abos = shader_prog->NumAtomicBuffers;
    shader->info->num_ssbos = sh->NumShaderStorageBlocks;
    shader->info->uses_clip_distance_out =
       sh->Program->ClipDistanceArraySize != 0;
