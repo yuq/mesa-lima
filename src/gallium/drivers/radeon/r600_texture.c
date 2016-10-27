@@ -1131,8 +1131,13 @@ r600_texture_create_object(struct pipe_screen *screen,
 		if (base->flags & (R600_RESOURCE_FLAG_TRANSFER |
 				   R600_RESOURCE_FLAG_FLUSHED_DEPTH) ||
 		    rscreen->chip_class >= EVERGREEN) {
-			rtex->can_sample_z = !rtex->surface.u.legacy.depth_adjusted;
-			rtex->can_sample_s = !rtex->surface.u.legacy.stencil_adjusted;
+			if (rscreen->chip_class >= GFX9) {
+				rtex->can_sample_z = true;
+				rtex->can_sample_s = true;
+			} else {
+				rtex->can_sample_z = !rtex->surface.u.legacy.depth_adjusted;
+				rtex->can_sample_s = !rtex->surface.u.legacy.stencil_adjusted;
+			}
 		} else {
 			if (rtex->resource.b.b.nr_samples <= 1 &&
 			    (rtex->resource.b.b.format == PIPE_FORMAT_Z16_UNORM ||
