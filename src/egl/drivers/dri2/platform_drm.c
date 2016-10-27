@@ -712,6 +712,7 @@ dri2_initialize_drm(_EGLDriver *drv, _EGLDisplay *disp)
    dri2_dpy->flush = dri2_dpy->gbm_dri->flush;
    dri2_dpy->swrast = dri2_dpy->gbm_dri->swrast;
    dri2_dpy->driver_configs = dri2_dpy->gbm_dri->driver_configs;
+   dri2_dpy->interop = dri2_dpy->gbm_dri->interop;
 
    dri2_dpy->gbm_dri->lookup_image = dri2_lookup_egl_image;
    dri2_dpy->gbm_dri->lookup_user_data = disp;
