@@ -570,6 +570,7 @@ struct r600_common_context {
 	unsigned			num_compute_calls;
 	unsigned			num_spill_compute_calls;
 	unsigned			num_dma_calls;
+	unsigned			num_cp_dma_calls;
 	unsigned			num_vs_flushes;
 	unsigned			num_ps_flushes;
 	unsigned			num_cs_flushes;

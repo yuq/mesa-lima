@@ -214,6 +214,8 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	if (tc_l2_flag)
 		r600_resource(dst)->TC_L2_dirty = true;
+
+	sctx->b.num_cp_dma_calls++;
 }
 
 /**
@@ -338,6 +340,8 @@ void si_copy_buffer(struct si_context *sctx,
 
 	if (tc_l2_flag)
 		r600_resource(dst)->TC_L2_dirty = true;
+
+	sctx->b.num_cp_dma_calls++;
 }
 
 void si_init_cp_dma_functions(struct si_context *sctx)

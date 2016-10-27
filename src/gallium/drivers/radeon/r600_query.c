@@ -101,6 +101,9 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_DMA_CALLS:
 		query->begin_result = rctx->num_dma_calls;
 		break;
+	case R600_QUERY_CP_DMA_CALLS:
+		query->begin_result = rctx->num_cp_dma_calls;
+		break;
 	case R600_QUERY_NUM_VS_FLUSHES:
 		query->begin_result = rctx->num_vs_flushes;
 		break;
@@ -181,6 +184,9 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	case R600_QUERY_DMA_CALLS:
 		query->end_result = rctx->num_dma_calls;
+		break;
+	case R600_QUERY_CP_DMA_CALLS:
+		query->end_result = rctx->num_cp_dma_calls;
 		break;
 	case R600_QUERY_NUM_VS_FLUSHES:
 		query->end_result = rctx->num_vs_flushes;
@@ -1655,6 +1661,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("compute-calls",		COMPUTE_CALLS,		UINT64, AVERAGE),
 	X("spill-compute-calls",	SPILL_COMPUTE_CALLS,	UINT64, AVERAGE),
 	X("dma-calls",			DMA_CALLS,		UINT64, AVERAGE),
+	X("cp-dma-calls",		CP_DMA_CALLS,		UINT64, AVERAGE),
 	X("num-vs-flushes",		NUM_VS_FLUSHES,		UINT64, AVERAGE),
 	X("num-ps-flushes",		NUM_PS_FLUSHES,		UINT64, AVERAGE),
 	X("num-cs-flushes",		NUM_CS_FLUSHES,		UINT64, AVERAGE),
