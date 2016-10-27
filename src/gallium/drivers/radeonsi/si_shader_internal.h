@@ -194,6 +194,7 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 			  const struct tgsi_token *tokens);
 
 void si_llvm_create_func(struct si_shader_context *ctx,
+			 const char *name,
 			 LLVMTypeRef *return_types, unsigned num_return_elems,
 			 LLVMTypeRef *ParamTypes, unsigned ParamCount);
 

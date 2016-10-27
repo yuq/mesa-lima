@@ -5365,13 +5365,14 @@ static const struct lp_build_tgsi_action interp_action = {
 };
 
 static void si_create_function(struct si_shader_context *ctx,
+			       const char *name,
 			       LLVMTypeRef *returns, unsigned num_returns,
 			       LLVMTypeRef *params, unsigned num_params,
 			       int last_sgpr)
 {
 	int i;
 
-	si_llvm_create_func(ctx, returns, num_returns,
+	si_llvm_create_func(ctx, name, returns, num_returns,
 			    params, num_params);
 	si_llvm_shader_type(ctx->main_fn, ctx->type);
 	ctx->return_value = LLVMGetUndef(ctx->return_type);
@@ -5694,7 +5695,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	assert(num_params <= ARRAY_SIZE(params));
 
-	si_create_function(ctx, returns, num_returns, params,
+	si_create_function(ctx, "main", returns, num_returns, params,
 			   num_params, last_sgpr);
 
 	/* Reserve register locations for VGPR inputs the PS prolog may need. */
@@ -7030,7 +7031,7 @@ static bool si_compile_vs_prolog(struct si_screen *sscreen,
 		returns[num_returns++] = ctx.f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, returns, num_returns, params,
+	si_create_function(&ctx, "vs_prolog", returns, num_returns, params,
 			   num_params, last_sgpr);
 	func = ctx.main_fn;
 
@@ -7118,7 +7119,7 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 		params[i] = ctx.f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, NULL, 0, params, num_params, -1);
+	si_create_function(&ctx, "vs_epilog", NULL, 0, params, num_params, -1);
 
 	/* Emit exports. */
 	if (key->vs_epilog.states.export_prim_id) {
@@ -7288,7 +7289,7 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	params[num_params++] = ctx.i32; /* LDS offset where tess factors should be loaded from */
 
 	/* Create the function. */
-	si_create_function(&ctx, NULL, 0, params, num_params, last_sgpr);
+	si_create_function(&ctx, "tcs_epilog", NULL, 0, params, num_params, last_sgpr);
 	declare_tess_lds(&ctx);
 	func = ctx.main_fn;
 
@@ -7380,7 +7381,7 @@ static bool si_compile_ps_prolog(struct si_screen *sscreen,
 		params[num_returns++] = ctx.f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, params, num_returns, params,
+	si_create_function(&ctx, "ps_prolog", params, num_returns, params,
 			   num_params, last_sgpr);
 	func = ctx.main_fn;
 
@@ -7645,7 +7646,7 @@ static bool si_compile_ps_epilog(struct si_screen *sscreen,
 		params[i] = ctx.f32;
 
 	/* Create the function. */
-	si_create_function(&ctx, NULL, 0, params, num_params, last_sgpr);
+	si_create_function(&ctx, "ps_epilog", NULL, 0, params, num_params, last_sgpr);
 	/* Disable elimination of unused inputs. */
 	si_llvm_add_attribute(ctx.main_fn,
 				  "InitialPSInputAddr", 0xffffff);

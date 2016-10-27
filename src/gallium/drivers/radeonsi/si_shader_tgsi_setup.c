@@ -1304,6 +1304,7 @@ void si_llvm_context_init(struct si_shader_context *ctx, const char *triple,
 }
 
 void si_llvm_create_func(struct si_shader_context *ctx,
+			 const char *name,
 			 LLVMTypeRef *return_types, unsigned num_return_elems,
 			 LLVMTypeRef *ParamTypes, unsigned ParamCount)
 {
@@ -1320,7 +1321,7 @@ void si_llvm_create_func(struct si_shader_context *ctx,
 	/* Setup the function */
 	ctx->return_type = ret_type;
 	main_fn_type = LLVMFunctionType(ret_type, ParamTypes, ParamCount, 0);
-	ctx->main_fn = LLVMAddFunction(ctx->gallivm.module, "main", main_fn_type);
+	ctx->main_fn = LLVMAddFunction(ctx->gallivm.module, name, main_fn_type);
 	main_fn_body = LLVMAppendBasicBlockInContext(ctx->gallivm.context,
 			ctx->main_fn, "main_body");
 	LLVMPositionBuilderAtEnd(ctx->gallivm.builder, main_fn_body);
