@@ -1492,11 +1492,11 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
    }
 
    isl_surf_init(dev, ccs_surf,
-                 .dim = ISL_SURF_DIM_2D,
+                 .dim = surf->dim,
                  .format = ccs_format,
                  .width = surf->logical_level0_px.width,
                  .height = surf->logical_level0_px.height,
-                 .depth = 1,
+                 .depth = surf->logical_level0_px.depth,
                  .levels = surf->levels,
                  .array_len = surf->logical_level0_px.array_len,
                  .samples = 1,
