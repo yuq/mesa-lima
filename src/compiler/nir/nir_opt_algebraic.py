@@ -364,19 +364,19 @@ optimizations = [
               ('ubfe', 'value', 'offset', 'bits')),
     'options->lower_bitfield_extract'),
 
-   (('extract_i8', a, b),
+   (('extract_i8', a, 'b@32'),
     ('ishr', ('ishl', a, ('imul', ('isub', 3, b), 8)), 24),
     'options->lower_extract_byte'),
 
-   (('extract_u8', a, b),
+   (('extract_u8', a, 'b@32'),
     ('iand', ('ushr', a, ('imul', b, 8)), 0xff),
     'options->lower_extract_byte'),
 
-   (('extract_i16', a, b),
+   (('extract_i16', a, 'b@32'),
     ('ishr', ('ishl', a, ('imul', ('isub', 1, b), 16)), 16),
     'options->lower_extract_word'),
 
-   (('extract_u16', a, b),
+   (('extract_u16', a, 'b@32'),
     ('iand', ('ushr', a, ('imul', b, 16)), 0xffff),
     'options->lower_extract_word'),
 

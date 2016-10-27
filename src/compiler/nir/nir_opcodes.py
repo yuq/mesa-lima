@@ -492,9 +492,9 @@ binop("seq", tfloat32, commutative, "(src0 == src1) ? 1.0f : 0.0f") # Set on Equ
 binop("sne", tfloat32, commutative, "(src0 != src1) ? 1.0f : 0.0f") # Set on Not Equal
 
 
-binop("ishl", tint, "", "src0 << src1")
-binop("ishr", tint, "", "src0 >> src1")
-binop("ushr", tuint, "", "src0 >> src1")
+opcode("ishl", 0, tint, [0, 0], [tint, tuint32], "", "src0 << src1")
+opcode("ishr", 0, tint, [0, 0], [tint, tuint32], "", "src0 >> src1")
+opcode("ushr", 0, tuint, [0, 0], [tuint, tuint32], "", "src0 >> src1")
 
 # bitwise logic operators
 #
