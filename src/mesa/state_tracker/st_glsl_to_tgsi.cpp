@@ -6783,6 +6783,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
                                                    PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED);
       bool have_dfrexp = pscreen->get_shader_param(pscreen, ptarget,
                                                    PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED);
+      unsigned if_threshold = pscreen->get_shader_param(pscreen, ptarget,
+                                                        PIPE_SHADER_CAP_LOWER_IF_THRESHOLD);
 
       /* If there are forms of indirect addressing that the driver
        * cannot handle, perform the lowering pass.
@@ -6865,7 +6867,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
            || progress;
 
          progress = lower_if_to_cond_assign((gl_shader_stage)i, ir,
-                                            options->MaxIfDepth) || progress;
+                                            options->MaxIfDepth, if_threshold) ||
+                    progress;
 
       } while (progress);
 
