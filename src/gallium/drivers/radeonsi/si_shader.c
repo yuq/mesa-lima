@@ -1300,56 +1300,6 @@ static void interp_fs_input(struct si_shader_context *ctx,
 	}
 }
 
-/* LLVMGetParam with bc_optimize resolved. */
-static LLVMValueRef get_interp_param(struct si_shader_context *ctx,
-				     int interp_param_idx)
-{
-	LLVMBuilderRef builder = ctx->gallivm.builder;
-	LLVMValueRef main_fn = ctx->main_fn;
-	LLVMValueRef param = NULL;
-
-	/* Handle PRIM_MASK[31] (bc_optimize). */
-	if (ctx->no_prolog &&
-	    ((ctx->shader->key.ps.prolog.bc_optimize_for_persp &&
-	      interp_param_idx == SI_PARAM_PERSP_CENTROID) ||
-	     (ctx->shader->key.ps.prolog.bc_optimize_for_linear &&
-	      interp_param_idx == SI_PARAM_LINEAR_CENTROID))) {
-		/* The shader should do: if (PRIM_MASK[31]) CENTROID = CENTER;
-		 * The hw doesn't compute CENTROID if the whole wave only
-		 * contains fully-covered quads.
-		 */
-		LLVMValueRef bc_optimize =
-			LLVMGetParam(main_fn, SI_PARAM_PRIM_MASK);
-		bc_optimize = LLVMBuildLShr(builder,
-					    bc_optimize,
-					    LLVMConstInt(ctx->i32, 31, 0), "");
-		bc_optimize = LLVMBuildTrunc(builder, bc_optimize, ctx->i1, "");
-
-		if (ctx->shader->key.ps.prolog.bc_optimize_for_persp &&
-		    interp_param_idx == SI_PARAM_PERSP_CENTROID) {
-			param = LLVMBuildSelect(builder, bc_optimize,
-						LLVMGetParam(main_fn,
-							     SI_PARAM_PERSP_CENTER),
-						LLVMGetParam(main_fn,
-							     SI_PARAM_PERSP_CENTROID),
-						"");
-		}
-		if (ctx->shader->key.ps.prolog.bc_optimize_for_linear &&
-		    interp_param_idx == SI_PARAM_LINEAR_CENTROID) {
-			param = LLVMBuildSelect(builder, bc_optimize,
-						LLVMGetParam(main_fn,
-							     SI_PARAM_LINEAR_CENTER),
-						LLVMGetParam(main_fn,
-							     SI_PARAM_LINEAR_CENTROID),
-						"");
-		}
-	}
-
-	if (!param)
-		param = LLVMGetParam(main_fn, interp_param_idx);
-	return param;
-}
-
 static void declare_input_fs(
 	struct si_shader_context *radeon_bld,
 	unsigned input_index,
@@ -1385,7 +1335,7 @@ static void declare_input_fs(
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx) {
-		interp_param = get_interp_param(ctx, interp_param_idx);
+		interp_param = LLVMGetParam(ctx->main_fn, interp_param_idx);
 	}
 
 	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
@@ -5131,7 +5081,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx)
-		interp_param = get_interp_param(ctx, interp_param_idx);
+		interp_param = LLVMGetParam(ctx->main_fn, interp_param_idx);
 	else
 		interp_param = NULL;
 
