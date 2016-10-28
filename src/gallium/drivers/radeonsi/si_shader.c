@@ -7158,22 +7158,25 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
  *
  * \param sscreen	screen
  * \param list		list of shader parts of the same category
+ * \param type		shader type
  * \param key		shader part key
+ * \param prolog	whether the part being requested is a prolog
  * \param tm		LLVM target machine
  * \param debug		debug callback
- * \param compile	the callback responsible for compilation
+ * \param build		the callback responsible for building the main function
  * \return		non-NULL on success
  */
 static struct si_shader_part *
 si_get_shader_part(struct si_screen *sscreen,
 		   struct si_shader_part **list,
+		   enum pipe_shader_type type,
+		   bool prolog,
 		   union si_shader_part_key *key,
 		   LLVMTargetMachineRef tm,
 		   struct pipe_debug_callback *debug,
-		   bool (*compile)(struct si_screen *,
-				   LLVMTargetMachineRef,
-				   struct pipe_debug_callback *,
-				   struct si_shader_part *))
+		   void (*build)(struct si_shader_context *,
+				 union si_shader_part_key *),
+		   const char *name)
 {
 	struct si_shader_part *result;
 
@@ -7190,14 +7193,49 @@ si_get_shader_part(struct si_screen *sscreen,
 	/* Compile a new one. */
 	result = CALLOC_STRUCT(si_shader_part);
 	result->key = *key;
-	if (!compile(sscreen, tm, debug, result)) {
+
+	struct si_shader shader = {};
+	struct si_shader_context ctx;
+	struct gallivm_state *gallivm = &ctx.gallivm;
+
+	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
+	ctx.type = type;
+
+	switch (type) {
+	case PIPE_SHADER_VERTEX:
+		break;
+	case PIPE_SHADER_TESS_CTRL:
+		assert(!prolog);
+		shader.key.tcs.epilog = key->tcs_epilog.states;
+		break;
+	case PIPE_SHADER_FRAGMENT:
+		if (prolog)
+			shader.key.ps.prolog = key->ps_prolog.states;
+		else
+			shader.key.ps.epilog = key->ps_epilog.states;
+		break;
+	default:
+		unreachable("bad shader part");
+	}
+
+	build(&ctx, key);
+
+	/* Compile. */
+	si_llvm_finalize_module(&ctx,
+		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
+
+	if (si_compile_llvm(sscreen, &result->binary, &result->config, tm,
+			    gallivm->module, debug, ctx.type, name)) {
 		FREE(result);
-		pipe_mutex_unlock(sscreen->shader_parts_mutex);
-		return NULL;
+		result = NULL;
+		goto out;
 	}
 
 	result->next = *list;
 	*list = result;
+
+out:
+	si_llvm_dispose(&ctx);
 	pipe_mutex_unlock(sscreen->shader_parts_mutex);
 	return result;
 }
@@ -7301,38 +7339,6 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 }
 
 /**
- * Create a vertex shader prolog.
- */
-static bool si_compile_vs_prolog(struct si_screen *sscreen,
-				 LLVMTargetMachineRef tm,
-				 struct pipe_debug_callback *debug,
-				 struct si_shader_part *out)
-{
-	union si_shader_part_key *key = &out->key;
-	struct si_shader shader = {};
-	struct si_shader_context ctx;
-	struct gallivm_state *gallivm = &ctx.gallivm;
-	bool status = true;
-
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = PIPE_SHADER_VERTEX;
-
-	si_build_vs_prolog_function(&ctx, key);
-
-	/* Compile. */
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_VERTEX));
-
-	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
-			    gallivm->module, debug, ctx.type,
-			    "Vertex Shader Prolog"))
-		status = false;
-
-	si_llvm_dispose(&ctx);
-	return status;
-}
-
-/**
  * Build the vertex shader epilog function. This is also used by the tessellation
  * evaluation shader compiled as VS.
  *
@@ -7387,38 +7393,6 @@ static void si_build_vs_epilog_function(struct si_shader_context *ctx,
 }
 
 /**
- * Compile the vertex shader epilog. This is also used by the tessellation
- * evaluation shader compiled as VS.
- */
-static bool si_compile_vs_epilog(struct si_screen *sscreen,
-				 LLVMTargetMachineRef tm,
-				 struct pipe_debug_callback *debug,
-				 struct si_shader_part *out)
-{
-	union si_shader_part_key *key = &out->key;
-	struct si_shader_context ctx;
-	struct gallivm_state *gallivm = &ctx.gallivm;
-	bool status = true;
-
-	si_init_shader_ctx(&ctx, sscreen, NULL, tm);
-	ctx.type = PIPE_SHADER_VERTEX;
-
-	si_build_vs_epilog_function(&ctx, key);
-
-	/* Compile. */
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_VERTEX));
-
-	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
-			    gallivm->module, debug, ctx.type,
-			    "Vertex Shader Epilog"))
-		status = false;
-
-	si_llvm_dispose(&ctx);
-	return status;
-}
-
-/**
  * Create & compile a vertex shader epilog. This a helper used by VS and TES.
  */
 static bool si_get_vs_epilog(struct si_screen *sscreen,
@@ -7432,8 +7406,10 @@ static bool si_get_vs_epilog(struct si_screen *sscreen,
 	si_get_vs_epilog_key(shader, states, &epilog_key);
 
 	shader->epilog = si_get_shader_part(sscreen, &sscreen->vs_epilogs,
+					    PIPE_SHADER_VERTEX, true,
 					    &epilog_key, tm, debug,
-					    si_compile_vs_epilog);
+					    si_build_vs_epilog_function,
+					    "Vertex Shader Epilog");
 	return shader->epilog != NULL;
 }
 
@@ -7455,8 +7431,10 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 	if (info->num_inputs) {
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->vs_prologs,
+					   PIPE_SHADER_VERTEX, true,
 					   &prolog_key, tm, debug,
-					   si_compile_vs_prolog);
+					   si_build_vs_prolog_function,
+					   "Vertex Shader Prolog");
 		if (!shader->prolog)
 			return false;
 	}
@@ -7532,40 +7510,6 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 }
 
 /**
- * Compile the TCS epilog. This writes tesselation factors to memory based on
- * the output primitive type of the tesselator (determined by TES).
- */
-static bool si_compile_tcs_epilog(struct si_screen *sscreen,
-				  LLVMTargetMachineRef tm,
-				  struct pipe_debug_callback *debug,
-				  struct si_shader_part *out)
-{
-	union si_shader_part_key *key = &out->key;
-	struct si_shader shader = {};
-	struct si_shader_context ctx;
-	struct gallivm_state *gallivm = &ctx.gallivm;
-	bool status = true;
-
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = PIPE_SHADER_TESS_CTRL;
-	shader.key.tcs.epilog = key->tcs_epilog.states;
-
-	si_build_tcs_epilog_function(&ctx, key);
-
-	/* Compile. */
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_TESS_CTRL));
-
-	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
-			    gallivm->module, debug, ctx.type,
-			    "Tessellation Control Shader Epilog"))
-		status = false;
-
-	si_llvm_dispose(&ctx);
-	return status;
-}
-
-/**
  * Select and compile (or reuse) TCS parts (epilog).
  */
 static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
@@ -7580,8 +7524,10 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 	epilog_key.tcs_epilog.states = shader->key.tcs.epilog;
 
 	shader->epilog = si_get_shader_part(sscreen, &sscreen->tcs_epilogs,
+					    PIPE_SHADER_TESS_CTRL, false,
 					    &epilog_key, tm, debug,
-					    si_compile_tcs_epilog);
+					    si_build_tcs_epilog_function,
+					    "Tessellation Control Shader Epilog");
 	return shader->epilog != NULL;
 }
 
@@ -7832,39 +7778,6 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 }
 
 /**
- * Compile the pixel shader prolog.
- */
-static bool si_compile_ps_prolog(struct si_screen *sscreen,
-				 LLVMTargetMachineRef tm,
-				 struct pipe_debug_callback *debug,
-				 struct si_shader_part *out)
-{
-	union si_shader_part_key *key = &out->key;
-	struct si_shader shader = {};
-	struct si_shader_context ctx;
-	struct gallivm_state *gallivm = &ctx.gallivm;
-	bool status = true;
-
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = PIPE_SHADER_FRAGMENT;
-	shader.key.ps.prolog = key->ps_prolog.states;
-
-	si_build_ps_prolog_function(&ctx, key);
-
-	/* Compile. */
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
-
-	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
-			    gallivm->module, debug, ctx.type,
-			    "Fragment Shader Prolog"))
-		status = false;
-
-	si_llvm_dispose(&ctx);
-	return status;
-}
-
-/**
  * Build the pixel shader epilog function. This handles everything that must be
  * emulated for pixel shader exports. (alpha-test, format conversions, etc)
  */
@@ -7965,40 +7878,6 @@ static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 	LLVMBuildRetVoid(gallivm->builder);
 }
 
-
-/**
- * Compile the pixel shader epilog to a binary for concatenation.
- */
-static bool si_compile_ps_epilog(struct si_screen *sscreen,
-				 LLVMTargetMachineRef tm,
-				 struct pipe_debug_callback *debug,
-				 struct si_shader_part *out)
-{
-	union si_shader_part_key *key = &out->key;
-	struct si_shader shader = {};
-	struct si_shader_context ctx;
-	struct gallivm_state *gallivm = &ctx.gallivm;
-	bool status = true;
-
-	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
-	ctx.type = PIPE_SHADER_FRAGMENT;
-	shader.key.ps.epilog = key->ps_epilog.states;
-
-	si_build_ps_epilog_function(&ctx, key);
-
-	/* Compile. */
-	si_llvm_finalize_module(&ctx,
-		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_FRAGMENT));
-
-	if (si_compile_llvm(sscreen, &out->binary, &out->config, tm,
-			    gallivm->module, debug, ctx.type,
-			    "Fragment Shader Epilog"))
-		status = false;
-
-	si_llvm_dispose(&ctx);
-	return status;
-}
-
 /**
  * Select and compile (or reuse) pixel shader parts (prolog & epilog).
  */
@@ -8017,8 +7896,10 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	if (si_need_ps_prolog(&prolog_key)) {
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->ps_prologs,
+					   PIPE_SHADER_FRAGMENT, true,
 					   &prolog_key, tm, debug,
-					   si_compile_ps_prolog);
+					   si_build_ps_prolog_function,
+					   "Fragment Shader Prolog");
 		if (!shader->prolog)
 			return false;
 	}
@@ -8028,8 +7909,10 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 
 	shader->epilog =
 		si_get_shader_part(sscreen, &sscreen->ps_epilogs,
+				   PIPE_SHADER_FRAGMENT, false,
 				   &epilog_key, tm, debug,
-				   si_compile_ps_epilog);
+				   si_build_ps_epilog_function,
+				   "Fragment Shader Epilog");
 	if (!shader->epilog)
 		return false;
 
