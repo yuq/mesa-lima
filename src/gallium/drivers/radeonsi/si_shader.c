@@ -1183,45 +1183,6 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 	}
 }
 
-/* This shouldn't be used by explicit INTERP opcodes. */
-static unsigned select_interp_param(struct si_shader_context *ctx,
-				    unsigned param)
-{
-	if (!ctx->no_prolog)
-		return param;
-
-	if (ctx->shader->key.ps.prolog.force_persp_sample_interp) {
-		switch (param) {
-		case SI_PARAM_PERSP_CENTROID:
-		case SI_PARAM_PERSP_CENTER:
-			return SI_PARAM_PERSP_SAMPLE;
-		}
-	}
-	if (ctx->shader->key.ps.prolog.force_linear_sample_interp) {
-		switch (param) {
-		case SI_PARAM_LINEAR_CENTROID:
-		case SI_PARAM_LINEAR_CENTER:
-			return SI_PARAM_LINEAR_SAMPLE;
-		}
-	}
-	if (ctx->shader->key.ps.prolog.force_persp_center_interp) {
-		switch (param) {
-		case SI_PARAM_PERSP_CENTROID:
-		case SI_PARAM_PERSP_SAMPLE:
-			return SI_PARAM_PERSP_CENTER;
-		}
-	}
-	if (ctx->shader->key.ps.prolog.force_linear_center_interp) {
-		switch (param) {
-		case SI_PARAM_LINEAR_CENTROID:
-		case SI_PARAM_LINEAR_SAMPLE:
-			return SI_PARAM_LINEAR_CENTER;
-		}
-	}
-
-	return param;
-}
-
 /**
  * Interpolate a fragment shader input.
  *
@@ -1424,8 +1385,6 @@ static void declare_input_fs(
 	if (interp_param_idx == -1)
 		return;
 	else if (interp_param_idx) {
-		interp_param_idx = select_interp_param(ctx,
-						       interp_param_idx);
 		interp_param = get_interp_param(ctx, interp_param_idx);
 	}
 
