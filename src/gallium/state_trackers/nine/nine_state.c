@@ -2419,9 +2419,32 @@ nine_state_clear(struct nine_state *state, const boolean device)
 }
 
 void
-nine_context_clear(struct nine_context *context)
+nine_context_clear(struct NineDevice9 *device)
 {
+    struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
+    struct cso_context *cso = context->cso;
     unsigned i;
+
+    /* Early device ctor failure. Nothing to do */
+    if (!pipe || !cso)
+        return;
+
+    pipe->bind_vs_state(pipe, NULL);
+    pipe->bind_fs_state(pipe, NULL);
+
+    /* Don't unbind constant buffers, they're device-private and
+     * do not change on Reset.
+     */
+
+    cso_set_samplers(cso, PIPE_SHADER_VERTEX, 0, NULL);
+    cso_set_samplers(cso, PIPE_SHADER_FRAGMENT, 0, NULL);
+
+    cso_set_sampler_views(cso, PIPE_SHADER_VERTEX, 0, NULL);
+    cso_set_sampler_views(cso, PIPE_SHADER_FRAGMENT, 0, NULL);
+
+    pipe->set_vertex_buffers(pipe, 0, device->caps.MaxStreams, NULL);
+    pipe->set_index_buffer(pipe, NULL);
 
     for (i = 0; i < ARRAY_SIZE(context->rt); ++i)
        nine_bind(&context->rt[i], NULL);

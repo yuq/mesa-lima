@@ -498,12 +498,10 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     DBG("This=%p\n", This);
 
-    if (This->context.pipe && This->context.cso)
-        nine_pipe_context_clear(This);
     nine_ff_fini(This);
     nine_state_destroy_sw(This);
     nine_state_clear(&This->state, TRUE);
-    nine_context_clear(&This->context);
+    nine_context_clear(This);
 
     if (This->vertex_uploader)
         u_upload_destroy(This->vertex_uploader);
@@ -871,9 +869,8 @@ NineDevice9_Reset( struct NineDevice9 *This,
             break;
     }
 
-    nine_pipe_context_clear(This);
     nine_state_clear(&This->state, TRUE);
-    nine_context_clear(&This->context);
+    nine_context_clear(This);
 
     NineDevice9_SetDefaultState(This, TRUE);
     NineDevice9_SetRenderTarget(
