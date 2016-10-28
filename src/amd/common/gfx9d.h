@@ -6186,6 +6186,60 @@
 #define   S_028A90_EVENT_TYPE(x)                                      (((unsigned)(x) & 0x3F) << 0)
 #define   G_028A90_EVENT_TYPE(x)                                      (((x) >> 0) & 0x3F)
 #define   C_028A90_EVENT_TYPE                                         0xFFFFFFC0
+#define     V_028A90_SAMPLE_STREAMOUTSTATS1                         0x01
+#define     V_028A90_SAMPLE_STREAMOUTSTATS2                         0x02
+#define     V_028A90_SAMPLE_STREAMOUTSTATS3                         0x03
+#define     V_028A90_CACHE_FLUSH_TS                                 0x04
+#define     V_028A90_CONTEXT_DONE                                   0x05
+#define     V_028A90_CACHE_FLUSH                                    0x06
+#define     V_028A90_CS_PARTIAL_FLUSH                               0x07
+#define     V_028A90_VGT_STREAMOUT_SYNC                             0x08
+#define     V_028A90_VGT_STREAMOUT_RESET                            0x0A
+#define     V_028A90_END_OF_PIPE_INCR_DE                            0x0B
+#define     V_028A90_END_OF_PIPE_IB_END                             0x0C
+#define     V_028A90_RST_PIX_CNT                                    0x0D
+#define     V_028A90_BREAK_BATCH                                    0x0E /* new */
+#define     V_028A90_VS_PARTIAL_FLUSH                               0x0F
+#define     V_028A90_PS_PARTIAL_FLUSH                               0x10
+#define     V_028A90_FLUSH_HS_OUTPUT                                0x11
+#define     V_028A90_FLUSH_DFSM                                     0x12 /* new */
+#define     V_028A90_RESET_TO_LOWEST_VGT                            0x13 /* new */
+#define     V_028A90_CACHE_FLUSH_AND_INV_TS_EVENT                   0x14
+#define     V_028A90_ZPASS_DONE                                     0x15
+#define     V_028A90_CACHE_FLUSH_AND_INV_EVENT                      0x16
+#define     V_028A90_PERFCOUNTER_START                              0x17
+#define     V_028A90_PERFCOUNTER_STOP                               0x18
+#define     V_028A90_PIPELINESTAT_START                             0x19
+#define     V_028A90_PIPELINESTAT_STOP                              0x1A
+#define     V_028A90_PERFCOUNTER_SAMPLE                             0x1B
+#define     V_028A90_SAMPLE_PIPELINESTAT                            0x1E
+#define     V_028A90_SO_VGTSTREAMOUT_FLUSH                          0x1F
+#define     V_028A90_SAMPLE_STREAMOUTSTATS                          0x20
+#define     V_028A90_RESET_VTX_CNT                                  0x21
+#define     V_028A90_BLOCK_CONTEXT_DONE                             0x22
+#define     V_028A90_CS_CONTEXT_DONE                                0x23
+#define     V_028A90_VGT_FLUSH                                      0x24
+#define     V_028A90_TGID_ROLLOVER                                  0x25
+#define     V_028A90_SC_SEND_DB_VPZ                                 0x27
+#define     V_028A90_BOTTOM_OF_PIPE_TS                              0x28
+#define     V_028A90_DB_CACHE_FLUSH_AND_INV                         0x2A
+#define     V_028A90_FLUSH_AND_INV_DB_DATA_TS                       0x2B
+#define     V_028A90_FLUSH_AND_INV_DB_META                          0x2C
+#define     V_028A90_FLUSH_AND_INV_CB_DATA_TS                       0x2D
+#define     V_028A90_FLUSH_AND_INV_CB_META                          0x2E
+#define     V_028A90_CS_DONE                                        0x2F
+#define     V_028A90_PS_DONE                                        0x30
+#define     V_028A90_FLUSH_AND_INV_CB_PIXEL_DATA                    0x31
+#define     V_028A90_THREAD_TRACE_START                             0x33
+#define     V_028A90_THREAD_TRACE_STOP                              0x34
+#define     V_028A90_THREAD_TRACE_MARKER                            0x35
+#define     V_028A90_THREAD_TRACE_FLUSH                             0x36
+#define     V_028A90_THREAD_TRACE_FINISH                            0x37
+#define     V_028A90_PIXEL_PIPE_STAT_CONTROL                        0x38
+#define     V_028A90_PIXEL_PIPE_STAT_DUMP                           0x39
+#define     V_028A90_PIXEL_PIPE_STAT_RESET                          0x3A
+#define     V_028A90_ENABLE_NGG_PIPELINE                            0x3D /* new */
+#define     V_028A90_ENABLE_LEGACY_PIPELINE                         0x3E /* new */
 #define   S_028A90_ADDRESS_HI_GFX9(x)                                 (((unsigned)(x) & 0x1FFFF) << 10)
 #define   G_028A90_ADDRESS_HI_GFX9(x)                                 (((x) >> 10) & 0x1FFFF)
 #define   C_028A90_ADDRESS_HI_GFX9                                    0xF80003FF
