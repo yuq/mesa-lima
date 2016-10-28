@@ -36,12 +36,13 @@
 #include "nir_builder.h"
 
 static nir_shader *
-create_passthrough_tcs(const struct brw_compiler *compiler,
+create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
                        const nir_shader_compiler_options *options,
                        const struct brw_tcs_prog_key *key)
 {
    nir_builder b;
-   nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_TESS_CTRL, options);
+   nir_builder_init_simple_shader(&b, mem_ctx, MESA_SHADER_TESS_CTRL,
+                                  options);
    nir_shader *nir = b.shader;
    nir_variable *var;
    nir_intrinsic_instr *load;
@@ -177,6 +178,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    bool start_busy = false;
    double start_time = 0;
 
+   void *mem_ctx = ralloc_context(NULL);
    if (tcp) {
       nir = tcp->program.nir;
    } else {
@@ -186,7 +188,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
        */
       const nir_shader_compiler_options *options =
          ctx->Const.ShaderCompilerOptions[MESA_SHADER_TESS_CTRL].NirOptions;
-      nir = create_passthrough_tcs(compiler, options, key);
+      nir = create_passthrough_tcs(mem_ctx, compiler, options, key);
    }
 
    memset(&prog_data, 0, sizeof(prog_data));
@@ -260,7 +262,6 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
-   void *mem_ctx = ralloc_context(NULL);
    unsigned program_size;
    char *error_str;
    const unsigned *program =
@@ -270,8 +271,6 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       if (shader_prog) {
          shader_prog->LinkStatus = false;
          ralloc_strcat(&shader_prog->InfoLog, error_str);
-      } else {
-         ralloc_free(nir);
       }
 
       _mesa_problem(NULL, "Failed to compile tessellation control shader: "
@@ -306,8 +305,6 @@ brw_codegen_tcs_prog(struct brw_context *brw,
                     &prog_data, sizeof(prog_data),
                     &stage_state->prog_offset, &brw->tcs.base.prog_data);
    ralloc_free(mem_ctx);
-   if (!tcs)
-      ralloc_free(nir);
 
    return true;
 }
