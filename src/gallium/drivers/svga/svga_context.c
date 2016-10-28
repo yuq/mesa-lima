@@ -386,9 +386,13 @@ svga_context_finish(struct svga_context *svga)
    struct pipe_screen *screen = svga->pipe.screen;
    struct pipe_fence_handle *fence = NULL;
 
+   SVGA_STATS_TIME_PUSH(svga_sws(svga), SVGA_STATS_TIME_CONTEXTFINISH);
+
    svga_context_flush(svga, &fence);
    screen->fence_finish(screen, NULL, fence, PIPE_TIMEOUT_INFINITE);
    screen->fence_reference(screen, &fence, NULL);
+
+   SVGA_STATS_TIME_POP(svga_sws(svga));
 }
 
 
