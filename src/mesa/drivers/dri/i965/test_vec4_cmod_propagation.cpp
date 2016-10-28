@@ -369,10 +369,10 @@ TEST_F(cmod_propagation_test, intervening_dest_write)
    src_reg src1 = src_reg(v, glsl_type::float_type);
    src_reg src2 = src_reg(v, glsl_type::vec2_type);
    src_reg zero(brw_imm_f(0.0f));
-   bld.ADD(offset(dest, 2), src0, src1);
+   bld.ADD(offset(dest, 8, 2), src0, src1);
    bld.emit(SHADER_OPCODE_TEX, dest, src2)
       ->size_written = 4 * REG_SIZE;
-   bld.CMP(bld.null_reg_f(), offset(src_reg(dest), 2), zero, BRW_CONDITIONAL_GE);
+   bld.CMP(bld.null_reg_f(), offset(src_reg(dest), 8, 2), zero, BRW_CONDITIONAL_GE);
 
    /* = Before =
     *
