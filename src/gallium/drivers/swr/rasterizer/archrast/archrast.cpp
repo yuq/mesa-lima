@@ -43,8 +43,8 @@ namespace ArchRast
         EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id) {}
 
         // These are events that we're not interested in saving in stats event files.
-        virtual void handle(Start& event) {}
-        virtual void handle(End& event) {}
+        virtual void Handle(Start& event) {}
+        virtual void Handle(End& event) {}
     };
 
     static EventManager* FromHandle(HANDLE hThreadContext)
@@ -64,7 +64,7 @@ namespace ArchRast
 
         if (pManager && pHandler)
         {
-            pManager->attach(pHandler);
+            pManager->Attach(pHandler);
 
             return pManager;
         }
@@ -82,11 +82,11 @@ namespace ArchRast
     }
 
     // Dispatch event for this thread.
-    void dispatch(HANDLE hThreadContext, Event& event)
+    void Dispatch(HANDLE hThreadContext, Event& event)
     {
         EventManager* pManager = FromHandle(hThreadContext);
         SWR_ASSERT(pManager != nullptr);
 
-        pManager->dispatch(event);
+        pManager->Dispatch(event);
     }
 }

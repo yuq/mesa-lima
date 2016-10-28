@@ -394,7 +394,6 @@ void SwrDestroyContext(HANDLE hContext)
     }
 
     delete[] pContext->ppScratch;
-    delete[] pContext->pArContext;
     delete[] pContext->pStats;
 
     delete(pContext->pHotTileMgr);

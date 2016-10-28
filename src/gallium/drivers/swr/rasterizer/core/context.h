@@ -523,9 +523,9 @@ struct SWR_CONTEXT
 #define AR_API_CTX     pContext->pArContext[pContext->NumWorkerThreads]
 
 #ifdef KNOB_ENABLE_AR
-    #define _AR_BEGIN(ctx, type, id)    ArchRast::dispatch(ctx, ArchRast::Start(ArchRast::type, id))
-    #define _AR_END(ctx, type, count)   ArchRast::dispatch(ctx, ArchRast::End(ArchRast::type, count))
-    #define _AR_EVENT(ctx, event)       ArchRast::dispatch(ctx, ArchRast::event)
+    #define _AR_BEGIN(ctx, type, id)    ArchRast::Dispatch(ctx, ArchRast::Start(ArchRast::type, id))
+    #define _AR_END(ctx, type, count)   ArchRast::Dispatch(ctx, ArchRast::End(ArchRast::type, count))
+    #define _AR_EVENT(ctx, event)       ArchRast::Dispatch(ctx, ArchRast::event)
 #else
     #ifdef KNOB_ENABLE_RDTSC
         #define _AR_BEGIN(ctx, type, id) (void)ctx; RDTSC_START(type)

@@ -36,6 +36,6 @@ namespace ArchRast
     void DestroyThreadContext(HANDLE hThreadContext);
 
     // Dispatch event for this thread.
-    void dispatch(HANDLE hThreadContext, Event& event);
+    void Dispatch(HANDLE hThreadContext, Event& event);
 };
 

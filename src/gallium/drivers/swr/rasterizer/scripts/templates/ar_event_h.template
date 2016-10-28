@@ -51,7 +51,10 @@ namespace ArchRast
     //////////////////////////////////////////////////////////////////////////
     struct Event
     {
-        virtual void accept(EventHandler* pHandler) = 0;
+        Event() {}
+        virtual ~Event() {}
+
+        virtual void Accept(EventHandler* pHandler) = 0;
     };
 % for name in protos['event_names']:
 
@@ -96,7 +99,7 @@ namespace ArchRast
         % endfor
         }
 
-        virtual void accept(EventHandler* pHandler);
+        virtual void Accept(EventHandler* pHandler);
     };
 % endfor
 }
