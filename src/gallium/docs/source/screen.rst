@@ -463,6 +463,10 @@ to be 0.
 * ``PIPE_SHADER_CAP_SUPPORTED_IRS``: Supported representations of the
   program.  It should be a mask of ``pipe_shader_ir`` bits.
 * ``PIPE_SHADER_CAP_MAX_SHADER_IMAGES``: Maximum number of image units.
+* ``PIPE_SHADER_CAP_LOWER_IF_THRESHOLD``: IF and ELSE branches with a lower
+  cost than this value should be lowered by the state tracker for better
+  performance. This is a tunable for the GLSL compiler and the behavior is
+  specific to the compiler.
 
 
 .. _pipe_compute_cap:

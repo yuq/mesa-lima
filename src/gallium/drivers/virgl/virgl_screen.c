@@ -312,6 +312,7 @@ virgl_get_shader_param(struct pipe_screen *screen, unsigned shader, enum pipe_sh
          return 32;
       case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE:
          return 4096 * sizeof(float[4]);
+      case PIPE_SHADER_CAP_LOWER_IF_THRESHOLD:
       default:
          return 0;
       }
