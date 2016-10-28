@@ -2960,98 +2960,6 @@ static void si_export_null(struct lp_build_tgsi_context *bld_base)
 			   ctx->voidt, args, 9, 0);
 }
 
-static void si_llvm_emit_fs_epilogue(struct lp_build_tgsi_context *bld_base)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct si_shader *shader = ctx->shader;
-	struct lp_build_context *base = &bld_base->base;
-	struct tgsi_shader_info *info = &shader->selector->info;
-	LLVMBuilderRef builder = base->gallivm->builder;
-	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
-	int last_color_export = -1;
-	int i;
-	struct si_ps_exports exp = {};
-
-	/* Determine the last export. If MRTZ is present, it's always last.
-	 * Otherwise, find the last color export.
-	 */
-	if (!info->writes_z && !info->writes_stencil && !info->writes_samplemask) {
-		unsigned spi_format = shader->key.ps.epilog.spi_shader_col_format;
-
-		/* Don't export NULL and return if alpha-test is enabled. */
-		if (shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS &&
-		    shader->key.ps.epilog.alpha_func != PIPE_FUNC_NEVER &&
-		    (spi_format & 0xf) == 0)
-			spi_format |= V_028714_SPI_SHADER_32_AR;
-
-		for (i = 0; i < info->num_outputs; i++) {
-			unsigned index = info->output_semantic_index[i];
-
-			if (info->output_semantic_name[i] != TGSI_SEMANTIC_COLOR)
-				continue;
-
-			/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-			if (shader->key.ps.epilog.last_cbuf > 0) {
-				/* Just set this if any of the colorbuffers are enabled. */
-				if (spi_format &
-				    ((1llu << (4 * (shader->key.ps.epilog.last_cbuf + 1))) - 1))
-					last_color_export = i;
-				continue;
-			}
-
-			if ((spi_format >> (index * 4)) & 0xf)
-				last_color_export = i;
-		}
-
-		/* If there are no outputs, export NULL. */
-		if (last_color_export == -1) {
-			si_export_null(bld_base);
-			return;
-		}
-	}
-
-	for (i = 0; i < info->num_outputs; i++) {
-		unsigned semantic_name = info->output_semantic_name[i];
-		unsigned semantic_index = info->output_semantic_index[i];
-		unsigned j;
-		LLVMValueRef color[4] = {};
-
-		/* Select the correct target */
-		switch (semantic_name) {
-		case TGSI_SEMANTIC_POSITION:
-			depth = LLVMBuildLoad(builder,
-					      ctx->soa.outputs[i][2], "");
-			break;
-		case TGSI_SEMANTIC_STENCIL:
-			stencil = LLVMBuildLoad(builder,
-						ctx->soa.outputs[i][1], "");
-			break;
-		case TGSI_SEMANTIC_SAMPLEMASK:
-			samplemask = LLVMBuildLoad(builder,
-						   ctx->soa.outputs[i][0], "");
-			break;
-		case TGSI_SEMANTIC_COLOR:
-			for (j = 0; j < 4; j++)
-				color[j] = LLVMBuildLoad(builder,
-							 ctx->soa.outputs[i][j], "");
-
-			si_export_mrt_color(bld_base, color, semantic_index,
-					    SI_PARAM_SAMPLE_COVERAGE,
-					    last_color_export == i, &exp);
-			break;
-		default:
-			fprintf(stderr,
-				"Warning: SI unhandled fs output type:%d\n",
-				semantic_name);
-		}
-	}
-
-	if (depth || stencil || samplemask)
-		si_export_mrt_z(bld_base, depth, stencil, samplemask, &exp);
-
-	si_emit_ps_exports(ctx, &exp);
-}
-
 /**
  * Return PS outputs in this order:
  *
@@ -6646,10 +6554,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		ctx->load_input = declare_input_fs;
-		if (ctx->no_epilog)
-			bld_base->emit_epilogue = si_llvm_emit_fs_epilogue;
-		else
-			bld_base->emit_epilogue = si_llvm_return_fs_outputs;
+		bld_base->emit_epilogue = si_llvm_return_fs_outputs;
 		break;
 	case PIPE_SHADER_COMPUTE:
 		ctx->declare_memory_region = declare_compute_memory;
