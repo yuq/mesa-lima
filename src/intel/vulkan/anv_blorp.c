@@ -1200,15 +1200,6 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    struct anv_subpass *subpass = cmd_buffer->state.subpass;
 
-   /* FINISHME(perf): Skip clears for resolve attachments.
-    *
-    * From the Vulkan 1.0 spec:
-    *
-    *    If the first use of an attachment in a render pass is as a resolve
-    *    attachment, then the loadOp is effectively ignored as the resolve is
-    *    guaranteed to overwrite all pixels in the render area.
-    */
-
    if (!subpass->has_resolve)
       return;
 
@@ -1221,6 +1212,17 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
       if (dst_att == VK_ATTACHMENT_UNUSED)
          continue;
+
+      if (cmd_buffer->state.attachments[dst_att].pending_clear_aspects) {
+         /* From the Vulkan 1.0 spec:
+          *
+          *    If the first use of an attachment in a render pass is as a
+          *    resolve attachment, then the loadOp is effectively ignored
+          *    as the resolve is guaranteed to overwrite all pixels in the
+          *    render area.
+          */
+         cmd_buffer->state.attachments[dst_att].pending_clear_aspects = 0;
+      }
 
       struct anv_image_view *src_iview = fb->attachments[src_att];
       struct anv_image_view *dst_iview = fb->attachments[dst_att];
