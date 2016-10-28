@@ -7716,6 +7716,51 @@ static bool si_shader_select_tes_parts(struct si_screen *sscreen,
 }
 
 /**
+ * Compile the TCS epilog function. This writes tesselation factors to memory
+ * based on the output primitive type of the tesselator (determined by TES).
+ */
+static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
+					 union si_shader_part_key *key)
+{
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
+	LLVMTypeRef params[16];
+	LLVMValueRef func;
+	int last_sgpr, num_params;
+
+	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
+	params[SI_PARAM_RW_BUFFERS] = const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+	params[SI_PARAM_CONST_BUFFERS] = ctx->i64;
+	params[SI_PARAM_SAMPLERS] = ctx->i64;
+	params[SI_PARAM_IMAGES] = ctx->i64;
+	params[SI_PARAM_SHADER_BUFFERS] = ctx->i64;
+	params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx->i32;
+	params[SI_PARAM_TCS_OUT_OFFSETS] = ctx->i32;
+	params[SI_PARAM_TCS_OUT_LAYOUT] = ctx->i32;
+	params[SI_PARAM_TCS_IN_LAYOUT] = ctx->i32;
+	params[ctx->param_oc_lds = SI_PARAM_TCS_OC_LDS] = ctx->i32;
+	params[SI_PARAM_TESS_FACTOR_OFFSET] = ctx->i32;
+	last_sgpr = SI_PARAM_TESS_FACTOR_OFFSET;
+	num_params = last_sgpr + 1;
+
+	params[num_params++] = ctx->i32; /* patch index within the wave (REL_PATCH_ID) */
+	params[num_params++] = ctx->i32; /* invocation ID within the patch */
+	params[num_params++] = ctx->i32; /* LDS offset where tess factors should be loaded from */
+
+	/* Create the function. */
+	si_create_function(ctx, "tcs_epilog", NULL, 0, params, num_params, last_sgpr);
+	declare_tess_lds(ctx);
+	func = ctx->main_fn;
+
+	si_write_tess_factors(bld_base,
+			      LLVMGetParam(func, last_sgpr + 1),
+			      LLVMGetParam(func, last_sgpr + 2),
+			      LLVMGetParam(func, last_sgpr + 3));
+
+	LLVMBuildRetVoid(gallivm->builder);
+}
+
+/**
  * Compile the TCS epilog. This writes tesselation factors to memory based on
  * the output primitive type of the tesselator (determined by TES).
  */
@@ -7728,47 +7773,15 @@ static bool si_compile_tcs_epilog(struct si_screen *sscreen,
 	struct si_shader shader = {};
 	struct si_shader_context ctx;
 	struct gallivm_state *gallivm = &ctx.gallivm;
-	struct lp_build_tgsi_context *bld_base = &ctx.soa.bld_base;
-	LLVMTypeRef params[16];
-	LLVMValueRef func;
-	int last_sgpr, num_params;
 	bool status = true;
 
 	si_init_shader_ctx(&ctx, sscreen, &shader, tm);
 	ctx.type = PIPE_SHADER_TESS_CTRL;
 	shader.key.tcs.epilog = key->tcs_epilog.states;
 
-	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
-	params[SI_PARAM_RW_BUFFERS] = const_array(ctx.v16i8, SI_NUM_RW_BUFFERS);
-	params[SI_PARAM_CONST_BUFFERS] = ctx.i64;
-	params[SI_PARAM_SAMPLERS] = ctx.i64;
-	params[SI_PARAM_IMAGES] = ctx.i64;
-	params[SI_PARAM_SHADER_BUFFERS] = ctx.i64;
-	params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx.i32;
-	params[SI_PARAM_TCS_OUT_OFFSETS] = ctx.i32;
-	params[SI_PARAM_TCS_OUT_LAYOUT] = ctx.i32;
-	params[SI_PARAM_TCS_IN_LAYOUT] = ctx.i32;
-	params[ctx.param_oc_lds = SI_PARAM_TCS_OC_LDS] = ctx.i32;
-	params[SI_PARAM_TESS_FACTOR_OFFSET] = ctx.i32;
-	last_sgpr = SI_PARAM_TESS_FACTOR_OFFSET;
-	num_params = last_sgpr + 1;
-
-	params[num_params++] = ctx.i32; /* patch index within the wave (REL_PATCH_ID) */
-	params[num_params++] = ctx.i32; /* invocation ID within the patch */
-	params[num_params++] = ctx.i32; /* LDS offset where tess factors should be loaded from */
-
-	/* Create the function. */
-	si_create_function(&ctx, "tcs_epilog", NULL, 0, params, num_params, last_sgpr);
-	declare_tess_lds(&ctx);
-	func = ctx.main_fn;
-
-	si_write_tess_factors(bld_base,
-			      LLVMGetParam(func, last_sgpr + 1),
-			      LLVMGetParam(func, last_sgpr + 2),
-			      LLVMGetParam(func, last_sgpr + 3));
+	si_build_tcs_epilog_function(&ctx, key);
 
 	/* Compile. */
-	LLVMBuildRetVoid(gallivm->builder);
 	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_TESS_CTRL));
 
