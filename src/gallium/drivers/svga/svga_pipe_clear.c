@@ -323,8 +323,10 @@ svga_clear_texture(struct pipe_context *pipe,
       struct pipe_surface *dsv =
          svga_validate_surface_view(svga, svga_surface_dst);
 
-      if (!dsv)
+      if (!dsv) {
+         pipe_surface_reference(&surface, NULL);
          return;
+      }
 
       if (box->x == 0 && box->y == 0 && box->width == surface->width &&
           box->height == surface->height) {
@@ -382,8 +384,10 @@ svga_clear_texture(struct pipe_context *pipe,
       struct pipe_surface *rtv =
          svga_validate_surface_view(svga, svga_surface_dst);
 
-      if (!rtv)
+      if (!rtv) {
+         pipe_surface_reference(&surface, NULL);
          return;
+      }
 
       if (box->x == 0 && box->y == 0 && box->width == surface->width &&
           box->height == surface->height) {
@@ -449,6 +453,7 @@ svga_clear_texture(struct pipe_context *pipe,
          }
       }
    }
+   pipe_surface_reference(&surface, NULL);
 }
 
 /**
