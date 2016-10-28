@@ -71,6 +71,8 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
 			       FILE *f);
 
+static void si_build_ps_prolog_function(struct si_shader_context *ctx,
+					union si_shader_part_key *key);
 static void si_build_ps_epilog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
 
@@ -6772,7 +6774,8 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
  * build the PS prolog function, and set related bits in shader->config.
  */
 static void si_get_ps_prolog_key(struct si_shader *shader,
-				 union si_shader_part_key *key)
+				 union si_shader_part_key *key,
+				 bool separate_prolog)
 {
 	struct tgsi_shader_info *info = &shader->selector->info;
 
@@ -6852,19 +6855,26 @@ static void si_get_ps_prolog_key(struct si_shader *shader,
 				if (shader->key.ps.prolog.force_linear_center_interp)
 					location = TGSI_INTERPOLATE_LOC_CENTER;
 
+				/* The VGPR assignment for non-monolithic shaders
+				 * works because InitialPSInputAddr is set on the
+				 * main shader and PERSP_PULL_MODEL is never used.
+				 */
 				switch (location) {
 				case TGSI_INTERPOLATE_LOC_SAMPLE:
-					key->ps_prolog.color_interp_vgpr_index[i] = 6;
+					key->ps_prolog.color_interp_vgpr_index[i] =
+						separate_prolog ? 6 : 9;
 					shader->config.spi_ps_input_ena |=
 						S_0286CC_LINEAR_SAMPLE_ENA(1);
 					break;
 				case TGSI_INTERPOLATE_LOC_CENTER:
-					key->ps_prolog.color_interp_vgpr_index[i] = 8;
+					key->ps_prolog.color_interp_vgpr_index[i] =
+						separate_prolog ? 8 : 11;
 					shader->config.spi_ps_input_ena |=
 						S_0286CC_LINEAR_CENTER_ENA(1);
 					break;
 				case TGSI_INTERPOLATE_LOC_CENTROID:
-					key->ps_prolog.color_interp_vgpr_index[i] = 10;
+					key->ps_prolog.color_interp_vgpr_index[i] =
+						separate_prolog ? 10 : 13;
 					shader->config.spi_ps_input_ena |=
 						S_0286CC_LINEAR_CENTROID_ENA(1);
 					break;
@@ -7122,8 +7132,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	ctx.no_epilog = is_monolithic;
 	ctx.separate_prolog = !is_monolithic;
 
-	if (ctx.type == PIPE_SHADER_FRAGMENT)
+	if (ctx.type == PIPE_SHADER_FRAGMENT) {
+		ctx.no_prolog = false;
 		ctx.no_epilog = false;
+	}
 
 	memset(shader->info.vs_output_param_offset, 0xff,
 	       sizeof(shader->info.vs_output_param_offset));
@@ -7139,16 +7151,26 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
-		LLVMValueRef parts[2];
+		LLVMValueRef parts[3];
+		union si_shader_part_key prolog_key;
 		union si_shader_part_key epilog_key;
+		bool need_prolog;
 
-		parts[0] = ctx.main_fn;
+		si_get_ps_prolog_key(shader, &prolog_key, false);
+		need_prolog = si_need_ps_prolog(&prolog_key);
+
+		parts[need_prolog ? 1 : 0] = ctx.main_fn;
+
+		if (need_prolog) {
+			si_build_ps_prolog_function(&ctx, &prolog_key);
+			parts[0] = ctx.main_fn;
+		}
 
 		si_get_ps_epilog_key(shader, &epilog_key);
 		si_build_ps_epilog_function(&ctx, &epilog_key);
-		parts[1] = ctx.main_fn;
+		parts[need_prolog ? 2 : 1] = ctx.main_fn;
 
-		si_build_wrapper_function(&ctx, parts, 2, 0);
+		si_build_wrapper_function(&ctx, parts, need_prolog ? 3 : 2, need_prolog ? 1 : 0);
 	}
 
 	mod = bld_base->base.gallivm->module;
@@ -8113,7 +8135,7 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	union si_shader_part_key epilog_key;
 
 	/* Get the prolog. */
-	si_get_ps_prolog_key(shader, &prolog_key);
+	si_get_ps_prolog_key(shader, &prolog_key, true);
 
 	/* The prolog is a no-op if these aren't set. */
 	if (si_need_ps_prolog(&prolog_key)) {
