@@ -5495,6 +5495,7 @@ static void create_function(struct si_shader_context *ctx)
 	LLVMTypeRef returns[16+32*4];
 	unsigned i, last_sgpr, num_params, num_return_sgprs;
 	unsigned num_returns = 0;
+	unsigned num_prolog_vgprs = 0;
 
 	v3i32 = LLVMVectorType(ctx->i32, 3);
 
@@ -5545,6 +5546,8 @@ static void create_function(struct si_shader_context *ctx)
 
 			for (i = 0; i < shader->selector->info.num_inputs; i++)
 				params[num_params++] = ctx->i32;
+
+			num_prolog_vgprs += shader->selector->info.num_inputs;
 		}
 
 		if (!ctx->no_epilog &&
@@ -5644,6 +5647,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_POS_Z_FLOAT] = ctx->f32;
 		params[SI_PARAM_POS_W_FLOAT] = ctx->f32;
 		params[SI_PARAM_FRONT_FACE] = ctx->i32;
+		shader->info.face_vgpr_index = 20;
 		params[SI_PARAM_ANCILLARY] = ctx->i32;
 		params[SI_PARAM_SAMPLE_COVERAGE] = ctx->f32;
 		params[SI_PARAM_POS_FIXED_PT] = ctx->i32;
@@ -5658,6 +5662,8 @@ static void create_function(struct si_shader_context *ctx)
 				assert(num_params + num_color_elements <= ARRAY_SIZE(params));
 				for (i = 0; i < num_color_elements; i++)
 					params[num_params++] = ctx->f32;
+
+				num_prolog_vgprs += num_color_elements;
 			}
 		}
 
@@ -5740,12 +5746,11 @@ static void create_function(struct si_shader_context *ctx)
 	for (i = 0; i <= last_sgpr; ++i)
 		shader->info.num_input_sgprs += llvm_get_type_size(params[i]) / 4;
 
-	/* Unused fragment shader inputs are eliminated by the compiler,
-	 * so we don't know yet how many there will be.
-	 */
-	if (ctx->type != PIPE_SHADER_FRAGMENT)
-		for (; i < num_params; ++i)
-			shader->info.num_input_vgprs += llvm_get_type_size(params[i]) / 4;
+	for (; i < num_params; ++i)
+		shader->info.num_input_vgprs += llvm_get_type_size(params[i]) / 4;
+
+	assert(shader->info.num_input_vgprs >= num_prolog_vgprs);
+	shader->info.num_input_vgprs -= num_prolog_vgprs;
 
 	if (!ctx->screen->has_ds_bpermute &&
 	    bld_base->info &&
