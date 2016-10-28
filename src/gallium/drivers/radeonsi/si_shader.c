@@ -75,6 +75,8 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
 static void si_build_vs_epilog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
+static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
+					 union si_shader_part_key *key);
 static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
 static void si_build_ps_epilog_function(struct si_shader_context *ctx,
@@ -2483,6 +2485,10 @@ handle_semantic:
 	}
 }
 
+/**
+ * Forward all outputs from the vertex shader to the TES. This is only used
+ * for the fixed function TCS.
+ */
 static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -2637,6 +2643,8 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef rel_patch_id, invocation_id, tf_lds_offset;
 
+	si_copy_tcs_inputs(bld_base);
+
 	rel_patch_id = get_rel_patch_id(ctx);
 	invocation_id = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
 	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
@@ -2679,7 +2687,6 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 		return;
 	}
 
-	si_copy_tcs_inputs(bld_base);
 	si_write_tess_factors(bld_base, rel_patch_id, invocation_id, tf_lds_offset);
 }
 
@@ -7179,6 +7186,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	ctx.separate_prolog = !is_monolithic;
 
 	if (ctx.type == PIPE_SHADER_VERTEX ||
+	    ctx.type == PIPE_SHADER_TESS_CTRL ||
 	    ctx.type == PIPE_SHADER_TESS_EVAL ||
 	    ctx.type == PIPE_SHADER_FRAGMENT) {
 		ctx.no_prolog = false;
@@ -7224,6 +7232,18 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 		si_build_wrapper_function(&ctx, parts, 1 + need_prolog + need_epilog,
 					  need_prolog ? 1 : 0);
+	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_CTRL) {
+		LLVMValueRef parts[2];
+		union si_shader_part_key epilog_key;
+
+		parts[0] = ctx.main_fn;
+
+		memset(&epilog_key, 0, sizeof(epilog_key));
+		epilog_key.tcs_epilog.states = shader->key.tcs.epilog;
+		si_build_tcs_epilog_function(&ctx, &epilog_key);
+		parts[1] = ctx.main_fn;
+
+		si_build_wrapper_function(&ctx, parts, 2, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_EVAL &&
 		   !shader->key.tes.as_es) {
 		LLVMValueRef parts[2];
