@@ -218,7 +218,7 @@ gen8_upload_ps_blend(struct brw_context *brw)
    if (brw_color_buffer_write_enabled(brw))
       dw1 |= GEN8_PS_BLEND_HAS_WRITEABLE_RT;
 
-   if(!buffer0_is_integer) {
+   if (!buffer0_is_integer) {
       /* _NEW_COLOR */
       if (ctx->Color.AlphaEnabled)
          dw1 |= GEN8_PS_BLEND_ALPHA_TEST_ENABLE;
