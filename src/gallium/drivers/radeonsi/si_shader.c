@@ -40,6 +40,7 @@
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_dump.h"
 
+#include "ac_llvm_util.h"
 #include "si_shader_internal.h"
 #include "si_pipe.h"
 #include "sid.h"
@@ -69,6 +70,9 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 
 static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
 			       FILE *f);
+
+static void si_build_ps_epilog_function(struct si_shader_context *ctx,
+					union si_shader_part_key *key);
 
 /* Ideally pass the sample mask input to the PS epilog as v13, which
  * is its usual location, so that the shader doesn't have to add v_mov.
@@ -6774,6 +6778,193 @@ static void si_get_ps_epilog_key(struct si_shader *shader,
 	key->ps_epilog.states = shader->key.ps.epilog;
 }
 
+/**
+ * Given a list of shader part functions, build a wrapper function that
+ * runs them in sequence to form a monolithic shader.
+ */
+static void si_build_wrapper_function(struct si_shader_context *ctx,
+				      LLVMValueRef *parts,
+				      unsigned num_parts,
+				      unsigned main_part)
+{
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+	/* PS epilog has one arg per color component */
+	LLVMTypeRef param_types[48];
+	LLVMValueRef out[48];
+	LLVMTypeRef function_type;
+	unsigned num_params;
+	unsigned num_out_sgpr, num_out;
+	unsigned num_sgprs, num_vgprs;
+	unsigned last_sgpr_param;
+	unsigned gprs;
+
+	for (unsigned i = 0; i < num_parts; ++i) {
+		LLVMAddFunctionAttr(parts[i], LLVMAlwaysInlineAttribute);
+		LLVMSetLinkage(parts[i], LLVMPrivateLinkage);
+	}
+
+	/* The parameters of the wrapper function correspond to those of the
+	 * first part in terms of SGPRs and VGPRs, but we use the types of the
+	 * main part to get the right types. This is relevant for the
+	 * dereferenceable attribute on descriptor table pointers.
+	 */
+	num_sgprs = 0;
+	num_vgprs = 0;
+
+	function_type = LLVMGetElementType(LLVMTypeOf(parts[0]));
+	num_params = LLVMCountParamTypes(function_type);
+
+	for (unsigned i = 0; i < num_params; ++i) {
+		LLVMValueRef param = LLVMGetParam(parts[0], i);
+
+		if (ac_is_sgpr_param(param)) {
+			assert(num_vgprs == 0);
+			num_sgprs += llvm_get_type_size(LLVMTypeOf(param)) / 4;
+		} else {
+			num_vgprs += llvm_get_type_size(LLVMTypeOf(param)) / 4;
+		}
+	}
+	assert(num_vgprs + num_sgprs <= ARRAY_SIZE(param_types));
+
+	num_params = 0;
+	last_sgpr_param = 0;
+	gprs = 0;
+	while (gprs < num_sgprs + num_vgprs) {
+		LLVMValueRef param = LLVMGetParam(parts[main_part], num_params);
+		unsigned size;
+
+		param_types[num_params] = LLVMTypeOf(param);
+		if (gprs < num_sgprs)
+			last_sgpr_param = num_params;
+		size = llvm_get_type_size(param_types[num_params]) / 4;
+		num_params++;
+
+		assert(ac_is_sgpr_param(param) == (gprs < num_sgprs));
+		assert(gprs + size <= num_sgprs + num_vgprs &&
+		       (gprs >= num_sgprs || gprs + size <= num_sgprs));
+
+		gprs += size;
+	}
+
+	si_create_function(ctx, "wrapper", NULL, 0, param_types, num_params, last_sgpr_param);
+
+	/* Record the arguments of the function as if they were an output of
+	 * a previous part.
+	 */
+	num_out = 0;
+	num_out_sgpr = 0;
+
+	for (unsigned i = 0; i < num_params; ++i) {
+		LLVMValueRef param = LLVMGetParam(ctx->main_fn, i);
+		LLVMTypeRef param_type = LLVMTypeOf(param);
+		LLVMTypeRef out_type = i <= last_sgpr_param ? ctx->i32 : ctx->f32;
+		unsigned size = llvm_get_type_size(param_type) / 4;
+
+		if (size == 1) {
+			if (param_type != out_type)
+				param = LLVMBuildBitCast(builder, param, out_type, "");
+			out[num_out++] = param;
+		} else {
+			LLVMTypeRef vector_type = LLVMVectorType(out_type, size);
+
+			if (LLVMGetTypeKind(param_type) == LLVMPointerTypeKind) {
+				param = LLVMBuildPtrToInt(builder, param, ctx->i64, "");
+				param_type = ctx->i64;
+			}
+
+			if (param_type != vector_type)
+				param = LLVMBuildBitCast(builder, param, vector_type, "");
+
+			for (unsigned j = 0; j < size; ++j)
+				out[num_out++] = LLVMBuildExtractElement(
+					builder, param, LLVMConstInt(ctx->i32, j, 0), "");
+		}
+
+		if (i <= last_sgpr_param)
+			num_out_sgpr = num_out;
+	}
+
+	/* Now chain the parts. */
+	for (unsigned part = 0; part < num_parts; ++part) {
+		LLVMValueRef in[48];
+		LLVMValueRef ret;
+		LLVMTypeRef ret_type;
+		unsigned out_idx = 0;
+
+		num_params = LLVMCountParams(parts[part]);
+		assert(num_params <= ARRAY_SIZE(param_types));
+
+		/* Derive arguments for the next part from outputs of the
+		 * previous one.
+		 */
+		for (unsigned param_idx = 0; param_idx < num_params; ++param_idx) {
+			LLVMValueRef param;
+			LLVMTypeRef param_type;
+			bool is_sgpr;
+			unsigned param_size;
+			LLVMValueRef arg = NULL;
+
+			param = LLVMGetParam(parts[part], param_idx);
+			param_type = LLVMTypeOf(param);
+			param_size = llvm_get_type_size(param_type) / 4;
+			is_sgpr = ac_is_sgpr_param(param);
+
+			if (is_sgpr) {
+				LLVMRemoveAttribute(param, LLVMByValAttribute);
+				LLVMAddAttribute(param, LLVMInRegAttribute);
+			}
+
+			assert(out_idx + param_size <= (is_sgpr ? num_out_sgpr : num_out));
+			assert(is_sgpr || out_idx >= num_out_sgpr);
+
+			if (param_size == 1)
+				arg = out[out_idx];
+			else
+				arg = lp_build_gather_values(gallivm, &out[out_idx], param_size);
+
+			if (LLVMTypeOf(arg) != param_type) {
+				if (LLVMGetTypeKind(param_type) == LLVMPointerTypeKind) {
+					arg = LLVMBuildBitCast(builder, arg, ctx->i64, "");
+					arg = LLVMBuildIntToPtr(builder, arg, param_type, "");
+				} else {
+					arg = LLVMBuildBitCast(builder, arg, param_type, "");
+				}
+			}
+
+			in[param_idx] = arg;
+			out_idx += param_size;
+		}
+
+		ret = LLVMBuildCall(builder, parts[part], in, num_params, "");
+		ret_type = LLVMTypeOf(ret);
+
+		/* Extract the returned GPRs. */
+		num_out = 0;
+		num_out_sgpr = 0;
+
+		if (LLVMGetTypeKind(ret_type) != LLVMVoidTypeKind) {
+			assert(LLVMGetTypeKind(ret_type) == LLVMStructTypeKind);
+
+			unsigned ret_size = LLVMCountStructElementTypes(ret_type);
+
+			for (unsigned i = 0; i < ret_size; ++i) {
+				LLVMValueRef val =
+					LLVMBuildExtractValue(builder, ret, i, "");
+
+				out[num_out++] = val;
+
+				if (LLVMTypeOf(val) == ctx->i32) {
+					assert(num_out_sgpr + 1 == num_out);
+					num_out_sgpr = num_out;
+				}
+			}
+		}
+	}
+
+	LLVMBuildRetVoid(builder);
+}
+
 int si_compile_tgsi_shader(struct si_screen *sscreen,
 			   LLVMTargetMachineRef tm,
 			   struct si_shader *shader,
@@ -6799,6 +6990,9 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	ctx.no_epilog = is_monolithic;
 	ctx.separate_prolog = !is_monolithic;
 
+	if (ctx.type == PIPE_SHADER_FRAGMENT)
+		ctx.no_epilog = false;
+
 	memset(shader->info.vs_output_param_offset, 0xff,
 	       sizeof(shader->info.vs_output_param_offset));
 
@@ -6810,6 +7004,19 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	if (!si_compile_tgsi_main(&ctx, shader)) {
 		si_llvm_dispose(&ctx);
 		return -1;
+	}
+
+	if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
+		LLVMValueRef parts[2];
+		union si_shader_part_key epilog_key;
+
+		parts[0] = ctx.main_fn;
+
+		si_get_ps_epilog_key(shader, &epilog_key);
+		si_build_ps_epilog_function(&ctx, &epilog_key);
+		parts[1] = ctx.main_fn;
+
+		si_build_wrapper_function(&ctx, parts, 2, 0);
 	}
 
 	mod = bld_base->base.gallivm->module;
