@@ -273,6 +273,7 @@ struct pipe_context *svga_context_create(struct pipe_screen *screen,
    }
 
    svga->dirty = ~0;
+   svga->pred.query_id = SVGA3D_INVALID_ID;
 
    return &svga->pipe;
 

@@ -583,6 +583,12 @@ struct svga_context
 
    /** Alternate rasterizer states created for point sprite */
    struct svga_rasterizer_state *rasterizer_no_cull[2];
+
+   /** Current conditional rendering predicate */
+   struct {
+      SVGA3dQueryId query_id;
+      boolean cond;
+   } pred;
 };
 
 /* A flag for each state_tracker state object:
@@ -618,7 +624,6 @@ struct svga_context
 #define SVGA_NEW_GS_CONST_BUFFER     0x20000000
 #define SVGA_NEW_GS_VARIANT          0x40000000
 #define SVGA_NEW_TEXTURE_CONSTS      0x80000000
-
 
 
 
