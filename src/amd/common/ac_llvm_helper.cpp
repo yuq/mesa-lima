@@ -35,6 +35,7 @@
 #include <llvm-c/Core.h>
 #include <llvm/Target/TargetOptions.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/IR/Attributes.h>
 
 void ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes)
 {
@@ -42,4 +43,13 @@ void ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes)
    llvm::AttrBuilder B;
    B.addDereferenceableAttr(bytes);
    A->addAttr(llvm::AttributeSet::get(A->getContext(), A->getArgNo() + 1,  B));
+}
+
+bool ac_is_sgpr_param(LLVMValueRef arg)
+{
+	llvm::Argument *A = llvm::unwrap<llvm::Argument>(arg);
+	llvm::AttributeSet AS = A->getParent()->getAttributes();
+	unsigned ArgNo = A->getArgNo();
+	return AS.hasAttribute(ArgNo + 1, llvm::Attribute::ByVal) ||
+	       AS.hasAttribute(ArgNo + 1, llvm::Attribute::InReg);
 }
