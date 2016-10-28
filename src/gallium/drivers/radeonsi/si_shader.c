@@ -71,6 +71,10 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
 			       FILE *f);
 
+static void si_build_vs_prolog_function(struct si_shader_context *ctx,
+					union si_shader_part_key *key);
+static void si_build_vs_epilog_function(struct si_shader_context *ctx,
+					union si_shader_part_key *key);
 static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 					union si_shader_part_key *key);
 static void si_build_ps_epilog_function(struct si_shader_context *ctx,
@@ -7174,7 +7178,8 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	ctx.no_epilog = is_monolithic;
 	ctx.separate_prolog = !is_monolithic;
 
-	if (ctx.type == PIPE_SHADER_FRAGMENT) {
+	if (ctx.type == PIPE_SHADER_VERTEX ||
+	    ctx.type == PIPE_SHADER_FRAGMENT) {
 		ctx.no_prolog = false;
 		ctx.no_epilog = false;
 	}
@@ -7192,7 +7197,33 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		return -1;
 	}
 
-	if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
+	if (is_monolithic && ctx.type == PIPE_SHADER_VERTEX) {
+		LLVMValueRef parts[3];
+		bool need_prolog;
+		bool need_epilog;
+
+		need_prolog = sel->info.num_inputs;
+		need_epilog = !shader->key.vs.as_es && !shader->key.vs.as_ls;
+
+		parts[need_prolog ? 1 : 0] = ctx.main_fn;
+
+		if (need_prolog) {
+			union si_shader_part_key prolog_key;
+			si_get_vs_prolog_key(shader, &prolog_key);
+			si_build_vs_prolog_function(&ctx, &prolog_key);
+			parts[0] = ctx.main_fn;
+		}
+
+		if (need_epilog) {
+			union si_shader_part_key epilog_key;
+			si_get_vs_epilog_key(shader, &shader->key.vs.epilog, &epilog_key);
+			si_build_vs_epilog_function(&ctx, &epilog_key);
+			parts[need_prolog ? 2 : 1] = ctx.main_fn;
+		}
+
+		si_build_wrapper_function(&ctx, parts, 1 + need_prolog + need_epilog,
+					  need_prolog ? 1 : 0);
+	} else if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
 		LLVMValueRef parts[3];
 		union si_shader_part_key prolog_key;
 		union si_shader_part_key epilog_key;
