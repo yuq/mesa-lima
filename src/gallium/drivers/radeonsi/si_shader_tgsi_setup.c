@@ -38,6 +38,7 @@
 #include "util/u_debug.h"
 
 #include <stdio.h>
+#include <llvm-c/Transforms/IPO.h>
 #include <llvm-c/Transforms/Scalar.h>
 
 /* Data for if/else/endif and bgnloop/endloop control flow structures.
@@ -1333,14 +1334,15 @@ void si_llvm_finalize_module(struct si_shader_context *ctx,
 	LLVMTargetLibraryInfoRef target_library_info;
 
 	/* Create the pass manager */
-	gallivm->passmgr = LLVMCreateFunctionPassManagerForModule(
-							gallivm->module);
+	gallivm->passmgr = LLVMCreatePassManager();
 
 	target_library_info = gallivm_create_target_library_info(triple);
 	LLVMAddTargetLibraryInfo(target_library_info, gallivm->passmgr);
 
 	if (run_verifier)
 		LLVMAddVerifierPass(gallivm->passmgr);
+
+	LLVMAddAlwaysInlinerPass(gallivm->passmgr);
 
 	/* This pass should eliminate all the load and store instructions */
 	LLVMAddPromoteMemoryToRegisterPass(gallivm->passmgr);
@@ -1353,9 +1355,7 @@ void si_llvm_finalize_module(struct si_shader_context *ctx,
 	LLVMAddInstructionCombiningPass(gallivm->passmgr);
 
 	/* Run the pass */
-	LLVMInitializeFunctionPassManager(gallivm->passmgr);
-	LLVMRunFunctionPassManager(gallivm->passmgr, ctx->main_fn);
-	LLVMFinalizeFunctionPassManager(gallivm->passmgr);
+	LLVMRunPassManager(gallivm->passmgr, ctx->gallivm.module);
 
 	LLVMDisposeBuilder(gallivm->builder);
 	LLVMDisposePassManager(gallivm->passmgr);
