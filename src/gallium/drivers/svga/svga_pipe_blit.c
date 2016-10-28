@@ -171,7 +171,8 @@ svga_resource_copy_region(struct pipe_context *pipe,
           util_format_is_compressed(dst_tex->format) &&
           stex->handle != dtex->handle &&
           svga_resource_type(src_tex->target) ==
-          svga_resource_type(dst_tex->target)) {
+          svga_resource_type(dst_tex->target) &&
+          stex->b.b.nr_samples == dtex->b.b.nr_samples) {
          copy_region_vgpu10(svga,
                             src_tex,
                             src_box->x, src_box->y, src_z,
@@ -249,7 +250,7 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
    stex = svga_texture(blit_info->src.resource);
    dtex = svga_texture(blit_info->dst.resource);
 
-   // can't copy within one resource
+   /* can't copy within one resource */
    if (stex->handle == dtex->handle)
       return false;
 
@@ -263,8 +264,13 @@ can_blit_via_copy_region_vgpu10(struct svga_context *svga,
        blit_info->src.box.height != blit_info->dst.box.height)
       return false;
 
-   /* For depth+stencil formats, copy with maks != PIPE_MASK_ZS is not
-    * supported */
+   /* check that sample counts are the same */
+   if (stex->b.b.nr_samples != dtex->b.b.nr_samples)
+      return false;
+
+   /* For depth+stencil formats, copy with mask != PIPE_MASK_ZS is not
+    * supported
+    */
    if (util_format_is_depth_and_stencil(blit_info->src.format) &&
       blit_info->mask != (PIPE_MASK_ZS))
      return false;
