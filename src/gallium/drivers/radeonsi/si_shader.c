@@ -7179,6 +7179,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	ctx.separate_prolog = !is_monolithic;
 
 	if (ctx.type == PIPE_SHADER_VERTEX ||
+	    ctx.type == PIPE_SHADER_TESS_EVAL ||
 	    ctx.type == PIPE_SHADER_FRAGMENT) {
 		ctx.no_prolog = false;
 		ctx.no_epilog = false;
@@ -7223,6 +7224,18 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 		si_build_wrapper_function(&ctx, parts, 1 + need_prolog + need_epilog,
 					  need_prolog ? 1 : 0);
+	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_EVAL &&
+		   !shader->key.tes.as_es) {
+		LLVMValueRef parts[2];
+		union si_shader_part_key epilog_key;
+
+		parts[0] = ctx.main_fn;
+
+		si_get_vs_epilog_key(shader, &shader->key.tes.epilog, &epilog_key);
+		si_build_vs_epilog_function(&ctx, &epilog_key);
+		parts[1] = ctx.main_fn;
+
+		si_build_wrapper_function(&ctx, parts, 2, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
 		LLVMValueRef parts[3];
 		union si_shader_part_key prolog_key;
