@@ -418,11 +418,11 @@ x11_surface_get_present_modes(VkIcdSurfaceBase *surface,
       return VK_SUCCESS;
    }
 
-   assert(*pPresentModeCount >= ARRAY_SIZE(present_modes));
+   *pPresentModeCount = MIN2(*pPresentModeCount, ARRAY_SIZE(present_modes));
    typed_memcpy(pPresentModes, present_modes, *pPresentModeCount);
-   *pPresentModeCount = ARRAY_SIZE(present_modes);
 
-   return VK_SUCCESS;
+   return *pPresentModeCount < ARRAY_SIZE(present_modes) ?
+      VK_INCOMPLETE : VK_SUCCESS;
 }
 
 VkResult wsi_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
