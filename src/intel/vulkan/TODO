@@ -21,7 +21,6 @@ Performance:
  - Multi-{sampled/gen8,LOD,subpass} HiZ
  - Fast color clears (after HiZ?)
  - Compressed multisample support
- - Renderbuffer compression (SKL+)
  - Pushing pieces of UBOs?
  - Enable guardband clipping
  - Remove alloc in renderpass begin to renderpass create
