@@ -1591,14 +1591,28 @@ VOID* SwrAllocDrawContextMemory(
 /// @brief Enables stats counting
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param enable - If true then counts are incremented.
-void SwrEnableStats(
+void SwrEnableStatsFE(
     HANDLE hContext,
     bool enable)
 {
     SWR_CONTEXT *pContext = GetContext(hContext);
     DRAW_CONTEXT* pDC = GetDrawContext(pContext);
 
-    pDC->pState->state.enableStats = enable;
+    pDC->pState->state.enableStatsFE = enable;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Enables stats counting
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param enable - If true then counts are incremented.
+void SwrEnableStatsBE(
+    HANDLE hContext,
+    bool enable)
+{
+    SWR_CONTEXT *pContext = GetContext(hContext);
+    DRAW_CONTEXT* pDC = GetDrawContext(pContext);
+
+    pDC->pState->state.enableStatsBE = enable;
 }
 
 //////////////////////////////////////////////////////////////////////////

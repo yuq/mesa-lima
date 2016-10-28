@@ -73,7 +73,7 @@ void ProcessComputeBE(DRAW_CONTEXT* pDC, uint32_t workerId, uint32_t threadGroup
 
     state.pfnCsFunc(GetPrivateState(pDC), &csContext);
 
-    UPDATE_STAT(CsInvocations, state.totalThreadsInGroup);
+    UPDATE_STAT_BE(CsInvocations, state.totalThreadsInGroup);
 
     AR_END(BEDispatch, 1);
 }
@@ -553,7 +553,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 // execute pixel shader
                 AR_BEGIN(BEPixelShader, pDC->drawId);
-                UPDATE_STAT(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
+                UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
                 state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
                 AR_END(BEPixelShader, 0);
 
@@ -578,7 +578,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
 
                 uint32_t statMask = _simd_movemask_ps(depthPassMask);
                 uint32_t statCount = _mm_popcnt_u32(statMask);
-                UPDATE_STAT(DepthPassCount, statCount);
+                UPDATE_STAT_BE(DepthPassCount, statCount);
 
                 // output merger
                 AR_BEGIN(BEOutputMerger, pDC->drawId);
@@ -763,7 +763,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                     // execute pixel shader
                     AR_BEGIN(BEPixelShader, pDC->drawId);
-                    UPDATE_STAT(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
+                    UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(vCoverageMask)));
                     state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
                     AR_END(BEPixelShader, 0);
 
@@ -790,7 +790,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
 
                     uint32_t statMask = _simd_movemask_ps(depthPassMask);
                     uint32_t statCount = _mm_popcnt_u32(statMask);
-                    UPDATE_STAT(DepthPassCount, statCount);
+                    UPDATE_STAT_BE(DepthPassCount, statCount);
 
                     // output merger
                     AR_BEGIN(BEOutputMerger, pDC->drawId);
@@ -922,7 +922,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             if(T::bCanEarlyZ && !T::bForcedSampleCount)
             {
                 uint32_t depthPassCount = PixelRateZTest(activeLanes, psContext, BEEarlyDepthTest);
-                UPDATE_STAT(DepthPassCount, depthPassCount);
+                UPDATE_STAT_BE(DepthPassCount, depthPassCount);
             }
 
             // if we have no covered samples that passed depth at this point, go to next tile
@@ -944,7 +944,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             // execute pixel shader
             AR_BEGIN(BEPixelShader, pDC->drawId);
             state.psState.pfnPixelShader(GetPrivateState(pDC), &psContext);
-            UPDATE_STAT(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(activeLanes)));
+            UPDATE_STAT_BE(PsInvocations, _mm_popcnt_u32(_simd_movemask_ps(activeLanes)));
             AR_END(BEPixelShader, 0);
 
             // update active lanes to remove any discarded or oMask'd pixels
@@ -955,7 +955,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             if(!T::bCanEarlyZ && !T::bForcedSampleCount)
             {
                 uint32_t depthPassCount = PixelRateZTest(activeLanes, psContext, BELateDepthTest);
-                UPDATE_STAT(DepthPassCount, depthPassCount);
+                UPDATE_STAT_BE(DepthPassCount, depthPassCount);
             }
 
             // if we have no covered samples that passed depth at this point, skip OM and go to next tile
@@ -1140,7 +1140,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
 
                     uint32_t statMask = _simd_movemask_ps(depthPassMask);
                     uint32_t statCount = _mm_popcnt_u32(statMask);
-                    UPDATE_STAT(DepthPassCount, statCount);
+                    UPDATE_STAT_BE(DepthPassCount, statCount);
                 }
 
 Endtile:

@@ -630,7 +630,15 @@ VOID* SWR_API SwrAllocDrawContextMemory(
 /// @brief Enables stats counting
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param enable - If true then counts are incremented.
-void SWR_API SwrEnableStats(
+void SWR_API SwrEnableStatsFE(
+    HANDLE hContext,
+    bool enable);
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief Enables stats counting
+/// @param hContext - Handle passed back from SwrCreateContext
+/// @param enable - If true then counts are incremented.
+void SWR_API SwrEnableStatsBE(
     HANDLE hContext,
     bool enable);
 

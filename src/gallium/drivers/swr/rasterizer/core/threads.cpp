@@ -322,7 +322,7 @@ bool CheckDependencyFE(SWR_CONTEXT *pContext, DRAW_CONTEXT *pDC, uint32_t lastRe
 /// @brief Update client stats.
 INLINE void UpdateClientStats(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEXT* pDC)
 {
-    if ((pContext->pfnUpdateStats == nullptr) || (GetApiState(pDC).enableStats == false))
+    if ((pContext->pfnUpdateStats == nullptr) || (GetApiState(pDC).enableStatsBE == false))
     {
         return;
     }
@@ -571,7 +571,7 @@ bool WorkOnFifoBE(
 /// @brief Called when FE work is complete for this DC.
 INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEXT* pDC)
 {
-    if (pContext->pfnUpdateStatsFE && GetApiState(pDC).enableStats)
+    if (pContext->pfnUpdateStatsFE && GetApiState(pDC).enableStatsFE)
     {
         SWR_STATS_FE& stats = pDC->dynState.statsFE;
 

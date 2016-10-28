@@ -297,14 +297,13 @@ OSALIGNLINE(struct) API_STATE
     SWR_BLEND_STATE         blendState;
     PFN_BLEND_JIT_FUNC      pfnBlendFunc[SWR_NUM_RENDERTARGETS];
 
-    // Stats are incremented when this is true.
-    bool enableStats;
-
     struct
     {
-        uint32_t colorHottileEnable : 8;
-        uint32_t depthHottileEnable: 1;
-        uint32_t stencilHottileEnable : 1;
+        uint32_t enableStatsFE : 1;             // Enable frontend pipeline stats
+        uint32_t enableStatsBE : 1;             // Enable backend pipeline stats
+        uint32_t colorHottileEnable : 8;        // Bitmask of enabled color hottiles
+        uint32_t depthHottileEnable: 1;         // Enable depth buffer hottile
+        uint32_t stencilHottileEnable : 1;      // Enable stencil buffer hottile
     };
 
     PFN_QUANTIZE_DEPTH      pfnQuantizeDepth;
@@ -516,8 +515,8 @@ struct SWR_CONTEXT
     HANDLE* pArContext;
 };
 
-#define UPDATE_STAT(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.pStats[workerId].name += count; }
-#define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStats) { pDC->dynState.statsFE.name += count; }
+#define UPDATE_STAT_BE(name, count) if (GetApiState(pDC).enableStatsBE) { pDC->dynState.pStats[workerId].name += count; }
+#define UPDATE_STAT_FE(name, count) if (GetApiState(pDC).enableStatsFE) { pDC->dynState.statsFE.name += count; }
 
 // ArchRast instrumentation framework
 #define AR_WORKER_CTX  pContext->pArContext[workerId]
