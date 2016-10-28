@@ -459,10 +459,10 @@ INLINE simd16scalar _simd16_cmp_ps(simd16scalar a, simd16scalar b)
 #define _simd16_cmpge_ps(a, b) _simd16_cmp_ps<_CMP_GE_OQ>(a, b)
 #define _simd16_cmple_ps(a, b) _simd16_cmp_ps<_CMP_LE_OQ>(a, b)
 
-SIMD16_EMU_AVX512_2(simd16scalar, _simd16_and_ps, _mm256_and_ps)
-SIMD16_EMU_AVX512_2(simd16scalar, _simd16_or_ps, _mm256_or_ps)
-SIMD16_EMU_AVX512_1(simd16scalar, _simd16_rcp_ps, _mm256_rcp_ps)
-SIMD16_EMU_AVX512_2(simd16scalar, _simd16_div_ps, _mm256_div_ps)
+SIMD16_EMU_AVX512_2(simd16scalar, _simd16_and_ps, _simd_and_ps)
+SIMD16_EMU_AVX512_2(simd16scalar, _simd16_or_ps, _simd_or_ps)
+SIMD16_EMU_AVX512_1(simd16scalar, _simd16_rcp_ps, _simd_rcp_ps)
+SIMD16_EMU_AVX512_2(simd16scalar, _simd16_div_ps, _simd_div_ps)
 
 INLINE simd16scalar _simd16_castsi_ps(simd16scalari a)
 {
@@ -509,21 +509,22 @@ INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
 
 #define _simd16_round_ps(a, mode) _simd16_round_ps_temp<mode>(a)
 
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_mul_epi32, _mm256_mul_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_mullo_epi32, _mm256_mullo_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sub_epi32, _mm256_sub_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sub_epi64, _mm256_sub_epi64)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_min_epi32, _mm256_min_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_max_epi32, _mm256_max_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_min_epu32, _mm256_min_epu32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_max_epu32, _mm256_max_epu32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_add_epi32, _mm256_add_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_mul_epi32, _simd_mul_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_mullo_epi32, _simd_mullo_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sub_epi32, _simd_sub_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sub_epi64, _simd_sub_epi64)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_min_epi32, _simd_min_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_max_epi32, _simd_max_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_min_epu32, _simd_min_epu32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_max_epu32, _simd_max_epu32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_add_epi32, _simd_add_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_and_si, _simd_and_si)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_andnot_si, _simd_andnot_si)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_or_si, _simd_or_si)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_xor_si, _simd_xor_si)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi32, _mm256_cmpeq_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi32, _mm256_cmpgt_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi32, _simd_cmpeq_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi32, _simd_cmpgt_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmplt_epi32, _simd_cmplt_epi32)
 
 INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
 {
@@ -579,13 +580,13 @@ INLINE simd16scalari _simd16_srli_epi32_temp(simd16scalari a)
 
 #define _simd16_srli_epi32(a, imm8) _simd16_srli_epi32_temp<imm8>(a)
 
-SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmadd_ps, _mm256_fmadd_ps)
-SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmsub_ps, _mm256_fmsub_ps)
+SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmadd_ps, _simd_fmadd_ps)
+SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmsub_ps, _simd_fmsub_ps)
 
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_shuffle_epi8, _mm256_shuffle_epi8)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_adds_epu8, _mm256_adds_epu8)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_subs_epu8, _mm256_subs_epu8)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_add_epi8, _mm256_add_epi8)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_shuffle_epi8, _simd_shuffle_epi8)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_adds_epu8, _simd_adds_epu8)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_subs_epu8, _simd_subs_epu8)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_add_epi8, _simd_add_epi8)
 
 template <int imm8>
 INLINE simd16scalar _simd16_i32gather_ps_temp(float const *m, simd16scalari a)
@@ -600,13 +601,13 @@ INLINE simd16scalar _simd16_i32gather_ps_temp(float const *m, simd16scalari a)
 
 #define _simd16_i32gather_ps(m, a, imm8) _simd16_i32gather_ps_temp<imm8>(m, a)
 
-SIMD16_EMU_AVX512_1(simd16scalari, _simd16_abs_epi32, _mm256_abs_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi64, _mm256_cmpeq_epi64)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi64, _mm256_cmpgt_epi64)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi16, _mm256_cmpeq_epi16)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi16, _mm256_cmpgt_epi16)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi8, _mm256_cmpeq_epi8)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi8, _mm256_cmpgt_epi8)
+SIMD16_EMU_AVX512_1(simd16scalari, _simd16_abs_epi32, _simd_abs_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi64, _simd_cmpeq_epi64)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi64, _simd_cmpgt_epi64)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi16, _simd_cmpeq_epi16)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi16, _simd_cmpgt_epi16)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi8, _simd_cmpeq_epi8)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi8, _simd_cmpgt_epi8)
 
 INLINE simd16scalar _simd16_permute_ps(simd16scalar a, simd16scalari i)
 {
@@ -631,8 +632,8 @@ INLINE simd16scalari _simd16_permute_epi32(simd16scalari a, simd16scalari i)
     return _simd16_castps_si(_simd16_permute_ps(_simd16_castsi_ps(a), i));
 }
 
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_srlv_epi32, _mm256_srlv_epi32)
-SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sllv_epi32, _mm256_sllv_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_srlv_epi32, _simd_srlv_epi32)
+SIMD16_EMU_AVX512_2(simd16scalari, _simd16_sllv_epi32, _simd_sllv_epi32)
 
 template <int imm8>
 INLINE simd16scalar _simd16_permute2f128_ps_temp(simd16scalar a, simd16scalar b)

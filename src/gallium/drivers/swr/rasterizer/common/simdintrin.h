@@ -314,7 +314,15 @@ SIMD_EMU_EPI(_simdemu_cmpgt_epi8, _mm_cmpgt_epi8)
 SIMD_EMU_EPI(_simdemu_cmpeq_epi8, _mm_cmpeq_epi8)
 SIMD_EMU_EPI(_simdemu_cmpgt_epi16, _mm_cmpgt_epi16)
 SIMD_EMU_EPI(_simdemu_cmpeq_epi16, _mm_cmpeq_epi16)
+SIMD_EMU_EPI(_simdemu_unpacklo_epi8, _mm_unpacklo_epi8)
+SIMD_EMU_EPI(_simdemu_unpackhi_epi8, _mm_unpackhi_epi8)
+SIMD_EMU_EPI(_simdemu_unpacklo_epi16, _mm_unpacklo_epi16)
+SIMD_EMU_EPI(_simdemu_unpackhi_epi16, _mm_unpackhi_epi16)
 
+#define _simd_unpacklo_epi8 _simdemu_unpacklo_epi8
+#define _simd_unpackhi_epi8 _simdemu_unpackhi_epi8
+#define _simd_unpacklo_epi16 _simdemu_unpacklo_epi16
+#define _simd_unpackhi_epi16 _simdemu_unpackhi_epi16
 #define _simd_unpacklo_epi32(a, b) _mm256_castps_si256(_mm256_unpacklo_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
 #define _simd_unpackhi_epi32(a, b) _mm256_castps_si256(_mm256_unpackhi_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)))
 #define _simd_unpacklo_epi64(a, b) _mm256_castpd_si256(_mm256_unpacklo_pd(_mm256_castsi256_pd(a), _mm256_castsi256_pd(b)))
@@ -490,6 +498,10 @@ __m256i _simd_packs_epi32(__m256i a, __m256i b)
 #define _simd_xor_si _mm256_xor_si256
 #define _simd_castps_si _mm256_castps_si256
 
+#define _simd_unpacklo_epi8 _mm256_unpacklo_epi8
+#define _simd_unpackhi_epi8 _mm256_unpackhi_epi8
+#define _simd_unpacklo_epi16 _mm256_unpacklo_epi16
+#define _simd_unpackhi_epi16 _mm256_unpackhi_epi16
 #define _simd_unpacklo_epi32 _mm256_unpacklo_epi32
 #define _simd_unpackhi_epi32 _mm256_unpackhi_epi32
 #define _simd_unpacklo_epi64 _mm256_unpacklo_epi64
@@ -529,6 +541,14 @@ __m256i _simd_packs_epi32(__m256i a, __m256i b)
 
 #endif
 
+#define _simd_unpacklo_ps _mm256_unpacklo_ps
+#define _simd_unpacklo_pd _mm256_unpacklo_pd
+#define _simd_insertf128_ps _mm256_insertf128_ps
+#define _simd_insertf128_pd _mm256_insertf128_pd
+#define _simd_insertf128_si _mm256_insertf128_si256
+#define _simd_extractf128_ps _mm256_extractf128_ps
+#define _simd_extractf128_pd _mm256_extractf128_pd
+#define _simd_extractf128_si _mm256_extractf128_si256
 #define _simd_permute2f128_ps _mm256_permute2f128_ps
 #define _simd_permute2f128_pd _mm256_permute2f128_pd
 #define _simd_permute2f128_si _mm256_permute2f128_si256
@@ -549,6 +569,22 @@ __m256i _simd_packs_epi32(__m256i a, __m256i b)
 #define _simd_sub_ps _mm256_sub_ps
 #define _simd_testz_ps _mm256_testz_ps
 #define _simd_xor_ps _mm256_xor_ps
+
+INLINE
+simdscalari _simd_loadu2_si(const __m128i *hiaddr, const __m128i *loaddr)
+{
+    __m128i lo = _mm_loadu_si128(loaddr);
+    __m128i hi = _mm_loadu_si128(hiaddr);
+
+    return _mm256_insertf128_si256(_mm256_castsi128_si256(lo), (hi), 1);
+}
+
+INLINE
+void _simd_storeu2_si(__m128i *hiaddr, __m128i *loaddr, simdscalari a)
+{
+    _mm_storeu_si128(loaddr, _mm256_castsi256_si128(a));
+    _mm_storeu_si128(hiaddr, _mm256_extractf128_si256(a, 1));
+}
 
 INLINE
 simdscalari _simd_blendv_epi32(simdscalari a, simdscalari b, simdscalar mask)

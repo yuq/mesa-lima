@@ -166,12 +166,12 @@ struct PackTraits<8, false>
         simd16scalari result = _simd16_setzero_si();
         simdscalari resultlo = _simd_setzero_si();
 
-        __m128i templo = _mm_packus_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 0))), _mm256_extractf128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1));
-        __m128i temphi = _mm_packus_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 1))), _mm256_extractf128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 1)), 1));
+        __m128i templo = _mm_packus_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 0))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1));
+        __m128i temphi = _mm_packus_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 1))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 1)), 1));
 
         __m128i temp = _mm_packus_epi16(templo, temphi);
 
-        resultlo = _mm256_inserti128_si256(resultlo, temp, 0);
+        resultlo = _simd_insertf128_si(resultlo, temp, 0);
         result = _simd16_insert_si(result, resultlo, 0);
 
         return _simd16_castsi_ps(result);
@@ -278,12 +278,12 @@ struct PackTraits<8, true>
         simd16scalari result = _simd16_setzero_si();
         simdscalari resultlo = _simd_setzero_si();
 
-        __m128i templo = _mm_packs_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 0))), _mm256_extractf128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1));
-        __m128i temphi = _mm_packs_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 1))), _mm256_extractf128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 1)), 1));
+        __m128i templo = _mm_packs_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 0))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1));
+        __m128i temphi = _mm_packs_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 1))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 1)), 1));
 
         __m128i temp = _mm_packs_epi16(templo, temphi);
 
-        resultlo = _mm256_inserti128_si256(resultlo, temp, 0);
+        resultlo = _simd_insertf128_si(resultlo, temp, 0);
         result = _simd16_insert_si(result, resultlo, 0);
 
         return _simd16_castsi_ps(result);
@@ -1057,16 +1057,16 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 16> : PackTraits<16>
         simdscalar simdlo = pack(_simd16_extract_ps(in, 0));
         simdscalar simdhi = pack(_simd16_extract_ps(in, 1));
 
-        __m128i templo = _mm256_extractf128_si256(_simd_castps_si(simdlo), 0);
-        __m128i temphi = _mm256_extractf128_si256(_simd_castps_si(simdhi), 0);
+        __m128i templo = _simd_extractf128_si(_simd_castps_si(simdlo), 0);
+        __m128i temphi = _simd_extractf128_si(_simd_castps_si(simdhi), 0);
 
 #else
         __m128i templo = _mm256_cvtps_ph(_simd16_extract_ps(in, 0), _MM_FROUND_TRUNC);
         __m128i temphi = _mm256_cvtps_ph(_simd16_extract_ps(in, 1), _MM_FROUND_TRUNC);
 
 #endif
-        resultlo = _mm256_insertf128_si256(resultlo, templo, 0);
-        resultlo = _mm256_insertf128_si256(resultlo, temphi, 1);
+        resultlo = _simd_insertf128_si(resultlo, templo, 0);
+        resultlo = _simd_insertf128_si(resultlo, temphi, 1);
 
         result = _simd16_insert_si(result, resultlo, 0);
 
