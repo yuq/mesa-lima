@@ -53,6 +53,7 @@ static const struct debug_named_value nine_debug_flags[] = {
     { "user",    DBG_USER,                 "User errors, both fixable and unfixable." },
     { "error",   DBG_ERROR,                "Driver errors, always visible." },
     { "warn",    DBG_WARN,                 "Driver warnings, always visible in debug builds." },
+    { "tid",     DBG_TID,                  "Display thread-ids." },
     DEBUG_NAMED_VALUE_END
 };
 
@@ -65,17 +66,20 @@ _nine_debug_printf( unsigned long flag,
     static boolean first = TRUE;
     static unsigned long dbg_flags = DBG_ERROR | DBG_WARN;
     unsigned long tid = 0;
-#if defined(HAVE_PTHREAD)
-#  if defined(__GNU_LIBRARY__) && defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
-      (__GLIBC__ >= 3 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 12))
-    tid = pthread_self();
-#  endif
-#endif
 
     if (first) {
         first = FALSE;
         dbg_flags |= debug_get_flags_option("NINE_DEBUG", nine_debug_flags, 0);
     }
+
+#if defined(HAVE_PTHREAD)
+#  if defined(__GNU_LIBRARY__) && defined(__GLIBC__) && defined(__GLIBC_MINOR__) && \
+      (__GLIBC__ >= 3 || (__GLIBC__ == 2 && __GLIBC_MINOR__ >= 12))
+    if (dbg_flags & DBG_TID)
+        tid = pthread_self();
+#  endif
+#endif
+
     if (dbg_flags & flag) {
         const char *f = func ? strrchr(func, '_') : NULL;
         va_list ap;
