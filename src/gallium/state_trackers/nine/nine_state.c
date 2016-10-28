@@ -358,10 +358,10 @@ prepare_vs(struct NineDevice9 *device, uint8_t shader_changed)
 
     /* likely because we dislike FF */
     if (likely(context->programmable_vs)) {
-        context->cso.vs = NineVertexShader9_GetVariant(vs);
+        context->cso_shader.vs = NineVertexShader9_GetVariant(vs);
     } else {
         vs = device->ff.vs;
-        context->cso.vs = vs->ff_cso;
+        context->cso_shader.vs = vs->ff_cso;
     }
 
     if (context->rs[NINED3DRS_VSPOINTSIZE] != vs->point_size) {
@@ -392,10 +392,10 @@ prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
         return 0;
 
     if (likely(ps)) {
-        context->cso.ps = NinePixelShader9_GetVariant(ps);
+        context->cso_shader.ps = NinePixelShader9_GetVariant(ps);
     } else {
         ps = device->ff.ps;
-        context->cso.ps = ps->ff_cso;
+        context->cso_shader.ps = ps->ff_cso;
     }
 
     if ((context->bound_samplers_mask_ps & ps->sampler_mask) != ps->sampler_mask)
@@ -871,7 +871,7 @@ commit_vs(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;
 
-    device->pipe->bind_vs_state(device->pipe, context->cso.vs);
+    device->pipe->bind_vs_state(device->pipe, context->cso_shader.vs);
 }
 
 
@@ -880,7 +880,7 @@ commit_ps(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;
 
-    device->pipe->bind_fs_state(device->pipe, context->cso.ps);
+    device->pipe->bind_fs_state(device->pipe, context->cso_shader.ps);
 }
 /* State Update */
 

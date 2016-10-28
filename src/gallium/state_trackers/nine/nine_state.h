@@ -239,7 +239,7 @@ struct nine_context {
     struct {
         void *vs;
         void *ps;
-    } cso;
+    } cso_shader;
 
     uint8_t rt_mask;
 
