@@ -1057,7 +1057,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
 
     ureg_END(ureg);
     nine_ureg_tgsi_dump(ureg, FALSE);
-    return ureg_create_shader_and_destroy(ureg, device->pipe);
+    return ureg_create_shader_and_destroy(ureg, device->context.pipe);
 }
 
 /* PS FF constants layout:
@@ -1552,7 +1552,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
 
     ureg_END(ureg);
     nine_ureg_tgsi_dump(ureg, FALSE);
-    return ureg_create_shader_and_destroy(ureg, device->pipe);
+    return ureg_create_shader_and_destroy(ureg, device->context.pipe);
 }
 
 static struct NineVertexShader9 *
@@ -2159,7 +2159,7 @@ nine_ff_prune_vs(struct NineDevice9 *device)
 
     if (device->ff.num_vs > 100) {
         /* could destroy the bound one here, so unbind */
-        device->pipe->bind_vs_state(device->pipe, NULL);
+        context->pipe->bind_vs_state(context->pipe, NULL);
         util_hash_table_foreach(device->ff.ht_vs, nine_ff_ht_delete_cb, NULL);
         util_hash_table_clear(device->ff.ht_vs);
         device->ff.num_vs = 0;
@@ -2173,7 +2173,7 @@ nine_ff_prune_ps(struct NineDevice9 *device)
 
     if (device->ff.num_ps > 100) {
         /* could destroy the bound one here, so unbind */
-        device->pipe->bind_fs_state(device->pipe, NULL);
+        context->pipe->bind_fs_state(context->pipe, NULL);
         util_hash_table_foreach(device->ff.ht_ps, nine_ff_ht_delete_cb, NULL);
         util_hash_table_clear(device->ff.ht_ps);
         device->ff.num_ps = 0;

@@ -191,18 +191,18 @@ NineDevice9_ctor( struct NineDevice9 *This,
     if (This->may_swvp)
         This->caps.MaxVertexShaderConst = NINE_MAX_CONST_F_SWVP;
 
-    This->pipe = This->screen->context_create(This->screen, NULL, 0);
-    if (!This->pipe) { return E_OUTOFMEMORY; } /* guess */
+    This->context.pipe = This->screen->context_create(This->screen, NULL, 0);
+    if (!This->context.pipe) { return E_OUTOFMEMORY; } /* guess */
     This->pipe_sw = This->screen_sw->context_create(This->screen_sw, NULL, 0);
     if (!This->pipe_sw) { return E_OUTOFMEMORY; }
 
-    This->cso = cso_create_context(This->pipe);
-    if (!This->cso) { return E_OUTOFMEMORY; } /* also a guess */
+    This->context.cso = cso_create_context(This->context.pipe);
+    if (!This->context.cso) { return E_OUTOFMEMORY; } /* also a guess */
     This->cso_sw = cso_create_context(This->pipe_sw);
     if (!This->cso_sw) { return E_OUTOFMEMORY; }
 
     /* Create first, it messes up our state. */
-    This->hud = hud_create(This->pipe, This->cso); /* NULL result is fine */
+    This->hud = hud_create(This->context.pipe, This->context.cso); /* NULL result is fine */
 
     /* Available memory counter. Updated only for allocations with this device
      * instance. This is the Win 7 behavior.
@@ -289,14 +289,14 @@ NineDevice9_ctor( struct NineDevice9 *This,
             return D3DERR_OUTOFVIDEOMEMORY;
 
         u_box_1d(0, 16, &box);
-        data = This->pipe->transfer_map(This->pipe, This->dummy_vbo, 0,
+        data = This->context.pipe->transfer_map(This->context.pipe, This->dummy_vbo, 0,
                                         PIPE_TRANSFER_WRITE |
                                         PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE,
                                         &box, &transfer);
         assert(data);
         assert(transfer);
         memset(data, 0, 16);
-        This->pipe->transfer_unmap(This->pipe, transfer);
+        This->context.pipe->transfer_unmap(This->context.pipe, transfer);
     }
 
     This->cursor.software = FALSE;
@@ -423,7 +423,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         templ.swizzle_a = PIPE_SWIZZLE_1;
         templ.target = This->dummy_texture->target;
 
-        This->dummy_sampler_view = This->pipe->create_sampler_view(This->pipe, This->dummy_texture, &templ);
+        This->dummy_sampler_view = This->context.pipe->create_sampler_view(This->context.pipe, This->dummy_texture, &templ);
         if (!This->dummy_sampler_view)
             return D3DERR_DRIVERINTERNALERROR;
 
@@ -450,16 +450,16 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->driver_caps.user_sw_cbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
     if (!This->driver_caps.user_vbufs)
-        This->vertex_uploader = u_upload_create(This->pipe, 65536,
+        This->vertex_uploader = u_upload_create(This->context.pipe, 65536,
                                                 PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
     This->vertex_sw_uploader = u_upload_create(This->pipe_sw, 65536,
                                             PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_ibufs)
-        This->index_uploader = u_upload_create(This->pipe, 128 * 1024,
+        This->index_uploader = u_upload_create(This->context.pipe, 128 * 1024,
                                                PIPE_BIND_INDEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_cbufs) {
         This->constbuf_alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
-        This->constbuf_uploader = u_upload_create(This->pipe, This->vs_const_size,
+        This->constbuf_uploader = u_upload_create(This->context.pipe, This->vs_const_size,
                                                   PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
     }
 
@@ -478,7 +478,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     {
         struct pipe_poly_stipple stipple;
         memset(&stipple, ~0, sizeof(stipple));
-        This->pipe->set_polygon_stipple(This->pipe, &stipple);
+        This->context.pipe->set_polygon_stipple(This->context.pipe, &stipple);
     }
 
     This->update = &This->state;
@@ -498,7 +498,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
 
     DBG("This=%p\n", This);
 
-    if (This->pipe && This->cso)
+    if (This->context.pipe && This->context.cso)
         nine_pipe_context_clear(This);
     nine_ff_fini(This);
     nine_state_destroy_sw(This);
@@ -545,9 +545,9 @@ NineDevice9_dtor( struct NineDevice9 *This )
     }
 
     /* Destroy cso first */
-    if (This->cso) { cso_destroy_context(This->cso); }
+    if (This->context.cso) { cso_destroy_context(This->context.cso); }
     if (This->cso_sw) { cso_destroy_context(This->cso_sw); }
-    if (This->pipe && This->pipe->destroy) { This->pipe->destroy(This->pipe); }
+    if (This->context.pipe && This->context.pipe->destroy) { This->context.pipe->destroy(This->context.pipe); }
     if (This->pipe_sw && This->pipe_sw->destroy) { This->pipe_sw->destroy(This->pipe_sw); }
 
     if (This->present) { ID3DPresentGroup_Release(This->present); }
@@ -565,7 +565,7 @@ NineDevice9_GetScreen( struct NineDevice9 *This )
 struct pipe_context *
 NineDevice9_GetPipe( struct NineDevice9 *This )
 {
-    return This->pipe;
+    return This->context.pipe;
 }
 
 const D3DCAPS9 *

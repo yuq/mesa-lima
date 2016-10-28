@@ -413,8 +413,8 @@ prepare_ps(struct NineDevice9 *device, uint8_t shader_changed)
 static void
 update_framebuffer(struct NineDevice9 *device, bool is_clear)
 {
-    struct pipe_context *pipe = device->pipe;
     struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
     struct pipe_framebuffer_state *fb = &context->pipe_data.fb;
     unsigned i;
     struct NineSurface9 *rt0 = context->rt[0];
@@ -489,7 +489,8 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
 static void
 update_viewport(struct NineDevice9 *device)
 {
-    const D3DVIEWPORT9 *vport = &device->context.viewport;
+    struct nine_context *context = &device->context;
+    const D3DVIEWPORT9 *vport = &context->viewport;
     struct pipe_viewport_state pvport;
 
     /* D3D coordinates are:
@@ -527,7 +528,7 @@ update_viewport(struct NineDevice9 *device)
         pvport.translate[1] -= 1.0f / 128.0f;
     }
 
-    cso_set_viewport(device->cso, &pvport);
+    cso_set_viewport(context->cso, &pvport);
 }
 
 /* Loop through VS inputs and pick the vertex elements with the declared
@@ -617,14 +618,14 @@ update_vertex_elements(struct NineDevice9 *device)
         context->dummy_vbo_bound_at = dummy_vbo_stream;
     }
 
-    cso_set_vertex_elements(device->cso, vs->num_inputs, ve);
+    cso_set_vertex_elements(context->cso, vs->num_inputs, ve);
 }
 
 static void
 update_vertex_buffers(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
     struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
     struct pipe_vertex_buffer dummy_vtxbuf;
     uint32_t mask = context->changed.vtxbuf;
     unsigned i;
@@ -722,7 +723,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
             if (update_sampler_derived(context, s) || (context->changed.sampler[s] & 0x05fe)) {
                 context->changed.sampler[s] = 0;
                 commit_samplers = TRUE;
-                nine_convert_sampler_state(device->cso, s, context->samp[s]);
+                nine_convert_sampler_state(context->cso, s, context->samp[s]);
             }
         } else {
             /* Bind dummy sampler. We do not bind dummy sampler when
@@ -734,7 +735,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
             view[i] = device->dummy_sampler_view;
             num_textures = i + 1;
 
-            cso_single_sampler(device->cso, PIPE_SHADER_FRAGMENT,
+            cso_single_sampler(context->cso, PIPE_SHADER_FRAGMENT,
                                s - NINE_SAMPLER_PS(0), &device->dummy_sampler_state);
 
             commit_samplers = TRUE;
@@ -744,10 +745,10 @@ update_textures_and_samplers(struct NineDevice9 *device)
         context->bound_samplers_mask_ps |= (1 << s);
     }
 
-    cso_set_sampler_views(device->cso, PIPE_SHADER_FRAGMENT, num_textures, view);
+    cso_set_sampler_views(context->cso, PIPE_SHADER_FRAGMENT, num_textures, view);
 
     if (commit_samplers)
-        cso_single_sampler_done(device->cso, PIPE_SHADER_FRAGMENT);
+        cso_single_sampler_done(context->cso, PIPE_SHADER_FRAGMENT);
 
     commit_samplers = FALSE;
     sampler_mask = context->programmable_vs ? context->vs->sampler_mask : 0;
@@ -770,7 +771,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
             if (update_sampler_derived(context, s) || (context->changed.sampler[s] & 0x05fe)) {
                 context->changed.sampler[s] = 0;
                 commit_samplers = TRUE;
-                nine_convert_sampler_state(device->cso, s, context->samp[s]);
+                nine_convert_sampler_state(context->cso, s, context->samp[s]);
             }
         } else {
             /* Bind dummy sampler. We do not bind dummy sampler when
@@ -782,7 +783,7 @@ update_textures_and_samplers(struct NineDevice9 *device)
             view[i] = device->dummy_sampler_view;
             num_textures = i + 1;
 
-            cso_single_sampler(device->cso, PIPE_SHADER_VERTEX,
+            cso_single_sampler(context->cso, PIPE_SHADER_VERTEX,
                                s - NINE_SAMPLER_VS(0), &device->dummy_sampler_state);
 
             commit_samplers = TRUE;
@@ -792,10 +793,10 @@ update_textures_and_samplers(struct NineDevice9 *device)
         context->bound_samplers_mask_vs |= (1 << s);
     }
 
-    cso_set_sampler_views(device->cso, PIPE_SHADER_VERTEX, num_textures, view);
+    cso_set_sampler_views(context->cso, PIPE_SHADER_VERTEX, num_textures, view);
 
     if (commit_samplers)
-        cso_single_sampler_done(device->cso, PIPE_SHADER_VERTEX);
+        cso_single_sampler_done(context->cso, PIPE_SHADER_VERTEX);
 }
 
 /* State commit only */
@@ -803,35 +804,43 @@ update_textures_and_samplers(struct NineDevice9 *device)
 static inline void
 commit_blend(struct NineDevice9 *device)
 {
-    cso_set_blend(device->cso, &device->context.pipe_data.blend);
+    struct nine_context *context = &device->context;
+
+    cso_set_blend(context->cso, &context->pipe_data.blend);
 }
 
 static inline void
 commit_dsa(struct NineDevice9 *device)
 {
-    cso_set_depth_stencil_alpha(device->cso, &device->context.pipe_data.dsa);
+    struct nine_context *context = &device->context;
+
+    cso_set_depth_stencil_alpha(context->cso, &context->pipe_data.dsa);
 }
 
 static inline void
 commit_scissor(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
+    struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
 
-    pipe->set_scissor_states(pipe, 0, 1, &device->context.scissor);
+    pipe->set_scissor_states(pipe, 0, 1, &context->scissor);
 }
 
 static inline void
 commit_rasterizer(struct NineDevice9 *device)
 {
-    cso_set_rasterizer(device->cso, &device->context.pipe_data.rast);
+    struct nine_context *context = &device->context;
+
+    cso_set_rasterizer(context->cso, &context->pipe_data.rast);
 }
 
 static inline void
 commit_index_buffer(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
-    if (device->context.idxbuf.buffer)
-        pipe->set_index_buffer(pipe, &device->context.idxbuf);
+    struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
+    if (context->idxbuf.buffer)
+        pipe->set_index_buffer(pipe, &context->idxbuf);
     else
         pipe->set_index_buffer(pipe, NULL);
 }
@@ -839,18 +848,19 @@ commit_index_buffer(struct NineDevice9 *device)
 static inline void
 commit_vs_constants(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
+    struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
 
-    if (unlikely(!device->context.programmable_vs))
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe_data.cb_vs_ff);
+    if (unlikely(!context->programmable_vs))
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &context->pipe_data.cb_vs_ff);
     else {
         if (device->swvp) {
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe_data.cb0_swvp);
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 1, &device->context.pipe_data.cb1_swvp);
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 2, &device->context.pipe_data.cb2_swvp);
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 3, &device->context.pipe_data.cb3_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &context->pipe_data.cb0_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 1, &context->pipe_data.cb1_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 2, &context->pipe_data.cb2_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 3, &context->pipe_data.cb3_swvp);
         } else {
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe_data.cb_vs);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &context->pipe_data.cb_vs);
         }
     }
 }
@@ -858,12 +868,13 @@ commit_vs_constants(struct NineDevice9 *device)
 static inline void
 commit_ps_constants(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
+    struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
 
-    if (unlikely(!device->context.ps))
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe_data.cb_ps_ff);
+    if (unlikely(!context->ps))
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &context->pipe_data.cb_ps_ff);
     else
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe_data.cb_ps);
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &context->pipe_data.cb_ps);
 }
 
 static inline void
@@ -871,7 +882,7 @@ commit_vs(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;
 
-    device->pipe->bind_vs_state(device->pipe, context->cso_shader.vs);
+    context->pipe->bind_vs_state(context->pipe, context->cso_shader.vs);
 }
 
 
@@ -880,7 +891,7 @@ commit_ps(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;
 
-    device->pipe->bind_fs_state(device->pipe, context->cso_shader.ps);
+    context->pipe->bind_fs_state(context->pipe, context->cso_shader.ps);
 }
 /* State Update */
 
@@ -945,8 +956,8 @@ update_managed_buffers(struct NineDevice9 *device)
 static void
 nine_update_state(struct NineDevice9 *device)
 {
-    struct pipe_context *pipe = device->pipe;
     struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
     uint32_t group;
 
     DBG("changed state groups: %x\n", context->changed.group);
@@ -1108,7 +1119,7 @@ NineDevice9_ResolveZ( struct NineDevice9 *device )
     blit.filter = PIPE_TEX_FILTER_NEAREST;
     blit.scissor_enable = FALSE;
 
-    device->pipe->blit(device->pipe, &blit);
+    context->pipe->blit(context->pipe, &blit);
 }
 
 #define ALPHA_TO_COVERAGE_ENABLE   MAKEFOURCC('A', '2', 'M', '1')
@@ -1850,7 +1861,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
     struct nine_context *context = &device->context;
     const int sRGB = context->rs[D3DRS_SRGBWRITEENABLE] ? 1 : 0;
     struct pipe_surface *cbuf, *zsbuf;
-    struct pipe_context *pipe = device->pipe;
+    struct pipe_context *pipe = context->pipe;
     struct NineSurface9 *zsbuf_surf = context->ds;
     struct NineSurface9 *rt;
     unsigned bufs = 0;
@@ -2006,6 +2017,7 @@ nine_context_draw_primitive(struct NineDevice9 *device,
                             UINT StartVertex,
                             UINT PrimitiveCount)
 {
+    struct nine_context *context = &device->context;
     struct pipe_draw_info info;
 
     nine_update_state(device);
@@ -2017,7 +2029,7 @@ nine_context_draw_primitive(struct NineDevice9 *device,
     info.min_index = info.start;
     info.max_index = info.count - 1;
 
-    device->pipe->draw_vbo(device->pipe, &info);
+    context->pipe->draw_vbo(context->pipe, &info);
 }
 
 void
@@ -2029,6 +2041,7 @@ nine_context_draw_indexed_primitive(struct NineDevice9 *device,
                                     UINT StartIndex,
                                     UINT PrimitiveCount)
 {
+    struct nine_context *context = &device->context;
     struct pipe_draw_info info;
 
     nine_update_state(device);
@@ -2041,7 +2054,7 @@ nine_context_draw_indexed_primitive(struct NineDevice9 *device,
     info.min_index = MinVertexIndex;
     info.max_index = MinVertexIndex + NumVertices - 1;
 
-    device->pipe->draw_vbo(device->pipe, &info);
+    context->pipe->draw_vbo(context->pipe, &info);
 }
 
 void
@@ -2050,6 +2063,7 @@ nine_context_draw_primitive_from_vtxbuf(struct NineDevice9 *device,
                                         UINT PrimitiveCount,
                                         struct pipe_vertex_buffer *vtxbuf)
 {
+    struct nine_context *context = &device->context;
     struct pipe_draw_info info;
 
     nine_update_state(device);
@@ -2061,9 +2075,9 @@ nine_context_draw_primitive_from_vtxbuf(struct NineDevice9 *device,
     info.min_index = 0;
     info.max_index = info.count - 1;
 
-    device->pipe->set_vertex_buffers(device->pipe, 0, 1, vtxbuf);
+    context->pipe->set_vertex_buffers(context->pipe, 0, 1, vtxbuf);
 
-    device->pipe->draw_vbo(device->pipe, &info);
+    context->pipe->draw_vbo(context->pipe, &info);
 }
 
 void
@@ -2075,6 +2089,7 @@ nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *devic
                                                        struct pipe_vertex_buffer *vbuf,
                                                        struct pipe_index_buffer *ibuf)
 {
+    struct nine_context *context = &device->context;
     struct pipe_draw_info info;
 
     nine_update_state(device);
@@ -2085,34 +2100,42 @@ nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(struct NineDevice9 *devic
     info.index_bias = 0;
     info.min_index = MinVertexIndex;
     info.max_index = MinVertexIndex + NumVertices - 1;
-    device->pipe->set_vertex_buffers(device->pipe, 0, 1, vbuf);
-    device->pipe->set_index_buffer(device->pipe, ibuf);
+    context->pipe->set_vertex_buffers(context->pipe, 0, 1, vbuf);
+    context->pipe->set_index_buffer(context->pipe, ibuf);
 
-    device->pipe->draw_vbo(device->pipe, &info);
+    context->pipe->draw_vbo(context->pipe, &info);
 }
 
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type)
 {
-    return device->pipe->create_query(device->pipe, query_type, 0);
+    struct nine_context *context = &device->context;
+
+    return context->pipe->create_query(context->pipe, query_type, 0);
 }
 
 void
 nine_context_destroy_query(struct NineDevice9 *device, struct pipe_query *query)
 {
-    device->pipe->destroy_query(device->pipe, query);
+    struct nine_context *context = &device->context;
+
+    context->pipe->destroy_query(context->pipe, query);
 }
 
 void
 nine_context_begin_query(struct NineDevice9 *device, struct pipe_query *query)
 {
-    (void) device->pipe->begin_query(device->pipe, query);
+    struct nine_context *context = &device->context;
+
+    (void) context->pipe->begin_query(context->pipe, query);
 }
 
 void
 nine_context_end_query(struct NineDevice9 *device, struct pipe_query *query)
 {
-    (void) device->pipe->end_query(device->pipe, query);
+    struct nine_context *context = &device->context;
+
+    (void) context->pipe->end_query(context->pipe, query);
 }
 
 boolean
@@ -2120,8 +2143,10 @@ nine_context_get_query_result(struct NineDevice9 *device, struct pipe_query *que
                               boolean flush, boolean wait,
                               union pipe_query_result *result)
 {
+    struct nine_context *context = &device->context;
+
     (void) flush;
-    return device->pipe->get_query_result(device->pipe, query, wait, result);
+    return context->pipe->get_query_result(context->pipe, query, wait, result);
 }
 
 /* State defaults */
@@ -2518,7 +2543,7 @@ update_vertex_elements_sw(struct NineDevice9 *device)
 static void
 update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_vertices)
 {
-    struct pipe_context *pipe = device->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(device);
     struct pipe_context *pipe_sw = device->pipe_sw;
     struct nine_state *state = &device->state;
     struct nine_state_sw_internal *sw_internal = &device->state_sw_internal;
@@ -2743,7 +2768,7 @@ void
 nine_state_after_draw_sw(struct NineDevice9 *device)
 {
     struct nine_state_sw_internal *sw_internal = &device->state_sw_internal;
-    struct pipe_context *pipe = device->pipe;
+    struct pipe_context *pipe = NineDevice9_GetPipe(device);
     struct pipe_context *pipe_sw = device->pipe_sw;
     int i;
 

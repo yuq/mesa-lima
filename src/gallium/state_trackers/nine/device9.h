@@ -53,9 +53,7 @@ struct NineDevice9
     /* G3D context */
     struct pipe_screen *screen;
     struct pipe_screen *screen_sw;
-    struct pipe_context *pipe;
     struct pipe_context *pipe_sw;
-    struct cso_context *cso;
     struct cso_context *cso_sw;
 
     /* creation parameters */

@@ -253,7 +253,7 @@ void
 nine_pipe_context_clear(struct NineDevice9 *This)
 {
     struct pipe_context *pipe = NineDevice9_GetPipe(This);
-    struct cso_context *cso = This->cso;
+    struct cso_context *cso = This->context.cso;
     pipe->bind_vs_state(pipe, NULL);
     pipe->bind_fs_state(pipe, NULL);
 

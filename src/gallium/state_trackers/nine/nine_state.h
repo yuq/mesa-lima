@@ -241,6 +241,9 @@ struct nine_context {
         void *ps;
     } cso_shader;
 
+    struct pipe_context *pipe;
+    struct cso_context *cso;
+
     uint8_t rt_mask;
 
     D3DVIEWPORT9 viewport;
