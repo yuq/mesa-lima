@@ -2062,18 +2062,18 @@ nine_ff_update(struct NineDevice9 *device)
         cb.buffer_size = NINE_FF_NUM_VS_CONST * 4 * sizeof(float);
 
         if (!device->driver_caps.user_cbufs) {
-            context->pipe.cb_vs_ff.buffer_size = cb.buffer_size;
+            context->pipe_data.cb_vs_ff.buffer_size = cb.buffer_size;
             u_upload_data(device->constbuf_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
-                          &context->pipe.cb_vs_ff.buffer_offset,
-                          &context->pipe.cb_vs_ff.buffer);
+                          &context->pipe_data.cb_vs_ff.buffer_offset,
+                          &context->pipe_data.cb_vs_ff.buffer);
             u_upload_unmap(device->constbuf_uploader);
-            context->pipe.cb_vs_ff.user_buffer = NULL;
+            context->pipe_data.cb_vs_ff.user_buffer = NULL;
         } else
-            context->pipe.cb_vs_ff = cb;
+            context->pipe_data.cb_vs_ff = cb;
         context->commit |= NINE_STATE_COMMIT_CONST_VS;
     }
 
@@ -2086,18 +2086,18 @@ nine_ff_update(struct NineDevice9 *device)
         cb.buffer_size = NINE_FF_NUM_PS_CONST * 4 * sizeof(float);
 
         if (!device->driver_caps.user_cbufs) {
-            context->pipe.cb_ps_ff.buffer_size = cb.buffer_size;
+            context->pipe_data.cb_ps_ff.buffer_size = cb.buffer_size;
             u_upload_data(device->constbuf_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
-                          &context->pipe.cb_ps_ff.buffer_offset,
-                          &context->pipe.cb_ps_ff.buffer);
+                          &context->pipe_data.cb_ps_ff.buffer_offset,
+                          &context->pipe_data.cb_ps_ff.buffer);
             u_upload_unmap(device->constbuf_uploader);
-            context->pipe.cb_ps_ff.user_buffer = NULL;
+            context->pipe_data.cb_ps_ff.user_buffer = NULL;
         } else
-            context->pipe.cb_ps_ff = cb;
+            context->pipe_data.cb_ps_ff = cb;
         context->commit |= NINE_STATE_COMMIT_CONST_PS;
     }
 

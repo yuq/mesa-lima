@@ -64,21 +64,21 @@ check_multisample(struct NineDevice9 *device)
 static inline void
 prepare_blend(struct NineDevice9 *device)
 {
-    nine_convert_blend_state(&device->context.pipe.blend, device->context.rs);
+    nine_convert_blend_state(&device->context.pipe_data.blend, device->context.rs);
     device->context.commit |= NINE_STATE_COMMIT_BLEND;
 }
 
 static inline void
 prepare_dsa(struct NineDevice9 *device)
 {
-    nine_convert_dsa_state(&device->context.pipe.dsa, device->context.rs);
+    nine_convert_dsa_state(&device->context.pipe_data.dsa, device->context.rs);
     device->context.commit |= NINE_STATE_COMMIT_DSA;
 }
 
 static inline void
 prepare_rasterizer(struct NineDevice9 *device)
 {
-    nine_convert_rasterizer_state(device, &device->context.pipe.rast, device->context.rs);
+    nine_convert_rasterizer_state(device, &device->context.pipe_data.rast, device->context.rs);
     device->context.commit |= NINE_STATE_COMMIT_RASTERIZER;
 }
 
@@ -114,14 +114,14 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         /* Do not erase the buffer field.
          * It is either NULL (user_cbufs), or a resource.
          * u_upload_data will do the proper refcount */
-        context->pipe.cb0_swvp.buffer_offset = cb.buffer_offset;
-        context->pipe.cb0_swvp.buffer_size = cb.buffer_size;
-        context->pipe.cb0_swvp.user_buffer = cb.user_buffer;
+        context->pipe_data.cb0_swvp.buffer_offset = cb.buffer_offset;
+        context->pipe_data.cb0_swvp.buffer_size = cb.buffer_size;
+        context->pipe_data.cb0_swvp.user_buffer = cb.user_buffer;
 
         cb.user_buffer = (char *)cb.user_buffer + 4096 * sizeof(float[4]);
-        context->pipe.cb1_swvp.buffer_offset = cb.buffer_offset;
-        context->pipe.cb1_swvp.buffer_size = cb.buffer_size;
-        context->pipe.cb1_swvp.user_buffer = cb.user_buffer;
+        context->pipe_data.cb1_swvp.buffer_offset = cb.buffer_offset;
+        context->pipe_data.cb1_swvp.buffer_size = cb.buffer_size;
+        context->pipe_data.cb1_swvp.user_buffer = cb.user_buffer;
 
         context->changed.vs_const_f = 0;
     }
@@ -133,9 +133,9 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         cb.buffer_size = 2048 * sizeof(float[4]);
         cb.user_buffer = context->vs_const_i;
 
-        context->pipe.cb2_swvp.buffer_offset = cb.buffer_offset;
-        context->pipe.cb2_swvp.buffer_size = cb.buffer_size;
-        context->pipe.cb2_swvp.user_buffer = cb.user_buffer;
+        context->pipe_data.cb2_swvp.buffer_offset = cb.buffer_offset;
+        context->pipe_data.cb2_swvp.buffer_size = cb.buffer_size;
+        context->pipe_data.cb2_swvp.user_buffer = cb.user_buffer;
         context->changed.vs_const_i = 0;
     }
 
@@ -146,14 +146,14 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         cb.buffer_size = 512 * sizeof(float[4]);
         cb.user_buffer = context->vs_const_b;
 
-        context->pipe.cb3_swvp.buffer_offset = cb.buffer_offset;
-        context->pipe.cb3_swvp.buffer_size = cb.buffer_size;
-        context->pipe.cb3_swvp.user_buffer = cb.user_buffer;
+        context->pipe_data.cb3_swvp.buffer_offset = cb.buffer_offset;
+        context->pipe_data.cb3_swvp.buffer_size = cb.buffer_size;
+        context->pipe_data.cb3_swvp.user_buffer = cb.user_buffer;
         context->changed.vs_const_b = 0;
     }
 
     if (!device->driver_caps.user_cbufs) {
-        struct pipe_constant_buffer *cb = &(context->pipe.cb0_swvp);
+        struct pipe_constant_buffer *cb = &(context->pipe_data.cb0_swvp);
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb->buffer_size,
@@ -164,7 +164,7 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         u_upload_unmap(device->constbuf_uploader);
         cb->user_buffer = NULL;
 
-        cb = &(context->pipe.cb1_swvp);
+        cb = &(context->pipe_data.cb1_swvp);
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb->buffer_size,
@@ -175,7 +175,7 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         u_upload_unmap(device->constbuf_uploader);
         cb->user_buffer = NULL;
 
-        cb = &(context->pipe.cb2_swvp);
+        cb = &(context->pipe_data.cb2_swvp);
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb->buffer_size,
@@ -186,7 +186,7 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
         u_upload_unmap(device->constbuf_uploader);
         cb->user_buffer = NULL;
 
-        cb = &(context->pipe.cb3_swvp);
+        cb = &(context->pipe_data.cb3_swvp);
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb->buffer_size,
@@ -252,18 +252,18 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     }
 
     if (!device->driver_caps.user_cbufs) {
-        context->pipe.cb_vs.buffer_size = cb.buffer_size;
+        context->pipe_data.cb_vs.buffer_size = cb.buffer_size;
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb.buffer_size,
                       device->constbuf_alignment,
                       cb.user_buffer,
-                      &context->pipe.cb_vs.buffer_offset,
-                      &context->pipe.cb_vs.buffer);
+                      &context->pipe_data.cb_vs.buffer_offset,
+                      &context->pipe_data.cb_vs.buffer);
         u_upload_unmap(device->constbuf_uploader);
-        context->pipe.cb_vs.user_buffer = NULL;
+        context->pipe_data.cb_vs.user_buffer = NULL;
     } else
-        context->pipe.cb_vs = cb;
+        context->pipe_data.cb_vs = cb;
 
     context->changed.vs_const_f = 0;
 
@@ -323,18 +323,18 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
         return;
 
     if (!device->driver_caps.user_cbufs) {
-        context->pipe.cb_ps.buffer_size = cb.buffer_size;
+        context->pipe_data.cb_ps.buffer_size = cb.buffer_size;
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb.buffer_size,
                       device->constbuf_alignment,
                       cb.user_buffer,
-                      &context->pipe.cb_ps.buffer_offset,
-                      &context->pipe.cb_ps.buffer);
+                      &context->pipe_data.cb_ps.buffer_offset,
+                      &context->pipe_data.cb_ps.buffer);
         u_upload_unmap(device->constbuf_uploader);
-        context->pipe.cb_ps.user_buffer = NULL;
+        context->pipe_data.cb_ps.user_buffer = NULL;
     } else
-        context->pipe.cb_ps = cb;
+        context->pipe_data.cb_ps = cb;
 
     context->changed.ps_const_f = 0;
 
@@ -415,7 +415,7 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
 {
     struct pipe_context *pipe = device->pipe;
     struct nine_context *context = &device->context;
-    struct pipe_framebuffer_state *fb = &context->pipe.fb;
+    struct pipe_framebuffer_state *fb = &context->pipe_data.fb;
     unsigned i;
     struct NineSurface9 *rt0 = context->rt[0];
     unsigned w = rt0->desc.Width;
@@ -803,13 +803,13 @@ update_textures_and_samplers(struct NineDevice9 *device)
 static inline void
 commit_blend(struct NineDevice9 *device)
 {
-    cso_set_blend(device->cso, &device->context.pipe.blend);
+    cso_set_blend(device->cso, &device->context.pipe_data.blend);
 }
 
 static inline void
 commit_dsa(struct NineDevice9 *device)
 {
-    cso_set_depth_stencil_alpha(device->cso, &device->context.pipe.dsa);
+    cso_set_depth_stencil_alpha(device->cso, &device->context.pipe_data.dsa);
 }
 
 static inline void
@@ -823,7 +823,7 @@ commit_scissor(struct NineDevice9 *device)
 static inline void
 commit_rasterizer(struct NineDevice9 *device)
 {
-    cso_set_rasterizer(device->cso, &device->context.pipe.rast);
+    cso_set_rasterizer(device->cso, &device->context.pipe_data.rast);
 }
 
 static inline void
@@ -842,15 +842,15 @@ commit_vs_constants(struct NineDevice9 *device)
     struct pipe_context *pipe = device->pipe;
 
     if (unlikely(!device->context.programmable_vs))
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe.cb_vs_ff);
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe_data.cb_vs_ff);
     else {
         if (device->swvp) {
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe.cb0_swvp);
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 1, &device->context.pipe.cb1_swvp);
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 2, &device->context.pipe.cb2_swvp);
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 3, &device->context.pipe.cb3_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe_data.cb0_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 1, &device->context.pipe_data.cb1_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 2, &device->context.pipe_data.cb2_swvp);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 3, &device->context.pipe_data.cb3_swvp);
         } else {
-            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe.cb_vs);
+            pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &device->context.pipe_data.cb_vs);
         }
     }
 }
@@ -861,9 +861,9 @@ commit_ps_constants(struct NineDevice9 *device)
     struct pipe_context *pipe = device->pipe;
 
     if (unlikely(!device->context.ps))
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe.cb_ps_ff);
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe_data.cb_ps_ff);
     else
-        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe.cb_ps);
+        pipe->set_constant_buffer(pipe, PIPE_SHADER_FRAGMENT, 0, &device->context.pipe_data.cb_ps);
 }
 
 static inline void
@@ -1863,7 +1863,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
 
     if (Flags & D3DCLEAR_TARGET) bufs |= PIPE_CLEAR_COLOR;
     /* Ignore Z buffer if not bound */
-    if (context->pipe.fb.zsbuf != NULL) {
+    if (context->pipe_data.fb.zsbuf != NULL) {
         if (Flags & D3DCLEAR_ZBUFFER) bufs |= PIPE_CLEAR_DEPTH;
         if (Flags & D3DCLEAR_STENCIL) bufs |= PIPE_CLEAR_STENCIL;
     }
@@ -1894,7 +1894,7 @@ nine_context_clear_fb(struct NineDevice9 *device,
         }
     }
 
-    if (rect.x1 >= context->pipe.fb.width || rect.y1 >= context->pipe.fb.height)
+    if (rect.x1 >= context->pipe_data.fb.width || rect.y1 >= context->pipe_data.fb.height)
         return;
 
     for (i = 0; i < device->caps.NumSimultaneousRTs; ++i) {
@@ -1908,8 +1908,8 @@ nine_context_clear_fb(struct NineDevice9 *device,
         rect.x1 == 0 && rect.y1 == 0 &&
         /* Case we clear only render target. Check clear region vs rt. */
         ((!(bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&
-         rect.x2 >= context->pipe.fb.width &&
-         rect.y2 >= context->pipe.fb.height) ||
+         rect.x2 >= context->pipe_data.fb.width &&
+         rect.y2 >= context->pipe_data.fb.height) ||
         /* Case we clear depth buffer (and eventually rt too).
          * depth buffer size is always >= rt size. Compare to clear region */
         ((bufs & (PIPE_CLEAR_DEPTH | PIPE_CLEAR_STENCIL)) &&

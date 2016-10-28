@@ -302,7 +302,7 @@ struct nine_context {
         struct pipe_constant_buffer cb_ps;
         struct pipe_constant_buffer cb_vs_ff;
         struct pipe_constant_buffer cb_ps_ff;
-    } pipe;
+    } pipe_data;
 };
 
 struct nine_state_sw_internal {
