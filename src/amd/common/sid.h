@@ -7795,7 +7795,7 @@
 /* CIK */
 #define     V_028A90_PIXEL_PIPE_STAT_CONTROL                        0x38
 #define     V_028A90_PIXEL_PIPE_STAT_DUMP                           0x39
-#define     V_028A90_PIXEL_PIPE_STAT_RESET                          0x40
+#define     V_028A90_PIXEL_PIPE_STAT_RESET                          0x3A
 /*     */
 #define   S_028A90_ADDRESS_HI(x)                                      (((unsigned)(x) & 0x1FF) << 18)
 #define   G_028A90_ADDRESS_HI(x)                                      (((x) >> 18) & 0x1FF)
