@@ -43,6 +43,7 @@ namespace ArchRast
     {
     public:
         EventHandlerFile(uint32_t id)
+        : mBufOffset(0)
         {
 #if defined(_WIN32)
             DWORD pid = GetCurrentProcessId();
@@ -71,21 +72,55 @@ namespace ArchRast
 
         virtual ~EventHandlerFile()
         {
-            if (mFile.is_open()) mFile.close();
+            FlushBuffer();
         }
 
+        //////////////////////////////////////////////////////////////////////////
+        /// @brief Flush buffer to file.
+        bool FlushBuffer()
+        {
+            if (mBufOffset > 0)
+            {
+                std::ofstream file;
+                file.open(mFilename, std::ios::out | std::ios::app | std::ios::binary);
+
+                if (!file.is_open())
+                {
+                    SWR_ASSERT(0, "ArchRast: Could not open event file!");
+                    return false;
+                }
+
+                file.write((char*)mBuffer, mBufOffset);
+                file.close();
+
+                mBufOffset = 0;
+            }
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////////
+        /// @brief Write event and its payload to the memory buffer.
         void Write(uint32_t eventId, const char* pBlock, uint32_t size)
         {
-            if (!mFile.is_open())
+            if ((mBufOffset + size + sizeof(eventId)) > mBufferSize)
             {
-                mFile.open(mFilename, std::ios::out | std::ios::app | std::ios::binary);
+                if (!FlushBuffer())
+                {
+                    // Don't corrupt what's already in the buffer?
+                    /// @todo Maybe add corrupt marker to buffer here in case we can open file in future?
+                    return;
+                }
             }
 
-            mFile.write((char*)&eventId, sizeof(eventId));
-            mFile.write(pBlock, size);
+            memcpy(&mBuffer[mBufOffset], (char*)&eventId, sizeof(eventId));
+            mBufOffset += sizeof(eventId);
+            memcpy(&mBuffer[mBufOffset], pBlock, size);
+            mBufOffset += size;
         }
 
 % for name in protos['event_names']:
+        //////////////////////////////////////////////////////////////////////////
+        /// @brief Handle ${name} event
         virtual void Handle(${name}& event)
         {
 % if protos['events'][name]['num_fields'] == 0:
@@ -96,7 +131,10 @@ namespace ArchRast
         }
 % endfor
 
-        std::ofstream mFile;
         std::string mFilename;
+
+        static const uint32_t mBufferSize = 1024;
+        uint8_t mBuffer[mBufferSize];
+        uint32_t mBufOffset{0};
     };
 }
