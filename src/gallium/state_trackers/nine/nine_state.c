@@ -455,12 +455,6 @@ update_framebuffer(struct NineDevice9 *device, bool is_clear)
             fb->cbufs[i] = NineSurface9_GetSurface(rt, sRGB);
             context->rt_mask |= 1 << i;
             fb->nr_cbufs = i + 1;
-
-            if (unlikely(rt->desc.Usage & D3DUSAGE_AUTOGENMIPMAP)) {
-                assert(rt->texture == D3DRTYPE_TEXTURE ||
-                       rt->texture == D3DRTYPE_CUBETEXTURE);
-                NineBaseTexture9(rt->base.base.container)->dirty_mip = TRUE;
-            }
         } else {
             /* Color outputs must match RT slot,
              * drivers will have to handle NULL entries for GL, too.
@@ -931,28 +925,6 @@ commit_ps(struct NineDevice9 *device)
     NINE_STATE_STENCIL_REF | \
     NINE_STATE_SAMPLE_MASK)
 
-
-/* TODO: only go through dirty textures */
-static void
-validate_textures(struct NineDevice9 *device)
-{
-    struct NineBaseTexture9 *tex, *ptr;
-    LIST_FOR_EACH_ENTRY_SAFE(tex, ptr, &device->update_textures, list) {
-        list_delinit(&tex->list);
-        NineBaseTexture9_Validate(tex);
-    }
-}
-
-static void
-update_managed_buffers(struct NineDevice9 *device)
-{
-    struct NineBuffer9 *buf, *ptr;
-    LIST_FOR_EACH_ENTRY_SAFE(buf, ptr, &device->update_buffers, managed.list) {
-        list_delinit(&buf->managed.list);
-        NineBuffer9_Upload(buf);
-    }
-}
-
 static void
 nine_update_state(struct NineDevice9 *device)
 {
@@ -968,8 +940,6 @@ nine_update_state(struct NineDevice9 *device)
      * into update_textures. Except, we also need to re-validate textures that
      * may be dirty anyway, even if no texture bindings changed.
      */
-    validate_textures(device); /* may clobber state */
-    update_managed_buffers(device);
 
     /* ff_update may change VS/PS dirty bits */
     if (unlikely(!context->programmable_vs || !context->ps))
@@ -1841,8 +1811,6 @@ static void
 nine_update_state_framebuffer_clear(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;
-
-    validate_textures(device);
 
     if (context->changed.group & NINE_STATE_FB)
         update_framebuffer(device, TRUE);

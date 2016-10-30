@@ -2706,6 +2706,55 @@ NineDevice9_GetNPatchMode( struct NineDevice9 *This )
     STUB(0);
 }
 
+/* TODO: only go through dirty textures */
+static void
+validate_textures(struct NineDevice9 *device)
+{
+    struct NineBaseTexture9 *tex, *ptr;
+    LIST_FOR_EACH_ENTRY_SAFE(tex, ptr, &device->update_textures, list) {
+        list_delinit(&tex->list);
+        NineBaseTexture9_Validate(tex);
+    }
+}
+
+static void
+update_managed_buffers(struct NineDevice9 *device)
+{
+    struct NineBuffer9 *buf, *ptr;
+    LIST_FOR_EACH_ENTRY_SAFE(buf, ptr, &device->update_buffers, managed.list) {
+        list_delinit(&buf->managed.list);
+        NineBuffer9_Upload(buf);
+    }
+}
+
+static void
+NineBeforeDraw( struct NineDevice9 *This )
+{
+    /* Upload Managed dirty content */
+    validate_textures(This); /* may clobber state */
+    update_managed_buffers(This);
+}
+
+static void
+NineAfterDraw( struct NineDevice9 *This )
+{
+    unsigned i;
+    struct nine_state *state = &This->state;
+    unsigned ps_mask = state->ps ? state->ps->rt_mask : 1;
+
+    /* Flag render-targets with autogenmipmap for mipmap regeneration */
+    for (i = 0; i < This->caps.NumSimultaneousRTs; ++i) {
+        struct NineSurface9 *rt = state->rt[i];
+
+        if (rt && rt->desc.Format != D3DFMT_NULL && (ps_mask & (1 << i)) &&
+            rt->desc.Usage & D3DUSAGE_AUTOGENMIPMAP) {
+            assert(rt->texture == D3DRTYPE_TEXTURE ||
+                   rt->texture == D3DRTYPE_CUBETEXTURE);
+            NineBaseTexture9(rt->base.base.container)->dirty_mip = TRUE;
+        }
+    }
+}
+
 HRESULT NINE_WINAPI
 NineDevice9_DrawPrimitive( struct NineDevice9 *This,
                            D3DPRIMITIVETYPE PrimitiveType,
@@ -2715,7 +2764,9 @@ NineDevice9_DrawPrimitive( struct NineDevice9 *This,
     DBG("iface %p, PrimitiveType %u, StartVertex %u, PrimitiveCount %u\n",
         This, PrimitiveType, StartVertex, PrimitiveCount);
 
+    NineBeforeDraw(This);
     nine_context_draw_primitive(This, PrimitiveType, StartVertex, PrimitiveCount);
+    NineAfterDraw(This);
 
     return D3D_OK;
 }
@@ -2737,9 +2788,11 @@ NineDevice9_DrawIndexedPrimitive( struct NineDevice9 *This,
     user_assert(This->state.idxbuf, D3DERR_INVALIDCALL);
     user_assert(This->state.vdecl, D3DERR_INVALIDCALL);
 
+    NineBeforeDraw(This);
     nine_context_draw_indexed_primitive(This, PrimitiveType, BaseVertexIndex,
                                         MinVertexIndex, NumVertices, StartIndex,
                                         PrimitiveCount);
+    NineAfterDraw(This);
 
     return D3D_OK;
 }
@@ -2778,7 +2831,9 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
         vtxbuf.user_buffer = NULL;
     }
 
+    NineBeforeDraw(This);
     nine_context_draw_primitive_from_vtxbuf(This, PrimitiveType, PrimitiveCount, &vtxbuf);
+    NineAfterDraw(This);
 
     pipe_resource_reference(&vtxbuf.buffer, NULL);
 
@@ -2852,12 +2907,14 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         ibuf.user_buffer = NULL;
     }
 
+    NineBeforeDraw(This);
     nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf(This, PrimitiveType,
                                                            MinVertexIndex,
                                                            NumVertices,
                                                            PrimitiveCount,
                                                            &vbuf,
                                                            &ibuf);
+    NineAfterDraw(This);
 
     pipe_resource_reference(&vbuf.buffer, NULL);
     pipe_resource_reference(&ibuf.buffer, NULL);
