@@ -7114,9 +7114,9 @@ static bool si_compile_vs_epilog(struct si_screen *sscreen,
 		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
 		args[5] = LLVMGetParam(ctx.main_fn,
 				       VS_EPILOG_PRIMID_LOC); /* X */
-		args[6] = uint->undef; /* Y */
-		args[7] = uint->undef; /* Z */
-		args[8] = uint->undef; /* W */
+		args[6] = base->undef; /* Y */
+		args[7] = base->undef; /* Z */
+		args[8] = base->undef; /* W */
 
 		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
 				   LLVMVoidTypeInContext(base->gallivm->context),
