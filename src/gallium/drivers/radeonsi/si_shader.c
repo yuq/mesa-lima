@@ -378,8 +378,6 @@ static void declare_input_vs(
 	struct gallivm_state *gallivm = base->gallivm;
 	struct si_shader_context *ctx =
 		si_shader_context(&radeon_bld->soa.bld_base);
-	unsigned divisor =
-		ctx->shader->key.vs.prolog.instance_divisors[input_index];
 
 	unsigned chan;
 
@@ -401,24 +399,9 @@ static void declare_input_vs(
 	/* Build the attribute offset */
 	attribute_offset = lp_build_const_int32(gallivm, 0);
 
-	if (!ctx->no_prolog) {
-		buffer_index = LLVMGetParam(radeon_bld->main_fn,
-					    ctx->param_vertex_index0 +
-					    input_index);
-	} else if (divisor) {
-		/* Build index from instance ID, start instance and divisor */
-		ctx->shader->info.uses_instanceid = true;
-		buffer_index = get_instance_index_for_fetch(ctx,
-							    SI_PARAM_START_INSTANCE,
-							    divisor);
-	} else {
-		/* Load the buffer index for vertices. */
-		LLVMValueRef vertex_id = LLVMGetParam(ctx->main_fn,
-						      ctx->param_vertex_id);
-		LLVMValueRef base_vertex = LLVMGetParam(radeon_bld->main_fn,
-							SI_PARAM_BASE_VERTEX);
-		buffer_index = LLVMBuildAdd(gallivm->builder, base_vertex, vertex_id, "");
-	}
+	buffer_index = LLVMGetParam(radeon_bld->main_fn,
+				    ctx->param_vertex_index0 +
+				    input_index);
 
 	args[0] = t_list;
 	args[1] = attribute_offset;
@@ -1315,8 +1298,7 @@ static void declare_input_fs(
 	int interp_param_idx;
 
 	/* Get colors from input VGPRs (set by the prolog). */
-	if (!ctx->no_prolog &&
-	    decl->Semantic.Name == TGSI_SEMANTIC_COLOR) {
+	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR) {
 		unsigned i = decl->Semantic.Index;
 		unsigned colors_read = shader->selector->info.colors_read;
 		unsigned mask = colors_read >> (i * 4);
@@ -2558,45 +2540,40 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	invocation_id = unpack_param(ctx, SI_PARAM_REL_IDS, 8, 5);
 	tf_lds_offset = get_tcs_out_current_patch_data_offset(ctx);
 
-	if (!ctx->no_epilog) {
-		/* Return epilog parameters from this function. */
-		LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-		LLVMValueRef ret = ctx->return_value;
-		LLVMValueRef rw_buffers, rw0, rw1, tf_soffset;
-		unsigned vgpr;
+	/* Return epilog parameters from this function. */
+	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
+	LLVMValueRef ret = ctx->return_value;
+	LLVMValueRef rw_buffers, rw0, rw1, tf_soffset;
+	unsigned vgpr;
 
-		/* RW_BUFFERS pointer */
-		rw_buffers = LLVMGetParam(ctx->main_fn,
-					  SI_PARAM_RW_BUFFERS);
-		rw_buffers = LLVMBuildPtrToInt(builder, rw_buffers, ctx->i64, "");
-		rw_buffers = LLVMBuildBitCast(builder, rw_buffers, ctx->v2i32, "");
-		rw0 = LLVMBuildExtractElement(builder, rw_buffers,
-					      bld_base->uint_bld.zero, "");
-		rw1 = LLVMBuildExtractElement(builder, rw_buffers,
-					      bld_base->uint_bld.one, "");
-		ret = LLVMBuildInsertValue(builder, ret, rw0, 0, "");
-		ret = LLVMBuildInsertValue(builder, ret, rw1, 1, "");
+	/* RW_BUFFERS pointer */
+	rw_buffers = LLVMGetParam(ctx->main_fn,
+				  SI_PARAM_RW_BUFFERS);
+	rw_buffers = LLVMBuildPtrToInt(builder, rw_buffers, ctx->i64, "");
+	rw_buffers = LLVMBuildBitCast(builder, rw_buffers, ctx->v2i32, "");
+	rw0 = LLVMBuildExtractElement(builder, rw_buffers,
+				      bld_base->uint_bld.zero, "");
+	rw1 = LLVMBuildExtractElement(builder, rw_buffers,
+				      bld_base->uint_bld.one, "");
+	ret = LLVMBuildInsertValue(builder, ret, rw0, 0, "");
+	ret = LLVMBuildInsertValue(builder, ret, rw1, 1, "");
 
-		/* Tess factor buffer soffset is after user SGPRs. */
-		tf_soffset = LLVMGetParam(ctx->main_fn,
-					  SI_PARAM_TESS_FACTOR_OFFSET);
-		ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
-					   SI_TCS_NUM_USER_SGPR + 1, "");
+	/* Tess factor buffer soffset is after user SGPRs. */
+	tf_soffset = LLVMGetParam(ctx->main_fn,
+				  SI_PARAM_TESS_FACTOR_OFFSET);
+	ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
+				   SI_TCS_NUM_USER_SGPR + 1, "");
 
-		/* VGPRs */
-		rel_patch_id = bitcast(bld_base, TGSI_TYPE_FLOAT, rel_patch_id);
-		invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
-		tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
+	/* VGPRs */
+	rel_patch_id = bitcast(bld_base, TGSI_TYPE_FLOAT, rel_patch_id);
+	invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
+	tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
 
-		vgpr = SI_TCS_NUM_USER_SGPR + 2;
-		ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
-		ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
-		ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
-		ctx->return_value = ret;
-		return;
-	}
-
-	si_write_tess_factors(bld_base, rel_patch_id, invocation_id, tf_lds_offset);
+	vgpr = SI_TCS_NUM_USER_SGPR + 2;
+	ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
+	ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
+	ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
+	ctx->return_value = ret;
 }
 
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -2742,27 +2719,13 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 					      "");
 	}
 
-	if (ctx->no_epilog) {
-		/* Export PrimitiveID when PS needs it. */
-		if (si_vs_exports_prim_id(ctx->shader)) {
-			outputs[i].name = TGSI_SEMANTIC_PRIMID;
-			outputs[i].sid = 0;
-			outputs[i].values[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
-						       get_primitive_id(bld_base, 0));
-			outputs[i].values[1] = bld_base->base.undef;
-			outputs[i].values[2] = bld_base->base.undef;
-			outputs[i].values[3] = bld_base->base.undef;
-			i++;
-		}
-	} else {
-		/* Return the primitive ID from the LLVM function. */
-		ctx->return_value =
-			LLVMBuildInsertValue(gallivm->builder,
-					     ctx->return_value,
-					     bitcast(bld_base, TGSI_TYPE_FLOAT,
-						     get_primitive_id(bld_base, 0)),
-					     VS_EPILOG_PRIMID_LOC, "");
-	}
+	/* Return the primitive ID from the LLVM function. */
+	ctx->return_value =
+		LLVMBuildInsertValue(gallivm->builder,
+				     ctx->return_value,
+				     bitcast(bld_base, TGSI_TYPE_FLOAT,
+					     get_primitive_id(bld_base, 0)),
+				     VS_EPILOG_PRIMID_LOC, "");
 
 	si_llvm_export_vs(bld_base, outputs, i);
 	FREE(outputs);
@@ -5369,8 +5332,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_vs_prim_id = num_params++] = ctx->i32;
 		params[ctx->param_instance_id = num_params++] = ctx->i32;
 
-		if (!ctx->no_prolog &&
-		    !ctx->is_gs_copy_shader) {
+		if (!ctx->is_gs_copy_shader) {
 			/* Vertex load indices. */
 			ctx->param_vertex_index0 = num_params;
 
@@ -5380,8 +5342,7 @@ static void create_function(struct si_shader_context *ctx)
 			num_prolog_vgprs += shader->selector->info.num_inputs;
 		}
 
-		if (!ctx->no_epilog &&
-		    !ctx->is_gs_copy_shader) {
+		if (!ctx->is_gs_copy_shader) {
 			/* PrimitiveID output. */
 			if (!shader->key.vs.as_es && !shader->key.vs.as_ls)
 				for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
@@ -5403,16 +5364,14 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_REL_IDS] = ctx->i32;
 		num_params = SI_PARAM_REL_IDS+1;
 
-		if (!ctx->no_epilog) {
-			/* SI_PARAM_TCS_OC_LDS and PARAM_TESS_FACTOR_OFFSET are
-			 * placed after the user SGPRs.
-			 */
-			for (i = 0; i < SI_TCS_NUM_USER_SGPR + 2; i++)
-				returns[num_returns++] = ctx->i32; /* SGPRs */
+		/* SI_PARAM_TCS_OC_LDS and PARAM_TESS_FACTOR_OFFSET are
+		 * placed after the user SGPRs.
+		 */
+		for (i = 0; i < SI_TCS_NUM_USER_SGPR + 2; i++)
+			returns[num_returns++] = ctx->i32; /* SGPRs */
 
-			for (i = 0; i < 3; i++)
-				returns[num_returns++] = ctx->f32; /* VGPRs */
-		}
+		for (i = 0; i < 3; i++)
+			returns[num_returns++] = ctx->f32; /* VGPRs */
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
@@ -5438,7 +5397,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_tes_patch_id = num_params++] = ctx->i32;
 
 		/* PrimitiveID output. */
-		if (!ctx->no_epilog && !shader->key.tes.as_es)
+		if (!shader->key.tes.as_es)
 			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
 				returns[num_returns++] = ctx->f32;
 		break;
@@ -5483,40 +5442,36 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_POS_FIXED_PT] = ctx->i32;
 		num_params = SI_PARAM_POS_FIXED_PT+1;
 
-		if (!ctx->no_prolog) {
-			/* Color inputs from the prolog. */
-			if (shader->selector->info.colors_read) {
-				unsigned num_color_elements =
-					util_bitcount(shader->selector->info.colors_read);
+		/* Color inputs from the prolog. */
+		if (shader->selector->info.colors_read) {
+			unsigned num_color_elements =
+				util_bitcount(shader->selector->info.colors_read);
 
-				assert(num_params + num_color_elements <= ARRAY_SIZE(params));
-				for (i = 0; i < num_color_elements; i++)
-					params[num_params++] = ctx->f32;
+			assert(num_params + num_color_elements <= ARRAY_SIZE(params));
+			for (i = 0; i < num_color_elements; i++)
+				params[num_params++] = ctx->f32;
 
-				num_prolog_vgprs += num_color_elements;
-			}
+			num_prolog_vgprs += num_color_elements;
 		}
 
-		if (!ctx->no_epilog) {
-			/* Outputs for the epilog. */
-			num_return_sgprs = SI_SGPR_ALPHA_REF + 1;
-			num_returns =
-				num_return_sgprs +
-				util_bitcount(shader->selector->info.colors_written) * 4 +
-				shader->selector->info.writes_z +
-				shader->selector->info.writes_stencil +
-				shader->selector->info.writes_samplemask +
-				1 /* SampleMaskIn */;
+		/* Outputs for the epilog. */
+		num_return_sgprs = SI_SGPR_ALPHA_REF + 1;
+		num_returns =
+			num_return_sgprs +
+			util_bitcount(shader->selector->info.colors_written) * 4 +
+			shader->selector->info.writes_z +
+			shader->selector->info.writes_stencil +
+			shader->selector->info.writes_samplemask +
+			1 /* SampleMaskIn */;
 
-			num_returns = MAX2(num_returns,
-					   num_return_sgprs +
-					   PS_EPILOG_SAMPLEMASK_MIN_LOC + 1);
+		num_returns = MAX2(num_returns,
+				   num_return_sgprs +
+				   PS_EPILOG_SAMPLEMASK_MIN_LOC + 1);
 
-			for (i = 0; i < num_return_sgprs; i++)
-				returns[i] = ctx->i32;
-			for (; i < num_returns; i++)
-				returns[i] = ctx->f32;
-		}
+		for (i = 0; i < num_return_sgprs; i++)
+			returns[i] = ctx->i32;
+		for (; i < num_returns; i++)
+			returns[i] = ctx->f32;
 		break;
 
 	case PIPE_SHADER_COMPUTE:
@@ -6568,14 +6523,6 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	create_function(ctx);
 	preload_ring_buffers(ctx);
 
-	if (ctx->no_prolog && sel->type == PIPE_SHADER_FRAGMENT &&
-	    shader->key.ps.prolog.poly_stipple) {
-		LLVMValueRef list = LLVMGetParam(ctx->main_fn,
-						 SI_PARAM_RW_BUFFERS);
-		si_llvm_emit_polygon_stipple(ctx, list,
-					     SI_PARAM_POS_FIXED_PT);
-	}
-
 	if (ctx->type == PIPE_SHADER_GEOMETRY) {
 		int i;
 		for (i = 0; i < 4; i++) {
@@ -6995,17 +6942,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
-	ctx.no_prolog = is_monolithic;
-	ctx.no_epilog = is_monolithic;
 	ctx.separate_prolog = !is_monolithic;
-
-	if (ctx.type == PIPE_SHADER_VERTEX ||
-	    ctx.type == PIPE_SHADER_TESS_CTRL ||
-	    ctx.type == PIPE_SHADER_TESS_EVAL ||
-	    ctx.type == PIPE_SHADER_FRAGMENT) {
-		ctx.no_prolog = false;
-		ctx.no_epilog = false;
-	}
 
 	memset(shader->info.vs_output_param_offset, 0xff,
 	       sizeof(shader->info.vs_output_param_offset));
