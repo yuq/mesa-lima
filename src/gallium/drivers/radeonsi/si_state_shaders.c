@@ -444,9 +444,9 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
  * Calculate the appropriate setting of VGT_GS_MODE when \p shader is a
  * geometry shader.
  */
-static uint32_t si_vgt_gs_mode(struct si_shader *shader)
+static uint32_t si_vgt_gs_mode(struct si_shader_selector *sel)
 {
-	unsigned gs_max_vert_out = shader->selector->gs_max_out_vertices;
+	unsigned gs_max_vert_out = sel->gs_max_out_vertices;
 	unsigned cut_mode;
 
 	if (gs_max_vert_out <= 128) {
@@ -482,7 +482,7 @@ static void si_shader_gs(struct si_shader *shader)
 	if (!pm4)
 		return;
 
-	si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(shader));
+	si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(shader->selector));
 
 	si_pm4_set_reg(pm4, R_028A60_VGT_GSVS_RING_OFFSET_1, gsvs_itemsize);
 	si_pm4_set_reg(pm4, R_028A64_VGT_GSVS_RING_OFFSET_2, gsvs_itemsize * ((max_stream >= 2) ? 2 : 1));
