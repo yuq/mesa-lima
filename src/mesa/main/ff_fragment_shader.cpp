@@ -300,9 +300,7 @@ static GLbitfield get_fp_input_mask( struct gl_context *ctx )
 {
    /* _NEW_PROGRAM */
    const GLboolean vertexShader =
-      (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] &&
-       ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]->data->LinkStatus &&
-       ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]->_LinkedShaders[MESA_SHADER_VERTEX]);
+      ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] != NULL;
    const GLboolean vertexProgram = ctx->VertexProgram._Enabled;
    GLbitfield fp_inputs = 0x0;
 
@@ -366,7 +364,7 @@ static GLbitfield get_fp_input_mask( struct gl_context *ctx )
        * validation (see additional comments in state.c).
        */
       if (vertexShader)
-         vprog = ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]->_LinkedShaders[MESA_SHADER_VERTEX]->Program;
+         vprog = ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
       else
          vprog = ctx->VertexProgram.Current;
 

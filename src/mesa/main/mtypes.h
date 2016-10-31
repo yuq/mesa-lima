@@ -2907,7 +2907,7 @@ struct gl_pipeline_object
     *
     * There is a separate program set for each shader stage.
     */
-   struct gl_shader_program *CurrentProgram[MESA_SHADER_STAGES];
+   struct gl_program *CurrentProgram[MESA_SHADER_STAGES];
 
    struct gl_program *_CurrentFragmentProgram;
 

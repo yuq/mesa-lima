@@ -1461,15 +1461,11 @@ brw_upload_cs_ubo_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog =
+   struct gl_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
 
-   if (!prog || !prog->_LinkedShaders[MESA_SHADER_COMPUTE])
-      return;
-
    /* BRW_NEW_CS_PROG_DATA */
-   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE]->Program,
-                           &brw->cs.base, brw->cs.base.prog_data);
+   brw_upload_ubo_surfaces(brw, prog, &brw->cs.base, brw->cs.base.prog_data);
 }
 
 const struct brw_tracked_state brw_cs_ubo_surfaces = {
@@ -1844,7 +1840,7 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog =
+   struct gl_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    /* BRW_NEW_CS_PROG_DATA */
    const struct brw_cs_prog_data *cs_prog_data =

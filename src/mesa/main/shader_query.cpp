@@ -1373,24 +1373,21 @@ _mesa_get_program_resourceiv(struct gl_shader_program *shProg,
 }
 
 static bool
-validate_io(struct gl_shader_program *producer,
-            struct gl_shader_program *consumer,
-            gl_shader_stage producer_stage,
-            gl_shader_stage consumer_stage)
+validate_io(struct gl_program *producer, struct gl_program *consumer)
 {
-   if (producer == consumer)
+   if (producer->sh.data->linked_stages == consumer->sh.data->linked_stages)
       return true;
 
    const bool nonarray_stage_to_array_stage =
-      producer_stage != MESA_SHADER_TESS_CTRL &&
-      (consumer_stage == MESA_SHADER_GEOMETRY ||
-       consumer_stage == MESA_SHADER_TESS_CTRL ||
-       consumer_stage == MESA_SHADER_TESS_EVAL);
+      producer->info.stage != MESA_SHADER_TESS_CTRL &&
+      (consumer->info.stage == MESA_SHADER_GEOMETRY ||
+       consumer->info.stage == MESA_SHADER_TESS_CTRL ||
+       consumer->info.stage == MESA_SHADER_TESS_EVAL);
 
    bool valid = true;
 
    gl_shader_variable const **outputs =
-      (gl_shader_variable const **) calloc(producer->data->NumProgramResourceList,
+      (gl_shader_variable const **) calloc(producer->sh.data->NumProgramResourceList,
                                            sizeof(gl_shader_variable *));
    if (outputs == NULL)
       return false;
@@ -1413,9 +1410,9 @@ validate_io(struct gl_shader_program *producer,
     * some output that did not have an input.
     */
    unsigned num_outputs = 0;
-   for (unsigned i = 0; i < producer->data->NumProgramResourceList; i++) {
+   for (unsigned i = 0; i < producer->sh.data->NumProgramResourceList; i++) {
       struct gl_program_resource *res =
-         &producer->data->ProgramResourceList[i];
+         &producer->sh.data->ProgramResourceList[i];
 
       if (res->Type != GL_PROGRAM_OUTPUT)
          continue;
@@ -1434,9 +1431,9 @@ validate_io(struct gl_shader_program *producer,
    }
 
    unsigned match_index = 0;
-   for (unsigned i = 0; i < consumer->data->NumProgramResourceList; i++) {
+   for (unsigned i = 0; i < consumer->sh.data->NumProgramResourceList; i++) {
       struct gl_program_resource *res =
-         &consumer->data->ProgramResourceList[i];
+         &consumer->sh.data->ProgramResourceList[i];
 
       if (res->Type != GL_PROGRAM_INPUT)
          continue;
@@ -1592,30 +1589,27 @@ validate_io(struct gl_shader_program *producer,
 extern "C" bool
 _mesa_validate_pipeline_io(struct gl_pipeline_object *pipeline)
 {
-   struct gl_shader_program **shProg =
-      (struct gl_shader_program **) pipeline->CurrentProgram;
+   struct gl_program **prog = (struct gl_program **) pipeline->CurrentProgram;
 
    /* Find first active stage in pipeline. */
    unsigned idx, prev = 0;
    for (idx = 0; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
-      if (shProg[idx]) {
+      if (prog[idx]) {
          prev = idx;
          break;
       }
    }
 
    for (idx = prev + 1; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
-      if (shProg[idx]) {
+      if (prog[idx]) {
          /* Pipeline might include both non-compute and a compute program, do
           * not attempt to validate varyings between non-compute and compute
           * stage.
           */
-         if (shProg[idx]->_LinkedShaders[idx]->Stage == MESA_SHADER_COMPUTE)
+         if (prog[idx]->info.stage == MESA_SHADER_COMPUTE)
             break;
 
-         if (!validate_io(shProg[prev], shProg[idx],
-                          shProg[prev]->_LinkedShaders[prev]->Stage,
-                          shProg[idx]->_LinkedShaders[idx]->Stage))
+         if (!validate_io(prog[prev], prog[idx]))
             return false;
 
          prev = idx;

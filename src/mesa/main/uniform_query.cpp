@@ -1163,27 +1163,22 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
 
    GLbitfield mask;
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];
-   struct gl_linked_shader *shader;
    unsigned active_samplers = 0;
-   const struct gl_shader_program **shProg =
-      (const struct gl_shader_program **) pipeline->CurrentProgram;
+   const struct gl_program **prog =
+      (const struct gl_program **) pipeline->CurrentProgram;
 
 
    memset(TexturesUsed, 0, sizeof(TexturesUsed));
 
    for (unsigned idx = 0; idx < ARRAY_SIZE(pipeline->CurrentProgram); idx++) {
-      if (!shProg[idx])
+      if (!prog[idx])
          continue;
 
-      shader = shProg[idx]->_LinkedShaders[idx];
-      if (!shader || !shader->Program)
-         continue;
-
-      mask = shader->Program->SamplersUsed;
+      mask = prog[idx]->SamplersUsed;
       while (mask) {
          const int s = u_bit_scan(&mask);
-         GLuint unit = shader->Program->SamplerUnits[s];
-         GLuint tgt = shader->Program->sh.SamplerTargets[s];
+         GLuint unit = prog[idx]->SamplerUnits[s];
+         GLuint tgt = prog[idx]->sh.SamplerTargets[s];
 
          /* FIXME: Samplers are initialized to 0 and Mesa doesn't do a
           * great job of eliminating unused uniforms currently so for now
@@ -1197,14 +1192,14 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
                ralloc_asprintf(pipeline,
                      "Program %d: "
                      "Texture unit %d is accessed with 2 different types",
-                     shProg[idx]->Name, unit);
+                     prog[idx]->Id, unit);
             return false;
          }
 
          TexturesUsed[unit] |= (1 << tgt);
       }
 
-      active_samplers += shader->Program->info.num_textures;
+      active_samplers += prog[idx]->info.num_textures;
    }
 
    if (active_samplers > MAX_COMBINED_TEXTURE_IMAGE_UNITS) {

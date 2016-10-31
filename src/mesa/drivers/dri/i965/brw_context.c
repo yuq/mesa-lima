@@ -274,14 +274,12 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
 
    /* Resolve color for each active shader image. */
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      const struct gl_linked_shader *shader =
-         ctx->_Shader->CurrentProgram[i] ?
-            ctx->_Shader->CurrentProgram[i]->_LinkedShaders[i] : NULL;
+      const struct gl_program *prog = ctx->_Shader->CurrentProgram[i];
 
-      if (unlikely(shader && shader->Program->info.num_images)) {
-         for (unsigned j = 0; j < shader->Program->info.num_images; j++) {
+      if (unlikely(prog && prog->info.num_images)) {
+         for (unsigned j = 0; j < prog->info.num_images; j++) {
             struct gl_image_unit *u =
-               &ctx->ImageUnits[shader->Program->sh.ImageUnits[j]];
+               &ctx->ImageUnits[prog->sh.ImageUnits[j]];
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {
