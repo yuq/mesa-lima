@@ -211,7 +211,7 @@ clover::llvm::compile_program(const std::string &source,
    if (has_flag(debug::llvm))
       debug::log(".ll", print_module_bitcode(*mod));
 
-   return build_module_library(*mod);
+   return build_module_library(*mod, module::section::text_intermediate);
 }
 
 namespace {
@@ -280,7 +280,7 @@ clover::llvm::link_program(const std::vector<module> &modules,
       debug::log(".ll", print_module_bitcode(*mod));
 
    if (create_library) {
-      return build_module_library(*mod);
+      return build_module_library(*mod, module::section::text_library);
 
    } else if (ir == PIPE_SHADER_IR_LLVM) {
       return build_module_bitcode(*mod, *c);

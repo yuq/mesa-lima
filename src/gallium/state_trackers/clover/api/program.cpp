@@ -248,7 +248,9 @@ namespace {
 
       for (auto &dev : all_devs) {
          const auto has_binary = [&](const program &prog) {
-            return !prog.build(dev).binary.secs.empty();
+            const auto t = prog.build(dev).binary_type();
+            return t == CL_PROGRAM_BINARY_TYPE_COMPILED_OBJECT ||
+                   t == CL_PROGRAM_BINARY_TYPE_LIBRARY;
          };
 
          // According to the CL 1.2 spec, when "all programs specified [..]
@@ -403,6 +405,10 @@ clGetProgramBuildInfo(cl_program d_prog, cl_device_id d_dev,
 
    case CL_PROGRAM_BUILD_LOG:
       buf.as_string() = prog.build(dev).log;
+      break;
+
+   case CL_PROGRAM_BINARY_TYPE:
+      buf.as_scalar<cl_program_binary_type>() = prog.build(dev).binary_type();
       break;
 
    default:

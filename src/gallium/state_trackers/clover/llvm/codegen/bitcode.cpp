@@ -80,10 +80,11 @@ clover::llvm::print_module_bitcode(const ::llvm::Module &mod) {
 }
 
 module
-clover::llvm::build_module_library(const ::llvm::Module &mod) {
+clover::llvm::build_module_library(const ::llvm::Module &mod,
+                                   enum module::section::type section_type) {
    module m;
    const auto code = emit_code(mod);
-   m.secs.emplace_back(0, module::section::text, code.size(), code);
+   m.secs.emplace_back(0, section_type, code.size(), code);
    return m;
 }
 
