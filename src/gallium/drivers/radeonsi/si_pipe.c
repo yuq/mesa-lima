@@ -672,6 +672,7 @@ static void si_destroy_screen(struct pipe_screen* pscreen)
 		sscreen->vs_prologs,
 		sscreen->vs_epilogs,
 		sscreen->tcs_epilogs,
+		sscreen->gs_prologs,
 		sscreen->ps_prologs,
 		sscreen->ps_epilogs
 	};

@@ -896,6 +896,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			key->tes.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:
+		key->gs.prolog.tri_strip_adj_fix = sctx->gs_tri_strip_adj_fix;
 		break;
 	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
@@ -1155,8 +1156,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	 * If this fails, the driver will try to compile a monolithic shader
 	 * on demand.
 	 */
-	if (sel->type != PIPE_SHADER_GEOMETRY &&
-	    !sscreen->use_monolithic_shaders) {
+	if (!sscreen->use_monolithic_shaders) {
 		struct si_shader *shader = CALLOC_STRUCT(si_shader);
 		void *tgsi_binary;
 
@@ -1201,8 +1201,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	}
 
 	/* Pre-compilation. */
-	if (sel->type == PIPE_SHADER_GEOMETRY ||
-	    sscreen->b.debug_flags & DBG_PRECOMPILE) {
+	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
 		struct si_shader_ctx_state state = {sel};
 		union si_shader_key key;
 

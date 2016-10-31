@@ -6747,6 +6747,78 @@ static void si_get_ps_epilog_key(struct si_shader *shader,
 }
 
 /**
+ * Build the GS prolog function. Rotate the input vertices for triangle strips
+ * with adjacency.
+ */
+static void si_build_gs_prolog_function(struct si_shader_context *ctx,
+					union si_shader_part_key *key)
+{
+	const unsigned num_sgprs = SI_GS_NUM_USER_SGPR + 2;
+	const unsigned num_vgprs = 8;
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	LLVMTypeRef params[32];
+	LLVMTypeRef returns[32];
+	LLVMValueRef func, ret;
+
+	for (unsigned i = 0; i < num_sgprs; ++i) {
+		params[i] = ctx->i32;
+		returns[i] = ctx->i32;
+	}
+
+	for (unsigned i = 0; i < num_vgprs; ++i) {
+		params[num_sgprs + i] = ctx->i32;
+		returns[num_sgprs + i] = ctx->f32;
+	}
+
+	/* Create the function. */
+	si_create_function(ctx, "gs_prolog", returns, num_sgprs + num_vgprs,
+			   params, num_sgprs + num_vgprs, num_sgprs - 1);
+	func = ctx->main_fn;
+
+	/* Copy inputs to outputs. This should be no-op, as the registers match,
+	 * but it will prevent the compiler from overwriting them unintentionally.
+	 */
+	ret = ctx->return_value;
+	for (unsigned i = 0; i < num_sgprs; i++) {
+		LLVMValueRef p = LLVMGetParam(func, i);
+		ret = LLVMBuildInsertValue(builder, ret, p, i, "");
+	}
+	for (unsigned i = 0; i < num_vgprs; i++) {
+		LLVMValueRef p = LLVMGetParam(func, num_sgprs + i);
+		p = LLVMBuildBitCast(builder, p, ctx->f32, "");
+		ret = LLVMBuildInsertValue(builder, ret, p, num_sgprs + i, "");
+	}
+
+	if (key->gs_prolog.states.tri_strip_adj_fix) {
+		/* Remap the input vertices for every other primitive. */
+		const unsigned vtx_params[6] = {
+			num_sgprs,
+			num_sgprs + 1,
+			num_sgprs + 3,
+			num_sgprs + 4,
+			num_sgprs + 5,
+			num_sgprs + 6
+		};
+		LLVMValueRef prim_id, rotate;
+
+		prim_id = LLVMGetParam(func, num_sgprs + 2);
+		rotate = LLVMBuildTrunc(builder, prim_id, ctx->i1, "");
+
+		for (unsigned i = 0; i < 6; ++i) {
+			LLVMValueRef base, rotated, actual;
+			base = LLVMGetParam(func, vtx_params[i]);
+			rotated = LLVMGetParam(func, vtx_params[(i + 4) % 6]);
+			actual = LLVMBuildSelect(builder, rotate, rotated, base, "");
+			actual = LLVMBuildBitCast(builder, actual, ctx->f32, "");
+			ret = LLVMBuildInsertValue(builder, ret, actual, vtx_params[i], "");
+		}
+	}
+
+	LLVMBuildRet(builder, ret);
+}
+
+/**
  * Given a list of shader part functions, build a wrapper function that
  * runs them in sequence to form a monolithic shader.
  */
@@ -7019,6 +7091,18 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		parts[1] = ctx.main_fn;
 
 		si_build_wrapper_function(&ctx, parts, 2, 0);
+	} else if (is_monolithic && ctx.type == PIPE_SHADER_GEOMETRY) {
+		LLVMValueRef parts[2];
+		union si_shader_part_key prolog_key;
+
+		parts[1] = ctx.main_fn;
+
+		memset(&prolog_key, 0, sizeof(prolog_key));
+		prolog_key.gs_prolog.states = shader->key.gs.prolog;
+		si_build_gs_prolog_function(&ctx, &prolog_key);
+		parts[0] = ctx.main_fn;
+
+		si_build_wrapper_function(&ctx, parts, 2, 1);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_FRAGMENT) {
 		LLVMValueRef parts[3];
 		union si_shader_part_key prolog_key;
@@ -7206,6 +7290,9 @@ si_get_shader_part(struct si_screen *sscreen,
 	case PIPE_SHADER_TESS_CTRL:
 		assert(!prolog);
 		shader.key.tcs.epilog = key->tcs_epilog.states;
+		break;
+	case PIPE_SHADER_GEOMETRY:
+		assert(prolog);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		if (prolog)
@@ -7528,6 +7615,30 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 					    si_build_tcs_epilog_function,
 					    "Tessellation Control Shader Epilog");
 	return shader->epilog != NULL;
+}
+
+/**
+ * Select and compile (or reuse) GS parts (prolog).
+ */
+static bool si_shader_select_gs_parts(struct si_screen *sscreen,
+				      LLVMTargetMachineRef tm,
+				      struct si_shader *shader,
+				      struct pipe_debug_callback *debug)
+{
+	union si_shader_part_key prolog_key;
+
+	if (!shader->key.gs.prolog.tri_strip_adj_fix)
+		return true;
+
+	memset(&prolog_key, 0, sizeof(prolog_key));
+	prolog_key.gs_prolog.states = shader->key.gs.prolog;
+
+	shader->prolog = si_get_shader_part(sscreen, &sscreen->gs_prologs,
+					    PIPE_SHADER_GEOMETRY, true,
+					    &prolog_key, tm, debug,
+					    si_build_gs_prolog_function,
+					    "Geometry Shader Prolog");
+	return shader->prolog != NULL;
 }
 
 /**
@@ -8045,6 +8156,10 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 			break;
 		case PIPE_SHADER_TESS_EVAL:
 			if (!si_shader_select_tes_parts(sscreen, tm, shader, debug))
+				return -1;
+			break;
+		case PIPE_SHADER_GEOMETRY:
+			if (!si_shader_select_gs_parts(sscreen, tm, shader, debug))
 				return -1;
 			break;
 		case PIPE_SHADER_FRAGMENT:

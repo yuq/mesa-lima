@@ -325,6 +325,10 @@ struct si_tcs_epilog_bits {
 	uint64_t	inputs_to_copy;
 };
 
+struct si_gs_prolog_bits {
+	unsigned	tri_strip_adj_fix:1;
+};
+
 /* Common PS bits between the shader key and the prolog key. */
 struct si_ps_prolog_bits {
 	unsigned	color_two_side:1;
@@ -362,6 +366,9 @@ union si_shader_part_key {
 	struct {
 		struct si_tcs_epilog_bits states;
 	} tcs_epilog;
+	struct {
+		struct si_gs_prolog_bits states;
+	} gs_prolog;
 	struct {
 		struct si_ps_prolog_bits states;
 		unsigned	num_input_sgprs:5;
@@ -401,6 +408,9 @@ union si_shader_key {
 		struct si_vs_epilog_bits epilog; /* same as VS */
 		unsigned	as_es:1; /* export shader */
 	} tes; /* tessellation evaluation shader */
+	struct {
+		struct si_gs_prolog_bits prolog;
+	} gs;
 };
 
 struct si_shader_config {

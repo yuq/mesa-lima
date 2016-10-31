@@ -96,6 +96,7 @@ struct si_screen {
 	struct si_shader_part		*vs_prologs;
 	struct si_shader_part		*vs_epilogs;
 	struct si_shader_part		*tcs_epilogs;
+	struct si_shader_part		*gs_prologs;
 	struct si_shader_part		*ps_prologs;
 	struct si_shader_part		*ps_epilogs;
 
@@ -319,6 +320,7 @@ struct si_context {
 	unsigned		last_sc_line_stipple;
 	int			last_vtx_reuse_depth;
 	int			current_rast_prim; /* primitive type after TES, GS */
+	bool			gs_tri_strip_adj_fix;
 	unsigned		last_gsvs_itemsize;
 
 	/* Scratch buffer */
