@@ -49,3 +49,9 @@ AM_CXXFLAGS = \
 noinst_LTLIBRARIES = libamd_common.la
 
 libamd_common_la_SOURCES = $(AMD_COMPILER_SOURCES)
+
+# nir_to_llvm requires LLVM 3.9, which is only required as a minimum when
+# radv is built.
+if HAVE_RADEON_VULKAN
+libamd_common_la_SOURCES += $(AMD_NIR_SOURCES)
+endif
