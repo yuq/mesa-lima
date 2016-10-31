@@ -542,6 +542,20 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    llvm::SmallVector<std::string, 16> MAttrs;
 
 #if defined(PIPE_ARCH_X86) || defined(PIPE_ARCH_X86_64)
+#if HAVE_LLVM >= 0x0400
+   /* llvm-3.7+ implements sys::getHostCPUFeatures for x86,
+    * which allows us to enable/disable code generation based
+    * on the results of cpuid.
+    */
+   llvm::StringMap<bool> features;
+   llvm::sys::getHostCPUFeatures(features);
+
+   for (StringMapIterator<bool> f = features.begin();
+        f != features.end();
+        ++f) {
+      MAttrs.push_back(((*f).second ? "+" : "-") + (*f).first().str());
+   }
+#else
    /*
     * We need to unset attributes because sometimes LLVM mistakenly assumes
     * certain features are present given the processor name.
@@ -594,6 +608,7 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    MAttrs.push_back("-avx512bw");
    MAttrs.push_back("-avx512dq");
    MAttrs.push_back("-avx512vl");
+#endif
 #endif
 #endif
 
