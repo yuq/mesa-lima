@@ -72,6 +72,7 @@
 #include "ir.h"
 #include "program.h"
 #include "program/prog_instruction.h"
+#include "program/program.h"
 #include "util/set.h"
 #include "util/string_to_uint_map.h"
 #include "linker.h"
@@ -2187,6 +2188,21 @@ link_intrastage_shaders(void *mem_ctx,
    }
 
    gl_linked_shader *linked = ctx->Driver.NewShader(shader_list[0]->Stage);
+
+   /* Create program and attach it to the linked shader */
+   struct gl_program *gl_prog =
+      ctx->Driver.NewProgram(ctx,
+                             _mesa_shader_stage_to_program(shader_list[0]->Stage),
+                             prog->Name);
+   if (!prog) {
+      prog->LinkStatus = false;
+      _mesa_delete_linked_shader(ctx, linked);
+      return NULL;
+   }
+
+   /* Don't use _mesa_reference_program() just take ownership */
+   linked->Program = gl_prog;
+
    linked->ir = new(linked) exec_list;
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 

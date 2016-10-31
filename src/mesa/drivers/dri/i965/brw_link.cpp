@@ -221,15 +221,7 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       if (!shader)
          continue;
 
-      struct gl_program *prog =
-         ctx->Driver.NewProgram(ctx, _mesa_shader_stage_to_program(stage),
-                                0);
-      if (!prog)
-        return false;
-
-      /* Don't use _mesa_reference_program() just take ownership */
-      shader->Program = prog;
-
+      struct gl_program *prog = shader->Program;
       prog->Parameters = _mesa_new_parameter_list();
 
       process_glsl_ir(brw, shProg, shader);

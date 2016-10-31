@@ -367,16 +367,10 @@ st_nir_get_mesa_program(struct gl_context *ctx,
                         struct gl_linked_shader *shader)
 {
    struct gl_program *prog;
-   GLenum target = _mesa_shader_stage_to_program(shader->Stage);
 
    validate_ir_tree(shader->ir);
 
-   prog = ctx->Driver.NewProgram(ctx, target, shader_program->Name);
-   if (!prog)
-      return NULL;
-
-   /* Don't use _mesa_reference_program() just take ownership */
-   shader->Program = prog;
+   prog = shader->Program;
 
    prog->Parameters = _mesa_new_parameter_list();
 

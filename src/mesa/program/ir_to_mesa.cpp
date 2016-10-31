@@ -2794,9 +2794,7 @@ get_mesa_program(struct gl_context *ctx,
 
    validate_ir_tree(shader->ir);
 
-   prog = ctx->Driver.NewProgram(ctx, target, shader_program->Name);
-   if (!prog)
-      return NULL;
+   prog = shader->Program;
    prog->Parameters = _mesa_new_parameter_list();
    v.ctx = ctx;
    v.prog = prog;
@@ -2928,9 +2926,6 @@ get_mesa_program(struct gl_context *ctx,
    if (target == GL_FRAGMENT_PROGRAM_ARB) {
       prog->info.fs.depth_layout = shader_program->FragDepthLayout;
    }
-
-   /* Don't use _mesa_reference_program() just take ownership */
-   shader->Program = prog;
 
    if ((ctx->_Shader->Flags & GLSL_NO_OPT) == 0) {
       _mesa_optimize_program(ctx, prog, prog);

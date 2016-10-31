@@ -6407,7 +6407,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 {
    glsl_to_tgsi_visitor* v;
    struct gl_program *prog;
-   GLenum target = _mesa_shader_stage_to_program(shader->Stage);
    struct gl_shader_compiler_options *options =
          &ctx->Const.ShaderCompilerOptions[shader->Stage];
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
@@ -6415,12 +6414,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 
    validate_ir_tree(shader->ir);
 
-   prog = ctx->Driver.NewProgram(ctx, target, shader_program->Name);
-   if (!prog)
-      return NULL;
-
-   /* Don't use _mesa_reference_program() just take ownership */
-   shader->Program = prog;
+   prog = shader->Program;
 
    prog->Parameters = _mesa_new_parameter_list();
    v = new glsl_to_tgsi_visitor();
