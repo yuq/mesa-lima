@@ -5951,7 +5951,7 @@ static const char *si_get_shader_name(struct si_shader *shader,
 		else
 			return "Tessellation Evaluation Shader as VS";
 	case PIPE_SHADER_GEOMETRY:
-		if (shader->gs_copy_shader == NULL)
+		if (shader->is_gs_copy_shader)
 			return "GS Copy Shader as VS";
 		else
 			return "Geometry Shader";
@@ -6080,7 +6080,7 @@ static void si_llvm_build_ret(struct si_shader_context *ctx, LLVMValueRef ret)
 }
 
 /* Generate code for the hardware VS shader stage to go with a geometry shader */
-static struct si_shader *
+struct si_shader *
 si_generate_gs_copy_shader(struct si_screen *sscreen,
 			   LLVMTargetMachineRef tm,
 			   struct si_shader_selector *gs_selector,
@@ -6103,6 +6103,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		return NULL;
 
 	shader->selector = gs_selector;
+	shader->is_gs_copy_shader = true;
+
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.type = PIPE_SHADER_VERTEX;
 	ctx.is_gs_copy_shader = true;
@@ -7150,13 +7152,6 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 			shader->info.num_input_vgprs += 1;
 	}
 
-	if (ctx.type == PIPE_SHADER_GEOMETRY) {
-		shader->gs_copy_shader =
-			si_generate_gs_copy_shader(sscreen, tm, shader->selector, debug);
-		if (!shader->gs_copy_shader)
-			return -1;
-	}
-
 	return 0;
 }
 
@@ -8098,11 +8093,6 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 void si_shader_destroy(struct si_shader *shader)
 {
-	if (shader->gs_copy_shader) {
-		si_shader_destroy(shader->gs_copy_shader);
-		FREE(shader->gs_copy_shader);
-	}
-
 	if (shader->scratch_bo)
 		r600_resource_reference(&shader->scratch_bo, NULL);
 

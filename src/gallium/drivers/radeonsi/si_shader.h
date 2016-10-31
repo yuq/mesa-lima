@@ -257,6 +257,8 @@ struct si_shader_selector {
 	 */
 	struct si_shader	*main_shader_part;
 
+	struct si_shader	*gs_copy_shader;
+
 	struct tgsi_token       *tokens;
 	struct pipe_stream_output_info  so;
 	struct tgsi_shader_info		info;
@@ -444,12 +446,12 @@ struct si_shader {
 	struct si_shader_part		*prolog;
 	struct si_shader_part		*epilog;
 
-	struct si_shader		*gs_copy_shader;
 	struct si_pm4_state		*pm4;
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
 	union si_shader_key		key;
 	bool				is_binary_shared;
+	bool				is_gs_copy_shader;
 
 	/* The following data is all that's needed for binary shaders. */
 	struct radeon_shader_binary	binary;
@@ -471,6 +473,11 @@ struct si_shader_part {
 };
 
 /* si_shader.c */
+struct si_shader *
+si_generate_gs_copy_shader(struct si_screen *sscreen,
+			   LLVMTargetMachineRef tm,
+			   struct si_shader_selector *gs_selector,
+			   struct pipe_debug_callback *debug);
 int si_compile_tgsi_shader(struct si_screen *sscreen,
 			   LLVMTargetMachineRef tm,
 			   struct si_shader *shader,

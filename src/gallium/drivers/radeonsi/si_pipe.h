@@ -450,7 +450,7 @@ static inline struct tgsi_shader_info *si_get_vs_info(struct si_context *sctx)
 static inline struct si_shader* si_get_vs_state(struct si_context *sctx)
 {
 	if (sctx->gs_shader.current)
-		return sctx->gs_shader.current->gs_copy_shader;
+		return sctx->gs_shader.cso->gs_copy_shader;
 	else if (sctx->tes_shader.current)
 		return sctx->tes_shader.current;
 	else

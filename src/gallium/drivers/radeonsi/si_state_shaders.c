@@ -836,7 +836,6 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		si_shader_gs(shader);
-		si_shader_vs(sscreen, shader->gs_copy_shader, shader->selector);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		si_shader_ps(shader);
@@ -1236,6 +1235,17 @@ void si_init_shader_selector_async(void *job, int thread_index)
 					      false, sel->is_debug_context))
 			fprintf(stderr, "radeonsi: can't create a monolithic shader\n");
 	}
+
+	/* The GS copy shader is always pre-compiled. */
+	if (sel->type == PIPE_SHADER_GEOMETRY) {
+		sel->gs_copy_shader = si_generate_gs_copy_shader(sscreen, tm, sel, debug);
+		if (!sel->gs_copy_shader) {
+			fprintf(stderr, "radeonsi: can't create GS copy shader\n");
+			return;
+		}
+
+		si_shader_vs(sscreen, sel->gs_copy_shader, sel);
+	}
 }
 
 static void *si_create_shader_selector(struct pipe_context *ctx,
@@ -1518,8 +1528,10 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 				si_pm4_delete_state(sctx, vs, shader->pm4);
 			break;
 		case PIPE_SHADER_GEOMETRY:
-			si_pm4_delete_state(sctx, gs, shader->pm4);
-			si_pm4_delete_state(sctx, vs, shader->gs_copy_shader->pm4);
+			if (shader->is_gs_copy_shader)
+				si_pm4_delete_state(sctx, vs, shader->pm4);
+			else
+				si_pm4_delete_state(sctx, gs, shader->pm4);
 			break;
 		case PIPE_SHADER_FRAGMENT:
 			si_pm4_delete_state(sctx, ps, shader->pm4);
@@ -1559,6 +1571,8 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 
 	if (sel->main_shader_part)
 		si_delete_shader(sctx, sel->main_shader_part);
+	if (sel->gs_copy_shader)
+		si_delete_shader(sctx, sel->gs_copy_shader);
 
 	util_queue_fence_destroy(&sel->ready);
 	pipe_mutex_destroy(sel->mutex);
@@ -2215,7 +2229,7 @@ bool si_update_shaders(struct si_context *sctx)
 		if (r)
 			return false;
 		si_pm4_bind_state(sctx, gs, sctx->gs_shader.current->pm4);
-		si_pm4_bind_state(sctx, vs, sctx->gs_shader.current->gs_copy_shader->pm4);
+		si_pm4_bind_state(sctx, vs, sctx->gs_shader.cso->gs_copy_shader->pm4);
 		si_update_so(sctx, sctx->gs_shader.cso);
 
 		if (!si_update_gs_ring_buffers(sctx))
