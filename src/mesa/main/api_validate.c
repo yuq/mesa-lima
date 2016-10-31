@@ -197,8 +197,8 @@ _mesa_valid_to_render(struct gl_context *ctx, const char *where)
       gl_shader_stage i;
 
       for (i = 0; i < MESA_SHADER_STAGES; i++) {
-	 if (shProg[i] == NULL || shProg[i]->_Used
-	     || shProg[i]->_LinkedShaders[i] == NULL)
+	 if (shProg[i] == NULL || shProg[i]->_LinkedShaders[i] == NULL ||
+             shProg[i]->_LinkedShaders[i]->Program->_Used)
 	    continue;
 
 	 /* This is the first time this shader is being used.
@@ -214,8 +214,8 @@ _mesa_valid_to_render(struct gl_context *ctx, const char *where)
       }
 
       for (i = 0; i < MESA_SHADER_STAGES; i++) {
-	 if (shProg[i] != NULL)
-	    shProg[i]->_Used = GL_TRUE;
+	 if (shProg[i] != NULL && shProg[i]->_LinkedShaders[i] != NULL)
+	    shProg[i]->_LinkedShaders[i]->Program->_Used = GL_TRUE;
       }
    }
 #endif

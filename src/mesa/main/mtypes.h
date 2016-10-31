@@ -1921,6 +1921,8 @@ struct gl_program
    GLenum Target;    /**< GL_VERTEX/FRAGMENT_PROGRAM_ARB, GL_GEOMETRY_PROGRAM_NV */
    GLenum Format;    /**< String encoding format */
 
+   GLboolean _Used;        /**< Ever used for drawing? Used for debugging */
+
    struct nir_shader *nir;
 
    GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
@@ -2842,7 +2844,6 @@ struct gl_shader_program
     */
    struct string_to_uint_map *UniformHash;
 
-   GLboolean _Used;        /**< Ever used for drawing? */
    GLboolean SamplersValidated; /**< Samplers validated against texture units? */
 
    bool IsES;              /**< True if this program uses GLSL ES */
