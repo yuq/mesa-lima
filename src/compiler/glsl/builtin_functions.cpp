@@ -1200,23 +1200,19 @@ builtin_builder::create_builtins()
                 _##NAME(fp64, glsl_type::dvec4_type),  \
                 NULL);
 
-#define FIUD(NAME)                                                 \
+#define FIUD_VEC(NAME)                                            \
    add_function(#NAME,                                            \
-                _##NAME(always_available, glsl_type::float_type), \
                 _##NAME(always_available, glsl_type::vec2_type),  \
                 _##NAME(always_available, glsl_type::vec3_type),  \
                 _##NAME(always_available, glsl_type::vec4_type),  \
                                                                   \
-                _##NAME(always_available, glsl_type::int_type),   \
                 _##NAME(always_available, glsl_type::ivec2_type), \
                 _##NAME(always_available, glsl_type::ivec3_type), \
                 _##NAME(always_available, glsl_type::ivec4_type), \
                                                                   \
-                _##NAME(v130, glsl_type::uint_type),              \
                 _##NAME(v130, glsl_type::uvec2_type),             \
                 _##NAME(v130, glsl_type::uvec3_type),             \
                 _##NAME(v130, glsl_type::uvec4_type),             \
-                _##NAME(fp64, glsl_type::double_type), \
                 _##NAME(fp64, glsl_type::dvec2_type),  \
                 _##NAME(fp64, glsl_type::dvec3_type),  \
                 _##NAME(fp64, glsl_type::dvec4_type),  \
@@ -1235,29 +1231,24 @@ builtin_builder::create_builtins()
                 _##NAME(glsl_type::uvec4_type), \
                 NULL);
 
-#define FIUBD(NAME)                                                \
+#define FIUBD_VEC(NAME)                                           \
    add_function(#NAME,                                            \
-                _##NAME(always_available, glsl_type::float_type), \
                 _##NAME(always_available, glsl_type::vec2_type),  \
                 _##NAME(always_available, glsl_type::vec3_type),  \
                 _##NAME(always_available, glsl_type::vec4_type),  \
                                                                   \
-                _##NAME(always_available, glsl_type::int_type),   \
                 _##NAME(always_available, glsl_type::ivec2_type), \
                 _##NAME(always_available, glsl_type::ivec3_type), \
                 _##NAME(always_available, glsl_type::ivec4_type), \
                                                                   \
-                _##NAME(v130, glsl_type::uint_type),              \
                 _##NAME(v130, glsl_type::uvec2_type),             \
                 _##NAME(v130, glsl_type::uvec3_type),             \
                 _##NAME(v130, glsl_type::uvec4_type),             \
                                                                   \
-                _##NAME(always_available, glsl_type::bool_type),  \
                 _##NAME(always_available, glsl_type::bvec2_type), \
                 _##NAME(always_available, glsl_type::bvec3_type), \
                 _##NAME(always_available, glsl_type::bvec4_type), \
                                                                   \
-                _##NAME(fp64, glsl_type::double_type),  \
                 _##NAME(fp64, glsl_type::dvec2_type), \
                 _##NAME(fp64, glsl_type::dvec3_type), \
                 _##NAME(fp64, glsl_type::dvec4_type), \
@@ -1573,12 +1564,12 @@ builtin_builder::create_builtins()
                 _transpose(fp64, glsl_type::dmat4x2_type),
                 _transpose(fp64, glsl_type::dmat4x3_type),
                 NULL);
-   FIUD(lessThan)
-   FIUD(lessThanEqual)
-   FIUD(greaterThan)
-   FIUD(greaterThanEqual)
-   FIUBD(notEqual)
-   FIUBD(equal)
+   FIUD_VEC(lessThan)
+   FIUD_VEC(lessThanEqual)
+   FIUD_VEC(greaterThan)
+   FIUD_VEC(greaterThanEqual)
+   FIUBD_VEC(notEqual)
+   FIUBD_VEC(equal)
 
    add_function("any",
                 _any(glsl_type::bvec2_type),
@@ -2993,8 +2984,8 @@ builtin_builder::create_builtins()
 
 #undef F
 #undef FI
-#undef FIUD
-#undef FIUBD
+#undef FIUD_VEC
+#undef FIUBD_VEC
 #undef FIU2_MIXED
 }
 
