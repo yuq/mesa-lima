@@ -210,7 +210,7 @@ _mesa_valid_to_render(struct gl_context *ctx, const char *where)
 	  * program isn't also bound to the fragment shader target we don't
 	  * want to log its fragment data.
 	  */
-	 _mesa_append_uniforms_to_file(shProg[i]->_LinkedShaders[i]);
+	 _mesa_append_uniforms_to_file(shProg[i]->_LinkedShaders[i]->Program);
       }
 
       for (i = 0; i < MESA_SHADER_STAGES; i++) {
