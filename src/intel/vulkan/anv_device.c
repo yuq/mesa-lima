@@ -812,7 +812,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    ret = anv_gem_execbuffer(device, &execbuf);
    if (ret != 0) {
       /* We don't know the real error. */
-      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
+      result = vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
       goto fail;
    }
 
@@ -820,7 +820,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    ret = anv_gem_wait(device, bo.gem_handle, &timeout);
    if (ret != 0) {
       /* We don't know the real error. */
-      result = vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY, "execbuf2 failed: %m");
+      result = vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
       goto fail;
    }
 
@@ -1090,8 +1090,7 @@ VkResult anv_QueueSubmit(
          ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
          if (ret != 0) {
             /* We don't know the real error. */
-            return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                             "execbuf2 failed: %m");
+            return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
          }
 
          for (uint32_t k = 0; k < cmd_buffer->execbuf2.bo_count; k++)
@@ -1103,8 +1102,7 @@ VkResult anv_QueueSubmit(
       ret = anv_gem_execbuffer(device, &fence->execbuf);
       if (ret != 0) {
          /* We don't know the real error. */
-         return vk_errorf(VK_ERROR_OUT_OF_DEVICE_MEMORY,
-                          "execbuf2 failed: %m");
+         return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
       }
    }
 
