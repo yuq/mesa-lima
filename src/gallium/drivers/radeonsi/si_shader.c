@@ -6080,33 +6080,41 @@ static void si_llvm_build_ret(struct si_shader_context *ctx, LLVMValueRef ret)
 }
 
 /* Generate code for the hardware VS shader stage to go with a geometry shader */
-static int si_generate_gs_copy_shader(struct si_screen *sscreen,
-				      struct si_shader_context *ctx,
-				      struct si_shader *gs,
-				      struct pipe_debug_callback *debug)
+static struct si_shader *
+si_generate_gs_copy_shader(struct si_screen *sscreen,
+			   LLVMTargetMachineRef tm,
+			   struct si_shader_selector *gs_selector,
+			   struct pipe_debug_callback *debug)
 {
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
+	struct si_shader_context ctx;
+	struct si_shader *shader;
+	struct gallivm_state *gallivm = &ctx.gallivm;
+	struct lp_build_tgsi_context *bld_base = &ctx.soa.bld_base;
 	struct lp_build_context *uint = &bld_base->uint_bld;
 	struct si_shader_output_values *outputs;
-	struct tgsi_shader_info *gsinfo = &gs->selector->info;
+	struct tgsi_shader_info *gsinfo = &gs_selector->info;
 	LLVMValueRef args[9];
 	int i, r;
 
 	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
 
-	si_init_shader_ctx(ctx, sscreen, ctx->shader, ctx->tm);
-	ctx->type = PIPE_SHADER_VERTEX;
-	ctx->is_gs_copy_shader = true;
+	shader = CALLOC_STRUCT(si_shader);
+	if (!shader)
+		return NULL;
 
-	create_meta_data(ctx);
-	create_function(ctx);
-	preload_ring_buffers(ctx);
+	shader->selector = gs_selector;
+	si_init_shader_ctx(&ctx, sscreen, shader, tm);
+	ctx.type = PIPE_SHADER_VERTEX;
+	ctx.is_gs_copy_shader = true;
 
-	args[0] = ctx->gsvs_ring[0];
+	create_meta_data(&ctx);
+	create_function(&ctx);
+	preload_ring_buffers(&ctx);
+
+	args[0] = ctx.gsvs_ring[0];
 	args[1] = lp_build_mul_imm(uint,
-				   LLVMGetParam(ctx->main_fn,
-						ctx->param_vertex_id),
+				   LLVMGetParam(ctx.main_fn,
+						ctx.param_vertex_id),
 				   4);
 	args[3] = uint->zero;
 	args[4] = uint->one;  /* OFFEN */
@@ -6125,15 +6133,15 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 		for (chan = 0; chan < 4; chan++) {
 			args[2] = lp_build_const_int32(gallivm,
 						       (i * 4 + chan) *
-						       gs->selector->gs_max_out_vertices * 16 * 4);
+						       gs_selector->gs_max_out_vertices * 16 * 4);
 
 			outputs[i].values[chan] =
 				LLVMBuildBitCast(gallivm->builder,
 						 lp_build_intrinsic(gallivm->builder,
 								 "llvm.SI.buffer.load.dword.i32.i32",
-								 ctx->i32, args, 9,
+								 ctx.i32, args, 9,
 								 LLVMReadOnlyAttribute),
-						 ctx->f32, "");
+						 ctx.f32, "");
 		}
 	}
 
@@ -6146,26 +6154,31 @@ static int si_generate_gs_copy_shader(struct si_screen *sscreen,
 	    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 		LLVMDumpModule(bld_base->base.gallivm->module);
 
-	si_llvm_finalize_module(ctx,
+	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_GEOMETRY));
 
-	r = si_compile_llvm(sscreen, &ctx->shader->binary,
-			    &ctx->shader->config, ctx->tm,
+	r = si_compile_llvm(sscreen, &ctx.shader->binary,
+			    &ctx.shader->config, ctx.tm,
 			    bld_base->base.gallivm->module,
 			    debug, PIPE_SHADER_GEOMETRY,
 			    "GS Copy Shader");
 	if (!r) {
 		if (r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 			fprintf(stderr, "GS Copy Shader:\n");
-		si_shader_dump(sscreen, ctx->shader, debug,
+		si_shader_dump(sscreen, ctx.shader, debug,
 			       PIPE_SHADER_GEOMETRY, stderr);
-		r = si_shader_binary_upload(sscreen, ctx->shader);
+		r = si_shader_binary_upload(sscreen, ctx.shader);
 	}
 
-	si_llvm_dispose(ctx);
+	si_llvm_dispose(&ctx);
 
 	FREE(outputs);
-	return r;
+
+	if (r != 0) {
+		FREE(shader);
+		shader = NULL;
+	}
+	return shader;
 }
 
 static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
@@ -7138,16 +7151,10 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	if (ctx.type == PIPE_SHADER_GEOMETRY) {
-		shader->gs_copy_shader = CALLOC_STRUCT(si_shader);
-		shader->gs_copy_shader->selector = shader->selector;
-		ctx.shader = shader->gs_copy_shader;
-		r = si_generate_gs_copy_shader(sscreen, &ctx,
-					       shader, debug);
-		if (r) {
-			free(shader->gs_copy_shader);
-			shader->gs_copy_shader = NULL;
-			return r;
-		}
+		shader->gs_copy_shader =
+			si_generate_gs_copy_shader(sscreen, tm, shader->selector, debug);
+		if (!shader->gs_copy_shader)
+			return -1;
 	}
 
 	return 0;
