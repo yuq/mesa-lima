@@ -2203,6 +2203,7 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       for (int i = 0; i < 3; i++)
          dst->info.cs.local_size[i] = src->Comp.LocalSize[i];
       dst->info.cs.shared_size = src->Comp.SharedSize;
+      dst->info.cs.local_size_variable = src->Comp.LocalSizeVariable;
       break;
    }
    default:
