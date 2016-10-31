@@ -2652,6 +2652,9 @@ struct gl_shader_program_data
    GLboolean LinkStatus;   /**< GL_LINK_STATUS */
    GLboolean Validated;
    GLchar *InfoLog;
+
+   /* Mask of stages this program was linked against */
+   unsigned linked_stages;
 };
 
 /**

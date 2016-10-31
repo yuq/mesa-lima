@@ -4889,6 +4889,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          }
 
          prog->_LinkedShaders[stage] = sh;
+         prog->data->linked_stages |= 1 << stage;
       }
    }
 
