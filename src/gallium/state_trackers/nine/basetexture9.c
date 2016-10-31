@@ -203,17 +203,6 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
         pipe_sampler_view_reference(&This->view[0], NULL);
         pipe_sampler_view_reference(&This->view[1], NULL);
 
-        if (This->bind_count) {
-            /* mark state dirty */
-            struct nine_state *state = &This->base.base.device->state;
-            struct nine_context *context = &This->base.base.device->context;
-            unsigned s;
-            for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
-                /* Dirty tracking is done in device9 state, not nine_context. */
-                if (state->texture[s] == This)
-                    context->changed.group |= NINE_STATE_TEXTURE;
-        }
-
         /* Allocate a new resource */
         hr = NineBaseTexture9_CreatePipeResource(This, This->managed.lod_resident != -1);
         if (FAILED(hr))
@@ -377,6 +366,16 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 
     if (This->base.usage & D3DUSAGE_AUTOGENMIPMAP)
         This->dirty_mip = TRUE;
+
+    /* Set again the textures currently bound to update the texture data */
+    if (This->bind_count) {
+        struct nine_state *state = &This->base.base.device->state;
+        unsigned s;
+        for (s = 0; s < NINE_MAX_SAMPLERS; ++s)
+            /* Dirty tracking is done in device9 state, not nine_context. */
+            if (state->texture[s] == This)
+                nine_context_set_texture(This->base.base.device, s, This);
+    }
 
     DBG("DONE, generate mip maps = %i\n", This->dirty_mip);
     return D3D_OK;

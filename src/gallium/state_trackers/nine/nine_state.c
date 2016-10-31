@@ -656,20 +656,20 @@ update_sampler_derived(struct nine_context *context, unsigned s)
 {
     boolean changed = FALSE;
 
-    if (context->samp[s][NINED3DSAMP_SHADOW] != context->texture[s]->shadow) {
+    if (context->samp[s][NINED3DSAMP_SHADOW] != context->texture[s].shadow) {
         changed = TRUE;
-        context->samp[s][NINED3DSAMP_SHADOW] = context->texture[s]->shadow;
+        context->samp[s][NINED3DSAMP_SHADOW] = context->texture[s].shadow;
     }
 
     if (context->samp[s][NINED3DSAMP_CUBETEX] !=
-        (NineResource9(context->texture[s])->type == D3DRTYPE_CUBETEXTURE)) {
+        (context->texture[s].type == D3DRTYPE_CUBETEXTURE)) {
         changed = TRUE;
         context->samp[s][NINED3DSAMP_CUBETEX] =
-                NineResource9(context->texture[s])->type == D3DRTYPE_CUBETEXTURE;
+                context->texture[s].type == D3DRTYPE_CUBETEXTURE;
     }
 
     if (context->samp[s][D3DSAMP_MIPFILTER] != D3DTEXF_NONE) {
-        int lod = context->samp[s][D3DSAMP_MAXMIPLEVEL] - context->texture[s]->managed.lod;
+        int lod = context->samp[s][D3DSAMP_MAXMIPLEVEL] - context->texture[s].lod;
         if (lod < 0)
             lod = 0;
         if (context->samp[s][NINED3DSAMP_MINLOD] != lod) {
@@ -703,15 +703,15 @@ update_textures_and_samplers(struct NineDevice9 *device)
         const unsigned s = NINE_SAMPLER_PS(i);
         int sRGB;
 
-        if (!context->texture[s] && !(sampler_mask & (1 << i))) {
+        if (!context->texture[s].enabled && !(sampler_mask & (1 << i))) {
             view[i] = NULL;
             continue;
         }
 
-        if (context->texture[s]) {
+        if (context->texture[s].enabled) {
             sRGB = context->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
-            view[i] = NineBaseTexture9_GetSamplerView(context->texture[s], sRGB);
+            view[i] = context->texture[s].view[sRGB];
             num_textures = i + 1;
 
             if (update_sampler_derived(context, s) || (context->changed.sampler[s] & 0x05fe)) {
@@ -751,15 +751,15 @@ update_textures_and_samplers(struct NineDevice9 *device)
         const unsigned s = NINE_SAMPLER_VS(i);
         int sRGB;
 
-        if (!context->texture[s] && !(sampler_mask & (1 << i))) {
+        if (!context->texture[s].enabled && !(sampler_mask & (1 << i))) {
             view[i] = NULL;
             continue;
         }
 
-        if (context->texture[s]) {
+        if (context->texture[s].enabled) {
             sRGB = context->samp[s][D3DSAMP_SRGBTEXTURE] ? 1 : 0;
 
-            view[i] = NineBaseTexture9_GetSamplerView(context->texture[s], sRGB);
+            view[i] = context->texture[s].view[sRGB];
             num_textures = i + 1;
 
             if (update_sampler_derived(context, s) || (context->changed.sampler[s] & 0x05fe)) {
@@ -1043,18 +1043,17 @@ NineDevice9_ResolveZ( struct NineDevice9 *device )
     struct nine_context *context = &device->context;
     const struct util_format_description *desc;
     struct NineSurface9 *source = context->ds;
-    struct NineBaseTexture9 *destination = context->texture[0];
     struct pipe_resource *src, *dst;
     struct pipe_blit_info blit;
 
     DBG("RESZ resolve\n");
 
-    if (!source || !destination ||
-        destination->base.type != D3DRTYPE_TEXTURE)
+    if (!source || !context->texture[0].enabled ||
+        context->texture[0].type != D3DRTYPE_TEXTURE)
         return;
 
     src = source->base.resource;
-    dst = destination->base.resource;
+    dst = context->texture[0].resource;
 
     if (!src || !dst)
         return;
@@ -1146,10 +1145,31 @@ nine_context_set_texture(struct NineDevice9 *device,
     struct nine_context *context = &device->context;
 
     context->samplers_shadow &= ~(1 << Stage);
-    if (tex)
+    /* For managed pool, the data can be initially incomplete.
+     * In that case, the texture is rebound later
+     * (in NineBaseTexture9_Validate/NineBaseTexture9_UploadSelf). */
+    if (tex && tex->base.resource) {
         context->samplers_shadow |= tex->shadow << Stage;
-
-    nine_bind(&context->texture[Stage], tex);
+        context->texture[Stage].enabled = TRUE;
+        context->texture[Stage].shadow = tex->shadow;
+        context->texture[Stage].lod = tex->managed.lod;
+        context->texture[Stage].type = tex->base.type;
+        context->texture[Stage].pstype = tex->pstype;
+        pipe_resource_reference(&context->texture[Stage].resource,
+                                tex->base.resource);
+        pipe_sampler_view_reference(&context->texture[Stage].view[0],
+                                    NineBaseTexture9_GetSamplerView(tex, 0));
+        pipe_sampler_view_reference(&context->texture[Stage].view[1],
+                                    NineBaseTexture9_GetSamplerView(tex, 1));
+    } else {
+        context->texture[Stage].enabled = FALSE;
+        pipe_resource_reference(&context->texture[Stage].resource,
+                                NULL);
+        pipe_sampler_view_reference(&context->texture[Stage].view[0],
+                                    NULL);
+        pipe_sampler_view_reference(&context->texture[Stage].view[1],
+                                    NULL);
+    }
 
     context->changed.group |= NINE_STATE_TEXTURE;
 }
@@ -1601,15 +1621,11 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         uint32_t m = src->changed.texture;
         unsigned s;
 
-        context->samplers_shadow &= ~m;
-
         for (s = 0; m; ++s, m >>= 1) {
             struct NineBaseTexture9 *tex = src->texture[s];
             if (!(m & 1))
                 continue;
-            if (tex)
-                context->samplers_shadow |= tex->shadow << s;
-            nine_bind(&context->texture[s], src->texture[s]);
+            nine_context_set_texture(device, s, tex);
         }
     }
 
@@ -2424,8 +2440,15 @@ nine_context_clear(struct NineDevice9 *device)
         pipe_resource_reference(&context->vtxbuf[i].buffer, NULL);
     pipe_resource_reference(&context->idxbuf.buffer, NULL);
 
-    for (i = 0; i < NINE_MAX_SAMPLERS; ++i)
-        nine_bind(&context->texture[i], NULL);
+    for (i = 0; i < NINE_MAX_SAMPLERS; ++i) {
+        context->texture[i].enabled = FALSE;
+        pipe_resource_reference(&context->texture[i].resource,
+                                NULL);
+        pipe_sampler_view_reference(&context->texture[i].view[0],
+                                    NULL);
+        pipe_sampler_view_reference(&context->texture[i].view[1],
+                                    NULL);
+    }
 }
 
 void

@@ -80,7 +80,7 @@ NinePixelShader9_UpdateKey( struct NinePixelShader9 *ps,
         while (m) {
             int s = ffs(m) - 1;
             m &= ~(1 << s);
-            samplers_ps1_types |= (context->texture[s] ? context->texture[s]->pstype : 1) << (s * 2);
+            samplers_ps1_types |= (context->texture[s].enabled ? context->texture[s].pstype : 1) << (s * 2);
         }
         key = samplers_ps1_types;
     } else {

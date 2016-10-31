@@ -277,7 +277,15 @@ struct nine_context {
 
     DWORD rs[NINED3DRS_COUNT];
 
-    struct NineBaseTexture9 *texture[NINE_MAX_SAMPLERS];
+    struct {
+        BOOL enabled;
+        BOOL shadow;
+        DWORD lod;
+        D3DRESOURCETYPE type;
+        struct pipe_resource *resource;
+        struct pipe_sampler_view *view[2];
+        uint8_t pstype;
+    } texture[NINE_MAX_SAMPLERS];
 
     DWORD samp[NINE_MAX_SAMPLERS][NINED3DSAMP_COUNT];
 
