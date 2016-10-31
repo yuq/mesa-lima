@@ -52,7 +52,6 @@ struct si_shader_context {
 	struct si_screen *screen;
 
 	unsigned type; /* PIPE_SHADER_* specifies the type of shader. */
-	bool is_gs_copy_shader;
 
 	/* Whether the prolog will be compiled separately. */
 	bool separate_prolog;

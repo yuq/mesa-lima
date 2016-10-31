@@ -2666,7 +2666,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 	struct si_shader_output_values *outputs = NULL;
 	int i,j;
 
-	assert(!ctx->is_gs_copy_shader);
+	assert(!ctx->shader->is_gs_copy_shader);
 
 	outputs = MALLOC((info->num_outputs + 1) * sizeof(outputs[0]));
 
@@ -5312,7 +5312,7 @@ static void create_function(struct si_shader_context *ctx)
 			params[SI_PARAM_LS_OUT_LAYOUT] = ctx->i32;
 			num_params = SI_PARAM_LS_OUT_LAYOUT+1;
 		} else {
-			if (ctx->is_gs_copy_shader) {
+			if (shader->is_gs_copy_shader) {
 				num_params = SI_PARAM_RW_BUFFERS+1;
 			} else {
 				params[SI_PARAM_VS_STATE_BITS] = ctx->i32;
@@ -5332,7 +5332,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_vs_prim_id = num_params++] = ctx->i32;
 		params[ctx->param_instance_id = num_params++] = ctx->i32;
 
-		if (!ctx->is_gs_copy_shader) {
+		if (!shader->is_gs_copy_shader) {
 			/* Vertex load indices. */
 			ctx->param_vertex_index0 = num_params;
 
@@ -5340,9 +5340,7 @@ static void create_function(struct si_shader_context *ctx)
 				params[num_params++] = ctx->i32;
 
 			num_prolog_vgprs += shader->selector->info.num_inputs;
-		}
 
-		if (!ctx->is_gs_copy_shader) {
 			/* PrimitiveID output. */
 			if (!shader->key.vs.as_es && !shader->key.vs.as_ls)
 				for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
@@ -5583,7 +5581,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 			build_indexed_load_const(ctx, buf_ptr, offset);
 	}
 
-	if (ctx->is_gs_copy_shader) {
+	if (ctx->shader->is_gs_copy_shader) {
 		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_VS_RING_GSVS);
 
 		ctx->gsvs_ring[0] =
@@ -6107,7 +6105,6 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.type = PIPE_SHADER_VERTEX;
-	ctx.is_gs_copy_shader = true;
 
 	create_meta_data(&ctx);
 	create_function(&ctx);
