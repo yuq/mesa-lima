@@ -524,7 +524,7 @@ static void si_shader_gs(struct si_shader *shader)
  * is the copy shader.
  */
 static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
-                         struct si_shader *gs)
+                         struct si_shader_selector *gs)
 {
 	struct si_pm4_state *pm4;
 	unsigned num_user_sgprs;
@@ -836,7 +836,7 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		si_shader_gs(shader);
-		si_shader_vs(sscreen, shader->gs_copy_shader, shader);
+		si_shader_vs(sscreen, shader->gs_copy_shader, shader->selector);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		si_shader_ps(shader);
