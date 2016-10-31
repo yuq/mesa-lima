@@ -257,38 +257,11 @@ static const struct nvc0_hw_metric_query_cfg *sm21_hw_metric_queries[] =
 
 /* ==== Compute capability 3.0 (GK104/GK106/GK107) ==== */
 static const struct nvc0_hw_metric_query_cfg
-sm30_achieved_occupancy =
-{
-   .type        = NVC0_HW_METRIC_QUERY_ACHIEVED_OCCUPANCY,
-   .queries[0]  = _SM(ACTIVE_WARPS),
-   .queries[1]  = _SM(ACTIVE_CYCLES),
-   .num_queries = 2,
-};
-
-static const struct nvc0_hw_metric_query_cfg
-sm30_branch_efficiency =
-{
-   .type        = NVC0_HW_METRIC_QUERY_BRANCH_EFFICIENCY,
-   .queries[0]  = _SM(BRANCH),
-   .queries[1]  = _SM(DIVERGENT_BRANCH),
-   .num_queries = 2,
-};
-
-static const struct nvc0_hw_metric_query_cfg
 sm30_inst_issued =
 {
    .type        = NVC0_HW_METRIC_QUERY_INST_ISSUED,
    .queries[0]  = _SM(INST_ISSUED1),
    .queries[1]  = _SM(INST_ISSUED2),
-   .num_queries = 2,
-};
-
-static const struct nvc0_hw_metric_query_cfg
-sm30_inst_per_wrap =
-{
-   .type        = NVC0_HW_METRIC_QUERY_INST_PER_WRAP,
-   .queries[0]  = _SM(INST_EXECUTED),
-   .queries[1]  = _SM(WARPS_LAUNCHED),
    .num_queries = 2,
 };
 
@@ -332,15 +305,6 @@ sm30_issue_slot_utilization =
 };
 
 static const struct nvc0_hw_metric_query_cfg
-sm30_ipc =
-{
-   .type        = NVC0_HW_METRIC_QUERY_IPC,
-   .queries[0]  = _SM(INST_EXECUTED),
-   .queries[1]  = _SM(ACTIVE_CYCLES),
-   .num_queries = 2,
-};
-
-static const struct nvc0_hw_metric_query_cfg
 sm30_shared_replay_overhead =
 {
    .type        = NVC0_HW_METRIC_QUERY_SHARED_REPLAY_OVERHEAD,
@@ -352,29 +316,29 @@ sm30_shared_replay_overhead =
 
 static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
 {
-   &sm30_achieved_occupancy,
-   &sm30_branch_efficiency,
+   &sm20_achieved_occupancy,
+   &sm20_branch_efficiency,
    &sm30_inst_issued,
-   &sm30_inst_per_wrap,
+   &sm20_inst_per_wrap,
    &sm30_inst_replay_overhead,
    &sm30_issued_ipc,
    &sm30_issue_slots,
    &sm30_issue_slot_utilization,
-   &sm30_ipc,
+   &sm20_ipc,
    &sm30_shared_replay_overhead,
 };
 
 /* ==== Compute capability 3.5 (GK110) ==== */
 static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
 {
-   &sm30_achieved_occupancy,
+   &sm20_achieved_occupancy,
    &sm30_inst_issued,
-   &sm30_inst_per_wrap,
+   &sm20_inst_per_wrap,
    &sm30_inst_replay_overhead,
    &sm30_issued_ipc,
    &sm30_inst_issued,
    &sm30_issue_slot_utilization,
-   &sm30_ipc,
+   &sm20_ipc,
    &sm30_shared_replay_overhead,
 };
 
