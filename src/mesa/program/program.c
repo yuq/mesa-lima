@@ -190,6 +190,7 @@ _mesa_init_gl_program(struct gl_program *prog, GLenum target, GLuint id)
    prog->Target = target;
    prog->RefCount = 1;
    prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
+   prog->info.stage = _mesa_program_enum_to_shader_stage(target);
 
    /* default mapping from samplers to texture units */
    for (i = 0; i < MAX_SAMPLERS; i++)
