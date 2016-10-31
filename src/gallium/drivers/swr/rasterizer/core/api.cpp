@@ -115,8 +115,7 @@ HANDLE SwrCreateContext(
 #if defined(KNOB_ENABLE_AR)
     // Setup ArchRast thread contexts which includes +1 for API thread.
     pContext->pArContext = new HANDLE[pContext->NumWorkerThreads+1];
-    pContext->pArContext[pContext->NumWorkerThreads] = ArchRast::CreateThreadContext();
-    _AR_EVENT(pContext->pArContext[pContext->NumWorkerThreads], ThreadStartApiEvent());
+    pContext->pArContext[pContext->NumWorkerThreads] = ArchRast::CreateThreadContext(ArchRast::AR_THREAD::API);
 #endif
 
     // Allocate scratch space for workers.
@@ -136,8 +135,7 @@ HANDLE SwrCreateContext(
 
 #if defined(KNOB_ENABLE_AR)
         // Initialize worker thread context for ArchRast.
-        pContext->pArContext[i] = ArchRast::CreateThreadContext();
-        _AR_EVENT(pContext->pArContext[i], ThreadStartWorkerEvent());
+        pContext->pArContext[i] = ArchRast::CreateThreadContext(ArchRast::AR_THREAD::WORKER);
 #endif
     }
 

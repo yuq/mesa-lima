@@ -32,7 +32,13 @@
 
 namespace ArchRast
 {
-    HANDLE CreateThreadContext();
+    enum class AR_THREAD
+    {
+        API = 0,
+        WORKER = 1
+    };
+
+    HANDLE CreateThreadContext(AR_THREAD type);
     void DestroyThreadContext(HANDLE hThreadContext);
 
     // Dispatch event for this thread.

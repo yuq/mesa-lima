@@ -53,18 +53,30 @@ namespace ArchRast
     }
 
     // Construct an event manager and associate a handler with it.
-    HANDLE CreateThreadContext()
+    HANDLE CreateThreadContext(AR_THREAD type)
     {
         // Can we assume single threaded here?
         static std::atomic<uint32_t> counter(0);
         uint32_t id = counter.fetch_add(1);
 
         EventManager* pManager = new EventManager();
-        EventHandler* pHandler = new EventHandlerStatsFile(id);
+        EventHandlerFile* pHandler = new EventHandlerStatsFile(id);
 
         if (pManager && pHandler)
         {
             pManager->Attach(pHandler);
+
+            if (type == AR_THREAD::API)
+            {
+                ThreadStartApiEvent e;
+                pManager->Dispatch(e);
+            }
+            else
+            {
+                ThreadStartWorkerEvent e;
+                pManager->Dispatch(e);
+            }
+            pHandler->MarkHeader();
 
             return pManager;
         }

@@ -81,6 +81,12 @@ namespace ArchRast
         {
             if (mBufOffset > 0)
             {
+                if (mBufOffset == mHeaderBufOffset)
+                {
+                    // Nothing to flush. Only header has been generated.
+                    return false;
+                }
+
                 std::ofstream file;
                 file.open(mFilename, std::ios::out | std::ios::app | std::ios::binary);
 
@@ -94,6 +100,7 @@ namespace ArchRast
                 file.close();
 
                 mBufOffset = 0;
+                mHeaderBufOffset = 0; // Reset header offset so its no longer considered.
             }
             return true;
         }
@@ -121,7 +128,7 @@ namespace ArchRast
 % for name in protos['event_names']:
         //////////////////////////////////////////////////////////////////////////
         /// @brief Handle ${name} event
-        virtual void Handle(${name}& event)
+        virtual void Handle(${name}&& event)
         {
 % if protos['events'][name]['num_fields'] == 0:
             Write(${protos['events'][name]['event_id']}, (char*)&event.data, 0);
@@ -131,10 +138,18 @@ namespace ArchRast
         }
 % endfor
 
+        //////////////////////////////////////////////////////////////////////////
+        /// @brief Everything written to buffer this point is the header.
+        virtual void MarkHeader()
+        {
+            mHeaderBufOffset = mBufOffset;
+        }
+
         std::string mFilename;
 
         static const uint32_t mBufferSize = 1024;
         uint8_t mBuffer[mBufferSize];
         uint32_t mBufOffset{0};
+        uint32_t mHeaderBufOffset{0};
     };
 }
