@@ -1244,23 +1244,39 @@ nine_context_set_stream_source_freq(struct NineDevice9 *device,
         context->changed.group |= NINE_STATE_STREAMFREQ;
 }
 
+static void
+nine_context_set_indices_apply(struct NineDevice9 *device,
+                               struct pipe_resource *res,
+                               UINT IndexSize,
+                               UINT OffsetInBytes)
+{
+    struct nine_context *context = &device->context;
+
+    context->idxbuf.index_size = IndexSize;
+    context->idxbuf.offset = OffsetInBytes;
+    pipe_resource_reference(&context->idxbuf.buffer, res);
+    context->idxbuf.user_buffer = NULL;
+
+    context->changed.group |= NINE_STATE_IDXBUF;
+}
+
 void
 nine_context_set_indices(struct NineDevice9 *device,
                          struct NineIndexBuffer9 *idxbuf)
 {
-    struct nine_context *context = &device->context;
     const struct pipe_index_buffer *pipe_idxbuf;
+    struct pipe_resource *res = NULL;
+    UINT IndexSize = 0;
+    UINT OffsetInBytes = 0;
 
     if (idxbuf) {
         pipe_idxbuf = NineIndexBuffer9_GetBuffer(idxbuf);
-        context->idxbuf.index_size = pipe_idxbuf->index_size;
-        pipe_resource_reference(&context->idxbuf.buffer, pipe_idxbuf->buffer);
-        context->idxbuf.offset = pipe_idxbuf->offset;
-        context->idxbuf.user_buffer = NULL;
-    } else
-        pipe_resource_reference(&context->idxbuf.buffer, NULL);
+        IndexSize = pipe_idxbuf->index_size;
+        res = pipe_idxbuf->buffer;
+        OffsetInBytes = pipe_idxbuf->offset;
+    }
 
-    context->changed.group |= NINE_STATE_IDXBUF;
+    nine_context_set_indices_apply(device, res, IndexSize, OffsetInBytes);
 }
 
 void
