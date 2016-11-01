@@ -81,7 +81,7 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
 
    blorp->upload_shader(blorp, &blorp_key, sizeof(blorp_key),
                         program, program_size,
-                        &prog_data, sizeof(prog_data),
+                        &prog_data.base, sizeof(prog_data),
                         &params->wm_prog_kernel, &params->wm_prog_data);
 
    ralloc_free(mem_ctx);

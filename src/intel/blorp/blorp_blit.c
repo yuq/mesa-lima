@@ -1252,7 +1252,7 @@ brw_blorp_get_blit_kernel(struct blorp_context *blorp,
 
    blorp->upload_shader(blorp, prog_key, sizeof(*prog_key),
                         program, program_size,
-                        &prog_data, sizeof(prog_data),
+                        &prog_data.base, sizeof(prog_data),
                         &params->wm_prog_kernel, &params->wm_prog_data);
 
    ralloc_free(mem_ctx);
