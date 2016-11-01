@@ -39,6 +39,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
 {
     struct NineDevice9 *device;
     struct nine_shader_info info;
+    struct pipe_context *pipe;
     HRESULT hr;
     unsigned i;
 
@@ -55,6 +56,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     }
 
     device = This->base.device;
+    pipe = NineDevice9_GetPipe(device);
 
     info.type = PIPE_SHADER_VERTEX;
     info.byte_code = pFunction;
@@ -68,12 +70,12 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     info.swvp_on = !!(device->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING);
     info.process_vertices = false;
 
-    hr = nine_translate_shader(device, &info);
+    hr = nine_translate_shader(device, &info, pipe);
     if (hr == D3DERR_INVALIDCALL &&
         (device->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)) {
         /* Retry with a swvp shader. It will require swvp to be on. */
         info.swvp_on = true;
-        hr = nine_translate_shader(device, &info);
+        hr = nine_translate_shader(device, &info, pipe);
     }
     if (hr == D3DERR_INVALIDCALL)
         ERR("Encountered buggy shader\n");
@@ -168,6 +170,9 @@ NineVertexShader9_GetFunction( struct NineVertexShader9 *This,
 void *
 NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
 {
+    /* GetVariant is called from nine_context, thus we can
+     * get pipe directly */
+    struct pipe_context *pipe = This->base.device->context.pipe;
     void *cso;
     uint64_t key;
 
@@ -192,7 +197,7 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
         info.swvp_on = device->swvp;
         info.process_vertices = false;
 
-        hr = nine_translate_shader(This->base.device, &info);
+        hr = nine_translate_shader(This->base.device, &info, pipe);
         if (FAILED(hr))
             return NULL;
         nine_shader_variant_add(&This->variant, key, info.cso);
@@ -229,7 +234,7 @@ NineVertexShader9_GetVariantProcessVertices( struct NineVertexShader9 *This,
     info.swvp_on = true;
     info.vdecl_out = vdecl_out;
     info.process_vertices = true;
-    hr = nine_translate_shader(This->base.device, &info);
+    hr = nine_translate_shader(This->base.device, &info, This->base.device->pipe_sw);
     if (FAILED(hr))
         return NULL;
     *so = info.so;

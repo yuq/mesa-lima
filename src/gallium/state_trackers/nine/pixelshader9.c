@@ -37,6 +37,7 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
 {
     struct NineDevice9 *device;
     struct nine_shader_info info;
+    struct pipe_context *pipe;
     HRESULT hr;
 
     DBG("This=%p pParams=%p pFunction=%p cso=%p\n", This, pParams, pFunction, cso);
@@ -50,6 +51,7 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
         return D3D_OK;
     }
     device = This->base.device;
+    pipe = NineDevice9_GetPipe(device);
 
     info.type = PIPE_SHADER_FRAGMENT;
     info.byte_code = pFunction;
@@ -61,7 +63,7 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
     info.projected = 0;
     info.process_vertices = false;
 
-    hr = nine_translate_shader(device, &info);
+    hr = nine_translate_shader(device, &info, pipe);
     if (FAILED(hr))
         return hr;
     This->byte_code.version = info.version;
@@ -140,6 +142,9 @@ NinePixelShader9_GetFunction( struct NinePixelShader9 *This,
 void *
 NinePixelShader9_GetVariant( struct NinePixelShader9 *This )
 {
+    /* GetVariant is called from nine_context, thus we can
+     * get pipe directly */
+    struct pipe_context *pipe = This->base.device->context.pipe;
     void *cso;
     uint64_t key;
 
@@ -165,7 +170,7 @@ NinePixelShader9_GetVariant( struct NinePixelShader9 *This )
         info.projected = (key >> 48) & 0xffff;
         info.process_vertices = false;
 
-        hr = nine_translate_shader(This->base.device, &info);
+        hr = nine_translate_shader(This->base.device, &info, pipe);
         if (FAILED(hr))
             return NULL;
         nine_shader_variant_add(&This->variant, key, info.cso);
