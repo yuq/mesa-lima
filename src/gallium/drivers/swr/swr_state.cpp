@@ -1205,6 +1205,7 @@ swr_update_derived(struct pipe_context *pipe,
       struct pipe_depth_state *depth = &(ctx->depth_stencil->depth);
       struct pipe_stencil_state *stencil = ctx->depth_stencil->stencil;
       SWR_DEPTH_STENCIL_STATE depthStencilState = {{0}};
+      SWR_DEPTH_BOUNDS_STATE depthBoundsState = {0};
 
       /* XXX, incomplete.  Need to flesh out stencil & alpha test state
       struct pipe_stencil_state *front_stencil =
@@ -1251,6 +1252,11 @@ swr_update_derived(struct pipe_context *pipe,
       depthStencilState.depthTestFunc = swr_convert_depth_func(depth->func);
       depthStencilState.depthWriteEnable = depth->writemask;
       SwrSetDepthStencilState(ctx->swrContext, &depthStencilState);
+
+      depthBoundsState.depthBoundsTestEnable = depth->bounds_test;
+      depthBoundsState.depthBoundsTestMinValue = depth->bounds_min;
+      depthBoundsState.depthBoundsTestMaxValue = depth->bounds_max;
+      SwrSetDepthBoundsState(ctx->swrContext, &depthBoundsState);
    }
 
    /* Blend State */
