@@ -1137,41 +1137,64 @@ nine_context_set_render_state(struct NineDevice9 *device,
     context->changed.group |= nine_render_state_group[State];
 }
 
+static void
+nine_context_set_texture_apply(struct NineDevice9 *device,
+                               DWORD stage,
+                               BOOL enabled,
+                               BOOL shadow,
+                               DWORD lod,
+                               D3DRESOURCETYPE type,
+                               uint8_t pstype,
+                               struct pipe_resource *res,
+                               struct pipe_sampler_view *view0,
+                               struct pipe_sampler_view *view1)
+{
+    struct nine_context *context = &device->context;
+
+    context->texture[stage].enabled = enabled;
+    context->samplers_shadow &= ~(1 << stage);
+    context->samplers_shadow |= shadow << stage;
+    context->texture[stage].shadow = shadow;
+    context->texture[stage].lod = lod;
+    context->texture[stage].type = type;
+    context->texture[stage].pstype = pstype;
+    pipe_resource_reference(&context->texture[stage].resource, res);
+    pipe_sampler_view_reference(&context->texture[stage].view[0], view0);
+    pipe_sampler_view_reference(&context->texture[stage].view[1], view1);
+
+    context->changed.group |= NINE_STATE_TEXTURE;
+}
+
 void
 nine_context_set_texture(struct NineDevice9 *device,
                          DWORD Stage,
                          struct NineBaseTexture9 *tex)
 {
-    struct nine_context *context = &device->context;
+    BOOL enabled = FALSE;
+    BOOL shadow = FALSE;
+    DWORD lod = 0;
+    D3DRESOURCETYPE type = D3DRTYPE_TEXTURE;
+    uint8_t pstype = 0;
+    struct pipe_resource *res = NULL;
+    struct pipe_sampler_view *view0 = NULL, *view1 = NULL;
 
-    context->samplers_shadow &= ~(1 << Stage);
     /* For managed pool, the data can be initially incomplete.
      * In that case, the texture is rebound later
      * (in NineBaseTexture9_Validate/NineBaseTexture9_UploadSelf). */
     if (tex && tex->base.resource) {
-        context->samplers_shadow |= tex->shadow << Stage;
-        context->texture[Stage].enabled = TRUE;
-        context->texture[Stage].shadow = tex->shadow;
-        context->texture[Stage].lod = tex->managed.lod;
-        context->texture[Stage].type = tex->base.type;
-        context->texture[Stage].pstype = tex->pstype;
-        pipe_resource_reference(&context->texture[Stage].resource,
-                                tex->base.resource);
-        pipe_sampler_view_reference(&context->texture[Stage].view[0],
-                                    NineBaseTexture9_GetSamplerView(tex, 0));
-        pipe_sampler_view_reference(&context->texture[Stage].view[1],
-                                    NineBaseTexture9_GetSamplerView(tex, 1));
-    } else {
-        context->texture[Stage].enabled = FALSE;
-        pipe_resource_reference(&context->texture[Stage].resource,
-                                NULL);
-        pipe_sampler_view_reference(&context->texture[Stage].view[0],
-                                    NULL);
-        pipe_sampler_view_reference(&context->texture[Stage].view[1],
-                                    NULL);
+        enabled = TRUE;
+        shadow = tex->shadow;
+        lod = tex->managed.lod;
+        type = tex->base.type;
+        pstype = tex->pstype;
+        res = tex->base.resource;
+        view0 = NineBaseTexture9_GetSamplerView(tex, 0);
+        view1 = NineBaseTexture9_GetSamplerView(tex, 1);
     }
 
-    context->changed.group |= NINE_STATE_TEXTURE;
+    nine_context_set_texture_apply(device, Stage, enabled,
+                                   shadow, lod, type, pstype,
+                                   res, view0, view1);
 }
 
 void
