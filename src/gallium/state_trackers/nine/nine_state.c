@@ -1446,6 +1446,23 @@ nine_context_set_pixel_shader_constant_f(struct NineDevice9 *device,
     context->changed.group |= NINE_STATE_PS_CONST;
 }
 
+/* For stateblocks */
+static void
+nine_context_set_pixel_shader_constant_i_transformed(struct NineDevice9 *device,
+                                                     UINT StartRegister,
+                                                     const int *pConstantData,
+                                                     UINT Vector4iCount)
+{
+    struct nine_context *context = &device->context;
+
+    memcpy(&context->ps_const_i[StartRegister][0],
+           pConstantData,
+           Vector4iCount * sizeof(context->ps_const_i[0]));
+
+    context->changed.ps_const_i = TRUE;
+    context->changed.group |= NINE_STATE_PS_CONST;
+}
+
 void
 nine_context_set_pixel_shader_constant_i(struct NineDevice9 *device,
                                          UINT StartRegister,
@@ -1587,6 +1604,20 @@ nine_context_set_light(struct NineDevice9 *device,
     context->changed.group |= NINE_STATE_FF_LIGHTING;
 }
 
+
+/* For stateblocks */
+static void
+nine_context_light_enable_stateblock(struct NineDevice9 *device,
+                                     const uint16_t active_light[NINE_MAX_LIGHTS_ACTIVE], /* TODO: use pointer that convey size for csmt */
+                                     unsigned int num_lights_active)
+{
+    struct nine_context *context = &device->context;
+
+    memcpy(context->ff.active_light, active_light, NINE_MAX_LIGHTS_ACTIVE * sizeof(context->ff.active_light[0]));
+    context->ff.num_lights_active = num_lights_active;
+    context->changed.group |= NINE_STATE_FF_LIGHTING;
+}
+
 void
 nine_context_light_enable(struct NineDevice9 *device,
                           DWORD Index,
@@ -1652,6 +1683,8 @@ nine_context_set_clip_plane(struct NineDevice9 *device,
     memcpy(&context->clip.ucp[Index][0], pPlane, sizeof(context->clip.ucp[0]));
     context->changed.ucp = TRUE;
 }
+
+#if 0
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,
@@ -1874,6 +1907,179 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
                         (struct nine_ff_state *)&src->ff, s, FALSE);
             }
             context->ff.changed.transform[i] |= src->ff.changed.transform[i];
+        }
+    }
+}
+
+#endif
+
+/* Do not write to nine_context directly. Slower,
+ * but works with csmt. TODO: write a special csmt version that
+ * would record the list of commands as much as possible,
+ * and use the version above else.
+ */
+void
+nine_context_apply_stateblock(struct NineDevice9 *device,
+                              const struct nine_state *src)
+{
+    int i;
+
+    /* No need to apply src->changed.group, since all calls do
+    * set context->changed.group */
+
+    for (i = 0; i < ARRAY_SIZE(src->changed.rs); ++i) {
+        uint32_t m = src->changed.rs[i];
+        while (m) {
+            const int r = ffs(m) - 1;
+            m &= ~(1 << r);
+            nine_context_set_render_state(device, i * 32 + r, src->rs_advertised[i * 32 + r]);
+        }
+    }
+
+    /* Textures */
+    if (src->changed.texture) {
+        uint32_t m = src->changed.texture;
+        unsigned s;
+
+        for (s = 0; m; ++s, m >>= 1) {
+            struct NineBaseTexture9 *tex = src->texture[s];
+            if (!(m & 1))
+                continue;
+            nine_context_set_texture(device, s, tex);
+        }
+    }
+
+    /* Sampler state */
+    if (src->changed.group & NINE_STATE_SAMPLER) {
+        unsigned s;
+
+        for (s = 0; s < NINE_MAX_SAMPLERS; ++s) {
+            uint32_t m = src->changed.sampler[s];
+            while (m) {
+                const int i = ffs(m) - 1;
+                m &= ~(1 << i);
+                nine_context_set_sampler_state(device, s, i, src->samp_advertised[s][i]);
+            }
+        }
+    }
+
+    /* Vertex buffers */
+    if (src->changed.vtxbuf | src->changed.stream_freq) {
+        uint32_t m = src->changed.vtxbuf | src->changed.stream_freq;
+        for (i = 0; m; ++i, m >>= 1) {
+            if (src->changed.vtxbuf & (1 << i))
+                nine_context_set_stream_source(device, i, src->stream[i], src->vtxbuf[i].buffer_offset, src->vtxbuf[i].stride);
+            if (src->changed.stream_freq & (1 << i))
+                nine_context_set_stream_source_freq(device, i, src->stream_freq[i]);
+        }
+    }
+
+    /* Index buffer */
+    if (src->changed.group & NINE_STATE_IDXBUF)
+        nine_context_set_indices(device, src->idxbuf);
+
+    /* Vertex declaration */
+    if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
+        nine_context_set_vertex_declaration(device, src->vdecl);
+
+    /* Vertex shader */
+    if (src->changed.group & NINE_STATE_VS)
+        nine_context_set_vertex_shader(device, src->vs);
+
+    /* Pixel shader */
+    if (src->changed.group & NINE_STATE_PS)
+        nine_context_set_pixel_shader(device, src->ps);
+
+    /* Vertex constants */
+    if (src->changed.group & NINE_STATE_VS_CONST) {
+        struct nine_range *r;
+        for (r = src->changed.vs_const_f; r; r = r->next)
+            nine_context_set_vertex_shader_constant_f(device, r->bgn,
+                                                      &src->vs_const_f[r->bgn * 4],
+                                                      r->end - r->bgn);
+        for (r = src->changed.vs_const_i; r; r = r->next)
+            nine_context_set_vertex_shader_constant_i(device, r->bgn,
+                                                      &src->vs_const_i[r->bgn * 4],
+                                                      r->end - r->bgn);
+        for (r = src->changed.vs_const_b; r; r = r->next)
+            nine_context_set_vertex_shader_constant_b(device, r->bgn,
+                                                      &src->vs_const_b[r->bgn * 4],
+                                                      r->end - r->bgn);
+    }
+
+    /* Pixel constants */
+    if (src->changed.group & NINE_STATE_PS_CONST) {
+        struct nine_range *r;
+        for (r = src->changed.ps_const_f; r; r = r->next)
+            nine_context_set_pixel_shader_constant_f(device, r->bgn,
+                                                     &src->ps_const_f[r->bgn * 4],
+                                                     r->end - r->bgn);
+        if (src->changed.ps_const_i) {
+            uint16_t m = src->changed.ps_const_i;
+            for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
+                if (m & 1)
+                    nine_context_set_pixel_shader_constant_i_transformed(device, i,
+                                                                         src->ps_const_i[i], 1);
+        }
+        if (src->changed.ps_const_b) {
+            uint16_t m = src->changed.ps_const_b;
+            for (i = ffs(m) - 1, m >>= i; m; ++i, m >>= 1)
+                if (m & 1)
+                    nine_context_set_pixel_shader_constant_b(device, i,
+                                                             &src->ps_const_b[i], 1);
+        }
+    }
+
+    /* Viewport */
+    if (src->changed.group & NINE_STATE_VIEWPORT)
+        nine_context_set_viewport(device, &src->viewport);
+
+    /* Scissor */
+    if (src->changed.group & NINE_STATE_SCISSOR)
+        nine_context_set_scissor(device, &src->scissor);
+
+    /* User Clip Planes */
+    if (src->changed.ucp)
+        for (i = 0; i < PIPE_MAX_CLIP_PLANES; ++i)
+            if (src->changed.ucp & (1 << i))
+                nine_context_set_clip_plane(device, i, &src->clip.ucp[i][0]);
+
+    if (!(src->changed.group & NINE_STATE_FF))
+        return;
+
+    /* Fixed function state. */
+
+    if (src->changed.group & NINE_STATE_FF_MATERIAL)
+        nine_context_set_material(device, &src->ff.material);
+
+    if (src->changed.group & NINE_STATE_FF_PSSTAGES) {
+        unsigned s;
+        for (s = 0; s < NINE_MAX_TEXTURE_STAGES; ++s) {
+            for (i = 0; i < NINED3DTSS_COUNT; ++i)
+                if (src->ff.changed.tex_stage[s][i / 32] & (1 << (i % 32)))
+                   nine_context_set_texture_stage_state(device, s, i, src->ff.tex_stage[s][i]);
+        }
+    }
+    if (src->changed.group & NINE_STATE_FF_LIGHTING) {
+        for (i = 0; i < src->ff.num_lights; ++i)
+            if (src->ff.light[i].Type != NINED3DLIGHT_INVALID)
+                nine_context_set_light(device, i, &src->ff.light[i]);
+
+        nine_context_light_enable_stateblock(device, src->ff.active_light, src->ff.num_lights_active);
+    }
+    if (src->changed.group & NINE_STATE_FF_VSTRANSF) {
+        for (i = 0; i < ARRAY_SIZE(src->ff.changed.transform); ++i) {
+            unsigned s;
+            if (!src->ff.changed.transform[i])
+                continue;
+            for (s = i * 32; s < (i * 32 + 32); ++s) {
+                if (!(src->ff.changed.transform[i] & (1 << (s % 32))))
+                    continue;
+                nine_context_set_transform(device, s,
+                                           nine_state_access_transform(
+                                               (struct nine_ff_state *)&src->ff,
+                                                                       s, FALSE));
+            }
         }
     }
 }
