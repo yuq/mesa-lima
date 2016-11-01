@@ -1176,8 +1176,6 @@ struct anv_cmd_buffer {
 
       /* Allocated length of the 'objects' and 'bos' arrays */
       uint32_t                                  array_length;
-
-      bool                                      need_reloc;
    } execbuf2;
 
    /* Serial for tracking buffer completion */

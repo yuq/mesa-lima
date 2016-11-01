@@ -1011,32 +1011,8 @@ static void
 anv_cmd_buffer_process_relocs(struct anv_cmd_buffer *cmd_buffer,
                               struct anv_reloc_list *list)
 {
-   struct anv_bo *bo;
-
-   /* If the kernel supports I915_EXEC_NO_RELOC, it will compare offset in
-    * struct drm_i915_gem_exec_object2 against the bos current offset and if
-    * all bos haven't moved it will skip relocation processing alltogether.
-    * If I915_EXEC_NO_RELOC is not supported, the kernel ignores the incoming
-    * value of offset so we can set it either way.  For that to work we need
-    * to make sure all relocs use the same presumed offset.
-    */
-
-   for (size_t i = 0; i < list->num_relocs; i++) {
-      bo = list->reloc_bos[i];
-      if (bo->offset != list->relocs[i].presumed_offset)
-         cmd_buffer->execbuf2.need_reloc = true;
-
-      list->relocs[i].target_handle = bo->index;
-   }
-}
-
-static uint64_t
-read_reloc(const struct anv_device *device, const void *p)
-{
-   if (device->info.gen >= 8)
-      return *(uint64_t *)p;
-   else
-      return *(uint32_t *)p;
+   for (size_t i = 0; i < list->num_relocs; i++)
+      list->relocs[i].target_handle = list->reloc_bos[i]->index;
 }
 
 static void
@@ -1049,27 +1025,10 @@ write_reloc(const struct anv_device *device, void *p, uint64_t v)
 }
 
 static void
-adjust_relocations_from_block_pool(struct anv_block_pool *pool,
+adjust_relocations_from_state_pool(struct anv_block_pool *pool,
                                    struct anv_reloc_list *relocs)
 {
    for (size_t i = 0; i < relocs->num_relocs; i++) {
-      /* In general, we don't know how stale the relocated value is.  It
-       * may have been used last time or it may not.  Since we don't want
-       * to stomp it while the GPU may be accessing it, we haven't updated
-       * it anywhere else in the code.  Instead, we just set the presumed
-       * offset to what it is now based on the delta and the data in the
-       * block pool.  Then the kernel will update it for us if needed.
-       */
-      assert(relocs->relocs[i].offset < pool->state.end);
-      const void *p = pool->map + relocs->relocs[i].offset;
-
-      /* We're reading back the relocated value from potentially incoherent
-       * memory here. However, any change to the value will be from the kernel
-       * writing out relocations, which will keep the CPU cache up to date.
-       */
-      relocs->relocs[i].presumed_offset =
-         read_reloc(pool->device, p) - relocs->relocs[i].delta;
-
       /* All of the relocations from this block pool to other BO's should
        * have been emitted relative to the surface block pool center.  We
        * need to add the center offset to make them relative to the
@@ -1080,7 +1039,7 @@ adjust_relocations_from_block_pool(struct anv_block_pool *pool,
 }
 
 static void
-adjust_relocations_to_block_pool(struct anv_block_pool *pool,
+adjust_relocations_to_state_pool(struct anv_block_pool *pool,
                                  struct anv_bo *from_bo,
                                  struct anv_reloc_list *relocs,
                                  uint32_t *last_pool_center_bo_offset)
@@ -1126,9 +1085,8 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       &cmd_buffer->device->surface_state_block_pool;
 
    cmd_buffer->execbuf2.bo_count = 0;
-   cmd_buffer->execbuf2.need_reloc = false;
 
-   adjust_relocations_from_block_pool(ss_pool, &cmd_buffer->surface_relocs);
+   adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs);
    anv_cmd_buffer_add_bo(cmd_buffer, &ss_pool->bo, &cmd_buffer->surface_relocs);
 
    /* First, we walk over all of the bos we've seen and add them and their
@@ -1136,7 +1094,7 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
     */
    struct anv_batch_bo **bbo;
    u_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
-      adjust_relocations_to_block_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
+      adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        &(*bbo)->last_ss_pool_bo_offset);
 
       anv_cmd_buffer_add_bo(cmd_buffer, &(*bbo)->bo, &(*bbo)->relocs);
@@ -1198,15 +1156,21 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       .rsvd1 = cmd_buffer->device->context_id,
       .rsvd2 = 0,
    };
-
-   if (!cmd_buffer->execbuf2.need_reloc)
-      cmd_buffer->execbuf2.execbuf.flags |= I915_EXEC_NO_RELOC;
 }
 
 VkResult
 anv_cmd_buffer_execbuf(struct anv_device *device,
                        struct anv_cmd_buffer *cmd_buffer)
 {
+   /* Since surface states are shared between command buffers and we don't
+    * know what order they will be submitted to the kernel, we don't know what
+    * address is actually written in the surface state object at any given
+    * time.  The only option is to set a bogus presumed offset and let
+    * relocations do their job.
+    */
+   for (size_t i = 0; i < cmd_buffer->surface_relocs.num_relocs; i++)
+      cmd_buffer->surface_relocs.relocs[i].presumed_offset = -1;
+
    return anv_device_execbuf(device, &cmd_buffer->execbuf2.execbuf,
                              cmd_buffer->execbuf2.bos);
 }
