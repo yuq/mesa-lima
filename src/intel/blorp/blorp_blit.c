@@ -1237,7 +1237,7 @@ brw_blorp_get_blit_kernel(struct blorp_context *blorp,
 
    const unsigned *program;
    unsigned program_size;
-   struct brw_blorp_prog_data prog_data;
+   struct brw_wm_prog_data prog_data;
 
    nir_shader *nir = brw_blorp_build_nir_shader(blorp, mem_ctx, prog_key);
    struct brw_wm_prog_key wm_key;

@@ -73,7 +73,7 @@ blorp_params_get_clear_kernel(struct blorp_context *blorp,
    struct brw_wm_prog_key wm_key;
    brw_blorp_init_wm_prog_key(&wm_key);
 
-   struct brw_blorp_prog_data prog_data;
+   struct brw_wm_prog_data prog_data;
    unsigned program_size;
    const unsigned *program =
       blorp_compile_fs(blorp, mem_ctx, b.shader, &wm_key, use_replicated_data,
