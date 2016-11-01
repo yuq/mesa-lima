@@ -516,7 +516,8 @@ struct anv_shader_bin *
 anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                  const void *key_data, uint32_t key_size,
                                  const void *kernel_data, uint32_t kernel_size,
-                                 const void *prog_data, uint32_t prog_data_size,
+                                 const struct brw_stage_prog_data *prog_data,
+                                 uint32_t prog_data_size,
                                  const struct anv_pipeline_bind_map *bind_map);
 
 struct anv_device {
@@ -1297,15 +1298,23 @@ struct anv_pipeline_bind_map {
    struct anv_pipeline_binding *                sampler_to_descriptor;
 };
 
+struct anv_shader_bin_key {
+   uint32_t size;
+   uint8_t data[0];
+};
+
 struct anv_shader_bin {
    uint32_t ref_cnt;
+
+   const struct anv_shader_bin_key *key;
 
    struct anv_state kernel;
    uint32_t kernel_size;
 
-   struct anv_pipeline_bind_map bind_map;
-
+   const struct brw_stage_prog_data *prog_data;
    uint32_t prog_data_size;
+
+   struct anv_pipeline_bind_map bind_map;
 
    /* Prog data follows, then the key, both aligned to 8-bytes */
 };
@@ -1314,7 +1323,8 @@ struct anv_shader_bin *
 anv_shader_bin_create(struct anv_device *device,
                       const void *key, uint32_t key_size,
                       const void *kernel, uint32_t kernel_size,
-                      const void *prog_data, uint32_t prog_data_size,
+                      const struct brw_stage_prog_data *prog_data,
+                      uint32_t prog_data_size,
                       const struct anv_pipeline_bind_map *bind_map);
 
 void
@@ -1333,14 +1343,6 @@ anv_shader_bin_unref(struct anv_device *device, struct anv_shader_bin *shader)
    assert(shader->ref_cnt >= 1);
    if (__sync_fetch_and_add(&shader->ref_cnt, -1) == 1)
       anv_shader_bin_destroy(device, shader);
-}
-
-static inline const struct brw_stage_prog_data *
-anv_shader_bin_get_prog_data(const struct anv_shader_bin *shader)
-{
-   const void *data = shader;
-   data += align_u32(sizeof(struct anv_shader_bin), 8);
-   return data;
 }
 
 struct anv_pipeline {
@@ -1409,7 +1411,7 @@ get_##prefix##_prog_data(struct anv_pipeline *pipeline)              \
 {                                                                    \
    if (anv_pipeline_has_stage(pipeline, stage)) {                    \
       return (const struct brw_##prefix##_prog_data *)               \
-             anv_shader_bin_get_prog_data(pipeline->shaders[stage]); \
+             pipeline->shaders[stage]->prog_data;                    \
    } else {                                                          \
       return NULL;                                                   \
    }                                                                 \

@@ -388,7 +388,8 @@ anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
                            struct anv_pipeline_cache *cache,
                            const void *key_data, uint32_t key_size,
                            const void *kernel_data, uint32_t kernel_size,
-                           const void *prog_data, uint32_t prog_data_size,
+                           const struct brw_stage_prog_data *prog_data,
+                           uint32_t prog_data_size,
                            const struct anv_pipeline_bind_map *bind_map)
 {
    if (cache) {
@@ -476,7 +477,8 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
 
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
-                                       &prog_data, sizeof(prog_data), &map);
+                                       &prog_data.base.base, sizeof(prog_data),
+                                       &map);
       if (!bin) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -486,7 +488,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
    }
 
    const struct brw_vs_prog_data *vs_prog_data =
-      (const struct brw_vs_prog_data *)anv_shader_bin_get_prog_data(bin);
+      (const struct brw_vs_prog_data *)bin->prog_data;
 
    if (vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8) {
       pipeline->vs_simd8 = bin->kernel.offset;
@@ -563,7 +565,8 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
       /* TODO: SIMD8 GS */
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
-                                       &prog_data, sizeof(prog_data), &map);
+                                       &prog_data.base.base, sizeof(prog_data),
+                                       &map);
       if (!bin) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -686,7 +689,8 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
 
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
-                                       &prog_data, sizeof(prog_data), &map);
+                                       &prog_data.base, sizeof(prog_data),
+                                       &map);
       if (!bin) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
@@ -758,7 +762,8 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
       bin = anv_pipeline_upload_kernel(pipeline, cache, sha1, 20,
                                        shader_code, code_size,
-                                       &prog_data, sizeof(prog_data), &map);
+                                       &prog_data.base, sizeof(prog_data),
+                                       &map);
       if (!bin) {
          ralloc_free(mem_ctx);
          return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);

@@ -26,11 +26,6 @@
 #include "util/debug.h"
 #include "anv_private.h"
 
-struct shader_bin_key {
-   uint32_t size;
-   uint8_t data[0];
-};
-
 static size_t
 anv_shader_bin_size(uint32_t prog_data_size, uint32_t key_size,
                     uint32_t surface_count, uint32_t sampler_count)
@@ -44,20 +39,12 @@ anv_shader_bin_size(uint32_t prog_data_size, uint32_t key_size,
           align_u32(binding_data_size, 8);
 }
 
-static inline const struct shader_bin_key *
-anv_shader_bin_get_key(const struct anv_shader_bin *shader)
-{
-   const void *data = shader;
-   data += align_u32(sizeof(struct anv_shader_bin), 8);
-   data += align_u32(shader->prog_data_size, 8);
-   return data;
-}
-
 struct anv_shader_bin *
 anv_shader_bin_create(struct anv_device *device,
                       const void *key_data, uint32_t key_size,
                       const void *kernel_data, uint32_t kernel_size,
-                      const void *prog_data, uint32_t prog_data_size,
+                      const struct brw_stage_prog_data *prog_data,
+                      uint32_t prog_data_size,
                       const struct anv_pipeline_bind_map *bind_map)
 {
    const size_t size =
@@ -82,10 +69,12 @@ anv_shader_bin_create(struct anv_device *device,
    void *data = shader;
    data += align_u32(sizeof(struct anv_shader_bin), 8);
 
+   shader->prog_data = data;
    memcpy(data, prog_data, prog_data_size);
    data += align_u32(prog_data_size, 8);
 
-   struct shader_bin_key *key = data;
+   shader->key = data;
+   struct anv_shader_bin_key *key = data;
    key->size = key_size;
    memcpy(key->data, key_data, key_size);
    data += align_u32(sizeof(*key) + key_size, 8);
@@ -115,7 +104,7 @@ static size_t
 anv_shader_bin_data_size(const struct anv_shader_bin *shader)
 {
    return anv_shader_bin_size(shader->prog_data_size,
-                              anv_shader_bin_get_key(shader)->size,
+                              shader->key->size,
                               shader->bind_map.surface_count,
                               shader->bind_map.sampler_count) +
           align_u32(shader->kernel_size, 8);
@@ -126,7 +115,7 @@ anv_shader_bin_write_data(const struct anv_shader_bin *shader, void *data)
 {
    size_t struct_size =
       anv_shader_bin_size(shader->prog_data_size,
-                          anv_shader_bin_get_key(shader)->size,
+                          shader->key->size,
                           shader->bind_map.surface_count,
                           shader->bind_map.sampler_count);
 
@@ -151,14 +140,14 @@ anv_shader_bin_write_data(const struct anv_shader_bin *shader, void *data)
 static uint32_t
 shader_bin_key_hash_func(const void *void_key)
 {
-   const struct shader_bin_key *key = void_key;
+   const struct anv_shader_bin_key *key = void_key;
    return _mesa_hash_data(key->data, key->size);
 }
 
 static bool
 shader_bin_key_compare_func(const void *void_a, const void *void_b)
 {
-   const struct shader_bin_key *a = void_a, *b = void_b;
+   const struct anv_shader_bin_key *a = void_a, *b = void_b;
    if (a->size != b->size)
       return false;
 
@@ -230,7 +219,7 @@ anv_pipeline_cache_search_locked(struct anv_pipeline_cache *cache,
                                  const void *key_data, uint32_t key_size)
 {
    uint32_t vla[1 + DIV_ROUND_UP(key_size, sizeof(uint32_t))];
-   struct shader_bin_key *key = (void *)vla;
+   struct anv_shader_bin_key *key = (void *)vla;
    key->size = key_size;
    memcpy(key->data, key_data, key_size);
 
@@ -281,7 +270,7 @@ anv_pipeline_cache_add_shader(struct anv_pipeline_cache *cache,
    if (!bin)
       return NULL;
 
-   _mesa_hash_table_insert(cache->cache, anv_shader_bin_get_key(bin), bin);
+   _mesa_hash_table_insert(cache->cache, bin->key, bin);
 
    return bin;
 }
@@ -290,7 +279,8 @@ struct anv_shader_bin *
 anv_pipeline_cache_upload_kernel(struct anv_pipeline_cache *cache,
                                  const void *key_data, uint32_t key_size,
                                  const void *kernel_data, uint32_t kernel_size,
-                                 const void *prog_data, uint32_t prog_data_size,
+                                 const struct brw_stage_prog_data *prog_data,
+                                 uint32_t prog_data_size,
                                  const struct anv_pipeline_bind_map *bind_map)
 {
    if (cache->cache) {
@@ -369,7 +359,7 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
       const void *prog_data = p;
       p += align_u32(bin.prog_data_size, 8);
 
-      struct shader_bin_key key;
+      struct anv_shader_bin_key key;
       if (p + sizeof(key) > end)
          break;
       memcpy(&key, p, sizeof(key));
@@ -532,11 +522,11 @@ VkResult anv_MergePipelineCaches(
       struct hash_entry *entry;
       hash_table_foreach(src->cache, entry) {
          struct anv_shader_bin *bin = entry->data;
-         if (_mesa_hash_table_search(dst->cache, anv_shader_bin_get_key(bin)))
+         if (_mesa_hash_table_search(dst->cache, bin->key))
             continue;
 
          anv_shader_bin_ref(bin);
-         _mesa_hash_table_insert(dst->cache, anv_shader_bin_get_key(bin), bin);
+         _mesa_hash_table_insert(dst->cache, bin->key, bin);
       }
    }
 
