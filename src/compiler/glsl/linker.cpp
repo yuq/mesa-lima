@@ -4795,14 +4795,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                    "type of shader\n");
    }
 
-   for (unsigned int i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (prog->_LinkedShaders[i] != NULL) {
-         _mesa_delete_linked_shader(ctx, prog->_LinkedShaders[i]);
-      }
-
-      prog->_LinkedShaders[i] = NULL;
-   }
-
    /* Link all shaders for a particular stage and validate the result.
     */
    for (int stage = 0; stage < MESA_SHADER_STAGES; stage++) {
