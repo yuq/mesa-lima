@@ -950,9 +950,11 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     // have to check for the special case where depth/stencil test is enabled but depthwrite is disabled.
     pState->state.depthHottileEnable = ((!(pState->state.depthStencilState.depthTestEnable &&
                                            !pState->state.depthStencilState.depthWriteEnable &&
+                                           !pState->state.depthBoundsState.depthBoundsTestEnable &&
                                            pState->state.depthStencilState.depthTestFunc == ZFUNC_ALWAYS)) && 
                                         (pState->state.depthStencilState.depthTestEnable || 
-                                         pState->state.depthStencilState.depthWriteEnable)) ? true : false;
+                                         pState->state.depthStencilState.depthWriteEnable ||
+                                         pState->state.depthBoundsState.depthBoundsTestEnable)) ? true : false;
 
     pState->state.stencilHottileEnable = (((!(pState->state.depthStencilState.stencilTestEnable &&
                                              !pState->state.depthStencilState.stencilWriteEnable &&
