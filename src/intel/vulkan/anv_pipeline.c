@@ -400,7 +400,8 @@ anv_pipeline_upload_kernel(struct anv_pipeline *pipeline,
    } else {
       return anv_shader_bin_create(pipeline->device, key_data, key_size,
                                    kernel_data, kernel_size,
-                                   prog_data, prog_data_size, bind_map);
+                                   prog_data, prog_data_size,
+                                   prog_data->param, bind_map);
    }
 }
 
