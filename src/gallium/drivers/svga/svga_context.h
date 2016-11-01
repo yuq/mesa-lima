@@ -628,16 +628,6 @@ struct svga_context
 #define SVGA_NEW_TEXTURE_CONSTS      0x80000000
 
 
-
-
-/***********************************************************************
- * svga_screen_texture.c: 
- */
-void svga_mark_surfaces_dirty(struct svga_context *svga);
-
-
-
-
 void svga_init_state_functions( struct svga_context *svga );
 void svga_init_flush_functions( struct svga_context *svga );
 void svga_init_string_functions( struct svga_context *svga );
