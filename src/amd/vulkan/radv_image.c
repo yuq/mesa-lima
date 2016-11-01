@@ -562,10 +562,6 @@ radv_image_get_cmask_info(struct radv_device *device,
 	/* Each element of CMASK is a nibble. */
 	unsigned slice_bytes = slice_elements / 2;
 
-	out->pitch = width;
-	out->height = height;
-	out->xalign = cl_width * 8;
-	out->yalign = cl_height * 8;
 	out->slice_tile_max = (width * height) / (128*128);
 	if (out->slice_tile_max)
 		out->slice_tile_max -= 1;
