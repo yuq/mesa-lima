@@ -353,6 +353,7 @@ static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
    &sm30_inst_replay_overhead,
    &sm20_ipc,
    &sm30_issued_ipc,
+   &sm30_issue_slots,
    &sm30_issue_slot_utilization,
    &sm30_shared_replay_overhead,
    &sm30_warp_execution_efficiency,
