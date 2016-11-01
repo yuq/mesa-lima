@@ -571,6 +571,10 @@ void anv_device_get_cache_uuid(void *uuid);
 void anv_device_init_blorp(struct anv_device *device);
 void anv_device_finish_blorp(struct anv_device *device);
 
+VkResult anv_device_execbuf(struct anv_device *device,
+                            struct drm_i915_gem_execbuffer2 *execbuf,
+                            struct anv_bo **execbuf_bos);
+
 void* anv_gem_mmap(struct anv_device *device,
                    uint32_t gem_handle, uint64_t offset, uint64_t size, uint32_t flags);
 void anv_gem_munmap(void *p, uint64_t size);

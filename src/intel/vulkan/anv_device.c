@@ -770,7 +770,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
 {
    struct drm_i915_gem_execbuffer2 execbuf;
    struct drm_i915_gem_exec_object2 exec2_objects[1];
-   struct anv_bo bo;
+   struct anv_bo bo, *exec_bos[1];
    VkResult result = VK_SUCCESS;
    uint32_t size;
    int64_t timeout;
@@ -786,6 +786,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
    if (!device->info.has_llc)
       anv_clflush_range(bo.map, size);
 
+   exec_bos[0] = &bo;
    exec2_objects[0].handle = bo.gem_handle;
    exec2_objects[0].relocation_count = 0;
    exec2_objects[0].relocs_ptr = 0;
@@ -809,12 +810,9 @@ anv_device_submit_simple_batch(struct anv_device *device,
    execbuf.rsvd1 = device->context_id;
    execbuf.rsvd2 = 0;
 
-   ret = anv_gem_execbuffer(device, &execbuf);
-   if (ret != 0) {
-      /* We don't know the real error. */
-      result = vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
+   result = anv_device_execbuf(device, &execbuf, exec_bos);
+   if (result != VK_SUCCESS)
       goto fail;
-   }
 
    timeout = INT64_MAX;
    ret = anv_gem_wait(device, bo.gem_handle, &timeout);
@@ -1070,6 +1068,24 @@ void anv_GetDeviceQueue(
    *pQueue = anv_queue_to_handle(&device->queue);
 }
 
+VkResult
+anv_device_execbuf(struct anv_device *device,
+                   struct drm_i915_gem_execbuffer2 *execbuf,
+                   struct anv_bo **execbuf_bos)
+{
+   int ret = anv_gem_execbuffer(device, execbuf);
+   if (ret != 0) {
+      /* We don't know the real error. */
+      return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
+   }
+
+   struct drm_i915_gem_exec_object2 *objects = (void *)execbuf->buffers_ptr;
+   for (uint32_t k = 0; k < execbuf->buffer_count; k++)
+      execbuf_bos[k]->offset = objects[k].offset;
+
+   return VK_SUCCESS;
+}
+
 VkResult anv_QueueSubmit(
     VkQueue                                     _queue,
     uint32_t                                    submitCount,
@@ -1079,7 +1095,7 @@ VkResult anv_QueueSubmit(
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
    ANV_FROM_HANDLE(anv_fence, fence, _fence);
    struct anv_device *device = queue->device;
-   int ret;
+   VkResult result = VK_SUCCESS;
 
    for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
@@ -1087,23 +1103,18 @@ VkResult anv_QueueSubmit(
                          pSubmits[i].pCommandBuffers[j]);
          assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-         ret = anv_gem_execbuffer(device, &cmd_buffer->execbuf2.execbuf);
-         if (ret != 0) {
-            /* We don't know the real error. */
-            return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
-         }
-
-         for (uint32_t k = 0; k < cmd_buffer->execbuf2.bo_count; k++)
-            cmd_buffer->execbuf2.bos[k]->offset = cmd_buffer->execbuf2.objects[k].offset;
+         result = anv_device_execbuf(device, &cmd_buffer->execbuf2.execbuf,
+                                     cmd_buffer->execbuf2.bos);
+         if (result != VK_SUCCESS)
+            return result;
       }
    }
 
    if (fence) {
-      ret = anv_gem_execbuffer(device, &fence->execbuf);
-      if (ret != 0) {
-         /* We don't know the real error. */
-         return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
-      }
+      struct anv_bo *fence_bo = &fence->bo;
+      result = anv_device_execbuf(device, &fence->execbuf, &fence_bo);
+      if (result != VK_SUCCESS)
+         return result;
    }
 
    return VK_SUCCESS;
