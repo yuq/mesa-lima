@@ -253,10 +253,7 @@ anv_block_pool_init(struct anv_block_pool *pool,
    assert(util_is_power_of_two(block_size));
 
    pool->device = device;
-   pool->bo.gem_handle = 0;
-   pool->bo.offset = 0;
-   pool->bo.size = 0;
-   pool->bo.is_winsys_bo = false;
+   anv_bo_init(&pool->bo, 0, 0);
    pool->block_size = block_size;
    pool->free_list = ANV_FREE_LIST_EMPTY;
    pool->back_free_list = ANV_FREE_LIST_EMPTY;
@@ -463,10 +460,8 @@ anv_block_pool_grow(struct anv_block_pool *pool, struct anv_block_state *state)
     * values back into pool. */
    pool->map = map + center_bo_offset;
    pool->center_bo_offset = center_bo_offset;
-   pool->bo.gem_handle = gem_handle;
-   pool->bo.size = size;
+   anv_bo_init(&pool->bo, gem_handle, size);
    pool->bo.map = map;
-   pool->bo.index = 0;
 
 done:
    pthread_mutex_unlock(&pool->device->mutex);

@@ -270,6 +270,17 @@ struct anv_bo {
    bool is_winsys_bo;
 };
 
+static inline void
+anv_bo_init(struct anv_bo *bo, uint32_t gem_handle, uint64_t size)
+{
+   bo->gem_handle = gem_handle;
+   bo->index = 0;
+   bo->offset = 0;
+   bo->size = size;
+   bo->map = NULL;
+   bo->is_winsys_bo = false;
+}
+
 /* Represents a lock-free linked list of "free" things.  This is used by
  * both the block pool and the state pools.  Unfortunately, in order to
  * solve the ABA problem, we can't use a single uint32_t head.

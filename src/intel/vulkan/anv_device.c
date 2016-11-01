@@ -1146,15 +1146,11 @@ VkResult anv_DeviceWaitIdle(
 VkResult
 anv_bo_init_new(struct anv_bo *bo, struct anv_device *device, uint64_t size)
 {
-   bo->gem_handle = anv_gem_create(device, size);
-   if (!bo->gem_handle)
+   uint32_t gem_handle = anv_gem_create(device, size);
+   if (!gem_handle)
       return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
 
-   bo->map = NULL;
-   bo->index = 0;
-   bo->offset = 0;
-   bo->size = size;
-   bo->is_winsys_bo = false;
+   anv_bo_init(bo, gem_handle, size);
 
    return VK_SUCCESS;
 }
