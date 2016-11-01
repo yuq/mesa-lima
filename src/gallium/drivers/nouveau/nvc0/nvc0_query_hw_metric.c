@@ -178,9 +178,9 @@ static const struct nvc0_hw_metric_query_cfg *sm20_hw_metric_queries[] =
    &sm20_branch_efficiency,
    &sm20_inst_per_wrap,
    &sm20_inst_replay_overhead,
+   &sm20_ipc,
    &sm20_issued_ipc,
    &sm20_issue_slot_utilization,
-   &sm20_ipc,
 };
 
 /* ==== Compute capability 2.1 (GF108+ except GF110) ==== */
@@ -249,10 +249,10 @@ static const struct nvc0_hw_metric_query_cfg *sm21_hw_metric_queries[] =
    &sm21_inst_issued,
    &sm20_inst_per_wrap,
    &sm21_inst_replay_overhead,
+   &sm20_ipc,
    &sm21_issued_ipc,
    &sm21_issue_slots,
    &sm21_issue_slot_utilization,
-   &sm20_ipc,
 };
 
 /* ==== Compute capability 3.0 (GK104/GK106/GK107) ==== */
@@ -321,10 +321,10 @@ static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
    &sm30_inst_issued,
    &sm20_inst_per_wrap,
    &sm30_inst_replay_overhead,
+   &sm20_ipc,
    &sm30_issued_ipc,
    &sm30_issue_slots,
    &sm30_issue_slot_utilization,
-   &sm20_ipc,
    &sm30_shared_replay_overhead,
 };
 
@@ -335,10 +335,10 @@ static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
    &sm30_inst_issued,
    &sm20_inst_per_wrap,
    &sm30_inst_replay_overhead,
+   &sm20_ipc,
    &sm30_issued_ipc,
    &sm30_inst_issued,
    &sm30_issue_slot_utilization,
-   &sm20_ipc,
    &sm30_shared_replay_overhead,
 };
 
