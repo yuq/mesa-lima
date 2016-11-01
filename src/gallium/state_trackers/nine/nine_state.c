@@ -212,7 +212,7 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     cb.buffer_size = context->vs->const_used_size;
     cb.user_buffer = context->vs_const_f;
 
-    if (device->swvp) {
+    if (context->swvp) {
         prepare_vs_constants_userbuf_swvp(device);
         return;
     }
@@ -848,7 +848,7 @@ commit_vs_constants(struct NineDevice9 *device)
     if (unlikely(!context->programmable_vs))
         pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &context->pipe_data.cb_vs_ff);
     else {
-        if (device->swvp) {
+        if (context->swvp) {
             pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 0, &context->pipe_data.cb0_swvp);
             pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 1, &context->pipe_data.cb1_swvp);
             pipe->set_constant_buffer(pipe, PIPE_SHADER_VERTEX, 2, &context->pipe_data.cb2_swvp);
@@ -1682,6 +1682,16 @@ nine_context_set_clip_plane(struct NineDevice9 *device,
 
     memcpy(&context->clip.ucp[Index][0], pPlane, sizeof(context->clip.ucp[0]));
     context->changed.ucp = TRUE;
+}
+
+void
+nine_context_set_swvp(struct NineDevice9 *device,
+                      boolean swvp)
+{
+    struct nine_context *context = &device->context;
+
+    context->swvp = swvp;
+    context->changed.group |= NINE_STATE_SWVP;
 }
 
 #if 0

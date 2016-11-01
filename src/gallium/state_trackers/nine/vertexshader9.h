@@ -91,7 +91,7 @@ NineVertexShader9_UpdateKey( struct NineVertexShader9 *vs,
 
     if (vs->byte_code.version < 0x30)
         key |= (uint32_t) ((!!context->rs[D3DRS_FOGENABLE]) << 8);
-    key |= (uint32_t) (device->swvp << 9);
+    key |= (uint32_t) (context->swvp << 9);
 
     /* We want to use a 64 bits key for performance.
      * Use compressed float16 values for the pointsize min/max in the key.

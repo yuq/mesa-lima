@@ -173,6 +173,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
         DBG("Application asked mixed Software Vertex Processing.\n");
         This->may_swvp = true;
     }
+    This->context.swvp = This->swvp;
     /* TODO: check if swvp is resetted by device Resets */
 
     if (This->may_swvp &&
@@ -2681,7 +2682,7 @@ NineDevice9_SetSoftwareVertexProcessing( struct NineDevice9 *This,
 {
     if (This->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING) {
         This->swvp = bSoftware;
-        This->context.changed.group |= NINE_STATE_SWVP;
+        nine_context_set_swvp(This, bSoftware);
         return D3D_OK;
     } else
         return D3DERR_INVALIDCALL; /* msdn. TODO: check in practice */

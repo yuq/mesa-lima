@@ -299,6 +299,9 @@ struct nine_context {
 
     struct nine_ff_state ff;
 
+    /* software vertex processing */
+    boolean swvp;
+
     uint32_t commit;
     struct {
         struct pipe_framebuffer_state fb;
@@ -457,6 +460,10 @@ void
 nine_context_set_clip_plane(struct NineDevice9 *device,
                             DWORD Index,
                             const float *pPlane);
+
+void
+nine_context_set_swvp(struct NineDevice9 *device,
+                      boolean swvp);
 
 void
 nine_context_apply_stateblock(struct NineDevice9 *device,

@@ -194,7 +194,7 @@ NineVertexShader9_GetVariant( struct NineVertexShader9 *This )
         info.fog_enable = device->context.rs[D3DRS_FOGENABLE];
         info.point_size_min = asfloat(device->context.rs[D3DRS_POINTSIZE_MIN]);
         info.point_size_max = asfloat(device->context.rs[D3DRS_POINTSIZE_MAX]);
-        info.swvp_on = device->swvp;
+        info.swvp_on = device->context.swvp;
         info.process_vertices = false;
 
         hr = nine_translate_shader(This->base.device, &info, pipe);
