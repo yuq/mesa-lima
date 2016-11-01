@@ -34,8 +34,8 @@ static const struct nvc0_hw_metric_cfg {
    _Q(ACHIEVED_OCCUPANCY,
       "metric-achieved_occupancy",
       PERCENTAGE,
-      "Ratio of the average active warps per active cycle to the maximum number "
-      "of warps supported on a multiprocessor"),
+      "Ratio of the average active warps per active cycle to the maximum "
+      "number of warps supported on a multiprocessor"),
 
    _Q(BRANCH_EFFICIENCY,
       "metric-branch_efficiency",
@@ -70,8 +70,8 @@ static const struct nvc0_hw_metric_cfg {
    _Q(ISSUE_SLOT_UTILIZATION,
       "metric-issue_slot_utilization",
       PERCENTAGE,
-      "Percentage of issue slots that issued at least one instruction, averaged "
-      "across all cycles"),
+      "Percentage of issue slots that issued at least one instruction, "
+      "averaged across all cycles"),
 
    _Q(IPC,
       "metric-ipc",
