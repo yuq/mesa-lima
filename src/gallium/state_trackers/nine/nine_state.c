@@ -2583,6 +2583,23 @@ CSMT_ITEM_NO_WAIT(nine_context_draw_indexed_primitive_from_vtxbuf_idxbuf,
     context->pipe->draw_vbo(context->pipe, &info);
 }
 
+CSMT_ITEM_NO_WAIT(nine_context_resource_copy_region,
+                  ARG_BIND_RES(struct pipe_resource, dst_res),
+                  ARG_VAL(unsigned, dst_level),
+                  ARG_COPY_REF(struct pipe_box, dst_box),
+                  ARG_BIND_RES(struct pipe_resource, src_res),
+                  ARG_VAL(unsigned, src_level),
+                  ARG_COPY_REF(struct pipe_box, src_box))
+{
+    struct nine_context *context = &device->context;
+
+    context->pipe->resource_copy_region(context->pipe,
+            dst_res, dst_level,
+            dst_box->x, dst_box->y, dst_box->z,
+            src_res, src_level,
+            src_box);
+}
+
 CSMT_ITEM_NO_WAIT(nine_context_blit,
                   ARG_BIND_BLIT(struct pipe_blit_info, blit))
 {
