@@ -323,13 +323,20 @@ VkResult anv_AcquireNextImageKHR(
     VkSwapchainKHR                               _swapchain,
     uint64_t                                     timeout,
     VkSemaphore                                  semaphore,
-    VkFence                                      fence,
+    VkFence                                      _fence,
     uint32_t*                                    pImageIndex)
 {
    ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
+   ANV_FROM_HANDLE(anv_fence, fence, _fence);
 
-   return swapchain->acquire_next_image(swapchain, timeout, semaphore,
-                                        pImageIndex);
+   VkResult result = swapchain->acquire_next_image(swapchain, timeout,
+                                                   semaphore, pImageIndex);
+
+   /* Thanks to implicit sync, the image is ready immediately. */
+   if (fence)
+      fence->ready = true;
+
+   return result;
 }
 
 VkResult anv_QueuePresentKHR(
