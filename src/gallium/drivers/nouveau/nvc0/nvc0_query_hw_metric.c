@@ -83,6 +83,12 @@ static const struct nvc0_hw_metric_cfg {
       UINT64,
       "Average number of replays due to shared memory conflicts for each "
       "instruction executed"),
+
+   _Q(WARP_EXECUTION_EFFICIENCY,
+      "metric-warp_execution_efficiency",
+      PERCENTAGE,
+      "Ratio of the average active threads per warp to the maximum number of "
+      "threads per warp supported on a multiprocessor"),
 };
 
 #undef _Q
@@ -314,6 +320,15 @@ sm30_shared_replay_overhead =
    .num_queries = 3,
 };
 
+static const struct nvc0_hw_metric_query_cfg
+sm30_warp_execution_efficiency =
+{
+   .type        = NVC0_HW_METRIC_QUERY_WARP_EXECUTION_EFFICIENCY,
+   .queries[0]  = _SM(INST_EXECUTED),
+   .queries[1]  = _SM(TH_INST_EXECUTED),
+   .num_queries = 2,
+};
+
 static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
 {
    &sm20_achieved_occupancy,
@@ -326,6 +341,7 @@ static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
    &sm30_issue_slots,
    &sm30_issue_slot_utilization,
    &sm30_shared_replay_overhead,
+   &sm30_warp_execution_efficiency,
 };
 
 /* ==== Compute capability 3.5 (GK110) ==== */
@@ -340,6 +356,7 @@ static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
    &sm30_inst_issued,
    &sm30_issue_slot_utilization,
    &sm30_shared_replay_overhead,
+   &sm30_warp_execution_efficiency,
 };
 
 #undef _SM
@@ -572,6 +589,12 @@ sm30_hw_metric_calc_result(struct nvc0_hw_query *hq, uint64_t res64[8])
       /* (shared_load_replay + shared_store_replay) / inst_executed */
       if (res64[2])
          return (res64[0] + res64[1]) / (double)res64[2];
+      break;
+   case NVC0_HW_METRIC_QUERY_WARP_EXECUTION_EFFICIENCY:
+      /* thread_inst_executed / (inst_executed * max. number of threads per
+       * wrap) * 100 */
+      if (res64[0])
+         return (res64[1] / ((double)res64[0] * 32)) * 100;
       break;
    default:
       debug_printf("invalid metric type: %d\n",
