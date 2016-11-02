@@ -2610,6 +2610,24 @@ static void emit_barrier(struct nir_to_llvm_context *ctx)
 			    ctx->voidt, NULL, 0, 0);
 }
 
+static void emit_discard_if(struct nir_to_llvm_context *ctx,
+			    nir_intrinsic_instr *instr)
+{
+	LLVMValueRef cond;
+	ctx->shader_info->fs.can_discard = true;
+
+	cond = LLVMBuildICmp(ctx->builder, LLVMIntNE,
+			     get_src(ctx, instr->src[0]),
+			     ctx->i32zero, "");
+
+	cond = LLVMBuildSelect(ctx->builder, cond,
+			       LLVMConstReal(ctx->f32, -1.0f),
+			       ctx->f32zero, "");
+	emit_llvm_intrinsic(ctx, "llvm.AMDGPU.kill",
+			    LLVMVoidTypeInContext(ctx->context),
+			    &cond, 1, 0);
+}
+
 static LLVMValueRef
 visit_load_local_invocation_index(struct nir_to_llvm_context *ctx)
 {
@@ -2921,6 +2939,9 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		emit_llvm_intrinsic(ctx, "llvm.AMDGPU.kilp",
 				    LLVMVoidTypeInContext(ctx->context),
 				    NULL, 0, 0);
+		break;
+	case nir_intrinsic_discard_if:
+		emit_discard_if(ctx, instr);
 		break;
 	case nir_intrinsic_memory_barrier:
 		emit_waitcnt(ctx);
