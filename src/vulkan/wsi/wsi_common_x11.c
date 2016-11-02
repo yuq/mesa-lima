@@ -118,6 +118,8 @@ wsi_x11_get_connection(struct wsi_device *wsi_dev,
 
       struct wsi_x11_connection *wsi_conn =
          wsi_x11_connection_create(alloc, conn);
+      if (!wsi_conn)
+         return NULL;
 
       pthread_mutex_lock(&wsi->mutex);
 
