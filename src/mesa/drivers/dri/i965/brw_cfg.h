@@ -274,7 +274,7 @@ bblock_t::last_non_control_flow_inst()
 
 struct cfg_t {
 #ifdef __cplusplus
-   DECLARE_RALLOC_CXX_OPERATORS(cfg_t)
+   DECLARE_RZALLOC_CXX_OPERATORS(cfg_t)
 
    cfg_t(exec_list *instructions);
    ~cfg_t();
