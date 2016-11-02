@@ -157,7 +157,9 @@ static void surf_winsys_to_drm(struct radeon_surface *surf_drm,
     surf_drm->tile_split = surf_ws->tile_split;
 
     for (i = 0; i <= surf_drm->last_level; i++) {
-        surf_level_winsys_to_drm(&surf_drm->level[i], &surf_ws->level[i], bpe);
+        surf_level_winsys_to_drm(&surf_drm->level[i], &surf_ws->level[i],
+                                 bpe * surf_drm->nsamples);
+
         surf_drm->tiling_index[i] = surf_ws->tiling_index[i];
     }
 
@@ -166,7 +168,8 @@ static void surf_winsys_to_drm(struct radeon_surface *surf_drm,
 
         for (i = 0; i <= surf_drm->last_level; i++) {
             surf_level_winsys_to_drm(&surf_drm->stencil_level[i],
-                                     &surf_ws->stencil_level[i], bpe);
+                                     &surf_ws->stencil_level[i],
+                                     surf_drm->nsamples);
             surf_drm->stencil_tiling_index[i] = surf_ws->stencil_tiling_index[i];
         }
     }
