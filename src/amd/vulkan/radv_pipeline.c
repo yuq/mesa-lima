@@ -642,7 +642,8 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 					const VkGraphicsPipelineCreateInfo *pCreateInfo,
 					uint32_t blend_enable,
 					uint32_t blend_need_alpha,
-					bool single_cb_enable)
+					bool single_cb_enable,
+					bool blend_mrt0_is_dual_src)
 {
 	RADV_FROM_HANDLE(radv_render_pass, pass, pCreateInfo->renderPass);
 	struct radv_subpass *subpass = pass->subpasses + pCreateInfo->subpass;
@@ -664,6 +665,8 @@ radv_pipeline_compute_spi_color_formats(struct radv_pipeline *pipeline,
 
 	blend->cb_shader_mask = si_get_cb_shader_mask(col_format);
 
+	if (blend_mrt0_is_dual_src)
+		col_format |= (col_format & 0xf) << 4;
 	if (!col_format)
 		col_format |= V_028714_SPI_SHADER_32_R;
 	blend->spi_shader_col_format = col_format;
@@ -715,6 +718,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 	struct radv_blend_state *blend = &pipeline->graphics.blend;
 	unsigned mode = V_028808_CB_NORMAL;
 	uint32_t blend_enable = 0, blend_need_alpha = 0;
+	bool blend_mrt0_is_dual_src = false;
 	int i;
 	bool single_cb_enable = false;
 	if (extra && extra->custom_blend_mode) {
@@ -755,7 +759,9 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		}
 
 		if (is_dual_src(srcRGB) || is_dual_src(dstRGB) || is_dual_src(srcA) || is_dual_src(dstA))
-			radv_finishme("dual source blending");
+			if (i == 0)
+				blend_mrt0_is_dual_src = true;
+
 		if (eqRGB == VK_BLEND_OP_MIN || eqRGB == VK_BLEND_OP_MAX) {
 			srcRGB = VK_BLEND_FACTOR_ONE;
 			dstRGB = VK_BLEND_FACTOR_ONE;
@@ -797,7 +803,7 @@ radv_pipeline_init_blend_state(struct radv_pipeline *pipeline,
 		blend->cb_color_control |= S_028808_MODE(V_028808_CB_DISABLE);
 
 	radv_pipeline_compute_spi_color_formats(pipeline, pCreateInfo,
-						blend_enable, blend_need_alpha, single_cb_enable);
+						blend_enable, blend_need_alpha, single_cb_enable, blend_mrt0_is_dual_src);
 }
 
 static uint32_t si_translate_stencil_op(enum VkStencilOp op)
