@@ -1910,6 +1910,9 @@ typedef enum
  */
 struct gl_program
 {
+   /** FIXME: This must be first until we split shader_info from nir_shader */
+   struct shader_info info;
+
    mtx_t Mutex;
    GLuint Id;
    GLint RefCount;
@@ -1921,8 +1924,6 @@ struct gl_program
    struct prog_instruction *Instructions;
 
    struct nir_shader *nir;
-
-   struct shader_info info;
 
    GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];  /**< TEXTURE_x_BIT bitmask */
