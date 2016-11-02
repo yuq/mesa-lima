@@ -2040,17 +2040,18 @@ nine_ff_update(struct NineDevice9 *device)
         cb.buffer_size = NINE_FF_NUM_VS_CONST * 4 * sizeof(float);
 
         if (!device->driver_caps.user_cbufs) {
+            state->pipe.cb_vs_ff.buffer_size = cb.buffer_size;
             u_upload_data(device->constbuf_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
-                          &cb.buffer_offset,
-                          &cb.buffer);
+                          &state->pipe.cb_vs_ff.buffer_offset,
+                          &state->pipe.cb_vs_ff.buffer);
             u_upload_unmap(device->constbuf_uploader);
-            cb.user_buffer = NULL;
-        }
-        state->pipe.cb_vs_ff = cb;
+            state->pipe.cb_vs_ff.user_buffer = NULL;
+        } else
+            state->pipe.cb_vs_ff = cb;
         state->commit |= NINE_STATE_COMMIT_CONST_VS;
     }
 
@@ -2063,17 +2064,18 @@ nine_ff_update(struct NineDevice9 *device)
         cb.buffer_size = NINE_FF_NUM_PS_CONST * 4 * sizeof(float);
 
         if (!device->driver_caps.user_cbufs) {
+            state->pipe.cb_ps_ff.buffer_size = cb.buffer_size;
             u_upload_data(device->constbuf_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
-                          &cb.buffer_offset,
-                          &cb.buffer);
+                          &state->pipe.cb_ps_ff.buffer_offset,
+                          &state->pipe.cb_ps_ff.buffer);
             u_upload_unmap(device->constbuf_uploader);
-            cb.user_buffer = NULL;
-        }
-        state->pipe.cb_ps_ff = cb;
+            state->pipe.cb_ps_ff.user_buffer = NULL;
+        } else
+            state->pipe.cb_ps_ff = cb;
         state->commit |= NINE_STATE_COMMIT_CONST_PS;
     }
 

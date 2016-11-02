@@ -89,7 +89,6 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
     if (state->changed.vs_const_f || state->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
-        cb.buffer = NULL;
         cb.buffer_offset = 0;
         cb.buffer_size = 4096 * sizeof(float[4]);
         cb.user_buffer = state->vs_const_f_swvp;
@@ -111,32 +110,41 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
             cb.user_buffer = dst;
         }
 
-        state->pipe.cb0_swvp = cb;
+        /* Do not erase the buffer field.
+         * It is either NULL (user_cbufs), or a resource.
+         * u_upload_data will do the proper refcount */
+        state->pipe.cb0_swvp.buffer_offset = cb.buffer_offset;
+        state->pipe.cb0_swvp.buffer_size = cb.buffer_size;
+        state->pipe.cb0_swvp.user_buffer = cb.user_buffer;
 
         cb.user_buffer = (char *)cb.user_buffer + 4096 * sizeof(float[4]);
-        state->pipe.cb1_swvp = cb;
+        state->pipe.cb1_swvp.buffer_offset = cb.buffer_offset;
+        state->pipe.cb1_swvp.buffer_size = cb.buffer_size;
+        state->pipe.cb1_swvp.user_buffer = cb.user_buffer;
     }
 
     if (state->changed.vs_const_i || state->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
-        cb.buffer = NULL;
         cb.buffer_offset = 0;
         cb.buffer_size = 2048 * sizeof(float[4]);
         cb.user_buffer = state->vs_const_i;
 
-        state->pipe.cb2_swvp = cb;
+        state->pipe.cb2_swvp.buffer_offset = cb.buffer_offset;
+        state->pipe.cb2_swvp.buffer_size = cb.buffer_size;
+        state->pipe.cb2_swvp.user_buffer = cb.user_buffer;
     }
 
     if (state->changed.vs_const_b || state->changed.group & NINE_STATE_SWVP) {
         struct pipe_constant_buffer cb;
 
-        cb.buffer = NULL;
         cb.buffer_offset = 0;
         cb.buffer_size = 512 * sizeof(float[4]);
         cb.user_buffer = state->vs_const_b;
 
-        state->pipe.cb3_swvp = cb;
+        state->pipe.cb3_swvp.buffer_offset = cb.buffer_offset;
+        state->pipe.cb3_swvp.buffer_size = cb.buffer_size;
+        state->pipe.cb3_swvp.user_buffer = cb.user_buffer;
     }
 
     if (!device->driver_caps.user_cbufs) {
@@ -282,18 +290,18 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
     }
 
     if (!device->driver_caps.user_cbufs) {
+        state->pipe.cb_vs.buffer_size = cb.buffer_size;
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb.buffer_size,
                       device->constbuf_alignment,
                       cb.user_buffer,
-                      &cb.buffer_offset,
-                      &cb.buffer);
+                      &state->pipe.cb_vs.buffer_offset,
+                      &state->pipe.cb_vs.buffer);
         u_upload_unmap(device->constbuf_uploader);
-        cb.user_buffer = NULL;
-    }
-
-    state->pipe.cb_vs = cb;
+        state->pipe.cb_vs.user_buffer = NULL;
+    } else
+        state->pipe.cb_vs = cb;
 
     if (device->state.changed.vs_const_f) {
         struct nine_range *r = device->state.changed.vs_const_f;
@@ -360,18 +368,18 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
         return;
 
     if (!device->driver_caps.user_cbufs) {
+        state->pipe.cb_ps.buffer_size = cb.buffer_size;
         u_upload_data(device->constbuf_uploader,
                       0,
                       cb.buffer_size,
                       device->constbuf_alignment,
                       cb.user_buffer,
-                      &cb.buffer_offset,
-                      &cb.buffer);
+                      &state->pipe.cb_ps.buffer_offset,
+                      &state->pipe.cb_ps.buffer);
         u_upload_unmap(device->constbuf_uploader);
-        cb.user_buffer = NULL;
-    }
-
-    state->pipe.cb_ps = cb;
+        state->pipe.cb_ps.user_buffer = NULL;
+    } else
+        state->pipe.cb_ps = cb;
 
     if (device->state.changed.ps_const_f) {
         struct nine_range *r = device->state.changed.ps_const_f;
