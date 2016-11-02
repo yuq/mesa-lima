@@ -89,6 +89,13 @@ static const struct nvc0_hw_metric_cfg {
       PERCENTAGE,
       "Ratio of the average active threads per warp to the maximum number of "
       "threads per warp supported on a multiprocessor"),
+
+   _Q(WARP_NONPRED_EXECUTION_EFFICIENCY,
+      "metric-warp_nonpred_execution_efficiency",
+      PERCENTAGE,
+      "Ratio of the average active threads per warp executing non-predicated "
+      "instructions to the maximum number of threads per warp supported on a "
+      "multiprocessor"),
 };
 
 #undef _Q
@@ -344,7 +351,16 @@ static const struct nvc0_hw_metric_query_cfg *sm30_hw_metric_queries[] =
    &sm30_warp_execution_efficiency,
 };
 
-/* ==== Compute capability 3.5 (GK110) ==== */
+/* ==== Compute capability 3.5 (GK110/GK208) ==== */
+static const struct nvc0_hw_metric_query_cfg
+sm35_warp_nonpred_execution_efficiency =
+{
+   .type        = NVC0_HW_METRIC_QUERY_WARP_NONPRED_EXECUTION_EFFICIENCY,
+   .queries[0]  = _SM(INST_EXECUTED),
+   .queries[1]  = _SM(NOT_PRED_OFF_INST_EXECUTED),
+   .num_queries = 2,
+};
+
 static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
 {
    &sm20_achieved_occupancy,
@@ -357,6 +373,7 @@ static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
    &sm30_issue_slot_utilization,
    &sm30_shared_replay_overhead,
    &sm30_warp_execution_efficiency,
+   &sm35_warp_nonpred_execution_efficiency,
 };
 
 #undef _SM
@@ -604,6 +621,22 @@ sm30_hw_metric_calc_result(struct nvc0_hw_query *hq, uint64_t res64[8])
    return 0;
 }
 
+static uint64_t
+sm35_hw_metric_calc_result(struct nvc0_hw_query *hq, uint64_t res64[8])
+{
+   switch (hq->base.type - NVC0_HW_METRIC_QUERY(0)) {
+   case NVC0_HW_METRIC_QUERY_WARP_NONPRED_EXECUTION_EFFICIENCY:
+      /* not_predicated_off_thread_inst_executed / (inst_executed * max. number
+       * of threads per wrap) * 100 */
+      if (res64[0])
+         return (res64[1] / ((double)res64[0] * 32)) * 100;
+      break;
+   default:
+      return sm30_hw_metric_calc_result(hq, res64);
+   }
+   return 0;
+}
+
 static boolean
 nvc0_hw_metric_get_query_result(struct nvc0_context *nvc0,
                                 struct nvc0_hw_query *hq, boolean wait,
@@ -628,6 +661,8 @@ nvc0_hw_metric_get_query_result(struct nvc0_context *nvc0,
 
    switch (screen->base.class_3d) {
    case NVF0_3D_CLASS:
+      value = sm35_hw_metric_calc_result(hq, res64);
+      break;
    case NVE4_3D_CLASS:
       value = sm30_hw_metric_calc_result(hq, res64);
       break;
