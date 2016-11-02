@@ -144,6 +144,7 @@ radv_optimize_nir(struct nir_shader *shader)
                 NIR_PASS(progress, shader, nir_opt_algebraic);
                 NIR_PASS(progress, shader, nir_opt_constant_folding);
                 NIR_PASS(progress, shader, nir_opt_undef);
+                NIR_PASS(progress, shader, nir_opt_conditional_discard);
         } while (progress);
 }
 
