@@ -334,7 +334,7 @@ VkResult anv_AcquireNextImageKHR(
 
    /* Thanks to implicit sync, the image is ready immediately. */
    if (fence)
-      fence->ready = true;
+      fence->state = ANV_FENCE_STATE_SIGNALED;
 
    return result;
 }
