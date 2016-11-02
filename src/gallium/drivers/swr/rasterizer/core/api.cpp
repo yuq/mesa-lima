@@ -155,6 +155,7 @@ HANDLE SwrCreateContext(
     pContext->pfnUpdateSoWriteOffset = pCreateInfo->pfnUpdateSoWriteOffset;
     pContext->pfnUpdateStats = pCreateInfo->pfnUpdateStats;
     pContext->pfnUpdateStatsFE = pCreateInfo->pfnUpdateStatsFE;
+    
 
     // pass pointer to bucket manager back to caller
 #ifdef KNOB_ENABLE_RDTSC
@@ -333,6 +334,7 @@ DRAW_CONTEXT* GetDrawContext(SWR_CONTEXT *pContext, bool isSplitDraw = false)
         pCurDrawContext->drawId = pContext->dcRing.GetHead();
 
         pCurDrawContext->cleanupState = true;
+
     }
     else
     {
@@ -822,6 +824,7 @@ extern PFN_BACKEND_FUNC gBackendPixelRateTable[SWR_MULTISAMPLE_TYPE_COUNT][SWR_M
 extern PFN_BACKEND_FUNC gBackendSampleRateTable[SWR_MULTISAMPLE_TYPE_COUNT][SWR_INPUT_COVERAGE_COUNT][2][2];
 void SetupPipeline(DRAW_CONTEXT *pDC)
 {
+    SWR_CONTEXT* pContext = pDC->pContext;
     DRAW_STATE* pState = pDC->pState;
     const SWR_RASTSTATE &rastState = pState->state.rastState;
     const SWR_PS_STATE &psState = pState->state.psState;
@@ -891,6 +894,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         break;
     };
 
+
     // disable clipper if viewport transform is disabled
     if (pState->state.frontendState.vpTransformDisable)
     {
@@ -911,6 +915,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
     {
         pState->pfnProcessPrims = nullptr;
     }
+
 
     // set up the frontend attribute count
     pState->state.feNumAttributes = 0;
@@ -1010,6 +1015,8 @@ void InitDraw(
         SetupMacroTileScissors(pDC);
         SetupPipeline(pDC);
     }
+    
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1137,6 +1144,7 @@ void DrawInstanced(
         pState->rastState.cullMode = SWR_CULLMODE_NONE;
     }
 
+
     int draw = 0;
     while (remainingVerts)
     {
@@ -1174,6 +1182,7 @@ void DrawInstanced(
     // restore culling state
     pDC = GetDrawContext(pContext);
     pDC->pState->state.rastState.cullMode = oldCullMode;
+
 
     AR_API_END(APIDraw, numVertices * numInstances);
 }
@@ -1276,6 +1285,7 @@ void DrawIndexedInstance(
         pState->rastState.cullMode = SWR_CULLMODE_NONE;
     }
 
+
     while (remainingIndices)
     {
         uint32_t numIndicesForDraw = (remainingIndices < maxIndicesPerDraw) ?
@@ -1283,6 +1293,7 @@ void DrawIndexedInstance(
 
         // When breaking up draw, we need to obtain new draw context for each iteration.
         bool isSplitDraw = (draw > 0) ? true : false;
+
         pDC = GetDrawContext(pContext, isSplitDraw);
         InitDraw(pDC, isSplitDraw);
 
@@ -1314,9 +1325,10 @@ void DrawIndexedInstance(
         draw++;
     }
 
-    // restore culling state
+    // Restore culling state
     pDC = GetDrawContext(pContext);
     pDC->pState->state.rastState.cullMode = oldCullMode;
+ 
 
     AR_API_END(APIDrawIndexed, numIndices * numInstances);
 }
@@ -1626,3 +1638,4 @@ void SWR_API SwrEndFrame(
 
     pContext->frameCount++;
 }
+

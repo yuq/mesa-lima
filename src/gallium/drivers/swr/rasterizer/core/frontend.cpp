@@ -1388,6 +1388,7 @@ void ProcessDraw(
         pa.Reset();
     }
 
+
     AR_END(FEProcessDraw, numPrims * work.numInstances);
 }
 

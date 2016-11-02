@@ -761,6 +761,8 @@ void BinTriangles(
         _simd_store_si((simdscalari*)aRTAI, _simd_setzero_si());
     }
 
+endBinTriangles:
+
     // scan remaining valid triangles and bin each separately
     while (_BitScanForward(&triIndex, triMask))
     {
@@ -839,7 +841,6 @@ void BinTriangles(
                      triMask &= ~(1 << triIndex);
     }
 
-endBinTriangles:
     AR_END(FEBinTriangles, 1);
 }
 
@@ -859,6 +860,7 @@ PFN_PROCESS_PRIMS GetBinTrianglesFunc(bool IsConservative)
 {
     return TemplateArgUnroller<FEBinTrianglesChooser>::GetFunc(IsConservative);
 }
+
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Bin SIMD points to the backend.  Only supports point size of 1

@@ -415,6 +415,8 @@ struct DRAW_CONTEXT
     volatile int32_t    threadsDone;
 
     SYNC_DESC       retireCallback; // Call this func when this DC is retired.
+
+
 };
 
 static_assert((sizeof(DRAW_CONTEXT) & 63) == 0, "Invalid size for DRAW_CONTEXT");
@@ -495,6 +497,7 @@ struct SWR_CONTEXT
     PFN_UPDATE_SO_WRITE_OFFSET  pfnUpdateSoWriteOffset;
     PFN_UPDATE_STATS            pfnUpdateStats;
     PFN_UPDATE_STATS_FE         pfnUpdateStatsFE;
+
 
     // Global Stats
     SWR_STATS* pStats;

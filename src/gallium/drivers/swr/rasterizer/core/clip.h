@@ -502,8 +502,7 @@ public:
     void ExecuteStage(PA_STATE& pa, simdvector prim[], uint32_t primMask, simdscalari primId, simdscalari viewportIdx)
     {
         SWR_ASSERT(pa.pDC != nullptr);
-
-        SWR_CONTEXT *pContext = pa.pDC->pContext;
+        SWR_CONTEXT* pContext = pa.pDC->pContext;
 
         // set up binner based on PA state
         PFN_PROCESS_PRIMS pfnBinner;
@@ -523,6 +522,7 @@ public:
             pfnBinner = GetBinTrianglesFunc((pa.pDC->pState->state.rastState.conservativeRast > 0));
             break;
         };
+
 
         // update clipper invocations pipeline stat
         uint32_t numInvoc = _mm_popcnt_u32(primMask);

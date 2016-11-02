@@ -206,6 +206,7 @@ struct SWR_CREATECONTEXT_INFO
     PFN_UPDATE_STATS            pfnUpdateStats;
     PFN_UPDATE_STATS_FE         pfnUpdateStatsFE;
 
+
     // Pointer to rdtsc buckets mgr returned to the caller.
     // Only populated when KNOB_ENABLE_RDTSC is set
     BucketManager* pBucketMgr;
@@ -648,4 +649,5 @@ void SWR_API SwrEnableStatsBE(
 void SWR_API SwrEndFrame(
     HANDLE hContext);
 
-#endif//__SWR_API_H__
+
+#endif
