@@ -1103,8 +1103,7 @@ VkResult anv_QueueSubmit(
                          pSubmits[i].pCommandBuffers[j]);
          assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-         result = anv_device_execbuf(device, &cmd_buffer->execbuf2.execbuf,
-                                     cmd_buffer->execbuf2.bos);
+         result = anv_cmd_buffer_execbuf(device, cmd_buffer);
          if (result != VK_SUCCESS)
             return result;
       }

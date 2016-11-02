@@ -1202,3 +1202,11 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    if (!cmd_buffer->execbuf2.need_reloc)
       cmd_buffer->execbuf2.execbuf.flags |= I915_EXEC_NO_RELOC;
 }
+
+VkResult
+anv_cmd_buffer_execbuf(struct anv_device *device,
+                       struct anv_cmd_buffer *cmd_buffer)
+{
+   return anv_device_execbuf(device, &cmd_buffer->execbuf2.execbuf,
+                             cmd_buffer->execbuf2.bos);
+}
