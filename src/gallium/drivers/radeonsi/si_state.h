@@ -99,6 +99,7 @@ struct si_stencil_ref {
 struct si_vertex_element
 {
 	unsigned			count;
+	uint32_t			fix_fetch;
 	uint32_t			rsrc_word3[SI_MAX_ATTRIBS];
 	uint32_t			format_size[SI_MAX_ATTRIBS];
 	struct pipe_vertex_element	elements[SI_MAX_ATTRIBS];

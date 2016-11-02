@@ -369,17 +369,16 @@ static LLVMValueRef get_instance_index_for_fetch(
 }
 
 static void declare_input_vs(
-	struct si_shader_context *radeon_bld,
+	struct si_shader_context *ctx,
 	unsigned input_index,
 	const struct tgsi_full_declaration *decl,
 	LLVMValueRef out[4])
 {
-	struct lp_build_context *base = &radeon_bld->soa.bld_base.base;
+	struct lp_build_context *base = &ctx->soa.bld_base.base;
 	struct gallivm_state *gallivm = base->gallivm;
-	struct si_shader_context *ctx =
-		si_shader_context(&radeon_bld->soa.bld_base);
 
 	unsigned chan;
+	unsigned fix_fetch;
 
 	LLVMValueRef t_list_ptr;
 	LLVMValueRef t_offset;
@@ -399,7 +398,7 @@ static void declare_input_vs(
 	/* Build the attribute offset */
 	attribute_offset = lp_build_const_int32(gallivm, 0);
 
-	buffer_index = LLVMGetParam(radeon_bld->main_fn,
+	buffer_index = LLVMGetParam(ctx->main_fn,
 				    ctx->param_vertex_index0 +
 				    input_index);
 
@@ -415,6 +414,45 @@ static void declare_input_vs(
 		LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
 		out[chan] = LLVMBuildExtractElement(gallivm->builder,
 						    input, llvm_chan, "");
+	}
+
+	fix_fetch = (ctx->shader->key.vs.fix_fetch >> (2 * input_index)) & 3;
+	if (fix_fetch) {
+		/* The hardware returns an unsigned value; convert it to a
+		 * signed one.
+		 */
+		LLVMValueRef tmp = out[3];
+		LLVMValueRef c30 = LLVMConstInt(ctx->i32, 30, 0);
+
+		/* First, recover the sign-extended signed integer value. */
+		if (fix_fetch == SI_FIX_FETCH_A2_SSCALED)
+			tmp = LLVMBuildFPToUI(gallivm->builder, tmp, ctx->i32, "");
+		else
+			tmp = LLVMBuildBitCast(gallivm->builder, tmp, ctx->i32, "");
+
+		/* For the integer-like cases, do a natural sign extension.
+		 *
+		 * For the SNORM case, the values are 0.0, 0.333, 0.666, 1.0
+		 * and happen to contain 0, 1, 2, 3 as the two LSBs of the
+		 * exponent.
+		 */
+		tmp = LLVMBuildShl(gallivm->builder, tmp,
+				   fix_fetch == SI_FIX_FETCH_A2_SNORM ?
+				   LLVMConstInt(ctx->i32, 7, 0) : c30, "");
+		tmp = LLVMBuildAShr(gallivm->builder, tmp, c30, "");
+
+		/* Convert back to the right type. */
+		if (fix_fetch == SI_FIX_FETCH_A2_SNORM) {
+			LLVMValueRef clamp;
+			LLVMValueRef neg_one = LLVMConstReal(ctx->f32, -1.0);
+			tmp = LLVMBuildSIToFP(gallivm->builder, tmp, ctx->f32, "");
+			clamp = LLVMBuildFCmp(gallivm->builder, LLVMRealULT, tmp, neg_one, "");
+			tmp = LLVMBuildSelect(gallivm->builder, clamp, neg_one, tmp, "");
+		} else if (fix_fetch == SI_FIX_FETCH_A2_SSCALED) {
+			tmp = LLVMBuildSIToFP(gallivm->builder, tmp, ctx->f32, "");
+		}
+
+		out[3] = tmp;
 	}
 }
 
@@ -8102,11 +8140,15 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	/* LS, ES, VS are compiled on demand if the main part hasn't been
 	 * compiled for that stage.
+	 *
+	 * Vertex shaders are compiled on demand when a vertex fetch
+	 * workaround must be applied.
 	 */
 	if (!mainp ||
 	    (sel->type == PIPE_SHADER_VERTEX &&
 	     (shader->key.vs.as_es != mainp->key.vs.as_es ||
-	      shader->key.vs.as_ls != mainp->key.vs.as_ls)) ||
+	      shader->key.vs.as_ls != mainp->key.vs.as_ls ||
+	      shader->key.vs.fix_fetch)) ||
 	    (sel->type == PIPE_SHADER_TESS_EVAL &&
 	     shader->key.tes.as_es != mainp->key.tes.as_es) ||
 	    (sel->type == PIPE_SHADER_TESS_CTRL &&

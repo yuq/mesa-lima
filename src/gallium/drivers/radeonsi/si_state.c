@@ -3281,6 +3281,20 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				   S_008F0C_NUM_FORMAT(num_format) |
 				   S_008F0C_DATA_FORMAT(data_format);
 		v->format_size[i] = desc->block.bits / 8;
+
+		/* The hardware always treats the 2-bit alpha channel as
+		 * unsigned, so a shader workaround is needed.
+		 */
+		if (data_format == V_008F0C_BUF_DATA_FORMAT_2_10_10_10) {
+			if (num_format == V_008F0C_BUF_NUM_FORMAT_SNORM) {
+				v->fix_fetch |= SI_FIX_FETCH_A2_SNORM << (2 * i);
+			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SSCALED) {
+				v->fix_fetch |= SI_FIX_FETCH_A2_SSCALED << (2 * i);
+			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SINT) {
+				/* This isn't actually used in OpenGL. */
+				v->fix_fetch |= SI_FIX_FETCH_A2_SINT << (2 * i);
+			}
+		}
 	}
 	memcpy(v->elements, elements, sizeof(struct pipe_vertex_element) * count);
 

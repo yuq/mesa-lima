@@ -233,6 +233,14 @@ enum {
 	TGSI_SEMANTIC_DEFAULT_TESSINNER_SI,
 };
 
+/* For VS shader key fix_fetch. */
+enum {
+	SI_FIX_FETCH_NONE = 0,
+	SI_FIX_FETCH_A2_SNORM = 1,
+	SI_FIX_FETCH_A2_SSCALED = 2,
+	SI_FIX_FETCH_A2_SINT = 3,
+};
+
 struct si_shader;
 
 /* A shader selector is a gallium CSO and contains shader variants and
@@ -400,6 +408,9 @@ union si_shader_key {
 		struct si_vs_epilog_bits epilog;
 		unsigned	as_es:1; /* export shader */
 		unsigned	as_ls:1; /* local shader */
+
+		/* One pair of bits for every input: SI_FIX_FETCH_* enums. */
+		uint32_t	fix_fetch;
 	} vs;
 	struct {
 		struct si_tcs_epilog_bits epilog;
