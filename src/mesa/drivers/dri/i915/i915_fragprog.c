@@ -1148,13 +1148,13 @@ i915NewProgram(struct gl_context * ctx, GLenum target, GLuint id)
 {
    switch (target) {
    case GL_VERTEX_PROGRAM_ARB: {
-      struct gl_program *prog = CALLOC_STRUCT(gl_program);
+      struct gl_program *prog = rzalloc(NULL, struct gl_program);
       return _mesa_init_gl_program(prog, target, id);
    }
 
    case GL_FRAGMENT_PROGRAM_ARB:{
          struct i915_fragment_program *prog =
-            CALLOC_STRUCT(i915_fragment_program);
+            rzalloc(NULL, struct i915_fragment_program);
          if (prog) {
             i915_init_program(I915_CONTEXT(ctx), prog);
 

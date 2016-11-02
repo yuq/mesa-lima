@@ -58,27 +58,33 @@ st_new_program(struct gl_context *ctx, GLenum target, GLuint id)
 {
    switch (target) {
    case GL_VERTEX_PROGRAM_ARB: {
-      struct st_vertex_program *prog = ST_CALLOC_STRUCT(st_vertex_program);
+      struct st_vertex_program *prog = rzalloc(NULL,
+                                               struct st_vertex_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct st_fragment_program *prog = ST_CALLOC_STRUCT(st_fragment_program);
+      struct st_fragment_program *prog = rzalloc(NULL,
+                                                 struct st_fragment_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_GEOMETRY_PROGRAM_NV: {
-      struct st_geometry_program *prog = ST_CALLOC_STRUCT(st_geometry_program);
+      struct st_geometry_program *prog = rzalloc(NULL,
+                                                 struct st_geometry_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_TESS_CONTROL_PROGRAM_NV: {
-      struct st_tessctrl_program *prog = ST_CALLOC_STRUCT(st_tessctrl_program);
+      struct st_tessctrl_program *prog = rzalloc(NULL,
+                                                 struct st_tessctrl_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_TESS_EVALUATION_PROGRAM_NV: {
-      struct st_tesseval_program *prog = ST_CALLOC_STRUCT(st_tesseval_program);
+      struct st_tesseval_program *prog = rzalloc(NULL,
+                                                 struct st_tesseval_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    case GL_COMPUTE_PROGRAM_NV: {
-      struct st_compute_program *prog = ST_CALLOC_STRUCT(st_compute_program);
+      struct st_compute_program *prog = rzalloc(NULL,
+                                                struct st_compute_program);
       return _mesa_init_gl_program(&prog->Base, target, id);
    }
    default:

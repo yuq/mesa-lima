@@ -221,7 +221,7 @@ _mesa_new_program(struct gl_context *ctx, GLenum target, GLuint id)
    case GL_TESS_EVALUATION_PROGRAM_NV:
    case GL_FRAGMENT_PROGRAM_ARB:
    case GL_COMPUTE_PROGRAM_NV: {
-      struct gl_program *prog = CALLOC_STRUCT(gl_program);
+      struct gl_program *prog = rzalloc(NULL, struct gl_program);
       return _mesa_init_gl_program(prog, target, id);
    }
    default:
@@ -262,7 +262,7 @@ _mesa_delete_program(struct gl_context *ctx, struct gl_program *prog)
    }
 
    mtx_destroy(&prog->Mutex);
-   free(prog);
+   ralloc_free(prog);
 }
 
 

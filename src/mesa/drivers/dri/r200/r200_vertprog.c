@@ -1203,11 +1203,12 @@ r200NewProgram(struct gl_context *ctx, GLenum target, GLuint id)
 {
    switch(target){
    case GL_VERTEX_PROGRAM_ARB: {
-      struct r200_vertex_program *vp = CALLOC_STRUCT(r200_vertex_program);
+      struct r200_vertex_program *vp = rzalloc(NULL,
+                                               struct r200_vertex_program);
       return _mesa_init_gl_program(&vp->mesa_program, target, id);
    }
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct gl_program *prog = CALLOC_STRUCT(gl_program);
+      struct gl_program *prog = rzalloc(NULL, struct gl_program);
       return _mesa_init_gl_program(prog, target, id);
    }
    default:
