@@ -350,7 +350,7 @@ VkResult anv_EnumeratePhysicalDevices(
          snprintf(path, sizeof(path), "/dev/dri/renderD%d", 128 + i);
          result = anv_physical_device_init(&instance->physicalDevice,
                                            instance, path);
-         if (result == VK_SUCCESS)
+         if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
             break;
       }
 
