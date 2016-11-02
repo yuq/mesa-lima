@@ -155,15 +155,20 @@ static void surf_winsys_to_drm(struct radeon_surface *surf_drm,
     surf_drm->bankh = surf_ws->bankh;
     surf_drm->mtilea = surf_ws->mtilea;
     surf_drm->tile_split = surf_ws->tile_split;
-    surf_drm->stencil_tile_split = surf_ws->stencil_tile_split;
 
     for (i = 0; i <= surf_drm->last_level; i++) {
         surf_level_winsys_to_drm(&surf_drm->level[i], &surf_ws->level[i], bpe);
-        surf_level_winsys_to_drm(&surf_drm->stencil_level[i],
-                                 &surf_ws->stencil_level[i], bpe);
-
         surf_drm->tiling_index[i] = surf_ws->tiling_index[i];
-        surf_drm->stencil_tiling_index[i] = surf_ws->stencil_tiling_index[i];
+    }
+
+    if (flags & RADEON_SURF_SBUFFER) {
+        surf_drm->stencil_tile_split = surf_ws->stencil_tile_split;
+
+        for (i = 0; i <= surf_drm->last_level; i++) {
+            surf_level_winsys_to_drm(&surf_drm->stencil_level[i],
+                                     &surf_ws->stencil_level[i], bpe);
+            surf_drm->stencil_tiling_index[i] = surf_ws->stencil_tiling_index[i];
+        }
     }
 }
 
@@ -188,18 +193,24 @@ static void surf_drm_to_winsys(struct radeon_drm_winsys *ws,
     surf_ws->bankh = surf_drm->bankh;
     surf_ws->mtilea = surf_drm->mtilea;
     surf_ws->tile_split = surf_drm->tile_split;
-    surf_ws->stencil_tile_split = surf_drm->stencil_tile_split;
 
     surf_ws->macro_tile_index = cik_get_macro_tile_index(surf_ws);
 
     for (i = 0; i <= surf_drm->last_level; i++) {
         surf_level_drm_to_winsys(&surf_ws->level[i], &surf_drm->level[i],
                                  surf_drm->bpe * surf_drm->nsamples);
-        surf_level_drm_to_winsys(&surf_ws->stencil_level[i],
-                                 &surf_drm->stencil_level[i], surf_drm->nsamples);
-
         surf_ws->tiling_index[i] = surf_drm->tiling_index[i];
-        surf_ws->stencil_tiling_index[i] = surf_drm->stencil_tiling_index[i];
+    }
+
+    if (surf_ws->flags & RADEON_SURF_SBUFFER) {
+        surf_ws->stencil_tile_split = surf_drm->stencil_tile_split;
+
+        for (i = 0; i <= surf_drm->last_level; i++) {
+            surf_level_drm_to_winsys(&surf_ws->stencil_level[i],
+                                     &surf_drm->stencil_level[i],
+                                     surf_drm->nsamples);
+            surf_ws->stencil_tiling_index[i] = surf_drm->stencil_tiling_index[i];
+        }
     }
 
     set_micro_tile_mode(surf_ws, &ws->info);
