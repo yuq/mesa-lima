@@ -443,10 +443,13 @@ struct BlendJit : public Builder
         }
     }
 
-    void AlphaTest(const BLEND_COMPILE_STATE& state, Value* pBlendState, Value* pAlpha, Value* ppMask)
+    void AlphaTest(const BLEND_COMPILE_STATE& state, Value* pBlendState, Value* ppAlpha, Value* ppMask)
     {
         // load uint32_t reference
         Value* pRef = VBROADCAST(LOAD(pBlendState, { 0, SWR_BLEND_STATE_alphaTestReference }));
+        
+        // load alpha
+        Value* pAlpha = LOAD(ppAlpha);
 
         Value* pTest = nullptr;
         if (state.alphaTestFormat == ALPHA_TEST_UNORM8)
@@ -523,6 +526,7 @@ struct BlendJit : public Builder
             PointerType::get(Gen_SWR_BLEND_STATE(JM()), 0), // SWR_BLEND_STATE*
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& src
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& src1
+            PointerType::get(mSimdFP32Ty, 0),               // src0alpha
             Type::getInt32Ty(JM()->mContext),               // sampleNum
             PointerType::get(mSimdFP32Ty, 0),               // uint8_t* pDst
             PointerType::get(mSimdFP32Ty, 0),               // simdvector& result
@@ -545,6 +549,8 @@ struct BlendJit : public Builder
         pSrc->setName("src");
         Value* pSrc1 = &*argitr++;
         pSrc1->setName("src1");
+        Value* pSrc0Alpha = &*argitr++;
+        pSrc0Alpha->setName("src0alpha");
         Value* sampleNum = &*argitr++;
         sampleNum->setName("sampleNum");
         Value* pDst = &*argitr++;
@@ -588,7 +594,7 @@ struct BlendJit : public Builder
         // alpha test
         if (state.desc.alphaTestEnable)
         {
-            AlphaTest(state, pBlendState, src[3], ppMask);
+            AlphaTest(state, pBlendState, pSrc0Alpha, ppMask);
         }
 
         // color blend
