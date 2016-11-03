@@ -8,6 +8,7 @@ gbm_device_is_format_supported
 gbm_device_destroy
 gbm_create_device
 gbm_bo_create
+gbm_bo_create_with_modifiers
 gbm_bo_import
 gbm_bo_map
 gbm_bo_unmap
@@ -27,6 +28,7 @@ gbm_bo_set_user_data
 gbm_bo_get_user_data
 gbm_bo_destroy
 gbm_surface_create
+gbm_surface_create_with_modifiers
 gbm_surface_needs_lock_front_buffer
 gbm_surface_lock_front_buffer
 gbm_surface_release_buffer

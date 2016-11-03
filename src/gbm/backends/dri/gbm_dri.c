@@ -1023,12 +1023,19 @@ free_bo:
 static struct gbm_bo *
 gbm_dri_bo_create(struct gbm_device *gbm,
                   uint32_t width, uint32_t height,
-                  uint32_t format, uint32_t usage)
+                  uint32_t format, uint32_t usage,
+                  const uint64_t *modifiers,
+                  const unsigned int count)
 {
    struct gbm_dri_device *dri = gbm_dri_device(gbm);
    struct gbm_dri_bo *bo;
    int dri_format;
    unsigned dri_use = 0;
+
+   /* Callers of this may specify a modifier, or a dri usage, but not both. The
+    * newer modifier interface deprecates the older usage flags.
+    */
+   assert(!(usage && count));
 
    if (usage & GBM_BO_USE_WRITE || dri->image == NULL)
       return create_dumb(gbm, width, height, format, usage);
@@ -1087,11 +1094,25 @@ gbm_dri_bo_create(struct gbm_device *gbm,
    /* Gallium drivers requires shared in order to get the handle/stride */
    dri_use |= __DRI_IMAGE_USE_SHARE;
 
-   bo->image =
-      dri->image->createImage(dri->screen,
-                              width, height,
-                              dri_format, dri_use,
-                              bo);
+   if (modifiers) {
+      if (!dri->image || dri->image->base.version < 14 ||
+          !dri->image->createImageWithModifiers) {
+         fprintf(stderr, "Modifiers specified, but DRI is too old\n");
+         errno = ENOSYS;
+         goto failed;
+      }
+
+      bo->image =
+         dri->image->createImageWithModifiers(dri->screen,
+                                              width, height,
+                                              dri_format,
+                                              modifiers, count,
+                                              bo);
+   } else {
+      bo->image = dri->image->createImage(dri->screen, width, height,
+                                          dri_format, dri_use, bo);
+   }
+
    if (bo->image == NULL)
       goto failed;
 
@@ -1165,19 +1186,44 @@ gbm_dri_bo_unmap(struct gbm_bo *_bo, void *map_data)
 static struct gbm_surface *
 gbm_dri_surface_create(struct gbm_device *gbm,
                        uint32_t width, uint32_t height,
-		       uint32_t format, uint32_t flags)
+		       uint32_t format, uint32_t flags,
+                       const uint64_t *modifiers, const unsigned count)
 {
+   struct gbm_dri_device *dri = gbm_dri_device(gbm);
    struct gbm_dri_surface *surf;
 
-   surf = calloc(1, sizeof *surf);
-   if (surf == NULL)
+   if (modifiers &&
+       (!dri->image || dri->image->base.version < 14 ||
+        !dri->image->createImageWithModifiers)) {
+      errno = ENOSYS;
       return NULL;
+   }
+
+   surf = calloc(1, sizeof *surf);
+   if (surf == NULL) {
+      errno = ENOMEM;
+      return NULL;
+   }
 
    surf->base.gbm = gbm;
    surf->base.width = width;
    surf->base.height = height;
    surf->base.format = format;
    surf->base.flags = flags;
+   if (!modifiers) {
+      assert(!count);
+      return &surf->base;
+   }
+
+   surf->base.modifiers = calloc(count, sizeof(*modifiers));
+   if (count && !surf->base.modifiers) {
+      errno = ENOMEM;
+      free(surf);
+      return NULL;
+   }
+
+   surf->base.count = count;
+   memcpy(surf->base.modifiers, modifiers, count * sizeof(*modifiers));
 
    return &surf->base;
 }
@@ -1187,6 +1233,7 @@ gbm_dri_surface_destroy(struct gbm_surface *_surf)
 {
    struct gbm_dri_surface *surf = gbm_dri_surface(_surf);
 
+   free(surf->base.modifiers);
    free(surf);
 }
 
