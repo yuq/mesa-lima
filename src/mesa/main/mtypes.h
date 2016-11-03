@@ -1730,12 +1730,12 @@ struct gl_transform_feedback_object
    unsigned GlesRemainingPrims;
 
    /**
-    * The shader program active when BeginTransformFeedback() was called.
+    * The program active when BeginTransformFeedback() was called.
     * When active and unpaused, this equals ctx->Shader.CurrentProgram[stage],
     * where stage is the pipeline stage that is the source of data for
     * transform feedback.
     */
-   struct gl_shader_program *shader_program;
+   struct gl_program *program;
 
    /** The feedback buffers */
    GLuint BufferNames[MAX_FEEDBACK_BUFFERS];

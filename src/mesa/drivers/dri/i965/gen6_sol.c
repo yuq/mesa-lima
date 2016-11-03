@@ -45,8 +45,7 @@ gen6_update_sol_surfaces(struct brw_context *brw)
    if (xfb_active) {
       /* BRW_NEW_TRANSFORM_FEEDBACK */
       xfb_obj = ctx->TransformFeedback.CurrentObject;
-      linked_xfb_info =
-         xfb_obj->shader_program->xfb_program->sh.LinkedTransformFeedback;
+      linked_xfb_info = xfb_obj->program->sh.LinkedTransformFeedback;
    }
 
    for (int i = 0; i < BRW_MAX_SOL_BINDINGS; ++i) {
