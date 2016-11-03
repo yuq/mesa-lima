@@ -152,7 +152,7 @@ static struct gl_program *brwNewProgram( struct gl_context *ctx,
             rzalloc(NULL, struct gen4_fragment_program);
          prog = &g4_prog->base;
       } else {
-         prog = CALLOC_STRUCT(brw_program);
+         prog = rzalloc(NULL, struct brw_program);
       }
 
       if (prog) {
