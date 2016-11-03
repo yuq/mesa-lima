@@ -1972,6 +1972,15 @@ struct gl_program
          GLuint NumSubroutineFunctions;
          GLuint MaxSubroutineFunctionIndex;
          struct gl_subroutine_function *SubroutineFunctions;
+
+         union {
+            struct {
+               /**
+                * A bitmask of gl_advanced_blend_mode values
+                */
+               GLbitfield BlendSupport;
+            } fs;
+         };
       } sh;
 
       /** ARB assembly-style program fields */
@@ -2279,11 +2288,6 @@ struct gl_shader_info
    bool EarlyFragmentTests;
 
    /**
-    * A bitmask of gl_advanced_blend_mode values
-    */
-   GLbitfield BlendSupport;
-
-   /**
     * Compute shader state from ARB_compute_shader and
     * ARB_compute_variable_group_size layout qualifiers.
     */
@@ -2435,6 +2439,11 @@ struct gl_shader
 
    struct exec_list *ir;
    struct glsl_symbol_table *symbols;
+
+   /**
+    * A bitmask of gl_advanced_blend_mode values
+    */
+   GLbitfield BlendSupport;
 
    struct gl_shader_info info;
 };

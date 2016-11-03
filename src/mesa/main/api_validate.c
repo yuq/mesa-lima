@@ -102,7 +102,7 @@ check_blend_func_error(struct gl_context *ctx)
       const struct gl_shader_program *sh_prog =
          ctx->_Shader->_CurrentFragmentProgram;
       const GLbitfield blend_support = !sh_prog ? 0 :
-         sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->info.BlendSupport;
+         sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program->sh.fs.BlendSupport;
 
       if ((blend_support & ctx->Color._AdvancedBlendMode) == 0) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
