@@ -43,6 +43,8 @@ struct NineBuffer9
     int nmaps, maxmaps;
     UINT size;
 
+    int16_t bind_count; /* to Device9->state.stream */
+
     /* Specific to managed buffers */
     struct {
         void *data;
@@ -93,6 +95,22 @@ NineBuffer9_Upload( struct NineBuffer9 *This )
                          This->managed.dirty_box.width,
                          (char *)This->managed.data + This->managed.dirty_box.x);
     This->managed.dirty = FALSE;
+}
+
+static void inline
+NineBindBufferToDevice( struct NineDevice9 *device,
+                        struct NineBuffer9 **slot,
+                        struct NineBuffer9 *buf )
+{
+    struct NineBuffer9 *old = *slot;
+
+    (void)device;
+    if (buf)
+        buf->bind_count++;
+    if (old)
+        old->bind_count--;
+
+    nine_bind(slot, buf);
 }
 
 void

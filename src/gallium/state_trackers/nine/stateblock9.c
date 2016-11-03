@@ -25,6 +25,8 @@
 #include "basetexture9.h"
 #include "nine_helpers.h"
 #include "vertexdeclaration9.h"
+#include "vertexbuffer9.h"
+#include "indexbuffer9.h"
 
 #define DBG_CHANNEL DBG_STATEBLOCK
 
@@ -91,6 +93,18 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
     }
 
     NineUnknown_dtor(&This->base);
+}
+
+static void
+NineStateBlock9_BindBuffer( struct NineDevice9 *device,
+                            boolean applyToDevice,
+                            struct NineBuffer9 **slot,
+                            struct NineBuffer9 *buf )
+{
+    if (applyToDevice)
+        NineBindBufferToDevice(device, slot, buf);
+    else
+        nine_bind(slot, buf);
 }
 
 static void
@@ -233,7 +247,10 @@ nine_state_copy_common(struct NineDevice9 *device,
 
     /* Index buffer. */
     if (mask->changed.group & NINE_STATE_IDXBUF)
-        nine_bind(&dst->idxbuf, src->idxbuf);
+        NineStateBlock9_BindBuffer(device,
+                                   apply,
+                                   (struct NineBuffer9 **)&dst->idxbuf,
+                                   (struct NineBuffer9 *)src->idxbuf);
 
     /* Vertex streams. */
     if (mask->changed.vtxbuf | mask->changed.stream_freq) {
@@ -241,7 +258,10 @@ nine_state_copy_common(struct NineDevice9 *device,
         uint32_t m = mask->changed.vtxbuf | mask->changed.stream_freq;
         for (i = 0; m; ++i, m >>= 1) {
             if (mask->changed.vtxbuf & (1 << i)) {
-                nine_bind(&dst->stream[i], src->stream[i]);
+                NineStateBlock9_BindBuffer(device,
+                                           apply,
+                                           (struct NineBuffer9 **)&dst->stream[i],
+                                           (struct NineBuffer9 *)src->stream[i]);
                 if (src->stream[i]) {
                     dst->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset;
                     dst->vtxbuf[i].stride = src->vtxbuf[i].stride;
@@ -408,12 +428,18 @@ nine_state_copy_common_all(struct NineDevice9 *device,
                src->changed.sampler, sizeof(dst->changed.sampler));
 
     /* Index buffer. */
-    nine_bind(&dst->idxbuf, src->idxbuf);
+    NineStateBlock9_BindBuffer(device,
+                               apply,
+                               (struct NineBuffer9 **)&dst->idxbuf,
+                               (struct NineBuffer9 *)src->idxbuf);
 
     /* Vertex streams. */
     if (1) {
         for (i = 0; i < ARRAY_SIZE(dst->stream); ++i) {
-            nine_bind(&dst->stream[i], src->stream[i]);
+            NineStateBlock9_BindBuffer(device,
+                                       apply,
+                                       (struct NineBuffer9 **)&dst->stream[i],
+                                       (struct NineBuffer9 *)src->stream[i]);
             if (src->stream[i]) {
                 dst->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset;
                 dst->vtxbuf[i].stride = src->vtxbuf[i].stride;

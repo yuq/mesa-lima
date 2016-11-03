@@ -3471,7 +3471,9 @@ NineDevice9_SetStreamSource( struct NineDevice9 *This,
     state->vtxbuf[i].stride = Stride;
     state->vtxbuf[i].buffer_offset = OffsetInBytes;
 
-    nine_bind(&state->stream[i], pStreamData);
+    NineBindBufferToDevice(This,
+                           (struct NineBuffer9 **)&state->stream[i],
+                           (struct NineBuffer9 *)pVBuf9);
 
     nine_context_set_stream_source(This,
                                    StreamNumber,
@@ -3564,7 +3566,10 @@ NineDevice9_SetIndices( struct NineDevice9 *This,
 
     if (state->idxbuf == idxbuf)
         return D3D_OK;
-    nine_bind(&state->idxbuf, idxbuf);
+
+    NineBindBufferToDevice(This,
+                           (struct NineBuffer9 **)&state->idxbuf,
+                           (struct NineBuffer9 *)idxbuf);
 
     nine_context_set_indices(This, idxbuf);
 
