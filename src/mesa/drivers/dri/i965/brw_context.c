@@ -527,14 +527,21 @@ brw_initialize_context_constants(struct brw_context *brw)
 
    ctx->Const.MaxTextureCoordUnits = 8; /* Mesa limit */
    ctx->Const.MaxImageUnits = MAX_IMAGE_UNITS;
-   ctx->Const.MaxRenderbufferSize = 8192;
-   ctx->Const.MaxTextureLevels = MIN2(14 /* 8192 */, MAX_TEXTURE_LEVELS);
+   if (brw->gen >= 7) {
+      ctx->Const.MaxRenderbufferSize = 16384;
+      ctx->Const.MaxTextureLevels = MIN2(15 /* 16384 */, MAX_TEXTURE_LEVELS);
+      ctx->Const.MaxCubeTextureLevels = 15; /* 16384 */
+   } else {
+      ctx->Const.MaxRenderbufferSize = 8192;
+      ctx->Const.MaxTextureLevels = MIN2(14 /* 8192 */, MAX_TEXTURE_LEVELS);
+      ctx->Const.MaxCubeTextureLevels = 14; /* 8192 */
+   }
    ctx->Const.Max3DTextureLevels = 12; /* 2048 */
-   ctx->Const.MaxCubeTextureLevels = 14; /* 8192 */
    ctx->Const.MaxArrayTextureLayers = brw->gen >= 7 ? 2048 : 512;
    ctx->Const.MaxTextureMbytes = 1536;
    ctx->Const.MaxTextureRectSize = 1 << 12;
    ctx->Const.MaxTextureMaxAnisotropy = 16.0;
+   ctx->Const.MaxTextureLodBias = 15.0;
    ctx->Const.StripTextureBorder = true;
    if (brw->gen >= 7) {
       ctx->Const.MaxProgramTextureGatherComponents = 4;
