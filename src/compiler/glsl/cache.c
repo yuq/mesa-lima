@@ -416,7 +416,8 @@ choose_random_file_matching(const char *dir_path,
       return NULL;
    }
 
-   asprintf(&filename, "%s/%s", dir_path, entry->d_name);
+   if (asprintf(&filename, "%s/%s", dir_path, entry->d_name) < 0)
+      filename = NULL;
 
    closedir(dir);
 
@@ -497,8 +498,7 @@ evict_random_item(struct program_cache *cache)
    a = rand() % 16;
    b = rand() % 16;
 
-   asprintf (&dir_path, "%s/%c%c", cache->path, hex[a], hex[b]);
-   if (dir_path == NULL)
+   if (asprintf(&dir_path, "%s/%c%c", cache->path, hex[a], hex[b]) < 0)
       return;
 
    size = unlink_random_file_from_directory(dir_path);
