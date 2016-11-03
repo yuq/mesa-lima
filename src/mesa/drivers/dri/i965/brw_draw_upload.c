@@ -423,13 +423,22 @@ copy_array_to_vbo_array(struct brw_context *brw,
    uint8_t *dst = intel_upload_space(brw, size, dst_stride,
                                      &buffer->bo, &buffer->offset);
 
-   if (dst_stride == src_stride) {
-      memcpy(dst, src, size);
-   } else {
-      while (count--) {
-	 memcpy(dst, src, dst_stride);
-	 src += src_stride;
-	 dst += dst_stride;
+   /* The GL 4.5 spec says:
+    *      "If any enabled array’s buffer binding is zero when DrawArrays or
+    *      one of the other drawing commands defined in section 10.4 is called,
+    *      the result is undefined."
+    *
+    * In this case, let's the dst with undefined values
+    */
+   if (src != NULL) {
+      if (dst_stride == src_stride) {
+         memcpy(dst, src, size);
+      } else {
+         while (count--) {
+            memcpy(dst, src, dst_stride);
+            src += src_stride;
+            dst += dst_stride;
+         }
       }
    }
    buffer->stride = dst_stride;
