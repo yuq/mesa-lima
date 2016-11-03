@@ -1041,10 +1041,10 @@ get_buffer_property(struct gl_shader_program *shProg,
          *val = RESOURCE_XFB(res)->NumVaryings;
          return 1;
       case GL_ACTIVE_VARIABLES:
-         int i = 0;
-         for ( ; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
-            unsigned index =
-               shProg->LinkedTransformFeedback.Varyings[i].BufferIndex;
+         struct gl_transform_feedback_info *linked_xfb =
+            shProg->xfb_program->sh.LinkedTransformFeedback;
+         for (int i = 0; i < linked_xfb->NumVarying; i++) {
+            unsigned index = linked_xfb->Varyings[i].BufferIndex;
             struct gl_program_resource *buf_res =
                _mesa_program_resource_find_index(shProg,
                                                  GL_TRANSFORM_FEEDBACK_BUFFER,

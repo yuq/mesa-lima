@@ -534,7 +534,7 @@ gen6_gs_visitor::xfb_setup()
    };
 
    const struct gl_transform_feedback_info *linked_xfb_info =
-      &this->shader_prog->LinkedTransformFeedback;
+      this->shader_prog->xfb_program->sh.LinkedTransformFeedback;
    int i;
 
    /* Make sure that the VUE slots won't overflow the unsigned chars in

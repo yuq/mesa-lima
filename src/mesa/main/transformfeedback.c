@@ -418,7 +418,7 @@ _mesa_BeginTransformFeedback(GLenum mode)
       return;
    }
 
-   info = &source->LinkedTransformFeedback;
+   info = source->xfb_program->sh.LinkedTransformFeedback;
 
    if (info->NumOutputs == 0) {
       _mesa_error(ctx, GL_INVALID_OPERATION,

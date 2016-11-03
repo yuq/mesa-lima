@@ -4242,25 +4242,26 @@ build_program_resource_list(struct gl_context *ctx,
                                 output_stage, GL_PROGRAM_OUTPUT))
       return;
 
+   struct gl_transform_feedback_info *linked_xfb =
+      shProg->xfb_program->sh.LinkedTransformFeedback;
+
    /* Add transform feedback varyings. */
-   if (shProg->LinkedTransformFeedback.NumVarying > 0) {
-      for (int i = 0; i < shProg->LinkedTransformFeedback.NumVarying; i++) {
+   if (linked_xfb->NumVarying > 0) {
+      for (int i = 0; i < linked_xfb->NumVarying; i++) {
          if (!add_program_resource(shProg, resource_set,
                                    GL_TRANSFORM_FEEDBACK_VARYING,
-                                   &shProg->LinkedTransformFeedback.Varyings[i],
-                                   0))
+                                   &linked_xfb->Varyings[i], 0))
          return;
       }
    }
 
    /* Add transform feedback buffers. */
    for (unsigned i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
-      if ((shProg->LinkedTransformFeedback.ActiveBuffers >> i) & 1) {
-         shProg->LinkedTransformFeedback.Buffers[i].Binding = i;
+      if ((linked_xfb->ActiveBuffers >> i) & 1) {
+         linked_xfb->Buffers[i].Binding = i;
          if (!add_program_resource(shProg, resource_set,
                                    GL_TRANSFORM_FEEDBACK_BUFFER,
-                                   &shProg->LinkedTransformFeedback.Buffers[i],
-                                   0))
+                                   &linked_xfb->Buffers[i], 0))
          return;
       }
    }
@@ -4585,6 +4586,18 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
    if (!has_xfb_qualifiers) {
       num_tfeedback_decls = prog->TransformFeedback.NumVarying;
       varying_names = prog->TransformFeedback.VaryingNames;
+   }
+
+   /* Find the program used for xfb. Even if we don't use xfb we still want to
+    * set this so we can fill the default values for program interface query.
+    */
+   prog->xfb_program = prog->_LinkedShaders[last]->Program;
+   for (int i = MESA_SHADER_GEOMETRY; i >= MESA_SHADER_VERTEX; i--) {
+      if (prog->_LinkedShaders[i] == NULL)
+         continue;
+
+      prog->xfb_program = prog->_LinkedShaders[i]->Program;
+      break;
    }
 
    if (num_tfeedback_decls != 0) {

@@ -1950,6 +1950,9 @@ struct gl_program
       struct {
          struct gl_active_atomic_buffer **AtomicBuffers;
 
+         /** Post-link transform feedback info. */
+         struct gl_transform_feedback_info *LinkedTransformFeedback;
+
          /**
           * Number of types for subroutine uniforms.
           */
@@ -2737,8 +2740,7 @@ struct gl_shader_program
       GLchar **VaryingNames;  /**< Array [NumVarying] of char * */
    } TransformFeedback;
 
-   /** Post-link transform feedback info. */
-   struct gl_transform_feedback_info LinkedTransformFeedback;
+   struct gl_program *xfb_program;
 
    /** Post-link gl_FragDepth layout for ARB_conservative_depth. */
    enum gl_frag_depth_layout FragDepthLayout;

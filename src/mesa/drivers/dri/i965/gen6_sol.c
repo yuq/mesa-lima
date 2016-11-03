@@ -45,7 +45,8 @@ gen6_update_sol_surfaces(struct brw_context *brw)
    if (xfb_active) {
       /* BRW_NEW_TRANSFORM_FEEDBACK */
       xfb_obj = ctx->TransformFeedback.CurrentObject;
-      linked_xfb_info = &xfb_obj->shader_program->LinkedTransformFeedback;
+      linked_xfb_info =
+         xfb_obj->shader_program->xfb_program->sh.LinkedTransformFeedback;
    }
 
    for (int i = 0; i < BRW_MAX_SOL_BINDINGS; ++i) {
@@ -116,7 +117,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
       if (shaderprog) {
          /* Skip making a binding table if we don't have anything to put in it */
          const struct gl_transform_feedback_info *linked_xfb_info =
-            &shaderprog->LinkedTransformFeedback;
+            shaderprog->xfb_program->sh.LinkedTransformFeedback;
          need_binding_table = linked_xfb_info->NumOutputs > 0;
       }
       if (!need_binding_table) {
@@ -145,7 +146,7 @@ brw_gs_upload_binding_table(struct brw_context *brw)
          /* Skip making a binding table if we don't have anything to put in it */
          struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
          const struct gl_transform_feedback_info *linked_xfb_info =
-            &shaderprog->LinkedTransformFeedback;
+            shaderprog->xfb_program->sh.LinkedTransformFeedback;
          need_binding_table = linked_xfb_info->NumOutputs > 0 ||
                               prog_data->binding_table.size_bytes > 0;
       }
@@ -241,7 +242,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
       shaderprog =
          ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
    }
-   linked_xfb_info = &shaderprog->LinkedTransformFeedback;
+   linked_xfb_info = shaderprog->xfb_program->sh.LinkedTransformFeedback;
 
    /* Compute the maximum number of vertices that we can write without
     * overflowing any of the buffers currently being used for feedback.
