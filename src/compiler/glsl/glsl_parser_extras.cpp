@@ -28,6 +28,7 @@
 #include "main/core.h" /* for struct gl_context */
 #include "main/context.h"
 #include "main/debug_output.h"
+#include "main/formats.h"
 #include "main/shaderobj.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 #include "util/ralloc.h"
@@ -687,6 +688,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT_AEP(EXT_texture_buffer),
    EXT_AEP(EXT_texture_cube_map_array),
    EXT(MESA_shader_integer_functions),
+   EXT(NV_image_formats),
 };
 
 #undef EXT

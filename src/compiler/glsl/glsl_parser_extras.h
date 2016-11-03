@@ -765,6 +765,8 @@ struct _mesa_glsl_parse_state {
    bool MESA_shader_framebuffer_fetch_non_coherent_warn;
    bool MESA_shader_integer_functions_enable;
    bool MESA_shader_integer_functions_warn;
+   bool NV_image_formats_enable;
+   bool NV_image_formats_warn;
    /*@}*/
 
    /** Extensions supported by the OpenGL implementation. */
