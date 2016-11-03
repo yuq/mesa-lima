@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <values.h>
+#include <limits.h>
 #include <assert.h>
 #include <linux/futex.h>
 #include <linux/memfd.h>
