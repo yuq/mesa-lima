@@ -250,9 +250,6 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       }
    }
 
-   if (unlikely(INTEL_DEBUG & DEBUG_TCS) && tcs)
-      brw_dump_ir("tessellation control", shader_prog, tcs, NULL);
-
    int st_index = -1;
    if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))
       st_index = brw_get_shader_time_index(brw, shader_prog, NULL, ST_TCS);

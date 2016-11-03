@@ -264,6 +264,16 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       brw_add_texrect_params(prog);
 
+      bool debug_enabled =
+         (INTEL_DEBUG & intel_debug_flag_for_shader_stage(shader->Stage));
+
+      if (debug_enabled && shader->ir) {
+         fprintf(stderr, "GLSL IR for native %s shader %d:\n",
+                 _mesa_shader_stage_to_string(shader->Stage), shProg->Name);
+         _mesa_print_ir(stderr, shader->ir, NULL);
+         fprintf(stderr, "\n\n");
+      }
+
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
                                  compiler->scalar_stage[stage]);
 

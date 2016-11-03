@@ -116,9 +116,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
       start_time = get_time();
    }
 
-   if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      brw_dump_ir("compute", prog, &cs->base, &cp->program);
-
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
       st_index = brw_get_shader_time_index(brw, prog, &cp->program, ST_CS);
@@ -171,9 +168,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
    brw_alloc_stage_scratch(brw, &brw->cs.base,
                            prog_data.base.total_scratch,
                            scratch_ids_per_subslice * subslices);
-
-   if (unlikely(INTEL_DEBUG & DEBUG_CS))
-      fprintf(stderr, "\n");
 
    brw_upload_cache(&brw->cache, BRW_CACHE_CS_PROG,
                     key, sizeof(*key),

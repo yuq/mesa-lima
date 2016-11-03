@@ -126,6 +126,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
    } else {
       brw_nir_setup_arb_uniforms(fp->program.nir, &fp->program,
                                  &prog_data.base);
+
+      if (unlikely(INTEL_DEBUG & DEBUG_WM))
+         brw_dump_arb_asm("fragment", &fp->program);
    }
 
    if (unlikely(brw->perf_debug)) {
@@ -133,9 +136,6 @@ brw_codegen_wm_prog(struct brw_context *brw,
                     drm_intel_bo_busy(brw->batch.last_bo));
       start_time = get_time();
    }
-
-   if (unlikely(INTEL_DEBUG & DEBUG_WM))
-      brw_dump_ir("fragment", prog, fs ? &fs->base : NULL, &fp->program);
 
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
@@ -177,7 +177,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
                            prog_data.base.total_scratch,
                            devinfo->max_wm_threads);
 
-   if (unlikely(INTEL_DEBUG & DEBUG_WM))
+   if (unlikely((INTEL_DEBUG & DEBUG_WM) && !prog))
       fprintf(stderr, "\n");
 
    brw_upload_cache(&brw->cache, BRW_CACHE_FS_PROG,

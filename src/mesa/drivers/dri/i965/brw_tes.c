@@ -171,9 +171,6 @@ brw_codegen_tes_prog(struct brw_context *brw,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);
 
-   if (unlikely(INTEL_DEBUG & DEBUG_TES))
-      brw_dump_ir("tessellation evaluation", shader_prog, tes, NULL);
-
    int st_index = -1;
    if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))
       st_index = brw_get_shader_time_index(brw, shader_prog, NULL, ST_TES);
