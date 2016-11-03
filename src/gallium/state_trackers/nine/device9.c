@@ -193,7 +193,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
         This->caps.MaxVertexShaderConst = NINE_MAX_CONST_F_SWVP;
 
     This->context.pipe = This->screen->context_create(This->screen, NULL, 0);
-    if (!This->context.pipe) { return E_OUTOFMEMORY; } /* guess */
+    This->pipe_secondary = This->screen->context_create(This->screen, NULL, 0);
+    if (!This->context.pipe || !This->pipe_secondary) { return E_OUTOFMEMORY; } /* guess */
     This->pipe_sw = This->screen_sw->context_create(This->screen_sw, NULL, 0);
     if (!This->pipe_sw) { return E_OUTOFMEMORY; }
 
@@ -574,6 +575,7 @@ NineDevice9_dtor( struct NineDevice9 *This )
     if (This->context.cso) { cso_destroy_context(This->context.cso); }
     if (This->cso_sw) { cso_destroy_context(This->cso_sw); }
     if (This->context.pipe && This->context.pipe->destroy) { This->context.pipe->destroy(This->context.pipe); }
+    if (This->pipe_secondary && This->pipe_secondary->destroy) { This->pipe_secondary->destroy(This->pipe_secondary); }
     if (This->pipe_sw && This->pipe_sw->destroy) { This->pipe_sw->destroy(This->pipe_sw); }
 
     if (This->present) { ID3DPresentGroup_Release(This->present); }

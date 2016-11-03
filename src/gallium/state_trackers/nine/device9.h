@@ -53,6 +53,8 @@ struct NineDevice9
 
     /* G3D context */
     struct pipe_screen *screen;
+    /* For first time upload. No Sync with rendering thread */
+    struct pipe_context *pipe_secondary;
     struct pipe_screen *screen_sw;
     struct pipe_context *pipe_sw;
     struct cso_context *cso_sw;
