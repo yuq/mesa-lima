@@ -39,6 +39,7 @@
 
 #include "wsi_common.h"
 #include "wsi_common_x11.h"
+#include "wsi_common_queue.h"
 
 #define typed_memcpy(dest, src, count) ({ \
    static_assert(sizeof(*src) == sizeof(*dest), ""); \
@@ -145,6 +146,7 @@ static const VkSurfaceFormatKHR formats[] = {
 static const VkPresentModeKHR present_modes[] = {
    VK_PRESENT_MODE_IMMEDIATE_KHR,
    VK_PRESENT_MODE_MAILBOX_KHR,
+   VK_PRESENT_MODE_FIFO_KHR,
 };
 
 static xcb_screen_t *
@@ -490,7 +492,14 @@ struct x11_swapchain {
    xcb_present_event_t                          event_id;
    xcb_special_event_t *                        special_event;
    uint64_t                                     send_sbc;
+   uint64_t                                     last_present_msc;
    uint32_t                                     stamp;
+
+   bool                                         threaded;
+   VkResult                                     status;
+   struct wsi_queue                             present_queue;
+   struct wsi_queue                             acquire_queue;
+   pthread_t                                    queue_manager;
 
    struct x11_image                             images[0];
 };
@@ -536,6 +545,8 @@ x11_handle_dri3_present_event(struct x11_swapchain *chain,
       for (unsigned i = 0; i < chain->image_count; i++) {
          if (chain->images[i].pixmap == idle->pixmap) {
             chain->images[i].busy = false;
+            if (chain->threaded)
+               wsi_queue_push(&chain->acquire_queue, i);
             break;
          }
       }
@@ -543,7 +554,13 @@ x11_handle_dri3_present_event(struct x11_swapchain *chain,
       break;
    }
 
-   case XCB_PRESENT_COMPLETE_NOTIFY:
+   case XCB_PRESENT_EVENT_COMPLETE_NOTIFY: {
+      xcb_present_complete_notify_event_t *complete = (void *) event;
+      if (complete->kind == XCB_PRESENT_COMPLETE_KIND_PIXMAP)
+         chain->last_present_msc = complete->msc;
+      break;
+   }
+
    default:
       break;
    }
@@ -572,12 +589,9 @@ static uint64_t wsi_get_absolute_timeout(uint64_t timeout)
 }
 
 static VkResult
-x11_acquire_next_image(struct wsi_swapchain *anv_chain,
-                       uint64_t timeout,
-                       VkSemaphore semaphore,
-                       uint32_t *image_index)
+x11_acquire_next_image_poll_x11(struct x11_swapchain *chain,
+                                uint32_t *image_index, uint64_t timeout)
 {
-   struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
    xcb_generic_event_t *event;
    struct pollfd pfds;
    uint64_t atimeout;
@@ -635,17 +649,38 @@ x11_acquire_next_image(struct wsi_swapchain *anv_chain,
 }
 
 static VkResult
-x11_queue_present(struct wsi_swapchain *anv_chain,
-                  uint32_t image_index)
+x11_acquire_next_image_from_queue(struct x11_swapchain *chain,
+                                  uint32_t *image_index_out, uint64_t timeout)
 {
-   struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
+   assert(chain->threaded);
+
+   uint32_t image_index;
+   VkResult result = wsi_queue_pull(&chain->acquire_queue,
+                                    &image_index, timeout);
+   if (result != VK_SUCCESS) {
+      return result;
+   } else if (chain->status != VK_SUCCESS) {
+      return chain->status;
+   }
+
+   assert(image_index < chain->image_count);
+   xshmfence_await(chain->images[image_index].shm_fence);
+
+   *image_index_out = image_index;
+
+   return VK_SUCCESS;
+}
+
+static VkResult
+x11_present_to_x11(struct x11_swapchain *chain, uint32_t image_index,
+                   uint32_t target_msc)
+{
    struct x11_image *image = &chain->images[image_index];
 
    assert(image_index < chain->image_count);
 
    uint32_t options = XCB_PRESENT_OPTION_NONE;
 
-   int64_t target_msc = 0;
    int64_t divisor = 0;
    int64_t remainder = 0;
 
@@ -677,6 +712,82 @@ x11_queue_present(struct wsi_swapchain *anv_chain,
    xcb_flush(chain->conn);
 
    return VK_SUCCESS;
+}
+
+static VkResult
+x11_acquire_next_image(struct wsi_swapchain *anv_chain,
+                       uint64_t timeout,
+                       VkSemaphore semaphore,
+                       uint32_t *image_index)
+{
+   struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
+
+   if (chain->threaded) {
+      return x11_acquire_next_image_from_queue(chain, image_index, timeout);
+   } else {
+      return x11_acquire_next_image_poll_x11(chain, image_index, timeout);
+   }
+}
+
+static VkResult
+x11_queue_present(struct wsi_swapchain *anv_chain,
+                  uint32_t image_index)
+{
+   struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
+
+   if (chain->threaded) {
+      wsi_queue_push(&chain->present_queue, image_index);
+      return chain->status;
+   } else {
+      return x11_present_to_x11(chain, image_index, 0);
+   }
+}
+
+static void *
+x11_manage_fifo_queues(void *state)
+{
+   struct x11_swapchain *chain = state;
+   VkResult result;
+
+   assert(chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR);
+
+   while (chain->status == VK_SUCCESS) {
+      /* It should be safe to unconditionally block here.  Later in the loop
+       * we blocks until the previous present has landed on-screen.  At that
+       * point, we should have received IDLE_NOTIFY on all images presented
+       * before that point so the client should be able to acquire any image
+       * other than the currently presented one.
+       */
+      uint32_t image_index;
+      result = wsi_queue_pull(&chain->present_queue, &image_index, INT64_MAX);
+      if (result != VK_SUCCESS) {
+         goto fail;
+      } else if (chain->status != VK_SUCCESS) {
+         return NULL;
+      }
+
+      uint64_t target_msc = chain->last_present_msc + 1;
+      result = x11_present_to_x11(chain, image_index, target_msc);
+      if (result != VK_SUCCESS)
+         goto fail;
+
+      while (chain->last_present_msc < target_msc) {
+         xcb_generic_event_t *event =
+            xcb_wait_for_special_event(chain->conn, chain->special_event);
+         if (!event)
+            goto fail;
+
+         result = x11_handle_dri3_present_event(chain, (void *)event);
+         if (result != VK_SUCCESS)
+            goto fail;
+      }
+   }
+
+fail:
+   chain->status = result;
+   wsi_queue_push(&chain->acquire_queue, UINT32_MAX);
+
+   return NULL;
 }
 
 static VkResult
@@ -777,6 +888,15 @@ x11_swapchain_destroy(struct wsi_swapchain *anv_chain,
    for (uint32_t i = 0; i < chain->image_count; i++)
       x11_image_finish(chain, pAllocator, &chain->images[i]);
 
+   if (chain->threaded) {
+      chain->status = VK_ERROR_OUT_OF_DATE_KHR;
+      /* Push a UINT32_MAX to wake up the manager */
+      wsi_queue_push(&chain->present_queue, UINT32_MAX);
+      pthread_join(chain->queue_manager, NULL);
+      wsi_queue_destroy(&chain->acquire_queue);
+      wsi_queue_destroy(&chain->present_queue);
+   }
+
    xcb_unregister_for_special_event(chain->conn, chain->special_event);
 
    vk_free(pAllocator, chain);
@@ -828,6 +948,9 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->extent = pCreateInfo->imageExtent;
    chain->image_count = num_images;
    chain->send_sbc = 0;
+   chain->last_present_msc = 0;
+   chain->threaded = false;
+   chain->status = VK_SUCCESS;
 
    free(geometry);
 
@@ -864,6 +987,37 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                               &chain->images[image]);
       if (result != VK_SUCCESS)
          goto fail_init_images;
+   }
+
+   if (chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR) {
+      chain->threaded = true;
+
+      /* Initialize our queues.  We make them image_count + 1 because we will
+       * occasionally use UINT32_MAX to signal the other thread that an error
+       * has occurred and we don't want an overflow.
+       */
+      int ret;
+      ret = wsi_queue_init(&chain->acquire_queue, chain->image_count + 1);
+      if (ret) {
+         goto fail_init_images;
+      }
+
+      ret = wsi_queue_init(&chain->present_queue, chain->image_count + 1);
+      if (ret) {
+         wsi_queue_destroy(&chain->acquire_queue);
+         goto fail_init_images;
+      }
+
+      for (unsigned i = 0; i < chain->image_count; i++)
+         wsi_queue_push(&chain->acquire_queue, i);
+
+      ret = pthread_create(&chain->queue_manager, NULL,
+                           x11_manage_fifo_queues, chain);
+      if (ret) {
+         wsi_queue_destroy(&chain->present_queue);
+         wsi_queue_destroy(&chain->acquire_queue);
+         goto fail_init_images;
+      }
    }
 
    *swapchain_out = &chain->base;
