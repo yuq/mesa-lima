@@ -534,20 +534,31 @@ svga_surface_destroy(struct pipe_context *pipe,
    if (s->view_id != SVGA3D_INVALID_ID) {
       unsigned try;
 
-      assert(svga_have_vgpu10(svga));
-      for (try = 0; try < 2; try++) {
-         if (util_format_is_depth_or_stencil(s->base.format)) {
-            ret = SVGA3D_vgpu10_DestroyDepthStencilView(svga->swc, s->view_id);
-         }
-         else {
-            ret = SVGA3D_vgpu10_DestroyRenderTargetView(svga->swc, s->view_id);
-         }
-         if (ret == PIPE_OK)
-            break;
-         svga_context_flush(svga, NULL);
+      /* The SVGA3D device will generate a device error if the
+       * render target view or depth stencil view is destroyed from
+       * a context other than the one it was created with.
+       * Similar to shader resource view, in this case, we will skip
+       * the destroy for now.
+       */
+      if (surf->context != pipe) {
+         _debug_printf("context mismatch in %s\n", __func__);
       }
-      assert(ret == PIPE_OK);
-      util_bitmask_clear(svga->surface_view_id_bm, s->view_id);
+      else {
+         assert(svga_have_vgpu10(svga));
+         for (try = 0; try < 2; try++) {
+            if (util_format_is_depth_or_stencil(s->base.format)) {
+               ret = SVGA3D_vgpu10_DestroyDepthStencilView(svga->swc, s->view_id);
+            }
+            else {
+               ret = SVGA3D_vgpu10_DestroyRenderTargetView(svga->swc, s->view_id);
+            }
+            if (ret == PIPE_OK)
+               break;
+            svga_context_flush(svga, NULL);
+         }
+         assert(ret == PIPE_OK);
+         util_bitmask_clear(svga->surface_view_id_bm, s->view_id);
+      }
    }
 
    pipe_resource_reference(&surf->texture, NULL);
