@@ -1438,14 +1438,10 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
-
-   if (!prog || !prog->_LinkedShaders[MESA_SHADER_FRAGMENT])
-      return;
+   struct gl_program *prog = ctx->_Shader->_CurrentFragmentProgram;
 
    /* BRW_NEW_FS_PROG_DATA */
-   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program,
-                           &brw->wm.base, brw->wm.base.prog_data);
+   brw_upload_ubo_surfaces(brw, prog, &brw->wm.base, brw->wm.base.prog_data);
 }
 
 const struct brw_tracked_state brw_wm_ubo_surfaces = {

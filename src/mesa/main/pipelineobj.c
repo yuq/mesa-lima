@@ -58,7 +58,7 @@ _mesa_delete_pipeline_object(struct gl_context *ctx,
 {
    unsigned i;
 
-   _mesa_reference_shader_program(ctx, &obj->_CurrentFragmentProgram, NULL);
+   _mesa_reference_program(ctx, &obj->_CurrentFragmentProgram, NULL);
 
    for (i = 0; i < MESA_SHADER_STAGES; i++)
       _mesa_reference_shader_program(ctx, &obj->CurrentProgram[i], NULL);

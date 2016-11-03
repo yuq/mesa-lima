@@ -161,8 +161,7 @@ _mesa_free_shader_state(struct gl_context *ctx)
       _mesa_reference_shader_program(ctx, &ctx->Shader.CurrentProgram[i],
                                      NULL);
    }
-   _mesa_reference_shader_program(ctx, &ctx->Shader._CurrentFragmentProgram,
-				  NULL);
+   _mesa_reference_program(ctx, &ctx->Shader._CurrentFragmentProgram, NULL);
    _mesa_reference_shader_program(ctx, &ctx->Shader.ActiveProgram, NULL);
 
    /* Extended for ARB_separate_shader_objects */
@@ -1230,10 +1229,13 @@ use_shader_program(struct gl_context *ctx, gl_shader_stage stage,
          /* Empty for now. */
          break;
       case MESA_SHADER_FRAGMENT:
-         if (*target == ctx->_Shader->_CurrentFragmentProgram) {
-	    _mesa_reference_shader_program(ctx,
-                                           &ctx->_Shader->_CurrentFragmentProgram,
-					   NULL);
+         if (*target != NULL &&
+             ((*target)->_LinkedShaders[MESA_SHADER_FRAGMENT] &&
+              (*target)->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program ==
+              ctx->_Shader->_CurrentFragmentProgram)) {
+	    _mesa_reference_program(ctx,
+                                    &ctx->_Shader->_CurrentFragmentProgram,
+                                    NULL);
 	 }
 	 break;
       }

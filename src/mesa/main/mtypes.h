@@ -2921,7 +2921,7 @@ struct gl_pipeline_object
     */
    struct gl_shader_program *CurrentProgram[MESA_SHADER_STAGES];
 
-   struct gl_shader_program *_CurrentFragmentProgram;
+   struct gl_program *_CurrentFragmentProgram;
 
    /**
     * Program used by glUniform calls.
