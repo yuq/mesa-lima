@@ -76,6 +76,8 @@ NineIndexBuffer9_dtor( struct NineIndexBuffer9 *This )
 const struct pipe_index_buffer *
 NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This )
 {
+    /* The resource may change */
+    This->buffer.buffer = NineIndexBuffer9_GetResource(This);
     return &This->buffer;
 }
 

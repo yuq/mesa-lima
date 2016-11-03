@@ -32,6 +32,7 @@
 #include "pipe/p_defines.h"
 #include "pipe/p_format.h"
 #include "util/u_box.h"
+#include "util/u_inlines.h"
 
 #define DBG_CHANNEL (DBG_INDEXBUFFER|DBG_VERTEXBUFFER)
 
@@ -50,7 +51,7 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
 
     user_assert(Pool != D3DPOOL_SCRATCH, D3DERR_INVALIDCALL);
 
-    This->maps = MALLOC(sizeof(struct pipe_transfer *));
+    This->maps = MALLOC(sizeof(struct NineTransfer));
     if (!This->maps)
         return E_OUTOFMEMORY;
     This->nmaps = 0;
@@ -169,6 +170,25 @@ NineBuffer9_GetResource( struct NineBuffer9 *This )
     return NineResource9_GetResource(&This->base);
 }
 
+static void
+NineBuffer9_RebindIfRequired( struct NineBuffer9 *This,
+                              struct NineDevice9 *device )
+{
+    int i;
+
+    if (!This->bind_count)
+        return;
+    for (i = 0; i < device->caps.MaxStreams; i++) {
+        if (device->state.stream[i] == (struct NineVertexBuffer9 *)This)
+            nine_context_set_stream_source(device, i,
+                                           (struct NineVertexBuffer9 *)This,
+                                           device->state.vtxbuf[i].buffer_offset,
+                                           device->state.vtxbuf[i].stride);
+    }
+    if (device->state.idxbuf == (struct NineIndexBuffer9 *)This)
+        nine_context_set_indices(device, (struct NineIndexBuffer9 *)This);
+}
+
 HRESULT NINE_WINAPI
 NineBuffer9_Lock( struct NineBuffer9 *This,
                         UINT OffsetToLock,
@@ -176,6 +196,7 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
                         void **ppbData,
                         DWORD Flags )
 {
+    struct NineDevice9 *device = This->base.base.device;
     struct pipe_box box;
     struct pipe_context *pipe;
     void *data;
@@ -241,9 +262,9 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         usage |= PIPE_TRANSFER_DONTBLOCK;
 
     if (This->nmaps == This->maxmaps) {
-        struct pipe_transfer **newmaps =
-            REALLOC(This->maps, sizeof(struct pipe_transfer *)*This->maxmaps,
-                    sizeof(struct pipe_transfer *)*(This->maxmaps << 1));
+        struct NineTransfer *newmaps =
+            REALLOC(This->maps, sizeof(struct NineTransfer)*This->maxmaps,
+                    sizeof(struct NineTransfer)*(This->maxmaps << 1));
         if (newmaps == NULL)
             return E_OUTOFMEMORY;
 
@@ -251,9 +272,29 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         This->maps = newmaps;
     }
 
-    pipe = NineDevice9_GetPipe(This->base.base.device);
+    This->maps[This->nmaps].is_pipe_secondary = FALSE;
+
+    if (Flags & D3DLOCK_DISCARD && device->csmt_active) {
+        struct pipe_screen *screen = NineDevice9_GetScreen(device);
+        struct pipe_resource *new_res = screen->resource_create(screen, &This->base.info);
+        if (new_res) {
+            /* Use the new resource */
+            pipe_resource_reference(&This->base.resource, new_res);
+            pipe_resource_reference(&new_res, NULL);
+            usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_UNSYNCHRONIZED;
+            NineBuffer9_RebindIfRequired(This, device);
+            This->maps[This->nmaps].is_pipe_secondary = TRUE;
+        }
+    } else if (Flags & D3DLOCK_NOOVERWRITE && device->csmt_active)
+        This->maps[This->nmaps].is_pipe_secondary = TRUE;
+
+    if (This->maps[This->nmaps].is_pipe_secondary)
+        pipe = device->pipe_secondary;
+    else
+        pipe = NineDevice9_GetPipe(device);
+
     data = pipe->transfer_map(pipe, This->base.resource, 0,
-                              usage, &box, &This->maps[This->nmaps]);
+                              usage, &box, &This->maps[This->nmaps].transfer);
 
     if (!data) {
         DBG("pipe::transfer_map failed\n"
@@ -277,15 +318,21 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
 HRESULT NINE_WINAPI
 NineBuffer9_Unlock( struct NineBuffer9 *This )
 {
+    struct NineDevice9 *device = This->base.base.device;
     struct pipe_context *pipe;
     DBG("This=%p\n", This);
 
     user_assert(This->nmaps > 0, D3DERR_INVALIDCALL);
+    This->nmaps--;
     if (This->base.pool != D3DPOOL_MANAGED) {
-        pipe = NineDevice9_GetPipe(This->base.base.device);
-        pipe->transfer_unmap(pipe, This->maps[--(This->nmaps)]);
+        pipe = This->maps[This->nmaps].is_pipe_secondary ?
+            device->pipe_secondary :
+            NineDevice9_GetPipe(device);
+        pipe->transfer_unmap(pipe, This->maps[This->nmaps].transfer);
+        /* We need to flush in case the driver does implicit copies */
+        if (This->maps[This->nmaps].is_pipe_secondary)
+            pipe->flush(pipe, NULL, 0);
     } else {
-        This->nmaps--;
         BASEBUF_REGISTER_UPDATE(This);
     }
     return D3D_OK;

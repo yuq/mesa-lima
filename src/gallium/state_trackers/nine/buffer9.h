@@ -34,12 +34,17 @@ struct pipe_screen;
 struct pipe_context;
 struct pipe_transfer;
 
+struct NineTransfer {
+    struct pipe_transfer *transfer;
+    bool is_pipe_secondary;
+};
+
 struct NineBuffer9
 {
     struct NineResource9 base;
 
     /* G3D */
-    struct pipe_transfer **maps;
+    struct NineTransfer *maps;
     int nmaps, maxmaps;
     UINT size;
 
