@@ -903,7 +903,7 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader,
       unsigned num_blocks = var->data.mode == ir_var_uniform ?
          shader->Program->info.num_ubos : shader->NumShaderStorageBlocks;
       struct gl_uniform_block **blks = var->data.mode == ir_var_uniform ?
-         shader->UniformBlocks : shader->ShaderStorageBlocks;
+         shader->Program->sh.UniformBlocks : shader->ShaderStorageBlocks;
 
       if (var->is_interface_instance()) {
          const ir_array_refcount_entry *const entry = v.get_variable_entry(var);
@@ -1332,7 +1332,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
 
       for (unsigned i = 0; i < sh->Program->info.num_ubos; i++) {
          sh->num_combined_uniform_components +=
-            sh->UniformBlocks[i]->UniformBufferSize / 4;
+            sh->Program->sh.UniformBlocks[i]->UniformBufferSize / 4;
       }
    }
 

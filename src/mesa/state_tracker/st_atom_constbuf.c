@@ -252,7 +252,7 @@ static void st_bind_ubos(struct st_context *st,
       struct gl_uniform_buffer_binding *binding;
       struct st_buffer_object *st_obj;
 
-      binding = &st->ctx->UniformBufferBindings[shader->UniformBlocks[i]->Binding];
+      binding = &st->ctx->UniformBufferBindings[shader->Program->sh.UniformBlocks[i]->Binding];
       st_obj = st_buffer_object(binding->BufferObject);
 
       cb.buffer = st_obj->buffer;

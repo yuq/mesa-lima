@@ -1999,6 +1999,8 @@ struct gl_program
           */
          GLenum ImageAccess[MAX_IMAGE_UNIFORMS];
 
+         struct gl_uniform_block **UniformBlocks;
+
          union {
             struct {
                /**
@@ -2381,8 +2383,6 @@ struct gl_linked_shader
     * sizes divided by sizeof(float), and num_uniform_compoennts.
     */
    unsigned num_combined_uniform_components;
-
-   struct gl_uniform_block **UniformBlocks;
 
    unsigned NumShaderStorageBlocks;
    struct gl_uniform_block **ShaderStorageBlocks;

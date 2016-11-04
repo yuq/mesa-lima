@@ -1385,7 +1385,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
 
    for (int i = 0; i < shader->Program->info.num_ubos; i++) {
       struct gl_uniform_buffer_binding *binding =
-         &ctx->UniformBufferBindings[shader->UniformBlocks[i]->Binding];
+         &ctx->UniformBufferBindings[shader->Program->sh.UniformBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
          brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);

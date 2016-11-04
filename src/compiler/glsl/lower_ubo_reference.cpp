@@ -293,7 +293,7 @@ lower_ubo_reference_visitor::setup_for_load_or_store(void *mem_ctx,
       blocks = shader->ShaderStorageBlocks;
    } else {
       num_blocks = shader->Program->info.num_ubos;
-      blocks = shader->UniformBlocks;
+      blocks = shader->Program->sh.UniformBlocks;
    }
    this->uniform_block = NULL;
    for (unsigned i = 0; i < num_blocks; i++) {

@@ -6301,16 +6301,14 @@ st_translate_program(
       }
    }
 
-   if (program->shader) {
-      for (i = 0; i < proginfo->info.num_ubos; i++) {
-         unsigned size = program->shader->UniformBlocks[i]->UniformBufferSize;
-         unsigned num_const_vecs = (size + 15) / 16;
-         unsigned first, last;
-         assert(num_const_vecs > 0);
-         first = 0;
-         last = num_const_vecs > 0 ? num_const_vecs - 1 : 0;
-         ureg_DECL_constant2D(t->ureg, first, last, i + 1);
-      }
+   for (i = 0; i < proginfo->info.num_ubos; i++) {
+      unsigned size = proginfo->sh.UniformBlocks[i]->UniformBufferSize;
+      unsigned num_const_vecs = (size + 15) / 16;
+      unsigned first, last;
+      assert(num_const_vecs > 0);
+      first = 0;
+      last = num_const_vecs > 0 ? num_const_vecs - 1 : 0;
+      ureg_DECL_constant2D(t->ureg, first, last, i + 1);
    }
 
    /* Emit immediate values.
