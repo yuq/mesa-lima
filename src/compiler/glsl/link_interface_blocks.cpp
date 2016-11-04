@@ -344,6 +344,15 @@ validate_intrastage_interface_blocks(struct gl_shader_program *prog,
    }
 }
 
+static bool
+is_builtin_gl_in_block(ir_variable *var, int consumer_stage)
+{
+   return !strcmp(var->name, "gl_in") &&
+          (consumer_stage == MESA_SHADER_TESS_CTRL ||
+           consumer_stage == MESA_SHADER_TESS_EVAL ||
+           consumer_stage == MESA_SHADER_GEOMETRY);
+}
+
 void
 validate_interstage_inout_blocks(struct gl_shader_program *prog,
                                  const gl_linked_shader *producer,
@@ -355,28 +364,38 @@ validate_interstage_inout_blocks(struct gl_shader_program *prog,
                                    consumer->Stage != MESA_SHADER_FRAGMENT) ||
                                   consumer->Stage == MESA_SHADER_GEOMETRY;
 
-   /* Add input interfaces from the consumer to the symbol table. */
-   foreach_in_list(ir_instruction, node, consumer->ir) {
-      ir_variable *var = node->as_variable();
-      if (!var || !var->get_interface_type() || var->data.mode != ir_var_shader_in)
-         continue;
-
-      definitions.store(var);
-   }
-
-   /* Verify that the producer's output interfaces match. */
+   /* Add output interfaces from the producer to the symbol table. */
    foreach_in_list(ir_instruction, node, producer->ir) {
       ir_variable *var = node->as_variable();
       if (!var || !var->get_interface_type() || var->data.mode != ir_var_shader_out)
          continue;
 
-      ir_variable *consumer_def = definitions.lookup(var);
+      definitions.store(var);
+   }
 
-      /* The consumer doesn't use this output block.  Ignore it. */
-      if (consumer_def == NULL)
+   /* Verify that the consumer's input interfaces match. */
+   foreach_in_list(ir_instruction, node, consumer->ir) {
+      ir_variable *var = node->as_variable();
+      if (!var || !var->get_interface_type() || var->data.mode != ir_var_shader_in)
          continue;
 
-      if (!interstage_match(prog, var, consumer_def, extra_array_level)) {
+      ir_variable *producer_def = definitions.lookup(var);
+
+      /* The producer doesn't generate this input: fail to link. Skip built-in
+       * 'gl_in[]' since that may not be present if the producer does not
+       * write to any of the pre-defined outputs (e.g. if the vertex shader
+       * does not write to gl_Position, etc), which is allowed and results in
+       * undefined behavior.
+       */
+      if (producer_def == NULL &&
+          !is_builtin_gl_in_block(var, consumer->Stage)) {
+         linker_error(prog, "Input block `%s' is not an output of "
+                      "the previous stage\n", var->get_interface_type()->name);
+         return;
+      }
+
+      if (producer_def &&
+          !interstage_match(prog, producer_def, var, extra_array_level)) {
          linker_error(prog, "definitions of interface block `%s' do not "
                       "match\n", var->get_interface_type()->name);
          return;
