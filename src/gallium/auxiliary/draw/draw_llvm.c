@@ -658,7 +658,6 @@ generate_vs(struct draw_llvm_variant *variant,
 
 static void
 generate_fetch(struct gallivm_state *gallivm,
-               struct draw_context *draw,
                const struct util_format_description *format_desc,
                LLVMValueRef vb_stride,
                LLVMValueRef stride_fixed,
@@ -676,11 +675,6 @@ generate_fetch(struct gallivm_state *gallivm,
       lp_build_alloca(gallivm,
                       lp_build_vec_type(gallivm, lp_float32_vec4_type()), "");
    struct lp_build_if_state if_ctx;
-
-   if (format_desc->format == PIPE_FORMAT_NONE) {
-      *res = lp_build_const_vec(gallivm, lp_float32_vec4_type(), 0);
-      return;
-   }
 
    stride = lp_build_umul_overflow(gallivm, vb_stride, index, &ofbit);
    stride = lp_build_uadd_overflow(gallivm, stride, stride_fixed, &ofbit);
@@ -1530,14 +1524,14 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
     * the values).
     */
    const boolean bypass_viewport = key->has_gs || key->bypass_viewport ||
-                                   llvm->draw->vs.vertex_shader->info.writes_viewport_index;
+                                   vs_info->writes_viewport_index;
    const boolean enable_cliptest = !key->has_gs && (key->clip_xy ||
                                                     key->clip_z ||
                                                     key->clip_user ||
                                                     key->need_edgeflags);
    LLVMValueRef variant_func;
-   const unsigned pos = llvm->draw->vs.position_output;
-   const unsigned cv = llvm->draw->vs.clipvertex_output;
+   const unsigned pos = draw->vs.position_output;
+   const unsigned cv = draw->vs.clipvertex_output;
    boolean have_clipdist = FALSE;
    struct lp_bld_tgsi_system_values system_values;
 
@@ -1658,10 +1652,10 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    /*
     * Pre-calculate everything which is constant per shader invocation.
     */
-   for (j = 0; j < draw->pt.nr_vertex_elements; ++j) {
+   for (j = 0; j < key->nr_vertex_elements; ++j) {
       LLVMValueRef vb_buffer_offset, buffer_size;
       LLVMValueRef vb_info, vbuffer_ptr;
-      struct pipe_vertex_element *velem = &draw->pt.vertex_element[j];
+      struct pipe_vertex_element *velem = &key->vertex_element[j];
       LLVMValueRef vb_index =
          lp_build_const_int32(gallivm, velem->vertex_buffer_index);
       LLVMValueRef bsize = lp_build_const_int32(gallivm,
@@ -1669,41 +1663,44 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       LLVMValueRef src_offset = lp_build_const_int32(gallivm,
                                                      velem->src_offset);
 
-      vbuffer_ptr = LLVMBuildGEP(builder, vbuffers_ptr, &vb_index, 1, "");
-      vb_info = LLVMBuildGEP(builder, vb_ptr, &vb_index, 1, "");
-      vb_stride[j] = draw_jit_vbuffer_stride(gallivm, vb_info);
-      vb_buffer_offset = draw_jit_vbuffer_offset(gallivm, vb_info);
-      map_ptr[j] = draw_jit_dvbuffer_map(gallivm, vbuffer_ptr);
-      buffer_size = draw_jit_dvbuffer_size(gallivm, vbuffer_ptr);
+      if (velem->src_format != PIPE_FORMAT_NONE) {
+         vbuffer_ptr = LLVMBuildGEP(builder, vbuffers_ptr, &vb_index, 1, "");
+         vb_info = LLVMBuildGEP(builder, vb_ptr, &vb_index, 1, "");
+         vb_stride[j] = draw_jit_vbuffer_stride(gallivm, vb_info);
+         vb_buffer_offset = draw_jit_vbuffer_offset(gallivm, vb_info);
+         map_ptr[j] = draw_jit_dvbuffer_map(gallivm, vbuffer_ptr);
+         buffer_size = draw_jit_dvbuffer_size(gallivm, vbuffer_ptr);
 
-      ofbit[j] = NULL;
-      stride_fixed[j] = lp_build_uadd_overflow(gallivm, vb_buffer_offset,
-                                               src_offset, &ofbit[j]);
-      buffer_size_adj[j] = lp_build_usub_overflow(gallivm, buffer_size, bsize,
-                                                   &ofbit[j]);
+         ofbit[j] = NULL;
+         stride_fixed[j] = lp_build_uadd_overflow(gallivm, vb_buffer_offset,
+                                                  src_offset, &ofbit[j]);
+         buffer_size_adj[j] = lp_build_usub_overflow(gallivm, buffer_size, bsize,
+                                                     &ofbit[j]);
 
-      if (velem->instance_divisor) {
-         /* Index is equal to the start instance plus the number of current 
-          * instance divided by the divisor. In this case we compute it as:
-          * index = start_instance + (instance_id  / divisor)
-          */
-         LLVMValueRef current_instance;
-         current_instance = LLVMBuildUDiv(builder, system_values.instance_id,
-                                          lp_build_const_int32(gallivm,
-                                                               velem->instance_divisor),
-                                          "instance_divisor");
-         instance_index[j] = lp_build_uadd_overflow(gallivm, start_instance,
-                                                    current_instance, &ofbit[j]);
-      }
+         if (velem->instance_divisor) {
+            /* Index is equal to the start instance plus the number of current
+             * instance divided by the divisor. In this case we compute it as:
+             * index = start_instance + (instance_id  / divisor)
+             */
+            LLVMValueRef current_instance;
+            current_instance = LLVMBuildUDiv(builder, system_values.instance_id,
+                                             lp_build_const_int32(gallivm,
+                                                                  velem->instance_divisor),
+                                             "instance_divisor");
+            instance_index[j] = lp_build_uadd_overflow(gallivm, start_instance,
+                                                       current_instance, &ofbit[j]);
+         }
 
-      if (0) {
-         lp_build_printf(gallivm, "vbuf index = %u, vb_stride is %u\n",
-                         vb_index, vb_stride[j]);
-         lp_build_printf(gallivm, "   vb_buffer_offset = %u, src_offset is %u\n",
-                         vb_buffer_offset, src_offset);
-         lp_build_print_value(gallivm, "   blocksize = ", bsize);
-         lp_build_printf(gallivm, "   instance_id = %u\n", system_values.instance_id);
-         lp_build_printf(gallivm, "   buffer size = %u\n", buffer_size);
+         if (0) {
+            lp_build_printf(gallivm, "vbuf index = %u, vb_stride is %u\n",
+                            vb_index, vb_stride[j]);
+            lp_build_printf(gallivm, "   vb_buffer_offset = %u, src_offset is %u\n",
+                            vb_buffer_offset, src_offset);
+            lp_build_print_value(gallivm, "   blocksize = ", bsize);
+            lp_build_printf(gallivm, "   instance_id = %u\n",
+                            system_values.instance_id);
+            lp_build_printf(gallivm, "   buffer size = %u\n", buffer_size);
+         }
       }
    }
 
@@ -1782,15 +1779,22 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       }
 
       for (j = 0; j < key->nr_vertex_elements; ++j) {
-         struct pipe_vertex_element *velem = &draw->pt.vertex_element[j];
+         struct pipe_vertex_element *velem = &key->vertex_element[j];
          const struct util_format_description *format_desc =
             util_format_description(velem->src_format);
 
          for (i = 0; i < vector_length; ++i) {
-            generate_fetch(gallivm, draw, format_desc,
-                           vb_stride[j], stride_fixed[j], map_ptr[j],
-                           buffer_size_adj[j], ofbit[j], &aos_attribs[i],
-                           velem->instance_divisor ? instance_index[j] : true_indices[i]);
+            if (format_desc->format == PIPE_FORMAT_NONE) {
+               aos_attribs[i] = lp_build_const_vec(gallivm,
+                                                   lp_float32_vec4_type(), 0);
+            }
+            else {
+               generate_fetch(gallivm, format_desc,
+                              vb_stride[j], stride_fixed[j], map_ptr[j],
+                              buffer_size_adj[j], ofbit[j], &aos_attribs[i],
+                              velem->instance_divisor ?
+                                 instance_index[j] : true_indices[i]);
+            }
          }
          convert_to_soa(gallivm, aos_attribs, inputs, j, vs_type);
       }
