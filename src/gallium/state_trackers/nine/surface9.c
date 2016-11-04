@@ -185,6 +185,11 @@ NineSurface9_ctor( struct NineSurface9 *This,
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
         This->base.resource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
 
+    if (This->base.resource && (pDesc->Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL))) {
+        (void) NineSurface9_CreatePipeSurface(This, 0);
+        (void) NineSurface9_CreatePipeSurface(This, 1);
+    }
+
     /* TODO: investigate what else exactly needs to be cleared */
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
         surf = NineSurface9_GetSurface(This, 0);
@@ -748,6 +753,10 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
 
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);
+    if (resource) {
+        (void) NineSurface9_CreatePipeSurface(This, 0);
+        (void) NineSurface9_CreatePipeSurface(This, 1);
+    }
 }
 
 

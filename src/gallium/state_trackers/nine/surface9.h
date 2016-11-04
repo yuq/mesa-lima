@@ -94,9 +94,8 @@ NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB );
 static inline struct pipe_surface *
 NineSurface9_GetSurface( struct NineSurface9 *This, int sRGB )
 {
-    if (This->surface[sRGB])
-        return This->surface[sRGB];
-    return NineSurface9_CreatePipeSurface(This, sRGB);
+    assert(This->surface[sRGB]);
+    return This->surface[sRGB];
 }
 
 static inline struct pipe_resource *
