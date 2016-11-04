@@ -2360,14 +2360,6 @@ struct gl_linked_shader
    GLbitfield shadow_samplers;	/**< Samplers used for shadow sampling. */
    /*@}*/
 
-   /**
-    * Map from sampler unit to texture unit (set by glUniform1i())
-    *
-    * A sampler unit is associated with each sampler uniform by the linker.
-    * The sampler unit associated with each uniform is stored in the
-    * \c gl_uniform_storage::sampler field.
-    */
-   GLubyte SamplerUnits[MAX_SAMPLERS];
    /** Which texture target is being sampled (TEXTURE_1D/2D/3D/etc_INDEX) */
    gl_texture_index SamplerTargets[MAX_SAMPLERS];
 

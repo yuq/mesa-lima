@@ -134,7 +134,8 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
                 storage->opaque[sh].active) {
                for (unsigned i = 0; i < elements; i++) {
                   const unsigned index = storage->opaque[sh].index + i;
-                  shader->SamplerUnits[index] = storage->storage[i].i;
+                  shader->Program->SamplerUnits[index] =
+                     storage->storage[i].i;
                }
 
             } else if (storage->type->base_type == GLSL_TYPE_IMAGE &&
@@ -242,7 +243,7 @@ set_uniform_initializer(void *mem_ctx, gl_shader_program *prog,
             if (shader && storage->opaque[sh].active) {
                unsigned index = storage->opaque[sh].index;
 
-               shader->SamplerUnits[index] = storage->storage[0].i;
+               shader->Program->SamplerUnits[index] = storage->storage[0].i;
             }
          }
       }

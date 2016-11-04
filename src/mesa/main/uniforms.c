@@ -73,14 +73,13 @@ _mesa_update_shader_textures_used(struct gl_shader_program *shProg,
 
    assert(shader);
 
-   memcpy(prog->SamplerUnits, shader->SamplerUnits, sizeof(prog->SamplerUnits));
    memset(prog->TexturesUsed, 0, sizeof(prog->TexturesUsed));
 
    shProg->SamplersValidated = GL_TRUE;
 
    while (mask) {
       const int s = u_bit_scan(&mask);
-      GLuint unit = shader->SamplerUnits[s];
+      GLuint unit = prog->SamplerUnits[s];
       GLuint tgt = shader->SamplerTargets[s];
       assert(unit < ARRAY_SIZE(prog->TexturesUsed));
       assert(tgt < NUM_TEXTURE_TARGETS);

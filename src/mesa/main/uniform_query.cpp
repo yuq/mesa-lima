@@ -866,8 +866,8 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
          bool changed = false;
          for (int j = 0; j < count; j++) {
             unsigned unit = uni->opaque[i].index + offset + j;
-            if (sh->SamplerUnits[unit] != ((unsigned *) values)[j]) {
-               sh->SamplerUnits[unit] = ((unsigned *) values)[j];
+            if (sh->Program->SamplerUnits[unit] != ((unsigned *) values)[j]) {
+               sh->Program->SamplerUnits[unit] = ((unsigned *) values)[j];
                changed = true;
             }
          }
@@ -879,8 +879,6 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
 	    }
 
             struct gl_program *const prog = sh->Program;
-            assert(sizeof(prog->SamplerUnits) == sizeof(sh->SamplerUnits));
-
 	    _mesa_update_shader_textures_used(shProg, prog);
             if (ctx->Driver.SamplerUniformChange)
 	       ctx->Driver.SamplerUniformChange(ctx, prog->Target, prog);
@@ -1108,7 +1106,7 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
       mask = shader->Program->SamplersUsed;
       while (mask) {
          const int s = u_bit_scan(&mask);
-         GLuint unit = shader->SamplerUnits[s];
+         GLuint unit = shader->Program->SamplerUnits[s];
          GLuint tgt = shader->SamplerTargets[s];
 
          /* FIXME: Samplers are initialized to 0 and Mesa doesn't do a
