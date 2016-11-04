@@ -417,6 +417,16 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 }
         }
 
+        if (c->stage != QSTAGE_FRAG && !is_txl) {
+                /* From the GLSL 1.20 spec:
+                 *
+                 *     "If it is mip-mapped and running on the vertex shader,
+                 *      then the base texture is used."
+                 */
+                is_txl = true;
+                lod = qir_uniform_ui(c, 0);
+        }
+
         if (c->key->tex[unit].force_first_level) {
                 lod = qir_uniform(c, QUNIFORM_TEXTURE_FIRST_LEVEL, unit);
                 is_txl = true;
