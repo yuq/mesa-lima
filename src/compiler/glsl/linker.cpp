@@ -1159,7 +1159,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
       struct gl_uniform_block **sh_blks;
       if (validate_ssbo) {
          sh_num_blocks = prog->_LinkedShaders[i]->Program->info.num_ssbos;
-         sh_blks = sh->ShaderStorageBlocks;
+         sh_blks = sh->Program->sh.ShaderStorageBlocks;
       } else {
          sh_num_blocks = prog->_LinkedShaders[i]->Program->info.num_ubos;
          sh_blks = sh->Program->sh.UniformBlocks;
@@ -1194,7 +1194,8 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
             struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
             struct gl_uniform_block **sh_blks = validate_ssbo ?
-               sh->ShaderStorageBlocks : sh->Program->sh.UniformBlocks;
+               sh->Program->sh.ShaderStorageBlocks :
+               sh->Program->sh.UniformBlocks;
 
             blks[j].stageref |= sh_blks[stage_index]->stageref;
             sh_blks[stage_index] = &blks[j];
@@ -2281,11 +2282,11 @@ link_intrastage_shaders(void *mem_ctx,
    linked->Program->info.num_ubos = num_ubo_blocks;
 
    /* Copy ssbo blocks to linked shader list */
-   linked->ShaderStorageBlocks =
+   linked->Program->sh.ShaderStorageBlocks =
       ralloc_array(linked, gl_uniform_block *, num_ssbo_blocks);
    ralloc_steal(linked, ssbo_blocks);
    for (unsigned i = 0; i < num_ssbo_blocks; i++) {
-      linked->ShaderStorageBlocks[i] = &ssbo_blocks[i];
+      linked->Program->sh.ShaderStorageBlocks[i] = &ssbo_blocks[i];
    }
    linked->Program->info.num_ssbos = num_ssbo_blocks;
 

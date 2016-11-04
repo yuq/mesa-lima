@@ -1410,7 +1410,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
 
    for (int i = 0; i < shader->Program->info.num_ssbos; i++) {
       struct gl_shader_storage_buffer_binding *binding =
-         &ctx->ShaderStorageBufferBindings[shader->ShaderStorageBlocks[i]->Binding];
+         &ctx->ShaderStorageBufferBindings[shader->Program->sh.ShaderStorageBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
          brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);

@@ -59,7 +59,7 @@ st_bind_ssbos(struct st_context *st, struct gl_linked_shader *shader,
       struct pipe_shader_buffer *sb = &buffers[i];
 
       binding = &st->ctx->ShaderStorageBufferBindings[
-            shader->ShaderStorageBlocks[i]->Binding];
+            shader->Program->sh.ShaderStorageBlocks[i]->Binding];
       st_obj = st_buffer_object(binding->BufferObject);
 
       sb->buffer = st_obj->buffer;
