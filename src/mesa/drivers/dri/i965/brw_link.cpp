@@ -50,10 +50,10 @@ brw_shader_precompile(struct gl_context *ctx,
    struct gl_linked_shader *fs = sh_prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
    struct gl_linked_shader *cs = sh_prog->_LinkedShaders[MESA_SHADER_COMPUTE];
 
-   if (fs && !brw_fs_precompile(ctx, sh_prog, fs->Program))
+   if (fs && !brw_fs_precompile(ctx, fs->Program))
       return false;
 
-   if (gs && !brw_gs_precompile(ctx, sh_prog, gs->Program))
+   if (gs && !brw_gs_precompile(ctx, gs->Program))
       return false;
 
    if (tes && !brw_tes_precompile(ctx, sh_prog, tes->Program))
@@ -62,10 +62,10 @@ brw_shader_precompile(struct gl_context *ctx,
    if (tcs && !brw_tcs_precompile(ctx, sh_prog, tcs->Program))
       return false;
 
-   if (vs && !brw_vs_precompile(ctx, sh_prog, vs->Program))
+   if (vs && !brw_vs_precompile(ctx, vs->Program))
       return false;
 
-   if (cs && !brw_cs_precompile(ctx, sh_prog, cs->Program))
+   if (cs && !brw_cs_precompile(ctx, cs->Program))
       return false;
 
    return true;

@@ -277,24 +277,16 @@ brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
                                         struct brw_stage_prog_data *stage_prog_data,
                                         uint32_t next_binding_table_offset);
 
-bool brw_vs_precompile(struct gl_context *ctx,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_program *prog);
+bool brw_vs_precompile(struct gl_context *ctx, struct gl_program *prog);
 bool brw_tcs_precompile(struct gl_context *ctx,
                         struct gl_shader_program *shader_prog,
                         struct gl_program *prog);
 bool brw_tes_precompile(struct gl_context *ctx,
                         struct gl_shader_program *shader_prog,
                         struct gl_program *prog);
-bool brw_gs_precompile(struct gl_context *ctx,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_program *prog);
-bool brw_fs_precompile(struct gl_context *ctx,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_program *prog);
-bool brw_cs_precompile(struct gl_context *ctx,
-                       struct gl_shader_program *shader_prog,
-                       struct gl_program *prog);
+bool brw_gs_precompile(struct gl_context *ctx, struct gl_program *prog);
+bool brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog);
+bool brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog);
 
 GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
 struct gl_linked_shader *brw_new_shader(gl_shader_stage stage);

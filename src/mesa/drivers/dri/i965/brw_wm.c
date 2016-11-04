@@ -132,9 +132,8 @@ brw_wm_debug_recompile(struct brw_context *brw, struct gl_program *prog,
  * Depending on the instructions used (i.e. flow control instructions)
  * we'll use one of two code generators.
  */
-bool
+static bool
 brw_codegen_wm_prog(struct brw_context *brw,
-                    struct gl_shader_program *prog,
                     struct brw_program *fp,
                     struct brw_wm_prog_key *key,
                     struct brw_vue_map *vue_map)
@@ -563,8 +562,6 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
 void
 brw_upload_wm_prog(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
-   struct gl_shader_program *current = ctx->_Shader->_CurrentFragmentProgram;
    struct brw_wm_prog_key key;
    struct brw_program *fp = (struct brw_program *) brw->fragment_program;
 
@@ -577,7 +574,7 @@ brw_upload_wm_prog(struct brw_context *brw)
                          &key, sizeof(key),
                          &brw->wm.base.prog_offset,
                          &brw->wm.base.prog_data)) {
-      bool success = brw_codegen_wm_prog(brw, current, fp, &key,
+      bool success = brw_codegen_wm_prog(brw, fp, &key,
                                          &brw->vue_map_geom_out);
       (void) success;
       assert(success);
@@ -585,9 +582,7 @@ brw_upload_wm_prog(struct brw_context *brw)
 }
 
 bool
-brw_fs_precompile(struct gl_context *ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog)
+brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_wm_prog_key key;
@@ -637,7 +632,7 @@ brw_fs_precompile(struct gl_context *ctx,
                           false);
    }
 
-   bool success = brw_codegen_wm_prog(brw, shader_prog, bfp, &key, &vue_map);
+   bool success = brw_codegen_wm_prog(brw, bfp, &key, &vue_map);
 
    brw->wm.base.prog_offset = old_prog_offset;
    brw->wm.base.prog_data = old_prog_data;

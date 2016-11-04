@@ -60,11 +60,6 @@ extern "C" {
 #endif
 
 bool brw_color_buffer_write_enabled(struct brw_context *brw);
-bool brw_codegen_wm_prog(struct brw_context *brw,
-                         struct gl_shader_program *prog,
-                         struct brw_program *fp,
-                         struct brw_wm_prog_key *key,
-                         struct brw_vue_map *vue_map);
 
 void
 brw_upload_wm_prog(struct brw_context *brw);

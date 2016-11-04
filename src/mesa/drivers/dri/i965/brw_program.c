@@ -212,7 +212,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT, true);
 
-      brw_fs_precompile(ctx, NULL, prog);
+      brw_fs_precompile(ctx, prog);
       break;
    }
    case GL_VERTEX_PROGRAM_ARB: {
@@ -236,7 +236,7 @@ brwProgramStringNotify(struct gl_context *ctx,
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
                                  compiler->scalar_stage[MESA_SHADER_VERTEX]);
 
-      brw_vs_precompile(ctx, NULL, prog);
+      brw_vs_precompile(ctx, prog);
       break;
    }
    default:

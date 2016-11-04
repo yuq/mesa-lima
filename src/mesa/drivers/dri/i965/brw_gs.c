@@ -86,9 +86,8 @@ assign_gs_binding_table_offsets(const struct gen_device_info *devinfo,
                                            &prog_data->base.base, reserved);
 }
 
-bool
+static bool
 brw_codegen_gs_prog(struct brw_context *brw,
-                    struct gl_shader_program *prog,
                     struct brw_program *gp,
                     struct brw_gs_prog_key *key)
 {
@@ -210,8 +209,6 @@ brw_gs_populate_key(struct brw_context *brw,
 void
 brw_upload_gs_prog(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
-   struct gl_shader_program **current = ctx->_Shader->CurrentProgram;
    struct brw_stage_state *stage_state = &brw->gs.base;
    struct brw_gs_prog_key key;
    /* BRW_NEW_GEOMETRY_PROGRAM */
@@ -242,17 +239,14 @@ brw_upload_gs_prog(struct brw_context *brw)
                          &key, sizeof(key),
                          &stage_state->prog_offset,
                          &brw->gs.base.prog_data)) {
-      bool success = brw_codegen_gs_prog(brw, current[MESA_SHADER_GEOMETRY],
-                                         gp, &key);
+      bool success = brw_codegen_gs_prog(brw, gp, &key);
       assert(success);
       (void)success;
    }
 }
 
 bool
-brw_gs_precompile(struct gl_context *ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog)
+brw_gs_precompile(struct gl_context *ctx, struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_gs_prog_key key;
@@ -267,7 +261,7 @@ brw_gs_precompile(struct gl_context *ctx,
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
    key.program_string_id = bgp->id;
 
-   success = brw_codegen_gs_prog(brw, shader_prog, bgp, &key);
+   success = brw_codegen_gs_prog(brw, bgp, &key);
 
    brw->gs.base.prog_offset = old_prog_offset;
    brw->gs.base.prog_data = old_prog_data;

@@ -77,7 +77,6 @@ brw_tes_debug_recompile(struct brw_context *brw, struct gl_program *prog,
 
 static bool
 brw_codegen_tes_prog(struct brw_context *brw,
-                     struct gl_shader_program *shader_prog,
                      struct brw_program *tep,
                      struct brw_tes_prog_key *key)
 {
@@ -255,7 +254,6 @@ brw_tes_populate_key(struct brw_context *brw,
 void
 brw_upload_tes_prog(struct brw_context *brw)
 {
-   struct gl_shader_program **current = brw->ctx._Shader->CurrentProgram;
    struct brw_stage_state *stage_state = &brw->tes.base;
    struct brw_tes_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
@@ -272,8 +270,7 @@ brw_upload_tes_prog(struct brw_context *brw)
                          &key, sizeof(key),
                          &stage_state->prog_offset,
                          &brw->tes.base.prog_data)) {
-      bool success = brw_codegen_tes_prog(brw, current[MESA_SHADER_TESS_EVAL],
-                                          tep, &key);
+      bool success = brw_codegen_tes_prog(brw, tep, &key);
       assert(success);
       (void)success;
    }
@@ -312,7 +309,7 @@ brw_tes_precompile(struct gl_context *ctx,
 
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
 
-   success = brw_codegen_tes_prog(brw, shader_prog, btep, &key);
+   success = brw_codegen_tes_prog(brw, btep, &key);
 
    brw->tes.base.prog_offset = old_prog_offset;
    brw->tes.base.prog_data = old_prog_data;

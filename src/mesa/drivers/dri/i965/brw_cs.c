@@ -51,7 +51,6 @@ assign_cs_binding_table_offsets(const struct gen_device_info *devinfo,
 
 static bool
 brw_codegen_cs_prog(struct brw_context *brw,
-                    struct gl_shader_program *prog,
                     struct brw_program *cp,
                     struct brw_cs_prog_key *key)
 {
@@ -215,10 +214,7 @@ brw_upload_cs_prog(struct brw_context *brw)
                          &key, sizeof(key),
                          &brw->cs.base.prog_offset,
                          &brw->cs.base.prog_data)) {
-      bool success =
-         brw_codegen_cs_prog(brw,
-                             ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE],
-                             cp, &key);
+      bool success = brw_codegen_cs_prog(brw, cp, &key);
       (void) success;
       assert(success);
    }
@@ -226,9 +222,7 @@ brw_upload_cs_prog(struct brw_context *brw)
 
 
 bool
-brw_cs_precompile(struct gl_context *ctx,
-                  struct gl_shader_program *shader_prog,
-                  struct gl_program *prog)
+brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog)
 {
    struct brw_context *brw = brw_context(ctx);
    struct brw_cs_prog_key key;
@@ -243,7 +237,7 @@ brw_cs_precompile(struct gl_context *ctx,
    uint32_t old_prog_offset = brw->cs.base.prog_offset;
    struct brw_stage_prog_data *old_prog_data = brw->cs.base.prog_data;
 
-   bool success = brw_codegen_cs_prog(brw, shader_prog, bcp, &key);
+   bool success = brw_codegen_cs_prog(brw, bcp, &key);
 
    brw->cs.base.prog_offset = old_prog_offset;
    brw->cs.base.prog_data = old_prog_data;

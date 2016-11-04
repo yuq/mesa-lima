@@ -163,11 +163,8 @@ brw_tcs_debug_recompile(struct brw_context *brw, struct gl_program *prog,
 }
 
 static bool
-brw_codegen_tcs_prog(struct brw_context *brw,
-                     struct gl_shader_program *shader_prog,
-                     struct brw_program *tcp,
-                     struct brw_program *tep,
-                     struct brw_tcs_prog_key *key)
+brw_codegen_tcs_prog(struct brw_context *brw, struct brw_program *tcp,
+                     struct brw_program *tep, struct brw_tcs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
    const struct brw_compiler *compiler = brw->screen->compiler;
@@ -346,7 +343,6 @@ brw_tcs_populate_key(struct brw_context *brw,
 void
 brw_upload_tcs_prog(struct brw_context *brw)
 {
-   struct gl_shader_program **current = brw->ctx._Shader->CurrentProgram;
    struct brw_stage_state *stage_state = &brw->tcs.base;
    struct brw_tcs_prog_key key;
    /* BRW_NEW_TESS_PROGRAMS */
@@ -367,8 +363,7 @@ brw_upload_tcs_prog(struct brw_context *brw)
                          &key, sizeof(key),
                          &stage_state->prog_offset,
                          &brw->tcs.base.prog_data)) {
-      bool success = brw_codegen_tcs_prog(brw, current[MESA_SHADER_TESS_CTRL],
-                                          tcp, tep, &key);
+      bool success = brw_codegen_tcs_prog(brw, tcp, tep, &key);
       assert(success);
       (void)success;
    }
@@ -416,7 +411,7 @@ brw_tcs_precompile(struct gl_context *ctx,
    key.outputs_written = prog->nir->info->outputs_written;
    key.patch_outputs_written = prog->nir->info->patch_outputs_written;
 
-   success = brw_codegen_tcs_prog(brw, shader_prog, btcp, btep, &key);
+   success = brw_codegen_tcs_prog(brw, btcp, btep, &key);
 
    brw->tcs.base.prog_offset = old_prog_offset;
    brw->tcs.base.prog_data = old_prog_data;
