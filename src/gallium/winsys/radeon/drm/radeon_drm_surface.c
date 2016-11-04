@@ -231,7 +231,7 @@ static int radeon_winsys_surface_init(struct radeon_winsys *rws,
 
     surf_winsys_to_drm(&surf_drm, tex, flags, bpe, mode, surf_ws);
 
-    if (!(flags & RADEON_SURF_IMPORTED)) {
+    if (!(flags & (RADEON_SURF_IMPORTED | RADEON_SURF_FMASK))) {
        r = radeon_surface_best(ws->surf_man, &surf_drm);
        if (r)
           return r;
