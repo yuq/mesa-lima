@@ -272,9 +272,7 @@ struct brw_gs_compile
 };
 
 uint32_t
-brw_assign_common_binding_table_offsets(gl_shader_stage stage,
-                                        const struct gen_device_info *devinfo,
-                                        const struct gl_shader_program *shader_prog,
+brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
                                         const struct gl_program *prog,
                                         struct brw_stage_prog_data *stage_prog_data,
                                         uint32_t next_binding_table_offset);

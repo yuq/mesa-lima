@@ -36,7 +36,6 @@
 
 static void
 assign_cs_binding_table_offsets(const struct gen_device_info *devinfo,
-                                const struct gl_shader_program *shader_prog,
                                 const struct gl_program *prog,
                                 struct brw_cs_prog_data *prog_data)
 {
@@ -46,8 +45,7 @@ assign_cs_binding_table_offsets(const struct gen_device_info *devinfo,
    prog_data->binding_table.work_groups_start = next_binding_table_offset;
    next_binding_table_offset++;
 
-   brw_assign_common_binding_table_offsets(MESA_SHADER_COMPUTE, devinfo,
-                                           shader_prog, prog, &prog_data->base,
+   brw_assign_common_binding_table_offsets(devinfo, prog, &prog_data->base,
                                            next_binding_table_offset);
 }
 
@@ -81,7 +79,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       prog_data.base.total_shared = cp->program.info.cs.shared_size;
    }
 
-   assign_cs_binding_table_offsets(devinfo, prog, &cp->program, &prog_data);
+   assign_cs_binding_table_offsets(devinfo, &cp->program, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed

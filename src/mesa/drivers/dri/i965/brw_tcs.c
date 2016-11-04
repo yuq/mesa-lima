@@ -210,8 +210,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    prog_data.base.base.nr_params = param_count;
 
    if (tcp) {
-      brw_assign_common_binding_table_offsets(MESA_SHADER_TESS_CTRL, devinfo,
-                                              shader_prog, &tcp->program,
+      brw_assign_common_binding_table_offsets(devinfo, &tcp->program,
                                               &prog_data.base.base, 0);
 
       prog_data.base.base.image_param =

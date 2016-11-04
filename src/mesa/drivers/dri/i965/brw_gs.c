@@ -74,7 +74,6 @@ brw_gs_debug_recompile(struct brw_context *brw, struct gl_program *prog,
 
 static void
 assign_gs_binding_table_offsets(const struct gen_device_info *devinfo,
-                                const struct gl_shader_program *shader_prog,
                                 const struct gl_program *prog,
                                 struct brw_gs_prog_data *prog_data)
 {
@@ -83,10 +82,8 @@ assign_gs_binding_table_offsets(const struct gen_device_info *devinfo,
     */
    uint32_t reserved = devinfo->gen == 6 ? BRW_MAX_SOL_BINDINGS : 0;
 
-   brw_assign_common_binding_table_offsets(MESA_SHADER_GEOMETRY, devinfo,
-                                           shader_prog, prog,
-                                           &prog_data->base.base,
-                                           reserved);
+   brw_assign_common_binding_table_offsets(devinfo, prog,
+                                           &prog_data->base.base, reserved);
 }
 
 bool
@@ -104,7 +101,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   assign_gs_binding_table_offsets(devinfo, prog, &gp->program, &prog_data);
+   assign_gs_binding_table_offsets(devinfo, &gp->program, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed

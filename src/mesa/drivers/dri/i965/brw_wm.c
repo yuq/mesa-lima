@@ -43,7 +43,6 @@
 
 static void
 assign_fs_binding_table_offsets(const struct gen_device_info *devinfo,
-                                const struct gl_shader_program *shader_prog,
                                 const struct gl_program *prog,
                                 const struct brw_wm_prog_key *key,
                                 struct brw_wm_prog_data *prog_data)
@@ -57,8 +56,7 @@ assign_fs_binding_table_offsets(const struct gen_device_info *devinfo,
    next_binding_table_offset += MAX2(key->nr_color_regions, 1);
 
    next_binding_table_offset =
-      brw_assign_common_binding_table_offsets(MESA_SHADER_FRAGMENT, devinfo,
-                                              shader_prog, prog, &prog_data->base,
+      brw_assign_common_binding_table_offsets(devinfo, prog, &prog_data->base,
                                               next_binding_table_offset);
 
    if (prog->nir->info->outputs_read && !key->coherent_fb_fetch) {
@@ -156,8 +154,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    if (!prog)
       prog_data.base.use_alt_mode = true;
 
-   assign_fs_binding_table_offsets(devinfo, prog, &fp->program, key,
-                                   &prog_data);
+   assign_fs_binding_table_offsets(devinfo, &fp->program, key, &prog_data);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed

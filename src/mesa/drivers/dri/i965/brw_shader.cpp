@@ -1191,18 +1191,12 @@ backend_shader::calculate_cfg()
  * trigger some of our asserts that surface indices are < BRW_MAX_SURFACES.
  */
 uint32_t
-brw_assign_common_binding_table_offsets(gl_shader_stage stage,
-                                        const struct gen_device_info *devinfo,
-                                        const struct gl_shader_program *shader_prog,
+brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
                                         const struct gl_program *prog,
                                         struct brw_stage_prog_data *stage_prog_data,
                                         uint32_t next_binding_table_offset)
 {
-   const struct gl_linked_shader *shader = NULL;
    int num_textures = util_last_bit(prog->SamplersUsed);
-
-   if (shader_prog)
-      shader = shader_prog->_LinkedShaders[stage];
 
    stage_prog_data->binding_table.texture_start = next_binding_table_offset;
    next_binding_table_offset += num_textures;

@@ -91,8 +91,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   brw_assign_common_binding_table_offsets(MESA_SHADER_TESS_EVAL, devinfo,
-                                           shader_prog, &tep->program,
+   brw_assign_common_binding_table_offsets(devinfo, &tep->program,
                                            &prog_data.base.base, 0);
 
    switch (tep->program.info.tes.spacing) {

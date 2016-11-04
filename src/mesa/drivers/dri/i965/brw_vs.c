@@ -161,9 +161,8 @@ brw_codegen_vs_prog(struct brw_context *brw,
 
    mem_ctx = ralloc_context(NULL);
 
-   brw_assign_common_binding_table_offsets(MESA_SHADER_VERTEX, devinfo, prog,
-                                           &vp->program, &prog_data.base.base,
-                                           0);
+   brw_assign_common_binding_table_offsets(devinfo, &vp->program,
+                                           &prog_data.base.base, 0);
 
    /* Allocate the references to the uniforms that will end up in the
     * prog_data associated with the compiled program, and which will be freed
