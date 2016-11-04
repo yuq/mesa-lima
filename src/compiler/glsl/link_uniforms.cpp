@@ -234,10 +234,8 @@ program_resource_visitor::visit_field(const glsl_type *type, const char *name,
 }
 
 void
-program_resource_visitor::visit_field(const glsl_struct_field *field)
+program_resource_visitor::visit_field(const glsl_struct_field *)
 {
-   (void) field;
-   /* empty */
 }
 
 void
@@ -346,13 +344,11 @@ public:
 
 private:
    virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major)
+                            bool /* row_major */)
    {
       assert(!type->without_array()->is_record());
       assert(!type->without_array()->is_interface());
       assert(!(type->is_array() && type->fields.array->is_array()));
-
-      (void) row_major;
 
       /* Count the number of samplers regardless of whether the uniform is
        * already in the hash table.  The hash table prevents adding the same
@@ -372,7 +368,7 @@ private:
           * components in the default block.  The spec allows image
           * uniforms to use up no more than one scalar slot.
           */
-         if(!is_shader_storage)
+         if (!is_shader_storage)
             this->num_shader_uniform_components += values;
       } else {
          /* Accumulate the total number of uniform slots used by this shader.
@@ -651,17 +647,16 @@ private:
       this->record_array_count = record_array_count;
    }
 
-   virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major)
+   virtual void visit_field(const glsl_type *, const char *,
+                            bool /* row_major */)
    {
-      (void) type;
-      (void) name;
-      (void) row_major;
       assert(!"Should not get here.");
    }
 
    virtual void enter_record(const glsl_type *type, const char *,
-                             bool row_major, const enum glsl_interface_packing packing) {
+                             bool row_major,
+                             const enum glsl_interface_packing packing)
+   {
       assert(type->is_record());
       if (this->buffer_block_index == -1)
          return;
@@ -674,7 +669,9 @@ private:
    }
 
    virtual void leave_record(const glsl_type *type, const char *,
-                             bool row_major, const enum glsl_interface_packing packing) {
+                             bool row_major,
+                             const enum glsl_interface_packing packing)
+   {
       assert(type->is_record());
       if (this->buffer_block_index == -1)
          return;
@@ -892,7 +889,7 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader)
    foreach_in_list(ir_instruction, node, shader->ir) {
       ir_variable *const var = node->as_variable();
 
-      if ((var == NULL) || !var->is_in_buffer_block())
+      if (var == NULL || !var->is_in_buffer_block())
          continue;
 
       assert(var->data.mode == ir_var_uniform ||
@@ -942,6 +939,7 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader)
                break;
             }
          }
+
          if (found)
             break;
       }
