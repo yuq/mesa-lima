@@ -604,6 +604,7 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	}
 
 	switch (param) {
+	/* Shader limits. */
 	case PIPE_SHADER_CAP_MAX_INSTRUCTIONS:
 	case PIPE_SHADER_CAP_MAX_ALU_INSTRUCTIONS:
 	case PIPE_SHADER_CAP_MAX_TEX_INSTRUCTIONS:
@@ -620,46 +621,45 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 		return 4096 * sizeof(float[4]); /* actually only memory limits this */
 	case PIPE_SHADER_CAP_MAX_CONST_BUFFERS:
 		return SI_NUM_CONST_BUFFERS;
-	case PIPE_SHADER_CAP_MAX_PREDS:
-		return 0; /* FIXME */
-	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
-		return 1;
-	case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
-		return 1;
-	case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
-		/* Indirection of geometry shader input dimension is not
-		 * handled yet
-		 */
-		return shader != PIPE_SHADER_GEOMETRY;
-	case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
-	case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
-	case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
-		return 1;
-	case PIPE_SHADER_CAP_INTEGERS:
-		return 1;
-	case PIPE_SHADER_CAP_SUBROUTINES:
-		return 0;
 	case PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS:
 	case PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS:
 		return SI_NUM_SAMPLERS;
-	case PIPE_SHADER_CAP_PREFERRED_IR:
-		return PIPE_SHADER_IR_TGSI;
-	case PIPE_SHADER_CAP_SUPPORTED_IRS:
-		return 0;
-	case PIPE_SHADER_CAP_DOUBLES:
-		return HAVE_LLVM >= 0x0307;
-	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
-	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
-		return 0;
-	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
-	case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
-		return 1;
-	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
-		return 32;
 	case PIPE_SHADER_CAP_MAX_SHADER_BUFFERS:
 		return HAVE_LLVM >= 0x0309 ? SI_NUM_SHADER_BUFFERS : 0;
 	case PIPE_SHADER_CAP_MAX_SHADER_IMAGES:
 		return HAVE_LLVM >= 0x0309 ? SI_NUM_IMAGES : 0;
+	case PIPE_SHADER_CAP_MAX_UNROLL_ITERATIONS_HINT:
+		return 32;
+	case PIPE_SHADER_CAP_PREFERRED_IR:
+		return PIPE_SHADER_IR_TGSI;
+
+	/* Supported boolean features. */
+	case PIPE_SHADER_CAP_TGSI_CONT_SUPPORTED:
+	case PIPE_SHADER_CAP_TGSI_SQRT_SUPPORTED:
+	case PIPE_SHADER_CAP_INDIRECT_OUTPUT_ADDR:
+	case PIPE_SHADER_CAP_INDIRECT_TEMP_ADDR:
+	case PIPE_SHADER_CAP_INDIRECT_CONST_ADDR:
+	case PIPE_SHADER_CAP_INTEGERS:
+	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
+	case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
+		return 1;
+
+	case PIPE_SHADER_CAP_DOUBLES:
+		return HAVE_LLVM >= 0x0307;
+
+	case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
+		/* TODO: Indirection of geometry shader input dimension is not
+		 * handled yet
+		 */
+		return shader != PIPE_SHADER_GEOMETRY;
+
+	/* Unsupported boolean features. */
+	case PIPE_SHADER_CAP_MAX_PREDS:
+	case PIPE_SHADER_CAP_SUBROUTINES:
+	case PIPE_SHADER_CAP_SUPPORTED_IRS:
+	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
+	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
+		return 0;
 	}
 	return 0;
 }
