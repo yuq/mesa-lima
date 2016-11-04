@@ -859,38 +859,27 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
       for (int i = 0; i < MESA_SHADER_STAGES; i++) {
 	 struct gl_linked_shader *const sh = shProg->_LinkedShaders[i];
 
-	 /* If the shader stage doesn't use the sampler uniform, skip this.
-	  */
-	 if (sh == NULL || !uni->opaque[i].active)
+	 /* If the shader stage doesn't use the sampler uniform, skip this. */
+	 if (!uni->opaque[i].active)
 	    continue;
 
+         bool changed = false;
          for (int j = 0; j < count; j++) {
-            sh->SamplerUnits[uni->opaque[i].index + offset + j] =
-               ((unsigned *) values)[j];
+            unsigned unit = uni->opaque[i].index + offset + j;
+            if (sh->SamplerUnits[unit] != ((unsigned *) values)[j]) {
+               sh->SamplerUnits[unit] = ((unsigned *) values)[j];
+               changed = true;
+            }
          }
-
-	 struct gl_program *const prog = sh->Program;
-
-	 assert(sizeof(prog->SamplerUnits) == sizeof(sh->SamplerUnits));
-
-	 /* Determine if any of the samplers used by this shader stage have
-	  * been modified.
-	  */
-	 bool changed = false;
-	 GLbitfield mask = sh->active_samplers;
-	 while (mask) {
-	    const int j = u_bit_scan(&mask);
-	    if (prog->SamplerUnits[j] != sh->SamplerUnits[j]) {
-	       changed = true;
-	       break;
-	    }
-	 }
 
 	 if (changed) {
 	    if (!flushed) {
 	       FLUSH_VERTICES(ctx, _NEW_TEXTURE | _NEW_PROGRAM);
 	       flushed = true;
 	    }
+
+            struct gl_program *const prog = sh->Program;
+            assert(sizeof(prog->SamplerUnits) == sizeof(sh->SamplerUnits));
 
 	    _mesa_update_shader_textures_used(shProg, prog);
             if (ctx->Driver.SamplerUniformChange)
