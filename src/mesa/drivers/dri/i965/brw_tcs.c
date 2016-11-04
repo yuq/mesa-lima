@@ -116,8 +116,7 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
 }
 
 static void
-brw_tcs_debug_recompile(struct brw_context *brw,
-                       struct gl_shader_program *shader_prog,
+brw_tcs_debug_recompile(struct brw_context *brw, struct gl_program *prog,
                        const struct brw_tcs_prog_key *key)
 {
    struct brw_cache_item *c = NULL;
@@ -125,7 +124,7 @@ brw_tcs_debug_recompile(struct brw_context *brw,
    bool found = false;
 
    perf_debug("Recompiling tessellation control shader for program %d\n",
-              shader_prog->Name);
+              prog->Id);
 
    for (unsigned int i = 0; i < brw->cache.size; i++) {
       for (c = brw->cache.items[i]; c; c = c->next) {
@@ -280,7 +279,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    if (unlikely(brw->perf_debug)) {
       if (tcp) {
          if (tcp->compiled_once) {
-            brw_tcs_debug_recompile(brw, shader_prog, key);
+            brw_tcs_debug_recompile(brw, &tcp->program, key);
          }
          tcp->compiled_once = true;
       }

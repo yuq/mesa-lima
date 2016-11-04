@@ -65,9 +65,6 @@ bool brw_codegen_wm_prog(struct brw_context *brw,
                          struct brw_program *fp,
                          struct brw_wm_prog_key *key,
                          struct brw_vue_map *vue_map);
-void brw_wm_debug_recompile(struct brw_context *brw,
-                            struct gl_shader_program *prog,
-                            const struct brw_wm_prog_key *key);
 
 void
 brw_upload_wm_prog(struct brw_context *brw);

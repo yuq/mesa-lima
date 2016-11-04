@@ -68,6 +68,67 @@ assign_fs_binding_table_offsets(const struct gen_device_info *devinfo,
    }
 }
 
+static void
+brw_wm_debug_recompile(struct brw_context *brw, struct gl_program *prog,
+                       const struct brw_wm_prog_key *key)
+{
+   struct brw_cache_item *c = NULL;
+   const struct brw_wm_prog_key *old_key = NULL;
+   bool found = false;
+
+   perf_debug("Recompiling fragment shader for program %d\n", prog->Id);
+
+   for (unsigned int i = 0; i < brw->cache.size; i++) {
+      for (c = brw->cache.items[i]; c; c = c->next) {
+         if (c->cache_id == BRW_CACHE_FS_PROG) {
+            old_key = c->key;
+
+            if (old_key->program_string_id == key->program_string_id)
+               break;
+         }
+      }
+      if (c)
+         break;
+   }
+
+   if (!c) {
+      perf_debug("  Didn't find previous compile in the shader cache for debug\n");
+      return;
+   }
+
+   found |= key_debug(brw, "alphatest, computed depth, depth test, or "
+                      "depth write",
+                      old_key->iz_lookup, key->iz_lookup);
+   found |= key_debug(brw, "depth statistics",
+                      old_key->stats_wm, key->stats_wm);
+   found |= key_debug(brw, "flat shading",
+                      old_key->flat_shade, key->flat_shade);
+   found |= key_debug(brw, "per-sample interpolation",
+                      old_key->persample_interp, key->persample_interp);
+   found |= key_debug(brw, "number of color buffers",
+                      old_key->nr_color_regions, key->nr_color_regions);
+   found |= key_debug(brw, "MRT alpha test or alpha-to-coverage",
+                      old_key->replicate_alpha, key->replicate_alpha);
+   found |= key_debug(brw, "fragment color clamping",
+                      old_key->clamp_fragment_color, key->clamp_fragment_color);
+   found |= key_debug(brw, "multisampled FBO",
+                      old_key->multisample_fbo, key->multisample_fbo);
+   found |= key_debug(brw, "line smoothing",
+                      old_key->line_aa, key->line_aa);
+   found |= key_debug(brw, "input slots valid",
+                      old_key->input_slots_valid, key->input_slots_valid);
+   found |= key_debug(brw, "mrt alpha test function",
+                      old_key->alpha_test_func, key->alpha_test_func);
+   found |= key_debug(brw, "mrt alpha test reference value",
+                      old_key->alpha_test_ref, key->alpha_test_ref);
+
+   found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
+
+   if (!found) {
+      perf_debug("  Something else\n");
+   }
+}
+
 /**
  * All Mesa program -> GPU code generation goes through this function.
  * Depending on the instructions used (i.e. flow control instructions)
@@ -162,7 +223,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    if (unlikely(brw->perf_debug)) {
       if (fp->compiled_once)
-         brw_wm_debug_recompile(brw, prog, key);
+         brw_wm_debug_recompile(brw, &fp->program, key);
       fp->compiled_once = true;
 
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
@@ -231,68 +292,6 @@ brw_debug_recompile_sampler_key(struct brw_context *brw,
    }
 
    return found;
-}
-
-void
-brw_wm_debug_recompile(struct brw_context *brw,
-                       struct gl_shader_program *prog,
-                       const struct brw_wm_prog_key *key)
-{
-   struct brw_cache_item *c = NULL;
-   const struct brw_wm_prog_key *old_key = NULL;
-   bool found = false;
-
-   perf_debug("Recompiling fragment shader for program %d\n", prog->Name);
-
-   for (unsigned int i = 0; i < brw->cache.size; i++) {
-      for (c = brw->cache.items[i]; c; c = c->next) {
-         if (c->cache_id == BRW_CACHE_FS_PROG) {
-            old_key = c->key;
-
-            if (old_key->program_string_id == key->program_string_id)
-               break;
-         }
-      }
-      if (c)
-         break;
-   }
-
-   if (!c) {
-      perf_debug("  Didn't find previous compile in the shader cache for debug\n");
-      return;
-   }
-
-   found |= key_debug(brw, "alphatest, computed depth, depth test, or "
-                      "depth write",
-                      old_key->iz_lookup, key->iz_lookup);
-   found |= key_debug(brw, "depth statistics",
-                      old_key->stats_wm, key->stats_wm);
-   found |= key_debug(brw, "flat shading",
-                      old_key->flat_shade, key->flat_shade);
-   found |= key_debug(brw, "per-sample interpolation",
-                      old_key->persample_interp, key->persample_interp);
-   found |= key_debug(brw, "number of color buffers",
-                      old_key->nr_color_regions, key->nr_color_regions);
-   found |= key_debug(brw, "MRT alpha test or alpha-to-coverage",
-                      old_key->replicate_alpha, key->replicate_alpha);
-   found |= key_debug(brw, "fragment color clamping",
-                      old_key->clamp_fragment_color, key->clamp_fragment_color);
-   found |= key_debug(brw, "multisampled FBO",
-                      old_key->multisample_fbo, key->multisample_fbo);
-   found |= key_debug(brw, "line smoothing",
-                      old_key->line_aa, key->line_aa);
-   found |= key_debug(brw, "input slots valid",
-                      old_key->input_slots_valid, key->input_slots_valid);
-   found |= key_debug(brw, "mrt alpha test function",
-                      old_key->alpha_test_func, key->alpha_test_func);
-   found |= key_debug(brw, "mrt alpha test reference value",
-                      old_key->alpha_test_ref, key->alpha_test_ref);
-
-   found |= brw_debug_recompile_sampler_key(brw, &old_key->tex, &key->tex);
-
-   if (!found) {
-      perf_debug("  Something else\n");
-   }
 }
 
 static uint8_t

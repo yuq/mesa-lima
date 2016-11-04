@@ -37,16 +37,14 @@
 #include "compiler/glsl/ir_uniform.h"
 
 static void
-brw_gs_debug_recompile(struct brw_context *brw,
-                       struct gl_shader_program *shader_prog,
+brw_gs_debug_recompile(struct brw_context *brw, struct gl_program *prog,
                        const struct brw_gs_prog_key *key)
 {
    struct brw_cache_item *c = NULL;
    const struct brw_gs_prog_key *old_key = NULL;
    bool found = false;
 
-   perf_debug("Recompiling geometry shader for program %d\n",
-              shader_prog->Name);
+   perf_debug("Recompiling geometry shader for program %d\n", prog->Id);
 
    for (unsigned int i = 0; i < brw->cache.size; i++) {
       for (c = brw->cache.items[i]; c; c = c->next) {
@@ -164,7 +162,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    if (unlikely(brw->perf_debug)) {
       if (gp->compiled_once) {
-         brw_gs_debug_recompile(brw, prog, key);
+         brw_gs_debug_recompile(brw, &gp->program, key);
       }
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("GS compile took %.03f ms and stalled the GPU\n",

@@ -35,8 +35,7 @@
 #include "program/prog_parameter.h"
 
 static void
-brw_tes_debug_recompile(struct brw_context *brw,
-                       struct gl_shader_program *shader_prog,
+brw_tes_debug_recompile(struct brw_context *brw, struct gl_program *prog,
                        const struct brw_tes_prog_key *key)
 {
    struct brw_cache_item *c = NULL;
@@ -44,7 +43,7 @@ brw_tes_debug_recompile(struct brw_context *brw,
    bool found = false;
 
    perf_debug("Recompiling tessellation evaluation shader for program %d\n",
-              shader_prog->Name);
+              prog->Id);
 
    for (unsigned int i = 0; i < brw->cache.size; i++) {
       for (c = brw->cache.items[i]; c; c = c->next) {
@@ -194,7 +193,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    if (unlikely(brw->perf_debug)) {
       if (tep->compiled_once) {
-         brw_tes_debug_recompile(brw, shader_prog, key);
+         brw_tes_debug_recompile(brw, &tep->program, key);
       }
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("TES compile took %.03f ms and stalled the GPU\n",
