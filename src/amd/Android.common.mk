@@ -1,5 +1,5 @@
-# Copyright © 2016 Red Hat.
-# Copyright © 2016 Mauro Rossi <issor.oruam@gmail.com>
+# Copyright Â© 2016 Red Hat.
+# Copyright Â© 2016 Mauro Rossi <issor.oruam@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -20,10 +20,28 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-LOCAL_PATH := $(call my-dir)
+# ---------------------------------------
+# Build libmesa_amd_common
+# ---------------------------------------
 
-# Import variables
-include $(LOCAL_PATH)/Makefile.sources
+include $(CLEAR_VARS)
 
-include $(LOCAL_PATH)/Android.addrlib.mk
-include $(LOCAL_PATH)/Android.common.mk
+LOCAL_MODULE := libmesa_amd_common
+
+LOCAL_SRC_FILES := $(AMD_COMPILER_SOURCES)
+
+LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/include \
+	$(MESA_TOP)/src \
+	$(MESA_TOP)/src/amd/common \
+	$(MESA_TOP)/src/gallium/include \
+	$(MESA_TOP)/src/gallium/auxiliary \
+	external/llvm/include \
+	external/llvm/device/include \
+	external/libcxx/include \
+	external/elfutils/$(if $(filter 5,$(MESA_ANDROID_MAJOR_VERSION)),0.153/,$(if $(filter 6,$(MESA_ANDROID_MAJOR_VERSION)),src/))libelf
+
+LOCAL_STATIC_LIBRARIES := libLLVMCore
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
