@@ -2108,12 +2108,14 @@ do_common_optimization(exec_list *ir, bool linked,
    OPT(optimize_split_arrays, ir, linked);
    OPT(optimize_redundant_jumps, ir);
 
-   loop_state *ls = analyze_loop_variables(ir);
-   if (ls->loop_found) {
-      OPT(set_loop_controls, ir, ls);
-      OPT(unroll_loops, ir, ls, options);
+   if (options->MaxUnrollIterations) {
+      loop_state *ls = analyze_loop_variables(ir);
+      if (ls->loop_found) {
+         OPT(set_loop_controls, ir, ls);
+         OPT(unroll_loops, ir, ls, options);
+      }
+      delete ls;
    }
-   delete ls;
 
 #undef OPT
 
