@@ -1208,9 +1208,9 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
    next_binding_table_offset += num_textures;
 
    if (shader) {
-      assert(shader->NumUniformBlocks <= BRW_MAX_UBO);
+      assert(prog->info.num_ubos <= BRW_MAX_UBO);
       stage_prog_data->binding_table.ubo_start = next_binding_table_offset;
-      next_binding_table_offset += shader->NumUniformBlocks;
+      next_binding_table_offset += prog->info.num_ubos;
 
       assert(shader->NumShaderStorageBlocks <= BRW_MAX_SSBO);
       stage_prog_data->binding_table.ssbo_start = next_binding_table_offset;

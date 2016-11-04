@@ -2382,7 +2382,6 @@ struct gl_linked_shader
     */
    unsigned num_combined_uniform_components;
 
-   unsigned NumUniformBlocks;
    struct gl_uniform_block **UniformBlocks;
 
    unsigned NumShaderStorageBlocks;

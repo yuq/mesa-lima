@@ -901,7 +901,7 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader,
              var->data.mode == ir_var_shader_storage);
 
       unsigned num_blocks = var->data.mode == ir_var_uniform ?
-         shader->NumUniformBlocks : shader->NumShaderStorageBlocks;
+         shader->Program->info.num_ubos : shader->NumShaderStorageBlocks;
       struct gl_uniform_block **blks = var->data.mode == ir_var_uniform ?
          shader->UniformBlocks : shader->ShaderStorageBlocks;
 
@@ -1330,7 +1330,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
       sh->num_uniform_components = uniform_size.num_shader_uniform_components;
       sh->num_combined_uniform_components = sh->num_uniform_components;
 
-      for (unsigned i = 0; i < sh->NumUniformBlocks; i++) {
+      for (unsigned i = 0; i < sh->Program->info.num_ubos; i++) {
          sh->num_combined_uniform_components +=
             sh->UniformBlocks[i]->UniformBufferSize / 4;
       }

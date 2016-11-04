@@ -1140,7 +1140,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
                prog->_LinkedShaders[i]->NumShaderStorageBlocks;
          } else {
             max_num_buffer_blocks +=
-               prog->_LinkedShaders[i]->NumUniformBlocks;
+               prog->_LinkedShaders[i]->Program->info.num_ubos;
          }
       }
    }
@@ -1161,7 +1161,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
          sh_num_blocks = prog->_LinkedShaders[i]->NumShaderStorageBlocks;
          sh_blks = sh->ShaderStorageBlocks;
       } else {
-         sh_num_blocks = prog->_LinkedShaders[i]->NumUniformBlocks;
+         sh_num_blocks = prog->_LinkedShaders[i]->Program->info.num_ubos;
          sh_blks = sh->UniformBlocks;
       }
 
@@ -2278,7 +2278,7 @@ link_intrastage_shaders(void *mem_ctx,
    for (unsigned i = 0; i < num_ubo_blocks; i++) {
       linked->UniformBlocks[i] = &ubo_blocks[i];
    }
-   linked->NumUniformBlocks = num_ubo_blocks;
+   linked->Program->info.num_ubos = num_ubo_blocks;
 
    /* Copy ssbo blocks to linked shader list */
    linked->ShaderStorageBlocks =
@@ -3100,14 +3100,14 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
       }
 
       total_shader_storage_blocks += sh->NumShaderStorageBlocks;
-      total_uniform_blocks += sh->NumUniformBlocks;
+      total_uniform_blocks += sh->Program->info.num_ubos;
 
       const unsigned max_uniform_blocks =
          ctx->Const.Program[i].MaxUniformBlocks;
-      if (max_uniform_blocks < sh->NumUniformBlocks) {
+      if (max_uniform_blocks < sh->Program->info.num_ubos) {
          linker_error(prog, "Too many %s uniform blocks (%d/%d)\n",
-                      _mesa_shader_stage_to_string(i), sh->NumUniformBlocks,
-                      max_uniform_blocks);
+                      _mesa_shader_stage_to_string(i),
+                      sh->Program->info.num_ubos, max_uniform_blocks);
       }
 
       const unsigned max_shader_storage_blocks =

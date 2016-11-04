@@ -1383,7 +1383,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
    uint32_t *ubo_surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
-   for (int i = 0; i < shader->NumUniformBlocks; i++) {
+   for (int i = 0; i < shader->Program->info.num_ubos; i++) {
       struct gl_uniform_buffer_binding *binding =
          &ctx->UniformBufferBindings[shader->UniformBlocks[i]->Binding];
 
@@ -1430,7 +1430,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       }
    }
 
-   if (shader->NumUniformBlocks || shader->NumShaderStorageBlocks)
+   if (shader->Program->info.num_ubos || shader->NumShaderStorageBlocks)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 

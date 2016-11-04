@@ -248,7 +248,7 @@ static void st_bind_ubos(struct st_context *st,
    if (!shader)
       return;
 
-   for (i = 0; i < shader->NumUniformBlocks; i++) {
+   for (i = 0; i < shader->Program->info.num_ubos; i++) {
       struct gl_uniform_buffer_binding *binding;
       struct st_buffer_object *st_obj;
 

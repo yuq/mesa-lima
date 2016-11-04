@@ -6302,9 +6302,7 @@ st_translate_program(
    }
 
    if (program->shader) {
-      unsigned num_ubos = program->shader->NumUniformBlocks;
-
-      for (i = 0; i < num_ubos; i++) {
+      for (i = 0; i < proginfo->info.num_ubos; i++) {
          unsigned size = program->shader->UniformBlocks[i]->UniformBufferSize;
          unsigned num_const_vecs = (size + 15) / 16;
          unsigned first, last;
@@ -6646,7 +6644,7 @@ set_affected_state_flags(uint64_t *states,
    if (shader->NumImages)
       *states |= new_images;
 
-   if (shader->NumUniformBlocks)
+   if (prog->info.num_ubos)
       *states |= new_ubos;
 
    if (shader->NumShaderStorageBlocks)
