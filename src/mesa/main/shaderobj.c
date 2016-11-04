@@ -116,22 +116,6 @@ _mesa_new_shader(GLuint name, gl_shader_stage stage)
 
 
 /**
- * Allocate a new gl_linked_shader object.
- * Called via ctx->Driver.NewShader()
- */
-struct gl_linked_shader *
-_mesa_new_linked_shader(gl_shader_stage stage)
-{
-   struct gl_linked_shader *shader;
-   shader = rzalloc(NULL, struct gl_linked_shader);
-   if (shader) {
-      shader->Stage = stage;
-   }
-   return shader;
-}
-
-
-/**
  * Delete a shader object.
  */
 void
@@ -505,6 +489,5 @@ _mesa_lookup_shader_program_err(struct gl_context *ctx, GLuint name,
 void
 _mesa_init_shader_object_functions(struct dd_function_table *driver)
 {
-   driver->NewShader = _mesa_new_linked_shader;
    driver->LinkShader = _mesa_ir_link_shader;
 }

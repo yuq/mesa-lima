@@ -375,7 +375,6 @@ void brwInitFragProgFuncs( struct dd_function_table *functions )
    functions->DeleteProgram = brwDeleteProgram;
    functions->ProgramStringNotify = brwProgramStringNotify;
 
-   functions->NewShader = brw_new_shader;
    functions->LinkShader = brw_link_shader;
 
    functions->MemoryBarrier = brw_memory_barrier;

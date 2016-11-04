@@ -2194,7 +2194,8 @@ link_intrastage_shaders(void *mem_ctx,
       return NULL;
    }
 
-   gl_linked_shader *linked = ctx->Driver.NewShader(shader_list[0]->Stage);
+   gl_linked_shader *linked = rzalloc(NULL, struct gl_linked_shader);
+   linked->Stage = shader_list[0]->Stage;
 
    /* Create program and attach it to the linked shader */
    struct gl_program *gl_prog =

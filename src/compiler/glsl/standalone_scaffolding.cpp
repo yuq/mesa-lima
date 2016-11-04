@@ -90,19 +90,6 @@ _mesa_new_shader(GLuint name, gl_shader_stage stage)
    return shader;
 }
 
-struct gl_linked_shader *
-_mesa_new_linked_shader(gl_shader_stage stage)
-{
-   struct gl_linked_shader *shader;
-
-   assert(stage == MESA_SHADER_FRAGMENT || stage == MESA_SHADER_VERTEX);
-   shader = rzalloc(NULL, struct gl_linked_shader);
-   if (shader) {
-      shader->Stage = stage;
-   }
-   return shader;
-}
-
 GLbitfield
 _mesa_program_state_flags(const gl_state_index state[STATE_LENGTH])
 {

@@ -174,17 +174,6 @@ process_glsl_ir(struct brw_context *brw,
    }
 }
 
-extern "C" struct gl_linked_shader *
-brw_new_shader(gl_shader_stage stage)
-{
-   struct gl_linked_shader *shader = rzalloc(NULL, struct gl_linked_shader);
-   if (shader) {
-      shader->Stage = stage;
-   }
-
-   return shader;
-}
-
 static void
 unify_interfaces(struct shader_info **infos)
 {
