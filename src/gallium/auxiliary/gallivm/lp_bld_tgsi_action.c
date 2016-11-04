@@ -842,26 +842,15 @@ imul_hi_emit(
    struct lp_build_tgsi_context * bld_base,
    struct lp_build_emit_data * emit_data)
 {
-   LLVMBuilderRef builder = bld_base->base.gallivm->builder;
    struct lp_build_context *int_bld = &bld_base->int_bld;
-   struct lp_type type = int_bld->type;
-   LLVMValueRef src0, src1;
-   LLVMValueRef dst64;
-   LLVMTypeRef typeRef;
+   LLVMValueRef hi_bits;
 
-   assert(type.width == 32);
-   type.width = 64;
-   typeRef = lp_build_vec_type(bld_base->base.gallivm, type);
-   src0 = LLVMBuildSExt(builder, emit_data->args[0], typeRef, "");
-   src1 = LLVMBuildSExt(builder, emit_data->args[1], typeRef, "");
-   dst64 = LLVMBuildMul(builder, src0, src1, "");
-   dst64 = LLVMBuildAShr(
-            builder, dst64,
-            lp_build_const_vec(bld_base->base.gallivm, type, 32), "");
-   type.width = 32;
-   typeRef = lp_build_vec_type(bld_base->base.gallivm, type);
-   emit_data->output[emit_data->chan] =
-         LLVMBuildTrunc(builder, dst64, typeRef, "");
+   assert(int_bld->type.width == 32);
+
+   /* low result bits are tossed away */
+   lp_build_mul_32_lohi(int_bld, emit_data->args[0],
+                        emit_data->args[0], &hi_bits);
+   emit_data->output[emit_data->chan] = hi_bits;
 }
 
 /* TGSI_OPCODE_UMUL_HI */
@@ -871,26 +860,15 @@ umul_hi_emit(
    struct lp_build_tgsi_context * bld_base,
    struct lp_build_emit_data * emit_data)
 {
-   LLVMBuilderRef builder = bld_base->base.gallivm->builder;
    struct lp_build_context *uint_bld = &bld_base->uint_bld;
-   struct lp_type type = uint_bld->type;
-   LLVMValueRef src0, src1;
-   LLVMValueRef dst64;
-   LLVMTypeRef typeRef;
+   LLVMValueRef hi_bits;
 
-   assert(type.width == 32);
-   type.width = 64;
-   typeRef = lp_build_vec_type(bld_base->base.gallivm, type);
-   src0 = LLVMBuildZExt(builder, emit_data->args[0], typeRef, "");
-   src1 = LLVMBuildZExt(builder, emit_data->args[1], typeRef, "");
-   dst64 = LLVMBuildMul(builder, src0, src1, "");
-   dst64 = LLVMBuildLShr(
-            builder, dst64,
-            lp_build_const_vec(bld_base->base.gallivm, type, 32), "");
-   type.width = 32;
-   typeRef = lp_build_vec_type(bld_base->base.gallivm, type);
-   emit_data->output[emit_data->chan] =
-         LLVMBuildTrunc(builder, dst64, typeRef, "");
+   assert(uint_bld->type.width == 32);
+
+   /* low result bits are tossed away */
+   lp_build_mul_32_lohi(uint_bld, emit_data->args[0],
+                        emit_data->args[0], &hi_bits);
+   emit_data->output[emit_data->chan] = hi_bits;
 }
 
 /* TGSI_OPCODE_MAX */
