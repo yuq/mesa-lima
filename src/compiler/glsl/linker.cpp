@@ -3067,7 +3067,8 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
       if (sh == NULL)
          continue;
 
-      if (sh->num_samplers > ctx->Const.Program[i].MaxTextureImageUnits) {
+      if (sh->Program->info.num_textures >
+          ctx->Const.Program[i].MaxTextureImageUnits) {
          linker_error(prog, "Too many %s shader texture samplers\n",
                       _mesa_shader_stage_to_string(i));
       }

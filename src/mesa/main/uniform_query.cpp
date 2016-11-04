@@ -1141,7 +1141,7 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
          TexturesUsed[unit] |= (1 << tgt);
       }
 
-      active_samplers += shader->num_samplers;
+      active_samplers += shader->Program->info.num_textures;
    }
 
    if (active_samplers > MAX_COMBINED_TEXTURE_IMAGE_UNITS) {

@@ -2356,7 +2356,6 @@ struct gl_linked_shader
     * \note Each of these fields is only set post-linking.
     */
    /*@{*/
-   unsigned num_samplers;	/**< Number of samplers used by this shader. */
    GLbitfield active_samplers;	/**< Bitfield of which samplers are used */
    GLbitfield shadow_samplers;	/**< Samplers used for shadow sampling. */
    /*@}*/

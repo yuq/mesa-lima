@@ -1315,7 +1315,7 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
          uniform_size.process(var);
       }
 
-      sh->num_samplers = uniform_size.num_shader_samplers;
+      sh->Program->info.num_textures = uniform_size.num_shader_samplers;
       sh->NumImages = uniform_size.num_shader_images;
       sh->num_uniform_components = uniform_size.num_shader_uniform_components;
       sh->num_combined_uniform_components = sh->num_uniform_components;

@@ -6636,7 +6636,7 @@ set_affected_state_flags(uint64_t *states,
    if (prog->Parameters->NumParameters)
       *states |= new_constants;
 
-   if (shader->num_samplers)
+   if (prog->info.num_textures)
       *states |= new_sampler_views | new_samplers;
 
    if (shader->NumImages)
