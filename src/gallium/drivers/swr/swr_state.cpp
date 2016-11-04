@@ -1300,7 +1300,8 @@ swr_update_derived(struct pipe_context *pipe,
                    sizeof(compileState.blendState));
 
             if (compileState.blendState.blendEnable == false &&
-                compileState.blendState.logicOpEnable == false) {
+                compileState.blendState.logicOpEnable == false &&
+                ctx->depth_stencil->alpha.enabled == 0) {
                SwrSetBlendFunc(ctx->swrContext, target, NULL);
                continue;
             }
