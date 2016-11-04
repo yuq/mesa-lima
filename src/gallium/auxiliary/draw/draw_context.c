@@ -787,6 +787,7 @@ draw_set_indexes(struct draw_context *draw,
                  const void *elements, unsigned elem_size,
                  unsigned elem_buffer_space)
 {
+   static const unsigned fake_index_buf = 0;
    assert(elem_size == 0 ||
           elem_size == 1 ||
           elem_size == 2 ||
@@ -797,6 +798,10 @@ draw_set_indexes(struct draw_context *draw,
       draw->pt.user.eltMax = elem_buffer_space / elem_size;
    else
       draw->pt.user.eltMax = 0;
+
+   if (draw->pt.user.eltMax == 0) {
+      draw->pt.user.elts = &fake_index_buf;
+   }
 }
 
 
