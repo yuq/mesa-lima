@@ -1137,7 +1137,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
       if (prog->_LinkedShaders[i]) {
          if (validate_ssbo) {
             max_num_buffer_blocks +=
-               prog->_LinkedShaders[i]->NumShaderStorageBlocks;
+               prog->_LinkedShaders[i]->Program->info.num_ssbos;
          } else {
             max_num_buffer_blocks +=
                prog->_LinkedShaders[i]->Program->info.num_ubos;
@@ -1158,7 +1158,7 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
       unsigned sh_num_blocks;
       struct gl_uniform_block **sh_blks;
       if (validate_ssbo) {
-         sh_num_blocks = prog->_LinkedShaders[i]->NumShaderStorageBlocks;
+         sh_num_blocks = prog->_LinkedShaders[i]->Program->info.num_ssbos;
          sh_blks = sh->ShaderStorageBlocks;
       } else {
          sh_num_blocks = prog->_LinkedShaders[i]->Program->info.num_ubos;
@@ -2287,7 +2287,7 @@ link_intrastage_shaders(void *mem_ctx,
    for (unsigned i = 0; i < num_ssbo_blocks; i++) {
       linked->ShaderStorageBlocks[i] = &ssbo_blocks[i];
    }
-   linked->NumShaderStorageBlocks = num_ssbo_blocks;
+   linked->Program->info.num_ssbos = num_ssbo_blocks;
 
    /* At this point linked should contain all of the linked IR, so
     * validate it to make sure nothing went wrong.
@@ -3099,7 +3099,7 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
          }
       }
 
-      total_shader_storage_blocks += sh->NumShaderStorageBlocks;
+      total_shader_storage_blocks += sh->Program->info.num_ssbos;
       total_uniform_blocks += sh->Program->info.num_ubos;
 
       const unsigned max_uniform_blocks =
@@ -3112,10 +3112,10 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
 
       const unsigned max_shader_storage_blocks =
          ctx->Const.Program[i].MaxShaderStorageBlocks;
-      if (max_shader_storage_blocks < sh->NumShaderStorageBlocks) {
+      if (max_shader_storage_blocks < sh->Program->info.num_ssbos) {
          linker_error(prog, "Too many %s shader storage blocks (%d/%d)\n",
                       _mesa_shader_stage_to_string(i),
-                      sh->NumShaderStorageBlocks, max_shader_storage_blocks);
+                      sh->Program->info.num_ssbos, max_shader_storage_blocks);
       }
    }
 
@@ -3224,7 +3224,7 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
                          ctx->Const.Program[i].MaxImageUniforms);
 
          total_image_units += sh->NumImages;
-         total_shader_storage_blocks += sh->NumShaderStorageBlocks;
+         total_shader_storage_blocks += sh->Program->info.num_ssbos;
 
          if (i == MESA_SHADER_FRAGMENT) {
             foreach_in_list(ir_instruction, node, sh->ir) {

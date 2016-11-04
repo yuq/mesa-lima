@@ -2384,7 +2384,6 @@ struct gl_linked_shader
     */
    unsigned num_combined_uniform_components;
 
-   unsigned NumShaderStorageBlocks;
    struct gl_uniform_block **ShaderStorageBlocks;
 
    struct exec_list *ir;

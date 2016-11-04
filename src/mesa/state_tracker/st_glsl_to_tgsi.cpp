@@ -6645,7 +6645,7 @@ set_affected_state_flags(uint64_t *states,
    if (prog->info.num_ubos)
       *states |= new_ubos;
 
-   if (shader->NumShaderStorageBlocks)
+   if (prog->info.num_ssbos)
       *states |= new_ssbos;
 
    if (prog->info.num_abos)

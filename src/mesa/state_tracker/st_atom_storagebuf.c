@@ -53,7 +53,7 @@ st_bind_ssbos(struct st_context *st, struct gl_linked_shader *shader,
 
    c = &st->ctx->Const.Program[shader->Stage];
 
-   for (i = 0; i < shader->NumShaderStorageBlocks; i++) {
+   for (i = 0; i < shader->Program->info.num_ssbos; i++) {
       struct gl_shader_storage_buffer_binding *binding;
       struct st_buffer_object *st_obj;
       struct pipe_shader_buffer *sb = &buffers[i];
@@ -80,13 +80,13 @@ st_bind_ssbos(struct st_context *st, struct gl_linked_shader *shader,
       }
    }
    st->pipe->set_shader_buffers(st->pipe, shader_type, c->MaxAtomicBuffers,
-                                shader->NumShaderStorageBlocks, buffers);
+                                shader->Program->info.num_ssbos, buffers);
    /* clear out any stale shader buffers */
-   if (shader->NumShaderStorageBlocks < c->MaxShaderStorageBlocks)
+   if (shader->Program->info.num_ssbos < c->MaxShaderStorageBlocks)
       st->pipe->set_shader_buffers(
             st->pipe, shader_type,
-            c->MaxAtomicBuffers + shader->NumShaderStorageBlocks,
-            c->MaxShaderStorageBlocks - shader->NumShaderStorageBlocks,
+            c->MaxAtomicBuffers + shader->Program->info.num_ssbos,
+            c->MaxShaderStorageBlocks - shader->Program->info.num_ssbos,
             NULL);
 }
 

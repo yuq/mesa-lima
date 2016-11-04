@@ -1207,16 +1207,19 @@ brw_assign_common_binding_table_offsets(gl_shader_stage stage,
    stage_prog_data->binding_table.texture_start = next_binding_table_offset;
    next_binding_table_offset += num_textures;
 
-   if (shader) {
+   if (prog->info.num_ubos) {
       assert(prog->info.num_ubos <= BRW_MAX_UBO);
       stage_prog_data->binding_table.ubo_start = next_binding_table_offset;
       next_binding_table_offset += prog->info.num_ubos;
-
-      assert(shader->NumShaderStorageBlocks <= BRW_MAX_SSBO);
-      stage_prog_data->binding_table.ssbo_start = next_binding_table_offset;
-      next_binding_table_offset += shader->NumShaderStorageBlocks;
    } else {
       stage_prog_data->binding_table.ubo_start = 0xd0d0d0d0;
+   }
+
+   if (prog->info.num_ssbos) {
+      assert(prog->info.num_ssbos <= BRW_MAX_SSBO);
+      stage_prog_data->binding_table.ssbo_start = next_binding_table_offset;
+      next_binding_table_offset += prog->info.num_ssbos;
+   } else {
       stage_prog_data->binding_table.ssbo_start = 0xd0d0d0d0;
    }
 

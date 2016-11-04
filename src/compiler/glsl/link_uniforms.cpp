@@ -901,7 +901,7 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader,
              var->data.mode == ir_var_shader_storage);
 
       unsigned num_blocks = var->data.mode == ir_var_uniform ?
-         shader->Program->info.num_ubos : shader->NumShaderStorageBlocks;
+         shader->Program->info.num_ubos : shader->Program->info.num_ssbos;
       struct gl_uniform_block **blks = var->data.mode == ir_var_uniform ?
          shader->Program->sh.UniformBlocks : shader->ShaderStorageBlocks;
 
