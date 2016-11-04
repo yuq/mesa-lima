@@ -373,8 +373,16 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
                                       VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
    }
 
+   /* For true mailbox mode, we need at least 4 images:
+    *  1) One to scan out from
+    *  2) One to have queued for scan-out
+    *  3) One to be currently held by the X server
+    *  4) One to render to
+    */
    caps->minImageCount = 2;
-   caps->maxImageCount = 4;
+   /* There is no real maximum */
+   caps->maxImageCount = 0;
+
    caps->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->maxImageArrayLayers = 1;
@@ -791,16 +799,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
 
-   int num_images = pCreateInfo->minImageCount;
-
-   /* For true mailbox mode, we need at least 4 images:
-    *  1) One to scan out from
-    *  2) One to have queued for scan-out
-    *  3) One to be currently held by the Wayland compositor
-    *  4) One to render to
-    */
-   if (pCreateInfo->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-      num_images = MAX2(num_images, 4);
+   const unsigned num_images = pCreateInfo->minImageCount;
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
    chain = vk_alloc(pAllocator, size, 8,

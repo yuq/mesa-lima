@@ -42,8 +42,6 @@
    memcpy((dest), (src), (count) * sizeof(*(src))); \
 })
 
-#define MIN_NUM_IMAGES 2
-
 struct wsi_wayland;
 
 struct wsi_wl_display {
@@ -369,8 +367,16 @@ static VkResult
 wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
                                 VkSurfaceCapabilitiesKHR* caps)
 {
-   caps->minImageCount = MIN_NUM_IMAGES;
-   caps->maxImageCount = 4;
+   /* For true mailbox mode, we need at least 4 images:
+    *  1) One to scan out from
+    *  2) One to have queued for scan-out
+    *  3) One to be currently held by the Wayland compositor
+    *  4) One to render to
+    */
+   caps->minImageCount = 4;
+   /* There is no real maximum */
+   caps->maxImageCount = 0;
+
    caps->currentExtent = (VkExtent2D) { -1, -1 };
    caps->minImageExtent = (VkExtent2D) { 1, 1 };
    caps->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
@@ -689,17 +695,6 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR);
 
    int num_images = pCreateInfo->minImageCount;
-
-   assert(num_images >= MIN_NUM_IMAGES);
-
-   /* For true mailbox mode, we need at least 4 images:
-    *  1) One to scan out from
-    *  2) One to have queued for scan-out
-    *  3) One to be currently held by the Wayland compositor
-    *  4) One to render to
-    */
-   if (pCreateInfo->presentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-      num_images = MAX2(num_images, 4);
 
    size_t size = sizeof(*chain) + num_images * sizeof(chain->images[0]);
    chain = vk_alloc(pAllocator, size, 8,
