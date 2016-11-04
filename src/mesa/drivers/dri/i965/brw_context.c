@@ -280,7 +280,8 @@ intel_update_state(struct gl_context * ctx, GLuint new_state)
 
       if (unlikely(shader && shader->Program->info.num_images)) {
          for (unsigned j = 0; j < shader->Program->info.num_images; j++) {
-            struct gl_image_unit *u = &ctx->ImageUnits[shader->ImageUnits[j]];
+            struct gl_image_unit *u =
+               &ctx->ImageUnits[shader->Program->sh.ImageUnits[j]];
             tex_obj = intel_texture_object(u->TexObj);
 
             if (tex_obj && tex_obj->mt) {

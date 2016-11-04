@@ -613,7 +613,7 @@ private:
          this->next_image += MAX2(1, uniform->array_elements);
 
          for (unsigned i = first; i < MIN2(next_image, MAX_IMAGE_UNIFORMS); i++)
-            prog->_LinkedShaders[shader_type]->ImageAccess[i] = access;
+            prog->_LinkedShaders[shader_type]->Program->sh.ImageAccess[i] = access;
       }
    }
 
@@ -1308,7 +1308,6 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
        *     types cannot have initializers."
        */
       memset(sh->SamplerUnits, 0, sizeof(sh->SamplerUnits));
-      memset(sh->ImageUnits, 0, sizeof(sh->ImageUnits));
 
       link_update_uniform_buffer_variables(sh, i);
 

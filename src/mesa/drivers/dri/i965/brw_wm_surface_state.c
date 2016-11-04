@@ -1564,16 +1564,13 @@ const struct brw_tracked_state brw_cs_abo_surfaces = {
 static void
 brw_upload_cs_image_surfaces(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog =
-      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    const struct gl_program *cp = brw->compute_program;
 
-   if (cp && prog) {
+   if (cp) {
       /* BRW_NEW_CS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
-      brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                                cp, &brw->cs.base, brw->cs.base.prog_data);
+      brw_upload_image_surfaces(brw, cp, &brw->cs.base,
+                                brw->cs.base.prog_data);
    }
 }
 
@@ -1780,7 +1777,6 @@ update_image_surface(struct brw_context *brw,
 
 void
 brw_upload_image_surfaces(struct brw_context *brw,
-                          struct gl_linked_shader *shader,
                           const struct gl_program *prog,
                           struct brw_stage_state *stage_state,
                           struct brw_stage_prog_data *prog_data)
@@ -1788,12 +1784,12 @@ brw_upload_image_surfaces(struct brw_context *brw,
    assert(prog);
    struct gl_context *ctx = &brw->ctx;
 
-   if (prog->info.num_images && shader) {
+   if (prog->info.num_images) {
       for (unsigned i = 0; i < prog->info.num_images; i++) {
-         struct gl_image_unit *u = &ctx->ImageUnits[shader->ImageUnits[i]];
+         struct gl_image_unit *u = &ctx->ImageUnits[prog->sh.ImageUnits[i]];
          const unsigned surf_idx = prog_data->binding_table.image_start + i;
 
-         update_image_surface(brw, u, shader->ImageAccess[i],
+         update_image_surface(brw, u, prog->sh.ImageAccess[i],
                               surf_idx,
                               &stage_state->surf_offset[surf_idx],
                               &prog_data->image_param[i]);
@@ -1811,15 +1807,13 @@ brw_upload_image_surfaces(struct brw_context *brw,
 static void
 brw_upload_wm_image_surfaces(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
    /* BRW_NEW_FRAGMENT_PROGRAM */
-   struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
    const struct gl_program *wm = brw->fragment_program;
 
-   if (wm && prog) {
+   if (wm) {
       /* BRW_NEW_FS_PROG_DATA, BRW_NEW_IMAGE_UNITS, _NEW_TEXTURE */
-      brw_upload_image_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                                wm, &brw->wm.base, brw->wm.base.prog_data);
+      brw_upload_image_surfaces(brw, wm, &brw->wm.base,
+                                brw->wm.base.prog_data);
    }
 }
 

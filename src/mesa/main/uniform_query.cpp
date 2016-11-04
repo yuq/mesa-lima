@@ -908,7 +908,7 @@ _mesa_uniform(struct gl_context *ctx, struct gl_shader_program *shProg,
             struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
 
             for (int j = 0; j < count; j++)
-               sh->ImageUnits[uni->opaque[i].index + offset + j] =
+               sh->Program->sh.ImageUnits[uni->opaque[i].index + offset + j] =
                   ((GLint *) values)[j];
          }
       }

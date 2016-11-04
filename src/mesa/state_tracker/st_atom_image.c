@@ -58,7 +58,8 @@ st_bind_images(struct st_context *st, struct gl_linked_shader *shader,
    c = &st->ctx->Const.Program[shader->Stage];
 
    for (i = 0; i < shader->NumImages; i++) {
-      struct gl_image_unit *u = &st->ctx->ImageUnits[shader->ImageUnits[i]];
+      struct gl_image_unit *u =
+         &st->ctx->ImageUnits[shader->Program->sh.ImageUnits[i]];
       struct st_texture_object *stObj = st_texture_object(u->TexObj);
       struct pipe_image_view *img = &images[i];
 
