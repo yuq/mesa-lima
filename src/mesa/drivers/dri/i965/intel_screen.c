@@ -23,6 +23,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+#include <drm_fourcc.h>
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
@@ -518,11 +519,13 @@ intel_destroy_image(__DRIimage *image)
 enum modifier_priority {
    MODIFIER_PRIORITY_INVALID = 0,
    MODIFIER_PRIORITY_LINEAR,
+   MODIFIER_PRIORITY_Y,
 };
 
 const uint64_t priority_to_modifier[] = {
    [MODIFIER_PRIORITY_INVALID] = DRM_FORMAT_MOD_INVALID,
    [MODIFIER_PRIORITY_LINEAR] = DRM_FORMAT_MOD_LINEAR,
+   [MODIFIER_PRIORITY_Y] = I915_FORMAT_MOD_Y_TILED,
 };
 
 static uint64_t
@@ -530,11 +533,13 @@ select_best_modifier(struct gen_device_info *devinfo,
                      const uint64_t *modifiers,
                      const unsigned count)
 {
-
    enum modifier_priority prio = MODIFIER_PRIORITY_INVALID;
 
    for (int i = 0; i < count; i++) {
       switch (modifiers[i]) {
+      case I915_FORMAT_MOD_Y_TILED:
+         prio = MAX2(prio, MODIFIER_PRIORITY_Y);
+         break;
       case DRM_FORMAT_MOD_LINEAR:
          prio = MAX2(prio, MODIFIER_PRIORITY_LINEAR);
          break;
@@ -574,6 +579,9 @@ intel_create_image_common(__DRIscreen *dri_screen,
    switch (modifier) {
    case DRM_FORMAT_MOD_LINEAR:
       tiling = I915_TILING_NONE;
+      break;
+   case I915_FORMAT_MOD_Y_TILED:
+      tiling = I915_TILING_Y;
       break;
    case DRM_FORMAT_MOD_INVALID:
       if (modifiers)
@@ -628,8 +636,8 @@ intel_create_image_with_modifiers(__DRIscreen *dri_screen,
                                   const unsigned count,
                                   void *loaderPrivate)
 {
-   return intel_create_image_common(dri_screen, width, height, format, 0, NULL,
-                                    0, loaderPrivate);
+   return intel_create_image_common(dri_screen, width, height, format, 0,
+                                    modifiers, count, loaderPrivate);
 }
 
 static GLboolean
@@ -1999,7 +2007,9 @@ intelAllocateBuffer(__DRIscreen *dri_screen,
    if (intelBuffer == NULL)
       return NULL;
 
-   /* The front and back buffers are color buffers, which are X tiled. */
+   /* The front and back buffers are color buffers, which are X tiled. GEN9+
+    * supports Y tiled and compressed buffers, but there is no way to plumb that
+    * through to here. */
    uint32_t tiling = I915_TILING_X;
    unsigned long pitch;
    int cpp = format / 8;
