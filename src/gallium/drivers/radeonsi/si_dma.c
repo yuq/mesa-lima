@@ -98,7 +98,6 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	struct r600_texture *rsrc = (struct r600_texture*)src;
 	struct r600_texture *rdst = (struct r600_texture*)dst;
 	unsigned dst_mode = rdst->surface.level[dst_level].mode;
-	unsigned src_mode = rsrc->surface.level[src_level].mode;
 	bool detile = dst_mode == RADEON_SURF_MODE_LINEAR_ALIGNED;
 	struct r600_texture *rlinear = detile ? rdst : rsrc;
 	struct r600_texture *rtiled = detile ? rsrc : rdst;
@@ -114,7 +113,7 @@ static void si_dma_copy_tile(struct si_context *ctx,
 	uint64_t base, addr;
 	unsigned pipe_config;
 
-	assert(dst_mode != src_mode);
+	assert(dst_mode != rsrc->surface.level[src_level].mode);
 
 	sub_cmd = SI_DMA_COPY_TILED;
 	lbpp = util_logbase2(bpp);

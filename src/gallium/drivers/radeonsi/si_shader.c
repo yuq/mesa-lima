@@ -6872,7 +6872,8 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 	LLVMValueRef out[48];
 	LLVMTypeRef function_type;
 	unsigned num_params;
-	unsigned num_out_sgpr, num_out;
+	unsigned num_out;
+	MAYBE_UNUSED unsigned num_out_sgpr; /* used in debug checks */
 	unsigned num_sgprs, num_vgprs;
 	unsigned last_sgpr_param;
 	unsigned gprs;
