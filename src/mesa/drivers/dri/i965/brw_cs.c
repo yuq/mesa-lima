@@ -66,10 +66,6 @@ brw_codegen_cs_prog(struct brw_context *brw,
    bool start_busy = false;
    double start_time = 0;
 
-   struct brw_shader *cs =
-      (struct brw_shader *) prog->_LinkedShaders[MESA_SHADER_COMPUTE];
-   assert (cs);
-
    memset(&prog_data, 0, sizeof(prog_data));
 
    if (prog->Comp.SharedSize > 64 * 1024) {
@@ -134,11 +130,11 @@ brw_codegen_cs_prog(struct brw_context *brw,
       return false;
    }
 
-   if (unlikely(brw->perf_debug) && cs) {
-      if (cs->compiled_once) {
+   if (unlikely(brw->perf_debug)) {
+      if (cp->compiled_once) {
          _mesa_problem(&brw->ctx, "CS programs shouldn't need recompiles");
       }
-      cs->compiled_once = true;
+      cp->compiled_once = true;
 
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("CS compile took %.03f ms and stalled the GPU\n",

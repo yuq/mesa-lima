@@ -333,6 +333,8 @@ struct brw_state_flags {
 struct brw_program {
    struct gl_program program;
    GLuint id;
+
+   bool compiled_once;
 };
 
 
@@ -349,12 +351,6 @@ struct gen4_fragment_program {
    unsigned char interp_mode[BRW_VARYING_SLOT_COUNT];
 };
 
-
-struct brw_shader {
-   struct gl_linked_shader base;
-
-   bool compiled_once;
-};
 
 /**
  * Bitmask indicating which fragment shader inputs represent varyings (and

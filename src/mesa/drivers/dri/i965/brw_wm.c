@@ -85,13 +85,9 @@ brw_codegen_wm_prog(struct brw_context *brw,
    void *mem_ctx = ralloc_context(NULL);
    struct brw_wm_prog_data prog_data;
    const GLuint *program;
-   struct brw_shader *fs = NULL;
    GLuint program_size;
    bool start_busy = false;
    double start_time = 0;
-
-   if (prog)
-      fs = (struct brw_shader *)prog->_LinkedShaders[MESA_SHADER_FRAGMENT];
 
    memset(&prog_data, 0, sizeof(prog_data));
 
@@ -161,10 +157,10 @@ brw_codegen_wm_prog(struct brw_context *brw,
       return false;
    }
 
-   if (unlikely(brw->perf_debug) && fs) {
-      if (fs->compiled_once)
+   if (unlikely(brw->perf_debug)) {
+      if (fp->compiled_once)
          brw_wm_debug_recompile(brw, prog, key);
-      fs->compiled_once = true;
+      fp->compiled_once = true;
 
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("FS compile took %.03f ms and stalled the GPU\n",

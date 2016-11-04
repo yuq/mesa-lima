@@ -195,17 +195,14 @@ brw_codegen_tes_prog(struct brw_context *brw,
    }
 
    if (unlikely(brw->perf_debug)) {
-      struct gl_linked_shader *tes =
-         shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
-      struct brw_shader *btes = (struct brw_shader *) tes;
-      if (btes->compiled_once) {
+      if (tep->compiled_once) {
          brw_tes_debug_recompile(brw, shader_prog, key);
       }
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("TES compile took %.03f ms and stalled the GPU\n",
                     (get_time() - start_time) * 1000);
       }
-      btes->compiled_once = true;
+      tep->compiled_once = true;
    }
 
    /* Scratch space is used for register spilling */

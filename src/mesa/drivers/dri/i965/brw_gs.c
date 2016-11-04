@@ -116,8 +116,6 @@ brw_codegen_gs_prog(struct brw_context *brw,
     * padding around uniform values below vec4 size, so the worst case is that
     * every uniform is a float which gets padded to the size of a vec4.
     */
-   struct gl_linked_shader *gs = prog->_LinkedShaders[MESA_SHADER_GEOMETRY];
-   struct brw_shader *bgs = (struct brw_shader *) gs;
    int param_count = gp->program.nir->num_uniforms / 4;
 
    prog_data.base.base.param =
@@ -154,7 +152,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    char *error_str;
    const unsigned *program =
       brw_compile_gs(brw->screen->compiler, brw, mem_ctx, key,
-                     &prog_data, gs->Program->nir, prog,
+                     &prog_data, gp->program.nir, prog,
                      st_index, &program_size, &error_str);
    if (program == NULL) {
       ralloc_strcat(&prog->data->InfoLog, error_str);
@@ -165,14 +163,14 @@ brw_codegen_gs_prog(struct brw_context *brw,
    }
 
    if (unlikely(brw->perf_debug)) {
-      if (bgs->compiled_once) {
+      if (gp->compiled_once) {
          brw_gs_debug_recompile(brw, prog, key);
       }
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("GS compile took %.03f ms and stalled the GPU\n",
                     (get_time() - start_time) * 1000);
       }
-      bgs->compiled_once = true;
+      gp->compiled_once = true;
    }
 
    /* Scratch space is used for register spilling */

@@ -177,14 +177,12 @@ process_glsl_ir(struct brw_context *brw,
 extern "C" struct gl_linked_shader *
 brw_new_shader(gl_shader_stage stage)
 {
-   struct brw_shader *shader;
-
-   shader = rzalloc(NULL, struct brw_shader);
+   struct gl_linked_shader *shader = rzalloc(NULL, struct gl_linked_shader);
    if (shader) {
-      shader->base.Stage = stage;
+      shader->Stage = stage;
    }
 
-   return &shader->base;
+   return shader;
 }
 
 static void

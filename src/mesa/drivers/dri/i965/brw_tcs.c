@@ -277,15 +277,13 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    }
 
    if (unlikely(brw->perf_debug)) {
-      struct gl_linked_shader *tcs = shader_prog ?
-         shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL] : NULL;
-      struct brw_shader *btcs = (struct brw_shader *) tcs;
-      if (btcs) {
-         if (btcs->compiled_once) {
+      if (tcp) {
+         if (tcp->compiled_once) {
             brw_tcs_debug_recompile(brw, shader_prog, key);
          }
-         btcs->compiled_once = true;
+         tcp->compiled_once = true;
       }
+
       if (start_busy && !drm_intel_bo_busy(brw->batch.last_bo)) {
          perf_debug("TCS compile took %.03f ms and stalled the GPU\n",
                     (get_time() - start_time) * 1000);
