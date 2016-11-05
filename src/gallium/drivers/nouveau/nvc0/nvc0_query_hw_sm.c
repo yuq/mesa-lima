@@ -504,8 +504,8 @@ struct nvc0_hw_sm_query_cfg
    uint8_t norm[2]; /* normalization num,denom */
 };
 
-#define _CA(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, NVE4_COMPUTE_MP_PM_A_SIGSEL_##g, 0, s }
-#define _CB(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, NVE4_COMPUTE_MP_PM_B_SIGSEL_##g, 0, s }
+#define _CA(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 0, g, 0, s }
+#define _CB(f, m, g, s) { f, NVE4_COMPUTE_MP_PM_FUNC_MODE_##m, 1, g, 0, s }
 #define _Q(n, c) [NVE4_HW_SM_QUERY_##n] = c
 
 /* ==== Compute capability 3.0 (GK104:GK110) ==== */
@@ -513,7 +513,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_active_cycles =
 {
    .type         = NVC0_HW_SM_QUERY_ACTIVE_CYCLES,
-   .ctr[0]       = _CB(0x0001, B6, WARP, 0x00000000),
+   .ctr[0]       = _CB(0x0001, B6, 0x02, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -522,7 +522,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_active_warps =
 {
    .type         = NVC0_HW_SM_QUERY_ACTIVE_WARPS,
-   .ctr[0]       = _CB(0x003f, B6, WARP, 0x31483104),
+   .ctr[0]       = _CB(0x003f, B6, 0x02, 0x31483104),
    .num_counters = 1,
    .norm         = { 2, 1 },
 };
@@ -531,7 +531,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_atom_cas_count =
 {
    .type         = NVC0_HW_SM_QUERY_ATOM_CAS_COUNT,
-   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x000000004),
+   .ctr[0]       = _CA(0x0001, B6, 0x1c, 0x000000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -540,7 +540,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_atom_count =
 {
    .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
-   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000000),
+   .ctr[0]       = _CA(0x0001, B6, 0x1c, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -549,7 +549,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_branch =
 {
    .type         = NVC0_HW_SM_QUERY_BRANCH,
-   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x0000000c),
+   .ctr[0]       = _CA(0x0001, B6, 0x1c, 0x0000000c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -558,7 +558,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_divergent_branch =
 {
    .type         = NVC0_HW_SM_QUERY_DIVERGENT_BRANCH,
-   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000010),
+   .ctr[0]       = _CA(0x0001, B6, 0x1c, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -567,7 +567,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_gld_request =
 {
    .type         = NVC0_HW_SM_QUERY_GLD_REQUEST,
-   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000010),
+   .ctr[0]       = _CA(0x0001, B6, 0x1b, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -576,7 +576,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_gld_mem_div_replay =
 {
    .type         = NVC0_HW_SM_QUERY_GLD_MEM_DIV_REPLAY,
-   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000010),
+   .ctr[0]       = _CB(0x0001, B6, 0x08, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -585,7 +585,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_gst_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_GST_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, MEM, 0x00000004),
+   .ctr[0]       = _CB(0x0001, B6, 0x11, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -594,7 +594,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_gst_mem_div_replay =
 {
    .type         = NVC0_HW_SM_QUERY_GST_MEM_DIV_REPLAY,
-   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000014),
+   .ctr[0]       = _CB(0x0001, B6, 0x08, 0x00000014),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -603,7 +603,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_gred_count =
 {
    .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
-   .ctr[0]       = _CA(0x0001, B6, BRANCH, 0x00000008),
+   .ctr[0]       = _CA(0x0001, B6, 0x1c, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -612,7 +612,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_gst_request =
 {
    .type         = NVC0_HW_SM_QUERY_GST_REQUEST,
-   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000014),
+   .ctr[0]       = _CA(0x0001, B6, 0x1b, 0x00000014),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -621,7 +621,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_inst_executed =
 {
    .type         = NVC0_HW_SM_QUERY_INST_EXECUTED,
-   .ctr[0]       = _CA(0x0003, B6, EXEC, 0x00000398),
+   .ctr[0]       = _CA(0x0003, B6, 0x04, 0x00000398),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -630,7 +630,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_inst_issued1 =
 {
    .type         = NVC0_HW_SM_QUERY_INST_ISSUED1,
-   .ctr[0]       = _CA(0x0001, B6, ISSUE, 0x00000004),
+   .ctr[0]       = _CA(0x0001, B6, 0x05, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -639,7 +639,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_inst_issued2 =
 {
    .type         = NVC0_HW_SM_QUERY_INST_ISSUED2,
-   .ctr[0]       = _CA(0x0001, B6, ISSUE, 0x00000008),
+   .ctr[0]       = _CA(0x0001, B6, 0x05, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -648,7 +648,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_gld_hit =
 {
    .type         = NVC0_HW_SM_QUERY_L1_GLD_HIT,
-   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000010),
+   .ctr[0]       = _CB(0x0001, B6, 0x10, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -657,7 +657,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_gld_miss =
 {
    .type         = NVC0_HW_SM_QUERY_L1_GLD_MISS,
-   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000014),
+   .ctr[0]       = _CB(0x0001, B6, 0x10, 0x00000014),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -666,7 +666,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_gld_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_L1_GLD_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, UNK0F, 0x00000000),
+   .ctr[0]       = _CB(0x0001, B6, 0x0f, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -675,7 +675,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_gst_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_L1_GST_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, UNK0F, 0x00000004),
+   .ctr[0]       = _CB(0x0001, B6, 0x0f, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -684,7 +684,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_local_ld_hit =
 {
    .type         = NVC0_HW_SM_QUERY_L1_LOCAL_LD_HIT,
-   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000000),
+   .ctr[0]       = _CB(0x0001, B6, 0x10, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -693,7 +693,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_local_ld_miss =
 {
    .type         = NVC0_HW_SM_QUERY_L1_LOCAL_LD_MISS,
-   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000004),
+   .ctr[0]       = _CB(0x0001, B6, 0x10, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -702,7 +702,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_local_st_hit =
 {
    .type         = NVC0_HW_SM_QUERY_L1_LOCAL_ST_HIT,
-   .ctr[0]       = _CB(0x0001, B6, L1, 0x00000008),
+   .ctr[0]       = _CB(0x0001, B6, 0x10, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -711,7 +711,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_local_st_miss =
 {
    .type         = NVC0_HW_SM_QUERY_L1_LOCAL_ST_MISS,
-   .ctr[0]       = _CB(0x0001, B6, L1, 0x0000000c),
+   .ctr[0]       = _CB(0x0001, B6, 0x10, 0x0000000c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -720,7 +720,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_shared_ld_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_L1_SHARED_LD_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000008),
+   .ctr[0]       = _CB(0x0001, B6, 0x0e, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -729,7 +729,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_l1_shared_st_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_L1_SHARED_ST_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x0000000c),
+   .ctr[0]       = _CB(0x0001, B6, 0x0e, 0x0000000c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -738,7 +738,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_local_ld =
 {
    .type         = NVC0_HW_SM_QUERY_LOCAL_LD,
-   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000008),
+   .ctr[0]       = _CA(0x0001, B6, 0x1b, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -747,7 +747,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_local_ld_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_LOCAL_LD_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000000),
+   .ctr[0]       = _CB(0x0001, B6, 0x0e, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -756,7 +756,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_local_st =
 {
    .type         = NVC0_HW_SM_QUERY_LOCAL_ST,
-   .ctr[0]       = _CA(0x0001, B6, LDST, 0x0000000c),
+   .ctr[0]       = _CA(0x0001, B6, 0x1b, 0x0000000c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -765,7 +765,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_local_st_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_LOCAL_ST_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, TRANSACTION, 0x00000004),
+   .ctr[0]       = _CB(0x0001, B6, 0x0e, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -774,7 +774,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_0 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_0,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000000),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -783,7 +783,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_1 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_1,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000004),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -792,7 +792,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_2 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_2,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000008),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -801,7 +801,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_3 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_3,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x0000000c),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x0000000c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -810,7 +810,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_4 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_4,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000010),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -819,7 +819,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_5 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_5,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000014),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x00000014),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -828,7 +828,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_6 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_6,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x00000018),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x00000018),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -837,7 +837,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_prof_trigger_7 =
 {
    .type         = NVC0_HW_SM_QUERY_PROF_TRIGGER_7,
-   .ctr[0]       = _CA(0x0001, B6, USER, 0x0000001c),
+   .ctr[0]       = _CA(0x0001, B6, 0x01, 0x0000001c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -846,7 +846,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_shared_ld =
 {
    .type         = NVC0_HW_SM_QUERY_SHARED_LD,
-   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000000),
+   .ctr[0]       = _CA(0x0001, B6, 0x1b, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -855,7 +855,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_shared_ld_replay =
 {
    .type         = NVC0_HW_SM_QUERY_SHARED_LD_REPLAY,
-   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x00000008),
+   .ctr[0]       = _CB(0x0001, B6, 0x08, 0x00000008),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -864,7 +864,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_shared_st =
 {
    .type         = NVC0_HW_SM_QUERY_SHARED_ST,
-   .ctr[0]       = _CA(0x0001, B6, LDST, 0x00000004),
+   .ctr[0]       = _CA(0x0001, B6, 0x1b, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -873,7 +873,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_shared_st_replay =
 {
    .type         = NVC0_HW_SM_QUERY_SHARED_ST_REPLAY,
-   .ctr[0]       = _CB(0x0001, B6, REPLAY, 0x0000000c),
+   .ctr[0]       = _CB(0x0001, B6, 0x08, 0x0000000c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -882,7 +882,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_sm_cta_launched =
 {
    .type         = NVC0_HW_SM_QUERY_SM_CTA_LAUNCHED,
-   .ctr[0]       = _CB(0x0001, B6, WARP, 0x0000001c),
+   .ctr[0]       = _CB(0x0001, B6, 0x02, 0x0000001c),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -891,7 +891,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_threads_launched =
 {
    .type         = NVC0_HW_SM_QUERY_THREADS_LAUNCHED,
-   .ctr[0]       = _CA(0x003f, B6, LAUNCH, 0x398a4188),
+   .ctr[0]       = _CA(0x003f, B6, 0x03, 0x398a4188),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -900,7 +900,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_uncached_gld_transactions =
 {
    .type         = NVC0_HW_SM_QUERY_UNCACHED_GLD_TRANSACTIONS,
-   .ctr[0]       = _CB(0x0001, B6, MEM, 0x00000000),
+   .ctr[0]       = _CB(0x0001, B6, 0x11, 0x00000000),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -909,7 +909,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm30_warps_launched =
 {
    .type         = NVC0_HW_SM_QUERY_WARPS_LAUNCHED,
-   .ctr[0]       = _CA(0x0001, B6, LAUNCH, 0x00000004),
+   .ctr[0]       = _CA(0x0001, B6, 0x03, 0x00000004),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -972,7 +972,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_atom_cas_count =
 {
    .type         = NVC0_HW_SM_QUERY_ATOM_CAS_COUNT,
-   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000014),
+   .ctr[0]       = _CA(0x0001, B6, 0x1a, 0x00000014),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -981,7 +981,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_atom_count =
 {
    .type         = NVC0_HW_SM_QUERY_ATOM_COUNT,
-   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000010),
+   .ctr[0]       = _CA(0x0001, B6, 0x1a, 0x00000010),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -990,7 +990,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_gred_count =
 {
    .type         = NVC0_HW_SM_QUERY_GRED_COUNT,
-   .ctr[0]       = _CA(0x0001, B6, UNK1A, 0x00000018),
+   .ctr[0]       = _CA(0x0001, B6, 0x1a, 0x00000018),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -999,7 +999,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_not_pred_off_inst_executed =
 {
    .type         = NVC0_HW_SM_QUERY_NOT_PRED_OFF_INST_EXECUTED,
-   .ctr[0]       = _CA(0x003f, B6, UNK14, 0x29062080),
+   .ctr[0]       = _CA(0x003f, B6, 0x14, 0x29062080),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
@@ -1008,8 +1008,8 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_shared_ld_replay =
 {
    .type         = NVC0_HW_SM_QUERY_SHARED_LD_REPLAY,
-   .ctr[0]       = _CB(0xaaaa, LOGOP, UNK13, 0x00000018),
-   .ctr[1]       = _CB(0x8888, LOGOP, REPLAY, 0x00000151),
+   .ctr[0]       = _CB(0xaaaa, LOGOP, 0x13, 0x00000018),
+   .ctr[1]       = _CB(0x8888, LOGOP, 0x08, 0x00000151),
    .num_counters = 2,
    .norm         = { 1, 1 },
 };
@@ -1018,8 +1018,8 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_shared_st_replay =
 {
    .type         = NVC0_HW_SM_QUERY_SHARED_ST_REPLAY,
-   .ctr[0]       = _CB(0xaaaa, LOGOP, UNK13, 0x00000018),
-   .ctr[1]       = _CB(0x8888, LOGOP, REPLAY, 0x000001d1),
+   .ctr[0]       = _CB(0xaaaa, LOGOP, 0x13, 0x00000018),
+   .ctr[1]       = _CB(0x8888, LOGOP, 0x08, 0x000001d1),
    .num_counters = 2,
    .norm         = { 1, 1 },
 };
@@ -1028,7 +1028,7 @@ static const struct nvc0_hw_sm_query_cfg
 sm35_th_inst_executed =
 {
    .type         = NVC0_HW_SM_QUERY_TH_INST_EXECUTED,
-   .ctr[0]       = _CA(0x003f, B6, UNK11, 0x29062080),
+   .ctr[0]       = _CA(0x003f, B6, 0x11, 0x29062080),
    .num_counters = 1,
    .norm         = { 1, 1 },
 };
