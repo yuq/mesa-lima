@@ -455,14 +455,17 @@ scan_declaration(struct tgsi_shader_info *info,
       unsigned semName = fulldecl->Semantic.Name;
       unsigned semIndex = fulldecl->Semantic.Index +
          (reg - fulldecl->Range.First);
+      int buffer;
+      unsigned index, target, type;
 
       /* only first 32 regs will appear in this bitfield */
       info->file_mask[file] |= (1 << reg);
       info->file_count[file]++;
       info->file_max[file] = MAX2(info->file_max[file], (int)reg);
 
-      if (file == TGSI_FILE_CONSTANT) {
-         int buffer = 0;
+      switch (file) {
+      case TGSI_FILE_CONSTANT:
+         buffer = 0;
 
          if (fulldecl->Declaration.Dimension)
             buffer = fulldecl->Dim.Index2D;
@@ -470,13 +473,19 @@ scan_declaration(struct tgsi_shader_info *info,
          info->const_file_max[buffer] =
             MAX2(info->const_file_max[buffer], (int)reg);
          info->const_buffers_declared |= 1u << buffer;
-      } else if (file == TGSI_FILE_IMAGE) {
+         break;
+
+      case TGSI_FILE_IMAGE:
          info->images_declared |= 1u << reg;
          if (fulldecl->Image.Resource == TGSI_TEXTURE_BUFFER)
             info->images_buffers |= 1 << reg;
-      } else if (file == TGSI_FILE_BUFFER) {
+         break;
+
+      case TGSI_FILE_BUFFER:
          info->shader_buffers_declared |= 1u << reg;
-      } else if (file == TGSI_FILE_INPUT) {
+         break;
+
+      case TGSI_FILE_INPUT:
          info->input_semantic_name[reg] = (ubyte) semName;
          info->input_semantic_index[reg] = (ubyte) semIndex;
          info->input_interpolate[reg] = (ubyte)fulldecl->Interp.Interpolate;
@@ -494,9 +503,10 @@ scan_declaration(struct tgsi_shader_info *info,
             else if (semName == TGSI_SEMANTIC_FACE)
                info->uses_frontface = TRUE;
          }
-      }
-      else if (file == TGSI_FILE_SYSTEM_VALUE) {
-         unsigned index = fulldecl->Range.First;
+         break;
+
+      case TGSI_FILE_SYSTEM_VALUE:
+         index = fulldecl->Range.First;
 
          info->system_value_semantic_name[index] = semName;
          info->num_system_values = MAX2(info->num_system_values, index + 1);
@@ -530,8 +540,9 @@ scan_declaration(struct tgsi_shader_info *info,
             info->reads_samplemask = TRUE;
             break;
          }
-      }
-      else if (file == TGSI_FILE_OUTPUT) {
+         break;
+
+      case TGSI_FILE_OUTPUT:
          info->output_semantic_name[reg] = (ubyte) semName;
          info->output_semantic_index[reg] = (ubyte) semIndex;
          info->num_outputs = MAX2(info->num_outputs, reg + 1);
@@ -578,12 +589,16 @@ scan_declaration(struct tgsi_shader_info *info,
                info->writes_edgeflag = TRUE;
             }
          }
-      } else if (file == TGSI_FILE_SAMPLER) {
+         break;
+
+      case TGSI_FILE_SAMPLER:
          STATIC_ASSERT(sizeof(info->samplers_declared) * 8 >= PIPE_MAX_SAMPLERS);
          info->samplers_declared |= 1u << reg;
-      } else if (file == TGSI_FILE_SAMPLER_VIEW) {
-         unsigned target = fulldecl->SamplerView.Resource;
-         unsigned type = fulldecl->SamplerView.ReturnTypeX;
+         break;
+
+      case TGSI_FILE_SAMPLER_VIEW:
+         target = fulldecl->SamplerView.Resource;
+         type = fulldecl->SamplerView.ReturnTypeX;
 
          assert(target < TGSI_TEXTURE_UNKNOWN);
          if (info->sampler_targets[reg] == TGSI_TEXTURE_UNKNOWN) {
@@ -595,6 +610,7 @@ scan_declaration(struct tgsi_shader_info *info,
             assert(info->sampler_targets[reg] == target);
             assert(info->sampler_type[reg] == type);
          }
+         break;
       }
    }
 }
