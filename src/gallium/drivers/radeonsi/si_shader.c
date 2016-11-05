@@ -3239,7 +3239,7 @@ static void
 image_fetch_rsrc(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *image,
-	bool dcc_off,
+	bool dcc_off, unsigned target,
 	LLVMValueRef *rsrc)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -3255,7 +3255,7 @@ image_fetch_rsrc(
 		index = LLVMConstInt(ctx->i32, image->Register.Index, 0);
 
 		if (info->images_writemask & (1 << image->Register.Index) &&
-		    !(info->images_buffers & (1 << image->Register.Index)))
+		    target != TGSI_TEXTURE_BUFFER)
 			dcc_off = true;
 	} else {
 		/* From the GL_ARB_shader_image_load_store extension spec:
@@ -3422,7 +3422,7 @@ static void load_fetch_args(
 	} else if (inst->Src[0].Register.File == TGSI_FILE_IMAGE) {
 		LLVMValueRef coords;
 
-		image_fetch_rsrc(bld_base, &inst->Src[0], false, &rsrc);
+		image_fetch_rsrc(bld_base, &inst->Src[0], false, target, &rsrc);
 		coords = image_fetch_coords(bld_base, inst, 1);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
@@ -3633,14 +3633,15 @@ static void store_fetch_args(
 		coords = image_fetch_coords(bld_base, inst, 0);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
-			image_fetch_rsrc(bld_base, &memory, false, &rsrc);
+			image_fetch_rsrc(bld_base, &memory, false, target, &rsrc);
 
 			rsrc = extract_rsrc_top_half(ctx, rsrc);
 			buffer_append_args(ctx, emit_data, rsrc, coords,
 					bld_base->uint_bld.zero, false);
 		} else {
 			emit_data->args[1] = coords;
-			image_fetch_rsrc(bld_base, &memory, true, &emit_data->args[2]);
+			image_fetch_rsrc(bld_base, &memory, true, target,
+					 &emit_data->args[2]);
 			emit_data->args[3] = lp_build_const_int32(gallivm, 15); /* dmask */
 			emit_data->arg_count = 4;
 
@@ -3834,7 +3835,7 @@ static void atomic_fetch_args(
 		LLVMValueRef coords;
 
 		image_fetch_rsrc(bld_base, &inst->Src[0],
-				 target != TGSI_TEXTURE_BUFFER, &rsrc);
+				 target != TGSI_TEXTURE_BUFFER, target, &rsrc);
 		coords = image_fetch_coords(bld_base, inst, 1);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
@@ -3977,11 +3978,13 @@ static void resq_fetch_args(
 		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg);
 		emit_data->arg_count = 1;
 	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
-		image_fetch_rsrc(bld_base, reg, false, &emit_data->args[0]);
+		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
+				 &emit_data->args[0]);
 		emit_data->arg_count = 1;
 	} else {
 		emit_data->args[0] = bld_base->uint_bld.zero; /* mip level */
-		image_fetch_rsrc(bld_base, reg, false, &emit_data->args[1]);
+		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
+				 &emit_data->args[1]);
 		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
 		emit_data->args[3] = bld_base->uint_bld.zero; /* unorm */
 		emit_data->args[4] = bld_base->uint_bld.zero; /* r128 */
