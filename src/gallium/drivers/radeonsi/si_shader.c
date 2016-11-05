@@ -3239,13 +3239,14 @@ static void
 image_fetch_rsrc(
 	struct lp_build_tgsi_context *bld_base,
 	const struct tgsi_full_src_register *image,
-	bool dcc_off, unsigned target,
+	bool is_store, unsigned target,
 	LLVMValueRef *rsrc)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	LLVMValueRef rsrc_ptr = LLVMGetParam(ctx->main_fn,
 					     SI_PARAM_IMAGES);
 	LLVMValueRef index, tmp;
+	bool dcc_off = target != TGSI_TEXTURE_BUFFER && is_store;
 
 	assert(image->Register.File == TGSI_FILE_IMAGE);
 
@@ -3633,7 +3634,7 @@ static void store_fetch_args(
 		coords = image_fetch_coords(bld_base, inst, 0);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
-			image_fetch_rsrc(bld_base, &memory, false, target, &rsrc);
+			image_fetch_rsrc(bld_base, &memory, true, target, &rsrc);
 
 			rsrc = extract_rsrc_top_half(ctx, rsrc);
 			buffer_append_args(ctx, emit_data, rsrc, coords,
@@ -3834,8 +3835,7 @@ static void atomic_fetch_args(
 		unsigned target = inst->Memory.Texture;
 		LLVMValueRef coords;
 
-		image_fetch_rsrc(bld_base, &inst->Src[0],
-				 target != TGSI_TEXTURE_BUFFER, target, &rsrc);
+		image_fetch_rsrc(bld_base, &inst->Src[0], true, target, &rsrc);
 		coords = image_fetch_coords(bld_base, inst, 1);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
