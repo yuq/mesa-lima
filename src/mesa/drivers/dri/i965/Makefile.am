@@ -109,6 +109,7 @@ TESTS = \
 	test_fs_copy_propagation \
 	test_fs_saturate_propagation \
         test_eu_compact \
+	test_eu_validate \
 	test_vf_float_conversions \
 	test_vec4_cmod_propagation \
         test_vec4_copy_propagation \
@@ -162,3 +163,9 @@ test_eu_compact_SOURCES = \
 	test_eu_compact.c
 nodist_EXTRA_test_eu_compact_SOURCES = dummy.cpp
 test_eu_compact_LDADD = $(TEST_LIBS)
+
+test_eu_validate_SOURCES = \
+	test_eu_validate.cpp
+test_eu_validate_LDADD = \
+	$(top_builddir)/src/gtest/libgtest.la \
+	$(TEST_LIBS)

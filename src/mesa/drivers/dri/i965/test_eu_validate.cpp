@@ -1,0 +1,169 @@
+/*
+ * Copyright © 2016 Intel Corporation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a
+ * copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice (including the next
+ * paragraph) shall be included in all copies or substantial portions of the
+ * Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+ * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ * IN THE SOFTWARE.
+ */
+
+#include <gtest/gtest.h>
+#include "brw_eu.h"
+#include "util/ralloc.h"
+
+enum subgen {
+   IS_G45 = 1,
+   IS_BYT,
+   IS_HSW,
+   IS_CHV,
+   IS_BXT,
+   IS_KBL,
+};
+
+static const struct gen_info {
+   const char *name;
+   int gen;
+   enum subgen subgen;
+} gens[] = {
+   { "brw", 4 },
+   { "g45", 4, IS_G45 },
+   { "ilk", 5 },
+   { "snb", 6 },
+   { "ivb", 7 },
+   { "byt", 7, IS_BYT },
+   { "hsw", 7, IS_HSW },
+   { "bdw", 8 },
+   { "chv", 8, IS_CHV },
+   { "skl", 9 },
+   { "bxt", 9, IS_BXT },
+   { "kbl", 9, IS_KBL },
+};
+
+class validation_test: public ::testing::TestWithParam<struct gen_info> {
+   virtual void SetUp();
+
+public:
+   validation_test();
+   virtual ~validation_test();
+
+   struct brw_codegen *p;
+   struct gen_device_info devinfo;
+};
+
+validation_test::validation_test()
+{
+   p = rzalloc(NULL, struct brw_codegen);
+   memset(&devinfo, 0, sizeof(devinfo));
+}
+
+validation_test::~validation_test()
+{
+   ralloc_free(p);
+}
+
+void validation_test::SetUp()
+{
+   struct gen_info info = GetParam();
+
+   devinfo.gen           = info.gen;
+   devinfo.is_g4x        = info.subgen == IS_G45;
+   devinfo.is_baytrail   = info.subgen == IS_BYT;
+   devinfo.is_haswell    = info.subgen == IS_HSW;
+   devinfo.is_cherryview = info.subgen == IS_CHV;
+   devinfo.is_broxton    = info.subgen == IS_BXT;
+   devinfo.is_kabylake   = info.subgen == IS_KBL;
+
+   brw_init_codegen(&devinfo, p, p);
+}
+
+struct gen_name {
+   template <class ParamType>
+   std::string
+   operator()(const ::testing::TestParamInfo<ParamType>& info) const {
+      return info.param.name;
+   }
+};
+
+INSTANTIATE_TEST_CASE_P(eu_assembly, validation_test,
+                        ::testing::ValuesIn(gens),
+                        gen_name());
+
+static bool
+validate(struct brw_codegen *p)
+{
+   const bool print = getenv("TEST_DEBUG");
+   struct annotation_info annotation;
+   memset(&annotation, 0, sizeof(annotation));
+
+   if (print) {
+      annotation.mem_ctx = ralloc_context(NULL);
+      annotation.ann_count = 1;
+      annotation.ann_size = 2;
+      annotation.ann = rzalloc_array(annotation.mem_ctx, struct annotation,
+                                     annotation.ann_size);
+      annotation.ann[annotation.ann_count].offset = p->next_insn_offset;
+   }
+
+   bool ret = brw_validate_instructions(p, 0, &annotation);
+
+   if (print) {
+      dump_assembly(p->store, annotation.ann_count, annotation.ann, p->devinfo);
+      ralloc_free(annotation.mem_ctx);
+   }
+
+   return ret;
+}
+
+#define g0           brw_vec8_grf(0, 0)
+#define null         brw_null_reg()
+
+TEST_P(validation_test, sanity)
+{
+   brw_ADD(p, g0, g0, g0);
+
+   EXPECT_TRUE(validate(p));
+}
+
+TEST_P(validation_test, src0_null_reg)
+{
+   brw_MOV(p, g0, null);
+
+   EXPECT_FALSE(validate(p));
+}
+
+TEST_P(validation_test, src1_null_reg)
+{
+   brw_ADD(p, g0, g0, null);
+
+   EXPECT_FALSE(validate(p));
+}
+
+TEST_P(validation_test, opcode46)
+{
+   /* opcode 46 is "push" on Gen 4 and 5
+    *              "fork" on Gen 6
+    *              reserved on Gen 7
+    *              "goto" on Gen8+
+    */
+   brw_next_insn(p, 46);
+
+   if (devinfo.gen == 7) {
+      EXPECT_FALSE(validate(p));
+   } else {
+      EXPECT_TRUE(validate(p));
+   }
+}
