@@ -254,9 +254,6 @@ struct prog_instruction
     * For ELSE, points to ENDIF.
     */
    GLint BranchTarget;
-
-   /** for debugging purposes */
-   const char *Comment;
 };
 
 

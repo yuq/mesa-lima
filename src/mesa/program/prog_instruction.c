@@ -82,12 +82,7 @@ struct prog_instruction *
 _mesa_copy_instructions(struct prog_instruction *dest,
                         const struct prog_instruction *src, GLuint n)
 {
-   GLuint i;
    memcpy(dest, src, n * sizeof(struct prog_instruction));
-   for (i = 0; i < n; i++) {
-      if (src[i].Comment)
-         dest[i].Comment = strdup(src[i].Comment);
-   }
    return dest;
 }
 
@@ -98,10 +93,6 @@ _mesa_copy_instructions(struct prog_instruction *dest,
 void
 _mesa_free_instructions(struct prog_instruction *inst, GLuint count)
 {
-   GLuint i;
-   for (i = 0; i < count; i++) {
-      free((char *)inst[i].Comment);
-   }
    free(inst);
 }
 

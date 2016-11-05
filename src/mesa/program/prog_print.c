@@ -551,16 +551,6 @@ fprint_src_reg(FILE *f,
 }
 
 
-static void
-fprint_comment(FILE *f, const struct prog_instruction *inst)
-{
-   if (inst->Comment)
-      fprintf(f, ";  # %s\n", inst->Comment);
-   else
-      fprintf(f, ";\n");
-}
-
-
 void
 _mesa_fprint_alu_instruction(FILE *f,
 			     const struct prog_instruction *inst,
@@ -593,7 +583,7 @@ _mesa_fprint_alu_instruction(FILE *f,
 	 fprintf(f, ", ");
    }
 
-   fprint_comment(f, inst);
+   fprintf(f, ";\n");
 }
 
 
@@ -640,7 +630,7 @@ _mesa_fprint_instruction_opt(FILE *f,
 	      inst->SrcReg[0].Index,
 	      _mesa_swizzle_string(inst->SrcReg[0].Swizzle,
 				   inst->SrcReg[0].Negate, GL_TRUE));
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
    case OPCODE_TEX:
    case OPCODE_TXP:
@@ -674,28 +664,28 @@ _mesa_fprint_instruction_opt(FILE *f,
       }
       if (inst->TexShadow)
          fprintf(f, " SHADOW");
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
 
    case OPCODE_KIL:
       fprintf(f, "%s", _mesa_opcode_string(inst->Opcode));
       fprintf(f, " ");
       fprint_src_reg(f, &inst->SrcReg[0], mode, prog);
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
    case OPCODE_ARL:
       fprintf(f, "ARL ");
       fprint_dst_reg(f, &inst->DstReg, mode, prog);
       fprintf(f, ", ");
       fprint_src_reg(f, &inst->SrcReg[0], mode, prog);
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
    case OPCODE_IF:
       fprintf(f, "IF ");
       fprint_src_reg(f, &inst->SrcReg[0], mode, prog);
       fprintf(f, "; ");
       fprintf(f, " # (if false, goto %d)", inst->BranchTarget);
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       return indent + 3;
    case OPCODE_ELSE:
       fprintf(f, "ELSE; # (goto %d)\n", inst->BranchTarget);
@@ -714,26 +704,26 @@ _mesa_fprint_instruction_opt(FILE *f,
       fprintf(f, "%s; # (goto %d)",
 	      _mesa_opcode_string(inst->Opcode),
 	      inst->BranchTarget);
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
 
    case OPCODE_BGNSUB:
       fprintf(f, "BGNSUB");
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       return indent + 3;
    case OPCODE_ENDSUB:
       if (mode == PROG_PRINT_DEBUG) {
          fprintf(f, "ENDSUB");
-         fprint_comment(f, inst);
+         fprintf(f, ";\n");
       }
       break;
    case OPCODE_CAL:
       fprintf(f, "CAL %u", inst->BranchTarget);
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
    case OPCODE_RET:
       fprintf(f, "RET");
-      fprint_comment(f, inst);
+      fprintf(f, ";\n");
       break;
 
    case OPCODE_END:
@@ -742,11 +732,7 @@ _mesa_fprint_instruction_opt(FILE *f,
    case OPCODE_NOP:
       if (mode == PROG_PRINT_DEBUG) {
          fprintf(f, "NOP");
-         fprint_comment(f, inst);
-      }
-      else if (inst->Comment) {
-         /* ARB/NV extensions don't have NOP instruction */
-         fprintf(f, "# %s\n", inst->Comment);
+         fprintf(f, ";\n");
       }
       break;
    /* XXX may need other special-case instructions */
