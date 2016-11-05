@@ -1456,8 +1456,7 @@ brw_update_sol_surface(struct brw_context *brw,
                        struct gl_buffer_object *buffer_obj,
                        uint32_t *out_offset, unsigned num_vector_components,
                        unsigned stride_dwords, unsigned offset_dwords);
-void brw_upload_ubo_surfaces(struct brw_context *brw,
-			     struct gl_linked_shader *shader,
+void brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
                              struct brw_stage_state *stage_state,
                              struct brw_stage_prog_data *prog_data);
 void brw_upload_abo_surfaces(struct brw_context *brw,

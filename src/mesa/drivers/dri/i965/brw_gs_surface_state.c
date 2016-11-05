@@ -75,13 +75,13 @@ brw_upload_gs_ubo_surfaces(struct brw_context *brw)
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY];
 
-   if (!prog)
+   if (!prog || !prog->_LinkedShaders[MESA_SHADER_GEOMETRY])
       return;
 
    /* BRW_NEW_GS_PROG_DATA */
    struct brw_stage_prog_data *prog_data = brw->gs.base.prog_data;
 
-   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_GEOMETRY],
+   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program,
 			   &brw->gs.base, prog_data);
 }
 

@@ -1370,22 +1370,21 @@ const struct brw_tracked_state brw_cs_texture_surfaces = {
 
 
 void
-brw_upload_ubo_surfaces(struct brw_context *brw,
-			struct gl_linked_shader *shader,
+brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
                         struct brw_stage_state *stage_state,
                         struct brw_stage_prog_data *prog_data)
 {
    struct gl_context *ctx = &brw->ctx;
 
-   if (!shader)
+   if (!prog)
       return;
 
    uint32_t *ubo_surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ubo_start];
 
-   for (int i = 0; i < shader->Program->info.num_ubos; i++) {
+   for (int i = 0; i < prog->info.num_ubos; i++) {
       struct gl_uniform_buffer_binding *binding =
-         &ctx->UniformBufferBindings[shader->Program->sh.UniformBlocks[i]->Binding];
+         &ctx->UniformBufferBindings[prog->sh.UniformBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
          brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ubo_surf_offsets[i]);
@@ -1408,9 +1407,9 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
    uint32_t *ssbo_surf_offsets =
       &stage_state->surf_offset[prog_data->binding_table.ssbo_start];
 
-   for (int i = 0; i < shader->Program->info.num_ssbos; i++) {
+   for (int i = 0; i < prog->info.num_ssbos; i++) {
       struct gl_shader_storage_buffer_binding *binding =
-         &ctx->ShaderStorageBufferBindings[shader->Program->sh.ShaderStorageBlocks[i]->Binding];
+         &ctx->ShaderStorageBufferBindings[prog->sh.ShaderStorageBlocks[i]->Binding];
 
       if (binding->BufferObject == ctx->Shared->NullBufferObj) {
          brw->vtbl.emit_null_surface_state(brw, 1, 1, 1, &ssbo_surf_offsets[i]);
@@ -1430,7 +1429,7 @@ brw_upload_ubo_surfaces(struct brw_context *brw,
       }
    }
 
-   if (shader->Program->info.num_ubos || shader->Program->info.num_ssbos)
+   if (prog->info.num_ubos || prog->info.num_ssbos)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
 
@@ -1441,11 +1440,11 @@ brw_upload_wm_ubo_surfaces(struct brw_context *brw)
    /* _NEW_PROGRAM */
    struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
 
-   if (!prog)
+   if (!prog || !prog->_LinkedShaders[MESA_SHADER_FRAGMENT])
       return;
 
    /* BRW_NEW_FS_PROG_DATA */
-   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
+   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT]->Program,
                            &brw->wm.base, brw->wm.base.prog_data);
 }
 
@@ -1468,11 +1467,11 @@ brw_upload_cs_ubo_surfaces(struct brw_context *brw)
    struct gl_shader_program *prog =
       ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
 
-   if (!prog)
+   if (!prog || !prog->_LinkedShaders[MESA_SHADER_COMPUTE])
       return;
 
    /* BRW_NEW_CS_PROG_DATA */
-   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
+   brw_upload_ubo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE]->Program,
                            &brw->cs.base, brw->cs.base.prog_data);
 }
 
