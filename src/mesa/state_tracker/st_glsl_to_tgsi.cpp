@@ -680,6 +680,10 @@ glsl_to_tgsi_visitor::emit_asm(ir_instruction *ir, unsigned op,
    inst->is_64bit_expanded = false;
    inst->ir = ir;
    inst->dead_mask = 0;
+   inst->tex_offsets = NULL;
+   inst->tex_offset_num_offset = 0;
+   inst->saturate = 0;
+   inst->tex_shadow = 0;
    /* default to float, for paths where this is not initialized
     * (since 0==UINT which is likely wrong):
     */
