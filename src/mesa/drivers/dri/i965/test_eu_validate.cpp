@@ -152,6 +152,29 @@ TEST_P(validation_test, src1_null_reg)
    EXPECT_FALSE(validate(p));
 }
 
+TEST_P(validation_test, math_src0_null_reg)
+{
+   if (devinfo.gen >= 6) {
+      gen6_math(p, g0, BRW_MATH_FUNCTION_SIN, null, null);
+   } else {
+      gen4_math(p, g0, BRW_MATH_FUNCTION_SIN, 0, null, BRW_MATH_PRECISION_FULL);
+   }
+
+   EXPECT_FALSE(validate(p));
+}
+
+TEST_P(validation_test, math_src1_null_reg)
+{
+   if (devinfo.gen >= 6) {
+      gen6_math(p, g0, BRW_MATH_FUNCTION_POW, g0, null);
+      EXPECT_FALSE(validate(p));
+   } else {
+      /* Math instructions on Gen4/5 are actually SEND messages with payloads.
+       * src1 is an immediate message descriptor set by gen4_math.
+       */
+   }
+}
+
 TEST_P(validation_test, opcode46)
 {
    /* opcode 46 is "push" on Gen 4 and 5
