@@ -136,7 +136,9 @@ void lower_shared_reference(struct gl_linked_shader *shader,
 void lower_ubo_reference(struct gl_linked_shader *shader,
                          bool clamp_block_indices);
 void lower_packed_varyings(void *mem_ctx,
-                           unsigned locations_used, ir_variable_mode mode,
+                           unsigned locations_used,
+                           const uint8_t *components,
+                           ir_variable_mode mode,
                            unsigned gs_input_vertices,
                            gl_linked_shader *shader,
                            bool disable_varying_packing, bool xfb_enabled);

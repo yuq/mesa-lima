@@ -1217,6 +1217,7 @@ public:
    ~varying_matches();
    void record(ir_variable *producer_var, ir_variable *consumer_var);
    unsigned assign_locations(struct gl_shader_program *prog,
+                             uint8_t *components,
                              uint64_t reserved_slots);
    void store_locations() const;
 
@@ -1482,6 +1483,7 @@ varying_matches::record(ir_variable *producer_var, ir_variable *consumer_var)
  */
 unsigned
 varying_matches::assign_locations(struct gl_shader_program *prog,
+                                  uint8_t *components,
                                   uint64_t reserved_slots)
 {
    /* If packing has been disabled then we cannot safely sort the varyings by
@@ -1583,6 +1585,12 @@ varying_matches::assign_locations(struct gl_shader_program *prog,
                       "packed between varyings with explicit locations. Try "
                       "using an explicit location for arrays and structs.",
                       var->name);
+      }
+
+      if (slot_end < MAX_VARYINGS_INCL_PATCH * 4u) {
+         for (unsigned j = *location / 4u; j < slot_end / 4u; j++)
+            components[j] = 4;
+         components[slot_end / 4u] = (slot_end & 3) + 1;
       }
 
       this->matches[i].generic_location = *location;
@@ -2203,7 +2211,9 @@ assign_varying_locations(struct gl_context *ctx,
       }
    }
 
-   const unsigned slots_used = matches.assign_locations(prog, reserved_slots);
+   uint8_t components[MAX_VARYINGS_INCL_PATCH] = {0};
+   const unsigned slots_used = matches.assign_locations(
+         prog, components, reserved_slots);
    matches.store_locations();
 
    for (unsigned i = 0; i < num_tfeedback_decls; ++i) {
@@ -2263,13 +2273,13 @@ assign_varying_locations(struct gl_context *ctx,
    }
 
    if (producer) {
-      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_out,
+      lower_packed_varyings(mem_ctx, slots_used, components, ir_var_shader_out,
                             0, producer, disable_varying_packing,
                             xfb_enabled);
    }
 
    if (consumer) {
-      lower_packed_varyings(mem_ctx, slots_used, ir_var_shader_in,
+      lower_packed_varyings(mem_ctx, slots_used, components, ir_var_shader_in,
                             consumer_vertices, consumer,
                             disable_varying_packing, xfb_enabled);
    }
