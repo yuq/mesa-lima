@@ -159,7 +159,8 @@ is_swizzle_regular(GLuint swz)
  * \return number of instructions removed
  */
 static GLuint
-remove_instructions(struct gl_program *prog, const GLboolean *removeFlags)
+remove_instructions(struct gl_program *prog, const GLboolean *removeFlags,
+                    void *mem_ctx)
 {
    GLint i, removeEnd = 0, removeCount = 0;
    GLuint totalRemoved = 0;
@@ -184,7 +185,7 @@ remove_instructions(struct gl_program *prog, const GLboolean *removeFlags)
           */
          if (removeCount > 0) {
             GLint removeStart = removeEnd - removeCount + 1;
-            _mesa_delete_instructions(prog, removeStart, removeCount);
+            _mesa_delete_instructions(prog, removeStart, removeCount, mem_ctx);
             removeStart = removeCount = 0; /* reset removal info */
          }
       }
@@ -192,7 +193,7 @@ remove_instructions(struct gl_program *prog, const GLboolean *removeFlags)
    /* Finish removing if the first instruction was to be removed. */
    if (removeCount > 0) {
       GLint removeStart = removeEnd - removeCount + 1;
-      _mesa_delete_instructions(prog, removeStart, removeCount);
+      _mesa_delete_instructions(prog, removeStart, removeCount, mem_ctx);
    }
    return totalRemoved;
 }
@@ -236,7 +237,7 @@ replace_regs(struct gl_program *prog, gl_register_file file, const GLint map[])
  * write to such registers.  Be careful with condition code setters.
  */
 static GLboolean
-_mesa_remove_dead_code_global(struct gl_program *prog)
+_mesa_remove_dead_code_global(struct gl_program *prog, void *mem_ctx)
 {
    GLboolean tempRead[REG_ALLOCATE_MAX_PROGRAM_TEMPS][4];
    GLboolean *removeInst; /* per-instruction removal flag */
@@ -325,7 +326,7 @@ _mesa_remove_dead_code_global(struct gl_program *prog)
    }
 
    /* now remove the instructions which aren't needed */
-   rem = remove_instructions(prog, removeInst);
+   rem = remove_instructions(prog, removeInst, mem_ctx);
 
    if (dbg) {
       printf("Optimize: End dead code removal.\n");
@@ -568,7 +569,7 @@ _mesa_remove_extra_move_use(struct gl_program *prog)
  * with a proper control flow graph
  */
 static GLboolean
-_mesa_remove_dead_code_local(struct gl_program *prog)
+_mesa_remove_dead_code_local(struct gl_program *prog, void *mem_ctx)
 {
    GLboolean *removeInst;
    GLuint i, arg, rem = 0;
@@ -600,7 +601,7 @@ _mesa_remove_dead_code_local(struct gl_program *prog)
          removeInst[i] = GL_TRUE;
    }
 
-   rem = remove_instructions(prog, removeInst);
+   rem = remove_instructions(prog, removeInst, mem_ctx);
 
 done:
    free(removeInst);
@@ -704,7 +705,7 @@ _mesa_merge_mov_into_inst(struct prog_instruction *inst,
  * Try to remove extraneous MOV instructions from the given program.
  */
 static GLboolean
-_mesa_remove_extra_moves(struct gl_program *prog)
+_mesa_remove_extra_moves(struct gl_program *prog, void *mem_ctx)
 {
    GLboolean *removeInst; /* per-instruction removal flag */
    GLuint i, rem = 0, nesting = 0;
@@ -790,7 +791,7 @@ _mesa_remove_extra_moves(struct gl_program *prog)
    }
 
    /* now remove the instructions which aren't needed */
-   rem = remove_instructions(prog, removeInst);
+   rem = remove_instructions(prog, removeInst, mem_ctx);
 
    free(removeInst);
 
@@ -1310,7 +1311,8 @@ _mesa_simplify_cmp(struct gl_program * program)
  * instructions, temp regs, etc.
  */
 void
-_mesa_optimize_program(struct gl_context *ctx, struct gl_program *program)
+_mesa_optimize_program(struct gl_context *ctx, struct gl_program *program,
+                       void *mem_ctx)
 {
    GLboolean any_change;
 
@@ -1319,11 +1321,11 @@ _mesa_optimize_program(struct gl_context *ctx, struct gl_program *program)
    do {
       any_change = GL_FALSE;
       _mesa_remove_extra_move_use(program);
-      if (_mesa_remove_dead_code_global(program))
+      if (_mesa_remove_dead_code_global(program, mem_ctx))
          any_change = GL_TRUE;
-      if (_mesa_remove_extra_moves(program))
+      if (_mesa_remove_extra_moves(program, mem_ctx))
          any_change = GL_TRUE;
-      if (_mesa_remove_dead_code_local(program))
+      if (_mesa_remove_dead_code_local(program, mem_ctx))
          any_change = GL_TRUE;
 
       any_change = _mesa_constant_fold(program) || any_change;

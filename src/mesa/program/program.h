@@ -93,7 +93,8 @@ extern  GLboolean
 _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count);
 
 extern  GLboolean
-_mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count);
+_mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count,
+                          void *mem_ctx);
 
 extern void
 _mesa_find_used_registers(const struct gl_program *prog,

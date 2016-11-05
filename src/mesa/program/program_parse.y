@@ -2511,7 +2511,7 @@ _mesa_parse_arb_program(struct gl_context *ctx, GLenum target, const GLubyte *st
 
    /* Make a copy of the program string and force it to be NUL-terminated.
     */
-   strz = (GLubyte *) malloc(len + 1);
+   strz = (GLubyte *) ralloc_size(state->mem_ctx, len + 1);
    if (strz == NULL) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY, "glProgramStringARB");
       return GL_FALSE;
@@ -2565,7 +2565,8 @@ _mesa_parse_arb_program(struct gl_context *ctx, GLenum target, const GLubyte *st
    /* Add one instruction to store the "END" instruction.
     */
    state->prog->Instructions =
-      _mesa_alloc_instructions(state->prog->NumInstructions + 1);
+      rzalloc_array(state->mem_ctx, struct prog_instruction,
+                    state->prog->NumInstructions + 1);
 
    if (state->prog->Instructions == NULL) {
       goto error;

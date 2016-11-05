@@ -375,7 +375,9 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
             case STATE_LOCAL:
                if (!ctx->FragmentProgram.Current->LocalParams) {
                   ctx->FragmentProgram.Current->LocalParams =
-                     calloc(MAX_PROGRAM_LOCAL_PARAMS, sizeof(float[4]));
+                     rzalloc_array_size(ctx->FragmentProgram.Current,
+                                        sizeof(float[4]),
+                                        MAX_PROGRAM_LOCAL_PARAMS);
                   if (!ctx->FragmentProgram.Current->LocalParams)
                      return;
                }
@@ -401,7 +403,9 @@ _mesa_fetch_state(struct gl_context *ctx, const gl_state_index state[],
             case STATE_LOCAL:
                if (!ctx->VertexProgram.Current->LocalParams) {
                   ctx->VertexProgram.Current->LocalParams =
-                     calloc(MAX_PROGRAM_LOCAL_PARAMS, sizeof(float[4]));
+                     rzalloc_array_size(ctx->VertexProgram.Current,
+                                        sizeof(float[4]),
+                                        MAX_PROGRAM_LOCAL_PARAMS);
                   if (!ctx->VertexProgram.Current->LocalParams)
                      return;
                }

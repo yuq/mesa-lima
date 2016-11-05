@@ -586,7 +586,8 @@ static void emit_op3fn(struct tnl_program *p,
       /* double the size */
       p->max_inst *= 2;
 
-      newInst = _mesa_alloc_instructions(p->max_inst);
+      newInst =
+         rzalloc_array(p->program, struct prog_instruction, p->max_inst);
       if (!newInst) {
          _mesa_error(NULL, GL_OUT_OF_MEMORY, "vertex program build");
          return;
@@ -595,8 +596,7 @@ static void emit_op3fn(struct tnl_program *p,
       _mesa_copy_instructions(newInst, p->program->Instructions,
                               p->program->NumInstructions);
 
-      _mesa_free_instructions(p->program->Instructions,
-                              p->program->NumInstructions);
+      ralloc_free(p->program->Instructions);
 
       p->program->Instructions = newInst;
    }
@@ -1632,7 +1632,8 @@ create_new_program( const struct state_key *key,
     * If we need more, we'll grow the instruction array as needed.
     */
    p.max_inst = 32;
-   p.program->Instructions = _mesa_alloc_instructions(p.max_inst);
+   p.program->Instructions = rzalloc_array(program, struct prog_instruction,
+                                           p.max_inst);
    p.program->String = NULL;
    p.program->NumInstructions =
    p.program->NumTemporaries =

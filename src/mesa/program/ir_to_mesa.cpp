@@ -2933,7 +2933,7 @@ get_mesa_program(struct gl_context *ctx,
    _mesa_reference_program(ctx, &shader->Program, prog);
 
    if ((ctx->_Shader->Flags & GLSL_NO_OPT) == 0) {
-      _mesa_optimize_program(ctx, prog);
+      _mesa_optimize_program(ctx, prog, prog);
    }
 
    /* This has to be done last.  Any operation that can cause

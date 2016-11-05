@@ -70,7 +70,7 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
    }
 
    /* Alloc storage for new instructions */
-   newInst = _mesa_alloc_instructions(newLen);
+   newInst = rzalloc_array(vprog, struct prog_instruction, newLen);
    if (!newInst) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY,
                   "glProgramString(inserting position_invariant code)");
@@ -102,7 +102,7 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
    _mesa_copy_instructions (newInst + 4, vprog->Instructions, origLen);
 
    /* free old instructions */
-   _mesa_free_instructions(vprog->Instructions, origLen);
+   ralloc_free(vprog->Instructions);
 
    /* install new instructions */
    vprog->Instructions = newInst;
@@ -138,7 +138,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
    }
 
    /* Alloc storage for new instructions */
-   newInst = _mesa_alloc_instructions(newLen);
+   newInst = rzalloc_array(vprog, struct prog_instruction, newLen);
    if (!newInst) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY,
                   "glProgramString(inserting position_invariant code)");
@@ -203,7 +203,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
    _mesa_copy_instructions (newInst + 4, vprog->Instructions, origLen);
 
    /* free old instructions */
-   _mesa_free_instructions(vprog->Instructions, origLen);
+   ralloc_free(vprog->Instructions);
 
    /* install new instructions */
    vprog->Instructions = newInst;
@@ -270,7 +270,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    }
 
    /* Alloc storage for new instructions */
-   newInst = _mesa_alloc_instructions(newLen);
+   newInst = rzalloc_array(fprog, struct prog_instruction, newLen);
    if (!newInst) {
       _mesa_error(ctx, GL_OUT_OF_MEMORY,
                   "glProgramString(inserting fog_option code)");
@@ -403,7 +403,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    inst++;
 
    /* free old instructions */
-   _mesa_free_instructions(fprog->Instructions, origLen);
+   ralloc_free(fprog->Instructions);
 
    /* install new instructions */
    fprog->Instructions = newInst;

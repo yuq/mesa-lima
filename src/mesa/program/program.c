@@ -247,12 +247,6 @@ _mesa_delete_program(struct gl_context *ctx, struct gl_program *prog)
    if (prog == &_mesa_DummyProgram)
       return;
 
-   free(prog->String);
-   free(prog->LocalParams);
-
-   if (prog->Instructions) {
-      _mesa_free_instructions(prog->Instructions, prog->NumInstructions);
-   }
    if (prog->Parameters) {
       _mesa_free_parameter_list(prog->Parameters);
    }
@@ -358,7 +352,7 @@ _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count)
    }
 
    /* Alloc storage for new instructions */
-   newInst = _mesa_alloc_instructions(newLen);
+   newInst = rzalloc_array(prog, struct prog_instruction, newLen);
    if (!newInst) {
       return GL_FALSE;
    }
@@ -375,7 +369,7 @@ _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count)
                            origLen - start);
 
    /* free old instructions */
-   _mesa_free_instructions(prog->Instructions, origLen);
+   ralloc_free(prog->Instructions);
 
    /* install new instructions */
    prog->Instructions = newInst;
@@ -389,7 +383,8 @@ _mesa_insert_instructions(struct gl_program *prog, GLuint start, GLuint count)
  * Adjust branch targets accordingly.
  */
 GLboolean
-_mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count)
+_mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count,
+                          void *mem_ctx)
 {
    const GLuint origLen = prog->NumInstructions;
    const GLuint newLen = origLen - count;
@@ -407,7 +402,7 @@ _mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count)
    }
 
    /* Alloc storage for new instructions */
-   newInst = _mesa_alloc_instructions(newLen);
+   newInst = rzalloc_array(mem_ctx, struct prog_instruction, newLen);
    if (!newInst) {
       return GL_FALSE;
    }
@@ -421,7 +416,7 @@ _mesa_delete_instructions(struct gl_program *prog, GLuint start, GLuint count)
                            newLen - start);
 
    /* free old instructions */
-   _mesa_free_instructions(prog->Instructions, origLen);
+   ralloc_free(prog->Instructions);
 
    /* install new instructions */
    prog->Instructions = newInst;

@@ -59,19 +59,6 @@ _mesa_init_instructions(struct prog_instruction *inst, GLuint count)
 
 
 /**
- * Allocate an array of program instructions.
- * \param numInst  number of instructions
- * \return pointer to instruction memory
- */
-struct prog_instruction *
-_mesa_alloc_instructions(GLuint numInst)
-{
-   return
-      calloc(numInst, sizeof(struct prog_instruction));
-}
-
-
-/**
  * Copy an array of program instructions.
  * \param dest  pointer to destination.
  * \param src  pointer to source.
@@ -84,16 +71,6 @@ _mesa_copy_instructions(struct prog_instruction *dest,
 {
    memcpy(dest, src, n * sizeof(struct prog_instruction));
    return dest;
-}
-
-
-/**
- * Free an array of instructions
- */
-void
-_mesa_free_instructions(struct prog_instruction *inst, GLuint count)
-{
-   free(inst);
 }
 
 

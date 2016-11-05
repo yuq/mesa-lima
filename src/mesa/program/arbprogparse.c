@@ -170,17 +170,20 @@ _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
    memset(&prog, 0, sizeof(prog));
    memset(&state, 0, sizeof(state));
    state.prog = &prog;
+   state.mem_ctx = program;
 
    if (!_mesa_parse_arb_program(ctx, target, (const GLubyte*) str, len,
 				&state)) {
+      ralloc_free(prog.Instructions);
+      ralloc_free(prog.String);
       _mesa_error(ctx, GL_INVALID_OPERATION, "glProgramString(bad program)");
       return;
    }
 
    if ((ctx->_Shader->Flags & GLSL_NO_OPT) == 0)
-      _mesa_optimize_program(ctx, &prog);
+      _mesa_optimize_program(ctx, &prog, program);
 
-   free(program->String);
+   ralloc_free(program->String);
 
    /* Copy the relevant contents of the arb_program struct into the 
     * vertex_program struct.
@@ -202,7 +205,7 @@ _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
    program->IsPositionInvariant = (state.option.PositionInvariant)
       ? GL_TRUE : GL_FALSE;
 
-   free(program->Instructions);
+   ralloc_free(program->Instructions);
    program->Instructions = prog.Instructions;
 
    if (program->Parameters)
