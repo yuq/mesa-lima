@@ -376,6 +376,22 @@ static const struct nvc0_hw_metric_query_cfg *sm35_hw_metric_queries[] =
    &sm35_warp_nonpred_execution_efficiency,
 };
 
+/* ==== Compute capability 5.0 (GM107/GM108) ==== */
+static const struct nvc0_hw_metric_query_cfg *sm50_hw_metric_queries[] =
+{
+   &sm20_achieved_occupancy,
+   &sm20_branch_efficiency,
+   &sm30_inst_issued,
+   &sm20_inst_per_wrap,
+   &sm30_inst_replay_overhead,
+   &sm20_ipc,
+   &sm30_issued_ipc,
+   &sm30_issue_slots,
+   &sm30_issue_slot_utilization,
+   &sm30_warp_execution_efficiency,
+   &sm35_warp_nonpred_execution_efficiency,
+};
+
 #undef _SM
 
 static inline const struct nvc0_hw_metric_query_cfg **
@@ -384,6 +400,9 @@ nvc0_hw_metric_get_queries(struct nvc0_screen *screen)
    struct nouveau_device *dev = screen->base.device;
 
    switch (screen->base.class_3d) {
+   case GM200_3D_CLASS:
+   case GM107_3D_CLASS:
+      return sm50_hw_metric_queries;
    case NVF0_3D_CLASS:
       return sm35_hw_metric_queries;
    case NVE4_3D_CLASS:
@@ -403,6 +422,9 @@ nvc0_hw_metric_get_num_queries(struct nvc0_screen *screen)
    struct nouveau_device *dev = screen->base.device;
 
    switch (screen->base.class_3d) {
+   case GM200_3D_CLASS:
+   case GM107_3D_CLASS:
+      return ARRAY_SIZE(sm50_hw_metric_queries);
    case NVF0_3D_CLASS:
       return ARRAY_SIZE(sm35_hw_metric_queries);
    case NVE4_3D_CLASS:
@@ -660,6 +682,8 @@ nvc0_hw_metric_get_query_result(struct nvc0_context *nvc0,
    }
 
    switch (screen->base.class_3d) {
+   case GM200_3D_CLASS:
+   case GM107_3D_CLASS:
    case NVF0_3D_CLASS:
       value = sm35_hw_metric_calc_result(hq, res64);
       break;
@@ -734,7 +758,7 @@ nvc0_hw_metric_get_driver_query_info(struct nvc0_screen *screen, unsigned id,
 
    if (id < count) {
       if (screen->compute) {
-         if (screen->base.class_3d <= NVF0_3D_CLASS) {
+         if (screen->base.class_3d <= GM200_3D_CLASS) {
             const struct nvc0_hw_metric_query_cfg **queries =
                nvc0_hw_metric_get_queries(screen);
             const struct nvc0_hw_metric_cfg *cfg =
