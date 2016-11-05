@@ -472,6 +472,8 @@ scan_declaration(struct tgsi_shader_info *info,
          info->const_buffers_declared |= 1u << buffer;
       } else if (file == TGSI_FILE_IMAGE) {
          info->images_declared |= 1u << reg;
+         if (fulldecl->Image.Resource == TGSI_TEXTURE_BUFFER)
+            info->images_buffers |= 1 << reg;
       } else if (file == TGSI_FILE_BUFFER) {
          info->shader_buffers_declared |= 1u << reg;
       } else if (file == TGSI_FILE_INPUT) {
@@ -593,9 +595,6 @@ scan_declaration(struct tgsi_shader_info *info,
             assert(info->sampler_targets[reg] == target);
             assert(info->sampler_type[reg] == type);
          }
-      } else if (file == TGSI_FILE_IMAGE) {
-         if (fulldecl->Image.Resource == TGSI_TEXTURE_BUFFER)
-            info->images_buffers |= 1 << reg;
       }
    }
 }
