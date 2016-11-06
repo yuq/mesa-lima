@@ -93,6 +93,18 @@ NineStateBlock9_dtor( struct NineStateBlock9 *This )
     NineUnknown_dtor(&This->base);
 }
 
+static void
+NineStateBlock9_BindTexture( struct NineDevice9 *device,
+                             boolean applyToDevice,
+                             struct NineBaseTexture9 **slot,
+                             struct NineBaseTexture9 *tex )
+{
+    if (applyToDevice)
+        NineBindTextureToDevice(device, slot, tex);
+    else
+        nine_bind(slot, tex);
+}
+
 /* Copy state marked changed in @mask from @src to @dst.
  * If @apply is false, updating dst->changed can be omitted.
  * TODO: compare ?
@@ -242,6 +254,14 @@ nine_state_copy_common(struct NineDevice9 *device,
             dst->changed.vtxbuf |= mask->changed.vtxbuf;
             dst->changed.stream_freq |= mask->changed.stream_freq;
         }
+    }
+
+    /* Textures */
+    if (mask->changed.texture) {
+        uint32_t m = mask->changed.texture;
+        for (s = 0; m; ++s, m >>= 1)
+            if (m & 1)
+                NineStateBlock9_BindTexture(device, apply, &dst->texture[s], src->texture[s]);
     }
 
     if (!(mask->changed.group & NINE_STATE_FF))
@@ -406,6 +426,12 @@ nine_state_copy_common_all(struct NineDevice9 *device,
         }
     }
 
+    /* Textures */
+    if (1) {
+        for (i = 0; i < device->caps.MaxSimultaneousTextures; i++)
+            NineStateBlock9_BindTexture(device, apply, &dst->texture[i], src->texture[i]);
+    }
+
     /* keep this check in case we want to disable FF */
     if (!(help->changed.group & NINE_STATE_FF))
         return;
@@ -460,7 +486,6 @@ NineStateBlock9_Capture( struct NineStateBlock9 *This )
     struct nine_state *dst = &This->state;
     struct nine_state *src = &device->state;
     const int MaxStreams = device->caps.MaxStreams;
-    unsigned s;
 
     DBG("This=%p\n", This);
 
@@ -471,14 +496,6 @@ NineStateBlock9_Capture( struct NineStateBlock9 *This )
 
     if (dst->changed.group & NINE_STATE_VDECL)
         nine_bind(&dst->vdecl, src->vdecl);
-
-    /* Textures */
-    if (dst->changed.texture) {
-        uint32_t m = dst->changed.texture;
-        for (s = 0; m; ++s, m >>= 1)
-            if (m & 1)
-                nine_bind(&dst->texture[s], src->texture[s]);
-    }
 
     return D3D_OK;
 }
@@ -492,7 +509,6 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
     struct nine_state *src = &This->state;
     struct nine_range_pool *pool = &device->range_pool;
     const int MaxStreams = device->caps.MaxStreams;
-    unsigned s;
 
     DBG("This=%p\n", This);
 
@@ -505,25 +521,6 @@ NineStateBlock9_Apply( struct NineStateBlock9 *This )
 
     if ((src->changed.group & NINE_STATE_VDECL) && src->vdecl)
         nine_bind(&dst->vdecl, src->vdecl);
-
-    /* Textures */
-    if (src->changed.texture) {
-        uint32_t m = src->changed.texture;
-
-        for (s = 0; m; ++s, m >>= 1) {
-            struct NineBaseTexture9 *tex = src->texture[s];
-            if (!(m & 1))
-                continue;
-            if (tex) {
-                tex->bind_count++;
-                if ((tex->managed.dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
-                    list_add(&tex->list, &This->base.device->update_textures);
-            }
-            if (src->texture[s])
-                src->texture[s]->bind_count--;
-            nine_bind(&dst->texture[s], src->texture[s]);
-        }
-    }
 
     return D3D_OK;
 }

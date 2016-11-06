@@ -2486,18 +2486,9 @@ NineDevice9_SetTexture( struct NineDevice9 *This,
     if (old == tex)
         return D3D_OK;
 
-    if (tex) {
-        if ((tex->managed.dirty | tex->dirty_mip) && LIST_IS_EMPTY(&tex->list))
-            list_add(&tex->list, &This->update_textures);
-
-        tex->bind_count++;
-    }
-    if (old)
-        old->bind_count--;
+    NineBindTextureToDevice(This, &state->texture[Stage], tex);
 
     nine_context_set_texture(This, Stage, tex);
-
-    nine_bind(&state->texture[Stage], pTexture);
 
     return D3D_OK;
 }
