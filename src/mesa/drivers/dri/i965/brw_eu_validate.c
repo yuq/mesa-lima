@@ -64,6 +64,13 @@ cat(struct string *dest, const struct string src)
    } while (0)
 
 static bool
+dst_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
+{
+   return brw_inst_dst_reg_file(devinfo, inst) == BRW_ARCHITECTURE_REGISTER_FILE &&
+          brw_inst_dst_da_reg_nr(devinfo, inst) == BRW_ARF_NULL;
+}
+
+static bool
 src0_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    return brw_inst_src0_reg_file(devinfo, inst) == BRW_ARCHITECTURE_REGISTER_FILE &&
@@ -187,6 +194,155 @@ is_unsupported_inst(const struct gen_device_info *devinfo,
    return brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst)) == NULL;
 }
 
+/**
+ * Checks restrictions listed in "General Restrictions on Regioning Parameters"
+ * in the "Register Region Restrictions" section.
+ */
+static struct string
+general_restrictions_on_region_parameters(const struct gen_device_info *devinfo,
+                                          const brw_inst *inst)
+{
+   const struct opcode_desc *desc =
+      brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst));
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   unsigned exec_size = 1 << brw_inst_exec_size(devinfo, inst);
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   if (num_sources == 3)
+      return (struct string){};
+
+   if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_16) {
+      if (desc->ndst != 0 && !dst_is_null(devinfo, inst))
+         ERROR_IF(brw_inst_dst_hstride(devinfo, inst) != BRW_HORIZONTAL_STRIDE_1,
+                  "Destination Horizontal Stride must be 1");
+
+      if (num_sources >= 1) {
+         if (devinfo->is_haswell || devinfo->gen >= 8) {
+            ERROR_IF(brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
+                     brw_inst_src0_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_0 &&
+                     brw_inst_src0_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_2 &&
+                     brw_inst_src0_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_4,
+                     "In Align16 mode, only VertStride of 0, 2, or 4 is allowed");
+         } else {
+            ERROR_IF(brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
+                     brw_inst_src0_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_0 &&
+                     brw_inst_src0_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_4,
+                     "In Align16 mode, only VertStride of 0 or 4 is allowed");
+         }
+      }
+
+      if (num_sources == 2) {
+         if (devinfo->is_haswell || devinfo->gen >= 8) {
+            ERROR_IF(brw_inst_src1_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
+                     brw_inst_src1_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_0 &&
+                     brw_inst_src1_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_2 &&
+                     brw_inst_src1_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_4,
+                     "In Align16 mode, only VertStride of 0, 2, or 4 is allowed");
+         } else {
+            ERROR_IF(brw_inst_src1_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
+                     brw_inst_src1_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_0 &&
+                     brw_inst_src1_vstride(devinfo, inst) != BRW_VERTICAL_STRIDE_4,
+                     "In Align16 mode, only VertStride of 0 or 4 is allowed");
+         }
+      }
+
+      return error_msg;
+   }
+
+   for (unsigned i = 0; i < num_sources; i++) {
+      unsigned vstride, width, hstride, element_size, subreg;
+
+#define DO_SRC(n)                                                              \
+      if (brw_inst_src ## n ## _reg_file(devinfo, inst) ==                     \
+          BRW_IMMEDIATE_VALUE)                                                 \
+         continue;                                                             \
+                                                                               \
+      vstride = brw_inst_src ## n ## _vstride(devinfo, inst) ?                 \
+                (1 << (brw_inst_src ## n ## _vstride(devinfo, inst) - 1)) : 0; \
+      width = 1 << brw_inst_src ## n ## _width(devinfo, inst);                 \
+      hstride = brw_inst_src ## n ## _hstride(devinfo, inst) ?                 \
+                (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0; \
+      element_size = brw_element_size(devinfo, inst, src ## n);                \
+      subreg = brw_inst_src ## n ## _da1_subreg_nr(devinfo, inst)
+
+      if (i == 0) {
+         DO_SRC(0);
+      } else if (i == 1) {
+         DO_SRC(1);
+      }
+#undef DO_SRC
+
+      /* ExecSize must be greater than or equal to Width. */
+      ERROR_IF(exec_size < width, "ExecSize must be greater than or equal "
+                                  "to Width");
+
+      /* If ExecSize = Width and HorzStride ≠ 0,
+       * VertStride must be set to Width * HorzStride.
+       */
+      if (exec_size == width && hstride != 0) {
+         ERROR_IF(vstride != width * hstride,
+                  "If ExecSize = Width and HorzStride ≠ 0, "
+                  "VertStride must be set to Width * HorzStride");
+      }
+
+      /* If Width = 1, HorzStride must be 0 regardless of the values of
+       * ExecSize and VertStride.
+       */
+      if (width == 1) {
+         ERROR_IF(hstride != 0,
+                  "If Width = 1, HorzStride must be 0 regardless "
+                  "of the values of ExecSize and VertStride");
+      }
+
+      /* If ExecSize = Width = 1, both VertStride and HorzStride must be 0. */
+      if (exec_size == 1 && width == 1) {
+         ERROR_IF(vstride != 0 || hstride != 0,
+                  "If ExecSize = Width = 1, both VertStride "
+                  "and HorzStride must be 0");
+      }
+
+      /* If VertStride = HorzStride = 0, Width must be 1 regardless of the
+       * value of ExecSize.
+       */
+      if (vstride == 0 && hstride == 0) {
+         ERROR_IF(width != 1,
+                  "If VertStride = HorzStride = 0, Width must be "
+                  "1 regardless of the value of ExecSize");
+      }
+
+      /* VertStride must be used to cross GRF register boundaries. This rule
+       * implies that elements within a 'Width' cannot cross GRF boundaries.
+       */
+      const uint64_t mask = (1 << element_size) - 1;
+      unsigned rowbase = subreg;
+
+      for (int y = 0; y < exec_size / width; y++) {
+         uint64_t access_mask = 0;
+         unsigned offset = rowbase;
+
+         for (int x = 0; x < width; x++) {
+            access_mask |= mask << offset;
+            offset += hstride * element_size;
+         }
+
+         rowbase += vstride * element_size;
+
+         if ((uint32_t)access_mask != 0 && (access_mask >> 32) != 0) {
+            ERROR("VertStride must be used to cross GRF register boundaries");
+            break;
+         }
+      }
+   }
+
+   /* Dst.HorzStride must not be 0. */
+   if (desc->ndst != 0 && !dst_is_null(devinfo, inst)) {
+      ERROR_IF(brw_inst_dst_hstride(devinfo, inst) == BRW_HORIZONTAL_STRIDE_0,
+               "Destination Horizontal Stride must not be 0");
+   }
+
+   return error_msg;
+}
+
 bool
 brw_validate_instructions(const struct brw_codegen *p, int start_offset,
                           struct annotation_info *annotation)
@@ -205,6 +361,7 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
       } else {
          CHECK(sources_not_null);
          CHECK(send_restrictions);
+         CHECK(general_restrictions_on_region_parameters);
       }
 
       if (error_msg.str && annotation) {

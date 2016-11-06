@@ -128,8 +128,16 @@ validate(struct brw_codegen *p)
    return ret;
 }
 
+#define last_inst    (&p->store[p->nr_insn - 1])
 #define g0           brw_vec8_grf(0, 0)
 #define null         brw_null_reg()
+
+static void
+clear_instructions(struct brw_codegen *p)
+{
+   p->next_insn_offset = 0;
+   p->nr_insn = 0;
+}
 
 TEST_P(validation_test, sanity)
 {
@@ -188,5 +196,217 @@ TEST_P(validation_test, opcode46)
       EXPECT_FALSE(validate(p));
    } else {
       EXPECT_TRUE(validate(p));
+   }
+}
+
+/* ExecSize must be greater than or equal to Width. */
+TEST_P(validation_test, exec_size_less_than_width)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_16);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_16);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* If ExecSize = Width and HorzStride ≠ 0,
+ * VertStride must be set to Width * HorzStride.
+ */
+TEST_P(validation_test, vertical_stride_is_width_by_horizontal_stride)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* If Width = 1, HorzStride must be 0 regardless of the values
+ * of ExecSize and VertStride.
+ */
+TEST_P(validation_test, horizontal_stride_must_be_0_if_width_is_1)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* If ExecSize = Width = 1, both VertStride and HorzStride must be 0. */
+TEST_P(validation_test, scalar_region_must_be_0_1_0)
+{
+   struct brw_reg g0_0 = brw_vec1_grf(0, 0);
+
+   brw_ADD(p, g0, g0, g0_0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_1);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_1);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0_0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_1);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_1);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* If VertStride = HorzStride = 0, Width must be 1 regardless of the value
+ * of ExecSize.
+ */
+TEST_P(validation_test, zero_stride_implies_0_1_0)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_2);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_2);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* Dst.HorzStride must not be 0. */
+TEST_P(validation_test, dst_horizontal_stride_0)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_set_default_access_mode(p, BRW_ALIGN_16);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* VertStride must be used to cross GRF register boundaries. This rule implies
+ * that elements within a 'Width' cannot cross GRF boundaries.
+ */
+TEST_P(validation_test, must_not_cross_grf_boundary_in_a_width)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src0_da1_subreg_nr(&devinfo, last_inst, 4);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_da1_subreg_nr(&devinfo, last_inst, 4);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_FALSE(validate(p));
+}
+
+/* Destination Horizontal must be 1 in Align16 */
+TEST_P(validation_test, dst_hstride_on_align16_must_be_1)
+{
+   brw_set_default_access_mode(p, BRW_ALIGN_16);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_TRUE(validate(p));
+}
+
+/* VertStride must be 0 or 4 in Align16 */
+TEST_P(validation_test, vstride_on_align16_must_be_0_or_4)
+{
+   const struct {
+      enum brw_vertical_stride vstride;
+      bool expected_result;
+   } vstride[] = {
+      { BRW_VERTICAL_STRIDE_0, true },
+      { BRW_VERTICAL_STRIDE_1, false },
+      { BRW_VERTICAL_STRIDE_2, devinfo.is_haswell || devinfo.gen >= 8 },
+      { BRW_VERTICAL_STRIDE_4, true },
+      { BRW_VERTICAL_STRIDE_8, false },
+      { BRW_VERTICAL_STRIDE_16, false },
+      { BRW_VERTICAL_STRIDE_32, false },
+      { BRW_VERTICAL_STRIDE_ONE_DIMENSIONAL, false },
+   };
+
+   brw_set_default_access_mode(p, BRW_ALIGN_16);
+
+   for (unsigned i = 0; i < sizeof(vstride) / sizeof(vstride[0]); i++) {
+      brw_ADD(p, g0, g0, g0);
+      brw_inst_set_src0_vstride(&devinfo, last_inst, vstride[i].vstride);
+
+      EXPECT_EQ(vstride[i].expected_result, validate(p));
+
+      clear_instructions(p);
+   }
+
+   for (unsigned i = 0; i < sizeof(vstride) / sizeof(vstride[0]); i++) {
+      brw_ADD(p, g0, g0, g0);
+      brw_inst_set_src1_vstride(&devinfo, last_inst, vstride[i].vstride);
+
+      EXPECT_EQ(vstride[i].expected_result, validate(p));
+
+      clear_instructions(p);
    }
 }
