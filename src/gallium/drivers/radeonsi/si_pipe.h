@@ -259,6 +259,7 @@ struct si_context {
 	struct r600_atom		msaa_config;
 	struct si_sample_mask		sample_mask;
 	struct r600_atom		cb_render_state;
+	unsigned			last_cb_target_mask;
 	struct si_blend_color		blend_color;
 	struct r600_atom		clip_regs;
 	struct si_clip_state		clip_state;

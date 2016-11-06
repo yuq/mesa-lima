@@ -117,6 +117,17 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 
 	radeon_set_context_reg(cs, R_028238_CB_TARGET_MASK, cb_target_mask);
 
+	/* GFX9: Flush DFSM when CB_TARGET_MASK changes.
+	 * I think we don't have to do anything between IBs.
+	 */
+	if (sctx->b.chip_class >= GFX9 &&
+	    sctx->last_cb_target_mask != cb_target_mask) {
+		sctx->last_cb_target_mask = cb_target_mask;
+
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
+	}
+
 	/* RB+ register settings. */
 	if (sctx->screen->b.rbplus_allowed) {
 		unsigned spi_shader_col_format =
@@ -2877,6 +2888,12 @@ static void si_emit_msaa_config(struct si_context *sctx, struct r600_atom *atom)
 				sctx->ps_iter_samples,
 				sctx->smoothing_enabled ? SI_NUM_SMOOTH_AA_SAMPLES : 0,
 				sc_mode_cntl_1);
+
+	/* GFX9: Flush DFSM when the AA mode changes. */
+	if (sctx->b.chip_class >= GFX9) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_DFSM) | EVENT_INDEX(0));
+	}
 }
 
 static void si_set_min_samples(struct pipe_context *ctx, unsigned min_samples)
