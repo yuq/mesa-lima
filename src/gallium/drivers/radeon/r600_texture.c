@@ -222,7 +222,8 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 		flags |= RADEON_SURF_ZBUFFER;
 
 		if (tc_compatible_htile &&
-		    array_mode == RADEON_SURF_MODE_2D) {
+		    (rscreen->chip_class >= GFX9 ||
+		     array_mode == RADEON_SURF_MODE_2D)) {
 			/* TC-compatible HTILE only supports Z32_FLOAT.
 			 * GFX9 also supports Z16_UNORM.
 			 * On VI, promote Z16 to Z32. DB->CB copies will convert
