@@ -1007,9 +1007,9 @@ r600_texture_create_object(struct pipe_screen *screen,
 	rtex->surface = *surface;
 	rtex->size = rtex->surface.surf_size;
 
-	rtex->tc_compatible_htile = rtex->surface.htile_size != 0;
-	assert(!!(rtex->surface.flags & RADEON_SURF_TC_COMPATIBLE_HTILE) ==
-	       rtex->tc_compatible_htile);
+	rtex->tc_compatible_htile = rtex->surface.htile_size != 0 &&
+				    (rtex->surface.flags &
+				     RADEON_SURF_TC_COMPATIBLE_HTILE);
 
 	/* TC-compatible HTILE only supports Z32_FLOAT. */
 	if (rtex->tc_compatible_htile)
