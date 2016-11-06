@@ -232,6 +232,8 @@ struct si_descriptors {
 	/* elements of the list that are changed and need to be uploaded */
 	unsigned dirty_mask;
 
+	/* Whether CE is used to upload this descriptor array. */
+	bool uses_ce;
 	/* Whether the CE ram is dirty and needs to be reinitialized entirely
 	 * before we can do partial updates. */
 	bool ce_ram_dirty;

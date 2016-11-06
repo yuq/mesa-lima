@@ -113,6 +113,7 @@ static void si_init_descriptors(struct si_descriptors *desc,
 	desc->shader_userdata_offset = shader_userdata_index * 4;
 
 	if (ce_offset) {
+		desc->uses_ce = true;
 		desc->ce_offset = *ce_offset;
 
 		/* make sure that ce_offset stays 32 byte aligned */
@@ -210,7 +211,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	if (!desc->dirty_mask)
 		return true;
 
-	if (sctx->ce_ib) {
+	if (sctx->ce_ib && desc->uses_ce) {
 		uint32_t const* list = (uint32_t const*)desc->list;
 
 		if (desc->ce_ram_dirty)
@@ -1941,6 +1942,16 @@ void si_init_all_descriptors(struct si_context *sctx)
 	unsigned ce_offset = 0;
 
 	for (i = 0; i < SI_NUM_SHADERS; i++) {
+		/* GFX9 has only 4KB of CE, while previous chips had 32KB.
+		 * Rarely used descriptors don't use CE RAM.
+		 */
+		bool big_ce = sctx->b.chip_class <= VI;
+		bool images_use_ce = big_ce;
+		bool shaderbufs_use_ce = big_ce ||
+					 i == PIPE_SHADER_COMPUTE;
+		bool samplers_use_ce = big_ce ||
+				       i == PIPE_SHADER_FRAGMENT;
+
 		si_init_buffer_resources(&sctx->const_buffers[i],
 					 si_const_buffer_descriptors(sctx, i),
 					 SI_NUM_CONST_BUFFERS, SI_SGPR_CONST_BUFFERS,
@@ -1950,15 +1961,17 @@ void si_init_all_descriptors(struct si_context *sctx)
 					 si_shader_buffer_descriptors(sctx, i),
 					 SI_NUM_SHADER_BUFFERS, SI_SGPR_SHADER_BUFFERS,
 					 RADEON_USAGE_READWRITE, RADEON_PRIO_SHADER_RW_BUFFER,
-					 &ce_offset);
+					 shaderbufs_use_ce ? &ce_offset : NULL);
 
 		si_init_descriptors(si_sampler_descriptors(sctx, i),
 				    SI_SGPR_SAMPLERS, 16, SI_NUM_SAMPLERS,
-				    null_texture_descriptor, &ce_offset);
+				    null_texture_descriptor,
+				    samplers_use_ce ? &ce_offset : NULL);
 
 		si_init_descriptors(si_image_descriptors(sctx, i),
 				    SI_SGPR_IMAGES, 8, SI_NUM_IMAGES,
-				    null_image_descriptor, &ce_offset);
+				    null_image_descriptor,
+				    images_use_ce ? &ce_offset : NULL);
 	}
 
 	si_init_buffer_resources(&sctx->rw_buffers,
@@ -1971,7 +1984,10 @@ void si_init_all_descriptors(struct si_context *sctx)
 
 	sctx->descriptors_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
 
-	assert(ce_offset <= 32768);
+	if (sctx->b.chip_class >= GFX9)
+		assert(ce_offset <= 4096);
+	else
+		assert(ce_offset <= 32768);
 
 	/* Set pipe_context functions. */
 	sctx->b.b.bind_sampler_states = si_bind_sampler_states;
