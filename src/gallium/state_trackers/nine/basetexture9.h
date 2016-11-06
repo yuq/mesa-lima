@@ -159,7 +159,7 @@ NineBaseTexture9_Dump( struct NineBaseTexture9 *This ) { }
 #endif
 
 #define BASETEX_REGISTER_UPDATE(t) do { \
-    if (((t)->managed.dirty | ((t)->dirty_mip)) && (t)->base.base.bind) \
+    if (((t)->managed.dirty | ((t)->dirty_mip)) && (t)->bind_count) \
         if (LIST_IS_EMPTY(&(t)->list)) \
             list_add(&(t)->list, &(t)->base.base.device->update_textures); \
     } while(0)
