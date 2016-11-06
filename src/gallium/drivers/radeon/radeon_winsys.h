@@ -250,6 +250,11 @@ struct radeon_bo_metadata {
             unsigned                stride;
             bool                    scanout;
         } legacy;
+
+        struct {
+            /* surface flags */
+            unsigned swizzle_mode:5;
+        } gfx9;
     } u;
 
     /* Additional metadata associated with the buffer, in bytes.

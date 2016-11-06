@@ -291,6 +291,7 @@ static void r600_texture_init_metadata(struct r600_common_screen *rscreen,
 	memset(metadata, 0, sizeof(*metadata));
 
 	if (rscreen->chip_class >= GFX9) {
+		metadata->u.gfx9.swizzle_mode = surface->u.gfx9.surf.swizzle_mode;
 	} else {
 		metadata->u.legacy.microtile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_1D ?
 					   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
@@ -1345,6 +1346,7 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	int r;
 	struct radeon_bo_metadata metadata = {};
 	struct r600_texture *rtex;
+	bool is_scanout;
 
 	/* Support only 2D textures without mipmaps */
 	if ((templ->target != PIPE_TEXTURE_2D && templ->target != PIPE_TEXTURE_RECT) ||
@@ -1358,6 +1360,13 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 	rscreen->ws->buffer_get_metadata(buf, &metadata);
 
 	if (rscreen->chip_class >= GFX9) {
+		if (metadata.u.gfx9.swizzle_mode > 0)
+			array_mode = RADEON_SURF_MODE_2D;
+		else
+			array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+
+		is_scanout = metadata.u.gfx9.swizzle_mode == 0 ||
+			     metadata.u.gfx9.swizzle_mode % 4 == 2;
 	} else {
 		surface.u.legacy.pipe_config = metadata.u.legacy.pipe_config;
 		surface.u.legacy.bankw = metadata.u.legacy.bankw;
@@ -1372,10 +1381,12 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 			array_mode = RADEON_SURF_MODE_1D;
 		else
 			array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+
+		is_scanout = metadata.u.legacy.scanout;
 	}
 
 	r = r600_init_surface(rscreen, &surface, templ, array_mode, stride,
-			      offset, true, metadata.u.legacy.scanout, false, false);
+			      offset, true, is_scanout, false, false);
 	if (r) {
 		return NULL;
 	}
@@ -1389,6 +1400,13 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 
 	if (rscreen->apply_opaque_metadata)
 		rscreen->apply_opaque_metadata(rscreen, rtex, &metadata);
+
+	/* Validate that addrlib arrived at the same surface parameters. */
+	if (rscreen->chip_class >= GFX9) {
+		struct gfx9_surf_layout *gfx9 = &surface.u.gfx9;
+
+		assert(metadata.u.gfx9.swizzle_mode == gfx9->surf.swizzle_mode);
+	}
 
 	return &rtex->resource.b.b;
 }
