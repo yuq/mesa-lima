@@ -133,7 +133,6 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
         u_box_1d(0, Size, &This->managed.dirty_box);
         list_inithead(&This->managed.list);
         list_inithead(&This->managed.list2);
-        list_add(&This->managed.list, &pParams->device->update_buffers);
         list_add(&This->managed.list2, &pParams->device->managed_buffers);
     }
 
@@ -208,12 +207,8 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
                 assert(LIST_IS_EMPTY(&This->managed.list));
                 This->managed.dirty = TRUE;
                 This->managed.dirty_box = box;
-            } else {
+            } else
                 u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
-                /* Do not upload while we are locking, we'll add it back later */
-                if (!LIST_IS_EMPTY(&This->managed.list))
-                    list_delinit(&This->managed.list);
-            }
         }
         *ppbData = (char *)This->managed.data + OffsetToLock;
         DBG("returning pointer %p\n", *ppbData);
@@ -287,10 +282,7 @@ NineBuffer9_Unlock( struct NineBuffer9 *This )
         pipe->transfer_unmap(pipe, This->maps[--(This->nmaps)]);
     } else {
         This->nmaps--;
-        /* TODO: Fix this to upload at the first draw call needing the data,
-         * instead of at the next draw call */
-        if (!This->nmaps && This->managed.dirty && LIST_IS_EMPTY(&This->managed.list))
-            list_add(&This->managed.list, &This->base.base.device->update_buffers);
+        BASEBUF_REGISTER_UPDATE(This);
     }
     return D3D_OK;
 }
@@ -300,10 +292,7 @@ NineBuffer9_SetDirty( struct NineBuffer9 *This )
 {
     assert(This->base.pool == D3DPOOL_MANAGED);
 
-    if (!This->managed.dirty) {
-        assert(LIST_IS_EMPTY(&This->managed.list));
-        list_add(&This->managed.list, &This->base.base.device->update_buffers);
-        This->managed.dirty = TRUE;
-    }
+    This->managed.dirty = TRUE;
     u_box_1d(0, This->size, &This->managed.dirty_box);
+    BASEBUF_REGISTER_UPDATE(This);
 }
