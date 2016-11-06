@@ -900,10 +900,12 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 	}
 }
 
-void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
+void r600_print_texture_info(struct r600_common_screen *rscreen,
+			     struct r600_texture *rtex, FILE *f)
 {
 	int i;
 
+	/* Common parameters. */
 	fprintf(f, "  Info: npix_x=%u, npix_y=%u, npix_z=%u, blk_w=%u, "
 		"blk_h=%u, array_size=%u, last_level=%u, "
 		"bpe=%u, nsamples=%u, flags=0x%x, %s\n",
@@ -913,6 +915,63 @@ void r600_print_texture_info(struct r600_texture *rtex, FILE *f)
 		rtex->resource.b.b.array_size, rtex->resource.b.b.last_level,
 		rtex->surface.bpe, rtex->resource.b.b.nr_samples,
 		rtex->surface.flags, util_format_short_name(rtex->resource.b.b.format));
+
+	if (rscreen->chip_class >= GFX9) {
+		fprintf(f, "  Surf: size=%"PRIu64", slice_size=%"PRIu64", "
+			"alignment=%u, swmode=%u, epitch=%u, pitch=%u\n",
+			rtex->surface.surf_size,
+			rtex->surface.u.gfx9.surf_slice_size,
+			rtex->surface.surf_alignment,
+			rtex->surface.u.gfx9.surf.swizzle_mode,
+			rtex->surface.u.gfx9.surf.epitch,
+			rtex->surface.u.gfx9.surf_pitch);
+
+		if (rtex->fmask.size) {
+			fprintf(f, "  FMASK: offset=%"PRIu64", size=%"PRIu64", "
+				"alignment=%u, swmode=%u, epitch=%u\n",
+				rtex->fmask.offset,
+				rtex->surface.u.gfx9.fmask_size,
+				rtex->surface.u.gfx9.fmask_alignment,
+				rtex->surface.u.gfx9.fmask.swizzle_mode,
+				rtex->surface.u.gfx9.fmask.epitch);
+		}
+
+		if (rtex->cmask.size) {
+			fprintf(f, "  CMask: offset=%"PRIu64", size=%"PRIu64", "
+				"alignment=%u, rb_aligned=%u, pipe_aligned=%u\n",
+				rtex->cmask.offset,
+				rtex->surface.u.gfx9.cmask_size,
+				rtex->surface.u.gfx9.cmask_alignment,
+				rtex->surface.u.gfx9.cmask.rb_aligned,
+				rtex->surface.u.gfx9.cmask.pipe_aligned);
+		}
+
+		if (rtex->htile_buffer) {
+			fprintf(f, "  HTile: size=%u, alignment=%u, "
+				"rb_aligned=%u, pipe_aligned=%u\n",
+				rtex->htile_buffer->b.b.width0,
+				rtex->htile_buffer->buf->alignment,
+				rtex->surface.u.gfx9.htile.rb_aligned,
+				rtex->surface.u.gfx9.htile.pipe_aligned);
+		}
+
+		if (rtex->dcc_offset) {
+			fprintf(f, "  DCC: offset=%"PRIu64", size=%"PRIu64", "
+				"alignment=%u, pitch_max=%u, num_dcc_levels=%u\n",
+				rtex->dcc_offset, rtex->surface.dcc_size,
+				rtex->surface.dcc_alignment,
+				rtex->surface.u.gfx9.dcc_pitch_max,
+				rtex->surface.num_dcc_levels);
+		}
+
+		if (rtex->surface.u.gfx9.stencil_offset) {
+			fprintf(f, "  Stencil: offset=%"PRIu64", swmode=%u, epitch=%u\n",
+				rtex->surface.u.gfx9.stencil_offset,
+				rtex->surface.u.gfx9.stencil.swizzle_mode,
+				rtex->surface.u.gfx9.stencil.epitch);
+		}
+		return;
+	}
 
 	fprintf(f, "  Layout: size=%"PRIu64", alignment=%u, bankw=%u, "
 		"bankh=%u, nbanks=%u, mtilea=%u, tilesplit=%u, pipeconfig=%u, scanout=%u\n",
@@ -1143,7 +1202,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 
 	if (rscreen->debug_flags & DBG_TEX) {
 		puts("Texture:");
-		r600_print_texture_info(rtex, stdout);
+		r600_print_texture_info(rscreen, rtex, stdout);
 		fflush(stdout);
 	}
 
