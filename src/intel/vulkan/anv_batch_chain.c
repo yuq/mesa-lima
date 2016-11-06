@@ -648,6 +648,20 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 }
 
+static void
+anv_execbuf_init(struct anv_execbuf *exec)
+{
+   memset(exec, 0, sizeof(*exec));
+}
+
+static void
+anv_execbuf_finish(struct anv_execbuf *exec,
+                   const VkAllocationCallbacks *alloc)
+{
+   vk_free(alloc, exec->objects);
+   vk_free(alloc, exec->bos);
+}
+
 VkResult
 anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -694,9 +708,7 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 
    anv_cmd_buffer_new_binding_table_block(cmd_buffer);
 
-   cmd_buffer->execbuf2.objects = NULL;
-   cmd_buffer->execbuf2.bos = NULL;
-   cmd_buffer->execbuf2.array_length = 0;
+   anv_execbuf_init(&cmd_buffer->execbuf2);
 
    return VK_SUCCESS;
 
@@ -730,8 +742,7 @@ anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_bo_destroy(bbo, cmd_buffer);
    }
 
-   vk_free(&cmd_buffer->pool->alloc, cmd_buffer->execbuf2.objects);
-   vk_free(&cmd_buffer->pool->alloc, cmd_buffer->execbuf2.bos);
+   anv_execbuf_finish(&cmd_buffer->execbuf2, &cmd_buffer->pool->alloc);
 }
 
 void
@@ -929,55 +940,57 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
 }
 
 static VkResult
-anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
-                      struct anv_bo *bo,
-                      struct anv_reloc_list *relocs)
+anv_execbuf_add_bo(struct anv_execbuf *exec,
+                   struct anv_bo *bo,
+                   struct anv_reloc_list *relocs,
+                   const VkAllocationCallbacks *alloc)
 {
    struct drm_i915_gem_exec_object2 *obj = NULL;
 
-   if (bo->index < cmd_buffer->execbuf2.bo_count &&
-       cmd_buffer->execbuf2.bos[bo->index] == bo)
-      obj = &cmd_buffer->execbuf2.objects[bo->index];
+   if (bo->index < exec->bo_count && exec->bos[bo->index] == bo)
+      obj = &exec->objects[bo->index];
 
    if (obj == NULL) {
       /* We've never seen this one before.  Add it to the list and assign
        * an id that we can use later.
        */
-      if (cmd_buffer->execbuf2.bo_count >= cmd_buffer->execbuf2.array_length) {
-         uint32_t new_len = cmd_buffer->execbuf2.objects ?
-                            cmd_buffer->execbuf2.array_length * 2 : 64;
+      if (exec->bo_count >= exec->array_length) {
+         uint32_t new_len = exec->objects ? exec->array_length * 2 : 64;
 
          struct drm_i915_gem_exec_object2 *new_objects =
-            vk_alloc(&cmd_buffer->pool->alloc, new_len * sizeof(*new_objects),
-                      8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            vk_alloc(alloc, new_len * sizeof(*new_objects),
+                     8, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
          if (new_objects == NULL)
             return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
          struct anv_bo **new_bos =
-            vk_alloc(&cmd_buffer->pool->alloc, new_len * sizeof(*new_bos),
-                      8, VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+            vk_alloc(alloc, new_len * sizeof(*new_bos),
+                      8, VK_SYSTEM_ALLOCATION_SCOPE_COMMAND);
          if (new_bos == NULL) {
-            vk_free(&cmd_buffer->pool->alloc, new_objects);
+            vk_free(alloc, new_objects);
             return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
          }
 
-         if (cmd_buffer->execbuf2.objects) {
-            memcpy(new_objects, cmd_buffer->execbuf2.objects,
-                   cmd_buffer->execbuf2.bo_count * sizeof(*new_objects));
-            memcpy(new_bos, cmd_buffer->execbuf2.bos,
-                   cmd_buffer->execbuf2.bo_count * sizeof(*new_bos));
+         if (exec->objects) {
+            memcpy(new_objects, exec->objects,
+                   exec->bo_count * sizeof(*new_objects));
+            memcpy(new_bos, exec->bos,
+                   exec->bo_count * sizeof(*new_bos));
          }
 
-         cmd_buffer->execbuf2.objects = new_objects;
-         cmd_buffer->execbuf2.bos = new_bos;
-         cmd_buffer->execbuf2.array_length = new_len;
+         vk_free(alloc, exec->objects);
+         vk_free(alloc, exec->bos);
+
+         exec->objects = new_objects;
+         exec->bos = new_bos;
+         exec->array_length = new_len;
       }
 
-      assert(cmd_buffer->execbuf2.bo_count < cmd_buffer->execbuf2.array_length);
+      assert(exec->bo_count < exec->array_length);
 
-      bo->index = cmd_buffer->execbuf2.bo_count++;
-      obj = &cmd_buffer->execbuf2.objects[bo->index];
-      cmd_buffer->execbuf2.bos[bo->index] = bo;
+      bo->index = exec->bo_count++;
+      obj = &exec->objects[bo->index];
+      exec->bos[bo->index] = bo;
 
       obj->handle = bo->gem_handle;
       obj->relocation_count = 0;
@@ -1000,7 +1013,7 @@ anv_cmd_buffer_add_bo(struct anv_cmd_buffer *cmd_buffer,
       for (size_t i = 0; i < relocs->num_relocs; i++) {
          /* A quick sanity check on relocations */
          assert(relocs->relocs[i].offset < bo->size);
-         anv_cmd_buffer_add_bo(cmd_buffer, relocs->reloc_bos[i], NULL);
+         anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL, alloc);
       }
    }
 
@@ -1104,7 +1117,9 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->execbuf2.bo_count = 0;
 
    adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs);
-   anv_cmd_buffer_add_bo(cmd_buffer, &ss_pool->bo, &cmd_buffer->surface_relocs);
+   anv_execbuf_add_bo(&cmd_buffer->execbuf2, &ss_pool->bo,
+                      &cmd_buffer->surface_relocs,
+                      &cmd_buffer->pool->alloc);
 
    /* First, we walk over all of the bos we've seen and add them and their
     * relocations to the validate list.
@@ -1114,7 +1129,8 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        &(*bbo)->last_ss_pool_bo_offset);
 
-      anv_cmd_buffer_add_bo(cmd_buffer, &(*bbo)->bo, &(*bbo)->relocs);
+      anv_execbuf_add_bo(&cmd_buffer->execbuf2, &(*bbo)->bo, &(*bbo)->relocs,
+                         &cmd_buffer->pool->alloc);
    }
 
    struct anv_batch_bo *first_batch_bo =
