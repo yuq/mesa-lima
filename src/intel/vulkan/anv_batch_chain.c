@@ -645,20 +645,6 @@ anv_cmd_buffer_new_binding_table_block(struct anv_cmd_buffer *cmd_buffer)
    return VK_SUCCESS;
 }
 
-static void
-anv_execbuf_init(struct anv_execbuf *exec)
-{
-   memset(exec, 0, sizeof(*exec));
-}
-
-static void
-anv_execbuf_finish(struct anv_execbuf *exec,
-                   const VkAllocationCallbacks *alloc)
-{
-   vk_free(alloc, exec->objects);
-   vk_free(alloc, exec->bos);
-}
-
 VkResult
 anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -706,8 +692,6 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
 
    anv_cmd_buffer_new_binding_table_block(cmd_buffer);
 
-   anv_execbuf_init(&cmd_buffer->execbuf2);
-
    return VK_SUCCESS;
 
  fail_bt_blocks:
@@ -739,8 +723,6 @@ anv_cmd_buffer_fini_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
                             &cmd_buffer->batch_bos, link) {
       anv_batch_bo_destroy(bbo, cmd_buffer);
    }
-
-   anv_execbuf_finish(&cmd_buffer->execbuf2, &cmd_buffer->pool->alloc);
 }
 
 void
@@ -938,6 +920,31 @@ anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
                          &secondary->surface_relocs, 0);
 }
 
+struct anv_execbuf {
+   struct drm_i915_gem_execbuffer2           execbuf;
+
+   struct drm_i915_gem_exec_object2 *        objects;
+   uint32_t                                  bo_count;
+   struct anv_bo **                          bos;
+
+   /* Allocated length of the 'objects' and 'bos' arrays */
+   uint32_t                                  array_length;
+};
+
+static void
+anv_execbuf_init(struct anv_execbuf *exec)
+{
+   memset(exec, 0, sizeof(*exec));
+}
+
+static void
+anv_execbuf_finish(struct anv_execbuf *exec,
+                   const VkAllocationCallbacks *alloc)
+{
+   vk_free(alloc, exec->objects);
+   vk_free(alloc, exec->bos);
+}
+
 static VkResult
 anv_execbuf_add_bo(struct anv_execbuf *exec,
                    struct anv_bo *bo,
@@ -1108,20 +1115,20 @@ adjust_relocations_to_state_pool(struct anv_block_pool *pool,
    }
 }
 
-void
-anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
+VkResult
+anv_cmd_buffer_execbuf(struct anv_device *device,
+                       struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_batch *batch = &cmd_buffer->batch;
    struct anv_block_pool *ss_pool =
       &cmd_buffer->device->surface_state_block_pool;
 
-   cmd_buffer->execbuf2.bo_count = 0;
+   struct anv_execbuf execbuf;
+   anv_execbuf_init(&execbuf);
 
    adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs,
                                       cmd_buffer->last_ss_pool_center);
-
-   anv_execbuf_add_bo(&cmd_buffer->execbuf2, &ss_pool->bo,
-                      &cmd_buffer->surface_relocs,
+   anv_execbuf_add_bo(&execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
                       &cmd_buffer->pool->alloc);
 
    /* First, we walk over all of the bos we've seen and add them and their
@@ -1132,7 +1139,7 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        cmd_buffer->last_ss_pool_center);
 
-      anv_execbuf_add_bo(&cmd_buffer->execbuf2, &(*bbo)->bo, &(*bbo)->relocs,
+      anv_execbuf_add_bo(&execbuf, &(*bbo)->bo, &(*bbo)->relocs,
                          &cmd_buffer->pool->alloc);
    }
 
@@ -1150,20 +1157,19 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
     * corresponding to the first batch_bo in the chain with the last
     * element in the list.
     */
-   if (first_batch_bo->bo.index != cmd_buffer->execbuf2.bo_count - 1) {
+   if (first_batch_bo->bo.index != execbuf.bo_count - 1) {
       uint32_t idx = first_batch_bo->bo.index;
-      uint32_t last_idx = cmd_buffer->execbuf2.bo_count - 1;
+      uint32_t last_idx = execbuf.bo_count - 1;
 
-      struct drm_i915_gem_exec_object2 tmp_obj =
-         cmd_buffer->execbuf2.objects[idx];
-      assert(cmd_buffer->execbuf2.bos[idx] == &first_batch_bo->bo);
+      struct drm_i915_gem_exec_object2 tmp_obj = execbuf.objects[idx];
+      assert(execbuf.bos[idx] == &first_batch_bo->bo);
 
-      cmd_buffer->execbuf2.objects[idx] = cmd_buffer->execbuf2.objects[last_idx];
-      cmd_buffer->execbuf2.bos[idx] = cmd_buffer->execbuf2.bos[last_idx];
-      cmd_buffer->execbuf2.bos[idx]->index = idx;
+      execbuf.objects[idx] = execbuf.objects[last_idx];
+      execbuf.bos[idx] = execbuf.bos[last_idx];
+      execbuf.bos[idx]->index = idx;
 
-      cmd_buffer->execbuf2.objects[last_idx] = tmp_obj;
-      cmd_buffer->execbuf2.bos[last_idx] = &first_batch_bo->bo;
+      execbuf.objects[last_idx] = tmp_obj;
+      execbuf.bos[last_idx] = &first_batch_bo->bo;
       first_batch_bo->bo.index = last_idx;
    }
 
@@ -1184,9 +1190,9 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   cmd_buffer->execbuf2.execbuf = (struct drm_i915_gem_execbuffer2) {
-      .buffers_ptr = (uintptr_t) cmd_buffer->execbuf2.objects,
-      .buffer_count = cmd_buffer->execbuf2.bo_count,
+   execbuf.execbuf = (struct drm_i915_gem_execbuffer2) {
+      .buffers_ptr = (uintptr_t) execbuf.objects,
+      .buffer_count = execbuf.bo_count,
       .batch_start_offset = 0,
       .batch_len = batch->next - batch->start,
       .cliprects_ptr = 0,
@@ -1198,12 +1204,7 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
       .rsvd1 = cmd_buffer->device->context_id,
       .rsvd2 = 0,
    };
-}
 
-VkResult
-anv_cmd_buffer_execbuf(struct anv_device *device,
-                       struct anv_cmd_buffer *cmd_buffer)
-{
    /* Since surface states are shared between command buffers and we don't
     * know what order they will be submitted to the kernel, we don't know what
     * address is actually written in the surface state object at any given
@@ -1213,6 +1214,9 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
    for (size_t i = 0; i < cmd_buffer->surface_relocs.num_relocs; i++)
       cmd_buffer->surface_relocs.relocs[i].presumed_offset = -1;
 
-   return anv_device_execbuf(device, &cmd_buffer->execbuf2.execbuf,
-                             cmd_buffer->execbuf2.bos);
+   VkResult result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
+
+   anv_execbuf_finish(&execbuf, &cmd_buffer->pool->alloc);
+
+   return result;
 }

@@ -200,19 +200,8 @@ genX(EndCommandBuffer)(
     VkCommandBuffer                             commandBuffer)
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
-   struct anv_device *device = cmd_buffer->device;
 
    anv_cmd_buffer_end_batch_buffer(cmd_buffer);
-
-   if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-      /* The algorithm used to compute the validate list is not threadsafe as
-       * it uses the bo->index field.  We have to lock the device around it.
-       * Fortunately, the chances for contention here are probably very low.
-       */
-      pthread_mutex_lock(&device->mutex);
-      anv_cmd_buffer_prepare_execbuf(cmd_buffer);
-      pthread_mutex_unlock(&device->mutex);
-   }
 
    return VK_SUCCESS;
 }

@@ -1144,17 +1144,6 @@ enum anv_cmd_buffer_exec_mode {
    ANV_CMD_BUFFER_EXEC_MODE_COPY_AND_CHAIN,
 };
 
-struct anv_execbuf {
-   struct drm_i915_gem_execbuffer2           execbuf;
-
-   struct drm_i915_gem_exec_object2 *        objects;
-   uint32_t                                  bo_count;
-   struct anv_bo **                          bos;
-
-   /* Allocated length of the 'objects' and 'bos' arrays */
-   uint32_t                                  array_length;
-};
-
 struct anv_cmd_buffer {
    VK_LOADER_DATA                               _loader_data;
 
@@ -1189,8 +1178,6 @@ struct anv_cmd_buffer {
    struct anv_reloc_list                        surface_relocs;
    /** Last seen surface state block pool center bo offset */
    uint32_t                                     last_ss_pool_center;
-
-   struct anv_execbuf                           execbuf2;
 
    /* Serial for tracking buffer completion */
    uint32_t                                     serial;

@@ -1097,6 +1097,27 @@ VkResult anv_QueueSubmit(
    struct anv_device *device = queue->device;
    VkResult result = VK_SUCCESS;
 
+   /* We lock around QueueSubmit for two main reasons:
+    *
+    *  1) When a block pool is resized, we create a new gem handle with a
+    *     different size and, in the case of surface states, possibly a
+    *     different center offset but we re-use the same anv_bo struct when
+    *     we do so.  If this happens in the middle of setting up an execbuf,
+    *     we could end up with our list of BOs out of sync with our list of
+    *     gem handles.
+    *
+    *  2) The algorithm we use for building the list of unique buffers isn't
+    *     thread-safe.  While the client is supposed to syncronize around
+    *     QueueSubmit, this would be extremely difficult to debug if it ever
+    *     came up in the wild due to a broken app.  It's better to play it
+    *     safe and just lock around QueueSubmit.
+    *
+    * Since the only other things that ever take the device lock such as block
+    * pool resize only rarely happen, this will almost never be contended so
+    * taking a lock isn't really an expensive operation in this case.
+    */
+   pthread_mutex_lock(&device->mutex);
+
    for (uint32_t i = 0; i < submitCount; i++) {
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
          ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer,
@@ -1105,7 +1126,7 @@ VkResult anv_QueueSubmit(
 
          result = anv_cmd_buffer_execbuf(device, cmd_buffer);
          if (result != VK_SUCCESS)
-            return result;
+            goto out;
       }
    }
 
@@ -1113,10 +1134,13 @@ VkResult anv_QueueSubmit(
       struct anv_bo *fence_bo = &fence->bo;
       result = anv_device_execbuf(device, &fence->execbuf, &fence_bo);
       if (result != VK_SUCCESS)
-         return result;
+         goto out;
    }
 
-   return VK_SUCCESS;
+out:
+   pthread_mutex_unlock(&device->mutex);
+
+   return result;
 }
 
 VkResult anv_QueueWaitIdle(
