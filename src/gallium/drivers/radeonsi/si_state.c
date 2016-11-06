@@ -2804,6 +2804,11 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 	radeon_set_context_reg(cs, R_028208_PA_SC_WINDOW_SCISSOR_BR,
 			       S_028208_BR_X(state->width) | S_028208_BR_Y(state->height));
 
+	if (sctx->b.chip_class >= GFX9) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_BREAK_BATCH) | EVENT_INDEX(0));
+	}
+
 	sctx->framebuffer.dirty_cbufs = 0;
 	sctx->framebuffer.dirty_zsbuf = false;
 }
