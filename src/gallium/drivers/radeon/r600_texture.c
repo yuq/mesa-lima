@@ -281,24 +281,29 @@ static int r600_init_surface(struct r600_common_screen *rscreen,
 	return 0;
 }
 
-static void r600_texture_init_metadata(struct r600_texture *rtex,
+static void r600_texture_init_metadata(struct r600_common_screen *rscreen,
+				       struct r600_texture *rtex,
 				       struct radeon_bo_metadata *metadata)
 {
 	struct radeon_surf *surface = &rtex->surface;
 
 	memset(metadata, 0, sizeof(*metadata));
-	metadata->microtile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_1D ?
-				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata->macrotile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_2D ?
-				   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
-	metadata->pipe_config = surface->u.legacy.pipe_config;
-	metadata->bankw = surface->u.legacy.bankw;
-	metadata->bankh = surface->u.legacy.bankh;
-	metadata->tile_split = surface->u.legacy.tile_split;
-	metadata->mtilea = surface->u.legacy.mtilea;
-	metadata->num_banks = surface->u.legacy.num_banks;
-	metadata->stride = surface->u.legacy.level[0].nblk_x * surface->bpe;
-	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
+
+	if (rscreen->chip_class >= GFX9) {
+	} else {
+		metadata->u.legacy.microtile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_1D ?
+					   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+		metadata->u.legacy.macrotile = surface->u.legacy.level[0].mode >= RADEON_SURF_MODE_2D ?
+					   RADEON_LAYOUT_TILED : RADEON_LAYOUT_LINEAR;
+		metadata->u.legacy.pipe_config = surface->u.legacy.pipe_config;
+		metadata->u.legacy.bankw = surface->u.legacy.bankw;
+		metadata->u.legacy.bankh = surface->u.legacy.bankh;
+		metadata->u.legacy.tile_split = surface->u.legacy.tile_split;
+		metadata->u.legacy.mtilea = surface->u.legacy.mtilea;
+		metadata->u.legacy.num_banks = surface->u.legacy.num_banks;
+		metadata->u.legacy.stride = surface->u.legacy.level[0].nblk_x * surface->bpe;
+		metadata->u.legacy.scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
+	}
 }
 
 static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
@@ -526,7 +531,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 
 		/* Set metadata. */
 		if (!res->is_shared || update_metadata) {
-			r600_texture_init_metadata(rtex, &metadata);
+			r600_texture_init_metadata(rscreen, rtex, &metadata);
 			if (rscreen->query_opaque_metadata)
 				rscreen->query_opaque_metadata(rscreen, rtex,
 							       &metadata);
@@ -1265,22 +1270,25 @@ static struct pipe_resource *r600_texture_from_handle(struct pipe_screen *screen
 
 	rscreen->ws->buffer_get_metadata(buf, &metadata);
 
-	surface.u.legacy.pipe_config = metadata.pipe_config;
-	surface.u.legacy.bankw = metadata.bankw;
-	surface.u.legacy.bankh = metadata.bankh;
-	surface.u.legacy.tile_split = metadata.tile_split;
-	surface.u.legacy.mtilea = metadata.mtilea;
-	surface.u.legacy.num_banks = metadata.num_banks;
+	if (rscreen->chip_class >= GFX9) {
+	} else {
+		surface.u.legacy.pipe_config = metadata.u.legacy.pipe_config;
+		surface.u.legacy.bankw = metadata.u.legacy.bankw;
+		surface.u.legacy.bankh = metadata.u.legacy.bankh;
+		surface.u.legacy.tile_split = metadata.u.legacy.tile_split;
+		surface.u.legacy.mtilea = metadata.u.legacy.mtilea;
+		surface.u.legacy.num_banks = metadata.u.legacy.num_banks;
 
-	if (metadata.macrotile == RADEON_LAYOUT_TILED)
-		array_mode = RADEON_SURF_MODE_2D;
-	else if (metadata.microtile == RADEON_LAYOUT_TILED)
-		array_mode = RADEON_SURF_MODE_1D;
-	else
-		array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+		if (metadata.u.legacy.macrotile == RADEON_LAYOUT_TILED)
+			array_mode = RADEON_SURF_MODE_2D;
+		else if (metadata.u.legacy.microtile == RADEON_LAYOUT_TILED)
+			array_mode = RADEON_SURF_MODE_1D;
+		else
+			array_mode = RADEON_SURF_MODE_LINEAR_ALIGNED;
+	}
 
 	r = r600_init_surface(rscreen, &surface, templ, array_mode, stride,
-			      offset, true, metadata.scanout, false, false);
+			      offset, true, metadata.u.legacy.scanout, false, false);
 	if (r) {
 		return NULL;
 	}

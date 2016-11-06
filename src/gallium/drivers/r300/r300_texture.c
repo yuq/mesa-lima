@@ -1132,9 +1132,9 @@ r300_texture_create_object(struct r300_screen *rscreen,
                 util_format_is_depth_or_stencil(base->format) ? "depth" : "color");
     }
 
-    tiling.microtile = tex->tex.microtile;
-    tiling.macrotile = tex->tex.macrotile[0];
-    tiling.stride = tex->tex.stride_in_bytes[0];
+    tiling.u.legacy.microtile = tex->tex.microtile;
+    tiling.u.legacy.macrotile = tex->tex.macrotile[0];
+    tiling.u.legacy.stride = tex->tex.stride_in_bytes[0];
     rws->buffer_set_metadata(tex->buf, &tiling);
 
     return tex;
@@ -1195,20 +1195,20 @@ struct pipe_resource *r300_texture_from_handle(struct pipe_screen *screen,
 
     /* Enforce a microtiled zbuffer. */
     if (util_format_is_depth_or_stencil(base->format) &&
-        tiling.microtile == RADEON_LAYOUT_LINEAR) {
+        tiling.u.legacy.microtile == RADEON_LAYOUT_LINEAR) {
         switch (util_format_get_blocksize(base->format)) {
             case 4:
-                tiling.microtile = RADEON_LAYOUT_TILED;
+                tiling.u.legacy.microtile = RADEON_LAYOUT_TILED;
                 break;
 
             case 2:
-                tiling.microtile = RADEON_LAYOUT_SQUARETILED;
+                tiling.u.legacy.microtile = RADEON_LAYOUT_SQUARETILED;
                 break;
         }
     }
 
     return (struct pipe_resource*)
-           r300_texture_create_object(rscreen, base, tiling.microtile, tiling.macrotile,
+           r300_texture_create_object(rscreen, base, tiling.u.legacy.microtile, tiling.u.legacy.macrotile,
                                       stride, buffer);
 }
 

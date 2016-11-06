@@ -863,22 +863,22 @@ static void radeon_bo_get_metadata(struct pb_buffer *_buf,
                         &args,
                         sizeof(args));
 
-    md->microtile = RADEON_LAYOUT_LINEAR;
-    md->macrotile = RADEON_LAYOUT_LINEAR;
+    md->u.legacy.microtile = RADEON_LAYOUT_LINEAR;
+    md->u.legacy.macrotile = RADEON_LAYOUT_LINEAR;
     if (args.tiling_flags & RADEON_TILING_MICRO)
-        md->microtile = RADEON_LAYOUT_TILED;
+        md->u.legacy.microtile = RADEON_LAYOUT_TILED;
     else if (args.tiling_flags & RADEON_TILING_MICRO_SQUARE)
-        md->microtile = RADEON_LAYOUT_SQUARETILED;
+        md->u.legacy.microtile = RADEON_LAYOUT_SQUARETILED;
 
     if (args.tiling_flags & RADEON_TILING_MACRO)
-        md->macrotile = RADEON_LAYOUT_TILED;
+        md->u.legacy.macrotile = RADEON_LAYOUT_TILED;
 
-    md->bankw = (args.tiling_flags >> RADEON_TILING_EG_BANKW_SHIFT) & RADEON_TILING_EG_BANKW_MASK;
-    md->bankh = (args.tiling_flags >> RADEON_TILING_EG_BANKH_SHIFT) & RADEON_TILING_EG_BANKH_MASK;
-    md->tile_split = (args.tiling_flags >> RADEON_TILING_EG_TILE_SPLIT_SHIFT) & RADEON_TILING_EG_TILE_SPLIT_MASK;
-    md->mtilea = (args.tiling_flags >> RADEON_TILING_EG_MACRO_TILE_ASPECT_SHIFT) & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK;
-    md->tile_split = eg_tile_split(md->tile_split);
-    md->scanout = bo->rws->gen >= DRV_SI && !(args.tiling_flags & RADEON_TILING_R600_NO_SCANOUT);
+    md->u.legacy.bankw = (args.tiling_flags >> RADEON_TILING_EG_BANKW_SHIFT) & RADEON_TILING_EG_BANKW_MASK;
+    md->u.legacy.bankh = (args.tiling_flags >> RADEON_TILING_EG_BANKH_SHIFT) & RADEON_TILING_EG_BANKH_MASK;
+    md->u.legacy.tile_split = (args.tiling_flags >> RADEON_TILING_EG_TILE_SPLIT_SHIFT) & RADEON_TILING_EG_TILE_SPLIT_MASK;
+    md->u.legacy.mtilea = (args.tiling_flags >> RADEON_TILING_EG_MACRO_TILE_ASPECT_SHIFT) & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK;
+    md->u.legacy.tile_split = eg_tile_split(md->u.legacy.tile_split);
+    md->u.legacy.scanout = bo->rws->gen >= DRV_SI && !(args.tiling_flags & RADEON_TILING_R600_NO_SCANOUT);
 }
 
 static void radeon_bo_set_metadata(struct pb_buffer *_buf,
@@ -893,31 +893,31 @@ static void radeon_bo_set_metadata(struct pb_buffer *_buf,
 
     os_wait_until_zero(&bo->num_active_ioctls, PIPE_TIMEOUT_INFINITE);
 
-    if (md->microtile == RADEON_LAYOUT_TILED)
+    if (md->u.legacy.microtile == RADEON_LAYOUT_TILED)
         args.tiling_flags |= RADEON_TILING_MICRO;
-    else if (md->microtile == RADEON_LAYOUT_SQUARETILED)
+    else if (md->u.legacy.microtile == RADEON_LAYOUT_SQUARETILED)
         args.tiling_flags |= RADEON_TILING_MICRO_SQUARE;
 
-    if (md->macrotile == RADEON_LAYOUT_TILED)
+    if (md->u.legacy.macrotile == RADEON_LAYOUT_TILED)
         args.tiling_flags |= RADEON_TILING_MACRO;
 
-    args.tiling_flags |= (md->bankw & RADEON_TILING_EG_BANKW_MASK) <<
+    args.tiling_flags |= (md->u.legacy.bankw & RADEON_TILING_EG_BANKW_MASK) <<
         RADEON_TILING_EG_BANKW_SHIFT;
-    args.tiling_flags |= (md->bankh & RADEON_TILING_EG_BANKH_MASK) <<
+    args.tiling_flags |= (md->u.legacy.bankh & RADEON_TILING_EG_BANKH_MASK) <<
         RADEON_TILING_EG_BANKH_SHIFT;
-    if (md->tile_split) {
-	args.tiling_flags |= (eg_tile_split_rev(md->tile_split) &
+    if (md->u.legacy.tile_split) {
+	args.tiling_flags |= (eg_tile_split_rev(md->u.legacy.tile_split) &
 			      RADEON_TILING_EG_TILE_SPLIT_MASK) <<
 	    RADEON_TILING_EG_TILE_SPLIT_SHIFT;
     }
-    args.tiling_flags |= (md->mtilea & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK) <<
+    args.tiling_flags |= (md->u.legacy.mtilea & RADEON_TILING_EG_MACRO_TILE_ASPECT_MASK) <<
         RADEON_TILING_EG_MACRO_TILE_ASPECT_SHIFT;
 
-    if (bo->rws->gen >= DRV_SI && !md->scanout)
+    if (bo->rws->gen >= DRV_SI && !md->u.legacy.scanout)
         args.tiling_flags |= RADEON_TILING_R600_NO_SCANOUT;
 
     args.handle = bo->handle;
-    args.pitch = md->stride;
+    args.pitch = md->u.legacy.stride;
 
     drmCommandWriteRead(bo->rws->fd,
                         DRM_RADEON_GEM_SET_TILING,

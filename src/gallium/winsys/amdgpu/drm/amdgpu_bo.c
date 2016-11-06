@@ -611,21 +611,24 @@ static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
 
    tiling_flags = info.metadata.tiling_info;
 
-   md->microtile = RADEON_LAYOUT_LINEAR;
-   md->macrotile = RADEON_LAYOUT_LINEAR;
+   if (bo->ws->info.chip_class >= GFX9) {
+   } else {
+      md->u.legacy.microtile = RADEON_LAYOUT_LINEAR;
+      md->u.legacy.macrotile = RADEON_LAYOUT_LINEAR;
 
-   if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 4)  /* 2D_TILED_THIN1 */
-      md->macrotile = RADEON_LAYOUT_TILED;
-   else if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 2) /* 1D_TILED_THIN1 */
-      md->microtile = RADEON_LAYOUT_TILED;
+      if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 4)  /* 2D_TILED_THIN1 */
+         md->u.legacy.macrotile = RADEON_LAYOUT_TILED;
+      else if (AMDGPU_TILING_GET(tiling_flags, ARRAY_MODE) == 2) /* 1D_TILED_THIN1 */
+         md->u.legacy.microtile = RADEON_LAYOUT_TILED;
 
-   md->pipe_config = AMDGPU_TILING_GET(tiling_flags, PIPE_CONFIG);
-   md->bankw = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_WIDTH);
-   md->bankh = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_HEIGHT);
-   md->tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));
-   md->mtilea = 1 << AMDGPU_TILING_GET(tiling_flags, MACRO_TILE_ASPECT);
-   md->num_banks = 2 << AMDGPU_TILING_GET(tiling_flags, NUM_BANKS);
-   md->scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
+      md->u.legacy.pipe_config = AMDGPU_TILING_GET(tiling_flags, PIPE_CONFIG);
+      md->u.legacy.bankw = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_WIDTH);
+      md->u.legacy.bankh = 1 << AMDGPU_TILING_GET(tiling_flags, BANK_HEIGHT);
+      md->u.legacy.tile_split = eg_tile_split(AMDGPU_TILING_GET(tiling_flags, TILE_SPLIT));
+      md->u.legacy.mtilea = 1 << AMDGPU_TILING_GET(tiling_flags, MACRO_TILE_ASPECT);
+      md->u.legacy.num_banks = 2 << AMDGPU_TILING_GET(tiling_flags, NUM_BANKS);
+      md->u.legacy.scanout = AMDGPU_TILING_GET(tiling_flags, MICRO_TILE_MODE) == 0; /* DISPLAY */
+   }
 
    md->size_metadata = info.metadata.size_metadata;
    memcpy(md->metadata, info.metadata.umd_metadata, sizeof(md->metadata));
@@ -640,25 +643,28 @@ static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
 
    assert(bo->bo && "must not be called for slab entries");
 
-   if (md->macrotile == RADEON_LAYOUT_TILED)
-      tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 4); /* 2D_TILED_THIN1 */
-   else if (md->microtile == RADEON_LAYOUT_TILED)
-      tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 2); /* 1D_TILED_THIN1 */
-   else
-      tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 1); /* LINEAR_ALIGNED */
+   if (bo->ws->info.chip_class >= GFX9) {
+   } else {
+      if (md->u.legacy.macrotile == RADEON_LAYOUT_TILED)
+         tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 4); /* 2D_TILED_THIN1 */
+      else if (md->u.legacy.microtile == RADEON_LAYOUT_TILED)
+         tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 2); /* 1D_TILED_THIN1 */
+      else
+         tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 1); /* LINEAR_ALIGNED */
 
-   tiling_flags |= AMDGPU_TILING_SET(PIPE_CONFIG, md->pipe_config);
-   tiling_flags |= AMDGPU_TILING_SET(BANK_WIDTH, util_logbase2(md->bankw));
-   tiling_flags |= AMDGPU_TILING_SET(BANK_HEIGHT, util_logbase2(md->bankh));
-   if (md->tile_split)
-      tiling_flags |= AMDGPU_TILING_SET(TILE_SPLIT, eg_tile_split_rev(md->tile_split));
-   tiling_flags |= AMDGPU_TILING_SET(MACRO_TILE_ASPECT, util_logbase2(md->mtilea));
-   tiling_flags |= AMDGPU_TILING_SET(NUM_BANKS, util_logbase2(md->num_banks)-1);
+      tiling_flags |= AMDGPU_TILING_SET(PIPE_CONFIG, md->u.legacy.pipe_config);
+      tiling_flags |= AMDGPU_TILING_SET(BANK_WIDTH, util_logbase2(md->u.legacy.bankw));
+      tiling_flags |= AMDGPU_TILING_SET(BANK_HEIGHT, util_logbase2(md->u.legacy.bankh));
+      if (md->u.legacy.tile_split)
+         tiling_flags |= AMDGPU_TILING_SET(TILE_SPLIT, eg_tile_split_rev(md->u.legacy.tile_split));
+      tiling_flags |= AMDGPU_TILING_SET(MACRO_TILE_ASPECT, util_logbase2(md->u.legacy.mtilea));
+      tiling_flags |= AMDGPU_TILING_SET(NUM_BANKS, util_logbase2(md->u.legacy.num_banks)-1);
 
-   if (md->scanout)
-      tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 0); /* DISPLAY_MICRO_TILING */
-   else
-      tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 1); /* THIN_MICRO_TILING */
+      if (md->u.legacy.scanout)
+         tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 0); /* DISPLAY_MICRO_TILING */
+      else
+         tiling_flags |= AMDGPU_TILING_SET(MICRO_TILE_MODE, 1); /* THIN_MICRO_TILING */
+   }
 
    metadata.tiling_info = tiling_flags;
    metadata.size_metadata = md->size_metadata;
