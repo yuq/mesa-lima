@@ -370,6 +370,8 @@ struct r600_common_screen {
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
+	bool				has_rbplus;     /* if RB+ registers exist */
+	bool				rbplus_allowed; /* if RB+ is allowed */
 
 	struct disk_cache		*disk_shader_cache;
 

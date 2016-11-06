@@ -117,8 +117,8 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 
 	radeon_set_context_reg(cs, R_028238_CB_TARGET_MASK, cb_target_mask);
 
-	/* STONEY-specific register settings. */
-	if (sctx->b.family == CHIP_STONEY) {
+	/* RB+ register settings. */
+	if (sctx->screen->b.rbplus_allowed) {
 		unsigned spi_shader_col_format =
 			sctx->ps_shader.cso ?
 			sctx->ps_shader.current->key.part.ps.epilog.spi_shader_col_format : 0;
@@ -242,16 +242,15 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 			}
 		}
 
-		if (sctx->screen->b.debug_flags & DBG_NO_RB_PLUS) {
-			sx_ps_downconvert = 0;
-			sx_blend_opt_epsilon = 0;
-			sx_blend_opt_control = 0;
-		}
-
 		radeon_set_context_reg_seq(cs, R_028754_SX_PS_DOWNCONVERT, 3);
 		radeon_emit(cs, sx_ps_downconvert);	/* R_028754_SX_PS_DOWNCONVERT */
 		radeon_emit(cs, sx_blend_opt_epsilon);	/* R_028758_SX_BLEND_OPT_EPSILON */
 		radeon_emit(cs, sx_blend_opt_control);	/* R_02875C_SX_BLEND_OPT_CONTROL */
+	} else if (sctx->screen->b.has_rbplus) {
+		radeon_set_context_reg_seq(cs, R_028754_SX_PS_DOWNCONVERT, 3);
+		radeon_emit(cs, 0);	/* R_028754_SX_PS_DOWNCONVERT */
+		radeon_emit(cs, 0);	/* R_028758_SX_BLEND_OPT_EPSILON */
+		radeon_emit(cs, 0);	/* R_02875C_SX_BLEND_OPT_CONTROL */
 	}
 }
 
@@ -483,7 +482,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 			continue;
 		}
 
-		/* Blending optimizations for Stoney.
+		/* Blending optimizations for RB+.
 		 * These transformations don't change the behavior.
 		 *
 		 * First, get rid of DST in the blend factors:
@@ -558,7 +557,7 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 		color_control |= S_028808_MODE(V_028808_CB_DISABLE);
 	}
 
-	if (sctx->b.family == CHIP_STONEY) {
+	if (sctx->screen->b.has_rbplus) {
 		/* Disable RB+ blend optimizations for dual source blending.
 		 * Vulkan does this.
 		 */
@@ -1197,8 +1196,8 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 	if (!rs || !rs->multisample_enable)
 		db_shader_control &= C_02880C_MASK_EXPORT_ENABLE;
 
-	if (sctx->b.family == CHIP_STONEY &&
-	    sctx->screen->b.debug_flags & DBG_NO_RB_PLUS)
+	if (sctx->screen->b.has_rbplus &&
+	    !sctx->screen->b.rbplus_allowed)
 		db_shader_control |= S_02880C_DUAL_QUAD_DISABLE(1);
 
 	radeon_set_context_reg(cs, R_02880C_DB_SHADER_CONTROL,
@@ -1968,7 +1967,7 @@ static void si_choose_spi_color_formats(struct r600_surface *surf,
 	unsigned blend = 0; /* supports blending, but may not export alpha */
 	unsigned blend_alpha = 0; /* least optimal, supports blending and exports alpha */
 
-	/* Choose the SPI color formats. These are required values for Stoney/RB+.
+	/* Choose the SPI color formats. These are required values for RB+.
 	 * Other chips have multiple choices, though they are not necessarily better.
 	 */
 	switch (format) {
@@ -4212,7 +4211,7 @@ static void si_init_config(struct si_context *sctx)
 		si_pm4_set_reg(pm4, R_028C5C_VGT_OUT_DEALLOC_CNTL, 16);
 	}
 
-	if (sctx->b.family == CHIP_STONEY)
+	if (sctx->screen->b.has_rbplus)
 		si_pm4_set_reg(pm4, R_028C40_PA_SC_SHADER_CONTROL, 0);
 
 	si_pm4_set_reg(pm4, R_028080_TA_BC_BASE_ADDR, border_color_va >> 8);

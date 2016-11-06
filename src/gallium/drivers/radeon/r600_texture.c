@@ -2475,12 +2475,13 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 		    !(rctx->screen->debug_flags & DBG_NO_DCC_FB)) {
 			vi_separate_dcc_try_enable(rctx, tex);
 
-			/* Stoney can't do a CMASK-based clear, so all clears are
-			 * considered to be hypothetically slow clears, which
-			 * is weighed when determining to enable separate DCC.
+			/* RB+ isn't supported with a CMASK-based clear, so all
+			 * clears are considered to be hypothetically slow
+			 * clears, which is weighed when determining whether to
+			 * enable separate DCC.
 			 */
 			if (tex->dcc_gather_statistics &&
-			    rctx->family == CHIP_STONEY)
+			    rctx->screen->rbplus_allowed)
 				tex->num_slow_clears++;
 		}
 
@@ -2508,8 +2509,8 @@ void evergreen_do_fast_color_clear(struct r600_common_context *rctx,
 				continue;
 			}
 
-			/* Stoney/RB+ doesn't work with CMASK fast clear. */
-			if (rctx->family == CHIP_STONEY)
+			/* RB+ doesn't work with CMASK fast clear. */
+			if (rctx->screen->rbplus_allowed)
 				continue;
 
 			/* ensure CMASK is enabled */

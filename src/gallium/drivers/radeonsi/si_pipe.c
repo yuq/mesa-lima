@@ -839,6 +839,19 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
+
+	/* Some chips have RB+ registers, but don't support RB+. Those must
+	 * always disable it.
+	 */
+	if (sscreen->b.family == CHIP_STONEY ||
+	    sscreen->b.chip_class >= GFX9) {
+		sscreen->b.has_rbplus = true;
+
+		sscreen->b.rbplus_allowed =
+			!(sscreen->b.debug_flags & DBG_NO_RB_PLUS) &&
+			sscreen->b.family == CHIP_STONEY;
+	}
+
 	(void) mtx_init(&sscreen->shader_parts_mutex, mtx_plain);
 	sscreen->use_monolithic_shaders =
 		(sscreen->b.debug_flags & DBG_MONOLITHIC_SHADERS) != 0;
