@@ -78,9 +78,10 @@ struct blitter_context_priv
    void *fs_write_one_cbuf;
    void *fs_write_all_cbufs;
 
-   /* FS which outputs a color from a texture,
-      where the index is PIPE_TEXTURE_* to be sampled. */
-   void *fs_texfetch_col[3][PIPE_MAX_TEXTURE_TYPES];
+   /* FS which outputs a color from a texture.
+    * The first index indicates the texture type / destination type,
+    * the second index is the PIPE_TEXTURE_* to be sampled. */
+   void *fs_texfetch_col[5][PIPE_MAX_TEXTURE_TYPES];
 
    /* FS which outputs a depth from a texture,
       where the index is PIPE_TEXTURE_* to be sampled. */
@@ -89,7 +90,7 @@ struct blitter_context_priv
    void *fs_texfetch_stencil[PIPE_MAX_TEXTURE_TYPES];
 
    /* FS which outputs one sample from a multisample texture. */
-   void *fs_texfetch_col_msaa[3][PIPE_MAX_TEXTURE_TYPES];
+   void *fs_texfetch_col_msaa[5][PIPE_MAX_TEXTURE_TYPES];
    void *fs_texfetch_depth_msaa[PIPE_MAX_TEXTURE_TYPES];
    void *fs_texfetch_depthstencil_msaa[PIPE_MAX_TEXTURE_TYPES];
    void *fs_texfetch_stencil_msaa[PIPE_MAX_TEXTURE_TYPES];
@@ -863,7 +864,8 @@ static void blitter_set_dst_dimensions(struct blitter_context_priv *ctx,
 }
 
 static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
-                                         enum pipe_format format,
+                                         enum pipe_format src_format,
+                                         enum pipe_format dst_format,
                                          enum pipe_texture_target target,
                                          unsigned src_nr_samples,
                                          unsigned dst_nr_samples,
@@ -872,19 +874,36 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
    struct pipe_context *pipe = ctx->base.pipe;
    unsigned tgsi_tex = util_pipe_tex_to_tgsi_tex(target, src_nr_samples);
    enum tgsi_return_type stype;
+   enum tgsi_return_type dtype;
    unsigned type;
 
    assert(target < PIPE_MAX_TEXTURE_TYPES);
 
-   if (util_format_is_pure_uint(format)) {
+   if (util_format_is_pure_uint(src_format)) {
       stype = TGSI_RETURN_TYPE_UINT;
-      type = 0;
-   } else if (util_format_is_pure_sint(format)) {
+      if (util_format_is_pure_uint(dst_format)) {
+         dtype = TGSI_RETURN_TYPE_UINT;
+         type = 0;
+      } else {
+         assert(util_format_is_pure_sint(dst_format));
+         dtype = TGSI_RETURN_TYPE_SINT;
+         type = 1;
+      }
+   } else if (util_format_is_pure_sint(src_format)) {
       stype = TGSI_RETURN_TYPE_SINT;
-      type = 1;
+      if (util_format_is_pure_sint(dst_format)) {
+         dtype = TGSI_RETURN_TYPE_SINT;
+         type = 2;
+      } else {
+         assert(util_format_is_pure_uint(dst_format));
+         dtype = TGSI_RETURN_TYPE_UINT;
+         type = 3;
+      }
    } else {
-      stype = TGSI_RETURN_TYPE_FLOAT;
-      type = 2;
+      assert(!util_format_is_pure_uint(dst_format) &&
+             !util_format_is_pure_sint(dst_format));
+      dtype = stype = TGSI_RETURN_TYPE_FLOAT;
+      type = 4;
    }
 
    if (src_nr_samples > 1) {
@@ -926,7 +945,7 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
          /* Create the fragment shader on-demand. */
          if (!*shader) {
             assert(!ctx->cached_all_shaders);
-            *shader = util_make_fs_blit_msaa_color(pipe, tgsi_tex, stype);
+            *shader = util_make_fs_blit_msaa_color(pipe, tgsi_tex, stype, dtype);
          }
       }
 
@@ -939,7 +958,7 @@ static void *blitter_get_fs_texfetch_col(struct blitter_context_priv *ctx,
          assert(!ctx->cached_all_shaders);
          *shader = util_make_fragment_tex_shader(pipe, tgsi_tex,
                                                  TGSI_INTERPOLATE_LINEAR,
-                                                 stype);
+                                                 stype, dtype);
       }
 
       return *shader;
@@ -1101,11 +1120,20 @@ void util_blitter_cache_all_shaders(struct blitter_context *blitter)
          /* If samples == 1, the shaders read one texel. If samples >= 1,
           * they read one sample.
           */
-         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_FLOAT, target,
+         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_FLOAT,
+                                     PIPE_FORMAT_R32_FLOAT, target,
                                      samples, samples, 0);
-         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_UINT, target,
+         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_UINT,
+                                     PIPE_FORMAT_R32_UINT, target,
                                      samples, samples, 0);
-         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_SINT, target,
+         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_UINT,
+                                     PIPE_FORMAT_R32_SINT, target,
+                                     samples, samples, 0);
+         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_SINT,
+                                     PIPE_FORMAT_R32_SINT, target,
+                                     samples, samples, 0);
+         blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_SINT,
+                                     PIPE_FORMAT_R32_UINT, target,
                                      samples, samples, 0);
          blitter_get_fs_texfetch_depth(ctx, target, samples);
          if (ctx->has_stencil_export) {
@@ -1125,11 +1153,14 @@ void util_blitter_cache_all_shaders(struct blitter_context *blitter)
             }
 
             for (f = 0; f < 2; f++) {
-               blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_FLOAT, target,
+               blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_FLOAT,
+                                           PIPE_FORMAT_R32_FLOAT, target,
                                            j, 1, f);
-               blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_UINT, target,
+               blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_UINT,
+                                           PIPE_FORMAT_R32_UINT, target,
                                            j, 1, f);
-               blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_SINT, target,
+               blitter_get_fs_texfetch_col(ctx, PIPE_FORMAT_R32_SINT,
+                                           PIPE_FORMAT_R32_SINT, target,
                                            j, 1, f);
             }
          }
@@ -1723,7 +1754,7 @@ void util_blitter_blit_generic(struct blitter_context *blitter,
       pipe->bind_blend_state(pipe, ctx->blend[colormask][alpha_blend]);
       pipe->bind_depth_stencil_alpha_state(pipe, ctx->dsa_keep_depth_stencil);
       ctx->bind_fs_state(pipe,
-            blitter_get_fs_texfetch_col(ctx, src->format, src_target,
+            blitter_get_fs_texfetch_col(ctx, src->format, dst->format, src_target,
                                         src_samples, dst_samples, filter));
    }
 
@@ -1876,7 +1907,7 @@ void util_blitter_generate_mipmap(struct blitter_context *blitter,
       pipe->bind_blend_state(pipe, ctx->blend[PIPE_MASK_RGBA][0]);
       pipe->bind_depth_stencil_alpha_state(pipe, ctx->dsa_keep_depth_stencil);
       ctx->bind_fs_state(pipe,
-            blitter_get_fs_texfetch_col(ctx, tex->format, tex->target,
+            blitter_get_fs_texfetch_col(ctx, tex->format, tex->format, tex->target,
                                         1, 1, PIPE_TEX_FILTER_LINEAR));
    }
 
