@@ -1493,11 +1493,21 @@ struct blt_coords {
    struct blt_axis x, y;
 };
 
-static void
-do_blorp_blit(struct blorp_batch *batch,
-              struct blorp_params *params,
-              struct brw_blorp_blit_prog_key *wm_prog_key,
-              const struct blt_coords *coords)
+enum blit_shrink_status {
+   BLIT_NO_SHRINK = 0,
+   BLIT_WIDTH_SHRINK = 1,
+   BLIT_HEIGHT_SHRINK = 2,
+};
+
+/* Try to blit. If the surface parameters exceed the size allowed by hardware,
+ * then enum blit_shrink_status will be returned. If BLIT_NO_SHRINK is
+ * returned, then the blit was successful.
+ */
+static enum blit_shrink_status
+try_blorp_blit(struct blorp_batch *batch,
+               struct blorp_params *params,
+               struct brw_blorp_blit_prog_key *wm_prog_key,
+               const struct blt_coords *coords)
 {
    const struct gen_device_info *devinfo = batch->blorp->isl_dev->info;
 
@@ -1700,7 +1710,87 @@ do_blorp_blit(struct blorp_batch *batch,
 
    brw_blorp_get_blit_kernel(batch->blorp, params, wm_prog_key);
 
-   batch->blorp->exec(batch, params);
+   unsigned result = 0;
+
+   if (result == 0) {
+      batch->blorp->exec(batch, params);
+   }
+
+   return result;
+}
+
+/* Adjust split blit source coordinates for the current destination
+ * coordinates.
+ */
+static void
+adjust_split_source_coords(const struct blt_axis *orig,
+                           struct blt_axis *split_coords,
+                           double scale)
+{
+   /* When scale is greater than 0, then we are growing from the start, so
+    * src0 uses delta0, and src1 uses delta1. When scale is less than 0, the
+    * source range shrinks from the end. In that case src0 is adjusted by
+    * delta1, and src1 is adjusted by delta0.
+    */
+   double delta0 = scale * (split_coords->dst0 - orig->dst0);
+   double delta1 = scale * (split_coords->dst1 - orig->dst1);
+   split_coords->src0 = orig->src0 + (scale >= 0.0 ? delta0 : delta1);
+   split_coords->src1 = orig->src1 + (scale >= 0.0 ? delta1 : delta0);
+}
+
+static void
+do_blorp_blit(struct blorp_batch *batch,
+              struct blorp_params *params,
+              struct brw_blorp_blit_prog_key *wm_prog_key,
+              const struct blt_coords *orig)
+{
+   struct blt_coords split_coords = *orig;
+   double w = orig->x.dst1 - orig->x.dst0;
+   double h = orig->y.dst1 - orig->y.dst0;
+   double x_scale = (orig->x.src1 - orig->x.src0) / w;
+   double y_scale = (orig->y.src1 - orig->y.src0) / h;
+   if (orig->x.mirror)
+      x_scale = -x_scale;
+   if (orig->y.mirror)
+      y_scale = -y_scale;
+
+   bool x_done, y_done;
+   do {
+      enum blit_shrink_status result =
+         try_blorp_blit(batch, params, wm_prog_key, &split_coords);
+
+      if (result & BLIT_WIDTH_SHRINK) {
+         w /= 2.0;
+         assert(w >= 1.0);
+         split_coords.x.dst1 = MIN2(split_coords.x.dst0 + w, orig->x.dst1);
+         adjust_split_source_coords(&orig->x, &split_coords.x, x_scale);
+      }
+      if (result & BLIT_HEIGHT_SHRINK) {
+         h /= 2.0;
+         assert(h >= 1.0);
+         split_coords.y.dst1 = MIN2(split_coords.y.dst0 + h, orig->y.dst1);
+         adjust_split_source_coords(&orig->y, &split_coords.y, y_scale);
+      }
+
+      if (result != 0)
+         continue;
+
+      y_done = (orig->y.dst1 - split_coords.y.dst1 < 0.5);
+      x_done = y_done && (orig->x.dst1 - split_coords.x.dst1 < 0.5);
+      if (x_done) {
+         break;
+      } else if (y_done) {
+         split_coords.x.dst0 += w;
+         split_coords.x.dst1 = MIN2(split_coords.x.dst0 + w, orig->x.dst1);
+         split_coords.y.dst0 = orig->y.dst0;
+         split_coords.y.dst1 = MIN2(split_coords.y.dst0 + h, orig->y.dst1);
+         adjust_split_source_coords(&orig->x, &split_coords.x, x_scale);
+      } else {
+         split_coords.y.dst0 += h;
+         split_coords.y.dst1 = MIN2(split_coords.y.dst0 + h, orig->y.dst1);
+         adjust_split_source_coords(&orig->y, &split_coords.y, y_scale);
+      }
+   } while (true);
 }
 
 void
