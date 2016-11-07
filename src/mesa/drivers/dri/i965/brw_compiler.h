@@ -711,11 +711,6 @@ struct brw_gs_prog_data
    int invocations;
 
    /**
-    * Gen6 transform feedback enabled flag.
-    */
-   bool gen6_xfb_enabled;
-
-   /**
     * Gen6: Provoking vertex convention for odd-numbered triangles
     * in tristrips.
     */

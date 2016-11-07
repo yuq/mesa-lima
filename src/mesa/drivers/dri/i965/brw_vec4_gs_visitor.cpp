@@ -665,12 +665,6 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    } else {
       /* There are no control data bits in gen6. */
       c.control_data_bits_per_vertex = 0;
-
-      /* If it is using transform feedback, enable it */
-      if (shader->info->has_transform_feedback_varyings)
-         prog_data->gen6_xfb_enabled = true;
-      else
-         prog_data->gen6_xfb_enabled = false;
    }
    c.control_data_header_size_bits =
       shader->info->gs.vertices_out * c.control_data_bits_per_vertex;
@@ -900,6 +894,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                                shader_time_index);
    else
       gs = new gen6_gs_visitor(compiler, log_data, &c, prog_data, shader_prog,
+                               shader_prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program,
                                shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
 
