@@ -1138,13 +1138,11 @@ try_pbo_upload_common(struct gl_context *ctx,
    struct cso_context *cso = st->cso_context;
    struct pipe_context *pipe = st->pipe;
    bool success = false;
+   void *fs;
 
-   /* Create fragment shader */
-   if (!st->pbo.upload_fs) {
-      st->pbo.upload_fs = st_pbo_create_upload_fs(st);
-      if (!st->pbo.upload_fs)
-         return false;
-   }
+   fs = st_pbo_get_upload_fs(st);
+   if (!fs)
+      return false;
 
    cso_save_state(cso, (CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
                         CSO_BIT_FRAGMENT_SAMPLERS |
@@ -1217,7 +1215,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    }
 
    /* Set up the fragment shader */
-   cso_set_fragment_shader_handle(cso, st->pbo.upload_fs);
+   cso_set_fragment_shader_handle(cso, fs);
 
    success = st_pbo_draw(st, addr, surface->width, surface->height);
 

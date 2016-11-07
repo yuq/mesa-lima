@@ -515,9 +515,12 @@ create_fs(struct st_context *st, bool download, enum pipe_texture_target target)
 }
 
 void *
-st_pbo_create_upload_fs(struct st_context *st)
+st_pbo_get_upload_fs(struct st_context *st)
 {
-   return create_fs(st, false, 0);
+   if (!st->pbo.upload_fs)
+      st->pbo.upload_fs = create_fs(st, false, 0);
+
+   return st->pbo.upload_fs;
 }
 
 void *
