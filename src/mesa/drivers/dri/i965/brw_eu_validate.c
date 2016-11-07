@@ -50,7 +50,6 @@ cat(struct string *dest, const struct string src)
    do {                              \
       if (cond) {                    \
          CAT(error_msg, error(msg)); \
-         valid = false;              \
       }                              \
    } while(0)
 
@@ -178,6 +177,7 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
       if (error_msg.str && annotation) {
          annotation_insert_error(annotation, src_offset, error_msg.str);
       }
+      valid = valid && error_msg.len == 0;
       free(error_msg.str);
    }
 
