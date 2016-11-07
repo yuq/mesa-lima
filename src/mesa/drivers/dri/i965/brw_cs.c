@@ -68,7 +68,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    memset(&prog_data, 0, sizeof(prog_data));
 
-   if (prog->Comp.SharedSize > 64 * 1024) {
+   if (cp->program.info.cs.shared_size > 64 * 1024) {
       prog->data->LinkStatus = false;
       const char *error_str =
          "Compute shader used more than 64KB of shared variables";
@@ -78,7 +78,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
       ralloc_free(mem_ctx);
       return false;
    } else {
-      prog_data.base.total_shared = prog->Comp.SharedSize;
+      prog_data.base.total_shared = cp->program.info.cs.shared_size;
    }
 
    assign_cs_binding_table_offsets(devinfo, prog, &cp->program, &prog_data);
