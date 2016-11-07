@@ -1140,7 +1140,7 @@ try_pbo_upload_common(struct gl_context *ctx,
    bool success = false;
    void *fs;
 
-   fs = st_pbo_get_upload_fs(st);
+   fs = st_pbo_get_upload_fs(st, src_format, surface->format);
    if (!fs)
       return false;
 

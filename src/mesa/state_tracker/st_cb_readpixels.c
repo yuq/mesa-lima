@@ -219,7 +219,7 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
 
    /* Set up the fragment shader */
    {
-      void *fs = st_pbo_get_download_fs(st, view_target);
+      void *fs = st_pbo_get_download_fs(st, view_target, src_format, dst_format);
       if (!fs)
          goto fail;
 
