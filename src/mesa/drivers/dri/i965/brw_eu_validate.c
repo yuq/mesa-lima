@@ -53,6 +53,15 @@ cat(struct string *dest, const struct string src)
       }                              \
    } while(0)
 
+#define CHECK(func, args...)                             \
+   do {                                                  \
+      struct string __msg = func(devinfo, inst, ##args); \
+      if (__msg.str) {                                   \
+         cat(&error_msg, __msg);                         \
+         free(__msg.str);                                \
+      }                                                  \
+   } while (0)
+
 static bool
 src0_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
