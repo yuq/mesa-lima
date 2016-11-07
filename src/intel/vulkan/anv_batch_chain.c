@@ -297,8 +297,6 @@ anv_batch_bo_clone(struct anv_cmd_buffer *cmd_buffer,
    bbo->length = other_bbo->length;
    memcpy(bbo->bo.map, other_bbo->bo.map, other_bbo->length);
 
-   bbo->last_ss_pool_bo_offset = other_bbo->last_ss_pool_bo_offset;
-
    *bbo_out = bbo;
 
    return VK_SUCCESS;
@@ -318,7 +316,6 @@ anv_batch_bo_start(struct anv_batch_bo *bbo, struct anv_batch *batch,
    batch->next = batch->start = bbo->bo.map;
    batch->end = bbo->bo.map + bbo->bo.size - batch_padding;
    batch->relocs = &bbo->relocs;
-   bbo->last_ss_pool_bo_offset = 0;
    bbo->relocs.num_relocs = 0;
 }
 
@@ -705,6 +702,7 @@ anv_cmd_buffer_init_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
                                 &cmd_buffer->pool->alloc);
    if (result != VK_SUCCESS)
       goto fail_bt_blocks;
+   cmd_buffer->last_ss_pool_center = 0;
 
    anv_cmd_buffer_new_binding_table_block(cmd_buffer);
 
@@ -770,6 +768,7 @@ anv_cmd_buffer_reset_batch_bo_chain(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->bt_next = 0;
 
    cmd_buffer->surface_relocs.num_relocs = 0;
+   cmd_buffer->last_ss_pool_center = 0;
 
    /* Reset the list of seen buffers */
    cmd_buffer->seen_bbos.head = 0;
@@ -1056,15 +1055,19 @@ write_reloc(const struct anv_device *device, void *p, uint64_t v, bool flush)
 
 static void
 adjust_relocations_from_state_pool(struct anv_block_pool *pool,
-                                   struct anv_reloc_list *relocs)
+                                   struct anv_reloc_list *relocs,
+                                   uint32_t last_pool_center_bo_offset)
 {
+   assert(last_pool_center_bo_offset <= pool->center_bo_offset);
+   uint32_t delta = pool->center_bo_offset - last_pool_center_bo_offset;
+
    for (size_t i = 0; i < relocs->num_relocs; i++) {
       /* All of the relocations from this block pool to other BO's should
        * have been emitted relative to the surface block pool center.  We
        * need to add the center offset to make them relative to the
        * beginning of the actual GEM bo.
        */
-      relocs->relocs[i].offset += pool->center_bo_offset;
+      relocs->relocs[i].offset += delta;
    }
 }
 
@@ -1072,10 +1075,10 @@ static void
 adjust_relocations_to_state_pool(struct anv_block_pool *pool,
                                  struct anv_bo *from_bo,
                                  struct anv_reloc_list *relocs,
-                                 uint32_t *last_pool_center_bo_offset)
+                                 uint32_t last_pool_center_bo_offset)
 {
-   assert(*last_pool_center_bo_offset <= pool->center_bo_offset);
-   uint32_t delta = pool->center_bo_offset - *last_pool_center_bo_offset;
+   assert(last_pool_center_bo_offset <= pool->center_bo_offset);
+   uint32_t delta = pool->center_bo_offset - last_pool_center_bo_offset;
 
    /* When we initially emit relocations into a block pool, we don't
     * actually know what the final center_bo_offset will be so we just emit
@@ -1103,8 +1106,6 @@ adjust_relocations_to_state_pool(struct anv_block_pool *pool,
                      relocs->relocs[i].delta, false);
       }
    }
-
-   *last_pool_center_bo_offset = pool->center_bo_offset;
 }
 
 void
@@ -1116,7 +1117,9 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
 
    cmd_buffer->execbuf2.bo_count = 0;
 
-   adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs);
+   adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs,
+                                      cmd_buffer->last_ss_pool_center);
+
    anv_execbuf_add_bo(&cmd_buffer->execbuf2, &ss_pool->bo,
                       &cmd_buffer->surface_relocs,
                       &cmd_buffer->pool->alloc);
@@ -1127,11 +1130,17 @@ anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer)
    struct anv_batch_bo **bbo;
    u_vector_foreach(bbo, &cmd_buffer->seen_bbos) {
       adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
-                                       &(*bbo)->last_ss_pool_bo_offset);
+                                       cmd_buffer->last_ss_pool_center);
 
       anv_execbuf_add_bo(&cmd_buffer->execbuf2, &(*bbo)->bo, &(*bbo)->relocs,
                          &cmd_buffer->pool->alloc);
    }
+
+   /* Now that we've adjusted all of the surface state relocations, we need to
+    * record the surface state pool center so future executions of the command
+    * buffer can adjust correctly.
+    */
+   cmd_buffer->last_ss_pool_center = ss_pool->center_bo_offset;
 
    struct anv_batch_bo *first_batch_bo =
       list_first_entry(&cmd_buffer->batch_bos, struct anv_batch_bo, link);
