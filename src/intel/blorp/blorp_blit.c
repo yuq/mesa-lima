@@ -1484,6 +1484,12 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
    info->tile_y_sa /= 2;
 }
 
+static bool
+can_shrink_surfaces(const struct blorp_params *params)
+{
+   return false;
+}
+
 struct blt_axis {
    double src0, src1, dst0, dst1;
    bool mirror;
@@ -1738,12 +1744,88 @@ adjust_split_source_coords(const struct blt_axis *orig,
    split_coords->src1 = orig->src1 + (scale >= 0.0 ? delta1 : delta0);
 }
 
+static const struct isl_extent2d
+get_px_size_sa(const struct isl_surf *surf)
+{
+   static const struct isl_extent2d one_to_one = { .w = 1, .h = 1 };
+
+   if (surf->msaa_layout != ISL_MSAA_LAYOUT_INTERLEAVED)
+      return one_to_one;
+   else
+      return isl_get_interleaved_msaa_px_size_sa(surf->samples);
+}
+
+static void
+shrink_surface_params(const struct isl_device *dev,
+                      struct brw_blorp_surface_info *info,
+                      double *x0, double *x1, double *y0, double *y1)
+{
+   uint32_t byte_offset, x_offset_sa, y_offset_sa, size;
+   struct isl_extent2d px_size_sa;
+   int adjust;
+
+   surf_convert_to_single_slice(dev, info);
+
+   px_size_sa = get_px_size_sa(&info->surf);
+
+   /* Because this gets called after we lower compressed images, the tile
+    * offsets may be non-zero and we need to incorporate them in our
+    * calculations.
+    */
+   x_offset_sa = (uint32_t)*x0 * px_size_sa.w + info->tile_x_sa;
+   y_offset_sa = (uint32_t)*y0 * px_size_sa.h + info->tile_y_sa;
+   isl_tiling_get_intratile_offset_sa(dev, info->surf.tiling,
+                                      info->surf.format, info->surf.row_pitch,
+                                      x_offset_sa, y_offset_sa,
+                                      &byte_offset,
+                                      &info->tile_x_sa, &info->tile_y_sa);
+
+   info->addr.offset += byte_offset;
+
+   adjust = (int)info->tile_x_sa / px_size_sa.w - (int)*x0;
+   *x0 += adjust;
+   *x1 += adjust;
+   info->tile_x_sa = 0;
+
+   adjust = (int)info->tile_y_sa / px_size_sa.h - (int)*y0;
+   *y0 += adjust;
+   *y1 += adjust;
+   info->tile_y_sa = 0;
+
+   size = MIN2((uint32_t)ceil(*x1), info->surf.logical_level0_px.width);
+   info->surf.logical_level0_px.width = size;
+   info->surf.phys_level0_sa.width = size * px_size_sa.w;
+
+   size = MIN2((uint32_t)ceil(*y1), info->surf.logical_level0_px.height);
+   info->surf.logical_level0_px.height = size;
+   info->surf.phys_level0_sa.height = size * px_size_sa.h;
+}
+
+static void
+shrink_surfaces(const struct isl_device *dev,
+                struct blorp_params *params,
+                struct brw_blorp_blit_prog_key *wm_prog_key,
+                struct blt_coords *coords)
+{
+   /* Shrink source surface */
+   shrink_surface_params(dev, &params->src, &coords->x.src0, &coords->x.src1,
+                         &coords->y.src0, &coords->y.src1);
+   wm_prog_key->need_src_offset = false;
+
+   /* Shrink destination surface */
+   shrink_surface_params(dev, &params->dst, &coords->x.dst0, &coords->x.dst1,
+                         &coords->y.dst0, &coords->y.dst1);
+   wm_prog_key->need_dst_offset = false;
+}
+
 static void
 do_blorp_blit(struct blorp_batch *batch,
-              struct blorp_params *params,
+              const struct blorp_params *orig_params,
               struct brw_blorp_blit_prog_key *wm_prog_key,
               const struct blt_coords *orig)
 {
+   struct blorp_params params;
+   struct blt_coords blit_coords;
    struct blt_coords split_coords = *orig;
    double w = orig->x.dst1 - orig->x.dst0;
    double h = orig->y.dst1 - orig->y.dst0;
@@ -1755,9 +1837,15 @@ do_blorp_blit(struct blorp_batch *batch,
       y_scale = -y_scale;
 
    bool x_done, y_done;
+   bool shrink = false;
    do {
+      params = *orig_params;
+      blit_coords = split_coords;
+      if (shrink)
+         shrink_surfaces(batch->blorp->isl_dev, &params, wm_prog_key,
+                         &blit_coords);
       enum blit_shrink_status result =
-         try_blorp_blit(batch, params, wm_prog_key, &split_coords);
+         try_blorp_blit(batch, &params, wm_prog_key, &blit_coords);
 
       if (result & BLIT_WIDTH_SHRINK) {
          w /= 2.0;
@@ -1772,8 +1860,11 @@ do_blorp_blit(struct blorp_batch *batch,
          adjust_split_source_coords(&orig->y, &split_coords.y, y_scale);
       }
 
-      if (result != 0)
+      if (result != 0) {
+         assert(can_shrink_surfaces(orig_params));
+         shrink = true;
          continue;
+      }
 
       y_done = (orig->y.dst1 - split_coords.y.dst1 < 0.5);
       x_done = y_done && (orig->x.dst1 - split_coords.x.dst1 < 0.5);
