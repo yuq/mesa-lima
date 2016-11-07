@@ -41,6 +41,7 @@
 #include "program/prog_parameter.h"
 #include "util/ralloc.h"
 #include "util/string_to_uint_map.h"
+#include "util/u_atomic.h"
 
 /**********************************************************************/
 /*** Shader object functions                                        ***/
@@ -208,6 +209,33 @@ _mesa_lookup_shader_err(struct gl_context *ctx, GLuint name, const char *caller)
 /**********************************************************************/
 
 
+void
+_mesa_reference_shader_program_data(struct gl_context *ctx,
+                                    struct gl_shader_program_data **ptr,
+                                    struct gl_shader_program_data *data)
+{
+   if (*ptr == data)
+      return;
+
+   if (*ptr) {
+      struct gl_shader_program_data *oldData = *ptr;
+
+      assert(oldData->RefCount > 0);
+
+      if (p_atomic_dec_zero(&oldData->RefCount)) {
+         assert(ctx);
+         ralloc_free(oldData);
+      }
+
+      *ptr = NULL;
+   }
+
+   if (data)
+      p_atomic_inc(&data->RefCount);
+
+   *ptr = data;
+}
+
 /**
  * Set ptr to point to shProg.
  * If ptr is pointing to another object, decrement its refcount (and delete
@@ -247,6 +275,17 @@ _mesa_reference_shader_program_(struct gl_context *ctx,
       shProg->RefCount++;
       *ptr = shProg;
    }
+}
+
+static struct gl_shader_program_data *
+create_shader_program_data()
+{
+   struct gl_shader_program_data *data;
+   data = rzalloc(NULL, struct gl_shader_program_data);
+   if (data)
+      data->RefCount = 1;
+
+   return data;
 }
 
 static void
