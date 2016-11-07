@@ -155,7 +155,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
                      &prog_data, gp->program.nir, prog,
                      st_index, &program_size, &error_str);
    if (program == NULL) {
-      ralloc_strcat(&prog->data->InfoLog, error_str);
+      ralloc_strcat(&gp->program.sh.data->InfoLog, error_str);
       _mesa_problem(NULL, "Failed to compile geometry shader: %s\n", error_str);
 
       ralloc_free(mem_ctx);

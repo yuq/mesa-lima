@@ -150,8 +150,8 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    if (program == NULL) {
       if (prog) {
-         prog->data->LinkStatus = false;
-         ralloc_strcat(&prog->data->InfoLog, error_str);
+         fp->program.sh.data->LinkStatus = false;
+         ralloc_strcat(&fp->program.sh.data->InfoLog, error_str);
       }
 
       _mesa_problem(NULL, "Failed to compile fragment shader: %s\n", error_str);

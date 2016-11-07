@@ -265,9 +265,9 @@ brw_codegen_tcs_prog(struct brw_context *brw,
       brw_compile_tcs(compiler, brw, mem_ctx, key, &prog_data, nir, st_index,
                       &program_size, &error_str);
    if (program == NULL) {
-      if (shader_prog) {
-         shader_prog->data->LinkStatus = false;
-         ralloc_strcat(&shader_prog->data->InfoLog, error_str);
+      if (tep) {
+         tep->program.sh.data->LinkStatus = false;
+         ralloc_strcat(&tep->program.sh.data->InfoLog, error_str);
       }
 
       _mesa_problem(NULL, "Failed to compile tessellation control shader: "
