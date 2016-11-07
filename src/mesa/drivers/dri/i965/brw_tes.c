@@ -160,8 +160,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
    prog_data.base.base.nr_params = param_count;
    prog_data.base.base.nr_image_params = tep->program.info.num_images;
 
-   brw_nir_setup_glsl_uniforms(nir, shader_prog, &tep->program,
-                               &prog_data.base.base,
+   brw_nir_setup_glsl_uniforms(nir, &tep->program, &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_TESS_EVAL]);
 
    int st_index = -1;

@@ -174,7 +174,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    prog_data.base.nr_params = param_count;
 
    if (prog) {
-      brw_nir_setup_glsl_uniforms(fp->program.nir, prog, &fp->program,
+      brw_nir_setup_glsl_uniforms(fp->program.nir, &fp->program,
                                   &prog_data.base, true);
    } else {
       brw_nir_setup_arb_uniforms(fp->program.nir, &fp->program,

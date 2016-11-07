@@ -123,7 +123,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    prog_data.base.base.nr_params = param_count;
    prog_data.base.base.nr_image_params = gp->program.info.num_images;
 
-   brw_nir_setup_glsl_uniforms(gp->program.nir, prog, &gp->program,
+   brw_nir_setup_glsl_uniforms(gp->program.nir, &gp->program,
                                &prog_data.base.base,
                                compiler->scalar_stage[MESA_SHADER_GEOMETRY]);
 

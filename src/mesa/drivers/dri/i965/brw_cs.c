@@ -102,8 +102,8 @@ brw_codegen_cs_prog(struct brw_context *brw,
    prog_data.base.nr_params = param_count;
    prog_data.base.nr_image_params = cp->program.info.num_images;
 
-   brw_nir_setup_glsl_uniforms(cp->program.nir, prog, &cp->program,
-                               &prog_data.base, true);
+   brw_nir_setup_glsl_uniforms(cp->program.nir, &cp->program,&prog_data.base,
+                               true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = (brw->batch.last_bo &&

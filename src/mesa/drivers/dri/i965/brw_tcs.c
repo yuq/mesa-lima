@@ -218,8 +218,7 @@ brw_codegen_tcs_prog(struct brw_context *brw,
                        tcp->program.info.num_images);
       prog_data.base.base.nr_image_params = tcp->program.info.num_images;
 
-      brw_nir_setup_glsl_uniforms(nir, shader_prog, &tcp->program,
-                                  &prog_data.base.base,
+      brw_nir_setup_glsl_uniforms(nir, &tcp->program, &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_TESS_CTRL]);
    } else {
       /* Upload the Patch URB Header as the first two uniforms.

@@ -187,7 +187,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    stage_prog_data->nr_params = param_count;
 
    if (prog) {
-      brw_nir_setup_glsl_uniforms(vp->program.nir, prog, &vp->program,
+      brw_nir_setup_glsl_uniforms(vp->program.nir, &vp->program,
                                   &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_VERTEX]);
    } else {
