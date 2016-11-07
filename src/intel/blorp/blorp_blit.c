@@ -1484,15 +1484,20 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
    info->tile_y_sa /= 2;
 }
 
+struct blt_axis {
+   double src0, src1, dst0, dst1;
+   bool mirror;
+};
+
+struct blt_coords {
+   struct blt_axis x, y;
+};
+
 static void
 do_blorp_blit(struct blorp_batch *batch,
               struct blorp_params *params,
               struct brw_blorp_blit_prog_key *wm_prog_key,
-              float src_x0, float src_y0,
-              float src_x1, float src_y1,
-              float dst_x0, float dst_y0,
-              float dst_x1, float dst_y1,
-              bool mirror_x, bool mirror_y)
+              const struct blt_coords *coords)
 {
    const struct gen_device_info *devinfo = batch->blorp->isl_dev->info;
 
@@ -1519,15 +1524,19 @@ do_blorp_blit(struct blorp_batch *batch,
    /* Round floating point values to nearest integer to avoid "off by one texel"
     * kind of errors when blitting.
     */
-   params->x0 = params->wm_inputs.discard_rect.x0 = roundf(dst_x0);
-   params->y0 = params->wm_inputs.discard_rect.y0 = roundf(dst_y0);
-   params->x1 = params->wm_inputs.discard_rect.x1 = roundf(dst_x1);
-   params->y1 = params->wm_inputs.discard_rect.y1 = roundf(dst_y1);
+   params->x0 = params->wm_inputs.discard_rect.x0 = round(coords->x.dst0);
+   params->y0 = params->wm_inputs.discard_rect.y0 = round(coords->y.dst0);
+   params->x1 = params->wm_inputs.discard_rect.x1 = round(coords->x.dst1);
+   params->y1 = params->wm_inputs.discard_rect.y1 = round(coords->y.dst1);
 
    brw_blorp_setup_coord_transform(&params->wm_inputs.coord_transform[0],
-                                   src_x0, src_x1, dst_x0, dst_x1, mirror_x);
+                                   coords->x.src0, coords->x.src1,
+                                   coords->x.dst0, coords->x.dst1,
+                                   coords->x.mirror);
    brw_blorp_setup_coord_transform(&params->wm_inputs.coord_transform[1],
-                                   src_y0, src_y1, dst_y0, dst_y1, mirror_y);
+                                   coords->y.src0, coords->y.src1,
+                                   coords->y.dst0, coords->y.dst1,
+                                   coords->y.mirror);
 
    if (devinfo->gen > 6 &&
        params->dst.surf.msaa_layout == ISL_MSAA_LAYOUT_INTERLEAVED) {
@@ -1764,10 +1773,24 @@ blorp_blit(struct blorp_batch *batch,
       minify(params.src.surf.logical_level0_px.height, src_level) *
       wm_prog_key.y_scale - 1.0f;
 
-   do_blorp_blit(batch, &params, &wm_prog_key,
-                 src_x0, src_y0, src_x1, src_y1,
-                 dst_x0, dst_y0, dst_x1, dst_y1,
-                 mirror_x, mirror_y);
+   struct blt_coords coords = {
+      .x = {
+         .src0 = src_x0,
+         .src1 = src_x1,
+         .dst0 = dst_x0,
+         .dst1 = dst_x1,
+         .mirror = mirror_x
+      },
+      .y = {
+         .src0 = src_y0,
+         .src1 = src_y1,
+         .dst0 = dst_y0,
+         .dst1 = dst_y1,
+         .mirror = mirror_y
+      }
+   };
+
+   do_blorp_blit(batch, &params, &wm_prog_key, &coords);
 }
 
 static enum isl_format
@@ -2076,8 +2099,22 @@ blorp_copy(struct blorp_batch *batch,
       wm_prog_key.need_dst_offset = true;
    }
 
-   do_blorp_blit(batch, &params, &wm_prog_key,
-                 src_x, src_y, src_x + src_width, src_y + src_height,
-                 dst_x, dst_y, dst_x + dst_width, dst_y + dst_height,
-                 false, false);
+   struct blt_coords coords = {
+      .x = {
+         .src0 = src_x,
+         .src1 = src_x + src_width,
+         .dst0 = dst_x,
+         .dst1 = dst_x + dst_width,
+         .mirror = false
+      },
+      .y = {
+         .src0 = src_y,
+         .src1 = src_y + src_height,
+         .dst0 = dst_y,
+         .dst1 = dst_y + dst_height,
+         .mirror = false
+      }
+   };
+
+   do_blorp_blit(batch, &params, &wm_prog_key, &coords);
 }
