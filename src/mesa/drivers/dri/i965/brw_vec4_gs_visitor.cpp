@@ -590,7 +590,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                const struct brw_gs_prog_key *key,
                struct brw_gs_prog_data *prog_data,
                const nir_shader *src_shader,
-               struct gl_shader_program *shader_prog,
+               struct gl_program *prog,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str)
@@ -643,7 +643,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
          prog_data->control_data_format = GEN7_GS_CONTROL_DATA_FORMAT_GSCTL_SID;
 
          /* We only have to emit control bits if we are using streams */
-         if (shader_prog && shader_prog->Geom.UsesStreams)
+         if (prog && prog->info.gs.uses_streams)
             c.control_data_bits_per_vertex = 2;
          else
             c.control_data_bits_per_vertex = 0;
@@ -893,8 +893,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                                shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
    else
-      gs = new gen6_gs_visitor(compiler, log_data, &c, prog_data, shader_prog,
-                               shader_prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program,
+      gs = new gen6_gs_visitor(compiler, log_data, &c, prog_data, prog,
                                shader, mem_ctx, false /* no_spills */,
                                shader_time_index);
 

@@ -819,7 +819,7 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                const struct brw_gs_prog_key *key,
                struct brw_gs_prog_data *prog_data,
                const struct nir_shader *shader,
-               struct gl_shader_program *shader_prog,
+               struct gl_program *prog,
                int shader_time_index,
                unsigned *final_assembly_size,
                char **error_str);

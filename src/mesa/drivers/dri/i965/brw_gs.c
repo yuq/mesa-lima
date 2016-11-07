@@ -152,7 +152,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
    char *error_str;
    const unsigned *program =
       brw_compile_gs(brw->screen->compiler, brw, mem_ctx, key,
-                     &prog_data, gp->program.nir, prog,
+                     &prog_data, gp->program.nir, &gp->program,
                      st_index, &program_size, &error_str);
    if (program == NULL) {
       ralloc_strcat(&gp->program.sh.data->InfoLog, error_str);
