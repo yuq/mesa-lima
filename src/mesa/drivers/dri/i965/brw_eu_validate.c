@@ -96,7 +96,14 @@ num_sources_from_inst(const struct gen_device_info *devinfo,
    } else if (devinfo->gen < 6 &&
               brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND) {
       if (brw_inst_sfid(devinfo, inst) == BRW_SFID_MATH) {
-         math_function = brw_inst_math_msg_function(devinfo, inst);
+         /* src1 must be a descriptor (including the information to determine
+          * that the SEND is doing an extended math operation), but src0 can
+          * actually be null since it serves as the source of the implicit GRF
+          * to MRF move.
+          *
+          * If we stop using that functionality, we'll have to revisit this.
+          */
+         return 2;
       } else {
          /* Send instructions are allowed to have null sources since they use
           * the base_mrf field to specify which message register source.
