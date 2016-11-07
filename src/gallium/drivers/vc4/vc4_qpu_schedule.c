@@ -453,6 +453,7 @@ struct choose_scoreboard {
         int last_sfu_write_tick;
         int last_uniforms_reset_tick;
         uint32_t last_waddr_a, last_waddr_b;
+        bool tlb_locked;
 };
 
 static bool
@@ -589,6 +590,14 @@ choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
                         if (prev_inst->uniform != -1 && n->uniform != -1)
                                 continue;
 
+                        /* Don't merge in something that will lock the TLB.
+                         * Hopwefully what we have in inst will release some
+                         * other instructions, allowing us to delay the
+                         * TLB-locking instruction until later.
+                         */
+                        if (!scoreboard->tlb_locked && qpu_inst_is_tlb(inst))
+                                continue;
+
                         inst = qpu_merge_inst(prev_inst->inst->inst, inst);
                         if (!inst)
                                 continue;
@@ -647,6 +656,9 @@ update_scoreboard_for_chosen(struct choose_scoreboard *scoreboard,
             waddr_mul == QPU_W_UNIFORMS_ADDRESS) {
                 scoreboard->last_uniforms_reset_tick = scoreboard->tick;
         }
+
+        if (qpu_inst_is_tlb(inst))
+                scoreboard->tlb_locked = true;
 }
 
 static void
