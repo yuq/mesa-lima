@@ -928,13 +928,12 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader)
                if ((ptrdiff_t) l != (end - begin))
                   continue;
 
-               if (strncmp(var->name, begin, l) == 0) {
-                  found = true;
-                  var->data.location = j;
-                  break;
-               }
-            } else if (!strcmp(var->name, blks[i]->Uniforms[j].Name)) {
-               found = true;
+               found = strncmp(var->name, begin, l) == 0;
+            } else {
+               found = strcmp(var->name, blks[i]->Uniforms[j].Name) == 0;
+            }
+
+            if (found) {
                var->data.location = j;
                break;
             }
