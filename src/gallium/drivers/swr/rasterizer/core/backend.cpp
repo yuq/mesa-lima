@@ -533,6 +533,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                     AR_BEGIN(BEEarlyDepthTest, pDC->drawId);
                     depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                                      psContext.vZ, pDepthBuffer, vCoverageMask, pStencilBuffer, &stencilPassMask);
+					AR_EVENT(EarlyDepthStencilInfoSingleSample(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(vCoverageMask), _simd_movemask_ps(stencilPassMask)));
                     AR_END(BEEarlyDepthTest, 0);
 
                     // early-exit if no pixels passed depth or earlyZ is forced on
@@ -565,6 +566,7 @@ void BackendSingleSample(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint3
                     AR_BEGIN(BELateDepthTest, pDC->drawId);
                     depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                                         psContext.vZ, pDepthBuffer, vCoverageMask, pStencilBuffer, &stencilPassMask);
+					AR_EVENT(LateDepthStencilInfoSingleSample(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(vCoverageMask), _simd_movemask_ps(stencilPassMask)));
                     AR_END(BELateDepthTest, 0);
 
                     if (!_simd_movemask_ps(depthPassMask))
@@ -742,6 +744,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                         AR_BEGIN(BEEarlyDepthTest, pDC->drawId);
                         depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                               psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
+						AR_EVENT(EarlyDepthStencilInfoSampleRate(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(vCoverageMask), _simd_movemask_ps(stencilPassMask)));
                         AR_END(BEEarlyDepthTest, 0);
 
                         // early-exit if no samples passed depth or earlyZ is forced on.
@@ -775,6 +778,7 @@ void BackendSampleRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_
                         AR_BEGIN(BELateDepthTest, pDC->drawId);
                         depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                                               psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
+						AR_EVENT(LateDepthStencilInfoSampleRate(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(vCoverageMask), _simd_movemask_ps(stencilPassMask)));
                         AR_END(BELateDepthTest, 0);
 
                         if (!_simd_movemask_ps(depthPassMask))
@@ -923,6 +927,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             {
                 uint32_t depthPassCount = PixelRateZTest(activeLanes, psContext, BEEarlyDepthTest);
                 UPDATE_STAT_BE(DepthPassCount, depthPassCount);
+				AR_EVENT(EarlyDepthInfoPixelRate(depthPassCount, _simd_movemask_ps(activeLanes)));
             }
 
             // if we have no covered samples that passed depth at this point, go to next tile
@@ -956,6 +961,7 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
             {
                 uint32_t depthPassCount = PixelRateZTest(activeLanes, psContext, BELateDepthTest);
                 UPDATE_STAT_BE(DepthPassCount, depthPassCount);
+				AR_EVENT(LateDepthInfoPixelRate(depthPassCount, _simd_movemask_ps(activeLanes)));
             }
 
             // if we have no covered samples that passed depth at this point, skip OM and go to next tile
@@ -1134,6 +1140,7 @@ void BackendNullPS(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y,
                     AR_BEGIN(BEEarlyDepthTest, pDC->drawId);
                     simdscalar depthPassMask = DepthStencilTest(&state, work.triFlags.frontFacing, work.triFlags.viewportIndex,
                         psContext.vZ, pDepthSample, vCoverageMask, pStencilSample, &stencilPassMask);
+					AR_EVENT(EarlyDepthStencilInfoNullPS(_simd_movemask_ps(depthPassMask), _simd_movemask_ps(vCoverageMask), _simd_movemask_ps(stencilPassMask)));
                     DepthStencilWrite(&state.vp[work.triFlags.viewportIndex], &state.depthStencilState, work.triFlags.frontFacing, psContext.vZ,
                         pDepthSample, depthPassMask, vCoverageMask, pStencilSample, stencilPassMask);
                     AR_END(BEEarlyDepthTest, 0);

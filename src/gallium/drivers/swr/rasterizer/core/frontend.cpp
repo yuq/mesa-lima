@@ -853,7 +853,7 @@ static void GeometryShaderStage(
     // update GS pipeline stats
     UPDATE_STAT_FE(GsInvocations, numInputPrims * pState->instanceCount);
     UPDATE_STAT_FE(GsPrimitives, totalPrimsGenerated);
-
+	AR_EVENT(GSPrimInfo(numInputPrims, totalPrimsGenerated, numVertsPerPrim*numInputPrims));
     AR_END(FEGeometryShader, 1);
 }
 
@@ -1027,6 +1027,7 @@ static void TessellationStages(
         SWR_TS_TESSELLATED_DATA tsData = { 0 };
         AR_BEGIN(FETessellation, pDC->drawId);
         TSTessellate(tsCtx, hsContext.pCPout[p].tessFactors, tsData);
+		AR_EVENT(TessPrimCount(1));
         AR_END(FETessellation, 0);
 
         if (tsData.NumPrimitives == 0)

@@ -581,6 +581,7 @@ INLINE void CompleteDrawFE(SWR_CONTEXT* pContext, uint32_t workerId, DRAW_CONTEX
             stats.SoPrimStorageNeeded[0], stats.SoPrimStorageNeeded[1], stats.SoPrimStorageNeeded[2], stats.SoPrimStorageNeeded[3],
             stats.SoNumPrimsWritten[0], stats.SoNumPrimsWritten[1], stats.SoNumPrimsWritten[2], stats.SoNumPrimsWritten[3]
         ));
+		AR_EVENT(FrontendDrawEndEvent(pDC->drawId));
 
         pContext->pfnUpdateStatsFE(GetPrivateState(pDC), &stats);
     }
