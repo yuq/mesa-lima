@@ -495,6 +495,15 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 struct qreg u0 = qir_uniform_f(c, 0.0f);
                 struct qreg u1 = qir_uniform_f(c, 1.0f);
                 if (c->key->tex[unit].compare_mode) {
+                        /* From the GL_ARB_shadow spec:
+                         *
+                         *     "Let Dt (D subscript t) be the depth texture
+                         *      value, in the range [0, 1].  Let R be the
+                         *      interpolated texture coordinate clamped to the
+                         *      range [0, 1]."
+                         */
+                        compare = qir_SAT(c, compare);
+
                         switch (c->key->tex[unit].compare_func) {
                         case PIPE_FUNC_NEVER:
                                 depth_output = qir_uniform_f(c, 0.0f);
