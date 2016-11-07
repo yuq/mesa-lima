@@ -132,6 +132,28 @@ num_sources_from_inst(const struct gen_device_info *devinfo,
    }
 }
 
+static struct string
+sources_not_null(const struct gen_device_info *devinfo,
+                 const brw_inst *inst)
+{
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   /* Nothing to test. 3-src instructions can only have GRF sources, and
+    * there's no bit to control the file.
+    */
+   if (num_sources == 3)
+      return (struct string){};
+
+   if (num_sources >= 1)
+      ERROR_IF(src0_is_null(devinfo, inst), "src0 is null");
+
+   if (num_sources == 2)
+      ERROR_IF(src1_is_null(devinfo, inst), "src1 is null");
+
+   return error_msg;
+}
+
 static bool
 is_unsupported_inst(const struct gen_device_info *devinfo,
                     const brw_inst *inst)
@@ -152,26 +174,10 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
       struct string error_msg = { .str = NULL, .len = 0 };
       const brw_inst *inst = store + src_offset;
 
-      switch (num_sources_from_inst(devinfo, inst)) {
-      case 3:
-         /* Nothing to test. 3-src instructions can only have GRF sources, and
-          * there's no bit to control the file.
-          */
-         break;
-      case 2:
-         ERROR_IF(src1_is_null(devinfo, inst), "src1 is null");
-         /* fallthrough */
-      case 1:
-         ERROR_IF(src0_is_null(devinfo, inst), "src0 is null");
-         break;
-      case 0:
-      default:
-         break;
-      }
-
       if (is_unsupported_inst(devinfo, inst)) {
          ERROR("Instruction not supported on this Gen");
       } else {
+         CHECK(sources_not_null);
       }
 
       if (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND) {
