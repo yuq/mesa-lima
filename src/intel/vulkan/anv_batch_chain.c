@@ -522,6 +522,77 @@ anv_cmd_buffer_grow_batch(struct anv_batch *batch, void *_data)
    return VK_SUCCESS;
 }
 
+/** Allocate a binding table
+ *
+ * This function allocates a binding table.  This is a bit more complicated
+ * than one would think due to a combination of Vulkan driver design and some
+ * unfortunate hardware restrictions.
+ *
+ * The 3DSTATE_BINDING_TABLE_POINTERS_* packets only have a 16-bit field for
+ * the binding table pointer which means that all binding tables need to live
+ * in the bottom 64k of surface state base address.  The way the GL driver has
+ * classically dealt with this restriction is to emit all surface states
+ * on-the-fly into the batch and have a batch buffer smaller than 64k.  This
+ * isn't really an option in Vulkan for a couple of reasons:
+ *
+ *  1) In Vulkan, we have growing (or chaining) batches so surface states have
+ *     to live in their own buffer and we have to be able to re-emit
+ *     STATE_BASE_ADDRESS as needed which requires a full pipeline stall.  In
+ *     order to avoid emitting STATE_BASE_ADDRESS any more often than needed
+ *     (it's not that hard to hit 64k of just binding tables), we allocate
+ *     surface state objects up-front when VkImageView is created.  In order
+ *     for this to work, surface state objects need to be allocated from a
+ *     global buffer.
+ *
+ *  2) We tried to design the surface state system in such a way that it's
+ *     already ready for bindless texturing.  The way bindless texturing works
+ *     on our hardware is that you have a big pool of surface state objects
+ *     (with its own state base address) and the bindless handles are simply
+ *     offsets into that pool.  With the architecture we chose, we already
+ *     have that pool and it's exactly the same pool that we use for regular
+ *     surface states so we should already be ready for bindless.
+ *
+ *  3) For render targets, we need to be able to fill out the surface states
+ *     later in vkBeginRenderPass so that we can assign clear colors
+ *     correctly.  One way to do this would be to just create the surface
+ *     state data and then repeatedly copy it into the surface state BO every
+ *     time we have to re-emit STATE_BASE_ADDRESS.  While this works, it's
+ *     rather annoying and just being able to allocate them up-front and
+ *     re-use them for the entire render pass.
+ *
+ * While none of these are technically blockers for emitting state on the fly
+ * like we do in GL, the ability to have a single surface state pool is
+ * simplifies things greatly.  Unfortunately, it comes at a cost...
+ *
+ * Because of the 64k limitation of 3DSTATE_BINDING_TABLE_POINTERS_*, we can't
+ * place the binding tables just anywhere in surface state base address.
+ * Because 64k isn't a whole lot of space, we can't simply restrict the
+ * surface state buffer to 64k, we have to be more clever.  The solution we've
+ * chosen is to have a block pool with a maximum size of 2G that starts at
+ * zero and grows in both directions.  All surface states are allocated from
+ * the top of the pool (positive offsets) and we allocate blocks (< 64k) of
+ * binding tables from the bottom of the pool (negative offsets).  Every time
+ * we allocate a new binding table block, we set surface state base address to
+ * point to the bottom of the binding table block.  This way all of the
+ * binding tables in the block are in the bottom 64k of surface state base
+ * address.  When we fill out the binding table, we add the distance between
+ * the bottom of our binding table block and zero of the block pool to the
+ * surface state offsets so that they are correct relative to out new surface
+ * state base address at the bottom of the binding table block.
+ *
+ * \see adjust_relocations_from_block_pool()
+ * \see adjust_relocations_too_block_pool()
+ *
+ * \param[in]  entries        The number of surface state entries the binding
+ *                            table should be able to hold.
+ *
+ * \param[out] state_offset   The offset surface surface state base address
+ *                            where the surface states live.  This must be
+ *                            added to the surface state offset when it is
+ *                            written into the binding table entry.
+ *
+ * \return                    An anv_state representing the binding table
+ */
 struct anv_state
 anv_cmd_buffer_alloc_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                    uint32_t entries, uint32_t *state_offset)
