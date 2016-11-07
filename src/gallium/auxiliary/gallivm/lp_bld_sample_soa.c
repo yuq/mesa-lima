@@ -60,6 +60,7 @@
 #include "lp_bld_struct.h"
 #include "lp_bld_quad.h"
 #include "lp_bld_pack.h"
+#include "lp_bld_intr.h"
 
 
 /**
@@ -3316,7 +3317,8 @@ lp_build_sample_soa_func(struct gallivm_state *gallivm,
 
       for (i = 0; i < num_param; ++i) {
          if(LLVMGetTypeKind(arg_types[i]) == LLVMPointerTypeKind) {
-            LLVMAddAttribute(LLVMGetParam(function, i), LLVMNoAliasAttribute);
+
+            lp_add_function_attr(function, i + 1, LP_FUNC_ATTR_NOALIAS);
          }
       }
 

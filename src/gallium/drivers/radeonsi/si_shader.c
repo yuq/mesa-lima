@@ -407,7 +407,7 @@ static void declare_input_vs(
 	args[2] = buffer_index;
 	input = lp_build_intrinsic(gallivm->builder,
 		"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-		LLVMReadNoneAttribute);
+		LP_FUNC_ATTR_READNONE);
 
 	/* Break up the vec4 into individual components */
 	for (chan = 0; chan < 4; chan++) {
@@ -841,7 +841,7 @@ static LLVMValueRef build_buffer_load(struct si_shader_context *ctx,
 		         type_names[func]);
 
 		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
-		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute);
+		                          ARRAY_SIZE(args), LP_FUNC_ATTR_READONLY);
 	} else {
 		LLVMValueRef args[] = {
 			LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v16i8, ""),
@@ -872,7 +872,7 @@ static LLVMValueRef build_buffer_load(struct si_shader_context *ctx,
 		         type_names[func], arg_type);
 
 		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
-		                          ARRAY_SIZE(args), LLVMReadOnlyAttribute);
+		                          ARRAY_SIZE(args), LP_FUNC_ATTR_READONLY);
 	}
 }
 
@@ -1159,14 +1159,14 @@ static LLVMValueRef fetch_input_gs(
 	value = lp_build_intrinsic(gallivm->builder,
 				   "llvm.SI.buffer.load.dword.i32.i32",
 				   ctx->i32, args, 9,
-				   LLVMReadOnlyAttribute);
+				   LP_FUNC_ATTR_READONLY);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle + 1) * 256);
 		value2 = lp_build_intrinsic(gallivm->builder,
 					    "llvm.SI.buffer.load.dword.i32.i32",
 					    ctx->i32, args, 9,
-					    LLVMReadOnlyAttribute);
+					    LP_FUNC_ATTR_READONLY);
 		return si_llvm_emit_fetch_64bit(bld_base, type,
 						value, value2);
 	}
@@ -1279,12 +1279,12 @@ static void interp_fs_input(struct si_shader_context *ctx,
 			args[1] = attr_number;
 			front = lp_build_intrinsic(gallivm->builder, intr_name,
 						ctx->f32, args, args[3] ? 4 : 3,
-						LLVMReadNoneAttribute);
+						LP_FUNC_ATTR_READNONE);
 
 			args[1] = back_attr_number;
 			back = lp_build_intrinsic(gallivm->builder, intr_name,
 					       ctx->f32, args, args[3] ? 4 : 3,
-					       LLVMReadNoneAttribute);
+					       LP_FUNC_ATTR_READNONE);
 
 			result[chan] = LLVMBuildSelect(gallivm->builder,
 						is_face_positive,
@@ -1301,7 +1301,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 		args[3] = interp_param;
 		result[0] = lp_build_intrinsic(gallivm->builder, intr_name,
 					ctx->f32, args, args[3] ? 4 : 3,
-					LLVMReadNoneAttribute);
+					LP_FUNC_ATTR_READNONE);
 		result[1] =
 		result[2] = lp_build_const_float(gallivm, 0.0f);
 		result[3] = lp_build_const_float(gallivm, 1.0f);
@@ -1316,7 +1316,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 			args[3] = interp_param;
 			result[chan] = lp_build_intrinsic(gallivm->builder, intr_name,
 						ctx->f32, args, args[3] ? 4 : 3,
-						LLVMReadNoneAttribute);
+						LP_FUNC_ATTR_READNONE);
 		}
 	}
 }
@@ -1404,18 +1404,18 @@ static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
 
 	if (HAVE_LLVM < 0x0308) {
 		tid = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid",
-				ctx->i32,   NULL, 0, LLVMReadNoneAttribute);
+				ctx->i32,   NULL, 0, LP_FUNC_ATTR_READNONE);
 	} else {
 		LLVMValueRef tid_args[2];
 		tid_args[0] = lp_build_const_int32(gallivm, 0xffffffff);
 		tid_args[1] = lp_build_const_int32(gallivm, 0);
 		tid_args[1] = lp_build_intrinsic(gallivm->builder,
 					"llvm.amdgcn.mbcnt.lo", ctx->i32,
-					tid_args, 2, LLVMReadNoneAttribute);
+					tid_args, 2, LP_FUNC_ATTR_READNONE);
 
 		tid = lp_build_intrinsic(gallivm->builder,
 					"llvm.amdgcn.mbcnt.hi", ctx->i32,
-					tid_args, 2, LLVMReadNoneAttribute);
+					tid_args, 2, LP_FUNC_ATTR_READNONE);
 	}
 	set_range_metadata(ctx, tid, 0, 64);
 	return tid;
@@ -1432,7 +1432,7 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 	LLVMValueRef args[2] = {resource, offset};
 
 	return lp_build_intrinsic(builder, "llvm.SI.load.const", ctx->f32, args, 2,
-			       LLVMReadNoneAttribute);
+			       LP_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef load_sample_position(struct si_shader_context *radeon_bld, LLVMValueRef sample_id)
@@ -1670,7 +1670,7 @@ static void declare_system_value(
 		value = lp_build_intrinsic(gallivm->builder,
 					   "llvm.amdgcn.ps.live",
 					   ctx->i1, NULL, 0,
-					   LLVMReadNoneAttribute);
+					   LP_FUNC_ATTR_READNONE);
 		value = LLVMBuildNot(gallivm->builder, value, "");
 		value = LLVMBuildSExt(gallivm->builder, value, ctx->i32, "");
 		break;
@@ -1883,7 +1883,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			packed = lp_build_intrinsic(base->gallivm->builder,
 						    "llvm.SI.packf16",
 						    ctx->i32, pack_args, 2,
-						    LLVMReadNoneAttribute);
+						    LP_FUNC_ATTR_READNONE);
 			args[chan + 5] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed, ctx->f32, "");
@@ -2028,7 +2028,7 @@ static LLVMValueRef si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *
 
 	coverage = lp_build_intrinsic(gallivm->builder, "llvm.ctpop.i32",
 				   ctx->i32,
-				   &coverage, 1, LLVMReadNoneAttribute);
+				   &coverage, 1, LP_FUNC_ATTR_READNONE);
 
 	coverage = LLVMBuildUIToFP(gallivm->builder, coverage,
 				   ctx->f32, "");
@@ -3469,7 +3469,7 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			builder, intrinsic_name, dst_type,
 			emit_data->args, emit_data->arg_count,
-			LLVMReadOnlyAttribute);
+			LP_FUNC_ATTR_READONLY);
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
@@ -3574,7 +3574,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LLVMReadOnlyAttribute);
+				LP_FUNC_ATTR_READONLY);
 	} else {
 		get_image_intr_name("llvm.amdgcn.image.load",
 				emit_data->dst_type,		/* vdata */
@@ -3586,7 +3586,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LLVMReadOnlyAttribute);
+				LP_FUNC_ATTR_READONLY);
 	}
 }
 
@@ -4014,7 +4014,7 @@ static void resq_emit(
 		out = lp_build_intrinsic(
 			builder, "llvm.SI.getresinfo.i32", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LLVMReadNoneAttribute);
+			LP_FUNC_ATTR_READNONE);
 
 		/* Divide the number of layers by 6 to get the number of cubes. */
 		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
@@ -4248,7 +4248,7 @@ static void txq_emit(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, "llvm.SI.getresinfo.i32",
 		emit_data->dst_type, emit_data->args, emit_data->arg_count,
-		LLVMReadNoneAttribute);
+		LP_FUNC_ATTR_READNONE);
 
 	/* Divide the number of layers by 6 to get the number of cubes. */
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
@@ -4666,7 +4666,7 @@ static void si_lower_gather4_integer(struct si_shader_context *ctx,
 	emit_data->output[emit_data->chan] =
 		lp_build_intrinsic(builder, intr_name, emit_data->dst_type,
 				   emit_data->args, emit_data->arg_count,
-				   LLVMReadNoneAttribute);
+				   LP_FUNC_ATTR_READNONE);
 }
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
@@ -4690,7 +4690,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 			base->gallivm->builder,
 			"llvm.SI.vs.load.input", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LLVMReadNoneAttribute);
+			LP_FUNC_ATTR_READNONE);
 		return;
 	}
 
@@ -4767,7 +4767,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, intr_name, emit_data->dst_type,
 		emit_data->args, emit_data->arg_count,
-		LLVMReadNoneAttribute);
+		LP_FUNC_ATTR_READNONE);
 }
 
 static void si_llvm_emit_txqs(
@@ -4865,13 +4865,13 @@ static void si_llvm_emit_ddxy(
 		args[1] = val;
 		tl = lp_build_intrinsic(gallivm->builder,
 					"llvm.amdgcn.ds.bpermute", ctx->i32,
-					args, 2, LLVMReadNoneAttribute);
+					args, 2, LP_FUNC_ATTR_READNONE);
 
 		args[0] = LLVMBuildMul(gallivm->builder, trbl_tid,
 				       lp_build_const_int32(gallivm, 4), "");
 		trbl = lp_build_intrinsic(gallivm->builder,
 					  "llvm.amdgcn.ds.bpermute", ctx->i32,
-					  args, 2, LLVMReadNoneAttribute);
+					  args, 2, LP_FUNC_ATTR_READNONE);
 	} else {
 		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 
@@ -5054,7 +5054,7 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 		emit_data->output[chan] =
 			lp_build_intrinsic(gallivm->builder, intr_name,
 					   ctx->f32, args, args[3] ? 4 : 3,
-					   LLVMReadNoneAttribute);
+					   LP_FUNC_ATTR_READNONE);
 	}
 }
 
@@ -5223,10 +5223,10 @@ static void si_create_function(struct si_shader_context *ctx,
 		 * SGPR spilling significantly.
 		 */
 		if (LLVMGetTypeKind(LLVMTypeOf(P)) == LLVMPointerTypeKind) {
-			LLVMAddAttribute(P, LLVMByValAttribute);
+			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_BYVAL);
 			lp_add_attr_dereferenceable(P, UINT64_MAX);
 		} else
-			LLVMAddAttribute(P, LLVMInRegAttribute);
+			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
 	}
 
 	if (ctx->screen->b.debug_flags & DBG_UNSAFE_MATH) {
@@ -6177,7 +6177,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 						 lp_build_intrinsic(gallivm->builder,
 								 "llvm.SI.buffer.load.dword.i32.i32",
 								 ctx.i32, args, 9,
-								 LLVMReadOnlyAttribute),
+								 LP_FUNC_ATTR_READONLY),
 						 ctx.f32, "");
 		}
 	}
@@ -6878,7 +6878,7 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 	unsigned gprs;
 
 	for (unsigned i = 0; i < num_parts; ++i) {
-		LLVMAddFunctionAttr(parts[i], LLVMAlwaysInlineAttribute);
+		lp_add_function_attr(parts[i], -1, LP_FUNC_ATTR_ALWAYSINLINE);
 		LLVMSetLinkage(parts[i], LLVMPrivateLinkage);
 	}
 
@@ -6989,8 +6989,13 @@ static void si_build_wrapper_function(struct si_shader_context *ctx,
 			is_sgpr = ac_is_sgpr_param(param);
 
 			if (is_sgpr) {
+#if HAVE_LLVM < 0x0400
 				LLVMRemoveAttribute(param, LLVMByValAttribute);
-				LLVMAddAttribute(param, LLVMInRegAttribute);
+#else
+				unsigned kind_id = LLVMGetEnumAttributeKindForName("byval", 5);
+				LLVMRemoveEnumAttributeAtIndex(parts[part], param_idx + 1, kind_id);
+#endif
+				lp_add_function_attr(parts[part], param_idx + 1, LP_FUNC_ATTR_INREG);
 			}
 
 			assert(out_idx + param_size <= (is_sgpr ? num_out_sgpr : num_out));
