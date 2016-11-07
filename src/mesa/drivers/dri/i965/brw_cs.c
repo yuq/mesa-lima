@@ -69,10 +69,10 @@ brw_codegen_cs_prog(struct brw_context *brw,
    memset(&prog_data, 0, sizeof(prog_data));
 
    if (cp->program.info.cs.shared_size > 64 * 1024) {
-      prog->data->LinkStatus = false;
+      cp->program.sh.data->LinkStatus = false;
       const char *error_str =
          "Compute shader used more than 64KB of shared variables";
-      ralloc_strcat(&prog->data->InfoLog, error_str);
+      ralloc_strcat(&cp->program.sh.data->InfoLog, error_str);
       _mesa_problem(NULL, "Failed to link compute shader: %s\n", error_str);
 
       ralloc_free(mem_ctx);
@@ -122,8 +122,8 @@ brw_codegen_cs_prog(struct brw_context *brw,
                             &prog_data, cp->program.nir, st_index,
                             &program_size, &error_str);
    if (program == NULL) {
-      prog->data->LinkStatus = false;
-      ralloc_strcat(&prog->data->InfoLog, error_str);
+      cp->program.sh.data->LinkStatus = false;
+      ralloc_strcat(&cp->program.sh.data->InfoLog, error_str);
       _mesa_problem(NULL, "Failed to compile compute shader: %s\n", error_str);
 
       ralloc_free(mem_ctx);
