@@ -134,7 +134,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    brw_compute_vue_map(devinfo,
                        &prog_data.base.vue_map, outputs_written,
-                       prog->SeparateShader);
+                       gp->program.info.separate_shader);
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
