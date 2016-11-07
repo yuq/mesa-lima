@@ -1485,9 +1485,41 @@ surf_retile_w_to_y(const struct isl_device *isl_dev,
 }
 
 static bool
+can_shrink_surface(const struct brw_blorp_surface_info *surf)
+{
+   /* The current code doesn't support offsets into the aux buffers. This
+    * should be possible, but we need to make sure the offset is page
+    * aligned for both the surface and the aux buffer surface. Generally
+    * this mean using the page aligned offset for the aux buffer.
+    *
+    * Currently the cases where we must split the blit are limited to cases
+    * where we don't have a aux buffer.
+    */
+   if (surf->aux_addr.buffer != NULL)
+      return false;
+
+   /* We can't support splitting the blit for gen <= 7, because the qpitch
+    * size is calculated by the hardware based on the surface height for
+    * gen <= 7. In gen >= 8, the qpitch is controlled by the driver.
+    */
+   if (surf->surf.msaa_layout == ISL_MSAA_LAYOUT_ARRAY)
+      return false;
+
+   return true;
+}
+
+static bool
 can_shrink_surfaces(const struct blorp_params *params)
 {
-   return false;
+   return
+      can_shrink_surface(&params->src) &&
+      can_shrink_surface(&params->dst);
+}
+
+static unsigned
+get_max_surface_size()
+{
+   return 16384;
 }
 
 struct blt_axis {
@@ -1781,6 +1813,13 @@ try_blorp_blit(struct blorp_batch *batch,
    brw_blorp_get_blit_kernel(batch->blorp, params, wm_prog_key);
 
    unsigned result = 0;
+   unsigned max_surface_size = get_max_surface_size(devinfo, params);
+   if (params->src.surf.logical_level0_px.width > max_surface_size ||
+       params->dst.surf.logical_level0_px.width > max_surface_size)
+      result |= BLIT_WIDTH_SHRINK;
+   if (params->src.surf.logical_level0_px.height > max_surface_size ||
+       params->dst.surf.logical_level0_px.height > max_surface_size)
+      result |= BLIT_HEIGHT_SHRINK;
 
    if (result == 0) {
       batch->blorp->exec(batch, params);
