@@ -2488,9 +2488,15 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                 }
         }
 
-        copy_uniform_state_to_shader(shader, c);
-        shader->bo = vc4_bo_alloc_shader(vc4->screen, c->qpu_insts,
-                                         c->qpu_inst_count * sizeof(uint64_t));
+        shader->failed = c->failed;
+        if (c->failed) {
+                shader->failed = true;
+        } else {
+                copy_uniform_state_to_shader(shader, c);
+                shader->bo = vc4_bo_alloc_shader(vc4->screen, c->qpu_insts,
+                                                 c->qpu_inst_count *
+                                                 sizeof(uint64_t));
+        }
 
         /* Copy the compiler UBO range state to the compiled shader, dropping
          * out arrays that were never referenced by an indirect load.
@@ -2693,11 +2699,15 @@ vc4_update_compiled_vs(struct vc4_context *vc4, uint8_t prim_mode)
         }
 }
 
-void
+bool
 vc4_update_compiled_shaders(struct vc4_context *vc4, uint8_t prim_mode)
 {
         vc4_update_compiled_fs(vc4, prim_mode);
         vc4_update_compiled_vs(vc4, prim_mode);
+
+        return !(vc4->prog.cs->failed ||
+                 vc4->prog.vs->failed ||
+                 vc4->prog.fs->failed);
 }
 
 static uint32_t

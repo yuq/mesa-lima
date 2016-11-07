@@ -323,7 +323,8 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
         if (!ok) {
                 fprintf(stderr, "Failed to register allocate:\n");
                 qir_dump(c);
-                abort();
+                c->failed = true;
+                return NULL;
         }
 
         for (uint32_t i = 0; i < c->num_temps; i++) {
