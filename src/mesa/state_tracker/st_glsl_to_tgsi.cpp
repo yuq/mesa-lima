@@ -570,10 +570,10 @@ fail_link(struct gl_shader_program *prog, const char *fmt, ...)
 {
    va_list args;
    va_start(args, fmt);
-   ralloc_vasprintf_append(&prog->InfoLog, fmt, args);
+   ralloc_vasprintf_append(&prog->data->InfoLog, fmt, args);
    va_end(args);
 
-   prog->LinkStatus = GL_FALSE;
+   prog->data->LinkStatus = GL_FALSE;
 }
 
 static int
@@ -3880,8 +3880,8 @@ glsl_to_tgsi_visitor::get_deref_offsets(ir_dereference *ir,
 
    if (opaque) {
       assert(location != 0xffffffff);
-      *base += this->shader_program->UniformStorage[location].opaque[shader].index;
-      *index += this->shader_program->UniformStorage[location].opaque[shader].index;
+      *base += this->shader_program->data->UniformStorage[location].opaque[shader].index;
+      *index += this->shader_program->data->UniformStorage[location].opaque[shader].index;
    }
 }
 
@@ -6534,7 +6534,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
     * program constant) has to happen before creating this linkage.
     */
    _mesa_associate_uniform_storage(ctx, shader_program, prog->Parameters);
-   if (!shader_program->LinkStatus) {
+   if (!shader_program->data->LinkStatus) {
       free_glsl_to_tgsi_visitor(v);
       _mesa_reference_program(ctx, &shader->Program, NULL);
       return NULL;
@@ -6760,7 +6760,7 @@ GLboolean
 st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 {
    struct pipe_screen *pscreen = ctx->st->pipe->screen;
-   assert(prog->LinkStatus);
+   assert(prog->data->LinkStatus);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)

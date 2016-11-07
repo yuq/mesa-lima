@@ -532,7 +532,7 @@ get_handle(struct gl_context *ctx, GLenum pname)
 static bool
 check_gs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
 {
-   if (shProg->LinkStatus &&
+   if (shProg->data->LinkStatus &&
        shProg->_LinkedShaders[MESA_SHADER_GEOMETRY] != NULL) {
       return true;
    }
@@ -557,7 +557,7 @@ check_gs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
 static bool
 check_tcs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
 {
-   if (shProg->LinkStatus &&
+   if (shProg->data->LinkStatus &&
        shProg->_LinkedShaders[MESA_SHADER_TESS_CTRL] != NULL) {
       return true;
    }
@@ -583,7 +583,7 @@ check_tcs_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
 static bool
 check_tes_query(struct gl_context *ctx, const struct gl_shader_program *shProg)
 {
-   if (shProg->LinkStatus &&
+   if (shProg->data->LinkStatus &&
        shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL] != NULL) {
       return true;
    }
@@ -636,14 +636,14 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       *params = shProg->DeletePending;
       return;
    case GL_LINK_STATUS:
-      *params = shProg->LinkStatus;
+      *params = shProg->data->LinkStatus;
       return;
    case GL_VALIDATE_STATUS:
-      *params = shProg->Validated;
+      *params = shProg->data->Validated;
       return;
    case GL_INFO_LOG_LENGTH:
-      *params = (shProg->InfoLog && shProg->InfoLog[0] != '\0') ?
-         strlen(shProg->InfoLog) + 1 : 0;
+      *params = (shProg->data->InfoLog && shProg->data->InfoLog[0] != '\0') ?
+         strlen(shProg->data->InfoLog) + 1 : 0;
       return;
    case GL_ATTACHED_SHADERS:
       *params = shProg->NumShaders;
@@ -657,9 +657,9 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    case GL_ACTIVE_UNIFORMS: {
       unsigned i;
       const unsigned num_uniforms =
-         shProg->NumUniformStorage - shProg->NumHiddenUniforms;
+         shProg->data->NumUniformStorage - shProg->data->NumHiddenUniforms;
       for (*params = 0, i = 0; i < num_uniforms; i++) {
-         if (!shProg->UniformStorage[i].is_shader_storage)
+         if (!shProg->data->UniformStorage[i].is_shader_storage)
             (*params)++;
       }
       return;
@@ -668,17 +668,17 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       unsigned i;
       GLint max_len = 0;
       const unsigned num_uniforms =
-         shProg->NumUniformStorage - shProg->NumHiddenUniforms;
+         shProg->data->NumUniformStorage - shProg->data->NumHiddenUniforms;
 
       for (i = 0; i < num_uniforms; i++) {
-         if (shProg->UniformStorage[i].is_shader_storage)
+         if (shProg->data->UniformStorage[i].is_shader_storage)
             continue;
 
 	 /* Add one for the terminating NUL character for a non-array, and
 	  * 4 for the "[0]" and the NUL for an array.
 	  */
-	 const GLint len = strlen(shProg->UniformStorage[i].name) + 1 +
-	     ((shProg->UniformStorage[i].array_elements != 0) ? 3 : 0);
+         const GLint len = strlen(shProg->data->UniformStorage[i].name) + 1 +
+             ((shProg->data->UniformStorage[i].array_elements != 0) ? 3 : 0);
 
 	 if (len > max_len)
 	    max_len = len;
@@ -755,10 +755,10 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!has_ubo)
          break;
 
-      for (i = 0; i < shProg->NumUniformBlocks; i++) {
+      for (i = 0; i < shProg->data->NumUniformBlocks; i++) {
 	 /* Add one for the terminating NUL character.
 	  */
-	 const GLint len = strlen(shProg->UniformBlocks[i].Name) + 1;
+         const GLint len = strlen(shProg->data->UniformBlocks[i].Name) + 1;
 
 	 if (len > max_len)
 	    max_len = len;
@@ -771,7 +771,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!has_ubo)
          break;
 
-      *params = shProg->NumUniformBlocks;
+      *params = shProg->data->NumUniformBlocks;
       return;
    case GL_PROGRAM_BINARY_RETRIEVABLE_HINT:
       /* This enum isn't part of the OES extension for OpenGL ES 2.0.  It is
@@ -792,13 +792,13 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (!ctx->Extensions.ARB_shader_atomic_counters)
          break;
 
-      *params = shProg->NumAtomicBuffers;
+      *params = shProg->data->NumAtomicBuffers;
       return;
    case GL_COMPUTE_WORK_GROUP_SIZE: {
       int i;
       if (!_mesa_has_compute_shaders(ctx))
          break;
-      if (!shProg->LinkStatus) {
+      if (!shProg->data->LinkStatus) {
          _mesa_error(ctx, GL_INVALID_OPERATION, "glGetProgramiv(program not "
                      "linked)");
          return;
@@ -814,7 +814,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    }
    case GL_PROGRAM_SEPARABLE:
       /* If the program has not been linked, return initial value 0. */
-      *params = (shProg->LinkStatus == GL_FALSE) ? 0 : shProg->SeparateShader;
+      *params = (shProg->data->LinkStatus == GL_FALSE) ? 0 : shProg->SeparateShader;
       return;
 
    /* ARB_tessellation_shader */
@@ -927,7 +927,7 @@ get_program_info_log(struct gl_context *ctx, GLuint program, GLsizei bufSize,
       return;
    }
 
-   _mesa_copy_string(infoLog, bufSize, length, shProg->InfoLog);
+   _mesa_copy_string(infoLog, bufSize, length, shProg->data->InfoLog);
 }
 
 
@@ -1115,10 +1115,10 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
       ralloc_free(filename);
    }
 
-   if (shProg->LinkStatus == GL_FALSE &&
+   if (shProg->data->LinkStatus == GL_FALSE &&
        (ctx->_Shader->Flags & GLSL_REPORT_ERRORS)) {
       _mesa_debug(ctx, "Error linking program %u:\n%s\n",
-                  shProg->Name, shProg->InfoLog);
+                  shProg->Name, shProg->data->InfoLog);
    }
 
    /* debug code */
@@ -1127,7 +1127,7 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       printf("Link %u shaders in program %u: %s\n",
                    shProg->NumShaders, shProg->Name,
-                   shProg->LinkStatus ? "Success" : "Failed");
+                   shProg->data->LinkStatus ? "Success" : "Failed");
 
       for (i = 0; i < shProg->NumShaders; i++) {
          printf(" shader %u, stage %u\n",
@@ -1178,7 +1178,7 @@ void
 _mesa_active_program(struct gl_context *ctx, struct gl_shader_program *shProg,
 		     const char *caller)
 {
-   if ((shProg != NULL) && !shProg->LinkStatus) {
+   if ((shProg != NULL) && !shProg->data->LinkStatus) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
 		  "%s(program %u not linked)", caller, shProg->Name);
       return;
@@ -1259,7 +1259,7 @@ static GLboolean
 validate_shader_program(const struct gl_shader_program *shProg,
                         char *errMsg)
 {
-   if (!shProg->LinkStatus) {
+   if (!shProg->data->LinkStatus) {
       return GL_FALSE;
    }
 
@@ -1303,13 +1303,13 @@ validate_program(struct gl_context *ctx, GLuint program)
       return;
    }
 
-   shProg->Validated = validate_shader_program(shProg, errMsg);
-   if (!shProg->Validated) {
+   shProg->data->Validated = validate_shader_program(shProg, errMsg);
+   if (!shProg->data->Validated) {
       /* update info log */
-      if (shProg->InfoLog) {
-         ralloc_free(shProg->InfoLog);
+      if (shProg->data->InfoLog) {
+         ralloc_free(shProg->data->InfoLog);
       }
-      shProg->InfoLog = ralloc_strdup(shProg, errMsg);
+      shProg->data->InfoLog = ralloc_strdup(shProg->data, errMsg);
    }
 }
 
@@ -1815,7 +1815,7 @@ _mesa_UseProgram(GLuint program)
       if (!shProg) {
          return;
       }
-      if (!shProg->LinkStatus) {
+      if (!shProg->data->LinkStatus) {
          _mesa_error(ctx, GL_INVALID_OPERATION,
                      "glUseProgram(program %u not linked)", program);
          return;
@@ -1992,7 +1992,7 @@ _mesa_GetProgramBinary(GLuint program, GLsizei bufSize, GLsizei *length,
     *     length is zero, and a call to GetProgramBinary will generate an
     *     INVALID_OPERATION error.
     */
-   if (!shProg->LinkStatus) {
+   if (!shProg->data->LinkStatus) {
       _mesa_error(ctx, GL_INVALID_OPERATION,
                   "glGetProgramBinary(program %u not linked)",
                   shProg->Name);
@@ -2044,7 +2044,7 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
     * Since any value of binaryFormat passed "is not one of those specified as
     * allowable for [this] command, an INVALID_ENUM error is generated."
     */
-   shProg->LinkStatus = GL_FALSE;
+   shProg->data->LinkStatus = GL_FALSE;
    _mesa_error(ctx, GL_INVALID_ENUM, "glProgramBinary");
 }
 
@@ -2246,12 +2246,12 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 	    /* Possibly... */
 	    if (active-user-defined-varyings-in-linked-program) {
 	       append-error-to-info-log;
-	       shProg->LinkStatus = GL_FALSE;
+               shProg->data->LinkStatus = GL_FALSE;
 	    }
 #endif
 	 }
          if (sh->InfoLog)
-            ralloc_strcat(&shProg->InfoLog, sh->InfoLog);
+            ralloc_strcat(&shProg->data->InfoLog, sh->InfoLog);
       }
 
       delete_shader(ctx, shader);

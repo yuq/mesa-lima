@@ -153,8 +153,9 @@ _mesa_meta_link_program_with_debug(struct gl_context *ctx,
 {
    _mesa_link_program(ctx, sh_prog);
 
-   if (!sh_prog->LinkStatus) {
-      _mesa_problem(ctx, "meta program link failed:\n%s", sh_prog->InfoLog);
+   if (!sh_prog->data->LinkStatus) {
+      _mesa_problem(ctx, "meta program link failed:\n%s",
+                    sh_prog->data->InfoLog);
    }
 }
 

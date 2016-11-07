@@ -132,7 +132,7 @@ update_program(struct gl_context *ctx)
     * come up, or matter.
     */
 
-   if (fsProg && fsProg->LinkStatus
+   if (fsProg && fsProg->data->LinkStatus
        && fsProg->_LinkedShaders[MESA_SHADER_FRAGMENT]) {
       /* Use GLSL fragment shader */
       _mesa_reference_shader_program(ctx,
@@ -183,7 +183,7 @@ update_program(struct gl_context *ctx)
 			      NULL);
    }
 
-   if (gsProg && gsProg->LinkStatus
+   if (gsProg && gsProg->data->LinkStatus
        && gsProg->_LinkedShaders[MESA_SHADER_GEOMETRY]) {
       /* Use GLSL geometry shader */
       _mesa_reference_program(ctx, &ctx->GeometryProgram._Current,
@@ -193,7 +193,7 @@ update_program(struct gl_context *ctx)
       _mesa_reference_program(ctx, &ctx->GeometryProgram._Current, NULL);
    }
 
-   if (tesProg && tesProg->LinkStatus
+   if (tesProg && tesProg->data->LinkStatus
        && tesProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]) {
       /* Use GLSL tessellation evaluation shader */
       _mesa_reference_program(ctx, &ctx->TessEvalProgram._Current,
@@ -204,7 +204,7 @@ update_program(struct gl_context *ctx)
       _mesa_reference_program(ctx, &ctx->TessEvalProgram._Current, NULL);
    }
 
-   if (tcsProg && tcsProg->LinkStatus
+   if (tcsProg && tcsProg->data->LinkStatus
        && tcsProg->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
       /* Use GLSL tessellation control shader */
       _mesa_reference_program(ctx, &ctx->TessCtrlProgram._Current,
@@ -219,7 +219,7 @@ update_program(struct gl_context *ctx)
     * _mesa_get_fixed_func_vertex_program() needs to know active
     * fragprog inputs.
     */
-   if (vsProg && vsProg->LinkStatus
+   if (vsProg && vsProg->data->LinkStatus
        && vsProg->_LinkedShaders[MESA_SHADER_VERTEX]) {
       /* Use GLSL vertex shader */
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current,
@@ -242,7 +242,7 @@ update_program(struct gl_context *ctx)
       _mesa_reference_program(ctx, &ctx->VertexProgram._Current, NULL);
    }
 
-   if (csProg && csProg->LinkStatus
+   if (csProg && csProg->data->LinkStatus
        && csProg->_LinkedShaders[MESA_SHADER_COMPUTE]) {
       /* Use GLSL compute shader */
       _mesa_reference_program(ctx, &ctx->ComputeProgram._Current,

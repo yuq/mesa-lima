@@ -198,8 +198,8 @@ brw_codegen_vs_prog(struct brw_context *brw,
                             st_index, &program_size, &error_str);
    if (program == NULL) {
       if (prog) {
-         prog->LinkStatus = false;
-         ralloc_strcat(&prog->InfoLog, error_str);
+         prog->data->LinkStatus = false;
+         ralloc_strcat(&prog->data->InfoLog, error_str);
       }
 
       _mesa_problem(NULL, "Failed to compile vertex shader: %s\n", error_str);

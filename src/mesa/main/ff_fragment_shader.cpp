@@ -301,7 +301,7 @@ static GLbitfield get_fp_input_mask( struct gl_context *ctx )
    /* _NEW_PROGRAM */
    const GLboolean vertexShader =
       (ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX] &&
-       ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]->LinkStatus &&
+       ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]->data->LinkStatus &&
        ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX]->_LinkedShaders[MESA_SHADER_VERTEX]);
    const GLboolean vertexProgram = ctx->VertexProgram._Enabled;
    GLbitfield fp_inputs = 0x0;
@@ -1266,9 +1266,9 @@ create_new_program(struct gl_context *ctx, struct state_key *key)
 
    _mesa_glsl_link_shader(ctx, p.shader_program);
 
-   if (!p.shader_program->LinkStatus)
+   if (!p.shader_program->data->LinkStatus)
       _mesa_problem(ctx, "Failed to link fixed function fragment shader: %s\n",
-		    p.shader_program->InfoLog);
+                    p.shader_program->data->InfoLog);
 
    ralloc_free(p.mem_ctx);
    return p.shader_program;

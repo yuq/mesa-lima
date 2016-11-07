@@ -141,26 +141,26 @@ _mesa_clear_shader_program_data(struct gl_context *ctx,
       }
    }
 
-   shProg->NumUniformStorage = 0;
-   shProg->UniformStorage = NULL;
+   shProg->data->NumUniformStorage = 0;
+   shProg->data->UniformStorage = NULL;
    shProg->NumUniformRemapTable = 0;
    shProg->UniformRemapTable = NULL;
    shProg->UniformHash = NULL;
 
-   ralloc_free(shProg->InfoLog);
-   shProg->InfoLog = ralloc_strdup(shProg, "");
+   ralloc_free(shProg->data->InfoLog);
+   shProg->data->InfoLog = ralloc_strdup(shProg->data, "");
 
-   ralloc_free(shProg->UniformBlocks);
-   shProg->UniformBlocks = NULL;
-   shProg->NumUniformBlocks = 0;
+   ralloc_free(shProg->data->UniformBlocks);
+   shProg->data->UniformBlocks = NULL;
+   shProg->data->NumUniformBlocks = 0;
 
-   ralloc_free(shProg->ShaderStorageBlocks);
-   shProg->ShaderStorageBlocks = NULL;
-   shProg->NumShaderStorageBlocks = 0;
+   ralloc_free(shProg->data->ShaderStorageBlocks);
+   shProg->data->ShaderStorageBlocks = NULL;
+   shProg->data->NumShaderStorageBlocks = 0;
 
-   ralloc_free(shProg->AtomicBuffers);
-   shProg->AtomicBuffers = NULL;
-   shProg->NumAtomicBuffers = 0;
+   ralloc_free(shProg->data->AtomicBuffers);
+   shProg->data->AtomicBuffers = NULL;
+   shProg->data->NumAtomicBuffers = 0;
 }
 
 void initialize_context_to_defaults(struct gl_context *ctx, gl_api api)

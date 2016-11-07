@@ -415,12 +415,12 @@ linker_error(gl_shader_program *prog, const char *fmt, ...)
 {
    va_list ap;
 
-   ralloc_strcat(&prog->InfoLog, "error: ");
+   ralloc_strcat(&prog->data->InfoLog, "error: ");
    va_start(ap, fmt);
-   ralloc_vasprintf_append(&prog->InfoLog, fmt, ap);
+   ralloc_vasprintf_append(&prog->data->InfoLog, fmt, ap);
    va_end(ap);
 
-   prog->LinkStatus = false;
+   prog->data->LinkStatus = false;
 }
 
 
@@ -429,9 +429,9 @@ linker_warning(gl_shader_program *prog, const char *fmt, ...)
 {
    va_list ap;
 
-   ralloc_strcat(&prog->InfoLog, "warning: ");
+   ralloc_strcat(&prog->data->InfoLog, "warning: ");
    va_start(ap, fmt);
-   ralloc_vasprintf_append(&prog->InfoLog, fmt, ap);
+   ralloc_vasprintf_append(&prog->data->InfoLog, fmt, ap);
    va_end(ap);
 
 }
@@ -1128,8 +1128,8 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
 {
    int *InterfaceBlockStageIndex[MESA_SHADER_STAGES];
    struct gl_uniform_block *blks = NULL;
-   unsigned *num_blks = validate_ssbo ? &prog->NumShaderStorageBlocks :
-      &prog->NumUniformBlocks;
+   unsigned *num_blks = validate_ssbo ? &prog->data->NumShaderStorageBlocks :
+      &prog->data->NumUniformBlocks;
 
    unsigned max_num_buffer_blocks = 0;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
@@ -1206,9 +1206,9 @@ interstage_cross_validate_uniform_blocks(struct gl_shader_program *prog,
    }
 
    if (validate_ssbo)
-      prog->ShaderStorageBlocks = blks;
+      prog->data->ShaderStorageBlocks = blks;
    else
-      prog->UniformBlocks = blks;
+      prog->data->UniformBlocks = blks;
 
    return true;
 }
@@ -2116,14 +2116,14 @@ link_intrastage_shaders(void *mem_ctx,
       cross_validate_globals(prog, shader_list[i]->ir, &variables, false);
    }
 
-   if (!prog->LinkStatus)
+   if (!prog->data->LinkStatus)
       return NULL;
 
    /* Check that interface blocks defined in multiple shaders are consistent.
     */
    validate_intrastage_interface_blocks(prog, (const gl_shader **)shader_list,
                                         num_shaders);
-   if (!prog->LinkStatus)
+   if (!prog->data->LinkStatus)
       return NULL;
 
    /* Check that there is only a single definition of each function signature
@@ -2195,7 +2195,7 @@ link_intrastage_shaders(void *mem_ctx,
                              _mesa_shader_stage_to_program(shader_list[0]->Stage),
                              prog->Name);
    if (!prog) {
-      prog->LinkStatus = false;
+      prog->data->LinkStatus = false;
       _mesa_delete_linked_shader(ctx, linked);
       return NULL;
    }
@@ -2256,7 +2256,7 @@ link_intrastage_shaders(void *mem_ctx,
    link_uniform_blocks(mem_ctx, ctx, prog, linked, &ubo_blocks,
                        &num_ubo_blocks, &ssbo_blocks, &num_ssbo_blocks);
 
-   if (!prog->LinkStatus) {
+   if (!prog->data->LinkStatus) {
       _mesa_delete_linked_shader(ctx, linked);
       return NULL;
    }
@@ -3110,22 +3110,22 @@ check_resources(struct gl_context *ctx, struct gl_shader_program *prog)
                    ctx->Const.MaxCombinedShaderStorageBlocks);
    }
 
-   for (unsigned i = 0; i < prog->NumUniformBlocks; i++) {
-      if (prog->UniformBlocks[i].UniformBufferSize >
+   for (unsigned i = 0; i < prog->data->NumUniformBlocks; i++) {
+      if (prog->data->UniformBlocks[i].UniformBufferSize >
           ctx->Const.MaxUniformBlockSize) {
          linker_error(prog, "Uniform block %s too big (%d/%d)\n",
-                      prog->UniformBlocks[i].Name,
-                      prog->UniformBlocks[i].UniformBufferSize,
+                      prog->data->UniformBlocks[i].Name,
+                      prog->data->UniformBlocks[i].UniformBufferSize,
                       ctx->Const.MaxUniformBlockSize);
       }
    }
 
-   for (unsigned i = 0; i < prog->NumShaderStorageBlocks; i++) {
-      if (prog->ShaderStorageBlocks[i].UniformBufferSize >
+   for (unsigned i = 0; i < prog->data->NumShaderStorageBlocks; i++) {
+      if (prog->data->ShaderStorageBlocks[i].UniformBufferSize >
           ctx->Const.MaxShaderStorageBlockSize) {
          linker_error(prog, "Shader storage block %s too big (%d/%d)\n",
-                      prog->ShaderStorageBlocks[i].Name,
-                      prog->ShaderStorageBlocks[i].UniformBufferSize,
+                      prog->data->ShaderStorageBlocks[i].Name,
+                      prog->data->ShaderStorageBlocks[i].UniformBufferSize,
                       ctx->Const.MaxShaderStorageBlockSize);
       }
    }
@@ -3441,8 +3441,8 @@ should_add_buffer_variable(struct gl_shader_program *shProg,
    if (type != GL_BUFFER_VARIABLE)
       return true;
 
-   for (unsigned i = 0; i < shProg->NumShaderStorageBlocks; i++) {
-      const char *block_name = shProg->ShaderStorageBlocks[i].Name;
+   for (unsigned i = 0; i < shProg->data->NumShaderStorageBlocks; i++) {
+      const char *block_name = shProg->data->ShaderStorageBlocks[i].Name;
       block_name_len = strlen(block_name);
 
       const char *block_square_bracket = strchr(block_name, '[');
@@ -4097,8 +4097,8 @@ calculate_array_size_and_stride(struct gl_shader_program *shProg,
    char *var_name = get_top_level_name(uni->name);
    char *interface_name =
       get_top_level_name(uni->is_shader_storage ?
-                         shProg->ShaderStorageBlocks[block_index].Name :
-                         shProg->UniformBlocks[block_index].Name);
+                         shProg->data->ShaderStorageBlocks[block_index].Name :
+                         shProg->data->UniformBlocks[block_index].Name);
 
    if (strcmp(var_name, interface_name) == 0) {
       /* Deal with instanced array of SSBOs */
@@ -4235,73 +4235,75 @@ build_program_resource_list(struct gl_context *ctx,
    }
 
    /* Add uniforms from uniform storage. */
-   for (unsigned i = 0; i < shProg->NumUniformStorage; i++) {
+   for (unsigned i = 0; i < shProg->data->NumUniformStorage; i++) {
       /* Do not add uniforms internally used by Mesa. */
-      if (shProg->UniformStorage[i].hidden)
+      if (shProg->data->UniformStorage[i].hidden)
          continue;
 
       uint8_t stageref =
-         build_stageref(shProg, shProg->UniformStorage[i].name,
+         build_stageref(shProg, shProg->data->UniformStorage[i].name,
                         ir_var_uniform);
 
       /* Add stagereferences for uniforms in a uniform block. */
-      bool is_shader_storage =  shProg->UniformStorage[i].is_shader_storage;
-      int block_index = shProg->UniformStorage[i].block_index;
+      bool is_shader_storage =
+        shProg->data->UniformStorage[i].is_shader_storage;
+      int block_index = shProg->data->UniformStorage[i].block_index;
       if (block_index != -1) {
          stageref |= is_shader_storage ?
-            shProg->ShaderStorageBlocks[block_index].stageref :
-            shProg->UniformBlocks[block_index].stageref;
+            shProg->data->ShaderStorageBlocks[block_index].stageref :
+            shProg->data->UniformBlocks[block_index].stageref;
       }
 
       GLenum type = is_shader_storage ? GL_BUFFER_VARIABLE : GL_UNIFORM;
       if (!should_add_buffer_variable(shProg, type,
-                                      shProg->UniformStorage[i].name))
+                                      shProg->data->UniformStorage[i].name))
          continue;
 
       if (is_shader_storage) {
-         calculate_array_size_and_stride(shProg, &shProg->UniformStorage[i]);
+         calculate_array_size_and_stride(shProg,
+                                         &shProg->data->UniformStorage[i]);
       }
 
       if (!add_program_resource(shProg, resource_set, type,
-                                &shProg->UniformStorage[i], stageref))
+                                &shProg->data->UniformStorage[i], stageref))
          return;
    }
 
    /* Add program uniform blocks. */
-   for (unsigned i = 0; i < shProg->NumUniformBlocks; i++) {
+   for (unsigned i = 0; i < shProg->data->NumUniformBlocks; i++) {
       if (!add_program_resource(shProg, resource_set, GL_UNIFORM_BLOCK,
-          &shProg->UniformBlocks[i], 0))
+          &shProg->data->UniformBlocks[i], 0))
          return;
    }
 
    /* Add program shader storage blocks. */
-   for (unsigned i = 0; i < shProg->NumShaderStorageBlocks; i++) {
+   for (unsigned i = 0; i < shProg->data->NumShaderStorageBlocks; i++) {
       if (!add_program_resource(shProg, resource_set, GL_SHADER_STORAGE_BLOCK,
-          &shProg->ShaderStorageBlocks[i], 0))
+          &shProg->data->ShaderStorageBlocks[i], 0))
          return;
    }
 
    /* Add atomic counter buffers. */
-   for (unsigned i = 0; i < shProg->NumAtomicBuffers; i++) {
+   for (unsigned i = 0; i < shProg->data->NumAtomicBuffers; i++) {
       if (!add_program_resource(shProg, resource_set, GL_ATOMIC_COUNTER_BUFFER,
-                                &shProg->AtomicBuffers[i], 0))
+                                &shProg->data->AtomicBuffers[i], 0))
          return;
    }
 
-   for (unsigned i = 0; i < shProg->NumUniformStorage; i++) {
+   for (unsigned i = 0; i < shProg->data->NumUniformStorage; i++) {
       GLenum type;
-      if (!shProg->UniformStorage[i].hidden)
+      if (!shProg->data->UniformStorage[i].hidden)
          continue;
 
       for (int j = MESA_SHADER_VERTEX; j < MESA_SHADER_STAGES; j++) {
-         if (!shProg->UniformStorage[i].opaque[j].active ||
-             !shProg->UniformStorage[i].type->is_subroutine())
+         if (!shProg->data->UniformStorage[i].opaque[j].active ||
+             !shProg->data->UniformStorage[i].type->is_subroutine())
             continue;
 
          type = _mesa_shader_stage_to_subroutine_uniform((gl_shader_stage)j);
          /* add shader subroutines */
          if (!add_program_resource(shProg, resource_set,
-                                   type, &shProg->UniformStorage[i], 0))
+                                   type, &shProg->data->UniformStorage[i], 0))
             return;
       }
    }
@@ -4686,7 +4688,7 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
    check_image_resources(ctx, prog);
    link_check_atomic_counter_resources(ctx, prog);
 
-   if (!prog->LinkStatus)
+   if (!prog->data->LinkStatus)
       return false;
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
@@ -4714,8 +4716,8 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
 void
 link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 {
-   prog->LinkStatus = true; /* All error paths will set this to false */
-   prog->Validated = false;
+   prog->data->LinkStatus = true; /* All error paths will set this to false */
+   prog->data->Validated = false;
    prog->_Used = false;
 
    /* Section 7.3 (Program Objects) of the OpenGL 4.5 Core Profile spec says:
@@ -4848,7 +4850,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
             link_intrastage_shaders(mem_ctx, ctx, prog, shader_list[stage],
                                     num_shaders[stage], false);
 
-         if (!prog->LinkStatus) {
+         if (!prog->data->LinkStatus) {
             if (sh)
                _mesa_delete_linked_shader(ctx, sh);
             goto done;
@@ -4871,7 +4873,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
             validate_fragment_shader_executable(prog, sh);
             break;
          }
-         if (!prog->LinkStatus) {
+         if (!prog->data->LinkStatus) {
             if (sh)
                _mesa_delete_linked_shader(ctx, sh);
             goto done;
@@ -4900,7 +4902,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
     * varyings.
     */
    cross_validate_uniforms(prog);
-   if (!prog->LinkStatus)
+   if (!prog->data->LinkStatus)
       goto done;
 
    unsigned first, last, prev;
@@ -4920,7 +4922,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    num_explicit_uniform_locs = check_explicit_uniform_locations(ctx, prog);
    link_assign_subroutine_types(prog);
 
-   if (!prog->LinkStatus)
+   if (!prog->data->LinkStatus)
       goto done;
 
    resize_tes_inputs(ctx, prog);
@@ -4935,13 +4937,13 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
       validate_interstage_inout_blocks(prog, prog->_LinkedShaders[prev],
                                        prog->_LinkedShaders[i]);
-      if (!prog->LinkStatus)
+      if (!prog->data->LinkStatus)
          goto done;
 
       cross_validate_outputs_to_inputs(prog,
                                        prog->_LinkedShaders[prev],
                                        prog->_LinkedShaders[i]);
-      if (!prog->LinkStatus)
+      if (!prog->data->LinkStatus)
          goto done;
 
       prev = i;
@@ -4949,7 +4951,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    /* Cross-validate uniform blocks between shader stages */
    validate_interstage_uniform_blocks(prog, prog->_LinkedShaders);
-   if (!prog->LinkStatus)
+   if (!prog->data->LinkStatus)
       goto done;
 
    for (unsigned int i = 0; i < MESA_SHADER_STAGES; i++) {
@@ -4990,7 +4992,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          continue;
 
       detect_recursion_linked(prog, prog->_LinkedShaders[i]->ir);
-      if (!prog->LinkStatus)
+      if (!prog->data->LinkStatus)
          goto done;
 
       if (ctx->Const.ShaderCompilerOptions[i].LowerCombinedClipCullDistance) {

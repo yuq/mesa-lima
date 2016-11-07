@@ -81,8 +81,9 @@ brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
     * with our name, or the prefix of a component that starts with our name.
     */
    unsigned uniform_index = var->data.driver_location / 4;
-   for (unsigned u = 0; u < shader_prog->NumUniformStorage; u++) {
-      struct gl_uniform_storage *storage = &shader_prog->UniformStorage[u];
+   for (unsigned u = 0; u < shader_prog->data->NumUniformStorage; u++) {
+      struct gl_uniform_storage *storage =
+         &shader_prog->data->UniformStorage[u];
 
       if (storage->builtin)
          continue;

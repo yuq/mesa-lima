@@ -2781,10 +2781,8 @@ struct gl_shader_program
       bool LocalSizeVariable;
    } Comp;
 
-   /* post-link info: */
-   unsigned NumUniformStorage;
-   unsigned NumHiddenUniforms;
-   struct gl_uniform_storage *UniformStorage;
+   /** Data shared by gl_program and gl_shader_program */
+   struct gl_shader_program_data *data;
 
    /**
     * Mapping from GL uniform locations returned by \c glUniformLocation to
@@ -2808,12 +2806,6 @@ struct gl_shader_program
    unsigned LastClipDistanceArraySize;
    unsigned LastCullDistanceArraySize;
 
-   unsigned NumUniformBlocks;
-   struct gl_uniform_block *UniformBlocks;
-
-   unsigned NumShaderStorageBlocks;
-   struct gl_uniform_block *ShaderStorageBlocks;
-
    /**
     * Map of active uniform names to locations
     *
@@ -2824,14 +2816,8 @@ struct gl_shader_program
     */
    struct string_to_uint_map *UniformHash;
 
-   struct gl_active_atomic_buffer *AtomicBuffers;
-   unsigned NumAtomicBuffers;
-
-   GLboolean LinkStatus;   /**< GL_LINK_STATUS */
-   GLboolean Validated;
    GLboolean _Used;        /**< Ever used for drawing? */
    GLboolean SamplersValidated; /**< Samplers validated against texture units? */
-   GLchar *InfoLog;
 
    unsigned Version;       /**< GLSL version used for linking */
    bool IsES;              /**< True if this program uses GLSL ES */

@@ -439,7 +439,9 @@ standalone_compile_shader(const struct standalone_options *_options,
 
    whole_program = rzalloc (NULL, struct gl_shader_program);
    assert(whole_program != NULL);
-   whole_program->InfoLog = ralloc_strdup(whole_program, "");
+   whole_program->data = rzalloc(whole_program, struct gl_shader_program_data);
+   assert(whole_program->data != NULL);
+   whole_program->data->InfoLog = ralloc_strdup(whole_program->data, "");
 
    /* Created just to avoid segmentation faults */
    whole_program->AttributeBindings = new string_to_uint_map;
@@ -510,7 +512,7 @@ standalone_compile_shader(const struct standalone_options *_options,
       } else {
          const gl_shader_stage stage = whole_program->Shaders[0]->Stage;
 
-         whole_program->LinkStatus = GL_TRUE;
+         whole_program->data->LinkStatus = GL_TRUE;
          whole_program->_LinkedShaders[stage] =
             link_intrastage_shaders(whole_program /* mem_ctx */,
                                     ctx,
@@ -523,7 +525,7 @@ standalone_compile_shader(const struct standalone_options *_options,
           * references.
           */
          if (whole_program->_LinkedShaders[stage] != NULL) {
-            assert(whole_program->LinkStatus);
+            assert(whole_program->data->LinkStatus);
 
             struct gl_shader_compiler_options *const compiler_options =
                &ctx->Const.ShaderCompilerOptions[stage];
@@ -545,13 +547,13 @@ standalone_compile_shader(const struct standalone_options *_options,
          }
       }
 
-      status = (whole_program->LinkStatus) ? EXIT_SUCCESS : EXIT_FAILURE;
+      status = (whole_program->data->LinkStatus) ? EXIT_SUCCESS : EXIT_FAILURE;
 
-      if (strlen(whole_program->InfoLog) > 0) {
+      if (strlen(whole_program->data->InfoLog) > 0) {
          printf("\n");
          if (!options->just_log)
             printf("Info log for linking:\n");
-         printf("%s", whole_program->InfoLog);
+         printf("%s", whole_program->data->InfoLog);
          if (!options->just_log)
             printf("\n");
       }
