@@ -154,6 +154,27 @@ sources_not_null(const struct gen_device_info *devinfo,
    return error_msg;
 }
 
+static struct string
+send_restrictions(const struct gen_device_info *devinfo,
+                  const brw_inst *inst)
+{
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   if (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND) {
+      ERROR_IF(brw_inst_src0_address_mode(devinfo, inst) != BRW_ADDRESS_DIRECT,
+               "send must use direct addressing");
+
+      if (devinfo->gen >= 7) {
+         ERROR_IF(!src0_is_grf(devinfo, inst), "send from non-GRF");
+         ERROR_IF(brw_inst_eot(devinfo, inst) &&
+                  brw_inst_src0_da_reg_nr(devinfo, inst) < 112,
+                  "send with EOT must use g112-g127");
+      }
+   }
+
+   return error_msg;
+}
+
 static bool
 is_unsupported_inst(const struct gen_device_info *devinfo,
                     const brw_inst *inst)
@@ -178,18 +199,7 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
          ERROR("Instruction not supported on this Gen");
       } else {
          CHECK(sources_not_null);
-      }
-
-      if (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND) {
-         ERROR_IF(brw_inst_src0_address_mode(devinfo, inst) !=
-                  BRW_ADDRESS_DIRECT, "send must use direct addressing");
-
-         if (devinfo->gen >= 7) {
-            ERROR_IF(!src0_is_grf(devinfo, inst), "send from non-GRF");
-            ERROR_IF(brw_inst_eot(devinfo, inst) &&
-                     brw_inst_src0_da_reg_nr(devinfo, inst) < 112,
-                     "send with EOT must use g112-g127");
-         }
+         CHECK(send_restrictions);
       }
 
       if (error_msg.str && annotation) {
