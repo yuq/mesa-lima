@@ -1107,7 +1107,7 @@ _mesa_sampler_uniforms_pipeline_are_valid(struct gl_pipeline_object *pipeline)
       while (mask) {
          const int s = u_bit_scan(&mask);
          GLuint unit = shader->Program->SamplerUnits[s];
-         GLuint tgt = shader->SamplerTargets[s];
+         GLuint tgt = shader->Program->sh.SamplerTargets[s];
 
          /* FIXME: Samplers are initialized to 0 and Mesa doesn't do a
           * great job of eliminating unused uniforms currently so for now

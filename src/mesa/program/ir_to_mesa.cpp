@@ -2918,7 +2918,7 @@ get_mesa_program(struct gl_context *ctx,
    do_set_program_inouts(shader->ir, prog, shader->Stage);
 
    prog->ShadowSamplers = shader->shadow_samplers;
-   prog->ExternalSamplersUsed = gl_external_samplers(shader);
+   prog->ExternalSamplersUsed = gl_external_samplers(prog);
    _mesa_update_shader_textures_used(shader_program, prog);
 
    /* Set the gl_FragDepth layout. */

@@ -1248,10 +1248,11 @@ link_assign_uniform_storage(struct gl_context *ctx,
          parcel.shader_samplers_used;
       prog->_LinkedShaders[i]->shadow_samplers = parcel.shader_shadow_samplers;
 
-      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) ==
+      STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->Program->sh.SamplerTargets) ==
                     sizeof(parcel.targets));
-      memcpy(prog->_LinkedShaders[i]->SamplerTargets, parcel.targets,
-             sizeof(prog->_LinkedShaders[i]->SamplerTargets));
+      memcpy(prog->_LinkedShaders[i]->Program->sh.SamplerTargets,
+             parcel.targets,
+             sizeof(prog->_LinkedShaders[i]->Program->sh.SamplerTargets));
    }
 
 #ifndef NDEBUG

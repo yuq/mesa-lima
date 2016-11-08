@@ -2004,6 +2004,11 @@ struct gl_program
          struct gl_uniform_block **UniformBlocks;
          struct gl_uniform_block **ShaderStorageBlocks;
 
+         /** Which texture target is being sampled
+          * (TEXTURE_1D/2D/3D/etc_INDEX)
+          */
+         gl_texture_index SamplerTargets[MAX_SAMPLERS];
+
          union {
             struct {
                /**
@@ -2359,9 +2364,6 @@ struct gl_linked_shader
    GLbitfield shadow_samplers;	/**< Samplers used for shadow sampling. */
    /*@}*/
 
-   /** Which texture target is being sampled (TEXTURE_1D/2D/3D/etc_INDEX) */
-   gl_texture_index SamplerTargets[MAX_SAMPLERS];
-
    /**
     * Number of default uniform block components used by this shader.
     *
@@ -2392,14 +2394,14 @@ struct gl_linked_shader
    struct gl_shader_info info;
 };
 
-static inline GLbitfield gl_external_samplers(struct gl_linked_shader *shader)
+static inline GLbitfield gl_external_samplers(struct gl_program *prog)
 {
    GLbitfield external_samplers = 0;
-   GLbitfield mask = shader->Program->SamplersUsed;
+   GLbitfield mask = prog->SamplersUsed;
 
    while (mask) {
       int idx = u_bit_scan(&mask);
-      if (shader->SamplerTargets[idx] == TEXTURE_EXTERNAL_INDEX)
+      if (prog->sh.SamplerTargets[idx] == TEXTURE_EXTERNAL_INDEX)
          external_samplers |= (1 << idx);
    }
 
