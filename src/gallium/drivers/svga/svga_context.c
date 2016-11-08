@@ -130,6 +130,8 @@ svga_context_create(struct pipe_screen *screen, void *priv, unsigned flags)
    struct svga_context *svga = NULL;
    enum pipe_error ret;
 
+   SVGA_STATS_TIME_PUSH(svgascreen->sws, SVGA_STATS_TIME_CREATECONTEXT);
+
    svga = CALLOC_STRUCT(svga_context);
    if (!svga)
       goto cleanup;
@@ -298,7 +300,7 @@ svga_context_create(struct pipe_screen *screen, void *priv, unsigned flags)
    svga->pred.query_id = SVGA3D_INVALID_ID;
    svga->disable_rasterizer = FALSE;
 
-   return &svga->pipe;
+   goto done;
 
 cleanup:
    svga_destroy_swtnl(svga);
@@ -325,7 +327,10 @@ cleanup:
    util_bitmask_destroy(svga->stream_output_id_bm);
    util_bitmask_destroy(svga->query_id_bm);
    FREE(svga);
-   return NULL;
+
+done:
+   SVGA_STATS_TIME_POP(svgascreen->sws);
+   return svga ? &svga->pipe:NULL;
 }
 
 
