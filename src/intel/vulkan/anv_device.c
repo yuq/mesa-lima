@@ -24,6 +24,7 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
 
@@ -1311,8 +1312,12 @@ VkResult anv_MapMemory(
    /* Let's map whole pages */
    map_size = align_u64(map_size, 4096);
 
-   mem->map = anv_gem_mmap(device, mem->bo.gem_handle,
-                           map_offset, map_size, gem_flags);
+   void *map = anv_gem_mmap(device, mem->bo.gem_handle,
+                            map_offset, map_size, gem_flags);
+   if (map == MAP_FAILED)
+      return vk_error(VK_ERROR_MEMORY_MAP_FAILED);
+
+   mem->map = map;
    mem->map_size = map_size;
 
    *ppData = mem->map + (offset - map_offset);
