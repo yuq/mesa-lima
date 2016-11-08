@@ -1094,12 +1094,14 @@ lp_build_mul(struct lp_build_context *bld,
 /*
  * Widening mul, valid for 32x32 bit -> 64bit only.
  * Result is low 32bits, high bits returned in res_hi.
+ *
+ * Emits code that is meant to be compiled for the host CPU.
  */
 LLVMValueRef
-lp_build_mul_32_lohi(struct lp_build_context *bld,
-                     LLVMValueRef a,
-                     LLVMValueRef b,
-                     LLVMValueRef *res_hi)
+lp_build_mul_32_lohi_cpu(struct lp_build_context *bld,
+                         LLVMValueRef a,
+                         LLVMValueRef b,
+                         LLVMValueRef *res_hi)
 {
    struct gallivm_state *gallivm = bld->gallivm;
    LLVMBuilderRef builder = gallivm->builder;
@@ -1216,29 +1218,47 @@ lp_build_mul_32_lohi(struct lp_build_context *bld,
       return LLVMBuildShuffleVector(builder, muleven, mulodd, shuf_vec, "");
    }
    else {
-      LLVMValueRef tmp;
-      struct lp_type type_tmp;
-      LLVMTypeRef wide_type, cast_type;
-
-      type_tmp = bld->type;
-      type_tmp.width *= 2;
-      wide_type = lp_build_vec_type(gallivm, type_tmp);
-      type_tmp = bld->type;
-      type_tmp.length *= 2;
-      cast_type = lp_build_vec_type(gallivm, type_tmp);
-
-      if (bld->type.sign) {
-         a = LLVMBuildSExt(builder, a, wide_type, "");
-         b = LLVMBuildSExt(builder, b, wide_type, "");
-      } else {
-         a = LLVMBuildZExt(builder, a, wide_type, "");
-         b = LLVMBuildZExt(builder, b, wide_type, "");
-      }
-      tmp = LLVMBuildMul(builder, a, b, "");
-      tmp = LLVMBuildBitCast(builder, tmp, cast_type, "");
-      *res_hi = lp_build_uninterleave1(gallivm, bld->type.length * 2, tmp, 1);
-      return lp_build_uninterleave1(gallivm, bld->type.length * 2, tmp, 0);
+      return lp_build_mul_32_lohi(bld, a, b, res_hi);
    }
+}
+
+
+/*
+ * Widening mul, valid for 32x32 bit -> 64bit only.
+ * Result is low 32bits, high bits returned in res_hi.
+ *
+ * Emits generic code.
+ */
+LLVMValueRef
+lp_build_mul_32_lohi(struct lp_build_context *bld,
+                     LLVMValueRef a,
+                     LLVMValueRef b,
+                     LLVMValueRef *res_hi)
+{
+   struct gallivm_state *gallivm = bld->gallivm;
+   LLVMBuilderRef builder = gallivm->builder;
+   LLVMValueRef tmp;
+   struct lp_type type_tmp;
+   LLVMTypeRef wide_type, cast_type;
+
+   type_tmp = bld->type;
+   type_tmp.width *= 2;
+   wide_type = lp_build_vec_type(gallivm, type_tmp);
+   type_tmp = bld->type;
+   type_tmp.length *= 2;
+   cast_type = lp_build_vec_type(gallivm, type_tmp);
+
+   if (bld->type.sign) {
+      a = LLVMBuildSExt(builder, a, wide_type, "");
+      b = LLVMBuildSExt(builder, b, wide_type, "");
+   } else {
+      a = LLVMBuildZExt(builder, a, wide_type, "");
+      b = LLVMBuildZExt(builder, b, wide_type, "");
+   }
+   tmp = LLVMBuildMul(builder, a, b, "");
+   tmp = LLVMBuildBitCast(builder, tmp, cast_type, "");
+   *res_hi = lp_build_uninterleave1(gallivm, bld->type.length * 2, tmp, 1);
+   return lp_build_uninterleave1(gallivm, bld->type.length * 2, tmp, 0);
 }
 
 

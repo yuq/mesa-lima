@@ -849,7 +849,24 @@ imul_hi_emit(
 
    /* low result bits are tossed away */
    lp_build_mul_32_lohi(int_bld, emit_data->args[0],
-                        emit_data->args[0], &hi_bits);
+                        emit_data->args[1], &hi_bits);
+   emit_data->output[emit_data->chan] = hi_bits;
+}
+
+static void
+imul_hi_emit_cpu(
+   const struct lp_build_tgsi_action * action,
+   struct lp_build_tgsi_context * bld_base,
+   struct lp_build_emit_data * emit_data)
+{
+   struct lp_build_context *int_bld = &bld_base->int_bld;
+   LLVMValueRef hi_bits;
+
+   assert(int_bld->type.width == 32);
+
+   /* low result bits are tossed away */
+   lp_build_mul_32_lohi_cpu(int_bld, emit_data->args[0],
+                            emit_data->args[1], &hi_bits);
    emit_data->output[emit_data->chan] = hi_bits;
 }
 
@@ -867,7 +884,24 @@ umul_hi_emit(
 
    /* low result bits are tossed away */
    lp_build_mul_32_lohi(uint_bld, emit_data->args[0],
-                        emit_data->args[0], &hi_bits);
+                        emit_data->args[1], &hi_bits);
+   emit_data->output[emit_data->chan] = hi_bits;
+}
+
+static void
+umul_hi_emit_cpu(
+   const struct lp_build_tgsi_action * action,
+   struct lp_build_tgsi_context * bld_base,
+   struct lp_build_emit_data * emit_data)
+{
+   struct lp_build_context *uint_bld = &bld_base->uint_bld;
+   LLVMValueRef hi_bits;
+
+   assert(uint_bld->type.width == 32);
+
+   /* low result bits are tossed away */
+   lp_build_mul_32_lohi_cpu(uint_bld, emit_data->args[0],
+                            emit_data->args[1], &hi_bits);
    emit_data->output[emit_data->chan] = hi_bits;
 }
 
@@ -2581,6 +2615,8 @@ lp_set_default_actions_cpu(
    bld_base->op_actions[TGSI_OPCODE_ISHR].emit = ishr_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_ISLT].emit = islt_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_ISSG].emit = issg_emit_cpu;
+   bld_base->op_actions[TGSI_OPCODE_IMUL_HI].emit = imul_hi_emit_cpu;
+   bld_base->op_actions[TGSI_OPCODE_UMUL_HI].emit = umul_hi_emit_cpu;
 
    bld_base->op_actions[TGSI_OPCODE_LG2].emit = lg2_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_LOG].emit = log_emit_cpu;
