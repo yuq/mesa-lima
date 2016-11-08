@@ -242,6 +242,9 @@ intelInitExtensions(struct gl_context *ctx)
    if (brw->gen >= 8 || brw->is_haswell) {
       ctx->Extensions.ARB_stencil_texturing = true;
       ctx->Extensions.ARB_texture_stencil8 = true;
+      ctx->Extensions.OES_geometry_shader = true;
+      ctx->Extensions.OES_texture_cube_map_array = true;
+      ctx->Extensions.OES_viewport_array = true;
    }
 
    if (brw->gen >= 8 || brw->is_haswell || brw->is_baytrail) {
@@ -265,9 +268,6 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_shader_precision = true;
       ctx->Extensions.ARB_vertex_attrib_64bit = true;
       ctx->Extensions.ARB_ES3_2_compatibility = true;
-      ctx->Extensions.OES_geometry_shader = true;
-      ctx->Extensions.OES_texture_cube_map_array = true;
-      ctx->Extensions.OES_viewport_array = true;
    }
 
    if (brw->gen >= 9) {
