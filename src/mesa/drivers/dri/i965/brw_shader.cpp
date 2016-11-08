@@ -1352,14 +1352,12 @@ brw_compile_tes(const struct brw_compiler *compiler,
                 const struct brw_tes_prog_key *key,
                 struct brw_tes_prog_data *prog_data,
                 const nir_shader *src_shader,
-                struct gl_shader_program *shader_prog,
+                struct gl_program *prog,
                 int shader_time_index,
                 unsigned *final_assembly_size,
                 char **error_str)
 {
    const struct gen_device_info *devinfo = compiler->devinfo;
-   struct gl_linked_shader *shader =
-      shader_prog->_LinkedShaders[MESA_SHADER_TESS_EVAL];
    const bool is_scalar = compiler->scalar_stage[MESA_SHADER_TESS_EVAL];
 
    nir_shader *nir = nir_shader_clone(mem_ctx, src_shader);
@@ -1417,7 +1415,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
    if (is_scalar) {
       fs_visitor v(compiler, log_data, mem_ctx, (void *) key,
-                   &prog_data->base.base, shader->Program, nir, 8,
+                   &prog_data->base.base, prog, nir, 8,
                    shader_time_index, &input_vue_map);
       if (!v.run_tes()) {
          if (error_str)
