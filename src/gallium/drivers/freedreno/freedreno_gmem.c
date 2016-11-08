@@ -69,7 +69,7 @@
 
 static uint32_t bin_width(struct fd_screen *screen)
 {
-	if (is_a4xx(screen))
+	if (is_a4xx(screen) || is_a5xx(screen))
 		return 1024;
 	if (is_a3xx(screen))
 		return 992;
@@ -339,6 +339,9 @@ render_tiles(struct fd_batch *batch)
 		/* emit gmem2mem to transfer tile back to system memory: */
 		ctx->emit_tile_gmem2mem(batch, tile);
 	}
+
+	if (ctx->emit_tile_fini)
+		ctx->emit_tile_fini(batch);
 }
 
 static void

@@ -261,17 +261,7 @@ fd_reset_wfi(struct fd_batch *batch)
 	batch->needs_wfi = true;
 }
 
-/* emit a WAIT_FOR_IDLE only if needed, ie. if there has not already
- * been one since last draw:
- */
-static inline void
-fd_wfi(struct fd_batch *batch, struct fd_ringbuffer *ring)
-{
-	if (batch->needs_wfi) {
-		OUT_WFI(ring);
-		batch->needs_wfi = false;
-	}
-}
+void fd_wfi(struct fd_batch *batch, struct fd_ringbuffer *ring);
 
 /* emit a CP_EVENT_WRITE:
  */

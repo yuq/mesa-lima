@@ -53,6 +53,7 @@
 #include "a2xx/fd2_screen.h"
 #include "a3xx/fd3_screen.h"
 #include "a4xx/fd4_screen.h"
+#include "a5xx/fd5_screen.h"
 
 #include "ir3/ir3_nir.h"
 
@@ -666,6 +667,9 @@ fd_screen_create(struct fd_device *dev)
 	case 420:
 	case 430:
 		fd4_screen_init(pscreen);
+		break;
+	case 530:
+		fd5_screen_init(pscreen);
 		break;
 	default:
 		debug_printf("unsupported GPU: a%03d\n", screen->gpu_id);

@@ -403,3 +403,18 @@ fd_batch_check_size(struct fd_batch *batch)
 			(fd_mesa_debug & FD_DBG_FLUSH))
 		fd_batch_flush(batch, true);
 }
+
+/* emit a WAIT_FOR_IDLE only if needed, ie. if there has not already
+ * been one since last draw:
+ */
+void
+fd_wfi(struct fd_batch *batch, struct fd_ringbuffer *ring)
+{
+	if (batch->needs_wfi) {
+		if (batch->ctx->screen->gpu_id >= 500)
+			OUT_WFI5(ring);
+		else
+			OUT_WFI(ring);
+		batch->needs_wfi = false;
+	}
+}
