@@ -658,10 +658,6 @@ struct intel_mipmap_tree
    GLuint refcount;
 };
 
-void
-intel_get_non_msrt_mcs_alignment(const struct intel_mipmap_tree *mt,
-                                 unsigned *width_px, unsigned *height);
-
 bool
 intel_miptree_is_lossless_compressed(const struct brw_context *brw,
                                      const struct intel_mipmap_tree *mt);

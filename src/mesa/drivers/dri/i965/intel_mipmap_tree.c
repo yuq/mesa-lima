@@ -101,66 +101,6 @@ compute_msaa_layout(struct brw_context *brw, mesa_format format,
    }
 }
 
-
-/**
- * For single-sampled render targets ("non-MSRT"), the MCS buffer is a
- * scaled-down bitfield representation of the color buffer which is capable of
- * recording when blocks of the color buffer are equal to the clear value.
- * This function returns the block size that will be used by the MCS buffer
- * corresponding to a certain color miptree.
- *
- * From the Ivy Bridge PRM, Vol2 Part1 11.7 "MCS Buffer for Render Target(s)",
- * beneath the "Fast Color Clear" bullet (p327):
- *
- *     The following table describes the RT alignment
- *
- *                       Pixels  Lines
- *         TiledY RT CL
- *             bpp
- *              32          8      4
- *              64          4      4
- *             128          2      4
- *         TiledX RT CL
- *             bpp
- *              32         16      2
- *              64          8      2
- *             128          4      2
- *
- * This alignment has the following uses:
- *
- * - For figuring out the size of the MCS buffer.  Each 4k tile in the MCS
- *   buffer contains 128 blocks horizontally and 256 blocks vertically.
- *
- * - For figuring out alignment restrictions for a fast clear operation.  Fast
- *   clear operations must always clear aligned multiples of 16 blocks
- *   horizontally and 32 blocks vertically.
- *
- * - For scaling down the coordinates sent through the render pipeline during
- *   a fast clear.  X coordinates must be scaled down by 8 times the block
- *   width, and Y coordinates by 16 times the block height.
- *
- * - For scaling down the coordinates sent through the render pipeline during
- *   a "Render Target Resolve" operation.  X coordinates must be scaled down
- *   by half the block width, and Y coordinates by half the block height.
- */
-void
-intel_get_non_msrt_mcs_alignment(const struct intel_mipmap_tree *mt,
-                                 unsigned *width_px, unsigned *height)
-{
-   switch (mt->tiling) {
-   default:
-      unreachable("Non-MSRT MCS requires X or Y tiling");
-      /* In release builds, fall through */
-   case I915_TILING_Y:
-      *width_px = 32 / mt->cpp;
-      *height = 4;
-      break;
-   case I915_TILING_X:
-      *width_px = 64 / mt->cpp;
-      *height = 2;
-   }
-}
-
 bool
 intel_tiling_supports_non_msrt_mcs(const struct brw_context *brw,
                                    unsigned tiling)
@@ -1654,55 +1594,53 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    assert(!mt->disable_aux_buffers);
    assert(!mt->no_ccs);
 
-   /* The format of the MCS buffer is opaque to the driver; all that matters
-    * is that we get its size and pitch right.  We'll pretend that the format
-    * is R32.  Since an MCS tile covers 128 blocks horizontally, and a Y-tiled
-    * R32 buffer is 32 pixels across, we'll need to scale the width down by
-    * the block width and then a further factor of 4.  Since an MCS tile
-    * covers 256 blocks vertically, and a Y-tiled R32 buffer is 32 rows high,
-    * we'll need to scale the height down by the block height and then a
-    * further factor of 8.
+   struct isl_surf temp_main_surf;
+   struct isl_surf temp_ccs_surf;
+
+   /* Create first an ISL presentation for the main color surface and let ISL
+    * calculate equivalent CCS surface against it.
     */
-   const mesa_format format = MESA_FORMAT_R_UINT32;
-   unsigned block_width_px;
-   unsigned block_height;
-   intel_get_non_msrt_mcs_alignment(mt, &block_width_px, &block_height);
-   unsigned width_divisor = block_width_px * 4;
-   unsigned height_divisor = block_height * 8;
+   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
+   if (!isl_surf_get_ccs_surf(&brw->isl_dev, &temp_main_surf, &temp_ccs_surf))
+      return false;
 
-   /* The Skylake MCS is twice as tall as the Broadwell MCS.
-    *
-    * In pre-Skylake, each bit in the MCS contained the state of 2 cachelines
-    * in the main surface. In Skylake, it's two bits.  The extra bit
-    * doubles the MCS height, not width, because in Skylake the MCS is always
-    * Y-tiled.
-    */
-   if (brw->gen >= 9)
-      height_divisor /= 2;
+   assert(temp_ccs_surf.size &&
+          (temp_ccs_surf.size % temp_ccs_surf.row_pitch == 0));
 
-   unsigned mcs_width =
-      ALIGN(mt->logical_width0, width_divisor) / width_divisor;
-   unsigned mcs_height =
-      ALIGN(mt->logical_height0, height_divisor) / height_divisor;
-   assert(mt->logical_depth0 == 1);
+   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   if (!buf)
+      return false;
 
-   uint32_t layout_flags =
-      (brw->gen >= 8) ? MIPTREE_LAYOUT_FORCE_HALIGN16 : 0;
+   buf->size = temp_ccs_surf.size;
+   buf->pitch = temp_ccs_surf.row_pitch;
+   buf->qpitch = isl_surf_get_array_pitch_sa_rows(&temp_ccs_surf);
+
    /* In case of compression mcs buffer needs to be initialised requiring the
     * buffer to be immediately mapped to cpu space for writing. Therefore do
     * not use the gpu access flag which can cause an unnecessary delay if the
     * backing pages happened to be just used by the GPU.
     */
-   if (!is_lossless_compressed)
-      layout_flags |= MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
+   const uint32_t alloc_flags =
+      is_lossless_compressed ? 0 : BO_ALLOC_FOR_RENDER;
+   uint32_t tiling = I915_TILING_Y;
+   unsigned long pitch;
 
-   mt->mcs_buf = intel_mcs_miptree_buf_create(brw, mt,
-                                              format,
-                                              mcs_width,
-                                              mcs_height,
-                                              layout_flags);
-   if (!mt->mcs_buf)
+   /* ISL has stricter set of alignment rules then the drm allocator.
+    * Therefore one can pass the ISL dimensions in terms of bytes instead of
+    * trying to recalculate based on different format block sizes.
+    */
+   buf->bo = drm_intel_bo_alloc_tiled(brw->bufmgr, "ccs-miptree",
+                                      buf->pitch, buf->size / buf->pitch,
+                                      1, &tiling, &pitch, alloc_flags);
+   if (buf->bo) {
+      assert(pitch == buf->pitch);
+      assert(tiling == I915_TILING_Y);
+   } else {
+      free(buf);
       return false;
+   }
+
+   mt->mcs_buf = buf;
 
    /* From Gen9 onwards single-sampled (non-msrt) auxiliary buffers are
     * used for lossless compression which requires similar initialisation
