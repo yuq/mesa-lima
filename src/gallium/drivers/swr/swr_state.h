@@ -106,7 +106,7 @@ swr_convert_logic_op(const UINT op)
    case PIPE_LOGICOP_NOR:
       return LOGICOP_NOR;
    case PIPE_LOGICOP_AND_INVERTED:
-      return LOGICOP_CLEAR;
+      return LOGICOP_AND_INVERTED;
    case PIPE_LOGICOP_COPY_INVERTED:
       return LOGICOP_COPY_INVERTED;
    case PIPE_LOGICOP_AND_REVERSE:
