@@ -385,7 +385,7 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
     */
    foreach_block_and_inst(block, vec4_instruction, inst, cfg) {
       for (unsigned int i = 0; i < 3; i++) {
-         if (inst->src[i].file == VGRF) {
+         if (inst->src[i].file == VGRF && !no_spill[inst->src[i].nr]) {
             /* We will only unspill src[i] it it wasn't unspilled for the
              * previous instruction, in which case we'll just reuse the scratch
              * reg for this instruction.
@@ -399,7 +399,7 @@ vec4_visitor::evaluate_spill_costs(float *spill_costs, bool *no_spill)
          }
       }
 
-      if (inst->dst.file == VGRF) {
+      if (inst->dst.file == VGRF && !no_spill[inst->dst.nr]) {
          spill_costs[inst->dst.nr] += loop_scale;
          if (inst->dst.reladdr || inst->dst.offset % REG_SIZE != 0)
             no_spill[inst->dst.nr] = true;
