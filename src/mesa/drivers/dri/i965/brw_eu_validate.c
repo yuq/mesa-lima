@@ -46,6 +46,7 @@ cat(struct string *dest, const struct string src)
 
 #define error(str) "\tERROR: " str "\n"
 
+#define ERROR(msg) ERROR_IF(true, msg)
 #define ERROR_IF(cond, msg)          \
    do {                              \
       if (cond) {                    \
@@ -168,8 +169,10 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
          break;
       }
 
-      ERROR_IF(is_unsupported_inst(devinfo, inst),
-               "Instruction not supported on this Gen");
+      if (is_unsupported_inst(devinfo, inst)) {
+         ERROR("Instruction not supported on this Gen");
+      } else {
+      }
 
       if (brw_inst_opcode(devinfo, inst) == BRW_OPCODE_SEND) {
          ERROR_IF(brw_inst_src0_address_mode(devinfo, inst) !=
