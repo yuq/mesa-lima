@@ -449,6 +449,7 @@ nir_optimize(nir_shader *nir, bool is_scalar)
 nir_shader *
 brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 {
+   const struct gen_device_info *devinfo = compiler->devinfo;
    bool progress; /* Written by OPT and OPT_V */
    (void)progress;
 
@@ -457,7 +458,9 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    if (nir->stage == MESA_SHADER_GEOMETRY)
       OPT(nir_lower_gs_intrinsics);
 
-   if (compiler->precise_trig)
+   /* See also brw_nir_trig_workarounds.py */
+   if (compiler->precise_trig &&
+       !(devinfo->gen >= 10 || devinfo->is_kabylake))
       OPT(brw_nir_apply_trig_workarounds);
 
    static const nir_lower_tex_options tex_options = {
