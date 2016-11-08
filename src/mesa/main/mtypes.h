@@ -2356,7 +2356,6 @@ struct gl_linked_shader
     * \note Each of these fields is only set post-linking.
     */
    /*@{*/
-   GLbitfield active_samplers;	/**< Bitfield of which samplers are used */
    GLbitfield shadow_samplers;	/**< Samplers used for shadow sampling. */
    /*@}*/
 
@@ -2396,7 +2395,7 @@ struct gl_linked_shader
 static inline GLbitfield gl_external_samplers(struct gl_linked_shader *shader)
 {
    GLbitfield external_samplers = 0;
-   GLbitfield mask = shader->active_samplers;
+   GLbitfield mask = shader->Program->SamplersUsed;
 
    while (mask) {
       int idx = u_bit_scan(&mask);

@@ -1244,7 +1244,8 @@ link_assign_uniform_storage(struct gl_context *ctx,
          parcel.set_and_process(var);
       }
 
-      prog->_LinkedShaders[i]->active_samplers = parcel.shader_samplers_used;
+      prog->_LinkedShaders[i]->Program->SamplersUsed =
+         parcel.shader_samplers_used;
       prog->_LinkedShaders[i]->shadow_samplers = parcel.shader_shadow_samplers;
 
       STATIC_ASSERT(sizeof(prog->_LinkedShaders[i]->SamplerTargets) ==
