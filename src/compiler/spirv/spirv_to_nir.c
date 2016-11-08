@@ -704,9 +704,11 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->type = (signedness ? glsl_int_type() : glsl_uint_type());
       break;
    }
-   case SpvOpTypeFloat:
-      val->type->type = glsl_float_type();
+   case SpvOpTypeFloat: {
+      int bit_size = w[2];
+      val->type->type = bit_size == 64 ? glsl_double_type() : glsl_float_type();
       break;
+   }
 
    case SpvOpTypeVector: {
       struct vtn_type *base = vtn_value(b, w[2], vtn_value_type_type)->type;
