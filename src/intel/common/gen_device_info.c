@@ -489,6 +489,7 @@ static const struct gen_device_info gen_device_info_bxt_2x6 = {
 
 static const struct gen_device_info gen_device_info_kbl_gt1 = {
    GEN9_FEATURES,
+   .is_kabylake = true,
    .gt = 1,
 
    .max_cs_threads = 7 * 6,
@@ -498,6 +499,7 @@ static const struct gen_device_info gen_device_info_kbl_gt1 = {
 
 static const struct gen_device_info gen_device_info_kbl_gt1_5 = {
    GEN9_FEATURES,
+   .is_kabylake = true,
    .gt = 1,
 
    .max_cs_threads = 7 * 6,
@@ -506,6 +508,7 @@ static const struct gen_device_info gen_device_info_kbl_gt1_5 = {
 
 static const struct gen_device_info gen_device_info_kbl_gt2 = {
    GEN9_FEATURES,
+   .is_kabylake = true,
    .gt = 2,
 
    .num_slices = 1,
@@ -513,6 +516,7 @@ static const struct gen_device_info gen_device_info_kbl_gt2 = {
 
 static const struct gen_device_info gen_device_info_kbl_gt3 = {
    GEN9_FEATURES,
+   .is_kabylake = true,
    .gt = 3,
 
    .num_slices = 2,
@@ -520,6 +524,7 @@ static const struct gen_device_info gen_device_info_kbl_gt3 = {
 
 static const struct gen_device_info gen_device_info_kbl_gt4 = {
    GEN9_FEATURES,
+   .is_kabylake = true,
    .gt = 4,
 
    /*

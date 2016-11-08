@@ -41,6 +41,7 @@ struct gen_device_info
    bool is_haswell;
    bool is_cherryview;
    bool is_broxton;
+   bool is_kabylake;
 
    bool has_hiz_and_separate_stencil;
    bool must_use_separate_stencil;
