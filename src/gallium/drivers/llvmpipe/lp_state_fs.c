@@ -2296,7 +2296,7 @@ generate_fragment(struct llvmpipe_context *lp,
     */
    for(i = 0; i < ARRAY_SIZE(arg_types); ++i)
       if(LLVMGetTypeKind(arg_types[i]) == LLVMPointerTypeKind)
-         LLVMAddAttribute(LLVMGetParam(function, i), LLVMNoAliasAttribute);
+         lp_add_function_attr(function, i + 1, LP_FUNC_ATTR_NOALIAS);
 
    context_ptr  = LLVMGetParam(function, 0);
    x            = LLVMGetParam(function, 1);
