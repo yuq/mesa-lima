@@ -1305,6 +1305,12 @@ swr_update_derived(struct pipe_context *pipe,
                    &ctx->blend->compileState[target],
                    sizeof(compileState.blendState));
 
+            const SWR_FORMAT_INFO& info = GetFormatInfo(compileState.format);
+            if (compileState.blendState.logicOpEnable &&
+                ((info.type[0] == SWR_TYPE_FLOAT) || info.isSRGB)) {
+               compileState.blendState.logicOpEnable = false;
+            }
+
             if (compileState.blendState.blendEnable == false &&
                 compileState.blendState.logicOpEnable == false &&
                 ctx->depth_stencil->alpha.enabled == 0) {
