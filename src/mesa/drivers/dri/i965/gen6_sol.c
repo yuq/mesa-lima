@@ -38,28 +38,19 @@ static void
 gen6_update_sol_surfaces(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
-   /* BRW_NEW_TRANSFORM_FEEDBACK */
-   struct gl_transform_feedback_object *xfb_obj =
-      ctx->TransformFeedback.CurrentObject;
-   const struct gl_shader_program *shaderprog;
-   const struct gl_transform_feedback_info *linked_xfb_info;
-   int i;
+   bool xfb_active = _mesa_is_xfb_active_and_unpaused(ctx);
+   struct gl_transform_feedback_object *xfb_obj;
+   const struct gl_transform_feedback_info *linked_xfb_info = NULL;
 
-   if (brw->geometry_program) {
-      /* BRW_NEW_GEOMETRY_PROGRAM */
-      shaderprog =
-         ctx->_Shader->CurrentProgram[MESA_SHADER_GEOMETRY];
-   } else {
-      /* BRW_NEW_VERTEX_PROGRAM */
-      shaderprog =
-         ctx->_Shader->CurrentProgram[MESA_SHADER_VERTEX];
+   if (xfb_active) {
+      /* BRW_NEW_TRANSFORM_FEEDBACK */
+      xfb_obj = ctx->TransformFeedback.CurrentObject;
+      linked_xfb_info = &xfb_obj->shader_program->LinkedTransformFeedback;
    }
-   linked_xfb_info = &shaderprog->LinkedTransformFeedback;
 
-   for (i = 0; i < BRW_MAX_SOL_BINDINGS; ++i) {
+   for (int i = 0; i < BRW_MAX_SOL_BINDINGS; ++i) {
       const int surf_index = SURF_INDEX_GEN6_SOL_BINDING(i);
-      if (_mesa_is_xfb_active_and_unpaused(ctx) &&
-          i < linked_xfb_info->NumOutputs) {
+      if (xfb_active && i < linked_xfb_info->NumOutputs) {
          unsigned buffer = linked_xfb_info->Outputs[i].OutputBuffer;
          unsigned buffer_offset =
             xfb_obj->Offset[buffer] / 4 +
@@ -93,8 +84,6 @@ const struct brw_tracked_state gen6_sol_surface = {
       .mesa = 0,
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
-             BRW_NEW_GEOMETRY_PROGRAM |
-             BRW_NEW_VERTEX_PROGRAM |
              BRW_NEW_TRANSFORM_FEEDBACK,
    },
    .emit = gen6_update_sol_surfaces,
