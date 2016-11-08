@@ -4353,11 +4353,9 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx,
 
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef values[4];
-		bool last;
+
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
-
-		last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
 
 		if (i == FRAG_RESULT_DEPTH) {
 			ctx->shader_info->fs.writes_z = true;
@@ -4368,9 +4366,13 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx,
 			stencil = to_float(ctx, LLVMBuildLoad(ctx->builder,
 							      ctx->outputs[radeon_llvm_reg_index_soa(i, 0)], ""));
 		} else {
+			bool last = false;
 			for (unsigned j = 0; j < 4; j++)
 				values[j] = to_float(ctx, LLVMBuildLoad(ctx->builder,
 									ctx->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
+
+			if (!ctx->shader_info->fs.writes_z && !ctx->shader_info->fs.writes_stencil)
+				last = ctx->output_mask <= ((1ull << (i + 1)) - 1);
 
 			si_export_mrt_color(ctx, values, V_008DFC_SQ_EXP_MRT + index, last);
 			index++;
