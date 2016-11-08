@@ -8,13 +8,14 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    398 bytes, from 2015-09-24 17:25:31)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2016-04-26 17:56:44)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  11518 bytes, from 2016-02-10 21:03:25)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  16185 bytes, from 2016-03-05 03:08:05)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83967 bytes, from 2016-02-10 17:07:21)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110685 bytes, from 2016-04-25 17:56:43)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  90537 bytes, from 2016-11-29 17:10:44)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -172,6 +173,14 @@ enum a3xx_color_swap {
 	WXYZ = 1,
 	ZYXW = 2,
 	XYZW = 3,
+};
+
+enum a3xx_rb_blend_opcode {
+	BLEND_DST_PLUS_SRC = 0,
+	BLEND_SRC_MINUS_DST = 1,
+	BLEND_DST_MINUS_SRC = 2,
+	BLEND_MIN_DST_SRC = 3,
+	BLEND_MAX_DST_SRC = 4,
 };
 
 #define REG_AXXX_CP_RB_BASE					0x000001c0

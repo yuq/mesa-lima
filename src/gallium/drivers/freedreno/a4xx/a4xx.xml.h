@@ -8,13 +8,14 @@ http://github.com/freedreno/envytools/
 git clone https://github.com/freedreno/envytools.git
 
 The rules-ng-ng source files this header was generated from are:
-- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    398 bytes, from 2015-09-24 17:25:31)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno.xml               (    431 bytes, from 2016-04-26 17:56:44)
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32901 bytes, from 2015-05-20 20:03:14)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  11518 bytes, from 2016-02-10 21:03:25)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  16185 bytes, from 2016-03-05 03:08:05)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83967 bytes, from 2016-02-10 17:07:21)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110685 bytes, from 2016-04-25 17:56:43)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  90537 bytes, from 2016-11-29 17:10:44)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -92,15 +93,8 @@ enum a4xx_color_fmt {
 
 enum a4xx_tile_mode {
 	TILE4_LINEAR = 0,
+	TILE4_2 = 2,
 	TILE4_3 = 3,
-};
-
-enum a4xx_rb_blend_opcode {
-	BLEND_DST_PLUS_SRC = 0,
-	BLEND_SRC_MINUS_DST = 1,
-	BLEND_DST_MINUS_SRC = 2,
-	BLEND_MIN_DST_SRC = 3,
-	BLEND_MAX_DST_SRC = 4,
 };
 
 enum a4xx_vtx_fmt {
@@ -1047,7 +1041,7 @@ static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_RGB_SRC_FACTOR(enum adreno_rb_b
 }
 #define A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE__MASK	0x000000e0
 #define A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE__SHIFT	5
-static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE(enum a4xx_rb_blend_opcode val)
+static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE(enum a3xx_rb_blend_opcode val)
 {
 	return ((val) << A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE__SHIFT) & A4XX_RB_MRT_BLEND_CONTROL_RGB_BLEND_OPCODE__MASK;
 }
@@ -1065,7 +1059,7 @@ static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_ALPHA_SRC_FACTOR(enum adreno_rb
 }
 #define A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE__MASK	0x00e00000
 #define A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE__SHIFT	21
-static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE(enum a4xx_rb_blend_opcode val)
+static inline uint32_t A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE(enum a3xx_rb_blend_opcode val)
 {
 	return ((val) << A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE__SHIFT) & A4XX_RB_MRT_BLEND_CONTROL_ALPHA_BLEND_OPCODE__MASK;
 }
@@ -2205,11 +2199,23 @@ static inline uint32_t REG_A4XX_RBBM_CLOCK_DELAY_RB_MARB_CCU_L1_REG(uint32_t i0)
 
 #define REG_A4XX_CP_DRAW_STATE_ADDR				0x00000232
 
-#define REG_A4XX_CP_PROTECT_REG_0				0x00000240
-
 static inline uint32_t REG_A4XX_CP_PROTECT(uint32_t i0) { return 0x00000240 + 0x1*i0; }
 
 static inline uint32_t REG_A4XX_CP_PROTECT_REG(uint32_t i0) { return 0x00000240 + 0x1*i0; }
+#define A4XX_CP_PROTECT_REG_BASE_ADDR__MASK			0x0001ffff
+#define A4XX_CP_PROTECT_REG_BASE_ADDR__SHIFT			0
+static inline uint32_t A4XX_CP_PROTECT_REG_BASE_ADDR(uint32_t val)
+{
+	return ((val) << A4XX_CP_PROTECT_REG_BASE_ADDR__SHIFT) & A4XX_CP_PROTECT_REG_BASE_ADDR__MASK;
+}
+#define A4XX_CP_PROTECT_REG_MASK_LEN__MASK			0x1f000000
+#define A4XX_CP_PROTECT_REG_MASK_LEN__SHIFT			24
+static inline uint32_t A4XX_CP_PROTECT_REG_MASK_LEN(uint32_t val)
+{
+	return ((val) << A4XX_CP_PROTECT_REG_MASK_LEN__SHIFT) & A4XX_CP_PROTECT_REG_MASK_LEN__MASK;
+}
+#define A4XX_CP_PROTECT_REG_TRAP_WRITE				0x20000000
+#define A4XX_CP_PROTECT_REG_TRAP_READ				0x40000000
 
 #define REG_A4XX_CP_PROTECT_CTRL				0x00000250
 
@@ -2300,7 +2306,7 @@ static inline uint32_t A4XX_SP_VS_CTRL_REG0_HALFREGFOOTPRINT(uint32_t val)
 {
 	return ((val) << A4XX_SP_VS_CTRL_REG0_HALFREGFOOTPRINT__SHIFT) & A4XX_SP_VS_CTRL_REG0_HALFREGFOOTPRINT__MASK;
 }
-#define A4XX_SP_VS_CTRL_REG0_FULLREGFOOTPRINT__MASK		0x0003fc00
+#define A4XX_SP_VS_CTRL_REG0_FULLREGFOOTPRINT__MASK		0x0000fc00
 #define A4XX_SP_VS_CTRL_REG0_FULLREGFOOTPRINT__SHIFT		10
 static inline uint32_t A4XX_SP_VS_CTRL_REG0_FULLREGFOOTPRINT(uint32_t val)
 {
@@ -2448,7 +2454,7 @@ static inline uint32_t A4XX_SP_FS_CTRL_REG0_HALFREGFOOTPRINT(uint32_t val)
 {
 	return ((val) << A4XX_SP_FS_CTRL_REG0_HALFREGFOOTPRINT__SHIFT) & A4XX_SP_FS_CTRL_REG0_HALFREGFOOTPRINT__MASK;
 }
-#define A4XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT__MASK		0x0003fc00
+#define A4XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT__MASK		0x0000fc00
 #define A4XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT__SHIFT		10
 static inline uint32_t A4XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT(uint32_t val)
 {
@@ -3283,6 +3289,7 @@ static inline uint32_t A4XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH(float val)
 	return ((((int32_t)(val * 4.0))) << A4XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH__SHIFT) & A4XX_GRAS_SU_MODE_CONTROL_LINEHALFWIDTH__MASK;
 }
 #define A4XX_GRAS_SU_MODE_CONTROL_POLY_OFFSET			0x00000800
+#define A4XX_GRAS_SU_MODE_CONTROL_MSAA_ENABLE			0x00002000
 #define A4XX_GRAS_SU_MODE_CONTROL_RENDERING_PASS		0x00100000
 
 #define REG_A4XX_GRAS_SC_CONTROL				0x0000207b
@@ -3700,6 +3707,8 @@ static inline uint32_t A4XX_HLSQ_GS_CONTROL_REG_INSTRLENGTH(uint32_t val)
 #define REG_A4XX_PC_BINNING_COMMAND				0x00000d00
 #define A4XX_PC_BINNING_COMMAND_BINNING_ENABLE			0x00000001
 
+#define REG_A4XX_PC_TESSFACTOR_ADDR				0x00000d08
+
 #define REG_A4XX_PC_DRAWCALL_SETUP_OVERRIDE			0x00000d0c
 
 #define REG_A4XX_PC_PERFCTR_PC_SEL_0				0x00000d10
@@ -3796,12 +3805,8 @@ static inline uint32_t A4XX_PC_HS_PARAM_SPACING(enum a4xx_tess_spacing val)
 {
 	return ((val) << A4XX_PC_HS_PARAM_SPACING__SHIFT) & A4XX_PC_HS_PARAM_SPACING__MASK;
 }
-#define A4XX_PC_HS_PARAM_PRIMTYPE__MASK				0x01800000
-#define A4XX_PC_HS_PARAM_PRIMTYPE__SHIFT			23
-static inline uint32_t A4XX_PC_HS_PARAM_PRIMTYPE(enum adreno_pa_su_sc_draw val)
-{
-	return ((val) << A4XX_PC_HS_PARAM_PRIMTYPE__SHIFT) & A4XX_PC_HS_PARAM_PRIMTYPE__MASK;
-}
+#define A4XX_PC_HS_PARAM_CW					0x00800000
+#define A4XX_PC_HS_PARAM_CONNECTED				0x01000000
 
 #define REG_A4XX_VBIF_VERSION					0x00003000
 

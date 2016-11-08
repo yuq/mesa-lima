@@ -874,10 +874,10 @@ fd4_emit_restore(struct fd_batch *batch, struct fd_ringbuffer *ring)
 
 	/* we don't use this yet.. probably best to disable.. */
 	OUT_PKT3(ring, CP_SET_DRAW_STATE, 2);
-	OUT_RING(ring, CP_SET_DRAW_STATE_0_COUNT(0) |
-			CP_SET_DRAW_STATE_0_DISABLE_ALL_GROUPS |
-			CP_SET_DRAW_STATE_0_GROUP_ID(0));
-	OUT_RING(ring, CP_SET_DRAW_STATE_1_ADDR(0));
+	OUT_RING(ring, CP_SET_DRAW_STATE__0_COUNT(0) |
+			CP_SET_DRAW_STATE__0_DISABLE_ALL_GROUPS |
+			CP_SET_DRAW_STATE__0_GROUP_ID(0));
+	OUT_RING(ring, CP_SET_DRAW_STATE__1_ADDR_LO(0));
 
 	OUT_PKT0(ring, REG_A4XX_SP_VS_PVT_MEM_PARAM, 2);
 	OUT_RING(ring, 0x08000001);                  /* SP_VS_PVT_MEM_PARAM */
