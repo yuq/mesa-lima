@@ -739,6 +739,7 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
    case GLSL_TYPE_INT:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_DOUBLE:
       /* At this point, we have a scalar, vector, or matrix so we know that
        * there cannot be any structure splitting still in the way.  By
        * stopping at the matrix level rather than the vector level, we
