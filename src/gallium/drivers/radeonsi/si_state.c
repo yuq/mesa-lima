@@ -1767,16 +1767,43 @@ static uint32_t si_translate_buffer_numformat(struct pipe_screen *screen,
 	}
 }
 
-static bool si_is_vertex_format_supported(struct pipe_screen *screen, enum pipe_format format)
+static unsigned si_is_vertex_format_supported(struct pipe_screen *screen,
+					      enum pipe_format format,
+					      unsigned usage)
 {
 	const struct util_format_description *desc;
 	int first_non_void;
 	unsigned data_format;
 
+	assert((usage & ~(PIPE_BIND_SHADER_IMAGE |
+			  PIPE_BIND_SAMPLER_VIEW |
+			  PIPE_BIND_VERTEX_BUFFER)) == 0);
+
 	desc = util_format_description(format);
+
+	/* There are no native 8_8_8 or 16_16_16 data formats, and we currently
+	 * select 8_8_8_8 and 16_16_16_16 instead. This works reasonably well
+	 * for read-only access (with caveats surrounding bounds checks), but
+	 * obviously fails for write access which we have to implement for
+	 * shader images. Luckily, OpenGL doesn't expect this to be supported
+	 * anyway, and so the only impact is on PBO uploads / downloads, which
+	 * shouldn't be expected to be fast for GL_RGB anyway.
+	 */
+	if (desc->block.bits == 3 * 8 ||
+	    desc->block.bits == 3 * 16) {
+		if (usage & (PIPE_BIND_SHADER_IMAGE | PIPE_BIND_SAMPLER_VIEW)) {
+		    usage &= ~(PIPE_BIND_SHADER_IMAGE | PIPE_BIND_SAMPLER_VIEW);
+			if (!usage)
+				return 0;
+		}
+	}
+
 	first_non_void = util_format_get_first_non_void_channel(format);
 	data_format = si_translate_buffer_dataformat(screen, desc, first_non_void);
-	return data_format != V_008F0C_BUF_DATA_FORMAT_INVALID;
+	if (data_format == V_008F0C_BUF_DATA_FORMAT_INVALID)
+		return 0;
+
+	return usage;
 }
 
 static bool si_is_colorbuffer_format_supported(enum pipe_format format)
@@ -1831,9 +1858,9 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 	if (usage & (PIPE_BIND_SAMPLER_VIEW |
 		     PIPE_BIND_SHADER_IMAGE)) {
 		if (target == PIPE_BUFFER) {
-			if (si_is_vertex_format_supported(screen, format))
-				retval |= usage & (PIPE_BIND_SAMPLER_VIEW |
-						   PIPE_BIND_SHADER_IMAGE);
+			retval |= si_is_vertex_format_supported(
+				screen, format, usage & (PIPE_BIND_SAMPLER_VIEW |
+						         PIPE_BIND_SHADER_IMAGE));
 		} else {
 			if (si_is_sampler_format_supported(screen, format))
 				retval |= usage & (PIPE_BIND_SAMPLER_VIEW |
@@ -1862,9 +1889,9 @@ static boolean si_is_format_supported(struct pipe_screen *screen,
 		retval |= PIPE_BIND_DEPTH_STENCIL;
 	}
 
-	if ((usage & PIPE_BIND_VERTEX_BUFFER) &&
-	    si_is_vertex_format_supported(screen, format)) {
-		retval |= PIPE_BIND_VERTEX_BUFFER;
+	if (usage & PIPE_BIND_VERTEX_BUFFER) {
+		retval |= si_is_vertex_format_supported(screen, format,
+							PIPE_BIND_VERTEX_BUFFER);
 	}
 
 	if ((usage & PIPE_BIND_LINEAR) &&
