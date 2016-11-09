@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "wsi_common_wayland.h"
 
