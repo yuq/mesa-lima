@@ -422,11 +422,8 @@ SWR_FORMAT
 mesa_to_swr_format(enum pipe_format format)
 {
    static const std::map<pipe_format,SWR_FORMAT> mesa2swr = {
-      {PIPE_FORMAT_NONE,                   (SWR_FORMAT)-1},
       {PIPE_FORMAT_B8G8R8A8_UNORM,         B8G8R8A8_UNORM},
       {PIPE_FORMAT_B8G8R8X8_UNORM,         B8G8R8X8_UNORM},
-      {PIPE_FORMAT_A8R8G8B8_UNORM,         (SWR_FORMAT)-1},
-      {PIPE_FORMAT_X8R8G8B8_UNORM,         (SWR_FORMAT)-1},
       {PIPE_FORMAT_B5G5R5A1_UNORM,         B5G5R5A1_UNORM},
       {PIPE_FORMAT_B4G4R4A4_UNORM,         B4G4R4A4_UNORM},
       {PIPE_FORMAT_B5G6R5_UNORM,           B5G6R5_UNORM},
@@ -437,35 +434,18 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_L8A8_UNORM,             L8A8_UNORM},
       {PIPE_FORMAT_L16_UNORM,              L16_UNORM},
       {PIPE_FORMAT_UYVY,                   YCRCB_SWAPUVY},
-      {PIPE_FORMAT_YUYV,                   (SWR_FORMAT)-1},
       {PIPE_FORMAT_Z16_UNORM,              R16_UNORM}, // z
-      {PIPE_FORMAT_Z32_UNORM,              (SWR_FORMAT)-1},
       {PIPE_FORMAT_Z32_FLOAT,              R32_FLOAT}, // z
       {PIPE_FORMAT_Z24_UNORM_S8_UINT,      R24_UNORM_X8_TYPELESS}, // z
-      {PIPE_FORMAT_S8_UINT_Z24_UNORM,      (SWR_FORMAT)-1},
       {PIPE_FORMAT_Z24X8_UNORM,            R24_UNORM_X8_TYPELESS}, // z
-      {PIPE_FORMAT_X8Z24_UNORM,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_S8_UINT,                (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R64_FLOAT,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R64G64_FLOAT,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R64G64B64_FLOAT,        (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R64G64B64A64_FLOAT,     (SWR_FORMAT)-1},
       {PIPE_FORMAT_R32_FLOAT,              R32_FLOAT},
       {PIPE_FORMAT_R32G32_FLOAT,           R32G32_FLOAT},
       {PIPE_FORMAT_R32G32B32_FLOAT,        R32G32B32_FLOAT},
       {PIPE_FORMAT_R32G32B32A32_FLOAT,     R32G32B32A32_FLOAT},
-      {PIPE_FORMAT_R32_UNORM,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32_UNORM,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32_UNORM,        (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32A32_UNORM,     (SWR_FORMAT)-1},
       {PIPE_FORMAT_R32_USCALED,            R32_USCALED},
       {PIPE_FORMAT_R32G32_USCALED,         R32G32_USCALED},
       {PIPE_FORMAT_R32G32B32_USCALED,      R32G32B32_USCALED},
       {PIPE_FORMAT_R32G32B32A32_USCALED,   R32G32B32A32_USCALED},
-      {PIPE_FORMAT_R32_SNORM,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32_SNORM,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32_SNORM,        (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32A32_SNORM,     (SWR_FORMAT)-1},
       {PIPE_FORMAT_R32_SSCALED,            R32_SSCALED},
       {PIPE_FORMAT_R32G32_SSCALED,         R32G32_SSCALED},
       {PIPE_FORMAT_R32G32B32_SSCALED,      R32G32B32_SSCALED},
@@ -490,7 +470,6 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R8G8_UNORM,             R8G8_UNORM},
       {PIPE_FORMAT_R8G8B8_UNORM,           R8G8B8_UNORM},
       {PIPE_FORMAT_R8G8B8A8_UNORM,         R8G8B8A8_UNORM},
-      {PIPE_FORMAT_X8B8G8R8_UNORM,         (SWR_FORMAT)-1},
       {PIPE_FORMAT_R8_USCALED,             R8_USCALED},
       {PIPE_FORMAT_R8G8_USCALED,           R8G8_USCALED},
       {PIPE_FORMAT_R8G8B8_USCALED,         R8G8B8_USCALED},
@@ -503,10 +482,6 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R8G8_SSCALED,           R8G8_SSCALED},
       {PIPE_FORMAT_R8G8B8_SSCALED,         R8G8B8_SSCALED},
       {PIPE_FORMAT_R8G8B8A8_SSCALED,       R8G8B8A8_SSCALED},
-      {PIPE_FORMAT_R32_FIXED,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32_FIXED,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32_FIXED,        (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32A32_FIXED,     (SWR_FORMAT)-1},
       {PIPE_FORMAT_R16_FLOAT,              R16_FLOAT},
       {PIPE_FORMAT_R16G16_FLOAT,           R16G16_FLOAT},
       {PIPE_FORMAT_R16G16B16_FLOAT,        R16G16B16_FLOAT},
@@ -515,20 +490,14 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_L8_SRGB,                L8_UNORM_SRGB},
       {PIPE_FORMAT_L8A8_SRGB,              L8A8_UNORM_SRGB},
       {PIPE_FORMAT_R8G8B8_SRGB,            R8G8B8_UNORM_SRGB},
-      {PIPE_FORMAT_A8B8G8R8_SRGB,          (SWR_FORMAT)-1},
-      {PIPE_FORMAT_X8B8G8R8_SRGB,          (SWR_FORMAT)-1},
       {PIPE_FORMAT_B8G8R8A8_SRGB,          B8G8R8A8_UNORM_SRGB},
       {PIPE_FORMAT_B8G8R8X8_SRGB,          B8G8R8X8_UNORM_SRGB},
-      {PIPE_FORMAT_A8R8G8B8_SRGB,          (SWR_FORMAT)-1},
-      {PIPE_FORMAT_X8R8G8B8_SRGB,          (SWR_FORMAT)-1},
       {PIPE_FORMAT_R8G8B8A8_SRGB,          R8G8B8A8_UNORM_SRGB},
 
-      {PIPE_FORMAT_DXT1_RGB,               (SWR_FORMAT)-1},
       {PIPE_FORMAT_DXT1_RGBA,              BC1_UNORM},
       {PIPE_FORMAT_DXT3_RGBA,              BC2_UNORM},
       {PIPE_FORMAT_DXT5_RGBA,              BC3_UNORM},
 
-      {PIPE_FORMAT_DXT1_SRGB,              (SWR_FORMAT)-1},
       {PIPE_FORMAT_DXT1_SRGBA,             BC1_UNORM_SRGB},
       {PIPE_FORMAT_DXT3_SRGBA,             BC2_UNORM_SRGB},
       {PIPE_FORMAT_DXT5_SRGBA,             BC3_UNORM_SRGB},
@@ -538,50 +507,17 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_RGTC2_UNORM,            BC5_UNORM},
       {PIPE_FORMAT_RGTC2_SNORM,            BC5_SNORM},
 
-      {PIPE_FORMAT_R8G8_B8G8_UNORM,        (SWR_FORMAT)-1},
-      {PIPE_FORMAT_G8R8_G8B8_UNORM,        (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_R8SG8SB8UX8U_NORM,      (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R5SG5SB6U_NORM,         (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_A8B8G8R8_UNORM,         (SWR_FORMAT)-1},
       {PIPE_FORMAT_B5G5R5X1_UNORM,         B5G5R5X1_UNORM},
       {PIPE_FORMAT_R10G10B10A2_USCALED,    R10G10B10A2_USCALED},
       {PIPE_FORMAT_R11G11B10_FLOAT,        R11G11B10_FLOAT},
-      {PIPE_FORMAT_R9G9B9E5_FLOAT,         (SWR_FORMAT)-1},
       {PIPE_FORMAT_Z32_FLOAT_S8X24_UINT,   R32_FLOAT_X8X24_TYPELESS}, // z
-      {PIPE_FORMAT_R1_UNORM,               (SWR_FORMAT)-1},
       {PIPE_FORMAT_R10G10B10X2_USCALED,    R10G10B10X2_USCALED},
-      {PIPE_FORMAT_R10G10B10X2_SNORM,      (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L4A4_UNORM,             (SWR_FORMAT)-1},
       {PIPE_FORMAT_B10G10R10A2_UNORM,      B10G10R10A2_UNORM},
-      {PIPE_FORMAT_R10SG10SB10SA2U_NORM,   (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8G8Bx_SNORM,           (SWR_FORMAT)-1},
       {PIPE_FORMAT_R8G8B8X8_UNORM,         R8G8B8X8_UNORM},
-      {PIPE_FORMAT_B4G4R4X4_UNORM,         (SWR_FORMAT)-1},
 
-      {PIPE_FORMAT_X24S8_UINT,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_S8X24_UINT,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_X32_S8X24_UINT,         (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_B2G3R3_UNORM,           (SWR_FORMAT)-1},
       {PIPE_FORMAT_L16A16_UNORM,           L16A16_UNORM},
       {PIPE_FORMAT_A16_UNORM,              A16_UNORM},
       {PIPE_FORMAT_I16_UNORM,              I16_UNORM},
-
-      {PIPE_FORMAT_LATC1_UNORM,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_LATC1_SNORM,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_LATC2_UNORM,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_LATC2_SNORM,            (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_A8_SNORM,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L8_SNORM,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L8A8_SNORM,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_I8_SNORM,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_A16_SNORM,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L16_SNORM,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L16A16_SNORM,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_I16_SNORM,              (SWR_FORMAT)-1},
 
       {PIPE_FORMAT_A16_FLOAT,              A16_FLOAT},
       {PIPE_FORMAT_L16_FLOAT,              L16_FLOAT},
@@ -591,17 +527,6 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_L32_FLOAT,              L32_FLOAT},
       {PIPE_FORMAT_L32A32_FLOAT,           L32A32_FLOAT},
       {PIPE_FORMAT_I32_FLOAT,              I32_FLOAT},
-
-      {PIPE_FORMAT_YV12,                   (SWR_FORMAT)-1},
-      {PIPE_FORMAT_YV16,                   (SWR_FORMAT)-1},
-      {PIPE_FORMAT_IYUV,                   (SWR_FORMAT)-1},
-      {PIPE_FORMAT_NV12,                   (SWR_FORMAT)-1},
-      {PIPE_FORMAT_NV21,                   (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_A4R4_UNORM,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R4A4_UNORM,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8A8_UNORM,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_A8R8_UNORM,             (SWR_FORMAT)-1},
 
       {PIPE_FORMAT_R10G10B10A2_SSCALED,    R10G10B10A2_SSCALED},
       {PIPE_FORMAT_R10G10B10A2_SNORM,      R10G10B10A2_SNORM},
@@ -640,68 +565,20 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R32G32B32_SINT,         R32G32B32_SINT},
       {PIPE_FORMAT_R32G32B32A32_SINT,      R32G32B32A32_SINT},
 
-      {PIPE_FORMAT_A8_UINT,                (SWR_FORMAT)-1},
       {PIPE_FORMAT_I8_UINT,                I8_UINT},
       {PIPE_FORMAT_L8_UINT,                L8_UINT},
       {PIPE_FORMAT_L8A8_UINT,              L8A8_UINT},
 
-      {PIPE_FORMAT_A8_SINT,                (SWR_FORMAT)-1},
       {PIPE_FORMAT_I8_SINT,                I8_SINT},
       {PIPE_FORMAT_L8_SINT,                L8_SINT},
       {PIPE_FORMAT_L8A8_SINT,              L8A8_SINT},
 
-      {PIPE_FORMAT_A16_UINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_I16_UINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L16_UINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L16A16_UINT,            (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_A16_SINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_I16_SINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L16_SINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L16A16_SINT,            (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_A32_UINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_I32_UINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L32_UINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L32A32_UINT,            (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_A32_SINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_I32_SINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L32_SINT,               (SWR_FORMAT)-1},
-      {PIPE_FORMAT_L32A32_SINT,            (SWR_FORMAT)-1},
-
       {PIPE_FORMAT_B10G10R10A2_UINT,       B10G10R10A2_UINT},
 
-      {PIPE_FORMAT_ETC1_RGB8,              (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_R8G8_R8B8_UNORM,        (SWR_FORMAT)-1},
-      {PIPE_FORMAT_G8R8_B8R8_UNORM,        (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_R8G8B8X8_SNORM,         (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8G8B8X8_SRGB,          (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8G8B8X8_UINT,          (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8G8B8X8_SINT,          (SWR_FORMAT)-1},
       {PIPE_FORMAT_B10G10R10X2_UNORM,      B10G10R10X2_UNORM},
       {PIPE_FORMAT_R16G16B16X16_UNORM,     R16G16B16X16_UNORM},
-      {PIPE_FORMAT_R16G16B16X16_SNORM,     (SWR_FORMAT)-1},
       {PIPE_FORMAT_R16G16B16X16_FLOAT,     R16G16B16X16_FLOAT},
-      {PIPE_FORMAT_R16G16B16X16_UINT,      (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R16G16B16X16_SINT,      (SWR_FORMAT)-1},
       {PIPE_FORMAT_R32G32B32X32_FLOAT,     R32G32B32X32_FLOAT},
-      {PIPE_FORMAT_R32G32B32X32_UINT,      (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32G32B32X32_SINT,      (SWR_FORMAT)-1},
-
-      {PIPE_FORMAT_R8A8_SNORM,             (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R16A16_UNORM,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R16A16_SNORM,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R16A16_FLOAT,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32A32_FLOAT,           (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8A8_UINT,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R8A8_SINT,              (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R16A16_UINT,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R16A16_SINT,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32A32_UINT,            (SWR_FORMAT)-1},
-      {PIPE_FORMAT_R32A32_SINT,            (SWR_FORMAT)-1},
       {PIPE_FORMAT_R10G10B10A2_UINT,       R10G10B10A2_UINT},
 
       {PIPE_FORMAT_B5G6R5_SRGB,            B5G6R5_UNORM_SRGB}
@@ -711,9 +588,6 @@ mesa_to_swr_format(enum pipe_format format)
       return mesa2swr.at(format);
    }
    catch (std::out_of_range) {
-      debug_printf("asked to convert unsupported format %s\n",
-                   util_format_name(format));
-
       return (SWR_FORMAT)-1;
    }
 }
