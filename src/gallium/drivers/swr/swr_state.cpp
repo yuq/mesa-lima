@@ -38,6 +38,7 @@
 #include "util/u_inlines.h"
 #include "util/u_helpers.h"
 #include "util/u_framebuffer.h"
+#include "util/u_viewport.h"
 
 #include "swr_state.h"
 #include "swr_context.h"
@@ -951,13 +952,8 @@ swr_update_derived(struct pipe_context *pipe,
       vp->width = state->translate[0] + state->scale[0];
       vp->y = state->translate[1] - fabs(state->scale[1]);
       vp->height = state->translate[1] + fabs(state->scale[1]);
-      if (rasterizer->clip_halfz == 0) {
-         vp->minZ = state->translate[2] - state->scale[2];
-         vp->maxZ = state->translate[2] + state->scale[2];
-      } else {
-         vp->minZ = state->translate[2];
-         vp->maxZ = state->translate[2] + state->scale[2];
-      }
+      util_viewport_zmin_zmax(state, rasterizer->clip_halfz,
+                              &vp->minZ, &vp->maxZ);
 
       vpm->m00[0] = state->scale[0];
       vpm->m11[0] = state->scale[1];
