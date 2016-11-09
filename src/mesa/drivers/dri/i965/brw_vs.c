@@ -156,7 +156,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
    memset(&prog_data, 0, sizeof(prog_data));
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
-   if (!prog)
+   if (vp->program.is_arb_asm)
       stage_prog_data->use_alt_mode = true;
 
    mem_ctx = ralloc_context(NULL);
@@ -186,7 +186,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
                     stage_prog_data->nr_image_params);
    stage_prog_data->nr_params = param_count;
 
-   if (prog) {
+   if (!vp->program.is_arb_asm) {
       brw_nir_setup_glsl_uniforms(vp->program.nir, &vp->program,
                                   &prog_data.base.base,
                                   compiler->scalar_stage[MESA_SHADER_VERTEX]);
@@ -219,15 +219,14 @@ brw_codegen_vs_prog(struct brw_context *brw,
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_VS)) {
-      if (!prog)
+      if (vp->program.is_arb_asm)
          brw_dump_arb_asm("vertex", &vp->program);
    }
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
-      bool is_glsl_sh = prog != NULL;
       st_index = brw_get_shader_time_index(brw, &vp->program, ST_VS,
-                                           is_glsl_sh);
+                                           !vp->program.is_arb_asm);
    }
 
    /* Emit GEN4 code.
@@ -239,7 +238,7 @@ brw_codegen_vs_prog(struct brw_context *brw,
                             !_mesa_is_gles3(&brw->ctx),
                             st_index, &program_size, &error_str);
    if (program == NULL) {
-      if (prog) {
+      if (!vp->program.is_arb_asm) {
          vp->program.sh.data->LinkStatus = false;
          ralloc_strcat(&vp->program.sh.data->InfoLog, error_str);
       }

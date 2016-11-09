@@ -151,7 +151,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
    memset(&prog_data, 0, sizeof(prog_data));
 
    /* Use ALT floating point mode for ARB programs so that 0^0 == 1. */
-   if (!prog)
+   if (fp->program.is_arb_asm)
       prog_data.base.use_alt_mode = true;
 
    assign_fs_binding_table_offsets(devinfo, &fp->program, key, &prog_data);
@@ -173,7 +173,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
                     prog_data.base.nr_image_params);
    prog_data.base.nr_params = param_count;
 
-   if (prog) {
+   if (!fp->program.is_arb_asm) {
       brw_nir_setup_glsl_uniforms(fp->program.nir, &fp->program,
                                   &prog_data.base, true);
    } else {
@@ -192,11 +192,10 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
-      bool is_glsl_sh = prog != NULL;
       st_index8 = brw_get_shader_time_index(brw, &fp->program, ST_FS8,
-                                            is_glsl_sh);
+                                            !fp->program.is_arb_asm);
       st_index16 = brw_get_shader_time_index(brw, &fp->program, ST_FS16,
-                                             is_glsl_sh);
+                                             !fp->program.is_arb_asm);
    }
 
    char *error_str = NULL;
@@ -207,7 +206,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
                             &program_size, &error_str);
 
    if (program == NULL) {
-      if (prog) {
+      if (!fp->program.is_arb_asm) {
          fp->program.sh.data->LinkStatus = false;
          ralloc_strcat(&fp->program.sh.data->InfoLog, error_str);
       }
@@ -233,7 +232,7 @@ brw_codegen_wm_prog(struct brw_context *brw,
                            prog_data.base.total_scratch,
                            devinfo->max_wm_threads);
 
-   if (unlikely((INTEL_DEBUG & DEBUG_WM) && !prog))
+   if (unlikely((INTEL_DEBUG & DEBUG_WM) && fp->program.is_arb_asm))
       fprintf(stderr, "\n");
 
    brw_upload_cache(&brw->cache, BRW_CACHE_FS_PROG,
