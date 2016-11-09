@@ -6624,7 +6624,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
 static void
 set_affected_state_flags(uint64_t *states,
                          struct gl_program *prog,
-                         struct gl_linked_shader *shader,
                          uint64_t new_constants,
                          uint64_t new_sampler_views,
                          uint64_t new_samplers,
@@ -6690,7 +6689,7 @@ get_mesa_program(struct gl_context *ctx,
                    ST_NEW_RASTERIZER |
                    ST_NEW_VERTEX_ARRAYS;
 
-         set_affected_state_flags(states, prog, shader,
+         set_affected_state_flags(states, prog,
                                   ST_NEW_VS_CONSTANTS,
                                   ST_NEW_VS_SAMPLER_VIEWS,
                                   ST_NEW_RENDER_SAMPLERS,
@@ -6705,7 +6704,7 @@ get_mesa_program(struct gl_context *ctx,
 
          *states = ST_NEW_TCS_STATE;
 
-         set_affected_state_flags(states, prog, shader,
+         set_affected_state_flags(states, prog,
                                   ST_NEW_TCS_CONSTANTS,
                                   ST_NEW_TCS_SAMPLER_VIEWS,
                                   ST_NEW_RENDER_SAMPLERS,
@@ -6721,7 +6720,7 @@ get_mesa_program(struct gl_context *ctx,
          *states = ST_NEW_TES_STATE |
                    ST_NEW_RASTERIZER;
 
-         set_affected_state_flags(states, prog, shader,
+         set_affected_state_flags(states, prog,
                                   ST_NEW_TES_CONSTANTS,
                                   ST_NEW_TES_SAMPLER_VIEWS,
                                   ST_NEW_RENDER_SAMPLERS,
@@ -6737,7 +6736,7 @@ get_mesa_program(struct gl_context *ctx,
          *states = ST_NEW_GS_STATE |
                    ST_NEW_RASTERIZER;
 
-         set_affected_state_flags(states, prog, shader,
+         set_affected_state_flags(states, prog,
                                   ST_NEW_GS_CONSTANTS,
                                   ST_NEW_GS_SAMPLER_VIEWS,
                                   ST_NEW_RENDER_SAMPLERS,
@@ -6755,7 +6754,7 @@ get_mesa_program(struct gl_context *ctx,
                    ST_NEW_SAMPLE_SHADING |
                    ST_NEW_FS_CONSTANTS;
 
-         set_affected_state_flags(states, prog, shader,
+         set_affected_state_flags(states, prog,
                                   ST_NEW_FS_CONSTANTS,
                                   ST_NEW_FS_SAMPLER_VIEWS,
                                   ST_NEW_RENDER_SAMPLERS,
@@ -6770,7 +6769,7 @@ get_mesa_program(struct gl_context *ctx,
 
          *states = ST_NEW_CS_STATE;
 
-         set_affected_state_flags(states, prog, shader,
+         set_affected_state_flags(states, prog,
                                   ST_NEW_CS_CONSTANTS,
                                   ST_NEW_CS_SAMPLER_VIEWS,
                                   ST_NEW_CS_SAMPLERS,
