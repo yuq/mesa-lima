@@ -1318,7 +1318,12 @@ swr_update_derived(struct pipe_context *pipe,
             compileState.desc.alphaTestEnable =
                ctx->depth_stencil->alpha.enabled;
             compileState.desc.independentAlphaBlendEnable =
-               ctx->blend->pipe.independent_blend_enable;
+               (compileState.blendState.sourceBlendFactor !=
+                compileState.blendState.sourceAlphaBlendFactor) ||
+               (compileState.blendState.destBlendFactor !=
+                compileState.blendState.destAlphaBlendFactor) ||
+               (compileState.blendState.colorBlendFunc !=
+                compileState.blendState.alphaBlendFunc);
             compileState.desc.alphaToCoverageEnable =
                ctx->blend->pipe.alpha_to_coverage;
             compileState.desc.sampleMaskEnable = 0; // XXX
