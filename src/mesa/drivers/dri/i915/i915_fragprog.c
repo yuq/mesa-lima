@@ -1144,12 +1144,13 @@ i915BindProgram(struct gl_context * ctx, GLenum target, struct gl_program *prog)
 }
 
 static struct gl_program *
-i915NewProgram(struct gl_context * ctx, GLenum target, GLuint id)
+i915NewProgram(struct gl_context * ctx, GLenum target, GLuint id,
+               bool is_arb_asm)
 {
    switch (target) {
    case GL_VERTEX_PROGRAM_ARB: {
       struct gl_program *prog = rzalloc(NULL, struct gl_program);
-      return _mesa_init_gl_program(prog, target, id);
+      return _mesa_init_gl_program(prog, target, id, is_arb_asm);
    }
 
    case GL_FRAGMENT_PROGRAM_ARB:{
@@ -1158,7 +1159,8 @@ i915NewProgram(struct gl_context * ctx, GLenum target, GLuint id)
          if (prog) {
             i915_init_program(I915_CONTEXT(ctx), prog);
 
-            return _mesa_init_gl_program(&prog->FragProg, target, id);
+            return _mesa_init_gl_program(&prog->FragProg, target, id,
+                                         is_arb_asm);
          }
          else
             return NULL;
@@ -1167,7 +1169,7 @@ i915NewProgram(struct gl_context * ctx, GLenum target, GLuint id)
    default:
       /* Just fallback:
        */
-      return _mesa_new_program(ctx, target, id);
+      return _mesa_new_program(ctx, target, id, is_arb_asm);
    }
 }
 

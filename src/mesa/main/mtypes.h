@@ -1925,6 +1925,8 @@ struct gl_program
 
    struct nir_shader *nir;
 
+   bool is_arb_asm; /** Is this an ARB assembly-style program */
+
    GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
    GLbitfield TexturesUsed[MAX_COMBINED_TEXTURE_IMAGE_UNITS];  /**< TEXTURE_x_BIT bitmask */
    GLbitfield SamplersUsed;   /**< Bitfield of which samplers are used */

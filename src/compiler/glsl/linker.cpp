@@ -2202,7 +2202,7 @@ link_intrastage_shaders(void *mem_ctx,
    struct gl_program *gl_prog =
       ctx->Driver.NewProgram(ctx,
                              _mesa_shader_stage_to_program(shader_list[0]->Stage),
-                             prog->Name);
+                             prog->Name, false);
    if (!gl_prog) {
       prog->data->LinkStatus = false;
       _mesa_delete_linked_shader(ctx, linked);
