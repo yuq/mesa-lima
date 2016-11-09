@@ -6370,7 +6370,7 @@ st_translate_program(
    if (program->use_shared_memory)
       t->shared_memory = ureg_DECL_memory(ureg, TGSI_MEMORY_TYPE_SHARED);
 
-   for (i = 0; i < program->shader->NumImages; i++) {
+   for (i = 0; i < program->shader->Program->info.num_images; i++) {
       if (program->images_used & (1 << i)) {
          t->images[i] = ureg_DECL_image(ureg, i,
                                         program->image_targets[i],
@@ -6639,7 +6639,7 @@ set_affected_state_flags(uint64_t *states,
    if (prog->info.num_textures)
       *states |= new_sampler_views | new_samplers;
 
-   if (shader->NumImages)
+   if (prog->info.num_images)
       *states |= new_images;
 
    if (prog->info.num_ubos)

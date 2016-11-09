@@ -57,7 +57,7 @@ st_bind_images(struct st_context *st, struct gl_linked_shader *shader,
 
    c = &st->ctx->Const.Program[shader->Stage];
 
-   for (i = 0; i < shader->NumImages; i++) {
+   for (i = 0; i < shader->Program->info.num_images; i++) {
       struct gl_image_unit *u =
          &st->ctx->ImageUnits[shader->Program->sh.ImageUnits[i]];
       struct st_texture_object *stObj = st_texture_object(u->TexObj);
@@ -118,14 +118,14 @@ st_bind_images(struct st_context *st, struct gl_linked_shader *shader,
          }
       }
    }
-   cso_set_shader_images(st->cso_context, shader_type, 0, shader->NumImages,
-                         images);
+   cso_set_shader_images(st->cso_context, shader_type, 0,
+                         shader->Program->info.num_images, images);
    /* clear out any stale shader images */
-   if (shader->NumImages < c->MaxImageUniforms)
+   if (shader->Program->info.num_images < c->MaxImageUniforms)
       cso_set_shader_images(
             st->cso_context, shader_type,
-            shader->NumImages,
-            c->MaxImageUniforms - shader->NumImages,
+            shader->Program->info.num_images,
+            c->MaxImageUniforms - shader->Program->info.num_images,
             NULL);
 }
 

@@ -3220,12 +3220,13 @@ check_image_resources(struct gl_context *ctx, struct gl_shader_program *prog)
       struct gl_linked_shader *sh = prog->_LinkedShaders[i];
 
       if (sh) {
-         if (sh->NumImages > ctx->Const.Program[i].MaxImageUniforms)
+         if (sh->Program->info.num_images > ctx->Const.Program[i].MaxImageUniforms)
             linker_error(prog, "Too many %s shader image uniforms (%u > %u)\n",
-                         _mesa_shader_stage_to_string(i), sh->NumImages,
+                         _mesa_shader_stage_to_string(i),
+                         sh->Program->info.num_images,
                          ctx->Const.Program[i].MaxImageUniforms);
 
-         total_image_units += sh->NumImages;
+         total_image_units += sh->Program->info.num_images;
          total_shader_storage_blocks += sh->Program->info.num_ssbos;
 
          if (i == MESA_SHADER_FRAGMENT) {

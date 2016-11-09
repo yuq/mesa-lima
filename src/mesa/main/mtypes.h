@@ -2382,13 +2382,6 @@ struct gl_linked_shader
    struct exec_list *fragdata_arrays;
    struct glsl_symbol_table *symbols;
 
-   /**
-    * Number of image uniforms defined in the shader.  It specifies
-    * the number of valid elements in the \c ImageUnits and \c
-    * ImageAccess arrays.
-    */
-   GLuint NumImages;
-
    struct gl_shader_info info;
 };
 
