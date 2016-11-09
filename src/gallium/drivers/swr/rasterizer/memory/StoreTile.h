@@ -2563,6 +2563,7 @@ void InitStoreTilesTableDepth(
     PFN_STORE_TILES(&table)[NumTileModes][ArraySizeT])
 {
    table[TTileMode][R32_FLOAT]                      = StoreMacroTile<TilingTraits<TTileMode, 32>, R32_FLOAT, R32_FLOAT>::Store;
+   table[TTileMode][R32_FLOAT_X8X24_TYPELESS]       = StoreMacroTile<TilingTraits<TTileMode, 64>, R32_FLOAT, R32_FLOAT_X8X24_TYPELESS>::Store;
    table[TTileMode][R24_UNORM_X8_TYPELESS]          = StoreMacroTile<TilingTraits<TTileMode, 32>, R32_FLOAT, R24_UNORM_X8_TYPELESS>::Store;
    table[TTileMode][R16_UNORM]                      = StoreMacroTile<TilingTraits<TTileMode, 16>, R32_FLOAT, R16_UNORM>::Store;
 }
