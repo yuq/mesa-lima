@@ -921,6 +921,7 @@ swr_update_derived(struct pipe_context *pipe,
          rastState->depthFormat = swr_resource(zb->texture)->swr.format;
 
       rastState->depthClipEnable = rasterizer->depth_clip;
+      rastState->clipHalfZ = rasterizer->clip_halfz;
 
       rastState->clipDistanceMask =
          ctx->vs->info.base.num_written_clipdistance ?
