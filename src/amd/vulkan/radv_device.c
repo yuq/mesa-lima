@@ -113,19 +113,19 @@ static const VkExtensionProperties global_extensions[] = {
 #ifdef VK_USE_PLATFORM_XCB_KHR
 	{
 		.extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-		.specVersion = 5,
+		.specVersion = 6,
 	},
 #endif
 #ifdef VK_USE_PLATFORM_XLIB_KHR
 	{
 		.extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-		.specVersion = 5,
+		.specVersion = 6,
 	},
 #endif
 #ifdef VK_USE_PLATFORM_WAYLAND_KHR
 	{
 		.extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-		.specVersion = 4,
+		.specVersion = 5,
 	},
 #endif
 };
@@ -133,7 +133,7 @@ static const VkExtensionProperties global_extensions[] = {
 static const VkExtensionProperties device_extensions[] = {
 	{
 		.extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		.specVersion = 67,
+		.specVersion = 68,
 	},
 };
 
