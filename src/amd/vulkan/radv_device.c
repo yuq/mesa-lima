@@ -1186,6 +1186,8 @@ VkResult radv_GetFenceStatus(VkDevice _device, VkFence _fence)
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	RADV_FROM_HANDLE(radv_fence, fence, _fence);
 
+	if (fence->signalled)
+		return VK_SUCCESS;
 	if (!fence->submitted)
 		return VK_NOT_READY;
 
