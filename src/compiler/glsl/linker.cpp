@@ -4678,7 +4678,7 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
          lower_ubo_reference(prog->_LinkedShaders[i],
                              options->ClampBlockIndicesToArrayBounds);
 
-      if (options->LowerShaderSharedVariables)
+      if (i == MESA_SHADER_COMPUTE)
          lower_shared_reference(prog->_LinkedShaders[i],
                                 &prog->Comp.SharedSize);
 
