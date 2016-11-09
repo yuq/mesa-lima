@@ -1486,6 +1486,8 @@ intel_miptree_init_mcs(struct brw_context *brw,
                        struct intel_mipmap_tree *mt,
                        int init_value)
 {
+   assert(mt->mcs_buf != NULL);
+
    /* From the Ivy Bridge PRM, Vol 2 Part 1 p326:
     *
     *     When MCS buffer is enabled and bound to MSRT, it is required that it
@@ -1604,10 +1606,12 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
                                    mt->logical_width0,
                                    mt->logical_height0,
                                    MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
+   if (!mt->mcs_buf)
+      return false;
 
    intel_miptree_init_mcs(brw, mt, 0xFF);
 
-   return mt->mcs_buf != NULL;
+   return true;
 }
 
 
@@ -1666,6 +1670,8 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                               mcs_width,
                                               mcs_height,
                                               layout_flags);
+   if (!mt->mcs_buf)
+      return false;
 
    /* From Gen9 onwards single-sampled (non-msrt) auxiliary buffers are
     * used for lossless compression which requires similar initialisation
@@ -1686,7 +1692,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
       mt->msaa_layout = INTEL_MSAA_LAYOUT_CMS;
    }
 
-   return mt->mcs_buf != NULL;
+   return true;
 }
 
 /**
