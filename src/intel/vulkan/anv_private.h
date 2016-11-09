@@ -159,7 +159,7 @@ anv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
         __dword &= ~(1 << (b)))
 
 #define typed_memcpy(dest, src, count) ({ \
-   static_assert(sizeof(*src) == sizeof(*dest), ""); \
+   STATIC_ASSERT(sizeof(*src) == sizeof(*dest)); \
    memcpy((dest), (src), (count) * sizeof(*(src))); \
 })
 
@@ -725,7 +725,7 @@ _anv_combine_address(struct anv_batch *batch, void *location,
    do {                                                                 \
       uint32_t *dw;                                                     \
                                                                         \
-      static_assert(ARRAY_SIZE(dwords0) == ARRAY_SIZE(dwords1), "mismatch merge"); \
+      STATIC_ASSERT(ARRAY_SIZE(dwords0) == ARRAY_SIZE(dwords1));        \
       dw = anv_batch_emit_dwords((batch), ARRAY_SIZE(dwords0));         \
       for (uint32_t i = 0; i < ARRAY_SIZE(dwords0); i++)                \
          dw[i] = (dwords0)[i] | (dwords1)[i];                           \
