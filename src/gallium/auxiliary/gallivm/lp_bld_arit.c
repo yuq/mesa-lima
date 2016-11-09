@@ -1237,16 +1237,15 @@ lp_build_mul_32_lohi(struct lp_build_context *bld,
 {
    struct gallivm_state *gallivm = bld->gallivm;
    LLVMBuilderRef builder = gallivm->builder;
-   LLVMValueRef tmp;
+   LLVMValueRef tmp, shift, res_lo;
    struct lp_type type_tmp;
-   LLVMTypeRef wide_type, cast_type;
+   LLVMTypeRef wide_type, narrow_type;
 
    type_tmp = bld->type;
+   narrow_type = lp_build_vec_type(gallivm, type_tmp);
    type_tmp.width *= 2;
    wide_type = lp_build_vec_type(gallivm, type_tmp);
-   type_tmp = bld->type;
-   type_tmp.length *= 2;
-   cast_type = lp_build_vec_type(gallivm, type_tmp);
+   shift = lp_build_const_vec(gallivm, type_tmp, 32);
 
    if (bld->type.sign) {
       a = LLVMBuildSExt(builder, a, wide_type, "");
@@ -1256,9 +1255,14 @@ lp_build_mul_32_lohi(struct lp_build_context *bld,
       b = LLVMBuildZExt(builder, b, wide_type, "");
    }
    tmp = LLVMBuildMul(builder, a, b, "");
-   tmp = LLVMBuildBitCast(builder, tmp, cast_type, "");
-   *res_hi = lp_build_uninterleave1(gallivm, bld->type.length * 2, tmp, 1);
-   return lp_build_uninterleave1(gallivm, bld->type.length * 2, tmp, 0);
+
+   res_lo = LLVMBuildTrunc(builder, tmp, narrow_type, "");
+
+   /* Since we truncate anyway, LShr and AShr are equivalent. */
+   tmp = LLVMBuildLShr(builder, tmp, shift, "");
+   *res_hi = LLVMBuildTrunc(builder, tmp, narrow_type, "");
+
+   return res_lo;
 }
 
 
