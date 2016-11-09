@@ -480,6 +480,21 @@ enum SWR_LOGIC_OP
     LOGICOP_SET,
 };
 
+//////////////////////////////////////////////////////////////////////////
+/// SWR_AUX_MODE
+/// @brief Specifies how the auxiliary buffer is used by the driver.
+//////////////////////////////////////////////////////////////////////////
+enum SWR_AUX_MODE
+{
+    AUX_MODE_NONE,
+    AUX_MODE_COLOR,
+    AUX_MODE_UAV,
+    AUX_MODE_DEPTH,
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// SWR_SURFACE_STATE
+//////////////////////////////////////////////////////////////////////////
 struct SWR_SURFACE_STATE
 {
     uint8_t *pBaseAddress;
@@ -506,6 +521,7 @@ struct SWR_SURFACE_STATE
     uint32_t lodOffsets[2][15]; // lod offsets for sampled surfaces
 
     uint8_t *pAuxBaseAddress;   // Used for compression, append/consume counter, etc.
+    SWR_AUX_MODE auxMode;      // @llvm_enum
 
     bool bInterleavedSamples;   // are MSAA samples stored interleaved or planar
 };
