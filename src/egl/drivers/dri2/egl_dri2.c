@@ -166,6 +166,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
    unsigned int dri_masks[4] = { 0, 0, 0, 0 };
    _EGLConfig *matching_config;
    EGLint num_configs = 0;
+   EGLint config_id;
    int i;
 
    _eglInitConfig(&base, disp, id);
@@ -285,6 +286,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
       return NULL;
    }
 
+   config_id = base.ConfigID;
    base.ConfigID    = EGL_DONT_CARE;
    base.SurfaceType = EGL_DONT_CARE;
    num_configs = _eglFilterArray(disp->Configs, (void **) &matching_config, 1,
@@ -313,6 +315,7 @@ dri2_add_config(_EGLDisplay *disp, const __DRIconfig *dri_config, int id,
 
       memcpy(&conf->base, &base, sizeof base);
       conf->base.SurfaceType = 0;
+      conf->base.ConfigID = config_id;
 
       _eglLinkConfig(&conf->base);
    }
