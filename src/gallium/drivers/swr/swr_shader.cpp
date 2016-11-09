@@ -34,6 +34,7 @@
 #include "builder.h"
 
 #include "tgsi/tgsi_strings.h"
+#include "util/u_format.h"
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_struct.h"
@@ -41,6 +42,7 @@
 
 #include "swr_context.h"
 #include "swr_context_llvm.h"
+#include "swr_resource.h"
 #include "swr_state.h"
 #include "swr_screen.h"
 
@@ -85,18 +87,36 @@ swr_generate_sampler_key(const struct lp_tgsi_info &info,
          info.base.file_max[TGSI_FILE_SAMPLER_VIEW] + 1;
       for (unsigned i = 0; i < key.nr_sampler_views; i++) {
          if (info.base.file_mask[TGSI_FILE_SAMPLER_VIEW] & (1 << i)) {
+            const struct pipe_sampler_view *view =
+               ctx->sampler_views[shader_type][i];
             lp_sampler_static_texture_state(
-               &key.sampler[i].texture_state,
-               ctx->sampler_views[shader_type][i]);
+               &key.sampler[i].texture_state, view);
+            if (view) {
+               struct swr_resource *swr_res = swr_resource(view->texture);
+               const struct util_format_description *desc =
+                  util_format_description(view->format);
+               if (swr_res->has_depth && swr_res->has_stencil &&
+                   !util_format_has_depth(desc))
+                  key.sampler[i].texture_state.format = PIPE_FORMAT_S8_UINT;
+            }
          }
       }
    } else {
       key.nr_sampler_views = key.nr_samplers;
       for (unsigned i = 0; i < key.nr_sampler_views; i++) {
          if (info.base.file_mask[TGSI_FILE_SAMPLER] & (1 << i)) {
+            const struct pipe_sampler_view *view =
+               ctx->sampler_views[shader_type][i];
             lp_sampler_static_texture_state(
-               &key.sampler[i].texture_state,
-               ctx->sampler_views[shader_type][i]);
+               &key.sampler[i].texture_state, view);
+            if (view) {
+               struct swr_resource *swr_res = swr_resource(view->texture);
+               const struct util_format_description *desc =
+                  util_format_description(view->format);
+               if (swr_res->has_depth && swr_res->has_stencil &&
+                   !util_format_has_depth(desc))
+                  key.sampler[i].texture_state.format = PIPE_FORMAT_S8_UINT;
+            }
          }
       }
    }

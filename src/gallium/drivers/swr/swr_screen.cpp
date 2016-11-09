@@ -44,6 +44,8 @@ extern "C" {
 
 #include "jit_api.h"
 
+#include "memory/TilingFunctions.h"
+
 #include <stdio.h>
 #include <map>
 
@@ -722,12 +724,14 @@ swr_displaytarget_layout(struct swr_screen *screen, struct swr_resource *res)
    struct sw_winsys *winsys = screen->winsys;
    struct sw_displaytarget *dt;
 
+   const unsigned width = align(res->swr.width, res->swr.halign);
+   const unsigned height = align(res->swr.height, res->swr.valign);
+
    UINT stride;
    dt = winsys->displaytarget_create(winsys,
                                      res->base.bind,
                                      res->base.format,
-                                     res->alignedWidth,
-                                     res->alignedHeight,
+                                     width, height,
                                      64, NULL,
                                      &stride);
 
@@ -741,14 +745,14 @@ swr_displaytarget_layout(struct swr_screen *screen, struct swr_resource *res)
 
    /* Clear the display target surface */
    if (map)
-      memset(map, 0, res->alignedHeight * stride);
+      memset(map, 0, height * stride);
 
    winsys->displaytarget_unmap(winsys, dt);
 
    return TRUE;
 }
 
-static boolean
+static bool
 swr_texture_layout(struct swr_screen *screen,
                    struct swr_resource *res,
                    boolean allocate)
@@ -764,87 +768,164 @@ swr_texture_layout(struct swr_screen *screen,
    if (res->has_stencil && !res->has_depth)
       fmt = PIPE_FORMAT_R8_UINT;
 
+   /* We always use the SWR layout. For 2D and 3D textures this looks like:
+    *
+    * |<------- pitch ------->|
+    * +=======================+-------
+    * |Array 0                |   ^
+    * |                       |   |
+    * |        Level 0        |   |
+    * |                       |   |
+    * |                       | qpitch
+    * +-----------+-----------+   |
+    * |           | L2L2L2L2  |   |
+    * |  Level 1  | L3L3      |   |
+    * |           | L4        |   v
+    * +===========+===========+-------
+    * |Array 1                |
+    * |                       |
+    * |        Level 0        |
+    * |                       |
+    * |                       |
+    * +-----------+-----------+
+    * |           | L2L2L2L2  |
+    * |  Level 1  | L3L3      |
+    * |           | L4        |
+    * +===========+===========+
+    *
+    * The overall width in bytes is known as the pitch, while the overall
+    * height in rows is the qpitch. Array slices are laid out logically below
+    * one another, qpitch rows apart. For 3D surfaces, the "level" values are
+    * just invalid for the higher array numbers (since depth is also
+    * minified). 1D and 1D array surfaces are stored effectively the same way,
+    * except that pitch never plays into it. All the levels are logically
+    * adjacent to each other on the X axis. The qpitch becomes the number of
+    * elements between array slices, while the pitch is unused.
+    *
+    * Each level's sizes are subject to the valign and halign settings of the
+    * surface. For compressed formats that swr is unaware of, we will use an
+    * appropriately-sized uncompressed format, and scale the widths/heights.
+    *
+    * This surface is stored inside res->swr. For depth/stencil textures,
+    * res->secondary will have an identically-laid-out but R8_UINT-formatted
+    * stencil tree. In the Z32F_S8 case, the primary surface still has 64-bpp
+    * texels, to simplify map/unmap logic which copies the stencil values
+    * in/out.
+    */
+
    res->swr.width = pt->width0;
    res->swr.height = pt->height0;
-   res->swr.depth = pt->depth0;
    res->swr.type = swr_convert_target_type(pt->target);
    res->swr.tileMode = SWR_TILE_NONE;
    res->swr.format = mesa_to_swr_format(fmt);
-   res->swr.numSamples = (1 << pt->nr_samples);
+   res->swr.numSamples = std::max(1u, pt->nr_samples);
 
-   SWR_FORMAT_INFO finfo = GetFormatInfo(res->swr.format);
-
-   size_t total_size = 0;
-   unsigned width = pt->width0;
-   unsigned height = pt->height0;
-   unsigned depth = pt->depth0;
-   unsigned layers = pt->array_size;
-
-   for (int level = 0; level <= pt->last_level; level++) {
-      unsigned alignedWidth, alignedHeight;
-      unsigned num_slices;
-
-      if (pt->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL)) {
-         alignedWidth = align(width, KNOB_MACROTILE_X_DIM);
-         alignedHeight = align(height, KNOB_MACROTILE_Y_DIM);
-      } else {
-         alignedWidth = width;
-         alignedHeight = height;
-      }
-
-      if (level == 0) {
-         res->alignedWidth = alignedWidth;
-         res->alignedHeight = alignedHeight;
-      }
-
-      res->row_stride[level] = util_format_get_stride(fmt, alignedWidth);
-      res->img_stride[level] =
-         res->row_stride[level] * util_format_get_nblocksy(fmt, alignedHeight);
-      res->mip_offsets[level] = total_size;
-
-      if (pt->target == PIPE_TEXTURE_3D)
-         num_slices = depth;
-      else if (pt->target == PIPE_TEXTURE_1D_ARRAY
-               || pt->target == PIPE_TEXTURE_2D_ARRAY
-               || pt->target == PIPE_TEXTURE_CUBE
-               || pt->target == PIPE_TEXTURE_CUBE_ARRAY)
-         num_slices = layers;
-      else
-         num_slices = 1;
-
-      total_size += res->img_stride[level] * num_slices;
-      if (total_size > SWR_MAX_TEXTURE_SIZE)
-         return FALSE;
-
-      width = u_minify(width, 1);
-      height = u_minify(height, 1);
-      depth = u_minify(depth, 1);
+   if (pt->bind & (PIPE_BIND_RENDER_TARGET | PIPE_BIND_DEPTH_STENCIL)) {
+      res->swr.halign = KNOB_MACROTILE_X_DIM;
+      res->swr.valign = KNOB_MACROTILE_Y_DIM;
+   } else {
+      res->swr.halign = 1;
+      res->swr.valign = 1;
    }
 
-   res->swr.halign = res->alignedWidth;
-   res->swr.valign = res->alignedHeight;
-   res->swr.pitch = res->row_stride[0];
+   unsigned halign = res->swr.halign * util_format_get_blockwidth(fmt);
+   unsigned width = align(pt->width0, halign);
+   if (pt->target == PIPE_TEXTURE_1D || pt->target == PIPE_TEXTURE_1D_ARRAY) {
+      for (int level = 1; level <= pt->last_level; level++)
+         width += align(u_minify(pt->width0, level), halign);
+      res->swr.pitch = util_format_get_blocksize(fmt);
+      res->swr.qpitch = util_format_get_nblocksx(fmt, width);
+   } else {
+      // The pitch is the overall width of the texture in bytes. Most of the
+      // time this is the pitch of level 0 since all the other levels fit
+      // underneath it. However in some degenerate situations, the width of
+      // level1 + level2 may be larger. In that case, we use those
+      // widths. This can happen if, e.g. halign is 32, and the width of level
+      // 0 is 32 or less. In that case, the aligned levels 1 and 2 will also
+      // be 32 each, adding up to 64.
+      unsigned valign = res->swr.valign * util_format_get_blockheight(fmt);
+      if (pt->last_level > 1) {
+         width = std::max<uint32_t>(
+               width,
+               align(u_minify(pt->width0, 1), halign) +
+               align(u_minify(pt->width0, 2), halign));
+      }
+      res->swr.pitch = util_format_get_stride(fmt, width);
+
+      // The qpitch is controlled by either the height of the second LOD, or
+      // the combination of all the later LODs.
+      unsigned height = align(pt->height0, valign);
+      if (pt->last_level == 1) {
+         height += align(u_minify(pt->height0, 1), valign);
+      } else if (pt->last_level > 1) {
+         unsigned level1 = align(u_minify(pt->height0, 1), valign);
+         unsigned level2 = 0;
+         for (int level = 2; level <= pt->last_level; level++) {
+            level2 += align(u_minify(pt->height0, level), valign);
+         }
+         height += std::max(level1, level2);
+      }
+      res->swr.qpitch = util_format_get_nblocksy(fmt, height);
+   }
+
+   if (pt->target == PIPE_TEXTURE_3D)
+      res->swr.depth = pt->depth0;
+   else
+      res->swr.depth = pt->array_size;
+
+   // Fix up swr format if necessary so that LOD offset computation works
+   if (res->swr.format == (SWR_FORMAT)-1) {
+      switch (util_format_get_blocksize(fmt)) {
+      default:
+         unreachable("Unexpected format block size");
+      case 1: res->swr.format = R8_UINT; break;
+      case 2: res->swr.format = R16_UINT; break;
+      case 4: res->swr.format = R32_UINT; break;
+      case 8:
+         if (util_format_is_compressed(fmt))
+            res->swr.format = BC4_UNORM;
+         else
+            res->swr.format = R32G32_UINT;
+         break;
+      case 16:
+         if (util_format_is_compressed(fmt))
+            res->swr.format = BC5_UNORM;
+         else
+            res->swr.format = R32G32B32A32_UINT;
+         break;
+      }
+   }
+
+   for (int level = 0; level <= pt->last_level; level++) {
+      res->mip_offsets[level] =
+         ComputeSurfaceOffset<false>(0, 0, 0, 0, 0, level, &res->swr);
+   }
+
+   size_t total_size =
+      (size_t)res->swr.depth * res->swr.qpitch * res->swr.pitch;
+   if (total_size > SWR_MAX_TEXTURE_SIZE)
+      return false;
 
    if (allocate) {
       res->swr.pBaseAddress = (uint8_t *)AlignedMalloc(total_size, 64);
 
       if (res->has_depth && res->has_stencil) {
-         SWR_FORMAT_INFO finfo = GetFormatInfo(res->secondary.format);
-         res->secondary.width = pt->width0;
-         res->secondary.height = pt->height0;
-         res->secondary.depth = pt->depth0;
-         res->secondary.type = SURFACE_2D;
-         res->secondary.tileMode = SWR_TILE_NONE;
+         res->secondary = res->swr;
          res->secondary.format = R8_UINT;
-         res->secondary.numSamples = (1 << pt->nr_samples);
-         res->secondary.pitch = res->alignedWidth * finfo.Bpp;
+         res->secondary.pitch = res->swr.pitch / util_format_get_blocksize(fmt);
+
+         for (int level = 0; level <= pt->last_level; level++) {
+            res->secondary_mip_offsets[level] =
+               ComputeSurfaceOffset<false>(0, 0, 0, 0, 0, level, &res->secondary);
+         }
 
          res->secondary.pBaseAddress = (uint8_t *)AlignedMalloc(
-            res->alignedHeight * res->secondary.pitch, 64);
+            res->secondary.depth * res->secondary.qpitch *
+            res->secondary.pitch, 64);
       }
    }
 
-   return TRUE;
+   return true;
 }
 
 static boolean

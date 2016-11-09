@@ -281,7 +281,9 @@ swr_store_dirty_resource(struct pipe_context *pipe,
       swr_draw_context *pDC = &ctx->swrDC;
       SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
       for (uint32_t i = 0; i < SWR_NUM_ATTACHMENTS; i++)
-         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress) {
+         if (renderTargets[i].pBaseAddress == spr->swr.pBaseAddress ||
+             (spr->secondary.pBaseAddress &&
+              renderTargets[i].pBaseAddress == spr->secondary.pBaseAddress)) {
             swr_store_render_target(pipe, i, post_tile_state);
 
             /* Mesa thinks depth/stencil are fused, so we'll never get an

@@ -717,25 +717,46 @@ swr_update_texture_state(struct swr_context *ctx,
    for (unsigned i = 0; i < num_sampler_views; i++) {
       struct pipe_sampler_view *view =
          ctx->sampler_views[shader_type][i];
+      struct swr_jit_texture *jit_tex = &textures[i];
 
+      memset(jit_tex, 0, sizeof(*jit_tex));
       if (view) {
          struct pipe_resource *res = view->texture;
          struct swr_resource *swr_res = swr_resource(res);
-         struct swr_jit_texture *jit_tex = &textures[i];
-         memset(jit_tex, 0, sizeof(*jit_tex));
+         SWR_SURFACE_STATE *swr = &swr_res->swr;
+         size_t *mip_offsets = swr_res->mip_offsets;
+         if (swr_res->has_depth && swr_res->has_stencil &&
+            !util_format_has_depth(util_format_description(view->format))) {
+            swr = &swr_res->secondary;
+            mip_offsets = swr_res->secondary_mip_offsets;
+         }
+
          jit_tex->width = res->width0;
          jit_tex->height = res->height0;
-         jit_tex->depth = res->depth0;
-         jit_tex->first_level = view->u.tex.first_level;
-         jit_tex->last_level = view->u.tex.last_level;
-         jit_tex->base_ptr = swr_res->swr.pBaseAddress;
+         jit_tex->base_ptr = swr->pBaseAddress;
+         if (view->target != PIPE_BUFFER) {
+            jit_tex->first_level = view->u.tex.first_level;
+            jit_tex->last_level = view->u.tex.last_level;
+            if (view->target == PIPE_TEXTURE_3D)
+               jit_tex->depth = res->depth0;
+            else
+               jit_tex->depth =
+                  view->u.tex.last_layer - view->u.tex.first_layer + 1;
+            jit_tex->base_ptr += view->u.tex.first_layer *
+               swr->qpitch * swr->pitch;
+         } else {
+            unsigned view_blocksize = util_format_get_blocksize(view->format);
+            jit_tex->base_ptr += view->u.buf.offset;
+            jit_tex->width = view->u.buf.size / view_blocksize;
+            jit_tex->depth = 1;
+         }
 
          for (unsigned level = jit_tex->first_level;
               level <= jit_tex->last_level;
               level++) {
-            jit_tex->row_stride[level] = swr_res->row_stride[level];
-            jit_tex->img_stride[level] = swr_res->img_stride[level];
-            jit_tex->mip_offsets[level] = swr_res->mip_offsets[level];
+            jit_tex->row_stride[level] = swr->pitch;
+            jit_tex->img_stride[level] = swr->qpitch * swr->pitch;
+            jit_tex->mip_offsets[level] = mip_offsets[level];
          }
       }
    }
@@ -805,6 +826,61 @@ swr_update_constants(struct swr_context *ctx, enum pipe_shader_type shaderType)
    }
 }
 
+static bool
+swr_change_rt(struct swr_context *ctx,
+              unsigned attachment,
+              const struct pipe_surface *sf)
+{
+   swr_draw_context *pDC = &ctx->swrDC;
+   struct SWR_SURFACE_STATE *rt = &pDC->renderTargets[attachment];
+
+   /* Do nothing if the render target hasn't changed */
+   if ((!sf || !sf->texture) && rt->pBaseAddress == nullptr)
+      return false;
+
+   /* Deal with disabling RT up front */
+   if (!sf || !sf->texture) {
+      /* If detaching attachment, mark tiles as RESOLVED so core
+       * won't try to load from non-existent target. */
+      swr_store_render_target(&ctx->pipe, attachment, SWR_TILE_RESOLVED);
+      *rt = {0};
+      return true;
+   }
+
+   const struct swr_resource *swr = swr_resource(sf->texture);
+   const SWR_SURFACE_STATE *swr_surface = &swr->swr;
+   SWR_FORMAT fmt = mesa_to_swr_format(sf->format);
+
+   if (attachment == SWR_ATTACHMENT_STENCIL && swr->secondary.pBaseAddress) {
+      swr_surface = &swr->secondary;
+      fmt = swr_surface->format;
+   }
+
+   if (rt->pBaseAddress == swr_surface->pBaseAddress &&
+       rt->format == fmt &&
+       rt->lod == sf->u.tex.level &&
+       rt->arrayIndex == sf->u.tex.first_layer)
+      return false;
+
+   bool need_fence = false;
+
+   /* StoreTile for changed target */
+   if (rt->pBaseAddress) {
+      /* If changing attachment to a new target, mark tiles as
+       * INVALID so they are reloaded from surface. */
+      swr_store_render_target(&ctx->pipe, attachment, SWR_TILE_INVALID);
+      need_fence = true;
+   }
+
+   /* Make new attachment */
+   *rt = *swr_surface;
+   rt->format = fmt;
+   rt->lod = sf->u.tex.level;
+   rt->arrayIndex = sf->u.tex.first_layer;
+
+   return need_fence;
+}
+
 void
 swr_update_derived(struct pipe_context *pipe,
                    const struct pipe_draw_info *p_draw_info)
@@ -823,64 +899,30 @@ swr_update_derived(struct pipe_context *pipe,
    /* Render Targets */
    if (ctx->dirty & SWR_NEW_FRAMEBUFFER) {
       struct pipe_framebuffer_state *fb = &ctx->framebuffer;
-      SWR_SURFACE_STATE *new_attachment[SWR_NUM_ATTACHMENTS] = {0};
-      UINT i;
+      const struct util_format_description *desc = NULL;
+      bool need_fence = false;
 
       /* colorbuffer targets */
-      if (fb->nr_cbufs)
-         for (i = 0; i < fb->nr_cbufs; ++i)
-            if (fb->cbufs[i]) {
-               struct swr_resource *colorBuffer =
-                  swr_resource(fb->cbufs[i]->texture);
-               new_attachment[SWR_ATTACHMENT_COLOR0 + i] = &colorBuffer->swr;
-            }
+      if (fb->nr_cbufs) {
+         for (unsigned i = 0; i < fb->nr_cbufs; ++i)
+            need_fence |= swr_change_rt(
+                  ctx, SWR_ATTACHMENT_COLOR0 + i, fb->cbufs[i]);
+      }
+      for (unsigned i = fb->nr_cbufs; i < SWR_NUM_RENDERTARGETS; ++i)
+         need_fence |= swr_change_rt(ctx, SWR_ATTACHMENT_COLOR0 + i, NULL);
 
       /* depth/stencil target */
-      if (fb->zsbuf) {
-         struct swr_resource *depthStencilBuffer =
-            swr_resource(fb->zsbuf->texture);
-         if (depthStencilBuffer->has_depth) {
-            new_attachment[SWR_ATTACHMENT_DEPTH] = &depthStencilBuffer->swr;
+      if (fb->zsbuf)
+         desc = util_format_description(fb->zsbuf->format);
+      if (fb->zsbuf && util_format_has_depth(desc))
+         need_fence |= swr_change_rt(ctx, SWR_ATTACHMENT_DEPTH, fb->zsbuf);
+      else
+         need_fence |= swr_change_rt(ctx, SWR_ATTACHMENT_DEPTH, NULL);
 
-            if (depthStencilBuffer->has_stencil)
-               new_attachment[SWR_ATTACHMENT_STENCIL] =
-                  &depthStencilBuffer->secondary;
-
-         } else if (depthStencilBuffer->has_stencil)
-            new_attachment[SWR_ATTACHMENT_STENCIL] = &depthStencilBuffer->swr;
-      }
-
-      /* Make the attachment updates */
-      swr_draw_context *pDC = &ctx->swrDC;
-      SWR_SURFACE_STATE *renderTargets = pDC->renderTargets;
-      unsigned need_fence = FALSE;
-      for (i = 0; i < SWR_NUM_ATTACHMENTS; i++) {
-         void *new_base = nullptr;
-         if (new_attachment[i])
-            new_base = new_attachment[i]->pBaseAddress;
-
-         /* StoreTile for changed target */
-         if (renderTargets[i].pBaseAddress != new_base) {
-            if (renderTargets[i].pBaseAddress) {
-               /* If changing attachment to a new target, mark tiles as
-                * INVALID so they are reloaded from surface.
-                * If detaching attachment, mark tiles as RESOLVED so core
-                * won't try to load from non-existent target. */
-               enum SWR_TILE_STATE post_state = (new_attachment[i]
-                  ? SWR_TILE_INVALID : SWR_TILE_RESOLVED);
-               swr_store_render_target(pipe, i, post_state);
-
-               need_fence |= TRUE;
-            }
-
-            /* Make new attachment */
-            if (new_attachment[i])
-               renderTargets[i] = *new_attachment[i];
-            else
-               if (renderTargets[i].pBaseAddress)
-                  renderTargets[i] = {0};
-         }
-      }
+      if (fb->zsbuf && util_format_has_stencil(desc))
+         need_fence |= swr_change_rt(ctx, SWR_ATTACHMENT_STENCIL, fb->zsbuf);
+      else
+         need_fence |= swr_change_rt(ctx, SWR_ATTACHMENT_STENCIL, NULL);
 
       /* This fence ensures any attachment changes are resolved before the
        * next draw */
