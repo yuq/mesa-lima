@@ -322,6 +322,8 @@ wsi_wl_get_display(struct wsi_device *wsi_device,
       pthread_mutex_unlock(&wsi->mutex);
 
       struct wsi_wl_display *display = wsi_wl_display_create(wsi, wl_display);
+      if (!display)
+         return NULL;
 
       pthread_mutex_lock(&wsi->mutex);
 
@@ -398,6 +400,8 @@ wsi_wl_surface_get_formats(VkIcdSurfaceBase *icd_surface,
    VkIcdSurfaceWayland *surface = (VkIcdSurfaceWayland *)icd_surface;
    struct wsi_wl_display *display =
       wsi_wl_get_display(wsi_device, surface->display);
+   if (!display)
+      return VK_ERROR_OUT_OF_HOST_MEMORY;
 
    uint32_t count = u_vector_length(&display->formats);
 
@@ -827,6 +831,10 @@ wsi_wl_finish_wsi(struct wsi_device *wsi_device,
       (struct wsi_wayland *)wsi_device->wsi[VK_ICD_WSI_PLATFORM_WAYLAND];
 
    if (wsi) {
+      struct hash_entry *entry;
+      hash_table_foreach(wsi->displays, entry)
+         wsi_wl_display_destroy(wsi, entry->data);
+
       _mesa_hash_table_destroy(wsi->displays, NULL);
 
       pthread_mutex_destroy(&wsi->mutex);
