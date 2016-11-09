@@ -106,7 +106,24 @@ def generate(env):
         ])
         env.Prepend(LIBPATH = [os.path.join(llvm_dir, 'lib')])
         # LIBS should match the output of `llvm-config --libs engine mcjit bitwriter x86asmprinter`
-        if llvm_version >= distutils.version.LooseVersion('3.7'):
+        if llvm_version >= distutils.version.LooseVersion('3.9'):
+            env.Prepend(LIBS = [
+                'LLVMX86Disassembler', 'LLVMX86AsmParser',
+                'LLVMX86CodeGen', 'LLVMSelectionDAG', 'LLVMAsmPrinter',
+                'LLVMDebugInfoCodeView', 'LLVMCodeGen',
+                'LLVMScalarOpts', 'LLVMInstCombine',
+                'LLVMInstrumentation', 'LLVMTransformUtils',
+                'LLVMBitWriter', 'LLVMX86Desc',
+                'LLVMMCDisassembler', 'LLVMX86Info',
+                'LLVMX86AsmPrinter', 'LLVMX86Utils',
+                'LLVMMCJIT', 'LLVMExecutionEngine', 'LLVMTarget',
+                'LLVMAnalysis', 'LLVMProfileData',
+                'LLVMRuntimeDyld', 'LLVMObject', 'LLVMMCParser',
+                'LLVMBitReader', 'LLVMMC', 'LLVMCore',
+                'LLVMSupport',
+                'LLVMIRReader', 'LLVMASMParser'
+            ])
+        elif llvm_version >= distutils.version.LooseVersion('3.7'):
             env.Prepend(LIBS = [
                 'LLVMBitWriter', 'LLVMX86Disassembler', 'LLVMX86AsmParser',
                 'LLVMX86CodeGen', 'LLVMSelectionDAG', 'LLVMAsmPrinter',
@@ -203,7 +220,7 @@ def generate(env):
             if '-fno-rtti' in cxxflags:
                 env.Append(CXXFLAGS = ['-fno-rtti'])
 
-            components = ['engine', 'mcjit', 'bitwriter', 'x86asmprinter', 'mcdisassembler']
+            components = ['engine', 'mcjit', 'bitwriter', 'x86asmprinter', 'mcdisassembler', 'irreader']
 
             env.ParseConfig('llvm-config --libs ' + ' '.join(components))
             env.ParseConfig('llvm-config --ldflags')
