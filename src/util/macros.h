@@ -178,7 +178,6 @@ do {                       \
 #   elif defined(_MSC_VER) && !defined(__INTEL_COMPILER)
 #      if _MSC_VER >= 1800
 #         define HAS_TRIVIAL_DESTRUCTOR(T) __has_trivial_destructor(T)
-#      else
 #      endif
 #   endif
 #   ifndef HAS_TRIVIAL_DESTRUCTOR
