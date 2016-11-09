@@ -796,8 +796,9 @@ swr_texture_layout(struct swr_screen *screen,
          res->alignedHeight = alignedHeight;
       }
 
-      res->row_stride[level] = alignedWidth * finfo.Bpp;
-      res->img_stride[level] = res->row_stride[level] * alignedHeight;
+      res->row_stride[level] = util_format_get_stride(fmt, alignedWidth);
+      res->img_stride[level] =
+         res->row_stride[level] * util_format_get_nblocksy(fmt, alignedHeight);
       res->mip_offsets[level] = total_size;
 
       if (pt->target == PIPE_TEXTURE_3D)

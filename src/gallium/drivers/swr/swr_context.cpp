@@ -157,8 +157,9 @@ swr_transfer_map(struct pipe_context *pipe,
       }
    }
 
-   unsigned offset = box->z * pt->layer_stride + box->y * pt->stride
-      + box->x * util_format_get_blocksize(format);
+   unsigned offset = box->z * pt->layer_stride +
+      util_format_get_nblocksy(format, box->y) * pt->stride +
+      util_format_get_stride(format, box->x);
 
    *transfer = pt;
 
