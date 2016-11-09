@@ -230,6 +230,14 @@ enum PACKED brw_reg_type {
 
 unsigned brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
                                  enum brw_reg_type type, enum brw_reg_file file);
+
+#define brw_element_size(devinfo, inst, operand)                             \
+   brw_hw_reg_type_to_size(devinfo,                                          \
+                           brw_inst_ ## operand ## _reg_type(devinfo, inst), \
+                           brw_inst_ ## operand ## _reg_file(devinfo, inst))
+unsigned brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
+                                 unsigned type, enum brw_reg_file file);
+
 const char *brw_reg_type_letters(unsigned brw_reg_type);
 uint32_t brw_swizzle_immediate(enum brw_reg_type type, uint32_t x, unsigned swz);
 

@@ -141,6 +141,57 @@ brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
    }
 }
 
+/**
+ * Return the element size given a hardware register type and file.
+ *
+ * The hardware encoding may depend on whether the value is an immediate.
+ */
+unsigned
+brw_hw_reg_type_to_size(const struct gen_device_info *devinfo,
+                        unsigned type, enum brw_reg_file file)
+{
+   if (file == BRW_IMMEDIATE_VALUE) {
+      static const unsigned imm_hw_sizes[] = {
+         [BRW_HW_REG_TYPE_UD]      = 4,
+         [BRW_HW_REG_TYPE_D]       = 4,
+         [BRW_HW_REG_TYPE_UW]      = 2,
+         [BRW_HW_REG_TYPE_W]       = 2,
+         [BRW_HW_REG_IMM_TYPE_UV]  = 2,
+         [BRW_HW_REG_IMM_TYPE_VF]  = 4,
+         [BRW_HW_REG_IMM_TYPE_V]   = 2,
+         [BRW_HW_REG_TYPE_F]       = 4,
+         [GEN8_HW_REG_TYPE_UQ]     = 8,
+         [GEN8_HW_REG_TYPE_Q]      = 8,
+         [GEN8_HW_REG_IMM_TYPE_DF] = 8,
+         [GEN8_HW_REG_IMM_TYPE_HF] = 2,
+      };
+      assert(type < ARRAY_SIZE(imm_hw_sizes));
+      assert(devinfo->gen >= 6 || type != BRW_HW_REG_IMM_TYPE_UV);
+      assert(devinfo->gen >= 8 || type <= BRW_HW_REG_TYPE_F);
+      return imm_hw_sizes[type];
+   } else {
+      /* Non-immediate registers */
+      static const unsigned hw_sizes[] = {
+         [BRW_HW_REG_TYPE_UD]          = 4,
+         [BRW_HW_REG_TYPE_D]           = 4,
+         [BRW_HW_REG_TYPE_UW]          = 2,
+         [BRW_HW_REG_TYPE_W]           = 2,
+         [BRW_HW_REG_NON_IMM_TYPE_UB]  = 1,
+         [BRW_HW_REG_NON_IMM_TYPE_B]   = 1,
+         [GEN7_HW_REG_NON_IMM_TYPE_DF] = 8,
+         [BRW_HW_REG_TYPE_F]           = 4,
+         [GEN8_HW_REG_TYPE_UQ]         = 8,
+         [GEN8_HW_REG_TYPE_Q]          = 8,
+         [GEN8_HW_REG_NON_IMM_TYPE_HF] = 2,
+      };
+      assert(type < ARRAY_SIZE(hw_sizes));
+      assert(devinfo->gen >= 7 ||
+             (type < GEN7_HW_REG_NON_IMM_TYPE_DF || type == BRW_HW_REG_TYPE_F));
+      assert(devinfo->gen >= 8 || type <= BRW_HW_REG_TYPE_F);
+      return hw_sizes[type];
+   }
+}
+
 void
 brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
 {
@@ -219,8 +270,6 @@ brw_set_dest(struct brw_codegen *p, brw_inst *inst, struct brw_reg dest)
       brw_inst_set_exec_size(devinfo, inst, dest.width);
 }
 
-extern int reg_type_size[];
-
 static void
 validate_reg(const struct gen_device_info *devinfo,
              brw_inst *inst, struct brw_reg reg)
@@ -237,8 +286,9 @@ validate_reg(const struct gen_device_info *devinfo,
        * destination horiz stride has to be a word.
        */
       if (reg.type == BRW_REGISTER_TYPE_V) {
+         unsigned elem_size = brw_element_size(devinfo, inst, dst);
          assert(hstride_for_reg[brw_inst_dst_hstride(devinfo, inst)] *
-                reg_type_size[brw_inst_dst_reg_type(devinfo, inst)] == 2);
+                elem_size == 2);
       }
 
       return;

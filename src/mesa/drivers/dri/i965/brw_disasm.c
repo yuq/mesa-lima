@@ -257,20 +257,6 @@ static const char *const three_source_reg_encoding[] = {
    [BRW_3SRC_TYPE_DF] = "DF",
 };
 
-const int reg_type_size[] = {
-   [BRW_HW_REG_TYPE_UD]          = 4,
-   [BRW_HW_REG_TYPE_D]           = 4,
-   [BRW_HW_REG_TYPE_UW]          = 2,
-   [BRW_HW_REG_TYPE_W]           = 2,
-   [BRW_HW_REG_NON_IMM_TYPE_UB]  = 1,
-   [BRW_HW_REG_NON_IMM_TYPE_B]   = 1,
-   [GEN7_HW_REG_NON_IMM_TYPE_DF] = 8,
-   [BRW_HW_REG_TYPE_F]           = 4,
-   [GEN8_HW_REG_TYPE_UQ]         = 8,
-   [GEN8_HW_REG_TYPE_Q]          = 8,
-   [GEN8_HW_REG_NON_IMM_TYPE_HF] = 2,
-};
-
 static const char *const reg_file[4] = {
    [0] = "A",
    [1] = "g",
@@ -734,6 +720,7 @@ reg(FILE *file, unsigned _reg_file, unsigned _reg_nr)
 static int
 dest(FILE *file, const struct gen_device_info *devinfo, brw_inst *inst)
 {
+   unsigned elem_size = brw_element_size(devinfo, inst, dst);
    int err = 0;
 
    if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1) {
@@ -744,7 +731,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, brw_inst *inst)
             return 0;
          if (brw_inst_dst_da1_subreg_nr(devinfo, inst))
             format(file, ".%"PRIu64, brw_inst_dst_da1_subreg_nr(devinfo, inst) /
-                   reg_type_size[brw_inst_dst_reg_type(devinfo, inst)]);
+                   elem_size);
          string(file, "<");
          err |= control(file, "horiz stride", horiz_stride,
                         brw_inst_dst_hstride(devinfo, inst), NULL);
@@ -755,7 +742,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, brw_inst *inst)
          string(file, "g[a0");
          if (brw_inst_dst_ia_subreg_nr(devinfo, inst))
             format(file, ".%"PRIu64, brw_inst_dst_ia_subreg_nr(devinfo, inst) /
-                   reg_type_size[brw_inst_dst_reg_type(devinfo, inst)]);
+                   elem_size);
          if (brw_inst_dst_ia1_addr_imm(devinfo, inst))
             format(file, " %d", brw_inst_dst_ia1_addr_imm(devinfo, inst));
          string(file, "]<");
@@ -772,8 +759,7 @@ dest(FILE *file, const struct gen_device_info *devinfo, brw_inst *inst)
          if (err == -1)
             return 0;
          if (brw_inst_dst_da16_subreg_nr(devinfo, inst))
-            format(file, ".%u", 16 /
-                   reg_type_size[brw_inst_dst_reg_type(devinfo, inst)]);
+            format(file, ".%u", 16 / elem_size);
          string(file, "<1>");
          err |= control(file, "writemask", writemask,
                         brw_inst_da16_writemask(devinfo, inst), NULL);
@@ -850,8 +836,10 @@ src_da1(FILE *file,
    err |= reg(file, _reg_file, reg_num);
    if (err == -1)
       return 0;
-   if (sub_reg_num)
-      format(file, ".%d", sub_reg_num / reg_type_size[type]);   /* use formal style like spec */
+   if (sub_reg_num) {
+      unsigned elem_size = brw_hw_reg_type_to_size(devinfo, type, _reg_file);
+      format(file, ".%d", sub_reg_num / elem_size);   /* use formal style like spec */
+   }
    src_align1_region(file, _vert_stride, _width, _horiz_stride);
    err |= control(file, "src reg encoding", reg_encoding, type, NULL);
    return err;
@@ -936,10 +924,14 @@ src_da16(FILE *file,
    err |= reg(file, _reg_file, _reg_nr);
    if (err == -1)
       return 0;
-   if (_subreg_nr)
+   if (_subreg_nr) {
+      unsigned elem_size =
+         brw_hw_reg_type_to_size(devinfo, _reg_type, _reg_file);
+
       /* bit4 for subreg number byte addressing. Make this same meaning as
          in da1 case, so output looks consistent. */
-      format(file, ".%d", 16 / reg_type_size[_reg_type]);
+      format(file, ".%d", 16 / elem_size);
+   }
    string(file, "<");
    err |= control(file, "vert stride", vert_stride, _vert_stride, NULL);
    string(file, ">");
