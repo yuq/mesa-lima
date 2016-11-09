@@ -199,6 +199,64 @@ TEST_P(validation_test, opcode46)
    }
 }
 
+/* When the Execution Data Type is wider than the destination data type, the
+ * destination must [...] specify a HorzStride equal to the ratio in sizes of
+ * the two data types.
+ */
+TEST_P(validation_test, dest_stride_must_be_equal_to_the_ratio_of_exec_size_to_dest_size)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+
+   EXPECT_TRUE(validate(p));
+}
+
+/* When the Execution Data Type is wider than the destination data type, the
+ * destination must be aligned as required by the wider execution data type
+ * [...]
+ */
+TEST_P(validation_test, dst_subreg_must_be_aligned_to_exec_type_size)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 2);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_4);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 8);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_TRUE(validate(p));
+}
+
 /* ExecSize must be greater than or equal to Width. */
 TEST_P(validation_test, exec_size_less_than_width)
 {

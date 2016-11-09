@@ -64,6 +64,20 @@ cat(struct string *dest, const struct string src)
    } while (0)
 
 static bool
+inst_is_send(const struct gen_device_info *devinfo, const brw_inst *inst)
+{
+   switch (brw_inst_opcode(devinfo, inst)) {
+   case BRW_OPCODE_SEND:
+   case BRW_OPCODE_SENDC:
+   case BRW_OPCODE_SENDS:
+   case BRW_OPCODE_SENDSC:
+      return true;
+   default:
+      return false;
+   }
+}
+
+static bool
 dst_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    return brw_inst_dst_reg_file(devinfo, inst) == BRW_ARCHITECTURE_REGISTER_FILE &&
@@ -192,6 +206,206 @@ is_unsupported_inst(const struct gen_device_info *devinfo,
                     const brw_inst *inst)
 {
    return brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst)) == NULL;
+}
+
+static unsigned
+execution_type_for_type(unsigned type, bool is_immediate)
+{
+   /* The meaning of the type bits is dependent on whether the operand is an
+    * immediate, so normalize them first.
+    */
+   if (is_immediate) {
+      switch (type) {
+      case BRW_HW_REG_IMM_TYPE_UV:
+      case BRW_HW_REG_IMM_TYPE_V:
+         type = BRW_HW_REG_TYPE_W;
+         break;
+      case BRW_HW_REG_IMM_TYPE_VF:
+         type = BRW_HW_REG_TYPE_F;
+         break;
+      case GEN8_HW_REG_IMM_TYPE_DF:
+         type = GEN7_HW_REG_NON_IMM_TYPE_DF;
+         break;
+      case GEN8_HW_REG_IMM_TYPE_HF:
+         type = GEN8_HW_REG_NON_IMM_TYPE_HF;
+         break;
+      default:
+         break;
+      }
+   }
+
+   switch (type) {
+   case BRW_HW_REG_TYPE_UD:
+   case BRW_HW_REG_TYPE_D:
+      return BRW_HW_REG_TYPE_D;
+   case BRW_HW_REG_TYPE_UW:
+   case BRW_HW_REG_TYPE_W:
+   case BRW_HW_REG_NON_IMM_TYPE_UB:
+   case BRW_HW_REG_NON_IMM_TYPE_B:
+      return BRW_HW_REG_TYPE_W;
+   case GEN8_HW_REG_TYPE_UQ:
+   case GEN8_HW_REG_TYPE_Q:
+      return GEN8_HW_REG_TYPE_Q;
+   case BRW_HW_REG_TYPE_F:
+   case GEN7_HW_REG_NON_IMM_TYPE_DF:
+   case GEN8_HW_REG_NON_IMM_TYPE_HF:
+      return type;
+   default:
+      unreachable("not reached");
+   }
+}
+
+/**
+ * Returns the execution type of an instruction \p inst
+ */
+static unsigned
+execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
+{
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   unsigned src0_exec_type, src1_exec_type;
+   unsigned src0_type = brw_inst_src0_reg_type(devinfo, inst);
+   unsigned src1_type = brw_inst_src1_reg_type(devinfo, inst);
+
+   bool src0_is_immediate =
+      brw_inst_src0_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE;
+   bool src1_is_immediate =
+      brw_inst_src1_reg_file(devinfo, inst) == BRW_IMMEDIATE_VALUE;
+
+   /* Execution data type is independent of destination data type, except in
+    * mixed F/HF instructions on CHV and SKL+.
+    */
+   unsigned dst_exec_type = brw_inst_dst_reg_type(devinfo, inst);
+
+   src0_exec_type = execution_type_for_type(src0_type, src0_is_immediate);
+   if (num_sources == 1) {
+      if ((devinfo->gen >= 9 || devinfo->is_cherryview) &&
+          src0_exec_type == GEN8_HW_REG_NON_IMM_TYPE_HF) {
+         return dst_exec_type;
+      }
+      return src0_exec_type;
+   }
+
+   src1_exec_type = execution_type_for_type(src1_type, src1_is_immediate);
+   if (src0_exec_type == src1_exec_type)
+      return src0_exec_type;
+
+   /* Mixed operand types where one is float is float on Gen < 6
+    * (and not allowed on later platforms)
+    */
+   if (devinfo->gen < 6 &&
+       (src0_exec_type == BRW_HW_REG_TYPE_F ||
+        src1_exec_type == BRW_HW_REG_TYPE_F))
+      return BRW_HW_REG_TYPE_F;
+
+   if (src0_exec_type == GEN8_HW_REG_TYPE_Q ||
+       src1_exec_type == GEN8_HW_REG_TYPE_Q)
+      return GEN8_HW_REG_TYPE_Q;
+
+   if (src0_exec_type == BRW_HW_REG_TYPE_D ||
+       src1_exec_type == BRW_HW_REG_TYPE_D)
+      return BRW_HW_REG_TYPE_D;
+
+   if (src0_exec_type == BRW_HW_REG_TYPE_W ||
+       src1_exec_type == BRW_HW_REG_TYPE_W)
+      return BRW_HW_REG_TYPE_W;
+
+   if (src0_exec_type == GEN7_HW_REG_NON_IMM_TYPE_DF ||
+       src1_exec_type == GEN7_HW_REG_NON_IMM_TYPE_DF)
+      return GEN7_HW_REG_NON_IMM_TYPE_DF;
+
+   if (devinfo->gen >= 9 || devinfo->is_cherryview) {
+      if (dst_exec_type == BRW_HW_REG_TYPE_F ||
+          src0_exec_type == BRW_HW_REG_TYPE_F ||
+          src1_exec_type == BRW_HW_REG_TYPE_F) {
+         return BRW_HW_REG_TYPE_F;
+      } else {
+         return GEN8_HW_REG_NON_IMM_TYPE_HF;
+      }
+   }
+
+   assert(src0_exec_type == BRW_HW_REG_TYPE_F);
+   return BRW_HW_REG_TYPE_F;
+}
+
+/**
+ * Checks restrictions listed in "General Restrictions Based on Operand Types"
+ * in the "Register Region Restrictions" section.
+ */
+static struct string
+general_restrictions_based_on_operand_types(const struct gen_device_info *devinfo,
+                                            const brw_inst *inst)
+{
+   const struct opcode_desc *desc =
+      brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst));
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   unsigned exec_size = 1 << brw_inst_exec_size(devinfo, inst);
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   if (num_sources == 3)
+      return (struct string){};
+
+   if (inst_is_send(devinfo, inst))
+      return (struct string){};
+
+   if (exec_size == 1)
+      return (struct string){};
+
+   if (desc->ndst == 0)
+      return (struct string){};
+
+   /* The PRMs say:
+    *
+    *    Where n is the largest element size in bytes for any source or
+    *    destination operand type, ExecSize * n must be <= 64.
+    *
+    * But we do not attempt to enforce it, because it is implied by other
+    * rules:
+    *
+    *    - that the destination stride must match the execution data type
+    *    - sources may not span more than two adjacent GRF registers
+    *    - destination may not span more than two adjacent GRF registers
+    *
+    * In fact, checking it would weaken testing of the other rules.
+    */
+
+   if (num_sources == 3)
+      return (struct string){};
+
+   if (exec_size == 1)
+      return (struct string){};
+
+   if (inst_is_send(devinfo, inst))
+      return (struct string){};
+
+   if (desc->ndst == 0)
+      return (struct string){};
+
+   /* FINISHME: check special cases for byte operations */
+   if (brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_B ||
+       brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_UB)
+      return (struct string){};
+
+   unsigned exec_type = execution_type(devinfo, inst);
+   unsigned exec_type_size =
+      brw_hw_reg_type_to_size(devinfo, exec_type, BRW_GENERAL_REGISTER_FILE);
+   unsigned dst_type_size = brw_element_size(devinfo, inst, dst);
+
+   if (exec_type_size > dst_type_size) {
+      unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+      ERROR_IF(dst_stride * dst_type_size != exec_type_size,
+               "Destination stride must be equal to the ratio of the sizes of "
+               "the execution data type to the destination type");
+
+      if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1 &&
+          brw_inst_dst_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
+         unsigned subreg = brw_inst_dst_da1_subreg_nr(devinfo, inst);
+         ERROR_IF(subreg % exec_type_size != 0,
+                  "Destination subreg must be aligned to the size of the "
+                  "execution data type");
+      }
+   }
+
+   return error_msg;
 }
 
 /**
@@ -361,6 +575,7 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
       } else {
          CHECK(sources_not_null);
          CHECK(send_restrictions);
+         CHECK(general_restrictions_based_on_operand_types);
          CHECK(general_restrictions_on_region_parameters);
       }
 
