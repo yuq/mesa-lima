@@ -225,16 +225,6 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
 }
 
 void
-program_resource_visitor::visit_field(const glsl_type *type, const char *name,
-                                      bool row_major,
-                                      const glsl_type *,
-                                      const enum glsl_interface_packing,
-                                      bool /* last_field */)
-{
-   visit_field(type, name, row_major);
-}
-
-void
 program_resource_visitor::visit_field(const glsl_struct_field *)
 {
 }
@@ -345,7 +335,10 @@ public:
 
 private:
    virtual void visit_field(const glsl_type *type, const char *name,
-                            bool /* row_major */)
+                            bool /* row_major */,
+                            const glsl_type * /* record_type */,
+                            const enum glsl_interface_packing,
+                            bool /* last_field */)
    {
       assert(!type->without_array()->is_record());
       assert(!type->without_array()->is_interface());
@@ -646,12 +639,6 @@ private:
    virtual void set_record_array_count(unsigned record_array_count)
    {
       this->record_array_count = record_array_count;
-   }
-
-   virtual void visit_field(const glsl_type *, const char *,
-                            bool /* row_major */)
-   {
-      assert(!"Should not get here.");
    }
 
    virtual void enter_record(const glsl_type *type, const char *,

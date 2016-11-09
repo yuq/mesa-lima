@@ -60,15 +60,6 @@ public:
    struct gl_shader_program *prog;
 
 private:
-   virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major)
-   {
-      (void) type;
-      (void) name;
-      (void) row_major;
-      assert(!"Should not get here.");
-   }
-
    virtual void enter_record(const glsl_type *type, const char *,
                              bool row_major, const enum glsl_interface_packing packing) {
       assert(type->is_record());
@@ -191,12 +182,13 @@ public:
    unsigned num_active_uniforms;
 
 private:
-   virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major)
+   virtual void visit_field(const glsl_type * /* type */,
+                            const char * /* name */,
+                            bool /* row_major */,
+                            const glsl_type * /* record_type */,
+                            const enum glsl_interface_packing,
+                            bool /* last_field */)
    {
-      (void) type;
-      (void) name;
-      (void) row_major;
       this->num_active_uniforms++;
    }
 };

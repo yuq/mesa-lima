@@ -2381,7 +2381,9 @@ public:
 
 private:
    virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major);
+                            bool row_major, const glsl_type *record_type,
+                            const enum glsl_interface_packing packing,
+                            bool last_field);
 
    struct gl_shader_program *shader_program;
    struct gl_program_parameter_list *params;
@@ -2393,11 +2395,12 @@ private:
 
 void
 add_uniform_to_shader::visit_field(const glsl_type *type, const char *name,
-                                   bool row_major)
+                                   bool /* row_major */,
+                                   const glsl_type * /* record_type */,
+                                   const enum glsl_interface_packing,
+                                   bool /* last_field */)
 {
    unsigned int size;
-
-   (void) row_major;
 
    /* atomics don't get real storage */
    if (type->contains_atomic())

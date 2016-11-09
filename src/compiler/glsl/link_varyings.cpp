@@ -1788,12 +1788,13 @@ public:
 
 private:
    virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major)
+                            bool /* row_major */,
+                            const glsl_type * /* record_type */,
+                            const enum glsl_interface_packing,
+                            bool /* last_field */)
    {
       assert(!type->without_array()->is_record());
       assert(!type->without_array()->is_interface());
-
-      (void) row_major;
 
       tfeedback_candidate *candidate
          = rzalloc(this->mem_ctx, tfeedback_candidate);

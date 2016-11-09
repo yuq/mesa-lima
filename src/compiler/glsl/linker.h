@@ -145,23 +145,11 @@ protected:
     * \param last_field   Set if \c name is the last field of the structure
     *                     containing it.  This will always be false for items
     *                     not contained in a structure or interface block.
-    *
-    * The default implementation just calls the other \c visit_field method.
     */
    virtual void visit_field(const glsl_type *type, const char *name,
                             bool row_major, const glsl_type *record_type,
                             const enum glsl_interface_packing packing,
-                            bool last_field);
-
-   /**
-    * Method invoked for each leaf of the variable
-    *
-    * \param type  Type of the field.
-    * \param name  Fully qualified name of the field.
-    * \param row_major  For a matrix type, is it stored row-major.
-    */
-   virtual void visit_field(const glsl_type *type, const char *name,
-                            bool row_major) = 0;
+                            bool last_field) = 0;
 
    /**
     * Visit a record before visiting its fields
