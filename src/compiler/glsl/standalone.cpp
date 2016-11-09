@@ -107,10 +107,6 @@ init_gl_program(struct gl_program *prog, GLenum target, bool is_arb_asm)
    prog->RefCount = 1;
    prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
    prog->is_arb_asm = is_arb_asm;
-
-   /* default mapping from samplers to texture units */
-   for (int i = 0; i < MAX_SAMPLERS; i++)
-      prog->SamplerUnits[i] = i;
 }
 
 struct gl_program *

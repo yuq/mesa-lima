@@ -181,8 +181,6 @@ struct gl_program *
 _mesa_init_gl_program(struct gl_program *prog, GLenum target, GLuint id,
                       bool is_arb_asm)
 {
-   GLuint i;
-
    if (!prog)
       return NULL;
 
@@ -195,9 +193,22 @@ _mesa_init_gl_program(struct gl_program *prog, GLenum target, GLuint id,
    prog->info.stage = _mesa_program_enum_to_shader_stage(target);
    prog->is_arb_asm = is_arb_asm;
 
-   /* default mapping from samplers to texture units */
-   for (i = 0; i < MAX_SAMPLERS; i++)
-      prog->SamplerUnits[i] = i;
+   /* Uniforms that lack an initializer in the shader code have an initial
+    * value of zero.  This includes sampler uniforms.
+    *
+    * Page 24 (page 30 of the PDF) of the GLSL 1.20 spec says:
+    *
+    *     "The link time initial value is either the value of the variable's
+    *     initializer, if present, or 0 if no initializer is present. Sampler
+    *     types cannot have initializers."
+    *
+    * So we only initialise ARB assembly style programs.
+    */
+   if (is_arb_asm) {
+      /* default mapping from samplers to texture units */
+      for (unsigned i = 0; i < MAX_SAMPLERS; i++)
+         prog->SamplerUnits[i] = i;
+   }
 
    return prog;
 }
