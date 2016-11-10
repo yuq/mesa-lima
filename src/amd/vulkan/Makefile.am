@@ -135,7 +135,7 @@ CLEANFILES = $(BUILT_SOURCES) dev_icd.json radeon_icd.@host_cpu@.json
 EXTRA_DIST = \
 	$(top_srcdir)/include/vulkan/vk_icd.h \
 	dev_icd.json.in \
-	radeon_icd.json \
+	radeon_icd.json.in \
 	radv_entrypoints_gen.py \
 	vk_format_layout.csv \
 	vk_format_parse.py \
