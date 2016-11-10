@@ -816,6 +816,7 @@ _vtn_variable_copy(struct vtn_builder *b, struct vtn_access_chain *dest,
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
    case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_BOOL:
       /* At this point, we have a scalar, vector, or matrix so we know that
        * there cannot be any structure splitting still in the way.  By
