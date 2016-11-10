@@ -533,6 +533,13 @@ struct vc4_compile {
 
         uint32_t program_id;
         uint32_t variant_id;
+
+        /* Set to compile program in threaded FS mode, where SIG_THREAD_SWITCH
+         * is used to hide texturing latency at the cost of limiting ourselves
+         * to the bottom half of physical reg space.
+         */
+        bool fs_threaded;
+
         bool failed;
 };
 
