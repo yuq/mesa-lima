@@ -674,11 +674,21 @@ swr_update_resource_status(struct pipe_context *pipe,
    }
 
    /* texture sampler views */
-   for (uint32_t i = 0; i < PIPE_MAX_SHADER_SAMPLER_VIEWS; i++) {
-      struct pipe_sampler_view *view =
-         ctx->sampler_views[PIPE_SHADER_FRAGMENT][i];
-      if (view)
-         swr_resource_read(view->texture);
+   for (uint32_t j : {PIPE_SHADER_VERTEX, PIPE_SHADER_FRAGMENT}) {
+      for (uint32_t i = 0; i < ctx->num_sampler_views[j]; i++) {
+         struct pipe_sampler_view *view = ctx->sampler_views[j][i];
+         if (view)
+            swr_resource_read(view->texture);
+      }
+   }
+
+   /* constant buffers */
+   for (uint32_t j : {PIPE_SHADER_VERTEX, PIPE_SHADER_FRAGMENT}) {
+      for (uint32_t i = 0; i < PIPE_MAX_CONSTANT_BUFFERS; i++) {
+         struct pipe_constant_buffer *cb = &ctx->constants[j][i];
+         if (cb->buffer)
+            swr_resource_read(cb->buffer);
+      }
    }
 }
 
