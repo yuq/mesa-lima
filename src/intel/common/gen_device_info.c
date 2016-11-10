@@ -475,6 +475,52 @@ static const struct gen_device_info gen_device_info_kbl_gt4 = {
    .num_slices = 3,
 };
 
+static const struct gen_device_info gen_device_info_glk = {
+   GEN9_FEATURES,
+   .is_broxton = 1,
+   .gt = 1,
+   .has_llc = false,
+
+   .num_slices = 1,
+   .max_vs_threads = 112,
+   .max_tcs_threads = 112,
+   .max_tes_threads = 112,
+   .max_gs_threads = 112,
+   .max_cs_threads = 6 * 6,
+   .urb = {
+      .size = 192,
+      .min_vs_entries = 34,
+      .min_ds_entries = 34,
+      .max_vs_entries = 704,
+      .max_tcs_entries = 256,
+      .max_tes_entries = 416,
+      .max_gs_entries = 256,
+   }
+};
+
+static const struct gen_device_info gen_device_info_glk_2x6 = {
+   GEN9_FEATURES,
+   .is_broxton = 1,
+   .gt = 1,
+   .has_llc = false,
+
+   .num_slices = 1,
+   .max_vs_threads = 56, /* XXX: guess */
+   .max_tcs_threads = 56, /* XXX: guess */
+   .max_tes_threads = 56,
+   .max_gs_threads = 56,
+   .max_cs_threads = 6 * 6,
+   .urb = {
+      .size = 128,
+      .min_vs_entries = 34,
+      .min_ds_entries = 34,
+      .max_vs_entries = 352,
+      .max_tcs_entries = 128,
+      .max_tes_entries = 208,
+      .max_gs_entries = 128,
+   }
+};
+
 bool
 gen_get_device_info(int devid, struct gen_device_info *devinfo)
 {
