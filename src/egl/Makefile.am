@@ -86,6 +86,8 @@ endif
 
 if HAVE_EGL_PLATFORM_ANDROID
 AM_CFLAGS += -DHAVE_ANDROID_PLATFORM
+AM_CFLAGS += $(ANDROID_CFLAGS)
+libEGL_la_LIBADD += $(ANDROID_LIBS)
 dri2_backend_FILES += drivers/dri2/platform_android.c
 endif
 
