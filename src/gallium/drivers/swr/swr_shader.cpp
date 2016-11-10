@@ -372,15 +372,6 @@ locate_linkage(ubyte name, ubyte index, struct tgsi_shader_info *info)
       }
    }
 
-   if (name == TGSI_SEMANTIC_COLOR) { // BCOLOR fallback
-      for (int i = 0; i < PIPE_MAX_SHADER_OUTPUTS; i++) {
-         if ((info->output_semantic_name[i] == TGSI_SEMANTIC_BCOLOR)
-             && (info->output_semantic_index[i] == index)) {
-            return i - 1; // position is not part of the linkage
-         }
-      }
-   }
-
    return 0xFFFFFFFF;
 }
 
@@ -523,24 +514,58 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
       unsigned linkedAttrib =
          locate_linkage(semantic_name, semantic_idx, &ctx->vs->info.base);
-      if (linkedAttrib == 0xFFFFFFFF) {
-         // not found - check for point sprite
-         if (ctx->rasterizer->sprite_coord_enable) {
-            linkedAttrib = ctx->vs->info.base.num_outputs - 1;
-            swr_fs->pointSpriteMask |= (1 << linkedAttrib);
-         } else {
-            fprintf(stderr,
-                    "Missing %s[%d]\n",
-                    tgsi_semantic_names[semantic_name],
-                    semantic_idx);
-            assert(0 && "attribute linkage not found");
+      if (semantic_name == TGSI_SEMANTIC_GENERIC &&
+          ctx->rasterizer->sprite_coord_enable & (1 << semantic_idx)) {
+         /* we add an extra attrib to the backendState in swr_update_derived. */
+         linkedAttrib = ctx->vs->info.base.num_outputs - 1;
+         swr_fs->pointSpriteMask |= (1 << linkedAttrib);
+      } else if (linkedAttrib == 0xFFFFFFFF) {
+         inputs[attrib][0] = wrap(VIMMED1(0.0f));
+         inputs[attrib][1] = wrap(VIMMED1(0.0f));
+         inputs[attrib][2] = wrap(VIMMED1(0.0f));
+         inputs[attrib][3] = wrap(VIMMED1(1.0f));
+         /* If we're reading in color and 2-sided lighting is enabled, we have
+          * to keep going.
+          */
+         if (semantic_name != TGSI_SEMANTIC_COLOR || !key.light_twoside)
+            continue;
+      } else {
+         if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
+            swr_fs->constantMask |= 1 << linkedAttrib;
+         } else if (interpMode == TGSI_INTERPOLATE_COLOR) {
+            swr_fs->flatConstantMask |= 1 << linkedAttrib;
          }
       }
 
-      if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
-         swr_fs->constantMask |= 1 << linkedAttrib;
-      } else if (interpMode == TGSI_INTERPOLATE_COLOR) {
-         swr_fs->flatConstantMask |= 1 << linkedAttrib;
+      unsigned bcolorAttrib = 0xFFFFFFFF;
+      Value *offset = NULL;
+      if (semantic_name == TGSI_SEMANTIC_COLOR && key.light_twoside) {
+         bcolorAttrib = locate_linkage(
+               TGSI_SEMANTIC_BCOLOR, semantic_idx, &ctx->vs->info.base);
+         /* Neither front nor back colors were available. Nothing to load. */
+         if (bcolorAttrib == 0xFFFFFFFF && linkedAttrib == 0xFFFFFFFF)
+            continue;
+         /* If there is no front color, just always use the back color. */
+         if (linkedAttrib == 0xFFFFFFFF)
+            linkedAttrib = bcolorAttrib;
+
+         if (bcolorAttrib != 0xFFFFFFFF) {
+            if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
+               swr_fs->constantMask |= 1 << bcolorAttrib;
+            } else if (interpMode == TGSI_INTERPOLATE_COLOR) {
+               swr_fs->flatConstantMask |= 1 << bcolorAttrib;
+            }
+
+            unsigned diff = 12 * (bcolorAttrib - linkedAttrib);
+
+            if (diff) {
+               Value *back =
+                  XOR(C(1), LOAD(pPS, {0, SWR_PS_CONTEXT_frontFace}), "backFace");
+
+               offset = MUL(back, C(diff));
+               offset->setName("offset");
+            }
+         }
       }
 
       for (int channel = 0; channel < TGSI_NUM_CHANNELS; channel++) {
@@ -549,28 +574,10 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
             Value *indexB = C(linkedAttrib * 12 + channel + 4);
             Value *indexC = C(linkedAttrib * 12 + channel + 8);
 
-            if ((semantic_name == TGSI_SEMANTIC_COLOR)
-                && ctx->rasterizer->light_twoside) {
-               unsigned bcolorAttrib = locate_linkage(
-                  TGSI_SEMANTIC_BCOLOR, semantic_idx, &ctx->vs->info.base);
-
-               unsigned diff = 12 * (bcolorAttrib - linkedAttrib);
-
-               Value *back =
-                  XOR(C(1), LOAD(pPS, {0, SWR_PS_CONTEXT_frontFace}), "backFace");
-
-               Value *offset = MUL(back, C(diff));
-               offset->setName("offset");
-
+            if (offset) {
                indexA = ADD(indexA, offset);
                indexB = ADD(indexB, offset);
                indexC = ADD(indexC, offset);
-
-               if (interpMode == TGSI_INTERPOLATE_CONSTANT) {
-                  swr_fs->constantMask |= 1 << bcolorAttrib;
-               } else if (interpMode == TGSI_INTERPOLATE_COLOR) {
-                  swr_fs->flatConstantMask |= 1 << bcolorAttrib;
-               }
             }
 
             Value *va = VBROADCAST(LOAD(GEP(pAttribs, indexA)));
