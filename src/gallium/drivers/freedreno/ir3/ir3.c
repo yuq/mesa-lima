@@ -46,7 +46,7 @@ void * ir3_alloc(struct ir3 *shader, int sz)
 struct ir3 * ir3_create(struct ir3_compiler *compiler,
 		unsigned nin, unsigned nout)
 {
-	struct ir3 *shader = ralloc(compiler, struct ir3);
+	struct ir3 *shader = rzalloc(compiler, struct ir3);
 
 	shader->compiler = compiler;
 	shader->ninputs = nin;

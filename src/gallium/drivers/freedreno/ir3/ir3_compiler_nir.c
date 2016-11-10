@@ -235,7 +235,7 @@ static void
 declare_var(struct ir3_compile *ctx, nir_variable *var)
 {
 	unsigned length = glsl_get_length(var->type) * 4;  /* always vec4, at least with ttn */
-	struct ir3_array *arr = ralloc(ctx, struct ir3_array);
+	struct ir3_array *arr = rzalloc(ctx, struct ir3_array);
 	arr->id = ++ctx->num_arrays;
 	arr->length = length;
 	arr->var = var;
