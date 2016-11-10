@@ -2668,6 +2668,10 @@ struct gl_shader_program_data
    struct gl_active_atomic_buffer *AtomicBuffers;
    unsigned NumAtomicBuffers;
 
+   /** List of all active resources after linking. */
+   struct gl_program_resource *ProgramResourceList;
+   unsigned NumProgramResourceList;
+
    GLboolean LinkStatus;   /**< GL_LINK_STATUS */
    GLboolean Validated;
    GLchar *InfoLog;
@@ -2861,10 +2865,6 @@ struct gl_shader_program
     * \c NULL.
     */
    struct gl_linked_shader *_LinkedShaders[MESA_SHADER_STAGES];
-
-   /** List of all active resources after linking. */
-   struct gl_program_resource *ProgramResourceList;
-   unsigned NumProgramResourceList;
 
    /* True if any of the fragment shaders attached to this program use:
     * #extension ARB_fragment_coord_conventions: enable

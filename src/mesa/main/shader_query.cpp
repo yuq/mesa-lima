@@ -198,9 +198,10 @@ _mesa_count_active_attribs(struct gl_shader_program *shProg)
       return 0;
    }
 
-   struct gl_program_resource *res = shProg->ProgramResourceList;
+   struct gl_program_resource *res = shProg->data->ProgramResourceList;
    unsigned count = 0;
-   for (unsigned j = 0; j < shProg->NumProgramResourceList; j++, res++) {
+   for (unsigned j = 0; j < shProg->data->NumProgramResourceList;
+        j++, res++) {
       if (res->Type == GL_PROGRAM_INPUT &&
           res->StageReferences & (1 << MESA_SHADER_VERTEX))
          count++;
@@ -217,9 +218,10 @@ _mesa_longest_attribute_name_length(struct gl_shader_program *shProg)
       return 0;
    }
 
-   struct gl_program_resource *res = shProg->ProgramResourceList;
+   struct gl_program_resource *res = shProg->data->ProgramResourceList;
    size_t longest = 0;
-   for (unsigned j = 0; j < shProg->NumProgramResourceList; j++, res++) {
+   for (unsigned j = 0; j < shProg->data->NumProgramResourceList;
+        j++, res++) {
       if (res->Type == GL_PROGRAM_INPUT &&
           res->StageReferences & (1 << MESA_SHADER_VERTEX)) {
 
@@ -466,8 +468,9 @@ _mesa_program_resource_find_name(struct gl_shader_program *shProg,
                                  GLenum programInterface, const char *name,
                                  unsigned *array_index)
 {
-   struct gl_program_resource *res = shProg->ProgramResourceList;
-   for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
+   struct gl_program_resource *res = shProg->data->ProgramResourceList;
+   for (unsigned i = 0; i < shProg->data->NumProgramResourceList;
+        i++, res++) {
       if (res->Type != programInterface)
          continue;
 
@@ -570,10 +573,10 @@ calc_resource_index(struct gl_shader_program *shProg,
 {
    unsigned i;
    GLuint index = 0;
-   for (i = 0; i < shProg->NumProgramResourceList; i++) {
-      if (&shProg->ProgramResourceList[i] == res)
+   for (i = 0; i < shProg->data->NumProgramResourceList; i++) {
+      if (&shProg->data->ProgramResourceList[i] == res)
          return index;
-      if (shProg->ProgramResourceList[i].Type == res->Type)
+      if (shProg->data->ProgramResourceList[i].Type == res->Type)
          index++;
    }
    return GL_INVALID_INDEX;
@@ -614,8 +617,9 @@ _mesa_program_resource_index(struct gl_shader_program *shProg,
 static struct gl_program_resource*
 program_resource_find_data(struct gl_shader_program *shProg, void *data)
 {
-   struct gl_program_resource *res = shProg->ProgramResourceList;
-   for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
+   struct gl_program_resource *res = shProg->data->ProgramResourceList;
+   for (unsigned i = 0; i < shProg->data->NumProgramResourceList;
+        i++, res++) {
       if (res->Data == data)
          return res;
    }
@@ -628,10 +632,11 @@ struct gl_program_resource *
 _mesa_program_resource_find_index(struct gl_shader_program *shProg,
                                   GLenum programInterface, GLuint index)
 {
-   struct gl_program_resource *res = shProg->ProgramResourceList;
+   struct gl_program_resource *res = shProg->data->ProgramResourceList;
    int idx = -1;
 
-   for (unsigned i = 0; i < shProg->NumProgramResourceList; i++, res++) {
+   for (unsigned i = 0; i < shProg->data->NumProgramResourceList;
+        i++, res++) {
       if (res->Type != programInterface)
          continue;
 
@@ -1385,7 +1390,7 @@ validate_io(struct gl_shader_program *producer,
    bool valid = true;
 
    gl_shader_variable const **outputs =
-      (gl_shader_variable const **) calloc(producer->NumProgramResourceList,
+      (gl_shader_variable const **) calloc(producer->data->NumProgramResourceList,
                                            sizeof(gl_shader_variable *));
    if (outputs == NULL)
       return false;
@@ -1408,8 +1413,9 @@ validate_io(struct gl_shader_program *producer,
     * some output that did not have an input.
     */
    unsigned num_outputs = 0;
-   for (unsigned i = 0; i < producer->NumProgramResourceList; i++) {
-      struct gl_program_resource *res = &producer->ProgramResourceList[i];
+   for (unsigned i = 0; i < producer->data->NumProgramResourceList; i++) {
+      struct gl_program_resource *res =
+         &producer->data->ProgramResourceList[i];
 
       if (res->Type != GL_PROGRAM_OUTPUT)
          continue;
@@ -1428,8 +1434,9 @@ validate_io(struct gl_shader_program *producer,
    }
 
    unsigned match_index = 0;
-   for (unsigned i = 0; i < consumer->NumProgramResourceList; i++) {
-      struct gl_program_resource *res = &consumer->ProgramResourceList[i];
+   for (unsigned i = 0; i < consumer->data->NumProgramResourceList; i++) {
+      struct gl_program_resource *res =
+         &consumer->data->ProgramResourceList[i];
 
       if (res->Type != GL_PROGRAM_INPUT)
          continue;

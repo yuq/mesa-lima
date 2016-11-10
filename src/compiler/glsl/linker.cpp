@@ -3536,25 +3536,25 @@ add_program_resource(struct gl_shader_program *prog,
    if (_mesa_set_search(resource_set, data))
       return true;
 
-   prog->ProgramResourceList =
+   prog->data->ProgramResourceList =
       reralloc(prog,
-               prog->ProgramResourceList,
+               prog->data->ProgramResourceList,
                gl_program_resource,
-               prog->NumProgramResourceList + 1);
+               prog->data->NumProgramResourceList + 1);
 
-   if (!prog->ProgramResourceList) {
+   if (!prog->data->ProgramResourceList) {
       linker_error(prog, "Out of memory during linking.\n");
       return false;
    }
 
    struct gl_program_resource *res =
-      &prog->ProgramResourceList[prog->NumProgramResourceList];
+      &prog->data->ProgramResourceList[prog->data->NumProgramResourceList];
 
    res->Type = type;
    res->Data = data;
    res->StageReferences = stages;
 
-   prog->NumProgramResourceList++;
+   prog->data->NumProgramResourceList++;
 
    _mesa_set_add(resource_set, data);
 
@@ -4198,10 +4198,10 @@ build_program_resource_list(struct gl_context *ctx,
                             struct gl_shader_program *shProg)
 {
    /* Rebuild resource list. */
-   if (shProg->ProgramResourceList) {
-      ralloc_free(shProg->ProgramResourceList);
-      shProg->ProgramResourceList = NULL;
-      shProg->NumProgramResourceList = 0;
+   if (shProg->data->ProgramResourceList) {
+      ralloc_free(shProg->data->ProgramResourceList);
+      shProg->data->ProgramResourceList = NULL;
+      shProg->data->NumProgramResourceList = 0;
    }
 
    int input_stage = MESA_SHADER_STAGES, output_stage = 0;
