@@ -484,8 +484,6 @@ struct SWR_CONTEXT
     std::condition_variable FifosNotEmpty;
     std::mutex WaitLock;
 
-    DRIVER_TYPE driverType;
-
     uint32_t privateStateSize;
 
     HotTileMgr *pHotTileMgr;

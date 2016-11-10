@@ -73,7 +73,6 @@ HANDLE SwrCreateContext(
     memset(pContextMem, 0, sizeof(SWR_CONTEXT));
     SWR_CONTEXT *pContext = new (pContextMem) SWR_CONTEXT();
 
-    pContext->driverType = pCreateInfo->driver;
     pContext->privateStateSize = pCreateInfo->privateStateSize;
 
     pContext->dcRing.Init(KNOB_MAX_DRAWS_IN_FLIGHT);
@@ -715,43 +714,8 @@ void SwrSetViewports(
     API_STATE* pState = GetDrawState(pContext);
 
     memcpy(&pState->vp[0], pViewports, sizeof(SWR_VIEWPORT) * numViewports);
-
-    if (pMatrices != nullptr)
-    {
-        // @todo Faster to copy portions of the SOA or just copy all of it?
-        memcpy(&pState->vpMatrices, pMatrices, sizeof(SWR_VIEWPORT_MATRICES));
-    }
-    else
-    {
-        // Compute default viewport transform.
-        for (uint32_t i = 0; i < numViewports; ++i)
-        {
-            if (pContext->driverType == DX)
-            {
-                pState->vpMatrices.m00[i] = pState->vp[i].width / 2.0f;
-                pState->vpMatrices.m11[i] = -pState->vp[i].height / 2.0f;
-                pState->vpMatrices.m22[i] = pState->vp[i].maxZ - pState->vp[i].minZ;
-                pState->vpMatrices.m30[i] = pState->vp[i].x + pState->vpMatrices.m00[i];
-                pState->vpMatrices.m31[i] = pState->vp[i].y - pState->vpMatrices.m11[i];
-                pState->vpMatrices.m32[i] = pState->vp[i].minZ;
-            }
-            else
-            {
-                // Standard, with the exception that Y is inverted.
-                pState->vpMatrices.m00[i] = (pState->vp[i].width - pState->vp[i].x) / 2.0f;
-                pState->vpMatrices.m11[i] = (pState->vp[i].y - pState->vp[i].height) / 2.0f;
-                pState->vpMatrices.m22[i] = (pState->vp[i].maxZ - pState->vp[i].minZ) / 2.0f;
-                pState->vpMatrices.m30[i] = pState->vp[i].x + pState->vpMatrices.m00[i];
-                pState->vpMatrices.m31[i] = pState->vp[i].height + pState->vpMatrices.m11[i];
-                pState->vpMatrices.m32[i] = pState->vp[i].minZ + pState->vpMatrices.m22[i];
-
-                // Now that the matrix is calculated, clip the view coords to screen size.
-                // OpenGL allows for -ve x,y in the viewport.
-                pState->vp[i].x = std::max(pState->vp[i].x, 0.0f);
-                pState->vp[i].y = std::max(pState->vp[i].y, 0.0f);
-            }
-        }
-    }
+    // @todo Faster to copy portions of the SOA or just copy all of it?
+    memcpy(&pState->vpMatrices, pMatrices, sizeof(SWR_VIEWPORT_MATRICES));
 
     updateGuardbands(pState);
 }

@@ -192,8 +192,6 @@ struct SWR_THREADING_INFO
 /////////////////////////////////////////////////////////////////////////
 struct SWR_CREATECONTEXT_INFO
 {
-    DRIVER_TYPE driver;
-
     // External functions (e.g. sampler) need per draw context state.
     // Use SwrGetPrivateContextState() to access private state.
     uint32_t privateStateSize;
