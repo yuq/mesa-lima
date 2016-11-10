@@ -152,6 +152,32 @@ include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
 # ---------------------------------------
+# Build libmesa_i965_compiler
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_i965_compiler
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+
+LOCAL_SRC_FILES := \
+	$(i965_compiler_FILES)
+
+LOCAL_C_INCLUDES := \
+	$(MESA_DRI_C_INCLUDES) \
+	$(MESA_TOP)/src/intel \
+	$(MESA_TOP)/src/compiler/nir \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_glsl,,)/glsl
+
+LOCAL_SHARED_LIBRARIES := \
+	libdrm_intel
+
+include $(LOCAL_PATH)/Android.gen.mk
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)
+
+# ---------------------------------------
 # Build i965_dri
 # ---------------------------------------
 
@@ -177,7 +203,6 @@ LOCAL_C_INCLUDES := \
 	$(MESA_DRI_C_INCLUDES)
 
 LOCAL_SRC_FILES := \
-	$(i965_compiler_FILES) \
 	$(i965_FILES)
 
 LOCAL_WHOLE_STATIC_LIBRARIES := \
@@ -185,7 +210,8 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	$(I965_PERGEN_LIBS) \
 	libmesa_intel_common \
 	libmesa_blorp \
-	libmesa_isl
+	libmesa_isl \
+	libmesa_i965_compiler
 
 LOCAL_SHARED_LIBRARIES := \
 	$(MESA_DRI_SHARED_LIBRARIES) \
@@ -194,8 +220,6 @@ LOCAL_SHARED_LIBRARIES := \
 LOCAL_GENERATED_SOURCES := \
 	$(MESA_DRI_OPTIONS_H) \
 	$(MESA_GEN_NIR_H)
-
-include $(LOCAL_PATH)/Android.gen.mk
 
 include $(MESA_COMMON_MK)
 include $(BUILD_SHARED_LIBRARY)
