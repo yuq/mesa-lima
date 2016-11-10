@@ -120,32 +120,34 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
         vc4->reg_class_r4_or_a = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_a = ra_alloc_reg_class(vc4->regs);
         vc4->reg_class_r0_r3 = ra_alloc_reg_class(vc4->regs);
-        for (uint32_t i = 0; i < ARRAY_SIZE(vc4_regs); i++) {
+
+        /* r0-r3 */
+        for (uint32_t i = ACC_INDEX; i < ACC_INDEX + 4; i++) {
+                ra_class_add_reg(vc4->regs, vc4->reg_class_r0_r3, i);
+                ra_class_add_reg(vc4->regs, vc4->reg_class_a_or_b_or_acc, i);
+        }
+
+        /* R4 gets a special class because it can't be written as a general
+         * purpose register. (it's TMU_NOSWAP as a write address).
+         */
+        ra_class_add_reg(vc4->regs, vc4->reg_class_r4_or_a, ACC_INDEX + 4);
+
+        /* A/B */
+        for (uint32_t i = AB_INDEX; i < AB_INDEX + 64; i ++) {
                 /* Reserve ra31/rb31 for spilling fixup_raddr_conflict() in
                  * vc4_qpu_emit.c
                  */
                 if (vc4_regs[i].addr == 31)
                         continue;
 
-                /* R4 can't be written as a general purpose register. (it's
-                 * TMU_NOSWAP as a write address).
-                 */
-                if (vc4_regs[i].mux == QPU_MUX_R4) {
-                        ra_class_add_reg(vc4->regs, vc4->reg_class_r4_or_a, i);
-                        ra_class_add_reg(vc4->regs, vc4->reg_class_any, i);
-                        continue;
-                }
-
-                if (vc4_regs[i].mux <= QPU_MUX_R3)
-                        ra_class_add_reg(vc4->regs, vc4->reg_class_r0_r3, i);
-
                 ra_class_add_reg(vc4->regs, vc4->reg_class_any, i);
                 ra_class_add_reg(vc4->regs, vc4->reg_class_a_or_b_or_acc, i);
-        }
 
-        for (uint32_t i = AB_INDEX; i < AB_INDEX + 64; i += 2) {
-                ra_class_add_reg(vc4->regs, vc4->reg_class_a, i);
-                ra_class_add_reg(vc4->regs, vc4->reg_class_r4_or_a, i);
+                /* A only */
+                if (((i - AB_INDEX) & 1) == 0) {
+                        ra_class_add_reg(vc4->regs, vc4->reg_class_a, i);
+                        ra_class_add_reg(vc4->regs, vc4->reg_class_r4_or_a, i);
+                }
         }
 
         ra_set_finalize(vc4->regs, NULL);
