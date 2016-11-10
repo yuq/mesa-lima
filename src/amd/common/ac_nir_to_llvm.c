@@ -139,10 +139,81 @@ struct ac_tex_info {
 	bool has_offset;
 };
 
+enum ac_func_attr {
+	AC_FUNC_ATTR_ALWAYSINLINE = (1 << 0),
+	AC_FUNC_ATTR_BYVAL        = (1 << 1),
+	AC_FUNC_ATTR_INREG        = (1 << 2),
+	AC_FUNC_ATTR_NOALIAS      = (1 << 3),
+	AC_FUNC_ATTR_NOUNWIND     = (1 << 4),
+	AC_FUNC_ATTR_READNONE     = (1 << 5),
+	AC_FUNC_ATTR_READONLY     = (1 << 6),
+	AC_FUNC_ATTR_LAST         = (1 << 7)
+};
+
+#if HAVE_LLVM < 0x0400
+static LLVMAttribute ac_attr_to_llvm_attr(enum ac_func_attr attr)
+{
+   switch (attr) {
+   case AC_FUNC_ATTR_ALWAYSINLINE: return LLVMAlwaysInlineAttribute;
+   case AC_FUNC_ATTR_BYVAL: return LLVMByValAttribute;
+   case AC_FUNC_ATTR_INREG: return LLVMInRegAttribute;
+   case AC_FUNC_ATTR_NOALIAS: return LLVMNoAliasAttribute;
+   case AC_FUNC_ATTR_NOUNWIND: return LLVMNoUnwindAttribute;
+   case AC_FUNC_ATTR_READNONE: return LLVMReadNoneAttribute;
+   case AC_FUNC_ATTR_READONLY: return LLVMReadOnlyAttribute;
+   default:
+	   fprintf(stderr, "Unhandled function attribute: %x\n", attr);
+	   return 0;
+   }
+}
+
+#else
+
+static const char *attr_to_str(enum ac_func_attr attr)
+{
+   switch (attr) {
+   case AC_FUNC_ATTR_ALWAYSINLINE: return "alwaysinline";
+   case AC_FUNC_ATTR_BYVAL: return "byval";
+   case AC_FUNC_ATTR_INREG: return "inreg";
+   case AC_FUNC_ATTR_NOALIAS: return "noalias";
+   case AC_FUNC_ATTR_NOUNWIND: return "nounwind";
+   case AC_FUNC_ATTR_READNONE: return "readnone";
+   case AC_FUNC_ATTR_READONLY: return "readonly";
+   default:
+	   fprintf(stderr, "Unhandled function attribute: %x\n", attr);
+	   return 0;
+   }
+}
+
+#endif
+
+static void
+ac_add_function_attr(LLVMValueRef function,
+                     int attr_idx,
+                     enum ac_func_attr attr)
+{
+
+#if HAVE_LLVM < 0x0400
+   LLVMAttribute llvm_attr = ac_attr_to_llvm_attr(attr);
+   if (attr_idx == -1) {
+      LLVMAddFunctionAttr(function, llvm_attr);
+   } else {
+      LLVMAddAttribute(LLVMGetParam(function, attr_idx - 1), llvm_attr);
+   }
+#else
+   LLVMContextRef context = LLVMGetModuleContext(LLVMGetGlobalParent(function));
+   const char *attr_name = attr_to_str(attr);
+   unsigned kind_id = LLVMGetEnumAttributeKindForName(attr_name,
+                                                      strlen(attr_name));
+   LLVMAttributeRef llvm_attr = LLVMCreateEnumAttribute(context, kind_id, 0);
+   LLVMAddAttributeAtIndex(function, attr_idx, llvm_attr);
+#endif
+}
+
 static LLVMValueRef
 emit_llvm_intrinsic(struct nir_to_llvm_context *ctx, const char *name,
                     LLVMTypeRef return_type, LLVMValueRef *params,
-                    unsigned param_count, LLVMAttribute attribs);
+                    unsigned param_count, unsigned attr_mask);
 static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 				     nir_deref_var *deref,
 				     enum desc_type desc_type);
@@ -228,11 +299,12 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 		LLVMValueRef P = LLVMGetParam(main_function, i);
 
 		if (i < array_params) {
-			LLVMAddAttribute(P, LLVMByValAttribute);
+			ac_add_function_attr(P, i + 1, AC_FUNC_ATTR_BYVAL);
 			ac_add_attr_dereferenceable(P, UINT64_MAX);
 		}
-		else
-			LLVMAddAttribute(P, LLVMInRegAttribute);
+		else {
+			ac_add_function_attr(P, i + 1, AC_FUNC_ATTR_INREG);
+		}
 	}
 
 	if (unsafe_math) {
@@ -708,7 +780,7 @@ static LLVMValueRef emit_intrin_1f_param(struct nir_to_llvm_context *ctx,
 	LLVMValueRef params[] = {
 		to_float(ctx, src0),
 	};
-	return emit_llvm_intrinsic(ctx, intrin, ctx->f32, params, 1, LLVMReadNoneAttribute);
+	return emit_llvm_intrinsic(ctx, intrin, ctx->f32, params, 1, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_intrin_2f_param(struct nir_to_llvm_context *ctx,
@@ -719,7 +791,7 @@ static LLVMValueRef emit_intrin_2f_param(struct nir_to_llvm_context *ctx,
 		to_float(ctx, src0),
 		to_float(ctx, src1),
 	};
-	return emit_llvm_intrinsic(ctx, intrin, ctx->f32, params, 2, LLVMReadNoneAttribute);
+	return emit_llvm_intrinsic(ctx, intrin, ctx->f32, params, 2, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_intrin_3f_param(struct nir_to_llvm_context *ctx,
@@ -731,7 +803,7 @@ static LLVMValueRef emit_intrin_3f_param(struct nir_to_llvm_context *ctx,
 		to_float(ctx, src1),
 		to_float(ctx, src2),
 	};
-	return emit_llvm_intrinsic(ctx, intrin, ctx->f32, params, 3, LLVMReadNoneAttribute);
+	return emit_llvm_intrinsic(ctx, intrin, ctx->f32, params, 3, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_bcsel(struct nir_to_llvm_context *ctx,
@@ -757,7 +829,7 @@ static LLVMValueRef emit_find_lsb(struct nir_to_llvm_context *ctx,
 		 */
 		LLVMConstInt(ctx->i32, 1, false),
 	};
-	return emit_llvm_intrinsic(ctx, "llvm.cttz.i32", ctx->i32, params, 2, LLVMReadNoneAttribute);
+	return emit_llvm_intrinsic(ctx, "llvm.cttz.i32", ctx->i32, params, 2, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_ifind_msb(struct nir_to_llvm_context *ctx,
@@ -765,7 +837,7 @@ static LLVMValueRef emit_ifind_msb(struct nir_to_llvm_context *ctx,
 {
 	LLVMValueRef msb = emit_llvm_intrinsic(ctx, "llvm.AMDGPU.flbit.i32",
 					       ctx->i32, &src0, 1,
-					       LLVMReadNoneAttribute);
+					       AC_FUNC_ATTR_READNONE);
 
 	/* The HW returns the last bit index from MSB, but NIR wants
 	 * the index from LSB. Invert it by doing "31 - msb". */
@@ -791,7 +863,7 @@ static LLVMValueRef emit_ufind_msb(struct nir_to_llvm_context *ctx,
 	};
 	LLVMValueRef msb = emit_llvm_intrinsic(ctx, "llvm.ctlz.i32",
 					       ctx->i32, args, ARRAY_SIZE(args),
-					       LLVMReadNoneAttribute);
+					       AC_FUNC_ATTR_READNONE);
 
 	/* The HW returns the last bit index from MSB, but NIR wants
 	 * the index from LSB. Invert it by doing "31 - msb". */
@@ -855,7 +927,7 @@ static LLVMValueRef emit_ffract(struct nir_to_llvm_context *ctx,
 	};
 	LLVMValueRef floor = emit_llvm_intrinsic(ctx, intr,
 						 ctx->f32, params, 1,
-						 LLVMReadNoneAttribute);
+						 AC_FUNC_ATTR_READNONE);
 	return LLVMBuildFSub(ctx->builder, fsrc0, floor, "");
 }
 
@@ -871,7 +943,7 @@ static LLVMValueRef emit_uint_carry(struct nir_to_llvm_context *ctx,
 					   2, true);
 
 	res = emit_llvm_intrinsic(ctx, intrin, ret_type,
-				  params, 2, LLVMReadNoneAttribute);
+				  params, 2, AC_FUNC_ATTR_READNONE);
 
 	res = LLVMBuildExtractValue(ctx->builder, res, 1, "");
 	res = LLVMBuildZExt(ctx->builder, res, ctx->i32, "");
@@ -916,7 +988,7 @@ static LLVMValueRef emit_bitfield_extract(struct nir_to_llvm_context *ctx,
 {
 	LLVMValueRef result;
 	LLVMValueRef icond = LLVMBuildICmp(ctx->builder, LLVMIntEQ, srcs[2], LLVMConstInt(ctx->i32, 32, false), "");
-	result = emit_llvm_intrinsic(ctx, intrin, ctx->i32, srcs, 3, LLVMReadNoneAttribute);
+	result = emit_llvm_intrinsic(ctx, intrin, ctx->i32, srcs, 3, AC_FUNC_ATTR_READNONE);
 
 	result = LLVMBuildSelect(ctx->builder, icond, srcs[0], result, "");
 	return result;
@@ -1023,11 +1095,11 @@ static LLVMValueRef get_thread_id(struct nir_to_llvm_context *ctx)
 	tid_args[1] = ctx->i32zero;
 	tid_args[1] = emit_llvm_intrinsic(ctx,
 					  "llvm.amdgcn.mbcnt.lo", ctx->i32,
-					  tid_args, 2, LLVMReadNoneAttribute);
+					  tid_args, 2, AC_FUNC_ATTR_READNONE);
 
 	tid = emit_llvm_intrinsic(ctx,
 				  "llvm.amdgcn.mbcnt.hi", ctx->i32,
-				  tid_args, 2, LLVMReadNoneAttribute);
+				  tid_args, 2, AC_FUNC_ATTR_READNONE);
 	set_range_metadata(ctx, tid, 0, 64);
 	return tid;
 }
@@ -1115,13 +1187,13 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 		args[1] = src0;
 		tl = emit_llvm_intrinsic(ctx, "llvm.amdgcn.ds.bpermute",
 					 ctx->i32, args, 2,
-					 LLVMReadNoneAttribute);
+					 AC_FUNC_ATTR_READNONE);
 
 		args[0] = LLVMBuildMul(ctx->builder, trbl_tid,
 				       LLVMConstInt(ctx->i32, 4, false), "");
 		trbl = emit_llvm_intrinsic(ctx, "llvm.amdgcn.ds.bpermute",
 					   ctx->i32, args, 2,
-					   LLVMReadNoneAttribute);
+					   AC_FUNC_ATTR_READNONE);
 	} else {
 		LLVMBuildStore(ctx->builder, src0, store_ptr);
 
@@ -1451,10 +1523,10 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 		result = emit_bitfield_insert(ctx, src[0], src[1], src[2], src[3]);
 		break;
 	case nir_op_bitfield_reverse:
-		result = emit_llvm_intrinsic(ctx, "llvm.bitreverse.i32", ctx->i32, src, 1, LLVMReadNoneAttribute);
+		result = emit_llvm_intrinsic(ctx, "llvm.bitreverse.i32", ctx->i32, src, 1, AC_FUNC_ATTR_READNONE);
 		break;
 	case nir_op_bit_count:
-		result = emit_llvm_intrinsic(ctx, "llvm.ctpop.i32", ctx->i32, src, 1, LLVMReadNoneAttribute);
+		result = emit_llvm_intrinsic(ctx, "llvm.ctpop.i32", ctx->i32, src, 1, AC_FUNC_ATTR_READNONE);
 		break;
 	case nir_op_vec2:
 	case nir_op_vec3:
@@ -1582,7 +1654,7 @@ static LLVMValueRef cast_ptr(struct nir_to_llvm_context *ctx, LLVMValueRef ptr,
 static LLVMValueRef
 emit_llvm_intrinsic(struct nir_to_llvm_context *ctx, const char *name,
                     LLVMTypeRef return_type, LLVMValueRef *params,
-                    unsigned param_count, LLVMAttribute attribs)
+                    unsigned param_count, unsigned attrib_mask)
 {
 	LLVMValueRef function;
 
@@ -1604,7 +1676,7 @@ emit_llvm_intrinsic(struct nir_to_llvm_context *ctx, const char *name,
 		LLVMSetFunctionCallConv(function, LLVMCCallConv);
 		LLVMSetLinkage(function, LLVMExternalLinkage);
 
-		LLVMAddFunctionAttr(function, attribs | LLVMNoUnwindAttribute);
+		ac_add_function_attr(function, 0, attrib_mask | AC_FUNC_ATTR_NOUNWIND);
 	}
 	return LLVMBuildCall(ctx->builder, function, params, param_count, "");
 }
@@ -1680,7 +1752,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 		txq_args[txq_arg_count++] = LLVMConstInt(ctx->i32, 0, 0); /* lwe */
 		size = emit_llvm_intrinsic(ctx, "llvm.SI.getresinfo.i32", ctx->v4i32,
 					   txq_args, txq_arg_count,
-					   LLVMReadNoneAttribute);
+					   AC_FUNC_ATTR_READNONE);
 
 		for (c = 0; c < 2; c++) {
 			half_texel[c] = LLVMBuildExtractElement(ctx->builder, size,
@@ -1704,7 +1776,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 
 	tinfo->args[0] = coord;
 	return emit_llvm_intrinsic(ctx, intr_name, tinfo->dst_type, tinfo->args, tinfo->arg_count,
-				   LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+				   AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND);
 
 }
 
@@ -1772,7 +1844,7 @@ static LLVMValueRef build_tex_intrinsic(struct nir_to_llvm_context *ctx,
 		}
 	}
 	return emit_llvm_intrinsic(ctx, intr_name, tinfo->dst_type, tinfo->args, tinfo->arg_count,
-				   LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+				   AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND);
 
 }
 
@@ -2416,7 +2488,7 @@ static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
 				    intrinsic_name, sizeof(intrinsic_name));
 
 		res = emit_llvm_intrinsic(ctx, intrinsic_name, ctx->v4f32,
-					params, 7, LLVMReadOnlyAttribute);
+					  params, 7, AC_FUNC_ATTR_READONLY);
 	}
 	return to_integer(ctx, res);
 }
@@ -2581,7 +2653,7 @@ static LLVMValueRef visit_image_size(struct nir_to_llvm_context *ctx,
 	params[9] = ctx->i32zero;
 
 	res = emit_llvm_intrinsic(ctx, "llvm.SI.getresinfo.i32", ctx->v4i32,
-				  params, 10, LLVMReadNoneAttribute);
+				  params, 10, AC_FUNC_ATTR_READNONE);
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE &&
 	    glsl_sampler_type_is_array(type)) {
@@ -2832,7 +2904,7 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 		args[3] = interp_param;
 		result[chan] = emit_llvm_intrinsic(ctx, intr_name,
 						   ctx->f32, args, args[3] ? 4 : 3,
-						   LLVMReadNoneAttribute);
+						   AC_FUNC_ATTR_READNONE);
 	}
 	return build_gather_values(ctx, result, 2);
 }
@@ -3130,13 +3202,13 @@ static LLVMValueRef build_cube_intrinsic(struct nir_to_llvm_context *ctx,
 		LLVMValueRef out[4];
 
 		out[0] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubetc",
-					     f32, in, 3, LLVMReadNoneAttribute);
+					     f32, in, 3, AC_FUNC_ATTR_READNONE);
 		out[1] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubesc",
-					     f32, in, 3, LLVMReadNoneAttribute);
+					     f32, in, 3, AC_FUNC_ATTR_READNONE);
 		out[2] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubema",
-					     f32, in, 3, LLVMReadNoneAttribute);
+					     f32, in, 3, AC_FUNC_ATTR_READNONE);
 		out[3] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubeid",
-					     f32, in, 3, LLVMReadNoneAttribute);
+					     f32, in, 3, AC_FUNC_ATTR_READNONE);
 
 		return build_gather_values(ctx, out, 4);
 	} else {
@@ -3147,7 +3219,7 @@ static LLVMValueRef build_cube_intrinsic(struct nir_to_llvm_context *ctx,
 		c[3] = LLVMGetUndef(LLVMTypeOf(in[0]));
 		cube_vec = build_gather_values(ctx, c, 4);
 		v = emit_llvm_intrinsic(ctx, "llvm.AMDGPU.cube", LLVMTypeOf(cube_vec),
-					&cube_vec, 1, LLVMReadNoneAttribute);
+					&cube_vec, 1, AC_FUNC_ATTR_READNONE);
 	}
 	return v;
 }
@@ -3167,7 +3239,7 @@ static void cube_to_2d_coords(struct nir_to_llvm_context *ctx,
 						    LLVMConstInt(ctx->i32, i, false), "");
 
 	coords[2] = emit_llvm_intrinsic(ctx, "llvm.fabs.f32", ctx->f32,
-					&coords[2], 1, LLVMReadNoneAttribute);
+					&coords[2], 1, AC_FUNC_ATTR_READNONE);
 	coords[2] = emit_fdiv(ctx, ctx->f32one, coords[2]);
 
 	mad_args[1] = coords[2];
@@ -3772,7 +3844,7 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 		args[2] = buffer_index;
 		input = emit_llvm_intrinsic(ctx,
 			"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-			LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+			AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND);
 
 		for (unsigned chan = 0; chan < 4; chan++) {
 			LLVMValueRef llvm_chan = LLVMConstInt(ctx->i32, chan, false);
@@ -3818,7 +3890,7 @@ static void interp_fs_input(struct nir_to_llvm_context *ctx,
 		args[3] = interp_param;
 		result[chan] = emit_llvm_intrinsic(ctx, intr_name,
 						   ctx->f32, args, args[3] ? 4 : 3,
-						  LLVMReadNoneAttribute | LLVMNoUnwindAttribute);
+						  AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND);
 	}
 }
 
@@ -4077,7 +4149,7 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 
 				packed = emit_llvm_intrinsic(ctx, "llvm.SI.packf16",
 							     ctx->i32, pack_args, 2,
-							     LLVMReadNoneAttribute);
+							     AC_FUNC_ATTR_READNONE);
 				args[chan + 5] = packed;
 			}
 			break;
