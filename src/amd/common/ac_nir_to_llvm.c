@@ -3371,17 +3371,25 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	}
 
 	if (instr->op == nir_texop_texture_samples) {
-		LLVMValueRef res, samples;
+		LLVMValueRef res, samples, is_msaa;
 		res = LLVMBuildBitCast(ctx->builder, res_ptr, ctx->v8i32, "");
 		samples = LLVMBuildExtractElement(ctx->builder, res,
 						  LLVMConstInt(ctx->i32, 3, false), "");
+		is_msaa = LLVMBuildLShr(ctx->builder, samples,
+					LLVMConstInt(ctx->i32, 28, false), "");
+		is_msaa = LLVMBuildAnd(ctx->builder, is_msaa,
+				       LLVMConstInt(ctx->i32, 0xe, false), "");
+		is_msaa = LLVMBuildICmp(ctx->builder, LLVMIntEQ, is_msaa,
+					LLVMConstInt(ctx->i32, 0xe, false), "");
+
 		samples = LLVMBuildLShr(ctx->builder, samples,
 					LLVMConstInt(ctx->i32, 16, false), "");
 		samples = LLVMBuildAnd(ctx->builder, samples,
 				       LLVMConstInt(ctx->i32, 0xf, false), "");
 		samples = LLVMBuildShl(ctx->builder, ctx->i32one,
 				       samples, "");
-
+		samples = LLVMBuildSelect(ctx->builder, is_msaa, samples,
+					  ctx->i32one, "");
 		result = samples;
 		goto write_result;
 	}
