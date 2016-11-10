@@ -166,7 +166,7 @@ node_to_temp_priority(const void *in_a, const void *in_b)
 }
 
 #define CLASS_BIT_A			(1 << 0)
-#define CLASS_BIT_B_OR_ACC		(1 << 1)
+#define CLASS_BIT_B			(1 << 1)
 #define CLASS_BIT_R4			(1 << 2)
 #define CLASS_BIT_R0_R3			(1 << 4)
 
@@ -212,7 +212,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
          * incrementally remove bits that the temp definitely can't be in.
          */
         memset(class_bits,
-               CLASS_BIT_A | CLASS_BIT_B_OR_ACC | CLASS_BIT_R4,
+               CLASS_BIT_A | CLASS_BIT_B | CLASS_BIT_R4 | CLASS_BIT_R0_R3,
                sizeof(class_bits));
 
         int ip = 0;
@@ -285,10 +285,10 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                 int node = temp_to_node[i];
 
                 switch (class_bits[i]) {
-                case CLASS_BIT_A | CLASS_BIT_B_OR_ACC | CLASS_BIT_R4:
+                case CLASS_BIT_A | CLASS_BIT_B | CLASS_BIT_R4 | CLASS_BIT_R0_R3:
                         ra_set_node_class(g, node, vc4->reg_class_any);
                         break;
-                case CLASS_BIT_A | CLASS_BIT_B_OR_ACC:
+                case CLASS_BIT_A | CLASS_BIT_B | CLASS_BIT_R0_R3:
                         ra_set_node_class(g, node, vc4->reg_class_a_or_b_or_acc);
                         break;
                 case CLASS_BIT_A | CLASS_BIT_R4:
