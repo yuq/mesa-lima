@@ -856,19 +856,14 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
 }
 
 static int
-droid_open_device(void)
+droid_open_device(struct dri2_egl_display *dri2_dpy)
 {
-   const hw_module_t *mod;
-   int fd = -1, err;
+   int fd = -1, err = -EINVAL;
 
-   err = hw_get_module(GRALLOC_HARDWARE_MODULE_ID, &mod);
-   if (!err) {
-      const gralloc_module_t *gr = (gralloc_module_t *) mod;
-
-      err = -EINVAL;
-      if (gr->perform)
-         err = gr->perform(gr, GRALLOC_MODULE_PERFORM_GET_DRM_FD, &fd);
-   }
+   if (dri2_dpy->gralloc->perform)
+         err = dri2_dpy->gralloc->perform(dri2_dpy->gralloc,
+                                          GRALLOC_MODULE_PERFORM_GET_DRM_FD,
+                                          &fd);
    if (err || fd < 0) {
       _eglLog(_EGL_WARNING, "fail to get drm fd");
       fd = -1;
@@ -963,6 +958,7 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
 {
    struct dri2_egl_display *dri2_dpy;
    const char *err;
+   int ret;
 
    _eglSetLogProc(droid_log);
 
@@ -972,9 +968,16 @@ dri2_initialize_android(_EGLDriver *drv, _EGLDisplay *dpy)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
+   ret = hw_get_module(GRALLOC_HARDWARE_MODULE_ID,
+                       (const hw_module_t **)&dri2_dpy->gralloc);
+   if (ret) {
+      err = "DRI2: failed to get gralloc module";
+      goto cleanup_display;
+   }
+
    dpy->DriverData = (void *) dri2_dpy;
 
-   dri2_dpy->fd = droid_open_device();
+   dri2_dpy->fd = droid_open_device(dri2_dpy);
    if (dri2_dpy->fd < 0) {
       err = "DRI2: failed to open device";
       goto cleanup_display;

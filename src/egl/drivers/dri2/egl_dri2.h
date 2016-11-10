@@ -219,6 +219,10 @@ struct dri2_egl_display
    char                     *device_name;
 #endif
 
+#ifdef HAVE_ANDROID_PLATFORM
+   const gralloc_module_t *gralloc;
+#endif
+
    int                       is_render_node;
    int                       is_different_gpu;
 };
