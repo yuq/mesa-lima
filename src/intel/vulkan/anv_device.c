@@ -479,7 +479,7 @@ void anv_GetPhysicalDeviceFeatures(
       .shaderStorageImageArrayDynamicIndexing   = true,
       .shaderClipDistance                       = true,
       .shaderCullDistance                       = true,
-      .shaderFloat64                            = false,
+      .shaderFloat64                            = pdevice->info.gen >= 8,
       .shaderInt64                              = false,
       .shaderInt16                              = false,
       .shaderResourceMinLod                     = false,
