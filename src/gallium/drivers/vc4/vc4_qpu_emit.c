@@ -500,6 +500,12 @@ vc4_generate_code_block(struct vc4_compile *c,
                         handle_r4_qpu_write(block, qinst, dst);
                         break;
 
+                case QOP_THRSW:
+                        queue(block, qpu_NOP());
+                        *last_inst(block) = qpu_set_sig(*last_inst(block),
+                                                        QPU_SIG_THREAD_SWITCH);
+                        break;
+
                 case QOP_BRANCH:
                         /* The branch target will be updated at QPU scheduling
                          * time.

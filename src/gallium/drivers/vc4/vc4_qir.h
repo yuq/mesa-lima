@@ -156,6 +156,16 @@ enum qop {
          */
         QOP_TEX_RESULT,
 
+        /**
+         * Insert the signal for switching threads in a threaded fragment
+         * shader.  No value can be live in an accumulator across a thrsw.
+         *
+         * At the QPU level, this will have several delay slots before the
+         * switch happens.  Those slots are the responsibility of the
+         * scheduler.
+         */
+        QOP_THRSW,
+
         /* 32-bit immediate loaded to each SIMD channel */
         QOP_LOAD_IMM,
 
