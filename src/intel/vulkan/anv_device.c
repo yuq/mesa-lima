@@ -1086,7 +1086,8 @@ anv_device_execbuf(struct anv_device *device,
       return vk_errorf(VK_ERROR_DEVICE_LOST, "execbuf2 failed: %m");
    }
 
-   struct drm_i915_gem_exec_object2 *objects = (void *)execbuf->buffers_ptr;
+   struct drm_i915_gem_exec_object2 *objects =
+      (void *)(uintptr_t)execbuf->buffers_ptr;
    for (uint32_t k = 0; k < execbuf->buffer_count; k++)
       execbuf_bos[k]->offset = objects[k].offset;
 
