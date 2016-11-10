@@ -1146,6 +1146,7 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
             case GLSL_TYPE_UINT:
             case GLSL_TYPE_INT:
             case GLSL_TYPE_FLOAT:
+            case GLSL_TYPE_DOUBLE:
             case GLSL_TYPE_BOOL:
                /* If we hit this granularity, we're picking off an element */
                if (glsl_type_is_matrix(type)) {
