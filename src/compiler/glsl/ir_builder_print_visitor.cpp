@@ -21,6 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#define __STDC_FORMAT_MACROS 1
 #include <inttypes.h> /* for PRIx64 macro */
 #include "ir.h"
 #include "ir_hierarchical_visitor.h"
