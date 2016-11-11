@@ -511,7 +511,7 @@ void radv_CmdUpdateBuffer(
 	VkBuffer                                    dstBuffer,
 	VkDeviceSize                                dstOffset,
 	VkDeviceSize                                dataSize,
-	const uint32_t*                             pData)
+	const void*                                 pData)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_buffer, dst_buffer, dstBuffer);
