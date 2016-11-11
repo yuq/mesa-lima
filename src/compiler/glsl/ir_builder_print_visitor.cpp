@@ -21,6 +21,7 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#include <inttypes.h> /* for PRIx64 macro */
 #include "ir.h"
 #include "ir_hierarchical_visitor.h"
 #include "ir_builder_print_visitor.h"
