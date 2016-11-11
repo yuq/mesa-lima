@@ -245,6 +245,8 @@ void brw_program_cache_check_size(struct brw_context *brw);
 void brw_init_caches( struct brw_context *brw );
 void brw_destroy_caches( struct brw_context *brw );
 
+void brw_print_program_cache(struct brw_context *brw);
+
 /***********************************************************************
  * brw_state_batch.c
  */

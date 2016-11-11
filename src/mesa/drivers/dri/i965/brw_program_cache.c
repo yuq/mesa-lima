@@ -480,3 +480,49 @@ brw_destroy_caches(struct brw_context *brw)
 {
    brw_destroy_cache(brw, &brw->cache);
 }
+
+static const char *
+cache_name(enum brw_cache_id cache_id)
+{
+   switch (cache_id) {
+   case BRW_CACHE_VS_PROG:
+      return "VS kernel";
+   case BRW_CACHE_TCS_PROG:
+      return "TCS kernel";
+   case BRW_CACHE_TES_PROG:
+      return "TES kernel";
+   case BRW_CACHE_FF_GS_PROG:
+      return "Fixed-function GS kernel";
+   case BRW_CACHE_GS_PROG:
+      return "GS kernel";
+   case BRW_CACHE_CLIP_PROG:
+      return "CLIP kernel";
+   case BRW_CACHE_SF_PROG:
+      return "SF kernel";
+   case BRW_CACHE_FS_PROG:
+      return "FS kernel";
+   case BRW_CACHE_CS_PROG:
+      return "CS kernel";
+   default:
+      return "unknown";
+   }
+}
+
+void
+brw_print_program_cache(struct brw_context *brw)
+{
+   const struct brw_cache *cache = &brw->cache;
+   struct brw_cache_item *item;
+
+   drm_intel_bo_map(cache->bo, false);
+
+   for (unsigned i = 0; i < cache->size; i++) {
+      for (item = cache->items[i]; item; item = item->next) {
+         fprintf(stderr, "%s:\n", cache_name(i));
+         brw_disassemble(&brw->screen->devinfo, cache->bo->virtual,
+                         item->offset, item->size, stderr);
+      }
+   }
+
+   drm_intel_bo_unmap(cache->bo);
+}
