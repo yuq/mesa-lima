@@ -252,8 +252,8 @@ enum brw_state_id {
 #define BRW_NEW_FS_PROG_DATA            (1ull << BRW_CACHE_FS_PROG)
 /* XXX: The BRW_NEW_BLORP_BLIT_PROG_DATA dirty bit is unused (as BLORP doesn't
  * use the normal state upload paths), but the cache is still used.  To avoid
- * polluting the brw_state_cache code with special cases, we retain the dirty
- * bit for now.  It should eventually be removed.
+ * polluting the brw_program_cache code with special cases, we retain the
+ * dirty bit for now.  It should eventually be removed.
  */
 #define BRW_NEW_BLORP_BLIT_PROG_DATA    (1ull << BRW_CACHE_BLORP_PROG)
 #define BRW_NEW_SF_PROG_DATA            (1ull << BRW_CACHE_SF_PROG)
