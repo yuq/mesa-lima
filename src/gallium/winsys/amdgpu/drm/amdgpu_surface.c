@@ -402,7 +402,9 @@ static int amdgpu_surface_init(struct radeon_winsys *rws,
     * requested, because TC-compatible HTILE requires 2D tiling.
     */
    AddrSurfInfoIn.flags.degrade4Space = !AddrSurfInfoIn.flags.tcCompatible &&
-                                        !(flags & RADEON_SURF_FMASK);
+                                        !AddrSurfInfoIn.flags.fmask &&
+                                        tex->nr_samples <= 1 &&
+                                        (flags & RADEON_SURF_OPTIMIZE_FOR_SPACE);
 
    /* DCC notes:
     * - If we add MSAA support, keep in mind that CB can't decompress 8bpp
