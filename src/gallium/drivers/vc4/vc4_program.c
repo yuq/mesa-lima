@@ -2285,6 +2285,17 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
 
         switch (stage) {
         case QSTAGE_FRAG:
+                /* FS threading requires that the thread execute
+                 * QPU_SIG_LAST_THREAD_SWITCH exactly once before terminating
+                 * (with no other THRSW afterwards, obviously).  If we didn't
+                 * fetch a texture at a top level block, this wouldn't be
+                 * true.
+                 */
+                if (c->fs_threaded && !c->last_thrsw_at_top_level) {
+                        c->failed = true;
+                        return c;
+                }
+
                 emit_frag_end(c);
                 break;
         case QSTAGE_VERT:

@@ -504,6 +504,7 @@ vc4_generate_code_block(struct vc4_compile *c,
                         queue(block, qpu_NOP());
                         *last_inst(block) = qpu_set_sig(*last_inst(block),
                                                         QPU_SIG_THREAD_SWITCH);
+                        c->last_thrsw = last_inst(block);
                         break;
 
                 case QOP_BRANCH:
@@ -590,6 +591,23 @@ vc4_generate_code(struct vc4_context *vc4, struct vc4_compile *c)
 
         qir_for_each_block(block, c)
                 vc4_generate_code_block(c, block, temp_registers);
+
+        /* Switch the last SIG_THRSW instruction to SIG_LAST_THRSW.
+         *
+         * LAST_THRSW is a new signal in BCM2708B0 (including Raspberry Pi)
+         * that ensures that a later thread doesn't try to lock the scoreboard
+         * and terminate before an earlier-spawned thread on the same QPU, by
+         * delaying switching back to the later shader until earlier has
+         * finished.  Otherwise, if the earlier thread was hitting the same
+         * quad, the scoreboard would deadlock.
+         */
+        if (c->last_thrsw) {
+                assert(QPU_GET_FIELD(*c->last_thrsw, QPU_SIG) ==
+                       QPU_SIG_THREAD_SWITCH);
+                *c->last_thrsw = ((*c->last_thrsw & ~QPU_SIG_MASK) |
+                                  QPU_SET_FIELD(QPU_SIG_LAST_THREAD_SWITCH,
+                                                QPU_SIG));
+        }
 
         uint32_t cycles = qpu_schedule_instructions(c);
         uint32_t inst_count_at_schedule_time = c->qpu_inst_count;

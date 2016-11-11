@@ -514,6 +514,9 @@ struct vc4_compile {
 
         struct list_head qpu_inst_list;
 
+        /* Pre-QPU-scheduled instruction containing the last THRSW */
+        uint64_t *last_thrsw;
+
         uint64_t *qpu_insts;
         uint32_t qpu_inst_count;
         uint32_t qpu_inst_size;
@@ -539,6 +542,8 @@ struct vc4_compile {
          * to the bottom half of physical reg space.
          */
         bool fs_threaded;
+
+        bool last_thrsw_at_top_level;
 
         bool failed;
 };
