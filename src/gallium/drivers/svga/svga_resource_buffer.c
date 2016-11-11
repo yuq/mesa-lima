@@ -224,7 +224,7 @@ svga_buffer_transfer_map(struct pipe_context *pipe,
    }
 
    if (!sbuf->swbuf && !svga_buffer_has_hw_storage(sbuf)) {
-      if (svga_buffer_create_hw_storage(ss, sbuf) != PIPE_OK) {
+      if (svga_buffer_create_hw_storage(ss, sbuf, sbuf->bind_flags) != PIPE_OK) {
          /*
           * We can't create a hardware buffer big enough, so create a malloc
           * buffer instead.
@@ -399,6 +399,7 @@ svga_buffer_create(struct pipe_screen *screen,
 {
    struct svga_screen *ss = svga_screen(screen);
    struct svga_buffer *sbuf;
+   unsigned bind_flags;
 
    SVGA_STATS_TIME_PUSH(ss->sws, SVGA_STATS_TIME_CREATEBUFFER);
 
@@ -410,21 +411,21 @@ svga_buffer_create(struct pipe_screen *screen,
    sbuf->b.vtbl = &svga_buffer_vtbl;
    pipe_reference_init(&sbuf->b.b.reference, 1);
    sbuf->b.b.screen = screen;
-   sbuf->bind_flags = template->bind;
+   bind_flags = template->bind;
 
-   if (template->bind & PIPE_BIND_CONSTANT_BUFFER) {
+   if (bind_flags & PIPE_BIND_CONSTANT_BUFFER) {
       /* Constant buffers can only have the PIPE_BIND_CONSTANT_BUFFER
        * flag set.
        */
       if (ss->sws->have_vgpu10) {
-         sbuf->bind_flags = PIPE_BIND_CONSTANT_BUFFER;
+         bind_flags = PIPE_BIND_CONSTANT_BUFFER;
 
          /* Constant buffer size needs to be in multiples of 16. */
          sbuf->b.b.width0 = align(sbuf->b.b.width0, 16);
       }
    }
 
-   if (svga_buffer_needs_hw_storage(template->bind)) {
+   if (svga_buffer_needs_hw_storage(bind_flags)) {
 
       /* If the buffer will be used for vertex/index/stream data, set all
        * the flags so that the buffer will be accepted for all those uses.
@@ -436,13 +437,13 @@ svga_buffer_create(struct pipe_screen *screen,
          /* Not a constant buffer.  The buffer may be used for vertex data,
           * indexes or stream-out.
           */
-         sbuf->bind_flags |= (PIPE_BIND_VERTEX_BUFFER |
-                              PIPE_BIND_INDEX_BUFFER);
+         bind_flags |= (PIPE_BIND_VERTEX_BUFFER |
+                        PIPE_BIND_INDEX_BUFFER);
          if (ss->sws->have_vgpu10)
-            sbuf->bind_flags |= PIPE_BIND_STREAM_OUTPUT;
+            bind_flags |= PIPE_BIND_STREAM_OUTPUT;
       }
 
-      if (svga_buffer_create_host_surface(ss, sbuf) != PIPE_OK)
+      if (svga_buffer_create_host_surface(ss, sbuf, bind_flags) != PIPE_OK)
          goto error2;
    }
    else {
@@ -454,6 +455,7 @@ svga_buffer_create(struct pipe_screen *screen,
    debug_reference(&sbuf->b.b.reference,
                    (debug_reference_descriptor)debug_describe_resource, 0);
 
+   sbuf->bind_flags = bind_flags;
    sbuf->size = util_resource_size(&sbuf->b.b);
    ss->hud.total_resource_bytes += sbuf->size;
 

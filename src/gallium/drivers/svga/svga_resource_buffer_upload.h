@@ -38,7 +38,8 @@ svga_buffer_add_range(struct svga_buffer *sbuf,
 
 enum pipe_error
 svga_buffer_create_hw_storage(struct svga_screen *ss,
-                              struct svga_buffer *sbuf);
+                              struct svga_buffer *sbuf,
+                              unsigned bind_flags);
 
 void
 svga_buffer_destroy_hw_storage(struct svga_screen *ss,
@@ -46,7 +47,8 @@ svga_buffer_destroy_hw_storage(struct svga_screen *ss,
 
 enum pipe_error
 svga_buffer_create_host_surface(struct svga_screen *ss,
-                                struct svga_buffer *sbuf);
+                                struct svga_buffer *sbuf,
+                                unsigned bind_flags);
 
 void
 svga_buffer_destroy_host_surface(struct svga_screen *ss,
