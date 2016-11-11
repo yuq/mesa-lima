@@ -393,7 +393,7 @@ layout_size(const struct anv_descriptor_set_layout *layout)
 
 struct surface_state_free_list_entry {
    void *next;
-   uint32_t offset;
+   struct anv_state state;
 };
 
 VkResult
@@ -463,10 +463,9 @@ anv_descriptor_set_create(struct anv_device *device,
       struct anv_state state;
 
       if (entry) {
-         state.map = entry;
-         state.offset = entry->offset;
-         state.alloc_size = 64;
+         state = entry->state;
          pool->surface_state_free_list = entry->next;
+         assert(state.alloc_size == 64);
       } else {
          state = anv_state_stream_alloc(&pool->surface_state_stream, 64, 64);
       }
@@ -489,7 +488,7 @@ anv_descriptor_set_destroy(struct anv_device *device,
       struct surface_state_free_list_entry *entry =
          set->buffer_views[b].surface_state.map;
       entry->next = pool->surface_state_free_list;
-      entry->offset = set->buffer_views[b].surface_state.offset;
+      entry->state = set->buffer_views[b].surface_state;
       pool->surface_state_free_list = entry;
    }
 
