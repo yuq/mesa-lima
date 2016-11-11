@@ -145,6 +145,7 @@ LIBGLSL_SHADER_CACHE_FILES = \
 GLSL_COMPILER_CXX_FILES = \
 	glsl/ir_builder_print_visitor.cpp \
 	glsl/ir_builder_print_visitor.h \
+	glsl/opt_add_neg_to_sub.h \
 	glsl/standalone_scaffolding.cpp \
 	glsl/standalone_scaffolding.h \
 	glsl/standalone.cpp \
