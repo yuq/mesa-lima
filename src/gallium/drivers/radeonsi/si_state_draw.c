@@ -108,6 +108,19 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
 	unsigned offchip_layout, hardware_lds_size, ls_hs_config;
 
+	if (sctx->last_ls == ls->current &&
+	    sctx->last_tcs == tcs &&
+	    sctx->last_tes_sh_base == tes_sh_base &&
+	    sctx->last_num_tcs_input_cp == num_tcs_input_cp) {
+		*num_patches = sctx->last_num_patches;
+		return;
+	}
+
+	sctx->last_ls = ls->current;
+	sctx->last_tcs = tcs;
+	sctx->last_tes_sh_base = tes_sh_base;
+	sctx->last_num_tcs_input_cp = num_tcs_input_cp;
+
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
 	num_tcs_inputs = util_last_bit64(ls->cso->outputs_written);
@@ -153,6 +166,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	 * specific value is taken from the proprietary driver.
 	 */
 	*num_patches = MIN2(*num_patches, 40);
+	sctx->last_num_patches = *num_patches;
 
 	output_patch0_offset = input_patch_size * *num_patches;
 	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
@@ -167,17 +181,6 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 		assert(lds_size <= 32768);
 		ls_rsrc2 |= S_00B52C_LDS_SIZE(align(lds_size, 256) / 256);
 	}
-
-	if (sctx->last_ls == ls->current &&
-	    sctx->last_tcs == tcs &&
-	    sctx->last_tes_sh_base == tes_sh_base &&
-	    sctx->last_num_tcs_input_cp == num_tcs_input_cp)
-		return;
-
-	sctx->last_ls = ls->current;
-	sctx->last_tcs = tcs;
-	sctx->last_tes_sh_base = tes_sh_base;
-	sctx->last_num_tcs_input_cp = num_tcs_input_cp;
 
 	/* Due to a hw bug, RSRC2_LS must be written twice with another
 	 * LS register written in between. */
