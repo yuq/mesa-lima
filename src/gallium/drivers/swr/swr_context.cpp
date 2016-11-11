@@ -21,6 +21,14 @@
  * IN THE SOFTWARE.
  ***************************************************************************/
 
+#include "swr_context.h"
+#include "swr_memory.h"
+#include "swr_screen.h"
+#include "swr_resource.h"
+#include "swr_scratch.h"
+#include "swr_query.h"
+#include "swr_fence.h"
+
 #include "util/u_memory.h"
 #include "util/u_inlines.h"
 #include "util/u_format.h"
@@ -30,14 +38,6 @@ extern "C" {
 #include "util/u_transfer.h"
 #include "util/u_surface.h"
 }
-
-#include "swr_context.h"
-#include "swr_memory.h"
-#include "swr_screen.h"
-#include "swr_resource.h"
-#include "swr_scratch.h"
-#include "swr_query.h"
-#include "swr_fence.h"
 
 #include "api.h"
 #include "backend.h"

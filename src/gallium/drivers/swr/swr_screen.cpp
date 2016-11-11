@@ -21,6 +21,13 @@
  * IN THE SOFTWARE.
  ***************************************************************************/
 
+#include "swr_context.h"
+#include "swr_public.h"
+#include "swr_screen.h"
+#include "swr_resource.h"
+#include "swr_fence.h"
+#include "gen_knobs.h"
+
 #include "pipe/p_screen.h"
 #include "pipe/p_defines.h"
 #include "util/u_memory.h"
@@ -34,13 +41,6 @@
 extern "C" {
 #include "gallivm/lp_bld_limits.h"
 }
-
-#include "swr_public.h"
-#include "swr_screen.h"
-#include "swr_context.h"
-#include "swr_resource.h"
-#include "swr_fence.h"
-#include "gen_knobs.h"
 
 #include "jit_api.h"
 
@@ -1023,14 +1023,3 @@ swr_create_screen(struct sw_winsys *winsys)
    return &screen->base;
 }
 
-struct sw_winsys *
-swr_get_winsys(struct pipe_screen *pipe)
-{
-   return ((struct swr_screen *)pipe)->winsys;
-}
-
-struct sw_displaytarget *
-swr_get_displaytarget(struct pipe_resource *resource)
-{
-   return ((struct swr_resource *)resource)->display_target;
-}
