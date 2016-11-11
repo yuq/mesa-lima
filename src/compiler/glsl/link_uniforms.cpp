@@ -1130,6 +1130,10 @@ link_setup_uniform_remap_tables(struct gl_context *ctx,
       if (prog->UniformStorage[i].remap_location == UNMAPPED_UNIFORM_LOC)
          continue;
 
+      /* How many new entries for this uniform? */
+      const unsigned entries =
+         MAX2(1, prog->UniformStorage[i].array_elements);
+
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
          struct gl_linked_shader *sh = prog->_LinkedShaders[j];
          if (!sh)
@@ -1137,10 +1141,6 @@ link_setup_uniform_remap_tables(struct gl_context *ctx,
 
          if (!prog->UniformStorage[i].opaque[j].active)
             continue;
-
-         /* How many new entries for this uniform? */
-         const unsigned entries =
-            MAX2(1, prog->UniformStorage[i].array_elements);
 
          /* Set remap table entries point to correct gl_uniform_storage. */
          for (unsigned k = 0; k < entries; k++) {
@@ -1155,13 +1155,15 @@ link_setup_uniform_remap_tables(struct gl_context *ctx,
 
    /* reserve subroutine locations */
    for (unsigned i = 0; i < prog->NumUniformStorage; i++) {
-
       if (!prog->UniformStorage[i].type->is_subroutine())
          continue;
-      const unsigned entries = MAX2(1, prog->UniformStorage[i].array_elements);
 
       if (prog->UniformStorage[i].remap_location != UNMAPPED_UNIFORM_LOC)
          continue;
+
+      const unsigned entries =
+         MAX2(1, prog->UniformStorage[i].array_elements);
+
       for (unsigned j = 0; j < MESA_SHADER_STAGES; j++) {
          struct gl_linked_shader *sh = prog->_LinkedShaders[j];
          if (!sh)
