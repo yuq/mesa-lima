@@ -145,10 +145,10 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
 
         /* A/B */
         for (uint32_t i = AB_INDEX; i < AB_INDEX + 64; i ++) {
-                /* Reserve ra31/rb31 for spilling fixup_raddr_conflict() in
+                /* Reserve ra14/rb14 for spilling fixup_raddr_conflict() in
                  * vc4_qpu_emit.c
                  */
-                if (vc4_regs[i].addr == 31)
+                if (vc4_regs[i].addr == 14)
                         continue;
 
                 ra_class_add_reg(vc4->regs, vc4->reg_class_any[0], i);

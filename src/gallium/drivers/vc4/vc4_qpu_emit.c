@@ -157,7 +157,7 @@ setup_for_vpm_read(struct vc4_compile *c, struct qblock *block)
  * address.
  *
  * In that case, we need to move one to a temporary that can be used in the
- * instruction, instead.  We reserve ra31/rb31 for this purpose.
+ * instruction, instead.  We reserve ra14/rb14 for this purpose.
  */
 static void
 fixup_raddr_conflict(struct qblock *block,
@@ -183,9 +183,9 @@ fixup_raddr_conflict(struct qblock *block,
                  * in case of unpacks.
                  */
                 if (qir_is_float_input(inst))
-                        queue(block, qpu_a_FMAX(qpu_rb(31), *src0, *src0));
+                        queue(block, qpu_a_FMAX(qpu_rb(14), *src0, *src0));
                 else
-                        queue(block, qpu_a_MOV(qpu_rb(31), *src0));
+                        queue(block, qpu_a_MOV(qpu_rb(14), *src0));
 
                 /* If we had an unpack on this A-file source, we need to put
                  * it into this MOV, not into the later move from regfile B.
@@ -194,10 +194,10 @@ fixup_raddr_conflict(struct qblock *block,
                         *last_inst(block) |= *unpack;
                         *unpack = 0;
                 }
-                *src0 = qpu_rb(31);
+                *src0 = qpu_rb(14);
         } else {
-                queue(block, qpu_a_MOV(qpu_ra(31), *src0));
-                *src0 = qpu_ra(31);
+                queue(block, qpu_a_MOV(qpu_ra(14), *src0));
+                *src0 = qpu_ra(14);
         }
 }
 
