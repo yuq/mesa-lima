@@ -1559,7 +1559,7 @@ dri2_wl_swrast_commit_backbuffer(struct dri2_egl_surface *dri2_surf)
    while (dri2_surf->throttle_callback != NULL)
       if (wl_display_dispatch_queue(dri2_dpy->wl_dpy,
                                     dri2_dpy->wl_queue) == -1)
-         return -1;
+         return;
 
    if (dri2_surf->base.SwapInterval > 0) {
       dri2_surf->throttle_callback =
