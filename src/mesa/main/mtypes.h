@@ -1944,6 +1944,11 @@ struct gl_program
    GLubyte SamplerUnits[MAX_SAMPLERS];
 
    union {
+      /** Fields used by GLSL programs */
+      struct {
+         struct gl_active_atomic_buffer **AtomicBuffers;
+      } sh;
+
       /** ARB assembly-style program fields */
       struct {
          struct prog_instruction *Instructions;
@@ -2353,9 +2358,6 @@ struct gl_linked_shader
     * ImageAccess arrays above.
     */
    GLuint NumImages;
-
-   struct gl_active_atomic_buffer **AtomicBuffers;
-   unsigned NumAtomicBuffers;
 
    /**
      * Number of types for subroutine uniforms.

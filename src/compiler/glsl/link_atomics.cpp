@@ -267,8 +267,9 @@ link_assign_atomic_counter_resources(struct gl_context *ctx,
     */
    for (unsigned j = 0; j < MESA_SHADER_STAGES; ++j) {
       if (prog->_LinkedShaders[j] && num_atomic_buffers[j] > 0) {
-         prog->_LinkedShaders[j]->NumAtomicBuffers = num_atomic_buffers[j];
-         prog->_LinkedShaders[j]->AtomicBuffers =
+         struct gl_program *gl_prog = prog->_LinkedShaders[j]->Program;
+         gl_prog->info.num_abos = num_atomic_buffers[j];
+         gl_prog->sh.AtomicBuffers =
             rzalloc_array(prog, gl_active_atomic_buffer *,
                           num_atomic_buffers[j]);
 
@@ -277,8 +278,7 @@ link_assign_atomic_counter_resources(struct gl_context *ctx,
             struct gl_active_atomic_buffer *atomic_buffer =
                &prog->AtomicBuffers[i];
             if (atomic_buffer->StageReferences[j]) {
-               prog->_LinkedShaders[j]->AtomicBuffers[intra_stage_idx] =
-                  atomic_buffer;
+               gl_prog->sh.AtomicBuffers[intra_stage_idx] = atomic_buffer;
 
                for (unsigned u = 0; u < atomic_buffer->NumUniforms; u++) {
                   prog->UniformStorage[atomic_buffer->Uniforms[u]].opaque[j].index =

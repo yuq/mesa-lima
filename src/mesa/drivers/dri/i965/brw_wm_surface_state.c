@@ -1484,7 +1484,6 @@ const struct brw_tracked_state brw_cs_ubo_surfaces = {
 
 void
 brw_upload_abo_surfaces(struct brw_context *brw,
-                        struct gl_linked_shader *shader,
                         const struct gl_program *prog,
                         struct brw_stage_state *stage_state,
                         struct brw_stage_prog_data *prog_data)
@@ -1494,10 +1493,9 @@ brw_upload_abo_surfaces(struct brw_context *brw,
       &stage_state->surf_offset[prog_data->binding_table.abo_start];
 
    if (prog->info.num_abos) {
-      assert(shader);
       for (unsigned i = 0; i < prog->info.num_abos; i++) {
          struct gl_atomic_buffer_binding *binding =
-            &ctx->AtomicBufferBindings[shader->AtomicBuffers[i]->Binding];
+            &ctx->AtomicBufferBindings[prog->sh.AtomicBuffers[i]->Binding];
          struct intel_buffer_object *intel_bo =
             intel_buffer_object(binding->BufferObject);
          drm_intel_bo *bo = intel_bufferobj_buffer(
@@ -1515,15 +1513,12 @@ brw_upload_abo_surfaces(struct brw_context *brw,
 static void
 brw_upload_wm_abo_surfaces(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog = ctx->_Shader->_CurrentFragmentProgram;
    const struct gl_program *wm = brw->fragment_program;
 
-   if (prog) {
+   if (wm) {
       /* BRW_NEW_FS_PROG_DATA */
-      brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_FRAGMENT],
-                              wm, &brw->wm.base, brw->wm.base.prog_data);
+      brw_upload_abo_surfaces(brw, wm, &brw->wm.base, brw->wm.base.prog_data);
    }
 }
 
@@ -1541,16 +1536,12 @@ const struct brw_tracked_state brw_wm_abo_surfaces = {
 static void
 brw_upload_cs_abo_surfaces(struct brw_context *brw)
 {
-   struct gl_context *ctx = &brw->ctx;
    /* _NEW_PROGRAM */
-   struct gl_shader_program *prog =
-      ctx->_Shader->CurrentProgram[MESA_SHADER_COMPUTE];
    const struct gl_program *cp = brw->compute_program;
 
-   if (cp && prog) {
+   if (cp) {
       /* BRW_NEW_CS_PROG_DATA */
-      brw_upload_abo_surfaces(brw, prog->_LinkedShaders[MESA_SHADER_COMPUTE],
-                              cp, &brw->cs.base, brw->cs.base.prog_data);
+      brw_upload_abo_surfaces(brw, cp, &brw->cs.base, brw->cs.base.prog_data);
    }
 }
 

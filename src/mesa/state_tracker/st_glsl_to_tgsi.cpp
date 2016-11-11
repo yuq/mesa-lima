@@ -6607,7 +6607,7 @@ set_affected_state_flags(uint64_t *states,
    if (shader->NumShaderStorageBlocks)
       *states |= new_ssbos;
 
-   if (shader->NumAtomicBuffers)
+   if (prog->info.num_abos)
       *states |= new_atomics;
 }
 
