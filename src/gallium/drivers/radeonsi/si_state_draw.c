@@ -107,7 +107,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	unsigned num_tcs_patch_outputs;
 	unsigned input_vertex_size, output_vertex_size, pervertex_output_patch_size;
 	unsigned input_patch_size, output_patch_size, output_patch0_offset;
-	unsigned perpatch_output_offset, lds_size, ls_rsrc2;
+	unsigned perpatch_output_offset, lds_size;
 	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
 	unsigned offchip_layout, hardware_lds_size, ls_hs_config;
 
@@ -181,27 +181,6 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	output_patch0_offset = input_patch_size * *num_patches;
 	perpatch_output_offset = output_patch0_offset + pervertex_output_patch_size;
 
-	lds_size = output_patch0_offset + output_patch_size * *num_patches;
-	ls_rsrc2 = ls->current->config.rsrc2;
-
-	if (sctx->b.chip_class >= CIK) {
-		assert(lds_size <= 65536);
-		lds_size = align(lds_size, 512) / 512;
-	} else {
-		assert(lds_size <= 32768);
-		lds_size = align(lds_size, 256) / 256;
-	}
-	si_multiwave_lds_size_workaround(sctx->screen, &lds_size);
-	ls_rsrc2 |= S_00B52C_LDS_SIZE(lds_size);
-
-	/* Due to a hw bug, RSRC2_LS must be written twice with another
-	 * LS register written in between. */
-	if (sctx->b.chip_class == CIK && sctx->b.family != CHIP_HAWAII)
-		radeon_set_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
-	radeon_set_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
-	radeon_emit(cs, ls->current->config.rsrc1);
-	radeon_emit(cs, ls_rsrc2);
-
 	/* Compute userdata SGPRs. */
 	assert(((input_vertex_size / 4) & ~0xff) == 0);
 	assert(((output_vertex_size / 4) & ~0xff) == 0);
@@ -221,20 +200,48 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	offchip_layout = (pervertex_output_patch_size * *num_patches << 16) |
 			 (num_tcs_output_cp << 9) | *num_patches;
 
-	/* Set them for LS. */
+	/* Compute the LDS size. */
+	lds_size = output_patch0_offset + output_patch_size * *num_patches;
+
+	if (sctx->b.chip_class >= CIK) {
+		assert(lds_size <= 65536);
+		lds_size = align(lds_size, 512) / 512;
+	} else {
+		assert(lds_size <= 32768);
+		lds_size = align(lds_size, 256) / 256;
+	}
+
+	/* Set SI_SGPR_VS_STATE_BITS. */
 	sctx->current_vs_state &= C_VS_STATE_LS_OUT_PATCH_SIZE &
 				  C_VS_STATE_LS_OUT_VERTEX_SIZE;
 	sctx->current_vs_state |= tcs_in_layout;
 
-	/* Set them for TCS. */
-	radeon_set_sh_reg_seq(cs,
-		R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 4);
-	radeon_emit(cs, offchip_layout);
-	radeon_emit(cs, tcs_out_offsets);
-	radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
-	radeon_emit(cs, tcs_in_layout);
+	if (sctx->b.chip_class >= GFX9) {
+		// TODO
+	} else {
+		unsigned ls_rsrc2 = ls->current->config.rsrc2;
 
-	/* Set them for TES. */
+		si_multiwave_lds_size_workaround(sctx->screen, &lds_size);
+		ls_rsrc2 |= S_00B52C_LDS_SIZE(lds_size);
+
+		/* Due to a hw bug, RSRC2_LS must be written twice with another
+		 * LS register written in between. */
+		if (sctx->b.chip_class == CIK && sctx->b.family != CHIP_HAWAII)
+			radeon_set_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
+		radeon_set_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
+		radeon_emit(cs, ls->current->config.rsrc1);
+		radeon_emit(cs, ls_rsrc2);
+
+		/* Set userdata SGPRs for TCS. */
+		radeon_set_sh_reg_seq(cs,
+			R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 4);
+		radeon_emit(cs, offchip_layout);
+		radeon_emit(cs, tcs_out_offsets);
+		radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
+		radeon_emit(cs, tcs_in_layout);
+	}
+
+	/* Set userdata SGPRs for TES. */
 	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 1);
 	radeon_emit(cs, offchip_layout);
 
