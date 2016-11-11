@@ -612,7 +612,7 @@ retry:
    if (brw->always_flush_batch)
       intel_batchbuffer_flush(brw);
 
-   brw_state_cache_check_size(brw);
+   brw_program_cache_check_size(brw);
    brw_postdraw_set_buffers_need_resolve(brw);
 
    return;
