@@ -1752,7 +1752,7 @@ dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
                                              config, dri2_surf);
    if (dri2_surf->dri_drawable == NULL) {
       _eglError(EGL_BAD_ALLOC, "swrast->createNewDrawable");
-      goto cleanup_dri_drawable;
+      goto cleanup_surf;
    }
 
    dri2_wl_swap_interval(drv, disp, &dri2_surf->base,
@@ -1760,8 +1760,6 @@ dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
 
    return &dri2_surf->base;
 
- cleanup_dri_drawable:
-   dri2_dpy->core->destroyDrawable(dri2_surf->dri_drawable);
  cleanup_surf:
    free(dri2_surf);
 
