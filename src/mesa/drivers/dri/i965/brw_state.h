@@ -235,6 +235,11 @@ bool brw_search_cache(struct brw_cache *cache,
                       const void *key,
                       GLuint key_size,
                       uint32_t *inout_offset, void *inout_aux);
+
+const void *brw_find_previous_compile(struct brw_cache *cache,
+                                      enum brw_cache_id cache_id,
+                                      unsigned program_string_id);
+
 void brw_program_cache_check_size(struct brw_context *brw);
 
 void brw_init_caches( struct brw_context *brw );

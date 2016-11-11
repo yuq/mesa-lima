@@ -40,26 +40,14 @@ static void
 brw_gs_debug_recompile(struct brw_context *brw, struct gl_program *prog,
                        const struct brw_gs_prog_key *key)
 {
-   struct brw_cache_item *c = NULL;
-   const struct brw_gs_prog_key *old_key = NULL;
-   bool found = false;
-
    perf_debug("Recompiling geometry shader for program %d\n", prog->Id);
 
-   for (unsigned int i = 0; i < brw->cache.size; i++) {
-      for (c = brw->cache.items[i]; c; c = c->next) {
-         if (c->cache_id == BRW_CACHE_GS_PROG) {
-            old_key = c->key;
+   bool found = false;
+   const struct brw_gs_prog_key *old_key =
+      brw_find_previous_compile(&brw->cache, BRW_CACHE_GS_PROG,
+                                key->program_string_id);
 
-            if (old_key->program_string_id == key->program_string_id)
-               break;
-         }
-      }
-      if (c)
-         break;
-   }
-
-   if (!c) {
+   if (!old_key) {
       perf_debug("  Didn't find previous compile in the shader cache for "
                  "debug\n");
       return;
