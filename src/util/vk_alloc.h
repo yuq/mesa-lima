@@ -46,6 +46,9 @@ vk_realloc(const VkAllocationCallbacks *alloc,
 static inline void
 vk_free(const VkAllocationCallbacks *alloc, void *data)
 {
+   if (data == NULL)
+      return;
+
    alloc->pfnFree(alloc->pUserData, data);
 }
 
