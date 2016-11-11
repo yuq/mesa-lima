@@ -217,7 +217,7 @@ brw_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
 }
 
 /***********************************************************************
- * brw_state_cache.c
+ * brw_program_cache.c
  */
 
 void brw_upload_cache(struct brw_cache *cache,

@@ -29,13 +29,13 @@
   *   Keith Whitwell <keithw@vmware.com>
   */
 
-/** @file brw_state_cache.c
+/** @file brw_program_cache.c
  *
- * This file implements a simple static state cache for 965.  The
- * consumers can query the hash table of state using a cache_id,
- * opaque key data, and receive the corresponding state buffer object
- * of state (plus associated auxiliary data) in return.  Objects in
- * the cache may not have relocations (pointers to other BOs) in them.
+ * This file implements a simple program cache for 965.  The consumers can
+ *  query the hash table of programs using a cache_id and program key, and
+ * receive the corresponding program buffer object (plus associated auxiliary
+ *  data) in return.  Objects in the cache may not have relocations
+ * (pointers to other BOs) in them.
  *
  * The inner workings are a simple hash table based on a CRC of the
  * key data.

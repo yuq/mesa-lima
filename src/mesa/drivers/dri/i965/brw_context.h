@@ -178,7 +178,7 @@ enum brw_cache_id {
 };
 
 enum brw_state_id {
-   /* brw_cache_ids must come first - see brw_state_cache.c */
+   /* brw_cache_ids must come first - see brw_program_cache.c */
    BRW_STATE_URB_FENCE = BRW_MAX_CACHE,
    BRW_STATE_FRAGMENT_PROGRAM,
    BRW_STATE_GEOMETRY_PROGRAM,
