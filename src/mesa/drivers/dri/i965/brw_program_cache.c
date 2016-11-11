@@ -75,7 +75,7 @@ hash_key(struct brw_cache_item *item)
 
 static int
 brw_cache_item_equals(const struct brw_cache_item *a,
-		      const struct brw_cache_item *b)
+                      const struct brw_cache_item *b)
 {
    return a->cache_id == b->cache_id &&
       a->hash == b->hash &&
@@ -85,7 +85,7 @@ brw_cache_item_equals(const struct brw_cache_item *a,
 
 static struct brw_cache_item *
 search_cache(struct brw_cache *cache, GLuint hash,
-	     struct brw_cache_item *lookup)
+             struct brw_cache_item *lookup)
 {
    struct brw_cache_item *c;
 
@@ -96,12 +96,12 @@ search_cache(struct brw_cache *cache, GLuint hash,
       bucketcount++;
 
    fprintf(stderr, "bucket %d/%d = %d/%d items\n", hash % cache->size,
-	   cache->size, bucketcount, cache->n_items);
+           cache->size, bucketcount, cache->n_items);
 #endif
 
    for (c = cache->items[hash % cache->size]; c; c = c->next) {
       if (brw_cache_item_equals(lookup, c))
-	 return c;
+         return c;
    }
 
    return NULL;
@@ -120,9 +120,9 @@ rehash(struct brw_cache *cache)
 
    for (i = 0; i < cache->size; i++)
       for (c = cache->items[i]; c; c = next) {
-	 next = c->next;
-	 c->next = items[c->hash % size];
-	 items[c->hash % size] = c;
+         next = c->next;
+         c->next = items[c->hash % size];
+         items[c->hash % size] = c;
       }
 
    free(cache->items);
@@ -216,20 +216,20 @@ brw_lookup_prog(const struct brw_cache *cache,
 
    for (i = 0; i < cache->size; i++) {
       for (item = cache->items[i]; item; item = item->next) {
-	 int ret;
+         int ret;
 
-	 if (item->cache_id != cache_id || item->size != data_size)
-	    continue;
+         if (item->cache_id != cache_id || item->size != data_size)
+            continue;
 
          if (!brw->has_llc)
             drm_intel_bo_map(cache->bo, false);
-	 ret = memcmp(cache->bo->virtual + item->offset, data, item->size);
+         ret = memcmp(cache->bo->virtual + item->offset, data, item->size);
          if (!brw->has_llc)
             drm_intel_bo_unmap(cache->bo);
-	 if (ret)
-	    continue;
+         if (ret)
+            continue;
 
-	 return item;
+         return item;
       }
    }
 
@@ -247,7 +247,7 @@ brw_alloc_item_data(struct brw_cache *cache, uint32_t size)
       uint32_t new_size = cache->bo->size * 2;
 
       while (cache->next_offset + size > new_size)
-	 new_size *= 2;
+         new_size *= 2;
 
       brw_cache_new_bo(cache, new_size);
    }
@@ -270,15 +270,15 @@ brw_alloc_item_data(struct brw_cache *cache, uint32_t size)
 
 void
 brw_upload_cache(struct brw_cache *cache,
-		 enum brw_cache_id cache_id,
-		 const void *key,
-		 GLuint key_size,
-		 const void *data,
-		 GLuint data_size,
-		 const void *aux,
-		 GLuint aux_size,
-		 uint32_t *out_offset,
-		 void *out_aux)
+                 enum brw_cache_id cache_id,
+                 const void *key,
+                 GLuint key_size,
+                 const void *data,
+                 GLuint data_size,
+                 const void *aux,
+                 GLuint aux_size,
+                 uint32_t *out_offset,
+                 void *out_aux)
 {
    struct brw_context *brw = cache->brw;
    struct brw_cache_item *item = CALLOC_STRUCT(brw_cache_item);
@@ -347,9 +347,7 @@ brw_init_caches(struct brw_context *brw)
    cache->items =
       calloc(cache->size, sizeof(struct brw_cache_item *));
 
-   cache->bo = drm_intel_bo_alloc(brw->bufmgr,
-				  "program cache",
-				  4096, 64);
+   cache->bo = drm_intel_bo_alloc(brw->bufmgr, "program cache",  4096, 64);
    if (brw->has_llc)
       drm_intel_gem_bo_map_unsynchronized(cache->bo);
 }
@@ -364,7 +362,7 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
 
    for (i = 0; i < cache->size; i++) {
       for (c = cache->items[i]; c; c = next) {
-	 next = c->next;
+         next = c->next;
          if (c->cache_id == BRW_CACHE_VS_PROG ||
              c->cache_id == BRW_CACHE_TCS_PROG ||
              c->cache_id == BRW_CACHE_TES_PROG ||
@@ -374,8 +372,8 @@ brw_clear_cache(struct brw_context *brw, struct brw_cache *cache)
             const void *item_aux = c->key + c->key_size;
             brw_stage_prog_data_free(item_aux);
          }
-	 free((void *)c->key);
-	 free(c);
+         free((void *)c->key);
+         free(c);
       }
       cache->items[i] = NULL;
    }
