@@ -38,10 +38,11 @@ struct pipe_screen *swr_create_screen(struct sw_winsys *winsys);
 // arch-specific dll entry point
 PUBLIC struct pipe_screen *swr_create_screen_internal(struct sw_winsys *winsys);
 
-struct sw_winsys *swr_get_winsys(struct pipe_screen *pipe);
-
-struct sw_displaytarget *swr_get_displaytarget(struct pipe_resource *resource);
-
+#ifdef _WIN32
+void swr_gdi_swap(struct pipe_screen *screen,
+                  struct pipe_resource *res,
+                  void *hDC);
+#endif /* _WIN32 */
 
 #ifdef __cplusplus
 }
