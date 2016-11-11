@@ -247,7 +247,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
 
                 case QOP_ROT_MUL:
                         assert(inst->src[0].file == QFILE_TEMP);
-                        class_bits[inst->src[0].index] &= ~CLASS_BIT_R0_R3;
+                        class_bits[inst->src[0].index] &= CLASS_BIT_R0_R3;
                         break;
 
                 default:
