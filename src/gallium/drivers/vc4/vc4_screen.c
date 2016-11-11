@@ -614,6 +614,8 @@ vc4_screen_create(int fd)
                 vc4_has_feature(screen, DRM_VC4_PARAM_SUPPORTS_BRANCHES);
         screen->has_etc1 =
                 vc4_has_feature(screen, DRM_VC4_PARAM_SUPPORTS_ETC1);
+        screen->has_threaded_fs =
+                vc4_has_feature(screen, DRM_VC4_PARAM_SUPPORTS_THREADED_FS);
 
         if (!vc4_get_chip_info(screen))
                 goto fail;

@@ -42,6 +42,9 @@
 #ifndef DRM_VC4_PARAM_SUPPORTS_ETC1
 #define DRM_VC4_PARAM_SUPPORTS_ETC1		4
 #endif
+#ifndef DRM_VC4_PARAM_SUPPORTS_THREADED_FS
+#define DRM_VC4_PARAM_SUPPORTS_THREADED_FS	5
+#endif
 
 #ifdef USE_VC4_SIMULATOR
 #define using_vc4_simulator true

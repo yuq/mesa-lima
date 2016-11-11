@@ -2158,7 +2158,7 @@ count_nir_instrs(nir_shader *nir)
 
 static struct vc4_compile *
 vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
-                       struct vc4_key *key)
+               struct vc4_key *key, bool fs_threaded)
 {
         struct vc4_compile *c = qir_compile_init();
 
@@ -2168,6 +2168,7 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
         c->program_id = key->shader_state->program_id;
         c->variant_id =
                 p_atomic_inc_return(&key->shader_state->compiled_variant_count);
+        c->fs_threaded = fs_threaded;
 
         c->key = key;
         switch (stage) {
@@ -2496,12 +2497,16 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
 {
         struct hash_table *ht;
         uint32_t key_size;
+        bool try_threading;
+
         if (stage == QSTAGE_FRAG) {
                 ht = vc4->fs_cache;
                 key_size = sizeof(struct vc4_fs_key);
+                try_threading = vc4->screen->has_threaded_fs;
         } else {
                 ht = vc4->vs_cache;
                 key_size = sizeof(struct vc4_vs_key);
+                try_threading = false;
         }
 
         struct vc4_compiled_shader *shader;
@@ -2509,7 +2514,13 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
         if (entry)
                 return entry->data;
 
-        struct vc4_compile *c = vc4_shader_ntq(vc4, stage, key);
+        struct vc4_compile *c = vc4_shader_ntq(vc4, stage, key, try_threading);
+        /* If the FS failed to compile threaded, fall back to single threaded. */
+        if (try_threading && c->failed) {
+                qir_compile_destroy(c);
+                c = vc4_shader_ntq(vc4, stage, key, false);
+        }
+
         shader = rzalloc(NULL, struct vc4_compiled_shader);
 
         shader->program_id = vc4->next_compiled_program_id++;

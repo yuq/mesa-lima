@@ -90,6 +90,7 @@ struct vc4_screen {
         uint32_t bo_count;
         bool has_control_flow;
         bool has_etc1;
+        bool has_threaded_fs;
 
         struct vc4_simulator_file *sim_file;
 };
