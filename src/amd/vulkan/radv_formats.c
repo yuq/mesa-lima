@@ -957,6 +957,18 @@ void radv_GetPhysicalDeviceFormatProperties(
 						   pFormatProperties);
 }
 
+void radv_GetPhysicalDeviceFormatProperties2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	VkFormat                                    format,
+	VkFormatProperties2KHR*                         pFormatProperties)
+{
+	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
+
+	radv_physical_device_get_format_properties(physical_device,
+						   format,
+						   &pFormatProperties->formatProperties);
+}
+
 VkResult radv_GetPhysicalDeviceImageFormatProperties(
 	VkPhysicalDevice                            physicalDevice,
 	VkFormat                                    format,
@@ -1071,6 +1083,20 @@ unsupported:
 	return VK_ERROR_FORMAT_NOT_SUPPORTED;
 }
 
+VkResult radv_GetPhysicalDeviceImageFormatProperties2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	const VkPhysicalDeviceImageFormatInfo2KHR*  pImageFormatInfo,
+	VkImageFormatProperties2KHR                *pImageFormatProperties)
+{
+	return radv_GetPhysicalDeviceImageFormatProperties(physicalDevice,
+							   pImageFormatInfo->format,
+							   pImageFormatInfo->type,
+							   pImageFormatInfo->tiling,
+							   pImageFormatInfo->usage,
+							   pImageFormatInfo->flags,
+							   &pImageFormatProperties->imageFormatProperties);
+}
+
 void radv_GetPhysicalDeviceSparseImageFormatProperties(
 	VkPhysicalDevice                            physicalDevice,
 	VkFormat                                    format,
@@ -1083,4 +1109,14 @@ void radv_GetPhysicalDeviceSparseImageFormatProperties(
 {
 	/* Sparse images are not yet supported. */
 	*pNumProperties = 0;
+}
+
+void radv_GetPhysicalDeviceSparseImageFormatProperties2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	const VkPhysicalDeviceSparseImageFormatInfo2KHR* pFormatInfo,
+	uint32_t                                   *pPropertyCount,
+	VkSparseImageFormatProperties2KHR*          pProperties)
+{
+	/* Sparse images are not yet supported. */
+	*pPropertyCount = 0;
 }

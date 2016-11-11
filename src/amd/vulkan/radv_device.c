@@ -119,6 +119,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.extensionName = VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static VkResult
@@ -467,6 +471,13 @@ void radv_GetPhysicalDeviceFeatures(
 	};
 }
 
+void radv_GetPhysicalDeviceFeatures2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	VkPhysicalDeviceFeatures2KHR               *pFeatures)
+{
+	return radv_GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
+}
+
 void radv_GetPhysicalDeviceProperties(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties*                 pProperties)
@@ -600,6 +611,13 @@ void radv_GetPhysicalDeviceProperties(
 	memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
 }
 
+void radv_GetPhysicalDeviceProperties2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	VkPhysicalDeviceProperties2KHR             *pProperties)
+{
+	return radv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
+}
+
 void radv_GetPhysicalDeviceQueueFamilyProperties(
 	VkPhysicalDevice                            physicalDevice,
 	uint32_t*                                   pCount,
@@ -650,9 +668,19 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 	*pCount = idx;
 }
 
+void radv_GetPhysicalDeviceQueueFamilyProperties2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	uint32_t*                                   pCount,
+	VkQueueFamilyProperties2KHR                *pQueueFamilyProperties)
+{
+	return radv_GetPhysicalDeviceQueueFamilyProperties(physicalDevice,
+							   pCount,
+							   &pQueueFamilyProperties->queueFamilyProperties);
+}
+
 void radv_GetPhysicalDeviceMemoryProperties(
 	VkPhysicalDevice                            physicalDevice,
-	VkPhysicalDeviceMemoryProperties*           pMemoryProperties)
+	VkPhysicalDeviceMemoryProperties           *pMemoryProperties)
 {
 	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
 
@@ -697,6 +725,14 @@ void radv_GetPhysicalDeviceMemoryProperties(
 		.size = physical_device->rad_info.gart_size,
 		.flags = 0,
 	};
+}
+
+void radv_GetPhysicalDeviceMemoryProperties2KHR(
+	VkPhysicalDevice                            physicalDevice,
+	VkPhysicalDeviceMemoryProperties2KHR       *pMemoryProperties)
+{
+	return radv_GetPhysicalDeviceMemoryProperties(physicalDevice,
+						      &pMemoryProperties->memoryProperties);
 }
 
 static int
