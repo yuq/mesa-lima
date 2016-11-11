@@ -972,6 +972,7 @@ static bool do_hardware_msaa_resolve(struct pipe_context *ctx,
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct r600_texture *src = (struct r600_texture*)info->src.resource;
 	struct r600_texture *dst = (struct r600_texture*)info->dst.resource;
+	struct r600_texture *rtmp;
 	unsigned dst_width = u_minify(info->dst.resource->width0, info->dst.level);
 	unsigned dst_height = u_minify(info->dst.resource->height0, info->dst.level);
 	enum pipe_format format = info->src.format;
@@ -1074,9 +1075,10 @@ resolve_to_temp:
 	tmp = ctx->screen->resource_create(ctx->screen, &templ);
 	if (!tmp)
 		return false;
+	rtmp = (struct r600_texture*)tmp;
 
-	assert(src->surface.micro_tile_mode ==
-	       ((struct r600_texture*)tmp)->surface.micro_tile_mode);
+	assert(!rtmp->surface.is_linear);
+	assert(src->surface.micro_tile_mode == rtmp->surface.micro_tile_mode);
 
 	/* resolve */
 	si_blitter_begin(ctx, SI_COLOR_RESOLVE |
