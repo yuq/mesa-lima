@@ -37,7 +37,12 @@
 #include "util/algorithm.hpp"
 
 #include <map>
+#if HAVE_LLVM < 0x0400
 #include <llvm/Bitcode/ReaderWriter.h>
+#else
+#include <llvm/Bitcode/BitcodeReader.h>
+#include <llvm/Bitcode/BitcodeWriter.h>
+#endif
 #include <llvm/Support/raw_ostream.h>
 
 using namespace clover;
