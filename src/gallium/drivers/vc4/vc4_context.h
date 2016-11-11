@@ -163,6 +163,8 @@ struct vc4_compiled_shader {
          */
         bool failed;
 
+        bool fs_threaded;
+
         uint8_t num_inputs;
 
         /* Byte offsets for the start of the vertex attributes 0-7, and the

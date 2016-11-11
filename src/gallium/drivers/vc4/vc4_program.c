@@ -2543,6 +2543,8 @@ vc4_get_compiled_shader(struct vc4_context *vc4, enum qstage stage,
                                                  sizeof(uint64_t));
         }
 
+        shader->fs_threaded = c->fs_threaded;
+
         /* Copy the compiler UBO range state to the compiled shader, dropping
          * out arrays that were never referenced by an indirect load.
          *
