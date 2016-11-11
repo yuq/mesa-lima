@@ -76,6 +76,9 @@ void anv_DestroySurfaceKHR(
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
    ANV_FROM_HANDLE(_VkIcdSurfaceBase, surface, _surface);
 
+   if (!surface)
+      return;
+
    vk_free2(&instance->alloc, pAllocator, surface);
 }
 
@@ -293,6 +296,9 @@ void anv_DestroySwapchainKHR(
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(wsi_swapchain, swapchain, _swapchain);
    const VkAllocationCallbacks *alloc;
+
+   if (!swapchain)
+      return;
 
    if (pAllocator)
      alloc = pAllocator;
