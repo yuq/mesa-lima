@@ -297,16 +297,48 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                 case QOP_TEX_R:
                 case QOP_TEX_B:
                 case QOP_TEX_DIRECT:
-                        /* If the texture coordinate fifo is full,
-                         * block this on the last QOP_TEX_RESULT.
+                        /* From the VC4 spec:
+                         *
+                         *     "The TFREQ input FIFO holds two full lots of s,
+                         *      t, r, b data, plus associated setup data, per
+                         *      QPU, that is, there are eight data slots. For
+                         *      each texture request, slots are only consumed
+                         *      for the components of s, t, r, and b actually
+                         *      written. Thus the FIFO can hold four requests
+                         *      of just (s, t) data, or eight requests of just
+                         *      s data (for direct addressed data lookups).
+                         *
+                         *      Note that there is one FIFO per QPU, and the
+                         *      FIFO has no concept of threads - that is,
+                         *      multi-threaded shaders must be careful to use
+                         *      only 1/2 the FIFO depth before reading
+                         *      back. Multi-threaded programs must also
+                         *      therefore always thread switch on texture
+                         *      fetch as the other thread may have data
+                         *      waiting in the FIFO."
+                         *
+                         * If the texture coordinate fifo is full, block this
+                         * on the last QOP_TEX_RESULT.
                          */
                         if (state.tfreq_count == 8) {
                                 block_until_tex_result(&state, n);
                         }
 
-                        /* If the texture result fifo is full, block
-                         * adding any more to it until the last
-                         * QOP_TEX_RESULT.
+                        /* From the VC4 spec:
+                         *
+                         *     "Since the maximum number of texture requests
+                         *      in the input (TFREQ) FIFO is four lots of (s,
+                         *      t) data, the output (TFRCV) FIFO is sized to
+                         *      holds four lots of max-size color data per
+                         *      QPU. For non-float color, reads are packed
+                         *      RGBA8888 data (one read per pixel). For 16-bit
+                         *      float color, two reads are necessary per
+                         *      pixel, with reads packed as RG1616 then
+                         *      BA1616. So per QPU there are eight color slots
+                         *      in the TFRCV FIFO."
+                         *
+                         * If the texture result fifo is full, block adding
+                         * any more to it until the last QOP_TEX_RESULT.
                          */
                         if (inst->op == QOP_TEX_S ||
                             inst->op == QOP_TEX_DIRECT) {
