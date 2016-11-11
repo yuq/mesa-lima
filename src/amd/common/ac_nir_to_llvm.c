@@ -1675,7 +1675,11 @@ emit_llvm_intrinsic(struct nir_to_llvm_context *ctx, const char *name,
 		LLVMSetFunctionCallConv(function, LLVMCCallConv);
 		LLVMSetLinkage(function, LLVMExternalLinkage);
 
-		ac_add_function_attr(function, 0, attrib_mask | AC_FUNC_ATTR_NOUNWIND);
+		attrib_mask |= AC_FUNC_ATTR_NOUNWIND;
+		while (attrib_mask) {
+			enum ac_func_attr attr = 1u << u_bit_scan(&attrib_mask);
+			ac_add_function_attr(function, -1, attr);
+		}
 	}
 	return LLVMBuildCall(ctx->builder, function, params, param_count, "");
 }
