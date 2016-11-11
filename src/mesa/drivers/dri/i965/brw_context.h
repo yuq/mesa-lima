@@ -453,25 +453,6 @@ struct brw_ff_gs_prog_data {
  */
 #define SHADER_TIME_STRIDE 64
 
-struct brw_cache_item {
-   /**
-    * Effectively part of the key, cache_id identifies what kind of state
-    * buffer is involved, and also which dirty flag should set.
-    */
-   enum brw_cache_id cache_id;
-   /** 32-bit hash of the key data */
-   GLuint hash;
-   GLuint key_size;		/* for variable-sized keys */
-   GLuint aux_size;
-   const void *key;
-
-   uint32_t offset;
-   uint32_t size;
-
-   struct brw_cache_item *next;
-};
-
-
 struct brw_cache {
    struct brw_context *brw;
 

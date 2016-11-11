@@ -55,6 +55,27 @@
 
 #define FILE_DEBUG_FLAG DEBUG_STATE
 
+struct brw_cache_item {
+   /**
+    * Effectively part of the key, cache_id identifies what kind of state
+    * buffer is involved, and also which dirty flag should set.
+    */
+   enum brw_cache_id cache_id;
+
+   /** 32-bit hash of the key data */
+   GLuint hash;
+
+   /** for variable-sized keys */
+   GLuint key_size;
+   GLuint aux_size;
+   const void *key;
+
+   uint32_t offset;
+   uint32_t size;
+
+   struct brw_cache_item *next;
+};
+
 static unsigned
 get_program_string_id(enum brw_cache_id cache_id, const void *key)
 {
