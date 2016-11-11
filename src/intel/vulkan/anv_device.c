@@ -1554,7 +1554,11 @@ VkResult anv_CreateFence(
    fence->execbuf.rsvd1 = device->context_id;
    fence->execbuf.rsvd2 = 0;
 
-   fence->state = ANV_FENCE_STATE_RESET;
+   if (pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT) {
+      fence->state = ANV_FENCE_STATE_SIGNALED;
+   } else {
+      fence->state = ANV_FENCE_STATE_RESET;
+   }
 
    *pFence = anv_fence_to_handle(fence);
 
