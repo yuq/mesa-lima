@@ -1696,10 +1696,8 @@ _mesa_make_current( struct gl_context *newCtx,
           */
 	 newCtx->NewState |= _NEW_BUFFERS;
 
-         if (drawBuffer) {
-            _mesa_check_init_viewport(newCtx,
-                                      drawBuffer->Width, drawBuffer->Height);
-         }
+         _mesa_check_init_viewport(newCtx,
+                                   drawBuffer->Width, drawBuffer->Height);
       }
 
       if (newCtx->FirstTimeCurrent) {
