@@ -385,10 +385,25 @@ calculate_deps(struct schedule_state *state, struct schedule_node *n)
         switch (sig) {
         case QPU_SIG_SW_BREAKPOINT:
         case QPU_SIG_NONE:
-        case QPU_SIG_THREAD_SWITCH:
-        case QPU_SIG_LAST_THREAD_SWITCH:
         case QPU_SIG_SMALL_IMM:
         case QPU_SIG_LOAD_IMM:
+                break;
+
+        case QPU_SIG_THREAD_SWITCH:
+        case QPU_SIG_LAST_THREAD_SWITCH:
+                /* All accumulator contents and flags are undefined after the
+                 * switch.
+                 */
+                for (int i = 0; i < ARRAY_SIZE(state->last_r); i++)
+                        add_write_dep(state, &state->last_r[i], n);
+                add_write_dep(state, &state->last_sf, n);
+
+                /* Scoreboard-locking operations have to stay after the last
+                 * thread switch.
+                 */
+                add_write_dep(state, &state->last_tlb, n);
+
+                add_write_dep(state, &state->last_tmu_write, n);
                 break;
 
         case QPU_SIG_LOAD_TMU0:
@@ -900,6 +915,16 @@ schedule_instructions(struct vc4_compile *c,
                         inst = qpu_NOP();
                         update_scoreboard_for_chosen(scoreboard, inst);
                         qpu_serialize_one_inst(c, inst);
+                        qpu_serialize_one_inst(c, inst);
+                        qpu_serialize_one_inst(c, inst);
+                } else if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_THREAD_SWITCH ||
+                           QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_LAST_THREAD_SWITCH) {
+                        /* The thread switch occurs after two delay slots.  We
+                         * should fit things in these slots, but we don't
+                         * currently.
+                         */
+                        inst = qpu_NOP();
+                        update_scoreboard_for_chosen(scoreboard, inst);
                         qpu_serialize_one_inst(c, inst);
                         qpu_serialize_one_inst(c, inst);
                 }
