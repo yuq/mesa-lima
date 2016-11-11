@@ -7935,16 +7935,9 @@ ast_gs_input_layout::hir(exec_list *instructions,
 {
    YYLTYPE loc = this->get_location();
 
-   /* If any geometry input layout declaration preceded this one, make sure it
-    * was consistent with this one.
-    */
-   if (state->gs_input_prim_type_specified &&
-       state->in_qualifier->prim_type != this->prim_type) {
-      _mesa_glsl_error(&loc, state,
-                       "geometry shader input layout does not match"
-                       " previous declaration");
-      return NULL;
-   }
+   /* Should have been prevented by the parser. */
+   assert(!state->gs_input_prim_type_specified
+          || state->in_qualifier->prim_type == this->prim_type);
 
    /* If any shader inputs occurred before this declaration and specified an
     * array size, make sure the size they specified is consistent with the
