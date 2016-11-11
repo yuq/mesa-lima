@@ -65,6 +65,23 @@ resize_qreg_array(struct vc4_compile *c,
                 (*regs)[i] = c->undef;
 }
 
+static void
+ntq_emit_thrsw(struct vc4_compile *c)
+{
+        if (!c->fs_threaded)
+                return;
+
+        /* Always thread switch after each texture operation for now.
+         *
+         * We could do better by batching a bunch of texture fetches up and
+         * then doing one thread switch and collecting all their results
+         * afterward.
+         */
+        qir_emit_nondef(c, qir_inst(QOP_THRSW, c->undef,
+                                    c->undef, c->undef));
+        c->last_thrsw_at_top_level = (c->execute.file == QFILE_NULL);
+}
+
 static struct qreg
 indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
 {
@@ -105,6 +122,9 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
 
         qir_TEX_DIRECT(c, indirect_offset, qir_uniform(c, QUNIFORM_UBO_ADDR, 0));
         c->num_texture_samples++;
+
+        ntq_emit_thrsw(c);
+
         return qir_TEX_RESULT(c);
 }
 
@@ -363,6 +383,8 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
 
         qir_TEX_DIRECT(c, addr, qir_uniform(c, QUNIFORM_TEXTURE_MSAA_ADDR, unit));
 
+        ntq_emit_thrsw(c);
+
         struct qreg tex = qir_TEX_RESULT(c);
         c->num_texture_samples++;
 
@@ -483,6 +505,9 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
         qir_TEX_S(c, s, texture_u[next_texture_u++]);
 
         c->num_texture_samples++;
+
+        ntq_emit_thrsw(c);
+
         struct qreg tex = qir_TEX_RESULT(c);
 
         enum pipe_format format = c->key->tex[unit].format;

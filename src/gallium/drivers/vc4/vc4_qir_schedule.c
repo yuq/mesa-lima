@@ -229,6 +229,30 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 add_write_dep(dir, &state->last_tex_result, n);
                 break;
 
+        case QOP_THRSW:
+                /* After a new THRSW, one must collect all texture samples
+                 * queued since the previous THRSW/program start.  For now, we
+                 * have one THRSW in between each texture setup and its
+                 * results collection as our input, and we just make sure that
+                 * that ordering is maintained.
+                 */
+                add_write_dep(dir, &state->last_tex_coord, n);
+                add_write_dep(dir, &state->last_tex_result, n);
+
+                /* accumulators and flags are lost across thread switches. */
+                add_write_dep(dir, &state->last_sf, n);
+
+                /* Setup, like the varyings, will need to be drained before we
+                 * thread switch.
+                 */
+                add_write_dep(dir, &state->last_vary_read, n);
+
+                /* The TLB-locking operations have to stay after the last
+                 * thread switch.
+                 */
+                add_write_dep(dir, &state->last_tlb, n);
+                break;
+
         case QOP_TLB_COLOR_READ:
         case QOP_MS_MASK:
                 add_write_dep(dir, &state->last_tlb, n);
