@@ -256,7 +256,6 @@ _mesa_reference_framebuffer_(struct gl_framebuffer **ptr,
 
       *ptr = NULL;
    }
-   assert(!*ptr);
 
    if (fb) {
       mtx_lock(&fb->Mutex);
