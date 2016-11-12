@@ -630,9 +630,9 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 #endif
 
       if (prog_data) {
-         ps.DispatchGRFStartRegisterforConstantSetupData0 =
+         ps.DispatchGRFStartRegisterForConstantSetupData0 =
             prog_data->base.dispatch_grf_start_reg;
-         ps.DispatchGRFStartRegisterforConstantSetupData2 =
+         ps.DispatchGRFStartRegisterForConstantSetupData2 =
             prog_data->dispatch_grf_start_reg_2;
 
          ps.KernelStartPointer0 = params->wm_prog_kernel;
@@ -692,9 +692,9 @@ blorp_emit_ps_config(struct blorp_batch *batch,
       if (prog_data) {
          wm.ThreadDispatchEnable = true;
 
-         wm.DispatchGRFStartRegisterforConstantSetupData0 =
+         wm.DispatchGRFStartRegisterForConstantSetupData0 =
             prog_data->base.dispatch_grf_start_reg;
-         wm.DispatchGRFStartRegisterforConstantSetupData2 =
+         wm.DispatchGRFStartRegisterForConstantSetupData2 =
             prog_data->dispatch_grf_start_reg_2;
 
          wm.KernelStartPointer0 = params->wm_prog_kernel;

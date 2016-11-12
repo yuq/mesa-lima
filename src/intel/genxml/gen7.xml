@@ -1393,9 +1393,9 @@
     <field name="32 Pixel Dispatch Enable" start="130" end="130" type="bool"/>
     <field name="16 Pixel Dispatch Enable" start="129" end="129" type="bool"/>
     <field name="8 Pixel Dispatch Enable" start="128" end="128" type="bool"/>
-    <field name="Dispatch GRF Start Register for Constant/Setup Data [0]" start="176" end="182" type="uint"/>
-    <field name="Dispatch GRF Start Register for Constant/Setup Data [1]" start="168" end="174" type="uint"/>
-    <field name="Dispatch GRF Start Register for Constant/Setup Data [2]" start="160" end="166" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data [0]" start="176" end="182" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data [1]" start="168" end="174" type="uint"/>
+    <field name="Dispatch GRF Start Register For Constant/Setup Data [2]" start="160" end="166" type="uint"/>
     <field name="Kernel Start Pointer[1]" start="198" end="223" type="offset"/>
     <field name="Kernel Start Pointer[2]" start="230" end="255" type="offset"/>
   </instruction>

@@ -168,10 +168,10 @@ genX(graphics_pipeline_create)(
          ps._16PixelDispatchEnable        = wm_prog_data->dispatch_16;
          ps._8PixelDispatchEnable         = wm_prog_data->dispatch_8;
 
-         ps.DispatchGRFStartRegisterforConstantSetupData0 =
+         ps.DispatchGRFStartRegisterForConstantSetupData0 =
             wm_prog_data->base.dispatch_grf_start_reg,
-         ps.DispatchGRFStartRegisterforConstantSetupData1 = 0,
-         ps.DispatchGRFStartRegisterforConstantSetupData2 =
+         ps.DispatchGRFStartRegisterForConstantSetupData1 = 0,
+         ps.DispatchGRFStartRegisterForConstantSetupData2 =
             wm_prog_data->dispatch_grf_start_reg_2;
 
          /* Haswell requires the sample mask to be set in this packet as well as
