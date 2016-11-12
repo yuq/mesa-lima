@@ -1001,17 +1001,20 @@ do_assignment(exec_list *instructions, struct _mesa_glsl_parse_state *state,
     * i = j += 1;
     */
    if (needs_rvalue) {
-      ir_variable *var = new(ctx) ir_variable(rhs->type, "assignment_tmp",
-                                              ir_var_temporary);
-      instructions->push_tail(var);
-      instructions->push_tail(assign(var, rhs));
-
+      ir_rvalue *rvalue;
       if (!error_emitted) {
-         ir_dereference_variable *deref_var = new(ctx) ir_dereference_variable(var);
-         instructions->push_tail(new(ctx) ir_assignment(lhs, deref_var));
-      }
-      ir_rvalue *rvalue = new(ctx) ir_dereference_variable(var);
+         ir_variable *var = new(ctx) ir_variable(rhs->type, "assignment_tmp",
+                                                 ir_var_temporary);
+         instructions->push_tail(var);
+         instructions->push_tail(assign(var, rhs));
 
+         ir_dereference_variable *deref_var =
+            new(ctx) ir_dereference_variable(var);
+         instructions->push_tail(new(ctx) ir_assignment(lhs, deref_var));
+         rvalue = new(ctx) ir_dereference_variable(var);
+      } else {
+         rvalue = ir_rvalue::error_value(ctx);
+      }
       *out_rvalue = rvalue;
    } else {
       if (!error_emitted)
