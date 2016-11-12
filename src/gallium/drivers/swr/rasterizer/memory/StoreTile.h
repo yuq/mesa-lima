@@ -2175,7 +2175,7 @@ struct OptStoreRasterTile< TilingTraits<SWR_TILE_MODE_YMAJOR, 64>, SrcFormat, Ds
 template<SWR_FORMAT SrcFormat, SWR_FORMAT DstFormat>
 struct OptStoreRasterTile< TilingTraits<SWR_TILE_MODE_YMAJOR, 128>, SrcFormat, DstFormat>
 {
-    typedef StoreRasterTile<TilingTraits<SWR_TILE_NONE, 128>, SrcFormat, DstFormat> GenericStoreTile;
+    typedef StoreRasterTile<TilingTraits<SWR_TILE_MODE_YMAJOR, 128>, SrcFormat, DstFormat> GenericStoreTile;
 #if USE_8x2_TILE_BACKEND
     static const size_t SRC_BYTES_PER_PIXEL = FormatTraits<SrcFormat>::bpp / 8;
 
