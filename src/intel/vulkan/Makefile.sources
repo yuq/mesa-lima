@@ -42,7 +42,6 @@ VULKAN_FILES := \
 	anv_query.c \
 	anv_util.c \
 	anv_wsi.c \
-	genX_pipeline_util.h \
 	vk_format_info.h
 
 VULKAN_WSI_WAYLAND_FILES := \
