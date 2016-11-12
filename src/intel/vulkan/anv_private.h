@@ -1414,6 +1414,8 @@ struct anv_pipeline {
    struct {
       uint32_t                                  wm_depth_stencil[4];
    } gen9;
+
+   uint32_t                                     interface_descriptor_data[8];
 };
 
 static inline bool

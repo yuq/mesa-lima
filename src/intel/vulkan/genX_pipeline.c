@@ -1470,6 +1470,32 @@ compute_pipeline_create(
       vfe.CURBEAllocationSize    = vfe_curbe_allocation;
    }
 
+   const struct anv_shader_bin *cs_bin =
+      pipeline->shaders[MESA_SHADER_COMPUTE];
+   struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
+      .KernelStartPointer     = cs_bin->kernel.offset,
+
+      .SamplerCount           = get_sampler_count(cs_bin),
+      .BindingTableEntryCount = get_binding_table_entry_count(cs_bin),
+      .BarrierEnable          = cs_prog_data->uses_barrier,
+      .SharedLocalMemorySize  =
+         encode_slm_size(GEN_GEN, cs_prog_data->base.total_shared),
+
+#if !GEN_IS_HASWELL
+      .ConstantURBEntryReadOffset = 0,
+#endif
+      .ConstantURBEntryReadLength = cs_prog_data->push.per_thread.regs,
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
+      .CrossThreadConstantDataReadLength =
+         cs_prog_data->push.cross_thread.regs,
+#endif
+
+      .NumberofThreadsinGPGPUThreadGroup = cs_prog_data->threads,
+   };
+   GENX(INTERFACE_DESCRIPTOR_DATA_pack)(NULL,
+                                        pipeline->interface_descriptor_data,
+                                        &desc);
+
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
    return VK_SUCCESS;

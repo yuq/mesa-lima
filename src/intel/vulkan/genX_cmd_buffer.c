@@ -1338,7 +1338,6 @@ void genX(CmdDrawIndexedIndirect)(
 static VkResult
 flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 {
-   struct anv_device *device = cmd_buffer->device;
    struct anv_pipeline *pipeline = cmd_buffer->state.compute_pipeline;
    struct anv_state surfaces = { 0, }, samplers = { 0, };
    VkResult result;
@@ -1352,9 +1351,6 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 
    struct anv_state push_state = anv_cmd_buffer_cs_push_constants(cmd_buffer);
 
-   const struct brw_cs_prog_data *cs_prog_data = get_cs_prog_data(pipeline);
-   const struct brw_stage_prog_data *prog_data = &cs_prog_data->base;
-
    if (push_state.alloc_size) {
       anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
          curbe.CURBETotalDataLength    = push_state.alloc_size;
@@ -1362,31 +1358,18 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
       }
    }
 
-   const uint32_t slm_size = encode_slm_size(GEN_GEN, prog_data->total_shared);
+   uint32_t iface_desc_data_dw[GENX(INTERFACE_DESCRIPTOR_DATA_length)];
+   struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
+      .BindingTablePointer = surfaces.offset,
+      .SamplerStatePointer = samplers.offset,
+   };
+   GENX(INTERFACE_DESCRIPTOR_DATA_pack)(NULL, iface_desc_data_dw, &desc);
 
-   const struct anv_shader_bin *cs_bin =
-      pipeline->shaders[MESA_SHADER_COMPUTE];
    struct anv_state state =
-      anv_state_pool_emit(&device->dynamic_state_pool,
-                          GENX(INTERFACE_DESCRIPTOR_DATA), 64,
-                          .KernelStartPointer = cs_bin->kernel.offset,
-                          .BindingTablePointer = surfaces.offset,
-                          .BindingTableEntryCount = 0,
-                          .SamplerStatePointer = samplers.offset,
-                          .SamplerCount = 0,
-#if !GEN_IS_HASWELL
-                          .ConstantURBEntryReadOffset = 0,
-#endif
-                          .ConstantURBEntryReadLength =
-                             cs_prog_data->push.per_thread.regs,
-#if GEN_GEN >= 8 || GEN_IS_HASWELL
-                          .CrossThreadConstantDataReadLength =
-                             cs_prog_data->push.cross_thread.regs,
-#endif
-                          .BarrierEnable = cs_prog_data->uses_barrier,
-                          .SharedLocalMemorySize = slm_size,
-                          .NumberofThreadsinGPGPUThreadGroup =
-                             cs_prog_data->threads);
+      anv_cmd_buffer_merge_dynamic(cmd_buffer, iface_desc_data_dw,
+                                   pipeline->interface_descriptor_data,
+                                   GENX(INTERFACE_DESCRIPTOR_DATA_length),
+                                   64);
 
    uint32_t size = GENX(INTERFACE_DESCRIPTOR_DATA_length) * sizeof(uint32_t);
    anv_batch_emit(&cmd_buffer->batch,
