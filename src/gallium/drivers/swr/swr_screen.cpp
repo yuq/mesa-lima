@@ -428,12 +428,7 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_B4G4R4A4_UNORM,         B4G4R4A4_UNORM},
       {PIPE_FORMAT_B5G6R5_UNORM,           B5G6R5_UNORM},
       {PIPE_FORMAT_R10G10B10A2_UNORM,      R10G10B10A2_UNORM},
-      {PIPE_FORMAT_L8_UNORM,               L8_UNORM},
       {PIPE_FORMAT_A8_UNORM,               A8_UNORM},
-      {PIPE_FORMAT_I8_UNORM,               I8_UNORM},
-      {PIPE_FORMAT_L8A8_UNORM,             L8A8_UNORM},
-      {PIPE_FORMAT_L16_UNORM,              L16_UNORM},
-      {PIPE_FORMAT_UYVY,                   YCRCB_SWAPUVY},
       {PIPE_FORMAT_Z16_UNORM,              R16_UNORM}, // z
       {PIPE_FORMAT_Z32_FLOAT,              R32_FLOAT}, // z
       {PIPE_FORMAT_Z24_UNORM_S8_UINT,      R24_UNORM_X8_TYPELESS}, // z
@@ -487,25 +482,10 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R16G16B16_FLOAT,        R16G16B16_FLOAT},
       {PIPE_FORMAT_R16G16B16A16_FLOAT,     R16G16B16A16_FLOAT},
 
-      {PIPE_FORMAT_L8_SRGB,                L8_UNORM_SRGB},
-      {PIPE_FORMAT_L8A8_SRGB,              L8A8_UNORM_SRGB},
       {PIPE_FORMAT_R8G8B8_SRGB,            R8G8B8_UNORM_SRGB},
       {PIPE_FORMAT_B8G8R8A8_SRGB,          B8G8R8A8_UNORM_SRGB},
       {PIPE_FORMAT_B8G8R8X8_SRGB,          B8G8R8X8_UNORM_SRGB},
       {PIPE_FORMAT_R8G8B8A8_SRGB,          R8G8B8A8_UNORM_SRGB},
-
-      {PIPE_FORMAT_DXT1_RGBA,              BC1_UNORM},
-      {PIPE_FORMAT_DXT3_RGBA,              BC2_UNORM},
-      {PIPE_FORMAT_DXT5_RGBA,              BC3_UNORM},
-
-      {PIPE_FORMAT_DXT1_SRGBA,             BC1_UNORM_SRGB},
-      {PIPE_FORMAT_DXT3_SRGBA,             BC2_UNORM_SRGB},
-      {PIPE_FORMAT_DXT5_SRGBA,             BC3_UNORM_SRGB},
-
-      {PIPE_FORMAT_RGTC1_UNORM,            BC4_UNORM},
-      {PIPE_FORMAT_RGTC1_SNORM,            BC4_SNORM},
-      {PIPE_FORMAT_RGTC2_UNORM,            BC5_UNORM},
-      {PIPE_FORMAT_RGTC2_SNORM,            BC5_SNORM},
 
       {PIPE_FORMAT_B5G5R5X1_UNORM,         B5G5R5X1_UNORM},
       {PIPE_FORMAT_R10G10B10A2_USCALED,    R10G10B10A2_USCALED},
@@ -515,18 +495,9 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_B10G10R10A2_UNORM,      B10G10R10A2_UNORM},
       {PIPE_FORMAT_R8G8B8X8_UNORM,         R8G8B8X8_UNORM},
 
-      {PIPE_FORMAT_L16A16_UNORM,           L16A16_UNORM},
       {PIPE_FORMAT_A16_UNORM,              A16_UNORM},
-      {PIPE_FORMAT_I16_UNORM,              I16_UNORM},
-
       {PIPE_FORMAT_A16_FLOAT,              A16_FLOAT},
-      {PIPE_FORMAT_L16_FLOAT,              L16_FLOAT},
-      {PIPE_FORMAT_L16A16_FLOAT,           L16A16_FLOAT},
-      {PIPE_FORMAT_I16_FLOAT,              I16_FLOAT},
       {PIPE_FORMAT_A32_FLOAT,              A32_FLOAT},
-      {PIPE_FORMAT_L32_FLOAT,              L32_FLOAT},
-      {PIPE_FORMAT_L32A32_FLOAT,           L32A32_FLOAT},
-      {PIPE_FORMAT_I32_FLOAT,              I32_FLOAT},
 
       {PIPE_FORMAT_R10G10B10A2_SSCALED,    R10G10B10A2_SSCALED},
       {PIPE_FORMAT_R10G10B10A2_SNORM,      R10G10B10A2_SNORM},
@@ -565,14 +536,6 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R32G32B32_SINT,         R32G32B32_SINT},
       {PIPE_FORMAT_R32G32B32A32_SINT,      R32G32B32A32_SINT},
 
-      {PIPE_FORMAT_I8_UINT,                I8_UINT},
-      {PIPE_FORMAT_L8_UINT,                L8_UINT},
-      {PIPE_FORMAT_L8A8_UINT,              L8A8_UINT},
-
-      {PIPE_FORMAT_I8_SINT,                I8_SINT},
-      {PIPE_FORMAT_L8_SINT,                L8_SINT},
-      {PIPE_FORMAT_L8A8_SINT,              L8A8_SINT},
-
       {PIPE_FORMAT_B10G10R10A2_UINT,       B10G10R10A2_UINT},
 
       {PIPE_FORMAT_B10G10R10X2_UNORM,      B10G10R10X2_UNORM},
@@ -581,7 +544,54 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R32G32B32X32_FLOAT,     R32G32B32X32_FLOAT},
       {PIPE_FORMAT_R10G10B10A2_UINT,       R10G10B10A2_UINT},
 
-      {PIPE_FORMAT_B5G6R5_SRGB,            B5G6R5_UNORM_SRGB}
+      {PIPE_FORMAT_B5G6R5_SRGB,            B5G6R5_UNORM_SRGB},
+
+      /* These formats have entries in SWR but don't have Load/StoreTile
+       * implementations. That means these aren't renderable, and thus having
+       * a mapping entry here is detrimental.
+       */
+      /*
+
+      {PIPE_FORMAT_L8_UNORM,               L8_UNORM},
+      {PIPE_FORMAT_I8_UNORM,               I8_UNORM},
+      {PIPE_FORMAT_L8A8_UNORM,             L8A8_UNORM},
+      {PIPE_FORMAT_L16_UNORM,              L16_UNORM},
+      {PIPE_FORMAT_UYVY,                   YCRCB_SWAPUVY},
+
+      {PIPE_FORMAT_L8_SRGB,                L8_UNORM_SRGB},
+      {PIPE_FORMAT_L8A8_SRGB,              L8A8_UNORM_SRGB},
+
+      {PIPE_FORMAT_DXT1_RGBA,              BC1_UNORM},
+      {PIPE_FORMAT_DXT3_RGBA,              BC2_UNORM},
+      {PIPE_FORMAT_DXT5_RGBA,              BC3_UNORM},
+
+      {PIPE_FORMAT_DXT1_SRGBA,             BC1_UNORM_SRGB},
+      {PIPE_FORMAT_DXT3_SRGBA,             BC2_UNORM_SRGB},
+      {PIPE_FORMAT_DXT5_SRGBA,             BC3_UNORM_SRGB},
+
+      {PIPE_FORMAT_RGTC1_UNORM,            BC4_UNORM},
+      {PIPE_FORMAT_RGTC1_SNORM,            BC4_SNORM},
+      {PIPE_FORMAT_RGTC2_UNORM,            BC5_UNORM},
+      {PIPE_FORMAT_RGTC2_SNORM,            BC5_SNORM},
+
+      {PIPE_FORMAT_L16A16_UNORM,           L16A16_UNORM},
+      {PIPE_FORMAT_I16_UNORM,              I16_UNORM},
+      {PIPE_FORMAT_L16_FLOAT,              L16_FLOAT},
+      {PIPE_FORMAT_L16A16_FLOAT,           L16A16_FLOAT},
+      {PIPE_FORMAT_I16_FLOAT,              I16_FLOAT},
+      {PIPE_FORMAT_L32_FLOAT,              L32_FLOAT},
+      {PIPE_FORMAT_L32A32_FLOAT,           L32A32_FLOAT},
+      {PIPE_FORMAT_I32_FLOAT,              I32_FLOAT},
+
+      {PIPE_FORMAT_I8_UINT,                I8_UINT},
+      {PIPE_FORMAT_L8_UINT,                L8_UINT},
+      {PIPE_FORMAT_L8A8_UINT,              L8A8_UINT},
+
+      {PIPE_FORMAT_I8_SINT,                I8_SINT},
+      {PIPE_FORMAT_L8_SINT,                L8_SINT},
+      {PIPE_FORMAT_L8A8_SINT,              L8A8_SINT},
+
+      */
    };
 
    try {
