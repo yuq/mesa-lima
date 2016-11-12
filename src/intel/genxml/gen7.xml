@@ -1195,13 +1195,13 @@
       <value name="DUAL_INSTANCE" value="1"/>
       <value name="DUAL_OBJECT" value="2"/>
     </field>
-    <field name="GS Statistics Enable" start="170" end="170" type="uint"/>
+    <field name="Statistics Enable" start="170" end="170" type="uint"/>
     <field name="GS Invocations Increment Value" start="165" end="169" type="uint"/>
     <field name="Include Primitive ID" start="164" end="164" type="bool"/>
     <field name="Hint" start="163" end="163" type="uint"/>
     <field name="Reorder Enable" start="162" end="162" type="bool"/>
     <field name="Discard Adjacency" start="161" end="161" type="bool"/>
-    <field name="GS Enable" start="160" end="160" type="bool"/>
+    <field name="Function Enable" start="160" end="160" type="bool"/>
     <field name="Semaphore Handle" start="192" end="203" type="offset"/>
   </instruction>
 

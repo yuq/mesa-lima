@@ -151,7 +151,7 @@ genX(graphics_pipeline_create)(
          gs.StatisticsEnable        = true;
          gs.IncludePrimitiveID      = gs_prog_data->include_primitive_id;
          gs.ReorderMode             = TRAILING;
-         gs.Enable                  = true;
+         gs.FunctionEnable          = true;
 
          gs.ControlDataFormat       = gs_prog_data->control_data_format;
 

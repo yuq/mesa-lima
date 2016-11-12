@@ -1049,7 +1049,7 @@
     <field name="Vertex URB Entry Read Offset" start="132" end="137" type="uint"/>
     <field name="Dispatch GRF Start Register For URB Data" start="128" end="131" type="uint"/>
     <field name="Maximum Number of Threads" start="185" end="191" type="uint"/>
-    <field name="GS Statistics Enable" start="170" end="170" type="bool"/>
+    <field name="Statistics Enable" start="170" end="170" type="bool"/>
     <field name="SO Statistics Enable" start="169" end="169" type="bool"/>
     <field name="Rendering Enabled" start="168" end="168" type="uint"/>
     <field name="Reorder Enable" start="222" end="222" type="bool"/>
@@ -1057,7 +1057,7 @@
     <field name="SVBI Payload Enable" start="220" end="220" type="bool"/>
     <field name="SVBI Post-Increment Enable" start="219" end="219" type="bool"/>
     <field name="SVBI Post-Increment Value" start="208" end="217" type="uint"/>
-    <field name="GS Enable" start="207" end="207" type="bool"/>
+    <field name="Function Enable" start="207" end="207" type="bool"/>
   </instruction>
 
   <instruction name="3DSTATE_GS_SVB_INDEX" bias="2" length="7">

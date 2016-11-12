@@ -1548,7 +1548,7 @@
       <value name="TRAILING" value="1"/>
     </field>
     <field name="Discard Adjacency" start="225" end="225" type="bool"/>
-    <field name="Enable" start="224" end="224" type="bool"/>
+    <field name="Function Enable" start="224" end="224" type="bool"/>
     <field name="Control Data Format" start="287" end="287" type="uint">
       <value name="CUT" value="0"/>
       <value name="SID" value="1"/>
