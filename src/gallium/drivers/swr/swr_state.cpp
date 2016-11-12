@@ -1318,6 +1318,9 @@ swr_update_derived(struct pipe_context *pipe,
                compileState.blendState.logicOpEnable = false;
             }
 
+            if (info.type[0] == SWR_TYPE_SINT || info.type[0] == SWR_TYPE_UINT)
+               compileState.blendState.blendEnable = false;
+
             if (compileState.blendState.blendEnable == false &&
                 compileState.blendState.logicOpEnable == false &&
                 ctx->depth_stencil->alpha.enabled == 0) {
