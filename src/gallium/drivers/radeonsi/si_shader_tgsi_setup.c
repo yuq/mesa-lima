@@ -22,6 +22,7 @@
  */
 
 #include "si_shader_internal.h"
+#include "si_pipe.h"
 #include "radeon/radeon_elf_util.h"
 
 #include "gallivm/lp_bld_const.h"
@@ -1246,7 +1247,10 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
 						ctx->gallivm.context);
 	LLVMSetTarget(ctx->gallivm.module, "amdgcn--");
-	ctx->gallivm.builder = LLVMCreateBuilderInContext(ctx->gallivm.context);
+
+	bool unsafe_fpmath = (sscreen->b.debug_flags & DBG_UNSAFE_MATH) != 0;
+	ctx->gallivm.builder = lp_create_builder(ctx->gallivm.context,
+						 unsafe_fpmath);
 
 	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
 
