@@ -514,7 +514,8 @@ brw_print_program_cache(struct brw_context *brw)
    const struct brw_cache *cache = &brw->cache;
    struct brw_cache_item *item;
 
-   drm_intel_bo_map(cache->bo, false);
+   if (!brw->has_llc)
+      drm_intel_bo_map(cache->bo, false);
 
    for (unsigned i = 0; i < cache->size; i++) {
       for (item = cache->items[i]; item; item = item->next) {
@@ -524,5 +525,6 @@ brw_print_program_cache(struct brw_context *brw)
       }
    }
 
-   drm_intel_bo_unmap(cache->bo);
+   if (!brw->has_llc)
+      drm_intel_bo_unmap(cache->bo);
 }
