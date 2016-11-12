@@ -371,6 +371,10 @@ swr_delete_vs_state(struct pipe_context *pipe, void *vs)
 {
    struct swr_vertex_shader *swr_vs = (swr_vertex_shader *)vs;
    FREE((void *)swr_vs->pipe.tokens);
+   struct swr_screen *screen = swr_screen(pipe->screen);
+   if (!swr_is_fence_pending(screen->flush_fence))
+      swr_fence_submit(swr_context(pipe), screen->flush_fence);
+   swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
    delete swr_vs;
 }
 
@@ -407,6 +411,10 @@ swr_delete_fs_state(struct pipe_context *pipe, void *fs)
 {
    struct swr_fragment_shader *swr_fs = (swr_fragment_shader *)fs;
    FREE((void *)swr_fs->pipe.tokens);
+   struct swr_screen *screen = swr_screen(pipe->screen);
+   if (!swr_is_fence_pending(screen->flush_fence))
+      swr_fence_submit(swr_context(pipe), screen->flush_fence);
+   swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
    delete swr_fs;
 }
 
