@@ -64,7 +64,6 @@ genX(graphics_pipeline_create)(
 
    assert(pCreateInfo->pVertexInputState);
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
-   emit_3dstate_vf_topology(pipeline);
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
                  pCreateInfo->pMultisampleState, pass, subpass);
@@ -79,12 +78,13 @@ genX(graphics_pipeline_create)(
                      pCreateInfo->pRasterizationState);
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
-   emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
-   emit_3dstate_gs(pipeline);
    emit_3dstate_vs(pipeline);
+   emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
+   emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
    emit_3dstate_ps(pipeline);
    emit_3dstate_ps_extra(pipeline);
+   emit_3dstate_vf_topology(pipeline);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 

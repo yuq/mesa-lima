@@ -68,9 +68,8 @@ genX(graphics_pipeline_create)(
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
                  pCreateInfo->pMultisampleState, pass, subpass);
-
+   emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
-
    emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
                            pCreateInfo->pMultisampleState);
 
@@ -79,8 +78,6 @@ genX(graphics_pipeline_create)(
    emit_3dstate_clip(pipeline, pCreateInfo->pViewportState,
                      pCreateInfo->pRasterizationState);
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
-
-   emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
 
 #if 0 
    /* From gen7_vs_state.c */
@@ -104,8 +101,8 @@ genX(graphics_pipeline_create)(
    emit_3dstate_vs(pipeline);
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
-   emit_3dstate_ps(pipeline);
    emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
+   emit_3dstate_ps(pipeline);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
