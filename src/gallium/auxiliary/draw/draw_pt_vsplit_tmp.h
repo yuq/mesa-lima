@@ -49,9 +49,8 @@ CONCAT(vsplit_primitive_, ELT_TYPE)(struct vsplit_frontend *vsplit,
 
    /* If the index buffer overflows we'll need to run
     * through the normal paths */
-   if (start >= draw->pt.user.eltMax ||
-       end > draw->pt.user.eltMax ||
-       end < istart || end < icount)
+   if (end >= draw->pt.user.eltMax ||
+       end < istart)
       return FALSE;
 
    /* use the ib directly */

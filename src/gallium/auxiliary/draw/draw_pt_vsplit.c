@@ -33,7 +33,7 @@
 #define SEGMENT_SIZE 1024
 #define MAP_SIZE     256
 
-/* The largest possible index withing an index buffer */
+/* The largest possible index within an index buffer */
 #define MAX_ELT_IDX 0xffffffff
 
 struct vsplit_frontend {
@@ -108,55 +108,36 @@ vsplit_add_cache(struct vsplit_frontend *vsplit, unsigned fetch, unsigned ofbias
 
 /**
  * Returns the base index to the elements array.
- * The value is checked for overflows (both integer overflows
- * and the elements array overflow).
+ * The value is checked for integer overflow.
  */
 static inline unsigned
-vsplit_get_base_idx(struct vsplit_frontend *vsplit,
-                    unsigned start, unsigned fetch, unsigned *ofbit)
+vsplit_get_base_idx(unsigned start, unsigned fetch)
 {
-   struct draw_context *draw = vsplit->draw;
-   unsigned elt_idx = draw_overflow_uadd(start, fetch, MAX_ELT_IDX);
-   if (ofbit)
-      *ofbit = 0;
-
-   /* Overflown indices need to wrap to the first element
-    * in the index buffer */
-   if (elt_idx >= draw->pt.user.eltMax) {
-      if (ofbit)
-         *ofbit = 1;
-      elt_idx = 0;
-   }
-
-   return elt_idx;
+   return draw_overflow_uadd(start, fetch, MAX_ELT_IDX);
 }
 
 /**
  * Returns the element index adjust for the element bias.
  * The final element index is created from the actual element
- * index, plus the element bias, clamped to maximum elememt
+ * index, plus the element bias, clamped to maximum element
  * index if that addition overflows.
  */
 static inline unsigned
-vsplit_get_bias_idx(struct vsplit_frontend *vsplit,
-                    int idx, int bias, unsigned *ofbias)
+vsplit_get_bias_idx(int idx, int bias, unsigned *ofbias)
 {
    int res = idx + bias;
 
-   if (ofbias)
-      *ofbias = 0;
+   *ofbias = 0;
 
    if (idx > 0 && bias > 0) {
-      if (res < idx || res < bias) {
+      if (res < idx) {
          res = DRAW_MAX_FETCH_IDX;
-         if (ofbias)
-            *ofbias = 1;
+         *ofbias = 1;
       }
    } else if (idx < 0 && bias < 0) {
-      if (res > idx || res > bias) {
+      if (res > idx) {
          res = DRAW_MAX_FETCH_IDX;
-         if (ofbias)
-            *ofbias = 1;
+         *ofbias = 1;
       }
    }
 
@@ -165,10 +146,9 @@ vsplit_get_bias_idx(struct vsplit_frontend *vsplit,
 
 #define VSPLIT_CREATE_IDX(elts, start, fetch, elt_bias)    \
    unsigned elt_idx;                                       \
-   unsigned ofbit;                                         \
    unsigned ofbias;                                        \
-   elt_idx = vsplit_get_base_idx(vsplit, start, fetch, &ofbit);          \
-   elt_idx = vsplit_get_bias_idx(vsplit, ofbit ? 0 : DRAW_GET_IDX(elts, elt_idx), elt_bias, &ofbias)
+   elt_idx = vsplit_get_base_idx(start, fetch);    \
+   elt_idx = vsplit_get_bias_idx(DRAW_GET_IDX(elts, elt_idx), elt_bias, &ofbias)
 
 static inline void
 vsplit_add_cache_ubyte(struct vsplit_frontend *vsplit, const ubyte *elts,
