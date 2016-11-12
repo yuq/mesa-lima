@@ -68,7 +68,6 @@ GEN7_FILES := \
 	genX_blorp_exec.c \
 	genX_pipeline.c \
 	gen7_cmd_buffer.c \
-	gen7_pipeline.c \
 	genX_state.c
 
 GEN75_FILES := \
@@ -76,7 +75,6 @@ GEN75_FILES := \
 	genX_blorp_exec.c \
 	genX_pipeline.c \
 	gen7_cmd_buffer.c \
-	gen7_pipeline.c \
 	genX_state.c
 
 GEN8_FILES := \
@@ -84,7 +82,6 @@ GEN8_FILES := \
 	genX_blorp_exec.c \
 	genX_pipeline.c \
 	gen8_cmd_buffer.c \
-	gen8_pipeline.c \
 	genX_state.c
 
 GEN9_FILES := \
@@ -92,5 +89,4 @@ GEN9_FILES := \
 	genX_blorp_exec.c \
 	genX_pipeline.c \
 	gen8_cmd_buffer.c \
-	gen8_pipeline.c \
 	genX_state.c

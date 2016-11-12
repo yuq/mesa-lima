@@ -62,12 +62,5 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
 void genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
                                enum blorp_hiz_op op);
 
-VkResult
-genX(graphics_pipeline_create)(VkDevice _device,
-                               struct anv_pipeline_cache *cache,
-                               const VkGraphicsPipelineCreateInfo *pCreateInfo,
-                               const VkAllocationCallbacks *alloc,
-                               VkPipeline *pPipeline);
-
 void genX(blorp_exec)(struct blorp_batch *batch,
                       const struct blorp_params *params);
