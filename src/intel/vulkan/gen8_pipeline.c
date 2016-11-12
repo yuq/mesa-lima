@@ -209,7 +209,7 @@ genX(graphics_pipeline_create)(
       vs.VertexURBEntryReadOffset      = 0;
 
       vs.MaximumNumberofThreads        = devinfo->max_vs_threads - 1;
-      vs.StatisticsEnable              = false;
+      vs.StatisticsEnable              = true;
       vs.SIMD8DispatchEnable           =
          vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
       vs.VertexCacheDisable            = false;
