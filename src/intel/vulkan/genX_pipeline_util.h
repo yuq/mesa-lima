@@ -956,4 +956,16 @@ emit_3dstate_streamout(struct anv_pipeline *pipeline,
    }
 }
 
+static inline uint32_t
+get_sampler_count(const struct anv_shader_bin *bin)
+{
+   return DIV_ROUND_UP(bin->bind_map.sampler_count, 4);
+}
+
+static inline uint32_t
+get_binding_table_entry_count(const struct anv_shader_bin *bin)
+{
+   return DIV_ROUND_UP(bin->bind_map.surface_count, 32);
+}
+
 #endif /* GENX_PIPELINE_UTIL_H */

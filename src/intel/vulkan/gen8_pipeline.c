@@ -117,6 +117,9 @@ genX(graphics_pipeline_create)(
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
       const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
+      const struct anv_shader_bin *gs_bin =
+         pipeline->shaders[MESA_SHADER_GEOMETRY];
+
       offset = 1;
       length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
@@ -124,8 +127,8 @@ genX(graphics_pipeline_create)(
          gs.SingleProgramFlow       = false;
          gs.KernelStartPointer      = pipeline->gs_kernel;
          gs.VectorMaskEnable        = false;
-         gs.SamplerCount            = 0;
-         gs.BindingTableEntryCount  = 0;
+         gs.SamplerCount            = get_sampler_count(gs_bin);
+         gs.BindingTableEntryCount  = get_binding_table_entry_count(gs_bin);
          gs.ExpectedVertexCount     = gs_prog_data->vertices_in;
 
          gs.ScratchSpaceBasePointer = (struct anv_address) {
@@ -186,14 +189,16 @@ genX(graphics_pipeline_create)(
          vs.VertexURBEntryOutputLength = length;
       }
    } else {
+      const struct anv_shader_bin *vs_bin =
+         pipeline->shaders[MESA_SHADER_VERTEX];
+
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.KernelStartPointer            = vs_start;
          vs.SingleVertexDispatch          = false;
          vs.VectorMaskEnable              = false;
-         vs.SamplerCount                  = 0;
 
-         vs.BindingTableEntryCount =
-            vs_prog_data->base.base.binding_table.size_bytes / 4;
+         vs.SamplerCount                  = get_sampler_count(vs_bin);
+         vs.BindingTableEntryCount        = get_binding_table_entry_count(vs_bin);
 
          vs.ThreadDispatchPriority        = false;
          vs.FloatingPointMode             = IEEE754;
@@ -237,6 +242,9 @@ genX(graphics_pipeline_create)(
          extra.PixelShaderValid = false;
       }
    } else {
+      const struct anv_shader_bin *fs_bin =
+         pipeline->shaders[MESA_SHADER_FRAGMENT];
+
       emit_3dstate_sbe(pipeline);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
@@ -248,7 +256,8 @@ genX(graphics_pipeline_create)(
          ps._32PixelDispatchEnable  = false;
          ps.SingleProgramFlow       = false;
          ps.VectorMaskEnable        = true;
-         ps.SamplerCount            = 1;
+         ps.SamplerCount            = get_sampler_count(fs_bin);
+         ps.BindingTableEntryCount  = get_binding_table_entry_count(fs_bin);
          ps.PushConstantEnable      = wm_prog_data->base.nr_params > 0;
          ps.PositionXYOffsetSelect  = wm_prog_data->uses_pos_offset ?
             POSOFFSET_SAMPLE: POSOFFSET_NONE;

@@ -106,9 +106,12 @@ genX(graphics_pipeline_create)(
       gen7_emit_vs_workaround_flush(brw);
 #endif
 
-   if (pipeline->vs_vec4 == NO_KERNEL)
+   if (pipeline->vs_vec4 == NO_KERNEL) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs);
-   else
+   } else {
+      const struct anv_shader_bin *vs_bin =
+         pipeline->shaders[MESA_SHADER_VERTEX];
+
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.KernelStartPointer         = pipeline->vs_vec4;
 
@@ -123,18 +126,25 @@ genX(graphics_pipeline_create)(
          vs.DispatchGRFStartRegisterforURBData    =
             vs_prog_data->base.base.dispatch_grf_start_reg;
 
+         vs.SamplerCount              = get_sampler_count(vs_bin);
+         vs.BindingTableEntryCount    = get_binding_table_entry_count(vs_bin);
+
          vs.VertexURBEntryReadLength   = vs_prog_data->base.urb_read_length;
          vs.VertexURBEntryReadOffset   = 0;
          vs.MaximumNumberofThreads     = devinfo->max_vs_threads - 1;
          vs.StatisticsEnable           = true;
          vs.VSFunctionEnable           = true;
       }
+   }
 
    const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
    if (pipeline->gs_kernel == NO_KERNEL) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
+      const struct anv_shader_bin *gs_bin =
+         pipeline->shaders[MESA_SHADER_GEOMETRY];
+
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
          gs.KernelStartPointer         = pipeline->gs_kernel;
 
@@ -153,6 +163,9 @@ genX(graphics_pipeline_create)(
 
          gs.DispatchGRFStartRegisterforURBData =
             gs_prog_data->base.base.dispatch_grf_start_reg;
+
+         gs.SamplerCount              = get_sampler_count(gs_bin);
+         gs.BindingTableEntryCount    = get_binding_table_entry_count(gs_bin);
 
          gs.MaximumNumberofThreads     = devinfo->max_gs_threads - 1;
          /* This in the next dword on HSW. */
@@ -190,6 +203,9 @@ genX(graphics_pipeline_create)(
          ps.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
       }
    } else {
+      const struct anv_shader_bin *fs_bin =
+         pipeline->shaders[MESA_SHADER_FRAGMENT];
+
       const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
           wm_prog_data->urb_setup[VARYING_SLOT_BFC1] != -1)
@@ -211,6 +227,10 @@ genX(graphics_pipeline_create)(
             .offset = 0,
          };
          ps.PerThreadScratchSpace         = scratch_space(&wm_prog_data->base);
+
+         ps.SamplerCount                  = get_sampler_count(fs_bin);
+         ps.BindingTableEntryCount        = get_binding_table_entry_count(fs_bin);
+
          ps.MaximumNumberofThreads        = devinfo->max_wm_threads - 1;
          ps.PushConstantEnable            = wm_prog_data->base.nr_params > 0;
          ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
