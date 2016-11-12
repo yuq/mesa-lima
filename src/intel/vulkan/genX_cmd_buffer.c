@@ -1364,10 +1364,12 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 
    const uint32_t slm_size = encode_slm_size(GEN_GEN, prog_data->total_shared);
 
+   const struct anv_shader_bin *cs_bin =
+      pipeline->shaders[MESA_SHADER_COMPUTE];
    struct anv_state state =
       anv_state_pool_emit(&device->dynamic_state_pool,
                           GENX(INTERFACE_DESCRIPTOR_DATA), 64,
-                          .KernelStartPointer = pipeline->cs_simd,
+                          .KernelStartPointer = cs_bin->kernel.offset,
                           .BindingTablePointer = surfaces.offset,
                           .BindingTableEntryCount = 0,
                           .SamplerStatePointer = samplers.offset,

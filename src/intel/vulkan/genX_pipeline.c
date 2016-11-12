@@ -68,10 +68,6 @@ compute_pipeline_create(
     */
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
 
-   pipeline->vs_simd8 = NO_KERNEL;
-   pipeline->vs_vec4 = NO_KERNEL;
-   pipeline->gs_kernel = NO_KERNEL;
-
    pipeline->active_stages = 0;
 
    pipeline->needs_data_cache = false;

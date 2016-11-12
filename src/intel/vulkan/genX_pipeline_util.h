@@ -366,10 +366,10 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    const struct brw_vue_map *fs_input_map;
 
-   if (pipeline->gs_kernel == NO_KERNEL)
-      fs_input_map = &vs_prog_data->base.vue_map;
-   else
+   if (gs_prog_data)
       fs_input_map = &gs_prog_data->base.vue_map;
+   else
+      fs_input_map = &vs_prog_data->base.vue_map;
 
    struct GENX(3DSTATE_SBE) sbe = {
       GENX(3DSTATE_SBE_header),

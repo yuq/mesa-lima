@@ -1389,11 +1389,6 @@ struct anv_pipeline {
 
    VkShaderStageFlags                           active_stages;
    struct anv_state                             blend_state;
-   uint32_t                                     vs_simd8;
-   uint32_t                                     vs_vec4;
-   uint32_t                                     ps_ksp0;
-   uint32_t                                     gs_kernel;
-   uint32_t                                     cs_simd;
 
    uint32_t                                     vb_used;
    uint32_t                                     binding_stride[MAX_VBS];

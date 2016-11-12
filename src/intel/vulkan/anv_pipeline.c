@@ -488,17 +488,6 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       ralloc_free(mem_ctx);
    }
 
-   const struct brw_vs_prog_data *vs_prog_data =
-      (const struct brw_vs_prog_data *)bin->prog_data;
-
-   if (vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8) {
-      pipeline->vs_simd8 = bin->kernel.offset;
-      pipeline->vs_vec4 = NO_KERNEL;
-   } else {
-      pipeline->vs_simd8 = NO_KERNEL;
-      pipeline->vs_vec4 = bin->kernel.offset;
-   }
-
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_VERTEX, bin);
 
    return VK_SUCCESS;
@@ -575,8 +564,6 @@ anv_pipeline_compile_gs(struct anv_pipeline *pipeline,
 
       ralloc_free(mem_ctx);
    }
-
-   pipeline->gs_kernel = bin->kernel.offset;
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_GEOMETRY, bin);
 
@@ -700,8 +687,6 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
       ralloc_free(mem_ctx);
    }
 
-   pipeline->ps_ksp0 = bin->kernel.offset;
-
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_FRAGMENT, bin);
 
    return VK_SUCCESS;
@@ -772,8 +757,6 @@ anv_pipeline_compile_cs(struct anv_pipeline *pipeline,
 
       ralloc_free(mem_ctx);
    }
-
-   pipeline->cs_simd = bin->kernel.offset;
 
    anv_pipeline_add_compiled_stage(pipeline, MESA_SHADER_COMPUTE, bin);
 
@@ -1023,11 +1006,6 @@ anv_pipeline_init(struct anv_pipeline *pipeline,
     * of various prog_data pointers.  Make them NULL by default.
     */
    memset(pipeline->shaders, 0, sizeof(pipeline->shaders));
-
-   pipeline->vs_simd8 = NO_KERNEL;
-   pipeline->vs_vec4 = NO_KERNEL;
-   pipeline->gs_kernel = NO_KERNEL;
-   pipeline->ps_ksp0 = NO_KERNEL;
 
    pipeline->active_stages = 0;
 

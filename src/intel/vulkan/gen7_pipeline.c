@@ -106,14 +106,14 @@ genX(graphics_pipeline_create)(
       gen7_emit_vs_workaround_flush(brw);
 #endif
 
-   if (pipeline->vs_vec4 == NO_KERNEL) {
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs);
    } else {
       const struct anv_shader_bin *vs_bin =
          pipeline->shaders[MESA_SHADER_VERTEX];
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-         vs.KernelStartPointer         = pipeline->vs_vec4;
+         vs.KernelStartPointer         = vs_bin->kernel.offset;
 
          vs.ScratchSpaceBasePointer = (struct anv_address) {
             .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
@@ -139,14 +139,14 @@ genX(graphics_pipeline_create)(
 
    const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
-   if (pipeline->gs_kernel == NO_KERNEL) {
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_GEOMETRY)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
       const struct anv_shader_bin *gs_bin =
          pipeline->shaders[MESA_SHADER_GEOMETRY];
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
-         gs.KernelStartPointer         = pipeline->gs_kernel;
+         gs.KernelStartPointer         = gs_bin->kernel.offset;
 
          gs.ScratchSpaceBasePointer = (struct anv_address) {
             .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
@@ -184,7 +184,7 @@ genX(graphics_pipeline_create)(
       }
    }
 
-   if (pipeline->ps_ksp0 == NO_KERNEL) {
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
@@ -205,8 +205,8 @@ genX(graphics_pipeline_create)(
    } else {
       const struct anv_shader_bin *fs_bin =
          pipeline->shaders[MESA_SHADER_FRAGMENT];
-
       const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
           wm_prog_data->urb_setup[VARYING_SLOT_BFC1] != -1)
          anv_finishme("two-sided color needs sbe swizzling setup");
@@ -216,9 +216,10 @@ genX(graphics_pipeline_create)(
       emit_3dstate_sbe(pipeline);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-         ps.KernelStartPointer0           = pipeline->ps_ksp0;
+         ps.KernelStartPointer0           = fs_bin->kernel.offset;
          ps.KernelStartPointer1           = 0;
-         ps.KernelStartPointer2           = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
+         ps.KernelStartPointer2           = fs_bin->kernel.offset +
+                                            wm_prog_data->prog_offset_2;
 
          ps.ScratchSpaceBasePointer = (struct anv_address) {
             .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,

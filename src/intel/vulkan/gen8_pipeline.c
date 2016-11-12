@@ -109,11 +109,11 @@ genX(graphics_pipeline_create)(
          wm.EarlyDepthStencilControl         = NORMAL;
       }
 
-      wm.BarycentricInterpolationMode = pipeline->ps_ksp0 == NO_KERNEL ?
-         0 : wm_prog_data->barycentric_interp_modes;
+      wm.BarycentricInterpolationMode =
+         wm_prog_data ? wm_prog_data->barycentric_interp_modes : 0;
    }
 
-   if (pipeline->gs_kernel == NO_KERNEL) {
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_GEOMETRY)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
    } else {
       const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
@@ -125,7 +125,7 @@ genX(graphics_pipeline_create)(
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
          gs.SingleProgramFlow       = false;
-         gs.KernelStartPointer      = pipeline->gs_kernel;
+         gs.KernelStartPointer      = gs_bin->kernel.offset;
          gs.VectorMaskEnable        = false;
          gs.SamplerCount            = get_sampler_count(gs_bin);
          gs.BindingTableEntryCount  = get_binding_table_entry_count(gs_bin);
@@ -177,10 +177,7 @@ genX(graphics_pipeline_create)(
    offset = 1;
    length = (vs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
-   uint32_t vs_start = pipeline->vs_simd8 != NO_KERNEL ? pipeline->vs_simd8 :
-                                                         pipeline->vs_vec4;
-
-   if (vs_start == NO_KERNEL) {
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
          vs.FunctionEnable = false;
          /* Even if VS is disabled, SBE still gets the amount of
@@ -193,7 +190,7 @@ genX(graphics_pipeline_create)(
          pipeline->shaders[MESA_SHADER_VERTEX];
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-         vs.KernelStartPointer            = vs_start;
+         vs.KernelStartPointer            = vs_bin->kernel.offset;
          vs.SingleVertexDispatch          = false;
          vs.VectorMaskEnable              = false;
 
@@ -222,7 +219,8 @@ genX(graphics_pipeline_create)(
 
          vs.MaximumNumberofThreads        = devinfo->max_vs_threads - 1;
          vs.StatisticsEnable              = false;
-         vs.SIMD8DispatchEnable           = pipeline->vs_simd8 != NO_KERNEL;
+         vs.SIMD8DispatchEnable           =
+            vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
          vs.VertexCacheDisable            = false;
          vs.FunctionEnable                = true;
 
@@ -236,7 +234,7 @@ genX(graphics_pipeline_create)(
    }
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
-   if (pipeline->ps_ksp0 == NO_KERNEL) {
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps);
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), extra) {
          extra.PixelShaderValid = false;
@@ -248,9 +246,10 @@ genX(graphics_pipeline_create)(
       emit_3dstate_sbe(pipeline);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-         ps.KernelStartPointer0     = pipeline->ps_ksp0;
+         ps.KernelStartPointer0     = fs_bin->kernel.offset;
          ps.KernelStartPointer1     = 0;
-         ps.KernelStartPointer2     = pipeline->ps_ksp0 + wm_prog_data->prog_offset_2;
+         ps.KernelStartPointer2     = fs_bin->kernel.offset +
+                                      wm_prog_data->prog_offset_2;
          ps._8PixelDispatchEnable   = wm_prog_data->dispatch_8;
          ps._16PixelDispatchEnable  = wm_prog_data->dispatch_16;
          ps._32PixelDispatchEnable  = false;
