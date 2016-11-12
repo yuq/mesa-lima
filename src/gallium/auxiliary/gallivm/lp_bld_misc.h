@@ -82,6 +82,9 @@ lp_get_called_value(LLVMValueRef call);
 extern bool
 lp_is_function(LLVMValueRef v);
 
+extern LLVMBuilderRef
+lp_create_builder(LLVMContextRef ctx, bool unsafe_fpmath);
+
 #ifdef __cplusplus
 }
 #endif

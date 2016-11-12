@@ -733,3 +733,17 @@ lp_is_function(LLVMValueRef v)
 	return llvm::isa<llvm::Function>(llvm::unwrap(v));
 #endif
 }
+
+extern "C" LLVMBuilderRef
+lp_create_builder(LLVMContextRef ctx, bool unsafe_fpmath)
+{
+   LLVMBuilderRef builder = LLVMCreateBuilderInContext(ctx);
+
+   if (unsafe_fpmath) {
+      llvm::FastMathFlags flags;
+      flags.setUnsafeAlgebra();
+      llvm::unwrap(builder)->setFastMathFlags(flags);
+   }
+
+   return builder;
+}
