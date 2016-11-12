@@ -111,6 +111,7 @@ genX(graphics_pipeline_create)(
 
    emit_3dstate_gs(pipeline);
    emit_3dstate_vs(pipeline);
+   emit_3dstate_sbe(pipeline);
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
@@ -121,8 +122,6 @@ genX(graphics_pipeline_create)(
    } else {
       const struct anv_shader_bin *fs_bin =
          pipeline->shaders[MESA_SHADER_FRAGMENT];
-
-      emit_3dstate_sbe(pipeline);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.KernelStartPointer0     = fs_bin->kernel.offset;

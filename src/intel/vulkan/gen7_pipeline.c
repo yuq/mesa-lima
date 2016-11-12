@@ -106,10 +106,9 @@ genX(graphics_pipeline_create)(
 
    emit_3dstate_vs(pipeline);
    emit_3dstate_gs(pipeline);
+   emit_3dstate_sbe(pipeline);
 
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
-
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
          wm.StatisticsEnable                    = true;
          wm.ThreadDispatchEnable                = false;
@@ -135,8 +134,6 @@ genX(graphics_pipeline_create)(
          anv_finishme("two-sided color needs sbe swizzling setup");
       if (wm_prog_data->urb_setup[VARYING_SLOT_PRIMITIVE_ID] != -1)
          anv_finishme("primitive_id needs sbe swizzling setup");
-
-      emit_3dstate_sbe(pipeline);
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
          ps.KernelStartPointer0           = fs_bin->kernel.offset;

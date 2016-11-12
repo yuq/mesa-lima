@@ -366,6 +366,14 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    const struct brw_vue_map *fs_input_map;
 
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
+#if GEN_GEN >= 8
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE_SWIZ), sbe);
+#endif
+      return;
+   }
+
    if (gs_prog_data)
       fs_input_map = &gs_prog_data->base.vue_map;
    else
