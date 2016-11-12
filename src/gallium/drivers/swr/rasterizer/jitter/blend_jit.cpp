@@ -220,7 +220,7 @@ struct BlendJit : public Builder
         const SWR_FORMAT_INFO& info = GetFormatInfo(format);
         for (uint32_t c = 0; c < info.numComps; ++c)
         {
-            if (info.bpc[c] <= QUANTIZE_THRESHOLD)
+            if (info.bpc[c] <= QUANTIZE_THRESHOLD && info.type[c] != SWR_TYPE_UNUSED)
             {
                 uint32_t swizComp = info.swizzle[c];
                 float factor = (float)((1 << info.bpc[c]) - 1);
