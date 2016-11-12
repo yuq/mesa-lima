@@ -2678,11 +2678,13 @@ CSMT_ITEM_NO_WAIT(nine_context_blit,
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type)
 {
-    struct nine_context *context = &device->context;
+    struct pipe_context *pipe;
+    struct pipe_query *res;
 
-    if (device->csmt_active)
-        nine_csmt_process(device);
-    return context->pipe->create_query(context->pipe, query_type, 0);
+    pipe = nine_context_get_pipe_acquire(device);
+    res = pipe->create_query(pipe, query_type, 0);
+    nine_context_get_pipe_release(device);
+    return res;
 }
 
 CSMT_ITEM_DO_WAIT(nine_context_destroy_query,
@@ -3146,7 +3148,7 @@ update_vertex_elements_sw(struct NineDevice9 *device)
 static void
 update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_vertices)
 {
-    struct pipe_context *pipe = NineDevice9_GetPipe(device);
+    struct pipe_context *pipe = nine_context_get_pipe_acquire(device);
     struct pipe_context *pipe_sw = device->pipe_sw;
     struct nine_state *state = &device->state;
     struct nine_state_sw_internal *sw_internal = &device->state_sw_internal;
@@ -3194,6 +3196,7 @@ update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_
                 pipe_sw->set_vertex_buffers(pipe_sw, i, 1, NULL);
         }
     }
+    nine_context_get_pipe_release(device);
 }
 
 static void
@@ -3371,7 +3374,7 @@ void
 nine_state_after_draw_sw(struct NineDevice9 *device)
 {
     struct nine_state_sw_internal *sw_internal = &device->state_sw_internal;
-    struct pipe_context *pipe = NineDevice9_GetPipe(device);
+    struct pipe_context *pipe = nine_context_get_pipe_acquire(device);
     struct pipe_context *pipe_sw = device->pipe_sw;
     int i;
 
@@ -3381,6 +3384,7 @@ nine_state_after_draw_sw(struct NineDevice9 *device)
             pipe->transfer_unmap(pipe, sw_internal->transfers_so[i]);
         sw_internal->transfers_so[i] = NULL;
     }
+    nine_context_get_pipe_release(device);
 }
 
 void

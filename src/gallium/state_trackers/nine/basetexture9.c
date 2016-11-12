@@ -455,7 +455,6 @@ NineBaseTexture9_CreatePipeResource( struct NineBaseTexture9 *This,
     if (!res)
         return D3DERR_OUTOFVIDEOMEMORY;
     This->base.resource = res;
-    pipe = NineDevice9_GetPipe(This->base.base.device);
 
     if (old && CopyData) { /* Don't return without releasing old ! */
         struct pipe_box box;
@@ -470,6 +469,8 @@ NineBaseTexture9_CreatePipeResource( struct NineBaseTexture9 *This,
         box.height = u_minify(templ.height0, l);
         box.depth = u_minify(templ.depth0, l);
 
+        pipe = nine_context_get_pipe_acquire(This->base.base.device);
+
         for (; l <= templ.last_level; ++l, ++m) {
             pipe->resource_copy_region(pipe,
                                        res, l, 0, 0, 0,
@@ -478,6 +479,8 @@ NineBaseTexture9_CreatePipeResource( struct NineBaseTexture9 *This,
             box.height = u_minify(box.height, 1);
             box.depth = u_minify(box.depth, 1);
         }
+
+        nine_context_get_pipe_release(This->base.base.device);
     }
     pipe_resource_reference(&old, NULL);
 
@@ -574,8 +577,9 @@ NineBaseTexture9_UpdateSamplerView( struct NineBaseTexture9 *This,
     templ.swizzle_a = swizzle[3];
     templ.target = resource->target;
 
-    pipe = NineDevice9_GetPipe(This->base.base.device);
+    pipe = nine_context_get_pipe_acquire(This->base.base.device);
     This->view[sRGB] = pipe->create_sampler_view(pipe, resource, &templ);
+    nine_context_get_pipe_release(This->base.base.device);
 
     DBG("sampler view = %p(resource = %p)\n", This->view[sRGB], resource);
 

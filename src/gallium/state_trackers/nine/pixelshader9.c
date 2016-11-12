@@ -51,7 +51,6 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
         return D3D_OK;
     }
     device = This->base.device;
-    pipe = NineDevice9_GetPipe(device);
 
     info.type = PIPE_SHADER_FRAGMENT;
     info.byte_code = pFunction;
@@ -63,7 +62,9 @@ NinePixelShader9_ctor( struct NinePixelShader9 *This,
     info.projected = 0;
     info.process_vertices = false;
 
+    pipe = nine_context_get_pipe_acquire(device);
     hr = nine_translate_shader(device, &info, pipe);
+    nine_context_get_pipe_release(device);
     if (FAILED(hr))
         return hr;
     This->byte_code.version = info.version;

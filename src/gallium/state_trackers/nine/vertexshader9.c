@@ -56,7 +56,6 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     }
 
     device = This->base.device;
-    pipe = NineDevice9_GetPipe(device);
 
     info.type = PIPE_SHADER_VERTEX;
     info.byte_code = pFunction;
@@ -70,6 +69,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
     info.swvp_on = !!(device->params.BehaviorFlags & D3DCREATE_SOFTWARE_VERTEXPROCESSING);
     info.process_vertices = false;
 
+    pipe = nine_context_get_pipe_acquire(device);
     hr = nine_translate_shader(device, &info, pipe);
     if (hr == D3DERR_INVALIDCALL &&
         (device->params.BehaviorFlags & D3DCREATE_MIXED_VERTEXPROCESSING)) {
@@ -77,6 +77,7 @@ NineVertexShader9_ctor( struct NineVertexShader9 *This,
         info.swvp_on = true;
         hr = nine_translate_shader(device, &info, pipe);
     }
+    nine_context_get_pipe_release(device);
     if (hr == D3DERR_INVALIDCALL)
         ERR("Encountered buggy shader\n");
     if (FAILED(hr))

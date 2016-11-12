@@ -344,9 +344,10 @@ NineVolume9_UnlockBox( struct NineVolume9 *This )
     DBG("This=%p lock_count=%u\n", This, This->lock_count);
     user_assert(This->lock_count, D3DERR_INVALIDCALL);
     if (This->transfer) {
-        pipe = NineDevice9_GetPipe(This->base.device);
+        pipe = nine_context_get_pipe_acquire(This->base.device);
         pipe->transfer_unmap(pipe, This->transfer);
         This->transfer = NULL;
+        nine_context_get_pipe_release(This->base.device);
     }
     --This->lock_count;
 

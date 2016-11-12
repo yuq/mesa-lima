@@ -90,7 +90,7 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
                        int for_frontbuffer_reading)
 {
     D3DWindowBuffer *ret;
-    struct pipe_context *pipe = NineDevice9_GetPipe(This->base.device);
+    struct pipe_context *pipe = nine_context_get_pipe_acquire(This->base.device);
     struct winsys_handle whandle;
     int stride, dmaBufFd;
     HRESULT hr;
@@ -103,6 +103,7 @@ D3DWindowBuffer_create(struct NineSwapChain9 *This,
                                           PIPE_HANDLE_USAGE_WRITE :
                                           PIPE_HANDLE_USAGE_EXPLICIT_FLUSH |
                                           PIPE_HANDLE_USAGE_READ);
+    nine_context_get_pipe_release(This->base.device);
     stride = whandle.stride;
     dmaBufFd = whandle.handle;
     hr = ID3DPresent_NewD3DWindowBufferFromDmaBuf(This->present,

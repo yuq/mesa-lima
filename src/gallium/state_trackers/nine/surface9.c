@@ -194,8 +194,9 @@ NineSurface9_ctor( struct NineSurface9 *This,
     /* TODO: investigate what else exactly needs to be cleared */
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
         surf = NineSurface9_GetSurface(This, 0);
-        pipe = NineDevice9_GetPipe(pParams->device);
+        pipe = nine_context_get_pipe_acquire(pParams->device);
         pipe->clear_render_target(pipe, surf, &rgba, 0, 0, pDesc->Width, pDesc->Height, false);
+        nine_context_get_pipe_release(pParams->device);
     }
 
     NineSurface9_Dump(This);
@@ -225,7 +226,7 @@ NineSurface9_dtor( struct NineSurface9 *This )
 struct pipe_surface *
 NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
 {
-    struct pipe_context *pipe = NineDevice9_GetPipe(This->base.base.device);
+    struct pipe_context *pipe;
     struct pipe_screen *screen = NineDevice9_GetScreen(This->base.base.device);
     struct pipe_resource *resource = This->base.resource;
     struct pipe_surface templ;
@@ -245,7 +246,9 @@ NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
     templ.u.tex.first_layer = This->layer;
     templ.u.tex.last_layer = This->layer;
 
+    pipe = nine_context_get_pipe_acquire(This->base.base.device);
     This->surface[sRGB] = pipe->create_surface(pipe, resource, &templ);
+    nine_context_get_pipe_release(This->base.base.device);
     assert(This->surface[sRGB]);
     return This->surface[sRGB];
 }
@@ -509,8 +512,9 @@ NineSurface9_UnlockRect( struct NineSurface9 *This )
     DBG("This=%p lock_count=%u\n", This, This->lock_count);
     user_assert(This->lock_count, D3DERR_INVALIDCALL);
     if (This->transfer) {
-        pipe = NineDevice9_GetPipe(This->base.base.device);
+        pipe = nine_context_get_pipe_acquire(This->base.base.device);
         pipe->transfer_unmap(pipe, This->transfer);
+        nine_context_get_pipe_release(This->base.base.device);
         This->transfer = NULL;
     }
     --This->lock_count;
