@@ -177,60 +177,50 @@ genX(graphics_pipeline_create)(
    offset = 1;
    length = (vs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
-   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-         vs.FunctionEnable = false;
-         /* Even if VS is disabled, SBE still gets the amount of
-          * vertex data to read from this field. */
-         vs.VertexURBEntryOutputReadOffset = offset;
-         vs.VertexURBEntryOutputLength = length;
-      }
-   } else {
-      const struct anv_shader_bin *vs_bin =
-         pipeline->shaders[MESA_SHADER_VERTEX];
+   assert(anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX));
+   const struct anv_shader_bin *vs_bin =
+      pipeline->shaders[MESA_SHADER_VERTEX];
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
+      vs.KernelStartPointer            = vs_bin->kernel.offset;
+      vs.SingleVertexDispatch          = false;
+      vs.VectorMaskEnable              = false;
 
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-         vs.KernelStartPointer            = vs_bin->kernel.offset;
-         vs.SingleVertexDispatch          = false;
-         vs.VectorMaskEnable              = false;
+      vs.SamplerCount                  = get_sampler_count(vs_bin);
+      vs.BindingTableEntryCount        = get_binding_table_entry_count(vs_bin);
 
-         vs.SamplerCount                  = get_sampler_count(vs_bin);
-         vs.BindingTableEntryCount        = get_binding_table_entry_count(vs_bin);
+      vs.ThreadDispatchPriority        = false;
+      vs.FloatingPointMode             = IEEE754;
+      vs.IllegalOpcodeExceptionEnable  = false;
+      vs.AccessesUAV                   = false;
+      vs.SoftwareExceptionEnable       = false;
 
-         vs.ThreadDispatchPriority        = false;
-         vs.FloatingPointMode             = IEEE754;
-         vs.IllegalOpcodeExceptionEnable  = false;
-         vs.AccessesUAV                   = false;
-         vs.SoftwareExceptionEnable       = false;
+      vs.ScratchSpaceBasePointer = (struct anv_address) {
+         .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
+                                      MESA_SHADER_VERTEX,
+                                      vs_prog_data->base.base.total_scratch),
+         .offset = 0,
+      };
+      vs.PerThreadScratchSpace   = scratch_space(&vs_prog_data->base.base);
 
-         vs.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                         MESA_SHADER_VERTEX,
-                                         vs_prog_data->base.base.total_scratch),
-            .offset = 0,
-         };
-         vs.PerThreadScratchSpace   = scratch_space(&vs_prog_data->base.base);
+      vs.DispatchGRFStartRegisterForURBData =
+         vs_prog_data->base.base.dispatch_grf_start_reg;
 
-         vs.DispatchGRFStartRegisterForURBData =
-            vs_prog_data->base.base.dispatch_grf_start_reg;
+      vs.VertexURBEntryReadLength      = vs_prog_data->base.urb_read_length;
+      vs.VertexURBEntryReadOffset      = 0;
 
-         vs.VertexURBEntryReadLength      = vs_prog_data->base.urb_read_length;
-         vs.VertexURBEntryReadOffset      = 0;
+      vs.MaximumNumberofThreads        = devinfo->max_vs_threads - 1;
+      vs.StatisticsEnable              = false;
+      vs.SIMD8DispatchEnable           =
+         vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
+      vs.VertexCacheDisable            = false;
+      vs.FunctionEnable                = true;
 
-         vs.MaximumNumberofThreads        = devinfo->max_vs_threads - 1;
-         vs.StatisticsEnable              = false;
-         vs.SIMD8DispatchEnable           =
-            vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
-         vs.VertexCacheDisable            = false;
-         vs.FunctionEnable                = true;
+      vs.VertexURBEntryOutputReadOffset = offset;
+      vs.VertexURBEntryOutputLength    = length;
 
-         vs.VertexURBEntryOutputReadOffset = offset;
-         vs.VertexURBEntryOutputLength    = length;
-
-         /* TODO */
-         vs.UserClipDistanceClipTestEnableBitmask = 0;
-         vs.UserClipDistanceCullTestEnableBitmask = 0;
-      }
+      /* TODO */
+      vs.UserClipDistanceClipTestEnableBitmask = 0;
+      vs.UserClipDistanceCullTestEnableBitmask = 0;
    }
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
