@@ -2310,9 +2310,9 @@
     <field name="Legacy Hierarchical Depth Buffer Resolve Enable" start="59" end="59" type="bool"/>
     <field name="Legacy Diamond Line Rasterization" start="58" end="58" type="bool"/>
     <field name="Early Depth/Stencil Control" start="53" end="54" type="uint">
-      <value name="NORMAL" value="0"/>
-      <value name="PSEXEC" value="1"/>
-      <value name="PREPS" value="2"/>
+      <value name="EDSC_NORMAL" value="0"/>
+      <value name="EDSC_PSEXEC" value="1"/>
+      <value name="EDSC_PREPS" value="2"/>
     </field>
     <field name="Force Thread Dispatch Enable" start="51" end="52" type="uint">
       <value name="ForceOff" value="1"/>

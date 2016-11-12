@@ -1892,7 +1892,12 @@
       <value name="BACK" value="3"/>
     </field>
     <field name="Line Width" start="82" end="91" type="u3.7"/>
-    <field name="Line End Cap Antialiasing Region Width" start="80" end="81" type="uint"/>
+    <field name="Line End Cap Antialiasing Region Width" start="80" end="81" type="uint">
+      <value name="0.5 pixels" value="0"/>
+      <value name="1.0 pixels" value="1"/>
+      <value name="2.0 pixels" value="2"/>
+      <value name="4.0 pixels" value="3"/>
+    </field>
     <field name="Line Stipple Enable" start="78" end="78" type="bool"/>
     <field name="Scissor Rectangle Enable" start="75" end="75" type="bool"/>
     <field name="RT Independent Rasterization Enable" start="74" end="74" type="bool"/>
@@ -2180,7 +2185,7 @@
     <field name="Depth Buffer Resolve Enable" start="60" end="60" type="bool"/>
     <field name="Hierarchical Depth Buffer Resolve Enable" start="59" end="59" type="bool"/>
     <field name="Legacy Diamond Line Rasterization" start="58" end="58" type="bool"/>
-    <field name="Pixel Shader Kill Pixel" start="57" end="57" type="bool"/>
+    <field name="Pixel Shader Kills Pixel" start="57" end="57" type="bool"/>
     <field name="Pixel Shader Computed Depth Mode" start="55" end="56" type="uint">
       <value name="PSCDEPTH_OFF" value="0"/>
       <value name="PSCDEPTH_ON" value="1"/>
@@ -2202,7 +2207,12 @@
     <field name="Barycentric Interpolation Mode" start="43" end="48" type="uint"/>
     <field name="Pixel Shader Uses Input Coverage Mask" start="42" end="42" type="bool"/>
     <field name="Line End Cap Antialiasing Region Width" start="40" end="41" type="uint"/>
-    <field name="Line Antialiasing Region Width" start="38" end="39" type="uint"/>
+    <field name="Line Antialiasing Region Width" start="38" end="39" type="uint">
+      <value name="0.5 pixels" value="0"/>
+      <value name="1.0 pixels" value="1"/>
+      <value name="2.0 pixels" value="2"/>
+      <value name="4.0 pixels" value="3"/>
+    </field>
     <field name="RT Independent Rasterization Enable" start="37" end="37" type="bool"/>
     <field name="Polygon Stipple Enable" start="36" end="36" type="bool"/>
     <field name="Line Stipple Enable" start="35" end="35" type="bool"/>

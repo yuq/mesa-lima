@@ -608,7 +608,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
          wm.ThreadDispatchEnable = true;
 
       if (params->src.enabled)
-         wm.PixelShaderKillPixel = true;
+         wm.PixelShaderKillsPixel = true;
 
       if (params->dst.surf.samples > 1) {
          wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
@@ -709,7 +709,7 @@ blorp_emit_ps_config(struct blorp_batch *batch,
 
       if (params->src.enabled) {
          wm.SamplerCount = 1; /* Up to 4 samplers */
-         wm.PixelShaderKillPixel = true; /* TODO: temporarily smash on */
+         wm.PixelShaderKillsPixel = true; /* TODO: temporarily smash on */
       }
 
       if (params->dst.surf.samples > 1) {
