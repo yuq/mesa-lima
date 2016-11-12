@@ -44,9 +44,6 @@ genX(graphics_pipeline_create)(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
-   const struct anv_physical_device *physical_device =
-      &device->instance->physicalDevice;
-   const struct gen_device_info *devinfo = &physical_device->info;
    struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
    struct anv_pipeline *pipeline;
    VkResult result;
@@ -107,6 +104,7 @@ genX(graphics_pipeline_create)(
    emit_3dstate_vs(pipeline);
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
+   emit_3dstate_ps(pipeline);
 
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
@@ -117,16 +115,7 @@ genX(graphics_pipeline_create)(
          wm.EarlyDepthStencilControl            = EDSC_NORMAL;
          wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
       }
-
-      /* Even if no fragments are ever dispatched, the hardware hangs if we
-       * don't at least set the maximum number of threads.
-       */
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-         ps.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
-      }
    } else {
-      const struct anv_shader_bin *fs_bin =
-         pipeline->shaders[MESA_SHADER_FRAGMENT];
       const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
 
       if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
@@ -134,53 +123,6 @@ genX(graphics_pipeline_create)(
          anv_finishme("two-sided color needs sbe swizzling setup");
       if (wm_prog_data->urb_setup[VARYING_SLOT_PRIMITIVE_ID] != -1)
          anv_finishme("primitive_id needs sbe swizzling setup");
-
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-         ps.KernelStartPointer0           = fs_bin->kernel.offset;
-         ps.KernelStartPointer1           = 0;
-         ps.KernelStartPointer2           = fs_bin->kernel.offset +
-                                            wm_prog_data->prog_offset_2;
-
-         ps.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                         MESA_SHADER_FRAGMENT,
-                                         wm_prog_data->base.total_scratch),
-            .offset = 0,
-         };
-         ps.PerThreadScratchSpace         = scratch_space(&wm_prog_data->base);
-
-         ps.SamplerCount                  = get_sampler_count(fs_bin);
-         ps.BindingTableEntryCount        = get_binding_table_entry_count(fs_bin);
-
-         ps.MaximumNumberofThreads        = devinfo->max_wm_threads - 1;
-         ps.PushConstantEnable            = wm_prog_data->base.nr_params > 0;
-         ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
-         ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;
-
-         ps.RenderTargetFastClearEnable   = false;
-         ps.DualSourceBlendEnable         = wm_prog_data->dual_src_blend;
-         ps.RenderTargetResolveEnable     = false;
-
-         ps.PositionXYOffsetSelect        = wm_prog_data->uses_pos_offset ?
-                                            POSOFFSET_SAMPLE : POSOFFSET_NONE;
-
-         ps._32PixelDispatchEnable        = false;
-         ps._16PixelDispatchEnable        = wm_prog_data->dispatch_16;
-         ps._8PixelDispatchEnable         = wm_prog_data->dispatch_8;
-
-         ps.DispatchGRFStartRegisterForConstantSetupData0 =
-            wm_prog_data->base.dispatch_grf_start_reg,
-         ps.DispatchGRFStartRegisterForConstantSetupData1 = 0,
-         ps.DispatchGRFStartRegisterForConstantSetupData2 =
-            wm_prog_data->dispatch_grf_start_reg_2;
-
-         /* Haswell requires the sample mask to be set in this packet as well as
-          * in 3DSTATE_SAMPLE_MASK; the values should match. */
-         /* _NEW_BUFFERS, _NEW_MULTISAMPLE */
-#if GEN_IS_HASWELL
-         ps.SampleMask                    = 0xff;
-#endif
-      }
 
       uint32_t samples = pCreateInfo->pMultisampleState ?
                          pCreateInfo->pMultisampleState->rasterizationSamples : 1;

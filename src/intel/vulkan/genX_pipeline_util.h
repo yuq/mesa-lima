@@ -455,12 +455,6 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
 #endif
 }
 
-static inline uint32_t
-scratch_space(const struct brw_stage_prog_data *prog_data)
-{
-   return ffs(prog_data->total_scratch / 2048);
-}
-
 static const uint32_t vk_to_gen_cullmode[] = {
    [VK_CULL_MODE_NONE]                       = CULLMODE_NONE,
    [VK_CULL_MODE_FRONT_BIT]                  = CULLMODE_FRONT,
@@ -1131,6 +1125,76 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
       gs.PerThreadScratchSpace   = get_scratch_space(gs_bin);
       gs.ScratchSpaceBasePointer =
          get_scratch_address(pipeline, MESA_SHADER_GEOMETRY, gs_bin);
+   }
+}
+
+static void
+emit_3dstate_ps(struct anv_pipeline *pipeline)
+{
+   MAYBE_UNUSED const struct gen_device_info *devinfo = &pipeline->device->info;
+   const struct anv_shader_bin *fs_bin =
+      pipeline->shaders[MESA_SHADER_FRAGMENT];
+
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+#if GEN_GEN == 7
+         /* Even if no fragments are ever dispatched, gen7 hardware hangs if
+          * we don't at least set the maximum number of threads.
+          */
+         ps.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
+#endif
+      }
+      return;
+   }
+
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
+      ps.KernelStartPointer0        = fs_bin->kernel.offset;
+      ps.KernelStartPointer1        = 0;
+      ps.KernelStartPointer2        = fs_bin->kernel.offset +
+                                      wm_prog_data->prog_offset_2;
+      ps._8PixelDispatchEnable      = wm_prog_data->dispatch_8;
+      ps._16PixelDispatchEnable     = wm_prog_data->dispatch_16;
+      ps._32PixelDispatchEnable     = false;
+
+      ps.SingleProgramFlow          = false;
+      ps.VectorMaskEnable           = true;
+      ps.SamplerCount               = get_sampler_count(fs_bin);
+      ps.BindingTableEntryCount     = get_binding_table_entry_count(fs_bin);
+      ps.PushConstantEnable         = wm_prog_data->base.nr_params > 0;
+      ps.PositionXYOffsetSelect     = wm_prog_data->uses_pos_offset ?
+                                      POSOFFSET_SAMPLE: POSOFFSET_NONE;
+#if GEN_GEN < 8
+      ps.AttributeEnable            = wm_prog_data->num_varying_inputs > 0;
+      ps.oMaskPresenttoRenderTarget = wm_prog_data->uses_omask;
+      ps.DualSourceBlendEnable      = wm_prog_data->dual_src_blend;
+#endif
+
+#if GEN_IS_HASWELL
+      /* Haswell requires the sample mask to be set in this packet as well
+       * as in 3DSTATE_SAMPLE_MASK; the values should match.
+       */
+      ps.SampleMask                 = 0xff;
+#endif
+
+#if GEN_GEN >= 9
+      ps.MaximumNumberofThreadsPerPSD  = 64 - 1;
+#elif GEN_GEN >= 8
+      ps.MaximumNumberofThreadsPerPSD  = 64 - 2;
+#else
+      ps.MaximumNumberofThreads        = devinfo->max_wm_threads - 1;
+#endif
+
+      ps.DispatchGRFStartRegisterForConstantSetupData0 =
+         wm_prog_data->base.dispatch_grf_start_reg;
+      ps.DispatchGRFStartRegisterForConstantSetupData1 = 0;
+      ps.DispatchGRFStartRegisterForConstantSetupData2 =
+         wm_prog_data->dispatch_grf_start_reg_2;
+
+      ps.PerThreadScratchSpace   = get_scratch_space(fs_bin);
+      ps.ScratchSpaceBasePointer =
+         get_scratch_address(pipeline, MESA_SHADER_FRAGMENT, fs_bin);
    }
 }
 

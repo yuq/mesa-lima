@@ -112,49 +112,13 @@ genX(graphics_pipeline_create)(
    emit_3dstate_gs(pipeline);
    emit_3dstate_vs(pipeline);
    emit_3dstate_sbe(pipeline);
+   emit_3dstate_ps(pipeline);
 
-   const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps);
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), extra) {
          extra.PixelShaderValid = false;
       }
    } else {
-      const struct anv_shader_bin *fs_bin =
-         pipeline->shaders[MESA_SHADER_FRAGMENT];
-
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
-         ps.KernelStartPointer0     = fs_bin->kernel.offset;
-         ps.KernelStartPointer1     = 0;
-         ps.KernelStartPointer2     = fs_bin->kernel.offset +
-                                      wm_prog_data->prog_offset_2;
-         ps._8PixelDispatchEnable   = wm_prog_data->dispatch_8;
-         ps._16PixelDispatchEnable  = wm_prog_data->dispatch_16;
-         ps._32PixelDispatchEnable  = false;
-         ps.SingleProgramFlow       = false;
-         ps.VectorMaskEnable        = true;
-         ps.SamplerCount            = get_sampler_count(fs_bin);
-         ps.BindingTableEntryCount  = get_binding_table_entry_count(fs_bin);
-         ps.PushConstantEnable      = wm_prog_data->base.nr_params > 0;
-         ps.PositionXYOffsetSelect  = wm_prog_data->uses_pos_offset ?
-            POSOFFSET_SAMPLE: POSOFFSET_NONE;
-
-         ps.MaximumNumberofThreadsPerPSD = 64 - num_thread_bias;
-
-         ps.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                         MESA_SHADER_FRAGMENT,
-                                         wm_prog_data->base.total_scratch),
-            .offset = 0,
-         };
-         ps.PerThreadScratchSpace   = scratch_space(&wm_prog_data->base);
-
-         ps.DispatchGRFStartRegisterForConstantSetupData0 =
-            wm_prog_data->base.dispatch_grf_start_reg;
-         ps.DispatchGRFStartRegisterForConstantSetupData1 = 0;
-         ps.DispatchGRFStartRegisterForConstantSetupData2 =
-            wm_prog_data->dispatch_grf_start_reg_2;
-      }
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), ps) {
          ps.PixelShaderValid              = true;
