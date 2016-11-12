@@ -968,4 +968,89 @@ get_binding_table_entry_count(const struct anv_shader_bin *bin)
    return DIV_ROUND_UP(bin->bind_map.surface_count, 32);
 }
 
+static inline struct anv_address
+get_scratch_address(struct anv_pipeline *pipeline,
+                    gl_shader_stage stage,
+                    const struct anv_shader_bin *bin)
+{
+   return (struct anv_address) {
+      .bo = anv_scratch_pool_alloc(pipeline->device,
+                                   &pipeline->device->scratch_pool,
+                                   stage, bin->prog_data->total_scratch),
+      .offset = 0,
+   };
+}
+
+static inline uint32_t
+get_scratch_space(const struct anv_shader_bin *bin)
+{
+   return ffs(bin->prog_data->total_scratch / 2048);
+}
+
+static inline uint32_t
+get_urb_output_offset()
+{
+   /* Skip the VUE header and position slots */
+   return 1;
+}
+
+static inline uint32_t
+get_urb_output_length(const struct anv_shader_bin *bin)
+{
+   const struct brw_vue_prog_data *prog_data =
+      (const struct brw_vue_prog_data *)bin->prog_data;
+
+   return (prog_data->vue_map.num_slots + 1) / 2 - get_urb_output_offset();
+}
+
+static void
+emit_3dstate_vs(struct anv_pipeline *pipeline)
+{
+   const struct gen_device_info *devinfo = &pipeline->device->info;
+   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
+   const struct anv_shader_bin *vs_bin =
+      pipeline->shaders[MESA_SHADER_VERTEX];
+
+   assert(anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX));
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
+      vs.FunctionEnable       = true;
+      vs.StatisticsEnable     = true;
+      vs.KernelStartPointer   = vs_bin->kernel.offset;
+#if GEN_GEN >= 8
+      vs.SIMD8DispatchEnable  =
+         vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
+#endif
+
+      assert(!vs_prog_data->base.base.use_alt_mode);
+      vs.SingleVertexDispatch       = false;
+      vs.VectorMaskEnable           = false;
+      vs.SamplerCount               = get_sampler_count(vs_bin);
+      vs.BindingTableEntryCount     = get_binding_table_entry_count(vs_bin);
+      vs.FloatingPointMode          = IEEE754;
+      vs.IllegalOpcodeExceptionEnable = false;
+      vs.SoftwareExceptionEnable    = false;
+      vs.MaximumNumberofThreads     = devinfo->max_vs_threads - 1;
+      vs.VertexCacheDisable         = false;
+
+      vs.VertexURBEntryReadLength      = vs_prog_data->base.urb_read_length;
+      vs.VertexURBEntryReadOffset      = 0;
+      vs.DispatchGRFStartRegisterForURBData =
+         vs_prog_data->base.base.dispatch_grf_start_reg;
+
+#if GEN_GEN >= 8
+      vs.VertexURBEntryOutputReadOffset = get_urb_output_offset();
+      vs.VertexURBEntryOutputLength     = get_urb_output_length(vs_bin);
+
+     /* TODO */
+      vs.UserClipDistanceClipTestEnableBitmask = 0;
+      vs.UserClipDistanceCullTestEnableBitmask = 0;
+#endif
+
+      vs.PerThreadScratchSpace   = get_scratch_space(vs_bin);
+      vs.ScratchSpaceBasePointer =
+         get_scratch_address(pipeline, MESA_SHADER_VERTEX, vs_bin);
+   }
+}
+
 #endif /* GENX_PIPELINE_UTIL_H */

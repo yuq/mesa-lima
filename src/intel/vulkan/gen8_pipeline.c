@@ -59,7 +59,6 @@ genX(graphics_pipeline_create)(
    struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
    struct anv_pipeline *pipeline;
    VkResult result;
-   uint32_t offset, length;
 
    assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO);
 
@@ -120,8 +119,8 @@ genX(graphics_pipeline_create)(
       const struct anv_shader_bin *gs_bin =
          pipeline->shaders[MESA_SHADER_GEOMETRY];
 
-      offset = 1;
-      length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
+      uint32_t offset = 1;
+      uint32_t length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
 
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
          gs.SingleProgramFlow       = false;
@@ -171,57 +170,7 @@ genX(graphics_pipeline_create)(
       }
    }
 
-   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
-   assert(!vs_prog_data->base.base.use_alt_mode);
-   /* Skip the VUE header and position slots */
-   offset = 1;
-   length = (vs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
-
-   assert(anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX));
-   const struct anv_shader_bin *vs_bin =
-      pipeline->shaders[MESA_SHADER_VERTEX];
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-      vs.KernelStartPointer            = vs_bin->kernel.offset;
-      vs.SingleVertexDispatch          = false;
-      vs.VectorMaskEnable              = false;
-
-      vs.SamplerCount                  = get_sampler_count(vs_bin);
-      vs.BindingTableEntryCount        = get_binding_table_entry_count(vs_bin);
-
-      vs.ThreadDispatchPriority        = false;
-      vs.FloatingPointMode             = IEEE754;
-      vs.IllegalOpcodeExceptionEnable  = false;
-      vs.AccessesUAV                   = false;
-      vs.SoftwareExceptionEnable       = false;
-
-      vs.ScratchSpaceBasePointer = (struct anv_address) {
-         .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                      MESA_SHADER_VERTEX,
-                                      vs_prog_data->base.base.total_scratch),
-         .offset = 0,
-      };
-      vs.PerThreadScratchSpace   = scratch_space(&vs_prog_data->base.base);
-
-      vs.DispatchGRFStartRegisterForURBData =
-         vs_prog_data->base.base.dispatch_grf_start_reg;
-
-      vs.VertexURBEntryReadLength      = vs_prog_data->base.urb_read_length;
-      vs.VertexURBEntryReadOffset      = 0;
-
-      vs.MaximumNumberofThreads        = devinfo->max_vs_threads - 1;
-      vs.StatisticsEnable              = true;
-      vs.SIMD8DispatchEnable           =
-         vs_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8;
-      vs.VertexCacheDisable            = false;
-      vs.FunctionEnable                = true;
-
-      vs.VertexURBEntryOutputReadOffset = offset;
-      vs.VertexURBEntryOutputLength    = length;
-
-      /* TODO */
-      vs.UserClipDistanceClipTestEnableBitmask = 0;
-      vs.UserClipDistanceCullTestEnableBitmask = 0;
-   }
+   emit_3dstate_vs(pipeline);
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {

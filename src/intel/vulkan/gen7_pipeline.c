@@ -85,8 +85,6 @@ genX(graphics_pipeline_create)(
 
    emit_ms_state(pipeline, pCreateInfo->pMultisampleState);
 
-   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
-
 #if 0 
    /* From gen7_vs_state.c */
 
@@ -106,32 +104,7 @@ genX(graphics_pipeline_create)(
       gen7_emit_vs_workaround_flush(brw);
 #endif
 
-   assert(anv_pipeline_has_stage(pipeline, MESA_SHADER_VERTEX));
-   const struct anv_shader_bin *vs_bin =
-      pipeline->shaders[MESA_SHADER_VERTEX];
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VS), vs) {
-      vs.KernelStartPointer         = vs_bin->kernel.offset;
-
-      vs.ScratchSpaceBasePointer = (struct anv_address) {
-         .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                      MESA_SHADER_VERTEX,
-                                      vs_prog_data->base.base.total_scratch),
-         .offset = 0,
-      };
-      vs.PerThreadScratchSpace      = scratch_space(&vs_prog_data->base.base);
-
-      vs.DispatchGRFStartRegisterForURBData    =
-         vs_prog_data->base.base.dispatch_grf_start_reg;
-
-      vs.SamplerCount              = get_sampler_count(vs_bin);
-      vs.BindingTableEntryCount    = get_binding_table_entry_count(vs_bin);
-
-      vs.VertexURBEntryReadLength   = vs_prog_data->base.urb_read_length;
-      vs.VertexURBEntryReadOffset   = 0;
-      vs.MaximumNumberofThreads     = devinfo->max_vs_threads - 1;
-      vs.StatisticsEnable           = true;
-      vs.FunctionEnable             = true;
-   }
+   emit_3dstate_vs(pipeline);
 
    const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
 
