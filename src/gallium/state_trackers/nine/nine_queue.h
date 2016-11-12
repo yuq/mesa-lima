@@ -40,6 +40,9 @@ void *
 nine_queue_alloc(struct nine_queue_pool* ctx, unsigned space);
 
 bool
+nine_queue_no_flushed_work(struct nine_queue_pool* ctx);
+
+bool
 nine_queue_isempty(struct nine_queue_pool* ctx);
 
 struct nine_queue_pool*

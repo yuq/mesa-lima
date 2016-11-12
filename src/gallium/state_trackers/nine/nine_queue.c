@@ -204,6 +204,15 @@ nine_queue_alloc(struct nine_queue_pool* ctx, unsigned space)
     return cmdbuf->mem_pool + offset;
 }
 
+/* Returns the current queue flush state.
+ * TRUE nothing flushed
+ * FALSE one ore more instructions queued flushed. */
+bool
+nine_queue_no_flushed_work(struct nine_queue_pool* ctx)
+{
+    return (ctx->tail == ctx->head);
+}
+
 /* Returns the current queue empty state.
  * TRUE no instructions queued.
  * FALSE one ore more instructions queued. */

@@ -66,6 +66,10 @@ struct csmt_context {
     pipe_mutex mutex_processed;
     struct NineDevice9 *device;
     BOOL processed;
+    BOOL toPause;
+    BOOL hasPaused;
+    pipe_mutex thread_running;
+    pipe_mutex thread_resume;
 };
 
 /* Wait for instruction to be processed.
@@ -93,6 +97,7 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
 
     while (1) {
         nine_queue_wait_flush(ctx->pool);
+        pipe_mutex_lock(ctx->thread_running);
 
         /* Get instruction. NULL on empty cmdbuf. */
         while (!p_atomic_read(&ctx->terminate) &&
@@ -105,7 +110,16 @@ PIPE_THREAD_ROUTINE(nine_csmt_worker, arg)
                 pipe_condvar_signal(ctx->event_processed);
                 pipe_mutex_unlock(ctx->mutex_processed);
             }
+            if (p_atomic_read(&ctx->toPause)) {
+                pipe_mutex_unlock(ctx->thread_running);
+                /* will wait here the thread can be resumed */
+                pipe_mutex_lock(ctx->thread_resume);
+                pipe_mutex_lock(ctx->thread_running);
+                pipe_mutex_unlock(ctx->thread_resume);
+            }
         }
+
+        pipe_mutex_unlock(ctx->thread_running);
         if (p_atomic_read(&ctx->terminate)) {
             pipe_mutex_lock(ctx->mutex_processed);
             p_atomic_set(&ctx->processed, TRUE);
@@ -138,6 +152,8 @@ nine_csmt_create( struct NineDevice9 *This )
     }
     pipe_condvar_init(ctx->event_processed);
     pipe_mutex_init(ctx->mutex_processed);
+    pipe_mutex_init(ctx->thread_running);
+    pipe_mutex_init(ctx->thread_resume);
 
 #if DEBUG
     pipe_thread_setname("Main thread");
@@ -223,6 +239,43 @@ nine_csmt_destroy( struct NineDevice9 *device, struct csmt_context *ctx )
     pipe_thread_wait(render_thread);
 }
 
+static void
+nine_csmt_pause( struct NineDevice9 *device )
+{
+    struct csmt_context *ctx = device->csmt_ctx;
+
+    if (!device->csmt_active)
+        return;
+
+    /* No need to pause the thread */
+    if (nine_queue_no_flushed_work(ctx->pool))
+        return;
+
+    pipe_mutex_lock(ctx->thread_resume);
+    p_atomic_set(&ctx->toPause, TRUE);
+
+    /* Wait the thread is paused */
+    pipe_mutex_lock(ctx->thread_running);
+    ctx->hasPaused = TRUE;
+    p_atomic_set(&ctx->toPause, FALSE);
+}
+
+static void
+nine_csmt_resume( struct NineDevice9 *device )
+{
+    struct csmt_context *ctx = device->csmt_ctx;
+
+    if (!device->csmt_active)
+        return;
+
+    if (!ctx->hasPaused)
+        return;
+
+    ctx->hasPaused = FALSE;
+    pipe_mutex_unlock(ctx->thread_running);
+    pipe_mutex_unlock(ctx->thread_resume);
+}
+
 struct pipe_context *
 nine_context_get_pipe( struct NineDevice9 *device )
 {
@@ -244,6 +297,20 @@ nine_context_get_pipe_multithread( struct NineDevice9 *device )
 
     return device->context.pipe;
 }
+
+struct pipe_context *
+nine_context_get_pipe_acquire( struct NineDevice9 *device )
+{
+    nine_csmt_pause(device);
+    return device->context.pipe;
+}
+
+void
+nine_context_get_pipe_release( struct NineDevice9 *device )
+{
+    nine_csmt_resume(device);
+}
+
 /* Nine state functions */
 
 /* Check if some states need to be set dirty */

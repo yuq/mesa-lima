@@ -600,4 +600,16 @@ nine_context_get_pipe( struct NineDevice9 *device );
 struct pipe_context *
 nine_context_get_pipe_multithread( struct NineDevice9 *device );
 
+
+/* Get the pipe_context (should not be called from the worker thread).
+ * All the work in the worker thread is paused before returning.
+ * It is neccessary to release in order to restart the thread.
+ * This is intended for use of the nine_context pipe_context that don't
+ * need the worker thread to finish all queued job. */
+struct pipe_context *
+nine_context_get_pipe_acquire( struct NineDevice9 *device );
+
+void
+nine_context_get_pipe_release( struct NineDevice9 *device );
+
 #endif /* _NINE_STATE_H_ */
