@@ -1446,14 +1446,10 @@ compute_pipeline_create(
 
    const uint32_t subslices = MAX2(physical_device->subslice_total, 1);
 
+   const struct anv_shader_bin *cs_bin =
+      pipeline->shaders[MESA_SHADER_COMPUTE];
+
    anv_batch_emit(&pipeline->batch, GENX(MEDIA_VFE_STATE), vfe) {
-      vfe.ScratchSpaceBasePointer = (struct anv_address) {
-         .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                      MESA_SHADER_COMPUTE,
-                                      cs_prog_data->base.total_scratch),
-         .offset = 0,
-      };
-      vfe.PerThreadScratchSpace  = ffs(cs_prog_data->base.total_scratch / 2048);
 #if GEN_GEN > 7
       vfe.StackSize              = 0;
 #else
@@ -1468,10 +1464,12 @@ compute_pipeline_create(
 #endif
       vfe.URBEntryAllocationSize = GEN_GEN <= 7 ? 0 : 2;
       vfe.CURBEAllocationSize    = vfe_curbe_allocation;
+
+      vfe.PerThreadScratchSpace = get_scratch_space(cs_bin);
+      vfe.ScratchSpaceBasePointer =
+         get_scratch_address(pipeline, MESA_SHADER_COMPUTE, cs_bin);
    }
 
-   const struct anv_shader_bin *cs_bin =
-      pipeline->shaders[MESA_SHADER_COMPUTE];
    struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
       .KernelStartPointer     = cs_bin->kernel.offset,
 
