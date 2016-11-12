@@ -2685,7 +2685,6 @@ dnl Substitute the config
 AC_CONFIG_FILES([Makefile
 		src/Makefile
 		src/amd/Makefile
-		src/amd/common/Makefile
 		src/amd/vulkan/Makefile
 		src/compiler/Makefile
 		src/egl/Makefile

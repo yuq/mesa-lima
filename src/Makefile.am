@@ -78,10 +78,6 @@ if HAVE_AMD_DRIVERS
 SUBDIRS += amd
 endif
 
-if NEED_RADEON_LLVM
-SUBDIRS += amd/common
-endif
-
 if HAVE_INTEL_DRIVERS
 SUBDIRS += intel
 endif
