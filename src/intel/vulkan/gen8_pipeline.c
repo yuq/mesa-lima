@@ -89,38 +89,12 @@ genX(graphics_pipeline_create)(
                      pCreateInfo->pRasterizationState);
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
-   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
-
    emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
    emit_3dstate_gs(pipeline);
    emit_3dstate_vs(pipeline);
    emit_3dstate_sbe(pipeline);
    emit_3dstate_ps(pipeline);
-
-   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), extra) {
-         extra.PixelShaderValid = false;
-      }
-   } else {
-
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS_EXTRA), ps) {
-         ps.PixelShaderValid              = true;
-         ps.PixelShaderKillsPixel         = wm_prog_data->uses_kill;
-         ps.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;
-         ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
-         ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;
-         ps.PixelShaderIsPerSample        = wm_prog_data->persample_dispatch;
-         ps.PixelShaderUsesSourceDepth    = wm_prog_data->uses_src_depth;
-         ps.PixelShaderUsesSourceW        = wm_prog_data->uses_src_w;
-#if GEN_GEN >= 9
-         ps.PixelShaderPullsBary    = wm_prog_data->pulls_bary;
-         ps.InputCoverageMaskState  = wm_prog_data->uses_sample_mask ?
-            ICMS_INNER_CONSERVATIVE : ICMS_NONE;
-#else
-         ps.PixelShaderUsesInputCoverageMask = wm_prog_data->uses_sample_mask;
-#endif
-      }
-   }
+   emit_3dstate_ps_extra(pipeline);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 
