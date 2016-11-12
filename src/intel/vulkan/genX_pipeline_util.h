@@ -1281,6 +1281,14 @@ emit_3dstate_ps_extra(struct anv_pipeline *pipeline)
 #endif
    }
 }
+
+static void
+emit_3dstate_vf_topology(struct anv_pipeline *pipeline)
+{
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_TOPOLOGY), vft) {
+      vft.PrimitiveTopologyType = pipeline->topology;
+   }
+}
 #endif
 
 #endif /* GENX_PIPELINE_UTIL_H */

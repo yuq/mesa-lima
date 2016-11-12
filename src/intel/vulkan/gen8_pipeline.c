@@ -34,15 +34,6 @@
 
 #include "genX_pipeline_util.h"
 
-static void
-emit_ia_state(struct anv_pipeline *pipeline,
-              const VkPipelineInputAssemblyStateCreateInfo *info)
-{
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_TOPOLOGY), vft) {
-      vft.PrimitiveTopologyType = pipeline->topology;
-   }
-}
-
 VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
@@ -73,8 +64,7 @@ genX(graphics_pipeline_create)(
 
    assert(pCreateInfo->pVertexInputState);
    emit_vertex_input(pipeline, pCreateInfo->pVertexInputState);
-   assert(pCreateInfo->pInputAssemblyState);
-   emit_ia_state(pipeline, pCreateInfo->pInputAssemblyState);
+   emit_3dstate_vf_topology(pipeline);
    assert(pCreateInfo->pRasterizationState);
    emit_rs_state(pipeline, pCreateInfo->pRasterizationState,
                  pCreateInfo->pMultisampleState, pass, subpass);
