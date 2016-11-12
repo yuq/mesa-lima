@@ -6285,32 +6285,9 @@ static void si_init_shader_ctx(struct si_shader_context *ctx,
 	struct lp_build_tgsi_context *bld_base;
 	struct lp_build_tgsi_action tmpl = {};
 
-	memset(ctx, 0, sizeof(*ctx));
-	si_llvm_context_init(
-		ctx, "amdgcn--",
+	si_llvm_context_init(ctx, sscreen, shader, tm,
 		(shader && shader->selector) ? &shader->selector->info : NULL,
 		(shader && shader->selector) ? shader->selector->tokens : NULL);
-	si_shader_context_init_alu(&ctx->soa.bld_base);
-	ctx->tm = tm;
-	ctx->screen = sscreen;
-	if (shader && shader->selector)
-		ctx->type = shader->selector->info.processor;
-	else
-		ctx->type = -1;
-	ctx->shader = shader;
-
-	ctx->voidt = LLVMVoidTypeInContext(ctx->gallivm.context);
-	ctx->i1 = LLVMInt1TypeInContext(ctx->gallivm.context);
-	ctx->i8 = LLVMInt8TypeInContext(ctx->gallivm.context);
-	ctx->i32 = LLVMInt32TypeInContext(ctx->gallivm.context);
-	ctx->i64 = LLVMInt64TypeInContext(ctx->gallivm.context);
-	ctx->i128 = LLVMIntTypeInContext(ctx->gallivm.context, 128);
-	ctx->f32 = LLVMFloatTypeInContext(ctx->gallivm.context);
-	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
-	ctx->v2i32 = LLVMVectorType(ctx->i32, 2);
-	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
-	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
-	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
 
 	bld_base = &ctx->soa.bld_base;
 	bld_base->emit_fetch_funcs[TGSI_FILE_CONSTANT] = fetch_constant;

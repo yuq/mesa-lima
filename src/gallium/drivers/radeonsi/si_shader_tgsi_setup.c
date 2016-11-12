@@ -1222,7 +1222,10 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 	ctx->soa.num_immediates++;
 }
 
-void si_llvm_context_init(struct si_shader_context *ctx, const char *triple,
+void si_llvm_context_init(struct si_shader_context *ctx,
+			  struct si_screen *sscreen,
+			  struct si_shader *shader,
+			  LLVMTargetMachineRef tm,
 			  const struct tgsi_shader_info *info,
 			  const struct tgsi_token *tokens)
 {
@@ -1233,12 +1236,16 @@ void si_llvm_context_init(struct si_shader_context *ctx, const char *triple,
 	 * This should be enough for us to be able to pass our gallivm struct to the
 	 * helper functions in the gallivm module.
 	 */
-	memset(&ctx->gallivm, 0, sizeof (ctx->gallivm));
-	memset(&ctx->soa, 0, sizeof(ctx->soa));
+	memset(ctx, 0, sizeof(*ctx));
+	ctx->shader = shader;
+	ctx->screen = sscreen;
+	ctx->tm = tm;
+	ctx->type = info ? info->processor : -1;
+
 	ctx->gallivm.context = LLVMContextCreate();
 	ctx->gallivm.module = LLVMModuleCreateWithNameInContext("tgsi",
 						ctx->gallivm.context);
-	LLVMSetTarget(ctx->gallivm.module, triple);
+	LLVMSetTarget(ctx->gallivm.module, "amdgcn--");
 	ctx->gallivm.builder = LLVMCreateBuilderInContext(ctx->gallivm.context);
 
 	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
@@ -1301,6 +1308,21 @@ void si_llvm_context_init(struct si_shader_context *ctx, const char *triple,
 	bld_base->op_actions[TGSI_OPCODE_ELSE].emit = else_emit;
 	bld_base->op_actions[TGSI_OPCODE_ENDIF].emit = endif_emit;
 	bld_base->op_actions[TGSI_OPCODE_ENDLOOP].emit = endloop_emit;
+
+	si_shader_context_init_alu(&ctx->soa.bld_base);
+
+	ctx->voidt = LLVMVoidTypeInContext(ctx->gallivm.context);
+	ctx->i1 = LLVMInt1TypeInContext(ctx->gallivm.context);
+	ctx->i8 = LLVMInt8TypeInContext(ctx->gallivm.context);
+	ctx->i32 = LLVMInt32TypeInContext(ctx->gallivm.context);
+	ctx->i64 = LLVMInt64TypeInContext(ctx->gallivm.context);
+	ctx->i128 = LLVMIntTypeInContext(ctx->gallivm.context, 128);
+	ctx->f32 = LLVMFloatTypeInContext(ctx->gallivm.context);
+	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
+	ctx->v2i32 = LLVMVectorType(ctx->i32, 2);
+	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
+	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
+	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
 }
 
 void si_llvm_create_func(struct si_shader_context *ctx,
