@@ -105,58 +105,7 @@ genX(graphics_pipeline_create)(
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
    emit_3dstate_ps(pipeline);
-
-   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
-         wm.StatisticsEnable                    = true;
-         wm.ThreadDispatchEnable                = false;
-         wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
-         wm.LineAntialiasingRegionWidth         = 1; /* 1.0 pixels */
-         wm.EarlyDepthStencilControl            = EDSC_NORMAL;
-         wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
-      }
-   } else {
-      const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
-
-      if (wm_prog_data->urb_setup[VARYING_SLOT_BFC0] != -1 ||
-          wm_prog_data->urb_setup[VARYING_SLOT_BFC1] != -1)
-         anv_finishme("two-sided color needs sbe swizzling setup");
-      if (wm_prog_data->urb_setup[VARYING_SLOT_PRIMITIVE_ID] != -1)
-         anv_finishme("primitive_id needs sbe swizzling setup");
-
-      uint32_t samples = pCreateInfo->pMultisampleState ?
-                         pCreateInfo->pMultisampleState->rasterizationSamples : 1;
-
-      /* FIXME-GEN7: This needs a lot more work, cf gen7 upload_wm_state(). */
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
-         wm.StatisticsEnable                    = true;
-         wm.ThreadDispatchEnable                = true;
-         wm.LineEndCapAntialiasingRegionWidth   = 0; /* 0.5 pixels */
-         wm.LineAntialiasingRegionWidth         = 1; /* 1.0 pixels */
-         wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
-         wm.PixelShaderKillsPixel               = wm_prog_data->uses_kill;
-         wm.PixelShaderComputedDepthMode        = wm_prog_data->computed_depth_mode;
-         wm.PixelShaderUsesSourceDepth          = wm_prog_data->uses_src_depth;
-         wm.PixelShaderUsesSourceW              = wm_prog_data->uses_src_w;
-         wm.PixelShaderUsesInputCoverageMask    = wm_prog_data->uses_sample_mask;
-
-         if (wm_prog_data->early_fragment_tests) {
-            wm.EarlyDepthStencilControl         = EDSC_PREPS;
-         } else if (wm_prog_data->has_side_effects) {
-            wm.EarlyDepthStencilControl         = EDSC_PSEXEC;
-         } else {
-            wm.EarlyDepthStencilControl         = EDSC_NORMAL;
-         }
-
-         wm.BarycentricInterpolationMode        = wm_prog_data->barycentric_interp_modes;
-
-         wm.MultisampleRasterizationMode        = samples > 1 ?
-                                                  MSRASTMODE_ON_PATTERN : MSRASTMODE_OFF_PIXEL;
-         wm.MultisampleDispatchMode             = ((samples == 1) ||
-                                                   (samples > 1 && wm_prog_data->persample_dispatch)) ?
-                                                  MSDISPMODE_PERSAMPLE : MSDISPMODE_PERPIXEL;
-      }
-   }
+   emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
 
    *pPipeline = anv_pipeline_to_handle(pipeline);
 

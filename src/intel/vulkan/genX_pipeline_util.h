@@ -1129,6 +1129,59 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
 }
 
 static void
+emit_3dstate_wm(struct anv_pipeline *pipeline,
+                const VkPipelineMultisampleStateCreateInfo *multisample)
+{
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+
+   MAYBE_UNUSED uint32_t samples =
+      multisample ? multisample->rasterizationSamples : 1;
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
+      wm.StatisticsEnable                    = true;
+      wm.LineEndCapAntialiasingRegionWidth   = _05pixels;
+      wm.LineAntialiasingRegionWidth         = _10pixels;
+      wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
+
+      if (anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
+         if (wm_prog_data->early_fragment_tests) {
+            wm.EarlyDepthStencilControl         = EDSC_PREPS;
+         } else if (wm_prog_data->has_side_effects) {
+            wm.EarlyDepthStencilControl         = EDSC_PSEXEC;
+         } else {
+            wm.EarlyDepthStencilControl         = EDSC_NORMAL;
+         }
+
+         wm.BarycentricInterpolationMode =
+            wm_prog_data->barycentric_interp_modes;
+
+#if GEN_GEN < 8
+         /* FIXME: This needs a lot more work, cf gen7 upload_wm_state(). */
+         wm.ThreadDispatchEnable          = true;
+
+         wm.PixelShaderKillsPixel         = wm_prog_data->uses_kill;
+         wm.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;
+         wm.PixelShaderUsesSourceDepth    = wm_prog_data->uses_src_depth;
+         wm.PixelShaderUsesSourceW        = wm_prog_data->uses_src_w;
+         wm.PixelShaderUsesInputCoverageMask = wm_prog_data->uses_sample_mask;
+
+         if (samples > 1) {
+            wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
+            if (wm_prog_data->persample_dispatch) {
+               wm.MultisampleDispatchMode = MSDISPMODE_PERSAMPLE;
+            } else {
+               wm.MultisampleDispatchMode = MSDISPMODE_PERPIXEL;
+            }
+         } else {
+            wm.MultisampleRasterizationMode = MSRASTMODE_OFF_PIXEL;
+            wm.MultisampleDispatchMode = MSDISPMODE_PERSAMPLE;
+         }
+#endif
+      }
+   }
+}
+
+static void
 emit_3dstate_ps(struct anv_pipeline *pipeline)
 {
    MAYBE_UNUSED const struct gen_device_info *devinfo = &pipeline->device->info;

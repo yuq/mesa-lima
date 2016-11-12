@@ -90,25 +90,8 @@ genX(graphics_pipeline_create)(
    emit_3dstate_streamout(pipeline, pCreateInfo->pRasterizationState);
 
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
-   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_WM), wm) {
-      wm.StatisticsEnable                    = true;
-      wm.LineEndCapAntialiasingRegionWidth   = _05pixels;
-      wm.LineAntialiasingRegionWidth         = _10pixels;
-      wm.ForceThreadDispatchEnable           = 0 /* Normal */;
-      wm.PointRasterizationRule              = RASTRULE_UPPER_RIGHT;
 
-      if (wm_prog_data && wm_prog_data->early_fragment_tests) {
-         wm.EarlyDepthStencilControl         = EDSC_PREPS;
-      } else if (wm_prog_data && wm_prog_data->has_side_effects) {
-         wm.EarlyDepthStencilControl         = EDSC_PSEXEC;
-      } else {
-         wm.EarlyDepthStencilControl         = EDSC_NORMAL;
-      }
-
-      wm.BarycentricInterpolationMode =
-         wm_prog_data ? wm_prog_data->barycentric_interp_modes : 0;
-   }
-
+   emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
    emit_3dstate_gs(pipeline);
    emit_3dstate_vs(pipeline);
    emit_3dstate_sbe(pipeline);
