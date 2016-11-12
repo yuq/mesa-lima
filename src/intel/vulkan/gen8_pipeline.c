@@ -53,9 +53,6 @@ genX(graphics_pipeline_create)(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
    ANV_FROM_HANDLE(anv_render_pass, pass, pCreateInfo->renderPass);
-   const struct anv_physical_device *physical_device =
-      &device->instance->physicalDevice;
-   const struct gen_device_info *devinfo = &physical_device->info;
    struct anv_subpass *subpass = &pass->subpasses[pCreateInfo->subpass];
    struct anv_pipeline *pipeline;
    VkResult result;
@@ -112,65 +109,7 @@ genX(graphics_pipeline_create)(
          wm_prog_data ? wm_prog_data->barycentric_interp_modes : 0;
    }
 
-   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_GEOMETRY)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
-   } else {
-      const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
-      const struct anv_shader_bin *gs_bin =
-         pipeline->shaders[MESA_SHADER_GEOMETRY];
-
-      uint32_t offset = 1;
-      uint32_t length = (gs_prog_data->base.vue_map.num_slots + 1) / 2 - offset;
-
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
-         gs.SingleProgramFlow       = false;
-         gs.KernelStartPointer      = gs_bin->kernel.offset;
-         gs.VectorMaskEnable        = false;
-         gs.SamplerCount            = get_sampler_count(gs_bin);
-         gs.BindingTableEntryCount  = get_binding_table_entry_count(gs_bin);
-         gs.ExpectedVertexCount     = gs_prog_data->vertices_in;
-
-         gs.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                         MESA_SHADER_GEOMETRY,
-                                         gs_prog_data->base.base.total_scratch),
-            .offset = 0,
-         };
-         gs.PerThreadScratchSpace   = scratch_space(&gs_prog_data->base.base);
-         gs.OutputVertexSize        = gs_prog_data->output_vertex_size_hwords * 2 - 1;
-         gs.OutputTopology          = gs_prog_data->output_topology;
-         gs.VertexURBEntryReadLength = gs_prog_data->base.urb_read_length;
-         gs.IncludeVertexHandles    = gs_prog_data->base.include_vue_handles;
-
-         gs.DispatchGRFStartRegisterForURBData =
-            gs_prog_data->base.base.dispatch_grf_start_reg;
-
-         gs.MaximumNumberofThreads  = devinfo->max_gs_threads / 2 - 1;
-         gs.ControlDataHeaderSize   = gs_prog_data->control_data_header_size_hwords;
-         gs.InstanceControl         = MAX2(gs_prog_data->invocations, 1) - 1;
-         gs.DispatchMode            = gs_prog_data->base.dispatch_mode;
-         gs.StatisticsEnable        = true;
-         gs.IncludePrimitiveID      = gs_prog_data->include_primitive_id;
-         gs.ReorderMode             = TRAILING;
-         gs.FunctionEnable          = true;
-
-         gs.ControlDataFormat       = gs_prog_data->control_data_format;
-
-         gs.StaticOutput            = gs_prog_data->static_vertex_count >= 0;
-         gs.StaticOutputVertexCount =
-            gs_prog_data->static_vertex_count >= 0 ?
-            gs_prog_data->static_vertex_count : 0;
-
-         /* FIXME: mesa sets this based on ctx->Transform.ClipPlanesEnabled:
-          * UserClipDistanceClipTestEnableBitmask_3DSTATE_GS(v)
-          * UserClipDistanceCullTestEnableBitmask(v)
-          */
-
-         gs.VertexURBEntryOutputReadOffset = offset;
-         gs.VertexURBEntryOutputLength = length;
-      }
-   }
-
+   emit_3dstate_gs(pipeline);
    emit_3dstate_vs(pipeline);
 
    const int num_thread_bias = GEN_GEN == 8 ? 2 : 1;

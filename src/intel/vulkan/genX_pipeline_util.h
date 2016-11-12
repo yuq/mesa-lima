@@ -1053,4 +1053,77 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
    }
 }
 
+static void
+emit_3dstate_gs(struct anv_pipeline *pipeline)
+{
+   const struct gen_device_info *devinfo = &pipeline->device->info;
+   const struct anv_shader_bin *gs_bin =
+      pipeline->shaders[MESA_SHADER_GEOMETRY];
+
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_GEOMETRY)) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
+      return;
+   }
+
+   const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
+      gs.FunctionEnable          = true;
+      gs.StatisticsEnable        = true;
+      gs.KernelStartPointer      = gs_bin->kernel.offset;
+      gs.DispatchMode            = gs_prog_data->base.dispatch_mode;
+
+      gs.SingleProgramFlow       = false;
+      gs.VectorMaskEnable        = false;
+      gs.SamplerCount            = get_sampler_count(gs_bin);
+      gs.BindingTableEntryCount  = get_binding_table_entry_count(gs_bin);
+      gs.IncludeVertexHandles    = gs_prog_data->base.include_vue_handles;
+      gs.IncludePrimitiveID      = gs_prog_data->include_primitive_id;
+
+      if (GEN_GEN == 8) {
+         /* Broadwell is weird.  It needs us to divide by 2. */
+         gs.MaximumNumberofThreads = devinfo->max_gs_threads / 2 - 1;
+      } else {
+         gs.MaximumNumberofThreads = devinfo->max_gs_threads - 1;
+      }
+
+      gs.OutputVertexSize        = gs_prog_data->output_vertex_size_hwords * 2 - 1;
+      gs.OutputTopology          = gs_prog_data->output_topology;
+      gs.VertexURBEntryReadLength = gs_prog_data->base.urb_read_length;
+      gs.ControlDataFormat       = gs_prog_data->control_data_format;
+      gs.ControlDataHeaderSize   = gs_prog_data->control_data_header_size_hwords;
+      gs.InstanceControl         = MAX2(gs_prog_data->invocations, 1) - 1;
+#if GEN_GEN >= 8 || GEN_IS_HASWELL
+      gs.ReorderMode             = TRAILING;
+#else
+      gs.ReorderEnable           = true;
+#endif
+
+#if GEN_GEN >= 8
+      gs.ExpectedVertexCount     = gs_prog_data->vertices_in;
+      gs.StaticOutput            = gs_prog_data->static_vertex_count >= 0;
+      gs.StaticOutputVertexCount = gs_prog_data->static_vertex_count >= 0 ?
+                                   gs_prog_data->static_vertex_count : 0;
+#endif
+
+      gs.VertexURBEntryReadOffset = 0;
+      gs.VertexURBEntryReadLength = gs_prog_data->base.urb_read_length;
+      gs.DispatchGRFStartRegisterForURBData =
+         gs_prog_data->base.base.dispatch_grf_start_reg;
+
+#if GEN_GEN >= 8
+      gs.VertexURBEntryOutputReadOffset = get_urb_output_offset();
+      gs.VertexURBEntryOutputLength     = get_urb_output_length(gs_bin);
+
+     /* TODO */
+      gs.UserClipDistanceClipTestEnableBitmask = 0;
+      gs.UserClipDistanceCullTestEnableBitmask = 0;
+#endif
+
+      gs.PerThreadScratchSpace   = get_scratch_space(gs_bin);
+      gs.ScratchSpaceBasePointer =
+         get_scratch_address(pipeline, MESA_SHADER_GEOMETRY, gs_bin);
+   }
+}
+
 #endif /* GENX_PIPELINE_UTIL_H */

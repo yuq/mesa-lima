@@ -105,53 +105,7 @@ genX(graphics_pipeline_create)(
 #endif
 
    emit_3dstate_vs(pipeline);
-
-   const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
-
-   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_GEOMETRY)) {
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs);
-   } else {
-      const struct anv_shader_bin *gs_bin =
-         pipeline->shaders[MESA_SHADER_GEOMETRY];
-
-      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_GS), gs) {
-         gs.KernelStartPointer         = gs_bin->kernel.offset;
-
-         gs.ScratchSpaceBasePointer = (struct anv_address) {
-            .bo = anv_scratch_pool_alloc(device, &device->scratch_pool,
-                                         MESA_SHADER_GEOMETRY,
-                                         gs_prog_data->base.base.total_scratch),
-            .offset = 0,
-         };
-         gs.PerThreadScratchSpace      = scratch_space(&gs_prog_data->base.base);
-
-         gs.OutputVertexSize           = gs_prog_data->output_vertex_size_hwords * 2 - 1;
-         gs.OutputTopology             = gs_prog_data->output_topology;
-         gs.VertexURBEntryReadLength   = gs_prog_data->base.urb_read_length;
-         gs.IncludeVertexHandles       = gs_prog_data->base.include_vue_handles;
-
-         gs.DispatchGRFStartRegisterForURBData =
-            gs_prog_data->base.base.dispatch_grf_start_reg;
-
-         gs.SamplerCount              = get_sampler_count(gs_bin);
-         gs.BindingTableEntryCount    = get_binding_table_entry_count(gs_bin);
-
-         gs.MaximumNumberofThreads     = devinfo->max_gs_threads - 1;
-         /* This in the next dword on HSW. */
-         gs.ControlDataFormat          = gs_prog_data->control_data_format;
-         gs.ControlDataHeaderSize      = gs_prog_data->control_data_header_size_hwords;
-         gs.InstanceControl            = MAX2(gs_prog_data->invocations, 1) - 1;
-         gs.DispatchMode               = gs_prog_data->base.dispatch_mode;
-         gs.StatisticsEnable           = true;
-         gs.IncludePrimitiveID         = gs_prog_data->include_primitive_id;
-#     if (GEN_IS_HASWELL)
-         gs.ReorderMode                = TRAILING;
-#     else
-         gs.ReorderEnable              = true;
-#     endif
-         gs.FunctionEnable             = true;
-      }
-   }
+   emit_3dstate_gs(pipeline);
 
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
