@@ -1383,20 +1383,21 @@ generate_clipmask(struct draw_llvm *llvm,
 
 /**
  * Returns boolean if any clipping has occurred
- * Used zero/non-zero i32 value to represent boolean
+ * Used zero/one i8 value to represent boolean
  */
 static LLVMValueRef
-clipmask_booli32(struct gallivm_state *gallivm,
-                 const struct lp_type vs_type,
-                 LLVMValueRef clipmask_bool_ptr,
-                 boolean edgeflag_in_clipmask)
+clipmask_booli8(struct gallivm_state *gallivm,
+                const struct lp_type vs_type,
+                LLVMValueRef clipmask_bool_ptr,
+                boolean edgeflag_in_clipmask)
 {
    LLVMBuilderRef builder = gallivm->builder;
-   LLVMTypeRef int32_type = LLVMInt32TypeInContext(gallivm->context);
+   LLVMTypeRef int8_type = LLVMInt8TypeInContext(gallivm->context);
    LLVMValueRef clipmask_bool = LLVMBuildLoad(builder, clipmask_bool_ptr, "");
-   LLVMValueRef ret = LLVMConstNull(int32_type);
-   LLVMValueRef temp;
-   int i;
+   LLVMValueRef ret;
+   struct lp_build_context bldivec;
+
+   lp_build_context_init(&bldivec, gallivm, lp_int_type(vs_type));
 
    /*
     * We need to invert the edgeflag bit from the clipmask here
@@ -1404,19 +1405,20 @@ clipmask_booli32(struct gallivm_state *gallivm,
     * and we (may) need it if edgeflag was 0).
     */
    if (edgeflag_in_clipmask) {
-      struct lp_type i32_type = lp_int_type(vs_type);
-      LLVMValueRef edge = lp_build_const_int_vec(gallivm, i32_type,
+      LLVMValueRef edge = lp_build_const_int_vec(gallivm, bldivec.type,
                                                  1LL << DRAW_TOTAL_CLIP_PLANES);
       clipmask_bool = LLVMBuildXor(builder, clipmask_bool, edge, "");
    }
+
    /*
-    * Could do much better with just cmp/movmskps.
+    * XXX: probably should mask off bits from the mask which come from
+    * vertices which were beyond the count (i.e. indices_valid for
+    * linear fetches, for elts ones we don't have the correct mask
+    * right now). Otherwise might run the pipeline for nothing,
+    * though everything should still work.
     */
-   for (i=0; i < vs_type.length; i++) {
-      temp = LLVMBuildExtractElement(builder, clipmask_bool,
-                                     lp_build_const_int32(gallivm, i) , "");
-      ret = LLVMBuildOr(builder, ret, temp, "");
-   }
+   ret = lp_build_any_true_range(&bldivec, vs_type.length, clipmask_bool);
+   ret = LLVMBuildZExt(builder, ret, int8_type, "");
    return ret;
 }
 
@@ -1641,7 +1643,8 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    arg_types[i++] = int32_type;                     /* vertex_id_offset */
    arg_types[i++] = int32_type;                     /* start_instance */
 
-   func_type = LLVMFunctionType(int32_type, arg_types, num_arg_types, 0);
+   func_type = LLVMFunctionType(LLVMInt8TypeInContext(context),
+                                arg_types, num_arg_types, 0);
 
    variant_func = LLVMAddFunction(gallivm->module, func_name, func_type);
 
@@ -2005,8 +2008,8 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    sampler->destroy(sampler);
 
    /* return clipping boolean value for function */
-   ret = clipmask_booli32(gallivm, vs_type, clipmask_bool_ptr,
-                          enable_cliptest && key->need_edgeflags);
+   ret = clipmask_booli8(gallivm, vs_type, clipmask_bool_ptr,
+                         enable_cliptest && key->need_edgeflags);
 
    LLVMBuildRet(builder, ret);
 

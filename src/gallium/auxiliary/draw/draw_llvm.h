@@ -261,7 +261,7 @@ enum {
 
 
 
-typedef int
+typedef boolean
 (*draw_jit_vert_func)(struct draw_jit_context *context,
                       struct vertex_header *io,
                       const struct draw_vertex_buffer vbuffers[PIPE_MAX_ATTRIBS],
@@ -274,7 +274,7 @@ typedef int
                       unsigned start_instance);
 
 
-typedef int
+typedef boolean
 (*draw_jit_vert_func_elts)(struct draw_jit_context *context,
                            struct vertex_header *io,
                            const struct draw_vertex_buffer vbuffers[PIPE_MAX_ATTRIBS],

@@ -353,7 +353,7 @@ llvm_pipeline_generic(struct draw_pt_middle_end *middle,
    const struct draw_prim_info *prim_info = in_prim_info;
    boolean free_prim_info = FALSE;
    unsigned opt = fpme->opt;
-   unsigned clipped = 0;
+   boolean clipped = 0;
 
    llvm_vert_info.count = fetch_info->count;
    llvm_vert_info.vertex_size = fpme->vertex_size;
