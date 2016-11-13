@@ -455,6 +455,7 @@ swr_create_vertex_elements_state(struct pipe_context *pipe,
    assert(num_elements <= PIPE_MAX_ATTRIBS);
    velems = CALLOC_STRUCT(swr_vertex_element_state);
    if (velems) {
+      velems->fsState.bVertexIDOffsetEnable = true;
       velems->fsState.numAttribs = num_elements;
       for (unsigned i = 0; i < num_elements; i++) {
          // XXX: we should do this keyed on the VS usage info
