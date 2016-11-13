@@ -1800,7 +1800,7 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
         union util_color uc;
         HRESULT hr;
         /* XXX: lock pRect and fix util_fill_rect */
-        hr = NineSurface9_LockRect(surf, &lock, NULL, 0);
+        hr = NineSurface9_LockRect(surf, &lock, NULL, pRect ? 0 : D3DLOCK_DISCARD);
         if (FAILED(hr))
             return hr;
         util_pack_color_ub(color >> 16, color >> 8, color >> 0, color >> 24,
