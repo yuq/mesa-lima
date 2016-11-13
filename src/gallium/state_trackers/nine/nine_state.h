@@ -530,6 +530,15 @@ void
 nine_context_blit(struct NineDevice9 *device,
                   struct pipe_blit_info *blit);
 
+void
+nine_context_clear_render_target(struct NineDevice9 *device,
+                                 struct NineSurface9 *surface,
+                                 D3DCOLOR color,
+                                 UINT x,
+                                 UINT y,
+                                 UINT width,
+                                 UINT height);
+
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type);
 

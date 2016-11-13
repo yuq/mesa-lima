@@ -55,9 +55,6 @@ NineSurface9_ctor( struct NineSurface9 *This,
                    D3DSURFACE_DESC *pDesc )
 {
     HRESULT hr;
-    union pipe_color_union rgba = {0};
-    struct pipe_surface *surf;
-    struct pipe_context *pipe;
     bool allocate = !pContainer && pDesc->Format != D3DFMT_NULL;
     D3DMULTISAMPLE_TYPE multisample_type;
 
@@ -192,12 +189,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
     }
 
     /* TODO: investigate what else exactly needs to be cleared */
-    if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET)) {
-        surf = NineSurface9_GetSurface(This, 0);
-        pipe = nine_context_get_pipe_acquire(pParams->device);
-        pipe->clear_render_target(pipe, surf, &rgba, 0, 0, pDesc->Width, pDesc->Height, false);
-        nine_context_get_pipe_release(pParams->device);
-    }
+    if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET))
+        nine_context_clear_render_target(pParams->device, This, 0, 0, 0, pDesc->Width, pDesc->Height);
 
     NineSurface9_Dump(This);
 
