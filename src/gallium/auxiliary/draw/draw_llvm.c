@@ -661,22 +661,23 @@ fetch_instanced(struct gallivm_state *gallivm,
                 LLVMValueRef vb_stride,
                 LLVMValueRef map_ptr,
                 LLVMValueRef buffer_size_adj,
-                LLVMValueRef ofbit,
                 LLVMValueRef *inputs,
                 LLVMValueRef index)
 {
-   LLVMValueRef zero = LLVMConstNull(LLVMInt32TypeInContext(gallivm->context));
+   LLVMTypeRef i32_t = LLVMInt32TypeInContext(gallivm->context);
+   LLVMTypeRef aosf_t, aosi_t;
+   LLVMValueRef zero = LLVMConstNull(i32_t);
    LLVMBuilderRef builder = gallivm->builder;
-   LLVMValueRef stride, buffer_overflowed, aos;
-   LLVMValueRef temp_ptr =
-      lp_build_alloca(gallivm,
-                      lp_build_vec_type(gallivm, lp_float32_vec4_type()), "");
-   struct lp_build_if_state if_ctx;
+   LLVMValueRef stride, buffer_overflowed, aos, index_valid;
+   LLVMValueRef ofbit = NULL;
    unsigned i;
+
+   aosf_t = lp_build_vec_type(gallivm, lp_float32_vec4_type());
+   aosi_t = lp_build_vec_type(gallivm, lp_int32_vec4_type());
 
    stride = lp_build_umul_overflow(gallivm, vb_stride, index, &ofbit);
 
-   buffer_overflowed = LLVMBuildICmp(builder, LLVMIntUGT,
+   buffer_overflowed = LLVMBuildICmp(builder, LLVMIntUGE,
                                      stride, buffer_size_adj,
                                      "buffer_overflowed");
    buffer_overflowed = LLVMBuildOr(builder, buffer_overflowed, ofbit, "");
@@ -686,28 +687,22 @@ fetch_instanced(struct gallivm_state *gallivm,
       lp_build_print_value(gallivm, "   buffer overflowed = ", buffer_overflowed);
    }
 
-   lp_build_if(&if_ctx, gallivm, buffer_overflowed);
-   {
-      LLVMValueRef val =
-         lp_build_const_vec(gallivm, lp_float32_vec4_type(), 0);
-      LLVMBuildStore(builder, val, temp_ptr);
-   }
-   lp_build_else(&if_ctx);
-   {
-      LLVMValueRef val;
+   index_valid = LLVMBuildNot(builder, buffer_overflowed, "");
+   index_valid = LLVMBuildSExt(builder, index_valid, i32_t, "");
+   stride = LLVMBuildAnd(builder, stride, index_valid, "");
 
-      val = lp_build_fetch_rgba_aos(gallivm,
-                                    format_desc,
-                                    lp_float32_vec4_type(),
-                                    FALSE,
-                                    map_ptr,
-                                    stride, zero, zero,
-                                    NULL);
-      LLVMBuildStore(builder, val, temp_ptr);
-   }
-   lp_build_endif(&if_ctx);
+   aos = lp_build_fetch_rgba_aos(gallivm,
+                                 format_desc,
+                                 lp_float32_vec4_type(),
+                                 FALSE,
+                                 map_ptr,
+                                 stride, zero, zero,
+                                 NULL);
 
-   aos = LLVMBuildLoad(builder, temp_ptr, "aos");
+   index_valid = lp_build_broadcast(gallivm, aosi_t, index_valid);
+   aos = LLVMBuildBitCast(builder, aos, aosi_t, "");
+   aos = LLVMBuildAnd(builder, aos, index_valid, "");
+   aos = LLVMBuildBitCast(builder, aos, aosf_t, "");
 
    for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
       LLVMValueRef index = lp_build_const_int32(gallivm, i);
@@ -758,7 +753,6 @@ fetch_vector(struct gallivm_state *gallivm,
              LLVMValueRef vb_stride,
              LLVMValueRef map_ptr,
              LLVMValueRef buffer_size_adj,
-             LLVMValueRef ofmask,
              LLVMValueRef *inputs,
              LLVMValueRef indices)
 {
@@ -786,12 +780,11 @@ fetch_vector(struct gallivm_state *gallivm,
     */
    offset = lp_build_mul_32_lohi_cpu(&blduivec, vb_stride, indices, &tmp);
 
-   tmp = lp_build_compare(gallivm, blduivec.type,
-                          PIPE_FUNC_EQUAL, tmp, blduivec.zero);
-   valid_mask = lp_build_andnot(&blduivec, tmp, ofmask);
+   valid_mask = lp_build_compare(gallivm, blduivec.type,
+                                 PIPE_FUNC_EQUAL, tmp, blduivec.zero);
 
    tmp = lp_build_compare(gallivm, blduivec.type,
-                          PIPE_FUNC_LEQUAL, offset, buffer_size_adj);
+                          PIPE_FUNC_LESS, offset, buffer_size_adj);
    valid_mask = LLVMBuildAnd(builder, tmp, valid_mask, "");
 
    /* not valid elements use offset 0 */
@@ -1581,7 +1574,6 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
    LLVMValueRef vb_stride[PIPE_MAX_ATTRIBS];
    LLVMValueRef map_ptr[PIPE_MAX_ATTRIBS];
    LLVMValueRef buffer_size_adj[PIPE_MAX_ATTRIBS];
-   LLVMValueRef ofmask[PIPE_MAX_ATTRIBS];
    LLVMValueRef instance_index[PIPE_MAX_ATTRIBS];
    LLVMValueRef fake_buf_ptr, fake_buf;
 
@@ -1762,9 +1754,14 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
          buffer_size = draw_jit_dvbuffer_size(gallivm, vbuffer_ptr);
 
          ofbit = NULL;
+         /*
+          * We'll set buffer_size_adj to zero if we have of, so it will
+          * always overflow later automatically without having to keep ofbit.
+          */
          buf_offset = lp_build_uadd_overflow(gallivm, vb_buffer_offset,
                                              src_offset, &ofbit);
-         buffer_size_adj[j] = lp_build_usub_overflow(gallivm, buffer_size, bsize,
+         tmp = lp_build_sub(&bld, bsize, bld.one);
+         buffer_size_adj[j] = lp_build_usub_overflow(gallivm, buffer_size, tmp,
                                                      &ofbit);
          buffer_size_adj[j] = lp_build_usub_overflow(gallivm, buffer_size_adj[j],
                                                      buf_offset, &ofbit);
@@ -1776,13 +1773,14 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
           * inside the main loop.
           * (Alternatively, could have control flow per vector skipping fetch
           * if ofbit is true.)
-          * For instanced elements, we keep the control flow for now as it's a
-          * scalar fetch, making things easier.
           */
          if (velem->instance_divisor) {
-            /* Index is equal to the start instance plus the number of current
+            /*
+             * Index is equal to the start instance plus the number of current
              * instance divided by the divisor. In this case we compute it as:
-             * index = start_instance + (instance_id  / divisor)
+             * index = start_instance + (instance_id  / divisor).
+             * Note we could actually do the fetch here, outside the loop -
+             * it's all constant, hopefully llvm recognizes this.
              */
             LLVMValueRef current_instance;
             current_instance = LLVMBuildUDiv(builder, system_values.instance_id,
@@ -1791,31 +1789,25 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
                                              "instance_divisor");
             instance_index[j] = lp_build_uadd_overflow(gallivm, start_instance,
                                                        current_instance, &ofbit);
+         }
+
+         buffer_size_adj[j] = LLVMBuildSelect(builder, ofbit, bld.zero,
+                                              buffer_size_adj[j], "");
+
+         temp_ptr = lp_build_alloca_undef(gallivm,
+                       LLVMPointerType(LLVMInt8TypeInContext(context), 0), "");
+
+         lp_build_if(&if_ctx, gallivm, ofbit);
+         {
+            LLVMBuildStore(builder, fake_buf_ptr, temp_ptr);
+         }
+         lp_build_else(&if_ctx);
+         {
             map_ptr[j] = LLVMBuildGEP(builder, map_ptr[j], &buf_offset, 1, "");
-
-            /* This is a scalar fetch, just keep the of bit */
-            ofmask[j] = ofbit;
+            LLVMBuildStore(builder, map_ptr[j], temp_ptr);
          }
-         else {
-            temp_ptr = lp_build_alloca_undef(gallivm,
-                          LLVMPointerType(LLVMInt8TypeInContext(context), 0), "");
-
-            lp_build_if(&if_ctx, gallivm, ofbit);
-            {
-               LLVMBuildStore(builder, fake_buf_ptr, temp_ptr);
-            }
-            lp_build_else(&if_ctx);
-            {
-               map_ptr[j] = LLVMBuildGEP(builder, map_ptr[j], &buf_offset, 1, "");
-               LLVMBuildStore(builder, map_ptr[j], temp_ptr);
-            }
-            lp_build_endif(&if_ctx);
-            map_ptr[j] = LLVMBuildLoad(builder, temp_ptr, "map_ptr");
-
-            /* Expand to vector mask */
-            ofmask[j] = LLVMBuildSExt(builder, ofbit, int32_type, "");
-            ofmask[j] = lp_build_broadcast_scalar(&blduivec, ofmask[j]);
-         }
+         lp_build_endif(&if_ctx);
+         map_ptr[j] = LLVMBuildLoad(builder, temp_ptr, "map_ptr");
 
          if (0) {
             lp_build_printf(gallivm, "velem %d, vbuf index = %u, vb_stride = %u\n",
@@ -1917,13 +1909,13 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
          else if (velem->instance_divisor) {
             fetch_instanced(gallivm, format_desc, vs_type,
                             vb_stride[j], map_ptr[j],
-                            buffer_size_adj[j], ofmask[j],
+                            buffer_size_adj[j],
                             inputs[j], instance_index[j]);
          }
          else {
             fetch_vector(gallivm, format_desc, vs_type,
                          vb_stride[j], map_ptr[j],
-                         buffer_size_adj[j], ofmask[j],
+                         buffer_size_adj[j],
                          inputs[j], true_index_array);
          }
       }
