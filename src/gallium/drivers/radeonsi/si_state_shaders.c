@@ -626,7 +626,7 @@ static unsigned si_get_ps_num_interp(struct si_shader *ps)
 	unsigned num_colors = !!(info->colors_read & 0x0f) +
 			      !!(info->colors_read & 0xf0);
 	unsigned num_interp = ps->selector->info.num_inputs +
-			      (ps->key.ps.prolog.color_two_side ? num_colors : 0);
+			      (ps->key.part.ps.prolog.color_two_side ? num_colors : 0);
 
 	assert(num_interp <= 32);
 	return MIN2(num_interp, 32);
@@ -634,7 +634,7 @@ static unsigned si_get_ps_num_interp(struct si_shader *ps)
 
 static unsigned si_get_spi_shader_col_format(struct si_shader *shader)
 {
-	unsigned value = shader->key.ps.epilog.spi_shader_col_format;
+	unsigned value = shader->key.part.ps.epilog.spi_shader_col_format;
 	unsigned i, num_targets = (util_last_bit(value) + 3) / 4;
 
 	/* If the i-th target format is set, all previous target formats must
@@ -705,30 +705,30 @@ static void si_shader_ps(struct si_shader *shader)
 	       G_0286CC_PERSP_PULL_MODEL_ENA(input_ena));
 
 	/* Validate interpolation optimization flags (read as implications). */
-	assert(!shader->key.ps.prolog.bc_optimize_for_persp ||
+	assert(!shader->key.part.ps.prolog.bc_optimize_for_persp ||
 	       (G_0286CC_PERSP_CENTER_ENA(input_ena) &&
 		G_0286CC_PERSP_CENTROID_ENA(input_ena)));
-	assert(!shader->key.ps.prolog.bc_optimize_for_linear ||
+	assert(!shader->key.part.ps.prolog.bc_optimize_for_linear ||
 	       (G_0286CC_LINEAR_CENTER_ENA(input_ena) &&
 		G_0286CC_LINEAR_CENTROID_ENA(input_ena)));
-	assert(!shader->key.ps.prolog.force_persp_center_interp ||
+	assert(!shader->key.part.ps.prolog.force_persp_center_interp ||
 	       (!G_0286CC_PERSP_SAMPLE_ENA(input_ena) &&
 		!G_0286CC_PERSP_CENTROID_ENA(input_ena)));
-	assert(!shader->key.ps.prolog.force_linear_center_interp ||
+	assert(!shader->key.part.ps.prolog.force_linear_center_interp ||
 	       (!G_0286CC_LINEAR_SAMPLE_ENA(input_ena) &&
 		!G_0286CC_LINEAR_CENTROID_ENA(input_ena)));
-	assert(!shader->key.ps.prolog.force_persp_sample_interp ||
+	assert(!shader->key.part.ps.prolog.force_persp_sample_interp ||
 	       (!G_0286CC_PERSP_CENTER_ENA(input_ena) &&
 		!G_0286CC_PERSP_CENTROID_ENA(input_ena)));
-	assert(!shader->key.ps.prolog.force_linear_sample_interp ||
+	assert(!shader->key.part.ps.prolog.force_linear_sample_interp ||
 	       (!G_0286CC_LINEAR_CENTER_ENA(input_ena) &&
 		!G_0286CC_LINEAR_CENTROID_ENA(input_ena)));
 
 	/* Validate cases when the optimizations are off (read as implications). */
-	assert(shader->key.ps.prolog.bc_optimize_for_persp ||
+	assert(shader->key.part.ps.prolog.bc_optimize_for_persp ||
 	       !G_0286CC_PERSP_CENTER_ENA(input_ena) ||
 	       !G_0286CC_PERSP_CENTROID_ENA(input_ena));
-	assert(shader->key.ps.prolog.bc_optimize_for_linear ||
+	assert(shader->key.part.ps.prolog.bc_optimize_for_linear ||
 	       !G_0286CC_LINEAR_CENTER_ENA(input_ena) ||
 	       !G_0286CC_LINEAR_CENTROID_ENA(input_ena));
 
@@ -818,9 +818,9 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 {
 	switch (shader->selector->type) {
 	case PIPE_SHADER_VERTEX:
-		if (shader->key.vs.as_ls)
+		if (shader->key.as_ls)
 			si_shader_ls(shader);
-		else if (shader->key.vs.as_es)
+		else if (shader->key.as_es)
 			si_shader_es(sscreen, shader);
 		else
 			si_shader_vs(sscreen, shader, NULL);
@@ -829,7 +829,7 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 		si_shader_hs(shader);
 		break;
 	case PIPE_SHADER_TESS_EVAL:
-		if (shader->key.tes.as_es)
+		if (shader->key.as_es)
 			si_shader_es(sscreen, shader);
 		else
 			si_shader_vs(sscreen, shader, NULL);
@@ -857,7 +857,7 @@ static unsigned si_get_alpha_test_func(struct si_context *sctx)
 /* Compute the key for the hw shader variant */
 static inline void si_shader_selector_key(struct pipe_context *ctx,
 					  struct si_shader_selector *sel,
-					  union si_shader_key *key)
+					  struct si_shader_key *key)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 	unsigned i;
@@ -870,37 +870,37 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			unsigned count = MIN2(sel->info.num_inputs,
 					      sctx->vertex_elements->count);
 			for (i = 0; i < count; ++i)
-				key->vs.prolog.instance_divisors[i] =
+				key->part.vs.prolog.instance_divisors[i] =
 					sctx->vertex_elements->elements[i].instance_divisor;
 
-			key->vs.fix_fetch =
+			key->mono.vs.fix_fetch =
 				sctx->vertex_elements->fix_fetch &
 				u_bit_consecutive(0, 2 * count);
 		}
 		if (sctx->tes_shader.cso)
-			key->vs.as_ls = 1;
+			key->as_ls = 1;
 		else if (sctx->gs_shader.cso)
-			key->vs.as_es = 1;
+			key->as_es = 1;
 
 		if (!sctx->gs_shader.cso && sctx->ps_shader.cso &&
 		    sctx->ps_shader.cso->info.uses_primid)
-			key->vs.epilog.export_prim_id = 1;
+			key->part.vs.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_TESS_CTRL:
-		key->tcs.epilog.prim_mode =
+		key->part.tcs.epilog.prim_mode =
 			sctx->tes_shader.cso->info.properties[TGSI_PROPERTY_TES_PRIM_MODE];
 
 		if (sel == sctx->fixed_func_tcs_shader.cso)
-			key->tcs.epilog.inputs_to_copy = sctx->vs_shader.cso->outputs_written;
+			key->mono.tcs.inputs_to_copy = sctx->vs_shader.cso->outputs_written;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
-			key->tes.as_es = 1;
+			key->as_es = 1;
 		else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
-			key->tes.epilog.export_prim_id = 1;
+			key->part.tes.epilog.export_prim_id = 1;
 		break;
 	case PIPE_SHADER_GEOMETRY:
-		key->gs.prolog.tri_strip_adj_fix = sctx->gs_tri_strip_adj_fix;
+		key->part.gs.prolog.tri_strip_adj_fix = sctx->gs_tri_strip_adj_fix;
 		break;
 	case PIPE_SHADER_FRAGMENT: {
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
@@ -908,13 +908,13 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 		if (sel->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
 		    sel->info.colors_written == 0x1)
-			key->ps.epilog.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
+			key->part.ps.epilog.last_cbuf = MAX2(sctx->framebuffer.state.nr_cbufs, 1) - 1;
 
 		if (blend) {
 			/* Select the shader color format based on whether
 			 * blending or alpha are needed.
 			 */
-			key->ps.epilog.spi_shader_col_format =
+			key->part.ps.epilog.spi_shader_col_format =
 				(blend->blend_enable_4bit & blend->need_src_alpha_4bit &
 				 sctx->framebuffer.spi_shader_col_format_blend_alpha) |
 				(blend->blend_enable_4bit & ~blend->need_src_alpha_4bit &
@@ -928,29 +928,29 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			 * the same format as the first output.
 			 */
 			if (blend->dual_src_blend)
-				key->ps.epilog.spi_shader_col_format |=
-					(key->ps.epilog.spi_shader_col_format & 0xf) << 4;
+				key->part.ps.epilog.spi_shader_col_format |=
+					(key->part.ps.epilog.spi_shader_col_format & 0xf) << 4;
 		} else
-			key->ps.epilog.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
+			key->part.ps.epilog.spi_shader_col_format = sctx->framebuffer.spi_shader_col_format;
 
 		/* If alpha-to-coverage is enabled, we have to export alpha
 		 * even if there is no color buffer.
 		 */
-		if (!(key->ps.epilog.spi_shader_col_format & 0xf) &&
+		if (!(key->part.ps.epilog.spi_shader_col_format & 0xf) &&
 		    blend && blend->alpha_to_coverage)
-			key->ps.epilog.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
+			key->part.ps.epilog.spi_shader_col_format |= V_028710_SPI_SHADER_32_AR;
 
 		/* On SI and CIK except Hawaii, the CB doesn't clamp outputs
 		 * to the range supported by the type if a channel has less
 		 * than 16 bits and the export format is 16_ABGR.
 		 */
 		if (sctx->b.chip_class <= CIK && sctx->b.family != CHIP_HAWAII)
-			key->ps.epilog.color_is_int8 = sctx->framebuffer.color_is_int8;
+			key->part.ps.epilog.color_is_int8 = sctx->framebuffer.color_is_int8;
 
 		/* Disable unwritten outputs (if WRITE_ALL_CBUFS isn't enabled). */
-		if (!key->ps.epilog.last_cbuf) {
-			key->ps.epilog.spi_shader_col_format &= sel->colors_written_4bit;
-			key->ps.epilog.color_is_int8 &= sel->info.colors_written;
+		if (!key->part.ps.epilog.last_cbuf) {
+			key->part.ps.epilog.spi_shader_col_format &= sel->colors_written_4bit;
+			key->part.ps.epilog.color_is_int8 &= sel->info.colors_written;
 		}
 
 		if (rs) {
@@ -959,55 +959,55 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				       sctx->current_rast_prim >= PIPE_PRIM_TRIANGLES_ADJACENCY;
 			bool is_line = !is_poly && sctx->current_rast_prim != PIPE_PRIM_POINTS;
 
-			key->ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
-			key->ps.prolog.flatshade_colors = rs->flatshade && sel->info.colors_read;
+			key->part.ps.prolog.color_two_side = rs->two_side && sel->info.colors_read;
+			key->part.ps.prolog.flatshade_colors = rs->flatshade && sel->info.colors_read;
 
 			if (sctx->queued.named.blend) {
-				key->ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
+				key->part.ps.epilog.alpha_to_one = sctx->queued.named.blend->alpha_to_one &&
 							      rs->multisample_enable;
 			}
 
-			key->ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;
-			key->ps.epilog.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
+			key->part.ps.prolog.poly_stipple = rs->poly_stipple_enable && is_poly;
+			key->part.ps.epilog.poly_line_smoothing = ((is_poly && rs->poly_smooth) ||
 							      (is_line && rs->line_smooth)) &&
 							     sctx->framebuffer.nr_samples <= 1;
-			key->ps.epilog.clamp_color = rs->clamp_fragment_color;
+			key->part.ps.epilog.clamp_color = rs->clamp_fragment_color;
 
 			if (rs->force_persample_interp &&
 			    rs->multisample_enable &&
 			    sctx->framebuffer.nr_samples > 1 &&
 			    sctx->ps_iter_samples > 1) {
-				key->ps.prolog.force_persp_sample_interp =
+				key->part.ps.prolog.force_persp_sample_interp =
 					sel->info.uses_persp_center ||
 					sel->info.uses_persp_centroid;
 
-				key->ps.prolog.force_linear_sample_interp =
+				key->part.ps.prolog.force_linear_sample_interp =
 					sel->info.uses_linear_center ||
 					sel->info.uses_linear_centroid;
 			} else if (rs->multisample_enable &&
 				   sctx->framebuffer.nr_samples > 1) {
-				key->ps.prolog.bc_optimize_for_persp =
+				key->part.ps.prolog.bc_optimize_for_persp =
 					sel->info.uses_persp_center &&
 					sel->info.uses_persp_centroid;
-				key->ps.prolog.bc_optimize_for_linear =
+				key->part.ps.prolog.bc_optimize_for_linear =
 					sel->info.uses_linear_center &&
 					sel->info.uses_linear_centroid;
 			} else {
 				/* Make sure SPI doesn't compute more than 1 pair
 				 * of (i,j), which is the optimization here. */
-				key->ps.prolog.force_persp_center_interp =
+				key->part.ps.prolog.force_persp_center_interp =
 					sel->info.uses_persp_center +
 					sel->info.uses_persp_centroid +
 					sel->info.uses_persp_sample > 1;
 
-				key->ps.prolog.force_linear_center_interp =
+				key->part.ps.prolog.force_linear_center_interp =
 					sel->info.uses_linear_center +
 					sel->info.uses_linear_centroid +
 					sel->info.uses_linear_sample > 1;
 			}
 		}
 
-		key->ps.epilog.alpha_func = si_get_alpha_test_func(sctx);
+		key->part.ps.epilog.alpha_func = si_get_alpha_test_func(sctx);
 		break;
 	}
 	default:
@@ -1018,7 +1018,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 /* Select the hw shader variant depending on the current state. */
 static int si_shader_select_with_key(struct si_screen *sscreen,
 				     struct si_shader_ctx_state *state,
-				     union si_shader_key *key,
+				     struct si_shader_key *key,
 				     LLVMTargetMachineRef tm,
 				     struct pipe_debug_callback *debug,
 				     bool wait,
@@ -1101,7 +1101,7 @@ static int si_shader_select(struct pipe_context *ctx,
 			    struct si_shader_ctx_state *state)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
-	union si_shader_key key;
+	struct si_shader_key key;
 
 	si_shader_selector_key(ctx, state->cso, &key);
 	return si_shader_select_with_key(sctx->screen, state, &key,
@@ -1110,7 +1110,7 @@ static int si_shader_select(struct pipe_context *ctx,
 }
 
 static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
-					  union si_shader_key *key)
+					  struct si_shader_key *key)
 {
 	unsigned next_shader = info->properties[TGSI_PROPERTY_NEXT_SHADER];
 
@@ -1118,11 +1118,11 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 	case PIPE_SHADER_VERTEX:
 		switch (next_shader) {
 		case PIPE_SHADER_GEOMETRY:
-			key->vs.as_es = 1;
+			key->as_es = 1;
 			break;
 		case PIPE_SHADER_TESS_CTRL:
 		case PIPE_SHADER_TESS_EVAL:
-			key->vs.as_ls = 1;
+			key->as_ls = 1;
 			break;
 		default:
 			/* If POSITION isn't written, it can't be a HW VS.
@@ -1136,7 +1136,7 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 
 	case PIPE_SHADER_TESS_EVAL:
 		if (next_shader == PIPE_SHADER_GEOMETRY)
-			key->tes.as_es = 1;
+			key->as_es = 1;
 		break;
 	}
 }
@@ -1214,7 +1214,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	/* Pre-compilation. */
 	if (sscreen->b.debug_flags & DBG_PRECOMPILE) {
 		struct si_shader_ctx_state state = {sel};
-		union si_shader_key key;
+		struct si_shader_key key;
 
 		memset(&key, 0, sizeof(key));
 		si_parse_next_shader_property(&sel->info, &key);
@@ -1224,19 +1224,19 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		 */
 		switch (sel->type) {
 		case PIPE_SHADER_TESS_CTRL:
-			key.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
+			key.part.tcs.epilog.prim_mode = PIPE_PRIM_TRIANGLES;
 			break;
 		case PIPE_SHADER_FRAGMENT:
-			key.ps.prolog.bc_optimize_for_persp =
+			key.part.ps.prolog.bc_optimize_for_persp =
 				sel->info.uses_persp_center &&
 				sel->info.uses_persp_centroid;
-			key.ps.prolog.bc_optimize_for_linear =
+			key.part.ps.prolog.bc_optimize_for_linear =
 				sel->info.uses_linear_center &&
 				sel->info.uses_linear_centroid;
-			key.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
+			key.part.ps.epilog.alpha_func = PIPE_FUNC_ALWAYS;
 			for (i = 0; i < 8; i++)
 				if (sel->info.colors_written & (1 << i))
-					key.ps.epilog.spi_shader_col_format |=
+					key.part.ps.epilog.spi_shader_col_format |=
 						V_028710_SPI_SHADER_FP16_ABGR << (i * 4);
 			break;
 		}
@@ -1521,9 +1521,9 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 	if (shader->pm4) {
 		switch (shader->selector->type) {
 		case PIPE_SHADER_VERTEX:
-			if (shader->key.vs.as_ls)
+			if (shader->key.as_ls)
 				si_pm4_delete_state(sctx, ls, shader->pm4);
-			else if (shader->key.vs.as_es)
+			else if (shader->key.as_es)
 				si_pm4_delete_state(sctx, es, shader->pm4);
 			else
 				si_pm4_delete_state(sctx, vs, shader->pm4);
@@ -1532,7 +1532,7 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 			si_pm4_delete_state(sctx, hs, shader->pm4);
 			break;
 		case PIPE_SHADER_TESS_EVAL:
-			if (shader->key.tes.as_es)
+			if (shader->key.as_es)
 				si_pm4_delete_state(sctx, es, shader->pm4);
 			else
 				si_pm4_delete_state(sctx, vs, shader->pm4);
@@ -1673,7 +1673,7 @@ static void si_emit_spi_map(struct si_context *sctx, struct r600_atom *atom)
 		}
 	}
 
-	if (ps->key.ps.prolog.color_two_side) {
+	if (ps->key.part.ps.prolog.color_two_side) {
 		unsigned bcol = TGSI_SEMANTIC_BCOLOR;
 
 		for (i = 0; i < 2; i++) {
@@ -2281,8 +2281,8 @@ bool si_update_shaders(struct si_context *sctx)
 			si_mark_atom_dirty(sctx, &sctx->db_render_state);
 		}
 
-		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.ps.epilog.poly_line_smoothing) {
-			sctx->smoothing_enabled = sctx->ps_shader.current->key.ps.epilog.poly_line_smoothing;
+		if (sctx->smoothing_enabled != sctx->ps_shader.current->key.part.ps.epilog.poly_line_smoothing) {
+			sctx->smoothing_enabled = sctx->ps_shader.current->key.part.ps.epilog.poly_line_smoothing;
 			si_mark_atom_dirty(sctx, &sctx->msaa_config);
 
 			if (sctx->b.chip_class == SI)

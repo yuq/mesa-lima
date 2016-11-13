@@ -68,7 +68,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 				 struct lp_build_tgsi_context *bld_base,
 				 struct lp_build_emit_data *emit_data);
 
-static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
+static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 			       FILE *f);
 
 static void si_build_vs_prolog_function(struct si_shader_context *ctx,
@@ -416,7 +416,7 @@ static void declare_input_vs(
 						    input, llvm_chan, "");
 	}
 
-	fix_fetch = (ctx->shader->key.vs.fix_fetch >> (2 * input_index)) & 3;
+	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (2 * input_index)) & 3;
 	if (fix_fetch) {
 		/* The hardware returns an unsigned value; convert it to a
 		 * signed one.
@@ -1252,7 +1252,7 @@ static void interp_fs_input(struct si_shader_context *ctx,
 	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
 
 	if (semantic_name == TGSI_SEMANTIC_COLOR &&
-	    ctx->shader->key.ps.prolog.color_two_side) {
+	    ctx->shader->key.part.ps.prolog.color_two_side) {
 		LLVMValueRef args[4];
 		LLVMValueRef is_face_positive;
 		LLVMValueRef back_attr_number;
@@ -1360,7 +1360,7 @@ static void declare_input_fs(
 
 	if (decl->Semantic.Name == TGSI_SEMANTIC_COLOR &&
 	    decl->Interp.Interpolate == TGSI_INTERPOLATE_COLOR &&
-	    ctx->shader->key.ps.prolog.flatshade_colors)
+	    ctx->shader->key.part.ps.prolog.flatshade_colors)
 		interp_param = NULL; /* load the constant color */
 
 	interp_fs_input(ctx, input_index, decl->Semantic.Name,
@@ -1832,13 +1832,13 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	args[3] = lp_build_const_int32(base->gallivm, target);
 
 	if (ctx->type == PIPE_SHADER_FRAGMENT) {
-		const union si_shader_key *key = &ctx->shader->key;
-		unsigned col_formats = key->ps.epilog.spi_shader_col_format;
+		const struct si_shader_key *key = &ctx->shader->key;
+		unsigned col_formats = key->part.ps.epilog.spi_shader_col_format;
 		int cbuf = target - V_008DFC_SQ_EXP_MRT;
 
 		assert(cbuf >= 0 && cbuf < 8);
 		spi_shader_col_format = (col_formats >> (cbuf * 4)) & 0xf;
-		is_int8 = (key->ps.epilog.color_is_int8 >> cbuf) & 0x1;
+		is_int8 = (key->part.ps.epilog.color_is_int8 >> cbuf) & 0x1;
 	}
 
 	args[4] = uint->zero; /* COMPR flag */
@@ -1991,13 +1991,13 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 
-	if (ctx->shader->key.ps.epilog.alpha_func != PIPE_FUNC_NEVER) {
+	if (ctx->shader->key.part.ps.epilog.alpha_func != PIPE_FUNC_NEVER) {
 		LLVMValueRef alpha_ref = LLVMGetParam(ctx->main_fn,
 				SI_PARAM_ALPHA_REF);
 
 		LLVMValueRef alpha_pass =
 			lp_build_cmp(&bld_base->base,
-				     ctx->shader->key.ps.epilog.alpha_func,
+				     ctx->shader->key.part.ps.epilog.alpha_func,
 				     alpha, alpha_ref);
 		LLVMValueRef arg =
 			lp_build_select(&bld_base->base,
@@ -2440,7 +2440,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	lds_base = get_tcs_in_current_patch_offset(ctx);
 	lds_base = LLVMBuildAdd(gallivm->builder, lds_base, lds_vertex_offset, "");
 
-	inputs = ctx->shader->key.tcs.epilog.inputs_to_copy;
+	inputs = ctx->shader->key.mono.tcs.inputs_to_copy;
 	while (inputs) {
 		unsigned i = u_bit_scan64(&inputs);
 
@@ -2487,7 +2487,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  invocation_id, bld_base->uint_bld.zero, ""));
 
 	/* Determine the layout of one tess factor element in the buffer. */
-	switch (shader->key.tcs.epilog.prim_mode) {
+	switch (shader->key.part.tcs.epilog.prim_mode) {
 	case PIPE_PRIM_LINES:
 		stride = 2; /* 2 dwords, 1 vec2 store */
 		outer_comps = 2;
@@ -2874,31 +2874,31 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 	int i;
 
 	/* Clamp color */
-	if (ctx->shader->key.ps.epilog.clamp_color)
+	if (ctx->shader->key.part.ps.epilog.clamp_color)
 		for (i = 0; i < 4; i++)
 			color[i] = si_llvm_saturate(bld_base, color[i]);
 
 	/* Alpha to one */
-	if (ctx->shader->key.ps.epilog.alpha_to_one)
+	if (ctx->shader->key.part.ps.epilog.alpha_to_one)
 		color[3] = base->one;
 
 	/* Alpha test */
 	if (index == 0 &&
-	    ctx->shader->key.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS)
+	    ctx->shader->key.part.ps.epilog.alpha_func != PIPE_FUNC_ALWAYS)
 		si_alpha_test(bld_base, color[3]);
 
 	/* Line & polygon smoothing */
-	if (ctx->shader->key.ps.epilog.poly_line_smoothing)
+	if (ctx->shader->key.part.ps.epilog.poly_line_smoothing)
 		color[3] = si_scale_alpha_by_sample_mask(bld_base, color[3],
 							 samplemask_param);
 
 	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
-	if (ctx->shader->key.ps.epilog.last_cbuf > 0) {
+	if (ctx->shader->key.part.ps.epilog.last_cbuf > 0) {
 		LLVMValueRef args[8][9];
 		int c, last = -1;
 
 		/* Get the export arguments, also find out what the last one is. */
-		for (c = 0; c <= ctx->shader->key.ps.epilog.last_cbuf; c++) {
+		for (c = 0; c <= ctx->shader->key.part.ps.epilog.last_cbuf; c++) {
 			si_llvm_init_export_args(bld_base, color,
 						 V_008DFC_SQ_EXP_MRT + c, args[c]);
 			if (args[c][0] != bld_base->uint_bld.zero)
@@ -2906,7 +2906,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 		}
 
 		/* Emit all exports. */
-		for (c = 0; c <= ctx->shader->key.ps.epilog.last_cbuf; c++) {
+		for (c = 0; c <= ctx->shader->key.part.ps.epilog.last_cbuf; c++) {
 			if (is_last && last == c) {
 				args[c][1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
 				args[c][2] = bld_base->uint_bld.one; /* DONE bit */
@@ -5347,9 +5347,9 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_DRAWID] = ctx->i32;
 		num_params = SI_PARAM_DRAWID+1;
 
-		if (shader->key.vs.as_es) {
+		if (shader->key.as_es) {
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
-		} else if (shader->key.vs.as_ls) {
+		} else if (shader->key.as_ls) {
 			params[SI_PARAM_LS_OUT_LAYOUT] = ctx->i32;
 			num_params = SI_PARAM_LS_OUT_LAYOUT+1;
 		} else {
@@ -5383,7 +5383,7 @@ static void create_function(struct si_shader_context *ctx)
 			num_prolog_vgprs += shader->selector->info.num_inputs;
 
 			/* PrimitiveID output. */
-			if (!shader->key.vs.as_es && !shader->key.vs.as_ls)
+			if (!shader->key.as_es && !shader->key.as_ls)
 				for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
 					returns[num_returns++] = ctx->f32;
 		}
@@ -5417,7 +5417,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[SI_PARAM_TCS_OFFCHIP_LAYOUT] = ctx->i32;
 		num_params = SI_PARAM_TCS_OFFCHIP_LAYOUT+1;
 
-		if (shader->key.tes.as_es) {
+		if (shader->key.as_es) {
 			params[ctx->param_oc_lds = num_params++] = ctx->i32;
 			params[ctx->param_tess_offchip = num_params++] = ctx->i32;
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
@@ -5436,7 +5436,7 @@ static void create_function(struct si_shader_context *ctx)
 		params[ctx->param_tes_patch_id = num_params++] = ctx->i32;
 
 		/* PrimitiveID output. */
-		if (!shader->key.tes.as_es)
+		if (!shader->key.as_es)
 			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
 				returns[num_returns++] = ctx->f32;
 		break;
@@ -5590,7 +5590,7 @@ static void create_function(struct si_shader_context *ctx)
 						    "ddxy_lds",
 						    LOCAL_ADDR_SPACE);
 
-	if ((ctx->type == PIPE_SHADER_VERTEX && shader->key.vs.as_ls) ||
+	if ((ctx->type == PIPE_SHADER_VERTEX && shader->key.as_ls) ||
 	    ctx->type == PIPE_SHADER_TESS_CTRL ||
 	    ctx->type == PIPE_SHADER_TESS_EVAL)
 		declare_tess_lds(ctx);
@@ -5609,9 +5609,9 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 					    SI_PARAM_RW_BUFFERS);
 
 	if ((ctx->type == PIPE_SHADER_VERTEX &&
-	     ctx->shader->key.vs.as_es) ||
+	     ctx->shader->key.as_es) ||
 	    (ctx->type == PIPE_SHADER_TESS_EVAL &&
-	     ctx->shader->key.tes.as_es) ||
+	     ctx->shader->key.as_es) ||
 	    ctx->type == PIPE_SHADER_GEOMETRY) {
 		unsigned ring =
 			ctx->type == PIPE_SHADER_GEOMETRY ? SI_GS_RING_ESGS
@@ -5976,16 +5976,16 @@ static const char *si_get_shader_name(struct si_shader *shader,
 {
 	switch (processor) {
 	case PIPE_SHADER_VERTEX:
-		if (shader->key.vs.as_es)
+		if (shader->key.as_es)
 			return "Vertex Shader as ES";
-		else if (shader->key.vs.as_ls)
+		else if (shader->key.as_ls)
 			return "Vertex Shader as LS";
 		else
 			return "Vertex Shader as VS";
 	case PIPE_SHADER_TESS_CTRL:
 		return "Tessellation Control Shader";
 	case PIPE_SHADER_TESS_EVAL:
-		if (shader->key.tes.as_es)
+		if (shader->key.as_es)
 			return "Tessellation Evaluation Shader as ES";
 		else
 			return "Tessellation Evaluation Shader as VS";
@@ -6227,7 +6227,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	return shader;
 }
 
-static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
+static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 			       FILE *f)
 {
 	int i;
@@ -6236,23 +6236,23 @@ static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
 
 	switch (shader) {
 	case PIPE_SHADER_VERTEX:
-		fprintf(f, "  instance_divisors = {");
-		for (i = 0; i < ARRAY_SIZE(key->vs.prolog.instance_divisors); i++)
+		fprintf(f, "  part.vs.prolog.instance_divisors = {");
+		for (i = 0; i < ARRAY_SIZE(key->part.vs.prolog.instance_divisors); i++)
 			fprintf(f, !i ? "%u" : ", %u",
-				key->vs.prolog.instance_divisors[i]);
+				key->part.vs.prolog.instance_divisors[i]);
 		fprintf(f, "}\n");
-		fprintf(f, "  as_es = %u\n", key->vs.as_es);
-		fprintf(f, "  as_ls = %u\n", key->vs.as_ls);
-		fprintf(f, "  export_prim_id = %u\n", key->vs.epilog.export_prim_id);
+		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n", key->part.vs.epilog.export_prim_id);
+		fprintf(f, "  as_es = %u\n", key->as_es);
+		fprintf(f, "  as_ls = %u\n", key->as_ls);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
-		fprintf(f, "  prim_mode = %u\n", key->tcs.epilog.prim_mode);
+		fprintf(f, "  part.tcs.epilog.prim_mode = %u\n", key->part.tcs.epilog.prim_mode);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
-		fprintf(f, "  as_es = %u\n", key->tes.as_es);
-		fprintf(f, "  export_prim_id = %u\n", key->tes.epilog.export_prim_id);
+		fprintf(f, "  part.tes.epilog.export_prim_id = %u\n", key->part.tes.epilog.export_prim_id);
+		fprintf(f, "  as_es = %u\n", key->as_es);
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
@@ -6260,22 +6260,22 @@ static void si_dump_shader_key(unsigned shader, union si_shader_key *key,
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
-		fprintf(f, "  prolog.color_two_side = %u\n", key->ps.prolog.color_two_side);
-		fprintf(f, "  prolog.flatshade_colors = %u\n", key->ps.prolog.flatshade_colors);
-		fprintf(f, "  prolog.poly_stipple = %u\n", key->ps.prolog.poly_stipple);
-		fprintf(f, "  prolog.force_persp_sample_interp = %u\n", key->ps.prolog.force_persp_sample_interp);
-		fprintf(f, "  prolog.force_linear_sample_interp = %u\n", key->ps.prolog.force_linear_sample_interp);
-		fprintf(f, "  prolog.force_persp_center_interp = %u\n", key->ps.prolog.force_persp_center_interp);
-		fprintf(f, "  prolog.force_linear_center_interp = %u\n", key->ps.prolog.force_linear_center_interp);
-		fprintf(f, "  prolog.bc_optimize_for_persp = %u\n", key->ps.prolog.bc_optimize_for_persp);
-		fprintf(f, "  prolog.bc_optimize_for_linear = %u\n", key->ps.prolog.bc_optimize_for_linear);
-		fprintf(f, "  epilog.spi_shader_col_format = 0x%x\n", key->ps.epilog.spi_shader_col_format);
-		fprintf(f, "  epilog.color_is_int8 = 0x%X\n", key->ps.epilog.color_is_int8);
-		fprintf(f, "  epilog.last_cbuf = %u\n", key->ps.epilog.last_cbuf);
-		fprintf(f, "  epilog.alpha_func = %u\n", key->ps.epilog.alpha_func);
-		fprintf(f, "  epilog.alpha_to_one = %u\n", key->ps.epilog.alpha_to_one);
-		fprintf(f, "  epilog.poly_line_smoothing = %u\n", key->ps.epilog.poly_line_smoothing);
-		fprintf(f, "  epilog.clamp_color = %u\n", key->ps.epilog.clamp_color);
+		fprintf(f, "  part.ps.prolog.color_two_side = %u\n", key->part.ps.prolog.color_two_side);
+		fprintf(f, "  part.ps.prolog.flatshade_colors = %u\n", key->part.ps.prolog.flatshade_colors);
+		fprintf(f, "  part.ps.prolog.poly_stipple = %u\n", key->part.ps.prolog.poly_stipple);
+		fprintf(f, "  part.ps.prolog.force_persp_sample_interp = %u\n", key->part.ps.prolog.force_persp_sample_interp);
+		fprintf(f, "  part.ps.prolog.force_linear_sample_interp = %u\n", key->part.ps.prolog.force_linear_sample_interp);
+		fprintf(f, "  part.ps.prolog.force_persp_center_interp = %u\n", key->part.ps.prolog.force_persp_center_interp);
+		fprintf(f, "  part.ps.prolog.force_linear_center_interp = %u\n", key->part.ps.prolog.force_linear_center_interp);
+		fprintf(f, "  part.ps.prolog.bc_optimize_for_persp = %u\n", key->part.ps.prolog.bc_optimize_for_persp);
+		fprintf(f, "  part.ps.prolog.bc_optimize_for_linear = %u\n", key->part.ps.prolog.bc_optimize_for_linear);
+		fprintf(f, "  part.ps.epilog.spi_shader_col_format = 0x%x\n", key->part.ps.epilog.spi_shader_col_format);
+		fprintf(f, "  part.ps.epilog.color_is_int8 = 0x%X\n", key->part.ps.epilog.color_is_int8);
+		fprintf(f, "  part.ps.epilog.last_cbuf = %u\n", key->part.ps.epilog.last_cbuf);
+		fprintf(f, "  part.ps.epilog.alpha_func = %u\n", key->part.ps.epilog.alpha_func);
+		fprintf(f, "  part.ps.epilog.alpha_to_one = %u\n", key->part.ps.epilog.alpha_to_one);
+		fprintf(f, "  part.ps.epilog.poly_line_smoothing = %u\n", key->part.ps.epilog.poly_line_smoothing);
+		fprintf(f, "  part.ps.epilog.clamp_color = %u\n", key->part.ps.epilog.clamp_color);
 		break;
 
 	default:
@@ -6427,9 +6427,7 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 
 	exports.num = 0;
 
-	if ((ctx->type == PIPE_SHADER_VERTEX &&
-	     (shader->key.vs.as_es || shader->key.vs.as_ls)) ||
-	    (ctx->type == PIPE_SHADER_TESS_EVAL && shader->key.tes.as_es))
+	if (shader->key.as_es || shader->key.as_ls)
 		return;
 
 	/* Process all LLVM instructions. */
@@ -6519,9 +6517,9 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
 		ctx->load_input = declare_input_vs;
-		if (shader->key.vs.as_ls)
+		if (shader->key.as_ls)
 			bld_base->emit_epilogue = si_llvm_emit_ls_epilogue;
-		else if (shader->key.vs.as_es)
+		else if (shader->key.as_es)
 			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_emit_vs_epilogue;
@@ -6534,7 +6532,7 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		bld_base->emit_fetch_funcs[TGSI_FILE_INPUT] = fetch_input_tes;
-		if (shader->key.tes.as_es)
+		if (shader->key.as_es)
 			bld_base->emit_epilogue = si_llvm_emit_es_epilogue;
 		else
 			bld_base->emit_epilogue = si_llvm_emit_vs_epilogue;
@@ -6587,7 +6585,7 @@ static void si_get_vs_prolog_key(struct si_shader *shader,
 	struct tgsi_shader_info *info = &shader->selector->info;
 
 	memset(key, 0, sizeof(*key));
-	key->vs_prolog.states = shader->key.vs.prolog;
+	key->vs_prolog.states = shader->key.part.vs.prolog;
 	key->vs_prolog.num_input_sgprs = shader->info.num_input_sgprs;
 	key->vs_prolog.last_input = MAX2(1, info->num_inputs) - 1;
 
@@ -6609,7 +6607,7 @@ static void si_get_vs_epilog_key(struct si_shader *shader,
 	key->vs_epilog.states = *states;
 
 	/* Set up the PrimitiveID output. */
-	if (shader->key.vs.epilog.export_prim_id) {
+	if (shader->key.part.vs.epilog.export_prim_id) {
 		unsigned index = shader->selector->info.num_outputs;
 		unsigned offset = shader->info.nr_param_exports++;
 
@@ -6630,7 +6628,7 @@ static void si_get_ps_prolog_key(struct si_shader *shader,
 	struct tgsi_shader_info *info = &shader->selector->info;
 
 	memset(key, 0, sizeof(*key));
-	key->ps_prolog.states = shader->key.ps.prolog;
+	key->ps_prolog.states = shader->key.part.ps.prolog;
 	key->ps_prolog.colors_read = info->colors_read;
 	key->ps_prolog.num_input_sgprs = shader->info.num_input_sgprs;
 	key->ps_prolog.num_input_vgprs = shader->info.num_input_vgprs;
@@ -6646,7 +6644,7 @@ static void si_get_ps_prolog_key(struct si_shader *shader,
 	if (info->colors_read) {
 		unsigned *color = shader->selector->color_attr_index;
 
-		if (shader->key.ps.prolog.color_two_side) {
+		if (shader->key.part.ps.prolog.color_two_side) {
 			/* BCOLORs are stored after the last input. */
 			key->ps_prolog.num_interp_inputs = info->num_inputs;
 			key->ps_prolog.face_vgpr_index = shader->info.face_vgpr_index;
@@ -6662,7 +6660,7 @@ static void si_get_ps_prolog_key(struct si_shader *shader,
 
 			key->ps_prolog.color_attr_index[i] = color[i];
 
-			if (shader->key.ps.prolog.flatshade_colors &&
+			if (shader->key.part.ps.prolog.flatshade_colors &&
 			    interp == TGSI_INTERPOLATE_COLOR)
 				interp = TGSI_INTERPOLATE_CONSTANT;
 
@@ -6673,9 +6671,9 @@ static void si_get_ps_prolog_key(struct si_shader *shader,
 			case TGSI_INTERPOLATE_PERSPECTIVE:
 			case TGSI_INTERPOLATE_COLOR:
 				/* Force the interpolation location for colors here. */
-				if (shader->key.ps.prolog.force_persp_sample_interp)
+				if (shader->key.part.ps.prolog.force_persp_sample_interp)
 					location = TGSI_INTERPOLATE_LOC_SAMPLE;
-				if (shader->key.ps.prolog.force_persp_center_interp)
+				if (shader->key.part.ps.prolog.force_persp_center_interp)
 					location = TGSI_INTERPOLATE_LOC_CENTER;
 
 				switch (location) {
@@ -6700,9 +6698,9 @@ static void si_get_ps_prolog_key(struct si_shader *shader,
 				break;
 			case TGSI_INTERPOLATE_LINEAR:
 				/* Force the interpolation location for colors here. */
-				if (shader->key.ps.prolog.force_linear_sample_interp)
+				if (shader->key.part.ps.prolog.force_linear_sample_interp)
 					location = TGSI_INTERPOLATE_LOC_SAMPLE;
-				if (shader->key.ps.prolog.force_linear_center_interp)
+				if (shader->key.part.ps.prolog.force_linear_center_interp)
 					location = TGSI_INTERPOLATE_LOC_CENTER;
 
 				/* The VGPR assignment for non-monolithic shaders
@@ -6767,7 +6765,7 @@ static void si_get_ps_epilog_key(struct si_shader *shader,
 	key->ps_epilog.writes_z = info->writes_z;
 	key->ps_epilog.writes_stencil = info->writes_stencil;
 	key->ps_epilog.writes_samplemask = info->writes_samplemask;
-	key->ps_epilog.states = shader->key.ps.epilog;
+	key->ps_epilog.states = shader->key.part.ps.epilog;
 }
 
 /**
@@ -7077,7 +7075,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		bool need_epilog;
 
 		need_prolog = sel->info.num_inputs;
-		need_epilog = !shader->key.vs.as_es && !shader->key.vs.as_ls;
+		need_epilog = !shader->key.as_es && !shader->key.as_ls;
 
 		parts[need_prolog ? 1 : 0] = ctx.main_fn;
 
@@ -7090,7 +7088,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 
 		if (need_epilog) {
 			union si_shader_part_key epilog_key;
-			si_get_vs_epilog_key(shader, &shader->key.vs.epilog, &epilog_key);
+			si_get_vs_epilog_key(shader, &shader->key.part.vs.epilog, &epilog_key);
 			si_build_vs_epilog_function(&ctx, &epilog_key);
 			parts[need_prolog ? 2 : 1] = ctx.main_fn;
 		}
@@ -7104,19 +7102,19 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		parts[0] = ctx.main_fn;
 
 		memset(&epilog_key, 0, sizeof(epilog_key));
-		epilog_key.tcs_epilog.states = shader->key.tcs.epilog;
+		epilog_key.tcs_epilog.states = shader->key.part.tcs.epilog;
 		si_build_tcs_epilog_function(&ctx, &epilog_key);
 		parts[1] = ctx.main_fn;
 
 		si_build_wrapper_function(&ctx, parts, 2, 0);
 	} else if (is_monolithic && ctx.type == PIPE_SHADER_TESS_EVAL &&
-		   !shader->key.tes.as_es) {
+		   !shader->key.as_es) {
 		LLVMValueRef parts[2];
 		union si_shader_part_key epilog_key;
 
 		parts[0] = ctx.main_fn;
 
-		si_get_vs_epilog_key(shader, &shader->key.tes.epilog, &epilog_key);
+		si_get_vs_epilog_key(shader, &shader->key.part.tes.epilog, &epilog_key);
 		si_build_vs_epilog_function(&ctx, &epilog_key);
 		parts[1] = ctx.main_fn;
 
@@ -7128,7 +7126,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		parts[1] = ctx.main_fn;
 
 		memset(&prolog_key, 0, sizeof(prolog_key));
-		prolog_key.gs_prolog.states = shader->key.gs.prolog;
+		prolog_key.gs_prolog.states = shader->key.part.gs.prolog;
 		si_build_gs_prolog_function(&ctx, &prolog_key);
 		parts[0] = ctx.main_fn;
 
@@ -7319,16 +7317,16 @@ si_get_shader_part(struct si_screen *sscreen,
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		assert(!prolog);
-		shader.key.tcs.epilog = key->tcs_epilog.states;
+		shader.key.part.tcs.epilog = key->tcs_epilog.states;
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		assert(prolog);
 		break;
 	case PIPE_SHADER_FRAGMENT:
 		if (prolog)
-			shader.key.ps.prolog = key->ps_prolog.states;
+			shader.key.part.ps.prolog = key->ps_prolog.states;
 		else
-			shader.key.ps.epilog = key->ps_epilog.states;
+			shader.key.part.ps.epilog = key->ps_epilog.states;
 		break;
 	default:
 		unreachable("bad shader part");
@@ -7556,9 +7554,9 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 	}
 
 	/* Get the epilog. */
-	if (!shader->key.vs.as_es && !shader->key.vs.as_ls &&
+	if (!shader->key.as_es && !shader->key.as_ls &&
 	    !si_get_vs_epilog(sscreen, tm, shader, debug,
-			      &shader->key.vs.epilog))
+			      &shader->key.part.vs.epilog))
 		return false;
 
 	return true;
@@ -7572,12 +7570,12 @@ static bool si_shader_select_tes_parts(struct si_screen *sscreen,
 				       struct si_shader *shader,
 				       struct pipe_debug_callback *debug)
 {
-	if (shader->key.tes.as_es)
+	if (shader->key.as_es)
 		return true;
 
 	/* TES compiled as VS. */
 	return si_get_vs_epilog(sscreen, tm, shader, debug,
-				&shader->key.tes.epilog);
+				&shader->key.part.tes.epilog);
 }
 
 /**
@@ -7637,7 +7635,7 @@ static bool si_shader_select_tcs_parts(struct si_screen *sscreen,
 
 	/* Get the epilog. */
 	memset(&epilog_key, 0, sizeof(epilog_key));
-	epilog_key.tcs_epilog.states = shader->key.tcs.epilog;
+	epilog_key.tcs_epilog.states = shader->key.part.tcs.epilog;
 
 	shader->epilog = si_get_shader_part(sscreen, &sscreen->tcs_epilogs,
 					    PIPE_SHADER_TESS_CTRL, false,
@@ -7657,11 +7655,11 @@ static bool si_shader_select_gs_parts(struct si_screen *sscreen,
 {
 	union si_shader_part_key prolog_key;
 
-	if (!shader->key.gs.prolog.tri_strip_adj_fix)
+	if (!shader->key.part.gs.prolog.tri_strip_adj_fix)
 		return true;
 
 	memset(&prolog_key, 0, sizeof(prolog_key));
-	prolog_key.gs_prolog.states = shader->key.gs.prolog;
+	prolog_key.gs_prolog.states = shader->key.part.gs.prolog;
 
 	shader->prolog = si_get_shader_part(sscreen, &sscreen->gs_prologs,
 					    PIPE_SHADER_GEOMETRY, true,
@@ -8057,34 +8055,34 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 		return false;
 
 	/* Enable POS_FIXED_PT if polygon stippling is enabled. */
-	if (shader->key.ps.prolog.poly_stipple) {
+	if (shader->key.part.ps.prolog.poly_stipple) {
 		shader->config.spi_ps_input_ena |= S_0286CC_POS_FIXED_PT_ENA(1);
 		assert(G_0286CC_POS_FIXED_PT_ENA(shader->config.spi_ps_input_addr));
 	}
 
 	/* Set up the enable bits for per-sample shading if needed. */
-	if (shader->key.ps.prolog.force_persp_sample_interp &&
+	if (shader->key.part.ps.prolog.force_persp_sample_interp &&
 	    (G_0286CC_PERSP_CENTER_ENA(shader->config.spi_ps_input_ena) ||
 	     G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
 		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTER_ENA;
 		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTROID_ENA;
 		shader->config.spi_ps_input_ena |= S_0286CC_PERSP_SAMPLE_ENA(1);
 	}
-	if (shader->key.ps.prolog.force_linear_sample_interp &&
+	if (shader->key.part.ps.prolog.force_linear_sample_interp &&
 	    (G_0286CC_LINEAR_CENTER_ENA(shader->config.spi_ps_input_ena) ||
 	     G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
 		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTER_ENA;
 		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_CENTROID_ENA;
 		shader->config.spi_ps_input_ena |= S_0286CC_LINEAR_SAMPLE_ENA(1);
 	}
-	if (shader->key.ps.prolog.force_persp_center_interp &&
+	if (shader->key.part.ps.prolog.force_persp_center_interp &&
 	    (G_0286CC_PERSP_SAMPLE_ENA(shader->config.spi_ps_input_ena) ||
 	     G_0286CC_PERSP_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
 		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_SAMPLE_ENA;
 		shader->config.spi_ps_input_ena &= C_0286CC_PERSP_CENTROID_ENA;
 		shader->config.spi_ps_input_ena |= S_0286CC_PERSP_CENTER_ENA(1);
 	}
-	if (shader->key.ps.prolog.force_linear_center_interp &&
+	if (shader->key.part.ps.prolog.force_linear_center_interp &&
 	    (G_0286CC_LINEAR_SAMPLE_ENA(shader->config.spi_ps_input_ena) ||
 	     G_0286CC_LINEAR_CENTROID_ENA(shader->config.spi_ps_input_ena))) {
 		shader->config.spi_ps_input_ena &= C_0286CC_LINEAR_SAMPLE_ENA;
@@ -8108,7 +8106,7 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	/* The sample mask input is always enabled, because the API shader always
 	 * passes it through to the epilog. Disable it here if it's unused.
 	 */
-	if (!shader->key.ps.epilog.poly_line_smoothing &&
+	if (!shader->key.part.ps.epilog.poly_line_smoothing &&
 	    !shader->selector->info.reads_samplemask)
 		shader->config.spi_ps_input_ena &= C_0286CC_SAMPLE_COVERAGE_ENA;
 
@@ -8137,14 +8135,12 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	 * workaround must be applied.
 	 */
 	if (!mainp ||
+	    shader->key.as_es != mainp->key.as_es ||
+	    shader->key.as_ls != mainp->key.as_ls ||
 	    (sel->type == PIPE_SHADER_VERTEX &&
-	     (shader->key.vs.as_es != mainp->key.vs.as_es ||
-	      shader->key.vs.as_ls != mainp->key.vs.as_ls ||
-	      shader->key.vs.fix_fetch)) ||
-	    (sel->type == PIPE_SHADER_TESS_EVAL &&
-	     shader->key.tes.as_es != mainp->key.tes.as_es) ||
+	     shader->key.mono.vs.fix_fetch) ||
 	    (sel->type == PIPE_SHADER_TESS_CTRL &&
-	     shader->key.tcs.epilog.inputs_to_copy) ||
+	     shader->key.mono.tcs.inputs_to_copy) ||
 	    sel->type == PIPE_SHADER_COMPUTE) {
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).

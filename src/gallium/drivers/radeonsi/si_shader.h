@@ -330,7 +330,6 @@ struct si_vs_epilog_bits {
 /* Common TCS bits between the shader key and the epilog key. */
 struct si_tcs_epilog_bits {
 	unsigned	prim_mode:3;
-	uint64_t	inputs_to_copy;
 };
 
 struct si_gs_prolog_bits {
@@ -398,30 +397,44 @@ union si_shader_part_key {
 	} ps_epilog;
 };
 
-union si_shader_key {
-	struct {
-		struct si_ps_prolog_bits prolog;
-		struct si_ps_epilog_bits epilog;
-	} ps;
-	struct {
-		struct si_vs_prolog_bits prolog;
-		struct si_vs_epilog_bits epilog;
-		unsigned	as_es:1; /* export shader */
-		unsigned	as_ls:1; /* local shader */
+struct si_shader_key {
+	/* Prolog and epilog flags. */
+	union {
+		struct {
+			struct si_ps_prolog_bits prolog;
+			struct si_ps_epilog_bits epilog;
+		} ps;
+		struct {
+			struct si_vs_prolog_bits prolog;
+			struct si_vs_epilog_bits epilog;
+		} vs;
+		struct {
+			struct si_tcs_epilog_bits epilog;
+		} tcs; /* tessellation control shader */
+		struct {
+			struct si_vs_epilog_bits epilog; /* same as VS */
+		} tes; /* tessellation evaluation shader */
+		struct {
+			struct si_gs_prolog_bits prolog;
+		} gs;
+	} part;
 
-		/* One pair of bits for every input: SI_FIX_FETCH_* enums. */
-		uint32_t	fix_fetch;
-	} vs;
-	struct {
-		struct si_tcs_epilog_bits epilog;
-	} tcs; /* tessellation control shader */
-	struct {
-		struct si_vs_epilog_bits epilog; /* same as VS */
-		unsigned	as_es:1; /* export shader */
-	} tes; /* tessellation evaluation shader */
-	struct {
-		struct si_gs_prolog_bits prolog;
-	} gs;
+	/* These two are initially set according to the NEXT_SHADER property,
+	 * or guessed if the property doesn't seem correct.
+	 */
+	unsigned as_es:1; /* export shader */
+	unsigned as_ls:1; /* local shader */
+
+	/* Flags for monolithic compilation only. */
+	union {
+		struct {
+			/* One pair of bits for every input: SI_FIX_FETCH_* enums. */
+			uint32_t	fix_fetch;
+		} vs;
+		struct {
+			uint64_t	inputs_to_copy; /* for fixed-func TCS */
+		} tcs;
+	} mono;
 };
 
 struct si_shader_config {
@@ -470,7 +483,7 @@ struct si_shader {
 	struct si_pm4_state		*pm4;
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
-	union si_shader_key		key;
+	struct si_shader_key		key;
 	bool				is_binary_shared;
 	bool				is_gs_copy_shader;
 
