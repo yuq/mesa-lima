@@ -594,12 +594,11 @@ mesa_to_swr_format(enum pipe_format format)
       */
    };
 
-   try {
-      return mesa2swr.at(format);
-   }
-   catch (std::out_of_range) {
+   auto it = mesa2swr.find(format);
+   if (it == mesa2swr.end())
       return (SWR_FORMAT)-1;
-   }
+   else
+      return it->second;
 }
 
 static boolean
