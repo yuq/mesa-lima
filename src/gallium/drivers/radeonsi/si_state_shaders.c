@@ -1425,9 +1425,18 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				sel->patch_outputs_written |=
 					1llu << si_shader_io_get_unique_index(name, index);
 				break;
-			default:
+
+			case TGSI_SEMANTIC_GENERIC:
+				/* don't process indices the function can't handle */
+				if (index >= 60)
+					break;
+				/* fall through */
+			case TGSI_SEMANTIC_POSITION:
+			case TGSI_SEMANTIC_PSIZE:
+			case TGSI_SEMANTIC_CLIPDIST:
 				sel->outputs_written |=
 					1llu << si_shader_io_get_unique_index(name, index);
+				break;
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;

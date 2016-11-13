@@ -123,11 +123,9 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 	case TGSI_SEMANTIC_GENERIC:
 		if (index <= 63-4)
 			return 4 + index;
-		else
-			/* same explanation as in the default statement,
-			 * the only user hitting this is st/nine.
-			 */
-			return 0;
+
+		assert(!"invalid generic index");
+		return 0;
 
 	/* patch indices are completely separate and thus start from 0 */
 	case TGSI_SEMANTIC_TESSOUTER:
@@ -138,11 +136,7 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 		return 2 + index;
 
 	default:
-		/* Don't fail here. The result of this function is only used
-		 * for LS, TCS, TES, and GS, where legacy GL semantics can't
-		 * occur, but this function is called for all vertex shaders
-		 * before it's known whether LS will be compiled or not.
-		 */
+		assert(!"invalid semantic name");
 		return 0;
 	}
 }
