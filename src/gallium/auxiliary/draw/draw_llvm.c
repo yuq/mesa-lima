@@ -669,18 +669,17 @@ fetch_instanced(struct gallivm_state *gallivm,
    LLVMValueRef zero = LLVMConstNull(i32_t);
    LLVMBuilderRef builder = gallivm->builder;
    LLVMValueRef stride, buffer_overflowed, aos, index_valid;
-   LLVMValueRef ofbit = NULL;
    unsigned i;
 
    aosf_t = lp_build_vec_type(gallivm, lp_float32_vec4_type());
    aosi_t = lp_build_vec_type(gallivm, lp_int32_vec4_type());
 
-   stride = lp_build_umul_overflow(gallivm, vb_stride, index, &ofbit);
+   /* This mul can overflow. Wraparound is ok. */
+   stride = LLVMBuildMul(builder, vb_stride, index, "");
 
    buffer_overflowed = LLVMBuildICmp(builder, LLVMIntUGE,
                                      stride, buffer_size_adj,
                                      "buffer_overflowed");
-   buffer_overflowed = LLVMBuildOr(builder, buffer_overflowed, ofbit, "");
 
    if (0) {
       lp_build_print_value(gallivm, "   instance index = ", index);
@@ -759,7 +758,7 @@ fetch_vector(struct gallivm_state *gallivm,
    LLVMValueRef zero = LLVMConstNull(LLVMInt32TypeInContext(gallivm->context));
    LLVMBuilderRef builder = gallivm->builder;
    struct lp_build_context blduivec;
-   LLVMValueRef offset, tmp, valid_mask;
+   LLVMValueRef offset, valid_mask;
    LLVMValueRef aos_fetch[LP_MAX_VECTOR_WIDTH / 32];
    unsigned i;
 
@@ -768,24 +767,11 @@ fetch_vector(struct gallivm_state *gallivm,
    vb_stride = lp_build_broadcast_scalar(&blduivec, vb_stride);
    buffer_size_adj = lp_build_broadcast_scalar(&blduivec, buffer_size_adj);
 
-   /*
-    * Sort of interestingly, with interleaved attribs, llvm 3.7+ will
-    * recognize these calculations to be constant with different attribs
-    * (the different offset has been added to map_ptr).
-    * llvm 3.3, however, will not (I can't get llvm 3.4-3.6 to link...)
-    *
-    * XXX: could actually avoid this altogether (replacing by simple
-    * non-widening mul) by precalculating the max index instead outside
-    * the loop (at the cost of one scalar udiv per vertex element).
-    */
-   offset = lp_build_mul_32_lohi_cpu(&blduivec, vb_stride, indices, &tmp);
+   /* This mul can overflow. Wraparound is ok. */
+   offset = lp_build_mul(&blduivec, vb_stride, indices);
 
    valid_mask = lp_build_compare(gallivm, blduivec.type,
-                                 PIPE_FUNC_EQUAL, tmp, blduivec.zero);
-
-   tmp = lp_build_compare(gallivm, blduivec.type,
-                          PIPE_FUNC_LESS, offset, buffer_size_adj);
-   valid_mask = LLVMBuildAnd(builder, tmp, valid_mask, "");
+                                 PIPE_FUNC_LESS, offset, buffer_size_adj);
 
    /* not valid elements use offset 0 */
    offset = LLVMBuildAnd(builder, offset, valid_mask, "");
@@ -1566,10 +1552,10 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
    LLVMBuilderRef builder;
    char func_name[64];
    struct lp_type vs_type;
-   LLVMValueRef count, fetch_elts, start_or_maxelt, start;
+   LLVMValueRef count, fetch_elts, start_or_maxelt;
    LLVMValueRef vertex_id_offset, start_instance;
    LLVMValueRef stride, step, io_itr;
-   LLVMValueRef ind_vec, ind_vec_store, have_elts, fetch_max, tmp;
+   LLVMValueRef ind_vec, start_vec, have_elts, fetch_max, tmp;
    LLVMValueRef io_ptr, vbuffers_ptr, vb_ptr;
    LLVMValueRef vb_stride[PIPE_MAX_ATTRIBS];
    LLVMValueRef map_ptr[PIPE_MAX_ATTRIBS];
@@ -1580,7 +1566,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
    struct draw_context *draw = llvm->draw;
    const struct tgsi_shader_info *vs_info = &draw->vs.vertex_shader->info;
    unsigned i, j;
-   struct lp_build_context bld, bldivec, blduivec;
+   struct lp_build_context bld, blduivec;
    struct lp_build_loop_state lp_loop;
    struct lp_build_if_state if_ctx;
    const int vector_length = lp_native_vector_width / 32;
@@ -1640,6 +1626,11 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
    io_ptr                    = LLVMGetParam(variant_func, 1);
    vbuffers_ptr              = LLVMGetParam(variant_func, 2);
    count                     = LLVMGetParam(variant_func, 3);
+   /*
+    * XXX: the maxelt part is unused. Not really useful, since we cannot
+    * get index buffer overflows due to vsplit (which provides its own
+    * elts buffer, with a different size than what's passed in here).
+    */
    start_or_maxelt           = LLVMGetParam(variant_func, 4);
    /*
     * XXX: stride is actually unused. The stride we use is strictly calculated
@@ -1682,7 +1673,6 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
    vs_type.length = vector_length;
 
    lp_build_context_init(&bld, gallivm, lp_type_uint(32));
-   lp_build_context_init(&bldivec, gallivm, lp_int_type(vs_type));
    lp_build_context_init(&blduivec, gallivm, lp_uint_type(vs_type));
 
    /* hold temporary "bool" clipmask */
@@ -1706,29 +1696,16 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
    }
 
    fetch_max = lp_build_alloca(gallivm, int32_type, "fetch_max");
-   ind_vec_store = lp_build_alloca(gallivm, bldivec.vec_type, "ind_vec");
 
    have_elts = LLVMBuildICmp(builder, LLVMIntNE,
                              LLVMConstPointerNull(arg_types[10]), fetch_elts, "");
-   lp_build_if(&if_ctx, gallivm, have_elts);
-   {
-      LLVMBuildStore(builder, ind_vec, ind_vec_store);
-      LLVMBuildStore(builder, count, fetch_max);
-   }
-   lp_build_else(&if_ctx);
-   {
-      tmp = lp_build_add(&bld, count, start_or_maxelt);
-      LLVMBuildStore(builder, tmp, fetch_max);
-      start = lp_build_broadcast_scalar(&bldivec, start_or_maxelt);
-      tmp = lp_build_add(&bldivec, start, ind_vec);
-      LLVMBuildStore(builder, tmp, ind_vec_store);
-   }
-   lp_build_endif(&if_ctx);
 
-   fetch_max = LLVMBuildLoad(builder, fetch_max, "");
-   fetch_max = LLVMBuildSub(builder, fetch_max, bld.one, "fetch_max");
-   fetch_max = lp_build_broadcast_scalar(&bldivec, fetch_max);
-   ind_vec = LLVMBuildLoad(builder, ind_vec_store, "");
+   fetch_max = LLVMBuildSub(builder, count, bld.one, "fetch_max");
+   fetch_max = lp_build_broadcast_scalar(&blduivec, fetch_max);
+   /*
+    * Only needed for non-indexed path.
+    */
+   start_vec = lp_build_broadcast_scalar(&blduivec, start_or_maxelt);
 
    /*
     * Pre-calculate everything which is constant per shader invocation.
@@ -1757,9 +1734,12 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
          /*
           * We'll set buffer_size_adj to zero if we have of, so it will
           * always overflow later automatically without having to keep ofbit.
+          * Overflows (with normal wraparound) doing the actual offset
+          * calculation should be ok, just not for the buffer size calc.
+          * It would also be possible to detect such overflows and return
+          * zeros if that happens, but this would be more complex.
           */
-         buf_offset = lp_build_uadd_overflow(gallivm, vb_buffer_offset,
-                                             src_offset, &ofbit);
+         buf_offset = lp_build_add(&bld, vb_buffer_offset, src_offset);
          tmp = lp_build_sub(&bld, bsize, bld.one);
          buffer_size_adj[j] = lp_build_usub_overflow(gallivm, buffer_size, tmp,
                                                      &ofbit);
@@ -1843,21 +1823,17 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
       true_index_array = LLVMBuildAdd(builder, true_index_array, ind_vec, "");
 
       /*
-       * XXX: This code is really fishy. We are required to use a int min
-       * here, not uint. The reason is that for some non-indexed draws, we
-       * might get something like MAX_UINT - 3 as start value (due to start
-       * vertex). So, the first 3 elements in the vector are huge, and
-       * limiting them to fetch_max is incorrect. By using int min, we'll
-       * pick that huge value - we rely on this creating an overflow (which
-       * is guaranteed) in the stride mul later (using (signed) cmp and
-       * incorporating the result into ofmask would also work).
-       * For the later elements, this just wraps around the indices, which
-       * is apparently ok...
+       * Limit indices to fetch_max, otherwise might try to access indices
+       * beyond index buffer (or rather vsplit elt buffer) size.
+       * Could probably safely (?) skip this for non-indexed draws and
+       * simplify things minimally (by removing it could combine the ind_vec
+       * and start_vec adds). I think the only effect for non-indexed draws will
+       * be that for the invalid elements they will be all fetched from the
+       * same location as the last valid one, but noone should really care.
        */
-      true_index_array = lp_build_min(&bldivec, true_index_array, fetch_max);
+      true_index_array = lp_build_min(&blduivec, true_index_array, fetch_max);
 
-      index_store = lp_build_alloca_undef(gallivm, bldivec.vec_type, "index_store");
-      LLVMBuildStore(builder, true_index_array, index_store);
+      index_store = lp_build_alloca_undef(gallivm, blduivec.vec_type, "index_store");
 
       lp_build_if(&if_ctx, gallivm, have_elts);
       {
@@ -1875,22 +1851,27 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
           * not being zero will get a different fetch index than the valid
           * index 0. So, just rely on vsplit code preventing out-of-bounds
           * fetches. This is also why it's safe to do elts fetch even if there
-          * was no index buffer bound - the real buffer is never seen here.
+          * was no index buffer bound - the real buffer is never seen here, at
+          * least not if there are index buffer overflows...
           */
 
          /*
           * XXX should not have to do this, as scale can be handled
           * natively by loads (hits asserts though).
           */
-         true_index_array = lp_build_shl_imm(&blduivec, true_index_array, 2);
+         tmp = lp_build_shl_imm(&blduivec, true_index_array, 2);
          fetch_elts = LLVMBuildBitCast(builder, fetch_elts,
                                        LLVMPointerType(LLVMInt8TypeInContext(context),
                                                        0), "");
-         true_index_array = lp_build_gather(gallivm, vs_type.length,
-                                            32, 32, TRUE,
-                                            fetch_elts, true_index_array,
-                                            FALSE);
-         LLVMBuildStore(builder, true_index_array, index_store);
+         tmp = lp_build_gather(gallivm, vs_type.length,
+                               32, 32, TRUE,
+                               fetch_elts, tmp, FALSE);
+         LLVMBuildStore(builder, tmp, index_store);
+      }
+      lp_build_else(&if_ctx);
+      {
+         tmp = LLVMBuildAdd(builder, true_index_array, start_vec, "");
+         LLVMBuildStore(builder, tmp, index_store);
       }
       lp_build_endif(&if_ctx);
 
