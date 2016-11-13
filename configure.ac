@@ -1361,7 +1361,6 @@ if test "x$with_sha1" = "x"; then
         AC_MSG_ERROR([Cannot enable shader cache (no SHA-1 implementation found)])
     fi
 fi
-AM_CONDITIONAL([ENABLE_SHADER_CACHE], [test x$enable_shader_cache = xyes])
 if test "x$enable_shader_cache" = "xyes"; then
    AC_DEFINE([ENABLE_SHADER_CACHE], [1], [Enable shader cache])
 fi

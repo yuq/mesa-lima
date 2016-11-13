@@ -131,10 +131,6 @@ glsl_libglsl_la_SOURCES =				\
 	$(LIBGLSL_GENERATED_FILES)			\
 	$(LIBGLSL_FILES)
 
-if ENABLE_SHADER_CACHE
-glsl_libglsl_la_SOURCES += $(LIBGLSL_SHADER_CACHE_FILES)
-endif
-
 glsl_libstandalone_la_SOURCES = \
 	$(GLSL_COMPILER_CXX_FILES)
 

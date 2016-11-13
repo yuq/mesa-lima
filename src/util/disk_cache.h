@@ -21,16 +21,15 @@
  * IN THE SOFTWARE.
  */
 
-#pragma once
-#ifndef CACHE_H
-#define CACHE_H
+#ifndef DISK_CACHE_H
+#define DISK_CACHE_H
+
+#include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <stdbool.h>
 
 /* Size of cache keys in bytes. */
 #define CACHE_KEY_SIZE 20

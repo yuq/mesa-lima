@@ -21,6 +21,8 @@
  * IN THE SOFTWARE.
  */
 
+#ifdef ENABLE_SHADER_CACHE
+
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
@@ -40,7 +42,7 @@
 #include "util/ralloc.h"
 #include "main/errors.h"
 
-#include "cache.h"
+#include "disk_cache.h"
 
 /* Number of bits to mask off from a cache key to get an index. */
 #define CACHE_INDEX_KEY_BITS 16
@@ -86,9 +88,8 @@ mkdir_if_needed(char *path)
       if (S_ISDIR(sb.st_mode)) {
          return 0;
       } else {
-         _mesa_warning(NULL,
-                       "Cannot use %s for shader cache (not a directory)"
-                       "---disabling.\n", path);
+         fprintf(stderr, "Cannot use %s for shader cache (not a directory)"
+                         "---disabling.\n", path);
          return -1;
       }
    }
@@ -97,9 +98,8 @@ mkdir_if_needed(char *path)
    if (ret == 0 || (ret == -1 && errno == EEXIST))
      return 0;
 
-   _mesa_warning(NULL,
-                 "Failed to create %s for shader cache (%s)---disabling.\n",
-                 path, strerror(errno));
+   fprintf(stderr, "Failed to create %s for shader cache (%s)---disabling.\n",
+           path, strerror(errno));
 
    return -1;
 }
@@ -708,3 +708,5 @@ cache_has_key(struct program_cache *cache, cache_key key)
 
    return memcmp(entry, key, CACHE_KEY_SIZE) == 0;
 }
+
+#endif

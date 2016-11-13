@@ -32,31 +32,11 @@
 #include <stdarg.h>
 
 #include "util/mesa-sha1.h"
-#include "cache.h"
+#include "util/disk_cache.h"
 
 bool error = false;
 
 #ifdef ENABLE_SHADER_CACHE
-void
-_mesa_warning(void *ctx, const char *fmt, ...);
-
-void
-_mesa_warning(void *ctx, const char *fmt, ...)
-{
-    va_list vargs;
-    (void) ctx;
-
-    va_start(vargs, fmt);
-
-    /* This output is not thread-safe, but that's good enough for the
-     * standalone compiler.
-     */
-    fprintf(stderr, "Mesa warning: ");
-    vfprintf(stderr, fmt, vargs);
-    fprintf(stderr, "\n");
-
-    va_end(vargs);
-}
 
 static void
 expect_equal(uint64_t actual, uint64_t expected, const char *test)
