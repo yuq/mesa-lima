@@ -211,6 +211,60 @@ name( struct NineDevice9 *device ARGS_FOR_DECLARATION( __VA_ARGS__ ) ) \
 static void \
 name##_priv( struct NineDevice9 *device ARGS_FOR_DECLARATION( __VA_ARGS__ ) )
 
+#define CSMT_ITEM_NO_WAIT_WITH_COUNTER(name, ...) \
+\
+struct s_##name##_private { \
+    struct csmt_instruction instr; \
+    unsigned *counter; \
+    ARGS_FOR_STRUCT( __VA_ARGS__ ) \
+}; \
+\
+static void \
+name##_priv( struct NineDevice9 *device ARGS_FOR_DECLARATION( __VA_ARGS__ ) ); \
+\
+static int \
+name##_rx( struct NineDevice9 *device, struct csmt_instruction *instr ) \
+{ \
+    struct csmt_context *ctx = device->csmt_ctx; \
+    struct s_##name##_private *args = (struct s_##name##_private *)instr; \
+    \
+    (void) args; \
+    (void) ctx; \
+    name##_priv( \
+        device ARGS_FOR_CALL( __VA_ARGS__ ) \
+    ); \
+    ARGS_FOR_UNBIND( __VA_ARGS__ ) \
+    p_atomic_dec(args->counter); \
+    return 0; \
+} \
+\
+void \
+name( struct NineDevice9 *device, unsigned *counter ARGS_FOR_DECLARATION( __VA_ARGS__ ) ) \
+{ \
+    struct csmt_context *ctx = device->csmt_ctx; \
+    struct s_##name##_private *args; \
+    unsigned memsize = sizeof(struct s_##name##_private); \
+    unsigned memsize2 = 0; \
+    \
+    if (!device->csmt_active) { \
+        name##_priv( \
+            device ARGS_FOR_BYPASS( __VA_ARGS__ ) \
+        ); \
+        return; \
+    } \
+    assert(counter); \
+    p_atomic_inc(counter); \
+    ARGS_FOR_MEM ( __VA_ARGS__ ) \
+    args = nine_queue_alloc(ctx->pool, memsize + memsize2); \
+    assert(args); \
+    args->instr.func = &name##_rx; \
+    args->counter = counter; \
+    ARGS_FOR_ASSIGN( __VA_ARGS__ ) \
+} \
+\
+static void \
+name##_priv( struct NineDevice9 *device ARGS_FOR_DECLARATION( __VA_ARGS__ ) )
+
 #define CSMT_ITEM_DO_WAIT(name, ...) \
 \
 struct s_##name##_private { \
