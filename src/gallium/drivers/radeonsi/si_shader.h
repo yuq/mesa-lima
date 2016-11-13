@@ -484,6 +484,7 @@ struct si_shader {
 	struct r600_resource		*bo;
 	struct r600_resource		*scratch_bo;
 	struct si_shader_key		key;
+	bool				is_monolithic;
 	bool				is_binary_shared;
 	bool				is_gs_copy_shader;
 

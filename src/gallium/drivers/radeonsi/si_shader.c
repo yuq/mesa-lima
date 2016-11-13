@@ -8139,14 +8139,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 	 * Vertex shaders are compiled on demand when a vertex fetch
 	 * workaround must be applied.
 	 */
-	if (!mainp ||
-	    shader->key.as_es != mainp->key.as_es ||
-	    shader->key.as_ls != mainp->key.as_ls ||
-	    (sel->type == PIPE_SHADER_VERTEX &&
-	     shader->key.mono.vs.fix_fetch) ||
-	    (sel->type == PIPE_SHADER_TESS_CTRL &&
-	     shader->key.mono.tcs.inputs_to_copy) ||
-	    sel->type == PIPE_SHADER_COMPUTE) {
+	if (shader->is_monolithic) {
 		/* Monolithic shader (compiled as a whole, has many variants,
 		 * may take a long time to compile).
 		 */

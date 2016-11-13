@@ -126,6 +126,7 @@ static void *si_create_compute_state(
 		p_atomic_inc(&sscreen->b.num_shaders_created);
 
 		program->shader.selector = &sel;
+		program->shader.is_monolithic = true;
 
 		if (si_shader_create(sscreen, sctx->tm, &program->shader,
 		                     &sctx->b.debug)) {

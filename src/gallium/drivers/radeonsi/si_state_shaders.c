@@ -1024,6 +1024,7 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 				     bool wait,
 				     bool is_debug_context)
 {
+	static const struct si_shader_key zeroed;
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
@@ -1064,6 +1065,11 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 	}
 	shader->selector = sel;
 	shader->key = *key;
+	shader->is_monolithic =
+		!sel->main_shader_part ||
+		sel->main_shader_part->key.as_ls != key->as_ls ||
+		sel->main_shader_part->key.as_es != key->as_es ||
+		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
 
 	r = si_shader_create(sscreen, tm, shader, debug);
 	if (unlikely(r)) {
