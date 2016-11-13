@@ -63,8 +63,7 @@
 
 
 static void
-draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *var,
-                   boolean elts);
+draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *var);
 
 
 struct draw_gs_llvm_iface {
@@ -577,16 +576,12 @@ draw_llvm_create_variant(struct draw_llvm *llvm,
 
    variant->vertex_header_ptr_type = LLVMPointerType(vertex_header, 0);
 
-   draw_llvm_generate(llvm, variant, FALSE);  /* linear */
-   draw_llvm_generate(llvm, variant, TRUE);   /* elts */
+   draw_llvm_generate(llvm, variant);
 
    gallivm_compile_module(variant->gallivm);
 
    variant->jit_func = (draw_jit_vert_func)
          gallivm_jit_function(variant->gallivm, variant->function);
-
-   variant->jit_func_elts = (draw_jit_vert_func_elts)
-         gallivm_jit_function(variant->gallivm, variant->function_elts);
 
    gallivm_free_ir(variant->gallivm);
 
@@ -1565,25 +1560,23 @@ draw_gs_llvm_epilogue(const struct lp_build_tgsi_gs_iface *gs_base,
 }
 
 static void
-draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
-                   boolean elts)
+draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
 {
    struct gallivm_state *gallivm = variant->gallivm;
    LLVMContextRef context = gallivm->context;
    LLVMTypeRef int32_type = LLVMInt32TypeInContext(context);
    LLVMTypeRef arg_types[11];
-   unsigned num_arg_types =
-      elts ? ARRAY_SIZE(arg_types) : ARRAY_SIZE(arg_types) - 1;
+   unsigned num_arg_types = ARRAY_SIZE(arg_types);
    LLVMTypeRef func_type;
    LLVMValueRef context_ptr;
    LLVMBasicBlockRef block;
    LLVMBuilderRef builder;
    char func_name[64];
    struct lp_type vs_type;
-   LLVMValueRef count, fetch_elts, fetch_elt_max;
-   LLVMValueRef vertex_id_offset, start_instance, start;
+   LLVMValueRef count, fetch_elts, start_or_maxelt, start;
+   LLVMValueRef vertex_id_offset, start_instance;
    LLVMValueRef stride, step, io_itr;
-   LLVMValueRef ind_vec;
+   LLVMValueRef ind_vec, ind_vec_store, have_elts, fetch_max, tmp;
    LLVMValueRef io_ptr, vbuffers_ptr, vb_ptr;
    LLVMValueRef vb_stride[PIPE_MAX_ATTRIBS];
    LLVMValueRef map_ptr[PIPE_MAX_ATTRIBS];
@@ -1597,9 +1590,9 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    unsigned i, j;
    struct lp_build_context bld, bldivec, blduivec;
    struct lp_build_loop_state lp_loop;
+   struct lp_build_if_state if_ctx;
    const int vector_length = lp_native_vector_width / 32;
    LLVMValueRef outputs[PIPE_MAX_SHADER_OUTPUTS][TGSI_NUM_CHANNELS];
-   LLVMValueRef fetch_max;
    struct lp_build_sampler_soa *sampler = 0;
    LLVMValueRef ret, clipmask_bool_ptr;
    struct draw_llvm_variant_key *key = &variant->key;
@@ -1624,8 +1617,8 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
 
    memset(&system_values, 0, sizeof(system_values));
 
-   util_snprintf(func_name, sizeof(func_name), "draw_llvm_vs_variant%u_%s",
-                 variant->shader->variants_cached, elts ? "elts" : "linear");
+   util_snprintf(func_name, sizeof(func_name), "draw_llvm_vs_variant%u",
+                 variant->shader->variants_cached);
 
    i = 0;
    arg_types[i++] = get_context_ptr_type(variant);       /* context */
@@ -1638,19 +1631,13 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    arg_types[i++] = int32_type;                          /* instance_id */
    arg_types[i++] = int32_type;                          /* vertex_id_offset */
    arg_types[i++] = int32_type;                          /* start_instance */
-   if (elts) {
-      arg_types[i++] = LLVMPointerType(int32_type, 0);   /* fetch_elts  */
-   }
+   arg_types[i++] = LLVMPointerType(int32_type, 0);      /* fetch_elts  */
 
    func_type = LLVMFunctionType(LLVMInt8TypeInContext(context),
                                 arg_types, num_arg_types, 0);
 
    variant_func = LLVMAddFunction(gallivm->module, func_name, func_type);
-
-   if (elts)
-      variant->function_elts = variant_func;
-   else
-      variant->function = variant_func;
+   variant->function = variant_func;
 
    LLVMSetFunctionCallConv(variant_func, LLVMCCallConv);
    for (i = 0; i < num_arg_types; ++i)
@@ -1661,6 +1648,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    io_ptr                    = LLVMGetParam(variant_func, 1);
    vbuffers_ptr              = LLVMGetParam(variant_func, 2);
    count                     = LLVMGetParam(variant_func, 3);
+   start_or_maxelt           = LLVMGetParam(variant_func, 4);
    /*
     * XXX: stride is actually unused. The stride we use is strictly calculated
     * from the number of outputs (including the draw_extra outputs).
@@ -1672,29 +1660,19 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    system_values.instance_id = LLVMGetParam(variant_func, 7);
    vertex_id_offset          = LLVMGetParam(variant_func, 8);
    start_instance            = LLVMGetParam(variant_func, 9);
+   fetch_elts                = LLVMGetParam(variant_func, 10);
 
    lp_build_name(context_ptr, "context");
    lp_build_name(io_ptr, "io");
    lp_build_name(vbuffers_ptr, "vbuffers");
    lp_build_name(count, "count");
+   lp_build_name(start_or_maxelt, "start_or_maxelt");
    lp_build_name(stride, "stride");
    lp_build_name(vb_ptr, "vb");
    lp_build_name(system_values.instance_id, "instance_id");
    lp_build_name(vertex_id_offset, "vertex_id_offset");
    lp_build_name(start_instance, "start_instance");
-
-   if (elts) {
-      fetch_elt_max = LLVMGetParam(variant_func, 4);
-      fetch_elts    = LLVMGetParam(variant_func, 10);
-      lp_build_name(fetch_elts, "fetch_elts");
-      lp_build_name(fetch_elt_max, "fetch_elt_max");
-      start = NULL;
-   }
-   else {
-      start        = LLVMGetParam(variant_func, 4);
-      lp_build_name(start, "start");
-      fetch_elts = NULL;
-   }
+   lp_build_name(fetch_elts, "fetch_elts");
 
    /*
     * Function body
@@ -1735,19 +1713,30 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       ind_vec = LLVMBuildInsertElement(builder, ind_vec, index, index, "");
    }
 
+   fetch_max = lp_build_alloca(gallivm, int32_type, "fetch_max");
+   ind_vec_store = lp_build_alloca(gallivm, bldivec.vec_type, "ind_vec");
 
-   if (elts) {
-      fetch_max = count;
-      start = blduivec.zero;
+   have_elts = LLVMBuildICmp(builder, LLVMIntNE,
+                             LLVMConstPointerNull(arg_types[10]), fetch_elts, "");
+   lp_build_if(&if_ctx, gallivm, have_elts);
+   {
+      LLVMBuildStore(builder, ind_vec, ind_vec_store);
+      LLVMBuildStore(builder, count, fetch_max);
    }
-   else {
-      fetch_max = lp_build_add(&bld, start, count);
-      start = lp_build_broadcast_scalar(&blduivec, start);
-      ind_vec = lp_build_add(&blduivec, start, ind_vec);
+   lp_build_else(&if_ctx);
+   {
+      tmp = lp_build_add(&bld, count, start_or_maxelt);
+      LLVMBuildStore(builder, tmp, fetch_max);
+      start = lp_build_broadcast_scalar(&bldivec, start_or_maxelt);
+      tmp = lp_build_add(&bldivec, start, ind_vec);
+      LLVMBuildStore(builder, tmp, ind_vec_store);
    }
+   lp_build_endif(&if_ctx);
 
+   fetch_max = LLVMBuildLoad(builder, fetch_max, "");
    fetch_max = LLVMBuildSub(builder, fetch_max, bld.one, "fetch_max");
-   fetch_max = lp_build_broadcast_scalar(&blduivec, fetch_max);
+   fetch_max = lp_build_broadcast_scalar(&bldivec, fetch_max);
+   ind_vec = LLVMBuildLoad(builder, ind_vec_store, "");
 
    /*
     * Pre-calculate everything which is constant per shader invocation.
@@ -1847,7 +1836,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
       LLVMValueRef inputs[PIPE_MAX_SHADER_INPUTS][TGSI_NUM_CHANNELS];
       LLVMValueRef io;
       LLVMValueRef clipmask;   /* holds the clipmask value */
-      LLVMValueRef true_index_array;
+      LLVMValueRef true_index_array, index_store;
       const LLVMValueRef (*ptr_aos)[TGSI_NUM_CHANNELS];
 
       io_itr = lp_loop.counter;
@@ -1875,8 +1864,11 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
        */
       true_index_array = lp_build_min(&bldivec, true_index_array, fetch_max);
 
-      if (elts) {
+      index_store = lp_build_alloca_undef(gallivm, bldivec.vec_type, "index_store");
+      LLVMBuildStore(builder, true_index_array, index_store);
 
+      lp_build_if(&if_ctx, gallivm, have_elts);
+      {
          /*
           * Note: you'd expect some comparison/clamp against fetch_elt_max
           * here.
@@ -1906,7 +1898,11 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
                                             32, 32, TRUE,
                                             fetch_elts, true_index_array,
                                             FALSE);
+         LLVMBuildStore(builder, true_index_array, index_store);
       }
+      lp_build_endif(&if_ctx);
+
+      true_index_array = LLVMBuildLoad(builder, index_store, "");
 
       for (j = 0; j < key->nr_vertex_elements; ++j) {
          struct pipe_vertex_element *velem = &key->vertex_element[j];

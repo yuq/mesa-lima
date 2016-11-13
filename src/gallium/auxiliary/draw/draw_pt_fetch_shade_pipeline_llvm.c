@@ -354,6 +354,8 @@ llvm_pipeline_generic(struct draw_pt_middle_end *middle,
    boolean free_prim_info = FALSE;
    unsigned opt = fpme->opt;
    boolean clipped = 0;
+   unsigned start_or_maxelt, vid_base;
+   const unsigned *elts;
 
    llvm_vert_info.count = fetch_info->count;
    llvm_vert_info.vertex_size = fpme->vertex_size;
@@ -373,29 +375,27 @@ llvm_pipeline_generic(struct draw_pt_middle_end *middle,
       draw->statistics.vs_invocations += fetch_info->count;
    }
 
-   if (fetch_info->linear)
-      clipped = fpme->current_variant->jit_func( &fpme->llvm->jit_context,
-                                       llvm_vert_info.verts,
-                                       draw->pt.user.vbuffer,
-                                       fetch_info->count,
-                                       fetch_info->start,
-                                       fpme->vertex_size,
-                                       draw->pt.vertex_buffer,
-                                       draw->instance_id,
-                                       draw->start_index,
-                                       draw->start_instance);
-   else
-      clipped = fpme->current_variant->jit_func_elts( &fpme->llvm->jit_context,
-                                            llvm_vert_info.verts,
-                                            draw->pt.user.vbuffer,
-                                            fetch_info->count,
-                                            draw->pt.user.eltMax,
-                                            fpme->vertex_size,
-                                            draw->pt.vertex_buffer,
-                                            draw->instance_id,
-                                            draw->pt.user.eltBias,
-                                            draw->start_instance,
-                                            fetch_info->elts);
+   if (fetch_info->linear) {
+      start_or_maxelt = fetch_info->start;
+      vid_base = draw->start_index;
+      elts = NULL;
+   }
+   else {
+      start_or_maxelt = draw->pt.user.eltMax;
+      vid_base = draw->pt.user.eltBias;
+      elts = fetch_info->elts;
+   }
+   clipped = fpme->current_variant->jit_func(&fpme->llvm->jit_context,
+                                             llvm_vert_info.verts,
+                                             draw->pt.user.vbuffer,
+                                             fetch_info->count,
+                                             start_or_maxelt,
+                                             fpme->vertex_size,
+                                             draw->pt.vertex_buffer,
+                                             draw->instance_id,
+                                             vid_base,
+                                             draw->start_instance,
+                                             elts);
 
    /* Finished with fetch and vs:
     */
