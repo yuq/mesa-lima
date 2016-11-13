@@ -645,10 +645,12 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct tgsi_shader_info *info = si_get_vs_info(sctx);
+	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	unsigned window_space =
 	   info->properties[TGSI_PROPERTY_VS_WINDOW_SPACE_POSITION];
 	unsigned clipdist_mask =
 		info->writes_clipvertex ? SIX_BITS : info->clipdist_writemask;
+	unsigned ucp_mask = clipdist_mask ? 0 : rs->clip_plane_enable & SIX_BITS;
 	unsigned total_mask = clipdist_mask | (info->culldist_writemask << info->num_written_clipdistance);
 
 	radeon_set_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
@@ -663,12 +665,11 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 					    info->writes_layer ||
 					     info->writes_viewport_index) |
 		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(1) |
-		(sctx->queued.named.rasterizer->clip_plane_enable &
+		(rs->clip_plane_enable &
 		 clipdist_mask) | (info->culldist_writemask << 8));
 	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
-		sctx->queued.named.rasterizer->pa_cl_clip_cntl |
-		(clipdist_mask ? 0 :
-		 sctx->queued.named.rasterizer->clip_plane_enable & SIX_BITS) |
+		rs->pa_cl_clip_cntl |
+		ucp_mask |
 		S_028810_CLIP_DISABLE(window_space));
 
 	/* reuse needs to be set off if we write oViewport */
