@@ -1757,7 +1757,6 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
     struct pipe_surface *psurf;
     unsigned x, y, w, h;
     union pipe_color_union rgba;
-    boolean fallback;
 
     DBG("This=%p pSurface=%p pRect=%p color=%08x\n", This,
         pSurface, pRect, color);
@@ -1793,15 +1792,8 @@ NineDevice9_ColorFill( struct NineDevice9 *This,
     }
     d3dcolor_to_pipe_color_union(&rgba, color);
 
-    fallback = !(surf->base.info.bind & PIPE_BIND_RENDER_TARGET);
-
-    if (!fallback) {
+    if (surf->base.info.bind & PIPE_BIND_RENDER_TARGET) {
         psurf = NineSurface9_GetSurface(surf, 0);
-        if (!psurf)
-            fallback = TRUE;
-    }
-
-    if (!fallback) {
         pipe->clear_render_target(pipe, psurf, &rgba, x, y, w, h, false);
     } else {
         D3DLOCKED_RECT lock;
