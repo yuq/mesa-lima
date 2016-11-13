@@ -320,8 +320,6 @@ struct si_vs_prolog_bits {
 struct si_vs_epilog_bits {
 	unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
 	/* TODO:
-	 * - skip clipdist, culldist (including clipvertex code) exports based
-	 *   on which clip_plane_enable bits are set
 	 * - skip layer, viewport, clipdist, and culldist parameter exports
 	 *   if PS doesn't read them
 	 */
@@ -438,6 +436,9 @@ struct si_shader_key {
 
 	/* Optimization flags for asynchronous compilation only. */
 	union {
+		struct {
+			unsigned	clip_disable:1;
+		} hw_vs; /* HW VS (it can be VS, TES, GS) */
 	} opt;
 };
 

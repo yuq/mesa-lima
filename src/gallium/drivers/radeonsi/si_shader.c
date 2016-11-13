@@ -2294,9 +2294,15 @@ handle_semantic:
 			param_count++;
 			break;
 		case TGSI_SEMANTIC_CLIPDIST:
+			if (shader->key.opt.hw_vs.clip_disable) {
+				semantic_name = TGSI_SEMANTIC_GENERIC;
+				goto handle_semantic;
+			}
 			target = V_008DFC_SQ_EXP_POS + 2 + semantic_index;
 			break;
 		case TGSI_SEMANTIC_CLIPVERTEX:
+			if (shader->key.opt.hw_vs.clip_disable)
+				continue;
 			si_llvm_emit_clipvertex(bld_base, pos_args, outputs[i].values);
 			continue;
 		case TGSI_SEMANTIC_PRIMID:

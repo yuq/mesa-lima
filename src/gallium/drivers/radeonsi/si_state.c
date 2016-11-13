@@ -644,6 +644,7 @@ static void si_emit_clip_state(struct si_context *sctx, struct r600_atom *atom)
 static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+	struct si_shader *vs = si_get_vs_state(sctx);
 	struct tgsi_shader_info *info = si_get_vs_info(sctx);
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	unsigned window_space =
@@ -652,7 +653,14 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 		info->writes_clipvertex ? SIX_BITS : info->clipdist_writemask;
 	unsigned ucp_mask = clipdist_mask ? 0 : rs->clip_plane_enable & SIX_BITS;
 	unsigned culldist_mask = info->culldist_writemask << info->num_written_clipdistance;
-	unsigned total_mask = clipdist_mask | culldist_mask;
+	unsigned total_mask;
+
+	if (vs->key.opt.hw_vs.clip_disable) {
+		assert(!info->culldist_writemask);
+		clipdist_mask = 0;
+		culldist_mask = 0;
+	}
+	total_mask = clipdist_mask | culldist_mask;
 
 	radeon_set_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
 		S_02881C_USE_VTX_POINT_SIZE(info->writes_psize) |

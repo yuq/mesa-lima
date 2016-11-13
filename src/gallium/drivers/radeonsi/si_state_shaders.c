@@ -854,6 +854,17 @@ static unsigned si_get_alpha_test_func(struct si_context *sctx)
 	return PIPE_FUNC_ALWAYS;
 }
 
+static void si_shader_selector_key_hw_vs(struct si_context *sctx,
+					 struct si_shader_selector *vs,
+					 struct si_shader_key *key)
+{
+	key->opt.hw_vs.clip_disable =
+		sctx->queued.named.rasterizer->clip_plane_enable == 0 &&
+		(vs->info.clipdist_writemask ||
+		 vs->info.writes_clipvertex) &&
+		!vs->info.culldist_writemask;
+}
+
 /* Compute the key for the hw shader variant */
 static inline void si_shader_selector_key(struct pipe_context *ctx,
 					  struct si_shader_selector *sel,
@@ -882,6 +893,8 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 		else if (sctx->gs_shader.cso)
 			key->as_es = 1;
 		else {
+			si_shader_selector_key_hw_vs(sctx, sel, key);
+
 			if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
 				key->part.vs.epilog.export_prim_id = 1;
 		}
@@ -896,8 +909,12 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
 			key->as_es = 1;
-		else if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
-			key->part.tes.epilog.export_prim_id = 1;
+		else {
+			si_shader_selector_key_hw_vs(sctx, sel, key);
+
+			if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
+				key->part.tes.epilog.export_prim_id = 1;
+		}
 		break;
 	case PIPE_SHADER_GEOMETRY:
 		key->part.gs.prolog.tri_strip_adj_fix = sctx->gs_tri_strip_adj_fix;
