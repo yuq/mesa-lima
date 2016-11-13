@@ -139,7 +139,7 @@ NineQuery9_dtor( struct NineQuery9 *This )
 
     if (This->pq) {
         if (This->state == NINE_QUERY_STATE_RUNNING)
-            nine_context_end_query(device, This->pq);
+            nine_context_end_query(device, &This->counter, This->pq);
         nine_context_destroy_query(device, This->pq);
     }
 
@@ -177,15 +177,15 @@ NineQuery9_Issue( struct NineQuery9 *This,
 
     if (dwIssueFlags == D3DISSUE_BEGIN) {
         if (This->state == NINE_QUERY_STATE_RUNNING)
-            nine_context_end_query(device, This->pq);
-        nine_context_begin_query(device, This->pq);
+            nine_context_end_query(device, &This->counter, This->pq);
+        nine_context_begin_query(device, &This->counter, This->pq);
         This->state = NINE_QUERY_STATE_RUNNING;
     } else {
         if (This->state != NINE_QUERY_STATE_RUNNING &&
             This->type != D3DQUERYTYPE_EVENT &&
             This->type != D3DQUERYTYPE_TIMESTAMP)
-            nine_context_begin_query(device, This->pq);
-        nine_context_end_query(device, This->pq);
+            nine_context_begin_query(device, &This->counter, This->pq);
+        nine_context_end_query(device, &This->counter, This->pq);
         This->state = NINE_QUERY_STATE_ENDED;
     }
     return D3D_OK;
@@ -240,7 +240,7 @@ NineQuery9_GetData( struct NineQuery9 *This,
     /* Note: We ignore dwGetDataFlags, because get_query_result will
      * flush automatically if needed */
 
-    ok = nine_context_get_query_result(device, This->pq,
+    ok = nine_context_get_query_result(device, This->pq, &This->counter,
                                        !!(dwGetDataFlags & D3DGETDATA_FLUSH),
                                        wait_query_result, &presult);
 

@@ -2712,16 +2712,16 @@ CSMT_ITEM_DO_WAIT(nine_context_destroy_query,
     context->pipe->destroy_query(context->pipe, query);
 }
 
-CSMT_ITEM_NO_WAIT(nine_context_begin_query,
-                  ARG_REF(struct pipe_query, query))
+CSMT_ITEM_NO_WAIT_WITH_COUNTER(nine_context_begin_query,
+                               ARG_REF(struct pipe_query, query))
 {
     struct nine_context *context = &device->context;
 
     (void) context->pipe->begin_query(context->pipe, query);
 }
 
-CSMT_ITEM_NO_WAIT(nine_context_end_query,
-                  ARG_REF(struct pipe_query, query))
+CSMT_ITEM_NO_WAIT_WITH_COUNTER(nine_context_end_query,
+                               ARG_REF(struct pipe_query, query))
 {
     struct nine_context *context = &device->context;
 
@@ -2730,15 +2730,28 @@ CSMT_ITEM_NO_WAIT(nine_context_end_query,
 
 boolean
 nine_context_get_query_result(struct NineDevice9 *device, struct pipe_query *query,
-                              boolean flush, boolean wait,
+                              unsigned *counter, boolean flush, boolean wait,
                               union pipe_query_result *result)
 {
-    struct nine_context *context = &device->context;
+    struct pipe_context *pipe;
+    boolean ret;
 
-    (void) flush;
-    if (device->csmt_active)
-        nine_csmt_process(device);
-    return context->pipe->get_query_result(context->pipe, query, wait, result);
+    if (wait) {
+        if (device->csmt_active)
+            nine_csmt_process(device);
+    } else if (p_atomic_read(counter) > 0) {
+        if (flush && device->csmt_active)
+            nine_queue_flush(device->csmt_ctx->pool);
+        DBG("Pending begin/end. Returning\n");
+        return false;
+    }
+
+    pipe = nine_context_get_pipe_acquire(device);
+    ret = pipe->get_query_result(pipe, query, wait, result);
+    nine_context_get_pipe_release(device);
+
+    DBG("Query result %s\n", ret ? "found" : "not yet available");
+    return ret;
 }
 
 /* State defaults */

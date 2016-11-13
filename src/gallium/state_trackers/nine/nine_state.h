@@ -546,14 +546,14 @@ void
 nine_context_destroy_query(struct NineDevice9 *device, struct pipe_query *query);
 
 void
-nine_context_begin_query(struct NineDevice9 *device, struct pipe_query *query);
+nine_context_begin_query(struct NineDevice9 *device, unsigned *counter, struct pipe_query *query);
 
 void
-nine_context_end_query(struct NineDevice9 *device, struct pipe_query *query);
+nine_context_end_query(struct NineDevice9 *device, unsigned *counter, struct pipe_query *query);
 
 boolean
 nine_context_get_query_result(struct NineDevice9 *device, struct pipe_query *query,
-                              boolean flush, boolean wait,
+                              unsigned *counter, boolean flush, boolean wait,
                               union pipe_query_result *result);
 
 void nine_state_restore_non_cso(struct NineDevice9 *device);
