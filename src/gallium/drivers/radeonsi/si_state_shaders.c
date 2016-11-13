@@ -881,10 +881,10 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			key->as_ls = 1;
 		else if (sctx->gs_shader.cso)
 			key->as_es = 1;
-
-		if (!sctx->gs_shader.cso && sctx->ps_shader.cso &&
-		    sctx->ps_shader.cso->info.uses_primid)
-			key->part.vs.epilog.export_prim_id = 1;
+		else {
+			if (sctx->ps_shader.cso && sctx->ps_shader.cso->info.uses_primid)
+				key->part.vs.epilog.export_prim_id = 1;
+		}
 		break;
 	case PIPE_SHADER_TESS_CTRL:
 		key->part.tcs.epilog.prim_mode =
