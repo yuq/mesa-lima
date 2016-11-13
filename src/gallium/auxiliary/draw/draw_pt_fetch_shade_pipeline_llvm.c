@@ -377,8 +377,8 @@ llvm_pipeline_generic(struct draw_pt_middle_end *middle,
       clipped = fpme->current_variant->jit_func( &fpme->llvm->jit_context,
                                        llvm_vert_info.verts,
                                        draw->pt.user.vbuffer,
-                                       fetch_info->start,
                                        fetch_info->count,
+                                       fetch_info->start,
                                        fpme->vertex_size,
                                        draw->pt.vertex_buffer,
                                        draw->instance_id,
@@ -388,14 +388,14 @@ llvm_pipeline_generic(struct draw_pt_middle_end *middle,
       clipped = fpme->current_variant->jit_func_elts( &fpme->llvm->jit_context,
                                             llvm_vert_info.verts,
                                             draw->pt.user.vbuffer,
-                                            fetch_info->elts,
-                                            draw->pt.user.eltMax,
                                             fetch_info->count,
+                                            draw->pt.user.eltMax,
                                             fpme->vertex_size,
                                             draw->pt.vertex_buffer,
                                             draw->instance_id,
                                             draw->pt.user.eltBias,
-                                            draw->start_instance);
+                                            draw->start_instance,
+                                            fetch_info->elts);
 
    /* Finished with fetch and vs:
     */

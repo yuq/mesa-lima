@@ -265,8 +265,8 @@ typedef boolean
 (*draw_jit_vert_func)(struct draw_jit_context *context,
                       struct vertex_header *io,
                       const struct draw_vertex_buffer vbuffers[PIPE_MAX_ATTRIBS],
-                      unsigned start,
                       unsigned count,
+                      unsigned start,
                       unsigned stride,
                       struct pipe_vertex_buffer *vertex_buffers,
                       unsigned instance_id,
@@ -278,14 +278,14 @@ typedef boolean
 (*draw_jit_vert_func_elts)(struct draw_jit_context *context,
                            struct vertex_header *io,
                            const struct draw_vertex_buffer vbuffers[PIPE_MAX_ATTRIBS],
-                           const unsigned *fetch_elts,
+                           unsigned count,
                            unsigned fetch_max_elt,
-                           unsigned fetch_count,
                            unsigned stride,
                            struct pipe_vertex_buffer *vertex_buffers,
                            unsigned instance_id,
                            unsigned vertex_id_offset,
-                           unsigned start_instance);
+                           unsigned start_instance,
+                           const unsigned *fetch_elts);
 
 
 typedef int

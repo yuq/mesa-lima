@@ -1580,7 +1580,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    LLVMBuilderRef builder;
    char func_name[64];
    struct lp_type vs_type;
-   LLVMValueRef count, fetch_elts, fetch_elt_max, fetch_count;
+   LLVMValueRef count, fetch_elts, fetch_elt_max;
    LLVMValueRef vertex_id_offset, start_instance, start;
    LLVMValueRef stride, step, io_itr;
    LLVMValueRef ind_vec;
@@ -1631,17 +1631,16 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    arg_types[i++] = get_context_ptr_type(variant);       /* context */
    arg_types[i++] = get_vertex_header_ptr_type(variant); /* vertex_header */
    arg_types[i++] = get_buffer_ptr_type(variant);        /* vbuffers */
+   arg_types[i++] = int32_type;                          /* count */
+   arg_types[i++] = int32_type;                          /* start/fetch_elt_max */
+   arg_types[i++] = int32_type;                          /* stride */
+   arg_types[i++] = get_vb_ptr_type(variant);            /* pipe_vertex_buffer's */
+   arg_types[i++] = int32_type;                          /* instance_id */
+   arg_types[i++] = int32_type;                          /* vertex_id_offset */
+   arg_types[i++] = int32_type;                          /* start_instance */
    if (elts) {
-      arg_types[i++] = LLVMPointerType(int32_type, 0);/* fetch_elts  */
-      arg_types[i++] = int32_type;                  /* fetch_elt_max */
-   } else
-      arg_types[i++] = int32_type;                  /* start */
-   arg_types[i++] = int32_type;                     /* fetch_count / count */
-   arg_types[i++] = int32_type;                     /* stride */
-   arg_types[i++] = get_vb_ptr_type(variant);       /* pipe_vertex_buffer's */
-   arg_types[i++] = int32_type;                     /* instance_id */
-   arg_types[i++] = int32_type;                     /* vertex_id_offset */
-   arg_types[i++] = int32_type;                     /* start_instance */
+      arg_types[i++] = LLVMPointerType(int32_type, 0);   /* fetch_elts  */
+   }
 
    func_type = LLVMFunctionType(LLVMInt8TypeInContext(context),
                                 arg_types, num_arg_types, 0);
@@ -1661,21 +1660,23 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    context_ptr               = LLVMGetParam(variant_func, 0);
    io_ptr                    = LLVMGetParam(variant_func, 1);
    vbuffers_ptr              = LLVMGetParam(variant_func, 2);
+   count                     = LLVMGetParam(variant_func, 3);
    /*
     * XXX: stride is actually unused. The stride we use is strictly calculated
     * from the number of outputs (including the draw_extra outputs).
     * Should probably fix some day (we need a new vs just because of extra
     * outputs which the generated vs won't touch).
     */
-   stride                    = LLVMGetParam(variant_func, 5 + (elts ? 1 : 0));
-   vb_ptr                    = LLVMGetParam(variant_func, 6 + (elts ? 1 : 0));
-   system_values.instance_id = LLVMGetParam(variant_func, 7 + (elts ? 1 : 0));
-   vertex_id_offset          = LLVMGetParam(variant_func, 8 + (elts ? 1 : 0));
-   start_instance            = LLVMGetParam(variant_func, 9 + (elts ? 1 : 0));
+   stride                    = LLVMGetParam(variant_func, 5);
+   vb_ptr                    = LLVMGetParam(variant_func, 6);
+   system_values.instance_id = LLVMGetParam(variant_func, 7);
+   vertex_id_offset          = LLVMGetParam(variant_func, 8);
+   start_instance            = LLVMGetParam(variant_func, 9);
 
    lp_build_name(context_ptr, "context");
    lp_build_name(io_ptr, "io");
    lp_build_name(vbuffers_ptr, "vbuffers");
+   lp_build_name(count, "count");
    lp_build_name(stride, "stride");
    lp_build_name(vb_ptr, "vb");
    lp_build_name(system_values.instance_id, "instance_id");
@@ -1683,20 +1684,16 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
    lp_build_name(start_instance, "start_instance");
 
    if (elts) {
-      fetch_elts    = LLVMGetParam(variant_func, 3);
       fetch_elt_max = LLVMGetParam(variant_func, 4);
-      fetch_count   = LLVMGetParam(variant_func, 5);
+      fetch_elts    = LLVMGetParam(variant_func, 10);
       lp_build_name(fetch_elts, "fetch_elts");
       lp_build_name(fetch_elt_max, "fetch_elt_max");
-      lp_build_name(fetch_count, "fetch_count");
-      start = count = NULL;
+      start = NULL;
    }
    else {
-      start        = LLVMGetParam(variant_func, 3);
-      count        = LLVMGetParam(variant_func, 4);
+      start        = LLVMGetParam(variant_func, 4);
       lp_build_name(start, "start");
-      lp_build_name(count, "count");
-      fetch_elts = fetch_count = NULL;
+      fetch_elts = NULL;
    }
 
    /*
@@ -1740,8 +1737,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant,
 
 
    if (elts) {
-      fetch_max = fetch_count;
-      count = fetch_count;
+      fetch_max = count;
       start = blduivec.zero;
    }
    else {
