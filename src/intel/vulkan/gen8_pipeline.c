@@ -147,6 +147,7 @@ genX(graphics_pipeline_create)(
 
          gs.MaximumNumberofThreads  = devinfo->max_gs_threads / 2 - 1;
          gs.ControlDataHeaderSize   = gs_prog_data->control_data_header_size_hwords;
+         gs.InstanceControl         = MAX2(gs_prog_data->invocations, 1) - 1;
          gs.DispatchMode            = gs_prog_data->base.dispatch_mode;
          gs.StatisticsEnable        = true;
          gs.IncludePrimitiveID      = gs_prog_data->include_primitive_id;
