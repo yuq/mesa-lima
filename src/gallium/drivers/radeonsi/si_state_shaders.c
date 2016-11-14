@@ -858,11 +858,35 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 					 struct si_shader_selector *vs,
 					 struct si_shader_key *key)
 {
+	struct si_shader_selector *ps = sctx->ps_shader.cso;
+
 	key->opt.hw_vs.clip_disable =
 		sctx->queued.named.rasterizer->clip_plane_enable == 0 &&
 		(vs->info.clipdist_writemask ||
 		 vs->info.writes_clipvertex) &&
 		!vs->info.culldist_writemask;
+
+	/* Find out if PS is disabled. */
+	bool ps_disabled = ps == NULL;
+
+	/* Find out which VS outputs aren't used by the PS. */
+	uint64_t outputs_written = vs->outputs_written;
+	uint32_t outputs_written2 = vs->outputs_written2;
+	uint64_t inputs_read = 0;
+	uint32_t inputs_read2 = 0;
+
+	outputs_written &= ~0x3; /* ignore POSITION, PSIZE */
+
+	if (!ps_disabled) {
+		inputs_read = ps->inputs_read;
+		inputs_read2 = ps->inputs_read2;
+	}
+
+	uint64_t linked = outputs_written & inputs_read;
+	uint32_t linked2 = outputs_written2 & inputs_read2;
+
+	key->opt.hw_vs.kill_outputs = ~linked & outputs_written;
+	key->opt.hw_vs.kill_outputs2 = ~linked2 & outputs_written2;
 }
 
 /* Compute the key for the hw shader variant */
@@ -1785,11 +1809,16 @@ static unsigned si_get_ps_input_cntl(struct si_context *sctx,
 				/* The input is loaded from parameter memory. */
 				ps_input_cntl |= S_028644_OFFSET(offset);
 			} else if (!G_028644_PT_SPRITE_TEX(ps_input_cntl)) {
-				/* The input is a DEFAULT_VAL constant. */
-				assert(offset >= EXP_PARAM_DEFAULT_VAL_0000 &&
-				       offset <= EXP_PARAM_DEFAULT_VAL_1111);
+				if (offset == EXP_PARAM_UNDEFINED) {
+					/* This can happen with depth-only rendering. */
+					offset = 0;
+				} else {
+					/* The input is a DEFAULT_VAL constant. */
+					assert(offset >= EXP_PARAM_DEFAULT_VAL_0000 &&
+					       offset <= EXP_PARAM_DEFAULT_VAL_1111);
+					offset -= EXP_PARAM_DEFAULT_VAL_0000;
+				}
 
-				offset -= EXP_PARAM_DEFAULT_VAL_0000;
 				ps_input_cntl = S_028644_OFFSET(0x20) |
 						S_028644_DEFAULT_VAL(offset);
 			}

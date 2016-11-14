@@ -322,10 +322,6 @@ struct si_vs_prolog_bits {
 /* Common VS bits between the shader key and the epilog key. */
 struct si_vs_epilog_bits {
 	unsigned	export_prim_id:1; /* when PS needs it and GS is disabled */
-	/* TODO:
-	 * - skip layer, viewport, clipdist, and culldist parameter exports
-	 *   if PS doesn't read them
-	 */
 };
 
 /* Common TCS bits between the shader key and the epilog key. */
@@ -440,6 +436,8 @@ struct si_shader_key {
 	/* Optimization flags for asynchronous compilation only. */
 	union {
 		struct {
+			uint64_t	kill_outputs; /* "get_unique_index" bits */
+			uint32_t	kill_outputs2; /* "get_unique_index2" bits */
 			unsigned	clip_disable:1;
 		} hw_vs; /* HW VS (it can be VS, TES, GS) */
 	} opt;
@@ -468,6 +466,7 @@ enum {
 	EXP_PARAM_DEFAULT_VAL_0001,
 	EXP_PARAM_DEFAULT_VAL_1110,
 	EXP_PARAM_DEFAULT_VAL_1111,
+	EXP_PARAM_UNDEFINED = 255,
 };
 
 /* GCN-specific shader info. */

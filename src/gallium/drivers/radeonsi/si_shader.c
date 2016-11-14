@@ -2281,6 +2281,26 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	for (i = 0; i < noutput; i++) {
 		semantic_name = outputs[i].name;
 		semantic_index = outputs[i].sid;
+		bool export_param = true;
+
+		switch (semantic_name) {
+		case TGSI_SEMANTIC_POSITION: /* ignore these */
+		case TGSI_SEMANTIC_PSIZE:
+		case TGSI_SEMANTIC_CLIPVERTEX:
+		case TGSI_SEMANTIC_EDGEFLAG:
+			break;
+		case TGSI_SEMANTIC_GENERIC:
+		case TGSI_SEMANTIC_CLIPDIST:
+			if (shader->key.opt.hw_vs.kill_outputs &
+			    (1ull << si_shader_io_get_unique_index(semantic_name, semantic_index)))
+				export_param = false;
+			break;
+		default:
+			if (shader->key.opt.hw_vs.kill_outputs2 &
+			    (1u << si_shader_io_get_unique_index2(semantic_name, semantic_index)))
+				export_param = false;
+			break;
+		}
 
 handle_semantic:
 		/* Select the correct target */
@@ -2304,6 +2324,8 @@ handle_semantic:
 			break;
 		case TGSI_SEMANTIC_COLOR:
 		case TGSI_SEMANTIC_BCOLOR:
+			if (!export_param)
+				continue;
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
 			shader->info.vs_output_param_offset[i] = param_count;
@@ -2325,6 +2347,8 @@ handle_semantic:
 		case TGSI_SEMANTIC_FOG:
 		case TGSI_SEMANTIC_TEXCOORD:
 		case TGSI_SEMANTIC_GENERIC:
+			if (!export_param)
+				continue;
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
 			assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
 			shader->info.vs_output_param_offset[i] = param_count;
@@ -7083,7 +7107,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.separate_prolog = !is_monolithic;
 
-	memset(shader->info.vs_output_param_offset, 0xff,
+	memset(shader->info.vs_output_param_offset, EXP_PARAM_UNDEFINED,
 	       sizeof(shader->info.vs_output_param_offset));
 
 	shader->info.uses_instanceid = sel->info.uses_instanceid;
