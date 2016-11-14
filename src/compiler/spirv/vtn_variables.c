@@ -1027,6 +1027,9 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
    case SpvDecorationDescriptorSet:
       vtn_var->descriptor_set = dec->literals[0];
       return;
+   case SpvDecorationInputAttachmentIndex:
+      vtn_var->input_attachment_index = dec->literals[0];
+      return;
    default:
       break;
    }
@@ -1335,6 +1338,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
           */
          var->var->data.binding = var->binding;
          var->var->data.descriptor_set = var->descriptor_set;
+         var->var->data.index = var->input_attachment_index;
 
          if (var->mode == vtn_variable_mode_image)
             var->var->data.image.format = without_array->image_format;
