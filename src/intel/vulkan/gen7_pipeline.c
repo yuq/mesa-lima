@@ -158,7 +158,7 @@ genX(graphics_pipeline_create)(
          ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;
 
          ps.RenderTargetFastClearEnable   = false;
-         ps.DualSourceBlendEnable         = false;
+         ps.DualSourceBlendEnable         = wm_prog_data->dual_src_blend;
          ps.RenderTargetResolveEnable     = false;
 
          ps.PositionXYOffsetSelect        = wm_prog_data->uses_pos_offset ?
