@@ -6244,10 +6244,12 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n", key->part.vs.epilog.export_prim_id);
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
+		fprintf(f, "  mono.vs.fix_fetch = 0x%x\n", key->mono.vs.fix_fetch);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
 		fprintf(f, "  part.tcs.epilog.prim_mode = %u\n", key->part.tcs.epilog.prim_mode);
+		fprintf(f, "  mono.tcs.inputs_to_copy = 0x%"PRIx64"\n", key->mono.tcs.inputs_to_copy);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
@@ -6256,6 +6258,9 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
+		fprintf(f, "  part.gs.prolog.tri_strip_adj_fix = %u\n", key->part.gs.prolog.tri_strip_adj_fix);
+		break;
+
 	case PIPE_SHADER_COMPUTE:
 		break;
 
