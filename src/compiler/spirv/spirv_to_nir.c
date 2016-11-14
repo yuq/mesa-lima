@@ -930,7 +930,7 @@ vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
 }
 
 static void
-spec_constant_deocoration_cb(struct vtn_builder *b, struct vtn_value *v,
+spec_constant_decoration_cb(struct vtn_builder *b, struct vtn_value *v,
                              int member, const struct vtn_decoration *dec,
                              void *data)
 {
@@ -952,7 +952,7 @@ static uint32_t
 get_specialization(struct vtn_builder *b, struct vtn_value *val,
                    uint32_t const_value)
 {
-   vtn_foreach_decoration(b, val, spec_constant_deocoration_cb, &const_value);
+   vtn_foreach_decoration(b, val, spec_constant_decoration_cb, &const_value);
    return const_value;
 }
 
