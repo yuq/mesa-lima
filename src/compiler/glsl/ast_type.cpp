@@ -198,16 +198,20 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    if (q.flags.q.prim_type) {
       if (this->flags.q.prim_type && this->prim_type != q.prim_type) {
          _mesa_glsl_error(loc, state,
-                          "conflicting primitive type qualifiers used");
+                          "conflicting input primitive %s specified",
+                          state->stage == MESA_SHADER_GEOMETRY ?
+                          "type" : "mode");
          return false;
       }
+      this->flags.q.prim_type = 1;
       this->prim_type = q.prim_type;
    }
 
    if (q.flags.q.max_vertices) {
-      if (this->max_vertices && !is_single_layout_merge) {
+      if (this->flags.q.max_vertices && !is_single_layout_merge) {
          this->max_vertices->merge_qualifier(q.max_vertices);
       } else {
+         this->flags.q.max_vertices = 1;
          this->max_vertices = q.max_vertices;
       }
    }
@@ -222,9 +226,10 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.invocations) {
-      if (this->invocations && !is_single_layout_merge) {
+      if (this->flags.q.invocations && !is_single_layout_merge) {
          this->invocations->merge_qualifier(q.invocations);
       } else {
+         this->flags.q.invocations = 1;
          this->invocations = q.invocations;
       }
    }
@@ -284,9 +289,10 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
    }
 
    if (q.flags.q.vertices) {
-      if (this->vertices && !is_single_layout_merge) {
+      if (this->flags.q.vertices && !is_single_layout_merge) {
          this->vertices->merge_qualifier(q.vertices);
       } else {
+         this->flags.q.vertices = 1;
          this->vertices = q.vertices;
       }
    }
@@ -296,6 +302,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          _mesa_glsl_error(loc, state, "conflicting vertex spacing used");
          return false;
       }
+      this->flags.q.vertex_spacing = 1;
       this->vertex_spacing = q.vertex_spacing;
    }
 
@@ -304,6 +311,7 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          _mesa_glsl_error(loc, state, "conflicting ordering used");
          return false;
       }
+      this->flags.q.ordering = 1;
       this->ordering = q.ordering;
    }
 
@@ -312,8 +320,12 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          _mesa_glsl_error(loc, state, "conflicting point mode used");
          return false;
       }
+      this->flags.q.point_mode = 1;
       this->point_mode = q.point_mode;
    }
+
+   if (q.flags.q.early_fragment_tests)
+      this->flags.q.early_fragment_tests = true;
 
    if ((q.flags.i & ubo_mat_mask.flags.i) != 0)
       this->flags.i &= ~ubo_mat_mask.flags.i;
@@ -329,6 +341,9 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
          }
       }
    }
+
+   if (q.flags.q.local_size_variable)
+      this->flags.q.local_size_variable = true;
 
    this->flags.i |= q.flags.i;
 
@@ -535,6 +550,45 @@ ast_type_qualifier::validate_in_qualifier(YYLTYPE *loc,
       _mesa_glsl_error(loc, state, "invalid input layout qualifiers used");
    }
 
+   /* The checks below are also performed when merging but we want to spit an
+    * error against the default global input qualifier as soon as we can, with
+    * the closest error location in the shader.
+    */
+
+   /* Input layout qualifiers can be specified multiple
+    * times in separate declarations, as long as they match.
+    */
+   if (state->in_qualifier->flags.q.prim_type && this->flags.q.prim_type
+       && state->in_qualifier->prim_type != this->prim_type) {
+      r = false;
+      _mesa_glsl_error(loc, state,
+                       "conflicting input primitive %s specified",
+                       state->stage == MESA_SHADER_GEOMETRY ?
+                       "type" : "mode");
+   }
+
+   if (state->in_qualifier->flags.q.vertex_spacing
+       && this->flags.q.vertex_spacing
+       && state->in_qualifier->vertex_spacing != this->vertex_spacing) {
+      r = false;
+      _mesa_glsl_error(loc, state,
+                       "conflicting vertex spacing specified");
+   }
+
+   if (state->in_qualifier->flags.q.ordering && this->flags.q.ordering
+       && state->in_qualifier->ordering != this->ordering) {
+      r = false;
+      _mesa_glsl_error(loc, state,
+                       "conflicting ordering specified");
+   }
+
+   if (state->in_qualifier->flags.q.point_mode && this->flags.q.point_mode
+       && state->in_qualifier->point_mode != this->point_mode) {
+      r = false;
+      _mesa_glsl_error(loc, state,
+                       "conflicting point mode specified");
+   }
+
    return r;
 }
 
@@ -543,100 +597,43 @@ ast_type_qualifier::merge_into_in_qualifier(YYLTYPE *loc,
                                             _mesa_glsl_parse_state *state,
                                             ast_node* &node, bool create_node)
 {
+   bool r = true;
    void *lin_ctx = state->linalloc;
-   bool create_gs_ast = false;
-   bool create_cs_ast = false;
 
-   switch (state->stage) {
-   case MESA_SHADER_GEOMETRY:
-      create_gs_ast |=
-         this->flags.q.prim_type &&
-         !state->in_qualifier->flags.q.prim_type;
-      break;
-   case MESA_SHADER_COMPUTE:
-      create_cs_ast |=
-         this->flags.q.local_size != 0 &&
-         state->in_qualifier->flags.q.local_size == 0;
-      break;
-   default:
-      break;
-   }
-
-   /* Input layout qualifiers can be specified multiple
-    * times in separate declarations, as long as they match.
+   /* We create the gs_input_layout node before merging so, in the future, no
+    * more repeated nodes will be created as we will have the flag set.
     */
-   if (state->in_qualifier->flags.q.prim_type) {
-      if (this->flags.q.prim_type &&
-          state->in_qualifier->prim_type != this->prim_type) {
-         _mesa_glsl_error(loc, state,
-                          "conflicting input primitive %s specified",
-                          state->stage == MESA_SHADER_GEOMETRY ?
-                          "type" : "mode");
-      }
-   } else if (this->flags.q.prim_type) {
-      state->in_qualifier->flags.q.prim_type = 1;
-      state->in_qualifier->prim_type = this->prim_type;
+   if (state->stage == MESA_SHADER_GEOMETRY
+       && this->flags.q.prim_type && !state->in_qualifier->flags.q.prim_type
+       && create_node) {
+      node = new(lin_ctx) ast_gs_input_layout(*loc, this->prim_type);
    }
 
-   if (this->flags.q.invocations) {
-      state->in_qualifier->flags.q.invocations = 1;
-      if (state->in_qualifier->invocations) {
-         state->in_qualifier->invocations->merge_qualifier(this->invocations);
-      } else {
-         state->in_qualifier->invocations = this->invocations;
-      }
-   }
+   r = state->in_qualifier->merge_qualifier(loc, state, *this, false);
 
-   if (this->flags.q.early_fragment_tests) {
+   if (state->in_qualifier->flags.q.early_fragment_tests) {
       state->fs_early_fragment_tests = true;
+      state->in_qualifier->flags.q.early_fragment_tests = false;
    }
 
-   if (state->in_qualifier->flags.q.vertex_spacing) {
-      if (this->flags.q.vertex_spacing &&
-          state->in_qualifier->vertex_spacing != this->vertex_spacing) {
-         _mesa_glsl_error(loc, state,
-                          "conflicting vertex spacing specified");
-      }
-   } else if (this->flags.q.vertex_spacing) {
-      state->in_qualifier->flags.q.vertex_spacing = 1;
-      state->in_qualifier->vertex_spacing = this->vertex_spacing;
+   /* We allow the creation of multiple cs_input_layout nodes. Coherence among
+    * all existing nodes is checked later, when the AST node is transformed
+    * into HIR.
+    */
+   if (state->in_qualifier->flags.q.local_size) {
+      if (create_node)
+         node = new(lin_ctx) ast_cs_input_layout(*loc, state->in_qualifier->local_size);
+      state->in_qualifier->flags.q.local_size = 0;
+      for (int i = 0; i < 3; i++)
+         state->in_qualifier->local_size[i] = NULL;
    }
 
-   if (state->in_qualifier->flags.q.ordering) {
-      if (this->flags.q.ordering &&
-          state->in_qualifier->ordering != this->ordering) {
-         _mesa_glsl_error(loc, state,
-                          "conflicting ordering specified");
-      }
-   } else if (this->flags.q.ordering) {
-      state->in_qualifier->flags.q.ordering = 1;
-      state->in_qualifier->ordering = this->ordering;
-   }
-
-   if (state->in_qualifier->flags.q.point_mode) {
-      if (this->flags.q.point_mode &&
-          state->in_qualifier->point_mode != this->point_mode) {
-         _mesa_glsl_error(loc, state,
-                          "conflicting point mode specified");
-      }
-   } else if (this->flags.q.point_mode) {
-      state->in_qualifier->flags.q.point_mode = 1;
-      state->in_qualifier->point_mode = this->point_mode;
-   }
-
-   if (this->flags.q.local_size_variable) {
+   if (state->in_qualifier->flags.q.local_size_variable) {
       state->cs_input_local_size_variable_specified = true;
+      state->in_qualifier->flags.q.local_size_variable = false;
    }
 
-   if (create_node) {
-      if (create_gs_ast) {
-         node = new(lin_ctx) ast_gs_input_layout(*loc, this->prim_type);
-      } else if (create_cs_ast) {
-         node = new(lin_ctx) ast_cs_input_layout(*loc, this->local_size);
-      }
-   }
-
-   return true;
+   return r;
 }
 
 /**
