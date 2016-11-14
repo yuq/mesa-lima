@@ -511,6 +511,9 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       break;
    }
 
+   if (anv_formats[format].isl_format == ISL_FORMAT_UNSUPPORTED)
+      goto unsupported;
+
    /* Our hardware doesn't support 1D compressed textures.
     *    From the SKL PRM, RENDER_SURFACE_STATE::SurfaceFormat:
     *    * This field cannot be a compressed (BC*, DXT*, FXT*, ETC*, EAC*) format
