@@ -38,7 +38,10 @@ extern "C" {
 
 struct nir_spirv_specialization {
    uint32_t id;
-   uint32_t data;
+   union {
+      uint32_t data32;
+      uint64_t data64;
+   };
 };
 
 struct nir_spirv_supported_extensions {

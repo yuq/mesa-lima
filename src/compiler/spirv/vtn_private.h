@@ -489,3 +489,9 @@ void vtn_handle_alu(struct vtn_builder *b, SpvOp opcode,
 
 bool vtn_handle_glsl450_instruction(struct vtn_builder *b, uint32_t ext_opcode,
                                     const uint32_t *words, unsigned count);
+
+static inline uint64_t
+vtn_u64_literal(const uint32_t *w)
+{
+   return (uint64_t)w[1] << 32 | w[0];
+}

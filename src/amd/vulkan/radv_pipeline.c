@@ -188,7 +188,10 @@ radv_shader_compile_to_nir(struct radv_device *device,
 				assert(data + entry.size <= spec_info->pData + spec_info->dataSize);
 
 				spec_entries[i].id = spec_info->pMapEntries[i].constantID;
-				spec_entries[i].data = *(const uint32_t *)data;
+				if (spec_info->dataSize == 8)
+					spec_entries[i].data64 = *(const uint64_t *)data;
+				else
+					spec_entries[i].data32 = *(const uint32_t *)data;
 			}
 		}
 		const struct nir_spirv_supported_extensions supported_ext = {
