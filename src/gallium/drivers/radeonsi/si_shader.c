@@ -141,6 +141,28 @@ unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index)
 	}
 }
 
+unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index)
+{
+	switch (name) {
+	case TGSI_SEMANTIC_FOG:
+		return 0;
+	case TGSI_SEMANTIC_LAYER:
+		return 1;
+	case TGSI_SEMANTIC_VIEWPORT_INDEX:
+		return 2;
+	case TGSI_SEMANTIC_PRIMID:
+		return 3;
+	case TGSI_SEMANTIC_COLOR: /* these alias */
+	case TGSI_SEMANTIC_BCOLOR:
+		return 4 + index;
+	case TGSI_SEMANTIC_TEXCOORD:
+		return 6 + index;
+	default:
+		assert(!"invalid semantic name");
+		return 0;
+	}
+}
+
 /**
  * Get the value of a shader input parameter and extract a bitfield.
  */

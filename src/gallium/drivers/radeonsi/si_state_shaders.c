@@ -1296,6 +1296,51 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		}
 
 		sel->main_shader_part = shader;
+
+		/* Unset "outputs_written" flags for outputs converted to
+		 * DEFAULT_VAL, so that later inter-shader optimizations don't
+		 * try to eliminate outputs that don't exist in the final
+		 * shader.
+		 *
+		 * This is only done if non-monolithic shaders are enabled.
+		 */
+		if ((sel->type == PIPE_SHADER_VERTEX ||
+		     sel->type == PIPE_SHADER_TESS_EVAL) &&
+		    !shader->key.as_ls &&
+		    !shader->key.as_es) {
+			unsigned i;
+
+			for (i = 0; i < sel->info.num_outputs; i++) {
+				unsigned offset = shader->info.vs_output_param_offset[i];
+
+				if (offset <= EXP_PARAM_OFFSET_31)
+					continue;
+
+				unsigned name = sel->info.output_semantic_name[i];
+				unsigned index = sel->info.output_semantic_index[i];
+				unsigned id;
+
+				switch (name) {
+				case TGSI_SEMANTIC_GENERIC:
+					/* don't process indices the function can't handle */
+					if (index >= 60)
+						break;
+					/* fall through */
+				case TGSI_SEMANTIC_CLIPDIST:
+					id = si_shader_io_get_unique_index(name, index);
+					sel->outputs_written &= ~(1ull << id);
+					break;
+				case TGSI_SEMANTIC_POSITION: /* ignore these */
+				case TGSI_SEMANTIC_PSIZE:
+				case TGSI_SEMANTIC_CLIPVERTEX:
+				case TGSI_SEMANTIC_EDGEFLAG:
+					break;
+				default:
+					id = si_shader_io_get_unique_index2(name, index);
+					sel->outputs_written2 &= ~(1u << id);
+				}
+			}
+		}
 	}
 
 	/* Pre-compilation. */
@@ -1437,12 +1482,36 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 				sel->outputs_written |=
 					1llu << si_shader_io_get_unique_index(name, index);
 				break;
+			case TGSI_SEMANTIC_CLIPVERTEX: /* ignore these */
+			case TGSI_SEMANTIC_EDGEFLAG:
+				break;
+			default:
+				sel->outputs_written2 |=
+					1u << si_shader_io_get_unique_index2(name, index);
 			}
 		}
 		sel->esgs_itemsize = util_last_bit64(sel->outputs_written) * 16;
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
+		for (i = 0; i < sel->info.num_inputs; i++) {
+			unsigned name = sel->info.input_semantic_name[i];
+			unsigned index = sel->info.input_semantic_index[i];
+
+			switch (name) {
+			case TGSI_SEMANTIC_CLIPDIST:
+			case TGSI_SEMANTIC_GENERIC:
+				sel->inputs_read |=
+					1llu << si_shader_io_get_unique_index(name, index);
+				break;
+			case TGSI_SEMANTIC_PCOORD: /* ignore this */
+				break;
+			default:
+				sel->inputs_read2 |=
+					1u << si_shader_io_get_unique_index2(name, index);
+			}
+		}
+
 		for (i = 0; i < 8; i++)
 			if (sel->info.colors_written & (1 << i))
 				sel->colors_written_4bit |= 0xf << (4 * i);

@@ -295,9 +295,12 @@ struct si_shader_selector {
 	/* CS parameters */
 	unsigned local_size;
 
-	/* masks of "get_unique_index" bits */
-	uint64_t	outputs_written;
-	uint32_t	patch_outputs_written;
+	uint64_t	outputs_written;	/* "get_unique_index" bits */
+	uint32_t	patch_outputs_written;	/* "get_unique_index" bits */
+	uint32_t	outputs_written2;	/* "get_unique_index2" bits */
+
+	uint64_t	inputs_read;		/* "get_unique_index" bits */
+	uint32_t	inputs_read2;		/* "get_unique_index2" bits */
 };
 
 /* Valid shader configurations:
@@ -539,6 +542,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 		    const char *name);
 void si_shader_destroy(struct si_shader *shader);
 unsigned si_shader_io_get_unique_index(unsigned semantic_name, unsigned index);
+unsigned si_shader_io_get_unique_index2(unsigned name, unsigned index);
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader);
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,
