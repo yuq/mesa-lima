@@ -768,10 +768,18 @@ struct ast_type_qualifier {
                                  _mesa_glsl_parse_state *state,
                                  ast_node* &node, bool create_node);
 
-   bool merge_in_qualifier(YYLTYPE *loc,
-                           _mesa_glsl_parse_state *state,
-                           const ast_type_qualifier &q,
-                           ast_node* &node, bool create_node);
+   /**
+    * Validate current qualifier against the global in one.
+    */
+   bool validate_in_qualifier(YYLTYPE *loc,
+                              _mesa_glsl_parse_state *state);
+
+   /**
+    * Merge current qualifier into the global in one.
+    */
+   bool merge_into_in_qualifier(YYLTYPE *loc,
+                                _mesa_glsl_parse_state *state,
+                                ast_node* &node, bool create_node);
 
    bool validate_flags(YYLTYPE *loc,
                        _mesa_glsl_parse_state *state,
