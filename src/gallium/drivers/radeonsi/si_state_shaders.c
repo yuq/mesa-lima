@@ -1124,6 +1124,13 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 		case PIPE_SHADER_TESS_EVAL:
 			key->vs.as_ls = 1;
 			break;
+		default:
+			/* If POSITION isn't written, it can't be a HW VS.
+			 * Assume that it's a HW LS. (the next shader is TCS)
+			 * This heuristic is needed for separate shader objects.
+			 */
+			if (!info->writes_position)
+				key->as_ls = 1;
 		}
 		break;
 
