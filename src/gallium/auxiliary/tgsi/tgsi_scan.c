@@ -547,47 +547,35 @@ scan_declaration(struct tgsi_shader_info *info,
          info->output_semantic_index[reg] = (ubyte) semIndex;
          info->num_outputs = MAX2(info->num_outputs, reg + 1);
 
-         if (semName == TGSI_SEMANTIC_COLOR)
+         switch (semName) {
+         case TGSI_SEMANTIC_VIEWPORT_INDEX:
+            info->writes_viewport_index = true;
+            break;
+         case TGSI_SEMANTIC_LAYER:
+            info->writes_layer = true;
+            break;
+         case TGSI_SEMANTIC_PSIZE:
+            info->writes_psize = true;
+            break;
+         case TGSI_SEMANTIC_CLIPVERTEX:
+            info->writes_clipvertex = true;
+            break;
+         case TGSI_SEMANTIC_COLOR:
             info->colors_written |= 1 << semIndex;
-
-         if (procType == PIPE_SHADER_VERTEX ||
-             procType == PIPE_SHADER_GEOMETRY ||
-             procType == PIPE_SHADER_TESS_CTRL ||
-             procType == PIPE_SHADER_TESS_EVAL) {
-            switch (semName) {
-            case TGSI_SEMANTIC_VIEWPORT_INDEX:
-               info->writes_viewport_index = TRUE;
-               break;
-            case TGSI_SEMANTIC_LAYER:
-               info->writes_layer = TRUE;
-               break;
-            case TGSI_SEMANTIC_PSIZE:
-               info->writes_psize = TRUE;
-               break;
-            case TGSI_SEMANTIC_CLIPVERTEX:
-               info->writes_clipvertex = TRUE;
-               break;
-            }
-         }
-
-         if (procType == PIPE_SHADER_FRAGMENT) {
-            switch (semName) {
-            case TGSI_SEMANTIC_POSITION:
-               info->writes_z = TRUE;
-               break;
-            case TGSI_SEMANTIC_STENCIL:
-               info->writes_stencil = TRUE;
-               break;
-            case TGSI_SEMANTIC_SAMPLEMASK:
-               info->writes_samplemask = TRUE;
-               break;
-            }
-         }
-
-         if (procType == PIPE_SHADER_VERTEX) {
-            if (semName == TGSI_SEMANTIC_EDGEFLAG) {
-               info->writes_edgeflag = TRUE;
-            }
+            break;
+         case TGSI_SEMANTIC_STENCIL:
+            info->writes_stencil = true;
+            break;
+         case TGSI_SEMANTIC_SAMPLEMASK:
+            info->writes_samplemask = true;
+            break;
+         case TGSI_SEMANTIC_EDGEFLAG:
+            info->writes_edgeflag = true;
+            break;
+         case TGSI_SEMANTIC_POSITION:
+            if (procType == PIPE_SHADER_FRAGMENT)
+               info->writes_z = true;
+            break;
          }
          break;
 
