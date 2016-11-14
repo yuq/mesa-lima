@@ -368,32 +368,29 @@ ast_type_qualifier::merge_qualifier(YYLTYPE *loc,
 }
 
 bool
-ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
-                                        _mesa_glsl_parse_state *state,
-                                        const ast_type_qualifier &q,
-                                        ast_node* &node, bool create_node)
+ast_type_qualifier::validate_out_qualifier(YYLTYPE *loc,
+                                           _mesa_glsl_parse_state *state)
 {
-   const bool r = this->merge_qualifier(loc, state, q, false);
+   bool r = true;
    ast_type_qualifier valid_out_mask;
    valid_out_mask.flags.i = 0;
 
-   if (state->stage == MESA_SHADER_GEOMETRY) {
-      if (q.flags.q.prim_type) {
+   switch (state->stage) {
+   case MESA_SHADER_GEOMETRY:
+      if (this->flags.q.prim_type) {
          /* Make sure this is a valid output primitive type. */
-         switch (q.prim_type) {
+         switch (this->prim_type) {
          case GL_POINTS:
          case GL_LINE_STRIP:
          case GL_TRIANGLE_STRIP:
             break;
          default:
+            r = false;
             _mesa_glsl_error(loc, state, "invalid geometry shader output "
                              "primitive type");
             break;
          }
       }
-
-      /* Allow future assigments of global out's stream id value */
-      this->flags.q.explicit_stream = 0;
 
       valid_out_mask.flags.q.stream = 1;
       valid_out_mask.flags.q.explicit_stream = 1;
@@ -403,43 +400,68 @@ ast_type_qualifier::merge_out_qualifier(YYLTYPE *loc,
       valid_out_mask.flags.q.xfb_stride = 1;
       valid_out_mask.flags.q.max_vertices = 1;
       valid_out_mask.flags.q.prim_type = 1;
-   } else if (state->stage == MESA_SHADER_TESS_CTRL) {
-      if (create_node) {
-         node = new(state->linalloc) ast_tcs_output_layout(*loc);
-      }
+      break;
+   case MESA_SHADER_TESS_CTRL:
       valid_out_mask.flags.q.vertices = 1;
       valid_out_mask.flags.q.explicit_xfb_buffer = 1;
       valid_out_mask.flags.q.xfb_buffer = 1;
       valid_out_mask.flags.q.explicit_xfb_stride = 1;
       valid_out_mask.flags.q.xfb_stride = 1;
-   } else if (state->stage == MESA_SHADER_TESS_EVAL ||
-              state->stage == MESA_SHADER_VERTEX) {
+      break;
+   case MESA_SHADER_TESS_EVAL:
+   case MESA_SHADER_VERTEX:
       valid_out_mask.flags.q.explicit_xfb_buffer = 1;
       valid_out_mask.flags.q.xfb_buffer = 1;
       valid_out_mask.flags.q.explicit_xfb_stride = 1;
       valid_out_mask.flags.q.xfb_stride = 1;
-   } else if (state->stage == MESA_SHADER_FRAGMENT) {
+      break;
+   case MESA_SHADER_FRAGMENT:
       valid_out_mask.flags.q.blend_support = 1;
-   } else {
-      _mesa_glsl_error(loc, state, "out layout qualifiers only valid in "
-                       "geometry, tessellation and vertex shaders");
-      return false;
+      break;
+   default:
+      r = false;
+      _mesa_glsl_error(loc, state,
+                       "out layout qualifiers only valid in "
+                       "geometry, tessellation, vertex and fragment shaders");
    }
 
-   /* Allow future assigments of global out's */
-   this->flags.q.explicit_xfb_buffer = 0;
-   this->flags.q.explicit_xfb_stride = 0;
-
-   /* Generate an error when invalid input layout qualifiers are used. */
-   if ((q.flags.i & ~valid_out_mask.flags.i) != 0) {
+   /* Generate an error when invalid output layout qualifiers are used. */
+   if ((this->flags.i & ~valid_out_mask.flags.i) != 0) {
+      r = false;
       _mesa_glsl_error(loc, state, "invalid output layout qualifiers used");
-      return false;
    }
 
    return r;
 }
 
 bool
+ast_type_qualifier::merge_into_out_qualifier(YYLTYPE *loc,
+                                             _mesa_glsl_parse_state *state,
+                                             ast_node* &node, bool create_node)
+{
+   const bool r = state->out_qualifier->merge_qualifier(loc, state,
+                                                        *this, false);
+
+   switch (state->stage) {
+   case MESA_SHADER_GEOMETRY:
+      /* Allow future assignments of global out's stream id value */
+      state->out_qualifier->flags.q.explicit_stream = 0;
+      break;
+   case MESA_SHADER_TESS_CTRL:
+      if (create_node)
+         node = new(state->linalloc) ast_tcs_output_layout(*loc);
+      break;
+   default:
+      break;
+   }
+
+   /* Allow future assignments of global out's */
+   state->out_qualifier->flags.q.explicit_xfb_buffer = 0;
+   state->out_qualifier->flags.q.explicit_xfb_stride = 0;
+
+   return r;
+}
+
 ast_type_qualifier::merge_in_qualifier(YYLTYPE *loc,
                                        _mesa_glsl_parse_state *state,
                                        const ast_type_qualifier &q,

@@ -2942,8 +2942,10 @@ layout_out_defaults:
          _mesa_glsl_error(&@1, state, "duplicate layout(...) qualifiers");
          YYERROR;
       } else {
-         if (!state->out_qualifier->
-                merge_out_qualifier(& @1, state, $1, $$, false)) {
+         if (!$1.validate_out_qualifier(& @1, state)) {
+            YYERROR;
+         }
+         if (!$1.merge_into_out_qualifier(& @1, state, $$, false)) {
             YYERROR;
          }
          $$ = $2;
@@ -2952,9 +2954,12 @@ layout_out_defaults:
    | layout_qualifier OUT_TOK ';'
    {
       $$ = NULL;
-      if (!state->out_qualifier->
-             merge_out_qualifier(& @1, state, $1, $$, true))
+      if (!$1.validate_out_qualifier(& @1, state)) {
          YYERROR;
+      }
+      if (!$1.merge_into_out_qualifier(& @1, state, $$, true)) {
+         YYERROR;
+      }
    }
    ;
 

@@ -755,10 +755,18 @@ struct ast_type_qualifier {
                         const ast_type_qualifier &q,
                         bool is_single_layout_merge);
 
-   bool merge_out_qualifier(YYLTYPE *loc,
-                           _mesa_glsl_parse_state *state,
-                           const ast_type_qualifier &q,
-                           ast_node* &node, bool create_node);
+   /**
+    * Validate current qualifier against the global out one.
+    */
+   bool validate_out_qualifier(YYLTYPE *loc,
+                               _mesa_glsl_parse_state *state);
+
+   /**
+    * Merge current qualifier into the global out one.
+    */
+   bool merge_into_out_qualifier(YYLTYPE *loc,
+                                 _mesa_glsl_parse_state *state,
+                                 ast_node* &node, bool create_node);
 
    bool merge_in_qualifier(YYLTYPE *loc,
                            _mesa_glsl_parse_state *state,
