@@ -34,6 +34,7 @@ VULKAN_FILES := \
 	anv_nir.h \
 	anv_nir_apply_dynamic_offsets.c \
 	anv_nir_apply_pipeline_layout.c \
+	anv_nir_lower_input_attachments.c \
 	anv_nir_lower_push_constants.c \
 	anv_pass.c \
 	anv_pipeline.c \

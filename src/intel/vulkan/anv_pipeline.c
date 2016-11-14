@@ -172,6 +172,9 @@ anv_shader_compile_to_nir(struct anv_device *device,
    nir_lower_clip_cull_distance_arrays(nir);
    nir_validate_shader(nir);
 
+   if (stage == MESA_SHADER_FRAGMENT)
+      anv_nir_lower_input_attachments(nir);
+
    nir_shader_gather_info(nir, entry_point->impl);
 
    nir_variable_mode indirect_mask = 0;
