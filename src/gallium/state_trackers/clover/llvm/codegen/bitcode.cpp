@@ -98,8 +98,14 @@ clover::llvm::parse_module_library(const module &m, ::llvm::LLVMContext &ctx,
                                    std::string &r_log) {
    auto mod = ::llvm::parseBitcodeFile(::llvm::MemoryBufferRef(
                                         as_string(m.secs[0].data), " "), ctx);
-   if (!mod)
-      fail(r_log, error(CL_INVALID_PROGRAM), mod.getError().message());
+
+   if (::llvm::Error err = mod.takeError()) {
+      std::string msg;
+      ::llvm::handleAllErrors(std::move(err), [&](::llvm::ErrorInfoBase &EIB) {
+         msg = EIB.message();
+         fail(r_log, error(CL_INVALID_PROGRAM), msg.c_str());
+      });
+   }
 
    return std::unique_ptr<::llvm::Module>(std::move(*mod));
 }
