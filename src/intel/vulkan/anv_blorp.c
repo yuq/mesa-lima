@@ -803,7 +803,7 @@ void anv_CmdClearColorImage(
       unsigned base_layer = pRanges[r].baseArrayLayer;
       unsigned layer_count = pRanges[r].layerCount;
 
-      for (unsigned i = 0; i < pRanges[r].levelCount; i++) {
+      for (unsigned i = 0; i < anv_get_levelCount(image, &pRanges[r]); i++) {
          const unsigned level = pRanges[r].baseMipLevel + i;
          const unsigned level_width = anv_minify(image->extent.width, level);
          const unsigned level_height = anv_minify(image->extent.height, level);
@@ -863,7 +863,7 @@ void anv_CmdClearDepthStencilImage(
       unsigned base_layer = pRanges[r].baseArrayLayer;
       unsigned layer_count = pRanges[r].layerCount;
 
-      for (unsigned i = 0; i < pRanges[r].levelCount; i++) {
+      for (unsigned i = 0; i < anv_get_levelCount(image, &pRanges[r]); i++) {
          const unsigned level = pRanges[r].baseMipLevel + i;
          const unsigned level_width = anv_minify(image->extent.width, level);
          const unsigned level_height = anv_minify(image->extent.height, level);
