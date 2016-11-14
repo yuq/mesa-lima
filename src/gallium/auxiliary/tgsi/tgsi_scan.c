@@ -575,6 +575,8 @@ scan_declaration(struct tgsi_shader_info *info,
          case TGSI_SEMANTIC_POSITION:
             if (procType == PIPE_SHADER_FRAGMENT)
                info->writes_z = true;
+            else
+               info->writes_position = true;
             break;
          }
          break;
