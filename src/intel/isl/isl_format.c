@@ -97,7 +97,7 @@ static const struct surface_format_info format_info[] = {
    SF( x,  x,  x,  x,  x,  x,  Y,  x,  x,    x,   R32G32B32A32_SSCALED)
    SF( x,  x,  x,  x,  x,  x,  Y,  x,  x,    x,   R32G32B32A32_USCALED)
    SF( x,  x,  x,  x,  x,  x, 75,  x,  x,    x,   R32G32B32A32_SFIXED)
-   SF( x,  x,  x,  x,  x,  x,  x,  x,  x,    x,   R64G64_PASSTHRU)
+   SF( x,  x,  x,  x,  x,  x, 80,  x,  x,    x,   R64G64_PASSTHRU)
    SF( Y, 50,  x,  x,  x,  x,  Y,  Y,  x,    x,   R32G32B32_FLOAT)
    SF( Y,  x,  x,  x,  x,  x,  Y,  Y,  x,    x,   R32G32B32_SINT)
    SF( Y,  x,  x,  x,  x,  x,  Y,  Y,  x,    x,   R32G32B32_UINT)
@@ -131,7 +131,7 @@ static const struct surface_format_info format_info[] = {
    SF( x,  x,  x,  x,  x,  x,  Y,  x,  x,    x,   R32G32_SSCALED)
    SF( x,  x,  x,  x,  x,  x,  Y,  x,  x,    x,   R32G32_USCALED)
    SF( x,  x,  x,  x,  x,  x, 75,  x,  x,    x,   R32G32_SFIXED)
-   SF( x,  x,  x,  x,  x,  x,  x,  x,  x,    x,   R64_PASSTHRU)
+   SF( x,  x,  x,  x,  x,  x, 80,  x,  x,    x,   R64_PASSTHRU)
    SF( Y,  Y,  x,  Y,  Y,  Y,  Y,  x, 60,   90,   B8G8R8A8_UNORM)
    SF( Y,  Y,  x,  x,  Y,  Y,  x,  x,  x,    x,   B8G8R8A8_UNORM_SRGB)
 /* smpl filt shad CK  RT  AB  VB  SO  color ccs_e */
