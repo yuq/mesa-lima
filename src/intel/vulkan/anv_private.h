@@ -69,6 +69,7 @@ struct gen_l3_config;
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_intel.h>
 #include <vulkan/vk_icd.h>
+#include <vulkan/vk_android_native_buffer.h>
 
 #include "anv_entrypoints.h"
 #include "isl/isl.h"
@@ -2629,6 +2630,9 @@ struct anv_image_create_info {
    /** An opt-in bitmask which filters an ISL-mapping of the Vulkan tiling. */
    isl_tiling_flags_t isl_tiling_flags;
 
+   /** These flags will be added to any derived from VkImageCreateInfo. */
+   isl_surf_usage_flags_t isl_extra_usage_flags;
+
    uint32_t stride;
 };
 
@@ -2636,6 +2640,14 @@ VkResult anv_image_create(VkDevice _device,
                           const struct anv_image_create_info *info,
                           const VkAllocationCallbacks* alloc,
                           VkImage *pImage);
+
+#ifdef ANDROID
+VkResult anv_image_from_gralloc(VkDevice device_h,
+                                const VkImageCreateInfo *base_info,
+                                const VkNativeBufferANDROID *gralloc_info,
+                                const VkAllocationCallbacks *alloc,
+                                VkImage *pImage);
+#endif
 
 const struct anv_surface *
 anv_image_get_surface_for_aspect_mask(const struct anv_image *image,

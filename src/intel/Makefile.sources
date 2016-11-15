@@ -231,6 +231,9 @@ VULKAN_FILES := \
 	vulkan/anv_wsi.c \
 	vulkan/vk_format_info.h
 
+VULKAN_ANDROID_FILES := \
+	vulkan/anv_android.c
+
 VULKAN_WSI_WAYLAND_FILES := \
 	vulkan/anv_wsi_wayland.c
 

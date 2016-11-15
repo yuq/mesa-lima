@@ -40,9 +40,10 @@
 static isl_surf_usage_flags_t
 choose_isl_surf_usage(VkImageCreateFlags vk_create_flags,
                       VkImageUsageFlags vk_usage,
+                      isl_surf_usage_flags_t isl_extra_usage,
                       VkImageAspectFlags aspect)
 {
-   isl_surf_usage_flags_t isl_usage = 0;
+   isl_surf_usage_flags_t isl_usage = isl_extra_usage;
 
    if (vk_usage & VK_IMAGE_USAGE_SAMPLED_BIT)
       isl_usage |= ISL_SURF_USAGE_TEXTURE_BIT;
@@ -290,6 +291,10 @@ make_surface(const struct anv_device *dev,
       anv_get_format_plane(&dev->info, image->vk_format, aspect, image->tiling);
    struct anv_surface *anv_surf = &image->planes[plane].surface;
 
+   const isl_surf_usage_flags_t usage =
+      choose_isl_surf_usage(vk_info->flags, image->usage,
+                            anv_info->isl_extra_usage_flags, aspect);
+
    /* If an image is created as BLOCK_TEXEL_VIEW_COMPATIBLE, then we need to
     * fall back to linear on Broadwell and earlier because we aren't
     * guaranteed that we can handle offsets correctly.  On Sky Lake, the
@@ -316,7 +321,7 @@ make_surface(const struct anv_device *dev,
       .samples = vk_info->samples,
       .min_alignment = 0,
       .row_pitch = anv_info->stride,
-      .usage = choose_isl_surf_usage(vk_info->flags, image->usage, aspect),
+      .usage = usage,
       .tiling_flags = tiling_flags);
 
    /* isl_surf_init() will fail only if provided invalid input. Invalid input
@@ -347,7 +352,7 @@ make_surface(const struct anv_device *dev,
          .samples = vk_info->samples,
          .min_alignment = 0,
          .row_pitch = anv_info->stride,
-         .usage = choose_isl_surf_usage(image->usage, image->usage, aspect),
+         .usage = usage,
          .tiling_flags = ISL_TILING_ANY_MASK);
 
       /* isl_surf_init() will fail only if provided invalid input. Invalid input
@@ -547,6 +552,15 @@ anv_CreateImage(VkDevice device,
                 const VkAllocationCallbacks *pAllocator,
                 VkImage *pImage)
 {
+#ifdef ANDROID
+   const VkNativeBufferANDROID *gralloc_info =
+      vk_find_struct_const(pCreateInfo->pNext, NATIVE_BUFFER_ANDROID);
+
+   if (gralloc_info)
+      return anv_image_from_gralloc(device, pCreateInfo, gralloc_info,
+                                    pAllocator, pImage);
+#endif
+
    return anv_image_create(device,
       &(struct anv_image_create_info) {
          .vk_info = pCreateInfo,
