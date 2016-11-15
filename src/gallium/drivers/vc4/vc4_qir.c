@@ -784,6 +784,7 @@ qir_optimize(struct vc4_compile *c)
                 OPTPASS(qir_opt_dead_code);
                 OPTPASS(qir_opt_small_immediates);
                 OPTPASS(qir_opt_vpm);
+                OPTPASS(qir_opt_coalesce_ff_writes);
 
                 if (!progress)
                         break;
