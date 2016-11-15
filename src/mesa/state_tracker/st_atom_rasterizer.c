@@ -253,7 +253,7 @@ static void update_raster_state( struct st_context *st )
    /* _NEW_MULTISAMPLE | _NEW_BUFFERS */
    raster->force_persample_interp =
          !st->force_persample_in_shader &&
-         _mesa_is_multisample_enabled(ctx) &&
+         raster->multisample &&
          ctx->Multisample.SampleShading &&
          ctx->Multisample.MinSampleShadingValue *
          _mesa_geometric_samples(ctx->DrawBuffer) > 1;
