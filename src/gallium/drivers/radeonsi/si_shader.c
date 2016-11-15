@@ -3328,10 +3328,12 @@ image_fetch_rsrc(
 
 	if (!image->Register.Indirect) {
 		const struct tgsi_shader_info *info = bld_base->info;
+		unsigned images_writemask = info->images_store |
+					    info->images_atomic;
 
 		index = LLVMConstInt(ctx->i32, image->Register.Index, 0);
 
-		if (info->images_writemask & (1 << image->Register.Index) &&
+		if (images_writemask & (1 << image->Register.Index) &&
 		    target != TGSI_TEXTURE_BUFFER)
 			dcc_off = true;
 	} else {

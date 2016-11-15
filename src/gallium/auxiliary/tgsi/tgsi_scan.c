@@ -283,9 +283,9 @@ scan_src_operand(struct tgsi_shader_info *info,
 
          if (src->Register.File == TGSI_FILE_IMAGE) {
             if (src->Register.Indirect)
-               info->images_writemask = info->images_declared;
+               info->images_atomic = info->images_declared;
             else
-               info->images_writemask |= 1 << src->Register.Index;
+               info->images_atomic |= 1 << src->Register.Index;
          } else if (src->Register.File == TGSI_FILE_BUFFER) {
             if (src->Register.Indirect)
                info->shader_buffers_atomic = info->shader_buffers_declared;
@@ -293,7 +293,12 @@ scan_src_operand(struct tgsi_shader_info *info,
                info->shader_buffers_atomic |= 1 << src->Register.Index;
          }
       } else {
-         if (src->Register.File == TGSI_FILE_BUFFER) {
+         if (src->Register.File == TGSI_FILE_IMAGE) {
+            if (src->Register.Indirect)
+               info->images_load = info->images_declared;
+            else
+               info->images_load |= 1 << src->Register.Index;
+         } else if (src->Register.File == TGSI_FILE_BUFFER) {
             if (src->Register.Indirect)
                info->shader_buffers_load = info->shader_buffers_declared;
             else
@@ -425,9 +430,9 @@ scan_instruction(struct tgsi_shader_info *info,
 
          if (dst->Register.File == TGSI_FILE_IMAGE) {
             if (dst->Register.Indirect)
-               info->images_writemask = info->images_declared;
+               info->images_store = info->images_declared;
             else
-               info->images_writemask |= 1 << dst->Register.Index;
+               info->images_store |= 1 << dst->Register.Index;
          } else if (dst->Register.File == TGSI_FILE_BUFFER) {
             if (dst->Register.Indirect)
                info->shader_buffers_store = info->shader_buffers_declared;

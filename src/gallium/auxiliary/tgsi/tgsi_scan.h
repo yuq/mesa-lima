@@ -138,14 +138,12 @@ struct tgsi_shader_info
 
    unsigned images_declared; /**< bitmask of declared images */
    /**
-    * Bitmask indicating which images are written to (STORE / ATOM*).
-    * Indirect image accesses are not reflected in this mask.
-    */
-   unsigned images_writemask;
-   /**
     * Bitmask indicating which declared image is a buffer.
     */
    unsigned images_buffers;
+   unsigned images_load; /**< bitmask of images using loads */
+   unsigned images_store; /**< bitmask of images using stores */
+   unsigned images_atomic; /**< bitmask of images using atomics */
    unsigned shader_buffers_declared; /**< bitmask of declared shader buffers */
    unsigned shader_buffers_load; /**< bitmask of shader buffers using loads */
    unsigned shader_buffers_store; /**< bitmask of shader buffers using stores */
