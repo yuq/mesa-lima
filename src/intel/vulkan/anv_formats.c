@@ -467,6 +467,9 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
    uint32_t maxArraySize;
    VkSampleCountFlags sampleCounts = VK_SAMPLE_COUNT_1_BIT;
 
+   if (anv_formats[format].isl_format == ISL_FORMAT_UNSUPPORTED)
+      goto unsupported;
+
    anv_physical_device_get_format_properties(physical_device, format,
                                              &format_props);
 
@@ -510,9 +513,6 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
       maxArraySize = 1;
       break;
    }
-
-   if (anv_formats[format].isl_format == ISL_FORMAT_UNSUPPORTED)
-      goto unsupported;
 
    /* Our hardware doesn't support 1D compressed textures.
     *    From the SKL PRM, RENDER_SURFACE_STATE::SurfaceFormat:
