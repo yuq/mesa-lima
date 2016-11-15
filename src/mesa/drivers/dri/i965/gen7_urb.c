@@ -192,10 +192,10 @@ upload_urb(struct brw_context *brw)
    const struct brw_vue_prog_data *vs_vue_prog_data =
       brw_vue_prog_data(brw->vs.base.prog_data);
    const unsigned vs_size = MAX2(vs_vue_prog_data->urb_entry_size, 1);
-   /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
-   const bool gs_present = brw->geometry_program;
-   /* BRW_NEW_TESS_PROGRAMS */
-   const bool tess_present = brw->tess_eval_program;
+   /* BRW_NEW_GS_PROG_DATA */
+   const bool gs_present = brw->gs.base.prog_data;
+   /* BRW_NEW_TES_PROG_DATA */
+   const bool tess_present = brw->tes.base.prog_data;
 
    gen7_upload_urb(brw, vs_size, gs_present, tess_present);
 }
@@ -450,8 +450,6 @@ const struct brw_tracked_state gen7_urb = {
       .mesa = 0,
       .brw = BRW_NEW_CONTEXT |
              BRW_NEW_URB_SIZE |
-             BRW_NEW_GEOMETRY_PROGRAM |
-             BRW_NEW_TESS_PROGRAMS |
              BRW_NEW_GS_PROG_DATA |
              BRW_NEW_TCS_PROG_DATA |
              BRW_NEW_TES_PROG_DATA |
