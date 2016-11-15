@@ -267,17 +267,7 @@ si_make_texture_descriptor(struct radv_device *device,
 
 	if (desc->colorspace == VK_FORMAT_COLORSPACE_ZS) {
 		const unsigned char swizzle_xxxx[4] = {0, 0, 0, 0};
-		const unsigned char swizzle_yyyy[4] = {1, 1, 1, 1};
-
-		switch (vk_format) {
-		case VK_FORMAT_X8_D24_UNORM_PACK32:
-		case VK_FORMAT_D24_UNORM_S8_UINT:
-		case VK_FORMAT_D32_SFLOAT_S8_UINT:
-			vk_format_compose_swizzles(mapping, swizzle_yyyy, swizzle);
-			break;
-		default:
-			vk_format_compose_swizzles(mapping, swizzle_xxxx, swizzle);
-		}
+		vk_format_compose_swizzles(mapping, swizzle_xxxx, swizzle);
 	} else {
 		vk_format_compose_swizzles(mapping, desc->swizzle, swizzle);
 	}
@@ -771,8 +761,13 @@ radv_image_view_init(struct radv_image_view *iview,
 	iview->vk_format = pCreateInfo->format;
 	iview->aspect_mask = pCreateInfo->subresourceRange.aspectMask;
 
-	if (iview->aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT)
+	if (iview->aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT) {
 		is_stencil = true;
+		iview->vk_format = vk_format_stencil_only(iview->vk_format);
+	} else if (iview->aspect_mask == VK_IMAGE_ASPECT_DEPTH_BIT) {
+		iview->vk_format = vk_format_depth_only(iview->vk_format);
+	}
+
 	iview->extent = (VkExtent3D) {
 		.width  = radv_minify(image->extent.width , range->baseMipLevel),
 		.height = radv_minify(image->extent.height, range->baseMipLevel),
@@ -790,7 +785,7 @@ radv_image_view_init(struct radv_image_view *iview,
 
 	si_make_texture_descriptor(device, image, false,
 				   iview->type,
-				   pCreateInfo->format,
+				   iview->vk_format,
 				   &pCreateInfo->components,
 				   0, radv_get_levelCount(image, range) - 1,
 				   range->baseArrayLayer,
