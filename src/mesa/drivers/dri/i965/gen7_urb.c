@@ -284,7 +284,8 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
     *  greater than or equal to 192."
     */
    unsigned vs_min_entries =
-      tess_present && brw->gen == 8 ? 192 : devinfo->urb.min_vs_entries;
+      tess_present && brw->gen == 8 ?
+         192 : devinfo->urb.min_entries[MESA_SHADER_VERTEX];
    /* Min VS Entries isn't a multiple of 8 on Cherryview/Broxton; round up */
    vs_min_entries = ALIGN(vs_min_entries, vs_granularity);
 
@@ -327,8 +328,8 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
                       hs_entry_size_bytes, chunk_size_bytes) - hs_chunks;
 
       ds_chunks =
-         DIV_ROUND_UP(devinfo->urb.min_ds_entries * ds_entry_size_bytes,
-                      chunk_size_bytes);
+         DIV_ROUND_UP(devinfo->urb.min_entries[MESA_SHADER_TESS_EVAL] *
+                      ds_entry_size_bytes, chunk_size_bytes);
       ds_wants =
          DIV_ROUND_UP(devinfo->urb.max_entries[MESA_SHADER_TESS_EVAL] *
                       ds_entry_size_bytes, chunk_size_bytes) - ds_chunks;
@@ -410,7 +411,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
       assert(nr_gs_entries >= 2);
    if (tess_present) {
       assert(nr_hs_entries >= 1);
-      assert(nr_ds_entries >= devinfo->urb.min_ds_entries);
+      assert(nr_ds_entries >= devinfo->urb.min_entries[MESA_SHADER_TESS_EVAL]);
    }
 
    /* Gen7 doesn't actually use brw->urb.nr_{vs,gs}_entries, but it seems

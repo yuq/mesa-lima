@@ -135,8 +135,11 @@ struct gen_device_info
        * urb.size = URB Size (kbytes) / slice count
        */
       unsigned size;
-      unsigned min_vs_entries;
-      unsigned min_ds_entries;
+
+      /**
+       * The minimum number of URB entries.  See the 3DSTATE_URB_<XS> docs.
+       */
+      unsigned min_entries[4];
 
       /**
        * The maximum number of URB entries.  See the 3DSTATE_URB_<XS> docs.

@@ -74,7 +74,8 @@ gen6_upload_urb(struct brw_context *brw, unsigned vs_size,
    brw->urb.nr_vs_entries = ROUND_DOWN_TO(nr_vs_entries, 4);
    brw->urb.nr_gs_entries = ROUND_DOWN_TO(nr_gs_entries, 4);
 
-   assert(brw->urb.nr_vs_entries >= devinfo->urb.min_vs_entries);
+   assert(brw->urb.nr_vs_entries >=
+          devinfo->urb.min_entries[MESA_SHADER_VERTEX]);
    assert(brw->urb.nr_vs_entries % 4 == 0);
    assert(brw->urb.nr_gs_entries % 4 == 0);
    assert(vs_size <= 5);

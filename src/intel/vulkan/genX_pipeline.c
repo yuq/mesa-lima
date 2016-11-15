@@ -234,8 +234,8 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
 
    /* VS has a lower limit on the number of URB entries */
    unsigned vs_chunks =
-      ALIGN(device->info.urb.min_vs_entries * vs_entry_size_bytes,
-            chunk_size_bytes) / chunk_size_bytes;
+      ALIGN(device->info.urb.min_entries[MESA_SHADER_VERTEX] *
+            vs_entry_size_bytes, chunk_size_bytes) / chunk_size_bytes;
    unsigned vs_wants =
       ALIGN(device->info.urb.max_entries[MESA_SHADER_VERTEX] *
             vs_entry_size_bytes,
@@ -303,7 +303,7 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
    /* Finally, sanity check to make sure we have at least the minimum number
     * of entries needed for each stage.
     */
-   assert(nr_vs_entries >= device->info.urb.min_vs_entries);
+   assert(nr_vs_entries >= device->info.urb.min_entries[MESA_SHADER_VERTEX]);
    if (active_stages & VK_SHADER_STAGE_GEOMETRY_BIT)
       assert(nr_gs_entries >= 2);
 
