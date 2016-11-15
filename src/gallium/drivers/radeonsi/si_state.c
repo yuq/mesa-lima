@@ -867,11 +867,12 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	if (!state)
 		return;
 
-	if (sctx->framebuffer.nr_samples > 1 &&
-	    (!old_rs || old_rs->multisample_enable != rs->multisample_enable)) {
+	if (!old_rs || old_rs->multisample_enable != rs->multisample_enable) {
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
-		if (sctx->b.family >= CHIP_POLARIS10)
+		/* Update the small primitive filter workaround if necessary. */
+		if (sctx->b.family >= CHIP_POLARIS10 &&
+		    sctx->framebuffer.nr_samples > 1)
 			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
 	}
 
@@ -1153,7 +1154,7 @@ static void si_emit_db_render_state(struct si_context *sctx, struct r600_atom *s
 	}
 
 	/* Disable the gl_SampleMask fragment shader output if MSAA is disabled. */
-	if (sctx->framebuffer.nr_samples <= 1 || (rs && !rs->multisample_enable))
+	if (!rs || !rs->multisample_enable)
 		db_shader_control &= C_02880C_MASK_EXPORT_ENABLE;
 
 	if (sctx->b.family == CHIP_STONEY &&
