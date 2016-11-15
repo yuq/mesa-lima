@@ -3443,8 +3443,23 @@ static void load_fetch_args(
 	}
 }
 
+static unsigned get_load_intr_attribs(bool readonly_memory)
+{
+	/* READNONE means writes can't affect it, while READONLY means that
+	 * writes can affect it. */
+	return readonly_memory ? LP_FUNC_ATTR_READNONE :
+				 LP_FUNC_ATTR_READONLY;
+}
+
+static unsigned get_store_intr_attribs(bool writeonly_memory)
+{
+	return writeonly_memory ? LP_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
+				  LP_FUNC_ATTR_WRITEONLY;
+}
+
 static void load_emit_buffer(struct si_shader_context *ctx,
-			     struct lp_build_emit_data *emit_data)
+			     struct lp_build_emit_data *emit_data,
+			     bool readonly_memory)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -3472,7 +3487,7 @@ static void load_emit_buffer(struct si_shader_context *ctx,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			builder, intrinsic_name, dst_type,
 			emit_data->args, emit_data->arg_count,
-			LP_FUNC_ATTR_READONLY);
+			get_load_intr_attribs(readonly_memory));
 }
 
 static LLVMValueRef get_memory_ptr(struct si_shader_context *ctx,
@@ -3548,6 +3563,68 @@ static void get_image_intr_name(const char *base_name,
 	}
 }
 
+/**
+ * Return true if the memory accessed by a LOAD or STORE instruction is
+ * read-only or write-only, respectively.
+ *
+ * \param shader_buffers_reverse_access_mask
+ *	For LOAD, set this to (store | atomic) slot usage in the shader.
+ *	For STORE, set this to (load | atomic) slot usage in the shader.
+ * \param images_reverse_access_mask  Same as above, but for images.
+ */
+static bool is_oneway_access_only(const struct tgsi_full_instruction *inst,
+				  const struct tgsi_shader_info *info,
+				  unsigned shader_buffers_reverse_access_mask,
+				  unsigned images_reverse_access_mask)
+{
+	/* RESTRICT means NOALIAS.
+	 * If there are no writes, we can assume the accessed memory is read-only.
+	 * If there are no reads, we can assume the accessed memory is write-only.
+	 */
+	if (inst->Memory.Qualifier & TGSI_MEMORY_RESTRICT) {
+		unsigned reverse_access_mask;
+
+		if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+			reverse_access_mask = shader_buffers_reverse_access_mask;
+		} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+			reverse_access_mask = info->images_buffers &
+					      images_reverse_access_mask;
+		} else {
+			reverse_access_mask = ~info->images_buffers &
+					      images_reverse_access_mask;
+		}
+
+		if (inst->Src[0].Register.Indirect) {
+			if (!reverse_access_mask)
+				return true;
+		} else {
+			if (!(reverse_access_mask &
+			      (1u << inst->Src[0].Register.Index)))
+				return true;
+		}
+	}
+
+	/* If there are no buffer writes (for both shader buffers & image
+	 * buffers), it implies that buffer memory is read-only.
+	 * If there are no buffer reads (for both shader buffers & image
+	 * buffers), it implies that buffer memory is write-only.
+	 *
+	 * Same for the case when there are no writes/reads for non-buffer
+	 * images.
+	 */
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER ||
+	    (inst->Src[0].Register.File == TGSI_FILE_IMAGE &&
+	     inst->Memory.Texture == TGSI_TEXTURE_BUFFER)) {
+		if (!shader_buffers_reverse_access_mask &&
+		    !(info->images_buffers & images_reverse_access_mask))
+			return true;
+	} else {
+		if (!(~info->images_buffers & images_reverse_access_mask))
+			return true;
+	}
+	return false;
+}
+
 static void load_emit(
 		const struct lp_build_tgsi_action *action,
 		struct lp_build_tgsi_context *bld_base,
@@ -3557,7 +3634,9 @@ static void load_emit(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
+	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	char intrinsic_name[64];
+	bool readonly_memory = false;
 
 	if (inst->Src[0].Register.File == TGSI_FILE_MEMORY) {
 		load_emit_memory(ctx, emit_data);
@@ -3567,8 +3646,15 @@ static void load_emit(
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		emit_waitcnt(ctx, VM_CNT);
 
+	readonly_memory = !(inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE) &&
+			  is_oneway_access_only(inst, info,
+						info->shader_buffers_store |
+						info->shader_buffers_atomic,
+						info->images_store |
+						info->images_atomic);
+
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		load_emit_buffer(ctx, emit_data);
+		load_emit_buffer(ctx, emit_data, readonly_memory);
 		return;
 	}
 
@@ -3577,7 +3663,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, "llvm.amdgcn.buffer.load.format.v4f32", emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LP_FUNC_ATTR_READONLY);
+				get_load_intr_attribs(readonly_memory));
 	} else {
 		get_image_intr_name("llvm.amdgcn.image.load",
 				emit_data->dst_type,		/* vdata */
@@ -3589,7 +3675,7 @@ static void load_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LP_FUNC_ATTR_READONLY);
+				get_load_intr_attribs(readonly_memory));
 	}
 }
 
@@ -3661,7 +3747,8 @@ static void store_fetch_args(
 
 static void store_emit_buffer(
 		struct si_shader_context *ctx,
-		struct lp_build_emit_data *emit_data)
+		struct lp_build_emit_data *emit_data,
+		bool writeonly_memory)
 {
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct gallivm_state *gallivm = &ctx->gallivm;
@@ -3728,7 +3815,7 @@ static void store_emit_buffer(
 		lp_build_intrinsic(
 			builder, intrinsic_name, emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LP_FUNC_ATTR_WRITEONLY);
+			get_store_intr_attribs(writeonly_memory));
 	}
 }
 
@@ -3766,8 +3853,10 @@ static void store_emit(
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction * inst = emit_data->inst;
+	const struct tgsi_shader_info *info = &ctx->shader->selector->info;
 	unsigned target = inst->Memory.Texture;
 	char intrinsic_name[64];
+	bool writeonly_memory = false;
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_MEMORY) {
 		store_emit_memory(ctx, emit_data);
@@ -3777,8 +3866,14 @@ static void store_emit(
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
 		emit_waitcnt(ctx, VM_CNT);
 
+	writeonly_memory = is_oneway_access_only(inst, info,
+						 info->shader_buffers_load |
+						 info->shader_buffers_atomic,
+						 info->images_load |
+						 info->images_atomic);
+
 	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
-		store_emit_buffer(ctx, emit_data);
+		store_emit_buffer(ctx, emit_data, writeonly_memory);
 		return;
 	}
 
@@ -3787,7 +3882,7 @@ static void store_emit(
 			builder, "llvm.amdgcn.buffer.store.format.v4f32",
 			emit_data->dst_type, emit_data->args,
 			emit_data->arg_count,
-			LP_FUNC_ATTR_WRITEONLY);
+			get_store_intr_attribs(writeonly_memory));
 	} else {
 		get_image_intr_name("llvm.amdgcn.image.store",
 				LLVMTypeOf(emit_data->args[0]), /* vdata */
@@ -3799,7 +3894,7 @@ static void store_emit(
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
 				emit_data->args, emit_data->arg_count,
-				LP_FUNC_ATTR_WRITEONLY);
+				get_store_intr_attribs(writeonly_memory));
 	}
 }
 
