@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "gen_device_info.h"
+#include "compiler/shader_enums.h"
 
 static const struct gen_device_info gen_device_info_i965 = {
    .gen = 4,
@@ -81,8 +82,10 @@ static const struct gen_device_info gen_device_info_snb_gt1 = {
    .urb = {
       .size = 32,
       .min_vs_entries = 24,
-      .max_vs_entries = 256,
-      .max_gs_entries = 256,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]   = 256,
+         [MESA_SHADER_GEOMETRY] = 256,
+      },
    },
 };
 
@@ -101,8 +104,10 @@ static const struct gen_device_info gen_device_info_snb_gt2 = {
    .urb = {
       .size = 64,
       .min_vs_entries = 24,
-      .max_vs_entries = 256,
-      .max_gs_entries = 256,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]   = 256,
+         [MESA_SHADER_GEOMETRY] = 256,
+      },
    },
 };
 
@@ -126,11 +131,13 @@ static const struct gen_device_info gen_device_info_ivb_gt1 = {
    .urb = {
       .size = 128,
       .min_vs_entries = 32,
-      .max_vs_entries = 512,
-      .max_tcs_entries = 32,
       .min_ds_entries = 10,
-      .max_tes_entries = 288,
-      .max_gs_entries = 192,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 512,
+         [MESA_SHADER_TESS_CTRL] = 32,
+         [MESA_SHADER_TESS_EVAL] = 288,
+         [MESA_SHADER_GEOMETRY]  = 192,
+      },
    },
 };
 
@@ -146,11 +153,13 @@ static const struct gen_device_info gen_device_info_ivb_gt2 = {
    .urb = {
       .size = 256,
       .min_vs_entries = 32,
-      .max_vs_entries = 704,
-      .max_tcs_entries = 64,
       .min_ds_entries = 10,
-      .max_tes_entries = 448,
-      .max_gs_entries = 320,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 704,
+         [MESA_SHADER_TESS_CTRL] = 64,
+         [MESA_SHADER_TESS_EVAL] = 448,
+         [MESA_SHADER_GEOMETRY]  = 320,
+      },
    },
 };
 
@@ -167,11 +176,13 @@ static const struct gen_device_info gen_device_info_byt = {
    .urb = {
       .size = 128,
       .min_vs_entries = 32,
-      .max_vs_entries = 512,
-      .max_tcs_entries = 32,
       .min_ds_entries = 10,
-      .max_tes_entries = 288,
-      .max_gs_entries = 192,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 512,
+         [MESA_SHADER_TESS_CTRL] = 32,
+         [MESA_SHADER_TESS_EVAL] = 288,
+         [MESA_SHADER_GEOMETRY]  = 192,
+      },
    },
 };
 
@@ -193,11 +204,13 @@ static const struct gen_device_info gen_device_info_hsw_gt1 = {
    .urb = {
       .size = 128,
       .min_vs_entries = 32,
-      .max_vs_entries = 640,
-      .max_tcs_entries = 64,
       .min_ds_entries = 10,
-      .max_tes_entries = 384,
-      .max_gs_entries = 256,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 640,
+         [MESA_SHADER_TESS_CTRL] = 64,
+         [MESA_SHADER_TESS_EVAL] = 384,
+         [MESA_SHADER_GEOMETRY]  = 256,
+      },
    },
 };
 
@@ -213,11 +226,13 @@ static const struct gen_device_info gen_device_info_hsw_gt2 = {
    .urb = {
       .size = 256,
       .min_vs_entries = 64,
-      .max_vs_entries = 1664,
-      .max_tcs_entries = 128,
       .min_ds_entries = 10,
-      .max_tes_entries = 960,
-      .max_gs_entries = 640,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 1664,
+         [MESA_SHADER_TESS_CTRL] = 128,
+         [MESA_SHADER_TESS_EVAL] = 960,
+         [MESA_SHADER_GEOMETRY]  = 640,
+      },
    },
 };
 
@@ -233,11 +248,13 @@ static const struct gen_device_info gen_device_info_hsw_gt3 = {
    .urb = {
       .size = 512,
       .min_vs_entries = 64,
-      .max_vs_entries = 1664,
-      .max_tcs_entries = 128,
       .min_ds_entries = 10,
-      .max_tes_entries = 960,
-      .max_gs_entries = 640,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 1664,
+         [MESA_SHADER_TESS_CTRL] = 128,
+         [MESA_SHADER_TESS_EVAL] = 960,
+         [MESA_SHADER_GEOMETRY]  = 640,
+      },
    },
 };
 
@@ -263,11 +280,13 @@ static const struct gen_device_info gen_device_info_bdw_gt1 = {
    .urb = {
       .size = 192,
       .min_vs_entries = 64,
-      .max_vs_entries = 2560,
-      .max_tcs_entries = 504,
       .min_ds_entries = 34,
-      .max_tes_entries = 1536,
-      .max_gs_entries = 960,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 2560,
+         [MESA_SHADER_TESS_CTRL] = 504,
+         [MESA_SHADER_TESS_EVAL] = 1536,
+         [MESA_SHADER_GEOMETRY]  = 960,
+      },
    }
 };
 
@@ -278,11 +297,13 @@ static const struct gen_device_info gen_device_info_bdw_gt2 = {
    .urb = {
       .size = 384,
       .min_vs_entries = 64,
-      .max_vs_entries = 2560,
-      .max_tcs_entries = 504,
       .min_ds_entries = 34,
-      .max_tes_entries = 1536,
-      .max_gs_entries = 960,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 2560,
+         [MESA_SHADER_TESS_CTRL] = 504,
+         [MESA_SHADER_TESS_EVAL] = 1536,
+         [MESA_SHADER_GEOMETRY]  = 960,
+      },
    }
 };
 
@@ -293,11 +314,13 @@ static const struct gen_device_info gen_device_info_bdw_gt3 = {
    .urb = {
       .size = 384,
       .min_vs_entries = 64,
-      .max_vs_entries = 2560,
-      .max_tcs_entries = 504,
       .min_ds_entries = 34,
-      .max_tes_entries = 1536,
-      .max_gs_entries = 960,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 2560,
+         [MESA_SHADER_TESS_CTRL] = 504,
+         [MESA_SHADER_TESS_EVAL] = 1536,
+         [MESA_SHADER_GEOMETRY]  = 960,
+      },
    }
 };
 
@@ -314,11 +337,13 @@ static const struct gen_device_info gen_device_info_chv = {
    .urb = {
       .size = 192,
       .min_vs_entries = 34,
-      .max_vs_entries = 640,
-      .max_tcs_entries = 80,
       .min_ds_entries = 34,
-      .max_tes_entries = 384,
-      .max_gs_entries = 256,
+      .max_entries = {
+         [MESA_SHADER_VERTEX]    = 640,
+         [MESA_SHADER_TESS_CTRL] = 80,
+         [MESA_SHADER_TESS_EVAL] = 384,
+         [MESA_SHADER_GEOMETRY]  = 256,
+      },
    }
 };
 
@@ -339,11 +364,13 @@ static const struct gen_device_info gen_device_info_chv = {
    .urb = {                                         \
       .size = 384,                                  \
       .min_vs_entries = 64,                         \
-      .max_vs_entries = 1856,                       \
-      .max_tcs_entries = 672,                       \
       .min_ds_entries = 34,                         \
-      .max_tes_entries = 1120,                      \
-      .max_gs_entries = 640,                        \
+      .max_entries = {                              \
+         [MESA_SHADER_VERTEX]    = 1856,            \
+         [MESA_SHADER_TESS_CTRL] = 672,             \
+         [MESA_SHADER_TESS_EVAL] = 1120,            \
+         [MESA_SHADER_GEOMETRY]  = 640,             \
+      },                                            \
    }
 
 #define GEN9_LP_FEATURES                           \
@@ -361,10 +388,12 @@ static const struct gen_device_info gen_device_info_chv = {
       .size = 192,                                 \
       .min_vs_entries = 34,                        \
       .min_ds_entries = 34,                        \
-      .max_vs_entries = 704,                       \
-      .max_tcs_entries = 256,                      \
-      .max_tes_entries = 416,                      \
-      .max_gs_entries = 256,                       \
+      .max_entries = {                             \
+         [MESA_SHADER_VERTEX]    = 704,            \
+         [MESA_SHADER_TESS_CTRL] = 256,            \
+         [MESA_SHADER_TESS_EVAL] = 416,            \
+         [MESA_SHADER_GEOMETRY]  = 256,            \
+      },                                           \
    }
 
 #define GEN9_LP_FEATURES_2X6                       \
@@ -378,10 +407,12 @@ static const struct gen_device_info gen_device_info_chv = {
       .size = 128,                                 \
       .min_vs_entries = 34,                        \
       .min_ds_entries = 34,                        \
-      .max_vs_entries = 352,                       \
-      .max_tcs_entries = 128,                      \
-      .max_tes_entries = 208,                      \
-      .max_gs_entries = 128,                       \
+      .max_entries = {                             \
+         [MESA_SHADER_VERTEX]    = 352,            \
+         [MESA_SHADER_TESS_CTRL] = 128,            \
+         [MESA_SHADER_TESS_EVAL] = 208,            \
+         [MESA_SHADER_GEOMETRY]  = 128,            \
+      },                                           \
    }
 
 static const struct gen_device_info gen_device_info_skl_gt1 = {

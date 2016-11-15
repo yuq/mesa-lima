@@ -237,7 +237,8 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
       ALIGN(device->info.urb.min_vs_entries * vs_entry_size_bytes,
             chunk_size_bytes) / chunk_size_bytes;
    unsigned vs_wants =
-      ALIGN(device->info.urb.max_vs_entries * vs_entry_size_bytes,
+      ALIGN(device->info.urb.max_entries[MESA_SHADER_VERTEX] *
+            vs_entry_size_bytes,
             chunk_size_bytes) / chunk_size_bytes - vs_chunks;
 
    unsigned gs_chunks = 0;
@@ -254,7 +255,8 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
       gs_chunks = ALIGN(MAX2(gs_granularity, 2) * gs_entry_size_bytes,
                         chunk_size_bytes) / chunk_size_bytes;
       gs_wants =
-         ALIGN(device->info.urb.max_gs_entries * gs_entry_size_bytes,
+         ALIGN(device->info.urb.max_entries[MESA_SHADER_GEOMETRY] *
+               gs_entry_size_bytes,
                chunk_size_bytes) / chunk_size_bytes - gs_chunks;
    }
 
@@ -289,8 +291,10 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
    /* Since we rounded up when computing *_wants, this may be slightly more
     * than the maximum allowed amount, so correct for that.
     */
-   nr_vs_entries = MIN2(nr_vs_entries, device->info.urb.max_vs_entries);
-   nr_gs_entries = MIN2(nr_gs_entries, device->info.urb.max_gs_entries);
+   nr_vs_entries = MIN2(nr_vs_entries,
+                        device->info.urb.max_entries[MESA_SHADER_VERTEX]);
+   nr_gs_entries = MIN2(nr_gs_entries,
+                        device->info.urb.max_entries[MESA_SHADER_GEOMETRY]);
 
    /* Ensure that we program a multiple of the granularity. */
    nr_vs_entries = ROUND_DOWN_TO(nr_vs_entries, vs_granularity);

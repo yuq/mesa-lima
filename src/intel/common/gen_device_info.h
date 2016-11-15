@@ -136,11 +136,12 @@ struct gen_device_info
        */
       unsigned size;
       unsigned min_vs_entries;
-      unsigned max_vs_entries;
-      unsigned max_tcs_entries;
       unsigned min_ds_entries;
-      unsigned max_tes_entries;
-      unsigned max_gs_entries;
+
+      /**
+       * The maximum number of URB entries.  See the 3DSTATE_URB_<XS> docs.
+       */
+      unsigned max_entries[4];
    } urb;
    /** @} */
 };
