@@ -3259,6 +3259,11 @@ fs_visitor::nir_emit_fs_intrinsic(const fs_builder &bld,
       break;
    }
 
+   case nir_intrinsic_load_layer_id:
+      dest.type = BRW_REGISTER_TYPE_UD;
+      bld.MOV(dest, fetch_render_target_array_index(bld));
+      break;
+
    case nir_intrinsic_load_helper_invocation:
    case nir_intrinsic_load_sample_mask_in:
    case nir_intrinsic_load_sample_id: {
