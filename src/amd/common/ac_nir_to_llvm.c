@@ -1759,7 +1759,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 
 		for (c = 0; c < 2; c++) {
 			half_texel[c] = LLVMBuildExtractElement(ctx->builder, size,
-								ctx->i32zero, "");
+								LLVMConstInt(ctx->i32, c, false), "");
 			half_texel[c] = LLVMBuildUIToFP(ctx->builder, half_texel[c], ctx->f32, "");
 			half_texel[c] = emit_fdiv(ctx, ctx->f32one, half_texel[c]);
 			half_texel[c] = LLVMBuildFMul(ctx->builder, half_texel[c],
