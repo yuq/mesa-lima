@@ -180,6 +180,17 @@ qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst)
 }
 
 bool
+qir_has_uniform_read(struct qinst *inst)
+{
+        for (int i = 0; i < qir_get_nsrc(inst); i++) {
+                if (inst->src[i].file == QFILE_UNIF)
+                        return true;
+        }
+
+        return false;
+}
+
+bool
 qir_is_mul(struct qinst *inst)
 {
         switch (inst->op) {
