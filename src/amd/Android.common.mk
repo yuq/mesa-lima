@@ -28,7 +28,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := libmesa_amd_common
 
-LOCAL_SRC_FILES := $(AMD_COMPILER_SOURCES)
+LOCAL_SRC_FILES := $(AMD_COMPILER_FILES)
 
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/include \
