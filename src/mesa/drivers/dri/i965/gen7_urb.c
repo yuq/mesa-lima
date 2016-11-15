@@ -356,7 +356,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
 
       if (total_wants > 0) {
          unsigned hs_additional = (unsigned)
-            round(hs_wants * (((double) remaining_space) / total_wants));
+            roundf(hs_wants * (((float) remaining_space) / total_wants));
          hs_chunks += hs_additional;
          remaining_space -= hs_additional;
          total_wants -= hs_wants;
@@ -364,7 +364,7 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
 
       if (total_wants > 0) {
          unsigned ds_additional = (unsigned)
-            round(ds_wants * (((double) remaining_space) / total_wants));
+            roundf(ds_wants * (((float) remaining_space) / total_wants));
          ds_chunks += ds_additional;
          remaining_space -= ds_additional;
          total_wants -= ds_wants;
