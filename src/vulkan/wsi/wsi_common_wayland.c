@@ -498,19 +498,25 @@ wsi_wl_swapchain_get_images(struct wsi_swapchain *wsi_chain,
                             uint32_t *pCount, VkImage *pSwapchainImages)
 {
    struct wsi_wl_swapchain *chain = (struct wsi_wl_swapchain *)wsi_chain;
+   uint32_t ret_count;
+   VkResult result;
 
    if (pSwapchainImages == NULL) {
       *pCount = chain->image_count;
       return VK_SUCCESS;
    }
 
-   assert(chain->image_count <= *pCount);
-   for (uint32_t i = 0; i < chain->image_count; i++)
+   result = VK_SUCCESS;
+   ret_count = chain->image_count;
+   if (chain->image_count > *pCount) {
+     ret_count = *pCount;
+     result = VK_INCOMPLETE;
+   }
+
+   for (uint32_t i = 0; i < ret_count; i++)
       pSwapchainImages[i] = chain->images[i].image;
 
-   *pCount = chain->image_count;
-
-   return VK_SUCCESS;
+   return result;
 }
 
 static VkResult
