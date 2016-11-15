@@ -463,6 +463,7 @@ anv_pipeline_compile_vs(struct anv_pipeline *pipeline,
       ralloc_steal(mem_ctx, nir);
 
       prog_data.inputs_read = nir->info->inputs_read;
+      prog_data.double_inputs_read = nir->info->double_inputs_read;
 
       brw_compute_vue_map(&pipeline->device->info,
                           &prog_data.base.vue_map,
