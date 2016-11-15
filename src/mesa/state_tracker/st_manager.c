@@ -680,7 +680,9 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
       }
 
       st->ctx->Const.ContextFlags |= GL_CONTEXT_FLAG_DEBUG_BIT;
+   }
 
+   if (st->ctx->Const.ContextFlags & GL_CONTEXT_FLAG_DEBUG_BIT) {
       st_update_debug_callback(st);
    }
 
