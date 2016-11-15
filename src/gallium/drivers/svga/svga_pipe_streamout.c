@@ -276,14 +276,14 @@ svga_set_stream_output_targets(struct pipe_context *pipe,
    for (i = 0; i < num_targets; i++) {
       struct svga_stream_output_target *sot
          = svga_stream_output_target(targets[i]);
-      struct svga_buffer *sbuf = svga_buffer(sot->base.buffer);
       unsigned size;
-
-      assert(sbuf->key.flags & SVGA3D_SURFACE_BIND_STREAM_OUTPUT);
-      (void) sbuf;
 
       svga->so_surfaces[i] = svga_buffer_handle(svga, sot->base.buffer,
                                                 PIPE_BIND_STREAM_OUTPUT);
+
+      assert(svga_buffer(sot->base.buffer)->key.flags
+             & SVGA3D_SURFACE_BIND_STREAM_OUTPUT);
+
       svga->so_targets[i] = &sot->base;
       soBindings[i].offset = sot->base.buffer_offset;
 

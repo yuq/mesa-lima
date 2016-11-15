@@ -427,20 +427,22 @@ svga_buffer_create(struct pipe_screen *screen,
 
    if (svga_buffer_needs_hw_storage(bind_flags)) {
 
-      /* If the buffer will be used for vertex/index/stream data, set all
-       * the flags so that the buffer will be accepted for all those uses.
+      /* If the buffer will be used for vertex/index/stream data, set
+       * the vertex/index bind flags as well so that the buffer will be
+       * accepted for those uses.
        * Note that the PIPE_BIND_ flags we get from the state tracker are
        * just a hint about how the buffer may be used.  And OpenGL buffer
        * object may be used for many different things.
+       * Also note that we do not unconditionally set the streamout
+       * bind flag since streamout buffer is an output buffer and
+       * might have performance implication.
        */
       if (!(template->bind & PIPE_BIND_CONSTANT_BUFFER)) {
-         /* Not a constant buffer.  The buffer may be used for vertex data,
-          * indexes or stream-out.
+         /* Not a constant buffer.  The buffer may be used for vertex data
+          * or indexes.
           */
          bind_flags |= (PIPE_BIND_VERTEX_BUFFER |
                         PIPE_BIND_INDEX_BUFFER);
-         if (ss->sws->have_vgpu10)
-            bind_flags |= PIPE_BIND_STREAM_OUTPUT;
       }
 
       if (svga_buffer_create_host_surface(ss, sbuf, bind_flags) != PIPE_OK)

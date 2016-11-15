@@ -50,6 +50,11 @@ svga_buffer_create_host_surface(struct svga_screen *ss,
                                 struct svga_buffer *sbuf,
                                 unsigned bind_flags);
 
+enum pipe_error
+svga_buffer_recreate_host_surface(struct svga_context *svga,
+                                  struct svga_buffer *sbuf,
+                                  unsigned bind_flags);
+
 void
 svga_buffer_destroy_host_surface(struct svga_screen *ss,
                                  struct svga_buffer *sbuf);
