@@ -1220,6 +1220,80 @@ static int lookup_interp_param_index(unsigned interpolate, unsigned location)
 	}
 }
 
+static LLVMValueRef build_fs_interp(
+	struct lp_build_tgsi_context *bld_base,
+	LLVMValueRef llvm_chan,
+	LLVMValueRef attr_number,
+	LLVMValueRef params,
+	LLVMValueRef i,
+	LLVMValueRef j) {
+
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef args[5];
+	LLVMValueRef p1;
+	if (HAVE_LLVM < 0x0400) {
+		LLVMValueRef ij[2];
+		ij[0] = LLVMBuildBitCast(gallivm->builder, i, ctx->i32, "");
+		ij[1] = LLVMBuildBitCast(gallivm->builder, j, ctx->i32, "");
+
+		args[0] = llvm_chan;
+		args[1] = attr_number;
+		args[2] = params;
+		args[3] = lp_build_gather_values(gallivm, ij, 2);
+		return lp_build_intrinsic(gallivm->builder, "llvm.fs.interp",
+					  ctx->f32, args, 4,
+					  LP_FUNC_ATTR_READNONE);
+	}
+
+	args[0] = i;
+	args[1] = llvm_chan;
+	args[2] = attr_number;
+	args[3] = params;
+
+	p1 = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.interp.p1",
+				ctx->f32, args, 4, LP_FUNC_ATTR_READNONE);
+
+	args[0] = p1;
+	args[1] = j;
+	args[2] = llvm_chan;
+	args[3] = attr_number;
+	args[4] = params;
+
+	return lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.interp.p2",
+				  ctx->f32, args, 5, LP_FUNC_ATTR_READNONE);
+}
+
+static LLVMValueRef build_fs_interp_mov(
+	struct lp_build_tgsi_context *bld_base,
+	LLVMValueRef parameter,
+	LLVMValueRef llvm_chan,
+	LLVMValueRef attr_number,
+	LLVMValueRef params) {
+
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMValueRef args[4];
+	if (HAVE_LLVM < 0x0400) {
+		args[0] = llvm_chan;
+		args[1] = attr_number;
+		args[2] = params;
+
+		return lp_build_intrinsic(gallivm->builder,
+					  "llvm.SI.fs.constant",
+					  ctx->f32, args, 3,
+					  LP_FUNC_ATTR_READNONE);
+	}
+
+	args[0] = parameter;
+	args[1] = llvm_chan;
+	args[2] = attr_number;
+	args[3] = params;
+
+	return lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.interp.mov",
+				  ctx->f32, args, 4, LP_FUNC_ATTR_READNONE);
+}
+
 /**
  * Interpolate a fragment shader input.
  *
@@ -1245,15 +1319,14 @@ static void interp_fs_input(struct si_shader_context *ctx,
 			    LLVMValueRef face,
 			    LLVMValueRef result[4])
 {
-	struct lp_build_context *base = &ctx->soa.bld_base.base;
-	struct lp_build_context *uint =	&ctx->soa.bld_base.uint_bld;
+	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
+	struct lp_build_context *base = &bld_base->base;
+	struct lp_build_context *uint =	&bld_base->uint_bld;
 	struct gallivm_state *gallivm = base->gallivm;
-	const char *intr_name;
 	LLVMValueRef attr_number;
+	LLVMValueRef i, j;
 
 	unsigned chan;
-
-	attr_number = lp_build_const_int32(gallivm, input_index);
 
 	/* fs.constant returns the param from the middle vertex, so it's not
 	 * really useful for flat shading. It's meant to be used for custom
@@ -1264,12 +1337,26 @@ static void interp_fs_input(struct si_shader_context *ctx,
 	 * to do the right thing. The only reason we use fs.constant is that
 	 * fs.interp cannot be used on integers, because they can be equal
 	 * to NaN.
+	 *
+	 * When interp is false we will use fs.constant or for newer llvm,
+         * amdgcn.interp.mov.
 	 */
-	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
+	bool interp = interp_param != NULL;
+
+	attr_number = lp_build_const_int32(gallivm, input_index);
+
+	if (interp) {
+		interp_param = LLVMBuildBitCast(gallivm->builder, interp_param,
+						LLVMVectorType(ctx->f32, 2), "");
+
+		i = LLVMBuildExtractElement(gallivm->builder, interp_param,
+						uint->zero, "");
+		j = LLVMBuildExtractElement(gallivm->builder, interp_param,
+						uint->one, "");
+	}
 
 	if (semantic_name == TGSI_SEMANTIC_COLOR &&
 	    ctx->shader->key.part.ps.prolog.color_two_side) {
-		LLVMValueRef args[4];
 		LLVMValueRef is_face_positive;
 		LLVMValueRef back_attr_number;
 
@@ -1285,22 +1372,25 @@ static void interp_fs_input(struct si_shader_context *ctx,
 		is_face_positive = LLVMBuildICmp(gallivm->builder, LLVMIntNE,
 						 face, uint->zero, "");
 
-		args[2] = prim_mask;
-		args[3] = interp_param;
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
 			LLVMValueRef front, back;
 
-			args[0] = llvm_chan;
-			args[1] = attr_number;
-			front = lp_build_intrinsic(gallivm->builder, intr_name,
-						ctx->f32, args, args[3] ? 4 : 3,
-						LP_FUNC_ATTR_READNONE);
-
-			args[1] = back_attr_number;
-			back = lp_build_intrinsic(gallivm->builder, intr_name,
-					       ctx->f32, args, args[3] ? 4 : 3,
-					       LP_FUNC_ATTR_READNONE);
+			if (interp) {
+				front = build_fs_interp(bld_base, llvm_chan,
+							attr_number, prim_mask,
+							i, j);
+				back = build_fs_interp(bld_base, llvm_chan,
+							back_attr_number, prim_mask,
+							i, j);
+			} else {
+				front = build_fs_interp_mov(bld_base,
+					lp_build_const_int32(gallivm, 2), /* P0 */
+					llvm_chan, attr_number, prim_mask);
+				back = build_fs_interp_mov(bld_base,
+					lp_build_const_int32(gallivm, 2), /* P0 */
+					llvm_chan, back_attr_number, prim_mask);
+			}
 
 			result[chan] = LLVMBuildSelect(gallivm->builder,
 						is_face_positive,
@@ -1309,30 +1399,29 @@ static void interp_fs_input(struct si_shader_context *ctx,
 						"");
 		}
 	} else if (semantic_name == TGSI_SEMANTIC_FOG) {
-		LLVMValueRef args[4];
-
-		args[0] = uint->zero;
-		args[1] = attr_number;
-		args[2] = prim_mask;
-		args[3] = interp_param;
-		result[0] = lp_build_intrinsic(gallivm->builder, intr_name,
-					ctx->f32, args, args[3] ? 4 : 3,
-					LP_FUNC_ATTR_READNONE);
+		if (interp) {
+			result[0] = build_fs_interp(bld_base, uint->zero,
+						attr_number, prim_mask, i, j);
+		} else {
+			result[0] = build_fs_interp_mov(bld_base, uint->zero,
+				lp_build_const_int32(gallivm, 2), /* P0 */
+				attr_number, prim_mask);
+		}
 		result[1] =
 		result[2] = lp_build_const_float(gallivm, 0.0f);
 		result[3] = lp_build_const_float(gallivm, 1.0f);
 	} else {
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-			LLVMValueRef args[4];
 			LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
 
-			args[0] = llvm_chan;
-			args[1] = attr_number;
-			args[2] = prim_mask;
-			args[3] = interp_param;
-			result[chan] = lp_build_intrinsic(gallivm->builder, intr_name,
-						ctx->f32, args, args[3] ? 4 : 3,
-						LP_FUNC_ATTR_READNONE);
+			if (interp) {
+				result[chan] = build_fs_interp(bld_base,
+					llvm_chan, attr_number, prim_mask, i, j);
+			} else {
+				result[chan] = build_fs_interp_mov(bld_base,
+					lp_build_const_int32(gallivm, 2), /* P0 */
+					llvm_chan, attr_number, prim_mask);
+			}
 		}
 	}
 }
@@ -5020,9 +5109,9 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	struct lp_build_context *uint = &bld_base->uint_bld;
 	LLVMValueRef interp_param;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
-	const char *intr_name;
 	int input_index = inst->Src[0].Register.Index;
 	int chan;
 	int i;
@@ -5083,32 +5172,33 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 
 			temp2 = LLVMBuildFMul(gallivm->builder, ddy_el, emit_data->args[1], "");
 
-			temp2 = LLVMBuildFAdd(gallivm->builder, temp2, temp1, "");
-
-			ij_out[i] = LLVMBuildBitCast(gallivm->builder,
-						     temp2, ctx->i32, "");
+			ij_out[i] = LLVMBuildFAdd(gallivm->builder, temp2, temp1, "");
 		}
 		interp_param = lp_build_gather_values(bld_base->base.gallivm, ij_out, 2);
 	}
 
-	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
 	for (chan = 0; chan < 4; chan++) {
-		LLVMValueRef args[4];
 		LLVMValueRef llvm_chan;
 		unsigned schan;
 
 		schan = tgsi_util_get_full_src_register_swizzle(&inst->Src[0], chan);
 		llvm_chan = lp_build_const_int32(gallivm, schan);
 
-		args[0] = llvm_chan;
-		args[1] = attr_number;
-		args[2] = params;
-		args[3] = interp_param;
-
-		emit_data->output[chan] =
-			lp_build_intrinsic(gallivm->builder, intr_name,
-					   ctx->f32, args, args[3] ? 4 : 3,
-					   LP_FUNC_ATTR_READNONE);
+		if (interp_param) {
+			interp_param = LLVMBuildBitCast(gallivm->builder,
+				interp_param, LLVMVectorType(ctx->f32, 2), "");
+			LLVMValueRef i = LLVMBuildExtractElement(
+				gallivm->builder, interp_param, uint->zero, "");
+			LLVMValueRef j = LLVMBuildExtractElement(
+				gallivm->builder, interp_param, uint->one, "");
+			emit_data->output[chan] = build_fs_interp(bld_base,
+				llvm_chan, attr_number, params,
+				i, j);
+		} else {
+			emit_data->output[chan] = build_fs_interp_mov(bld_base,
+				lp_build_const_int32(gallivm, 2), /* P0 */
+				llvm_chan, attr_number, params);
+		}
 	}
 }
 
@@ -7978,8 +8068,6 @@ static void si_build_ps_prolog_function(struct si_shader_context *ctx,
 			interp[1] = LLVMBuildExtractValue(gallivm->builder, ret,
 							  interp_vgpr + 1, "");
 			interp_ij = lp_build_gather_values(gallivm, interp, 2);
-			interp_ij = LLVMBuildBitCast(gallivm->builder, interp_ij,
-						     ctx->v2i32, "");
 		}
 
 		/* Use the absolute location of the input. */
