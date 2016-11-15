@@ -913,6 +913,9 @@ struct anv_pipeline_binding {
 
    /* Index in the binding */
    uint8_t index;
+
+   /* Input attachment index (relative to the subpass) */
+   uint8_t input_attachment_index;
 };
 
 struct anv_pipeline_layout {
