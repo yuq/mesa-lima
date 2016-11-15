@@ -70,6 +70,7 @@ VkResult anv_CreateRenderPass(
 
       att->format = pCreateInfo->pAttachments[i].format;
       att->samples = pCreateInfo->pAttachments[i].samples;
+      att->usage = 0;
       att->load_op = pCreateInfo->pAttachments[i].loadOp;
       att->store_op = pCreateInfo->pAttachments[i].storeOp;
       att->stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
@@ -113,6 +114,7 @@ VkResult anv_CreateRenderPass(
          for (uint32_t j = 0; j < desc->inputAttachmentCount; j++) {
             uint32_t a = desc->pInputAttachments[j].attachment;
             subpass->input_attachments[j] = a;
+            pass->attachments[a].usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
             pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_INPUT;
          }
       }
@@ -124,6 +126,7 @@ VkResult anv_CreateRenderPass(
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             uint32_t a = desc->pColorAttachments[j].attachment;
             subpass->color_attachments[j] = a;
+            pass->attachments[a].usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_DRAW;
          }
       }
@@ -139,6 +142,10 @@ VkResult anv_CreateRenderPass(
             if (a != VK_ATTACHMENT_UNUSED) {
                subpass->has_resolve = true;
                uint32_t color_att = desc->pColorAttachments[j].attachment;
+               pass->attachments[color_att].usage |=
+                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+               pass->attachments[a].usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+
                pass->attachments[color_att].subpass_usage[i] |=
                   ANV_SUBPASS_USAGE_RESOLVE_SRC;
                pass->attachments[a].subpass_usage[i] |=
@@ -150,8 +157,11 @@ VkResult anv_CreateRenderPass(
       if (desc->pDepthStencilAttachment) {
          uint32_t a = desc->pDepthStencilAttachment->attachment;
          subpass->depth_stencil_attachment = a;
-         if (a != VK_ATTACHMENT_UNUSED)
+         if (a != VK_ATTACHMENT_UNUSED) {
+            pass->attachments[a].usage |=
+               VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
             pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_DRAW;
+         }
       } else {
          subpass->depth_stencil_attachment = VK_ATTACHMENT_UNUSED;
       }

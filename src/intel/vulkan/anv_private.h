@@ -1722,6 +1722,7 @@ enum anv_subpass_usage {
 struct anv_render_pass_attachment {
    VkFormat                                     format;
    uint32_t                                     samples;
+   VkImageUsageFlags                            usage;
    VkAttachmentLoadOp                           load_op;
    VkAttachmentStoreOp                          store_op;
    VkAttachmentLoadOp                           stencil_load_op;
