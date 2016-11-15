@@ -363,9 +363,8 @@ dri_open_driver(struct gbm_dri_device *dri)
       return NULL;
    }
 
-   get_extensions_name = dri_get_extensions_name(dri->base.driver_name);
-
-   if (get_extensions_name) {
+   if (asprintf(&get_extensions_name, "%s_%s",
+                __DRI_DRIVER_GET_EXTENSIONS, dri->base.driver_name) != -1) {
       const __DRIextension **(*get_extensions)(void);
 
       get_extensions = dlsym(dri->driver, get_extensions_name);

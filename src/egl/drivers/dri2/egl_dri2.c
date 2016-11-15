@@ -514,9 +514,8 @@ dri2_open_driver(_EGLDisplay *disp)
 
    _eglLog(_EGL_DEBUG, "DRI2: dlopen(%s)", path);
 
-   get_extensions_name = dri_get_extensions_name(dri2_dpy->driver_name);
-
-   if (get_extensions_name) {
+   if (asprintf(&get_extensions_name, "%s_%s",
+                __DRI_DRIVER_GET_EXTENSIONS, dri2_dpy->driver_name) != -1) {
       get_extensions = dlsym(dri2_dpy->driver, get_extensions_name);
       if (get_extensions) {
          extensions = get_extensions();
