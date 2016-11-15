@@ -152,40 +152,6 @@ const struct brw_tracked_state gen7_push_constant_space = {
 };
 
 static void
-gen7_emit_urb_state(struct brw_context *brw,
-                    unsigned nr_vs_entries,
-                    unsigned vs_size, unsigned vs_start,
-                    unsigned nr_hs_entries,
-                    unsigned hs_size, unsigned hs_start,
-                    unsigned nr_ds_entries,
-                    unsigned ds_size, unsigned ds_start,
-                    unsigned nr_gs_entries,
-                    unsigned gs_size, unsigned gs_start)
-{
-   BEGIN_BATCH(8);
-   OUT_BATCH(_3DSTATE_URB_VS << 16 | (2 - 2));
-   OUT_BATCH(nr_vs_entries |
-             ((vs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (vs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-
-   OUT_BATCH(_3DSTATE_URB_GS << 16 | (2 - 2));
-   OUT_BATCH(nr_gs_entries |
-             ((gs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (gs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-
-   OUT_BATCH(_3DSTATE_URB_HS << 16 | (2 - 2));
-   OUT_BATCH(nr_hs_entries |
-             ((hs_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (hs_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-
-   OUT_BATCH(_3DSTATE_URB_DS << 16 | (2 - 2));
-   OUT_BATCH(nr_ds_entries |
-             ((ds_size - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
-             (ds_start << GEN7_URB_STARTING_ADDRESS_SHIFT));
-   ADVANCE_BATCH();
-}
-
-static void
 upload_urb(struct brw_context *brw)
 {
    /* BRW_NEW_VS_PROG_DATA */
@@ -208,56 +174,45 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    const int push_size_kB =
       (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
 
-   /* BRW_NEW_VS_PROG_DATA */
-   unsigned vs_entry_size_bytes = vs_size * 64;
-   /* BRW_NEW_GEOMETRY_PROGRAM, BRW_NEW_GS_PROG_DATA */
-   const struct brw_vue_prog_data *gs_vue_prog_data =
-      brw_vue_prog_data(brw->gs.base.prog_data);
-   unsigned gs_size = gs_present ? gs_vue_prog_data->urb_entry_size : 1;
-   unsigned gs_entry_size_bytes = gs_size * 64;
+   const bool active[4] = { true, tess_present, tess_present, gs_present };
 
-   /* BRW_NEW_TCS_PROG_DATA */
-   const struct brw_vue_prog_data *tcs_vue_prog_data =
-      brw_vue_prog_data(brw->tcs.base.prog_data);
-   unsigned hs_size = tess_present ? tcs_vue_prog_data->urb_entry_size : 1;
-   unsigned hs_entry_size_bytes = hs_size * 64;
-   /* BRW_NEW_TES_PROG_DATA */
-   const struct brw_vue_prog_data *tes_vue_prog_data =
-      brw_vue_prog_data(brw->tes.base.prog_data);
-   unsigned ds_size = tess_present ? tes_vue_prog_data->urb_entry_size : 1;
-   unsigned ds_entry_size_bytes = ds_size * 64;
+   /* BRW_NEW_{VS,TCS,TES,GS}_PROG_DATA */
+   struct brw_vue_prog_data *prog_data[4] = {
+      [MESA_SHADER_VERTEX] =
+         brw_vue_prog_data(brw->vs.base.prog_data),
+      [MESA_SHADER_TESS_CTRL] =
+         tess_present ? brw_vue_prog_data(brw->tcs.base.prog_data) : NULL,
+      [MESA_SHADER_TESS_EVAL] =
+         tess_present ? brw_vue_prog_data(brw->tes.base.prog_data) : NULL,
+      [MESA_SHADER_GEOMETRY] =
+         gs_present ? brw_vue_prog_data(brw->gs.base.prog_data) : NULL,
+   };
+
+   unsigned entry_size[4];
+   entry_size[MESA_SHADER_VERTEX] = vs_size;
+   for (int i = MESA_SHADER_TESS_CTRL; i <= MESA_SHADER_GEOMETRY; i++) {
+      entry_size[i] = prog_data[i] ? prog_data[i]->urb_entry_size : 1;
+   }
 
    /* If we're just switching between programs with the same URB requirements,
     * skip the rest of the logic.
     */
    if (!(brw->ctx.NewDriverState & BRW_NEW_CONTEXT) &&
        !(brw->ctx.NewDriverState & BRW_NEW_URB_SIZE) &&
-       brw->urb.vsize == vs_size &&
+       brw->urb.vsize == entry_size[MESA_SHADER_VERTEX] &&
        brw->urb.gs_present == gs_present &&
-       brw->urb.gsize == gs_size &&
+       brw->urb.gsize == entry_size[MESA_SHADER_GEOMETRY] &&
        brw->urb.tess_present == tess_present &&
-       brw->urb.hsize == hs_size &&
-       brw->urb.dsize == ds_size) {
+       brw->urb.hsize == entry_size[MESA_SHADER_TESS_CTRL] &&
+       brw->urb.dsize == entry_size[MESA_SHADER_TESS_EVAL]) {
       return;
    }
-   brw->urb.vsize = vs_size;
+   brw->urb.vsize = entry_size[MESA_SHADER_VERTEX];
    brw->urb.gs_present = gs_present;
-   brw->urb.gsize = gs_size;
+   brw->urb.gsize = entry_size[MESA_SHADER_GEOMETRY];
    brw->urb.tess_present = tess_present;
-   brw->urb.hsize = hs_size;
-   brw->urb.dsize = ds_size;
-
-   /* From p35 of the Ivy Bridge PRM (section 1.7.1: 3DSTATE_URB_GS):
-    *
-    *     VS Number of URB Entries must be divisible by 8 if the VS URB Entry
-    *     Allocation Size is less than 9 512-bit URB entries.
-    *
-    * Similar text exists for HS, DS and GS.
-    */
-   unsigned vs_granularity = (vs_size < 9) ? 8 : 1;
-   unsigned hs_granularity = (hs_size < 9) ? 8 : 1;
-   unsigned ds_granularity = (ds_size < 9) ? 8 : 1;
-   unsigned gs_granularity = (gs_size < 9) ? 8 : 1;
+   brw->urb.hsize = entry_size[MESA_SHADER_TESS_CTRL];
+   brw->urb.dsize = entry_size[MESA_SHADER_TESS_EVAL];
 
    /* URB allocations must be done in 8k chunks. */
    unsigned chunk_size_bytes = 8192;
@@ -269,36 +224,30 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
 
    /* Reserve space for push constants */
    unsigned push_constant_bytes = 1024 * push_size_kB;
-   unsigned push_constant_chunks =
-      push_constant_bytes / chunk_size_bytes;
+   unsigned push_constant_chunks = push_constant_bytes / chunk_size_bytes;
 
-   /* Initially, assign each stage the minimum amount of URB space it needs,
-    * and make a note of how much additional space it "wants" (the amount of
-    * additional space it could actually make use of).
-    */
-
-   /* VS has a lower limit on the number of URB entries.
+   /* From p35 of the Ivy Bridge PRM (section 1.7.1: 3DSTATE_URB_GS):
     *
-    * From the Broadwell PRM, 3DSTATE_URB_VS instruction:
-    * "When tessellation is enabled, the VS Number of URB Entries must be
-    *  greater than or equal to 192."
+    *     VS Number of URB Entries must be divisible by 8 if the VS URB Entry
+    *     Allocation Size is less than 9 512-bit URB entries.
+    *
+    * Similar text exists for HS, DS and GS.
     */
-   unsigned vs_min_entries =
-      tess_present && brw->gen == 8 ?
-         192 : devinfo->urb.min_entries[MESA_SHADER_VERTEX];
-   /* Min VS Entries isn't a multiple of 8 on Cherryview/Broxton; round up */
-   vs_min_entries = ALIGN(vs_min_entries, vs_granularity);
+   unsigned granularity[4];
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      granularity[i] = (entry_size[i] < 9) ? 8 : 1;
+   }
 
-   unsigned vs_chunks =
-      DIV_ROUND_UP(vs_min_entries * vs_entry_size_bytes, chunk_size_bytes);
-   unsigned vs_wants =
-      DIV_ROUND_UP(devinfo->urb.max_entries[MESA_SHADER_VERTEX] *
-                   vs_entry_size_bytes,
-                   chunk_size_bytes) - vs_chunks;
+   unsigned min_entries[4] = {
+      /* VS has a lower limit on the number of URB entries.
+       *
+       * From the Broadwell PRM, 3DSTATE_URB_VS instruction:
+       * "When tessellation is enabled, the VS Number of URB Entries must be
+       *  greater than or equal to 192."
+       */
+      [MESA_SHADER_VERTEX] = tess_present && brw->gen == 8 ?
+         192 : devinfo->urb.min_entries[MESA_SHADER_VERTEX],
 
-   unsigned gs_chunks = 0;
-   unsigned gs_wants = 0;
-   if (gs_present) {
       /* There are two constraints on the minimum amount of URB space we can
        * allocate:
        *
@@ -307,133 +256,116 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
        *
        * (2) We can't allocate less than nr_gs_entries_granularity.
        */
-      gs_chunks = DIV_ROUND_UP(MAX2(gs_granularity, 2) * gs_entry_size_bytes,
-                               chunk_size_bytes);
-      gs_wants = DIV_ROUND_UP(devinfo->urb.max_entries[MESA_SHADER_GEOMETRY] *
-                              gs_entry_size_bytes,
-                              chunk_size_bytes) - gs_chunks;
-   }
+      [MESA_SHADER_GEOMETRY] = gs_present ? 2 : 0,
 
-   unsigned hs_chunks = 0;
-   unsigned hs_wants = 0;
-   unsigned ds_chunks = 0;
-   unsigned ds_wants = 0;
+      [MESA_SHADER_TESS_CTRL] = tess_present ? 1 : 0,
 
-   if (tess_present) {
-      hs_chunks =
-         DIV_ROUND_UP(hs_granularity * hs_entry_size_bytes,
-                      chunk_size_bytes);
-      hs_wants =
-         DIV_ROUND_UP(devinfo->urb.max_entries[MESA_SHADER_TESS_CTRL] *
-                      hs_entry_size_bytes, chunk_size_bytes) - hs_chunks;
+      [MESA_SHADER_TESS_EVAL] = tess_present ?
+         devinfo->urb.min_entries[MESA_SHADER_TESS_EVAL] : 0,
+   };
 
-      ds_chunks =
-         DIV_ROUND_UP(devinfo->urb.min_entries[MESA_SHADER_TESS_EVAL] *
-                      ds_entry_size_bytes, chunk_size_bytes);
-      ds_wants =
-         DIV_ROUND_UP(devinfo->urb.max_entries[MESA_SHADER_TESS_EVAL] *
-                      ds_entry_size_bytes, chunk_size_bytes) - ds_chunks;
-   }
-
-   /* There should always be enough URB space to satisfy the minimum
-    * requirements of each stage.
+   /* Min VS Entries isn't a multiple of 8 on Cherryview/Broxton; round up.
+    * Round them all up.
     */
-   unsigned total_needs = push_constant_chunks +
-                          vs_chunks + hs_chunks + ds_chunks + gs_chunks;
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      min_entries[i] = ALIGN(min_entries[i], granularity[i]);
+   }
+
+   unsigned entry_size_bytes[4];
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      entry_size_bytes[i] = 64 * entry_size[i];
+   }
+
+   /* Initially, assign each stage the minimum amount of URB space it needs,
+    * and make a note of how much additional space it "wants" (the amount of
+    * additional space it could actually make use of).
+    */
+   unsigned chunks[4];
+   unsigned wants[4];
+   unsigned total_needs = push_constant_chunks;
+   unsigned total_wants = 0;
+
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      if (active[i]) {
+         chunks[i] = DIV_ROUND_UP(min_entries[i] * entry_size_bytes[i],
+                                  chunk_size_bytes);
+
+         wants[i] =
+            DIV_ROUND_UP(devinfo->urb.max_entries[i] * entry_size_bytes[i],
+                         chunk_size_bytes) - chunks[i];
+      } else {
+         chunks[i] = 0;
+         wants[i] = 0;
+      }
+
+      total_needs += chunks[i];
+      total_wants += wants[i];
+   }
+
    assert(total_needs <= urb_chunks);
 
    /* Mete out remaining space (if any) in proportion to "wants". */
-   unsigned total_wants = vs_wants + hs_wants + ds_wants + gs_wants;
-   unsigned remaining_space = urb_chunks - total_needs;
-   if (remaining_space > total_wants)
-      remaining_space = total_wants;
+   unsigned remaining_space = MIN2(urb_chunks - total_needs, total_wants);
+
    if (remaining_space > 0) {
-      unsigned vs_additional = (unsigned)
-         roundf(vs_wants * (((float) remaining_space) / total_wants));
-      vs_chunks += vs_additional;
-      remaining_space -= vs_additional;
-      total_wants -= vs_wants;
-
-      if (total_wants > 0) {
-         unsigned hs_additional = (unsigned)
-            roundf(hs_wants * (((float) remaining_space) / total_wants));
-         hs_chunks += hs_additional;
-         remaining_space -= hs_additional;
-         total_wants -= hs_wants;
+      for (int i = MESA_SHADER_VERTEX;
+           total_wants > 0 && i <= MESA_SHADER_TESS_EVAL; i++) {
+         unsigned additional = (unsigned)
+            roundf(wants[i] * (((float) remaining_space) / total_wants));
+         chunks[i] += additional;
+         remaining_space -= additional;
+         total_wants -= additional;
       }
 
-      if (total_wants > 0) {
-         unsigned ds_additional = (unsigned)
-            roundf(ds_wants * (((float) remaining_space) / total_wants));
-         ds_chunks += ds_additional;
-         remaining_space -= ds_additional;
-         total_wants -= ds_wants;
-      }
-
-      gs_chunks += remaining_space;
+      chunks[MESA_SHADER_GEOMETRY] += remaining_space;
    }
 
    /* Sanity check that we haven't over-allocated. */
-   assert(push_constant_chunks +
-          vs_chunks + hs_chunks + ds_chunks + gs_chunks <= urb_chunks);
+   unsigned total_chunks = push_constant_chunks;
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      total_chunks += chunks[i];
+   }
+   assert(total_chunks <= urb_chunks);
 
    /* Finally, compute the number of entries that can fit in the space
     * allocated to each stage.
     */
-   unsigned nr_vs_entries = vs_chunks * chunk_size_bytes / vs_entry_size_bytes;
-   unsigned nr_hs_entries = hs_chunks * chunk_size_bytes / hs_entry_size_bytes;
-   unsigned nr_ds_entries = ds_chunks * chunk_size_bytes / ds_entry_size_bytes;
-   unsigned nr_gs_entries = gs_chunks * chunk_size_bytes / gs_entry_size_bytes;
+   unsigned entries[4];
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      entries[i] = chunks[i] * chunk_size_bytes / entry_size_bytes[i];
 
-   /* Since we rounded up when computing *_wants, this may be slightly more
-    * than the maximum allowed amount, so correct for that.
-    */
-   nr_vs_entries =
-      MIN2(nr_vs_entries, devinfo->urb.max_entries[MESA_SHADER_VERTEX]);
-   nr_hs_entries =
-      MIN2(nr_hs_entries, devinfo->urb.max_entries[MESA_SHADER_TESS_CTRL]);
-   nr_ds_entries =
-      MIN2(nr_ds_entries, devinfo->urb.max_entries[MESA_SHADER_TESS_EVAL]);
-   nr_gs_entries =
-      MIN2(nr_gs_entries, devinfo->urb.max_entries[MESA_SHADER_GEOMETRY]);
+      /* Since we rounded up when computing wants[], this may be slightly
+       * more than the maximum allowed amount, so correct for that.
+       */
+      entries[i] = MIN2(entries[i], devinfo->urb.max_entries[i]);
 
-   /* Ensure that we program a multiple of the granularity. */
-   nr_vs_entries = ROUND_DOWN_TO(nr_vs_entries, vs_granularity);
-   nr_hs_entries = ROUND_DOWN_TO(nr_hs_entries, hs_granularity);
-   nr_ds_entries = ROUND_DOWN_TO(nr_ds_entries, ds_granularity);
-   nr_gs_entries = ROUND_DOWN_TO(nr_gs_entries, gs_granularity);
+      /* Ensure that we program a multiple of the granularity. */
+      entries[i] = ROUND_DOWN_TO(entries[i], granularity[i]);
 
-   /* Finally, sanity check to make sure we have at least the minimum number
-    * of entries needed for each stage.
-    */
-   assert(nr_vs_entries >= vs_min_entries);
-   if (gs_present)
-      assert(nr_gs_entries >= 2);
-   if (tess_present) {
-      assert(nr_hs_entries >= 1);
-      assert(nr_ds_entries >= devinfo->urb.min_entries[MESA_SHADER_TESS_EVAL]);
+      /* Finally, sanity check to make sure we have at least the minimum
+       * number of entries needed for each stage.
+       */
+      assert(entries[i] >= min_entries[i]);
    }
 
-   /* Lay out the URB in the following order:
-    * - push constants
-    * - VS
-    * - HS
-    * - DS
-    * - GS
-    */
-   unsigned vs_start = push_constant_chunks;
-   unsigned hs_start = push_constant_chunks + vs_chunks;
-   unsigned ds_start = push_constant_chunks + vs_chunks + hs_chunks;
-   unsigned gs_start = push_constant_chunks + vs_chunks + hs_chunks +
-                       ds_chunks;
+   /* Lay out the URB in pipeline order: push constants, VS, HS, DS, GS. */
+   unsigned start[4];
+   start[0] = push_constant_chunks;
+   for (int i = MESA_SHADER_TESS_CTRL; i <= MESA_SHADER_GEOMETRY; i++) {
+      start[i] = start[i - 1] + chunks[i - 1];
+   }
 
    if (brw->gen == 7 && !brw->is_haswell && !brw->is_baytrail)
       gen7_emit_vs_workaround_flush(brw);
-   gen7_emit_urb_state(brw,
-                       nr_vs_entries, vs_size, vs_start,
-                       nr_hs_entries, hs_size, hs_start,
-                       nr_ds_entries, ds_size, ds_start,
-                       nr_gs_entries, gs_size, gs_start);
+
+   BEGIN_BATCH(8);
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      OUT_BATCH((_3DSTATE_URB_VS + i) << 16 | (2 - 2));
+      OUT_BATCH(entries[i] |
+                ((entry_size[i] - 1) << GEN7_URB_ENTRY_SIZE_SHIFT) |
+                (start[i] << GEN7_URB_STARTING_ADDRESS_SHIFT));
+   }
+   ADVANCE_BATCH();
 }
 
 const struct brw_tracked_state gen7_urb = {
