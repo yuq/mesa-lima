@@ -120,7 +120,10 @@ indirect_uniform_load(struct vc4_compile *c, nir_intrinsic_instr *intr)
                                   qir_uniform_ui(c, (range->dst_offset +
                                                      range->size - 4)));
 
-        qir_TEX_DIRECT(c, indirect_offset, qir_uniform(c, QUNIFORM_UBO_ADDR, 0));
+        qir_ADD_dest(c, qir_reg(QFILE_TEX_S_DIRECT, 0),
+                     indirect_offset,
+                     qir_uniform(c, QUNIFORM_UBO_ADDR, 0));
+
         c->num_texture_samples++;
 
         ntq_emit_thrsw(c);
@@ -381,7 +384,8 @@ ntq_emit_txf(struct vc4_compile *c, nir_tex_instr *instr)
         addr = qir_MAX(c, addr, qir_uniform_ui(c, 0));
         addr = qir_MIN(c, addr,  qir_uniform_ui(c, size - 4));
 
-        qir_TEX_DIRECT(c, addr, qir_uniform(c, QUNIFORM_TEXTURE_MSAA_ADDR, unit));
+        qir_ADD_dest(c, qir_reg(QFILE_TEX_S_DIRECT, 0),
+                     addr, qir_uniform(c, QUNIFORM_TEXTURE_MSAA_ADDR, unit));
 
         ntq_emit_thrsw(c);
 
@@ -479,14 +483,20 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                                            unit | (is_txl << 16));
         }
 
+        struct qinst *tmu;
         if (instr->sampler_dim == GLSL_SAMPLER_DIM_CUBE) {
-                qir_TEX_R(c, r, texture_u[next_texture_u++]);
+                tmu = qir_MOV_dest(c, qir_reg(QFILE_TEX_R, 0), r);
+                tmu->src[qir_get_tex_uniform_src(tmu)] =
+                        texture_u[next_texture_u++];
         } else if (c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP_TO_BORDER ||
                    c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP ||
                    c->key->tex[unit].wrap_t == PIPE_TEX_WRAP_CLAMP_TO_BORDER ||
                    c->key->tex[unit].wrap_t == PIPE_TEX_WRAP_CLAMP) {
-                qir_TEX_R(c, qir_uniform(c, QUNIFORM_TEXTURE_BORDER_COLOR, unit),
-                          texture_u[next_texture_u++]);
+                tmu = qir_MOV_dest(c, qir_reg(QFILE_TEX_R, 0),
+                                   qir_uniform(c, QUNIFORM_TEXTURE_BORDER_COLOR,
+                                               unit));
+                tmu->src[qir_get_tex_uniform_src(tmu)] =
+                        texture_u[next_texture_u++];
         }
 
         if (c->key->tex[unit].wrap_s == PIPE_TEX_WRAP_CLAMP) {
@@ -497,12 +507,18 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                 t = qir_SAT(c, t);
         }
 
-        qir_TEX_T(c, t, texture_u[next_texture_u++]);
+        tmu = qir_MOV_dest(c, qir_reg(QFILE_TEX_T, 0), t);
+        tmu->src[qir_get_tex_uniform_src(tmu)] =
+                texture_u[next_texture_u++];
 
-        if (is_txl || is_txb)
-                qir_TEX_B(c, lod, texture_u[next_texture_u++]);
+        if (is_txl || is_txb) {
+                tmu = qir_MOV_dest(c, qir_reg(QFILE_TEX_B, 0), lod);
+                tmu->src[qir_get_tex_uniform_src(tmu)] =
+                        texture_u[next_texture_u++];
+        }
 
-        qir_TEX_S(c, s, texture_u[next_texture_u++]);
+        tmu = qir_MOV_dest(c, qir_reg(QFILE_TEX_S, 0), s);
+        tmu->src[qir_get_tex_uniform_src(tmu)] = texture_u[next_texture_u++];
 
         c->num_texture_samples++;
 

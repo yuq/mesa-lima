@@ -62,11 +62,8 @@ qir_opt_small_immediates(struct vc4_compile *c)
                                 continue;
                         }
 
-                        if (i == 1 &&
-                            (inst->op == QOP_TEX_S ||
-                             inst->op == QOP_TEX_T ||
-                             inst->op == QOP_TEX_R ||
-                             inst->op == QOP_TEX_B)) {
+                        if (qir_is_tex(inst) &&
+                            i == qir_get_tex_uniform_src(inst)) {
                                 /* No turning the implicit uniform read into
                                  * an immediate.
                                  */

@@ -77,7 +77,7 @@ is_lowerable_uniform(struct qinst *inst, int i)
         if (inst->src[i].file != QFILE_UNIF)
                 return false;
         if (qir_is_tex(inst))
-                return i != 1;
+                return i != qir_get_tex_uniform_src(inst);
         return true;
 }
 

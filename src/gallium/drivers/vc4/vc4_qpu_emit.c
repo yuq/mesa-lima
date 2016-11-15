@@ -347,6 +347,11 @@ vc4_generate_code_block(struct vc4_compile *c,
                         case QFILE_TLB_COLOR_WRITE_MS:
                         case QFILE_TLB_Z_WRITE:
                         case QFILE_TLB_STENCIL_SETUP:
+                        case QFILE_TEX_S:
+                        case QFILE_TEX_S_DIRECT:
+                        case QFILE_TEX_T:
+                        case QFILE_TEX_R:
+                        case QFILE_TEX_B:
                                 unreachable("bad qir src file");
                         }
                 }
@@ -377,6 +382,23 @@ vc4_generate_code_block(struct vc4_compile *c,
 
                 case QFILE_TLB_STENCIL_SETUP:
                         dst = qpu_ra(QPU_W_TLB_STENCIL_SETUP);
+                        break;
+
+                case QFILE_TEX_S:
+                case QFILE_TEX_S_DIRECT:
+                        dst = qpu_rb(QPU_W_TMU0_S);
+                        break;
+
+                case QFILE_TEX_T:
+                        dst = qpu_rb(QPU_W_TMU0_T);
+                        break;
+
+                case QFILE_TEX_R:
+                        dst = qpu_rb(QPU_W_TMU0_R);
+                        break;
+
+                case QFILE_TEX_B:
+                        dst = qpu_rb(QPU_W_TMU0_B);
                         break;
 
                 case QFILE_VARY:
@@ -477,21 +499,6 @@ vc4_generate_code_block(struct vc4_compile *c,
                         queue(block, qpu_a_FADD(dst, src[0], qpu_r5()) | unpack);
                         break;
 
-                case QOP_TEX_S:
-                case QOP_TEX_T:
-                case QOP_TEX_R:
-                case QOP_TEX_B:
-                        queue(block, qpu_a_MOV(qpu_rb(QPU_W_TMU0_S +
-                                                      (qinst->op - QOP_TEX_S)),
-                                               src[0]) | unpack);
-                        break;
-
-                case QOP_TEX_DIRECT:
-                        fixup_raddr_conflict(block, dst, &src[0], &src[1],
-                                             qinst, &unpack);
-                        queue(block, qpu_a_ADD(qpu_rb(QPU_W_TMU0_S),
-                                               src[0], src[1]) | unpack);
-                        break;
 
                 case QOP_TEX_RESULT:
                         queue(block, qpu_NOP());
@@ -538,7 +545,7 @@ vc4_generate_code_block(struct vc4_compile *c,
                          * argument slot as well so that we don't take up
                          * another raddr just to get unused data.
                          */
-                        if (qir_get_nsrc(qinst) == 1)
+                        if (qir_get_non_sideband_nsrc(qinst) == 1)
                                 src[1] = src[0];
 
                         fixup_raddr_conflict(block, dst, &src[0], &src[1],

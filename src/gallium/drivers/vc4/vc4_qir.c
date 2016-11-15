@@ -75,11 +75,6 @@ static const struct qir_op_info qir_op_info[] = {
         [QOP_FRAG_Z] = { "frag_z", 1, 0 },
         [QOP_FRAG_W] = { "frag_w", 1, 0 },
 
-        [QOP_TEX_S] = { "tex_s", 0, 2, true },
-        [QOP_TEX_T] = { "tex_t", 0, 2, true },
-        [QOP_TEX_R] = { "tex_r", 0, 2, true },
-        [QOP_TEX_B] = { "tex_b", 0, 2, true },
-        [QOP_TEX_DIRECT] = { "tex_direct", 0, 2, true },
         [QOP_TEX_RESULT] = { "tex_result", 1, 0, true },
 
         [QOP_THRSW] = { "thrsw", 0, 0, true },
@@ -104,10 +99,35 @@ qir_get_op_name(enum qop qop)
 }
 
 int
-qir_get_nsrc(struct qinst *inst)
+qir_get_non_sideband_nsrc(struct qinst *inst)
 {
         assert(qir_op_info[inst->op].name);
         return qir_op_info[inst->op].nsrc;
+}
+
+int
+qir_get_nsrc(struct qinst *inst)
+{
+        assert(qir_op_info[inst->op].name);
+
+        int nsrc = qir_get_non_sideband_nsrc(inst);
+
+        /* Normal (non-direct) texture coordinate writes also implicitly load
+         * a uniform for the texture parameters.
+         */
+        if (qir_is_tex(inst) && inst->dst.file != QFILE_TEX_S_DIRECT)
+                nsrc++;
+
+        return nsrc;
+}
+
+/* The sideband uniform for textures gets stored after the normal ALU
+ * arguments.
+ */
+int
+qir_get_tex_uniform_src(struct qinst *inst)
+{
+        return qir_get_nsrc(inst) - 1;
 }
 
 /**
@@ -122,6 +142,11 @@ qir_has_side_effects(struct vc4_compile *c, struct qinst *inst)
         case QFILE_TLB_COLOR_WRITE:
         case QFILE_TLB_COLOR_WRITE_MS:
         case QFILE_TLB_STENCIL_SETUP:
+        case QFILE_TEX_S_DIRECT:
+        case QFILE_TEX_S:
+        case QFILE_TEX_T:
+        case QFILE_TEX_R:
+        case QFILE_TEX_B:
                 return true;
         default:
                 break;
@@ -206,7 +231,30 @@ qir_is_raw_mov(struct qinst *inst)
 bool
 qir_is_tex(struct qinst *inst)
 {
-        return inst->op >= QOP_TEX_S && inst->op <= QOP_TEX_DIRECT;
+        switch (inst->dst.file) {
+        case QFILE_TEX_S_DIRECT:
+        case QFILE_TEX_S:
+        case QFILE_TEX_T:
+        case QFILE_TEX_R:
+        case QFILE_TEX_B:
+                return true;
+        default:
+                return false;
+        }
+}
+
+bool
+qir_has_implicit_tex_uniform(struct qinst *inst)
+{
+        switch (inst->dst.file) {
+        case QFILE_TEX_S:
+        case QFILE_TEX_T:
+        case QFILE_TEX_R:
+        case QFILE_TEX_B:
+                return true;
+        default:
+                return false;
+        }
 }
 
 bool
@@ -298,6 +346,11 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
                 [QFILE_FRAG_Y] = "frag_y",
                 [QFILE_FRAG_REV_FLAG] = "frag_rev_flag",
                 [QFILE_QPU_ELEMENT] = "elem",
+                [QFILE_TEX_S_DIRECT] = "tex_s_direct",
+                [QFILE_TEX_S] = "tex_s",
+                [QFILE_TEX_T] = "tex_t",
+                [QFILE_TEX_R] = "tex_r",
+                [QFILE_TEX_B] = "tex_b",
         };
 
         switch (reg.file) {
@@ -330,6 +383,11 @@ qir_print_reg(struct vc4_compile *c, struct qreg reg, bool write)
         case QFILE_TLB_COLOR_WRITE_MS:
         case QFILE_TLB_Z_WRITE:
         case QFILE_TLB_STENCIL_SETUP:
+        case QFILE_TEX_S_DIRECT:
+        case QFILE_TEX_S:
+        case QFILE_TEX_T:
+        case QFILE_TEX_R:
+        case QFILE_TEX_B:
                 fprintf(stderr, "%s", files[reg.file]);
                 break;
 

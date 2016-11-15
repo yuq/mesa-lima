@@ -212,18 +212,6 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 add_dep(dir, state->last_vary_read, n);
                 break;
 
-        case QOP_TEX_S:
-        case QOP_TEX_T:
-        case QOP_TEX_R:
-        case QOP_TEX_B:
-        case QOP_TEX_DIRECT:
-                /* Texturing setup gets scheduled in order, because
-                 * the uniforms referenced by them have to land in a
-                 * specific order.
-                 */
-                add_write_dep(dir, &state->last_tex_coord, n);
-                break;
-
         case QOP_TEX_RESULT:
                 /* Results have to be fetched in order. */
                 add_write_dep(dir, &state->last_tex_result, n);
@@ -278,6 +266,18 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
                 add_write_dep(dir, &state->last_tlb, n);
                 break;
 
+        case QFILE_TEX_S_DIRECT:
+        case QFILE_TEX_S:
+        case QFILE_TEX_T:
+        case QFILE_TEX_R:
+        case QFILE_TEX_B:
+                /* Texturing setup gets scheduled in order, because
+                 * the uniforms referenced by them have to land in a
+                 * specific order.
+                 */
+                add_write_dep(dir, &state->last_tex_coord, n);
+                break;
+
         default:
                 break;
         }
@@ -315,12 +315,12 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                         }
                 }
 
-                switch (inst->op) {
-                case QOP_TEX_S:
-                case QOP_TEX_T:
-                case QOP_TEX_R:
-                case QOP_TEX_B:
-                case QOP_TEX_DIRECT:
+                switch (inst->dst.file) {
+                case QFILE_TEX_S_DIRECT:
+                case QFILE_TEX_S:
+                case QFILE_TEX_T:
+                case QFILE_TEX_R:
+                case QFILE_TEX_B:
                         /* From the VC4 spec:
                          *
                          *     "The TFREQ input FIFO holds two full lots of s,
@@ -364,8 +364,8 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                          * If the texture result fifo is full, block adding
                          * any more to it until the last QOP_TEX_RESULT.
                          */
-                        if (inst->op == QOP_TEX_S ||
-                            inst->op == QOP_TEX_DIRECT) {
+                        if (inst->dst.file == QFILE_TEX_S ||
+                            inst->dst.file == QFILE_TEX_S_DIRECT) {
                                 if (state.tfrcv_count ==
                                     (c->fs_threaded ? 2 : 4))
                                         block_until_tex_result(&state, n);
@@ -376,6 +376,11 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                         state.tfreq_count++;
                         break;
 
+                default:
+                        break;
+                }
+
+                switch (inst->op) {
                 case QOP_TEX_RESULT:
                         /* Results have to be fetched after the
                          * coordinate setup.  Note that we're assuming
@@ -398,7 +403,6 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                         break;
 
                 default:
-                        assert(!qir_is_tex(inst));
                         break;
                 }
         }
@@ -560,8 +564,8 @@ dump_state(struct vc4_compile *c, struct schedule_state *state)
 static uint32_t
 latency_between(struct schedule_node *before, struct schedule_node *after)
 {
-        if ((before->inst->op == QOP_TEX_S ||
-             before->inst->op == QOP_TEX_DIRECT) &&
+        if ((before->inst->dst.file == QFILE_TEX_S ||
+             before->inst->dst.file == QFILE_TEX_S_DIRECT) &&
             after->inst->op == QOP_TEX_RESULT)
                 return 100;
 
