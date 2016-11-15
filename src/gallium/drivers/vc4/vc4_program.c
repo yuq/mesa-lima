@@ -2441,7 +2441,7 @@ vc4_setup_compiled_fs_inputs(struct vc4_context *vc4, struct vc4_compile *c,
 
         memset(input_live, 0, sizeof(input_live));
         qir_for_each_inst_inorder(inst, c) {
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(inst); i++) {
                         if (inst->src[i].file == QFILE_VARY)
                                 input_live[inst->src[i].index] = true;
                 }

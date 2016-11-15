@@ -58,7 +58,7 @@ qir_opt_vpm(struct vc4_compile *c)
                         break;
                 }
 
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(inst); i++) {
                         if (inst->src[i].file == QFILE_TEMP) {
                                 uint32_t temp = inst->src[i].index;
                                 use_count[temp]++;
@@ -81,7 +81,7 @@ qir_opt_vpm(struct vc4_compile *c)
                     qir_is_tex(inst))
                         continue;
 
-                for (int j = 0; j < qir_get_op_nsrc(inst->op); j++) {
+                for (int j = 0; j < qir_get_nsrc(inst); j++) {
                         if (inst->src[j].file != QFILE_TEMP ||
                             inst->src[j].pack)
                                 continue;
@@ -106,7 +106,7 @@ qir_opt_vpm(struct vc4_compile *c)
                         }
 
                         uint32_t temps = 0;
-                        for (int k = 0; k < qir_get_op_nsrc(inst->op); k++) {
+                        for (int k = 0; k < qir_get_nsrc(inst); k++) {
                                 if (inst->src[k].file == QFILE_TEMP)
                                         temps++;
                         }

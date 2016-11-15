@@ -306,7 +306,7 @@ vc4_register_allocate(struct vc4_context *vc4, struct vc4_compile *c)
                  * can only be done from regfile A, while float unpacks can be
                  * either A or R4.
                  */
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(inst); i++) {
                         if (inst->src[i].file == QFILE_TEMP &&
                             inst->src[i].pack) {
                                 if (qir_is_float_input(inst)) {

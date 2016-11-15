@@ -577,7 +577,7 @@ struct qinst *qir_emit_nondef(struct vc4_compile *c, struct qinst *inst);
 
 struct qreg qir_get_temp(struct vc4_compile *c);
 void qir_calculate_live_intervals(struct vc4_compile *c);
-int qir_get_op_nsrc(enum qop qop);
+int qir_get_nsrc(struct qinst *inst);
 bool qir_reg_equals(struct qreg a, struct qreg b);
 bool qir_has_side_effects(struct vc4_compile *c, struct qinst *inst);
 bool qir_has_side_effect_reads(struct vc4_compile *c, struct qinst *inst);

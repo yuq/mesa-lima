@@ -187,7 +187,7 @@ calculate_deps(struct schedule_setup_state *state, struct schedule_node *n)
          * ignore uniforms accesses, because qir_reorder_uniforms() happens
          * after this.
          */
-        for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+        for (int i = 0; i < qir_get_nsrc(inst); i++) {
                 switch (inst->src[i].file) {
                 case QFILE_TEMP:
                         add_dep(dir,
@@ -305,7 +305,7 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
 
                 calculate_deps(&state, n);
 
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(inst); i++) {
                         switch (inst->src[i].file) {
                         case QFILE_UNIF:
                                 add_dep(state.dir, state.last_uniforms_reset, n);
@@ -429,7 +429,7 @@ get_register_pressure_cost(struct schedule_state *state, struct qinst *inst)
             state->temp_writes[inst->dst.index] == 1)
                 cost--;
 
-        for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+        for (int i = 0; i < qir_get_nsrc(inst); i++) {
                 if (inst->src[i].file == QFILE_TEMP &&
                     !BITSET_TEST(state->temp_live, inst->src[i].index)) {
                         cost++;
@@ -648,7 +648,7 @@ schedule_instructions(struct vc4_compile *c,
                 }
 
                 /* Update our tracking of register pressure. */
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(inst); i++) {
                         if (inst->src[i].file == QFILE_TEMP)
                                 BITSET_SET(state->temp_live, inst->src[i].index);
                 }

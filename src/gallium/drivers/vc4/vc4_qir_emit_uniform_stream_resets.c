@@ -41,7 +41,7 @@ inst_reads_a_uniform(struct qinst *inst)
         if (qir_is_tex(inst))
                 return true;
 
-        for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+        for (int i = 0; i < qir_get_nsrc(inst); i++) {
                 if (inst->src[i].file == QFILE_UNIF)
                         return true;
         }

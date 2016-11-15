@@ -205,7 +205,7 @@ qir_setup_def_use(struct vc4_compile *c)
                 _mesa_hash_table_clear(partial_update_ht, NULL);
 
                 qir_for_each_inst(inst, block) {
-                        for (int i = 0; i < qir_get_op_nsrc(inst->op); i++)
+                        for (int i = 0; i < qir_get_nsrc(inst); i++)
                                 qir_setup_use(c, block, ip, inst->src[i]);
 
                         qir_setup_def(c, block, ip, partial_update_ht, inst);

@@ -86,7 +86,7 @@ void qir_validate(struct vc4_compile *c)
                         break;
                 }
 
-                for (int i = 0; i < qir_get_op_nsrc(inst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(inst); i++) {
                         struct qreg src = inst->src[i];
 
                         switch (src.file) {

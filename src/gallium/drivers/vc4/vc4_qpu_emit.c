@@ -289,7 +289,7 @@ vc4_generate_code_block(struct vc4_compile *c,
 
                 uint64_t unpack = 0;
                 struct qpu_reg src[ARRAY_SIZE(qinst->src)];
-                for (int i = 0; i < qir_get_op_nsrc(qinst->op); i++) {
+                for (int i = 0; i < qir_get_nsrc(qinst); i++) {
                         int index = qinst->src[i].index;
                         switch (qinst->src[i].file) {
                         case QFILE_NULL:
@@ -538,7 +538,7 @@ vc4_generate_code_block(struct vc4_compile *c,
                          * argument slot as well so that we don't take up
                          * another raddr just to get unused data.
                          */
-                        if (qir_get_op_nsrc(qinst->op) == 1)
+                        if (qir_get_nsrc(qinst) == 1)
                                 src[1] = src[0];
 
                         fixup_raddr_conflict(block, dst, &src[0], &src[1],
