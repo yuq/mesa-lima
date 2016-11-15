@@ -2360,6 +2360,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	si_dec_framebuffer_counters(&sctx->framebuffer.state);
 	util_copy_framebuffer_state(&sctx->framebuffer.state, state);
 
+	sctx->framebuffer.colorbuf_enabled_4bit = 0;
 	sctx->framebuffer.spi_shader_col_format = 0;
 	sctx->framebuffer.spi_shader_col_format_alpha = 0;
 	sctx->framebuffer.spi_shader_col_format_blend = 0;
@@ -2382,6 +2383,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 			si_initialize_color_surface(sctx, surf);
 		}
 
+		sctx->framebuffer.colorbuf_enabled_4bit |= 0xf << (i * 4);
 		sctx->framebuffer.spi_shader_col_format |=
 			surf->spi_shader_col_format << (i * 4);
 		sctx->framebuffer.spi_shader_col_format_alpha |=

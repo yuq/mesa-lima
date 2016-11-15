@@ -167,6 +167,7 @@ struct si_framebuffer {
 	unsigned			nr_samples;
 	unsigned			log_samples;
 	unsigned			compressed_cb_mask;
+	unsigned			colorbuf_enabled_4bit;
 	unsigned			spi_shader_col_format;
 	unsigned			spi_shader_col_format_alpha;
 	unsigned			spi_shader_col_format_blend;

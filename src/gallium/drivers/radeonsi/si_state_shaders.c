@@ -867,7 +867,24 @@ static void si_shader_selector_key_hw_vs(struct si_context *sctx,
 		!vs->info.culldist_writemask;
 
 	/* Find out if PS is disabled. */
-	bool ps_disabled = ps == NULL;
+	bool ps_disabled = true;
+	if (ps) {
+		bool ps_modifies_zs = ps->info.uses_kill ||
+				      ps->info.writes_z ||
+				      ps->info.writes_stencil ||
+				      ps->info.writes_samplemask ||
+				      si_get_alpha_test_func(sctx) != PIPE_FUNC_ALWAYS;
+
+		unsigned ps_colormask = sctx->framebuffer.colorbuf_enabled_4bit &
+					sctx->queued.named.blend->cb_target_mask;
+		if (!ps->info.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS])
+			ps_colormask &= ps->colors_written_4bit;
+
+		ps_disabled = sctx->queued.named.rasterizer->rasterizer_discard ||
+			      (!ps_colormask &&
+			       !ps_modifies_zs &&
+			       !ps->info.writes_memory);
+	}
 
 	/* Find out which VS outputs aren't used by the PS. */
 	uint64_t outputs_written = vs->outputs_written;
