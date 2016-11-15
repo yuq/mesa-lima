@@ -1003,7 +1003,7 @@ _mesa_is_multisample_enabled(const struct gl_context *ctx)
     */
    return ctx->Multisample.Enabled &&
           ctx->DrawBuffer &&
-          _mesa_geometric_nonvalidated_samples(ctx->DrawBuffer) > 1;
+          _mesa_geometric_nonvalidated_samples(ctx->DrawBuffer) >= 1;
 }
 
 /**
