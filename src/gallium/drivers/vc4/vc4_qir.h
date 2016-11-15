@@ -203,7 +203,7 @@ struct qinst {
 
         enum qop op;
         struct qreg dst;
-        struct qreg *src;
+        struct qreg src[2];
         bool sf;
         bool cond_is_exec_mask;
         uint8_t cond;

@@ -288,7 +288,7 @@ vc4_generate_code_block(struct vc4_compile *c,
                 };
 
                 uint64_t unpack = 0;
-                struct qpu_reg src[4];
+                struct qpu_reg src[ARRAY_SIZE(qinst->src)];
                 for (int i = 0; i < qir_get_op_nsrc(qinst->op); i++) {
                         int index = qinst->src[i].index;
                         switch (qinst->src[i].file) {
