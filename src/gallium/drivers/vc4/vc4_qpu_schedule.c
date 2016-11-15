@@ -705,6 +705,26 @@ static uint32_t waddr_latency(uint32_t waddr, uint64_t after)
 
         /* Apply some huge latency between texture fetch requests and getting
          * their results back.
+         *
+         * FIXME: This is actually pretty bogus.  If we do:
+         *
+         * mov tmu0_s, a
+         * <a bit of math>
+         * mov tmu0_s, b
+         * load_tmu0
+         * <more math>
+         * load_tmu0
+         *
+         * we count that as worse than
+         *
+         * mov tmu0_s, a
+         * mov tmu0_s, b
+         * <lots of math>
+         * load_tmu0
+         * <more math>
+         * load_tmu0
+         *
+         * because we associate the first load_tmu0 with the *second* tmu0_s.
          */
         if (waddr == QPU_W_TMU0_S) {
                 if (QPU_GET_FIELD(after, QPU_SIG) == QPU_SIG_LOAD_TMU0)
