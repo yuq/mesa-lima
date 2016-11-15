@@ -55,9 +55,9 @@ void genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer);
 
 void
 genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
+                     const struct gen_l3_config *l3_config,
                      VkShaderStageFlags active_stages,
-                     unsigned vs_entry_size, unsigned gs_entry_size,
-                     const struct gen_l3_config *l3_config);
+                     const unsigned entry_size[4]);
 
 void genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
                                enum blorp_hiz_op op);

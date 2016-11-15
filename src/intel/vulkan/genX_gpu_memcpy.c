@@ -149,9 +149,11 @@ genX(cmd_buffer_gpu_memcpy)(struct anv_cmd_buffer *cmd_buffer,
     * allocate space for the VS.  Even though one isn't run, we need VUEs to
     * store the data that VF is going to pass to SOL.
     */
+   const unsigned entry_size[4] = { DIV_ROUND_UP(32, 64), 1, 1, 1 };
+
    genX(emit_urb_setup)(cmd_buffer->device, &cmd_buffer->batch,
-                        VK_SHADER_STAGE_VERTEX_BIT, DIV_ROUND_UP(32, 64), 0,
-                        cmd_buffer->state.current_l3_config);
+                        cmd_buffer->state.current_l3_config,
+                        VK_SHADER_STAGE_VERTEX_BIT, entry_size);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_SO_BUFFER), sob) {
       sob.SOBufferIndex = 0;

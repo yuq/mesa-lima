@@ -124,11 +124,13 @@ blorp_emit_urb_config(struct blorp_batch *batch, unsigned vs_entry_size)
    struct anv_device *device = batch->blorp->driver_ctx;
    struct anv_cmd_buffer *cmd_buffer = batch->driver_batch;
 
+   const unsigned entry_size[4] = { vs_entry_size, 1, 1, 1 };
+
    genX(emit_urb_setup)(device, &cmd_buffer->batch,
+                        cmd_buffer->state.current_l3_config,
                         VK_SHADER_STAGE_VERTEX_BIT |
                         VK_SHADER_STAGE_FRAGMENT_BIT,
-                        vs_entry_size, 0,
-                        cmd_buffer->state.current_l3_config);
+                        entry_size);
 }
 
 void genX(blorp_exec)(struct blorp_batch *batch,

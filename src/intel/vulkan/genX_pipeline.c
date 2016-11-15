@@ -183,129 +183,27 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
 void
 genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
+                     const struct gen_l3_config *l3_config,
                      VkShaderStageFlags active_stages,
-                     unsigned vs_size, unsigned gs_size,
-                     const struct gen_l3_config *l3_config)
+                     const unsigned entry_size[4])
 {
-   if (!(active_stages & VK_SHADER_STAGE_VERTEX_BIT))
-      vs_size = 1;
+   const struct gen_device_info *devinfo = &device->info;
+#if GEN_IS_HASWELL
+   const unsigned push_constant_kb = devinfo->gt == 3 ? 32 : 16;
+#else
+   const unsigned push_constant_kb = GEN_GEN >= 8 ? 32 : 16;
+#endif
 
-   if (!(active_stages & VK_SHADER_STAGE_GEOMETRY_BIT))
-      gs_size = 1;
+   const unsigned urb_size_kb = gen_get_l3_config_urb_size(devinfo, l3_config);
 
-   unsigned vs_entry_size_bytes = vs_size * 64;
-   unsigned gs_entry_size_bytes = gs_size * 64;
-
-   /* From p35 of the Ivy Bridge PRM (section 1.7.1: 3DSTATE_URB_GS):
-    *
-    *     VS Number of URB Entries must be divisible by 8 if the VS URB Entry
-    *     Allocation Size is less than 9 512-bit URB entries.
-    *
-    * Similar text exists for GS.
-    */
-   unsigned vs_granularity = (vs_size < 9) ? 8 : 1;
-   unsigned gs_granularity = (gs_size < 9) ? 8 : 1;
-
-   /* URB allocations must be done in 8k chunks. */
-   unsigned chunk_size_bytes = 8192;
-
-   /* Determine the size of the URB in chunks. */
-   const unsigned total_urb_size =
-      gen_get_l3_config_urb_size(&device->info, l3_config);
-   const unsigned urb_chunks = total_urb_size * 1024 / chunk_size_bytes;
-
-   /* Reserve space for push constants */
-   unsigned push_constant_kb;
-   if (device->info.gen >= 8)
-      push_constant_kb = 32;
-   else if (device->info.is_haswell)
-      push_constant_kb = device->info.gt == 3 ? 32 : 16;
-   else
-      push_constant_kb = 16;
-
-   unsigned push_constant_bytes = push_constant_kb * 1024;
-   unsigned push_constant_chunks =
-      push_constant_bytes / chunk_size_bytes;
-
-   /* Initially, assign each stage the minimum amount of URB space it needs,
-    * and make a note of how much additional space it "wants" (the amount of
-    * additional space it could actually make use of).
-    */
-
-   /* VS has a lower limit on the number of URB entries */
-   unsigned vs_chunks =
-      ALIGN(device->info.urb.min_entries[MESA_SHADER_VERTEX] *
-            vs_entry_size_bytes, chunk_size_bytes) / chunk_size_bytes;
-   unsigned vs_wants =
-      ALIGN(device->info.urb.max_entries[MESA_SHADER_VERTEX] *
-            vs_entry_size_bytes,
-            chunk_size_bytes) / chunk_size_bytes - vs_chunks;
-
-   unsigned gs_chunks = 0;
-   unsigned gs_wants = 0;
-   if (active_stages & VK_SHADER_STAGE_GEOMETRY_BIT) {
-      /* There are two constraints on the minimum amount of URB space we can
-       * allocate:
-       *
-       * (1) We need room for at least 2 URB entries, since we always operate
-       * the GS in DUAL_OBJECT mode.
-       *
-       * (2) We can't allocate less than nr_gs_entries_granularity.
-       */
-      gs_chunks = ALIGN(MAX2(gs_granularity, 2) * gs_entry_size_bytes,
-                        chunk_size_bytes) / chunk_size_bytes;
-      gs_wants =
-         ALIGN(device->info.urb.max_entries[MESA_SHADER_GEOMETRY] *
-               gs_entry_size_bytes,
-               chunk_size_bytes) / chunk_size_bytes - gs_chunks;
-   }
-
-   /* There should always be enough URB space to satisfy the minimum
-    * requirements of each stage.
-    */
-   unsigned total_needs = push_constant_chunks + vs_chunks + gs_chunks;
-   assert(total_needs <= urb_chunks);
-
-   /* Mete out remaining space (if any) in proportion to "wants". */
-   unsigned total_wants = vs_wants + gs_wants;
-   unsigned remaining_space = urb_chunks - total_needs;
-   if (remaining_space > total_wants)
-      remaining_space = total_wants;
-   if (remaining_space > 0) {
-      unsigned vs_additional = (unsigned)
-         round(vs_wants * (((double) remaining_space) / total_wants));
-      vs_chunks += vs_additional;
-      remaining_space -= vs_additional;
-      gs_chunks += remaining_space;
-   }
-
-   /* Sanity check that we haven't over-allocated. */
-   assert(push_constant_chunks + vs_chunks + gs_chunks <= urb_chunks);
-
-   /* Finally, compute the number of entries that can fit in the space
-    * allocated to each stage.
-    */
-   unsigned nr_vs_entries = vs_chunks * chunk_size_bytes / vs_entry_size_bytes;
-   unsigned nr_gs_entries = gs_chunks * chunk_size_bytes / gs_entry_size_bytes;
-
-   /* Since we rounded up when computing *_wants, this may be slightly more
-    * than the maximum allowed amount, so correct for that.
-    */
-   nr_vs_entries = MIN2(nr_vs_entries,
-                        device->info.urb.max_entries[MESA_SHADER_VERTEX]);
-   nr_gs_entries = MIN2(nr_gs_entries,
-                        device->info.urb.max_entries[MESA_SHADER_GEOMETRY]);
-
-   /* Ensure that we program a multiple of the granularity. */
-   nr_vs_entries = ROUND_DOWN_TO(nr_vs_entries, vs_granularity);
-   nr_gs_entries = ROUND_DOWN_TO(nr_gs_entries, gs_granularity);
-
-   /* Finally, sanity check to make sure we have at least the minimum number
-    * of entries needed for each stage.
-    */
-   assert(nr_vs_entries >= device->info.urb.min_entries[MESA_SHADER_VERTEX]);
-   if (active_stages & VK_SHADER_STAGE_GEOMETRY_BIT)
-      assert(nr_gs_entries >= 2);
+   unsigned entries[4];
+   unsigned start[4];
+   gen_get_urb_config(devinfo,
+                      1024 * push_constant_kb, 1024 * urb_size_kb,
+                      active_stages &
+                         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+                      active_stages & VK_SHADER_STAGE_GEOMETRY_BIT,
+                      entry_size, entries, start);
 
 #if GEN_GEN == 7 && !GEN_IS_HASWELL
    /* From the IVB PRM Vol. 2, Part 1, Section 3.2.1:
@@ -323,45 +221,31 @@ genX(emit_urb_setup)(struct anv_device *device, struct anv_batch *batch,
    }
 #endif
 
-   /* Lay out the URB in the following order:
-    * - push constants
-    * - VS
-    * - GS
-    */
-   anv_batch_emit(batch, GENX(3DSTATE_URB_VS), urb) {
-      urb.VSURBStartingAddress      = push_constant_chunks;
-      urb.VSURBEntryAllocationSize  = vs_size - 1;
-      urb.VSNumberofURBEntries      = nr_vs_entries;
-   }
-
-   anv_batch_emit(batch, GENX(3DSTATE_URB_HS), urb) {
-      urb.HSURBStartingAddress      = push_constant_chunks;
-   }
-
-   anv_batch_emit(batch, GENX(3DSTATE_URB_DS), urb) {
-      urb.DSURBStartingAddress      = push_constant_chunks;
-   }
-
-   anv_batch_emit(batch, GENX(3DSTATE_URB_GS), urb) {
-      urb.GSURBStartingAddress      = push_constant_chunks + vs_chunks;
-      urb.GSURBEntryAllocationSize  = gs_size - 1;
-      urb.GSNumberofURBEntries      = nr_gs_entries;
+   for (int i = 0; i <= MESA_SHADER_GEOMETRY; i++) {
+      anv_batch_emit(batch, GENX(3DSTATE_URB_VS), urb) {
+         urb._3DCommandSubOpcode      += i;
+         urb.VSURBStartingAddress      = start[i];
+         urb.VSURBEntryAllocationSize  = entry_size[i] - 1;
+         urb.VSNumberofURBEntries      = entries[i];
+      }
    }
 }
 
 static inline void
 emit_urb_setup(struct anv_pipeline *pipeline)
 {
-   unsigned vs_entry_size =
-      (pipeline->active_stages & VK_SHADER_STAGE_VERTEX_BIT) ?
-      get_vs_prog_data(pipeline)->base.urb_entry_size : 0;
-   unsigned gs_entry_size =
-      (pipeline->active_stages & VK_SHADER_STAGE_GEOMETRY_BIT) ?
-      get_gs_prog_data(pipeline)->base.urb_entry_size : 0;
+   unsigned entry_size[4];
+   for (int i = MESA_SHADER_VERTEX; i <= MESA_SHADER_GEOMETRY; i++) {
+      const struct brw_vue_prog_data *prog_data =
+         !anv_pipeline_has_stage(pipeline, i) ? NULL :
+         (const struct brw_vue_prog_data *) pipeline->shaders[i]->prog_data;
+
+      entry_size[i] = prog_data ? prog_data->urb_entry_size : 1;
+   }
 
    genX(emit_urb_setup)(pipeline->device, &pipeline->batch,
-                        pipeline->active_stages, vs_entry_size, gs_entry_size,
-                        pipeline->urb.l3_config);
+                        pipeline->urb.l3_config,
+                        pipeline->active_stages, entry_size);
 }
 
 static void
