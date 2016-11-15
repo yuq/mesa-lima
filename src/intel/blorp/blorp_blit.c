@@ -1347,22 +1347,19 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
    uint32_t tile_x_px, tile_y_px;
    surf_get_intratile_offset_px(info, &tile_x_px, &tile_y_px);
 
-   /* TODO: Once this file gets converted to C, we shouls just use designated
-    * initializers.
-    */
-   struct isl_surf_init_info init_info = { 0, };
-
-   init_info.dim = ISL_SURF_DIM_2D;
-   init_info.format = info->surf.format;
-   init_info.width = slice_width_px + tile_x_px;
-   init_info.height = slice_height_px + tile_y_px;
-   init_info.depth = 1;
-   init_info.levels = 1;
-   init_info.array_len = 1;
-   init_info.samples = info->surf.samples;
-   init_info.min_pitch = info->surf.row_pitch;
-   init_info.usage = info->surf.usage;
-   init_info.tiling_flags = 1 << info->surf.tiling;
+   struct isl_surf_init_info init_info = {
+      .dim = ISL_SURF_DIM_2D,
+      .format = info->surf.format,
+      .width = slice_width_px + tile_x_px,
+      .height = slice_height_px + tile_y_px,
+      .depth = 1,
+      .levels = 1,
+      .array_len = 1,
+      .samples = info->surf.samples,
+      .min_pitch = info->surf.row_pitch,
+      .usage = info->surf.usage,
+      .tiling_flags = 1 << info->surf.tiling,
+   };
 
    isl_surf_init_s(isl_dev, &info->surf, &init_info);
    assert(info->surf.row_pitch == init_info.min_pitch);
