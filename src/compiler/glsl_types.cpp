@@ -644,6 +644,7 @@ glsl_type::get_sampler_instance(enum glsl_sampler_dim dim,
          else
             return samplerExternalOES_type;
       case GLSL_SAMPLER_DIM_SUBPASS:
+      case GLSL_SAMPLER_DIM_SUBPASS_MS:
          return error_type;
       }
    case GLSL_TYPE_INT:
@@ -673,6 +674,7 @@ glsl_type::get_sampler_instance(enum glsl_sampler_dim dim,
       case GLSL_SAMPLER_DIM_EXTERNAL:
          return error_type;
       case GLSL_SAMPLER_DIM_SUBPASS:
+      case GLSL_SAMPLER_DIM_SUBPASS_MS:
          return error_type;
       }
    case GLSL_TYPE_UINT:
@@ -702,6 +704,7 @@ glsl_type::get_sampler_instance(enum glsl_sampler_dim dim,
       case GLSL_SAMPLER_DIM_EXTERNAL:
          return error_type;
       case GLSL_SAMPLER_DIM_SUBPASS:
+      case GLSL_SAMPLER_DIM_SUBPASS_MS:
          return error_type;
       }
    default:
@@ -715,8 +718,6 @@ const glsl_type *
 glsl_type::get_image_instance(enum glsl_sampler_dim dim,
                               bool array, glsl_base_type type)
 {
-   if (dim == GLSL_SAMPLER_DIM_SUBPASS)
-      return subpassInput_type;
    switch (type) {
    case GLSL_TYPE_FLOAT:
       switch (dim) {
@@ -740,8 +741,11 @@ glsl_type::get_image_instance(enum glsl_sampler_dim dim,
             return imageBuffer_type;
       case GLSL_SAMPLER_DIM_MS:
          return (array ? image2DMSArray_type : image2DMS_type);
-      case GLSL_SAMPLER_DIM_EXTERNAL:
       case GLSL_SAMPLER_DIM_SUBPASS:
+         return subpassInput_type;
+      case GLSL_SAMPLER_DIM_SUBPASS_MS:
+         return subpassInputMS_type;
+      case GLSL_SAMPLER_DIM_EXTERNAL:
          return error_type;
       }
    case GLSL_TYPE_INT:
@@ -766,8 +770,11 @@ glsl_type::get_image_instance(enum glsl_sampler_dim dim,
          return iimageBuffer_type;
       case GLSL_SAMPLER_DIM_MS:
          return (array ? iimage2DMSArray_type : iimage2DMS_type);
-      case GLSL_SAMPLER_DIM_EXTERNAL:
       case GLSL_SAMPLER_DIM_SUBPASS:
+         return isubpassInput_type;
+      case GLSL_SAMPLER_DIM_SUBPASS_MS:
+         return isubpassInputMS_type;
+      case GLSL_SAMPLER_DIM_EXTERNAL:
          return error_type;
       }
    case GLSL_TYPE_UINT:
@@ -792,8 +799,11 @@ glsl_type::get_image_instance(enum glsl_sampler_dim dim,
          return uimageBuffer_type;
       case GLSL_SAMPLER_DIM_MS:
          return (array ? uimage2DMSArray_type : uimage2DMS_type);
-      case GLSL_SAMPLER_DIM_EXTERNAL:
       case GLSL_SAMPLER_DIM_SUBPASS:
+         return usubpassInput_type;
+      case GLSL_SAMPLER_DIM_SUBPASS_MS:
+         return usubpassInputMS_type;
+      case GLSL_SAMPLER_DIM_EXTERNAL:
          return error_type;
       }
    default:

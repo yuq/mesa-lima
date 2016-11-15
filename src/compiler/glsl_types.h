@@ -82,6 +82,7 @@ enum glsl_sampler_dim {
    GLSL_SAMPLER_DIM_EXTERNAL,
    GLSL_SAMPLER_DIM_MS,
    GLSL_SAMPLER_DIM_SUBPASS, /* for vulkan input attachments */
+   GLSL_SAMPLER_DIM_SUBPASS_MS, /* for multisampled vulkan input attachments */
 };
 
 enum glsl_interface_packing {
