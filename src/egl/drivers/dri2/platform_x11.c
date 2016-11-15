@@ -892,7 +892,7 @@ dri2_x11_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
           return EGL_TRUE;
       }
       /* Swap failed with a window drawable. */
-      _eglError(EGL_BAD_NATIVE_WINDOW, __FUNCTION__);
+      _eglError(EGL_BAD_NATIVE_WINDOW, __func__);
       return EGL_FALSE;
    } else {
       assert(dri2_dpy->swrast);
