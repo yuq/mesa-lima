@@ -414,15 +414,6 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
       assert(nr_ds_entries >= devinfo->urb.min_entries[MESA_SHADER_TESS_EVAL]);
    }
 
-   /* Gen7 doesn't actually use brw->urb.nr_{vs,gs}_entries, but it seems
-    * better to put reasonable data in there rather than leave them
-    * uninitialized.
-    */
-   brw->urb.nr_vs_entries = nr_vs_entries;
-   brw->urb.nr_hs_entries = nr_hs_entries;
-   brw->urb.nr_ds_entries = nr_ds_entries;
-   brw->urb.nr_gs_entries = nr_gs_entries;
-
    /* Lay out the URB in the following order:
     * - push constants
     * - VS
@@ -430,19 +421,19 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
     * - DS
     * - GS
     */
-   brw->urb.vs_start = push_constant_chunks;
-   brw->urb.hs_start = push_constant_chunks + vs_chunks;
-   brw->urb.ds_start = push_constant_chunks + vs_chunks + hs_chunks;
-   brw->urb.gs_start = push_constant_chunks + vs_chunks + hs_chunks +
+   unsigned vs_start = push_constant_chunks;
+   unsigned hs_start = push_constant_chunks + vs_chunks;
+   unsigned ds_start = push_constant_chunks + vs_chunks + hs_chunks;
+   unsigned gs_start = push_constant_chunks + vs_chunks + hs_chunks +
                        ds_chunks;
 
    if (brw->gen == 7 && !brw->is_haswell && !brw->is_baytrail)
       gen7_emit_vs_workaround_flush(brw);
    gen7_emit_urb_state(brw,
-                       brw->urb.nr_vs_entries, vs_size, brw->urb.vs_start,
-                       brw->urb.nr_hs_entries, hs_size, brw->urb.hs_start,
-                       brw->urb.nr_ds_entries, ds_size, brw->urb.ds_start,
-                       brw->urb.nr_gs_entries, gs_size, brw->urb.gs_start);
+                       nr_vs_entries, vs_size, vs_start,
+                       nr_hs_entries, hs_size, hs_start,
+                       nr_ds_entries, ds_size, ds_start,
+                       nr_gs_entries, gs_size, gs_start);
 }
 
 const struct brw_tracked_state gen7_urb = {
