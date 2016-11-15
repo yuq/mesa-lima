@@ -1931,7 +1931,14 @@
       <value name="INTERP_CENTROID" value="2"/>
       <value name="INTERP_SAMPLE" value="3"/>
     </field>
-    <field name="Barycentric Interpolation Mode" start="43" end="48" type="uint"/>
+    <field name="Barycentric Interpolation Mode" start="43" end="48" type="uint">
+      <value name="BIM_PERSPECTIVE_PIXEL" value="1"/>
+      <value name="BIM_PERSPECTIVE_CENTROID" value ="2"/>
+      <value name="BIM_PERSPECTIVE_SAMPLE" value="4"/>
+      <value name="BIM_LINEAR_PIXEL" value="8"/>
+      <value name="BIM_LINEAR_CENTROID" value="16"/>
+      <value name="BIM_LINEAR_SAMPLE" value="32"/>
+    </field>
     <field name="Pixel Shader Uses Input Coverage Mask" start="42" end="42" type="bool"/>
     <field name="Line End Cap Antialiasing Region Width" start="40" end="41" type="uint"/>
     <field name="Line Antialiasing Region Width" start="38" end="39" type="uint">
