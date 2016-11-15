@@ -521,7 +521,14 @@ anv_CreateImageView(VkDevice _device,
       iview->isl.usage = 0;
    }
 
-   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+   /* Input attachment surfaces for color or depth are allocated and filled
+    * out at BeginRenderPass time because they need compression information.
+    * Stencil image do not support compression so we just use the texture
+    * surface from the image view.
+    */
+   if (image->usage & VK_IMAGE_USAGE_SAMPLED_BIT ||
+       (image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
+        (iview->aspect_mask & VK_IMAGE_ASPECT_STENCIL_BIT))) {
       iview->sampler_surface_state = alloc_surface_state(device);
 
       struct isl_view view = iview->isl;

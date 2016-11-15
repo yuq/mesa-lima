@@ -617,6 +617,7 @@ void anv_UpdateDescriptorSets(
 
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          for (uint32_t j = 0; j < write->descriptorCount; j++) {
             ANV_FROM_HANDLE(anv_image_view, iview,
                             write->pImageInfo[j].imageView);
@@ -639,10 +640,6 @@ void anv_UpdateDescriptorSets(
                .buffer_view = bview,
             };
          }
-         break;
-
-      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-         anv_finishme("input attachments not implemented");
          break;
 
       case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:

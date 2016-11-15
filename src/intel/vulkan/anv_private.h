@@ -1088,6 +1088,7 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
 struct anv_attachment_state {
    enum isl_aux_usage                           aux_usage;
    struct anv_state                             color_rt_state;
+   struct anv_state                             input_att_state;
 
    VkImageAspectFlags                           pending_clear_aspects;
    VkClearValue                                 clear_value;

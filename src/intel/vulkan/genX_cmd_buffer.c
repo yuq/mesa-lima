@@ -210,6 +210,19 @@ fb_attachment_get_aux_usage(struct anv_device *device,
    return ISL_AUX_USAGE_NONE;
 }
 
+static bool
+need_input_attachment_state(const struct anv_render_pass_attachment *att)
+{
+   if (!(att->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT))
+      return false;
+
+   /* We only allocate input attachment states for color and depth surfaces.
+    * Stencil doesn't allow compression so we can just use the texture surface
+    * state from the view
+    */
+   return vk_format_is_color(att->format) || vk_format_has_depth(att->format);
+}
+
 /**
  * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
  */
@@ -250,6 +263,9 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
           */
          need_null_state = true;
       }
+
+      if (need_input_attachment_state(&pass->attachments[i]))
+         num_states++;
    }
    num_states += need_null_state;
 
@@ -270,6 +286,12 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
    for (uint32_t i = 0; i < pass->attachment_count; ++i) {
       if (vk_format_is_color(pass->attachments[i].format)) {
          state->attachments[i].color_rt_state = next_state;
+         next_state.offset += ss_stride;
+         next_state.map += ss_stride;
+      }
+
+      if (need_input_attachment_state(&pass->attachments[i])) {
+         state->attachments[i].input_att_state = next_state;
          next_state.offset += ss_stride;
          next_state.map += ss_stride;
       }
@@ -347,6 +369,29 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                   state->attachments[i].color_rt_state);
          } else {
             state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
+         }
+
+         if (need_input_attachment_state(&pass->attachments[i])) {
+            const struct isl_surf *surf;
+            if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
+               surf = &iview->image->color_surface.isl;
+            } else {
+               surf = &iview->image->depth_surface.isl;
+            }
+
+            struct isl_view view = iview->isl;
+            view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
+            isl_surf_fill_state(isl_dev,
+                                state->attachments[i].input_att_state.map,
+                                .surf = surf,
+                                .view = &view,
+                                .aux_surf = &iview->image->aux_surface.isl,
+                                .aux_usage = state->attachments[i].aux_usage,
+                                .mocs = cmd_buffer->device->default_mocs);
+
+            add_image_view_relocs(cmd_buffer, iview,
+                                  state->attachments[i].aux_usage,
+                                  state->attachments[i].input_att_state);
          }
       }
 
@@ -942,12 +987,34 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          surface_state = desc->image_view->sampler_surface_state;
          assert(surface_state.alloc_size);
          add_image_view_relocs(cmd_buffer, desc->image_view,
                                desc->image_view->image->aux_usage,
                                surface_state);
+         break;
+
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+         assert(stage == MESA_SHADER_FRAGMENT);
+         if (desc->image_view->aspect_mask == VK_IMAGE_ASPECT_STENCIL_BIT) {
+            /* For stencil input attachments, we treat it like any old texture
+             * that a user may have bound.
+             */
+            surface_state = desc->image_view->sampler_surface_state;
+            assert(surface_state.alloc_size);
+            add_image_view_relocs(cmd_buffer, desc->image_view,
+                                  desc->image_view->image->aux_usage,
+                                  surface_state);
+         } else {
+            /* For depth and color input attachments, we create the surface
+             * state at vkBeginRenderPass time so that we can include aux
+             * and clear color information.
+             */
+            assert(binding->input_attachment_index < subpass->input_count);
+            const unsigned subpass_att = binding->input_attachment_index;
+            const unsigned att = subpass->input_attachments[subpass_att];
+            surface_state = cmd_buffer->state.attachments[att].input_att_state;
+         }
          break;
 
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
