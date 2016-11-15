@@ -2632,7 +2632,10 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	/* On Polaris, the small primitive filter uses the sample locations
 	 * even when MSAA is off, so we need to make sure they're set to 0.
 	 */
-	if ((nr_samples > 1 || sctx->b.family >= CHIP_POLARIS10) &&
+	if (sctx->b.family >= CHIP_POLARIS10)
+		nr_samples = MAX2(nr_samples, 1);
+
+	if (nr_samples >= 1 &&
 	    (nr_samples != sctx->msaa_sample_locs.nr_samples)) {
 		sctx->msaa_sample_locs.nr_samples = nr_samples;
 		cayman_emit_msaa_sample_locs(cs, nr_samples);
