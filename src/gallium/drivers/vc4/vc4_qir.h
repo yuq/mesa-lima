@@ -564,11 +564,6 @@ struct qblock *qir_entry_block(struct vc4_compile *c);
 struct qblock *qir_exit_block(struct vc4_compile *c);
 struct qinst *qir_inst(enum qop op, struct qreg dst,
                        struct qreg src0, struct qreg src1);
-struct qinst *qir_inst4(enum qop op, struct qreg dst,
-                        struct qreg a,
-                        struct qreg b,
-                        struct qreg c,
-                        struct qreg d);
 void qir_remove_instruction(struct vc4_compile *c, struct qinst *qinst);
 struct qreg qir_uniform(struct vc4_compile *c,
                         enum quniform_contents contents,

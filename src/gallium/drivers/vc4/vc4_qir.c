@@ -485,26 +485,6 @@ qir_inst(enum qop op, struct qreg dst, struct qreg src0, struct qreg src1)
         return inst;
 }
 
-struct qinst *
-qir_inst4(enum qop op, struct qreg dst,
-          struct qreg a,
-          struct qreg b,
-          struct qreg c,
-          struct qreg d)
-{
-        struct qinst *inst = CALLOC_STRUCT(qinst);
-
-        inst->op = op;
-        inst->dst = dst;
-        inst->src = calloc(4, sizeof(*inst->src));
-        inst->src[0] = a;
-        inst->src[1] = b;
-        inst->src[2] = c;
-        inst->src[3] = d;
-
-        return inst;
-}
-
 static void
 qir_emit(struct vc4_compile *c, struct qinst *inst)
 {
