@@ -166,7 +166,7 @@ remove_instructions(struct gl_program *prog, const GLboolean *removeFlags,
    GLuint totalRemoved = 0;
 
    /* go backward */
-   for (i = prog->NumInstructions - 1; i >= 0; i--) {
+   for (i = prog->arb.NumInstructions - 1; i >= 0; i--) {
       if (removeFlags[i]) {
          totalRemoved++;
          if (removeCount == 0) {
@@ -210,8 +210,8 @@ replace_regs(struct gl_program *prog, gl_register_file file, const GLint map[])
 {
    GLuint i;
 
-   for (i = 0; i < prog->NumInstructions; i++) {
-      struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      struct prog_instruction *inst = prog->arb.Instructions + i;
       const GLuint numSrc = _mesa_num_inst_src_regs(inst->Opcode);
       GLuint j;
       for (j = 0; j < numSrc; j++) {
@@ -251,11 +251,11 @@ _mesa_remove_dead_code_global(struct gl_program *prog, void *mem_ctx)
    }
 
    removeInst =
-      calloc(prog->NumInstructions, sizeof(GLboolean));
+      calloc(prog->arb.NumInstructions, sizeof(GLboolean));
 
    /* Determine which temps are read and written */
-   for (i = 0; i < prog->NumInstructions; i++) {
-      const struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      const struct prog_instruction *inst = prog->arb.Instructions + i;
       const GLuint numSrc = _mesa_num_inst_src_regs(inst->Opcode);
       GLuint j;
 
@@ -297,8 +297,8 @@ _mesa_remove_dead_code_global(struct gl_program *prog, void *mem_ctx)
    }
 
    /* find instructions that write to dead registers, flag for removal */
-   for (i = 0; i < prog->NumInstructions; i++) {
-      struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      struct prog_instruction *inst = prog->arb.Instructions + i;
       const GLuint numDst = _mesa_num_inst_dst_regs(inst->Opcode);
 
       if (numDst != 0 && inst->DstReg.File == PROGRAM_TEMPORARY) {
@@ -365,8 +365,8 @@ find_next_use(const struct gl_program *prog,
 {
    GLuint i;
 
-   for (i = start; i < prog->NumInstructions; i++) {
-      const struct prog_instruction *inst = prog->Instructions + i;
+   for (i = start; i < prog->arb.NumInstructions; i++) {
+      const struct prog_instruction *inst = prog->arb.Instructions + i;
       switch (inst->Opcode) {
       case OPCODE_BGNLOOP:
       case OPCODE_BGNSUB:
@@ -482,8 +482,8 @@ _mesa_remove_extra_move_use(struct gl_program *prog)
     *    FOO tmpY, arg0, arg1;
     */
 
-   for (i = 0; i + 1 < prog->NumInstructions; i++) {
-      const struct prog_instruction *mov = prog->Instructions + i;
+   for (i = 0; i + 1 < prog->arb.NumInstructions; i++) {
+      const struct prog_instruction *mov = prog->arb.Instructions + i;
       GLuint dst_mask, src_mask;
       if (can_upward_mov_be_modifed(mov) == GL_FALSE)
          continue;
@@ -498,8 +498,8 @@ _mesa_remove_extra_move_use(struct gl_program *prog)
        * rewritten or we get into some flow-control, eliminating the use of
        * this MOV.
        */
-      for (j = i + 1; j < prog->NumInstructions; j++) {
-	 struct prog_instruction *inst2 = prog->Instructions + j;
+      for (j = i + 1; j < prog->arb.NumInstructions; j++) {
+         struct prog_instruction *inst2 = prog->arb.Instructions + j;
          GLuint arg;
 
 	 if (_mesa_is_flow_control_opcode(inst2->Opcode))
@@ -575,10 +575,10 @@ _mesa_remove_dead_code_local(struct gl_program *prog, void *mem_ctx)
    GLuint i, arg, rem = 0;
 
    removeInst =
-      calloc(prog->NumInstructions, sizeof(GLboolean));
+      calloc(prog->arb.NumInstructions, sizeof(GLboolean));
 
-   for (i = 0; i < prog->NumInstructions; i++) {
-      const struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      const struct prog_instruction *inst = prog->arb.Instructions + i;
       const GLuint index = inst->DstReg.Index;
       const GLuint mask = inst->DstReg.WriteMask;
       enum inst_use use;
@@ -716,7 +716,7 @@ _mesa_remove_extra_moves(struct gl_program *prog, void *mem_ctx)
    }
 
    removeInst =
-      calloc(prog->NumInstructions, sizeof(GLboolean));
+      calloc(prog->arb.NumInstructions, sizeof(GLboolean));
 
    /*
     * Look for sequences such as this:
@@ -726,8 +726,8 @@ _mesa_remove_extra_moves(struct gl_program *prog, void *mem_ctx)
     *    FOO tmpY, arg0, arg1;
     */
 
-   for (i = 0; i < prog->NumInstructions; i++) {
-      const struct prog_instruction *mov = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      const struct prog_instruction *mov = prog->arb.Instructions + i;
 
       switch (mov->Opcode) {
       case OPCODE_BGNLOOP:
@@ -756,7 +756,7 @@ _mesa_remove_extra_moves(struct gl_program *prog, void *mem_ctx)
             prevI = i - 1;
             while (prevI > 0 && removeInst[prevI])
                prevI--;
-            prevInst = prog->Instructions + prevI;
+            prevInst = prog->arb.Instructions + prevI;
 
             if (prevInst->DstReg.File == PROGRAM_TEMPORARY &&
                 prevInst->DstReg.Index == id &&
@@ -1034,7 +1034,8 @@ find_live_intervals(struct gl_program *prog,
    }
 
    /* build intermediate arrays */
-   if (!_mesa_find_temp_intervals(prog->Instructions, prog->NumInstructions,
+   if (!_mesa_find_temp_intervals(prog->arb.Instructions,
+                                  prog->arb.NumInstructions,
                                   intBegin, intEnd))
       return GL_FALSE;
 
@@ -1194,7 +1195,7 @@ _mesa_reallocate_registers(struct gl_program *prog)
        */
       replace_regs(prog, PROGRAM_TEMPORARY, registerMap);
 
-      prog->NumTemporaries = maxTemp + 1;
+      prog->arb.NumTemporaries = maxTemp + 1;
    }
 
    if (dbg) {
@@ -1209,7 +1210,7 @@ _mesa_reallocate_registers(struct gl_program *prog)
 #if 0
 static void
 print_it(struct gl_context *ctx, struct gl_program *program, const char *txt) {
-   fprintf(stderr, "%s (%u inst):\n", txt, program->NumInstructions);
+   fprintf(stderr, "%s (%u inst):\n", txt, program->arb.NumInstructions);
    _mesa_print_program(program);
    _mesa_print_program_parameters(ctx, program);
    fprintf(stderr, "\n\n");
@@ -1257,8 +1258,8 @@ _mesa_simplify_cmp(struct gl_program * program)
       outputWrites[i] = 0;
    }
 
-   for (i = 0; i < program->NumInstructions; i++) {
-      struct prog_instruction *inst = program->Instructions + i;
+   for (i = 0; i < program->arb.NumInstructions; i++) {
+      struct prog_instruction *inst = program->arb.Instructions + i;
       GLuint prevWriteMask;
 
       /* Give up if we encounter relative addressing or flow control. */

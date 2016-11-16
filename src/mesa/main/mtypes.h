@@ -1921,8 +1921,6 @@ struct gl_program
    GLenum Target;    /**< GL_VERTEX/FRAGMENT_PROGRAM_ARB, GL_GEOMETRY_PROGRAM_NV */
    GLenum Format;    /**< String encoding format */
 
-   struct prog_instruction *Instructions;
-
    struct nir_shader *nir;
 
    GLbitfield64 SecondaryOutputsWritten; /**< Subset of OutputsWritten outputs written with non-zero index. */
@@ -1942,50 +1940,57 @@ struct gl_program
    /** Named parameters, constants, etc. from program text */
    struct gl_program_parameter_list *Parameters;
 
-   /**
-    * Local parameters used by the program.
-    *
-    * It's dynamically allocated because it is rarely used (just
-    * assembly-style programs), and MAX_PROGRAM_LOCAL_PARAMS entries once it's
-    * allocated.
-    */
-   GLfloat (*LocalParams)[4];
-
    /** Map from sampler unit to texture unit (set by glUniform1i()) */
    GLubyte SamplerUnits[MAX_SAMPLERS];
 
-   /** Bitmask of which register files are read/written with indirect
-    * addressing.  Mask of (1 << PROGRAM_x) bits.
-    */
-   GLbitfield IndirectRegisterFiles;
+   union {
+      /** ARB assembly-style program fields */
+      struct {
+         struct prog_instruction *Instructions;
 
-   /** Logical counts */
-   /*@{*/
-   GLuint NumInstructions;
-   GLuint NumTemporaries;
-   GLuint NumParameters;
-   GLuint NumAttributes;
-   GLuint NumAddressRegs;
-   GLuint NumAluInstructions;
-   GLuint NumTexInstructions;
-   GLuint NumTexIndirections;
-   /*@}*/
-   /** Native, actual h/w counts */
-   /*@{*/
-   GLuint NumNativeInstructions;
-   GLuint NumNativeTemporaries;
-   GLuint NumNativeParameters;
-   GLuint NumNativeAttributes;
-   GLuint NumNativeAddressRegs;
-   GLuint NumNativeAluInstructions;
-   GLuint NumNativeTexInstructions;
-   GLuint NumNativeTexIndirections;
-   /*@}*/
+         /**
+          * Local parameters used by the program.
+          *
+          * It's dynamically allocated because it is rarely used (just
+          * assembly-style programs), and MAX_PROGRAM_LOCAL_PARAMS entries
+          * once it's allocated.
+          */
+         GLfloat (*LocalParams)[4];
 
-   /** Used by ARB assembly-style programs. Can only be true for vertex
-    * programs.
-    */
-   GLboolean IsPositionInvariant;
+         /** Bitmask of which register files are read/written with indirect
+          * addressing.  Mask of (1 << PROGRAM_x) bits.
+          */
+         GLbitfield IndirectRegisterFiles;
+
+         /** Logical counts */
+         /*@{*/
+         GLuint NumInstructions;
+         GLuint NumTemporaries;
+         GLuint NumParameters;
+         GLuint NumAttributes;
+         GLuint NumAddressRegs;
+         GLuint NumAluInstructions;
+         GLuint NumTexInstructions;
+         GLuint NumTexIndirections;
+         /*@}*/
+         /** Native, actual h/w counts */
+         /*@{*/
+         GLuint NumNativeInstructions;
+         GLuint NumNativeTemporaries;
+         GLuint NumNativeParameters;
+         GLuint NumNativeAttributes;
+         GLuint NumNativeAddressRegs;
+         GLuint NumNativeAluInstructions;
+         GLuint NumNativeTexInstructions;
+         GLuint NumNativeTexIndirections;
+         /*@}*/
+
+         /** Used by ARB assembly-style programs. Can only be true for vertex
+          * programs.
+          */
+         GLboolean IsPositionInvariant;
+      } arb;
+   };
 };
 
 

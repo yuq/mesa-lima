@@ -91,25 +91,25 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
     * fragment_program struct.
     */
    program->String          = prog.String;
-   program->NumInstructions = prog.NumInstructions;
-   program->NumTemporaries  = prog.NumTemporaries;
-   program->NumParameters   = prog.NumParameters;
-   program->NumAttributes   = prog.NumAttributes;
-   program->NumAddressRegs  = prog.NumAddressRegs;
-   program->NumNativeInstructions = prog.NumNativeInstructions;
-   program->NumNativeTemporaries = prog.NumNativeTemporaries;
-   program->NumNativeParameters = prog.NumNativeParameters;
-   program->NumNativeAttributes = prog.NumNativeAttributes;
-   program->NumNativeAddressRegs = prog.NumNativeAddressRegs;
-   program->NumAluInstructions   = prog.NumAluInstructions;
-   program->NumTexInstructions   = prog.NumTexInstructions;
-   program->NumTexIndirections   = prog.NumTexIndirections;
-   program->NumNativeAluInstructions = prog.NumAluInstructions;
-   program->NumNativeTexInstructions = prog.NumTexInstructions;
-   program->NumNativeTexIndirections = prog.NumTexIndirections;
+   program->arb.NumInstructions = prog.arb.NumInstructions;
+   program->arb.NumTemporaries  = prog.arb.NumTemporaries;
+   program->arb.NumParameters   = prog.arb.NumParameters;
+   program->arb.NumAttributes   = prog.arb.NumAttributes;
+   program->arb.NumAddressRegs  = prog.arb.NumAddressRegs;
+   program->arb.NumNativeInstructions = prog.arb.NumNativeInstructions;
+   program->arb.NumNativeTemporaries = prog.arb.NumNativeTemporaries;
+   program->arb.NumNativeParameters = prog.arb.NumNativeParameters;
+   program->arb.NumNativeAttributes = prog.arb.NumNativeAttributes;
+   program->arb.NumNativeAddressRegs = prog.arb.NumNativeAddressRegs;
+   program->arb.NumAluInstructions   = prog.arb.NumAluInstructions;
+   program->arb.NumTexInstructions   = prog.arb.NumTexInstructions;
+   program->arb.NumTexIndirections   = prog.arb.NumTexIndirections;
+   program->arb.NumNativeAluInstructions = prog.arb.NumAluInstructions;
+   program->arb.NumNativeTexInstructions = prog.arb.NumTexInstructions;
+   program->arb.NumNativeTexIndirections = prog.arb.NumTexIndirections;
    program->info.inputs_read      = prog.info.inputs_read;
    program->info.outputs_written = prog.info.outputs_written;
-   program->IndirectRegisterFiles = prog.IndirectRegisterFiles;
+   program->arb.IndirectRegisterFiles = prog.arb.IndirectRegisterFiles;
    for (i = 0; i < MAX_TEXTURE_IMAGE_UNITS; i++) {
       program->TexturesUsed[i] = prog.TexturesUsed[i];
       if (prog.TexturesUsed[i])
@@ -121,8 +121,8 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
 
    program->info.fs.uses_discard = state.fragment.UsesKill;
 
-   free(program->Instructions);
-   program->Instructions = prog.Instructions;
+   free(program->arb.Instructions);
+   program->arb.Instructions = prog.arb.Instructions;
 
    if (program->Parameters)
       _mesa_free_parameter_list(program->Parameters);
@@ -174,7 +174,7 @@ _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
 
    if (!_mesa_parse_arb_program(ctx, target, (const GLubyte*) str, len,
 				&state)) {
-      ralloc_free(prog.Instructions);
+      ralloc_free(prog.arb.Instructions);
       ralloc_free(prog.String);
       _mesa_error(ctx, GL_INVALID_OPERATION, "glProgramString(bad program)");
       return;
@@ -189,24 +189,24 @@ _mesa_parse_arb_vertex_program(struct gl_context *ctx, GLenum target,
     * vertex_program struct.
     */
    program->String          = prog.String;
-   program->NumInstructions = prog.NumInstructions;
-   program->NumTemporaries  = prog.NumTemporaries;
-   program->NumParameters   = prog.NumParameters;
-   program->NumAttributes   = prog.NumAttributes;
-   program->NumAddressRegs  = prog.NumAddressRegs;
-   program->NumNativeInstructions = prog.NumNativeInstructions;
-   program->NumNativeTemporaries = prog.NumNativeTemporaries;
-   program->NumNativeParameters = prog.NumNativeParameters;
-   program->NumNativeAttributes = prog.NumNativeAttributes;
-   program->NumNativeAddressRegs = prog.NumNativeAddressRegs;
+   program->arb.NumInstructions = prog.arb.NumInstructions;
+   program->arb.NumTemporaries  = prog.arb.NumTemporaries;
+   program->arb.NumParameters   = prog.arb.NumParameters;
+   program->arb.NumAttributes   = prog.arb.NumAttributes;
+   program->arb.NumAddressRegs  = prog.arb.NumAddressRegs;
+   program->arb.NumNativeInstructions = prog.arb.NumNativeInstructions;
+   program->arb.NumNativeTemporaries = prog.arb.NumNativeTemporaries;
+   program->arb.NumNativeParameters = prog.arb.NumNativeParameters;
+   program->arb.NumNativeAttributes = prog.arb.NumNativeAttributes;
+   program->arb.NumNativeAddressRegs = prog.arb.NumNativeAddressRegs;
    program->info.inputs_read     = prog.info.inputs_read;
    program->info.outputs_written = prog.info.outputs_written;
-   program->IndirectRegisterFiles = prog.IndirectRegisterFiles;
-   program->IsPositionInvariant = (state.option.PositionInvariant)
+   program->arb.IndirectRegisterFiles = prog.arb.IndirectRegisterFiles;
+   program->arb.IsPositionInvariant = (state.option.PositionInvariant)
       ? GL_TRUE : GL_FALSE;
 
-   ralloc_free(program->Instructions);
-   program->Instructions = prog.Instructions;
+   ralloc_free(program->arb.Instructions);
+   program->arb.Instructions = prog.arb.Instructions;
 
    if (program->Parameters)
       _mesa_free_parameter_list(program->Parameters);

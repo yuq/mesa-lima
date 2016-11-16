@@ -242,7 +242,7 @@ st_translate_vertex_program(struct st_context *st,
 
    stvp->num_inputs = 0;
 
-   if (stvp->Base.IsPositionInvariant)
+   if (stvp->Base.arb.IsPositionInvariant)
       _mesa_insert_mvp_code(st->ctx, &stvp->Base);
 
    /*

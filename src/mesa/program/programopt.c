@@ -49,7 +49,7 @@ static void
 _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
 {
    struct prog_instruction *newInst;
-   const GLuint origLen = vprog->NumInstructions;
+   const GLuint origLen = vprog->arb.NumInstructions;
    const GLuint newLen = origLen + 4;
    GLuint i;
 
@@ -99,14 +99,14 @@ _mesa_insert_mvp_dp4_code(struct gl_context *ctx, struct gl_program *vprog)
    }
 
    /* Append original instructions after new instructions */
-   _mesa_copy_instructions (newInst + 4, vprog->Instructions, origLen);
+   _mesa_copy_instructions (newInst + 4, vprog->arb.Instructions, origLen);
 
    /* free old instructions */
-   ralloc_free(vprog->Instructions);
+   ralloc_free(vprog->arb.Instructions);
 
    /* install new instructions */
-   vprog->Instructions = newInst;
-   vprog->NumInstructions = newLen;
+   vprog->arb.Instructions = newInst;
+   vprog->arb.NumInstructions = newLen;
    vprog->info.inputs_read |= VERT_BIT_POS;
    vprog->info.outputs_written |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
@@ -116,7 +116,7 @@ static void
 _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
 {
    struct prog_instruction *newInst;
-   const GLuint origLen = vprog->NumInstructions;
+   const GLuint origLen = vprog->arb.NumInstructions;
    const GLuint newLen = origLen + 4;
    GLuint hposTemp;
    GLuint i;
@@ -146,7 +146,7 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
    }
 
    /* TEMP hposTemp; */
-   hposTemp = vprog->NumTemporaries++;
+   hposTemp = vprog->arb.NumTemporaries++;
 
    /*
     * Generated instructions:
@@ -200,14 +200,14 @@ _mesa_insert_mvp_mad_code(struct gl_context *ctx, struct gl_program *vprog)
 
 
    /* Append original instructions after new instructions */
-   _mesa_copy_instructions (newInst + 4, vprog->Instructions, origLen);
+   _mesa_copy_instructions (newInst + 4, vprog->arb.Instructions, origLen);
 
    /* free old instructions */
-   ralloc_free(vprog->Instructions);
+   ralloc_free(vprog->arb.Instructions);
 
    /* install new instructions */
-   vprog->Instructions = newInst;
-   vprog->NumInstructions = newLen;
+   vprog->arb.Instructions = newInst;
+   vprog->arb.NumInstructions = newLen;
    vprog->info.inputs_read |= VERT_BIT_POS;
    vprog->info.outputs_written |= BITFIELD64_BIT(VARYING_SLOT_POS);
 }
@@ -252,7 +252,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    static const gl_state_index fogColorState[STATE_LENGTH]
       = { STATE_FOG_COLOR, 0, 0, 0, 0};
    struct prog_instruction *newInst, *inst;
-   const GLuint origLen = fprog->NumInstructions;
+   const GLuint origLen = fprog->arb.NumInstructions;
    const GLuint newLen = origLen + 5;
    GLuint i;
    GLint fogPRefOpt, fogColorRef; /* state references */
@@ -278,7 +278,7 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    }
 
    /* Copy orig instructions into new instruction buffer */
-   _mesa_copy_instructions(newInst, fprog->Instructions, origLen);
+   _mesa_copy_instructions(newInst, fprog->arb.Instructions, origLen);
 
    /* PARAM fogParamsRefOpt = internal optimized fog params; */
    fogPRefOpt
@@ -288,13 +288,13 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
       = _mesa_add_state_reference(fprog->Parameters, fogColorState);
 
    /* TEMP colorTemp; */
-   colorTemp = fprog->NumTemporaries++;
+   colorTemp = fprog->arb.NumTemporaries++;
    /* TEMP fogFactorTemp; */
-   fogFactorTemp = fprog->NumTemporaries++;
+   fogFactorTemp = fprog->arb.NumTemporaries++;
 
    /* Scan program to find where result.color is written */
    inst = newInst;
-   for (i = 0; i < fprog->NumInstructions; i++) {
+   for (i = 0; i < fprog->arb.NumInstructions; i++) {
       if (inst->Opcode == OPCODE_END)
          break;
       if (inst->DstReg.File == PROGRAM_OUTPUT &&
@@ -403,11 +403,11 @@ _mesa_append_fog_code(struct gl_context *ctx, struct gl_program *fprog,
    inst++;
 
    /* free old instructions */
-   ralloc_free(fprog->Instructions);
+   ralloc_free(fprog->arb.Instructions);
 
    /* install new instructions */
-   fprog->Instructions = newInst;
-   fprog->NumInstructions = inst - newInst;
+   fprog->arb.Instructions = newInst;
+   fprog->arb.NumInstructions = inst - newInst;
    fprog->info.inputs_read |= VARYING_BIT_FOGC;
    assert(fprog->info.outputs_written & (1 << FRAG_RESULT_COLOR));
 }
@@ -445,8 +445,8 @@ _mesa_count_texture_indirections(struct gl_program *prog)
    GLbitfield aluTemps = 0x0;
    GLuint i;
 
-   for (i = 0; i < prog->NumInstructions; i++) {
-      const struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      const struct prog_instruction *inst = prog->arb.Instructions + i;
 
       if (is_texture_instruction(inst)) {
          if (((inst->SrcReg[0].File == PROGRAM_TEMPORARY) && 
@@ -474,7 +474,7 @@ _mesa_count_texture_indirections(struct gl_program *prog)
          tempsOutput |= (1 << inst->DstReg.Index);
    }
 
-   prog->NumTexIndirections = indirections;
+   prog->arb.NumTexIndirections = indirections;
 }
 
 
@@ -486,9 +486,10 @@ void
 _mesa_count_texture_instructions(struct gl_program *prog)
 {
    GLuint i;
-   prog->NumTexInstructions = 0;
-   for (i = 0; i < prog->NumInstructions; i++) {
-      prog->NumTexInstructions += is_texture_instruction(prog->Instructions + i);
+   prog->arb.NumTexInstructions = 0;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      prog->arb.NumTexInstructions +=
+         is_texture_instruction(prog->arb.Instructions + i);
    }
 }
 
@@ -517,8 +518,8 @@ _mesa_remove_output_reads(struct gl_program *prog, gl_register_file type)
       outputMap[i] = -1;
 
    /* look for instructions which read from varying vars */
-   for (i = 0; i < prog->NumInstructions; i++) {
-      struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      struct prog_instruction *inst = prog->arb.Instructions + i;
       const GLuint numSrc = _mesa_num_inst_src_regs(inst->Opcode);
       GLuint j;
       for (j = 0; j < numSrc; j++) {
@@ -542,8 +543,8 @@ _mesa_remove_output_reads(struct gl_program *prog, gl_register_file type)
       return; /* nothing to be done */
 
    /* look for instructions which write to the varying vars identified above */
-   for (i = 0; i < prog->NumInstructions; i++) {
-      struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      struct prog_instruction *inst = prog->arb.Instructions + i;
       if (inst->DstReg.File == type &&
           outputMap[inst->DstReg.Index] >= 0) {
          /* change inst to write to the temp reg, instead of the varying */
@@ -559,8 +560,8 @@ _mesa_remove_output_reads(struct gl_program *prog, gl_register_file type)
 
       /* Look for END instruction and insert the new varying writes */
       endPos = -1;
-      for (i = 0; i < prog->NumInstructions; i++) {
-         struct prog_instruction *inst = prog->Instructions + i;
+      for (i = 0; i < prog->arb.NumInstructions; i++) {
+         struct prog_instruction *inst = prog->arb.Instructions + i;
          if (inst->Opcode == OPCODE_END) {
             endPos = i;
             _mesa_insert_instructions(prog, i, numVaryingReads);
@@ -571,7 +572,7 @@ _mesa_remove_output_reads(struct gl_program *prog, gl_register_file type)
       assert(endPos >= 0);
 
       /* insert new MOV instructions here */
-      inst = prog->Instructions + endPos;
+      inst = prog->arb.Instructions + endPos;
       for (var = 0; var < VARYING_SLOT_MAX; var++) {
          if (outputMap[var] >= 0) {
             /* MOV VAR[var], TEMP[tmp]; */
@@ -598,8 +599,8 @@ _mesa_program_fragment_position_to_sysval(struct gl_program *prog)
    prog->info.inputs_read &= ~BITFIELD64_BIT(VARYING_SLOT_POS);
    prog->info.system_values_read |= 1 << SYSTEM_VALUE_FRAG_COORD;
 
-   for (i = 0; i < prog->NumInstructions; i++) {
-      struct prog_instruction *inst = prog->Instructions + i;
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
+      struct prog_instruction *inst = prog->arb.Instructions + i;
       const GLuint numSrc = _mesa_num_inst_src_regs(inst->Opcode);
       GLuint j;
 

@@ -409,7 +409,7 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    vp->translated = GL_TRUE;
    vp->fogmode = ctx->Fog.Mode;
 
-   if (mesa_vp->NumInstructions == 0)
+   if (mesa_vp->arb.NumInstructions == 0)
       return GL_FALSE;
 
 #if 0
@@ -445,7 +445,7 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    struct prog_dst_register dst;
 
 /* FIXME: is changing the prog safe to do here? */
-   if (mesa_vp->IsPositionInvariant &&
+   if (mesa_vp->arb.IsPositionInvariant &&
       /* make sure we only do this once */
        !(mesa_vp->info.outputs_written & (1 << VARYING_SLOT_POS))) {
 	 _mesa_insert_mvp_code(ctx, mesa_vp);
@@ -462,11 +462,11 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    }
 
    vp->pos_end = 0;
-   mesa_vp->NumNativeInstructions = 0;
+   mesa_vp->arb.NumNativeInstructions = 0;
    if (mesa_vp->Parameters)
-      mesa_vp->NumNativeParameters = mesa_vp->Parameters->NumParameters;
+      mesa_vp->arb.NumNativeParameters = mesa_vp->Parameters->NumParameters;
    else
-      mesa_vp->NumNativeParameters = 0;
+      mesa_vp->arb.NumNativeParameters = 0;
 
    for(i = 0; i < VERT_ATTRIB_MAX; i++)
       vp->inputs[i] = -1;
@@ -590,7 +590,7 @@ static GLboolean r200_translate_vertex_program(struct gl_context *ctx, struct r2
    }
 
    o_inst = vp->instr;
-   for (vpi = mesa_vp->Instructions; vpi->Opcode != OPCODE_END; vpi++, o_inst++){
+   for (vpi = mesa_vp->arb.Instructions; vpi->Opcode != OPCODE_END; vpi++, o_inst++){
       operands = op_operands(vpi->Opcode);
       are_srcs_scalar = operands & SCALAR_FLAG;
       operands &= OP_MASK;
@@ -1070,20 +1070,20 @@ else {
       }
 
       u_temp_used = (R200_VSF_MAX_TEMPS - 1) - u_temp_i;
-      if (mesa_vp->NumNativeTemporaries <
-	  (mesa_vp->NumTemporaries + u_temp_used)) {
-	 mesa_vp->NumNativeTemporaries =
-	    mesa_vp->NumTemporaries + u_temp_used;
+      if (mesa_vp->arb.NumNativeTemporaries <
+          (mesa_vp->arb.NumTemporaries + u_temp_used)) {
+         mesa_vp->arb.NumNativeTemporaries =
+            mesa_vp->arb.NumTemporaries + u_temp_used;
       }
-      if ((mesa_vp->NumTemporaries + u_temp_used) > R200_VSF_MAX_TEMPS) {
+      if ((mesa_vp->arb.NumTemporaries + u_temp_used) > R200_VSF_MAX_TEMPS) {
 	 if (R200_DEBUG & RADEON_FALLBACKS) {
-	    fprintf(stderr, "Ran out of temps, num temps %d, us %d\n", mesa_vp->NumTemporaries, u_temp_used);
+            fprintf(stderr, "Ran out of temps, num temps %d, us %d\n", mesa_vp->arb.NumTemporaries, u_temp_used);
 	 }
 	 return GL_FALSE;
       }
       u_temp_i = R200_VSF_MAX_TEMPS - 1;
       if(o_inst - vp->instr >= R200_VSF_MAX_INST) {
-	 mesa_vp->NumNativeInstructions = 129;
+         mesa_vp->arb.NumNativeInstructions = 129;
 	 if (R200_DEBUG & RADEON_FALLBACKS) {
 	    fprintf(stderr, "more than 128 native instructions\n");
 	 }
@@ -1095,7 +1095,7 @@ else {
    }
 
    vp->native = GL_TRUE;
-   mesa_vp->NumNativeInstructions = (o_inst - vp->instr);
+   mesa_vp->arb.NumNativeInstructions = (o_inst - vp->instr);
 #if 0
    fprintf(stderr, "hw program:\n");
    for(i=0; i < vp->program.length; i++)
@@ -1127,15 +1127,15 @@ void r200SetupVertexProg( struct gl_context *ctx ) {
    R200_STATECHANGE( rmesa, pvs );
 
    rmesa->hw.pvs.cmd[PVS_CNTL_1] = (0 << R200_PVS_CNTL_1_PROGRAM_START_SHIFT) |
-      ((vp->mesa_program.NumNativeInstructions - 1) << R200_PVS_CNTL_1_PROGRAM_END_SHIFT) |
+      ((vp->mesa_program.arb.NumNativeInstructions - 1) << R200_PVS_CNTL_1_PROGRAM_END_SHIFT) |
       (vp->pos_end << R200_PVS_CNTL_1_POS_END_SHIFT);
    rmesa->hw.pvs.cmd[PVS_CNTL_2] = (0 << R200_PVS_CNTL_2_PARAM_OFFSET_SHIFT) |
-      (vp->mesa_program.NumNativeParameters << R200_PVS_CNTL_2_PARAM_COUNT_SHIFT);
+      (vp->mesa_program.arb.NumNativeParameters << R200_PVS_CNTL_2_PARAM_COUNT_SHIFT);
 
    /* maybe user clip planes just work with vertex progs... untested */
    if (ctx->Transform.ClipPlanesEnabled) {
       R200_STATECHANGE( rmesa, tcl );
-      if (vp->mesa_program.IsPositionInvariant) {
+      if (vp->mesa_program.arb.IsPositionInvariant) {
 	 rmesa->hw.tcl.cmd[TCL_UCP_VERT_BLEND_CTL] |= (ctx->Transform.ClipPlanesEnabled << 2);
       }
       else {
@@ -1144,7 +1144,7 @@ void r200SetupVertexProg( struct gl_context *ctx ) {
    }
 
    if (vp != rmesa->curr_vp_hw) {
-      GLuint count = vp->mesa_program.NumNativeInstructions;
+      GLuint count = vp->mesa_program.arb.NumNativeInstructions;
       drm_radeon_cmd_header_t tmp;
 
       R200_STATECHANGE( rmesa, vpi[0] );

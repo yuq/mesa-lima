@@ -159,7 +159,8 @@ ptn_get_src(struct ptn_compile *c, const struct prog_src_register *prog_src)
 
       switch (file) {
       case PROGRAM_CONSTANT:
-         if ((c->prog->IndirectRegisterFiles & (1 << PROGRAM_CONSTANT)) == 0) {
+         if ((c->prog->arb.IndirectRegisterFiles &
+              (1 << PROGRAM_CONSTANT)) == 0) {
             float *v = (float *) plist->ParameterValues[prog_src->Index];
             src.src = nir_src_for_ssa(nir_imm_vec4(b, v[0], v[1], v[2], v[3]));
             break;
@@ -977,10 +978,11 @@ setup_registers_and_variables(struct ptn_compile *c)
    }
 
    /* Create temporary registers. */
-   c->temp_regs = rzalloc_array(c, nir_register *, c->prog->NumTemporaries);
+   c->temp_regs = rzalloc_array(c, nir_register *,
+                                c->prog->arb.NumTemporaries);
 
    nir_register *reg;
-   for (unsigned i = 0; i < c->prog->NumTemporaries; i++) {
+   for (unsigned i = 0; i < c->prog->arb.NumTemporaries; i++) {
       reg = nir_local_reg_create(b->impl);
       if (!reg) {
          c->error = true;
@@ -1036,8 +1038,8 @@ prog_to_nir(const struct gl_program *prog,
    if (unlikely(c->error))
       goto fail;
 
-   for (unsigned int i = 0; i < prog->NumInstructions; i++) {
-      ptn_emit_instruction(c, &prog->Instructions[i]);
+   for (unsigned int i = 0; i < prog->arb.NumInstructions; i++) {
+      ptn_emit_instruction(c, &prog->arb.Instructions[i]);
 
       if (unlikely(c->error))
          break;

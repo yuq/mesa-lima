@@ -2810,7 +2810,7 @@ get_mesa_program(struct gl_context *ctx,
    visit_exec_list(shader->ir, &v);
    v.emit(NULL, OPCODE_END);
 
-   prog->NumTemporaries = v.next_temp;
+   prog->arb.NumTemporaries = v.next_temp;
 
    unsigned num_instructions = v.instructions.length();
 
@@ -2844,12 +2844,12 @@ get_mesa_program(struct gl_context *ctx,
 
       /* Set IndirectRegisterFiles. */
       if (mesa_inst->DstReg.RelAddr)
-         prog->IndirectRegisterFiles |= 1 << mesa_inst->DstReg.File;
+         prog->arb.IndirectRegisterFiles |= 1 << mesa_inst->DstReg.File;
 
       /* Update program's bitmask of indirectly accessed register files */
       for (unsigned src = 0; src < 3; src++)
          if (mesa_inst->SrcReg[src].RelAddr)
-            prog->IndirectRegisterFiles |= 1 << mesa_inst->SrcReg[src].File;
+            prog->arb.IndirectRegisterFiles |= 1 << mesa_inst->SrcReg[src].File;
 
       switch (mesa_inst->Opcode) {
       case OPCODE_IF:
@@ -2877,7 +2877,7 @@ get_mesa_program(struct gl_context *ctx,
 	 }
 	 break;
       case OPCODE_ARL:
-	 prog->NumAddressRegs = 1;
+         prog->arb.NumAddressRegs = 1;
 	 break;
       default:
 	 break;
@@ -2910,8 +2910,8 @@ get_mesa_program(struct gl_context *ctx,
       fflush(stderr);
    }
 
-   prog->Instructions = mesa_instructions;
-   prog->NumInstructions = num_instructions;
+   prog->arb.Instructions = mesa_instructions;
+   prog->arb.NumInstructions = num_instructions;
 
    /* Setting this to NULL prevents a possible double free in the fail_exit
     * path (far below).

@@ -803,10 +803,10 @@ _mesa_fprint_program_opt(FILE *f,
       fprintf(f, "# Geometry Shader\n");
    }
 
-   for (i = 0; i < prog->NumInstructions; i++) {
+   for (i = 0; i < prog->arb.NumInstructions; i++) {
       if (lineNumbers)
          fprintf(f, "%3d: ", i);
-      indent = _mesa_fprint_instruction_opt(f, prog->Instructions + i,
+      indent = _mesa_fprint_instruction_opt(f, prog->arb.Instructions + i,
                                            indent, mode, prog);
    }
 }
@@ -862,13 +862,14 @@ _mesa_fprint_program_parameters(FILE *f,
    fprintf(f, "OutputsWritten: %" PRIx64 " (0b%s)\n",
            (uint64_t) prog->info.outputs_written,
            binary(prog->info.outputs_written));
-   fprintf(f, "NumInstructions=%d\n", prog->NumInstructions);
-   fprintf(f, "NumTemporaries=%d\n", prog->NumTemporaries);
-   fprintf(f, "NumParameters=%d\n", prog->NumParameters);
-   fprintf(f, "NumAttributes=%d\n", prog->NumAttributes);
-   fprintf(f, "NumAddressRegs=%d\n", prog->NumAddressRegs);
+   fprintf(f, "NumInstructions=%d\n", prog->arb.NumInstructions);
+   fprintf(f, "NumTemporaries=%d\n", prog->arb.NumTemporaries);
+   fprintf(f, "NumParameters=%d\n", prog->arb.NumParameters);
+   fprintf(f, "NumAttributes=%d\n", prog->arb.NumAttributes);
+   fprintf(f, "NumAddressRegs=%d\n", prog->arb.NumAddressRegs);
    fprintf(f, "IndirectRegisterFiles: 0x%x (0b%s)\n",
-           prog->IndirectRegisterFiles, binary(prog->IndirectRegisterFiles));
+           prog->arb.IndirectRegisterFiles,
+           binary(prog->arb.IndirectRegisterFiles));
    fprintf(f, "SamplersUsed: 0x%x (0b%s)\n",
                  prog->SamplersUsed, binary(prog->SamplersUsed));
    fprintf(f, "Samplers=[ ");

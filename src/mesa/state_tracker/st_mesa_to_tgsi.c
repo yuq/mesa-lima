@@ -906,8 +906,8 @@ st_translate_mesa_program(
 
    /* Declare address register.
     */
-   if (program->NumAddressRegs > 0) {
-      debug_assert( program->NumAddressRegs == 1 );
+   if (program->arb.NumAddressRegs > 0) {
+      debug_assert( program->arb.NumAddressRegs == 1 );
       t->address[0] = ureg_DECL_address( ureg );
    }
 
@@ -952,11 +952,11 @@ st_translate_mesa_program(
       }
    }
 
-   if (program->IndirectRegisterFiles & (1 << PROGRAM_TEMPORARY)) {
+   if (program->arb.IndirectRegisterFiles & (1 << PROGRAM_TEMPORARY)) {
       /* If temps are accessed with indirect addressing, declare temporaries
        * in sequential order.  Else, we declare them on demand elsewhere.
        */
-      for (i = 0; i < program->NumTemporaries; i++) {
+      for (i = 0; i < program->arb.NumTemporaries; i++) {
          /* XXX use TGSI_FILE_TEMPORARY_ARRAY when it's supported by ureg */
          t->temps[i] = ureg_DECL_temporary( t->ureg );
       }
@@ -987,7 +987,7 @@ st_translate_mesa_program(
              * array.
              */
          case PROGRAM_CONSTANT:
-            if (program->IndirectRegisterFiles & PROGRAM_ANY_CONST)
+            if (program->arb.IndirectRegisterFiles & PROGRAM_ANY_CONST)
                t->constants[i] = ureg_DECL_constant( ureg, i );
             else
                t->constants[i] = 
@@ -1019,8 +1019,8 @@ st_translate_mesa_program(
 
    /* Emit each instruction in turn:
     */
-   for (i = 0; i < program->NumInstructions; i++)
-      compile_instruction(ctx, t, &program->Instructions[i]);
+   for (i = 0; i < program->arb.NumInstructions; i++)
+      compile_instruction(ctx, t, &program->arb.Instructions[i]);
 
 out:
    free(t->constants);

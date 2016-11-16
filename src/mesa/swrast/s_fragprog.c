@@ -43,7 +43,7 @@ _swrast_use_fragment_program(struct gl_context *ctx)
 {
    struct gl_program *fp = ctx->FragmentProgram._Current;
    return fp && !(fp == ctx->FragmentProgram._TexEnvProgram
-                  && fp->NumInstructions == 0);
+                  && fp->arb.NumInstructions == 0);
 }
 
 /**

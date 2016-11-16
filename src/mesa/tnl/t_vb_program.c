@@ -163,7 +163,7 @@ do_ndc_cliptest(struct gl_context *ctx, struct vp_stage_data *store)
     */
    /** XXX NEW_SLANG _Enabled ??? */
    if (ctx->Transform.ClipPlanesEnabled && (!ctx->VertexProgram._Enabled ||
-      ctx->VertexProgram.Current->IsPositionInvariant)) {
+      ctx->VertexProgram.Current->arb.IsPositionInvariant)) {
       userclip( ctx,
 		VB->ClipPtr,
 		store->clipmask,
@@ -397,7 +397,7 @@ run_vp( struct gl_context *ctx, struct tnl_pipeline_stage *stage )
 
    unmap_textures(ctx, program);
 
-   if (program->IsPositionInvariant) {
+   if (program->arb.IsPositionInvariant) {
       /* We need the exact same transform as in the fixed function path here
        * to guarantee invariance, depending on compiler optimization flags
        * results could be different otherwise.

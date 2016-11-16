@@ -183,7 +183,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 		       GLenum target,
 		       struct gl_program *prog)
 {
-   assert(target == GL_VERTEX_PROGRAM_ARB || !prog->IsPositionInvariant);
+   assert(target == GL_VERTEX_PROGRAM_ARB || !prog->arb.IsPositionInvariant);
 
    struct brw_context *brw = brw_context(ctx);
    const struct brw_compiler *compiler = brw->screen->compiler;
@@ -212,7 +212,7 @@ brwProgramStringNotify(struct gl_context *ctx,
 
       if (newVP == curVP)
 	 brw->ctx.NewDriverState |= BRW_NEW_VERTEX_PROGRAM;
-      if (newVP->program.IsPositionInvariant) {
+      if (newVP->program.arb.IsPositionInvariant) {
 	 _mesa_insert_mvp_code(ctx, &newVP->program);
       }
       newVP->id = get_new_program_id(brw->screen);

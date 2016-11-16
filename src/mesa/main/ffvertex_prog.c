@@ -383,8 +383,8 @@ static struct ureg get_temp( struct tnl_program *p )
       exit(1);
    }
 
-   if ((GLuint) bit > p->program->NumTemporaries)
-      p->program->NumTemporaries = bit;
+   if ((GLuint) bit > p->program->arb.NumTemporaries)
+      p->program->arb.NumTemporaries = bit;
 
    p->temp_in_use |= 1<<(bit-1);
    return make_ureg(PROGRAM_TEMPORARY, bit-1);
@@ -577,9 +577,9 @@ static void emit_op3fn(struct tnl_program *p,
    GLuint nr;
    struct prog_instruction *inst;
 
-   assert(p->program->NumInstructions <= p->max_inst);
+   assert(p->program->arb.NumInstructions <= p->max_inst);
 
-   if (p->program->NumInstructions == p->max_inst) {
+   if (p->program->arb.NumInstructions == p->max_inst) {
       /* need to extend the program's instruction array */
       struct prog_instruction *newInst;
 
@@ -593,17 +593,17 @@ static void emit_op3fn(struct tnl_program *p,
          return;
       }
 
-      _mesa_copy_instructions(newInst, p->program->Instructions,
-                              p->program->NumInstructions);
+      _mesa_copy_instructions(newInst, p->program->arb.Instructions,
+                              p->program->arb.NumInstructions);
 
-      ralloc_free(p->program->Instructions);
+      ralloc_free(p->program->arb.Instructions);
 
-      p->program->Instructions = newInst;
+      p->program->arb.Instructions = newInst;
    }
 
-   nr = p->program->NumInstructions++;
+   nr = p->program->arb.NumInstructions++;
 
-   inst = &p->program->Instructions[nr];
+   inst = &p->program->arb.Instructions[nr];
    inst->Opcode = (enum prog_opcode) op;
 
    emit_arg( &inst->SrcReg[0], src0 );
@@ -1632,13 +1632,13 @@ create_new_program( const struct state_key *key,
     * If we need more, we'll grow the instruction array as needed.
     */
    p.max_inst = 32;
-   p.program->Instructions = rzalloc_array(program, struct prog_instruction,
-                                           p.max_inst);
+   p.program->arb.Instructions =
+      rzalloc_array(program, struct prog_instruction, p.max_inst);
    p.program->String = NULL;
-   p.program->NumInstructions =
-   p.program->NumTemporaries =
-   p.program->NumParameters =
-   p.program->NumAttributes = p.program->NumAddressRegs = 0;
+   p.program->arb.NumInstructions =
+   p.program->arb.NumTemporaries =
+   p.program->arb.NumParameters =
+   p.program->arb.NumAttributes = p.program->arb.NumAddressRegs = 0;
    p.program->Parameters = _mesa_new_parameter_list();
    p.program->info.inputs_read = 0;
    p.program->info.outputs_written = 0;
