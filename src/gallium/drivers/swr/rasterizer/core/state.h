@@ -30,12 +30,6 @@
 #include "common/formats.h"
 #include "common/simdintrin.h"
 
-// clear flags
-#define SWR_CLEAR_NONE        0
-#define SWR_CLEAR_COLOR      (1 << 0)
-#define SWR_CLEAR_DEPTH      (1 << 1)
-#define SWR_CLEAR_STENCIL    (1 << 2)
-
 //////////////////////////////////////////////////////////////////////////
 /// PRIMITIVE_TOPOLOGY.
 //////////////////////////////////////////////////////////////////////////

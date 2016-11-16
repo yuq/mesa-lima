@@ -558,14 +558,14 @@ void SWR_API SwrStoreTiles(
 //////////////////////////////////////////////////////////////////////////
 /// @brief SwrClearRenderTarget - Clear attached render targets / depth / stencil
 /// @param hContext - Handle passed back from SwrCreateContext
-/// @param clearMask - combination of SWR_CLEAR_COLOR / SWR_CLEAR_DEPTH / SWR_CLEAR_STENCIL flags (or SWR_CLEAR_NONE)
+/// @param attachmentMask - combination of SWR_ATTACHMENT_*_BIT attachments to clear
 /// @param clearColor - color use for clearing render targets
 /// @param z - depth value use for clearing depth buffer
 /// @param stencil - stencil value used for clearing stencil buffer
 /// @param clearRect - The pixel-coordinate rectangle to clear in all cleared buffers
 void SWR_API SwrClearRenderTarget(
     HANDLE hContext,
-    uint32_t clearMask,
+    uint32_t attachmentMask,
     const float clearColor[4],
     float z,
     uint8_t stencil,

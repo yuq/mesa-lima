@@ -237,29 +237,37 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
         SWR_MULTISAMPLE_COUNT sampleCount = pDC->pState->state.rastState.sampleCount;
         uint32_t numSamples = GetNumSamples(sampleCount);
 
-        SWR_ASSERT(pClear->flags.bits != 0); // shouldn't be here without a reason.
+        SWR_ASSERT(pClear->attachmentMask != 0); // shouldn't be here without a reason.
 
         AR_BEGIN(BEClear, pDC->drawId);
 
-        if (pClear->flags.mask & SWR_CLEAR_COLOR)
+        if (pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR)
         {
-            HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, SWR_ATTACHMENT_COLOR0, true, numSamples);
-            // All we want to do here is to mark the hot tile as being in a "needs clear" state.
-            pHotTile->clearData[0] = *(DWORD*)&(pClear->clearRTColor[0]);
-            pHotTile->clearData[1] = *(DWORD*)&(pClear->clearRTColor[1]);
-            pHotTile->clearData[2] = *(DWORD*)&(pClear->clearRTColor[2]);
-            pHotTile->clearData[3] = *(DWORD*)&(pClear->clearRTColor[3]);
-            pHotTile->state = HOTTILE_CLEAR;
+            unsigned long rt = 0;
+            uint32_t mask = pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR;
+            while (_BitScanForward(&rt, mask))
+            {
+                mask &= ~(1 << rt);
+
+                HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, (SWR_RENDERTARGET_ATTACHMENT)rt, true, numSamples);
+
+                // All we want to do here is to mark the hot tile as being in a "needs clear" state.
+                pHotTile->clearData[0] = *(DWORD*)&(pClear->clearRTColor[0]);
+                pHotTile->clearData[1] = *(DWORD*)&(pClear->clearRTColor[1]);
+                pHotTile->clearData[2] = *(DWORD*)&(pClear->clearRTColor[2]);
+                pHotTile->clearData[3] = *(DWORD*)&(pClear->clearRTColor[3]);
+                pHotTile->state = HOTTILE_CLEAR;
+            }
         }
 
-        if (pClear->flags.mask & SWR_CLEAR_DEPTH)
+        if (pClear->attachmentMask & SWR_ATTACHMENT_DEPTH_BIT)
         {
             HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, SWR_ATTACHMENT_DEPTH, true, numSamples);
             pHotTile->clearData[0] = *(DWORD*)&pClear->clearDepth;
             pHotTile->state = HOTTILE_CLEAR;
         }
 
-        if (pClear->flags.mask & SWR_CLEAR_STENCIL)
+        if (pClear->attachmentMask & SWR_ATTACHMENT_STENCIL_BIT)
         {
             HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, SWR_ATTACHMENT_STENCIL, true, numSamples);
 
@@ -275,7 +283,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
         CLEAR_DESC *pClear = (CLEAR_DESC*)pUserData;
         AR_BEGIN(BEClear, pDC->drawId);
 
-        if (pClear->flags.mask & SWR_CLEAR_COLOR)
+        if (pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR)
         {
             /// @todo clear data should come in as RGBA32_FLOAT
             DWORD clearData[4];
@@ -292,10 +300,17 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[KNOB_COLOR_HOT_TILE_FORMAT];
             SWR_ASSERT(pfnClearTiles != nullptr);
 
-            pfnClearTiles(pDC, SWR_ATTACHMENT_COLOR0, macroTile, clearData, pClear->rect);
+            unsigned long rt = 0;
+            uint32_t mask = pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR;
+            while (_BitScanForward(&rt, mask))
+            {
+                mask &= ~(1 << rt);
+
+                pfnClearTiles(pDC, (SWR_RENDERTARGET_ATTACHMENT)rt, macroTile, clearData, pClear->rect);
+            }
         }
 
-        if (pClear->flags.mask & SWR_CLEAR_DEPTH)
+        if (pClear->attachmentMask & SWR_ATTACHMENT_DEPTH_BIT)
         {
             DWORD clearData[4];
             clearData[0] = *(DWORD*)&pClear->clearDepth;
@@ -305,7 +320,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
             pfnClearTiles(pDC, SWR_ATTACHMENT_DEPTH, macroTile, clearData, pClear->rect);
         }
 
-        if (pClear->flags.mask & SWR_CLEAR_STENCIL)
+        if (pClear->attachmentMask & SWR_ATTACHMENT_STENCIL_BIT)
         {
             uint32_t value = pClear->clearStencil;
             DWORD clearData[4];

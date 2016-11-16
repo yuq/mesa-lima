@@ -42,25 +42,17 @@ swr_clear(struct pipe_context *pipe,
    if (ctx->dirty)
       swr_update_derived(pipe);
 
-/* Update clearMask/targetMask */
-#if 0 /* XXX SWR currently only clears SWR_ATTACHMENT_COLOR0, don't bother   \
-         checking others yet. */
    if (buffers & PIPE_CLEAR_COLOR && fb->nr_cbufs) {
-      UINT i;
-      for (i = 0; i < fb->nr_cbufs; ++i)
+      for (unsigned i = 0; i < fb->nr_cbufs; ++i)
          if (fb->cbufs[i])
-            clearMask |= (SWR_CLEAR_COLOR0 << i);
+            clearMask |= (SWR_ATTACHMENT_COLOR0_BIT << i);
    }
-#else
-   if (buffers & PIPE_CLEAR_COLOR && fb->cbufs[0])
-      clearMask |= SWR_CLEAR_COLOR;
-#endif
 
    if (buffers & PIPE_CLEAR_DEPTH && fb->zsbuf)
-      clearMask |= SWR_CLEAR_DEPTH;
+      clearMask |= SWR_ATTACHMENT_DEPTH_BIT;
 
    if (buffers & PIPE_CLEAR_STENCIL && fb->zsbuf)
-      clearMask |= SWR_CLEAR_STENCIL;
+      clearMask |= SWR_ATTACHMENT_STENCIL_BIT;
 
 #if 0 // XXX HACK, override clear color alpha. On ubuntu, clears are
       // transparent.

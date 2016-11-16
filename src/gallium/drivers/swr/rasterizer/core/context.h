@@ -100,19 +100,10 @@ struct TRIANGLE_WORK_DESC
     TRI_FLAGS triFlags;
 };
 
-union CLEAR_FLAGS
-{
-    struct
-    {
-        uint32_t mask : 3;
-    };
-    uint32_t bits;
-};
-
 struct CLEAR_DESC
 {
     SWR_RECT rect;
-    CLEAR_FLAGS flags;
+    uint32_t attachmentMask;
     float clearRTColor[4];  // RGBA_32F
     float clearDepth;   // [0..1]
     uint8_t clearStencil;
