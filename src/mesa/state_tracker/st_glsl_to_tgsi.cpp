@@ -6501,9 +6501,6 @@ get_mesa_program_tgsi(struct gl_context *ctx,
       _mesa_log("\n\n");
    }
 
-   prog->Instructions = NULL;
-   prog->NumInstructions = 0;
-
    do_set_program_inouts(shader->ir, prog, shader->Stage);
    _mesa_copy_linked_program_data(shader_program, shader);
    shrink_array_declarations(v->inputs, v->num_inputs,

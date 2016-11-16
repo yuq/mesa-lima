@@ -417,9 +417,6 @@ st_nir_get_mesa_program(struct gl_context *ctx,
       _mesa_log("\n\n");
    }
 
-   prog->Instructions = NULL;
-   prog->NumInstructions = 0;
-
    prog->SamplersUsed = shader->active_samplers;
    prog->ShadowSamplers = shader->shadow_samplers;
    prog->ExternalSamplersUsed = gl_external_samplers(shader);
