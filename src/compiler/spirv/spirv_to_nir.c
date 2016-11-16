@@ -2445,6 +2445,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilitySampleRateShading:
       case SpvCapabilityClipDistance:
       case SpvCapabilityCullDistance:
+      case SpvCapabilityInputAttachment:
          break;
 
       case SpvCapabilityGeometryStreams:
@@ -2463,7 +2464,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityStorageImageMultisample:
       case SpvCapabilityImageCubeArray:
       case SpvCapabilityInt8:
-      case SpvCapabilityInputAttachment:
       case SpvCapabilitySparseResidency:
       case SpvCapabilityMinLod:
       case SpvCapabilityImageMSArray:
