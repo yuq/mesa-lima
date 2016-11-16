@@ -2217,6 +2217,7 @@ enum brw_message_target {
 # define GEN7_CLIP_VERTEX_SUBPIXEL_PRECISION_8          (0 << 19)
 # define GEN7_CLIP_VERTEX_SUBPIXEL_PRECISION_4          (1 << 19)
 # define GEN7_CLIP_EARLY_CULL                           (1 << 18)
+# define GEN8_CLIP_FORCE_USER_CLIP_DISTANCE_BITMASK     (1 << 17)
 # define GEN7_CLIP_CULLMODE_BOTH                        (0 << 16)
 # define GEN7_CLIP_CULLMODE_NONE                        (1 << 16)
 # define GEN7_CLIP_CULLMODE_FRONT                       (2 << 16)
