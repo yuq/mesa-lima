@@ -41,6 +41,7 @@
 #include "util/u_simple_shaders.h"
 #include "util/u_debug.h"
 #include "util/u_memory.h"
+#include "util/u_string.h"
 #include "tgsi/tgsi_dump.h"
 #include "tgsi/tgsi_strings.h"
 #include "tgsi/tgsi_ureg.h"
@@ -595,8 +596,8 @@ util_make_fs_blit_msaa_gen(struct pipe_context *pipe,
    assert(tgsi_tex == TGSI_TEXTURE_2D_MSAA ||
           tgsi_tex == TGSI_TEXTURE_2D_ARRAY_MSAA);
 
-   snprintf(text, sizeof(text), shader_templ, type, samp_type,
-            output_semantic, conversion_decl, type, conversion, output_mask);
+   util_snprintf(text, sizeof(text), shader_templ, type, samp_type,
+                 output_semantic, conversion_decl, type, conversion, output_mask);
 
    if (!tgsi_text_translate(text, tokens, ARRAY_SIZE(tokens))) {
       puts(text);
