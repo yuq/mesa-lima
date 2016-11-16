@@ -2764,6 +2764,15 @@ static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 	return build_gather_values(ctx, result, 2);
 }
 
+static LLVMValueRef load_sample_pos(struct nir_to_llvm_context *ctx)
+{
+	LLVMValueRef values[2];
+
+	values[0] = emit_ffract(ctx, ctx->frag_pos[0]);
+	values[1] = emit_ffract(ctx, ctx->frag_pos[1]);
+	return build_gather_values(ctx, values, 2);
+}
+
 static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 				 nir_intrinsic_instr *instr)
 {
@@ -2887,6 +2896,9 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	case nir_intrinsic_load_sample_id:
 		result = ctx->ancillary;
+		break;
+	case nir_intrinsic_load_sample_pos:
+		result = load_sample_pos(ctx);
 		break;
 	case nir_intrinsic_load_front_face:
 		result = ctx->front_face;
