@@ -204,9 +204,9 @@ droid_window_enqueue_buffer(_EGLDisplay *disp, struct dri2_egl_surface *dri2_sur
 
    mtx_lock(&disp->Mutex);
 
-   if (dri2_surf->dri_image) {
-      dri2_dpy->image->destroyImage(dri2_surf->dri_image);
-      dri2_surf->dri_image = NULL;
+   if (dri2_surf->dri_image_back) {
+      dri2_dpy->image->destroyImage(dri2_surf->dri_image_back);
+      dri2_surf->dri_image_back = NULL;
    }
 
    return EGL_TRUE;
@@ -295,7 +295,7 @@ droid_create_surface(_EGLDriver *drv, _EGLDisplay *disp, EGLint type,
       window->query(window, NATIVE_WINDOW_HEIGHT, &dri2_surf->base.Height);
    }
 
-   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
+   config = dri2_get_dri_config(dri2_conf, type,
                                 dri2_surf->base.GLColorspace);
    if (!config)
       goto cleanup_surface;
@@ -353,6 +353,18 @@ droid_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
       dri2_surf->window->common.decRef(&dri2_surf->window->common);
    }
 
+   if (dri2_surf->dri_image_back) {
+      _eglLog(_EGL_DEBUG, "%s : %d : destroy dri_image_back", __func__, __LINE__);
+      dri2_dpy->image->destroyImage(dri2_surf->dri_image_back);
+      dri2_surf->dri_image_back = NULL;
+   }
+
+   if (dri2_surf->dri_image_front) {
+      _eglLog(_EGL_DEBUG, "%s : %d : destroy dri_image_front", __func__, __LINE__);
+      dri2_dpy->image->destroyImage(dri2_surf->dri_image_front);
+      dri2_surf->dri_image_front = NULL;
+   }
+
    (*dri2_dpy->core->destroyDrawable)(dri2_surf->dri_drawable);
 
    free(dri2_surf);
@@ -391,8 +403,8 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    int fourcc, pitch;
    int offset = 0, fd;
 
-   if (dri2_surf->dri_image)
-	   return 0;
+   if (dri2_surf->dri_image_back)
+      return 0;
 
    if (!dri2_surf->buffer)
       return -1;
@@ -414,7 +426,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
       return -1;
    }
 
-   dri2_surf->dri_image =
+   dri2_surf->dri_image_back =
       dri2_dpy->image->createImageFromFds(dri2_dpy->dri_screen,
                                           dri2_surf->base.Width,
                                           dri2_surf->base.Height,
@@ -424,7 +436,7 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
                                           &pitch,
                                           &offset,
                                           dri2_surf);
-   if (!dri2_surf->dri_image)
+   if (!dri2_surf->dri_image_back)
       return -1;
 
    return 0;
@@ -439,25 +451,75 @@ droid_image_get_buffers(__DRIdrawable *driDrawable,
                   struct __DRIimageList *images)
 {
    struct dri2_egl_surface *dri2_surf = loaderPrivate;
+   struct dri2_egl_display *dri2_dpy =
+      dri2_egl_display(dri2_surf->base.Resource.Display);
 
    images->image_mask = 0;
+   images->front = NULL;
+   images->back = NULL;
 
    if (update_buffers(dri2_surf) < 0)
       return 0;
 
    if (buffer_mask & __DRI_IMAGE_BUFFER_FRONT) {
-      /*
-       * We don't support front buffers and GLES doesn't require them for
-       * window surfaces, but some DRI drivers will request them anyway.
-       * We just ignore such request as other platforms backends do.
+      if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
+         /* According current EGL spec,
+          * front buffer rendering for window surface is not supported now */
+         _eglLog(_EGL_WARNING,
+                 "%s:%d front buffer rendering for window surface is not supported!",
+                 __func__, __LINE__);
+         return 0;
+      }
+
+      /* The EGL 1.5 spec states that pbuffers are single-buffered. Specifically,
+       * the spec states that they have a back buffer but no front buffer, in
+       * contrast to pixmaps, which have a front buffer but no back buffer.
+       *
+       * Single-buffered surfaces with no front buffer confuse Mesa; so we deviate
+       * from the spec, following the precedent of Mesa's EGL X11 platform. The
+       * X11 platform correctly assigns pbuffers to single-buffered configs, but
+       * assigns the pbuffer a front buffer instead of a back buffer.
+       *
+       * Pbuffers in the X11 platform mostly work today, so let's just copy its
+       * behavior instead of trying to fix (and hence potentially breaking) the
+       * world.
        */
+      if (!dri2_surf->dri_image_front &&
+          dri2_surf->base.Type == EGL_PBUFFER_BIT) {
+         dri2_surf->dri_image_front =
+            dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+                                         dri2_surf->base.Width,
+                                         dri2_surf->base.Height,
+                                         format,
+                                         0,
+                                         dri2_surf);
+      }
+
+      if (!dri2_surf->dri_image_front) {
+         _eglLog(_EGL_WARNING,
+                 "%s:%d dri2_image front buffer allocation failed!",
+                 __func__, __LINE__);
+         return 0;
+      }
+
+      images->front = dri2_surf->dri_image_front;
+      images->image_mask |= __DRI_IMAGE_BUFFER_FRONT;
    }
 
    if (buffer_mask & __DRI_IMAGE_BUFFER_BACK) {
-      if (get_back_bo(dri2_surf) < 0)
-         return 0;
+      if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
+         if (get_back_bo(dri2_surf) < 0)
+            return 0;
+      }
 
-      images->back = dri2_surf->dri_image;
+      if (!dri2_surf->dri_image_back) {
+         _eglLog(_EGL_WARNING,
+                 "%s:%d dri2_image back buffer allocation failed!",
+                 __func__, __LINE__);
+         return 0;
+      }
+
+      images->back = dri2_surf->dri_image_back;
       images->image_mask |= __DRI_IMAGE_BUFFER_BACK;
    }
 
@@ -775,14 +837,6 @@ droid_add_configs_for_visuals(_EGLDriver *drv, _EGLDisplay *dpy)
    for (i = 0; dri2_dpy->driver_configs[i]; i++) {
       const EGLint surface_type = EGL_WINDOW_BIT | EGL_PBUFFER_BIT;
       struct dri2_egl_config *dri2_conf;
-      unsigned int double_buffered = 0;
-
-      dri2_dpy->core->getConfigAttrib(dri2_dpy->driver_configs[i],
-         __DRI_ATTRIB_DOUBLE_BUFFER, &double_buffered);
-
-      /* support only double buffered configs */
-      if (!double_buffered)
-         continue;
 
       for (j = 0; j < ARRAY_SIZE(visuals); j++) {
          config_attrs[1] = visuals[j].format;

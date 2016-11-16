@@ -290,7 +290,8 @@ struct dri2_egl_surface
 #ifdef HAVE_ANDROID_PLATFORM
    struct ANativeWindow *window;
    struct ANativeWindowBuffer *buffer;
-   __DRIimage *dri_image;
+   __DRIimage *dri_image_back;
+   __DRIimage *dri_image_front;
 
    /* EGL-owned buffers */
    __DRIbuffer           *local_buffers[__DRI_BUFFER_COUNT];
