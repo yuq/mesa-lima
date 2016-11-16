@@ -2373,9 +2373,11 @@ intel_update_r8stencil(struct brw_context *brw,
                                  dst, level, layers_per_blit * layer,
                                  MESA_FORMAT_R_UNORM8,
                                  0, 0,
-                                 src->logical_width0, src->logical_height0,
+                                 minify(src->logical_width0, level),
+                                 minify(src->logical_height0, level),
                                  0, 0,
-                                 dst->logical_width0, dst->logical_height0,
+                                 minify(dst->logical_width0, level),
+                                 minify(dst->logical_height0, level),
                                  GL_NEAREST, false, false /*mirror x, y*/,
                                  false, false /* decode/encode srgb */);
       }
