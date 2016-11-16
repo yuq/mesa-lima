@@ -44,7 +44,8 @@ cat(struct string *dest, const struct string src)
 }
 #define CAT(dest, src) cat(&dest, (struct string){src, strlen(src)})
 
-#define error(str) "\tERROR: " str "\n"
+#define error(str)   "\tERROR: " str "\n"
+#define ERROR_INDENT "\t       "
 
 #define ERROR(msg) ERROR_IF(true, msg)
 #define ERROR_IF(cond, msg)          \
@@ -102,6 +103,22 @@ static bool
 src0_is_grf(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
    return brw_inst_src0_reg_file(devinfo, inst) == BRW_GENERAL_REGISTER_FILE;
+}
+
+static bool
+src0_has_scalar_region(const struct gen_device_info *devinfo, const brw_inst *inst)
+{
+   return brw_inst_src0_vstride(devinfo, inst) == BRW_VERTICAL_STRIDE_0 &&
+          brw_inst_src0_width(devinfo, inst) == BRW_WIDTH_1 &&
+          brw_inst_src0_hstride(devinfo, inst) == BRW_HORIZONTAL_STRIDE_0;
+}
+
+static bool
+src1_has_scalar_region(const struct gen_device_info *devinfo, const brw_inst *inst)
+{
+   return brw_inst_src1_vstride(devinfo, inst) == BRW_VERTICAL_STRIDE_0 &&
+          brw_inst_src1_width(devinfo, inst) == BRW_WIDTH_1 &&
+          brw_inst_src1_hstride(devinfo, inst) == BRW_HORIZONTAL_STRIDE_0;
 }
 
 static unsigned
@@ -325,6 +342,26 @@ execution_type(const struct gen_device_info *devinfo, const brw_inst *inst)
 
    assert(src0_exec_type == BRW_HW_REG_TYPE_F);
    return BRW_HW_REG_TYPE_F;
+}
+
+/**
+ * Returns whether a region is packed
+ *
+ * A region is packed if its elements are adjacent in memory, with no
+ * intervening space, no overlap, and no replicated values.
+ */
+static bool
+is_packed(unsigned vstride, unsigned width, unsigned hstride)
+{
+   if (vstride == width) {
+      if (vstride == 1) {
+         return hstride == 0;
+      } else {
+         return hstride == 1;
+      }
+   }
+
+   return false;
 }
 
 /**
@@ -557,6 +594,376 @@ general_restrictions_on_region_parameters(const struct gen_device_info *devinfo,
    return error_msg;
 }
 
+/**
+ * Creates an \p access_mask for an \p exec_size, \p element_size, and a region
+ *
+ * An \p access_mask is a 32-element array of uint64_t, where each uint64_t is
+ * a bitmask of bytes accessed by the region.
+ *
+ * For instance the access mask of the source gX.1<4,2,2>F in an exec_size = 4
+ * instruction would be
+ *
+ *    access_mask[0] = 0x00000000000000F0
+ *    access_mask[1] = 0x000000000000F000
+ *    access_mask[2] = 0x0000000000F00000
+ *    access_mask[3] = 0x00000000F0000000
+ *    access_mask[4-31] = 0
+ *
+ * because the first execution channel accesses bytes 7-4 and the second
+ * execution channel accesses bytes 15-12, etc.
+ */
+static void
+align1_access_mask(uint64_t access_mask[static 32],
+                   unsigned exec_size, unsigned element_size, unsigned subreg,
+                   unsigned vstride, unsigned width, unsigned hstride)
+{
+   const uint64_t mask = (1 << element_size) - 1;
+   unsigned rowbase = subreg;
+   unsigned element = 0;
+
+   for (int y = 0; y < exec_size / width; y++) {
+      unsigned offset = rowbase;
+
+      for (int x = 0; x < width; x++) {
+         access_mask[element++] = mask << offset;
+         offset += hstride * element_size;
+      }
+
+      rowbase += vstride * element_size;
+   }
+
+   assert(element == 0 || element == exec_size);
+}
+
+/**
+ * Returns the number of registers accessed according to the \p access_mask
+ */
+static int
+registers_read(const uint64_t access_mask[static 32])
+{
+   int regs_read = 0;
+
+   for (unsigned i = 0; i < 32; i++) {
+      if (access_mask[i] > 0xFFFFFFFF) {
+         return 2;
+      } else if (access_mask[i]) {
+         regs_read = 1;
+      }
+   }
+
+   return regs_read;
+}
+
+/**
+ * Checks restrictions listed in "Region Alignment Rules" in the "Register
+ * Region Restrictions" section.
+ */
+static struct string
+region_alignment_rules(const struct gen_device_info *devinfo,
+                       const brw_inst *inst)
+{
+   const struct opcode_desc *desc =
+      brw_opcode_desc(devinfo, brw_inst_opcode(devinfo, inst));
+   unsigned num_sources = num_sources_from_inst(devinfo, inst);
+   unsigned exec_size = 1 << brw_inst_exec_size(devinfo, inst);
+   uint64_t dst_access_mask[32], src0_access_mask[32], src1_access_mask[32];
+   struct string error_msg = { .str = NULL, .len = 0 };
+
+   if (num_sources == 3)
+      return (struct string){};
+
+   if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_16)
+      return (struct string){};
+
+   if (inst_is_send(devinfo, inst))
+      return (struct string){};
+
+   memset(dst_access_mask, 0, sizeof(dst_access_mask));
+   memset(src0_access_mask, 0, sizeof(src0_access_mask));
+   memset(src1_access_mask, 0, sizeof(src1_access_mask));
+
+   for (unsigned i = 0; i < num_sources; i++) {
+      unsigned vstride, width, hstride, element_size, subreg;
+
+      /* In Direct Addressing mode, a source cannot span more than 2 adjacent
+       * GRF registers.
+       */
+
+#define DO_SRC(n)                                                              \
+      if (brw_inst_src ## n ## _address_mode(devinfo, inst) !=                 \
+          BRW_ADDRESS_DIRECT)                                                  \
+         continue;                                                             \
+                                                                               \
+      if (brw_inst_src ## n ## _reg_file(devinfo, inst) ==                     \
+          BRW_IMMEDIATE_VALUE)                                                 \
+         continue;                                                             \
+                                                                               \
+      vstride = brw_inst_src ## n ## _vstride(devinfo, inst) ?                 \
+                (1 << (brw_inst_src ## n ## _vstride(devinfo, inst) - 1)) : 0; \
+      width = 1 << brw_inst_src ## n ## _width(devinfo, inst);                 \
+      hstride = brw_inst_src ## n ## _hstride(devinfo, inst) ?                 \
+                (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0; \
+      element_size = brw_element_size(devinfo, inst, src ## n);                \
+      subreg = brw_inst_src ## n ## _da1_subreg_nr(devinfo, inst);             \
+      align1_access_mask(src ## n ## _access_mask,                             \
+                         exec_size, element_size, subreg,                      \
+                         vstride, width, hstride)
+
+      if (i == 0) {
+         DO_SRC(0);
+      } else if (i == 1) {
+         DO_SRC(1);
+      }
+#undef DO_SRC
+
+      unsigned num_vstride = exec_size / width;
+      unsigned num_hstride = width;
+      unsigned vstride_elements = (num_vstride - 1) * vstride;
+      unsigned hstride_elements = (num_hstride - 1) * hstride;
+      unsigned offset = (vstride_elements + hstride_elements) * element_size +
+                        subreg;
+      ERROR_IF(offset >= 64,
+               "A source cannot span more than 2 adjacent GRF registers");
+   }
+
+   if (desc->ndst == 0 || dst_is_null(devinfo, inst))
+      return error_msg;
+
+   unsigned stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+   unsigned element_size = brw_element_size(devinfo, inst, dst);
+   unsigned subreg = brw_inst_dst_da1_subreg_nr(devinfo, inst);
+   unsigned offset = ((exec_size - 1) * stride * element_size) + subreg;
+   ERROR_IF(offset >= 64,
+            "A destination cannot span more than 2 adjacent GRF registers");
+
+   if (error_msg.str)
+      return error_msg;
+
+   align1_access_mask(dst_access_mask, exec_size, element_size, subreg,
+                      exec_size == 1 ? 0 : exec_size * stride,
+                      exec_size == 1 ? 1 : exec_size,
+                      exec_size == 1 ? 0 : stride);
+
+   unsigned dst_regs = registers_read(dst_access_mask);
+   unsigned src0_regs = registers_read(src0_access_mask);
+   unsigned src1_regs = registers_read(src1_access_mask);
+
+   /* The SNB, IVB, HSW, BDW, and CHV PRMs say:
+    *
+    *    When an instruction has a source region spanning two registers and a
+    *    destination region contained in one register, the number of elements
+    *    must be the same between two sources and one of the following must be
+    *    true:
+    *
+    *       1. The destination region is entirely contained in the lower OWord
+    *          of a register.
+    *       2. The destination region is entirely contained in the upper OWord
+    *          of a register.
+    *       3. The destination elements are evenly split between the two OWords
+    *          of a register.
+    */
+   if (devinfo->gen <= 8) {
+      if (dst_regs == 1 && (src0_regs == 2 || src1_regs == 2)) {
+         unsigned upper_oword_writes = 0, lower_oword_writes = 0;
+
+         for (unsigned i = 0; i < exec_size; i++) {
+            if (dst_access_mask[i] > 0x0000FFFF) {
+               upper_oword_writes++;
+            } else {
+               assert(dst_access_mask[i] != 0);
+               lower_oword_writes++;
+            }
+         }
+
+         ERROR_IF(lower_oword_writes != 0 &&
+                  upper_oword_writes != 0 &&
+                  upper_oword_writes != lower_oword_writes,
+                  "Writes must be to only one OWord or "
+                  "evenly split between OWords");
+      }
+   }
+
+   /* The IVB and HSW PRMs say:
+    *
+    *    When an instruction has a source region that spans two registers and
+    *    the destination spans two registers, the destination elements must be
+    *    evenly split between the two registers [...]
+    *
+    * The SNB PRM contains similar wording (but written in a much more
+    * confusing manner).
+    *
+    * The BDW PRM says:
+    *
+    *    When destination spans two registers, the source may be one or two
+    *    registers. The destination elements must be evenly split between the
+    *    two registers.
+    *
+    * The SKL PRM says:
+    *
+    *    When destination of MATH instruction spans two registers, the
+    *    destination elements must be evenly split between the two registers.
+    *
+    * It is not known whether this restriction applies to KBL other Gens after
+    * SKL.
+    */
+   if (devinfo->gen <= 8 ||
+       brw_inst_opcode(devinfo, inst) == BRW_OPCODE_MATH) {
+
+      /* Nothing explicitly states that on Gen < 8 elements must be evenly
+       * split between two destination registers in the two exceptional
+       * source-region-spans-one-register cases, but since Broadwell requires
+       * evenly split writes regardless of source region, we assume that it was
+       * an oversight and require it.
+       */
+      if (dst_regs == 2) {
+         unsigned upper_reg_writes = 0, lower_reg_writes = 0;
+
+         for (unsigned i = 0; i < exec_size; i++) {
+            if (dst_access_mask[i] > 0xFFFFFFFF) {
+               upper_reg_writes++;
+            } else {
+               assert(dst_access_mask[i] != 0);
+               lower_reg_writes++;
+            }
+         }
+
+         ERROR_IF(upper_reg_writes != lower_reg_writes,
+                  "Writes must be evenly split between the two "
+                  "destination registers");
+      }
+   }
+
+   /* The IVB and HSW PRMs say:
+    *
+    *    When an instruction has a source region that spans two registers and
+    *    the destination spans two registers, the destination elements must be
+    *    evenly split between the two registers and each destination register
+    *    must be entirely derived from one source register.
+    *
+    *    Note: In such cases, the regioning parameters must ensure that the
+    *    offset from the two source registers is the same.
+    *
+    * The SNB PRM contains similar wording (but written in a much more
+    * confusing manner).
+    *
+    * There are effectively three rules stated here:
+    *
+    *    For an instruction with a source and a destination spanning two
+    *    registers,
+    *
+    *       (1) destination elements must be evenly split between the two
+    *           registers
+    *       (2) all destination elements in a register must be derived
+    *           from one source register
+    *       (3) the offset (i.e. the starting location in each of the two
+    *           registers spanned by a region) must be the same in the two
+    *           registers spanned by a region
+    *
+    * It is impossible to violate rule (1) without violating (2) or (3), so we
+    * do not attempt to validate it.
+    */
+   if (devinfo->gen <= 7 && dst_regs == 2) {
+      for (unsigned i = 0; i < num_sources; i++) {
+#define DO_SRC(n)                                                             \
+         if (src ## n ## _regs <= 1)                                          \
+            continue;                                                         \
+                                                                              \
+         for (unsigned i = 0; i < exec_size; i++) {                           \
+            if ((dst_access_mask[i] > 0xFFFFFFFF) !=                          \
+                (src ## n ## _access_mask[i] > 0xFFFFFFFF)) {                 \
+               ERROR("Each destination register must be entirely derived "    \
+                     "from one source register");                             \
+               break;                                                         \
+            }                                                                 \
+         }                                                                    \
+                                                                              \
+         unsigned offset_0 =                                                  \
+            brw_inst_src ## n ## _da1_subreg_nr(devinfo, inst);               \
+         unsigned offset_1 = offset_0;                                        \
+                                                                              \
+         for (unsigned i = 0; i < exec_size; i++) {                           \
+            if (src ## n ## _access_mask[i] > 0xFFFFFFFF) {                   \
+               offset_1 = __builtin_ctzll(src ## n ## _access_mask[i]) - 32;  \
+               break;                                                         \
+            }                                                                 \
+         }                                                                    \
+                                                                              \
+         ERROR_IF(offset_0 != offset_1,                                       \
+                  "The offset from the two source registers "                 \
+                  "must be the same")
+
+         if (i == 0) {
+            DO_SRC(0);
+         } else if (i == 1) {
+            DO_SRC(1);
+         }
+#undef DO_SRC
+      }
+   }
+
+   /* The IVB and HSW PRMs say:
+    *
+    *    When destination spans two registers, the source MUST span two
+    *    registers. The exception to the above rule:
+    *        1. When source is scalar, the source registers are not
+    *           incremented.
+    *        2. When source is packed integer Word and destination is packed
+    *           integer DWord, the source register is not incremented by the
+    *           source sub register is incremented.
+    *
+    * The SNB PRM does not contain this rule, but the internal documentation
+    * indicates that it applies to SNB as well. We assume that the rule applies
+    * to Gen <= 5 although their PRMs do not state it.
+    *
+    * While the documentation explicitly says in exception (2) that the
+    * destination must be an integer DWord, the hardware allows at least a
+    * float destination type as well. We emit such instructions from
+    *
+    *    fs_visitor::emit_interpolation_setup_gen6
+    *    fs_visitor::emit_fragcoord_interpolation
+    *
+    * and have for years with no ill effects.
+    *
+    * Additionally the simulator source code indicates that the real condition
+    * is that the size of the destination type is 4 bytes.
+    */
+   if (devinfo->gen <= 7 && dst_regs == 2) {
+      bool dst_is_packed_dword =
+         is_packed(exec_size * stride, exec_size, stride) &&
+         brw_element_size(devinfo, inst, dst) == 4;
+
+      for (unsigned i = 0; i < num_sources; i++) {
+#define DO_SRC(n)                                                                  \
+         unsigned vstride, width, hstride;                                         \
+         vstride = brw_inst_src ## n ## _vstride(devinfo, inst) ?                  \
+                   (1 << (brw_inst_src ## n ## _vstride(devinfo, inst) - 1)) : 0;  \
+         width = 1 << brw_inst_src ## n ## _width(devinfo, inst);                  \
+         hstride = brw_inst_src ## n ## _hstride(devinfo, inst) ?                  \
+                   (1 << (brw_inst_src ## n ## _hstride(devinfo, inst) - 1)) : 0;  \
+         bool src ## n ## _is_packed_word =                                        \
+            is_packed(vstride, width, hstride) &&                                  \
+            (brw_inst_src ## n ## _reg_type(devinfo, inst) == BRW_HW_REG_TYPE_W || \
+             brw_inst_src ## n ## _reg_type(devinfo, inst) == BRW_HW_REG_TYPE_UW); \
+                                                                                   \
+         ERROR_IF(src ## n ## _regs == 1 &&                                        \
+                  !src ## n ## _has_scalar_region(devinfo, inst) &&                \
+                  !(dst_is_packed_dword && src ## n ## _is_packed_word),           \
+                  "When the destination spans two registers, the source must "     \
+                  "span two registers\n" ERROR_INDENT "(exceptions for scalar "    \
+                  "source and packed-word to packed-dword expansion)")
+
+         if (i == 0) {
+            DO_SRC(0);
+         } else if (i == 1) {
+            DO_SRC(1);
+         }
+#undef DO_SRC
+      }
+   }
+
+   return error_msg;
+}
+
 bool
 brw_validate_instructions(const struct brw_codegen *p, int start_offset,
                           struct annotation_info *annotation)
@@ -577,6 +984,7 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
          CHECK(send_restrictions);
          CHECK(general_restrictions_based_on_operand_types);
          CHECK(general_restrictions_on_region_parameters);
+         CHECK(region_alignment_rules);
       }
 
       if (error_msg.str && annotation) {

@@ -468,3 +468,291 @@ TEST_P(validation_test, vstride_on_align16_must_be_0_or_4)
       clear_instructions(p);
    }
 }
+
+/* In Direct Addressing mode, a source cannot span more than 2 adjacent GRF
+ * registers.
+ */
+TEST_P(validation_test, source_cannot_span_more_than_2_registers)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_32);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_8);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_8);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_src1_da1_subreg_nr(&devinfo, last_inst, 2);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+
+   EXPECT_TRUE(validate(p));
+}
+
+/* A destination cannot span more than 2 adjacent GRF registers. */
+TEST_P(validation_test, destination_cannot_span_more_than_2_registers)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_32);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_8);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 6);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_4);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_TRUE(validate(p));
+}
+
+TEST_P(validation_test, src_region_spans_two_regs_dst_region_spans_one)
+{
+   /* Writes to dest are to the lower OWord */
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   /* Writes to dest are to the upper OWord */
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 16);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   /* Writes to dest are evenly split between OWords */
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_8);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   /* Writes to dest are uneven between OWords */
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_4);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 10);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_16);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_2);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   if (devinfo.gen >= 9) {
+      EXPECT_TRUE(validate(p));
+   } else {
+      EXPECT_FALSE(validate(p));
+   }
+}
+
+TEST_P(validation_test, dst_elements_must_be_evenly_split_between_registers)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 4);
+
+   if (devinfo.gen >= 9) {
+      EXPECT_TRUE(validate(p));
+   } else {
+      EXPECT_FALSE(validate(p));
+   }
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   if (devinfo.gen >= 6) {
+      gen6_math(p, g0, BRW_MATH_FUNCTION_SIN, g0, null);
+
+      EXPECT_TRUE(validate(p));
+
+      clear_instructions(p);
+
+      gen6_math(p, g0, BRW_MATH_FUNCTION_SIN, g0, null);
+      brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 4);
+
+      EXPECT_FALSE(validate(p));
+   }
+}
+
+TEST_P(validation_test, two_src_two_dst_source_offsets_must_be_same)
+{
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_4);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_4);
+   brw_inst_set_src0_da1_subreg_nr(&devinfo, last_inst, 16);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_2);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   if (devinfo.gen <= 7) {
+      EXPECT_FALSE(validate(p));
+   } else {
+      EXPECT_TRUE(validate(p));
+   }
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_4);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_4);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_8);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_2);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_TRUE(validate(p));
+}
+
+#if 0
+TEST_P(validation_test, two_src_two_dst_each_dst_must_be_derived_from_one_src)
+{
+   // mov (16) r10.0<2>:w r12.4<4;4,1>:w
+
+   brw_MOV(p, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_da1_subreg_nr(&devinfo, last_inst, 8);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_4);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+#if 0
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_src1_da1_subreg_nr(&devinfo, last_inst, 16);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_4);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_4);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_1);
+
+   EXPECT_FALSE(validate(p));
+   #endif
+}
+#endif
+
+TEST_P(validation_test, one_src_two_dst)
+{
+   struct brw_reg g0_0 = brw_vec1_grf(0, 0);
+
+   brw_ADD(p, g0, g0_0, g0_0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_D);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src1_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_src1_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src1_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+
+   if (devinfo.gen >= 8) {
+      EXPECT_TRUE(validate(p));
+   } else {
+      EXPECT_FALSE(validate(p));
+   }
+
+   clear_instructions(p);
+
+   brw_ADD(p, g0, g0, g0);
+   brw_inst_set_exec_size(&devinfo, last_inst, BRW_EXECUTE_16);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_dst_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+   brw_inst_set_src0_vstride(&devinfo, last_inst, BRW_VERTICAL_STRIDE_0);
+   brw_inst_set_src0_width(&devinfo, last_inst, BRW_WIDTH_1);
+   brw_inst_set_src0_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_0);
+   brw_inst_set_src1_reg_type(&devinfo, last_inst, BRW_HW_REG_TYPE_W);
+
+   if (devinfo.gen >= 8) {
+      EXPECT_TRUE(validate(p));
+   } else {
+      EXPECT_FALSE(validate(p));
+   }
+}
