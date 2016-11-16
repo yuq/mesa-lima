@@ -413,21 +413,26 @@ svga_buffer_create(struct pipe_screen *screen,
    sbuf->b.b.screen = screen;
    bind_flags = template->bind;
 
+   LIST_INITHEAD(&sbuf->surfaces);
+
    if (bind_flags & PIPE_BIND_CONSTANT_BUFFER) {
       /* Constant buffers can only have the PIPE_BIND_CONSTANT_BUFFER
        * flag set.
        */
       if (ss->sws->have_vgpu10) {
          bind_flags = PIPE_BIND_CONSTANT_BUFFER;
-
-         /* Constant buffer size needs to be in multiples of 16. */
-         sbuf->b.b.width0 = align(sbuf->b.b.width0, 16);
       }
    }
 
+   /* Although svga device only requires constant buffer size to be
+    * in multiples of 16, in order to allow bind_flags promotion,
+    * we are mandating all buffer size to be in multiples of 16.
+    */
+   sbuf->b.b.width0 = align(sbuf->b.b.width0, 16);
+
    if (svga_buffer_needs_hw_storage(bind_flags)) {
 
-      /* If the buffer will be used for vertex/index/stream data, set
+      /* If the buffer is not used for constant buffer, set
        * the vertex/index bind flags as well so that the buffer will be
        * accepted for those uses.
        * Note that the PIPE_BIND_ flags we get from the state tracker are

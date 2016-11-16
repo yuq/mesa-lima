@@ -148,6 +148,8 @@ svga_buffer_create_host_surface(struct svga_screen *ss,
                                 struct svga_buffer *sbuf,
                                 unsigned bind_flags)
 {
+   enum pipe_error ret = PIPE_OK;
+
    assert(!sbuf->user);
 
    if (!sbuf->handle) {
@@ -207,9 +209,13 @@ svga_buffer_create_host_surface(struct svga_screen *ss,
 
       SVGA_DBG(DEBUG_DMA, "   --> got sid %p sz %d (buffer)\n",
                sbuf->handle, sbuf->b.b.width0);
+
+      /* Add the new surface to the buffer surface list */
+      ret = svga_buffer_add_host_surface(sbuf, sbuf->handle, &sbuf->key,
+                                         bind_flags);
    }
 
-   return PIPE_OK;
+   return ret;
 }
 
 
@@ -221,23 +227,17 @@ svga_buffer_recreate_host_surface(struct svga_context *svga,
                                   struct svga_buffer *sbuf,
                                   unsigned bind_flags)
 {
-   struct svga_screen *ss = svga_screen(sbuf->b.b.screen);
-   struct svga_winsys_surface *old_handle;
-   struct svga_host_surface_cache_key old_key;
    enum pipe_error ret = PIPE_OK;
+   struct svga_winsys_surface *old_handle = sbuf->handle;
 
    assert(sbuf->bind_flags != bind_flags);
+   assert(old_handle);
 
-   /* Flush any pending upload first */
-   svga_buffer_upload_flush(svga, sbuf);
-
-   /* Save the old resource handle and key */
-   old_handle = sbuf->handle;
-   old_key = sbuf->key;
    sbuf->handle = NULL;
  
-   /* Create a new resource with the required bind_flags */
-   ret = svga_buffer_create_host_surface(ss, sbuf, bind_flags);
+   /* Create a new resource with the requested bind_flags */
+   ret = svga_buffer_create_host_surface(svga_screen(svga->pipe.screen),
+                                         sbuf, bind_flags);
    if (ret == PIPE_OK) {
       /* Copy the surface data */
       assert(sbuf->handle);
@@ -254,20 +254,175 @@ svga_buffer_recreate_host_surface(struct svga_context *svga,
    /* Set the new bind flags for this buffer resource */
    sbuf->bind_flags = bind_flags;
 
-   /* Destroy the old resource handle */
-   svga_screen_surface_destroy(ss, &old_key, &old_handle);
-
    return ret;
 }
+
+
+/**
+ * Returns TRUE if the surface bind flags is compatible with the new bind flags.
+ */
+static boolean
+compatible_bind_flags(unsigned bind_flags,
+                      unsigned tobind_flags)
+{
+   if ((bind_flags & tobind_flags) == tobind_flags)
+      return TRUE;
+   else if ((bind_flags|tobind_flags) & PIPE_BIND_CONSTANT_BUFFER)
+      return FALSE;
+   else
+      return TRUE;
+}
+
+
+/**
+ * Returns a buffer surface from the surface list
+ * that has the requested bind flags or its existing bind flags
+ * can be promoted to include the new bind flags.
+ */
+static struct svga_buffer_surface *
+svga_buffer_get_host_surface(struct svga_buffer *sbuf,
+                             unsigned bind_flags)
+{
+   struct svga_buffer_surface *bufsurf;
+
+   LIST_FOR_EACH_ENTRY(bufsurf, &sbuf->surfaces, list) {
+      if (compatible_bind_flags(bufsurf->bind_flags, bind_flags))
+         return bufsurf;
+   }
+   return NULL;
+}
+
+
+/**
+ * Adds the host surface to the buffer surface list.
+ */
+enum pipe_error
+svga_buffer_add_host_surface(struct svga_buffer *sbuf,
+                             struct svga_winsys_surface *handle,
+                             struct svga_host_surface_cache_key *key,
+                             unsigned bind_flags)
+{
+   struct svga_buffer_surface *bufsurf;
+
+   bufsurf = CALLOC_STRUCT(svga_buffer_surface);
+   if (!bufsurf)
+      return PIPE_ERROR_OUT_OF_MEMORY;
+
+   bufsurf->bind_flags = bind_flags;
+   bufsurf->handle = handle;
+   bufsurf->key = *key;
+
+   /* add the surface to the surface list */
+   LIST_ADD(&bufsurf->list, &sbuf->surfaces);
+
+   return PIPE_OK;
+}
+
+
+/**
+ * Start using the specified surface for this buffer resource.
+ */
+void
+svga_buffer_bind_host_surface(struct svga_context *svga,
+                              struct svga_buffer *sbuf,
+                              struct svga_buffer_surface *bufsurf)
+{
+   enum pipe_error ret;
+
+   /* Update the to-bind surface */
+   assert(bufsurf->handle);
+   assert(sbuf->handle);
+
+   /* If we are switching from stream output to other buffer,
+    * make sure to copy the buffer content.
+    */
+   if (sbuf->bind_flags & PIPE_BIND_STREAM_OUTPUT) {
+      ret = SVGA3D_vgpu10_BufferCopy(svga->swc, sbuf->handle, bufsurf->handle,
+                                     0, 0, sbuf->b.b.width0);
+      if (ret != PIPE_OK) {
+         svga_context_flush(svga, NULL);
+         ret = SVGA3D_vgpu10_BufferCopy(svga->swc, sbuf->handle, bufsurf->handle,
+                                        0, 0, sbuf->b.b.width0);
+         assert(ret == PIPE_OK);
+      }
+   }
+
+   /* Set this surface as the current one */
+   sbuf->handle = bufsurf->handle;
+   sbuf->key = bufsurf->key;
+   sbuf->bind_flags = bufsurf->bind_flags;
+}
+
+
+/**
+ * Prepare a host surface that can be used as indicated in the
+ * tobind_flags. If the existing host surface is not created
+ * with the necessary binding flags and if the new bind flags can be
+ * combined with the existing bind flags, then we will recreate a
+ * new surface with the combined bind flags. Otherwise, we will create
+ * a surface for that incompatible bind flags.
+ * For example, if a stream output buffer is reused as a constant buffer,
+ * since constant buffer surface cannot be bound as a stream output surface,
+ * two surfaces will be created, one for stream output,
+ * and another one for constant buffer.
+ */
+enum pipe_error
+svga_buffer_validate_host_surface(struct svga_context *svga,
+                                  struct svga_buffer *sbuf,
+                                  unsigned tobind_flags)
+{
+   struct svga_buffer_surface *bufsurf;
+   enum pipe_error ret = PIPE_OK;
+
+   /* Flush any pending upload first */
+   svga_buffer_upload_flush(svga, sbuf);
+
+   /* First check from the cached buffer surface list to see if there is
+    * already a buffer surface that has the requested bind flags, or
+    * surface with compatible bind flags that can be promoted.
+    */
+   bufsurf = svga_buffer_get_host_surface(sbuf, tobind_flags);
+   
+   if (bufsurf) {
+      if ((bufsurf->bind_flags & tobind_flags) == tobind_flags) {
+         /* there is a surface with the requested bind flags */
+         svga_buffer_bind_host_surface(svga, sbuf, bufsurf);
+      } else {
+
+         /* Recreate a host surface with the combined bind flags */
+         ret = svga_buffer_recreate_host_surface(svga, sbuf,
+                                                 bufsurf->bind_flags |
+                                                 tobind_flags);
+
+         /* Destroy the old surface */
+         svga_screen_surface_destroy(svga_screen(sbuf->b.b.screen),
+                                     &bufsurf->key, &bufsurf->handle);
+         
+         LIST_DEL(&bufsurf->list);
+         FREE(bufsurf);
+      }
+   } else {
+      /* Need to create a new surface if the bind flags are incompatible,
+       * such as constant buffer surface & stream output surface.
+       */
+      ret = svga_buffer_recreate_host_surface(svga, sbuf,
+                                              tobind_flags);
+   }
+   return ret;
+}
+
 
 void
 svga_buffer_destroy_host_surface(struct svga_screen *ss,
                                  struct svga_buffer *sbuf)
 {
-   if (sbuf->handle) {
+   struct svga_buffer_surface *bufsurf, *next;
+
+   LIST_FOR_EACH_ENTRY_SAFE(bufsurf, next, &sbuf->surfaces, list) {
       SVGA_DBG(DEBUG_DMA, " ungrab sid %p sz %d\n",
-               sbuf->handle, sbuf->b.b.width0);
-      svga_screen_surface_destroy(ss, &sbuf->key, &sbuf->handle);
+               bufsurf->handle, sbuf->b.b.width0);
+      svga_screen_surface_destroy(ss, &bufsurf->key, &bufsurf->handle);
+      FREE(bufsurf);
    }
 }
 
@@ -841,13 +996,9 @@ svga_buffer_handle(struct svga_context *svga, struct pipe_resource *buf,
    if (sbuf->handle) {
       if ((sbuf->bind_flags & tobind_flags) != tobind_flags) {
          /* If the allocated resource's bind flags do not include the
-          * requested bind flags, create a new resource to include the
-          * new bind flags, and do a BufferCopy from the old resource to
-          * the new one.
+          * requested bind flags, validate the host surface.
           */
-         assert(svga_have_vgpu10(svga));
-         ret = svga_buffer_recreate_host_surface(svga, sbuf,
-                                                 sbuf->bind_flags|tobind_flags);
+         ret = svga_buffer_validate_host_surface(svga, sbuf, tobind_flags);
          if (ret != PIPE_OK)
             return NULL;
       }

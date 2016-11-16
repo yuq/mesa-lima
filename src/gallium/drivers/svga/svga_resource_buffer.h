@@ -59,6 +59,18 @@ struct svga_buffer_range
 struct svga_3d_update_gb_image;
 
 /**
+ * This structure describes the bind flags and cache key associated
+ * with the host surface.
+ */
+struct svga_buffer_surface
+{
+   struct list_head list;
+   unsigned bind_flags;
+   struct svga_host_surface_cache_key key;
+   struct svga_winsys_surface *handle;
+};
+
+/**
  * SVGA pipe buffer.
  */
 struct svga_buffer 
@@ -99,6 +111,12 @@ struct svga_buffer
     * Only set for non-user buffers.
     */
    struct svga_winsys_surface *handle;
+
+   /**
+    * List of surfaces created for this buffer resource to support
+    * incompatible bind flags.
+    */
+   struct list_head surfaces;
 
    /**
     * Information about ongoing and past map operations.
