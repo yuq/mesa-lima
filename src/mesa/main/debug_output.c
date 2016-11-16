@@ -1282,12 +1282,14 @@ _mesa_init_debug_output(struct gl_context *ctx)
        */
       struct gl_debug_state *debug = _mesa_lock_debug_state(ctx);
       if (!debug) {
-         return;
+         goto done;
       }
       debug->DebugOutput = GL_TRUE;
       debug->LogToStderr = GL_TRUE;
       ctx->Const.ContextFlags |= GL_CONTEXT_FLAG_DEBUG_BIT;
    }
+done:
+   _mesa_unlock_debug_state(ctx);
 }
 
 
