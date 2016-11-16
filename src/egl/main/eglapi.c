@@ -1195,8 +1195,8 @@ eglSwapBuffers(EGLDisplay dpy, EGLSurface surface)
 
 
 static EGLBoolean
-eglSwapBuffersWithDamageCommon(_EGLDisplay *disp, _EGLSurface *surf,
-                               EGLint *rects, EGLint n_rects)
+_eglSwapBuffersWithDamageCommon(_EGLDisplay *disp, _EGLSurface *surf,
+                                EGLint *rects, EGLint n_rects)
 {
    _EGLContext *ctx = _eglGetCurrentContext();
    _EGLDriver *drv;
@@ -1224,7 +1224,7 @@ eglSwapBuffersWithDamageEXT(EGLDisplay dpy, EGLSurface surface,
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSurface *surf = _eglLookupSurface(surface, disp);
    _EGL_FUNC_START(disp, EGL_OBJECT_SURFACE_KHR, surf, EGL_FALSE);
-   return eglSwapBuffersWithDamageCommon(disp, surf, rects, n_rects);
+   return _eglSwapBuffersWithDamageCommon(disp, surf, rects, n_rects);
 }
 
 static EGLBoolean EGLAPIENTRY
@@ -1234,7 +1234,7 @@ eglSwapBuffersWithDamageKHR(EGLDisplay dpy, EGLSurface surface,
    _EGLDisplay *disp = _eglLockDisplay(dpy);
    _EGLSurface *surf = _eglLookupSurface(surface, disp);
    _EGL_FUNC_START(disp, EGL_OBJECT_SURFACE_KHR, surf, EGL_FALSE);
-   return eglSwapBuffersWithDamageCommon(disp, surf, rects, n_rects);
+   return _eglSwapBuffersWithDamageCommon(disp, surf, rects, n_rects);
 }
 
 EGLBoolean EGLAPIENTRY
