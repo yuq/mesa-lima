@@ -145,10 +145,11 @@ brw_emit_surface_state(struct brw_context *brw,
       if (mt->mcs_buf) {
          assert(mt->mcs_buf->offset == 0);
          aux_bo = mt->mcs_buf->bo;
-         aux_offset = mt->mcs_buf->bo->offset64;
+         aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
       } else {
          aux_bo = mt->hiz_buf->aux_base.bo;
-         aux_offset = mt->hiz_buf->aux_base.bo->offset64;
+         aux_offset = mt->hiz_buf->aux_base.bo->offset64 +
+                      mt->hiz_buf->mt->offset;
       }
 
       /* We only really need a clear color if we also have an auxiliary
