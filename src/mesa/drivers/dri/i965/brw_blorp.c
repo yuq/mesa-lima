@@ -141,9 +141,25 @@ blorp_surf_for_miptree(struct brw_context *brw,
                        struct blorp_surf *surf,
                        struct intel_mipmap_tree *mt,
                        bool is_render_target,
+                       uint32_t safe_aux_usage,
                        unsigned *level,
+                       unsigned start_layer, unsigned num_layers,
                        struct isl_surf tmp_surfs[2])
 {
+   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
+       mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
+      const unsigned num_samples = MAX2(1, mt->num_samples);
+      for (unsigned i = 0; i < num_layers; i++) {
+         for (unsigned s = 0; s < num_samples; s++) {
+            const unsigned phys_layer = (start_layer + i) * num_samples + s;
+            intel_miptree_check_level_layer(mt, *level, phys_layer);
+         }
+      }
+   } else {
+      for (unsigned i = 0; i < num_layers; i++)
+         intel_miptree_check_level_layer(mt, *level, start_layer + i);
+   }
+
    intel_miptree_get_isl_surf(brw, mt, &tmp_surfs[0]);
    surf->surf = &tmp_surfs[0];
    surf->addr = (struct blorp_address) {
@@ -175,10 +191,41 @@ blorp_surf_for_miptree(struct brw_context *brw,
    struct isl_surf *aux_surf = &tmp_surfs[1];
    intel_miptree_get_aux_isl_surf(brw, mt, aux_surf, &surf->aux_usage);
 
-   /* For textures that are in the RESOLVED state, we ignore the MCS */
-   if (mt->mcs_buf && !is_render_target &&
-       mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED)
-      surf->aux_usage = ISL_AUX_USAGE_NONE;
+   if (surf->aux_usage != ISL_AUX_USAGE_NONE) {
+      if (surf->aux_usage == ISL_AUX_USAGE_HIZ) {
+         /* If we're not going to use it as a depth buffer, resolve HiZ */
+         if (!(safe_aux_usage & (1 << ISL_AUX_USAGE_HIZ))) {
+            for (unsigned i = 0; i < num_layers; i++) {
+               intel_miptree_slice_resolve_depth(brw, mt, *level,
+                                                 start_layer + i);
+
+               /* If we're rendering to it then we'll need a HiZ resolve once
+                * we're done before we can use it with HiZ again.
+                */
+               if (is_render_target)
+                  intel_miptree_slice_set_needs_hiz_resolve(mt, *level,
+                                                            start_layer + i);
+            }
+            surf->aux_usage = ISL_AUX_USAGE_NONE;
+         }
+      } else if (!(safe_aux_usage & (1 << surf->aux_usage))) {
+         uint32_t flags = 0;
+         if (safe_aux_usage & (1 << ISL_AUX_USAGE_CCS_E))
+            flags |= INTEL_MIPTREE_IGNORE_CCS_E;
+
+         intel_miptree_resolve_color(brw, mt, flags);
+
+         assert(mt->fast_clear_state == INTEL_FAST_CLEAR_STATE_RESOLVED);
+         surf->aux_usage = ISL_AUX_USAGE_NONE;
+      }
+   }
+
+   if (is_render_target) {
+      intel_miptree_used_for_rendering(mt);
+
+      if (surf->aux_usage == ISL_AUX_USAGE_CCS_E)
+         mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
+   }
 
    if (surf->aux_usage != ISL_AUX_USAGE_NONE) {
       /* We only really need a clear color if we also have an auxiliary
@@ -288,23 +335,6 @@ physical_to_logical_layer(struct intel_mipmap_tree *mt,
    }
 }
 
-static void
-miptree_check_level_logical_layer(struct intel_mipmap_tree *mt,
-                                  unsigned level,
-                                  unsigned logical_layer)
-{
-   if (mt->msaa_layout == INTEL_MSAA_LAYOUT_UMS ||
-       mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS) {
-      const unsigned num_samples = MAX2(1, mt->num_samples);
-      for (unsigned s = 0; s < num_samples; s++) {
-         const unsigned physical_layer = (logical_layer * num_samples) + s;
-         intel_miptree_check_level_layer(mt, level, physical_layer);
-      }
-   } else {
-      intel_miptree_check_level_layer(mt, level, logical_layer);
-   }
-}
-
 /**
  * Note: if the src (or dst) is a 2D multisample array texture on Gen7+ using
  * INTEL_MSAA_LAYOUT_UMS or INTEL_MSAA_LAYOUT_CMS, src_layer (dst_layer) is
@@ -327,15 +357,9 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
                         GLenum filter, bool mirror_x, bool mirror_y,
                         bool decode_srgb, bool encode_srgb)
 {
-   /* Get ready to blit.  This includes depth resolving the src and dst
-    * buffers if necessary.  Note: it's not necessary to do a color resolve on
-    * the destination buffer because we use the standard render path to render
-    * to destination color buffers, and the standard render path is
-    * fast-color-aware.
-    */
-   intel_miptree_resolve_color(brw, src_mt, INTEL_MIPTREE_IGNORE_CCS_E);
-   intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
-   intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
+   /* Blorp operates in logical layers */
+   src_layer = physical_to_logical_layer(src_mt, src_layer);
+   dst_layer = physical_to_logical_layer(dst_mt, dst_layer);
 
    DBG("%s from %dx %s mt %p %d %d (%f,%f) (%f,%f)"
        "to %dx %s mt %p %d %d (%f,%f) (%f,%f) (flip %d,%d)\n",
@@ -369,16 +393,22 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
       src_format = dst_format = MESA_FORMAT_R_FLOAT32;
    }
 
-   intel_miptree_check_level_layer(src_mt, src_level, src_layer);
-   intel_miptree_check_level_layer(dst_mt, dst_level, dst_layer);
-   intel_miptree_used_for_rendering(dst_mt);
+   uint32_t src_usage_flags = (1 << ISL_AUX_USAGE_MCS);
+   if (src_format == src_mt->format)
+      src_usage_flags |= (1 << ISL_AUX_USAGE_CCS_E);
+
+   uint32_t dst_usage_flags = (1 << ISL_AUX_USAGE_MCS);
+   if (dst_format == dst_mt->format) {
+      dst_usage_flags |= (1 << ISL_AUX_USAGE_CCS_E) |
+                         (1 << ISL_AUX_USAGE_CCS_D);
+   }
 
    struct isl_surf tmp_surfs[4];
    struct blorp_surf src_surf, dst_surf;
-   blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
-                          &src_level, &tmp_surfs[0]);
-   blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
-                          &dst_level, &tmp_surfs[2]);
+   blorp_surf_for_miptree(brw, &src_surf, src_mt, false, src_usage_flags,
+                          &src_level, src_layer, 1, &tmp_surfs[0]);
+   blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true, dst_usage_flags,
+                          &dst_level, dst_layer, 1, &tmp_surfs[2]);
 
    struct isl_swizzle src_isl_swizzle = {
       .r = swizzle_to_scs(GET_SWZ(src_swizzle, 0)),
@@ -389,22 +419,15 @@ brw_blorp_blit_miptrees(struct brw_context *brw,
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
-   blorp_blit(&batch, &src_surf, src_level,
-              physical_to_logical_layer(src_mt, src_layer),
+   blorp_blit(&batch, &src_surf, src_level, src_layer,
               brw_blorp_to_isl_format(brw, src_format, false), src_isl_swizzle,
-              &dst_surf, dst_level,
-              physical_to_logical_layer(dst_mt, dst_layer),
+              &dst_surf, dst_level, dst_layer,
               brw_blorp_to_isl_format(brw, dst_format, true),
               ISL_SWIZZLE_IDENTITY,
               src_x0, src_y0, src_x1, src_y1,
               dst_x0, dst_y0, dst_x1, dst_y1,
               filter, mirror_x, mirror_y);
    blorp_batch_finish(&batch);
-
-   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
-
-   if (intel_miptree_is_lossless_compressed(brw, dst_mt))
-      dst_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
 }
 
 void
@@ -417,16 +440,6 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
                         unsigned dst_x, unsigned dst_y,
                         unsigned src_width, unsigned src_height)
 {
-   /* Get ready to blit.  This includes depth resolving the src and dst
-    * buffers if necessary.  Note: it's not necessary to do a color resolve on
-    * the destination buffer because we use the standard render path to render
-    * to destination color buffers, and the standard render path is
-    * fast-color-aware.
-    */
-   intel_miptree_resolve_color(brw, src_mt, INTEL_MIPTREE_IGNORE_CCS_E);
-   intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_layer);
-   intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_layer);
-
    DBG("%s from %dx %s mt %p %d %d (%d,%d) %dx%d"
        "to %dx %s mt %p %d %d (%d,%d)\n",
        __func__,
@@ -435,16 +448,14 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
        dst_mt->num_samples, _mesa_get_format_name(dst_mt->format), dst_mt,
        dst_level, dst_layer, dst_x, dst_y);
 
-   miptree_check_level_logical_layer(src_mt, src_level, src_layer);
-   miptree_check_level_logical_layer(dst_mt, dst_level, dst_layer);
-   intel_miptree_used_for_rendering(dst_mt);
-
    struct isl_surf tmp_surfs[4];
    struct blorp_surf src_surf, dst_surf;
    blorp_surf_for_miptree(brw, &src_surf, src_mt, false,
-                          &src_level, &tmp_surfs[0]);
+                          (1 << ISL_AUX_USAGE_MCS),
+                          &src_level, src_layer, 1, &tmp_surfs[0]);
    blorp_surf_for_miptree(brw, &dst_surf, dst_mt, true,
-                          &dst_level, &tmp_surfs[2]);
+                          (1 << ISL_AUX_USAGE_MCS),
+                          &dst_level, dst_layer, 1, &tmp_surfs[2]);
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
@@ -452,11 +463,6 @@ brw_blorp_copy_miptrees(struct brw_context *brw,
               &dst_surf, dst_level, dst_layer,
               src_x, src_y, dst_x, dst_y, src_width, src_height);
    blorp_batch_finish(&batch);
-
-   intel_miptree_slice_set_needs_hiz_resolve(dst_mt, dst_level, dst_layer);
-
-   if (intel_miptree_is_lossless_compressed(brw, dst_mt))
-      dst_mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
 }
 
 static struct intel_mipmap_tree *
@@ -838,14 +844,18 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       }
    }
 
-   intel_miptree_used_for_rendering(irb->mt);
+   const unsigned logical_layer = irb_logical_mt_layer(irb);
+   const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
 
    /* We can't setup the blorp_surf until we've allocated the MCS above */
    struct isl_surf isl_tmp[2];
    struct blorp_surf surf;
    unsigned level = irb->mt_level;
-   blorp_surf_for_miptree(brw, &surf, irb->mt, true, &level, isl_tmp);
-   const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
+   blorp_surf_for_miptree(brw, &surf, irb->mt, true,
+                          (1 << ISL_AUX_USAGE_MCS) |
+                          (1 << ISL_AUX_USAGE_CCS_E) |
+                          (1 << ISL_AUX_USAGE_CCS_D),
+                          &level, logical_layer, num_layers, isl_tmp);
 
    if (can_fast_clear) {
       DBG("%s (fast) to mt %p level %d layers %d+%d\n", __FUNCTION__,
@@ -855,7 +865,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       blorp_batch_init(&brw->blorp, &batch, brw, 0);
       blorp_fast_clear(&batch, &surf,
                        (enum isl_format)brw->render_target_format[format],
-                       level, irb_logical_mt_layer(irb), num_layers,
+                       level, logical_layer, num_layers,
                        x0, y0, x1, y1);
       blorp_batch_finish(&batch);
 
@@ -880,14 +890,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
                   x0, y0, x1, y1,
                   clear_color, color_write_disable);
       blorp_batch_finish(&batch);
-
-      if (is_lossless_compressed) {
-         /* Compressed buffers can be cleared also using normal rep-clear. In
-          * such case they behave such as if they were drawn using normal 3D
-          * render pipeline, and we simply mark the mcs as dirty.
-          */
-         irb->mt->fast_clear_state = INTEL_FAST_CLEAR_STATE_UNRESOLVED;
-      }
    }
 
    return true;
@@ -912,11 +914,6 @@ brw_blorp_clear_color(struct brw_context *brw, struct gl_framebuffer *fb,
       if (rb == NULL)
          continue;
 
-      const unsigned num_layers = fb->MaxNumLayers ? irb->layer_count : 1;
-      for (unsigned layer = 0; layer < num_layers; layer++) {
-         intel_miptree_check_level_layer(irb->mt, irb->mt_level, layer);
-      }
-
       if (!do_single_blorp_clear(brw, fb, rb, buf, partial_clear,
                                  encode_srgb)) {
          return false;
@@ -935,13 +932,14 @@ brw_blorp_resolve_color(struct brw_context *brw, struct intel_mipmap_tree *mt)
 
    const mesa_format format = _mesa_get_srgb_format_linear(mt->format);
 
-   intel_miptree_check_level_layer(mt, 0 /* level */, 0 /* layer */);
-   intel_miptree_used_for_rendering(mt);
-
    struct isl_surf isl_tmp[2];
    struct blorp_surf surf;
    unsigned level = 0;
-   blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+   blorp_surf_for_miptree(brw, &surf, mt, true,
+                          (1 << ISL_AUX_USAGE_CCS_E) |
+                          (1 << ISL_AUX_USAGE_CCS_D),
+                          &level, 0 /* start_layer */, 1 /* num_layers */,
+                          isl_tmp);
 
    enum blorp_fast_clear_op resolve_op;
    if (brw->gen >= 9) {
@@ -969,14 +967,12 @@ static void
 gen6_blorp_hiz_exec(struct brw_context *brw, struct intel_mipmap_tree *mt,
                     unsigned int level, unsigned int layer, enum blorp_hiz_op op)
 {
-   intel_miptree_check_level_layer(mt, level, layer);
-   intel_miptree_used_for_rendering(mt);
-
    assert(intel_miptree_level_has_hiz(mt, level));
 
    struct isl_surf isl_tmp[2];
    struct blorp_surf surf;
-   blorp_surf_for_miptree(brw, &surf, mt, true, &level, isl_tmp);
+   blorp_surf_for_miptree(brw, &surf, mt, true, (1 << ISL_AUX_USAGE_HIZ),
+                          &level, layer, 1, isl_tmp);
 
    struct blorp_batch batch;
    blorp_batch_init(&brw->blorp, &batch, brw, 0);
