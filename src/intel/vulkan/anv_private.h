@@ -1711,6 +1711,9 @@ struct anv_subpass {
    uint32_t *                                   resolve_attachments;
    uint32_t                                     depth_stencil_attachment;
 
+   /** Subpass has a depth/stencil self-dependency */
+   bool                                         has_ds_self_dep;
+
    /** Subpass has at least one resolve attachment */
    bool                                         has_resolve;
 };

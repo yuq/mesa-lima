@@ -1039,7 +1039,7 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
 }
 
 static void
-emit_3dstate_wm(struct anv_pipeline *pipeline,
+emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
                 const VkPipelineMultisampleStateCreateInfo *multisample)
 {
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
@@ -1069,11 +1069,20 @@ emit_3dstate_wm(struct anv_pipeline *pipeline,
          /* FIXME: This needs a lot more work, cf gen7 upload_wm_state(). */
          wm.ThreadDispatchEnable          = true;
 
-         wm.PixelShaderKillsPixel         = wm_prog_data->uses_kill;
          wm.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;
          wm.PixelShaderUsesSourceDepth    = wm_prog_data->uses_src_depth;
          wm.PixelShaderUsesSourceW        = wm_prog_data->uses_src_w;
          wm.PixelShaderUsesInputCoverageMask = wm_prog_data->uses_sample_mask;
+
+         /* If the subpass has a depth or stencil self-dependency, then we
+          * need to force the hardware to do the depth/stencil write *after*
+          * fragment shader execution.  Otherwise, the writes may hit memory
+          * before we get around to fetching from the input attachment and we
+          * may get the depth or stencil value from the current draw rather
+          * than the previous one.
+          */
+         wm.PixelShaderKillsPixel         = subpass->has_ds_self_dep ||
+                                            wm_prog_data->uses_kill;
 
          if (samples > 1) {
             wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
@@ -1163,7 +1172,8 @@ emit_3dstate_ps(struct anv_pipeline *pipeline)
 
 #if GEN_GEN >= 8
 static void
-emit_3dstate_ps_extra(struct anv_pipeline *pipeline)
+emit_3dstate_ps_extra(struct anv_pipeline *pipeline,
+                      struct anv_subpass *subpass)
 {
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
 
@@ -1177,10 +1187,18 @@ emit_3dstate_ps_extra(struct anv_pipeline *pipeline)
       ps.AttributeEnable               = wm_prog_data->num_varying_inputs > 0;
       ps.oMaskPresenttoRenderTarget    = wm_prog_data->uses_omask;
       ps.PixelShaderIsPerSample        = wm_prog_data->persample_dispatch;
-      ps.PixelShaderKillsPixel         = wm_prog_data->uses_kill;
       ps.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;
       ps.PixelShaderUsesSourceDepth    = wm_prog_data->uses_src_depth;
       ps.PixelShaderUsesSourceW        = wm_prog_data->uses_src_w;
+
+      /* If the subpass has a depth or stencil self-dependency, then we need
+       * to force the hardware to do the depth/stencil write *after* fragment
+       * shader execution.  Otherwise, the writes may hit memory before we get
+       * around to fetching from the input attachment and we may get the depth
+       * or stencil value from the current draw rather than the previous one.
+       */
+      ps.PixelShaderKillsPixel         = subpass->has_ds_self_dep ||
+                                         wm_prog_data->uses_kill;
 
 #if GEN_GEN >= 9
       ps.PixelShaderPullsBary    = wm_prog_data->pulls_bary;
@@ -1267,10 +1285,10 @@ genX(graphics_pipeline_create)(
    emit_3dstate_vs(pipeline);
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
-   emit_3dstate_wm(pipeline, pCreateInfo->pMultisampleState);
+   emit_3dstate_wm(pipeline, subpass, pCreateInfo->pMultisampleState);
    emit_3dstate_ps(pipeline);
 #if GEN_GEN >= 8
-   emit_3dstate_ps_extra(pipeline);
+   emit_3dstate_ps_extra(pipeline, subpass);
    emit_3dstate_vf_topology(pipeline);
 #endif
 

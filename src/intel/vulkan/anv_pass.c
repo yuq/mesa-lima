@@ -116,6 +116,10 @@ VkResult anv_CreateRenderPass(
             subpass->input_attachments[j] = a;
             pass->attachments[a].usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
             pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_INPUT;
+
+            if (desc->pDepthStencilAttachment &&
+                a == desc->pDepthStencilAttachment->attachment)
+               subpass->has_ds_self_dep = true;
          }
       }
 
