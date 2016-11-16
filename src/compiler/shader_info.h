@@ -25,6 +25,8 @@
 #ifndef SHADER_INFO_H
 #define SHADER_INFO_H
 
+#include "shader_enums.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
