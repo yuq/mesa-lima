@@ -47,8 +47,6 @@ protected:
     */
    hash_table *replacements;
 
-   void *mem_ctx;
-
    unsigned stage;
 public:
    output_read_remover(unsigned stage);
@@ -80,7 +78,6 @@ hash_table_var_hash(const void *key)
 output_read_remover::output_read_remover(unsigned stage)
 {
    this->stage = stage;
-   mem_ctx = ralloc_context(NULL);
    replacements = _mesa_hash_table_create(NULL, hash_table_var_hash,
                                           _mesa_key_pointer_equal);
 }
@@ -88,7 +85,6 @@ output_read_remover::output_read_remover(unsigned stage)
 output_read_remover::~output_read_remover()
 {
    _mesa_hash_table_destroy(replacements, NULL);
-   ralloc_free(mem_ctx);
 }
 
 ir_visitor_status
