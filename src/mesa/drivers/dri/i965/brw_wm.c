@@ -460,7 +460,7 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
       if (ctx->Depth.Test)
          lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
 
-      if (ctx->Depth.Test && ctx->Depth.Mask) /* ?? */
+      if (brw_depth_writes_enabled(brw))
          lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
 
       /* _NEW_STENCIL | _NEW_BUFFERS */

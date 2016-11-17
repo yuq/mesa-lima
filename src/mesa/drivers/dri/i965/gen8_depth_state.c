@@ -218,7 +218,7 @@ gen8_emit_depth_stencil_hiz(struct brw_context *brw,
    }
 
    emit_depth_packets(brw, depth_mt, brw_depthbuffer_format(brw), surftype,
-                      ctx->Depth.Mask != 0,
+                      brw_depth_writes_enabled(brw),
                       stencil_mt, ctx->Stencil._WriteEnabled,
                       hiz, width, height, depth, lod, min_array_element);
 }
@@ -280,7 +280,7 @@ pma_fix_enable(const struct brw_context *brw)
     * 3DSTATE_WM_DEPTH_STENCIL::DepthWriteEnable &&
     * 3DSTATE_DEPTH_BUFFER::DEPTH_WRITE_ENABLE.
     */
-   const bool depth_writes_enabled = ctx->Depth.Mask;
+   const bool depth_writes_enabled = brw_depth_writes_enabled(brw);
 
    /* _NEW_STENCIL:
     * !DEPTH_STENCIL_STATE::Stencil Buffer Write Enable ||

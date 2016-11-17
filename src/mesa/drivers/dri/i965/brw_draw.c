@@ -372,7 +372,7 @@ brw_postdraw_set_buffers_need_resolve(struct brw_context *brw)
       front_irb->need_downsample = true;
    if (back_irb)
       back_irb->need_downsample = true;
-   if (depth_irb && ctx->Depth.Mask) {
+   if (depth_irb && brw_depth_writes_enabled(brw)) {
       intel_renderbuffer_att_set_needs_depth_resolve(depth_att);
       brw_render_cache_set_add_bo(brw, depth_irb->mt->bo);
    }

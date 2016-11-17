@@ -109,7 +109,7 @@ gen7_emit_depth_stencil_hiz(struct brw_context *brw,
              (depthbuffer_format << 18) |
              ((hiz ? 1 : 0) << 22) |
              ((stencil_mt != NULL && ctx->Stencil._WriteEnabled) << 27) |
-             ((ctx->Depth.Mask != 0) << 28) |
+             (brw_depth_writes_enabled(brw) << 28) |
              (surftype << 29));
 
    /* 3DSTATE_DEPTH_BUFFER dw2 */
