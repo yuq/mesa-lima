@@ -35,6 +35,7 @@ swr_clear(struct pipe_context *pipe,
    struct pipe_framebuffer_state *fb = &ctx->framebuffer;
 
    UINT clearMask = 0;
+   int layers = 0;
 
    if (!swr_check_render_cond(pipe))
       return;
@@ -43,24 +44,46 @@ swr_clear(struct pipe_context *pipe,
 
    if (buffers & PIPE_CLEAR_COLOR && fb->nr_cbufs) {
       for (unsigned i = 0; i < fb->nr_cbufs; ++i)
-         if (fb->cbufs[i])
+         if (fb->cbufs[i] && (buffers & (PIPE_CLEAR_COLOR0 << i))) {
             clearMask |= (SWR_ATTACHMENT_COLOR0_BIT << i);
+            layers = std::max(layers, fb->cbufs[i]->u.tex.last_layer -
+                                      fb->cbufs[i]->u.tex.first_layer + 1);
+         }
    }
 
-   if (buffers & PIPE_CLEAR_DEPTH && fb->zsbuf)
+   if (buffers & PIPE_CLEAR_DEPTH && fb->zsbuf) {
       clearMask |= SWR_ATTACHMENT_DEPTH_BIT;
+      layers = std::max(layers, fb->zsbuf->u.tex.last_layer -
+                                fb->zsbuf->u.tex.first_layer + 1);
+   }
 
-   if (buffers & PIPE_CLEAR_STENCIL && fb->zsbuf)
+   if (buffers & PIPE_CLEAR_STENCIL && fb->zsbuf) {
       clearMask |= SWR_ATTACHMENT_STENCIL_BIT;
+      layers = std::max(layers, fb->zsbuf->u.tex.last_layer -
+                                fb->zsbuf->u.tex.first_layer + 1);
+   }
 
 #if 0 // XXX HACK, override clear color alpha. On ubuntu, clears are
       // transparent.
    ((union pipe_color_union *)color)->f[3] = 1.0; /* cast off your const'd-ness */
 #endif
 
-   swr_update_draw_context(ctx);
-   SwrClearRenderTarget(ctx->swrContext, clearMask, 0, color->f, depth, stencil,
-                        ctx->swr_scissor);
+   for (int i = 0; i < layers; ++i) {
+      swr_update_draw_context(ctx);
+      SwrClearRenderTarget(ctx->swrContext, clearMask, i,
+                           color->f, depth, stencil,
+                           ctx->swr_scissor);
+
+      // Mask out the attachments that are out of layers.
+      if (fb->zsbuf &&
+          fb->zsbuf->u.tex.last_layer - fb->zsbuf->u.tex.first_layer <= i)
+         clearMask &= ~(SWR_ATTACHMENT_DEPTH_BIT | SWR_ATTACHMENT_STENCIL_BIT);
+      for (unsigned c = 0; c < fb->nr_cbufs; ++c) {
+         const struct pipe_surface *sf = fb->cbufs[c];
+         if (sf && sf->u.tex.last_layer - sf->u.tex.first_layer <= i)
+            clearMask &= ~(SWR_ATTACHMENT_COLOR0_BIT << c);
+      }
+   }
 }
 
 
