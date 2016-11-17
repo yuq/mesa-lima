@@ -30,6 +30,10 @@
 #include "util/list.h"
 #include "util/slab.h"
 
+#ifndef DRM_VC4_PARAM_SUPPORTS_ETC1
+#define DRM_VC4_PARAM_SUPPORTS_ETC1		4
+#endif
+
 struct vc4_bo;
 
 #define VC4_DEBUG_CL        0x0001
@@ -85,6 +89,7 @@ struct vc4_screen {
         uint32_t bo_size;
         uint32_t bo_count;
         bool has_control_flow;
+        bool has_etc1;
 
         struct vc4_simulator_file *sim_file;
 };

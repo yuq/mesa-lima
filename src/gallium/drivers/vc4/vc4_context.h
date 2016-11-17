@@ -39,6 +39,10 @@
 #include "vc4_cl.h"
 #include "vc4_qir.h"
 
+#ifndef DRM_VC4_PARAM_SUPPORTS_ETC1
+#define DRM_VC4_PARAM_SUPPORTS_ETC1		4
+#endif
+
 #ifdef USE_VC4_SIMULATOR
 #define using_vc4_simulator true
 #else

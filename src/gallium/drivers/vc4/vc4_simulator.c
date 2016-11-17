@@ -612,6 +612,7 @@ vc4_simulator_get_param_ioctl(int fd, struct drm_vc4_get_param *args)
 {
         switch (args->param) {
         case DRM_VC4_PARAM_SUPPORTS_BRANCHES:
+        case DRM_VC4_PARAM_SUPPORTS_ETC1:
                 args->value = true;
                 return 0;
 
