@@ -625,7 +625,7 @@ vc4_simulator_get_param_ioctl(int fd, struct drm_vc4_get_param *args)
 
         default:
                 fprintf(stderr, "Unknown DRM_IOCTL_VC4_GET_PARAM(%lld)\n",
-                        (long long)args->value);
+                        (long long)args->param);
                 abort();
         };
 }
