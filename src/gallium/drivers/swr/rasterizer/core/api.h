@@ -137,10 +137,11 @@ typedef void(SWR_API *PFN_STORE_TILE)(HANDLE hPrivateContext, SWR_FORMAT srcForm
 /// @param renderTargetIndex - render target to store, can be color, depth or stencil
 /// @param x - destination x coordinate
 /// @param y - destination y coordinate
+/// @param renderTargetArrayIndex - render target array offset from arrayIndex
 /// @param pClearColor - pointer to the hot tile's clear value
 typedef void(SWR_API *PFN_CLEAR_TILE)(HANDLE hPrivateContext,
     SWR_RENDERTARGET_ATTACHMENT rtIndex,
-    uint32_t x, uint32_t y, const float* pClearColor);
+    uint32_t x, uint32_t y, uint32_t renderTargetArrayIndex, const float* pClearColor);
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Callback to allow driver to update their copy of streamout write offset.
@@ -559,6 +560,7 @@ void SWR_API SwrStoreTiles(
 /// @brief SwrClearRenderTarget - Clear attached render targets / depth / stencil
 /// @param hContext - Handle passed back from SwrCreateContext
 /// @param attachmentMask - combination of SWR_ATTACHMENT_*_BIT attachments to clear
+/// @param renderTargetArrayIndex - the RT array index to clear
 /// @param clearColor - color use for clearing render targets
 /// @param z - depth value use for clearing depth buffer
 /// @param stencil - stencil value used for clearing stencil buffer
@@ -566,6 +568,7 @@ void SWR_API SwrStoreTiles(
 void SWR_API SwrClearRenderTarget(
     HANDLE hContext,
     uint32_t attachmentMask,
+    uint32_t renderTargetArrayIndex,
     const float clearColor[4],
     float z,
     uint8_t stencil,

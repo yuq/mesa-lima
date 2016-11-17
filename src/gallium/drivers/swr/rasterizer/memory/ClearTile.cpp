@@ -33,7 +33,7 @@
 #include "memory/tilingtraits.h"
 #include "memory/Convert.h"
 
-typedef void(*PFN_STORE_TILES_CLEAR)(const float*, SWR_SURFACE_STATE*, UINT, UINT);
+typedef void(*PFN_STORE_TILES_CLEAR)(const float*, SWR_SURFACE_STATE*, UINT, UINT, uint32_t);
 
 //////////////////////////////////////////////////////////////////////////
 /// Clear Raster Tile Function Tables.
@@ -57,11 +57,16 @@ struct StoreRasterTileClear
         const uint8_t* dstFormattedColor,
         UINT dstBytesPerPixel,
         SWR_SURFACE_STATE* pDstSurface,
-        UINT x, UINT y) // (x, y) pixel coordinate to start of raster tile.
+        UINT x, UINT y, // (x, y) pixel coordinate to start of raster tile.
+        uint32_t renderTargetArrayIndex)
     {
         // Compute destination address for raster tile.
-        uint8_t* pDstTile = (uint8_t*)pDstSurface->pBaseAddress +
-            (y * pDstSurface->pitch) + (x * dstBytesPerPixel);
+        uint8_t* pDstTile = (uint8_t*)ComputeSurfaceAddress<false, false>(
+                x, y, pDstSurface->arrayIndex + renderTargetArrayIndex,
+                pDstSurface->arrayIndex + renderTargetArrayIndex,
+                0, // sampleNum
+                pDstSurface->lod,
+                pDstSurface);
 
         // start of first row
         uint8_t* pDst = pDstTile;
@@ -106,7 +111,7 @@ struct StoreMacroTileClear
     static void StoreClear(
         const float *pColor,
         SWR_SURFACE_STATE* pDstSurface,
-        UINT x, UINT y)
+        UINT x, UINT y, uint32_t renderTargetArrayIndex)
     {
         UINT dstBytesPerPixel = (FormatTraits<DstFormat>::bpp / 8);
 
@@ -129,7 +134,7 @@ struct StoreMacroTileClear
         {
             for (UINT col = 0; col < KNOB_MACROTILE_X_DIM; col += KNOB_TILE_X_DIM)
             {
-                StoreRasterTileClear<SrcFormat, DstFormat>::StoreClear(dstFormattedColor, dstBytesPerPixel, pDstSurface, (x + col), (y + row));
+                StoreRasterTileClear<SrcFormat, DstFormat>::StoreClear(dstFormattedColor, dstBytesPerPixel, pDstSurface, (x + col), (y + row), renderTargetArrayIndex);
             }
         }
     }
@@ -146,6 +151,7 @@ void StoreHotTileClear(
     SWR_RENDERTARGET_ATTACHMENT renderTargetIndex,
     UINT x,
     UINT y,
+    uint32_t renderTargetArrayIndex,
     const float* pClearColor)
 {
     PFN_STORE_TILES_CLEAR pfnStoreTilesClear = NULL;
@@ -167,7 +173,7 @@ void StoreHotTileClear(
     /// @todo Once all formats are supported then if check can go away. This is to help us near term to make progress.
     if (pfnStoreTilesClear != NULL)
     {
-        pfnStoreTilesClear(pClearColor, pDstSurface, x, y);
+        pfnStoreTilesClear(pClearColor, pDstSurface, x, y, renderTargetArrayIndex);
     }
 }
 

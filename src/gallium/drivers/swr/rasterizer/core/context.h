@@ -104,6 +104,7 @@ struct CLEAR_DESC
 {
     SWR_RECT rect;
     uint32_t attachmentMask;
+    uint32_t renderTargetArrayIndex;
     float clearRTColor[4];  // RGBA_32F
     float clearDepth;   // [0..1]
     uint8_t clearStencil;

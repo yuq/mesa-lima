@@ -59,7 +59,7 @@ swr_clear(struct pipe_context *pipe,
 #endif
 
    swr_update_draw_context(ctx);
-   SwrClearRenderTarget(ctx->swrContext, clearMask, color->f, depth, stencil,
+   SwrClearRenderTarget(ctx->swrContext, clearMask, 0, color->f, depth, stencil,
                         ctx->swr_scissor);
 }
 
