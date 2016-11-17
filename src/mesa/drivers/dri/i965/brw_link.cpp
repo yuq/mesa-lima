@@ -227,7 +227,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       if (!prog)
         return false;
 
-      _mesa_reference_program(ctx, &shader->Program, prog);
+      /* Don't use _mesa_reference_program() just take ownership */
+      shader->Program = prog;
 
       prog->Parameters = _mesa_new_parameter_list();
 
@@ -276,8 +277,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
                                  compiler->scalar_stage[stage]);
-
-      _mesa_reference_program(ctx, &prog, NULL);
    }
 
    if ((ctx->_Shader->Flags & GLSL_DUMP) && shProg->Name != 0) {

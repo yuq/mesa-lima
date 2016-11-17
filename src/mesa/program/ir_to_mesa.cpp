@@ -2929,7 +2929,8 @@ get_mesa_program(struct gl_context *ctx,
       prog->info.fs.depth_layout = shader_program->FragDepthLayout;
    }
 
-   _mesa_reference_program(ctx, &shader->Program, prog);
+   /* Don't use _mesa_reference_program() just take ownership */
+   shader->Program = prog;
 
    if ((ctx->_Shader->Flags & GLSL_NO_OPT) == 0) {
       _mesa_optimize_program(ctx, prog, prog);
@@ -3033,11 +3034,11 @@ _mesa_ir_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
          if (!ctx->Driver.ProgramStringNotify(ctx,
                                               _mesa_shader_stage_to_program(i),
                                               linked_prog)) {
+            _mesa_reference_program(ctx, &prog->_LinkedShaders[i]->Program,
+                                    NULL);
             return GL_FALSE;
          }
       }
-
-      _mesa_reference_program(ctx, &linked_prog, NULL);
    }
 
    build_program_resource_list(ctx, prog);

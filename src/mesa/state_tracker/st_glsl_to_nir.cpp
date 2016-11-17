@@ -375,7 +375,8 @@ st_nir_get_mesa_program(struct gl_context *ctx,
    if (!prog)
       return NULL;
 
-   _mesa_reference_program(ctx, &shader->Program, prog);
+   /* Don't use _mesa_reference_program() just take ownership */
+   shader->Program = prog;
 
    prog->Parameters = _mesa_new_parameter_list();
 

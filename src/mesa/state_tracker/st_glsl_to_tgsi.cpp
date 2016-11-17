@@ -6419,7 +6419,8 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    if (!prog)
       return NULL;
 
-   _mesa_reference_program(ctx, &shader->Program, prog);
+   /* Don't use _mesa_reference_program() just take ownership */
+   shader->Program = prog;
 
    prog->Parameters = _mesa_new_parameter_list();
    v = new glsl_to_tgsi_visitor();
@@ -6541,6 +6542,7 @@ get_mesa_program_tgsi(struct gl_context *ctx,
    _mesa_associate_uniform_storage(ctx, shader_program, prog->Parameters);
    if (!shader_program->LinkStatus) {
       free_glsl_to_tgsi_visitor(v);
+      _mesa_reference_program(ctx, &shader->Program, NULL);
       return NULL;
    }
 
@@ -6883,19 +6885,14 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       linked_prog = get_mesa_program(ctx, prog, prog->_LinkedShaders[i]);
 
       if (linked_prog) {
-         _mesa_reference_program(ctx, &prog->_LinkedShaders[i]->Program,
-                                 linked_prog);
          if (!ctx->Driver.ProgramStringNotify(ctx,
                                               _mesa_shader_stage_to_program(i),
                                               linked_prog)) {
             _mesa_reference_program(ctx, &prog->_LinkedShaders[i]->Program,
                                     NULL);
-            _mesa_reference_program(ctx, &linked_prog, NULL);
             return GL_FALSE;
          }
       }
-
-      _mesa_reference_program(ctx, &linked_prog, NULL);
    }
 
    return GL_TRUE;
