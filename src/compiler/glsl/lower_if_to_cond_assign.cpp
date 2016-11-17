@@ -86,6 +86,7 @@ public:
 
    bool found_unsupported_op;
    bool found_expensive_op;
+   bool found_dynamic_arrayref;
    bool is_then;
    bool progress;
    gl_shader_stage stage;
@@ -148,8 +149,13 @@ check_ir_node(ir_instruction *ir, void *data)
       v->found_expensive_op = true;
       break;
 
+   case ir_type_dereference_array: {
+      ir_dereference_array *deref = ir->as_dereference_array();
+
+      if (deref->array_index->ir_type != ir_type_constant)
+         v->found_dynamic_arrayref = true;
+   } /* fall-through */
    case ir_type_expression:
-   case ir_type_dereference_array:
    case ir_type_dereference_record:
       if (v->is_then)
          v->then_cost++;
@@ -229,6 +235,7 @@ ir_if_to_cond_assign_visitor::visit_leave(ir_if *ir)
 
    this->found_unsupported_op = false;
    this->found_expensive_op = false;
+   this->found_dynamic_arrayref = false;
    this->then_cost = 0;
    this->else_cost = 0;
 
@@ -248,9 +255,17 @@ ir_if_to_cond_assign_visitor::visit_leave(ir_if *ir)
    if (this->found_unsupported_op)
       return visit_continue; /* can't handle inner unsupported opcodes */
 
-   /* Skip if the branch cost is high enough or if there's an expensive op. */
+   /* Skip if the branch cost is high enough or if there's an expensive op.
+    *
+    * Also skip if non-constant array indices were encountered, since those
+    * can be out-of-bounds for a not-taken branch, and so generating an
+    * assignment would be incorrect. In the case of must_lower, it's up to the
+    * backend to deal with any potential fall-out (perhaps by translating the
+    * assignments to hardware-predicated moves).
+    */
    if (!must_lower &&
        (this->found_expensive_op ||
+        this->found_dynamic_arrayref ||
         MAX2(this->then_cost, this->else_cost) >= this->min_branch_cost))
       return visit_continue;
 
