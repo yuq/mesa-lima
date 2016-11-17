@@ -96,8 +96,6 @@ output_read_remover::visit(ir_dereference_variable *ir)
 {
    if (ir->var->data.mode != ir_var_shader_out)
       return visit_continue;
-   if (stage == MESA_SHADER_TESS_CTRL)
-      return visit_continue;
 
    hash_entry *entry = _mesa_hash_table_search(replacements, ir->var);
    ir_variable *temp = entry ? (ir_variable *) entry->data : NULL;
@@ -173,6 +171,12 @@ output_read_remover::visit_leave(ir_function_signature *sig)
 void
 lower_output_reads(unsigned stage, exec_list *instructions)
 {
+   /* Due to the possible interactions between multiple tessellation control
+    * shader invocations, we leave output variables as-is.
+    */
+   if (stage == MESA_SHADER_TESS_CTRL)
+      return;
+
    output_read_remover v(stage);
    visit_list_elements(&v, instructions);
 }
