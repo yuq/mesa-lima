@@ -986,7 +986,7 @@ swr_destroy_screen(struct pipe_screen *p_screen)
 
 PUBLIC
 struct pipe_screen *
-swr_create_screen(struct sw_winsys *winsys)
+swr_create_screen_internal(struct sw_winsys *winsys)
 {
    struct swr_screen *screen = CALLOC_STRUCT(swr_screen);
 

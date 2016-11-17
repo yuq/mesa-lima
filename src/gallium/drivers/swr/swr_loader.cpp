@@ -54,7 +54,7 @@ swr_create_screen(struct sw_winsys *winsys)
       exit(-1);
    }
 
-   util_dl_proc pScreenProc = util_dl_get_proc_address(pLibrary, "swr_create_screen");
+   util_dl_proc pScreenProc = util_dl_get_proc_address(pLibrary, "swr_create_screen_internal");
 
    if (!pScreenProc) {
       fprintf(stderr, "SWR library search failure: %s\n", util_dl_error());

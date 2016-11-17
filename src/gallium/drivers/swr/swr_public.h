@@ -32,7 +32,11 @@ struct sw_displaytarget;
 extern "C" {
 #endif
 
+// driver entry point
 struct pipe_screen *swr_create_screen(struct sw_winsys *winsys);
+
+// arch-specific dll entry point
+PUBLIC struct pipe_screen *swr_create_screen_internal(struct sw_winsys *winsys);
 
 struct sw_winsys *swr_get_winsys(struct pipe_screen *pipe);
 
