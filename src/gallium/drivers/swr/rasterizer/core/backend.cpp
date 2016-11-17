@@ -354,7 +354,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
     MacroTileMgr::getTileIndices(macroTile, x, y);
 
     // Only need to store the hottile if it's been rendered to...
-    HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, attachment, false);
+    HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTileNoLoad(pContext, pDC, macroTile, attachment, false);
     if (pHotTile)
     {
         // clear if clear is pending (i.e., not rendered to), then mark as dirty for store.
