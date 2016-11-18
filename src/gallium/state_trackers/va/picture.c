@@ -351,7 +351,11 @@ handleVAEncSequenceParameterBufferType(vlVaDriver *drv, vlVaContext *context, vl
       if (!context->decoder)
          return VA_STATUS_ERROR_ALLOCATION_FAILED;
    }
-   context->desc.h264enc.gop_size = h264->intra_idr_period;
+
+   context->gop_coeff = ((1024 + h264->intra_idr_period - 1) / h264->intra_idr_period + 1) / 2 * 2;
+   if (context->gop_coeff > VL_VA_ENC_GOP_COEFF)
+      context->gop_coeff = VL_VA_ENC_GOP_COEFF;
+   context->desc.h264enc.gop_size = h264->intra_idr_period * context->gop_coeff;
    context->desc.h264enc.rate_ctrl.frame_rate_num = h264->time_scale / 2;
    context->desc.h264enc.rate_ctrl.frame_rate_den = 1;
    return VA_STATUS_SUCCESS;
@@ -391,10 +395,10 @@ handleVAEncPictureParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlV
    context->desc.h264enc.not_referenced = false;
    context->desc.h264enc.is_idr = (h264->pic_fields.bits.idr_pic_flag == 1);
    context->desc.h264enc.pic_order_cnt = h264->CurrPic.TopFieldOrderCnt;
-   if (context->desc.h264enc.is_idr)
-      context->desc.h264enc.i_remain = 1;
-   else
-      context->desc.h264enc.i_remain = 0;
+   if (context->desc.h264enc.gop_cnt == 0)
+      context->desc.h264enc.i_remain = context->gop_coeff;
+   else if (context->desc.h264enc.frame_num == 1)
+      context->desc.h264enc.i_remain--;
 
    context->desc.h264enc.p_remain = context->desc.h264enc.gop_size - context->desc.h264enc.gop_cnt - context->desc.h264enc.i_remain;
 
@@ -578,6 +582,8 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
 
    context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+      int idr_period = context->desc.h264enc.gop_size / context->gop_coeff;
+      int p_remain_in_idr = idr_period - context->desc.h264enc.frame_num;
       surf->frame_num_cnt = context->desc.h264enc.frame_num_cnt;
       surf->force_flushed = false;
       if (context->first_single_submitted) {
@@ -585,7 +591,7 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
          context->first_single_submitted = false;
          surf->force_flushed = true;
       }
-      if (context->desc.h264enc.p_remain == 1) {
+      if (p_remain_in_idr == 1) {
          if ((context->desc.h264enc.frame_num_cnt % 2) != 0) {
             context->decoder->flush(context->decoder);
             context->first_single_submitted = true;

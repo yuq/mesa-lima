@@ -50,6 +50,7 @@
 #define VL_VA_PSCREEN(ctx) (VL_VA_DRIVER(ctx)->vscreen->pscreen)
 
 #define VL_VA_MAX_IMAGE_FORMATS 9
+#define VL_VA_ENC_GOP_COEFF 16
 
 static inline enum pipe_video_chroma_format
 ChromaToPipe(int format)
@@ -245,6 +246,7 @@ typedef struct {
    struct vlVaBuffer *coded_buf;
    int target_id;
    bool first_single_submitted;
+   int gop_coeff;
 } vlVaContext;
 
 typedef struct {
