@@ -238,31 +238,50 @@ get_qword(uint32_t *p)
    return ((uint64_t) p[1] << 32) | p[0];
 }
 
+static inline uint64_t
+get_address(struct gen_spec *spec, uint32_t *p)
+{
+   /* Addresses are always guaranteed to be page-aligned and sometimes
+    * hardware packets have extra stuff stuffed in the bottom 12 bits.
+    */
+   uint64_t addr = p[0] & ~0xfffu;
+
+   if (gen_spec_get_gen(spec) >= gen_make_gen(8,0)) {
+      /* On Broadwell and above, we have 48-bit addresses which consume two
+       * dwords.  Some packets require that these get stored in a "canonical
+       * form" which means that bit 47 is sign-extended through the upper
+       * bits. In order to correctly handle those aub dumps, we need to mask
+       * off the top 16 bits.
+       */
+      addr |= ((uint64_t)p[1] & 0xffff) << 32;
+   }
+
+   return addr;
+}
+
 static void
 handle_state_base_address(struct gen_spec *spec, uint32_t *p)
 {
-   uint64_t mask = ~((1 << 12) - 1);
-
    if (gen_spec_get_gen(spec) >= gen_make_gen(8,0)) {
       if (p[1] & 1)
-         general_state_base = get_qword(&p[1]) & mask;
+         general_state_base = get_address(spec, &p[1]);
       if (p[4] & 1)
-         surface_state_base = get_qword(&p[4]) & mask;
+         surface_state_base = get_address(spec, &p[4]);
       if (p[6] & 1)
-         dynamic_state_base = get_qword(&p[6]) & mask;
+         dynamic_state_base = get_address(spec, &p[6]);
       if (p[10] & 1)
-         instruction_base = get_qword(&p[10]) & mask;
+         instruction_base = get_address(spec, &p[10]);
       if (p[15] & 1)
-         instruction_bound = p[15] & mask;
+         instruction_bound = p[15] & 0xfff;
    } else {
       if (p[2] & 1)
-         surface_state_base = p[2] & mask;
+         surface_state_base = get_address(spec, &p[2]);
       if (p[3] & 1)
-         dynamic_state_base = p[3] & mask;
+         dynamic_state_base = get_address(spec, &p[3]);
       if (p[5] & 1)
-         instruction_base = p[5] & mask;
+         instruction_base = get_address(spec, &p[5]);
       if (p[9] & 1)
-         instruction_bound = p[9] & mask;
+         instruction_bound = get_address(spec, &p[9]);
    }
 }
 
@@ -784,11 +803,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
       }
 
       if ((p[0] & 0xffff0000) == AUB_MI_BATCH_BUFFER_START) {
-         uint64_t start;
-         if (gen_spec_get_gen(spec) >= gen_make_gen(8,0))
-            start = get_qword(&p[1]);
-         else
-            start = p[1];
+         uint64_t start = get_address(spec, &p[1]);
 
          if (p[0] & (1 << 22)) {
             /* MI_BATCH_BUFFER_START with "2nd Level Batch Buffer" set acts
