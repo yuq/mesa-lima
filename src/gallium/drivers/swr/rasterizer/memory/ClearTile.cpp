@@ -282,7 +282,9 @@ void StoreHotTileClear(
     memset(sStoreTilesClearDepthTable, 0, sizeof(sStoreTilesClearDepthTable)); \
     \
     sStoreTilesClearDepthTable[R32_FLOAT] = StoreMacroTileClear<R32_FLOAT, R32_FLOAT>::StoreClear; \
+    sStoreTilesClearDepthTable[R32_FLOAT_X8X24_TYPELESS] = StoreMacroTileClear<R32_FLOAT, R32_FLOAT_X8X24_TYPELESS>::StoreClear; \
     sStoreTilesClearDepthTable[R24_UNORM_X8_TYPELESS] = StoreMacroTileClear<R32_FLOAT, R24_UNORM_X8_TYPELESS>::StoreClear; \
+    sStoreTilesClearDepthTable[R16_UNORM] = StoreMacroTileClear<R32_FLOAT, R16_UNORM>::StoreClear; \
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Sets up tables for ClearTile
