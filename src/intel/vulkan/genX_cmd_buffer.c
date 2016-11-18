@@ -229,8 +229,7 @@ need_input_attachment_state(const struct anv_render_pass_attachment *att)
 static void
 genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                    struct anv_render_pass *pass,
-                                   struct anv_framebuffer *framebuffer,
-                                   const VkClearValue *clear_values)
+                                   const VkRenderPassBeginInfo *begin)
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
    struct anv_cmd_state *state = &cmd_buffer->state;
@@ -299,7 +298,8 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
    assert(next_state.offset == state->render_pass_states.offset +
                                state->render_pass_states.alloc_size);
 
-   if (framebuffer) {
+   if (begin) {
+      ANV_FROM_HANDLE(anv_framebuffer, framebuffer, begin->framebuffer);
       assert(pass->attachment_count == framebuffer->attachment_count);
 
       if (need_null_state) {
@@ -345,7 +345,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
 
          state->attachments[i].pending_clear_aspects = clear_aspects;
          if (clear_aspects)
-            state->attachments[i].clear_value = clear_values[i];
+            state->attachments[i].clear_value = begin->pClearValues[i];
 
          struct anv_image_view *iview = framebuffer->attachments[i];
          assert(iview->vk_format == att->format);
@@ -439,7 +439,7 @@ genX(BeginCommandBuffer)(
       cmd_buffer->state.framebuffer = NULL;
 
       genX(cmd_buffer_setup_attachments)(cmd_buffer, cmd_buffer->state.pass,
-                                         NULL, NULL);
+                                         NULL);
 
       cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
    }
@@ -2118,8 +2118,7 @@ void genX(CmdBeginRenderPass)(
    cmd_buffer->state.framebuffer = framebuffer;
    cmd_buffer->state.pass = pass;
    cmd_buffer->state.render_area = pRenderPassBegin->renderArea;
-   genX(cmd_buffer_setup_attachments)(cmd_buffer, pass, framebuffer,
-                                      pRenderPassBegin->pClearValues);
+   genX(cmd_buffer_setup_attachments)(cmd_buffer, pass, pRenderPassBegin);
 
    genX(flush_pipeline_select_3d)(cmd_buffer);
 
