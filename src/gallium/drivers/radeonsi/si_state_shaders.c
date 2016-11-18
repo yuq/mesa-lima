@@ -32,7 +32,7 @@
 #include "tgsi/tgsi_parse.h"
 #include "tgsi/tgsi_ureg.h"
 #include "util/hash_table.h"
-#include "util/u_hash.h"
+#include "util/crc32.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 
