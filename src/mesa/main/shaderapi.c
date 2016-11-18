@@ -59,6 +59,7 @@
 #include "util/ralloc.h"
 #include "util/hash_table.h"
 #include "util/mesa-sha1.h"
+#include "util/crc32.h"
 
 /**
  * Return mask of GLSL_x flags by examining the MESA_GLSL env var.
@@ -992,7 +993,7 @@ shader_source(struct gl_shader *sh, const GLchar *source)
    free((void *)sh->Source);
    sh->Source = source;
 #ifdef DEBUG
-   sh->SourceChecksum = _mesa_str_checksum(sh->Source);
+   sh->SourceChecksum = util_hash_crc32(sh->Source, strlen(sh->Source));
 #endif
 }
 
