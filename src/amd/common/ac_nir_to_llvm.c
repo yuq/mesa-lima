@@ -3492,7 +3492,10 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		address[count++] = sample_index;
 	} else if(instr->op == nir_texop_txs) {
 		count = 0;
-		address[count++] = lod;
+		if (lod)
+			address[count++] = lod;
+		else
+			address[count++] = ctx->i32zero;
 	}
 
 	for (chan = 0; chan < count; chan++) {
