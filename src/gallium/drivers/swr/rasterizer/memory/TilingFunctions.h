@@ -284,8 +284,8 @@ INLINE void ComputeLODOffset1D(
         offset = GFX_ALIGN(curWidth, hAlign);
         for (uint32_t l = 1; l < lod; ++l)
         {
-            curWidth = GFX_ALIGN(std::max<uint32_t>(curWidth >> 1, 1U), hAlign);
-            offset += curWidth;
+            curWidth = std::max<uint32_t>(curWidth >> 1, 1U);
+            offset += GFX_ALIGN(curWidth, hAlign);
         }
 
         if (info.isSubsampled || info.isBC)
