@@ -53,6 +53,7 @@ struct NineSwapChain9
     D3DDISPLAYMODEEX *mode;
     struct d3dadapter9_context *actx;
     BOOL implicit;
+    unsigned num_back_buffers;
 
     /* buffer handles */
     struct NineSurface9 *buffers[D3DPRESENT_BACK_BUFFERS_MAX_EX + 1]; /* 0 to BackBufferCount-1 : the back buffers. BackBufferCount : additional buffer */

@@ -206,9 +206,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
     /* When we have flip behaviour, d3d9 expects we get back the screen buffer when we flip.
      * Here we don't get back the initial content of the screen. To emulate the behaviour
      * we allocate an additional buffer */
-    oldBufferCount = This->params.BackBufferCount ?
-                     (This->params.BackBufferCount +
-                      (This->params.SwapEffect != D3DSWAPEFFECT_COPY)) : 0;
+    oldBufferCount = This->num_back_buffers;
     newBufferCount = pParams->BackBufferCount +
                      (pParams->SwapEffect != D3DSWAPEFFECT_COPY);
 
@@ -295,6 +293,7 @@ NineSwapChain9_Resize( struct NineSwapChain9 *This,
             This->present_handles[i] = NULL;
         }
     }
+    This->num_back_buffers = newBufferCount;
 
     for (i = 0; i < newBufferCount; ++i) {
         tmplt.bind = PIPE_BIND_SAMPLER_VIEW | PIPE_BIND_RENDER_TARGET;
@@ -498,13 +497,13 @@ NineSwapChain9_dtor( struct NineSwapChain9 *This )
     if (This->pool)
         _mesa_threadpool_destroy(This, This->pool);
 
-    if (This->buffers[0]) {
-        for (i = 0; i < This->params.BackBufferCount; i++) {
+    for (i = 0; i < This->num_back_buffers; i++) {
+        if (This->buffers[i])
             NineUnknown_Release(NineUnknown(This->buffers[i]));
+        if (This->present_handles[i])
             ID3DPresent_DestroyD3DWindowBuffer(This->present, This->present_handles[i]);
-            if (This->present_buffers[i])
-                pipe_resource_reference(&(This->present_buffers[i]), NULL);
-        }
+        if (This->present_buffers[i])
+            pipe_resource_reference(&(This->present_buffers[i]), NULL);
     }
     if (This->zsbuf)
         NineUnknown_Unbind(NineUnknown(This->zsbuf));
@@ -806,32 +805,32 @@ NineSwapChain9_Present( struct NineSwapChain9 *This,
         case D3DSWAPEFFECT_DISCARD:
             /* rotate the queue */
             pipe_resource_reference(&res, This->buffers[0]->base.resource);
-            for (i = 1; i <= This->params.BackBufferCount; i++) {
+            for (i = 1; i < This->num_back_buffers; i++) {
                 NineSurface9_SetResourceResize(This->buffers[i - 1],
                                                This->buffers[i]->base.resource);
             }
             NineSurface9_SetResourceResize(
-                This->buffers[This->params.BackBufferCount], res);
+                This->buffers[This->num_back_buffers - 1], res);
             pipe_resource_reference(&res, NULL);
 
             if (This->present_buffers[0]) {
                 pipe_resource_reference(&res, This->present_buffers[0]);
-                for (i = 1; i <= This->params.BackBufferCount; i++)
+                for (i = 1; i < This->num_back_buffers; i++)
                     pipe_resource_reference(&(This->present_buffers[i-1]), This->present_buffers[i]);
-                pipe_resource_reference(&(This->present_buffers[This->params.BackBufferCount]), res);
+                pipe_resource_reference(&(This->present_buffers[This->num_back_buffers - 1]), res);
                 pipe_resource_reference(&res, NULL);
             }
 
             handle_temp = This->present_handles[0];
-            for (i = 1; i <= This->params.BackBufferCount; i++) {
+            for (i = 1; i < This->num_back_buffers; i++) {
                 This->present_handles[i-1] = This->present_handles[i];
             }
-            This->present_handles[This->params.BackBufferCount] = handle_temp;
+            This->present_handles[This->num_back_buffers - 1] = handle_temp;
             task_temp = This->tasks[0];
-            for (i = 1; i <= This->params.BackBufferCount; i++) {
+            for (i = 1; i < This->num_back_buffers; i++) {
                 This->tasks[i-1] = This->tasks[i];
             }
-            This->tasks[This->params.BackBufferCount] = task_temp;
+            This->tasks[This->num_back_buffers - 1] = task_temp;
             break;
 
         case D3DSWAPEFFECT_COPY:
