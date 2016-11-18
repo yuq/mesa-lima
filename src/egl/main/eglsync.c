@@ -84,6 +84,8 @@ _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
    sync->Type = type;
    sync->SyncStatus = EGL_UNSIGNALED_KHR;
 
+   err = _eglParseSyncAttribList(sync, attrib_list);
+
    switch (type) {
    case EGL_SYNC_CL_EVENT_KHR:
       sync->SyncCondition = EGL_SYNC_CL_EVENT_COMPLETE_KHR;
@@ -92,7 +94,6 @@ _eglInitSync(_EGLSync *sync, _EGLDisplay *dpy, EGLenum type,
       sync->SyncCondition = EGL_SYNC_PRIOR_COMMANDS_COMPLETE_KHR;
    }
 
-   err = _eglParseSyncAttribList(sync, attrib_list);
    if (err != EGL_SUCCESS)
       return _eglError(err, "eglCreateSyncKHR");
 
