@@ -259,7 +259,9 @@ swr_store_render_target(struct pipe_context *pipe,
    if (renderTarget->pBaseAddress) {
       swr_update_draw_context(ctx);
       SWR_RECT full_rect =
-         {0, 0, (int32_t)renderTarget->width, (int32_t)renderTarget->height};
+         {0, 0,
+          (int32_t)u_minify(renderTarget->width, renderTarget->lod),
+          (int32_t)u_minify(renderTarget->height, renderTarget->lod)};
       SwrStoreTiles(ctx->swrContext,
                     1 << attachment,
                     post_tile_state,
