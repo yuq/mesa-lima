@@ -1178,24 +1178,33 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
       .layerCount = cmd_buffer->state.framebuffer->layers,
    };
 
+   struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
       const uint32_t a = cmd_state->subpass->color_attachments[i];
+      struct anv_attachment_state *att_state = &cmd_state->attachments[a];
 
-      if (!cmd_state->attachments[a].pending_clear_aspects)
+      if (!att_state->pending_clear_aspects)
          continue;
 
-      assert(cmd_state->attachments[a].pending_clear_aspects ==
-             VK_IMAGE_ASPECT_COLOR_BIT);
+      assert(att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT);
 
-      VkClearAttachment clear_att = {
-         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-         .colorAttachment = i, /* Use attachment index relative to subpass */
-         .clearValue = cmd_state->attachments[a].clear_value,
-      };
+      struct anv_image_view *iview = fb->attachments[a];
+      const struct anv_image *image = iview->image;
+      struct blorp_surf surf;
+      get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
+                                   att_state->aux_usage, &surf);
 
-      clear_color_attachment(cmd_buffer, &batch, &clear_att, 1, &clear_rect);
+      const VkRect2D render_area = cmd_buffer->state.render_area;
 
-      cmd_state->attachments[a].pending_clear_aspects = 0;
+      blorp_clear(&batch, &surf, iview->isl.format, iview->isl.swizzle,
+                  iview->isl.base_level,
+                  iview->isl.base_array_layer, fb->layers,
+                  render_area.offset.x, render_area.offset.y,
+                  render_area.offset.x + render_area.extent.width,
+                  render_area.offset.y + render_area.extent.height,
+                  vk_to_isl_color(att_state->clear_value.color), NULL);
+
+      att_state->pending_clear_aspects = 0;
    }
 
    const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
