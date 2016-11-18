@@ -146,6 +146,8 @@ struct _egl_api
    EGLBoolean (*GetSyncAttrib)(_EGLDriver *drv, _EGLDisplay *dpy,
                                _EGLSync *sync, EGLint attribute,
                                EGLAttrib *value);
+   EGLint (*DupNativeFenceFDANDROID)(_EGLDriver *drv, _EGLDisplay *dpy,
+                                     _EGLSync *sync);
 
    EGLBoolean (*SwapBuffersRegionNOK)(_EGLDriver *drv, _EGLDisplay *disp,
                                       _EGLSurface *surf, EGLint numRects,

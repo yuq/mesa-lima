@@ -94,6 +94,7 @@ struct _egl_extensions
    /* Please keep these sorted alphabetically. */
    EGLBoolean ANDROID_framebuffer_target;
    EGLBoolean ANDROID_image_native_buffer;
+   EGLBoolean ANDROID_native_fence_sync;
    EGLBoolean ANDROID_recordable;
 
    EGLBoolean CHROMIUM_sync_control;
