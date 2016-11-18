@@ -191,23 +191,87 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
-static enum isl_aux_usage
-fb_attachment_get_aux_usage(struct anv_device *device,
-                            struct anv_framebuffer *fb,
-                            uint32_t attachment)
+static bool
+color_is_zero_one(VkClearColorValue value, enum isl_format format)
 {
-   struct anv_image_view *iview = fb->attachments[attachment];
+   if (isl_format_has_int_channel(format)) {
+      for (unsigned i = 0; i < 4; i++) {
+         if (value.int32[i] != 0 && value.int32[i] != 1)
+            return false;
+      }
+   } else {
+      for (unsigned i = 0; i < 4; i++) {
+         if (value.float32[i] != 0.0f && value.float32[i] != 1.0f)
+            return false;
+      }
+   }
 
-   if (iview->image->aux_surface.isl.size == 0)
-      return ISL_AUX_USAGE_NONE; /* No aux surface */
+   return true;
+}
+
+static void
+color_attachment_compute_aux_usage(struct anv_device *device,
+                                   struct anv_attachment_state *att_state,
+                                   struct anv_image_view *iview,
+                                   VkRect2D render_area,
+                                   union isl_color_value *fast_clear_color)
+{
+   if (iview->image->aux_surface.isl.size == 0) {
+      att_state->aux_usage = ISL_AUX_USAGE_NONE;
+      att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
+      att_state->fast_clear = false;
+      return;
+   }
 
    assert(iview->image->aux_surface.isl.usage & ISL_SURF_USAGE_CCS_BIT);
 
-   if (isl_format_supports_lossless_compression(&device->info,
-                                                iview->isl.format))
-      return ISL_AUX_USAGE_CCS_E;
+   att_state->clear_color_is_zero_one =
+      color_is_zero_one(att_state->clear_value.color, iview->isl.format);
 
-   return ISL_AUX_USAGE_NONE;
+   if (att_state->pending_clear_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
+      /* Start off assuming fast clears are possible */
+      att_state->fast_clear = true;
+
+      /* Potentially, we could do partial fast-clears but doing so has crazy
+       * alignment restrictions.  It's easier to just restrict to full size
+       * fast clears for now.
+       */
+      if (render_area.offset.x != 0 ||
+          render_area.offset.y != 0 ||
+          render_area.extent.width != iview->extent.width ||
+          render_area.extent.height != iview->extent.height)
+         att_state->fast_clear = false;
+
+      if (att_state->fast_clear) {
+         memcpy(fast_clear_color->u32, att_state->clear_value.color.uint32,
+                sizeof(fast_clear_color->u32));
+      }
+   } else {
+      att_state->fast_clear = false;
+   }
+
+   if (isl_format_supports_lossless_compression(&device->info,
+                                                iview->isl.format)) {
+      att_state->aux_usage = ISL_AUX_USAGE_CCS_E;
+      att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
+   } else if (att_state->fast_clear) {
+      att_state->aux_usage = ISL_AUX_USAGE_CCS_D;
+      /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
+       *
+       *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
+       *    setting is only allowed if Surface Format supported for Fast
+       *    Clear. In addition, if the surface is bound to the sampling
+       *    engine, Surface Format must be supported for Render Target
+       *    Compression for surfaces bound to the sampling engine."
+       *
+       * In other words, we can't sample from a fast-cleared image if it
+       * doesn't also support color compression.
+       */
+      att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
+   } else {
+      att_state->aux_usage = ISL_AUX_USAGE_NONE;
+      att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
+   }
 }
 
 static bool
@@ -350,9 +414,12 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          struct anv_image_view *iview = framebuffer->attachments[i];
          assert(iview->vk_format == att->format);
 
+         union isl_color_value clear_color = { .u32 = { 0, } };
          if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
-            state->attachments[i].aux_usage =
-               fb_attachment_get_aux_usage(cmd_buffer->device, framebuffer, i);
+            color_attachment_compute_aux_usage(cmd_buffer->device,
+                                               &state->attachments[i],
+                                               iview, begin->renderArea,
+                                               &clear_color);
 
             struct isl_view view = iview->isl;
             view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
@@ -362,6 +429,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                 .view = &view,
                                 .aux_surf = &iview->image->aux_surface.isl,
                                 .aux_usage = state->attachments[i].aux_usage,
+                                .clear_color = clear_color,
                                 .mocs = cmd_buffer->device->default_mocs);
 
             add_image_view_relocs(cmd_buffer, iview,
@@ -369,6 +437,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                   state->attachments[i].color_rt_state);
          } else {
             state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
+            state->attachments[i].input_aux_usage = ISL_AUX_USAGE_NONE;
          }
 
          if (need_input_attachment_state(&pass->attachments[i])) {
@@ -386,11 +455,12 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                 .surf = surf,
                                 .view = &view,
                                 .aux_surf = &iview->image->aux_surface.isl,
-                                .aux_usage = state->attachments[i].aux_usage,
+                                .aux_usage = state->attachments[i].input_aux_usage,
+                                .clear_color = clear_color,
                                 .mocs = cmd_buffer->device->default_mocs);
 
             add_image_view_relocs(cmd_buffer, iview,
-                                  state->attachments[i].aux_usage,
+                                  state->attachments[i].input_aux_usage,
                                   state->attachments[i].input_att_state);
          }
       }

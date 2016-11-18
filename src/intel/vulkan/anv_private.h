@@ -1100,11 +1100,14 @@ void anv_dynamic_state_copy(struct anv_dynamic_state *dest,
  */
 struct anv_attachment_state {
    enum isl_aux_usage                           aux_usage;
+   enum isl_aux_usage                           input_aux_usage;
    struct anv_state                             color_rt_state;
    struct anv_state                             input_att_state;
 
    VkImageAspectFlags                           pending_clear_aspects;
+   bool                                         fast_clear;
    VkClearValue                                 clear_value;
+   bool                                         clear_color_is_zero_one;
 };
 
 /** State required while building cmd buffer */
