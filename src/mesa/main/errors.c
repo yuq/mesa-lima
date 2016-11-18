@@ -35,12 +35,6 @@
 #include "imports.h"
 #include "context.h"
 #include "debug_output.h"
-#include "dispatch.h"
-#include "hash.h"
-#include "mtypes.h"
-#include "version.h"
-#include "util/hash_table.h"
-#include "util/simple_list.h"
 
 
 static FILE *LogFile = NULL;
