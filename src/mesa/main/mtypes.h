@@ -2282,6 +2282,10 @@ struct gl_linked_shader
 {
    gl_shader_stage Stage;
 
+#ifdef DEBUG
+   unsigned SourceChecksum;
+#endif
+
    struct gl_program *Program;  /**< Post-compile assembly code */
 
    /**
@@ -2414,7 +2418,9 @@ struct gl_shader
    GLboolean CompileStatus;
    bool IsES;              /**< True if this shader uses GLSL ES */
 
-   GLuint SourceChecksum;       /**< for debug/logging purposes */
+#ifdef DEBUG
+   unsigned SourceChecksum;       /**< for debug/logging purposes */
+#endif
    const GLchar *Source;  /**< Source code string */
 
    GLchar *InfoLog;
