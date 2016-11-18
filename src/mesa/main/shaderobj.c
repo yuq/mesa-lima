@@ -109,6 +109,9 @@ _mesa_new_shader(GLuint name, gl_shader_stage stage)
    if (shader) {
       shader->Stage = stage;
       shader->Name = name;
+#ifdef DEBUG
+      shader->SourceChecksum = 0xa110c; /* alloc */
+#endif
       _mesa_init_shader(shader);
    }
    return shader;
