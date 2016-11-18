@@ -2814,9 +2814,8 @@ get_mesa_program(struct gl_context *ctx,
 
    unsigned num_instructions = v.instructions.length();
 
-   mesa_instructions =
-      (struct prog_instruction *)calloc(num_instructions,
-					sizeof(*mesa_instructions));
+   mesa_instructions = rzalloc_array(prog, struct prog_instruction,
+                                     num_instructions);
    mesa_instruction_annotation = ralloc_array(v.mem_ctx, ir_instruction *,
 					      num_instructions);
 
@@ -2948,7 +2947,7 @@ get_mesa_program(struct gl_context *ctx,
    return prog;
 
 fail_exit:
-   free(mesa_instructions);
+   ralloc_free(mesa_instructions);
    _mesa_reference_program(ctx, &shader->Program, NULL);
    return NULL;
 }

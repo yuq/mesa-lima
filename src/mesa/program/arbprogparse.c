@@ -85,7 +85,7 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
       return;
    }
 
-   free(program->String);
+   ralloc_free(program->String);
 
    /* Copy the relevant contents of the arb_program struct into the
     * fragment_program struct.
@@ -121,7 +121,7 @@ _mesa_parse_arb_fragment_program(struct gl_context* ctx, GLenum target,
 
    program->info.fs.uses_discard = state.fragment.UsesKill;
 
-   free(program->arb.Instructions);
+   ralloc_free(program->arb.Instructions);
    program->arb.Instructions = prog.arb.Instructions;
 
    if (program->Parameters)
