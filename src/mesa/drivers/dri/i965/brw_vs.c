@@ -310,7 +310,7 @@ brw_vs_populate_key(struct brw_context *brw,
       }
    }
 
-   if (prog->nir->info->outputs_written &
+   if (prog->info.outputs_written &
        (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
         VARYING_BIT_BFC1)) {
       /* _NEW_LIGHT | _NEW_BUFFERS */
@@ -364,7 +364,7 @@ brw_vs_precompile(struct gl_context *ctx, struct gl_program *prog)
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
    key.program_string_id = bvp->id;
    key.clamp_vertex_color =
-      (prog->nir->info->outputs_written &
+      (prog->info.outputs_written &
        (VARYING_BIT_COL0 | VARYING_BIT_COL1 | VARYING_BIT_BFC0 |
         VARYING_BIT_BFC1));
 
