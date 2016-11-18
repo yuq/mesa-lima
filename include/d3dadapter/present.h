@@ -70,7 +70,10 @@ typedef struct ID3DPresentVtbl
     HRESULT (WINAPI *DestroyD3DWindowBuffer)(ID3DPresent *This, D3DWindowBuffer *buffer);
     /* After presenting a buffer to the window system, the buffer
      * may be used as is (no copy of the content) by the window system.
-     * You must not use a non-released buffer, else the user may see undefined content. */
+     * You must not use a non-released buffer, else the user may see undefined content.
+     * Note: This function waits as well that the buffer content was displayed (this
+     * can be after the release of the buffer if the window system decided to make
+     * an internal copy and release early. */
     HRESULT (WINAPI *WaitBufferReleased)(ID3DPresent *This, D3DWindowBuffer *buffer);
     HRESULT (WINAPI *FrontBufferCopy)(ID3DPresent *This, D3DWindowBuffer *buffer);
     /* It is possible to do partial copy, but impossible to do resizing, which must
