@@ -245,6 +245,7 @@ libswrAVX2_la_LDFLAGS = \
 include $(top_srcdir)/install-gallium-links.mk
 
 EXTRA_DIST = \
+	SConscript \
 	rasterizer/archrast/events.proto \
 	rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 	rasterizer/jitter/scripts/gen_llvm_types.py \
