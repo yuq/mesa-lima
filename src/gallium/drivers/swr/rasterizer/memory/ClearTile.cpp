@@ -156,15 +156,18 @@ void StoreHotTileClear(
 {
     PFN_STORE_TILES_CLEAR pfnStoreTilesClear = NULL;
 
-    SWR_ASSERT(renderTargetIndex != SWR_ATTACHMENT_STENCIL);  ///@todo Not supported yet.
-
-    if (renderTargetIndex != SWR_ATTACHMENT_DEPTH)
+    if (renderTargetIndex == SWR_ATTACHMENT_STENCIL)
     {
-        pfnStoreTilesClear = sStoreTilesClearColorTable[pDstSurface->format];
+        SWR_ASSERT(pDstSurface->format == R8_UINT);
+        pfnStoreTilesClear = StoreMacroTileClear<R8_UINT, R8_UINT>::StoreClear;
+    }
+    else if (renderTargetIndex == SWR_ATTACHMENT_DEPTH)
+    {
+        pfnStoreTilesClear = sStoreTilesClearDepthTable[pDstSurface->format];
     }
     else
     {
-        pfnStoreTilesClear = sStoreTilesClearDepthTable[pDstSurface->format];
+        pfnStoreTilesClear = sStoreTilesClearColorTable[pDstSurface->format];
     }
 
     SWR_ASSERT(pfnStoreTilesClear != NULL);
