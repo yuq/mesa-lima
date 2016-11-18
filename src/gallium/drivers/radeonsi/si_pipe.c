@@ -409,6 +409,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_CLEAR_TEXTURE:
 	case PIPE_CAP_CULL_DISTANCE:
 	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
+	case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
 		return 1;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:

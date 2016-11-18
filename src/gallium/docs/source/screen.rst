@@ -364,6 +364,8 @@ The integer capabilities:
 * ``PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS``: Whether interleaved stream
   output mode is able to interleave across buffers. This is required for
   ARB_transform_feedback3.
+* ``PIPE_CAP_TGSI_CAN_READ_OUTPUTS``: Whether every TGSI shader stage can read
+  from the output file.
 
 
 .. _pipe_capf:
