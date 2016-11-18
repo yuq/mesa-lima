@@ -285,17 +285,11 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
 
         if (pClear->attachmentMask & SWR_ATTACHMENT_MASK_COLOR)
         {
-            /// @todo clear data should come in as RGBA32_FLOAT
             DWORD clearData[4];
-            float clearFloat[4];
-            clearFloat[0] = ((uint8_t*)(&pClear->clearRTColor))[0] / 255.0f;
-            clearFloat[1] = ((uint8_t*)(&pClear->clearRTColor))[1] / 255.0f;
-            clearFloat[2] = ((uint8_t*)(&pClear->clearRTColor))[2] / 255.0f;
-            clearFloat[3] = ((uint8_t*)(&pClear->clearRTColor))[3] / 255.0f;
-            clearData[0] = *(DWORD*)&clearFloat[0];
-            clearData[1] = *(DWORD*)&clearFloat[1];
-            clearData[2] = *(DWORD*)&clearFloat[2];
-            clearData[3] = *(DWORD*)&clearFloat[3];
+            clearData[0] = *(DWORD*)&(pClear->clearRTColor[0]);
+            clearData[1] = *(DWORD*)&(pClear->clearRTColor[1]);
+            clearData[2] = *(DWORD*)&(pClear->clearRTColor[2]);
+            clearData[3] = *(DWORD*)&(pClear->clearRTColor[3]);
 
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[KNOB_COLOR_HOT_TILE_FORMAT];
             SWR_ASSERT(pfnClearTiles != nullptr);
