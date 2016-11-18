@@ -442,9 +442,9 @@ handle_3dstate_hs(struct gen_spec *spec, uint32_t *p)
    int hs_enable;
 
    if (gen_spec_get_gen(spec) >= gen_make_gen(8, 0)) {
-      start = get_qword(&p[4]);
+      start = get_qword(&p[3]);
    } else {
-      start = p[4];
+      start = p[3];
    }
 
    hs_enable = p[2] & 0x80000000;
