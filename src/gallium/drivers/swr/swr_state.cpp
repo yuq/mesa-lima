@@ -682,6 +682,13 @@ swr_update_resource_status(struct pipe_context *pipe,
          swr_resource_read(ib->buffer);
    }
 
+   /* transform feedback buffers */
+   for (uint32_t i = 0; i < ctx->num_so_targets; i++) {
+      struct pipe_stream_output_target *target = ctx->so_targets[i];
+      if (target && target->buffer)
+         swr_resource_write(target->buffer);
+   }
+
    /* texture sampler views */
    for (uint32_t j : {PIPE_SHADER_VERTEX, PIPE_SHADER_FRAGMENT}) {
       for (uint32_t i = 0; i < ctx->num_sampler_views[j]; i++) {
