@@ -153,6 +153,19 @@ anv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
    }
 }
 
+static inline union isl_color_value
+vk_to_isl_color(VkClearColorValue color)
+{
+   return (union isl_color_value) {
+      .u32 = {
+         color.uint32[0],
+         color.uint32[1],
+         color.uint32[2],
+         color.uint32[3],
+      },
+   };
+}
+
 #define for_each_bit(b, dword)                          \
    for (uint32_t __dword = (dword);                     \
         (b) = __builtin_ffs(__dword) - 1, __dword;      \
