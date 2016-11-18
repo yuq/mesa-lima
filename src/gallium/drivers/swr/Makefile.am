@@ -71,11 +71,21 @@ swr_context_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py swr_context.h
 		--input $(srcdir)/swr_context.h \
 		--output swr_context_llvm.h
 
-rasterizer/scripts/gen_knobs.cpp rasterizer/scripts/gen_knobs.h: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
+rasterizer/scripts/gen_knobs.cpp: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
 	$(MKDIR_GEN)
 	$(PYTHON_GEN) \
 		$(srcdir)/rasterizer/scripts/gen_knobs.py \
-		rasterizer/scripts
+		--input $(srcdir)/rasterizer/scripts/templates/knobs.template \
+		--output rasterizer/scripts/gen_knobs.cpp \
+		--gen_cpp
+
+rasterizer/scripts/gen_knobs.h: rasterizer/scripts/gen_knobs.py rasterizer/scripts/knob_defs.py rasterizer/scripts/templates/knobs.template
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) \
+		$(srcdir)/rasterizer/scripts/gen_knobs.py \
+		--input $(srcdir)/rasterizer/scripts/templates/knobs.template \
+		--output rasterizer/scripts/gen_knobs.h \
+		--gen_h
 
 rasterizer/jitter/state_llvm.h: rasterizer/jitter/scripts/gen_llvm_types.py rasterizer/core/state.h
 	$(MKDIR_GEN)
