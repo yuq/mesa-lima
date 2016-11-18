@@ -60,6 +60,12 @@ struct StoreRasterTileClear
         UINT x, UINT y, // (x, y) pixel coordinate to start of raster tile.
         uint32_t renderTargetArrayIndex)
     {
+        // If we're outside of the surface, stop.
+        uint32_t lodWidth = std::max<uint32_t>(pDstSurface->width >> pDstSurface->lod, 1U);
+        uint32_t lodHeight = std::max<uint32_t>(pDstSurface->height >> pDstSurface->lod, 1U);
+        if (x >= lodWidth || y >= lodHeight)
+            return;
+
         // Compute destination address for raster tile.
         uint8_t* pDstTile = (uint8_t*)ComputeSurfaceAddress<false, false>(
                 x, y, pDstSurface->arrayIndex + renderTargetArrayIndex,
@@ -73,7 +79,7 @@ struct StoreRasterTileClear
         UINT dstBytesPerRow = 0;
 
         // For each raster tile pixel in row 0 (rx, 0)
-        for (UINT rx = 0; (rx < KNOB_TILE_X_DIM) && ((x + rx) < pDstSurface->width); ++rx)
+        for (UINT rx = 0; (rx < KNOB_TILE_X_DIM) && ((x + rx) < lodWidth); ++rx)
         {
             memcpy(pDst, dstFormattedColor, dstBytesPerPixel);
 
@@ -86,7 +92,7 @@ struct StoreRasterTileClear
         pDst = pDstTile + pDstSurface->pitch;
 
         // For each remaining row in the rest of the raster tile
-        for (UINT ry = 1; (ry < KNOB_TILE_Y_DIM) && ((y + ry) < pDstSurface->height); ++ry)
+        for (UINT ry = 1; (ry < KNOB_TILE_Y_DIM) && ((y + ry) < lodHeight); ++ry)
         {
             // copy row
             memcpy(pDst, pDstTile, dstBytesPerRow);
