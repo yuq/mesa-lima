@@ -233,12 +233,6 @@ handle_3dstate_index_buffer(struct gen_spec *spec, uint32_t *p)
 }
 
 static inline uint64_t
-get_qword(uint32_t *p)
-{
-   return ((uint64_t) p[1] << 32) | p[0];
-}
-
-static inline uint64_t
 get_address(struct gen_spec *spec, uint32_t *p)
 {
    /* Addresses are always guaranteed to be page-aligned and sometimes
@@ -257,6 +251,21 @@ get_address(struct gen_spec *spec, uint32_t *p)
    }
 
    return addr;
+}
+
+static inline uint64_t
+get_offset(uint32_t *p, uint32_t start, uint32_t end)
+{
+   assert(start <= end);
+   assert(end < 64);
+
+   uint64_t mask = (~0ull >> (64 - (end - start + 1))) << start;
+
+   uint64_t offset = p[0];
+   if (end >= 32)
+      offset |= (uint64_t) p[1] << 32;
+
+   return offset & mask;
 }
 
 static void
@@ -418,10 +427,10 @@ handle_3dstate_vs(struct gen_spec *spec, uint32_t *p)
    int vs_enable;
 
    if (gen_spec_get_gen(spec) >= gen_make_gen(8, 0)) {
-      start = get_qword(&p[1]);
+      start = get_offset(&p[1], 6, 63);
       vs_enable = p[7] & 1;
    } else {
-      start = p[1];
+      start = get_offset(&p[1], 6, 31);
       vs_enable = p[5] & 1;
    }
 
@@ -442,9 +451,9 @@ handle_3dstate_hs(struct gen_spec *spec, uint32_t *p)
    int hs_enable;
 
    if (gen_spec_get_gen(spec) >= gen_make_gen(8, 0)) {
-      start = get_qword(&p[3]);
+      start = get_offset(&p[3], 6, 63);
    } else {
-      start = p[3];
+      start = get_offset(&p[3], 6, 31);
    }
 
    hs_enable = p[2] & 0x80000000;
