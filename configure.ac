@@ -899,6 +899,79 @@ llvm_add_target() {
     fi
 }
 
+llvm_set_environment_variables() {
+    if test -z "$LLVM_CONFIG"; then
+        if test -n "$llvm_prefix"; then
+            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no], ["$llvm_prefix/bin"])
+        else
+            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no])
+        fi
+    fi
+
+    if test "x$LLVM_CONFIG" != xno; then
+        LLVM_VERSION=`$LLVM_CONFIG --version | egrep -o '^[[0-9.]]+'`
+        LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
+        LLVM_BINDIR=`$LLVM_CONFIG --bindir`
+        LLVM_CPPFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cppflags"`
+        LLVM_CFLAGS=$LLVM_CPPFLAGS   # CPPFLAGS seem to be sufficient
+        LLVM_CXXFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cxxflags"`
+        LLVM_INCLUDEDIR=`$LLVM_CONFIG --includedir`
+        LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
+
+        AC_COMPUTE_INT([LLVM_VERSION_MAJOR], [LLVM_VERSION_MAJOR],
+            [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
+        AC_COMPUTE_INT([LLVM_VERSION_MINOR], [LLVM_VERSION_MINOR],
+            [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
+
+        LLVM_VERSION_PATCH=`echo $LLVM_VERSION | cut -d. -f3 | egrep -o '^[[0-9]]+'`
+        if test -z "$LLVM_VERSION_PATCH"; then
+            LLVM_VERSION_PATCH=0
+        fi
+
+        if test -n "${LLVM_VERSION_MAJOR}"; then
+            LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}"
+        else
+            LLVM_VERSION_INT=`echo $LLVM_VERSION | sed -e 's/\([[0-9]]\)\.\([[0-9]]\)/\10\2/g'`
+        fi
+
+        LLVM_REQUIRED_VERSION_MAJOR="3"
+        LLVM_REQUIRED_VERSION_MINOR="3"
+        if test "$LLVM_VERSION_INT" -lt "${LLVM_REQUIRED_VERSION_MAJOR}0${LLVM_REQUIRED_VERSION_MINOR}"; then
+            AC_MSG_ERROR([LLVM $LLVM_REQUIRED_VERSION_MAJOR.$LLVM_REQUIRED_VERSION_MINOR or newer is required])
+        fi
+
+        llvm_add_default_components "gallium"
+
+        if test "x$enable_opencl" = xyes; then
+            llvm_check_version_for "3" "6" "0" "opencl"
+
+            llvm_add_component "all-targets" "opencl"
+            llvm_add_component "ipo" "opencl"
+            llvm_add_component "linker" "opencl"
+            llvm_add_component "instrumentation" "opencl"
+            llvm_add_component "irreader" "opencl"
+            llvm_add_component "option" "opencl"
+            llvm_add_component "objcarcopts" "opencl"
+            llvm_add_component "profiledata" "opencl"
+        fi
+        DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
+        MESA_LLVM=1
+
+        dnl Check for Clang internal headers
+        if test "x$enable_opencl" = xyes; then
+            if test -z "$CLANG_LIBDIR"; then
+                CLANG_LIBDIR=${LLVM_LIBDIR}
+            fi
+            CLANG_RESOURCE_DIR=$CLANG_LIBDIR/clang/${LLVM_VERSION}
+            AS_IF([test ! -f "$CLANG_RESOURCE_DIR/include/stddef.h"],
+                [AC_MSG_ERROR([Could not find clang internal header stddef.h in $CLANG_RESOURCE_DIR Use --with-clang-libdir to specify the correct path to the clang libraries.])])
+        fi
+    else
+        MESA_LLVM=0
+        LLVM_VERSION_INT=0
+    fi
+}
+
 dnl Options for APIs
 AC_ARG_ENABLE([opengl],
     [AS_HELP_STRING([--disable-opengl],
@@ -2202,76 +2275,7 @@ if test "x$enable_gallium_llvm" = xauto; then
     esac
 fi
 if test "x$enable_gallium_llvm" = xyes || test "x$HAVE_RADEON_VULKAN" = xyes; then
-    if test -z "$LLVM_CONFIG"; then
-        if test -n "$llvm_prefix"; then
-            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no], ["$llvm_prefix/bin"])
-        else
-            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no])
-        fi
-    fi
-
-    if test "x$LLVM_CONFIG" != xno; then
-        LLVM_VERSION=`$LLVM_CONFIG --version | egrep -o '^[[0-9.]]+'`
-        LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
-        LLVM_BINDIR=`$LLVM_CONFIG --bindir`
-        LLVM_CPPFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cppflags"`
-        LLVM_CFLAGS=$LLVM_CPPFLAGS   # CPPFLAGS seem to be sufficient
-        LLVM_CXXFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cxxflags"`
-        LLVM_INCLUDEDIR=`$LLVM_CONFIG --includedir`
-        LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
-
-        AC_COMPUTE_INT([LLVM_VERSION_MAJOR], [LLVM_VERSION_MAJOR],
-            [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
-        AC_COMPUTE_INT([LLVM_VERSION_MINOR], [LLVM_VERSION_MINOR],
-            [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
-
-        LLVM_VERSION_PATCH=`echo $LLVM_VERSION | cut -d. -f3 | egrep -o '^[[0-9]]+'`
-        if test -z "$LLVM_VERSION_PATCH"; then
-            LLVM_VERSION_PATCH=0
-        fi
-
-        if test -n "${LLVM_VERSION_MAJOR}"; then
-            LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}"
-        else
-            LLVM_VERSION_INT=`echo $LLVM_VERSION | sed -e 's/\([[0-9]]\)\.\([[0-9]]\)/\10\2/g'`
-        fi
-
-        LLVM_REQUIRED_VERSION_MAJOR="3"
-        LLVM_REQUIRED_VERSION_MINOR="3"
-        if test "$LLVM_VERSION_INT" -lt "${LLVM_REQUIRED_VERSION_MAJOR}0${LLVM_REQUIRED_VERSION_MINOR}"; then
-            AC_MSG_ERROR([LLVM $LLVM_REQUIRED_VERSION_MAJOR.$LLVM_REQUIRED_VERSION_MINOR or newer is required])
-        fi
-
-        llvm_add_default_components "gallium"
-
-        if test "x$enable_opencl" = xyes; then
-            llvm_check_version_for "3" "6" "0" "opencl"
-
-            llvm_add_component "all-targets" "opencl"
-            llvm_add_component "ipo" "opencl"
-            llvm_add_component "linker" "opencl"
-            llvm_add_component "instrumentation" "opencl"
-            llvm_add_component "irreader" "opencl"
-            llvm_add_component "option" "opencl"
-            llvm_add_component "objcarcopts" "opencl"
-            llvm_add_component "profiledata" "opencl"
-        fi
-        DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
-        MESA_LLVM=1
-
-        dnl Check for Clang internal headers
-        if test "x$enable_opencl" = xyes; then
-            if test -z "$CLANG_LIBDIR"; then
-                CLANG_LIBDIR=${LLVM_LIBDIR}
-            fi
-            CLANG_RESOURCE_DIR=$CLANG_LIBDIR/clang/${LLVM_VERSION}
-            AS_IF([test ! -f "$CLANG_RESOURCE_DIR/include/stddef.h"],
-                [AC_MSG_ERROR([Could not find clang internal header stddef.h in $CLANG_RESOURCE_DIR Use --with-clang-libdir to specify the correct path to the clang libraries.])])
-        fi
-    else
-        MESA_LLVM=0
-        LLVM_VERSION_INT=0
-    fi
+    llvm_set_environment_variables
 else
     MESA_LLVM=0
     LLVM_VERSION_INT=0
