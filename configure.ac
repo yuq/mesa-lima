@@ -984,30 +984,8 @@ llvm_set_environment_variables() {
 
         llvm_add_default_components "gallium"
 
-        if test "x$enable_opencl" = xyes; then
-            llvm_check_version_for "3" "6" "0" "opencl"
-
-            llvm_add_component "all-targets" "opencl"
-            llvm_add_component "ipo" "opencl"
-            llvm_add_component "linker" "opencl"
-            llvm_add_component "instrumentation" "opencl"
-            llvm_add_component "irreader" "opencl"
-            llvm_add_component "option" "opencl"
-            llvm_add_component "objcarcopts" "opencl"
-            llvm_add_component "profiledata" "opencl"
-        fi
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         MESA_LLVM=1
-
-        dnl Check for Clang internal headers
-        if test "x$enable_opencl" = xyes; then
-            if test -z "$CLANG_LIBDIR"; then
-                CLANG_LIBDIR=${LLVM_LIBDIR}
-            fi
-            CLANG_RESOURCE_DIR=$CLANG_LIBDIR/clang/${LLVM_VERSION}
-            AS_IF([test ! -f "$CLANG_RESOURCE_DIR/include/stddef.h"],
-                [AC_MSG_ERROR([Could not find clang internal header stddef.h in $CLANG_RESOURCE_DIR Use --with-clang-libdir to specify the correct path to the clang libraries.])])
-        fi
     else
         MESA_LLVM=0
         LLVM_VERSION_INT=0
@@ -2143,6 +2121,25 @@ if test "x$enable_opencl" = xyes; then
     if test "x$have_libelf" != xyes; then
        AC_MSG_ERROR([Clover requires libelf])
     fi
+
+    llvm_check_version_for "3" "6" "0" "opencl"
+
+    llvm_add_component "all-targets" "opencl"
+    llvm_add_component "linker" "opencl"
+    llvm_add_component "instrumentation" "opencl"
+    llvm_add_component "ipo" "opencl"
+    llvm_add_component "irreader" "opencl"
+    llvm_add_component "option" "opencl"
+    llvm_add_component "objcarcopts" "opencl"
+    llvm_add_component "profiledata" "opencl"
+
+    dnl Check for Clang internal headers
+    if test -z "$CLANG_LIBDIR"; then
+        CLANG_LIBDIR=${LLVM_LIBDIR}
+    fi
+    CLANG_RESOURCE_DIR=$CLANG_LIBDIR/clang/${LLVM_VERSION}
+    AS_IF([test ! -f "$CLANG_RESOURCE_DIR/include/stddef.h"],
+        [AC_MSG_ERROR([Could not find clang internal header stddef.h in $CLANG_RESOURCE_DIR Use --with-clang-libdir to specify the correct path to the clang libraries.])])
 fi
 AM_CONDITIONAL(HAVE_CLOVER, test "x$enable_opencl" = xyes)
 AM_CONDITIONAL(HAVE_CLOVER_ICD, test "x$enable_opencl_icd" = xyes)
