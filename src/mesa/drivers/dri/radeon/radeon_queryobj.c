@@ -29,7 +29,6 @@
 #include "radeon_debug.h"
 
 #include "main/imports.h"
-#include "util/simple_list.h"
 
 #include <inttypes.h>
 
