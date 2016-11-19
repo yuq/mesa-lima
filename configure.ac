@@ -866,6 +866,27 @@ AC_SUBST([SELINUX_LIBS])
 dnl
 dnl LLVM
 dnl
+AC_ARG_ENABLE([llvm-shared-libs],
+    [AS_HELP_STRING([--enable-llvm-shared-libs],
+        [link with LLVM shared libraries @<:@default=enabled@:>@])],
+    [enable_llvm_shared_libs="$enableval"],
+    [enable_llvm_shared_libs=yes])
+
+AC_ARG_WITH([llvm-prefix],
+    [AS_HELP_STRING([--with-llvm-prefix],
+        [Prefix for LLVM installations in non-standard locations])],
+    [llvm_prefix="$withval"],
+    [llvm_prefix=''])
+
+PKG_CHECK_MODULES([LIBELF], [libelf], [have_libelf=yes], [have_libelf=no])
+if test "x$have_libelf" = xno; then
+   LIBELF_LIBS=''
+   LIBELF_CFLAGS=''
+   AC_CHECK_LIB([elf], [elf_memory], [have_libelf=yes;LIBELF_LIBS=-lelf], [have_libelf=no])
+   AC_SUBST([LIBELF_LIBS])
+   AC_SUBST([LIBELF_CFLAGS])
+fi
+
 llvm_add_component() {
     new_llvm_component=$1
     driver_name=$2
@@ -897,6 +918,33 @@ llvm_add_target() {
     else
         AC_MSG_ERROR([LLVM target '$new_llvm_target' not enabled in your LLVM build. Required by $driver_name.])
     fi
+}
+
+# Call this inside ` ` to get the return value.
+# $1 is the llvm-config command with arguments.
+strip_unwanted_llvm_flags() {
+    # Use \> (marks the end of the word)
+    echo `$1` | sed \
+        -e 's/-march=\S*//g' \
+        -e 's/-mtune=\S*//g' \
+        -e 's/-mcpu=\S*//g' \
+        -e 's/-DNDEBUG\>//g' \
+        -e 's/-D_GNU_SOURCE\>//g' \
+        -e 's/-pedantic\>//g' \
+        -e 's/-Wcovered-switch-default\>//g' \
+        -e 's/-O.\>//g' \
+        -e 's/-g\>//g' \
+        -e 's/-Wall\>//g' \
+        -e 's/-Wcast-qual\>//g' \
+        -e 's/-Woverloaded-virtual\>//g' \
+        -e 's/-fcolor-diagnostics\>//g' \
+        -e 's/-fdata-sections\>//g' \
+        -e 's/-ffunction-sections\>//g' \
+        -e 's/-fno-exceptions\>//g' \
+        -e 's/-fomit-frame-pointer\>//g' \
+        -e 's/-fvisibility-inlines-hidden\>//g' \
+        -e 's/-fPIC\>//g' \
+        -e 's/-fstack-protector-strong\>//g'
 }
 
 llvm_set_environment_variables() {
@@ -969,6 +1017,32 @@ llvm_set_environment_variables() {
     else
         MESA_LLVM=0
         LLVM_VERSION_INT=0
+    fi
+}
+
+llvm_check_version_for() {
+    if test "${LLVM_VERSION_INT}${LLVM_VERSION_PATCH}" -lt "${1}0${2}${3}"; then
+        AC_MSG_ERROR([LLVM $1.$2.$3 or newer is required for $4])
+    fi
+}
+
+radeon_llvm_check() {
+    if test ${LLVM_VERSION_INT} -lt 307; then
+        amdgpu_llvm_target_name='r600'
+    else
+        amdgpu_llvm_target_name='amdgpu'
+    fi
+
+    llvm_check_version_for $2 $3 $4 $1
+
+    llvm_add_target $amdgpu_llvm_target_name $1
+
+    llvm_add_component "bitreader" $1
+    llvm_add_component "ipo" $1
+
+    NEED_RADEON_LLVM=yes
+    if test "x$have_libelf" != xyes; then
+       AC_MSG_ERROR([$1 requires libelf when using llvm])
     fi
 }
 
@@ -2040,15 +2114,6 @@ AC_ARG_WITH([clang-libdir],
    [CLANG_LIBDIR=''])
 
 PKG_CHECK_EXISTS([libclc], [have_libclc=yes], [have_libclc=no])
-PKG_CHECK_MODULES([LIBELF], [libelf], [have_libelf=yes], [have_libelf=no])
-
-if test "x$have_libelf" = xno; then
-   LIBELF_LIBS=''
-   LIBELF_CFLAGS=''
-   AC_CHECK_LIB([elf], [elf_memory], [have_libelf=yes;LIBELF_LIBS=-lelf], [have_libelf=no])
-   AC_SUBST([LIBELF_LIBS])
-   AC_SUBST([LIBELF_CFLAGS])
-fi
 
 if test "x$enable_opencl" = xyes; then
     if test -z "$with_gallium_drivers"; then
@@ -2218,54 +2283,6 @@ AC_ARG_ENABLE([gallium-llvm],
     [enable_gallium_llvm="$enableval"],
     [enable_gallium_llvm=auto])
 
-AC_ARG_ENABLE([llvm-shared-libs],
-    [AS_HELP_STRING([--enable-llvm-shared-libs],
-        [link with LLVM shared libraries @<:@default=enabled@:>@])],
-    [enable_llvm_shared_libs="$enableval"],
-    [enable_llvm_shared_libs=yes])
-
-AC_ARG_WITH([llvm-prefix],
-    [AS_HELP_STRING([--with-llvm-prefix],
-        [Prefix for LLVM installations in non-standard locations])],
-    [llvm_prefix="$withval"],
-    [llvm_prefix=''])
-
-
-# Call this inside ` ` to get the return value.
-# $1 is the llvm-config command with arguments.
-strip_unwanted_llvm_flags() {
-    # Use \> (marks the end of the word)
-    echo `$1` | sed \
-	-e 's/-march=\S*//g' \
-	-e 's/-mtune=\S*//g' \
-	-e 's/-mcpu=\S*//g' \
-	-e 's/-DNDEBUG\>//g' \
-	-e 's/-D_GNU_SOURCE\>//g' \
-	-e 's/-pedantic\>//g' \
-	-e 's/-Wcovered-switch-default\>//g' \
-	-e 's/-O.\>//g' \
-	-e 's/-g\>//g' \
-	-e 's/-Wall\>//g' \
-	-e 's/-Wcast-qual\>//g' \
-	-e 's/-Woverloaded-virtual\>//g' \
-	-e 's/-fcolor-diagnostics\>//g' \
-	-e 's/-fdata-sections\>//g' \
-	-e 's/-ffunction-sections\>//g' \
-	-e 's/-fno-exceptions\>//g' \
-	-e 's/-fomit-frame-pointer\>//g' \
-	-e 's/-fvisibility-inlines-hidden\>//g' \
-	-e 's/-fPIC\>//g' \
-	-e 's/-fstack-protector-strong\>//g'
-}
-
-llvm_check_version_for() {
-    if test "${LLVM_VERSION_INT}${LLVM_VERSION_PATCH}" -lt "${1}0${2}${3}"; then
-        AC_MSG_ERROR([LLVM $1.$2.$3 or newer is required for $4])
-    fi
-}
-
-
-
 if test -z "$with_gallium_drivers"; then
     enable_gallium_llvm=no
 fi
@@ -2358,26 +2375,6 @@ require_basic_egl() {
                   Recommended options: drm,x11])
             ;;
     esac
-}
-
-radeon_llvm_check() {
-    if test ${LLVM_VERSION_INT} -lt 307; then
-        amdgpu_llvm_target_name='r600'
-    else
-        amdgpu_llvm_target_name='amdgpu'
-    fi
-
-    llvm_check_version_for $2 $3 $4 $1
-
-    llvm_add_target $amdgpu_llvm_target_name $1
-
-    llvm_add_component "bitreader" $1
-    llvm_add_component "ipo" $1
-
-    NEED_RADEON_LLVM=yes
-    if test "x$have_libelf" != xyes; then
-       AC_MSG_ERROR([$1 requires libelf when using llvm])
-    fi
 }
 
 radeon_gallium_llvm_check() {
