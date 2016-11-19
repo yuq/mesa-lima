@@ -2166,10 +2166,12 @@ if test "x$enable_gallium_llvm" = xauto; then
     esac
 fi
 if test "x$enable_gallium_llvm" = xyes || test "x$HAVE_RADEON_VULKAN" = xyes; then
-    if test -n "$llvm_prefix"; then
-        AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no], ["$llvm_prefix/bin"])
-    else
-        AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no])
+    if test -z "$LLVM_CONFIG"; then
+        if test -n "$llvm_prefix"; then
+            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no], ["$llvm_prefix/bin"])
+        else
+            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no])
+        fi
     fi
 
     if test "x$LLVM_CONFIG" != xno; then
