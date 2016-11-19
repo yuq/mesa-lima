@@ -887,6 +887,14 @@ if test "x$have_libelf" = xno; then
    AC_SUBST([LIBELF_CFLAGS])
 fi
 
+if test -z "$LLVM_CONFIG"; then
+    if test -n "$llvm_prefix"; then
+        AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no], ["$llvm_prefix/bin"])
+    else
+        AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no])
+    fi
+fi
+
 llvm_add_component() {
     new_llvm_component=$1
     driver_name=$2
@@ -948,14 +956,6 @@ strip_unwanted_llvm_flags() {
 }
 
 llvm_set_environment_variables() {
-    if test -z "$LLVM_CONFIG"; then
-        if test -n "$llvm_prefix"; then
-            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no], ["$llvm_prefix/bin"])
-        else
-            AC_PATH_TOOL([LLVM_CONFIG], [llvm-config], [no])
-        fi
-    fi
-
     if test "x$LLVM_CONFIG" != xno; then
         LLVM_VERSION=`$LLVM_CONFIG --version | egrep -o '^[[0-9.]]+'`
         LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
