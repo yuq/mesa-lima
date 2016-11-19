@@ -72,8 +72,8 @@ NineSwapChain9_ctor( struct NineSwapChain9 *This,
         D3DPRESENT_PARAMETERS2 params2;
 
         memset(&params2, 0, sizeof(D3DPRESENT_PARAMETERS2));
-        params2.AllowDISCARDDelayedRelease = TRUE;
-        params2.TearFreeDISCARD = FALSE;
+        params2.AllowDISCARDDelayedRelease = This->actx->discard_delayed_release;
+        params2.TearFreeDISCARD = This->actx->tearfree_discard;
         ID3DPresent_SetPresentParameters2(pPresent, &params2);
     }
 
