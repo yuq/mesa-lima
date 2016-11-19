@@ -1816,6 +1816,35 @@ genX(flush_pipeline_select_gpgpu)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+void
+genX(cmd_buffer_emit_gen7_depth_flush)(struct anv_cmd_buffer *cmd_buffer)
+{
+   if (GEN_GEN >= 8)
+      return;
+
+   /* From the Haswell PRM, documentation for 3DSTATE_DEPTH_BUFFER:
+    *
+    *    "Restriction: Prior to changing Depth/Stencil Buffer state (i.e., any
+    *    combination of 3DSTATE_DEPTH_BUFFER, 3DSTATE_CLEAR_PARAMS,
+    *    3DSTATE_STENCIL_BUFFER, 3DSTATE_HIER_DEPTH_BUFFER) SW must first
+    *    issue a pipelined depth stall (PIPE_CONTROL with Depth Stall bit
+    *    set), followed by a pipelined depth cache flush (PIPE_CONTROL with
+    *    Depth Flush Bit set, followed by another pipelined depth stall
+    *    (PIPE_CONTROL with Depth Stall Bit set), unless SW can otherwise
+    *    guarantee that the pipeline from WM onwards is already flushed (e.g.,
+    *    via a preceding MI_FLUSH)."
+    */
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pipe) {
+      pipe.DepthStallEnable = true;
+   }
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pipe) {
+      pipe.DepthCacheFlushEnable = true;
+   }
+   anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pipe) {
+      pipe.DepthStallEnable = true;
+   }
+}
+
 static void
 cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -1831,6 +1860,8 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
    /* FIXME: Implement the PMA stall W/A */
    /* FIXME: Width and Height are wrong */
+
+   genX(cmd_buffer_emit_gen7_depth_flush)(cmd_buffer);
 
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
