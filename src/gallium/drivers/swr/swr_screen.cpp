@@ -406,7 +406,7 @@ swr_get_paramf(struct pipe_screen *screen, enum pipe_capf param)
    case PIPE_CAPF_MAX_TEXTURE_ANISOTROPY:
       return 0.0;
    case PIPE_CAPF_MAX_TEXTURE_LOD_BIAS:
-      return 0.0;
+      return 16.0; /* arbitrary */
    case PIPE_CAPF_GUARD_BAND_LEFT:
    case PIPE_CAPF_GUARD_BAND_TOP:
    case PIPE_CAPF_GUARD_BAND_RIGHT:
