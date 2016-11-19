@@ -982,17 +982,15 @@ llvm_set_environment_variables() {
             [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
         AC_COMPUTE_INT([LLVM_VERSION_MINOR], [LLVM_VERSION_MINOR],
             [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
+        AC_COMPUTE_INT([LLVM_VERSION_PATCH], [LLVM_VERSION_PATCH],
+            [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
 
-        LLVM_VERSION_PATCH=`echo $LLVM_VERSION | cut -d. -f3 | egrep -o '^[[0-9]]+'`
+        # Only needed for LLVM < 3.6.0
         if test -z "$LLVM_VERSION_PATCH"; then
             LLVM_VERSION_PATCH=0
         fi
 
-        if test -n "${LLVM_VERSION_MAJOR}"; then
-            LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}"
-        else
-            LLVM_VERSION_INT=`echo $LLVM_VERSION | sed -e 's/\([[0-9]]\)\.\([[0-9]]\)/\10\2/g'`
-        fi
+        LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}"
 
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         MESA_LLVM=1
