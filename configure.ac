@@ -2451,15 +2451,15 @@ if test -n "$with_gallium_drivers"; then
         xr300)
             HAVE_GALLIUM_R300=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
-            require_libdrm "Gallium R300"
-            gallium_require_llvm "Gallium R300"
+            require_libdrm "r300"
+            gallium_require_llvm "r300"
             ;;
         xr600)
             HAVE_GALLIUM_R600=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
-            require_libdrm "Gallium R600"
+            require_libdrm "r600"
             if test "x$enable_opencl" = xyes; then
-                radeon_gallium_llvm_check "r600g" "3" "6" "0"
+                radeon_gallium_llvm_check "r600" "3" "6" "0"
 
                 llvm_add_component "asmparser" "r600"
                 llvm_add_component "bitreader" "r600"
