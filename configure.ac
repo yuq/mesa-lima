@@ -2247,8 +2247,14 @@ if test "x$enable_gallium_llvm" = xyes || test "x$HAVE_RADEON_VULKAN" = xyes; th
         if test "x$enable_opencl" = xyes; then
             llvm_check_version_for "3" "6" "0" "opencl"
 
-            LLVM_COMPONENTS="${LLVM_COMPONENTS} all-targets ipo linker instrumentation"
-            LLVM_COMPONENTS="${LLVM_COMPONENTS} irreader option objcarcopts profiledata"
+            llvm_add_component "all-targets" "opencl"
+            llvm_add_component "ipo" "opencl"
+            llvm_add_component "linker" "opencl"
+            llvm_add_component "instrumentation" "opencl"
+            llvm_add_component "irreader" "opencl"
+            llvm_add_component "option" "opencl"
+            llvm_add_component "objcarcopts" "opencl"
+            llvm_add_component "profiledata" "opencl"
         fi
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         MESA_LLVM=1
@@ -2356,11 +2362,14 @@ radeon_llvm_check() {
     else
         amdgpu_llvm_target_name='amdgpu'
     fi
+
     llvm_check_version_for $2 $3 $4 $1
-    if test true && $LLVM_CONFIG --targets-built | grep -iqvw $amdgpu_llvm_target_name ; then
-        AC_MSG_ERROR([LLVM $amdgpu_llvm_target_name not enabled in your LLVM build.])
-    fi
-    LLVM_COMPONENTS="${LLVM_COMPONENTS} $amdgpu_llvm_target_name bitreader ipo"
+
+    llvm_add_target $amdgpu_llvm_target_name $1
+
+    llvm_add_component "bitreader" $1
+    llvm_add_component "ipo" $1
+
     NEED_RADEON_LLVM=yes
     if test "x$have_libelf" != xyes; then
        AC_MSG_ERROR([$1 requires libelf when using llvm])
@@ -2454,7 +2463,9 @@ if test -n "$with_gallium_drivers"; then
             require_libdrm "Gallium R600"
             if test "x$enable_opencl" = xyes; then
                 radeon_gallium_llvm_check "r600g" "3" "6" "0"
-                LLVM_COMPONENTS="${LLVM_COMPONENTS} bitreader asmparser"
+
+                llvm_add_component "asmparser" "r600"
+                llvm_add_component "bitreader" "r600"
             fi
             ;;
         xradeonsi)
