@@ -99,6 +99,39 @@ private:
    set *variables;
 };
 
+void
+init_gl_program(struct gl_program *prog, GLenum target)
+{
+   mtx_init(&prog->Mutex, mtx_plain);
+
+   prog->RefCount = 1;
+   prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
+
+   /* default mapping from samplers to texture units */
+   for (int i = 0; i < MAX_SAMPLERS; i++)
+      prog->SamplerUnits[i] = i;
+}
+
+struct gl_program *
+new_program(struct gl_context *ctx, GLenum target, GLuint id)
+{
+   switch (target) {
+   case GL_VERTEX_PROGRAM_ARB: /* == GL_VERTEX_PROGRAM_NV */
+   case GL_GEOMETRY_PROGRAM_NV:
+   case GL_TESS_CONTROL_PROGRAM_NV:
+   case GL_TESS_EVALUATION_PROGRAM_NV:
+   case GL_FRAGMENT_PROGRAM_ARB:
+   case GL_COMPUTE_PROGRAM_NV: {
+      struct gl_program *prog = rzalloc(NULL, struct gl_program);
+      init_gl_program(prog, target);
+      return prog;
+   }
+   default:
+      printf("bad target in new_program\n");
+      return NULL;
+   }
+}
+
 static const struct standalone_options *options;
 
 static void
@@ -298,6 +331,7 @@ initialize_context(struct gl_context *ctx, gl_api api)
       4 * MESA_SHADER_STAGES * MAX_UNIFORMS;
 
    ctx->Driver.NewShader = _mesa_new_linked_shader;
+   ctx->Driver.NewProgram = new_program;
 }
 
 /* Returned string will have 'ctx' as its ralloc owner. */
@@ -358,19 +392,6 @@ compile_shader(struct gl_context *ctx, struct gl_shader *shader)
    }
 
    return;
-}
-
-void
-init_gl_program(struct gl_program *prog, GLenum target)
-{
-   mtx_init(&prog->Mutex, mtx_plain);
-
-   prog->RefCount = 1;
-   prog->Format = GL_PROGRAM_FORMAT_ASCII_ARB;
-
-   /* default mapping from samplers to texture units */
-   for (int i = 0; i < MAX_SAMPLERS; i++)
-      prog->SamplerUnits[i] = i;
 }
 
 extern "C" struct gl_shader_program *
@@ -547,9 +568,6 @@ standalone_compile_shader(const struct standalone_options *_options,
          dead_variable_visitor dv;
          visit_list_elements(&dv, shader->ir);
          dv.remove_dead_variables();
-
-         shader->Program = rzalloc(shader, gl_program);
-         init_gl_program(shader->Program, shader->Stage);
       }
 
       if (options->dump_builder) {
@@ -567,6 +585,11 @@ standalone_compile_shader(const struct standalone_options *_options,
    return whole_program;
 
 fail:
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (whole_program->_LinkedShaders[i])
+         ralloc_free(whole_program->_LinkedShaders[i]->Program);
+   }
+
    ralloc_free(whole_program);
    return NULL;
 }
@@ -574,8 +597,10 @@ fail:
 extern "C" void
 standalone_compiler_cleanup(struct gl_shader_program *whole_program)
 {
-   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++)
-      ralloc_free(whole_program->_LinkedShaders[i]);
+   for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+      if (whole_program->_LinkedShaders[i])
+         ralloc_free(whole_program->_LinkedShaders[i]->Program);
+   }
 
    delete whole_program->AttributeBindings;
    delete whole_program->FragDataBindings;
