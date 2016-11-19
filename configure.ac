@@ -1005,12 +1005,12 @@ radeon_llvm_check() {
         amdgpu_llvm_target_name='amdgpu'
     fi
 
-    llvm_check_version_for $2 $3 $4 $1
+    llvm_check_version_for $*
 
-    llvm_add_target $amdgpu_llvm_target_name $1
+    llvm_add_target $amdgpu_llvm_target_name $4
 
-    llvm_add_component "bitreader" $1
-    llvm_add_component "ipo" $1
+    llvm_add_component "bitreader" $4
+    llvm_add_component "ipo" $4
 
     NEED_RADEON_LLVM=yes
     if test "x$have_libelf" != xyes; then
@@ -1858,7 +1858,7 @@ if test -n "$with_vulkan_drivers"; then
             ;;
         xradeon)
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
-            radeon_llvm_check "radv" "3" "9" "0"
+            radeon_llvm_check "3" "9" "0" "radv"
             HAVE_RADEON_VULKAN=yes;
             if test "x$with_sha1" == "x"; then
                 AC_MSG_ERROR([radv vulkan driver requires SHA1])
@@ -2361,7 +2361,7 @@ require_basic_egl() {
 
 radeon_gallium_llvm_check() {
     if test "x$enable_gallium_llvm" != "xyes"; then
-        AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
+        AC_MSG_ERROR([--enable-gallium-llvm is required when building $4])
     fi
     radeon_llvm_check $*
 }
@@ -2435,7 +2435,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r600"
             if test "x$enable_opencl" = xyes; then
-                radeon_gallium_llvm_check "r600" "3" "6" "0"
+                radeon_gallium_llvm_check "3" "6" "0" "r600"
 
                 llvm_add_component "asmparser" "r600"
                 llvm_add_component "bitreader" "r600"
@@ -2446,7 +2446,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             require_libdrm "radeonsi"
-            radeon_gallium_llvm_check "radeonsi" "3" "6" "0"
+            radeon_gallium_llvm_check "3" "6" "0" "radeonsi"
             require_basic_egl "radeonsi"
             ;;
         xnouveau)
