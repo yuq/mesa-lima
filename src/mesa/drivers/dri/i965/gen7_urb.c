@@ -176,8 +176,6 @@ gen7_upload_urb(struct brw_context *brw, unsigned vs_size,
    const int push_size_kB =
       (brw->gen >= 8 || (brw->is_haswell && brw->gt == 3)) ? 32 : 16;
 
-   const bool active[4] = { true, tess_present, tess_present, gs_present };
-
    /* BRW_NEW_{VS,TCS,TES,GS}_PROG_DATA */
    struct brw_vue_prog_data *prog_data[4] = {
       [MESA_SHADER_VERTEX] =
