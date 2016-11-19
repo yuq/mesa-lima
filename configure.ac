@@ -863,6 +863,42 @@ fi
 AC_SUBST([SELINUX_CFLAGS])
 AC_SUBST([SELINUX_LIBS])
 
+dnl
+dnl LLVM
+dnl
+llvm_add_component() {
+    new_llvm_component=$1
+    driver_name=$2
+
+    LLVM_COMPONENTS="$LLVM_COMPONENTS $new_llvm_component"
+}
+
+llvm_add_default_components() {
+    driver_name=$1
+
+    # Required default components
+    llvm_add_component "bitwriter" $driver_name
+    llvm_add_component "engine" $driver_name
+    llvm_add_component "mcdisassembler" $driver_name
+    llvm_add_component "mcjit" $driver_name
+
+    # Optional default components
+    if $LLVM_CONFIG --components | grep -iqw inteljitevents ; then
+        LLVM_COMPONENTS="$LLVM_COMPONENTS inteljitevents"
+    fi
+}
+
+llvm_add_target() {
+    new_llvm_target=$1
+    driver_name=$2
+
+    if $LLVM_CONFIG --targets-built | grep -iqw $new_llvm_target ; then
+        llvm_add_component $new_llvm_target $driver_name
+    else
+        AC_MSG_ERROR([LLVM target '$new_llvm_target' not enabled in your LLVM build. Required by $driver_name.])
+    fi
+}
+
 dnl Options for APIs
 AC_ARG_ENABLE([opengl],
     [AS_HELP_STRING([--disable-opengl],
