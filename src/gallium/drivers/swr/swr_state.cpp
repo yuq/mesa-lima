@@ -976,9 +976,9 @@ swr_update_derived(struct pipe_context *pipe,
       SWR_VIEWPORT_MATRICES *vpm = &ctx->derived.vpm;
 
       vp->x = state->translate[0] - state->scale[0];
-      vp->width = state->translate[0] + state->scale[0];
+      vp->width = 2 * state->scale[0];
       vp->y = state->translate[1] - fabs(state->scale[1]);
-      vp->height = state->translate[1] + fabs(state->scale[1]);
+      vp->height = 2 * fabs(state->scale[1]);
       util_viewport_zmin_zmax(state, rasterizer->clip_halfz,
                               &vp->minZ, &vp->maxZ);
 
@@ -991,10 +991,16 @@ swr_update_derived(struct pipe_context *pipe,
 
       /* Now that the matrix is calculated, clip the view coords to screen
        * size.  OpenGL allows for -ve x,y in the viewport. */
-      vp->x = std::max(vp->x, 0.0f);
-      vp->y = std::max(vp->y, 0.0f);
-      vp->width = std::min(vp->width, (float)fb->width);
-      vp->height = std::min(vp->height, (float)fb->height);
+      if (vp->x < 0.0f) {
+         vp->width += vp->x;
+         vp->x = 0.0f;
+      }
+      if (vp->y < 0.0f) {
+         vp->height += vp->y;
+         vp->y = 0.0f;
+      }
+      vp->width = std::min(vp->width, (float)fb->width - vp->x);
+      vp->height = std::min(vp->height, (float)fb->height - vp->y);
 
       SwrSetViewports(ctx->swrContext, 1, vp, vpm);
    }
