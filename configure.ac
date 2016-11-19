@@ -92,6 +92,14 @@ XVMC_REQUIRED=1.0.6
 PYTHON_MAKO_REQUIRED=0.8.0
 LIBSENSORS_REQUIRED=4.0.0
 
+dnl LLVM versions
+LLVM_REQUIRED_GALLIUM=3.3.0
+LLVM_REQUIRED_OPENCL=3.6.0
+LLVM_REQUIRED_R600=3.6.0
+LLVM_REQUIRED_RADEONSI=3.6.0
+LLVM_REQUIRED_RADV=3.9.0
+LLVM_REQUIRED_SWR=3.6.0
+
 dnl Check for progs
 AC_PROG_CPP
 AC_PROG_CC
@@ -995,9 +1003,41 @@ llvm_set_environment_variables() {
 }
 
 llvm_check_version_for() {
-    if test "${LLVM_VERSION_INT}${LLVM_VERSION_PATCH}" -lt "${1}0${2}${3}"; then
-        AC_MSG_ERROR([LLVM $1.$2.$3 or newer is required for $4])
+    if test "x$MESA_LLVM" = x0; then
+        AC_MSG_ERROR([LLVM $1 or newer is required for $2])
+        return
     fi
+
+    llvm_target_version_major=`echo $1 | cut -d. -f1 | egrep -o '^[[0-9]]+'`
+    llvm_target_version_minor=`echo $1 | cut -d. -f2 | egrep -o '^[[0-9]]+'`
+    llvm_target_version_patch=`echo $1 | cut -d. -f3 | egrep -o '^[[0-9]]+'`
+
+    if test "$LLVM_VERSION_MAJOR" -gt "$llvm_target_version_major"; then
+        # major > required major
+        #  --> OK
+        return
+    fi
+
+    if test "$LLVM_VERSION_MAJOR" -eq "$llvm_target_version_major"; then
+        if test "$LLVM_VERSION_MINOR" -gt "$llvm_target_version_minor"; then
+            # major = required major and
+            # minor > required minor
+            #  --> OK
+            return
+        else
+            if test "$LLVM_VERSION_MINOR" -eq "$llvm_target_version_minor"; then
+                if test "$LLVM_VERSION_PATCH" -ge "$llvm_target_version_patch"; then
+                    # major = required major and
+                    # minor = required minor and
+                    # patch >= required patch
+                    #  --> OK
+                    return
+                fi
+            fi
+        fi
+    fi
+
+    AC_MSG_ERROR([LLVM $1 or newer is required for $2])
 }
 
 radeon_llvm_check() {
@@ -1009,11 +1049,11 @@ radeon_llvm_check() {
 
     llvm_check_version_for $*
 
-    llvm_add_target $amdgpu_llvm_target_name $4
+    llvm_add_target $amdgpu_llvm_target_name $2
 
-    llvm_add_default_components $4
-    llvm_add_component "bitreader" $4
-    llvm_add_component "ipo" $4
+    llvm_add_default_components $2
+    llvm_add_component "bitreader" $2
+    llvm_add_component "ipo" $2
 
     NEED_RADEON_LLVM=yes
     if test "x$have_libelf" != xyes; then
@@ -1861,7 +1901,7 @@ if test -n "$with_vulkan_drivers"; then
             ;;
         xradeon)
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
-            radeon_llvm_check "3" "9" "0" "radv"
+            radeon_llvm_check $LLVM_REQUIRED_RADV "radv"
             HAVE_RADEON_VULKAN=yes;
             if test "x$with_sha1" == "x"; then
                 AC_MSG_ERROR([radv vulkan driver requires SHA1])
@@ -2135,7 +2175,7 @@ if test "x$enable_opencl" = xyes; then
        AC_MSG_ERROR([Clover requires libelf])
     fi
 
-    llvm_check_version_for "3" "6" "0" "opencl"
+    llvm_check_version_for $LLVM_REQUIRED_OPENCL "opencl"
 
     llvm_add_default_components "opencl"
     llvm_add_component "all-targets" "opencl"
@@ -2340,7 +2380,7 @@ dnl Gallium helper functions
 dnl
 gallium_require_llvm() {
     if test "x$enable_gallium_llvm" == "xyes"; then
-        llvm_check_version_for "3" "3" "0" "gallium"
+        llvm_check_version_for $LLVM_REQUIRED_GALLIUM "gallium"
     else
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
@@ -2365,7 +2405,7 @@ require_basic_egl() {
 
 radeon_gallium_llvm_check() {
     if test "x$enable_gallium_llvm" != "xyes"; then
-        AC_MSG_ERROR([--enable-gallium-llvm is required when building $4])
+        AC_MSG_ERROR([--enable-gallium-llvm is required when building $2])
     fi
     radeon_llvm_check $*
 }
@@ -2439,7 +2479,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r600"
             if test "x$enable_opencl" = xyes; then
-                radeon_gallium_llvm_check "3" "6" "0" "r600"
+                radeon_gallium_llvm_check $LLVM_REQUIRED_R600 "r600"
 
                 llvm_add_component "asmparser" "r600"
                 llvm_add_component "bitreader" "r600"
@@ -2450,7 +2490,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             require_libdrm "radeonsi"
-            radeon_gallium_llvm_check "3" "6" "0" "radeonsi"
+            radeon_gallium_llvm_check $LLVM_REQUIRED_RADEONSI "radeonsi"
             require_basic_egl "radeonsi"
             ;;
         xnouveau)
@@ -2470,7 +2510,7 @@ if test -n "$with_gallium_drivers"; then
             fi
             ;;
         xswr)
-            llvm_check_version_for "3" "6" "0" "swr"
+            llvm_check_version_for $LLVM_REQUIRED_SWR "swr"
             gallium_require_llvm "swr"
 
             swr_require_cxx_feature_flags "C++11" "__cplusplus >= 201103L" \
@@ -2513,7 +2553,7 @@ if test -n "$with_gallium_drivers"; then
 fi
 
 if test "x$enable_gallium_llvm" == "xyes"; then
-    llvm_check_version_for "3" "3" "0" "gallium"
+    llvm_check_version_for $LLVM_REQUIRED_GALLIUM "gallium"
     llvm_add_default_components "gallium"
 fi
 
