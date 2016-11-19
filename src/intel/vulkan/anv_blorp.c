@@ -1349,6 +1349,21 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
                                 att_state->aux_usage, &surf);
 
+   /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
+    *
+    *    "When performing a render target resolve, PIPE_CONTROL with end of
+    *    pipe sync must be delivered."
+    *
+    * This comment is a bit cryptic and doesn't really tell you what's going
+    * or what's really needed.  It appears that fast clear ops are not
+    * properly synchronized with other drawing.  We need to use a PIPE_CONTROL
+    * to ensure that the contents of the previous draw hit the render target
+    * before we resolve and then use a second PIPE_CONTROL after the resolve
+    * to ensure that it is completed before any additional drawing occurs.
+    */
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
+
    for (uint32_t layer = 0; layer < fb->layers; layer++) {
       blorp_ccs_resolve(batch, &surf,
                         iview->isl.base_level,
@@ -1356,6 +1371,9 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
                         iview->isl.format,
                         BLORP_FAST_CLEAR_OP_RESOLVE_FULL);
    }
+
+   cmd_buffer->state.pending_pipe_bits |=
+      ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
 }
 
 void
@@ -1367,13 +1385,6 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
-
-   /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
-    *
-    *    "When performing a render target resolve, PIPE_CONTROL with end of
-    *    pipe sync must be delivered."
-    */
-   cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
 
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
       ccs_resolve_attachment(cmd_buffer, &batch,
@@ -1417,13 +1428,6 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
                        render_area.offset.x, render_area.offset.y,
                        render_area.offset.x, render_area.offset.y,
                        render_area.extent.width, render_area.extent.height);
-
-         /* From the Sky Lake PRM Vol. 7, "Render Target Resolve":
-          *
-          *    "When performing a render target resolve, PIPE_CONTROL with end
-          *    of pipe sync must be delivered."
-          */
-         cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
 
          ccs_resolve_attachment(cmd_buffer, &batch, dst_att);
       }
