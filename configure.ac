@@ -1858,6 +1858,7 @@ if test -n "$with_vulkan_drivers"; then
             ;;
         xradeon)
             PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
+            radeon_llvm_check "radv" "3" "9" "0"
             HAVE_RADEON_VULKAN=yes;
             if test "x$with_sha1" == "x"; then
                 AC_MSG_ERROR([radv vulkan driver requires SHA1])
@@ -2505,10 +2506,6 @@ if test -n "$with_gallium_drivers"; then
             ;;
         esac
     done
-fi
-
-if test "x$HAVE_RADEON_VULKAN" = "xyes"; then
-    radeon_llvm_check "radv" "3" "9" "0"
 fi
 
 dnl Set LLVM_LIBS - This is done after the driver configuration so
