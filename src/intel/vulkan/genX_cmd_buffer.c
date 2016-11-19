@@ -242,6 +242,21 @@ color_attachment_compute_aux_usage(struct anv_device *device,
           render_area.extent.height != iview->extent.height)
          att_state->fast_clear = false;
 
+      if (GEN_GEN <= 7) {
+         /* On gen7, we can't do multi-LOD or multi-layer fast-clears.  We
+          * technically can, but it comes with crazy restrictions that we
+          * don't want to deal with now.
+          */
+         if (iview->isl.base_level > 0 ||
+             iview->isl.base_array_layer > 0 ||
+             iview->isl.array_len > 1)
+            att_state->fast_clear = false;
+      }
+
+      /* On Broadwell and earlier, we can only handle 0/1 clear colors */
+      if (GEN_GEN <= 8 && !att_state->clear_color_is_zero_one)
+         att_state->fast_clear = false;
+
       if (att_state->fast_clear) {
          memcpy(fast_clear_color->u32, att_state->clear_value.color.uint32,
                 sizeof(fast_clear_color->u32));
@@ -256,18 +271,26 @@ color_attachment_compute_aux_usage(struct anv_device *device,
       att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
    } else if (att_state->fast_clear) {
       att_state->aux_usage = ISL_AUX_USAGE_CCS_D;
-      /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
-       *
-       *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
-       *    setting is only allowed if Surface Format supported for Fast
-       *    Clear. In addition, if the surface is bound to the sampling
-       *    engine, Surface Format must be supported for Render Target
-       *    Compression for surfaces bound to the sampling engine."
-       *
-       * In other words, we can't sample from a fast-cleared image if it
-       * doesn't also support color compression.
-       */
-      att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
+      if (GEN_GEN >= 9) {
+         /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
+          *
+          *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
+          *    setting is only allowed if Surface Format supported for Fast
+          *    Clear. In addition, if the surface is bound to the sampling
+          *    engine, Surface Format must be supported for Render Target
+          *    Compression for surfaces bound to the sampling engine."
+          *
+          * In other words, we can't sample from a fast-cleared image if it
+          * doesn't also support color compression.
+          */
+         att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
+      } else if (GEN_GEN == 8) {
+         /* Broadwell can sample from fast-cleared images */
+         att_state->input_aux_usage = ISL_AUX_USAGE_CCS_D;
+      } else {
+         /* Ivy Bridge and Haswell cannot */
+         att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
+      }
    } else {
       att_state->aux_usage = ISL_AUX_USAGE_NONE;
       att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
