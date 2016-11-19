@@ -982,12 +982,6 @@ llvm_set_environment_variables() {
             LLVM_VERSION_INT=`echo $LLVM_VERSION | sed -e 's/\([[0-9]]\)\.\([[0-9]]\)/\10\2/g'`
         fi
 
-        LLVM_REQUIRED_VERSION_MAJOR="3"
-        LLVM_REQUIRED_VERSION_MINOR="3"
-        if test "$LLVM_VERSION_INT" -lt "${LLVM_REQUIRED_VERSION_MAJOR}0${LLVM_REQUIRED_VERSION_MINOR}"; then
-            AC_MSG_ERROR([LLVM $LLVM_REQUIRED_VERSION_MAJOR.$LLVM_REQUIRED_VERSION_MINOR or newer is required])
-        fi
-
         llvm_add_default_components "gallium"
 
         if test "x$enable_opencl" = xyes; then
@@ -2348,11 +2342,10 @@ dnl
 dnl Gallium helper functions
 dnl
 gallium_require_llvm() {
-    if test "x$MESA_LLVM" = x0; then
-        case "$host" in *gnux32) return;; esac
-        case "$host_cpu" in
-        i*86|x86_64|amd64) AC_MSG_ERROR([LLVM is required to build $1 on x86 and x86_64]);;
-        esac
+    if test "x$enable_gallium_llvm" == "xyes"; then
+        llvm_check_version_for "3" "3" "0" "gallium"
+    else
+        AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
 }
 
@@ -2485,7 +2478,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
-            if test "x$MESA_LLVM" = x1; then
+            if test "x$MESA_LLVM" = x1 && test "x$enable_gallium_llvm" == "xyes";  then
                 HAVE_GALLIUM_LLVMPIPE=yes
             fi
             ;;
