@@ -2296,10 +2296,6 @@ if test "x$enable_gallium_llvm" = xyes || test "x$HAVE_RADEON_VULKAN" = xyes; th
 else
     MESA_LLVM=0
     LLVM_VERSION_INT=0
-
-    if test "x$enable_opencl" = xyes; then
-        AC_MSG_ERROR([cannot enable OpenCL without LLVM])
-    fi
 fi
 
 dnl Directory for XVMC libs
