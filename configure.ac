@@ -2373,16 +2373,6 @@ radeon_gallium_llvm_check() {
     radeon_llvm_check $*
 }
 
-swr_llvm_check() {
-    gallium_require_llvm $1
-    if test ${LLVM_VERSION_INT} -lt 306; then
-        AC_MSG_ERROR([LLVM version 3.6 or later required when building $1])
-    fi
-    if test "x$enable_gallium_llvm" != "xyes"; then
-        AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
-    fi
-}
-
 swr_require_cxx_feature_flags() {
     feature_name="$1"
     preprocessor_test="$2"
@@ -2483,7 +2473,8 @@ if test -n "$with_gallium_drivers"; then
             fi
             ;;
         xswr)
-            swr_llvm_check "swr"
+            llvm_check_version_for "3" "6" "0" "swr"
+            gallium_require_llvm "swr"
 
             swr_require_cxx_feature_flags "C++11" "__cplusplus >= 201103L" \
                 ",-std=c++11" \
