@@ -899,7 +899,11 @@ llvm_add_component() {
     new_llvm_component=$1
     driver_name=$2
 
-    LLVM_COMPONENTS="$LLVM_COMPONENTS $new_llvm_component"
+    if $LLVM_CONFIG --components | grep -iqw $new_llvm_component ; then
+        LLVM_COMPONENTS="${LLVM_COMPONENTS} ${new_llvm_component}"
+    else
+        AC_MSG_ERROR([LLVM component '$new_llvm_component' not enabled in your LLVM build. Required by $driver_name.])
+    fi
 }
 
 llvm_add_default_components() {
@@ -982,8 +986,6 @@ llvm_set_environment_variables() {
             LLVM_VERSION_INT=`echo $LLVM_VERSION | sed -e 's/\([[0-9]]\)\.\([[0-9]]\)/\10\2/g'`
         fi
 
-        llvm_add_default_components "gallium"
-
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         MESA_LLVM=1
     else
@@ -1009,6 +1011,7 @@ radeon_llvm_check() {
 
     llvm_add_target $amdgpu_llvm_target_name $4
 
+    llvm_add_default_components $4
     llvm_add_component "bitreader" $4
     llvm_add_component "ipo" $4
 
@@ -2134,6 +2137,7 @@ if test "x$enable_opencl" = xyes; then
 
     llvm_check_version_for "3" "6" "0" "opencl"
 
+    llvm_add_default_components "opencl"
     llvm_add_component "all-targets" "opencl"
     llvm_add_component "linker" "opencl"
     llvm_add_component "instrumentation" "opencl"
@@ -2506,6 +2510,11 @@ if test -n "$with_gallium_drivers"; then
             ;;
         esac
     done
+fi
+
+if test "x$enable_gallium_llvm" == "xyes"; then
+    llvm_check_version_for "3" "3" "0" "gallium"
+    llvm_add_default_components "gallium"
 fi
 
 dnl Set LLVM_LIBS - This is done after the driver configuration so
