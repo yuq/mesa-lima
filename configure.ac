@@ -1189,6 +1189,8 @@ AC_ARG_ENABLE([gallium-tests],
     [enable_gallium_tests="$enableval"],
     [enable_gallium_tests=no])
 
+llvm_set_environment_variables
+
 # Option for Gallium drivers
 
 # Keep this in sync with the --with-gallium-drivers help string default value
@@ -2285,12 +2287,6 @@ if test "x$enable_gallium_llvm" = xauto; then
     i*86|x86_64|amd64) enable_gallium_llvm=yes;;
     esac
 fi
-if test "x$enable_gallium_llvm" = xyes || test "x$HAVE_RADEON_VULKAN" = xyes; then
-    llvm_set_environment_variables
-else
-    MESA_LLVM=0
-    LLVM_VERSION_INT=0
-fi
 
 dnl Directory for XVMC libs
 AC_ARG_WITH([xvmc-libdir],
@@ -2626,7 +2622,8 @@ AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
 AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$enable_glx" = xgallium-xlib)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
-AM_CONDITIONAL(HAVE_MESA_LLVM, test x$MESA_LLVM = x1)
+AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$MESA_LLVM" = x1 -a \
+                                       "x$enable_gallium_llvm" = xyes)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)
 if test "x$USE_VC4_SIMULATOR" = xyes -a "x$HAVE_GALLIUM_ILO" = xyes; then
     AC_MSG_ERROR([VC4 simulator on x86 replaces i965 driver build, so ilo must be disabled.])

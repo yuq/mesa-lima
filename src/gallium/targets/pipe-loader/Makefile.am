@@ -71,7 +71,7 @@ AM_LDFLAGS += \
 	-Wl,--version-script=$(top_srcdir)/src/gallium/targets/pipe-loader/pipe.sym
 endif
 
-if HAVE_MESA_LLVM
+if HAVE_GALLIUM_LLVM
 PIPE_LIBS += $(LLVM_LIBS)
 AM_LDFLAGS += $(LLVM_LDFLAGS)
 endif
