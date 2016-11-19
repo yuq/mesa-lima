@@ -1018,6 +1018,19 @@ radeon_llvm_check() {
     fi
 }
 
+llvm_set_environment_variables
+
+AC_SUBST([MESA_LLVM])
+AC_SUBST([LLVM_BINDIR])
+AC_SUBST([LLVM_CFLAGS])
+AC_SUBST([LLVM_CPPFLAGS])
+AC_SUBST([LLVM_CXXFLAGS])
+AC_SUBST([LLVM_LIBDIR])
+AC_SUBST([LLVM_LIBS])
+AC_SUBST([LLVM_LDFLAGS])
+AC_SUBST([LLVM_INCLUDEDIR])
+AC_SUBST([LLVM_VERSION])
+
 dnl Options for APIs
 AC_ARG_ENABLE([opengl],
     [AS_HELP_STRING([--disable-opengl],
@@ -1166,8 +1179,6 @@ AC_ARG_ENABLE([gallium-tests],
         [Enable optional Gallium tests) @<:@default=disabled@:>@])],
     [enable_gallium_tests="$enableval"],
     [enable_gallium_tests=no])
-
-llvm_set_environment_variables
 
 # Option for Gallium drivers
 
@@ -1374,8 +1385,6 @@ if test "x$enable_gallium_osmesa" = xyes; then
         AC_MSG_ERROR([Cannot enable both classic and Gallium OSMesa implementations])
     fi
 fi
-
-AC_SUBST([MESA_LLVM])
 
 # SHA1 hashing
 AC_ARG_WITH([sha1],
@@ -2144,22 +2153,12 @@ fi
 AM_CONDITIONAL(HAVE_CLOVER, test "x$enable_opencl" = xyes)
 AM_CONDITIONAL(HAVE_CLOVER_ICD, test "x$enable_opencl_icd" = xyes)
 AC_SUBST([OPENCL_LIBNAME])
+AC_SUBST([CLANG_RESOURCE_DIR])
 
 dnl
 dnl Gallium configuration
 dnl
 AM_CONDITIONAL(HAVE_GALLIUM, test -n "$with_gallium_drivers")
-
-AC_SUBST([LLVM_BINDIR])
-AC_SUBST([LLVM_CFLAGS])
-AC_SUBST([LLVM_CPPFLAGS])
-AC_SUBST([LLVM_CXXFLAGS])
-AC_SUBST([LLVM_LIBDIR])
-AC_SUBST([LLVM_LIBS])
-AC_SUBST([LLVM_LDFLAGS])
-AC_SUBST([LLVM_INCLUDEDIR])
-AC_SUBST([LLVM_VERSION])
-AC_SUBST([CLANG_RESOURCE_DIR])
 
 case "x$enable_opengl$enable_gles1$enable_gles2" in
 x*yes*)
