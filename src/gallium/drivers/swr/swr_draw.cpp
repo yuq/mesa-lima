@@ -90,8 +90,7 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    /* Update derived state, pass draw info to update function */
-   if (ctx->dirty)
-      swr_update_derived(pipe, info);
+   swr_update_derived(pipe, info);
 
    swr_update_draw_context(ctx);
 

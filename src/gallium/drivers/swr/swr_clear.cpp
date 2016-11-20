@@ -39,8 +39,7 @@ swr_clear(struct pipe_context *pipe,
    if (!swr_check_render_cond(pipe))
       return;
 
-   if (ctx->dirty)
-      swr_update_derived(pipe);
+   swr_update_derived(pipe);
 
    if (buffers & PIPE_CLEAR_COLOR && fb->nr_cbufs) {
       for (unsigned i = 0; i < fb->nr_cbufs; ++i)
