@@ -135,10 +135,10 @@ brw_validate_instructions(const struct brw_codegen *p, int start_offset,
                           struct annotation_info *annotation)
 {
    const struct gen_device_info *devinfo = p->devinfo;
-   const void *store = p->store + start_offset / 16;
+   const void *store = p->store;
    bool valid = true;
 
-   for (int src_offset = 0; src_offset < p->next_insn_offset - start_offset;
+   for (int src_offset = start_offset; src_offset < p->next_insn_offset;
         src_offset += sizeof(brw_inst)) {
       struct string error_msg = { .str = NULL, .len = 0 };
       const brw_inst *inst = store + src_offset;
