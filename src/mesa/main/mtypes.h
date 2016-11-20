@@ -2686,6 +2686,8 @@ struct gl_shader_program_data
    unsigned NumUniformDataSlots;
    union gl_constant_value *UniformDataSlots;
 
+   bool cache_fallback;
+
    /** List of all active resources after linking. */
    struct gl_program_resource *ProgramResourceList;
    unsigned NumProgramResourceList;
