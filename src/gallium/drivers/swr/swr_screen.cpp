@@ -497,6 +497,7 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R8G8B8A8_UNORM,         R8G8B8A8_UNORM},
       {PIPE_FORMAT_R8G8B8A8_SRGB,          R8G8B8A8_UNORM_SRGB},
       {PIPE_FORMAT_R8G8B8X8_UNORM,         R8G8B8X8_UNORM},
+      {PIPE_FORMAT_R8G8B8X8_SRGB,          R8G8B8X8_UNORM_SRGB},
 
       {PIPE_FORMAT_R8_USCALED,             R8_USCALED},
       {PIPE_FORMAT_R8G8_USCALED,           R8G8_USCALED},
