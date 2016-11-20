@@ -1047,7 +1047,7 @@ get_buffer_property(struct gl_shader_program *shProg,
          return 1;
       case GL_ACTIVE_VARIABLES:
          struct gl_transform_feedback_info *linked_xfb =
-            shProg->xfb_program->sh.LinkedTransformFeedback;
+            shProg->last_vert_prog->sh.LinkedTransformFeedback;
          for (int i = 0; i < linked_xfb->NumVarying; i++) {
             unsigned index = linked_xfb->Varyings[i].BufferIndex;
             struct gl_program_resource *buf_res =

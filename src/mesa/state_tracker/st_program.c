@@ -390,9 +390,13 @@ st_translate_vertex_program(struct st_context *st,
       stvp->tgsi.type = PIPE_SHADER_IR_NIR;
       stvp->tgsi.ir.nir = nir;
 
-      st_translate_stream_output_info2(stvp->shader_program->xfb_program->sh.LinkedTransformFeedback,
-                                       stvp->result_to_output,
-                                       &stvp->tgsi.stream_output);
+      struct gl_program *prog = stvp->shader_program->last_vert_prog;
+      if (prog) {
+         st_translate_stream_output_info2(prog->sh.LinkedTransformFeedback,
+                                          stvp->result_to_output,
+                                          &stvp->tgsi.stream_output);
+      }
+
       return true;
    }
 

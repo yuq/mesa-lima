@@ -1076,6 +1076,9 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                      unsigned num_tfeedback_decls,
                      tfeedback_decl *tfeedback_decls, bool has_xfb_qualifiers)
 {
+   if (!prog->last_vert_prog)
+      return true;
+
    /* Make sure MaxTransformFeedbackBuffers is less than 32 so the bitmask for
     * tracking the number of buffers doesn't overflow.
     */
@@ -1084,7 +1087,7 @@ store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
    bool separate_attribs_mode =
       prog->TransformFeedback.BufferMode == GL_SEPARATE_ATTRIBS;
 
-   struct gl_program *xfb_prog = prog->xfb_program;
+   struct gl_program *xfb_prog = prog->last_vert_prog;
    xfb_prog->sh.LinkedTransformFeedback =
       rzalloc(xfb_prog, struct gl_transform_feedback_info);
 

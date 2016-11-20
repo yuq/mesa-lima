@@ -7003,8 +7003,11 @@ st_translate_stream_output_info(glsl_to_tgsi_visitor *glsl_to_tgsi,
                                 const GLuint outputMapping[],
                                 struct pipe_stream_output_info *so)
 {
+   if (!glsl_to_tgsi->shader_program->last_vert_prog)
+      return;
+
    struct gl_transform_feedback_info *info =
-      glsl_to_tgsi->shader_program->xfb_program->sh.LinkedTransformFeedback;
+      glsl_to_tgsi->shader_program->last_vert_prog->sh.LinkedTransformFeedback;
    st_translate_stream_output_info2(info, outputMapping, so);
 }
 

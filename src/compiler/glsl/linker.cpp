@@ -4235,27 +4235,29 @@ build_program_resource_list(struct gl_context *ctx,
                                 output_stage, GL_PROGRAM_OUTPUT))
       return;
 
-   struct gl_transform_feedback_info *linked_xfb =
-      shProg->xfb_program->sh.LinkedTransformFeedback;
+   if (shProg->last_vert_prog) {
+      struct gl_transform_feedback_info *linked_xfb =
+         shProg->last_vert_prog->sh.LinkedTransformFeedback;
 
-   /* Add transform feedback varyings. */
-   if (linked_xfb->NumVarying > 0) {
-      for (int i = 0; i < linked_xfb->NumVarying; i++) {
-         if (!add_program_resource(shProg, resource_set,
-                                   GL_TRANSFORM_FEEDBACK_VARYING,
-                                   &linked_xfb->Varyings[i], 0))
-         return;
+      /* Add transform feedback varyings. */
+      if (linked_xfb->NumVarying > 0) {
+         for (int i = 0; i < linked_xfb->NumVarying; i++) {
+            if (!add_program_resource(shProg, resource_set,
+                                      GL_TRANSFORM_FEEDBACK_VARYING,
+                                      &linked_xfb->Varyings[i], 0))
+            return;
+         }
       }
-   }
 
-   /* Add transform feedback buffers. */
-   for (unsigned i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
-      if ((linked_xfb->ActiveBuffers >> i) & 1) {
-         linked_xfb->Buffers[i].Binding = i;
-         if (!add_program_resource(shProg, resource_set,
-                                   GL_TRANSFORM_FEEDBACK_BUFFER,
-                                   &linked_xfb->Buffers[i], 0))
-         return;
+      /* Add transform feedback buffers. */
+      for (unsigned i = 0; i < ctx->Const.MaxTransformFeedbackBuffers; i++) {
+         if ((linked_xfb->ActiveBuffers >> i) & 1) {
+            linked_xfb->Buffers[i].Binding = i;
+            if (!add_program_resource(shProg, resource_set,
+                                      GL_TRANSFORM_FEEDBACK_BUFFER,
+                                      &linked_xfb->Buffers[i], 0))
+            return;
+         }
       }
    }
 
@@ -4566,15 +4568,12 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
       return false;
    }
 
-   /* Find the program used for xfb. Even if we don't use xfb we still want to
-    * set this so we can fill the default values for program interface query.
-    */
-   prog->xfb_program = prog->_LinkedShaders[last]->Program;
+   prog->last_vert_prog = NULL;
    for (int i = MESA_SHADER_GEOMETRY; i >= MESA_SHADER_VERTEX; i--) {
       if (prog->_LinkedShaders[i] == NULL)
          continue;
 
-      prog->xfb_program = prog->_LinkedShaders[i]->Program;
+      prog->last_vert_prog = prog->_LinkedShaders[i]->Program;
       break;
    }
 
