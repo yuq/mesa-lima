@@ -6137,9 +6137,15 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	outputs = MALLOC(gsinfo->num_outputs * sizeof(outputs[0]));
 
-	shader = CALLOC_STRUCT(si_shader);
-	if (!shader)
+	if (!outputs)
 		return NULL;
+
+	shader = CALLOC_STRUCT(si_shader);
+	if (!shader) {
+		FREE(outputs);
+		return NULL;
+	}
+
 
 	shader->selector = gs_selector;
 	shader->is_gs_copy_shader = true;
