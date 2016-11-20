@@ -2794,13 +2794,6 @@ struct gl_shader_program
    struct exec_list EmptyUniformLocations;
 
    /**
-    * Size of the gl_ClipDistance array that is output from the last pipeline
-    * stage before the fragment shader.
-    */
-   unsigned LastClipDistanceArraySize;
-   unsigned LastCullDistanceArraySize;
-
-   /**
     * Total number of explicit uniform location including inactive uniforms.
     */
    unsigned NumExplicitUniformLocations;

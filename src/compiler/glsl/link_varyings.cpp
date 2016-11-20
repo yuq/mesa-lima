@@ -745,10 +745,12 @@ tfeedback_decl::assign_location(struct gl_context *ctx,
       unsigned actual_array_size;
       switch (this->lowered_builtin_array_variable) {
       case clip_distance:
-         actual_array_size = prog->LastClipDistanceArraySize;
+         actual_array_size = prog->last_vert_prog ?
+            prog->last_vert_prog->info.clip_distance_array_size : 0;
          break;
       case cull_distance:
-         actual_array_size = prog->LastCullDistanceArraySize;
+         actual_array_size = prog->last_vert_prog ?
+            prog->last_vert_prog->info.cull_distance_array_size : 0;
          break;
       case tess_level_outer:
          actual_array_size = 4;
