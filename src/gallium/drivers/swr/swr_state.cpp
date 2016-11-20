@@ -1002,13 +1002,38 @@ swr_update_derived(struct pipe_context *pipe,
    /* Set vertex & index buffers */
    /* (using draw info if called by swr_draw_vbo) */
    if (ctx->dirty & SWR_NEW_VERTEX) {
-      uint32_t size, pitch, max_vertex, partial_inbounds;
+      uint32_t size, pitch, max_vertex, partial_inbounds, scratch_total;
       const uint8_t *p_data;
+      uint8_t *scratch = NULL;
 
       /* If being called by swr_draw_vbo, copy draw details */
       struct pipe_draw_info info = {0};
       if (p_draw_info)
          info = *p_draw_info;
+
+      /* We must get all the scratch space in one go */
+      scratch_total = 0;
+      for (UINT i = 0; i < ctx->num_vertex_buffers; i++) {
+         struct pipe_vertex_buffer *vb = &ctx->vertex_buffer[i];
+
+         if (!vb->user_buffer)
+            continue;
+
+         if (vb->stride) {
+            size = (info.max_index - info.min_index + 1) * vb->stride;
+         } else {
+            /* pitch = 0, means constant value
+             * set size to 1 vertex */
+            size = ctx->velems->stream_pitch[i];
+         }
+
+         scratch_total += AlignUp(size, 4);
+      }
+
+      if (scratch_total) {
+         scratch = (uint8_t *)swr_copy_to_scratch_space(
+               ctx, &ctx->scratch->vertex_buffer, NULL, scratch_total);
+      }
 
       /* vertex buffers */
       SWR_VERTEX_BUFFER_STATE swrVertexBuffers[PIPE_MAX_ATTRIBS];
@@ -1046,8 +1071,9 @@ swr_update_derived(struct pipe_context *pipe,
             size = AlignUp(size, 4);
             const void *ptr = (const uint8_t *) vb->user_buffer
                + info.min_index * pitch;
-            ptr = swr_copy_to_scratch_space(
-               ctx, &ctx->scratch->vertex_buffer, ptr, size);
+            memcpy(scratch, ptr, size);
+            ptr = scratch;
+            scratch += size;
             p_data = (const uint8_t *)ptr - info.min_index * pitch;
          }
 

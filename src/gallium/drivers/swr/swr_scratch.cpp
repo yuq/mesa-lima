@@ -35,7 +35,6 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
 {
    void *ptr;
    assert(space);
-   assert(user_buffer);
    assert(size);
 
    if (size >= 2048) { /* XXX TODO create KNOB_ for this */
@@ -82,7 +81,8 @@ swr_copy_to_scratch_space(struct swr_context *ctx,
    }
 
    /* Copy user_buffer to scratch */
-   memcpy(ptr, user_buffer, size);
+   if (user_buffer)
+      memcpy(ptr, user_buffer, size);
 
    return ptr;
 }
