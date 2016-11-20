@@ -539,6 +539,7 @@ gen_spec_load_from_path(const struct gen_device_info *devinfo,
    XML_SetUserData(ctx.parser, &ctx);
    if (ctx.parser == NULL) {
       fprintf(stderr, "failed to create parser\n");
+      fclose(input);
       free(filename);
       return NULL;
    }
