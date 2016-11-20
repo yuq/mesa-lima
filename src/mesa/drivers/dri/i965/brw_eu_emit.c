@@ -1211,7 +1211,7 @@ brw_F32TO16(struct brw_codegen *p, struct brw_reg dst, struct brw_reg src)
 
    if (needs_zero_fill) {
       brw_inst_set_no_dd_clear(devinfo, inst, true);
-      inst = brw_MOV(p, suboffset(dst, 1), brw_imm_ud(0u));
+      inst = brw_MOV(p, suboffset(dst, 1), brw_imm_w(0));
       brw_inst_set_no_dd_check(devinfo, inst, true);
    }
 
