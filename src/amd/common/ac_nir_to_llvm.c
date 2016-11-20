@@ -130,6 +130,8 @@ struct nir_to_llvm_context {
 	bool has_ddxy;
 	unsigned num_clips;
 	unsigned num_culls;
+
+	bool has_ds_bpermute;
 };
 
 struct ac_tex_info {
@@ -377,14 +379,23 @@ static LLVMValueRef to_float(struct nir_to_llvm_context *ctx, LLVMValueRef v)
 	return v;
 }
 
+static LLVMValueRef build_gep0(struct nir_to_llvm_context *ctx,
+			       LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	LLVMValueRef indices[2] = {
+		ctx->i32zero,
+		index,
+	};
+	return LLVMBuildGEP(ctx->builder, base_ptr,
+			    indices, 2, "");
+}
+
 static LLVMValueRef build_indexed_load(struct nir_to_llvm_context *ctx,
 				       LLVMValueRef base_ptr, LLVMValueRef index,
 				       bool uniform)
 {
 	LLVMValueRef pointer;
-	LLVMValueRef indices[] = {ctx->i32zero, index};
-
-	pointer = LLVMBuildGEP(ctx->builder, base_ptr, indices, 2, "");
+	pointer = build_gep0(ctx, base_ptr, index);
 	if (uniform)
 		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
 	return LLVMBuildLoad(ctx->builder, pointer, "");
@@ -1132,55 +1143,44 @@ static LLVMValueRef get_thread_id(struct nir_to_llvm_context *ctx)
 #define TID_MASK_TOP      0xfffffffd
 #define TID_MASK_LEFT     0xfffffffe
 static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
-			      nir_alu_instr *instr,
+			      nir_op op,
 			      LLVMValueRef src0)
 {
-	LLVMValueRef indices[2];
-	LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 	LLVMValueRef tl, trbl, result;
 	LLVMValueRef tl_tid, trbl_tid;
 	LLVMValueRef args[2];
+	LLVMValueRef thread_id;
 	unsigned mask;
 	int idx;
 	ctx->has_ddxy = true;
-	if (!ctx->lds)
+
+	if (!ctx->lds && !ctx->has_ds_bpermute)
 		ctx->lds = LLVMAddGlobalInAddressSpace(ctx->module,
 						       LLVMArrayType(ctx->i32, 64),
 						       "ddxy_lds", LOCAL_ADDR_SPACE);
 
-	indices[0] = ctx->i32zero;
-	indices[1] = get_thread_id(ctx);
-	store_ptr = LLVMBuildGEP(ctx->builder, ctx->lds,
-				 indices, 2, "");
-
-	if (instr->op == nir_op_fddx_fine || instr->op == nir_op_fddx)
+	thread_id = get_thread_id(ctx);
+	if (op == nir_op_fddx_fine || op == nir_op_fddx)
 		mask = TID_MASK_LEFT;
-	else if (instr->op == nir_op_fddy_fine || instr->op == nir_op_fddy)
+	else if (op == nir_op_fddy_fine || op == nir_op_fddy)
 		mask = TID_MASK_TOP;
 	else
 		mask = TID_MASK_TOP_LEFT;
 
-	tl_tid = LLVMBuildAnd(ctx->builder, indices[1],
+	tl_tid = LLVMBuildAnd(ctx->builder, thread_id,
 			      LLVMConstInt(ctx->i32, mask, false), "");
-	indices[1] = tl_tid;
-	load_ptr0 = LLVMBuildGEP(ctx->builder, ctx->lds,
-				 indices, 2, "");
-
 	/* for DDX we want to next X pixel, DDY next Y pixel. */
-	if (instr->op == nir_op_fddx_fine ||
-	    instr->op == nir_op_fddx_coarse ||
-	    instr->op == nir_op_fddx)
+	if (op == nir_op_fddx_fine ||
+	    op == nir_op_fddx_coarse ||
+	    op == nir_op_fddx)
 		idx = 1;
 	else
 		idx = 2;
 
-	trbl_tid = LLVMBuildAdd(ctx->builder, indices[1],
+	trbl_tid = LLVMBuildAdd(ctx->builder, tl_tid,
 				LLVMConstInt(ctx->i32, idx, false), "");
-	indices[1] = trbl_tid;
-	load_ptr1 = LLVMBuildGEP(ctx->builder, ctx->lds,
-				 indices, 2, "");
 
-	if (ctx->options->family >= CHIP_TONGA) {
+	if (ctx->has_ds_bpermute) {
 		args[0] = LLVMBuildMul(ctx->builder, tl_tid,
 				       LLVMConstInt(ctx->i32, 4, false), "");
 		args[1] = src0;
@@ -1194,8 +1194,13 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 					   ctx->i32, args, 2,
 					   AC_FUNC_ATTR_READNONE);
 	} else {
-		LLVMBuildStore(ctx->builder, src0, store_ptr);
+		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 
+		store_ptr = build_gep0(ctx, ctx->lds, thread_id);
+		load_ptr0 = build_gep0(ctx, ctx->lds, tl_tid);
+		load_ptr1 = build_gep0(ctx, ctx->lds, trbl_tid);
+
+		LLVMBuildStore(ctx->builder, src0, store_ptr);
 		tl = LLVMBuildLoad(ctx->builder, load_ptr0, "");
 		trbl = LLVMBuildLoad(ctx->builder, load_ptr1, "");
 	}
@@ -1214,72 +1219,15 @@ static LLVMValueRef emit_ddxy_interp(
 	struct nir_to_llvm_context *ctx,
 	LLVMValueRef interp_ij)
 {
-	LLVMValueRef indices[2];
-	LLVMValueRef store_ptr, load_ptr_x, load_ptr_y, load_ptr_ddx, load_ptr_ddy, temp, temp2;
-	LLVMValueRef tl, tr, bl, result[4];
-	unsigned c;
+	LLVMValueRef result[4], a;
+	unsigned i;
 
-	if (!ctx->lds)
-		ctx->lds = LLVMAddGlobalInAddressSpace(ctx->module,
-						       LLVMArrayType(ctx->i32, 64),
-						       "ddxy_lds", LOCAL_ADDR_SPACE);
-
-	indices[0] = ctx->i32zero;
-	indices[1] = get_thread_id(ctx);
-	store_ptr = LLVMBuildGEP(ctx->builder, ctx->lds,
-				 indices, 2, "");
-
-	temp = LLVMBuildAnd(ctx->builder, indices[1],
-			    LLVMConstInt(ctx->i32, TID_MASK_LEFT, false), "");
-
-	temp2 = LLVMBuildAnd(ctx->builder, indices[1],
-			     LLVMConstInt(ctx->i32, TID_MASK_TOP, false), "");
-
-	indices[1] = temp;
-	load_ptr_x = LLVMBuildGEP(ctx->builder, ctx->lds,
-				  indices, 2, "");
-
-	indices[1] = temp2;
-	load_ptr_y = LLVMBuildGEP(ctx->builder, ctx->lds,
-				  indices, 2, "");
-
-	indices[1] = LLVMBuildAdd(ctx->builder, temp,
-				  LLVMConstInt(ctx->i32, 1, false), "");
-	load_ptr_ddx = LLVMBuildGEP(ctx->builder, ctx->lds,
-				   indices, 2, "");
-
-	indices[1] = LLVMBuildAdd(ctx->builder, temp2,
-				  LLVMConstInt(ctx->i32, 2, false), "");
-	load_ptr_ddy = LLVMBuildGEP(ctx->builder, ctx->lds,
-				   indices, 2, "");
-
-	for (c = 0; c < 2; ++c) {
-		LLVMValueRef store_val;
-		LLVMValueRef c_ll = LLVMConstInt(ctx->i32, c, false);
-
-		store_val = LLVMBuildExtractElement(ctx->builder,
-						    interp_ij, c_ll, "");
-		LLVMBuildStore(ctx->builder,
-			       store_val,
-			       store_ptr);
-
-		tl = LLVMBuildLoad(ctx->builder, load_ptr_x, "");
-		tl = LLVMBuildBitCast(ctx->builder, tl, ctx->f32, "");
-
-		tr = LLVMBuildLoad(ctx->builder, load_ptr_ddx, "");
-		tr = LLVMBuildBitCast(ctx->builder, tr, ctx->f32, "");
-
-		result[c] = LLVMBuildFSub(ctx->builder, tr, tl, "");
-
-		tl = LLVMBuildLoad(ctx->builder, load_ptr_y, "");
-		tl = LLVMBuildBitCast(ctx->builder, tl, ctx->f32, "");
-
-		bl = LLVMBuildLoad(ctx->builder, load_ptr_ddy, "");
-		bl = LLVMBuildBitCast(ctx->builder, bl, ctx->f32, "");
-
-		result[c + 2] = LLVMBuildFSub(ctx->builder, bl, tl, "");
+	for (i = 0; i < 2; i++) {
+		a = LLVMBuildExtractElement(ctx->builder, interp_ij,
+					    LLVMConstInt(ctx->i32, i, false), "");
+		result[i] = emit_ddxy(ctx, nir_op_fddx, a);
+		result[2+i] = emit_ddxy(ctx, nir_op_fddy, a);
 	}
-
 	return build_gather_values(ctx, result, 4);
 }
 
@@ -1593,7 +1541,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_fddy_fine:
 	case nir_op_fddx_coarse:
 	case nir_op_fddy_coarse:
-		result = emit_ddxy(ctx, instr, src[0]);
+		result = emit_ddxy(ctx, instr->op, src[0]);
 		break;
 	default:
 		fprintf(stderr, "Unknown NIR alu instr: ");
@@ -4557,6 +4505,8 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.shader_info = shader_info;
 	ctx.context = LLVMContextCreate();
 	ctx.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
+
+	ctx.has_ds_bpermute = ctx.options->chip_class >= VI;
 
 	memset(shader_info, 0, sizeof(*shader_info));
 
