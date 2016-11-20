@@ -841,13 +841,15 @@ generate_tcs_input_urb_offsets(struct brw_codegen *p,
       struct brw_reg addr = brw_address_reg(0);
 
       /* bottom half: m0.0 = g[1.0 + vertex.0]UD */
-      brw_ADD(p, addr, get_element_ud(vertex, 0), brw_imm_uw(0x8));
-      brw_SHL(p, addr, addr, brw_imm_ud(2));
+      brw_ADD(p, addr, retype(get_element_ud(vertex, 0), BRW_REGISTER_TYPE_UW),
+              brw_imm_uw(0x8));
+      brw_SHL(p, addr, addr, brw_imm_uw(2));
       brw_MOV(p, get_element_ud(dst, 0), deref_1ud(brw_indirect(0, 0), 0));
 
       /* top half: m0.1 = g[1.0 + vertex.4]UD */
-      brw_ADD(p, addr, get_element_ud(vertex, 4), brw_imm_uw(0x8));
-      brw_SHL(p, addr, addr, brw_imm_ud(2));
+      brw_ADD(p, addr, retype(get_element_ud(vertex, 4), BRW_REGISTER_TYPE_UW),
+              brw_imm_uw(0x8));
+      brw_SHL(p, addr, addr, brw_imm_uw(2));
       brw_MOV(p, get_element_ud(dst, 1), deref_1ud(brw_indirect(0, 0), 0));
    }
 
