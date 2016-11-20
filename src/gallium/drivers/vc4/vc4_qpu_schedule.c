@@ -830,6 +830,7 @@ schedule_instructions(struct vc4_compile *c,
                       uint32_t *next_uniform)
 {
         uint32_t time = 0;
+        uint32_t last_thread_switch = 0;
 
         if (debug) {
                 fprintf(stderr, "initial deps:\n");
@@ -944,14 +945,44 @@ schedule_instructions(struct vc4_compile *c,
                         qpu_serialize_one_inst(c, inst);
                 } else if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_THREAD_SWITCH ||
                            QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_LAST_THREAD_SWITCH) {
-                        /* The thread switch occurs after two delay slots.  We
-                         * should fit things in these slots, but we don't
-                         * currently.
+                        int last = c->qpu_inst_count - 1;
+
+                        /* The thread switch occurs after two delay slots.
+                         * Shift the signal upwards, if there is an
+                         * instruction without a signal there. Watch out for
+                         * the last thread switch as theoretically it could be
+                         * only two instructions away.
                          */
-                        inst = qpu_NOP();
-                        update_scoreboard_for_chosen(scoreboard, inst);
-                        qpu_serialize_one_inst(c, inst);
-                        qpu_serialize_one_inst(c, inst);
+
+                         /* Remove sig from the instruction */
+                        enum qpu_sig_bits sig = QPU_GET_FIELD(inst, QPU_SIG);
+                        c->qpu_insts[last] = QPU_UPDATE_FIELD(c->qpu_insts[last],
+                                                              QPU_SIG_NONE,
+                                                              QPU_SIG);
+                        /* Compute how far we can shift */
+                        int max_shift = MIN2(last - last_thread_switch, 2);
+                        /* If both instructions in front have a signal set,
+                         * reset the signal on the current instruction.*/
+                        int shift;
+                        for (shift = max_shift; shift >= 0; --shift) {
+                                int ip = last - shift;
+                                if (QPU_GET_FIELD(c->qpu_insts[ip],
+                                                  QPU_SIG) == QPU_SIG_NONE) {
+                                        c->qpu_insts[ip] =
+                                                QPU_UPDATE_FIELD(
+                                                        c->qpu_insts[ip],
+                                                        sig, QPU_SIG);
+                                        break;
+                                }
+                        }
+                        /* If necessarry, add filling NOPs*/
+                        for (int i = 0; i < 2 - shift; ++i) {
+                                update_scoreboard_for_chosen(scoreboard,
+                                                             qpu_NOP());
+                                qpu_serialize_one_inst(c, qpu_NOP());
+                        }
+                        /* Avoid branching in a thread switch*/
+                        last_thread_switch = c->qpu_inst_count - 1;
                 }
         }
 
