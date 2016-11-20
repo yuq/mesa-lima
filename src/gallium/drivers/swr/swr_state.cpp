@@ -617,18 +617,7 @@ swr_set_framebuffer_state(struct pipe_context *pipe,
    assert(fb->height <= KNOB_GUARDBAND_HEIGHT);
 
    if (changed) {
-      unsigned i;
-      for (i = 0; i < fb->nr_cbufs; ++i)
-         pipe_surface_reference(&ctx->framebuffer.cbufs[i], fb->cbufs[i]);
-      for (; i < ctx->framebuffer.nr_cbufs; ++i)
-         pipe_surface_reference(&ctx->framebuffer.cbufs[i], NULL);
-
-      ctx->framebuffer.nr_cbufs = fb->nr_cbufs;
-
-      ctx->framebuffer.width = fb->width;
-      ctx->framebuffer.height = fb->height;
-
-      pipe_surface_reference(&ctx->framebuffer.zsbuf, fb->zsbuf);
+      util_copy_framebuffer_state(&ctx->framebuffer, fb);
 
       ctx->dirty |= SWR_NEW_FRAMEBUFFER;
    }
