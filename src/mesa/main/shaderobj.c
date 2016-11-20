@@ -430,7 +430,8 @@ _mesa_delete_shader_program(struct gl_context *ctx,
                             struct gl_shader_program *shProg)
 {
    _mesa_free_shader_program_data(ctx, shProg);
-   _mesa_reference_shader_program_data(ctx, &shProg->data, NULL);
+   if (!shProg->data->cache_fallback)
+      _mesa_reference_shader_program_data(ctx, &shProg->data, NULL);
    ralloc_free(shProg);
 }
 
