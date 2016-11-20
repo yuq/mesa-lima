@@ -153,54 +153,15 @@ static int
 swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
 {
    switch (param) {
-   case PIPE_CAP_NPOT_TEXTURES:
-   case PIPE_CAP_MIXED_FRAMEBUFFER_SIZES:
-   case PIPE_CAP_MIXED_COLOR_DEPTH_BITS:
-      return 1;
-   case PIPE_CAP_TWO_SIDED_STENCIL:
-      return 1;
-   case PIPE_CAP_SM3:
-      return 1;
-   case PIPE_CAP_ANISOTROPIC_FILTER:
-      return 0;
-   case PIPE_CAP_POINT_SPRITE:
-      return 1;
+      /* limits */
    case PIPE_CAP_MAX_RENDER_TARGETS:
       return PIPE_MAX_COLOR_BUFS;
-   case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
-      return 1;
-   case PIPE_CAP_OCCLUSION_QUERY:
-   case PIPE_CAP_QUERY_TIME_ELAPSED:
-   case PIPE_CAP_QUERY_PIPELINE_STATISTICS:
-      return 1;
-   case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
-      return 1;
-   case PIPE_CAP_TEXTURE_SHADOW_MAP:
-      return 1;
-   case PIPE_CAP_TEXTURE_SWIZZLE:
-      return 1;
-   case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
-      return 0;
    case PIPE_CAP_MAX_TEXTURE_2D_LEVELS:
       return SWR_MAX_TEXTURE_2D_LEVELS;
    case PIPE_CAP_MAX_TEXTURE_3D_LEVELS:
       return SWR_MAX_TEXTURE_3D_LEVELS;
    case PIPE_CAP_MAX_TEXTURE_CUBE_LEVELS:
       return SWR_MAX_TEXTURE_CUBE_LEVELS;
-   case PIPE_CAP_BLEND_EQUATION_SEPARATE:
-      return 1;
-   case PIPE_CAP_INDEP_BLEND_ENABLE:
-      return 1;
-   case PIPE_CAP_INDEP_BLEND_FUNC:
-      return 1;
-   case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
-      return 0; // Don't support lower left frag coord.
-   case PIPE_CAP_TGSI_FS_COORD_ORIGIN_UPPER_LEFT:
-   case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
-   case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
-      return 1;
-   case PIPE_CAP_DEPTH_CLIP_DISABLE:
-      return 1;
    case PIPE_CAP_MAX_STREAM_OUTPUT_BUFFERS:
       return MAX_SO_STREAMS;
    case PIPE_CAP_MAX_STREAM_OUTPUT_SEPARATE_COMPONENTS:
@@ -213,134 +174,112 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
       return 1;
    case PIPE_CAP_MAX_VERTEX_ATTRIB_STRIDE:
       return 2048;
-   case PIPE_CAP_PRIMITIVE_RESTART:
-      return 1;
-   case PIPE_CAP_SHADER_STENCIL_EXPORT:
-      return 0;
-   case PIPE_CAP_TGSI_INSTANCEID:
-   case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
-   case PIPE_CAP_START_INSTANCE:
-      return 1;
-   case PIPE_CAP_SEAMLESS_CUBE_MAP:
-   case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
-      return 1;
    case PIPE_CAP_MAX_TEXTURE_ARRAY_LAYERS:
       return SWR_MAX_TEXTURE_ARRAY_LAYERS;
    case PIPE_CAP_MIN_TEXEL_OFFSET:
       return -8;
    case PIPE_CAP_MAX_TEXEL_OFFSET:
       return 7;
-   case PIPE_CAP_CONDITIONAL_RENDER:
-      return 1;
-   case PIPE_CAP_TEXTURE_BARRIER:
-      return 0;
-   case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
-   case PIPE_CAP_VERTEX_COLOR_CLAMPED:
-      return 0;
-   case PIPE_CAP_VERTEX_COLOR_UNCLAMPED:
-      return 1;
-   case PIPE_CAP_MIXED_COLORBUFFER_FORMATS:
-      return 1;
    case PIPE_CAP_GLSL_FEATURE_LEVEL:
       return 330;
-   case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
-      return 1;
-   case PIPE_CAP_COMPUTE:
+   case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
+      return 16;
+   case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
+      return 64;
+   case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
+      return 65536;
+   case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
       return 0;
+   case PIPE_CAP_MAX_VIEWPORTS:
+      return 1;
+   case PIPE_CAP_ENDIANNESS:
+      return PIPE_ENDIAN_NATIVE;
+   case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
+   case PIPE_CAP_MAX_TEXTURE_GATHER_OFFSET:
+      return 0;
+
+      /* supported features */
+   case PIPE_CAP_NPOT_TEXTURES:
+   case PIPE_CAP_MIXED_FRAMEBUFFER_SIZES:
+   case PIPE_CAP_MIXED_COLOR_DEPTH_BITS:
+   case PIPE_CAP_TWO_SIDED_STENCIL:
+   case PIPE_CAP_SM3:
+   case PIPE_CAP_POINT_SPRITE:
+   case PIPE_CAP_MAX_DUAL_SOURCE_RENDER_TARGETS:
+   case PIPE_CAP_OCCLUSION_QUERY:
+   case PIPE_CAP_QUERY_TIME_ELAPSED:
+   case PIPE_CAP_QUERY_PIPELINE_STATISTICS:
+   case PIPE_CAP_TEXTURE_MIRROR_CLAMP:
+   case PIPE_CAP_TEXTURE_SHADOW_MAP:
+   case PIPE_CAP_TEXTURE_SWIZZLE:
+   case PIPE_CAP_BLEND_EQUATION_SEPARATE:
+   case PIPE_CAP_INDEP_BLEND_ENABLE:
+   case PIPE_CAP_INDEP_BLEND_FUNC:
+   case PIPE_CAP_TGSI_FS_COORD_ORIGIN_UPPER_LEFT:
+   case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_HALF_INTEGER:
+   case PIPE_CAP_TGSI_FS_COORD_PIXEL_CENTER_INTEGER:
+   case PIPE_CAP_DEPTH_CLIP_DISABLE:
+   case PIPE_CAP_PRIMITIVE_RESTART:
+   case PIPE_CAP_TGSI_INSTANCEID:
+   case PIPE_CAP_VERTEX_ELEMENT_INSTANCE_DIVISOR:
+   case PIPE_CAP_START_INSTANCE:
+   case PIPE_CAP_SEAMLESS_CUBE_MAP:
+   case PIPE_CAP_SEAMLESS_CUBE_MAP_PER_TEXTURE:
+   case PIPE_CAP_CONDITIONAL_RENDER:
+   case PIPE_CAP_VERTEX_COLOR_UNCLAMPED:
+   case PIPE_CAP_MIXED_COLORBUFFER_FORMATS:
+   case PIPE_CAP_QUADS_FOLLOW_PROVOKING_VERTEX_CONVENTION:
    case PIPE_CAP_USER_VERTEX_BUFFERS:
    case PIPE_CAP_USER_INDEX_BUFFERS:
    case PIPE_CAP_USER_CONSTANT_BUFFERS:
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
    case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
+   case PIPE_CAP_QUERY_TIMESTAMP:
+   case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
+   case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
+   case PIPE_CAP_FAKE_SW_MSAA:
+   case PIPE_CAP_DRAW_INDIRECT:
+   case PIPE_CAP_UMA:
+   case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
+   case PIPE_CAP_CLIP_HALFZ:
+   case PIPE_CAP_POLYGON_OFFSET_CLAMP:
+   case PIPE_CAP_DEPTH_BOUNDS_TEST:
+   case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
+   case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
+   case PIPE_CAP_CULL_DISTANCE:
       return 1;
-   case PIPE_CAP_CONSTANT_BUFFER_OFFSET_ALIGNMENT:
-      return 16;
+
+      /* unsupported features */
+   case PIPE_CAP_ANISOTROPIC_FILTER:
+   case PIPE_CAP_TEXTURE_BORDER_COLOR_QUIRK:
+   case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
+   case PIPE_CAP_SHADER_STENCIL_EXPORT:
+   case PIPE_CAP_TEXTURE_BARRIER:
+   case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
+   case PIPE_CAP_VERTEX_COLOR_CLAMPED:
+   case PIPE_CAP_COMPUTE:
    case PIPE_CAP_TGSI_VS_LAYER_VIEWPORT:
    case PIPE_CAP_TGSI_CAN_COMPACT_CONSTANTS:
    case PIPE_CAP_VERTEX_BUFFER_OFFSET_4BYTE_ALIGNED_ONLY:
    case PIPE_CAP_VERTEX_BUFFER_STRIDE_4BYTE_ALIGNED_ONLY:
    case PIPE_CAP_VERTEX_ELEMENT_SRC_OFFSET_4BYTE_ALIGNED_ONLY:
    case PIPE_CAP_TEXTURE_MULTISAMPLE:
-      return 0;
-   case PIPE_CAP_MIN_MAP_BUFFER_ALIGNMENT:
-      return 64;
-   case PIPE_CAP_QUERY_TIMESTAMP:
-      return 1;
    case PIPE_CAP_CUBE_MAP_ARRAY:
-      return 0;
-   case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
-      return 1;
-   case PIPE_CAP_MAX_TEXTURE_BUFFER_SIZE:
-      return 65536;
-   case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
-      return 0;
    case PIPE_CAP_TGSI_TEXCOORD:
    case PIPE_CAP_PREFER_BLIT_BASED_TEXTURE_TRANSFER:
-      return 0;
-   case PIPE_CAP_MAX_VIEWPORTS:
-      return 1;
-   case PIPE_CAP_ENDIANNESS:
-      return PIPE_ENDIAN_NATIVE;
    case PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS:
    case PIPE_CAP_TEXTURE_GATHER_SM5:
-      return 0;
-   case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
-      return 1;
    case PIPE_CAP_TEXTURE_QUERY_LOD:
    case PIPE_CAP_SAMPLE_SHADING:
    case PIPE_CAP_TEXTURE_GATHER_OFFSETS:
    case PIPE_CAP_TGSI_VS_WINDOW_SPACE_POSITION:
    case PIPE_CAP_TGSI_FS_FINE_DERIVATIVE:
    case PIPE_CAP_SAMPLER_VIEW_TARGET:
-      return 0;
-   case PIPE_CAP_FAKE_SW_MSAA:
-      return 1;
-   case PIPE_CAP_MIN_TEXTURE_GATHER_OFFSET:
-   case PIPE_CAP_MAX_TEXTURE_GATHER_OFFSET:
-      return 0;
-   case PIPE_CAP_DRAW_INDIRECT:
-      return 1;
-
-   case PIPE_CAP_VENDOR_ID:
-      return 0xFFFFFFFF;
-   case PIPE_CAP_DEVICE_ID:
-      return 0xFFFFFFFF;
-   case PIPE_CAP_ACCELERATED:
-      return 0;
-   case PIPE_CAP_VIDEO_MEMORY: {
-      /* XXX: Do we want to return the full amount of system memory ? */
-      uint64_t system_memory;
-
-      if (!os_get_total_physical_memory(&system_memory))
-         return 0;
-
-      return (int)(system_memory >> 20);
-   }
-   case PIPE_CAP_UMA:
-      return 1;
-   case PIPE_CAP_CONDITIONAL_RENDER_INVERTED:
-      return 1;
-   case PIPE_CAP_CLIP_HALFZ:
-      return 1;
    case PIPE_CAP_VERTEXID_NOBASE:
-      return 0;
-   case PIPE_CAP_POLYGON_OFFSET_CLAMP:
-      return 1;
    case PIPE_CAP_MULTISAMPLE_Z_RESOLVE:
-      return 0;
    case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
-      return 0; // xxx
    case PIPE_CAP_DEVICE_RESET_STATUS_QUERY:
-      return 0;
    case PIPE_CAP_MAX_SHADER_PATCH_VARYINGS:
-      return 0;
-   case PIPE_CAP_DEPTH_BOUNDS_TEST:
-      return 1;
-   case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
-   case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
-      return 1;
-   case PIPE_CAP_CULL_DISTANCE:
-      return 1;
    case PIPE_CAP_TGSI_TXQS:
    case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
    case PIPE_CAP_SHAREABLE_SHADERS:
@@ -373,6 +312,22 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
    case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
       return 0;
+
+   case PIPE_CAP_VENDOR_ID:
+      return 0xFFFFFFFF;
+   case PIPE_CAP_DEVICE_ID:
+      return 0xFFFFFFFF;
+   case PIPE_CAP_ACCELERATED:
+      return 0;
+   case PIPE_CAP_VIDEO_MEMORY: {
+      /* XXX: Do we want to return the full amount of system memory ? */
+      uint64_t system_memory;
+
+      if (!os_get_total_physical_memory(&system_memory))
+         return 0;
+
+      return (int)(system_memory >> 20);
+   }
    }
 
    /* should only get here on unhandled cases */
