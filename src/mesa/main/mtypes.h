@@ -1933,10 +1933,6 @@ struct gl_program
    GLbitfield ShadowSamplers; /**< Texture units used for shadow sampling. */
    GLbitfield ExternalSamplersUsed; /**< Texture units used for samplerExternalOES */
 
-   /* Vertex and geometry shaders fields */
-   unsigned ClipDistanceArraySize;
-   unsigned CullDistanceArraySize;
-
    /* Fragement shader only fields */
    GLboolean OriginUpperLeft;
    GLboolean PixelCenterInteger;
@@ -2748,49 +2744,15 @@ struct gl_shader_program
    enum gl_frag_depth_layout FragDepthLayout;
 
    /**
-    * Tessellation Evaluation shader state from layout qualifiers.
-    */
-   struct {
-      /**
-       * True if gl_ClipDistance is written to.  Copied into
-       * gl_program by _mesa_copy_linked_program_data().
-       */
-      GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
-                                         0 if not present. */
-      GLuint CullDistanceArraySize; /**< Size of the gl_CullDistance array, or
-                                         0 if not present. */
-   } TessEval;
-
-   /**
     * Geometry shader state - copied into gl_program by
     * _mesa_copy_linked_program_data().
     */
    struct {
       GLint VerticesIn;
 
-      /**
-       * True if gl_ClipDistance is written to.  Copied into
-       * gl_program by _mesa_copy_linked_program_data().
-       */
-      GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
-                                         0 if not present. */
-      GLuint CullDistanceArraySize; /**< Size of the gl_CullDistance array, or
-                                         0 if not present. */
       bool UsesEndPrimitive;
       bool UsesStreams;
    } Geom;
-
-   /** Vertex shader state */
-   struct {
-      /**
-       * True if gl_ClipDistance is written to.  Copied into gl_program
-       * by _mesa_copy_linked_program_data().
-       */
-      GLuint ClipDistanceArraySize; /**< Size of the gl_ClipDistance array, or
-                                         0 if not present. */
-      GLuint CullDistanceArraySize; /**< Size of the gl_CullDistance array, or
-                                         0 if not present. */
-   } Vert;
 
    /**
     * Compute shader state - copied into gl_program by

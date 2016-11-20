@@ -404,12 +404,12 @@ st_translate_vertex_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
-   if (stvp->Base.ClipDistanceArraySize)
+   if (stvp->Base.info.clip_distance_array_size)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
-                    stvp->Base.ClipDistanceArraySize);
-   if (stvp->Base.CullDistanceArraySize)
+                    stvp->Base.info.clip_distance_array_size);
+   if (stvp->Base.info.cull_distance_array_size)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CULLDIST_ENABLED,
-                    stvp->Base.CullDistanceArraySize);
+                    stvp->Base.info.cull_distance_array_size);
 
    if (ST_DEBUG & DEBUG_MESA) {
       _mesa_print_program(&stvp->Base);
@@ -1219,12 +1219,12 @@ st_translate_program_common(struct st_context *st,
    memset(outputMapping, 0, sizeof(outputMapping));
    memset(out_state, 0, sizeof(*out_state));
 
-   if (prog->ClipDistanceArraySize)
+   if (prog->info.clip_distance_array_size)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CLIPDIST_ENABLED,
-                    prog->ClipDistanceArraySize);
-   if (prog->CullDistanceArraySize)
+                    prog->info.clip_distance_array_size);
+   if (prog->info.cull_distance_array_size)
       ureg_property(ureg, TGSI_PROPERTY_NUM_CULLDIST_ENABLED,
-                    prog->CullDistanceArraySize);
+                    prog->info.cull_distance_array_size);
 
    /*
     * Convert Mesa program inputs to TGSI input register semantics.

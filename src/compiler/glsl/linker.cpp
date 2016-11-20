@@ -634,8 +634,8 @@ analyze_clip_cull_usage(struct gl_shader_program *prog,
 /**
  * Verify that a vertex shader executable meets all semantic requirements.
  *
- * Also sets prog->Vert.ClipDistanceArraySize and
- * prog->Vert.CullDistanceArraySize as a side effect.
+ * Also sets info.clip_distance_array_size and
+ * info.cull_distance_array_size as a side effect.
  *
  * \param shader  Vertex shader executable to be verified
  */
@@ -690,8 +690,8 @@ validate_vertex_shader_executable(struct gl_shader_program *prog,
    }
 
    analyze_clip_cull_usage(prog, shader, ctx,
-                           &prog->Vert.ClipDistanceArraySize,
-                           &prog->Vert.CullDistanceArraySize);
+                           &shader->Program->info.clip_distance_array_size,
+                           &shader->Program->info.cull_distance_array_size);
 }
 
 void
@@ -703,8 +703,8 @@ validate_tess_eval_shader_executable(struct gl_shader_program *prog,
       return;
 
    analyze_clip_cull_usage(prog, shader, ctx,
-                           &prog->TessEval.ClipDistanceArraySize,
-                           &prog->TessEval.CullDistanceArraySize);
+                           &shader->Program->info.clip_distance_array_size,
+                           &shader->Program->info.cull_distance_array_size);
 }
 
 
@@ -735,8 +735,8 @@ validate_fragment_shader_executable(struct gl_shader_program *prog,
 /**
  * Verify that a geometry shader executable meets all semantic requirements
  *
- * Also sets prog->Geom.VerticesIn, and prog->Geom.ClipDistanceArraySize and
- * prog->Geom.CullDistanceArraySize as a side effect.
+ * Also sets prog->Geom.VerticesIn, and info.clip_distance_array_sizeand
+ * info.cull_distance_array_size as a side effect.
  *
  * \param shader Geometry shader executable to be verified
  */
@@ -752,8 +752,8 @@ validate_geometry_shader_executable(struct gl_shader_program *prog,
    prog->Geom.VerticesIn = num_vertices;
 
    analyze_clip_cull_usage(prog, shader, ctx,
-                           &prog->Geom.ClipDistanceArraySize,
-                           &prog->Geom.CullDistanceArraySize);
+                           &shader->Program->info.clip_distance_array_size,
+                           &shader->Program->info.cull_distance_array_size);
 }
 
 /**
@@ -4776,14 +4776,14 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
    }
 
    if (num_shaders[MESA_SHADER_GEOMETRY] > 0) {
-      prog->LastClipDistanceArraySize = prog->Geom.ClipDistanceArraySize;
-      prog->LastCullDistanceArraySize = prog->Geom.CullDistanceArraySize;
+      prog->LastClipDistanceArraySize = prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program->info.clip_distance_array_size;
+      prog->LastCullDistanceArraySize = prog->_LinkedShaders[MESA_SHADER_GEOMETRY]->Program->info.cull_distance_array_size;
    } else if (num_shaders[MESA_SHADER_TESS_EVAL] > 0) {
-      prog->LastClipDistanceArraySize = prog->TessEval.ClipDistanceArraySize;
-      prog->LastCullDistanceArraySize = prog->TessEval.CullDistanceArraySize;
+      prog->LastClipDistanceArraySize = prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]->Program->info.clip_distance_array_size;
+      prog->LastCullDistanceArraySize = prog->_LinkedShaders[MESA_SHADER_TESS_EVAL]->Program->info.cull_distance_array_size;
    } else if (num_shaders[MESA_SHADER_VERTEX] > 0) {
-      prog->LastClipDistanceArraySize = prog->Vert.ClipDistanceArraySize;
-      prog->LastCullDistanceArraySize = prog->Vert.CullDistanceArraySize;
+      prog->LastClipDistanceArraySize = prog->_LinkedShaders[MESA_SHADER_VERTEX]->Program->info.clip_distance_array_size;
+      prog->LastCullDistanceArraySize = prog->_LinkedShaders[MESA_SHADER_VERTEX]->Program->info.cull_distance_array_size;
    } else {
       prog->LastClipDistanceArraySize = 0; /* Not used */
       prog->LastCullDistanceArraySize = 0; /* Not used */

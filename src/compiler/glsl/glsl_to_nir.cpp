@@ -169,8 +169,6 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    shader->info->name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
       shader->info->label = ralloc_strdup(shader, shader_prog->Label);
-   shader->info->clip_distance_array_size = sh->Program->ClipDistanceArraySize;
-   shader->info->cull_distance_array_size = sh->Program->CullDistanceArraySize;
    shader->info->has_transform_feedback_varyings =
       shader_prog->TransformFeedback.NumVarying > 0;
 

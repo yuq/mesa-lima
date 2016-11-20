@@ -294,7 +294,7 @@ brw_vs_populate_key(struct brw_context *brw,
 
    if (ctx->Transform.ClipPlanesEnabled != 0 &&
        (ctx->API == API_OPENGL_COMPAT || ctx->API == API_OPENGLES) &&
-       vp->program.ClipDistanceArraySize == 0) {
+       vp->program.info.clip_distance_array_size == 0) {
       key->nr_userclip_plane_consts =
          _mesa_logbase2(ctx->Transform.ClipPlanesEnabled) + 1;
    }

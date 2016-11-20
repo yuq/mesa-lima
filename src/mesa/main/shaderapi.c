@@ -2202,17 +2202,11 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
    dst->info.separate_shader = src->SeparateShader;
 
    switch (dst_sh->Stage) {
-   case MESA_SHADER_VERTEX:
-      dst->ClipDistanceArraySize = src->Vert.ClipDistanceArraySize;
-      dst->CullDistanceArraySize = src->Vert.CullDistanceArraySize;
-      break;
    case MESA_SHADER_TESS_EVAL: {
       dst->info.tess.primitive_mode = dst_sh->info.TessEval.PrimitiveMode;
       dst->info.tess.spacing = dst_sh->info.TessEval.Spacing;
       dst->info.tess.ccw = dst_sh->info.TessEval.VertexOrder == GL_CCW;
       dst->info.tess.point_mode = dst_sh->info.TessEval.PointMode;
-      dst->ClipDistanceArraySize = src->TessEval.ClipDistanceArraySize;
-      dst->CullDistanceArraySize = src->TessEval.CullDistanceArraySize;
       break;
    }
    case MESA_SHADER_GEOMETRY: {
@@ -2221,8 +2215,6 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       dst->info.gs.invocations = dst_sh->info.Geom.Invocations;
       dst->info.gs.input_primitive = dst_sh->info.Geom.InputType;
       dst->info.gs.output_primitive = dst_sh->info.Geom.OutputType;
-      dst->ClipDistanceArraySize = src->Geom.ClipDistanceArraySize;
-      dst->CullDistanceArraySize = src->Geom.CullDistanceArraySize;
       dst->info.gs.uses_end_primitive = src->Geom.UsesEndPrimitive;
       dst->info.gs.uses_streams = src->Geom.UsesStreams;
       break;
