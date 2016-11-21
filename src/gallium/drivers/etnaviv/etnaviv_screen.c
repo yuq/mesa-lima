@@ -748,8 +748,8 @@ etna_screen_create(struct etna_device *dev, struct etna_gpu *gpu,
 
    etna_mesa_debug = debug_get_option_etna_mesa_debug();
 
-   /* FIXME: Disable tile status for stability at the moment */
-   etna_mesa_debug |= ETNA_DBG_NO_TS;
+   /* Disable autodisable for correct rendering with TS */
+   etna_mesa_debug |= ETNA_DBG_NO_AUTODISABLE;
 
    screen->pipe = etna_pipe_new(gpu, ETNA_PIPE_3D);
    if (!screen->pipe) {
