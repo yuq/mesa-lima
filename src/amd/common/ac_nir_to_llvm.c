@@ -379,6 +379,23 @@ static LLVMValueRef to_float(struct nir_to_llvm_context *ctx, LLVMValueRef v)
 	return v;
 }
 
+static LLVMValueRef unpack_param(struct nir_to_llvm_context *ctx,
+				 LLVMValueRef param, unsigned rshift,
+				 unsigned bitwidth)
+{
+	LLVMValueRef value = param;
+	if (rshift)
+		value = LLVMBuildLShr(ctx->builder, value,
+				      LLVMConstInt(ctx->i32, rshift, false), "");
+
+	if (rshift + bitwidth < 32) {
+		unsigned mask = (1 << bitwidth) - 1;
+		value = LLVMBuildAnd(ctx->builder, value,
+				     LLVMConstInt(ctx->i32, mask, false), "");
+	}
+	return value;
+}
+
 static LLVMValueRef build_gep0(struct nir_to_llvm_context *ctx,
 			       LLVMValueRef base_ptr, LLVMValueRef index)
 {
@@ -2895,7 +2912,7 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		result = ctx->start_instance;
 		break;
 	case nir_intrinsic_load_sample_id:
-		result = ctx->ancillary;
+		result = unpack_param(ctx, ctx->ancillary, 8, 4);
 		break;
 	case nir_intrinsic_load_sample_pos:
 		result = load_sample_pos(ctx);
