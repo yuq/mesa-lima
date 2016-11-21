@@ -909,6 +909,7 @@ fd_resource_from_handle(struct pipe_screen *pscreen,
 	rsc->cpp = util_format_get_blocksize(tmpl->format);
 	slice->pitch = handle->stride / rsc->cpp;
 	slice->offset = handle->offset;
+	slice->size0 = handle->stride * prsc->height0;
 
 	if ((slice->pitch < align(prsc->width0, 32)) || (slice->pitch % 32))
 		goto fail;
