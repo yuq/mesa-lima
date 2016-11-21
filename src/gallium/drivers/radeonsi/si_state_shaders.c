@@ -1121,6 +1121,11 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 	struct si_shader_selector *sel = state->cso;
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
+
+	if (unlikely(sscreen->b.chip_class & DBG_NO_OPT_VARIANT)) {
+		memset(&key->opt, 0, sizeof(key->opt));
+	}
+
 again:
 	/* Check if we don't need to change anything.
 	 * This path is also used for most shaders that don't need multiple
