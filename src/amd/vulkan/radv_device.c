@@ -25,10 +25,12 @@
  * IN THE SOFTWARE.
  */
 
+#include <dlfcn.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/stat.h>
 #include "radv_private.h"
 #include "util/strtod.h"
 
@@ -40,15 +42,37 @@
 #include "ac_llvm_util.h"
 #include "vk_format.h"
 #include "sid.h"
-#include "radv_timestamp.h"
 #include "util/debug.h"
 struct radv_dispatch_table dtable;
 
-static void
+static int
+radv_get_function_timestamp(void *ptr, uint32_t* timestamp)
+{
+	Dl_info info;
+	struct stat st;
+	if (!dladdr(ptr, &info) || !info.dli_fname) {
+		return -1;
+	}
+	if (stat(info.dli_fname, &st)) {
+		return -1;
+	}
+	*timestamp = st.st_mtim.tv_sec;
+	return 0;
+}
+
+static int
 radv_device_get_cache_uuid(void *uuid)
 {
+	uint32_t mesa_timestamp, llvm_timestamp;
 	memset(uuid, 0, VK_UUID_SIZE);
-	snprintf(uuid, VK_UUID_SIZE, "radv-%s", RADV_TIMESTAMP);
+	if (radv_get_function_timestamp(radv_device_get_cache_uuid, &mesa_timestamp) ||
+	    radv_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo, &llvm_timestamp))
+		return -1;
+
+	memcpy(uuid, &mesa_timestamp, 4);
+	memcpy((char*)uuid + 4, &llvm_timestamp, 4);
+	snprintf((char*)uuid + 8, VK_UUID_SIZE - 8, "radv");
+	return 0;
 }
 
 static VkResult
@@ -96,7 +120,11 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
-	radv_device_get_cache_uuid(device->uuid);
+	if (radv_device_get_cache_uuid(device->uuid)) {
+		radv_finish_wsi(device);
+		device->ws->destroy(device->ws);
+		goto fail;
+	}
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
