@@ -1180,8 +1180,14 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                val->constant = *c;
             } else {
                unsigned num_components = glsl_get_vector_elements(type);
+               unsigned bit_size = glsl_get_bit_size(type);
                for (unsigned i = 0; i < num_components; i++)
-                  val->constant->values[0].u32[i] = (*c)->values[col].u32[elem + i];
+                  if (bit_size == 64) {
+                     val->constant->values[0].u64[i] = (*c)->values[col].u64[elem + i];
+                  } else {
+                     assert(bit_size == 32);
+                     val->constant->values[0].u32[i] = (*c)->values[col].u32[elem + i];
+                  }
             }
          } else {
             struct vtn_value *insert =
@@ -1191,8 +1197,14 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
                *c = insert->constant;
             } else {
                unsigned num_components = glsl_get_vector_elements(type);
+               unsigned bit_size = glsl_get_bit_size(type);
                for (unsigned i = 0; i < num_components; i++)
-                  (*c)->values[col].u32[elem + i] = insert->constant->values[0].u32[i];
+                  if (bit_size == 64) {
+                     (*c)->values[col].u64[elem + i] = insert->constant->values[0].u64[i];
+                  } else {
+                     assert(bit_size == 32);
+                     (*c)->values[col].u32[elem + i] = insert->constant->values[0].u32[i];
+                  }
             }
          }
          break;
