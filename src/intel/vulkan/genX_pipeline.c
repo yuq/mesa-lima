@@ -1006,6 +1006,94 @@ emit_3dstate_vs(struct anv_pipeline *pipeline)
 }
 
 static void
+emit_3dstate_hs_te_ds(struct anv_pipeline *pipeline)
+{
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_TESS_EVAL)) {
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_HS), hs);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_TE), te);
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_DS), ds);
+      return;
+   }
+
+   const struct gen_device_info *devinfo = &pipeline->device->info;
+   const struct anv_shader_bin *tcs_bin =
+      pipeline->shaders[MESA_SHADER_TESS_CTRL];
+   const struct anv_shader_bin *tes_bin =
+      pipeline->shaders[MESA_SHADER_TESS_EVAL];
+
+   const struct brw_tcs_prog_data *tcs_prog_data = get_tcs_prog_data(pipeline);
+   const struct brw_tes_prog_data *tes_prog_data = get_tes_prog_data(pipeline);
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_HS), hs) {
+      hs.FunctionEnable = true;
+      hs.StatisticsEnable = true;
+      hs.KernelStartPointer = tcs_bin->kernel.offset;
+
+      hs.SamplerCount = get_sampler_count(tcs_bin);
+      hs.BindingTableEntryCount = get_binding_table_entry_count(tcs_bin);
+      hs.MaximumNumberofThreads = devinfo->max_tcs_threads - 1;
+      hs.IncludeVertexHandles = true;
+      hs.InstanceCount = tcs_prog_data->instances - 1;
+
+      hs.VertexURBEntryReadLength = 0;
+      hs.VertexURBEntryReadOffset = 0;
+      hs.DispatchGRFStartRegisterForURBData =
+         tcs_prog_data->base.base.dispatch_grf_start_reg;
+
+      hs.PerThreadScratchSpace = get_scratch_space(tcs_bin);
+      hs.ScratchSpaceBasePointer =
+         get_scratch_address(pipeline, MESA_SHADER_TESS_CTRL, tcs_bin);
+   }
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_TE), te) {
+      te.Partitioning = tes_prog_data->partitioning;
+      te.OutputTopology = tes_prog_data->output_topology;
+      te.TEDomain = tes_prog_data->domain;
+      te.TEEnable = true;
+      te.MaximumTessellationFactorOdd = 63.0;
+      te.MaximumTessellationFactorNotOdd = 64.0;
+   }
+
+   anv_batch_emit(&pipeline->batch, GENX(3DSTATE_DS), ds) {
+      ds.FunctionEnable = true;
+      ds.StatisticsEnable = true;
+      ds.KernelStartPointer = tes_bin->kernel.offset;
+
+      ds.SamplerCount = get_sampler_count(tes_bin);
+      ds.BindingTableEntryCount = get_binding_table_entry_count(tes_bin);
+      ds.MaximumNumberofThreads = devinfo->max_tes_threads - 1;
+
+      ds.ComputeWCoordinateEnable =
+         tes_prog_data->domain == BRW_TESS_DOMAIN_TRI;
+
+      ds.PatchURBEntryReadLength = tes_prog_data->base.urb_read_length;
+      ds.PatchURBEntryReadOffset = 0;
+      ds.DispatchGRFStartRegisterForURBData =
+         tes_prog_data->base.base.dispatch_grf_start_reg;
+
+#if GEN_GEN >= 8
+      ds.VertexURBEntryOutputReadOffset = 1;
+      ds.VertexURBEntryOutputLength =
+         (tes_prog_data->base.vue_map.num_slots + 1) / 2 - 1;
+
+      ds.DispatchMode =
+         tes_prog_data->base.dispatch_mode == DISPATCH_MODE_SIMD8 ?
+            DISPATCH_MODE_SIMD8_SINGLE_PATCH :
+            DISPATCH_MODE_SIMD4X2;
+
+      ds.UserClipDistanceClipTestEnableBitmask =
+         tes_prog_data->base.clip_distance_mask;
+      ds.UserClipDistanceCullTestEnableBitmask =
+         tes_prog_data->base.cull_distance_mask;
+#endif
+
+      ds.PerThreadScratchSpace = get_scratch_space(tes_bin);
+      ds.ScratchSpaceBasePointer =
+         get_scratch_address(pipeline, MESA_SHADER_TESS_EVAL, tes_bin);
+   }
+}
+
+static void
 emit_3dstate_gs(struct anv_pipeline *pipeline)
 {
    const struct gen_device_info *devinfo = &pipeline->device->info;
@@ -1356,6 +1444,7 @@ genX(graphics_pipeline_create)(
 #endif
 
    emit_3dstate_vs(pipeline);
+   emit_3dstate_hs_te_ds(pipeline);
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
    emit_3dstate_wm(pipeline, subpass, pCreateInfo->pMultisampleState);
