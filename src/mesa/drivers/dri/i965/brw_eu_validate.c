@@ -78,6 +78,34 @@ inst_is_send(const struct gen_device_info *devinfo, const brw_inst *inst)
    }
 }
 
+static unsigned
+signed_type(unsigned type)
+{
+   switch (type) {
+   case BRW_HW_REG_TYPE_UD:         return BRW_HW_REG_TYPE_D;
+   case BRW_HW_REG_TYPE_UW:         return BRW_HW_REG_TYPE_W;
+   case BRW_HW_REG_NON_IMM_TYPE_UB: return BRW_HW_REG_NON_IMM_TYPE_B;
+   case GEN8_HW_REG_TYPE_UQ:        return GEN8_HW_REG_TYPE_Q;
+   default:                         return type;
+   }
+}
+
+static bool
+inst_is_raw_move(const struct gen_device_info *devinfo, const brw_inst *inst)
+{
+   unsigned dst_type = signed_type(brw_inst_dst_reg_type(devinfo, inst));
+   unsigned src_type = signed_type(brw_inst_src0_reg_type(devinfo, inst));
+
+   if (brw_inst_src0_reg_file(devinfo, inst) != BRW_IMMEDIATE_VALUE &&
+       (brw_inst_src0_negate(devinfo, inst) ||
+        brw_inst_src0_abs(devinfo, inst)))
+      return false;
+
+   return brw_inst_opcode(devinfo, inst) == BRW_OPCODE_MOV &&
+          brw_inst_saturate(devinfo, inst) == 0 &&
+          dst_type == src_type;
+}
+
 static bool
 dst_is_null(const struct gen_device_info *devinfo, const brw_inst *inst)
 {
@@ -417,10 +445,21 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
    if (desc->ndst == 0)
       return (struct string){};
 
-   /* FINISHME: check special cases for byte operations */
-   if (brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_B ||
-       brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_UB)
-      return (struct string){};
+   unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
+   bool dst_type_is_byte =
+      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_B ||
+      brw_inst_dst_reg_type(devinfo, inst) == BRW_HW_REG_NON_IMM_TYPE_UB;
+
+   if (dst_type_is_byte) {
+      if (is_packed(exec_size * dst_stride, exec_size, dst_stride)) {
+         if (!inst_is_raw_move(devinfo, inst)) {
+            ERROR("Only raw MOV supports a packed-byte destination");
+            return error_msg;
+         } else {
+            return (struct string){};
+         }
+      }
+   }
 
    unsigned exec_type = execution_type(devinfo, inst);
    unsigned exec_type_size =
@@ -428,17 +467,30 @@ general_restrictions_based_on_operand_types(const struct gen_device_info *devinf
    unsigned dst_type_size = brw_element_size(devinfo, inst, dst);
 
    if (exec_type_size > dst_type_size) {
-      unsigned dst_stride = 1 << (brw_inst_dst_hstride(devinfo, inst) - 1);
       ERROR_IF(dst_stride * dst_type_size != exec_type_size,
                "Destination stride must be equal to the ratio of the sizes of "
                "the execution data type to the destination type");
 
+      unsigned subreg = brw_inst_dst_da1_subreg_nr(devinfo, inst);
+
       if (brw_inst_access_mode(devinfo, inst) == BRW_ALIGN_1 &&
           brw_inst_dst_address_mode(devinfo, inst) == BRW_ADDRESS_DIRECT) {
-         unsigned subreg = brw_inst_dst_da1_subreg_nr(devinfo, inst);
-         ERROR_IF(subreg % exec_type_size != 0,
-                  "Destination subreg must be aligned to the size of the "
-                  "execution data type");
+         /* The i965 PRM says:
+          *
+          *    Implementation Restriction: The relaxed alignment rule for byte
+          *    destination (#10.5) is not supported.
+          */
+         if ((devinfo->gen > 4 || devinfo->is_g4x) && dst_type_is_byte) {
+            ERROR_IF(subreg % exec_type_size != 0 &&
+                     subreg % exec_type_size != 1,
+                     "Destination subreg must be aligned to the size of the "
+                     "execution data type (or to the next lowest byte for byte "
+                     "destinations)");
+         } else {
+            ERROR_IF(subreg % exec_type_size != 0,
+                     "Destination subreg must be aligned to the size of the "
+                     "execution data type");
+         }
       }
    }
 

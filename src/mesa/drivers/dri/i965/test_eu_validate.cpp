@@ -756,3 +756,92 @@ TEST_P(validation_test, one_src_two_dst)
       EXPECT_FALSE(validate(p));
    }
 }
+
+TEST_P(validation_test, packed_byte_destination)
+{
+   static const struct {
+      enum brw_reg_type dst_type;
+      enum brw_reg_type src_type;
+      bool neg, abs, sat;
+      bool expected_result;
+   } move[] = {
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_UB, 0, 0, 0, true },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_B , 0, 0, 0, true },
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_B , 0, 0, 0, true },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_UB, 0, 0, 0, true },
+
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_UB, 1, 0, 0, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_B , 1, 0, 0, false },
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_B , 1, 0, 0, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_UB, 1, 0, 0, false },
+
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_UB, 0, 1, 0, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_B , 0, 1, 0, false },
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_B , 0, 1, 0, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_UB, 0, 1, 0, false },
+
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_UB, 0, 0, 1, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_B , 0, 0, 1, false },
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_B , 0, 0, 1, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_UB, 0, 0, 1, false },
+
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_UW, 0, 0, 0, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_W , 0, 0, 0, false },
+      { BRW_REGISTER_TYPE_UB, BRW_REGISTER_TYPE_UD, 0, 0, 0, false },
+      { BRW_REGISTER_TYPE_B , BRW_REGISTER_TYPE_D , 0, 0, 0, false },
+   };
+
+   for (unsigned i = 0; i < sizeof(move) / sizeof(move[0]); i++) {
+      brw_MOV(p, retype(g0, move[i].dst_type), retype(g0, move[i].src_type));
+      brw_inst_set_src0_negate(&devinfo, last_inst, move[i].neg);
+      brw_inst_set_src0_abs(&devinfo, last_inst, move[i].abs);
+      brw_inst_set_saturate(&devinfo, last_inst, move[i].sat);
+
+      EXPECT_EQ(move[i].expected_result, validate(p));
+
+      clear_instructions(p);
+   }
+
+   brw_SEL(p, retype(g0, BRW_REGISTER_TYPE_UB),
+              retype(g0, BRW_REGISTER_TYPE_UB),
+              retype(g0, BRW_REGISTER_TYPE_UB));
+   brw_inst_set_pred_control(&devinfo, last_inst, BRW_PREDICATE_NORMAL);
+
+   EXPECT_FALSE(validate(p));
+
+   clear_instructions(p);
+
+   brw_SEL(p, retype(g0, BRW_REGISTER_TYPE_B),
+              retype(g0, BRW_REGISTER_TYPE_B),
+              retype(g0, BRW_REGISTER_TYPE_B));
+   brw_inst_set_pred_control(&devinfo, last_inst, BRW_PREDICATE_NORMAL);
+
+   EXPECT_FALSE(validate(p));
+}
+
+TEST_P(validation_test, byte_destination_relaxed_alignment)
+{
+   brw_SEL(p, retype(g0, BRW_REGISTER_TYPE_B),
+              retype(g0, BRW_REGISTER_TYPE_W),
+              retype(g0, BRW_REGISTER_TYPE_W));
+   brw_inst_set_pred_control(&devinfo, last_inst, BRW_PREDICATE_NORMAL);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+
+   EXPECT_TRUE(validate(p));
+
+   clear_instructions(p);
+
+   brw_SEL(p, retype(g0, BRW_REGISTER_TYPE_B),
+              retype(g0, BRW_REGISTER_TYPE_W),
+              retype(g0, BRW_REGISTER_TYPE_W));
+   brw_inst_set_pred_control(&devinfo, last_inst, BRW_PREDICATE_NORMAL);
+   brw_inst_set_dst_hstride(&devinfo, last_inst, BRW_HORIZONTAL_STRIDE_2);
+   brw_inst_set_dst_da1_subreg_nr(&devinfo, last_inst, 1);
+
+   if (devinfo.gen > 4 || devinfo.is_g4x) {
+      EXPECT_TRUE(validate(p));
+   } else {
+      EXPECT_FALSE(validate(p));
+   }
+
+}
