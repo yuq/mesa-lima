@@ -1180,13 +1180,10 @@ static const __DRIextension *swrast_loader_extensions[] = {
 };
 
 static EGLBoolean
-dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
+dri2_get_xcb_connection(_EGLDriver *drv, _EGLDisplay *disp,
+                        struct dri2_egl_display *dri2_dpy)
 {
-   struct dri2_egl_display *dri2_dpy;
-
-   dri2_dpy = calloc(1, sizeof *dri2_dpy);
-   if (!dri2_dpy)
-      return _eglError(EGL_BAD_ALLOC, "eglInitialize");
+   const char *msg;
 
    disp->DriverData = (void *) dri2_dpy;
    if (disp->PlatformDisplay == NULL) {
@@ -1200,9 +1197,29 @@ dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    }
 
    if (!dri2_dpy->conn || xcb_connection_has_error(dri2_dpy->conn)) {
-      _eglLog(_EGL_WARNING, "DRI2: xcb_connect failed");
-      goto cleanup_dpy;
+      msg = "xcb_connect failed";
+      goto disconnect;
    }
+
+   return EGL_TRUE;
+disconnect:
+   if (disp->PlatformDisplay == NULL)
+      xcb_disconnect(dri2_dpy->conn);
+
+   return _eglError(EGL_BAD_ALLOC, msg);
+}
+
+static EGLBoolean
+dri2_initialize_x11_swrast(_EGLDriver *drv, _EGLDisplay *disp)
+{
+   struct dri2_egl_display *dri2_dpy;
+
+   dri2_dpy = calloc(1, sizeof *dri2_dpy);
+   if (!dri2_dpy)
+      return _eglError(EGL_BAD_ALLOC, "eglInitialize");
+
+   if (!dri2_get_xcb_connection(drv, disp, dri2_dpy))
+      goto cleanup_dpy;
 
    /*
     * Every hardware driver_name is set using strdup. Doing the same in
@@ -1308,21 +1325,8 @@ dri2_initialize_x11_dri3(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
-   disp->DriverData = (void *) dri2_dpy;
-   if (disp->PlatformDisplay == NULL) {
-      dri2_dpy->conn = xcb_connect(0, &dri2_dpy->screen);
-      dri2_dpy->own_device = true;
-   } else {
-      Display *dpy = disp->PlatformDisplay;
-
-      dri2_dpy->conn = XGetXCBConnection(dpy);
-      dri2_dpy->screen = DefaultScreen(dpy);
-   }
-
-   if (!dri2_dpy->conn || xcb_connection_has_error(dri2_dpy->conn)) {
-      _eglLog(_EGL_WARNING, "DRI3: xcb_connect failed");
+   if (!dri2_get_xcb_connection(drv, disp, dri2_dpy))
       goto cleanup_dpy;
-   }
 
    if (!dri3_x11_connect(dri2_dpy))
       goto cleanup_conn;
@@ -1421,21 +1425,8 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
    if (!dri2_dpy)
       return _eglError(EGL_BAD_ALLOC, "eglInitialize");
 
-   disp->DriverData = (void *) dri2_dpy;
-   if (disp->PlatformDisplay == NULL) {
-      dri2_dpy->conn = xcb_connect(0, &dri2_dpy->screen);
-      dri2_dpy->own_device = true;
-   } else {
-      Display *dpy = disp->PlatformDisplay;
-
-      dri2_dpy->conn = XGetXCBConnection(dpy);
-      dri2_dpy->screen = DefaultScreen(dpy);
-   }
-
-   if (!dri2_dpy->conn || xcb_connection_has_error(dri2_dpy->conn)) {
-      _eglLog(_EGL_WARNING, "DRI2: xcb_connect failed");
+   if (!dri2_get_xcb_connection(drv, disp, dri2_dpy))
       goto cleanup_dpy;
-   }
 
    if (!dri2_x11_connect(dri2_dpy))
       goto cleanup_conn;
