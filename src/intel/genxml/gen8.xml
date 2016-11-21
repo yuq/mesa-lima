@@ -1286,7 +1286,10 @@
     <field name="Patch URB Entry Read Offset" start="196" end="201" type="uint"/>
     <field name="Maximum Number of Threads" start="245" end="253" type="uint"/>
     <field name="Statistics Enable" start="234" end="234" type="bool"/>
-    <field name="SIMD8 Dispatch Enable" start="227" end="227" type="bool"/>
+    <field name="Dispatch Mode" start="227" end="227" type="uint" prefix="DISPATCH_MODE">
+      <value name="SIMD4X2" value="0"/>
+      <value name="SIMD8_SINGLE_PATCH" value="1"/>
+    </field>
     <field name="Compute W Coordinate Enable" start="226" end="226" type="bool"/>
     <field name="Cache Disable" start="225" end="225" type="bool"/>
     <field name="Function Enable" start="224" end="224" type="bool"/>
