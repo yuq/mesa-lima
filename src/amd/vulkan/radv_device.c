@@ -61,9 +61,10 @@ radv_get_function_timestamp(void *ptr, uint32_t* timestamp)
 }
 
 static int
-radv_device_get_cache_uuid(void *uuid)
+radv_device_get_cache_uuid(enum radeon_family family, void *uuid)
 {
 	uint32_t mesa_timestamp, llvm_timestamp;
+	uint16_t f = family;
 	memset(uuid, 0, VK_UUID_SIZE);
 	if (radv_get_function_timestamp(radv_device_get_cache_uuid, &mesa_timestamp) ||
 	    radv_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo, &llvm_timestamp))
@@ -71,7 +72,8 @@ radv_device_get_cache_uuid(void *uuid)
 
 	memcpy(uuid, &mesa_timestamp, 4);
 	memcpy((char*)uuid + 4, &llvm_timestamp, 4);
-	snprintf((char*)uuid + 8, VK_UUID_SIZE - 8, "radv");
+	memcpy((char*)uuid + 8, &f, 2);
+	snprintf((char*)uuid + 10, VK_UUID_SIZE - 10, "radv");
 	return 0;
 }
 
@@ -120,7 +122,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
-	if (radv_device_get_cache_uuid(device->uuid)) {
+	if (radv_device_get_cache_uuid(device->rad_info.family, device->uuid)) {
 		radv_finish_wsi(device);
 		device->ws->destroy(device->ws);
 		goto fail;
