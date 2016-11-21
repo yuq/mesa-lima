@@ -1076,18 +1076,46 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
          unsigned len0 = glsl_get_vector_elements(v0->const_type);
          unsigned len1 = glsl_get_vector_elements(v1->const_type);
 
-         uint32_t u[8];
-         for (unsigned i = 0; i < len0; i++)
-            u[i] = v0->constant->values[0].u32[i];
-         for (unsigned i = 0; i < len1; i++)
-            u[len0 + i] = v1->constant->values[0].u32[i];
+         assert(len0 + len1 < 16);
 
-         for (unsigned i = 0; i < count - 6; i++) {
-            uint32_t comp = w[i + 6];
-            if (comp == (uint32_t)-1) {
-               val->constant->values[0].u32[i] = 0xdeadbeef;
-            } else {
-               val->constant->values[0].u32[i] = u[comp];
+         unsigned bit_size = glsl_get_bit_size(val->const_type);
+         assert(bit_size == glsl_get_bit_size(v0->const_type) &&
+                bit_size == glsl_get_bit_size(v1->const_type));
+
+         if (bit_size == 64) {
+            uint64_t u64[8];
+            for (unsigned i = 0; i < len0; i++)
+               u64[i] = v0->constant->values[0].u64[i];
+            for (unsigned i = 0; i < len1; i++)
+               u64[len0 + i] = v1->constant->values[0].u64[i];
+
+            for (unsigned i = 0, j = 0; i < count - 6; i++, j++) {
+               uint32_t comp = w[i + 6];
+               /* If component is not used, set the value to a known constant
+                * to detect if it is wrongly used.
+                */
+               if (comp == (uint32_t)-1)
+                  val->constant->values[0].u64[j] = 0xdeadbeefdeadbeef;
+               else
+                  val->constant->values[0].u64[j] = u64[comp];
+            }
+         } else {
+            uint32_t u32[8];
+            for (unsigned i = 0; i < len0; i++)
+               u32[i] = v0->constant->values[0].u32[i];
+
+            for (unsigned i = 0; i < len1; i++)
+               u32[len0 + i] = v1->constant->values[0].u32[i];
+
+            for (unsigned i = 0, j = 0; i < count - 6; i++, j++) {
+               uint32_t comp = w[i + 6];
+               /* If component is not used, set the value to a known constant
+                * to detect if it is wrongly used.
+                */
+               if (comp == (uint32_t)-1)
+                  val->constant->values[0].u32[j] = 0xdeadbeef;
+               else
+                  val->constant->values[0].u32[j] = u32[comp];
             }
          }
          break;
