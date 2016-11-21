@@ -107,6 +107,7 @@ etna_create_surface(struct pipe_context *pctx, struct pipe_resource *prsc,
 
       surf->surf.ts_offset += layer_offset;
       surf->surf.ts_size -= layer_offset;
+      surf->surf.ts_valid = false;
 
       surf->ts_reloc.bo = rsc->ts_bo;
       surf->ts_reloc.offset = surf->surf.ts_offset;

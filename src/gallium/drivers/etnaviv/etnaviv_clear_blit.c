@@ -119,6 +119,7 @@ etna_blit_clear_color(struct pipe_context *pctx, struct pipe_surface *dst,
          ctx->framebuffer.TS_MEM_CONFIG |= VIVS_TS_MEM_CONFIG_COLOR_AUTO_DISABLE;
       }
 
+      surf->level->ts_valid = true;
       ctx->dirty |= ETNA_DIRTY_TS;
    } else if (unlikely(new_clear_value != surf->level->clear_value)) { /* Queue normal RS clear for non-TS surfaces */
       /* If clear color changed, re-generate stored command */
@@ -178,6 +179,7 @@ etna_blit_clear_zs(struct pipe_context *pctx, struct pipe_surface *dst,
          ctx->framebuffer.TS_MEM_CONFIG |= VIVS_TS_MEM_CONFIG_DEPTH_AUTO_DISABLE;
       }
 
+      surf->level->ts_valid = true;
       ctx->dirty |= ETNA_DIRTY_TS;
    } else {
       if (unlikely(new_clear_value != surf->level->clear_value)) { /* Queue normal RS clear for non-TS surfaces */
@@ -468,7 +470,8 @@ etna_try_rs_blit(struct pipe_context *pctx,
    }
 
    /* Set up color TS to source surface before blit, if needed */
-   if (src->levels[blit_info->src.level].ts_size) {
+   if (src->levels[blit_info->src.level].ts_size &&
+       src->levels[blit_info->src.level].ts_valid) {
       struct etna_reloc reloc;
       unsigned ts_offset =
          src_lev->ts_offset + blit_info->src.box.z * src_lev->ts_layer_stride;
@@ -521,6 +524,7 @@ etna_try_rs_blit(struct pipe_context *pctx,
    etna_submit_rs_state(ctx, &copy_to_screen);
    resource_written(ctx, &dst->base);
    dst->seqno++;
+   dst->levels[blit_info->dst.level].ts_valid = false;
 
    return TRUE;
 
