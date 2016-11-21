@@ -645,7 +645,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
             LLVMValueRef out =
                LLVMBuildLoad(gallivm->builder, outputs[attrib][channel], "");
-            if (swr_fs->info.base.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS]) {
+            if (swr_fs->info.base.properties[TGSI_PROPERTY_FS_COLOR0_WRITES_ALL_CBUFS] &&
+                swr_fs->info.base.output_semantic_index[attrib] == 0) {
                for (uint32_t rt = 0; rt < key.nr_cbufs; rt++) {
                   STORE(unwrap(out),
                         pPS,
