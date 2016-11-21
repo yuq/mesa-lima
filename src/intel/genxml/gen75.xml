@@ -1228,7 +1228,7 @@
     <field name="Statistics Enable" start="170" end="170" type="bool"/>
     <field name="Compute W Coordinate Enable" start="162" end="162" type="bool"/>
     <field name="DS Cache Disable" start="161" end="161" type="bool"/>
-    <field name="DS Function Enable" start="160" end="160" type="bool"/>
+    <field name="Function Enable" start="160" end="160" type="bool"/>
   </instruction>
 
   <instruction name="3DSTATE_GATHER_CONSTANT_DS" bias="2">
