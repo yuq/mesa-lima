@@ -258,6 +258,8 @@ struct radv_physical_device {
 	uint32_t                    pci_vendor_id;
 	uint32_t                    pci_device_id;
 
+	uint8_t                                     uuid[VK_UUID_SIZE];
+
 	struct wsi_device                       wsi_device;
 };
 
@@ -452,8 +454,6 @@ struct radv_device {
 	float sample_locations_8x[8][2];
 	float sample_locations_16x[16][2];
 };
-
-void radv_device_get_cache_uuid(void *uuid);
 
 struct radv_device_memory {
 	struct radeon_winsys_bo                      *bo;

@@ -44,6 +44,13 @@
 #include "util/debug.h"
 struct radv_dispatch_table dtable;
 
+static void
+radv_device_get_cache_uuid(void *uuid)
+{
+	memset(uuid, 0, VK_UUID_SIZE);
+	snprintf(uuid, VK_UUID_SIZE, "radv-%s", RADV_TIMESTAMP);
+}
+
 static VkResult
 radv_physical_device_init(struct radv_physical_device *device,
 			  struct radv_instance *instance,
@@ -88,6 +95,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 		device->ws->destroy(device->ws);
 		goto fail;
 	}
+
+	radv_device_get_cache_uuid(device->uuid);
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
@@ -361,13 +370,6 @@ void radv_GetPhysicalDeviceFeatures(
 	};
 }
 
-void
-radv_device_get_cache_uuid(void *uuid)
-{
-	memset(uuid, 0, VK_UUID_SIZE);
-	snprintf(uuid, VK_UUID_SIZE, "radv-%s", RADV_TIMESTAMP);
-}
-
 void radv_GetPhysicalDeviceProperties(
 	VkPhysicalDevice                            physicalDevice,
 	VkPhysicalDeviceProperties*                 pProperties)
@@ -498,7 +500,7 @@ void radv_GetPhysicalDeviceProperties(
 	};
 
 	strcpy(pProperties->deviceName, pdevice->name);
-	radv_device_get_cache_uuid(pProperties->pipelineCacheUUID);
+	memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
 }
 
 void radv_GetPhysicalDeviceQueueFamilyProperties(
