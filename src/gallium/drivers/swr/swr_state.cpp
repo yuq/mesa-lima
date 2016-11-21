@@ -1501,10 +1501,8 @@ swr_update_derived(struct pipe_context *pipe,
       (ctx->rasterizer->sprite_coord_enable ? 1 : 0);
    for (unsigned i = 0; i < backendState.numAttributes; i++)
       backendState.numComponents[i] = 4;
-   backendState.constantInterpolationMask =
-      ctx->rasterizer->flatshade ?
-      ctx->fs->flatConstantMask :
-      ctx->fs->constantMask;
+   backendState.constantInterpolationMask = ctx->fs->constantMask |
+      (ctx->rasterizer->flatshade ? ctx->fs->flatConstantMask : 0);
    backendState.pointSpriteTexCoordMask = ctx->fs->pointSpriteMask;
 
    SwrSetBackendState(ctx->swrContext, &backendState);
