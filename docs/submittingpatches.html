@@ -25,6 +25,7 @@
 <li><a href="#reviewing">Reviewing Patches</a>
 <li><a href="#nominations">Nominating a commit for a stable branch</a>
 <li><a href="#criteria">Criteria for accepting patches to the stable branch</a>
+<li><a href="#gittips">Git tips</a>
 </ul>
 
 <h2 id="guidelines">Basic guidelines</h2>
@@ -315,6 +316,25 @@ be rejected:
   previously working, (even if technically non-compliant with the
   specification), could stop working after this patch. So that would be a
   regression that is unaacceptable for the stable branch.</li>
+</ul>
+
+<h2 id="gittips">Git tips</h2>
+
+<ul>
+<li>Test for build breakage between patches e.g last 8 commits.
+<pre>
+    git rebase -i --exec="make -j4" HEAD~8
+</pre>
+<li>Sets the default mailing address for your repo.
+<pre>
+    git config --local sendemail.to mesa-dev@lists.freedesktop.org
+</pre>
+<li> Add version to subject line of patch series in this case for the last 8
+commits before sending.
+<pre>
+    git send-email --subject-prefix="PATCH v4" HEAD~8
+    git send-email -v4 @~8 # shorter version, inherited from git format-patch
+</pre>
 </ul>
 
 
