@@ -457,7 +457,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 
       // load/compute w
       Value *vw = nullptr, *pAttribs;
-      if (interpMode == TGSI_INTERPOLATE_PERSPECTIVE) {
+      if (interpMode == TGSI_INTERPOLATE_PERSPECTIVE ||
+          interpMode == TGSI_INTERPOLATE_COLOR) {
          pAttribs = pPerspAttribs;
          switch (interpLoc) {
          case TGSI_INTERPOLATE_LOC_CENTER:
@@ -596,7 +597,8 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
                Value *interp1 = FMUL(vb, vj);
                interp = FADD(interp, interp1);
                interp = FADD(interp, vc);
-               if (interpMode == TGSI_INTERPOLATE_PERSPECTIVE)
+               if (interpMode == TGSI_INTERPOLATE_PERSPECTIVE ||
+                   interpMode == TGSI_INTERPOLATE_COLOR)
                   interp = FMUL(interp, vw);
                inputs[attrib][channel] = wrap(interp);
             }
