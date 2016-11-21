@@ -131,6 +131,7 @@ swr_generate_fs_key(struct swr_jit_fs_key &key,
 
    key.nr_cbufs = ctx->framebuffer.nr_cbufs;
    key.light_twoside = ctx->rasterizer->light_twoside;
+   key.sprite_coord_enable = ctx->rasterizer->sprite_coord_enable;
    memcpy(&key.vs_output_semantic_name,
           &ctx->vs->info.base.output_semantic_name,
           sizeof(key.vs_output_semantic_name));
@@ -515,7 +516,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
       unsigned linkedAttrib =
          locate_linkage(semantic_name, semantic_idx, &ctx->vs->info.base);
       if (semantic_name == TGSI_SEMANTIC_GENERIC &&
-          ctx->rasterizer->sprite_coord_enable & (1 << semantic_idx)) {
+          key.sprite_coord_enable & (1 << semantic_idx)) {
          /* we add an extra attrib to the backendState in swr_update_derived. */
          linkedAttrib = ctx->vs->info.base.num_outputs - 1;
          swr_fs->pointSpriteMask |= (1 << linkedAttrib);
