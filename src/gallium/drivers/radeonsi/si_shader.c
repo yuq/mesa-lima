@@ -6332,6 +6332,15 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 	default:
 		assert(0);
 	}
+
+	if ((shader == PIPE_SHADER_GEOMETRY ||
+	     shader == PIPE_SHADER_TESS_EVAL ||
+	     shader == PIPE_SHADER_VERTEX) &&
+	    !key->as_es && !key->as_ls) {
+		fprintf(f, "  opt.hw_vs.kill_outputs = 0x%"PRIx64"\n", key->opt.hw_vs.kill_outputs);
+		fprintf(f, "  opt.hw_vs.kill_outputs2 = 0x%x\n", key->opt.hw_vs.kill_outputs2);
+		fprintf(f, "  opt.hw_vs.clip_disable = %u\n", key->opt.hw_vs.clip_disable);
+	}
 }
 
 static void si_init_shader_ctx(struct si_shader_context *ctx,
