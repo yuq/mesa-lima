@@ -1003,10 +1003,18 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       break;
    }
 
-   case SpvOpConstant:
+   case SpvOpConstant: {
       assert(glsl_type_is_scalar(val->const_type));
-      val->constant->values[0].u32[0] = w[3];
+      int bit_size = glsl_get_bit_size(val->const_type);
+      if (bit_size == 64) {
+         val->constant->values->u32[0] = w[3];
+         val->constant->values->u32[1] = w[4];
+      } else {
+         assert(bit_size == 32);
+         val->constant->values->u32[0] = w[3];
+      }
       break;
+   }
    case SpvOpSpecConstant:
       assert(glsl_type_is_scalar(val->const_type));
       val->constant->values[0].u32[0] = get_specialization(b, val, w[3]);
