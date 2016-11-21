@@ -98,11 +98,12 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_DOUBLE:
+   case GLSL_TYPE_DOUBLE: {
+      int bit_size = glsl_get_bit_size(type);
       if (glsl_type_is_vector_or_scalar(type)) {
          unsigned num_components = glsl_get_vector_elements(val->type);
          nir_load_const_instr *load =
-            nir_load_const_instr_create(b->shader, num_components, 32);
+            nir_load_const_instr_create(b->shader, num_components, bit_size);
 
          load->value = constant->values[0];
 
@@ -118,7 +119,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
             struct vtn_ssa_value *col_val = rzalloc(b, struct vtn_ssa_value);
             col_val->type = glsl_get_column_type(val->type);
             nir_load_const_instr *load =
-               nir_load_const_instr_create(b->shader, rows, 32);
+               nir_load_const_instr_create(b->shader, rows, bit_size);
 
             load->value = constant->values[i];
 
@@ -129,6 +130,7 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
          }
       }
       break;
+   }
 
    case GLSL_TYPE_ARRAY: {
       unsigned elems = glsl_get_length(val->type);
