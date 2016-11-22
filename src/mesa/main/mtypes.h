@@ -2243,7 +2243,6 @@ struct gl_subroutine_function
 struct gl_shader_info
 {
    bool uses_gl_fragcoord;
-   bool redeclares_gl_fragcoord;
    bool PostDepthCoverage;
    bool InnerCoverage;
 
@@ -2434,6 +2433,8 @@ struct gl_shader
    bool EarlyFragmentTests;
 
    bool ARB_fragment_coord_conventions_enable;
+
+   bool redeclares_gl_fragcoord;
 
    struct gl_shader_info info;
 };
