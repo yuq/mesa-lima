@@ -1528,7 +1528,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     }
 
     if (key->specular)
-        ureg_ADD(ureg, ps.rCur, ps.rCurSrc, ps.vC[1]);
+        ureg_ADD(ureg, ureg_writemask(ps.rCur, TGSI_WRITEMASK_XYZ), ps.rCurSrc, ps.vC[1]);
 
     /* Fog.
      */
