@@ -666,6 +666,7 @@ VkResult radv_CreateDevice(
 	}
 	device->allow_fast_clears = env_var_as_boolean("RADV_FAST_CLEARS", false);
 	device->allow_dcc = !env_var_as_boolean("RADV_DCC_DISABLE", false);
+	device->shader_stats_dump = env_var_as_boolean("RADV_SHADER_STATS", false);
 
 	if (device->allow_fast_clears && device->allow_dcc)
 		radv_finishme("DCC fast clears have not been tested\n");

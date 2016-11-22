@@ -444,6 +444,7 @@ struct radv_device {
 
 	bool allow_fast_clears;
 	bool allow_dcc;
+	bool shader_stats_dump;
 
 	/* MSAA sample locations.
 	 * The first index is the sample index.
@@ -794,6 +795,7 @@ struct radv_shader_variant {
 	struct ac_shader_variant_info info;
 	unsigned rsrc1;
 	unsigned rsrc2;
+	uint32_t code_size;
 };
 
 struct radv_depth_stencil_state {
