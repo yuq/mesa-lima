@@ -1564,8 +1564,20 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 
    genX(flush_pipeline_select_gpgpu)(cmd_buffer);
 
-   if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)
+   if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE) {
+      /* From the Sky Lake PRM Vol 2a, MEDIA_VFE_STATE:
+       *
+       *    "A stalling PIPE_CONTROL is required before MEDIA_VFE_STATE unless
+       *    the only bits that are changed are scoreboard related: Scoreboard
+       *    Enable, Scoreboard Type, Scoreboard Mask, Scoreboard * Delta. For
+       *    these scoreboard related states, a MEDIA_STATE_FLUSH is
+       *    sufficient."
+       */
+      cmd_buffer->state.pending_pipe_bits |= ANV_PIPE_CS_STALL_BIT;
+      genX(cmd_buffer_apply_pipe_flushes)(cmd_buffer);
+
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
+   }
 
    if (cmd_buffer->state.push_constants_dirty & VK_SHADER_STAGE_COMPUTE_BIT) {
       struct anv_state push_state =
