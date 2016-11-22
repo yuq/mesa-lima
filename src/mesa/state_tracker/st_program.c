@@ -1624,7 +1624,7 @@ st_translate_tesseval_program(struct st_context *st,
    }
 
    ureg_property(ureg, TGSI_PROPERTY_TES_VERTEX_ORDER_CW,
-                 sttep->Base.info.tes.vertex_order == GL_CW);
+                 !sttep->Base.info.tes.ccw);
    ureg_property(ureg, TGSI_PROPERTY_TES_POINT_MODE,
                  sttep->Base.info.tes.point_mode);
 

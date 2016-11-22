@@ -150,7 +150,8 @@ typedef struct shader_info {
       struct {
          uint32_t primitive_mode; /* GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
          uint32_t spacing;        /* GL_EQUAL, GL_FRACTIONAL_EVEN, GL_FRACTIONAL_ODD */
-         uint32_t vertex_order;   /* GL_CW or GL_CCW */
+         /** Is the vertex order counterclockwise? */
+         bool ccw;
          bool point_mode;
       } tes;
    };

@@ -2176,7 +2176,7 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
    case MESA_SHADER_TESS_EVAL: {
       dst->info.tes.primitive_mode = dst_sh->info.TessEval.PrimitiveMode;
       dst->info.tes.spacing = dst_sh->info.TessEval.Spacing;
-      dst->info.tes.vertex_order = dst_sh->info.TessEval.VertexOrder;
+      dst->info.tes.ccw = dst_sh->info.TessEval.VertexOrder == GL_CCW;
       dst->info.tes.point_mode = dst_sh->info.TessEval.PointMode;
       dst->ClipDistanceArraySize = src->TessEval.ClipDistanceArraySize;
       dst->CullDistanceArraySize = src->TessEval.CullDistanceArraySize;

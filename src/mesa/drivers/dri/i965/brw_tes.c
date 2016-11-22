@@ -127,16 +127,9 @@ brw_codegen_tes_prog(struct brw_context *brw,
       prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_LINE;
    } else {
       /* Hardware winding order is backwards from OpenGL */
-      switch (tep->program.info.tes.vertex_order) {
-      case GL_CCW:
-         prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW;
-         break;
-      case GL_CW:
-         prog_data.output_topology = BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW;
-         break;
-      default:
-         unreachable("invalid domain shader vertex order");
-      }
+      prog_data.output_topology =
+         tep->program.info.tes.ccw ? BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW
+                                   : BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW;
    }
 
    /* Allocate the references to the uniforms that will end up in the
