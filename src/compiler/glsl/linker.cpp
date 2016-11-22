@@ -2008,20 +2008,20 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
-                                struct gl_linked_shader *linked_shader,
+                                struct gl_program *gl_prog,
                                 struct gl_shader **shader_list,
                                 unsigned num_shaders)
 {
-   for (int i = 0; i < 3; i++)
-      linked_shader->info.Comp.LocalSize[i] = 0;
-
-   linked_shader->info.Comp.LocalSizeVariable = false;
-
    /* This function is called for all shader stages, but it only has an effect
     * for compute shaders.
     */
-   if (linked_shader->Stage != MESA_SHADER_COMPUTE)
+   if (gl_prog->info.stage != MESA_SHADER_COMPUTE)
       return;
+
+   for (int i = 0; i < 3; i++)
+      gl_prog->info.cs.local_size[i] = 0;
+
+   gl_prog->info.cs.local_size_variable = false;
 
    /* From the ARB_compute_shader spec, in the section describing local size
     * declarations:
@@ -2037,9 +2037,9 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
       struct gl_shader *shader = shader_list[sh];
 
       if (shader->info.Comp.LocalSize[0] != 0) {
-         if (linked_shader->info.Comp.LocalSize[0] != 0) {
+         if (gl_prog->info.cs.local_size[0] != 0) {
             for (int i = 0; i < 3; i++) {
-               if (linked_shader->info.Comp.LocalSize[i] !=
+               if (gl_prog->info.cs.local_size[i] !=
                    shader->info.Comp.LocalSize[i]) {
                   linker_error(prog, "compute shader defined with conflicting "
                                "local sizes\n");
@@ -2048,11 +2048,11 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
             }
          }
          for (int i = 0; i < 3; i++) {
-            linked_shader->info.Comp.LocalSize[i] =
+            gl_prog->info.cs.local_size[i] =
                shader->info.Comp.LocalSize[i];
          }
       } else if (shader->info.Comp.LocalSizeVariable) {
-         if (linked_shader->info.Comp.LocalSize[0] != 0) {
+         if (gl_prog->info.cs.local_size[0] != 0) {
             /* The ARB_compute_variable_group_size spec says:
              *
              *     If one compute shader attached to a program declares a
@@ -2064,7 +2064,7 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
                          "variable local group size\n");
             return;
          }
-         linked_shader->info.Comp.LocalSizeVariable = true;
+         gl_prog->info.cs.local_size_variable = true;
       }
    }
 
@@ -2072,17 +2072,12 @@ link_cs_input_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->info.Comp.LocalSize[0] == 0 &&
-       !linked_shader->info.Comp.LocalSizeVariable) {
+   if (gl_prog->info.cs.local_size[0] == 0 &&
+       !gl_prog->info.cs.local_size_variable) {
       linker_error(prog, "compute shader must contain a fixed or a variable "
                          "local group size\n");
       return;
    }
-   for (int i = 0; i < 3; i++)
-      prog->Comp.LocalSize[i] = linked_shader->info.Comp.LocalSize[i];
-
-   prog->Comp.LocalSizeVariable =
-      linked_shader->info.Comp.LocalSizeVariable;
 }
 
 
@@ -2212,7 +2207,7 @@ link_intrastage_shaders(void *mem_ctx,
    link_tcs_out_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_tes_in_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_gs_inout_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
-   link_cs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_cs_input_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_xfb_stride_layout_qualifiers(ctx, prog, linked, shader_list,
                                      num_shaders);
 

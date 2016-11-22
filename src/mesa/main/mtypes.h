@@ -2760,19 +2760,9 @@ struct gl_shader_program
     */
    struct {
       /**
-       * If this shader contains a compute stage, size specified using
-       * local_size_{x,y,z}.  Otherwise undefined.
-       */
-      unsigned LocalSize[3];
-      /**
        * Size of shared variables accessed by the compute shader.
        */
       unsigned SharedSize;
-
-      /**
-       * Whether a variable work group size has been specified.
-       */
-      bool LocalSizeVariable;
    } Comp;
 
    /** Data shared by gl_program and gl_shader_program */

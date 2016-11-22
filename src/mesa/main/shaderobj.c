@@ -282,8 +282,6 @@ init_shader_program(struct gl_shader_program *prog)
    prog->Geom.UsesEndPrimitive = false;
    prog->Geom.UsesStreams = false;
 
-   prog->Comp.LocalSizeVariable = false;
-
    prog->TransformFeedback.BufferMode = GL_INTERLEAVED_ATTRIBS;
 
    exec_list_make_empty(&prog->EmptyUniformLocations);

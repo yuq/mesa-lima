@@ -807,7 +807,8 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          return;
       }
       for (i = 0; i < 3; i++)
-         params[i] = shProg->Comp.LocalSize[i];
+         params[i] = shProg->_LinkedShaders[MESA_SHADER_COMPUTE]->
+            Program->info.cs.local_size[i];
       return;
    }
    case GL_PROGRAM_SEPARABLE:
@@ -2213,10 +2214,7 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       break;
    }
    case MESA_SHADER_COMPUTE: {
-      for (int i = 0; i < 3; i++)
-         dst->info.cs.local_size[i] = src->Comp.LocalSize[i];
       dst->info.cs.shared_size = src->Comp.SharedSize;
-      dst->info.cs.local_size_variable = src->Comp.LocalSizeVariable;
       break;
    }
    default:
