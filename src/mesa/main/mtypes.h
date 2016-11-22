@@ -2354,8 +2354,6 @@ struct gl_linked_shader
    struct exec_list *packed_varyings;
    struct exec_list *fragdata_arrays;
    struct glsl_symbol_table *symbols;
-
-   struct gl_shader_info info;
 };
 
 static inline GLbitfield gl_external_samplers(struct gl_program *prog)
