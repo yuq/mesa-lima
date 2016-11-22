@@ -654,7 +654,7 @@ get_tex_memcpy(struct gl_context *ctx,
 
       if (src) {
          if (bytesPerRow == dstRowStride && bytesPerRow == srcRowStride) {
-            memcpy(dst, src, bytesPerRow * texImage->Height);
+            memcpy(dst, src, bytesPerRow * height);
          }
          else {
             GLuint row;
