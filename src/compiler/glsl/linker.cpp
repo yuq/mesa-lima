@@ -748,7 +748,8 @@ validate_geometry_shader_executable(struct gl_shader_program *prog,
    if (shader == NULL)
       return;
 
-   unsigned num_vertices = vertices_per_prim(shader->info.Geom.InputType);
+   unsigned num_vertices =
+      vertices_per_prim(shader->Program->info.gs.input_primitive);
    prog->Geom.VerticesIn = num_vertices;
 
    analyze_clip_cull_usage(prog, shader, ctx,
@@ -803,7 +804,8 @@ validate_geometry_shader_emissions(struct gl_context *ctx,
        * EmitStreamVertex() or EmitEndPrimitive() are called with a non-zero
        * stream.
        */
-      if (prog->Geom.UsesStreams && sh->info.Geom.OutputType != GL_POINTS) {
+      if (prog->Geom.UsesStreams &&
+          sh->Program->info.gs.output_primitive != GL_POINTS) {
          linker_error(prog, "EmitStreamVertex(n) and EndStreamPrimitive(n) "
                       "with n>0 requires point output\n");
       }
@@ -1893,21 +1895,22 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
-                                struct gl_linked_shader *linked_shader,
+                                struct gl_program *gl_prog,
                                 struct gl_shader **shader_list,
                                 unsigned num_shaders)
 {
-   linked_shader->info.Geom.VerticesOut = -1;
-   linked_shader->info.Geom.Invocations = 0;
-   linked_shader->info.Geom.InputType = PRIM_UNKNOWN;
-   linked_shader->info.Geom.OutputType = PRIM_UNKNOWN;
-
    /* No in/out qualifiers defined for anything but GLSL 1.50+
     * geometry shaders so far.
     */
-   if (linked_shader->Stage != MESA_SHADER_GEOMETRY ||
+   if (gl_prog->info.stage != MESA_SHADER_GEOMETRY ||
        prog->data->Version < 150)
       return;
+
+   int vertices_out = -1;
+
+   gl_prog->info.gs.invocations = 0;
+   gl_prog->info.gs.input_primitive = PRIM_UNKNOWN;
+   gl_prog->info.gs.output_primitive = PRIM_UNKNOWN;
 
    /* From the GLSL 1.50 spec, page 46:
     *
@@ -1923,51 +1926,49 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
       struct gl_shader *shader = shader_list[i];
 
       if (shader->info.Geom.InputType != PRIM_UNKNOWN) {
-         if (linked_shader->info.Geom.InputType != PRIM_UNKNOWN &&
-             linked_shader->info.Geom.InputType !=
+         if (gl_prog->info.gs.input_primitive != PRIM_UNKNOWN &&
+             gl_prog->info.gs.input_primitive !=
              shader->info.Geom.InputType) {
             linker_error(prog, "geometry shader defined with conflicting "
                          "input types\n");
             return;
          }
-         linked_shader->info.Geom.InputType = shader->info.Geom.InputType;
+         gl_prog->info.gs.input_primitive = shader->info.Geom.InputType;
       }
 
       if (shader->info.Geom.OutputType != PRIM_UNKNOWN) {
-         if (linked_shader->info.Geom.OutputType != PRIM_UNKNOWN &&
-             linked_shader->info.Geom.OutputType !=
+         if (gl_prog->info.gs.output_primitive != PRIM_UNKNOWN &&
+             gl_prog->info.gs.output_primitive !=
              shader->info.Geom.OutputType) {
             linker_error(prog, "geometry shader defined with conflicting "
                          "output types\n");
             return;
          }
-         linked_shader->info.Geom.OutputType = shader->info.Geom.OutputType;
+         gl_prog->info.gs.output_primitive = shader->info.Geom.OutputType;
       }
 
       if (shader->info.Geom.VerticesOut != -1) {
-         if (linked_shader->info.Geom.VerticesOut != -1 &&
-             linked_shader->info.Geom.VerticesOut !=
-             shader->info.Geom.VerticesOut) {
+         if (vertices_out != -1 &&
+             vertices_out != shader->info.Geom.VerticesOut) {
             linker_error(prog, "geometry shader defined with conflicting "
                          "output vertex count (%d and %d)\n",
-                         linked_shader->info.Geom.VerticesOut,
-                         shader->info.Geom.VerticesOut);
+                         vertices_out, shader->info.Geom.VerticesOut);
             return;
          }
-         linked_shader->info.Geom.VerticesOut = shader->info.Geom.VerticesOut;
+         vertices_out = shader->info.Geom.VerticesOut;
       }
 
       if (shader->info.Geom.Invocations != 0) {
-         if (linked_shader->info.Geom.Invocations != 0 &&
-             linked_shader->info.Geom.Invocations !=
-             shader->info.Geom.Invocations) {
+         if (gl_prog->info.gs.invocations != 0 &&
+             gl_prog->info.gs.invocations !=
+             (unsigned) shader->info.Geom.Invocations) {
             linker_error(prog, "geometry shader defined with conflicting "
                          "invocation count (%d and %d)\n",
-                         linked_shader->info.Geom.Invocations,
+                         gl_prog->info.gs.invocations,
                          shader->info.Geom.Invocations);
             return;
          }
-         linked_shader->info.Geom.Invocations = shader->info.Geom.Invocations;
+         gl_prog->info.gs.invocations = shader->info.Geom.Invocations;
       }
    }
 
@@ -1975,26 +1976,28 @@ link_gs_inout_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->info.Geom.InputType == PRIM_UNKNOWN) {
+   if (gl_prog->info.gs.input_primitive == PRIM_UNKNOWN) {
       linker_error(prog,
                    "geometry shader didn't declare primitive input type\n");
       return;
    }
 
-   if (linked_shader->info.Geom.OutputType == PRIM_UNKNOWN) {
+   if (gl_prog->info.gs.output_primitive == PRIM_UNKNOWN) {
       linker_error(prog,
                    "geometry shader didn't declare primitive output type\n");
       return;
    }
 
-   if (linked_shader->info.Geom.VerticesOut == -1) {
+   if (vertices_out == -1) {
       linker_error(prog,
                    "geometry shader didn't declare max_vertices\n");
       return;
+   } else {
+      gl_prog->info.gs.vertices_out = vertices_out;
    }
 
-   if (linked_shader->info.Geom.Invocations == 0)
-      linked_shader->info.Geom.Invocations = 1;
+   if (gl_prog->info.gs.invocations == 0)
+      gl_prog->info.gs.invocations = 1;
 }
 
 
@@ -2208,7 +2211,7 @@ link_intrastage_shaders(void *mem_ctx,
    link_fs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tcs_out_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_tes_in_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
-   link_gs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_gs_inout_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_cs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_xfb_stride_layout_qualifiers(ctx, prog, linked, shader_list,
                                      num_shaders);
@@ -2285,7 +2288,8 @@ link_intrastage_shaders(void *mem_ctx,
 
    /* Set the size of geometry shader input arrays */
    if (linked->Stage == MESA_SHADER_GEOMETRY) {
-      unsigned num_vertices = vertices_per_prim(linked->info.Geom.InputType);
+      unsigned num_vertices =
+         vertices_per_prim(gl_prog->info.gs.input_primitive);
       array_resize_visitor input_resize_visitor(num_vertices, prog,
                                                 MESA_SHADER_GEOMETRY);
       foreach_in_list(ir_instruction, ir, linked->ir) {

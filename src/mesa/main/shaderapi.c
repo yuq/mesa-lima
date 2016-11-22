@@ -719,7 +719,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_gs_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->
-            info.Geom.VerticesOut;
+            Program->info.gs.vertices_out;
       }
       return;
    case GL_GEOMETRY_SHADER_INVOCATIONS:
@@ -727,7 +727,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_gs_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->
-            info.Geom.Invocations;
+            Program->info.gs.invocations;
       }
       return;
    case GL_GEOMETRY_INPUT_TYPE:
@@ -735,7 +735,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_gs_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->
-            info.Geom.InputType;
+            Program->info.gs.input_primitive;
       }
       return;
    case GL_GEOMETRY_OUTPUT_TYPE:
@@ -743,7 +743,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_gs_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_GEOMETRY]->
-            info.Geom.OutputType;
+            Program->info.gs.output_primitive;
       }
       return;
    case GL_ACTIVE_UNIFORM_BLOCK_MAX_NAME_LENGTH: {
@@ -2204,10 +2204,6 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
    switch (dst_sh->Stage) {
    case MESA_SHADER_GEOMETRY: {
       dst->info.gs.vertices_in = src->Geom.VerticesIn;
-      dst->info.gs.vertices_out = dst_sh->info.Geom.VerticesOut;
-      dst->info.gs.invocations = dst_sh->info.Geom.Invocations;
-      dst->info.gs.input_primitive = dst_sh->info.Geom.InputType;
-      dst->info.gs.output_primitive = dst_sh->info.Geom.OutputType;
       dst->info.gs.uses_end_primitive = src->Geom.UsesEndPrimitive;
       dst->info.gs.uses_streams = src->Geom.UsesStreams;
       break;
