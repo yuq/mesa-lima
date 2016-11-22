@@ -1813,7 +1813,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       shader->info.uses_gl_fragcoord = state->fs_uses_gl_fragcoord;
       shader->info.pixel_center_integer = state->fs_pixel_center_integer;
       shader->info.origin_upper_left = state->fs_origin_upper_left;
-      shader->info.ARB_fragment_coord_conventions_enable =
+      shader->ARB_fragment_coord_conventions_enable =
          state->ARB_fragment_coord_conventions_enable;
       shader->EarlyFragmentTests = state->fs_early_fragment_tests;
       shader->info.InnerCoverage = state->fs_inner_coverage;

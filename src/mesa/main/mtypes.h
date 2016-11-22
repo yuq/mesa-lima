@@ -2246,7 +2246,6 @@ struct gl_shader_info
    bool redeclares_gl_fragcoord;
    bool PostDepthCoverage;
    bool InnerCoverage;
-   bool ARB_fragment_coord_conventions_enable;
 
    /**
     * Fragment shader state from GLSL 1.50 layout qualifiers.
@@ -2433,6 +2432,8 @@ struct gl_shader
     * ARB_shader_image_load_store.
     */
    bool EarlyFragmentTests;
+
+   bool ARB_fragment_coord_conventions_enable;
 
    struct gl_shader_info info;
 };
