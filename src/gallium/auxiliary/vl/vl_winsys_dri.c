@@ -46,7 +46,7 @@
 #include "state_tracker/drm_driver.h"
 
 #include "util/u_memory.h"
-#include "util/u_hash.h"
+#include "util/crc32.h"
 #include "util/u_hash_table.h"
 #include "util/u_inlines.h"
 

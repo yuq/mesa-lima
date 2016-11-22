@@ -24,7 +24,7 @@
 
 #include <inttypes.h>
 #include "util/u_format.h"
-#include "util/u_hash.h"
+#include "util/crc32.h"
 #include "util/u_math.h"
 #include "util/u_memory.h"
 #include "util/ralloc.h"

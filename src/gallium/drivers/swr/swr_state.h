@@ -30,7 +30,7 @@
 #include "tgsi/tgsi_dump.h"
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_tgsi.h"
-#include "util/u_hash.h"
+#include "util/crc32.h"
 #include "api.h"
 #include "swr_tex_sample.h"
 #include "swr_shader.h"

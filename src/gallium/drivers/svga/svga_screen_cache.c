@@ -25,7 +25,7 @@
 
 #include "util/u_math.h"
 #include "util/u_memory.h"
-#include "util/u_hash.h"
+#include "util/crc32.h"
 
 #include "svga_debug.h"
 #include "svga_format.h"
