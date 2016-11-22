@@ -1514,6 +1514,7 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
 
    result = emit_binding_table(cmd_buffer, MESA_SHADER_COMPUTE, &surfaces);
    if (result != VK_SUCCESS) {
+      assert(result == VK_ERROR_OUT_OF_DEVICE_MEMORY);
       result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
       assert(result == VK_SUCCESS);
 
