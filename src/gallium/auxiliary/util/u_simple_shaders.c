@@ -633,14 +633,14 @@ util_make_fs_blit_msaa_color(struct pipe_context *pipe,
 
       if (dtype == TGSI_RETURN_TYPE_SINT) {
          conversion_decl = "IMM[0] UINT32 {2147483647, 0, 0, 0}\n";
-         conversion = "UMIN TEMP[0], TEMP[0], IMM[0].x\n";
+         conversion = "UMIN TEMP[0], TEMP[0], IMM[0].xxxx\n";
       }
    } else if (stype == TGSI_RETURN_TYPE_SINT) {
       samp_type = "SINT";
 
       if (dtype == TGSI_RETURN_TYPE_UINT) {
          conversion_decl = "IMM[0] INT32 {0, 0, 0, 0}\n";
-         conversion = "IMAX TEMP[0], TEMP[0], IMM[0].x\n";
+         conversion = "IMAX TEMP[0], TEMP[0], IMM[0].xxxx\n";
       }
    } else {
       assert(dtype == TGSI_RETURN_TYPE_FLOAT);
