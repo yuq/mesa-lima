@@ -1512,12 +1512,22 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
    struct anv_state surfaces = { 0, }, samplers = { 0, };
    VkResult result;
 
-   result = emit_samplers(cmd_buffer, MESA_SHADER_COMPUTE, &samplers);
-   if (result != VK_SUCCESS)
-      return result;
    result = emit_binding_table(cmd_buffer, MESA_SHADER_COMPUTE, &surfaces);
-   if (result != VK_SUCCESS)
-      return result;
+   if (result != VK_SUCCESS) {
+      result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+      assert(result == VK_SUCCESS);
+
+      /* Re-emit state base addresses so we get the new surface state base
+       * address before we start emitting binding tables etc.
+       */
+      genX(cmd_buffer_emit_state_base_address)(cmd_buffer);
+
+      result = emit_binding_table(cmd_buffer, MESA_SHADER_COMPUTE, &surfaces);
+      assert(result == VK_SUCCESS);
+   }
+   result = emit_samplers(cmd_buffer, MESA_SHADER_COMPUTE, &samplers);
+   assert(result == VK_SUCCESS);
+
 
    struct anv_state push_state = anv_cmd_buffer_cs_push_constants(cmd_buffer);
 
