@@ -386,10 +386,10 @@ brw_tcs_precompile(struct gl_context *ctx,
    struct brw_program *btep;
    if (tes) {
       btep = brw_program(tes->Program);
-      key.tes_primitive_mode = tes->info.TessEval.PrimitiveMode;
+      key.tes_primitive_mode = tes->Program->info.tess.primitive_mode;
       key.quads_workaround = brw->gen < 9 &&
-                             tes->info.TessEval.PrimitiveMode == GL_QUADS &&
-                             tes->info.TessEval.Spacing == TESS_SPACING_EQUAL;
+                             tes->Program->info.tess.primitive_mode == GL_QUADS &&
+                             tes->Program->info.tess.spacing == TESS_SPACING_EQUAL;
    } else {
       btep = NULL;
       key.tes_primitive_mode = GL_TRIANGLES;

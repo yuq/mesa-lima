@@ -1714,17 +1714,18 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
  */
 static void
 link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
-                              struct gl_linked_shader *linked_shader,
+                              struct gl_program *gl_prog,
                               struct gl_shader **shader_list,
                               unsigned num_shaders)
 {
-   linked_shader->info.TessEval.PrimitiveMode = PRIM_UNKNOWN;
-   linked_shader->info.TessEval.Spacing = TESS_SPACING_UNSPECIFIED;
-   linked_shader->info.TessEval.VertexOrder = 0;
-   linked_shader->info.TessEval.PointMode = -1;
-
-   if (linked_shader->Stage != MESA_SHADER_TESS_EVAL)
+   if (gl_prog->info.stage != MESA_SHADER_TESS_EVAL)
       return;
+
+   int point_mode = -1;
+   unsigned vertex_order = 0;
+
+   gl_prog->info.tess.primitive_mode = PRIM_UNKNOWN;
+   gl_prog->info.tess.spacing = TESS_SPACING_UNSPECIFIED;
 
    /* From the GLSL 4.0 spec (chapter 4.3.8.1):
     *
@@ -1744,49 +1745,45 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
       struct gl_shader *shader = shader_list[i];
 
       if (shader->info.TessEval.PrimitiveMode != PRIM_UNKNOWN) {
-         if (linked_shader->info.TessEval.PrimitiveMode != PRIM_UNKNOWN &&
-             linked_shader->info.TessEval.PrimitiveMode !=
+         if (gl_prog->info.tess.primitive_mode != PRIM_UNKNOWN &&
+             gl_prog->info.tess.primitive_mode !=
              shader->info.TessEval.PrimitiveMode) {
             linker_error(prog, "tessellation evaluation shader defined with "
                          "conflicting input primitive modes.\n");
             return;
          }
-         linked_shader->info.TessEval.PrimitiveMode = shader->info.TessEval.PrimitiveMode;
+         gl_prog->info.tess.primitive_mode =
+            shader->info.TessEval.PrimitiveMode;
       }
 
       if (shader->info.TessEval.Spacing != 0) {
-         if (linked_shader->info.TessEval.Spacing != 0 &&
-             linked_shader->info.TessEval.Spacing !=
+         if (gl_prog->info.tess.spacing != 0 && gl_prog->info.tess.spacing !=
              shader->info.TessEval.Spacing) {
             linker_error(prog, "tessellation evaluation shader defined with "
                          "conflicting vertex spacing.\n");
             return;
          }
-         linked_shader->info.TessEval.Spacing = shader->info.TessEval.Spacing;
+         gl_prog->info.tess.spacing = shader->info.TessEval.Spacing;
       }
 
       if (shader->info.TessEval.VertexOrder != 0) {
-         if (linked_shader->info.TessEval.VertexOrder != 0 &&
-             linked_shader->info.TessEval.VertexOrder !=
-             shader->info.TessEval.VertexOrder) {
+         if (vertex_order != 0 &&
+             vertex_order != shader->info.TessEval.VertexOrder) {
             linker_error(prog, "tessellation evaluation shader defined with "
                          "conflicting ordering.\n");
             return;
          }
-         linked_shader->info.TessEval.VertexOrder =
-            shader->info.TessEval.VertexOrder;
+         vertex_order = shader->info.TessEval.VertexOrder;
       }
 
       if (shader->info.TessEval.PointMode != -1) {
-         if (linked_shader->info.TessEval.PointMode != -1 &&
-             linked_shader->info.TessEval.PointMode !=
-             shader->info.TessEval.PointMode) {
+         if (point_mode != -1 &&
+             point_mode != shader->info.TessEval.PointMode) {
             linker_error(prog, "tessellation evaluation shader defined with "
                          "conflicting point modes.\n");
             return;
          }
-         linked_shader->info.TessEval.PointMode =
-            shader->info.TessEval.PointMode;
+         point_mode = shader->info.TessEval.PointMode;
       }
 
    }
@@ -1795,21 +1792,26 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->info.TessEval.PrimitiveMode == PRIM_UNKNOWN) {
+   if (gl_prog->info.tess.primitive_mode == PRIM_UNKNOWN) {
       linker_error(prog,
                    "tessellation evaluation shader didn't declare input "
                    "primitive modes.\n");
       return;
    }
 
-   if (linked_shader->info.TessEval.Spacing == TESS_SPACING_UNSPECIFIED)
-      linked_shader->info.TessEval.Spacing = TESS_SPACING_EQUAL;
+   if (gl_prog->info.tess.spacing == TESS_SPACING_UNSPECIFIED)
+      gl_prog->info.tess.spacing = TESS_SPACING_EQUAL;
 
-   if (linked_shader->info.TessEval.VertexOrder == 0)
-      linked_shader->info.TessEval.VertexOrder = GL_CCW;
+   if (vertex_order == 0)
+      gl_prog->info.tess.ccw = true;
+   else
+      gl_prog->info.tess.ccw = false;
 
-   if (linked_shader->info.TessEval.PointMode == -1)
-      linked_shader->info.TessEval.PointMode = GL_FALSE;
+
+   if (point_mode == -1)
+      gl_prog->info.tess.point_mode = false;
+   else
+      gl_prog->info.tess.point_mode = true;
 }
 
 
@@ -2205,7 +2207,7 @@ link_intrastage_shaders(void *mem_ctx,
 
    link_fs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_tcs_out_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
-   link_tes_in_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_tes_in_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_gs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_cs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_xfb_stride_layout_qualifiers(ctx, prog, linked, shader_list,

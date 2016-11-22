@@ -829,7 +829,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_tes_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
-            info.TessEval.PrimitiveMode;
+            Program->info.tess.primitive_mode;
       }
       return;
    case GL_TESS_GEN_SPACING:
@@ -838,7 +838,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       if (check_tes_query(ctx, shProg)) {
          const struct gl_linked_shader *tes =
             shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL];
-         switch (tes->info.TessEval.Spacing) {
+         switch (tes->Program->info.tess.spacing) {
          case TESS_SPACING_EQUAL:
             *params = GL_EQUAL;
             break;
@@ -859,7 +859,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_tes_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
-            info.TessEval.VertexOrder;
+            Program->info.tess.ccw ? GL_CCW : GL_CW;
          }
       return;
    case GL_TESS_GEN_POINT_MODE:
@@ -867,7 +867,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_tes_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_TESS_EVAL]->
-            info.TessEval.PointMode;
+            Program->info.tess.point_mode ? GL_TRUE : GL_FALSE;
       }
       return;
    default:
@@ -2202,13 +2202,6 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
    dst->info.separate_shader = src->SeparateShader;
 
    switch (dst_sh->Stage) {
-   case MESA_SHADER_TESS_EVAL: {
-      dst->info.tess.primitive_mode = dst_sh->info.TessEval.PrimitiveMode;
-      dst->info.tess.spacing = dst_sh->info.TessEval.Spacing;
-      dst->info.tess.ccw = dst_sh->info.TessEval.VertexOrder == GL_CCW;
-      dst->info.tess.point_mode = dst_sh->info.TessEval.PointMode;
-      break;
-   }
    case MESA_SHADER_GEOMETRY: {
       dst->info.gs.vertices_in = src->Geom.VerticesIn;
       dst->info.gs.vertices_out = dst_sh->info.Geom.VerticesOut;
