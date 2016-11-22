@@ -32,6 +32,7 @@
 ///
 
 #include "llvm/codegen.hpp"
+#include "llvm/compat.hpp"
 #include "llvm/metadata.hpp"
 #include "core/error.hpp"
 #include "util/algorithm.hpp"
@@ -99,13 +100,9 @@ clover::llvm::parse_module_library(const module &m, ::llvm::LLVMContext &ctx,
    auto mod = ::llvm::parseBitcodeFile(::llvm::MemoryBufferRef(
                                         as_string(m.secs[0].data), " "), ctx);
 
-   if (::llvm::Error err = mod.takeError()) {
-      std::string msg;
-      ::llvm::handleAllErrors(std::move(err), [&](::llvm::ErrorInfoBase &EIB) {
-         msg = EIB.message();
-         fail(r_log, error(CL_INVALID_PROGRAM), msg.c_str());
+   compat::handle_module_error(mod, [&](const std::string &s) {
+         fail(r_log, error(CL_INVALID_PROGRAM), s);
       });
-   }
 
    return std::unique_ptr<::llvm::Module>(std::move(*mod));
 }
