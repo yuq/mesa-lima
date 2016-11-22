@@ -141,6 +141,8 @@ vc4_alloc_reg_set(struct vc4_context *vc4)
         for (int i = 0; i < 2; i++) {
                 ra_class_add_reg(vc4->regs, vc4->reg_class_r4_or_a[i],
                                  ACC_INDEX + 4);
+                ra_class_add_reg(vc4->regs, vc4->reg_class_any[i],
+                                 ACC_INDEX + 4);
         }
 
         /* A/B */
