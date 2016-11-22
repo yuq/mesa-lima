@@ -344,7 +344,7 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                          * If the texture coordinate fifo is full, block this
                          * on the last QOP_TEX_RESULT.
                          */
-                        if (state.tfreq_count == 8) {
+                        if (state.tfreq_count == (c->fs_threaded ? 4 : 8)) {
                                 block_until_tex_result(&state, n);
                         }
 
@@ -366,7 +366,8 @@ calculate_forward_deps(struct vc4_compile *c, void *mem_ctx,
                          */
                         if (inst->op == QOP_TEX_S ||
                             inst->op == QOP_TEX_DIRECT) {
-                                if (state.tfrcv_count == 4)
+                                if (state.tfrcv_count ==
+                                    (c->fs_threaded ? 2 : 4))
                                         block_until_tex_result(&state, n);
                                 state.tfrcv_count++;
                         }
