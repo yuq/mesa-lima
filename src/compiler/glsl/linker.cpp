@@ -1659,14 +1659,14 @@ link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
  */
 static void
 link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
-                               struct gl_linked_shader *linked_shader,
+                               struct gl_program *gl_prog,
                                struct gl_shader **shader_list,
                                unsigned num_shaders)
 {
-   linked_shader->info.TessCtrl.VerticesOut = 0;
-
-   if (linked_shader->Stage != MESA_SHADER_TESS_CTRL)
+   if (gl_prog->info.stage != MESA_SHADER_TESS_CTRL)
       return;
+
+   gl_prog->info.tess.tcs_vertices_out = 0;
 
    /* From the GLSL 4.0 spec (chapter 4.3.8.2):
     *
@@ -1682,16 +1682,16 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
       struct gl_shader *shader = shader_list[i];
 
       if (shader->info.TessCtrl.VerticesOut != 0) {
-         if (linked_shader->info.TessCtrl.VerticesOut != 0 &&
-             linked_shader->info.TessCtrl.VerticesOut !=
-             shader->info.TessCtrl.VerticesOut) {
+         if (gl_prog->info.tess.tcs_vertices_out != 0 &&
+             gl_prog->info.tess.tcs_vertices_out !=
+             (unsigned) shader->info.TessCtrl.VerticesOut) {
             linker_error(prog, "tessellation control shader defined with "
                          "conflicting output vertex count (%d and %d)\n",
-                         linked_shader->info.TessCtrl.VerticesOut,
+                         gl_prog->info.tess.tcs_vertices_out,
                          shader->info.TessCtrl.VerticesOut);
             return;
          }
-         linked_shader->info.TessCtrl.VerticesOut =
+         gl_prog->info.tess.tcs_vertices_out =
             shader->info.TessCtrl.VerticesOut;
       }
    }
@@ -1700,7 +1700,7 @@ link_tcs_out_layout_qualifiers(struct gl_shader_program *prog,
     * since we already know we're in the right type of shader program
     * for doing it.
     */
-   if (linked_shader->info.TessCtrl.VerticesOut == 0) {
+   if (gl_prog->info.tess.tcs_vertices_out == 0) {
       linker_error(prog, "tessellation control shader didn't declare "
                    "vertices out layout qualifier\n");
       return;
@@ -2218,7 +2218,7 @@ link_intrastage_shaders(void *mem_ctx,
    clone_ir_list(mem_ctx, linked->ir, main->ir);
 
    link_fs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
-   link_tcs_out_layout_qualifiers(prog, linked, shader_list, num_shaders);
+   link_tcs_out_layout_qualifiers(prog, gl_prog, shader_list, num_shaders);
    link_tes_in_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_gs_inout_layout_qualifiers(prog, linked, shader_list, num_shaders);
    link_cs_input_layout_qualifiers(prog, linked, shader_list, num_shaders);
@@ -2431,7 +2431,7 @@ resize_tes_inputs(struct gl_context *ctx,
     * known until draw time.
     */
    const int num_vertices = tcs
-      ? tcs->info.TessCtrl.VerticesOut
+      ? tcs->Program->info.tess.tcs_vertices_out
       : ctx->Const.MaxPatchVertices;
 
    array_resize_visitor input_resize_visitor(num_vertices, prog,

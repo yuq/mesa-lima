@@ -823,7 +823,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
          break;
       if (check_tcs_query(ctx, shProg)) {
          *params = shProg->_LinkedShaders[MESA_SHADER_TESS_CTRL]->
-            info.TessCtrl.VerticesOut;
+            Program->info.tess.tcs_vertices_out;
       }
       return;
    case GL_TESS_GEN_MODE:
@@ -2209,10 +2209,6 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       dst->ClipDistanceArraySize = src->Vert.ClipDistanceArraySize;
       dst->CullDistanceArraySize = src->Vert.CullDistanceArraySize;
       break;
-   case MESA_SHADER_TESS_CTRL: {
-      dst->info.tess.tcs_vertices_out = dst_sh->info.TessCtrl.VerticesOut;
-      break;
-   }
    case MESA_SHADER_TESS_EVAL: {
       dst->info.tess.primitive_mode = dst_sh->info.TessEval.PrimitiveMode;
       dst->info.tess.spacing = dst_sh->info.TessEval.Spacing;
