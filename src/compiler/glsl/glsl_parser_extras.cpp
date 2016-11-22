@@ -1984,7 +1984,6 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    shader->InfoLog = state->info_log;
    shader->Version = state->language_version;
    shader->IsES = state->es_shader;
-   shader->info.uses_builtin_functions = state->uses_builtin_functions;
 
    /* Retain any live IR, but trash the rest. */
    reparent_ir(shader->ir, shader->ir);

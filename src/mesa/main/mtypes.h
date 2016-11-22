@@ -2172,7 +2172,6 @@ struct gl_subroutine_function
  */
 struct gl_shader_info
 {
-   bool uses_builtin_functions;
    bool uses_gl_fragcoord;
    bool redeclares_gl_fragcoord;
    bool ARB_fragment_coord_conventions_enable;
