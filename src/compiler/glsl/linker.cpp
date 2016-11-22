@@ -1828,7 +1828,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
 {
    bool redeclares_gl_fragcoord = false;
    bool uses_gl_fragcoord = false;
-   linked_shader->info.origin_upper_left = false;
+   bool origin_upper_left = false;
    linked_shader->info.pixel_center_integer = false;
 
    if (linked_shader->Stage != MESA_SHADER_FRAGMENT ||
@@ -1858,8 +1858,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
        *    single program must have the same set of qualifiers."
        */
       if (redeclares_gl_fragcoord && shader->redeclares_gl_fragcoord &&
-          (shader->info.origin_upper_left !=
-           linked_shader->info.origin_upper_left ||
+          (shader->origin_upper_left != origin_upper_left ||
            shader->info.pixel_center_integer !=
            linked_shader->info.pixel_center_integer)) {
          linker_error(prog, "fragment shader defined with conflicting "
@@ -1874,8 +1873,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
       if (shader->redeclares_gl_fragcoord || shader->uses_gl_fragcoord) {
          redeclares_gl_fragcoord = shader->redeclares_gl_fragcoord;
          uses_gl_fragcoord |= shader->uses_gl_fragcoord;
-         linked_shader->info.origin_upper_left =
-            shader->info.origin_upper_left;
+         origin_upper_left = shader->origin_upper_left;
          linked_shader->info.pixel_center_integer =
             shader->info.pixel_center_integer;
       }

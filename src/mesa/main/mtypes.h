@@ -2245,10 +2245,6 @@ struct gl_shader_info
    bool PostDepthCoverage;
    bool InnerCoverage;
 
-   /**
-    * Fragment shader state from GLSL 1.50 layout qualifiers.
-    */
-   bool origin_upper_left;
    bool pixel_center_integer;
 
    struct {
@@ -2435,6 +2431,11 @@ struct gl_shader
 
    bool redeclares_gl_fragcoord;
    bool uses_gl_fragcoord;
+
+   /**
+    * Fragment shader state from GLSL 1.50 layout qualifiers.
+    */
+   bool origin_upper_left;
 
    struct gl_shader_info info;
 };
