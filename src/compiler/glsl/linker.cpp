@@ -1829,7 +1829,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
    bool redeclares_gl_fragcoord = false;
    bool uses_gl_fragcoord = false;
    bool origin_upper_left = false;
-   linked_shader->info.pixel_center_integer = false;
+   bool pixel_center_integer = false;
 
    if (linked_shader->Stage != MESA_SHADER_FRAGMENT ||
        (prog->data->Version < 150 &&
@@ -1859,8 +1859,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
        */
       if (redeclares_gl_fragcoord && shader->redeclares_gl_fragcoord &&
           (shader->origin_upper_left != origin_upper_left ||
-           shader->info.pixel_center_integer !=
-           linked_shader->info.pixel_center_integer)) {
+           shader->pixel_center_integer != pixel_center_integer)) {
          linker_error(prog, "fragment shader defined with conflicting "
                       "layout qualifiers for gl_FragCoord\n");
       }
@@ -1874,8 +1873,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
          redeclares_gl_fragcoord = shader->redeclares_gl_fragcoord;
          uses_gl_fragcoord |= shader->uses_gl_fragcoord;
          origin_upper_left = shader->origin_upper_left;
-         linked_shader->info.pixel_center_integer =
-            shader->info.pixel_center_integer;
+         pixel_center_integer = shader->pixel_center_integer;
       }
 
       linked_shader->Program->info.fs.early_fragment_tests |=

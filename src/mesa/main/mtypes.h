@@ -2245,8 +2245,6 @@ struct gl_shader_info
    bool PostDepthCoverage;
    bool InnerCoverage;
 
-   bool pixel_center_integer;
-
    struct {
       /** Global xfb_stride out qualifier if any */
       GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
@@ -2436,6 +2434,7 @@ struct gl_shader
     * Fragment shader state from GLSL 1.50 layout qualifiers.
     */
    bool origin_upper_left;
+   bool pixel_center_integer;
 
    struct gl_shader_info info;
 };
