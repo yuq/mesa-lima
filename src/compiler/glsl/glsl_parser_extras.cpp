@@ -1911,7 +1911,7 @@ do_late_parsing_checks(struct _mesa_glsl_parse_state *state)
 
 void
 _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
-                          bool dump_ast, bool dump_hir)
+                          bool dump_ast, bool dump_hir, bool force_recompile)
 {
    struct _mesa_glsl_parse_state *state =
       new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);

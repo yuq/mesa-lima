@@ -381,7 +381,8 @@ compile_shader(struct gl_context *ctx, struct gl_shader *shader)
    struct _mesa_glsl_parse_state *state =
       new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
 
-   _mesa_glsl_compile_shader(ctx, shader, options->dump_ast, options->dump_hir);
+   _mesa_glsl_compile_shader(ctx, shader, options->dump_ast,
+                             options->dump_hir, true);
 
    /* Print out the resulting IR */
    if (!state->error && options->dump_lir) {
