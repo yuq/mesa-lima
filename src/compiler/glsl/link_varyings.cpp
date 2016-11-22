@@ -120,6 +120,7 @@ process_xfb_layout_qualifiers(void *mem_ctx, const gl_linked_shader *sh,
    for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
       if (sh->info.TransformFeedback.BufferStride[j]) {
          has_xfb_qualifiers = true;
+         break;
       }
    }
 
