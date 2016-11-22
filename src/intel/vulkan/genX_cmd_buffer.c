@@ -1580,6 +1580,14 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
    }
 
+   if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
+       (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
+      /* FIXME: figure out descriptors for gen7 */
+      result = flush_compute_descriptor_set(cmd_buffer);
+      assert(result == VK_SUCCESS);
+      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE_BIT;
+   }
+
    if (cmd_buffer->state.push_constants_dirty & VK_SHADER_STAGE_COMPUTE_BIT) {
       struct anv_state push_state =
          anv_cmd_buffer_cs_push_constants(cmd_buffer);
@@ -1590,14 +1598,6 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
             curbe.CURBEDataStartAddress   = push_state.offset;
          }
       }
-   }
-
-   if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
-       (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
-      /* FIXME: figure out descriptors for gen7 */
-      result = flush_compute_descriptor_set(cmd_buffer);
-      assert(result == VK_SUCCESS);
-      cmd_buffer->state.descriptors_dirty &= ~VK_SHADER_STAGE_COMPUTE_BIT;
    }
 
    cmd_buffer->state.compute_dirty = 0;
