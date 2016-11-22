@@ -103,10 +103,8 @@ num_sources_from_inst(const struct gen_device_info *devinfo,
           */
          return 0;
       }
-   } else if (desc) {
-      return desc->nsrc;
    } else {
-      return 0;
+      return desc->nsrc;
    }
 
    switch (math_function) {
