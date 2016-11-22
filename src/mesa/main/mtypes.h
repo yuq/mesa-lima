@@ -2316,12 +2316,6 @@ struct gl_shader_info
    } Geom;
 
    /**
-    * Whether early fragment tests are enabled as defined by
-    * ARB_shader_image_load_store.
-    */
-   bool EarlyFragmentTests;
-
-   /**
     * Compute shader state from ARB_compute_shader and
     * ARB_compute_variable_group_size layout qualifiers.
     */
@@ -2433,6 +2427,12 @@ struct gl_shader
     * A bitmask of gl_advanced_blend_mode values
     */
    GLbitfield BlendSupport;
+
+   /**
+    * Whether early fragment tests are enabled as defined by
+    * ARB_shader_image_load_store.
+    */
+   bool EarlyFragmentTests;
 
    struct gl_shader_info info;
 };
