@@ -1525,18 +1525,9 @@ flush_compute_descriptor_set(struct anv_cmd_buffer *cmd_buffer)
       result = emit_binding_table(cmd_buffer, MESA_SHADER_COMPUTE, &surfaces);
       assert(result == VK_SUCCESS);
    }
+
    result = emit_samplers(cmd_buffer, MESA_SHADER_COMPUTE, &samplers);
    assert(result == VK_SUCCESS);
-
-
-   struct anv_state push_state = anv_cmd_buffer_cs_push_constants(cmd_buffer);
-
-   if (push_state.alloc_size) {
-      anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
-         curbe.CURBETotalDataLength    = push_state.alloc_size;
-         curbe.CURBEDataStartAddress   = push_state.offset;
-      }
-   }
 
    uint32_t iface_desc_data_dw[GENX(INTERFACE_DESCRIPTOR_DATA_length)];
    struct GENX(INTERFACE_DESCRIPTOR_DATA) desc = {
@@ -1575,6 +1566,18 @@ genX(cmd_buffer_flush_compute_state)(struct anv_cmd_buffer *cmd_buffer)
 
    if (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)
       anv_batch_emit_batch(&cmd_buffer->batch, &pipeline->batch);
+
+   if (cmd_buffer->state.push_constants_dirty & VK_SHADER_STAGE_COMPUTE_BIT) {
+      struct anv_state push_state =
+         anv_cmd_buffer_cs_push_constants(cmd_buffer);
+
+      if (push_state.alloc_size) {
+         anv_batch_emit(&cmd_buffer->batch, GENX(MEDIA_CURBE_LOAD), curbe) {
+            curbe.CURBETotalDataLength    = push_state.alloc_size;
+            curbe.CURBEDataStartAddress   = push_state.offset;
+         }
+      }
+   }
 
    if ((cmd_buffer->state.descriptors_dirty & VK_SHADER_STAGE_COMPUTE_BIT) ||
        (cmd_buffer->state.compute_dirty & ANV_CMD_DIRTY_PIPELINE)) {
