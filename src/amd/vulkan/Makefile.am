@@ -119,12 +119,6 @@ radv_entrypoints.c : radv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) |\
 	$(PYTHON2) $(srcdir)/radv_entrypoints_gen.py code > $@
 
-.PHONY: radv_timestamp.h
-
-radv_timestamp.h:
-	@echo "Updating radv_timestamp.h"
-	$(AM_V_GEN) echo "#define RADV_TIMESTAMP \"$(TIMESTAMP_CMD)\"" > $@
-
 vk_format_table.c: vk_format_table.py \
 		   vk_format_parse.py \
                    vk_format_layout.csv
