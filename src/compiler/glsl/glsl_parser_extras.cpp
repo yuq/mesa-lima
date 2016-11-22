@@ -1704,7 +1704,7 @@ set_shader_inout_layout(struct gl_shader *shader,
          if (state->out_qualifier->out_xfb_stride[i]->
                 process_qualifier_constant(state, "xfb_stride", &xfb_stride,
                 true)) {
-            shader->info.TransformFeedback.BufferStride[i] = xfb_stride;
+            shader->TransformFeedbackBufferStride[i] = xfb_stride;
          }
       }
    }

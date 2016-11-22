@@ -1587,6 +1587,29 @@ private:
    hash_table *unnamed_interfaces;
 };
 
+static bool
+validate_xfb_buffer_stride(struct gl_context *ctx, unsigned idx,
+                           struct gl_shader_program *prog)
+{
+   /* We will validate doubles at a later stage */
+   if (prog->TransformFeedback.BufferStride[idx] % 4) {
+      linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
+                   "multiple of 4 or if its applied to a type that is "
+                   "or contains a double a multiple of 8.",
+                   prog->TransformFeedback.BufferStride[idx]);
+      return false;
+   }
+
+   if (prog->TransformFeedback.BufferStride[idx] / 4 >
+       ctx->Const.MaxTransformFeedbackInterleavedComponents) {
+      linker_error(prog, "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
+                   "limit has been exceeded.");
+      return false;
+   }
+
+   return true;
+}
+
 /**
  * Check for conflicting xfb_stride default qualifiers and store buffer stride
  * for later use.
@@ -1599,54 +1622,28 @@ link_xfb_stride_layout_qualifiers(struct gl_context *ctx,
                                   unsigned num_shaders)
 {
    for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
-      linked_shader->info.TransformFeedback.BufferStride[i] = 0;
+      prog->TransformFeedback.BufferStride[i] = 0;
    }
 
    for (unsigned i = 0; i < num_shaders; i++) {
       struct gl_shader *shader = shader_list[i];
 
       for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-         if (shader->info.TransformFeedback.BufferStride[j]) {
-            if (linked_shader->info.TransformFeedback.BufferStride[j] != 0 &&
-                shader->info.TransformFeedback.BufferStride[j] != 0 &&
-                linked_shader->info.TransformFeedback.BufferStride[j] !=
-                   shader->info.TransformFeedback.BufferStride[j]) {
+         if (shader->TransformFeedbackBufferStride[j]) {
+            if (prog->TransformFeedback.BufferStride[j] == 0) {
+               prog->TransformFeedback.BufferStride[j] =
+                  shader->TransformFeedbackBufferStride[j];
+               if (!validate_xfb_buffer_stride(ctx, j, prog))
+                  return;
+            } else if (prog->TransformFeedback.BufferStride[j] !=
+                       shader->TransformFeedbackBufferStride[j]){
                linker_error(prog,
                             "intrastage shaders defined with conflicting "
                             "xfb_stride for buffer %d (%d and %d)\n", j,
-                            linked_shader->
-                               info.TransformFeedback.BufferStride[j],
-                            shader->info.TransformFeedback.BufferStride[j]);
+                            prog->TransformFeedback.BufferStride[j],
+                            shader->TransformFeedbackBufferStride[j]);
                return;
             }
-
-            if (shader->info.TransformFeedback.BufferStride[j])
-               linked_shader->info.TransformFeedback.BufferStride[j] =
-                  shader->info.TransformFeedback.BufferStride[j];
-         }
-      }
-   }
-
-   for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-      if (linked_shader->info.TransformFeedback.BufferStride[j]) {
-         prog->TransformFeedback.BufferStride[j] =
-            linked_shader->info.TransformFeedback.BufferStride[j];
-
-         /* We will validate doubles at a later stage */
-         if (prog->TransformFeedback.BufferStride[j] % 4) {
-            linker_error(prog, "invalid qualifier xfb_stride=%d must be a "
-                         "multiple of 4 or if its applied to a type that is "
-                         "or contains a double a multiple of 8.",
-                         prog->TransformFeedback.BufferStride[j]);
-            return;
-         }
-
-         if (prog->TransformFeedback.BufferStride[j] / 4 >
-             ctx->Const.MaxTransformFeedbackInterleavedComponents) {
-            linker_error(prog,
-                         "The MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS "
-                         "limit has been exceeded.");
-                  return;
          }
       }
    }

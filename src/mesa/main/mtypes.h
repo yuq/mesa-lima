@@ -2242,11 +2242,6 @@ struct gl_subroutine_function
  */
 struct gl_shader_info
 {
-   struct {
-      /** Global xfb_stride out qualifier if any */
-      GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
-   } TransformFeedback;
-
    /**
     * Tessellation Control shader state from layout qualifiers.
     */
@@ -2435,6 +2430,9 @@ struct gl_shader
     */
    bool origin_upper_left;
    bool pixel_center_integer;
+
+   /** Global xfb_stride out qualifier if any */
+   GLuint TransformFeedbackBufferStride[MAX_FEEDBACK_BUFFERS];
 
    struct gl_shader_info info;
 };

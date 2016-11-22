@@ -108,6 +108,7 @@ create_xfb_varying_names(void *mem_ctx, const glsl_type *t, char **name,
 
 static bool
 process_xfb_layout_qualifiers(void *mem_ctx, const gl_linked_shader *sh,
+                              struct gl_shader_program *prog,
                               unsigned *num_tfeedback_decls,
                               char ***varying_names)
 {
@@ -118,7 +119,7 @@ process_xfb_layout_qualifiers(void *mem_ctx, const gl_linked_shader *sh,
     * xfb_stride to interface block members so this will catch that case also.
     */
    for (unsigned j = 0; j < MAX_FEEDBACK_BUFFERS; j++) {
-      if (sh->info.TransformFeedback.BufferStride[j]) {
+      if (prog->TransformFeedback.BufferStride[j]) {
          has_xfb_qualifiers = true;
          break;
       }
@@ -2397,7 +2398,7 @@ link_varyings(struct gl_shader_program *prog, unsigned first, unsigned last,
       if (prog->_LinkedShaders[i]) {
          has_xfb_qualifiers =
             process_xfb_layout_qualifiers(mem_ctx, prog->_LinkedShaders[i],
-                                          &num_tfeedback_decls,
+                                          prog, &num_tfeedback_decls,
                                           &varying_names);
          break;
       }
