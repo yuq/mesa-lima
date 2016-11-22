@@ -1827,7 +1827,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
                                 unsigned num_shaders)
 {
    bool redeclares_gl_fragcoord = false;
-   linked_shader->info.uses_gl_fragcoord = false;
+   bool uses_gl_fragcoord = false;
    linked_shader->info.origin_upper_left = false;
    linked_shader->info.pixel_center_integer = false;
 
@@ -1845,9 +1845,9 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
        *    that have a static use gl_FragCoord."
        */
       if ((redeclares_gl_fragcoord && !shader->redeclares_gl_fragcoord &&
-           shader->info.uses_gl_fragcoord)
+           shader->uses_gl_fragcoord)
           || (shader->redeclares_gl_fragcoord && !redeclares_gl_fragcoord &&
-              linked_shader->info.uses_gl_fragcoord)) {
+              uses_gl_fragcoord)) {
              linker_error(prog, "fragment shader defined with conflicting "
                          "layout qualifiers for gl_FragCoord\n");
       }
@@ -1871,11 +1871,9 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
        * are multiple redeclarations, all the fields except uses_gl_fragcoord
        * are already known to be the same.
        */
-      if (shader->redeclares_gl_fragcoord || shader->info.uses_gl_fragcoord) {
+      if (shader->redeclares_gl_fragcoord || shader->uses_gl_fragcoord) {
          redeclares_gl_fragcoord = shader->redeclares_gl_fragcoord;
-         linked_shader->info.uses_gl_fragcoord =
-            linked_shader->info.uses_gl_fragcoord ||
-            shader->info.uses_gl_fragcoord;
+         uses_gl_fragcoord |= shader->uses_gl_fragcoord;
          linked_shader->info.origin_upper_left =
             shader->info.origin_upper_left;
          linked_shader->info.pixel_center_integer =
