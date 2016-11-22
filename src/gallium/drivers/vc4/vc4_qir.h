@@ -757,10 +757,8 @@ static inline struct qreg
 qir_SEL(struct vc4_compile *c, uint8_t cond, struct qreg src0, struct qreg src1)
 {
         struct qreg t = qir_get_temp(c);
-        struct qinst *a = qir_MOV_dest(c, t, src0);
-        struct qinst *b = qir_MOV_dest(c, t, src1);
-        a->cond = cond;
-        b->cond = qpu_cond_complement(cond);
+        qir_MOV_dest(c, t, src1);
+        qir_MOV_dest(c, t, src0)->cond = cond;
         return t;
 }
 
