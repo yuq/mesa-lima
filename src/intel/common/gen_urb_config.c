@@ -160,7 +160,7 @@ gen_get_urb_config(const struct gen_device_info *devinfo,
             roundf(wants[i] * (((float) remaining_space) / total_wants));
          chunks[i] += additional;
          remaining_space -= additional;
-         total_wants -= additional;
+         total_wants -= wants[i];
       }
 
       chunks[MESA_SHADER_GEOMETRY] += remaining_space;
