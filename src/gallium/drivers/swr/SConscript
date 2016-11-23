@@ -31,7 +31,8 @@ if env['platform'] == 'windows':
     # on windows there is no llvm-config, so LLVM is defined
     llvm_includedir = os.path.join(os.environ['LLVM'], 'include')
 else:
-    llvm_includedir = env.backtick('llvm-config --includedir').rstrip()
+    llvm_config = os.environ.get('LLVM_CONFIG', 'llvm-config')
+    llvm_includedir = env.backtick('%s --includedir' % llvm_config).rstrip()
     print "llvm include dir %s" % llvm_includedir
 
 # the loader is included in the mesa lib itself
