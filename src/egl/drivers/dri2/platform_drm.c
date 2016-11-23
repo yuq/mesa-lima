@@ -215,13 +215,15 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
    struct gbm_dri_surface *surf = dri2_surf->gbm_surf;
+   int age = 0;
    unsigned i;
 
    if (dri2_surf->back == NULL) {
       for (i = 0; i < ARRAY_SIZE(dri2_surf->color_buffers); i++) {
-	 if (!dri2_surf->color_buffers[i].locked) {
+	 if (!dri2_surf->color_buffers[i].locked &&
+	      dri2_surf->color_buffers[i].age >= age) {
 	    dri2_surf->back = &dri2_surf->color_buffers[i];
-	    break;
+	    age = dri2_surf->color_buffers[i].age;
 	 }
       }
    }
