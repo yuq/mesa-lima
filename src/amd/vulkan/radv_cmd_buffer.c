@@ -1849,16 +1849,25 @@ static void
 radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 			VkBuffer _buffer,
 			VkDeviceSize offset,
+			VkBuffer _count_buffer,
+			VkDeviceSize count_offset,
 			uint32_t draw_count,
 			uint32_t stride,
 			bool indexed)
 {
 	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
+	RADV_FROM_HANDLE(radv_buffer, count_buffer, _count_buffer);
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	unsigned di_src_sel = indexed ? V_0287F0_DI_SRC_SEL_DMA
 					    : V_0287F0_DI_SRC_SEL_AUTO_INDEX;
 	uint64_t indirect_va = cmd_buffer->device->ws->buffer_get_va(buffer->bo);
 	indirect_va += offset + buffer->offset;
+	uint64_t count_va = 0;
+
+	if (count_buffer) {
+		count_va = cmd_buffer->device->ws->buffer_get_va(count_buffer->bo);
+		count_va += count_offset + count_buffer->offset;
+	}
 
 	if (!draw_count)
 		return;
@@ -1876,36 +1885,42 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cs, 0);
 	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_BASE_VERTEX * 4) - SI_SH_REG_OFFSET) >> 2);
 	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_START_INSTANCE * 4) - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, 0); /* draw_index */
+	radeon_emit(cs, S_2C3_COUNT_INDIRECT_ENABLE(!!count_va)); /* draw_index and count_indirect enable */
 	radeon_emit(cs, draw_count); /* count */
-	radeon_emit(cs, 0); /* count_addr -- disabled */
-	radeon_emit(cs, 0);
+	radeon_emit(cs, count_va); /* count_addr */
+	radeon_emit(cs, count_va >> 32);
 	radeon_emit(cs, stride); /* stride */
 	radeon_emit(cs, di_src_sel);
 }
 
-void radv_CmdDrawIndirect(
-	VkCommandBuffer                             commandBuffer,
-	VkBuffer                                    _buffer,
-	VkDeviceSize                                offset,
-	uint32_t                                    drawCount,
-	uint32_t                                    stride)
+static void
+radv_cmd_draw_indirect_count(VkCommandBuffer                             commandBuffer,
+                             VkBuffer                                    buffer,
+                             VkDeviceSize                                offset,
+                             VkBuffer                                    countBuffer,
+                             VkDeviceSize                                countBufferOffset,
+                             uint32_t                                    maxDrawCount,
+                             uint32_t                                    stride)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	radv_cmd_buffer_flush_state(cmd_buffer);
 
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 14);
 
-	radv_emit_indirect_draw(cmd_buffer, _buffer, offset, drawCount, stride, false);
+	radv_emit_indirect_draw(cmd_buffer, buffer, offset,
+	                        countBuffer, countBufferOffset, maxDrawCount, stride, false);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
 
-void radv_CmdDrawIndexedIndirect(
+static void
+radv_cmd_draw_indexed_indirect_count(
 	VkCommandBuffer                             commandBuffer,
-	VkBuffer                                    _buffer,
+	VkBuffer                                    buffer,
 	VkDeviceSize                                offset,
-	uint32_t                                    drawCount,
+	VkBuffer                                    countBuffer,
+	VkDeviceSize                                countBufferOffset,
+	uint32_t                                    maxDrawCount,
 	uint32_t                                    stride)
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
@@ -1930,9 +1945,60 @@ void radv_CmdDrawIndexedIndirect(
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_BUFFER_SIZE, 0, 0));
 	radeon_emit(cmd_buffer->cs, index_max_size);
 
-	radv_emit_indirect_draw(cmd_buffer, _buffer, offset, drawCount, stride, true);
+	radv_emit_indirect_draw(cmd_buffer, buffer, offset,
+	                        countBuffer, countBufferOffset, maxDrawCount, stride, true);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+}
+
+void radv_CmdDrawIndirect(
+	VkCommandBuffer                             commandBuffer,
+	VkBuffer                                    buffer,
+	VkDeviceSize                                offset,
+	uint32_t                                    drawCount,
+	uint32_t                                    stride)
+{
+	radv_cmd_draw_indirect_count(commandBuffer, buffer, offset,
+	                             VK_NULL_HANDLE, 0, drawCount, stride);
+}
+
+void radv_CmdDrawIndexedIndirect(
+	VkCommandBuffer                             commandBuffer,
+	VkBuffer                                    buffer,
+	VkDeviceSize                                offset,
+	uint32_t                                    drawCount,
+	uint32_t                                    stride)
+{
+	radv_cmd_draw_indexed_indirect_count(commandBuffer, buffer, offset,
+	                                     VK_NULL_HANDLE, 0, drawCount, stride);
+}
+
+void radv_CmdDrawIndirectCountAMD(
+	VkCommandBuffer                             commandBuffer,
+	VkBuffer                                    buffer,
+	VkDeviceSize                                offset,
+	VkBuffer                                    countBuffer,
+	VkDeviceSize                                countBufferOffset,
+	uint32_t                                    maxDrawCount,
+	uint32_t                                    stride)
+{
+	radv_cmd_draw_indirect_count(commandBuffer, buffer, offset,
+	                             countBuffer, countBufferOffset,
+	                             maxDrawCount, stride);
+}
+
+void radv_CmdDrawIndexedIndirectCountAMD(
+	VkCommandBuffer                             commandBuffer,
+	VkBuffer                                    buffer,
+	VkDeviceSize                                offset,
+	VkBuffer                                    countBuffer,
+	VkDeviceSize                                countBufferOffset,
+	uint32_t                                    maxDrawCount,
+	uint32_t                                    stride)
+{
+	radv_cmd_draw_indexed_indirect_count(commandBuffer, buffer, offset,
+	                                     countBuffer, countBufferOffset,
+	                                     maxDrawCount, stride);
 }
 
 void radv_CmdDispatch(

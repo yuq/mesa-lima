@@ -179,6 +179,10 @@ static const VkExtensionProperties device_extensions[] = {
 		.specVersion = 68,
 	},
 	{
+		.extensionName = VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+	{
 		.extensionName = VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME,
 		.specVersion = 1,
 	},
