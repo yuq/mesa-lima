@@ -28,6 +28,8 @@
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
+static const bool split_blorp_blit_debug = false;
+
 /**
  * Enum to specify the order of arguments in a sampler message
  */
@@ -1517,9 +1519,13 @@ can_shrink_surfaces(const struct blorp_params *params)
 }
 
 static unsigned
-get_max_surface_size()
+get_max_surface_size(const struct gen_device_info *devinfo,
+                     const struct blorp_params *params)
 {
-   return 16384;
+   if (split_blorp_blit_debug && can_shrink_surfaces(params))
+      return 16384 >> 4; /* A smaller restriction when debug is enabled */
+   else
+      return 16384;
 }
 
 struct blt_axis {
@@ -1940,7 +1946,7 @@ do_blorp_blit(struct blorp_batch *batch,
       y_scale = -y_scale;
 
    bool x_done, y_done;
-   bool shrink = false;
+   bool shrink = split_blorp_blit_debug && can_shrink_surfaces(orig_params);
    do {
       params = *orig_params;
       blit_coords = split_coords;
