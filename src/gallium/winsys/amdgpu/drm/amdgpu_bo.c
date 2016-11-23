@@ -600,7 +600,7 @@ static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_bo_info info = {0};
-   uint32_t tiling_flags;
+   uint64_t tiling_flags;
    int r;
 
    assert(bo->bo && "must not be called for slab entries");
@@ -612,6 +612,7 @@ static void amdgpu_buffer_get_metadata(struct pb_buffer *_buf,
    tiling_flags = info.metadata.tiling_info;
 
    if (bo->ws->info.chip_class >= GFX9) {
+      md->u.gfx9.swizzle_mode = AMDGPU_TILING_GET(tiling_flags, SWIZZLE_MODE);
    } else {
       md->u.legacy.microtile = RADEON_LAYOUT_LINEAR;
       md->u.legacy.macrotile = RADEON_LAYOUT_LINEAR;
@@ -639,11 +640,12 @@ static void amdgpu_buffer_set_metadata(struct pb_buffer *_buf,
 {
    struct amdgpu_winsys_bo *bo = amdgpu_winsys_bo(_buf);
    struct amdgpu_bo_metadata metadata = {0};
-   uint32_t tiling_flags = 0;
+   uint64_t tiling_flags = 0;
 
    assert(bo->bo && "must not be called for slab entries");
 
    if (bo->ws->info.chip_class >= GFX9) {
+      tiling_flags |= AMDGPU_TILING_SET(SWIZZLE_MODE, md->u.gfx9.swizzle_mode);
    } else {
       if (md->u.legacy.macrotile == RADEON_LAYOUT_TILED)
          tiling_flags |= AMDGPU_TILING_SET(ARRAY_MODE, 4); /* 2D_TILED_THIN1 */
