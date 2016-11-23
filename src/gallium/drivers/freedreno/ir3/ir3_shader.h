@@ -31,6 +31,7 @@
 
 #include "pipe/p_state.h"
 #include "compiler/shader_enums.h"
+#include "util/bitscan.h"
 
 #include "ir3.h"
 #include "disasm.h"
@@ -342,6 +343,52 @@ ir3_next_varying(const struct ir3_shader_variant *so, int i)
 		if (so->inputs[i].compmask && so->inputs[i].bary)
 			break;
 	return i;
+}
+
+struct ir3_shader_linkage {
+	uint8_t max_loc;
+	uint8_t cnt;
+	struct {
+		uint8_t regid;
+		uint8_t compmask;
+		uint8_t loc;
+	} var[16];
+};
+
+static inline void
+ir3_link_add(struct ir3_shader_linkage *l, uint8_t regid, uint8_t compmask, uint8_t loc)
+{
+	int i = l->cnt++;
+
+	debug_assert(i < ARRAY_SIZE(l->var));
+
+	l->var[i].regid    = regid;
+	l->var[i].compmask = compmask;
+	l->var[i].loc      = loc;
+	l->max_loc = MAX2(l->max_loc, loc + util_last_bit(compmask));
+}
+
+static inline void
+ir3_link_shaders(struct ir3_shader_linkage *l,
+		const struct ir3_shader_variant *vs,
+		const struct ir3_shader_variant *fs)
+{
+	int j = -1, k;
+
+	while (l->cnt < ARRAY_SIZE(l->var)) {
+		j = ir3_next_varying(fs, j);
+
+		if (j >= fs->inputs_count)
+			break;
+
+		if (fs->inputs[j].inloc >= fs->total_in)
+			continue;
+
+		k = ir3_find_output(vs, fs->inputs[j].slot);
+
+		ir3_link_add(l, vs->outputs[k].regid,
+			fs->inputs[j].compmask, fs->inputs[j].inloc);
+	}
 }
 
 static inline uint32_t
