@@ -366,10 +366,10 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 
 		OUT_PKT0(ring, REG_A4XX_SP_VS_VPC_DST_REG(i), 1);
 
-		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC0(l.var[j++].loc);
-		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC1(l.var[j++].loc);
-		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC2(l.var[j++].loc);
-		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC3(l.var[j++].loc);
+		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC0(l.var[j++].loc + 8);
+		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC1(l.var[j++].loc + 8);
+		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC2(l.var[j++].loc + 8);
+		reg |= A4XX_SP_VS_VPC_DST_REG_OUTLOC3(l.var[j++].loc + 8);
 
 		OUT_RING(ring, reg);
 	}
@@ -504,10 +504,7 @@ fd4_program_emit(struct fd_ringbuffer *ring, struct fd4_emit *emit,
 			 */
 			unsigned compmask = s[FS].v->inputs[j].compmask;
 
-			/* TODO might be cleaner to just +8 in SP_VS_VPC_DST_REG
-			 * instead.. rather than -8 everywhere else..
-			 */
-			uint32_t inloc = s[FS].v->inputs[j].inloc - 8;
+			uint32_t inloc = s[FS].v->inputs[j].inloc;
 
 			if ((s[FS].v->inputs[j].interpolate == INTERP_MODE_FLAT) ||
 					(s[FS].v->inputs[j].rasterflat && emit->rasterflat)) {

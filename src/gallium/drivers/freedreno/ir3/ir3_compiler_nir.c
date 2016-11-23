@@ -2460,7 +2460,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	for (i = 0; i < so->inputs_count; i++) {
 		unsigned j, regid = ~0, compmask = 0;
 		so->inputs[i].ncomp = 0;
-		so->inputs[i].inloc = inloc + 8;
+		so->inputs[i].inloc = inloc;
 		for (j = 0; j < 4; j++) {
 			struct ir3_instruction *in = inputs[(i*4) + j];
 			if (in && !(in->flags & IR3_INSTR_UNUSED)) {
