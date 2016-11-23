@@ -271,7 +271,7 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
         {
             HOTTILE *pHotTile = pContext->pHotTileMgr->GetHotTile(pContext, pDC, macroTile, SWR_ATTACHMENT_STENCIL, true, numSamples);
 
-            pHotTile->clearData[0] = *(DWORD*)&pClear->clearStencil;
+            pHotTile->clearData[0] = pClear->clearStencil;
             pHotTile->state = HOTTILE_CLEAR;
         }
 
@@ -322,9 +322,8 @@ void ProcessClearBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile, vo
 
         if (pClear->attachmentMask & SWR_ATTACHMENT_STENCIL_BIT)
         {
-            uint32_t value = pClear->clearStencil;
             DWORD clearData[4];
-            clearData[0] = *(DWORD*)&value;
+            clearData[0] = pClear->clearStencil;
             PFN_CLEAR_TILES pfnClearTiles = sClearTilesTable[KNOB_STENCIL_HOT_TILE_FORMAT];
 
             pfnClearTiles(pDC, SWR_ATTACHMENT_STENCIL, macroTile, clearData, pClear->rect);
