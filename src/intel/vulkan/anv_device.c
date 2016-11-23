@@ -448,7 +448,7 @@ void anv_GetPhysicalDeviceFeatures(
       .multiDrawIndirect                        = false,
       .drawIndirectFirstInstance                = false,
       .depthClamp                               = true,
-      .depthBiasClamp                           = false,
+      .depthBiasClamp                           = true,
       .fillModeNonSolid                         = true,
       .depthBounds                              = false,
       .wideLines                                = true,
