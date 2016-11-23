@@ -233,7 +233,8 @@ static void si_dump_reg(FILE *file, unsigned offset, uint32_t value,
 		}
 	}
 
-	fprintf(file, COLOR_YELLOW "0x%05x" COLOR_RESET " = 0x%08x", offset, value);
+	print_spaces(file, INDENT_PKT);
+	fprintf(file, COLOR_YELLOW "0x%05x" COLOR_RESET " <- 0x%08x\n", offset, value);
 }
 
 static void si_parse_set_reg_packet(FILE *f, uint32_t *ib, unsigned count,
