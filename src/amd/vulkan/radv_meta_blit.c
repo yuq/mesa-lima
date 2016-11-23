@@ -488,6 +488,8 @@ void radv_CmdBlitImage(
 	radv_meta_save_graphics_reset_vport_scissor(&saved_state, cmd_buffer);
 
 	for (unsigned r = 0; r < regionCount; r++) {
+		const VkImageSubresourceLayers *src_res = &pRegions[r].srcSubresource;
+		const VkImageSubresourceLayers *dst_res = &pRegions[r].dstSubresource;
 		struct radv_image_view src_iview;
 		radv_image_view_init(&src_iview, cmd_buffer->device,
 				     &(VkImageViewCreateInfo) {
@@ -496,10 +498,10 @@ void radv_CmdBlitImage(
 						     .viewType = radv_meta_get_view_type(src_image),
 						     .format = src_image->vk_format,
 						     .subresourceRange = {
-						     .aspectMask = pRegions[r].srcSubresource.aspectMask,
-						     .baseMipLevel = pRegions[r].srcSubresource.mipLevel,
+						     .aspectMask = src_res->aspectMask,
+						     .baseMipLevel = src_res->mipLevel,
 						     .levelCount = 1,
-						     .baseArrayLayer = pRegions[r].srcSubresource.baseArrayLayer,
+						     .baseArrayLayer = src_res->baseArrayLayer,
 						     .layerCount = 1
 					     },
 						     },
@@ -524,12 +526,12 @@ void radv_CmdBlitImage(
 		};
 
 
-		if (pRegions[r].srcSubresource.layerCount > 1)
+		if (src_res->layerCount > 1)
 			radv_finishme("FINISHME: copy multiple array layers");
 
 		struct radv_image_view dest_iview;
 		unsigned usage;
-		if (pRegions[r].dstSubresource.aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
+		if (dst_res->aspectMask == VK_IMAGE_ASPECT_COLOR_BIT)
 			usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		else
 			usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -547,7 +549,7 @@ void radv_CmdBlitImage(
 				.z = i,
 			};
 			const uint32_t dest_array_slice =
-				radv_meta_get_iview_layer(dest_image, &pRegions[r].dstSubresource,
+				radv_meta_get_iview_layer(dest_image, dst_res,
 							  &dest_offset);
 
 			radv_image_view_init(&dest_iview, cmd_buffer->device,
@@ -557,8 +559,8 @@ void radv_CmdBlitImage(
 							     .viewType = radv_meta_get_view_type(dest_image),
 							     .format = dest_image->vk_format,
 							     .subresourceRange = {
-							     .aspectMask = pRegions[r].dstSubresource.aspectMask,
-							     .baseMipLevel = pRegions[r].dstSubresource.mipLevel,
+							     .aspectMask = dst_res->aspectMask,
+							     .baseMipLevel = dst_res->mipLevel,
 							     .levelCount = 1,
 							     .baseArrayLayer = dest_array_slice,
 							     .layerCount = 1
