@@ -368,6 +368,10 @@ static uint32_t *si_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		si_dump_reg(f, R_3F1_IB_BASE_HI, ib[2], ~0);
 		si_dump_reg(f, R_3F2_CONTROL, ib[3], ~0);
 		break;
+	case PKT3_CLEAR_STATE:
+	case PKT3_INCREMENT_DE_COUNTER:
+	case PKT3_PFP_SYNC_ME:
+		break;
 	case PKT3_NOP:
 		if (ib[0] == 0xffff1000) {
 			count = -1; /* One dword NOP. */
