@@ -437,11 +437,13 @@ static struct si_pm4_state *si_get_shader_pm4_state(struct si_shader *shader)
 	return shader->pm4;
 }
 
-static void si_shader_ls(struct si_shader *shader)
+static void si_shader_ls(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
+
+	assert(sscreen->b.chip_class <= VI);
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
@@ -498,6 +500,8 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 	unsigned vgpr_comp_cnt;
 	uint64_t va;
 	unsigned oc_lds_en;
+
+	assert(sscreen->b.chip_class <= VI);
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
@@ -926,7 +930,7 @@ static void si_shader_init_pm4_state(struct si_screen *sscreen,
 	switch (shader->selector->type) {
 	case PIPE_SHADER_VERTEX:
 		if (shader->key.as_ls)
-			si_shader_ls(shader);
+			si_shader_ls(sscreen, shader);
 		else if (shader->key.as_es)
 			si_shader_es(sscreen, shader);
 		else
@@ -1894,21 +1898,26 @@ static void si_delete_shader(struct si_context *sctx, struct si_shader *shader)
 	if (shader->pm4) {
 		switch (shader->selector->type) {
 		case PIPE_SHADER_VERTEX:
-			if (shader->key.as_ls)
+			if (shader->key.as_ls) {
+				assert(sctx->b.chip_class <= VI);
 				si_pm4_delete_state(sctx, ls, shader->pm4);
-			else if (shader->key.as_es)
+			} else if (shader->key.as_es) {
+				assert(sctx->b.chip_class <= VI);
 				si_pm4_delete_state(sctx, es, shader->pm4);
-			else
+			} else {
 				si_pm4_delete_state(sctx, vs, shader->pm4);
+			}
 			break;
 		case PIPE_SHADER_TESS_CTRL:
 			si_pm4_delete_state(sctx, hs, shader->pm4);
 			break;
 		case PIPE_SHADER_TESS_EVAL:
-			if (shader->key.as_es)
+			if (shader->key.as_es) {
+				assert(sctx->b.chip_class <= VI);
 				si_pm4_delete_state(sctx, es, shader->pm4);
-			else
+			} else {
 				si_pm4_delete_state(sctx, vs, shader->pm4);
+			}
 			break;
 		case PIPE_SHADER_GEOMETRY:
 			if (shader->is_gs_copy_shader)
@@ -2569,10 +2578,13 @@ bool si_update_shaders(struct si_context *sctx)
 		}
 
 		/* VS as LS */
-		r = si_shader_select(ctx, &sctx->vs_shader, &compiler_state);
-		if (r)
-			return false;
-		si_pm4_bind_state(sctx, ls, sctx->vs_shader.current->pm4);
+		if (sctx->b.chip_class <= VI) {
+			r = si_shader_select(ctx, &sctx->vs_shader,
+					     &compiler_state);
+			if (r)
+				return false;
+			si_pm4_bind_state(sctx, ls, sctx->vs_shader.current->pm4);
+		}
 
 		if (sctx->tcs_shader.cso) {
 			r = si_shader_select(ctx, &sctx->tcs_shader,
@@ -2595,27 +2607,36 @@ bool si_update_shaders(struct si_context *sctx)
 					  sctx->fixed_func_tcs_shader.current->pm4);
 		}
 
-		r = si_shader_select(ctx, &sctx->tes_shader, &compiler_state);
-		if (r)
-			return false;
-
 		if (sctx->gs_shader.cso) {
 			/* TES as ES */
-			si_pm4_bind_state(sctx, es, sctx->tes_shader.current->pm4);
+			if (sctx->b.chip_class <= VI) {
+				r = si_shader_select(ctx, &sctx->tes_shader,
+						     &compiler_state);
+				if (r)
+					return false;
+				si_pm4_bind_state(sctx, es, sctx->tes_shader.current->pm4);
+			}
 		} else {
 			/* TES as VS */
+			r = si_shader_select(ctx, &sctx->tes_shader,
+					     &compiler_state);
+			if (r)
+				return false;
 			si_pm4_bind_state(sctx, vs, sctx->tes_shader.current->pm4);
 			si_update_so(sctx, sctx->tes_shader.cso);
 		}
 	} else if (sctx->gs_shader.cso) {
-		/* VS as ES */
-		r = si_shader_select(ctx, &sctx->vs_shader, &compiler_state);
-		if (r)
-			return false;
-		si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
+		if (sctx->b.chip_class <= VI) {
+			/* VS as ES */
+			r = si_shader_select(ctx, &sctx->vs_shader,
+					     &compiler_state);
+			if (r)
+				return false;
+			si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
 
-		si_pm4_bind_state(sctx, ls, NULL);
-		si_pm4_bind_state(sctx, hs, NULL);
+			si_pm4_bind_state(sctx, ls, NULL);
+			si_pm4_bind_state(sctx, hs, NULL);
+		}
 	} else {
 		/* VS as VS */
 		r = si_shader_select(ctx, &sctx->vs_shader, &compiler_state);
@@ -2641,7 +2662,8 @@ bool si_update_shaders(struct si_context *sctx)
 			return false;
 	} else {
 		si_pm4_bind_state(sctx, gs, NULL);
-		si_pm4_bind_state(sctx, es, NULL);
+		if (sctx->b.chip_class <= VI)
+			si_pm4_bind_state(sctx, es, NULL);
 	}
 
 	si_update_vgt_shader_config(sctx);
