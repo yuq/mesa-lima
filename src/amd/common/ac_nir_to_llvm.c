@@ -3151,6 +3151,35 @@ static void set_tex_fetch_args(struct nir_to_llvm_context *ctx,
 	tinfo->arg_count = num_args;
 }
 
+/* Disable anisotropic filtering if BASE_LEVEL == LAST_LEVEL.
+ *
+ * SI-CI:
+ *   If BASE_LEVEL == LAST_LEVEL, the shader must disable anisotropic
+ *   filtering manually. The driver sets img7 to a mask clearing
+ *   MAX_ANISO_RATIO if BASE_LEVEL == LAST_LEVEL. The shader must do:
+ *     s_and_b32 samp0, samp0, img7
+ *
+ * VI:
+ *   The ANISO_OVERRIDE sampler field enables this fix in TA.
+ */
+static LLVMValueRef sici_fix_sampler_aniso(struct nir_to_llvm_context *ctx,
+                                           LLVMValueRef res, LLVMValueRef samp)
+{
+	LLVMBuilderRef builder = ctx->builder;
+	LLVMValueRef img7, samp0;
+
+	if (ctx->options->chip_class >= VI)
+		return samp;
+
+	img7 = LLVMBuildExtractElement(builder, res,
+	                               LLVMConstInt(ctx->i32, 7, 0), "");
+	samp0 = LLVMBuildExtractElement(builder, samp,
+	                                LLVMConstInt(ctx->i32, 0, 0), "");
+	samp0 = LLVMBuildAnd(builder, samp0, img7, "");
+	return LLVMBuildInsertElement(builder, samp, samp0,
+	                              LLVMConstInt(ctx->i32, 0, 0), "");
+}
+
 static void tex_fetch_ptrs(struct nir_to_llvm_context *ctx,
 			   nir_tex_instr *instr,
 			   LLVMValueRef *res_ptr, LLVMValueRef *samp_ptr,
@@ -3165,6 +3194,8 @@ static void tex_fetch_ptrs(struct nir_to_llvm_context *ctx,
 			*samp_ptr = get_sampler_desc(ctx, instr->sampler, DESC_SAMPLER);
 		else
 			*samp_ptr = get_sampler_desc(ctx, instr->texture, DESC_SAMPLER);
+		if (instr->sampler_dim < GLSL_SAMPLER_DIM_RECT)
+			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 	}
 	if (fmask_ptr && !instr->sampler && (instr->op == nir_texop_txf_ms ||
 					     instr->op == nir_texop_samples_identical))

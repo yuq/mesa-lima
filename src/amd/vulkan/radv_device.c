@@ -371,7 +371,7 @@ void radv_GetPhysicalDeviceFeatures(
 		.largePoints                              = true,
 		.alphaToOne                               = true,
 		.multiViewport                            = false,
-		.samplerAnisotropy                        = false, /* FINISHME */
+		.samplerAnisotropy                        = true,
 		.textureCompressionETC2                   = false,
 		.textureCompressionASTC_LDR               = false,
 		.textureCompressionBC                     = true,
@@ -1805,14 +1805,7 @@ radv_init_sampler(struct radv_device *device,
 	uint32_t max_aniso = pCreateInfo->anisotropyEnable && pCreateInfo->maxAnisotropy > 1.0 ?
 					(uint32_t) pCreateInfo->maxAnisotropy : 0;
 	uint32_t max_aniso_ratio = radv_tex_aniso_filter(max_aniso);
-	bool is_vi;
-	is_vi = (device->instance->physicalDevice.rad_info.chip_class >= VI);
-
-	if (!is_vi && max_aniso > 0) {
-		radv_finishme("Anisotropic filtering must be disabled manually "
-		              "by the shader on SI-CI when BASE_LEVEL == LAST_LEVEL\n");
-		max_aniso = max_aniso_ratio = 0;
-	}
+	bool is_vi = (device->instance->physicalDevice.rad_info.chip_class >= VI);
 
 	sampler->state[0] = (S_008F30_CLAMP_X(radv_tex_wrap(pCreateInfo->addressModeU)) |
 			     S_008F30_CLAMP_Y(radv_tex_wrap(pCreateInfo->addressModeV)) |
