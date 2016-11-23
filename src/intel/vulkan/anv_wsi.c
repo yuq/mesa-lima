@@ -200,7 +200,7 @@ x11_anv_wsi_image_create(VkDevice device_h,
    memory = anv_device_memory_from_handle(memory_h);
    memory->bo.is_winsys_bo = true;
 
-   anv_BindImageMemory(VK_NULL_HANDLE, image_h, memory_h, 0);
+   anv_BindImageMemory(device_h, image_h, memory_h, 0);
 
    struct anv_surface *surface = &image->color_surface;
    assert(surface->isl.tiling == ISL_TILING_X);
