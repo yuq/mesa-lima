@@ -887,6 +887,6 @@ qir_BRANCH(struct vc4_compile *c, uint8_t cond)
 
 #define qir_for_each_inst_inorder(inst, c)                              \
         qir_for_each_block(_block, c)                                   \
-                qir_for_each_inst(inst, _block)
+                qir_for_each_inst_safe(inst, _block)
 
 #endif /* VC4_QIR_H */
