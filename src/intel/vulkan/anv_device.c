@@ -446,7 +446,7 @@ void anv_GetPhysicalDeviceFeatures(
       .dualSrcBlend                             = true,
       .logicOp                                  = true,
       .multiDrawIndirect                        = false,
-      .drawIndirectFirstInstance                = false,
+      .drawIndirectFirstInstance                = true,
       .depthClamp                               = true,
       .depthBiasClamp                           = true,
       .fillModeNonSolid                         = true,
