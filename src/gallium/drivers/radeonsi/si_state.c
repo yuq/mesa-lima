@@ -94,13 +94,13 @@ static void si_emit_cb_render_state(struct si_context *sctx, struct r600_atom *a
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	struct si_state_blend *blend = sctx->queued.named.blend;
-	uint32_t cb_target_mask, i;
+	/* CB_COLORn_INFO.FORMAT=INVALID should disable unbound colorbuffers,
+	 * but you never know. */
+	uint32_t cb_target_mask = sctx->framebuffer.colorbuf_enabled_4bit;
+	unsigned i;
 
-	/* CB_COLORn_INFO.FORMAT=INVALID disables empty colorbuffer slots. */
 	if (blend)
-		cb_target_mask = blend->cb_target_mask;
-	else
-		cb_target_mask = 0xffffffff;
+		cb_target_mask &= blend->cb_target_mask;
 
 	/* Avoid a hang that happens when dual source blending is enabled
 	 * but there is not enough color outputs. This is undefined behavior,
