@@ -64,6 +64,7 @@ struct fd_screen {
 	uint32_t chip_id;        /* coreid:8 majorrev:8 minorrev:8 patch:8 */
 	uint32_t max_freq;
 	uint32_t max_rts;        /* max # of render targets */
+	uint32_t gmem_alignment;
 	bool has_timestamp;
 
 	void *compiler;          /* currently unused for a2xx */

@@ -672,6 +672,12 @@ fd_screen_create(struct fd_device *dev)
 		goto fail;
 	}
 
+	if (screen->gpu_id >= 500) {
+		screen->gmem_alignment = 64;
+	} else {
+		screen->gmem_alignment = 32;
+	}
+
 	/* NOTE: don't enable reordering on a2xx, since completely untested.
 	 * Also, don't enable if we have too old of a kernel to support
 	 * growable cmdstream buffers, since memory requirement for cmdstream
