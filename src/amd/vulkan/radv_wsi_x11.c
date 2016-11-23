@@ -46,7 +46,7 @@ VkBool32 radv_GetPhysicalDeviceXcbPresentationSupportKHR(
       &device->wsi_device,
       &device->instance->alloc,
       queueFamilyIndex,
-      device->local_fd,
+      device->local_fd, true,
       connection, visual_id);
 }
 
@@ -62,7 +62,7 @@ VkBool32 radv_GetPhysicalDeviceXlibPresentationSupportKHR(
       &device->wsi_device,
       &device->instance->alloc,
       queueFamilyIndex,
-      device->local_fd,
+      device->local_fd, true,
       XGetXCBConnection(dpy), visualID);
 }
 

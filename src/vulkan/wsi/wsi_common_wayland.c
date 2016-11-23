@@ -352,6 +352,7 @@ wsi_wl_surface_get_support(VkIcdSurfaceBase *surface,
                            const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
                            int local_fd,
+                           bool can_handle_different_gpu,
                            VkBool32* pSupported)
 {
    *pSupported = true;
@@ -637,6 +638,8 @@ wsi_wl_image_init(struct wsi_wl_swapchain *chain,
    result = chain->base.image_fns->create_wsi_image(vk_device,
                                                     pCreateInfo,
                                                     pAllocator,
+                                                    false,
+                                                    false,
                                                     &image->image,
                                                     &image->memory,
                                                     &size,
@@ -694,6 +697,7 @@ static VkResult
 wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
                                 VkDevice device,
                                 struct wsi_device *wsi_device,
+                                int local_fd,
                                 const VkSwapchainCreateInfoKHR* pCreateInfo,
                                 const VkAllocationCallbacks* pAllocator,
                                 const struct wsi_image_fns *image_fns,
@@ -724,6 +728,7 @@ wsi_wl_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.image_fns = image_fns;
    chain->base.present_mode = pCreateInfo->presentMode;
    chain->base.image_count = num_images;
+   chain->base.needs_linear_copy = false;
    chain->surface = surface->surface;
    chain->extent = pCreateInfo->imageExtent;
    chain->vk_format = pCreateInfo->imageFormat;

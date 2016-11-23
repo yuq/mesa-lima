@@ -208,6 +208,9 @@ void radv_meta_resolve_compute_image(struct radv_cmd_buffer *cmd_buffer,
 				     uint32_t region_count,
 				     const VkImageResolve *regions);
 
+void radv_blit_to_prime_linear(struct radv_cmd_buffer *cmd_buffer,
+			       struct radv_image *image,
+			       struct radv_image *linear_image);
 #ifdef __cplusplus
 }
 #endif

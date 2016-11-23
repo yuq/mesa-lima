@@ -94,7 +94,7 @@ VkResult anv_GetPhysicalDeviceSurfaceSupportKHR(
 
    return iface->get_support(surface, &device->wsi_device,
                              &device->instance->alloc,
-                             queueFamilyIndex, device->local_fd, pSupported);
+                             queueFamilyIndex, device->local_fd, false, pSupported);
 }
 
 VkResult anv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -142,6 +142,8 @@ static VkResult
 x11_anv_wsi_image_create(VkDevice device_h,
                          const VkSwapchainCreateInfoKHR *pCreateInfo,
                          const VkAllocationCallbacks* pAllocator,
+                         bool different_gpu,
+                         bool linear,
                          VkImage *image_p,
                          VkDeviceMemory *memory_p,
                          uint32_t *size,
@@ -272,6 +274,7 @@ VkResult anv_CreateSwapchainKHR(
      alloc = &device->alloc;
    VkResult result = iface->create_swapchain(surface, _device,
                                              &device->instance->physicalDevice.wsi_device,
+                                             device->instance->physicalDevice.local_fd,
                                              pCreateInfo,
                                              alloc, &anv_wsi_image_fns,
                                              &swapchain);
