@@ -1429,6 +1429,11 @@ _mesa_GetTextureImage(GLuint texture, GLint level, GLenum format, GLenum type,
       return;
    }
 
+   if (!legal_getteximage_target(ctx, texObj->Target, true)) {
+      _mesa_error(ctx, GL_INVALID_ENUM, "%s", caller);
+      return;
+   }
+
    get_texture_image_dims(texObj, texObj->Target, level,
                           &width, &height, &depth);
 
