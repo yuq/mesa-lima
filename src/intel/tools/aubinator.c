@@ -63,7 +63,7 @@ static enum { COLOR_AUTO, COLOR_ALWAYS, COLOR_NEVER } option_color;
 /* state */
 
 uint16_t pci_id = 0;
-char *xml_path = NULL;
+char *input_file = NULL, *xml_path = NULL;
 struct gen_spec *spec;
 struct gen_disasm *disasm;
 
@@ -894,6 +894,18 @@ handle_trace_block(uint32_t *p)
 static void
 handle_trace_header(uint32_t *p)
 {
+   /* The intel_aubdump tool from IGT is kind enough to put a PCI-ID= tag in
+    * the AUB header comment.  If the user hasn't specified a hardware
+    * generation, try to use the one from the AUB file.
+    */
+   uint32_t *end = p + (p[0] & 0xffff) + 2;
+   int aub_pci_id = 0;
+   if (end > &p[12] && p[12] > 0)
+      sscanf((char *)&p[13], "PCI-ID=%i", &aub_pci_id);
+
+   if (pci_id == 0)
+      pci_id = aub_pci_id;
+
    struct gen_device_info devinfo;
    if (!gen_get_device_info(pci_id, &devinfo)) {
       fprintf(stderr, "can't find device information: pci_id=0x%x\n", pci_id);
@@ -908,6 +920,25 @@ handle_trace_header(uint32_t *p)
 
    if (spec == NULL || disasm == NULL)
       exit(EXIT_FAILURE);
+
+   printf("%sAubinator: Intel AUB file decoder.%-80s%s\n",
+          GREEN_HEADER, "", NORMAL);
+
+   if (input_file)
+      printf("File name:        %s\n", input_file);
+
+   if (aub_pci_id)
+      printf("PCI ID:           0x%x\n", aub_pci_id);
+
+   char app_name[33];
+   strncpy(app_name, (char *)&p[2], 32);
+   app_name[32] = 0;
+   printf("Application name: %s\n", app_name);
+
+   printf("Decoding as:      %s\n", gen_get_device_name(pci_id));
+
+   /* Throw in a new line before the first batch */
+   printf("\n");
 }
 
 struct aub_file {
@@ -1185,7 +1216,6 @@ int main(int argc, char *argv[])
    struct aub_file *file;
    int c, i;
    bool help = false, pager = true;
-   char *input_file = NULL;
    const struct {
       const char *name;
       int pci_id;
