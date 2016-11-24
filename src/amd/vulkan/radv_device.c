@@ -130,6 +130,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
+	close(fd);
 	return VK_SUCCESS;
 
 fail:
