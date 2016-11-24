@@ -59,8 +59,7 @@ VULKAN_GEM_STUB_FILES := \
 
 VULKAN_GENERATED_FILES := \
 	anv_entrypoints.c \
-	anv_entrypoints.h \
-	anv_timestamp.h
+	anv_entrypoints.h
 
 
 GEN7_FILES := \

@@ -140,12 +140,6 @@ anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
 	$(AM_V_GEN) cat $(vulkan_include_HEADERS) |\
 	$(PYTHON2) $(srcdir)/anv_entrypoints_gen.py code > $@
 
-.PHONY: anv_timestamp.h
-
-anv_timestamp.h:
-	@echo "Updating anv_timestamp.h"
-	$(AM_V_GEN) echo "#define ANV_TIMESTAMP \"$(TIMESTAMP_CMD)\"" > $@
-
 BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES) dev_icd.json intel_icd.@host_cpu@.json
 EXTRA_DIST = \
