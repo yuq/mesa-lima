@@ -692,9 +692,13 @@ struct BlendJit : public Builder
                     dst[i] = BITCAST(dst[i], mSimdInt32Ty);
                     break;
                 case SWR_TYPE_SNORM:
-                    src[i] = FADD(src[i], VIMMED1(0.5f));
-                    dst[i] = FADD(dst[i], VIMMED1(0.5f));
-                    /* fallthrough */
+                    src[i] = FP_TO_SI(
+                        FMUL(src[i], VIMMED1(scale[i])),
+                        mSimdInt32Ty);
+                    dst[i] = FP_TO_SI(
+                        FMUL(dst[i], VIMMED1(scale[i])),
+                        mSimdInt32Ty);
+                    break;
                 case SWR_TYPE_UNORM:
                     src[i] = FP_TO_UI(
                         FMUL(src[i], VIMMED1(scale[i])),
@@ -728,11 +732,14 @@ struct BlendJit : public Builder
                     result[i] = BITCAST(result[i], mSimdFP32Ty);
                     break;
                 case SWR_TYPE_SNORM:
+                    result[i] = SHL(result[i], C(32 - info.bpc[i]));
+                    result[i] = ASHR(result[i], C(32 - info.bpc[i]));
+                    result[i] = FMUL(SI_TO_FP(result[i], mSimdFP32Ty),
+                                     VIMMED1(1.0f / scale[i]));
+                    break;
                 case SWR_TYPE_UNORM:
                     result[i] = FMUL(UI_TO_FP(result[i], mSimdFP32Ty),
                                      VIMMED1(1.0f / scale[i]));
-                    if (info.type[i] == SWR_TYPE_SNORM)
-                        result[i] = FADD(result[i], VIMMED1(-0.5f));
                     break;
                 }
 
