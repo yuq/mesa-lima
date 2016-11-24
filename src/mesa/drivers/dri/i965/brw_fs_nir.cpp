@@ -2520,78 +2520,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
          bld.MOV(patch_handle,
                  retype(brw_vec1_grf(0, 0), BRW_REGISTER_TYPE_UD));
 
-         if (imm_offset == 0) {
-            /* This is a read of gl_TessLevelInner[], which lives in the
-             * Patch URB header.  The layout depends on the domain.
-             */
-            dst.type = BRW_REGISTER_TYPE_F;
-            switch (tcs_key->tes_primitive_mode) {
-            case GL_QUADS: {
-               /* DWords 3-2 (reversed) */
-               fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
-
-               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, patch_handle);
-               inst->offset = 0;
-               inst->mlen = 1;
-               inst->size_written = 4 * REG_SIZE;
-
-               /* dst.xy = tmp.wz */
-               bld.MOV(dst,                 offset(tmp, bld, 3));
-               bld.MOV(offset(dst, bld, 1), offset(tmp, bld, 2));
-               break;
-            }
-            case GL_TRIANGLES:
-               /* DWord 4; hardcode offset = 1 and size_written = REG_SIZE */
-               inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, dst, patch_handle);
-               inst->offset = 1;
-               inst->mlen = 1;
-               inst->size_written = REG_SIZE;
-               break;
-            case GL_ISOLINES:
-               /* All channels are undefined. */
-               break;
-            default:
-               unreachable("Bogus tessellation domain");
-            }
-         } else if (imm_offset == 1) {
-            /* This is a read of gl_TessLevelOuter[], which lives in the
-             * Patch URB header.  The layout depends on the domain.
-             */
-            dst.type = BRW_REGISTER_TYPE_F;
-
-            fs_reg tmp = bld.vgrf(BRW_REGISTER_TYPE_F, 4);
-            inst = bld.emit(SHADER_OPCODE_URB_READ_SIMD8, tmp, patch_handle);
-            inst->offset = 1;
-            inst->mlen = 1;
-            inst->size_written = 4 * REG_SIZE;
-
-            /* Reswizzle: WZYX */
-            fs_reg srcs[4] = {
-               offset(tmp, bld, 3),
-               offset(tmp, bld, 2),
-               offset(tmp, bld, 1),
-               offset(tmp, bld, 0),
-            };
-
-            unsigned num_components;
-            switch (tcs_key->tes_primitive_mode) {
-            case GL_QUADS:
-               num_components = 4;
-               break;
-            case GL_TRIANGLES:
-               num_components = 3;
-               break;
-            case GL_ISOLINES:
-               /* Isolines are not reversed; swizzle .zw -> .xy */
-               srcs[0] = offset(tmp, bld, 2);
-               srcs[1] = offset(tmp, bld, 3);
-               num_components = 2;
-               break;
-            default:
-               unreachable("Bogus tessellation domain");
-            }
-            bld.LOAD_PAYLOAD(dst, srcs, num_components, 0);
-         } else {
+         {
             if (first_component != 0) {
                unsigned read_components =
                   instr->num_components + first_component;
@@ -2656,55 +2585,6 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
 
       if (indirect_offset.file != BAD_FILE) {
          srcs[header_regs++] = indirect_offset;
-      } else if (!is_passthrough_shader) {
-         if (imm_offset == 0) {
-            value.type = BRW_REGISTER_TYPE_F;
-
-            mask &= (1 << tesslevel_inner_components(tcs_key->tes_primitive_mode)) - 1;
-
-            /* This is a write to gl_TessLevelInner[], which lives in the
-             * Patch URB header.  The layout depends on the domain.
-             */
-            switch (tcs_key->tes_primitive_mode) {
-            case GL_QUADS:
-               /* gl_TessLevelInner[].xy lives at DWords 3-2 (reversed).
-                * We use an XXYX swizzle to reverse put .xy in the .wz
-                * channels, and use a .zw writemask.
-                */
-               mask = writemask_for_backwards_vector(mask);
-               swiz = BRW_SWIZZLE4(0, 0, 1, 0);
-               break;
-            case GL_TRIANGLES:
-               /* gl_TessLevelInner[].x lives at DWord 4, so we set the
-                * writemask to X and bump the URB offset by 1.
-                */
-               imm_offset = 1;
-               break;
-            case GL_ISOLINES:
-               /* Skip; gl_TessLevelInner[] doesn't exist for isolines. */
-               return;
-            default:
-               unreachable("Bogus tessellation domain");
-            }
-         } else if (imm_offset == 1) {
-            /* This is a write to gl_TessLevelOuter[] which lives in the
-             * Patch URB Header at DWords 4-7.  However, it's reversed, so
-             * instead of .xyzw we have .wzyx.
-             */
-            value.type = BRW_REGISTER_TYPE_F;
-
-            mask &= (1 << tesslevel_outer_components(tcs_key->tes_primitive_mode)) - 1;
-
-            if (tcs_key->tes_primitive_mode == GL_ISOLINES) {
-               /* Isolines .xy should be stored in .zw, in order. */
-               swiz = BRW_SWIZZLE4(0, 0, 0, 1);
-               mask <<= 2;
-            } else {
-               /* Other domains are reversed; store .wzyx instead of .xyzw */
-               swiz = BRW_SWIZZLE_WZYX;
-               mask = writemask_for_backwards_vector(mask);
-            }
-         }
       }
 
       if (mask == 0)
@@ -2848,48 +2728,6 @@ fs_visitor::nir_emit_tes_intrinsic(const fs_builder &bld,
       /* gl_TessCoord is part of the payload in g1-3 */
       for (unsigned i = 0; i < 3; i++) {
          bld.MOV(offset(dest, bld, i), fs_reg(brw_vec8_grf(1 + i, 0)));
-      }
-      break;
-
-   case nir_intrinsic_load_tess_level_outer:
-      /* When the TES reads gl_TessLevelOuter, we ensure that the patch header
-       * appears as a push-model input.  So, we can simply use the ATTR file
-       * rather than issuing URB read messages.  The data is stored in the
-       * high DWords in reverse order - DWord 7 contains .x, DWord 6 contains
-       * .y, and so on.
-       */
-      switch (tes_prog_data->domain) {
-      case BRW_TESS_DOMAIN_QUAD:
-         for (unsigned i = 0; i < 4; i++)
-            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 7 - i));
-         break;
-      case BRW_TESS_DOMAIN_TRI:
-         for (unsigned i = 0; i < 3; i++)
-            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 7 - i));
-         break;
-      case BRW_TESS_DOMAIN_ISOLINE:
-         for (unsigned i = 0; i < 2; i++)
-            bld.MOV(offset(dest, bld, i), component(fs_reg(ATTR, 0), 6 + i));
-         break;
-      }
-      break;
-
-   case nir_intrinsic_load_tess_level_inner:
-      /* When the TES reads gl_TessLevelInner, we ensure that the patch header
-       * appears as a push-model input.  So, we can simply use the ATTR file
-       * rather than issuing URB read messages.
-       */
-      switch (tes_prog_data->domain) {
-      case BRW_TESS_DOMAIN_QUAD:
-         bld.MOV(dest, component(fs_reg(ATTR, 0), 3));
-         bld.MOV(offset(dest, bld, 1), component(fs_reg(ATTR, 0), 2));
-         break;
-      case BRW_TESS_DOMAIN_TRI:
-         bld.MOV(dest, component(fs_reg(ATTR, 0), 4));
-         break;
-      case BRW_TESS_DOMAIN_ISOLINE:
-         /* ignore - value is undefined */
-         break;
       }
       break;
 

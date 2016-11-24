@@ -648,53 +648,6 @@ get_atomic_counter_op(nir_intrinsic_op op)
    }
 }
 
-unsigned
-tesslevel_outer_components(GLenum tes_primitive_mode)
-{
-   switch (tes_primitive_mode) {
-   case GL_QUADS:
-      return 4;
-   case GL_TRIANGLES:
-      return 3;
-   case GL_ISOLINES:
-      return 2;
-   default:
-      unreachable("Bogus tessellation domain");
-   }
-   return 0;
-}
-
-unsigned
-tesslevel_inner_components(GLenum tes_primitive_mode)
-{
-   switch (tes_primitive_mode) {
-   case GL_QUADS:
-      return 2;
-   case GL_TRIANGLES:
-      return 1;
-   case GL_ISOLINES:
-      return 0;
-   default:
-      unreachable("Bogus tessellation domain");
-   }
-   return 0;
-}
-
-/**
- * Given a normal .xyzw writemask, convert it to a writemask for a vector
- * that's stored backwards, i.e. .wzyx.
- */
-unsigned
-writemask_for_backwards_vector(unsigned mask)
-{
-   unsigned new_mask = 0;
-
-   for (int i = 0; i < 4; i++)
-      new_mask |= ((mask >> i) & 1) << (3 - i);
-
-   return new_mask;
-}
-
 backend_shader::backend_shader(const struct brw_compiler *compiler,
                                void *log_data,
                                void *mem_ctx,
@@ -712,8 +665,6 @@ backend_shader::backend_shader(const struct brw_compiler *compiler,
    debug_enabled = INTEL_DEBUG & intel_debug_flag_for_shader_stage(stage);
    stage_name = _mesa_shader_stage_to_string(stage);
    stage_abbrev = _mesa_shader_stage_to_abbrev(stage);
-   is_passthrough_shader =
-      nir->info->name && strcmp(nir->info->name, "passthrough") == 0;
 }
 
 bool
@@ -1394,17 +1345,7 @@ brw_compile_tes(const struct brw_compiler *compiler,
 
    /* URB entry sizes are stored as a multiple of 64 bytes. */
    prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 64) / 64;
-
-   bool need_patch_header = nir->info->system_values_read &
-      (BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_OUTER) |
-       BITFIELD64_BIT(SYSTEM_VALUE_TESS_LEVEL_INNER));
-
-   /* The TES will pull most inputs using URB read messages.
-    *
-    * However, we push the patch header for TessLevel factors when required,
-    * as it's a tiny amount of extra data.
-    */
-   prog_data->base.urb_read_length = need_patch_header ? 1 : 0;
+   prog_data->base.urb_read_length = 0;
 
    if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
       fprintf(stderr, "TES Input ");

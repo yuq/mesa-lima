@@ -319,62 +319,8 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
       dst_reg dst = get_nir_dest(instr->dest, BRW_REGISTER_TYPE_D);
       dst.writemask = brw_writemask_for_size(instr->num_components);
 
-      if (imm_offset == 0 && indirect_offset.file == BAD_FILE) {
-         dst.type = BRW_REGISTER_TYPE_F;
-
-         /* This is a read of gl_TessLevelInner[], which lives in the
-          * Patch URB header.  The layout depends on the domain.
-          */
-         switch (key->tes_primitive_mode) {
-         case GL_QUADS: {
-            /* DWords 3-2 (reversed); use offset 0 and WZYX swizzle. */
-            dst_reg tmp(this, glsl_type::vec4_type);
-            emit_output_urb_read(tmp, 0, 0, src_reg());
-            emit(MOV(writemask(dst, WRITEMASK_XY),
-                     swizzle(src_reg(tmp), BRW_SWIZZLE_WZYX)));
-            break;
-         }
-         case GL_TRIANGLES:
-            /* DWord 4; use offset 1 but normal swizzle/writemask. */
-            emit_output_urb_read(writemask(dst, WRITEMASK_X), 1, 0,
-                                 src_reg());
-            break;
-         case GL_ISOLINES:
-            /* All channels are undefined. */
-            return;
-         default:
-            unreachable("Bogus tessellation domain");
-         }
-      } else if (imm_offset == 1 && indirect_offset.file == BAD_FILE) {
-         dst.type = BRW_REGISTER_TYPE_F;
-         unsigned swiz = BRW_SWIZZLE_WZYX;
-
-         /* This is a read of gl_TessLevelOuter[], which lives in the
-          * high 4 DWords of the Patch URB header, in reverse order.
-          */
-         switch (key->tes_primitive_mode) {
-         case GL_QUADS:
-            dst.writemask = WRITEMASK_XYZW;
-            break;
-         case GL_TRIANGLES:
-            dst.writemask = WRITEMASK_XYZ;
-            break;
-         case GL_ISOLINES:
-            /* Isolines are not reversed; swizzle .zw -> .xy */
-            swiz = BRW_SWIZZLE_ZWZW;
-            dst.writemask = WRITEMASK_XY;
-            return;
-         default:
-            unreachable("Bogus tessellation domain");
-         }
-
-         dst_reg tmp(this, glsl_type::vec4_type);
-         emit_output_urb_read(tmp, 1, 0, src_reg());
-         emit(MOV(dst, swizzle(src_reg(tmp), swiz)));
-      } else {
-         emit_output_urb_read(dst, imm_offset, nir_intrinsic_component(instr),
-                              indirect_offset);
-      }
+      emit_output_urb_read(dst, imm_offset, nir_intrinsic_component(instr),
+                           indirect_offset);
       break;
    }
    case nir_intrinsic_store_output:
@@ -385,62 +331,6 @@ vec4_tcs_visitor::nir_emit_intrinsic(nir_intrinsic_instr *instr)
 
       src_reg indirect_offset = get_indirect_offset(instr);
       unsigned imm_offset = instr->const_index[0];
-
-      /* The passthrough shader writes the whole patch header as two vec4s;
-       * skip all the gl_TessLevelInner/Outer swizzling.
-       */
-      if (indirect_offset.file == BAD_FILE && !is_passthrough_shader) {
-         if (imm_offset == 0) {
-            value.type = BRW_REGISTER_TYPE_F;
-
-            mask &=
-               (1 << tesslevel_inner_components(key->tes_primitive_mode)) - 1;
-
-            /* This is a write to gl_TessLevelInner[], which lives in the
-             * Patch URB header.  The layout depends on the domain.
-             */
-            switch (key->tes_primitive_mode) {
-            case GL_QUADS:
-               /* gl_TessLevelInner[].xy lives at DWords 3-2 (reversed).
-                * We use an XXYX swizzle to reverse put .xy in the .wz
-                * channels, and use a .zw writemask.
-                */
-               swiz = BRW_SWIZZLE4(0, 0, 1, 0);
-               mask = writemask_for_backwards_vector(mask);
-               break;
-            case GL_TRIANGLES:
-               /* gl_TessLevelInner[].x lives at DWord 4, so we set the
-                * writemask to X and bump the URB offset by 1.
-                */
-               imm_offset = 1;
-               break;
-            case GL_ISOLINES:
-               /* Skip; gl_TessLevelInner[] doesn't exist for isolines. */
-               return;
-            default:
-               unreachable("Bogus tessellation domain");
-            }
-         } else if (imm_offset == 1) {
-            value.type = BRW_REGISTER_TYPE_F;
-
-            mask &=
-               (1 << tesslevel_outer_components(key->tes_primitive_mode)) - 1;
-
-            /* This is a write to gl_TessLevelOuter[] which lives in the
-             * Patch URB Header at DWords 4-7.  However, it's reversed, so
-             * instead of .xyzw we have .wzyx.
-             */
-            if (key->tes_primitive_mode == GL_ISOLINES) {
-               /* Isolines .xy should be stored in .zw, in order. */
-               swiz = BRW_SWIZZLE4(0, 0, 0, 1);
-               mask <<= 2;
-            } else {
-               /* Other domains are reversed; store .wzyx instead of .xyzw. */
-               swiz = BRW_SWIZZLE_WZYX;
-               mask = writemask_for_backwards_vector(mask);
-            }
-         }
-      }
 
       unsigned first_component = nir_intrinsic_component(instr);
       if (first_component) {
@@ -522,7 +412,8 @@ brw_compile_tcs(const struct brw_compiler *compiler,
 
    nir = brw_nir_apply_sampler_key(nir, compiler, &key->tex, is_scalar);
    brw_nir_lower_vue_inputs(nir, is_scalar, &input_vue_map);
-   brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map);
+   brw_nir_lower_tcs_outputs(nir, &vue_prog_data->vue_map,
+                             key->tes_primitive_mode);
    if (key->quads_workaround)
       brw_nir_apply_tcs_quads_workaround(nir);
 

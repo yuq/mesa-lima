@@ -217,7 +217,6 @@ public:
    bool debug_enabled;
    const char *stage_name;
    const char *stage_abbrev;
-   bool is_passthrough_shader;
 
    brw::simple_allocator alloc;
 
@@ -290,10 +289,6 @@ bool brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog);
 
 GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
 struct gl_linked_shader *brw_new_shader(gl_shader_stage stage);
-
-unsigned tesslevel_outer_components(GLenum tes_primitive_mode);
-unsigned tesslevel_inner_components(GLenum tes_primitive_mode);
-unsigned writemask_for_backwards_vector(unsigned mask);
 
 unsigned get_atomic_counter_op(nir_intrinsic_op op);
 

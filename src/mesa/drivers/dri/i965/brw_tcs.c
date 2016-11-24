@@ -51,7 +51,8 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
    nir_ssa_def *invoc_id =
       nir_load_system_value(&b, nir_intrinsic_load_invocation_id, 0);
 
-   nir->info->inputs_read = key->outputs_written;
+   nir->info->inputs_read = key->outputs_written &
+      ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
    nir->info->outputs_written = key->outputs_written;
    nir->info->tcs.vertices_out = key->input_vertices;
    nir->info->name = ralloc_strdup(nir, "passthrough");
@@ -81,7 +82,7 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
    }
 
    /* Copy inputs to outputs. */
-   uint64_t varyings = key->outputs_written;
+   uint64_t varyings = nir->info->inputs_read;
 
    while (varyings != 0) {
       const int varying = ffsll(varyings) - 1;

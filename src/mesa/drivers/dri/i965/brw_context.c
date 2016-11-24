@@ -673,7 +673,7 @@ brw_initialize_context_constants(struct brw_context *brw)
    if (brw->gen >= 5 || brw->is_g4x)
       ctx->Const.MaxClipPlanes = 8;
 
-   ctx->Const.LowerTessLevel = true;
+   ctx->Const.GLSLTessLevelsAsInputs = true;
    ctx->Const.LowerTCSPatchVerticesIn = brw->gen >= 8;
    ctx->Const.LowerTESPatchVerticesIn = true;
    ctx->Const.PrimitiveRestartForPatches = true;

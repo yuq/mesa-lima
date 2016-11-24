@@ -141,9 +141,68 @@ remap_inputs_with_vue_map(nir_block *block, const struct brw_vue_map *vue_map)
 }
 
 static bool
-remap_patch_urb_offsets(nir_block *block, nir_builder *b,
-                        const struct brw_vue_map *vue_map)
+remap_tess_levels(nir_builder *b, nir_intrinsic_instr *intr,
+                  GLenum primitive_mode)
 {
+   const int location = nir_intrinsic_base(intr);
+   const unsigned component = nir_intrinsic_component(intr);
+   bool out_of_bounds;
+
+   if (location == VARYING_SLOT_TESS_LEVEL_INNER) {
+      switch (primitive_mode) {
+      case GL_QUADS:
+         /* gl_TessLevelInner[0..1] lives at DWords 3-2 (reversed). */
+         nir_intrinsic_set_base(intr, 0);
+         nir_intrinsic_set_component(intr, 3 - component);
+         out_of_bounds = false;
+         break;
+      case GL_TRIANGLES:
+         /* gl_TessLevelInner[0] lives at DWord 4. */
+         nir_intrinsic_set_base(intr, 1);
+         out_of_bounds = component > 0;
+         break;
+      case GL_ISOLINES:
+         out_of_bounds = true;
+         break;
+      default:
+         unreachable("Bogus tessellation domain");
+      }
+   } else if (location == VARYING_SLOT_TESS_LEVEL_OUTER) {
+      if (primitive_mode == GL_ISOLINES) {
+         /* gl_TessLevelOuter[0..1] lives at DWords 6-7 (in order). */
+         nir_intrinsic_set_base(intr, 1);
+         nir_intrinsic_set_component(intr, 2 + nir_intrinsic_component(intr));
+         out_of_bounds = component > 1;
+      } else {
+         /* Triangles use DWords 7-5 (reversed); Quads use 7-4 (reversed) */
+         nir_intrinsic_set_base(intr, 1);
+         nir_intrinsic_set_component(intr, 3 - nir_intrinsic_component(intr));
+         out_of_bounds = component == 3 && primitive_mode == GL_TRIANGLES;
+      }
+   } else {
+      return false;
+   }
+
+   if (out_of_bounds) {
+      if (nir_intrinsic_infos[intr->intrinsic].has_dest) {
+         b->cursor = nir_before_instr(&intr->instr);
+         nir_ssa_def *undef = nir_ssa_undef(b, 1, 32);
+         nir_ssa_def_rewrite_uses(&intr->dest.ssa, nir_src_for_ssa(undef));
+      }
+      nir_instr_remove(&intr->instr);
+   }
+
+   return true;
+}
+
+static bool
+remap_patch_urb_offsets(nir_block *block, nir_builder *b,
+                        const struct brw_vue_map *vue_map,
+                        GLenum tes_primitive_mode)
+{
+   const bool is_passthrough_tcs = b->shader->info->name &&
+      strcmp(b->shader->info->name, "passthrough") == 0;
+
    nir_foreach_instr_safe(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -154,6 +213,11 @@ remap_patch_urb_offsets(nir_block *block, nir_builder *b,
 
       if ((stage == MESA_SHADER_TESS_CTRL && is_output(intrin)) ||
           (stage == MESA_SHADER_TESS_EVAL && is_input(intrin))) {
+
+         if (!is_passthrough_tcs &&
+             remap_tess_levels(b, intrin, tes_primitive_mode))
+            continue;
+
          int vue_slot = vue_map->varying_to_slot[intrin->const_index[0]];
          assert(vue_slot != -1);
          intrin->const_index[0] = vue_slot;
@@ -273,7 +337,8 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
          nir_builder b;
          nir_builder_init(&b, function->impl);
          nir_foreach_block(block, function->impl) {
-            remap_patch_urb_offsets(block, &b, vue_map);
+            remap_patch_urb_offsets(block, &b, vue_map,
+                                    nir->info->tes.primitive_mode);
          }
       }
    }
@@ -341,7 +406,8 @@ brw_nir_lower_vue_outputs(nir_shader *nir,
 }
 
 void
-brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
+brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map,
+                          GLenum tes_primitive_mode)
 {
    nir_foreach_variable(var, &nir->outputs) {
       var->data.driver_location = var->data.location;
@@ -359,7 +425,7 @@ brw_nir_lower_tcs_outputs(nir_shader *nir, const struct brw_vue_map *vue_map)
          nir_builder b;
          nir_builder_init(&b, function->impl);
          nir_foreach_block(block, function->impl) {
-            remap_patch_urb_offsets(block, &b, vue_map);
+            remap_patch_urb_offsets(block, &b, vue_map, tes_primitive_mode);
          }
       }
    }

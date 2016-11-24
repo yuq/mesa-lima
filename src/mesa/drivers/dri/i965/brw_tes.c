@@ -235,16 +235,12 @@ brw_tes_populate_key(struct brw_context *brw,
     */
    if (tcp) {
       struct gl_program *tcp_prog = &tcp->program;
-      per_vertex_slots |= tcp_prog->info.outputs_written;
+      per_vertex_slots |= tcp_prog->info.outputs_written &
+         ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
       per_patch_slots |= tcp_prog->info.patch_outputs_written;
    }
 
-   /* Ignore gl_TessLevelInner/Outer - we treat them as system values,
-    * not inputs, and they're always present in the URB entry regardless
-    * of whether or not we read them.
-    */
-   key->inputs_read = per_vertex_slots &
-      ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
+   key->inputs_read = per_vertex_slots;
    key->patch_inputs_read = per_patch_slots;
 
    /* _NEW_TEXTURE */
@@ -299,13 +295,10 @@ brw_tes_precompile(struct gl_context *ctx,
    if (shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]) {
       struct gl_program *tcp =
          shader_prog->_LinkedShaders[MESA_SHADER_TESS_CTRL]->Program;
-      key.inputs_read |= tcp->nir->info->outputs_written;
+      key.inputs_read |= tcp->nir->info->outputs_written &
+         ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
       key.patch_inputs_read |= tcp->nir->info->patch_outputs_written;
    }
-
-   /* Ignore gl_TessLevelInner/Outer - they're system values. */
-   key.inputs_read &= ~(VARYING_BIT_TESS_LEVEL_INNER |
-                        VARYING_BIT_TESS_LEVEL_OUTER);
 
    brw_setup_tex_for_precompile(brw, &key.tex, prog);
 
