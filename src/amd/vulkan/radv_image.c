@@ -827,29 +827,29 @@ void radv_image_set_optimal_micro_tile_mode(struct radv_device *device,
 		switch (micro_tile_mode) {
 		case 0: /* displayable */
 			switch (image->surface.bpe) {
-			case 8:
+			case 1:
                             image->surface.tiling_index[0] = 10;
                             break;
-			case 16:
+			case 2:
                             image->surface.tiling_index[0] = 11;
                             break;
-			default: /* 32, 64 */
+			default: /* 4, 8 */
                             image->surface.tiling_index[0] = 12;
                             break;
 			}
 			break;
 		case 1: /* thin */
 			switch (image->surface.bpe) {
-			case 8:
+			case 1:
                                 image->surface.tiling_index[0] = 14;
                                 break;
-			case 16:
+			case 2:
                                 image->surface.tiling_index[0] = 15;
                                 break;
-			case 32:
+			case 4:
                                 image->surface.tiling_index[0] = 16;
                                 break;
-			default: /* 64, 128 */
+			default: /* 8, 16 */
                                 image->surface.tiling_index[0] = 17;
                                 break;
 			}
