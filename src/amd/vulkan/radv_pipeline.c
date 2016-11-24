@@ -1349,7 +1349,9 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	else
 		ms->num_samples = 1;
 
-	if (pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.force_persample) {
+	if (vkms && vkms->sampleShadingEnable) {
+		ps_iter_samples = ceil(vkms->minSampleShading * ms->num_samples);
+	} else if (pipeline->shaders[MESA_SHADER_FRAGMENT]->info.fs.force_persample) {
 		ps_iter_samples = ms->num_samples;
 	}
 

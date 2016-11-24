@@ -570,7 +570,7 @@ void radv_GetPhysicalDeviceFeatures(
 		.independentBlend                         = true,
 		.geometryShader                           = !is_gfx9,
 		.tessellationShader                       = !is_gfx9,
-		.sampleRateShading                        = false,
+		.sampleRateShading                        = true,
 		.dualSrcBlend                             = true,
 		.logicOp                                  = true,
 		.multiDrawIndirect                        = true,
