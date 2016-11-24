@@ -453,7 +453,7 @@ void util_blitter_destroy(struct blitter_context *blitter)
    }
 
    for (i = 0; i < PIPE_MAX_TEXTURE_TYPES; i++) {
-      for (unsigned type = 0; type < 3; ++type) {
+      for (unsigned type = 0; type < ARRAY_SIZE(ctx->fs_texfetch_col); ++type) {
          if (ctx->fs_texfetch_col[type][i])
             ctx->delete_fs_state(pipe, ctx->fs_texfetch_col[type][i]);
          if (ctx->fs_texfetch_col_msaa[type][i])
