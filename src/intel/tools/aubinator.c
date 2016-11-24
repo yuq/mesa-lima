@@ -62,6 +62,9 @@ static enum { COLOR_AUTO, COLOR_ALWAYS, COLOR_NEVER } option_color;
 
 /* state */
 
+uint16_t pci_id = 0;
+char *xml_path = NULL;
+struct gen_spec *spec;
 struct gen_disasm *disasm;
 
 uint64_t gtt_size, gtt_end;
@@ -843,7 +846,7 @@ parse_commands(struct gen_spec *spec, uint32_t *cmds, int size, int engine)
 #define GEN_ENGINE_BLITTER 2
 
 static void
-handle_trace_block(struct gen_spec *spec, uint32_t *p)
+handle_trace_block(uint32_t *p)
 {
    int operation = p[1] & AUB_TRACE_OPERATION_MASK;
    int type = p[1] & AUB_TRACE_TYPE_MASK;
@@ -886,6 +889,25 @@ handle_trace_block(struct gen_spec *spec, uint32_t *p)
       gtt_end = 0;
       break;
    }
+}
+
+static void
+handle_trace_header(uint32_t *p)
+{
+   struct gen_device_info devinfo;
+   if (!gen_get_device_info(pci_id, &devinfo)) {
+      fprintf(stderr, "can't find device information: pci_id=0x%x\n", pci_id);
+      exit(EXIT_FAILURE);
+   }
+
+   if (xml_path == NULL)
+      spec = gen_spec_load(&devinfo);
+   else
+      spec = gen_spec_load_from_path(&devinfo, xml_path);
+   disasm = gen_disasm_create(pci_id);
+
+   if (spec == NULL || disasm == NULL)
+      exit(EXIT_FAILURE);
 }
 
 struct aub_file {
@@ -990,7 +1012,7 @@ enum {
 };
 
 static int
-aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
+aub_file_decode_batch(struct aub_file *file)
 {
    uint32_t *p, h, device, data_type, *new_cursor;
    int header_length, bias;
@@ -1028,9 +1050,10 @@ aub_file_decode_batch(struct aub_file *file, struct gen_spec *spec)
 
    switch (h & 0xffff0000) {
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_HEADER):
+      handle_trace_header(p);
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BLOCK):
-      handle_trace_block(spec, p);
+      handle_trace_block(p);
       break;
    case MAKE_HEADER(TYPE_AUB, OPCODE_AUB, SUBOPCODE_BMP):
       break;
@@ -1159,12 +1182,10 @@ print_help(const char *progname, FILE *file)
 
 int main(int argc, char *argv[])
 {
-   struct gen_spec *spec;
    struct aub_file *file;
    int c, i;
    bool help = false, pager = true;
-   char *input_file = NULL, *xml_path = NULL;
-   uint16_t pci_id;
+   char *input_file = NULL;
    const struct {
       const char *name;
       int pci_id;
@@ -1188,7 +1209,6 @@ int main(int argc, char *argv[])
       { "xml",        required_argument, NULL,                          'x' },
       { NULL,         0,                 NULL,                          0 }
    };
-   struct gen_device_info devinfo;
 
    i = 0;
    while ((c = getopt_long(argc, argv, "", aubinator_opts, &i)) != -1) {
@@ -1234,27 +1254,12 @@ int main(int argc, char *argv[])
    if (optind < argc)
       input_file = argv[optind];
 
-   if (!gen_get_device_info(pci_id, &devinfo)) {
-      fprintf(stderr, "can't find device information: pci_id=0x%x\n", pci_id);
-      exit(EXIT_FAILURE);
-   }
-
-
    /* Do this before we redirect stdout to pager. */
    if (option_color == COLOR_AUTO)
       option_color = isatty(1) ? COLOR_ALWAYS : COLOR_NEVER;
 
    if (isatty(1) && pager)
       setup_pager();
-
-   if (xml_path == NULL)
-      spec = gen_spec_load(&devinfo);
-   else
-      spec = gen_spec_load_from_path(&devinfo, xml_path);
-   disasm = gen_disasm_create(pci_id);
-
-   if (spec == NULL || disasm == NULL)
-      exit(EXIT_FAILURE);
 
    if (input_file == NULL)
       file = aub_file_stdin();
@@ -1271,7 +1276,7 @@ int main(int argc, char *argv[])
    }
 
    while (aub_file_more_stuff(file)) {
-      switch (aub_file_decode_batch(file, spec)) {
+      switch (aub_file_decode_batch(file)) {
       case AUB_ITEM_DECODE_OK:
          break;
       case AUB_ITEM_DECODE_NEED_MORE_DATA:
