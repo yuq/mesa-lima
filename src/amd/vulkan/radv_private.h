@@ -211,7 +211,13 @@ void radv_loge_v(const char *format, va_list va);
  * Print a FINISHME message, including its source location.
  */
 #define radv_finishme(format, ...)					\
-	__radv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__);
+	do { \
+		static bool reported = false; \
+		if (!reported) { \
+			__radv_finishme(__FILE__, __LINE__, format, ##__VA_ARGS__); \
+			reported = true; \
+		} \
+	} while (0)
 
 /* A non-fatal assert.  Useful for debugging. */
 #ifdef DEBUG
