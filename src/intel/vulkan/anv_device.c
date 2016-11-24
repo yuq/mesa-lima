@@ -21,15 +21,16 @@
  * IN THE SOFTWARE.
  */
 
+#include <dlfcn.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 
 #include "anv_private.h"
-#include "anv_timestamp.h"
 #include "util/strtod.h"
 #include "util/debug.h"
 
@@ -53,11 +54,32 @@ compiler_perf_log(void *data, const char *fmt, ...)
    va_end(args);
 }
 
-static void
+static bool
+anv_get_function_timestamp(void *ptr, uint32_t* timestamp)
+{
+   Dl_info info;
+   struct stat st;
+   if (!dladdr(ptr, &info) || !info.dli_fname)
+      return false;
+
+   if (stat(info.dli_fname, &st))
+      return false;
+
+   *timestamp = st.st_mtim.tv_sec;
+   return true;
+}
+
+static bool
 anv_device_get_cache_uuid(void *uuid)
 {
+   uint32_t timestamp;
+
    memset(uuid, 0, VK_UUID_SIZE);
-   snprintf(uuid, VK_UUID_SIZE, "anv-%s", ANV_TIMESTAMP);
+   if (anv_get_function_timestamp(anv_device_get_cache_uuid, &timestamp))
+         return false;
+
+   snprintf(uuid, VK_UUID_SIZE, "anv-%d", timestamp);
+   return true;
 }
 
 static VkResult
@@ -141,7 +163,11 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
-   anv_device_get_cache_uuid(device->uuid);
+   if (!anv_device_get_cache_uuid(device->uuid)) {
+      result = vk_errorf(VK_ERROR_INITIALIZATION_FAILED,
+                         "cannot generate UUID");
+      goto fail;
+   }
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
    /* GENs prior to 8 do not support EU/Subslice info */
