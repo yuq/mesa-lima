@@ -208,8 +208,10 @@ anv_physical_device_init(struct anv_physical_device *device,
    device->compiler->shader_perf_log = compiler_perf_log;
 
    result = anv_init_wsi(device);
-   if (result != VK_SUCCESS)
-       goto fail;
+   if (result != VK_SUCCESS) {
+      ralloc_free(device->compiler);
+      goto fail;
+   }
 
    isl_device_init(&device->isl_dev, &device->info, swizzled);
 
