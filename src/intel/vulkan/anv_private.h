@@ -506,6 +506,8 @@ struct anv_physical_device {
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
 
+    uint8_t                                     uuid[VK_UUID_SIZE];
+
     struct wsi_device                       wsi_device;
 };
 
@@ -596,8 +598,6 @@ struct anv_device {
     pthread_mutex_t                             mutex;
     pthread_cond_t                              queue_submit;
 };
-
-void anv_device_get_cache_uuid(void *uuid);
 
 void anv_device_init_blorp(struct anv_device *device);
 void anv_device_finish_blorp(struct anv_device *device);

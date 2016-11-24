@@ -53,6 +53,13 @@ compiler_perf_log(void *data, const char *fmt, ...)
    va_end(args);
 }
 
+static void
+anv_device_get_cache_uuid(void *uuid)
+{
+   memset(uuid, 0, VK_UUID_SIZE);
+   snprintf(uuid, VK_UUID_SIZE, "anv-%s", ANV_TIMESTAMP);
+}
+
 static VkResult
 anv_physical_device_init(struct anv_physical_device *device,
                          struct anv_instance *instance,
@@ -134,6 +141,7 @@ anv_physical_device_init(struct anv_physical_device *device,
       goto fail;
    }
 
+   anv_device_get_cache_uuid(device->uuid);
    bool swizzled = anv_gem_get_bit6_swizzle(fd, I915_TILING_X);
 
    /* GENs prior to 8 do not support EU/Subslice info */
@@ -454,13 +462,6 @@ void anv_GetPhysicalDeviceFeatures(
       pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
 }
 
-void
-anv_device_get_cache_uuid(void *uuid)
-{
-   memset(uuid, 0, VK_UUID_SIZE);
-   snprintf(uuid, VK_UUID_SIZE, "anv-%s", ANV_TIMESTAMP);
-}
-
 void anv_GetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties*                 pProperties)
@@ -601,7 +602,7 @@ void anv_GetPhysicalDeviceProperties(
    };
 
    strcpy(pProperties->deviceName, pdevice->name);
-   anv_device_get_cache_uuid(pProperties->pipelineCacheUUID);
+   memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
 }
 
 void anv_GetPhysicalDeviceQueueFamilyProperties(
