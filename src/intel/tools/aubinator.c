@@ -1164,7 +1164,7 @@ int main(int argc, char *argv[])
    int c, i;
    bool help = false, pager = true;
    char *input_file = NULL, *xml_path = NULL;
-   char gen_val[24] = { 0, };
+   uint16_t pci_id;
    const struct {
       const char *name;
       int pci_id;
@@ -1177,7 +1177,7 @@ int main(int argc, char *argv[])
       { "skl", 0x1912 }, /* Intel(R) HD Graphics 530 (Skylake GT2) */
       { "kbl", 0x591D }, /* Intel(R) Kabylake GT2 */
       { "bxt", 0x0A84 }  /* Intel(R) HD Graphics (Broxton) */
-   }, *gen = NULL;
+   };
    const struct option aubinator_opts[] = {
       { "help",       no_argument,       (int *) &help,                 true },
       { "no-pager",   no_argument,       (int *) &pager,                false },
@@ -1194,7 +1194,17 @@ int main(int argc, char *argv[])
    while ((c = getopt_long(argc, argv, "", aubinator_opts, &i)) != -1) {
       switch (c) {
       case 'g':
-         snprintf(gen_val, sizeof(gen_val), "%s", optarg);
+         for (i = 0; i < ARRAY_SIZE(gens); i++) {
+            if (!strcmp(optarg, gens[i].name)) {
+               pci_id = gens[i].pci_id;
+               break;
+            }
+         }
+         if (i == ARRAY_SIZE(gens)) {
+            fprintf(stderr, "can't parse gen: '%s', expected ivb, byt, hsw, "
+                                   "bdw, chv, skl, kbl or bxt\n", optarg);
+            exit(EXIT_FAILURE);
+         }
          break;
       case 'c':
          if (optarg == NULL || strcmp(optarg, "always") == 0)
@@ -1224,22 +1234,8 @@ int main(int argc, char *argv[])
    if (optind < argc)
       input_file = argv[optind];
 
-   for (i = 0; i < ARRAY_SIZE(gens); i++) {
-      if (!strcmp(gen_val, gens[i].name)) {
-         gen = &gens[i];
-         break;
-      }
-   }
-
-   if (gen == NULL) {
-      fprintf(stderr, "can't parse gen: '%s', expected ivb, byt, hsw, "
-                             "bdw, chv, skl, kbl or bxt\n", gen_val);
-      exit(EXIT_FAILURE);
-   }
-
-   if (!gen_get_device_info(gen->pci_id, &devinfo)) {
-      fprintf(stderr, "can't find device information: pci_id=0x%x name=%s\n",
-              gen->pci_id, gen->name);
+   if (!gen_get_device_info(pci_id, &devinfo)) {
+      fprintf(stderr, "can't find device information: pci_id=0x%x\n", pci_id);
       exit(EXIT_FAILURE);
    }
 
@@ -1255,7 +1251,7 @@ int main(int argc, char *argv[])
       spec = gen_spec_load(&devinfo);
    else
       spec = gen_spec_load_from_path(&devinfo, xml_path);
-   disasm = gen_disasm_create(gen->pci_id);
+   disasm = gen_disasm_create(pci_id);
 
    if (spec == NULL || disasm == NULL)
       exit(EXIT_FAILURE);
