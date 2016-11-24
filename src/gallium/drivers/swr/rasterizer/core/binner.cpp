@@ -383,7 +383,7 @@ PFN_PROCESS_ATTRIBUTES GetProcessAttributesFunc(uint32_t NumVerts, bool IsSwizzl
 /// @param clipDistMask - mask of enabled clip distances
 /// @param pUserClipBuffer - buffer to store results
 template<uint32_t NumVerts>
-void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask, float* pUserClipBuffer)
+void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask, float *pRecipW, float* pUserClipBuffer)
 {
     DWORD clipDist;
     while (_BitScanForward(&clipDist, clipDistMask))
@@ -407,11 +407,12 @@ void ProcessUserClipDist(PA_STATE& pa, uint32_t primIndex, uint8_t clipDistMask,
 
         // setup plane equations for barycentric interpolation in the backend
         float baryCoeff[NumVerts];
+        float last = vertClipDist[NumVerts - 1] * pRecipW[NumVerts - 1];
         for (uint32_t e = 0; e < NumVerts - 1; ++e)
         {
-            baryCoeff[e] = vertClipDist[e] - vertClipDist[NumVerts - 1];
+            baryCoeff[e] = vertClipDist[e] * pRecipW[e] - last;
         }
-        baryCoeff[NumVerts - 1] = vertClipDist[NumVerts - 1];
+        baryCoeff[NumVerts - 1] = last;
 
         for (uint32_t e = 0; e < NumVerts; ++e)
         {
@@ -834,7 +835,7 @@ endBinTriangles:
         {
             uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
             desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 3 * sizeof(float));
-            ProcessUserClipDist<3>(pa, triIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
+            ProcessUserClipDist<3>(pa, triIndex, rastState.clipDistanceMask, &desc.pTriBuffer[12], desc.pUserClipBuffer);
         }
 
         for (uint32_t y = aMTTop[triIndex]; y <= aMTBottom[triIndex]; ++y)
@@ -1184,8 +1185,9 @@ void BinPoints(
             if (rastState.clipDistanceMask)
             {
                 uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
+                float one[2] = {1.0f, 1.0f};
                 desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 2 * sizeof(float));
-                ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
+                ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, one, desc.pUserClipBuffer);
             }
 
             MacroTileMgr *pTileMgr = pDC->pTileMgr;
@@ -1396,7 +1398,7 @@ void BinPostSetupLines(
         {
             uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
             desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 2 * sizeof(float));
-            ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, desc.pUserClipBuffer);
+            ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, &desc.pTriBuffer[12], desc.pUserClipBuffer);
         }
 
         MacroTileMgr *pTileMgr = pDC->pTileMgr;
