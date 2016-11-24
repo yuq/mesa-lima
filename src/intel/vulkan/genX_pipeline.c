@@ -1100,8 +1100,18 @@ emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
    }
 }
 
+static bool
+is_dual_src_blend_factor(VkBlendFactor factor)
+{
+   return factor == VK_BLEND_FACTOR_SRC1_COLOR ||
+          factor == VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR ||
+          factor == VK_BLEND_FACTOR_SRC1_ALPHA ||
+          factor == VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+}
+
 static void
-emit_3dstate_ps(struct anv_pipeline *pipeline)
+emit_3dstate_ps(struct anv_pipeline *pipeline,
+                const VkPipelineColorBlendStateCreateInfo *blend)
 {
    MAYBE_UNUSED const struct gen_device_info *devinfo = &pipeline->device->info;
    const struct anv_shader_bin *fs_bin =
@@ -1120,6 +1130,26 @@ emit_3dstate_ps(struct anv_pipeline *pipeline)
    }
 
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+
+#if GEN_GEN < 8
+   /* The hardware wedges if you have this bit set but don't turn on any dual
+    * source blend factors.
+    */
+   bool dual_src_blend = false;
+   if (wm_prog_data->dual_src_blend) {
+      for (uint32_t i = 0; i < blend->attachmentCount; i++) {
+         VkPipelineColorBlendAttachmentState *bstate = &blend->pAttachments[i];
+         if (bstate->blendEnable &&
+             (is_dual_src_blend_factor(bstate->srcColorBlendFactor) ||
+              is_dual_src_blend_factor(bstate->dstColorBlendFactor) ||
+              is_dual_src_blend_factor(bstate->srcAlphaBlendFactor) ||
+              is_dual_src_blend_factor(bstate->dstAlphaBlendFactor))) {
+            dual_src_blend = true;
+            break;
+         }
+      }
+   }
+#endif
 
    anv_batch_emit(&pipeline->batch, GENX(3DSTATE_PS), ps) {
       ps.KernelStartPointer0        = fs_bin->kernel.offset;
@@ -1140,7 +1170,7 @@ emit_3dstate_ps(struct anv_pipeline *pipeline)
 #if GEN_GEN < 8
       ps.AttributeEnable            = wm_prog_data->num_varying_inputs > 0;
       ps.oMaskPresenttoRenderTarget = wm_prog_data->uses_omask;
-      ps.DualSourceBlendEnable      = wm_prog_data->dual_src_blend;
+      ps.DualSourceBlendEnable      = dual_src_blend;
 #endif
 
 #if GEN_IS_HASWELL
@@ -1286,7 +1316,7 @@ genX(graphics_pipeline_create)(
    emit_3dstate_gs(pipeline);
    emit_3dstate_sbe(pipeline);
    emit_3dstate_wm(pipeline, subpass, pCreateInfo->pMultisampleState);
-   emit_3dstate_ps(pipeline);
+   emit_3dstate_ps(pipeline, pCreateInfo->pColorBlendState);
 #if GEN_GEN >= 8
    emit_3dstate_ps_extra(pipeline, subpass);
    emit_3dstate_vf_topology(pipeline);
