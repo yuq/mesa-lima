@@ -101,7 +101,7 @@ vk_to_gen_tex_filter(VkFilter filter, bool anisotropyEnable)
    default:
       assert(!"Invalid filter");
    case VK_FILTER_NEAREST:
-      return MAPFILTER_NEAREST;
+      return anisotropyEnable ? MAPFILTER_ANISOTROPIC : MAPFILTER_NEAREST;
    case VK_FILTER_LINEAR:
       return anisotropyEnable ? MAPFILTER_ANISOTROPIC : MAPFILTER_LINEAR;
    }
