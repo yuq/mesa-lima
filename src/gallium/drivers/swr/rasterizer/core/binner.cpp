@@ -1185,9 +1185,15 @@ void BinPoints(
             if (rastState.clipDistanceMask)
             {
                 uint32_t numClipDist = _mm_popcnt_u32(rastState.clipDistanceMask);
-                float one[2] = {1.0f, 1.0f};
-                desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 2 * sizeof(float));
-                ProcessUserClipDist<2>(pa, primIndex, rastState.clipDistanceMask, one, desc.pUserClipBuffer);
+                desc.pUserClipBuffer = (float*)pArena->Alloc(numClipDist * 3 * sizeof(float));
+                float dists[8];
+                float one = 1.0f;
+                ProcessUserClipDist<1>(pa, primIndex, rastState.clipDistanceMask, &one, dists);
+                for (uint32_t i = 0; i < numClipDist; i++) {
+                    desc.pUserClipBuffer[3*i + 0] = 0.0f;
+                    desc.pUserClipBuffer[3*i + 1] = 0.0f;
+                    desc.pUserClipBuffer[3*i + 2] = dists[i];
+                }
             }
 
             MacroTileMgr *pTileMgr = pDC->pTileMgr;
