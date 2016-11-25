@@ -433,8 +433,8 @@ anv_state_clflush(struct anv_state state)
    anv_clflush_range(state.map, state.alloc_size);
 }
 
-void anv_block_pool_init(struct anv_block_pool *pool,
-                         struct anv_device *device, uint32_t block_size);
+VkResult anv_block_pool_init(struct anv_block_pool *pool,
+                             struct anv_device *device, uint32_t block_size);
 void anv_block_pool_finish(struct anv_block_pool *pool);
 int32_t anv_block_pool_alloc(struct anv_block_pool *pool);
 int32_t anv_block_pool_alloc_back(struct anv_block_pool *pool);
