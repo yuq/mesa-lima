@@ -611,13 +611,11 @@ void radv_GetPhysicalDeviceMemoryProperties(
 	};
 }
 
-static VkResult
+static void
 radv_queue_init(struct radv_device *device, struct radv_queue *queue)
 {
 	queue->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	queue->device = device;
-
-	return VK_SUCCESS;
 }
 
 static void
