@@ -737,14 +737,12 @@ PFN_vkVoidFunction anv_GetDeviceProcAddr(
    return anv_lookup_entrypoint(&device->info, pName);
 }
 
-static VkResult
+static void
 anv_queue_init(struct anv_device *device, struct anv_queue *queue)
 {
    queue->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
    queue->device = device;
    queue->pool = &device->surface_state_pool;
-
-   return VK_SUCCESS;
 }
 
 static void
