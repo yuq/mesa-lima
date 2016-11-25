@@ -319,6 +319,12 @@ upload_raster(struct brw_context *brw)
       }
    }
 
+   /* _NEW_POLYGON */
+   if (ctx->IntelConservativeRasterization) {
+      if (brw->gen >= 9)
+         dw1 |= GEN9_RASTER_CONSERVATIVE_RASTERIZATION_ENABLE;
+   }
+
    BEGIN_BATCH(5);
    OUT_BATCH(_3DSTATE_RASTER << 16 | (5 - 2));
    OUT_BATCH(dw1);

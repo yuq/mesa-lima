@@ -6455,6 +6455,7 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
 
    prog_data->early_fragment_tests = shader->info->fs.early_fragment_tests;
    prog_data->post_depth_coverage = shader->info->fs.post_depth_coverage;
+   prog_data->inner_coverage = shader->info->fs.inner_coverage;
 
    prog_data->barycentric_interp_modes =
       brw_compute_barycentric_interp_modes(compiler->devinfo, shader);
