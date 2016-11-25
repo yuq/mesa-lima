@@ -103,7 +103,6 @@ PUBLIC VAStatus
 VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
 {
    vlVaDriver *drv;
-   struct drm_state *drm_info;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -127,7 +126,7 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
    case VA_DISPLAY_WAYLAND:
    case VA_DISPLAY_DRM:
    case VA_DISPLAY_DRM_RENDERNODES: {
-      drm_info = (struct drm_state *) ctx->drm_state;
+      const struct drm_state *drm_info = (struct drm_state *) ctx->drm_state;
 
       if (!drm_info || drm_info->fd < 0) {
          FREE(drv);
