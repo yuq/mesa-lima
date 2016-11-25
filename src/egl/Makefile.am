@@ -70,18 +70,18 @@ libEGL_common_la_LIBADD += $(top_builddir)/src/egl/wayland/wayland-drm/libwaylan
 dri2_backend_FILES += drivers/dri2/platform_wayland.c
 endif
 
-if HAVE_EGL_PLATFORM_DRM
+if HAVE_PLATFORM_DRM
 AM_CFLAGS += -DHAVE_DRM_PLATFORM
 libEGL_common_la_LIBADD += $(top_builddir)/src/gbm/libgbm.la
 dri2_backend_FILES += drivers/dri2/platform_drm.c
 endif
 
-if HAVE_EGL_PLATFORM_SURFACELESS
+if HAVE_PLATFORM_SURFACELESS
 AM_CFLAGS += -DHAVE_SURFACELESS_PLATFORM
 dri2_backend_FILES += drivers/dri2/platform_surfaceless.c
 endif
 
-if HAVE_EGL_PLATFORM_ANDROID
+if HAVE_PLATFORM_ANDROID
 AM_CFLAGS += -DHAVE_ANDROID_PLATFORM
 AM_CFLAGS += $(ANDROID_CFLAGS)
 libEGL_common_la_LIBADD += $(ANDROID_LIBS)
