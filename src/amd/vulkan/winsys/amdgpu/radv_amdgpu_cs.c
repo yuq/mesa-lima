@@ -54,6 +54,7 @@ struct radv_amdgpu_cs {
 	bool                        is_chained;
 
 	int                         buffer_hash_table[1024];
+	unsigned                    hw_ip;
 };
 
 static inline struct radv_amdgpu_cs *
@@ -62,6 +63,19 @@ radv_amdgpu_cs(struct radeon_winsys_cs *base)
 	return (struct radv_amdgpu_cs*)base;
 }
 
+static int ring_to_hw_ip(enum ring_type ring)
+{
+	switch (ring) {
+	case RING_GFX:
+		return AMDGPU_HW_IP_GFX;
+	case RING_DMA:
+		return AMDGPU_HW_IP_DMA;
+	case RING_COMPUTE:
+		return AMDGPU_HW_IP_COMPUTE;
+	default:
+		unreachable("unsupported ring");
+	}
+}
 
 static void radv_amdgpu_request_to_fence(struct radv_amdgpu_ctx *ctx,
 					 struct amdgpu_cs_fence *fence,
@@ -137,6 +151,7 @@ static boolean radv_amdgpu_init_cs(struct radv_amdgpu_cs *cs,
 	for (int i = 0; i < ARRAY_SIZE(cs->buffer_hash_table); ++i)
 		cs->buffer_hash_table[i] = -1;
 
+	cs->hw_ip = ring_to_hw_ip(ring_type);
 	return true;
 }
 
@@ -151,7 +166,7 @@ radv_amdgpu_cs_create(struct radeon_winsys *ws,
 		return NULL;
 
 	cs->ws = radv_amdgpu_winsys(ws);
-	radv_amdgpu_init_cs(cs, RING_GFX);
+	radv_amdgpu_init_cs(cs, ring_type);
 
 	if (cs->ws->use_ib_bos) {
 		cs->ib_buffer = ws->buffer_create(ws, ib_size, 0,
@@ -526,7 +541,7 @@ static int radv_amdgpu_winsys_cs_submit_chained(struct radeon_winsys_ctx *_ctx,
 		return r;
 	}
 
-	request.ip_type = AMDGPU_HW_IP_GFX;
+	request.ip_type = cs0->hw_ip;
 	request.number_of_ibs = 1;
 	request.ibs = &cs0->ib;
 	request.resources = bo_list;
@@ -576,7 +591,7 @@ static int radv_amdgpu_winsys_cs_submit_fallback(struct radeon_winsys_ctx *_ctx,
 			return r;
 		}
 
-		request.ip_type = AMDGPU_HW_IP_GFX;
+		request.ip_type = cs0->hw_ip;
 		request.resources = bo_list;
 		request.number_of_ibs = cnt;
 		request.ibs = ibs;
@@ -676,7 +691,7 @@ static int radv_amdgpu_winsys_cs_submit_sysmem(struct radeon_winsys_ctx *_ctx,
 		ib.size = size;
 		ib.ib_mc_address = ws->buffer_get_va(bo);
 
-		request.ip_type = AMDGPU_HW_IP_GFX;
+		request.ip_type = cs0->hw_ip;
 		request.resources = bo_list;
 		request.number_of_ibs = 1;
 		request.ibs = &ib;
@@ -759,7 +774,7 @@ static bool radv_amdgpu_ctx_wait_idle(struct radeon_winsys_ctx *rwctx)
 		struct amdgpu_cs_fence fence;
 
 		fence.context = ctx->ctx;
-		fence.ip_type = RING_GFX;
+		fence.ip_type = AMDGPU_HW_IP_GFX;
 		fence.ip_instance = 0;
 		fence.ring = 0;
 		fence.fence = ctx->last_seq_no;
