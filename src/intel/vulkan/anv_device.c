@@ -993,9 +993,9 @@ void anv_DestroyDevice(
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
 
-   anv_queue_finish(&device->queue);
-
    anv_device_finish_blorp(device);
+
+   anv_queue_finish(&device->queue);
 
 #ifdef HAVE_VALGRIND
    /* We only need to free these to prevent valgrind errors.  The backing
@@ -1004,21 +1004,26 @@ void anv_DestroyDevice(
    anv_state_pool_free(&device->dynamic_state_pool, device->border_colors);
 #endif
 
+   anv_scratch_pool_finish(device, &device->scratch_pool);
+
    anv_gem_munmap(device->workaround_bo.map, device->workaround_bo.size);
    anv_gem_close(device, device->workaround_bo.gem_handle);
 
-   anv_bo_pool_finish(&device->batch_bo_pool);
-   anv_state_pool_finish(&device->dynamic_state_pool);
-   anv_block_pool_finish(&device->dynamic_state_block_pool);
-   anv_state_pool_finish(&device->instruction_state_pool);
-   anv_block_pool_finish(&device->instruction_block_pool);
    anv_state_pool_finish(&device->surface_state_pool);
    anv_block_pool_finish(&device->surface_state_block_pool);
-   anv_scratch_pool_finish(device, &device->scratch_pool);
+   anv_state_pool_finish(&device->instruction_state_pool);
+   anv_block_pool_finish(&device->instruction_block_pool);
+   anv_state_pool_finish(&device->dynamic_state_pool);
+   anv_block_pool_finish(&device->dynamic_state_block_pool);
+
+   anv_bo_pool_finish(&device->batch_bo_pool);
+
+   pthread_cond_destroy(&device->queue_submit);
+   pthread_mutex_destroy(&device->mutex);
+
+   anv_gem_destroy_context(device, device->context_id);
 
    close(device->fd);
-
-   pthread_mutex_destroy(&device->mutex);
 
    vk_free(&device->alloc, device);
 }
