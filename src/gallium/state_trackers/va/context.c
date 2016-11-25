@@ -136,8 +136,8 @@ VA_DRIVER_INIT_FUNC(VADriverContextP ctx)
       drv->vscreen = vl_drm_screen_create(drm_info->fd);
       if (!drv->vscreen)
          goto error_screen;
-      }
       break;
+   }
    default:
       FREE(drv);
       return VA_STATUS_ERROR_INVALID_DISPLAY;
