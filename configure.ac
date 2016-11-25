@@ -1666,9 +1666,9 @@ AC_ARG_WITH([platforms],
     [with_platforms="$withval"],
     [with_platforms=auto])
 
-# For the time being, we still reuse the EGL named variables/defines.
-if test "x$with_platforms" != xauto; then
-    with_egl_platforms=$with_platforms
+# Reuse the autodetection rather than duplicating it.
+if test "x$with_platforms" = xauto; then
+    with_platforms=$with_egl_platforms
 fi
 
 PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
@@ -1678,16 +1678,16 @@ if test "x$WAYLAND_SCANNER" = x; then
     AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
 fi
 
-# Do per-EGL platform setups and checks
-egl_platforms=`IFS=', '; echo $with_egl_platforms`
-for plat in $egl_platforms; do
+# Do per platform setups and checks
+platforms=`IFS=', '; echo $with_platforms`
+for plat in $platforms; do
 	case "$plat" in
 	wayland)
 
 		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
 
 		if test "x$WAYLAND_SCANNER" = "x:"; then
-			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland egl platform])
+			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
 		fi
 		;;
 
@@ -1708,7 +1708,7 @@ for plat in $egl_platforms; do
 		;;
 
 	*)
-		AC_MSG_ERROR([EGL platform '$plat' does not exist])
+		AC_MSG_ERROR([platform '$plat' does not exist])
 		;;
 	esac
 
@@ -1719,11 +1719,11 @@ for plat in $egl_platforms; do
 	esac
 done
 
-AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$egl_platforms" | grep -q 'x11')
-AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
-AM_CONDITIONAL(HAVE_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
-AM_CONDITIONAL(HAVE_PLATFORM_SURFACELESS, echo "$egl_platforms" | grep -q 'surfaceless')
-AM_CONDITIONAL(HAVE_PLATFORM_ANDROID, echo "$egl_platforms" | grep -q 'android')
+AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$platforms" | grep -q 'x11')
+AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$platforms" | grep -q 'wayland')
+AM_CONDITIONAL(HAVE_PLATFORM_DRM, echo "$platforms" | grep -q 'drm')
+AM_CONDITIONAL(HAVE_PLATFORM_SURFACELESS, echo "$platforms" | grep -q 'surfaceless')
+AM_CONDITIONAL(HAVE_PLATFORM_ANDROID, echo "$platforms" | grep -q 'android')
 
 dnl
 dnl More DRI setup
@@ -2230,8 +2230,8 @@ AM_CONDITIONAL(HAVE_GALLIUM, test -n "$with_gallium_drivers")
 
 # libEGL wants to default to the first platform specified in
 # ./configure.  parse that here.
-if test "x$egl_platforms" != "x"; then
-    FIRST_PLATFORM_CAPS=`echo $egl_platforms | sed 's| .*||' | tr '[[a-z]]' '[[A-Z]]'`
+if test "x$platforms" != "x"; then
+    FIRST_PLATFORM_CAPS=`echo $platforms | sed 's| .*||' | tr '[[a-z]]' '[[A-Z]]'`
     EGL_NATIVE_PLATFORM="_EGL_PLATFORM_$FIRST_PLATFORM_CAPS"
 else
     EGL_NATIVE_PLATFORM="_EGL_INVALID_PLATFORM"
@@ -2242,7 +2242,7 @@ AC_SUBST([EGL_CFLAGS])
 
 # If we don't have the X11 platform, set this define so we don't try to include
 # the X11 headers.
-if ! echo "$egl_platforms" | grep -q 'x11'; then
+if ! echo "$platforms" | grep -q 'x11'; then
     DEFINES="$DEFINES -DMESA_EGL_NO_X11_HEADERS"
     GL_PC_CFLAGS="$GL_PC_CFLAGS -DMESA_EGL_NO_X11_HEADERS"
 fi
@@ -2312,7 +2312,7 @@ dnl DRM is needed by X, Wayland, and offscreen rendering.
 dnl Surfaceless is an alternative for the last one.
 dnl
 require_basic_egl() {
-    case "$with_egl_platforms" in
+    case "$with_platforms" in
         *drm*|*surfaceless*)
             ;;
         *)
@@ -2867,7 +2867,7 @@ else
     echo "        GBM:             no"
 fi
 
-    echo "        EGL/Vulkan/VL platforms:   $egl_platforms"
+    echo "        EGL/Vulkan/VL platforms:   $platforms"
 
 # Vulkan
 echo ""
