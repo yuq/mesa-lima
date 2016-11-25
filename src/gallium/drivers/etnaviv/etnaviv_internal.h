@@ -47,6 +47,17 @@
 /* PE render targets must be aligned to 64 bytes */
 #define ETNA_PE_ALIGNMENT (64)
 
+/* These demarcate the margin (fixp16) between the computed sizes and the
+  value sent to the chip. These have been set to the numbers used by the
+  Vivante driver on gc2000. They used to be -1 for scissor right and bottom. I
+  am not sure whether older hardware was relying on these or they were just a
+  guess. But if so, these need to be moved to the _specs structure.
+*/
+#define ETNA_SE_SCISSOR_MARGIN_RIGHT (0x1119)
+#define ETNA_SE_SCISSOR_MARGIN_BOTTOM (0x1111)
+#define ETNA_SE_CLIP_MARGIN_RIGHT (0xffff)
+#define ETNA_SE_CLIP_MARGIN_BOTTOM (0xffff)
+
 /* GPU chip 3D specs */
 struct etna_specs {
    /* supports SUPERTILE (64x64) tiling? */
@@ -128,6 +139,8 @@ struct compiled_scissor_state {
    uint32_t SE_SCISSOR_TOP;
    uint32_t SE_SCISSOR_RIGHT;
    uint32_t SE_SCISSOR_BOTTOM;
+   uint32_t SE_CLIP_RIGHT;
+   uint32_t SE_CLIP_BOTTOM;
 };
 
 /* Compiled pipe_viewport_state */
@@ -142,6 +155,8 @@ struct compiled_viewport_state {
    uint32_t SE_SCISSOR_TOP;
    uint32_t SE_SCISSOR_RIGHT;
    uint32_t SE_SCISSOR_BOTTOM;
+   uint32_t SE_CLIP_RIGHT;
+   uint32_t SE_CLIP_BOTTOM;
    uint32_t PE_DEPTH_NEAR;
    uint32_t PE_DEPTH_FAR;
 };
@@ -164,6 +179,8 @@ struct compiled_framebuffer_state {
    uint32_t SE_SCISSOR_TOP;
    uint32_t SE_SCISSOR_RIGHT;
    uint32_t SE_SCISSOR_BOTTOM;
+   uint32_t SE_CLIP_RIGHT;
+   uint32_t SE_CLIP_BOTTOM;
    uint32_t RA_MULTISAMPLE_UNK00E04;
    uint32_t RA_MULTISAMPLE_UNK00E10[VIVS_RA_MULTISAMPLE_UNK00E10__LEN];
    uint32_t RA_CENTROID_TABLE[VIVS_RA_CENTROID_TABLE__LEN];
