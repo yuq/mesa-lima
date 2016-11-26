@@ -232,7 +232,6 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_USER_VERTEX_BUFFERS:
    case PIPE_CAP_USER_INDEX_BUFFERS:
    case PIPE_CAP_USER_CONSTANT_BUFFERS:
-   case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
    case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
    case PIPE_CAP_QUERY_TIMESTAMP:
    case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
@@ -312,6 +311,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
    case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
    case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
+   case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
       return 0;
 
    case PIPE_CAP_VENDOR_ID:
