@@ -814,10 +814,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_MOV(ureg, rD, ureg_imm1f(ureg, 0.0f));
         ureg_MOV(ureg, rA, ureg_imm1f(ureg, 0.0f));
         ureg_MOV(ureg, rS, ureg_imm1f(ureg, 0.0f));
-        rD = ureg_saturate(rD);
-        rA = ureg_saturate(rA);
-        rS = ureg_saturate(rS);
-
 
         /* loop management */
         ureg_BGNLOOP(ureg, &label[loop_label]);
