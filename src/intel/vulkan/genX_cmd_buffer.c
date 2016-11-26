@@ -2181,11 +2181,14 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
           *    - SURFTYPE_1D: distance in pixels between array slices
           *    - SURFTYPE_2D/CUBE: distance in rows between array slices
           *    - SURFTYPE_3D: distance in rows between R - slices
+          *
+          * Unfortunately, the docs aren't 100% accurate here.  They fail to
+          * mention that the 1-D rule only applies to linear 1-D images.
+          * Since depth and HiZ buffers are always tiled, they are treated as
+          * 2-D images.  Prior to Sky Lake, this field is always in rows.
           */
          hdb.SurfaceQPitch =
-            image->aux_surface.isl.dim == ISL_SURF_DIM_1D ?
-               isl_surf_get_array_pitch_el(&image->aux_surface.isl) >> 2 :
-               isl_surf_get_array_pitch_el_rows(&image->aux_surface.isl) >> 2;
+            isl_surf_get_array_pitch_el_rows(&image->aux_surface.isl) >> 2;
 #endif
       }
    } else {
