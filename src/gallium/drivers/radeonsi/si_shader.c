@@ -6487,7 +6487,10 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 
 	exports.num = 0;
 
-	if (shader->key.as_es || shader->key.as_ls)
+	if (ctx->type == PIPE_SHADER_FRAGMENT ||
+	    ctx->type == PIPE_SHADER_COMPUTE ||
+	    shader->key.as_es ||
+	    shader->key.as_ls)
 		return;
 
 	/* Process all LLVM instructions. */
