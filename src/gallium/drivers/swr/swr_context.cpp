@@ -301,7 +301,10 @@ swr_blit(struct pipe_context *pipe, const struct pipe_blit_info *blit_info)
       return;
    }
 
-   /* XXX turn off occlusion and streamout queries */
+   if (ctx->active_queries) {
+      SwrEnableStatsFE(ctx->swrContext, FALSE);
+      SwrEnableStatsBE(ctx->swrContext, FALSE);
+   }
 
    util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vertex_buffer);
    util_blitter_save_vertex_elements(ctx->blitter, (void *)ctx->velems);
@@ -335,6 +338,11 @@ swr_blit(struct pipe_context *pipe, const struct pipe_blit_info *blit_info)
                                       ctx->render_cond_mode);
 
    util_blitter_blit(ctx->blitter, &info);
+
+   if (ctx->active_queries) {
+      SwrEnableStatsFE(ctx->swrContext, TRUE);
+      SwrEnableStatsBE(ctx->swrContext, TRUE);
+   }
 }
 
 
