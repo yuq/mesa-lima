@@ -1570,7 +1570,7 @@ swr_set_so_targets(struct pipe_context *pipe,
 
    swr->num_so_targets = num_targets;
 
-   swr->dirty = SWR_NEW_SO;
+   swr->dirty |= SWR_NEW_SO;
 }
 
 
