@@ -5348,6 +5348,9 @@ static unsigned llvm_get_type_size(LLVMTypeRef type)
 	case LLVMVectorTypeKind:
 		return LLVMGetVectorSize(type) *
 		       llvm_get_type_size(LLVMGetElementType(type));
+	case LLVMArrayTypeKind:
+		return LLVMGetArrayLength(type) *
+		       llvm_get_type_size(LLVMGetElementType(type));
 	default:
 		assert(0);
 		return 0;
@@ -5996,13 +5999,15 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			"VGPRS: %d\n"
 		        "Spilled SGPRs: %d\n"
 			"Spilled VGPRs: %d\n"
+			"Private memory VGPRs: %d\n"
 			"Code Size: %d bytes\n"
 			"LDS: %d blocks\n"
 			"Scratch: %d bytes per wave\n"
 			"Max Waves: %d\n"
 			"********************\n\n\n",
 			conf->num_sgprs, conf->num_vgprs,
-			conf->spilled_sgprs, conf->spilled_vgprs, code_size,
+			conf->spilled_sgprs, conf->spilled_vgprs,
+			conf->private_mem_vgprs, code_size,
 			conf->lds_size, conf->scratch_bytes_per_wave,
 			max_simd_waves);
 	}
@@ -6010,11 +6015,11 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	pipe_debug_message(debug, SHADER_INFO,
 			   "Shader Stats: SGPRS: %d VGPRS: %d Code Size: %d "
 			   "LDS: %d Scratch: %d Max Waves: %d Spilled SGPRs: %d "
-			   "Spilled VGPRs: %d",
+			   "Spilled VGPRs: %d PrivMem VGPRs: %d",
 			   conf->num_sgprs, conf->num_vgprs, code_size,
 			   conf->lds_size, conf->scratch_bytes_per_wave,
 			   max_simd_waves, conf->spilled_sgprs,
-			   conf->spilled_vgprs);
+			   conf->spilled_vgprs, conf->private_mem_vgprs);
 }
 
 static const char *si_get_shader_name(struct si_shader *shader,
@@ -6568,6 +6573,32 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 			}
 		}
 		shader->info.nr_param_exports = new_count;
+	}
+}
+
+static void si_count_scratch_private_memory(struct si_shader_context *ctx)
+{
+	ctx->shader->config.private_mem_vgprs = 0;
+
+	/* Process all LLVM instructions. */
+	LLVMBasicBlockRef bb = LLVMGetFirstBasicBlock(ctx->main_fn);
+	while (bb) {
+		LLVMValueRef next = LLVMGetFirstInstruction(bb);
+
+		while (next) {
+			LLVMValueRef inst = next;
+			next = LLVMGetNextInstruction(next);
+
+			if (LLVMGetInstructionOpcode(inst) != LLVMAlloca)
+				continue;
+
+			LLVMTypeRef type = LLVMGetElementType(LLVMTypeOf(inst));
+			/* No idea why LLVM aligns allocas to 4 elements. */
+			unsigned alignment = LLVMGetAlignment(inst);
+			unsigned dw_size = align(llvm_get_type_size(type) / 4, alignment);
+			ctx->shader->config.private_mem_vgprs += dw_size;
+		}
+		bb = LLVMGetNextBasicBlock(bb);
 	}
 }
 
@@ -7227,8 +7258,12 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	si_llvm_finalize_module(&ctx,
 				    r600_extra_shader_checks(&sscreen->b, ctx.type));
 
-	/* Post-optimization transformations. */
+	/* Post-optimization transformations and analysis. */
 	si_eliminate_const_vs_outputs(&ctx);
+
+	if ((debug && debug->debug_message) ||
+	    r600_can_dump_shader(&sscreen->b, ctx.type))
+		si_count_scratch_private_memory(&ctx);
 
 	/* Compile to bytecode. */
 	r = si_compile_llvm(sscreen, &shader->binary, &shader->config, tm,
