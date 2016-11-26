@@ -765,7 +765,7 @@ void SetupMacroTileScissors(DRAW_CONTEXT *pDC)
         tileAligned  = (scissorInFixedPoint.xmin % KNOB_TILE_X_DIM) == 0;
         tileAligned &= (scissorInFixedPoint.ymin % KNOB_TILE_Y_DIM) == 0;
         tileAligned &= (scissorInFixedPoint.xmax % KNOB_TILE_X_DIM) == 0;
-        tileAligned &= (scissorInFixedPoint.xmax % KNOB_TILE_Y_DIM) == 0;
+        tileAligned &= (scissorInFixedPoint.ymax % KNOB_TILE_Y_DIM) == 0;
 
         pState->scissorsTileAligned &= tileAligned;
 
