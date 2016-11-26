@@ -454,6 +454,10 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 
 		/* Only set dual source blending for MRT0 to avoid a hang. */
 		if (i >= 1 && blend->dual_src_blend) {
+			/* Vulkan does this for dual source blending. */
+			if (i == 1)
+				blend_cntl |= S_028780_ENABLE(1);
+
 			si_pm4_set_reg(pm4, R_028780_CB_BLEND0_CONTROL + i * 4, blend_cntl);
 			continue;
 		}
