@@ -557,6 +557,17 @@ static void *si_create_blend_state_mode(struct pipe_context *ctx,
 	}
 
 	if (sctx->b.family == CHIP_STONEY) {
+		/* Disable RB+ blend optimizations for dual source blending.
+		 * Vulkan does this.
+		 */
+		if (blend->dual_src_blend) {
+			for (int i = 0; i < 8; i++) {
+				sx_mrt_blend_opt[i] =
+					S_028760_COLOR_COMB_FCN(V_028760_OPT_COMB_NONE) |
+					S_028760_ALPHA_COMB_FCN(V_028760_OPT_COMB_NONE);
+			}
+		}
+
 		for (int i = 0; i < 8; i++)
 			si_pm4_set_reg(pm4, R_028760_SX_MRT0_BLEND_OPT + i * 4,
 				       sx_mrt_blend_opt[i]);
