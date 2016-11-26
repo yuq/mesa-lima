@@ -179,7 +179,6 @@ anv_physical_device_init(struct anv_physical_device *device,
    if (result != VK_SUCCESS)
        goto fail;
 
-   /* XXX: Actually detect bit6 swizzling */
    isl_device_init(&device->isl_dev, &device->info, swizzled);
 
    return VK_SUCCESS;
