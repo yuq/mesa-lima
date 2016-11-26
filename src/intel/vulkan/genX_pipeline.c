@@ -1138,7 +1138,9 @@ emit_3dstate_ps(struct anv_pipeline *pipeline,
    bool dual_src_blend = false;
    if (wm_prog_data->dual_src_blend) {
       for (uint32_t i = 0; i < blend->attachmentCount; i++) {
-         VkPipelineColorBlendAttachmentState *bstate = &blend->pAttachments[i];
+         const VkPipelineColorBlendAttachmentState *bstate =
+            &blend->pAttachments[i];
+
          if (bstate->blendEnable &&
              (is_dual_src_blend_factor(bstate->srcColorBlendFactor) ||
               is_dual_src_blend_factor(bstate->dstColorBlendFactor) ||
