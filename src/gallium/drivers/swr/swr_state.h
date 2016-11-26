@@ -72,6 +72,8 @@ struct swr_vertex_element_state {
    FETCH_COMPILE_STATE fsState;
    PFN_FETCH_FUNC fsFunc;
    uint32_t stream_pitch[PIPE_MAX_ATTRIBS];
+   uint32_t min_instance_div[PIPE_MAX_ATTRIBS];
+   uint32_t instanced_bufs;
 };
 
 struct swr_blend_state {
