@@ -206,7 +206,7 @@ static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
  * CONST[12..15] D3DTS_VIEW^(-1)
  * CONST[16..18] Normal matrix
  *
- * CONST[19]      MATERIAL.Emissive + Material.Ambient * RS.Ambient
+ * CONST[19].xyz  MATERIAL.Emissive + Material.Ambient * RS.Ambient
  * CONST[20]      MATERIAL.Diffuse
  * CONST[21]      MATERIAL.Ambient
  * CONST[22]      MATERIAL.Specular
@@ -914,11 +914,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         ureg_fixup_label(ureg, label[loop_label], ureg_get_instruction_number(ureg));
         ureg_ENDLOOP(ureg, &label[loop_label]);
 
-        /* Set alpha factors of illumination to 1.0 for the multiplications. */
-        rD.WriteMask = TGSI_WRITEMASK_W; rD.Saturate = 0;
-        rA.WriteMask = TGSI_WRITEMASK_W; rA.Saturate = 0;
-        ureg_MOV(ureg, rD, ureg_imm1f(ureg, 1.0f));
-
         /* Apply to material:
          *
          * oCol[0] = (material.emissive + material.ambient * rs.ambient) +
@@ -926,16 +921,15 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
          *           material.diffuse * diffuse +
          * oCol[1] = material.specular * specular;
          */
-        if (key->mtl_emissive == 0 && key->mtl_ambient == 0) {
-            ureg_MOV(ureg, rA, ureg_imm1f(ureg, 1.0f));
-            ureg_MAD(ureg, tmp, ureg_src(rA), vs->mtlA, _CONST(19));
-        } else {
+        if (key->mtl_emissive == 0 && key->mtl_ambient == 0)
+            ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(rA), vs->mtlA, _CONST(19));
+        else {
             ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(rA), _CONST(25));
             ureg_MAD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), vs->mtlA, ureg_src(tmp), vs->mtlE);
-            ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_W  ), vs->mtlA, vs->mtlE);
         }
 
-        ureg_MAD(ureg, oCol[0], ureg_src(rD), vs->mtlD, ureg_src(tmp));
+        ureg_MAD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_XYZ), ureg_src(rD), vs->mtlD, ureg_src(tmp));
+        ureg_MOV(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), vs->mtlD);
         ureg_MUL(ureg, oCol[1], ureg_src(rS), vs->mtlS);
         ureg_release_temporary(ureg, rAtt);
         ureg_release_temporary(ureg, rHit);
@@ -949,15 +943,11 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
     } else
     /* COLOR */
     if (key->darkness) {
-        if (key->mtl_emissive == 0 && key->mtl_ambient == 0) {
-            ureg_MAD(ureg, oCol[0], vs->mtlD, ureg_imm4f(ureg, 0.0f, 0.0f, 0.0f, 1.0f), _CONST(19));
-        } else {
-            struct ureg_dst tmp = ureg_DECL_temporary(ureg);
+        if (key->mtl_emissive == 0 && key->mtl_ambient == 0)
+            ureg_MOV(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_XYZ), _CONST(19));
+        else
             ureg_MAD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_XYZ), vs->mtlA, _CONST(25), vs->mtlE);
-            ureg_ADD(ureg, ureg_writemask(tmp,     TGSI_WRITEMASK_W), vs->mtlA, vs->mtlE);
-            ureg_ADD(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), vs->mtlD, _W(tmp));
-            ureg_release_temporary(ureg, tmp);
-        }
+        ureg_MOV(ureg, ureg_writemask(oCol[0], TGSI_WRITEMASK_W), vs->mtlD);
         ureg_MOV(ureg, oCol[1], ureg_imm1f(ureg, 0.0f));
     } else {
         ureg_MOV(ureg, oCol[0], vs->aCol[0]);
@@ -1891,7 +1881,6 @@ nine_ff_load_lights(struct NineDevice9 *device)
         dst[19].x = dst[25].x * mtl->Ambient.r + mtl->Emissive.r;
         dst[19].y = dst[25].y * mtl->Ambient.g + mtl->Emissive.g;
         dst[19].z = dst[25].z * mtl->Ambient.b + mtl->Emissive.b;
-        dst[19].w = mtl->Ambient.a + mtl->Emissive.a;
     }
 
     if (!(state->changed.group & NINE_STATE_FF_LIGHTING))
