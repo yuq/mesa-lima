@@ -1709,16 +1709,28 @@ nine_ff_get_ps(struct NineDevice9 *device)
     for (s = 0; s < 8; ++s) {
         key.ts[s].colorop = state->ff.tex_stage[s][D3DTSS_COLOROP];
         key.ts[s].alphaop = state->ff.tex_stage[s][D3DTSS_ALPHAOP];
-        /* MSDN says D3DTOP_DISABLE disables this and all subsequent stages. */
-        /* ALPHAOP cannot be disabled if COLOROP is enabled. */
+        const uint8_t used_c = ps_d3dtop_args_mask(key.ts[s].colorop);
+        const uint8_t used_a = ps_d3dtop_args_mask(key.ts[s].alphaop);
+        /* MSDN says D3DTOP_DISABLE disables this and all subsequent stages.
+         * ALPHAOP cannot be enabled if COLOROP is disabled.
+         * Verified on Windows. */
         if (key.ts[s].colorop == D3DTOP_DISABLE) {
             key.ts[s].alphaop = D3DTOP_DISABLE; /* DISABLE == 1, avoid degenerate keys */
             break;
         }
 
         if (!state->texture[s] &&
-            state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE) {
-            /* This should also disable the stage. */
+            ((state->ff.tex_stage[s][D3DTSS_COLORARG0] == D3DTA_TEXTURE &&
+              used_c & 0x1) ||
+             (state->ff.tex_stage[s][D3DTSS_COLORARG1] == D3DTA_TEXTURE &&
+              used_c & 0x2) ||
+             (state->ff.tex_stage[s][D3DTSS_COLORARG2] == D3DTA_TEXTURE &&
+              used_c & 0x4))) {
+            /* Tested on Windows: Invalid texture read disables the stage
+             * and the subsequent ones, but only for colorop. For alpha,
+             * it's as if the texture had alpha of 1.0, which is what
+             * has our dummy texture in that case. Invalid color also
+             * disabled the following alpha stages. */
             key.ts[s].colorop = key.ts[s].alphaop = D3DTOP_DISABLE;
             break;
         }
@@ -1732,7 +1744,6 @@ nine_ff_get_ps(struct NineDevice9 *device)
             sampler_mask |= (1 << s);
 
         if (key.ts[s].colorop != D3DTOP_DISABLE) {
-            uint8_t used_c = ps_d3dtop_args_mask(key.ts[s].colorop);
             if (used_c & 0x1) key.ts[s].colorarg0 = state->ff.tex_stage[s][D3DTSS_COLORARG0];
             if (used_c & 0x2) key.ts[s].colorarg1 = state->ff.tex_stage[s][D3DTSS_COLORARG1];
             if (used_c & 0x4) key.ts[s].colorarg2 = state->ff.tex_stage[s][D3DTSS_COLORARG2];
@@ -1744,7 +1755,6 @@ nine_ff_get_ps(struct NineDevice9 *device)
             if (used_c & 0x4) key.colorarg_b5[2] |= (state->ff.tex_stage[s][D3DTSS_COLORARG2] >> 5) << s;
         }
         if (key.ts[s].alphaop != D3DTOP_DISABLE) {
-            uint8_t used_a = ps_d3dtop_args_mask(key.ts[s].alphaop);
             if (used_a & 0x1) key.ts[s].alphaarg0 = state->ff.tex_stage[s][D3DTSS_ALPHAARG0];
             if (used_a & 0x2) key.ts[s].alphaarg1 = state->ff.tex_stage[s][D3DTSS_ALPHAARG1];
             if (used_a & 0x4) key.ts[s].alphaarg2 = state->ff.tex_stage[s][D3DTSS_ALPHAARG2];
