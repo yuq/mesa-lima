@@ -883,9 +883,15 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
                 ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
             }
             ureg_normalize3(ureg, rMid, ureg_src(rMid));
+            ureg_DP3(ureg, ureg_saturate(tmp_x), vs->aNrm, ureg_src(rHit));
             ureg_DP3(ureg, ureg_saturate(tmp_y), vs->aNrm, ureg_src(rMid));
-            ureg_IF(ureg, _Y(tmp), &label[l++]);
+            ureg_MUL(ureg, tmp_z, _X(tmp), _Y(tmp));
+            /* Tests show that specular is computed only if (dp3(normal,hitDir) > 0).
+             * For front facing, it is more restrictive than test (dp3(normal,mid) > 0).
+             * No tests were made for backfacing, so add the two conditions */
+            ureg_IF(ureg, _Z(tmp), &label[l++]);
             {
+                ureg_DP3(ureg, ureg_saturate(tmp_y), vs->aNrm, ureg_src(rMid));
                 ureg_POW(ureg, tmp_y, _Y(tmp), mtlP);
                 ureg_MUL(ureg, tmp_y, _W(rAtt), _Y(tmp)); /* power factor * att */
                 ureg_MAD(ureg, rS, cLColS, _Y(tmp), ureg_src(rS)); /* accumulate specular */
@@ -893,7 +899,6 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_fixup_label(ureg, label[l-1], ureg_get_instruction_number(ureg));
             ureg_ENDIF(ureg);
 
-            ureg_DP3(ureg, ureg_saturate(tmp_x), vs->aNrm, ureg_src(rHit));
             ureg_MUL(ureg, tmp_x, _W(rAtt), _X(tmp)); /* dp3(normal,hitDir) * att */
             ureg_MAD(ureg, rD, cLColD, _X(tmp), ureg_src(rD)); /* accumulate diffuse */
         }
