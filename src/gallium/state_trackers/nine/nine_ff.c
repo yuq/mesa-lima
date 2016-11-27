@@ -1385,9 +1385,10 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
         struct ureg_dst dst;
         struct ureg_src arg[3];
 
-        if (key->ts[s].colorop == D3DTOP_DISABLE &&
-            key->ts[s].alphaop == D3DTOP_DISABLE)
+        if (key->ts[s].colorop == D3DTOP_DISABLE) {
+            assert (key->ts[s].alphaop == D3DTOP_DISABLE);
             continue;
+        }
         ps.stage.index = s;
 
         DBG("STAGE[%u]: colorop=%s alphaop=%s\n", s,
