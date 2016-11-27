@@ -1642,21 +1642,22 @@ nine_ff_get_vs(struct NineDevice9 *device)
 
     for (s = 0; s < 8; ++s) {
         unsigned gen = (state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] >> 16) + 1;
+        unsigned idx = state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] & 7;
         unsigned dim;
 
         if (key.position_t && gen > NINED3DTSS_TCI_PASSTHRU)
             gen = NINED3DTSS_TCI_PASSTHRU;
 
-        if (!input_texture_coord[s] && gen == NINED3DTSS_TCI_PASSTHRU)
+        if (!input_texture_coord[idx] && gen == NINED3DTSS_TCI_PASSTHRU)
             gen = NINED3DTSS_TCI_DISABLE;
 
         key.tc_gen |= gen << (s * 3);
-        key.tc_idx |= (state->ff.tex_stage[s][D3DTSS_TEXCOORDINDEX] & 7) << (s * 3);
-        key.tc_dim_input |= ((input_texture_coord[s]-1) & 0x3) << (s * 2);
+        key.tc_idx |= idx << (s * 3);
+        key.tc_dim_input |= ((input_texture_coord[idx]-1) & 0x3) << (s * 2);
 
         dim = state->ff.tex_stage[s][D3DTSS_TEXTURETRANSFORMFLAGS] & 0x7;
         if (dim > 4)
-            dim = input_texture_coord[s];
+            dim = input_texture_coord[idx];
         if (dim == 1) /* NV behaviour */
             dim = 0;
         key.tc_dim_output |= dim << (s * 3);
