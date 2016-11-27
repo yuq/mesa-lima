@@ -1773,6 +1773,26 @@ nine_ff_get_ps(struct NineDevice9 *device)
         }
     }
 
+    /* Note: If colorop is D3DTOP_DISABLE for the first stage
+     * (which implies alphaop is too), nothing particular happens,
+     * that is, current is equal to diffuse (which is the case anyway,
+     * because it is how it is initialized).
+     * Special case seems if alphaop is D3DTOP_DISABLE and not colorop,
+     * because then if the resultarg is TEMP, then diffuse alpha is written
+     * to it. */
+    if (key.ts[0].colorop != D3DTOP_DISABLE &&
+        key.ts[0].alphaop == D3DTOP_DISABLE &&
+        key.ts[0].resultarg != 0) {
+        key.ts[0].alphaop = D3DTOP_SELECTARG1;
+        key.ts[0].alphaarg1 = D3DTA_DIFFUSE;
+    }
+    /* When no alpha stage writes to current, diffuse alpha is taken.
+     * Since we initialize current to diffuse, we have the behaviour. */
+
+    /* Last stage always writes to Current */
+    if (s >= 1)
+        key.ts[s-1].resultarg = 0;
+
     key.projected = nine_ff_get_projected_key(state);
     key.specular = !!state->rs[D3DRS_SPECULARENABLE];
 
