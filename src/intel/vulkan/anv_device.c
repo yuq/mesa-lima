@@ -465,7 +465,7 @@ void anv_GetPhysicalDeviceFeatures(
       .fragmentStoresAndAtomics                 = true,
       .shaderTessellationAndGeometryPointSize   = true,
       .shaderImageGatherExtended                = false,
-      .shaderStorageImageExtendedFormats        = false,
+      .shaderStorageImageExtendedFormats        = true,
       .shaderStorageImageMultisample            = false,
       .shaderUniformBufferArrayDynamicIndexing  = true,
       .shaderSampledImageArrayDynamicIndexing   = true,
