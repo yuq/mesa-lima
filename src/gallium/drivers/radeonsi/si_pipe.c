@@ -33,7 +33,7 @@
 #include "../ddebug/dd_util.h"
 
 #define SI_LLVM_DEFAULT_FEATURES \
-	"+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals"
+	"+DumpCode,+vgpr-spilling,-fp32-denormals,+fp64-denormals,-xnack"
 
 /*
  * pipe_context
