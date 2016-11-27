@@ -1570,7 +1570,7 @@ swr_set_so_targets(struct pipe_context *pipe,
    struct swr_context *swr = swr_context(pipe);
    uint32_t i;
 
-   assert(num_targets < MAX_SO_STREAMS);
+   assert(num_targets <= MAX_SO_STREAMS);
 
    for (i = 0; i < num_targets; i++) {
       pipe_so_target_reference(
