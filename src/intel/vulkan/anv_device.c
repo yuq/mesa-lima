@@ -438,7 +438,7 @@ void anv_GetPhysicalDeviceFeatures(
    *pFeatures = (VkPhysicalDeviceFeatures) {
       .robustBufferAccess                       = true,
       .fullDrawIndexUint32                      = true,
-      .imageCubeArray                           = false,
+      .imageCubeArray                           = true,
       .independentBlend                         = true,
       .geometryShader                           = true,
       .tessellationShader                       = false,
