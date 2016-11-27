@@ -1488,10 +1488,11 @@ swr_update_derived(struct pipe_context *pipe,
             continue;
          buffer.enable = true;
          buffer.pBuffer =
-            (uint32_t *)swr_resource_data(ctx->so_targets[i]->buffer);
+            (uint32_t *)(swr_resource_data(ctx->so_targets[i]->buffer) +
+                         ctx->so_targets[i]->buffer_offset);
          buffer.bufferSize = ctx->so_targets[i]->buffer_size >> 2;
          buffer.pitch = stream_output->stride[i];
-         buffer.streamOffset = ctx->so_targets[i]->buffer_offset >> 2;
+         buffer.streamOffset = 0;
 
          SwrSetSoBuffers(ctx->swrContext, &buffer, i);
       }
