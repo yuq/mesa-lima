@@ -1332,7 +1332,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     ps.rTexSrc = ureg_src(ps.rTex);
 
     /* Initial values */
-    ureg_MOV(ureg, ps.rCur, ureg_imm1f(ureg, 0.0f));
+    ureg_MOV(ureg, ps.rCur, ps.vC[0]);
     ureg_MOV(ureg, ps.rTmp, ureg_imm1f(ureg, 0.0f));
     ureg_MOV(ureg, ps.rTex, ureg_imm1f(ureg, 0.0f));
 
@@ -1450,29 +1450,6 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             }
             if (s >= 1 && key->ts[s-1].colorop == D3DTOP_BUMPENVMAPLUMINANCE)
                 ureg_MUL(ureg, ps.rTex, ureg_src(ps.rTex), _X(delta));
-        }
-
-        if (((s == 0 && key->ts[0].colorop != D3DTOP_BUMPENVMAP &&
-              key->ts[0].colorop != D3DTOP_BUMPENVMAPLUMINANCE) ||
-             (s == 1 &&
-              (key->ts[0].colorop == D3DTOP_BUMPENVMAP ||
-               key->ts[0].colorop == D3DTOP_BUMPENVMAPLUMINANCE)))&&
-            (key->ts[s].resultarg != 0 /* not current */ ||
-             key->ts[s].colorop == D3DTOP_DISABLE ||
-             key->ts[s].alphaop == D3DTOP_DISABLE ||
-             key->ts[s].colorop == D3DTOP_BLENDCURRENTALPHA ||
-             key->ts[s].alphaop == D3DTOP_BLENDCURRENTALPHA ||
-             key->ts[s].colorarg0 == D3DTA_CURRENT ||
-             key->ts[s].colorarg1 == D3DTA_CURRENT ||
-             key->ts[s].colorarg2 == D3DTA_CURRENT ||
-             key->ts[s].alphaarg0 == D3DTA_CURRENT ||
-             key->ts[s].alphaarg1 == D3DTA_CURRENT ||
-             key->ts[s].alphaarg2 == D3DTA_CURRENT)) {
-            /* Initialize D3DTA_CURRENT.
-             * (Yes we can do this before the loop but not until
-             *  NVE4 has an instruction scheduling pass.)
-             */
-            ureg_MOV(ureg, ps.rCur, ps.vC[0]);
         }
 
         if (key->ts[s].colorop == D3DTOP_BUMPENVMAP ||
