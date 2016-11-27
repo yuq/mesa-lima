@@ -70,8 +70,7 @@ AM_CPPFLAGS += \
 
 VULKAN_SOURCES += $(VULKAN_WSI_X11_FILES)
 
-# FIXME: Use pkg-config for X11-xcb ldflags.
-VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS) -lX11-xcb
+VULKAN_LIB_DEPS += $(XCB_DRI3_LIBS)
 endif
 
 

@@ -1536,14 +1536,9 @@ xdri)
 
             PKG_CHECK_MODULES([DRI2PROTO], [dri2proto >= $DRI2PROTO_REQUIRED])
             GL_PC_REQ_PRIV="$GL_PC_REQ_PRIV libdrm >= $LIBDRM_REQUIRED"
+
             if test x"$enable_dri" = xyes; then
                dri_modules="$dri_modules xcb-dri2 >= $XCBDRI2_REQUIRED"
-            fi
-
-            if test x"$enable_dri3" = xyes; then
-               PKG_CHECK_EXISTS([xcb >= $XCB_REQUIRED], [], AC_MSG_ERROR([DRI3 requires xcb >= $XCB_REQUIRED]))
-               dri3_modules="xcb xcb-dri3 xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED"
-               PKG_CHECK_MODULES([XCB_DRI3], [$dri3_modules])
             fi
         fi
         if test x"$dri_platform" = xapple ; then
@@ -1725,6 +1720,13 @@ if test "x$enable_glx" != xno; then
     fi
 fi
 
+if test x"$enable_dri3" = xyes; then
+    DEFINES="$DEFINES -DHAVE_DRI3"
+
+    dri3_modules="x11-xcb xcb >= $XCB_REQUIRED xcb-dri3 xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED"
+    PKG_CHECK_MODULES([XCB_DRI3], [$dri3_modules])
+fi
+
 AM_CONDITIONAL(HAVE_PLATFORM_X11, echo "$platforms" | grep -q 'x11')
 AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$platforms" | grep -q 'wayland')
 AM_CONDITIONAL(HAVE_PLATFORM_DRM, echo "$platforms" | grep -q 'drm')
@@ -1773,10 +1775,6 @@ if test "x$enable_dri" = xyes; then
     # Platform specific settings and drivers to build
     case "$host_os" in
     linux*)
-        if test "x$enable_dri3" = xyes; then
-            DEFINES="$DEFINES -DHAVE_DRI3"
-        fi
-
         case "$host_cpu" in
         powerpc* | sparc*)
             # Build only the drivers for cards that exist on PowerPC/sparc
@@ -2088,12 +2086,7 @@ if test "x$enable_xvmc" = xyes -o \
         "x$enable_vdpau" = xyes -o \
         "x$enable_omx" = xyes -o \
         "x$enable_va" = xyes; then
-    if test x"$enable_dri3" = xyes; then
-        PKG_CHECK_MODULES([VL], [xcb-dri3 xcb-present xcb-sync xshmfence >= $XSHMFENCE_REQUIRED
-                                 xcb-xfixes x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
-    else
-        PKG_CHECK_MODULES([VL], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
-    fi
+    PKG_CHECK_MODULES([VL], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED])
     need_gallium_vl_winsys=yes
 fi
 AM_CONDITIONAL(NEED_GALLIUM_VL_WINSYS, test "x$need_gallium_vl_winsys" = xyes)
