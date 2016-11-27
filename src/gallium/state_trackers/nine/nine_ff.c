@@ -1375,11 +1375,6 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
 
     oCol = ureg_DECL_output(ureg, TGSI_SEMANTIC_COLOR, 0);
 
-    if (key->ts[0].colorop == D3DTOP_DISABLE &&
-        key->ts[0].alphaop == D3DTOP_DISABLE)
-        ureg_MOV(ureg, ps.rCur, ps.vC[0]);
-    /* Or is it undefined then ? */
-
     /* Run stages.
      */
     for (s = 0; s < 8; ++s) {
