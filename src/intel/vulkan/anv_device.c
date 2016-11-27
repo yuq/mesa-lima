@@ -477,7 +477,7 @@ void anv_GetPhysicalDeviceFeatures(
       .textureCompressionASTC_LDR               = pdevice->info.gen >= 9, /* FINISHME CHV */
       .textureCompressionBC                     = true,
       .occlusionQueryPrecise                    = true,
-      .pipelineStatisticsQuery                  = false,
+      .pipelineStatisticsQuery                  = true,
       .fragmentStoresAndAtomics                 = true,
       .shaderTessellationAndGeometryPointSize   = true,
       .shaderImageGatherExtended                = true,

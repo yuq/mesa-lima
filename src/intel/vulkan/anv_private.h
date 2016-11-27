@@ -2013,8 +2013,11 @@ struct anv_render_pass {
    struct anv_subpass                           subpasses[0];
 };
 
+#define ANV_PIPELINE_STATISTICS_MASK 0x000007ff
+
 struct anv_query_pool {
    VkQueryType                                  type;
+   VkQueryPipelineStatisticFlags                pipeline_statistics;
    /** Stride between slots, in bytes */
    uint32_t                                     stride;
    /** Number of slots in this query pool */
