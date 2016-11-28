@@ -461,6 +461,14 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	unsigned i;
 	unsigned num_sets = ctx->options->layout ? ctx->options->layout->num_sets : 0;
 	unsigned user_sgpr_idx;
+	bool need_push_constants;
+
+	need_push_constants = true;
+	if (!ctx->options->layout)
+		need_push_constants = false;
+	else if (!ctx->options->layout->push_constant_size &&
+		 !ctx->options->layout->dynamic_offset_count)
+		need_push_constants = false;
 
 	/* 1 for each descriptor set */
 	for (unsigned i = 0; i < num_sets; ++i) {
@@ -469,8 +477,10 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		}
 	}
 
-	/* 1 for push constants and dynamic descriptors */
-	arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
+	if (need_push_constants) {
+		/* 1 for push constants and dynamic descriptors */
+		arg_types[arg_idx++] = const_array(ctx->i8, 1024 * 1024);
+	}
 
 	array_count = arg_idx;
 	switch (nir->stage) {
@@ -551,9 +561,11 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			ctx->descriptor_sets[i] = NULL;
 	}
 
-	ctx->push_constants = LLVMGetParam(ctx->main_function, arg_idx++);
-	set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
-	user_sgpr_idx += 2;
+	if (need_push_constants) {
+		ctx->push_constants = LLVMGetParam(ctx->main_function, arg_idx++);
+		set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, user_sgpr_idx, 2);
+		user_sgpr_idx += 2;
+	}
 
 	switch (nir->stage) {
 	case MESA_SHADER_COMPUTE:
