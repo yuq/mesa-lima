@@ -128,17 +128,16 @@ destroy_window_callback(void *data)
  * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
  */
 static _EGLSurface *
-dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
-                       _EGLConfig *conf, void *native_window,
-                       const EGLint *attrib_list)
+dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
+                              _EGLConfig *conf, void *native_window,
+                              const EGLint *attrib_list)
 {
+   __DRIcreateNewDrawableFunc createNewDrawable;
    struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
    struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
    struct wl_egl_window *window = native_window;
    struct dri2_egl_surface *dri2_surf;
    const __DRIconfig *config;
-
-   (void) drv;
 
    dri2_surf = calloc(1, sizeof *dri2_surf);
    if (!dri2_surf) {
@@ -164,7 +163,6 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
    dri2_surf->wl_win = window;
 
    dri2_surf->wl_win->private = dri2_surf;
-   dri2_surf->wl_win->resize_callback = resize_callback;
    dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
 
    dri2_surf->base.Width =  -1;
@@ -173,13 +171,23 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
    config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
                                 dri2_surf->base.GLColorspace);
 
-   dri2_surf->dri_drawable = 
-      dri2_dpy->dri2->createNewDrawable(dri2_dpy->dri_screen, config,
-                                        dri2_surf);
-   if (dri2_surf->dri_drawable == NULL) {
-      _eglError(EGL_BAD_ALLOC, "dri2->createNewDrawable");
-      goto cleanup_surf;
+   if (dri2_dpy->dri2) {
+      dri2_surf->wl_win->resize_callback = resize_callback;
+
+      createNewDrawable = dri2_dpy->dri2->createNewDrawable;
+   } else {
+      createNewDrawable = dri2_dpy->swrast->createNewDrawable;
    }
+
+   dri2_surf->dri_drawable = (*createNewDrawable)(dri2_dpy->dri_screen, config,
+                                                  dri2_surf);
+    if (dri2_surf->dri_drawable == NULL) {
+      _eglError(EGL_BAD_ALLOC, "createNewDrawable");
+       goto cleanup_surf;
+    }
+
+   dri2_wl_swap_interval(drv, disp, &dri2_surf->base,
+                         dri2_dpy->default_swap_interval);
 
    return &dri2_surf->base;
 
@@ -187,25 +195,6 @@ dri2_wl_create_surface(_EGLDriver *drv, _EGLDisplay *disp,
    free(dri2_surf);
 
    return NULL;
-}
-
-/**
- * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
- */
-static _EGLSurface *
-dri2_wl_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
-                              _EGLConfig *conf, void *native_window,
-                              const EGLint *attrib_list)
-{
-   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   _EGLSurface *surf;
-
-   surf = dri2_wl_create_surface(drv, disp, conf, native_window, attrib_list);
-
-   if (surf != NULL)
-      dri2_wl_swap_interval(drv, disp, surf, dri2_dpy->default_swap_interval);
-
-   return surf;
 }
 
 static _EGLSurface *
@@ -1712,67 +1701,6 @@ dri2_wl_swrast_put_image(__DRIdrawable * draw, int op,
                              stride, data, loaderPrivate);
 }
 
-/**
- * Called via eglCreateWindowSurface(), drv->API.CreateWindowSurface().
- */
-static _EGLSurface *
-dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
-                                     _EGLConfig *conf, void *native_window,
-                                     const EGLint *attrib_list)
-{
-   struct dri2_egl_display *dri2_dpy = dri2_egl_display(disp);
-   struct dri2_egl_config *dri2_conf = dri2_egl_config(conf);
-   struct wl_egl_window *window = native_window;
-   struct dri2_egl_surface *dri2_surf;
-   const __DRIconfig *config;
-
-   (void) drv;
-
-   dri2_surf = calloc(1, sizeof *dri2_surf);
-   if (!dri2_surf) {
-      _eglError(EGL_BAD_ALLOC, "dri2_create_surface");
-      return NULL;
-   }
-
-   if (!_eglInitSurface(&dri2_surf->base, disp, EGL_WINDOW_BIT, conf, attrib_list))
-      goto cleanup_surf;
-
-   if (conf->RedSize == 5)
-      dri2_surf->format = WL_SHM_FORMAT_RGB565;
-   else if (conf->AlphaSize == 0)
-      dri2_surf->format = WL_SHM_FORMAT_XRGB8888;
-   else
-      dri2_surf->format = WL_SHM_FORMAT_ARGB8888;
-
-   dri2_surf->wl_win = window;
-   dri2_surf->wl_win->private = dri2_surf;
-   dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
-
-   dri2_surf->base.Width = -1;
-   dri2_surf->base.Height = -1;
-
-   config = dri2_get_dri_config(dri2_conf, EGL_WINDOW_BIT,
-                                dri2_surf->base.GLColorspace);
-
-   dri2_surf->dri_drawable =
-      dri2_dpy->swrast->createNewDrawable(dri2_dpy->dri_screen,
-                                          config, dri2_surf);
-   if (dri2_surf->dri_drawable == NULL) {
-      _eglError(EGL_BAD_ALLOC, "swrast->createNewDrawable");
-      goto cleanup_surf;
-   }
-
-   dri2_wl_swap_interval(drv, disp, &dri2_surf->base,
-                         dri2_dpy->default_swap_interval);
-
-   return &dri2_surf->base;
-
- cleanup_surf:
-   free(dri2_surf);
-
-   return NULL;
-}
-
 static EGLBoolean
 dri2_wl_swrast_swap_buffers(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *draw)
 {
@@ -1825,7 +1753,7 @@ static const struct wl_registry_listener registry_listener_swrast = {
 
 static struct dri2_egl_display_vtbl dri2_wl_swrast_display_vtbl = {
    .authenticate = NULL,
-   .create_window_surface = dri2_wl_swrast_create_window_surface,
+   .create_window_surface = dri2_wl_create_window_surface,
    .create_pixmap_surface = dri2_wl_create_pixmap_surface,
    .create_pbuffer_surface = dri2_fallback_create_pbuffer_surface,
    .destroy_surface = dri2_wl_destroy_surface,
