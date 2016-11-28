@@ -276,6 +276,46 @@ static unsigned radv_pack_float_12p4(float x)
 	       x >= 4096 ? 0xffff : x * 16;
 }
 
+static uint32_t
+shader_stage_to_user_data_0(gl_shader_stage stage)
+{
+	switch (stage) {
+	case MESA_SHADER_FRAGMENT:
+		return R_00B030_SPI_SHADER_USER_DATA_PS_0;
+	case MESA_SHADER_VERTEX:
+		return R_00B130_SPI_SHADER_USER_DATA_VS_0;
+	case MESA_SHADER_COMPUTE:
+		return R_00B900_COMPUTE_USER_DATA_0;
+	default:
+		unreachable("unknown shader");
+	}
+}
+
+static struct ac_userdata_info *
+radv_lookup_user_sgpr(struct radv_pipeline *pipeline,
+		      gl_shader_stage stage,
+		      int idx)
+{
+	return &pipeline->shaders[stage]->info.user_sgprs_locs.shader_data[idx];
+}
+
+static void
+radv_emit_userdata_address(struct radv_cmd_buffer *cmd_buffer,
+			   struct radv_pipeline *pipeline,
+			   gl_shader_stage stage,
+			   int idx, uint64_t va)
+{
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(pipeline, stage, idx);
+	uint32_t base_reg = shader_stage_to_user_data_0(stage);
+	if (loc->sgpr_idx == -1)
+		return;
+	assert(loc->num_sgprs == 2);
+	assert(!loc->indirect);
+	radeon_set_sh_reg_seq(cmd_buffer->cs, base_reg + loc->sgpr_idx * 4, 2);
+	radeon_emit(cmd_buffer->cs, va);
+	radeon_emit(cmd_buffer->cs, va >> 32);
+}
+
 static void
 radv_update_multisample_state(struct radv_cmd_buffer *cmd_buffer,
 			      struct radv_pipeline *pipeline)
@@ -327,9 +367,8 @@ radv_update_multisample_state(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
 	va += samples_offset;
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B030_SPI_SHADER_USER_DATA_PS_0 + AC_USERDATA_PS_SAMPLE_POS * 4, 2);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
+	radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
+				   AC_UD_PS_SAMPLE_POS, va);
 }
 
 static void
@@ -896,34 +935,51 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 
 static void
 emit_stage_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
+				   struct radv_pipeline *pipeline,
 				   int idx,
 				   uint64_t va,
-				   uint32_t base_reg)
+				   gl_shader_stage stage)
 {
+	struct ac_userdata_info *desc_set_loc = &pipeline->shaders[stage]->info.user_sgprs_locs.descriptor_sets[idx];
+	uint32_t base_reg = shader_stage_to_user_data_0(stage);
+
+	if (desc_set_loc->sgpr_idx == -1)
+		return;
+
+	assert(!desc_set_loc->indirect);
+	assert(desc_set_loc->num_sgprs == 2);
 	radeon_set_sh_reg_seq(cmd_buffer->cs,
-			      base_reg + 8 * idx, 2);
+			      base_reg + desc_set_loc->sgpr_idx * 4, 2);
 	radeon_emit(cmd_buffer->cs, va);
 	radeon_emit(cmd_buffer->cs, va >> 32);
 }
 
 static void
 radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
+				  struct radv_pipeline *pipeline,
 				  VkShaderStageFlags stages,
 				  struct radv_descriptor_set *set,
 				  unsigned idx)
 {
 	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
-		emit_stage_descriptor_set_userdata(cmd_buffer, idx, set->va, R_00B030_SPI_SHADER_USER_DATA_PS_0);
+		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
+						   idx, set->va,
+						   MESA_SHADER_FRAGMENT);
 
 	if (stages & VK_SHADER_STAGE_VERTEX_BIT)
-		emit_stage_descriptor_set_userdata(cmd_buffer, idx, set->va, R_00B130_SPI_SHADER_USER_DATA_VS_0);
+		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
+						   idx, set->va,
+						   MESA_SHADER_VERTEX);
 
 	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
-		emit_stage_descriptor_set_userdata(cmd_buffer, idx, set->va, R_00B900_COMPUTE_USER_DATA_0);
+		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
+						   idx, set->va,
+						   MESA_SHADER_COMPUTE);
 }
 
 static void
 radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
+		       struct radv_pipeline *pipeline,
 		       VkShaderStageFlags stages)
 {
 	unsigned i;
@@ -937,20 +993,9 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
 		if (!set)
 			continue;
 
-		radv_emit_descriptor_set_userdata(cmd_buffer, stages, set, i);
+		radv_emit_descriptor_set_userdata(cmd_buffer, pipeline, stages, set, i);
 	}
 	cmd_buffer->state.descriptors_dirty = 0;
-}
-
-static void
-emit_constants_set_userdata(struct radv_cmd_buffer *cmd_buffer,
-			    uint64_t va,
-			    uint32_t base_reg)
-{
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-			      base_reg + 4 * AC_USERDATA_PUSH_CONST_DYN, 2);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
 }
 
 static void
@@ -979,13 +1024,16 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 	va += offset;
 
 	if (stages & VK_SHADER_STAGE_VERTEX_BIT)
-		emit_constants_set_userdata(cmd_buffer, va, R_00B130_SPI_SHADER_USER_DATA_VS_0);
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_VERTEX,
+					   AC_UD_PUSH_CONSTANTS, va);
 
 	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
-		emit_constants_set_userdata(cmd_buffer, va, R_00B030_SPI_SHADER_USER_DATA_PS_0);
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
+					   AC_UD_PUSH_CONSTANTS, va);
 
 	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
-		emit_constants_set_userdata(cmd_buffer, va, R_00B900_COMPUTE_USER_DATA_0);
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_COMPUTE,
+					   AC_UD_PUSH_CONSTANTS, va);
 
 	cmd_buffer->push_constant_stages &= ~stages;
 }
@@ -1036,11 +1084,9 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 
 		va = device->ws->buffer_get_va(cmd_buffer->upload.upload_bo);
 		va += vb_offset;
-		radeon_set_sh_reg_seq(cmd_buffer->cs,
-				      R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_VERTEX_BUFFERS * 4, 2);
-		radeon_emit(cmd_buffer->cs, va);
-		radeon_emit(cmd_buffer->cs, va >> 32);
 
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_VERTEX,
+					   AC_UD_VS_VERTEX_BUFFERS, va);
 	}
 
 	cmd_buffer->state.vertex_descriptors_dirty = false;
@@ -1075,7 +1121,8 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
 
-	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
+	radv_flush_descriptors(cmd_buffer, cmd_buffer->state.pipeline,
+			       VK_SHADER_STAGE_ALL_GRAPHICS);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
 
@@ -1820,9 +1867,13 @@ void radv_CmdDraw(
 
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_BASE_VERTEX * 4, 2);
-	radeon_emit(cmd_buffer->cs, firstVertex);
-	radeon_emit(cmd_buffer->cs, firstInstance);
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
+							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
+	if (loc->sgpr_idx != -1) {
+		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B130_SPI_SHADER_USER_DATA_VS_0 + loc->sgpr_idx * 4, 2);
+		radeon_emit(cmd_buffer->cs, firstVertex);
+		radeon_emit(cmd_buffer->cs, firstInstance);
+	}
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
 	radeon_emit(cmd_buffer->cs, instanceCount);
 
@@ -1867,9 +1918,13 @@ void radv_CmdDrawIndexed(
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
 	radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_BASE_VERTEX * 4, 2);
-	radeon_emit(cmd_buffer->cs, vertexOffset);
-	radeon_emit(cmd_buffer->cs, firstInstance);
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
+							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
+	if (loc->sgpr_idx != -1) {
+		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B130_SPI_SHADER_USER_DATA_VS_0 + loc->sgpr_idx * 4, 2);
+		radeon_emit(cmd_buffer->cs, vertexOffset);
+		radeon_emit(cmd_buffer->cs, firstInstance);
+	}
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_NUM_INSTANCES, 0, 0));
 	radeon_emit(cmd_buffer->cs, instanceCount);
 
@@ -1914,6 +1969,9 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, buffer->bo, 8);
 
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
+							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
+	assert(loc->sgpr_idx != -1);
 	radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
 	radeon_emit(cs, 1);
 	radeon_emit(cs, indirect_va);
@@ -1923,8 +1981,8 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 				       PKT3_DRAW_INDIRECT_MULTI,
 			     8, false));
 	radeon_emit(cs, 0);
-	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_BASE_VERTEX * 4) - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + AC_USERDATA_VS_START_INSTANCE * 4) - SI_SH_REG_OFFSET) >> 2);
+	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + loc->sgpr_idx * 4) - SI_SH_REG_OFFSET) >> 2);
+	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + (loc->sgpr_idx + 1) * 4) - SI_SH_REG_OFFSET) >> 2);
 	radeon_emit(cs, S_2C3_COUNT_INDIRECT_ENABLE(!!count_va)); /* draw_index and count_indirect enable */
 	radeon_emit(cs, draw_count); /* count */
 	radeon_emit(cs, count_va); /* count_addr */
@@ -2045,7 +2103,8 @@ static void
 radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 {
 	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
+	radv_flush_descriptors(cmd_buffer, cmd_buffer->state.compute_pipeline,
+			       VK_SHADER_STAGE_COMPUTE_BIT);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			     VK_SHADER_STAGE_COMPUTE_BIT);
 	si_emit_cache_flush(cmd_buffer);
@@ -2063,10 +2122,16 @@ void radv_CmdDispatch(
 
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 10);
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + AC_USERDATA_CS_GRID_SIZE * 4, 3);
-	radeon_emit(cmd_buffer->cs, x);
-	radeon_emit(cmd_buffer->cs, y);
-	radeon_emit(cmd_buffer->cs, z);
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
+							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
+	if (loc->sgpr_idx != -1) {
+		assert(!loc->indirect);
+		assert(loc->num_sgprs == 3);
+		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + loc->sgpr_idx * 4, 3);
+		radeon_emit(cmd_buffer->cs, x);
+		radeon_emit(cmd_buffer->cs, y);
+		radeon_emit(cmd_buffer->cs, z);
+	}
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
 		    PKT3_SHADER_TYPE_S(1));
@@ -2093,15 +2158,18 @@ void radv_CmdDispatchIndirect(
 	radv_flush_compute_state(cmd_buffer);
 
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 25);
-
-	for (unsigned i = 0; i < 3; ++i) {
-		radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, 0));
-		radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
-					    COPY_DATA_DST_SEL(COPY_DATA_REG));
-		radeon_emit(cmd_buffer->cs, (va +  4 * i));
-		radeon_emit(cmd_buffer->cs, (va + 4 * i) >> 32);
-		radeon_emit(cmd_buffer->cs, ((R_00B900_COMPUTE_USER_DATA_0 + AC_USERDATA_CS_GRID_SIZE * 4) >> 2) + i);
-		radeon_emit(cmd_buffer->cs, 0);
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
+							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
+	if (loc->sgpr_idx != -1) {
+		for (unsigned i = 0; i < 3; ++i) {
+			radeon_emit(cmd_buffer->cs, PKT3(PKT3_COPY_DATA, 4, 0));
+			radeon_emit(cmd_buffer->cs, COPY_DATA_SRC_SEL(COPY_DATA_MEM) |
+				    COPY_DATA_DST_SEL(COPY_DATA_REG));
+			radeon_emit(cmd_buffer->cs, (va +  4 * i));
+			radeon_emit(cmd_buffer->cs, (va + 4 * i) >> 32);
+			radeon_emit(cmd_buffer->cs, ((R_00B900_COMPUTE_USER_DATA_0 + loc->sgpr_idx * 4) >> 2) + i);
+			radeon_emit(cmd_buffer->cs, 0);
+		}
 	}
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_SET_BASE, 2, 0) |
@@ -2152,11 +2220,14 @@ void radv_unaligned_dispatch(
 		    S_00B81C_NUM_THREAD_FULL(compute_shader->info.cs.block_size[2]) |
 		    S_00B81C_NUM_THREAD_PARTIAL(remainder[2]));
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + AC_USERDATA_CS_GRID_SIZE * 4, 3);
-	radeon_emit(cmd_buffer->cs, blocks[0]);
-	radeon_emit(cmd_buffer->cs, blocks[1]);
-	radeon_emit(cmd_buffer->cs, blocks[2]);
-
+	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
+							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
+	if (loc->sgpr_idx != -1) {
+		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + loc->sgpr_idx * 4, 3);
+		radeon_emit(cmd_buffer->cs, blocks[0]);
+		radeon_emit(cmd_buffer->cs, blocks[1]);
+		radeon_emit(cmd_buffer->cs, blocks[2]);
+	}
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_DIRECT, 3, 0) |
 		    PKT3_SHADER_TYPE_S(1));
 	radeon_emit(cmd_buffer->cs, blocks[0]);

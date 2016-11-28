@@ -62,7 +62,7 @@ struct nir_to_llvm_context {
 	struct hash_table *defs;
 	struct hash_table *phis;
 
-	LLVMValueRef descriptor_sets[4];
+	LLVMValueRef descriptor_sets[AC_UD_MAX_SETS];
 	LLVMValueRef push_constants;
 	LLVMValueRef num_work_groups;
 	LLVMValueRef workgroup_ids;
@@ -426,6 +426,45 @@ static LLVMValueRef build_indexed_load_const(struct nir_to_llvm_context *ctx,
 	return result;
 }
 
+static void set_userdata_location(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs)
+{
+	ud_info->sgpr_idx = sgpr_idx;
+	ud_info->num_sgprs = num_sgprs;
+	ud_info->indirect = false;
+	ud_info->indirect_offset = 0;
+}
+
+static void set_userdata_location_shader(struct nir_to_llvm_context *ctx,
+					 int idx, uint8_t sgpr_idx, uint8_t num_sgprs)
+{
+	set_userdata_location(&ctx->shader_info->user_sgprs_locs.shader_data[idx], sgpr_idx, num_sgprs);
+}
+
+#if 0
+static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs,
+					   uint32_t indirect_offset)
+{
+	ud_info->sgpr_idx = sgpr_idx;
+	ud_info->num_sgprs = num_sgprs;
+	ud_info->indirect = true;
+	ud_info->indirect_offset = indirect_offset;
+}
+#endif
+
+#define AC_USERDATA_DESCRIPTOR_SET_0 0
+#define AC_USERDATA_DESCRIPTOR_SET_1 2
+#define AC_USERDATA_DESCRIPTOR_SET_2 4
+#define AC_USERDATA_DESCRIPTOR_SET_3 6
+#define AC_USERDATA_PUSH_CONST_DYN 8
+
+#define AC_USERDATA_VS_VERTEX_BUFFERS 10
+#define AC_USERDATA_VS_BASE_VERTEX 12
+#define AC_USERDATA_VS_START_INSTANCE 13
+
+#define AC_USERDATA_PS_SAMPLE_POS 10
+
+#define AC_USERDATA_CS_GRID_SIZE 10
+
 static void create_function(struct nir_to_llvm_context *ctx,
                             struct nir_shader *nir)
 {
@@ -510,14 +549,18 @@ static void create_function(struct nir_to_llvm_context *ctx,
 			ctx->shader_info->num_input_vgprs += llvm_get_type_size(arg_types[i]) / 4;
 
 	arg_idx = 0;
-	for (unsigned i = 0; i < 4; ++i)
+	for (unsigned i = 0; i < 4; ++i) {
+		set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], i * 2, 2);
 		ctx->descriptor_sets[i] =
 		    LLVMGetParam(ctx->main_function, arg_idx++);
+	}
 
 	ctx->push_constants = LLVMGetParam(ctx->main_function, arg_idx++);
+	set_userdata_location_shader(ctx, AC_UD_PUSH_CONSTANTS, AC_USERDATA_PUSH_CONST_DYN, 2);
 
 	switch (nir->stage) {
 	case MESA_SHADER_COMPUTE:
+		set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, AC_USERDATA_CS_GRID_SIZE, 3);
 		ctx->num_work_groups =
 		    LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->workgroup_ids =
@@ -528,7 +571,9 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		    LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_VERTEX:
+		set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, AC_USERDATA_VS_VERTEX_BUFFERS, 2);
 		ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
+		set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, AC_USERDATA_VS_BASE_VERTEX, 2);
 		ctx->base_vertex = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->start_instance = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->vertex_id = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -537,6 +582,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		ctx->instance_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_FRAGMENT:
+		set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS, AC_USERDATA_PS_SAMPLE_POS, 2);
 		ctx->sample_positions = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->prim_mask = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->persp_sample = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -4604,6 +4650,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 {
 	struct nir_to_llvm_context ctx = {0};
 	struct nir_function *func;
+	unsigned i;
 	ctx.options = options;
 	ctx.shader_info = shader_info;
 	ctx.context = LLVMContextCreate();
@@ -4618,6 +4665,11 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
 	ctx.stage = nir->stage;
+
+	for (i = 0; i < AC_UD_MAX_SETS; i++)
+		shader_info->user_sgprs_locs.descriptor_sets[i].sgpr_idx = -1;
+	for (i = 0; i < AC_UD_MAX_UD; i++)
+		shader_info->user_sgprs_locs.shader_data[i].sgpr_idx = -1;
 
 	create_function(&ctx, nir);
 
