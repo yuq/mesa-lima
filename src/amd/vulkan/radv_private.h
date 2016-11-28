@@ -649,6 +649,7 @@ struct radv_cmd_state {
 	enum radv_cmd_flush_bits                     flush_bits;
 	unsigned                                     active_occlusion_queries;
 	float					     offset_scale;
+	uint32_t                                      descriptors_dirty;
 };
 struct radv_cmd_pool {
 	VkAllocationCallbacks                        alloc;

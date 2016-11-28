@@ -916,6 +916,25 @@ radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
+radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer)
+{
+	unsigned i;
+	if (!cmd_buffer->state.descriptors_dirty)
+		return;
+
+	for (i = 0; i < MAX_SETS; i++) {
+		if (!(cmd_buffer->state.descriptors_dirty & (1 << i)))
+			continue;
+		struct radv_descriptor_set *set = cmd_buffer->state.descriptors[i];
+		if (!set)
+			continue;
+
+		radv_emit_descriptor_set_userdata(cmd_buffer, set, i);
+	}
+	cmd_buffer->state.descriptors_dirty = 0;
+}
+
+static void
 radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 		     struct radv_pipeline *pipeline,
 		     VkShaderStageFlags stages)
@@ -1049,6 +1068,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
 
+	radv_flush_descriptors(cmd_buffer);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
 
@@ -1366,7 +1386,7 @@ void radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
 
 	cmd_buffer->state.descriptors[idx] = set;
-
+	cmd_buffer->state.descriptors_dirty |= (1 << idx);
 	if (!set)
 		return;
 
@@ -1374,7 +1394,6 @@ void radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 		if (set->descriptors[j])
 			ws->cs_add_buffer(cmd_buffer->cs, set->descriptors[j], 7);
 
-	radv_emit_descriptor_set_userdata(cmd_buffer, set, idx);
 	if(set->bo)
 		ws->cs_add_buffer(cmd_buffer->cs, set->bo, 8);
 }
@@ -2014,6 +2033,7 @@ static void
 radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 {
 	radv_emit_compute_pipeline(cmd_buffer);
+	radv_flush_descriptors(cmd_buffer);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			     VK_SHADER_STAGE_COMPUTE_BIT);
 	si_emit_cache_flush(cmd_buffer);
