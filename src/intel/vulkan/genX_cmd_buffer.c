@@ -2033,6 +2033,51 @@ genX(cmd_buffer_emit_gen7_depth_flush)(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+static uint32_t
+depth_stencil_surface_type(enum isl_surf_dim dim)
+{
+   switch (dim) {
+   case ISL_SURF_DIM_1D:
+      if (GEN_GEN >= 9) {
+         /* From the Sky Lake PRM, 3DSTATAE_DEPTH_BUFFER::SurfaceType
+          *
+          *    Programming Notes:
+          *    The Surface Type of the depth buffer must be the same as the
+          *    Surface Type of the render target(s) (defined in
+          *    SURFACE_STATE), unless either the depth buffer or render
+          *    targets are SURFTYPE_NULL (see exception below for SKL).  1D
+          *    surface type not allowed for depth surface and stencil surface.
+          *
+          *    Workaround:
+          *    If depth/stencil is enabled with 1D render target,
+          *    depth/stencil surface type needs to be set to 2D surface type
+          *    and height set to 1. Depth will use (legacy) TileY and stencil
+          *    will use TileW. For this case only, the Surface Type of the
+          *    depth buffer can be 2D while the Surface Type of the render
+          *    target(s) are 1D, representing an exception to a programming
+          *    note above.
+          */
+         return SURFTYPE_2D;
+      } else {
+         return SURFTYPE_1D;
+      }
+   case ISL_SURF_DIM_2D:
+      return SURFTYPE_2D;
+   case ISL_SURF_DIM_3D:
+      if (GEN_GEN >= 9) {
+         /* The Sky Lake docs list the value for 3D as "Reserved".  However,
+          * they have the exact same layout as 2D arrays on gen9+, so we can
+          * just use 2D here.
+          */
+         return SURFTYPE_2D;
+      } else {
+         return SURFTYPE_3D;
+      }
+   default:
+      unreachable("Invalid surface dimension");
+   }
+}
+
 static void
 cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 {
@@ -2054,7 +2099,8 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    /* Emit 3DSTATE_DEPTH_BUFFER */
    if (has_depth) {
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
-         db.SurfaceType                   = SURFTYPE_2D;
+         db.SurfaceType                   =
+            depth_stencil_surface_type(image->depth_surface.isl.dim);
          db.DepthWriteEnable              = true;
          db.StencilWriteEnable            = has_stencil;
 
@@ -2106,7 +2152,12 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        * be combined with a stencil buffer so we use D32_FLOAT instead.
        */
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
-         db.SurfaceType          = SURFTYPE_2D;
+         if (has_stencil) {
+            db.SurfaceType       = SURFTYPE_2D;
+               depth_stencil_surface_type(image->stencil_surface.isl.dim);
+         } else {
+            db.SurfaceType       = SURFTYPE_2D;
+         }
          db.SurfaceFormat        = D32_FLOAT;
          db.Width                = fb->width - 1;
          db.Height               = fb->height - 1;
