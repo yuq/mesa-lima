@@ -3114,7 +3114,7 @@ static LLVMValueRef get_buffer_size(
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef size =
 		LLVMBuildExtractElement(builder, descriptor,
-					lp_build_const_int32(gallivm, 6), "");
+					lp_build_const_int32(gallivm, 2), "");
 
 	if (ctx->screen->b.chip_class >= VI) {
 		/* On VI, the descriptor contains the size in bytes,
@@ -3123,7 +3123,7 @@ static LLVMValueRef get_buffer_size(
 		 */
 		LLVMValueRef stride =
 			LLVMBuildExtractElement(builder, descriptor,
-						lp_build_const_int32(gallivm, 5), "");
+						lp_build_const_int32(gallivm, 1), "");
 		stride = LLVMBuildLShr(builder, stride,
 				       lp_build_const_int32(gallivm, 16), "");
 		stride = LLVMBuildAnd(builder, stride,
@@ -3278,6 +3278,12 @@ static LLVMValueRef force_dcc_off(struct si_shader_context *ctx,
 	}
 }
 
+static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
+{
+	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
+			       CONST_ADDR_SPACE);
+}
+
 /**
  * Load the resource descriptor for \p image.
  */
@@ -3317,6 +3323,19 @@ image_fetch_rsrc(
 		index = get_bounded_indirect_index(ctx, &image->Indirect,
 						   image->Register.Index,
 						   SI_NUM_IMAGES);
+	}
+
+	if (target == TGSI_TEXTURE_BUFFER) {
+		LLVMBuilderRef builder = ctx->gallivm.builder;
+
+		rsrc_ptr = LLVMBuildPointerCast(builder, rsrc_ptr,
+						const_array(ctx->v4i32, 0), "");
+		index = LLVMBuildMul(builder, index,
+				     LLVMConstInt(ctx->i32, 2, 0), "");
+		index = LLVMBuildAdd(builder, index,
+				     LLVMConstInt(ctx->i32, 1, 0), "");
+		*rsrc = build_indexed_load_const(ctx, rsrc_ptr, index);
+		return;
 	}
 
 	tmp = build_indexed_load_const(ctx, rsrc_ptr, index);
@@ -3394,25 +3413,6 @@ static void image_append_args(
 }
 
 /**
- * Given a 256 bit resource, extract the top half (which stores the buffer
- * resource in the case of textures and images).
- */
-static LLVMValueRef extract_rsrc_top_half(
-		struct si_shader_context *ctx,
-		LLVMValueRef rsrc)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
-	LLVMTypeRef v2i128 = LLVMVectorType(ctx->i128, 2);
-
-	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, v2i128, "");
-	rsrc = LLVMBuildExtractElement(gallivm->builder, rsrc, bld_base->uint_bld.one, "");
-	rsrc = LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v4i32, "");
-
-	return rsrc;
-}
-
-/**
  * Append the resource and indexing arguments for buffer intrinsics.
  *
  * \param rsrc the v4i32 buffer resource
@@ -3473,7 +3473,6 @@ static void load_fetch_args(
 		coords = image_fetch_coords(bld_base, inst, 1);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
-			rsrc = extract_rsrc_top_half(ctx, rsrc);
 			buffer_append_args(ctx, emit_data, rsrc, coords,
 					bld_base->uint_bld.zero, false);
 		} else {
@@ -3681,8 +3680,6 @@ static void store_fetch_args(
 
 		if (target == TGSI_TEXTURE_BUFFER) {
 			image_fetch_rsrc(bld_base, &memory, true, target, &rsrc);
-
-			rsrc = extract_rsrc_top_half(ctx, rsrc);
 			buffer_append_args(ctx, emit_data, rsrc, coords,
 					bld_base->uint_bld.zero, false);
 		} else {
@@ -3885,7 +3882,6 @@ static void atomic_fetch_args(
 		coords = image_fetch_coords(bld_base, inst, 1);
 
 		if (target == TGSI_TEXTURE_BUFFER) {
-			rsrc = extract_rsrc_top_half(ctx, rsrc);
 			buffer_append_args(ctx, emit_data, rsrc, coords,
 					   bld_base->uint_bld.zero, true);
 		} else {
@@ -4129,15 +4125,10 @@ static const struct lp_build_tgsi_action tex_action;
 
 enum desc_type {
 	DESC_IMAGE,
+	DESC_BUFFER,
 	DESC_FMASK,
-	DESC_SAMPLER
+	DESC_SAMPLER,
 };
-
-static LLVMTypeRef const_array(LLVMTypeRef elem_type, int num_elements)
-{
-	return LLVMPointerType(LLVMArrayType(elem_type, num_elements),
-			       CONST_ADDR_SPACE);
-}
 
 /**
  * Load an image view, fmask view. or sampler state descriptor.
@@ -4153,6 +4144,13 @@ static LLVMValueRef load_sampler_desc_custom(struct si_shader_context *ctx,
 	case DESC_IMAGE:
 		/* The image is at [0:7]. */
 		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 2, 0), "");
+		break;
+	case DESC_BUFFER:
+		/* The buffer is in [4:7]. */
+		index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, 4, 0), "");
+		index = LLVMBuildAdd(builder, index, LLVMConstInt(ctx->i32, 1, 0), "");
+		list = LLVMBuildPointerCast(builder, list,
+					    const_array(ctx->v4i32, 0), "");
 		break;
 	case DESC_FMASK:
 		/* The FMASK is at [8:15]. */
@@ -4235,21 +4233,25 @@ static void tex_fetch_ptrs(
 		index = LLVMConstInt(ctx->i32, sampler_index, 0);
 	}
 
-	*res_ptr = load_sampler_desc(ctx, index, DESC_IMAGE);
+	if (target == TGSI_TEXTURE_BUFFER)
+		*res_ptr = load_sampler_desc(ctx, index, DESC_BUFFER);
+	else
+		*res_ptr = load_sampler_desc(ctx, index, DESC_IMAGE);
+
+	if (samp_ptr)
+		*samp_ptr = NULL;
+	if (fmask_ptr)
+		*fmask_ptr = NULL;
 
 	if (target == TGSI_TEXTURE_2D_MSAA ||
 	    target == TGSI_TEXTURE_2D_ARRAY_MSAA) {
-		if (samp_ptr)
-			*samp_ptr = NULL;
 		if (fmask_ptr)
 			*fmask_ptr = load_sampler_desc(ctx, index, DESC_FMASK);
-	} else {
+	} else if (target != TGSI_TEXTURE_BUFFER) {
 		if (samp_ptr) {
 			*samp_ptr = load_sampler_desc(ctx, index, DESC_SAMPLER);
 			*samp_ptr = sici_fix_sampler_aniso(ctx, *res_ptr, *samp_ptr);
 		}
-		if (fmask_ptr)
-			*fmask_ptr = NULL;
 	}
 }
 
@@ -4258,8 +4260,6 @@ static void txq_fetch_args(
 	struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	unsigned target = inst->Texture.Texture;
 	LLVMValueRef res_ptr;
@@ -4269,8 +4269,7 @@ static void txq_fetch_args(
 
 	if (target == TGSI_TEXTURE_BUFFER) {
 		/* Read the size from the buffer descriptor directly. */
-		LLVMValueRef res = LLVMBuildBitCast(builder, res_ptr, ctx->v8i32, "");
-		emit_data->args[0] = get_buffer_size(bld_base, res);
+		emit_data->args[0] = get_buffer_size(bld_base, res_ptr);
 		return;
 	}
 
@@ -4338,16 +4337,9 @@ static void tex_fetch_args(
 	tex_fetch_ptrs(bld_base, emit_data, &res_ptr, &samp_ptr, &fmask_ptr);
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		LLVMTypeRef v2i128 = LLVMVectorType(ctx->i128, 2);
-
-		/* Bitcast and truncate v8i32 to v16i8. */
-		LLVMValueRef res = res_ptr;
-		res = LLVMBuildBitCast(gallivm->builder, res, v2i128, "");
-		res = LLVMBuildExtractElement(gallivm->builder, res, bld_base->uint_bld.one, "");
-		res = LLVMBuildBitCast(gallivm->builder, res, ctx->v16i8, "");
-
 		emit_data->dst_type = ctx->v4f32;
-		emit_data->args[0] = res;
+		emit_data->args[0] = LLVMBuildBitCast(gallivm->builder, res_ptr,
+						      ctx->v16i8, "");
 		emit_data->args[1] = bld_base->uint_bld.zero;
 		emit_data->args[2] = lp_build_emit_fetch(bld_base, emit_data->inst, 0, TGSI_CHAN_X);
 		emit_data->arg_count = 3;
