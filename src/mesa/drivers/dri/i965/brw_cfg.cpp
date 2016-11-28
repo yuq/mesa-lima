@@ -158,6 +158,7 @@ cfg_t::cfg_t(exec_list *instructions)
    blocks = NULL;
    num_blocks = 0;
    idom_dirty = true;
+   cycle_count = 0;
 
    bblock_t *cur = NULL;
    int ip = 0;
