@@ -2001,6 +2001,15 @@ void radv_CmdDrawIndexedIndirectCountAMD(
 	                                     maxDrawCount, stride);
 }
 
+static void
+radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
+{
+	radv_emit_compute_pipeline(cmd_buffer);
+	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline->layout,
+			     VK_SHADER_STAGE_COMPUTE_BIT);
+	si_emit_cache_flush(cmd_buffer);
+}
+
 void radv_CmdDispatch(
 	VkCommandBuffer                             commandBuffer,
 	uint32_t                                    x,
@@ -2009,10 +2018,8 @@ void radv_CmdDispatch(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 
-	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline->layout,
-			     VK_SHADER_STAGE_COMPUTE_BIT);
-	si_emit_cache_flush(cmd_buffer);
+	radv_flush_compute_state(cmd_buffer);
+
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 10);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B900_COMPUTE_USER_DATA_0 + AC_USERDATA_CS_GRID_SIZE * 4, 3);
@@ -2042,10 +2049,7 @@ void radv_CmdDispatchIndirect(
 
 	cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs, buffer->bo, 8);
 
-	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline->layout,
-			     VK_SHADER_STAGE_COMPUTE_BIT);
-	si_emit_cache_flush(cmd_buffer);
+	radv_flush_compute_state(cmd_buffer);
 
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 25);
 
@@ -2092,10 +2096,8 @@ void radv_unaligned_dispatch(
 	remainder[1] = y + compute_shader->info.cs.block_size[1] - align_u32_npot(y, compute_shader->info.cs.block_size[1]);
 	remainder[2] = z + compute_shader->info.cs.block_size[2] - align_u32_npot(z, compute_shader->info.cs.block_size[2]);
 
-	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline->layout,
-			     VK_SHADER_STAGE_COMPUTE_BIT);
-	si_emit_cache_flush(cmd_buffer);
+	radv_flush_compute_state(cmd_buffer);
+
 	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
