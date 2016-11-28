@@ -896,27 +896,35 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 
 static void
 radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
+				  VkShaderStageFlags stages,
 				  struct radv_descriptor_set *set,
 				  unsigned idx)
 {
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-				R_00B030_SPI_SHADER_USER_DATA_PS_0 + 8 * idx, 2);
-	radeon_emit(cmd_buffer->cs, set->va);
-	radeon_emit(cmd_buffer->cs, set->va >> 32);
+	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT) {
+		radeon_set_sh_reg_seq(cmd_buffer->cs,
+				      R_00B030_SPI_SHADER_USER_DATA_PS_0 + 8 * idx, 2);
+		radeon_emit(cmd_buffer->cs, set->va);
+		radeon_emit(cmd_buffer->cs, set->va >> 32);
+	}
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-				R_00B130_SPI_SHADER_USER_DATA_VS_0 + 8 * idx, 2);
-	radeon_emit(cmd_buffer->cs, set->va);
-	radeon_emit(cmd_buffer->cs, set->va >> 32);
+	if (stages & VK_SHADER_STAGE_VERTEX_BIT) {
+		radeon_set_sh_reg_seq(cmd_buffer->cs,
+				      R_00B130_SPI_SHADER_USER_DATA_VS_0 + 8 * idx, 2);
+		radeon_emit(cmd_buffer->cs, set->va);
+		radeon_emit(cmd_buffer->cs, set->va >> 32);
+	}
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-				R_00B900_COMPUTE_USER_DATA_0 + 8 * idx, 2);
-	radeon_emit(cmd_buffer->cs, set->va);
-	radeon_emit(cmd_buffer->cs, set->va >> 32);
+	if (stages & VK_SHADER_STAGE_COMPUTE_BIT) {
+		radeon_set_sh_reg_seq(cmd_buffer->cs,
+				      R_00B900_COMPUTE_USER_DATA_0 + 8 * idx, 2);
+		radeon_emit(cmd_buffer->cs, set->va);
+		radeon_emit(cmd_buffer->cs, set->va >> 32);
+	}
 }
 
 static void
-radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer)
+radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer,
+		       VkShaderStageFlags stages)
 {
 	unsigned i;
 	if (!cmd_buffer->state.descriptors_dirty)
@@ -929,7 +937,7 @@ radv_flush_descriptors(struct radv_cmd_buffer *cmd_buffer)
 		if (!set)
 			continue;
 
-		radv_emit_descriptor_set_userdata(cmd_buffer, set, i);
+		radv_emit_descriptor_set_userdata(cmd_buffer, stages, set, i);
 	}
 	cmd_buffer->state.descriptors_dirty = 0;
 }
@@ -1068,7 +1076,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
 
-	radv_flush_descriptors(cmd_buffer);
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_ALL_GRAPHICS);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
 
@@ -1519,6 +1527,11 @@ void radv_CmdBindPipeline(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_pipeline, pipeline, _pipeline);
+
+	for (unsigned i = 0; i < MAX_SETS; i++) {
+		if (cmd_buffer->state.descriptors[i])
+			cmd_buffer->state.descriptors_dirty |= (1 << i);
+	}
 
 	switch (pipelineBindPoint) {
 	case VK_PIPELINE_BIND_POINT_COMPUTE:
@@ -2033,7 +2046,7 @@ static void
 radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 {
 	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_descriptors(cmd_buffer);
+	radv_flush_descriptors(cmd_buffer, VK_SHADER_STAGE_COMPUTE_BIT);
 	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			     VK_SHADER_STAGE_COMPUTE_BIT);
 	si_emit_cache_flush(cmd_buffer);
