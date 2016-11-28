@@ -2499,7 +2499,7 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 	actual_in = 0;
 	inloc = 0;
 	for (i = 0; i < so->inputs_count; i++) {
-		unsigned j, regid = ~0, compmask = 0;
+		unsigned j, regid = ~0, compmask = 0, maxcomp = 0;
 		so->inputs[i].ncomp = 0;
 		so->inputs[i].inloc = inloc;
 		for (j = 0; j < 4; j++) {
@@ -2512,14 +2512,19 @@ ir3_compile_shader_nir(struct ir3_compiler *compiler,
 				if ((so->type == SHADER_FRAGMENT) && so->inputs[i].bary) {
 					/* assign inloc: */
 					assert(in->regs[1]->flags & IR3_REG_IMMED);
-					in->regs[1]->iim_val = inloc++;
+					in->regs[1]->iim_val = inloc + j;
+					maxcomp = j + 1;
 				}
 			}
 		}
-		if ((so->type == SHADER_FRAGMENT) && compmask && so->inputs[i].bary)
+		if ((so->type == SHADER_FRAGMENT) && compmask && so->inputs[i].bary) {
 			so->varying_in++;
+			so->inputs[i].compmask = (1 << maxcomp) - 1;
+			inloc += maxcomp;
+		} else {
+			so->inputs[i].compmask = compmask;
+		}
 		so->inputs[i].regid = regid;
-		so->inputs[i].compmask = compmask;
 	}
 
 	if (ctx->astc_srgb)
