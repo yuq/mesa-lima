@@ -1694,9 +1694,6 @@ instruction_scheduler::run(cfg_t *cfg)
       setup_liveness(cfg);
 
    foreach_block(block, cfg) {
-      if (block->end_ip - block->start_ip <= 1)
-         continue;
-
       if (reads_remaining) {
          memset(reads_remaining, 0,
                 grf_count * sizeof(*reads_remaining));
