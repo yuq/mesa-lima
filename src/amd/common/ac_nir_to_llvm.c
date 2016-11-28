@@ -2035,6 +2035,34 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 	                        get_def_type(ctx, &instr->dest.ssa), "");
 }
 
+static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
+                                          nir_intrinsic_instr *instr)
+{
+	const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
+	const char *load_name;
+	LLVMTypeRef data_type = ctx->f32;
+	LLVMValueRef results[4], ret;
+	LLVMValueRef rsrc = get_src(ctx, instr->src[0]);
+	LLVMValueRef offset = get_src(ctx, instr->src[1]);
+
+	rsrc = LLVMBuildBitCast(ctx->builder, rsrc, LLVMVectorType(ctx->i8, 16), "");
+
+	for (unsigned i = 0; i < instr->num_components; ++i) {
+		LLVMValueRef params[] = {
+			rsrc,
+			LLVMBuildAdd(ctx->builder, LLVMConstInt(ctx->i32, 4 * i, 0),
+				     offset, "")
+		};
+		results[i] = emit_llvm_intrinsic(ctx, "llvm.SI.load.const", ctx->f32,
+						 params, 2, AC_FUNC_ATTR_READNONE);
+	}
+
+
+	ret = build_gather_values(ctx, results, instr->num_components);
+	return LLVMBuildBitCast(ctx->builder, ret,
+	                        get_def_type(ctx, &instr->dest.ssa), "");
+}
+
 static void
 radv_get_deref_offset(struct nir_to_llvm_context *ctx, nir_deref *tail,
                       bool vs_in, unsigned *const_out, LLVMValueRef *indir_out)
@@ -2956,7 +2984,7 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		result = visit_atomic_ssbo(ctx, instr);
 		break;
 	case nir_intrinsic_load_ubo:
-		result = visit_load_buffer(ctx, instr);
+		result = visit_load_ubo_buffer(ctx, instr);
 		break;
 	case nir_intrinsic_get_buffer_size:
 		result = visit_get_buffer_size(ctx, instr);
