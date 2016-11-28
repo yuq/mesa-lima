@@ -163,6 +163,15 @@ TEST_F(copy_propagation_test, maxmax_sat_imm)
       { BRW_CONDITIONAL_L   , -1.5f, false },
       { BRW_CONDITIONAL_GE  ,  1.5f, false },
       { BRW_CONDITIONAL_L   ,  1.5f, false },
+
+      { BRW_CONDITIONAL_NONE, 0.5f, false },
+      { BRW_CONDITIONAL_Z   , 0.5f, false },
+      { BRW_CONDITIONAL_NZ  , 0.5f, false },
+      { BRW_CONDITIONAL_G   , 0.5f, false },
+      { BRW_CONDITIONAL_LE  , 0.5f, false },
+      { BRW_CONDITIONAL_R   , 0.5f, false },
+      { BRW_CONDITIONAL_O   , 0.5f, false },
+      { BRW_CONDITIONAL_U   , 0.5f, false },
    };
 
    for (unsigned i = 0; i < sizeof(test) / sizeof(test[0]); i++) {

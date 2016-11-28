@@ -431,7 +431,9 @@ fs_visitor::try_copy_propagate(fs_inst *inst, int arg, acp_entry *entry)
    if (entry->saturate) {
       switch(inst->opcode) {
       case BRW_OPCODE_SEL:
-         if (inst->src[1].file != IMM ||
+         if ((inst->conditional_mod != BRW_CONDITIONAL_GE &&
+              inst->conditional_mod != BRW_CONDITIONAL_L) ||
+             inst->src[1].file != IMM ||
              inst->src[1].f < 0.0 ||
              inst->src[1].f > 1.0) {
             return false;
