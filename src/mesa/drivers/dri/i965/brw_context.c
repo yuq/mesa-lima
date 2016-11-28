@@ -536,10 +536,15 @@ brw_initialize_context_constants(struct brw_context *brw)
    ctx->Const.MaxTextureRectSize = 1 << 12;
    ctx->Const.MaxTextureMaxAnisotropy = 16.0;
    ctx->Const.StripTextureBorder = true;
-   if (brw->gen >= 7)
+   if (brw->gen >= 7) {
       ctx->Const.MaxProgramTextureGatherComponents = 4;
-   else if (brw->gen == 6)
+      ctx->Const.MinProgramTextureGatherOffset = -32;
+      ctx->Const.MaxProgramTextureGatherOffset = 31;
+   } else if (brw->gen == 6) {
       ctx->Const.MaxProgramTextureGatherComponents = 1;
+      ctx->Const.MinProgramTextureGatherOffset = -8;
+      ctx->Const.MaxProgramTextureGatherOffset = 7;
+   }
 
    ctx->Const.MaxUniformBlockSize = 65536;
 
