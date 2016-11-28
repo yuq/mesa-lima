@@ -4485,8 +4485,12 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       case nir_tex_src_offset: {
          nir_const_value *const_offset =
             nir_src_as_const_value(instr->src[i].src);
-         if (const_offset) {
-            header_bits |= brw_texture_offset(const_offset->i32, 3);
+         unsigned offset_bits = 0;
+         if (const_offset &&
+             brw_texture_offset(const_offset->i32,
+                                nir_tex_instr_src_size(instr, i),
+                                &offset_bits)) {
+            header_bits |= offset_bits;
          } else {
             srcs[TEX_LOGICAL_SRC_TG4_OFFSET] =
                retype(src, BRW_REGISTER_TYPE_D);

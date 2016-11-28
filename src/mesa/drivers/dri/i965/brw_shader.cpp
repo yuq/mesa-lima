@@ -127,10 +127,15 @@ brw_math_function(enum opcode op)
    }
 }
 
-uint32_t
-brw_texture_offset(int *offsets, unsigned num_components)
+bool
+brw_texture_offset(int *offsets, unsigned num_components, uint32_t *offset_bits)
 {
-   if (!offsets) return 0;  /* nonconstant offset; caller will handle it. */
+   if (!offsets) return false;  /* nonconstant offset; caller will handle it. */
+
+   /* offset out of bounds; caller will handle it. */
+   for (unsigned i = 0; i < num_components; i++)
+      if (offsets[i] > 7 || offsets[i] < -8)
+         return false;
 
    /* Combine all three offsets into a single unsigned dword:
     *
@@ -138,12 +143,12 @@ brw_texture_offset(int *offsets, unsigned num_components)
     *    bits  7:4 - V Offset (Y component)
     *    bits  3:0 - R Offset (Z component)
     */
-   unsigned offset_bits = 0;
+   *offset_bits = 0;
    for (unsigned i = 0; i < num_components; i++) {
       const unsigned shift = 4 * (2 - i);
-      offset_bits |= (offsets[i] << shift) & (0xF << shift);
+      *offset_bits |= (offsets[i] << shift) & (0xF << shift);
    }
-   return offset_bits;
+   return true;
 }
 
 const char *

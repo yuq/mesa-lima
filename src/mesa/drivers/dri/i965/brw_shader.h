@@ -215,7 +215,9 @@ public:
    virtual void invalidate_live_intervals() = 0;
 };
 
-uint32_t brw_texture_offset(int *offsets, unsigned num_components);
+bool brw_texture_offset(int *offsets,
+                        unsigned num_components,
+                        uint32_t *offset_bits);
 
 void brw_setup_image_uniform_values(gl_shader_stage stage,
                                     struct brw_stage_prog_data *stage_prog_data,

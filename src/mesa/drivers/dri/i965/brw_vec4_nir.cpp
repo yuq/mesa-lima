@@ -1880,9 +1880,10 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
       case nir_tex_src_offset: {
          nir_const_value *const_offset =
             nir_src_as_const_value(instr->src[i].src);
-         if (const_offset) {
-            constant_offset = brw_texture_offset(const_offset->i32, 3);
-         } else {
+         if (!const_offset ||
+             !brw_texture_offset(const_offset->i32,
+                                 nir_tex_instr_src_size(instr, i),
+                                 &constant_offset)) {
             offset_value =
                get_nir_src(instr->src[i].src, BRW_REGISTER_TYPE_D, 2);
          }
