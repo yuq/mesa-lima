@@ -1745,6 +1745,8 @@ dri2_wl_swrast_create_window_surface(_EGLDriver *drv, _EGLDisplay *disp,
       dri2_surf->format = WL_SHM_FORMAT_ARGB8888;
 
    dri2_surf->wl_win = window;
+   dri2_surf->wl_win->private = dri2_surf;
+   dri2_surf->wl_win->destroy_window_callback = destroy_window_callback;
 
    dri2_surf->base.Width = -1;
    dri2_surf->base.Height = -1;
