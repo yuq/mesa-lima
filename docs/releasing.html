@@ -300,11 +300,6 @@ Reason: ...
 
 <h1 id="release">Making a new release</h1>
 
-* process - manual + xorg tool
-+ ^^ verify
-+ touch test -> glxgears/info dota2vk
-
-
 <p>
 These are the instructions for making a new Mesa release.
 </p>
@@ -335,36 +330,56 @@ Here is one solution that I've been using.
 <pre>
 	git clean -fXd; git clean -nxd
 	read # quick cross check any outstanding files
+	export __version=`cat VERSION`
 	export __mesa_root=../
 	export __build_root=./foo
 	chmod 755 -fR $__build_root; rm -rf $__build_root
 	mkdir -p $__build_root &amp;&amp; cd $__build_root
 
-	 $__mesa_root/autogen.sh --enable-llvm-shared-libs &amp;&amp; make -j2 distcheck
+	$__mesa_root/autogen.sh --enable-llvm-shared-libs &amp;&amp; make -j2 distcheck
 
 	# Build check the tarballs (scons)
-	tar -xaf mesa-*.tar.xz &amp;&amp; cd mesa-* &amp;&amp; scons &amp;&amp; cd ..
+	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version &amp;&amp; scons &amp;&amp; cd ..
 
 	# Test the automake binaries
-	tar -xaf mesa-*.tar.xz &amp;&amp; cd mesa-*
+	rm -rf cd mesa-$__version
+	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
 	./configure \
 		--with-dri-drivers=i965,swrast \
 		--with-gallium-drivers=swrast \
+		--with-vulkan-drivers=intel \
 		--enable-llvm-shared-libs \
-		--enable-gallium-llvm
+		--enable-gallium-llvm \
+		--enable-glx-tls \
+		--enable-gbm \
+		--enable-egl \
+		--with-egl-platforms=x11,drm,wayland
 	make -j2 &amp;&amp; DESTDIR=`pwd`/test make -j6 install
 	export LD_LIBRARY_PATH=`pwd`/test/usr/local/lib/
 	export LIBGL_DRIVERS_PATH=`pwd`/test/usr/local/lib/dri/
-	xport LIBGL_DEBUG=verbose
+	export LIBGL_DEBUG=verbose
 	glxinfo | egrep -o "Mesa.*"
 	glxgears
+	es2_info | egrep "GL_VERSION|GL_RENDERER"
+	es2gears_x11
 	export LIBGL_ALWAYS_SOFTWARE=1
 	glxinfo | egrep -o "Mesa.*|Gallium.*"
 	glxgears
+	es2_info | egrep "GL_VERSION|GL_RENDERER"
+	es2gears_x11
 	export LIBGL_ALWAYS_SOFTWARE=1
 	export GALLIUM_DRIVER=softpipe
 	glxinfo | egrep -o "Mesa.*|Gallium.*"
 	glxgears
+	es2_info | egrep "GL_VERSION|GL_RENDERER"
+	es2gears_x11
+	# Smoke test DOTA2
+	unset LD_LIBRARY_PATH
+	unset LIBGL_DRIVERS_PATH
+	unset LIBGL_DEBUG
+	unset LIBGL_ALWAYS_SOFTWARE
+	export VK_ICD_FILENAMES=`pwd`/src/intel/vulkan/dev_icd.json
+	steam steam://rungameid/570  -vconsole -vulkan
 </pre>
 
 <h3>Update version in file VERSION</h3>
