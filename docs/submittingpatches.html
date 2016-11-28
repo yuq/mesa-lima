@@ -337,6 +337,13 @@ be rejected:
 <h2 id="gittips">Git tips</h2>
 
 <ul>
+<li><code>git rebase -i ...</code> is your friend. Don't be afraid to use it.
+<li>Apply a fixup to commit FOO.
+<pre>
+    git add ...
+    git commit --fixup=FOO
+    git rebase -i --autosquash ...
+</pre>
 <li>Test for build breakage between patches e.g last 8 commits.
 <pre>
     git rebase -i --exec="make -j4" HEAD~8
