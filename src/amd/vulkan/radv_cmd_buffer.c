@@ -895,6 +895,27 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 }
 
 static void
+radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
+				  struct radv_descriptor_set *set,
+				  unsigned idx)
+{
+	radeon_set_sh_reg_seq(cmd_buffer->cs,
+				R_00B030_SPI_SHADER_USER_DATA_PS_0 + 8 * idx, 2);
+	radeon_emit(cmd_buffer->cs, set->va);
+	radeon_emit(cmd_buffer->cs, set->va >> 32);
+
+	radeon_set_sh_reg_seq(cmd_buffer->cs,
+				R_00B130_SPI_SHADER_USER_DATA_VS_0 + 8 * idx, 2);
+	radeon_emit(cmd_buffer->cs, set->va);
+	radeon_emit(cmd_buffer->cs, set->va >> 32);
+
+	radeon_set_sh_reg_seq(cmd_buffer->cs,
+				R_00B900_COMPUTE_USER_DATA_0 + 8 * idx, 2);
+	radeon_emit(cmd_buffer->cs, set->va);
+	radeon_emit(cmd_buffer->cs, set->va >> 32);
+}
+
+static void
 radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 		     struct radv_pipeline *pipeline,
 		     VkShaderStageFlags stages)
@@ -1353,21 +1374,7 @@ void radv_bind_descriptor_set(struct radv_cmd_buffer *cmd_buffer,
 		if (set->descriptors[j])
 			ws->cs_add_buffer(cmd_buffer->cs, set->descriptors[j], 7);
 
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-				R_00B030_SPI_SHADER_USER_DATA_PS_0 + 8 * idx, 2);
-	radeon_emit(cmd_buffer->cs, set->va);
-	radeon_emit(cmd_buffer->cs, set->va >> 32);
-
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-				R_00B130_SPI_SHADER_USER_DATA_VS_0 + 8 * idx, 2);
-	radeon_emit(cmd_buffer->cs, set->va);
-	radeon_emit(cmd_buffer->cs, set->va >> 32);
-
-	radeon_set_sh_reg_seq(cmd_buffer->cs,
-				R_00B900_COMPUTE_USER_DATA_0 + 8 * idx, 2);
-	radeon_emit(cmd_buffer->cs, set->va);
-	radeon_emit(cmd_buffer->cs, set->va >> 32);
-
+	radv_emit_descriptor_set_userdata(cmd_buffer, set, idx);
 	if(set->bo)
 		ws->cs_add_buffer(cmd_buffer->cs, set->bo, 8);
 }
