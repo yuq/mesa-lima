@@ -896,8 +896,10 @@ radv_cmd_buffer_flush_dynamic_state(struct radv_cmd_buffer *cmd_buffer)
 
 static void
 radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
-		     struct radv_pipeline_layout *layout,
-		     VkShaderStageFlags stages) {
+		     struct radv_pipeline *pipeline,
+		     VkShaderStageFlags stages)
+{
+	struct radv_pipeline_layout *layout = pipeline->layout;
 	unsigned offset;
 	void *ptr;
 	uint64_t va;
@@ -1026,7 +1028,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 
 	radv_cmd_buffer_flush_dynamic_state(cmd_buffer);
 
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline->layout,
+	radv_flush_constants(cmd_buffer, cmd_buffer->state.pipeline,
 			     VK_SHADER_STAGE_ALL_GRAPHICS);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
@@ -2005,7 +2007,7 @@ static void
 radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 {
 	radv_emit_compute_pipeline(cmd_buffer);
-	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline->layout,
+	radv_flush_constants(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			     VK_SHADER_STAGE_COMPUTE_BIT);
 	si_emit_cache_flush(cmd_buffer);
 }
