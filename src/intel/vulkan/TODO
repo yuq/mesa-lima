@@ -9,7 +9,6 @@ Missing Features:
  - Investigate CTS failures on HSW
  - Pipeline statistics queries
  - Sparse memory
- - Per-sample-dispatch, minSampleShading
 
 Code sharing with GL:
  - Add surface capability introspection to ISL (pull the surface format
