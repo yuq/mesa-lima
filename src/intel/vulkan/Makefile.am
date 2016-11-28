@@ -43,9 +43,6 @@ noinst_LTLIBRARIES = $(PER_GEN_LIBS)
 # The gallium includes are for the util/u_math.h include from main/macros.h
 
 AM_CPPFLAGS = \
-	$(INTEL_CFLAGS) \
-	$(VALGRIND_CFLAGS) \
-	$(DEFINES) \
 	-I$(top_srcdir)/include \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
@@ -61,6 +58,17 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/include \
 	-I$(top_builddir)/src/intel \
 	-I$(top_srcdir)/src/intel
+
+if HAVE_PLATFORM_WAYLAND
+AM_CPPFLAGS += \
+	-I$(top_builddir)/src/egl/wayland/wayland-drm \
+	-I$(top_srcdir)/src/egl/wayland/wayland-drm
+endif
+
+AM_CPPFLAGS += \
+	$(INTEL_CFLAGS) \
+	$(VALGRIND_CFLAGS) \
+	$(DEFINES)
 
 AM_CFLAGS = \
 	$(VISIBILITY_CFLAGS) \
@@ -100,8 +108,6 @@ endif
 
 if HAVE_PLATFORM_WAYLAND
 AM_CPPFLAGS += \
-	-I$(top_builddir)/src/egl/wayland/wayland-drm \
-	-I$(top_srcdir)/src/egl/wayland/wayland-drm \
 	$(WAYLAND_CFLAGS) \
 	-DVK_USE_PLATFORM_WAYLAND_KHR
 
