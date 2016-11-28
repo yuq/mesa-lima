@@ -468,6 +468,21 @@ static void si_dump_descriptors(struct si_context *sctx,
 					num_elements[i], f);
 }
 
+static void si_dump_command(const char *title, const char *command, FILE *f)
+{
+	char line[2000];
+
+	FILE *p = popen(command, "r");
+	if (!p)
+		return;
+
+	fprintf(f, COLOR_YELLOW "%s: " COLOR_RESET "\n", title);
+	while (fgets(line, sizeof(line), p))
+		fputs(line, f);
+	fprintf(f, "\n\n");
+	pclose(p);
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
@@ -485,6 +500,11 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_shader(sctx->screen, &sctx->tes_shader, f);
 		si_dump_shader(sctx->screen, &sctx->gs_shader, f);
 		si_dump_shader(sctx->screen, &sctx->ps_shader, f);
+
+		if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
+			si_dump_command("Active waves", "umr -wa | column -t", f);
+			si_dump_command("Wave information", "umr -O bits -wa", f);
+		}
 
 		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
 					"", "RW buffers", SI_NUM_RW_BUFFERS, f);
