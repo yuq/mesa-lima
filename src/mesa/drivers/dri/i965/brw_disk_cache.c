@@ -30,6 +30,7 @@
 #include "util/mesa-sha1.h"
 
 #include "brw_context.h"
+#include "brw_program.h"
 #include "brw_gs.h"
 #include "brw_state.h"
 #include "brw_vs.h"
@@ -120,6 +121,14 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
        */
       prog_key.vs.program_string_id = 0;
       break;
+   case MESA_SHADER_TESS_CTRL:
+      brw_tcs_populate_key(brw, &prog_key.tcs);
+      prog_key.tcs.program_string_id = 0;
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      brw_tes_populate_key(brw, &prog_key.tes);
+      prog_key.tes.program_string_id = 0;
+      break;
    case MESA_SHADER_GEOMETRY:
       brw_gs_populate_key(brw, &prog_key.gs);
       prog_key.gs.program_string_id = 0;
@@ -181,6 +190,16 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
       prog_key.vs.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_VS_PROG;
       stage_state = &brw->vs.base;
+      break;
+   case MESA_SHADER_TESS_CTRL:
+      prog_key.tcs.program_string_id = brw_program(prog)->id;
+      cache_id = BRW_CACHE_TCS_PROG;
+      stage_state = &brw->tcs.base;
+      break;
+   case MESA_SHADER_TESS_EVAL:
+      prog_key.tes.program_string_id = brw_program(prog)->id;
+      cache_id = BRW_CACHE_TES_PROG;
+      stage_state = &brw->tes.base;
       break;
    case MESA_SHADER_GEOMETRY:
       prog_key.gs.program_string_id = brw_program(prog)->id;
@@ -285,6 +304,28 @@ brw_disk_cache_write_program(struct brw_context *brw)
       write_program_data(brw, prog, &vs_key, brw->vs.base.prog_data,
                          brw->vs.base.prog_offset, cache,
                          MESA_SHADER_VERTEX);
+   }
+
+   prog = brw->ctx._Shader->CurrentProgram[MESA_SHADER_TESS_CTRL];
+   if (prog && !prog->program_written_to_cache) {
+      struct brw_tcs_prog_key tcs_key;
+      brw_tcs_populate_key(brw, &tcs_key);
+      tcs_key.program_string_id = 0;
+
+      write_program_data(brw, prog, &tcs_key, brw->tcs.base.prog_data,
+                         brw->tcs.base.prog_offset, cache,
+                         MESA_SHADER_TESS_CTRL);
+   }
+
+   prog = brw->ctx._Shader->CurrentProgram[MESA_SHADER_TESS_EVAL];
+   if (prog && !prog->program_written_to_cache) {
+      struct brw_tes_prog_key tes_key;
+      brw_tes_populate_key(brw, &tes_key);
+      tes_key.program_string_id = 0;
+
+      write_program_data(brw, prog, &tes_key, brw->tes.base.prog_data,
+                         brw->tes.base.prog_offset, cache,
+                         MESA_SHADER_TESS_EVAL);
    }
 
    prog = brw->ctx._Shader->CurrentProgram[MESA_SHADER_GEOMETRY];

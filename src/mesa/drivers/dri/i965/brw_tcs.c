@@ -337,14 +337,21 @@ brw_upload_tcs_prog(struct brw_context *brw)
 
    brw_tcs_populate_key(brw, &key);
 
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_TCS_PROG,
-                         &key, sizeof(key),
-                         &stage_state->prog_offset,
-                         &brw->tcs.base.prog_data)) {
-      bool success = brw_codegen_tcs_prog(brw, tcp, tep, &key);
-      assert(success);
-      (void)success;
-   }
+   if (brw_search_cache(&brw->cache, BRW_CACHE_TCS_PROG,
+                        &key, sizeof(key),
+                        &stage_state->prog_offset,
+                        &brw->tcs.base.prog_data))
+      return;
+
+   if (brw_disk_cache_upload_program(brw, MESA_SHADER_TESS_CTRL))
+      return;
+
+   tcp = (struct brw_program *) brw->programs[MESA_SHADER_TESS_CTRL];
+   if (tcp)
+      tcp->id = key.program_string_id;
+
+   MAYBE_UNUSED bool success = brw_codegen_tcs_prog(brw, tcp, tep, &key);
+   assert(success);
 }
 
 
