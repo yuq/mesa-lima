@@ -5256,6 +5256,7 @@ static void si_llvm_emit_vertex(
 	struct si_shader *shader = ctx->shader;
 	struct tgsi_shader_info *info = &shader->selector->info;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	struct lp_build_if_state if_state;
 	LLVMValueRef soffset = LLVMGetParam(ctx->main_fn,
 					    SI_PARAM_GS2VS_OFFSET);
 	LLVMValueRef gs_next_vertex;
@@ -5273,19 +5274,28 @@ static void si_llvm_emit_vertex(
 				       "");
 
 	/* If this thread has already emitted the declared maximum number of
-	 * vertices, kill it: excessive vertex emissions are not supposed to
-	 * have any effect, and GS threads have no externally observable
-	 * effects other than emitting vertices.
+	 * vertices, skip the write: excessive vertex emissions are not
+	 * supposed to have any effect.
+	 *
+	 * If the shader has no writes to memory, kill it instead. This skips
+	 * further memory loads and may allow LLVM to skip to the end
+	 * altogether.
 	 */
 	can_emit = LLVMBuildICmp(gallivm->builder, LLVMIntULE, gs_next_vertex,
 				 lp_build_const_int32(gallivm,
 						      shader->selector->gs_max_out_vertices), "");
-	kill = lp_build_select(&bld_base->base, can_emit,
-			       lp_build_const_float(gallivm, 1.0f),
-			       lp_build_const_float(gallivm, -1.0f));
 
-	lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-			   ctx->voidt, &kill, 1, 0);
+	bool use_kill = !info->writes_memory;
+	if (use_kill) {
+		kill = lp_build_select(&bld_base->base, can_emit,
+				       lp_build_const_float(gallivm, 1.0f),
+				       lp_build_const_float(gallivm, -1.0f));
+
+		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
+				   ctx->voidt, &kill, 1, 0);
+	} else {
+		lp_build_if(&if_state, gallivm, can_emit);
+	}
 
 	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr =
@@ -5311,6 +5321,7 @@ static void si_llvm_emit_vertex(
 					    1, 0, 1, 1, 0);
 		}
 	}
+
 	gs_next_vertex = lp_build_add(uint, gs_next_vertex,
 				      lp_build_const_int32(gallivm, 1));
 
@@ -5321,6 +5332,9 @@ static void si_llvm_emit_vertex(
 	args[1] = LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID);
 	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
 			   ctx->voidt, args, 2, 0);
+
+	if (!use_kill)
+		lp_build_endif(&if_state);
 }
 
 /* Cut one primitive from the geometry shader */
