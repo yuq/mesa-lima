@@ -181,14 +181,12 @@ brw_compute_vue_map(const struct gen_device_info *devinfo,
       const int varying = ffsll(generics) - 1;
       if (separate) {
          slot = first_generic_slot + varying - VARYING_SLOT_VAR0;
-         assign_vue_slot(vue_map, varying, slot);
-      } else {
-         assign_vue_slot(vue_map, varying, slot++);
       }
+      assign_vue_slot(vue_map, varying, slot++);
       generics &= ~BITFIELD64_BIT(varying);
    }
 
-   vue_map->num_slots = separate ? slot + 1 : slot;
+   vue_map->num_slots = slot;
    vue_map->num_per_vertex_slots = 0;
    vue_map->num_per_patch_slots = 0;
 }
