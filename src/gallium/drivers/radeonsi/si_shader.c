@@ -2265,11 +2265,13 @@ static void emit_streamout_output(struct si_shader_context *ctx,
 				   stream_out->dst_offset * 4);
 }
 
-/* On SI, the vertex shader is responsible for writing streamout data
- * to buffers. */
+/**
+ * Write streamout data to buffers for vertex stream @p stream (different
+ * vertex streams can occur for GS copy shaders).
+ */
 static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 				   struct si_shader_output_values *outputs,
-				   unsigned noutput)
+				   unsigned noutput, unsigned stream)
 {
 	struct si_shader_selector *sel = ctx->shader->selector;
 	struct pipe_stream_output_info *so = &sel->so;
@@ -2288,27 +2290,11 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	LLVMValueRef can_emit =
 		LLVMBuildICmp(builder, LLVMIntULT, tid, so_vtx_count, "");
 
-	LLVMValueRef stream_id =
-		unpack_param(ctx, ctx->param_streamout_config, 24, 2);
-
 	/* Emit the streamout code conditionally. This actually avoids
 	 * out-of-bounds buffer access. The hw tells us via the SGPR
 	 * (so_vtx_count) which threads are allowed to emit streamout data. */
 	lp_build_if(&if_ctx, gallivm, can_emit);
-
-	for (int stream = 0; stream < 4; ++stream) {
-		struct lp_build_if_state if_ctx_stream;
-
-		if (!sel->info.num_stream_output_components[stream])
-			continue;
-
-		LLVMValueRef is_stream =
-			LLVMBuildICmp(builder, LLVMIntEQ,
-				      stream_id,
-				      lp_build_const_int32(gallivm, stream), "");
-
-		lp_build_if(&if_ctx_stream, gallivm, is_stream);
-
+	{
 		/* The buffer offset is computed as follows:
 		 *   ByteOffset = streamout_offset[buffer_id]*4 +
 		 *                (streamout_write_index + thread_id)*stride[buffer_id] +
@@ -2360,8 +2346,6 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 			emit_streamout_output(ctx, so_buffers, so_write_offset,
 					      &so->output[i], &outputs[reg]);
 		}
-
-		lp_build_endif(&if_ctx_stream);
 	}
 	lp_build_endif(&if_ctx);
 }
@@ -2932,7 +2916,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 				     VS_EPILOG_PRIMID_LOC, "");
 
 	if (ctx->shader->selector->so.num_outputs)
-		si_llvm_emit_streamout(ctx, outputs, i);
+		si_llvm_emit_streamout(ctx, outputs, i, 0);
 	si_llvm_export_vs(bld_base, outputs, i);
 	FREE(outputs);
 }
@@ -6354,6 +6338,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	struct si_shader_context ctx;
 	struct si_shader *shader;
 	struct gallivm_state *gallivm = &ctx.gallivm;
+	LLVMBuilderRef builder;
 	struct lp_build_tgsi_context *bld_base = &ctx.soa.bld_base;
 	struct lp_build_context *uint = &bld_base->uint_bld;
 	struct si_shader_output_values *outputs;
@@ -6379,6 +6364,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	si_init_shader_ctx(&ctx, sscreen, shader, tm);
 	ctx.type = PIPE_SHADER_VERTEX;
 
+	builder = gallivm->builder;
+
 	create_meta_data(&ctx);
 	create_function(&ctx);
 	preload_ring_buffers(&ctx);
@@ -6394,6 +6381,14 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	args[6] = uint->one;  /* GLC */
 	args[7] = uint->one;  /* SLC */
 	args[8] = uint->zero; /* TFE */
+
+	/* Fetch the vertex stream ID.*/
+	LLVMValueRef stream_id;
+
+	if (gs_selector->so.num_outputs)
+		stream_id = unpack_param(&ctx, ctx.param_streamout_config, 24, 2);
+	else
+		stream_id = uint->zero;
 
 	/* Fetch vertex data from GSVS ring */
 	for (i = 0; i < gsinfo->num_outputs; ++i) {
@@ -6420,8 +6415,25 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		}
 	}
 
-	if (gs_selector->so.num_outputs)
-		si_llvm_emit_streamout(&ctx, outputs, gsinfo->num_outputs);
+	if (gs_selector->so.num_outputs) {
+		for (int stream = 0; stream < 4; stream++) {
+			struct lp_build_if_state if_ctx_stream;
+
+			if (!gsinfo->num_stream_output_components[stream])
+				continue;
+
+			LLVMValueRef is_stream =
+				LLVMBuildICmp(builder, LLVMIntEQ,
+					      stream_id,
+					      lp_build_const_int32(gallivm, stream), "");
+
+			lp_build_if(&if_ctx_stream, gallivm, is_stream);
+			si_llvm_emit_streamout(&ctx, outputs,
+					       gsinfo->num_outputs,
+					       stream);
+			lp_build_endif(&if_ctx_stream);
+		}
+	}
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
 	LLVMBuildRetVoid(gallivm->builder);
