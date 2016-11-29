@@ -588,8 +588,7 @@
   </struct>
 
   <struct name="INTERFACE_DESCRIPTOR_DATA" length="8">
-    <field name="Kernel Start Pointer" start="6" end="31" type="offset"/>
-    <field name="Kernel Start Pointer High" start="32" end="47" type="offset"/>
+    <field name="Kernel Start Pointer" start="6" end="47" type="offset"/>
     <field name="Denorm Mode" start="83" end="83" type="uint">
       <value name="Ftz" value="0"/>
       <value name="SetByKernel" value="1"/>
