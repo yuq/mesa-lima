@@ -119,4 +119,6 @@ gen6_upload_push_constants(struct brw_context *brw,
        */
       assert(stage_state->push_const_size <= 32);
    }
+
+   stage_state->push_constants_dirty = true;
 }

@@ -565,6 +565,9 @@ struct brw_stage_state
    /** SAMPLER_STATE count and table offset */
    uint32_t sampler_count;
    uint32_t sampler_offset;
+
+   /** Need to re-emit 3DSTATE_CONSTANT_XS? */
+   bool push_constants_dirty;
 };
 
 enum brw_predicate_state {
