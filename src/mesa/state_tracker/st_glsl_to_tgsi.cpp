@@ -339,6 +339,7 @@ struct inout_decl {
    unsigned array_id; /* TGSI ArrayID; 1-based: 0 means not an array */
    unsigned size;
    unsigned interp_loc;
+   unsigned gs_out_streams;
    enum glsl_interp_mode interp;
    enum glsl_base_type base_type;
    ubyte usage_mask; /* GLSL-style usage-mask,  i.e. single bit per double */
@@ -2478,6 +2479,14 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
          decl->mesa_index = var->data.location + FRAG_RESULT_MAX * var->data.index;
          decl->base_type = type_without_array->base_type;
          decl->usage_mask = u_bit_consecutive(component, num_components);
+         if (var->data.stream & (1u << 31)) {
+            decl->gs_out_streams = var->data.stream & ~(1u << 31);
+         } else {
+            assert(var->data.stream < 4);
+            decl->gs_out_streams = 0;
+            for (unsigned i = 0; i < num_components; ++i)
+               decl->gs_out_streams |= var->data.stream << (2 * (component + i));
+         }
 
          if (is_inout_array(shader->Stage, var, &remove_array)) {
             decl->array_id = num_output_arrays + 1;
@@ -6091,6 +6100,7 @@ st_translate_program(
 
          dst = ureg_DECL_output_layout(ureg,
                      outputSemanticName[slot], outputSemanticIndex[slot],
+                     decl->gs_out_streams,
                      slot, tgsi_usage_mask, decl->array_id, decl->size);
 
          for (unsigned j = 0; j < decl->size; ++j) {
