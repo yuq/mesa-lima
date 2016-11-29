@@ -111,8 +111,9 @@ struct nine_ff_ps_key
             uint32_t projected : 16;
             uint32_t fog : 1; /* for vFog coming from VS */
             uint32_t fog_mode : 2;
+            uint32_t fog_source : 1; /* 0: Z, 1: W */
             uint32_t specular : 1;
-            uint32_t pad1 : 12; /* 9 32-bit words with this */
+            uint32_t pad1 : 11; /* 9 32-bit words with this */
             uint8_t colorarg_b4[3];
             uint8_t colorarg_b5[3];
             uint8_t alphaarg_b4[3]; /* 11 32-bit words plus a byte */
@@ -1497,6 +1498,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
     /* Fog.
      */
     if (key->fog_mode) {
+        struct ureg_dst rFog = ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X);
         struct ureg_src vPos;
         if (device->screen->get_param(device->screen,
                                       PIPE_CAP_TGSI_FS_POSITION_IS_SYSVAL)) {
@@ -1506,20 +1508,35 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
                                       TGSI_INTERPOLATE_LINEAR);
         }
 
-        struct ureg_dst rFog = ureg_writemask(ps.rTmp, TGSI_WRITEMASK_X);
+        /* Source is either W or Z.
+         * When we use vs ff,
+         * Z is when an orthogonal projection matrix is detected,
+         * W (WFOG) else.
+         * Z is used for programmable vs.
+         * Note: Tests indicate that the projection matrix coefficients do
+         * actually affect pixel fog (and not vertex fog) when vs ff is used,
+         * which justifies taking the position's w instead of taking the z coordinate
+         * before the projection in the vs shader.
+         */
+        if (!key->fog_source)
+            ureg_MOV(ureg, rFog, _ZZZZ(vPos));
+        else
+            /* Position's w is 1/w */
+            ureg_RCP(ureg, rFog, _WWWW(vPos));
+
         if (key->fog_mode == D3DFOG_EXP) {
-            ureg_MUL(ureg, rFog, _ZZZZ(vPos), _ZZZZ(_CONST(22)));
+            ureg_MUL(ureg, rFog, _X(rFog), _ZZZZ(_CONST(22)));
             ureg_MUL(ureg, rFog, _X(rFog), ureg_imm1f(ureg, -1.442695f));
             ureg_EX2(ureg, rFog, _X(rFog));
         } else
         if (key->fog_mode == D3DFOG_EXP2) {
-            ureg_MUL(ureg, rFog, _ZZZZ(vPos), _ZZZZ(_CONST(22)));
+            ureg_MUL(ureg, rFog, _X(rFog), _ZZZZ(_CONST(22)));
             ureg_MUL(ureg, rFog, _X(rFog), _X(rFog));
             ureg_MUL(ureg, rFog, _X(rFog), ureg_imm1f(ureg, -1.442695f));
             ureg_EX2(ureg, rFog, _X(rFog));
         } else
         if (key->fog_mode == D3DFOG_LINEAR) {
-            ureg_SUB(ureg, rFog, _XXXX(_CONST(22)), _ZZZZ(vPos));
+            ureg_SUB(ureg, rFog, _XXXX(_CONST(22)), _X(rFog));
             ureg_MUL(ureg, ureg_saturate(rFog), _X(rFog), _YYYY(_CONST(22)));
         }
         ureg_LRP(ureg, ureg_writemask(oCol, TGSI_WRITEMASK_XYZ), _X(rFog), ps.rCurSrc, _CONST(21));
@@ -1690,10 +1707,14 @@ nine_ff_get_vs(struct NineDevice9 *device)
     return vs;
 }
 
+#define GET_D3DTS(n) nine_state_access_transform(state, D3DTS_##n, FALSE)
+#define IS_D3DTS_DIRTY(s,n) ((s)->ff.changed.transform[(D3DTS_##n) / 32] & (1 << ((D3DTS_##n) % 32)))
+
 static struct NinePixelShader9 *
 nine_ff_get_ps(struct NineDevice9 *device)
 {
     struct nine_state *state = &device->state;
+    D3DMATRIX *projection_matrix = GET_D3DTS(PROJECTION);
     struct NinePixelShader9 *ps;
     enum pipe_error err;
     struct nine_ff_ps_key key;
@@ -1803,6 +1824,15 @@ nine_ff_get_ps(struct NineDevice9 *device)
     if (state->rs[D3DRS_FOGENABLE])
         key.fog_mode = state->rs[D3DRS_FOGTABLEMODE];
     key.fog = !!state->rs[D3DRS_FOGENABLE];
+    /* Pixel fog (with WFOG advertised): source is either Z or W.
+     * W is the source if vs ff is used, and the
+     * projection matrix is not orthogonal.
+     * Tests on Win 10 seem to indicate _34
+     * and _33 are checked against 0, 1. */
+    if (key.fog_mode && key.fog)
+        key.fog_source = !state->programmable_vs &&
+            !(projection_matrix->_34 == 0.0f &&
+              projection_matrix->_44 == 1.0f);
 
     ps = util_hash_table_get(device->ff.ht_ps, &key);
     if (ps)
@@ -1825,8 +1855,6 @@ nine_ff_get_ps(struct NineDevice9 *device)
     return ps;
 }
 
-#define GET_D3DTS(n) nine_state_access_transform(state, D3DTS_##n, FALSE)
-#define IS_D3DTS_DIRTY(s,n) ((s)->ff.changed.transform[(D3DTS_##n) / 32] & (1 << ((D3DTS_##n) % 32)))
 static void
 nine_ff_load_vs_transforms(struct NineDevice9 *device)
 {
