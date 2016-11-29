@@ -327,7 +327,6 @@ struct si_context {
 	int			last_vtx_reuse_depth;
 	int			current_rast_prim; /* primitive type after TES, GS */
 	bool			gs_tri_strip_adj_fix;
-	unsigned		last_gsvs_itemsize;
 
 	/* Scratch buffer */
 	struct r600_resource	*scratch_buffer;

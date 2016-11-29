@@ -5817,6 +5817,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 {
 	struct gallivm_state *gallivm =
 		ctx->soa.bld_base.base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
 
 	LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
 					    SI_PARAM_RW_BUFFERS);
@@ -5836,18 +5837,74 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 	}
 
 	if (ctx->shader->is_gs_copy_shader) {
-		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_VS_RING_GSVS);
+		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS);
 
 		ctx->gsvs_ring[0] =
 			build_indexed_load_const(ctx, buf_ptr, offset);
-	}
-	if (ctx->type == PIPE_SHADER_GEOMETRY) {
-		int i;
-		for (i = 0; i < 4; i++) {
-			LLVMValueRef offset = lp_build_const_int32(gallivm, SI_GS_RING_GSVS0 + i);
+	} else if (ctx->type == PIPE_SHADER_GEOMETRY) {
+		struct lp_build_context *uint = &ctx->soa.bld_base.uint_bld;
+		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS);
+		LLVMValueRef base_ring;
 
-			ctx->gsvs_ring[i] =
-				build_indexed_load_const(ctx, buf_ptr, offset);
+		base_ring = build_indexed_load_const(ctx, buf_ptr, offset);
+
+		/* The conceptual layout of the GSVS ring is
+		 *   v0c0 .. vLv0 v0c1 .. vLc1 ..
+		 * but the real memory layout is swizzled across
+		 * threads:
+		 *   t0v0c0 .. t15v0c0 t0v1c0 .. t15v1c0 ... t15vLcL
+		 *   t16v0c0 ..
+		 * Override the buffer descriptor accordingly.
+		 */
+		LLVMTypeRef v2i64 = LLVMVectorType(ctx->i64, 2);
+		unsigned max_gsvs_emit_size = ctx->shader->selector->max_gsvs_emit_size;
+		unsigned num_records;
+
+		num_records = 64;
+		if (ctx->screen->b.chip_class >= VI)
+			num_records *= max_gsvs_emit_size;
+
+		for (unsigned stream = 0; stream < 4; ++stream) {
+			LLVMValueRef ring, tmp;
+
+			if (!ctx->shader->selector->info.num_stream_output_components[stream])
+				continue;
+
+			/* Limit on the stride field for <= CIK. */
+			assert(max_gsvs_emit_size < (1 << 14));
+
+			ring = LLVMBuildBitCast(builder, base_ring, v2i64, "");
+			tmp = LLVMBuildExtractElement(builder, ring, uint->zero, "");
+			tmp = LLVMBuildAdd(builder, tmp,
+					   LLVMConstInt(ctx->i64,
+							max_gsvs_emit_size * 64 * stream, 0), "");
+			ring = LLVMBuildInsertElement(builder, ring, tmp, uint->zero, "");
+			ring = LLVMBuildBitCast(builder, ring, ctx->v4i32, "");
+			tmp = LLVMBuildExtractElement(builder, ring, uint->one, "");
+			tmp = LLVMBuildOr(builder, tmp,
+				LLVMConstInt(ctx->i32,
+					     S_008F04_STRIDE(max_gsvs_emit_size) |
+					     S_008F04_SWIZZLE_ENABLE(1), 0), "");
+			ring = LLVMBuildInsertElement(builder, ring, tmp, uint->one, "");
+			ring = LLVMBuildInsertElement(builder, ring,
+					LLVMConstInt(ctx->i32, num_records, 0),
+					LLVMConstInt(ctx->i32, 2, 0), "");
+			ring = LLVMBuildInsertElement(builder, ring,
+				LLVMConstInt(ctx->i32,
+					     S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+					     S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+					     S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+					     S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+					     S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+					     S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32) |
+					     S_008F0C_ELEMENT_SIZE(1) | /* element_size = 4 (bytes) */
+					     S_008F0C_INDEX_STRIDE(1) | /* index_stride = 16 (elements) */
+					     S_008F0C_ADD_TID_ENABLE(1),
+					     0),
+				LLVMConstInt(ctx->i32, 3, 0), "");
+			ring = LLVMBuildBitCast(builder, ring, ctx->v16i8, "");
+
+			ctx->gsvs_ring[stream] = ring;
 		}
 	}
 }

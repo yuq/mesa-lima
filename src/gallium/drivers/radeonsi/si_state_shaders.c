@@ -2039,45 +2039,12 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 				   false, false, 0, 0, 0);
 	}
 	if (sctx->gsvs_ring) {
-		si_set_ring_buffer(&sctx->b.b, SI_VS_RING_GSVS,
+		si_set_ring_buffer(&sctx->b.b, SI_RING_GSVS,
 				   sctx->gsvs_ring, 0, sctx->gsvs_ring->width0,
 				   false, false, 0, 0, 0);
-
-		/* Also update SI_GS_RING_GSVSi descriptors. */
-		sctx->last_gsvs_itemsize = 0;
 	}
 
 	return true;
-}
-
-static void si_update_gsvs_ring_bindings(struct si_context *sctx)
-{
-	unsigned gsvs_itemsize = sctx->gs_shader.cso->max_gsvs_emit_size;
-	uint64_t offset;
-
-	if (!sctx->gsvs_ring || gsvs_itemsize == sctx->last_gsvs_itemsize)
-		return;
-
-	sctx->last_gsvs_itemsize = gsvs_itemsize;
-
-	si_set_ring_buffer(&sctx->b.b, SI_GS_RING_GSVS0,
-			   sctx->gsvs_ring, gsvs_itemsize,
-			   64, true, true, 4, 16, 0);
-
-	offset = gsvs_itemsize * 64;
-	si_set_ring_buffer(&sctx->b.b, SI_GS_RING_GSVS1,
-			   sctx->gsvs_ring, gsvs_itemsize,
-			   64, true, true, 4, 16, offset);
-
-	offset = (gsvs_itemsize * 2) * 64;
-	si_set_ring_buffer(&sctx->b.b, SI_GS_RING_GSVS2,
-			   sctx->gsvs_ring, gsvs_itemsize,
-			   64, true, true, 4, 16, offset);
-
-	offset = (gsvs_itemsize * 3) * 64;
-	si_set_ring_buffer(&sctx->b.b, SI_GS_RING_GSVS3,
-			   sctx->gsvs_ring, gsvs_itemsize,
-			   64, true, true, 4, 16, offset);
 }
 
 /**
@@ -2469,8 +2436,6 @@ bool si_update_shaders(struct si_context *sctx)
 
 		if (!si_update_gs_ring_buffers(sctx))
 			return false;
-
-		si_update_gsvs_ring_bindings(sctx);
 	} else {
 		si_pm4_bind_state(sctx, gs, NULL);
 		si_pm4_bind_state(sctx, es, NULL);
