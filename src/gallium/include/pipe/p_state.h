@@ -195,6 +195,18 @@ struct pipe_clip_state
    float ucp[PIPE_MAX_CLIP_PLANES][4];
 };
 
+/**
+ * A single output for vertex transform feedback.
+ */
+struct pipe_stream_output
+{
+   unsigned register_index:8;  /**< 0 to PIPE_MAX_SHADER_OUTPUTS */
+   unsigned start_component:2; /** 0 to 3 */
+   unsigned num_components:3;  /** 1 to 4 */
+   unsigned output_buffer:3;   /**< 0 to PIPE_MAX_SO_BUFFERS */
+   unsigned dst_offset:16;     /**< offset into the buffer in dwords */
+   unsigned stream:2;          /**< 0 to 3 */
+};
 
 /**
  * Stream output for vertex transform feedback.
@@ -209,14 +221,7 @@ struct pipe_stream_output_info
     * Array of stream outputs, in the order they are to be written in.
     * Selected components are tightly packed into the output buffer.
     */
-   struct {
-      unsigned register_index:8;  /**< 0 to PIPE_MAX_SHADER_OUTPUTS */
-      unsigned start_component:2; /** 0 to 3 */
-      unsigned num_components:3;  /** 1 to 4 */
-      unsigned output_buffer:3;   /**< 0 to PIPE_MAX_SO_BUFFERS */
-      unsigned dst_offset:16;     /**< offset into the buffer in dwords */
-      unsigned stream:2;          /**< 0 to 3 */
-   } output[PIPE_MAX_SO_OUTPUTS];
+   struct pipe_stream_output output[PIPE_MAX_SO_OUTPUTS];
 };
 
 /**
