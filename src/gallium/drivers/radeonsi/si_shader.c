@@ -6407,8 +6407,14 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		}
 	}
 
+	LLVMBasicBlockRef end_bb;
+	LLVMValueRef switch_inst;
+
+	end_bb = LLVMAppendBasicBlockInContext(gallivm->context, ctx.main_fn, "end");
+	switch_inst = LLVMBuildSwitch(builder, stream_id, end_bb, 4);
+
 	for (int stream = 0; stream < 4; stream++) {
-		struct lp_build_if_state if_ctx_stream;
+		LLVMBasicBlockRef bb;
 
 		if (!gsinfo->num_stream_output_components[stream])
 			continue;
@@ -6416,12 +6422,9 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		if (stream > 0 && !gs_selector->so.num_outputs)
 			continue;
 
-		LLVMValueRef is_stream =
-			LLVMBuildICmp(builder, LLVMIntEQ,
-				      stream_id,
-				      lp_build_const_int32(gallivm, stream), "");
-
-		lp_build_if(&if_ctx_stream, gallivm, is_stream);
+		bb = LLVMInsertBasicBlockInContext(gallivm->context, end_bb, "out");
+		LLVMAddCase(switch_inst, lp_build_const_int32(gallivm, stream), bb);
+		LLVMPositionBuilderAtEnd(builder, bb);
 
 		/* Fetch vertex data from GSVS ring */
 		for (i = 0; i < gsinfo->num_outputs; ++i) {
@@ -6455,8 +6458,10 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		if (stream == 0)
 			si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
-		lp_build_endif(&if_ctx_stream);
+		LLVMBuildBr(builder, end_bb);
 	}
+
+	LLVMPositionBuilderAtEnd(builder, end_bb);
 
 	LLVMBuildRetVoid(gallivm->builder);
 
