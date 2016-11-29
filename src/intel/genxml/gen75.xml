@@ -358,7 +358,7 @@
   <struct name="VERTEX_ELEMENT_STATE" length="2">
     <field name="Vertex Buffer Index" start="26" end="31" type="uint"/>
     <field name="Valid" start="25" end="25" type="bool"/>
-    <field name="Source Element Format" start="16" end="24" type="uint"/>
+    <field name="Source Element Format" start="16" end="24" type="SURFACE_FORMAT"/>
     <field name="Edge Flag Enable" start="15" end="15" type="bool"/>
     <field name="Source Element Offset" start="0" end="11" type="uint"/>
     <field name="Component 0 Control" start="60" end="62" type="uint"/>
@@ -630,7 +630,7 @@
       <value name="SURFTYPE_NULL" value="7"/>
     </field>
     <field name="Surface Array" start="28" end="28" type="bool"/>
-    <field name="Surface Format" start="18" end="26" type="uint"/>
+    <field name="Surface Format" start="18" end="26" type="SURFACE_FORMAT"/>
     <field name="Surface Vertical Alignment" start="16" end="17" type="uint">
       <value name="VALIGN_2" value="0"/>
       <value name="VALIGN_4" value="1"/>
