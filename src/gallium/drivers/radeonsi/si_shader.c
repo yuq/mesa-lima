@@ -6396,28 +6396,14 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	else
 		stream_id = uint->zero;
 
-	/* Fetch vertex data from GSVS ring */
+	/* Fill in output information. */
 	for (i = 0; i < gsinfo->num_outputs; ++i) {
-		unsigned chan;
-
 		outputs[i].semantic_name = gsinfo->output_semantic_name[i];
 		outputs[i].semantic_index = gsinfo->output_semantic_index[i];
 
-		for (chan = 0; chan < 4; chan++) {
+		for (int chan = 0; chan < 4; chan++) {
 			outputs[i].vertex_stream[chan] =
 				(gsinfo->output_streams[i] >> (2 * chan)) & 3;
-
-			args[2] = lp_build_const_int32(gallivm,
-						       (i * 4 + chan) *
-						       gs_selector->gs_max_out_vertices * 16 * 4);
-
-			outputs[i].values[chan] =
-				LLVMBuildBitCast(gallivm->builder,
-						 lp_build_intrinsic(gallivm->builder,
-								 "llvm.SI.buffer.load.dword.i32.i32",
-								 ctx.i32, args, 9,
-								 LP_FUNC_ATTR_READONLY),
-						 ctx.f32, "");
 		}
 	}
 
@@ -6437,6 +6423,29 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 		lp_build_if(&if_ctx_stream, gallivm, is_stream);
 
+		/* Fetch vertex data from GSVS ring */
+		for (i = 0; i < gsinfo->num_outputs; ++i) {
+			for (unsigned chan = 0; chan < 4; chan++) {
+				if (outputs[i].vertex_stream[chan] != stream) {
+					outputs[i].values[chan] = ctx.soa.bld_base.base.undef;
+					continue;
+				}
+
+				args[2] = lp_build_const_int32(
+					gallivm,
+					(i * 4 + chan) * gs_selector->gs_max_out_vertices * 16 * 4);
+
+				outputs[i].values[chan] =
+					LLVMBuildBitCast(gallivm->builder,
+						 lp_build_intrinsic(gallivm->builder,
+								 "llvm.SI.buffer.load.dword.i32.i32",
+								 ctx.i32, args, 9,
+								 LP_FUNC_ATTR_READONLY),
+						 ctx.f32, "");
+			}
+		}
+
+		/* Streamout and exports. */
 		if (gs_selector->so.num_outputs) {
 			si_llvm_emit_streamout(&ctx, outputs,
 					       gsinfo->num_outputs,
