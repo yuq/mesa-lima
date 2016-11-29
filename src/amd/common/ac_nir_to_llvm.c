@@ -3361,7 +3361,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	unsigned dmask = 0xf;
 	LLVMValueRef address[16];
 	LLVMValueRef coords[5];
-	LLVMValueRef coord = NULL, lod = NULL, comparitor = NULL, bias, offsets = NULL;
+	LLVMValueRef coord = NULL, lod = NULL, comparitor = NULL;
+	LLVMValueRef bias = NULL, offsets = NULL;
 	LLVMValueRef res_ptr, samp_ptr, fmask_ptr = NULL, sample_index = NULL;
 	LLVMValueRef ddx = NULL, ddy = NULL;
 	LLVMValueRef derivs[6];
