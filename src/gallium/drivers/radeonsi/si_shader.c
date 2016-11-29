@@ -2898,10 +2898,11 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 		}
 	}
 
-	/* SI (except OLAND) has a bug that it only looks
+	/* SI (except OLAND and HAINAN) has a bug that it only looks
 	 * at the X writemask component. */
 	if (ctx->screen->b.chip_class == SI &&
-	    ctx->screen->b.family != CHIP_OLAND)
+	    ctx->screen->b.family != CHIP_OLAND &&
+	    ctx->screen->b.family != CHIP_HAINAN)
 		mask |= 0x1;
 
 	/* Specify which components to enable */
