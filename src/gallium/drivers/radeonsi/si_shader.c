@@ -5361,6 +5361,23 @@ static void declare_tess_lds(struct si_shader_context *ctx)
 		"tess_lds");
 }
 
+static unsigned si_get_max_workgroup_size(struct si_shader *shader)
+{
+	const unsigned *properties = shader->selector->info.properties;
+	unsigned max_work_group_size =
+	               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
+	               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
+	               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH];
+
+	if (!max_work_group_size) {
+		/* This is a variable group size compute shader,
+		 * compile it for the maximum possible group size.
+		 */
+		max_work_group_size = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
+	}
+	return max_work_group_size;
+}
+
 static void create_function(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
@@ -5587,22 +5604,9 @@ static void create_function(struct si_shader_context *ctx)
 				      S_0286D0_FRONT_FACE_ENA(1) |
 				      S_0286D0_POS_FIXED_PT_ENA(1));
 	} else if (ctx->type == PIPE_SHADER_COMPUTE) {
-		const unsigned *properties = shader->selector->info.properties;
-		unsigned max_work_group_size =
-		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
-		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
-		               properties[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH];
-
-		if (!max_work_group_size) {
-			/* This is a variable group size compute shader,
-			 * compile it for the maximum possible group size.
-			 */
-			max_work_group_size = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
-		}
-
 		si_llvm_add_attribute(ctx->main_fn,
 				      "amdgpu-max-work-group-size",
-				      max_work_group_size);
+				      si_get_max_workgroup_size(shader));
 	}
 
 	shader->info.num_input_sgprs = 0;
@@ -7270,20 +7274,11 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	 * LLVM 3.9svn has this bug.
 	 */
 	if (sel->type == PIPE_SHADER_COMPUTE) {
-		unsigned *props = sel->info.properties;
 		unsigned wave_size = 64;
 		unsigned max_vgprs = 256;
 		unsigned max_sgprs = sscreen->b.chip_class >= VI ? 800 : 512;
 		unsigned max_sgprs_per_wave = 128;
-		unsigned max_block_threads;
-
-		if (props[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH])
-			max_block_threads = props[TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH] *
-					    props[TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT] *
-					    props[TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH];
-		else
-			max_block_threads = SI_MAX_VARIABLE_THREADS_PER_BLOCK;
-
+		unsigned max_block_threads = si_get_max_workgroup_size(shader);
 		unsigned min_waves_per_cu = DIV_ROUND_UP(max_block_threads, wave_size);
 		unsigned min_waves_per_simd = DIV_ROUND_UP(min_waves_per_cu, 4);
 
