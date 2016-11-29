@@ -268,7 +268,7 @@ class Field(object):
         elif self.type in self.parser.structs:
             type = 'struct ' + self.parser.gen_prefix(safe_name(self.type))
         elif self.type in self.parser.enums:
-            type = 'uint32_t'
+            type = 'enum ' + self.parser.gen_prefix(safe_name(self.type))
         elif self.type == 'mbo':
             return
         else:
@@ -633,14 +633,14 @@ class Parser(object):
         self.emit_pack_function(self.struct, self.group)
 
     def emit_enum(self):
-        print('/* enum %s */' % self.gen_prefix(self.enum))
+        print('enum %s {' % self.gen_prefix(self.enum))
         for value in self.values:
             if self.prefix:
                 name = self.prefix + "_" + value.name
             else:
                 name = value.name
-            print('#define %-36s %6d' % (name.upper(), value.value))
-        print('')
+            print('   %-36s = %6d,' % (name.upper(), value.value))
+        print('};\n')
 
     def parse(self, filename):
         file = open(filename, "rb")
