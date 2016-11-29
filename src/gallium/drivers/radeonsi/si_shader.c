@@ -6421,26 +6421,33 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		}
 	}
 
-	if (gs_selector->so.num_outputs) {
-		for (int stream = 0; stream < 4; stream++) {
-			struct lp_build_if_state if_ctx_stream;
+	for (int stream = 0; stream < 4; stream++) {
+		struct lp_build_if_state if_ctx_stream;
 
-			if (!gsinfo->num_stream_output_components[stream])
-				continue;
+		if (!gsinfo->num_stream_output_components[stream])
+			continue;
 
-			LLVMValueRef is_stream =
-				LLVMBuildICmp(builder, LLVMIntEQ,
-					      stream_id,
-					      lp_build_const_int32(gallivm, stream), "");
+		if (stream > 0 && !gs_selector->so.num_outputs)
+			continue;
 
-			lp_build_if(&if_ctx_stream, gallivm, is_stream);
+		LLVMValueRef is_stream =
+			LLVMBuildICmp(builder, LLVMIntEQ,
+				      stream_id,
+				      lp_build_const_int32(gallivm, stream), "");
+
+		lp_build_if(&if_ctx_stream, gallivm, is_stream);
+
+		if (gs_selector->so.num_outputs) {
 			si_llvm_emit_streamout(&ctx, outputs,
 					       gsinfo->num_outputs,
 					       stream);
-			lp_build_endif(&if_ctx_stream);
 		}
+
+		if (stream == 0)
+			si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
+
+		lp_build_endif(&if_ctx_stream);
 	}
-	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
 	LLVMBuildRetVoid(gallivm->builder);
 
