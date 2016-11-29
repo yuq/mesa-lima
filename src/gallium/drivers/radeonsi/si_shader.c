@@ -2394,6 +2394,12 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 			break;
 		}
 
+		if (outputs[i].vertex_stream[0] != 0 &&
+		    outputs[i].vertex_stream[1] != 0 &&
+		    outputs[i].vertex_stream[2] != 0 &&
+		    outputs[i].vertex_stream[3] != 0)
+			export_param = false;
+
 handle_semantic:
 		/* Select the correct target */
 		switch(semantic_name) {
