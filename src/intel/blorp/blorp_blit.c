@@ -1302,6 +1302,8 @@ brw_blorp_get_blit_kernel(struct blorp_context *blorp,
    struct brw_wm_prog_data prog_data;
 
    nir_shader *nir = brw_blorp_build_nir_shader(blorp, mem_ctx, prog_key);
+   nir->info->name = ralloc_strdup(nir, "BLORP-blit");
+
    struct brw_wm_prog_key wm_key;
    brw_blorp_init_wm_prog_key(&wm_key);
    wm_key.tex.compressed_multisample_layout_mask =
