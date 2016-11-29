@@ -296,10 +296,18 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 
 		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
 		if (sctx->screen->has_distributed_tess) {
-			if (sctx->gs_shader.cso)
+			if (sctx->gs_shader.cso) {
 				partial_es_wave = true;
-			else
+
+				/* GPU hang workaround. */
+				if (sctx->b.family == CHIP_TONGA ||
+				    sctx->b.family == CHIP_FIJI ||
+				    sctx->b.family == CHIP_POLARIS10 ||
+				    sctx->b.family == CHIP_POLARIS11)
+					partial_vs_wave = true;
+			} else {
 				partial_vs_wave = true;
+			}
 		}
 	}
 
