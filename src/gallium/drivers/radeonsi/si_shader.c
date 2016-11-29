@@ -5317,6 +5317,9 @@ static void si_llvm_emit_vertex(
 			ctx->soa.outputs[i];
 
 		for (chan = 0; chan < 4; chan++) {
+			if (((info->output_streams[i] >> (2 * chan)) & 3) != stream)
+				continue;
+
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
 			LLVMValueRef voffset =
 				lp_build_const_int32(gallivm, (i * 4 + chan) *
