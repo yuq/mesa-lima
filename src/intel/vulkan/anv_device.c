@@ -555,7 +555,7 @@ void anv_GetPhysicalDeviceProperties(
       .maxGeometryTotalOutputComponents         = 1024,
       .maxFragmentInputComponents               = 128,
       .maxFragmentOutputAttachments             = 8,
-      .maxFragmentDualSrcAttachments            = 2,
+      .maxFragmentDualSrcAttachments            = 1,
       .maxFragmentCombinedOutputResources       = 8,
       .maxComputeSharedMemorySize               = 32768,
       .maxComputeWorkGroupCount                 = { 65535, 65535, 65535 },
