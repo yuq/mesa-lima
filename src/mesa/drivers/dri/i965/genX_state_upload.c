@@ -2920,7 +2920,6 @@ static const struct brw_tracked_state genX(vs_push_constants) = {
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_VERTEX_PROGRAM |
                BRW_NEW_VS_PROG_DATA,
    },
@@ -2951,8 +2950,7 @@ static const struct brw_tracked_state genX(gs_push_constants) = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_GEOMETRY_PROGRAM |
-               BRW_NEW_GS_PROG_DATA |
-               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+               BRW_NEW_GS_PROG_DATA,
    },
    .emit = genX(upload_gs_push_constants),
 };
@@ -2977,8 +2975,7 @@ static const struct brw_tracked_state genX(wm_push_constants) = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_FRAGMENT_PROGRAM |
-               BRW_NEW_FS_PROG_DATA |
-               BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+               BRW_NEW_FS_PROG_DATA,
    },
    .emit = genX(upload_wm_push_constants),
 };
@@ -3821,7 +3818,6 @@ static const struct brw_tracked_state genX(tes_push_constants) = {
       .mesa  = _NEW_PROGRAM_CONSTANTS,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
-               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_TESS_PROGRAMS |
                BRW_NEW_TES_PROG_DATA,
    },
@@ -3851,7 +3847,6 @@ static const struct brw_tracked_state genX(tcs_push_constants) = {
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_DEFAULT_TESS_LEVELS |
-               BRW_NEW_PUSH_CONSTANT_ALLOCATION |
                BRW_NEW_TESS_PROGRAMS |
                BRW_NEW_TCS_PROG_DATA,
    },

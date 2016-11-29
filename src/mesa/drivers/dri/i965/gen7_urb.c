@@ -101,7 +101,11 @@ gen7_allocate_push_constants(struct brw_context *brw)
     * Similar text exists for the other 3DSTATE_PUSH_CONSTANT_ALLOC_*
     * commands.
     */
-   brw->ctx.NewDriverState |= BRW_NEW_PUSH_CONSTANT_ALLOCATION;
+   brw->vs.base.push_constants_dirty = true;
+   brw->tcs.base.push_constants_dirty = true;
+   brw->tes.base.push_constants_dirty = true;
+   brw->gs.base.push_constants_dirty = true;
+   brw->wm.base.push_constants_dirty = true;
 }
 
 void
