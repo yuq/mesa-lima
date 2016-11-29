@@ -1946,7 +1946,7 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
                                       nir_intrinsic_instr *instr)
 {
 	const char *name;
-	LLVMValueRef params[5];
+	LLVMValueRef params[6];
 	int arg_count = 0;
 	if (ctx->stage == MESA_SHADER_FRAGMENT)
 		ctx->shader_info->fs.writes_memory = true;
