@@ -547,6 +547,23 @@ scan_declaration(struct tgsi_shader_info *info,
          info->output_semantic_index[reg] = (ubyte) semIndex;
          info->num_outputs = MAX2(info->num_outputs, reg + 1);
 
+         if (fulldecl->Declaration.UsageMask & TGSI_WRITEMASK_X) {
+            info->output_streams[reg] |= (ubyte)fulldecl->Semantic.StreamX;
+            info->num_stream_output_components[fulldecl->Semantic.StreamX]++;
+         }
+         if (fulldecl->Declaration.UsageMask & TGSI_WRITEMASK_Y) {
+            info->output_streams[reg] |= (ubyte)fulldecl->Semantic.StreamY << 2;
+            info->num_stream_output_components[fulldecl->Semantic.StreamY]++;
+         }
+         if (fulldecl->Declaration.UsageMask & TGSI_WRITEMASK_Z) {
+            info->output_streams[reg] |= (ubyte)fulldecl->Semantic.StreamZ << 4;
+            info->num_stream_output_components[fulldecl->Semantic.StreamZ]++;
+         }
+         if (fulldecl->Declaration.UsageMask & TGSI_WRITEMASK_W) {
+            info->output_streams[reg] |= (ubyte)fulldecl->Semantic.StreamW << 6;
+            info->num_stream_output_components[fulldecl->Semantic.StreamW]++;
+         }
+
          switch (semName) {
          case TGSI_SEMANTIC_PRIMID:
             info->writes_primid = true;

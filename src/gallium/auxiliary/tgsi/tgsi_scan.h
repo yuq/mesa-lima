@@ -54,6 +54,7 @@ struct tgsi_shader_info
    ubyte input_cylindrical_wrap[PIPE_MAX_SHADER_INPUTS];
    ubyte output_semantic_name[PIPE_MAX_SHADER_OUTPUTS]; /**< TGSI_SEMANTIC_x */
    ubyte output_semantic_index[PIPE_MAX_SHADER_OUTPUTS];
+   ubyte output_streams[PIPE_MAX_SHADER_OUTPUTS];
 
    ubyte num_system_values;
    ubyte system_value_semantic_name[PIPE_MAX_SHADER_INPUTS];
@@ -68,6 +69,7 @@ struct tgsi_shader_info
    unsigned samplers_declared; /**< bitmask of declared samplers */
    ubyte sampler_targets[PIPE_MAX_SHADER_SAMPLER_VIEWS];  /**< TGSI_TEXTURE_x values */
    ubyte sampler_type[PIPE_MAX_SHADER_SAMPLER_VIEWS]; /**< TGSI_RETURN_TYPE_x */
+   ubyte num_stream_output_components[4];
 
    ubyte input_array_first[PIPE_MAX_SHADER_INPUTS];
    ubyte input_array_last[PIPE_MAX_SHADER_INPUTS];
