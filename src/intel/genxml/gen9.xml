@@ -542,12 +542,12 @@
     <field name="Pre-Blend Color Clamp Enable" start="33" end="33" type="bool"/>
     <field name="Post-Blend Color Clamp Enable" start="32" end="32" type="bool"/>
     <field name="Color Buffer Blend Enable" start="31" end="31" type="bool"/>
-    <field name="Source Blend Factor" start="26" end="30" type="uint"/>
-    <field name="Destination Blend Factor" start="21" end="25" type="uint"/>
-    <field name="Color Blend Function" start="18" end="20" type="uint"/>
-    <field name="Source Alpha Blend Factor" start="13" end="17" type="uint"/>
-    <field name="Destination Alpha Blend Factor" start="8" end="12" type="uint"/>
-    <field name="Alpha Blend Function" start="5" end="7" type="uint"/>
+    <field name="Source Blend Factor" start="26" end="30" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Destination Blend Factor" start="21" end="25" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Color Blend Function" start="18" end="20" type="3D_Color_Buffer_Blend_Function"/>
+    <field name="Source Alpha Blend Factor" start="13" end="17" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Destination Alpha Blend Factor" start="8" end="12" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Alpha Blend Function" start="5" end="7" type="3D_Color_Buffer_Blend_Function"/>
     <field name="Write Disable Alpha" start="3" end="3" type="bool"/>
     <field name="Write Disable Red" start="2" end="2" type="bool"/>
     <field name="Write Disable Green" start="1" end="1" type="bool"/>
@@ -1767,10 +1767,10 @@
     <field name="Alpha To Coverage Enable" start="63" end="63" type="bool"/>
     <field name="Has Writeable RT" start="62" end="62" type="bool"/>
     <field name="Color Buffer Blend Enable" start="61" end="61" type="bool"/>
-    <field name="Source Alpha Blend Factor" start="56" end="60" type="uint"/>
-    <field name="Destination Alpha Blend Factor" start="51" end="55" type="uint"/>
-    <field name="Source Blend Factor" start="46" end="50" type="uint"/>
-    <field name="Destination Blend Factor" start="41" end="45" type="uint"/>
+    <field name="Source Alpha Blend Factor" start="56" end="60" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Destination Alpha Blend Factor" start="51" end="55" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Source Blend Factor" start="46" end="50" type="3D_Color_Buffer_Blend_Factor"/>
+    <field name="Destination Blend Factor" start="41" end="45" type="3D_Color_Buffer_Blend_Factor"/>
     <field name="Alpha Test Enable" start="40" end="40" type="bool"/>
     <field name="Independent Alpha Blend Enable" start="39" end="39" type="bool"/>
   </instruction>
