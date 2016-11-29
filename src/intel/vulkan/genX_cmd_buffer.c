@@ -2153,7 +2153,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
        */
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_DEPTH_BUFFER), db) {
          if (has_stencil) {
-            db.SurfaceType       = SURFTYPE_2D;
+            db.SurfaceType       =
                depth_stencil_surface_type(image->stencil_surface.isl.dim);
          } else {
             db.SurfaceType       = SURFTYPE_2D;
