@@ -244,6 +244,7 @@ typedef struct {
    struct vl_deint_filter *deint;
    struct vlVaBuffer *coded_buf;
    int target_id;
+   bool first_single_submitted;
 } vlVaContext;
 
 typedef struct {
@@ -274,6 +275,7 @@ typedef struct {
    vlVaBuffer *coded_buf;
    void *feedback;
    unsigned int frame_num_cnt;
+   bool force_flushed;
 } vlVaSurface;
 
 // Public functions:

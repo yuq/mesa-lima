@@ -413,7 +413,6 @@ handleVAEncPictureParameterBufferType(vlVaDriver *drv, vlVaContext *context, vlV
    context->desc.h264enc.quant_i_frames = h264->pic_init_qp;
    context->desc.h264enc.quant_b_frames = h264->pic_init_qp;
    context->desc.h264enc.quant_p_frames = h264->pic_init_qp;
-   context->desc.h264enc.frame_num_cnt++;
    context->desc.h264enc.gop_cnt++;
    if (context->desc.h264enc.gop_cnt == context->desc.h264enc.gop_size)
       context->desc.h264enc.gop_cnt = 0;
@@ -569,18 +568,33 @@ vlVaEndPicture(VADriverContextP ctx, VAContextID context_id)
    if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
       coded_buf = context->coded_buf;
       getEncParamPreset(context);
+      context->desc.h264enc.frame_num_cnt++;
       context->decoder->begin_frame(context->decoder, context->target, &context->desc.base);
       context->decoder->encode_bitstream(context->decoder, context->target,
                                          coded_buf->derived_surface.resource, &feedback);
-      surf->frame_num_cnt = context->desc.h264enc.frame_num_cnt;
       surf->feedback = feedback;
       surf->coded_buf = coded_buf;
    }
 
    context->decoder->end_frame(context->decoder, context->target, &context->desc.base);
-   if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE &&
-       context->desc.h264enc.p_remain == 1)
-      context->decoder->flush(context->decoder);
+   if (context->decoder->entrypoint == PIPE_VIDEO_ENTRYPOINT_ENCODE) {
+      surf->frame_num_cnt = context->desc.h264enc.frame_num_cnt;
+      surf->force_flushed = false;
+      if (context->first_single_submitted) {
+         context->decoder->flush(context->decoder);
+         context->first_single_submitted = false;
+         surf->force_flushed = true;
+      }
+      if (context->desc.h264enc.p_remain == 1) {
+         if ((context->desc.h264enc.frame_num_cnt % 2) != 0) {
+            context->decoder->flush(context->decoder);
+            context->first_single_submitted = true;
+         }
+         else
+            context->first_single_submitted = false;
+         surf->force_flushed = true;
+      }
+   }
    pipe_mutex_unlock(drv->mutex);
    return VA_STATUS_SUCCESS;
 }
