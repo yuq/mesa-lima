@@ -2274,19 +2274,6 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	LLVMBuilderRef builder = gallivm->builder;
 	int i;
 	struct lp_build_if_state if_ctx;
-	LLVMValueRef so_buffers[4];
-	LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
-					    SI_PARAM_RW_BUFFERS);
-
-	/* Load the descriptors. */
-	for (i = 0; i < 4; ++i) {
-		if (ctx->shader->selector->so.stride[i]) {
-			LLVMValueRef offset = lp_build_const_int32(gallivm,
-								   SI_VS_STREAMOUT_BUF0 + i);
-
-			so_buffers[i] = build_indexed_load_const(ctx, buf_ptr, offset);
-		}
-	}
 
 	/* Get bits [22:16], i.e. (so_param >> 16) & 127; */
 	LLVMValueRef so_vtx_count =
@@ -2319,11 +2306,21 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 		/* Compute (streamout_write_index + thread_id). */
 		so_write_index = LLVMBuildAdd(builder, so_write_index, tid, "");
 
-		/* Compute the write offset for each enabled buffer. */
+		/* Load the descriptor and compute the write offset for each
+		 * enabled buffer. */
 		LLVMValueRef so_write_offset[4] = {};
+		LLVMValueRef so_buffers[4];
+		LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
+						    SI_PARAM_RW_BUFFERS);
+
 		for (i = 0; i < 4; i++) {
 			if (!so->stride[i])
 				continue;
+
+			LLVMValueRef offset = lp_build_const_int32(gallivm,
+								   SI_VS_STREAMOUT_BUF0 + i);
+
+			so_buffers[i] = build_indexed_load_const(ctx, buf_ptr, offset);
 
 			LLVMValueRef so_offset = LLVMGetParam(ctx->main_fn,
 							      ctx->param_streamout_offset[i]);
