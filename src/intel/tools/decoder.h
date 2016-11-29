@@ -48,6 +48,7 @@ struct gen_group *gen_spec_find_register(struct gen_spec *spec, uint32_t offset)
 int gen_group_get_length(struct gen_group *group, const uint32_t *p);
 const char *gen_group_get_name(struct gen_group *group);
 uint32_t gen_group_get_opcode(struct gen_group *group);
+struct gen_enum *gen_spec_find_enum(struct gen_spec *spec, const char *name);
 
 struct gen_field_iterator {
    struct gen_group *group;
@@ -72,6 +73,17 @@ struct gen_group {
    uint32_t register_offset;
 };
 
+struct gen_value {
+   char *name;
+   uint64_t value;
+};
+
+struct gen_enum {
+   char *name;
+   int nvalues;
+   struct gen_value **values;
+};
+
 struct gen_type {
    enum {
       GEN_TYPE_UNKNOWN,
@@ -84,14 +96,19 @@ struct gen_type {
       GEN_TYPE_STRUCT,
       GEN_TYPE_UFIXED,
       GEN_TYPE_SFIXED,
-      GEN_TYPE_MBO
+      GEN_TYPE_MBO,
+      GEN_TYPE_ENUM
    } kind;
 
    /* Struct definition for  GEN_TYPE_STRUCT */
-   struct gen_group *gen_struct;
-
-   /* Integer and fractional sizes for GEN_TYPE_UFIXED and GEN_TYPE_SFIXED */
-   int i, f;
+   union {
+      struct gen_group *gen_struct;
+      struct gen_enum *gen_enum;
+      struct {
+         /* Integer and fractional sizes for GEN_TYPE_UFIXED and GEN_TYPE_SFIXED */
+         int i, f;
+      };
+   };
 };
 
 struct gen_field {
@@ -101,14 +118,7 @@ struct gen_field {
    bool has_default;
    uint32_t default_value;
 
-   struct gen_value **values;
-   uint32_t n_values;
-   uint32_t n_allocated_values;
-};
-
-struct gen_value {
-   char *name;
-   uint64_t value;
+   struct gen_enum inline_enum;
 };
 
 void gen_field_iterator_init(struct gen_field_iterator *iter,
