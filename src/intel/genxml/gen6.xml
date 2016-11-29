@@ -45,6 +45,17 @@
     <value name="GEQUAL" value="7"/>
   </enum>
 
+  <enum name="3D_Stencil_Operation" prefix="STENCILOP">
+    <value name="KEEP" value="0"/>
+    <value name="ZERO" value="1"/>
+    <value name="REPLACE" value="2"/>
+    <value name="INCRSAT" value="3"/>
+    <value name="DECRSAT" value="4"/>
+    <value name="INCR" value="5"/>
+    <value name="DECR" value="6"/>
+    <value name="INVERT" value="7"/>
+  </enum>
+
   <enum name="SURFACE_FORMAT" prefix="SF">
     <value name="R32G32B32A32_FLOAT" value="0"/>
     <value name="R32G32B32A32_SINT" value="1"/>
@@ -470,33 +481,15 @@
   <struct name="DEPTH_STENCIL_STATE" length="3">
     <field name="Stencil Test Enable" start="31" end="31" type="bool"/>
     <field name="Stencil Test Function" start="28" end="30" type="3D_Compare_Function"/>
-    <field name="Stencil Fail Op" start="25" end="27" type="uint">
-      <value name="STENCILOP_KEEP" value="0"/>
-      <value name="STENCILOP_ZERO" value="1"/>
-      <value name="STENCILOP_REPLACE" value="2"/>
-      <value name="STENCILOP_INCRSAT" value="3"/>
-      <value name="STENCILOP_DECRSAT" value="4"/>
-      <value name="STENCILOP_INCR" value="5"/>
-      <value name="STENCILOP_DECR" value="6"/>
-      <value name="STENCILOP_INVERT" value="7"/>
-    </field>
-    <field name="Stencil Pass Depth Fail Op" start="22" end="24" type="uint"/>
-    <field name="Stencil Pass Depth Pass Op" start="19" end="21" type="uint"/>
+    <field name="Stencil Fail Op" start="25" end="27" type="3D_Stencil_Operation"/>
+    <field name="Stencil Pass Depth Fail Op" start="22" end="24" type="3D_Stencil_Operation"/>
+    <field name="Stencil Pass Depth Pass Op" start="19" end="21" type="3D_Stencil_Operation"/>
     <field name="Stencil Buffer Write Enable" start="18" end="18" type="bool"/>
     <field name="Double Sided Stencil Enable" start="15" end="15" type="bool"/>
     <field name="Backface Stencil Test Function" start="12" end="14" type="3D_Compare_Function"/>
-    <field name="Backface Stencil Fail Op" start="9" end="11" type="uint">
-      <value name="STENCILOP_KEEP" value="0"/>
-      <value name="STENCILOP_ZERO" value="1"/>
-      <value name="STENCILOP_REPLACE" value="2"/>
-      <value name="STENCILOP_INCRSAT" value="3"/>
-      <value name="STENCILOP_DECRSAT" value="4"/>
-      <value name="STENCILOP_INCR" value="5"/>
-      <value name="STENCILOP_DECR" value="6"/>
-      <value name="STENCILOP_INVERT" value="7"/>
-    </field>
-    <field name="Backface Stencil Pass Depth Fail Op" start="6" end="8" type="uint"/>
-    <field name="Backface Stencil Pass Depth Pass Op" start="3" end="5" type="uint"/>
+    <field name="Backface Stencil Fail Op" start="9" end="11" type="3D_Stencil_Operation"/>
+    <field name="Backface Stencil Pass Depth Fail Op" start="6" end="8" type="3D_Stencil_Operation"/>
+    <field name="Backface Stencil Pass Depth Pass Op" start="3" end="5" type="3D_Stencil_Operation"/>
     <field name="Stencil Test Mask" start="56" end="63" type="uint"/>
     <field name="Stencil Write Mask" start="48" end="55" type="uint"/>
     <field name="Backface Stencil Test Mask" start="40" end="47" type="uint"/>

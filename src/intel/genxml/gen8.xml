@@ -2370,13 +2370,13 @@
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="78"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="1"/>
-    <field name="Stencil Fail Op" start="61" end="63" type="uint"/>
-    <field name="Stencil Pass Depth Fail Op" start="58" end="60" type="uint"/>
-    <field name="Stencil Pass Depth Pass Op" start="55" end="57" type="uint"/>
+    <field name="Stencil Fail Op" start="61" end="63" type="3D_Stencil_Operation"/>
+    <field name="Stencil Pass Depth Fail Op" start="58" end="60" type="3D_Stencil_Operation"/>
+    <field name="Stencil Pass Depth Pass Op" start="55" end="57" type="3D_Stencil_Operation"/>
     <field name="Backface Stencil Test Function" start="52" end="54" type="3D_Compare_Function"/>
-    <field name="Backface Stencil Fail Op" start="49" end="51" type="uint"/>
-    <field name="Backface Stencil Pass Depth Fail Op" start="46" end="48" type="uint"/>
-    <field name="Backface Stencil Pass Depth Pass Op" start="43" end="45" type="uint"/>
+    <field name="Backface Stencil Fail Op" start="49" end="51" type="3D_Stencil_Operation"/>
+    <field name="Backface Stencil Pass Depth Fail Op" start="46" end="48" type="3D_Stencil_Operation"/>
+    <field name="Backface Stencil Pass Depth Pass Op" start="43" end="45" type="3D_Stencil_Operation"/>
     <field name="Stencil Test Function" start="40" end="42" type="3D_Compare_Function"/>
     <field name="Depth Test Function" start="37" end="39" type="3D_Compare_Function"/>
     <field name="Double Sided Stencil Enable" start="36" end="36" type="bool"/>
