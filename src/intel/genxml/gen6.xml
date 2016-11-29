@@ -86,6 +86,25 @@
     <value name="INVERT" value="7"/>
   </enum>
 
+  <enum name="3D_Logic_Op_Function" prefix="LOGICOP">
+    <value name="CLEAR" value="0"/>
+    <value name="NOR" value="1"/>
+    <value name="AND_INVERTED" value="2"/>
+    <value name="COPY_INVERTED" value="3"/>
+    <value name="AND_REVERSE" value="4"/>
+    <value name="INVERT" value="5"/>
+    <value name="XOR" value="6"/>
+    <value name="NAND" value="7"/>
+    <value name="AND" value="8"/>
+    <value name="EQUIV" value="9"/>
+    <value name="NOOP" value="10"/>
+    <value name="OR_INVERTED" value="11"/>
+    <value name="COPY" value="12"/>
+    <value name="OR_REVERSE" value="13"/>
+    <value name="OR" value="14"/>
+    <value name="SET" value="15"/>
+  </enum>
+
   <enum name="SURFACE_FORMAT" prefix="SF">
     <value name="R32G32B32A32_FLOAT" value="0"/>
     <value name="R32G32B32A32_SINT" value="1"/>
@@ -417,24 +436,7 @@
     <field name="Write Disable Green" start="57" end="57" type="bool"/>
     <field name="Write Disable Blue" start="56" end="56" type="bool"/>
     <field name="Logic Op Enable" start="54" end="54" type="bool"/>
-    <field name="Logic Op Function" start="50" end="53" type="uint">
-      <value name="LOGICOP_CLEAR" value="0"/>
-      <value name="LOGICOP_NOR" value="1"/>
-      <value name="LOGICOP_AND_INVERTED" value="2"/>
-      <value name="LOGICOP_COPY_INVERTED" value="3"/>
-      <value name="LOGICOP_AND_REVERSE" value="4"/>
-      <value name="LOGICOP_INVERT" value="5"/>
-      <value name="LOGICOP_XOR" value="6"/>
-      <value name="LOGICOP_NAND" value="7"/>
-      <value name="LOGICOP_AND" value="8"/>
-      <value name="LOGICOP_EQUIV" value="9"/>
-      <value name="LOGICOP_NOOP" value="10"/>
-      <value name="LOGICOP_OR_INVERTED" value="11"/>
-      <value name="LOGICOP_COPY" value="12"/>
-      <value name="LOGICOP_OR_REVERSE" value="13"/>
-      <value name="LOGICOP_OR" value="14"/>
-      <value name="LOGICOP_SET" value="15"/>
-    </field>
+    <field name="Logic Op Function" start="50" end="53" type="3D_Logic_Op_Function"/>
     <field name="Alpha Test Enable" start="48" end="48" type="bool"/>
     <field name="Alpha Test Function" start="45" end="47" type="3D_Compare_Function"/>
     <field name="Color Dither Enable" start="44" end="44" type="bool"/>

@@ -523,7 +523,7 @@
 
   <struct name="BLEND_STATE_ENTRY" length="2">
     <field name="Logic Op Enable" start="63" end="63" type="bool"/>
-    <field name="Logic Op Function" start="59" end="62" type="uint"/>
+    <field name="Logic Op Function" start="59" end="62" type="3D_Logic_Op_Function"/>
     <field name="Pre-Blend Source Only Clamp Enable" start="36" end="36" type="bool"/>
     <field name="Color Clamp Range" start="34" end="35" type="uint">
       <value name="COLORCLAMP_UNORM" value="0"/>
