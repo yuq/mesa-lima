@@ -730,7 +730,7 @@
       <value name="SEQUENTIAL" value="0"/>
       <value name="RANDOM" value="1"/>
     </field>
-    <field name="Primitive Topology Type" start="10" end="14" type="uint"/>
+    <field name="Primitive Topology Type" start="10" end="14" type="3D_Prim_Topo_Type"/>
     <field name="Internal Vertex Count" start="9" end="9" type="uint"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="4"/>
     <field name="Vertex Count Per Instance" start="32" end="63" type="uint"/>

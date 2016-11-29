@@ -810,7 +810,7 @@
       <value name="SEQUENTIAL" value="0"/>
       <value name="RANDOM" value="1"/>
     </field>
-    <field name="Primitive Topology Type" start="32" end="37" type="uint"/>
+    <field name="Primitive Topology Type" start="32" end="37" type="3D_Prim_Topo_Type"/>
     <field name="Vertex Count Per Instance" start="64" end="95" type="uint"/>
     <field name="Start Vertex Location" start="96" end="127" type="uint"/>
     <field name="Instance Count" start="128" end="159" type="uint"/>
@@ -1141,7 +1141,7 @@
     <field name="Scratch Space Base Pointer" start="106" end="127" type="address"/>
     <field name="Per-Thread Scratch Space" start="96" end="99" type="uint"/>
     <field name="Output Vertex Size" start="151" end="156" type="uint"/>
-    <field name="Output Topology" start="145" end="150" type="uint" prefix="OUTPUT"/>
+    <field name="Output Topology" start="145" end="150" type="3D_Prim_Topo_Type"/>
     <field name="Vertex URB Entry Read Length" start="139" end="144" type="uint"/>
     <field name="Include Vertex Handles" start="138" end="138" type="bool"/>
     <field name="Vertex URB Entry Read Offset" start="132" end="137" type="uint"/>
@@ -2354,7 +2354,7 @@
   <instruction name="MI_TOPOLOGY_FILTER" bias="1" length="1">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="13"/>
-    <field name="Topology Filter Value" start="0" end="5" type="uint"/>
+    <field name="Topology Filter Value" start="0" end="5" type="3D_Prim_Topo_Type"/>
   </instruction>
 
   <instruction name="MI_URB_CLEAR" bias="2" length="2">

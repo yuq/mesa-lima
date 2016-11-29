@@ -901,7 +901,7 @@
       <value name="SEQUENTIAL" value="0"/>
       <value name="RANDOM" value="1"/>
     </field>
-    <field name="Primitive Topology Type" start="32" end="37" type="uint"/>
+    <field name="Primitive Topology Type" start="32" end="37" type="3D_Prim_Topo_Type"/>
     <field name="Vertex Count Per Instance" start="64" end="95" type="uint"/>
     <field name="Start Vertex Location" start="96" end="127" type="uint"/>
     <field name="Instance Count" start="128" end="159" type="uint"/>
@@ -1423,7 +1423,7 @@
     <field name="Scratch Space Base Pointer" start="138" end="191" type="address"/>
     <field name="Per-Thread Scratch Space" start="128" end="131" type="uint"/>
     <field name="Output Vertex Size" start="215" end="220" type="uint"/>
-    <field name="Output Topology" start="209" end="214" type="uint" prefix="OUTPUT"/>
+    <field name="Output Topology" start="209" end="214" type="3D_Prim_Topo_Type"/>
     <field name="Vertex URB Entry Read Length" start="203" end="208" type="uint"/>
     <field name="Include Vertex Handles" start="202" end="202" type="bool"/>
     <field name="Vertex URB Entry Read Offset" start="196" end="201" type="uint"/>
@@ -2234,7 +2234,7 @@
     <field name="3D Command Opcode" start="24" end="26" type="uint" default="0"/>
     <field name="3D Command Sub Opcode" start="16" end="23" type="uint" default="75"/>
     <field name="DWord Length" start="0" end="7" type="uint" default="0"/>
-    <field name="Primitive Topology Type" start="32" end="37" type="uint"/>
+    <field name="Primitive Topology Type" start="32" end="37" type="3D_Prim_Topo_Type"/>
   </instruction>
 
   <instruction name="3DSTATE_VIEWPORT_STATE_POINTERS_CC" bias="2" length="2">
@@ -3019,7 +3019,7 @@
   <instruction name="MI_TOPOLOGY_FILTER" bias="1" length="1">
     <field name="Command Type" start="29" end="31" type="uint" default="0"/>
     <field name="MI Command Opcode" start="23" end="28" type="uint" default="13"/>
-    <field name="Topology Filter Value" start="0" end="5" type="uint"/>
+    <field name="Topology Filter Value" start="0" end="5" type="3D_Prim_Topo_Type"/>
   </instruction>
 
   <instruction name="MI_URB_ATOMIC_ALLOC" bias="1" length="1">
