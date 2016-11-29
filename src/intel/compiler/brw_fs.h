@@ -50,6 +50,8 @@ offset(const fs_reg &reg, const brw::fs_builder &bld, unsigned delta)
    return offset(reg, bld.dispatch_width(), delta);
 }
 
+#define UBO_START ((1 << 16) - 4)
+
 /**
  * The fragment shader front-end.
  *

@@ -3822,6 +3822,34 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           * and we have to split it if necessary.
           */
          const unsigned type_size = type_sz(dest.type);
+
+         /* See if we've selected this as a push constant candidate */
+         if (const_index) {
+            const unsigned ubo_block = const_index->u32[0];
+            const unsigned offset_256b = const_offset->u32[0] / 32;
+
+            fs_reg push_reg;
+            for (int i = 0; i < 4; i++) {
+               const struct brw_ubo_range *range = &prog_data->ubo_ranges[i];
+               if (range->block == ubo_block &&
+                   offset_256b >= range->start &&
+                   offset_256b < range->start + range->length) {
+
+                  push_reg = fs_reg(UNIFORM, UBO_START + i, dest.type);
+                  push_reg.offset = const_offset->u32[0] - 32 * range->start;
+                  break;
+               }
+            }
+
+            if (push_reg.file != BAD_FILE) {
+               for (unsigned i = 0; i < instr->num_components; i++) {
+                  bld.MOV(offset(dest, bld, i),
+                          byte_offset(push_reg, i * type_size));
+               }
+               break;
+            }
+         }
+
          const unsigned block_sz = 64; /* Fetch one cacheline at a time. */
          const fs_builder ubld = bld.exec_all().group(block_sz / 4, 0);
          const fs_reg packed_consts = ubld.vgrf(BRW_REGISTER_TYPE_UD);
