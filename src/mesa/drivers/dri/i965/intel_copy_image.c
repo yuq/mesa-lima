@@ -183,16 +183,6 @@ intel_copy_image_sub_data(struct gl_context *ctx,
    struct intel_mipmap_tree *src_mt, *dst_mt;
    unsigned src_level, dst_level;
 
-   if (brw->gen < 6 &&
-       _mesa_meta_CopyImageSubData_uncompressed(ctx,
-                                                src_image, src_renderbuffer,
-                                                src_x, src_y, src_z,
-                                                dst_image, dst_renderbuffer,
-                                                dst_x, dst_y, dst_z,
-                                                src_width, src_height)) {
-      return;
-   }
-
    if (src_image) {
       src_mt = intel_texture_image(src_image)->mt;
       src_level = src_image->Level + src_image->TexObject->MinLevel;
