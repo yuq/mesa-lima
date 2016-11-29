@@ -589,7 +589,7 @@ void anv_GetPhysicalDeviceProperties(
       .subPixelInterpolationOffsetBits          = 4,
       .maxFramebufferWidth                      = (1 << 14),
       .maxFramebufferHeight                     = (1 << 14),
-      .maxFramebufferLayers                     = (1 << 10),
+      .maxFramebufferLayers                     = (1 << 11),
       .framebufferColorSampleCounts             = sample_counts,
       .framebufferDepthSampleCounts             = sample_counts,
       .framebufferStencilSampleCounts           = sample_counts,
