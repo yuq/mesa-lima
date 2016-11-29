@@ -482,16 +482,7 @@
       <value name="LOGICOP_SET" value="15"/>
     </field>
     <field name="Alpha Test Enable" start="48" end="48" type="bool"/>
-    <field name="Alpha Test Function" start="45" end="47" type="uint">
-      <value name="COMPAREFUNCTION_ALWAYS" value="0"/>
-      <value name="COMPAREFUNCTION_NEVER" value="1"/>
-      <value name="COMPAREFUNCTION_LESS" value="2"/>
-      <value name="COMPAREFUNCTION_EQUAL" value="3"/>
-      <value name="COMPAREFUNCTION_LEQUAL" value="4"/>
-      <value name="COMPAREFUNCTION_GREATER" value="5"/>
-      <value name="COMPAREFUNCTION_NOTEQUAL" value="6"/>
-      <value name="COMPAREFUNCTION_GEQUAL" value="7"/>
-    </field>
+    <field name="Alpha Test Function" start="45" end="47" type="3D_Compare_Function"/>
     <field name="Color Dither Enable" start="44" end="44" type="bool"/>
     <field name="X Dither Offset" start="42" end="43" type="uint"/>
     <field name="Y Dither Offset" start="40" end="41" type="uint"/>
@@ -533,16 +524,7 @@
 
   <struct name="DEPTH_STENCIL_STATE" length="3">
     <field name="Stencil Test Enable" start="31" end="31" type="bool"/>
-    <field name="Stencil Test Function" start="28" end="30" type="uint">
-      <value name="COMPAREFUNCTION_ALWAYS" value="0"/>
-      <value name="COMPAREFUNCTION_NEVER" value="1"/>
-      <value name="COMPAREFUNCTION_LESS" value="2"/>
-      <value name="COMPAREFUNCTION_EQUAL" value="3"/>
-      <value name="COMPAREFUNCTION_LEQUAL" value="4"/>
-      <value name="COMPAREFUNCTION_GREATER" value="5"/>
-      <value name="COMPAREFUNCTION_NOTEQUAL" value="6"/>
-      <value name="COMPAREFUNCTION_GEQUAL" value="7"/>
-    </field>
+    <field name="Stencil Test Function" start="28" end="30" type="3D_Compare_Function"/>
     <field name="Stencil Fail Op" start="25" end="27" type="uint">
       <value name="STENCILOP_KEEP" value="0"/>
       <value name="STENCILOP_ZERO" value="1"/>
@@ -557,16 +539,7 @@
     <field name="Stencil Pass Depth Pass Op" start="19" end="21" type="uint"/>
     <field name="Stencil Buffer Write Enable" start="18" end="18" type="bool"/>
     <field name="Double Sided Stencil Enable" start="15" end="15" type="bool"/>
-    <field name="Backface Stencil Test Function" start="12" end="14" type="uint">
-      <value name="COMPAREFUNCTION_ALWAYS" value="0"/>
-      <value name="COMPAREFUNCTION_NEVER" value="1"/>
-      <value name="COMPAREFUNCTION_LESS" value="2"/>
-      <value name="COMPAREFUNCTION_EQUAL" value="3"/>
-      <value name="COMPAREFUNCTION_LEQUAL" value="4"/>
-      <value name="COMPAREFUNCTION_GREATER" value="5"/>
-      <value name="COMPAREFUNCTION_NOTEQUAL" value="6"/>
-      <value name="COMPAREFUNCTION_GEQUAL" value="7"/>
-    </field>
+    <field name="Backface Stencil Test Function" start="12" end="14" type="3D_Compare_Function"/>
     <field name="Backface Stencil Fail Op" start="9" end="11" type="uint">
       <value name="STENCILOP_KEEP" value="0"/>
       <value name="STENCILOP_ZERO" value="1"/>
@@ -584,16 +557,7 @@
     <field name="Backface Stencil Test Mask" start="40" end="47" type="uint"/>
     <field name="Backface Stencil Write Mask" start="32" end="39" type="uint"/>
     <field name="Depth Test Enable" start="95" end="95" type="bool"/>
-    <field name="Depth Test Function" start="91" end="93" type="uint">
-      <value name="COMPAREFUNCTION_ALWAYS" value="0"/>
-      <value name="COMPAREFUNCTION_NEVER" value="1"/>
-      <value name="COMPAREFUNCTION_LESS" value="2"/>
-      <value name="COMPAREFUNCTION_EQUAL" value="3"/>
-      <value name="COMPAREFUNCTION_LEQUAL" value="4"/>
-      <value name="COMPAREFUNCTION_GREATER" value="5"/>
-      <value name="COMPAREFUNCTION_NOTEQUAL" value="6"/>
-      <value name="COMPAREFUNCTION_GEQUAL" value="7"/>
-    </field>
+    <field name="Depth Test Function" start="91" end="93" type="3D_Compare_Function"/>
     <field name="Depth Buffer Write Enable" start="90" end="90" type="bool"/>
   </struct>
 
