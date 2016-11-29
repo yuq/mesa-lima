@@ -55,8 +55,8 @@ static const char *scratch_rsrc_dword1_symbol =
 struct si_shader_output_values
 {
 	LLVMValueRef values[4];
-	unsigned name;
-	unsigned sid;
+	unsigned semantic_name;
+	unsigned semantic_index;
 };
 
 static void si_init_shader_ctx(struct si_shader_context *ctx,
@@ -2368,8 +2368,8 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	}
 
 	for (i = 0; i < noutput; i++) {
-		semantic_name = outputs[i].name;
-		semantic_index = outputs[i].sid;
+		semantic_name = outputs[i].semantic_name;
+		semantic_index = outputs[i].semantic_index;
 		bool export_param = true;
 
 		switch (semantic_name) {
@@ -2890,8 +2890,8 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 	}
 
 	for (i = 0; i < info->num_outputs; i++) {
-		outputs[i].name = info->output_semantic_name[i];
-		outputs[i].sid = info->output_semantic_index[i];
+		outputs[i].semantic_name = info->output_semantic_name[i];
+		outputs[i].semantic_index = info->output_semantic_index[i];
 
 		for (j = 0; j < 4; j++)
 			outputs[i].values[j] =
@@ -6374,8 +6374,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	for (i = 0; i < gsinfo->num_outputs; ++i) {
 		unsigned chan;
 
-		outputs[i].name = gsinfo->output_semantic_name[i];
-		outputs[i].sid = gsinfo->output_semantic_index[i];
+		outputs[i].semantic_name = gsinfo->output_semantic_name[i];
+		outputs[i].semantic_index = gsinfo->output_semantic_index[i];
 
 		for (chan = 0; chan < 4; chan++) {
 			args[2] = lp_build_const_int32(gallivm,
