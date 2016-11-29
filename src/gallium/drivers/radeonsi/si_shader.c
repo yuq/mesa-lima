@@ -2364,10 +2364,6 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	unsigned pos_idx;
 	int i;
 
-	if (outputs && ctx->shader->selector->so.num_outputs) {
-		si_llvm_emit_streamout(ctx, outputs, noutput);
-	}
-
 	for (i = 0; i < noutput; i++) {
 		semantic_name = outputs[i].semantic_name;
 		semantic_index = outputs[i].semantic_index;
@@ -2913,6 +2909,8 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 					     get_primitive_id(bld_base, 0)),
 				     VS_EPILOG_PRIMID_LOC, "");
 
+	if (ctx->shader->selector->so.num_outputs)
+		si_llvm_emit_streamout(ctx, outputs, i);
 	si_llvm_export_vs(bld_base, outputs, i);
 	FREE(outputs);
 }
@@ -6400,6 +6398,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		}
 	}
 
+	if (gs_selector->so.num_outputs)
+		si_llvm_emit_streamout(&ctx, outputs, gsinfo->num_outputs);
 	si_llvm_export_vs(bld_base, outputs, gsinfo->num_outputs);
 
 	LLVMBuildRetVoid(gallivm->builder);
