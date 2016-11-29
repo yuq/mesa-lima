@@ -57,6 +57,7 @@ struct si_shader_output_values
 	LLVMValueRef values[4];
 	unsigned semantic_name;
 	unsigned semantic_index;
+	ubyte vertex_stream[4];
 };
 
 static void si_init_shader_ctx(struct si_shader_context *ctx,
@@ -2893,11 +2894,15 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 		outputs[i].semantic_name = info->output_semantic_name[i];
 		outputs[i].semantic_index = info->output_semantic_index[i];
 
-		for (j = 0; j < 4; j++)
+		for (j = 0; j < 4; j++) {
 			outputs[i].values[j] =
 				LLVMBuildLoad(gallivm->builder,
 					      ctx->soa.outputs[i][j],
 					      "");
+			outputs[i].vertex_stream[j] =
+				(info->output_streams[i] >> (2 * j)) & 3;
+		}
+
 	}
 
 	/* Return the primitive ID from the LLVM function. */
@@ -6378,6 +6383,9 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		outputs[i].semantic_index = gsinfo->output_semantic_index[i];
 
 		for (chan = 0; chan < 4; chan++) {
+			outputs[i].vertex_stream[chan] =
+				(gsinfo->output_streams[i] >> (2 * chan)) & 3;
+
 			args[2] = lp_build_const_int32(gallivm,
 						       (i * 4 + chan) *
 						       gs_selector->gs_max_out_vertices * 16 * 4);
