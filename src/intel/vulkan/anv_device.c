@@ -981,31 +981,57 @@ VkResult anv_CreateDevice(
    device->robust_buffer_access = pCreateInfo->pEnabledFeatures &&
       pCreateInfo->pEnabledFeatures->robustBufferAccess;
 
-   pthread_mutex_init(&device->mutex, NULL);
+   if (pthread_mutex_init(&device->mutex, NULL) != 0) {
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
+      goto fail_context_id;
+   }
 
    pthread_condattr_t condattr;
-   pthread_condattr_init(&condattr);
-   pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC);
-   pthread_cond_init(&device->queue_submit, NULL);
+   if (pthread_condattr_init(&condattr) != 0) {
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
+      goto fail_mutex;
+   }
+   if (pthread_condattr_setclock(&condattr, CLOCK_MONOTONIC) != 0) {
+      pthread_condattr_destroy(&condattr);
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
+      goto fail_mutex;
+   }
+   if (pthread_cond_init(&device->queue_submit, NULL) != 0) {
+      pthread_condattr_destroy(&condattr);
+      result = vk_error(VK_ERROR_INITIALIZATION_FAILED);
+      goto fail_mutex;
+   }
    pthread_condattr_destroy(&condattr);
 
    anv_bo_pool_init(&device->batch_bo_pool, device);
 
-   anv_block_pool_init(&device->dynamic_state_block_pool, device, 16384);
+   result = anv_block_pool_init(&device->dynamic_state_block_pool, device,
+                                16384);
+   if (result != VK_SUCCESS)
+      goto fail_batch_bo_pool;
 
    anv_state_pool_init(&device->dynamic_state_pool,
                        &device->dynamic_state_block_pool);
 
-   anv_block_pool_init(&device->instruction_block_pool, device, 1024 * 1024);
+   result = anv_block_pool_init(&device->instruction_block_pool, device,
+                                1024 * 1024);
+   if (result != VK_SUCCESS)
+      goto fail_dynamic_state_pool;
+
    anv_state_pool_init(&device->instruction_state_pool,
                        &device->instruction_block_pool);
 
-   anv_block_pool_init(&device->surface_state_block_pool, device, 4096);
+   result = anv_block_pool_init(&device->surface_state_block_pool, device,
+                                4096);
+   if (result != VK_SUCCESS)
+      goto fail_instruction_state_pool;
 
    anv_state_pool_init(&device->surface_state_pool,
                        &device->surface_state_block_pool);
 
-   anv_bo_init_new(&device->workaround_bo, device, 1024);
+   result = anv_bo_init_new(&device->workaround_bo, device, 1024);
+   if (result != VK_SUCCESS)
+      goto fail_surface_state_pool;
 
    anv_scratch_pool_init(device, &device->scratch_pool);
 
@@ -1030,7 +1056,7 @@ VkResult anv_CreateDevice(
       unreachable("unhandled gen");
    }
    if (result != VK_SUCCESS)
-      goto fail_fd;
+      goto fail_workaround_bo;
 
    anv_device_init_blorp(device);
 
@@ -1040,6 +1066,27 @@ VkResult anv_CreateDevice(
 
    return VK_SUCCESS;
 
+ fail_workaround_bo:
+   anv_queue_finish(&device->queue);
+   anv_scratch_pool_finish(device, &device->scratch_pool);
+   anv_gem_munmap(device->workaround_bo.map, device->workaround_bo.size);
+   anv_gem_close(device, device->workaround_bo.gem_handle);
+ fail_surface_state_pool:
+   anv_state_pool_finish(&device->surface_state_pool);
+   anv_block_pool_finish(&device->surface_state_block_pool);
+ fail_instruction_state_pool:
+   anv_state_pool_finish(&device->instruction_state_pool);
+   anv_block_pool_finish(&device->instruction_block_pool);
+ fail_dynamic_state_pool:
+   anv_state_pool_finish(&device->dynamic_state_pool);
+   anv_block_pool_finish(&device->dynamic_state_block_pool);
+ fail_batch_bo_pool:
+   anv_bo_pool_finish(&device->batch_bo_pool);
+   pthread_cond_destroy(&device->queue_submit);
+ fail_mutex:
+   pthread_mutex_destroy(&device->mutex);
+ fail_context_id:
+   anv_gem_destroy_context(device, device->context_id);
  fail_fd:
    close(device->fd);
  fail_device:
