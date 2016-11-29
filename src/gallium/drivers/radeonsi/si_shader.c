@@ -2214,6 +2214,55 @@ static void si_dump_streamout(struct pipe_stream_output_info *so)
 	}
 }
 
+static void emit_streamout_output(struct si_shader_context *ctx,
+				  LLVMValueRef const *so_buffers,
+				  LLVMValueRef const *so_write_offsets,
+				  struct pipe_stream_output *stream_out,
+				  struct si_shader_output_values *shader_out)
+{
+	struct gallivm_state *gallivm = &ctx->gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	unsigned buf_idx = stream_out->output_buffer;
+	unsigned start = stream_out->start_component;
+	unsigned num_comps = stream_out->num_components;
+	LLVMValueRef out[4];
+
+	assert(num_comps && num_comps <= 4);
+	if (!num_comps || num_comps > 4)
+		return;
+
+	/* Load the output as int. */
+	for (int j = 0; j < num_comps; j++) {
+		out[j] = LLVMBuildBitCast(builder,
+					  shader_out->values[start + j],
+				ctx->i32, "");
+	}
+
+	/* Pack the output. */
+	LLVMValueRef vdata = NULL;
+
+	switch (num_comps) {
+	case 1: /* as i32 */
+		vdata = out[0];
+		break;
+	case 2: /* as v2i32 */
+	case 3: /* as v4i32 (aligned to 4) */
+	case 4: /* as v4i32 */
+		vdata = LLVMGetUndef(LLVMVectorType(ctx->i32, util_next_power_of_two(num_comps)));
+		for (int j = 0; j < num_comps; j++) {
+			vdata = LLVMBuildInsertElement(builder, vdata, out[j],
+						       LLVMConstInt(ctx->i32, j, 0), "");
+		}
+		break;
+	}
+
+	build_tbuffer_store_dwords(ctx, so_buffers[buf_idx],
+				   vdata, num_comps,
+				   so_write_offsets[buf_idx],
+				   LLVMConstInt(ctx->i32, 0, 0),
+				   stream_out->dst_offset * 4);
+}
+
 /* On SI, the vertex shader is responsible for writing streamout data
  * to buffers. */
 static void si_llvm_emit_streamout(struct si_shader_context *ctx,
@@ -2223,7 +2272,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	struct pipe_stream_output_info *so = &ctx->shader->selector->so;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
-	int i, j;
+	int i;
 	struct lp_build_if_state if_ctx;
 	LLVMValueRef so_buffers[4];
 	LLVMValueRef buf_ptr = LLVMGetParam(ctx->main_fn,
@@ -2287,45 +2336,12 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 
 		/* Write streamout data. */
 		for (i = 0; i < so->num_outputs; i++) {
-			unsigned buf_idx = so->output[i].output_buffer;
 			unsigned reg = so->output[i].register_index;
-			unsigned start = so->output[i].start_component;
-			unsigned num_comps = so->output[i].num_components;
 			unsigned stream = so->output[i].stream;
-			LLVMValueRef out[4];
 			struct lp_build_if_state if_ctx_stream;
-
-			assert(num_comps && num_comps <= 4);
-			if (!num_comps || num_comps > 4)
-				continue;
 
 			if (reg >= noutput)
 				continue;
-
-			/* Load the output as int. */
-			for (j = 0; j < num_comps; j++) {
-				out[j] = LLVMBuildBitCast(builder,
-							  outputs[reg].values[start+j],
-						ctx->i32, "");
-			}
-
-			/* Pack the output. */
-			LLVMValueRef vdata = NULL;
-
-			switch (num_comps) {
-			case 1: /* as i32 */
-				vdata = out[0];
-				break;
-			case 2: /* as v2i32 */
-			case 3: /* as v4i32 (aligned to 4) */
-			case 4: /* as v4i32 */
-				vdata = LLVMGetUndef(LLVMVectorType(ctx->i32, util_next_power_of_two(num_comps)));
-				for (j = 0; j < num_comps; j++) {
-					vdata = LLVMBuildInsertElement(builder, vdata, out[j],
-								       LLVMConstInt(ctx->i32, j, 0), "");
-				}
-				break;
-			}
 
 			LLVMValueRef can_emit_stream =
 				LLVMBuildICmp(builder, LLVMIntEQ,
@@ -2333,11 +2349,8 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 					      lp_build_const_int32(gallivm, stream), "");
 
 			lp_build_if(&if_ctx_stream, gallivm, can_emit_stream);
-			build_tbuffer_store_dwords(ctx, so_buffers[buf_idx],
-						   vdata, num_comps,
-						   so_write_offset[buf_idx],
-						   LLVMConstInt(ctx->i32, 0, 0),
-						   so->output[i].dst_offset*4);
+			emit_streamout_output(ctx, so_buffers, so_write_offset,
+					      &so->output[i], &outputs[reg]);
 			lp_build_endif(&if_ctx_stream);
 		}
 	}
