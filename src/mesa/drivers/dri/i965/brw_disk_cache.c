@@ -30,6 +30,7 @@
 #include "util/mesa-sha1.h"
 
 #include "brw_context.h"
+#include "brw_gs.h"
 #include "brw_state.h"
 #include "brw_vs.h"
 #include "brw_wm.h"
@@ -119,6 +120,10 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
        */
       prog_key.vs.program_string_id = 0;
       break;
+   case MESA_SHADER_GEOMETRY:
+      brw_gs_populate_key(brw, &prog_key.gs);
+      prog_key.gs.program_string_id = 0;
+      break;
    case MESA_SHADER_FRAGMENT:
       brw_wm_populate_key(brw, &prog_key.wm);
       prog_key.wm.program_string_id = 0;
@@ -176,6 +181,11 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
       prog_key.vs.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_VS_PROG;
       stage_state = &brw->vs.base;
+      break;
+   case MESA_SHADER_GEOMETRY:
+      prog_key.gs.program_string_id = brw_program(prog)->id;
+      cache_id = BRW_CACHE_GS_PROG;
+      stage_state = &brw->gs.base;
       break;
    case MESA_SHADER_FRAGMENT:
       prog_key.wm.program_string_id = brw_program(prog)->id;
@@ -275,6 +285,17 @@ brw_disk_cache_write_program(struct brw_context *brw)
       write_program_data(brw, prog, &vs_key, brw->vs.base.prog_data,
                          brw->vs.base.prog_offset, cache,
                          MESA_SHADER_VERTEX);
+   }
+
+   prog = brw->ctx._Shader->CurrentProgram[MESA_SHADER_GEOMETRY];
+   if (prog && !prog->program_written_to_cache) {
+      struct brw_gs_prog_key gs_key;
+      brw_gs_populate_key(brw, &gs_key);
+      gs_key.program_string_id = 0;
+
+      write_program_data(brw, prog, &gs_key, brw->gs.base.prog_data,
+                         brw->gs.base.prog_offset, cache,
+                         MESA_SHADER_GEOMETRY);
    }
 
    prog = brw->ctx._Shader->CurrentProgram[MESA_SHADER_FRAGMENT];
