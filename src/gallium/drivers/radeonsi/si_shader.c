@@ -8198,11 +8198,31 @@ static bool si_shader_select_ps_parts(struct si_screen *sscreen,
 	return true;
 }
 
-static void si_fix_num_sgprs(struct si_shader *shader)
+void si_multiwave_lds_size_workaround(struct si_screen *sscreen,
+				      unsigned *lds_size)
+{
+	/* SPI barrier management bug:
+	 *   Make sure we have at least 4k of LDS in use to avoid the bug.
+	 *   It applies to workgroup sizes of more than one wavefront.
+	 */
+	if (sscreen->b.family == CHIP_BONAIRE ||
+	    sscreen->b.family == CHIP_KABINI ||
+	    sscreen->b.family == CHIP_MULLINS)
+		*lds_size = MAX2(*lds_size, 8);
+}
+
+static void si_fix_resource_usage(struct si_screen *sscreen,
+				  struct si_shader *shader)
 {
 	unsigned min_sgprs = shader->info.num_input_sgprs + 2; /* VCC */
 
 	shader->config.num_sgprs = MAX2(shader->config.num_sgprs, min_sgprs);
+
+	if (shader->selector->type == PIPE_SHADER_COMPUTE &&
+	    si_get_max_workgroup_size(shader) > 64) {
+		si_multiwave_lds_size_workaround(sscreen,
+						 &shader->config.lds_size);
+	}
 }
 
 int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
@@ -8297,7 +8317,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		}
 	}
 
-	si_fix_num_sgprs(shader);
+	si_fix_resource_usage(sscreen, shader);
 	si_shader_dump(sscreen, shader, debug, sel->info.processor,
 		       stderr);
 

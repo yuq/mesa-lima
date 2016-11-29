@@ -176,11 +176,13 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 
 	if (sctx->b.chip_class >= CIK) {
 		assert(lds_size <= 65536);
-		ls_rsrc2 |= S_00B52C_LDS_SIZE(align(lds_size, 512) / 512);
+		lds_size = align(lds_size, 512) / 512;
 	} else {
 		assert(lds_size <= 32768);
-		ls_rsrc2 |= S_00B52C_LDS_SIZE(align(lds_size, 256) / 256);
+		lds_size = align(lds_size, 256) / 256;
 	}
+	si_multiwave_lds_size_workaround(sctx->screen, &lds_size);
+	ls_rsrc2 |= S_00B52C_LDS_SIZE(lds_size);
 
 	/* Due to a hw bug, RSRC2_LS must be written twice with another
 	 * LS register written in between. */
