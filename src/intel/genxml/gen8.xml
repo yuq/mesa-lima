@@ -551,7 +551,7 @@
     <field name="Alpha To One Enable" start="29" end="29" type="bool"/>
     <field name="Alpha To Coverage Dither Enable" start="28" end="28" type="bool"/>
     <field name="Alpha Test Enable" start="27" end="27" type="bool"/>
-    <field name="Alpha Test Function" start="24" end="26" type="uint"/>
+    <field name="Alpha Test Function" start="24" end="26" type="3D_Compare_Function"/>
     <field name="Color Dither Enable" start="23" end="23" type="bool"/>
     <field name="X Dither Offset" start="21" end="22" type="uint"/>
     <field name="Y Dither Offset" start="19" end="20" type="uint"/>
@@ -2373,12 +2373,12 @@
     <field name="Stencil Fail Op" start="61" end="63" type="uint"/>
     <field name="Stencil Pass Depth Fail Op" start="58" end="60" type="uint"/>
     <field name="Stencil Pass Depth Pass Op" start="55" end="57" type="uint"/>
-    <field name="Backface Stencil Test Function" start="52" end="54" type="uint"/>
+    <field name="Backface Stencil Test Function" start="52" end="54" type="3D_Compare_Function"/>
     <field name="Backface Stencil Fail Op" start="49" end="51" type="uint"/>
     <field name="Backface Stencil Pass Depth Fail Op" start="46" end="48" type="uint"/>
     <field name="Backface Stencil Pass Depth Pass Op" start="43" end="45" type="uint"/>
-    <field name="Stencil Test Function" start="40" end="42" type="uint"/>
-    <field name="Depth Test Function" start="37" end="39" type="uint"/>
+    <field name="Stencil Test Function" start="40" end="42" type="3D_Compare_Function"/>
+    <field name="Depth Test Function" start="37" end="39" type="3D_Compare_Function"/>
     <field name="Double Sided Stencil Enable" start="36" end="36" type="bool"/>
     <field name="Stencil Test Enable" start="35" end="35" type="bool"/>
     <field name="Stencil Buffer Write Enable" start="34" end="34" type="bool"/>
