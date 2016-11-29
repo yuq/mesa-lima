@@ -214,6 +214,7 @@ enum brw_state_id {
    BRW_STATE_BLORP,
    BRW_STATE_VIEWPORT_COUNT,
    BRW_STATE_CONSERVATIVE_RASTERIZATION,
+   BRW_STATE_DRAW_CALL,
    BRW_NUM_STATE_BITS
 };
 
@@ -304,6 +305,7 @@ enum brw_state_id {
 #define BRW_NEW_CC_STATE                (1ull << BRW_STATE_CC_STATE)
 #define BRW_NEW_BLORP                   (1ull << BRW_STATE_BLORP)
 #define BRW_NEW_CONSERVATIVE_RASTERIZATION (1ull << BRW_STATE_CONSERVATIVE_RASTERIZATION)
+#define BRW_NEW_DRAW_CALL               (1ull << BRW_STATE_DRAW_CALL)
 
 struct brw_state_flags {
    /** State update flags signalled by mesa internals */
