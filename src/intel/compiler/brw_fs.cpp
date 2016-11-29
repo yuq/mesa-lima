@@ -1383,7 +1383,14 @@ fs_visitor::emit_gs_thread_end()
 void
 fs_visitor::assign_curb_setup()
 {
-   prog_data->curb_read_length = ALIGN(stage_prog_data->nr_params, 8) / 8;
+   unsigned uniform_push_length = DIV_ROUND_UP(stage_prog_data->nr_params, 8);
+
+   unsigned ubo_push_length = 0;
+   for (int i = 0; i < 4; i++) {
+      ubo_push_length += stage_prog_data->ubo_ranges[i].length;
+   }
+
+   prog_data->curb_read_length = uniform_push_length + ubo_push_length;
 
    /* Map the offsets in the UNIFORM file to fixed HW regs. */
    foreach_block_and_inst(block, fs_inst, inst, cfg) {

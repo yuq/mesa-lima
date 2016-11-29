@@ -1776,6 +1776,9 @@ vec4_visitor::setup_uniforms(int reg)
       reg += ALIGN(uniforms, 2) / 2;
    }
 
+   for (int i = 0; i < 4; i++)
+      reg += stage_prog_data->ubo_ranges[i].length;
+
    stage_prog_data->nr_params = this->uniforms * 4;
 
    prog_data->base.curb_read_length =

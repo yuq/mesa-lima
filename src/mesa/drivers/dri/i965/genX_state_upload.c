@@ -2847,6 +2847,8 @@ UNUSED static const uint32_t push_constant_opcodes[] = {
 static void
 genX(upload_push_constant_packets)(struct brw_context *brw)
 {
+   struct gl_context *ctx = &brw->ctx;
+
    UNUSED uint32_t mocs = GEN_GEN < 8 ? GEN7_MOCS_L3 : 0;
 
    struct brw_stage_state *stage_states[] = {
@@ -2863,19 +2865,71 @@ genX(upload_push_constant_packets)(struct brw_context *brw)
 
    for (int stage = 0; stage <= MESA_SHADER_FRAGMENT; stage++) {
       struct brw_stage_state *stage_state = stage_states[stage];
-      bool active = stage_state->prog_data && stage_state->push_const_size > 0;
+      struct gl_program *prog = ctx->_Shader->CurrentProgram[stage];
 
       if (!stage_state->push_constants_dirty)
          continue;
 
       brw_batch_emit(brw, GENX(3DSTATE_CONSTANT_VS), pkt) {
          pkt._3DCommandSubOpcode = push_constant_opcodes[stage];
-         if (active) {
+         if (stage_state->prog_data) {
 #if GEN_GEN >= 8 || GEN_IS_HASWELL
-            pkt.ConstantBody.ReadLength[2] = stage_state->push_const_size;
-            pkt.ConstantBody.Buffer[2] =
-               render_ro_bo(stage_state->push_const_bo,
-                            stage_state->push_const_offset);
+            /* The Skylake PRM contains the following restriction:
+             *
+             *    "The driver must ensure The following case does not occur
+             *     without a flush to the 3D engine: 3DSTATE_CONSTANT_* with
+             *     buffer 3 read length equal to zero committed followed by a
+             *     3DSTATE_CONSTANT_* with buffer 0 read length not equal to
+             *     zero committed."
+             *
+             * To avoid this, we program the buffers in the highest slots.
+             * This way, slot 0 is only used if slot 3 is also used.
+             */
+            int n = 3;
+
+            for (int i = 3; i >= 0; i--) {
+               const struct brw_ubo_range *range =
+                  &stage_state->prog_data->ubo_ranges[i];
+
+               if (range->length == 0)
+                  continue;
+
+               const struct gl_uniform_block *block =
+                  prog->sh.UniformBlocks[range->block];
+               const struct gl_uniform_buffer_binding *binding =
+                  &ctx->UniformBufferBindings[block->Binding];
+
+               if (binding->BufferObject == ctx->Shared->NullBufferObj) {
+                  static unsigned msg_id = 0;
+                  _mesa_gl_debug(ctx, &msg_id, MESA_DEBUG_SOURCE_API,
+                                 MESA_DEBUG_TYPE_UNDEFINED,
+                                 MESA_DEBUG_SEVERITY_HIGH,
+                                 "UBO %d unbound, %s shader uniform data "
+                                 "will be undefined.",
+                                 range->block,
+                                 _mesa_shader_stage_to_string(stage));
+                  continue;
+               }
+
+               assert(binding->Offset % 32 == 0);
+
+               struct brw_bo *bo = intel_bufferobj_buffer(brw,
+                  intel_buffer_object(binding->BufferObject),
+                  binding->Offset, range->length * 32, false);
+
+               pkt.ConstantBody.ReadLength[n] = range->length;
+               pkt.ConstantBody.Buffer[n] =
+                  render_ro_bo(bo, range->start * 32 + binding->Offset);
+               n--;
+            }
+
+            if (stage_state->push_const_size > 0) {
+               assert(n >= 0);
+               pkt.ConstantBody.ReadLength[n] = stage_state->push_const_size;
+               pkt.ConstantBody.Buffer[n] =
+                  render_ro_bo(stage_state->push_const_bo,
+                               stage_state->push_const_offset);
+            }
 #else
             pkt.ConstantBody.ReadLength[0] = stage_state->push_const_size;
             pkt.ConstantBody.Buffer[0].offset =
@@ -3596,7 +3650,8 @@ genX(upload_ps)(struct brw_context *brw)
       ps.MaximumNumberofThreads = devinfo->max_wm_threads - 1;
 #endif
 
-      if (prog_data->base.nr_params > 0)
+      if (prog_data->base.nr_params > 0 ||
+          prog_data->base.ubo_ranges[0].length > 0)
          ps.PushConstantEnable = true;
 
 #if GEN_GEN < 8

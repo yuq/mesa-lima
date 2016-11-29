@@ -1446,6 +1446,8 @@ brw_upload_ubo_surfaces(struct brw_context *brw, struct gl_program *prog,
       }
    }
 
+   stage_state->push_constants_dirty = true;
+
    if (prog->info.num_ubos || prog->info.num_ssbos)
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
 }
