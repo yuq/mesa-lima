@@ -120,29 +120,39 @@ __emit_genx_sf_state(struct anv_cmd_buffer *cmd_buffer)
                            cmd_buffer->state.pipeline->gen8.sf);
 }
 
-#include "genxml/gen9_pack.h"
-static void
-__emit_gen9_sf_state(struct anv_cmd_buffer *cmd_buffer)
+void
+gen9_emit_sf_state(struct anv_cmd_buffer *cmd_buffer);
+
+#if GEN_GEN == 9
+
+void
+gen9_emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
 {
-      uint32_t sf_dw[GENX(3DSTATE_SF_length)];
-      struct GEN9_3DSTATE_SF sf = {
-         GEN9_3DSTATE_SF_header,
-         .LineWidth = cmd_buffer->state.dynamic.line_width,
-      };
-      GEN9_3DSTATE_SF_pack(NULL, sf_dw, &sf);
-      /* FIXME: gen9.fs */
-      anv_batch_emit_merge(&cmd_buffer->batch, sf_dw,
-                           cmd_buffer->state.pipeline->gen8.sf);
+   __emit_genx_sf_state(cmd_buffer);
 }
+
+#endif
+
+#if GEN_GEN == 8
 
 static void
 __emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
 {
    if (cmd_buffer->device->info.is_cherryview)
-      __emit_gen9_sf_state(cmd_buffer);
+      gen9_emit_sf_state(cmd_buffer);
    else
       __emit_genx_sf_state(cmd_buffer);
 }
+
+#else
+
+static void
+__emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
+{
+   __emit_genx_sf_state(cmd_buffer);
+}
+
+#endif
 
 void
 genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
