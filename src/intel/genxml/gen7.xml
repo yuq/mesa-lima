@@ -362,10 +362,10 @@
     <field name="Source Element Format" start="16" end="24" type="SURFACE_FORMAT"/>
     <field name="Edge Flag Enable" start="15" end="15" type="bool"/>
     <field name="Source Element Offset" start="0" end="11" type="uint"/>
-    <field name="Component 0 Control" start="60" end="62" type="uint"/>
-    <field name="Component 1 Control" start="56" end="58" type="uint"/>
-    <field name="Component 2 Control" start="52" end="54" type="uint"/>
-    <field name="Component 3 Control" start="48" end="50" type="uint"/>
+    <field name="Component 0 Control" start="60" end="62" type="3D_Vertex_Component_Control"/>
+    <field name="Component 1 Control" start="56" end="58" type="3D_Vertex_Component_Control"/>
+    <field name="Component 2 Control" start="52" end="54" type="3D_Vertex_Component_Control"/>
+    <field name="Component 3 Control" start="48" end="50" type="3D_Vertex_Component_Control"/>
   </struct>
 
   <struct name="SO_DECL" length="1">
