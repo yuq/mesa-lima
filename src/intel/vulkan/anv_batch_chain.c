@@ -29,7 +29,6 @@
 
 #include "anv_private.h"
 
-#include "genxml/gen7_pack.h"
 #include "genxml/gen8_pack.h"
 
 #include "util/debug.h"
@@ -449,6 +448,9 @@ emit_batch_buffer_start(struct anv_cmd_buffer *cmd_buffer,
     * gens.
     */
 
+#define GEN7_MI_BATCH_BUFFER_START_length      2
+#define GEN7_MI_BATCH_BUFFER_START_length_bias      2
+
    const uint32_t gen7_length =
       GEN7_MI_BATCH_BUFFER_START_length - GEN7_MI_BATCH_BUFFER_START_length_bias;
    const uint32_t gen8_length =
@@ -779,11 +781,11 @@ anv_cmd_buffer_end_batch_buffer(struct anv_cmd_buffer *cmd_buffer)
       cmd_buffer->batch.end += GEN8_MI_BATCH_BUFFER_START_length * 4;
       assert(cmd_buffer->batch.end == batch_bo->bo.map + batch_bo->bo.size);
 
-      anv_batch_emit(&cmd_buffer->batch, GEN7_MI_BATCH_BUFFER_END, bbe);
+      anv_batch_emit(&cmd_buffer->batch, GEN8_MI_BATCH_BUFFER_END, bbe);
 
       /* Round batch up to an even number of dwords. */
       if ((cmd_buffer->batch.next - cmd_buffer->batch.start) & 4)
-         anv_batch_emit(&cmd_buffer->batch, GEN7_MI_NOOP, noop);
+         anv_batch_emit(&cmd_buffer->batch, GEN8_MI_NOOP, noop);
 
       cmd_buffer->exec_mode = ANV_CMD_BUFFER_EXEC_MODE_PRIMARY;
    }
