@@ -4431,6 +4431,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    if (instr->sampler_dim == GLSL_SAMPLER_DIM_BUF)
       srcs[TEX_LOGICAL_SRC_LOD] = brw_imm_d(0);
 
+   uint32_t header_bits = 0;
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       fs_reg src = get_nir_src(instr->src[i].src);
       switch (instr->src[i].src_type) {
@@ -4485,11 +4486,9 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          nir_const_value *const_offset =
             nir_src_as_const_value(instr->src[i].src);
          if (const_offset) {
-            unsigned header_bits = brw_texture_offset(const_offset->i32, 3);
-            if (header_bits != 0)
-               srcs[TEX_LOGICAL_SRC_OFFSET_VALUE] = brw_imm_ud(header_bits);
+            header_bits |= brw_texture_offset(const_offset->i32, 3);
          } else {
-            srcs[TEX_LOGICAL_SRC_OFFSET_VALUE] =
+            srcs[TEX_LOGICAL_SRC_TG4_OFFSET] =
                retype(src, BRW_REGISTER_TYPE_D);
          }
          break;
@@ -4607,8 +4606,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       opcode = SHADER_OPCODE_LOD_LOGICAL;
       break;
    case nir_texop_tg4:
-      if (srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].file != BAD_FILE &&
-          srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].file != IMM)
+      if (srcs[TEX_LOGICAL_SRC_TG4_OFFSET].file != BAD_FILE)
          opcode = SHADER_OPCODE_TG4_OFFSET_LOGICAL;
       else
          opcode = SHADER_OPCODE_TG4_LOGICAL;
@@ -4639,8 +4637,21 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       unreachable("unknown texture opcode");
    }
 
+   if (instr->op == nir_texop_tg4) {
+      if (instr->component == 1 &&
+          key_tex->gather_channel_quirk_mask & (1 << texture)) {
+         /* gather4 sampler is broken for green channel on RG32F --
+          * we must ask for blue instead.
+          */
+         header_bits |= 2 << 16;
+      } else {
+         header_bits |= instr->component << 16;
+      }
+   }
+
    fs_reg dst = bld.vgrf(brw_type_for_nir_type(instr->dest_type), 4);
    fs_inst *inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
+   inst->offset = header_bits;
 
    const unsigned dest_size = nir_tex_instr_dest_size(instr);
    if (devinfo->gen >= 9 &&
@@ -4658,23 +4669,8 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
    if (srcs[TEX_LOGICAL_SRC_SHADOW_C].file != BAD_FILE)
       inst->shadow_compare = true;
 
-   if (srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].file == IMM)
-      inst->offset = srcs[TEX_LOGICAL_SRC_OFFSET_VALUE].ud;
-
-   if (instr->op == nir_texop_tg4) {
-      if (instr->component == 1 &&
-          key_tex->gather_channel_quirk_mask & (1 << texture)) {
-         /* gather4 sampler is broken for green channel on RG32F --
-          * we must ask for blue instead.
-          */
-         inst->offset |= 2 << 16;
-      } else {
-         inst->offset |= instr->component << 16;
-      }
-
-      if (devinfo->gen == 6)
-         emit_gen6_gather_wa(key_tex->gen6_gather_wa[texture], dst);
-   }
+   if (instr->op == nir_texop_tg4 && devinfo->gen == 6)
+      emit_gen6_gather_wa(key_tex->gen6_gather_wa[texture], dst);
 
    fs_reg nir_dest[4];
    for (unsigned i = 0; i < dest_size; i++)

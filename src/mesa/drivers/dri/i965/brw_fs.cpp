@@ -730,7 +730,7 @@ fs_inst::components_read(unsigned i) const
                opcode == SHADER_OPCODE_TXD_LOGICAL)
          return src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].ud;
       /* Texture offset. */
-      else if (i == TEX_LOGICAL_SRC_OFFSET_VALUE)
+      else if (i == TEX_LOGICAL_SRC_TG4_OFFSET)
          return 2;
       /* MCS */
       else if (i == TEX_LOGICAL_SRC_MCS && opcode == SHADER_OPCODE_TXF_CMS_W_LOGICAL)
@@ -3877,7 +3877,6 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
                                 const fs_reg &sample_index,
                                 const fs_reg &surface,
                                 const fs_reg &sampler,
-                                const fs_reg &offset_value,
                                 unsigned coord_components,
                                 unsigned grad_components)
 {
@@ -3885,7 +3884,7 @@ lower_sampler_logical_send_gen5(const fs_builder &bld, fs_inst *inst, opcode op,
    fs_reg msg_coords = message;
    unsigned header_size = 0;
 
-   if (offset_value.file != BAD_FILE) {
+   if (inst->offset != 0) {
       /* The offsets set up by the visitor are in the m1 header, so we can't
        * go headerless.
        */
@@ -3985,7 +3984,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
                                 const fs_reg &mcs,
                                 const fs_reg &surface,
                                 const fs_reg &sampler,
-                                const fs_reg &offset_value,
+                                const fs_reg &tg4_offset,
                                 unsigned coord_components,
                                 unsigned grad_components)
 {
@@ -3997,7 +3996,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
       sources[i] = bld.vgrf(BRW_REGISTER_TYPE_F);
 
    if (op == SHADER_OPCODE_TG4 || op == SHADER_OPCODE_TG4_OFFSET ||
-       offset_value.file != BAD_FILE || inst->eot ||
+       inst->offset != 0 || inst->eot ||
        op == SHADER_OPCODE_SAMPLEINFO ||
        is_high_sampler(devinfo, sampler)) {
       /* For general texture offsets (no txf workaround), we need a header to
@@ -4142,7 +4141,7 @@ lower_sampler_logical_send_gen7(const fs_builder &bld, fs_inst *inst, opcode op,
 
       for (unsigned i = 0; i < 2; i++) /* offu, offv */
          bld.MOV(retype(sources[length++], BRW_REGISTER_TYPE_D),
-                 offset(offset_value, bld, i));
+                 offset(tg4_offset, bld, i));
 
       if (coord_components == 3) /* r if present */
          bld.MOV(sources[length++], offset(coordinate, bld, 2));
@@ -4194,7 +4193,7 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    const fs_reg &mcs = inst->src[TEX_LOGICAL_SRC_MCS];
    const fs_reg &surface = inst->src[TEX_LOGICAL_SRC_SURFACE];
    const fs_reg &sampler = inst->src[TEX_LOGICAL_SRC_SAMPLER];
-   const fs_reg &offset_value = inst->src[TEX_LOGICAL_SRC_OFFSET_VALUE];
+   const fs_reg &tg4_offset = inst->src[TEX_LOGICAL_SRC_TG4_OFFSET];
    assert(inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].file == IMM);
    const unsigned coord_components = inst->src[TEX_LOGICAL_SRC_COORD_COMPONENTS].ud;
    assert(inst->src[TEX_LOGICAL_SRC_GRAD_COMPONENTS].file == IMM);
@@ -4203,12 +4202,12 @@ lower_sampler_logical_send(const fs_builder &bld, fs_inst *inst, opcode op)
    if (devinfo->gen >= 7) {
       lower_sampler_logical_send_gen7(bld, inst, op, coordinate,
                                       shadow_c, lod, lod2, sample_index,
-                                      mcs, surface, sampler, offset_value,
+                                      mcs, surface, sampler, tg4_offset,
                                       coord_components, grad_components);
    } else if (devinfo->gen >= 5) {
       lower_sampler_logical_send_gen5(bld, inst, op, coordinate,
                                       shadow_c, lod, lod2, sample_index,
-                                      surface, sampler, offset_value,
+                                      surface, sampler,
                                       coord_components, grad_components);
    } else {
       lower_sampler_logical_send_gen4(bld, inst, op, coordinate,
@@ -4677,7 +4676,7 @@ get_sampler_lowered_simd_width(const struct gen_device_info *devinfo,
       inst->components_read(TEX_LOGICAL_SRC_LOD2) +
       inst->components_read(TEX_LOGICAL_SRC_SAMPLE_INDEX) +
       (inst->opcode == SHADER_OPCODE_TG4_OFFSET_LOGICAL ?
-       inst->components_read(TEX_LOGICAL_SRC_OFFSET_VALUE) : 0) +
+       inst->components_read(TEX_LOGICAL_SRC_TG4_OFFSET) : 0) +
       inst->components_read(TEX_LOGICAL_SRC_MCS);
 
    /* SIMD16 messages with more than five arguments exceed the maximum message
