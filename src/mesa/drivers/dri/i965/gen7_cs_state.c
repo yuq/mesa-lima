@@ -133,8 +133,7 @@ const struct brw_tracked_state gen7_cs_push_constants = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
              BRW_NEW_COMPUTE_PROGRAM |
-             BRW_NEW_CS_PROG_DATA |
-             BRW_NEW_PUSH_CONSTANT_ALLOCATION,
+             BRW_NEW_CS_PROG_DATA,
    },
    .emit = gen7_upload_cs_push_constants,
 };

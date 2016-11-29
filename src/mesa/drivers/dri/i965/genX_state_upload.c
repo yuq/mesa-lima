@@ -3735,7 +3735,6 @@ static const struct brw_tracked_state genX(cs_state) = {
       .brw = BRW_NEW_BATCH |
              BRW_NEW_BLORP |
              BRW_NEW_CS_PROG_DATA |
-             BRW_NEW_PUSH_CONSTANT_ALLOCATION |
              BRW_NEW_SAMPLER_STATE_TABLE |
              BRW_NEW_SURFACES,
    },
