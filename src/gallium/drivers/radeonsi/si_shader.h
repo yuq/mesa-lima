@@ -576,5 +576,6 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 				  unsigned symbol_offset);
 unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
 				    bool writes_samplemask);
+const char *si_get_shader_name(struct si_shader *shader, unsigned processor);
 
 #endif

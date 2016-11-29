@@ -468,6 +468,254 @@ static void si_dump_descriptors(struct si_context *sctx,
 					num_elements[i], f);
 }
 
+struct si_shader_inst {
+	char text[160];  /* one disasm line */
+	unsigned offset; /* instruction offset */
+	unsigned size;   /* instruction size = 4 or 8 */
+};
+
+/* Split a disassembly string into lines and add them to the array pointed
+ * to by "instructions". */
+static void si_add_split_disasm(const char *disasm,
+				uint64_t start_addr,
+				unsigned *num,
+				struct si_shader_inst *instructions)
+{
+	struct si_shader_inst *last_inst = *num ? &instructions[*num - 1] : NULL;
+	char *next;
+
+	while ((next = strchr(disasm, '\n'))) {
+		struct si_shader_inst *inst = &instructions[*num];
+		unsigned len = next - disasm;
+
+		assert(len < ARRAY_SIZE(inst->text));
+		memcpy(inst->text, disasm, len);
+		inst->text[len] = 0;
+		inst->offset = last_inst ? last_inst->offset + last_inst->size : 0;
+
+		const char *semicolon = strchr(disasm, ';');
+		assert(semicolon);
+		/* More than 16 chars after ";" means the instruction is 8 bytes long. */
+		inst->size = next - semicolon > 16 ? 8 : 4;
+
+		snprintf(inst->text + len, ARRAY_SIZE(inst->text) - len,
+			" [PC=0x%"PRIx64", off=%u, size=%u]",
+			start_addr + inst->offset, inst->offset, inst->size);
+
+		last_inst = inst;
+		(*num)++;
+		disasm = next + 1;
+	}
+}
+
+#define MAX_WAVES_PER_CHIP (64 * 40)
+
+struct si_wave_info {
+	unsigned se; /* shader engine */
+	unsigned sh; /* shader array */
+	unsigned cu; /* compute unit */
+	unsigned simd;
+	unsigned wave;
+	uint32_t status;
+	uint64_t pc; /* program counter */
+	uint32_t inst_dw0;
+	uint32_t inst_dw1;
+	uint64_t exec;
+	bool matched; /* whether the wave is used by a currently-bound shader */
+};
+
+static int compare_wave(const void *p1, const void *p2)
+{
+	struct si_wave_info *w1 = (struct si_wave_info *)p1;
+	struct si_wave_info *w2 = (struct si_wave_info *)p2;
+
+	/* Sort waves according to PC and then SE, SH, CU, etc. */
+	if (w1->pc < w2->pc)
+		return -1;
+	if (w1->pc > w2->pc)
+		return 1;
+	if (w1->se < w2->se)
+		return -1;
+	if (w1->se > w2->se)
+		return 1;
+	if (w1->sh < w2->sh)
+		return -1;
+	if (w1->sh > w2->sh)
+		return 1;
+	if (w1->cu < w2->cu)
+		return -1;
+	if (w1->cu > w2->cu)
+		return 1;
+	if (w1->simd < w2->simd)
+		return -1;
+	if (w1->simd > w2->simd)
+		return 1;
+	if (w1->wave < w2->wave)
+		return -1;
+	if (w1->wave > w2->wave)
+		return 1;
+
+	return 0;
+}
+
+/* Return wave information. "waves" should be a large enough array. */
+static unsigned si_get_wave_info(struct si_wave_info waves[MAX_WAVES_PER_CHIP])
+{
+	char line[2000];
+	unsigned num_waves = 0;
+
+	FILE *p = popen("umr -wa", "r");
+	if (!p)
+		return 0;
+
+	if (!fgets(line, sizeof(line), p) ||
+	    strncmp(line, "SE", 2) != 0) {
+		pclose(p);
+		return 0;
+	}
+
+	while (fgets(line, sizeof(line), p)) {
+		struct si_wave_info *w;
+		uint32_t pc_hi, pc_lo, exec_hi, exec_lo;
+
+		assert(num_waves < MAX_WAVES_PER_CHIP);
+		w = &waves[num_waves];
+
+		if (sscanf(line, "%u %u %u %u %u %x %x %x %x %x %x %x",
+			   &w->se, &w->sh, &w->cu, &w->simd, &w->wave,
+			   &w->status, &pc_hi, &pc_lo, &w->inst_dw0,
+			   &w->inst_dw1, &exec_hi, &exec_lo) == 12) {
+			w->pc = ((uint64_t)pc_hi << 32) | pc_lo;
+			w->exec = ((uint64_t)exec_hi << 32) | exec_lo;
+			w->matched = false;
+			num_waves++;
+		}
+	}
+
+	qsort(waves, num_waves, sizeof(struct si_wave_info), compare_wave);
+
+	pclose(p);
+	return num_waves;
+}
+
+/* If the shader is being executed, print its asm instructions, and annotate
+ * those that are being executed right now with information about waves that
+ * execute them. This is most useful during a GPU hang.
+ */
+static void si_print_annotated_shader(struct si_shader *shader,
+				      struct si_wave_info *waves,
+				      unsigned num_waves,
+				      FILE *f)
+{
+	if (!shader || !shader->binary.disasm_string)
+		return;
+
+	uint64_t start_addr = shader->bo->gpu_address;
+	uint64_t end_addr = start_addr + shader->bo->b.b.width0;
+	unsigned i;
+
+	/* See if any wave executes the shader. */
+	for (i = 0; i < num_waves; i++) {
+		if (start_addr <= waves[i].pc && waves[i].pc <= end_addr)
+			break;
+	}
+	if (i == num_waves)
+		return; /* the shader is not being executed */
+
+	/* Remember the first found wave. The waves are sorted according to PC. */
+	waves = &waves[i];
+	num_waves -= i;
+
+	/* Get the list of instructions.
+	 * Buffer size / 4 is the upper bound of the instruction count.
+	 */
+	unsigned num_inst = 0;
+	struct si_shader_inst *instructions =
+		calloc(shader->bo->b.b.width0 / 4, sizeof(struct si_shader_inst));
+
+	if (shader->prolog) {
+		si_add_split_disasm(shader->prolog->binary.disasm_string,
+				    start_addr, &num_inst, instructions);
+	}
+	si_add_split_disasm(shader->binary.disasm_string,
+			    start_addr, &num_inst, instructions);
+	if (shader->epilog) {
+		si_add_split_disasm(shader->epilog->binary.disasm_string,
+				    start_addr, &num_inst, instructions);
+	}
+
+	fprintf(f, COLOR_YELLOW "%s - annotated disassembly:" COLOR_RESET "\n",
+		si_get_shader_name(shader, shader->selector->type));
+
+	/* Print instructions with annotations. */
+	for (i = 0; i < num_inst; i++) {
+		struct si_shader_inst *inst = &instructions[i];
+
+		fprintf(f, "%s\n", inst->text);
+
+		/* Print which waves execute the instruction right now. */
+		while (num_waves && start_addr + inst->offset == waves->pc) {
+			fprintf(f,
+				"          " COLOR_GREEN "^ SE%u SH%u CU%u "
+				"SIMD%u WAVE%u  EXEC=%016"PRIx64 "  ",
+				waves->se, waves->sh, waves->cu, waves->simd,
+				waves->wave, waves->exec);
+
+			if (inst->size == 4) {
+				fprintf(f, "INST32=%08X" COLOR_RESET "\n",
+					waves->inst_dw0);
+			} else {
+				fprintf(f, "INST64=%08X %08X" COLOR_RESET "\n",
+					waves->inst_dw0, waves->inst_dw1);
+			}
+
+			waves->matched = true;
+			waves = &waves[1];
+			num_waves--;
+		}
+	}
+
+	fprintf(f, "\n\n");
+	free(instructions);
+}
+
+static void si_dump_annotated_shaders(struct si_context *sctx, FILE *f)
+{
+	struct si_wave_info waves[MAX_WAVES_PER_CHIP];
+	unsigned num_waves = si_get_wave_info(waves);
+
+	fprintf(f, COLOR_CYAN "The number of active waves = %u" COLOR_RESET
+		"\n\n", num_waves);
+
+	si_print_annotated_shader(sctx->vs_shader.current, waves, num_waves, f);
+	si_print_annotated_shader(sctx->tcs_shader.current, waves, num_waves, f);
+	si_print_annotated_shader(sctx->tes_shader.current, waves, num_waves, f);
+	si_print_annotated_shader(sctx->gs_shader.current, waves, num_waves, f);
+	si_print_annotated_shader(sctx->ps_shader.current, waves, num_waves, f);
+
+	/* Print waves executing shaders that are not currently bound. */
+	unsigned i;
+	bool found = false;
+	for (i = 0; i < num_waves; i++) {
+		if (waves[i].matched)
+			continue;
+
+		if (!found) {
+			fprintf(f, COLOR_CYAN
+				"Waves not executing currently-bound shaders:"
+				COLOR_RESET "\n");
+			found = true;
+		}
+		fprintf(f, "    SE%u SH%u CU%u SIMD%u WAVE%u  EXEC=%016"PRIx64
+			"  INST=%08X %08X  PC=%"PRIx64"\n",
+			waves[i].se, waves[i].sh, waves[i].cu, waves[i].simd,
+			waves[i].wave, waves[i].exec, waves[i].inst_dw0,
+			waves[i].inst_dw1, waves[i].pc);
+	}
+	if (found)
+		fprintf(f, "\n\n");
+}
+
 static void si_dump_command(const char *title, const char *command, FILE *f)
 {
 	char line[2000];
@@ -502,7 +750,8 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_shader(sctx->screen, &sctx->ps_shader, f);
 
 		if (flags & PIPE_DUMP_DEVICE_STATUS_REGISTERS) {
-			si_dump_command("Active waves", "umr -wa | column -t", f);
+			si_dump_annotated_shaders(sctx, f);
+			si_dump_command("Active waves (raw data)", "umr -wa | column -t", f);
 			si_dump_command("Wave information", "umr -O bits -wa", f);
 		}
 

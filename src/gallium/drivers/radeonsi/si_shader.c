@@ -5918,8 +5918,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 			   conf->spilled_vgprs, conf->private_mem_vgprs);
 }
 
-static const char *si_get_shader_name(struct si_shader *shader,
-				      unsigned processor)
+const char *si_get_shader_name(struct si_shader *shader, unsigned processor)
 {
 	switch (processor) {
 	case PIPE_SHADER_VERTEX:
