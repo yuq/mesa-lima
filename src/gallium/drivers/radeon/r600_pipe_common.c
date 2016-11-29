@@ -102,7 +102,8 @@ void r600_gfx_write_event_eop(struct r600_common_context *ctx,
 		      EVENT_INDEX(5) |
 		      event_flags;
 
-	if (ctx->chip_class == CIK) {
+	if (ctx->chip_class == CIK ||
+	    ctx->chip_class == VI) {
 		/* Two EOP events are required to make all engines go idle
 		 * (and optional cache flushes executed) before the timestamp
 		 * is written.
@@ -131,7 +132,8 @@ unsigned r600_gfx_write_fence_dwords(struct r600_common_screen *screen)
 {
 	unsigned dwords = 6;
 
-	if (screen->chip_class == CIK)
+	if (screen->chip_class == CIK ||
+	    screen->chip_class == VI)
 		dwords *= 2;
 
 	if (!screen->info.has_virtual_memory)
