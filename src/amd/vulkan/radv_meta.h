@@ -166,6 +166,12 @@ void radv_meta_image_to_buffer(struct radv_cmd_buffer *cmd_buffer,
 			       unsigned num_rects,
 			       struct radv_meta_blit2d_rect *rects);
 
+void radv_meta_buffer_to_image_cs(struct radv_cmd_buffer *cmd_buffer,
+				  struct radv_meta_blit2d_buffer *src,
+				  struct radv_meta_blit2d_surf *dst,
+				  unsigned num_rects,
+				  struct radv_meta_blit2d_rect *rects);
+
 void radv_decompress_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 VkImageSubresourceRange *subresourceRange);
