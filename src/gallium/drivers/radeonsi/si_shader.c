@@ -2233,6 +2233,8 @@ static void emit_streamout_output(struct si_shader_context *ctx,
 
 	/* Load the output as int. */
 	for (int j = 0; j < num_comps; j++) {
+		assert(stream_out->stream == shader_out->vertex_stream[start + j]);
+
 		out[j] = LLVMBuildBitCast(builder,
 					  shader_out->values[start + j],
 				ctx->i32, "");
@@ -2269,7 +2271,8 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 				   struct si_shader_output_values *outputs,
 				   unsigned noutput)
 {
-	struct pipe_stream_output_info *so = &ctx->shader->selector->so;
+	struct si_shader_selector *sel = ctx->shader->selector;
+	struct pipe_stream_output_info *so = &sel->so;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	int i;
@@ -2292,7 +2295,20 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	 * out-of-bounds buffer access. The hw tells us via the SGPR
 	 * (so_vtx_count) which threads are allowed to emit streamout data. */
 	lp_build_if(&if_ctx, gallivm, can_emit);
-	{
+
+	for (int stream = 0; stream < 4; ++stream) {
+		struct lp_build_if_state if_ctx_stream;
+
+		if (!sel->info.num_stream_output_components[stream])
+			continue;
+
+		LLVMValueRef is_stream =
+			LLVMBuildICmp(builder, LLVMIntEQ,
+				      stream_id,
+				      lp_build_const_int32(gallivm, stream), "");
+
+		lp_build_if(&if_ctx_stream, gallivm, is_stream);
+
 		/* The buffer offset is computed as follows:
 		 *   ByteOffset = streamout_offset[buffer_id]*4 +
 		 *                (streamout_write_index + thread_id)*stride[buffer_id] +
@@ -2334,22 +2350,18 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 		/* Write streamout data. */
 		for (i = 0; i < so->num_outputs; i++) {
 			unsigned reg = so->output[i].register_index;
-			unsigned stream = so->output[i].stream;
-			struct lp_build_if_state if_ctx_stream;
 
 			if (reg >= noutput)
 				continue;
 
-			LLVMValueRef can_emit_stream =
-				LLVMBuildICmp(builder, LLVMIntEQ,
-					      stream_id,
-					      lp_build_const_int32(gallivm, stream), "");
+			if (stream != so->output[i].stream)
+				continue;
 
-			lp_build_if(&if_ctx_stream, gallivm, can_emit_stream);
 			emit_streamout_output(ctx, so_buffers, so_write_offset,
 					      &so->output[i], &outputs[reg]);
-			lp_build_endif(&if_ctx_stream);
 		}
+
+		lp_build_endif(&if_ctx_stream);
 	}
 	lp_build_endif(&if_ctx);
 }
