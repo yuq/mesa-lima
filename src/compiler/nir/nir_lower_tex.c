@@ -506,6 +506,59 @@ lower_gradient_cube_map(nir_builder *b, nir_tex_instr *tex)
 }
 
 static void
+lower_gradient_shadow(nir_builder *b, nir_tex_instr *tex)
+{
+   assert(tex->sampler_dim != GLSL_SAMPLER_DIM_CUBE);
+   assert(tex->is_shadow);
+   assert(tex->op == nir_texop_txd);
+   assert(tex->dest.is_ssa);
+
+   /* Use textureSize() to get the width and height of LOD 0 */
+   unsigned component_mask;
+   switch (tex->sampler_dim) {
+   case GLSL_SAMPLER_DIM_3D:
+      component_mask = 7;
+      break;
+   case GLSL_SAMPLER_DIM_1D:
+      component_mask = 1;
+      break;
+   default:
+      component_mask = 3;
+      break;
+   }
+
+   nir_ssa_def *size =
+      nir_channels(b, get_texture_size(b, tex), component_mask);
+
+   /* Scale the gradients by width and height.  Effectively, the incoming
+    * gradients are s'(x,y), t'(x,y), and r'(x,y) from equation 3.19 in the
+    * GL 3.0 spec; we want u'(x,y), which is w_t * s'(x,y).
+    */
+   nir_ssa_def *ddx =
+      tex->src[nir_tex_instr_src_index(tex, nir_tex_src_ddx)].src.ssa;
+   nir_ssa_def *ddy =
+      tex->src[nir_tex_instr_src_index(tex, nir_tex_src_ddy)].src.ssa;
+
+   nir_ssa_def *dPdx = nir_fmul(b, ddx, size);
+   nir_ssa_def *dPdy = nir_fmul(b, ddy, size);
+
+   nir_ssa_def *rho;
+   if (dPdx->num_components == 1) {
+      rho = nir_fmax(b, nir_fabs(b, dPdx), nir_fabs(b, dPdy));
+   } else {
+      rho = nir_fmax(b,
+                     nir_fsqrt(b, nir_fdot(b, dPdx, dPdx)),
+                     nir_fsqrt(b, nir_fdot(b, dPdy, dPdy)));
+   }
+
+   /* lod = log2(rho).  We're ignoring GL state biases for now. */
+   nir_ssa_def *lod = nir_flog2(b, rho);
+
+   /* Replace the gradient instruction with an equivalent lod instruction */
+   replace_gradient_with_lod(b, lod, tex);
+}
+
+static void
 saturate_src(nir_builder *b, nir_tex_instr *tex, unsigned sat_mask)
 {
    b->cursor = nir_before_instr(&tex->instr);
@@ -734,6 +787,13 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
       if (tex->op == nir_texop_txd && options->lower_txd_cube_map &&
           tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE) {
          lower_gradient_cube_map(b, tex);
+         progress = true;
+         continue;
+      }
+
+      if (tex->op == nir_texop_txd && options->lower_txd_shadow &&
+          tex->is_shadow && tex->sampler_dim != GLSL_SAMPLER_DIM_CUBE) {
+         lower_gradient_shadow(b, tex);
          progress = true;
          continue;
       }
