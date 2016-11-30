@@ -58,6 +58,10 @@ _reads_reg(uint64_t inst, uint32_t r, bool ignore_a, bool ignore_b)
         if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_BRANCH)
                 return false;
 
+        /* Load immediates don't read any registers. */
+        if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_LOAD_IMM)
+                return false;
+
         for (int i = 0; i < ARRAY_SIZE(src_regs); i++) {
                 if (!ignore_a &&
                     src_regs[i].mux == QPU_MUX_A &&

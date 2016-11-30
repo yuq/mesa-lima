@@ -477,6 +477,11 @@ reads_too_soon_after_write(struct choose_scoreboard *scoreboard, uint64_t inst)
         uint32_t raddr_a = QPU_GET_FIELD(inst, QPU_RADDR_A);
         uint32_t raddr_b = QPU_GET_FIELD(inst, QPU_RADDR_B);
         uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
+
+        /* Full immediate loads don't read any registers. */
+        if (sig == QPU_SIG_LOAD_IMM)
+                return false;
+
         uint32_t src_muxes[] = {
                 QPU_GET_FIELD(inst, QPU_ADD_A),
                 QPU_GET_FIELD(inst, QPU_ADD_B),
