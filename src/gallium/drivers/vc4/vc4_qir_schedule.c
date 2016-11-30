@@ -569,6 +569,28 @@ latency_between(struct schedule_node *before, struct schedule_node *after)
             after->inst->op == QOP_TEX_RESULT)
                 return 100;
 
+        switch (before->inst->op) {
+        case QOP_RCP:
+        case QOP_RSQ:
+        case QOP_EXP2:
+        case QOP_LOG2:
+                for (int i = 0; i < qir_get_nsrc(after->inst); i++) {
+                        if (after->inst->src[i].file ==
+                            before->inst->dst.file &&
+                            after->inst->src[i].index ==
+                            before->inst->dst.index) {
+                                /* There are two QPU delay slots before we can
+                                 * read a math result, which could be up to 4
+                                 * QIR instructions if they packed well.
+                                 */
+                                return 4;
+                        }
+                }
+                break;
+        default:
+                break;
+        }
+
         return 1;
 }
 
