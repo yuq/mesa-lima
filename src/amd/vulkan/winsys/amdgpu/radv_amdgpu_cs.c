@@ -63,6 +63,17 @@ radv_amdgpu_cs(struct radeon_winsys_cs *base)
 }
 
 
+static void radv_amdgpu_request_to_fence(struct radv_amdgpu_ctx *ctx,
+					 struct amdgpu_cs_fence *fence,
+					 struct amdgpu_cs_request *req)
+{
+	fence->context = ctx->ctx;
+	fence->ip_type = req->ip_type;
+	fence->ip_instance = req->ip_instance;
+	fence->ring = req->ring;
+	fence->fence = req->seq_no;
+}
+
 static struct radeon_winsys_fence *radv_amdgpu_create_fence()
 {
 	struct radv_amdgpu_cs_fence *fence = calloc(1, sizeof(struct amdgpu_cs_fence));
@@ -531,13 +542,9 @@ static int radv_amdgpu_winsys_cs_submit_chained(struct radeon_winsys_ctx *_ctx,
 
 	amdgpu_bo_list_destroy(bo_list);
 
-	if (fence) {
-		fence->context = ctx->ctx;
-		fence->ip_type = request.ip_type;
-		fence->ip_instance = request.ip_instance;
-		fence->ring = request.ring;
-		fence->fence = request.seq_no;
-	}
+	if (fence)
+		radv_amdgpu_request_to_fence(ctx, fence, &request);
+
 	ctx->last_seq_no = request.seq_no;
 
 	return r;
@@ -600,13 +607,9 @@ static int radv_amdgpu_winsys_cs_submit_fallback(struct radeon_winsys_ctx *_ctx,
 
 		i += cnt;
 	}
-	if (fence) {
-		fence->context = ctx->ctx;
-		fence->ip_type = request.ip_type;
-		fence->ip_instance = request.ip_instance;
-		fence->ring = request.ring;
-		fence->fence = request.seq_no;
-	}
+	if (fence)
+		radv_amdgpu_request_to_fence(ctx, fence, &request);
+
 	ctx->last_seq_no = request.seq_no;
 
 	return 0;
@@ -695,15 +698,9 @@ static int radv_amdgpu_winsys_cs_submit_sysmem(struct radeon_winsys_ctx *_ctx,
 
 		i += cnt;
 	}
-	if (fence) {
-		fence->context = ctx->ctx;
-		fence->ip_type = request.ip_type;
-		fence->ip_instance = request.ip_instance;
-		fence->ring = request.ring;
-		fence->fence = request.seq_no;
-	}
+	if (fence)
+		radv_amdgpu_request_to_fence(ctx, fence, &request);
 	ctx->last_seq_no = request.seq_no;
-
 	return 0;
 }
 
