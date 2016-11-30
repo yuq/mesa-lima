@@ -247,6 +247,17 @@ class Field(object):
             self.type = 'sfixed'
             self.fractional_size = int(sfixed_match.group(2))
 
+    def is_builtin_type(self):
+        builtins =  [ 'address', 'bool', 'float', 'ufixed',
+                      'offset', 'sfixed', 'offset', 'int', 'uint', 'mbo' ]
+        return self.type in builtins
+
+    def is_struct_type(self):
+        return self.type in self.parser.structs
+
+    def is_enum_type(self):
+        return self.type in self.parser.enums
+
     def emit_template_struct(self, dim):
         if self.type == 'address':
             type = '__gen_address_type'
@@ -266,9 +277,9 @@ class Field(object):
             type = 'int32_t'
         elif self.type == 'uint':
             type = 'uint32_t'
-        elif self.type in self.parser.structs:
+        elif self.is_struct_type():
             type = 'struct ' + self.parser.gen_prefix(safe_name(self.type))
-        elif self.type in self.parser.enums:
+        elif self.is_enum_type():
             type = 'enum ' + self.parser.gen_prefix(safe_name(self.type))
         elif self.type == 'mbo':
             return
@@ -387,7 +398,7 @@ class Group(object):
             if len(dw.fields) == 1:
                 field = dw.fields[0]
                 name = field.name + field.dim
-                if field.type in self.parser.structs and field.start % 32 == 0:
+                if field.is_struct_type() and field.start % 32 == 0:
                     print("")
                     print("   %s_pack(data, &dw[%d], &values->%s);" %
                           (self.parser.gen_prefix(safe_name(field.type)), index, name))
@@ -397,7 +408,7 @@ class Group(object):
             # to the dword for those fields.
             field_index = 0
             for field in dw.fields:
-                if type(field) is Field and field.type in self.parser.structs:
+                if type(field) is Field and field.is_struct_type():
                     name = field.name + field.dim
                     print("")
                     print("   uint32_t v%d_%d;" % (index, field_index))
@@ -435,7 +446,7 @@ class Group(object):
                 elif field.type == "uint":
                     non_address_fields.append("__gen_uint(values->%s, %d, %d)" % \
                         (name, field.start - dword_start, field.end - dword_start))
-                elif field.type in self.parser.enums:
+                elif field.is_enum_type():
                     non_address_fields.append("__gen_uint(values->%s, %d, %d)" % \
                         (name, field.start - dword_start, field.end - dword_start))
                 elif field.type == "int":
@@ -455,7 +466,7 @@ class Group(object):
                 elif field.type == 'sfixed':
                     non_address_fields.append("__gen_sfixed(values->%s, %d, %d, %d)" % \
                         (name, field.start - dword_start, field.end - dword_start, field.fractional_size))
-                elif field.type in self.parser.structs:
+                elif field.is_struct_type():
                     non_address_fields.append("__gen_uint(v%d_%d, %d, %d)" % \
                         (index, field_index, field.start - dword_start, field.end - dword_start))
                     field_index = field_index + 1
