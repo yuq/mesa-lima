@@ -154,22 +154,27 @@ get_texture_size(nir_builder *b, nir_tex_instr *tex)
 {
    b->cursor = nir_before_instr(&tex->instr);
 
-   /* RECT textures should not be array: */
-   assert(!tex->is_array);
-
    nir_tex_instr *txs;
 
    txs = nir_tex_instr_create(b->shader, 1);
    txs->op = nir_texop_txs;
-   txs->sampler_dim = GLSL_SAMPLER_DIM_RECT;
+   txs->sampler_dim = tex->sampler_dim;
+   txs->is_array = tex->is_array;
+   txs->is_shadow = tex->is_shadow;
+   txs->is_new_style_shadow = tex->is_new_style_shadow;
    txs->texture_index = tex->texture_index;
+   txs->texture = (nir_deref_var *)
+      nir_copy_deref(txs, &tex->texture->deref);
+   txs->sampler_index = tex->sampler_index;
+   txs->sampler = (nir_deref_var *)
+      nir_copy_deref(txs, &tex->sampler->deref);
    txs->dest_type = nir_type_int;
 
    /* only single src, the lod: */
    txs->src[0].src = nir_src_for_ssa(nir_imm_int(b, 0));
    txs->src[0].src_type = nir_tex_src_lod;
 
-   nir_ssa_dest_init(&txs->instr, &txs->dest, 2, 32, NULL);
+   nir_ssa_dest_init(&txs->instr, &txs->dest, tex->coord_components, 32, NULL);
    nir_builder_instr_insert(b, &txs->instr);
 
    return nir_i2f(b, &txs->dest.ssa);
