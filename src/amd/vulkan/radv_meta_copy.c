@@ -306,18 +306,13 @@ void radv_CmdCopyImageToBuffer(
 				  regionCount, pRegions);
 }
 
-void radv_CmdCopyImage(
-	VkCommandBuffer                             commandBuffer,
-	VkImage                                     srcImage,
-	VkImageLayout                               srcImageLayout,
-	VkImage                                     destImage,
-	VkImageLayout                               destImageLayout,
-	uint32_t                                    regionCount,
-	const VkImageCopy*                          pRegions)
+static void
+meta_copy_image(struct radv_cmd_buffer *cmd_buffer,
+		struct radv_image *src_image,
+		struct radv_image *dest_image,
+		uint32_t regionCount,
+		const VkImageCopy *pRegions)
 {
-	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
-	RADV_FROM_HANDLE(radv_image, src_image, srcImage);
-	RADV_FROM_HANDLE(radv_image, dest_image, destImage);
 	struct radv_meta_saved_state saved_state;
 
 	/* From the Vulkan 1.0 spec:
@@ -396,4 +391,21 @@ void radv_CmdCopyImage(
 	}
 
 	radv_meta_restore(&saved_state, cmd_buffer);
+}
+
+void radv_CmdCopyImage(
+	VkCommandBuffer                             commandBuffer,
+	VkImage                                     srcImage,
+	VkImageLayout                               srcImageLayout,
+	VkImage                                     destImage,
+	VkImageLayout                               destImageLayout,
+	uint32_t                                    regionCount,
+	const VkImageCopy*                          pRegions)
+{
+	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
+	RADV_FROM_HANDLE(radv_image, src_image, srcImage);
+	RADV_FROM_HANDLE(radv_image, dest_image, destImage);
+
+	meta_copy_image(cmd_buffer, src_image, dest_image,
+			regionCount, pRegions);
 }
