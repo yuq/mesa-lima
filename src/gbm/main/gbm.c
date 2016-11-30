@@ -223,6 +223,16 @@ gbm_bo_get_fd(struct gbm_bo *bo)
    return bo->gbm->bo_get_fd(bo);
 }
 
+/** Get the number of planes for the given bo.
+ *
+ * \param bo The buffer object
+ * \return The number of planes
+ */
+GBM_EXPORT int
+gbm_bo_get_plane_count(struct gbm_bo *bo)
+{
+   return bo->gbm->bo_get_planes(bo);
+}
 
 /** Write data into the buffer object
  *

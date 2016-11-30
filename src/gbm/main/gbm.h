@@ -316,6 +316,9 @@ int
 gbm_bo_get_fd(struct gbm_bo *bo);
 
 int
+gbm_bo_get_plane_count(struct gbm_bo *bo);
+
+int
 gbm_bo_write(struct gbm_bo *bo, const void *buf, size_t count);
 
 void
