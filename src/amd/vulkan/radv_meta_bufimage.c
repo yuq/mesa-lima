@@ -25,7 +25,8 @@
 #include "nir/nir_builder.h"
 
 /*
- * Compute shader implementation of image->buffer copy.
+ * GFX queue: Compute shader implementation of image->buffer copy
+ * Compute queue: implementation also of buffer->image, image->image, and image clear.
  */
 
 static nir_shader *
