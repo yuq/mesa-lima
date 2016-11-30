@@ -1961,7 +1961,7 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 	unsigned esgs_ring_size = max_gs_waves * 2 * wave_size *
 				  es->esgs_itemsize * gs->gs_input_verts_per_prim;
 	unsigned gsvs_ring_size = max_gs_waves * 2 * wave_size *
-				  gs->max_gsvs_emit_size * (gs->max_gs_stream + 1);
+				  gs->max_gsvs_emit_size;
 
 	min_esgs_ring_size = align(min_esgs_ring_size, alignment);
 	esgs_ring_size = align(esgs_ring_size, alignment);
