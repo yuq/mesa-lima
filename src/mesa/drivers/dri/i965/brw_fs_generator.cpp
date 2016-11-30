@@ -700,7 +700,7 @@ fs_generator::generate_tex(fs_inst *inst, struct brw_reg dst, struct brw_reg src
 	 break;
       case SHADER_OPCODE_TXD:
          if (inst->shadow_compare) {
-            /* Gen7.5+.  Otherwise, lowered by brw_lower_texture_gradients(). */
+            /* Gen7.5+.  Otherwise, lowered in NIR */
             assert(devinfo->gen >= 8 || devinfo->is_haswell);
             msg_type = HSW_SAMPLER_MESSAGE_SAMPLE_DERIV_COMPARE;
          } else {

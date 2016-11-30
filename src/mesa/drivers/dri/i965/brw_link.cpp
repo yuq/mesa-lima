@@ -128,7 +128,6 @@ process_glsl_ir(struct brw_context *brw,
       lower_if_to_cond_assign(shader->Stage, shader->ir, 16);
 
    do_lower_texture_projection(shader->ir);
-   brw_lower_texture_gradients(brw, shader->ir);
    do_vec_index_to_cond_assign(shader->ir);
    lower_vector_insert(shader->ir, true);
    lower_offset_arrays(shader->ir);

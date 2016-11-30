@@ -128,7 +128,6 @@ i965_FILES = \
 	brw_gs_state.c \
 	brw_gs_surface_state.c \
 	brw_link.cpp \
-	brw_lower_texture_gradients.cpp \
 	brw_meta_util.c \
 	brw_meta_util.h \
 	brw_misc_state.c \
