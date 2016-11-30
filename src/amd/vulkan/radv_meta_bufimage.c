@@ -300,28 +300,9 @@ create_bview(struct radv_cmd_buffer *cmd_buffer,
 
 struct itob_temps {
 	struct radv_image_view src_iview;
-
 	struct radv_buffer_view dst_bview;
 	VkDescriptorSet set;
 };
-
-static void
-itob_bind_src_image(struct radv_cmd_buffer *cmd_buffer,
-		   struct radv_meta_blit2d_surf *src,
-		   struct radv_meta_blit2d_rect *rect,
-		   struct itob_temps *tmp)
-{
-	create_iview(cmd_buffer, src, VK_IMAGE_USAGE_SAMPLED_BIT, &tmp->src_iview);
-}
-
-static void
-itob_bind_dst_buffer(struct radv_cmd_buffer *cmd_buffer,
-		     struct radv_meta_blit2d_buffer *dst,
-		     struct radv_meta_blit2d_rect *rect,
-		     struct itob_temps *tmp)
-{
-	create_bview(cmd_buffer, dst->buffer, dst->offset, dst->format, &tmp->dst_bview);
-}
 
 static void
 itob_bind_descriptors(struct radv_cmd_buffer *cmd_buffer,
@@ -370,12 +351,6 @@ itob_bind_descriptors(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-itob_unbind_src_image(struct radv_cmd_buffer *cmd_buffer,
-		      struct itob_temps *temps)
-{
-}
-
-static void
 bind_pipeline(struct radv_cmd_buffer *cmd_buffer)
 {
 	VkPipeline pipeline =
@@ -395,16 +370,15 @@ radv_meta_image_to_buffer(struct radv_cmd_buffer *cmd_buffer,
 			  struct radv_meta_blit2d_rect *rects)
 {
 	struct radv_device *device = cmd_buffer->device;
+	struct itob_temps temps;
+
+	create_iview(cmd_buffer, src, VK_IMAGE_USAGE_SAMPLED_BIT, &temps.src_iview);
+	create_bview(cmd_buffer, dst->buffer, dst->offset, dst->format, &temps.dst_bview);
+	itob_bind_descriptors(cmd_buffer, &temps);
+
+	bind_pipeline(cmd_buffer);
 
 	for (unsigned r = 0; r < num_rects; ++r) {
-		struct itob_temps temps;
-
-		itob_bind_src_image(cmd_buffer, src, &rects[r], &temps);
-		itob_bind_dst_buffer(cmd_buffer, dst, &rects[r], &temps);
-		itob_bind_descriptors(cmd_buffer, &temps);
-
-		bind_pipeline(cmd_buffer);
-
 		unsigned push_constants[3] = {
 			rects[r].src_x,
 			rects[r].src_y,
@@ -416,8 +390,6 @@ radv_meta_image_to_buffer(struct radv_cmd_buffer *cmd_buffer,
 				      push_constants);
 
 		radv_unaligned_dispatch(cmd_buffer, rects[r].width, rects[r].height, 1);
-		radv_temp_descriptor_set_destroy(cmd_buffer->device, temps.set);
-		itob_unbind_src_image(cmd_buffer, &temps);
 	}
-
+	radv_temp_descriptor_set_destroy(cmd_buffer->device, temps.set);
 }
