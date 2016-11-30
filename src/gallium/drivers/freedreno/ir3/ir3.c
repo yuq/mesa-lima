@@ -129,7 +129,9 @@ static int emit_cat0(struct ir3_instruction *instr, void *ptr,
 {
 	instr_cat0_t *cat0 = ptr;
 
-	if (info->gpu_id >= 400) {
+	if (info->gpu_id >= 500) {
+		cat0->a5xx.immed = instr->cat0.immed;
+	} else if (info->gpu_id >= 400) {
 		cat0->a4xx.immed = instr->cat0.immed;
 	} else {
 		cat0->a3xx.immed = instr->cat0.immed;
