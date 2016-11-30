@@ -30,6 +30,7 @@ LOCAL_SRC_FILES := \
 	$(a2xx_SOURCES) \
 	$(a3xx_SOURCES)	\
 	$(a4xx_SOURCES) \
+	$(a5xx_SOURCES) \
 	$(ir3_SOURCES)
 
 #LOCAL_CFLAGS := \
