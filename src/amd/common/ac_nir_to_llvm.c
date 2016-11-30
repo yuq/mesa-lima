@@ -1952,9 +1952,9 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
 		ctx->shader_info->fs.writes_memory = true;
 
 	if (instr->intrinsic == nir_intrinsic_ssbo_atomic_comp_swap) {
-		params[arg_count++] = get_src(ctx, instr->src[3]);
+		params[arg_count++] = llvm_extract_elem(ctx, get_src(ctx, instr->src[3]), 0);
 	}
-	params[arg_count++] = get_src(ctx, instr->src[2]);
+	params[arg_count++] = llvm_extract_elem(ctx, get_src(ctx, instr->src[2]), 0);
 	params[arg_count++] = get_src(ctx, instr->src[0]);
 	params[arg_count++] = LLVMConstInt(ctx->i32, 0, false); /* vindex */
 	params[arg_count++] = get_src(ctx, instr->src[1]);      /* voffset */
