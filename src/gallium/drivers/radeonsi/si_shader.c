@@ -5277,7 +5277,7 @@ static void si_llvm_emit_vertex(
 	LLVMValueRef gs_next_vertex;
 	LLVMValueRef can_emit, kill;
 	LLVMValueRef args[2];
-	unsigned chan;
+	unsigned chan, offset;
 	int i;
 	unsigned stream;
 
@@ -5312,6 +5312,7 @@ static void si_llvm_emit_vertex(
 		lp_build_if(&if_state, gallivm, can_emit);
 	}
 
+	offset = 0;
 	for (i = 0; i < info->num_outputs; i++) {
 		LLVMValueRef *out_ptr =
 			ctx->soa.outputs[i];
@@ -5323,8 +5324,9 @@ static void si_llvm_emit_vertex(
 
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
 			LLVMValueRef voffset =
-				lp_build_const_int32(gallivm, (i * 4 + chan) *
+				lp_build_const_int32(gallivm, offset *
 						     shader->selector->gs_max_out_vertices);
+			offset++;
 
 			voffset = lp_build_add(uint, voffset, gs_next_vertex);
 			voffset = lp_build_mul_imm(uint, voffset, 4);
@@ -6419,6 +6421,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	for (int stream = 0; stream < 4; stream++) {
 		LLVMBasicBlockRef bb;
+		unsigned offset;
 
 		if (!gsinfo->num_stream_output_components[stream])
 			continue;
@@ -6431,6 +6434,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		LLVMPositionBuilderAtEnd(builder, bb);
 
 		/* Fetch vertex data from GSVS ring */
+		offset = 0;
 		for (i = 0; i < gsinfo->num_outputs; ++i) {
 			for (unsigned chan = 0; chan < 4; chan++) {
 				if (!(gsinfo->output_usagemask[i] & (1 << chan)) ||
@@ -6441,7 +6445,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 				args[2] = lp_build_const_int32(
 					gallivm,
-					(i * 4 + chan) * gs_selector->gs_max_out_vertices * 16 * 4);
+					offset * gs_selector->gs_max_out_vertices * 16 * 4);
+				offset++;
 
 				outputs[i].values[chan] =
 					LLVMBuildBitCast(gallivm->builder,
