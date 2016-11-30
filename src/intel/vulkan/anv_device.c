@@ -260,6 +260,10 @@ static const VkExtensionProperties device_extensions[] = {
       .extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
       .specVersion = 68,
    },
+   {
+      .extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
+      .specVersion = 1,
+   }
 };
 
 static void *
