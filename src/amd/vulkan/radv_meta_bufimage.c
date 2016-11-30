@@ -420,11 +420,201 @@ radv_device_finish_meta_btoi_state(struct radv_device *device)
 	}
 }
 
+static nir_shader *
+build_nir_itoi_compute_shader(struct radv_device *dev)
+{
+	nir_builder b;
+	const struct glsl_type *buf_type = glsl_sampler_type(GLSL_SAMPLER_DIM_2D,
+							     false,
+							     false,
+							     GLSL_TYPE_FLOAT);
+	const struct glsl_type *img_type = glsl_sampler_type(GLSL_SAMPLER_DIM_2D,
+							     false,
+							     false,
+							     GLSL_TYPE_FLOAT);
+	nir_builder_init_simple_shader(&b, NULL, MESA_SHADER_COMPUTE, NULL);
+	b.shader->info->name = ralloc_strdup(b.shader, "meta_itoi_cs");
+	b.shader->info->cs.local_size[0] = 16;
+	b.shader->info->cs.local_size[1] = 16;
+	b.shader->info->cs.local_size[2] = 1;
+	nir_variable *input_img = nir_variable_create(b.shader, nir_var_uniform,
+						      buf_type, "s_tex");
+	input_img->data.descriptor_set = 0;
+	input_img->data.binding = 0;
+
+	nir_variable *output_img = nir_variable_create(b.shader, nir_var_uniform,
+						       img_type, "out_img");
+	output_img->data.descriptor_set = 0;
+	output_img->data.binding = 1;
+
+	nir_ssa_def *invoc_id = nir_load_system_value(&b, nir_intrinsic_load_local_invocation_id, 0);
+	nir_ssa_def *wg_id = nir_load_system_value(&b, nir_intrinsic_load_work_group_id, 0);
+	nir_ssa_def *block_size = nir_imm_ivec4(&b,
+						b.shader->info->cs.local_size[0],
+						b.shader->info->cs.local_size[1],
+						b.shader->info->cs.local_size[2], 0);
+
+	nir_ssa_def *global_id = nir_iadd(&b, nir_imul(&b, wg_id, block_size), invoc_id);
+
+	nir_intrinsic_instr *src_offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	src_offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 0));
+	src_offset->num_components = 2;
+	nir_ssa_dest_init(&src_offset->instr, &src_offset->dest, 2, 32, "src_offset");
+	nir_builder_instr_insert(&b, &src_offset->instr);
+
+	nir_intrinsic_instr *dst_offset = nir_intrinsic_instr_create(b.shader, nir_intrinsic_load_push_constant);
+	dst_offset->src[0] = nir_src_for_ssa(nir_imm_int(&b, 8));
+	dst_offset->num_components = 2;
+	nir_ssa_dest_init(&dst_offset->instr, &dst_offset->dest, 2, 32, "dst_offset");
+	nir_builder_instr_insert(&b, &dst_offset->instr);
+
+	nir_ssa_def *src_coord = nir_iadd(&b, global_id, &src_offset->dest.ssa);
+
+	nir_ssa_def *dst_coord = nir_iadd(&b, global_id, &dst_offset->dest.ssa);
+
+	nir_tex_instr *tex = nir_tex_instr_create(b.shader, 2);
+	tex->sampler_dim = GLSL_SAMPLER_DIM_2D;
+	tex->op = nir_texop_txf;
+	tex->src[0].src_type = nir_tex_src_coord;
+	tex->src[0].src = nir_src_for_ssa(src_coord);
+	tex->src[1].src_type = nir_tex_src_lod;
+	tex->src[1].src = nir_src_for_ssa(nir_imm_int(&b, 0));
+	tex->dest_type = nir_type_float;
+	tex->is_array = false;
+	tex->coord_components = 2;
+	tex->texture = nir_deref_var_create(tex, input_img);
+	tex->sampler = NULL;
+
+	nir_ssa_dest_init(&tex->instr, &tex->dest, 4, 32, "tex");
+	nir_builder_instr_insert(&b, &tex->instr);
+
+	nir_ssa_def *outval = &tex->dest.ssa;
+	nir_intrinsic_instr *store = nir_intrinsic_instr_create(b.shader, nir_intrinsic_image_store);
+	store->src[0] = nir_src_for_ssa(dst_coord);
+	store->src[1] = nir_src_for_ssa(nir_ssa_undef(&b, 1, 32));
+	store->src[2] = nir_src_for_ssa(outval);
+	store->variables[0] = nir_deref_var_create(store, output_img);
+
+	nir_builder_instr_insert(&b, &store->instr);
+	return b.shader;
+}
+
+/* image to image - don't write use image accessors */
+static VkResult
+radv_device_init_meta_itoi_state(struct radv_device *device)
+{
+	VkResult result;
+	struct radv_shader_module cs = { .nir = NULL };
+
+	zero(device->meta_state.itoi);
+
+	cs.nir = build_nir_itoi_compute_shader(device);
+
+	/*
+	 * two descriptors one for the image being sampled
+	 * one for the buffer being written.
+	 */
+	VkDescriptorSetLayoutCreateInfo ds_create_info = {
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.bindingCount = 2,
+		.pBindings = (VkDescriptorSetLayoutBinding[]) {
+			{
+				.binding = 0,
+				.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+				.descriptorCount = 1,
+				.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+				.pImmutableSamplers = NULL
+			},
+			{
+				.binding = 1,
+				.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.descriptorCount = 1,
+				.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
+				.pImmutableSamplers = NULL
+			},
+		}
+	};
+
+	result = radv_CreateDescriptorSetLayout(radv_device_to_handle(device),
+						&ds_create_info,
+						&device->meta_state.alloc,
+						&device->meta_state.itoi.img_ds_layout);
+	if (result != VK_SUCCESS)
+		goto fail;
+
+
+	VkPipelineLayoutCreateInfo pl_create_info = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.setLayoutCount = 1,
+		.pSetLayouts = &device->meta_state.itoi.img_ds_layout,
+		.pushConstantRangeCount = 1,
+		.pPushConstantRanges = &(VkPushConstantRange){VK_SHADER_STAGE_COMPUTE_BIT, 0, 16},
+	};
+
+	result = radv_CreatePipelineLayout(radv_device_to_handle(device),
+					  &pl_create_info,
+					  &device->meta_state.alloc,
+					  &device->meta_state.itoi.img_p_layout);
+	if (result != VK_SUCCESS)
+		goto fail;
+
+	/* compute shader */
+
+	VkPipelineShaderStageCreateInfo pipeline_shader_stage = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+		.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+		.module = radv_shader_module_to_handle(&cs),
+		.pName = "main",
+		.pSpecializationInfo = NULL,
+	};
+
+	VkComputePipelineCreateInfo vk_pipeline_info = {
+		.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+		.stage = pipeline_shader_stage,
+		.flags = 0,
+		.layout = device->meta_state.itoi.img_p_layout,
+	};
+
+	result = radv_CreateComputePipelines(radv_device_to_handle(device),
+					     radv_pipeline_cache_to_handle(&device->meta_state.cache),
+					     1, &vk_pipeline_info, NULL,
+					     &device->meta_state.itoi.pipeline);
+	if (result != VK_SUCCESS)
+		goto fail;
+
+	ralloc_free(cs.nir);
+	return VK_SUCCESS;
+fail:
+	ralloc_free(cs.nir);
+	return result;
+}
+
+static void
+radv_device_finish_meta_itoi_state(struct radv_device *device)
+{
+	if (device->meta_state.itoi.img_p_layout) {
+		radv_DestroyPipelineLayout(radv_device_to_handle(device),
+					   device->meta_state.itoi.img_p_layout,
+					   &device->meta_state.alloc);
+	}
+	if (device->meta_state.itoi.img_ds_layout) {
+		radv_DestroyDescriptorSetLayout(radv_device_to_handle(device),
+						device->meta_state.itoi.img_ds_layout,
+						&device->meta_state.alloc);
+	}
+	if (device->meta_state.itoi.pipeline) {
+		radv_DestroyPipeline(radv_device_to_handle(device),
+				     device->meta_state.itoi.pipeline,
+				     &device->meta_state.alloc);
+	}
+}
+
 void
 radv_device_finish_meta_bufimage_state(struct radv_device *device)
 {
 	radv_device_finish_meta_itob_state(device);
 	radv_device_finish_meta_btoi_state(device);
+	radv_device_finish_meta_itoi_state(device);
 }
 
 VkResult
@@ -441,7 +631,28 @@ radv_device_init_meta_bufimage_state(struct radv_device *device)
 		radv_device_finish_meta_itob_state(device);
 		return result;
 	}
+
+	result = radv_device_init_meta_itoi_state(device);
+	if (result != VK_SUCCESS) {
+		radv_device_finish_meta_itob_state(device);
+		radv_device_finish_meta_btoi_state(device);
+		return result;
+	}
 	return VK_SUCCESS;
+}
+
+void
+radv_meta_begin_itoi(struct radv_cmd_buffer *cmd_buffer,
+		     struct radv_meta_saved_compute_state *save)
+{
+	radv_meta_save_compute(save, cmd_buffer, 16);
+}
+
+void
+radv_meta_end_itoi(struct radv_cmd_buffer *cmd_buffer,
+		   struct radv_meta_saved_compute_state *save)
+{
+	radv_meta_restore_compute(save, cmd_buffer, 16);
 }
 
 void
@@ -685,6 +896,110 @@ radv_meta_buffer_to_image_cs(struct radv_cmd_buffer *cmd_buffer,
 		radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
 				      device->meta_state.btoi.img_p_layout,
 				      VK_SHADER_STAGE_COMPUTE_BIT, 0, 12,
+				      push_constants);
+
+		radv_unaligned_dispatch(cmd_buffer, rects[r].width, rects[r].height, 1);
+	}
+	radv_temp_descriptor_set_destroy(cmd_buffer->device, temps.set);
+}
+
+struct itoi_temps {
+	struct radv_image_view src_iview;
+	struct radv_image_view dst_iview;
+	VkDescriptorSet set;
+};
+
+static void
+itoi_bind_descriptors(struct radv_cmd_buffer *cmd_buffer,
+		      struct itoi_temps *tmp)
+{
+	struct radv_device *device = cmd_buffer->device;
+	VkDevice vk_device = radv_device_to_handle(cmd_buffer->device);
+
+	radv_temp_descriptor_set_create(device, cmd_buffer,
+					device->meta_state.itoi.img_ds_layout,
+					&tmp->set);
+
+	radv_UpdateDescriptorSets(vk_device,
+				  2, /* writeCount */
+				  (VkWriteDescriptorSet[]) {
+					  {
+						  .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						  .dstSet = tmp->set,
+						  .dstBinding = 0,
+						  .dstArrayElement = 0,
+						  .descriptorCount = 1,
+						  .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+						  .pImageInfo = (VkDescriptorImageInfo[]) {
+							  {
+								  .sampler = NULL,
+								  .imageView = radv_image_view_to_handle(&tmp->src_iview),
+								  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+							  },
+						  }
+					  },
+					  {
+						  .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+						  .dstSet = tmp->set,
+						  .dstBinding = 1,
+						  .dstArrayElement = 0,
+						  .descriptorCount = 1,
+						  .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+						  .pImageInfo = (VkDescriptorImageInfo[]) {
+							  {
+								  .sampler = NULL,
+								  .imageView = radv_image_view_to_handle(&tmp->dst_iview),
+								  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+							  },
+						  }
+					  }
+				  }, 0, NULL);
+
+	radv_CmdBindDescriptorSets(radv_cmd_buffer_to_handle(cmd_buffer),
+				   VK_PIPELINE_BIND_POINT_COMPUTE,
+				   device->meta_state.itoi.img_p_layout, 0, 1,
+				   &tmp->set, 0, NULL);
+}
+
+static void
+itoi_bind_pipeline(struct radv_cmd_buffer *cmd_buffer)
+{
+	VkPipeline pipeline =
+		cmd_buffer->device->meta_state.itoi.pipeline;
+
+	if (cmd_buffer->state.compute_pipeline != radv_pipeline_from_handle(pipeline)) {
+		radv_CmdBindPipeline(radv_cmd_buffer_to_handle(cmd_buffer),
+				     VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+	}
+}
+
+void
+radv_meta_image_to_image_cs(struct radv_cmd_buffer *cmd_buffer,
+			    struct radv_meta_blit2d_surf *src,
+			    struct radv_meta_blit2d_surf *dst,
+			    unsigned num_rects,
+			    struct radv_meta_blit2d_rect *rects)
+{
+	struct radv_device *device = cmd_buffer->device;
+	struct itoi_temps temps;
+
+	create_iview(cmd_buffer, src, VK_IMAGE_USAGE_SAMPLED_BIT, &temps.src_iview);
+	create_iview(cmd_buffer, dst, VK_IMAGE_USAGE_STORAGE_BIT, &temps.dst_iview);
+
+	itoi_bind_descriptors(cmd_buffer, &temps);
+
+	itoi_bind_pipeline(cmd_buffer);
+
+	for (unsigned r = 0; r < num_rects; ++r) {
+		unsigned push_constants[4] = {
+			rects[r].src_x,
+			rects[r].src_y,
+			rects[r].dst_x,
+			rects[r].dst_y,
+		};
+		radv_CmdPushConstants(radv_cmd_buffer_to_handle(cmd_buffer),
+				      device->meta_state.itoi.img_p_layout,
+				      VK_SHADER_STAGE_COMPUTE_BIT, 0, 16,
 				      push_constants);
 
 		radv_unaligned_dispatch(cmd_buffer, rects[r].width, rects[r].height, 1);
