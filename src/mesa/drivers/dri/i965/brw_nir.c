@@ -467,6 +467,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
       .lower_txp = ~0,
       .lower_txf_offset = true,
       .lower_rect_offset = true,
+      .lower_txd_cube_map = true,
    };
 
    OPT(nir_lower_tex, &tex_options);
