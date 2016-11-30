@@ -2394,6 +2394,11 @@ typedef struct nir_lower_tex_options {
     * of the texture are lowered to linear.
     */
    unsigned lower_srgb;
+
+   /**
+    * If true, lower nir_texop_txd on cube maps with nir_texop_txl.
+    */
+   bool lower_txd_cube_map;
 } nir_lower_tex_options;
 
 bool nir_lower_tex(nir_shader *shader,
