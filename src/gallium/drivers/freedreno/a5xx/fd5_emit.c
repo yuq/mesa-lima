@@ -285,9 +285,6 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_PKT4(ring, REG_A5XX_RB_STENCILREFMASK, 1);
 		OUT_RING(ring, zsa->rb_stencilrefmask |
 				A5XX_RB_STENCILREFMASK_STENCILREF(sr->ref_value[0]));
-
-		OUT_PKT4(ring, REG_A5XX_GRAS_SU_DEPTH_PLANE_CNTL, 1);
-		OUT_RING(ring, zsa->gras_su_depth_plane_cntl);
 	}
 
 	if (dirty & (FD_DIRTY_ZSA | FD_DIRTY_RASTERIZER | FD_DIRTY_PROG)) {
@@ -299,6 +296,10 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 		OUT_PKT4(ring, REG_A5XX_RB_DEPTH_PLANE_CNTL, 1);
 		OUT_RING(ring, COND(fragz, A5XX_RB_DEPTH_PLANE_CNTL_FRAG_WRITES_Z));
+
+		OUT_PKT4(ring, REG_A5XX_GRAS_SU_DEPTH_PLANE_CNTL, 1);
+		OUT_RING(ring, zsa->gras_su_depth_plane_cntl |
+				COND(fragz, A5XX_GRAS_SU_DEPTH_PLANE_CNTL_ALPHA_TEST_ENABLE));
 	}
 
 	if (dirty & FD_DIRTY_RASTERIZER) {
