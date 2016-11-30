@@ -468,15 +468,13 @@ static uint32_t si_vgt_gs_mode(struct si_shader_selector *sel)
 
 static void si_shader_gs(struct si_shader *shader)
 {
-	unsigned gs_vert_itemsize = shader->selector->gsvs_vertex_size;
-	unsigned gsvs_itemsize = shader->selector->max_gsvs_emit_size >> 2;
-	unsigned gs_num_invocations = shader->selector->gs_num_invocations;
+	struct si_shader_selector *sel = shader->selector;
+	const ubyte *num_components = sel->info.num_stream_output_components;
+	unsigned gs_num_invocations = sel->gs_num_invocations;
 	struct si_pm4_state *pm4;
 	uint64_t va;
-	unsigned max_stream = shader->selector->max_gs_stream;
-
-	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
-	assert(gsvs_itemsize < (1 << 15));
+	unsigned max_stream = sel->max_gs_stream;
+	unsigned offset;
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
@@ -484,18 +482,27 @@ static void si_shader_gs(struct si_shader *shader)
 
 	si_pm4_set_reg(pm4, R_028A40_VGT_GS_MODE, si_vgt_gs_mode(shader->selector));
 
-	si_pm4_set_reg(pm4, R_028A60_VGT_GSVS_RING_OFFSET_1, gsvs_itemsize);
-	si_pm4_set_reg(pm4, R_028A64_VGT_GSVS_RING_OFFSET_2, gsvs_itemsize * ((max_stream >= 2) ? 2 : 1));
-	si_pm4_set_reg(pm4, R_028A68_VGT_GSVS_RING_OFFSET_3, gsvs_itemsize * ((max_stream >= 3) ? 3 : 1));
+	offset = num_components[0] * sel->gs_max_out_vertices;
+	si_pm4_set_reg(pm4, R_028A60_VGT_GSVS_RING_OFFSET_1, offset);
+	if (max_stream >= 1)
+		offset += num_components[1] * sel->gs_max_out_vertices;
+	si_pm4_set_reg(pm4, R_028A64_VGT_GSVS_RING_OFFSET_2, offset);
+	if (max_stream >= 2)
+		offset += num_components[2] * sel->gs_max_out_vertices;
+	si_pm4_set_reg(pm4, R_028A68_VGT_GSVS_RING_OFFSET_3, offset);
+	if (max_stream >= 3)
+		offset += num_components[3] * sel->gs_max_out_vertices;
+	si_pm4_set_reg(pm4, R_028AB0_VGT_GSVS_RING_ITEMSIZE, offset);
 
-	si_pm4_set_reg(pm4, R_028AB0_VGT_GSVS_RING_ITEMSIZE, gsvs_itemsize * (max_stream + 1));
+	/* The GSVS_RING_ITEMSIZE register takes 15 bits */
+	assert(offset < (1 << 15));
 
 	si_pm4_set_reg(pm4, R_028B38_VGT_GS_MAX_VERT_OUT, shader->selector->gs_max_out_vertices);
 
-	si_pm4_set_reg(pm4, R_028B5C_VGT_GS_VERT_ITEMSIZE, gs_vert_itemsize >> 2);
-	si_pm4_set_reg(pm4, R_028B60_VGT_GS_VERT_ITEMSIZE_1, (max_stream >= 1) ? gs_vert_itemsize >> 2 : 0);
-	si_pm4_set_reg(pm4, R_028B64_VGT_GS_VERT_ITEMSIZE_2, (max_stream >= 2) ? gs_vert_itemsize >> 2 : 0);
-	si_pm4_set_reg(pm4, R_028B68_VGT_GS_VERT_ITEMSIZE_3, (max_stream >= 3) ? gs_vert_itemsize >> 2 : 0);
+	si_pm4_set_reg(pm4, R_028B5C_VGT_GS_VERT_ITEMSIZE, num_components[0]);
+	si_pm4_set_reg(pm4, R_028B60_VGT_GS_VERT_ITEMSIZE_1, (max_stream >= 1) ? num_components[1] : 0);
+	si_pm4_set_reg(pm4, R_028B64_VGT_GS_VERT_ITEMSIZE_2, (max_stream >= 2) ? num_components[2] : 0);
+	si_pm4_set_reg(pm4, R_028B68_VGT_GS_VERT_ITEMSIZE_3, (max_stream >= 3) ? num_components[3] : 0);
 
 	si_pm4_set_reg(pm4, R_028B90_VGT_GS_INSTANCE_CNT,
 		       S_028B90_CNT(MIN2(gs_num_invocations, 127)) |

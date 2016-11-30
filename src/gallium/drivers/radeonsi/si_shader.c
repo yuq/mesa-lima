@@ -5842,6 +5842,7 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 		ctx->gsvs_ring[0] =
 			build_indexed_load_const(ctx, buf_ptr, offset);
 	} else if (ctx->type == PIPE_SHADER_GEOMETRY) {
+		const struct si_shader_selector *sel = ctx->shader->selector;
 		struct lp_build_context *uint = &ctx->soa.bld_base.uint_bld;
 		LLVMValueRef offset = lp_build_const_int32(gallivm, SI_RING_GSVS);
 		LLVMValueRef base_ring;
@@ -5857,33 +5858,40 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 		 * Override the buffer descriptor accordingly.
 		 */
 		LLVMTypeRef v2i64 = LLVMVectorType(ctx->i64, 2);
-		unsigned max_gsvs_emit_size = ctx->shader->selector->max_gsvs_emit_size;
-		unsigned num_records;
-
-		num_records = 64;
-		if (ctx->screen->b.chip_class >= VI)
-			num_records *= max_gsvs_emit_size;
+		uint64_t stream_offset = 0;
 
 		for (unsigned stream = 0; stream < 4; ++stream) {
+			unsigned num_components;
+			unsigned stride;
+			unsigned num_records;
 			LLVMValueRef ring, tmp;
 
-			if (!ctx->shader->selector->info.num_stream_output_components[stream])
+			num_components = sel->info.num_stream_output_components[stream];
+			if (!num_components)
 				continue;
 
+			stride = 4 * num_components * sel->gs_max_out_vertices;
+
 			/* Limit on the stride field for <= CIK. */
-			assert(max_gsvs_emit_size < (1 << 14));
+			assert(stride < (1 << 14));
+
+			num_records = 64;
+			if (ctx->screen->b.chip_class >= VI)
+				num_records *= stride;
 
 			ring = LLVMBuildBitCast(builder, base_ring, v2i64, "");
 			tmp = LLVMBuildExtractElement(builder, ring, uint->zero, "");
 			tmp = LLVMBuildAdd(builder, tmp,
 					   LLVMConstInt(ctx->i64,
-							max_gsvs_emit_size * 64 * stream, 0), "");
+							stream_offset, 0), "");
+			stream_offset += stride * 64;
+
 			ring = LLVMBuildInsertElement(builder, ring, tmp, uint->zero, "");
 			ring = LLVMBuildBitCast(builder, ring, ctx->v4i32, "");
 			tmp = LLVMBuildExtractElement(builder, ring, uint->one, "");
 			tmp = LLVMBuildOr(builder, tmp,
 				LLVMConstInt(ctx->i32,
-					     S_008F04_STRIDE(max_gsvs_emit_size) |
+					     S_008F04_STRIDE(stride) |
 					     S_008F04_SWIZZLE_ENABLE(1), 0), "");
 			ring = LLVMBuildInsertElement(builder, ring, tmp, uint->one, "");
 			ring = LLVMBuildInsertElement(builder, ring,
