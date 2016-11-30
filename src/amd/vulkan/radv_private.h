@@ -434,12 +434,18 @@ struct radv_meta_state {
 	} buffer;
 };
 
+/* queue types */
+#define RADV_QUEUE_GENERAL 0
+#define RADV_QUEUE_COMPUTE 1
+#define RADV_QUEUE_TRANSFER 2
+
+#define RADV_MAX_QUEUE_FAMILIES 3
+
 struct radv_queue {
 	VK_LOADER_DATA                              _loader_data;
-
 	struct radv_device *                         device;
-
-	struct radv_state_pool *                     pool;
+	int queue_family_index;
+	int queue_idx;
 };
 
 struct radv_device {
@@ -452,7 +458,9 @@ struct radv_device {
 	struct radeon_winsys_ctx *hw_ctx;
 
 	struct radv_meta_state                       meta_state;
-	struct radv_queue                            queue;
+
+	struct radv_queue *queues[RADV_MAX_QUEUE_FAMILIES];
+	int queue_count[RADV_MAX_QUEUE_FAMILIES];
 	struct radeon_winsys_cs *empty_cs;
 
 	bool allow_fast_clears;
