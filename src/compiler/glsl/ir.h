@@ -917,6 +917,9 @@ public:
 
       /**
        * Vertex stream output identifier.
+       *
+       * For packed outputs, bit 31 is set and bits [2*i+1,2*i] indicate the
+       * stream of the i-th component.
        */
       unsigned stream;
 
