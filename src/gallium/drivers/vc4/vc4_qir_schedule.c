@@ -593,7 +593,7 @@ compute_delay(struct schedule_node *n)
                                 compute_delay(n->children[i]);
                         n->delay = MAX2(n->delay,
                                         n->children[i]->delay +
-                                        latency_between(n, n->children[i]));
+                                        latency_between(n->children[i], n));
                 }
         }
 }
@@ -644,8 +644,8 @@ schedule_instructions(struct vc4_compile *c,
 
                         child->unblocked_time = MAX2(child->unblocked_time,
                                                      state->time +
-                                                     latency_between(chosen,
-                                                                     child));
+                                                     latency_between(child,
+                                                                     chosen));
                         child->parent_count--;
                         if (child->parent_count == 0)
                                 list_add(&child->link, &state->worklist);
