@@ -293,6 +293,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->in_qualifier = new(this) ast_type_qualifier();
    this->out_qualifier = new(this) ast_type_qualifier();
    this->fs_early_fragment_tests = false;
+   this->fs_inner_coverage = false;
    this->fs_post_depth_coverage = false;
    this->fs_blend_support = 0;
    memset(this->atomic_counter_offsets, 0,
@@ -687,6 +688,7 @@ static const _mesa_glsl_extension _mesa_glsl_supported_extensions[] = {
    EXT(EXT_texture_array),
    EXT_AEP(EXT_texture_buffer),
    EXT_AEP(EXT_texture_cube_map_array),
+   EXT(INTEL_conservative_rasterization),
    EXT(MESA_shader_integer_functions),
    EXT(NV_image_formats),
 };
@@ -1692,6 +1694,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       assert(!state->fs_pixel_center_integer);
       assert(!state->fs_origin_upper_left);
       assert(!state->fs_early_fragment_tests);
+      assert(!state->fs_inner_coverage);
       assert(!state->fs_post_depth_coverage);
    }
 
@@ -1813,6 +1816,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       shader->info.ARB_fragment_coord_conventions_enable =
          state->ARB_fragment_coord_conventions_enable;
       shader->info.EarlyFragmentTests = state->fs_early_fragment_tests;
+      shader->info.InnerCoverage = state->fs_inner_coverage;
       shader->info.PostDepthCoverage = state->fs_post_depth_coverage;
       shader->info.BlendSupport = state->fs_blend_support;
       break;

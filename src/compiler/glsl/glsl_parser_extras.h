@@ -761,6 +761,8 @@ struct _mesa_glsl_parse_state {
    bool EXT_texture_buffer_warn;
    bool EXT_texture_cube_map_array_enable;
    bool EXT_texture_cube_map_array_warn;
+   bool INTEL_conservative_rasterization_enable;
+   bool INTEL_conservative_rasterization_warn;
    bool MESA_shader_framebuffer_fetch_enable;
    bool MESA_shader_framebuffer_fetch_warn;
    bool MESA_shader_framebuffer_fetch_non_coherent_enable;
@@ -787,6 +789,8 @@ struct _mesa_glsl_parse_state {
    unsigned gs_input_size;
 
    bool fs_early_fragment_tests;
+
+   bool fs_inner_coverage;
 
    bool fs_post_depth_coverage;
 

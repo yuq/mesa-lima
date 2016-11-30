@@ -2175,6 +2175,7 @@ struct gl_shader_info
    bool uses_gl_fragcoord;
    bool redeclares_gl_fragcoord;
    bool PostDepthCoverage;
+   bool InnerCoverage;
    bool ARB_fragment_coord_conventions_enable;
 
    /**
@@ -3936,6 +3937,7 @@ struct gl_extensions
    GLboolean ATI_fragment_shader;
    GLboolean ATI_separate_stencil;
    GLboolean GREMEDY_string_marker;
+   GLboolean INTEL_conservative_rasterization;
    GLboolean INTEL_performance_query;
    GLboolean KHR_blend_equation_advanced;
    GLboolean KHR_blend_equation_advanced_coherent;
@@ -4619,6 +4621,7 @@ struct gl_context
    GLboolean TextureFormatSupported[MESA_FORMAT_COUNT];
 
    GLboolean RasterDiscard;  /**< GL_RASTERIZER_DISCARD */
+   GLboolean IntelConservativeRasterization; /**< GL_INTEL_CONSERVATIVE_RASTERIZATION */
 
    /**
     * \name Hooks for module contexts.  

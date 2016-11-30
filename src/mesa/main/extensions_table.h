@@ -290,6 +290,7 @@ EXT(IBM_texture_mirrored_repeat             , dummy_true                        
 
 EXT(INGR_blend_func_separate                , EXT_blend_func_separate                , GLL,  x ,  x ,  x , 1999)
 
+EXT(INTEL_conservative_rasterization        , INTEL_conservative_rasterization       ,  x ,  42,  x ,  32, 2013)
 EXT(INTEL_performance_query                 , INTEL_performance_query                , GLL, GLC,  x , ES2, 2013)
 
 EXT(KHR_blend_equation_advanced             , KHR_blend_equation_advanced            , GLL, GLC,  x , ES2, 2014)
