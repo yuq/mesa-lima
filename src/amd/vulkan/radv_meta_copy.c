@@ -78,13 +78,13 @@ vk_format_for_size(int bs)
 }
 
 static struct radv_meta_blit2d_surf
-blit_surf_for_image_level_layer(struct radv_image* image, VkImageAspectFlags aspectMask,
-				int level, int layer)
+blit_surf_for_image_level_layer(struct radv_image *image,
+				const VkImageSubresourceLayers *subres)
 {
 	VkFormat format = image->vk_format;
-	if (aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)
+	if (subres->aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)
 		format = vk_format_depth_only(format);
-	else if (aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)
+	else if (subres->aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)
 		format = vk_format_stencil_only(format);
 
 	if (!image->surface.dcc_size)
@@ -93,10 +93,10 @@ blit_surf_for_image_level_layer(struct radv_image* image, VkImageAspectFlags asp
 	return (struct radv_meta_blit2d_surf) {
 		.format = format,
 		.bs = vk_format_get_blocksize(format),
-		.level = level,
-		.layer = layer,
+		.level = subres->mipLevel,
+		.layer = subres->baseArrayLayer,
 		.image = image,
-		.aspect_mask = aspectMask,
+		.aspect_mask = subres->aspectMask,
 	};
 }
 
@@ -150,9 +150,7 @@ meta_copy_buffer_to_image(struct radv_cmd_buffer *cmd_buffer,
 		/* Create blit surfaces */
 		struct radv_meta_blit2d_surf img_bsurf =
 			blit_surf_for_image_level_layer(image,
-							pRegions[r].imageSubresource.aspectMask,
-							pRegions[r].imageSubresource.mipLevel,
-							pRegions[r].imageSubresource.baseArrayLayer);
+							&pRegions[r].imageSubresource);
 
 		struct radv_meta_blit2d_buffer buf_bsurf = {
 			.bs = img_bsurf.bs,
@@ -253,9 +251,8 @@ meta_copy_image_to_buffer(struct radv_cmd_buffer *cmd_buffer,
 		/* Create blit surfaces */
 		struct radv_meta_blit2d_surf img_info =
 			blit_surf_for_image_level_layer(image,
-							pRegions[r].imageSubresource.aspectMask,
-							pRegions[r].imageSubresource.mipLevel,
-							pRegions[r].imageSubresource.baseArrayLayer);
+							&pRegions[r].imageSubresource);
+
 		struct radv_meta_blit2d_buffer buf_info = {
 			.bs = img_info.bs,
 			.format = img_info.format,
@@ -331,14 +328,11 @@ meta_copy_image(struct radv_cmd_buffer *cmd_buffer,
 		/* Create blit surfaces */
 		struct radv_meta_blit2d_surf b_src =
 			blit_surf_for_image_level_layer(src_image,
-							pRegions[r].srcSubresource.aspectMask,
-							pRegions[r].srcSubresource.mipLevel,
-							pRegions[r].srcSubresource.baseArrayLayer);
+							&pRegions[r].srcSubresource);
+
 		struct radv_meta_blit2d_surf b_dst =
 			blit_surf_for_image_level_layer(dest_image,
-							pRegions[r].dstSubresource.aspectMask,
-							pRegions[r].dstSubresource.mipLevel,
-							pRegions[r].dstSubresource.baseArrayLayer);
+							&pRegions[r].dstSubresource);
 
 		/* for DCC */
 		b_src.format = b_dst.format;
