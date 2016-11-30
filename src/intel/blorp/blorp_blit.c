@@ -1499,6 +1499,68 @@ struct blt_coords {
    struct blt_axis x, y;
 };
 
+static void
+surf_fake_rgb_with_red(const struct isl_device *isl_dev,
+                       struct brw_blorp_surface_info *info,
+                       uint32_t *x, uint32_t *width)
+{
+   surf_convert_to_single_slice(isl_dev, info);
+
+   info->surf.logical_level0_px.width *= 3;
+   info->surf.phys_level0_sa.width *= 3;
+   *x *= 3;
+   *width *= 3;
+
+   enum isl_format red_format;
+   switch (info->view.format) {
+   case ISL_FORMAT_R8G8B8_UNORM:
+      red_format = ISL_FORMAT_R8_UNORM;
+      break;
+   case ISL_FORMAT_R8G8B8_UINT:
+      red_format = ISL_FORMAT_R8_UINT;
+      break;
+   case ISL_FORMAT_R16G16B16_UNORM:
+      red_format = ISL_FORMAT_R16_UNORM;
+      break;
+   case ISL_FORMAT_R16G16B16_UINT:
+      red_format = ISL_FORMAT_R16_UINT;
+      break;
+   case ISL_FORMAT_R32G32B32_UINT:
+      red_format = ISL_FORMAT_R32_UINT;
+      break;
+   default:
+      unreachable("Invalid RGB copy destination format");
+   }
+   assert(isl_format_get_layout(red_format)->channels.r.type ==
+          isl_format_get_layout(info->view.format)->channels.r.type);
+   assert(isl_format_get_layout(red_format)->channels.r.bits ==
+          isl_format_get_layout(info->view.format)->channels.r.bits);
+
+   info->surf.format = info->view.format = red_format;
+}
+
+static void
+fake_dest_rgb_with_red(const struct isl_device *dev,
+                       struct blorp_params *params,
+                       struct brw_blorp_blit_prog_key *wm_prog_key,
+                       struct blt_coords *coords)
+{
+   /* Handle RGB destinations for blorp_copy */
+   const struct isl_format_layout *dst_fmtl =
+      isl_format_get_layout(params->dst.surf.format);
+
+   if (dst_fmtl->bpb % 3 == 0) {
+      uint32_t dst_x = coords->x.dst0;
+      uint32_t dst_width = coords->x.dst1 - dst_x;
+      surf_fake_rgb_with_red(dev, &params->dst,
+                             &dst_x, &dst_width);
+      coords->x.dst0 = dst_x;
+      coords->x.dst1 = dst_x + dst_width;
+      wm_prog_key->dst_rgb = true;
+      wm_prog_key->need_dst_offset = true;
+   }
+}
+
 enum blit_shrink_status {
    BLIT_NO_SHRINK = 0,
    BLIT_WIDTH_SHRINK = 1,
@@ -1513,9 +1575,11 @@ static enum blit_shrink_status
 try_blorp_blit(struct blorp_batch *batch,
                struct blorp_params *params,
                struct brw_blorp_blit_prog_key *wm_prog_key,
-               const struct blt_coords *coords)
+               struct blt_coords *coords)
 {
    const struct gen_device_info *devinfo = batch->blorp->isl_dev->info;
+
+   fake_dest_rgb_with_red(batch->blorp->isl_dev, params, wm_prog_key, coords);
 
    if (isl_format_has_sint_channel(params->src.view.format)) {
       wm_prog_key->texture_data_type = nir_type_int;
@@ -2149,46 +2213,6 @@ surf_convert_to_uncompressed(const struct isl_device *isl_dev,
    info->surf.format = get_copy_format_for_bpb(isl_dev, fmtl->bpb);
 }
 
-static void
-surf_fake_rgb_with_red(const struct isl_device *isl_dev,
-                       struct brw_blorp_surface_info *info,
-                       uint32_t *x, uint32_t *width)
-{
-   surf_convert_to_single_slice(isl_dev, info);
-
-   info->surf.logical_level0_px.width *= 3;
-   info->surf.phys_level0_sa.width *= 3;
-   *x *= 3;
-   *width *= 3;
-
-   enum isl_format red_format;
-   switch (info->view.format) {
-   case ISL_FORMAT_R8G8B8_UNORM:
-      red_format = ISL_FORMAT_R8_UNORM;
-      break;
-   case ISL_FORMAT_R8G8B8_UINT:
-      red_format = ISL_FORMAT_R8_UINT;
-      break;
-   case ISL_FORMAT_R16G16B16_UNORM:
-      red_format = ISL_FORMAT_R16_UNORM;
-      break;
-   case ISL_FORMAT_R16G16B16_UINT:
-      red_format = ISL_FORMAT_R16_UINT;
-      break;
-   case ISL_FORMAT_R32G32B32_UINT:
-      red_format = ISL_FORMAT_R32_UINT;
-      break;
-   default:
-      unreachable("Invalid RGB copy destination format");
-   }
-   assert(isl_format_get_layout(red_format)->channels.r.type ==
-          isl_format_get_layout(info->view.format)->channels.r.type);
-   assert(isl_format_get_layout(red_format)->channels.r.bits ==
-          isl_format_get_layout(info->view.format)->channels.r.bits);
-
-   info->surf.format = info->view.format = red_format;
-}
-
 void
 blorp_copy(struct blorp_batch *batch,
            const struct blorp_surf *src_surf,
@@ -2272,13 +2296,6 @@ blorp_copy(struct blorp_batch *batch,
     */
    uint32_t dst_width = src_width;
    uint32_t dst_height = src_height;
-
-   if (dst_fmtl->bpb % 3 == 0) {
-      surf_fake_rgb_with_red(batch->blorp->isl_dev, &params.dst,
-                             &dst_x, &dst_width);
-      wm_prog_key.dst_rgb = true;
-      wm_prog_key.need_dst_offset = true;
-   }
 
    struct blt_coords coords = {
       .x = {
