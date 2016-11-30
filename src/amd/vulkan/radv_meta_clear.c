@@ -1107,7 +1107,8 @@ radv_cmd_clear_image(struct radv_cmd_buffer *cmd_buffer,
 		     VkImageLayout image_layout,
 		     const VkClearValue *clear_value,
 		     uint32_t range_count,
-		     const VkImageSubresourceRange *ranges)
+		     const VkImageSubresourceRange *ranges,
+		     bool cs)
 {
 	VkFormat format = image->vk_format;
 	VkClearValue internal_clear_value = *clear_value;
@@ -1126,12 +1127,29 @@ radv_cmd_clear_image(struct radv_cmd_buffer *cmd_buffer,
 				radv_minify(image->extent.depth, range->baseMipLevel + l) :
 				radv_get_layerCount(image, range);
 			for (uint32_t s = 0; s < layer_count; ++s) {
-				radv_clear_image_layer(cmd_buffer, image, image_layout,
-						       range, format, l, s, &internal_clear_value);
+
+				if (cs) {
+					struct radv_meta_blit2d_surf surf;
+					surf.format = format;
+					surf.image = image;
+					surf.level = range->baseMipLevel + l;
+					surf.layer = range->baseArrayLayer + s;
+					surf.aspect_mask = range->aspectMask;
+					radv_meta_clear_image_cs(cmd_buffer, &surf,
+								 &internal_clear_value.color);
+				} else {
+					radv_clear_image_layer(cmd_buffer, image, image_layout,
+							       range, format, l, s, &internal_clear_value);
+				}
 			}
 		}
 	}
 }
+
+union meta_saved_state {
+	struct radv_meta_saved_state gfx;
+	struct radv_meta_saved_compute_state compute;
+};
 
 void radv_CmdClearColorImage(
 	VkCommandBuffer                             commandBuffer,
@@ -1143,15 +1161,22 @@ void radv_CmdClearColorImage(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_image, image, image_h);
-	struct radv_meta_saved_state saved_state;
+	union meta_saved_state saved_state;
+	bool cs = cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE;
 
-	radv_meta_save_graphics_reset_vport_scissor(&saved_state, cmd_buffer);
+	if (cs)
+		radv_meta_begin_cleari(cmd_buffer, &saved_state.compute);
+	else
+		radv_meta_save_graphics_reset_vport_scissor(&saved_state.gfx, cmd_buffer);
 
 	radv_cmd_clear_image(cmd_buffer, image, imageLayout,
 			     (const VkClearValue *) pColor,
-			     rangeCount, pRanges);
+			     rangeCount, pRanges, cs);
 
-	radv_meta_restore(&saved_state, cmd_buffer);
+	if (cs)
+		radv_meta_end_cleari(cmd_buffer, &saved_state.compute);
+	else
+		radv_meta_restore(&saved_state.gfx, cmd_buffer);
 }
 
 void radv_CmdClearDepthStencilImage(
@@ -1170,7 +1195,7 @@ void radv_CmdClearDepthStencilImage(
 
 	radv_cmd_clear_image(cmd_buffer, image, imageLayout,
 			     (const VkClearValue *) pDepthStencil,
-			     rangeCount, pRanges);
+			     rangeCount, pRanges, false);
 
 	radv_meta_restore(&saved_state, cmd_buffer);
 }
