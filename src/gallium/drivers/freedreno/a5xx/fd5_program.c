@@ -342,6 +342,19 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 	struct ir3_shader_linkage l = {0};
 	ir3_link_shaders(&l, s[VS].v, s[FS].v);
 
+	BITSET_DECLARE(varbs, 128) = {0};
+	uint32_t *varmask = (uint32_t *)varbs;
+
+	for (i = 0; i < l.cnt; i++)
+		for (j = 0; j < util_last_bit(l.var[i].compmask); j++)
+			BITSET_SET(varbs, l.var[i].loc + j);
+
+	OUT_PKT4(ring, REG_A5XX_VPC_VAR_DISABLE(0), 4);
+	OUT_RING(ring, ~varmask[0]);  /* VPC_VAR[0].DISABLE */
+	OUT_RING(ring, ~varmask[1]);  /* VPC_VAR[1].DISABLE */
+	OUT_RING(ring, ~varmask[2]);  /* VPC_VAR[2].DISABLE */
+	OUT_RING(ring, ~varmask[3]);  /* VPC_VAR[3].DISABLE */
+
 	/* a5xx appends pos/psize to end of the linkage map: */
 	if (pos_regid != regid(63,0))
 		ir3_link_add(&l, pos_regid, 0xf, l.max_loc);
@@ -383,19 +396,6 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 
 	if (s[VS].instrlen)
 		emit_shader(ring, s[VS].v);
-
-	BITSET_DECLARE(varbs, 128) = {0};
-	uint32_t *varmask = (uint32_t *)varbs;
-
-	for (i = 0; i < l.cnt; i++)
-		for (j = 0; j < util_last_bit(l.var[i].compmask); j++)
-			BITSET_SET(varbs, l.var[i].loc + j);
-
-	OUT_PKT4(ring, REG_A5XX_VPC_VAR_DISABLE(0), 4);
-	OUT_RING(ring, ~varmask[0]);  /* VPC_VAR[0].DISABLE */
-	OUT_RING(ring, ~varmask[1]);  /* VPC_VAR[1].DISABLE */
-	OUT_RING(ring, ~varmask[2]);  /* VPC_VAR[2].DISABLE */
-	OUT_RING(ring, ~varmask[3]);  /* VPC_VAR[3].DISABLE */
 
 	// TODO depending on other bits in this reg (if any) set somewhere else?
 	OUT_PKT4(ring, REG_A5XX_PC_PRIM_VTX_CNTL, 1);
