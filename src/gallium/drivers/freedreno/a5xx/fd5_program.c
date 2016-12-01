@@ -441,9 +441,6 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 			A5XX_HLSQ_CONTROL_4_REG_ZWCOORDREGID(zwcoord_regid) |
 			0x0000fcfc);               /* XXX */
 
-	OUT_PKT4(ring, REG_A5XX_GRAS_CNTL, 1);
-	OUT_RING(ring, COND(s[FS].v->total_in > 0, A5XX_GRAS_CNTL_VARYING));
-
 	OUT_PKT4(ring, REG_A5XX_SP_FS_CTRL_REG0, 1);
 	OUT_RING(ring, COND(s[FS].v->total_in > 0, A5XX_SP_FS_CTRL_REG0_VARYING) |
 			0x4000e | /* XXX set pretty much everywhere */
@@ -461,13 +458,23 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 	OUT_PKT4(ring, REG_A5XX_SP_SP_CNTL, 1);
 	OUT_RING(ring, 0x00000010);        /* XXX */
 
+	OUT_PKT4(ring, REG_A5XX_GRAS_CNTL, 1);
+	OUT_RING(ring, COND(s[FS].v->total_in > 0, A5XX_GRAS_CNTL_VARYING) |
+			COND(s[FS].v->frag_coord, A5XX_GRAS_CNTL_XCOORD |
+					A5XX_GRAS_CNTL_YCOORD |
+					A5XX_GRAS_CNTL_ZCOORD |
+					A5XX_GRAS_CNTL_WCOORD |
+					A5XX_GRAS_CNTL_UNK3));
+
 	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CONTROL0, 3);
 	OUT_RING(ring,
 			COND(s[FS].v->total_in > 0, A5XX_RB_RENDER_CONTROL0_VARYING) |
 			COND(s[FS].v->frag_coord, A5XX_RB_RENDER_CONTROL0_XCOORD |
 					A5XX_RB_RENDER_CONTROL0_YCOORD |
 					A5XX_RB_RENDER_CONTROL0_ZCOORD |
-					A5XX_RB_RENDER_CONTROL0_WCOORD));
+					A5XX_RB_RENDER_CONTROL0_WCOORD |
+					A5XX_RB_RENDER_CONTROL0_UNK3));
+
 	OUT_RING(ring,
 			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL1_FACENESS));
 	OUT_RING(ring, A5XX_RB_FS_OUTPUT_CNTL_MRT(nr) |
