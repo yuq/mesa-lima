@@ -386,6 +386,74 @@ intel_miptree_blit(struct brw_context *brw,
    return true;
 }
 
+bool
+intel_miptree_copy(struct brw_context *brw,
+                   struct intel_mipmap_tree *src_mt,
+                   int src_level, int src_slice,
+                   uint32_t src_x, uint32_t src_y,
+                   struct intel_mipmap_tree *dst_mt,
+                   int dst_level, int dst_slice,
+                   uint32_t dst_x, uint32_t dst_y,
+                   uint32_t src_width, uint32_t src_height)
+{
+   /* The blitter doesn't understand multisampling at all. */
+   if (src_mt->num_samples > 0 || dst_mt->num_samples > 0)
+      return false;
+
+   if (src_mt->format == MESA_FORMAT_S_UINT8)
+      return false;
+
+   /* The blitter has no idea about HiZ or fast color clears, so we need to
+    * resolve the miptrees before we do anything.
+    */
+   intel_miptree_slice_resolve_depth(brw, src_mt, src_level, src_slice);
+   intel_miptree_slice_resolve_depth(brw, dst_mt, dst_level, dst_slice);
+   intel_miptree_resolve_color(brw, src_mt, src_level, src_slice, 1, 0);
+   intel_miptree_resolve_color(brw, dst_mt, dst_level, dst_slice, 1, 0);
+
+   uint32_t src_image_x, src_image_y;
+   intel_miptree_get_image_offset(src_mt, src_level, src_slice,
+                                  &src_image_x, &src_image_y);
+
+   if (_mesa_is_format_compressed(src_mt->format)) {
+      GLuint bw, bh;
+      _mesa_get_format_block_size(src_mt->format, &bw, &bh);
+
+      assert(src_x % bw == 0);
+      assert(src_y % bh == 0);
+      assert(src_width % bw == 0);
+      assert(src_height % bh == 0);
+
+      src_x /= (int)bw;
+      src_y /= (int)bh;
+      src_width /= (int)bw;
+      src_height /= (int)bh;
+   }
+   src_x += src_image_x;
+   src_y += src_image_y;
+
+   uint32_t dst_image_x, dst_image_y;
+   intel_miptree_get_image_offset(dst_mt, dst_level, dst_slice,
+                                  &dst_image_x, &dst_image_y);
+
+   if (_mesa_is_format_compressed(dst_mt->format)) {
+      GLuint bw, bh;
+      _mesa_get_format_block_size(dst_mt->format, &bw, &bh);
+
+      assert(dst_x % bw == 0);
+      assert(dst_y % bh == 0);
+
+      dst_x /= (int)bw;
+      dst_y /= (int)bh;
+   }
+   dst_x += dst_image_x;
+   dst_y += dst_image_y;
+
+   return emit_miptree_blit(brw, src_mt, src_x, src_y,
+                            dst_mt, dst_x, dst_y,
+                            src_width, src_height, false, GL_COPY);
+}
+
 static bool
 alignment_valid(struct brw_context *brw, unsigned offset, uint32_t tiling)
 {
