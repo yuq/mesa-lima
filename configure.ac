@@ -1792,6 +1792,7 @@ if test -n "$with_vulkan_drivers"; then
 
             ;;
         xradeon)
+            require_libdrm "radv"
             PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             radeon_llvm_check $LLVM_REQUIRED_RADV "radv"
             HAVE_RADEON_VULKAN=yes
