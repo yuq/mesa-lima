@@ -108,9 +108,9 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    drmDevicePtr devinfo;
 
    /* Get PCI info. */
-   r = drmGetDevice(fd, &devinfo);
+   r = drmGetDevice2(fd, 0, &devinfo);
    if (r) {
-      fprintf(stderr, "amdgpu: drmGetDevice failed.\n");
+      fprintf(stderr, "amdgpu: drmGetDevice2 failed.\n");
       goto fail;
    }
    ws->info.pci_domain = devinfo->businfo.pci->domain;
