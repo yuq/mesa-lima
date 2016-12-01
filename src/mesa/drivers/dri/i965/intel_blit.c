@@ -215,6 +215,86 @@ get_blit_intratile_offset_el(const struct brw_context *brw,
    }
 }
 
+static bool
+emit_miptree_blit(struct brw_context *brw,
+                  struct intel_mipmap_tree *src_mt,
+                  uint32_t src_x, uint32_t src_y,
+                  struct intel_mipmap_tree *dst_mt,
+                  uint32_t dst_x, uint32_t dst_y,
+                  uint32_t width, uint32_t height,
+                  bool reverse, GLenum logicop)
+{
+   /* According to the Ivy Bridge PRM, Vol1 Part4, section 1.2.1.2 (Graphics
+    * Data Size Limitations):
+    *
+    *    The BLT engine is capable of transferring very large quantities of
+    *    graphics data. Any graphics data read from and written to the
+    *    destination is permitted to represent a number of pixels that
+    *    occupies up to 65,536 scan lines and up to 32,768 bytes per scan line
+    *    at the destination. The maximum number of pixels that may be
+    *    represented per scan line’s worth of graphics data depends on the
+    *    color depth.
+    *
+    * Furthermore, intelEmitCopyBlit (which is called below) uses a signed
+    * 16-bit integer to represent buffer pitch, so it can only handle buffer
+    * pitches < 32k. However, the pitch is measured in bytes for linear buffers
+    * and dwords for tiled buffers.
+    *
+    * As a result of these two limitations, we can only use the blitter to do
+    * this copy when the miptree's pitch is less than 32k linear or 128k tiled.
+    */
+   if (blt_pitch(src_mt) >= 32768 || blt_pitch(dst_mt) >= 32768) {
+      perf_debug("Falling back due to >= 32k/128k pitch\n");
+      return false;
+   }
+
+   /* We need to split the blit into chunks that each fit within the blitter's
+    * restrictions.  We can't use a chunk size of 32768 because we need to
+    * ensure that src_tile_x + chunk_size fits.  We choose 16384 because it's
+    * a nice round power of two, big enough that performance won't suffer, and
+    * small enough to guarantee everything fits.
+    */
+   const uint32_t max_chunk_size = 16384;
+
+   for (uint32_t chunk_x = 0; chunk_x < width; chunk_x += max_chunk_size) {
+      for (uint32_t chunk_y = 0; chunk_y < height; chunk_y += max_chunk_size) {
+         const uint32_t chunk_w = MIN2(max_chunk_size, width - chunk_x);
+         const uint32_t chunk_h = MIN2(max_chunk_size, height - chunk_y);
+
+         uint32_t src_offset, src_tile_x, src_tile_y;
+         get_blit_intratile_offset_el(brw, src_mt,
+                                      src_x + chunk_x, src_y + chunk_y,
+                                      &src_offset, &src_tile_x, &src_tile_y);
+
+         uint32_t dst_offset, dst_tile_x, dst_tile_y;
+         get_blit_intratile_offset_el(brw, dst_mt,
+                                      dst_x + chunk_x, dst_y + chunk_y,
+                                      &dst_offset, &dst_tile_x, &dst_tile_y);
+
+         if (!intelEmitCopyBlit(brw,
+                                src_mt->cpp,
+                                reverse ? -src_mt->pitch : src_mt->pitch,
+                                src_mt->bo, src_mt->offset + src_offset,
+                                src_mt->tiling,
+                                src_mt->tr_mode,
+                                dst_mt->pitch,
+                                dst_mt->bo, dst_mt->offset + dst_offset,
+                                dst_mt->tiling,
+                                dst_mt->tr_mode,
+                                src_tile_x, src_tile_y,
+                                dst_tile_x, dst_tile_y,
+                                chunk_w, chunk_h,
+                                logicop)) {
+            /* If this is ever going to fail, it will fail on the first chunk */
+            assert(chunk_x == 0 && chunk_y == 0);
+            return false;
+         }
+      }
+   }
+
+   return true;
+}
+
 /**
  * Implements a rectangular block transfer (blit) of pixels between two
  * miptrees.
@@ -265,30 +345,6 @@ intel_miptree_blit(struct brw_context *brw,
       return false;
    }
 
-   /* According to the Ivy Bridge PRM, Vol1 Part4, section 1.2.1.2 (Graphics
-    * Data Size Limitations):
-    *
-    *    The BLT engine is capable of transferring very large quantities of
-    *    graphics data. Any graphics data read from and written to the
-    *    destination is permitted to represent a number of pixels that
-    *    occupies up to 65,536 scan lines and up to 32,768 bytes per scan line
-    *    at the destination. The maximum number of pixels that may be
-    *    represented per scan line’s worth of graphics data depends on the
-    *    color depth.
-    *
-    * Furthermore, intelEmitCopyBlit (which is called below) uses a signed
-    * 16-bit integer to represent buffer pitch, so it can only handle buffer
-    * pitches < 32k. However, the pitch is measured in bytes for linear buffers
-    * and dwords for tiled buffers.
-    *
-    * As a result of these two limitations, we can only use the blitter to do
-    * this copy when the miptree's pitch is less than 32k linear or 128k tiled.
-    */
-   if (blt_pitch(src_mt) >= 32768 || blt_pitch(dst_mt) >= 32768) {
-      perf_debug("Falling back due to >= 32k/128k pitch\n");
-      return false;
-   }
-
    /* The blitter has no idea about HiZ or fast color clears, so we need to
     * resolve the miptrees before we do anything.
     */
@@ -313,49 +369,10 @@ intel_miptree_blit(struct brw_context *brw,
    dst_x += dst_image_x;
    dst_y += dst_image_y;
 
-   /* We need to split the blit into chunks that each fit within the blitter's
-    * restrictions.  We can't use a chunk size of 32768 because we need to
-    * ensure that src_tile_x + chunk_size fits.  We choose 16384 because it's
-    * a nice round power of two, big enough that performance won't suffer, and
-    * small enough to guarantee everything fits.
-    */
-   const uint32_t max_chunk_size = 16384;
-
-   for (uint32_t chunk_x = 0; chunk_x < width; chunk_x += max_chunk_size) {
-      for (uint32_t chunk_y = 0; chunk_y < height; chunk_y += max_chunk_size) {
-         const uint32_t chunk_w = MIN2(max_chunk_size, width - chunk_x);
-         const uint32_t chunk_h = MIN2(max_chunk_size, height - chunk_y);
-
-         uint32_t src_offset, src_tile_x, src_tile_y;
-         get_blit_intratile_offset_el(brw, src_mt,
-                                      src_x + chunk_x, src_y + chunk_y,
-                                      &src_offset, &src_tile_x, &src_tile_y);
-
-         uint32_t dst_offset, dst_tile_x, dst_tile_y;
-         get_blit_intratile_offset_el(brw, dst_mt,
-                                      dst_x + chunk_x, dst_y + chunk_y,
-                                      &dst_offset, &dst_tile_x, &dst_tile_y);
-
-         if (!intelEmitCopyBlit(brw,
-                                src_mt->cpp,
-                                src_flip == dst_flip ? src_mt->pitch :
-                                                       -src_mt->pitch,
-                                src_mt->bo, src_mt->offset + src_offset,
-                                src_mt->tiling,
-                                src_mt->tr_mode,
-                                dst_mt->pitch,
-                                dst_mt->bo, dst_mt->offset + dst_offset,
-                                dst_mt->tiling,
-                                dst_mt->tr_mode,
-                                src_tile_x, src_tile_y,
-                                dst_tile_x, dst_tile_y,
-                                chunk_w, chunk_h,
-                                logicop)) {
-            /* If this is ever going to fail, it will fail on the first chunk */
-            assert(chunk_x == 0 && chunk_y == 0);
-            return false;
-         }
-      }
+   if (!emit_miptree_blit(brw, src_mt, src_x, src_y,
+                          dst_mt, dst_x, dst_y, width, height,
+                          src_flip != dst_flip, logicop)) {
+      return false;
    }
 
    /* XXX This could be done in a single pass using XY_FULL_MONO_PATTERN_BLT */
