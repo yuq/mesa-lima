@@ -857,6 +857,10 @@ VkResult radv_QueueSubmit(
 		}
 		ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array,
 						   pSubmits[i].commandBufferCount,
+						   (struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
+						   pSubmits[i].waitSemaphoreCount,
+						   (struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
+						   pSubmits[i].signalSemaphoreCount,
 						   can_patch, base_fence);
 		if (ret)
 			radv_loge("failed to submit CS %d\n", i);
@@ -866,7 +870,7 @@ VkResult radv_QueueSubmit(
 	if (fence) {
 		if (!submitCount)
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, &queue->device->empty_cs,
-							   1, false, base_fence);
+							   1, NULL, 0, NULL, 0, false, base_fence);
 
 		fence->submitted = true;
 	}
@@ -1270,25 +1274,34 @@ VkResult radv_GetFenceStatus(VkDevice _device, VkFence _fence)
 // Queue semaphore functions
 
 VkResult radv_CreateSemaphore(
-	VkDevice                                    device,
+	VkDevice                                    _device,
 	const VkSemaphoreCreateInfo*                pCreateInfo,
 	const VkAllocationCallbacks*                pAllocator,
 	VkSemaphore*                                pSemaphore)
 {
-	/* The DRM execbuffer ioctl always execute in-oder, even between different
-	 * rings. As such, there's nothing to do for the user space semaphore.
-	 */
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	struct radeon_winsys_sem *sem;
 
-	*pSemaphore = (VkSemaphore)1;
+	sem = device->ws->create_sem(device->ws);
+	if (!sem)
+		return VK_ERROR_OUT_OF_HOST_MEMORY;
 
+	*pSemaphore = (VkSemaphore)sem;
 	return VK_SUCCESS;
 }
 
 void radv_DestroySemaphore(
-	VkDevice                                    device,
-	VkSemaphore                                 semaphore,
+	VkDevice                                    _device,
+	VkSemaphore                                 _semaphore,
 	const VkAllocationCallbacks*                pAllocator)
 {
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	struct radeon_winsys_sem *sem;
+	if (!_semaphore)
+		return;
+
+	sem = (struct radeon_winsys_sem *)_semaphore;
+	device->ws->destroy_sem(sem);
 }
 
 VkResult radv_CreateEvent(

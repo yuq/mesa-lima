@@ -739,20 +739,40 @@ static int radv_amdgpu_winsys_cs_submit(struct radeon_winsys_ctx *_ctx,
 					int queue_idx,
 					struct radeon_winsys_cs **cs_array,
 					unsigned cs_count,
+					struct radeon_winsys_sem **wait_sem,
+					unsigned wait_sem_count,
+					struct radeon_winsys_sem **signal_sem,
+					unsigned signal_sem_count,
 					bool can_patch,
 					struct radeon_winsys_fence *_fence)
 {
 	struct radv_amdgpu_cs *cs = radv_amdgpu_cs(cs_array[0]);
+	struct radv_amdgpu_ctx *ctx = radv_amdgpu_ctx(_ctx);
+	int ret;
+	int i;
+	
+	for (i = 0; i < wait_sem_count; i++) {
+		amdgpu_semaphore_handle sem = (amdgpu_semaphore_handle)wait_sem[i];
+		amdgpu_cs_wait_semaphore(ctx->ctx, cs->hw_ip, 0, queue_idx,
+					 sem);
+	}
 	if (!cs->ws->use_ib_bos) {
-		return radv_amdgpu_winsys_cs_submit_sysmem(_ctx, queue_idx, cs_array,
+		ret = radv_amdgpu_winsys_cs_submit_sysmem(_ctx, queue_idx, cs_array,
 							   cs_count, _fence);
 	} else if (can_patch && cs_count > AMDGPU_CS_MAX_IBS_PER_SUBMIT && false) {
-		return radv_amdgpu_winsys_cs_submit_chained(_ctx, queue_idx, cs_array,
+		ret = radv_amdgpu_winsys_cs_submit_chained(_ctx, queue_idx, cs_array,
 							    cs_count, _fence);
 	} else {
-		return radv_amdgpu_winsys_cs_submit_fallback(_ctx, queue_idx, cs_array,
+		ret = radv_amdgpu_winsys_cs_submit_fallback(_ctx, queue_idx, cs_array,
 							     cs_count, _fence);
 	}
+
+	for (i = 0; i < signal_sem_count; i++) {
+		amdgpu_semaphore_handle sem = (amdgpu_semaphore_handle)signal_sem[i];
+		amdgpu_cs_signal_semaphore(ctx->ctx, cs->hw_ip, 0, queue_idx,
+					   sem);
+	}
+	return ret;
 }
 
 static struct radeon_winsys_ctx *radv_amdgpu_ctx_create(struct radeon_winsys *_ws)
@@ -800,6 +820,23 @@ static bool radv_amdgpu_ctx_wait_idle(struct radeon_winsys_ctx *rwctx,
 	return true;
 }
 
+static struct radeon_winsys_sem *radv_amdgpu_create_sem(struct radeon_winsys *_ws)
+{
+	int ret;
+	amdgpu_semaphore_handle sem;
+
+	ret = amdgpu_cs_create_semaphore(&sem);
+	if (ret)
+		return NULL;
+	return (struct radeon_winsys_sem *)sem;
+}
+
+static void radv_amdgpu_destroy_sem(struct radeon_winsys_sem *_sem)
+{
+	amdgpu_semaphore_handle sem = (amdgpu_semaphore_handle)_sem;
+	amdgpu_cs_destroy_semaphore(sem);
+}
+
 void radv_amdgpu_cs_init_functions(struct radv_amdgpu_winsys *ws)
 {
 	ws->base.ctx_create = radv_amdgpu_ctx_create;
@@ -815,5 +852,7 @@ void radv_amdgpu_cs_init_functions(struct radv_amdgpu_winsys *ws)
 	ws->base.cs_submit = radv_amdgpu_winsys_cs_submit;
 	ws->base.create_fence = radv_amdgpu_create_fence;
 	ws->base.destroy_fence = radv_amdgpu_destroy_fence;
+	ws->base.create_sem = radv_amdgpu_create_sem;
+	ws->base.destroy_sem = radv_amdgpu_destroy_sem;
 	ws->base.fence_wait = radv_amdgpu_fence_wait;
 }
