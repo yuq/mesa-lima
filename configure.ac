@@ -1786,10 +1786,9 @@ if test -n "$with_vulkan_drivers"; then
     for driver in $VULKAN_DRIVERS; do
         case "x$driver" in
         xintel)
-            require_libdrm "i965"
+            require_libdrm "ANV"
             PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             HAVE_INTEL_VULKAN=yes
-
             ;;
         xradeon)
             require_libdrm "radv"

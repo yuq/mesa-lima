@@ -27,6 +27,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <xf86drm.h>
 
 #include "anv_private.h"
 #include "util/strtod.h"
@@ -384,6 +385,40 @@ void anv_DestroyInstance(
    vk_free(&instance->alloc, instance);
 }
 
+static VkResult
+anv_enumerate_devices(struct anv_instance *instance)
+{
+   /* TODO: Check for more devices ? */
+   drmDevicePtr devices[8];
+   VkResult result = VK_ERROR_INCOMPATIBLE_DRIVER;
+   int max_devices;
+
+   instance->physicalDeviceCount = 0;
+
+   max_devices = drmGetDevices2(0, devices, sizeof(devices));
+   if (max_devices < 1)
+      return VK_ERROR_INCOMPATIBLE_DRIVER;
+
+   for (unsigned i = 0; i < (unsigned)max_devices; i++) {
+      if (devices[i]->available_nodes & 1 << DRM_NODE_RENDER &&
+          devices[i]->bustype == DRM_BUS_PCI &&
+          devices[i]->deviceinfo.pci->vendor_id == 0x8086) {
+
+         result = anv_physical_device_init(&instance->physicalDevice,
+                        instance,
+                        devices[i]->nodes[DRM_NODE_RENDER]);
+         if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
+            break;
+      }
+   }
+
+   if (result == VK_SUCCESS)
+      instance->physicalDeviceCount = 1;
+
+   return result;
+}
+
+
 VkResult anv_EnumeratePhysicalDevices(
     VkInstance                                  _instance,
     uint32_t*                                   pPhysicalDeviceCount,
@@ -394,22 +429,10 @@ VkResult anv_EnumeratePhysicalDevices(
    VkResult result;
 
    if (instance->physicalDeviceCount < 0) {
-      char path[20];
-      for (unsigned i = 0; i < 8; i++) {
-         snprintf(path, sizeof(path), "/dev/dri/renderD%d", 128 + i);
-         result = anv_physical_device_init(&instance->physicalDevice,
-                                           instance, path);
-         if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
-            break;
-      }
-
-      if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-         instance->physicalDeviceCount = 0;
-      } else if (result == VK_SUCCESS) {
-         instance->physicalDeviceCount = 1;
-      } else {
+      result = anv_enumerate_devices(instance);
+      if (result != VK_SUCCESS &&
+          result != VK_ERROR_INCOMPATIBLE_DRIVER)
          return result;
-      }
    }
 
    if (instance->physicalDeviceCount > 0) {
