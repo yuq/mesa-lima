@@ -223,11 +223,14 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
 
     if (This->base.pool == D3DPOOL_MANAGED) {
         /* READONLY doesn't dirty the buffer */
+        /* Tests on Win: READONLY doesn't wait for the upload */
         if (!(Flags & D3DLOCK_READONLY)) {
             if (!This->managed.dirty) {
                 assert(LIST_IS_EMPTY(&This->managed.list));
                 This->managed.dirty = TRUE;
                 This->managed.dirty_box = box;
+                if (p_atomic_read(&This->managed.pending_upload))
+                    nine_csmt_process(This->base.base.device);
             } else
                 u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
         }

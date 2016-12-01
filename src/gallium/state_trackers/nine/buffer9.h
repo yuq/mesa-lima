@@ -25,6 +25,7 @@
 #define _NINE_BUFFER9_H_
 
 #include "device9.h"
+#include "nine_state.h"
 #include "resource9.h"
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
@@ -57,6 +58,7 @@ struct NineBuffer9
         struct pipe_box dirty_box;
         struct list_head list; /* for update_buffers */
         struct list_head list2; /* for managed_buffers */
+        unsigned pending_upload; /* for uploads */
     } managed;
 };
 static inline struct NineBuffer9 *
@@ -92,13 +94,13 @@ NineBuffer9_Unlock( struct NineBuffer9 *This );
 static inline void
 NineBuffer9_Upload( struct NineBuffer9 *This )
 {
-    struct pipe_context *pipe = NineDevice9_GetPipe(This->base.base.device);
+    struct NineDevice9 *device = This->base.base.device;
 
     assert(This->base.pool == D3DPOOL_MANAGED && This->managed.dirty);
-    pipe->buffer_subdata(pipe, This->base.resource, 0,
-                         This->managed.dirty_box.x,
-                         This->managed.dirty_box.width,
-                         (char *)This->managed.data + This->managed.dirty_box.x);
+    nine_context_range_upload(device, &This->managed.pending_upload, This->base.resource,
+                              This->managed.dirty_box.x,
+                              This->managed.dirty_box.width,
+                              (char *)This->managed.data + This->managed.dirty_box.x);
     This->managed.dirty = FALSE;
 }
 
