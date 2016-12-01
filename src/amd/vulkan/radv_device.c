@@ -1131,7 +1131,10 @@ VkResult radv_CreateFence(
 	fence->submitted = false;
 	fence->signalled = !!(pCreateInfo->flags & VK_FENCE_CREATE_SIGNALED_BIT);
 	fence->fence = device->ws->create_fence();
-
+	if (!fence->fence) {
+		vk_free2(&device->alloc, pAllocator, fence);
+		return VK_ERROR_OUT_OF_HOST_MEMORY;
+	}
 
 	*pFence = radv_fence_to_handle(fence);
 
