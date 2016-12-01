@@ -301,6 +301,7 @@ struct radeon_winsys {
 	void (*cs_grow)(struct radeon_winsys_cs * cs, size_t min_size);
 
 	int (*cs_submit)(struct radeon_winsys_ctx *ctx,
+			 int queue_index,
 			 struct radeon_winsys_cs **cs_array,
 			 unsigned cs_count,
 			 bool can_patch,
