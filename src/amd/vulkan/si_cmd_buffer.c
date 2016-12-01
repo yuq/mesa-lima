@@ -170,10 +170,11 @@ si_write_harvested_raster_configs(struct radv_physical_device *physical_device,
 				       S_030800_INSTANCE_BROADCAST_WRITES(1));
 }
 
-static void
+void
 si_init_compute(struct radv_physical_device *physical_device,
-                struct radeon_winsys_cs *cs)
+                struct radv_cmd_buffer *cmd_buffer)
 {
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	radeon_set_sh_reg_seq(cs, R_00B810_COMPUTE_START_X, 3);
 	radeon_emit(cs, 0);
 	radeon_emit(cs, 0);
@@ -419,7 +420,7 @@ void si_init_config(struct radv_physical_device *physical_device,
 	if (physical_device->rad_info.family == CHIP_STONEY)
 		radeon_set_context_reg(cs, R_028C40_PA_SC_SHADER_CONTROL, 0);
 
-	si_init_compute(physical_device, cs);
+	si_init_compute(physical_device, cmd_buffer);
 }
 
 static void

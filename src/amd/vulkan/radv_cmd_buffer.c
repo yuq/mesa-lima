@@ -1393,17 +1393,33 @@ VkResult radv_BeginCommandBuffer(
 
 	/* setup initial configuration into command buffer */
 	if (cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-		/* Flush read caches at the beginning of CS not flushed by the kernel. */
-		cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_INV_ICACHE |
-			RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
-			RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
-			RADV_CMD_FLAG_INV_VMEM_L1 |
-			RADV_CMD_FLAG_INV_SMEM_L1 |
-			RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER |
-			RADV_CMD_FLAG_INV_GLOBAL_L2;
-		si_init_config(&cmd_buffer->device->instance->physicalDevice, cmd_buffer);
-		radv_set_db_count_control(cmd_buffer);
-		si_emit_cache_flush(cmd_buffer);
+		switch (cmd_buffer->queue_family_index) {
+		case RADV_QUEUE_GENERAL:
+			/* Flush read caches at the beginning of CS not flushed by the kernel. */
+			cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_INV_ICACHE |
+				RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
+				RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
+				RADV_CMD_FLAG_INV_VMEM_L1 |
+				RADV_CMD_FLAG_INV_SMEM_L1 |
+				RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER |
+				RADV_CMD_FLAG_INV_GLOBAL_L2;
+			si_init_config(&cmd_buffer->device->instance->physicalDevice, cmd_buffer);
+			radv_set_db_count_control(cmd_buffer);
+			si_emit_cache_flush(cmd_buffer);
+			break;
+		case RADV_QUEUE_COMPUTE:
+			cmd_buffer->state.flush_bits = RADV_CMD_FLAG_INV_ICACHE |
+				RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
+				RADV_CMD_FLAG_INV_VMEM_L1 |
+				RADV_CMD_FLAG_INV_SMEM_L1 |
+				RADV_CMD_FLAG_INV_GLOBAL_L2;
+			si_init_compute(&cmd_buffer->device->instance->physicalDevice, cmd_buffer);
+			si_emit_cache_flush(cmd_buffer);
+			break;
+		case RADV_QUEUE_TRANSFER:
+		default:
+			break;
+		}
 	}
 
 	if (pBeginInfo->flags & VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT) {
@@ -1539,7 +1555,8 @@ VkResult radv_EndCommandBuffer(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 
-	si_emit_cache_flush(cmd_buffer);
+	if (cmd_buffer->queue_family_index != RADV_QUEUE_TRANSFER)
+		si_emit_cache_flush(cmd_buffer);
 	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs) ||
 	    cmd_buffer->record_fail)
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
