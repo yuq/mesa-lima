@@ -31,17 +31,20 @@
 
 #include "ac_nir_to_llvm.h"
 
+struct cache_entry_variant_info {
+	struct ac_shader_variant_info variant_info;
+	struct ac_shader_config config;
+	uint32_t rsrc1, rsrc2;
+};
+
 struct cache_entry {
 	union {
 		unsigned char sha1[20];
 		uint32_t sha1_dw[5];
 	};
-	uint32_t code_size;
-	struct ac_shader_variant_info variant_info;
-	struct ac_shader_config config;
-	uint32_t rsrc1, rsrc2;
-	struct radv_shader_variant *variant;
-	uint32_t code[0];
+	uint32_t code_sizes[MESA_SHADER_STAGES];
+	struct radv_shader_variant *variants[MESA_SHADER_STAGES];
+	char code[0];
 };
 
 void
@@ -72,9 +75,11 @@ radv_pipeline_cache_finish(struct radv_pipeline_cache *cache)
 {
 	for (unsigned i = 0; i < cache->table_size; ++i)
 		if (cache->hash_table[i]) {
-			if (cache->hash_table[i]->variant)
-				radv_shader_variant_destroy(cache->device,
-							    cache->hash_table[i]->variant);
+			for(int j = 0; j < MESA_SHADER_STAGES; ++j)  {
+				if (cache->hash_table[i]->variants[j])
+					radv_shader_variant_destroy(cache->device,
+								    cache->hash_table[i]->variants[j]);
+			}
 			vk_free(&cache->alloc, cache->hash_table[i]);
 		}
 	pthread_mutex_destroy(&cache->mutex);
@@ -84,7 +89,11 @@ radv_pipeline_cache_finish(struct radv_pipeline_cache *cache)
 static uint32_t
 entry_size(struct cache_entry *entry)
 {
-	return sizeof(*entry) + entry->code_size;
+	size_t ret = sizeof(*entry);
+	for (int i = 0; i < MESA_SHADER_STAGES; ++i)
+		if (entry->code_sizes[i])
+			ret += sizeof(struct cache_entry_variant_info) + entry->code_sizes[i];
+	return ret;
 }
 
 void
@@ -179,28 +188,33 @@ radv_create_shader_variant_from_pipeline_cache(struct radv_device *device,
 			return NULL;
 	}
 
-	if (!entry->variant) {
+	if (!entry->variants[0]) {
 		struct radv_shader_variant *variant;
+		char *p = entry->code;
+		struct cache_entry_variant_info info;
 
 		variant = calloc(1, sizeof(struct radv_shader_variant));
 		if (!variant)
 			return NULL;
 
-		variant->code_size = entry->code_size;
-		variant->config = entry->config;
-		variant->info = entry->variant_info;
-		variant->rsrc1 = entry->rsrc1;
-		variant->rsrc2 = entry->rsrc2;
+		memcpy(&info, p, sizeof(struct cache_entry_variant_info));
+		p += sizeof(struct cache_entry_variant_info);
+
+		variant->code_size = entry->code_sizes[0];
+		variant->config = info.config;
+		variant->info = info.variant_info;
+		variant->rsrc1 = info.rsrc1;
+		variant->rsrc2 = info.rsrc2;
 		variant->ref_count = 1;
 
 		void *ptr = radv_alloc_shader_memory(device, variant);
-		memcpy(ptr, entry->code, entry->code_size);
+		memcpy(ptr, p, entry->code_sizes[0]);
 
-		entry->variant = variant;
+		entry->variants[0] = variant;
 	}
 
-	p_atomic_inc(&entry->variant->ref_count);
-	return entry->variant;
+	p_atomic_inc(&entry->variants[0]->ref_count);
+	return entry->variants[0];
 }
 
 
@@ -286,34 +300,43 @@ radv_pipeline_cache_insert_shader(struct radv_device *device,
 	pthread_mutex_lock(&cache->mutex);
 	struct cache_entry *entry = radv_pipeline_cache_search_unlocked(cache, sha1);
 	if (entry) {
-		if (entry->variant) {
+		if (entry->variants[0]) {
 			radv_shader_variant_destroy(cache->device, variant);
-			variant = entry->variant;
+			variant = entry->variants[0];
 		} else {
-			entry->variant = variant;
+			entry->variants[0] = variant;
 		}
 		p_atomic_inc(&variant->ref_count);
 		pthread_mutex_unlock(&cache->mutex);
 		return variant;
 	}
 
-	entry = vk_alloc(&cache->alloc, sizeof(*entry) + code_size, 8,
+	entry = vk_alloc(&cache->alloc, sizeof(*entry) + sizeof(struct cache_entry_variant_info) + code_size, 8,
 			   VK_SYSTEM_ALLOCATION_SCOPE_CACHE);
 	if (!entry) {
 		pthread_mutex_unlock(&cache->mutex);
 		return variant;
 	}
 
+	memset(entry, 0, sizeof(*entry));
+
+	char* p = entry->code;
+	struct cache_entry_variant_info info;
+
+	info.config = variant->config;
+	info.variant_info = variant->info;
+	info.rsrc1 = variant->rsrc1;
+	info.rsrc2 = variant->rsrc2;
+	memcpy(p, &info, sizeof(struct cache_entry_variant_info));
+	p += sizeof(struct cache_entry_variant_info);
+
 	memcpy(entry->sha1, sha1, 20);
-	memcpy(entry->code, code, code_size);
-	entry->config = variant->config;
-	entry->variant_info = variant->info;
-	entry->rsrc1 = variant->rsrc1;
-	entry->rsrc2 = variant->rsrc2;
-	entry->code_size = code_size;
+	memcpy(p, code, code_size);
+
+	entry->code_sizes[0] = code_size;
 
 	/* Set variant to NULL so we have reproducible cache items */
-	entry->variant = NULL;
+	entry->variants[0] = NULL;
 
 	/* Always add cache items to disk. This will allow collection of
 	 * compiled shaders by third parties such as steam, even if the app
@@ -327,7 +350,7 @@ radv_pipeline_cache_insert_shader(struct radv_device *device,
 			       disk_sha1, entry, entry_size(entry), NULL);
 	}
 
-	entry->variant = variant;
+	entry->variants[0] = variant;
 	p_atomic_inc(&variant->ref_count);
 
 	radv_pipeline_cache_add_entry(cache, entry);
@@ -372,17 +395,19 @@ radv_pipeline_cache_load(struct radv_pipeline_cache *cache,
 	while (end - p >= sizeof(struct cache_entry)) {
 		struct cache_entry *entry = (struct cache_entry*)p;
 		struct cache_entry *dest_entry;
-		if(end - p < sizeof(*entry) + entry->code_size)
+		size_t size = entry_size(entry);
+		if(end - p < size)
 			break;
 
-		dest_entry = vk_alloc(&cache->alloc, sizeof(*entry) + entry->code_size,
+		dest_entry = vk_alloc(&cache->alloc, size,
 					8, VK_SYSTEM_ALLOCATION_SCOPE_CACHE);
 		if (dest_entry) {
-			memcpy(dest_entry, entry, sizeof(*entry) + entry->code_size);
-			dest_entry->variant = NULL;
+			memcpy(dest_entry, entry, size);
+			for (int i = 0; i < MESA_SHADER_STAGES; ++i)
+				dest_entry->variants[i] = NULL;
 			radv_pipeline_cache_add_entry(cache, dest_entry);
 		}
-		p += sizeof (*entry) + entry->code_size;
+		p += size;
 	}
 }
 
@@ -477,7 +502,8 @@ VkResult radv_GetPipelineCacheData(
 		}
 
 		memcpy(p, entry, size);
-		((struct cache_entry*)p)->variant = NULL;
+		for(int j = 0; j < MESA_SHADER_STAGES; ++j)
+			((struct cache_entry*)p)->variants[j] = NULL;
 		p += size;
 	}
 	*pDataSize = p - pData;
