@@ -326,12 +326,13 @@ gcm_schedule_late_def(nir_ssa_def *def, void *void_state)
     * as far outside loops as we can get.
     */
    nir_block *best = lca;
-   while (lca != def->parent_instr->block) {
-      assert(lca);
-      if (state->blocks[lca->index].loop_depth <
+   for (nir_block *block = lca; block != NULL; block = block->imm_dom) {
+      if (state->blocks[block->index].loop_depth <
           state->blocks[best->index].loop_depth)
-         best = lca;
-      lca = lca->imm_dom;
+         best = block;
+
+      if (block == def->parent_instr->block)
+         break;
    }
    def->parent_instr->block = best;
 
