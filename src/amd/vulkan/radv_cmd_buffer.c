@@ -110,6 +110,25 @@ radv_dynamic_state_copy(struct radv_dynamic_state *dest,
 		dest->stencil_reference = src->stencil_reference;
 }
 
+bool radv_cmd_buffer_uses_mec(struct radv_cmd_buffer *cmd_buffer)
+{
+	return cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE &&
+	       cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK;
+}
+
+enum ring_type radv_queue_family_to_ring(int f) {
+	switch (f) {
+	case RADV_QUEUE_GENERAL:
+		return RING_GFX;
+	case RADV_QUEUE_COMPUTE:
+		return RING_COMPUTE;
+	case RADV_QUEUE_TRANSFER:
+		return RING_DMA;
+	default:
+		unreachable("Unknown queue family");
+	}
+}
+
 static VkResult radv_create_cmd_buffer(
 	struct radv_device *                         device,
 	struct radv_cmd_pool *                       pool,
@@ -118,7 +137,7 @@ static VkResult radv_create_cmd_buffer(
 {
 	struct radv_cmd_buffer *cmd_buffer;
 	VkResult result;
-
+	unsigned ring;
 	cmd_buffer = vk_alloc(&pool->alloc, sizeof(*cmd_buffer), 8,
 				VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (cmd_buffer == NULL)
@@ -132,14 +151,19 @@ static VkResult radv_create_cmd_buffer(
 
 	if (pool) {
 		list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
+		cmd_buffer->queue_family_index = pool->queue_family_index;
+
 	} else {
 		/* Init the pool_link so we can safefly call list_del when we destroy
 		 * the command buffer
 		 */
 		list_inithead(&cmd_buffer->pool_link);
+		cmd_buffer->queue_family_index = RADV_QUEUE_GENERAL;
 	}
 
-	cmd_buffer->cs = device->ws->cs_create(device->ws, RING_GFX);
+	ring = radv_queue_family_to_ring(cmd_buffer->queue_family_index);
+
+	cmd_buffer->cs = device->ws->cs_create(device->ws, ring);
 	if (!cmd_buffer->cs) {
 		result = VK_ERROR_OUT_OF_HOST_MEMORY;
 		goto fail;
@@ -1774,6 +1798,8 @@ VkResult radv_CreateCommandPool(
 		pool->alloc = device->alloc;
 
 	list_inithead(&pool->cmd_buffers);
+
+	pool->queue_family_index = pCreateInfo->queueFamilyIndex;
 
 	*pCmdPool = radv_cmd_pool_to_handle(pool);
 

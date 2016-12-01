@@ -441,6 +441,8 @@ struct radv_meta_state {
 
 #define RADV_MAX_QUEUE_FAMILIES 3
 
+enum ring_type radv_queue_family_to_ring(int f);
+
 struct radv_queue {
 	VK_LOADER_DATA                              _loader_data;
 	struct radv_device *                         device;
@@ -666,9 +668,11 @@ struct radv_cmd_state {
 	float					     offset_scale;
 	uint32_t                                      descriptors_dirty;
 };
+
 struct radv_cmd_pool {
 	VkAllocationCallbacks                        alloc;
 	struct list_head                             cmd_buffers;
+	uint32_t queue_family_index;
 };
 
 struct radv_cmd_buffer_upload {
@@ -691,6 +695,7 @@ struct radv_cmd_buffer {
 	VkCommandBufferLevel                         level;
 	struct radeon_winsys_cs *cs;
 	struct radv_cmd_state state;
+	uint32_t queue_family_index;
 
 	uint8_t push_constants[MAX_PUSH_CONSTANTS_SIZE];
 	uint32_t dynamic_buffers[16 * MAX_DYNAMIC_BUFFERS];
@@ -702,6 +707,8 @@ struct radv_cmd_buffer {
 };
 
 struct radv_image;
+
+bool radv_cmd_buffer_uses_mec(struct radv_cmd_buffer *cmd_buffer);
 
 void si_init_config(struct radv_physical_device *physical_device,
 		    struct radv_cmd_buffer *cmd_buffer);
