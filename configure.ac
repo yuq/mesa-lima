@@ -72,7 +72,7 @@ AC_SUBST([OPENCL_VERSION])
 # codifies which drivers need which version of libdrm. Any libdrm
 # version dependencies in non-driver-specific code should be reflected
 # in the first entry.
-LIBDRM_REQUIRED=2.4.66
+LIBDRM_REQUIRED=2.4.75
 LIBDRM_RADEON_REQUIRED=2.4.71
 LIBDRM_AMDGPU_REQUIRED=2.4.63
 LIBDRM_INTEL_REQUIRED=2.4.75
