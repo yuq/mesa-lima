@@ -64,7 +64,7 @@ brw_nir_lower_uniforms(nir_shader *nir, bool is_scalar)
 nir_shader *
 brw_create_nir(struct brw_context *brw,
                const struct gl_shader_program *shader_prog,
-               const struct gl_program *prog,
+               struct gl_program *prog,
                gl_shader_stage stage,
                bool is_scalar)
 {
@@ -106,6 +106,15 @@ brw_create_nir(struct brw_context *brw,
    NIR_PASS_V(nir, brw_nir_lower_uniforms, is_scalar);
 
    nir_shader_gather_info(nir, nir_shader_get_entrypoint(nir));
+
+   /* nir_shader may have been cloned so make sure shader_info is in sync */
+   if (nir->info != &prog->info) {
+      const char *name = prog->info.name;
+      const char *label = prog->info.label;
+      prog->info = *nir->info;
+      prog->info.name = name;
+      prog->info.label = label;
+   }
 
    if (shader_prog) {
       NIR_PASS_V(nir, nir_lower_samplers, shader_prog);
