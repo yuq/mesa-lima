@@ -379,6 +379,38 @@ void radv_DestroyInstance(
 	vk_free(&instance->alloc, instance);
 }
 
+static VkResult
+radv_enumerate_devices(struct radv_instance *instance)
+{
+	/* TODO: Check for more devices ? */
+	drmDevicePtr devices[8];
+	VkResult result = VK_ERROR_INCOMPATIBLE_DRIVER;
+	int max_devices;
+
+	instance->physicalDeviceCount = 0;
+
+	max_devices = drmGetDevices2(0, devices, sizeof(devices));
+	if (max_devices < 1)
+		return VK_ERROR_INCOMPATIBLE_DRIVER;
+
+	for (unsigned i = 0; i < (unsigned)max_devices; i++) {
+		if (devices[i]->available_nodes & 1 << DRM_NODE_RENDER &&
+		    devices[i]->bustype == DRM_BUS_PCI &&
+		    devices[i]->deviceinfo.pci->vendor_id == 0x1002) {
+
+			result = radv_physical_device_init(instance->physicalDevices +
+			                                   instance->physicalDeviceCount,
+			                                   instance,
+			                                   devices[i]->nodes[DRM_NODE_RENDER]);
+			if (result == VK_SUCCESS)
+				++instance->physicalDeviceCount;
+			else if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
+				return result;
+		}
+	}
+	return result;
+}
+
 VkResult radv_EnumeratePhysicalDevices(
 	VkInstance                                  _instance,
 	uint32_t*                                   pPhysicalDeviceCount,
@@ -388,18 +420,10 @@ VkResult radv_EnumeratePhysicalDevices(
 	VkResult result;
 
 	if (instance->physicalDeviceCount < 0) {
-		char path[20];
-		instance->physicalDeviceCount = 0;
-		for (unsigned i = 0; i < RADV_MAX_DRM_DEVICES; i++) {
-			snprintf(path, sizeof(path), "/dev/dri/renderD%d", 128 + i);
-			result = radv_physical_device_init(instance->physicalDevices +
-			                                   instance->physicalDeviceCount,
-			                                   instance, path);
-			if (result == VK_SUCCESS)
-				++instance->physicalDeviceCount;
-			else if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
-				return result;
-		}
+		result = radv_enumerate_devices(instance);
+		if (result != VK_SUCCESS &&
+		    result != VK_ERROR_INCOMPATIBLE_DRIVER)
+			return result;
 	}
 
 	if (!pPhysicalDevices) {
