@@ -55,11 +55,11 @@ _eglParseSyncAttribList(_EGLSync *sync, const EGLAttrib *attrib_list)
       case EGL_CL_EVENT_HANDLE_KHR:
          if (sync->Type == EGL_SYNC_CL_EVENT_KHR) {
             sync->CLEvent = val;
-            break;
+         } else {
+            err = EGL_BAD_ATTRIBUTE;
          }
-         /* fall through */
+         break;
       default:
-         (void) val;
          err = EGL_BAD_ATTRIBUTE;
          break;
       }
