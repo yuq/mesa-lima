@@ -6048,19 +6048,21 @@ static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary
 }
 
 static void si_shader_dump_stats(struct si_screen *sscreen,
-			         struct si_shader_config *conf,
-				 unsigned num_inputs,
-				 unsigned code_size,
+				 struct si_shader *shader,
 			         struct pipe_debug_callback *debug,
 			         unsigned processor,
 				 FILE *file)
 {
+	struct si_shader_config *conf = &shader->config;
+	unsigned num_inputs = shader->selector ? shader->selector->info.num_inputs : 0;
+	unsigned code_size = si_get_shader_binary_size(shader);
 	unsigned lds_increment = sscreen->b.chip_class >= CIK ? 512 : 256;
 	unsigned lds_per_wave = 0;
 	unsigned max_simd_waves = 10;
 
 	/* Compute LDS usage for PS. */
-	if (processor == PIPE_SHADER_FRAGMENT) {
+	switch (processor) {
+	case PIPE_SHADER_FRAGMENT:
 		/* The minimum usage per wave is (num_inputs * 48). The maximum
 		 * usage is (num_inputs * 48 * 16).
 		 * We can get anything in between and it varies between waves.
@@ -6073,6 +6075,15 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 		 */
 		lds_per_wave = conf->lds_size * lds_increment +
 			       align(num_inputs * 48, lds_increment);
+		break;
+	case PIPE_SHADER_COMPUTE:
+		if (shader->selector) {
+			unsigned max_workgroup_size =
+				si_get_max_workgroup_size(shader);
+			lds_per_wave = (conf->lds_size * lds_increment) /
+				       DIV_ROUND_UP(max_workgroup_size, 64);
+		}
+		break;
 	}
 
 	/* Compute the per-SIMD wave counts. */
@@ -6086,9 +6097,8 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	if (conf->num_vgprs)
 		max_simd_waves = MIN2(max_simd_waves, 256 / conf->num_vgprs);
 
-	/* LDS is 64KB per CU (4 SIMDs), divided into 16KB blocks per SIMD
-	 * that PS can use.
-	 */
+	/* LDS is 64KB per CU (4 SIMDs), which is 16KB per SIMD (usage above
+	 * 16KB makes some SIMDs unoccupied). */
 	if (lds_per_wave)
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
@@ -6192,10 +6202,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		fprintf(file, "\n");
 	}
 
-	si_shader_dump_stats(sscreen, &shader->config,
-			     shader->selector ? shader->selector->info.num_inputs : 0,
-			     si_get_shader_binary_size(shader), debug, processor,
-			     file);
+	si_shader_dump_stats(sscreen, shader, debug, processor, file);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
