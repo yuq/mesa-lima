@@ -539,6 +539,14 @@ nine_context_clear_render_target(struct NineDevice9 *device,
                                  UINT width,
                                  UINT height);
 
+void
+nine_context_range_upload(struct NineDevice9 *device,
+                          unsigned *counter,
+                          struct pipe_resource *res,
+                          unsigned offset,
+                          unsigned size,
+                          const void *data);
+
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type);
 

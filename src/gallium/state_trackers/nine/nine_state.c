@@ -2692,6 +2692,17 @@ CSMT_ITEM_NO_WAIT(nine_context_clear_render_target,
     context->pipe->clear_render_target(context->pipe, surf, &rgba, x, y, width, height, false);
 }
 
+CSMT_ITEM_NO_WAIT_WITH_COUNTER(nine_context_range_upload,
+                               ARG_BIND_RES(struct pipe_resource, res),
+                               ARG_VAL(unsigned, offset),
+                               ARG_VAL(unsigned, size),
+                               ARG_VAL(const void *, data))
+{
+    struct nine_context *context = &device->context;
+
+    context->pipe->buffer_subdata(context->pipe, res, 0, offset, size, data);
+}
+
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type)
 {
