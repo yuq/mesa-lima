@@ -464,7 +464,8 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 					A5XX_GRAS_CNTL_YCOORD |
 					A5XX_GRAS_CNTL_ZCOORD |
 					A5XX_GRAS_CNTL_WCOORD |
-					A5XX_GRAS_CNTL_UNK3));
+					A5XX_GRAS_CNTL_UNK3) |
+			COND(s[FS].v->frag_face, A5XX_GRAS_CNTL_UNK3));
 
 	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CONTROL0, 3);
 	OUT_RING(ring,
@@ -473,7 +474,8 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 					A5XX_RB_RENDER_CONTROL0_YCOORD |
 					A5XX_RB_RENDER_CONTROL0_ZCOORD |
 					A5XX_RB_RENDER_CONTROL0_WCOORD |
-					A5XX_RB_RENDER_CONTROL0_UNK3));
+					A5XX_RB_RENDER_CONTROL0_UNK3) |
+			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL0_UNK3));
 
 	OUT_RING(ring,
 			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL1_FACENESS));
