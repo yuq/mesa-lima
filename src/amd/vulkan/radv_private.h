@@ -336,6 +336,20 @@ radv_pipeline_cache_insert_shader(struct radv_device *device,
 				  struct radv_shader_variant *variant,
 				  const void *code, unsigned code_size);
 
+bool
+radv_create_shader_variants_from_pipeline_cache(struct radv_device *device,
+					        struct radv_pipeline_cache *cache,
+					        const unsigned char *sha1,
+					        struct radv_shader_variant **variants);
+
+void
+radv_pipeline_cache_insert_shaders(struct radv_device *device,
+				   struct radv_pipeline_cache *cache,
+				   const unsigned char *sha1,
+				   struct radv_shader_variant **variants,
+				   const void *const *codes,
+				   const unsigned *code_sizes);
+
 struct radv_meta_state {
 	VkAllocationCallbacks alloc;
 
