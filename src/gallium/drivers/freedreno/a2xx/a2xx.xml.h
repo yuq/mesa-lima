@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-12-05 13:03:25)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  90537 bytes, from 2016-11-29 17:10:44)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  92389 bytes, from 2016-12-06 22:06:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -445,12 +445,14 @@ static inline uint32_t A2XX_MH_ARBITER_CONFIG_IN_FLIGHT_LIMIT(uint32_t val)
 #define A2XX_A220_VSC_BIN_SIZE_WIDTH__SHIFT			0
 static inline uint32_t A2XX_A220_VSC_BIN_SIZE_WIDTH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A2XX_A220_VSC_BIN_SIZE_WIDTH__SHIFT) & A2XX_A220_VSC_BIN_SIZE_WIDTH__MASK;
 }
 #define A2XX_A220_VSC_BIN_SIZE_HEIGHT__MASK			0x000003e0
 #define A2XX_A220_VSC_BIN_SIZE_HEIGHT__SHIFT			5
 static inline uint32_t A2XX_A220_VSC_BIN_SIZE_HEIGHT(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A2XX_A220_VSC_BIN_SIZE_HEIGHT__SHIFT) & A2XX_A220_VSC_BIN_SIZE_HEIGHT__MASK;
 }
 
@@ -621,6 +623,7 @@ static inline uint32_t A2XX_RB_COLOR_INFO_SWAP(uint32_t val)
 #define A2XX_RB_COLOR_INFO_BASE__SHIFT				12
 static inline uint32_t A2XX_RB_COLOR_INFO_BASE(uint32_t val)
 {
+	assert(!(val & 0x3ff));
 	return ((val >> 10) << A2XX_RB_COLOR_INFO_BASE__SHIFT) & A2XX_RB_COLOR_INFO_BASE__MASK;
 }
 
@@ -635,6 +638,7 @@ static inline uint32_t A2XX_RB_DEPTH_INFO_DEPTH_FORMAT(enum adreno_rb_depth_form
 #define A2XX_RB_DEPTH_INFO_DEPTH_BASE__SHIFT			12
 static inline uint32_t A2XX_RB_DEPTH_INFO_DEPTH_BASE(uint32_t val)
 {
+	assert(!(val & 0x3ff));
 	return ((val >> 10) << A2XX_RB_DEPTH_INFO_DEPTH_BASE__SHIFT) & A2XX_RB_DEPTH_INFO_DEPTH_BASE__MASK;
 }
 
@@ -1432,6 +1436,7 @@ static inline uint32_t A2XX_RB_COPY_CONTROL_CLEAR_MASK(uint32_t val)
 #define A2XX_RB_COPY_DEST_PITCH__SHIFT				0
 static inline uint32_t A2XX_RB_COPY_DEST_PITCH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A2XX_RB_COPY_DEST_PITCH__SHIFT) & A2XX_RB_COPY_DEST_PITCH__MASK;
 }
 
@@ -1539,6 +1544,7 @@ static inline uint32_t A2XX_SQ_TEX_0_CLAMP_Z(enum sq_tex_clamp val)
 #define A2XX_SQ_TEX_0_PITCH__SHIFT				22
 static inline uint32_t A2XX_SQ_TEX_0_PITCH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A2XX_SQ_TEX_0_PITCH__SHIFT) & A2XX_SQ_TEX_0_PITCH__MASK;
 }
 

@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-12-05 13:03:25)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  90537 bytes, from 2016-11-29 17:10:44)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  92389 bytes, from 2016-12-06 22:06:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -1164,6 +1164,7 @@ static inline uint32_t A3XX_RB_MODE_CONTROL_MRT(uint32_t val)
 #define A3XX_RB_RENDER_CONTROL_BIN_WIDTH__SHIFT			4
 static inline uint32_t A3XX_RB_RENDER_CONTROL_BIN_WIDTH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_RB_RENDER_CONTROL_BIN_WIDTH__SHIFT) & A3XX_RB_RENDER_CONTROL_BIN_WIDTH__MASK;
 }
 #define A3XX_RB_RENDER_CONTROL_DISABLE_COLOR_PIPE		0x00001000
@@ -1262,6 +1263,7 @@ static inline uint32_t A3XX_RB_MRT_BUF_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 #define A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__SHIFT		17
 static inline uint32_t A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__SHIFT) & A3XX_RB_MRT_BUF_INFO_COLOR_BUF_PITCH__MASK;
 }
 
@@ -1270,6 +1272,7 @@ static inline uint32_t REG_A3XX_RB_MRT_BUF_BASE(uint32_t i0) { return 0x000020c6
 #define A3XX_RB_MRT_BUF_BASE_COLOR_BUF_BASE__SHIFT		4
 static inline uint32_t A3XX_RB_MRT_BUF_BASE_COLOR_BUF_BASE(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_RB_MRT_BUF_BASE_COLOR_BUF_BASE__SHIFT) & A3XX_RB_MRT_BUF_BASE_COLOR_BUF_BASE__MASK;
 }
 
@@ -1402,6 +1405,7 @@ static inline uint32_t A3XX_RB_COPY_CONTROL_FASTCLEAR(uint32_t val)
 #define A3XX_RB_COPY_CONTROL_GMEM_BASE__SHIFT			14
 static inline uint32_t A3XX_RB_COPY_CONTROL_GMEM_BASE(uint32_t val)
 {
+	assert(!(val & 0x3fff));
 	return ((val >> 14) << A3XX_RB_COPY_CONTROL_GMEM_BASE__SHIFT) & A3XX_RB_COPY_CONTROL_GMEM_BASE__MASK;
 }
 
@@ -1410,6 +1414,7 @@ static inline uint32_t A3XX_RB_COPY_CONTROL_GMEM_BASE(uint32_t val)
 #define A3XX_RB_COPY_DEST_BASE_BASE__SHIFT			4
 static inline uint32_t A3XX_RB_COPY_DEST_BASE_BASE(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_RB_COPY_DEST_BASE_BASE__SHIFT) & A3XX_RB_COPY_DEST_BASE_BASE__MASK;
 }
 
@@ -1418,6 +1423,7 @@ static inline uint32_t A3XX_RB_COPY_DEST_BASE_BASE(uint32_t val)
 #define A3XX_RB_COPY_DEST_PITCH_PITCH__SHIFT			0
 static inline uint32_t A3XX_RB_COPY_DEST_PITCH_PITCH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_RB_COPY_DEST_PITCH_PITCH__SHIFT) & A3XX_RB_COPY_DEST_PITCH_PITCH__MASK;
 }
 
@@ -1486,6 +1492,7 @@ static inline uint32_t A3XX_RB_DEPTH_INFO_DEPTH_FORMAT(enum adreno_rb_depth_form
 #define A3XX_RB_DEPTH_INFO_DEPTH_BASE__SHIFT			11
 static inline uint32_t A3XX_RB_DEPTH_INFO_DEPTH_BASE(uint32_t val)
 {
+	assert(!(val & 0xfff));
 	return ((val >> 12) << A3XX_RB_DEPTH_INFO_DEPTH_BASE__SHIFT) & A3XX_RB_DEPTH_INFO_DEPTH_BASE__MASK;
 }
 
@@ -1494,6 +1501,7 @@ static inline uint32_t A3XX_RB_DEPTH_INFO_DEPTH_BASE(uint32_t val)
 #define A3XX_RB_DEPTH_PITCH__SHIFT				0
 static inline uint32_t A3XX_RB_DEPTH_PITCH(uint32_t val)
 {
+	assert(!(val & 0x7));
 	return ((val >> 3) << A3XX_RB_DEPTH_PITCH__SHIFT) & A3XX_RB_DEPTH_PITCH__MASK;
 }
 
@@ -1557,6 +1565,7 @@ static inline uint32_t A3XX_RB_STENCIL_CONTROL_ZFAIL_BF(enum adreno_stencil_op v
 #define A3XX_RB_STENCIL_INFO_STENCIL_BASE__SHIFT		11
 static inline uint32_t A3XX_RB_STENCIL_INFO_STENCIL_BASE(uint32_t val)
 {
+	assert(!(val & 0xfff));
 	return ((val >> 12) << A3XX_RB_STENCIL_INFO_STENCIL_BASE__SHIFT) & A3XX_RB_STENCIL_INFO_STENCIL_BASE__MASK;
 }
 
@@ -1565,6 +1574,7 @@ static inline uint32_t A3XX_RB_STENCIL_INFO_STENCIL_BASE(uint32_t val)
 #define A3XX_RB_STENCIL_PITCH__SHIFT				0
 static inline uint32_t A3XX_RB_STENCIL_PITCH(uint32_t val)
 {
+	assert(!(val & 0x7));
 	return ((val >> 3) << A3XX_RB_STENCIL_PITCH__SHIFT) & A3XX_RB_STENCIL_PITCH__MASK;
 }
 
@@ -2482,6 +2492,7 @@ static inline uint32_t A3XX_SP_VS_PVT_MEM_ADDR_REG_BURSTLEN(uint32_t val)
 #define A3XX_SP_VS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS__SHIFT	5
 static inline uint32_t A3XX_SP_VS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_SP_VS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS__SHIFT) & A3XX_SP_VS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS__MASK;
 }
 
@@ -2620,6 +2631,7 @@ static inline uint32_t A3XX_SP_FS_PVT_MEM_ADDR_REG_BURSTLEN(uint32_t val)
 #define A3XX_SP_FS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS__SHIFT	5
 static inline uint32_t A3XX_SP_FS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_SP_FS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS__SHIFT) & A3XX_SP_FS_PVT_MEM_ADDR_REG_SHADERSTARTADDRESS__MASK;
 }
 
@@ -2800,12 +2812,14 @@ static inline uint32_t A3XX_TPL1_TP_FS_TEX_OFFSET_BASETABLEPTR(uint32_t val)
 #define A3XX_VSC_BIN_SIZE_WIDTH__SHIFT				0
 static inline uint32_t A3XX_VSC_BIN_SIZE_WIDTH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_VSC_BIN_SIZE_WIDTH__SHIFT) & A3XX_VSC_BIN_SIZE_WIDTH__MASK;
 }
 #define A3XX_VSC_BIN_SIZE_HEIGHT__MASK				0x000003e0
 #define A3XX_VSC_BIN_SIZE_HEIGHT__SHIFT				5
 static inline uint32_t A3XX_VSC_BIN_SIZE_HEIGHT(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A3XX_VSC_BIN_SIZE_HEIGHT__SHIFT) & A3XX_VSC_BIN_SIZE_HEIGHT__MASK;
 }
 
@@ -3202,6 +3216,7 @@ static inline uint32_t A3XX_TEX_CONST_2_SWAP(enum a3xx_color_swap val)
 #define A3XX_TEX_CONST_3_LAYERSZ1__SHIFT			0
 static inline uint32_t A3XX_TEX_CONST_3_LAYERSZ1(uint32_t val)
 {
+	assert(!(val & 0xfff));
 	return ((val >> 12) << A3XX_TEX_CONST_3_LAYERSZ1__SHIFT) & A3XX_TEX_CONST_3_LAYERSZ1__MASK;
 }
 #define A3XX_TEX_CONST_3_DEPTH__MASK				0x0ffe0000
@@ -3214,6 +3229,7 @@ static inline uint32_t A3XX_TEX_CONST_3_DEPTH(uint32_t val)
 #define A3XX_TEX_CONST_3_LAYERSZ2__SHIFT			28
 static inline uint32_t A3XX_TEX_CONST_3_LAYERSZ2(uint32_t val)
 {
+	assert(!(val & 0xfff));
 	return ((val >> 12) << A3XX_TEX_CONST_3_LAYERSZ2__SHIFT) & A3XX_TEX_CONST_3_LAYERSZ2__MASK;
 }
 

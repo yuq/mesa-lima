@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-11-26 23:01:08)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-12-05 13:03:25)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  90537 bytes, from 2016-11-29 17:10:44)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  92389 bytes, from 2016-12-06 22:06:14)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -49,6 +49,7 @@ enum a5xx_color_fmt {
 	RB5_R4G4B4A4_UNORM = 8,
 	RB5_R5G5B5A1_UNORM = 10,
 	RB5_R5G6B5_UNORM = 14,
+	RB5_R8G8_UNORM = 15,
 	RB5_R16_FLOAT = 23,
 	RB5_R8G8B8A8_UNORM = 48,
 	RB5_R8G8B8_UNORM = 49,
@@ -1911,6 +1912,11 @@ static inline uint32_t A5XX_VSC_BIN_SIZE_Y(uint32_t val)
 
 #define REG_A5XX_GRAS_CNTL					0x0000e005
 #define A5XX_GRAS_CNTL_VARYING					0x00000001
+#define A5XX_GRAS_CNTL_UNK3					0x00000008
+#define A5XX_GRAS_CNTL_XCOORD					0x00000040
+#define A5XX_GRAS_CNTL_YCOORD					0x00000080
+#define A5XX_GRAS_CNTL_ZCOORD					0x00000100
+#define A5XX_GRAS_CNTL_WCOORD					0x00000200
 
 #define REG_A5XX_GRAS_CL_GUARDBAND_CLIP_ADJ			0x0000e006
 #define A5XX_GRAS_CL_GUARDBAND_CLIP_ADJ_HORZ__MASK		0x000003ff
@@ -2010,7 +2016,7 @@ static inline uint32_t A5XX_GRAS_SU_POINT_SIZE(float val)
 #define REG_A5XX_UNKNOWN_E093					0x0000e093
 
 #define REG_A5XX_GRAS_SU_DEPTH_PLANE_CNTL			0x0000e094
-#define A5XX_GRAS_SU_DEPTH_PLANE_CNTL_ALPHA_TEST_ENABLE		0x00000001
+#define A5XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z		0x00000001
 
 #define REG_A5XX_GRAS_SU_POLY_OFFSET_SCALE			0x0000e095
 #define A5XX_GRAS_SU_POLY_OFFSET_SCALE__MASK			0xffffffff
@@ -2177,12 +2183,14 @@ static inline uint32_t A5XX_GRAS_SC_WINDOW_SCISSOR_BR_Y(uint32_t val)
 #define A5XX_RB_CNTL_WIDTH__SHIFT				0
 static inline uint32_t A5XX_RB_CNTL_WIDTH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A5XX_RB_CNTL_WIDTH__SHIFT) & A5XX_RB_CNTL_WIDTH__MASK;
 }
 #define A5XX_RB_CNTL_HEIGHT__MASK				0x0001fe00
 #define A5XX_RB_CNTL_HEIGHT__SHIFT				9
 static inline uint32_t A5XX_RB_CNTL_HEIGHT(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A5XX_RB_CNTL_HEIGHT__SHIFT) & A5XX_RB_CNTL_HEIGHT__MASK;
 }
 #define A5XX_RB_CNTL_BYPASS					0x00020000
@@ -2223,6 +2231,7 @@ static inline uint32_t A5XX_RB_DEST_MSAA_CNTL_SAMPLES(enum a3xx_msaa_samples val
 
 #define REG_A5XX_RB_RENDER_CONTROL0				0x0000e144
 #define A5XX_RB_RENDER_CONTROL0_VARYING				0x00000001
+#define A5XX_RB_RENDER_CONTROL0_UNK3				0x00000008
 #define A5XX_RB_RENDER_CONTROL0_XCOORD				0x00000040
 #define A5XX_RB_RENDER_CONTROL0_YCOORD				0x00000080
 #define A5XX_RB_RENDER_CONTROL0_ZCOORD				0x00000100
@@ -2366,6 +2375,7 @@ static inline uint32_t REG_A5XX_RB_MRT_PITCH(uint32_t i0) { return 0x0000e153 + 
 #define A5XX_RB_MRT_PITCH__SHIFT				0
 static inline uint32_t A5XX_RB_MRT_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_MRT_PITCH__SHIFT) & A5XX_RB_MRT_PITCH__MASK;
 }
 
@@ -2374,6 +2384,7 @@ static inline uint32_t REG_A5XX_RB_MRT_ARRAY_PITCH(uint32_t i0) { return 0x0000e
 #define A5XX_RB_MRT_ARRAY_PITCH__SHIFT				0
 static inline uint32_t A5XX_RB_MRT_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_MRT_ARRAY_PITCH__SHIFT) & A5XX_RB_MRT_ARRAY_PITCH__MASK;
 }
 
@@ -2554,6 +2565,7 @@ static inline uint32_t A5XX_RB_DEPTH_BUFFER_INFO_DEPTH_FORMAT(enum a5xx_depth_fo
 #define A5XX_RB_DEPTH_BUFFER_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_DEPTH_BUFFER_PITCH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A5XX_RB_DEPTH_BUFFER_PITCH__SHIFT) & A5XX_RB_DEPTH_BUFFER_PITCH__MASK;
 }
 
@@ -2562,6 +2574,7 @@ static inline uint32_t A5XX_RB_DEPTH_BUFFER_PITCH(uint32_t val)
 #define A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__SHIFT) & A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__MASK;
 }
 
@@ -2630,6 +2643,7 @@ static inline uint32_t A5XX_RB_STENCIL_CONTROL_ZFAIL_BF(enum adreno_stencil_op v
 #define A5XX_RB_STENCIL_PITCH__SHIFT				0
 static inline uint32_t A5XX_RB_STENCIL_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_STENCIL_PITCH__SHIFT) & A5XX_RB_STENCIL_PITCH__MASK;
 }
 
@@ -2638,6 +2652,7 @@ static inline uint32_t A5XX_RB_STENCIL_PITCH(uint32_t val)
 #define A5XX_RB_STENCIL_ARRAY_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_STENCIL_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_STENCIL_ARRAY_PITCH__SHIFT) & A5XX_RB_STENCIL_ARRAY_PITCH__MASK;
 }
 
@@ -2727,6 +2742,7 @@ static inline uint32_t A5XX_RB_RESOLVE_CNTL_2_Y(uint32_t val)
 #define A5XX_RB_BLIT_DST_PITCH__SHIFT				0
 static inline uint32_t A5XX_RB_BLIT_DST_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_BLIT_DST_PITCH__SHIFT) & A5XX_RB_BLIT_DST_PITCH__MASK;
 }
 
@@ -2735,6 +2751,7 @@ static inline uint32_t A5XX_RB_BLIT_DST_PITCH(uint32_t val)
 #define A5XX_RB_BLIT_DST_ARRAY_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_BLIT_DST_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_BLIT_DST_ARRAY_PITCH__SHIFT) & A5XX_RB_BLIT_DST_ARRAY_PITCH__MASK;
 }
 
@@ -2772,6 +2789,7 @@ static inline uint32_t REG_A5XX_RB_MRT_FLAG_BUFFER_PITCH(uint32_t i0) { return 0
 #define A5XX_RB_MRT_FLAG_BUFFER_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_MRT_FLAG_BUFFER_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_MRT_FLAG_BUFFER_PITCH__SHIFT) & A5XX_RB_MRT_FLAG_BUFFER_PITCH__MASK;
 }
 
@@ -2780,6 +2798,7 @@ static inline uint32_t REG_A5XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH(uint32_t i0) { re
 #define A5XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH__SHIFT		0
 static inline uint32_t A5XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH__SHIFT) & A5XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH__MASK;
 }
 
@@ -2792,6 +2811,7 @@ static inline uint32_t A5XX_RB_MRT_FLAG_BUFFER_ARRAY_PITCH(uint32_t val)
 #define A5XX_RB_BLIT_FLAG_DST_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_BLIT_FLAG_DST_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_BLIT_FLAG_DST_PITCH__SHIFT) & A5XX_RB_BLIT_FLAG_DST_PITCH__MASK;
 }
 
@@ -2800,6 +2820,7 @@ static inline uint32_t A5XX_RB_BLIT_FLAG_DST_PITCH(uint32_t val)
 #define A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH__SHIFT		0
 static inline uint32_t A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0x3f));
 	return ((val >> 6) << A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH__SHIFT) & A5XX_RB_BLIT_FLAG_DST_ARRAY_PITCH__MASK;
 }
 
@@ -3497,7 +3518,13 @@ static inline uint32_t A5XX_HLSQ_CS_CNTL_INSTRLEN(uint32_t val)
 
 #define REG_A5XX_HLSQ_CONTEXT_SWITCH_CS_SW_4			0x0000e7dd
 
-#define REG_A5XX_RB_2D_DST_FILL					0x00002101
+#define REG_A5XX_RB_2D_SRC_SOLID_DW0				0x00002101
+
+#define REG_A5XX_RB_2D_SRC_SOLID_DW1				0x00002102
+
+#define REG_A5XX_RB_2D_SRC_SOLID_DW2				0x00002103
+
+#define REG_A5XX_RB_2D_SRC_SOLID_DW3				0x00002104
 
 #define REG_A5XX_RB_2D_SRC_INFO					0x00002107
 #define A5XX_RB_2D_SRC_INFO_COLOR_FORMAT__MASK			0x000000ff
@@ -3517,6 +3544,22 @@ static inline uint32_t A5XX_RB_2D_SRC_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 
 #define REG_A5XX_RB_2D_SRC_HI					0x00002109
 
+#define REG_A5XX_RB_2D_SRC_SIZE					0x0000210a
+#define A5XX_RB_2D_SRC_SIZE_PITCH__MASK				0x0000ffff
+#define A5XX_RB_2D_SRC_SIZE_PITCH__SHIFT			0
+static inline uint32_t A5XX_RB_2D_SRC_SIZE_PITCH(uint32_t val)
+{
+	assert(!(val & 0x3f));
+	return ((val >> 6) << A5XX_RB_2D_SRC_SIZE_PITCH__SHIFT) & A5XX_RB_2D_SRC_SIZE_PITCH__MASK;
+}
+#define A5XX_RB_2D_SRC_SIZE_ARRAY_PITCH__MASK			0xffff0000
+#define A5XX_RB_2D_SRC_SIZE_ARRAY_PITCH__SHIFT			16
+static inline uint32_t A5XX_RB_2D_SRC_SIZE_ARRAY_PITCH(uint32_t val)
+{
+	assert(!(val & 0x3f));
+	return ((val >> 6) << A5XX_RB_2D_SRC_SIZE_ARRAY_PITCH__SHIFT) & A5XX_RB_2D_SRC_SIZE_ARRAY_PITCH__MASK;
+}
+
 #define REG_A5XX_RB_2D_DST_INFO					0x00002110
 #define A5XX_RB_2D_DST_INFO_COLOR_FORMAT__MASK			0x000000ff
 #define A5XX_RB_2D_DST_INFO_COLOR_FORMAT__SHIFT			0
@@ -3531,13 +3574,29 @@ static inline uint32_t A5XX_RB_2D_DST_INFO_COLOR_SWAP(enum a3xx_color_swap val)
 	return ((val) << A5XX_RB_2D_DST_INFO_COLOR_SWAP__SHIFT) & A5XX_RB_2D_DST_INFO_COLOR_SWAP__MASK;
 }
 
-#define REG_A5XX_RB_2D_SRC_FLAGS_LO				0x00002140
-
-#define REG_A5XX_RB_2D_SRC_FLAGS_HI				0x00002141
-
 #define REG_A5XX_RB_2D_DST_LO					0x00002111
 
 #define REG_A5XX_RB_2D_DST_HI					0x00002112
+
+#define REG_A5XX_RB_2D_DST_SIZE					0x00002113
+#define A5XX_RB_2D_DST_SIZE_PITCH__MASK				0x0000ffff
+#define A5XX_RB_2D_DST_SIZE_PITCH__SHIFT			0
+static inline uint32_t A5XX_RB_2D_DST_SIZE_PITCH(uint32_t val)
+{
+	assert(!(val & 0x3f));
+	return ((val >> 6) << A5XX_RB_2D_DST_SIZE_PITCH__SHIFT) & A5XX_RB_2D_DST_SIZE_PITCH__MASK;
+}
+#define A5XX_RB_2D_DST_SIZE_ARRAY_PITCH__MASK			0xffff0000
+#define A5XX_RB_2D_DST_SIZE_ARRAY_PITCH__SHIFT			16
+static inline uint32_t A5XX_RB_2D_DST_SIZE_ARRAY_PITCH(uint32_t val)
+{
+	assert(!(val & 0x3f));
+	return ((val >> 6) << A5XX_RB_2D_DST_SIZE_ARRAY_PITCH__SHIFT) & A5XX_RB_2D_DST_SIZE_ARRAY_PITCH__MASK;
+}
+
+#define REG_A5XX_RB_2D_SRC_FLAGS_LO				0x00002140
+
+#define REG_A5XX_RB_2D_SRC_FLAGS_HI				0x00002141
 
 #define REG_A5XX_RB_2D_DST_FLAGS_LO				0x00002143
 
@@ -3570,6 +3629,12 @@ static inline uint32_t A5XX_GRAS_2D_DST_INFO_COLOR_SWAP(enum a3xx_color_swap val
 {
 	return ((val) << A5XX_GRAS_2D_DST_INFO_COLOR_SWAP__SHIFT) & A5XX_GRAS_2D_DST_INFO_COLOR_SWAP__MASK;
 }
+
+#define REG_A5XX_UNKNOWN_2100					0x00002100
+
+#define REG_A5XX_UNKNOWN_2180					0x00002180
+
+#define REG_A5XX_UNKNOWN_2184					0x00002184
 
 #define REG_A5XX_TEX_SAMP_0					0x00000000
 #define A5XX_TEX_SAMP_0_MIPFILTER_LINEAR_NEAR			0x00000001
@@ -3727,6 +3792,7 @@ static inline uint32_t A5XX_TEX_CONST_2_TYPE(enum a5xx_tex_type val)
 #define A5XX_TEX_CONST_3_ARRAY_PITCH__SHIFT			0
 static inline uint32_t A5XX_TEX_CONST_3_ARRAY_PITCH(uint32_t val)
 {
+	assert(!(val & 0xfff));
 	return ((val >> 12) << A5XX_TEX_CONST_3_ARRAY_PITCH__SHIFT) & A5XX_TEX_CONST_3_ARRAY_PITCH__MASK;
 }
 #define A5XX_TEX_CONST_3_FLAG					0x10000000
@@ -3736,6 +3802,7 @@ static inline uint32_t A5XX_TEX_CONST_3_ARRAY_PITCH(uint32_t val)
 #define A5XX_TEX_CONST_4_BASE_LO__SHIFT				5
 static inline uint32_t A5XX_TEX_CONST_4_BASE_LO(uint32_t val)
 {
+	assert(!(val & 0x1f));
 	return ((val >> 5) << A5XX_TEX_CONST_4_BASE_LO__SHIFT) & A5XX_TEX_CONST_4_BASE_LO__MASK;
 }
 
