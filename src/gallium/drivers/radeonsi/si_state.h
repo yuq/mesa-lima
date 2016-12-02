@@ -217,6 +217,8 @@ enum {
 struct si_descriptors {
 	/* The list of descriptors in malloc'd memory. */
 	uint32_t *list;
+	/* The list in mapped GPU memory. */
+	uint32_t *gpu_list;
 	/* The size of one descriptor. */
 	unsigned element_dw_size;
 	/* The maximum number of descriptors. */

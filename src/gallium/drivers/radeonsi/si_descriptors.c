@@ -241,6 +241,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 			return false; /* skip the draw call */
 
 		util_memcpy_cpu_to_le32(ptr, desc->list, list_size);
+		desc->gpu_list = ptr;
 
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
 	                            RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);

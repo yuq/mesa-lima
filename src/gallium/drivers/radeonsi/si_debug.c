@@ -674,6 +674,112 @@ static void si_dump_framebuffer(struct si_context *sctx, FILE *f)
 	}
 }
 
+static void si_dump_descriptor_list(struct si_descriptors *desc,
+				    const char *shader_name,
+				    const char *elem_name,
+				    unsigned num_elements,
+				    FILE *f)
+{
+	unsigned i, j;
+	uint32_t *cpu_list = desc->list;
+	uint32_t *gpu_list = desc->gpu_list;
+	const char *list_note = "GPU list";
+
+	if (!gpu_list) {
+		gpu_list = cpu_list;
+		list_note = "CPU list";
+	}
+
+	for (i = 0; i < num_elements; i++) {
+		fprintf(f, COLOR_GREEN "%s%s slot %u (%s):" COLOR_RESET "\n",
+			shader_name, elem_name, i, list_note);
+
+		switch (desc->element_dw_size) {
+		case 4:
+			for (j = 0; j < 4; j++)
+				si_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
+					    gpu_list[j], 0xffffffff);
+			break;
+		case 8:
+			for (j = 0; j < 8; j++)
+				si_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
+					    gpu_list[j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
+			for (j = 0; j < 4; j++)
+				si_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
+					    gpu_list[4+j], 0xffffffff);
+			break;
+		case 16:
+			for (j = 0; j < 8; j++)
+				si_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
+					    gpu_list[j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    Buffer:" COLOR_RESET "\n");
+			for (j = 0; j < 4; j++)
+				si_dump_reg(f, R_008F00_SQ_BUF_RSRC_WORD0 + j*4,
+					    gpu_list[4+j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    FMASK:" COLOR_RESET "\n");
+			for (j = 0; j < 8; j++)
+				si_dump_reg(f, R_008F10_SQ_IMG_RSRC_WORD0 + j*4,
+					    gpu_list[8+j], 0xffffffff);
+
+			fprintf(f, COLOR_CYAN "    Sampler state:" COLOR_RESET "\n");
+			for (j = 0; j < 4; j++)
+				si_dump_reg(f, R_008F30_SQ_IMG_SAMP_WORD0 + j*4,
+					    gpu_list[12+j], 0xffffffff);
+			break;
+		}
+
+		if (memcmp(gpu_list, cpu_list, desc->element_dw_size * 4) != 0) {
+			fprintf(f, COLOR_RED "!!!!! This slot was corrupted in GPU memory !!!!!"
+				COLOR_RESET "\n");
+		}
+
+		fprintf(f, "\n");
+		gpu_list += desc->element_dw_size;
+		cpu_list += desc->element_dw_size;
+	}
+}
+
+static void si_dump_descriptors(struct si_context *sctx,
+				struct si_shader_ctx_state *state,
+				FILE *f)
+{
+	if (!state->cso || !state->current)
+		return;
+
+	unsigned type = state->cso->type;
+	const struct tgsi_shader_info *info = &state->cso->info;
+	struct si_descriptors *descs =
+		&sctx->descriptors[SI_DESCS_FIRST_SHADER +
+				   type * SI_NUM_SHADER_DESCS];
+	static const char *shader_name[] = {"VS", "PS", "GS", "TCS", "TES", "CS"};
+
+	static const char *elem_name[] = {
+		" - Constant buffer",
+		" - Shader buffer",
+		" - Sampler",
+		" - Image",
+	};
+	unsigned num_elements[] = {
+		util_last_bit(info->const_buffers_declared),
+		util_last_bit(info->shader_buffers_declared),
+		util_last_bit(info->samplers_declared),
+		util_last_bit(info->images_declared),
+	};
+
+	if (type == PIPE_SHADER_VERTEX) {
+		si_dump_descriptor_list(&sctx->vertex_buffers, shader_name[type],
+					" - Vertex buffer", info->num_inputs, f);
+	}
+
+	for (unsigned i = 0; i < SI_NUM_SHADER_DESCS; ++i, ++descs)
+		si_dump_descriptor_list(descs, shader_name[type], elem_name[i],
+					num_elements[i], f);
+}
+
 static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 				unsigned flags)
 {
@@ -691,6 +797,14 @@ static void si_dump_debug_state(struct pipe_context *ctx, FILE *f,
 		si_dump_shader(sctx->screen, &sctx->tes_shader, f);
 		si_dump_shader(sctx->screen, &sctx->gs_shader, f);
 		si_dump_shader(sctx->screen, &sctx->ps_shader, f);
+
+		si_dump_descriptor_list(&sctx->descriptors[SI_DESCS_RW_BUFFERS],
+					"", "RW buffers", SI_NUM_RW_BUFFERS, f);
+		si_dump_descriptors(sctx, &sctx->vs_shader, f);
+		si_dump_descriptors(sctx, &sctx->tcs_shader, f);
+		si_dump_descriptors(sctx, &sctx->tes_shader, f);
+		si_dump_descriptors(sctx, &sctx->gs_shader, f);
+		si_dump_descriptors(sctx, &sctx->ps_shader, f);
 	}
 
 	if (flags & PIPE_DUMP_LAST_COMMAND_BUFFER) {
