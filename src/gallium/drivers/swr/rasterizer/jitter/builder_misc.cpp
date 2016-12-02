@@ -30,6 +30,7 @@
 #include "builder.h"
 #include "common/rdtsc_buckets.h"
 
+#include <cstdarg>
 
 namespace SwrJit
 {
