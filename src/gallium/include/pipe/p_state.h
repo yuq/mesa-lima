@@ -364,13 +364,13 @@ struct pipe_sampler_state
    unsigned wrap_s:3;            /**< PIPE_TEX_WRAP_x */
    unsigned wrap_t:3;            /**< PIPE_TEX_WRAP_x */
    unsigned wrap_r:3;            /**< PIPE_TEX_WRAP_x */
-   unsigned min_img_filter:2;    /**< PIPE_TEX_FILTER_x */
+   unsigned min_img_filter:1;    /**< PIPE_TEX_FILTER_x */
    unsigned min_mip_filter:2;    /**< PIPE_TEX_MIPFILTER_x */
-   unsigned mag_img_filter:2;    /**< PIPE_TEX_FILTER_x */
+   unsigned mag_img_filter:1;    /**< PIPE_TEX_FILTER_x */
    unsigned compare_mode:1;      /**< PIPE_TEX_COMPARE_x */
    unsigned compare_func:3;      /**< PIPE_FUNC_x */
    unsigned normalized_coords:1; /**< Are coords normalized to [0,1]? */
-   unsigned max_anisotropy:6;
+   unsigned max_anisotropy:5;
    unsigned seamless_cube_map:1;
    float lod_bias;               /**< LOD/lambda bias */
    float min_lod, max_lod;       /**< LOD clamp range, after bias */
