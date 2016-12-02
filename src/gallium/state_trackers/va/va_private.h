@@ -221,6 +221,20 @@ typedef struct {
 } vlVaSubpicture;
 
 typedef struct {
+   VABufferType type;
+   unsigned int size;
+   unsigned int num_elements;
+   void *data;
+   struct {
+      struct pipe_resource *resource;
+      struct pipe_transfer *transfer;
+   } derived_surface;
+   unsigned int export_refcount;
+   VABufferInfo export_state;
+   unsigned int coded_size;
+} vlVaBuffer;
+
+typedef struct {
    struct pipe_video_codec templat, *decoder;
    struct pipe_video_buffer *target;
    union {
@@ -243,7 +257,7 @@ typedef struct {
    } mpeg4;
 
    struct vl_deint_filter *deint;
-   struct vlVaBuffer *coded_buf;
+   vlVaBuffer *coded_buf;
    int target_id;
    bool first_single_submitted;
    int gop_coeff;
@@ -255,20 +269,6 @@ typedef struct {
    enum pipe_h264_enc_rate_control_method rc;
    unsigned int rt_format;
 } vlVaConfig;
-
-typedef struct {
-   VABufferType type;
-   unsigned int size;
-   unsigned int num_elements;
-   void *data;
-   struct {
-      struct pipe_resource *resource;
-      struct pipe_transfer *transfer;
-   } derived_surface;
-   unsigned int export_refcount;
-   VABufferInfo export_state;
-   unsigned int coded_size;
-} vlVaBuffer;
 
 typedef struct {
    struct pipe_video_buffer templat, *buffer;
