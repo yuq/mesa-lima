@@ -3280,6 +3280,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
  * point in the program by emitting empty inline assembly that is marked as
  * having side effects.
  */
+#if 0 /* unused currently */
 static void emit_optimization_barrier(struct si_shader_context *ctx)
 {
 	LLVMBuilderRef builder = ctx->gallivm.builder;
@@ -3287,7 +3288,10 @@ static void emit_optimization_barrier(struct si_shader_context *ctx)
 	LLVMValueRef inlineasm = LLVMConstInlineAsm(ftype, "", "", true, false);
 	LLVMBuildCall(builder, inlineasm, NULL, 0, "");
 }
+#endif
 
+/* Combine these with & instead of |. */
+#define LGKM_CNT 0x07f
 #define VM_CNT 0xf70
 
 static void emit_waitcnt(struct si_shader_context *ctx, unsigned simm16)
@@ -5333,7 +5337,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	 * always fits into a single wave.
 	 */
 	if (ctx->type == PIPE_SHADER_TESS_CTRL) {
-		emit_optimization_barrier(ctx);
+		emit_waitcnt(ctx, LGKM_CNT & VM_CNT);
 		return;
 	}
 
