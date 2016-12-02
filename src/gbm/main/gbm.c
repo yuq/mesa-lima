@@ -234,6 +234,24 @@ gbm_bo_get_plane_count(struct gbm_bo *bo)
    return bo->gbm->bo_get_planes(bo);
 }
 
+/** Get the handle for the specified plane of the buffer object
+ *
+ * This function gets the handle for any plane associated with the BO. When
+ * dealing with multi-planar formats, or formats which might have implicit
+ * planes based on different underlying hardware it is necessary for the client
+ * to be able to get this information to pass to the DRM.
+ *
+ * \param bo The buffer object
+ * \param plane the plane to get a handle for
+ *
+ * \sa gbm_bo_get_handle()
+ */
+GBM_EXPORT union gbm_bo_handle
+gbm_bo_get_handle_for_plane(struct gbm_bo *bo, int plane)
+{
+   return bo->gbm->bo_get_handle(bo, plane);
+}
+
 /** Write data into the buffer object
  *
  * If the buffer object was created with the GBM_BO_USE_WRITE flag,
