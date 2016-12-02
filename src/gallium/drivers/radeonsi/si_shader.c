@@ -5317,7 +5317,8 @@ static void si_llvm_emit_vertex(
 			ctx->soa.outputs[i];
 
 		for (chan = 0; chan < 4; chan++) {
-			if (((info->output_streams[i] >> (2 * chan)) & 3) != stream)
+			if (!(info->output_usagemask[i] & (1 << chan)) ||
+			    ((info->output_streams[i] >> (2 * chan)) & 3) != stream)
 				continue;
 
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
@@ -6432,7 +6433,8 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		/* Fetch vertex data from GSVS ring */
 		for (i = 0; i < gsinfo->num_outputs; ++i) {
 			for (unsigned chan = 0; chan < 4; chan++) {
-				if (outputs[i].vertex_stream[chan] != stream) {
+				if (!(gsinfo->output_usagemask[i] & (1 << chan)) ||
+				    outputs[i].vertex_stream[chan] != stream) {
 					outputs[i].values[chan] = ctx.soa.bld_base.base.undef;
 					continue;
 				}
