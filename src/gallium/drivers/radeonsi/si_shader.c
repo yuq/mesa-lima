@@ -3288,12 +3288,14 @@ static void emit_optimization_barrier(struct si_shader_context *ctx)
 	LLVMBuildCall(builder, inlineasm, NULL, 0, "");
 }
 
-static void emit_waitcnt(struct si_shader_context *ctx)
+#define VM_CNT 0xf70
+
+static void emit_waitcnt(struct si_shader_context *ctx, unsigned simm16)
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef args[1] = {
-		lp_build_const_int32(gallivm, 0xf70)
+		lp_build_const_int32(gallivm, simm16)
 	};
 	lp_build_intrinsic(builder, "llvm.amdgcn.s.waitcnt",
 			   ctx->voidt, args, 1, 0);
@@ -3306,7 +3308,7 @@ static void membar_emit(
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
-	emit_waitcnt(ctx);
+	emit_waitcnt(ctx, VM_CNT);
 }
 
 static LLVMValueRef
@@ -3710,7 +3712,7 @@ static void load_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		emit_waitcnt(ctx);
+		emit_waitcnt(ctx, VM_CNT);
 
 	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
 		load_emit_buffer(ctx, emit_data);
@@ -3919,7 +3921,7 @@ static void store_emit(
 	}
 
 	if (inst->Memory.Qualifier & TGSI_MEMORY_VOLATILE)
-		emit_waitcnt(ctx);
+		emit_waitcnt(ctx, VM_CNT);
 
 	if (inst->Dst[0].Register.File == TGSI_FILE_BUFFER) {
 		store_emit_buffer(ctx, emit_data);
