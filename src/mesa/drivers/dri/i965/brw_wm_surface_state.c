@@ -143,7 +143,6 @@ brw_emit_surface_state(struct brw_context *brw,
       aux_surf = &aux_surf_s;
 
       if (mt->mcs_buf) {
-         assert(mt->mcs_buf->offset == 0);
          aux_bo = mt->mcs_buf->bo;
          aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
       } else {
@@ -185,7 +184,7 @@ brw_emit_surface_state(struct brw_context *brw,
       uint32_t *aux_addr = state + brw->isl_dev.ss.aux_addr_offset;
       drm_intel_bo_emit_reloc(brw->batch.bo,
                               *surf_offset + brw->isl_dev.ss.aux_addr_offset,
-                              aux_bo, *aux_addr & 0xfff,
+                              aux_bo, *aux_addr - aux_bo->offset64,
                               read_domains, write_domains);
    }
 }
