@@ -94,7 +94,6 @@ vlVaSyncSurface(VADriverContextP ctx, VASurfaceID render_target)
    vlVaDriver *drv;
    vlVaContext *context;
    vlVaSurface *surf;
-   void *pbuff;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
