@@ -456,7 +456,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 
 			if (views->sampler_states[slot])
 				memcpy(desc + 12,
-				       views->sampler_states[slot], 4*4);
+				       views->sampler_states[slot]->val, 4*4);
 		}
 
 		views->enabled_mask |= 1u << slot;
@@ -474,7 +474,7 @@ static void si_set_sampler_view(struct si_context *sctx,
 		/* Re-set the sampler state if we are transitioning from FMASK. */
 		if (views->sampler_states[slot])
 			memcpy(desc + 12,
-			       views->sampler_states[slot], 4*4);
+			       views->sampler_states[slot]->val, 4*4);
 
 		views->enabled_mask &= ~(1u << slot);
 	}
