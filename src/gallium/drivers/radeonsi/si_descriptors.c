@@ -808,10 +808,10 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
 		/* If FMASK is bound, don't overwrite it.
 		 * The sampler state will be set after FMASK is unbound.
 		 */
-		if (samplers->views.views[i] &&
-		    samplers->views.views[i]->texture &&
-		    samplers->views.views[i]->texture->target != PIPE_BUFFER &&
-		    ((struct r600_texture*)samplers->views.views[i]->texture)->fmask.size)
+		if (samplers->views.views[slot] &&
+		    samplers->views.views[slot]->texture &&
+		    samplers->views.views[slot]->texture->target != PIPE_BUFFER &&
+		    ((struct r600_texture*)samplers->views.views[slot]->texture)->fmask.size)
 			continue;
 
 		memcpy(desc->list + slot * 16 + 12, sstates[i]->val, 4*4);
