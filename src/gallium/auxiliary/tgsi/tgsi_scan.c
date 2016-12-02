@@ -545,6 +545,7 @@ scan_declaration(struct tgsi_shader_info *info,
       case TGSI_FILE_OUTPUT:
          info->output_semantic_name[reg] = (ubyte) semName;
          info->output_semantic_index[reg] = (ubyte) semIndex;
+         info->output_usagemask[reg] |= fulldecl->Declaration.UsageMask;
          info->num_outputs = MAX2(info->num_outputs, reg + 1);
 
          if (fulldecl->Declaration.UsageMask & TGSI_WRITEMASK_X) {
