@@ -3291,6 +3291,7 @@ static void emit_optimization_barrier(struct si_shader_context *ctx)
 #endif
 
 /* Combine these with & instead of |. */
+#define NOOP_WAITCNT 0xf7f
 #define LGKM_CNT 0x07f
 #define VM_CNT 0xf70
 
@@ -3311,8 +3312,23 @@ static void membar_emit(
 		struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
+	LLVMValueRef src0 = lp_build_emit_fetch(bld_base, emit_data->inst, 0, 0);
+	unsigned flags = LLVMConstIntGetZExtValue(src0);
+	unsigned waitcnt = NOOP_WAITCNT;
 
-	emit_waitcnt(ctx, VM_CNT);
+	if (flags & TGSI_MEMBAR_THREAD_GROUP)
+		waitcnt &= VM_CNT & LGKM_CNT;
+
+	if (flags & (TGSI_MEMBAR_ATOMIC_BUFFER |
+		     TGSI_MEMBAR_SHADER_BUFFER |
+		     TGSI_MEMBAR_SHADER_IMAGE))
+		waitcnt &= VM_CNT;
+
+	if (flags & TGSI_MEMBAR_SHARED)
+		waitcnt &= LGKM_CNT;
+
+	if (waitcnt != NOOP_WAITCNT)
+		emit_waitcnt(ctx, waitcnt);
 }
 
 static LLVMValueRef
