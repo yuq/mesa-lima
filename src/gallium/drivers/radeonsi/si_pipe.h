@@ -137,7 +137,12 @@ struct si_sampler_view {
 	bool is_stencil_sampler;
 };
 
+#define SI_SAMPLER_STATE_MAGIC 0x34f1c35a
+
 struct si_sampler_state {
+#ifdef DEBUG
+	unsigned			magic;
+#endif
 	uint32_t			val[4];
 };
 

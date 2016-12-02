@@ -803,6 +803,9 @@ static void si_bind_sampler_states(struct pipe_context *ctx,
 		    sstates[i] == samplers->views.sampler_states[slot])
 			continue;
 
+#ifdef DEBUG
+		assert(sstates[i]->magic == SI_SAMPLER_STATE_MAGIC);
+#endif
 		samplers->views.sampler_states[slot] = sstates[i];
 
 		/* If FMASK is bound, don't overwrite it.

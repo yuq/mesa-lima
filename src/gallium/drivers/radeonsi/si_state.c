@@ -3247,6 +3247,9 @@ static void *si_create_sampler_state(struct pipe_context *ctx,
 		}
 	}
 
+#ifdef DEBUG
+	rstate->magic = SI_SAMPLER_STATE_MAGIC;
+#endif
 	rstate->val[0] = (S_008F30_CLAMP_X(si_tex_wrap(state->wrap_s)) |
 			  S_008F30_CLAMP_Y(si_tex_wrap(state->wrap_t)) |
 			  S_008F30_CLAMP_Z(si_tex_wrap(state->wrap_r)) |
@@ -3303,6 +3306,12 @@ static void si_emit_sample_mask(struct si_context *sctx, struct r600_atom *atom)
 
 static void si_delete_sampler_state(struct pipe_context *ctx, void *state)
 {
+	struct si_sampler_state *s = state;
+
+#ifdef DEBUG
+	assert(s->magic == SI_SAMPLER_STATE_MAGIC);
+	s->magic = 0;
+#endif
 	free(state);
 }
 
