@@ -53,6 +53,8 @@ struct NineVolume9
 
     struct pipe_transfer *transfer;
     unsigned lock_count;
+
+    unsigned pending_uploads_counter; /* pending uploads */
 };
 static inline struct NineVolume9 *
 NineVolume9( void *data )

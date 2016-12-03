@@ -145,6 +145,9 @@ NineVolume9_dtor( struct NineVolume9 *This )
     if (This->transfer)
         NineVolume9_UnlockBox(This);
 
+    if (p_atomic_read(&This->pending_uploads_counter))
+        nine_csmt_process(This->base.device);
+
     if (This->data)
         align_free(This->data);
     if (This->data_conversion)
@@ -301,6 +304,9 @@ NineVolume9_LockBox( struct NineVolume9 *This,
                  &box);
     }
 
+    if (p_atomic_read(&This->pending_uploads_counter))
+        nine_csmt_process(This->base.device);
+
     if (This->data_conversion) {
         /* For now we only have uncompressed formats here */
         pLockedVolume->RowPitch = This->stride_conversion;
@@ -398,12 +404,9 @@ NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
                               unsigned dstx, unsigned dsty, unsigned dstz,
                               struct pipe_box *pSrcBox )
 {
-    struct pipe_context *pipe;
-    struct pipe_transfer *transfer = NULL;
     struct pipe_resource *r_dst = This->resource;
     struct pipe_box src_box;
     struct pipe_box dst_box;
-    uint8_t *map = NULL;
 
     DBG("This=%p From=%p dstx=%u dsty=%u dstz=%u pSrcBox=%p\n",
         This, From, dstx, dsty, dstz, pSrcBox);
@@ -430,32 +433,15 @@ NineVolume9_CopyMemToDefault( struct NineVolume9 *This,
     dst_box.height = src_box.height;
     dst_box.depth = src_box.depth;
 
-    pipe = NineDevice9_GetPipe(This->base.device);
-
-    map = pipe->transfer_map(pipe,
-                             r_dst,
-                             This->level,
-                             PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE,
-                             &dst_box, &transfer);
-    if (!map)
-        return;
-
-    /* Note: if formats are the sames, it will revert
-     * to normal memcpy */
-    (void) util_format_translate_3d(r_dst->format,
-                                    map, transfer->stride,
-                                    transfer->layer_stride,
-                                    0, 0, 0,
-                                    From->info.format,
-                                    From->data, From->stride,
-                                    From->layer_stride,
-                                    src_box.x, src_box.y,
-                                    src_box.z,
-                                    src_box.width,
-                                    src_box.height,
-                                    src_box.depth);
-
-    pipe_transfer_unmap(pipe, transfer);
+    nine_context_box_upload(This->base.device,
+                            &From->pending_uploads_counter,
+                            r_dst,
+                            This->level,
+                            &dst_box,
+                            From->info.format,
+                            From->data, From->stride,
+                            From->layer_stride,
+                            &src_box);
 
     if (This->data_conversion)
         (void) util_format_translate_3d(This->format_conversion,
@@ -481,10 +467,8 @@ HRESULT
 NineVolume9_UploadSelf( struct NineVolume9 *This,
                         const struct pipe_box *damaged )
 {
-    struct pipe_context *pipe;
     struct pipe_resource *res = This->resource;
     struct pipe_box box;
-    uint8_t *ptr;
 
     DBG("This=%p damaged=%p data=%p res=%p\n", This, damaged,
         This->data, res);
@@ -503,11 +487,15 @@ NineVolume9_UploadSelf( struct NineVolume9 *This,
         box.depth = This->desc.Depth;
     }
 
-    ptr = NineVolume9_GetSystemMemPointer(This, box.x, box.y, box.z);
-
-    pipe = NineDevice9_GetPipe(This->base.device);
-    pipe->texture_subdata(pipe, res, This->level, 0, &box,
-                          ptr, This->stride, This->layer_stride);
+    nine_context_box_upload(This->base.device,
+                            &This->pending_uploads_counter,
+                            res,
+                            This->level,
+                            &box,
+                            res->format,
+                            This->data, This->stride,
+                            This->layer_stride,
+                            &box);
 
     return D3D_OK;
 }
