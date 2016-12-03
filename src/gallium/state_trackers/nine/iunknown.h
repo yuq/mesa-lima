@@ -165,8 +165,7 @@ static inline void
 NineUnknown_Detach( struct NineUnknown *This )
 {
     assert(This->container && !This->forward);
-    if (This->refs)
-        NineUnknown_Unbind(This->container);
+
     if (This->bind)
         NineUnknown_Unbind(This->container);
     This->container = NULL;
