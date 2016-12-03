@@ -49,7 +49,12 @@ struct NineUnknown
     int32_t bind; /* internal bind count */
     boolean forward; /* whether to forward references to the container */
 
-    struct NineUnknown *container; /* referenced if (refs | bind) */
+    /* container: for surfaces and volumes only.
+     * Can be a texture, a volume texture or a swapchain.
+     * forward is set to false for the swapchain case.
+     * Refs are passed to the container if forward is set.
+     * The container has bind increased if the object has non null bind. */
+    struct NineUnknown *container;
     struct NineDevice9 *device;    /* referenced if (refs) */
 
     const GUID **guids; /* for QueryInterface */
@@ -130,10 +135,10 @@ NineUnknown_Bind( struct NineUnknown *This )
 {
     UINT b = p_atomic_inc_return(&This->bind);
     assert(b);
-    if (b == 1 && This->container) {
-        if (This->container != NineUnknown(This->device))
-            NineUnknown_Bind(This->container);
-    }
+
+    if (b == 1 && This->container)
+        NineUnknown_Bind(This->container);
+
     return b;
 }
 
@@ -141,15 +146,12 @@ static inline UINT
 NineUnknown_Unbind( struct NineUnknown *This )
 {
     UINT b = p_atomic_dec_return(&This->bind);
-    if (!b) {
-        if (This->container) {
-            if (This->container != NineUnknown(This->device))
-                NineUnknown_Unbind(This->container);
-        } else
-        if (This->refs == 0) {
-            This->dtor(This);
-        }
-    }
+
+    if (b == 0 && This->container)
+        NineUnknown_Unbind(This->container);
+    else if (b == 0 && This->refs == 0)
+        This->dtor(This);
+
     return b;
 }
 
