@@ -52,8 +52,8 @@ struct NineUnknown
     /* container: for surfaces and volumes only.
      * Can be a texture, a volume texture or a swapchain.
      * forward is set to false for the swapchain case.
-     * Refs are passed to the container if forward is set.
-     * The container has bind increased if the object has non null bind. */
+     * If forward is set, refs are passed to the container if forward is set
+     * and the container has bind increased if the object has non null bind. */
     struct NineUnknown *container;
     struct NineDevice9 *device;    /* referenced if (refs) */
 
@@ -136,7 +136,7 @@ NineUnknown_Bind( struct NineUnknown *This )
     UINT b = p_atomic_inc_return(&This->bind);
     assert(b);
 
-    if (b == 1 && This->container)
+    if (b == 1 && This->forward)
         NineUnknown_Bind(This->container);
 
     return b;
@@ -147,9 +147,9 @@ NineUnknown_Unbind( struct NineUnknown *This )
 {
     UINT b = p_atomic_dec_return(&This->bind);
 
-    if (b == 0 && This->container)
+    if (b == 0 && This->forward)
         NineUnknown_Unbind(This->container);
-    else if (b == 0 && This->refs == 0)
+    else if (b == 0 && This->refs == 0 && !This->container)
         This->dtor(This);
 
     return b;
@@ -168,8 +168,6 @@ NineUnknown_Detach( struct NineUnknown *This )
 {
     assert(This->container && !This->forward);
 
-    if (This->bind)
-        NineUnknown_Unbind(This->container);
     This->container = NULL;
     if (!(This->refs | This->bind))
         This->dtor(This);
