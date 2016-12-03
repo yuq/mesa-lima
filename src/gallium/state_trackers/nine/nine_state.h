@@ -554,6 +554,17 @@ nine_context_range_upload(struct NineDevice9 *device,
                           unsigned size,
                           const void *data);
 
+void
+nine_context_box_upload(struct NineDevice9 *device,
+                        unsigned *counter,
+                        struct pipe_resource *res,
+                        unsigned level,
+                        const struct pipe_box *dst_box,
+                        enum pipe_format src_format,
+                        const void *src, unsigned src_stride,
+                        unsigned src_layer_stride,
+                        const struct pipe_box *src_box);
+
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type);
 

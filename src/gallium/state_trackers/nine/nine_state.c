@@ -2718,6 +2718,45 @@ CSMT_ITEM_NO_WAIT_WITH_COUNTER(nine_context_range_upload,
     context->pipe->buffer_subdata(context->pipe, res, 0, offset, size, data);
 }
 
+CSMT_ITEM_NO_WAIT_WITH_COUNTER(nine_context_box_upload,
+                               ARG_BIND_RES(struct pipe_resource, res),
+                               ARG_VAL(unsigned, level),
+                               ARG_COPY_REF(struct pipe_box, dst_box),
+                               ARG_VAL(enum pipe_format, src_format),
+                               ARG_VAL(const void *, src),
+                               ARG_VAL(unsigned, src_stride),
+                               ARG_VAL(unsigned, src_layer_stride),
+                               ARG_COPY_REF(struct pipe_box, src_box))
+{
+    struct nine_context *context = &device->context;
+    struct pipe_context *pipe = context->pipe;
+    struct pipe_transfer *transfer = NULL;
+    uint8_t *map;
+
+    map = pipe->transfer_map(pipe,
+                             res,
+                             level,
+                             PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE,
+                             dst_box, &transfer);
+    if (!map)
+        return;
+
+    /* Note: if formats are the sames, it will revert
+     * to normal memcpy */
+    (void) util_format_translate_3d(res->format,
+                                    map, transfer->stride,
+                                    transfer->layer_stride,
+                                    0, 0, 0,
+                                    src_format,
+                                    src, src_stride,
+                                    src_layer_stride,
+                                    src_box->x, src_box->y, src_box->z,
+                                    dst_box->width, dst_box->height,
+                                    dst_box->depth);
+
+    pipe_transfer_unmap(pipe, transfer);
+}
+
 struct pipe_query *
 nine_context_create_query(struct NineDevice9 *device, unsigned query_type)
 {
