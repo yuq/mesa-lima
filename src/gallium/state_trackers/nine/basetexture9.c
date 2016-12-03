@@ -34,7 +34,6 @@
 #endif
 
 #include "util/u_format.h"
-#include "util/u_gen_mipmap.h"
 
 #define DBG_CHANNEL DBG_BASETEXTURE
 
@@ -384,8 +383,6 @@ NineBaseTexture9_UploadSelf( struct NineBaseTexture9 *This )
 void NINE_WINAPI
 NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 {
-    struct pipe_context *pipe;
-    struct pipe_resource *resource;
     unsigned base_level = 0;
     unsigned last_level = This->base.info.last_level - This->managed.lod;
     unsigned first_layer = 0;
@@ -408,12 +405,9 @@ NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 
     last_layer = util_max_layer(This->view[0]->texture, base_level);
 
-    resource = This->base.resource;
-
-    pipe = NineDevice9_GetPipe(This->base.base.device);
-    util_gen_mipmap(pipe, resource,
-                    resource->format, base_level, last_level,
-                    first_layer, last_layer, filter);
+    nine_context_gen_mipmap(This->base.base.device, This->base.resource,
+                            base_level, last_level,
+                            first_layer, last_layer, filter);
 
     This->dirty_mip = FALSE;
 }
