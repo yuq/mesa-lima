@@ -540,6 +540,13 @@ nine_context_clear_render_target(struct NineDevice9 *device,
                                  UINT height);
 
 void
+nine_context_gen_mipmap(struct NineDevice9 *device,
+                        struct pipe_resource *res,
+                        UINT base_level, UINT last_level,
+                        UINT first_layer, UINT last_layer,
+                        UINT filter);
+
+void
 nine_context_range_upload(struct NineDevice9 *device,
                           unsigned *counter,
                           struct pipe_resource *res,

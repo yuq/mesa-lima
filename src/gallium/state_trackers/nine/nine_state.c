@@ -44,6 +44,7 @@
 #include "util/u_math.h"
 #include "util/u_box.h"
 #include "util/u_simple_shaders.h"
+#include "util/u_gen_mipmap.h"
 
 /* CSMT headers */
 #include "nine_queue.h"
@@ -2690,6 +2691,20 @@ CSMT_ITEM_NO_WAIT(nine_context_clear_render_target,
     d3dcolor_to_pipe_color_union(&rgba, color);
     surf = NineSurface9_GetSurface(surface, 0);
     context->pipe->clear_render_target(context->pipe, surf, &rgba, x, y, width, height, false);
+}
+
+CSMT_ITEM_NO_WAIT(nine_context_gen_mipmap,
+                  ARG_BIND_RES(struct pipe_resource, res),
+                  ARG_VAL(UINT, base_level),
+                  ARG_VAL(UINT, last_level),
+                  ARG_VAL(UINT, first_layer),
+                  ARG_VAL(UINT, last_layer),
+                  ARG_VAL(UINT, filter))
+{
+    struct nine_context *context = &device->context;
+
+    util_gen_mipmap(context->pipe, res, res->format, base_level,
+                    last_level, first_layer, last_layer, filter);
 }
 
 CSMT_ITEM_NO_WAIT_WITH_COUNTER(nine_context_range_upload,
