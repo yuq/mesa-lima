@@ -239,9 +239,22 @@ lp_build_unpack_rgba_soa(struct gallivm_state *gallivm,
 
       case UTIL_FORMAT_TYPE_FLOAT:
          if (type.floating) {
-            assert(start == 0);
-            assert(stop == 32);
-            assert(type.width == 32);
+            if (format_desc->channel[chan].size == 16) {
+               struct lp_type f16i_type = type;
+               f16i_type.width /= 2;
+               f16i_type.floating = 0;
+               if (start) {
+                  input = LLVMBuildLShr(builder, input,
+                             lp_build_const_int_vec(gallivm, type, start), "");
+               }
+               input = LLVMBuildTrunc(builder, input,
+                                      lp_build_vec_type(gallivm, f16i_type), "");
+               input = lp_build_half_to_float(gallivm, input);
+            } else {
+               assert(start == 0);
+               assert(stop == 32);
+               assert(type.width == 32);
+            }
             input = LLVMBuildBitCast(builder, input, lp_build_vec_type(gallivm, type), "");
          }
          else {
@@ -369,7 +382,8 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
        format_desc->block.height == 1 &&
        format_desc->block.bits <= type.width &&
        (format_desc->channel[0].type != UTIL_FORMAT_TYPE_FLOAT ||
-        format_desc->channel[0].size == 32))
+        format_desc->channel[0].size == 32 ||
+        format_desc->channel[0].size == 16))
    {
       /*
        * The packed pixel fits into an element of the destination format. Put
