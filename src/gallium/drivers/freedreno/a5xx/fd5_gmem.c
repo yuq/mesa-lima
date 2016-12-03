@@ -104,6 +104,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 			OUT_RING(ring, base);           /* RB_MRT[i].BASE_LO */
 			OUT_RING(ring, 0x00000000);     /* RB_MRT[i].BASE_HI */
 		} else {
+			debug_assert((offset + size) <= fd_bo_size(rsc->bo));
 			OUT_RELOCW(ring, rsc->bo, offset, 0, 0);  /* BASE_LO/HI */
 		}
 

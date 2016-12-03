@@ -679,9 +679,11 @@ fd_screen_create(struct fd_device *dev)
 	}
 
 	if (screen->gpu_id >= 500) {
-		screen->gmem_alignment = 64;
+		screen->gmem_alignw = 64;
+		screen->gmem_alignh = 32;
 	} else {
-		screen->gmem_alignment = 32;
+		screen->gmem_alignw = 32;
+		screen->gmem_alignh = 32;
 	}
 
 	/* NOTE: don't enable reordering on a2xx, since completely untested.
