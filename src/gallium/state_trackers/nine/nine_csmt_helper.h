@@ -346,16 +346,12 @@ name##_priv( struct NineDevice9 *device ARGS_FOR_DECLARATION( __VA_ARGS__ ) )
 
 #define ARG_BIND_REF(x, y) \
         x * _##y ,\
-        args->_##y = NULL; \
-        if (args->_##y != y && args->_##y) \
-            NineUnknown_Unbind((void *)(args->_##y)); \
-        if ( args->_##y != y && y ) \
+        if ( y ) \
             NineUnknown_Bind( (void *)y ); \
-        if ( args->_##y != y ) \
-            args->_##y = y ; ,\
+        args->_##y = y ; ,\
         x *y ,\
         args->_##y,\
-        if (args->_##y != NULL && args->_##y) \
+        if (args->_##y) \
             NineUnknown_Unbind((void *)(args->_##y)); \
         args->_##y = NULL; ,\
         ,\
