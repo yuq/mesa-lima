@@ -51,6 +51,8 @@ struct NineSurface9
     enum pipe_format format_conversion;
     unsigned stride; /* for system memory backing */
     unsigned stride_conversion;
+
+    unsigned pending_uploads_counter; /* pending uploads */
 };
 static inline struct NineSurface9 *
 NineSurface9( void *data )

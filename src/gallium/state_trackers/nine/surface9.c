@@ -205,6 +205,9 @@ NineSurface9_dtor( struct NineSurface9 *This )
     if (This->transfer)
         NineSurface9_UnlockRect(This);
 
+    if (p_atomic_read(&This->pending_uploads_counter))
+        nine_csmt_process(This->base.base.device);
+
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);
 
@@ -452,6 +455,9 @@ NineSurface9_LockRect( struct NineSurface9 *This,
 
     user_warn(This->desc.Format == D3DFMT_NULL);
 
+    if (p_atomic_read(&This->pending_uploads_counter))
+        nine_csmt_process(This->base.base.device);
+
     if (This->data_conversion) {
         /* For now we only have uncompressed formats here */
         pLockedRect->Pitch = This->stride_conversion;
@@ -588,11 +594,8 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
                                const POINT *pDestPoint,
                                const RECT *pSourceRect )
 {
-    struct pipe_context *pipe;
-    struct pipe_transfer *transfer = NULL;
     struct pipe_resource *r_dst = This->base.resource;
-    struct pipe_box dst_box;
-    uint8_t *map = NULL;
+    struct pipe_box dst_box, src_box;
     int src_x, src_y, dst_x, dst_y, copy_width, copy_height;
 
     assert(This->base.pool == D3DPOOL_DEFAULT &&
@@ -620,27 +623,18 @@ NineSurface9_CopyMemToDefault( struct NineSurface9 *This,
 
     u_box_2d_zslice(dst_x, dst_y, This->layer,
                     copy_width, copy_height, &dst_box);
+    u_box_2d_zslice(src_x, src_y, 0,
+                    copy_width, copy_height, &src_box);
 
-    pipe = NineDevice9_GetPipe(This->base.base.device);
-    map = pipe->transfer_map(pipe,
-                             r_dst,
-                             This->level,
-                             PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_RANGE,
-                             &dst_box, &transfer);
-    if (!map)
-        return;
-
-    /* Note: if formats are the sames, it will revert
-     * to normal memcpy */
-    (void) util_format_translate(r_dst->format,
-                                 map, transfer->stride,
-                                 0, 0,
-                                 From->base.info.format,
-                                 From->data, From->stride,
-                                 src_x, src_y,
-                                 copy_width, copy_height);
-
-    pipe_transfer_unmap(pipe, transfer);
+    nine_context_box_upload(This->base.base.device,
+                            &From->pending_uploads_counter,
+                            r_dst,
+                            This->level,
+                            &dst_box,
+                            From->base.info.format,
+                            From->data, From->stride,
+                            0, /* depth = 1 */
+                            &src_box);
 
     if (This->data_conversion)
         (void) util_format_translate(This->format_conversion,
@@ -675,6 +669,9 @@ NineSurface9_CopyDefaultToMem( struct NineSurface9 *This,
     u_box_origin_2d(This->desc.Width, This->desc.Height, &src_box);
     src_box.z = From->layer;
 
+    if (p_atomic_read(&This->pending_uploads_counter))
+        nine_csmt_process(This->base.base.device);
+
     pipe = NineDevice9_GetPipe(This->base.base.device);
     p_src = pipe->transfer_map(pipe, r_src, From->level,
                                PIPE_TRANSFER_READ,
@@ -700,9 +697,7 @@ HRESULT
 NineSurface9_UploadSelf( struct NineSurface9 *This,
                          const struct pipe_box *damaged )
 {
-    struct pipe_context *pipe;
     struct pipe_resource *res = This->base.resource;
-    uint8_t *ptr;
     struct pipe_box box;
 
     DBG("This=%p damaged=%p\n", This, damaged);
@@ -722,11 +717,15 @@ NineSurface9_UploadSelf( struct NineSurface9 *This,
         box.depth = 1;
     }
 
-    ptr = NineSurface9_GetSystemMemPointer(This, box.x, box.y);
-
-    pipe = NineDevice9_GetPipe(This->base.base.device);
-    pipe->texture_subdata(pipe, res, This->level, 0,
-                          &box, ptr, This->stride, 0);
+    nine_context_box_upload(This->base.base.device,
+                            &This->pending_uploads_counter,
+                            res,
+                            This->level,
+                            &box,
+                            res->format,
+                            This->data, This->stride,
+                            0, /* depth = 1 */
+                            &box);
 
     return D3D_OK;
 }
