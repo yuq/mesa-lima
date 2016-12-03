@@ -508,7 +508,7 @@ NineSwapChain9_dtor( struct NineSwapChain9 *This )
 
     for (i = 0; i < This->num_back_buffers; i++) {
         if (This->buffers[i])
-            NineUnknown_Release(NineUnknown(This->buffers[i]));
+            NineUnknown_Detach(NineUnknown(This->buffers[i]));
         if (This->present_handles[i])
             ID3DPresent_DestroyD3DWindowBuffer(This->present, This->present_handles[i]);
         if (This->present_buffers[i])
