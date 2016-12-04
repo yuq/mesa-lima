@@ -106,7 +106,7 @@ create_xfb_varying_names(void *mem_ctx, const glsl_type *t, char **name,
    }
 }
 
-bool
+static bool
 process_xfb_layout_qualifiers(void *mem_ctx, const gl_linked_shader *sh,
                               unsigned *num_tfeedback_decls,
                               char ***varying_names)
@@ -573,7 +573,7 @@ cross_validate_outputs_to_inputs(struct gl_shader_program *prog,
  * Demote shader inputs and outputs that are not used in other stages, and
  * remove them via dead code elimination.
  */
-void
+static void
 remove_unused_shader_inputs_and_outputs(bool is_separate_shader_object,
                                         gl_linked_shader *sh,
                                         enum ir_variable_mode mode)
@@ -1014,7 +1014,7 @@ tfeedback_decl::find_candidate(gl_shader_program *prog,
  * If an error occurs, the error is reported through linker_error() and false
  * is returned.
  */
-bool
+static bool
 parse_tfeedback_decls(struct gl_context *ctx, struct gl_shader_program *prog,
                       const void *mem_ctx, unsigned num_names,
                       char **varying_names, tfeedback_decl *decls)
@@ -1069,7 +1069,7 @@ cmp_xfb_offset(const void * x_generic, const void * y_generic)
  * If an error occurs, the error is reported through linker_error() and false
  * is returned.
  */
-bool
+static bool
 store_tfeedback_info(struct gl_context *ctx, struct gl_shader_program *prog,
                      unsigned num_tfeedback_decls,
                      tfeedback_decl *tfeedback_decls, bool has_xfb_qualifiers)
@@ -1985,7 +1985,7 @@ canonicalize_shader_io(exec_list *ir, enum ir_variable_mode io_mode)
  * 64 bit map. Per-vertex and per-patch both have separate location domains
  * with a max of MAX_VARYING.
  */
-uint64_t
+static uint64_t
 reserved_varying_slot(struct gl_linked_shader *stage,
                       ir_variable_mode io_mode)
 {
@@ -2042,7 +2042,7 @@ reserved_varying_slot(struct gl_linked_shader *stage,
  * be NULL.  In this case, varying locations are assigned solely based on the
  * requirements of transform feedback.
  */
-bool
+static bool
 assign_varying_locations(struct gl_context *ctx,
                          void *mem_ctx,
                          struct gl_shader_program *prog,
