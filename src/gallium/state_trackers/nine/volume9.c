@@ -320,10 +320,17 @@ NineVolume9_LockBox( struct NineVolume9 *This,
         pLockedVolume->pBits =
             NineVolume9_GetSystemMemPointer(This, box.x, box.y, box.z);
     } else {
-        pipe = NineDevice9_GetPipe(This->base.device);
+        bool no_refs = !p_atomic_read(&This->base.bind) &&
+            !p_atomic_read(&This->base.container->bind);
+        if (no_refs)
+            pipe = nine_context_get_pipe_acquire(This->base.device);
+        else
+            pipe = NineDevice9_GetPipe(This->base.device);
         pLockedVolume->pBits =
             pipe->transfer_map(pipe, resource, This->level, usage,
                                &box, &This->transfer);
+        if (no_refs)
+            nine_context_get_pipe_release(This->base.device);
         if (!This->transfer) {
             if (Flags & D3DLOCK_DONOTWAIT)
                 return D3DERR_WASSTILLDRAWING;
