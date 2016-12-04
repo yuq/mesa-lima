@@ -742,6 +742,7 @@ static struct radeon_winsys_ctx *radv_amdgpu_ctx_create(struct radeon_winsys *_w
 	ctx->ws = ws;
 	return (struct radeon_winsys_ctx *)ctx;
 error_create:
+	FREE(ctx);
 	return NULL;
 }
 
