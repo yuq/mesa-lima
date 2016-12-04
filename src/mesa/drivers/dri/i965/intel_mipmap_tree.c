@@ -2326,6 +2326,9 @@ intel_miptree_make_shareable(struct brw_context *brw,
    if (mt->mcs_buf) {
       intel_miptree_all_slices_resolve_color(brw, mt, 0);
       mt->no_ccs = true;
+      drm_intel_bo_unreference(mt->mcs_buf->bo);
+      free(mt->mcs_buf);
+      mt->mcs_buf = NULL;
    }
 }
 
