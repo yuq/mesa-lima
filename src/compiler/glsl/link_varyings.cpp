@@ -2373,3 +2373,160 @@ check_against_input_limit(struct gl_context *ctx,
 
    return true;
 }
+
+bool
+link_varyings(struct gl_shader_program *prog, unsigned first, unsigned last,
+              struct gl_context *ctx, void *mem_ctx)
+{
+   bool has_xfb_qualifiers = false;
+   unsigned num_tfeedback_decls = 0;
+   char **varying_names = NULL;
+   tfeedback_decl *tfeedback_decls = NULL;
+
+   /* From the ARB_enhanced_layouts spec:
+    *
+    *    "If the shader used to record output variables for transform feedback
+    *    varyings uses the "xfb_buffer", "xfb_offset", or "xfb_stride" layout
+    *    qualifiers, the values specified by TransformFeedbackVaryings are
+    *    ignored, and the set of variables captured for transform feedback is
+    *    instead derived from the specified layout qualifiers."
+    */
+   for (int i = MESA_SHADER_FRAGMENT - 1; i >= 0; i--) {
+      /* Find last stage before fragment shader */
+      if (prog->_LinkedShaders[i]) {
+         has_xfb_qualifiers =
+            process_xfb_layout_qualifiers(mem_ctx, prog->_LinkedShaders[i],
+                                          &num_tfeedback_decls,
+                                          &varying_names);
+         break;
+      }
+   }
+
+   if (!has_xfb_qualifiers) {
+      num_tfeedback_decls = prog->TransformFeedback.NumVarying;
+      varying_names = prog->TransformFeedback.VaryingNames;
+   }
+
+   if (num_tfeedback_decls != 0) {
+      /* From GL_EXT_transform_feedback:
+       *   A program will fail to link if:
+       *
+       *   * the <count> specified by TransformFeedbackVaryingsEXT is
+       *     non-zero, but the program object has no vertex or geometry
+       *     shader;
+       */
+      if (first >= MESA_SHADER_FRAGMENT) {
+         linker_error(prog, "Transform feedback varyings specified, but "
+                      "no vertex, tessellation, or geometry shader is "
+                      "present.\n");
+         return false;
+      }
+
+      tfeedback_decls = rzalloc_array(mem_ctx, tfeedback_decl,
+                                      num_tfeedback_decls);
+      if (!parse_tfeedback_decls(ctx, prog, mem_ctx, num_tfeedback_decls,
+                                 varying_names, tfeedback_decls))
+         return false;
+   }
+
+   /* If there is no fragment shader we need to set transform feedback.
+    *
+    * For SSO we also need to assign output locations.  We assign them here
+    * because we need to do it for both single stage programs and multi stage
+    * programs.
+    */
+   if (last < MESA_SHADER_FRAGMENT &&
+       (num_tfeedback_decls != 0 || prog->SeparateShader)) {
+      const uint64_t reserved_out_slots =
+         reserved_varying_slot(prog->_LinkedShaders[last], ir_var_shader_out);
+      if (!assign_varying_locations(ctx, mem_ctx, prog,
+                                    prog->_LinkedShaders[last], NULL,
+                                    num_tfeedback_decls, tfeedback_decls,
+                                    reserved_out_slots))
+         return false;
+   }
+
+   if (last <= MESA_SHADER_FRAGMENT) {
+      /* Remove unused varyings from the first/last stage unless SSO */
+      remove_unused_shader_inputs_and_outputs(prog->SeparateShader,
+                                              prog->_LinkedShaders[first],
+                                              ir_var_shader_in);
+      remove_unused_shader_inputs_and_outputs(prog->SeparateShader,
+                                              prog->_LinkedShaders[last],
+                                              ir_var_shader_out);
+
+      /* If the program is made up of only a single stage */
+      if (first == last) {
+         gl_linked_shader *const sh = prog->_LinkedShaders[last];
+
+         do_dead_builtin_varyings(ctx, NULL, sh, 0, NULL);
+         do_dead_builtin_varyings(ctx, sh, NULL, num_tfeedback_decls,
+                                  tfeedback_decls);
+
+         if (prog->SeparateShader) {
+            const uint64_t reserved_slots =
+               reserved_varying_slot(sh, ir_var_shader_in);
+
+            /* Assign input locations for SSO, output locations are already
+             * assigned.
+             */
+            if (!assign_varying_locations(ctx, mem_ctx, prog,
+                                          NULL /* producer */,
+                                          sh /* consumer */,
+                                          0 /* num_tfeedback_decls */,
+                                          NULL /* tfeedback_decls */,
+                                          reserved_slots))
+               return false;
+         }
+      } else {
+         /* Linking the stages in the opposite order (from fragment to vertex)
+          * ensures that inter-shader outputs written to in an earlier stage
+          * are eliminated if they are (transitively) not used in a later
+          * stage.
+          */
+         int next = last;
+         for (int i = next - 1; i >= 0; i--) {
+            if (prog->_LinkedShaders[i] == NULL && i != 0)
+               continue;
+
+            gl_linked_shader *const sh_i = prog->_LinkedShaders[i];
+            gl_linked_shader *const sh_next = prog->_LinkedShaders[next];
+
+            const uint64_t reserved_out_slots =
+               reserved_varying_slot(sh_i, ir_var_shader_out);
+            const uint64_t reserved_in_slots =
+               reserved_varying_slot(sh_next, ir_var_shader_in);
+
+            do_dead_builtin_varyings(ctx, sh_i, sh_next,
+                      next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
+                      tfeedback_decls);
+
+            if (!assign_varying_locations(ctx, mem_ctx, prog, sh_i, sh_next,
+                      next == MESA_SHADER_FRAGMENT ? num_tfeedback_decls : 0,
+                      tfeedback_decls,
+                      reserved_out_slots | reserved_in_slots))
+               return false;
+
+            /* This must be done after all dead varyings are eliminated. */
+            if (sh_i != NULL) {
+               unsigned slots_used = _mesa_bitcount_64(reserved_out_slots);
+               if (!check_against_output_limit(ctx, prog, sh_i, slots_used)) {
+                  return false;
+               }
+            }
+
+            unsigned slots_used = _mesa_bitcount_64(reserved_in_slots);
+            if (!check_against_input_limit(ctx, prog, sh_next, slots_used))
+               return false;
+
+            next = i;
+         }
+      }
+   }
+
+   if (!store_tfeedback_info(ctx, prog, num_tfeedback_decls, tfeedback_decls,
+                             has_xfb_qualifiers))
+      return false;
+
+   return true;
+}
