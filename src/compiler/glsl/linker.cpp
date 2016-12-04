@@ -3378,12 +3378,14 @@ reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
  * any optimizations happen to handle also inactive uniforms and
  * inactive array elements that may get trimmed away.
  */
-static unsigned
+static void
 check_explicit_uniform_locations(struct gl_context *ctx,
                                  struct gl_shader_program *prog)
 {
+   prog->NumExplicitUniformLocations = 0;
+
    if (!ctx->Extensions.ARB_explicit_uniform_location)
-      return 0;
+      return;
 
    /* This map is used to detect if overlapping explicit locations
     * occur with the same uniform (from different stage) or a different one.
@@ -3392,7 +3394,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
 
    if (!uniform_map) {
       linker_error(prog, "Out of memory during linking.\n");
-      return 0;
+      return;
    }
 
    unsigned entries_total = 0;
@@ -3420,7 +3422,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
             }
             if (!ret) {
                delete uniform_map;
-               return 0;
+               return;
             }
          }
       }
@@ -3445,7 +3447,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
    }
 
    delete uniform_map;
-   return entries_total;
+   prog->NumExplicitUniformLocations = entries_total;
 }
 
 static bool
@@ -4533,11 +4535,10 @@ disable_varying_optimizations_for_sso(struct gl_shader_program *prog)
 
 static void
 link_and_validate_uniforms(struct gl_context *ctx,
-                           struct gl_shader_program *prog,
-                           unsigned num_explicit_uniform_locs)
+                           struct gl_shader_program *prog)
 {
    update_array_sizes(prog);
-   link_assign_uniform_locations(prog, ctx, num_explicit_uniform_locs);
+   link_assign_uniform_locations(prog, ctx);
 
    link_assign_atomic_counter_resources(ctx, prog);
    link_calculate_subroutine_compat(prog);
@@ -4549,7 +4550,6 @@ link_and_validate_uniforms(struct gl_context *ctx,
 
 static bool
 link_varyings_and_uniforms(unsigned first, unsigned last,
-                           unsigned num_explicit_uniform_locs,
                            struct gl_context *ctx,
                            struct gl_shader_program *prog, void *mem_ctx)
 {
@@ -4595,7 +4595,7 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
    if (!link_varyings(prog, first, last, ctx, mem_ctx))
       return false;
 
-   link_and_validate_uniforms(ctx, prog, num_explicit_uniform_locs);
+   link_and_validate_uniforms(ctx, prog);
 
    if (!prog->data->LinkStatus)
       return false;
@@ -4646,8 +4646,6 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          linker_error(prog, "no shaders attached to the program\n");
       return;
    }
-
-   unsigned int num_explicit_uniform_locs = 0;
 
    void *mem_ctx = ralloc_context(NULL); // temporary linker context
 
@@ -4828,7 +4826,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       last = i;
    }
 
-   num_explicit_uniform_locs = check_explicit_uniform_locations(ctx, prog);
+   check_explicit_uniform_locations(ctx, prog);
    link_assign_subroutine_types(prog);
 
    if (!prog->data->LinkStatus)
@@ -4944,8 +4942,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    store_fragdepth_layout(prog);
 
-   if(!link_varyings_and_uniforms(first, last, num_explicit_uniform_locs, ctx,
-                                  prog, mem_ctx))
+   if(!link_varyings_and_uniforms(first, last, ctx, prog, mem_ctx))
       goto done;
 
    /* OpenGL ES < 3.1 requires that a vertex shader and a fragment shader both

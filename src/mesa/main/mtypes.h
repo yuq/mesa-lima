@@ -2835,6 +2835,11 @@ struct gl_shader_program
    unsigned LastCullDistanceArraySize;
 
    /**
+    * Total number of explicit uniform location including inactive uniforms.
+    */
+   unsigned NumExplicitUniformLocations;
+
+   /**
     * Map of active uniform names to locations
     *
     * Maps any active uniform that is not an array element to a location.

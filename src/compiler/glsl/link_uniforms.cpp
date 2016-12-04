@@ -1042,12 +1042,10 @@ find_empty_block(struct gl_shader_program *prog,
 
 static void
 link_setup_uniform_remap_tables(struct gl_context *ctx,
-                                struct gl_shader_program *prog,
-                                unsigned num_explicit_uniform_locs)
+                                struct gl_shader_program *prog)
 {
-   unsigned total_entries = num_explicit_uniform_locs;
-   unsigned empty_locs =
-      prog->NumUniformRemapTable - num_explicit_uniform_locs;
+   unsigned total_entries = prog->NumExplicitUniformLocations;
+   unsigned empty_locs = prog->NumUniformRemapTable - total_entries;
 
    /* Reserve all the explicit locations of the active uniforms. */
    for (unsigned i = 0; i < prog->data->NumUniformStorage; i++) {
@@ -1206,8 +1204,7 @@ link_setup_uniform_remap_tables(struct gl_context *ctx,
 static void
 link_assign_uniform_storage(struct gl_context *ctx,
                             struct gl_shader_program *prog,
-                            const unsigned num_data_slots,
-                            unsigned num_explicit_uniform_locs)
+                            const unsigned num_data_slots)
 {
    /* On the outside chance that there were no uniforms, bail out.
     */
@@ -1266,15 +1263,14 @@ link_assign_uniform_storage(struct gl_context *ctx,
    assert(parcel.values == data_end);
 #endif
 
-   link_setup_uniform_remap_tables(ctx, prog, num_explicit_uniform_locs);
+   link_setup_uniform_remap_tables(ctx, prog);
 
    link_set_uniform_initializers(prog, boolean_true);
 }
 
 void
 link_assign_uniform_locations(struct gl_shader_program *prog,
-                              struct gl_context *ctx,
-                              unsigned int num_explicit_uniform_locs)
+                              struct gl_context *ctx)
 {
    ralloc_free(prog->data->UniformStorage);
    prog->data->UniformStorage = NULL;
@@ -1335,6 +1331,5 @@ link_assign_uniform_locations(struct gl_shader_program *prog,
    hiddenUniforms->iterate(assign_hidden_uniform_slot_id, &uniform_size);
    delete hiddenUniforms;
 
-   link_assign_uniform_storage(ctx, prog, uniform_size.num_values,
-                               num_explicit_uniform_locs);
+   link_assign_uniform_storage(ctx, prog, uniform_size.num_values);
 }
