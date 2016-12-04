@@ -4531,6 +4531,22 @@ disable_varying_optimizations_for_sso(struct gl_shader_program *prog)
    }
 }
 
+static void
+link_and_validate_uniforms(struct gl_context *ctx,
+                           struct gl_shader_program *prog,
+                           unsigned num_explicit_uniform_locs)
+{
+   update_array_sizes(prog);
+   link_assign_uniform_locations(prog, ctx, num_explicit_uniform_locs);
+
+   link_assign_atomic_counter_resources(ctx, prog);
+   link_calculate_subroutine_compat(prog);
+   check_resources(ctx, prog);
+   check_subroutine_resources(prog);
+   check_image_resources(ctx, prog);
+   link_check_atomic_counter_resources(ctx, prog);
+}
+
 static bool
 link_varyings_and_uniforms(unsigned first, unsigned last,
                            unsigned num_explicit_uniform_locs,
@@ -4579,15 +4595,7 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
    if (!link_varyings(prog, first, last, ctx, mem_ctx))
       return false;
 
-   update_array_sizes(prog);
-   link_assign_uniform_locations(prog, ctx, num_explicit_uniform_locs);
-   link_assign_atomic_counter_resources(ctx, prog);
-
-   link_calculate_subroutine_compat(prog);
-   check_resources(ctx, prog);
-   check_subroutine_resources(prog);
-   check_image_resources(ctx, prog);
-   link_check_atomic_counter_resources(ctx, prog);
+   link_and_validate_uniforms(ctx, prog, num_explicit_uniform_locs);
 
    if (!prog->data->LinkStatus)
       return false;
