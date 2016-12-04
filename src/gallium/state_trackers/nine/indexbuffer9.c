@@ -49,7 +49,7 @@ NineIndexBuffer9_ctor( struct NineIndexBuffer9 *This,
     if (FAILED(hr))
         return hr;
 
-    This->buffer.buffer = NineIndexBuffer9_GetResource(This);
+    This->buffer.buffer = NULL;
     This->buffer.offset = 0;
 
     switch (pDesc->Format) {
@@ -77,14 +77,8 @@ const struct pipe_index_buffer *
 NineIndexBuffer9_GetBuffer( struct NineIndexBuffer9 *This )
 {
     /* The resource may change */
-    This->buffer.buffer = NineIndexBuffer9_GetResource(This);
+    This->buffer.buffer = NineBuffer9_GetResource(&This->base, &This->buffer.offset);
     return &This->buffer;
-}
-
-struct pipe_resource *
-NineIndexBuffer9_GetResource( struct NineIndexBuffer9 *This )
-{
-    return NineBuffer9_GetResource(&This->base);
 }
 
 HRESULT NINE_WINAPI

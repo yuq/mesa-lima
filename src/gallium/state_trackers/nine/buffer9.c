@@ -23,6 +23,7 @@
 
 #include "buffer9.h"
 #include "device9.h"
+#include "nine_buffer_upload.h"
 #include "nine_helpers.h"
 #include "nine_pipe.h"
 
@@ -100,6 +101,10 @@ NineBuffer9_ctor( struct NineBuffer9 *This,
     else
         info->usage = PIPE_USAGE_DYNAMIC;
 
+    /* When Writeonly is not set, we don't want to enable the
+     * optimizations */
+    This->discard_nooverwrite_only = !!(Usage & D3DUSAGE_WRITEONLY) &&
+                                     pParams->device->buffer_upload;
     /* if (pDesc->Usage & D3DUSAGE_DONOTCLIP) { } */
     /* if (pDesc->Usage & D3DUSAGE_NONSECURE) { } */
     /* if (pDesc->Usage & D3DUSAGE_NPATCHES) { } */
@@ -161,12 +166,18 @@ NineBuffer9_dtor( struct NineBuffer9 *This )
             list_del(&This->managed.list2);
     }
 
+    if (This->buf)
+        nine_upload_release_buffer(This->base.base.device->buffer_upload, This->buf);
+
     NineResource9_dtor(&This->base);
 }
 
 struct pipe_resource *
-NineBuffer9_GetResource( struct NineBuffer9 *This )
+NineBuffer9_GetResource( struct NineBuffer9 *This, unsigned *offset )
 {
+    if (This->buf)
+        return nine_upload_buffer_resource_and_offset(This->buf, offset);
+    *offset = 0;
     return NineResource9_GetResource(&This->base);
 }
 
@@ -264,6 +275,8 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
     if (Flags & D3DLOCK_DONOTWAIT && !(This->base.usage & D3DUSAGE_DYNAMIC))
         usage |= PIPE_TRANSFER_DONTBLOCK;
 
+    This->discard_nooverwrite_only &= !!(Flags & (D3DLOCK_DISCARD | D3DLOCK_NOOVERWRITE));
+
     if (This->nmaps == This->maxmaps) {
         struct NineTransfer *newmaps =
             REALLOC(This->maps, sizeof(struct NineTransfer)*This->maxmaps,
@@ -275,8 +288,67 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
         This->maps = newmaps;
     }
 
-    This->maps[This->nmaps].is_pipe_secondary = FALSE;
+    if (This->buf && !This->discard_nooverwrite_only) {
+        struct pipe_box src_box;
+        unsigned offset;
+        struct pipe_resource *src_res;
+        DBG("Disabling nine_subbuffer for a buffer having"
+            "used a nine_subbuffer buffer\n");
+        /* Copy buffer content to the buffer resource, which
+         * we will now use.
+         * Note: The behaviour may be different from what is expected
+         * with double lock. However applications can't really make expectations
+         * about double locks, and don't really use them, so that's ok. */
+        src_res = nine_upload_buffer_resource_and_offset(This->buf, &offset);
+        u_box_1d(offset, This->size, &src_box);
 
+        pipe = NineDevice9_GetPipe(device);
+        pipe->resource_copy_region(pipe, This->base.resource, 0, 0, 0, 0,
+                                   src_res, 0, &src_box);
+        /* Release previous resource */
+        if (This->nmaps >= 1)
+            This->maps[This->nmaps-1].should_destroy_buf = true;
+        else
+            nine_upload_release_buffer(device->buffer_upload, This->buf);
+        This->buf = NULL;
+        /* Rebind buffer */
+        NineBuffer9_RebindIfRequired(This, device);
+    }
+
+    This->maps[This->nmaps].transfer = NULL;
+    This->maps[This->nmaps].is_pipe_secondary = false;
+    This->maps[This->nmaps].buf = NULL;
+    This->maps[This->nmaps].should_destroy_buf = false;
+
+    if (This->discard_nooverwrite_only) {
+        if (This->buf && (Flags & D3DLOCK_DISCARD)) {
+            /* Release previous buffer */
+            if (This->nmaps >= 1)
+                This->maps[This->nmaps-1].should_destroy_buf = true;
+            else
+                nine_upload_release_buffer(device->buffer_upload, This->buf);
+            This->buf = NULL;
+        }
+
+        if (!This->buf) {
+            This->buf = nine_upload_create_buffer(device->buffer_upload, This->base.info.width0);
+            NineBuffer9_RebindIfRequired(This, device);
+        }
+
+        if (This->buf) {
+            This->maps[This->nmaps].buf = This->buf;
+            This->nmaps++;
+            *ppbData = nine_upload_buffer_get_map(This->buf) + OffsetToLock;
+            return D3D_OK;
+        } else {
+            /* Fallback to normal path, and don't try again */
+            This->discard_nooverwrite_only = false;
+        }
+    }
+
+    /* When csmt is active, we want to avoid stalls as much as possible,
+     * and thus we want to create a new resource on discard and map it
+     * with the secondary pipe, instead of waiting on the main pipe. */
     if (Flags & D3DLOCK_DISCARD && device->csmt_active) {
         struct pipe_screen *screen = NineDevice9_GetScreen(device);
         struct pipe_resource *new_res = screen->resource_create(screen, &This->base.info);
@@ -328,15 +400,18 @@ NineBuffer9_Unlock( struct NineBuffer9 *This )
     user_assert(This->nmaps > 0, D3DERR_INVALIDCALL);
     This->nmaps--;
     if (This->base.pool != D3DPOOL_MANAGED) {
-        pipe = This->maps[This->nmaps].is_pipe_secondary ?
-            device->pipe_secondary :
-            nine_context_get_pipe_acquire(device);
-        pipe->transfer_unmap(pipe, This->maps[This->nmaps].transfer);
-        /* We need to flush in case the driver does implicit copies */
-        if (This->maps[This->nmaps].is_pipe_secondary)
-            pipe->flush(pipe, NULL, 0);
-        else
-            nine_context_get_pipe_release(device);
+        if (!This->maps[This->nmaps].buf) {
+            pipe = This->maps[This->nmaps].is_pipe_secondary ?
+                device->pipe_secondary :
+                nine_context_get_pipe_acquire(device);
+            pipe->transfer_unmap(pipe, This->maps[This->nmaps].transfer);
+            /* We need to flush in case the driver does implicit copies */
+            if (This->maps[This->nmaps].is_pipe_secondary)
+                pipe->flush(pipe, NULL, 0);
+            else
+                nine_context_get_pipe_release(device);
+        } else if (This->maps[This->nmaps].should_destroy_buf)
+            nine_upload_release_buffer(device->buffer_upload, This->maps[This->nmaps].buf);
     } else {
         BASEBUF_REGISTER_UPDATE(This);
     }

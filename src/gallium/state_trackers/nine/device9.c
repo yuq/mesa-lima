@@ -34,6 +34,7 @@
 #include "texture9.h"
 #include "cubetexture9.h"
 #include "volumetexture9.h"
+#include "nine_buffer_upload.h"
 #include "nine_helpers.h"
 #include "nine_pipe.h"
 #include "nine_ff.h"
@@ -281,6 +282,8 @@ NineDevice9_ctor( struct NineDevice9 *This,
 
     if (This->csmt_active)
         DBG("\033[1;32mCSMT is active\033[0m\n");
+
+    This->buffer_upload = nine_upload_create(This->pipe_secondary, 4 * 1024 * 1024, 4);
 
     /* Initialize a dummy VBO to be used when a vertex declaration does not
      * specify all the inputs needed by vertex shader, on win default behavior
@@ -570,6 +573,9 @@ NineDevice9_dtor( struct NineDevice9 *This )
                 NineUnknown_Unbind(NineUnknown(This->swapchains[i]));
         FREE(This->swapchains);
     }
+
+    if (This->buffer_upload)
+        nine_upload_destroy(This->buffer_upload);
 
     /* Destroy cso first */
     if (This->context.cso) { cso_destroy_context(This->context.cso); }

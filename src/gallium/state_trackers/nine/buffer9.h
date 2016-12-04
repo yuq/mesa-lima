@@ -25,6 +25,7 @@
 #define _NINE_BUFFER9_H_
 
 #include "device9.h"
+#include "nine_buffer_upload.h"
 #include "nine_state.h"
 #include "resource9.h"
 #include "pipe/p_context.h"
@@ -38,6 +39,8 @@ struct pipe_transfer;
 struct NineTransfer {
     struct pipe_transfer *transfer;
     bool is_pipe_secondary;
+    struct nine_subbuffer *buf; /* NULL unless subbuffer are used */
+    bool should_destroy_buf; /* If the subbuffer should be destroyed */
 };
 
 struct NineBuffer9
@@ -50,6 +53,10 @@ struct NineBuffer9
     UINT size;
 
     int16_t bind_count; /* to Device9->state.stream */
+    /* Whether only discard and nooverwrite were used so far
+     * for this buffer. Allows some optimization. */
+    boolean discard_nooverwrite_only;
+    struct nine_subbuffer *buf;
 
     /* Specific to managed buffers */
     struct {
@@ -79,7 +86,7 @@ void
 NineBuffer9_dtor( struct NineBuffer9 *This );
 
 struct pipe_resource *
-NineBuffer9_GetResource( struct NineBuffer9 *This );
+NineBuffer9_GetResource( struct NineBuffer9 *This, unsigned *offset );
 
 HRESULT NINE_WINAPI
 NineBuffer9_Lock( struct NineBuffer9 *This,

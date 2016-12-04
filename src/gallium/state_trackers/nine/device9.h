@@ -63,6 +63,9 @@ struct NineDevice9
     struct csmt_context *csmt_ctx;
     BOOL csmt_active;
 
+    /* For DISCARD/NOOVERWRITE */
+    struct nine_buffer_upload *buffer_upload;
+
     /* creation parameters */
     D3DCAPS9 caps;
     D3DDEVICE_CREATION_PARAMETERS params;
