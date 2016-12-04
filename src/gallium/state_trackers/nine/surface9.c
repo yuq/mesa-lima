@@ -20,6 +20,7 @@
  * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
  * USE OR OTHER DEALINGS IN THE SOFTWARE. */
 
+#include "iunknown.h"
 #include "surface9.h"
 #include "device9.h"
 
@@ -479,13 +480,22 @@ NineSurface9_LockRect( struct NineSurface9 *This,
                                                                   box.y);
         }
     } else {
+        bool no_refs = !p_atomic_read(&This->base.base.bind) &&
+            !(This->base.base.container && p_atomic_read(&This->base.base.container->bind));
         DBG("mapping pipe_resource %p (level=%u usage=%x)\n",
             resource, This->level, usage);
 
-        pipe = NineDevice9_GetPipe(This->base.base.device);
+        /* if the object is not bound internally, there can't be any pending
+         * operation with the surface in the queue */
+        if (no_refs)
+            pipe = nine_context_get_pipe_acquire(This->base.base.device);
+        else
+            pipe = NineDevice9_GetPipe(This->base.base.device);
         pLockedRect->pBits = pipe->transfer_map(pipe, resource,
                                                 This->level, usage, &box,
                                                 &This->transfer);
+        if (no_refs)
+            nine_context_get_pipe_release(This->base.base.device);
         if (!This->transfer) {
             DBG("transfer_map failed\n");
             if (Flags & D3DLOCK_DONOTWAIT)
