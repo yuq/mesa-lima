@@ -1723,7 +1723,8 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
                                                 PIPE_BIND_RENDER_TARGET),
                     D3DERR_INVALIDCALL);
 
-        nine_context_blit(This, &blit);
+        nine_context_blit(This, (struct NineUnknown *)dst,
+                          (struct NineUnknown *)src, &blit);
     } else {
         assert(blit.dst.box.x >= 0 && blit.dst.box.y >= 0 &&
                blit.src.box.x >= 0 && blit.src.box.y >= 0 &&
@@ -1733,11 +1734,12 @@ NineDevice9_StretchRect( struct NineDevice9 *This,
                blit.src.box.y + blit.src.box.height <= src->desc.Height);
         /* Or drivers might crash ... */
         DBG("Using resource_copy_region.\n");
-        nine_context_resource_copy_region(This,
-            blit.dst.resource, blit.dst.level,
-            &blit.dst.box,
-            blit.src.resource, blit.src.level,
-            &blit.src.box);
+        nine_context_resource_copy_region(This, (struct NineUnknown *)dst,
+                                          (struct NineUnknown *)src,
+                                          blit.dst.resource, blit.dst.level,
+                                          &blit.dst.box,
+                                          blit.src.resource, blit.src.level,
+                                          &blit.src.box);
     }
 
     /* Communicate the container it needs to update sublevels - if apply */
