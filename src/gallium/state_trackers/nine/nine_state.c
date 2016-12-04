@@ -1539,14 +1539,15 @@ nine_context_set_stream_source(struct NineDevice9 *device,
                                UINT Stride)
 {
     struct pipe_resource *res = NULL;
+    unsigned offset = 0;
 
     if (pVBuf9)
-        res = NineVertexBuffer9_GetResource(pVBuf9);
+        res = NineVertexBuffer9_GetResource(pVBuf9, &offset);
     /* in the future when there is internal offset, add it
      * to OffsetInBytes */
 
     nine_context_set_stream_source_apply(device, StreamNumber,
-                                         res, OffsetInBytes,
+                                         res, offset + OffsetInBytes,
                                          Stride);
 }
 
@@ -2041,9 +2042,10 @@ nine_context_apply_stateblock(struct NineDevice9 *device,
         for (i = 0; m; ++i, m >>= 1) {
             if (src->changed.vtxbuf & (1 << i)) {
                 if (src->stream[i]) {
-                    context->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset;
+                    unsigned offset = 0;
                     pipe_resource_reference(&context->vtxbuf[i].buffer,
-                        src->stream[i] ? NineVertexBuffer9_GetResource(src->stream[i]) : NULL);
+                        src->stream[i] ? NineVertexBuffer9_GetResource(src->stream[i], &offset) : NULL);
+                    context->vtxbuf[i].buffer_offset = src->vtxbuf[i].buffer_offset + offset;
                     context->vtxbuf[i].stride = src->vtxbuf[i].stride;
                 }
             }
@@ -3276,16 +3278,17 @@ update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_
     for (i = 0; mask; mask >>= 1, ++i) {
         if (mask & 1) {
             if (state->stream[i]) {
+                unsigned offset;
                 struct pipe_resource *buf;
                 struct pipe_box box;
 
                 vtxbuf = state->vtxbuf[i];
-                vtxbuf.buffer = NineVertexBuffer9_GetResource(state->stream[i]);
+                vtxbuf.buffer = NineVertexBuffer9_GetResource(state->stream[i], &offset);
 
                 DBG("Locking %p (offset %d, length %d)\n", vtxbuf.buffer,
                     vtxbuf.buffer_offset, num_vertices * vtxbuf.stride);
 
-                u_box_1d(vtxbuf.buffer_offset + start_vertice * vtxbuf.stride,
+                u_box_1d(vtxbuf.buffer_offset + offset + start_vertice * vtxbuf.stride,
                          num_vertices * vtxbuf.stride, &box);
                 buf = vtxbuf.buffer;
                 vtxbuf.user_buffer = pipe->transfer_map(pipe, buf, 0, PIPE_TRANSFER_READ, &box,
