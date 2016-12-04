@@ -405,7 +405,8 @@ NineBaseTexture9_GenerateMipSubLevels( struct NineBaseTexture9 *This )
 
     last_layer = util_max_layer(This->view[0]->texture, base_level);
 
-    nine_context_gen_mipmap(This->base.base.device, This->base.resource,
+    nine_context_gen_mipmap(This->base.base.device, (struct NineUnknown *)This,
+                            This->base.resource,
                             base_level, last_level,
                             first_layer, last_layer, filter);
 

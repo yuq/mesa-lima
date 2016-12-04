@@ -2694,6 +2694,7 @@ CSMT_ITEM_NO_WAIT(nine_context_clear_render_target,
 }
 
 CSMT_ITEM_NO_WAIT(nine_context_gen_mipmap,
+                  ARG_BIND_REF(struct NineUnknown, dst),
                   ARG_BIND_RES(struct pipe_resource, res),
                   ARG_VAL(UINT, base_level),
                   ARG_VAL(UINT, last_level),
@@ -2702,6 +2703,9 @@ CSMT_ITEM_NO_WAIT(nine_context_gen_mipmap,
                   ARG_VAL(UINT, filter))
 {
     struct nine_context *context = &device->context;
+
+    /* We just bind dst for the bind count */
+    (void)dst;
 
     util_gen_mipmap(context->pipe, res, res->format, base_level,
                     last_level, first_layer, last_layer, filter);

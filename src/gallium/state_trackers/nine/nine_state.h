@@ -541,6 +541,7 @@ nine_context_clear_render_target(struct NineDevice9 *device,
 
 void
 nine_context_gen_mipmap(struct NineDevice9 *device,
+                        struct NineUnknown *dst,
                         struct pipe_resource *res,
                         UINT base_level, UINT last_level,
                         UINT first_layer, UINT last_layer,
