@@ -106,6 +106,7 @@ glsl_get_bit_size(const struct glsl_type *type)
    return 0;
 }
 
+bool glsl_type_is_64bit(const struct glsl_type *type);
 bool glsl_type_is_void(const struct glsl_type *type);
 bool glsl_type_is_error(const struct glsl_type *type);
 bool glsl_type_is_vector(const struct glsl_type *type);

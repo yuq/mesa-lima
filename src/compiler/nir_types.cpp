@@ -150,6 +150,12 @@ glsl_get_record_location_offset(const struct glsl_type *type,
 }
 
 bool
+glsl_type_is_64bit(const glsl_type *type)
+{
+   return type->is_64bit();
+}
+
+bool
 glsl_type_is_void(const glsl_type *type)
 {
    return type->is_void();
