@@ -292,9 +292,10 @@ etna_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
       return 1;
 
    /* Timer queries. */
+   case PIPE_CAP_OCCLUSION_QUERY: /* Not implemented - fake it for OpenGL2 */
+      return 1;
+
    case PIPE_CAP_QUERY_TIME_ELAPSED:
-   case PIPE_CAP_OCCLUSION_QUERY:
-      return 0;
    case PIPE_CAP_QUERY_TIMESTAMP:
       return 1;
    case PIPE_CAP_QUERY_PIPELINE_STATISTICS:
