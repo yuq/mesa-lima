@@ -105,6 +105,7 @@ struct _egl_extensions
    EGLBoolean EXT_swap_buffers_with_damage;
 
    EGLBoolean KHR_cl_event2;
+   EGLBoolean KHR_config_attribs;
    EGLBoolean KHR_create_context;
    EGLBoolean KHR_fence_sync;
    EGLBoolean KHR_get_all_proc_addresses;

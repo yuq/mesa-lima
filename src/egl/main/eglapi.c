@@ -485,6 +485,7 @@ _eglCreateExtensionsString(_EGLDisplay *dpy)
    _EGL_CHECK_EXTENSION(EXT_swap_buffers_with_damage);
 
    _EGL_CHECK_EXTENSION(KHR_cl_event2);
+   _EGL_CHECK_EXTENSION(KHR_config_attribs);
    _EGL_CHECK_EXTENSION(KHR_create_context);
    _EGL_CHECK_EXTENSION(KHR_fence_sync);
    _EGL_CHECK_EXTENSION(KHR_get_all_proc_addresses);
@@ -596,6 +597,11 @@ eglInitialize(EGLDisplay dpy, EGLint *major, EGLint *minor)
        * EGL_KHR_get_all_proc_addresses also.
        */
       disp->Extensions.KHR_get_all_proc_addresses = EGL_TRUE;
+
+      /* Extensions is used to provide EGL 1.3 functionality for 1.2 aware
+       * programs. It is driver agnostic and handled in the main EGL code.
+       */
+      disp->Extensions.KHR_config_attribs = EGL_TRUE;
 
       _eglComputeVersion(disp);
       _eglCreateExtensionsString(disp);
