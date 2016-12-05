@@ -209,12 +209,32 @@ brw_new_shader(gl_shader_stage stage)
    return &shader->base;
 }
 
+static void
+unify_interfaces(struct shader_info **infos)
+{
+   struct shader_info *prev_info = NULL;
+
+   for (unsigned i = MESA_SHADER_VERTEX; i < MESA_SHADER_FRAGMENT; i++) {
+      if (!infos[i])
+         continue;
+
+      if (prev_info) {
+         prev_info->outputs_written |= infos[i]->inputs_read;
+         prev_info->patch_outputs_written |= infos[i]->patch_inputs_read;
+         infos[i]->inputs_read |= prev_info->outputs_written;
+         infos[i]->patch_inputs_read |= prev_info->patch_outputs_written;
+      }
+      prev_info = infos[i];
+   }
+}
+
 extern "C" GLboolean
 brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
    struct brw_context *brw = brw_context(ctx);
    const struct brw_compiler *compiler = brw->screen->compiler;
    unsigned int stage;
+   struct shader_info *infos[MESA_SHADER_STAGES] = { 0, };
 
    for (stage = 0; stage < ARRAY_SIZE(shProg->_LinkedShaders); stage++) {
       struct gl_linked_shader *shader = shProg->_LinkedShaders[stage];
@@ -269,7 +289,16 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
                                  compiler->scalar_stage[stage]);
+      infos[stage] = prog->nir->info;
    }
+
+   /* The linker tries to dead code eliminate unused varying components,
+    * and make sure interfaces match.  But it isn't able to do so in all
+    * cases.  So, explicitly make the interfaces match by OR'ing together
+    * the inputs_read/outputs_written bitfields of adjacent stages.
+    */
+   if (!shProg->SeparateShader)
+      unify_interfaces(infos);
 
    if ((ctx->_Shader->Flags & GLSL_DUMP) && shProg->Name != 0) {
       for (unsigned i = 0; i < shProg->NumShaders; i++) {
