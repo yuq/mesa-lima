@@ -1705,9 +1705,9 @@ dnl
 
 AC_ARG_ENABLE([glx-tls],
     [AS_HELP_STRING([--enable-glx-tls],
-        [enable TLS support in GLX @<:@default=disabled@:>@])],
+        [enable TLS support in GLX @<:@default=enabled@:>@])],
     [GLX_USE_TLS="$enableval"],
-    [GLX_USE_TLS=no])
+    [GLX_USE_TLS=yes])
 AC_SUBST(GLX_TLS, ${GLX_USE_TLS})
 
 AS_IF([test "x$GLX_USE_TLS" = xyes -a "x$ax_pthread_ok" = xyes],
