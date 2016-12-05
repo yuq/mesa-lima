@@ -322,8 +322,6 @@ dri2_initialize_surfaceless(_EGLDriver *drv, _EGLDisplay *disp)
       goto cleanup_screen;
    }
 
-   disp->Extensions.KHR_image_base = EGL_TRUE;
-
    /* Fill vtbl last to prevent accidentally calling virtual function during
     * initialization.
     */
