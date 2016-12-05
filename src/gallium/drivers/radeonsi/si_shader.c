@@ -2657,10 +2657,18 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				 lp_build_const_int32(gallivm,
 						      tess_outer_index * 4), "");
 
-	for (i = 0; i < outer_comps; i++)
-		out[i] = lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_outer);
-	for (i = 0; i < inner_comps; i++)
-		out[outer_comps+i] = lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_inner);
+	if (shader->key.part.tcs.epilog.prim_mode == PIPE_PRIM_LINES) {
+		/* For isolines, the hardware expects tess factors in the
+		 * reverse order from what GLSL / TGSI specify.
+		 */
+		out[0] = lds_load(bld_base, TGSI_TYPE_SIGNED, 1, lds_outer);
+		out[1] = lds_load(bld_base, TGSI_TYPE_SIGNED, 0, lds_outer);
+	} else {
+		for (i = 0; i < outer_comps; i++)
+			out[i] = lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_outer);
+		for (i = 0; i < inner_comps; i++)
+			out[outer_comps+i] = lds_load(bld_base, TGSI_TYPE_SIGNED, i, lds_inner);
+	}
 
 	/* Convert the outputs to vectors for stores. */
 	vec0 = lp_build_gather_values(gallivm, out, MIN2(stride, 4));
