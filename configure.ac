@@ -1930,6 +1930,14 @@ AC_ARG_WITH([vulkan-icddir],
     [VULKAN_ICD_INSTALL_DIR='${datarootdir}/vulkan/icd.d'])
 AC_SUBST([VULKAN_ICD_INSTALL_DIR])
 
+require_x11_dri3() {
+    if echo "$platforms" | grep -q 'x11'; then
+        if test "x$enable_dri3" != xyes; then
+            AC_MSG_ERROR([$1 Vulkan driver requires DRI3 when built with X11])
+        fi
+    fi
+}
+
 if test -n "$with_vulkan_drivers"; then
     if test "x$ac_cv_func_dl_iterate_phdr" = xno; then
         AC_MSG_ERROR([Vulkan drivers require the dl_iterate_phdr function])
@@ -1941,12 +1949,14 @@ if test -n "$with_vulkan_drivers"; then
         xintel)
             require_libdrm "ANV"
             PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
+            require_x11_dri3 "ANV"
             HAVE_INTEL_VULKAN=yes
             ;;
         xradeon)
             require_libdrm "radv"
             PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             radeon_llvm_check $LLVM_REQUIRED_RADV "radv"
+            require_x11_dri3 "radv"
             HAVE_RADEON_VULKAN=yes
             ;;
         *)
