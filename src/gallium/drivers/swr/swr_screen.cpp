@@ -35,6 +35,7 @@
 #include "util/u_inlines.h"
 #include "util/u_cpu_detect.h"
 #include "util/u_format_s3tc.h"
+#include "util/u_string.h"
 
 #include "state_tracker/sw_winsys.h"
 
@@ -67,7 +68,11 @@ extern "C" {
 static const char *
 swr_get_name(struct pipe_screen *screen)
 {
-   return "SWR";
+   static char buf[100];
+   util_snprintf(buf, sizeof(buf), "SWR (LLVM %u.%u, %u bits)",
+                 HAVE_LLVM >> 8, HAVE_LLVM & 0xff,
+                 lp_native_vector_width );
+   return buf;
 }
 
 static const char *
@@ -938,6 +943,11 @@ swr_create_screen_internal(struct sw_winsys *winsys)
 
    if (!getenv("KNOB_MAX_PRIMS_PER_DRAW")) {
       g_GlobalKnobs.MAX_PRIMS_PER_DRAW.Value(49152);
+   }
+
+   if (!lp_build_init()) {
+      FREE(screen);
+      return NULL;
    }
 
    screen->winsys = winsys;
