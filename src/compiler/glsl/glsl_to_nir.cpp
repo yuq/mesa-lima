@@ -207,17 +207,21 @@ constant_copy(ir_constant *ir, void *mem_ctx)
    ret->num_elements = 0;
    switch (ir->type->base_type) {
    case GLSL_TYPE_UINT:
-      for (unsigned c = 0; c < cols; c++) {
-         for (unsigned r = 0; r < rows; r++)
-            ret->values[c].u32[r] = ir->value.u[c * rows + r];
-      }
+      /* Only float base types can be matrices. */
+      assert(cols == 1);
+
+      for (unsigned r = 0; r < rows; r++)
+         ret->values[0].u32[r] = ir->value.u[r];
+
       break;
 
    case GLSL_TYPE_INT:
-      for (unsigned c = 0; c < cols; c++) {
-         for (unsigned r = 0; r < rows; r++)
-            ret->values[c].i32[r] = ir->value.i[c * rows + r];
-      }
+      /* Only float base types can be matrices. */
+      assert(cols == 1);
+
+      for (unsigned r = 0; r < rows; r++)
+         ret->values[0].i32[r] = ir->value.i[r];
+
       break;
 
    case GLSL_TYPE_FLOAT:
@@ -235,12 +239,12 @@ constant_copy(ir_constant *ir, void *mem_ctx)
       break;
 
    case GLSL_TYPE_BOOL:
-      for (unsigned c = 0; c < cols; c++) {
-         for (unsigned r = 0; r < rows; r++) {
-            ret->values[c].u32[r] = ir->value.b[c * rows + r] ?
-                                    NIR_TRUE : NIR_FALSE;
-         }
-      }
+      /* Only float base types can be matrices. */
+      assert(cols == 1);
+
+      for (unsigned r = 0; r < rows; r++)
+         ret->values[0].u32[r] = ir->value.b[r] ? NIR_TRUE : NIR_FALSE;
+
       break;
 
    case GLSL_TYPE_STRUCT:
