@@ -242,7 +242,7 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
    struct pipe_video_buffer *video_buffer;
    struct pipe_sampler_view *sampler_view, sv_templ;
    struct pipe_surface *surface, surf_templ;
-   struct pipe_context *pipe;
+   struct pipe_context *pipe = NULL;
    struct pipe_resource res_tmpl, *res;
 
    vlVdpVideoMixer *vmixer;
