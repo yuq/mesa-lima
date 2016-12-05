@@ -1710,8 +1710,9 @@ AC_ARG_ENABLE([glx-tls],
     [GLX_USE_TLS=yes])
 AC_SUBST(GLX_TLS, ${GLX_USE_TLS})
 
-AS_IF([test "x$GLX_USE_TLS" = xyes -a "x$ax_pthread_ok" = xyes],
-      [DEFINES="${DEFINES} -DGLX_USE_TLS"])
+if test "x$GLX_USE_TLS" = xyes; then
+    DEFINES="$DEFINES -DGLX_USE_TLS"
+fi
 
 dnl Read-only text section on x86 hardened platforms
 AC_ARG_ENABLE([glx-read-only-text],
