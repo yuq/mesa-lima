@@ -47,7 +47,6 @@ dri2_backend_FILES =
 dri3_backend_FILES =
 
 if HAVE_PLATFORM_X11
-AM_CFLAGS += -DHAVE_X11_PLATFORM
 AM_CFLAGS += $(XCB_DRI2_CFLAGS)
 libEGL_common_la_LIBADD += $(XCB_DRI2_LIBS)
 dri2_backend_FILES += drivers/dri2/platform_x11.c
@@ -62,7 +61,6 @@ endif
 endif
 
 if HAVE_PLATFORM_WAYLAND
-AM_CFLAGS += -DHAVE_WAYLAND_PLATFORM
 AM_CFLAGS += $(WAYLAND_CFLAGS)
 libEGL_common_la_LIBADD += $(WAYLAND_LIBS)
 libEGL_common_la_LIBADD += $(LIBDRM_LIBS)
@@ -71,18 +69,15 @@ dri2_backend_FILES += drivers/dri2/platform_wayland.c
 endif
 
 if HAVE_PLATFORM_DRM
-AM_CFLAGS += -DHAVE_DRM_PLATFORM
 libEGL_common_la_LIBADD += $(top_builddir)/src/gbm/libgbm.la
 dri2_backend_FILES += drivers/dri2/platform_drm.c
 endif
 
 if HAVE_PLATFORM_SURFACELESS
-AM_CFLAGS += -DHAVE_SURFACELESS_PLATFORM
 dri2_backend_FILES += drivers/dri2/platform_surfaceless.c
 endif
 
 if HAVE_PLATFORM_ANDROID
-AM_CFLAGS += -DHAVE_ANDROID_PLATFORM
 AM_CFLAGS += $(ANDROID_CFLAGS)
 libEGL_common_la_LIBADD += $(ANDROID_LIBS)
 dri2_backend_FILES += drivers/dri2/platform_android.c

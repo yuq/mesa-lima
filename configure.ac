@@ -1684,22 +1684,27 @@ for plat in $platforms; do
 		if test "x$WAYLAND_SCANNER" = "x:"; then
 			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland platform])
 		fi
+		DEFINES="$DEFINES -DHAVE_WAYLAND_PLATFORM"
 		;;
 
 	x11)
 		PKG_CHECK_MODULES([XCB_DRI2], [x11-xcb xcb xcb-dri2 >= $XCBDRI2_REQUIRED xcb-xfixes])
+		DEFINES="$DEFINES -DHAVE_X11_PLATFORM"
 		;;
 
 	drm)
 		test "x$enable_gbm" = "xno" &&
 			AC_MSG_ERROR([EGL platform drm needs gbm])
+		DEFINES="$DEFINES -DHAVE_DRM_PLATFORM"
 		;;
 
 	surfaceless)
+		DEFINES="$DEFINES -DHAVE_SURFACELESS_PLATFORM"
 		;;
 
 	android)
 		PKG_CHECK_MODULES([ANDROID], [cutils hardware sync])
+		DEFINES="$DEFINES -DHAVE_ANDROID_PLATFORM"
 		;;
 
 	*)
