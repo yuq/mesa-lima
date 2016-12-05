@@ -48,7 +48,6 @@
 
 #include "pipe/p_screen.h"
 #include "pipe/p_video_codec.h"
-#include "state_tracker/drm_driver.h"
 #include "util/u_memory.h"
 #include "vl/vl_video_buffer.h"
 
