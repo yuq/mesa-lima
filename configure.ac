@@ -1776,7 +1776,6 @@ if test "x$enable_dri" = xyes; then
     # Platform specific settings and drivers to build
     case "$host_os" in
     linux*)
-        DEFINES="$DEFINES -DHAVE_ALIAS"
         if test "x$enable_dri3" = xyes; then
             DEFINES="$DEFINES -DHAVE_DRI3"
         fi
@@ -1790,19 +1789,13 @@ if test "x$enable_dri" = xyes; then
             ;;
         esac
         ;;
-    *freebsd* | dragonfly* | *netbsd* | openbsd*)
-        DEFINES="$DEFINES -DHAVE_ALIAS"
-        ;;
-    gnu*)
-        DEFINES="$DEFINES -DHAVE_ALIAS"
-        ;;
     cygwin*)
         if test "x$with_dri_drivers" = "xyes"; then
             with_dri_drivers="swrast"
         fi
         ;;
     darwin*)
-        DEFINES="$DEFINES -DGLX_ALIAS_UNSUPPORTED -DBUILDING_MESA"
+        DEFINES="$DEFINES -DBUILDING_MESA"
         if test "x$with_dri_drivers" = "xyes"; then
             with_dri_drivers="swrast"
         fi

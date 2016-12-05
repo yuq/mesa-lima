@@ -323,10 +323,6 @@ def generate(env):
                 'GLX_DIRECT_RENDERING',
                 'GLX_INDIRECT_RENDERING',
             ]
-        if env['platform'] in ('linux', 'freebsd'):
-            cppdefines += ['HAVE_ALIAS']
-        else:
-            cppdefines += ['GLX_ALIAS_UNSUPPORTED']
 
         if env['platform'] in ('linux', 'darwin'):
             cppdefines += ['HAVE_XLOCALE_H']
