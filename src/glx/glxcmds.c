@@ -2663,19 +2663,10 @@ _GLX_PUBLIC void (*glXGetProcAddressARB(const GLubyte * procName)) (void)
  *
  * \sa glXGetProcAddressARB
  */
-_GLX_PUBLIC void (*glXGetProcAddress(const GLubyte * procName)) (void)
-# ifdef HAVE_FUNC_ATTRIBUTE_ALIAS
-# if defined(USE_MGL_NAMESPACE)
-   __attribute__ ((alias("mglXGetProcAddressARB")));
-# else
-   __attribute__ ((alias("glXGetProcAddressARB")));
-# endif
-#else
-{
-   return glXGetProcAddressARB(procName);
-}
-#endif /* HAVE_FUNC_ATTRIBUTE_ALIA */
-
+_GLX_PUBLIC
+GLX_ALIAS(__GLXextFuncPtr, glXGetProcAddress,
+          (const GLubyte * procName),
+          (procName), glXGetProcAddressARB)
 
 #if defined(GLX_DIRECT_RENDERING) && !defined(GLX_USE_APPLEGL)
 /**
