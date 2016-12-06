@@ -33,6 +33,7 @@
 #include "lp_bld_format.h"
 #include "lp_bld_gather.h"
 #include "lp_bld_swizzle.h"
+#include "lp_bld_type.h"
 #include "lp_bld_init.h"
 #include "lp_bld_intr.h"
 
@@ -270,16 +271,51 @@ lp_build_gather(struct gallivm_state *gallivm,
 
       LLVMTypeRef dst_elem_type = LLVMIntTypeInContext(gallivm->context, dst_width);
       LLVMTypeRef dst_vec_type = LLVMVectorType(dst_elem_type, length);
+      LLVMTypeRef gather_vec_type = dst_vec_type;
       unsigned i;
+      boolean vec_zext = FALSE;
+      unsigned gather_width = dst_width;
 
-      res = LLVMGetUndef(dst_vec_type);
+
+      if (src_width == 16 && dst_width == 32) {
+         LLVMTypeRef g_elem_type = LLVMIntTypeInContext(gallivm->context, dst_width / 2);
+         gather_vec_type = LLVMVectorType(g_elem_type, length);
+         /*
+          * Note that llvm is never able to optimize zext/insert combos
+          * directly (i.e. zero the simd reg, then place the elements into
+          * the appropriate place directly). And 16->32bit zext simd loads
+          * aren't possible (instead loading to scalar reg first).
+          * (I think this has to do with scalar/vector transition.)
+          * No idea about other archs...
+          * We could do this manually, but instead we just use a vector
+          * zext, which is simple enough (and, in fact, llvm might optimize
+          * this away).
+          * (We're not trying that with other bit widths as that might not be
+          * easier, in particular with 8 bit values at least with only sse2.)
+          */
+         vec_zext = TRUE;
+         gather_width = 16;
+      }
+      res = LLVMGetUndef(gather_vec_type);
       for (i = 0; i < length; ++i) {
          LLVMValueRef index = lp_build_const_int32(gallivm, i);
          LLVMValueRef elem;
          elem = lp_build_gather_elem(gallivm, length,
-                                     src_width, dst_width, aligned,
+                                     src_width, gather_width, aligned,
                                      base_ptr, offsets, i, vector_justify);
          res = LLVMBuildInsertElement(gallivm->builder, res, elem, index, "");
+      }
+      if (vec_zext) {
+         res = LLVMBuildZExt(gallivm->builder, res, dst_vec_type, "");
+         if (vector_justify) {
+#if PIPE_ARCH_BIG_ENDIAN
+            struct lp_type dst_type;
+            unsigned sv = dst_width - src_width;
+            dst_type = lp_type_uint_vec(dst_width, dst_width * length);
+            res = LLVMBuildShl(gallivm->builder, res,
+                               lp_build_const_int_vec(gallivm, dst_type, sv), "");
+#endif
+         }
       }
    }
 
