@@ -53,7 +53,7 @@ fd5_draw(struct fd_batch *batch, struct fd_ringbuffer *ring,
 	 */
 	emit_marker5(ring, 7);
 
-	OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, idx_buffer ? 6 : 3);
+	OUT_PKT7(ring, CP_DRAW_INDX_OFFSET, idx_buffer ? 7 : 3);
 	if (vismode == USE_VISIBILITY) {
 		/* leave vis mode blank for now, it will be patched up when
 		 * we know if we are binning or not
