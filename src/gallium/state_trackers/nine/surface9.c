@@ -285,6 +285,8 @@ NineSurface9_GetContainer( struct NineSurface9 *This,
     DBG("This=%p riid=%p id=%s ppContainer=%p\n",
         This, riid, riid ? GUID_sprintf(guid_str, riid) : "", ppContainer);
 
+    (void)guid_str;
+
     if (!ppContainer) return E_POINTER;
 
     /* Return device for OffscreenPlainSurface, DepthStencilSurface and RenderTarget */
