@@ -3641,6 +3641,12 @@ struct gl_constants
    bool GLSLOptimizeConservatively;
 
    /**
+    * True if gl_TessLevelInner/Outer[] in the TES should be inputs
+    * (otherwise, they're system values).
+    */
+   bool GLSLTessLevelsAsInputs;
+
+   /**
     * Always use the GetTransformFeedbackVertexCount() driver hook, rather
     * than passing the transform feedback object to the drawing function.
     */
