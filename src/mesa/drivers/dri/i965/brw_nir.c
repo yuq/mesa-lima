@@ -486,10 +486,20 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    /* Lower a bunch of stuff */
    OPT_V(nir_lower_var_copies);
 
+   OPT_V(nir_lower_clip_cull_distance_arrays);
+
+   nir_variable_mode indirect_mask = 0;
+   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectInput)
+      indirect_mask |= nir_var_shader_in;
+   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectOutput)
+      indirect_mask |= nir_var_shader_out;
+   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectTemp)
+      indirect_mask |= nir_var_local;
+
+   nir_lower_indirect_derefs(nir, indirect_mask);
+
    /* Get rid of split copies */
    nir = nir_optimize(nir, is_scalar);
-
-   OPT_V(nir_lower_clip_cull_distance_arrays);
 
    OPT(nir_remove_dead_variables, nir_var_local);
 
