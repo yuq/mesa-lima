@@ -178,14 +178,15 @@ static unsigned get_cpb_num(struct rvce_encoder *enc)
 	case 41:
 		dpb = 32768;
 		break;
-	default:
 	case 42:
 		dpb = 34816;
 		break;
 	case 50:
 		dpb = 110400;
 		break;
+	default:
 	case 51:
+	case 52:
 		dpb = 184320;
 		break;
 	}
