@@ -53,10 +53,17 @@ gen8_upload_ps_extra(struct brw_context *brw,
       dw1 |= GEN8_PSX_SHADER_IS_PER_SAMPLE;
 
    if (prog_data->uses_sample_mask) {
-      if (brw->gen >= 9)
-         dw1 |= BRW_PSICMS_INNER << GEN9_PSX_SHADER_NORMAL_COVERAGE_MASK_SHIFT;
-      else
+      if (brw->gen >= 9) {
+         if (prog_data->post_depth_coverage) {
+            dw1 |= BRW_PCICMS_DEPTH << GEN9_PSX_SHADER_NORMAL_COVERAGE_MASK_SHIFT;
+         }
+         else {
+            dw1 |= BRW_PSICMS_INNER << GEN9_PSX_SHADER_NORMAL_COVERAGE_MASK_SHIFT;
+         }
+      }
+      else {
          dw1 |= GEN8_PSX_SHADER_USES_INPUT_COVERAGE_MASK;
+      }
    }
 
    if (prog_data->uses_omask)

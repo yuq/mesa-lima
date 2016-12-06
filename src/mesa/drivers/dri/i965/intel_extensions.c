@@ -415,6 +415,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.KHR_texture_compression_astc_ldr = true;
       ctx->Extensions.KHR_texture_compression_astc_sliced_3d = true;
       ctx->Extensions.MESA_shader_framebuffer_fetch = true;
+      ctx->Extensions.ARB_post_depth_coverage = true;
    }
 
    if (ctx->API == API_OPENGL_CORE)
