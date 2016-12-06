@@ -459,7 +459,7 @@ lower_instructions_visitor::ldexp_to_arith(ir_expression *ir)
     * pass.
     */
    if (!lowering(INSERT_TO_SHIFTS)) {
-      ir_constant *exp_width = new(ir) ir_constant(8u, vec_elem);
+      ir_constant *exp_width = new(ir) ir_constant(8, vec_elem);
       ir->operation = ir_unop_bitcast_i2f;
       ir->operands[0] = bitfield_insert(bitcast_f2i(x), resulting_biased_exp,
                                         exp_shift_clone, exp_width);
