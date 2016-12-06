@@ -173,7 +173,7 @@ radv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
 	     __dword &= ~(1 << (b)))
 
 #define typed_memcpy(dest, src, count) ({				\
-			static_assert(sizeof(*src) == sizeof(*dest), ""); \
+			STATIC_ASSERT(sizeof(*src) == sizeof(*dest)); \
 			memcpy((dest), (src), (count) * sizeof(*(src))); \
 		})
 
