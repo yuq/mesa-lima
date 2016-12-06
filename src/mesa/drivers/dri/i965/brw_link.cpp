@@ -248,29 +248,6 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       _mesa_copy_linked_program_data(shProg, shader);
 
-      /* Make a pass over the IR to add state references for any built-in
-       * uniforms that are used.  This has to be done now (during linking).
-       * Code generation doesn't happen until the first time this shader is
-       * used for rendering.  Waiting until then to generate the parameters is
-       * too late.  At that point, the values for the built-in uniforms won't
-       * get sent to the shader.
-       */
-      foreach_in_list(ir_instruction, node, shader->ir) {
-         ir_variable *var = node->as_variable();
-
-         if ((var == NULL) || (var->data.mode != ir_var_uniform)
-             || (strncmp(var->name, "gl_", 3) != 0))
-            continue;
-
-         const ir_state_slot *const slots = var->get_state_slots();
-         assert(slots != NULL);
-
-         for (unsigned int i = 0; i < var->get_num_state_slots(); i++) {
-            _mesa_add_state_reference(prog->Parameters,
-                                      (gl_state_index *) slots[i].tokens);
-         }
-      }
-
       prog->SamplersUsed = shader->active_samplers;
       prog->ShadowSamplers = shader->shadow_samplers;
       _mesa_update_shader_textures_used(shProg, prog);
@@ -290,6 +267,25 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
       prog->nir = brw_create_nir(brw, shProg, prog, (gl_shader_stage) stage,
                                  compiler->scalar_stage[stage]);
       infos[stage] = prog->nir->info;
+
+      /* Make a pass over the IR to add state references for any built-in
+       * uniforms that are used.  This has to be done now (during linking).
+       * Code generation doesn't happen until the first time this shader is
+       * used for rendering.  Waiting until then to generate the parameters is
+       * too late.  At that point, the values for the built-in uniforms won't
+       * get sent to the shader.
+       */
+      nir_foreach_variable(var, &prog->nir->uniforms) {
+         if (strncmp(var->name, "gl_", 3) == 0) {
+            const nir_state_slot *const slots = var->state_slots;
+            assert(var->state_slots != NULL);
+
+            for (unsigned int i = 0; i < var->num_state_slots; i++) {
+               _mesa_add_state_reference(prog->Parameters,
+                                         (gl_state_index *)slots[i].tokens);
+            }
+         }
+      }
    }
 
    /* The linker tries to dead code eliminate unused varying components,
