@@ -184,9 +184,12 @@ unify_interfaces(struct shader_info **infos)
          continue;
 
       if (prev_info) {
-         prev_info->outputs_written |= infos[i]->inputs_read;
+         prev_info->outputs_written |= infos[i]->inputs_read &
+            ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
+         infos[i]->inputs_read |= prev_info->outputs_written &
+            ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
+
          prev_info->patch_outputs_written |= infos[i]->patch_inputs_read;
-         infos[i]->inputs_read |= prev_info->outputs_written;
          infos[i]->patch_inputs_read |= prev_info->patch_outputs_written;
       }
       prev_info = infos[i];
