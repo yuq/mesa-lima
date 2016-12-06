@@ -284,6 +284,7 @@ nir_visitor::visit(ir_variable *ir)
    var->data.patch = ir->data.patch;
    var->data.invariant = ir->data.invariant;
    var->data.location = ir->data.location;
+   var->data.compact = false;
 
    switch(ir->data.mode) {
    case ir_var_auto:
@@ -314,11 +315,22 @@ nir_visitor::visit(ir_variable *ir)
          var->data.mode = nir_var_system_value;
       } else {
          var->data.mode = nir_var_shader_in;
+
+         if (shader->stage == MESA_SHADER_TESS_EVAL &&
+             (ir->data.location == VARYING_SLOT_TESS_LEVEL_INNER ||
+              ir->data.location == VARYING_SLOT_TESS_LEVEL_OUTER)) {
+            var->data.compact = ir->type->without_array()->is_scalar();
+         }
       }
       break;
 
    case ir_var_shader_out:
       var->data.mode = nir_var_shader_out;
+      if (shader->stage == MESA_SHADER_TESS_CTRL &&
+          (ir->data.location == VARYING_SLOT_TESS_LEVEL_INNER ||
+           ir->data.location == VARYING_SLOT_TESS_LEVEL_OUTER)) {
+         var->data.compact = ir->type->without_array()->is_scalar();
+      }
       break;
 
    case ir_var_uniform:
@@ -340,7 +352,6 @@ nir_visitor::visit(ir_variable *ir)
    var->data.interpolation = ir->data.interpolation;
    var->data.origin_upper_left = ir->data.origin_upper_left;
    var->data.pixel_center_integer = ir->data.pixel_center_integer;
-   var->data.compact = false;
    var->data.location_frac = ir->data.location_frac;
 
    switch (ir->data.depth_layout) {
