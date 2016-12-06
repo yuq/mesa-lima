@@ -419,10 +419,18 @@ intel_miptree_copy(struct brw_context *brw,
       GLuint bw, bh;
       _mesa_get_format_block_size(src_mt->format, &bw, &bh);
 
+      /* Compressed textures need not have dimensions that are a multiple of
+       * the block size.  Rectangles in compressed textures do need to be a
+       * multiple of the block size.  The one exception is that the right and
+       * bottom edges may be at the right or bottom edge of the miplevel even
+       * if it's not aligned.
+       */
       assert(src_x % bw == 0);
       assert(src_y % bh == 0);
-      assert(src_width % bw == 0);
-      assert(src_height % bh == 0);
+      assert(src_width % bw == 0 ||
+             src_x + src_width == minify(src_mt->logical_width0, src_level));
+      assert(src_height % bh == 0 ||
+             src_y + src_height == minify(src_mt->logical_height0, src_level));
 
       src_x /= (int)bw;
       src_y /= (int)bh;
