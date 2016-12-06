@@ -85,7 +85,10 @@ fd_emit_string_marker(struct pipe_context *pctx, const char *string, int len)
 	/* max packet size is 0x3fff dwords: */
 	len = MIN2(len, 0x3fff * 4);
 
-	OUT_PKT3(ring, CP_NOP, align(len, 4) / 4);
+	if (ctx->screen->gpu_id >= 500)
+		OUT_PKT7(ring, CP_NOP, align(len, 4) / 4);
+	else
+		OUT_PKT3(ring, CP_NOP, align(len, 4) / 4);
 	while (len >= 4) {
 		OUT_RING(ring, *buf);
 		buf++;
