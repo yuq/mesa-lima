@@ -374,7 +374,7 @@ DRI_CONF_OPT_END
 
 #define DRI_CONF_NINE_OVERRIDEVENDOR(def) \
 DRI_CONF_OPT_BEGIN(override_vendorid, int, def) \
-        DRI_CONF_DESC(en,"Define the vendor_id to report. This allows faking another hardware vendor.") \
+        DRI_CONF_DESC(en,gettext("Define the vendor_id to report. This allows faking another hardware vendor.")) \
 DRI_CONF_OPT_END
 
 #define DRI_CONF_NINE_ALLOWDISCARDDELAYEDRELEASE(def) \
