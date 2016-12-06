@@ -2283,10 +2283,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CLEAR_PARAMS), cp) {
       if (has_hiz) {
          cp.DepthClearValueValid = true;
-         const uint32_t ds =
-            cmd_buffer->state.subpass->depth_stencil_attachment;
-         cp.DepthClearValue =
-            cmd_buffer->state.attachments[ds].clear_value.depthStencil.depth;
+         cp.DepthClearValue = ANV_HZ_FC_VAL;
       }
    }
 }

@@ -72,6 +72,21 @@ struct gen_l3_config;
 extern "C" {
 #endif
 
+/* Allowing different clear colors requires us to perform a depth resolve at
+ * the end of certain render passes. This is because while slow clears store
+ * the clear color in the HiZ buffer, fast clears (without a resolve) don't.
+ * See the PRMs for examples describing when additional resolves would be
+ * necessary. To enable fast clears without requiring extra resolves, we set
+ * the clear value to a globally-defined one. We could allow different values
+ * if the user doesn't expect coherent data during or after a render passes
+ * (VK_ATTACHMENT_STORE_OP_DONT_CARE), but such users (aside from the CTS)
+ * don't seem to exist yet. In almost all Vulkan applications tested thus far,
+ * 1.0f seems to be the only value used. The only application that doesn't set
+ * this value does so through the usage of an seemingly uninitialized clear
+ * value.
+ */
+#define ANV_HZ_FC_VAL 1.0f
+
 #define MAX_VBS         32
 #define MAX_SETS         8
 #define MAX_RTS          8

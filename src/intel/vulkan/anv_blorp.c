@@ -1265,6 +1265,12 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
                                            render_area.offset.y +
                                            render_area.extent.height)) {
                clear_with_hiz = false;
+            } else if (clear_att.clearValue.depthStencil.depth !=
+                       ANV_HZ_FC_VAL) {
+               /* Don't enable fast depth clears for any color not equal to
+                * ANV_HZ_FC_VAL.
+                */
+               clear_with_hiz = false;
             }
          }
 
@@ -1636,8 +1642,7 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
    };
    surf.aux_usage = ISL_AUX_USAGE_HIZ;
 
-   surf.clear_color.u32[0] = (uint32_t)
-      cmd_state->attachments[ds].clear_value.depthStencil.depth;
+   surf.clear_color.u32[0] = (uint32_t) ANV_HZ_FC_VAL;
 
    blorp_gen6_hiz_op(&batch, &surf, 0, 0, op);
    blorp_batch_finish(&batch);
