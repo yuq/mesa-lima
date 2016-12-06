@@ -344,8 +344,6 @@ brw_tcs_populate_key(struct brw_context *brw,
 
       /* _NEW_TEXTURE */
       brw_populate_sampler_prog_key_data(&brw->ctx, &tcp->program, &key->tex);
-   } else {
-      key->outputs_written = tes_prog->info.inputs_read;
    }
 }
 
