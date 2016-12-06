@@ -610,6 +610,8 @@ struct _mesa_glsl_parse_state {
    bool ARB_gpu_shader5_warn;
    bool ARB_gpu_shader_fp64_enable;
    bool ARB_gpu_shader_fp64_warn;
+   bool ARB_post_depth_coverage_enable;
+   bool ARB_post_depth_coverage_warn;
    bool ARB_sample_shading_enable;
    bool ARB_sample_shading_warn;
    bool ARB_separate_shader_objects_enable;
@@ -785,6 +787,8 @@ struct _mesa_glsl_parse_state {
    unsigned gs_input_size;
 
    bool fs_early_fragment_tests;
+
+   bool fs_post_depth_coverage;
 
    unsigned fs_blend_support;
 

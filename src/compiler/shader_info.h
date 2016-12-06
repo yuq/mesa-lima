@@ -116,6 +116,7 @@ typedef struct shader_info {
           * ARB_shader_image_load_store.
           */
          bool early_fragment_tests;
+         bool post_depth_coverage;
 
          /** gl_FragDepth layout for ARB_conservative_depth. */
          enum gl_frag_depth_layout depth_layout;

@@ -1392,6 +1392,24 @@ layout_qualifier_id:
 
             $$.flags.q.early_fragment_tests = 1;
          }
+
+         if (!$$.flags.i &&
+             match_layout_qualifier($1, "post_depth_coverage", state) == 0) {
+            if (state->stage != MESA_SHADER_FRAGMENT) {
+               _mesa_glsl_error(& @1, state,
+                                "post_depth_coverage layout qualifier only "
+                                "valid in fragment shaders");
+            }
+
+            if (state->ARB_post_depth_coverage_enable) {
+               $$.flags.q.post_depth_coverage = 1;
+            } else {
+               _mesa_glsl_error(& @1, state,
+                                "post_depth_coverage layout qualifier present, "
+                                "but the GL_ARB_post_depth_coverage extension "
+                                "is not enabled.");
+            }
+         }
       }
 
       /* Layout qualifiers for tessellation evaluation shaders. */

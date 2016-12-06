@@ -2174,6 +2174,7 @@ struct gl_shader_info
 {
    bool uses_gl_fragcoord;
    bool redeclares_gl_fragcoord;
+   bool PostDepthCoverage;
    bool ARB_fragment_coord_conventions_enable;
 
    /**
@@ -3819,6 +3820,7 @@ struct gl_extensions
    GLboolean ARB_occlusion_query2;
    GLboolean ARB_pipeline_statistics_query;
    GLboolean ARB_point_sprite;
+   GLboolean ARB_post_depth_coverage;
    GLboolean ARB_query_buffer_object;
    GLboolean ARB_robust_buffer_access_behavior;
    GLboolean ARB_sample_shading;
