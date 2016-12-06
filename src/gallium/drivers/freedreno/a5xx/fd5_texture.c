@@ -281,7 +281,7 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 	case PIPE_TEXTURE_1D:
 	case PIPE_TEXTURE_2D:
 		so->texconst3 =
-			A5XX_TEX_CONST_3_ARRAY_PITCH(rsc->slices[lvl].size0);
+			A5XX_TEX_CONST_3_ARRAY_PITCH(rsc->layer_size);
 		so->texconst5 =
 			A5XX_TEX_CONST_5_DEPTH(1);
 		break;

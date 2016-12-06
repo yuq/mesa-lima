@@ -819,7 +819,7 @@ fd_resource_create(struct pipe_screen *pscreen,
 	assert(rsc->cpp);
 
 	alignment = slice_alignment(pscreen, tmpl);
-	if (is_a4xx(fd_screen(pscreen))) {
+	if (is_a4xx(fd_screen(pscreen)) || is_a5xx(fd_screen(pscreen))) {
 		switch (tmpl->target) {
 		case PIPE_TEXTURE_3D:
 			rsc->layer_first = false;
