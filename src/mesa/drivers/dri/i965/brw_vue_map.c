@@ -205,6 +205,9 @@ brw_compute_tess_vue_map(struct brw_vue_map *vue_map,
    /* I don't think anything actually uses this... */
    vue_map->slots_valid = vertex_slots;
 
+   /* separate isn't really meaningful, but make sure it's initialized */
+   vue_map->separate = false;
+
    vertex_slots &= ~(VARYING_BIT_TESS_LEVEL_OUTER |
                      VARYING_BIT_TESS_LEVEL_INNER);
 
