@@ -87,8 +87,6 @@ fd5_zsa_state_create(struct pipe_context *pctx,
 
 	if (cso->alpha.enabled) {
 		uint32_t ref = cso->alpha.ref_value * 255.0;
-		so->gras_su_depth_plane_cntl =
-			A5XX_GRAS_SU_DEPTH_PLANE_CNTL_ALPHA_TEST_ENABLE;
 		so->rb_alpha_control =
 			A5XX_RB_ALPHA_CONTROL_ALPHA_TEST |
 			A5XX_RB_ALPHA_CONTROL_ALPHA_REF(ref) |

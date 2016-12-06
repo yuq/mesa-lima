@@ -36,7 +36,6 @@
 struct fd5_zsa_stateobj {
 	struct pipe_depth_stencil_alpha_state base;
 
-	uint32_t gras_su_depth_plane_cntl;
 	uint32_t rb_alpha_control;
 	uint32_t rb_depth_cntl;
 	uint32_t rb_stencil_control;
