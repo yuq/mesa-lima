@@ -5281,7 +5281,7 @@ static void si_llvm_emit_vertex(
 	 * further memory loads and may allow LLVM to skip to the end
 	 * altogether.
 	 */
-	can_emit = LLVMBuildICmp(gallivm->builder, LLVMIntULE, gs_next_vertex,
+	can_emit = LLVMBuildICmp(gallivm->builder, LLVMIntULT, gs_next_vertex,
 				 lp_build_const_int32(gallivm,
 						      shader->selector->gs_max_out_vertices), "");
 
