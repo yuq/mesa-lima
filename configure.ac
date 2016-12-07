@@ -2012,14 +2012,8 @@ if test "x$enable_egl" = xyes; then
     fi
 
     if test "x$enable_dri" = xyes; then
-        HAVE_EGL_DRIVER_DRI2=1
         if test "x$enable_shared_glapi" = xno; then
-            AC_MSG_ERROR([egl_dri2 requires --enable-shared-glapi])
-        fi
-        if test "x$enable_dri3" = xyes; then
-            HAVE_EGL_DRIVER_DRI3=1
-            if test "x$enable_shared_glapi" = xno; then
-            AC_MSG_ERROR([egl_dri3 requires --enable-shared-glapi])
+            AC_MSG_ERROR([egl_dri requires --enable-shared-glapi])
         fi
     else
         # Avoid building an "empty" libEGL. Drop/update this
@@ -2298,8 +2292,6 @@ AM_CONDITIONAL(HAVE_PLATFORM_WAYLAND, echo "$egl_platforms" | grep -q 'wayland')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_DRM, echo "$egl_platforms" | grep -q 'drm')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_SURFACELESS, echo "$egl_platforms" | grep -q 'surfaceless')
 AM_CONDITIONAL(HAVE_EGL_PLATFORM_ANDROID, echo "$egl_platforms" | grep -q 'android')
-
-AM_CONDITIONAL(HAVE_EGL_DRIVER_DRI2, test "x$HAVE_EGL_DRIVER_DRI2" != "x")
 
 AC_SUBST([EGL_NATIVE_PLATFORM])
 AC_SUBST([EGL_CFLAGS])
@@ -2941,10 +2933,10 @@ if test "$enable_egl" = yes; then
     echo "        EGL platforms:   $egl_platforms"
 
     egl_drivers=""
-    if test "x$HAVE_EGL_DRIVER_DRI2" != "x"; then
+    if test "x$enable_dri" != "xno"; then
         egl_drivers="$egl_drivers builtin:egl_dri2"
     fi
-    if test "x$HAVE_EGL_DRIVER_DRI3" != "x"; then
+    if test "x$enable_dri3" != "xno"; then
         egl_drivers="$egl_drivers builtin:egl_dri3"
     fi
 
