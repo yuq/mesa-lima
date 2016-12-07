@@ -1585,9 +1585,7 @@ if test "x$enable_shader_cache" = "xyes"; then
 fi
 
 if test "x$enable_dri" = xyes; then
-    if test "$enable_static" = yes; then
-        AC_MSG_ERROR([Cannot use static libraries for DRI drivers])
-    fi
+    require_dri_shared_libs_and_glapi "DRI"
 
     # not a hard requirement as swrast does not depend on it
     if test "x$have_libdrm" = xyes; then
