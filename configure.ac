@@ -2062,6 +2062,12 @@ if test "x$enable_xa" = xyes; then
 fi
 AM_CONDITIONAL(HAVE_ST_XA, test "x$enable_xa" = xyes)
 
+if echo $platforms | grep -q "x11\|drm\|wayland"; then
+    have_va_platform=yes
+else
+    have_va_platform=no
+fi
+
 dnl
 dnl Gallium G3DVL configuration
 dnl
@@ -2078,7 +2084,7 @@ if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
 	PKG_CHECK_EXISTS([libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED], [enable_omx=yes], [enable_omx=no])
     fi
 
-    if test "x$enable_va" = xauto; then
+    if test "x$enable_va" = xauto -a "x$have_va_platform" = xyes; then
         PKG_CHECK_EXISTS([libva >= $LIBVA_REQUIRED], [enable_va=yes], [enable_va=no])
     fi
 fi
@@ -2121,6 +2127,9 @@ fi
 AM_CONDITIONAL(HAVE_ST_OMX, test "x$enable_omx" = xyes)
 
 if test "x$enable_va" = xyes; then
+    if test "x$have_va_platform" != xyes; then
+        AC_MSG_ERROR([VA requires at least one of the x11 drm or wayland platforms])
+    fi
     PKG_CHECK_MODULES([VA], [libva >= $LIBVA_REQUIRED])
     gallium_st="$gallium_st va"
 fi
