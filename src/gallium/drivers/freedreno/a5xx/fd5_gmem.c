@@ -287,12 +287,14 @@ emit_mem2gmem_surf(struct fd_batch *batch, uint32_t base,
 		struct pipe_surface *psurf, enum a5xx_blit_buf buf)
 {
 	struct fd_ringbuffer *ring = batch->gmem;
+	struct fd_gmem_stateobj *gmem = &batch->ctx->gmem;
 	struct fd_resource *rsc = fd_resource(psurf->texture);
-	struct fd_resource_slice *slice;
-
-	slice = fd_resource_slice(rsc, psurf->u.tex.level);
+	uint32_t stride, size;
 
 	debug_assert(psurf->u.tex.first_layer == psurf->u.tex.last_layer);
+
+	stride = gmem->bin_w * rsc->cpp;
+	size = stride * gmem->bin_h;
 
 	OUT_PKT4(ring, REG_A5XX_RB_BLIT_FLAG_DST_LO, 4);
 	OUT_RING(ring, 0x00000000);   /* RB_BLIT_FLAG_DST_LO */
@@ -304,8 +306,8 @@ emit_mem2gmem_surf(struct fd_batch *batch, uint32_t base,
 	OUT_RING(ring, 0x00000000);   /* RB_RESOLVE_CNTL_3 */
 	OUT_RING(ring, base);         /* RB_BLIT_DST_LO */
 	OUT_RING(ring, 0x00000000);   /* RB_BLIT_DST_HI */
-	OUT_RING(ring, A5XX_RB_BLIT_DST_PITCH(slice->pitch * rsc->cpp));
-	OUT_RING(ring, A5XX_RB_BLIT_DST_ARRAY_PITCH(slice->size0));
+	OUT_RING(ring, A5XX_RB_BLIT_DST_PITCH(stride));
+	OUT_RING(ring, A5XX_RB_BLIT_DST_ARRAY_PITCH(size));
 
 	OUT_PKT4(ring, REG_A5XX_RB_BLIT_CNTL, 1);
 	OUT_RING(ring, A5XX_RB_BLIT_CNTL_BUF(buf));
