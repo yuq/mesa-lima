@@ -455,6 +455,10 @@ emit_rs_state(struct anv_pipeline *pipeline,
     */
 #if GEN_GEN >= 8
    raster.DXMultisampleRasterizationEnable = true;
+   /* NOTE: 3DSTATE_RASTER::ForcedSampleCount affects the BDW and SKL PMA fix
+    * computations.  If we ever set this bit to a different value, they will
+    * need to be updated accordingly.
+    */
    raster.ForcedSampleCount = FSC_NUMRASTSAMPLES_0;
    raster.ForceMultisampling = false;
 #else
@@ -664,6 +668,8 @@ emit_ds_state(struct anv_pipeline *pipeline,
        * to make sure it's initialized to something useful.
        */
       pipeline->writes_stencil = false;
+      pipeline->writes_depth = false;
+      pipeline->depth_test_enable = false;
       memset(depth_stencil_dw, 0, sizeof(depth_stencil_dw));
       return;
    }
@@ -721,6 +727,9 @@ emit_ds_state(struct anv_pipeline *pipeline,
     */
    if (info->depthTestEnable && info->depthCompareOp == VK_COMPARE_OP_EQUAL)
       depth_stencil.DepthBufferWriteEnable = false;
+
+   pipeline->writes_depth = depth_stencil.DepthBufferWriteEnable;
+   pipeline->depth_test_enable = depth_stencil.DepthTestEnable;
 
 #if GEN_GEN <= 7
    GENX(DEPTH_STENCIL_STATE_pack)(NULL, depth_stencil_dw, &depth_stencil);
@@ -1443,6 +1452,38 @@ emit_3dstate_vf_topology(struct anv_pipeline *pipeline)
 }
 #endif
 
+static void
+compute_kill_pixel(struct anv_pipeline *pipeline,
+                   const VkPipelineMultisampleStateCreateInfo *ms_info,
+                   const struct anv_subpass *subpass)
+{
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
+      pipeline->kill_pixel = false;
+      return;
+   }
+
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+
+   /* This computes the KillPixel portion of the computation for whether or
+    * not we want to enable the PMA fix on gen8.  It's given by this chunk of
+    * the giant formula:
+    *
+    *    (3DSTATE_PS_EXTRA::PixelShaderKillsPixels ||
+    *     3DSTATE_PS_EXTRA::oMask Present to RenderTarget ||
+    *     3DSTATE_PS_BLEND::AlphaToCoverageEnable ||
+    *     3DSTATE_PS_BLEND::AlphaTestEnable ||
+    *     3DSTATE_WM_CHROMAKEY::ChromaKeyKillEnable)
+    *
+    * 3DSTATE_WM_CHROMAKEY::ChromaKeyKillEnable is always false and so is
+    * 3DSTATE_PS_BLEND::AlphaTestEnable since Vulkan doesn't have a concept
+    * of an alpha test.
+    */
+   pipeline->kill_pixel =
+      subpass->has_ds_self_dep || wm_prog_data->uses_kill ||
+      wm_prog_data->uses_omask ||
+      (ms_info && ms_info->alphaToCoverageEnable);
+}
+
 static VkResult
 genX(graphics_pipeline_create)(
     VkDevice                                    _device,
@@ -1480,6 +1521,7 @@ genX(graphics_pipeline_create)(
    emit_ds_state(pipeline, pCreateInfo->pDepthStencilState, pass, subpass);
    emit_cb_state(pipeline, pCreateInfo->pColorBlendState,
                            pCreateInfo->pMultisampleState);
+   compute_kill_pixel(pipeline, pCreateInfo->pMultisampleState, subpass);
 
    emit_urb_setup(pipeline);
 

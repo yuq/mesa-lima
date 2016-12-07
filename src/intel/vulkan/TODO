@@ -12,5 +12,4 @@ Performance:
  - Compressed multisample support
  - Pushing pieces of UBOs?
  - Enable guardband clipping
- - pma stall workaround
  - Use soft-pin to avoid relocations

@@ -1169,6 +1169,20 @@ struct anv_cmd_state {
    bool                                         need_query_wa;
 
    /**
+    * Whether or not the gen8 PMA fix is enabled.  We ensure that, at the top
+    * of any command buffer it is disabled by disabling it in EndCommandBuffer
+    * and before invoking the secondary in ExecuteCommands.
+    */
+   bool                                         pma_fix_enabled;
+
+   /**
+    * Whether or not we know for certain that HiZ is enabled for the current
+    * subpass.  If, for whatever reason, we are unsure as to whether HiZ is
+    * enabled or not, this will be false.
+    */
+   bool                                         hiz_enabled;
+
+   /**
     * Array length is anv_cmd_state::pass::attachment_count. Array content is
     * valid only when recording a render pass instance.
     */
@@ -1471,8 +1485,11 @@ struct anv_pipeline {
 
    uint32_t                                     cs_right_mask;
 
+   bool                                         writes_depth;
+   bool                                         depth_test_enable;
    bool                                         writes_stencil;
    bool                                         depth_clamp_enable;
+   bool                                         kill_pixel;
 
    struct {
       uint32_t                                  sf[7];

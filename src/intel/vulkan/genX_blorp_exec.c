@@ -154,6 +154,11 @@ genX(blorp_exec)(struct blorp_batch *batch,
 
    genX(cmd_buffer_emit_gen7_depth_flush)(cmd_buffer);
 
+   /* BLORP doesn't do anything fancy with depth such as discards, so we want
+    * the PMA fix off.  Also, off is always the safe option.
+    */
+   genX(cmd_buffer_enable_pma_fix)(cmd_buffer, false);
+
    blorp_exec(batch, params);
 
    cmd_buffer->state.vb_dirty = ~0;
