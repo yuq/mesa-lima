@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-12-05 13:03:25)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22914 bytes, from 2016-12-12 16:26:45)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  92389 bytes, from 2016-12-06 22:06:14)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  96819 bytes, from 2016-12-15 15:23:48)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -46,20 +46,44 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 enum a5xx_color_fmt {
 	RB5_R8_UNORM = 3,
+	RB5_R8_UINT = 5,
+	RB5_R8_SINT = 6,
 	RB5_R4G4B4A4_UNORM = 8,
 	RB5_R5G5B5A1_UNORM = 10,
 	RB5_R5G6B5_UNORM = 14,
 	RB5_R8G8_UNORM = 15,
+	RB5_R8G8_SNORM = 16,
+	RB5_R8G8_UINT = 17,
+	RB5_R8G8_SINT = 18,
+	RB5_R16_UNORM = 21,
+	RB5_R16_SNORM = 22,
 	RB5_R16_FLOAT = 23,
+	RB5_R16_UINT = 24,
+	RB5_R16_SINT = 25,
 	RB5_R8G8B8A8_UNORM = 48,
 	RB5_R8G8B8_UNORM = 49,
 	RB5_R8G8B8A8_UINT = 51,
+	RB5_R8G8B8A8_SINT = 52,
+	RB5_R10G10B10A2_UNORM = 55,
 	RB5_R10G10B10A2_UINT = 58,
+	RB5_R11G11B10_FLOAT = 66,
+	RB5_R16G16_UNORM = 67,
+	RB5_R16G16_SNORM = 68,
 	RB5_R16G16_FLOAT = 69,
+	RB5_R16G16_UINT = 70,
+	RB5_R16G16_SINT = 71,
 	RB5_R32_FLOAT = 74,
+	RB5_R32_UINT = 75,
+	RB5_R32_SINT = 76,
 	RB5_R16G16B16A16_FLOAT = 98,
+	RB5_R16G16B16A16_UINT = 99,
+	RB5_R16G16B16A16_SINT = 100,
 	RB5_R32G32_FLOAT = 103,
+	RB5_R32G32_UINT = 104,
+	RB5_R32G32_SINT = 105,
 	RB5_R32G32B32A32_FLOAT = 130,
+	RB5_R32G32B32A32_UINT = 131,
+	RB5_R32G32B32A32_SINT = 132,
 };
 
 enum a5xx_tile_mode {
@@ -134,24 +158,47 @@ enum a5xx_vtx_fmt {
 enum a5xx_tex_fmt {
 	TFMT5_A8_UNORM = 2,
 	TFMT5_8_UNORM = 3,
+	TFMT5_8_UINT = 5,
+	TFMT5_8_SINT = 6,
 	TFMT5_4_4_4_4_UNORM = 8,
 	TFMT5_5_5_5_1_UNORM = 10,
 	TFMT5_5_6_5_UNORM = 14,
 	TFMT5_8_8_UNORM = 15,
 	TFMT5_8_8_SNORM = 16,
+	TFMT5_8_8_UINT = 17,
+	TFMT5_8_8_SINT = 18,
 	TFMT5_L8_A8_UNORM = 19,
+	TFMT5_16_UNORM = 21,
+	TFMT5_16_SNORM = 22,
 	TFMT5_16_FLOAT = 23,
+	TFMT5_16_UINT = 24,
+	TFMT5_16_SINT = 25,
 	TFMT5_8_8_8_8_UNORM = 48,
 	TFMT5_8_8_8_UNORM = 49,
 	TFMT5_8_8_8_SNORM = 50,
+	TFMT5_8_8_8_8_UINT = 51,
+	TFMT5_8_8_8_8_SINT = 52,
 	TFMT5_9_9_9_E5_FLOAT = 53,
 	TFMT5_10_10_10_2_UNORM = 54,
+	TFMT5_10_10_10_2_UINT = 58,
 	TFMT5_11_11_10_FLOAT = 66,
+	TFMT5_16_16_UNORM = 67,
+	TFMT5_16_16_SNORM = 68,
 	TFMT5_16_16_FLOAT = 69,
+	TFMT5_16_16_UINT = 70,
+	TFMT5_16_16_SINT = 71,
 	TFMT5_32_FLOAT = 74,
+	TFMT5_32_UINT = 75,
+	TFMT5_32_SINT = 76,
 	TFMT5_16_16_16_16_FLOAT = 98,
+	TFMT5_16_16_16_16_UINT = 99,
+	TFMT5_16_16_16_16_SINT = 100,
 	TFMT5_32_32_FLOAT = 103,
+	TFMT5_32_32_UINT = 104,
+	TFMT5_32_32_SINT = 105,
 	TFMT5_32_32_32_32_FLOAT = 130,
+	TFMT5_32_32_32_32_UINT = 131,
+	TFMT5_32_32_32_32_SINT = 132,
 	TFMT5_X8Z24_UNORM = 160,
 };
 
@@ -2565,8 +2612,8 @@ static inline uint32_t A5XX_RB_DEPTH_BUFFER_INFO_DEPTH_FORMAT(enum a5xx_depth_fo
 #define A5XX_RB_DEPTH_BUFFER_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_DEPTH_BUFFER_PITCH(uint32_t val)
 {
-	assert(!(val & 0x1f));
-	return ((val >> 5) << A5XX_RB_DEPTH_BUFFER_PITCH__SHIFT) & A5XX_RB_DEPTH_BUFFER_PITCH__MASK;
+	assert(!(val & 0x3f));
+	return ((val >> 6) << A5XX_RB_DEPTH_BUFFER_PITCH__SHIFT) & A5XX_RB_DEPTH_BUFFER_PITCH__MASK;
 }
 
 #define REG_A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH			0x0000e1b6
@@ -2574,8 +2621,8 @@ static inline uint32_t A5XX_RB_DEPTH_BUFFER_PITCH(uint32_t val)
 #define A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__SHIFT			0
 static inline uint32_t A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH(uint32_t val)
 {
-	assert(!(val & 0x1f));
-	return ((val >> 5) << A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__SHIFT) & A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__MASK;
+	assert(!(val & 0x3f));
+	return ((val >> 6) << A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__SHIFT) & A5XX_RB_DEPTH_BUFFER_ARRAY_PITCH__MASK;
 }
 
 #define REG_A5XX_RB_STENCIL_CONTROL				0x0000e1c0
@@ -2694,7 +2741,7 @@ static inline uint32_t A5XX_RB_WINDOW_OFFSET_Y(uint32_t val)
 }
 
 #define REG_A5XX_RB_BLIT_CNTL					0x0000e210
-#define A5XX_RB_BLIT_CNTL_BUF__MASK				0x0000003f
+#define A5XX_RB_BLIT_CNTL_BUF__MASK				0x0000000f
 #define A5XX_RB_BLIT_CNTL_BUF__SHIFT				0
 static inline uint32_t A5XX_RB_BLIT_CNTL_BUF(enum a5xx_blit_buf val)
 {
@@ -3269,6 +3316,10 @@ static inline uint32_t A5XX_TPL1_TP_DEST_MSAA_CNTL_SAMPLES(enum a3xx_msaa_sample
 }
 #define A5XX_TPL1_TP_DEST_MSAA_CNTL_MSAA_DISABLE		0x00000004
 
+#define REG_A5XX_TPL1_TP_BORDER_COLOR_BASE_ADDR_LO		0x0000e706
+
+#define REG_A5XX_TPL1_TP_BORDER_COLOR_BASE_ADDR_HI		0x0000e707
+
 #define REG_A5XX_TPL1_VS_TEX_COUNT				0x0000e700
 
 #define REG_A5XX_TPL1_VS_TEX_SAMP_LO				0x0000e722
@@ -3705,6 +3756,12 @@ static inline uint32_t A5XX_TEX_SAMP_1_MIN_LOD(float val)
 }
 
 #define REG_A5XX_TEX_SAMP_2					0x00000002
+#define A5XX_TEX_SAMP_2_BCOLOR_OFFSET__MASK			0xfffffff0
+#define A5XX_TEX_SAMP_2_BCOLOR_OFFSET__SHIFT			4
+static inline uint32_t A5XX_TEX_SAMP_2_BCOLOR_OFFSET(uint32_t val)
+{
+	return ((val) << A5XX_TEX_SAMP_2_BCOLOR_OFFSET__SHIFT) & A5XX_TEX_SAMP_2_BCOLOR_OFFSET__MASK;
+}
 
 #define REG_A5XX_TEX_SAMP_3					0x00000003
 

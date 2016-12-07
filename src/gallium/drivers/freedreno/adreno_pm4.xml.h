@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22544 bytes, from 2016-12-05 13:03:25)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22914 bytes, from 2016-12-12 16:26:45)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  92389 bytes, from 2016-12-06 22:06:14)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  96819 bytes, from 2016-12-15 15:23:48)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -67,10 +67,14 @@ enum vgt_event_type {
 	PERFCOUNTER_STOP = 24,
 	VS_FETCH_DONE = 27,
 	FACENESS_FLUSH = 28,
+	UNK_19 = 25,
 	UNK_1C = 28,
 	UNK_1D = 29,
 	BLIT = 30,
+	UNK_25 = 37,
 	UNK_26 = 38,
+	UNK_2C = 44,
+	UNK_2D = 45,
 };
 
 enum pc_di_primtype {
@@ -204,6 +208,7 @@ enum adreno_pm4_type3_packets {
 	CP_COMPUTE_CHECKPOINT = 110,
 	CP_MEM_TO_MEM = 115,
 	CP_BLIT = 44,
+	CP_UNK_39 = 57,
 	IN_IB_PREFETCH_END = 23,
 	IN_SUBBLK_PREFETCH = 31,
 	IN_INSTR_PREFETCH = 32,
@@ -247,6 +252,7 @@ enum a4xx_index_size {
 
 enum render_mode_cmd {
 	BYPASS = 1,
+	BINNING = 2,
 	GMEM = 3,
 	BLIT2D = 5,
 };
