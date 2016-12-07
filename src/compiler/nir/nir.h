@@ -699,6 +699,8 @@ nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
    }
 }
 
+nir_op nir_type_conversion_op(nir_alu_type src, nir_alu_type dst);
+
 typedef enum {
    NIR_OP_IS_COMMUTATIVE = (1 << 0),
    NIR_OP_IS_ASSOCIATIVE = (1 << 1),
