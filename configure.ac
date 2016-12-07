@@ -468,12 +468,10 @@ dnl explicitly requested. If both disabled, set to static since shared
 dnl was explicitly requested.
 case "x$enable_static$enable_shared" in
 xyesyes)
-    AC_MSG_WARN([Cannot build static and shared libraries, disabling shared])
-    enable_shared=no
+    AC_MSG_ERROR([Cannot enable both static and shared. Building using --enable-shared is strongly recommended])
     ;;
 xnono)
-    AC_MSG_WARN([Cannot disable both static and shared libraries, enabling shared])
-    enable_shared=yes
+    AC_MSG_ERROR([Cannot disable both static and shared. Building using --enable-shared is strongly recommended])
     ;;
 esac
 
