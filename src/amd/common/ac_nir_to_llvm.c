@@ -451,8 +451,7 @@ static void set_userdata_location_indirect(struct ac_userdata_info *ud_info, uin
 }
 #endif
 
-static void create_function(struct nir_to_llvm_context *ctx,
-                            struct nir_shader *nir)
+static void create_function(struct nir_to_llvm_context *ctx)
 {
 	LLVMTypeRef arg_types[23];
 	unsigned arg_idx = 0;
@@ -483,7 +482,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	}
 
 	array_count = arg_idx;
-	switch (nir->stage) {
+	switch (ctx->stage) {
 	case MESA_SHADER_COMPUTE:
 		arg_types[arg_idx++] = LLVMVectorType(ctx->i32, 3); /* grid size */
 		user_sgpr_count = arg_idx;
@@ -532,7 +531,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	ctx->main_function = create_llvm_function(
 	    ctx->context, ctx->module, ctx->builder, NULL, 0, arg_types,
 	    arg_idx, array_count, sgpr_count, ctx->options->unsafe_math);
-	set_llvm_calling_convention(ctx->main_function, nir->stage);
+	set_llvm_calling_convention(ctx->main_function, ctx->stage);
 
 
 	ctx->shader_info->num_input_sgprs = 0;
@@ -545,7 +544,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 	for (; i < sgpr_count; i++)
 		ctx->shader_info->num_input_sgprs += llvm_get_type_size(arg_types[i]) / 4;
 
-	if (nir->stage != MESA_SHADER_FRAGMENT)
+	if (ctx->stage != MESA_SHADER_FRAGMENT)
 		for (; i < arg_idx; ++i)
 			ctx->shader_info->num_input_vgprs += llvm_get_type_size(arg_types[i]) / 4;
 
@@ -567,7 +566,7 @@ static void create_function(struct nir_to_llvm_context *ctx,
 		user_sgpr_idx += 2;
 	}
 
-	switch (nir->stage) {
+	switch (ctx->stage) {
 	case MESA_SHADER_COMPUTE:
 		set_userdata_location_shader(ctx, AC_UD_CS_GRID_SIZE, user_sgpr_idx, 3);
 		user_sgpr_idx += 3;
@@ -4680,7 +4679,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	for (i = 0; i < AC_UD_MAX_UD; i++)
 		shader_info->user_sgprs_locs.shader_data[i].sgpr_idx = -1;
 
-	create_function(&ctx, nir);
+	create_function(&ctx);
 
 	if (nir->stage == MESA_SHADER_COMPUTE) {
 		int num_shared = 0;
