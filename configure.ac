@@ -2063,6 +2063,12 @@ fi
 AM_CONDITIONAL(HAVE_ST_XA, test "x$enable_xa" = xyes)
 
 if echo $platforms | grep -q "x11"; then
+    have_xvmc_platform=yes
+else
+    have_xvmc_platform=no
+fi
+
+if echo $platforms | grep -q "x11"; then
     have_vdpau_platform=yes
 else
     have_vdpau_platform=no
@@ -2084,7 +2090,7 @@ dnl
 dnl Gallium G3DVL configuration
 dnl
 if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
-    if test "x$enable_xvmc" = xauto; then
+    if test "x$enable_xvmc" = xauto -a "x$have_xvmc_platform" = xyes; then
 	PKG_CHECK_EXISTS([xvmc >= $XVMC_REQUIRED], [enable_xvmc=yes], [enable_xvmc=no])
     fi
 
@@ -2120,6 +2126,9 @@ fi
 AM_CONDITIONAL(NEED_GALLIUM_VL_WINSYS, test "x$need_gallium_vl_winsys" = xyes)
 
 if test "x$enable_xvmc" = xyes; then
+    if test "x$have_xvmc_platform" != xyes; then
+        AC_MSG_ERROR([XVMC requires the x11 platforms])
+    fi
     PKG_CHECK_MODULES([XVMC], [xvmc >= $XVMC_REQUIRED])
     gallium_st="$gallium_st xvmc"
 fi
