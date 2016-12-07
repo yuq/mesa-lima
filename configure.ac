@@ -1974,6 +1974,10 @@ dnl
 dnl gbm configuration
 dnl
 if test "x$enable_gbm" = xyes; then
+    if test "x$enable_static" = xyes; then
+        AC_MSG_ERROR([gbm cannot be build as static library])
+    fi
+
     if test "x$enable_dri" = xyes; then
         if test "x$enable_shared_glapi" = xno; then
             AC_MSG_ERROR([gbm_dri requires --enable-shared-glapi])
@@ -2003,24 +2007,24 @@ if test "x$enable_egl" = xyes; then
 
     AC_CHECK_FUNC(mincore, [DEFINES="$DEFINES -DHAVE_MINCORE"])
 
-    if test "$enable_static" != yes; then
-        if test "x$enable_dri" = xyes; then
-            HAVE_EGL_DRIVER_DRI2=1
-            if test "x$enable_shared_glapi" = xno; then
-                AC_MSG_ERROR([egl_dri2 requires --enable-shared-glapi])
-            fi
-            if test "x$enable_dri3" = xyes; then
-                HAVE_EGL_DRIVER_DRI3=1
-                if test "x$enable_shared_glapi" = xno; then
-                    AC_MSG_ERROR([egl_dri3 requires --enable-shared-glapi])
-                fi
-            fi
-        else
-            # Avoid building an "empty" libEGL. Drop/update this
-            # when other backends (haiku?) come along.
-            AC_MSG_ERROR([egl requires --enable-dri])
-        fi
+    if test "x$enable_static" = xyes; then
+        AC_MSG_ERROR([egl cannot be build as static library])
+    fi
 
+    if test "x$enable_dri" = xyes; then
+        HAVE_EGL_DRIVER_DRI2=1
+        if test "x$enable_shared_glapi" = xno; then
+            AC_MSG_ERROR([egl_dri2 requires --enable-shared-glapi])
+        fi
+        if test "x$enable_dri3" = xyes; then
+            HAVE_EGL_DRIVER_DRI3=1
+            if test "x$enable_shared_glapi" = xno; then
+            AC_MSG_ERROR([egl_dri3 requires --enable-shared-glapi])
+        fi
+    else
+        # Avoid building an "empty" libEGL. Drop/update this
+        # when other backends (haiku?) come along.
+        AC_MSG_ERROR([egl requires --enable-dri])
     fi
 fi
 AM_CONDITIONAL(HAVE_EGL, test "x$enable_egl" = xyes)
