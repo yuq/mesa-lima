@@ -463,7 +463,7 @@ inline void SetupBarycentricCoeffs(BarycentricCoeffs *coeffs, const SWR_TRIANGLE
 
 inline void SetupRenderBuffers(uint8_t *pColorBuffer[SWR_NUM_RENDERTARGETS], uint8_t **pDepthBuffer, uint8_t **pStencilBuffer, uint32_t colorBufferCount, RenderOutputBuffers &renderBuffers)
 {
-    SWR_ASSERT(colorBufferCount <= SWR_NUM_RENDERTARGETS);
+    assert(colorBufferCount <= SWR_NUM_RENDERTARGETS);
 
     if (pColorBuffer)
     {
@@ -754,8 +754,6 @@ INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_N
 INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
     const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT, bool useAlternateOffset)
 {
-    assert(sample == 0); // will need up upate Raster Tile Color Offsets to support more than single sample here..
-
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
 

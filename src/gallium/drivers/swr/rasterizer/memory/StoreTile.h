@@ -545,38 +545,38 @@ struct ConvertPixelsSOAtoAOS<R32_FLOAT, R24_UNORM_X8_TYPELESS>
     INLINE static void Convert(const uint8_t* pSrc, uint8_t* (&ppDsts)[NumDests])
     {
 #if USE_8x2_TILE_BACKEND
-        static const uint32_t MAX_RASTER_TILE_BYTES = 16 * 4; // 16 pixels * 4 bytes per pixel
+        simd16scalar comp = _simd16_load_ps(reinterpret_cast<const float *>(pSrc));
 
-        OSALIGNSIMD16(uint8_t) soaTile[MAX_RASTER_TILE_BYTES];
-        OSALIGNSIMD16(uint8_t) aosTile[MAX_RASTER_TILE_BYTES];
+        // clamp
+        const simd16scalar zero = _simd16_setzero_ps();
+        const simd16scalar ones = _simd16_set1_ps(1.0f);
 
-        // Convert from SrcFormat --> DstFormat
-        simd16vector src;
-        LoadSOA<SrcFormat>(pSrc, src);
-        StoreSOA<DstFormat>(src, soaTile);
+        comp = _simd16_max_ps(comp, zero);
+        comp = _simd16_min_ps(comp, ones);
 
-        // Convert from SOA --> AOS
-        FormatTraits<DstFormat>::TransposeT::Transpose_16(soaTile, aosTile);
+        // normalize
+        comp = _simd16_mul_ps(comp, _simd16_set1_ps(FormatTraits<DstFormat>::fromFloat(0)));
 
-        // Store data into destination but don't overwrite the X8 bits
-        // Each 4-pixel row is 16-bytes
+        simd16scalari temp = _simd16_cvtps_epi32(comp);
 
-        simdscalari loadlo = _simd_load_si(reinterpret_cast<simdscalari *>(aosTile));
-        simdscalari loadhi = _simd_load_si(reinterpret_cast<simdscalari *>(aosTile + sizeof(simdscalari)));
+        // swizzle
+        temp = _simd16_permute_epi32(temp, _simd16_set_epi32(15, 14, 11, 10, 13, 12, 9, 8, 7, 6, 3, 2, 5, 4, 1, 0));
 
-        simdscalari templo = _simd_unpacklo_epi64(loadlo, loadhi);
-        simdscalari temphi = _simd_unpackhi_epi64(loadlo, loadhi);
-
+        // merge/store data into destination but don't overwrite the X8 bits
         simdscalari destlo = _simd_loadu2_si(reinterpret_cast<__m128i *>(ppDsts[1]), reinterpret_cast<__m128i *>(ppDsts[0]));
         simdscalari desthi = _simd_loadu2_si(reinterpret_cast<__m128i *>(ppDsts[3]), reinterpret_cast<__m128i *>(ppDsts[2]));
 
-        simdscalari mask = _simd_set1_epi32(0x00FFFFFF);
+        simd16scalari dest = _simd16_setzero_si();
 
-        destlo = _simd_or_si(_simd_andnot_si(mask, destlo), _simd_and_si(mask, templo));
-        desthi = _simd_or_si(_simd_andnot_si(mask, desthi), _simd_and_si(mask, templo));
+        dest = _simd16_insert_si(dest, destlo, 0);
+        dest = _simd16_insert_si(dest, desthi, 1);
 
-        _simd_storeu2_si(reinterpret_cast<__m128i *>(ppDsts[1]), reinterpret_cast<__m128i *>(ppDsts[0]), destlo);
-        _simd_storeu2_si(reinterpret_cast<__m128i *>(ppDsts[3]), reinterpret_cast<__m128i *>(ppDsts[2]), desthi);
+        simd16scalari mask = _simd16_set1_epi32(0x00FFFFFF);
+
+        dest = _simd16_or_si(_simd16_andnot_si(mask, dest), _simd16_and_si(mask, temp));
+
+        _simd_storeu2_si(reinterpret_cast<__m128i *>(ppDsts[1]), reinterpret_cast<__m128i *>(ppDsts[0]), _simd16_extract_si(dest, 0));
+        _simd_storeu2_si(reinterpret_cast<__m128i *>(ppDsts[3]), reinterpret_cast<__m128i *>(ppDsts[2]), _simd16_extract_si(dest, 1));
 #else
         static const uint32_t MAX_RASTER_TILE_BYTES = 128; // 8 pixels * 16 bytes per pixel
 
@@ -663,7 +663,7 @@ INLINE static void FlatConvert(const uint8_t* pSrc, uint8_t* pDst0, uint8_t* pDs
     simd16scalari src3 = _simd16_cvtps_epi32(comp3); // padded byte aaaaaaaaaaaaaaaa
 
     // SOA to AOS conversion
-    src1 = _simd16_slli_epi32(src1, 8);
+    src1 = _simd16_slli_epi32(src1,  8);
     src2 = _simd16_slli_epi32(src2, 16);
     src3 = _simd16_slli_epi32(src3, 24);
 
@@ -836,7 +836,7 @@ INLINE static void FlatConvertNoAlpha(const uint8_t* pSrc, uint8_t* pDst0, uint8
     simd16scalari src2 = _simd16_cvtps_epi32(comp2); // padded byte bbbbbbbbbbbbbbbb
 
     // SOA to AOS conversion
-    src1 = _simd16_slli_epi32(src1, 8);
+    src1 = _simd16_slli_epi32(src1,  8);
     src2 = _simd16_slli_epi32(src2, 16);
 
     simd16scalari final = _simd16_or_si(_simd16_or_si(src0, src1), src2);                       // 0 1 2 3 4 5 6 7 8 9 A B C D E F
