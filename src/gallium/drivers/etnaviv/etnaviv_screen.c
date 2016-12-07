@@ -471,8 +471,11 @@ etna_screen_is_format_supported(struct pipe_screen *pscreen,
       return FALSE;
 
    if (usage & PIPE_BIND_RENDER_TARGET) {
-      /* if render target, must be RS-supported format */
-      if (translate_rs_format(format) != ETNA_NO_MATCH) {
+      /* If render target, must be RS-supported format that is not rb swapped.
+       * Exposing rb swapped (or other swizzled) formats for rendering would
+       * involve swizzing in the pixel shader.
+       */
+      if (translate_rs_format(format) != ETNA_NO_MATCH && !translate_rs_format_rb_swap(format)) {
          /* Validate MSAA; number of samples must be allowed, and render target
           * must have MSAA'able format. */
          if (sample_count > 1) {
