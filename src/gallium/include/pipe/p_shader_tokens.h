@@ -207,7 +207,10 @@ struct tgsi_declaration_semantic
 {
    unsigned Name           : 8;  /**< one of TGSI_SEMANTIC_x */
    unsigned Index          : 16; /**< UINT */
-   unsigned Padding        : 8;
+   unsigned StreamX        : 2; /**< vertex stream (for GS output) */
+   unsigned StreamY        : 2;
+   unsigned StreamZ        : 2;
+   unsigned StreamW        : 2;
 };
 
 struct tgsi_declaration_image {
