@@ -2062,6 +2062,12 @@ if test "x$enable_xa" = xyes; then
 fi
 AM_CONDITIONAL(HAVE_ST_XA, test "x$enable_xa" = xyes)
 
+if echo $platforms | grep -q "x11\|drm"; then
+    have_omx_platform=yes
+else
+    have_omx_platform=no
+fi
+
 if echo $platforms | grep -q "x11\|drm\|wayland"; then
     have_va_platform=yes
 else
@@ -2080,7 +2086,7 @@ if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
 	PKG_CHECK_EXISTS([vdpau >= $VDPAU_REQUIRED], [enable_vdpau=yes], [enable_vdpau=no])
     fi
 
-    if test "x$enable_omx" = xauto; then
+    if test "x$enable_omx" = xauto -a "x$have_omx_platform" = xyes; then
 	PKG_CHECK_EXISTS([libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED], [enable_omx=yes], [enable_omx=no])
     fi
 
@@ -2121,6 +2127,9 @@ fi
 AM_CONDITIONAL(HAVE_ST_VDPAU, test "x$enable_vdpau" = xyes)
 
 if test "x$enable_omx" = xyes; then
+    if test "x$have_omx_platform" != xyes; then
+        AC_MSG_ERROR([OMX requires at least one of the x11 or drm platforms])
+    fi
     PKG_CHECK_MODULES([OMX], [libomxil-bellagio >= $LIBOMXIL_BELLAGIO_REQUIRED])
     gallium_st="$gallium_st omx"
 fi
