@@ -20,7 +20,7 @@
 * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 * IN THE SOFTWARE.
 * 
-* @file formats.h
+* @file gen_formats.h
 * 
 * @brief auto-generated file
 * 
@@ -46,6 +46,7 @@ enum SWR_TYPE
     SWR_TYPE_FLOAT,
     SWR_TYPE_SSCALED,
     SWR_TYPE_USCALED,
+    SWR_TYPE_SFIXED,
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -59,11 +60,13 @@ enum SWR_FORMAT
     R32G32B32X32_FLOAT          = 0x6,
     R32G32B32A32_SSCALED        = 0x7,
     R32G32B32A32_USCALED        = 0x8,
+    R32G32B32A32_SFIXED         = 0x20,
     R32G32B32_FLOAT             = 0x40,
     R32G32B32_SINT              = 0x41,
     R32G32B32_UINT              = 0x42,
     R32G32B32_SSCALED           = 0x45,
     R32G32B32_USCALED           = 0x46,
+    R32G32B32_SFIXED            = 0x50,
     R16G16B16A16_UNORM          = 0x80,
     R16G16B16A16_SNORM          = 0x81,
     R16G16B16A16_SINT           = 0x82,
@@ -83,6 +86,7 @@ enum SWR_FORMAT
     R16G16B16A16_USCALED        = 0x94,
     R32G32_SSCALED              = 0x95,
     R32G32_USCALED              = 0x96,
+    R32G32_SFIXED               = 0xA0,
     B8G8R8A8_UNORM              = 0xC0,
     B8G8R8A8_UNORM_SRGB         = 0xC1,
     R10G10B10A2_UNORM           = 0xC2,
@@ -203,6 +207,7 @@ enum SWR_FORMAT
     R8G8B8_UNORM_SRGB           = 0x1A8,
     R16G16B16_UINT              = 0x1B0,
     R16G16B16_SINT              = 0x1B1,
+    R32_SFIXED                  = 0x1B2,
     R10G10B10A2_SNORM           = 0x1B3,
     R10G10B10A2_USCALED         = 0x1B4,
     R10G10B10A2_SSCALED         = 0x1B5,

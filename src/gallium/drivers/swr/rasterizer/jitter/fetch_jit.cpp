@@ -46,6 +46,7 @@ enum ConversionType
     CONVERT_NORMALIZED,
     CONVERT_USCALED,
     CONVERT_SSCALED,
+    CONVERT_SFIXED,
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -423,6 +424,9 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                     break;
                 case SWR_TYPE_SSCALED:
                     vec = SI_TO_FP(vec, VectorType::get(mFP32Ty, 4));
+                    break;
+                case SWR_TYPE_SFIXED:
+                    vec = FMUL(SI_TO_FP(vec, VectorType::get(mFP32Ty, 4)), VBROADCAST(C(1/65536.0f)));
                     break;
                 case SWR_TYPE_UNKNOWN:
                 case SWR_TYPE_UNUSED:
@@ -943,6 +947,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                     conversionType = CONVERT_SSCALED;
                     extendCastType = Instruction::CastOps::SIToFP;
                     break;
+                case SWR_TYPE_SFIXED:
+                    conversionType = CONVERT_SFIXED;
+                    extendCastType = Instruction::CastOps::SExt;
+                    break;
                 default:
                     break;
             }
@@ -1033,6 +1041,10 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                                 else if (conversionType == CONVERT_SSCALED)
                                 {
                                     pGather = SI_TO_FP(pGather, mSimdFP32Ty);
+                                }
+                                else if (conversionType == CONVERT_SFIXED)
+                                {
+                                    pGather = FMUL(SI_TO_FP(pGather, mSimdFP32Ty), VBROADCAST(C(1/65536.0f)));
                                 }
 
                                 vVertexElements[currentVertexElement++] = pGather;

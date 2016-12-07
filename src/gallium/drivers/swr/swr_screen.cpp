@@ -531,6 +531,15 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R8G8B8_SINT,            R8G8B8_SINT},
       {PIPE_FORMAT_R8G8B8A8_SINT,          R8G8B8A8_SINT},
 
+      /* These formats are valid for vertex data, but should not be used
+       * for render targets.
+       */
+
+      {PIPE_FORMAT_R32_FIXED,              R32_SFIXED},
+      {PIPE_FORMAT_R32G32_FIXED,           R32G32_SFIXED},
+      {PIPE_FORMAT_R32G32B32_FIXED,        R32G32B32_SFIXED},
+      {PIPE_FORMAT_R32G32B32A32_FIXED,     R32G32B32A32_SFIXED},
+
       /* These formats have entries in SWR but don't have Load/StoreTile
        * implementations. That means these aren't renderable, and thus having
        * a mapping entry here is detrimental.

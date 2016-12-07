@@ -20,7 +20,7 @@
 * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 * IN THE SOFTWARE.
 *
-* @file format_traits.h
+* @file gen_format_traits.h
 *
 * @brief Format Traits.  auto-generated file
 *
@@ -200,6 +200,28 @@ template<> struct FormatTraits<R32G32B32A32_USCALED> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R32G32B32A32_SFIXED> - Format traits specialization for R32G32B32A32_SFIXED
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R32G32B32A32_SFIXED> :
+    ComponentTraits<SWR_TYPE_SFIXED, 32, SWR_TYPE_SFIXED, 32, SWR_TYPE_SFIXED, 32, SWR_TYPE_SFIXED, 32>,
+    FormatSwizzle<0, 1, 2, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 128 };
+    static const uint32_t numComps{ 4 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 3 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32_32_32    TransposeT;
+    typedef Format4<32, 32, 32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<R32G32B32_FLOAT> - Format traits specialization for R32G32B32_FLOAT
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R32G32B32_FLOAT> :
@@ -292,6 +314,28 @@ template<> struct FormatTraits<R32G32B32_SSCALED> :
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R32G32B32_USCALED> :
     ComponentTraits<SWR_TYPE_USCALED, 32, SWR_TYPE_USCALED, 32, SWR_TYPE_USCALED, 32>,
+    FormatSwizzle<0, 1, 2>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 96 };
+    static const uint32_t numComps{ 3 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32_32   TransposeT;
+    typedef Format3<32, 32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R32G32B32_SFIXED> - Format traits specialization for R32G32B32_SFIXED
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R32G32B32_SFIXED> :
+    ComponentTraits<SWR_TYPE_SFIXED, 32, SWR_TYPE_SFIXED, 32, SWR_TYPE_SFIXED, 32>,
     FormatSwizzle<0, 1, 2>,
     Defaults<0, 0, 0, 0x3f800000>
 {
@@ -710,6 +754,28 @@ template<> struct FormatTraits<R32G32_SSCALED> :
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R32G32_USCALED> :
     ComponentTraits<SWR_TYPE_USCALED, 32, SWR_TYPE_USCALED, 32>,
+    FormatSwizzle<0, 1>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 64 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose32_32  TransposeT;
+    typedef Format2<32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R32G32_SFIXED> - Format traits specialization for R32G32_SFIXED
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R32G32_SFIXED> :
+    ComponentTraits<SWR_TYPE_SFIXED, 32, SWR_TYPE_SFIXED, 32>,
     FormatSwizzle<0, 1>,
     Defaults<0, 0, 0, 0x3f800000>
 {
@@ -3365,6 +3431,28 @@ template<> struct FormatTraits<R16G16B16_SINT> :
 
     typedef Transpose16_16_16   TransposeT;
     typedef Format3<16, 16, 16> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R32_SFIXED> - Format traits specialization for R32_SFIXED
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R32_SFIXED> :
+    ComponentTraits<SWR_TYPE_SFIXED, 32>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 32 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<32> TransposeT;
+    typedef Format1<32>                  FormatT;
 };
 
 //////////////////////////////////////////////////////////////////////////
