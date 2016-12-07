@@ -1213,7 +1213,9 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
 
       default: {
          bool swap;
-         nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap);
+         nir_alu_type dst_alu_type = nir_get_nir_type_for_glsl_type(val->const_type);
+         nir_alu_type src_alu_type = dst_alu_type;
+         nir_op op = vtn_nir_alu_op_for_spirv_opcode(opcode, &swap, src_alu_type, dst_alu_type);
 
          unsigned num_components = glsl_get_vector_elements(val->const_type);
          unsigned bit_size =
