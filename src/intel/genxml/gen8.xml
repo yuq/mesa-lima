@@ -3200,4 +3200,25 @@
     <field name="Write Offset" start="2" end="31" type="offset"/>
   </register>
 
+  <register name="CACHE_MODE_1" length="1" num="0x7004">
+    <field name="RCZ Read after expansion control fix 2" start="2" end="2" type="bool"/>
+    <field name="Depth Read Hit Write-Only Optimization Disable" start="3" end="3" type="bool"/>
+    <field name="MCS Cache Disable" start="5" end="5" type="bool"/>
+    <field name="4X4 RCPFE-STC Optimization Disable" start="6" end="6" type="bool"/>
+    <field name="Sampler Cache Set XOR selection" start="7" end="8" type="uint"/>
+    <field name="NP PMA Fix Enable" start="11" end="11" type="uint"/>
+    <field name="HIZ Eviction Policy" start="12" end="12" type="uint"/>
+    <field name="NP Early Z Fails Disable" start="13" end="13" type="uint"/>
+    <field name="MSC Resolve Optimization Disable" start="14" end="14" type="uint"/>
+    <field name="RCZ Read after expansion control fix 2 Mask" start="18" end="18" type="bool"/>
+    <field name="Depth Read Hit Write-Only Optimization Disable Mask" start="19" end="19" type="bool"/>
+    <field name="MCS Cache Disable Mask" start="21" end="21" type="bool"/>
+    <field name="4X4 RCPFE-STC Optimization Disable Mask" start="22" end="22" type="bool"/>
+    <field name="Sampler Cache Set XOR selection Mask" start="23" end="24" type="uint"/>
+    <field name="NP PMA Fix Enable Mask" start="27" end="27" type="uint"/>
+    <field name="HIZ Eviction Policy Mask" start="28" end="28" type="uint"/>
+    <field name="NP Early Z Fails Disable Mask" start="29" end="29" type="uint"/>
+    <field name="MSC Resolve Optimization Disable Mask" start="30" end="30" type="uint"/>
+  </register>
+
 </genxml>
