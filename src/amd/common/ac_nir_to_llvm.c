@@ -1898,9 +1898,8 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 	offset = LLVMConstInt(ctx->i32, base_offset, false);
 	index = LLVMBuildMul(ctx->builder, index, stride, "");
 	offset = LLVMBuildAdd(ctx->builder, offset, index, "");
-
-	LLVMValueRef indices[] = {ctx->i32zero, offset};
-	desc_ptr = LLVMBuildGEP(ctx->builder, desc_ptr, indices, 2, "");
+	
+	desc_ptr = build_gep0(ctx, desc_ptr, offset);
 	desc_ptr = cast_ptr(ctx, desc_ptr, ctx->v4i32);
 	LLVMSetMetadata(desc_ptr, ctx->uniform_md_kind, ctx->empty_md);
 
@@ -1912,8 +1911,7 @@ static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
 {
 	LLVMValueRef ptr;
 
-	LLVMValueRef indices[] = {ctx->i32zero, get_src(ctx, instr->src[0])};
-	ptr = LLVMBuildGEP(ctx->builder, ctx->push_constants, indices, 2, "");
+	ptr = build_gep0(ctx, ctx->push_constants, get_src(ctx, instr->src[0]));
 	ptr = cast_ptr(ctx, ptr, get_def_type(ctx, &instr->dest.ssa));
 
 	return LLVMBuildLoad(ctx->builder, ptr, "");
@@ -3131,7 +3129,6 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 	unsigned type_size;
 	LLVMBuilderRef builder = ctx->builder;
 	LLVMTypeRef type;
-	LLVMValueRef indices[2];
 	LLVMValueRef index = NULL;
 
 	assert(deref->var->data.binding < layout->binding_count);
@@ -3175,9 +3172,8 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 		index = ctx->i32zero;
 
 	index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, stride / type_size, 0), "");
-	indices[0] = ctx->i32zero;
-	indices[1] = LLVMConstInt(ctx->i32, offset, 0);
-	list = LLVMBuildGEP(builder, list, indices, 2, "");
+
+	list = build_gep0(ctx, list, LLVMConstInt(ctx->i32, offset, 0));
 	list = LLVMBuildPointerCast(builder, list, const_array(type, 0), "");
 
 	return build_indexed_load_const(ctx, list, index);
