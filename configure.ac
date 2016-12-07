@@ -1970,26 +1970,27 @@ AC_SUBST([OSMESA_LIB_DEPS])
 AC_SUBST([OSMESA_PC_REQ])
 AC_SUBST([OSMESA_PC_LIB_PRIV])
 
+require_dri_shared_libs_and_glapi() {
+    if test "x$enable_static" = xyes; then
+        AC_MSG_ERROR([$1 cannot be build as static library])
+    fi
+
+    if test "x$enable_dri" != xyes; then
+        # There is only a single backend which won't be build/used otherwise.
+        # XXX: Revisit this as the egl/haiku is a thing.
+        AC_MSG_ERROR([$1 requires --enable-dri])
+    fi
+
+    if test "x$enable_shared_glapi" != xyes; then
+        AC_MSG_ERROR([$1 requires --enable-shared-glapi])
+    fi
+}
+
 dnl
 dnl gbm configuration
 dnl
 if test "x$enable_gbm" = xyes; then
-    if test "x$enable_static" = xyes; then
-        AC_MSG_ERROR([gbm cannot be build as static library])
-    fi
-
-    if test "x$enable_dri" = xyes; then
-        if test "x$enable_shared_glapi" = xno; then
-            AC_MSG_ERROR([gbm_dri requires --enable-shared-glapi])
-        fi
-    else
-        # Strictly speaking libgbm does not require --enable-dri, although
-        # both of its backends do. Thus one can build libgbm without any
-        # backends if --disable-dri is set.
-        # To avoid unnecessary complexity of checking if at least one backend
-        # is available when building, just mandate --enable-dri.
-        AC_MSG_ERROR([gbm requires --enable-dri])
-    fi
+    require_dri_shared_libs_and_glapi "gbm"
 fi
 AM_CONDITIONAL(HAVE_GBM, test "x$enable_gbm" = xyes)
 # FINISHME: GBM has a number of dependencies which we should add below
@@ -2007,19 +2008,7 @@ if test "x$enable_egl" = xyes; then
 
     AC_CHECK_FUNC(mincore, [DEFINES="$DEFINES -DHAVE_MINCORE"])
 
-    if test "x$enable_static" = xyes; then
-        AC_MSG_ERROR([egl cannot be build as static library])
-    fi
-
-    if test "x$enable_dri" = xyes; then
-        if test "x$enable_shared_glapi" = xno; then
-            AC_MSG_ERROR([egl_dri requires --enable-shared-glapi])
-        fi
-    else
-        # Avoid building an "empty" libEGL. Drop/update this
-        # when other backends (haiku?) come along.
-        AC_MSG_ERROR([egl requires --enable-dri])
-    fi
+    require_dri_shared_libs_and_glapi "egl"
 fi
 AM_CONDITIONAL(HAVE_EGL, test "x$enable_egl" = xyes)
 AC_SUBST([EGL_LIB_DEPS])
