@@ -675,6 +675,30 @@ nir_alu_type_get_base_type(nir_alu_type type)
    return type & NIR_ALU_TYPE_BASE_TYPE_MASK;
 }
 
+static inline nir_alu_type
+nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
+{
+   switch (glsl_get_base_type(type)) {
+   case GLSL_TYPE_BOOL:
+      return nir_type_bool32;
+      break;
+   case GLSL_TYPE_UINT:
+      return nir_type_uint32;
+      break;
+   case GLSL_TYPE_INT:
+      return nir_type_int32;
+      break;
+   case GLSL_TYPE_FLOAT:
+      return nir_type_float32;
+      break;
+   case GLSL_TYPE_DOUBLE:
+      return nir_type_float64;
+      break;
+   default:
+      unreachable("unknown type");
+   }
+}
+
 typedef enum {
    NIR_OP_IS_COMMUTATIVE = (1 << 0),
    NIR_OP_IS_ASSOCIATIVE = (1 << 1),
