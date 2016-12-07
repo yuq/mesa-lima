@@ -1208,6 +1208,15 @@ vec4_visitor::setup_imm_df(double v)
    if (devinfo->gen >= 8)
       return brw_imm_df(v);
 
+   /* gen7.5 does not support DF immediates straighforward but the DIM
+    * instruction allows to set the 64-bit immediate value.
+    */
+   if (devinfo->is_haswell) {
+      dst_reg dst = retype(dst_reg(VGRF, alloc.allocate(2)), BRW_REGISTER_TYPE_DF);
+      emit(DIM(dst, brw_imm_df(v)))->force_writemask_all = true;
+      return swizzle(src_reg(retype(dst, BRW_REGISTER_TYPE_DF)), BRW_SWIZZLE_XXXX);
+   }
+
    /* gen7 does not support DF immediates */
    union {
       double d;
