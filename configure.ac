@@ -2062,6 +2062,12 @@ if test "x$enable_xa" = xyes; then
 fi
 AM_CONDITIONAL(HAVE_ST_XA, test "x$enable_xa" = xyes)
 
+if echo $platforms | grep -q "x11"; then
+    have_vdpau_platform=yes
+else
+    have_vdpau_platform=no
+fi
+
 if echo $platforms | grep -q "x11\|drm"; then
     have_omx_platform=yes
 else
@@ -2082,7 +2088,7 @@ if test -n "$with_gallium_drivers" -a "x$with_gallium_drivers" != xswrast; then
 	PKG_CHECK_EXISTS([xvmc >= $XVMC_REQUIRED], [enable_xvmc=yes], [enable_xvmc=no])
     fi
 
-    if test "x$enable_vdpau" = xauto; then
+    if test "x$enable_vdpau" = xauto -a "x$have_vdpau_platform" = xyes; then
 	PKG_CHECK_EXISTS([vdpau >= $VDPAU_REQUIRED], [enable_vdpau=yes], [enable_vdpau=no])
     fi
 
@@ -2120,6 +2126,9 @@ fi
 AM_CONDITIONAL(HAVE_ST_XVMC, test "x$enable_xvmc" = xyes)
 
 if test "x$enable_vdpau" = xyes; then
+    if test "x$have_vdpau_platform" != xyes; then
+        AC_MSG_ERROR([VDPAU requires the x11 platforms])
+    fi
     PKG_CHECK_MODULES([VDPAU], [vdpau >= $VDPAU_REQUIRED])
     gallium_st="$gallium_st vdpau"
     DEFINES="$DEFINES -DHAVE_ST_VDPAU"
