@@ -288,7 +288,7 @@ _eglSetFuncName(const char *funcName, _EGLDisplay *disp, EGLenum objectType, _EG
  * Return an EGL error code. The output parameter out_attrib_list is modified
  * only on success.
  */
-EGLint
+static EGLint
 _eglConvertIntsToAttribs(const EGLint *int_list, EGLAttrib **out_attrib_list)
 {
    size_t len = 0;
