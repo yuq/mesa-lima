@@ -4081,24 +4081,28 @@ static void si_init_config(struct si_context *sctx)
 		raster_config_1 = 0x00000000;
 		break;
 	default:
-		fprintf(stderr,
-			"radeonsi: Unknown GPU, using 0 for raster_config\n");
-		raster_config = 0x00000000;
-		raster_config_1 = 0x00000000;
+		if (sctx->b.chip_class <= VI) {
+			fprintf(stderr,
+				"radeonsi: Unknown GPU, using 0 for raster_config\n");
+			raster_config = 0x00000000;
+			raster_config_1 = 0x00000000;
+		}
 		break;
 	}
 
-	/* Always use the default config when all backends are enabled
-	 * (or when we failed to determine the enabled backends).
-	 */
-	if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
-		si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
-			       raster_config);
-		if (sctx->b.chip_class >= CIK)
-			si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1,
-				       raster_config_1);
-	} else {
-		si_write_harvested_raster_configs(sctx, pm4, raster_config, raster_config_1);
+	if (sctx->b.chip_class <= VI) {
+		if (!rb_mask || util_bitcount(rb_mask) >= num_rb) {
+			/* Always use the default config when all backends are enabled
+			 * (or when we failed to determine the enabled backends).
+			 */
+			si_pm4_set_reg(pm4, R_028350_PA_SC_RASTER_CONFIG,
+				       raster_config);
+			if (sctx->b.chip_class >= CIK)
+				si_pm4_set_reg(pm4, R_028354_PA_SC_RASTER_CONFIG_1,
+					       raster_config_1);
+		} else {
+			si_write_harvested_raster_configs(sctx, pm4, raster_config, raster_config_1);
+		}
 	}
 
 	si_pm4_set_reg(pm4, R_028204_PA_SC_WINDOW_SCISSOR_TL, S_028204_WINDOW_OFFSET_DISABLE(1));
