@@ -1997,7 +1997,6 @@ AC_SUBST([GBM_PC_LIB_PRIV])
 dnl
 dnl EGL configuration
 dnl
-EGL_CLIENT_APIS=""
 
 if test "x$enable_egl" = xyes; then
     EGL_LIB_DEPS="$DLOPEN_LIBS $SELINUX_LIBS $PTHREAD_LIBS"
@@ -2210,15 +2209,6 @@ dnl
 dnl Gallium configuration
 dnl
 AM_CONDITIONAL(HAVE_GALLIUM, test -n "$with_gallium_drivers")
-
-case "x$enable_opengl$enable_gles1$enable_gles2" in
-x*yes*)
-    EGL_CLIENT_APIS="$EGL_CLIENT_APIS "'$(GL_LIB)'
-    ;;
-esac
-
-AC_SUBST([VG_LIB_DEPS])
-AC_SUBST([EGL_CLIENT_APIS])
 
 dnl
 dnl EGL Platforms configuration
