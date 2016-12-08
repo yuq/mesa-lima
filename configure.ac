@@ -998,15 +998,15 @@ llvm_set_environment_variables() {
         fi
 
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
-        MESA_LLVM=1
+        FOUND_LLVM=yes
     else
-        MESA_LLVM=0
+        FOUND_LLVM=no
         LLVM_VERSION_INT=0
     fi
 }
 
 llvm_check_version_for() {
-    if test "x$MESA_LLVM" = x0; then
+    if test "x$FOUND_LLVM" = xno; then
         AC_MSG_ERROR([LLVM $1 or newer is required for $2])
         return
     fi
@@ -1066,7 +1066,6 @@ radeon_llvm_check() {
 
 llvm_set_environment_variables
 
-AC_SUBST([MESA_LLVM])
 AC_SUBST([LLVM_BINDIR])
 AC_SUBST([LLVM_CFLAGS])
 AC_SUBST([LLVM_CPPFLAGS])
@@ -2519,7 +2518,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
-            if test "x$MESA_LLVM" = x1 && test "x$enable_gallium_llvm" == "xyes";  then
+            if test "x$FOUND_LLVM" = xyes -a "x$enable_gallium_llvm" = xyes;  then
                 HAVE_GALLIUM_LLVMPIPE=yes
             fi
             ;;
@@ -2584,7 +2583,7 @@ dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
 dnl this was causing the same libraries to be appear multiple times
 dnl in LLVM_LIBS.
 
-if test "x$MESA_LLVM" != x0; then
+if test "x$FOUND_LLVM" != xno; then
 
     if ! $LLVM_CONFIG --libs ${LLVM_COMPONENTS} >/dev/null; then
        AC_MSG_ERROR([Calling ${LLVM_CONFIG} failed])
@@ -2686,7 +2685,7 @@ AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
 AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$enable_glx" = xgallium-xlib)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
-AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$MESA_LLVM" = x1 -a \
+AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$FOUND_LLVM" = xyes -a \
                                        "x$enable_gallium_llvm" = xyes)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)
 if test "x$USE_VC4_SIMULATOR" = xyes -a "x$HAVE_GALLIUM_ILO" = xyes; then
@@ -2972,12 +2971,12 @@ else
 fi
 
 echo ""
-if test "x$MESA_LLVM" = x1; then
-    echo "        llvm:            yes"
+if test "x$FOUND_LLVM" = xyes; then
+    echo "        llvm found:      yes"
     echo "        llvm-config:     $LLVM_CONFIG"
     echo "        llvm-version:    $LLVM_VERSION"
 else
-    echo "        llvm:            no"
+    echo "        llvm found:      no"
 fi
 
 echo ""
@@ -3026,7 +3025,7 @@ echo "        CFLAGS:          $cflags"
 echo "        CXXFLAGS:        $cxxflags"
 echo "        Macros:          $defines"
 echo ""
-if test "x$MESA_LLVM" = x1; then
+if test "x$FOUND_LLVM" = xyes; then
     echo "        LLVM_CFLAGS:     $LLVM_CFLAGS"
     echo "        LLVM_CXXFLAGS:   $LLVM_CXXFLAGS"
     echo "        LLVM_CPPFLAGS:   $LLVM_CPPFLAGS"
