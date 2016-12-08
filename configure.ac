@@ -84,8 +84,6 @@ LIBDRM_ETNAVIV_REQUIRED=2.4.80
 
 dnl Versions for external dependencies
 DRI2PROTO_REQUIRED=2.8
-DRI3PROTO_REQUIRED=1.0
-PRESENTPROTO_REQUIRED=1.0
 GLPROTO_REQUIRED=1.4.14
 LIBOMXIL_BELLAGIO_REQUIRED=0.0
 LIBVA_REQUIRED=0.38.0
@@ -1543,11 +1541,6 @@ xdri)
 
             PKG_CHECK_MODULES([DRI2PROTO], [dri2proto >= $DRI2PROTO_REQUIRED])
             GL_PC_REQ_PRIV="$GL_PC_REQ_PRIV libdrm >= $LIBDRM_REQUIRED"
-            if test x"$enable_dri3" = xyes; then
-               PKG_CHECK_MODULES([DRI3PROTO], [dri3proto >= $DRI3PROTO_REQUIRED])
-               PKG_CHECK_MODULES([PRESENTPROTO], [presentproto >= $PRESENTPROTO_REQUIRED])
-            fi
-
             if test x"$enable_dri" = xyes; then
                dri_modules="$dri_modules xcb-dri2 >= $XCBDRI2_REQUIRED"
             fi
