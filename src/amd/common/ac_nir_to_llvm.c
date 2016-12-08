@@ -2095,9 +2095,6 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
                                           nir_intrinsic_instr *instr)
 {
-	const nir_intrinsic_info *info = &nir_intrinsic_infos[instr->intrinsic];
-	const char *load_name;
-	LLVMTypeRef data_type = ctx->f32;
 	LLVMValueRef results[4], ret;
 	LLVMValueRef rsrc = get_src(ctx, instr->src[0]);
 	LLVMValueRef offset = get_src(ctx, instr->src[1]);
