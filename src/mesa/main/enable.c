@@ -440,7 +440,7 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
          ctx->Color.IndexLogicOpEnabled = state;
          break;
       case GL_CONSERVATIVE_RASTERIZATION_INTEL:
-         if (!_mesa_is_desktop_gl(ctx) && ctx->API != API_OPENGLES)
+         if (!_mesa_has_INTEL_conservative_rasterization(ctx))
             goto invalid_enum_error;
          if (ctx->IntelConservativeRasterization == state)
             return;
