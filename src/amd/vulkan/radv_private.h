@@ -179,14 +179,6 @@ radv_clear_mask(uint32_t *inout_mask, uint32_t clear_mask)
 
 #define zero(x) (memset(&(x), 0, sizeof(x)))
 
-/* Define no kernel as 1, since that's an illegal offset for a kernel */
-#define NO_KERNEL 1
-
-struct radv_common {
-	VkStructureType                             sType;
-	const void*                                 pNext;
-};
-
 /* Whenever we generate an error, pass it through this function. Useful for
  * debugging, where we can break on it. Only call at error site, not when
  * propagating errors. Might be useful to plug in a stack trace here.
@@ -1282,13 +1274,5 @@ RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_shader_module, VkShaderModule)
 	{								\
 		return (const __VkType *) __radv_obj;			\
 	}
-
-#define RADV_COMMON_TO_STRUCT(__VkType, __vk_name, __common_name)	\
-	const __VkType *__vk_name = radv_common_to_ ## __VkType(__common_name)
-
-RADV_DEFINE_STRUCT_CASTS(radv_common, VkMemoryBarrier)
-RADV_DEFINE_STRUCT_CASTS(radv_common, VkBufferMemoryBarrier)
-RADV_DEFINE_STRUCT_CASTS(radv_common, VkImageMemoryBarrier)
-
 
 #endif /* RADV_PRIVATE_H */
