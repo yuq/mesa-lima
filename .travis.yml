@@ -27,8 +27,6 @@ env:
     - XORGMACROS_VERSION=util-macros-1.19.0
     - GLPROTO_VERSION=glproto-1.4.17
     - DRI2PROTO_VERSION=dri2proto-2.8
-    - DRI3PROTO_VERSION=dri3proto-1.0
-    - PRESENTPROTO_VERSION=presentproto-1.0
     - LIBPCIACCESS_VERSION=libpciaccess-0.13.4
     - LIBDRM_VERSION=libdrm-2.4.74
     - XCBPROTO_VERSION=xcb-proto-1.11
@@ -71,14 +69,6 @@ install:
   - wget $XORG_RELEASES/proto/$DRI2PROTO_VERSION.tar.bz2
   - tar -jxvf $DRI2PROTO_VERSION.tar.bz2
   - (cd $DRI2PROTO_VERSION && ./configure --prefix=$HOME/prefix && make install)
-
-  - wget $XORG_RELEASES/proto/$DRI3PROTO_VERSION.tar.bz2
-  - tar -jxvf $DRI3PROTO_VERSION.tar.bz2
-  - (cd $DRI3PROTO_VERSION && ./configure --prefix=$HOME/prefix && make install)
-
-  - wget $XORG_RELEASES/proto/$PRESENTPROTO_VERSION.tar.bz2
-  - tar -jxvf $PRESENTPROTO_VERSION.tar.bz2
-  - (cd $PRESENTPROTO_VERSION && ./configure --prefix=$HOME/prefix && make install)
 
   - wget $XCB_RELEASES/$XCBPROTO_VERSION.tar.bz2
   - tar -jxvf $XCBPROTO_VERSION.tar.bz2
