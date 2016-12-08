@@ -2573,6 +2573,7 @@ if test "x$enable_gallium_llvm" == "xyes"; then
     llvm_add_default_components "gallium"
 
     HAVE_GALLIUM_LLVM=yes
+    DEFINES="${DEFINES} -DHAVE_GALLIUM_LLVM"
 fi
 
 dnl We need to validate some needed dependencies for renderonly drivers.

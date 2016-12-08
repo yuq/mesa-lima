@@ -45,7 +45,7 @@
 #include "draw_vs.h"
 #include "draw_gs.h"
 
-#if HAVE_LLVM
+#if HAVE_GALLIUM_LLVM
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_limits.h"
 #include "draw_llvm.h"
@@ -78,7 +78,7 @@ draw_create_context(struct pipe_context *pipe, void *context,
    /* we need correct cpu caps for disabling denorms in draw_vbo() */
    util_cpu_detect();
 
-#if HAVE_LLVM
+#if HAVE_GALLIUM_LLVM
    if (try_llvm && draw_get_option_use_llvm()) {
       draw->llvm = draw_llvm_create(draw, (LLVMContextRef)context);
    }
@@ -112,7 +112,7 @@ draw_create(struct pipe_context *pipe)
 }
 
 
-#if HAVE_LLVM
+#if HAVE_GALLIUM_LLVM
 struct draw_context *
 draw_create_with_llvm_context(struct pipe_context *pipe,
                               void *context)
@@ -221,7 +221,7 @@ void draw_destroy( struct draw_context *draw )
    draw_pt_destroy( draw );
    draw_vs_destroy( draw );
    draw_gs_destroy( draw );
-#ifdef HAVE_LLVM
+#ifdef HAVE_GALLIUM_LLVM
    if (draw->llvm)
       draw_llvm_destroy( draw->llvm );
 #endif
@@ -1003,7 +1003,7 @@ draw_set_samplers(struct draw_context *draw,
 
    draw->num_samplers[shader_stage] = num;
 
-#ifdef HAVE_LLVM
+#ifdef HAVE_GALLIUM_LLVM
    if (draw->llvm)
       draw_llvm_set_sampler_state(draw, shader_stage);
 #endif
@@ -1020,7 +1020,7 @@ draw_set_mapped_texture(struct draw_context *draw,
                         uint32_t img_stride[PIPE_MAX_TEXTURE_LEVELS],
                         uint32_t mip_offsets[PIPE_MAX_TEXTURE_LEVELS])
 {
-#ifdef HAVE_LLVM
+#ifdef HAVE_GALLIUM_LLVM
    if (draw->llvm)
       draw_llvm_set_mapped_texture(draw,
                                    shader_stage,
@@ -1057,7 +1057,7 @@ int
 draw_get_shader_param(unsigned shader, enum pipe_shader_cap param)
 {
 
-#ifdef HAVE_LLVM
+#ifdef HAVE_GALLIUM_LLVM
    if (draw_get_option_use_llvm()) {
       switch(shader) {
       case PIPE_SHADER_VERTEX:

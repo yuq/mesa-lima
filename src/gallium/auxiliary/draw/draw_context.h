@@ -65,7 +65,7 @@ struct draw_so_target {
 
 struct draw_context *draw_create( struct pipe_context *pipe );
 
-#if HAVE_LLVM
+#if HAVE_GALLIUM_LLVM
 struct draw_context *draw_create_with_llvm_context(struct pipe_context *pipe,
                                                    void *context);
 #endif

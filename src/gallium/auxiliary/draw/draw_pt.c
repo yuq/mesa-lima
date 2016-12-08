@@ -191,7 +191,7 @@ boolean draw_pt_init( struct draw_context *draw )
    if (!draw->pt.middle.general)
       return FALSE;
 
-#if HAVE_LLVM
+#if HAVE_GALLIUM_LLVM
    if (draw->llvm)
       draw->pt.middle.llvm = draw_pt_fetch_pipeline_or_emit_llvm( draw );
 #endif
@@ -519,7 +519,7 @@ draw_vbo(struct draw_context *draw,
                                      draw->pt.vertex_element,
                                      draw->pt.nr_vertex_elements,
                                      info);
-#if HAVE_LLVM
+#if HAVE_GALLIUM_LLVM
    if (!draw->llvm)
 #endif
    {
