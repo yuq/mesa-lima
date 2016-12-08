@@ -1241,7 +1241,7 @@ static LLVMValueRef build_fs_interp(
 		args[1] = attr_number;
 		args[2] = params;
 		args[3] = lp_build_gather_values(gallivm, ij, 2);
-		return lp_build_intrinsic(gallivm->builder, "llvm.fs.interp",
+		return lp_build_intrinsic(gallivm->builder, "llvm.SI.fs.interp",
 					  ctx->f32, args, 4,
 					  LP_FUNC_ATTR_READNONE);
 	}
