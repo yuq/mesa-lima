@@ -85,6 +85,13 @@ typedef uint32_t xcb_window_t;
 
 #define NUM_DEPTH_CLEAR_PIPELINES 3
 
+enum radv_mem_heap {
+	RADV_MEM_HEAP_VRAM,
+	RADV_MEM_HEAP_VRAM_CPU_ACCESS,
+	RADV_MEM_HEAP_GTT,
+	RADV_MEM_HEAP_COUNT
+};
+
 #define radv_noreturn __attribute__((__noreturn__))
 #define radv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 

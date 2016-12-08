@@ -578,37 +578,39 @@ void radv_GetPhysicalDeviceMemoryProperties(
 	pMemoryProperties->memoryTypeCount = 4;
 	pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-		.heapIndex = 0,
+		.heapIndex = RADV_MEM_HEAP_VRAM,
 	};
 	pMemoryProperties->memoryTypes[1] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		.heapIndex = 2,
+		.heapIndex = RADV_MEM_HEAP_GTT,
 	};
 	pMemoryProperties->memoryTypes[2] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-		.heapIndex = 1,
+		.heapIndex = RADV_MEM_HEAP_VRAM_CPU_ACCESS,
 	};
 	pMemoryProperties->memoryTypes[3] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
 		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-		.heapIndex = 2,
+		.heapIndex = RADV_MEM_HEAP_GTT,
 	};
 
-	pMemoryProperties->memoryHeapCount = 3;
-	pMemoryProperties->memoryHeaps[0] = (VkMemoryHeap) {
+	STATIC_ASSERT(RADV_MEM_HEAP_COUNT <= VK_MAX_MEMORY_HEAPS);
+
+	pMemoryProperties->memoryHeapCount = RADV_MEM_HEAP_COUNT;
+	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_VRAM] = (VkMemoryHeap) {
 		.size = physical_device->rad_info.vram_size -
 				physical_device->rad_info.visible_vram_size,
 		.flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
 	};
-	pMemoryProperties->memoryHeaps[1] = (VkMemoryHeap) {
+	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_VRAM_CPU_ACCESS] = (VkMemoryHeap) {
 		.size = physical_device->rad_info.visible_vram_size,
 		.flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
 	};
-	pMemoryProperties->memoryHeaps[2] = (VkMemoryHeap) {
+	pMemoryProperties->memoryHeaps[RADV_MEM_HEAP_GTT] = (VkMemoryHeap) {
 		.size = physical_device->rad_info.gart_size,
 		.flags = 0,
 	};
