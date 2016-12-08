@@ -1467,24 +1467,20 @@ dri2_initialize_x11_dri2(_EGLDriver *drv, _EGLDisplay *disp)
 EGLBoolean
 dri2_initialize_x11(_EGLDriver *drv, _EGLDisplay *disp)
 {
-   EGLBoolean initialized = EGL_TRUE;
+   EGLBoolean initialized = EGL_FALSE;
 
-   int x11_dri2_accel = (getenv("LIBGL_ALWAYS_SOFTWARE") == NULL);
+   if (!getenv("LIBGL_ALWAYS_SOFTWARE")) {
+#ifdef HAVE_DRI3
+      if (!getenv("LIBGL_DRI3_DISABLE"))
+         initialized = dri2_initialize_x11_dri3(drv, disp);
+#endif
 
-   if (x11_dri2_accel) {
-#ifdef HAVE_DRI3
-      if (getenv("LIBGL_DRI3_DISABLE") != NULL ||
-          !dri2_initialize_x11_dri3(drv, disp)) {
-#endif
-         if (!dri2_initialize_x11_dri2(drv, disp)) {
-            initialized = dri2_initialize_x11_swrast(drv, disp);
-         }
-#ifdef HAVE_DRI3
-      }
-#endif
-   } else {
-      initialized = dri2_initialize_x11_swrast(drv, disp);
+      if (!initialized)
+         initialized = dri2_initialize_x11_dri2(drv, disp);
    }
+
+   if (!initialized)
+      initialized = dri2_initialize_x11_swrast(drv, disp);
 
    return initialized;
 }
