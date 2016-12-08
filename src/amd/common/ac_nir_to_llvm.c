@@ -4352,8 +4352,7 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 }
 
 static void
-handle_vs_outputs_post(struct nir_to_llvm_context *ctx,
-		      struct nir_shader *nir)
+handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	uint32_t param_count = 0;
 	unsigned target;
@@ -4555,8 +4554,7 @@ si_export_mrt_z(struct nir_to_llvm_context *ctx,
 }
 
 static void
-handle_fs_outputs_post(struct nir_to_llvm_context *ctx,
-		       struct nir_shader *nir)
+handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	unsigned index = 0;
 	LLVMValueRef depth = NULL, stencil = NULL, samplemask = NULL;
@@ -4598,15 +4596,14 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx,
 }
 
 static void
-handle_shader_outputs_post(struct nir_to_llvm_context *ctx,
-			   struct nir_shader *nir)
+handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	switch (ctx->stage) {
 	case MESA_SHADER_VERTEX:
-		handle_vs_outputs_post(ctx, nir);
+		handle_vs_outputs_post(ctx);
 		break;
 	case MESA_SHADER_FRAGMENT:
-		handle_fs_outputs_post(ctx, nir);
+		handle_fs_outputs_post(ctx);
 		break;
 	default:
 		break;
@@ -4724,7 +4721,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	visit_cf_list(&ctx, &func->impl->body);
 	phi_post_pass(&ctx);
 
-	handle_shader_outputs_post(&ctx, nir);
+	handle_shader_outputs_post(&ctx);
 	LLVMBuildRetVoid(ctx.builder);
 
 	ac_llvm_finalize_module(&ctx);
