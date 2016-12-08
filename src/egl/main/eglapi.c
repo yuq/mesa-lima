@@ -890,7 +890,7 @@ eglCreateWindowSurface(EGLDisplay dpy, EGLConfig config,
 }
 
 static void *
-fixupNativeWindow(_EGLDisplay *disp, void *native_window)
+_fixupNativeWindow(_EGLDisplay *disp, void *native_window)
 {
 #ifdef HAVE_X11_PLATFORM
    if (disp->Platform == _EGL_PLATFORM_X11 && native_window != NULL) {
@@ -914,7 +914,7 @@ eglCreatePlatformWindowSurfaceEXT(EGLDisplay dpy, EGLConfig config,
 {
    _EGLDisplay *disp = _eglLockDisplay(dpy);
 
-   native_window = fixupNativeWindow(disp, native_window);
+   native_window = _fixupNativeWindow(disp, native_window);
 
    _EGL_FUNC_START(disp, EGL_OBJECT_DISPLAY_KHR, NULL, EGL_NO_SURFACE);
    return _eglCreateWindowSurfaceCommon(disp, config, native_window,
@@ -937,7 +937,7 @@ eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config,
    if (attrib_list && !int_attribs)
       RETURN_EGL_ERROR(disp, EGL_BAD_ALLOC, EGL_NO_SURFACE);
 
-   native_window = fixupNativeWindow(disp, native_window);
+   native_window = _fixupNativeWindow(disp, native_window);
    surface = _eglCreateWindowSurfaceCommon(disp, config, native_window,
                                            int_attribs);
    free(int_attribs);
@@ -945,7 +945,7 @@ eglCreatePlatformWindowSurface(EGLDisplay dpy, EGLConfig config,
 }
 
 static void *
-fixupNativePixmap(_EGLDisplay *disp, void *native_pixmap)
+_fixupNativePixmap(_EGLDisplay *disp, void *native_pixmap)
 {
 #ifdef HAVE_X11_PLATFORM
       /* The `native_pixmap` parameter for the X11 platform differs between
@@ -1015,7 +1015,7 @@ eglCreatePlatformPixmapSurfaceEXT(EGLDisplay dpy, EGLConfig config,
    _EGLDisplay *disp = _eglLockDisplay(dpy);
 
    _EGL_FUNC_START(disp, EGL_OBJECT_DISPLAY_KHR, NULL, EGL_NO_SURFACE);
-   native_pixmap = fixupNativePixmap(disp, native_pixmap);
+   native_pixmap = _fixupNativePixmap(disp, native_pixmap);
    return _eglCreatePixmapSurfaceCommon(disp, config, native_pixmap,
                                         attrib_list);
 }
@@ -1036,7 +1036,7 @@ eglCreatePlatformPixmapSurface(EGLDisplay dpy, EGLConfig config,
    if (attrib_list && !int_attribs)
       RETURN_EGL_ERROR(disp, EGL_BAD_ALLOC, EGL_NO_SURFACE);
 
-   native_pixmap = fixupNativePixmap(disp, native_pixmap);
+   native_pixmap = _fixupNativePixmap(disp, native_pixmap);
    surface = _eglCreatePixmapSurfaceCommon(disp, config, native_pixmap,
                                            int_attribs);
    free(int_attribs);
@@ -2208,7 +2208,7 @@ eglLabelObjectKHR(EGLDisplay dpy, EGLenum objectType, EGLObjectKHR object,
 }
 
 static EGLBoolean
-validDebugMessageLevel(EGLAttrib level)
+_validDebugMessageLevel(EGLAttrib level)
 {
    return (level >= EGL_DEBUG_MSG_CRITICAL_KHR &&
            level <= EGL_DEBUG_MSG_INFO_KHR);
@@ -2229,7 +2229,7 @@ eglDebugMessageControlKHR(EGLDEBUGPROCKHR callback,
       int i;
 
       for (i = 0; attrib_list[i] != EGL_NONE; i += 2) {
-         if (validDebugMessageLevel(attrib_list[i])) {
+         if (_validDebugMessageLevel(attrib_list[i])) {
             if (attrib_list[i + 1])
                newEnabled |= DebugBitFromType(attrib_list[i]);
             else
@@ -2266,7 +2266,7 @@ eglQueryDebugKHR(EGLint attribute, EGLAttrib *value)
    mtx_lock(_eglGlobal.Mutex);
 
    do {
-      if (validDebugMessageLevel(attribute)) {
+      if (_validDebugMessageLevel(attribute)) {
          if (_eglGlobal.debugTypesEnabled & DebugBitFromType(attribute))
             *value = EGL_TRUE;
          else
