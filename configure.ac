@@ -1127,11 +1127,11 @@ AC_ARG_ENABLE([lmsensors],
 AM_CONDITIONAL(HAVE_LIBSENSORS, test "x$enable_lmsensors" = xyes)
 if test "x$enable_lmsensors" = xyes ; then
     DEFINES="${DEFINES} -DHAVE_LIBSENSORS=1"
-    LIBSENSORS_LDFLAGS="-lsensors"
+    LIBSENSORS_LIBS="-lsensors"
 else
-    LIBSENSORS_LDFLAGS=""
+    LIBSENSORS_LIBS=""
 fi
-AC_SUBST(LIBSENSORS_LDFLAGS)
+AC_SUBST(LIBSENSORS_LIBS)
 
 case "$host_os" in
 linux*)
