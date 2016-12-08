@@ -92,6 +92,14 @@ enum radv_mem_heap {
 	RADV_MEM_HEAP_COUNT
 };
 
+enum radv_mem_type {
+	RADV_MEM_TYPE_VRAM,
+	RADV_MEM_TYPE_GTT_WRITE_COMBINE,
+	RADV_MEM_TYPE_VRAM_CPU_ACCESS,
+	RADV_MEM_TYPE_GTT_CACHED,
+	RADV_MEM_TYPE_COUNT
+};
+
 #define radv_noreturn __attribute__((__noreturn__))
 #define radv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 

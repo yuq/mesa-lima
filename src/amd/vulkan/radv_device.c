@@ -575,23 +575,25 @@ void radv_GetPhysicalDeviceMemoryProperties(
 {
 	RADV_FROM_HANDLE(radv_physical_device, physical_device, physicalDevice);
 
-	pMemoryProperties->memoryTypeCount = 4;
-	pMemoryProperties->memoryTypes[0] = (VkMemoryType) {
+	STATIC_ASSERT(RADV_MEM_TYPE_COUNT <= VK_MAX_MEMORY_TYPES);
+
+	pMemoryProperties->memoryTypeCount = RADV_MEM_TYPE_COUNT;
+	pMemoryProperties->memoryTypes[RADV_MEM_TYPE_VRAM] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
 		.heapIndex = RADV_MEM_HEAP_VRAM,
 	};
-	pMemoryProperties->memoryTypes[1] = (VkMemoryType) {
+	pMemoryProperties->memoryTypes[RADV_MEM_TYPE_GTT_WRITE_COMBINE] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		.heapIndex = RADV_MEM_HEAP_GTT,
 	};
-	pMemoryProperties->memoryTypes[2] = (VkMemoryType) {
+	pMemoryProperties->memoryTypes[RADV_MEM_TYPE_VRAM_CPU_ACCESS] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
 		VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 		.heapIndex = RADV_MEM_HEAP_VRAM_CPU_ACCESS,
 	};
-	pMemoryProperties->memoryTypes[3] = (VkMemoryType) {
+	pMemoryProperties->memoryTypes[RADV_MEM_TYPE_GTT_CACHED] = (VkMemoryType) {
 		.propertyFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
 		VK_MEMORY_PROPERTY_HOST_COHERENT_BIT |
 		VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
@@ -915,17 +917,18 @@ VkResult radv_AllocateMemory(
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
 	uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
-	if (pAllocateInfo->memoryTypeIndex == 1 || pAllocateInfo->memoryTypeIndex == 3)
+	if (pAllocateInfo->memoryTypeIndex == RADV_MEM_TYPE_GTT_WRITE_COMBINE ||
+	    pAllocateInfo->memoryTypeIndex == RADV_MEM_TYPE_GTT_CACHED)
 		domain = RADEON_DOMAIN_GTT;
 	else
 		domain = RADEON_DOMAIN_VRAM;
 
-	if (pAllocateInfo->memoryTypeIndex == 0)
+	if (pAllocateInfo->memoryTypeIndex == RADV_MEM_TYPE_VRAM)
 		flags |= RADEON_FLAG_NO_CPU_ACCESS;
 	else
 		flags |= RADEON_FLAG_CPU_ACCESS;
 
-	if (pAllocateInfo->memoryTypeIndex == 1)
+	if (pAllocateInfo->memoryTypeIndex == RADV_MEM_TYPE_GTT_WRITE_COMBINE)
 		flags |= RADEON_FLAG_GTT_WC;
 
 	mem->bo = device->ws->buffer_create(device->ws, alloc_size, 32768,
@@ -1025,16 +1028,7 @@ void radv_GetBufferMemoryRequirements(
 {
 	RADV_FROM_HANDLE(radv_buffer, buffer, _buffer);
 
-	/* The Vulkan spec (git aaed022) says:
-	 *
-	 *    memoryTypeBits is a bitfield and contains one bit set for every
-	 *    supported memory type for the resource. The bit `1<<i` is set if and
-	 *    only if the memory type `i` in the VkPhysicalDeviceMemoryProperties
-	 *    structure for the physical device is supported.
-	 *
-	 * We support exactly one memory type.
-	 */
-	pMemoryRequirements->memoryTypeBits = 0x7;
+	pMemoryRequirements->memoryTypeBits = (1u << RADV_MEM_TYPE_COUNT) - 1;
 
 	pMemoryRequirements->size = buffer->size;
 	pMemoryRequirements->alignment = 16;
@@ -1047,16 +1041,7 @@ void radv_GetImageMemoryRequirements(
 {
 	RADV_FROM_HANDLE(radv_image, image, _image);
 
-	/* The Vulkan spec (git aaed022) says:
-	 *
-	 *    memoryTypeBits is a bitfield and contains one bit set for every
-	 *    supported memory type for the resource. The bit `1<<i` is set if and
-	 *    only if the memory type `i` in the VkPhysicalDeviceMemoryProperties
-	 *    structure for the physical device is supported.
-	 *
-	 * We support exactly one memory type.
-	 */
-	pMemoryRequirements->memoryTypeBits = 0x7;
+	pMemoryRequirements->memoryTypeBits = (1u << RADV_MEM_TYPE_COUNT) - 1;
 
 	pMemoryRequirements->size = image->size;
 	pMemoryRequirements->alignment = image->alignment;
