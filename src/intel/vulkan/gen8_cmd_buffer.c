@@ -224,6 +224,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 
          .BackfaceStencilTestMask = d->stencil_compare_mask.back & 0xff,
          .BackfaceStencilWriteMask = d->stencil_write_mask.back & 0xff,
+
+         .StencilBufferWriteEnable =
+            (d->stencil_write_mask.front || d->stencil_write_mask.back) &&
+            pipeline->writes_stencil,
       };
       GENX(3DSTATE_WM_DEPTH_STENCIL_pack)(NULL, wm_depth_stencil_dw,
                                           &wm_depth_stencil);
@@ -271,6 +275,10 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 
          .StencilReferenceValue = d->stencil_reference.front & 0xff,
          .BackfaceStencilReferenceValue = d->stencil_reference.back & 0xff,
+
+         .StencilBufferWriteEnable =
+            (d->stencil_write_mask.front || d->stencil_write_mask.back) &&
+            pipeline->writes_stencil,
       };
       GEN9_3DSTATE_WM_DEPTH_STENCIL_pack(NULL, dwords, &wm_depth_stencil);
 
