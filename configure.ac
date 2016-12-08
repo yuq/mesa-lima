@@ -2159,10 +2159,6 @@ AC_ARG_WITH([egl-platforms],
         with_egl_platforms=""
     fi])
 
-if test "x$with_egl_platforms" != "x" -a "x$enable_egl" != xyes; then
-    AC_MSG_ERROR([cannot build egl state tracker without EGL library])
-fi
-
 PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
         WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
         WAYLAND_SCANNER='')
