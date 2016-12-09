@@ -4059,21 +4059,23 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           * and we have to split it if necessary.
           */
          const unsigned type_size = type_sz(dest.type);
-         const fs_builder ubld = bld.exec_all().group(4, 0);
-         const fs_reg packed_consts = ubld.vgrf(BRW_REGISTER_TYPE_F);
+         const unsigned block_sz = 64; /* Fetch one cacheline at a time. */
+         const fs_builder ubld = bld.exec_all().group(block_sz / 4, 0);
+         const fs_reg packed_consts = ubld.vgrf(BRW_REGISTER_TYPE_UD);
 
          for (unsigned c = 0; c < instr->num_components;) {
             const unsigned base = const_offset->u32[0] + c * type_size;
-
-            /* Number of usable components in the next 16B-aligned load */
+            /* Number of usable components in the next block-aligned load. */
             const unsigned count = MIN2(instr->num_components - c,
-                                        (16 - base % 16) / type_size);
+                                        (block_sz - base % block_sz) / type_size);
 
             ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                      packed_consts, surf_index, brw_imm_ud(base & ~15));
+                      packed_consts, surf_index,
+                      brw_imm_ud(base & ~(block_sz - 1)));
 
             const fs_reg consts =
-               retype(byte_offset(packed_consts, base & 15), dest.type);
+               retype(byte_offset(packed_consts, base & (block_sz - 1)),
+                      dest.type);
 
             for (unsigned d = 0; d < count; d++)
                bld.MOV(offset(dest, bld, c + d), component(consts, d));

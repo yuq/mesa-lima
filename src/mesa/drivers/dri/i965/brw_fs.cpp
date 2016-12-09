@@ -2111,25 +2111,22 @@ fs_visitor::lower_constant_loads()
          if (pull_index == -1)
 	    continue;
 
-         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
-         fs_reg dst;
-
-         if (type_sz(inst->src[i].type) <= 4)
-            dst = vgrf(glsl_type::float_type);
-         else
-            dst = vgrf(glsl_type::double_type);
-
          assert(inst->src[i].stride == 0);
 
-         const fs_builder ubld = ibld.exec_all().group(4, 0);
-         struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
+         const unsigned index = stage_prog_data->binding_table.pull_constants_start;
+         const unsigned block_sz = 64; /* Fetch one cacheline at a time. */
+         const fs_builder ubld = ibld.exec_all().group(block_sz / 4, 0);
+         const fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_UD);
+         const unsigned base = pull_index * 4;
+
          ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                   dst, brw_imm_ud(index), offset);
+                   dst, brw_imm_ud(index), brw_imm_ud(base & ~(block_sz - 1)));
 
          /* Rewrite the instruction to use the temporary VGRF. */
          inst->src[i].file = VGRF;
          inst->src[i].nr = dst.nr;
-         inst->src[i].offset = (pull_index & 3) * 4 + inst->src[i].offset % 4;
+         inst->src[i].offset = (base & (block_sz - 1)) +
+                               inst->src[i].offset % 4;
 
          brw_mark_surface_used(prog_data, index);
       }
