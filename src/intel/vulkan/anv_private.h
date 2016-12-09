@@ -176,14 +176,6 @@ vk_to_isl_color(VkClearColorValue color)
    memcpy((dest), (src), (count) * sizeof(*(src))); \
 })
 
-/* Define no kernel as 1, since that's an illegal offset for a kernel */
-#define NO_KERNEL 1
-
-struct anv_common {
-    VkStructureType                             sType;
-    const void*                                 pNext;
-};
-
 /* Whenever we generate an error, pass it through this function. Useful for
  * debugging, where we can break on it. Only call at error site, not when
  * propagating errors. Might be useful to plug in a stack trace here.
@@ -1858,13 +1850,6 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
    { \
       return (const __VkType *) __anv_obj; \
    }
-
-#define ANV_COMMON_TO_STRUCT(__VkType, __vk_name, __common_name) \
-   const __VkType *__vk_name = anv_common_to_ ## __VkType(__common_name)
-
-ANV_DEFINE_STRUCT_CASTS(anv_common, VkMemoryBarrier)
-ANV_DEFINE_STRUCT_CASTS(anv_common, VkBufferMemoryBarrier)
-ANV_DEFINE_STRUCT_CASTS(anv_common, VkImageMemoryBarrier)
 
 /* Gen-specific function declarations */
 #ifdef genX
