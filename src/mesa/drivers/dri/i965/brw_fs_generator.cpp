@@ -1175,7 +1175,6 @@ fs_generator::generate_uniform_pull_constant_load_gen7(fs_inst *inst,
 
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-      brw_set_default_access_mode(p, BRW_ALIGN_1);
 
       /* a0.0 = surf_index & 0xff */
       brw_inst *insn_and = brw_next_insn(p, BRW_OPCODE_AND);
@@ -1311,7 +1310,6 @@ fs_generator::generate_varying_pull_constant_load_gen7(fs_inst *inst,
 
       brw_push_insn_state(p);
       brw_set_default_mask_control(p, BRW_MASK_DISABLE);
-      brw_set_default_access_mode(p, BRW_ALIGN_1);
 
       /* a0.0 = surf_index & 0xff */
       brw_inst *insn_and = brw_next_insn(p, BRW_OPCODE_AND);
