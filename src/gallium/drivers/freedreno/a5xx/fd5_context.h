@@ -49,7 +49,11 @@ struct fd5_context {
 	 */
 	struct fd_bo *vsc_size_mem;
 
-	/* TODO not sure what this is for.. */
+	/* TODO not sure what this is for.. probably similar to
+	 * CACHE_FLUSH_TS on kernel side, where value gets written
+	 * to this address synchronized w/ 3d (ie. a way to
+	 * synchronize when the CP is running far ahead)
+	 */
 	struct fd_bo *blit_mem;
 
 	struct u_upload_mgr *border_color_uploader;

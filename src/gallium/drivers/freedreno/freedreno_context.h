@@ -261,6 +261,7 @@ struct fd_context {
 
 	/* optional, for GMEM bypass: */
 	void (*emit_sysmem_prep)(struct fd_batch *batch);
+	void (*emit_sysmem_fini)(struct fd_batch *batch);
 
 	/* draw: */
 	bool (*draw_vbo)(struct fd_context *ctx, const struct pipe_draw_info *info);

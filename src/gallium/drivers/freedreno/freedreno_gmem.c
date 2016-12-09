@@ -358,6 +358,9 @@ render_sysmem(struct fd_batch *batch)
 	/* emit IB to drawcmds: */
 	ctx->emit_ib(batch->gmem, batch->draw);
 	fd_reset_wfi(batch);
+
+	if (ctx->emit_sysmem_fini)
+		ctx->emit_sysmem_fini(batch);
 }
 
 static void

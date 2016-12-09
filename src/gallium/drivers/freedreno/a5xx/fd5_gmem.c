@@ -96,7 +96,7 @@ emit_mrt(struct fd_ringbuffer *ring, unsigned nr_bufs,
 		OUT_RING(ring, A5XX_RB_MRT_BUF_INFO_COLOR_FORMAT(format) |
 				A5XX_RB_MRT_BUF_INFO_COLOR_TILE_MODE(tile_mode) |
 				A5XX_RB_MRT_BUF_INFO_COLOR_SWAP(swap) |
-				0x800 | /* XXX 0x1000 for RECTLIST clear, 0x0 for BLIT.. */
+				COND(gmem, 0x800) | /* XXX 0x1000 for RECTLIST clear, 0x0 for BLIT.. */
 				COND(srgb, A5XX_RB_MRT_BUF_INFO_COLOR_SRGB));
 		OUT_RING(ring, A5XX_RB_MRT_PITCH(stride));
 		OUT_RING(ring, A5XX_RB_MRT_ARRAY_PITCH(size));
@@ -467,8 +467,16 @@ fd5_emit_tile_gmem2mem(struct fd_batch *batch, struct fd_tile *tile)
 static void
 fd5_emit_tile_fini(struct fd_batch *batch)
 {
-	fd5_cache_flush(batch, batch->gmem);
-	fd5_set_render_mode(batch->ctx, batch->gmem, BYPASS);
+	struct fd_ringbuffer *ring = batch->gmem;
+
+	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
+	OUT_RING(ring, 0x0);
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
+	OUT_RING(ring, UNK_26);
+
+	fd5_cache_flush(batch, ring);
+	fd5_set_render_mode(batch->ctx, ring, BYPASS);
 }
 
 static void
@@ -545,6 +553,24 @@ fd5_emit_sysmem_prep(struct fd_batch *batch)
 			A5XX_GRAS_SC_DEST_MSAA_CNTL_MSAA_DISABLE);
 }
 
+static void
+fd5_emit_sysmem_fini(struct fd_batch *batch)
+{
+	struct fd5_context *fd5_ctx = fd5_context(batch->ctx);
+	struct fd_ringbuffer *ring = batch->gmem;
+
+	OUT_PKT7(ring, CP_SKIP_IB2_ENABLE_GLOBAL, 1);
+	OUT_RING(ring, 0x0);
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, 1);
+	OUT_RING(ring, UNK_26);
+
+	OUT_PKT7(ring, CP_EVENT_WRITE, 4);
+	OUT_RING(ring, UNK_1D);
+	OUT_RELOCW(ring, fd5_ctx->blit_mem, 0, 0, 0);  /* ADDR_LO/HI */
+	OUT_RING(ring, 0x00000000);
+}
+
 void
 fd5_gmem_init(struct pipe_context *pctx)
 {
@@ -557,4 +583,5 @@ fd5_gmem_init(struct pipe_context *pctx)
 	ctx->emit_tile_gmem2mem = fd5_emit_tile_gmem2mem;
 	ctx->emit_tile_fini = fd5_emit_tile_fini;
 	ctx->emit_sysmem_prep = fd5_emit_sysmem_prep;
+	ctx->emit_sysmem_fini = fd5_emit_sysmem_fini;
 }
