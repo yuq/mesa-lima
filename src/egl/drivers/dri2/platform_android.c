@@ -434,7 +434,40 @@ update_buffers(struct dri2_egl_surface *dri2_surf)
 }
 
 static int
-get_back_bo(struct dri2_egl_surface *dri2_surf)
+get_front_bo(struct dri2_egl_surface *dri2_surf, unsigned int format)
+{
+   struct dri2_egl_display *dri2_dpy =
+      dri2_egl_display(dri2_surf->base.Resource.Display);
+
+   if (dri2_surf->dri_image_front)
+      return 0;
+
+   if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
+      /* According current EGL spec, front buffer rendering
+       * for window surface is not supported now.
+       * and mesa doesn't have the implementation of this case.
+       * Add warning message, but not treat it as error.
+       */
+      _eglLog(_EGL_DEBUG, "DRI driver requested unsupported front buffer for window surface");
+   } else if (dri2_surf->base.Type == EGL_PBUFFER_BIT) {
+      dri2_surf->dri_image_front =
+          dri2_dpy->image->createImage(dri2_dpy->dri_screen,
+                                              dri2_surf->base.Width,
+                                              dri2_surf->base.Height,
+                                              format,
+                                              0,
+                                              dri2_surf);
+      if (!dri2_surf->dri_image_front) {
+         _eglLog(_EGL_WARNING, "dri2_image_front allocation failed");
+         return -1;
+      }
+   }
+
+   return 0;
+}
+
+static int
+get_back_bo(struct dri2_egl_surface *dri2_surf, unsigned int format)
 {
    struct dri2_egl_display *dri2_dpy =
       dri2_egl_display(dri2_surf->base.Resource.Display);
@@ -444,71 +477,44 @@ get_back_bo(struct dri2_egl_surface *dri2_surf)
    if (dri2_surf->dri_image_back)
       return 0;
 
-   if (!dri2_surf->buffer)
-      return -1;
-
-   fd = get_native_buffer_fd(dri2_surf->buffer);
-   if (fd < 0) {
-      _eglLog(_EGL_WARNING, "Could not get native buffer FD");
-      return -1;
-   }
-
-   fourcc = get_fourcc(dri2_surf->buffer->format);
-
-   pitch = dri2_surf->buffer->stride *
-      get_format_bpp(dri2_surf->buffer->format);
-
-   if (fourcc == -1 || pitch == 0) {
-      _eglLog(_EGL_WARNING, "Invalid buffer fourcc(%x) or pitch(%d)",
-              fourcc, pitch);
-      return -1;
-   }
-
-   dri2_surf->dri_image_back =
-      dri2_dpy->image->createImageFromFds(dri2_dpy->dri_screen,
-                                          dri2_surf->base.Width,
-                                          dri2_surf->base.Height,
-                                          fourcc,
-                                          &fd,
-                                          1,
-                                          &pitch,
-                                          &offset,
-                                          dri2_surf);
-   if (!dri2_surf->dri_image_back)
-      return -1;
-
-   return 0;
-}
-
-static int
-droid_image_get_buffers(__DRIdrawable *driDrawable,
-                  unsigned int format,
-                  uint32_t *stamp,
-                  void *loaderPrivate,
-                  uint32_t buffer_mask,
-                  struct __DRIimageList *images)
-{
-   struct dri2_egl_surface *dri2_surf = loaderPrivate;
-   struct dri2_egl_display *dri2_dpy =
-      dri2_egl_display(dri2_surf->base.Resource.Display);
-
-   images->image_mask = 0;
-   images->front = NULL;
-   images->back = NULL;
-
-   if (update_buffers(dri2_surf) < 0)
-      return 0;
-
-   if (buffer_mask & __DRI_IMAGE_BUFFER_FRONT) {
-      if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
-         /* According current EGL spec,
-          * front buffer rendering for window surface is not supported now */
-         _eglLog(_EGL_WARNING,
-                 "%s:%d front buffer rendering for window surface is not supported!",
-                 __func__, __LINE__);
-         return 0;
+   if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
+      if (!dri2_surf->buffer) {
+         _eglLog(_EGL_WARNING, "Could not get native buffer");
+         return -1;
       }
 
+      fd = get_native_buffer_fd(dri2_surf->buffer);
+      if (fd < 0) {
+         _eglLog(_EGL_WARNING, "Could not get native buffer FD");
+         return -1;
+      }
+
+      fourcc = get_fourcc(dri2_surf->buffer->format);
+
+      pitch = dri2_surf->buffer->stride *
+         get_format_bpp(dri2_surf->buffer->format);
+
+      if (fourcc == -1 || pitch == 0) {
+         _eglLog(_EGL_WARNING, "Invalid buffer fourcc(%x) or pitch(%d)",
+                 fourcc, pitch);
+         return -1;
+      }
+
+      dri2_surf->dri_image_back =
+         dri2_dpy->image->createImageFromFds(dri2_dpy->dri_screen,
+                                             dri2_surf->base.Width,
+                                             dri2_surf->base.Height,
+                                             fourcc,
+                                             &fd,
+                                             1,
+                                             &pitch,
+                                             &offset,
+                                             dri2_surf);
+      if (!dri2_surf->dri_image_back) {
+         _eglLog(_EGL_WARNING, "failed to create DRI image from FD");
+         return -1;
+      }
+   } else if (dri2_surf->base.Type == EGL_PBUFFER_BIT) {
       /* The EGL 1.5 spec states that pbuffers are single-buffered. Specifically,
        * the spec states that they have a back buffer but no front buffer, in
        * contrast to pixmaps, which have a front buffer but no back buffer.
@@ -522,43 +528,52 @@ droid_image_get_buffers(__DRIdrawable *driDrawable,
        * behavior instead of trying to fix (and hence potentially breaking) the
        * world.
        */
-      if (!dri2_surf->dri_image_front &&
-          dri2_surf->base.Type == EGL_PBUFFER_BIT) {
-         dri2_surf->dri_image_front =
-            dri2_dpy->image->createImage(dri2_dpy->dri_screen,
-                                         dri2_surf->base.Width,
-                                         dri2_surf->base.Height,
-                                         format,
-                                         0,
-                                         dri2_surf);
-      }
+      _eglLog(_EGL_DEBUG, "DRI driver requested unsupported back buffer for pbuffer surface");
+   }
 
-      if (!dri2_surf->dri_image_front) {
-         _eglLog(_EGL_WARNING,
-                 "%s:%d dri2_image front buffer allocation failed!",
-                 __func__, __LINE__);
+   return 0;
+}
+
+/* Some drivers will pass multiple bits in buffer_mask.
+ * For such case, will go through all the bits, and
+ * will not return error when unsupported buffer is requested, only
+ * return error when the allocation for supported buffer failed.
+ */
+static int
+droid_image_get_buffers(__DRIdrawable *driDrawable,
+                  unsigned int format,
+                  uint32_t *stamp,
+                  void *loaderPrivate,
+                  uint32_t buffer_mask,
+                  struct __DRIimageList *images)
+{
+   struct dri2_egl_surface *dri2_surf = loaderPrivate;
+
+   images->image_mask = 0;
+   images->front = NULL;
+   images->back = NULL;
+
+   if (update_buffers(dri2_surf) < 0)
+      return 0;
+
+   if (buffer_mask & __DRI_IMAGE_BUFFER_FRONT) {
+      if (get_front_bo(dri2_surf, format) < 0)
          return 0;
-      }
 
-      images->front = dri2_surf->dri_image_front;
-      images->image_mask |= __DRI_IMAGE_BUFFER_FRONT;
+      if (dri2_surf->dri_image_front) {
+         images->front = dri2_surf->dri_image_front;
+         images->image_mask |= __DRI_IMAGE_BUFFER_FRONT;
+      }
    }
 
    if (buffer_mask & __DRI_IMAGE_BUFFER_BACK) {
-      if (dri2_surf->base.Type == EGL_WINDOW_BIT) {
-         if (get_back_bo(dri2_surf) < 0)
-            return 0;
-      }
-
-      if (!dri2_surf->dri_image_back) {
-         _eglLog(_EGL_WARNING,
-                 "%s:%d dri2_image back buffer allocation failed!",
-                 __func__, __LINE__);
+      if (get_back_bo(dri2_surf, format) < 0)
          return 0;
-      }
 
-      images->back = dri2_surf->dri_image_back;
-      images->image_mask |= __DRI_IMAGE_BUFFER_BACK;
+      if (dri2_surf->dri_image_back) {
+         images->back = dri2_surf->dri_image_back;
+         images->image_mask |= __DRI_IMAGE_BUFFER_BACK;
+      }
    }
 
    return 1;
