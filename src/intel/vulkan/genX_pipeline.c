@@ -649,6 +649,137 @@ static const uint32_t vk_to_gen_stencil_op[] = {
    [VK_STENCIL_OP_DECREMENT_AND_WRAP]           = STENCILOP_DECR,
 };
 
+/* This function sanitizes the VkStencilOpState by looking at the compare ops
+ * and trying to determine whether or not a given stencil op can ever actually
+ * occur.  Stencil ops which can never occur are set to VK_STENCIL_OP_KEEP.
+ * This function returns true if, after sanitation, any of the stencil ops are
+ * set to something other than VK_STENCIL_OP_KEEP.
+ */
+static bool
+sanitize_stencil_face(VkStencilOpState *face,
+                      VkCompareOp depthCompareOp)
+{
+   /* If compareOp is ALWAYS then the stencil test will never fail and failOp
+    * will never happen.  Set failOp to KEEP in this case.
+    */
+   if (face->compareOp == VK_COMPARE_OP_ALWAYS)
+      face->failOp = VK_STENCIL_OP_KEEP;
+
+   /* If compareOp is NEVER or depthCompareOp is NEVER then one of the depth
+    * or stencil tests will fail and passOp will never happen.
+    */
+   if (face->compareOp == VK_COMPARE_OP_NEVER ||
+       depthCompareOp == VK_COMPARE_OP_NEVER)
+      face->passOp = VK_STENCIL_OP_KEEP;
+
+   /* If compareOp is NEVER or depthCompareOp is ALWAYS then either the
+    * stencil test will fail or the depth test will pass.  In either case,
+    * depthFailOp will never happen.
+    */
+   if (face->compareOp == VK_COMPARE_OP_NEVER ||
+       depthCompareOp == VK_COMPARE_OP_ALWAYS)
+      face->depthFailOp = VK_STENCIL_OP_KEEP;
+
+   return face->failOp != VK_STENCIL_OP_KEEP ||
+          face->depthFailOp != VK_STENCIL_OP_KEEP ||
+          face->passOp != VK_STENCIL_OP_KEEP;
+}
+
+/* Intel hardware is fairly sensitive to whether or not depth/stencil writes
+ * are enabled.  In the presence of discards, it's fairly easy to get into the
+ * non-promoted case which means a fairly big performance hit.  From the Iron
+ * Lake PRM, Vol 2, pt. 1, section 8.4.3.2, "Early Depth Test Cases":
+ *
+ *    "Non-promoted depth (N) is active whenever the depth test can be done
+ *    early but it cannot determine whether or not to write source depth to
+ *    the depth buffer, therefore the depth write must be performed post pixel
+ *    shader. This includes cases where the pixel shader can kill pixels,
+ *    including via sampler chroma key, as well as cases where the alpha test
+ *    function is enabled, which kills pixels based on a programmable alpha
+ *    test. In this case, even if the depth test fails, the pixel cannot be
+ *    killed if a stencil write is indicated. Whether or not the stencil write
+ *    happens depends on whether or not the pixel is killed later. In these
+ *    cases if stencil test fails and stencil writes are off, the pixels can
+ *    also be killed early. If stencil writes are enabled, the pixels must be
+ *    treated as Computed depth (described above)."
+ *
+ * The same thing as mentioned in the stencil case can happen in the depth
+ * case as well if it thinks it writes depth but, thanks to the depth test
+ * being GL_EQUAL, the write doesn't actually matter.  A little extra work
+ * up-front to try and disable depth and stencil writes can make a big
+ * difference.
+ *
+ * Unfortunately, the way depth and stencil testing is specified, there are
+ * many case where, regardless of depth/stencil writes being enabled, nothing
+ * actually gets written due to some other bit of state being set.  This
+ * function attempts to "sanitize" the depth stencil state and disable writes
+ * and sometimes even testing whenever possible.
+ */
+static void
+sanitize_ds_state(VkPipelineDepthStencilStateCreateInfo *state,
+                  bool *stencilWriteEnable,
+                  VkImageAspectFlags ds_aspects)
+{
+   *stencilWriteEnable = state->stencilTestEnable;
+
+   /* If the depth test is disabled, we won't be writing anything. */
+   if (!state->depthTestEnable)
+      state->depthWriteEnable = false;
+
+   /* The Vulkan spec requires that if either depth or stencil is not present,
+    * the pipeline is to act as if the test silently passes.
+    */
+   if (!(ds_aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
+      state->depthWriteEnable = false;
+      state->depthCompareOp = VK_COMPARE_OP_ALWAYS;
+   }
+
+   if (!(ds_aspects & VK_IMAGE_ASPECT_STENCIL_BIT)) {
+      *stencilWriteEnable = false;
+      state->front.compareOp = VK_COMPARE_OP_ALWAYS;
+      state->back.compareOp = VK_COMPARE_OP_ALWAYS;
+   }
+
+   /* If the stencil test is enabled and always fails, then we will never get
+    * to the depth test so we can just disable the depth test entirely.
+    */
+   if (state->stencilTestEnable &&
+       state->front.compareOp == VK_COMPARE_OP_NEVER &&
+       state->back.compareOp == VK_COMPARE_OP_NEVER) {
+      state->depthTestEnable = false;
+      state->depthWriteEnable = false;
+   }
+
+   /* If depthCompareOp is EQUAL then the value we would be writing to the
+    * depth buffer is the same as the value that's already there so there's no
+    * point in writing it.
+    */
+   if (state->depthCompareOp == VK_COMPARE_OP_EQUAL)
+      state->depthWriteEnable = false;
+
+   /* If the stencil ops are such that we don't actually ever modify the
+    * stencil buffer, we should disable writes.
+    */
+   if (!sanitize_stencil_face(&state->front, state->depthCompareOp) &&
+       !sanitize_stencil_face(&state->back, state->depthCompareOp))
+      *stencilWriteEnable = false;
+
+   /* If the depth test always passes and we never write out depth, that's the
+    * same as if the depth test is disabled entirely.
+    */
+   if (state->depthCompareOp == VK_COMPARE_OP_ALWAYS &&
+       !state->depthWriteEnable)
+      state->depthTestEnable = false;
+
+   /* If the stencil test always passes and we never write out stencil, that's
+    * the same as if the stencil test is disabled entirely.
+    */
+   if (state->front.compareOp == VK_COMPARE_OP_ALWAYS &&
+       state->back.compareOp == VK_COMPARE_OP_ALWAYS &&
+       !*stencilWriteEnable)
+      state->stencilTestEnable = false;
+}
+
 static void
 emit_ds_state(struct anv_pipeline *pipeline,
               const VkPipelineDepthStencilStateCreateInfo *pCreateInfo,
@@ -674,11 +805,19 @@ emit_ds_state(struct anv_pipeline *pipeline,
       return;
    }
 
+   VkImageAspectFlags ds_aspects = 0;
+   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+      VkFormat depth_stencil_format =
+         pass->attachments[subpass->depth_stencil_attachment].format;
+      ds_aspects = vk_format_aspects(depth_stencil_format);
+   }
+
    VkPipelineDepthStencilStateCreateInfo info = *pCreateInfo;
+   sanitize_ds_state(&info, &pipeline->writes_stencil, ds_aspects);
+   pipeline->writes_depth = info.depthWriteEnable;
+   pipeline->depth_test_enable = info.depthTestEnable;
 
    /* VkBool32 depthBoundsTestEnable; // optional (depth_bounds_test) */
-
-   pipeline->writes_stencil = info.stencilTestEnable;
 
 #if GEN_GEN <= 7
    struct GENX(DEPTH_STENCIL_STATE) depth_stencil = {
@@ -700,38 +839,6 @@ emit_ds_state(struct anv_pipeline *pipeline,
       .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info.back.depthFailOp],
       .BackfaceStencilTestFunction = vk_to_gen_compare_op[info.back.compareOp],
    };
-
-   VkImageAspectFlags aspects = 0;
-   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
-      VkFormat depth_stencil_format =
-         pass->attachments[subpass->depth_stencil_attachment].format;
-      aspects = vk_format_aspects(depth_stencil_format);
-   }
-
-   /* The Vulkan spec requires that if either depth or stencil is not present,
-    * the pipeline is to act as if the test silently passes.
-    */
-   if (!(aspects & VK_IMAGE_ASPECT_DEPTH_BIT)) {
-      depth_stencil.DepthBufferWriteEnable = false;
-      depth_stencil.DepthTestFunction = PREFILTEROPALWAYS;
-   }
-
-   if (!(aspects & VK_IMAGE_ASPECT_STENCIL_BIT)) {
-      pipeline->writes_stencil = false;
-      depth_stencil.StencilTestFunction = PREFILTEROPALWAYS;
-      depth_stencil.BackfaceStencilTestFunction = PREFILTEROPALWAYS;
-   }
-
-   /* From the Broadwell PRM:
-    *
-    *    "If Depth_Test_Enable = 1 AND Depth_Test_func = EQUAL, the
-    *    Depth_Write_Enable must be set to 0."
-    */
-   if (info.depthTestEnable && info.depthCompareOp == VK_COMPARE_OP_EQUAL)
-      depth_stencil.DepthBufferWriteEnable = false;
-
-   pipeline->writes_depth = depth_stencil.DepthBufferWriteEnable;
-   pipeline->depth_test_enable = depth_stencil.DepthTestEnable;
 
 #if GEN_GEN <= 7
    GENX(DEPTH_STENCIL_STATE_pack)(NULL, depth_stencil_dw, &depth_stencil);
