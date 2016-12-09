@@ -669,6 +669,7 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	unsigned ucp_mask = clipdist_mask ? 0 : rs->clip_plane_enable & SIX_BITS;
 	unsigned culldist_mask = info->culldist_writemask << info->num_written_clipdistance;
 	unsigned total_mask;
+	bool misc_vec_ena;
 
 	if (vs->key.opt.hw_vs.clip_disable) {
 		assert(!info->culldist_writemask);
@@ -677,6 +678,9 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	}
 	total_mask = clipdist_mask | culldist_mask;
 
+	misc_vec_ena = info->writes_psize || info->writes_edgeflag ||
+		       info->writes_layer || info->writes_viewport_index;
+
 	radeon_set_context_reg(cs, R_02881C_PA_CL_VS_OUT_CNTL,
 		S_02881C_USE_VTX_POINT_SIZE(info->writes_psize) |
 		S_02881C_USE_VTX_EDGE_FLAG(info->writes_edgeflag) |
@@ -684,11 +688,8 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	        S_02881C_USE_VTX_VIEWPORT_INDX(info->writes_viewport_index) |
 		S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0F) != 0) |
 		S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xF0) != 0) |
-		S_02881C_VS_OUT_MISC_VEC_ENA(info->writes_psize ||
-					    info->writes_edgeflag ||
-					    info->writes_layer ||
-					     info->writes_viewport_index) |
-		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(1) |
+		S_02881C_VS_OUT_MISC_VEC_ENA(misc_vec_ena) |
+		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(misc_vec_ena) |
 		(rs->clip_plane_enable &
 		 clipdist_mask) | (culldist_mask << 8));
 	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
