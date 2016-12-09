@@ -145,12 +145,6 @@ process_glsl_ir(struct brw_context *brw,
          brw_do_vector_splitting(shader->ir);
       }
 
-      progress = do_lower_jumps(shader->ir, true, true,
-                                true, /* main return */
-                                false, /* continue */
-                                false /* loops */
-                                ) || progress;
-
       progress = do_common_optimization(shader->ir, true, true,
                                         options, ctx->Const.NativeIntegers) || progress;
    } while (progress);
