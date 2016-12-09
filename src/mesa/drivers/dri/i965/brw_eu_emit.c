@@ -2056,11 +2056,6 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
    mrf = retype(mrf, BRW_REGISTER_TYPE_UD);
 
    const unsigned mlen = 1 + num_regs;
-   const unsigned msg_control =
-      (num_regs == 1 ? BRW_DATAPORT_OWORD_BLOCK_2_OWORDS :
-       num_regs == 2 ? BRW_DATAPORT_OWORD_BLOCK_4_OWORDS :
-       num_regs == 4 ? BRW_DATAPORT_OWORD_BLOCK_8_OWORDS : 0);
-   assert(msg_control);
 
    /* Set up the message header.  This is g0, with g0.2 filled with
     * the offset.  We don't want to leave our offset around in g0 or
@@ -2134,7 +2129,7 @@ void brw_oword_block_write_scratch(struct brw_codegen *p,
       brw_set_dp_write_message(p,
 			       insn,
                                brw_scratch_surface_idx(p),
-			       msg_control,
+			       BRW_DATAPORT_OWORD_BLOCK_DWORDS(num_regs * 8),
 			       msg_type,
                                target_cache,
 			       mlen,
@@ -2181,11 +2176,6 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
    dest = retype(dest, BRW_REGISTER_TYPE_UW);
 
    const unsigned rlen = num_regs;
-   const unsigned msg_control =
-      (num_regs == 1 ? BRW_DATAPORT_OWORD_BLOCK_2_OWORDS :
-       num_regs == 2 ? BRW_DATAPORT_OWORD_BLOCK_4_OWORDS :
-       num_regs == 4 ? BRW_DATAPORT_OWORD_BLOCK_8_OWORDS : 0);
-   assert(msg_control);
    const unsigned target_cache =
       (devinfo->gen >= 7 ? GEN7_SFID_DATAPORT_DATA_CACHE :
        devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_RENDER_CACHE :
@@ -2222,7 +2212,7 @@ brw_oword_block_read_scratch(struct brw_codegen *p,
       brw_set_dp_read_message(p,
 			      insn,
                               brw_scratch_surface_idx(p),
-			      msg_control,
+			      BRW_DATAPORT_OWORD_BLOCK_DWORDS(num_regs * 8),
 			      BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ, /* msg_type */
 			      target_cache,
 			      1, /* msg_length */
