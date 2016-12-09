@@ -4059,7 +4059,9 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
           * and we have to split it if necessary.
           */
          const unsigned type_size = type_sz(dest.type);
-         const fs_reg packed_consts = bld.vgrf(BRW_REGISTER_TYPE_F);
+         const fs_builder ubld = bld.exec_all().group(4, 0);
+         const fs_reg packed_consts = ubld.vgrf(BRW_REGISTER_TYPE_F);
+
          for (unsigned c = 0; c < instr->num_components;) {
             const unsigned base = const_offset->u32[0] + c * type_size;
 
@@ -4067,9 +4069,8 @@ fs_visitor::nir_emit_intrinsic(const fs_builder &bld, nir_intrinsic_instr *instr
             const unsigned count = MIN2(instr->num_components - c,
                                         (16 - base % 16) / type_size);
 
-            bld.exec_all()
-               .emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
-                     packed_consts, surf_index, brw_imm_ud(base & ~15));
+            ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
+                      packed_consts, surf_index, brw_imm_ud(base & ~15));
 
             const fs_reg consts =
                retype(byte_offset(packed_consts, base & 15), dest.type);

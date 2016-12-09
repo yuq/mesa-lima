@@ -2121,7 +2121,7 @@ fs_visitor::lower_constant_loads()
 
          assert(inst->src[i].stride == 0);
 
-         const fs_builder ubld = ibld.exec_all().group(8, 0);
+         const fs_builder ubld = ibld.exec_all().group(4, 0);
          struct brw_reg offset = brw_imm_ud((unsigned)(pull_index * 4) & ~15);
          ubld.emit(FS_OPCODE_UNIFORM_PULL_CONSTANT_LOAD,
                    dst, brw_imm_ud(index), offset);

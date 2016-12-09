@@ -2256,7 +2256,7 @@ gen7_block_read_scratch(struct brw_codegen *p,
 }
 
 /**
- * Read a float[4] vector from the data port constant cache.
+ * Read float[4] vectors from the data port constant cache.
  * Location (in buffer) should be a multiple of 16.
  * Used for fetching shader constants.
  */
@@ -2270,6 +2270,7 @@ void brw_oword_block_read(struct brw_codegen *p,
    const unsigned target_cache =
       (devinfo->gen >= 6 ? GEN6_SFID_DATAPORT_CONSTANT_CACHE :
        BRW_DATAPORT_READ_TARGET_DATA_CACHE);
+   const unsigned exec_size = 1 << brw_inst_exec_size(devinfo, p->current);
 
    /* On newer hardware, offset is in units of owords. */
    if (devinfo->gen >= 6)
@@ -2278,11 +2279,12 @@ void brw_oword_block_read(struct brw_codegen *p,
    mrf = retype(mrf, BRW_REGISTER_TYPE_UD);
 
    brw_push_insn_state(p);
-   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_set_default_predicate_control(p, BRW_PREDICATE_NONE);
    brw_set_default_compression_control(p, BRW_COMPRESSION_NONE);
    brw_set_default_mask_control(p, BRW_MASK_DISABLE);
 
+   brw_push_insn_state(p);
+   brw_set_default_exec_size(p, BRW_EXECUTE_8);
    brw_MOV(p, mrf, retype(brw_vec8_grf(0, 0), BRW_REGISTER_TYPE_UD));
 
    /* set message header global offset field (reg 0, element 2) */
@@ -2291,6 +2293,7 @@ void brw_oword_block_read(struct brw_codegen *p,
 			       mrf.nr,
 			       2), BRW_REGISTER_TYPE_UD),
 	   brw_imm_ud(offset));
+   brw_pop_insn_state(p);
 
    brw_inst *insn = next_insn(p, BRW_OPCODE_SEND);
 
@@ -2305,15 +2308,13 @@ void brw_oword_block_read(struct brw_codegen *p,
       brw_inst_set_base_mrf(devinfo, insn, mrf.nr);
    }
 
-   brw_set_dp_read_message(p,
-			   insn,
-			   bind_table_index,
-			   BRW_DATAPORT_OWORD_BLOCK_1_OWORDLOW,
+   brw_set_dp_read_message(p, insn, bind_table_index,
+                           BRW_DATAPORT_OWORD_BLOCK_DWORDS(exec_size),
 			   BRW_DATAPORT_READ_MESSAGE_OWORD_BLOCK_READ,
 			   target_cache,
 			   1, /* msg_length */
                            true, /* header_present */
-			   1); /* response_length (1 reg, 2 owords!) */
+			   DIV_ROUND_UP(exec_size, 8)); /* response_length */
 
    brw_pop_insn_state(p);
 }
