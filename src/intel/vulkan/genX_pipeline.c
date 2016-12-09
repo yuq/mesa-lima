@@ -651,7 +651,7 @@ static const uint32_t vk_to_gen_stencil_op[] = {
 
 static void
 emit_ds_state(struct anv_pipeline *pipeline,
-              const VkPipelineDepthStencilStateCreateInfo *info,
+              const VkPipelineDepthStencilStateCreateInfo *pCreateInfo,
               const struct anv_render_pass *pass,
               const struct anv_subpass *subpass)
 {
@@ -663,7 +663,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
 #  define depth_stencil_dw pipeline->gen9.wm_depth_stencil
 #endif
 
-   if (info == NULL) {
+   if (pCreateInfo == NULL) {
       /* We're going to OR this together with the dynamic state.  We need
        * to make sure it's initialized to something useful.
        */
@@ -674,29 +674,31 @@ emit_ds_state(struct anv_pipeline *pipeline,
       return;
    }
 
+   VkPipelineDepthStencilStateCreateInfo info = *pCreateInfo;
+
    /* VkBool32 depthBoundsTestEnable; // optional (depth_bounds_test) */
 
-   pipeline->writes_stencil = info->stencilTestEnable;
+   pipeline->writes_stencil = info.stencilTestEnable;
 
 #if GEN_GEN <= 7
    struct GENX(DEPTH_STENCIL_STATE) depth_stencil = {
 #else
    struct GENX(3DSTATE_WM_DEPTH_STENCIL) depth_stencil = {
 #endif
-      .DepthTestEnable = info->depthTestEnable,
-      .DepthBufferWriteEnable = info->depthWriteEnable,
-      .DepthTestFunction = vk_to_gen_compare_op[info->depthCompareOp],
+      .DepthTestEnable = info.depthTestEnable,
+      .DepthBufferWriteEnable = info.depthWriteEnable,
+      .DepthTestFunction = vk_to_gen_compare_op[info.depthCompareOp],
       .DoubleSidedStencilEnable = true,
 
-      .StencilTestEnable = info->stencilTestEnable,
-      .StencilFailOp = vk_to_gen_stencil_op[info->front.failOp],
-      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info->front.passOp],
-      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info->front.depthFailOp],
-      .StencilTestFunction = vk_to_gen_compare_op[info->front.compareOp],
-      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info->back.failOp],
-      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info->back.passOp],
-      .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info->back.depthFailOp],
-      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info->back.compareOp],
+      .StencilTestEnable = info.stencilTestEnable,
+      .StencilFailOp = vk_to_gen_stencil_op[info.front.failOp],
+      .StencilPassDepthPassOp = vk_to_gen_stencil_op[info.front.passOp],
+      .StencilPassDepthFailOp = vk_to_gen_stencil_op[info.front.depthFailOp],
+      .StencilTestFunction = vk_to_gen_compare_op[info.front.compareOp],
+      .BackfaceStencilFailOp = vk_to_gen_stencil_op[info.back.failOp],
+      .BackfaceStencilPassDepthPassOp = vk_to_gen_stencil_op[info.back.passOp],
+      .BackfaceStencilPassDepthFailOp =vk_to_gen_stencil_op[info.back.depthFailOp],
+      .BackfaceStencilTestFunction = vk_to_gen_compare_op[info.back.compareOp],
    };
 
    VkImageAspectFlags aspects = 0;
@@ -725,7 +727,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
     *    "If Depth_Test_Enable = 1 AND Depth_Test_func = EQUAL, the
     *    Depth_Write_Enable must be set to 0."
     */
-   if (info->depthTestEnable && info->depthCompareOp == VK_COMPARE_OP_EQUAL)
+   if (info.depthTestEnable && info.depthCompareOp == VK_COMPARE_OP_EQUAL)
       depth_stencil.DepthBufferWriteEnable = false;
 
    pipeline->writes_depth = depth_stencil.DepthBufferWriteEnable;
