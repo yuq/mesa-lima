@@ -1745,10 +1745,10 @@ save_BlendEquationSeparatei(GLuint buf, GLenum modeRGB, GLenum modeA)
 
 /* GL_ARB_draw_instanced. */
 static void GLAPIENTRY
-save_DrawArraysInstancedARB(GLenum mode,
-                            GLint first,
-                            GLsizei count,
-                            GLsizei primcount)
+save_DrawArraysInstancedARB(UNUSED GLenum mode,
+                            UNUSED GLint first,
+                            UNUSED GLsizei count,
+                            UNUSED GLsizei primcount)
 {
    GET_CURRENT_CONTEXT(ctx);
    _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1756,11 +1756,11 @@ save_DrawArraysInstancedARB(GLenum mode,
 }
 
 static void GLAPIENTRY
-save_DrawElementsInstancedARB(GLenum mode,
-                              GLsizei count,
-                              GLenum type,
-                              const GLvoid *indices,
-                              GLsizei primcount)
+save_DrawElementsInstancedARB(UNUSED GLenum mode,
+                              UNUSED GLsizei count,
+                              UNUSED GLenum type,
+                              UNUSED const GLvoid *indices,
+                              UNUSED GLsizei primcount)
 {
    GET_CURRENT_CONTEXT(ctx);
    _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1768,12 +1768,12 @@ save_DrawElementsInstancedARB(GLenum mode,
 }
 
 static void GLAPIENTRY
-save_DrawElementsInstancedBaseVertexARB(GLenum mode,
-                                        GLsizei count,
-                                        GLenum type,
-                                        const GLvoid *indices,
-                                        GLsizei primcount,
-                                        GLint basevertex)
+save_DrawElementsInstancedBaseVertexARB(UNUSED GLenum mode,
+                                        UNUSED GLsizei count,
+                                        UNUSED GLenum type,
+                                        UNUSED const GLvoid *indices,
+                                        UNUSED GLsizei primcount,
+                                        UNUSED GLint basevertex)
 {
    GET_CURRENT_CONTEXT(ctx);
    _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1782,11 +1782,11 @@ save_DrawElementsInstancedBaseVertexARB(GLenum mode,
 
 /* GL_ARB_base_instance. */
 static void GLAPIENTRY
-save_DrawArraysInstancedBaseInstance(GLenum mode,
-                                     GLint first,
-                                     GLsizei count,
-                                     GLsizei primcount,
-                                     GLuint baseinstance)
+save_DrawArraysInstancedBaseInstance(UNUSED GLenum mode,
+                                     UNUSED GLint first,
+                                     UNUSED GLsizei count,
+                                     UNUSED GLsizei primcount,
+                                     UNUSED GLuint baseinstance)
 {
    GET_CURRENT_CONTEXT(ctx);
    _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1794,12 +1794,12 @@ save_DrawArraysInstancedBaseInstance(GLenum mode,
 }
 
 static void APIENTRY
-save_DrawElementsInstancedBaseInstance(GLenum mode,
-                                       GLsizei count,
-                                       GLenum type,
-                                       const void *indices,
-                                       GLsizei primcount,
-                                       GLuint baseinstance)
+save_DrawElementsInstancedBaseInstance(UNUSED GLenum mode,
+                                       UNUSED GLsizei count,
+                                       UNUSED GLenum type,
+                                       UNUSED const void *indices,
+                                       UNUSED GLsizei primcount,
+                                       UNUSED GLuint baseinstance)
 {
    GET_CURRENT_CONTEXT(ctx);
    _mesa_error(ctx, GL_INVALID_OPERATION,
@@ -1807,13 +1807,13 @@ save_DrawElementsInstancedBaseInstance(GLenum mode,
 }
 
 static void APIENTRY
-save_DrawElementsInstancedBaseVertexBaseInstance(GLenum mode,
-                                                 GLsizei count,
-                                                 GLenum type,
-                                                 const void *indices,
-                                                 GLsizei primcount,
-                                                 GLint basevertex,
-                                                 GLuint baseinstance)
+save_DrawElementsInstancedBaseVertexBaseInstance(UNUSED GLenum mode,
+                                                 UNUSED GLsizei count,
+                                                 UNUSED GLenum type,
+                                                 UNUSED const void *indices,
+                                                 UNUSED GLsizei primcount,
+                                                 UNUSED GLint basevertex,
+                                                 UNUSED GLuint baseinstance)
 {
    GET_CURRENT_CONTEXT(ctx);
    _mesa_error(ctx, GL_INVALID_OPERATION,
