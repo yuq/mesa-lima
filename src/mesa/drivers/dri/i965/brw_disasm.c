@@ -1410,6 +1410,7 @@ brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
             }
             break;
          case GEN6_SFID_DATAPORT_SAMPLER_CACHE:
+         case GEN6_SFID_DATAPORT_CONSTANT_CACHE:
             /* aka BRW_SFID_DATAPORT_READ on Gen4-5 */
             if (devinfo->gen >= 6) {
                format(file, " (%"PRIu64", %"PRIu64", %"PRIu64", %"PRIu64")",
