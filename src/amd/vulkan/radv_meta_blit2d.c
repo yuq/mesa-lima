@@ -163,7 +163,7 @@ blit2d_bind_src(struct radv_cmd_buffer *cmd_buffer,
 								  .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
 								  .pImageInfo = (VkDescriptorImageInfo[]) {
 								  {
-									  .sampler = NULL,
+									  .sampler = VK_NULL_HANDLE,
 									  .imageView = radv_image_view_to_handle(&tmp->iview),
 									  .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
 								  },
