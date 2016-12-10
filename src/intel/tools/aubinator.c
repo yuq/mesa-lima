@@ -1297,7 +1297,7 @@ int main(int argc, char *argv[])
       file = aub_file_open(input_file);
 
    /* mmap a terabyte for our gtt space. */
-   gtt_size = 1ul << 40;
+   gtt_size = 1ull << 40;
    gtt = mmap(NULL, gtt_size, PROT_READ | PROT_WRITE,
               MAP_PRIVATE | MAP_ANONYMOUS |  MAP_NORESERVE, -1, 0);
    if (gtt == MAP_FAILED) {
