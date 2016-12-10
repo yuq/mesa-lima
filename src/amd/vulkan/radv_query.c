@@ -36,7 +36,7 @@
 static unsigned get_max_db(struct radv_device *device)
 {
 	unsigned num_db = device->instance->physicalDevice.rad_info.num_render_backends;
-	unsigned rb_mask = device->instance->physicalDevice.rad_info.enabled_rb_mask;
+	MAYBE_UNUSED unsigned rb_mask = device->instance->physicalDevice.rad_info.enabled_rb_mask;
 
 	if (device->instance->physicalDevice.rad_info.chip_class == SI)
 		num_db = 8;
@@ -217,7 +217,7 @@ void radv_CmdCopyQueryPoolResults(
 		uint64_t local_src_va = va  + query * pool->stride;
 		unsigned elem_size = (flags & VK_QUERY_RESULT_64_BIT) ? 8 : 4;
 
-		unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 26);
+		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 26);
 
 		if (flags & VK_QUERY_RESULT_WAIT_BIT) {
 			/* TODO, not sure if there is any case where we won't always be ready yet */
@@ -394,7 +394,7 @@ void radv_CmdWriteTimestamp(
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, pool->bo, 5);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 11);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 11);
 
 	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 	radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));

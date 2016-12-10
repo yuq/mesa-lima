@@ -1046,8 +1046,8 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 	uint32_t ia_multi_vgt_param;
 	uint32_t ls_hs_config = 0;
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs,
-					      4096);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
+							   cmd_buffer->cs, 4096);
 
 	if ((cmd_buffer->state.vertex_descriptors_dirty || cmd_buffer->state.vb_dirty) &&
 	    cmd_buffer->state.pipeline->num_vertex_attribs) {
@@ -1466,8 +1466,8 @@ void radv_CmdBindDescriptorSets(
 	RADV_FROM_HANDLE(radv_pipeline_layout, layout, _layout);
 	unsigned dyn_idx = 0;
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs,
-					      MAX_SETS * 4 * 6);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
+							   cmd_buffer->cs, MAX_SETS * 4 * 6);
 
 	for (unsigned i = 0; i < descriptorSetCount; ++i) {
 		unsigned idx = i + firstSet;
@@ -1540,7 +1540,8 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 
 	ws->cs_add_buffer(cmd_buffer->cs, compute_shader->bo, 8);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 16);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
+							   cmd_buffer->cs, 16);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B830_COMPUTE_PGM_LO, 2);
 	radeon_emit(cmd_buffer->cs, va >> 8);
@@ -1823,8 +1824,8 @@ void radv_CmdBeginRenderPass(
 	RADV_FROM_HANDLE(radv_render_pass, pass, pRenderPassBegin->renderPass);
 	RADV_FROM_HANDLE(radv_framebuffer, framebuffer, pRenderPassBegin->framebuffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs,
-					      2048);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
+							   cmd_buffer->cs, 2048);
 
 	cmd_buffer->state.framebuffer = framebuffer;
 	cmd_buffer->state.pass = pass;
@@ -1865,7 +1866,7 @@ void radv_CmdDraw(
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	radv_cmd_buffer_flush_state(cmd_buffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
 
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
@@ -1913,7 +1914,7 @@ void radv_CmdDrawIndexed(
 	radv_cmd_buffer_flush_state(cmd_buffer);
 	radv_emit_primitive_reset_index(cmd_buffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 14);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 14);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
 	radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
@@ -2003,7 +2004,8 @@ radv_cmd_draw_indirect_count(VkCommandBuffer                             command
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	radv_cmd_buffer_flush_state(cmd_buffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 14);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
+							   cmd_buffer->cs, 14);
 
 	radv_emit_indirect_draw(cmd_buffer, buffer, offset,
 	                        countBuffer, countBufferOffset, maxDrawCount, stride, false);
@@ -2031,7 +2033,7 @@ radv_cmd_draw_indexed_indirect_count(
 	index_va = cmd_buffer->device->ws->buffer_get_va(cmd_buffer->state.index_buffer->bo);
 	index_va += cmd_buffer->state.index_buffer->offset + cmd_buffer->state.index_offset;
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 21);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 21);
 
 	radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDEX_TYPE, 0, 0));
 	radeon_emit(cmd_buffer->cs, cmd_buffer->state.index_type);
@@ -2120,7 +2122,7 @@ void radv_CmdDispatch(
 
 	radv_flush_compute_state(cmd_buffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 10);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 10);
 
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
 							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
@@ -2157,7 +2159,7 @@ void radv_CmdDispatchIndirect(
 
 	radv_flush_compute_state(cmd_buffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 25);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 25);
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.compute_pipeline,
 							     MESA_SHADER_COMPUTE, AC_UD_CS_GRID_SIZE);
 	if (loc->sgpr_idx != -1) {
@@ -2207,7 +2209,7 @@ void radv_unaligned_dispatch(
 
 	radv_flush_compute_state(cmd_buffer);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 15);
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
 	radeon_emit(cmd_buffer->cs,
@@ -2499,7 +2501,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, event->bo, 8);
 
-	unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
 
 	/* TODO: this is overkill. Probably should figure something out from
 	 * the stage mask. */
@@ -2566,7 +2568,7 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 
 		cmd_buffer->device->ws->cs_add_buffer(cs, event->bo, 8);
 
-		unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
+		MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 7);
 
 		radeon_emit(cs, PKT3(PKT3_WAIT_REG_MEM, 5, 0));
 		radeon_emit(cs, WAIT_REG_MEM_EQUAL | WAIT_REG_MEM_MEM_SPACE(1));
