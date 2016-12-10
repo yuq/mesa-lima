@@ -142,37 +142,42 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
          * we emit a dummy read.
          */
         uint32_t num_elements_emit = MAX2(vtx->num_elements, 1);
+
         /* Emit the shader record. */
-        struct vc4_cl_out *shader_rec =
-                cl_start_shader_reloc(&job->shader_rec, 3 + num_elements_emit);
-        /* VC4_DIRTY_PRIM_MODE | VC4_DIRTY_RASTERIZER */
-        cl_u16(&shader_rec,
-               VC4_SHADER_FLAG_ENABLE_CLIPPING |
-               (vc4->prog.fs->fs_threaded ?
-                0 : VC4_SHADER_FLAG_FS_SINGLE_THREAD) |
-               ((info->mode == PIPE_PRIM_POINTS &&
-                 vc4->rasterizer->base.point_size_per_vertex) ?
-                VC4_SHADER_FLAG_VS_POINT_SIZE : 0));
+        cl_start_shader_reloc(&job->shader_rec, 3 + num_elements_emit);
 
-        /* VC4_DIRTY_COMPILED_FS */
-        cl_u8(&shader_rec, 0); /* fs num uniforms (unused) */
-        cl_u8(&shader_rec, vc4->prog.fs->num_inputs);
-        cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.fs->bo, 0);
-        cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
+        cl_emit(&job->shader_rec, SHADER_RECORD, rec) {
+                rec.enable_clipping = true;
 
-        /* VC4_DIRTY_COMPILED_VS */
-        cl_u16(&shader_rec, 0); /* vs num uniforms */
-        cl_u8(&shader_rec, vc4->prog.vs->vattrs_live);
-        cl_u8(&shader_rec, vc4->prog.vs->vattr_offsets[8]);
-        cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.vs->bo, 0);
-        cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
+                /* VC4_DIRTY_COMPILED_FS */
+                rec.fragment_shader_is_single_threaded =
+                        !vc4->prog.fs->fs_threaded;
 
-        /* VC4_DIRTY_COMPILED_CS */
-        cl_u16(&shader_rec, 0); /* cs num uniforms */
-        cl_u8(&shader_rec, vc4->prog.cs->vattrs_live);
-        cl_u8(&shader_rec, vc4->prog.cs->vattr_offsets[8]);
-        cl_reloc(job, &job->shader_rec, &shader_rec, vc4->prog.cs->bo, 0);
-        cl_u32(&shader_rec, 0); /* UBO offset written by kernel */
+                /* VC4_DIRTY_PRIM_MODE | VC4_DIRTY_RASTERIZER */
+                rec.point_size_included_in_shaded_vertex_data =
+                         (info->mode == PIPE_PRIM_POINTS &&
+                          vc4->rasterizer->base.point_size_per_vertex);
+
+                /* VC4_DIRTY_COMPILED_FS */
+                rec.fragment_shader_number_of_varyings =
+                        vc4->prog.fs->num_inputs;
+                rec.fragment_shader_code_address =
+                        cl_address(vc4->prog.fs->bo, 0);
+
+                rec.coordinate_shader_attribute_array_select_bits =
+                         vc4->prog.cs->vattrs_live;
+                rec.coordinate_shader_total_attributes_size =
+                         vc4->prog.cs->vattr_offsets[8];
+                rec.coordinate_shader_code_address =
+                        cl_address(vc4->prog.cs->bo, 0);
+
+                rec.vertex_shader_attribute_array_select_bits =
+                         vc4->prog.vs->vattrs_live;
+                rec.vertex_shader_total_attributes_size =
+                         vc4->prog.vs->vattr_offsets[8];
+                rec.vertex_shader_code_address =
+                        cl_address(vc4->prog.vs->bo, 0);
+        };
 
         uint32_t max_index = 0xffff;
         for (int i = 0; i < vtx->num_elements; i++) {
@@ -189,11 +194,15 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
                 uint32_t elem_size =
                         util_format_get_blocksize(elem->src_format);
 
-                cl_reloc(job, &job->shader_rec, &shader_rec, rsc->bo, offset);
-                cl_u8(&shader_rec, elem_size - 1);
-                cl_u8(&shader_rec, vb->stride);
-                cl_u8(&shader_rec, vc4->prog.vs->vattr_offsets[i]);
-                cl_u8(&shader_rec, vc4->prog.cs->vattr_offsets[i]);
+                cl_emit(&job->shader_rec, ATTRIBUTE_RECORD, attr) {
+                        attr.address = cl_address(rsc->bo, offset);
+                        attr.number_of_bytes_minus_1 = elem_size - 1;
+                        attr.stride = vb->stride;
+                        attr.coordinate_shader_vpm_offset =
+                                vc4->prog.cs->vattr_offsets[i];
+                        attr.vertex_shader_vpm_offset =
+                                vc4->prog.vs->vattr_offsets[i];
+                }
 
                 if (vb->stride > 0) {
                         max_index = MIN2(max_index,
@@ -204,14 +213,15 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
         if (vtx->num_elements == 0) {
                 assert(num_elements_emit == 1);
                 struct vc4_bo *bo = vc4_bo_alloc(vc4->screen, 4096, "scratch VBO");
-                cl_reloc(job, &job->shader_rec, &shader_rec, bo, 0);
-                cl_u8(&shader_rec, 16 - 1); /* element size */
-                cl_u8(&shader_rec, 0); /* stride */
-                cl_u8(&shader_rec, 0); /* VS VPM offset */
-                cl_u8(&shader_rec, 0); /* CS VPM offset */
-                vc4_bo_unreference(&bo);
+
+                cl_emit(&job->shader_rec, ATTRIBUTE_RECORD, attr) {
+                        attr.address = cl_address(bo, 0);
+                        attr.number_of_bytes_minus_1 = 16 - 1;
+                        attr.stride = 0;
+                        attr.coordinate_shader_vpm_offset = 0;
+                        attr.vertex_shader_vpm_offset = 0;
+                }
         }
-        cl_end(&job->shader_rec, shader_rec);
 
         cl_emit(&job->bcl, GL_SHADER_STATE, shader_state) {
                 /* Note that number of attributes == 0 in the packet means 8

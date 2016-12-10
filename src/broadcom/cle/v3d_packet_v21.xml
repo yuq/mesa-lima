@@ -217,4 +217,12 @@
     <field name="Coordinate Shader Uniforms Address" size="32" start="32b" type="uint"/>
   </struct>
 
+  <struct name="Attribute Record">
+    <field name="Address" size="32" start="0b" type="address"/>
+    <field name="Number of Bytes minus 1" size="8" start="4b" type="uint"/>
+    <field name="Stride" size="8" start="5b" type="uint"/>
+    <field name="Vertex Shader VPM offset" size="8" start="6b" type="uint"/>
+    <field name="Coordinate Shader VPM offset" size="8" start="7b" type="uint"/>
+  </struct>
+
 </vcxml>
