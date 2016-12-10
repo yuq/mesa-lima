@@ -697,7 +697,7 @@ genX(cmd_buffer_config_l3)(struct anv_cmd_buffer *cmd_buffer,
    assert(!urb_low_bw || cfg->n[GEN_L3P_URB] == cfg->n[GEN_L3P_SLM]);
 
    /* Minimum number of ways that can be allocated to the URB. */
-   const unsigned n0_urb = (devinfo->is_baytrail ? 32 : 0);
+   MAYBE_UNUSED const unsigned n0_urb = devinfo->is_baytrail ? 32 : 0;
    assert(cfg->n[GEN_L3P_URB] >= n0_urb);
 
    uint32_t l3sqcr1, l3cr2, l3cr3;

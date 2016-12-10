@@ -909,7 +909,8 @@ anv_cmd_buffer_alloc_blorp_binding_table(struct anv_cmd_buffer *cmd_buffer,
                                          state_offset);
    if (bt_state.map == NULL) {
       /* We ran out of space.  Grab a new binding table block. */
-      VkResult result = anv_cmd_buffer_new_binding_table_block(cmd_buffer);
+      MAYBE_UNUSED VkResult result =
+         anv_cmd_buffer_new_binding_table_block(cmd_buffer);
       assert(result == VK_SUCCESS);
 
       /* Re-emit state base addresses so we get the new surface state base
