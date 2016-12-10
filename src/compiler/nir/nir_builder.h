@@ -68,6 +68,13 @@ nir_builder_instr_insert(nir_builder *build, nir_instr *instr)
    build->cursor = nir_after_instr(instr);
 }
 
+static inline nir_instr *
+nir_builder_last_instr(nir_builder *build)
+{
+   assert(build->cursor.option == nir_cursor_after_instr);
+   return build->cursor.instr;
+}
+
 static inline void
 nir_builder_cf_insert(nir_builder *build, nir_cf_node *cf)
 {
