@@ -2330,6 +2330,8 @@ intel_miptree_make_shareable(struct brw_context *brw,
       free(mt->mcs_buf);
       mt->mcs_buf = NULL;
    }
+
+   mt->disable_aux_buffers = true;
 }
 
 
