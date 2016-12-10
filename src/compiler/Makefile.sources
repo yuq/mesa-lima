@@ -236,6 +236,7 @@ NIR_FILES = \
 	nir/nir_normalize_cubemap_coords.c \
 	nir/nir_opt_conditional_discard.c \
 	nir/nir_opt_constant_folding.c \
+	nir/nir_opt_copy_prop_vars.c \
 	nir/nir_opt_copy_propagate.c \
 	nir/nir_opt_cse.c \
 	nir/nir_opt_dce.c \

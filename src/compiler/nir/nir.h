@@ -2549,6 +2549,8 @@ bool nir_opt_global_to_local(nir_shader *shader);
 
 bool nir_copy_prop(nir_shader *shader);
 
+bool nir_opt_copy_prop_vars(nir_shader *shader);
+
 bool nir_opt_cse(nir_shader *shader);
 
 bool nir_opt_dce(nir_shader *shader);
