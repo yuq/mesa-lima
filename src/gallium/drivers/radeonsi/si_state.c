@@ -3306,9 +3306,9 @@ static void si_emit_sample_mask(struct si_context *sctx, struct r600_atom *atom)
 
 static void si_delete_sampler_state(struct pipe_context *ctx, void *state)
 {
+#ifdef DEBUG
 	struct si_sampler_state *s = state;
 
-#ifdef DEBUG
 	assert(s->magic == SI_SAMPLER_STATE_MAGIC);
 	s->magic = 0;
 #endif
