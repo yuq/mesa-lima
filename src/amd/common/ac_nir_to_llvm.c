@@ -721,7 +721,8 @@ build_gather_values_extended(struct nir_to_llvm_context *ctx,
 		if (load)
 			return LLVMBuildLoad(builder, values[0], "");
 		return values[0];
-	}
+	} else if (!value_count)
+		unreachable("value_count is 0");
 
 	for (i = 0; i < value_count; i++) {
 		LLVMValueRef value = values[i * value_stride];
@@ -3151,6 +3152,8 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 		type = ctx->v4i32;
 		type_size = 16;
 		break;
+	default:
+		unreachable("invalid desc_type\n");
 	}
 
 	if (deref->deref.child) {
