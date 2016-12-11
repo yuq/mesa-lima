@@ -224,6 +224,7 @@ lp_build_unpack_arith_rgba_aos(struct gallivm_state *gallivm,
    /* Ex: convert packed = {XYZW, XYZW, XYZW, XYZW}
     * into masked = {X, Y, Z, W}
     */
+   /* Note: we cannot do this shift on x86 natively until AVX2. */
    shifted = LLVMBuildLShr(builder, packed, LLVMConstVector(shifts, 4), "");
    masked = LLVMBuildAnd(builder, shifted, LLVMConstVector(masks, 4), "");
 
@@ -394,6 +395,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
        util_is_power_of_two(format_desc->block.bits)) {
       LLVMValueRef packed;
       LLVMTypeRef dst_vec_type = lp_build_vec_type(gallivm, type);
+      struct lp_type fetch_type;
       unsigned vec_len = type.width * type.length;
 
       /*
@@ -401,8 +403,9 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
        * scaling or converting.
        */
 
+      fetch_type = lp_type_uint(type.width*4);
       packed = lp_build_gather(gallivm, type.length/4,
-                               format_desc->block.bits, type.width*4,
+                               format_desc->block.bits, fetch_type,
                                aligned, base_ptr, offset, TRUE);
 
       assert(format_desc->block.bits <= vec_len);

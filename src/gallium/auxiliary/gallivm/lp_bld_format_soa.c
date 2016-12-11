@@ -405,6 +405,8 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
                         LLVMValueRef rgba_out[4])
 {
    LLVMBuilderRef builder = gallivm->builder;
+   enum pipe_format format = format_desc->format;
+   struct lp_type fetch_type;
 
    if (format_desc->layout == UTIL_FORMAT_LAYOUT_PLAIN &&
        (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB ||
@@ -430,10 +432,11 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
        * Ex: packed = {XYZW, XYZW, XYZW, XYZW}
        */
       assert(format_desc->block.bits <= type.width);
+      fetch_type = lp_type_uint(type.width);
       packed = lp_build_gather(gallivm,
                                type.length,
                                format_desc->block.bits,
-                               type.width,
+                               fetch_type,
                                aligned,
                                base_ptr, offset, FALSE);
 
@@ -447,22 +450,23 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
       return;
    }
 
-   if (format_desc->format == PIPE_FORMAT_R11G11B10_FLOAT ||
-       format_desc->format == PIPE_FORMAT_R9G9B9E5_FLOAT) {
+   if (format == PIPE_FORMAT_R11G11B10_FLOAT ||
+       format == PIPE_FORMAT_R9G9B9E5_FLOAT) {
       /*
        * similar conceptually to above but requiring special
        * AoS packed -> SoA float conversion code.
        */
       LLVMValueRef packed;
+      struct lp_type fetch_type = lp_type_uint(type.width);
 
       assert(type.floating);
       assert(type.width == 32);
 
       packed = lp_build_gather(gallivm, type.length,
                                format_desc->block.bits,
-                               type.width, aligned,
+                               fetch_type, aligned,
                                base_ptr, offset, FALSE);
-      if (format_desc->format == PIPE_FORMAT_R11G11B10_FLOAT) {
+      if (format == PIPE_FORMAT_R11G11B10_FLOAT) {
          lp_build_r11g11b10_to_float(gallivm, packed, rgba_out);
       }
       else {
@@ -478,8 +482,9 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
        * 32bit (or 8bit) from each block.
        */
       LLVMValueRef packed;
+      struct lp_type fetch_type = lp_type_uint(type.width);
 
-      if (format_desc->format == PIPE_FORMAT_X32_S8X24_UINT) {
+      if (format == PIPE_FORMAT_X32_S8X24_UINT) {
          /*
           * for stencil simply fix up offsets - could in fact change
           * base_ptr instead even outside the shader.
@@ -487,14 +492,14 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
          unsigned mask = (1 << 8) - 1;
          LLVMValueRef s_offset = lp_build_const_int_vec(gallivm, type, 4);
          offset = LLVMBuildAdd(builder, offset, s_offset, "");
-         packed = lp_build_gather(gallivm, type.length, 32, type.width,
+         packed = lp_build_gather(gallivm, type.length, 32, fetch_type,
                                   aligned, base_ptr, offset, FALSE);
          packed = LLVMBuildAnd(builder, packed,
                                lp_build_const_int_vec(gallivm, type, mask), "");
       }
       else {
-         assert (format_desc->format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT);
-         packed = lp_build_gather(gallivm, type.length, 32, type.width,
+         assert (format == PIPE_FORMAT_Z32_FLOAT_S8X24_UINT);
+         packed = lp_build_gather(gallivm, type.length, 32, fetch_type,
                                   aligned, base_ptr, offset, TRUE);
          packed = LLVMBuildBitCast(builder, packed,
                                    lp_build_vec_type(gallivm, type), "");

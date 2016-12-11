@@ -1864,7 +1864,7 @@ draw_llvm_generate(struct draw_llvm *llvm, struct draw_llvm_variant *variant)
                                        LLVMPointerType(LLVMInt8TypeInContext(context),
                                                        0), "");
          tmp = lp_build_gather(gallivm, vs_type.length,
-                               32, 32, TRUE,
+                               32, bld.type, TRUE,
                                fetch_elts, tmp, FALSE);
          LLVMBuildStore(builder, tmp, index_store);
       }
