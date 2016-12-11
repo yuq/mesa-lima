@@ -31,6 +31,7 @@
 #include "util/u_format.h"
 #include "util/u_memory.h"
 #include "util/u_string.h"
+#include "util/u_math.h"
 
 #include "lp_bld_type.h"
 #include "lp_bld_const.h"
@@ -113,6 +114,166 @@ lp_build_format_swizzle_soa(const struct util_format_description *format_desc,
 }
 
 
+
+static LLVMValueRef
+lp_build_extract_soa_chan(struct lp_build_context *bld,
+                          unsigned blockbits,
+                          boolean srgb_chan,
+                          struct util_format_channel_description chan_desc,
+                          LLVMValueRef packed)
+{
+   struct gallivm_state *gallivm = bld->gallivm;
+   LLVMBuilderRef builder = gallivm->builder;
+   struct lp_type type = bld->type;
+   LLVMValueRef input = packed;
+   const unsigned width = chan_desc.size;
+   const unsigned start = chan_desc.shift;
+   const unsigned stop = start + width;
+
+   /* Decode the input vector component */
+
+   switch(chan_desc.type) {
+   case UTIL_FORMAT_TYPE_VOID:
+      input = bld->undef;
+      break;
+
+   case UTIL_FORMAT_TYPE_UNSIGNED:
+      /*
+       * Align the LSB
+       */
+      if (start) {
+         input = LLVMBuildLShr(builder, input,
+                               lp_build_const_int_vec(gallivm, type, start), "");
+      }
+
+      /*
+       * Zero the MSBs
+       */
+      if (stop < blockbits) {
+         unsigned mask = ((unsigned long long)1 << width) - 1;
+         input = LLVMBuildAnd(builder, input,
+                              lp_build_const_int_vec(gallivm, type, mask), "");
+      }
+
+      /*
+       * Type conversion
+       */
+      if (type.floating) {
+         if (srgb_chan) {
+            struct lp_type conv_type = lp_uint_type(type);
+            input = lp_build_srgb_to_linear(gallivm, conv_type, width, input);
+         }
+         else {
+            if(chan_desc.normalized)
+               input = lp_build_unsigned_norm_to_float(gallivm, width, type, input);
+            else
+               input = LLVMBuildSIToFP(builder, input, bld->vec_type, "");
+         }
+      }
+      else if (chan_desc.pure_integer) {
+         /* Nothing to do */
+      } else {
+          /* FIXME */
+          assert(0);
+      }
+      break;
+
+   case UTIL_FORMAT_TYPE_SIGNED:
+      /*
+       * Align the sign bit first.
+       */
+      if (stop < type.width) {
+         unsigned bits = type.width - stop;
+         LLVMValueRef bits_val = lp_build_const_int_vec(gallivm, type, bits);
+         input = LLVMBuildShl(builder, input, bits_val, "");
+      }
+
+      /*
+       * Align the LSB (with an arithmetic shift to preserve the sign)
+       */
+      if (chan_desc.size < type.width) {
+         unsigned bits = type.width - chan_desc.size;
+         LLVMValueRef bits_val = lp_build_const_int_vec(gallivm, type, bits);
+         input = LLVMBuildAShr(builder, input, bits_val, "");
+      }
+
+      /*
+       * Type conversion
+       */
+      if (type.floating) {
+         input = LLVMBuildSIToFP(builder, input, bld->vec_type, "");
+         if (chan_desc.normalized) {
+            double scale = 1.0 / ((1 << (chan_desc.size - 1)) - 1);
+            LLVMValueRef scale_val = lp_build_const_vec(gallivm, type, scale);
+            input = LLVMBuildFMul(builder, input, scale_val, "");
+            /*
+             * The formula above will produce value below -1.0 for most negative
+             * value but everything seems happy with that hence disable for now.
+             */
+            if (0)
+               input = lp_build_max(bld, input,
+                                    lp_build_const_vec(gallivm, type, -1.0f));
+         }
+      }
+      else if (chan_desc.pure_integer) {
+         /* Nothing to do */
+      } else {
+          /* FIXME */
+          assert(0);
+      }
+      break;
+
+   case UTIL_FORMAT_TYPE_FLOAT:
+      if (type.floating) {
+         if (chan_desc.size == 16) {
+            struct lp_type f16i_type = type;
+            f16i_type.width /= 2;
+            f16i_type.floating = 0;
+            if (start) {
+               input = LLVMBuildLShr(builder, input,
+                                     lp_build_const_int_vec(gallivm, type, start), "");
+            }
+            input = LLVMBuildTrunc(builder, input,
+                                   lp_build_vec_type(gallivm, f16i_type), "");
+            input = lp_build_half_to_float(gallivm, input);
+         } else {
+            assert(start == 0);
+            assert(stop == 32);
+            assert(type.width == 32);
+         }
+         input = LLVMBuildBitCast(builder, input, bld->vec_type, "");
+      }
+      else {
+         /* FIXME */
+         assert(0);
+         input = bld->undef;
+      }
+      break;
+
+   case UTIL_FORMAT_TYPE_FIXED:
+      if (type.floating) {
+         double scale = 1.0 / ((1 << (chan_desc.size/2)) - 1);
+         LLVMValueRef scale_val = lp_build_const_vec(gallivm, type, scale);
+         input = LLVMBuildSIToFP(builder, input, bld->vec_type, "");
+         input = LLVMBuildFMul(builder, input, scale_val, "");
+      }
+      else {
+         /* FIXME */
+         assert(0);
+         input = bld->undef;
+      }
+      break;
+
+   default:
+      assert(0);
+      input = bld->undef;
+      break;
+   }
+
+   return input;
+}
+
+
 /**
  * Unpack several pixels in SoA.
  *
@@ -143,7 +304,6 @@ lp_build_unpack_rgba_soa(struct gallivm_state *gallivm,
                          LLVMValueRef packed,
                          LLVMValueRef rgba_out[4])
 {
-   LLVMBuilderRef builder = gallivm->builder;
    struct lp_build_context bld;
    LLVMValueRef inputs[4];
    unsigned chan;
@@ -159,162 +319,19 @@ lp_build_unpack_rgba_soa(struct gallivm_state *gallivm,
 
    /* Decode the input vector components */
    for (chan = 0; chan < format_desc->nr_channels; ++chan) {
-      const unsigned width = format_desc->channel[chan].size;
-      const unsigned start = format_desc->channel[chan].shift;
-      const unsigned stop = start + width;
-      LLVMValueRef input;
+      struct util_format_channel_description chan_desc = format_desc->channel[chan];
+      boolean srgb_chan = FALSE;
 
-      input = packed;
-
-      switch(format_desc->channel[chan].type) {
-      case UTIL_FORMAT_TYPE_VOID:
-         input = lp_build_undef(gallivm, type);
-         break;
-
-      case UTIL_FORMAT_TYPE_UNSIGNED:
-         /*
-          * Align the LSB
-          */
-
-         if (start) {
-            input = LLVMBuildLShr(builder, input, lp_build_const_int_vec(gallivm, type, start), "");
-         }
-
-         /*
-          * Zero the MSBs
-          */
-
-         if (stop < format_desc->block.bits) {
-            unsigned mask = ((unsigned long long)1 << width) - 1;
-            input = LLVMBuildAnd(builder, input, lp_build_const_int_vec(gallivm, type, mask), "");
-         }
-
-         /*
-          * Type conversion
-          */
-
-         if (type.floating) {
-            if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB) {
-               if (format_desc->swizzle[3] == chan) {
-                  input = lp_build_unsigned_norm_to_float(gallivm, width, type, input);
-               }
-               else {
-                  struct lp_type conv_type = lp_uint_type(type);
-                  input = lp_build_srgb_to_linear(gallivm, conv_type, width, input);
-               }
-            }
-            else {
-               if(format_desc->channel[chan].normalized)
-                  input = lp_build_unsigned_norm_to_float(gallivm, width, type, input);
-               else
-                  input = LLVMBuildSIToFP(builder, input,
-                                          lp_build_vec_type(gallivm, type), "");
-            }
-         }
-         else if (format_desc->channel[chan].pure_integer) {
-            /* Nothing to do */
-         } else {
-             /* FIXME */
-             assert(0);
-         }
-
-         break;
-
-      case UTIL_FORMAT_TYPE_SIGNED:
-         /*
-          * Align the sign bit first.
-          */
-
-         if (stop < type.width) {
-            unsigned bits = type.width - stop;
-            LLVMValueRef bits_val = lp_build_const_int_vec(gallivm, type, bits);
-            input = LLVMBuildShl(builder, input, bits_val, "");
-         }
-
-         /*
-          * Align the LSB (with an arithmetic shift to preserve the sign)
-          */
-
-         if (format_desc->channel[chan].size < type.width) {
-            unsigned bits = type.width - format_desc->channel[chan].size;
-            LLVMValueRef bits_val = lp_build_const_int_vec(gallivm, type, bits);
-            input = LLVMBuildAShr(builder, input, bits_val, "");
-         }
-
-         /*
-          * Type conversion
-          */
-
-         if (type.floating) {
-            input = LLVMBuildSIToFP(builder, input, lp_build_vec_type(gallivm, type), "");
-            if (format_desc->channel[chan].normalized) {
-               double scale = 1.0 / ((1 << (format_desc->channel[chan].size - 1)) - 1);
-               LLVMValueRef scale_val = lp_build_const_vec(gallivm, type, scale);
-               input = LLVMBuildFMul(builder, input, scale_val, "");
-               /* the formula above will produce value below -1.0 for most negative
-                * value but everything seems happy with that hence disable for now */
-               if (0)
-                  input = lp_build_max(&bld, input,
-                                       lp_build_const_vec(gallivm, type, -1.0f));
-            }
-         }
-         else if (format_desc->channel[chan].pure_integer) {
-            /* Nothing to do */
-         } else {
-             /* FIXME */
-             assert(0);
-         }
-
-         break;
-
-      case UTIL_FORMAT_TYPE_FLOAT:
-         if (type.floating) {
-            if (format_desc->channel[chan].size == 16) {
-               struct lp_type f16i_type = type;
-               f16i_type.width /= 2;
-               f16i_type.floating = 0;
-               if (start) {
-                  input = LLVMBuildLShr(builder, input,
-                             lp_build_const_int_vec(gallivm, type, start), "");
-               }
-               input = LLVMBuildTrunc(builder, input,
-                                      lp_build_vec_type(gallivm, f16i_type), "");
-               input = lp_build_half_to_float(gallivm, input);
-            } else {
-               assert(start == 0);
-               assert(stop == 32);
-               assert(type.width == 32);
-            }
-            input = LLVMBuildBitCast(builder, input, lp_build_vec_type(gallivm, type), "");
-         }
-         else {
-            /* FIXME */
-            assert(0);
-            input = lp_build_undef(gallivm, type);
-         }
-         break;
-
-      case UTIL_FORMAT_TYPE_FIXED:
-         if (type.floating) {
-            double scale = 1.0 / ((1 << (format_desc->channel[chan].size/2)) - 1);
-            LLVMValueRef scale_val = lp_build_const_vec(gallivm, type, scale);
-            input = LLVMBuildSIToFP(builder, input, lp_build_vec_type(gallivm, type), "");
-            input = LLVMBuildFMul(builder, input, scale_val, "");
-         }
-         else {
-            /* FIXME */
-            assert(0);
-            input = lp_build_undef(gallivm, type);
-         }
-         break;
-
-      default:
-         assert(0);
-         input = lp_build_undef(gallivm, type);
-         break;
+      if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB &&
+          format_desc->swizzle[3] != chan) {
+         srgb_chan = TRUE;
       }
 
-      inputs[chan] = input;
+      inputs[chan] = lp_build_extract_soa_chan(&bld,
+                                               format_desc->block.bits,
+                                               srgb_chan,
+                                               chan_desc,
+                                               packed);
    }
 
    lp_build_format_swizzle_soa(format_desc, &bld, inputs, rgba_out);
@@ -447,6 +464,210 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
                                format_desc,
                                type,
                                packed, rgba_out);
+      return;
+   }
+
+
+   if (format_desc->layout == UTIL_FORMAT_LAYOUT_PLAIN &&
+       (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB) &&
+       format_desc->block.width == 1 &&
+       format_desc->block.height == 1 &&
+       format_desc->block.bits > type.width &&
+       ((format_desc->block.bits <= type.width * type.length &&
+         format_desc->channel[0].size <= type.width) ||
+        (format_desc->channel[0].size == 64 &&
+         format_desc->channel[0].type == UTIL_FORMAT_TYPE_FLOAT &&
+         type.floating)))
+   {
+      /*
+       * Similar to above, but the packed pixel is larger than what fits
+       * into an element of the destination format. The packed pixels will be
+       * shuffled into SoA vectors appropriately, and then the extraction will
+       * be done in parallel as much as possible.
+       * Good for 16xn (n > 2) and 32xn (n > 1) formats, care is taken so
+       * the gathered vectors can be shuffled easily (even with avx).
+       * 64xn float -> 32xn float is handled too but it's a bit special as
+       * it does the conversion pre-shuffle.
+       */
+
+      LLVMValueRef packed[4], dst[4], output[4], shuffles[LP_MAX_VECTOR_WIDTH/32];
+      struct lp_type fetch_type, gather_type = type;
+      unsigned num_gather, fetch_width, i, j;
+      struct lp_build_context bld;
+      boolean fp64 = format_desc->channel[0].size == 64;
+
+      lp_build_context_init(&bld, gallivm, type);
+
+      assert(type.width == 32);
+      assert(format_desc->block.bits > type.width);
+
+      /*
+       * First, figure out fetch order.
+       */
+      fetch_width = util_next_power_of_two(format_desc->block.bits);
+      num_gather = fetch_width / type.width;
+      /*
+       * fp64 are treated like fp32 except we fetch twice wide values
+       * (as we shuffle after trunc). The shuffles for that work out
+       * mostly fine (slightly suboptimal for 4-wide, perfect for AVX)
+       * albeit we miss the potential opportunity for hw gather (as it
+       * only handles native size).
+       */
+      num_gather = fetch_width / type.width;
+      gather_type.width *= num_gather;
+      if (fp64) {
+         num_gather /= 2;
+      }
+      gather_type.length /= num_gather;
+
+      for (i = 0; i < num_gather; i++) {
+         LLVMValueRef offsetr, shuf_vec;
+         if(num_gather == 4) {
+            for (j = 0; j < gather_type.length; j++) {
+               unsigned idx = i + 4*j;
+               shuffles[j] = lp_build_const_int32(gallivm, idx);
+            }
+            shuf_vec = LLVMConstVector(shuffles, gather_type.length);
+            offsetr = LLVMBuildShuffleVector(builder, offset, offset, shuf_vec, "");
+
+         }
+         else if (num_gather == 2) {
+            assert(num_gather == 2);
+            for (j = 0; j < gather_type.length; j++) {
+               unsigned idx = i*2 + (j%2) + (j/2)*4;
+               shuffles[j] = lp_build_const_int32(gallivm, idx);
+            }
+            shuf_vec = LLVMConstVector(shuffles, gather_type.length);
+            offsetr = LLVMBuildShuffleVector(builder, offset, offset, shuf_vec, "");
+         }
+         else {
+            assert(num_gather == 1);
+            offsetr = offset;
+         }
+         if (gather_type.length == 1) {
+            LLVMValueRef zero = lp_build_const_int32(gallivm, 0);
+            offsetr = LLVMBuildExtractElement(builder, offsetr, zero, "");
+         }
+
+         /*
+          * Determine whether to use float or int loads. This is mostly
+          * to outsmart the (stupid) llvm int/float shuffle logic, we
+          * don't really care much if the data is floats or ints...
+          * But llvm will refuse to use single float shuffle with int data
+          * and instead use 3 int shuffles instead, the code looks atrocious.
+          * (Note bitcasts often won't help, as llvm is too smart to be
+          * fooled by that.)
+          * Nobody cares about simd float<->int domain transition penalties,
+          * which usually don't even exist for shuffles anyway.
+          * With 4x32bit (and 3x32bit) fetch, we use float vec (the data is
+          * going into transpose, which is unpacks, so doesn't really matter
+          * much).
+          * With 2x32bit or 4x16bit fetch, we use float vec, since those
+          * go into the weird channel separation shuffle. With floats,
+          * this is (with 128bit vectors):
+          * - 2 movq, 2 movhpd, 2 shufps
+          * With ints it would be:
+          * - 4 movq, 2 punpcklqdq, 4 pshufd, 2 blendw
+          * I've seen texture functions increase in code size by 15% just due
+          * to that (there's lots of such fetches in them...)
+          * (We could chose a different gather order to improve this somewhat
+          * for the int path, but it would basically just drop the blends,
+          * so the float path with this order really is optimal.)
+          * Albeit it is tricky sometimes llvm doesn't ignore the float->int
+          * casts so must avoid them until we're done with the float shuffle...
+          * 3x16bit formats (the same is also true for 3x8) are pretty bad but
+          * there's nothing we can do about them (we could overallocate by
+          * those couple bytes and use unaligned but pot sized load).
+          * Note that this is very much x86 specific. I don't know if this
+          * affect other archs at all.
+          */
+         if (num_gather > 1) {
+            /*
+             * We always want some float type here (with x86)
+             * due to shuffles being float ones afterwards (albeit for
+             * the num_gather == 4 case int should work fine too
+             * (unless there's some problems with avx but not avx2).
+             */
+            if (format_desc->channel[0].size == 64) {
+               fetch_type = lp_type_float_vec(64, gather_type.width);
+            } else {
+               fetch_type = lp_type_int_vec(32, gather_type.width);
+            }
+         }
+         else {
+            /* type doesn't matter much */
+            if (format_desc->channel[0].type == UTIL_FORMAT_TYPE_FLOAT &&
+                (format_desc->channel[0].size == 32 ||
+                 format_desc->channel[0].size == 64)) {
+            fetch_type = lp_type_float(gather_type.width);
+            } else {
+               fetch_type = lp_type_uint(gather_type.width);
+            }
+         }
+
+         /* Now finally gather the values */
+         packed[i] = lp_build_gather(gallivm, gather_type.length,
+                                     format_desc->block.bits,
+                                     fetch_type, aligned,
+                                     base_ptr, offsetr, FALSE);
+         if (fp64) {
+            struct lp_type conv_type = type;
+            conv_type.width *= 2;
+            packed[i] = LLVMBuildBitCast(builder, packed[i],
+                                         lp_build_vec_type(gallivm, conv_type), "");
+            packed[i] = LLVMBuildFPTrunc(builder, packed[i], bld.vec_type, "");
+         }
+      }
+
+      /* shuffle the gathered values to SoA */
+      if (num_gather == 2) {
+         for (i = 0; i < num_gather; i++) {
+            for (j = 0; j < type.length; j++) {
+               unsigned idx = (j%2)*2 + (j/4)*4 + i;
+               if ((j/2)%2)
+                  idx += type.length;
+               shuffles[j] = lp_build_const_int32(gallivm, idx);
+            }
+            dst[i] = LLVMBuildShuffleVector(builder, packed[0], packed[1],
+                                            LLVMConstVector(shuffles, type.length), "");
+         }
+      }
+      else if (num_gather == 4) {
+         lp_build_transpose_aos(gallivm, lp_int_type(type), packed, dst);
+      }
+      else {
+         assert(num_gather == 1);
+         dst[0] = packed[0];
+      }
+
+      /*
+       * And finally unpack exactly as above, except that
+       * chan shift is adjusted and the right vector selected.
+       */
+      if (!fp64) {
+         for (i = 0; i < num_gather; i++) {
+            dst[i] = LLVMBuildBitCast(builder, dst[i], bld.int_vec_type, "");
+         }
+         for (i = 0; i < format_desc->nr_channels; i++) {
+            struct util_format_channel_description chan_desc = format_desc->channel[i];
+            unsigned blockbits = type.width;
+            unsigned vec_nr = chan_desc.shift / type.width;
+            chan_desc.shift %= type.width;
+
+            output[i] = lp_build_extract_soa_chan(&bld,
+                                                  blockbits,
+                                                  FALSE,
+                                                  chan_desc,
+                                                  dst[vec_nr]);
+         }
+      }
+      else {
+         for (i = 0; i < format_desc->nr_channels; i++)  {
+            output[i] = dst[i];
+         }
+      }
+
+      lp_build_format_swizzle_soa(format_desc, &bld, output, rgba_out);
       return;
    }
 
