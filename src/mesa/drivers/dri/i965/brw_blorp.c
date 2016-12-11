@@ -813,8 +813,6 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
       can_fast_clear = false;
 
    const unsigned logical_layer = irb_logical_mt_layer(irb);
-   const bool is_lossless_compressed = intel_miptree_is_lossless_compressed(
-                                          brw, irb->mt);
    const enum intel_fast_clear_state fast_clear_state =
       intel_miptree_get_fast_clear_state(irb->mt, irb->mt_level,
                                          logical_layer);
@@ -850,7 +848,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
        * it now.
        */
       if (!irb->mt->mcs_buf) {
-         assert(!is_lossless_compressed);
+         assert(!intel_miptree_is_lossless_compressed(brw, irb->mt));
          if (!intel_miptree_alloc_non_msrt_mcs(brw, irb->mt, false)) {
             /* MCS allocation failed--probably this will only happen in
              * out-of-memory conditions.  But in any case, try to recover
