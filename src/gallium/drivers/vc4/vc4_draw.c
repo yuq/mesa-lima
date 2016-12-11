@@ -81,8 +81,7 @@ vc4_start_draw(struct vc4_context *vc4)
 
         vc4_get_draw_cl_space(job, 0);
 
-        struct vc4_cl_out *bcl = cl_start(&job->bcl);
-        cl_emit(&bcl, TILE_BINNING_MODE_CONFIGURATION, bin) {
+        cl_emit(&job->bcl, TILE_BINNING_MODE_CONFIGURATION, bin) {
                 bin.width_in_tiles = job->draw_tiles_x;
                 bin.height_in_tiles = job->draw_tiles_y;
                 bin.multisample_mode_4x = job->msaa;
@@ -93,14 +92,14 @@ vc4_start_draw(struct vc4_context *vc4)
          * figure out what new state packets need to be written to that tile's
          * command list.
          */
-        cl_emit(&bcl, START_TILE_BINNING, start);
+        cl_emit(&job->bcl, START_TILE_BINNING, start);
 
         /* Reset the current compressed primitives format.  This gets modified
          * by VC4_PACKET_GL_INDEXED_PRIMITIVE and
          * VC4_PACKET_GL_ARRAY_PRIMITIVE, so it needs to be reset at the start
          * of every tile.
          */
-        cl_emit(&bcl, PRIMITIVE_LIST_FORMAT, list) {
+        cl_emit(&job->bcl, PRIMITIVE_LIST_FORMAT, list) {
                 list.data_type = _16_BIT_INDEX;
                 list.primitive_type = TRIANGLES_LIST;
         }
@@ -108,8 +107,6 @@ vc4_start_draw(struct vc4_context *vc4)
         job->needs_flush = true;
         job->draw_width = vc4->framebuffer.width;
         job->draw_height = vc4->framebuffer.height;
-
-        cl_end(&job->bcl, bcl);
 }
 
 static void
@@ -216,8 +213,7 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
         }
         cl_end(&job->shader_rec, shader_rec);
 
-        struct vc4_cl_out *bcl = cl_start(&job->bcl);
-        cl_emit(&bcl, GL_SHADER_STATE, shader_state) {
+        cl_emit(&job->bcl, GL_SHADER_STATE, shader_state) {
                 /* Note that number of attributes == 0 in the packet means 8
                  * attributes.  This field also contains the offset into
                  * shader_rec.
@@ -226,7 +222,6 @@ vc4_emit_gl_shader_state(struct vc4_context *vc4,
                 shader_state.number_of_attribute_arrays =
                         num_elements_emit & 0x7;
         }
-        cl_end(&job->bcl, bcl);
 
         vc4_write_uniforms(vc4, vc4->prog.fs,
                            &vc4->constbuf[PIPE_SHADER_FRAGMENT],
@@ -336,7 +331,6 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
         /* Note that the primitive type fields match with OpenGL/gallium
          * definitions, up to but not including QUADS.
          */
-        struct vc4_cl_out *bcl = cl_start(&job->bcl);
         if (info->index_size) {
                 uint32_t index_size = info->index_size;
                 uint32_t offset = info->start * index_size;
@@ -359,6 +353,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 }
                 struct vc4_resource *rsc = vc4_resource(prsc);
 
+                struct vc4_cl_out *bcl = cl_start(&job->bcl);
                 cl_start_reloc(&job->bcl, &bcl, 1);
                 cl_u8(&bcl, VC4_PACKET_GL_INDEXED_PRIMITIVE);
                 cl_u8(&bcl,
@@ -369,6 +364,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                 cl_u32(&bcl, info->count);
                 cl_reloc(job, &job->bcl, &bcl, rsc->bo, offset);
                 cl_u32(&bcl, vc4->max_index);
+                cl_end(&job->bcl, bcl);
                 job->draw_calls_queued++;
 
                 if (info->index_size == 4 || info->has_user_indices)
@@ -395,10 +391,8 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                          * plus whatever remainder.
                          */
                         if (extra_index_bias) {
-                                cl_end(&job->bcl, bcl);
                                 vc4_emit_gl_shader_state(vc4, info,
                                                          extra_index_bias);
-                                bcl = cl_start(&job->bcl);
                         }
 
                         if (start + count > max_verts) {
@@ -434,7 +428,7 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                                 }
                         }
 
-                        cl_emit(&bcl, VERTEX_ARRAY_PRIMITIVES, array) {
+                        cl_emit(&job->bcl, VERTEX_ARRAY_PRIMITIVES, array) {
                                 array.primitive_mode = info->mode;
                                 array.length = this_count;
                                 array.index_of_first_vertex = start;
@@ -446,7 +440,6 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
                         start = 0;
                 }
         }
-        cl_end(&job->bcl, bcl);
 
         /* We shouldn't have tripped the HW_2116 bug with the GFXH-515
          * workaround.

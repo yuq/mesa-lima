@@ -255,17 +255,20 @@ cl_get_emit_space(struct vc4_cl_out **cl, size_t size)
  * Also, *dst is actually of the wrong type, it's the
  * uint8_t[cl_packet_length()] in the CL, not a cl_packet_struct(packet).
  */
-#define cl_emit(cl_out, packet, name)                            \
+#define cl_emit(cl, packet, name)                                \
         for (struct cl_packet_struct(packet) name = {            \
                 cl_packet_header(packet)                         \
         },                                                       \
-        *_dst = cl_get_emit_space(cl_out, cl_packet_length(packet)); \
-        __builtin_expect(_dst != NULL, 1);                       \
+        *_loop_terminate = &name;                                \
+        __builtin_expect(_loop_terminate != NULL, 1);            \
         ({                                                       \
-                cl_packet_pack(packet)(NULL, (uint8_t *)_dst, &name);  \
-                VG(VALGRIND_CHECK_MEM_IS_DEFINED(_dst,           \
+                struct vc4_cl_out *cl_out = cl_start(cl);        \
+                cl_packet_pack(packet)(cl, (uint8_t *)cl_out, &name); \
+                VG(VALGRIND_CHECK_MEM_IS_DEFINED(cl_out,         \
                                                  cl_packet_length(packet))); \
-                _dst = NULL;                                     \
+                cl_advance(&cl_out, cl_packet_length(packet));   \
+                cl_end(cl, cl_out);                              \
+                _loop_terminate = NULL;                          \
         }))                                                      \
 
 #endif /* VC4_CL_H */

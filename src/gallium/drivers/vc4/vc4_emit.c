@@ -29,7 +29,6 @@ vc4_emit_state(struct pipe_context *pctx)
         struct vc4_context *vc4 = vc4_context(pctx);
         struct vc4_job *job = vc4->job;
 
-        struct vc4_cl_out *bcl = cl_start(&job->bcl);
         if (vc4->dirty & (VC4_DIRTY_SCISSOR | VC4_DIRTY_VIEWPORT |
                           VC4_DIRTY_RASTERIZER)) {
                 float *vpscale = vc4->viewport.scale;
@@ -60,7 +59,7 @@ vc4_emit_state(struct pipe_context *pctx)
                         maxy = MIN2(vp_maxy, vc4->scissor.maxy);
                 }
 
-                cl_emit(&bcl, CLIP_WINDOW, clip) {
+                cl_emit(&job->bcl, CLIP_WINDOW, clip) {
                         clip.clip_window_left_pixel_coordinate = minx;
                         clip.clip_window_bottom_pixel_coordinate = miny;
                         clip.clip_window_height_in_pixels = maxy - miny;
@@ -79,6 +78,7 @@ vc4_emit_state(struct pipe_context *pctx)
                 uint8_t ez_enable_mask_out = ~0;
                 uint8_t rasosm_mask_out = ~0;
 
+                struct vc4_cl_out *bcl = cl_start(&job->bcl);
                 /* HW-2905: If the RCL ends up doing a full-res load when
                  * multisampling, then early Z tracking may end up with values
                  * from the previous tile due to a HW bug.  Disable it to
@@ -111,41 +111,42 @@ vc4_emit_state(struct pipe_context *pctx)
                 cl_u8(&bcl,
                       (vc4->rasterizer->config_bits[2] |
                        vc4->zsa->config_bits[2]) & ez_enable_mask_out);
+                cl_end(&job->bcl, bcl);
         }
 
         if (vc4->dirty & VC4_DIRTY_RASTERIZER) {
-                cl_emit(&bcl, DEPTH_OFFSET, depth) {
+                cl_emit(&job->bcl, DEPTH_OFFSET, depth) {
                         depth.depth_offset_units =
                                 vc4->rasterizer->offset_units;
                         depth.depth_offset_factor =
                                 vc4->rasterizer->offset_factor;
                 }
 
-                cl_emit(&bcl, POINT_SIZE, points) {
+                cl_emit(&job->bcl, POINT_SIZE, points) {
                         points.point_size = vc4->rasterizer->point_size;
                 }
 
-                cl_emit(&bcl, LINE_WIDTH, points) {
+                cl_emit(&job->bcl, LINE_WIDTH, points) {
                         points.line_width = vc4->rasterizer->base.line_width;
                 }
         }
 
         if (vc4->dirty & VC4_DIRTY_VIEWPORT) {
-                cl_emit(&bcl, CLIPPER_XY_SCALING, clip) {
+                cl_emit(&job->bcl, CLIPPER_XY_SCALING, clip) {
                         clip.viewport_half_width_in_1_16th_of_pixel =
                                 vc4->viewport.scale[0] * 16.0f;
                         clip.viewport_half_height_in_1_16th_of_pixel =
                                 vc4->viewport.scale[1] * 16.0f;
                 }
 
-                cl_emit(&bcl, CLIPPER_Z_SCALE_AND_OFFSET, clip) {
+                cl_emit(&job->bcl, CLIPPER_Z_SCALE_AND_OFFSET, clip) {
                         clip.viewport_z_offset_zc_to_zs =
                                 vc4->viewport.translate[2];
                         clip.viewport_z_scale_zc_to_zs =
                                 vc4->viewport.scale[2];
                 }
 
-                cl_emit(&bcl, VIEWPORT_OFFSET, vp) {
+                cl_emit(&job->bcl, VIEWPORT_OFFSET, vp) {
                         vp.viewport_centre_x_coordinate =
                                 16 * vc4->viewport.translate[0];
                         vp.viewport_centre_y_coordinate =
@@ -154,12 +155,10 @@ vc4_emit_state(struct pipe_context *pctx)
         }
 
         if (vc4->dirty & VC4_DIRTY_FLAT_SHADE_FLAGS) {
-                cl_emit(&bcl, FLAT_SHADE_FLAGS, flags) {
+                cl_emit(&job->bcl, FLAT_SHADE_FLAGS, flags) {
                         if (vc4->rasterizer->base.flatshade)
                                 flags.flat_shading_flags =
                                         vc4->prog.fs->color_inputs;
                 }
         }
-
-        cl_end(&job->bcl, bcl);
 }
