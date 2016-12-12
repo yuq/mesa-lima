@@ -36,8 +36,8 @@ public:
    ubo_visitor(void *mem_ctx, gl_uniform_buffer_variable *variables,
                unsigned num_variables, struct gl_shader_program *prog)
       : index(0), offset(0), buffer_size(0), variables(variables),
-        num_variables(num_variables), mem_ctx(mem_ctx), is_array_instance(false),
-        prog(prog)
+        num_variables(num_variables), mem_ctx(mem_ctx),
+        is_array_instance(false), prog(prog)
    {
       /* empty */
    }
@@ -61,7 +61,9 @@ public:
 
 private:
    virtual void enter_record(const glsl_type *type, const char *,
-                             bool row_major, const enum glsl_interface_packing packing) {
+                             bool row_major,
+                             const enum glsl_interface_packing packing)
+   {
       assert(type->is_record());
       if (packing == GLSL_INTERFACE_PACKING_STD430)
          this->offset = glsl_align(
@@ -72,15 +74,17 @@ private:
    }
 
    virtual void leave_record(const glsl_type *type, const char *,
-                             bool row_major, const enum glsl_interface_packing packing) {
+                             bool row_major,
+                             const enum glsl_interface_packing packing)
+   {
       assert(type->is_record());
 
       /* If this is the last field of a structure, apply rule #9.  The
-       * GL_ARB_uniform_buffer_object spec says:
+       * ARB_uniform_buffer_object spec says:
        *
-       *     "The structure may have padding at the end; the base offset of
-       *     the member following the sub-structure is rounded up to the next
-       *     multiple of the base alignment of the structure."
+       *    The structure may have padding at the end; the base offset of the
+       *    member following the sub-structure is rounded up to the next
+       *    multiple of the base alignment of the structure.
        */
       if (packing == GLSL_INTERFACE_PACKING_STD430)
          this->offset = glsl_align(
@@ -129,15 +133,16 @@ private:
       unsigned alignment = 0;
       unsigned size = 0;
 
-      /* From ARB_program_interface_query:
+      /* The ARB_program_interface_query spec says:
        *
-       *     "If the final member of an active shader storage block is array
-       *      with no declared size, the minimum buffer size is computed
-       *      assuming the array was declared as an array with one element."
+       *    If the final member of an active shader storage block is array
+       *    with no declared size, the minimum buffer size is computed
+       *    assuming the array was declared as an array with one element.
        *
-       * For that reason, we use the base type of the unsized array to calculate
-       * its size. We don't need to check if the unsized array is the last member
-       * of a shader storage block (that check was already done by the parser).
+       * For that reason, we use the base type of the unsized array to
+       * calculate its size. We don't need to check if the unsized array is
+       * the last member of a shader storage block (that check was already
+       * done by the parser).
        */
       const glsl_type *type_for_size = type;
       if (type->is_unsized_array()) {
@@ -158,15 +163,15 @@ private:
 
       this->offset += size;
 
-      /* From the GL_ARB_uniform_buffer_object spec:
+      /* The ARB_uniform_buffer_object spec says:
        *
-       *     "For uniform blocks laid out according to [std140] rules, the
-       *      minimum buffer object size returned by the
-       *      UNIFORM_BLOCK_DATA_SIZE query is derived by taking the offset of
-       *      the last basic machine unit consumed by the last uniform of the
-       *      uniform block (including any end-of-array or end-of-structure
-       *      padding), adding one, and rounding up to the next multiple of
-       *      the base alignment required for a vec4."
+       *    For uniform blocks laid out according to [std140] rules, the
+       *    minimum buffer object size returned by the UNIFORM_BLOCK_DATA_SIZE
+       *    query is derived by taking the offset of the last basic machine
+       *    unit consumed by the last uniform of the uniform block (including
+       *    any end-of-array or end-of-structure padding), adding one, and
+       *    rounding up to the next multiple of the base alignment required
+       *    for a vec4.
        */
       this->buffer_size = glsl_align(this->offset, 16);
    }
@@ -259,12 +264,12 @@ process_block_array_leaf(char **name,
    blocks[i].Name = ralloc_strdup(blocks, *name);
    blocks[i].Uniforms = &variables[(*parcel).index];
 
-   /* The GL_ARB_shading_language_420pack spec says:
+   /* The ARB_shading_language_420pack spec says:
     *
-    *     "If the binding identifier is used with a uniform block instanced as
-    *     an array then the first element of the array takes the specified
-    *     block binding and each subsequent element takes the next consecutive
-    *     uniform block binding point."
+    *    If the binding identifier is used with a uniform block instanced as
+    *    an array then the first element of the array takes the specified
+    *    block binding and each subsequent element takes the next consecutive
+    *    uniform block binding point.
     */
    blocks[i].Binding = (b->has_binding) ? b->binding + *binding_offset : 0;
 
@@ -333,7 +338,8 @@ create_buffer_blocks(void *mem_ctx, struct gl_context *ctx,
    /* Allocate storage to hold all of the information related to uniform
     * blocks that can be queried through the API.
     */
-   struct gl_uniform_block *blocks = rzalloc_array(mem_ctx, gl_uniform_block, num_blocks);
+   struct gl_uniform_block *blocks =
+      rzalloc_array(mem_ctx, gl_uniform_block, num_blocks);
    gl_uniform_buffer_variable *variables =
       ralloc_array(blocks, gl_uniform_buffer_variable, num_variables);
 
@@ -431,8 +437,7 @@ link_uniform_blocks(void *mem_ctx,
       return;
    }
 
-   /* Determine which uniform blocks are active.
-    */
+   /* Determine which uniform blocks are active. */
    link_uniform_block_active_visitor v(mem_ctx, block_hash, prog);
    visit_list_elements(&v, shader->ir);
 
@@ -497,12 +502,12 @@ link_uniform_blocks_are_compatible(const gl_uniform_block *a,
 
    /* Page 35 (page 42 of the PDF) in section 4.3.7 of the GLSL 1.50 spec says:
     *
-    *     "Matched block names within an interface (as defined above) must
-    *     match in terms of having the same number of declarations with the
-    *     same sequence of types and the same sequence of member names, as
-    *     well as having the same member-wise layout qualification....if a
-    *     matching block is declared as an array, then the array sizes must
-    *     also match... Any mismatch will generate a link error."
+    *    Matched block names within an interface (as defined above) must match
+    *    in terms of having the same number of declarations with the same
+    *    sequence of types and the same sequence of member names, as well as
+    *    having the same member-wise layout qualification....if a matching
+    *    block is declared as an array, then the array sizes must also
+    *    match... Any mismatch will generate a link error.
     *
     * Arrays are not yet supported, so there is no check for that.
     */
