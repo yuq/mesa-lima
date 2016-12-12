@@ -601,6 +601,16 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 {
 	enum chip_class chip_class = cmd_buffer->device->instance->physicalDevice.rad_info.chip_class;
 	unsigned cp_coher_cntl = 0;
+	bool is_compute = cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE;
+
+	if (is_compute)
+		cmd_buffer->state.flush_bits &= ~(RADV_CMD_FLAG_FLUSH_AND_INV_CB |
+	                                          RADV_CMD_FLAG_FLUSH_AND_INV_CB_META |
+	                                          RADV_CMD_FLAG_FLUSH_AND_INV_DB |
+	                                          RADV_CMD_FLAG_FLUSH_AND_INV_DB_META |
+	                                          RADV_CMD_FLAG_PS_PARTIAL_FLUSH |
+	                                          RADV_CMD_FLAG_VS_PARTIAL_FLUSH |
+	                                          RADV_CMD_FLAG_VGT_FLUSH);
 
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 128);
 
@@ -679,7 +689,8 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 	/* Make sure ME is idle (it executes most packets) before continuing.
 	 * This prevents read-after-write hazards between PFP and ME.
 	 */
-	if (cp_coher_cntl || (cmd_buffer->state.flush_bits & RADV_CMD_FLAG_CS_PARTIAL_FLUSH)) {
+	if ((cp_coher_cntl || (cmd_buffer->state.flush_bits & RADV_CMD_FLAG_CS_PARTIAL_FLUSH)) &&
+	    !radv_cmd_buffer_uses_mec(cmd_buffer)) {
 		radeon_emit(cmd_buffer->cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cmd_buffer->cs, 0);
 	}
@@ -688,12 +699,23 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 	 * Therefore, it should be last. Done in PFP.
 	 */
 	if (cp_coher_cntl) {
-		/* ACQUIRE_MEM is only required on a compute ring. */
-		radeon_emit(cmd_buffer->cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
-		radeon_emit(cmd_buffer->cs, cp_coher_cntl);   /* CP_COHER_CNTL */
-		radeon_emit(cmd_buffer->cs, 0xffffffff);      /* CP_COHER_SIZE */
-		radeon_emit(cmd_buffer->cs, 0);               /* CP_COHER_BASE */
-		radeon_emit(cmd_buffer->cs, 0x0000000A);      /* POLL_INTERVAL */
+		if (radv_cmd_buffer_uses_mec(cmd_buffer)) {
+			radeon_emit(cmd_buffer->cs, PKT3(PKT3_ACQUIRE_MEM, 5, 0) |
+			                            PKT3_SHADER_TYPE_S(1));
+			radeon_emit(cmd_buffer->cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+			radeon_emit(cmd_buffer->cs, 0xffffffff);      /* CP_COHER_SIZE */
+			radeon_emit(cmd_buffer->cs, 0xff);            /* CP_COHER_SIZE_HI */
+			radeon_emit(cmd_buffer->cs, 0);               /* CP_COHER_BASE */
+			radeon_emit(cmd_buffer->cs, 0);               /* CP_COHER_BASE_HI */
+			radeon_emit(cmd_buffer->cs, 0x0000000A);      /* POLL_INTERVAL */
+		} else {
+			/* ACQUIRE_MEM is only required on a compute ring. */
+			radeon_emit(cmd_buffer->cs, PKT3(PKT3_SURFACE_SYNC, 3, 0));
+			radeon_emit(cmd_buffer->cs, cp_coher_cntl);   /* CP_COHER_CNTL */
+			radeon_emit(cmd_buffer->cs, 0xffffffff);      /* CP_COHER_SIZE */
+			radeon_emit(cmd_buffer->cs, 0);               /* CP_COHER_BASE */
+			radeon_emit(cmd_buffer->cs, 0x0000000A);      /* POLL_INTERVAL */
+		}
 	}
 
 	cmd_buffer->state.flush_bits = 0;
