@@ -319,7 +319,7 @@ upload_raster(struct brw_context *brw)
       }
    }
 
-   /* _NEW_POLYGON */
+   /* BRW_NEW_CONSERVATIVE_RASTERIZATION */
    if (ctx->IntelConservativeRasterization) {
       if (brw->gen >= 9)
          dw1 |= GEN9_RASTER_CONSERVATIVE_RASTERIZATION_ENABLE;
@@ -344,7 +344,8 @@ const struct brw_tracked_state gen8_raster_state = {
                _NEW_SCISSOR |
                _NEW_TRANSFORM,
       .brw   = BRW_NEW_BLORP |
-               BRW_NEW_CONTEXT,
+               BRW_NEW_CONTEXT |
+               BRW_NEW_CONSERVATIVE_RASTERIZATION,
    },
    .emit = upload_raster,
 };

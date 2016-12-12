@@ -53,7 +53,7 @@ gen8_upload_ps_extra(struct brw_context *brw,
    if (prog_data->persample_dispatch)
       dw1 |= GEN8_PSX_SHADER_IS_PER_SAMPLE;
 
-   /* _NEW_POLYGON */
+   /* _NEW_MULTISAMPLE | BRW_NEW_CONSERVATIVE_RASTERIZATION */
    if (prog_data->uses_sample_mask) {
       if (brw->gen >= 9) {
          if (prog_data->post_depth_coverage)
@@ -131,7 +131,8 @@ const struct brw_tracked_state gen8_ps_extra = {
       .brw   = BRW_NEW_BLORP |
                BRW_NEW_CONTEXT |
                BRW_NEW_FRAGMENT_PROGRAM |
-               BRW_NEW_FS_PROG_DATA,
+               BRW_NEW_FS_PROG_DATA |
+               BRW_NEW_CONSERVATIVE_RASTERIZATION,
    },
    .emit = upload_ps_extra,
 };
@@ -291,8 +292,7 @@ upload_ps_state(struct brw_context *brw)
 
 const struct brw_tracked_state gen8_ps_state = {
    .dirty = {
-      .mesa  = _NEW_MULTISAMPLE |
-               _NEW_POLYGON,
+      .mesa  = _NEW_MULTISAMPLE,
       .brw   = BRW_NEW_BATCH |
                BRW_NEW_BLORP |
                BRW_NEW_FS_PROG_DATA,

@@ -4222,6 +4222,11 @@ struct gl_driver_flags
     * gl_context::TessCtrlProgram::patch_default_*
     */
    uint64_t NewDefaultTessLevels;
+
+   /**
+    * gl_context::IntelConservativeRasterization
+    */
+   uint64_t NewIntelConservativeRasterization;
 };
 
 struct gl_uniform_buffer_binding

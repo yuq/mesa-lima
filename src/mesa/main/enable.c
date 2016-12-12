@@ -444,7 +444,9 @@ _mesa_set_enable(struct gl_context *ctx, GLenum cap, GLboolean state)
             goto invalid_enum_error;
          if (ctx->IntelConservativeRasterization == state)
             return;
-         FLUSH_VERTICES(ctx, _NEW_POLYGON);
+         FLUSH_VERTICES(ctx, 0);
+         ctx->NewDriverState |=
+            ctx->DriverFlags.NewIntelConservativeRasterization;
          ctx->IntelConservativeRasterization = state;
          break;
       case GL_COLOR_LOGIC_OP:
