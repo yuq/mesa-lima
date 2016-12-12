@@ -707,8 +707,8 @@ print_tex_instr(nir_tex_instr *instr, print_state *state)
       case nir_tex_src_projector:
          fprintf(fp, "(projector)");
          break;
-      case nir_tex_src_comparitor:
-         fprintf(fp, "(comparitor)");
+      case nir_tex_src_comparator:
+         fprintf(fp, "(comparator)");
          break;
       case nir_tex_src_offset:
          fprintf(fp, "(offset)");

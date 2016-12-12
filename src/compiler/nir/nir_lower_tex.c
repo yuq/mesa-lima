@@ -55,7 +55,7 @@ project_src(nir_builder *b, nir_tex_instr *tex)
    for (unsigned i = 0; i < tex->num_srcs; i++) {
       switch (tex->src[i].src_type) {
       case nir_tex_src_coord:
-      case nir_tex_src_comparitor:
+      case nir_tex_src_comparator:
          break;
       default:
          continue;

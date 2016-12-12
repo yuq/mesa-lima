@@ -435,7 +435,7 @@ ntq_emit_tex(struct vc4_compile *c, nir_tex_instr *instr)
                         lod = ntq_get_src(c, instr->src[i].src, 0);
                         is_txl = true;
                         break;
-                case nir_tex_src_comparitor:
+                case nir_tex_src_comparator:
                         compare = ntq_get_src(c, instr->src[i].src, 0);
                         break;
                 default:

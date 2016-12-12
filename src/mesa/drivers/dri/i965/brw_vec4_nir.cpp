@@ -1804,7 +1804,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
    src_reg sampler_reg = brw_imm_ud(sampler);
    src_reg coordinate;
    const glsl_type *coord_type = NULL;
-   src_reg shadow_comparitor;
+   src_reg shadow_comparator;
    src_reg offset_value;
    src_reg lod, lod2;
    src_reg sample_index;
@@ -1823,8 +1823,8 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
    uint32_t constant_offset = 0;
    for (unsigned i = 0; i < instr->num_srcs; i++) {
       switch (instr->src[i].src_type) {
-      case nir_tex_src_comparitor:
-         shadow_comparitor = get_nir_src(instr->src[i].src,
+      case nir_tex_src_comparator:
+         shadow_comparator = get_nir_src(instr->src[i].src,
                                          BRW_REGISTER_TYPE_F, 1);
          break;
 
@@ -1960,7 +1960,7 @@ vec4_visitor::nir_emit_texture(nir_tex_instr *instr)
    ir_texture_opcode op = ir_texture_opcode_for_nir_texop(instr->op);
 
    emit_texture(op, dest, dest_type, coordinate, instr->coord_components,
-                shadow_comparitor,
+                shadow_comparator,
                 lod, lod2, sample_index,
                 constant_offset, offset_value, mcs,
                 texture, texture_reg, sampler_reg);

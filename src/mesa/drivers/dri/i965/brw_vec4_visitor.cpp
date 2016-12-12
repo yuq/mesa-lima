@@ -901,7 +901,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
                            const glsl_type *dest_type,
                            src_reg coordinate,
                            int coord_components,
-                           src_reg shadow_comparitor,
+                           src_reg shadow_comparator,
                            src_reg lod, src_reg lod2,
                            src_reg sample_index,
                            uint32_t constant_offset,
@@ -971,7 +971,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
    inst->base_mrf = 2;
    inst->mlen = inst->header_size;
    inst->dst.writemask = WRITEMASK_XYZW;
-   inst->shadow_compare = shadow_comparitor.file != BAD_FILE;
+   inst->shadow_compare = shadow_comparator.file != BAD_FILE;
 
    inst->src[1] = surface_reg;
    inst->src[2] = sampler_reg;
@@ -999,11 +999,11 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
          emit(MOV(dst_reg(MRF, param_base, coordinate.type, zero_mask),
                   brw_imm_d(0)));
       }
-      /* Load the shadow comparitor */
-      if (shadow_comparitor.file != BAD_FILE && op != ir_txd && (op != ir_tg4 || offset_value.file == BAD_FILE)) {
-	 emit(MOV(dst_reg(MRF, param_base + 1, shadow_comparitor.type,
+      /* Load the shadow comparator */
+      if (shadow_comparator.file != BAD_FILE && op != ir_txd && (op != ir_tg4 || offset_value.file == BAD_FILE)) {
+	 emit(MOV(dst_reg(MRF, param_base + 1, shadow_comparator.type,
 			  WRITEMASK_X),
-		  shadow_comparitor));
+		  shadow_comparator));
 	 inst->mlen++;
       }
 
@@ -1012,7 +1012,7 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 	 int mrf, writemask;
 	 if (devinfo->gen >= 5) {
 	    mrf = param_base + 1;
-	    if (shadow_comparitor.file != BAD_FILE) {
+	    if (shadow_comparator.file != BAD_FILE) {
 	       writemask = WRITEMASK_Y;
 	       /* mlen already incremented */
 	    } else {
@@ -1058,17 +1058,17 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 	    emit(MOV(dst_reg(MRF, param_base + 1, type, WRITEMASK_YW), lod2));
 	    inst->mlen++;
 
-	    if (dest_type->vector_elements == 3 || shadow_comparitor.file != BAD_FILE) {
+	    if (dest_type->vector_elements == 3 || shadow_comparator.file != BAD_FILE) {
 	       lod.swizzle = BRW_SWIZZLE_ZZZZ;
 	       lod2.swizzle = BRW_SWIZZLE_ZZZZ;
 	       emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_X), lod));
 	       emit(MOV(dst_reg(MRF, param_base + 2, type, WRITEMASK_Y), lod2));
 	       inst->mlen++;
 
-               if (shadow_comparitor.file != BAD_FILE) {
+               if (shadow_comparator.file != BAD_FILE) {
                   emit(MOV(dst_reg(MRF, param_base + 2,
-                                   shadow_comparitor.type, WRITEMASK_Z),
-                           shadow_comparitor));
+                                   shadow_comparator.type, WRITEMASK_Z),
+                           shadow_comparator));
                }
 	    }
 	 } else /* devinfo->gen == 4 */ {
@@ -1077,9 +1077,9 @@ vec4_visitor::emit_texture(ir_texture_opcode op,
 	    inst->mlen += 2;
 	 }
       } else if (op == ir_tg4 && offset_value.file != BAD_FILE) {
-         if (shadow_comparitor.file != BAD_FILE) {
-            emit(MOV(dst_reg(MRF, param_base, shadow_comparitor.type, WRITEMASK_W),
-                     shadow_comparitor));
+         if (shadow_comparator.file != BAD_FILE) {
+            emit(MOV(dst_reg(MRF, param_base, shadow_comparator.type, WRITEMASK_W),
+                     shadow_comparator));
          }
 
          emit(MOV(dst_reg(MRF, param_base + 1, glsl_type::ivec2_type, WRITEMASK_XY),

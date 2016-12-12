@@ -1065,7 +1065,7 @@ INTRINSIC_IDX_ACCESSORS(interp_mode, INTERP_MODE, unsigned)
 typedef enum {
    nir_tex_src_coord,
    nir_tex_src_projector,
-   nir_tex_src_comparitor, /* shadow comparitor */
+   nir_tex_src_comparator, /* shadow comparator */
    nir_tex_src_offset,
    nir_tex_src_bias,
    nir_tex_src_lod,
@@ -1263,7 +1263,7 @@ nir_tex_instr_src_type(nir_tex_instr *instr, unsigned src)
       }
 
    case nir_tex_src_projector:
-   case nir_tex_src_comparitor:
+   case nir_tex_src_comparator:
    case nir_tex_src_bias:
    case nir_tex_src_ddx:
    case nir_tex_src_ddy:

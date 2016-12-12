@@ -324,9 +324,9 @@ void ir_print_visitor::visit(ir_texture *ir)
       else
 	 fprintf(f, "1");
 
-      if (ir->shadow_comparitor) {
+      if (ir->shadow_comparator) {
 	 fprintf(f, " ");
-	 ir->shadow_comparitor->accept(this);
+	 ir->shadow_comparator->accept(this);
       } else {
 	 fprintf(f, " ()");
       }

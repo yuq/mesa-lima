@@ -4439,7 +4439,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
          srcs[TEX_LOGICAL_SRC_LOD] =
             retype(get_nir_src_imm(instr->src[i].src), BRW_REGISTER_TYPE_F);
          break;
-      case nir_tex_src_comparitor:
+      case nir_tex_src_comparator:
          srcs[TEX_LOGICAL_SRC_SHADOW_C] = retype(src, BRW_REGISTER_TYPE_F);
          break;
       case nir_tex_src_coord:

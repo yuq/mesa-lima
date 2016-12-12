@@ -104,7 +104,7 @@ lower_texture_grad_visitor::visit_leave(ir_texture *ir)
    /* Only lower textureGrad with cube maps or shadow samplers */
    if (ir->op != ir_txd ||
       (ir->sampler->type->sampler_dimensionality != GLSL_SAMPLER_DIM_CUBE &&
-       !ir->shadow_comparitor))
+       !ir->shadow_comparator))
       return visit_continue;
 
    /* Lower textureGrad() with samplerCube* even if we have the sample_d_c

@@ -1372,7 +1372,7 @@ emit_tex(struct ir3_compile *ctx, nir_tex_instr *tex)
 			lod = get_src(ctx, &tex->src[i].src)[0];
 			has_lod = true;
 			break;
-		case nir_tex_src_comparitor: /* shadow comparator */
+		case nir_tex_src_comparator: /* shadow comparator */
 			compare = get_src(ctx, &tex->src[i].src)[0];
 			break;
 		case nir_tex_src_projector:

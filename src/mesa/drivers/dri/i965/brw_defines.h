@@ -1405,7 +1405,7 @@ enum fb_write_logical_srcs {
 enum tex_logical_srcs {
    /** Texture coordinates */
    TEX_LOGICAL_SRC_COORDINATE,
-   /** Shadow comparitor */
+   /** Shadow comparator */
    TEX_LOGICAL_SRC_SHADOW_C,
    /** dPdx if the operation takes explicit derivatives, otherwise LOD value */
    TEX_LOGICAL_SRC_LOD,

@@ -3833,8 +3833,8 @@ lower_sampler_logical_send_gen4(const fs_builder &bld, fs_inst *inst, opcode op,
    }
 
    if (has_lod) {
-      /* Bias/LOD with shadow comparitor is unsupported in SIMD16 -- *Without*
-       * shadow comparitor (including RESINFO) it's unsupported in SIMD8 mode.
+      /* Bias/LOD with shadow comparator is unsupported in SIMD16 -- *Without*
+       * shadow comparator (including RESINFO) it's unsupported in SIMD8 mode.
        */
       assert(shadow_c.file != BAD_FILE ? bld.dispatch_width() == 8 :
              bld.dispatch_width() == 16);

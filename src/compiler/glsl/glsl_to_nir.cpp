@@ -1898,7 +1898,7 @@ nir_visitor::visit(ir_texture *ir)
 
    if (ir->projector != NULL)
       num_srcs++;
-   if (ir->shadow_comparitor != NULL)
+   if (ir->shadow_comparator != NULL)
       num_srcs++;
    if (ir->offset != NULL)
       num_srcs++;
@@ -1946,10 +1946,10 @@ nir_visitor::visit(ir_texture *ir)
       src_number++;
    }
 
-   if (ir->shadow_comparitor != NULL) {
+   if (ir->shadow_comparator != NULL) {
       instr->src[src_number].src =
-         nir_src_for_ssa(evaluate_rvalue(ir->shadow_comparitor));
-      instr->src[src_number].src_type = nir_tex_src_comparitor;
+         nir_src_for_ssa(evaluate_rvalue(ir->shadow_comparator));
+      instr->src[src_number].src_type = nir_tex_src_comparator;
       src_number++;
    }
 

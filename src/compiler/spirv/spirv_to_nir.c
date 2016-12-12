@@ -1460,7 +1460,7 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
    case SpvOpImageSampleProjDrefExplicitLod:
    case SpvOpImageDrefGather:
       /* These all have an explicit depth value as their next source */
-      (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_comparitor);
+      (*p++) = vtn_tex_src(b, w[idx++], nir_tex_src_comparator);
       break;
 
    case SpvOpImageGather:

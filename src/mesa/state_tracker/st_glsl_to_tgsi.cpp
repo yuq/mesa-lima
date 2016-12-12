@@ -3956,7 +3956,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
 
    switch (ir->op) {
    case ir_tex:
-      opcode = (is_cube_array && ir->shadow_comparitor) ? TGSI_OPCODE_TEX2 : TGSI_OPCODE_TEX;
+      opcode = (is_cube_array && ir->shadow_comparator) ? TGSI_OPCODE_TEX2 : TGSI_OPCODE_TEX;
       if (ir->offset) {
          ir->offset->accept(this);
          offset[0] = this->result;
@@ -4073,11 +4073,11 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
           * the shadow comparator value must also be projected.
           */
          st_src_reg tmp_src = coord;
-         if (ir->shadow_comparitor) {
+         if (ir->shadow_comparator) {
             /* Slot the shadow value in as the second to last component of the
              * coord.
              */
-            ir->shadow_comparitor->accept(this);
+            ir->shadow_comparator->accept(this);
 
             tmp_src = get_temp(glsl_type::vec4_type);
             st_dst_reg tmp_dst = st_dst_reg(tmp_src);
@@ -4104,11 +4104,11 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
     * comparator was put in the correct place (and projected) by the code,
     * above, that handles by-hand projection.
     */
-   if (ir->shadow_comparitor && (!ir->projector || opcode == TGSI_OPCODE_TXP)) {
+   if (ir->shadow_comparator && (!ir->projector || opcode == TGSI_OPCODE_TXP)) {
       /* Slot the shadow value in as the second to last component of the
        * coord.
        */
-      ir->shadow_comparitor->accept(this);
+      ir->shadow_comparator->accept(this);
 
       if (is_cube_array) {
          cube_sc = get_temp(glsl_type::float_type);
@@ -4167,7 +4167,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    } else if (opcode == TGSI_OPCODE_TEX2) {
       inst = emit_asm(ir, opcode, result_dst, coord, cube_sc);
    } else if (opcode == TGSI_OPCODE_TG4) {
-      if (is_cube_array && ir->shadow_comparitor) {
+      if (is_cube_array && ir->shadow_comparator) {
          inst = emit_asm(ir, opcode, result_dst, coord, cube_sc);
       } else {
          inst = emit_asm(ir, opcode, result_dst, coord, component);
@@ -4175,7 +4175,7 @@ glsl_to_tgsi_visitor::visit(ir_texture *ir)
    } else
       inst = emit_asm(ir, opcode, result_dst, coord);
 
-   if (ir->shadow_comparitor)
+   if (ir->shadow_comparator)
       inst->tex_shadow = GL_TRUE;
 
    inst->resource.index = sampler_index;

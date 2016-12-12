@@ -254,7 +254,7 @@ public:
                      const glsl_type *dest_type,
                      src_reg coordinate,
                      int coord_components,
-                     src_reg shadow_comparitor,
+                     src_reg shadow_comparator,
                      src_reg lod, src_reg lod2,
                      src_reg sample_index,
                      uint32_t constant_offset,

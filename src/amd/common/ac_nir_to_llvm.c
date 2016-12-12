@@ -3418,7 +3418,7 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	unsigned dmask = 0xf;
 	LLVMValueRef address[16];
 	LLVMValueRef coords[5];
-	LLVMValueRef coord = NULL, lod = NULL, comparitor = NULL;
+	LLVMValueRef coord = NULL, lod = NULL, comparator = NULL;
 	LLVMValueRef bias = NULL, offsets = NULL;
 	LLVMValueRef res_ptr, samp_ptr, fmask_ptr = NULL, sample_index = NULL;
 	LLVMValueRef ddx = NULL, ddy = NULL;
@@ -3435,8 +3435,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 			break;
 		case nir_tex_src_projector:
 			break;
-		case nir_tex_src_comparitor:
-			comparitor = get_src(ctx, instr->src[i].src);
+		case nir_tex_src_comparator:
+			comparator = get_src(ctx, instr->src[i].src);
 			break;
 		case nir_tex_src_offset:
 			offsets = get_src(ctx, instr->src[i].src);
@@ -3521,8 +3521,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	}
 
 	/* Pack depth comparison value */
-	if (instr->is_shadow && comparitor) {
-		address[count++] = llvm_extract_elem(ctx, comparitor, 0);
+	if (instr->is_shadow && comparator) {
+		address[count++] = llvm_extract_elem(ctx, comparator, 0);
 	}
 
 	/* pack derivatives */

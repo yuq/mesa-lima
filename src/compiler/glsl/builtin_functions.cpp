@@ -1697,7 +1697,7 @@ builtin_builder::create_builtins()
                 _texture(ir_tex, v130, glsl_type::float_type, glsl_type::sampler1DArrayShadow_type, glsl_type::vec3_type),
                 _texture(ir_tex, v130, glsl_type::float_type, glsl_type::sampler2DArrayShadow_type, glsl_type::vec4_type),
                 /* samplerCubeArrayShadow is special; it has an extra parameter
-                 * for the shadow comparitor since there is no vec5 type.
+                 * for the shadow comparator since there is no vec5 type.
                  */
                 _textureCubeArrayShadow(),
 
@@ -4659,7 +4659,7 @@ builtin_builder::_texture(ir_texture_opcode opcode,
    if (coord_size == coord_type->vector_elements) {
       tex->coordinate = var_ref(P);
    } else {
-      /* The incoming coordinate also has the projector or shadow comparitor,
+      /* The incoming coordinate also has the projector or shadow comparator,
        * so we need to swizzle those away.
        */
       tex->coordinate = swizzle_for_size(P, coord_size);
@@ -4676,12 +4676,12 @@ builtin_builder::_texture(ir_texture_opcode opcode,
           */
          ir_variable *refz = in_var(glsl_type::float_type, "refz");
          sig->parameters.push_tail(refz);
-         tex->shadow_comparitor = var_ref(refz);
+         tex->shadow_comparator = var_ref(refz);
       } else {
-         /* The shadow comparitor is normally in the Z component, but a few types
+         /* The shadow comparator is normally in the Z component, but a few types
           * have sufficiently large coordinates that it's in W.
           */
-         tex->shadow_comparitor = swizzle(P, MAX2(coord_size, SWIZZLE_Z), 1);
+         tex->shadow_comparator = swizzle(P, MAX2(coord_size, SWIZZLE_Z), 1);
       }
    }
 
@@ -4754,7 +4754,7 @@ builtin_builder::_textureCubeArrayShadow()
    tex->set_sampler(var_ref(s), glsl_type::float_type);
 
    tex->coordinate = var_ref(P);
-   tex->shadow_comparitor = var_ref(compare);
+   tex->shadow_comparator = var_ref(compare);
 
    body.emit(ret(tex));
 
