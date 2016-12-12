@@ -194,8 +194,10 @@ program_resource_visitor::recursion(const glsl_type *t, char **name,
          record_type = t->fields.array;
 
       unsigned length = t->length;
+
       /* Shader storage block unsized arrays: add subscript [0] to variable
-       * names */
+       * names.
+       */
       if (t->is_unsized_array())
          length = 1;
 
@@ -470,8 +472,7 @@ public:
             }
          } else {
             for (unsigned i = 0; i < num_blks; i++) {
-               if (strcmp(var->get_interface_type()->name, blks[i].Name) ==
-                   0) {
+               if (strcmp(var->get_interface_type()->name, blks[i].Name) == 0) {
                   buffer_block_index = i;
                   break;
                }
