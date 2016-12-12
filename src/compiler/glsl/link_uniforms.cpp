@@ -28,7 +28,7 @@
 #include "glsl_symbol_table.h"
 #include "program.h"
 #include "util/string_to_uint_map.h"
-#include "ir_variable_refcount.h"
+#include "ir_array_refcount.h"
 
 /**
  * \file link_uniforms.cpp
@@ -868,11 +868,11 @@ public:
 };
 
 static bool
-variable_is_referenced(ir_variable_refcount_visitor &v, ir_variable *var)
+variable_is_referenced(ir_array_refcount_visitor &v, ir_variable *var)
 {
-   ir_variable_refcount_entry *const entry = v.get_variable_entry(var);
+   ir_array_refcount_entry *const entry = v.get_variable_entry(var);
 
-   return entry->referenced_count > 0;
+   return entry->is_referenced;
 
 }
 
@@ -886,7 +886,7 @@ static void
 link_update_uniform_buffer_variables(struct gl_linked_shader *shader,
                                      unsigned stage)
 {
-   ir_variable_refcount_visitor v;
+   ir_array_refcount_visitor v;
 
    v.run(shader->ir);
 
