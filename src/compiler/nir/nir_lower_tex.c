@@ -784,8 +784,10 @@ nir_lower_tex_block(nir_block *block, nir_builder *b,
          progress = true;
       }
 
-      if (tex->op == nir_texop_txd && options->lower_txd_cube_map &&
-          tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE) {
+      if (tex->op == nir_texop_txd &&
+          tex->sampler_dim == GLSL_SAMPLER_DIM_CUBE &&
+          (options->lower_txd_cube_map ||
+           (tex->is_shadow && options->lower_txd_shadow))) {
          lower_gradient_cube_map(b, tex);
          progress = true;
          continue;
