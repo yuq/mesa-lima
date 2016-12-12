@@ -2217,16 +2217,24 @@ void radv_CmdDispatchIndirect(
 		}
 	}
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_SET_BASE, 2, 0) |
-				    PKT3_SHADER_TYPE_S(1));
-	radeon_emit(cmd_buffer->cs, 1);
-	radeon_emit(cmd_buffer->cs, va);
-	radeon_emit(cmd_buffer->cs, va >> 32);
+	if (radv_cmd_buffer_uses_mec(cmd_buffer)) {
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_INDIRECT, 2, 0) |
+					PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cmd_buffer->cs, va);
+		radeon_emit(cmd_buffer->cs, va >> 32);
+		radeon_emit(cmd_buffer->cs, 1);
+	} else {
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_SET_BASE, 2, 0) |
+					PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cmd_buffer->cs, 1);
+		radeon_emit(cmd_buffer->cs, va);
+		radeon_emit(cmd_buffer->cs, va >> 32);
 
-	radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, 0) |
-				    PKT3_SHADER_TYPE_S(1));
-	radeon_emit(cmd_buffer->cs, 0);
-	radeon_emit(cmd_buffer->cs, 1);
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_DISPATCH_INDIRECT, 1, 0) |
+					PKT3_SHADER_TYPE_S(1));
+		radeon_emit(cmd_buffer->cs, 0);
+		radeon_emit(cmd_buffer->cs, 1);
+	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
 }
