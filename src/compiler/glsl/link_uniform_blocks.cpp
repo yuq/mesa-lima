@@ -200,6 +200,15 @@ struct block {
    bool has_instance_name;
 };
 
+static void process_block_array_leaf(char **name, gl_uniform_block *blocks,
+                                     ubo_visitor *parcel,
+                                     gl_uniform_buffer_variable *variables,
+                                     const struct link_uniform_block_active *const b,
+                                     unsigned *block_index,
+                                     unsigned *binding_offset,
+                                     struct gl_context *ctx,
+                                     struct gl_shader_program *prog);
+
 static void
 process_block_array(struct uniform_block_array_elements *ub_array, char **name,
                     size_t name_length, gl_uniform_block *blocks,
@@ -208,7 +217,6 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
                     unsigned *block_index, unsigned *binding_offset,
                     struct gl_context *ctx, struct gl_shader_program *prog)
 {
-   if (ub_array) {
       for (unsigned j = 0; j < ub_array->num_array_elements; j++) {
          size_t new_length = name_length;
 
@@ -216,11 +224,26 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
          ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]",
                                       ub_array->array_elements[j]);
 
-         process_block_array(ub_array->array, name, new_length, blocks,
-                             parcel, variables, b, block_index,
-                             binding_offset, ctx, prog);
+         if (ub_array->array) {
+            process_block_array(ub_array->array, name, new_length, blocks,
+                                parcel, variables, b, block_index,
+                                binding_offset, ctx, prog);
+         } else {
+            process_block_array_leaf(name, blocks,
+                                     parcel, variables, b, block_index,
+                                     binding_offset, ctx, prog);
+         }
       }
-   } else {
+}
+
+static void
+process_block_array_leaf(char **name,
+                         gl_uniform_block *blocks,
+                         ubo_visitor *parcel, gl_uniform_buffer_variable *variables,
+                         const struct link_uniform_block_active *const b,
+                         unsigned *block_index, unsigned *binding_offset,
+                         struct gl_context *ctx, struct gl_shader_program *prog)
+{
       unsigned i = *block_index;
       const glsl_type *type =  b->type->without_array();
 
@@ -259,7 +282,6 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
 
       *block_index = *block_index + 1;
       *binding_offset = *binding_offset + 1;
-   }
 }
 
 /* This function resizes the array types of the block so that later we can use
