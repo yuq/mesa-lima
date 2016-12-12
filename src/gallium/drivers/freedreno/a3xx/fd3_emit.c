@@ -299,13 +299,13 @@ fd3_emit_gmem_restore_tex(struct fd_ringbuffer *ring,
 		}
 
 		struct fd_resource *rsc = fd_resource(psurf[i]->texture);
-		enum pipe_format format = fd3_gmem_restore_format(psurf[i]->format);
+		enum pipe_format format = fd_gmem_restore_format(psurf[i]->format);
 		/* The restore blit_zs shader expects stencil in sampler 0, and depth
 		 * in sampler 1
 		 */
 		if (rsc->stencil && i == 0) {
 			rsc = rsc->stencil;
-			format = fd3_gmem_restore_format(rsc->base.b.format);
+			format = fd_gmem_restore_format(rsc->base.b.format);
 		}
 
 		/* note: PIPE_BUFFER disallowed for surfaces */

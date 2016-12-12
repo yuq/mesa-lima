@@ -291,14 +291,14 @@ fd4_emit_gmem_restore_tex(struct fd_ringbuffer *ring, unsigned nr_bufs,
 	for (i = 0; i < nr_bufs; i++) {
 		if (bufs[i]) {
 			struct fd_resource *rsc = fd_resource(bufs[i]->texture);
-			enum pipe_format format = fd4_gmem_restore_format(bufs[i]->format);
+			enum pipe_format format = fd_gmem_restore_format(bufs[i]->format);
 
 			/* The restore blit_zs shader expects stencil in sampler 0,
 			 * and depth in sampler 1
 			 */
 			if (rsc->stencil && (i == 0)) {
 				rsc = rsc->stencil;
-				format = fd4_gmem_restore_format(rsc->base.b.format);
+				format = fd_gmem_restore_format(rsc->base.b.format);
 			}
 
 			/* note: PIPE_BUFFER disallowed for surfaces */

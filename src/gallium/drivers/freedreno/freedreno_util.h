@@ -46,6 +46,7 @@
 
 enum adreno_rb_depth_format fd_pipe2depth(enum pipe_format format);
 enum pc_di_index_size fd_pipe2index(enum pipe_format format);
+enum pipe_format fd_gmem_restore_format(enum pipe_format format);
 enum adreno_rb_blend_factor fd_blend_factor(unsigned factor);
 enum adreno_pa_su_sc_draw fd_polygon_mode(unsigned mode);
 enum adreno_stencil_op fd_stencil_op(unsigned op);
