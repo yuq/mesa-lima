@@ -421,8 +421,8 @@ struct Transpose32_32_32_32
 
         vTranspose4x8(vDst, _simd16_extract_ps(src0, 1), _simd16_extract_ps(src1, 1), _simd16_extract_ps(src2, 1), _simd16_extract_ps(src3, 1));
 
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, reinterpret_cast<simd16scalar *>(vDst)[2]);
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, reinterpret_cast<simd16scalar *>(vDst)[3]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, reinterpret_cast<simd16scalar *>(vDst)[0]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, reinterpret_cast<simd16scalar *>(vDst)[1]);
     }
 #endif
 };
@@ -474,8 +474,8 @@ struct Transpose32_32_32
 
         vTranspose3x8(vDst, _simd16_extract_ps(src0, 1), _simd16_extract_ps(src1, 1), _simd16_extract_ps(src2, 1));
 
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, reinterpret_cast<simd16scalar *>(vDst)[2]);
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, reinterpret_cast<simd16scalar *>(vDst)[3]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, reinterpret_cast<simd16scalar *>(vDst)[0]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, reinterpret_cast<simd16scalar *>(vDst)[1]);
     }
 #endif
 };
