@@ -217,23 +217,23 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
                     unsigned *block_index, unsigned *binding_offset,
                     struct gl_context *ctx, struct gl_shader_program *prog)
 {
-      for (unsigned j = 0; j < ub_array->num_array_elements; j++) {
-         size_t new_length = name_length;
+   for (unsigned j = 0; j < ub_array->num_array_elements; j++) {
+      size_t new_length = name_length;
 
-         /* Append the subscript to the current variable name */
-         ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]",
-                                      ub_array->array_elements[j]);
+      /* Append the subscript to the current variable name */
+      ralloc_asprintf_rewrite_tail(name, &new_length, "[%u]",
+                                   ub_array->array_elements[j]);
 
-         if (ub_array->array) {
-            process_block_array(ub_array->array, name, new_length, blocks,
-                                parcel, variables, b, block_index,
-                                binding_offset, ctx, prog);
-         } else {
-            process_block_array_leaf(name, blocks,
-                                     parcel, variables, b, block_index,
-                                     binding_offset, ctx, prog);
-         }
+      if (ub_array->array) {
+         process_block_array(ub_array->array, name, new_length, blocks,
+                             parcel, variables, b, block_index,
+                             binding_offset, ctx, prog);
+      } else {
+         process_block_array_leaf(name, blocks,
+                                  parcel, variables, b, block_index,
+                                  binding_offset, ctx, prog);
       }
+   }
 }
 
 static void
@@ -244,44 +244,43 @@ process_block_array_leaf(char **name,
                          unsigned *block_index, unsigned *binding_offset,
                          struct gl_context *ctx, struct gl_shader_program *prog)
 {
-      unsigned i = *block_index;
-      const glsl_type *type =  b->type->without_array();
+   unsigned i = *block_index;
+   const glsl_type *type =  b->type->without_array();
 
-      blocks[i].Name = ralloc_strdup(blocks, *name);
-      blocks[i].Uniforms = &variables[(*parcel).index];
+   blocks[i].Name = ralloc_strdup(blocks, *name);
+   blocks[i].Uniforms = &variables[(*parcel).index];
 
-      /* The GL_ARB_shading_language_420pack spec says:
-       *
-       *     "If the binding identifier is used with a uniform block
-       *     instanced as an array then the first element of the array
-       *     takes the specified block binding and each subsequent
-       *     element takes the next consecutive uniform block binding
-       *     point."
-       */
-      blocks[i].Binding = (b->has_binding) ? b->binding + *binding_offset : 0;
+   /* The GL_ARB_shading_language_420pack spec says:
+    *
+    *     "If the binding identifier is used with a uniform block instanced as
+    *     an array then the first element of the array takes the specified
+    *     block binding and each subsequent element takes the next consecutive
+    *     uniform block binding point."
+    */
+   blocks[i].Binding = (b->has_binding) ? b->binding + *binding_offset : 0;
 
-      blocks[i].UniformBufferSize = 0;
-      blocks[i]._Packing = gl_uniform_block_packing(type->interface_packing);
-      blocks[i]._RowMajor = type->get_interface_row_major();
+   blocks[i].UniformBufferSize = 0;
+   blocks[i]._Packing = gl_uniform_block_packing(type->interface_packing);
+   blocks[i]._RowMajor = type->get_interface_row_major();
 
-      parcel->process(type, blocks[i].Name);
+   parcel->process(type, blocks[i].Name);
 
-      blocks[i].UniformBufferSize = parcel->buffer_size;
+   blocks[i].UniformBufferSize = parcel->buffer_size;
 
-      /* Check SSBO size is lower than maximum supported size for SSBO */
-      if (b->is_shader_storage &&
-          parcel->buffer_size > ctx->Const.MaxShaderStorageBlockSize) {
-         linker_error(prog, "shader storage block `%s' has size %d, "
-                      "which is larger than than the maximum allowed (%d)",
-                      b->type->name,
-                      parcel->buffer_size,
-                      ctx->Const.MaxShaderStorageBlockSize);
-      }
-      blocks[i].NumUniforms =
-         (unsigned)(ptrdiff_t)(&variables[parcel->index] - blocks[i].Uniforms);
+   /* Check SSBO size is lower than maximum supported size for SSBO */
+   if (b->is_shader_storage &&
+       parcel->buffer_size > ctx->Const.MaxShaderStorageBlockSize) {
+      linker_error(prog, "shader storage block `%s' has size %d, "
+                   "which is larger than than the maximum allowed (%d)",
+                   b->type->name,
+                   parcel->buffer_size,
+                   ctx->Const.MaxShaderStorageBlockSize);
+   }
+   blocks[i].NumUniforms =
+      (unsigned)(ptrdiff_t)(&variables[parcel->index] - blocks[i].Uniforms);
 
-      *block_index = *block_index + 1;
-      *binding_offset = *binding_offset + 1;
+   *block_index = *block_index + 1;
+   *binding_offset = *binding_offset + 1;
 }
 
 /* This function resizes the array types of the block so that later we can use
