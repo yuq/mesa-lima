@@ -596,6 +596,9 @@ brw_nir_apply_sampler_key(nir_shader *nir,
          tex_options.swizzles[s][c] = GET_SWZ(key_tex->swizzles[s], c);
    }
 
+   /* Prior to Haswell, we have to lower gradients on shadow samplers */
+   tex_options.lower_txd_shadow = devinfo->gen < 8 && !devinfo->is_haswell;
+
    tex_options.lower_y_uv_external = key_tex->y_uv_image_mask;
    tex_options.lower_y_u_v_external = key_tex->y_u_v_image_mask;
    tex_options.lower_yx_xuxv_external = key_tex->yx_xuxv_image_mask;
