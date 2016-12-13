@@ -122,7 +122,7 @@ brw_compiler_create(void *mem_ctx, const struct gen_device_info *devinfo)
 
    /* We want the GLSL compiler to emit code that uses condition codes */
    for (int i = 0; i < MESA_SHADER_STAGES; i++) {
-      compiler->glsl_compiler_options[i].MaxUnrollIterations = 32;
+      compiler->glsl_compiler_options[i].MaxUnrollIterations = 0;
       compiler->glsl_compiler_options[i].MaxIfDepth =
          devinfo->gen < 6 ? 16 : UINT_MAX;
 
