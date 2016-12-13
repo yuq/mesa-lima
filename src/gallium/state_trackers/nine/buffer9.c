@@ -225,7 +225,11 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
      * D3DERR_WASSTILLDRAWING if the resource is in use, except for DYNAMIC.
      * Our tests: some apps do use both DISCARD and NOOVERWRITE at the same
      * time. On windows it seems to return different pointer, thus indicating
-     * DISCARD is taken into account. */
+     * DISCARD is taken into account.
+     * Our tests: SYSTEMMEM doesn't DISCARD */
+
+    if (This->base.pool == D3DPOOL_SYSTEMMEM)
+        Flags &= ~D3DLOCK_DISCARD;
 
     if (Flags & D3DLOCK_DISCARD)
         usage = PIPE_TRANSFER_WRITE | PIPE_TRANSFER_DISCARD_WHOLE_RESOURCE;
