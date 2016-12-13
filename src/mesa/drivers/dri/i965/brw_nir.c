@@ -396,8 +396,17 @@ brw_nir_lower_cs_shared(nir_shader *nir)
 #define OPT_V(pass, ...) NIR_PASS_V(nir, pass, ##__VA_ARGS__)
 
 static nir_shader *
-nir_optimize(nir_shader *nir, bool is_scalar)
+nir_optimize(nir_shader *nir, const struct brw_compiler *compiler,
+             bool is_scalar)
 {
+   nir_variable_mode indirect_mask = 0;
+   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectInput)
+      indirect_mask |= nir_var_shader_in;
+   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectOutput)
+      indirect_mask |= nir_var_shader_out;
+   if (compiler->glsl_compiler_options[nir->stage].EmitNoIndirectTemp)
+      indirect_mask |= nir_var_local;
+
    bool progress;
    do {
       progress = false;
@@ -420,6 +429,9 @@ nir_optimize(nir_shader *nir, bool is_scalar)
       OPT(nir_opt_algebraic);
       OPT(nir_opt_constant_folding);
       OPT(nir_opt_dead_cf);
+      if (nir->options->max_unroll_iterations != 0) {
+         OPT(nir_opt_loop_unroll, indirect_mask);
+      }
       OPT(nir_opt_remove_phis);
       OPT(nir_opt_undef);
       OPT_V(nir_lower_doubles, nir_lower_drcp |
@@ -477,7 +489,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 
    OPT(nir_split_var_copies);
 
-   nir = nir_optimize(nir, is_scalar);
+   nir = nir_optimize(nir, compiler, is_scalar);
 
    if (is_scalar) {
       OPT_V(nir_lower_load_const_to_scalar);
@@ -499,7 +511,7 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
    nir_lower_indirect_derefs(nir, indirect_mask);
 
    /* Get rid of split copies */
-   nir = nir_optimize(nir, is_scalar);
+   nir = nir_optimize(nir, compiler, is_scalar);
 
    OPT(nir_remove_dead_variables, nir_var_local);
 
@@ -524,7 +536,7 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
    bool progress; /* Written by OPT and OPT_V */
    (void)progress;
 
-   nir = nir_optimize(nir, is_scalar);
+   nir = nir_optimize(nir, compiler, is_scalar);
 
    if (devinfo->gen >= 6) {
       /* Try and fuse multiply-adds */
@@ -616,7 +628,7 @@ brw_nir_apply_sampler_key(nir_shader *nir,
 
    if (nir_lower_tex(nir, &tex_options)) {
       nir_validate_shader(nir);
-      nir = nir_optimize(nir, is_scalar);
+      nir = nir_optimize(nir, compiler, is_scalar);
    }
 
    return nir;
