@@ -263,14 +263,8 @@ struct radv_physical_device {
 
 	struct radeon_winsys *ws;
 	struct radeon_info rad_info;
-	uint32_t                                    chipset_id;
 	char                                        path[20];
 	const char *                                name;
-	uint64_t                                    aperture_size;
-	int                                         cmd_parser_version;
-	uint32_t                    pci_vendor_id;
-	uint32_t                    pci_device_id;
-
 	uint8_t                                     uuid[VK_UUID_SIZE];
 
 	struct wsi_device                       wsi_device;
