@@ -393,7 +393,7 @@ nir_if_create(nir_shader *shader)
 nir_loop *
 nir_loop_create(nir_shader *shader)
 {
-   nir_loop *loop = ralloc(shader, nir_loop);
+   nir_loop *loop = rzalloc(shader, nir_loop);
 
    cf_init(&loop->cf_node, nir_cf_node_loop);
 

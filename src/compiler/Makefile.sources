@@ -195,6 +195,8 @@ NIR_FILES = \
 	nir/nir_intrinsics.c \
 	nir/nir_intrinsics.h \
 	nir/nir_liveness.c \
+	nir/nir_loop_analyze.c \
+	nir/nir_loop_analyze.h \
 	nir/nir_lower_alu_to_scalar.c \
 	nir/nir_lower_atomics.c \
 	nir/nir_lower_bitmap.c \
