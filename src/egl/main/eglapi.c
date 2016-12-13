@@ -856,7 +856,7 @@ _eglCreateWindowSurfaceCommon(_EGLDisplay *disp, EGLConfig config,
       RETURN_EGL_ERROR(disp, EGL_BAD_NATIVE_WINDOW, EGL_NO_SURFACE);
 
 #ifdef HAVE_SURFACELESS_PLATFORM
-   if (disp->Platform == _EGL_PLATFORM_SURFACELESS) {
+   if (disp && disp->Platform == _EGL_PLATFORM_SURFACELESS) {
       /* From the EGL_MESA_platform_surfaceless spec (v1):
        *
        *    eglCreatePlatformWindowSurface fails when called with a <display>
@@ -977,7 +977,7 @@ _eglCreatePixmapSurfaceCommon(_EGLDisplay *disp, EGLConfig config,
    EGLSurface ret;
 
 #if HAVE_SURFACELESS_PLATFORM
-   if (disp->Platform == _EGL_PLATFORM_SURFACELESS) {
+   if (disp && disp->Platform == _EGL_PLATFORM_SURFACELESS) {
       /* From the EGL_MESA_platform_surfaceless spec (v1):
        *
        *   [Like eglCreatePlatformWindowSurface,] eglCreatePlatformPixmapSurface
