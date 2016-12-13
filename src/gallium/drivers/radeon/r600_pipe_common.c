@@ -892,23 +892,17 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_TONGA: return "tonga";
 	case CHIP_ICELAND: return "iceland";
 	case CHIP_CARRIZO: return "carrizo";
-#if HAVE_LLVM <= 0x0307
-	case CHIP_FIJI: return "tonga";
-	case CHIP_STONEY: return "carrizo";
-#else
-	case CHIP_FIJI: return "fiji";
-	case CHIP_STONEY: return "stoney";
-#endif
-#if HAVE_LLVM <= 0x0308
-	case CHIP_POLARIS10: return "tonga";
-	case CHIP_POLARIS11: return "tonga";
-	case CHIP_POLARIS12: return "tonga";
-#else
-	case CHIP_POLARIS10: return "polaris10";
-	case CHIP_POLARIS11: return "polaris11";
-	case CHIP_POLARIS12: return "polaris11";
-#endif
-	default: return "";
+	case CHIP_FIJI:
+		return HAVE_LLVM >= 0x0308 ? "fiji" : "carrizo";
+	case CHIP_STONEY:
+		return HAVE_LLVM >= 0x0308 ? "stoney" : "carrizo";
+	case CHIP_POLARIS10:
+		return HAVE_LLVM >= 0x0309 ? "polaris10" : "carrizo";
+	case CHIP_POLARIS11:
+	case CHIP_POLARIS12: /* same as polaris11 */
+		return HAVE_LLVM >= 0x0309 ? "polaris11" : "carrizo";
+	default:
+		return "";
 	}
 }
 
