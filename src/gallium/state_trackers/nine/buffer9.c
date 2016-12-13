@@ -244,6 +244,9 @@ NineBuffer9_Lock( struct NineBuffer9 *This,
                     nine_csmt_process(This->base.base.device);
             } else
                 u_box_union_2d(&This->managed.dirty_box, &This->managed.dirty_box, &box);
+            /* Tests trying to draw while the buffer is locked show that
+             * MANAGED buffers are made dirty at Lock time */
+            BASEBUF_REGISTER_UPDATE(This);
         }
         *ppbData = (char *)This->managed.data + OffsetToLock;
         DBG("returning pointer %p\n", *ppbData);
@@ -412,8 +415,6 @@ NineBuffer9_Unlock( struct NineBuffer9 *This )
                 nine_context_get_pipe_release(device);
         } else if (This->maps[This->nmaps].should_destroy_buf)
             nine_upload_release_buffer(device->buffer_upload, This->maps[This->nmaps].buf);
-    } else {
-        BASEBUF_REGISTER_UPDATE(This);
     }
     return D3D_OK;
 }
