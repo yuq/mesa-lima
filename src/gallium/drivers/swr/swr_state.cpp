@@ -372,10 +372,9 @@ swr_delete_vs_state(struct pipe_context *pipe, void *vs)
    struct swr_vertex_shader *swr_vs = (swr_vertex_shader *)vs;
    FREE((void *)swr_vs->pipe.tokens);
    struct swr_screen *screen = swr_screen(pipe->screen);
-   if (!swr_is_fence_pending(screen->flush_fence))
-      swr_fence_submit(swr_context(pipe), screen->flush_fence);
-   swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
-   delete swr_vs;
+
+   /* Defer deletion of vs state */
+   swr_fence_work_delete_vs(screen->flush_fence, swr_vs);
 }
 
 static void *
@@ -412,10 +411,9 @@ swr_delete_fs_state(struct pipe_context *pipe, void *fs)
    struct swr_fragment_shader *swr_fs = (swr_fragment_shader *)fs;
    FREE((void *)swr_fs->pipe.tokens);
    struct swr_screen *screen = swr_screen(pipe->screen);
-   if (!swr_is_fence_pending(screen->flush_fence))
-      swr_fence_submit(swr_context(pipe), screen->flush_fence);
-   swr_fence_finish(pipe->screen, NULL, screen->flush_fence, 0);
-   delete swr_fs;
+
+   /* Defer deleton of fs state */
+   swr_fence_work_delete_fs(screen->flush_fence, swr_fs);
 }
 
 
@@ -912,7 +910,7 @@ swr_update_derived(struct pipe_context *pipe,
                    const struct pipe_draw_info *p_draw_info)
 {
    struct swr_context *ctx = swr_context(pipe);
-   struct swr_screen *screen = swr_screen(ctx->pipe.screen);
+   struct swr_screen *screen = swr_screen(pipe->screen);
 
    /* Update screen->pipe to current pipe context. */
    if (screen->pipe != pipe)

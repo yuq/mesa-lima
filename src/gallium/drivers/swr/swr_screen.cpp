@@ -869,29 +869,28 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
    struct swr_resource *spr = swr_resource(pt);
    struct pipe_context *pipe = screen->pipe;
 
-   /* Only wait on fence if the resource is being used */
-   if (pipe && spr->status) {
-      /* But, if there's no fence pending, submit one.
-       * XXX: Remove once draw timestamps are implmented. */
-      if (!swr_is_fence_pending(screen->flush_fence))
-         swr_fence_submit(swr_context(pipe), screen->flush_fence);
-
-      swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
-      swr_resource_unused(pt);
-   }
-
-   /*
-    * Free resource primary surface.  If resource is display target, winsys
-    * manages the buffer and will free it on displaytarget_destroy.
-    */
    if (spr->display_target) {
-      /* display target */
+      /* If resource is display target, winsys manages the buffer and will
+       * free it on displaytarget_destroy. */
+      swr_fence_finish(p_screen, NULL, screen->flush_fence, 0);
+
       struct sw_winsys *winsys = screen->winsys;
       winsys->displaytarget_destroy(winsys, spr->display_target);
-   } else
-      AlignedFree(spr->swr.pBaseAddress);
 
-   AlignedFree(spr->secondary.pBaseAddress);
+   } else {
+      /* For regular resources, if the resource is being used, defer deletion
+       * (use aligned-free) */
+      if (pipe && spr->status) {
+         swr_resource_unused(pt);
+         swr_fence_work_free(screen->flush_fence,
+                             spr->swr.pBaseAddress, true);
+         swr_fence_work_free(screen->flush_fence, 
+                             spr->secondary.pBaseAddress, true);
+      } else {
+         AlignedFree(spr->swr.pBaseAddress);
+         AlignedFree(spr->secondary.pBaseAddress);
+      }
+   }
 
    FREE(spr);
 }
