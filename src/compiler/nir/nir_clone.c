@@ -603,12 +603,17 @@ fixup_phi_srcs(clone_state *state)
 {
    list_for_each_entry_safe(nir_phi_src, src, &state->phi_srcs, src.use_link) {
       src->pred = remap_local(state, src->pred);
-      assert(src->src.is_ssa);
-      src->src.ssa = remap_local(state, src->src.ssa);
 
-      /* Remove from this list and place in the uses of the SSA def */
+      /* Remove from this list */
       list_del(&src->src.use_link);
-      list_addtail(&src->src.use_link, &src->src.ssa->uses);
+
+      if (src->src.is_ssa) {
+         src->src.ssa = remap_local(state, src->src.ssa);
+         list_addtail(&src->src.use_link, &src->src.ssa->uses);
+      } else {
+         src->src.reg.reg = remap_reg(state, src->src.reg.reg);
+         list_addtail(&src->src.use_link, &src->src.reg.reg->uses);
+      }
    }
    assert(list_empty(&state->phi_srcs));
 }
