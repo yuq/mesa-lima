@@ -979,12 +979,18 @@ llvm_set_environment_variables() {
         LLVM_INCLUDEDIR=`$LLVM_CONFIG --includedir`
         LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
 
+        # We need to respect LLVM_CFLAGS when compiling LLVM headers.
+        save_CFLAGS="$CFLAGS"
+        CFLAGS="$CFLAGS $LLVM_CFLAGS"
+
         AC_COMPUTE_INT([LLVM_VERSION_MAJOR], [LLVM_VERSION_MAJOR],
             [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
         AC_COMPUTE_INT([LLVM_VERSION_MINOR], [LLVM_VERSION_MINOR],
             [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
         AC_COMPUTE_INT([LLVM_VERSION_PATCH], [LLVM_VERSION_PATCH],
             [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
+
+        CFLAGS="$save_CFLAGS"
 
         # Only needed for LLVM < 3.6.0
         if test -z "$LLVM_VERSION_PATCH"; then
