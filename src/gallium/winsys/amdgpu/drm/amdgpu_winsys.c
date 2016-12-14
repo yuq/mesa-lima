@@ -232,6 +232,13 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
       goto fail;
    }
 
+   /* LLVM 5.0 is required for GFX9. */
+   if (ws->info.chip_class >= GFX9 && HAVE_LLVM < 0x0500) {
+      fprintf(stderr, "amdgpu: LLVM 5.0 is required, got LLVM %i.%i\n",
+              HAVE_LLVM >> 8, HAVE_LLVM & 255);
+      goto fail;
+   }
+
    /* family and rev_id are for addrlib */
    switch (ws->info.family) {
    case CHIP_TAHITI:

@@ -952,6 +952,8 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12: /* same as polaris11 */
 		return HAVE_LLVM >= 0x0309 ? "polaris11" : "carrizo";
+	case CHIP_VEGA10:
+		return "gfx900";
 	default:
 		return "";
 	}
