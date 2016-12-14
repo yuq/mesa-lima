@@ -2342,6 +2342,8 @@ nir_src *nir_get_io_vertex_index_src(nir_intrinsic_instr *instr);
 bool nir_is_per_vertex_io(nir_variable *var, gl_shader_stage stage);
 
 void nir_lower_io_types(nir_shader *shader);
+void nir_lower_regs_to_ssa_impl(nir_function_impl *impl);
+void nir_lower_regs_to_ssa(nir_shader *shader);
 void nir_lower_vars_to_ssa(nir_shader *shader);
 
 bool nir_remove_dead_variables(nir_shader *shader, nir_variable_mode modes);
@@ -2519,9 +2521,6 @@ void nir_loop_analyze_impl(nir_function_impl *impl,
                            nir_variable_mode indirect_mask);
 
 bool nir_ssa_defs_interfere(nir_ssa_def *a, nir_ssa_def *b);
-
-void nir_convert_to_ssa_impl(nir_function_impl *impl);
-void nir_convert_to_ssa(nir_shader *shader);
 
 bool nir_repair_ssa_impl(nir_function_impl *impl);
 bool nir_repair_ssa(nir_shader *shader);

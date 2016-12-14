@@ -247,7 +247,7 @@ nir_opt_if(nir_shader *shader)
           * need to convert registers back into SSA defs and clean up SSA defs
           * that don't dominate their uses.
           */
-         nir_convert_to_ssa_impl(function->impl);
+         nir_lower_regs_to_ssa_impl(function->impl);
          progress = true;
       }
    }

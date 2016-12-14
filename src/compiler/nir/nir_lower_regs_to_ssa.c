@@ -511,7 +511,7 @@ destroy_rewrite_state(rewrite_state *state)
 }
 
 void
-nir_convert_to_ssa_impl(nir_function_impl *impl)
+nir_lower_regs_to_ssa_impl(nir_function_impl *impl)
 {
    nir_metadata_require(impl, nir_metadata_dominance);
 
@@ -531,10 +531,10 @@ nir_convert_to_ssa_impl(nir_function_impl *impl)
 }
 
 void
-nir_convert_to_ssa(nir_shader *shader)
+nir_lower_regs_to_ssa(nir_shader *shader)
 {
    nir_foreach_function(function, shader) {
       if (function->impl)
-         nir_convert_to_ssa_impl(function->impl);
+         nir_lower_regs_to_ssa_impl(function->impl);
    }
 }
