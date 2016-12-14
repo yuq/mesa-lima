@@ -56,7 +56,15 @@ ir_array_refcount_visitor::~ir_array_refcount_visitor()
 ir_array_refcount_entry::ir_array_refcount_entry(ir_variable *var)
    : var(var), is_referenced(false)
 {
-   /* empty */
+   num_bits = MAX2(1, var->type->arrays_of_arrays_size());
+   bits = new BITSET_WORD[BITSET_WORDS(num_bits)];
+   memset(bits, 0, BITSET_WORDS(num_bits) * sizeof(bits[0]));
+}
+
+
+ir_array_refcount_entry::~ir_array_refcount_entry()
+{
+   delete [] bits;
 }
 
 

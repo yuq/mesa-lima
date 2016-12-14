@@ -30,16 +30,40 @@
 #include "ir.h"
 #include "ir_visitor.h"
 #include "compiler/glsl_types.h"
+#include "util/bitset.h"
 
 class ir_array_refcount_entry
 {
 public:
    ir_array_refcount_entry(ir_variable *var);
+   ~ir_array_refcount_entry();
 
    ir_variable *var; /* The key: the variable's pointer. */
 
    /** Has the variable been referenced? */
    bool is_referenced;
+
+   /** Has a linearized array index been referenced? */
+   bool is_linearized_index_referenced(unsigned linearized_index) const
+   {
+      assert(bits != 0);
+      assert(linearized_index <= num_bits);
+
+      return BITSET_TEST(bits, linearized_index);
+   }
+
+private:
+   /** Set of bit-flags to note which array elements have been accessed. */
+   BITSET_WORD *bits;
+
+   /**
+    * Total number of bits referenced by \c bits.
+    *
+    * Also the total number of array(s-of-arrays) elements of \c var.
+    */
+   unsigned num_bits;
+
+   friend class array_refcount_test;
 };
 
 class ir_array_refcount_visitor : public ir_hierarchical_visitor {
