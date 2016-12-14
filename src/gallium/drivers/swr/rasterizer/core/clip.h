@@ -388,6 +388,7 @@ public:
             // so that the binner knows to bloat wide points later
             if (pa.binTopology == TOP_POINT_LIST)
                 clipTopology = TOP_POINT_LIST;
+
         }
         else if (NumVertsPerPrim == 2)
         {
@@ -399,7 +400,6 @@ public:
             SWR_ASSERT(0 && "Unexpected points in clipper.");
         }
         
-
         uint32_t* pVertexCount = (uint32_t*)&vNumClippedVerts;
         uint32_t* pPrimitiveId = (uint32_t*)&vPrimId;
         uint32_t* pViewportIdx = (uint32_t*)&vViewportIdx;
@@ -522,7 +522,6 @@ public:
             pfnBinner = GetBinTrianglesFunc((pa.pDC->pState->state.rastState.conservativeRast > 0));
             break;
         };
-
 
         // update clipper invocations pipeline stat
         uint32_t numInvoc = _mm_popcnt_u32(primMask);
