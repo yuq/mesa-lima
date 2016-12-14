@@ -32,6 +32,23 @@
 #include "compiler/glsl_types.h"
 #include "util/bitset.h"
 
+/**
+ * Describes an access of an array element or an access of the whole array
+ */
+struct array_deref_range {
+   /**
+    * Index that was accessed.
+    *
+    * All valid array indices are less than the size of the array.  If index
+    * is equal to the size of the array, this means the entire array has been
+    * accessed (e.g., due to use of a non-constant index).
+    */
+   unsigned index;
+
+   /** Size of the array.  Used for offset calculations. */
+   unsigned size;
+};
+
 class ir_array_refcount_entry
 {
 public:
@@ -86,4 +103,22 @@ public:
    struct hash_table *ht;
 
    void *mem_ctx;
+
+private:
+   /** Get an array_deref_range element from private tracking. */
+   array_deref_range *get_array_deref();
+
+   /**
+    * \name array_deref_range tracking
+    */
+   /*@{*/
+   /** Currently allocated block of derefs. */
+   array_deref_range *derefs;
+
+   /** Number of derefs used in current processing. */
+   unsigned num_derefs;
+
+   /** Size of the derefs buffer in bytes. */
+   unsigned derefs_size;
+   /*@}*/
 };

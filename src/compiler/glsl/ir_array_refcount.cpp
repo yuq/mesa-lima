@@ -34,6 +34,7 @@
 #include "util/hash_table.h"
 
 ir_array_refcount_visitor::ir_array_refcount_visitor()
+   : derefs(0), num_derefs(0), derefs_size(0)
 {
    this->mem_ctx = ralloc_context(NULL);
    this->ht = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
@@ -81,6 +82,26 @@ ir_array_refcount_visitor::get_variable_entry(ir_variable *var)
    _mesa_hash_table_insert(this->ht, var, entry);
 
    return entry;
+}
+
+
+array_deref_range *
+ir_array_refcount_visitor::get_array_deref()
+{
+   if ((num_derefs + 1) * sizeof(array_deref_range) > derefs_size) {
+      void *ptr = reralloc_size(mem_ctx, derefs, derefs_size + 4096);
+
+      if (ptr == NULL)
+         return NULL;
+
+      derefs_size += 4096;
+      derefs = (array_deref_range *)ptr;
+   }
+
+   array_deref_range *d = &derefs[num_derefs];
+   num_derefs++;
+
+   return d;
 }
 
 
