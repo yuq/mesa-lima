@@ -905,7 +905,9 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader,
          shader->UniformBlocks : shader->ShaderStorageBlocks;
 
       if (var->is_interface_instance()) {
-         if (variable_is_referenced(v, var)) {
+         const ir_array_refcount_entry *const entry = v.get_variable_entry(var);
+
+         if (entry->is_referenced) {
             /* Since this is an interface instance, the instance type will be
              * same as the array-stripped variable type.  If the variable type
              * is an array, then the block names will be suffixed with [0]
@@ -931,7 +933,9 @@ link_update_uniform_buffer_variables(struct gl_linked_shader *shader,
                 * be an array of instances, and all elements of the array need
                 * to be marked as referenced.
                 */
-               if (strncmp(begin, var->get_interface_type()->name, len) == 0) {
+               if (strncmp(begin, var->get_interface_type()->name, len) == 0 &&
+                   (!var->type->is_array() ||
+                    entry->is_linearized_index_referenced(blks[i]->linearized_array_index))) {
                   blks[i]->stageref |= 1U << stage;
                }
             }
