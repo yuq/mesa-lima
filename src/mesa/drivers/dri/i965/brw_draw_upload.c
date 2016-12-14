@@ -570,8 +570,7 @@ brw_prepare_vertices(struct brw_context *brw)
          first - DIV_ROUND_UP(_mesa_bitcount_64(vs_prog_data->double_inputs_read &
                                                 BITFIELD64_MASK(first)), 2);
       struct brw_vertex_element *input = &brw->vb.inputs[index];
-      input->is_dual_slot = brw->gen >= 8 &&
-         (vs_prog_data->double_inputs_read & BITFIELD64_BIT(first)) != 0;
+      input->is_dual_slot = (vs_prog_data->double_inputs_read & BITFIELD64_BIT(first)) != 0;
       vs_inputs &= ~BITFIELD64_BIT(first);
       if (input->is_dual_slot)
          vs_inputs &= ~BITFIELD64_BIT(first + 1);
