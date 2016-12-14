@@ -349,7 +349,8 @@ replace_gradient_with_lod(nir_builder *b, nir_ssa_def *lod, nir_tex_instr *tex)
 
    assert(src_num == num_srcs);
 
-   nir_ssa_dest_init(&txl->instr, &txl->dest, 4, 32, NULL);
+   nir_ssa_dest_init(&txl->instr, &txl->dest,
+                     tex->dest.ssa.num_components, 32, NULL);
    nir_builder_instr_insert(b, &txl->instr);
 
    nir_ssa_def_rewrite_uses(&tex->dest.ssa, nir_src_for_ssa(&txl->dest.ssa));
