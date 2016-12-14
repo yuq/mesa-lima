@@ -373,6 +373,11 @@ typedef struct nir_register {
    struct list_head if_uses;
 } nir_register;
 
+#define nir_foreach_register(reg, reg_list) \
+   foreach_list_typed(nir_register, reg, node, reg_list)
+#define nir_foreach_register_safe(reg, reg_list) \
+   foreach_list_typed_safe(nir_register, reg, node, reg_list)
+
 typedef enum {
    nir_instr_type_alu,
    nir_instr_type_call,
