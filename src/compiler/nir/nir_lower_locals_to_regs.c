@@ -35,12 +35,6 @@ struct locals_to_regs_state {
    /* A hash table mapping derefs to registers */
    struct hash_table *regs_table;
 
-   /* A growing array of derefs that we have encountered.  There is exactly
-    * one element of this array per element in the hash table.  This is
-    * used to make adding register initialization code deterministic.
-    */
-   nir_array derefs_array;
-
    bool progress;
 };
 
@@ -124,7 +118,6 @@ get_reg_for_deref(nir_deref_var *deref, struct locals_to_regs_state *state)
    reg->bit_size = glsl_get_bit_size(tail->type);
 
    _mesa_hash_table_insert_pre_hashed(state->regs_table, hash, deref, reg);
-   nir_array_add(&state->derefs_array, nir_deref_var *, deref);
 
    return reg;
 }
@@ -280,7 +273,6 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
    state.impl = impl;
    state.progress = false;
    state.regs_table = _mesa_hash_table_create(NULL, hash_deref, derefs_equal);
-   nir_array_init(&state.derefs_array, NULL);
 
    nir_metadata_require(impl, nir_metadata_dominance);
 
@@ -291,7 +283,6 @@ nir_lower_locals_to_regs_impl(nir_function_impl *impl)
    nir_metadata_preserve(impl, nir_metadata_block_index |
                                nir_metadata_dominance);
 
-   nir_array_fini(&state.derefs_array);
    _mesa_hash_table_destroy(state.regs_table, NULL);
 
    return state.progress;
