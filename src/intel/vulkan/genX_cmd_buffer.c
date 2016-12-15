@@ -311,11 +311,21 @@ need_input_attachment_state(const struct anv_render_pass_attachment *att)
 }
 
 static enum isl_aux_usage
-layout_to_hiz_usage(VkImageLayout layout)
+layout_to_hiz_usage(VkImageLayout layout, uint8_t samples)
 {
    switch (layout) {
    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
       return ISL_AUX_USAGE_HIZ;
+   case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+   case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+      if (anv_can_sample_with_hiz(GEN_GEN, samples))
+         return ISL_AUX_USAGE_HIZ;
+      /* Fall-through */
+   case VK_IMAGE_LAYOUT_GENERAL:
+      /* This buffer could be used as a source or destination in a transfer
+       * operation. Transfer operations current don't perform HiZ-enabled reads
+       * and writes.
+       */
    default:
       return ISL_AUX_USAGE_NONE;
    }
@@ -333,28 +343,48 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
 {
    assert(image);
 
-   if (image->aux_usage != ISL_AUX_USAGE_HIZ)
+   if (image->aux_usage != ISL_AUX_USAGE_HIZ || final_layout == initial_layout)
       return;
 
-   const bool hiz_enabled = layout_to_hiz_usage(initial_layout) ==
+   const bool hiz_enabled = layout_to_hiz_usage(initial_layout, image->samples) ==
                             ISL_AUX_USAGE_HIZ;
-   const bool enable_hiz = layout_to_hiz_usage(final_layout) ==
+   const bool enable_hiz = layout_to_hiz_usage(final_layout, image->samples) ==
                            ISL_AUX_USAGE_HIZ;
 
-   /* We've already initialized the aux HiZ buffer at BindImageMemory time,
-    * so there's no need to perform a HIZ resolve or clear to avoid GPU hangs.
-    * This initial layout indicates that the user doesn't care about the data
-    * that's currently in the buffer, so no resolves are necessary.
-    */
-   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED)
-      return;
-
-   if (hiz_enabled == enable_hiz) {
-      /* The same buffer will be used, no resolves are necessary */
+   enum blorp_hiz_op hiz_op;
+   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
+      /* We've already initialized the aux HiZ buffer at BindImageMemory time,
+       * so there's no need to perform a HIZ resolve or clear to avoid GPU hangs.
+       * This initial layout indicates that the user doesn't care about the data
+       * that's currently in the buffer, so resolves are not necessary except
+       * for the special case noted below.
+       */
+      hiz_op = BLORP_HIZ_OP_NONE;
    } else if (hiz_enabled && !enable_hiz) {
-      anv_gen8_hiz_op_resolve(cmd_buffer, image, BLORP_HIZ_OP_DEPTH_RESOLVE);
+      hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
+   } else if (!hiz_enabled && enable_hiz) {
+      hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
    } else {
-      assert(!hiz_enabled && enable_hiz);
+      assert(hiz_enabled == enable_hiz);
+      /* If the same buffer will be used, no resolves are necessary except for
+       * the special case noted below.
+       */
+      hiz_op = BLORP_HIZ_OP_NONE;
+   }
+
+   if (hiz_op != BLORP_HIZ_OP_NONE)
+      anv_gen8_hiz_op_resolve(cmd_buffer, image, hiz_op);
+
+   /* Images that have sampling with HiZ enabled cause all shader sampling to
+    * load data with the HiZ buffer. Therefore, in the case of transitioning to
+    * the general layout - which currently routes all writes to the depth
+    * buffer - we must ensure that the HiZ buffer remains consistent with the
+    * depth buffer by performing an additional HIZ resolve if the operation
+    * required by this transition was not already a HiZ resolve.
+    */
+   if (final_layout == VK_IMAGE_LAYOUT_GENERAL &&
+       anv_can_sample_with_hiz(GEN_GEN, image->samples) &&
+       hiz_op != BLORP_HIZ_OP_HIZ_RESOLVE) {
       anv_gen8_hiz_op_resolve(cmd_buffer, image, BLORP_HIZ_OP_HIZ_RESOLVE);
    }
 }
@@ -512,7 +542,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          } else {
             if (iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
                state->attachments[i].aux_usage =
-                  layout_to_hiz_usage(att->initial_layout);
+                  layout_to_hiz_usage(att->initial_layout, iview->image->samples);
             } else {
                state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
             }
@@ -2312,7 +2342,8 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer->state.attachments[ds].current_layout =
          cmd_buffer->state.subpass->depth_stencil_layout;
       cmd_buffer->state.attachments[ds].aux_usage =
-         layout_to_hiz_usage(cmd_buffer->state.subpass->depth_stencil_layout);
+         layout_to_hiz_usage(cmd_buffer->state.subpass->depth_stencil_layout,
+                             iview->image->samples);
    }
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
