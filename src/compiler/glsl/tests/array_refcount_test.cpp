@@ -62,6 +62,18 @@ public:
    {
       return entry.num_bits;
    }
+
+   /**
+    * Wrapper to access private member "array_depth" of ir_array_refcount_entry
+    *
+    * The test class is a friend to ir_array_refcount_entry, but the
+    * individual tests are not part of the class.  Since the friendliness of
+    * the test class does not extend to the tests, provide a wrapper.
+    */
+   unsigned get_array_depth(const ir_array_refcount_entry &entry)
+   {
+      return entry.array_depth;
+   }
 };
 
 void
@@ -95,6 +107,7 @@ TEST_F(array_refcount_test, ir_array_refcount_entry_initial_state_for_scalar)
    ASSERT_NE((void *)0, get_bits(entry));
    EXPECT_FALSE(entry.is_referenced);
    EXPECT_EQ(1, get_num_bits(entry));
+   EXPECT_EQ(0, get_array_depth(entry));
    EXPECT_FALSE(entry.is_linearized_index_referenced(0));
 }
 
@@ -108,6 +121,7 @@ TEST_F(array_refcount_test, ir_array_refcount_entry_initial_state_for_vector)
    ASSERT_NE((void *)0, get_bits(entry));
    EXPECT_FALSE(entry.is_referenced);
    EXPECT_EQ(1, get_num_bits(entry));
+   EXPECT_EQ(0, get_array_depth(entry));
    EXPECT_FALSE(entry.is_linearized_index_referenced(0));
 }
 
@@ -121,6 +135,7 @@ TEST_F(array_refcount_test, ir_array_refcount_entry_initial_state_for_matrix)
    ASSERT_NE((void *)0, get_bits(entry));
    EXPECT_FALSE(entry.is_referenced);
    EXPECT_EQ(1, get_num_bits(entry));
+   EXPECT_EQ(0, get_array_depth(entry));
    EXPECT_FALSE(entry.is_linearized_index_referenced(0));
 }
 
@@ -137,7 +152,141 @@ TEST_F(array_refcount_test, ir_array_refcount_entry_initial_state_for_array)
    ASSERT_NE((void *)0, get_bits(entry));
    EXPECT_FALSE(entry.is_referenced);
    EXPECT_EQ(total_elements, get_num_bits(entry));
+   EXPECT_EQ(3, get_array_depth(entry));
 
    for (unsigned i = 0; i < total_elements; i++)
       EXPECT_FALSE(entry.is_linearized_index_referenced(i)) << "index = " << i;
+}
+
+TEST_F(array_refcount_test, mark_array_elements_referenced_simple)
+{
+   ir_variable *const var =
+      new(mem_ctx) ir_variable(array_3_of_array_4_of_array_5_of_vec4,
+                               "a",
+                               ir_var_auto);
+   const unsigned total_elements = var->type->arrays_of_arrays_size();
+
+   ir_array_refcount_entry entry(var);
+
+   static const array_deref_range dr[] = {
+      { 0, 5 }, { 1, 4 }, { 2, 3 }
+   };
+   const unsigned accessed_element = 0 + (1 * 5) + (2 * 4 * 5);
+
+   entry.mark_array_elements_referenced(dr, 3);
+
+   for (unsigned i = 0; i < total_elements; i++)
+      EXPECT_EQ(i == accessed_element, entry.is_linearized_index_referenced(i));
+}
+
+TEST_F(array_refcount_test, mark_array_elements_referenced_whole_first_array)
+{
+   ir_variable *const var =
+      new(mem_ctx) ir_variable(array_3_of_array_4_of_array_5_of_vec4,
+                               "a",
+                               ir_var_auto);
+
+   ir_array_refcount_entry entry(var);
+
+   static const array_deref_range dr[] = {
+      { 0, 5 }, { 1, 4 }, { 3, 3 }
+   };
+
+   entry.mark_array_elements_referenced(dr, 3);
+
+   for (unsigned i = 0; i < 3; i++) {
+      for (unsigned j = 0; j < 4; j++) {
+         for (unsigned k = 0; k < 5; k++) {
+            const bool accessed = (j == 1) && (k == 0);
+            const unsigned linearized_index = k + (j * 5) + (i * 4 * 5);
+
+            EXPECT_EQ(accessed,
+                      entry.is_linearized_index_referenced(linearized_index));
+         }
+      }
+   }
+}
+
+TEST_F(array_refcount_test, mark_array_elements_referenced_whole_second_array)
+{
+   ir_variable *const var =
+      new(mem_ctx) ir_variable(array_3_of_array_4_of_array_5_of_vec4,
+                               "a",
+                               ir_var_auto);
+
+   ir_array_refcount_entry entry(var);
+
+   static const array_deref_range dr[] = {
+      { 0, 5 }, { 4, 4 }, { 1, 3 }
+   };
+
+   entry.mark_array_elements_referenced(dr, 3);
+
+   for (unsigned i = 0; i < 3; i++) {
+      for (unsigned j = 0; j < 4; j++) {
+         for (unsigned k = 0; k < 5; k++) {
+            const bool accessed = (i == 1) && (k == 0);
+            const unsigned linearized_index = k + (j * 5) + (i * 4 * 5);
+
+            EXPECT_EQ(accessed,
+                      entry.is_linearized_index_referenced(linearized_index));
+         }
+      }
+   }
+}
+
+TEST_F(array_refcount_test, mark_array_elements_referenced_whole_third_array)
+{
+   ir_variable *const var =
+      new(mem_ctx) ir_variable(array_3_of_array_4_of_array_5_of_vec4,
+                               "a",
+                               ir_var_auto);
+
+   ir_array_refcount_entry entry(var);
+
+   static const array_deref_range dr[] = {
+      { 5, 5 }, { 2, 4 }, { 1, 3 }
+   };
+
+   entry.mark_array_elements_referenced(dr, 3);
+
+   for (unsigned i = 0; i < 3; i++) {
+      for (unsigned j = 0; j < 4; j++) {
+         for (unsigned k = 0; k < 5; k++) {
+            const bool accessed = (i == 1) && (j == 2);
+            const unsigned linearized_index = k + (j * 5) + (i * 4 * 5);
+
+            EXPECT_EQ(accessed,
+                      entry.is_linearized_index_referenced(linearized_index));
+         }
+      }
+   }
+}
+
+TEST_F(array_refcount_test, mark_array_elements_referenced_whole_first_and_third_arrays)
+{
+   ir_variable *const var =
+      new(mem_ctx) ir_variable(array_3_of_array_4_of_array_5_of_vec4,
+                               "a",
+                               ir_var_auto);
+
+   ir_array_refcount_entry entry(var);
+
+   static const array_deref_range dr[] = {
+      { 5, 5 }, { 3, 4 }, { 3, 3 }
+   };
+
+   entry.mark_array_elements_referenced(dr, 3);
+
+   for (unsigned i = 0; i < 3; i++) {
+      for (unsigned j = 0; j < 4; j++) {
+         for (unsigned k = 0; k < 5; k++) {
+            const bool accessed = (j == 3);
+            const unsigned linearized_index = k + (j * 5) + (i * 4 * 5);
+
+            EXPECT_EQ(accessed,
+                      entry.is_linearized_index_referenced(linearized_index));
+         }
+      }
+   }
 }

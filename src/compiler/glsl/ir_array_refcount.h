@@ -60,6 +60,34 @@ public:
    /** Has the variable been referenced? */
    bool is_referenced;
 
+   /**
+    * Mark a set of array elements as accessed.
+    *
+    * If every \c array_deref_range is for a single index, only a single
+    * element will be marked.  If any \c array_deref_range is for an entire
+    * array-of-, then multiple elements will be marked.
+    *
+    * Items in the \c array_deref_range list appear in least- to
+    * most-significant order.  This is the \b opposite order the indices
+    * appear in the GLSL shader text.  An array access like
+    *
+    *     x = y[1][i][3];
+    *
+    * would appear as
+    *
+    *     { { 3, n }, { m, m }, { 1, p } }
+    *
+    * where n, m, and p are the sizes of the arrays-of-arrays.
+    *
+    * The set of marked array elements can later be queried by
+    * \c ::is_linearized_index_referenced.
+    *
+    * \param dr     List of array_deref_range elements to be processed.
+    * \param count  Number of array_deref_range elements to be processed.
+    */
+   void mark_array_elements_referenced(const array_deref_range *dr,
+                                       unsigned count);
+
    /** Has a linearized array index been referenced? */
    bool is_linearized_index_referenced(unsigned linearized_index) const
    {
@@ -79,6 +107,27 @@ private:
     * Also the total number of array(s-of-arrays) elements of \c var.
     */
    unsigned num_bits;
+
+   /** Count of nested arrays in the type. */
+   unsigned array_depth;
+
+   /**
+    * Recursive part of the public mark_array_elements_referenced method.
+    *
+    * The recursion occurs when an entire array-of- is accessed.  See the
+    * implementation for more details.
+    *
+    * \param dr                List of array_deref_range elements to be
+    *                          processed.
+    * \param count             Number of array_deref_range elements to be
+    *                          processed.
+    * \param scale             Current offset scale.
+    * \param linearized_index  Current accumulated linearized array index.
+    */
+   void mark_array_elements_referenced(const array_deref_range *dr,
+                                       unsigned count,
+                                       unsigned scale,
+                                       unsigned linearized_index);
 
    friend class array_refcount_test;
 };
