@@ -1271,6 +1271,15 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
                 * ANV_HZ_FC_VAL.
                 */
                clear_with_hiz = false;
+            } else if (gen == 8 &&
+                       anv_can_sample_with_hiz(cmd_buffer->device->info.gen,
+                                               iview->image->samples)) {
+               /* Only gen9+ supports returning ANV_HZ_FC_VAL when sampling a
+                * fast-cleared portion of a HiZ buffer. Testing has revealed
+                * that Gen8 only supports returning 0.0f. Gens prior to gen8 do
+                * not support this feature at all.
+                */
+               clear_with_hiz = false;
             }
          }
 
