@@ -310,6 +310,56 @@ need_input_attachment_state(const struct anv_render_pass_attachment *att)
    return vk_format_is_color(att->format) || vk_format_has_depth(att->format);
 }
 
+static enum isl_aux_usage
+layout_to_hiz_usage(VkImageLayout layout)
+{
+   switch (layout) {
+   case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+      return ISL_AUX_USAGE_HIZ;
+   default:
+      return ISL_AUX_USAGE_NONE;
+   }
+}
+
+/* Transitions a HiZ-enabled depth buffer from one layout to another. Unless
+ * the initial layout is undefined, the HiZ buffer and depth buffer will
+ * represent the same data at the end of this operation.
+ */
+static void
+transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
+                        const struct anv_image *image,
+                        VkImageLayout initial_layout,
+                        VkImageLayout final_layout)
+{
+   assert(image);
+
+   if (image->aux_usage != ISL_AUX_USAGE_HIZ)
+      return;
+
+   const bool hiz_enabled = layout_to_hiz_usage(initial_layout) ==
+                            ISL_AUX_USAGE_HIZ;
+   const bool enable_hiz = layout_to_hiz_usage(final_layout) ==
+                           ISL_AUX_USAGE_HIZ;
+
+   /* We've already initialized the aux HiZ buffer at BindImageMemory time,
+    * so there's no need to perform a HIZ resolve or clear to avoid GPU hangs.
+    * This initial layout indicates that the user doesn't care about the data
+    * that's currently in the buffer, so no resolves are necessary.
+    */
+   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED)
+      return;
+
+   if (hiz_enabled == enable_hiz) {
+      /* The same buffer will be used, no resolves are necessary */
+   } else if (hiz_enabled && !enable_hiz) {
+      anv_gen8_hiz_op_resolve(cmd_buffer, image, BLORP_HIZ_OP_DEPTH_RESOLVE);
+   } else {
+      assert(!hiz_enabled && enable_hiz);
+      anv_gen8_hiz_op_resolve(cmd_buffer, image, BLORP_HIZ_OP_HIZ_RESOLVE);
+   }
+}
+
+
 /**
  * Setup anv_cmd_state::attachments for vkCmdBeginRenderPass.
  */
