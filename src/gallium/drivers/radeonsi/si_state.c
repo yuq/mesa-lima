@@ -678,6 +678,15 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 	}
 	total_mask = clipdist_mask | culldist_mask;
 
+	/* Clip distances on points have no effect, so need to be implemented
+	 * as cull distances. This applies for the clipvertex case as well.
+	 *
+	 * Setting this for primitives other than points should have no adverse
+	 * effects.
+	 */
+	clipdist_mask &= rs->clip_plane_enable;
+	culldist_mask |= clipdist_mask;
+
 	misc_vec_ena = info->writes_psize || info->writes_edgeflag ||
 		       info->writes_layer || info->writes_viewport_index;
 
@@ -690,8 +699,7 @@ static void si_emit_clip_regs(struct si_context *sctx, struct r600_atom *atom)
 		S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xF0) != 0) |
 		S_02881C_VS_OUT_MISC_VEC_ENA(misc_vec_ena) |
 		S_02881C_VS_OUT_MISC_SIDE_BUS_ENA(misc_vec_ena) |
-		(rs->clip_plane_enable &
-		 clipdist_mask) | (culldist_mask << 8));
+		clipdist_mask | (culldist_mask << 8));
 	radeon_set_context_reg(cs, R_028810_PA_CL_CLIP_CNTL,
 		rs->pa_cl_clip_cntl |
 		ucp_mask |
