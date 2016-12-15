@@ -140,6 +140,7 @@ public:
    virtual ir_visitor_status visit(ir_dereference_variable *);
 
    virtual ir_visitor_status visit_enter(ir_function_signature *);
+   virtual ir_visitor_status visit_enter(ir_dereference_array *);
 
    /**
     * Find variable in the hash table, and insert it if not present
@@ -156,6 +157,15 @@ public:
 private:
    /** Get an array_deref_range element from private tracking. */
    array_deref_range *get_array_deref();
+
+   /**
+    * Last ir_dereference_array that was visited
+    *
+    * Used to prevent some redundant calculations.
+    *
+    * \sa ::visit_enter(ir_dereference_array *)
+    */
+   ir_dereference_array *last_array_deref;
 
    /**
     * \name array_deref_range tracking

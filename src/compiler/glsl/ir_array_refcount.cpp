@@ -34,7 +34,7 @@
 #include "util/hash_table.h"
 
 ir_array_refcount_visitor::ir_array_refcount_visitor()
-   : derefs(0), num_derefs(0), derefs_size(0)
+   : last_array_deref(0), derefs(0), num_derefs(0), derefs_size(0)
 {
    this->mem_ctx = ralloc_context(NULL);
    this->ht = _mesa_hash_table_create(NULL, _mesa_hash_pointer,
@@ -157,6 +157,77 @@ ir_array_refcount_visitor::get_array_deref()
    num_derefs++;
 
    return d;
+}
+
+ir_visitor_status
+ir_array_refcount_visitor::visit_enter(ir_dereference_array *ir)
+{
+   /* It could also be a vector or a matrix.  Individual elements of vectors
+    * are natrices are not tracked, so bail.
+    */
+   if (!ir->array->type->is_array())
+      return visit_continue;
+
+   /* If this array dereference is a child of an array dereference that was
+    * already visited, just continue on.  Otherwise, for an arrays-of-arrays
+    * dereference like x[1][2][3][4], we'd process the [1][2][3][4] sequence,
+    * the [1][2][3] sequence, the [1][2] sequence, and the [1] sequence.  This
+    * ensures that we only process the full sequence.
+    */
+   if (last_array_deref && last_array_deref->array == ir) {
+      last_array_deref = ir;
+      return visit_continue;
+   }
+
+   last_array_deref = ir;
+
+   num_derefs = 0;
+
+   ir_rvalue *rv = ir;
+   while (rv->ir_type == ir_type_dereference_array) {
+      ir_dereference_array *const deref = rv->as_dereference_array();
+
+      assert(deref != NULL);
+      assert(deref->array->type->is_array());
+
+      ir_rvalue *const array = deref->array;
+      const ir_constant *const idx = deref->array_index->as_constant();
+      array_deref_range *const dr = get_array_deref();
+
+      dr->size = array->type->array_size();
+
+      if (idx != NULL) {
+         dr->index = idx->get_int_component(0);
+      } else {
+         /* An unsized array can occur at the end of an SSBO.  We can't track
+          * accesses to such an array, so bail.
+          */
+         if (array->type->array_size() == 0)
+            return visit_continue;
+
+         dr->index = dr->size;
+      }
+
+      rv = array;
+   }
+
+   ir_dereference_variable *const var_deref = rv->as_dereference_variable();
+
+   /* If the array being dereferenced is not a variable, bail.  At the very
+    * least, ir_constant and ir_dereference_record are possible.
+    */
+   if (var_deref == NULL)
+      return visit_continue;
+
+   ir_array_refcount_entry *const entry =
+      this->get_variable_entry(var_deref->var);
+
+   if (entry == NULL)
+      return visit_stop;
+
+   entry->mark_array_elements_referenced(derefs, num_derefs);
+
+   return visit_continue;
 }
 
 
