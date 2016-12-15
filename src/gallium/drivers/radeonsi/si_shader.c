@@ -5872,8 +5872,6 @@ static void preload_ring_buffers(struct si_shader_context *ctx)
 			assert(stride < (1 << 14));
 
 			num_records = 64;
-			if (ctx->screen->b.chip_class >= VI)
-				num_records *= stride;
 
 			ring = LLVMBuildBitCast(builder, base_ring, v2i64, "");
 			tmp = LLVMBuildExtractElement(builder, ring, uint->zero, "");
