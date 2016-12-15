@@ -70,17 +70,10 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
-         if (inst->dst.is_null() && inst->flags_written()) {
-            if (!(flag_live[0] & inst->flags_written())) {
-               inst->opcode = BRW_OPCODE_NOP;
-               progress = true;
-            }
-         }
-
          if (inst->dst.is_null() &&
              !inst->is_control_flow() &&
              !inst->has_side_effects() &&
-             !inst->flags_written() &&
+             !(flag_live[0] & inst->flags_written()) &&
              !inst->writes_accumulator) {
             inst->opcode = BRW_OPCODE_NOP;
             progress = true;
