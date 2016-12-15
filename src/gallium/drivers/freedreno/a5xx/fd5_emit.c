@@ -122,10 +122,158 @@ fd5_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 	}
 }
 
+/* Border color layout is diff from a4xx/a5xx.. if it turns out to be
+ * the same as a6xx then move this somewhere common ;-)
+ *
+ * Entry layout looks like (total size, 0x60 bytes):
+ *
+ *   offset | description
+ *   -------+-------------
+ *     0x00 | fp32[0]
+ *          | fp32[1]
+ *          | fp32[2]
+ *          | fp32[3]
+ *     0x10 | uint16[0]
+ *          | uint16[1]
+ *          | uint16[2]
+ *          | uint16[3]
+ *     0x18 | int16[0]
+ *          | int16[1]
+ *          | int16[2]
+ *          | int16[3]
+ *     0x20 | fp16[0]
+ *          | fp16[1]
+ *          | fp16[2]
+ *          | fp16[3]
+ *     0x28 | ?? maybe padding ??
+ *     0x30 | uint8[0]
+ *          | uint8[1]
+ *          | uint8[2]
+ *          | uint8[3]
+ *     0x34 | int8[0]
+ *          | int8[1]
+ *          | int8[2]
+ *          | int8[3]
+ *     0x38 | ?? maybe padding ??
+ *
+ * Some uncertainty, because not clear that this actually works properly
+ * with blob, so who knows..
+ */
+
+struct PACKED bcolor_entry {
+	uint32_t fp32[4];
+	uint16_t ui16[4];
+	int16_t  si16[4];
+	uint16_t fp16[4];
+	uint8_t  __pad0[8];
+	uint8_t  ui8[4];
+	int8_t   si8[4];
+	uint8_t  __pad1[40];
+};
+
+#define FD5_BORDER_COLOR_SIZE        0x60
+#define FD5_BORDER_COLOR_UPLOAD_SIZE (2 * PIPE_MAX_SAMPLERS * FD5_BORDER_COLOR_SIZE)
+#define FD5_BORDER_COLOR_OFFSET      8   /* TODO probably should be dynamic */
+
 static void
+setup_border_colors(struct fd_texture_stateobj *tex, struct bcolor_entry *entries)
+{
+	unsigned i, j;
+
+	debug_assert(tex->num_samplers < FD5_BORDER_COLOR_OFFSET);  // TODO
+
+	for (i = 0; i < tex->num_samplers; i++) {
+		struct bcolor_entry *e = &entries[i];
+		struct pipe_sampler_state *sampler = tex->samplers[i];
+		union pipe_color_union *bc;
+
+		if (!sampler)
+			continue;
+
+		bc = &sampler->border_color;
+
+		/*
+		 * XXX HACK ALERT XXX
+		 *
+		 * The border colors need to be swizzled in a particular
+		 * format-dependent order. Even though samplers don't know about
+		 * formats, we can assume that with a GL state tracker, there's a
+		 * 1:1 correspondence between sampler and texture. Take advantage
+		 * of that knowledge.
+		 */
+		if ((i >= tex->num_textures) || !tex->textures[i])
+			continue;
+
+		const struct util_format_description *desc =
+				util_format_description(tex->textures[i]->format);
+
+		for (j = 0; j < 4; j++) {
+			int c = desc->swizzle[j];
+
+			if (c >= 4)
+				continue;
+
+			if (desc->channel[c].pure_integer) {
+				float f = bc->i[c];
+
+				e->fp32[j] = fui(f);
+				e->fp16[j] = util_float_to_half(f);
+				e->ui16[j] = bc->ui[c];
+				e->si16[j] = bc->i[c];
+				e->ui8[j]  = bc->ui[c];
+				e->si8[j]  = bc->i[c];
+			} else {
+				float f = bc->f[c];
+
+				e->fp32[j] = fui(f);
+				e->fp16[j] = util_float_to_half(f);
+				e->ui16[j] = f * 65535.0;
+				e->si16[j] = f * 32767.5;
+				e->ui8[j]  = f * 255.0;
+				e->si8[j]  = f * 128.0;
+			}
+		}
+
+#ifdef DEBUG
+		memset(&e->__pad0, 0, sizeof(e->__pad0));
+		memset(&e->__pad1, 0, sizeof(e->__pad1));
+#endif
+	}
+}
+
+static void
+emit_border_color(struct fd_context *ctx, struct fd_ringbuffer *ring)
+{
+	struct fd5_context *fd5_ctx = fd5_context(ctx);
+	struct bcolor_entry *entries;
+	unsigned off;
+	void *ptr;
+
+	STATIC_ASSERT(sizeof(struct bcolor_entry) == FD5_BORDER_COLOR_SIZE);
+
+	u_upload_alloc(fd5_ctx->border_color_uploader,
+			0, FD5_BORDER_COLOR_UPLOAD_SIZE,
+			FD5_BORDER_COLOR_UPLOAD_SIZE, &off,
+			&fd5_ctx->border_color_buf,
+			&ptr);
+
+	entries = ptr;
+
+	setup_border_colors(&ctx->verttex, &entries[0]);
+	setup_border_colors(&ctx->fragtex, &entries[ctx->verttex.num_samplers]);
+
+	OUT_PKT4(ring, REG_A5XX_TPL1_TP_BORDER_COLOR_BASE_ADDR_LO, 2);
+	OUT_RELOC(ring, fd_resource(fd5_ctx->border_color_buf)->bo, off, 0, 0);
+
+	u_upload_unmap(fd5_ctx->border_color_uploader);
+}
+
+static bool
 emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		enum adreno_state_block sb, struct fd_texture_stateobj *tex)
 {
+	bool needs_border = false;
+	unsigned bcolor_offset = (sb == SB_FRAG_TEX) ? ctx->verttex.num_samplers : 0;
 	unsigned i;
 
 	if (tex->num_samplers > 0) {
@@ -145,8 +293,11 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 					&dummy_sampler;
 			OUT_RING(ring, sampler->texsamp0);
 			OUT_RING(ring, sampler->texsamp1);
-			OUT_RING(ring, sampler->texsamp2);
+			OUT_RING(ring, sampler->texsamp2 |
+					A5XX_TEX_SAMP_2_BCOLOR_OFFSET(bcolor_offset));
 			OUT_RING(ring, sampler->texsamp3);
+
+			needs_border |= sampler->needs_border;
 		}
 	}
 
@@ -188,6 +339,8 @@ emit_textures(struct fd_context *ctx, struct fd_ringbuffer *ring,
 			OUT_RING(ring, view->texconst11);
 		}
 	}
+
+	return needs_border;
 }
 
 void
@@ -241,6 +394,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 	const struct ir3_shader_variant *vp = fd5_emit_get_vp(emit);
 	const struct ir3_shader_variant *fp = fd5_emit_get_fp(emit);
 	uint32_t dirty = emit->dirty;
+	bool needs_border = false;
 
 	emit_marker5(ring, 5);
 
@@ -444,7 +598,7 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_VERTTEX) {
 		if (vp->has_samp) {
-			emit_textures(ctx, ring, SB_VERT_TEX, &ctx->verttex);
+			needs_border |= emit_textures(ctx, ring, SB_VERT_TEX, &ctx->verttex);
 			OUT_PKT4(ring, REG_A5XX_TPL1_VS_TEX_COUNT, 1);
 			OUT_RING(ring, ctx->verttex.num_textures);
 		} else {
@@ -454,13 +608,16 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 
 	if (dirty & FD_DIRTY_FRAGTEX) {
 		if (fp->has_samp) {
-			emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->fragtex);
+			needs_border |= emit_textures(ctx, ring, SB_FRAG_TEX, &ctx->fragtex);
 			OUT_PKT4(ring, REG_A5XX_TPL1_FS_TEX_COUNT, 1);
 			OUT_RING(ring, ctx->fragtex.num_textures);
 		} else {
 			dirty &= ~FD_DIRTY_FRAGTEX;
 		}
 	}
+
+	if (needs_border)
+		emit_border_color(ctx, ring);
 
 	ctx->dirty &= ~dirty;
 }
