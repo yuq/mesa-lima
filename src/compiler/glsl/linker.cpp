@@ -3735,10 +3735,6 @@ add_shader_variable(const struct gl_context *ctx,
                     bool use_implicit_location, int location,
                     const glsl_type *outermost_struct_type = NULL)
 {
-   const bool is_vertex_input =
-      programInterface == GL_PROGRAM_INPUT &&
-      stage_mask == MESA_SHADER_VERTEX;
-
    switch (type->base_type) {
    case GLSL_TYPE_STRUCT: {
       /* The ARB_program_interface_query spec says:
@@ -3764,8 +3760,7 @@ add_shader_variable(const struct gl_context *ctx,
                                   outermost_struct_type))
             return false;
 
-         field_location +=
-            field->type->count_attribute_slots(is_vertex_input);
+         field_location += field->type->count_attribute_slots(false);
       }
       return true;
    }
