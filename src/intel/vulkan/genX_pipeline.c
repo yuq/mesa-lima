@@ -42,9 +42,35 @@ vertex_element_comp_control(enum isl_format format, unsigned comp)
    default: unreachable("Invalid component");
    }
 
+   /*
+    * Take in account hardware restrictions when dealing with 64-bit floats.
+    *
+    * From Broadwell spec, command reference structures, page 586:
+    *  "When SourceElementFormat is set to one of the *64*_PASSTHRU formats,
+    *   64-bit components are stored * in the URB without any conversion. In
+    *   this case, vertex elements must be written as 128 or 256 bits, with
+    *   VFCOMP_STORE_0 being used to pad the output as required. E.g., if
+    *   R64_PASSTHRU is used to copy a 64-bit Red component into the URB,
+    *   Component 1 must be specified as VFCOMP_STORE_0 (with Components 2,3
+    *   set to VFCOMP_NOSTORE) in order to output a 128-bit vertex element, or
+    *   Components 1-3 must be specified as VFCOMP_STORE_0 in order to output
+    *   a 256-bit vertex element. Likewise, use of R64G64B64_PASSTHRU requires
+    *   Component 3 to be specified as VFCOMP_STORE_0 in order to output a
+    *   256-bit vertex element."
+    */
    if (bits) {
       return VFCOMP_STORE_SRC;
-   } else if (comp < 3) {
+   } else if (comp >= 2 &&
+              !isl_format_layouts[format].channels.b.bits &&
+              isl_format_layouts[format].channels.r.type == ISL_RAW) {
+      /* When emitting 64-bit attributes, we need to write either 128 or 256
+       * bit chunks, using VFCOMP_NOSTORE when not writing the chunk, and
+       * VFCOMP_STORE_0 to pad the written chunk */
+      return VFCOMP_NOSTORE;
+   } else if (comp < 3 ||
+              isl_format_layouts[format].channels.r.type == ISL_RAW) {
+      /* Note we need to pad with value 0, not 1, due hardware restrictions
+       * (see comment above) */
       return VFCOMP_STORE_0;
    } else if (isl_format_layouts[format].channels.r.type == ISL_UINT ||
             isl_format_layouts[format].channels.r.type == ISL_SINT) {
@@ -64,8 +90,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 
    /* Pull inputs_read out of the VS prog data */
    const uint64_t inputs_read = vs_prog_data->inputs_read;
+   const uint64_t double_inputs_read = vs_prog_data->double_inputs_read;
    assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
    const uint32_t elements = inputs_read >> VERT_ATTRIB_GENERIC0;
+   const uint32_t elements_double = double_inputs_read >> VERT_ATTRIB_GENERIC0;
 
 #if GEN_GEN >= 8
    /* On BDW+, we only need to allocate space for base ids.  Setting up
@@ -83,13 +111,16 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                                 vs_prog_data->uses_baseinstance;
 #endif
 
-   uint32_t elem_count = __builtin_popcount(elements) + needs_svgs_elem;
-   if (elem_count == 0)
+   uint32_t elem_count = __builtin_popcount(elements) -
+      __builtin_popcount(elements_double) / 2;
+
+   uint32_t total_elems = elem_count + needs_svgs_elem;
+   if (total_elems == 0)
       return;
 
    uint32_t *p;
 
-   const uint32_t num_dwords = 1 + elem_count * 2;
+   const uint32_t num_dwords = 1 + total_elems * 2;
    p = anv_batch_emitn(&pipeline->batch, num_dwords,
                        GENX(3DSTATE_VERTEX_ELEMENTS));
    memset(p + 1, 0, (num_dwords - 1) * 4);
@@ -107,7 +138,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       if ((elements & (1 << desc->location)) == 0)
          continue; /* Binding unused */
 
-      uint32_t slot = __builtin_popcount(elements & ((1 << desc->location) - 1));
+      uint32_t slot =
+         __builtin_popcount(elements & ((1 << desc->location) - 1)) -
+         DIV_ROUND_UP(__builtin_popcount(elements_double &
+                                        ((1 << desc->location) -1)), 2);
 
       struct GENX(VERTEX_ELEMENT_STATE) element = {
          .VertexBufferIndex = desc->binding,
@@ -137,7 +171,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
 #endif
    }
 
-   const uint32_t id_slot = __builtin_popcount(elements);
+   const uint32_t id_slot = elem_count;
    if (needs_svgs_elem) {
       /* From the Broadwell PRM for the 3D_Vertex_Component_Control enum:
        *    "Within a VERTEX_ELEMENT_STATE structure, if a Component

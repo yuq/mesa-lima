@@ -492,19 +492,6 @@ type_size_scalar(const struct glsl_type *type)
    return 0;
 }
 
-/* Attribute arrays are loaded as one vec4 per element (or matrix column),
- * except for double-precision types, which are loaded as one dvec4.
- */
-extern "C" int
-type_size_vs_input(const struct glsl_type *type)
-{
-   if (type->is_double()) {
-      return type_size_dvec4(type);
-   } else {
-      return type_size_vec4(type);
-   }
-}
-
 /**
  * Create a MOV to read the timestamp register.
  *

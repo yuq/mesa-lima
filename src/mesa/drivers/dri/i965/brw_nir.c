@@ -113,9 +113,7 @@ remap_vs_attrs(nir_block *block, shader_info *nir_info)
          int attr = intrin->const_index[0];
          int slot = _mesa_bitcount_64(nir_info->inputs_read &
                                       BITFIELD64_MASK(attr));
-         int dslot = _mesa_bitcount_64(nir_info->double_inputs_read &
-                                       BITFIELD64_MASK(attr));
-         intrin->const_index[0] = 4 * (slot + dslot);
+         intrin->const_index[0] = 4 * slot;
       }
    }
    return true;
@@ -268,7 +266,7 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
     * loaded as one vec4 or dvec4 per element (or matrix column), depending on
     * whether it is a double-precision type or not.
     */
-   nir_lower_io(nir, nir_var_shader_in, type_size_vs_input, 0);
+   nir_lower_io(nir, nir_var_shader_in, type_size_vec4, 0);
 
    /* This pass needs actual constants */
    nir_opt_constant_folding(nir);

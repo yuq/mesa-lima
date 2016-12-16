@@ -129,6 +129,19 @@ private:
 
 } /* end of anonymous namespace */
 
+static void
+nir_remap_attributes(nir_shader *shader)
+{
+   nir_foreach_variable(var, &shader->inputs) {
+      var->data.location += _mesa_bitcount_64(shader->info->double_inputs_read &
+                                              BITFIELD64_MASK(var->data.location));
+   }
+
+   /* Once the remap is done, reset double_inputs_read, so later it will have
+    * which location/slots are doubles */
+   shader->info->double_inputs_read = 0;
+}
+
 nir_shader *
 glsl_to_nir(const struct gl_shader_program *shader_prog,
             gl_shader_stage stage,
@@ -145,6 +158,13 @@ glsl_to_nir(const struct gl_shader_program *shader_prog,
    visit_exec_list(sh->ir, &v1);
 
    nir_lower_constant_initializers(shader, (nir_variable_mode)~0);
+
+   /* Remap the locations to slots so those requiring two slots will occupy
+    * two locations. For instance, if we have in the IR code a dvec3 attr0 in
+    * location 0 and vec4 attr1 in location 1, in NIR attr0 will use
+    * locations/slots 0 and 1, and attr1 will use location/slot 2 */
+   if (shader->stage == MESA_SHADER_VERTEX)
+      nir_remap_attributes(shader);
 
    shader->info->name = ralloc_asprintf(shader, "GLSL%d", shader_prog->Name);
    if (shader_prog->Label)
@@ -320,6 +340,14 @@ nir_visitor::visit(ir_variable *ir)
              (ir->data.location == VARYING_SLOT_TESS_LEVEL_INNER ||
               ir->data.location == VARYING_SLOT_TESS_LEVEL_OUTER)) {
             var->data.compact = ir->type->without_array()->is_scalar();
+         }
+      }
+
+      /* Mark all the locations that require two slots */
+      if (glsl_type_is_dual_slot(glsl_without_array(var->type))) {
+         for (uint i = 0; i < glsl_count_attribute_slots(var->type, true); i++) {
+            uint64_t bitfield = BITFIELD64_BIT(var->data.location + i);
+            shader->info->double_inputs_read |= bitfield;
          }
       }
       break;

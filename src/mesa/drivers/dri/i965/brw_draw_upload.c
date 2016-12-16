@@ -481,11 +481,16 @@ brw_prepare_vertices(struct brw_context *brw)
    /* Accumulate the list of enabled arrays. */
    brw->vb.nr_enabled = 0;
    while (vs_inputs) {
-      GLuint index = ffsll(vs_inputs) - 1;
+      GLuint first = ffsll(vs_inputs) - 1;
+      GLuint index =
+         first - DIV_ROUND_UP(_mesa_bitcount_64(vs_prog_data->double_inputs_read &
+                                                BITFIELD64_MASK(first)), 2);
       struct brw_vertex_element *input = &brw->vb.inputs[index];
       input->is_dual_slot = brw->gen >= 8 &&
-         (vs_prog_data->double_inputs_read & BITFIELD64_BIT(index)) != 0;
-      vs_inputs &= ~BITFIELD64_BIT(index);
+         (vs_prog_data->double_inputs_read & BITFIELD64_BIT(first)) != 0;
+      vs_inputs &= ~BITFIELD64_BIT(first);
+      if (input->is_dual_slot)
+         vs_inputs &= ~BITFIELD64_BIT(first + 1);
       brw->vb.enabled[brw->vb.nr_enabled++] = input;
    }
 
