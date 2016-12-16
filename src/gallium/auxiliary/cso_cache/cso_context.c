@@ -220,18 +220,60 @@ sanitize_hash(struct cso_hash *hash, enum cso_cache_type type,
    int hash_size = cso_hash_size(hash);
    int max_entries = (max_size > hash_size) ? max_size : hash_size;
    int to_remove =  (max_size < max_entries) * max_entries/4;
-   struct cso_hash_iter iter = cso_hash_first_node(hash);
+   struct cso_hash_iter iter;
+   struct cso_sampler **samplers_to_restore = NULL;
+   unsigned to_restore = 0;
+
    if (hash_size > max_size)
       to_remove += hash_size - max_size;
+
+   if (to_remove == 0)
+      return;
+
+   if (type == CSO_SAMPLER) {
+      int i, j;
+
+      samplers_to_restore = MALLOC(PIPE_SHADER_TYPES * PIPE_MAX_SAMPLERS *
+                                   sizeof(*samplers_to_restore));
+
+      /* Temporarily remove currently bound sampler states from the hash
+       * table, to prevent them from being deleted
+       */
+      for (i = 0; i < PIPE_SHADER_TYPES; i++) {
+         for (j = 0; j < ctx->samplers[i].nr_samplers; j++) {
+            struct cso_sampler *sampler = ctx->samplers[i].cso_samplers[j];
+
+            if (sampler && cso_hash_take(hash, sampler->hash_key))
+               samplers_to_restore[to_restore++] = sampler;
+         }
+      }
+   }
+
+   iter = cso_hash_first_node(hash);
    while (to_remove) {
       /*remove elements until we're good */
       /*fixme: currently we pick the nodes to remove at random*/
       void *cso = cso_hash_iter_data(iter);
+
+      if (!cso)
+         break;
+
       if (delete_cso(ctx, cso, type)) {
          iter = cso_hash_erase(hash, iter);
          --to_remove;
       } else
          iter = cso_hash_iter_next(iter);
+   }
+
+   if (type == CSO_SAMPLER) {
+      /* Put currently bound sampler states back into the hash table */
+      while (to_restore--) {
+         struct cso_sampler *sampler = samplers_to_restore[to_restore];
+
+         cso_hash_insert(hash, sampler->hash_key, sampler);
+      }
+
+      FREE(samplers_to_restore);
    }
 }
 
