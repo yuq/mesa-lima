@@ -27,6 +27,7 @@
  */
 
 #include <xf86drm.h>
+#include "vc4_cl_dump.h"
 #include "vc4_context.h"
 #include "util/hash_table.h"
 

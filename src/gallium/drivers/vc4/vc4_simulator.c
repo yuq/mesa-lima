@@ -55,6 +55,7 @@
 #include "util/ralloc.h"
 
 #include "vc4_screen.h"
+#include "vc4_cl_dump.h"
 #include "vc4_context.h"
 #include "kernel/vc4_drv.h"
 #include "vc4_simulator_validate.h"
