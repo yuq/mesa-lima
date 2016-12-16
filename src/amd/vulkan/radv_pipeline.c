@@ -1461,20 +1461,18 @@ VkResult radv_CreateGraphicsPipelines(
 	unsigned i = 0;
 
 	for (; i < count; i++) {
-		result = radv_graphics_pipeline_create(_device,
-						       pipelineCache,
-						       &pCreateInfos[i],
-						       NULL, pAllocator, &pPipelines[i]);
-		if (result != VK_SUCCESS) {
-			for (unsigned j = 0; j < i; j++) {
-				radv_DestroyPipeline(_device, pPipelines[j], pAllocator);
-			}
-
-			return result;
+		VkResult r;
+		r = radv_graphics_pipeline_create(_device,
+						  pipelineCache,
+						  &pCreateInfos[i],
+						  NULL, pAllocator, &pPipelines[i]);
+		if (r != VK_SUCCESS) {
+			result = r;
+			pPipelines[i] = VK_NULL_HANDLE;
 		}
 	}
 
-	return VK_SUCCESS;
+	return result;
 }
 
 static VkResult radv_compute_pipeline_create(
@@ -1525,17 +1523,15 @@ VkResult radv_CreateComputePipelines(
 
 	unsigned i = 0;
 	for (; i < count; i++) {
-		result = radv_compute_pipeline_create(_device, pipelineCache,
-						      &pCreateInfos[i],
-						      pAllocator, &pPipelines[i]);
-		if (result != VK_SUCCESS) {
-			for (unsigned j = 0; j < i; j++) {
-				radv_DestroyPipeline(_device, pPipelines[j], pAllocator);
-			}
-
-			return result;
+		VkResult r;
+		r = radv_compute_pipeline_create(_device, pipelineCache,
+						 &pCreateInfos[i],
+						 pAllocator, &pPipelines[i]);
+		if (r != VK_SUCCESS) {
+			result = r;
+			pPipelines[i] = VK_NULL_HANDLE;
 		}
 	}
 
-	return VK_SUCCESS;
+	return result;
 }
