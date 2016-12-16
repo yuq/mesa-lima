@@ -190,7 +190,8 @@ NVC0LegalizePostRA::NVC0LegalizePostRA(const Program *prog)
    : rZero(NULL),
      carry(NULL),
      pOne(NULL),
-     needTexBar(prog->getTarget()->getChipset() >= 0xe0)
+     needTexBar(prog->getTarget()->getChipset() >= 0xe0 &&
+                prog->getTarget()->getChipset() < 0x110)
 {
 }
 
