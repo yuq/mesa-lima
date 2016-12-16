@@ -1182,6 +1182,7 @@ cso_single_sampler(struct cso_context *ctx, unsigned shader_stage,
          cso->delete_state =
             (cso_state_callback) ctx->pipe->delete_sampler_state;
          cso->context = ctx->pipe;
+         cso->hash_key = hash_key;
 
          iter = cso_insert_state(ctx->cache, hash_key, CSO_SAMPLER, cso);
          if (cso_hash_iter_is_null(iter)) {
