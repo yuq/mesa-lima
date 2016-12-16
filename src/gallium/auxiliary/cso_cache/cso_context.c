@@ -1267,8 +1267,10 @@ cso_save_fragment_samplers(struct cso_context *ctx)
    struct sampler_info *saved = &ctx->fragment_samplers_saved;
 
    saved->nr_samplers = info->nr_samplers;
-   memcpy(saved->cso_samplers, info->cso_samplers, sizeof(info->cso_samplers));
-   memcpy(saved->samplers, info->samplers, sizeof(info->samplers));
+   memcpy(saved->cso_samplers, info->cso_samplers, info->nr_samplers *
+          sizeof(*info->cso_samplers));
+   memcpy(saved->samplers, info->samplers, info->nr_samplers *
+          sizeof(*info->samplers));
 }
 
 
@@ -1277,9 +1279,20 @@ cso_restore_fragment_samplers(struct cso_context *ctx)
 {
    struct sampler_info *info = &ctx->samplers[PIPE_SHADER_FRAGMENT];
    struct sampler_info *saved = &ctx->fragment_samplers_saved;
+   int delta = (int)info->nr_samplers - saved->nr_samplers;
 
-   memcpy(info->cso_samplers, saved->cso_samplers, sizeof(info->cso_samplers));
-   memcpy(info->samplers, saved->samplers, sizeof(info->samplers));
+   memcpy(info->cso_samplers, saved->cso_samplers,
+          saved->nr_samplers * sizeof(*info->cso_samplers));
+   memcpy(info->samplers, saved->samplers,
+          saved->nr_samplers * sizeof(*info->samplers));
+
+   if (delta > 0) {
+      memset(&info->cso_samplers[saved->nr_samplers], 0,
+             delta * sizeof(*info->cso_samplers));
+      memset(&info->samplers[saved->nr_samplers], 0,
+             delta * sizeof(*info->samplers));
+   }
+
    cso_single_sampler_done(ctx, PIPE_SHADER_FRAGMENT);
 }
 
