@@ -387,6 +387,7 @@ void radv_CmdWriteTimestamp(
 {
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	RADV_FROM_HANDLE(radv_query_pool, pool, queryPool);
+	bool mec = radv_cmd_buffer_uses_mec(cmd_buffer);
 	struct radeon_winsys_cs *cs = cmd_buffer->cs;
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(pool->bo);
 	uint64_t avail_va = va + pool->availability_offset + 4 * query;
@@ -394,17 +395,27 @@ void radv_CmdWriteTimestamp(
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, pool->bo, 5);
 
-	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 11);
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
 
-	radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
-	radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
-	radeon_emit(cs, query_va);
-	radeon_emit(cs, (3 << 29) | ((query_va >> 32) & 0xFFFF));
-	radeon_emit(cs, 0);
-	radeon_emit(cs, 0);
+	if (mec) {
+		radeon_emit(cs, PKT3(PKT3_RELEASE_MEM, 5, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
+		radeon_emit(cs, 3 << 29);
+		radeon_emit(cs, query_va);
+		radeon_emit(cs, query_va >> 32);
+		radeon_emit(cs, 0);
+		radeon_emit(cs, 0);
+	} else {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_BOTTOM_OF_PIPE_TS) | EVENT_INDEX(5));
+		radeon_emit(cs, query_va);
+		radeon_emit(cs, (3 << 29) | ((query_va >> 32) & 0xFFFF));
+		radeon_emit(cs, 0);
+		radeon_emit(cs, 0);
+	}
 
 	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
-	radeon_emit(cs, S_370_DST_SEL(V_370_MEMORY_SYNC) |
+	radeon_emit(cs, S_370_DST_SEL(mec ? V_370_MEM_ASYNC : V_370_MEMORY_SYNC) |
 		    S_370_WR_CONFIRM(1) |
 		    S_370_ENGINE_SEL(V_370_ME));
 	radeon_emit(cs, avail_va);
