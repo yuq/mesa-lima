@@ -89,8 +89,9 @@ struct radeon_info {
 	bool                        has_dedicated_vram;
 	bool                     has_virtual_memory;
 	bool                        gfx_ib_pad_with_type2;
-	bool                     has_sdma;
 	bool                     has_uvd;
+	uint32_t                    sdma_rings;
+	uint32_t                    compute_rings;
 	uint32_t                    vce_fw_version;
 	uint32_t                    vce_harvest_config;
 	uint32_t                    clock_crystal_freq;
