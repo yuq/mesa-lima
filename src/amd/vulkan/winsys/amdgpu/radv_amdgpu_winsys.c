@@ -301,8 +301,10 @@ do_winsys_init(struct radv_amdgpu_winsys *ws, int fd)
 	ws->info.num_tile_pipes = radv_cik_get_num_tile_pipes(&ws->amdinfo);
 	ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
 	ws->info.has_virtual_memory = TRUE;
-	ws->info.sdma_rings = util_bitcount(dma.available_rings);
-	ws->info.compute_rings = util_bitcount(compute.available_rings);
+	ws->info.sdma_rings = MIN2(util_bitcount(dma.available_rings),
+	                           MAX_RINGS_PER_TYPE);
+	ws->info.compute_rings = MIN2(util_bitcount(compute.available_rings),
+	                              MAX_RINGS_PER_TYPE);
 
 	/* Get the number of good compute units. */
 	ws->info.num_good_compute_units = 0;

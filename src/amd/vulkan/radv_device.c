@@ -879,7 +879,9 @@ VkResult radv_QueueWaitIdle(
 {
 	RADV_FROM_HANDLE(radv_queue, queue, _queue);
 
-	queue->device->ws->ctx_wait_idle(queue->device->hw_ctx);
+	queue->device->ws->ctx_wait_idle(queue->device->hw_ctx,
+	                                 radv_queue_family_to_ring(queue->queue_family_index),
+	                                 queue->queue_idx);
 	return VK_SUCCESS;
 }
 
@@ -888,7 +890,11 @@ VkResult radv_DeviceWaitIdle(
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
 
-	device->ws->ctx_wait_idle(device->hw_ctx);
+	for (unsigned i = 0; i < RADV_MAX_QUEUE_FAMILIES; i++) {
+		for (unsigned q = 0; q < device->queue_count[i]; q++) {
+			radv_QueueWaitIdle(radv_queue_to_handle(&device->queues[i][q]));
+		}
+	}
 	return VK_SUCCESS;
 }
 
