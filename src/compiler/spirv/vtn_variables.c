@@ -385,6 +385,54 @@ end:
    return offset;
 }
 
+/* Tries to compute the size of an interface block based on the strides and
+ * offsets that are provided to us in the SPIR-V source.
+ */
+static unsigned
+vtn_type_block_size(struct vtn_type *type)
+{
+   enum glsl_base_type base_type = glsl_get_base_type(type->type);
+   switch (base_type) {
+   case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT:
+   case GLSL_TYPE_FLOAT:
+   case GLSL_TYPE_BOOL:
+   case GLSL_TYPE_DOUBLE: {
+      unsigned cols = type->row_major ? glsl_get_vector_elements(type->type) :
+                                        glsl_get_matrix_columns(type->type);
+      if (cols > 1) {
+         assert(type->stride > 0);
+         return type->stride * cols;
+      } else if (base_type == GLSL_TYPE_DOUBLE) {
+         return glsl_get_vector_elements(type->type) * 8;
+      } else {
+         return glsl_get_vector_elements(type->type) * 4;
+      }
+   }
+
+   case GLSL_TYPE_STRUCT:
+   case GLSL_TYPE_INTERFACE: {
+      unsigned size = 0;
+      unsigned num_fields = glsl_get_length(type->type);
+      for (unsigned f = 0; f < num_fields; f++) {
+         unsigned field_end = type->offsets[f] +
+                              vtn_type_block_size(type->members[f]);
+         size = MAX2(size, field_end);
+      }
+      return size;
+   }
+
+   case GLSL_TYPE_ARRAY:
+      assert(type->stride > 0);
+      assert(glsl_get_length(type->type) > 0);
+      return type->stride * glsl_get_length(type->type);
+
+   default:
+      assert(!"Invalid block type");
+      return 0;
+   }
+}
+
 static void
 _vtn_load_store_tail(struct vtn_builder *b, nir_intrinsic_op op, bool load,
                      nir_ssa_def *index, nir_ssa_def *offset,
@@ -1106,54 +1154,6 @@ var_decoration_cb(struct vtn_builder *b, struct vtn_value *val, int member,
                 vtn_var->mode == vtn_variable_mode_ssbo ||
                 vtn_var->mode == vtn_variable_mode_push_constant);
       }
-   }
-}
-
-/* Tries to compute the size of an interface block based on the strides and
- * offsets that are provided to us in the SPIR-V source.
- */
-static unsigned
-vtn_type_block_size(struct vtn_type *type)
-{
-   enum glsl_base_type base_type = glsl_get_base_type(type->type);
-   switch (base_type) {
-   case GLSL_TYPE_UINT:
-   case GLSL_TYPE_INT:
-   case GLSL_TYPE_FLOAT:
-   case GLSL_TYPE_BOOL:
-   case GLSL_TYPE_DOUBLE: {
-      unsigned cols = type->row_major ? glsl_get_vector_elements(type->type) :
-                                        glsl_get_matrix_columns(type->type);
-      if (cols > 1) {
-         assert(type->stride > 0);
-         return type->stride * cols;
-      } else if (base_type == GLSL_TYPE_DOUBLE) {
-         return glsl_get_vector_elements(type->type) * 8;
-      } else {
-         return glsl_get_vector_elements(type->type) * 4;
-      }
-   }
-
-   case GLSL_TYPE_STRUCT:
-   case GLSL_TYPE_INTERFACE: {
-      unsigned size = 0;
-      unsigned num_fields = glsl_get_length(type->type);
-      for (unsigned f = 0; f < num_fields; f++) {
-         unsigned field_end = type->offsets[f] +
-                              vtn_type_block_size(type->members[f]);
-         size = MAX2(size, field_end);
-      }
-      return size;
-   }
-
-   case GLSL_TYPE_ARRAY:
-      assert(type->stride > 0);
-      assert(glsl_get_length(type->type) > 0);
-      return type->stride * glsl_get_length(type->type);
-
-   default:
-      assert(!"Invalid block type");
-      return 0;
    }
 }
 
