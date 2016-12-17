@@ -473,7 +473,7 @@ struct radv_device {
 
 	struct radv_queue *queues[RADV_MAX_QUEUE_FAMILIES];
 	int queue_count[RADV_MAX_QUEUE_FAMILIES];
-	struct radeon_winsys_cs *empty_cs;
+	struct radeon_winsys_cs *empty_cs[RADV_MAX_QUEUE_FAMILIES];
 
 	bool allow_fast_clears;
 	bool allow_dcc;

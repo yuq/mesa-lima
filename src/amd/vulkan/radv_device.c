@@ -710,11 +710,23 @@ VkResult radv_CreateDevice(
 		radv_finishme("DCC fast clears have not been tested\n");
 
 	radv_device_init_msaa(device);
-	device->empty_cs = device->ws->cs_create(device->ws, RING_GFX);
-	radeon_emit(device->empty_cs, PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
-	radeon_emit(device->empty_cs, CONTEXT_CONTROL_LOAD_ENABLE(1));
-	radeon_emit(device->empty_cs, CONTEXT_CONTROL_SHADOW_ENABLE(1));
-	device->ws->cs_finalize(device->empty_cs);
+
+	for (int family = 0; family < RADV_MAX_QUEUE_FAMILIES; ++family) {
+		device->empty_cs[family] = device->ws->cs_create(device->ws, family);
+		switch (family) {
+		case RADV_QUEUE_GENERAL:
+			radeon_emit(device->empty_cs[family], PKT3(PKT3_CONTEXT_CONTROL, 1, 0));
+			radeon_emit(device->empty_cs[family], CONTEXT_CONTROL_LOAD_ENABLE(1));
+			radeon_emit(device->empty_cs[family], CONTEXT_CONTROL_SHADOW_ENABLE(1));
+			break;
+		case RADV_QUEUE_COMPUTE:
+			radeon_emit(device->empty_cs[family], PKT3(PKT3_NOP, 0, 0));
+			radeon_emit(device->empty_cs[family], 0);
+			break;
+		}
+		device->ws->cs_finalize(device->empty_cs[family]);
+	}
+
 	*pDevice = radv_device_to_handle(device);
 	return VK_SUCCESS;
 
@@ -869,7 +881,8 @@ VkResult radv_QueueSubmit(
 
 	if (fence) {
 		if (!submitCount)
-			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, &queue->device->empty_cs,
+			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
+							   &queue->device->empty_cs[queue->queue_family_index],
 							   1, NULL, 0, NULL, 0, false, base_fence);
 
 		fence->submitted = true;
