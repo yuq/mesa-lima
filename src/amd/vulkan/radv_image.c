@@ -698,6 +698,11 @@ radv_image_create(VkDevice _device,
 	image->samples = pCreateInfo->samples;
 	image->tiling = pCreateInfo->tiling;
 	image->usage = pCreateInfo->usage;
+
+	image->exclusive = pCreateInfo->sharingMode == VK_SHARING_MODE_EXCLUSIVE;
+	for (uint32_t i = 0; i < pCreateInfo->queueFamilyIndexCount; ++i)
+		image->queue_family_mask |= 1u << pCreateInfo->pQueueFamilyIndices[i];
+
 	radv_init_surface(device, &image->surface, create_info);
 
 	device->ws->surface_init(device->ws, &image->surface);
@@ -887,10 +892,19 @@ bool radv_layout_can_expclear(const struct radv_image *image,
 }
 
 bool radv_layout_has_cmask(const struct radv_image *image,
-			   VkImageLayout layout)
+			   VkImageLayout layout,
+			   unsigned queue_mask)
 {
 	return (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
-		layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
+		queue_mask == (1u << RADV_QUEUE_GENERAL);
+}
+
+
+unsigned radv_image_queue_family_mask(const struct radv_image *image, int family) {
+	if (image->exclusive)
+		return 1u <<family;
+	return image->queue_family_mask;
 }
 
 VkResult

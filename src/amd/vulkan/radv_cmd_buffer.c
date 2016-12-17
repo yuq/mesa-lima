@@ -36,6 +36,8 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 VkImageLayout src_layout,
 					 VkImageLayout dst_layout,
+					 int src_family,
+					 int dst_family,
 					 VkImageSubresourceRange range,
 					 VkImageAspectFlags pending_clears);
 
@@ -1207,7 +1209,7 @@ static void radv_handle_subpass_image_transition(struct radv_cmd_buffer *cmd_buf
 	radv_handle_image_transition(cmd_buffer,
 				     view->image,
 				     cmd_buffer->state.attachments[idx].current_layout,
-				     att.layout, range,
+				     att.layout, 0, 0, range,
 				     cmd_buffer->state.attachments[idx].pending_clear_aspects);
 
 	cmd_buffer->state.attachments[idx].current_layout = att.layout;
@@ -2386,6 +2388,8 @@ static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffe
 					       struct radv_image *image,
 					       VkImageLayout src_layout,
 					       VkImageLayout dst_layout,
+					       unsigned src_queue_mask,
+					       unsigned dst_queue_mask,
 					       VkImageSubresourceRange range,
 					       VkImageAspectFlags pending_clears)
 {
@@ -2394,8 +2398,8 @@ static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffe
 			radv_initialise_cmask(cmd_buffer, image, 0xccccccccu);
 		else
 			radv_initialise_cmask(cmd_buffer, image, 0xffffffffu);
-	} else if (radv_layout_has_cmask(image, src_layout) &&
-		   !radv_layout_has_cmask(image, dst_layout)) {
+	} else if (radv_layout_has_cmask(image, src_layout, src_queue_mask) &&
+		   !radv_layout_has_cmask(image, dst_layout, dst_queue_mask)) {
 		radv_fast_clear_flush_image_inplace(cmd_buffer, image);
 	}
 }
@@ -2436,16 +2440,40 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 VkImageLayout src_layout,
 					 VkImageLayout dst_layout,
+					 int src_family,
+					 int dst_family,
 					 VkImageSubresourceRange range,
 					 VkImageAspectFlags pending_clears)
 {
+	if (image->exclusive && src_family != dst_family) {
+		/* This is an acquire or a release operation and there will be
+		 * a corresponding release/acquire. Do the transition in the
+		 * most flexible queue. */
+
+		assert(src_family == cmd_buffer->queue_family_index ||
+		       dst_family == cmd_buffer->queue_family_index);
+
+		if (cmd_buffer->queue_family_index == RADV_QUEUE_TRANSFER)
+			return;
+
+		if (cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE &&
+		    (src_family == RADV_QUEUE_GENERAL ||
+		     dst_family == RADV_QUEUE_GENERAL))
+			return;
+	}
+
+	unsigned src_queue_mask = radv_image_queue_family_mask(image, src_family);
+	unsigned dst_queue_mask = radv_image_queue_family_mask(image, dst_family);
+
 	if (image->htile.size)
 		radv_handle_depth_image_transition(cmd_buffer, image, src_layout,
 						   dst_layout, range, pending_clears);
 
 	if (image->cmask.size)
 		radv_handle_cmask_image_transition(cmd_buffer, image, src_layout,
-						   dst_layout, range, pending_clears);
+						   dst_layout, src_queue_mask,
+						   dst_queue_mask, range,
+						   pending_clears);
 
 	if (image->surface.dcc_size)
 		radv_handle_dcc_image_transition(cmd_buffer, image, src_layout,
@@ -2509,6 +2537,8 @@ void radv_CmdPipelineBarrier(
 		radv_handle_image_transition(cmd_buffer, image,
 					     pImageMemoryBarriers[i].oldLayout,
 					     pImageMemoryBarriers[i].newLayout,
+					     pImageMemoryBarriers[i].srcQueueFamilyIndex,
+					     pImageMemoryBarriers[i].dstQueueFamilyIndex,
 					     pImageMemoryBarriers[i].subresourceRange,
 					     0);
 	}
@@ -2639,6 +2669,8 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 		radv_handle_image_transition(cmd_buffer, image,
 					     pImageMemoryBarriers[i].oldLayout,
 					     pImageMemoryBarriers[i].newLayout,
+					     pImageMemoryBarriers[i].srcQueueFamilyIndex,
+					     pImageMemoryBarriers[i].dstQueueFamilyIndex,
 					     pImageMemoryBarriers[i].subresourceRange,
 					     0);
 	}

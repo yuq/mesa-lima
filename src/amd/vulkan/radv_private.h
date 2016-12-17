@@ -1006,6 +1006,9 @@ struct radv_image {
 	VkDeviceSize size;
 	uint32_t alignment;
 
+	bool exclusive;
+	unsigned queue_family_mask;
+
 	/* Set when bound */
 	struct radeon_winsys_bo *bo;
 	VkDeviceSize offset;
@@ -1027,7 +1030,12 @@ bool radv_layout_is_htile_compressed(const struct radv_image *image,
 bool radv_layout_can_expclear(const struct radv_image *image,
                               VkImageLayout layout);
 bool radv_layout_has_cmask(const struct radv_image *image,
-			   VkImageLayout layout);
+			   VkImageLayout layout,
+			   unsigned queue_mask);
+
+
+unsigned radv_image_queue_family_mask(const struct radv_image *image, int family);
+
 static inline uint32_t
 radv_get_layerCount(const struct radv_image *image,
 		    const VkImageSubresourceRange *range)
