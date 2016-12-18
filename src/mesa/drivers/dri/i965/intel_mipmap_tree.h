@@ -253,6 +253,14 @@ enum miptree_array_layout {
    ALL_SLICES_AT_EACH_LOD,
 };
 
+enum intel_aux_disable {
+   INTEL_AUX_DISABLE_NONE = 0,
+   INTEL_AUX_DISABLE_HIZ  = 1 << 1,
+   INTEL_AUX_DISABLE_MCS  = 1 << 2,
+   INTEL_AUX_DISABLE_ALL  = INTEL_AUX_DISABLE_HIZ |
+                            INTEL_AUX_DISABLE_MCS
+};
+
 /**
  * Miptree aux buffer. These buffers are associated with a miptree, but the
  * format is managed by the hardware.
@@ -638,7 +646,7 @@ struct intel_mipmap_tree
     * buffer. This is useful for sharing the miptree bo with an external client
     * that doesn't understand auxiliary buffers.
     */
-   bool disable_aux_buffers;
+   enum intel_aux_disable aux_disable;
 
    /**
     * Fast clear and lossless compression are always disabled for this
