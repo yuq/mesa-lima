@@ -1564,7 +1564,7 @@ _mesa_GetFloatv(GLenum pname, GLfloat *params)
 
    case TYPE_INT_N:
       for (i = 0; i < v.value_int_n.n; i++)
-	 params[i] = INT_TO_FLOAT(v.value_int_n.ints[i]);
+	 params[i] = (GLfloat) v.value_int_n.ints[i];
       break;
 
    case TYPE_INT64:
@@ -2464,7 +2464,7 @@ _mesa_GetFloati_v(GLenum pname, GLuint index, GLfloat *params)
 
    case TYPE_INT_N:
       for (i = 0; i < v.value_int_n.n; i++)
-	 params[i] = INT_TO_FLOAT(v.value_int_n.ints[i]);
+	 params[i] = (GLfloat) v.value_int_n.ints[i];
       break;
 
    case TYPE_INT64:
@@ -2536,7 +2536,7 @@ _mesa_GetDoublei_v(GLenum pname, GLuint index, GLdouble *params)
 
    case TYPE_INT_N:
       for (i = 0; i < v.value_int_n.n; i++)
-	 params[i] = (GLdouble) INT_TO_FLOAT(v.value_int_n.ints[i]);
+	 params[i] = (GLdouble) v.value_int_n.ints[i];
       break;
 
    case TYPE_INT64:
