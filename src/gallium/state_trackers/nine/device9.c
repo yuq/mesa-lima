@@ -274,6 +274,12 @@ NineDevice9_ctor( struct NineDevice9 *This,
         /* r600 and radeonsi are thread safe. */
         This->csmt_active = strstr(pScreen->get_name(pScreen), "AMD") != NULL;
 
+    /* We rely on u_upload_mgr using persistent coherent buffers (which don't
+     * require flush to work in multi-pipe_context scenario) for vertex and
+     * index buffers */
+    if (!GET_PCAP(BUFFER_MAP_PERSISTENT_COHERENT))
+        This->csmt_active = false;
+
     if (This->csmt_active) {
         This->csmt_ctx = nine_csmt_create(This);
         if (!This->csmt_ctx)
@@ -472,13 +478,20 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->driver_caps.user_sw_vbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_VERTEX_BUFFERS);
     This->driver_caps.user_sw_cbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
+    /* Implicit use of context pipe for vertex and index uploaded when
+     * csmt is not active. Does not need to sync since csmt is unactive,
+     * thus no need to call NineDevice9_GetPipe at each upload. */
     if (!This->driver_caps.user_vbufs)
-        This->vertex_uploader = u_upload_create(This->context.pipe, 65536,
+        This->vertex_uploader = u_upload_create(This->csmt_active ?
+                                                    This->pipe_secondary : This->context.pipe,
+                                                65536,
                                                 PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
     This->vertex_sw_uploader = u_upload_create(This->pipe_sw, 65536,
                                             PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_ibufs)
-        This->index_uploader = u_upload_create(This->context.pipe, 128 * 1024,
+        This->index_uploader = u_upload_create(This->csmt_active ?
+                                                    This->pipe_secondary : This->context.pipe,
+                                               128 * 1024,
                                                PIPE_BIND_INDEX_BUFFER, PIPE_USAGE_STREAM);
     if (!This->driver_caps.user_cbufs) {
         This->constbuf_alignment = GET_PCAP(CONSTANT_BUFFER_OFFSET_ALIGNMENT);
@@ -2835,8 +2848,6 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
     vtxbuf.user_buffer = pVertexStreamZeroData;
 
     if (!This->driver_caps.user_vbufs) {
-        /* Implicit use of context pipe */
-        (void)NineDevice9_GetPipe(This);
         u_upload_data(This->vertex_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * VertexStreamZeroStride, /* XXX */
@@ -2900,8 +2911,6 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
 
     if (!This->driver_caps.user_vbufs) {
         const unsigned base = MinVertexIndex * VertexStreamZeroStride;
-        /* Implicit use of context pipe */
-        (void)NineDevice9_GetPipe(This);
         u_upload_data(This->vertex_uploader,
                       base,
                       NumVertices * VertexStreamZeroStride, /* XXX */
@@ -2915,8 +2924,6 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         vbuf.user_buffer = NULL;
     }
     if (!This->driver_caps.user_ibufs) {
-        /* Implicit use of context pipe */
-        (void)NineDevice9_GetPipe(This);
         u_upload_data(This->index_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * ibuf.index_size,
