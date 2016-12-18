@@ -475,11 +475,11 @@ void radv_GetPhysicalDeviceProperties(
 		.maxFragmentCombinedOutputResources       = 8,
 		.maxComputeSharedMemorySize               = 32768,
 		.maxComputeWorkGroupCount                 = { 65535, 65535, 65535 },
-		.maxComputeWorkGroupInvocations           = 16 * 1024,
+		.maxComputeWorkGroupInvocations           = 2048,
 		.maxComputeWorkGroupSize = {
-			16 * 1024/*devinfo->max_cs_threads*/,
-			16 * 1024,
-			16 * 1024
+			2048,
+			2048,
+			2048
 		},
 		.subPixelPrecisionBits                    = 4 /* FIXME */,
 		.subTexelPrecisionBits                    = 4 /* FIXME */,
