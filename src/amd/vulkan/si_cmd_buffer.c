@@ -776,7 +776,7 @@ static void si_emit_cp_dma_copy_buffer(struct radv_cmd_buffer *cmd_buffer,
 	 * indices. If we wanted to execute CP DMA in PFP, this packet
 	 * should precede it.
 	 */
-	if (sync_flag) {
+	if (sync_flag && cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL) {
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
@@ -816,7 +816,7 @@ static void si_emit_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer,
 	}
 
 	/* See "copy_buffer" for explanation. */
-	if (sync_flag) {
+	if (sync_flag && cmd_buffer->queue_family_index == RADV_QUEUE_GENERAL) {
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
