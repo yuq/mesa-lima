@@ -2821,6 +2821,8 @@ NineDevice9_DrawPrimitiveUP( struct NineDevice9 *This,
     vtxbuf.user_buffer = pVertexStreamZeroData;
 
     if (!This->driver_caps.user_vbufs) {
+        /* Implicit use of context pipe */
+        (void)NineDevice9_GetPipe(This);
         u_upload_data(This->vertex_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * VertexStreamZeroStride, /* XXX */
@@ -2884,6 +2886,8 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
 
     if (!This->driver_caps.user_vbufs) {
         const unsigned base = MinVertexIndex * VertexStreamZeroStride;
+        /* Implicit use of context pipe */
+        (void)NineDevice9_GetPipe(This);
         u_upload_data(This->vertex_uploader,
                       base,
                       NumVertices * VertexStreamZeroStride, /* XXX */
@@ -2897,6 +2901,8 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         vbuf.user_buffer = NULL;
     }
     if (!This->driver_caps.user_ibufs) {
+        /* Implicit use of context pipe */
+        (void)NineDevice9_GetPipe(This);
         u_upload_data(This->index_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * ibuf.index_size,
