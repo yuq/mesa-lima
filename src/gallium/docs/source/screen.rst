@@ -737,3 +737,13 @@ query group at the specified **index** is returned in **info**.
 The function returns non-zero on success.
 The driver-specific query group is described with the
 pipe_driver_query_group_info structure.
+
+
+Thread safety
+-------------
+
+Screen methods are required to be thread safe. While gallium rendering
+contexts are not required to be thread safe, it is required to be safe to use
+different contexts created with the same screen in different threads without
+locks. It is also required to be safe using screen methods in a thread, while
+using one of its contexts in another (without locks).
