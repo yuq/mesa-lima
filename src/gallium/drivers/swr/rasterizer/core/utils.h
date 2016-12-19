@@ -194,6 +194,29 @@ void vTranspose4x8(__m128 (&vDst)[8], const __m256 &vSrc0, const __m256 &vSrc1, 
     vDst[7] = _mm256_extractf128_ps(r02r1xhihi, 1);
 }
 
+#if ENABLE_AVX512_SIMD16
+INLINE
+void vTranspose4x16(simd16scalar(&dst)[4], const simd16scalar &src0, const simd16scalar &src1, const simd16scalar &src2, const simd16scalar &src3)
+{
+    const simd16scalari perm = _simd16_set_epi32(15, 11, 7, 3, 14, 10, 6, 2, 13, 9, 5, 1, 12, 8, 4, 0); // pre-permute input to setup the right order after all the unpacking
+
+    simd16scalar pre0 = _simd16_permute_ps(src0, perm); // r
+    simd16scalar pre1 = _simd16_permute_ps(src1, perm); // g
+    simd16scalar pre2 = _simd16_permute_ps(src2, perm); // b
+    simd16scalar pre3 = _simd16_permute_ps(src3, perm); // a
+
+    simd16scalar rblo = _simd16_unpacklo_ps(pre0, pre2);
+    simd16scalar galo = _simd16_unpacklo_ps(pre1, pre3);
+    simd16scalar rbhi = _simd16_unpackhi_ps(pre0, pre2);
+    simd16scalar gahi = _simd16_unpackhi_ps(pre1, pre3);
+
+    dst[0] = _simd16_unpacklo_ps(rblo, galo);
+    dst[1] = _simd16_unpackhi_ps(rblo, galo);
+    dst[2] = _simd16_unpacklo_ps(rbhi, gahi);
+    dst[3] = _simd16_unpackhi_ps(rbhi, gahi);
+}
+
+#endif
 INLINE
 void vTranspose8x8(__m256 (&vDst)[8], const __m256 &vMask0, const __m256 &vMask1, const __m256 &vMask2, const __m256 &vMask3, const __m256 &vMask4, const __m256 &vMask5, const __m256 &vMask6, const __m256 &vMask7)
 {
@@ -296,21 +319,23 @@ struct Transpose8_8_8_8
 
     INLINE static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst)
     {
-        simd16scalari src = _simd16_load_si(reinterpret_cast<const simd16scalari *>(pSrc));
+        __m128i src0 = _mm_load_si128(reinterpret_cast<const __m128i *>(pSrc));     // rrrrrrrrrrrrrrrr
+        __m128i src1 = _mm_load_si128(reinterpret_cast<const __m128i *>(pSrc) + 1); // gggggggggggggggg
+        __m128i src2 = _mm_load_si128(reinterpret_cast<const __m128i *>(pSrc) + 2); // bbbbbbbbbbbbbbbb
+        __m128i src3 = _mm_load_si128(reinterpret_cast<const __m128i *>(pSrc) + 3); // aaaaaaaaaaaaaaaa
 
-        simd16scalari mask0 = _simd16_set_epi32(0x0f078080, 0x0e068080, 0x0d058080, 0x0c048080, 0x80800b03, 0x80800a02, 0x80800901, 0x80800800);
+        simd16scalari cvt0 = _simd16_cvtepu8_epi32(src0);
+        simd16scalari cvt1 = _simd16_cvtepu8_epi32(src1);
+        simd16scalari cvt2 = _simd16_cvtepu8_epi32(src2);
+        simd16scalari cvt3 = _simd16_cvtepu8_epi32(src3);
 
-        simd16scalari dst01 = _simd16_shuffle_epi8(src, mask0);
+        simd16scalari shl1 = _simd16_slli_epi32(cvt1,  8);
+        simd16scalari shl2 = _simd16_slli_epi32(cvt2, 16);
+        simd16scalari shl3 = _simd16_slli_epi32(cvt3, 24);
 
-        simd16scalari perm1 = _simd16_permute2f128_si(src, src, 1);
+        simd16scalari dst = _simd16_or_si(_simd16_or_si(cvt0, shl1), _simd16_or_si(shl2, shl3));
 
-        simd16scalari mask1 = _simd16_set_epi32(0x80800f07, 0x80800e06, 0x80800d05, 0x80800c04, 0x0b038080, 0x0a028080, 0x09018080, 0x08008080);
-
-        simd16scalari dst23 = _simd16_shuffle_epi8(perm1, mask1);
-
-        simd16scalari dst = _simd16_or_si(dst01, dst23);
-
-        _simd16_store_si(reinterpret_cast<simd16scalari *>(pDst), dst);
+        _simd16_store_si(reinterpret_cast<simd16scalari *>(pDst), dst);             // rgbargbargbargbargbargbargbargbargbargbargbargbargbargbargbargba
     }
 #endif
 };
@@ -357,17 +382,17 @@ struct Transpose8_8
 
     INLINE static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst)
     {
-        simdscalari r = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc));     // rrrrrrrrrrrrrrrrgggggggggggggggg
+        __m128i src0 = _mm_load_si128(reinterpret_cast<const __m128i *>(pSrc));     // rrrrrrrrrrrrrrrr
+        __m128i src1 = _mm_load_si128(reinterpret_cast<const __m128i *>(pSrc) + 1); // gggggggggggggggg
 
-        simdscalari g = _simd_permute2f128_si(r, r, 1);                                 // ggggggggggggggggxxxxxxxxxxxxxxxx
+        simdscalari cvt0 = _simd_cvtepu8_epi16(src0);
+        simdscalari cvt1 = _simd_cvtepu8_epi16(src1);
 
-        r = _simd_insertf128_si(r, _mm_srli_si128(_simd_extractf128_si(r, 0), 8), 1);   // rrrrrrrrxxxxxxxxrrrrrrrrxxxxxxxx
+        simdscalari shl1 = _simd_slli_epi32(cvt1, 8);
 
-        g = _simd_insertf128_si(g, _mm_srli_si128(_simd_extractf128_si(g, 0), 8), 1);   // ggggggggxxxxxxxxggggggggxxxxxxxx
+        simdscalari dst = _simd_or_si(cvt0, shl1);
 
-        simdscalari dst = _simd_unpacklo_epi8(r, g);                                    // rgrgrgrgrgrgrgrgrgrgrgrgrgrgrgrg
-
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst), dst);
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst), dst);                 // rgrgrgrgrgrgrgrgrgrgrgrgrgrgrgrg
     }
 #endif
 };
@@ -412,17 +437,14 @@ struct Transpose32_32_32_32
         simd16scalar src2 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc) + 32);
         simd16scalar src3 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc) + 48);
 
-        __m128 vDst[8];
+        simd16scalar dst[4];
 
-        vTranspose4x8(vDst, _simd16_extract_ps(src0, 0), _simd16_extract_ps(src1, 0), _simd16_extract_ps(src2, 0), _simd16_extract_ps(src3, 0));
+        vTranspose4x16(dst, src0, src1, src2, src3);
 
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) +  0, reinterpret_cast<simd16scalar *>(vDst)[0]);
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 16, reinterpret_cast<simd16scalar *>(vDst)[1]);
-
-        vTranspose4x8(vDst, _simd16_extract_ps(src0, 1), _simd16_extract_ps(src1, 1), _simd16_extract_ps(src2, 1), _simd16_extract_ps(src3, 1));
-
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, reinterpret_cast<simd16scalar *>(vDst)[0]);
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, reinterpret_cast<simd16scalar *>(vDst)[1]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) +  0, dst[0]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 16, dst[1]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, dst[2]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, dst[3]);
     }
 #endif
 };
@@ -464,18 +486,16 @@ struct Transpose32_32_32
         simd16scalar src0 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc));
         simd16scalar src1 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc) + 16);
         simd16scalar src2 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc) + 32);
+        simd16scalar src3 = _simd16_setzero_ps();
 
-        __m128 vDst[8];
+        simd16scalar dst[4];
 
-        vTranspose3x8(vDst, _simd16_extract_ps(src0, 0), _simd16_extract_ps(src1, 0), _simd16_extract_ps(src2, 0));
+        vTranspose4x16(dst, src0, src1, src2, src3);
 
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) +  0, reinterpret_cast<simd16scalar *>(vDst)[0]);
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 16, reinterpret_cast<simd16scalar *>(vDst)[1]);
-
-        vTranspose3x8(vDst, _simd16_extract_ps(src0, 1), _simd16_extract_ps(src1, 1), _simd16_extract_ps(src2, 1));
-
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, reinterpret_cast<simd16scalar *>(vDst)[0]);
-        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, reinterpret_cast<simd16scalar *>(vDst)[1]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) +  0, dst[0]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 16, dst[1]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 32, dst[2]);
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 48, dst[3]);
     }
 #endif
 };
@@ -516,20 +536,20 @@ struct Transpose32_32
 
     INLINE static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst)
     {
-        simdscalar src_r0 = _simd_load_ps(reinterpret_cast<const float *>(pSrc));
-        simdscalar src_r1 = _simd_load_ps(reinterpret_cast<const float *>(pSrc) +  8);
-        simdscalar src_g0 = _simd_load_ps(reinterpret_cast<const float *>(pSrc) + 16);
-        simdscalar src_g1 = _simd_load_ps(reinterpret_cast<const float *>(pSrc) + 24);
+        simd16scalar src0 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc));                 // rrrrrrrrrrrrrrrr
+        simd16scalar src1 = _simd16_load_ps(reinterpret_cast<const float *>(pSrc) + 16);            // gggggggggggggggg
 
-        simdscalar dst0 = _simd_unpacklo_ps(src_r0, src_g0);
-        simdscalar dst1 = _simd_unpacklo_ps(src_r0, src_g0);
-        simdscalar dst2 = _simd_unpacklo_ps(src_r1, src_g1);
-        simdscalar dst3 = _simd_unpacklo_ps(src_r1, src_g1);
+        simd16scalar tmp0 = _simd16_unpacklo_ps(src0, src1);                                        // r0 g0 r1 g1 r4 g4 r5 g5 r8 g8 r9 g9 rC gC rD gD
+        simd16scalar tmp1 = _simd16_unpackhi_ps(src0, src1);                                        // r2 g2 r3 g3 r6 g6 r7 g7 rA gA rB gB rE gE rF gF
 
-        _simd_store_ps(reinterpret_cast<float *>(pDst) +  0, dst0);
-        _simd_store_ps(reinterpret_cast<float *>(pDst) +  8, dst1);
-        _simd_store_ps(reinterpret_cast<float *>(pDst) + 16, dst2);
-        _simd_store_ps(reinterpret_cast<float *>(pDst) + 24, dst3);
+        simd16scalar per0 = _simd16_permute2f128_ps(tmp0, tmp1, 0x44);  // (1, 0, 1, 0)             // r0 g0 r1 g1 r4 g4 r5 g5 r2 g2 r3 g3 r6 g6 r7 g7
+        simd16scalar per1 = _simd16_permute2f128_ps(tmp0, tmp1, 0xEE);  // (3, 2, 3, 2)             // r8 g8 r9 g9 rC gC rD gD rA gA rB gB rE gE rF gF
+
+        simd16scalar dst0 = _simd16_permute2f128_ps(per0, per0, 0xD8);  // (3, 1, 2, 0)             // r0 g0 r1 g1 r2 g2 r3 g3 r4 g4 r5 g5 r6 g6 r7 g7
+        simd16scalar dst1 = _simd16_permute2f128_ps(per1, per1, 0xD8);  // (3, 1, 2, 0)             // r8 g8 r9 g9 rA gA rB gB rC gC rD gD rE gE rF gF
+
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) +  0, dst0);                               // rgrgrgrgrgrgrgrg
+        _simd16_store_ps(reinterpret_cast<float *>(pDst) + 16, dst1);                               // rgrgrgrgrgrgrgrg
     }
 #endif
 };
@@ -576,28 +596,30 @@ struct Transpose16_16_16_16
 
     INLINE static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst)
     {
-        simd16scalari src_rg = _simd16_load_si(reinterpret_cast<const simd16scalari *>(pSrc));
-        simd16scalari src_ba = _simd16_load_si(reinterpret_cast<const simd16scalari *>(pSrc + sizeof(simd16scalari)));
+        simdscalari src0 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc));              // rrrrrrrrrrrrrrrr
+        simdscalari src1 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc) + 1);          // gggggggggggggggg
+        simdscalari src2 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc) + 2);          // bbbbbbbbbbbbbbbb
+        simdscalari src3 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc) + 3);          // aaaaaaaaaaaaaaaa
 
-        simdscalari src_r = _simd16_extract_si(src_rg, 0);
-        simdscalari src_g = _simd16_extract_si(src_rg, 1);
-        simdscalari src_b = _simd16_extract_si(src_ba, 0);
-        simdscalari src_a = _simd16_extract_si(src_ba, 1);
+        simdscalari pre0 = _simd_unpacklo_epi16(src0, src1);                                        // rg0 rg1 rg2 rg3 rg8 rg9 rgA rgB
+        simdscalari pre1 = _simd_unpackhi_epi16(src0, src1);                                        // rg4 rg5 rg6 rg7 rgC rgD rgE rgF
+        simdscalari pre2 = _simd_unpacklo_epi16(src2, src3);                                        // ba0 ba1 ba3 ba3 ba8 ba9 baA baB
+        simdscalari pre3 = _simd_unpackhi_epi16(src2, src3);                                        // ba4 ba5 ba6 ba7 baC baD baE baF
 
-        simdscalari rg0 = _simd_unpacklo_epi16(src_r, src_g);
-        simdscalari rg1 = _simd_unpackhi_epi16(src_r, src_g);
-        simdscalari ba0 = _simd_unpacklo_epi16(src_b, src_a);
-        simdscalari ba1 = _simd_unpackhi_epi16(src_b, src_a);
+        simdscalari tmp0 = _simd_unpacklo_epi32(pre0, pre2);                                        // rbga0 rbga1 rbga8 rbga9
+        simdscalari tmp1 = _simd_unpackhi_epi32(pre0, pre2);                                        // rbga2 rbga3 rbgaA rbgaB
+        simdscalari tmp2 = _simd_unpacklo_epi32(pre1, pre3);                                        // rbga4 rbga5 rgbaC rbgaD
+        simdscalari tmp3 = _simd_unpackhi_epi32(pre1, pre3);                                        // rbga6 rbga7 rbgaE rbgaF
 
-        simdscalari dst0 = _simd_unpacklo_epi32(rg0, ba0);
-        simdscalari dst1 = _simd_unpackhi_epi32(rg0, ba0);
-        simdscalari dst2 = _simd_unpacklo_epi32(rg1, ba1);
-        simdscalari dst3 = _simd_unpackhi_epi32(rg1, ba1);
+        simdscalari dst0 = _simd_permute2f128_si(tmp0, tmp1, 0x20); // (2, 0)                       // rbga0 rbga1 rbga2 rbga3
+        simdscalari dst1 = _simd_permute2f128_si(tmp2, tmp3, 0x20); // (2, 0)                       // rbga4 rbga5 rbga6 rbga7
+        simdscalari dst2 = _simd_permute2f128_si(tmp0, tmp1, 0x31); // (3, 1)                       // rbga8 rbga9 rbgaA rbgaB
+        simdscalari dst3 = _simd_permute2f128_si(tmp2, tmp3, 0x31); // (3, 1)                       // rbgaC rbgaD rbgaE rbgaF
 
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 0, dst0);
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 1, dst1);
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 2, dst2);
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 3, dst3);
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 0, dst0);                            // rgbargbargbargba
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 1, dst1);                            // rgbargbargbargba
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 2, dst2);                            // rgbargbargbargba
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 3, dst3);                            // rgbargbargbargba
     }
 #endif
 };
@@ -643,27 +665,30 @@ struct Transpose16_16_16
 
     INLINE static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst)
     {
-        simd16scalari src_rg = _simd16_load_si(reinterpret_cast<const simd16scalari *>(pSrc));
+        simdscalari src0 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc));              // rrrrrrrrrrrrrrrr
+        simdscalari src1 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc) + 1);          // gggggggggggggggg
+        simdscalari src2 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc) + 2);          // bbbbbbbbbbbbbbbb
+        simdscalari src3 = _simd_setzero_si();                                                      // aaaaaaaaaaaaaaaa
 
-        simdscalari src_r = _simd16_extract_si(src_rg, 0);
-        simdscalari src_g = _simd16_extract_si(src_rg, 1);
-        simdscalari src_b = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc + sizeof(simd16scalari)));
-        simdscalari src_a = _mm256_undefined_si256();
+        simdscalari pre0 = _simd_unpacklo_epi16(src0, src1);                                        // rg0 rg1 rg2 rg3 rg8 rg9 rgA rgB
+        simdscalari pre1 = _simd_unpackhi_epi16(src0, src1);                                        // rg4 rg5 rg6 rg7 rgC rgD rgE rgF
+        simdscalari pre2 = _simd_unpacklo_epi16(src2, src3);                                        // ba0 ba1 ba3 ba3 ba8 ba9 baA baB
+        simdscalari pre3 = _simd_unpackhi_epi16(src2, src3);                                        // ba4 ba5 ba6 ba7 baC baD baE baF
 
-        simdscalari rg0 = _simd_unpacklo_epi16(src_r, src_g);
-        simdscalari rg1 = _simd_unpackhi_epi16(src_r, src_g);
-        simdscalari ba0 = _simd_unpacklo_epi16(src_b, src_a);
-        simdscalari ba1 = _simd_unpackhi_epi16(src_b, src_a);
+        simdscalari tmp0 = _simd_unpacklo_epi32(pre0, pre2);                                        // rbga0 rbga1 rbga8 rbga9
+        simdscalari tmp1 = _simd_unpackhi_epi32(pre0, pre2);                                        // rbga2 rbga3 rbgaA rbgaB
+        simdscalari tmp2 = _simd_unpacklo_epi32(pre1, pre3);                                        // rbga4 rbga5 rgbaC rbgaD
+        simdscalari tmp3 = _simd_unpackhi_epi32(pre1, pre3);                                        // rbga6 rbga7 rbgaE rbgaF
 
-        simdscalari dst0 = _simd_unpacklo_epi32(rg0, ba0);
-        simdscalari dst1 = _simd_unpackhi_epi32(rg0, ba0);
-        simdscalari dst2 = _simd_unpacklo_epi32(rg1, ba1);
-        simdscalari dst3 = _simd_unpackhi_epi32(rg1, ba1);
+        simdscalari dst0 = _simd_permute2f128_si(tmp0, tmp1, 0x20); // (2, 0)                       // rbga0 rbga1 rbga2 rbga3
+        simdscalari dst1 = _simd_permute2f128_si(tmp2, tmp3, 0x20); // (2, 0)                       // rbga4 rbga5 rbga6 rbga7
+        simdscalari dst2 = _simd_permute2f128_si(tmp0, tmp1, 0x31); // (3, 1)                       // rbga8 rbga9 rbgaA rbgaB
+        simdscalari dst3 = _simd_permute2f128_si(tmp2, tmp3, 0x31); // (3, 1)                       // rbgaC rbgaD rbgaE rbgaF
 
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 0, dst0);
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 1, dst1);
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 2, dst2);
-        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 3, dst3);
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 0, dst0);                            // rgbargbargbargba
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 1, dst1);                            // rgbargbargbargba
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 2, dst2);                            // rgbargbargbargba
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 3, dst3);                            // rgbargbargbargba
     }
 #endif
 };
@@ -701,17 +726,17 @@ struct Transpose16_16
 
     INLINE static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst)
     {
-        simd16scalari result = _simd16_setzero_si();
+        simdscalari src0 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc));              // rrrrrrrrrrrrrrrr
+        simdscalari src1 = _simd_load_si(reinterpret_cast<const simdscalari *>(pSrc) + 1);          // gggggggggggggggg
 
-        simd16scalari src = _simd16_load_si(reinterpret_cast<const simd16scalari *>(pSrc));
+        simdscalari tmp0 = _simd_unpacklo_epi16(src0, src1);                                        // rg0 rg1 rg2 rg3 rg8 rg9 rgA rgB
+        simdscalari tmp1 = _simd_unpackhi_epi16(src0, src1);                                        // rg4 rg5 rg6 rg7 rgC rgD rgE rgF
 
-        simdscalari srclo = _simd16_extract_si(src, 0);
-        simdscalari srchi = _simd16_extract_si(src, 1);
+        simdscalari dst0 = _simd_permute2f128_si(tmp0, tmp1, 0x00);     // (0, 0)                   // rg0 rg1 rg2 rg3 rg4 rg5 rg6 rg7
+        simdscalari dst1 = _simd_permute2f128_si(tmp0, tmp1, 0x11);     // (1, 1)                   // rg8 rg9 rgA rgB rgC rgD rgE rgF
 
-        result = _simd16_insert_si(result, _simd_unpacklo_epi16(srclo, srchi), 0);
-        result = _simd16_insert_si(result, _simd_unpackhi_epi16(srclo, srchi), 1);
-
-        _simd16_store_si(reinterpret_cast<simd16scalari *>(pDst), result);
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 0, dst0);                            // rgrgrgrgrgrgrgrg
+        _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 1, dst1);                            // rgrgrgrgrgrgrgrg
     }
 #endif
 };
