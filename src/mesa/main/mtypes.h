@@ -2242,8 +2242,6 @@ struct gl_subroutine_function
  */
 struct gl_shader_info
 {
-   bool InnerCoverage;
-
    struct {
       /** Global xfb_stride out qualifier if any */
       GLuint BufferStride[MAX_FEEDBACK_BUFFERS];
@@ -2430,6 +2428,7 @@ struct gl_shader
    bool uses_gl_fragcoord;
 
    bool PostDepthCoverage;
+   bool InnerCoverage;
 
    /**
     * Fragment shader state from GLSL 1.50 layout qualifiers.

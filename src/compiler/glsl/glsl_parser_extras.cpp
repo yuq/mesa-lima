@@ -1815,7 +1815,7 @@ set_shader_inout_layout(struct gl_shader *shader,
       shader->ARB_fragment_coord_conventions_enable =
          state->ARB_fragment_coord_conventions_enable;
       shader->EarlyFragmentTests = state->fs_early_fragment_tests;
-      shader->info.InnerCoverage = state->fs_inner_coverage;
+      shader->InnerCoverage = state->fs_inner_coverage;
       shader->PostDepthCoverage = state->fs_post_depth_coverage;
       shader->BlendSupport = state->fs_blend_support;
       break;
