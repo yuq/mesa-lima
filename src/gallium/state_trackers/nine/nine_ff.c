@@ -449,9 +449,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             * position at the end.*/
             ureg_MOV(ureg, tmp, vs->aVtx);
             /* X from [X_min, X_min + width] to [-1, 1], same for Y. Z to [0, 1] */
-            ureg_SUB(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _CONST(101));
+            ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), ureg_negate(_CONST(101)));
             ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XYZ), ureg_src(tmp), _CONST(100));
-            ureg_SUB(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XY), ureg_src(tmp), ureg_imm1f(ureg, 1.0f));
+            ureg_ADD(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_XY), ureg_src(tmp), ureg_imm1f(ureg, -1.0f));
             /* Y needs to be reversed */
             ureg_MOV(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_Y), ureg_negate(ureg_src(tmp)));
             /* inverse rhw */
@@ -511,7 +511,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
                 if (has_aNrm)
                     ureg_MAD(ureg, aNrm_dst, ureg_src(tmp2), ureg_scalar(vs->aWgt, i), ureg_src(aNrm_dst));
                 /* subtract weighted position value for last value */
-                ureg_SUB(ureg, sum_blendweights, ureg_src(sum_blendweights), ureg_scalar(vs->aWgt, i));
+                ureg_ADD(ureg, sum_blendweights, ureg_src(sum_blendweights), ureg_negate(ureg_scalar(vs->aWgt, i)));
             }
         }
 
@@ -661,7 +661,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_DP3(ureg, tmp_x, ureg_src(aVtx_normed), vs->aNrm);
             ureg_MUL(ureg, tmp, vs->aNrm, _X(tmp));
             ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_src(tmp));
-            ureg_SUB(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(aVtx_normed), ureg_src(tmp));
+            ureg_ADD(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_XYZ), ureg_src(aVtx_normed), ureg_negate(ureg_src(tmp)));
             ureg_MOV(ureg, ureg_writemask(input_coord, TGSI_WRITEMASK_W), ureg_imm1f(ureg, 1.0f));
             ureg_release_temporary(ureg, aVtx_normed);
             dim_input = 4;
@@ -676,7 +676,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_DP3(ureg, tmp_x, ureg_src(aVtx_normed), vs->aNrm);
             ureg_MUL(ureg, tmp, vs->aNrm, _X(tmp));
             ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_src(tmp));
-            ureg_SUB(ureg, tmp, ureg_src(aVtx_normed), ureg_src(tmp));
+            ureg_ADD(ureg, tmp, ureg_src(aVtx_normed), ureg_negate(ureg_src(tmp)));
             /* now tmp = normed(Vtx) - 2 dot3(normed(Vtx), Nrm) Nrm */
             ureg_MOV(ureg, ureg_writemask(tmp2, TGSI_WRITEMASK_XYZ), ureg_src(tmp));
             ureg_MUL(ureg, tmp2, ureg_src(tmp2), ureg_src(tmp2));
@@ -829,7 +829,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             /* hitDir = light.position - eyeVtx
              * d = length(hitDir)
              */
-            ureg_SUB(ureg, rHit, cLPos, vs->aVtx);
+            ureg_ADD(ureg, rHit, cLPos, ureg_negate(vs->aVtx));
             ureg_DP3(ureg, tmp_x, ureg_src(rHit), ureg_src(rHit));
             ureg_RSQ(ureg, tmp_y, _X(tmp));
             ureg_MUL(ureg, tmp_x, _X(tmp), _Y(tmp)); /* length */
@@ -863,7 +863,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
              *     spotAtt = (rho - light.cphi2) / (light.ctht2 - light.cphi2) ^ light.falloff
              */
             ureg_DP3(ureg, tmp_y, ureg_negate(ureg_src(rHit)), cLDir); /* rho */
-            ureg_SUB(ureg, tmp_x, _Y(tmp), cLPhi);
+            ureg_ADD(ureg, tmp_x, _Y(tmp), ureg_negate(cLPhi));
             ureg_MUL(ureg, tmp_x, _X(tmp), cLSDiv);
             ureg_POW(ureg, tmp_x, _X(tmp), cLFOff); /* spotAtten */
             ureg_SGE(ureg, tmp_z, _Y(tmp), cLTht); /* if inside theta && phi */
@@ -879,9 +879,9 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
         if (has_aNrm) {
             if (key->localviewer) {
                 ureg_normalize3(ureg, rMid, vs->aVtx);
-                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_src(rMid));
+                ureg_ADD(ureg, rMid, ureg_src(rHit), ureg_negate(ureg_src(rMid)));
             } else {
-                ureg_SUB(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, 1.0f));
+                ureg_ADD(ureg, rMid, ureg_src(rHit), ureg_imm3f(ureg, 0.0f, 0.0f, -1.0f));
             }
             ureg_normalize3(ureg, rMid, ureg_src(rMid));
             ureg_DP3(ureg, ureg_saturate(tmp_x), vs->aNrm, ureg_src(rHit));
@@ -984,7 +984,7 @@ nine_ff_build_vs(struct NineDevice9 *device, struct vs_build_ctx *vs)
             ureg_EX2(ureg, tmp_x, _X(tmp));
         } else
         if (key->fog_mode == D3DFOG_LINEAR) {
-            ureg_SUB(ureg, tmp_x, _XXXX(_CONST(28)), _Z(tmp));
+            ureg_ADD(ureg, tmp_x, _XXXX(_CONST(28)), ureg_negate(_Z(tmp)));
             ureg_MUL(ureg, ureg_saturate(tmp_x), _X(tmp), _YYYY(_CONST(28)));
         }
         ureg_MOV(ureg, oFog, _X(tmp));
@@ -1132,7 +1132,7 @@ ps_get_ts_arg(struct ps_build_ctx *ps, unsigned ta)
     }
     if (ta & D3DTA_COMPLEMENT) {
         struct ureg_dst dst = ureg_DECL_temporary(ps->ureg);
-        ureg_SUB(ps->ureg, dst, ureg_imm1f(ps->ureg, 1.0f), reg);
+        ureg_ADD(ps->ureg, dst, ureg_imm1f(ps->ureg, 1.0f), ureg_negate(reg));
         reg = ureg_src(dst);
     }
     if (ta & D3DTA_ALPHAREPLICATE)
@@ -1235,17 +1235,17 @@ ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct u
         break;
     case D3DTOP_ADDSIGNED:
         ureg_ADD(ureg, tmp, arg[1], arg[2]);
-        ureg_SUB(ureg, dst, ureg_src(tmp), ureg_imm1f(ureg, 0.5f));
+        ureg_ADD(ureg, dst, ureg_src(tmp), ureg_imm1f(ureg, -0.5f));
         break;
     case D3DTOP_ADDSIGNED2X:
         ureg_ADD(ureg, tmp, arg[1], arg[2]);
         ureg_MAD(ureg, dst, ureg_src(tmp), ureg_imm1f(ureg, 2.0f), ureg_imm1f(ureg, -1.0f));
         break;
     case D3DTOP_SUBTRACT:
-        ureg_SUB(ureg, dst, arg[1], arg[2]);
+        ureg_ADD(ureg, dst, arg[1], ureg_negate(arg[2]));
         break;
     case D3DTOP_ADDSMOOTH:
-        ureg_SUB(ureg, tmp, ureg_imm1f(ureg, 1.0f), arg[1]);
+        ureg_ADD(ureg, tmp, ureg_imm1f(ureg, 1.0f), ureg_negate(arg[1]));
         ureg_MAD(ureg, dst, ureg_src(tmp), arg[2], arg[1]);
         break;
     case D3DTOP_BLENDDIFFUSEALPHA:
@@ -1259,7 +1259,7 @@ ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct u
         ureg_LRP(ureg, dst, _WWWW(_CONST(20)), arg[1], arg[2]);
         break;
     case D3DTOP_BLENDTEXTUREALPHAPM:
-        ureg_SUB(ureg, tmp_x, ureg_imm1f(ureg, 1.0f), _W(ps->rTex));
+        ureg_ADD(ureg, tmp_x, ureg_imm1f(ureg, 1.0f), ureg_negate(_W(ps->rTex)));
         ureg_MAD(ureg, dst, arg[2], _X(tmp), arg[1]);
         break;
     case D3DTOP_BLENDCURRENTALPHA:
@@ -1276,11 +1276,11 @@ ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct u
         ureg_MAD(ureg, dst, arg[1], arg[2], _WWWW(arg[1]));
         break;
     case D3DTOP_MODULATEINVALPHA_ADDCOLOR:
-        ureg_SUB(ureg, tmp_x, ureg_imm1f(ureg, 1.0f), _WWWW(arg[1]));
+        ureg_ADD(ureg, tmp_x, ureg_imm1f(ureg, 1.0f), ureg_negate(_WWWW(arg[1])));
         ureg_MAD(ureg, dst, _X(tmp), arg[2], arg[1]);
         break;
     case D3DTOP_MODULATEINVCOLOR_ADDALPHA:
-        ureg_SUB(ureg, tmp, ureg_imm1f(ureg, 1.0f), arg[1]);
+        ureg_ADD(ureg, tmp, ureg_imm1f(ureg, 1.0f), ureg_negate(arg[1]));
         ureg_MAD(ureg, dst, ureg_src(tmp), arg[2], _WWWW(arg[1]));
         break;
     case D3DTOP_BUMPENVMAP:
@@ -1288,8 +1288,8 @@ ps_do_ts_op(struct ps_build_ctx *ps, unsigned top, struct ureg_dst dst, struct u
     case D3DTOP_BUMPENVMAPLUMINANCE:
         break;
     case D3DTOP_DOTPRODUCT3:
-        ureg_SUB(ureg, tmp, arg[1], ureg_imm4f(ureg,0.5,0.5,0.5,0.5));
-        ureg_SUB(ureg, tmp2, arg[2] , ureg_imm4f(ureg,0.5,0.5,0.5,0.5));
+        ureg_ADD(ureg, tmp, arg[1], ureg_imm4f(ureg,-0.5,-0.5,-0.5,-0.5));
+        ureg_ADD(ureg, tmp2, arg[2] , ureg_imm4f(ureg,-0.5,-0.5,-0.5,-0.5));
         ureg_DP3(ureg, tmp, ureg_src(tmp), ureg_src(tmp2));
         ureg_MUL(ureg, ureg_saturate(dst), ureg_src(tmp), ureg_imm4f(ureg,4.0,4.0,4.0,4.0));
         break;
@@ -1536,7 +1536,7 @@ nine_ff_build_ps(struct NineDevice9 *device, struct nine_ff_ps_key *key)
             ureg_EX2(ureg, rFog, _X(rFog));
         } else
         if (key->fog_mode == D3DFOG_LINEAR) {
-            ureg_SUB(ureg, rFog, _XXXX(_CONST(22)), _X(rFog));
+            ureg_ADD(ureg, rFog, _XXXX(_CONST(22)), ureg_negate(_X(rFog)));
             ureg_MUL(ureg, ureg_saturate(rFog), _X(rFog), _YYYY(_CONST(22)));
         }
         ureg_LRP(ureg, ureg_writemask(oCol, TGSI_WRITEMASK_XYZ), _X(rFog), ps.rCurSrc, _CONST(21));
