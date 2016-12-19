@@ -1702,7 +1702,8 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       emit_asm(ir, TGSI_OPCODE_ADD, result_dst, op[0], op[1]);
       break;
    case ir_binop_sub:
-      emit_asm(ir, TGSI_OPCODE_SUB, result_dst, op[0], op[1]);
+      op[1].negate = ~op[1].negate;
+      emit_asm(ir, TGSI_OPCODE_ADD, result_dst, op[0], op[1]);
       break;
 
    case ir_binop_mul:

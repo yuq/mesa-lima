@@ -672,9 +672,6 @@ nvfx_vertprog_parse_instruction(struct nvfx_vpc *vpc,
    case TGSI_OPCODE_SSG:
       nvfx_vp_emit(vpc, arith(sat, VEC, SSG, dst, mask, src[0], none, none));
       break;
-   case TGSI_OPCODE_SUB:
-      nvfx_vp_emit(vpc, arith(sat, VEC, ADD, dst, mask, src[0], none, neg(src[1])));
-      break;
    case TGSI_OPCODE_TRUNC:
       tmp = nvfx_src(temp(vpc));
       insn = arith(0, VEC, MOV, none.reg, mask, src[0], none, none);

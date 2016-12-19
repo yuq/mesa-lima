@@ -151,8 +151,8 @@ create_frag_shader_weave(struct ureg_program *shader, struct ureg_dst fragment)
     */
    for (i = 0; i < 2; ++i) {
       ureg_MOV(shader, ureg_writemask(t_tc[i], TGSI_WRITEMASK_X), i_tc[i]);
-      ureg_SUB(shader, ureg_writemask(t_tc[i], TGSI_WRITEMASK_YZ),
-               i_tc[i], ureg_imm1f(shader, 0.5f));
+      ureg_ADD(shader, ureg_writemask(t_tc[i], TGSI_WRITEMASK_YZ),
+               i_tc[i], ureg_imm1f(shader, -0.5f));
       ureg_ROUND(shader, ureg_writemask(t_tc[i], TGSI_WRITEMASK_YZ), ureg_src(t_tc[i]));
       ureg_MOV(shader, ureg_writemask(t_tc[i], TGSI_WRITEMASK_W),
                ureg_imm1f(shader, i ? 1.0f : 0.0f));

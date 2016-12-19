@@ -3804,9 +3804,6 @@ static int tgsi_op2_64_params(struct r600_shader_ctx *ctx, bool singledest, bool
 		/* handle some special cases */
 		if (i == 1 || i == 3) {
 			switch (ctx->parse.FullToken.FullInstruction.Instruction.Opcode) {
-			case TGSI_OPCODE_SUB:
-				r600_bytecode_src_toggle_neg(&alu.src[1]);
-				break;
 			case TGSI_OPCODE_DABS:
 				r600_bytecode_src_set_abs(&alu.src[0]);
 				break;
@@ -3930,14 +3927,6 @@ static int tgsi_op2_s(struct r600_shader_ctx *ctx, int swap, int trans_only)
 		} else {
 			r600_bytecode_src(&alu.src[0], &ctx->src[1], i);
 			r600_bytecode_src(&alu.src[1], &ctx->src[0], i);
-		}
-		/* handle some special cases */
-		switch (inst->Instruction.Opcode) {
-		case TGSI_OPCODE_SUB:
-			r600_bytecode_src_toggle_neg(&alu.src[1]);
-			break;
-		default:
-			break;
 		}
 		if (i == lasti || trans_only) {
 			alu.last = 1;
@@ -9006,7 +8995,6 @@ static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] 
 	[TGSI_OPCODE_SLT]	= { ALU_OP2_SETGT, tgsi_op2_swap},
 	[TGSI_OPCODE_SGE]	= { ALU_OP2_SETGE, tgsi_op2},
 	[TGSI_OPCODE_MAD]	= { ALU_OP3_MULADD, tgsi_op3},
-	[TGSI_OPCODE_SUB]	= { ALU_OP2_ADD, tgsi_op2},
 	[TGSI_OPCODE_LRP]	= { ALU_OP0_NOP, tgsi_lrp},
 	[TGSI_OPCODE_FMA]	= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_SQRT]	= { ALU_OP1_SQRT_IEEE, tgsi_trans_srcx_replicate},
@@ -9205,7 +9193,6 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_SLT]	= { ALU_OP2_SETGT, tgsi_op2_swap},
 	[TGSI_OPCODE_SGE]	= { ALU_OP2_SETGE, tgsi_op2},
 	[TGSI_OPCODE_MAD]	= { ALU_OP3_MULADD, tgsi_op3},
-	[TGSI_OPCODE_SUB]	= { ALU_OP2_ADD, tgsi_op2},
 	[TGSI_OPCODE_LRP]	= { ALU_OP0_NOP, tgsi_lrp},
 	[TGSI_OPCODE_FMA]	= { ALU_OP3_FMA, tgsi_op3},
 	[TGSI_OPCODE_SQRT]	= { ALU_OP1_SQRT_IEEE, tgsi_trans_srcx_replicate},
@@ -9428,7 +9415,6 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_SLT]	= { ALU_OP2_SETGT, tgsi_op2_swap},
 	[TGSI_OPCODE_SGE]	= { ALU_OP2_SETGE, tgsi_op2},
 	[TGSI_OPCODE_MAD]	= { ALU_OP3_MULADD, tgsi_op3},
-	[TGSI_OPCODE_SUB]	= { ALU_OP2_ADD, tgsi_op2},
 	[TGSI_OPCODE_LRP]	= { ALU_OP0_NOP, tgsi_lrp},
 	[TGSI_OPCODE_FMA]	= { ALU_OP3_FMA, tgsi_op3},
 	[TGSI_OPCODE_SQRT]	= { ALU_OP1_SQRT_IEEE, cayman_emit_float_instr},

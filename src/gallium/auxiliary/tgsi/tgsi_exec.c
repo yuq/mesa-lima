@@ -5208,10 +5208,6 @@ exec_instruction(
       exec_vector_trinary(mach, inst, micro_mad, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
 
-   case TGSI_OPCODE_SUB:
-      exec_vector_binary(mach, inst, micro_sub, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
    case TGSI_OPCODE_LRP:
       exec_vector_trinary(mach, inst, micro_lrp, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;

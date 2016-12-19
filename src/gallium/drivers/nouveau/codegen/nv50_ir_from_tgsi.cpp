@@ -723,7 +723,6 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(SGE, SET);
    NV50_IR_OPCODE_CASE(MAD, MAD);
    NV50_IR_OPCODE_CASE(FMA, FMA);
-   NV50_IR_OPCODE_CASE(SUB, SUB);
 
    NV50_IR_OPCODE_CASE(FLR, FLOOR);
    NV50_IR_OPCODE_CASE(ROUND, CVT);
@@ -2988,7 +2987,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_SHL:
    case TGSI_OPCODE_ISHR:
    case TGSI_OPCODE_USHR:
-   case TGSI_OPCODE_SUB:
    case TGSI_OPCODE_XOR:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = fetchSrc(0, c);

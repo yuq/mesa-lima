@@ -750,9 +750,6 @@ nvfx_fragprog_parse_instruction(struct nvfx_fpc *fpc,
       }
       break;
    }
-   case TGSI_OPCODE_SUB:
-      nvfx_fp_emit(fpc, arith(sat, ADD, dst, mask, src[0], neg(src[1]), none));
-      break;
    case TGSI_OPCODE_TEX:
       nvfx_fp_emit(fpc, tex(sat, TEX, unit, dst, mask, src[0], none, none));
       break;

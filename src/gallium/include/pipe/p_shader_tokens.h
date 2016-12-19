@@ -345,7 +345,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_SLT                 14
 #define TGSI_OPCODE_SGE                 15
 #define TGSI_OPCODE_MAD                 16
-#define TGSI_OPCODE_SUB                 17
+/* gap */
 #define TGSI_OPCODE_LRP                 18
 #define TGSI_OPCODE_FMA                 19
 #define TGSI_OPCODE_SQRT                20

@@ -1022,17 +1022,6 @@ i915_translate_instruction(struct i915_fp_compile *p,
                       negate(tmp, 1, 1, 1, 1), 0);
       break;
 
-   case TGSI_OPCODE_SUB:
-      src0 = src_vector(p, &inst->Src[0], fs);
-      src1 = src_vector(p, &inst->Src[1], fs);
-
-      i915_emit_arith(p,
-                      A0_ADD,
-                      get_result_vector(p, &inst->Dst[0]),
-                      get_result_flags(inst), 0,
-                      src0, negate(src1, 1, 1, 1, 1), 0);
-      break;
-
    case TGSI_OPCODE_TEX:
       emit_tex(p, inst, T0_TEXLD, fs);
       break;

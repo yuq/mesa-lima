@@ -1403,30 +1403,6 @@ emit_ssg(struct svga_shader_emitter *emit,
 
 
 /**
- * Translate/emit TGSI SUB instruction as:
- * ADD DST, SRC0, negate(SRC1)
- */
-static boolean
-emit_sub(struct svga_shader_emitter *emit,
-         const struct tgsi_full_instruction *insn)
-{
-   SVGA3dShaderDestToken dst = translate_dst_register( emit, insn, 0 );
-   struct src_register src0 = translate_src_register(
-      emit, &insn->Src[0] );
-   struct src_register src1 = translate_src_register(
-      emit, &insn->Src[1] );
-
-   src1 = negate(src1);
-
-   if (!submit_op2( emit, inst_token( SVGA3DOP_ADD ), dst,
-                    src0, src1 ))
-      return FALSE;
-
-   return TRUE;
-}
-
-
-/**
  * Translate/emit KILL_IF instruction (kill if any of X,Y,Z,W are negative).
  */
 static boolean
@@ -2988,9 +2964,6 @@ svga_emit_instruction(struct svga_shader_emitter *emit,
 
    case TGSI_OPCODE_SLE:
       return emit_select_op( emit, PIPE_FUNC_LEQUAL, insn );
-
-   case TGSI_OPCODE_SUB:
-      return emit_sub( emit, insn );
 
    case TGSI_OPCODE_POW:
       return emit_pow( emit, insn );
