@@ -2123,14 +2123,17 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
          db.Height               = image->extent.height - 1;
          db.Width                = image->extent.width - 1;
          db.LOD                  = iview->isl.base_level;
-         db.Depth                = image->array_size - 1; /* FIXME: 3-D */
          db.MinimumArrayElement  = iview->isl.base_array_layer;
+
+         assert(image->depth_surface.isl.dim != ISL_SURF_DIM_3D);
+         db.Depth =
+         db.RenderTargetViewExtent =
+            iview->isl.array_len - iview->isl.base_array_layer - 1;
 
 #if GEN_GEN >= 8
          db.SurfaceQPitch =
             isl_surf_get_array_pitch_el_rows(&image->depth_surface.isl) >> 2;
 #endif
-         db.RenderTargetViewExtent = 1 - 1;
       }
    } else {
       /* Even when no depth buffer is present, the hardware requires that
