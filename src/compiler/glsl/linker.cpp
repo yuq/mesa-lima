@@ -1881,7 +1881,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
       linked_shader->info.InnerCoverage |=
          shader->info.InnerCoverage;
       linked_shader->Program->info.fs.post_depth_coverage |=
-         shader->info.PostDepthCoverage;
+         shader->PostDepthCoverage;
 
       linked_shader->Program->sh.fs.BlendSupport |= shader->BlendSupport;
    }

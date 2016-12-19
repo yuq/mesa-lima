@@ -2242,7 +2242,6 @@ struct gl_subroutine_function
  */
 struct gl_shader_info
 {
-   bool PostDepthCoverage;
    bool InnerCoverage;
 
    struct {
@@ -2429,6 +2428,8 @@ struct gl_shader
 
    bool redeclares_gl_fragcoord;
    bool uses_gl_fragcoord;
+
+   bool PostDepthCoverage;
 
    /**
     * Fragment shader state from GLSL 1.50 layout qualifiers.
