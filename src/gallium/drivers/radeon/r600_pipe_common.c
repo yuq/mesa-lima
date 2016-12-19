@@ -755,6 +755,7 @@ static const char* r600_get_chip_name(struct r600_common_screen *rscreen)
 	case CHIP_FIJI: return "AMD FIJI";
 	case CHIP_POLARIS10: return "AMD POLARIS10";
 	case CHIP_POLARIS11: return "AMD POLARIS11";
+	case CHIP_POLARIS12: return "AMD POLARIS12";
 	case CHIP_STONEY: return "AMD STONEY";
 	default: return "AMD unknown";
 	}
@@ -889,9 +890,11 @@ const char *r600_get_llvm_processor_name(enum radeon_family family)
 #if HAVE_LLVM <= 0x0308
 	case CHIP_POLARIS10: return "tonga";
 	case CHIP_POLARIS11: return "tonga";
+	case CHIP_POLARIS12: return "tonga";
 #else
 	case CHIP_POLARIS10: return "polaris10";
 	case CHIP_POLARIS11: return "polaris11";
+	case CHIP_POLARIS12: return "polaris11";
 #endif
 	default: return "";
 	}
