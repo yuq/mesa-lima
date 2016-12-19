@@ -1082,8 +1082,8 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
            if (tx->shift_wpos) {
                /* TODO: do this only once */
                struct ureg_dst wpos = tx_scratch(tx);
-               ureg_SUB(ureg, wpos, tx->regs.vPos,
-                        ureg_imm4f(ureg, 0.5f, 0.5f, 0.0f, 0.0f));
+               ureg_ADD(ureg, wpos, tx->regs.vPos,
+                        ureg_imm4f(ureg, -0.5f, -0.5f, 0.0f, 0.0f));
                src = ureg_src(wpos);
            } else {
                src = tx->regs.vPos;
@@ -1161,12 +1161,12 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         break;
     case NINED3DSPSM_BIAS:
         tmp = tx_scratch(tx);
-        ureg_SUB(ureg, tmp, src, ureg_imm1f(ureg, 0.5f));
+        ureg_ADD(ureg, tmp, src, ureg_imm1f(ureg, -0.5f));
         src = ureg_src(tmp);
         break;
     case NINED3DSPSM_BIASNEG:
         tmp = tx_scratch(tx);
-        ureg_SUB(ureg, tmp, ureg_imm1f(ureg, 0.5f), src);
+        ureg_ADD(ureg, tmp, ureg_imm1f(ureg, 0.5f), ureg_negate(src));
         src = ureg_src(tmp);
         break;
     case NINED3DSPSM_NOT:
@@ -1179,7 +1179,7 @@ tx_src_param(struct shader_translator *tx, const struct sm1_src_param *param)
         /* fall through */
     case NINED3DSPSM_COMP:
         tmp = tx_scratch(tx);
-        ureg_SUB(ureg, tmp, ureg_imm1f(ureg, 1.0f), src);
+        ureg_ADD(ureg, tmp, ureg_imm1f(ureg, 1.0f), ureg_negate(src));
         src = ureg_src(tmp);
         break;
     case NINED3DSPSM_DZ:
@@ -2552,7 +2552,7 @@ DECL_SPECIAL(TEXM3x3SPEC)
     ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_imm1f(ureg, 2.0f));
     ureg_MUL(ureg, tmp, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_src(dst));
     /* at this step tmp.xyz = 2 * (N.E / N.N) * N */
-    ureg_SUB(ureg, tmp, ureg_src(tmp), E);
+    ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_negate(E));
     ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m + 2), ureg_src(tmp), sample);
 
     return D3D_OK;
@@ -2691,7 +2691,7 @@ DECL_SPECIAL(TEXM3x3)
         ureg_MUL(ureg, ureg_writemask(tmp, TGSI_WRITEMASK_X), ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_imm1f(ureg, 2.0f));
         ureg_MUL(ureg, tmp, ureg_scalar(ureg_src(tmp), TGSI_SWIZZLE_X), ureg_src(dst));
         /* at this step tmp.xyz = 2 * (N.E / N.N) * N */
-        ureg_SUB(ureg, tmp, ureg_src(tmp), ureg_src(E));
+        ureg_ADD(ureg, tmp, ureg_src(tmp), ureg_negate(ureg_src(E)));
         ureg_TEX(ureg, dst, ps1x_sampler_type(tx->info, m + 2), ureg_src(tmp), sample);
         break;
     default:
@@ -3454,7 +3454,7 @@ shader_add_ps_fog_stage(struct shader_translator *tx, struct ureg_src src_col)
     if (tx->info->fog_mode == D3DFOG_LINEAR) {
         fog_end = NINE_CONSTANT_SRC_SWIZZLE(33, X);
         fog_coeff = NINE_CONSTANT_SRC_SWIZZLE(33, Y);
-        ureg_SUB(ureg, fog_factor, fog_end, depth);
+        ureg_ADD(ureg, fog_factor, fog_end, ureg_negate(depth));
         ureg_MUL(ureg, ureg_saturate(fog_factor), tx_src_scalar(fog_factor), fog_coeff);
     } else if (tx->info->fog_mode == D3DFOG_EXP) {
         fog_density = NINE_CONSTANT_SRC_SWIZZLE(33, X);
