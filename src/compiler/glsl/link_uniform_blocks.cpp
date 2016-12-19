@@ -205,7 +205,7 @@ struct block {
    bool has_instance_name;
 };
 
-static void process_block_array_leaf(char **name, gl_uniform_block *blocks,
+static void process_block_array_leaf(const char *name, gl_uniform_block *blocks,
                                      ubo_visitor *parcel,
                                      gl_uniform_buffer_variable *variables,
                                      const struct link_uniform_block_active *const b,
@@ -241,7 +241,7 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
                              parcel, variables, b, block_index,
                              binding_offset, ctx, prog, first_index);
       } else {
-         process_block_array_leaf(name, blocks,
+         process_block_array_leaf(*name, blocks,
                                   parcel, variables, b, block_index,
                                   binding_offset, *block_index - first_index,
                                   ctx, prog);
@@ -250,7 +250,7 @@ process_block_array(struct uniform_block_array_elements *ub_array, char **name,
 }
 
 static void
-process_block_array_leaf(char **name,
+process_block_array_leaf(const char *name,
                          gl_uniform_block *blocks,
                          ubo_visitor *parcel, gl_uniform_buffer_variable *variables,
                          const struct link_uniform_block_active *const b,
@@ -261,7 +261,7 @@ process_block_array_leaf(char **name,
    unsigned i = *block_index;
    const glsl_type *type =  b->type->without_array();
 
-   blocks[i].Name = ralloc_strdup(blocks, *name);
+   blocks[i].Name = ralloc_strdup(blocks, name);
    blocks[i].Uniforms = &variables[(*parcel).index];
 
    /* The ARB_shading_language_420pack spec says:
@@ -278,7 +278,7 @@ process_block_array_leaf(char **name,
    blocks[i]._RowMajor = type->get_interface_row_major();
    blocks[i].linearized_array_index = linearized_index;
 
-   parcel->process(type, blocks[i].Name);
+   parcel->process(type, b->has_instance_name ? blocks[i].Name : "");
 
    blocks[i].UniformBufferSize = parcel->buffer_size;
 
@@ -367,8 +367,8 @@ create_buffer_blocks(void *mem_ctx, struct gl_context *ctx,
       if ((create_ubo_blocks && !b->is_shader_storage) ||
           (!create_ubo_blocks && b->is_shader_storage)) {
 
+         unsigned binding_offset = 0;
          if (b->array != NULL) {
-            unsigned binding_offset = 0;
             char *name = ralloc_strdup(NULL,
                                        block_type->without_array()->name);
             size_t name_length = strlen(name);
@@ -379,31 +379,9 @@ create_buffer_blocks(void *mem_ctx, struct gl_context *ctx,
                                 i);
             ralloc_free(name);
          } else {
-            blocks[i].Name = ralloc_strdup(blocks, block_type->name);
-            blocks[i].Uniforms = &variables[parcel.index];
-            blocks[i].Binding = (b->has_binding) ? b->binding : 0;
-            blocks[i].UniformBufferSize = 0;
-            blocks[i]._Packing =
-               gl_uniform_block_packing(block_type->interface_packing);
-            blocks[i]._RowMajor = block_type->get_interface_row_major();
-
-            parcel.process(block_type,
-                           b->has_instance_name ? block_type->name : "");
-
-            blocks[i].UniformBufferSize = parcel.buffer_size;
-
-            /* Check SSBO size is lower than maximum supported size for SSBO
-             */
-            if (b->is_shader_storage &&
-                parcel.buffer_size > ctx->Const.MaxShaderStorageBlockSize) {
-               linker_error(prog, "shader storage block `%s' has size %d, "
-                            "which is larger than than the maximum allowed (%d)",
-                            block_type->name, parcel.buffer_size,
-                            ctx->Const.MaxShaderStorageBlockSize);
-            }
-            blocks[i].NumUniforms = (unsigned)(ptrdiff_t)
-               (&variables[parcel.index] - blocks[i].Uniforms);
-            i++;
+            process_block_array_leaf(block_type->name, blocks, &parcel,
+                                     variables, b, &i, &binding_offset,
+                                     0, ctx, prog);
          }
       }
    }
