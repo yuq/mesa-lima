@@ -32,7 +32,7 @@
 #include "si_pipe.h"
 #include "sid.h"
 
-#define MAX_GLOBAL_BUFFERS 20
+#define MAX_GLOBAL_BUFFERS 22
 
 struct si_compute {
 	unsigned ir_type;
@@ -196,17 +196,19 @@ static void si_set_global_binding(
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct si_compute *program = sctx->cs_shader_state.program;
 
+	assert(first + n <= MAX_GLOBAL_BUFFERS);
+
 	if (!resources) {
-		for (i = first; i < first + n; i++) {
-			pipe_resource_reference(&program->global_buffers[i], NULL);
+		for (i = 0; i < n; i++) {
+			pipe_resource_reference(&program->global_buffers[first + i], NULL);
 		}
 		return;
 	}
 
-	for (i = first; i < first + n; i++) {
+	for (i = 0; i < n; i++) {
 		uint64_t va;
 		uint32_t offset;
-		pipe_resource_reference(&program->global_buffers[i], resources[i]);
+		pipe_resource_reference(&program->global_buffers[first + i], resources[i]);
 		va = r600_resource(resources[i])->gpu_address;
 		offset = util_le32_to_cpu(*handles[i]);
 		va += offset;
