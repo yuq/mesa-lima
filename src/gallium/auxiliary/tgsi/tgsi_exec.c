@@ -5256,10 +5256,6 @@ exec_instruction(
       exec_xpd(mach, inst);
       break;
 
-   case TGSI_OPCODE_ABS:
-      exec_vector_unary(mach, inst, micro_abs, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
    case TGSI_OPCODE_DPH:
       exec_dph(mach, inst);
       break;

@@ -3936,9 +3936,6 @@ static int tgsi_op2_s(struct r600_shader_ctx *ctx, int swap, int trans_only)
 		case TGSI_OPCODE_SUB:
 			r600_bytecode_src_toggle_neg(&alu.src[1]);
 			break;
-		case TGSI_OPCODE_ABS:
-			r600_bytecode_src_set_abs(&alu.src[0]);
-			break;
 		default:
 			break;
 		}
@@ -9025,7 +9022,7 @@ static const struct r600_shader_tgsi_instruction r600_shader_tgsi_instruction[] 
 	[TGSI_OPCODE_POW]	= { ALU_OP0_NOP, tgsi_pow},
 	[TGSI_OPCODE_XPD]	= { ALU_OP0_NOP, tgsi_xpd},
 	[32]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ABS]	= { ALU_OP1_MOV, tgsi_op2},
+	[33]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[34]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_DPH]	= { ALU_OP2_DOT4, tgsi_dp},
 	[TGSI_OPCODE_COS]	= { ALU_OP1_COS, tgsi_trig},
@@ -9224,7 +9221,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_POW]	= { ALU_OP0_NOP, tgsi_pow},
 	[TGSI_OPCODE_XPD]	= { ALU_OP0_NOP, tgsi_xpd},
 	[32]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ABS]	= { ALU_OP1_MOV, tgsi_op2},
+	[33]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[34]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_DPH]	= { ALU_OP2_DOT4, tgsi_dp},
 	[TGSI_OPCODE_COS]	= { ALU_OP1_COS, tgsi_trig},
@@ -9447,7 +9444,7 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_POW]	= { ALU_OP0_NOP, cayman_pow},
 	[TGSI_OPCODE_XPD]	= { ALU_OP0_NOP, tgsi_xpd},
 	[32]			= { ALU_OP0_NOP, tgsi_unsupported},
-	[TGSI_OPCODE_ABS]	= { ALU_OP1_MOV, tgsi_op2},
+	[33]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[34]			= { ALU_OP0_NOP, tgsi_unsupported},
 	[TGSI_OPCODE_DPH]	= { ALU_OP2_DOT4, tgsi_dp},
 	[TGSI_OPCODE_COS]	= { ALU_OP1_COS, cayman_trig},

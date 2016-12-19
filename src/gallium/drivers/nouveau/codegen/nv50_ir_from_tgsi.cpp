@@ -731,8 +731,6 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(LG2, LG2);
    NV50_IR_OPCODE_CASE(POW, POW);
 
-   NV50_IR_OPCODE_CASE(ABS, ABS);
-
    NV50_IR_OPCODE_CASE(COS, COS);
    NV50_IR_OPCODE_CASE(DDX, DFDX);
    NV50_IR_OPCODE_CASE(DDX_FINE, DFDX);
@@ -3011,7 +3009,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       }
       break;
    case TGSI_OPCODE_MOV:
-   case TGSI_OPCODE_ABS:
    case TGSI_OPCODE_CEIL:
    case TGSI_OPCODE_FLR:
    case TGSI_OPCODE_TRUNC:

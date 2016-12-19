@@ -76,7 +76,6 @@ static const struct {
    unsigned num_dst;
    unsigned num_src;
 } op_table [TGSI_OPCODE_LAST] = {
-   [ TGSI_OPCODE_ABS     ] = { false,  false,                  0,  1,  1 },
    [ TGSI_OPCODE_ADD     ] = { false,   true,  TGSI_SWIZZLE_ZERO,  1,  2 },
    [ TGSI_OPCODE_CEIL    ] = { false,  false,                  0,  1,  1 },
    [ TGSI_OPCODE_CMP     ] = { false,  false,                  0,  1,  2 },

@@ -3456,28 +3456,6 @@ emit_puint_to_sscaled(struct svga_shader_emitter_v10 *emit,
 
 
 /**
- * Emit code for TGSI_OPCODE_ABS instruction.
- */
-static boolean
-emit_abs(struct svga_shader_emitter_v10 *emit,
-         const struct tgsi_full_instruction *inst)
-{
-   /* dst = ABS(s0):
-    *   dst = abs(s0)
-    * Translates into:
-    *   MOV dst, abs(s0)
-    */
-   struct tgsi_full_src_register abs_src0 = absolute_src(&inst->Src[0]);
-
-   /* MOV dst, abs(s0) */
-   emit_instruction_op1(emit, VGPU10_OPCODE_MOV, &inst->Dst[0],
-                        &abs_src0, inst->Instruction.Saturate);
-
-   return TRUE;
-}
-
-
-/**
  * Emit code for TGSI_OPCODE_ARL or TGSI_OPCODE_UARL instruction.
  */
 static boolean
@@ -5756,8 +5734,6 @@ emit_vgpu10_instruction(struct svga_shader_emitter_v10 *emit,
       return emit_vertex(emit, inst);
    case TGSI_OPCODE_ENDPRIM:
       return emit_endprim(emit, inst);
-   case TGSI_OPCODE_ABS:
-      return emit_abs(emit, inst);
    case TGSI_OPCODE_IABS:
       return emit_iabs(emit, inst);
    case TGSI_OPCODE_ARL:

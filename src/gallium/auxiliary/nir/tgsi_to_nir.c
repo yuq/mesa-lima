@@ -1547,7 +1547,6 @@ static const nir_op op_trans[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_LG2] = nir_op_flog2,
    [TGSI_OPCODE_POW] = nir_op_fpow,
    [TGSI_OPCODE_XPD] = 0,
-   [TGSI_OPCODE_ABS] = nir_op_fabs,
    [TGSI_OPCODE_DPH] = 0,
    [TGSI_OPCODE_COS] = nir_op_fcos,
    [TGSI_OPCODE_DDX] = nir_op_fddx,

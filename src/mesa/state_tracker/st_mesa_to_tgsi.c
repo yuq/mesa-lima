@@ -427,8 +427,6 @@ translate_opcode( unsigned op )
    switch( op ) {
    case OPCODE_ARL:
       return TGSI_OPCODE_ARL;
-   case OPCODE_ABS:
-      return TGSI_OPCODE_ABS;
    case OPCODE_ADD:
       return TGSI_OPCODE_ADD;
    case OPCODE_CMP:
@@ -562,6 +560,10 @@ compile_instruction(
 
    case OPCODE_RSQ:
       ureg_RSQ( ureg, dst[0], ureg_abs(src[0]) );
+      break;
+
+   case OPCODE_ABS:
+      ureg_MOV(ureg, dst[0], ureg_abs(src[0]));
       break;
 
    default:

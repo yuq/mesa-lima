@@ -58,7 +58,6 @@ static const struct {
    [TGSI_OPCODE_EX2]          = { TOY_OPCODE_EXP,                 1, 1 },
    [TGSI_OPCODE_LG2]          = { TOY_OPCODE_LOG,                 1, 1 },
    [TGSI_OPCODE_POW]          = { TOY_OPCODE_POW,                 1, 2 },
-   [TGSI_OPCODE_ABS]          = { GEN6_OPCODE_MOV,                 1, 1 },
    [TGSI_OPCODE_DPH]          = { GEN6_OPCODE_DPH,                 1, 2 },
    [TGSI_OPCODE_COS]          = { TOY_OPCODE_COS,                 1, 1 },
    [TGSI_OPCODE_KILL]         = { TOY_OPCODE_KIL,                 0, 0 },
@@ -148,7 +147,6 @@ aos_simple(struct toy_compiler *tc,
    case TGSI_OPCODE_SUB:
       src[1] = tsrc_negate(src[1]);
       break;
-   case TGSI_OPCODE_ABS:
    case TGSI_OPCODE_IABS:
       src[0] = tsrc_absolute(src[0]);
       break;
@@ -790,7 +788,6 @@ static const toy_tgsi_translate aos_translate_table[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_LG2]          = aos_simple,
    [TGSI_OPCODE_POW]          = aos_simple,
    [TGSI_OPCODE_XPD]          = aos_XPD,
-   [TGSI_OPCODE_ABS]          = aos_simple,
    [TGSI_OPCODE_DPH]          = aos_simple,
    [TGSI_OPCODE_COS]          = aos_simple,
    [TGSI_OPCODE_DDX]          = aos_unsupported,
@@ -1333,7 +1330,6 @@ static const toy_tgsi_translate soa_translate_table[TGSI_OPCODE_LAST] = {
    [TGSI_OPCODE_LG2]          = soa_scalar_replicate,
    [TGSI_OPCODE_POW]          = soa_scalar_replicate,
    [TGSI_OPCODE_XPD]          = soa_XPD,
-   [TGSI_OPCODE_ABS]          = soa_per_channel,
    [TGSI_OPCODE_DPH]          = soa_dot_product,
    [TGSI_OPCODE_COS]          = soa_scalar_replicate,
    [TGSI_OPCODE_DDX]          = soa_partial_derivative,

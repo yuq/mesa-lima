@@ -500,15 +500,6 @@ i915_translate_instruction(struct i915_fp_compile *p,
    uint tmp = 0;
 
    switch (inst->Instruction.Opcode) {
-   case TGSI_OPCODE_ABS:
-      src0 = src_vector(p, &inst->Src[0], fs);
-      i915_emit_arith(p,
-                      A0_MAX,
-                      get_result_vector(p, &inst->Dst[0]),
-                      get_result_flags(inst), 0,
-                      src0, negate(src0, 1, 1, 1, 1), 0);
-      break;
-
    case TGSI_OPCODE_ADD:
       emit_simple_arith(p, inst, A0_ADD, 2, fs);
       break;

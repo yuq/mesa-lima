@@ -767,8 +767,6 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 {
 	lp_set_default_actions(bld_base);
 
-	bld_base->op_actions[TGSI_OPCODE_ABS].emit = build_tgsi_intrinsic_nomem;
-	bld_base->op_actions[TGSI_OPCODE_ABS].intr_name = "llvm.fabs.f32";
 	bld_base->op_actions[TGSI_OPCODE_AND].emit = emit_and;
 	bld_base->op_actions[TGSI_OPCODE_ARL].emit = emit_arl;
 	bld_base->op_actions[TGSI_OPCODE_BFI].emit = emit_bfi;

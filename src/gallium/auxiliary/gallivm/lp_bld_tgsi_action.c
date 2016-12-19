@@ -499,8 +499,7 @@ log_emit(
    LLVMValueRef abs_x, log_abs_x, flr_log_abs_x, ex2_flr_log_abs_x;
 
    /* abs( src0.x) */
-   abs_x = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_ABS,
-                                    emit_data->args[0] /* src0.x */);
+   abs_x = lp_build_abs(&bld_base->base, emit_data->args[0] /* src0.x */);
 
    /* log( abs( src0.x ) ) */
    log_abs_x = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_LG2,
@@ -1411,18 +1410,6 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
 /* These actions are CPU only, because they could potentially output SSE
  * intrinsics.
  */
-
-/* TGSI_OPCODE_ABS (CPU Only)*/
-
-static void
-abs_emit_cpu(
-   const struct lp_build_tgsi_action * action,
-   struct lp_build_tgsi_context * bld_base,
-   struct lp_build_emit_data * emit_data)
-{
-   emit_data->output[emit_data->chan] = lp_build_abs(&bld_base->base,
-                                                       emit_data->args[0]);
-}
 
 /* TGSI_OPCODE_ADD (CPU Only) */
 static void
@@ -2588,7 +2575,6 @@ lp_set_default_actions_cpu(
    struct lp_build_tgsi_context * bld_base)
 {
    lp_set_default_actions(bld_base);
-   bld_base->op_actions[TGSI_OPCODE_ABS].emit = abs_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_ADD].emit = add_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_AND].emit = and_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_ARL].emit = arl_emit_cpu;

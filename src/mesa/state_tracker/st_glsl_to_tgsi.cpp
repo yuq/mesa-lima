@@ -98,6 +98,7 @@ public:
       this->index = index;
       this->swizzle = swizzle_for_type(type, component);
       this->negate = 0;
+      this->abs = 0;
       this->index2D = 0;
       this->type = type ? type->base_type : GLSL_TYPE_ERROR;
       this->reladdr = NULL;
@@ -117,6 +118,7 @@ public:
       this->index2D = 0;
       this->swizzle = SWIZZLE_XYZW;
       this->negate = 0;
+      this->abs = 0;
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
@@ -134,6 +136,7 @@ public:
       this->index2D = index2D;
       this->swizzle = SWIZZLE_XYZW;
       this->negate = 0;
+      this->abs = 0;
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
@@ -150,6 +153,7 @@ public:
       this->index2D = 0;
       this->swizzle = 0;
       this->negate = 0;
+      this->abs = 0;
       this->reladdr = NULL;
       this->reladdr2 = NULL;
       this->has_index2 = false;
@@ -164,6 +168,7 @@ public:
    int16_t index2D;
    uint16_t swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
    int negate:4; /**< NEGATE_XYZW mask from mesa */
+   unsigned abs:1;
    enum glsl_base_type type:4; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    unsigned has_index2:1;
    gl_register_file file:5; /**< PROGRAM_* from Mesa */
@@ -178,6 +183,14 @@ public:
    /** Register index should be offset by the integer in this reg. */
    st_src_reg *reladdr;
    st_src_reg *reladdr2;
+
+   st_src_reg get_abs()
+   {
+      st_src_reg reg = *this;
+      reg.negate = 0;
+      reg.abs = 1;
+      return reg;
+   }
 };
 
 class st_dst_reg {
@@ -245,6 +258,7 @@ st_src_reg::st_src_reg(st_dst_reg reg)
    this->index = reg.index;
    this->swizzle = SWIZZLE_XYZW;
    this->negate = 0;
+   this->abs = 0;
    this->reladdr = reg.reladdr;
    this->index2D = reg.index2D;
    this->reladdr2 = reg.reladdr2;
@@ -954,7 +968,6 @@ glsl_to_tgsi_visitor::get_opcode(unsigned op,
       case2iu(ISHR, USHR);
 
       case3fid(SSG, ISSG, DSSG);
-      case3fid(ABS, IABS, DABS);
 
       case2iu(IBFE, UBFE);
       case2iu(IMSB, UMSB);
@@ -1228,6 +1241,7 @@ glsl_to_tgsi_visitor::get_temp(const glsl_type *type)
    src.type = native_integers ? type->base_type : GLSL_TYPE_FLOAT;
    src.reladdr = NULL;
    src.negate = 0;
+   src.abs = 0;
 
    if (!options->EmitNoIndirectTemp && type_has_array_or_matrix(type)) {
       if (next_array >= max_num_arrays) {
@@ -1593,7 +1607,12 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       emit_asm(ir, TGSI_OPCODE_MOV, result_dst, op[0]);
       break;
    case ir_unop_abs:
-      emit_asm(ir, TGSI_OPCODE_ABS, result_dst, op[0]);
+      if (result_dst.type == GLSL_TYPE_FLOAT)
+         emit_asm(ir, TGSI_OPCODE_MOV, result_dst, op[0].get_abs());
+      else if (result_dst.type == GLSL_TYPE_DOUBLE)
+         emit_asm(ir, TGSI_OPCODE_DABS, result_dst, op[0]);
+      else
+         emit_asm(ir, TGSI_OPCODE_IABS, result_dst, op[0]);
       break;
    case ir_unop_sign:
       emit_asm(ir, TGSI_OPCODE_SSG, result_dst, op[0]);
@@ -1919,8 +1938,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
           * we want, I choose to use ABS to match DX9 and pre-GLSL RSQ
           * behavior.
           */
-         emit_scalar(ir, TGSI_OPCODE_ABS, result_dst, op[0]);
-         emit_scalar(ir, TGSI_OPCODE_RSQ, result_dst, result_src);
+         emit_scalar(ir, TGSI_OPCODE_RSQ, result_dst, op[0].get_abs());
          emit_scalar(ir, TGSI_OPCODE_RCP, result_dst, result_src);
       }
       break;
@@ -1974,7 +1992,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
    case ir_unop_bitcast_f2i:
    case ir_unop_bitcast_f2u:
       /* Make sure we don't propagate the negate modifier to integer opcodes. */
-      if (op[0].negate)
+      if (op[0].negate || op[0].abs)
          emit_asm(ir, TGSI_OPCODE_MOV, result_dst, op[0]);
       else
          result_src = op[0];
@@ -2076,6 +2094,7 @@ glsl_to_tgsi_visitor::visit_expression(ir_expression* ir, st_src_reg *op)
       cbuf.index = 0;
       cbuf.reladdr = NULL;
       cbuf.negate = 0;
+      cbuf.abs = 0;
 
       assert(ir->type->is_vector() || ir->type->is_scalar());
 
@@ -4843,7 +4862,8 @@ glsl_to_tgsi_visitor::copy_propagate(void)
           inst->src[0].file != PROGRAM_ARRAY &&
           !inst->src[0].reladdr &&
           !inst->src[0].reladdr2 &&
-          !inst->src[0].negate) {
+          !inst->src[0].negate &&
+          !inst->src[0].abs) {
          for (int i = 0; i < 4; i++) {
             if (inst->dst[0].writemask & (1 << i)) {
                acp[4 * inst->dst[0].index + i] = inst;
@@ -5515,6 +5535,9 @@ translate_src(struct st_translate *t, const st_src_reg *src_reg)
                       GET_SWZ(src_reg->swizzle, 1) & 0x3,
                       GET_SWZ(src_reg->swizzle, 2) & 0x3,
                       GET_SWZ(src_reg->swizzle, 3) & 0x3);
+
+   if (src_reg->abs)
+      src = ureg_abs(src);
 
    if ((src_reg->negate & 0xf) == NEGATE_XYZW)
       src = ureg_negate(src);
