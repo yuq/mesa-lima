@@ -2493,6 +2493,9 @@ bool nir_repair_ssa(nir_shader *shader);
  */
 void nir_convert_from_ssa(nir_shader *shader, bool phi_webs_only);
 
+bool nir_lower_phis_to_regs_block(nir_block *block);
+bool nir_lower_ssa_defs_to_regs_block(nir_block *block);
+
 bool nir_opt_algebraic(nir_shader *shader);
 bool nir_opt_algebraic_late(nir_shader *shader);
 bool nir_opt_constant_folding(nir_shader *shader);
