@@ -134,8 +134,11 @@ brw_codegen_wm_prog(struct brw_context *brw,
 
    int st_index8 = -1, st_index16 = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME) {
-      st_index8 = brw_get_shader_time_index(brw, prog, &fp->program, ST_FS8);
-      st_index16 = brw_get_shader_time_index(brw, prog, &fp->program, ST_FS16);
+      bool is_glsl_sh = prog != NULL;
+      st_index8 = brw_get_shader_time_index(brw, &fp->program, ST_FS8,
+                                            is_glsl_sh);
+      st_index16 = brw_get_shader_time_index(brw, &fp->program, ST_FS16,
+                                             is_glsl_sh);
    }
 
    char *error_str = NULL;

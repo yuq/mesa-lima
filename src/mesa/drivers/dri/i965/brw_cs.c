@@ -115,7 +115,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, &cp->program, ST_CS);
+      st_index = brw_get_shader_time_index(brw, &cp->program, ST_CS, true);
 
    char *error_str;
    program = brw_compile_cs(brw->screen->compiler, brw, mem_ctx, key,

@@ -168,7 +168,7 @@ brw_codegen_tes_prog(struct brw_context *brw,
 
    int st_index = -1;
    if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))
-      st_index = brw_get_shader_time_index(brw, shader_prog, NULL, ST_TES);
+      st_index = brw_get_shader_time_index(brw, &tep->program, ST_TES, true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = brw->batch.last_bo && drm_intel_bo_busy(brw->batch.last_bo);

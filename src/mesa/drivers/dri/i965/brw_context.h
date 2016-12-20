@@ -1429,9 +1429,9 @@ void brw_alloc_stage_scratch(struct brw_context *brw,
                              unsigned thread_count);
 void brw_init_shader_time(struct brw_context *brw);
 int brw_get_shader_time_index(struct brw_context *brw,
-                              struct gl_shader_program *shader_prog,
                               struct gl_program *prog,
-                              enum shader_time_shader_type type);
+                              enum shader_time_shader_type type,
+                              bool is_glsl_sh);
 void brw_collect_and_report_shader_time(struct brw_context *brw);
 void brw_destroy_shader_time(struct brw_context *brw);
 

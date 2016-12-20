@@ -605,29 +605,25 @@ brw_collect_and_report_shader_time(struct brw_context *brw)
  * change their lifetimes compared to normal operation.
  */
 int
-brw_get_shader_time_index(struct brw_context *brw,
-                          struct gl_shader_program *shader_prog,
-                          struct gl_program *prog,
-                          enum shader_time_shader_type type)
+brw_get_shader_time_index(struct brw_context *brw, struct gl_program *prog,
+                          enum shader_time_shader_type type, bool is_glsl_sh)
 {
    int shader_time_index = brw->shader_time.num_entries++;
    assert(shader_time_index < brw->shader_time.max_entries);
    brw->shader_time.types[shader_time_index] = type;
 
-   int id = shader_prog ? shader_prog->Name : prog->Id;
    const char *name;
-   if (id == 0) {
+   if (prog->Id == 0) {
       name = "ff";
-   } else if (!shader_prog) {
-      name = "prog";
-   } else if (shader_prog->Label) {
-      name = ralloc_strdup(brw->shader_time.names, shader_prog->Label);
+   } else if (is_glsl_sh) {
+      name = prog->info.label ?
+         ralloc_strdup(brw->shader_time.names, prog->info.label) : "glsl";
    } else {
-      name = "glsl";
+      name = "prog";
    }
 
    brw->shader_time.names[shader_time_index] = name;
-   brw->shader_time.ids[shader_time_index] = id;
+   brw->shader_time.ids[shader_time_index] = prog->Id;
 
    return shader_time_index;
 }

@@ -167,6 +167,7 @@ static bool
 brw_codegen_tcs_prog(struct brw_context *brw,
                      struct gl_shader_program *shader_prog,
                      struct brw_program *tcp,
+                     struct brw_program *tep,
                      struct brw_tcs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -250,8 +251,8 @@ brw_codegen_tcs_prog(struct brw_context *brw,
    }
 
    int st_index = -1;
-   if (unlikely(INTEL_DEBUG & DEBUG_SHADER_TIME))
-      st_index = brw_get_shader_time_index(brw, shader_prog, NULL, ST_TCS);
+   if (unlikely((INTEL_DEBUG & DEBUG_SHADER_TIME) && tep))
+      st_index = brw_get_shader_time_index(brw, &tep->program, ST_TCS, true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = brw->batch.last_bo && drm_intel_bo_busy(brw->batch.last_bo);
@@ -370,7 +371,7 @@ brw_upload_tcs_prog(struct brw_context *brw)
                          &stage_state->prog_offset,
                          &brw->tcs.base.prog_data)) {
       bool success = brw_codegen_tcs_prog(brw, current[MESA_SHADER_TESS_CTRL],
-                                          tcp, &key);
+                                          tcp, tep, &key);
       assert(success);
       (void)success;
    }
@@ -403,19 +404,22 @@ brw_tcs_precompile(struct gl_context *ctx,
          _LinkedShaders[MESA_SHADER_TESS_CTRL]->info.TessCtrl.VerticesOut;
    }
 
+   struct brw_program *btep;
    if (tes) {
+      btep = brw_program(tes->Program);
       key.tes_primitive_mode = tes->info.TessEval.PrimitiveMode;
       key.quads_workaround = brw->gen < 9 &&
                              tes->info.TessEval.PrimitiveMode == GL_QUADS &&
                              tes->info.TessEval.Spacing == GL_EQUAL;
    } else {
+      btep = NULL;
       key.tes_primitive_mode = GL_TRIANGLES;
    }
 
    key.outputs_written = prog->nir->info->outputs_written;
    key.patch_outputs_written = prog->nir->info->patch_outputs_written;
 
-   success = brw_codegen_tcs_prog(brw, shader_prog, btcp, &key);
+   success = brw_codegen_tcs_prog(brw, shader_prog, btcp, btep, &key);
 
    brw->tcs.base.prog_offset = old_prog_offset;
    brw->tcs.base.prog_data = old_prog_data;

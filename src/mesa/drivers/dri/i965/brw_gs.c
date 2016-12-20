@@ -140,7 +140,7 @@ brw_codegen_gs_prog(struct brw_context *brw,
 
    int st_index = -1;
    if (INTEL_DEBUG & DEBUG_SHADER_TIME)
-      st_index = brw_get_shader_time_index(brw, prog, NULL, ST_GS);
+      st_index = brw_get_shader_time_index(brw, &gp->program, ST_GS, true);
 
    if (unlikely(brw->perf_debug)) {
       start_busy = brw->batch.last_bo && drm_intel_bo_busy(brw->batch.last_bo);
