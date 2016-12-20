@@ -539,50 +539,50 @@ static const uint64_t nvf0_read_hw_sm_counters_code[] =
 
 static const uint64_t gm107_read_hw_sm_counters_code[] =
 {
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0xf0c8000002170008ULL,  /* mov $r8 $tidx                          */
-   0xf0c800000037000cULL,  /* mov $r12 $virtid                       */
-   0xf0c8000000470000ULL,  /* mov $r0 $pm0                           */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0xf0c8000000570001ULL,  /* mov $r1 $pm1                           */
-   0xf0c8000000670002ULL,  /* mov $r2 $pm2                           */
-   0xf0c8000000770003ULL,  /* mov $r3 $pm3                           */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0xf0c8000000870004ULL,  /* mov $r4 $pm4                           */
-   0xf0c8000000970005ULL,  /* mov $r5 $pm5                           */
-   0xf0c8000000a70006ULL,  /* mov $r6 $pm6                           */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0xf0c8000000b70007ULL,  /* mov $r7 $pm7                           */
-   0x5b6403800087ff07ULL,  /* isetp eq u32 and $p0 0x1 0x0 $r8 0x1   */
-   0x4c98079c1887000aULL,  /* mov $r10 c7[0x620] 0xf                 */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0x3800000091470c08ULL,  /* bfe u32 $r8 $r12 0x914                 */
-   0x4c98079c1897000bULL,  /* mov $r11 c7[0x624] 0xf                 */
-   0x3800000020870c09ULL,  /* bfe u32 $r9 $r12 0x208                 */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0xe30000000008000fULL,  /* not $p0 exit                           */
-   0x5b6403800097ff0fULL,  /* isetp eq u32 and $p1 0x1 0x0 $r9 0x1   */
-   0x3838000006070808ULL,  /* imul u32 u32 $r8 $r8 0x60              */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0x383800000107090cULL,  /* imul u32 u32 $r12 $r9 0x10             */
-   0x383800000047090dULL,  /* imul u32 u32 $r13 $r9 0x4              */
-   0x5c10000000d70809ULL,  /* iadd $r9 $r8 $r13                      */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0x5c10000000c70808ULL,  /* iadd $r8 $r8 $r12                      */
-   0x5c98078000a7000cULL,  /* mov $r12 $r10 0xf                      */
-   0x5c10800000870a0aULL,  /* iadd cc $r10 $r10 $r8                  */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0x5c98078000b7000dULL,  /* mov $r13 $r11 0xf                      */
-   0x5c1008000ff70b0bULL,  /* iadd x $r11 $r11 0x0                   */
-   0x5c10800000970c0cULL,  /* iadd cc $r12 $r12 $r9                  */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0x5c1008000ff70d0dULL,  /* iadd x $r13 $r13 0x0                   */
-   0xbfd0000000070a00ULL,  /* st e wt b128 g[$r10] $r0 0x1           */
-   0x4c98079c18a70000ULL,  /* mov $r0 c7[0x628] 0xf                  */
-   0x001f8000fc0007e0ULL,  /* sched (st 0x0) (st 0x0) (st 0x0)       */
-   0xbfd0000004010c04ULL,  /* $p1 st e wt b128 g[$r12+0x40] $r4 0x1  */
-   0xbf90000005070c00ULL,  /* st e wt b32 g[$r12+0x50] $r0 0x1       */
-   0xe30000000007000fULL,  /* exit                                   */
+   0x001d0400e4200701ULL, /* sched (st 0x1 wr 0x0) (st 0x1 wr 0x1) (st 0x1 wr 0x2)  */
+   0xf0c8000002170008ULL, /* mov $r8 $tidx                                          */
+   0xf0c800000037000cULL, /* mov $r12 $virtid                                       */
+   0xf0c8000000470000ULL, /* mov $r0 $pm0                                           */
+   0x001e8400f0200761ULL, /* sched (st 0x1 wr 0x3) (st 0x1 wr 0x4) (st 0x1 wr 0x5)  */
+   0xf0c8000000570001ULL, /* mov $r1 $pm1                                           */
+   0xf0c8000000670002ULL, /* mov $r2 $pm2                                           */
+   0xf0c8000000770003ULL, /* mov $r3 $pm3                                           */
+   0x001e8400f42007a1ULL, /* sched (st 0x1 wr 0x5) (st 0x1 wr 0x5) (st 0x1 wr 0x5)  */
+   0xf0c8000000870004ULL, /* mov $r4 $pm4                                           */
+   0xf0c8000000970005ULL, /* mov $r5 $pm5                                           */
+   0xf0c8000000a70006ULL, /* mov $r6 $pm6                                           */
+   0x001f8401fc2007a1ULL, /* sched (st 0x1 wr 0x5) (st 0x1 wt 0x1) (st 0x1)         */
+   0xf0c8000000b70007ULL, /* mov $r7 $pm7                                           */
+   0x5b6403800087ff07ULL, /* isetp eq u32 and $p0 0x1 0x0 $r8 0x1                   */
+   0x4c98079c1887000aULL, /* mov $r10 c7[0x620] 0xf                                 */
+   0x001fa400fc2017e1ULL, /* sched (st 0x1 wt 0x2) (st 0x1) (st 0x9)                */
+   0x3800000091470c08ULL, /* bfe u32 $r8 $r12 0x914                                 */
+   0x4c98079c1897000bULL, /* mov $r11 c7[0x624] 0xf                                 */
+   0x3800000020870c09ULL, /* bfe u32 $r9 $r12 0x208                                 */
+   0x001c1800fc2007edULL, /* sched (st 0xd) (st 0x1) (st 0x6 wr 0x0)                */
+   0xe30000000008000fULL, /* not $p0 exit                                           */
+   0x5b6403800097ff0fULL, /* isetp eq u32 and $p1 0x1 0x0 $r9 0x1                   */
+   0x3838000006070808ULL, /* imul u32 u32 $r8 $r8 0x60                              */
+   0x003f8400e0c00726ULL, /* sched (st 0x6 wr 0x1) (st 0x6 wr 0x0) (st 0x1 wt 0x1)  */
+   0x383800000107090cULL, /* imul u32 u32 $r12 $r9 0x10                             */
+   0x383800000047090dULL, /* imul u32 u32 $r13 $r9 0x4                              */
+   0x5c10000000d70809ULL, /* iadd $r9 $r8 $r13                                      */
+   0x001f8400fcc017e1ULL, /* sched (st 0x1 wt 0x2) (st 0x6) (st 0x1)                */
+   0x5c10000000c70808ULL, /* iadd $r8 $r8 $r12                                      */
+   0x5c98078000a7000cULL, /* mov $r12 $r10 0xf                                      */
+   0x5c10800000870a0aULL, /* iadd cc $r10 $r10 $r8                                  */
+   0x001f8400fc2007e6ULL, /* sched (st 0x6) (st 0x1) (st 0x1)                       */
+   0x5c98078000b7000dULL, /* mov $r13 $r11 0xf                                      */
+   0x5c1008000ff70b0bULL, /* iadd x $r11 $r11 0x0                                   */
+   0x5c10800000970c0cULL, /* iadd cc $r12 $r12 $r9                                  */
+   0x003f983c1c4007e1ULL, /* sched (st 0x1) (st 0x2 rd 0x0 wt 0x3c) (st 0x6 wt 0x1) */
+   0x5c1008000ff70d0dULL, /* iadd x $r13 $r13 0x0                                   */
+   0xbfd0000000070a00ULL, /* st e wt b128 g[$r10] $r0 0x1                           */
+   0x4c98079c18a70000ULL, /* mov $r0 c7[0x628] 0xf                                  */
+   0x001fbc00fc2007e6ULL, /* sched (st 0x1) (st 0x1) (st 0xf)                       */
+   0xbfd0000004010c04ULL, /* $p1 st e wt b128 g[$r12+0x40] $r4 0x1                  */
+   0xbf90000005070c00ULL, /* st e wt b32 g[$r12+0x50] $r0 0x1                       */
+   0xe30000000007000fULL, /* exit                                                   */
 };
 
 /* For simplicity, we will allocate as many group slots as we allocate counter
