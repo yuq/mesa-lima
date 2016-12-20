@@ -1952,6 +1952,9 @@ struct gl_program
    struct {
       /** Fields used by GLSL programs */
       struct {
+         /** Data shared by gl_program and gl_shader_program */
+         struct gl_shader_program_data *data;
+
          struct gl_active_atomic_buffer **AtomicBuffers;
 
          /** Post-link transform feedback info. */

@@ -2208,6 +2208,8 @@ link_intrastage_shaders(void *mem_ctx,
       return NULL;
    }
 
+   _mesa_reference_shader_program_data(ctx, &gl_prog->sh.data, prog->data);
+
    /* Don't use _mesa_reference_program() just take ownership */
    linked->Program = gl_prog;
 

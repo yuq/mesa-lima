@@ -54,6 +54,15 @@ _mesa_warning(struct gl_context *ctx, const char *fmt, ...)
 }
 
 void
+_mesa_reference_shader_program_data(struct gl_context *ctx,
+                                    struct gl_shader_program_data **ptr,
+                                    struct gl_shader_program_data *data)
+{
+   (void) ctx;
+   *ptr = data;
+}
+
+void
 _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
                        struct gl_shader *sh)
 {

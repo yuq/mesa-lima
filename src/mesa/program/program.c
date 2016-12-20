@@ -34,6 +34,7 @@
 #include "main/framebuffer.h"
 #include "main/hash.h"
 #include "main/macros.h"
+#include "main/shaderobj.h"
 #include "program.h"
 #include "prog_cache.h"
 #include "prog_parameter.h"
@@ -313,6 +314,7 @@ _mesa_reference_program_(struct gl_context *ctx,
 
       if (deleteFlag) {
          assert(ctx);
+         _mesa_reference_shader_program_data(ctx, &oldProg->sh.data, NULL);
          ctx->Driver.DeleteProgram(ctx, oldProg);
       }
 
