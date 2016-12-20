@@ -257,8 +257,10 @@ enum intel_aux_disable {
    INTEL_AUX_DISABLE_NONE = 0,
    INTEL_AUX_DISABLE_HIZ  = 1 << 1,
    INTEL_AUX_DISABLE_MCS  = 1 << 2,
+   INTEL_AUX_DISABLE_CCS  = 1 << 3,
    INTEL_AUX_DISABLE_ALL  = INTEL_AUX_DISABLE_HIZ |
-                            INTEL_AUX_DISABLE_MCS
+                            INTEL_AUX_DISABLE_MCS |
+                            INTEL_AUX_DISABLE_CCS
 };
 
 /**
@@ -647,12 +649,6 @@ struct intel_mipmap_tree
     * that doesn't understand auxiliary buffers.
     */
    enum intel_aux_disable aux_disable;
-
-   /**
-    * Fast clear and lossless compression are always disabled for this
-    * miptree.
-    */
-   bool no_ccs;
 
    /**
     * Tells if the underlying buffer is to be also consumed by entities other

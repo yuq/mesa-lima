@@ -808,7 +808,7 @@ do_single_blorp_clear(struct brw_context *brw, struct gl_framebuffer *fb,
    if (set_write_disables(irb, ctx->Color.ColorMask[buf], color_write_disable))
       can_fast_clear = false;
 
-   if (irb->mt->no_ccs ||
+   if (irb->mt->aux_disable & INTEL_AUX_DISABLE_CCS ||
        !brw_is_color_fast_clear_compatible(brw, irb->mt, &ctx->Color.ClearColor))
       can_fast_clear = false;
 

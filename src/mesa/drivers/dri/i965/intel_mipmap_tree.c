@@ -324,7 +324,7 @@ intel_miptree_create_layout(struct brw_context *brw,
    mt->logical_depth0 = depth0;
    mt->aux_disable = (layout_flags & MIPTREE_LAYOUT_DISABLE_AUX) != 0 ?
       INTEL_AUX_DISABLE_ALL : INTEL_AUX_DISABLE_NONE;
-   mt->no_ccs = true;
+   mt->aux_disable |= INTEL_AUX_DISABLE_CCS;
    mt->is_scanout = (layout_flags & MIPTREE_LAYOUT_FOR_SCANOUT) != 0;
    exec_list_make_empty(&mt->hiz_map);
    exec_list_make_empty(&mt->color_resolve_map);
@@ -736,7 +736,7 @@ intel_miptree_create(struct brw_context *brw,
     */
    if (intel_tiling_supports_non_msrt_mcs(brw, mt->tiling) &&
        intel_miptree_supports_non_msrt_fast_clear(brw, mt)) {
-      mt->no_ccs = false;
+      mt->aux_disable &= ~INTEL_AUX_DISABLE_CCS;
       assert(brw->gen < 8 || mt->halign == 16 || num_samples <= 1);
 
       /* On Gen9+ clients are not currently capable of consuming compressed
@@ -858,7 +858,7 @@ intel_update_winsys_renderbuffer_miptree(struct brw_context *intel,
     */
    if (intel_tiling_supports_non_msrt_mcs(intel, singlesample_mt->tiling) &&
        intel_miptree_supports_non_msrt_fast_clear(intel, singlesample_mt)) {
-      singlesample_mt->no_ccs = false;
+      singlesample_mt->aux_disable &= ~INTEL_AUX_DISABLE_CCS;
    }
 
    if (num_samples == 0) {
@@ -1583,8 +1583,7 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
                                  bool is_lossless_compressed)
 {
    assert(mt->mcs_buf == NULL);
-   assert((mt->aux_disable & INTEL_AUX_DISABLE_MCS) == 0);
-   assert(!mt->no_ccs);
+   assert(!(mt->aux_disable & (INTEL_AUX_DISABLE_MCS | INTEL_AUX_DISABLE_CCS)));
 
    struct isl_surf temp_main_surf;
    struct isl_surf temp_ccs_surf;
@@ -2160,7 +2159,8 @@ intel_miptree_check_color_resolve(const struct brw_context *brw,
                                   const struct intel_mipmap_tree *mt,
                                   unsigned level, unsigned layer)
 {
-   if (mt->no_ccs || !mt->mcs_buf)
+
+   if ((mt->aux_disable & INTEL_AUX_DISABLE_CCS) || !mt->mcs_buf)
       return;
 
    /* Fast color clear is supported for mipmapped surfaces only on Gen8+. */
@@ -2240,7 +2240,7 @@ intel_miptree_needs_color_resolve(const struct brw_context *brw,
                                   const struct intel_mipmap_tree *mt,
                                   int flags)
 {
-   if (mt->no_ccs)
+   if (mt->aux_disable & INTEL_AUX_DISABLE_CCS)
       return false;
 
    const bool is_lossless_compressed =
@@ -2334,19 +2334,18 @@ intel_miptree_make_shareable(struct brw_context *brw,
 
    if (mt->mcs_buf) {
       intel_miptree_all_slices_resolve_color(brw, mt, 0);
-      mt->no_ccs = true;
+      mt->aux_disable |= (INTEL_AUX_DISABLE_CCS | INTEL_AUX_DISABLE_MCS);
       drm_intel_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
       mt->mcs_buf = NULL;
    }
 
    if (mt->hiz_buf) {
+      mt->aux_disable |= INTEL_AUX_DISABLE_HIZ;
       intel_miptree_all_slices_resolve_depth(brw, mt);
       intel_miptree_hiz_buffer_free(mt->hiz_buf);
       mt->hiz_buf = NULL;
    }
-
-   mt->aux_disable = INTEL_AUX_DISABLE_ALL;
 }
 
 
@@ -3423,7 +3422,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
       } else if (intel_miptree_is_lossless_compressed(brw, mt)) {
          assert(brw->gen >= 9);
          *usage = ISL_AUX_USAGE_CCS_E;
-      } else if (!mt->no_ccs) {
+      } else if ((mt->aux_disable & INTEL_AUX_DISABLE_CCS) == 0) {
          *usage = ISL_AUX_USAGE_CCS_D;
       } else {
          unreachable("Invalid MCS miptree");

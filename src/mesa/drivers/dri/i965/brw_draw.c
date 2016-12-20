@@ -417,7 +417,8 @@ brw_predraw_set_aux_buffers(struct brw_context *brw)
        * while each layer may have its own fast clear color value. For
        * compressed buffers color value is available in the color buffer.
        */
-      if (irb->layer_count > 1 && !irb->mt->no_ccs &&
+      if (irb->layer_count > 1 &&
+          !(irb->mt->aux_disable & INTEL_AUX_DISABLE_CCS) &&
           !intel_miptree_is_lossless_compressed(brw, irb->mt)) {
          assert(brw->gen >= 8);
 
