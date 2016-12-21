@@ -104,6 +104,8 @@ boolean hud_driver_query_install(struct hud_batch_query_context **pbq,
 void hud_batch_query_update(struct hud_batch_query_context *bq);
 void hud_batch_query_cleanup(struct hud_batch_query_context **pbq);
 
+void hud_graph_set_dump_file(struct hud_graph *gr);
+
 #if HAVE_GALLIUM_EXTRA_HUD
 int hud_get_num_nics(bool displayhelp);
 #define NIC_DIRECTION_RX 1

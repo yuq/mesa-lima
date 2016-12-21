@@ -865,6 +865,23 @@ hud_graph_destroy(struct hud_graph *graph)
    FREE(graph);
 }
 
+void
+hud_graph_set_dump_file(struct hud_graph *gr)
+{
+   const char *hud_dump_dir = getenv("GALLIUM_HUD_DUMP_DIR");
+   char *dump_file;
+
+   if (hud_dump_dir && access(hud_dump_dir, W_OK) == 0) {
+      dump_file = malloc(strlen(hud_dump_dir) + sizeof(gr->name));
+      if (dump_file) {
+         strcpy(dump_file, hud_dump_dir);
+         strcat(dump_file, gr->name);
+         gr->fd = fopen(dump_file, "w+");
+         free(dump_file);
+      }
+   }
+}
+
 /**
  * Read a string from the environment variable.
  * The separators "+", ",", ":", and ";" terminate the string.
