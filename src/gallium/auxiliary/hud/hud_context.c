@@ -33,6 +33,7 @@
  * Set GALLIUM_HUD=help for more info.
  */
 
+#include <inttypes.h>
 #include <signal.h>
 #include <stdio.h>
 
@@ -829,6 +830,9 @@ hud_graph_add_value(struct hud_graph *gr, uint64_t value)
    gr->current_value = value;
    value = value > gr->pane->ceiling ? gr->pane->ceiling : value;
 
+   if (gr->fd)
+      fprintf(gr->fd, "%" PRIu64 "\n", value);
+
    if (gr->index == gr->pane->max_num_vertices) {
       gr->vertices[0] = 0;
       gr->vertices[1] = gr->vertices[(gr->index-1)*2+1];
@@ -856,6 +860,8 @@ hud_graph_destroy(struct hud_graph *graph)
    FREE(graph->vertices);
    if (graph->free_query_data)
       graph->free_query_data(graph->query_data);
+   if (graph->fd)
+      fclose(graph->fd);
    FREE(graph);
 }
 

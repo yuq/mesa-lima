@@ -48,6 +48,7 @@ struct hud_graph {
    unsigned num_vertices;
    unsigned index; /* vertex index being updated */
    uint64_t current_value;
+   FILE *fd;
 };
 
 struct hud_pane {

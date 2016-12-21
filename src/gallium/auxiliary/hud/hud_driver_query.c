@@ -351,6 +351,8 @@ hud_pipe_query_install(struct hud_batch_query_context **pbq,
 {
    struct hud_graph *gr;
    struct query_info *info;
+   const char *hud_dump_dir = getenv("GALLIUM_HUD_DUMP_DIR");
+   char *dump_file;
 
    gr = CALLOC_STRUCT(hud_graph);
    if (!gr)
@@ -376,6 +378,16 @@ hud_pipe_query_install(struct hud_batch_query_context **pbq,
    } else {
       info->query_type = query_type;
       info->result_index = result_index;
+   }
+
+   if (hud_dump_dir && access(hud_dump_dir, W_OK) == 0) {
+      dump_file = malloc(strlen(hud_dump_dir) + sizeof(gr->name));
+      if (dump_file) {
+         strcpy(dump_file, hud_dump_dir);
+         strcat(dump_file, gr->name);
+         gr->fd = fopen(dump_file, "w+");
+         free(dump_file);
+      }
    }
 
    hud_pane_add_graph(pane, gr);
