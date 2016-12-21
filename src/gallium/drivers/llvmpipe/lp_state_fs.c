@@ -127,7 +127,7 @@ generate_quad_mask(struct gallivm_state *gallivm,
    struct lp_type mask_type;
    LLVMTypeRef i32t = LLVMInt32TypeInContext(gallivm->context);
    LLVMValueRef bits[16];
-   LLVMValueRef mask;
+   LLVMValueRef mask, bits_vec;
    int shift, i;
 
    /*
@@ -179,15 +179,15 @@ generate_quad_mask(struct gallivm_state *gallivm,
       bits[4*i + 2] = LLVMConstInt(i32t, 1ULL << (j + 4), 0);
       bits[4*i + 3] = LLVMConstInt(i32t, 1ULL << (j + 5), 0);
    }
-   mask = LLVMBuildAnd(builder, mask, LLVMConstVector(bits, fs_type.length), "");
+   bits_vec = LLVMConstVector(bits, fs_type.length);
+   mask = LLVMBuildAnd(builder, mask, bits_vec, "");
 
    /*
-    * mask = mask != 0 ? ~0 : 0
+    * mask = mask == bits ? ~0 : 0
     */
    mask = lp_build_compare(gallivm,
-                           mask_type, PIPE_FUNC_NOTEQUAL,
-                           mask,
-                           lp_build_const_int_vec(gallivm, mask_type, 0));
+                           mask_type, PIPE_FUNC_EQUAL,
+                           mask, bits_vec);
 
    return mask;
 }
@@ -2476,8 +2476,10 @@ dump_fs_variant_key(const struct lp_fragment_shader_variant_key *key)
    for (i = 0; i < key->nr_cbufs; ++i) {
       debug_printf("cbuf_format[%u] = %s\n", i, util_format_name(key->cbuf_format[i]));
    }
-   if (key->depth.enabled) {
+   if (key->depth.enabled || key->stencil[0].enabled) {
       debug_printf("depth.format = %s\n", util_format_name(key->zsbuf_format));
+   }
+   if (key->depth.enabled) {
       debug_printf("depth.func = %s\n", util_dump_func(key->depth.func, TRUE));
       debug_printf("depth.writemask = %u\n", key->depth.writemask);
    }
