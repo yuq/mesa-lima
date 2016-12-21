@@ -395,6 +395,40 @@ dri2_x11_destroy_surface(_EGLDriver *drv, _EGLDisplay *disp, _EGLSurface *surf)
 }
 
 /**
+ * Function utilizes swrastGetDrawableInfo to get surface
+ * geometry from x server and calls default query surface
+ * implementation that returns the updated values.
+ *
+ * In case of errors we still return values that we currently
+ * have.
+ */
+static EGLBoolean
+dri2_query_surface(_EGLDriver *drv, _EGLDisplay *dpy,
+                   _EGLSurface *surf, EGLint attribute,
+                   EGLint *value)
+{
+   struct dri2_egl_display *dri2_dpy = dri2_egl_display(dpy);
+   struct dri2_egl_surface *dri2_surf = dri2_egl_surface(surf);
+   int x, y, w = -1, h = -1;
+
+   __DRIdrawable *drawable = dri2_dpy->vtbl->get_dri_drawable(surf);
+
+   switch (attribute) {
+   case EGL_WIDTH:
+   case EGL_HEIGHT:
+      swrastGetDrawableInfo(drawable, &x, &y, &w, &h, dri2_surf);
+      if (w != -1 && h != -1) {
+         surf->Width = w;
+         surf->Height = h;
+      }
+      break;
+   default:
+      break;
+   }
+   return _eglQuerySurface(drv, dpy, surf, attribute, value);
+}
+
+/**
  * Process list of buffer received from the server
  *
  * Processes the list of buffers received in a reply from the server to either
@@ -1113,6 +1147,7 @@ static struct dri2_egl_display_vtbl dri2_x11_swrast_display_vtbl = {
    .post_sub_buffer = dri2_fallback_post_sub_buffer,
    .copy_buffers = dri2_x11_copy_buffers,
    .query_buffer_age = dri2_fallback_query_buffer_age,
+   .query_surface = dri2_query_surface,
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
    .get_sync_values = dri2_fallback_get_sync_values,
    .get_dri_drawable = dri2_surface_get_dri_drawable,
@@ -1132,6 +1167,7 @@ static struct dri2_egl_display_vtbl dri2_x11_display_vtbl = {
    .post_sub_buffer = dri2_x11_post_sub_buffer,
    .copy_buffers = dri2_x11_copy_buffers,
    .query_buffer_age = dri2_fallback_query_buffer_age,
+   .query_surface = dri2_query_surface,
    .create_wayland_buffer_from_image = dri2_fallback_create_wayland_buffer_from_image,
    .get_sync_values = dri2_x11_get_sync_values,
    .get_dri_drawable = dri2_surface_get_dri_drawable,
