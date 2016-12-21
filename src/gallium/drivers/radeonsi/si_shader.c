@@ -2423,15 +2423,6 @@ handle_semantic:
 		case TGSI_SEMANTIC_POSITION:
 			target = V_008DFC_SQ_EXP_POS;
 			break;
-		case TGSI_SEMANTIC_COLOR:
-		case TGSI_SEMANTIC_BCOLOR:
-			if (!export_param)
-				continue;
-			target = V_008DFC_SQ_EXP_PARAM + param_count;
-			assert(i < ARRAY_SIZE(shader->info.vs_output_param_offset));
-			shader->info.vs_output_param_offset[i] = param_count;
-			param_count++;
-			break;
 		case TGSI_SEMANTIC_CLIPDIST:
 			if (shader->key.opt.hw_vs.clip_disable) {
 				semantic_name = TGSI_SEMANTIC_GENERIC;
@@ -2444,6 +2435,8 @@ handle_semantic:
 				continue;
 			si_llvm_emit_clipvertex(bld_base, pos_args, outputs[i].values);
 			continue;
+		case TGSI_SEMANTIC_COLOR:
+		case TGSI_SEMANTIC_BCOLOR:
 		case TGSI_SEMANTIC_PRIMID:
 		case TGSI_SEMANTIC_FOG:
 		case TGSI_SEMANTIC_TEXCOORD:
