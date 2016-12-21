@@ -733,63 +733,68 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
 
    /*
     * Try calling lp_build_fetch_rgba_aos for all pixels.
+    * Should only really hit subsampled, compressed
+    * (for s3tc srgb too, for rgtc the unorm ones only) by now.
+    * (This is invalid for plain 8unorm formats because we're lazy with
+    * the swizzle since some results would arrive swizzled, some not.)
     */
 
-   if (util_format_fits_8unorm(format_desc) &&
+   if ((format_desc->layout != UTIL_FORMAT_LAYOUT_PLAIN) &&
+       (util_format_fits_8unorm(format_desc) ||
+        format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC) &&
        type.floating && type.width == 32 &&
        (type.length == 1 || (type.length % 4 == 0))) {
       struct lp_type tmp_type;
-      LLVMValueRef tmp;
+      struct lp_build_context bld;
+      LLVMValueRef packed, rgba[4];
+      const struct util_format_description *flinear_desc;
+      const struct util_format_description *frgba8_desc;
+      unsigned chan;
 
+      lp_build_context_init(&bld, gallivm, type);
+
+      /*
+       * Make sure the conversion in aos really only does convert to rgba8
+       * and not anything more (so use linear format, adjust type).
+       */
+      flinear_desc = util_format_description(util_format_linear(format));
       memset(&tmp_type, 0, sizeof tmp_type);
       tmp_type.width = 8;
       tmp_type.length = type.length * 4;
       tmp_type.norm = TRUE;
 
-      tmp = lp_build_fetch_rgba_aos(gallivm, format_desc, tmp_type,
-                                    aligned, base_ptr, offset, i, j, cache);
+      packed = lp_build_fetch_rgba_aos(gallivm, flinear_desc, tmp_type,
+                                       aligned, base_ptr, offset, i, j, cache);
+      packed = LLVMBuildBitCast(builder, packed, bld.int_vec_type, "");
 
-      lp_build_rgba8_to_fi32_soa(gallivm,
-                                type,
-                                tmp,
-                                rgba_out);
-
-      return;
-   }
-
-   if (format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC &&
-       /* non-srgb case is already handled above */
-       format_desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB &&
-       type.floating && type.width == 32 &&
-       (type.length == 1 || (type.length % 4 == 0)) &&
-       cache) {
-      const struct util_format_description *format_decompressed;
-      const struct util_format_description *flinear_desc;
-      LLVMValueRef packed;
-      flinear_desc = util_format_description(util_format_linear(format_desc->format));
-      /* This probably only works with aligned data */
-      packed = lp_build_fetch_cached_texels(gallivm,
-                                            flinear_desc,
-                                            type.length,
-                                            base_ptr,
-                                            offset,
-                                            i, j,
-                                            cache);
-      packed = LLVMBuildBitCast(builder, packed,
-                                lp_build_int_vec_type(gallivm, type), "");
       /*
-       * The values are now packed so they match ordinary srgb RGBA8 format,
+       * The values are now packed so they match ordinary (srgb) RGBA8 format,
        * hence need to use matching format for unpack.
        */
-      format_decompressed = util_format_description(PIPE_FORMAT_R8G8B8A8_SRGB);
-
+      frgba8_desc = util_format_description(PIPE_FORMAT_R8G8B8A8_UNORM);
+      if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_SRGB) {
+         assert(format_desc->layout == UTIL_FORMAT_LAYOUT_S3TC);
+         frgba8_desc = util_format_description(PIPE_FORMAT_R8G8B8A8_SRGB);
+      }
       lp_build_unpack_rgba_soa(gallivm,
-                               format_decompressed,
+                               frgba8_desc,
                                type,
-                               packed, rgba_out);
+                               packed, rgba);
 
+      /*
+       * We converted 4 channels. Make sure llvm can drop unneeded ones
+       * (luckily the rgba order is fixed, only LA needs special case).
+       */
+      for (chan = 0; chan < 4; chan++) {
+         enum pipe_swizzle swizzle = format_desc->swizzle[chan];
+         if (chan == 3 && util_format_is_luminance_alpha(format)) {
+            swizzle = PIPE_SWIZZLE_W;
+         }
+         rgba_out[chan] = lp_build_swizzle_soa_channel(&bld, rgba, swizzle);
+      }
       return;
    }
+
 
    /*
     * Fallback to calling lp_build_fetch_rgba_aos for each pixel.
@@ -798,6 +803,13 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
     * miss some opportunities to do vectorization, but this is
     * convenient for formats or scenarios for which there was no
     * opportunity or incentive to optimize.
+    *
+    * We do NOT want to end up here, this typically is quite terrible,
+    * in particular if the formats have less than 4 channels.
+    *
+    * Right now, this should only be hit for:
+    * - RGTC snorm formats
+    *   (those miss fast fetch functions hence they are terrible anyway)
     */
 
    {
