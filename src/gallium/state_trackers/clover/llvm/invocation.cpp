@@ -98,8 +98,9 @@ namespace {
                             const std::vector<std::string> &opts,
                             std::string &r_log) {
       std::unique_ptr<clang::CompilerInstance> c { new clang::CompilerInstance };
+      clang::TextDiagnosticBuffer *diag_buffer = new clang::TextDiagnosticBuffer;
       clang::DiagnosticsEngine diag { new clang::DiagnosticIDs,
-            new clang::DiagnosticOptions, new clang::TextDiagnosticBuffer };
+            new clang::DiagnosticOptions, diag_buffer };
 
       // Parse the compiler options.  A file name should be present at the end
       // and must have the .cl extension in order for the CompilerInvocation
@@ -109,6 +110,10 @@ namespace {
 
       if (!clang::CompilerInvocation::CreateFromArgs(
              c->getInvocation(), copts.data(), copts.data() + copts.size(), diag))
+         throw invalid_build_options_error();
+
+      diag_buffer->FlushDiagnostics(diag);
+      if (diag.hasErrorOccurred())
          throw invalid_build_options_error();
 
       c->getTargetOpts().CPU = target.cpu;
