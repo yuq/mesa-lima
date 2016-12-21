@@ -713,39 +713,6 @@ fetch_instanced(struct gallivm_state *gallivm,
 
 
 static void
-convert_to_soa(struct gallivm_state *gallivm,
-               LLVMValueRef src_aos[LP_MAX_VECTOR_WIDTH / 32],
-               LLVMValueRef dst_soa[TGSI_NUM_CHANNELS],
-               const struct lp_type soa_type)
-{
-   unsigned j, k;
-   struct lp_type aos_channel_type = soa_type;
-
-   LLVMValueRef aos_channels[TGSI_NUM_CHANNELS];
-   unsigned pixels_per_channel = soa_type.length / TGSI_NUM_CHANNELS;
-
-   debug_assert(TGSI_NUM_CHANNELS == 4);
-   debug_assert((soa_type.length % TGSI_NUM_CHANNELS) == 0);
-
-   aos_channel_type.length >>= 1;
-
-   for (j = 0; j < TGSI_NUM_CHANNELS; ++j) {
-      LLVMValueRef channel[LP_MAX_VECTOR_LENGTH] = { 0 };
-
-      assert(pixels_per_channel <= LP_MAX_VECTOR_LENGTH);
-
-      for (k = 0; k < pixels_per_channel; ++k) {
-         channel[k] = src_aos[j + TGSI_NUM_CHANNELS * k];
-      }
-
-      aos_channels[j] = lp_build_concat(gallivm, channel, aos_channel_type, pixels_per_channel);
-   }
-
-   lp_build_transpose_aos(gallivm, soa_type, aos_channels, dst_soa);
-}
-
-
-static void
 fetch_vector(struct gallivm_state *gallivm,
              const struct util_format_description *format_desc,
              struct lp_type vs_type,
@@ -755,11 +722,10 @@ fetch_vector(struct gallivm_state *gallivm,
              LLVMValueRef *inputs,
              LLVMValueRef indices)
 {
-   LLVMValueRef zero = LLVMConstNull(LLVMInt32TypeInContext(gallivm->context));
    LLVMBuilderRef builder = gallivm->builder;
    struct lp_build_context blduivec;
+   struct lp_type fetch_type = vs_type;
    LLVMValueRef offset, valid_mask;
-   LLVMValueRef aos_fetch[LP_MAX_VECTOR_WIDTH / 32];
    unsigned i;
 
    lp_build_context_init(&blduivec, gallivm, lp_uint_type(vs_type));
@@ -783,28 +749,37 @@ fetch_vector(struct gallivm_state *gallivm,
    }
 
    /*
-    * Note: we probably really want to use SoA fetch, not AoS one (albeit
-    * for most formats it will amount to the same as this isn't very
-    * optimized). But looks dangerous since it assumes alignment.
+    * Unlike fetch_instanced, use SoA fetch instead of multiple AoS fetches.
+    * This should always produce better code.
     */
-   for (i = 0; i < vs_type.length; i++) {
-      LLVMValueRef offset1, elem;
-      elem = lp_build_const_int32(gallivm, i);
-      offset1 = LLVMBuildExtractElement(builder, offset, elem, "");
 
-      aos_fetch[i] = lp_build_fetch_rgba_aos(gallivm, format_desc,
-                                             lp_float32_vec4_type(),
-                                             FALSE, map_ptr, offset1,
-                                             zero, zero, NULL);
+   /* The type handling is annoying here... */
+   if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB &&
+       format_desc->channel[0].pure_integer) {
+      if (format_desc->channel[0].type == UTIL_FORMAT_TYPE_SIGNED) {
+         fetch_type = lp_type_int_vec(vs_type.width, vs_type.width * vs_type.length);
+      }
+      else if (format_desc->channel[0].type == UTIL_FORMAT_TYPE_UNSIGNED) {
+         fetch_type = lp_type_uint_vec(vs_type.width, vs_type.width * vs_type.length);
+      }
    }
-   convert_to_soa(gallivm, aos_fetch, inputs, vs_type);
 
+   lp_build_fetch_rgba_soa(gallivm, format_desc,
+                           fetch_type, FALSE, map_ptr, offset,
+                           blduivec.zero, blduivec.zero,
+                           NULL, inputs);
+
+   for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
+      inputs[i] = LLVMBuildBitCast(builder, inputs[i],
+                                   lp_build_vec_type(gallivm, vs_type), "");
+   }
+
+   /* out-of-bound fetches return all zeros */
    for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
       inputs[i] = LLVMBuildBitCast(builder, inputs[i], blduivec.vec_type, "");
       inputs[i] = LLVMBuildAnd(builder, inputs[i], valid_mask, "");
       inputs[i] = LLVMBuildBitCast(builder, inputs[i],
                                    lp_build_vec_type(gallivm, vs_type), "");
-
    }
 }
 
