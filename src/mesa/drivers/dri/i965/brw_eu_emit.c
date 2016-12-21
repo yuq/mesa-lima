@@ -405,7 +405,8 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
        * If we see a 0.0:F, change the type to VF so that it can be compacted.
        */
       if (brw_inst_imm_ud(devinfo, inst) == 0x0 &&
-          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_F) {
+          brw_inst_src0_reg_type(devinfo, inst) == BRW_HW_REG_TYPE_F &&
+          brw_inst_dst_reg_type(devinfo, inst) != GEN7_HW_REG_NON_IMM_TYPE_DF) {
          brw_inst_set_src0_reg_type(devinfo, inst, BRW_HW_REG_IMM_TYPE_VF);
       }
 
