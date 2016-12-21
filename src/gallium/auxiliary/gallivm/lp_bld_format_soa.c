@@ -40,6 +40,39 @@
 #include "lp_bld_debug.h"
 #include "lp_bld_format.h"
 #include "lp_bld_arit.h"
+#include "lp_bld_pack.h"
+
+
+static void
+convert_to_soa(struct gallivm_state *gallivm,
+               LLVMValueRef src_aos[LP_MAX_VECTOR_WIDTH / 32],
+               LLVMValueRef dst_soa[4],
+               const struct lp_type soa_type)
+{
+   unsigned j, k;
+   struct lp_type aos_channel_type = soa_type;
+
+   LLVMValueRef aos_channels[4];
+   unsigned pixels_per_channel = soa_type.length / 4;
+
+   debug_assert((soa_type.length % 4) == 0);
+
+   aos_channel_type.length >>= 1;
+
+   for (j = 0; j < 4; ++j) {
+      LLVMValueRef channel[LP_MAX_VECTOR_LENGTH] = { 0 };
+
+      assert(pixels_per_channel <= LP_MAX_VECTOR_LENGTH);
+
+      for (k = 0; k < pixels_per_channel; ++k) {
+         channel[k] = src_aos[j + 4 * k];
+      }
+
+      aos_channels[j] = lp_build_concat(gallivm, channel, aos_channel_type, pixels_per_channel);
+   }
+
+   lp_build_transpose_aos(gallivm, soa_type, aos_channels, dst_soa);
+}
 
 
 void
@@ -48,9 +81,6 @@ lp_build_format_swizzle_soa(const struct util_format_description *format_desc,
                             const LLVMValueRef *unswizzled,
                             LLVMValueRef swizzled_out[4])
 {
-   assert(PIPE_SWIZZLE_0 == (int)PIPE_SWIZZLE_0);
-   assert(PIPE_SWIZZLE_1 == (int)PIPE_SWIZZLE_1);
-
    if (format_desc->colorspace == UTIL_FORMAT_COLORSPACE_ZS) {
       enum pipe_swizzle swizzle;
       LLVMValueRef depth_or_stencil;
@@ -545,27 +575,30 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
     */
 
    {
-      unsigned k, chan;
+      unsigned k;
       struct lp_type tmp_type;
+      LLVMValueRef aos_fetch[LP_MAX_VECTOR_WIDTH / 32];
 
       if (gallivm_debug & GALLIVM_DEBUG_PERF) {
-         debug_printf("%s: scalar unpacking of %s\n",
+         debug_printf("%s: AoS fetch fallback for %s\n",
                       __FUNCTION__, format_desc->short_name);
       }
 
       tmp_type = type;
       tmp_type.length = 4;
 
-      for (chan = 0; chan < 4; ++chan) {
-         rgba_out[chan] = lp_build_undef(gallivm, type);
-      }
+      /*
+       * Note that vector transpose can be worse compared to insert/extract
+       * for aos->soa conversion (for formats with 1 or 2 channels). However,
+       * we should try to avoid getting here for just about all formats, so
+       * don't bother.
+       */
 
       /* loop over number of pixels */
       for(k = 0; k < type.length; ++k) {
          LLVMValueRef index = lp_build_const_int32(gallivm, k);
          LLVMValueRef offset_elem;
          LLVMValueRef i_elem, j_elem;
-         LLVMValueRef tmp;
 
          offset_elem = LLVMBuildExtractElement(builder, offset,
                                                index, "");
@@ -574,20 +607,11 @@ lp_build_fetch_rgba_soa(struct gallivm_state *gallivm,
          j_elem = LLVMBuildExtractElement(builder, j, index, "");
 
          /* Get a single float[4]={R,G,B,A} pixel */
-         tmp = lp_build_fetch_rgba_aos(gallivm, format_desc, tmp_type,
-                                       aligned, base_ptr, offset_elem,
-                                       i_elem, j_elem, cache);
+         aos_fetch[k] = lp_build_fetch_rgba_aos(gallivm, format_desc, tmp_type,
+                                                aligned, base_ptr, offset_elem,
+                                                i_elem, j_elem, cache);
 
-         /*
-          * Insert the AoS tmp value channels into the SoA result vectors at
-          * position = 'index'.
-          */
-         for (chan = 0; chan < 4; ++chan) {
-            LLVMValueRef chan_val = lp_build_const_int32(gallivm, chan),
-            tmp_chan = LLVMBuildExtractElement(builder, tmp, chan_val, "");
-            rgba_out[chan] = LLVMBuildInsertElement(builder, rgba_out[chan],
-                                                    tmp_chan, index, "");
-         }
       }
+      convert_to_soa(gallivm, aos_fetch, rgba_out, type);
    }
 }
