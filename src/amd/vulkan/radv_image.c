@@ -700,8 +700,10 @@ radv_image_create(VkDevice _device,
 	image->usage = pCreateInfo->usage;
 
 	image->exclusive = pCreateInfo->sharingMode == VK_SHARING_MODE_EXCLUSIVE;
-	for (uint32_t i = 0; i < pCreateInfo->queueFamilyIndexCount; ++i)
-		image->queue_family_mask |= 1u << pCreateInfo->pQueueFamilyIndices[i];
+	if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
+		for (uint32_t i = 0; i < pCreateInfo->queueFamilyIndexCount; ++i)
+			image->queue_family_mask |= 1u << pCreateInfo->pQueueFamilyIndices[i];
+	}
 
 	radv_init_surface(device, &image->surface, create_info);
 
