@@ -151,12 +151,7 @@ struct PackTraits<8, false>
 
     static simd16scalar unpack(simd16scalar &in)
     {
-        simd16scalari result = _simd16_setzero_si();
-
-        __m128i src = _mm_castps_si128(_mm256_castps256_ps128(_simd16_extract_ps(in, 0)));
-
-        result = _simd16_insert_si(result, _simd_cvtepu8_epi32(src), 0);
-        result = _simd16_insert_si(result, _simd_cvtepu8_epi32(_mm_srli_si128(src, 8)), 1);
+        simd16scalari result = _simd16_cvtepu8_epi32(_mm_castps_si128(_mm256_castps256_ps128(_simd16_extract_ps(in, 0))));
 
         return _simd16_castsi_ps(result);
     }
@@ -164,15 +159,23 @@ struct PackTraits<8, false>
     static simd16scalar pack(simd16scalar &in)
     {
         simd16scalari result = _simd16_setzero_si();
-        simdscalari resultlo = _simd_setzero_si();
 
-        __m128i templo = _mm_packus_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 0))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1));
-        __m128i temphi = _mm_packus_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 1))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 1)), 1));
+        simdscalari inlo = _simd_castps_si(_simd16_extract_ps(in, 0));          // r0 r1 r2 r3 r4 r5 r6 r7 (32b)
+        simdscalari inhi = _simd_castps_si(_simd16_extract_ps(in, 1));          // r8 r9 rA rB rC rD rE rF
 
-        __m128i temp = _mm_packus_epi16(templo, temphi);
+        simdscalari permlo = _simd_permute2f128_si(inlo, inhi, 0x20);           // r0 r1 r2 r3 r8 r9 rA rB (32b)
+        simdscalari permhi = _simd_permute2f128_si(inlo, inhi, 0x31);           // r4 r5 r6 r7 rC rD rE rF (32b)
 
-        resultlo = _simd_insertf128_si(resultlo, temp, 0);
-        result = _simd16_insert_si(result, resultlo, 0);
+        simdscalari pack = _simd_packus_epi32(permlo, permhi);                  // r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 rA rB rC rD rE rF (16b)
+
+        const simdscalari zero = _simd_setzero_si();
+
+        permlo = _simd_permute2f128_si(pack, zero, 0x20);   // (2, 0)           // r0 r1 r2 r3 r4 r5 r6 r7 00 00 00 00 00 00 00 00 (16b)
+        permhi = _simd_permute2f128_si(pack, zero, 0x31);   // (3, 1)           // r8 r9 rA rB rC rD rE rF 00 00 00 00 00 00 00 00 (16b)
+
+        pack = _simd_packus_epi16(permlo, permhi);                              // r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 rA rB rC rD rE rF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (8b)
+
+        result = _simd16_insert_si(result, pack, 0);
 
         return _simd16_castsi_ps(result);
     }
@@ -263,12 +266,7 @@ struct PackTraits<8, true>
 
     static simd16scalar unpack(simd16scalar &in)
     {
-        simd16scalari result = _simd16_setzero_si();
-
-        __m128i src = _mm_castps_si128(_mm256_castps256_ps128(_simd16_extract_ps(in, 0)));
-
-        result = _simd16_insert_si(result, _simd_cvtepu8_epi32(src), 0);
-        result = _simd16_insert_si(result, _simd_cvtepu8_epi32(_mm_srli_si128(src, 8)), 1);
+        simd16scalari result = _simd16_cvtepu8_epi32(_mm_castps_si128(_mm256_castps256_ps128(_simd16_extract_ps(in, 0))));
 
         return _simd16_castsi_ps(result);
     }
@@ -276,15 +274,23 @@ struct PackTraits<8, true>
     static simd16scalar pack(simd16scalar &in)
     {
         simd16scalari result = _simd16_setzero_si();
-        simdscalari resultlo = _simd_setzero_si();
 
-        __m128i templo = _mm_packs_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 0))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1));
-        __m128i temphi = _mm_packs_epi32(_mm256_castsi256_si128(_mm256_castps_si256(_simd16_extract_ps(in, 1))), _simd_extractf128_si(_mm256_castps_si256(_simd16_extract_ps(in, 1)), 1));
+        simdscalari inlo = _simd_castps_si(_simd16_extract_ps(in, 0));          // r0 r1 r2 r3 r4 r5 r6 r7 (32b)
+        simdscalari inhi = _simd_castps_si(_simd16_extract_ps(in, 1));          // r8 r9 rA rB rC rD rE rF
 
-        __m128i temp = _mm_packs_epi16(templo, temphi);
+        simdscalari permlo = _simd_permute2f128_si(inlo, inhi, 0x20);           // r0 r1 r2 r3 r8 r9 rA rB (32b)
+        simdscalari permhi = _simd_permute2f128_si(inlo, inhi, 0x31);           // r4 r5 r6 r7 rC rD rE rF (32b)
 
-        resultlo = _simd_insertf128_si(resultlo, temp, 0);
-        result = _simd16_insert_si(result, resultlo, 0);
+        simdscalari pack = _simd_packs_epi32(permlo, permhi);                   // r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 rA rB rC rD rE rF (16b)
+
+        const simdscalari zero = _simd_setzero_si();
+
+        permlo = _simd_permute2f128_si(pack, zero, 0x20);   // (2, 0)           // r0 r1 r2 r3 r4 r5 r6 r7 00 00 00 00 00 00 00 00 (16b)
+        permhi = _simd_permute2f128_si(pack, zero, 0x31);   // (3, 1)           // r8 r9 rA rB rC rD rE rF 00 00 00 00 00 00 00 00 (16b)
+
+        pack = _simd_packs_epi16(permlo, permhi);                               // r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 rA rB rC rD rE rF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (8b)
+
+        result = _simd16_insert_si(result, pack, 0);
 
         return _simd16_castsi_ps(result);
     }
@@ -370,25 +376,19 @@ struct PackTraits<16, false>
 
     static simd16scalar unpack(simd16scalar &in)
     {
-        simd16scalari result = _simd16_setzero_si();
-
-        result = _simd16_insert_si(result, _simd_cvtepu16_epi32(_mm256_extracti128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 0)), 0);
-        result = _simd16_insert_si(result, _simd_cvtepu16_epi32(_mm256_extracti128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1)), 1);
+        simd16scalari result = _simd16_cvtepu16_epi32(_simd_castps_si(_simd16_extract_ps(in, 0)));
 
         return _simd16_castsi_ps(result);
     }
 
     static simd16scalar pack(simd16scalar &in)
     {
-        simd16scalari result = _simd16_setzero_si();
+        const simd16scalari zero = _simd16_setzero_si();
 
-        simdscalari inlo = _simd_castps_si(_simd16_extract_ps(in, 0));
-        simdscalari inhi = _simd_castps_si(_simd16_extract_ps(in, 1));
+        simd16scalari permlo = _simd16_permute2f128_si(_simd16_castps_si(in), zero, 0x08);  // (0, 0, 2, 0) // r0 r1 r2 r3 r8 r9 rA rB 00 00 00 00 00 00 00 00 (32b)
+        simd16scalari permhi = _simd16_permute2f128_si(_simd16_castps_si(in), zero, 0x0D);  // (0, 0, 3, 1) // r4 r5 r6 r7 rC rD rE rF 00 00 00 00 00 00 00 00
 
-        simdscalari templo = _simd_permute2f128_si(inlo, inhi, 0x20);
-        simdscalari temphi = _simd_permute2f128_si(inlo, inhi, 0x31);
-
-        result = _simd16_insert_si(result, _simd_packus_epi32(templo, temphi), 0);
+        simd16scalari result = _simd16_packus_epi32(permlo, permhi);    // r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 rA rB rC rD rE rF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (16b)
 
         return _simd16_castsi_ps(result);
     }
@@ -475,25 +475,19 @@ struct PackTraits<16, true>
 
     static simd16scalar unpack(simd16scalar &in)
     {
-        simd16scalari result = _simd16_setzero_si();
-
-        result = _simd16_insert_si(result, _simd_cvtepu16_epi32(_mm256_extracti128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 0)), 0);
-        result = _simd16_insert_si(result, _simd_cvtepu16_epi32(_mm256_extracti128_si256(_mm256_castps_si256(_simd16_extract_ps(in, 0)), 1)), 1);
+        simd16scalari result = _simd16_cvtepu16_epi32(_simd_castps_si(_simd16_extract_ps(in, 0)));
 
         return _simd16_castsi_ps(result);
     }
 
     static simd16scalar pack(simd16scalar &in)
     {
-        simd16scalari result = _simd16_setzero_si();
+        const simd16scalari zero = _simd16_setzero_si();
 
-        simdscalari inlo = _simd_castps_si(_simd16_extract_ps(in, 0));
-        simdscalari inhi = _simd_castps_si(_simd16_extract_ps(in, 1));
+        simd16scalari permlo = _simd16_permute2f128_si(_simd16_castps_si(in), zero, 0x08);  // (0, 0, 2, 0) // r0 r1 r2 r3 r8 r9 rA rB 00 00 00 00 00 00 00 00 (32b)
+        simd16scalari permhi = _simd16_permute2f128_si(_simd16_castps_si(in), zero, 0x0D);  // (0, 0, 3, 1) // r4 r5 r6 r7 rC rD rE rF 00 00 00 00 00 00 00 00
 
-        simdscalari templo = _simd_permute2f128_si(inlo, inhi, 0x20);
-        simdscalari temphi = _simd_permute2f128_si(inlo, inhi, 0x31);
-
-        result = _simd16_insert_si(result, _simd_packus_epi32(templo, temphi), 0);
+        simd16scalari result = _simd16_packs_epi32(permlo, permhi);     // r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 rA rB rC rD rE rF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 (16b)
 
         return _simd16_castsi_ps(result);
     }
