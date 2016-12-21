@@ -1275,7 +1275,8 @@ static void si_parse_next_shader_property(const struct tgsi_shader_info *info,
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:
-		if (next_shader == PIPE_SHADER_GEOMETRY)
+		if (next_shader == PIPE_SHADER_GEOMETRY ||
+		    !info->writes_position)
 			key->as_es = 1;
 		break;
 	}
