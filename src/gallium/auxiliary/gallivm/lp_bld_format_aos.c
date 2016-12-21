@@ -52,6 +52,8 @@
 #include "lp_bld_format.h"
 #include "lp_bld_pack.h"
 #include "lp_bld_intr.h"
+#include "lp_bld_logic.h"
+#include "lp_bld_bitarit.h"
 
 
 /**
@@ -139,6 +141,73 @@ format_matches_type(const struct util_format_description *desc,
    return TRUE;
 }
 
+/*
+ * Do rounding when converting small unorm values to larger ones.
+ * Not quite 100% accurate, as it's done by appending MSBs, but
+ * should be good enough.
+ */
+
+static inline LLVMValueRef
+scale_bits_up(struct gallivm_state *gallivm,
+              int src_bits,
+              int dst_bits,
+              LLVMValueRef src,
+              struct lp_type src_type)
+{
+   LLVMBuilderRef builder = gallivm->builder;
+   LLVMValueRef result = src;
+
+   if (src_bits == 1 && dst_bits > 1) {
+      /*
+       * Useful for a1 - we'd need quite some repeated copies otherwise.
+       */
+      struct lp_build_context bld;
+      LLVMValueRef dst_mask;
+      lp_build_context_init(&bld, gallivm, src_type);
+      dst_mask = lp_build_const_int_vec(gallivm, src_type,
+                                        (1 << dst_bits) - 1),
+      result = lp_build_cmp(&bld, PIPE_FUNC_EQUAL, src,
+                            lp_build_const_int_vec(gallivm, src_type, 0));
+      result = lp_build_andnot(&bld, dst_mask, result);
+   }
+   else if (dst_bits > src_bits) {
+      /* Scale up bits */
+      int db = dst_bits - src_bits;
+
+      /* Shift left by difference in bits */
+      result = LLVMBuildShl(builder,
+                            src,
+                            lp_build_const_int_vec(gallivm, src_type, db),
+                            "");
+
+      if (db <= src_bits) {
+         /* Enough bits in src to fill the remainder */
+         LLVMValueRef lower = LLVMBuildLShr(builder,
+                                            src,
+                                            lp_build_const_int_vec(gallivm, src_type,
+                                                                   src_bits - db),
+                                            "");
+
+         result = LLVMBuildOr(builder, result, lower, "");
+      } else if (db > src_bits) {
+         /* Need to repeatedly copy src bits to fill remainder in dst */
+         unsigned n;
+
+         for (n = src_bits; n < dst_bits; n *= 2) {
+            LLVMValueRef shuv = lp_build_const_int_vec(gallivm, src_type, n);
+
+            result = LLVMBuildOr(builder,
+                                 result,
+                                 LLVMBuildLShr(builder, result, shuv, ""),
+                                 "");
+         }
+      }
+   } else {
+      assert (dst_bits == src_bits);
+   }
+
+   return result;
+}
 
 /**
  * Unpack a single pixel into its XYZW components.
@@ -451,6 +520,86 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
    }
 
    /*
+    * Bit arithmetic for converting small_unorm to unorm8.
+    *
+    * This misses some opportunities for optimizations (like skipping mask
+    * for the highest channel for instance, or doing bit scaling in parallel
+    * for channels with the same bit width) but it should be passable for
+    * all arithmetic formats.
+    */
+   if (format_desc->layout == UTIL_FORMAT_LAYOUT_PLAIN &&
+       format_desc->colorspace == UTIL_FORMAT_COLORSPACE_RGB &&
+       util_format_fits_8unorm(format_desc) &&
+       type.width == 8 && type.norm == 1 && type.sign == 0 &&
+       type.fixed == 0 && type.floating == 0) {
+      LLVMValueRef packed, res, chans[4], rgba[4];
+      LLVMTypeRef dst_vec_type, conv_vec_type;
+      struct lp_type fetch_type, conv_type;
+      struct lp_build_context bld_conv;
+      unsigned j;
+
+      fetch_type = lp_type_uint(type.width*4);
+      conv_type = lp_type_int_vec(type.width*4, type.width * type.length);
+      dst_vec_type = lp_build_vec_type(gallivm, type);
+      conv_vec_type = lp_build_vec_type(gallivm, conv_type);
+      lp_build_context_init(&bld, gallivm, conv_type);
+
+      packed = lp_build_gather(gallivm, type.length/4,
+                               format_desc->block.bits, fetch_type,
+                               aligned, base_ptr, offset, TRUE);
+
+      assert(format_desc->block.bits * type.length / 4 <=
+             type.width * type.length);
+
+      packed = LLVMBuildBitCast(gallivm->builder, packed, conv_vec_type, "");
+
+      for (j = 0; j < format_desc->nr_channels; ++j) {
+         unsigned mask = 0;
+         unsigned sa = format_desc->channel[j].shift;
+
+         mask = (1 << format_desc->channel[j].size) - 1;
+
+         /* Extract bits from source */
+         chans[j] = LLVMBuildLShr(builder, packed,
+                                  lp_build_const_int_vec(gallivm, conv_type, sa),
+                                  "");
+
+         chans[j] = LLVMBuildAnd(builder, chans[j],
+                                 lp_build_const_int_vec(gallivm, conv_type, mask),
+                                 "");
+
+         /* Scale bits */
+         if (type.norm) {
+            chans[j] = scale_bits_up(gallivm, format_desc->channel[j].size,
+                                     type.width, chans[j], conv_type);
+         }
+      }
+      /*
+       * This is a hacked lp_build_format_swizzle_soa() since we need a
+       * normalized 1 but only 8 bits in a 32bit vector...
+       */
+      for (j = 0; j < 4; ++j) {
+         enum pipe_swizzle swizzle = format_desc->swizzle[j];
+         if (swizzle == PIPE_SWIZZLE_1) {
+            rgba[j] = lp_build_const_int_vec(gallivm, conv_type, (1 << type.width) - 1);
+         } else {
+            rgba[j] = lp_build_swizzle_soa_channel(&bld_conv, chans, swizzle);
+         }
+         if (j == 0) {
+            res = rgba[j];
+         } else {
+            rgba[j] = LLVMBuildShl(builder, rgba[j],
+                                   lp_build_const_int_vec(gallivm, conv_type,
+                                                          j * type.width), "");
+            res = LLVMBuildOr(builder, res, rgba[j], "");
+         }
+      }
+      res = LLVMBuildBitCast(gallivm->builder, res, dst_vec_type, "");
+
+      return res;
+   }
+
+   /*
     * Bit arithmetic
     */
 
@@ -474,18 +623,9 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
       unsigned k, num_conv_src, num_conv_dst;
 
       /*
-       * XXX: We end up here for the AoS unorm8 sampling (if the format wasn't some
-       * 888(8) variant), so things like rgb565. This is _really_ suboptimal.
-       * Not only do we a single pixel at a time but we convert to float,
-       * do a normalize mul, un-normalize mul, convert back to int, finally pack
-       * down to 8 bits. At the end throw in a couple of shifts/ands/ors for aos
-       * swizzle (well rgb565 is ok but bgrx5551 not for instance) for good
-       * measure. (And if we're not extra careful we get some pointless min/max
-       * too for clamping values to range). This is a disaster of epic proportions,
-       * simply forcing SoA sampling would be way faster (even when we don't have
-       * AVX support).
-       * We should make sure we cannot hit this code path for anything but single
-       * pixels.
+       * Note this path is generally terrible for fetching multiple pixels.
+       * We should make sure we cannot hit this code path for anything but
+       * single pixels.
        */
 
       /*

@@ -1096,7 +1096,7 @@ scale_bits(struct gallivm_state *gallivm,
                             lp_build_const_int_vec(gallivm, src_type, db),
                             "");
 
-      if (db < src_bits) {
+      if (db <= src_bits) {
          /* Enough bits in src to fill the remainder */
          LLVMValueRef lower = LLVMBuildLShr(builder,
                                             src,
@@ -1154,7 +1154,7 @@ convert_to_blend_type(struct gallivm_state *gallivm,
    LLVMBuilderRef builder = gallivm->builder;
    struct lp_type blend_type;
    struct lp_type mem_type;
-   unsigned i, j, k;
+   unsigned i, j;
    unsigned pixels = block_size / num_srcs;
    bool is_arith;
 
@@ -1267,9 +1267,7 @@ convert_to_blend_type(struct gallivm_state *gallivm,
          unsigned from_lsb = src_fmt->nr_channels - j - 1;
 #endif
 
-         for (k = 0; k < src_fmt->channel[j].size; ++k) {
-            mask |= 1 << k;
-         }
+         mask = (1 << src_fmt->channel[j].size) - 1;
 
          /* Extract bits from source */
          chans[j] = LLVMBuildLShr(builder,
