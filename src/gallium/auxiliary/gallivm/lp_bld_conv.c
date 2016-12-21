@@ -497,8 +497,25 @@ int lp_build_conv_auto(struct gallivm_state *gallivm,
    if (src_type.width == dst_type->width) {
       lp_build_conv(gallivm, src_type, *dst_type, src, num_srcs, dst, num_dsts);
    } else {
-      for (i = 0; i < num_srcs; ++i) {
-         lp_build_conv(gallivm, src_type, *dst_type, &src[i], 1, &dst[i], 1);
+      /*
+       * If dst_width is 16 bits and src_width 32 and the dst vector size
+       * 64bit, try feeding 2 vectors at once so pack intrinsics can be used.
+       * (For AVX, this isn't needed, since we usually get 256bit src and
+       * 128bit dst vectors which works ok. If we do AVX2 pack this should
+       * be extended but need to be able to tell conversion code about pack
+       * ordering first.)
+       */
+      unsigned ratio = 1;
+      if (src_type.width == 2 * dst_type->width &&
+          src_type.length == dst_type->length &&
+          dst_type->floating == 0 && (num_srcs % 2 == 0) &&
+          dst_type->width * dst_type->length == 64) {
+         ratio = 2;
+         num_dsts /= 2;
+         dst_type->length *= 2;
+      }
+      for (i = 0; i < num_dsts; i++) {
+         lp_build_conv(gallivm, src_type, *dst_type, &src[i*ratio], ratio, &dst[i], 1);
       }
    }
 
