@@ -349,6 +349,9 @@ x11_surface_get_capabilities(VkIcdSurfaceBase *icd_surface,
    xcb_visualtype_t *visual =
       get_visualtype_for_window(conn, window, &visual_depth);
 
+   if (!visual)
+      return VK_ERROR_SURFACE_LOST_KHR;
+
    geom = xcb_get_geometry_reply(conn, geom_cookie, &err);
    if (geom) {
       VkExtent2D extent = { geom->width, geom->height };
