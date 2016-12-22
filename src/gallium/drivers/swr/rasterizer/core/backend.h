@@ -691,6 +691,7 @@ INLINE void CalcSampleBarycentrics(const BarycentricCoeffs& coeffs, SWR_PS_CONTE
     psContext.vOneOverW.sample = vplaneps(coeffs.vAOneOverW, coeffs.vBOneOverW, coeffs.vCOneOverW, psContext.vI.sample, psContext.vJ.sample);
 }
 
+// Merge Output to 4x2 SIMD Tile Format
 INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
                          const PFN_BLEND_JIT_FUNC (&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT)
 {
@@ -751,8 +752,9 @@ INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_N
 }
 
 #if USE_8x2_TILE_BACKEND
+// Merge Output to 8x2 SIMD16 Tile Format
 INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_NUM_RENDERTARGETS], uint32_t sample, const SWR_BLEND_STATE *pBlendState,
-    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT, bool useAlternateOffset)
+    const PFN_BLEND_JIT_FUNC(&pfnBlendFunc)[SWR_NUM_RENDERTARGETS], simdscalar &coverageMask, simdscalar depthPassMask, const uint32_t NumRT, const uint32_t colorBufferEnableMask, bool useAlternateOffset)
 {
     // type safety guaranteed from template instantiation in BEChooser<>::GetFunc
     uint32_t rasterTileColorOffset = RasterTileColorOffset(sample);
@@ -765,7 +767,8 @@ INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_N
     simdvector blendSrc;
     simdvector blendOut;
 
-    for (uint32_t rt = 0; rt < NumRT; ++rt)
+    uint32_t colorBufferBit = 1;
+    for (uint32_t rt = 0; rt < NumRT; rt += 1, colorBufferBit <<= 1)
     {
         simdscalar *pColorSample = reinterpret_cast<simdscalar *>(pColorBase[rt] + rasterTileColorOffset);
 
@@ -774,10 +777,13 @@ INLINE void OutputMerger(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SWR_N
         /// TODO: move this into the blend JIT.
         blendOut = psContext.shaded[rt];
 
-        blendSrc[0] = pColorSample[0];
-        blendSrc[1] = pColorSample[2];
-        blendSrc[2] = pColorSample[4];
-        blendSrc[3] = pColorSample[6];
+        if (colorBufferBit & colorBufferEnableMask)
+        {
+            blendSrc[0] = pColorSample[0];
+            blendSrc[1] = pColorSample[2];
+            blendSrc[2] = pColorSample[4];
+            blendSrc[3] = pColorSample[6];
+        }
 
         // Blend outputs and update coverage mask for alpha test
         if (pfnBlendFunc[rt] != nullptr)
