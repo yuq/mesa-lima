@@ -1460,7 +1460,8 @@ convert_from_blend_type(struct gallivm_state *gallivm,
          /* Extract bits */
          chans[j] = LLVMBuildLShr(builder,
                                   dst[i],
-                                  lp_build_const_int_vec(gallivm, src_type, from_lsb * blend_type.width),
+                                  lp_build_const_int_vec(gallivm, src_type,
+                                                         from_lsb * blend_type.width),
                                   "");
 
          chans[j] = LLVMBuildAnd(builder,
@@ -1548,7 +1549,8 @@ convert_alpha(struct gallivm_state *gallivm,
       /* If there is a src for each pixel broadcast the alpha across whole row */
       if (src_count == block_size) {
          for (i = 0; i < src_count; ++i) {
-            src_alpha[i] = lp_build_broadcast(gallivm, lp_build_vec_type(gallivm, row_type), src_alpha[i]);
+            src_alpha[i] = lp_build_broadcast(gallivm,
+                              lp_build_vec_type(gallivm, row_type), src_alpha[i]);
          }
       } else {
          unsigned pixels = block_size / src_count;
@@ -1749,13 +1751,23 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
    }
 
    /* If 3 channels then pad to include alpha for 4 element transpose */
-   if (dst_channels == 3 && !has_alpha) {
+   if (dst_channels == 3) {
+      assert (!has_alpha);
       for (i = 0; i < TGSI_NUM_CHANNELS; i++) {
          if (swizzle[i] > TGSI_NUM_CHANNELS)
             swizzle[i] = 3;
       }
       if (out_format_desc->nr_channels == 4) {
          dst_channels = 4;
+         /*
+          * We use alpha from the color conversion, not separate one.
+          * We had to include it for transpose, hence it will get converted
+          * too (albeit when doing transpose after conversion, that would
+          * no longer be the case necessarily).
+          * (It works only with 4 channel dsts, e.g. rgbx formats, because
+          * otherwise we really have padding, not alpha, included.)
+          */
+         has_alpha = true;
       }
    }
 
@@ -1787,6 +1799,7 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
       /*
        * XXX If we include that here maybe could actually use it instead of
        * separate alpha for blending?
+       * (Difficult though we actually convert pad channels, not alpha.)
        */
       if (dst_channels == 3 && !has_alpha) {
          fs_src[i][3] = alpha;
@@ -1794,11 +1807,14 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
 
       /* We split the row_mask and row_alpha as we want 128bit interleave */
       if (fs_type.length == 8) {
-         src_mask[i*2 + 0]  = lp_build_extract_range(gallivm, fs_mask[i], 0, src_channels);
-         src_mask[i*2 + 1]  = lp_build_extract_range(gallivm, fs_mask[i], src_channels, src_channels);
+         src_mask[i*2 + 0]  = lp_build_extract_range(gallivm, fs_mask[i],
+                                                     0, src_channels);
+         src_mask[i*2 + 1]  = lp_build_extract_range(gallivm, fs_mask[i],
+                                                     src_channels, src_channels);
 
          src_alpha[i*2 + 0] = lp_build_extract_range(gallivm, alpha, 0, src_channels);
-         src_alpha[i*2 + 1] = lp_build_extract_range(gallivm, alpha, src_channels, src_channels);
+         src_alpha[i*2 + 1] = lp_build_extract_range(gallivm, alpha,
+                                                     src_channels, src_channels);
       } else {
          src_mask[i] = fs_mask[i];
          src_alpha[i] = alpha;
@@ -1829,7 +1845,8 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
          }
          if (fs_type.length == 8) {
             src1_alpha[i*2 + 0] = lp_build_extract_range(gallivm, alpha, 0, src_channels);
-            src1_alpha[i*2 + 1] = lp_build_extract_range(gallivm, alpha, src_channels, src_channels);
+            src1_alpha[i*2 + 1] = lp_build_extract_range(gallivm, alpha,
+                                                         src_channels, src_channels);
          } else {
             src1_alpha[i] = alpha;
          }
@@ -1911,8 +1928,10 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
     * Blend Colour conversion
     */
    blend_color = lp_jit_context_f_blend_color(gallivm, context_ptr);
-   blend_color = LLVMBuildPointerCast(builder, blend_color, LLVMPointerType(lp_build_vec_type(gallivm, fs_type), 0), "");
-   blend_color = LLVMBuildLoad(builder, LLVMBuildGEP(builder, blend_color, &i32_zero, 1, ""), "");
+   blend_color = LLVMBuildPointerCast(builder, blend_color,
+                    LLVMPointerType(lp_build_vec_type(gallivm, fs_type), 0), "");
+   blend_color = LLVMBuildLoad(builder, LLVMBuildGEP(builder, blend_color,
+                               &i32_zero, 1, ""), "");
 
    /* Convert */
    lp_build_conv(gallivm, fs_type, blend_type, &blend_color, 1, &blend_color, 1);
@@ -2141,7 +2160,8 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
     * It seems some cleanup could be done here (like skipping conversion/blend
     * when not needed).
     */
-   convert_to_blend_type(gallivm, block_size, out_format_desc, dst_type, row_type, dst, src_count);
+   convert_to_blend_type(gallivm, block_size, out_format_desc, dst_type,
+                         row_type, dst, src_count);
 
    /*
     * FIXME: Really should get logic ops / masks out of generic blend / row
@@ -2167,7 +2187,8 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
                                   pad_inline ? 4 : dst_channels);
    }
 
-   convert_from_blend_type(gallivm, block_size, out_format_desc, row_type, dst_type, dst, src_count);
+   convert_from_blend_type(gallivm, block_size, out_format_desc,
+                           row_type, dst_type, dst, src_count);
 
    /* Split the blend rows back to memory rows */
    if (dst_count > src_count) {
