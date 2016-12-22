@@ -96,16 +96,16 @@ static void
 fd4_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 		uint32_t regid, uint32_t num, struct pipe_resource **prscs, uint32_t *offsets)
 {
+	uint32_t anum = align(num, 4);
 	uint32_t i;
 
 	debug_assert((regid % 4) == 0);
-	debug_assert((num % 4) == 0);
 
-	OUT_PKT3(ring, CP_LOAD_STATE, 2 + num);
+	OUT_PKT3(ring, CP_LOAD_STATE, 2 + anum);
 	OUT_RING(ring, CP_LOAD_STATE_0_DST_OFF(regid/4) |
 			CP_LOAD_STATE_0_STATE_SRC(SS_DIRECT) |
 			CP_LOAD_STATE_0_STATE_BLOCK(sb[type]) |
-			CP_LOAD_STATE_0_NUM_UNIT(num/4));
+			CP_LOAD_STATE_0_NUM_UNIT(anum/4));
 	OUT_RING(ring, CP_LOAD_STATE_1_EXT_SRC_ADDR(0) |
 			CP_LOAD_STATE_1_STATE_TYPE(ST_CONSTANTS));
 
@@ -120,6 +120,9 @@ fd4_emit_const_bo(struct fd_ringbuffer *ring, enum shader_t type, boolean write,
 			OUT_RING(ring, 0xbad00000 | (i << 16));
 		}
 	}
+
+	for (; i < anum; i++)
+		OUT_RING(ring, 0xffffffff);
 }
 
 static void

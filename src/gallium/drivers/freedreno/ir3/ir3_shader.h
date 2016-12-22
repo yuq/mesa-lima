@@ -47,22 +47,6 @@ enum ir3_driver_param {
 	IR3_DP_COUNT      = 36   /* must be aligned to vec4 */
 };
 
-/* Layout of constant registers:
- *
- *    num_uniform * vec4  -  user consts
- *    4 * vec4            -  UBO addresses
- *    if (vertex shader) {
- *        N * vec4        -  driver params (IR3_DP_*)
- *        1 * vec4        -  stream-out addresses
- *    }
- *
- * TODO this could be made more dynamic, to at least skip sections
- * that we don't need..
- */
-#define IR3_UBOS_OFF         0  /* UBOs after user consts */
-#define IR3_DRIVER_PARAM_OFF 4  /* driver params after UBOs */
-#define IR3_TFBOS_OFF       (IR3_DRIVER_PARAM_OFF + IR3_DP_COUNT/4)
-
 /* Configuration key used to identify a shader variant.. different
  * shader variants can be used to implement features not supported
  * in hw (two sided color), binning-pass vertex shader, etc.
@@ -143,6 +127,12 @@ struct ir3_shader_variant {
 	 */
 	unsigned constlen;
 
+	/* number of uniforms (in vec4), not including built-in compiler
+	 * constants, etc.
+	 */
+	unsigned num_uniforms;
+	unsigned num_ubos;
+
 	/* About Linkage:
 	 *   + Let the frag shader determine the position/compmask for the
 	 *     varyings, since it is the place where we know if the varying
@@ -211,12 +201,18 @@ struct ir3_shader_variant {
 	/* do we have kill instructions: */
 	bool has_kill;
 
-	/* const reg # of first immediate, ie. 1 == c1
-	 * (not regid, because TGSI thinks in terms of vec4 registers,
-	 * not scalar registers)
+	/* Layout of constant registers, each section (in vec4). Pointer size
+	 * is 32b (a3xx, a4xx), or 64b (a5xx+), which effects the size of the
+	 * UBO and stream-out consts.
 	 */
-	unsigned first_driver_param;
-	unsigned first_immediate;
+	struct {
+		/* user const start at zero */
+		unsigned ubo;
+		unsigned driver_param;
+		unsigned tfbo;
+		unsigned immediate;
+	} constbase;
+
 	unsigned immediates_count;
 	struct {
 		uint32_t val[4];

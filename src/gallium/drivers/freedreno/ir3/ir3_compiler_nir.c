@@ -119,6 +119,11 @@ struct ir3_compile {
 	bool error;
 };
 
+/* gpu pointer size in units of 32bit registers/slots */
+static unsigned pointer_size(struct ir3_compile *ctx)
+{
+	return (ctx->compiler->gpu_id >= 500) ? 2 : 1;
+}
 
 static struct ir3_instruction * create_immed(struct ir3_block *block, uint32_t val);
 static struct ir3_block * get_block(struct ir3_compile *ctx, nir_block *nblock);
@@ -181,30 +186,45 @@ compile_init(struct ir3_compiler *compiler,
 		nir_print_shader(ctx->s, stdout);
 	}
 
-	so->first_driver_param = so->first_immediate = align(ctx->s->num_uniforms, 4);
+	so->num_uniforms = ctx->s->num_uniforms;
+	so->num_ubos = ctx->s->info->num_ubos;
 
-	/* Layout of constant registers:
+	/* Layout of constant registers, each section aligned to vec4.  Note
+	 * that pointer size (ubo, etc) changes depending on generation.
 	 *
-	 *    num_uniform * vec4  -  user consts
-	 *    4 * vec4            -  UBO addresses
+	 *    user consts
+	 *    UBO addresses
 	 *    if (vertex shader) {
-	 *        N * vec4        -  driver params (IR3_DP_*)
-	 *        1 * vec4        -  stream-out addresses
+	 *        driver params (IR3_DP_*)
+	 *        if (stream_output.num_outputs > 0)
+	 *           stream-out addresses
 	 *    }
+	 *    immediates
 	 *
-	 * TODO this could be made more dynamic, to at least skip sections
-	 * that we don't need..
+	 * Immediates go last mostly because they are inserted in the CP pass
+	 * after the nir -> ir3 frontend.
 	 */
+	unsigned constoff = align(ctx->s->num_uniforms, 4);
+	unsigned ptrsz = pointer_size(ctx);
 
-	/* reserve 4 (vec4) slots for ubo base addresses: */
-	so->first_immediate += 4;
+	memset(&so->constbase, ~0, sizeof(so->constbase));
+
+	if (so->num_ubos > 0) {
+		so->constbase.ubo = constoff;
+		constoff += align(ctx->s->info->num_ubos * ptrsz, 4) / 4;
+	}
 
 	if (so->type == SHADER_VERTEX) {
-		/* driver params (see ir3_driver_param): */
-		so->first_immediate += IR3_DP_COUNT/4;  /* convert to vec4 */
-		/* one (vec4) slot for stream-output base addresses: */
-		so->first_immediate++;
+		so->constbase.driver_param = constoff;
+		constoff += align(IR3_DP_COUNT, 4) / 4;
+
+		if (so->shader->stream_output.num_outputs > 0) {
+			so->constbase.tfbo = constoff;
+			constoff += align(PIPE_MAX_SO_BUFFERS * ptrsz, 4) / 4;
+		}
 	}
+
+	so->constbase.immediate = constoff;
 
 	return ctx;
 }
@@ -576,7 +596,7 @@ create_driver_param(struct ir3_compile *ctx, enum ir3_driver_param dp)
 {
 	/* first four vec4 sysval's reserved for UBOs: */
 	/* NOTE: dp is in scalar, but there can be >4 dp components: */
-	unsigned n = ctx->so->first_driver_param + IR3_DRIVER_PARAM_OFF;
+	unsigned n = ctx->so->constbase.driver_param;
 	unsigned r = regid(n + dp / 4, dp % 4);
 	return create_uniform(ctx, r);
 }
@@ -975,7 +995,7 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 	struct ir3_instruction *addr, *src0, *src1;
 	nir_const_value *const_offset;
 	/* UBO addresses are the first driver params: */
-	unsigned ubo = regid(ctx->so->first_driver_param + IR3_UBOS_OFF, 0);
+	unsigned ubo = regid(ctx->so->constbase.ubo, 0);
 	int off = 0;
 
 	/* First src is ubo index, which could either be an immed or not: */
@@ -1905,7 +1925,7 @@ emit_stream_out(struct ir3_compile *ctx)
 		unsigned stride = strmout->stride[i];
 		struct ir3_instruction *base, *off;
 
-		base = create_uniform(ctx, regid(v->first_driver_param + IR3_TFBOS_OFF, i));
+		base = create_uniform(ctx, regid(v->constbase.tfbo, i));
 
 		/* 24-bit should be enough: */
 		off = ir3_MUL_U(ctx->block, vtxcnt, 0,
