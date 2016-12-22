@@ -732,8 +732,8 @@ struct Transpose16_16
         simdscalari tmp0 = _simd_unpacklo_epi16(src0, src1);                                        // rg0 rg1 rg2 rg3 rg8 rg9 rgA rgB
         simdscalari tmp1 = _simd_unpackhi_epi16(src0, src1);                                        // rg4 rg5 rg6 rg7 rgC rgD rgE rgF
 
-        simdscalari dst0 = _simd_permute2f128_si(tmp0, tmp1, 0x00);     // (0, 0)                   // rg0 rg1 rg2 rg3 rg4 rg5 rg6 rg7
-        simdscalari dst1 = _simd_permute2f128_si(tmp0, tmp1, 0x11);     // (1, 1)                   // rg8 rg9 rgA rgB rgC rgD rgE rgF
+        simdscalari dst0 = _simd_permute2f128_si(tmp0, tmp1, 0x20);     // (2, 0)                   // rg0 rg1 rg2 rg3 rg4 rg5 rg6 rg7
+        simdscalari dst1 = _simd_permute2f128_si(tmp0, tmp1, 0x31);     // (3, 1)                   // rg8 rg9 rgA rgB rgC rgD rgE rgF
 
         _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 0, dst0);                            // rgrgrgrgrgrgrgrg
         _simd_store_si(reinterpret_cast<simdscalari *>(pDst) + 1, dst1);                            // rgrgrgrgrgrgrgrg
