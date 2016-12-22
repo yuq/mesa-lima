@@ -631,13 +631,8 @@ miptree_create(struct brw_context *brw,
                                     first_level, last_level, width0,
                                     height0, depth0, num_samples,
                                     layout_flags);
-   /*
-    * pitch == 0 || height == 0  indicates the null texture
-    */
-   if (!mt || !mt->total_width || !mt->total_height) {
-      intel_miptree_release(&mt);
+   if (!mt)
       return NULL;
-   }
 
    if (mt->tiling == (I915_TILING_Y | I915_TILING_X))
       mt->tiling = I915_TILING_Y;
