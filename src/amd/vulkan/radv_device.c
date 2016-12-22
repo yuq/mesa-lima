@@ -396,7 +396,7 @@ void radv_GetPhysicalDeviceFeatures(
 		.fragmentStoresAndAtomics                 = true,
 		.shaderTessellationAndGeometryPointSize   = true,
 		.shaderImageGatherExtended                = true,
-		.shaderStorageImageExtendedFormats        = false,
+		.shaderStorageImageExtendedFormats        = true,
 		.shaderStorageImageMultisample            = false,
 		.shaderUniformBufferArrayDynamicIndexing  = true,
 		.shaderSampledImageArrayDynamicIndexing   = true,
