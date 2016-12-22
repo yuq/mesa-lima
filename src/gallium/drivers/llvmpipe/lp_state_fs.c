@@ -734,6 +734,10 @@ generate_fs_twiddle(struct gallivm_state *gallivm,
       }
    } else if (twiddle) {
       /* Twiddle pixels across elements of array */
+      /*
+       * XXX: we should avoid this in some cases, but would need to tell
+       * lp_build_conv to reorder (or deal with it ourselves).
+       */
       lp_bld_quad_twiddle(gallivm, type, src, src_count, dst);
    } else {
       /* Do nothing */
@@ -761,6 +765,94 @@ generate_fs_twiddle(struct gallivm_state *gallivm,
    }
 
    return src_count;
+}
+
+
+/*
+ * Untwiddle and transpose, much like the above.
+ * However, this is after conversion, so we get packed vectors.
+ * At this time only handle 4x16i8 rgba / 2x16i8 rg / 1x16i8 r data,
+ * the vectors will look like:
+ * r0r1r4r5r2r3r6r7r8r9r12... (albeit color channels may
+ * be swizzled here). Extending to 16bit should be trivial.
+ * Should also be extended to handle twice wide vectors with AVX2...
+ */
+static void
+fs_twiddle_transpose(struct gallivm_state *gallivm,
+                     struct lp_type type,
+                     LLVMValueRef *src,
+                     unsigned src_count,
+                     LLVMValueRef *dst)
+{
+   unsigned i, j;
+   struct lp_type type64, type16, type32;
+   LLVMTypeRef type64_t, type8_t, type16_t, type32_t;
+   LLVMBuilderRef builder = gallivm->builder;
+   LLVMValueRef tmp[4], shuf[8];
+   for (j = 0; j < 2; j++) {
+      shuf[j*4 + 0] = lp_build_const_int32(gallivm, j*4 + 0);
+      shuf[j*4 + 1] = lp_build_const_int32(gallivm, j*4 + 2);
+      shuf[j*4 + 2] = lp_build_const_int32(gallivm, j*4 + 1);
+      shuf[j*4 + 3] = lp_build_const_int32(gallivm, j*4 + 3);
+   }
+
+   assert(src_count == 4 || src_count == 2 || src_count == 1);
+   assert(type.width == 8);
+   assert(type.length == 16);
+
+   type8_t = lp_build_vec_type(gallivm, type);
+
+   type64 = type;
+   type64.length /= 8;
+   type64.width *= 8;
+   type64_t = lp_build_vec_type(gallivm, type64);
+
+   type16 = type;
+   type16.length /= 2;
+   type16.width *= 2;
+   type16_t = lp_build_vec_type(gallivm, type16);
+
+   type32 = type;
+   type32.length /= 4;
+   type32.width *= 4;
+   type32_t = lp_build_vec_type(gallivm, type32);
+
+   lp_build_transpose_aos_n(gallivm, type, src, src_count, tmp);
+
+   if (src_count == 1) {
+      /* transpose was no-op, just untwiddle */
+      LLVMValueRef shuf_vec;
+      shuf_vec = LLVMConstVector(shuf, 8);
+      tmp[0] = LLVMBuildBitCast(builder, src[0], type16_t, "");
+      tmp[0] = LLVMBuildShuffleVector(builder, tmp[0], tmp[0], shuf_vec, "");
+      dst[0] = LLVMBuildBitCast(builder, tmp[0], type8_t, "");
+   } else if (src_count == 2) {
+      LLVMValueRef shuf_vec;
+      shuf_vec = LLVMConstVector(shuf, 4);
+
+      for (i = 0; i < 2; i++) {
+         tmp[i] = LLVMBuildBitCast(builder, tmp[i], type32_t, "");
+         tmp[i] = LLVMBuildShuffleVector(builder, tmp[i], tmp[i], shuf_vec, "");
+         dst[i] = LLVMBuildBitCast(builder, tmp[i], type8_t, "");
+      }
+   } else {
+      for (j = 0; j < 2; j++) {
+         LLVMValueRef lo, hi, lo2, hi2;
+          /*
+          * Note that if we only really have 3 valid channels (rgb)
+          * and we don't need alpha we could substitute a undef here
+          * for the respective channel (causing llvm to drop conversion
+          * for alpha).
+          */
+         /* we now have rgba0rgba1rgba4rgba5 etc, untwiddle */
+         lo2 = LLVMBuildBitCast(builder, tmp[j*2], type64_t, "");
+         hi2 = LLVMBuildBitCast(builder, tmp[j*2 + 1], type64_t, "");
+         lo = lp_build_interleave2(gallivm, type64, lo2, hi2, 0);
+         hi = lp_build_interleave2(gallivm, type64, lo2, hi2, 1);
+         dst[j*2] = LLVMBuildBitCast(builder, lo, type8_t, "");
+         dst[j*2 + 1] = LLVMBuildBitCast(builder, hi, type8_t, "");
+      }
+   }
 }
 
 
@@ -1656,6 +1748,7 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
                                      util_blend_state_is_dual(&variant->key.blend, 0);
 
    const boolean is_1d = variant->key.resource_1d;
+   boolean twiddle_after_convert = FALSE;
    unsigned num_fullblock_fs = is_1d ? 2 * num_fs : num_fs;
    LLVMValueRef fpstate = 0;
 
@@ -1873,13 +1966,44 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
    }
 
    /*
+    * We actually should generally do conversion first (for non-1d cases)
+    * when the blend format is 8 or 16 bits. The reason is obvious,
+    * there's 2 or 4 times less vectors to deal with for the interleave...
+    * Albeit for the AVX (not AVX2) case there's no benefit with 16 bit
+    * vectors (as it can do 32bit unpack with 256bit vectors, but 8/16bit
+    * unpack only with 128bit vectors).
+    * Note: for 16bit sizes really need matching pack conversion code
+    */
+   if (!is_1d && dst_channels != 3 && dst_type.width == 8) {
+      twiddle_after_convert = TRUE;
+   }
+
+   /*
     * Pixel twiddle from fragment shader order to memory order
     */
-   src_count = generate_fs_twiddle(gallivm, fs_type, num_fullblock_fs,
-                                   dst_channels, fs_src, src, pad_inline);
-   if (dual_source_blend) {
-      generate_fs_twiddle(gallivm, fs_type, num_fullblock_fs, dst_channels,
-                          fs_src1, src1, pad_inline);
+   if (!twiddle_after_convert) {
+      src_count = generate_fs_twiddle(gallivm, fs_type, num_fullblock_fs,
+                                      dst_channels, fs_src, src, pad_inline);
+      if (dual_source_blend) {
+         generate_fs_twiddle(gallivm, fs_type, num_fullblock_fs, dst_channels,
+                             fs_src1, src1, pad_inline);
+      }
+   } else {
+      src_count = num_fullblock_fs * dst_channels;
+      /*
+       * We reorder things a bit here, so the cases for 4-wide and 8-wide
+       * (AVX) turn out the same later when untwiddling/transpose (albeit
+       * for true AVX2 path untwiddle needs to be different).
+       * For now just order by colors first (so we can use unpack later).
+       */
+      for (j = 0; j < num_fullblock_fs; j++) {
+         for (i = 0; i < dst_channels; i++) {
+            src[i*num_fullblock_fs + j] = fs_src[j][i];
+            if (dual_source_blend) {
+               src1[i*num_fullblock_fs + j] = fs_src1[j][i];
+            }
+         }
+      }
    }
 
    src_channels = dst_channels < 3 ? dst_channels : 4;
@@ -1923,6 +2047,12 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
       assert(bits == 128 || bits == 256);
    }
 
+   if (twiddle_after_convert) {
+      fs_twiddle_transpose(gallivm, row_type, src, src_count, src);
+      if (dual_source_blend) {
+         fs_twiddle_transpose(gallivm, row_type, src1, src_count, src1);
+      }
+   }
 
    /*
     * Blend Colour conversion
@@ -2008,13 +2138,19 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
          mask_type.length = pixels;
          mask_type.width = row_type.width * dst_channels;
 
-         src_mask[i] = LLVMBuildIntCast(builder, src_mask[i], lp_build_int_vec_type(gallivm, mask_type), "");
+         /*
+          * If mask_type width is smaller than 32bit, this doesn't quite
+          * generate the most efficient code (could use some pack).
+          */
+         src_mask[i] = LLVMBuildIntCast(builder, src_mask[i],
+                                        lp_build_int_vec_type(gallivm, mask_type), "");
 
          mask_type.length *= dst_channels;
          mask_type.width /= dst_channels;
       }
 
-      src_mask[i] = LLVMBuildBitCast(builder, src_mask[i], lp_build_int_vec_type(gallivm, mask_type), "");
+      src_mask[i] = LLVMBuildBitCast(builder, src_mask[i],
+                                     lp_build_int_vec_type(gallivm, mask_type), "");
       src_mask[i] = lp_build_pad_vector(gallivm, src_mask[i], row_type.length);
    }
 
