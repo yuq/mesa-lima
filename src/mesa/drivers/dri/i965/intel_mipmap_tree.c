@@ -1671,6 +1671,37 @@ intel_mcs_miptree_buf_create(struct brw_context *brw,
    return buf;
 }
 
+static struct intel_miptree_aux_buffer *
+intel_alloc_aux_buffer(struct brw_context *brw,
+                       const char *name,
+                       const struct isl_surf *aux_surf,
+                       uint32_t alloc_flags,
+                       struct intel_mipmap_tree *mt)
+{
+   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
+   if (!buf)
+      return false;
+
+   buf->size = aux_surf->size;
+   buf->pitch = aux_surf->row_pitch;
+   buf->qpitch = isl_surf_get_array_pitch_sa_rows(aux_surf);
+
+   /* ISL has stricter set of alignment rules then the drm allocator.
+    * Therefore one can pass the ISL dimensions in terms of bytes instead of
+    * trying to recalculate based on different format block sizes.
+    */
+   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, name, buf->size,
+                                I915_TILING_Y, buf->pitch, alloc_flags);
+   if (!buf->bo) {
+      free(buf);
+      return NULL;
+   }
+
+   buf->surf = *aux_surf;
+
+   return buf;
+}
+
 static bool
 intel_miptree_alloc_mcs(struct brw_context *brw,
                         struct intel_mipmap_tree *mt,
@@ -1756,20 +1787,10 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
    assert(temp_ccs_surf.size &&
           (temp_ccs_surf.size % temp_ccs_surf.row_pitch == 0));
 
-   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
-   if (!buf)
-      return false;
-
    enum isl_aux_state **aux_state =
       create_aux_state_map(mt, ISL_AUX_STATE_PASS_THROUGH);
-   if (!aux_state) {
-      free(buf);
+   if (!aux_state)
       return false;
-   }
-
-   buf->size = temp_ccs_surf.size;
-   buf->pitch = temp_ccs_surf.row_pitch;
-   buf->qpitch = isl_surf_get_array_pitch_sa_rows(&temp_ccs_surf);
 
    /* In case of compression mcs buffer needs to be initialised requiring the
     * buffer to be immediately mapped to cpu space for writing. Therefore do
@@ -1778,16 +1799,13 @@ intel_miptree_alloc_non_msrt_mcs(struct brw_context *brw,
     */
    const uint32_t alloc_flags =
       is_lossless_compressed ? 0 : BO_ALLOC_FOR_RENDER;
-
-   buf->bo = brw_bo_alloc_tiled(brw->bufmgr, "ccs-miptree", buf->size,
-                                I915_TILING_Y, buf->pitch, alloc_flags);
-   if (!buf->bo) {
-      free(buf);
+   mt->mcs_buf = intel_alloc_aux_buffer(brw, "ccs-miptree",
+                                        &temp_ccs_surf, alloc_flags, mt);
+   if (!mt->mcs_buf) {
       free(aux_state);
       return false;
    }
-
-   mt->mcs_buf = buf;
+  
    mt->aux_state = aux_state;
 
    /* From Gen9 onwards single-sampled (non-msrt) auxiliary buffers are
