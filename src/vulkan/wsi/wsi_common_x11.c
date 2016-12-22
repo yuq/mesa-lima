@@ -261,6 +261,9 @@ VkBool32 wsi_get_physical_device_xcb_presentation_support(
    struct wsi_x11_connection *wsi_conn =
       wsi_x11_get_connection(wsi_device, alloc, connection);
 
+   if (!wsi_conn)
+      return false;
+
    if (!wsi_conn->has_dri3) {
       fprintf(stderr, "vulkan: No DRI3 support\n");
       return false;
