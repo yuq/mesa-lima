@@ -496,10 +496,10 @@ void radv_GetPhysicalDeviceProperties(
 		.minTexelBufferOffsetAlignment            = 1,
 		.minUniformBufferOffsetAlignment          = 4,
 		.minStorageBufferOffsetAlignment          = 4,
-		.minTexelOffset                           = -8,
-		.maxTexelOffset                           = 7,
-		.minTexelGatherOffset                     = -8,
-		.maxTexelGatherOffset                     = 7,
+		.minTexelOffset                           = -32,
+		.maxTexelOffset                           = 31,
+		.minTexelGatherOffset                     = -32,
+		.maxTexelGatherOffset                     = 31,
 		.minInterpolationOffset                   = 0, /* FIXME */
 		.maxInterpolationOffset                   = 0, /* FIXME */
 		.subPixelInterpolationOffsetBits          = 0, /* FIXME */
