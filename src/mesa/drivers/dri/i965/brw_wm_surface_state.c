@@ -154,8 +154,8 @@ brw_emit_surface_state(struct brw_context *brw,
          intel_miptree_get_aux_isl_surf(brw, mt, aux_usage, &aux_surf_s);
          aux_surf = &aux_surf_s;
 
-         aux_bo = mt->hiz_buf->aux_base.bo;
-         aux_offset = mt->hiz_buf->aux_base.bo->offset64;
+         aux_bo = mt->hiz_buf->bo;
+         aux_offset = mt->hiz_buf->bo->offset64;
       }
 
       /* We only really need a clear color if we also have an auxiliary

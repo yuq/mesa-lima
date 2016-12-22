@@ -167,7 +167,7 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
    struct isl_surf *aux_surf;
    if (brw->gen == 6 && mt->hiz_buf) {
-      aux_surf = &mt->hiz_buf->aux_base.surf;
+      aux_surf = &mt->hiz_buf->surf;
    } else if (mt->mcs_buf) {
       aux_surf = &mt->mcs_buf->surf;
    } else {
@@ -212,8 +212,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
       } else {
          assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
 
-         surf->aux_addr.buffer = mt->hiz_buf->aux_base.bo;
-         surf->aux_addr.offset = mt->hiz_buf->aux_base.offset;
+         surf->aux_addr.buffer = mt->hiz_buf->bo;
+         surf->aux_addr.offset = mt->hiz_buf->offset;
       }
    } else {
       surf->aux_addr = (struct blorp_address) {

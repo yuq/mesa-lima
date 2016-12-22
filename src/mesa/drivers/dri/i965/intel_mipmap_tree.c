@@ -1073,14 +1073,14 @@ intel_miptree_reference(struct intel_mipmap_tree **dst,
 }
 
 static void
-intel_miptree_hiz_buffer_free(struct intel_miptree_hiz_buffer *hiz_buf)
+intel_miptree_aux_buffer_free(struct intel_miptree_aux_buffer *aux_buf)
 {
-   if (hiz_buf == NULL)
+   if (aux_buf == NULL)
       return;
 
-   brw_bo_unreference(hiz_buf->aux_base.bo);
+   brw_bo_unreference(aux_buf->bo);
 
-   free(hiz_buf);
+   free(aux_buf);
 }
 
 void
@@ -1098,11 +1098,8 @@ intel_miptree_release(struct intel_mipmap_tree **mt)
       brw_bo_unreference((*mt)->bo);
       intel_miptree_release(&(*mt)->stencil_mt);
       intel_miptree_release(&(*mt)->r8stencil_mt);
-      intel_miptree_hiz_buffer_free((*mt)->hiz_buf);
-      if ((*mt)->mcs_buf) {
-         brw_bo_unreference((*mt)->mcs_buf->bo);
-         free((*mt)->mcs_buf);
-      }
+      intel_miptree_aux_buffer_free((*mt)->hiz_buf);
+      intel_miptree_aux_buffer_free((*mt)->mcs_buf);
       free_aux_state_map((*mt)->aux_state);
 
       intel_miptree_release(&(*mt)->plane[0]);
@@ -1794,208 +1791,6 @@ intel_miptree_level_enable_hiz(struct brw_context *brw,
    return true;
 }
 
-
-/**
- * Helper for intel_miptree_alloc_hiz() that determines the required hiz
- * buffer dimensions and allocates a bo for the hiz buffer.
- */
-static struct intel_miptree_hiz_buffer *
-intel_gen7_hiz_buf_create(struct brw_context *brw,
-                          struct intel_mipmap_tree *mt)
-{
-   unsigned z_width = mt->logical_width0;
-   unsigned z_height = mt->logical_height0;
-   const unsigned z_depth = MAX2(mt->logical_depth0, 1);
-   unsigned hz_width, hz_height;
-   struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
-
-   if (!buf)
-      return NULL;
-
-   /* Gen7 PRM Volume 2, Part 1, 11.5.3 "Hierarchical Depth Buffer" documents
-    * adjustments required for Z_Height and Z_Width based on multisampling.
-    */
-   switch (mt->num_samples) {
-   case 0:
-   case 1:
-      break;
-   case 2:
-   case 4:
-      z_width *= 2;
-      z_height *= 2;
-      break;
-   case 8:
-      z_width *= 4;
-      z_height *= 2;
-      break;
-   default:
-      unreachable("unsupported sample count");
-   }
-
-   const unsigned vertical_align = 8; /* 'j' in the docs */
-   const unsigned H0 = z_height;
-   const unsigned h0 = ALIGN(H0, vertical_align);
-   const unsigned h1 = ALIGN(minify(H0, 1), vertical_align);
-   const unsigned Z0 = z_depth;
-
-   /* HZ_Width (bytes) = ceiling(Z_Width / 16) * 16 */
-   hz_width = ALIGN(z_width, 16);
-
-   if (mt->target == GL_TEXTURE_3D) {
-      unsigned H_i = H0;
-      unsigned Z_i = Z0;
-      hz_height = 0;
-      for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
-         unsigned h_i = ALIGN(H_i, vertical_align);
-         /* sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i))) */
-         hz_height += h_i * Z_i;
-         H_i = minify(H_i, 1);
-         Z_i = minify(Z_i, 1);
-      }
-      /* HZ_Height =
-       *    (1/2) * sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i)))
-       */
-      hz_height = DIV_ROUND_UP(hz_height, 2);
-   } else {
-      const unsigned hz_qpitch = h0 + h1 + (12 * vertical_align);
-      /* HZ_Height (rows) = Ceiling ( ( Q_pitch * Z_depth/2) /8 ) * 8 */
-      hz_height = DIV_ROUND_UP(hz_qpitch * Z0, 2 * 8) * 8;
-   }
-
-   buf->aux_base.bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "hiz",
-                                            hz_width, hz_height, 1,
-                                            I915_TILING_Y, &buf->aux_base.pitch,
-                                            BO_ALLOC_FOR_RENDER);
-   if (!buf->aux_base.bo) {
-      free(buf);
-      return NULL;
-   }
-
-   buf->aux_base.size = hz_width * hz_height;
-
-   return buf;
-}
-
-
-/**
- * Helper for intel_miptree_alloc_hiz() that determines the required hiz
- * buffer dimensions and allocates a bo for the hiz buffer.
- */
-static struct intel_miptree_hiz_buffer *
-intel_gen8_hiz_buf_create(struct brw_context *brw,
-                          struct intel_mipmap_tree *mt)
-{
-   unsigned z_width = mt->logical_width0;
-   unsigned z_height = mt->logical_height0;
-   const unsigned z_depth = MAX2(mt->logical_depth0, 1);
-   unsigned hz_width, hz_height;
-   struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
-
-   if (!buf)
-      return NULL;
-
-   /* Gen7 PRM Volume 2, Part 1, 11.5.3 "Hierarchical Depth Buffer" documents
-    * adjustments required for Z_Height and Z_Width based on multisampling.
-    */
-   if (brw->gen < 9) {
-      switch (mt->num_samples) {
-      case 0:
-      case 1:
-         break;
-      case 2:
-      case 4:
-         z_width *= 2;
-         z_height *= 2;
-         break;
-      case 8:
-         z_width *= 4;
-         z_height *= 2;
-         break;
-      default:
-         unreachable("unsupported sample count");
-      }
-   }
-
-   const unsigned vertical_align = 8; /* 'j' in the docs */
-   const unsigned H0 = z_height;
-   const unsigned h0 = ALIGN(H0, vertical_align);
-   const unsigned h1 = ALIGN(minify(H0, 1), vertical_align);
-   const unsigned Z0 = z_depth;
-
-   /* HZ_Width (bytes) = ceiling(Z_Width / 16) * 16 */
-   hz_width = ALIGN(z_width, 16);
-
-   unsigned H_i = H0;
-   unsigned Z_i = Z0;
-   unsigned sum_h_i = 0;
-   unsigned hz_height_3d_sum = 0;
-   for (unsigned level = mt->first_level; level <= mt->last_level; ++level) {
-      unsigned i = level - mt->first_level;
-      unsigned h_i = ALIGN(H_i, vertical_align);
-      /* sum(i=2 to m; h_i) */
-      if (i >= 2) {
-         sum_h_i += h_i;
-      }
-      /* sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i))) */
-      hz_height_3d_sum += h_i * Z_i;
-      H_i = minify(H_i, 1);
-      Z_i = minify(Z_i, 1);
-   }
-   /* HZ_QPitch = h0 + max(h1, sum(i=2 to m; h_i)) */
-   buf->aux_base.qpitch = h0 + MAX2(h1, sum_h_i);
-
-   if (mt->target == GL_TEXTURE_3D) {
-      /* (1/2) * sum(i=0 to m; h_i * max(1, floor(Z_Depth/2**i))) */
-      hz_height = DIV_ROUND_UP(hz_height_3d_sum, 2);
-   } else {
-      /* HZ_Height (rows) = ceiling( (HZ_QPitch/2)/8) *8 * Z_Depth */
-      hz_height = DIV_ROUND_UP(buf->aux_base.qpitch, 2 * 8) * 8 * Z0;
-   }
-
-   buf->aux_base.bo = brw_bo_alloc_tiled_2d(brw->bufmgr, "hiz",
-                                            hz_width, hz_height, 1,
-                                            I915_TILING_Y, &buf->aux_base.pitch,
-                                            BO_ALLOC_FOR_RENDER);
-   if (!buf->aux_base.bo) {
-      free(buf);
-      return NULL;
-   }
-
-   buf->aux_base.size = hz_width * hz_height;
-
-   return buf;
-}
-
-
-static struct intel_miptree_hiz_buffer *
-intel_hiz_miptree_buf_create(struct brw_context *brw,
-                             struct intel_mipmap_tree *mt)
-{
-   struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
-   if (!buf)
-      return NULL;
-
-   struct isl_surf temp_main_surf;
-   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
-
-   if (!isl_surf_get_hiz_surf(&brw->isl_dev, &temp_main_surf,
-                              &buf->aux_base.surf)) {
-      free(buf);
-      return NULL;
-   }
-
-   struct isl_surf *surf = &buf->aux_base.surf;
-   buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz", surf->size,
-                                         I915_TILING_Y, surf->row_pitch,
-                                         BO_ALLOC_FOR_RENDER);
-   if (!buf->aux_base.bo) {
-      free(buf);
-      return NULL;
-   }
-
-   return buf;
-}
-
 bool
 intel_miptree_wants_hiz_buffer(struct brw_context *brw,
                                struct intel_mipmap_tree *mt)
@@ -2033,13 +1828,16 @@ intel_miptree_alloc_hiz(struct brw_context *brw,
    if (!aux_state)
       return false;
 
-   if (brw->gen == 7) {
-      mt->hiz_buf = intel_gen7_hiz_buf_create(brw, mt);
-   } else if (brw->gen >= 8) {
-      mt->hiz_buf = intel_gen8_hiz_buf_create(brw, mt);
-   } else {
-      mt->hiz_buf = intel_hiz_miptree_buf_create(brw, mt);
-   }
+   struct isl_surf temp_main_surf;
+   struct isl_surf temp_hiz_surf;
+
+   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
+   assert(isl_surf_get_hiz_surf(&brw->isl_dev, &temp_main_surf,
+                                &temp_hiz_surf));
+
+   const uint32_t alloc_flags = BO_ALLOC_FOR_RENDER;
+   mt->hiz_buf = intel_alloc_aux_buffer(brw, "hiz-miptree",
+                                        &temp_hiz_surf, alloc_flags, mt);
 
    if (!mt->hiz_buf) {
       free(aux_state);
@@ -2810,7 +2608,7 @@ intel_miptree_make_shareable(struct brw_context *brw,
 
    if (mt->hiz_buf) {
       mt->aux_disable |= INTEL_AUX_DISABLE_HIZ;
-      intel_miptree_hiz_buffer_free(mt->hiz_buf);
+      intel_miptree_aux_buffer_free(mt->hiz_buf);
       mt->hiz_buf = NULL;
 
       for (uint32_t l = mt->first_level; l <= mt->last_level; ++l) {
@@ -3946,8 +3744,8 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
       aux_pitch = mt->mcs_buf->pitch;
       aux_qpitch = mt->mcs_buf->qpitch;
    } else if (mt->hiz_buf) {
-      aux_pitch = mt->hiz_buf->aux_base.pitch;
-      aux_qpitch = mt->hiz_buf->aux_base.qpitch;
+      aux_pitch = mt->hiz_buf->surf.row_pitch;
+      aux_qpitch = mt->hiz_buf->surf.array_pitch_el_rows;
    } else {
       return;
    }

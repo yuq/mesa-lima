@@ -354,15 +354,6 @@ struct intel_miptree_aux_buffer
     */
    uint32_t qpitch;
 };
-/**
- * The HiZ buffer requires extra attributes on earlier GENs. This is easily
- * contained within an intel_mipmap_tree. To make sure we do not abuse this, we
- * keep the hiz datastructure separate.
- */
-struct intel_miptree_hiz_buffer
-{
-   struct intel_miptree_aux_buffer aux_base;
-};
 
 struct intel_mipmap_tree
 {
@@ -572,7 +563,7 @@ struct intel_mipmap_tree
     * To determine if hiz is enabled, do not check this pointer. Instead, use
     * intel_miptree_slice_has_hiz().
     */
-   struct intel_miptree_hiz_buffer *hiz_buf;
+   struct intel_miptree_aux_buffer *hiz_buf;
 
    /**
     * \brief Maps miptree slices to their current aux state
