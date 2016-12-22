@@ -230,6 +230,9 @@ static struct intel_image_format intel_image_formats[] = {
    { __DRI_IMAGE_FOURCC_XBGR8888, __DRI_IMAGE_COMPONENTS_RGB, 1,
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_XBGR8888, 4 }, } },
 
+   { __DRI_IMAGE_FOURCC_ARGB1555, __DRI_IMAGE_COMPONENTS_RGBA, 1,
+     { { 0, 0, 0, __DRI_IMAGE_FORMAT_ARGB1555, 2 } } },
+
    { __DRI_IMAGE_FOURCC_RGB565, __DRI_IMAGE_COMPONENTS_RGB, 1,
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_RGB565, 2 } } },
 
