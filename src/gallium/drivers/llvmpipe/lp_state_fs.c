@@ -799,7 +799,8 @@ load_unswizzled_block(struct gallivm_state *gallivm,
       gep[1] = LLVMBuildAdd(builder, bx, by, "");
 
       dst_ptr = LLVMBuildGEP(builder, base_ptr, gep, 2, "");
-      dst_ptr = LLVMBuildBitCast(builder, dst_ptr, LLVMPointerType(lp_build_vec_type(gallivm, dst_type), 0), "");
+      dst_ptr = LLVMBuildBitCast(builder, dst_ptr,
+                                 LLVMPointerType(lp_build_vec_type(gallivm, dst_type), 0), "");
 
       dst[i] = LLVMBuildLoad(builder, dst_ptr, "");
 
@@ -843,7 +844,8 @@ store_unswizzled_block(struct gallivm_state *gallivm,
       gep[1] = LLVMBuildAdd(builder, bx, by, "");
 
       src_ptr = LLVMBuildGEP(builder, base_ptr, gep, 2, "");
-      src_ptr = LLVMBuildBitCast(builder, src_ptr, LLVMPointerType(lp_build_vec_type(gallivm, src_type), 0), "");
+      src_ptr = LLVMBuildBitCast(builder, src_ptr,
+                                 LLVMPointerType(lp_build_vec_type(gallivm, src_type), 0), "");
 
       src_ptr = LLVMBuildStore(builder, src[i], src_ptr);
 
@@ -1632,6 +1634,7 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
    struct lp_type blend_type;
    struct lp_type row_type;
    struct lp_type dst_type;
+   struct lp_type ls_type;
 
    unsigned char swizzle[TGSI_NUM_CHANNELS];
    unsigned vector_width;
@@ -2057,17 +2060,41 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
     */
    dst_alignment = MIN2(16, dst_alignment);
 
+   ls_type = dst_type;
+
+   if (dst_count > src_count) {
+      if ((dst_type.width == 8 || dst_type.width == 16) &&
+          util_is_power_of_two(dst_type.length) &&
+          dst_type.length * dst_type.width < 128) {
+         /*
+          * Never try to load values as 4xi8 which we will then
+          * concatenate to larger vectors. This gives llvm a real
+          * headache (the problem is the type legalizer (?) will
+          * try to load that as 4xi8 zext to 4xi32 to fill the vector,
+          * then the shuffles to concatenate are more or less impossible
+          * - llvm is easily capable of generating a sequence of 32
+          * pextrb/pinsrb instructions for that. Albeit it appears to
+          * be fixed in llvm 4.0. So, load and concatenate with 32bit
+          * width to avoid the trouble (16bit seems not as bad, llvm
+          * probably recognizes the load+shuffle as only one shuffle
+          * is necessary, but we can do just the same anyway).
+          */
+         ls_type.length = dst_type.length * dst_type.width / 32;
+         ls_type.width = 32;
+      }
+   }
+
    if (is_1d) {
       load_unswizzled_block(gallivm, color_ptr, stride, block_width, 1,
-                            dst, dst_type, dst_count / 4, dst_alignment);
+                            dst, ls_type, dst_count / 4, dst_alignment);
       for (i = dst_count / 4; i < dst_count; i++) {
-         dst[i] = lp_build_undef(gallivm, dst_type);
+         dst[i] = lp_build_undef(gallivm, ls_type);
       }
 
    }
    else {
       load_unswizzled_block(gallivm, color_ptr, stride, block_width, block_height,
-                            dst, dst_type, dst_count, dst_alignment);
+                            dst, ls_type, dst_count, dst_alignment);
    }
 
 
@@ -2082,7 +2109,24 @@ generate_unswizzled_blend(struct gallivm_state *gallivm,
     * on all 16 pixels in that single vector at once.
     */
    if (dst_count > src_count) {
-      lp_build_concat_n(gallivm, dst_type, dst, 4, dst, src_count);
+      if (ls_type.length != dst_type.length && ls_type.length == 1) {
+         LLVMTypeRef elem_type = lp_build_elem_type(gallivm, ls_type);
+         LLVMTypeRef ls_vec_type = LLVMVectorType(elem_type, 1);
+         for (i = 0; i < dst_count; i++) {
+            dst[i] = LLVMBuildBitCast(builder, dst[i], ls_vec_type, "");
+         }
+      }
+
+      lp_build_concat_n(gallivm, ls_type, dst, 4, dst, src_count);
+
+      if (ls_type.length != dst_type.length) {
+         struct lp_type tmp_type = dst_type;
+         tmp_type.length = dst_type.length * 4 / src_count;
+         for (i = 0; i < src_count; i++) {
+            dst[i] = LLVMBuildBitCast(builder, dst[i],
+                                      lp_build_vec_type(gallivm, tmp_type), "");
+         }
+      }
    }
 
    /*
