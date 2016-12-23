@@ -76,6 +76,7 @@ LIBDRM_NVVIEUX_REQUIRED=2.4.66
 LIBDRM_NOUVEAU_REQUIRED=2.4.66
 LIBDRM_FREEDRENO_REQUIRED=2.4.74
 LIBDRM_VC4_REQUIRED=2.4.69
+LIBDRM_ETNAVIV_REQUIRED=2.4.74
 DRI2PROTO_REQUIRED=2.6
 DRI3PROTO_REQUIRED=1.0
 PRESENTPROTO_REQUIRED=1.0
@@ -1233,7 +1234,7 @@ GALLIUM_DRIVERS_DEFAULT="r300,r600,svga,swrast"
 AC_ARG_WITH([gallium-drivers],
     [AS_HELP_STRING([--with-gallium-drivers@<:@=DIRS...@:>@],
         [comma delimited Gallium drivers list, e.g.
-        "i915,ilo,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl"
+        "i915,ilo,nouveau,r300,r600,radeonsi,freedreno,svga,swrast,vc4,virgl,etnaviv"
         @<:@default=r300,r600,svga,swrast@:>@])],
     [with_gallium_drivers="$withval"],
     [with_gallium_drivers="$GALLIUM_DRIVERS_DEFAULT"])
@@ -2506,6 +2507,11 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([FREEDRENO], [libdrm_freedreno >= $LIBDRM_FREEDRENO_REQUIRED])
             require_libdrm "freedreno"
             ;;
+        xetnaviv)
+            HAVE_GALLIUM_ETNAVIV=yes
+            PKG_CHECK_MODULES([ETNAVIV], [libdrm_etnaviv >= $LIBDRM_ETNAVIV_REQUIRED])
+            require_libdrm "etnaviv"
+            ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
             if test "x$MESA_LLVM" = x1 && test "x$enable_gallium_llvm" == "xyes";  then
@@ -2624,6 +2630,7 @@ AM_CONDITIONAL(HAVE_GALLIUM_RADEON_COMMON, test "x$HAVE_GALLIUM_R600" = xyes -o 
                                                 "x$HAVE_GALLIUM_RADEONSI" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_NOUVEAU, test "x$HAVE_GALLIUM_NOUVEAU" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_FREEDRENO, test "x$HAVE_GALLIUM_FREEDRENO" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_ETNAVIV, test "x$HAVE_GALLIUM_ETNAVIV" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SOFTPIPE, test "x$HAVE_GALLIUM_SOFTPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_LLVMPIPE, test "x$HAVE_GALLIUM_LLVMPIPE" = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_SWR, test "x$HAVE_GALLIUM_SWR" = xyes)
@@ -2777,6 +2784,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/drivers/svga/Makefile
 		src/gallium/drivers/swr/Makefile
 		src/gallium/drivers/trace/Makefile
+		src/gallium/drivers/etnaviv/Makefile
 		src/gallium/drivers/vc4/Makefile
 		src/gallium/drivers/virgl/Makefile
 		src/gallium/state_trackers/clover/Makefile
@@ -2806,6 +2814,7 @@ AC_CONFIG_FILES([Makefile
 		src/gallium/targets/xvmc/Makefile
 		src/gallium/tests/trivial/Makefile
 		src/gallium/tests/unit/Makefile
+		src/gallium/winsys/etnaviv/drm/Makefile
 		src/gallium/winsys/freedreno/drm/Makefile
 		src/gallium/winsys/i915/drm/Makefile
 		src/gallium/winsys/intel/drm/Makefile
