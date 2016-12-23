@@ -39,7 +39,7 @@ swr_fence_do_work(struct swr_fence *fence)
       work = fence->work.head.next;
       /* Immediately clear the head so any new work gets added to a new work
        * queue */
-      p_atomic_set(&fence->work.head.next, nullptr);
+      p_atomic_set(&fence->work.head.next, 0);
       p_atomic_set(&fence->work.tail, &fence->work.head);
       p_atomic_set(&fence->work.count, 0);
 
