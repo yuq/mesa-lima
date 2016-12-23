@@ -481,6 +481,9 @@ struct radv_device {
 	float sample_locations_4x[4][2];
 	float sample_locations_8x[8][2];
 	float sample_locations_16x[16][2];
+
+	struct radeon_winsys_bo                      *trace_bo;
+	uint32_t                                     *trace_id_ptr;
 };
 
 struct radv_device_memory {
@@ -671,6 +674,7 @@ struct radv_cmd_state {
 	unsigned                                     active_occlusion_queries;
 	float					     offset_scale;
 	uint32_t                                      descriptors_dirty;
+	uint32_t                                      trace_id;
 };
 
 struct radv_cmd_pool {
@@ -765,6 +769,7 @@ void radv_set_color_clear_regs(struct radv_cmd_buffer *cmd_buffer,
 void radv_fill_buffer(struct radv_cmd_buffer *cmd_buffer,
 		      struct radeon_winsys_bo *bo,
 		      uint64_t offset, uint64_t size, uint32_t value);
+void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer);
 
 /*
  * Takes x,y,z as exact numbers of invocations, instead of blocks.

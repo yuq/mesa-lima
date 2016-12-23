@@ -319,6 +319,8 @@ struct radeon_winsys {
 	void (*cs_execute_secondary)(struct radeon_winsys_cs *parent,
 				    struct radeon_winsys_cs *child);
 
+	void (*cs_dump)(struct radeon_winsys_cs *cs, FILE* file, uint32_t trace_id);
+
 	int (*surface_init)(struct radeon_winsys *ws,
 			    struct radeon_surf *surf);
 

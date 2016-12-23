@@ -32,6 +32,8 @@
 #include "vk_format.h"
 #include "radv_meta.h"
 
+#include "ac_debug.h"
+
 static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 VkImageLayout src_layout,
@@ -270,6 +272,32 @@ radv_cmd_buffer_upload_data(struct radv_cmd_buffer *cmd_buffer,
 		memcpy(ptr, data, size);
 
 	return true;
+}
+
+void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer)
+{
+	struct radv_device *device = cmd_buffer->device;
+	struct radeon_winsys_cs *cs = cmd_buffer->cs;
+	uint64_t va;
+
+	if (!device->trace_bo)
+		return;
+
+	va = device->ws->buffer_get_va(device->trace_bo);
+
+	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 7);
+
+	++cmd_buffer->state.trace_id;
+	device->ws->cs_add_buffer(cs, device->trace_bo, 8);
+	radeon_emit(cs, PKT3(PKT3_WRITE_DATA, 3, 0));
+	radeon_emit(cs, S_370_DST_SEL(V_370_MEM_ASYNC) |
+		    S_370_WR_CONFIRM(1) |
+		    S_370_ENGINE_SEL(V_370_ME));
+	radeon_emit(cs, va);
+	radeon_emit(cs, va >> 32);
+	radeon_emit(cs, cmd_buffer->state.trace_id);
+	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
+	radeon_emit(cs, AC_ENCODE_TRACE_POINT(cmd_buffer->state.trace_id));
 }
 
 static void
@@ -1929,6 +1957,8 @@ void radv_CmdDraw(
 		    S_0287F0_USE_OPAQUE(0));
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 static void radv_emit_primitive_reset_index(struct radv_cmd_buffer *cmd_buffer)
@@ -1984,6 +2014,7 @@ void radv_CmdDrawIndexed(
 	radeon_emit(cmd_buffer->cs, V_0287F0_DI_SRC_SEL_DMA);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 static void
@@ -2035,6 +2066,7 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 	radeon_emit(cs, count_va >> 32);
 	radeon_emit(cs, stride); /* stride */
 	radeon_emit(cs, di_src_sel);
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 static void
@@ -2188,6 +2220,7 @@ void radv_CmdDispatch(
 	radeon_emit(cmd_buffer->cs, 1);
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 void radv_CmdDispatchIndirect(
@@ -2239,6 +2272,7 @@ void radv_CmdDispatchIndirect(
 	}
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 void radv_unaligned_dispatch(
@@ -2292,6 +2326,7 @@ void radv_unaligned_dispatch(
 	                            S_00B800_PARTIAL_TG_EN(1));
 
 	assert(cmd_buffer->cs->cdw <= cdw_max);
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 void radv_CmdEndRenderPass(

@@ -718,6 +718,8 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 		}
 	}
 
+	if (cmd_buffer->state.flush_bits)
+		radv_cmd_buffer_trace_emit(cmd_buffer);
 	cmd_buffer->state.flush_bits = 0;
 }
 
@@ -780,6 +782,8 @@ static void si_emit_cp_dma_copy_buffer(struct radv_cmd_buffer *cmd_buffer,
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
+
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 /* Emit a CP DMA packet to clear a buffer. The size must fit in bits [20:0]. */
@@ -820,6 +824,7 @@ static void si_emit_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer,
 		radeon_emit(cs, PKT3(PKT3_PFP_SYNC_ME, 0, 0));
 		radeon_emit(cs, 0);
 	}
+	radv_cmd_buffer_trace_emit(cmd_buffer);
 }
 
 static void si_cp_dma_prepare(struct radv_cmd_buffer *cmd_buffer, uint64_t byte_count,

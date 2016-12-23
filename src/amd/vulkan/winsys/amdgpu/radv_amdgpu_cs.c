@@ -27,6 +27,7 @@
 #include <amdgpu_drm.h>
 #include <assert.h>
 
+#include "ac_debug.h"
 #include "amdgpu_id.h"
 #include "radv_radeon_winsys.h"
 #include "radv_amdgpu_cs.h"
@@ -775,6 +776,34 @@ static int radv_amdgpu_winsys_cs_submit(struct radeon_winsys_ctx *_ctx,
 	return ret;
 }
 
+
+static void *radv_amdgpu_winsys_get_cpu_addr(struct radv_amdgpu_cs *cs, uint64_t addr)
+{
+	void *ret = NULL;
+	for (unsigned i = 0; i <= cs->num_old_ib_buffers; ++i) {
+		struct radv_amdgpu_winsys_bo *bo;
+
+		bo = (struct radv_amdgpu_winsys_bo*)
+		       (i == cs->num_old_ib_buffers ? cs->ib_buffer : cs->old_ib_buffers[i]);
+		if (addr >= bo->va && addr - bo->va < bo->size) {
+			if (amdgpu_bo_cpu_map(bo->bo, &ret) == 0)
+				return (char *)ret + (addr - bo->va);
+		}
+	}
+	return ret;
+}
+
+static void radv_amdgpu_winsys_cs_dump(struct radeon_winsys_cs *_cs,
+                                       FILE* file,
+                                       uint32_t trace_id)
+{
+	struct radv_amdgpu_cs *cs = (struct radv_amdgpu_cs *)_cs;
+
+	ac_parse_ib(file,
+		    radv_amdgpu_winsys_get_cpu_addr(cs, cs->ib.ib_mc_address),
+		    cs->ib.size, trace_id,  "main IB", cs->ws->info.chip_class);
+}
+
 static struct radeon_winsys_ctx *radv_amdgpu_ctx_create(struct radeon_winsys *_ws)
 {
 	struct radv_amdgpu_winsys *ws = radv_amdgpu_winsys(_ws);
@@ -850,6 +879,7 @@ void radv_amdgpu_cs_init_functions(struct radv_amdgpu_winsys *ws)
 	ws->base.cs_add_buffer = radv_amdgpu_cs_add_buffer;
 	ws->base.cs_execute_secondary = radv_amdgpu_cs_execute_secondary;
 	ws->base.cs_submit = radv_amdgpu_winsys_cs_submit;
+	ws->base.cs_dump = radv_amdgpu_winsys_cs_dump;
 	ws->base.create_fence = radv_amdgpu_create_fence;
 	ws->base.destroy_fence = radv_amdgpu_destroy_fence;
 	ws->base.create_sem = radv_amdgpu_create_sem;

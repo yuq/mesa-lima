@@ -760,16 +760,34 @@ VkResult radv_CreateDevice(
 		device->ws->cs_finalize(device->empty_cs[family]);
 	}
 
+	if (getenv("RADV_TRACE_FILE")) {
+		device->trace_bo = device->ws->buffer_create(device->ws, 4096, 8,
+							     RADEON_DOMAIN_VRAM, RADEON_FLAG_CPU_ACCESS);
+		if (!device->trace_bo)
+			goto fail;
+
+		device->trace_id_ptr = device->ws->buffer_map(device->trace_bo);
+		if (!device->trace_id_ptr)
+			goto fail;
+	}
+
 	*pDevice = radv_device_to_handle(device);
 	return VK_SUCCESS;
 
 fail:
+	if (device->trace_bo)
+		device->ws->buffer_destroy(device->trace_bo);
+
 	for (unsigned i = 0; i < RADV_MAX_QUEUE_FAMILIES; i++) {
 		for (unsigned q = 0; q < device->queue_count[i]; q++)
 			radv_queue_finish(&device->queues[i][q]);
 		if (device->queue_count[i])
 			vk_free(&device->alloc, device->queues[i]);
 	}
+
+	if (device->hw_ctx)
+		device->ws->ctx_destroy(device->hw_ctx);
+
 	vk_free(&device->alloc, device);
 	return result;
 }
@@ -779,6 +797,9 @@ void radv_DestroyDevice(
 	const VkAllocationCallbacks*                pAllocator)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
+
+	if (device->trace_bo)
+		device->ws->buffer_destroy(device->trace_bo);
 
 	device->ws->ctx_destroy(device->hw_ctx);
 	for (unsigned i = 0; i < RADV_MAX_QUEUE_FAMILIES; i++) {
@@ -869,6 +890,21 @@ void radv_GetDeviceQueue(
 	*pQueue = radv_queue_to_handle(&device->queues[queueFamilyIndex][queueIndex]);
 }
 
+static void radv_dump_trace(struct radv_device *device,
+			    struct radeon_winsys_cs *cs)
+{
+	const char *filename = getenv("RADV_TRACE_FILE");
+	FILE *f = fopen(filename, "w");
+	if (!f) {
+		fprintf(stderr, "Failed to write trace dump to %s\n", filename);
+		return;
+	}
+
+	fprintf(f, "Trace ID: %x\n", *device->trace_id_ptr);
+	device->ws->cs_dump(cs, f, *device->trace_id_ptr);
+	fclose(f);
+}
+
 VkResult radv_QueueSubmit(
 	VkQueue                                     _queue,
 	uint32_t                                    submitCount,
@@ -880,10 +916,12 @@ VkResult radv_QueueSubmit(
 	struct radeon_winsys_fence *base_fence = fence ? fence->fence : NULL;
 	struct radeon_winsys_ctx *ctx = queue->device->hw_ctx;
 	int ret;
+	uint32_t max_cs_submission = queue->device->trace_bo ? 1 : UINT32_MAX;
 
 	for (uint32_t i = 0; i < submitCount; i++) {
 		struct radeon_winsys_cs **cs_array;
 		bool can_patch = true;
+		uint32_t advance;
 
 		if (!pSubmits[i].commandBufferCount)
 			continue;
@@ -900,15 +938,41 @@ VkResult radv_QueueSubmit(
 			if ((cmd_buffer->usage_flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT))
 				can_patch = false;
 		}
-		ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array,
-						   pSubmits[i].commandBufferCount,
-						   (struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
-						   pSubmits[i].waitSemaphoreCount,
-						   (struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
-						   pSubmits[i].signalSemaphoreCount,
-						   can_patch, base_fence);
-		if (ret)
-			radv_loge("failed to submit CS %d\n", i);
+
+		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j += advance) {
+			advance = MIN2(max_cs_submission,
+				       pSubmits[i].commandBufferCount - j);
+			bool b = j == 0;
+			bool e = j + advance == pSubmits[i].commandBufferCount;
+
+			if (queue->device->trace_bo)
+				*queue->device->trace_id_ptr = 0;
+
+			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array,
+							pSubmits[i].commandBufferCount,
+							(struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
+							b ? pSubmits[i].waitSemaphoreCount : 0,
+							(struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
+							e ? pSubmits[i].signalSemaphoreCount : 0,
+							can_patch, base_fence);
+
+			if (ret) {
+				radv_loge("failed to submit CS %d\n", i);
+				abort();
+			}
+			if (queue->device->trace_bo) {
+				bool success = queue->device->ws->ctx_wait_idle(
+							queue->device->hw_ctx,
+							radv_queue_family_to_ring(
+								queue->queue_family_index),
+							queue->queue_idx);
+
+				if (!success) { /* Hang */
+					radv_dump_trace(queue->device, cs_array[j]);
+					abort();
+				}
+			}
+		}
 		free(cs_array);
 	}
 
