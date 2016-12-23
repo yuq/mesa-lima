@@ -1469,22 +1469,23 @@ VkResult genX(CreateGraphicsPipelines)(
 
    VkResult result = VK_SUCCESS;
 
-   unsigned i = 0;
-   for (; i < count; i++) {
+   unsigned i;
+   for (i = 0; i < count; i++) {
       result = genX(graphics_pipeline_create)(_device,
                                               pipeline_cache,
                                               &pCreateInfos[i],
                                               pAllocator, &pPipelines[i]);
-      if (result != VK_SUCCESS) {
-         for (unsigned j = 0; j < i; j++) {
-            anv_DestroyPipeline(_device, pPipelines[j], pAllocator);
-         }
 
-         return result;
-      }
+      /* Bail out on the first error as it is not obvious what error should be
+       * report upon 2 different failures. */
+      if (result != VK_SUCCESS)
+         break;
    }
 
-   return VK_SUCCESS;
+   for (; i < count; i++)
+      pPipelines[i] = VK_NULL_HANDLE;
+
+   return result;
 }
 
 VkResult genX(CreateComputePipelines)(
@@ -1499,19 +1500,20 @@ VkResult genX(CreateComputePipelines)(
 
    VkResult result = VK_SUCCESS;
 
-   unsigned i = 0;
-   for (; i < count; i++) {
+   unsigned i;
+   for (i = 0; i < count; i++) {
       result = compute_pipeline_create(_device, pipeline_cache,
                                        &pCreateInfos[i],
                                        pAllocator, &pPipelines[i]);
-      if (result != VK_SUCCESS) {
-         for (unsigned j = 0; j < i; j++) {
-            anv_DestroyPipeline(_device, pPipelines[j], pAllocator);
-         }
 
-         return result;
-      }
+      /* Bail out on the first error as it is not obvious what error should be
+       * report upon 2 different failures. */
+      if (result != VK_SUCCESS)
+         break;
    }
 
-   return VK_SUCCESS;
+   for (; i < count; i++)
+      pPipelines[i] = VK_NULL_HANDLE;
+
+   return result;
 }
