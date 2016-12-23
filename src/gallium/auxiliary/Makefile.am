@@ -20,6 +20,16 @@ libgallium_la_SOURCES = \
 	$(NIR_SOURCES) \
 	$(GENERATED_SOURCES)
 
+if HAVE_LIBDRM
+
+AM_CFLAGS += \
+	$(LIBDRM_CFLAGS)
+
+libgallium_la_SOURCES += \
+	$(RENDERONLY_SOURCES)
+
+endif
+
 if HAVE_GALLIUM_LLVM
 
 AM_CFLAGS += \

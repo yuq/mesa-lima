@@ -50,6 +50,11 @@ GALLIUM_COMMON_LIB_DEPS = \
 	$(PTHREAD_LIBS) \
 	$(DLOPEN_LIBS)
 
+if HAVE_LIBDRM
+GALLIUM_COMMON_LIB_DEPS += \
+	$(LIBDRM_LIBS)
+endif
+
 GALLIUM_WINSYS_CFLAGS = \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/include \
