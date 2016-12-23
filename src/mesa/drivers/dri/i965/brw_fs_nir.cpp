@@ -4813,7 +4813,7 @@ setup_imm_df(const fs_builder &bld, double v)
     * instruction allows to set the 64-bit immediate value.
     */
    if (devinfo->is_haswell) {
-      const fs_builder ubld = bld.exec_all();
+      const fs_builder ubld = bld.exec_all().group(1, 0);
       fs_reg dst = ubld.vgrf(BRW_REGISTER_TYPE_DF, 1);
       ubld.DIM(dst, brw_imm_df(v));
       return component(dst, 0);
