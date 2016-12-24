@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22914 bytes, from 2016-12-12 16:26:45)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  23277 bytes, from 2016-12-24 05:01:47)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  96819 bytes, from 2016-12-15 15:23:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2016-12-26 17:51:07)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  99224 bytes, from 2016-12-26 18:40:41)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -2910,29 +2910,64 @@ static inline uint32_t A5XX_VPC_PACK_NUMNONPOSVAR(uint32_t val)
 
 #define REG_A5XX_VPC_FS_PRIMITIVEID_CNTL			0x0000e2a0
 
-#define REG_A5XX_UNKNOWN_E2A1					0x0000e2a1
+#define REG_A5XX_VPC_SO_BUF_CNTL				0x0000e2a1
+#define A5XX_VPC_SO_BUF_CNTL_BUF0				0x00000001
+#define A5XX_VPC_SO_BUF_CNTL_BUF1				0x00000008
+#define A5XX_VPC_SO_BUF_CNTL_BUF2				0x00000040
+#define A5XX_VPC_SO_BUF_CNTL_BUF3				0x00000200
+#define A5XX_VPC_SO_BUF_CNTL_ENABLE				0x00008000
 
 #define REG_A5XX_VPC_SO_OVERRIDE				0x0000e2a2
+#define A5XX_VPC_SO_OVERRIDE_SO_DISABLE				0x00000001
 
-#define REG_A5XX_VPC_SO_BUFFER_BASE_LO_0			0x0000e2a7
+#define REG_A5XX_VPC_SO_CNTL					0x0000e2a3
+#define A5XX_VPC_SO_CNTL_ENABLE					0x00010000
 
-#define REG_A5XX_VPC_SO_BUFFER_BASE_HI_0			0x0000e2a8
+#define REG_A5XX_VPC_SO_PROG					0x0000e2a4
+#define A5XX_VPC_SO_PROG_A_BUF__MASK				0x00000003
+#define A5XX_VPC_SO_PROG_A_BUF__SHIFT				0
+static inline uint32_t A5XX_VPC_SO_PROG_A_BUF(uint32_t val)
+{
+	return ((val) << A5XX_VPC_SO_PROG_A_BUF__SHIFT) & A5XX_VPC_SO_PROG_A_BUF__MASK;
+}
+#define A5XX_VPC_SO_PROG_A_OFF__MASK				0x000007fc
+#define A5XX_VPC_SO_PROG_A_OFF__SHIFT				2
+static inline uint32_t A5XX_VPC_SO_PROG_A_OFF(uint32_t val)
+{
+	assert(!(val & 0x3));
+	return ((val >> 2) << A5XX_VPC_SO_PROG_A_OFF__SHIFT) & A5XX_VPC_SO_PROG_A_OFF__MASK;
+}
+#define A5XX_VPC_SO_PROG_A_EN					0x00000800
+#define A5XX_VPC_SO_PROG_B_BUF__MASK				0x00003000
+#define A5XX_VPC_SO_PROG_B_BUF__SHIFT				12
+static inline uint32_t A5XX_VPC_SO_PROG_B_BUF(uint32_t val)
+{
+	return ((val) << A5XX_VPC_SO_PROG_B_BUF__SHIFT) & A5XX_VPC_SO_PROG_B_BUF__MASK;
+}
+#define A5XX_VPC_SO_PROG_B_OFF__MASK				0x007fc000
+#define A5XX_VPC_SO_PROG_B_OFF__SHIFT				14
+static inline uint32_t A5XX_VPC_SO_PROG_B_OFF(uint32_t val)
+{
+	assert(!(val & 0x3));
+	return ((val >> 2) << A5XX_VPC_SO_PROG_B_OFF__SHIFT) & A5XX_VPC_SO_PROG_B_OFF__MASK;
+}
+#define A5XX_VPC_SO_PROG_B_EN					0x00800000
 
-#define REG_A5XX_VPC_SO_BUFFER_SIZE_0				0x0000e2a9
+static inline uint32_t REG_A5XX_VPC_SO(uint32_t i0) { return 0x0000e2a7 + 0x7*i0; }
 
-#define REG_A5XX_UNKNOWN_E2AB					0x0000e2ab
+static inline uint32_t REG_A5XX_VPC_SO_BUFFER_BASE_LO(uint32_t i0) { return 0x0000e2a7 + 0x7*i0; }
 
-#define REG_A5XX_VPC_SO_FLUSH_BASE_LO_0				0x0000e2ac
+static inline uint32_t REG_A5XX_VPC_SO_BUFFER_BASE_HI(uint32_t i0) { return 0x0000e2a8 + 0x7*i0; }
 
-#define REG_A5XX_VPC_SO_FLUSH_BASE_HI_0				0x0000e2ad
+static inline uint32_t REG_A5XX_VPC_SO_BUFFER_SIZE(uint32_t i0) { return 0x0000e2a9 + 0x7*i0; }
 
-#define REG_A5XX_UNKNOWN_E2AE					0x0000e2ae
+static inline uint32_t REG_A5XX_VPC_SO_NCOMP(uint32_t i0) { return 0x0000e2aa + 0x7*i0; }
 
-#define REG_A5XX_UNKNOWN_E2B2					0x0000e2b2
+static inline uint32_t REG_A5XX_VPC_SO_BUFFER_OFFSET(uint32_t i0) { return 0x0000e2ab + 0x7*i0; }
 
-#define REG_A5XX_UNKNOWN_E2B9					0x0000e2b9
+static inline uint32_t REG_A5XX_VPC_SO_FLUSH_BASE_LO(uint32_t i0) { return 0x0000e2ac + 0x7*i0; }
 
-#define REG_A5XX_UNKNOWN_E2C0					0x0000e2c0
+static inline uint32_t REG_A5XX_VPC_SO_FLUSH_BASE_HI(uint32_t i0) { return 0x0000e2ad + 0x7*i0; }
 
 #define REG_A5XX_PC_PRIMITIVE_CNTL				0x0000e384
 #define A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC__MASK		0x0000007f

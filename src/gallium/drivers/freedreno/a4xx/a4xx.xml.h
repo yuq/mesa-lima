@@ -12,10 +12,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/freedreno_copyright.xml  (   1572 bytes, from 2016-02-10 17:07:21)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a2xx.xml          (  32907 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_common.xml (  12025 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  22914 bytes, from 2016-12-12 16:26:45)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  23277 bytes, from 2016-12-24 05:01:47)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110765 bytes, from 2016-11-26 23:01:48)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  96819 bytes, from 2016-12-15 15:23:48)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2016-12-26 17:51:07)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  99224 bytes, from 2016-12-26 18:40:41)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
 Copyright (C) 2013-2016 by the following authors:
@@ -3024,12 +3024,11 @@ static inline uint32_t A4XX_VFD_FETCH_INSTR_0_BUFSTRIDE(uint32_t val)
 static inline uint32_t REG_A4XX_VFD_FETCH_INSTR_1(uint32_t i0) { return 0x0000220b + 0x4*i0; }
 
 static inline uint32_t REG_A4XX_VFD_FETCH_INSTR_2(uint32_t i0) { return 0x0000220c + 0x4*i0; }
-#define A4XX_VFD_FETCH_INSTR_2_SIZE__MASK			0xfffffff0
-#define A4XX_VFD_FETCH_INSTR_2_SIZE__SHIFT			4
+#define A4XX_VFD_FETCH_INSTR_2_SIZE__MASK			0xffffffff
+#define A4XX_VFD_FETCH_INSTR_2_SIZE__SHIFT			0
 static inline uint32_t A4XX_VFD_FETCH_INSTR_2_SIZE(uint32_t val)
 {
-	assert(!(val & 0xf));
-	return ((val >> 4) << A4XX_VFD_FETCH_INSTR_2_SIZE__SHIFT) & A4XX_VFD_FETCH_INSTR_2_SIZE__MASK;
+	return ((val) << A4XX_VFD_FETCH_INSTR_2_SIZE__SHIFT) & A4XX_VFD_FETCH_INSTR_2_SIZE__MASK;
 }
 
 static inline uint32_t REG_A4XX_VFD_FETCH_INSTR_3(uint32_t i0) { return 0x0000220d + 0x4*i0; }
