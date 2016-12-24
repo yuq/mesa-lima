@@ -2312,7 +2312,7 @@ bool nir_inline_functions(nir_shader *shader);
 
 bool nir_propagate_invariant(nir_shader *shader);
 
-void nir_lower_var_copy_instr(nir_intrinsic_instr *copy, void *mem_ctx);
+void nir_lower_var_copy_instr(nir_intrinsic_instr *copy, nir_shader *shader);
 void nir_lower_var_copies(nir_shader *shader);
 
 bool nir_lower_global_vars_to_local(nir_shader *shader);
