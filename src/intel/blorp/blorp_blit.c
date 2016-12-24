@@ -1522,10 +1522,11 @@ static unsigned
 get_max_surface_size(const struct gen_device_info *devinfo,
                      const struct blorp_params *params)
 {
+   const unsigned max = devinfo->gen >= 7 ? 16384 : 8192;
    if (split_blorp_blit_debug && can_shrink_surfaces(params))
-      return 16384 >> 4; /* A smaller restriction when debug is enabled */
+      return max >> 4; /* A smaller restriction when debug is enabled */
    else
-      return 16384;
+      return max;
 }
 
 struct blt_axis {
