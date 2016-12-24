@@ -1351,13 +1351,12 @@ bool r600_extra_shader_checks(struct r600_common_screen *rscreen, unsigned proce
 }
 
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			      uint64_t offset, uint64_t size, unsigned value,
-			      enum r600_coherency coher)
+			      uint64_t offset, uint64_t size, unsigned value)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)rscreen->aux_context;
 
 	pipe_mutex_lock(rscreen->aux_context_lock);
-	rctx->clear_buffer(&rctx->b, dst, offset, size, value, coher);
+	rctx->dma_clear_buffer(&rctx->b, dst, offset, size, value);
 	rscreen->aux_context->flush(rscreen->aux_context, NULL, 0);
 	pipe_mutex_unlock(rscreen->aux_context_lock);
 }

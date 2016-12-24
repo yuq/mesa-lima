@@ -723,8 +723,7 @@ bool r600_can_dump_shader(struct r600_common_screen *rscreen,
 bool r600_extra_shader_checks(struct r600_common_screen *rscreen,
 			      unsigned processor);
 void r600_screen_clear_buffer(struct r600_common_screen *rscreen, struct pipe_resource *dst,
-			      uint64_t offset, uint64_t size, unsigned value,
-			      enum r600_coherency coher);
+			      uint64_t offset, uint64_t size, unsigned value);
 struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 						  const struct pipe_resource *templ);
 const char *r600_get_llvm_processor_name(enum radeon_family family);

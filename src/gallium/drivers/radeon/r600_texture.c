@@ -890,7 +890,7 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 	} else {
 		r600_screen_clear_buffer(rscreen, &rtex->htile_buffer->b.b,
 					 0, rtex->surface.htile_size,
-					 clear_value, R600_COHERENCY_NONE);
+					 clear_value);
 	}
 }
 
@@ -1105,7 +1105,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 		/* Initialize the cmask to 0xCC (= compressed state). */
 		r600_screen_clear_buffer(rscreen, &rtex->cmask_buffer->b.b,
 					 rtex->cmask.offset, rtex->cmask.size,
-					 0xCCCCCCCC, R600_COHERENCY_NONE);
+					 0xCCCCCCCC);
 	}
 
 	/* Initialize DCC only if the texture is not being imported. */
@@ -1113,7 +1113,7 @@ r600_texture_create_object(struct pipe_screen *screen,
 		r600_screen_clear_buffer(rscreen, &rtex->resource.b.b,
 					 rtex->dcc_offset,
 					 rtex->surface.dcc_size,
-					 0xFFFFFFFF, R600_COHERENCY_NONE);
+					 0xFFFFFFFF);
 	}
 
 	/* Initialize the CMASK base register value. */
