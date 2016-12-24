@@ -36,3 +36,6 @@ AMD_COMPILER_FILES = \
 AMD_NIR_FILES = \
 	common/ac_nir_to_llvm.c \
 	common/ac_nir_to_llvm.h
+
+AMD_GENERATED_FILES = \
+	common/sid_tables.h
