@@ -70,10 +70,6 @@
 					      SI_CONTEXT_FLUSH_AND_INV_DB | \
 					      SI_CONTEXT_FLUSH_AND_INV_DB_META)
 
-#define SI_ENCODE_TRACE_POINT(id)	(0xcafe0000 | ((id) & 0xffff))
-#define SI_IS_TRACE_POINT(x)		(((x) & 0xcafe0000) == 0xcafe0000)
-#define SI_GET_TRACE_POINT_ID(x)	((x) & 0xffff)
-
 #define SI_MAX_BORDER_COLORS	4096
 
 struct si_compute;

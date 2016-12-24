@@ -54,6 +54,7 @@ noinst_LTLIBRARIES += $(COMMON_LIBS)
 
 common_libamd_common_la_SOURCES = \
 	$(AMD_COMPILER_FILES) \
+	$(AMD_DEBUG_FILES) \
 	$(AMD_GENERATED_FILES)
 
 # nir_to_llvm requires LLVM 3.9, which is only required as a minimum when

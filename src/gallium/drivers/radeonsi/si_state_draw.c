@@ -32,6 +32,8 @@
 #include "util/u_upload_mgr.h"
 #include "util/u_prim.h"
 
+#include "ac_debug.h"
+
 static unsigned si_conv_pipe_prim(unsigned mode)
 {
         static const unsigned prim_conv[] = {
@@ -1234,5 +1236,5 @@ void si_trace_emit(struct si_context *sctx)
 	radeon_emit(cs, sctx->trace_buf->gpu_address >> 32);
 	radeon_emit(cs, sctx->trace_id);
 	radeon_emit(cs, PKT3(PKT3_NOP, 0, 0));
-	radeon_emit(cs, SI_ENCODE_TRACE_POINT(sctx->trace_id));
+	radeon_emit(cs, AC_ENCODE_TRACE_POINT(sctx->trace_id));
 }
