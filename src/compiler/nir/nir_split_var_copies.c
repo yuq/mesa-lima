@@ -62,7 +62,7 @@
  */
 
 struct split_var_copies_state {
-   void *mem_ctx;
+   nir_shader *shader;
    void *dead_ctx;
    bool progress;
 };
@@ -176,7 +176,7 @@ split_var_copy_instr(nir_intrinsic_instr *old_copy,
           * actually add the new copy instruction.
           */
          nir_intrinsic_instr *new_copy =
-            nir_intrinsic_instr_create(state->mem_ctx, nir_intrinsic_copy_var);
+            nir_intrinsic_instr_create(state->shader, nir_intrinsic_copy_var);
 
          /* We need to make copies because a) this deref chain actually
           * belongs to the copy instruction and b) the deref chains may
@@ -254,7 +254,7 @@ split_var_copies_impl(nir_function_impl *impl)
 {
    struct split_var_copies_state state;
 
-   state.mem_ctx = ralloc_parent(impl);
+   state.shader = impl->function->shader;
    state.dead_ctx = ralloc_context(NULL);
    state.progress = false;
 
