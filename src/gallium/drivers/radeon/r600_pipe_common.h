@@ -626,6 +626,9 @@ struct r600_common_context {
 			 unsigned src_level,
 			 const struct pipe_box *src_box);
 
+	void (*dma_clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
+				 uint64_t offset, uint64_t size, unsigned value);
+
 	void (*clear_buffer)(struct pipe_context *ctx, struct pipe_resource *dst,
 			     uint64_t offset, uint64_t size, unsigned value,
 			     enum r600_coherency coher);

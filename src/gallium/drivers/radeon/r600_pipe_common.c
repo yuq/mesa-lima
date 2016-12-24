@@ -533,6 +533,14 @@ bool r600_check_device_reset(struct r600_common_context *rctx)
 	return true;
 }
 
+static void r600_dma_clear_buffer_fallback(struct pipe_context *ctx,
+					   struct pipe_resource *dst,
+					   uint64_t offset, uint64_t size,
+					   unsigned value)
+{
+	ctx->clear_buffer(ctx, dst, offset, size, &value, 4);
+}
+
 bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen,
 			      unsigned context_flags)
@@ -559,6 +567,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->b.memory_barrier = r600_memory_barrier;
 	rctx->b.flush = r600_flush_from_st;
 	rctx->b.set_debug_callback = r600_set_debug_callback;
+	rctx->dma_clear_buffer = r600_dma_clear_buffer_fallback;
 
 	/* evergreen_compute.c has a special codepath for global buffers.
 	 * Everything else can use the direct path.
