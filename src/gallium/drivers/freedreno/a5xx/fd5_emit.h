@@ -54,6 +54,8 @@ struct fd5_emit {
 	/* cached to avoid repeated lookups of same variants: */
 	const struct ir3_shader_variant *vp, *fp;
 	/* TODO: other shader stages.. */
+
+	unsigned streamout_mask;
 };
 
 static inline enum a5xx_color_fmt fd5_emit_format(struct pipe_surface *surf)

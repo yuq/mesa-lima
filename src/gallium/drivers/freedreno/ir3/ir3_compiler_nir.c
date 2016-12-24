@@ -218,7 +218,8 @@ compile_init(struct ir3_compiler *compiler,
 		so->constbase.driver_param = constoff;
 		constoff += align(IR3_DP_COUNT, 4) / 4;
 
-		if (so->shader->stream_output.num_outputs > 0) {
+		if ((compiler->gpu_id < 500) &&
+				so->shader->stream_output.num_outputs > 0) {
 			so->constbase.tfbo = constoff;
 			constoff += align(PIPE_MAX_SO_BUFFERS * ptrsz, 4) / 4;
 		}
@@ -2001,7 +2002,8 @@ emit_function(struct ir3_compile *ctx, nir_function_impl *impl)
 	 * out, we guarantee that all exit paths flow into the stream-
 	 * out instructions.
 	 */
-	if ((ctx->so->shader->stream_output.num_outputs > 0) &&
+	if ((ctx->compiler->gpu_id < 500) &&
+			(ctx->so->shader->stream_output.num_outputs > 0) &&
 			!ctx->so->key.binning_pass) {
 		debug_assert(ctx->so->type == SHADER_VERTEX);
 		emit_stream_out(ctx);

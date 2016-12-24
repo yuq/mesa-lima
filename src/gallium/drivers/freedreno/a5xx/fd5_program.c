@@ -132,6 +132,122 @@ emit_shader(struct fd_ringbuffer *ring, const struct ir3_shader_variant *so)
 	}
 }
 
+/* Add any missing varyings needed for stream-out.  Otherwise varyings not
+ * used by fragment shader will be stripped out.
+ */
+static void
+link_stream_out(struct ir3_shader_linkage *l, const struct ir3_shader_variant *v)
+{
+	const struct pipe_stream_output_info *strmout = &v->shader->stream_output;
+
+	/*
+	 * First, any stream-out varyings not already in linkage map (ie. also
+	 * consumed by frag shader) need to be added:
+	 */
+	for (unsigned i = 0; i < strmout->num_outputs; i++) {
+		const struct pipe_stream_output *out = &strmout->output[i];
+		unsigned k = out->register_index;
+		unsigned compmask =
+			(1 << (out->num_components + out->start_component)) - 1;
+		unsigned idx, nextloc = 0;
+
+		/* psize/pos need to be the last entries in linkage map, and will
+		 * get added link_stream_out, so skip over them:
+		 */
+		if ((v->outputs[k].slot == VARYING_SLOT_PSIZ) ||
+				(v->outputs[k].slot == VARYING_SLOT_POS))
+			continue;
+
+		for (idx = 0; idx < l->cnt; idx++) {
+			if (l->var[idx].regid == v->outputs[k].regid)
+				break;
+			nextloc = MAX2(nextloc, l->var[idx].loc + 4);
+		}
+
+		/* add if not already in linkage map: */
+		if (idx == l->cnt)
+			ir3_link_add(l, v->outputs[k].regid, compmask, nextloc);
+
+		/* expand component-mask if needed, ie streaming out all components
+		 * but frag shader doesn't consume all components:
+		 */
+		if (compmask & ~l->var[idx].compmask) {
+			l->var[idx].compmask |= compmask;
+			l->max_loc = MAX2(l->max_loc,
+				l->var[idx].loc + util_last_bit(l->var[idx].compmask));
+		}
+	}
+}
+
+/* TODO maybe some of this we could pre-compute once rather than having
+ * so much draw-time logic?
+ */
+static void
+emit_stream_out(struct fd_ringbuffer *ring, const struct ir3_shader_variant *v,
+		struct ir3_shader_linkage *l)
+{
+	const struct pipe_stream_output_info *strmout = &v->shader->stream_output;
+	unsigned ncomp[PIPE_MAX_SO_BUFFERS] = {0};
+	unsigned prog[align(l->max_loc, 2) / 2];
+
+	memset(prog, 0, sizeof(prog));
+
+	for (unsigned i = 0; i < strmout->num_outputs; i++) {
+		const struct pipe_stream_output *out = &strmout->output[i];
+		unsigned k = out->register_index;
+		unsigned idx;
+
+		ncomp[out->output_buffer] += out->num_components;
+
+		/* linkage map sorted by order frag shader wants things, so
+		 * a bit less ideal here..
+		 */
+		for (idx = 0; idx < l->cnt; idx++)
+			if (l->var[idx].regid == v->outputs[k].regid)
+				break;
+
+		debug_assert(idx < l->cnt);
+
+		for (unsigned j = 0; j < out->num_components; j++) {
+			unsigned c   = j + out->start_component;
+			unsigned loc = l->var[idx].loc + c;
+			unsigned off = j + out->dst_offset;  /* in dwords */
+
+			if (loc & 1) {
+				prog[loc/2] |= A5XX_VPC_SO_PROG_B_EN |
+						A5XX_VPC_SO_PROG_B_BUF(out->output_buffer) |
+						A5XX_VPC_SO_PROG_B_OFF(off * 4);
+			} else {
+				prog[loc/2] |= A5XX_VPC_SO_PROG_A_EN |
+						A5XX_VPC_SO_PROG_A_BUF(out->output_buffer) |
+						A5XX_VPC_SO_PROG_A_OFF(off * 4);
+			}
+		}
+	}
+
+	OUT_PKT7(ring, CP_CONTEXT_REG_BUNCH, 12 + (2 * ARRAY_SIZE(prog)));
+	OUT_RING(ring, REG_A5XX_VPC_SO_BUF_CNTL);
+	OUT_RING(ring, A5XX_VPC_SO_BUF_CNTL_ENABLE |
+			COND(ncomp[0] > 0, A5XX_VPC_SO_BUF_CNTL_BUF0) |
+			COND(ncomp[1] > 0, A5XX_VPC_SO_BUF_CNTL_BUF1) |
+			COND(ncomp[2] > 0, A5XX_VPC_SO_BUF_CNTL_BUF2) |
+			COND(ncomp[3] > 0, A5XX_VPC_SO_BUF_CNTL_BUF3));
+	OUT_RING(ring, REG_A5XX_VPC_SO_NCOMP(0));
+	OUT_RING(ring, ncomp[0]);
+	OUT_RING(ring, REG_A5XX_VPC_SO_NCOMP(1));
+	OUT_RING(ring, ncomp[1]);
+	OUT_RING(ring, REG_A5XX_VPC_SO_NCOMP(2));
+	OUT_RING(ring, ncomp[2]);
+	OUT_RING(ring, REG_A5XX_VPC_SO_NCOMP(3));
+	OUT_RING(ring, ncomp[3]);
+	OUT_RING(ring, REG_A5XX_VPC_SO_CNTL);
+	OUT_RING(ring, A5XX_VPC_SO_CNTL_ENABLE);
+	for (unsigned i = 0; i < ARRAY_SIZE(prog); i++) {
+		OUT_RING(ring, REG_A5XX_VPC_SO_PROG);
+		OUT_RING(ring, prog[i]);
+	}
+}
+
 struct stage {
 	const struct ir3_shader_variant *v;
 	const struct ir3_info *i;
@@ -214,24 +330,17 @@ setup_stages(struct fd5_emit *emit, struct stage *s)
 }
 
 void
-fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
-		int nr, struct pipe_surface **bufs)
+fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 {
 	struct stage s[MAX_STAGES];
-	uint32_t pos_regid, posz_regid, psize_regid, color_regid[8];
+	uint32_t pos_regid, psize_regid, color_regid[8];
 	uint32_t face_regid, coord_regid, zwcoord_regid;
 	uint32_t vcoord_regid, vertex_regid, instance_regid;
 	int i, j;
 
-	debug_assert(nr <= ARRAY_SIZE(color_regid));
-
-	if (emit->key.binning_pass)
-		nr = 0;
-
 	setup_stages(emit, s);
 
 	pos_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_POS);
-	posz_regid = ir3_find_output_regid(s[FS].v, FRAG_RESULT_DEPTH);
 	psize_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_PSIZ);
 	vertex_regid = ir3_find_output_regid(s[VS].v, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE);
 	instance_regid = ir3_find_output_regid(s[VS].v, SYSTEM_VALUE_INSTANCE_ID);
@@ -342,6 +451,10 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 	struct ir3_shader_linkage l = {0};
 	ir3_link_shaders(&l, s[VS].v, s[FS].v);
 
+	if ((s[VS].v->shader->stream_output.num_outputs > 0) &&
+			!emit->key.binning_pass)
+		link_stream_out(&l, s[VS].v);
+
 	BITSET_DECLARE(varbs, 128) = {0};
 	uint32_t *varmask = (uint32_t *)varbs;
 
@@ -361,6 +474,17 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 
 	if (psize_regid != regid(63,0))
 		ir3_link_add(&l, psize_regid, 0x1, l.max_loc);
+
+	if ((s[VS].v->shader->stream_output.num_outputs > 0) &&
+			!emit->key.binning_pass) {
+		emit_stream_out(ring, s[VS].v, &l);
+
+		OUT_PKT4(ring, REG_A5XX_VPC_SO_OVERRIDE, 1);
+		OUT_RING(ring, 0x00000000);
+	} else {
+		OUT_PKT4(ring, REG_A5XX_VPC_SO_OVERRIDE, 1);
+		OUT_RING(ring, A5XX_VPC_SO_OVERRIDE_SO_DISABLE);
+	}
 
 	for (i = 0, j = 0; (i < 16) && (j < l.cnt); i++) {
 		uint32_t reg = 0;
@@ -406,11 +530,6 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 		OUT_RING(ring, 0x00000000);    /* SP_FS_OBJ_START_LO */
 		OUT_RING(ring, 0x00000000);    /* SP_FS_OBJ_START_HI */
 	} else {
-		uint32_t stride_in_vpc = align(s[FS].v->total_in, 4) + 4;
-
-		if (s[VS].v->writes_psize)
-			stride_in_vpc++;
-
 		// TODO if some of these other bits depend on something other than
 		// program state we should probably move these next three regs:
 
@@ -418,12 +537,12 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 		OUT_RING(ring, A5XX_SP_PRIMITIVE_CNTL_VSOUT(l.cnt));
 
 		OUT_PKT4(ring, REG_A5XX_VPC_CNTL_0, 1);
-		OUT_RING(ring, A5XX_VPC_CNTL_0_STRIDE_IN_VPC(stride_in_vpc) |
+		OUT_RING(ring, A5XX_VPC_CNTL_0_STRIDE_IN_VPC(l.max_loc) |
 				COND(s[FS].v->total_in > 0, A5XX_VPC_CNTL_0_VARYING) |
 				0x10000);    // XXX
 
 		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
-		OUT_RING(ring, A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(stride_in_vpc) |
+		OUT_RING(ring, A5XX_PC_PRIMITIVE_CNTL_STRIDE_IN_VPC(l.max_loc) |
 				0x400);      // XXX
 
 		OUT_PKT4(ring, REG_A5XX_SP_FS_OBJ_START_LO, 2);
@@ -467,25 +586,17 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit,
 					A5XX_GRAS_CNTL_UNK3) |
 			COND(s[FS].v->frag_face, A5XX_GRAS_CNTL_UNK3));
 
-	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CONTROL0, 3);
-	OUT_RING(ring,
-			COND(s[FS].v->total_in > 0, A5XX_RB_RENDER_CONTROL0_VARYING) |
+	OUT_PKT4(ring, REG_A5XX_RB_RENDER_CONTROL0, 2);
+	OUT_RING(ring, COND(s[FS].v->total_in > 0, A5XX_RB_RENDER_CONTROL0_VARYING) |
 			COND(s[FS].v->frag_coord, A5XX_RB_RENDER_CONTROL0_XCOORD |
 					A5XX_RB_RENDER_CONTROL0_YCOORD |
 					A5XX_RB_RENDER_CONTROL0_ZCOORD |
 					A5XX_RB_RENDER_CONTROL0_WCOORD |
 					A5XX_RB_RENDER_CONTROL0_UNK3) |
 			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL0_UNK3));
+	OUT_RING(ring, COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL1_FACENESS));
 
-	OUT_RING(ring,
-			COND(s[FS].v->frag_face, A5XX_RB_RENDER_CONTROL1_FACENESS));
-	OUT_RING(ring, A5XX_RB_FS_OUTPUT_CNTL_MRT(nr) |
-			COND(s[FS].v->writes_pos, A5XX_RB_FS_OUTPUT_CNTL_FRAG_WRITES_Z));
-
-	OUT_PKT4(ring, REG_A5XX_SP_FS_OUTPUT_CNTL, 9);
-	OUT_RING(ring, A5XX_SP_FS_OUTPUT_CNTL_MRT(nr) |
-			A5XX_SP_FS_OUTPUT_CNTL_DEPTH_REGID(posz_regid) |
-			A5XX_SP_FS_OUTPUT_CNTL_SAMPLEMASK_REGID(regid(63, 0)));
+	OUT_PKT4(ring, REG_A5XX_SP_FS_OUTPUT_REG(0), 8);
 	for (i = 0; i < 8; i++) {
 		OUT_RING(ring, A5XX_SP_FS_OUTPUT_REG_REGID(color_regid[i]) |
 				COND(emit->key.half_precision,

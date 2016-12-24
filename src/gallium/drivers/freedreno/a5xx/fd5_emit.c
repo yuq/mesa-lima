@@ -526,19 +526,63 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, A5XX_GRAS_CL_VPORT_ZSCALE_0(ctx->viewport.scale[2]));
 	}
 
-	if (dirty & (FD_DIRTY_PROG | FD_DIRTY_FRAMEBUFFER)) {
+	if (dirty & FD_DIRTY_PROG)
+		fd5_program_emit(ring, emit);
+
+	if (dirty & (FD_DIRTY_FRAMEBUFFER | FD_DIRTY_RASTERIZER)) {
 		struct pipe_framebuffer_state *pfb = &ctx->batch->framebuffer;
-		unsigned n = pfb->nr_cbufs;
-		/* if we have depth/stencil, we need at least on MRT: */
-		if (pfb->zsbuf)
-			n = MAX2(1, n);
-		fd5_program_emit(ring, emit, n, pfb->cbufs);
+		uint32_t posz_regid = ir3_find_output_regid(fp, FRAG_RESULT_DEPTH);
+		unsigned nr = pfb->nr_cbufs;
+
+		if (emit->key.binning_pass)
+			nr = 0;
+		else if (ctx->rasterizer->rasterizer_discard)
+			nr = 0;
+
+		OUT_PKT4(ring, REG_A5XX_RB_FS_OUTPUT_CNTL, 1);
+		OUT_RING(ring, A5XX_RB_FS_OUTPUT_CNTL_MRT(nr) |
+				COND(fp->writes_pos, A5XX_RB_FS_OUTPUT_CNTL_FRAG_WRITES_Z));
+
+		OUT_PKT4(ring, REG_A5XX_SP_FS_OUTPUT_CNTL, 1);
+		OUT_RING(ring, A5XX_SP_FS_OUTPUT_CNTL_MRT(nr) |
+				A5XX_SP_FS_OUTPUT_CNTL_DEPTH_REGID(posz_regid) |
+				A5XX_SP_FS_OUTPUT_CNTL_SAMPLEMASK_REGID(regid(63, 0)));
 	}
 
 	if (emit->prog == &ctx->prog) { /* evil hack to deal sanely with clear path */
 		ir3_emit_consts(vp, ring, ctx, emit->info, dirty);
 		if (!emit->key.binning_pass)
 			ir3_emit_consts(fp, ring, ctx, emit->info, dirty);
+
+		struct pipe_stream_output_info *info = &vp->shader->stream_output;
+		if (info->num_outputs) {
+			struct fd_streamout_stateobj *so = &ctx->streamout;
+
+			for (unsigned i = 0; i < so->num_targets; i++) {
+				struct pipe_stream_output_target *target = so->targets[i];
+
+				if (!target)
+					continue;
+
+				unsigned offset = (so->offsets[i] * info->stride[i] * 4) +
+						target->buffer_offset;
+
+				OUT_PKT4(ring, REG_A5XX_VPC_SO_BUFFER_BASE_LO(i), 3);
+				/* VPC_SO[i].BUFFER_BASE_LO: */
+				OUT_RELOCW(ring, fd_resource(target->buffer)->bo, 0, 0, 0);
+				OUT_RING(ring, target->buffer_size + offset);
+
+				OUT_PKT4(ring, REG_A5XX_VPC_SO_BUFFER_OFFSET(i), 3);
+				OUT_RING(ring, offset);
+				/* VPC_SO[i].FLUSH_BASE_LO/HI: */
+				// TODO just give hw a dummy addr for now.. we should
+				// be using this an then CP_MEM_TO_REG to set the
+				// VPC_SO[i].BUFFER_OFFSET for the next draw..
+				OUT_RELOCW(ring, fd5_context(ctx)->blit_mem, 0x100, 0, 0);
+
+				emit->streamout_mask |= (1 << i);
+			}
+		}
 	}
 
 	if ((dirty & FD_DIRTY_BLEND)) {

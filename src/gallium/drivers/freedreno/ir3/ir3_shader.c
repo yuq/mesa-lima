@@ -614,6 +614,8 @@ max_tf_vtx(struct fd_context *ctx, const struct ir3_shader_variant *v)
 	struct pipe_stream_output_info *info = &v->shader->stream_output;
 	uint32_t maxvtxcnt = 0x7fffffff;
 
+	if (ctx->screen->gpu_id >= 500)
+		return 0;
 	if (v->key.binning_pass)
 		return 0;
 	if (v->shader->stream_output.num_outputs == 0)

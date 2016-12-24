@@ -173,6 +173,17 @@ fd5_draw_vbo(struct fd_context *ctx, const struct pipe_draw_info *info)
 //	emit.fp = NULL;
 //	draw_impl(ctx, ctx->batch->binning, &emit);
 
+	if (emit.streamout_mask) {
+		struct fd_ringbuffer *ring = ctx->batch->draw;
+
+		for (unsigned i = 0; i < PIPE_MAX_SO_BUFFERS; i++) {
+			if (emit.streamout_mask & (1 << i)) {
+				OUT_PKT7(ring, CP_EVENT_WRITE, 1);
+				OUT_RING(ring, FLUSH_SO_0 + i);
+			}
+		}
+	}
+
 	return true;
 }
 
