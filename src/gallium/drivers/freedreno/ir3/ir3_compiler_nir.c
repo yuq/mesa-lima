@@ -992,20 +992,27 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 		struct ir3_instruction **dst)
 {
 	struct ir3_block *b = ctx->block;
-	struct ir3_instruction *addr, *src0, *src1;
+	struct ir3_instruction *base_lo, *base_hi, *addr, *src0, *src1;
 	nir_const_value *const_offset;
 	/* UBO addresses are the first driver params: */
 	unsigned ubo = regid(ctx->so->constbase.ubo, 0);
+	const unsigned ptrsz = pointer_size(ctx);
+
 	int off = 0;
 
 	/* First src is ubo index, which could either be an immed or not: */
 	src0 = get_src(ctx, &intr->src[0])[0];
 	if (is_same_type_mov(src0) &&
 			(src0->regs[1]->flags & IR3_REG_IMMED)) {
-		addr = create_uniform(ctx, ubo + src0->regs[1]->iim_val);
+		base_lo = create_uniform(ctx, ubo + (src0->regs[1]->iim_val * ptrsz));
+		base_hi = create_uniform(ctx, ubo + (src0->regs[1]->iim_val * ptrsz) + 1);
 	} else {
-		addr = create_uniform_indirect(ctx, ubo, get_addr(ctx, src0));
+		base_lo = create_uniform_indirect(ctx, ubo, get_addr(ctx, src0));
+		base_hi = create_uniform_indirect(ctx, ubo + 1, get_addr(ctx, src0));
 	}
+
+	/* note: on 32bit gpu's base_hi is ignored and DCE'd */
+	addr = base_lo;
 
 	const_offset = nir_src_as_const_value(intr->src[1]);
 	if (const_offset) {
@@ -1026,6 +1033,20 @@ emit_intrinsic_load_ubo(struct ir3_compile *ctx, nir_intrinsic_instr *intr,
 		unsigned off2 = off + (intr->num_components * 4) - 1024;
 		addr = ir3_ADD_S(b, addr, 0, create_immed(b, off2), 0);
 		off -= off2;
+	}
+
+	if (ptrsz == 2) {
+		struct ir3_instruction *carry;
+
+		/* handle 32b rollover, ie:
+		 *   if (addr < base_lo)
+		 *      base_hi++
+		 */
+		carry = ir3_CMPS_U(b, addr, 0, base_lo, 0);
+		carry->cat2.condition = IR3_COND_LT;
+		base_hi = ir3_ADD_S(b, base_hi, 0, carry, 0);
+
+		addr = create_collect(b, (struct ir3_instruction*[]){ addr, base_hi }, 2);
 	}
 
 	for (int i = 0; i < intr->num_components; i++) {
