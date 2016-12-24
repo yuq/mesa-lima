@@ -86,8 +86,7 @@ try_lower_input_load(nir_function_impl *impl, nir_intrinsic_instr *load)
    tex->is_array = true;
    tex->is_shadow = false;
 
-   tex->texture =
-      nir_deref_as_var(nir_copy_deref(tex, &load->variables[0]->deref));
+   tex->texture = nir_deref_var_clone(load->variables[0], tex);
    tex->sampler = NULL;
    tex->texture_index = 0;
    tex->sampler_index = 0;

@@ -121,7 +121,7 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
       nir_intrinsic_instr *load =
          nir_intrinsic_instr_create(mem_ctx, nir_intrinsic_load_var);
       load->num_components = num_components;
-      load->variables[0] = nir_deref_as_var(nir_copy_deref(load, &src_head->deref));
+      load->variables[0] = nir_deref_var_clone(src_head, load);
       nir_ssa_dest_init(&load->instr, &load->dest, num_components, bit_size,
                         NULL);
 
@@ -131,7 +131,7 @@ emit_copy_load_store(nir_intrinsic_instr *copy_instr,
          nir_intrinsic_instr_create(mem_ctx, nir_intrinsic_store_var);
       store->num_components = num_components;
       nir_intrinsic_set_write_mask(store, (1 << num_components) - 1);
-      store->variables[0] = nir_deref_as_var(nir_copy_deref(store, &dest_head->deref));
+      store->variables[0] = nir_deref_var_clone(dest_head, store);
 
       store->src[0].is_ssa = true;
       store->src[0].ssa = &load->dest.ssa;

@@ -1932,8 +1932,6 @@ nir_deref_var *nir_deref_var_create(void *mem_ctx, nir_variable *var);
 nir_deref_array *nir_deref_array_create(void *mem_ctx);
 nir_deref_struct *nir_deref_struct_create(void *mem_ctx, unsigned field_index);
 
-nir_deref *nir_copy_deref(void *mem_ctx, nir_deref *deref);
-
 typedef bool (*nir_deref_foreach_leaf_cb)(nir_deref_var *deref, void *state);
 bool nir_deref_foreach_leaf(nir_deref_var *deref,
                             nir_deref_foreach_leaf_cb cb, void *state);
@@ -2241,6 +2239,8 @@ nir_shader *nir_shader_clone(void *mem_ctx, const nir_shader *s);
 nir_function_impl *nir_function_impl_clone(const nir_function_impl *fi);
 nir_constant *nir_constant_clone(const nir_constant *c, nir_variable *var);
 nir_variable *nir_variable_clone(const nir_variable *c, nir_shader *shader);
+nir_deref *nir_deref_clone(const nir_deref *deref, void *mem_ctx);
+nir_deref_var *nir_deref_var_clone(const nir_deref_var *deref, void *mem_ctx);
 
 #ifdef DEBUG
 void nir_validate_shader(nir_shader *shader);

@@ -82,7 +82,7 @@ struct split_var_copies_state {
  */
 static void
 split_var_copy_instr(nir_intrinsic_instr *old_copy,
-                     nir_deref *dest_head, nir_deref *src_head,
+                     nir_deref_var *dest_head, nir_deref_var *src_head,
                      nir_deref *dest_tail, nir_deref *src_tail,
                      struct split_var_copies_state *state)
 {
@@ -182,11 +182,8 @@ split_var_copy_instr(nir_intrinsic_instr *old_copy,
           * belongs to the copy instruction and b) the deref chains may
           * have some of the same links due to the way we constructed them
           */
-         nir_deref *src = nir_copy_deref(new_copy, src_head);
-         nir_deref *dest = nir_copy_deref(new_copy, dest_head);
-
-         new_copy->variables[0] = nir_deref_as_var(dest);
-         new_copy->variables[1] = nir_deref_as_var(src);
+         new_copy->variables[0] = nir_deref_var_clone(dest_head, new_copy);
+         new_copy->variables[1] = nir_deref_var_clone(src_head, new_copy);
 
          /* Emit the copy instruction after the old instruction.  We'll
           * remove the old one later.
@@ -216,10 +213,10 @@ split_var_copies_block(nir_block *block, struct split_var_copies_state *state)
       if (intrinsic->intrinsic != nir_intrinsic_copy_var)
          continue;
 
-      nir_deref *dest_head = &intrinsic->variables[0]->deref;
-      nir_deref *src_head = &intrinsic->variables[1]->deref;
-      nir_deref *dest_tail = nir_deref_tail(dest_head);
-      nir_deref *src_tail = nir_deref_tail(src_head);
+      nir_deref_var *dest_head = intrinsic->variables[0];
+      nir_deref_var *src_head = intrinsic->variables[1];
+      nir_deref *dest_tail = nir_deref_tail(&dest_head->deref);
+      nir_deref *src_tail = nir_deref_tail(&src_head->deref);
 
       switch (glsl_get_base_type(src_tail->type)) {
       case GLSL_TYPE_ARRAY:
