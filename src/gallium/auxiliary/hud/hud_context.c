@@ -813,23 +813,25 @@ hud_pane_add_graph(struct hud_pane *pane, struct hud_graph *gr)
       {0, 1, 1},
       {1, 0, 1},
       {1, 1, 0},
-      {0.5, 0.5, 1},
-      {0.5, 0.5, 0.5},
+      {0.5, 1, 0.5},
+      {1, 0.5, 0.5},
+      {0.5, 1, 1},
+      {1, 0.5, 1},
+      {1, 1, 0.5},
+      {0, 0.5, 0},
+      {0.5, 0, 0},
+      {0, 0.5, 0.5},
+      {0.5, 0, 0.5},
+      {0.5, 0.5, 0},
    };
-   char *name = gr->name;
+   unsigned color = pane->num_graphs % ARRAY_SIZE(colors);
 
-   /* replace '-' with a space */
-   while (*name) {
-      if (*name == '-')
-         *name = ' ';
-      name++;
-   }
+   strip_hyphens(gr->name);
 
-   assert(pane->num_graphs < ARRAY_SIZE(colors));
    gr->vertices = MALLOC(pane->max_num_vertices * sizeof(float) * 2);
-   gr->color[0] = colors[pane->num_graphs][0];
-   gr->color[1] = colors[pane->num_graphs][1];
-   gr->color[2] = colors[pane->num_graphs][2];
+   gr->color[0] = colors[color][0];
+   gr->color[1] = colors[color][1];
+   gr->color[2] = colors[color][2];
    gr->pane = pane;
    LIST_ADDTAIL(&gr->head, &pane->graph_list);
    pane->num_graphs++;
