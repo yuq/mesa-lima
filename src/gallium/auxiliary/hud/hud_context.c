@@ -789,6 +789,17 @@ hud_pane_create(unsigned x1, unsigned y1, unsigned x2, unsigned y2,
    return pane;
 }
 
+/* replace '-' with a space */
+static void
+strip_hyphens(char *s)
+{
+   while (*s) {
+      if (*s == '-')
+         *s = ' ';
+      s++;
+   }
+}
+
 /**
  * Add a graph to an existing pane.
  * One pane can contain multiple graphs over each other.
@@ -895,7 +906,7 @@ parse_string(const char *s, char *out)
 {
    int i;
 
-   for (i = 0; *s && *s != '+' && *s != ',' && *s != ':' && *s != ';';
+   for (i = 0; *s && *s != '+' && *s != ',' && *s != ':' && *s != ';' && *s != '=';
         s++, out++, i++)
       *out = *s;
 
@@ -1193,8 +1204,28 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
          }
          else {
             fprintf(stderr, "gallium_hud: syntax error: unexpected '%c' (%i) "
-                    "after ':'\n", *env, *env);
+                            "after ':'\n", *env, *env);
             fflush(stderr);
+         }
+      }
+
+      if (*env == '=') {
+         env++;
+
+         if (!pane) {
+            fprintf(stderr, "gallium_hud: syntax error: unexpected '=', "
+                    "expected a name\n");
+            fflush(stderr);
+            break;
+         }
+
+         num = parse_string(env, s);
+         env += num;
+
+         strip_hyphens(s);
+         if (!LIST_IS_EMPTY(&pane->graph_list)) {
+            strcpy(LIST_ENTRY(struct hud_graph,
+                              pane->graph_list.prev, head)->name, s);
          }
       }
 
@@ -1274,6 +1305,8 @@ print_help(struct pipe_screen *screen)
    puts("             for the given pane.");
    puts("  ',' creates a new pane below the last one.");
    puts("  ';' creates a new pane at the top of the next column.");
+   puts("  '=' followed by a string, changes the name of the last data source");
+   puts("      to that string");
    puts("");
    puts("  Example: GALLIUM_HUD=\"cpu,fps;primitives-generated\"");
    puts("");
