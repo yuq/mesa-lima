@@ -583,8 +583,10 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 		idx++;
 	}
 
-	if (!all_queues)
+	if (!all_queues) {
+		*pCount = idx;
 		return;
+	}
 
 	if (pdevice->rad_info.compute_rings > 0 && pdevice->rad_info.chip_class >= CIK) {
 		if (*pCount > idx) {
@@ -597,6 +599,7 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 			idx++;
 		}
 	}
+	*pCount = idx;
 }
 
 void radv_GetPhysicalDeviceMemoryProperties(
