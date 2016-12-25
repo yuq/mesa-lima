@@ -386,6 +386,18 @@ void si_copy_buffer(struct si_context *sctx,
 		sctx->b.num_cp_dma_calls++;
 }
 
+void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf,
+			      uint64_t offset, unsigned size)
+{
+	assert(sctx->b.chip_class >= CIK);
+
+	si_copy_buffer(sctx, buf, buf, offset, offset, size,
+		       SI_CPDMA_SKIP_CHECK_CS_SPACE |
+		       SI_CPDMA_SKIP_SYNC_AFTER |
+		       SI_CPDMA_SKIP_SYNC_BEFORE |
+		       SI_CPDMA_SKIP_GFX_SYNC);
+}
+
 void si_init_cp_dma_functions(struct si_context *sctx)
 {
 	sctx->b.clear_buffer = si_clear_buffer;

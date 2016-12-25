@@ -381,6 +381,8 @@ void si_copy_buffer(struct si_context *sctx,
 		    struct pipe_resource *dst, struct pipe_resource *src,
 		    uint64_t dst_offset, uint64_t src_offset, unsigned size,
 		    unsigned user_flags);
+void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf,
+			      uint64_t offset, unsigned size);
 void si_init_cp_dma_functions(struct si_context *sctx);
 
 /* si_debug.c */
