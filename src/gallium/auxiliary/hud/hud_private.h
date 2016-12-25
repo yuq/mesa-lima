@@ -73,6 +73,7 @@ struct hud_pane {
 
    struct list_head graph_list;
    unsigned num_graphs;
+   unsigned next_color;
 };
 
 

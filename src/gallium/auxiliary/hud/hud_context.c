@@ -824,7 +824,7 @@ hud_pane_add_graph(struct hud_pane *pane, struct hud_graph *gr)
       {0.5, 0, 0.5},
       {0.5, 0.5, 0},
    };
-   unsigned color = pane->num_graphs % ARRAY_SIZE(colors);
+   unsigned color = pane->next_color % ARRAY_SIZE(colors);
 
    strip_hyphens(gr->name);
 
@@ -835,6 +835,7 @@ hud_pane_add_graph(struct hud_pane *pane, struct hud_graph *gr)
    gr->pane = pane;
    LIST_ADDTAIL(&gr->head, &pane->graph_list);
    pane->num_graphs++;
+   pane->next_color++;
 }
 
 void
@@ -926,7 +927,8 @@ parse_string(const char *s, char *out)
 static char *
 read_pane_settings(char *str, unsigned * const x, unsigned * const y,
                unsigned * const width, unsigned * const height,
-               uint64_t * const ceiling, boolean * const dyn_ceiling)
+               uint64_t * const ceiling, boolean * const dyn_ceiling,
+               boolean *reset_colors)
 {
    char *ret = str;
    unsigned tmp;
@@ -977,6 +979,12 @@ read_pane_settings(char *str, unsigned * const x, unsigned * const y,
          *dyn_ceiling = true;
          break;
 
+      case 'r':
+         ++str;
+         ret = str;
+         *reset_colors = true;
+         break;
+
       default:
          fprintf(stderr, "gallium_hud: syntax error: unexpected '%c'\n", *str);
          fflush(stderr);
@@ -1018,6 +1026,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
    uint64_t ceiling = UINT64_MAX;
    unsigned column_width = 251;
    boolean dyn_ceiling = false;
+   boolean reset_colors = false;
    const char *period_env;
 
    /*
@@ -1038,7 +1047,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 
       /* check for explicit location, size and etc. settings */
       name = read_pane_settings(name_a, &x, &y, &width, &height, &ceiling,
-                         &dyn_ceiling);
+                         &dyn_ceiling, &reset_colors);
 
      /*
       * Keep track of overall column width to avoid pane overlapping in case
@@ -1052,6 +1061,11 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
                          ceiling, dyn_ceiling);
          if (!pane)
             return;
+      }
+
+      if (reset_colors) {
+         pane->next_color = 0;
+         reset_colors = false;
       }
 
       /* Add a graph. */
@@ -1329,6 +1343,7 @@ print_help(struct pipe_screen *screen)
    puts("             the ceiling allows, the value is clamped.");
    puts("  'd' activates dynamic Y axis readjustment to set the value of");
    puts("      the Y axis to match the highest value still visible in the graph.");
+   puts("  'r' resets the color counter (the next color will be green)");
    puts("");
    puts("  If 'c' and 'd' modifiers are used simultaneously, both are in effect:");
    puts("  the Y axis does not go above the restriction imposed by 'c' while");
