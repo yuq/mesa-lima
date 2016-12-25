@@ -2151,10 +2151,8 @@ setup_output(struct ir3_compile *ctx, nir_variable *out)
 		case VARYING_SLOT_FOGC:
 		case VARYING_SLOT_CLIP_DIST0:
 		case VARYING_SLOT_CLIP_DIST1:
-			break;
 		case VARYING_SLOT_CLIP_VERTEX:
-			/* handled entirely in nir_lower_clip: */
-			return;
+			break;
 		default:
 			if (slot >= VARYING_SLOT_VAR0)
 				break;
