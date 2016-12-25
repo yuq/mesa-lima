@@ -735,6 +735,9 @@ void si_emit_cache_flush(struct si_context *sctx)
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
 	uint32_t cp_coher_cntl = 0;
 
+	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER)
+		sctx->b.num_fb_cache_flushes++;
+
 	/* SI has a bug that it always flushes ICACHE and KCACHE if either
 	 * bit is set. An alternative way is to write SQC_CACHES, but that
 	 * doesn't seem to work reliably. Since the bug doesn't affect
@@ -852,6 +855,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 				     S_0085F0_TC_ACTION_ENA(1) |
 				     S_0301F0_TC_WB_ACTION_ENA(rctx->chip_class >= VI));
 		cp_coher_cntl = 0;
+		sctx->b.num_L2_invalidates++;
 	} else {
 		/* L1 invalidation and L2 writeback must be done separately,
 		 * because both operations can't be done together.
@@ -867,6 +871,7 @@ void si_emit_cache_flush(struct si_context *sctx)
 					     S_0301F0_TC_WB_ACTION_ENA(1) |
 					     S_0301F0_TC_NC_ACTION_ENA(1));
 			cp_coher_cntl = 0;
+			sctx->b.num_L2_writebacks++;
 		}
 		if (rctx->flags & SI_CONTEXT_INV_VMEM_L1) {
 			/* Invalidate per-CU VMEM L1. */

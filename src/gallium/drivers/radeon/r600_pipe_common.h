@@ -574,6 +574,9 @@ struct r600_common_context {
 	unsigned			num_vs_flushes;
 	unsigned			num_ps_flushes;
 	unsigned			num_cs_flushes;
+	unsigned			num_fb_cache_flushes;
+	unsigned			num_L2_invalidates;
+	unsigned			num_L2_writebacks;
 	uint64_t			num_alloc_tex_transfer_bytes;
 	unsigned			last_tex_ps_draw_ratio; /* for query */
 
