@@ -566,7 +566,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    /* prepare vertex buffers */
    hud_alloc_vertices(hud, &hud->bg, 4 * 256, 2 * sizeof(float));
    hud_alloc_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
-   hud_alloc_vertices(hud, &hud->text, 4 * 1024, 4 * sizeof(float));
+   hud_alloc_vertices(hud, &hud->text, 16 * 1024, 4 * sizeof(float));
 
    /* prepare all graphs */
    hud_batch_query_update(hud->batch_query);
