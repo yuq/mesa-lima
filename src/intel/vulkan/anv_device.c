@@ -656,6 +656,8 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
       .timestampValidBits = 36, /* XXX: Real value here */
       .minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
    };
+
+   *pCount = 1;
 }
 
 void anv_GetPhysicalDeviceMemoryProperties(
