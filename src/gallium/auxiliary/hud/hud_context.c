@@ -483,7 +483,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    const struct pipe_sampler_state *sampler_states[] =
          { &hud->font_sampler_state };
    struct hud_pane *pane;
-   struct hud_graph *gr;
+   struct hud_graph *gr, *next;
 
    if (!huds_visible)
       return;
@@ -574,6 +574,23 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
       LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
          gr->query_new_value(gr);
+      }
+
+      if (pane->sort_items) {
+         LIST_FOR_EACH_ENTRY_SAFE(gr, next, &pane->graph_list, head) {
+            /* ignore the last one */
+            if (&gr->head == pane->graph_list.prev)
+               continue;
+
+            /* This is an incremental bubble sort, because we only do one pass
+             * per frame. It will eventually reach an equilibrium.
+             */
+            if (gr->current_value <
+                LIST_ENTRY(struct hud_graph, next, head)->current_value) {
+               LIST_DEL(&gr->head);
+               LIST_ADD(&gr->head, &next->head);
+            }
+         }
       }
 
       hud_pane_accumulate_vertices(hud, pane);
@@ -761,7 +778,7 @@ hud_pane_update_dyn_ceiling(struct hud_graph *gr, struct hud_pane *pane)
 static struct hud_pane *
 hud_pane_create(unsigned x1, unsigned y1, unsigned x2, unsigned y2,
                 unsigned period, uint64_t max_value, uint64_t ceiling,
-                boolean dyn_ceiling)
+                boolean dyn_ceiling, boolean sort_items)
 {
    struct hud_pane *pane = CALLOC_STRUCT(hud_pane);
 
@@ -783,6 +800,7 @@ hud_pane_create(unsigned x1, unsigned y1, unsigned x2, unsigned y2,
    pane->ceiling = ceiling;
    pane->dyn_ceiling = dyn_ceiling;
    pane->dyn_ceil_last_ran = 0;
+   pane->sort_items = sort_items;
    pane->initial_max_value = max_value;
    hud_pane_set_max_value(pane, max_value);
    LIST_INITHEAD(&pane->graph_list);
@@ -928,7 +946,7 @@ static char *
 read_pane_settings(char *str, unsigned * const x, unsigned * const y,
                unsigned * const width, unsigned * const height,
                uint64_t * const ceiling, boolean * const dyn_ceiling,
-               boolean *reset_colors)
+               boolean *reset_colors, boolean *sort_items)
 {
    char *ret = str;
    unsigned tmp;
@@ -985,6 +1003,12 @@ read_pane_settings(char *str, unsigned * const x, unsigned * const y,
          *reset_colors = true;
          break;
 
+      case 's':
+         ++str;
+         ret = str;
+         *sort_items = true;
+         break;
+
       default:
          fprintf(stderr, "gallium_hud: syntax error: unexpected '%c'\n", *str);
          fflush(stderr);
@@ -1027,6 +1051,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
    unsigned column_width = 251;
    boolean dyn_ceiling = false;
    boolean reset_colors = false;
+   boolean sort_items = false;
    const char *period_env;
 
    /*
@@ -1047,7 +1072,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 
       /* check for explicit location, size and etc. settings */
       name = read_pane_settings(name_a, &x, &y, &width, &height, &ceiling,
-                         &dyn_ceiling, &reset_colors);
+                                &dyn_ceiling, &reset_colors, &sort_items);
 
      /*
       * Keep track of overall column width to avoid pane overlapping in case
@@ -1058,7 +1083,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 
       if (!pane) {
          pane = hud_pane_create(x, y, x + width, y + height, period, 10,
-                         ceiling, dyn_ceiling);
+                         ceiling, dyn_ceiling, sort_items);
          if (!pane)
             return;
       }
@@ -1292,6 +1317,7 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       width = 251;
       ceiling = UINT64_MAX;
       dyn_ceiling = false;
+      sort_items = false;
 
    }
 
@@ -1344,6 +1370,7 @@ print_help(struct pipe_screen *screen)
    puts("  'd' activates dynamic Y axis readjustment to set the value of");
    puts("      the Y axis to match the highest value still visible in the graph.");
    puts("  'r' resets the color counter (the next color will be green)");
+   puts("  's' sort items below graphs in descending order");
    puts("");
    puts("  If 'c' and 'd' modifiers are used simultaneously, both are in effect:");
    puts("  the Y axis does not go above the restriction imposed by 'c' while");

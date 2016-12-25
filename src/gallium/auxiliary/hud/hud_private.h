@@ -68,6 +68,7 @@ struct hud_pane {
    uint64_t ceiling;
    unsigned dyn_ceil_last_ran;
    boolean dyn_ceiling;
+   boolean sort_items;
    enum pipe_driver_query_type type;
    uint64_t period; /* in microseconds */
 
