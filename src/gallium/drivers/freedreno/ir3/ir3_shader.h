@@ -342,7 +342,7 @@ struct ir3_shader_linkage {
 		uint8_t regid;
 		uint8_t compmask;
 		uint8_t loc;
-	} var[16];
+	} var[32];
 };
 
 static inline void
