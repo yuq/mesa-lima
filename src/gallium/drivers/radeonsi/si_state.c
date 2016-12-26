@@ -3487,8 +3487,7 @@ static void si_texture_barrier(struct pipe_context *ctx)
 
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_FLUSH_AND_INV_CB |
-			 SI_CONTEXT_CS_PARTIAL_FLUSH;
+			 SI_CONTEXT_FLUSH_AND_INV_CB;
 }
 
 /* This only ensures coherency for shader image/buffer stores. */
