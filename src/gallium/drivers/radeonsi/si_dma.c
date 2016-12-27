@@ -78,6 +78,45 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 	}
 }
 
+static void si_dma_clear_buffer(struct pipe_context *ctx,
+				struct pipe_resource *dst,
+				uint64_t offset,
+				uint64_t size,
+				unsigned clear_value)
+{
+	struct si_context *sctx = (struct si_context *)ctx;
+	struct radeon_winsys_cs *cs = sctx->b.dma.cs;
+	unsigned i, ncopy, csize;
+	struct r600_resource *rdst = r600_resource(dst);
+
+	if (!cs || offset % 4 != 0 || size % 4 != 0) {
+		ctx->clear_buffer(ctx, dst, offset, size, &clear_value, 4);
+		return;
+	}
+
+	/* Mark the buffer range of destination as valid (initialized),
+	 * so that transfer_map knows it should wait for the GPU when mapping
+	 * that range. */
+	util_range_add(&rdst->valid_buffer_range, offset, offset + size);
+
+	offset += rdst->gpu_address;
+
+	/* the same maximum size as for copying */
+	ncopy = DIV_ROUND_UP(size, SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE);
+	r600_need_dma_space(&sctx->b, ncopy * 4, rdst, NULL);
+
+	for (i = 0; i < ncopy; i++) {
+		csize = MIN2(size, SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE);
+		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_CONSTANT_FILL, 0,
+					      csize / 4));
+		radeon_emit(cs, offset);
+		radeon_emit(cs, clear_value);
+		radeon_emit(cs, (offset >> 32) << 16);
+		offset += csize;
+		size -= csize;
+	}
+}
+
 static void si_dma_copy_tile(struct si_context *ctx,
 			     struct pipe_resource *dst,
 			     unsigned dst_level,
@@ -285,4 +324,5 @@ fallback:
 void si_init_dma_functions(struct si_context *sctx)
 {
 	sctx->b.dma_copy = si_dma_copy;
+	sctx->b.dma_clear_buffer = si_dma_clear_buffer;
 }

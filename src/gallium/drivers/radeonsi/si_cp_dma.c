@@ -196,7 +196,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 
 	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
 	 * doesn't happen. We don't want an infinite recursion: */
-	if (sctx->b.chip_class >= CIK && sctx->b.dma.cs &&
+	if (sctx->b.dma.cs &&
 	    /* CP DMA is very slow. Always use SDMA for big clears. This
 	     * alone improves DeusEx:MD performance by 70%. */
 	    (size > 128 * 1024 ||
