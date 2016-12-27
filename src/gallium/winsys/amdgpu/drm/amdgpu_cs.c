@@ -1204,7 +1204,7 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    cs->main.base.used_gart = 0;
    cs->main.base.used_vram = 0;
 
-   ws->num_cs_flushes++;
+   ws->num_gfx_IBs++;
    return error_code;
 }
 
