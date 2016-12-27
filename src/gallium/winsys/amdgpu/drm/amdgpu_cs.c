@@ -1204,7 +1204,11 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    cs->main.base.used_gart = 0;
    cs->main.base.used_vram = 0;
 
-   ws->num_gfx_IBs++;
+   if (cs->ring_type == RING_GFX)
+      ws->num_gfx_IBs++;
+   else if (cs->ring_type == RING_DMA)
+      ws->num_sdma_IBs++;
+
    return error_code;
 }
 

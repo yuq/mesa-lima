@@ -62,6 +62,7 @@ struct amdgpu_winsys {
    uint64_t mapped_gtt;
    uint64_t buffer_wait_time; /* time spent in buffer_wait in ns */
    uint64_t num_gfx_IBs;
+   uint64_t num_sdma_IBs;
 
    struct radeon_info info;
 

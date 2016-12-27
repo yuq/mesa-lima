@@ -429,6 +429,8 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
       return retval;
    case RADEON_NUM_GFX_IBS:
       return ws->num_gfx_IBs;
+   case RADEON_NUM_SDMA_IBS:
+      return ws->num_sdma_IBs;
    case RADEON_NUM_BYTES_MOVED:
       amdgpu_query_info(ws->dev, AMDGPU_INFO_NUM_BYTES_MOVED, 8, &retval);
       return retval;
