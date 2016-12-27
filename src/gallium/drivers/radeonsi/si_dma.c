@@ -37,7 +37,7 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 				uint64_t size)
 {
 	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
-	unsigned i, ncopy, csize, max_csize, sub_cmd, shift;
+	unsigned i, ncopy, count, max_size, sub_cmd, shift;
 	struct r600_resource *rdst = (struct r600_resource*)dst;
 	struct r600_resource *rsrc = (struct r600_resource*)src;
 
@@ -50,31 +50,31 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 	dst_offset += rdst->gpu_address;
 	src_offset += rsrc->gpu_address;
 
-	/* see if we use dword or byte copy */
+	/* see whether we should use the dword-aligned or byte-aligned copy */
 	if (!(dst_offset % 4) && !(src_offset % 4) && !(size % 4)) {
-		size >>= 2;
 		sub_cmd = SI_DMA_COPY_DWORD_ALIGNED;
 		shift = 2;
-		max_csize = SI_DMA_COPY_MAX_SIZE_DW;
+		max_size = SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE;
 	} else {
 		sub_cmd = SI_DMA_COPY_BYTE_ALIGNED;
 		shift = 0;
-		max_csize = SI_DMA_COPY_MAX_SIZE;
+		max_size = SI_DMA_COPY_MAX_BYTE_ALIGNED_SIZE;
 	}
-	ncopy = (size / max_csize) + !!(size % max_csize);
 
+	ncopy = DIV_ROUND_UP(size, max_size);
 	r600_need_dma_space(&ctx->b, ncopy * 5, rdst, rsrc);
 
 	for (i = 0; i < ncopy; i++) {
-		csize = size < max_csize ? size : max_csize;
-		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, csize));
+		count = MIN2(size, max_size);
+		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd,
+					      count >> shift));
 		radeon_emit(cs, dst_offset);
 		radeon_emit(cs, src_offset);
 		radeon_emit(cs, (dst_offset >> 32UL) & 0xff);
 		radeon_emit(cs, (src_offset >> 32UL) & 0xff);
-		dst_offset += csize << shift;
-		src_offset += csize << shift;
-		size -= csize;
+		dst_offset += count;
+		src_offset += count;
+		size -= count;
 	}
 }
 
@@ -151,17 +151,17 @@ static void si_dma_copy_tile(struct si_context *ctx,
 
 	pipe_config = G_009910_PIPE_CONFIG(tile_mode);
 	mt = G_009910_MICRO_TILE_MODE(tile_mode);
-	size = (copy_height * pitch) / 4;
-	ncopy = (size / SI_DMA_COPY_MAX_SIZE_DW) + !!(size % SI_DMA_COPY_MAX_SIZE_DW);
+	size = copy_height * pitch;
+	ncopy = DIV_ROUND_UP(size, SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE);
 	r600_need_dma_space(&ctx->b, ncopy * 9, &rdst->resource, &rsrc->resource);
 
 	for (i = 0; i < ncopy; i++) {
 		cheight = copy_height;
-		if (((cheight * pitch) / 4) > SI_DMA_COPY_MAX_SIZE_DW) {
-			cheight = (SI_DMA_COPY_MAX_SIZE_DW * 4) / pitch;
+		if (cheight * pitch > SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE) {
+			cheight = SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE / pitch;
 		}
-		size = (cheight * pitch) / 4;
-		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, size));
+		size = cheight * pitch;
+		radeon_emit(cs, SI_DMA_PACKET(SI_DMA_PACKET_COPY, sub_cmd, size / 4));
 		radeon_emit(cs, base >> 8);
 		radeon_emit(cs, (detile << 31) | (array_mode << 27) |
 				(lbpp << 24) | (bank_h << 21) |

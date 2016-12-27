@@ -9021,8 +9021,10 @@
 /* SI async DMA Packet types */
 #define    SI_DMA_PACKET_WRITE                     0x2
 #define    SI_DMA_PACKET_COPY                      0x3
-#define    SI_DMA_COPY_MAX_SIZE                    0xfffe0
-#define    SI_DMA_COPY_MAX_SIZE_DW                 0xffff8
+#define    SI_DMA_COPY_MAX_BYTE_ALIGNED_SIZE       0xfffe0
+/* The documentation says 0xffff8 is the maximum size in dwords, which is
+ * 0x3fffe0 in bytes. */
+#define    SI_DMA_COPY_MAX_DWORD_ALIGNED_SIZE      0x3fffe0
 #define    SI_DMA_COPY_DWORD_ALIGNED               0x00
 #define    SI_DMA_COPY_BYTE_ALIGNED                0x40
 #define    SI_DMA_COPY_TILED                       0x8
