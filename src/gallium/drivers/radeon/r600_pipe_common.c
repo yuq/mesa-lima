@@ -220,6 +220,21 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	pipe_resource_reference(&buf, NULL);
 }
 
+static void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
+{
+	struct radeon_winsys_cs *cs = rctx->dma.cs;
+
+	/* NOP waits for idle on Evergreen and later. */
+	if (rctx->chip_class >= CIK)
+		radeon_emit(cs, 0x00000000); /* NOP */
+	else if (rctx->chip_class >= EVERGREEN)
+		radeon_emit(cs, 0xf0000000); /* NOP */
+	else {
+		/* TODO: R600-R700 should use the FENCE packet.
+		 * CS checker support is required. */
+	}
+}
+
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
                          struct r600_resource *dst, struct r600_resource *src)
 {
@@ -257,12 +272,24 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 	 * It improves texture upload performance by keeping the DMA
 	 * engine busy while uploads are being submitted.
 	 */
+	num_dw++; /* for emit_wait_idle below */
 	if (!ctx->ws->cs_check_space(ctx->dma.cs, num_dw) ||
 	    ctx->dma.cs->used_vram + ctx->dma.cs->used_gart > 64 * 1024 * 1024 ||
 	    !radeon_cs_memory_below_limit(ctx->screen, ctx->dma.cs, vram, gtt)) {
 		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->current.cdw) <= ctx->dma.cs->current.max_dw);
 	}
+
+	/* Wait for idle if either buffer has been used in the IB before to
+	 * prevent read-after-write hazards.
+	 */
+	if ((dst &&
+	     ctx->ws->cs_is_buffer_referenced(ctx->dma.cs, dst->buf,
+					      RADEON_USAGE_READWRITE)) ||
+	    (src &&
+	     ctx->ws->cs_is_buffer_referenced(ctx->dma.cs, src->buf,
+					      RADEON_USAGE_WRITE)))
+		r600_dma_emit_wait_idle(ctx);
 
 	/* If GPUVM is not supported, the CS checker needs 2 entries
 	 * in the buffer list per packet, which has to be done manually.
@@ -280,27 +307,6 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 
 	/* this function is called before all DMA calls, so increment this. */
 	ctx->num_dma_calls++;
-}
-
-/* This is required to prevent read-after-write hazards. */
-void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
-{
-	struct radeon_winsys_cs *cs = rctx->dma.cs;
-
-	r600_need_dma_space(rctx, 1, NULL, NULL);
-
-	if (!radeon_emitted(cs, 0)) /* empty queue */
-		return;
-
-	/* NOP waits for idle on Evergreen and later. */
-	if (rctx->chip_class >= CIK)
-		radeon_emit(cs, 0x00000000); /* NOP */
-	else if (rctx->chip_class >= EVERGREEN)
-		radeon_emit(cs, 0xf0000000); /* NOP */
-	else {
-		/* TODO: R600-R700 should use the FENCE packet.
-		 * CS checker support is required. */
-	}
 }
 
 static void r600_memory_barrier(struct pipe_context *ctx, unsigned flags)

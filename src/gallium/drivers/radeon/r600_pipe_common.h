@@ -729,7 +729,6 @@ struct pipe_resource *r600_resource_create_common(struct pipe_screen *screen,
 const char *r600_get_llvm_processor_name(enum radeon_family family);
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 			 struct r600_resource *dst, struct r600_resource *src);
-void r600_dma_emit_wait_idle(struct r600_common_context *rctx);
 void radeon_save_cs(struct radeon_winsys *ws, struct radeon_winsys_cs *cs,
 		    struct radeon_saved_cs *saved);
 void radeon_clear_saved_cs(struct radeon_saved_cs *saved);

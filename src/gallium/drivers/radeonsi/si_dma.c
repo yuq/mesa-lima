@@ -76,7 +76,6 @@ static void si_dma_copy_buffer(struct si_context *ctx,
 		src_offset += csize << shift;
 		size -= csize;
 	}
-	r600_dma_emit_wait_idle(&ctx->b);
 }
 
 static void si_dma_copy_tile(struct si_context *ctx,
@@ -177,7 +176,6 @@ static void si_dma_copy_tile(struct si_context *ctx,
 		addr += cheight * pitch;
 		tiled_y += cheight;
 	}
-	r600_dma_emit_wait_idle(&ctx->b);
 }
 
 static void si_dma_copy(struct pipe_context *ctx,

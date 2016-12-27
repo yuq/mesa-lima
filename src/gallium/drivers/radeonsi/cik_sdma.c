@@ -67,7 +67,6 @@ static void cik_sdma_copy_buffer(struct si_context *ctx,
 		src_offset += csize;
 		size -= csize;
 	}
-	r600_dma_emit_wait_idle(&ctx->b);
 }
 
 static void cik_sdma_clear_buffer(struct pipe_context *ctx,
@@ -108,7 +107,6 @@ static void cik_sdma_clear_buffer(struct pipe_context *ctx,
 		offset += csize;
 		size -= csize;
 	}
-	r600_dma_emit_wait_idle(&sctx->b);
 }
 
 static unsigned minify_as_blocks(unsigned width, unsigned level, unsigned blk_w)
@@ -251,8 +249,6 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 			radeon_emit(cs, (copy_width - 1) | ((copy_height - 1) << 16));
 			radeon_emit(cs, (copy_depth - 1));
 		}
-
-		r600_dma_emit_wait_idle(&sctx->b);
 		return true;
 	}
 
@@ -417,8 +413,6 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 				radeon_emit(cs, (copy_width_aligned - 1) | ((copy_height - 1) << 16));
 				radeon_emit(cs, (copy_depth - 1));
 			}
-
-			r600_dma_emit_wait_idle(&sctx->b);
 			return true;
 		}
 	}
@@ -515,8 +509,6 @@ static bool cik_sdma_copy_texture(struct si_context *sctx,
 						((copy_height_aligned - 8) << 16));
 				radeon_emit(cs, (copy_depth - 1));
 			}
-
-			r600_dma_emit_wait_idle(&sctx->b);
 			return true;
 		}
 	}
