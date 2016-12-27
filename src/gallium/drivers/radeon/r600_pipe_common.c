@@ -223,7 +223,8 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
                          struct r600_resource *dst, struct r600_resource *src)
 {
-	uint64_t vram = 0, gtt = 0;
+	uint64_t vram = ctx->dma.cs->used_vram;
+	uint64_t gtt = ctx->dma.cs->used_gart;
 
 	if (dst) {
 		vram += dst->vram_usage;
@@ -246,8 +247,18 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 
 	/* Flush if there's not enough space, or if the memory usage per IB
 	 * is too large.
+	 *
+	 * IBs using too little memory are limited by the IB submission overhead.
+	 * IBs using too much memory are limited by the kernel/TTM overhead.
+	 * Too long IBs create CPU-GPU pipeline bubbles and add latency.
+	 *
+	 * This heuristic makes sure that DMA requests are executed
+	 * very soon after the call is made and lowers memory usage.
+	 * It improves texture upload performance by keeping the DMA
+	 * engine busy while uploads are being submitted.
 	 */
 	if (!ctx->ws->cs_check_space(ctx->dma.cs, num_dw) ||
+	    ctx->dma.cs->used_vram + ctx->dma.cs->used_gart > 64 * 1024 * 1024 ||
 	    !radeon_cs_memory_below_limit(ctx->screen, ctx->dma.cs, vram, gtt)) {
 		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
 		assert((num_dw + ctx->dma.cs->current.cdw) <= ctx->dma.cs->current.max_dw);
@@ -266,29 +277,15 @@ void r600_need_dma_space(struct r600_common_context *ctx, unsigned num_dw,
 						  RADEON_USAGE_READ,
 						  RADEON_PRIO_SDMA_BUFFER);
 	}
+
+	/* this function is called before all DMA calls, so increment this. */
+	ctx->num_dma_calls++;
 }
 
 /* This is required to prevent read-after-write hazards. */
 void r600_dma_emit_wait_idle(struct r600_common_context *rctx)
 {
 	struct radeon_winsys_cs *cs = rctx->dma.cs;
-
-	/* done at the end of DMA calls, so increment this. */
-	rctx->num_dma_calls++;
-
-	/* IBs using too little memory are limited by the IB submission overhead.
-	 * IBs using too much memory are limited by the kernel/TTM overhead.
-	 * Too long IBs create CPU-GPU pipeline bubbles and add latency.
-	 *
-	 * This heuristic makes sure that DMA requests are executed
-	 * very soon after the call is made and lowers memory usage.
-	 * It improves texture upload performance by keeping the DMA
-	 * engine busy while uploads are being submitted.
-	 */
-	if (cs->used_vram + cs->used_gart > 64 * 1024 * 1024) {
-		rctx->dma.flush(rctx, RADEON_FLUSH_ASYNC, NULL);
-		return;
-	}
 
 	r600_need_dma_space(rctx, 1, NULL, NULL);
 
