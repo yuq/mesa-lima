@@ -575,15 +575,28 @@ choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
         struct schedule_node *chosen = NULL;
         int chosen_prio = 0;
 
+        /* Don't pair up anything with a thread switch signal -- emit_thrsw()
+         * will handle pairing it along with filling the delay slots.
+         */
+        if (prev_inst) {
+                uint32_t prev_sig = QPU_GET_FIELD(prev_inst->inst->inst,
+                                                  QPU_SIG);
+                if (prev_sig == QPU_SIG_THREAD_SWITCH ||
+                    prev_sig == QPU_SIG_LAST_THREAD_SWITCH) {
+                        return NULL;
+                }
+        }
+
         list_for_each_entry(struct schedule_node, n, schedule_list, link) {
                 uint64_t inst = n->inst->inst;
+                uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
 
                 /* Don't choose the branch instruction until it's the last one
                  * left.  XXX: We could potentially choose it before it's the
                  * last one, if the remaining instructions fit in the delay
                  * slots.
                  */
-                if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_BRANCH &&
+                if (sig == QPU_SIG_BRANCH &&
                     !list_is_singular(schedule_list)) {
                         continue;
                 }
@@ -607,6 +620,14 @@ choose_instruction_to_schedule(struct choose_scoreboard *scoreboard,
                  * that they're compatible.
                  */
                 if (prev_inst) {
+                        /* Don't pair up a thread switch signal -- we'll
+                         * handle pairing it when we pick it on its own.
+                         */
+                        if (sig == QPU_SIG_THREAD_SWITCH ||
+                            sig == QPU_SIG_LAST_THREAD_SWITCH) {
+                                continue;
+                        }
+
                         if (prev_inst->uniform != -1 && n->uniform != -1)
                                 continue;
 
@@ -820,6 +841,51 @@ mark_instruction_scheduled(struct list_head *schedule_list,
         }
 }
 
+/**
+ * Emits a THRSW/LTHRSW signal in the stream, trying to move it up to pair
+ * with another instruction.
+ */
+static void
+emit_thrsw(struct vc4_compile *c,
+           struct choose_scoreboard *scoreboard,
+           uint64_t inst)
+{
+        uint32_t sig = QPU_GET_FIELD(inst, QPU_SIG);
+
+        /* There should be nothing in a thrsw inst being scheduled other than
+         * the signal bits.
+         */
+        assert(QPU_GET_FIELD(inst, QPU_OP_ADD) == QPU_A_NOP);
+        assert(QPU_GET_FIELD(inst, QPU_OP_MUL) == QPU_M_NOP);
+
+        /* Try to find an earlier scheduled instruction that we can merge the
+         * thrsw into.
+         */
+        int thrsw_ip = c->qpu_inst_count;
+        for (int i = 1; i <= MIN2(c->qpu_inst_count, 3); i++) {
+                uint64_t prev_instr = c->qpu_insts[c->qpu_inst_count - i];
+                uint32_t prev_sig = QPU_GET_FIELD(prev_instr, QPU_SIG);
+
+                if (prev_sig == QPU_SIG_NONE)
+                        thrsw_ip = c->qpu_inst_count - i;
+        }
+
+        if (thrsw_ip != c->qpu_inst_count) {
+                /* Merge the thrsw into the existing instruction. */
+                c->qpu_insts[thrsw_ip] =
+                        QPU_UPDATE_FIELD(c->qpu_insts[thrsw_ip], sig, QPU_SIG);
+        } else {
+                qpu_serialize_one_inst(c, inst);
+                update_scoreboard_for_chosen(scoreboard, inst);
+        }
+
+        /* Fill the delay slots. */
+        while (c->qpu_inst_count < thrsw_ip + 3) {
+                update_scoreboard_for_chosen(scoreboard, qpu_NOP());
+                qpu_serialize_one_inst(c, qpu_NOP());
+        }
+}
+
 static uint32_t
 schedule_instructions(struct vc4_compile *c,
                       struct choose_scoreboard *scoreboard,
@@ -830,7 +896,6 @@ schedule_instructions(struct vc4_compile *c,
                       uint32_t *next_uniform)
 {
         uint32_t time = 0;
-        uint32_t last_thread_switch = 0;
 
         if (debug) {
                 fprintf(stderr, "initial deps:\n");
@@ -913,10 +978,6 @@ schedule_instructions(struct vc4_compile *c,
                         fprintf(stderr, "\n");
                 }
 
-                qpu_serialize_one_inst(c, inst);
-
-                update_scoreboard_for_chosen(scoreboard, inst);
-
                 /* Now that we've scheduled a new instruction, some of its
                  * children can be promoted to the list of instructions ready to
                  * be scheduled.  Update the children's unblocked time for this
@@ -924,6 +985,14 @@ schedule_instructions(struct vc4_compile *c,
                  */
                 mark_instruction_scheduled(schedule_list, time, chosen, false);
                 mark_instruction_scheduled(schedule_list, time, merge, false);
+
+                if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_THREAD_SWITCH ||
+                    QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_LAST_THREAD_SWITCH) {
+                        emit_thrsw(c, scoreboard, inst);
+                } else {
+                        qpu_serialize_one_inst(c, inst);
+                        update_scoreboard_for_chosen(scoreboard, inst);
+                }
 
                 scoreboard->tick++;
                 time++;
@@ -943,46 +1012,6 @@ schedule_instructions(struct vc4_compile *c,
                         qpu_serialize_one_inst(c, inst);
                         qpu_serialize_one_inst(c, inst);
                         qpu_serialize_one_inst(c, inst);
-                } else if (QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_THREAD_SWITCH ||
-                           QPU_GET_FIELD(inst, QPU_SIG) == QPU_SIG_LAST_THREAD_SWITCH) {
-                        int last = c->qpu_inst_count - 1;
-
-                        /* The thread switch occurs after two delay slots.
-                         * Shift the signal upwards, if there is an
-                         * instruction without a signal there. Watch out for
-                         * the last thread switch as theoretically it could be
-                         * only two instructions away.
-                         */
-
-                         /* Remove sig from the instruction */
-                        enum qpu_sig_bits sig = QPU_GET_FIELD(inst, QPU_SIG);
-                        c->qpu_insts[last] = QPU_UPDATE_FIELD(c->qpu_insts[last],
-                                                              QPU_SIG_NONE,
-                                                              QPU_SIG);
-                        /* Compute how far we can shift */
-                        int max_shift = MIN2(last - last_thread_switch, 2);
-                        /* If both instructions in front have a signal set,
-                         * reset the signal on the current instruction.*/
-                        int shift;
-                        for (shift = max_shift; shift >= 0; --shift) {
-                                int ip = last - shift;
-                                if (QPU_GET_FIELD(c->qpu_insts[ip],
-                                                  QPU_SIG) == QPU_SIG_NONE) {
-                                        c->qpu_insts[ip] =
-                                                QPU_UPDATE_FIELD(
-                                                        c->qpu_insts[ip],
-                                                        sig, QPU_SIG);
-                                        break;
-                                }
-                        }
-                        /* If necessarry, add filling NOPs*/
-                        for (int i = 0; i < 2 - shift; ++i) {
-                                update_scoreboard_for_chosen(scoreboard,
-                                                             qpu_NOP());
-                                qpu_serialize_one_inst(c, qpu_NOP());
-                        }
-                        /* Avoid branching in a thread switch*/
-                        last_thread_switch = c->qpu_inst_count - 1;
                 }
         }
 
