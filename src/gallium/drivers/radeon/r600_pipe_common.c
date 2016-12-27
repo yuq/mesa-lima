@@ -355,9 +355,9 @@ static void r600_flush_from_st(struct pipe_context *ctx,
 	if (flags & PIPE_FLUSH_DEFERRED)
 		rflags |= RADEON_FLUSH_ASYNC;
 
-	if (rctx->dma.cs) {
+	/* DMA IBs are preambles to gfx IBs, therefore must be flushed first. */
+	if (rctx->dma.cs)
 		rctx->dma.flush(rctx, rflags, fence ? &sdma_fence : NULL);
-	}
 
 	if (!radeon_emitted(rctx->gfx.cs, rctx->initial_gfx_cs_size)) {
 		if (fence)
