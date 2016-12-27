@@ -65,14 +65,11 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
    }
    if (*ptr) {
       /* Unreference the old shader */
-      GLboolean deleteFlag = GL_FALSE;
       struct gl_shader *old = *ptr;
 
       assert(old->RefCount > 0);
-      old->RefCount--;
-      deleteFlag = (old->RefCount == 0);
 
-      if (deleteFlag) {
+      if (p_atomic_dec_zero(&old->RefCount)) {
 	 if (old->Name != 0)
 	    _mesa_HashRemove(ctx->Shared->ShaderObjects, old->Name);
          _mesa_delete_shader(ctx, old);
@@ -84,7 +81,7 @@ _mesa_reference_shader(struct gl_context *ctx, struct gl_shader **ptr,
 
    if (sh) {
       /* reference new */
-      sh->RefCount++;
+      p_atomic_inc(&sh->RefCount);
       *ptr = sh;
    }
 }
@@ -257,14 +254,11 @@ _mesa_reference_shader_program_(struct gl_context *ctx,
    }
    if (*ptr) {
       /* Unreference the old shader program */
-      GLboolean deleteFlag = GL_FALSE;
       struct gl_shader_program *old = *ptr;
 
       assert(old->RefCount > 0);
-      old->RefCount--;
-      deleteFlag = (old->RefCount == 0);
 
-      if (deleteFlag) {
+      if (p_atomic_dec_zero(&old->RefCount)) {
 	 if (old->Name != 0)
 	    _mesa_HashRemove(ctx->Shared->ShaderObjects, old->Name);
          _mesa_delete_shader_program(ctx, old);
@@ -275,7 +269,7 @@ _mesa_reference_shader_program_(struct gl_context *ctx,
    assert(!*ptr);
 
    if (shProg) {
-      shProg->RefCount++;
+      p_atomic_inc(&shProg->RefCount);
       *ptr = shProg;
    }
 }
