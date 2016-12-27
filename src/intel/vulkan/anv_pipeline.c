@@ -124,7 +124,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
    nir_function *entry_point =
       spirv_to_nir(spirv, module->size / 4,
                    spec_entries, num_spec_entries,
-                   stage, entrypoint_name, nir_options);
+                   stage, entrypoint_name, NULL, nir_options);
    nir_shader *nir = entry_point->shader;
    assert(nir->stage == stage);
    nir_validate_shader(nir);

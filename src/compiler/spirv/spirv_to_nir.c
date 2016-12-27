@@ -2461,6 +2461,12 @@ stage_for_execution_model(SpvExecutionModel model)
    }
 }
 
+#define spv_check_supported(name, cap) do {		\
+      if (!(b->ext && b->ext->name))			\
+         vtn_warn("Unsupported SPIR-V capability: %s",  \
+                  spirv_capability_to_string(cap));     \
+   } while(0)
+
 static bool
 vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                                 const uint32_t *w, unsigned count)
@@ -2519,8 +2525,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityInt8:
       case SpvCapabilitySparseResidency:
       case SpvCapabilityMinLod:
-      case SpvCapabilityImageMSArray:
-      case SpvCapabilityStorageImageExtendedFormats:
       case SpvCapabilityTransformFeedback:
       case SpvCapabilityStorageImageReadWithoutFormat:
       case SpvCapabilityStorageImageWriteWithoutFormat:
@@ -2540,6 +2544,13 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityGenericPointer:
          vtn_warn("Unsupported OpenCL-style SPIR-V capability: %s",
                   spirv_capability_to_string(cap));
+         break;
+
+      case SpvCapabilityStorageImageExtendedFormats:
+         spv_check_supported(storage_image_extended_formats, cap);
+         break;
+      case SpvCapabilityImageMSArray:
+         spv_check_supported(image_ms_array, cap);
          break;
       }
       break;
@@ -3015,6 +3026,7 @@ nir_function *
 spirv_to_nir(const uint32_t *words, size_t word_count,
              struct nir_spirv_specialization *spec, unsigned num_spec,
              gl_shader_stage stage, const char *entry_point_name,
+             const struct nir_spirv_supported_extensions *ext,
              const nir_shader_compiler_options *options)
 {
    const uint32_t *word_end = words + word_count;
@@ -3037,6 +3049,7 @@ spirv_to_nir(const uint32_t *words, size_t word_count,
    exec_list_make_empty(&b->functions);
    b->entry_point_stage = stage;
    b->entry_point_name = entry_point_name;
+   b->ext = ext;
 
    /* Handle all the preamble instructions */
    words = vtn_foreach_instruction(b, words, word_end,
