@@ -1540,6 +1540,10 @@ vc4_optimize_nir(struct nir_shader *s)
                 NIR_PASS(progress, s, nir_opt_algebraic);
                 NIR_PASS(progress, s, nir_opt_constant_folding);
                 NIR_PASS(progress, s, nir_opt_undef);
+                NIR_PASS(progress, s, nir_opt_loop_unroll,
+                         nir_var_shader_in |
+                         nir_var_shader_out |
+                         nir_var_local);
         } while (progress);
 }
 
@@ -2155,6 +2159,7 @@ static const nir_shader_compiler_options nir_options = {
         .lower_fsqrt = true,
         .lower_negate = true,
         .native_integers = true,
+        .max_unroll_iterations = 32,
 };
 
 const void *
