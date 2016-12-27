@@ -168,6 +168,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 			    enum r600_coherency coher)
 {
 	struct si_context *sctx = (struct si_context*)ctx;
+	struct radeon_winsys *ws = sctx->b.ws;
 	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
 	unsigned flush_flags = get_flush_flags(sctx, coher);
 
@@ -190,6 +191,25 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 			unsigned byte_within_dword = (offset + i) % 4;
 			*map++ = (value >> (byte_within_dword * 8)) & 0xff;
 		}
+		return;
+	}
+
+	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
+	 * doesn't happen. We don't want an infinite recursion: */
+	if (sctx->b.chip_class >= CIK && sctx->b.dma.cs &&
+	    /* CP DMA is very slow. Always use SDMA for big clears. This
+	     * alone improves DeusEx:MD performance by 70%. */
+	    (size > 128 * 1024 ||
+	     /* Buffers not used by the GFX IB yet will be cleared by SDMA.
+	      * This happens to move most buffer clears to SDMA, including
+	      * DCC and CMASK clears, because pipe->clear clears them before
+	      * si_emit_framebuffer_state (in a draw call) adds them.
+	      * For example, DeusEx:MD has 21 buffer clears per frame and all
+	      * of them are moved to SDMA thanks to this. */
+	     !ws->cs_is_buffer_referenced(sctx->b.gfx.cs,
+					  r600_resource(dst)->buf,
+				          RADEON_USAGE_READWRITE))) {
+		sctx->b.dma_clear_buffer(ctx, dst, offset, size, value);
 		return;
 	}
 
