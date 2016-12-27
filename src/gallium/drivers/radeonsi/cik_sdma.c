@@ -28,20 +28,26 @@
 #include "sid.h"
 #include "si_pipe.h"
 
-static void cik_sdma_do_copy_buffer(struct si_context *ctx,
-				    struct pipe_resource *dst,
-				    struct pipe_resource *src,
-				    uint64_t dst_offset,
-				    uint64_t src_offset,
-				    uint64_t size)
+static void cik_sdma_copy_buffer(struct si_context *ctx,
+				 struct pipe_resource *dst,
+				 struct pipe_resource *src,
+				 uint64_t dst_offset,
+				 uint64_t src_offset,
+				 uint64_t size)
 {
 	struct radeon_winsys_cs *cs = ctx->b.dma.cs;
 	unsigned i, ncopy, csize;
-	struct r600_resource *rdst = (struct r600_resource*)dst;
-	struct r600_resource *rsrc = (struct r600_resource*)src;
+	struct r600_resource *rdst = r600_resource(dst);
+	struct r600_resource *rsrc = r600_resource(src);
 
-	dst_offset += r600_resource(dst)->gpu_address;
-	src_offset += r600_resource(src)->gpu_address;
+	/* Mark the buffer range of destination as valid (initialized),
+	 * so that transfer_map knows it should wait for the GPU when mapping
+	 * that range. */
+	util_range_add(&rdst->valid_buffer_range, dst_offset,
+		       dst_offset + size);
+
+	dst_offset += rdst->gpu_address;
+	src_offset += rsrc->gpu_address;
 
 	ncopy = DIV_ROUND_UP(size, CIK_SDMA_COPY_MAX_SIZE);
 	r600_need_dma_space(&ctx->b, ncopy * 7, rdst, rsrc);
@@ -61,24 +67,6 @@ static void cik_sdma_do_copy_buffer(struct si_context *ctx,
 		src_offset += csize;
 		size -= csize;
 	}
-}
-
-static void cik_sdma_copy_buffer(struct si_context *ctx,
-				 struct pipe_resource *dst,
-				 struct pipe_resource *src,
-				 uint64_t dst_offset,
-				 uint64_t src_offset,
-				 uint64_t size)
-{
-	struct r600_resource *rdst = (struct r600_resource*)dst;
-
-	/* Mark the buffer range of destination as valid (initialized),
-	 * so that transfer_map knows it should wait for the GPU when mapping
-	 * that range. */
-	util_range_add(&rdst->valid_buffer_range, dst_offset,
-		       dst_offset + size);
-
-	cik_sdma_do_copy_buffer(ctx, dst, src, dst_offset, src_offset, size);
 	r600_dma_emit_wait_idle(&ctx->b);
 }
 
