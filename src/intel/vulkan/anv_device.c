@@ -646,7 +646,14 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
       return;
    }
 
-   assert(*pCount >= 1);
+   /* The spec implicitly allows the incoming count to be 0. From the Vulkan
+    * 1.0.38 spec, Section 4.1 Physical Devices:
+    *
+    *     If the value referenced by pQueueFamilyPropertyCount is not 0 [then
+    *     do stuff].
+    */
+   if (*pCount == 0)
+      return;
 
    *pQueueFamilyProperties = (VkQueueFamilyProperties) {
       .queueFlags = VK_QUEUE_GRAPHICS_BIT |
