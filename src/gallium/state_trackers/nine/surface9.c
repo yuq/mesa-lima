@@ -44,6 +44,9 @@
 
 #define DBG_CHANNEL DBG_SURFACE
 
+static void
+NineSurface9_CreatePipeSurfaces( struct NineSurface9 *This );
+
 HRESULT
 NineSurface9_ctor( struct NineSurface9 *This,
                    struct NineUnknownParams *pParams,
@@ -184,10 +187,8 @@ NineSurface9_ctor( struct NineSurface9 *This,
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_DYNAMIC))
         This->base.resource->flags |= NINE_RESOURCE_FLAG_LOCKABLE;
 
-    if (This->base.resource && (pDesc->Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL))) {
-        (void) NineSurface9_CreatePipeSurface(This, 0);
-        (void) NineSurface9_CreatePipeSurface(This, 1);
-    }
+    if (This->base.resource && (pDesc->Usage & (D3DUSAGE_RENDERTARGET | D3DUSAGE_DEPTHSTENCIL)))
+        NineSurface9_CreatePipeSurfaces(This);
 
     /* TODO: investigate what else exactly needs to be cleared */
     if (This->base.resource && (pDesc->Usage & D3DUSAGE_RENDERTARGET))
@@ -220,8 +221,8 @@ NineSurface9_dtor( struct NineSurface9 *This )
     NineResource9_dtor(&This->base);
 }
 
-struct pipe_surface *
-NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
+static void
+NineSurface9_CreatePipeSurfaces( struct NineSurface9 *This )
 {
     struct pipe_context *pipe;
     struct pipe_screen *screen = NineDevice9_GetScreen(This->base.base.device);
@@ -233,21 +234,33 @@ NineSurface9_CreatePipeSurface( struct NineSurface9 *This, const int sRGB )
     assert(resource);
 
     srgb_format = util_format_srgb(resource->format);
-    if (sRGB && srgb_format != PIPE_FORMAT_NONE &&
-        screen->is_format_supported(screen, srgb_format,
-                                    resource->target, 0, resource->bind))
-        templ.format = srgb_format;
-    else
-        templ.format = resource->format;
+    if (srgb_format == PIPE_FORMAT_NONE ||
+        !screen->is_format_supported(screen, srgb_format,
+                                     resource->target, 0, resource->bind))
+        srgb_format = resource->format;
+
+    memset(&templ, 0, sizeof(templ));
+    templ.format = resource->format;
     templ.u.tex.level = This->level;
     templ.u.tex.first_layer = This->layer;
     templ.u.tex.last_layer = This->layer;
 
     pipe = nine_context_get_pipe_acquire(This->base.base.device);
-    This->surface[sRGB] = pipe->create_surface(pipe, resource, &templ);
+
+    This->surface[0] = pipe->create_surface(pipe, resource, &templ);
+
+    memset(&templ, 0, sizeof(templ));
+    templ.format = srgb_format;
+    templ.u.tex.level = This->level;
+    templ.u.tex.first_layer = This->layer;
+    templ.u.tex.last_layer = This->layer;
+
+    This->surface[1] = pipe->create_surface(pipe, resource, &templ);
+
     nine_context_get_pipe_release(This->base.base.device);
-    assert(This->surface[sRGB]);
-    return This->surface[sRGB];
+
+    assert(This->surface[0]); /* TODO: Handle failure */
+    assert(This->surface[1]);
 }
 
 #ifdef DEBUG
@@ -762,10 +775,8 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
 
     pipe_surface_reference(&This->surface[0], NULL);
     pipe_surface_reference(&This->surface[1], NULL);
-    if (resource) {
-        (void) NineSurface9_CreatePipeSurface(This, 0);
-        (void) NineSurface9_CreatePipeSurface(This, 1);
-    }
+    if (resource)
+        NineSurface9_CreatePipeSurfaces(This);
 }
 
 
