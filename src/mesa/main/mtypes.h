@@ -1947,6 +1947,26 @@ struct gl_program
       /** Fields used by GLSL programs */
       struct {
          struct gl_active_atomic_buffer **AtomicBuffers;
+
+         /**
+          * Number of types for subroutine uniforms.
+          */
+         GLuint NumSubroutineUniformTypes;
+
+         /**
+          * Subroutine uniform remap table
+          * based on the program level uniform remap table.
+          */
+         GLuint NumSubroutineUniforms; /* non-sparse total */
+         GLuint NumSubroutineUniformRemapTable;
+         struct gl_uniform_storage **SubroutineUniformRemapTable;
+
+         /**
+          * Num of subroutine functions for this stage and storage for them.
+          */
+         GLuint NumSubroutineFunctions;
+         GLuint MaxSubroutineFunctionIndex;
+         struct gl_subroutine_function *SubroutineFunctions;
       } sh;
 
       /** ARB assembly-style program fields */
@@ -2363,27 +2383,6 @@ struct gl_linked_shader
     * ImageAccess arrays above.
     */
    GLuint NumImages;
-
-   /**
-     * Number of types for subroutine uniforms.
-     */
-   GLuint NumSubroutineUniformTypes;
-
-   /**
-     * Subroutine uniform remap table
-     * based on the program level uniform remap table.
-     */
-   GLuint NumSubroutineUniforms; /* non-sparse total */
-   GLuint NumSubroutineUniformRemapTable;
-   struct gl_uniform_storage **SubroutineUniformRemapTable;
-
-   /**
-    * Num of subroutine functions for this stage
-    * and storage for them.
-    */
-   GLuint NumSubroutineFunctions;
-   GLuint MaxSubroutineFunctionIndex;
-   struct gl_subroutine_function *SubroutineFunctions;
 
    struct gl_shader_info info;
 };

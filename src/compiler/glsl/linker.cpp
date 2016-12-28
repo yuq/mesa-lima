@@ -3155,24 +3155,24 @@ link_calculate_subroutine_compat(struct gl_shader_program *prog)
    unsigned mask = prog->data->linked_stages;
    while (mask) {
       const int i = u_bit_scan(&mask);
-      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      struct gl_program *p = prog->_LinkedShaders[i]->Program;
 
-      for (unsigned j = 0; j < sh->NumSubroutineUniformRemapTable; j++) {
-         if (sh->SubroutineUniformRemapTable[j] == INACTIVE_UNIFORM_EXPLICIT_LOCATION)
+      for (unsigned j = 0; j < p->sh.NumSubroutineUniformRemapTable; j++) {
+         if (p->sh.SubroutineUniformRemapTable[j] == INACTIVE_UNIFORM_EXPLICIT_LOCATION)
             continue;
 
-         struct gl_uniform_storage *uni = sh->SubroutineUniformRemapTable[j];
+         struct gl_uniform_storage *uni = p->sh.SubroutineUniformRemapTable[j];
 
          if (!uni)
             continue;
 
          int count = 0;
-         if (sh->NumSubroutineFunctions == 0) {
+         if (p->sh.NumSubroutineFunctions == 0) {
             linker_error(prog, "subroutine uniform %s defined but no valid functions found\n", uni->type->name);
             continue;
          }
-         for (unsigned f = 0; f < sh->NumSubroutineFunctions; f++) {
-            struct gl_subroutine_function *fn = &sh->SubroutineFunctions[f];
+         for (unsigned f = 0; f < p->sh.NumSubroutineFunctions; f++) {
+            struct gl_subroutine_function *fn = &p->sh.SubroutineFunctions[f];
             for (int k = 0; k < fn->num_compat_types; k++) {
                if (fn->types[k] == uni->type) {
                   count++;
@@ -3191,11 +3191,12 @@ check_subroutine_resources(struct gl_shader_program *prog)
    unsigned mask = prog->data->linked_stages;
    while (mask) {
       const int i = u_bit_scan(&mask);
-      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      struct gl_program *p = prog->_LinkedShaders[i]->Program;
 
-      if (sh->NumSubroutineUniformRemapTable > MAX_SUBROUTINE_UNIFORM_LOCATIONS)
+      if (p->sh.NumSubroutineUniformRemapTable > MAX_SUBROUTINE_UNIFORM_LOCATIONS) {
          linker_error(prog, "Too many %s shader subroutine uniforms\n",
                       _mesa_shader_stage_to_string(i));
+      }
    }
 }
 /**
@@ -3316,36 +3317,36 @@ reserve_explicit_locations(struct gl_shader_program *prog,
 
 static bool
 reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
-                                      struct gl_linked_shader *sh,
+                                      struct gl_program *p,
                                       ir_variable *var)
 {
    unsigned slots = var->type->uniform_locations();
    unsigned max_loc = var->data.location + slots - 1;
 
    /* Resize remap table if locations do not fit in the current one. */
-   if (max_loc + 1 > sh->NumSubroutineUniformRemapTable) {
-      sh->SubroutineUniformRemapTable =
-         reralloc(sh, sh->SubroutineUniformRemapTable,
+   if (max_loc + 1 > p->sh.NumSubroutineUniformRemapTable) {
+      p->sh.SubroutineUniformRemapTable =
+         reralloc(p, p->sh.SubroutineUniformRemapTable,
                   gl_uniform_storage *,
                   max_loc + 1);
 
-      if (!sh->SubroutineUniformRemapTable) {
+      if (!p->sh.SubroutineUniformRemapTable) {
          linker_error(prog, "Out of memory during linking.\n");
          return false;
       }
 
       /* Initialize allocated space. */
-      for (unsigned i = sh->NumSubroutineUniformRemapTable; i < max_loc + 1; i++)
-         sh->SubroutineUniformRemapTable[i] = NULL;
+      for (unsigned i = p->sh.NumSubroutineUniformRemapTable; i < max_loc + 1; i++)
+         p->sh.SubroutineUniformRemapTable[i] = NULL;
 
-      sh->NumSubroutineUniformRemapTable = max_loc + 1;
+      p->sh.NumSubroutineUniformRemapTable = max_loc + 1;
    }
 
    for (unsigned i = 0; i < slots; i++) {
       unsigned loc = var->data.location + i;
 
       /* Check if location is already used. */
-      if (sh->SubroutineUniformRemapTable[loc] == INACTIVE_UNIFORM_EXPLICIT_LOCATION) {
+      if (p->sh.SubroutineUniformRemapTable[loc] == INACTIVE_UNIFORM_EXPLICIT_LOCATION) {
 
          /* ARB_explicit_uniform_location specification states:
           *     "No two subroutine uniform variables can have the same location
@@ -3362,7 +3363,7 @@ reserve_subroutine_explicit_locations(struct gl_shader_program *prog,
       /* Initialize location as inactive before optimization
        * rounds and location assignment.
        */
-      sh->SubroutineUniformRemapTable[loc] = INACTIVE_UNIFORM_EXPLICIT_LOCATION;
+      p->sh.SubroutineUniformRemapTable[loc] = INACTIVE_UNIFORM_EXPLICIT_LOCATION;
    }
 
    return true;
@@ -3393,9 +3394,9 @@ check_explicit_uniform_locations(struct gl_context *ctx,
    unsigned mask = prog->data->linked_stages;
    while (mask) {
       const int i = u_bit_scan(&mask);
-      struct gl_linked_shader *sh = prog->_LinkedShaders[i];
+      struct gl_program *p = prog->_LinkedShaders[i]->Program;
 
-      foreach_in_list(ir_instruction, node, sh->ir) {
+      foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
          ir_variable *var = node->as_variable();
          if (!var || var->data.mode != ir_var_uniform)
             continue;
@@ -3403,7 +3404,7 @@ check_explicit_uniform_locations(struct gl_context *ctx,
          if (var->data.explicit_location) {
             bool ret = false;
             if (var->type->without_array()->is_subroutine())
-               ret = reserve_subroutine_explicit_locations(prog, sh, var);
+               ret = reserve_subroutine_explicit_locations(prog, p, var);
             else {
                int slots = reserve_explicit_locations(prog, uniform_map,
                                                       var);
@@ -4341,12 +4342,12 @@ build_program_resource_list(struct gl_context *ctx,
    unsigned mask = shProg->data->linked_stages;
    while (mask) {
       const int i = u_bit_scan(&mask);
-      struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
+      struct gl_program *p = shProg->_LinkedShaders[i]->Program;
 
       GLuint type = _mesa_shader_stage_to_subroutine((gl_shader_stage)i);
-      for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
+      for (unsigned j = 0; j < p->sh.NumSubroutineFunctions; j++) {
          if (!add_program_resource(shProg, resource_set,
-                                   type, &sh->SubroutineFunctions[j], 0))
+                                   type, &p->sh.SubroutineFunctions[j], 0))
             return;
       }
    }
@@ -4396,33 +4397,33 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
    unsigned mask = prog->data->linked_stages;
    while (mask) {
       const int i = u_bit_scan(&mask);
-      gl_linked_shader *sh = prog->_LinkedShaders[i];
+      gl_program *p = prog->_LinkedShaders[i]->Program;
 
-      sh->MaxSubroutineFunctionIndex = 0;
-      foreach_in_list(ir_instruction, node, sh->ir) {
+      p->sh.MaxSubroutineFunctionIndex = 0;
+      foreach_in_list(ir_instruction, node, prog->_LinkedShaders[i]->ir) {
          ir_function *fn = node->as_function();
          if (!fn)
             continue;
 
          if (fn->is_subroutine)
-            sh->NumSubroutineUniformTypes++;
+            p->sh.NumSubroutineUniformTypes++;
 
          if (!fn->num_subroutine_types)
             continue;
 
          /* these should have been calculated earlier. */
          assert(fn->subroutine_index != -1);
-         if (sh->NumSubroutineFunctions + 1 > MAX_SUBROUTINES) {
+         if (p->sh.NumSubroutineFunctions + 1 > MAX_SUBROUTINES) {
             linker_error(prog, "Too many subroutine functions declared.\n");
             return;
          }
-         sh->SubroutineFunctions = reralloc(sh, sh->SubroutineFunctions,
+         p->sh.SubroutineFunctions = reralloc(p, p->sh.SubroutineFunctions,
                                             struct gl_subroutine_function,
-                                            sh->NumSubroutineFunctions + 1);
-         sh->SubroutineFunctions[sh->NumSubroutineFunctions].name = ralloc_strdup(sh, fn->name);
-         sh->SubroutineFunctions[sh->NumSubroutineFunctions].num_compat_types = fn->num_subroutine_types;
-         sh->SubroutineFunctions[sh->NumSubroutineFunctions].types =
-            ralloc_array(sh, const struct glsl_type *,
+                                            p->sh.NumSubroutineFunctions + 1);
+         p->sh.SubroutineFunctions[p->sh.NumSubroutineFunctions].name = ralloc_strdup(p, fn->name);
+         p->sh.SubroutineFunctions[p->sh.NumSubroutineFunctions].num_compat_types = fn->num_subroutine_types;
+         p->sh.SubroutineFunctions[p->sh.NumSubroutineFunctions].types =
+            ralloc_array(p, const struct glsl_type *,
                          fn->num_subroutine_types);
 
          /* From Section 4.4.4(Subroutine Function Layout Qualifiers) of the
@@ -4432,23 +4433,23 @@ link_assign_subroutine_types(struct gl_shader_program *prog)
           *    given a unique index, otherwise a compile or link error will be
           *    generated."
           */
-         for (unsigned j = 0; j < sh->NumSubroutineFunctions; j++) {
-            if (sh->SubroutineFunctions[j].index != -1 &&
-                sh->SubroutineFunctions[j].index == fn->subroutine_index) {
+         for (unsigned j = 0; j < p->sh.NumSubroutineFunctions; j++) {
+            if (p->sh.SubroutineFunctions[j].index != -1 &&
+                p->sh.SubroutineFunctions[j].index == fn->subroutine_index) {
                linker_error(prog, "each subroutine index qualifier in the "
                             "shader must be unique\n");
                return;
             }
          }
-         sh->SubroutineFunctions[sh->NumSubroutineFunctions].index =
+         p->sh.SubroutineFunctions[p->sh.NumSubroutineFunctions].index =
             fn->subroutine_index;
 
-         if (fn->subroutine_index > (int)sh->MaxSubroutineFunctionIndex)
-            sh->MaxSubroutineFunctionIndex = fn->subroutine_index;
+         if (fn->subroutine_index > (int)p->sh.MaxSubroutineFunctionIndex)
+            p->sh.MaxSubroutineFunctionIndex = fn->subroutine_index;
 
          for (int j = 0; j < fn->num_subroutine_types; j++)
-            sh->SubroutineFunctions[sh->NumSubroutineFunctions].types[j] = fn->subroutine_types[j];
-         sh->NumSubroutineFunctions++;
+            p->sh.SubroutineFunctions[p->sh.NumSubroutineFunctions].types[j] = fn->subroutine_types[j];
+         p->sh.NumSubroutineFunctions++;
       }
    }
 }
