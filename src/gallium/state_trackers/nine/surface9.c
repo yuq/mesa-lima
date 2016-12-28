@@ -755,6 +755,33 @@ NineSurface9_UploadSelf( struct NineSurface9 *This,
     return D3D_OK;
 }
 
+/* Currently nine_context uses the NineSurface9
+ * fields when it is render target. Any modification requires
+ * pending commands with the surface to be executed. If the bind
+ * count is 0, there is no pending commands. */
+#define PROCESS_IF_BOUND(surf) \
+    if (surf->base.base.bind) \
+        nine_csmt_process(surf->base.base.device);
+
+void
+NineSurface9_SetResource( struct NineSurface9 *This,
+                          struct pipe_resource *resource, unsigned level )
+{
+    /* No need to call PROCESS_IF_BOUND, because SetResource is used only
+     * for MANAGED textures, and they are not render targets. */
+    assert(This->base.pool == D3DPOOL_MANAGED);
+    This->level = level;
+    pipe_resource_reference(&This->base.resource, resource);
+}
+
+void
+NineSurface9_SetMultiSampleType( struct NineSurface9 *This,
+                                 D3DMULTISAMPLE_TYPE mst )
+{
+    PROCESS_IF_BOUND(This);
+    This->desc.MultiSampleType = mst;
+}
+
 void
 NineSurface9_SetResourceResize( struct NineSurface9 *This,
                                 struct pipe_resource *resource )
@@ -764,6 +791,7 @@ NineSurface9_SetResourceResize( struct NineSurface9 *This,
     assert(This->desc.Pool == D3DPOOL_DEFAULT);
     assert(!This->texture);
 
+    PROCESS_IF_BOUND(This);
     pipe_resource_reference(&This->base.resource, resource);
 
     This->desc.Width = This->base.info.width0 = resource->width0;
