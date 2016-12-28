@@ -285,10 +285,14 @@ NineCubeTexture9_AddDirtyRect( struct NineCubeTexture9 *This,
                         This->base.base.info.height0,
                         &This->dirty_rect[FaceType]);
     } else {
-        struct pipe_box box;
-        rect_to_pipe_box_clamp(&box, pDirtyRect);
-        u_box_union_2d(&This->dirty_rect[FaceType], &This->dirty_rect[FaceType],
-                       &box);
+        if (This->dirty_rect[FaceType].width == 0) {
+            rect_to_pipe_box_clamp(&This->dirty_rect[FaceType], pDirtyRect);
+        } else {
+            struct pipe_box box;
+            rect_to_pipe_box_clamp(&box, pDirtyRect);
+            u_box_union_2d(&This->dirty_rect[FaceType], &This->dirty_rect[FaceType],
+                           &box);
+        }
         (void) u_box_clip_2d(&This->dirty_rect[FaceType],
                              &This->dirty_rect[FaceType],
                              This->base.base.info.width0,
