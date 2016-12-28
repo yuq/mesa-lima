@@ -2995,6 +2995,9 @@ static const DWORD nine_samp_state_defaults[NINED3DSAMP_LAST + 1] =
     [NINED3DSAMP_CUBETEX] = 0
 };
 
+/* Note: The following 4 functions assume there is no
+ * pending commands */
+
 void nine_state_restore_non_cso(struct NineDevice9 *device)
 {
     struct nine_context *context = &device->context;

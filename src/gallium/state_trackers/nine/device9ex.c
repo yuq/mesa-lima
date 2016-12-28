@@ -257,6 +257,7 @@ NineDevice9Ex_Reset( struct NineDevice9Ex *This,
             break;
     }
 
+    nine_csmt_process(&This->base);
     nine_state_clear(&This->base.state, TRUE);
     nine_context_clear(&This->base);
 
