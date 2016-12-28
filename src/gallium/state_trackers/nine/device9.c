@@ -522,8 +522,7 @@ NineDevice9_ctor( struct NineDevice9 *This,
     nine_state_init_sw(This);
 
     ID3DPresentGroup_Release(This->present);
-    if (This->csmt_active)
-        nine_csmt_process(This);
+    nine_csmt_process(This);
 
     return D3D_OK;
 }

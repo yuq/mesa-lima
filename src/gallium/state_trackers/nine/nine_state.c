@@ -280,8 +280,7 @@ nine_csmt_resume( struct NineDevice9 *device )
 struct pipe_context *
 nine_context_get_pipe( struct NineDevice9 *device )
 {
-    if (device->csmt_active)
-        nine_csmt_process(device);
+    nine_csmt_process(device);
     return device->context.pipe;
 }
 
@@ -1908,8 +1907,8 @@ nine_context_light_enable_stateblock(struct NineDevice9 *device,
 {
     struct nine_context *context = &device->context;
 
-    if (device->csmt_active) /* TODO: fix */
-        nine_csmt_process(device);
+    /* TODO: Use CSMT_* to avoid calling nine_csmt_process */
+    nine_csmt_process(device);
     memcpy(context->ff.active_light, active_light, NINE_MAX_LIGHTS_ACTIVE * sizeof(context->ff.active_light[0]));
     context->ff.num_lights_active = num_lights_active;
     context->changed.group |= NINE_STATE_FF_LIGHTING;
@@ -2821,10 +2820,9 @@ nine_context_get_query_result(struct NineDevice9 *device, struct pipe_query *que
     struct pipe_context *pipe;
     boolean ret;
 
-    if (wait) {
-        if (device->csmt_active)
-            nine_csmt_process(device);
-    } else if (p_atomic_read(counter) > 0) {
+    if (wait)
+        nine_csmt_process(device);
+    else if (p_atomic_read(counter) > 0) {
         if (flush && device->csmt_active)
             nine_queue_flush(device->csmt_ctx->pool);
         DBG("Pending begin/end. Returning\n");
