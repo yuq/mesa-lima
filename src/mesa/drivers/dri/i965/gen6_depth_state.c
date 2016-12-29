@@ -191,20 +191,14 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
          uint32_t offset = 0;
 
          if (stencil_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
-            if (stencil_mt->format == MESA_FORMAT_S_UINT8) {
-               /* Note: we can't compute the stencil offset using
-                * intel_region_get_aligned_offset(), because stencil_region
-                * claims that the region is untiled even though it's W tiled.
-                */
-               offset =
-                  stencil_mt->level[lod].level_y * stencil_mt->pitch +
-                  stencil_mt->level[lod].level_x * 64;
-            } else {
-               offset = intel_miptree_get_aligned_offset(
-                           stencil_mt,
-                           stencil_mt->level[lod].level_x,
-                           stencil_mt->level[lod].level_y);
-            }
+            assert(stencil_mt->format == MESA_FORMAT_S_UINT8);
+
+            /* Note: we can't compute the stencil offset using
+             * intel_region_get_aligned_offset(), because stencil_region
+             * claims that the region is untiled even though it's W tiled.
+             */
+            offset = stencil_mt->level[lod].level_y * stencil_mt->pitch +
+                     stencil_mt->level[lod].level_x * 64;
          }
 
 	 BEGIN_BATCH(3);
