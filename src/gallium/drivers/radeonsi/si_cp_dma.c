@@ -169,6 +169,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 {
 	struct si_context *sctx = (struct si_context*)ctx;
 	struct radeon_winsys *ws = sctx->b.ws;
+	struct r600_resource *rdst = r600_resource(dst);
 	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
 	unsigned flush_flags = get_flush_flags(sctx, coher);
 
@@ -178,7 +179,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	/* Mark the buffer range of destination as valid (initialized),
 	 * so that transfer_map knows it should wait for the GPU when mapping
 	 * that range. */
-	util_range_add(&r600_resource(dst)->valid_buffer_range, offset,
+	util_range_add(&rdst->valid_buffer_range, offset,
 		       offset + size);
 
 	/* Fallback for unaligned clears. */
@@ -206,14 +207,13 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	      * si_emit_framebuffer_state (in a draw call) adds them.
 	      * For example, DeusEx:MD has 21 buffer clears per frame and all
 	      * of them are moved to SDMA thanks to this. */
-	     !ws->cs_is_buffer_referenced(sctx->b.gfx.cs,
-					  r600_resource(dst)->buf,
+	     !ws->cs_is_buffer_referenced(sctx->b.gfx.cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
 		sctx->b.dma_clear_buffer(ctx, dst, offset, size, value);
 		return;
 	}
 
-	uint64_t va = r600_resource(dst)->gpu_address + offset;
+	uint64_t va = rdst->gpu_address + offset;
 
 	/* Flush the caches. */
 	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
@@ -233,7 +233,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	}
 
 	if (tc_l2_flag)
-		r600_resource(dst)->TC_L2_dirty = true;
+		rdst->TC_L2_dirty = true;
 
 	sctx->b.num_cp_dma_calls++;
 }
