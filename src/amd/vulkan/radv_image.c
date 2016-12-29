@@ -712,7 +712,7 @@ radv_image_create(VkDevice _device,
 	image->size = image->surface.bo_size;
 	image->alignment = image->surface.bo_alignment;
 
-	if (image->exclusive || (image->queue_family_mask & 1) == 1)
+	if (image->exclusive || image->queue_family_mask == 1)
 		can_cmask_dcc = true;
 
 	if ((pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
@@ -900,8 +900,7 @@ bool radv_layout_can_fast_clear(const struct radv_image *image,
 			        VkImageLayout layout,
 			        unsigned queue_mask)
 {
-	return (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL ||
-		layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) &&
+	return layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL &&
 		queue_mask == (1u << RADV_QUEUE_GENERAL);
 }
 
