@@ -478,8 +478,6 @@ static int compare_dev(void *key1, void *key2)
    return key1 != key2;
 }
 
-DEBUG_GET_ONCE_BOOL_OPTION(thread, "RADEON_THREAD", true)
-
 static bool amdgpu_winsys_unref(struct radeon_winsys *rws)
 {
    struct amdgpu_winsys *ws = (struct amdgpu_winsys*)rws;
@@ -584,8 +582,11 @@ amdgpu_winsys_create(int fd, radeon_screen_create_t screen_create)
    pipe_mutex_init(ws->global_bo_list_lock);
    pipe_mutex_init(ws->bo_fence_lock);
 
-   if (sysconf(_SC_NPROCESSORS_ONLN) > 1 && debug_get_option_thread())
-      util_queue_init(&ws->cs_queue, "amdgpu_cs", 8, 1);
+   if (!util_queue_init(&ws->cs_queue, "amdgpu_cs", 8, 1)) {
+      amdgpu_winsys_destroy(&ws->base);
+      pipe_mutex_unlock(dev_tab_mutex);
+      return NULL;
+   }
 
    /* Create the screen at the end. The winsys must be initialized
     * completely.
