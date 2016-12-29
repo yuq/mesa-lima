@@ -674,7 +674,7 @@ radv_image_create(VkDevice _device,
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	const VkImageCreateInfo *pCreateInfo = create_info->vk_info;
 	struct radv_image *image = NULL;
-
+	bool can_cmask_dcc = false;
 	assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO);
 
 	radv_assert(pCreateInfo->mipLevels > 0);
@@ -712,15 +712,18 @@ radv_image_create(VkDevice _device,
 	image->size = image->surface.bo_size;
 	image->alignment = image->surface.bo_alignment;
 
+	if (image->exclusive || (image->queue_family_mask & 1) == 1)
+		can_cmask_dcc = true;
+
 	if ((pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
-	    image->surface.dcc_size)
+	    image->surface.dcc_size && can_cmask_dcc)
 		radv_image_alloc_dcc(device, image);
 	else
 		image->surface.dcc_size = 0;
 
 	if ((pCreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) &&
 	    pCreateInfo->mipLevels == 1 &&
-	    !image->surface.dcc_size && image->extent.depth == 1)
+	    !image->surface.dcc_size && image->extent.depth == 1 && can_cmask_dcc)
 		radv_image_alloc_cmask(device, image);
 	if (image->samples > 1 && vk_format_is_color(pCreateInfo->format)) {
 		radv_image_alloc_fmask(device, image);
