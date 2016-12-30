@@ -2386,12 +2386,16 @@ static int image_type_to_components_count(enum glsl_sampler_dim dim, bool array)
 		return array ? 2 : 1;
 	case GLSL_SAMPLER_DIM_2D:
 		return array ? 3 : 2;
+	case GLSL_SAMPLER_DIM_MS:
+		return array ? 4 : 3;
 	case GLSL_SAMPLER_DIM_3D:
 	case GLSL_SAMPLER_DIM_CUBE:
 		return 3;
 	case GLSL_SAMPLER_DIM_RECT:
 	case GLSL_SAMPLER_DIM_SUBPASS:
 		return 2;
+	case GLSL_SAMPLER_DIM_SUBPASS_MS:
+		return 3;
 	default:
 		break;
 	}
@@ -2413,7 +2417,11 @@ static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
 	};
 	LLVMValueRef res;
 	int count;
-	count = image_type_to_components_count(glsl_get_sampler_dim(type),
+	enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
+	bool is_ms = (dim == GLSL_SAMPLER_DIM_MS ||
+		      dim == GLSL_SAMPLER_DIM_SUBPASS_MS);
+
+	count = image_type_to_components_count(dim,
 					       glsl_sampler_type_is_array(type));
 
 	if (count == 1) {
@@ -2423,6 +2431,8 @@ static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
 			res = src0;
 	} else {
 		int chan;
+		if (is_ms)
+			count--;
 		for (chan = 0; chan < count; ++chan) {
 			coords[chan] = LLVMBuildExtractElement(ctx->builder, src0, masks[chan], "");
 		}
@@ -2431,6 +2441,11 @@ static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
 			for (chan = 0; chan < count; ++chan)
 				coords[chan] = LLVMBuildAdd(ctx->builder, coords[chan], LLVMBuildFPToUI(ctx->builder, ctx->frag_pos[chan], ctx->i32, ""), "");
 		}
+		if (is_ms) {
+			coords[count] = llvm_extract_elem(ctx, get_src(ctx, instr->src[1]), 0);
+			count++;
+		}
+
 		if (count == 3) {
 			coords[3] = LLVMGetUndef(ctx->i32);
 			count = 4;
