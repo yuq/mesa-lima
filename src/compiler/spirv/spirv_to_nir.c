@@ -2506,6 +2506,7 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityCullDistance:
       case SpvCapabilityInputAttachment:
       case SpvCapabilityImageGatherExtended:
+      case SpvCapabilityStorageImageExtendedFormats:
          break;
 
       case SpvCapabilityGeometryStreams:
@@ -2546,9 +2547,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
                   spirv_capability_to_string(cap));
          break;
 
-      case SpvCapabilityStorageImageExtendedFormats:
-         spv_check_supported(storage_image_extended_formats, cap);
-         break;
       case SpvCapabilityImageMSArray:
          spv_check_supported(image_ms_array, cap);
          break;
