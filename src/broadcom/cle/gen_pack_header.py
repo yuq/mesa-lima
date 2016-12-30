@@ -326,6 +326,11 @@ class Group(object):
             if field.type != "mbo":
                 convert = None
 
+                args = []
+                args.append('cl')
+                args.append(str(start + field.start))
+                args.append(str(start + field.end))
+
                 if field.type == "address":
                     convert = "__gen_unpack_address"
                 elif field.type == "uint":
@@ -339,17 +344,17 @@ class Group(object):
                 elif field.type == "offset":
                     convert = "__gen_unpack_offset"
                 elif field.type == 'ufixed':
+                    args.append(str(field.fractional_size))
                     convert = "__gen_unpack_ufixed"
                 elif field.type == 'sfixed':
+                    args.append(str(field.fractional_size))
                     convert = "__gen_unpack_sfixed"
                 else:
                     print("/* unhandled field %s, type %s */\n" % (name, field.type))
                     s = None
 
-                print("   values->%s = %s(cl, %s, %s);" % \
-                      (field.name, convert, \
-                       start + field.start, start + field.end))
-
+                print("   values->%s = %s(%s);" % \
+                      (field.name, convert, ', '.join(args)))
 
 class Value(object):
     def __init__(self, attrs):
