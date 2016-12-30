@@ -1945,7 +1945,11 @@ struct gl_program
    /** Map from sampler unit to texture unit (set by glUniform1i()) */
    GLubyte SamplerUnits[MAX_SAMPLERS];
 
-   union {
+   /* FIXME: We should be able to make this struct a union. However some
+    * drivers (i915/fragment_programs, swrast/prog_execute) mix the use of
+    * these fields, we should fix this.
+    */
+   struct {
       /** Fields used by GLSL programs */
       struct {
          struct gl_active_atomic_buffer **AtomicBuffers;
