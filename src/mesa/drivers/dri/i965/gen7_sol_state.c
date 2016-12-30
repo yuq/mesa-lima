@@ -228,12 +228,12 @@ upload_3dstate_streamout(struct brw_context *brw, bool active,
    /* BRW_NEW_TRANSFORM_FEEDBACK */
    struct gl_transform_feedback_object *xfb_obj =
       ctx->TransformFeedback.CurrentObject;
-   const struct gl_transform_feedback_info *linked_xfb_info =
-      xfb_obj->program->sh.LinkedTransformFeedback;
    uint32_t dw1 = 0, dw2 = 0, dw3 = 0, dw4 = 0;
    int i;
 
    if (active) {
+      const struct gl_transform_feedback_info *linked_xfb_info =
+         xfb_obj->program->sh.LinkedTransformFeedback;
       int urb_entry_read_offset = 0;
       int urb_entry_read_length = (vue_map->num_slots + 1) / 2 -
 	 urb_entry_read_offset;
