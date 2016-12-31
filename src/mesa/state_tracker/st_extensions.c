@@ -310,6 +310,8 @@ void st_init_limits(struct pipe_screen *screen,
       options->LowerBufferInterfaceBlocks = true;
    }
 
+   c->GLSLOptimizeConservatively =
+      screen->get_param(screen, PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY);
    c->LowerTessLevel = true;
    c->LowerCsDerivedVariables = true;
    c->PrimitiveRestartForPatches =
