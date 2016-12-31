@@ -6768,6 +6768,55 @@ get_mesa_program(struct gl_context *ctx,
    return prog;
 }
 
+/* See if there are unsupported control flow statements. */
+class ir_control_flow_info_visitor : public ir_hierarchical_visitor {
+private:
+   const struct gl_shader_compiler_options *options;
+public:
+   ir_control_flow_info_visitor(const struct gl_shader_compiler_options *options)
+      : options(options),
+        unsupported(false)
+   {
+   }
+
+   virtual ir_visitor_status visit_enter(ir_function *ir)
+   {
+      /* Other functions are skipped (same as glsl_to_tgsi). */
+      if (strcmp(ir->name, "main") == 0)
+         return visit_continue;
+
+      return visit_continue_with_parent;
+   }
+
+   virtual ir_visitor_status visit_enter(ir_call *ir)
+   {
+      if (!ir->callee->is_intrinsic()) {
+         unsupported = true; /* it's a function call */
+         return visit_stop;
+      }
+      return visit_continue;
+   }
+
+   virtual ir_visitor_status visit_enter(ir_return *ir)
+   {
+      if (options->EmitNoMainReturn) {
+         unsupported = true;
+         return visit_stop;
+      }
+      return visit_continue;
+   }
+
+   bool unsupported;
+};
+
+static bool
+has_unsupported_control_flow(exec_list *ir,
+                             const struct gl_shader_compiler_options *options)
+{
+   ir_control_flow_info_visitor visitor(options);
+   visit_list_elements(&visitor, ir);
+   return visitor.unsupported;
+}
 
 extern "C" {
 
@@ -6787,7 +6836,6 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       if (prog->_LinkedShaders[i] == NULL)
          continue;
 
-      bool progress;
       exec_list *ir = prog->_LinkedShaders[i]->ir;
       gl_shader_stage stage = prog->_LinkedShaders[i]->Stage;
       const struct gl_shader_compiler_options *options =
@@ -6871,14 +6919,24 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
          lower_discard(ir);
       }
 
-      do {
-         progress = do_common_optimization(ir, true, true, options,
-                                           ctx->Const.NativeIntegers);
-         progress = lower_if_to_cond_assign((gl_shader_stage)i, ir,
-                                            options->MaxIfDepth, if_threshold) ||
-                    progress;
-
-      } while (progress);
+      if (ctx->Const.GLSLOptimizeConservatively) {
+         /* Do it once and repeat only if there's unsupported control flow. */
+         do {
+            do_common_optimization(ir, true, true, options,
+                                   ctx->Const.NativeIntegers);
+            lower_if_to_cond_assign((gl_shader_stage)i, ir,
+                                    options->MaxIfDepth, if_threshold);
+         } while (has_unsupported_control_flow(ir, options));
+      } else {
+         /* Repeat it until it stops making changes. */
+         bool progress;
+         do {
+            progress = do_common_optimization(ir, true, true, options,
+                                              ctx->Const.NativeIntegers);
+            progress |= lower_if_to_cond_assign((gl_shader_stage)i, ir,
+                                                options->MaxIfDepth, if_threshold);
+         } while (progress);
+      }
 
       validate_ir_tree(ir);
    }
