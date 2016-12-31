@@ -6872,14 +6872,8 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       }
 
       do {
-         progress = false;
-
-         progress = do_lower_jumps(ir, true, true, options->EmitNoMainReturn, options->EmitNoCont, options->EmitNoLoops) || progress;
-
          progress = do_common_optimization(ir, true, true, options,
-                                           ctx->Const.NativeIntegers)
-           || progress;
-
+                                           ctx->Const.NativeIntegers);
          progress = lower_if_to_cond_assign((gl_shader_stage)i, ir,
                                             options->MaxIfDepth, if_threshold) ||
                     progress;

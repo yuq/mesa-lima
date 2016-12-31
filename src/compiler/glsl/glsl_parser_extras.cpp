@@ -2106,7 +2106,8 @@ do_common_optimization(exec_list *ir, bool linked,
    OPT(do_minmax_prune, ir);
    OPT(do_rebalance_tree, ir);
    OPT(do_algebraic, ir, native_integers, options);
-   OPT(do_lower_jumps, ir);
+   OPT(do_lower_jumps, ir, true, true, options->EmitNoMainReturn,
+       options->EmitNoCont, options->EmitNoLoops);
    OPT(do_vec_index_to_swizzle, ir);
    OPT(lower_vector_insert, ir, false);
    OPT(do_swizzle_swizzle, ir);
