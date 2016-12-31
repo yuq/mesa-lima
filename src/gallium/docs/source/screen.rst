@@ -366,6 +366,9 @@ The integer capabilities:
   ARB_transform_feedback3.
 * ``PIPE_CAP_TGSI_CAN_READ_OUTPUTS``: Whether every TGSI shader stage can read
   from the output file.
+* ``PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY``: Tell the GLSL compiler to use
+  the minimum amount of optimizations just to be able to do all the linking
+  and lowering.
 
 
 .. _pipe_capf:
