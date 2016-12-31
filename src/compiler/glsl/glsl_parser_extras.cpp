@@ -1949,12 +1949,20 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 
       assign_subroutine_indexes(shader, state);
       lower_subroutine(shader->ir, state);
+
       /* Do some optimization at compile time to reduce shader IR size
        * and reduce later work if the same shader is linked multiple times
        */
-      while (do_common_optimization(shader->ir, false, false, options,
-                                    ctx->Const.NativeIntegers))
-         ;
+      if (ctx->Const.GLSLOptimizeConservatively) {
+         /* Run it just once. */
+         do_common_optimization(shader->ir, false, false, options,
+                                ctx->Const.NativeIntegers);
+      } else {
+         /* Repeat it until it stops making changes. */
+         while (do_common_optimization(shader->ir, false, false, options,
+                                       ctx->Const.NativeIntegers))
+            ;
+      }
 
       validate_ir_tree(shader->ir);
 

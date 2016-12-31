@@ -5048,10 +5048,18 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          lower_tess_level(prog->_LinkedShaders[i]);
       }
 
-      while (do_common_optimization(prog->_LinkedShaders[i]->ir, true, false,
-                                    &ctx->Const.ShaderCompilerOptions[i],
-                                    ctx->Const.NativeIntegers))
-         ;
+      if (ctx->Const.GLSLOptimizeConservatively) {
+         /* Run it just once. */
+         do_common_optimization(prog->_LinkedShaders[i]->ir, true, false,
+                                &ctx->Const.ShaderCompilerOptions[i],
+                                ctx->Const.NativeIntegers);
+      } else {
+         /* Repeat it until it stops making changes. */
+         while (do_common_optimization(prog->_LinkedShaders[i]->ir, true, false,
+                                       &ctx->Const.ShaderCompilerOptions[i],
+                                       ctx->Const.NativeIntegers))
+            ;
+      }
 
       lower_const_arrays_to_uniforms(prog->_LinkedShaders[i]->ir, i);
       propagate_invariance(prog->_LinkedShaders[i]->ir);
