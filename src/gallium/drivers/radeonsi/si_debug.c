@@ -221,15 +221,18 @@ static void si_dump_last_ib(struct si_context *sctx, FILE *f)
 
 	if (sctx->init_config)
 		ac_parse_ib(f, sctx->init_config->pm4, sctx->init_config->ndw,
-			    -1, "IB2: Init config", sctx->b.chip_class);
+			    -1, "IB2: Init config", sctx->b.chip_class,
+			    NULL, NULL);
 
 	if (sctx->init_config_gs_rings)
 		ac_parse_ib(f, sctx->init_config_gs_rings->pm4,
 			    sctx->init_config_gs_rings->ndw,
-			    -1, "IB2: Init GS rings", sctx->b.chip_class);
+			    -1, "IB2: Init GS rings", sctx->b.chip_class,
+			    NULL, NULL);
 
 	ac_parse_ib(f, sctx->last_gfx.ib, sctx->last_gfx.num_dw,
-		    last_trace_id, "IB", sctx->b.chip_class);
+		    last_trace_id, "IB", sctx->b.chip_class,
+		     NULL, NULL);
 }
 
 static const char *priority_to_string(enum radeon_bo_priority priority)

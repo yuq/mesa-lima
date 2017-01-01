@@ -777,8 +777,9 @@ static int radv_amdgpu_winsys_cs_submit(struct radeon_winsys_ctx *_ctx,
 }
 
 
-static void *radv_amdgpu_winsys_get_cpu_addr(struct radv_amdgpu_cs *cs, uint64_t addr)
+static void *radv_amdgpu_winsys_get_cpu_addr(void *_cs, uint64_t addr)
 {
+	struct radv_amdgpu_cs *cs = (struct radv_amdgpu_cs *)_cs;
 	void *ret = NULL;
 	for (unsigned i = 0; i <= cs->num_old_ib_buffers; ++i) {
 		struct radv_amdgpu_winsys_bo *bo;
@@ -801,7 +802,8 @@ static void radv_amdgpu_winsys_cs_dump(struct radeon_winsys_cs *_cs,
 
 	ac_parse_ib(file,
 		    radv_amdgpu_winsys_get_cpu_addr(cs, cs->ib.ib_mc_address),
-		    cs->ib.size, trace_id,  "main IB", cs->ws->info.chip_class);
+		    cs->ib.size, trace_id,  "main IB", cs->ws->info.chip_class,
+		    radv_amdgpu_winsys_get_cpu_addr, cs);
 }
 
 static struct radeon_winsys_ctx *radv_amdgpu_ctx_create(struct radeon_winsys *_ws)

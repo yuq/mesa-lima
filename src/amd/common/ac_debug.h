@@ -35,9 +35,12 @@
 #define AC_IS_TRACE_POINT(x)            (((x) & 0xcafe0000) == 0xcafe0000)
 #define AC_GET_TRACE_POINT_ID(x)        ((x) & 0xffff)
 
+typedef void *(*ac_debug_addr_callback)(void *data, uint64_t addr);
+
 void ac_dump_reg(FILE *file, unsigned offset, uint32_t value,
 		 uint32_t field_mask);
 void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
-		 const char *name, enum chip_class chip_class);
+		 const char *name, enum chip_class chip_class,
+		 ac_debug_addr_callback addr_callback, void *addr_callback_data);
 
 #endif

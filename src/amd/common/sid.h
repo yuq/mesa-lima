@@ -133,7 +133,9 @@
 #define   R_3F1_IB_BASE_HI                     0x3F1
 #define   R_3F2_CONTROL                        0x3F2
 #define     S_3F2_IB_SIZE(x)                   (((unsigned)(x) & 0xfffff) << 0)
+#define     G_3F2_IB_SIZE(x)                   (((unsigned)(x) >> 0) & 0xfffff)
 #define     S_3F2_CHAIN(x)                     (((unsigned)(x) & 0x1) << 20)
+#define     G_3F2_CHAIN(x)                     (((unsigned)(x) >> 20) & 0x1)
 #define     S_3F2_VALID(x)                     (((unsigned)(x) & 0x1) << 23)
 
 #define PKT3_COPY_DATA			       0x40

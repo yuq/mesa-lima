@@ -139,7 +139,9 @@ static void ac_parse_set_reg_packet(FILE *f, uint32_t *ib, unsigned count,
 }
 
 static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
-				  int trace_id, enum chip_class chip_class)
+				  int trace_id, enum chip_class chip_class,
+				  ac_debug_addr_callback addr_callback,
+				  void *addr_callback_data)
 {
 	unsigned count = PKT_COUNT_G(ib[0]);
 	unsigned op = PKT3_IT_OPCODE_G(ib[0]);
@@ -258,6 +260,17 @@ static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
 		ac_dump_reg(f, R_3F0_IB_BASE_LO, ib[1], ~0);
 		ac_dump_reg(f, R_3F1_IB_BASE_HI, ib[2], ~0);
 		ac_dump_reg(f, R_3F2_CONTROL, ib[3], ~0);
+
+		if (addr_callback) {
+			uint64_t addr = ((uint64_t)ib[2] << 32) | ib[1];
+			void *data = addr_callback(addr_callback_data, addr);
+			const char *name = G_3F2_CHAIN(ib[3]) ? "chained" : "nested";
+
+			if (data)
+				ac_parse_ib(f, data,  G_3F2_IB_SIZE(ib[3]),
+					    trace_id, name, chip_class,
+					    addr_callback, addr_callback_data);
+		}
 		break;
 	case PKT3_CLEAR_STATE:
 	case PKT3_INCREMENT_DE_COUNTER:
@@ -320,9 +333,13 @@ static uint32_t *ac_parse_packet3(FILE *f, uint32_t *ib, int *num_dw,
  * \param chip_class	chip class
  * \param trace_id	the last trace ID that is known to have been reached
  *			and executed by the CP, typically read from a buffer
+ * \param addr_callback Get a mapped pointer of the IB at a given address. Can
+ *                      be NULL.
+ * \param addr_callback_data user data for addr_callback
  */
 void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
-		 const char *name, enum chip_class chip_class)
+		 const char *name, enum chip_class chip_class,
+		 ac_debug_addr_callback addr_callback, void *addr_callback_data)
 {
 	fprintf(f, "------------------ %s begin ------------------\n", name);
 
@@ -332,7 +349,8 @@ void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
 		switch (type) {
 		case 3:
 			ib = ac_parse_packet3(f, ib, &num_dw, trace_id,
-					      chip_class);
+					      chip_class, addr_callback,
+					      addr_callback_data);
 			break;
 		case 2:
 			/* type-2 nop */
