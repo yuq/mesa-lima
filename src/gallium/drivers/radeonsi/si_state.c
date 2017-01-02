@@ -3498,7 +3498,7 @@ static void si_set_tess_state(struct pipe_context *ctx,
 	pipe_resource_reference(&cb.buffer, NULL);
 }
 
-static void si_texture_barrier(struct pipe_context *ctx)
+static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
 

@@ -400,6 +400,12 @@ enum pipe_flush_flags
 #define PIPE_BARRIER_ALL               ((1 << 12) - 1)
 
 /**
+ * Flags for pipe_context::texture_barrier.
+ */
+#define PIPE_TEXTURE_BARRIER_SAMPLER      (1 << 0)
+#define PIPE_TEXTURE_BARRIER_FRAMEBUFFER  (1 << 1)
+
+/**
  * Resource binding flags -- state tracker must specify in advance all
  * the ways a resource might be used.
  */

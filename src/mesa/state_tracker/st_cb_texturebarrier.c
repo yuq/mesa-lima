@@ -50,7 +50,7 @@ st_TextureBarrier(struct gl_context *ctx)
 {
    struct pipe_context *pipe = st_context(ctx)->pipe;
 
-   pipe->texture_barrier(pipe);
+   pipe->texture_barrier(pipe, PIPE_TEXTURE_BARRIER_SAMPLER);
 }
 
 

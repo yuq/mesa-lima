@@ -566,7 +566,7 @@ struct pipe_context {
    /**
     * Flush any pending framebuffer writes and invalidate texture caches.
     */
-   void (*texture_barrier)(struct pipe_context *);
+   void (*texture_barrier)(struct pipe_context *, unsigned flags);
 
    /**
     * Flush caches according to flags.

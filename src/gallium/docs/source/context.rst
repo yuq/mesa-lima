@@ -578,7 +578,8 @@ texture_barrier
 %%%%%%%%%%%%%%%
 
 This function flushes all pending writes to the currently-set surfaces and
-invalidates all read caches of the currently-set samplers.
+invalidates all read caches of the currently-set samplers. This can be used
+for both regular textures as well as for framebuffers read via FBFETCH.
 
 
 
