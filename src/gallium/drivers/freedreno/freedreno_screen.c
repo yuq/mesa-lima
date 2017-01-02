@@ -78,6 +78,7 @@ static const struct debug_named_value debug_options[] = {
 		{"nir",       FD_DBG_NIR,    "Prefer NIR as native IR"},
 		{"reorder",   FD_DBG_REORDER,"Enable reordering for draws/blits"},
 		{"bstat",     FD_DBG_BSTAT,  "Print batch stats at context destroy"},
+		{"nogrow",    FD_DBG_NOGROW, "Disable \"growable\" cmdstream buffers, even if kernel supports it"},
 		DEBUG_NAMED_VALUE_END
 };
 

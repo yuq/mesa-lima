@@ -48,7 +48,8 @@ batch_init(struct fd_batch *batch)
 	 * we don't need to grow the ringbuffer.  Performance is likely to
 	 * suffer, but there is no good alternative.
 	 */
-	if (fd_device_version(ctx->screen->dev) < FD_VERSION_UNLIMITED_CMDS) {
+	if ((fd_device_version(ctx->screen->dev) < FD_VERSION_UNLIMITED_CMDS) ||
+			(fd_mesa_debug & FD_DBG_NOGROW)){
 		size = 0x100000;
 	}
 
