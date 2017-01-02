@@ -868,6 +868,7 @@ hud_graph_destroy(struct hud_graph *graph)
 void
 hud_graph_set_dump_file(struct hud_graph *gr)
 {
+#ifndef PIPE_OS_WINDOWS
    const char *hud_dump_dir = getenv("GALLIUM_HUD_DUMP_DIR");
    char *dump_file;
 
@@ -880,6 +881,7 @@ hud_graph_set_dump_file(struct hud_graph *gr)
          free(dump_file);
       }
    }
+#endif
 }
 
 /**
