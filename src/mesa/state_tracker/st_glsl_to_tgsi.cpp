@@ -2520,10 +2520,19 @@ glsl_to_tgsi_visitor::visit(ir_dereference_variable *ir)
          else
             decl->size = type_size(var->type);
 
-         entry = new(mem_ctx) variable_storage(var,
-                                               PROGRAM_OUTPUT,
-                                               decl->mesa_index,
-                                               decl->array_id);
+         if (var->data.fb_fetch_output) {
+            st_dst_reg dst = st_dst_reg(get_temp(var->type));
+            st_src_reg src = st_src_reg(PROGRAM_OUTPUT, decl->mesa_index,
+                                        var->type, component, decl->array_id);
+            emit_asm(NULL, TGSI_OPCODE_FBFETCH, dst, src);
+            entry = new(mem_ctx) variable_storage(var, dst.file, dst.index,
+                                                  dst.array_id);
+         } else {
+            entry = new(mem_ctx) variable_storage(var,
+                                                  PROGRAM_OUTPUT,
+                                                  decl->mesa_index,
+                                                  decl->array_id);
+         }
          entry->component = component;
 
          this->variables.push_tail(entry);
@@ -6855,8 +6864,9 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       if (prog->_LinkedShaders[i] == NULL)
          continue;
 
-      exec_list *ir = prog->_LinkedShaders[i]->ir;
-      gl_shader_stage stage = prog->_LinkedShaders[i]->Stage;
+      struct gl_linked_shader *shader = prog->_LinkedShaders[i];
+      exec_list *ir = shader->ir;
+      gl_shader_stage stage = shader->Stage;
       const struct gl_shader_compiler_options *options =
             &ctx->Const.ShaderCompilerOptions[stage];
       enum pipe_shader_type ptarget = st_shader_stage_to_ptarget(stage);
@@ -6872,7 +6882,7 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
        */
       if (options->EmitNoIndirectInput || options->EmitNoIndirectOutput ||
           options->EmitNoIndirectTemp || options->EmitNoIndirectUniform) {
-         lower_variable_index_to_cond_assign(prog->_LinkedShaders[i]->Stage, ir,
+         lower_variable_index_to_cond_assign(stage, ir,
                                              options->EmitNoIndirectInput,
                                              options->EmitNoIndirectOutput,
                                              options->EmitNoIndirectTemp,
@@ -6902,6 +6912,10 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       if (!pscreen->get_param(pscreen, PIPE_CAP_TEXTURE_GATHER_OFFSETS))
          lower_offset_arrays(ir);
       do_mat_op_to_vec(ir);
+
+      if (stage == MESA_SHADER_FRAGMENT)
+         lower_blend_equation_advanced(shader);
+
       lower_instructions(ir,
                          MOD_TO_FLOOR |
                          DIV_TO_MUL_RCP |
