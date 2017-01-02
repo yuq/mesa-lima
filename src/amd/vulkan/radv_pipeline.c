@@ -418,7 +418,7 @@ static struct radv_shader_variant *radv_shader_variant_create(struct radv_device
 
 	struct ac_shader_binary binary;
 
-	options.unsafe_math = env_var_as_boolean("RADV_UNSAFE_MATH", false);
+	options.unsafe_math = !!(device->debug_flags & RADV_DEBUG_UNSAFE_MATH);
 	options.family = chip_family;
 	options.chip_class = device->instance->physicalDevice.rad_info.chip_class;
 	tm = ac_create_target_machine(chip_family);
@@ -451,14 +451,14 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 		      gl_shader_stage stage,
 		      const VkSpecializationInfo *spec_info,
 		      struct radv_pipeline_layout *layout,
-		      const union ac_shader_variant_key *key,
-		      bool dump)
+		      const union ac_shader_variant_key *key)
 {
 	unsigned char sha1[20];
 	struct radv_shader_variant *variant;
 	nir_shader *nir;
 	void *code = NULL;
 	unsigned code_size = 0;
+	bool dump = (pipeline->device->debug_flags & RADV_DEBUG_DUMP_SHADERS);
 
 	if (module->nir)
 		_mesa_sha1_compute(module->nir->info->name,
@@ -1310,7 +1310,6 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 {
 	struct radv_shader_module fs_m = {0};
 
-	bool dump = getenv("RADV_DUMP_SHADERS");
 	if (alloc == NULL)
 		alloc = &device->alloc;
 
@@ -1337,7 +1336,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 					       pStages[MESA_SHADER_VERTEX]->pName,
 					       MESA_SHADER_VERTEX,
 					       pStages[MESA_SHADER_VERTEX]->pSpecializationInfo,
-					       pipeline->layout, &key, dump);
+					       pipeline->layout, &key);
 
 		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_VERTEX);
 	}
@@ -1362,7 +1361,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 					       stage ? stage->pName : "main",
 					       MESA_SHADER_FRAGMENT,
 					       stage ? stage->pSpecializationInfo : NULL,
-					       pipeline->layout, &key, dump);
+					       pipeline->layout, &key);
 		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_FRAGMENT);
 	}
 
@@ -1414,7 +1413,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		pipeline->binding_stride[desc->binding] = desc->stride;
 	}
 
-	if (device->shader_stats_dump) {
+	if (device->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
 		radv_dump_pipeline_stats(device, pipeline);
 	}
 
@@ -1490,7 +1489,6 @@ static VkResult radv_compute_pipeline_create(
 	RADV_FROM_HANDLE(radv_pipeline_cache, cache, _cache);
 	RADV_FROM_HANDLE(radv_shader_module, module, pCreateInfo->stage.module);
 	struct radv_pipeline *pipeline;
-	bool dump = getenv("RADV_DUMP_SHADERS");
 
 	pipeline = vk_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
 			       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1506,11 +1504,11 @@ static VkResult radv_compute_pipeline_create(
 				       pCreateInfo->stage.pName,
 				       MESA_SHADER_COMPUTE,
 				       pCreateInfo->stage.pSpecializationInfo,
-				       pipeline->layout, NULL, dump);
+				       pipeline->layout, NULL);
 
 	*pPipeline = radv_pipeline_to_handle(pipeline);
 
-	if (device->shader_stats_dump) {
+	if (device->debug_flags & RADV_DEBUG_DUMP_SHADER_STATS) {
 		radv_dump_pipeline_stats(device, pipeline);
 	}
 	return VK_SUCCESS;

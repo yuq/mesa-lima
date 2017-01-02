@@ -218,6 +218,18 @@ static const VkAllocationCallbacks default_alloc = {
 	.pfnFree = default_free_func,
 };
 
+static const struct debug_control radv_debug_options[] = {
+	{"fastclears", RADV_DEBUG_FAST_CLEARS},
+	{"nodcc", RADV_DEBUG_NO_DCC},
+	{"shaders", RADV_DEBUG_DUMP_SHADERS},
+	{"nocache", RADV_DEBUG_NO_CACHE},
+	{"shaderstats", RADV_DEBUG_DUMP_SHADER_STATS},
+	{"nohiz", RADV_DEBUG_NO_HIZ},
+	{"nocompute", RADV_DEBUG_NO_COMPUTE_QUEUE},
+	{"unsafemath", RADV_DEBUG_UNSAFE_MATH},
+	{NULL, 0}
+};
+
 VkResult radv_CreateInstance(
 	const VkInstanceCreateInfo*                 pCreateInfo,
 	const VkAllocationCallbacks*                pAllocator,
@@ -275,6 +287,9 @@ VkResult radv_CreateInstance(
 	_mesa_locale_init();
 
 	VG(VALGRIND_CREATE_MEMPOOL(instance, 0, false));
+
+	instance->debug_flags = parse_debug_string(getenv("RADV_DEBUG"),
+						   radv_debug_options);
 
 	*pInstance = radv_instance_to_handle(instance);
 
@@ -555,12 +570,11 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 {
 	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
 	int num_queue_families = 1;
-	bool all_queues = env_var_as_boolean("RADV_SHOW_QUEUES", true);
 	int idx;
-	if (all_queues && pdevice->rad_info.chip_class >= CIK) {
-		if (pdevice->rad_info.compute_rings > 0)
-			num_queue_families++;
-	}
+	if (pdevice->rad_info.compute_rings > 0 &&
+	    pdevice->rad_info.chip_class >= CIK &&
+	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE))
+		num_queue_families++;
 
 	if (pQueueFamilyProperties == NULL) {
 		*pCount = num_queue_families;
@@ -583,12 +597,9 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 		idx++;
 	}
 
-	if (!all_queues) {
-		*pCount = idx;
-		return;
-	}
-
-	if (pdevice->rad_info.compute_rings > 0 && pdevice->rad_info.chip_class >= CIK) {
+	if (pdevice->rad_info.compute_rings > 0 &&
+	    pdevice->rad_info.chip_class >= CIK &&
+	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE)) {
 		if (*pCount > idx) {
 			pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
 				.queueFlags = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
@@ -699,7 +710,8 @@ VkResult radv_CreateDevice(
 
 	device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	device->instance = physical_device->instance;
-	device->shader_stats_dump = false;
+
+	device->debug_flags = device->instance->debug_flags;
 
 	device->ws = physical_device->ws;
 	if (pAllocator)
@@ -735,12 +747,6 @@ VkResult radv_CreateDevice(
 		device->ws->ctx_destroy(device->hw_ctx);
 		goto fail;
 	}
-	device->allow_fast_clears = env_var_as_boolean("RADV_FAST_CLEARS", false);
-	device->allow_dcc = !env_var_as_boolean("RADV_DCC_DISABLE", false);
-	device->shader_stats_dump = env_var_as_boolean("RADV_SHADER_STATS", false);
-
-	if (device->allow_fast_clears && device->allow_dcc)
-		radv_finishme("DCC fast clears have not been tested\n");
 
 	radv_device_init_msaa(device);
 
@@ -1652,7 +1658,8 @@ radv_initialise_color_surface(struct radv_device *device,
 		if (iview->image->fmask.size)
 			cb->cb_color_info |= S_028C70_COMPRESSION(1);
 
-	if (iview->image->cmask.size && device->allow_fast_clears)
+	if (iview->image->cmask.size &&
+	    (device->debug_flags & RADV_DEBUG_FAST_CLEARS))
 		cb->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
 	if (iview->image->surface.dcc_size && level_info->dcc_enabled)

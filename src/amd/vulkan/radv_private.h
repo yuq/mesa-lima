@@ -100,6 +100,18 @@ enum radv_mem_type {
 	RADV_MEM_TYPE_COUNT
 };
 
+
+enum {
+	RADV_DEBUG_FAST_CLEARS       =   0x1,
+	RADV_DEBUG_NO_DCC            =   0x2,
+	RADV_DEBUG_DUMP_SHADERS      =   0x4,
+	RADV_DEBUG_NO_CACHE          =   0x8,
+	RADV_DEBUG_DUMP_SHADER_STATS =  0x10,
+	RADV_DEBUG_NO_HIZ            =  0x20,
+	RADV_DEBUG_NO_COMPUTE_QUEUE  =  0x40,
+	RADV_DEBUG_UNSAFE_MATH       =  0x80,
+};
+
 #define radv_noreturn __attribute__((__noreturn__))
 #define radv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
@@ -278,6 +290,8 @@ struct radv_instance {
 	uint32_t                                    apiVersion;
 	int                                         physicalDeviceCount;
 	struct radv_physical_device                  physicalDevice;
+
+	uint64_t debug_flags;
 };
 
 VkResult radv_init_wsi(struct radv_physical_device *physical_device);
@@ -469,9 +483,7 @@ struct radv_device {
 	int queue_count[RADV_MAX_QUEUE_FAMILIES];
 	struct radeon_winsys_cs *empty_cs[RADV_MAX_QUEUE_FAMILIES];
 
-	bool allow_fast_clears;
-	bool allow_dcc;
-	bool shader_stats_dump;
+	uint64_t debug_flags;
 
 	/* MSAA sample locations.
 	 * The first index is the sample index.
