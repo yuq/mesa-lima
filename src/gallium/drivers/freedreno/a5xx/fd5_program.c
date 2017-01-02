@@ -539,6 +539,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 		OUT_PKT4(ring, REG_A5XX_VPC_CNTL_0, 1);
 		OUT_RING(ring, A5XX_VPC_CNTL_0_STRIDE_IN_VPC(l.max_loc) |
 				COND(s[FS].v->total_in > 0, A5XX_VPC_CNTL_0_VARYING) |
+				COND(s[FS].v->frag_coord, A5XX_VPC_CNTL_0_VARYING) |
 				0x10000);    // XXX
 
 		OUT_PKT4(ring, REG_A5XX_PC_PRIMITIVE_CNTL, 1);
@@ -562,6 +563,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 
 	OUT_PKT4(ring, REG_A5XX_SP_FS_CTRL_REG0, 1);
 	OUT_RING(ring, COND(s[FS].v->total_in > 0, A5XX_SP_FS_CTRL_REG0_VARYING) |
+			COND(s[FS].v->frag_coord, A5XX_SP_FS_CTRL_REG0_VARYING) |
 			0x4000e | /* XXX set pretty much everywhere */
 			A5XX_SP_FS_CTRL_REG0_HALFREGFOOTPRINT(s[FS].i->max_half_reg + 1) |
 			A5XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT(s[FS].i->max_reg + 1) |

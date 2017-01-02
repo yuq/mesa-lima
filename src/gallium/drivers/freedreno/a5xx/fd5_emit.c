@@ -455,10 +455,12 @@ fd5_emit_state(struct fd_context *ctx, struct fd_ringbuffer *ring,
 		OUT_RING(ring, zsa->rb_depth_cntl);
 
 		OUT_PKT4(ring, REG_A5XX_RB_DEPTH_PLANE_CNTL, 1);
-		OUT_RING(ring, COND(fragz, A5XX_RB_DEPTH_PLANE_CNTL_FRAG_WRITES_Z));
+		OUT_RING(ring, COND(fragz, A5XX_RB_DEPTH_PLANE_CNTL_FRAG_WRITES_Z) |
+				COND(fragz && fp->frag_coord, A5XX_RB_DEPTH_PLANE_CNTL_UNK1));
 
 		OUT_PKT4(ring, REG_A5XX_GRAS_SU_DEPTH_PLANE_CNTL, 1);
-		OUT_RING(ring, COND(fragz, A5XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z));
+		OUT_RING(ring, COND(fragz, A5XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z) |
+				COND(fragz && fp->frag_coord, A5XX_GRAS_SU_DEPTH_PLANE_CNTL_UNK1));
 	}
 
 	if (dirty & FD_DIRTY_RASTERIZER) {
