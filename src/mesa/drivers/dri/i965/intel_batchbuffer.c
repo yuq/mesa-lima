@@ -119,7 +119,7 @@ intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
 #ifdef DEBUG
    assert(sz < BATCH_SZ - BATCH_RESERVED);
 #endif
-   if (intel_batchbuffer_space(brw) < sz)
+   if (intel_batchbuffer_space(&brw->batch) < sz)
       intel_batchbuffer_flush(brw);
 
    enum brw_gpu_ring prev_ring = brw->batch.ring;
@@ -401,10 +401,10 @@ _intel_batchbuffer_flush(struct brw_context *brw,
    brw_finish_batch(brw);
 
    /* Mark the end of the buffer. */
-   intel_batchbuffer_emit_dword(brw, MI_BATCH_BUFFER_END);
+   intel_batchbuffer_emit_dword(&brw->batch, MI_BATCH_BUFFER_END);
    if (USED_BATCH(brw->batch) & 1) {
       /* Round batchbuffer usage to 2 DWORDs. */
-      intel_batchbuffer_emit_dword(brw, MI_NOOP);
+      intel_batchbuffer_emit_dword(&brw->batch, MI_NOOP);
    }
 
    intel_upload_finish(brw);

@@ -94,27 +94,27 @@ static inline uint32_t float_as_int(float f)
  * work...
  */
 static inline unsigned
-intel_batchbuffer_space(struct brw_context *brw)
+intel_batchbuffer_space(struct intel_batchbuffer *batch)
 {
-   return (brw->batch.state_batch_offset - brw->batch.reserved_space)
-      - USED_BATCH(brw->batch) * 4;
+   return (batch->state_batch_offset - batch->reserved_space)
+      - USED_BATCH(*batch) * 4;
 }
 
 
 static inline void
-intel_batchbuffer_emit_dword(struct brw_context *brw, GLuint dword)
+intel_batchbuffer_emit_dword(struct intel_batchbuffer *batch, GLuint dword)
 {
 #ifdef DEBUG
-   assert(intel_batchbuffer_space(brw) >= 4);
+   assert(intel_batchbuffer_space(batch) >= 4);
 #endif
-   *brw->batch.map_next++ = dword;
-   assert(brw->batch.ring != UNKNOWN_RING);
+   *batch->map_next++ = dword;
+   assert(batch->ring != UNKNOWN_RING);
 }
 
 static inline void
-intel_batchbuffer_emit_float(struct brw_context *brw, float f)
+intel_batchbuffer_emit_float(struct intel_batchbuffer *batch, float f)
 {
-   intel_batchbuffer_emit_dword(brw, float_as_int(f));
+   intel_batchbuffer_emit_dword(batch, float_as_int(f));
 }
 
 static inline void
