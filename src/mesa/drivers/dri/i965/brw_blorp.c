@@ -165,8 +165,13 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
    surf->aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
 
-   struct isl_surf *aux_surf = &tmp_surfs[1];
-   intel_miptree_get_aux_isl_surf(brw, mt, surf->aux_usage, aux_surf);
+   struct isl_surf *aux_surf;
+   if (brw->gen == 6 && mt->hiz_buf) {
+      aux_surf = &mt->hiz_buf->aux_base.surf;
+   } else {
+      aux_surf = &tmp_surfs[1];
+      intel_miptree_get_aux_isl_surf(brw, mt, surf->aux_usage, aux_surf);
+   }
 
    if (wants_resolve) {
       bool supports_aux = surf->aux_usage != ISL_AUX_USAGE_NONE &&

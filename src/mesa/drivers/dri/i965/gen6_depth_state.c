@@ -165,18 +165,14 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
       /* Emit hiz buffer. */
       if (hiz) {
          assert(depth_mt);
-         struct intel_mipmap_tree *hiz_mt = depth_mt->hiz_buf->mt;
 
-         assert(hiz_mt->array_layout == GEN6_HIZ_STENCIL);
-
-         const uint32_t offset = intel_miptree_get_aligned_offset(
-                                    hiz_mt,
-                                    hiz_mt->level[lod].level_x,
-                                    hiz_mt->level[lod].level_y);
+         uint32_t offset;
+         isl_surf_get_image_offset_B_tile_sa(&depth_mt->hiz_buf->aux_base.surf,
+                                             lod, 0, 0, &offset, NULL, NULL);
 
 	 BEGIN_BATCH(3);
 	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(depth_mt->hiz_buf->aux_base.pitch - 1);
+	 OUT_BATCH(depth_mt->hiz_buf->aux_base.surf.row_pitch - 1);
 	 OUT_RELOC(depth_mt->hiz_buf->aux_base.bo,
 		   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
 		   offset);

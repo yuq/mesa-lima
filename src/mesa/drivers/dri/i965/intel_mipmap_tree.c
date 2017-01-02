@@ -1078,10 +1078,7 @@ intel_miptree_hiz_buffer_free(struct intel_miptree_hiz_buffer *hiz_buf)
    if (hiz_buf == NULL)
       return;
 
-   if (hiz_buf->mt)
-      intel_miptree_release(&hiz_buf->mt);
-   else
-      brw_bo_unreference(hiz_buf->aux_base.bo);
+   brw_bo_unreference(hiz_buf->aux_base.bo);
 
    free(hiz_buf);
 }
@@ -2025,34 +2022,26 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
                              struct intel_mipmap_tree *mt)
 {
    struct intel_miptree_hiz_buffer *buf = calloc(sizeof(*buf), 1);
-   uint32_t layout_flags = MIPTREE_LAYOUT_ACCELERATED_UPLOAD;
-
-   if (brw->gen == 6)
-      layout_flags |= MIPTREE_LAYOUT_GEN6_HIZ_STENCIL;
-
    if (!buf)
       return NULL;
 
-   layout_flags |= MIPTREE_LAYOUT_TILING_ANY;
-   buf->mt = intel_miptree_create(brw,
-                                  mt->target,
-                                  mt->format,
-                                  mt->first_level,
-                                  mt->last_level,
-                                  mt->logical_width0,
-                                  mt->logical_height0,
-                                  mt->logical_depth0,
-                                  mt->num_samples,
-                                  layout_flags);
-   if (!buf->mt) {
+   struct isl_surf temp_main_surf;
+   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
+
+   if (!isl_surf_get_hiz_surf(&brw->isl_dev, &temp_main_surf,
+                              &buf->aux_base.surf)) {
       free(buf);
       return NULL;
    }
 
-   buf->aux_base.bo = buf->mt->bo;
-   buf->aux_base.size = buf->mt->total_height * buf->mt->pitch;
-   buf->aux_base.pitch = buf->mt->pitch;
-   buf->aux_base.qpitch = buf->mt->qpitch * 2;
+   struct isl_surf *surf = &buf->aux_base.surf;
+   buf->aux_base.bo = brw_bo_alloc_tiled(brw->bufmgr, "hiz", surf->size,
+                                         I915_TILING_Y, surf->row_pitch,
+                                         BO_ALLOC_FOR_RENDER);
+   if (!buf->aux_base.bo) {
+      free(buf);
+      return NULL;
+   }
 
    return buf;
 }

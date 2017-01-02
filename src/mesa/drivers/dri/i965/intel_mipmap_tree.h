@@ -307,6 +307,8 @@ enum intel_aux_disable {
  */
 struct intel_miptree_aux_buffer
 {
+   struct isl_surf surf;
+
    /**
     * Buffer object containing the pixel data.
     *
@@ -360,11 +362,6 @@ struct intel_miptree_aux_buffer
 struct intel_miptree_hiz_buffer
 {
    struct intel_miptree_aux_buffer aux_base;
-
-   /**
-    * Hiz miptree. Used only by Gen6.
-    */
-   struct intel_mipmap_tree *mt;
 };
 
 struct intel_mipmap_tree
