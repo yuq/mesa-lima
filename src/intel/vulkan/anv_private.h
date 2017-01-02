@@ -1097,6 +1097,7 @@ struct anv_attachment_state {
    struct anv_state                             color_rt_state;
    struct anv_state                             input_att_state;
 
+   VkImageLayout                                current_layout;
    VkImageAspectFlags                           pending_clear_aspects;
    bool                                         fast_clear;
    VkClearValue                                 clear_value;
@@ -1733,7 +1734,12 @@ struct anv_subpass {
    uint32_t                                     color_count;
    uint32_t *                                   color_attachments;
    uint32_t *                                   resolve_attachments;
+
+   /* TODO: Consider storing the depth/stencil VkAttachmentReference
+    * instead of its two structure members (below) individually.
+    */
    uint32_t                                     depth_stencil_attachment;
+   VkImageLayout                                depth_stencil_layout;
 
    /** Subpass has a depth/stencil self-dependency */
    bool                                         has_ds_self_dep;
@@ -1750,12 +1756,17 @@ enum anv_subpass_usage {
 };
 
 struct anv_render_pass_attachment {
+   /* TODO: Consider using VkAttachmentDescription instead of storing each of
+    * its members individually.
+    */
    VkFormat                                     format;
    uint32_t                                     samples;
    VkImageUsageFlags                            usage;
    VkAttachmentLoadOp                           load_op;
    VkAttachmentStoreOp                          store_op;
    VkAttachmentLoadOp                           stencil_load_op;
+   VkImageLayout                                initial_layout;
+   VkImageLayout                                final_layout;
 
    /* An array, indexed by subpass id, of how the attachment will be used. */
    enum anv_subpass_usage *                     subpass_usage;

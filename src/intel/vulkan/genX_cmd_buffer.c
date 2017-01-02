@@ -480,6 +480,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
             }
          }
 
+         state->attachments[i].current_layout = att->initial_layout;
          state->attachments[i].pending_clear_aspects = clear_aspects;
          if (clear_aspects)
             state->attachments[i].clear_value = begin->pClearValues[i];

@@ -74,6 +74,8 @@ VkResult anv_CreateRenderPass(
       att->load_op = pCreateInfo->pAttachments[i].loadOp;
       att->store_op = pCreateInfo->pAttachments[i].storeOp;
       att->stencil_load_op = pCreateInfo->pAttachments[i].stencilLoadOp;
+      att->initial_layout = pCreateInfo->pAttachments[i].initialLayout;
+      att->final_layout = pCreateInfo->pAttachments[i].finalLayout;
       att->subpass_usage = usages;
       usages += pass->subpass_count;
    }
@@ -161,6 +163,8 @@ VkResult anv_CreateRenderPass(
       if (desc->pDepthStencilAttachment) {
          uint32_t a = desc->pDepthStencilAttachment->attachment;
          subpass->depth_stencil_attachment = a;
+         subpass->depth_stencil_layout =
+            desc->pDepthStencilAttachment->layout;
          if (a != VK_ATTACHMENT_UNUSED) {
             pass->attachments[a].usage |=
                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -168,6 +172,7 @@ VkResult anv_CreateRenderPass(
          }
       } else {
          subpass->depth_stencil_attachment = VK_ATTACHMENT_UNUSED;
+         subpass->depth_stencil_layout = VK_IMAGE_LAYOUT_UNDEFINED;
       }
    }
 
