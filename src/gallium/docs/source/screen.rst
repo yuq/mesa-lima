@@ -369,6 +369,8 @@ The integer capabilities:
 * ``PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY``: Tell the GLSL compiler to use
   the minimum amount of optimizations just to be able to do all the linking
   and lowering.
+* ``PIPE_CAP_TGSI_FS_FBFETCH``: Whether a fragment shader can use the FBFETCH
+  opcode to retrieve the current value in the framebuffer.
 
 
 .. _pipe_capf:
