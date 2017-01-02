@@ -397,7 +397,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_CMP                 66
 #define TGSI_OPCODE_SCS                 67
 #define TGSI_OPCODE_TXB                 68
-                                /* gap */
+#define TGSI_OPCODE_FBFETCH             69
 #define TGSI_OPCODE_DIV                 70
 #define TGSI_OPCODE_DP2                 71
 #define TGSI_OPCODE_TXL                 72
