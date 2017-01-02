@@ -749,7 +749,10 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
          i->setIndirectR(hnd);
          i->setIndirectS(NULL);
       } else if (i->tex.r == i->tex.s || i->op == OP_TXF) {
-         i->tex.r += prog->driver->io.texBindBase / 4;
+         if (i->tex.r == 0xffff)
+            i->tex.r = prog->driver->io.fbtexBindBase / 4;
+         else
+            i->tex.r += prog->driver->io.texBindBase / 4;
          i->tex.s  = 0; // only a single cX[] value possible here
       } else {
          Value *hnd = bld.getScratch();
@@ -804,6 +807,11 @@ NVC0LoweringPass::handleTEX(TexInstruction *i)
 
       Value *ticRel = i->getIndirectR();
       Value *tscRel = i->getIndirectS();
+
+      if (i->tex.r == 0xffff) {
+         i->tex.r = 0x20;
+         i->tex.s = 0x10;
+      }
 
       if (ticRel) {
          i->setSrc(i->tex.rIndirectSrc, NULL);
@@ -2507,9 +2515,13 @@ NVC0LoweringPass::handleRDSV(Instruction *i)
    default:
       if (prog->getType() == Program::TYPE_TESSELLATION_EVAL && !i->perPatch)
          vtx = bld.mkOp1v(OP_PFETCH, TYPE_U32, bld.getSSA(), bld.mkImm(0));
-      ld = bld.mkFetch(i->getDef(0), i->dType,
-                       FILE_SHADER_INPUT, addr, i->getIndirect(0, 0), vtx);
-      ld->perPatch = i->perPatch;
+      if (prog->getType() == Program::TYPE_FRAGMENT) {
+         bld.mkInterp(NV50_IR_INTERP_FLAT, i->getDef(0), addr, NULL);
+      } else {
+         ld = bld.mkFetch(i->getDef(0), i->dType,
+                          FILE_SHADER_INPUT, addr, i->getIndirect(0, 0), vtx);
+         ld->perPatch = i->perPatch;
+      }
       break;
    }
    bld.getBB()->remove(i);
