@@ -519,12 +519,14 @@ intel_destroy_image(__DRIimage *image)
 enum modifier_priority {
    MODIFIER_PRIORITY_INVALID = 0,
    MODIFIER_PRIORITY_LINEAR,
+   MODIFIER_PRIORITY_X,
    MODIFIER_PRIORITY_Y,
 };
 
 const uint64_t priority_to_modifier[] = {
    [MODIFIER_PRIORITY_INVALID] = DRM_FORMAT_MOD_INVALID,
    [MODIFIER_PRIORITY_LINEAR] = DRM_FORMAT_MOD_LINEAR,
+   [MODIFIER_PRIORITY_X] = I915_FORMAT_MOD_X_TILED,
    [MODIFIER_PRIORITY_Y] = I915_FORMAT_MOD_Y_TILED,
 };
 
@@ -539,6 +541,9 @@ select_best_modifier(struct gen_device_info *devinfo,
       switch (modifiers[i]) {
       case I915_FORMAT_MOD_Y_TILED:
          prio = MAX2(prio, MODIFIER_PRIORITY_Y);
+         break;
+      case I915_FORMAT_MOD_X_TILED:
+         prio = MAX2(prio, MODIFIER_PRIORITY_X);
          break;
       case DRM_FORMAT_MOD_LINEAR:
          prio = MAX2(prio, MODIFIER_PRIORITY_LINEAR);
@@ -577,6 +582,9 @@ intel_create_image_common(__DRIscreen *dri_screen,
 
    uint64_t modifier = select_best_modifier(&screen->devinfo, modifiers, count);
    switch (modifier) {
+   case I915_FORMAT_MOD_X_TILED:
+      assert(tiling == I915_TILING_X);
+      break;
    case DRM_FORMAT_MOD_LINEAR:
       tiling = I915_TILING_NONE;
       break;
