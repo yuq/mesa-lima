@@ -15,10 +15,10 @@ The rules-ng-ng source files this header was generated from are:
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/adreno_pm4.xml    (  23277 bytes, from 2016-12-24 05:01:47)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a3xx.xml          (  83840 bytes, from 2016-11-26 23:01:08)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/a4xx.xml          ( 110757 bytes, from 2016-12-26 17:51:07)
-- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  99224 bytes, from 2016-12-26 18:40:41)
+- /home/robclark/src/freedreno/envytools/rnndb/adreno/a5xx.xml          (  99436 bytes, from 2017-01-10 16:36:25)
 - /home/robclark/src/freedreno/envytools/rnndb/adreno/ocmem.xml         (   1773 bytes, from 2015-09-24 17:30:00)
 
-Copyright (C) 2013-2016 by the following authors:
+Copyright (C) 2013-2017 by the following authors:
 - Rob Clark <robdclark@gmail.com> (robclark)
 - Ilia Mirkin <imirkin@alum.mit.edu> (imirkin)
 
@@ -2064,6 +2064,7 @@ static inline uint32_t A5XX_GRAS_SU_POINT_SIZE(float val)
 
 #define REG_A5XX_GRAS_SU_DEPTH_PLANE_CNTL			0x0000e094
 #define A5XX_GRAS_SU_DEPTH_PLANE_CNTL_FRAG_WRITES_Z		0x00000001
+#define A5XX_GRAS_SU_DEPTH_PLANE_CNTL_UNK1			0x00000002
 
 #define REG_A5XX_GRAS_SU_POLY_OFFSET_SCALE			0x0000e095
 #define A5XX_GRAS_SU_POLY_OFFSET_SCALE__MASK			0xffffffff
@@ -2583,6 +2584,7 @@ static inline uint32_t A5XX_RB_BLEND_CNTL_SAMPLE_MASK(uint32_t val)
 
 #define REG_A5XX_RB_DEPTH_PLANE_CNTL				0x0000e1b0
 #define A5XX_RB_DEPTH_PLANE_CNTL_FRAG_WRITES_Z			0x00000001
+#define A5XX_RB_DEPTH_PLANE_CNTL_UNK1				0x00000002
 
 #define REG_A5XX_RB_DEPTH_CNTL					0x0000e1b1
 #define A5XX_RB_DEPTH_CNTL_Z_ENABLE				0x00000001
@@ -3003,17 +3005,17 @@ static inline uint32_t A5XX_VFD_CONTROL_0_VTXCNT(uint32_t val)
 }
 
 #define REG_A5XX_VFD_CONTROL_1					0x0000e401
+#define A5XX_VFD_CONTROL_1_REGID4VTX__MASK			0x000000ff
+#define A5XX_VFD_CONTROL_1_REGID4VTX__SHIFT			0
+static inline uint32_t A5XX_VFD_CONTROL_1_REGID4VTX(uint32_t val)
+{
+	return ((val) << A5XX_VFD_CONTROL_1_REGID4VTX__SHIFT) & A5XX_VFD_CONTROL_1_REGID4VTX__MASK;
+}
 #define A5XX_VFD_CONTROL_1_REGID4INST__MASK			0x0000ff00
 #define A5XX_VFD_CONTROL_1_REGID4INST__SHIFT			8
 static inline uint32_t A5XX_VFD_CONTROL_1_REGID4INST(uint32_t val)
 {
 	return ((val) << A5XX_VFD_CONTROL_1_REGID4INST__SHIFT) & A5XX_VFD_CONTROL_1_REGID4INST__MASK;
-}
-#define A5XX_VFD_CONTROL_1_REGID4VTX__MASK			0x00ff0000
-#define A5XX_VFD_CONTROL_1_REGID4VTX__SHIFT			16
-static inline uint32_t A5XX_VFD_CONTROL_1_REGID4VTX(uint32_t val)
-{
-	return ((val) << A5XX_VFD_CONTROL_1_REGID4VTX__SHIFT) & A5XX_VFD_CONTROL_1_REGID4VTX__MASK;
 }
 
 #define REG_A5XX_VFD_CONTROL_2					0x0000e402
@@ -3059,6 +3061,7 @@ static inline uint32_t A5XX_VFD_DECODE_INSTR_SWAP(enum a3xx_color_swap val)
 {
 	return ((val) << A5XX_VFD_DECODE_INSTR_SWAP__SHIFT) & A5XX_VFD_DECODE_INSTR_SWAP__MASK;
 }
+#define A5XX_VFD_DECODE_INSTR_INSTANCED				0x00020000
 
 static inline uint32_t REG_A5XX_VFD_DECODE_STEP_RATE(uint32_t i0) { return 0x0000e48b + 0x2*i0; }
 
@@ -3831,6 +3834,12 @@ static inline uint32_t A5XX_TEX_CONST_0_SWIZ_Z(enum a5xx_tex_swiz val)
 static inline uint32_t A5XX_TEX_CONST_0_SWIZ_W(enum a5xx_tex_swiz val)
 {
 	return ((val) << A5XX_TEX_CONST_0_SWIZ_W__SHIFT) & A5XX_TEX_CONST_0_SWIZ_W__MASK;
+}
+#define A5XX_TEX_CONST_0_MIPLVLS__MASK				0x000f0000
+#define A5XX_TEX_CONST_0_MIPLVLS__SHIFT				16
+static inline uint32_t A5XX_TEX_CONST_0_MIPLVLS(uint32_t val)
+{
+	return ((val) << A5XX_TEX_CONST_0_MIPLVLS__SHIFT) & A5XX_TEX_CONST_0_MIPLVLS__MASK;
 }
 #define A5XX_TEX_CONST_0_FMT__MASK				0x3fc00000
 #define A5XX_TEX_CONST_0_FMT__SHIFT				22
