@@ -1580,52 +1580,8 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
        image->aux_usage != ISL_AUX_USAGE_HIZ)
       return;
 
-   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
-   const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
-
-   /* Section 7.4. of the Vulkan 1.0.27 spec states:
-    *
-    *   "The render area must be contained within the framebuffer dimensions."
-    *
-    * Therefore, the only way the extent of the render area can match that of
-    * the image view is if the render area offset equals (0, 0).
-    */
-   const bool full_surface_op =
-             cmd_state->render_area.extent.width == image->extent.width &&
-             cmd_state->render_area.extent.height == image->extent.height;
-   if (full_surface_op)
-      assert(cmd_state->render_area.offset.x == 0 &&
-             cmd_state->render_area.offset.y == 0);
-
-   /* Check the subpass index to determine if skipping a resolve is allowed */
-   const uint32_t subpass_idx = cmd_state->subpass - cmd_state->pass->subpasses;
-   switch (op) {
-   case BLORP_HIZ_OP_DEPTH_RESOLVE:
-      if (cmd_buffer->state.pass->attachments[ds].store_op !=
-          VK_ATTACHMENT_STORE_OP_STORE &&
-          subpass_idx == cmd_state->pass->subpass_count - 1)
-         return;
-      break;
-   case BLORP_HIZ_OP_HIZ_RESOLVE:
-      /* If the render area covers the entire surface *and* load_op is either
-       * CLEAR or DONT_CARE then the previous contents of the depth buffer
-       * will be entirely discarded.  In this case, we can skip the HiZ
-       * resolve.
-       *
-       * If the render area is not the full surface, we need to do
-       * the resolve because otherwise data outside the render area may get
-       * garbled by the resolve at the end of the render pass.
-       */
-      if (full_surface_op &&
-          cmd_buffer->state.pass->attachments[ds].load_op !=
-          VK_ATTACHMENT_LOAD_OP_LOAD && subpass_idx == 0)
-         return;
-      break;
-   case BLORP_HIZ_OP_DEPTH_CLEAR:
-   case BLORP_HIZ_OP_NONE:
-      unreachable("Invalid HiZ OP");
-   }
-
+   assert(op == BLORP_HIZ_OP_HIZ_RESOLVE ||
+          op == BLORP_HIZ_OP_DEPTH_RESOLVE);
 
    struct blorp_batch batch;
    blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);

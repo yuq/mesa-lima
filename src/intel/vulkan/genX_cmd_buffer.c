@@ -510,7 +510,12 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                   state->attachments[i].aux_usage,
                                   state->attachments[i].color_rt_state);
          } else {
-            state->attachments[i].aux_usage = iview->image->aux_usage;
+            if (iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
+               state->attachments[i].aux_usage =
+                  layout_to_hiz_usage(att->initial_layout);
+            } else {
+               state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
+            }
             state->attachments[i].input_aux_usage = ISL_AUX_USAGE_NONE;
          }
 
@@ -910,6 +915,13 @@ void genX(CmdPipelineBarrier)(
    for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
       src_flags |= pImageMemoryBarriers[i].srcAccessMask;
       dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
+      ANV_FROM_HANDLE(anv_image, image, pImageMemoryBarriers[i].image);
+      if (pImageMemoryBarriers[i].subresourceRange.aspectMask &
+          VK_IMAGE_ASPECT_DEPTH_BIT) {
+         transition_depth_buffer(cmd_buffer, image,
+                                 pImageMemoryBarriers[i].oldLayout,
+                                 pImageMemoryBarriers[i].newLayout);
+      }
    }
 
    enum anv_pipe_bits pipe_bits = 0;
@@ -2292,9 +2304,15 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
-   if (iview) {
-      anv_gen8_hiz_op_resolve(cmd_buffer, iview->image,
-                              BLORP_HIZ_OP_HIZ_RESOLVE);
+   if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
+      const uint32_t ds = subpass->depth_stencil_attachment;
+      transition_depth_buffer(cmd_buffer, iview->image,
+                              cmd_buffer->state.attachments[ds].current_layout,
+                              cmd_buffer->state.subpass->depth_stencil_layout);
+      cmd_buffer->state.attachments[ds].current_layout =
+         cmd_buffer->state.subpass->depth_stencil_layout;
+      cmd_buffer->state.attachments[ds].aux_usage =
+         layout_to_hiz_usage(cmd_buffer->state.subpass->depth_stencil_layout);
    }
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
@@ -2332,9 +2350,15 @@ void genX(CmdNextSubpass)(
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
-   if (iview) {
-      anv_gen8_hiz_op_resolve(cmd_buffer, iview->image,
-                              BLORP_HIZ_OP_DEPTH_RESOLVE);
+   if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
+      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment;
+
+      if (cmd_buffer->state.subpass - cmd_buffer->state.pass->subpasses ==
+          cmd_buffer->state.pass->attachments[ds].last_subpass_idx) {
+         transition_depth_buffer(cmd_buffer, iview->image,
+                                 cmd_buffer->state.attachments[ds].current_layout,
+                                 cmd_buffer->state.pass->attachments[ds].final_layout);
+      }
    }
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
@@ -2349,9 +2373,15 @@ void genX(CmdEndRenderPass)(
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
-   if (iview) {
-      anv_gen8_hiz_op_resolve(cmd_buffer, iview->image,
-                              BLORP_HIZ_OP_DEPTH_RESOLVE);
+   if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
+      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment;
+
+      if (cmd_buffer->state.subpass - cmd_buffer->state.pass->subpasses ==
+          cmd_buffer->state.pass->attachments[ds].last_subpass_idx) {
+         transition_depth_buffer(cmd_buffer, iview->image,
+                                 cmd_buffer->state.attachments[ds].current_layout,
+                                 cmd_buffer->state.pass->attachments[ds].final_layout);
+      }
    }
 
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
