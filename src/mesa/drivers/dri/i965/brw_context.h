@@ -1241,11 +1241,6 @@ struct brw_context
    struct intel_screen *screen;
 };
 
-/*======================================================================
- * brw_vtbl.c
- */
-void brwInitVtbl( struct brw_context *brw );
-
 /* brw_clear.c */
 extern void intelInitClearFuncs(struct dd_function_table *functions);
 
