@@ -877,9 +877,12 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 			if (ctx->load_input &&
 			    ctx->input_decls[idx].Declaration.File != TGSI_FILE_INPUT) {
 				ctx->input_decls[idx] = *decl;
+				ctx->input_decls[idx].Range.First = idx;
+				ctx->input_decls[idx].Range.Last = idx;
+				ctx->input_decls[idx].Semantic.Index += idx - decl->Range.First;
 
 				if (bld_base->info->processor != PIPE_SHADER_FRAGMENT)
-					ctx->load_input(ctx, idx, decl,
+					ctx->load_input(ctx, idx, &ctx->input_decls[idx],
 							&ctx->inputs[idx * 4]);
 			}
 		}
