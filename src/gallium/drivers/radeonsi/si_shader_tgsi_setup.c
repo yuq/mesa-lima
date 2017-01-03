@@ -636,6 +636,15 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 	}
 }
 
+/* If this is true, preload FS inputs at the beginning of shaders. Otherwise,
+ * reload them at each use. This must be true if the shader is using
+ * derivatives, because all inputs should be loaded in the WQM mode.
+ */
+static bool si_preload_fs_inputs(struct si_shader_context *ctx)
+{
+	return ctx->shader->selector->info.uses_derivatives;
+}
+
 LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				const struct tgsi_full_src_register *reg,
 				enum tgsi_opcode_type type,
@@ -688,7 +697,8 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		 * only once. Fragment shaders don't care much, because
 		 * v_interp instructions are much cheaper than VMEM loads.
 		 */
-		if (ctx->soa.bld_base.info->processor == PIPE_SHADER_FRAGMENT)
+		if (!si_preload_fs_inputs(ctx) &&
+		    ctx->soa.bld_base.info->processor == PIPE_SHADER_FRAGMENT)
 			ctx->load_input(ctx, index, &ctx->input_decls[index], input);
 		else
 			memcpy(input, &ctx->inputs[index * 4], sizeof(input));
@@ -881,7 +891,8 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 				ctx->input_decls[idx].Range.Last = idx;
 				ctx->input_decls[idx].Semantic.Index += idx - decl->Range.First;
 
-				if (bld_base->info->processor != PIPE_SHADER_FRAGMENT)
+				if (si_preload_fs_inputs(ctx) ||
+				    bld_base->info->processor != PIPE_SHADER_FRAGMENT)
 					ctx->load_input(ctx, idx, &ctx->input_decls[idx],
 							&ctx->inputs[idx * 4]);
 			}
