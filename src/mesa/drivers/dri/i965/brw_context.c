@@ -1199,7 +1199,7 @@ intelDestroyContext(__DRIcontext * driContextPriv)
       _swrast_DestroyContext(&brw->ctx);
 
    brw_fini_pipe_control(brw);
-   intel_batchbuffer_free(brw);
+   intel_batchbuffer_free(&brw->batch);
 
    drm_intel_bo_unreference(brw->throttle_batch[1]);
    drm_intel_bo_unreference(brw->throttle_batch[0]);

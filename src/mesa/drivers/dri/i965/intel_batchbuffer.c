@@ -99,11 +99,11 @@ intel_batchbuffer_reset_to_saved(struct brw_context *brw)
 }
 
 void
-intel_batchbuffer_free(struct brw_context *brw)
+intel_batchbuffer_free(struct intel_batchbuffer *batch)
 {
-   free(brw->batch.cpu_map);
-   drm_intel_bo_unreference(brw->batch.last_bo);
-   drm_intel_bo_unreference(brw->batch.bo);
+   free(batch->cpu_map);
+   drm_intel_bo_unreference(batch->last_bo);
+   drm_intel_bo_unreference(batch->bo);
 }
 
 void
