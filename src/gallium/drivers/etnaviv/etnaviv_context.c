@@ -246,6 +246,18 @@ etna_cmd_stream_reset_notify(struct etna_cmd_stream *stream, void *priv)
    assert(LIST_IS_EMPTY(&ctx->used_resources));
 }
 
+static void
+etna_set_debug_callback(struct pipe_context *pctx,
+                        const struct pipe_debug_callback *cb)
+{
+   struct etna_context *ctx = etna_context(pctx);
+
+   if (cb)
+      ctx->debug = *cb;
+   else
+      memset(&ctx->debug, 0, sizeof(ctx->debug));
+}
+
 struct pipe_context *
 etna_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
@@ -279,6 +291,7 @@ etna_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    pctx->destroy = etna_context_destroy;
    pctx->draw_vbo = etna_draw_vbo;
    pctx->flush = etna_flush;
+   pctx->set_debug_callback = etna_set_debug_callback;
 
    /* creation of compile states */
    pctx->create_blend_state = etna_blend_state_create;
