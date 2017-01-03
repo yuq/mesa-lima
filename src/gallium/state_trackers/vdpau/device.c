@@ -128,13 +128,19 @@ vdp_imp_device_create_x11(Display *display, int screen, VdpDevice *device,
       goto no_handle;
    }
 
-   vl_compositor_init(&dev->compositor, dev->context);
+   if (!vl_compositor_init(&dev->compositor, dev->context)) {
+       ret = VDP_STATUS_ERROR;
+       goto no_compositor;
+   }
+
    pipe_mutex_init(dev->mutex);
 
    *get_proc_address = &vlVdpGetProcAddress;
 
    return VDP_STATUS_OK;
 
+no_compositor:
+   vlRemoveDataHTAB(*device);
 no_handle:
    pipe_sampler_view_reference(&dev->dummy_sv, NULL);
 no_resource:

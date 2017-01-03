@@ -65,11 +65,18 @@ vlVdpVideoMixerCreate(VdpDevice device,
 
    pipe_mutex_lock(dev->mutex);
 
-   vl_compositor_init_state(&vmixer->cstate, dev->context);
+   if (!vl_compositor_init_state(&vmixer->cstate, dev->context)) {
+      ret = VDP_STATUS_ERROR;
+      goto no_compositor_state;
+   }
 
    vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_601, NULL, true, &vmixer->csc);
-   if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-      vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc, 1.0f, 0.0f);
+   if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE)) {
+      if (!vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc, 1.0f, 0.0f)) {
+         ret = VDP_STATUS_ERROR;
+         goto err_csc_matrix;
+      }
+   }
 
    *mixer = vlAddDataHTAB(vmixer);
    if (*mixer == 0) {
@@ -163,7 +170,9 @@ no_params:
    vlRemoveDataHTAB(*mixer);
 
 no_handle:
+err_csc_matrix:
    vl_compositor_cleanup_state(&vmixer->cstate);
+no_compositor_state:
    pipe_mutex_unlock(dev->mutex);
    DeviceReference(&vmixer->device, NULL);
    FREE(vmixer);
@@ -690,8 +699,11 @@ vlVdpVideoMixerSetFeatureEnables(VdpVideoMixer mixer,
       case VDP_VIDEO_MIXER_FEATURE_LUMA_KEY:
          vmixer->luma_key.enabled = feature_enables[i];
          if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-            vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
-                                         vmixer->luma_key.luma_min, vmixer->luma_key.luma_max);
+            if (!vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
+                        vmixer->luma_key.luma_min, vmixer->luma_key.luma_max)) {
+               pipe_mutex_unlock(vmixer->device->mutex);
+               return VDP_STATUS_ERROR;
+            }
          break;
 
       case VDP_VIDEO_MIXER_FEATURE_HIGH_QUALITY_SCALING_L1:
@@ -810,8 +822,11 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
          else
             memcpy(vmixer->csc, vdp_csc, sizeof(vl_csc_matrix));
          if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-            vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
-                                         vmixer->luma_key.luma_min, vmixer->luma_key.luma_max);
+            if (!vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
+                                         vmixer->luma_key.luma_min, vmixer->luma_key.luma_max)) {
+               ret = VDP_STATUS_ERROR;
+               goto fail;
+            }
          break;
 
       case VDP_VIDEO_MIXER_ATTRIBUTE_NOISE_REDUCTION_LEVEL:
@@ -834,8 +849,11 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
          }
          vmixer->luma_key.luma_min = val;
          if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-            vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
-                                         vmixer->luma_key.luma_min, vmixer->luma_key.luma_max);
+            if (!vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
+                        vmixer->luma_key.luma_min, vmixer->luma_key.luma_max)) {
+               ret = VDP_STATUS_ERROR;
+               goto fail;
+            }
          break;
 
       case VDP_VIDEO_MIXER_ATTRIBUTE_LUMA_KEY_MAX_LUMA:
@@ -846,8 +864,11 @@ vlVdpVideoMixerSetAttributeValues(VdpVideoMixer mixer,
          }
          vmixer->luma_key.luma_max = val;
          if (!debug_get_bool_option("G3DVL_NO_CSC", FALSE))
-            vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
-                                         vmixer->luma_key.luma_min, vmixer->luma_key.luma_max);
+            if (!vl_compositor_set_csc_matrix(&vmixer->cstate, (const vl_csc_matrix *)&vmixer->csc,
+                        vmixer->luma_key.luma_min, vmixer->luma_key.luma_max)) {
+               ret = VDP_STATUS_ERROR;
+               goto fail;
+            }
          break;
 
       case VDP_VIDEO_MIXER_ATTRIBUTE_SHARPNESS_LEVEL:

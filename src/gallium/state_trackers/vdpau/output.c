@@ -111,7 +111,9 @@ vlVdpOutputSurfaceCreate(VdpDevice device,
 
    pipe_resource_reference(&res, NULL);
 
-   vl_compositor_init_state(&vlsurface->cstate, pipe);
+   if (!vl_compositor_init_state(&vlsurface->cstate, pipe))
+      goto err_resource;
+
    vl_compositor_reset_dirty_area(&vlsurface->dirty_area);
    pipe_mutex_unlock(dev->mutex);
 
@@ -492,9 +494,11 @@ vlVdpOutputSurfacePutBitsYCbCr(VdpOutputSurface surface,
    if (!csc_matrix) {
       vl_csc_matrix csc;
       vl_csc_get_matrix(VL_CSC_COLOR_STANDARD_BT_601, NULL, 1, &csc);
-      vl_compositor_set_csc_matrix(cstate, (const vl_csc_matrix*)&csc, 1.0f, 0.0f);
+      if (!vl_compositor_set_csc_matrix(cstate, (const vl_csc_matrix*)&csc, 1.0f, 0.0f))
+         goto err_csc_matrix;
    } else {
-      vl_compositor_set_csc_matrix(cstate, csc_matrix, 1.0f, 0.0f);
+      if (!vl_compositor_set_csc_matrix(cstate, csc_matrix, 1.0f, 0.0f))
+         goto err_csc_matrix;
    }
 
    vl_compositor_clear_layers(cstate);
@@ -506,6 +510,10 @@ vlVdpOutputSurfacePutBitsYCbCr(VdpOutputSurface surface,
    pipe_mutex_unlock(vlsurface->device->mutex);
 
    return VDP_STATUS_OK;
+err_csc_matrix:
+   vbuffer->destroy(vbuffer);
+   pipe_mutex_unlock(vlsurface->device->mutex);
+   return VDP_STATUS_ERROR;
 }
 
 static unsigned
