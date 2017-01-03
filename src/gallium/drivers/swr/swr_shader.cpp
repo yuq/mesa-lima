@@ -344,9 +344,7 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
    debug_printf("vert shader  %p\n", pFunc);
    assert(pFunc && "Error: VertShader = NULL");
 
-#if (LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 5)
    JM()->mIsModuleFinalized = true;
-#endif
 
    return pFunc;
 }
@@ -706,9 +704,7 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
    debug_printf("frag shader  %p\n", kernel);
    assert(kernel && "Error: FragShader = NULL");
 
-#if (LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 5)
    JM()->mIsModuleFinalized = true;
-#endif
 
    return kernel;
 }
