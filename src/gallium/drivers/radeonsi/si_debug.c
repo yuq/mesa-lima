@@ -633,7 +633,7 @@ static void si_dump_bo_list(struct si_context *sctx,
 		}
 
 		/* Print the buffer. */
-		fprintf(f, "  %10"PRIu64"    0x%013"PRIx64"       0x%013"PRIx64"       ",
+		fprintf(f, "  %10"PRIu64"    0x%013"PRIX64"       0x%013"PRIX64"       ",
 			size / page_size, va / page_size, (va + size) / page_size);
 
 		/* Print the usage. */
