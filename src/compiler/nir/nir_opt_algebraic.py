@@ -519,6 +519,9 @@ late_optimizations = [
    (('fdot3', a, b), ('fdot_replicated3', a, b), 'options->fdot_replicates'),
    (('fdot4', a, b), ('fdot_replicated4', a, b), 'options->fdot_replicates'),
    (('fdph', a, b), ('fdph_replicated', a, b), 'options->fdot_replicates'),
+
+   (('b2f(is_used_more_than_once)', ('inot', a)), ('bcsel', a, 0.0, 1.0)),
+   (('fneg(is_used_more_than_once)', ('b2f', ('inot', a))), ('bcsel', a, -0.0, -1.0)),
 ]
 
 print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()
