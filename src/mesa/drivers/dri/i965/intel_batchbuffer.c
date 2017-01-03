@@ -36,48 +36,55 @@
 #include <i915_drm.h>
 
 static void
-intel_batchbuffer_reset(struct brw_context *brw);
+intel_batchbuffer_reset(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
+                        bool has_llc);
 
 void
-intel_batchbuffer_init(struct brw_context *brw)
+intel_batchbuffer_init(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
+                       bool has_llc)
 {
-   intel_batchbuffer_reset(brw);
+   intel_batchbuffer_reset(batch, bufmgr, has_llc);
 
-   if (!brw->has_llc) {
-      brw->batch.cpu_map = malloc(BATCH_SZ);
-      brw->batch.map = brw->batch.cpu_map;
-      brw->batch.map_next = brw->batch.cpu_map;
+   if (!has_llc) {
+      batch->cpu_map = malloc(BATCH_SZ);
+      batch->map = batch->cpu_map;
+      batch->map_next = batch->cpu_map;
    }
 }
 
 static void
-intel_batchbuffer_reset(struct brw_context *brw)
+intel_batchbuffer_reset(struct intel_batchbuffer *batch, dri_bufmgr *bufmgr,
+                        bool has_llc)
 {
-   if (brw->batch.last_bo != NULL) {
-      drm_intel_bo_unreference(brw->batch.last_bo);
-      brw->batch.last_bo = NULL;
+   if (batch->last_bo != NULL) {
+      drm_intel_bo_unreference(batch->last_bo);
+      batch->last_bo = NULL;
    }
-   brw->batch.last_bo = brw->batch.bo;
+   batch->last_bo = batch->bo;
 
-   brw_render_cache_set_clear(brw);
-
-   brw->batch.bo = drm_intel_bo_alloc(brw->bufmgr, "batchbuffer",
-					BATCH_SZ, 4096);
-   if (brw->has_llc) {
-      drm_intel_bo_map(brw->batch.bo, true);
-      brw->batch.map = brw->batch.bo->virtual;
+   batch->bo = drm_intel_bo_alloc(bufmgr, "batchbuffer", BATCH_SZ, 4096);
+   if (has_llc) {
+      drm_intel_bo_map(batch->bo, true);
+      batch->map = batch->bo->virtual;
    }
-   brw->batch.map_next = brw->batch.map;
+   batch->map_next = batch->map;
 
-   brw->batch.reserved_space = BATCH_RESERVED;
-   brw->batch.state_batch_offset = brw->batch.bo->size;
-   brw->batch.needs_sol_reset = false;
-   brw->batch.state_base_address_emitted = false;
+   batch->reserved_space = BATCH_RESERVED;
+   batch->state_batch_offset = batch->bo->size;
+   batch->needs_sol_reset = false;
+   batch->state_base_address_emitted = false;
 
    /* We don't know what ring the new batch will be sent to until we see the
     * first BEGIN_BATCH or BEGIN_BATCH_BLT.  Mark it as unknown.
     */
-   brw->batch.ring = UNKNOWN_RING;
+   batch->ring = UNKNOWN_RING;
+}
+
+static void
+intel_batchbuffer_reset_and_clear_render_cache(struct brw_context *brw)
+{
+   intel_batchbuffer_reset(&brw->batch, brw->bufmgr, brw->has_llc);
+   brw_render_cache_set_clear(brw);
 }
 
 void
@@ -186,7 +193,7 @@ brw_new_batch(struct brw_context *brw)
 {
    /* Create a new batchbuffer and reset the associated state: */
    drm_intel_gem_bo_clear_relocs(brw->batch.bo, 0);
-   intel_batchbuffer_reset(brw);
+   intel_batchbuffer_reset_and_clear_render_cache(brw);
 
    /* If the kernel supports hardware contexts, then most hardware state is
     * preserved between batches; we only need to re-emit state that is required
