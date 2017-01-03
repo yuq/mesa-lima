@@ -170,7 +170,7 @@ static void *si_create_compute_state(
 				     &program->shader.config, 0);
 		}
 		si_shader_dump(sctx->screen, &program->shader, &sctx->b.debug,
-			       PIPE_SHADER_COMPUTE, stderr);
+			       PIPE_SHADER_COMPUTE, stderr, true);
 		if (si_shader_binary_upload(sctx->screen, &program->shader) < 0) {
 			fprintf(stderr, "LLVM failed to upload shader\n");
 			FREE(program);

@@ -1110,7 +1110,7 @@ static void si_build_shader_variant(void *job, int thread_index)
 		FILE *f = open_memstream(&shader->shader_log,
 					 &shader->shader_log_size);
 		if (f) {
-			si_shader_dump(sscreen, shader, NULL, sel->type, f);
+			si_shader_dump(sscreen, shader, NULL, sel->type, f, false);
 			fclose(f);
 		}
 	}

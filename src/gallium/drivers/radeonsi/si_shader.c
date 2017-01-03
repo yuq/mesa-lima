@@ -6169,7 +6169,8 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 				 struct si_shader *shader,
 			         struct pipe_debug_callback *debug,
 			         unsigned processor,
-				 FILE *file)
+				 FILE *file,
+				 bool check_debug_option)
 {
 	struct si_shader_config *conf = &shader->config;
 	unsigned num_inputs = shader->selector ? shader->selector->info.num_inputs : 0;
@@ -6220,7 +6221,7 @@ static void si_shader_dump_stats(struct si_screen *sscreen,
 	if (lds_per_wave)
 		max_simd_waves = MIN2(max_simd_waves, 16384 / lds_per_wave);
 
-	if (file != stderr ||
+	if (!check_debug_option ||
 	    r600_can_dump_shader(&sscreen->b, processor)) {
 		if (processor == PIPE_SHADER_FRAGMENT) {
 			fprintf(file, "*** SHADER CONFIG ***\n"
@@ -6291,19 +6292,19 @@ static const char *si_get_shader_name(struct si_shader *shader,
 
 void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		    struct pipe_debug_callback *debug, unsigned processor,
-		    FILE *file)
+		    FILE *file, bool check_debug_option)
 {
-	if (file != stderr ||
+	if (!check_debug_option ||
 	    r600_can_dump_shader(&sscreen->b, processor))
 		si_dump_shader_key(processor, &shader->key, file);
 
-	if (file != stderr && shader->binary.llvm_ir_string) {
+	if (!check_debug_option && shader->binary.llvm_ir_string) {
 		fprintf(file, "\n%s - main shader part - LLVM IR:\n\n",
 			si_get_shader_name(shader, processor));
 		fprintf(file, "%s\n", shader->binary.llvm_ir_string);
 	}
 
-	if (file != stderr ||
+	if (!check_debug_option ||
 	    (r600_can_dump_shader(&sscreen->b, processor) &&
 	     !(sscreen->b.debug_flags & DBG_NO_ASM))) {
 		fprintf(file, "\n%s:\n", si_get_shader_name(shader, processor));
@@ -6320,7 +6321,8 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 		fprintf(file, "\n");
 	}
 
-	si_shader_dump_stats(sscreen, shader, debug, processor, file);
+	si_shader_dump_stats(sscreen, shader, debug, processor, file,
+			     check_debug_option);
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
@@ -6553,7 +6555,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 		if (r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
 			fprintf(stderr, "GS Copy Shader:\n");
 		si_shader_dump(sscreen, ctx.shader, debug,
-			       PIPE_SHADER_GEOMETRY, stderr);
+			       PIPE_SHADER_GEOMETRY, stderr, true);
 		r = si_shader_binary_upload(sscreen, ctx.shader);
 	}
 
@@ -8611,7 +8613,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 
 	si_fix_resource_usage(sscreen, shader);
 	si_shader_dump(sscreen, shader, debug, sel->info.processor,
-		       stderr);
+		       stderr, true);
 
 	/* Upload. */
 	r = si_shader_binary_upload(sscreen, shader);

@@ -45,7 +45,7 @@ static void si_dump_shader(struct si_screen *sscreen,
 		fwrite(current->shader_log, current->shader_log_size, 1, f);
 	else
 		si_shader_dump(sscreen, state->current, NULL,
-			       state->cso->info.processor, f);
+			       state->cso->info.processor, f, false);
 }
 
 /**
