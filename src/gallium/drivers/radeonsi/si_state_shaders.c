@@ -2370,6 +2370,8 @@ bool si_update_shaders(struct si_context *sctx)
 {
 	struct pipe_context *ctx = (struct pipe_context*)sctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
+	struct si_shader *old_vs = si_get_vs_state(sctx);
+	bool old_clip_disable = old_vs ? old_vs->key.opt.hw_vs.clip_disable : false;
 	int r;
 
 	/* Update stages before GS. */
@@ -2449,6 +2451,9 @@ bool si_update_shaders(struct si_context *sctx)
 	}
 
 	si_update_vgt_shader_config(sctx);
+
+	if (old_clip_disable != si_get_vs_state(sctx)->key.opt.hw_vs.clip_disable)
+		si_mark_atom_dirty(sctx, &sctx->clip_regs);
 
 	if (sctx->ps_shader.cso) {
 		unsigned db_shader_control;
