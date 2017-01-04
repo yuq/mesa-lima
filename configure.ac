@@ -2382,7 +2382,7 @@ dnl
 dnl Gallium helper functions
 dnl
 gallium_require_llvm() {
-    if test "x$enable_gallium_llvm" == "xyes"; then
+    if test "x$enable_gallium_llvm" = "xyes"; then
         llvm_check_version_for $LLVM_REQUIRED_GALLIUM "gallium"
     else
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
