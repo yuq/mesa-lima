@@ -227,14 +227,14 @@ intelInitExtensions(struct gl_context *ctx)
          ctx->Extensions.ARB_transform_feedback3 = true;
          ctx->Extensions.ARB_transform_feedback_instanced = true;
 
-         if ((brw->gen >= 8 || brw->screen->cmd_parser_version >= 5) &&
+         if (can_do_compute_dispatch(brw->screen) &&
              ctx->Const.MaxComputeWorkGroupSize[0] >= 1024) {
             ctx->Extensions.ARB_compute_shader = true;
             ctx->Extensions.ARB_ES3_1_compatibility =
                brw->gen >= 8 || brw->is_haswell;
          }
 
-         if (brw->screen->cmd_parser_version >= 2)
+         if (can_do_predicate_writes(brw->screen))
             brw->predicate.supported = true;
       }
    }
@@ -248,7 +248,7 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.ARB_robust_buffer_access_behavior = true;
    }
 
-   if (brw->screen->has_mi_math_and_lrr) {
+   if (can_do_mi_math_and_lrr(brw->screen)) {
       ctx->Extensions.ARB_query_buffer_object = true;
    }
 

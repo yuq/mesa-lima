@@ -468,7 +468,7 @@ brw_init_driver_functions(struct brw_context *brw,
 
    functions->NewTransformFeedback = brw_new_transform_feedback;
    functions->DeleteTransformFeedback = brw_delete_transform_feedback;
-   if (brw->screen->has_mi_math_and_lrr) {
+   if (can_do_mi_math_and_lrr(brw->screen)) {
       functions->BeginTransformFeedback = hsw_begin_transform_feedback;
       functions->EndTransformFeedback = hsw_end_transform_feedback;
       functions->PauseTransformFeedback = hsw_pause_transform_feedback;
@@ -608,7 +608,7 @@ brw_initialize_context_constants(struct brw_context *brw)
       BRW_MAX_SOL_BINDINGS / BRW_MAX_SOL_BUFFERS;
 
    ctx->Const.AlwaysUseGetTransformFeedbackVertexCount =
-      !brw->screen->has_mi_math_and_lrr;
+      !can_do_mi_math_and_lrr(brw->screen);
 
    int max_samples;
    const int *msaa_modes = intel_supported_msaa_modes(brw->screen);

@@ -175,7 +175,7 @@ setup_l3_config(struct brw_context *brw, const struct gen_l3_config *cfg)
 
       ADVANCE_BATCH();
 
-      if (brw->is_haswell && brw->screen->cmd_parser_version >= 4) {
+      if (can_do_hsw_l3_atomics(brw->screen)) {
          /* Enable L3 atomics on HSW if we have a DC partition, otherwise keep
           * them disabled to avoid crashing the system hard.
           */

@@ -1735,7 +1735,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    }
 
    if (intel_detect_pipelined_so(screen))
-      screen->hw_has_pipelined_register |= HW_HAS_PIPELINED_SOL_OFFSET;
+      screen->kernel_features |= KERNEL_ALLOWS_SOL_OFFSET_WRITES;
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {
@@ -1773,13 +1773,29 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->cmd_parser_version = 0;
    }
 
+   if (screen->cmd_parser_version >= 2)
+      screen->kernel_features |= KERNEL_ALLOWS_PREDICATE_WRITES;
+
+   /* Haswell requires command parser version 4 in order to have L3
+    * atomic scratch1 and chicken3 bits
+    */
+   if (screen->devinfo.is_haswell && screen->cmd_parser_version >= 4) {
+      screen->kernel_features |=
+         KERNEL_ALLOWS_HSW_SCRATCH1_AND_ROW_CHICKEN3;
+   }
+
    /* Haswell requires command parser version 6 in order to write to the
     * MI_MATH GPR registers, and version 7 in order to use
     * MI_LOAD_REGISTER_REG (which all users of MI_MATH use).
     */
-   screen->has_mi_math_and_lrr = screen->devinfo.gen >= 8 ||
-                                      (screen->devinfo.is_haswell &&
-                                       screen->cmd_parser_version >= 7);
+   if (screen->devinfo.gen >= 8 ||
+       (screen->devinfo.is_haswell && screen->cmd_parser_version >= 7)) {
+      screen->kernel_features |= KERNEL_ALLOWS_MI_MATH_AND_LRR;
+   }
+
+   /* Gen7 needs at least command parser version 5 to support compute */
+   if (screen->devinfo.gen >= 8 || screen->cmd_parser_version >= 5)
+      screen->kernel_features |= KERNEL_ALLOWS_COMPUTE_DISPATCH;
 
    dri_screen->extensions = !screen->has_context_reset_notification
       ? screenExtensions : intelRobustScreenExtensions;
