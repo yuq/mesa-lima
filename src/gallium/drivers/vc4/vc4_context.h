@@ -228,6 +228,13 @@ struct vc4_job {
         struct vc4_cl bo_handles;
         struct vc4_cl bo_pointers;
         uint32_t shader_rec_count;
+        /**
+         * Amount of memory used by the BOs in bo_pointers.
+         *
+         * Used for checking when we should flush the job early so we don't
+         * OOM.
+         */
+        uint32_t bo_space;
 
         /** @{ Surfaces to submit rendering for. */
         struct pipe_surface *color_read;

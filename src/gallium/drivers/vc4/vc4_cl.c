@@ -76,5 +76,7 @@ vc4_gem_hindex(struct vc4_job *job, struct vc4_bo *bo)
         cl_ptr(&out, vc4_bo_reference(bo));
         cl_end(&job->bo_pointers, out);
 
+        job->bo_space += bo->size;
+
         return hindex;
 }

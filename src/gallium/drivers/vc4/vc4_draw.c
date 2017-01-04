@@ -466,6 +466,13 @@ vc4_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 
         job->resolve |= PIPE_CLEAR_COLOR0;
 
+        /* If we've used half of the presumably 256MB CMA area, flush the job
+         * so that we don't accumulate a job that will end up not being
+         * executable.
+         */
+        if (job->bo_space > 128 * 1024 * 1024)
+                vc4_flush(pctx);
+
         if (vc4_debug & VC4_DEBUG_ALWAYS_FLUSH)
                 vc4_flush(pctx);
 }
