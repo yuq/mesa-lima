@@ -2338,6 +2338,12 @@ intel_miptree_make_shareable(struct brw_context *brw,
       drm_intel_bo_unreference(mt->mcs_buf->bo);
       free(mt->mcs_buf);
       mt->mcs_buf = NULL;
+
+      /* Any pending MCS/CCS operations are no longer needed. Trying to
+       * execute any will likely crash due to the missing aux buffer. So let's
+       * delete all pending ops.
+       */
+      exec_list_make_empty(&mt->color_resolve_map);
    }
 
    if (mt->hiz_buf) {
@@ -2345,6 +2351,16 @@ intel_miptree_make_shareable(struct brw_context *brw,
       intel_miptree_all_slices_resolve_depth(brw, mt);
       intel_miptree_hiz_buffer_free(mt->hiz_buf);
       mt->hiz_buf = NULL;
+
+      for (uint32_t l = mt->first_level; l <= mt->last_level; ++l) {
+         mt->level[l].has_hiz = false;
+      }
+
+      /* Any pending HiZ operations are no longer needed. Trying to execute
+       * any will likely crash due to the missing aux buffer. So let's delete
+       * all pending ops.
+       */
+      exec_list_make_empty(&mt->hiz_map);
    }
 }
 
