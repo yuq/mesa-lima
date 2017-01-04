@@ -30,77 +30,6 @@
 #include "intel_batchbuffer.h"
 
 /**
- * Test if we can use MI_LOAD_REGISTER_MEM from an untrusted batchbuffer.
- *
- * Some combinations of hardware and kernel versions allow this feature,
- * while others don't.  Instead of trying to enumerate every case, just
- * try and write a register and see if works.
- */
-static bool
-can_do_pipelined_register_writes(struct brw_context *brw)
-{
-   /**
-    * gen >= 8 specifically allows these writes. gen <= 6 also
-    * doesn't block them.
-    */
-   if (brw->gen != 7)
-      return true;
-
-   static int result = -1;
-   if (result != -1)
-      return result;
-
-   /* We use SO_WRITE_OFFSET0 since you're supposed to write it (unlike the
-    * statistics registers), and we already reset it to zero before using it.
-    */
-   const int reg = GEN7_SO_WRITE_OFFSET(0);
-   const int expected_value = 0x1337d0d0;
-   const int offset = 100;
-
-   /* The register we picked only exists on Gen7+. */
-   assert(brw->gen == 7);
-
-   uint32_t *data;
-   /* Set a value in a BO to a known quantity.  The workaround BO already
-    * exists and doesn't contain anything important, so we may as well use it.
-    */
-   drm_intel_bo_map(brw->workaround_bo, true);
-   data = brw->workaround_bo->virtual;
-   data[offset] = 0xffffffff;
-   drm_intel_bo_unmap(brw->workaround_bo);
-
-   /* Write the register. */
-   BEGIN_BATCH(3);
-   OUT_BATCH(MI_LOAD_REGISTER_IMM | (3 - 2));
-   OUT_BATCH(reg);
-   OUT_BATCH(expected_value);
-   ADVANCE_BATCH();
-
-   brw_emit_mi_flush(brw);
-
-   /* Save the register's value back to the buffer. */
-   BEGIN_BATCH(3);
-   OUT_BATCH(MI_STORE_REGISTER_MEM | (3 - 2));
-   OUT_BATCH(reg);
-   OUT_RELOC(brw->workaround_bo,
-             I915_GEM_DOMAIN_INSTRUCTION, I915_GEM_DOMAIN_INSTRUCTION,
-             offset * sizeof(uint32_t));
-   ADVANCE_BATCH();
-
-   intel_batchbuffer_flush(brw);
-
-   /* Check whether the value got written. */
-   drm_intel_bo_map(brw->workaround_bo, false);
-   data = brw->workaround_bo->virtual;
-   bool success = data[offset] == expected_value;
-   drm_intel_bo_unmap(brw->workaround_bo);
-
-   result = success;
-
-   return success;
-}
-
-/**
  * Initializes potential list of extensions if ctx == NULL, or actually enables
  * extensions for a context.
  */
@@ -267,8 +196,6 @@ intelInitExtensions(struct gl_context *ctx)
    }
 
    brw->predicate.supported = false;
-   brw->can_do_pipelined_register_writes =
-      can_do_pipelined_register_writes(brw);
 
    if (brw->gen >= 7) {
       ctx->Extensions.ARB_conservative_depth = true;

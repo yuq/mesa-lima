@@ -1271,6 +1271,96 @@ intel_detect_timestamp(struct intel_screen *screen)
    return 0;
 }
 
+ /**
+ * Test if we can use MI_LOAD_REGISTER_MEM from an untrusted batchbuffer.
+ *
+ * Some combinations of hardware and kernel versions allow this feature,
+ * while others don't.  Instead of trying to enumerate every case, just
+ * try and write a register and see if works.
+ */
+static bool
+intel_detect_pipelined_register(struct intel_screen *screen,
+                                int reg, uint32_t expected_value, bool reset)
+{
+   drm_intel_bo *results, *bo;
+   uint32_t *batch;
+   uint32_t offset = 0;
+   bool success = false;
+
+   /* Create a zero'ed temporary buffer for reading our results */
+   results = drm_intel_bo_alloc(screen->bufmgr, "registers", 4096, 0);
+   if (results == NULL)
+      goto err;
+
+   bo = drm_intel_bo_alloc(screen->bufmgr, "batchbuffer", 4096, 0);
+   if (bo == NULL)
+      goto err_results;
+
+   if (drm_intel_bo_map(bo, 1))
+      goto err_batch;
+
+   batch = bo->virtual;
+
+   /* Write the register. */
+   *batch++ = MI_LOAD_REGISTER_IMM | (3 - 2);
+   *batch++ = reg;
+   *batch++ = expected_value;
+
+   /* Save the register's value back to the buffer. */
+   *batch++ = MI_STORE_REGISTER_MEM | (3 - 2);
+   *batch++ = reg;
+   drm_intel_bo_emit_reloc(bo, (char *)batch -(char *)bo->virtual,
+                           results, offset*sizeof(uint32_t),
+                           I915_GEM_DOMAIN_INSTRUCTION,
+                           I915_GEM_DOMAIN_INSTRUCTION);
+   *batch++ = results->offset + offset*sizeof(uint32_t);
+
+   /* And afterwards clear the register */
+   if (reset) {
+      *batch++ = MI_LOAD_REGISTER_IMM | (3 - 2);
+      *batch++ = reg;
+      *batch++ = 0;
+   }
+
+   *batch++ = MI_BATCH_BUFFER_END;
+
+   drm_intel_bo_mrb_exec(bo, ALIGN((char *)batch - (char *)bo->virtual, 8),
+                         NULL, 0, 0,
+                         I915_EXEC_RENDER);
+
+   /* Check whether the value got written. */
+   if (drm_intel_bo_map(results, false) == 0) {
+      success = *((uint32_t *)results->virtual + offset) == expected_value;
+      drm_intel_bo_unmap(results);
+   }
+
+err_batch:
+   drm_intel_bo_unreference(bo);
+err_results:
+   drm_intel_bo_unreference(results);
+err:
+   return success;
+}
+
+static bool
+intel_detect_pipelined_so(struct intel_screen *screen)
+{
+   /* Supposedly, Broadwell just works. */
+   if (screen->devinfo.gen >= 8)
+      return true;
+
+   if (screen->devinfo.gen <= 6)
+      return false;
+
+   /* We use SO_WRITE_OFFSET0 since you're supposed to write it (unlike the
+    * statistics registers), and we already reset it to zero before using it.
+    */
+   return intel_detect_pipelined_register(screen,
+                                          GEN7_SO_WRITE_OFFSET(0),
+                                          0x1337d0d0,
+                                          false);
+}
+
 /**
  * Return array of MSAA modes supported by the hardware. The array is
  * zero-terminated and sorted in decreasing order.
@@ -1642,6 +1732,9 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    } else if (screen->devinfo.gen == 7) {
       screen->subslice_total = 1 << (screen->devinfo.gt - 1);
    }
+
+   if (intel_detect_pipelined_so(screen))
+      screen->hw_has_pipelined_register |= HW_HAS_PIPELINED_SOL_OFFSET;
 
    const char *force_msaa = getenv("INTEL_FORCE_MSAA");
    if (force_msaa) {

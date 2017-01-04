@@ -68,6 +68,14 @@ struct intel_screen
     */
    bool has_context_reset_notification;
 
+   /**
+    * Does the kernel support pipelined register access?
+    * Due to whitelisting we need to do seperate checks
+    * for each register.
+    */
+   unsigned hw_has_pipelined_register;
+#define HW_HAS_PIPELINED_SOL_OFFSET (1<<0)
+
    dri_bufmgr *bufmgr;
 
    /**
