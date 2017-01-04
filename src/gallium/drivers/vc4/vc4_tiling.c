@@ -87,6 +87,22 @@ vc4_utile_height(int cpp)
         }
 }
 
+/** Returns the stride in bytes of a 64-byte microtile. */
+static uint32_t
+vc4_utile_stride(int cpp)
+{
+        switch (cpp) {
+        case 1:
+                return 8;
+        case 2:
+        case 4:
+        case 8:
+                return 16;
+        default:
+                unreachable("bad cpp");
+        }
+}
+
 /**
  * The texture unit decides what tiling format a particular miplevel is using
  * this function, so we lay out our miptrees accordingly.
@@ -101,25 +117,21 @@ vc4_size_is_lt(uint32_t width, uint32_t height, int cpp)
 void
 vc4_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp)
 {
-        uint32_t utile_h = vc4_utile_height(cpp);
-        uint32_t row_size = 64 / utile_h;
+        uint32_t src_stride = vc4_utile_stride(cpp);
 
-        for (int y = 0; y < utile_h; y++) {
-                memcpy(dst, src, row_size);
+        for (uint32_t src_offset = 0; src_offset < 64; src_offset += src_stride) {
+                memcpy(dst, src + src_offset, src_stride);
                 dst += dst_stride;
-                src += row_size;
         }
 }
 
 void
 vc4_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp)
 {
-        uint32_t utile_h = vc4_utile_height(cpp);
-        uint32_t row_size = 64 / utile_h;
+        uint32_t dst_stride = vc4_utile_stride(cpp);
 
-        for (int y = 0; y < utile_h; y++) {
-                memcpy(dst, src, row_size);
-                dst += row_size;
+        for (uint32_t dst_offset = 0; dst_offset < 64; dst_offset += dst_stride) {
+                memcpy(dst + dst_offset, src, dst_stride);
                 src += src_stride;
         }
 }
