@@ -155,7 +155,7 @@ libglx_la_LIBADD += \
 	  $(builddir)/windows/libwindowsglx.la
 endif
 
-if USE_LIBGLVND_GLX
+if USE_LIBGLVND
 AM_CFLAGS += \
 	-DGL_LIB_NAME=\"lib@GL_LIB@.so.0\" \
 	$(GLVND_CFLAGS)

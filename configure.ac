@@ -1348,10 +1348,11 @@ dnl Libglvnd configuration
 dnl
 AC_ARG_ENABLE([libglvnd],
     [AS_HELP_STRING([--enable-libglvnd],
-        [Build for libglvnd @<:@default=disabled@:>@])],
+        [Build GLX and EGL for libglvnd @<:@default=disabled@:>@])],
     [enable_libglvnd="$enableval"],
     [enable_libglvnd=no])
-AM_CONDITIONAL(USE_LIBGLVND_GLX, test "x$enable_libglvnd" = xyes)
+AM_CONDITIONAL(USE_LIBGLVND, test "x$enable_libglvnd" = xyes)
+
 if test "x$enable_libglvnd" = xyes ; then
     dnl XXX: update once we can handle more than libGL/glx.
     dnl Namely: we should error out if neither of the glvnd enabled libraries
@@ -1367,8 +1368,11 @@ if test "x$enable_libglvnd" = xyes ; then
         ;;
     esac
 
-    PKG_CHECK_MODULES([GLVND], libglvnd >= 0.1.0)
-    DEFINES="${DEFINES} -DUSE_LIBGLVND_GLX=1"
+    PKG_CHECK_MODULES([GLVND], libglvnd >= 0.2.0)
+    PKG_CHECK_VAR(LIBGLVND_DATADIR, libglvnd, datadir)
+    AC_SUBST([LIBGLVND_DATADIR])
+
+    DEFINES="${DEFINES} -DUSE_LIBGLVND=1"
     DEFAULT_GL_LIB_NAME=GLX_mesa
 fi
 
