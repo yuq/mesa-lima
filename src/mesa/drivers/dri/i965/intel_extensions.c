@@ -219,7 +219,7 @@ intelInitExtensions(struct gl_context *ctx)
       if (brw->is_haswell)
          ctx->Extensions.ARB_gpu_shader_fp64 = true;
 
-      if (brw->can_do_pipelined_register_writes) {
+      if (can_do_pipelined_register_writes(brw->screen)) {
          ctx->Extensions.ARB_draw_indirect = true;
          ctx->Extensions.ARB_transform_feedback2 = true;
          ctx->Extensions.ARB_transform_feedback3 = true;

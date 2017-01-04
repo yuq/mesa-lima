@@ -983,8 +983,6 @@ brwCreateContext(gl_api api,
 
    brw->must_use_separate_stencil = devinfo->must_use_separate_stencil;
    brw->has_swizzling = screen->hw_has_swizzling;
-   brw->can_do_pipelined_register_writes =
-      screen->hw_has_pipelined_register & HW_HAS_PIPELINED_SOL_OFFSET;
 
    isl_device_init(&brw->isl_dev, devinfo, screen->hw_has_swizzling);
 

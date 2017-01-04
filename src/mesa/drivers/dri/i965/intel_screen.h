@@ -127,4 +127,10 @@ void aub_dump_bmp(struct gl_context *ctx);
 const int*
 intel_supported_msaa_modes(const struct intel_screen  *screen);
 
+static inline bool
+can_do_pipelined_register_writes(const struct intel_screen *screen)
+{
+   return screen->hw_has_pipelined_register & HW_HAS_PIPELINED_SOL_OFFSET;
+}
+
 #endif
