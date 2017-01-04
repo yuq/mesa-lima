@@ -39,10 +39,6 @@
 
 #include "state_tracker/sw_winsys.h"
 
-extern "C" {
-#include "gallivm/lp_bld_limits.h"
-}
-
 #include "jit_api.h"
 
 #include "memory/TilingFunctions.h"
