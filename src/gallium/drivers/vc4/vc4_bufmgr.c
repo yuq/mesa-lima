@@ -289,17 +289,8 @@ vc4_bo_last_unreference_locked_timed(struct vc4_bo *bo, time_t time)
                 /* Move old list contents over (since the array has moved, and
                  * therefore the pointers to the list heads have to change).
                  */
-                for (int i = 0; i < cache->size_list_size; i++) {
-                        struct list_head *old_head = &cache->size_list[i];
-                        if (list_empty(old_head))
-                                list_inithead(&new_list[i]);
-                        else {
-                                new_list[i].next = old_head->next;
-                                new_list[i].prev = old_head->prev;
-                                new_list[i].next->prev = &new_list[i];
-                                new_list[i].prev->next = &new_list[i];
-                        }
-                }
+                for (int i = 0; i < cache->size_list_size; i++)
+                        list_replace(&cache->size_list[i], &new_list[i]);
                 for (int i = cache->size_list_size; i < page_index + 1; i++)
                         list_inithead(&new_list[i]);
 
