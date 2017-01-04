@@ -45,6 +45,7 @@ struct nir_spirv_specialization {
 };
 
 struct nir_spirv_supported_extensions {
+   bool float64;
    bool image_ms_array;
 };
 
