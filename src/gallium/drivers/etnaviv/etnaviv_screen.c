@@ -62,6 +62,7 @@ static const struct debug_named_value debug_options[] = {
    {"flush_all",      ETNA_DBG_FLUSH_ALL, "Flush after every rendered primitive"},
    {"zero",           ETNA_DBG_ZERO, "Zero all resources after allocation"},
    {"draw_stall",     ETNA_DBG_DRAW_STALL, "Stall FE/PE after each rendered primitive"},
+   {"shaderdb",       ETNA_DBG_SHADERDB, "Enable shaderdb output"},
    DEBUG_NAMED_VALUE_END
 };
 

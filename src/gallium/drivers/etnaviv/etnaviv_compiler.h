@@ -56,6 +56,8 @@ struct etna_shader_io_file {
 
 /* shader object, for linking */
 struct etna_shader {
+   uint32_t id; /* for debug */
+
    uint processor; /* TGSI_PROCESSOR_... */
    uint32_t code_size; /* code size in uint32 words */
    uint32_t *code;

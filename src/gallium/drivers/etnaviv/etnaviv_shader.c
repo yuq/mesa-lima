@@ -223,6 +223,42 @@ etna_shader_update_vs_inputs(struct etna_context *ctx,
    return true;
 }
 
+static inline const char *
+etna_shader_stage(struct etna_shader *shader)
+{
+   switch (shader->processor) {
+   case PIPE_SHADER_VERTEX:     return "VERT";
+   case PIPE_SHADER_FRAGMENT:   return "FRAG";
+   case PIPE_SHADER_COMPUTE:    return "CL";
+   default:
+      unreachable("invalid type");
+      return NULL;
+   }
+}
+
+static void
+dump_shader_info(struct etna_shader *shader, struct pipe_debug_callback *debug)
+{
+   if (!unlikely(etna_mesa_debug & ETNA_DBG_SHADERDB))
+      return;
+
+   pipe_debug_message(debug, SHADER_INFO, "\n"
+         "SHADER-DB: %s prog %d: %u instructions %u temps\n"
+         "SHADER-DB: %s prog %d: %u immediates %u consts\n"
+         "SHADER-DB: %s prog %d: %u loops\n",
+         etna_shader_stage(shader),
+         shader->id,
+         shader->code_size,
+         shader->num_temps,
+         etna_shader_stage(shader),
+         shader->id,
+         shader->uniforms.imm_count,
+         shader->uniforms.const_count,
+         etna_shader_stage(shader),
+         shader->id,
+         shader->num_loops);
+}
+
 bool
 etna_shader_update_vertex(struct etna_context *ctx)
 {
@@ -235,8 +271,14 @@ etna_create_shader_state(struct pipe_context *pctx,
                          const struct pipe_shader_state *pss)
 {
    struct etna_context *ctx = etna_context(pctx);
+   struct etna_shader *shader = etna_compile_shader(&ctx->specs, pss->tokens);
 
-   return etna_compile_shader(&ctx->specs, pss->tokens);
+   static uint32_t id;
+   shader->id = id++;
+
+   dump_shader_info(shader, &ctx->debug);
+
+   return shader;
 }
 
 static void
