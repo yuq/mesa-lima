@@ -2007,7 +2007,10 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
                              nir_intrinsic_instr *instr)
 {
 	const char *store_name;
+	LLVMValueRef src_data = get_src(ctx, instr->src[0]);
 	LLVMTypeRef data_type = ctx->f32;
+	int elem_size_mult = get_elem_bits(ctx, LLVMTypeOf(src_data)) / 32;
+	int components_32bit = elem_size_mult * instr->num_components;
 	unsigned writemask = nir_intrinsic_write_mask(instr);
 	LLVMValueRef base_data, base_offset;
 	LLVMValueRef params[6];
@@ -2020,10 +2023,10 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
 	params[4] = LLVMConstInt(ctx->i1, 0, false);  /* glc */
 	params[5] = LLVMConstInt(ctx->i1, 0, false);  /* slc */
 
-	if (instr->num_components > 1)
-		data_type = LLVMVectorType(ctx->f32, instr->num_components);
+	if (components_32bit > 1)
+		data_type = LLVMVectorType(ctx->f32, components_32bit);
 
-	base_data = to_float(ctx, get_src(ctx, instr->src[0]));
+	base_data = to_float(ctx, src_data);
 	base_data = trim_vector(ctx, base_data, instr->num_components);
 	base_data = LLVMBuildBitCast(ctx->builder, base_data,
 				     data_type, "");
@@ -2040,6 +2043,14 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
 		if (count == 3) {
 			writemask |= 1 << (start + 2);
 			count = 2;
+		}
+
+		start *= elem_size_mult;
+		count *= elem_size_mult;
+
+		if (count > 4) {
+			writemask |= ((1u << (count - 4)) - 1u) << (start + 4);
+			count = 4;
 		}
 
 		if (count == 4) {
