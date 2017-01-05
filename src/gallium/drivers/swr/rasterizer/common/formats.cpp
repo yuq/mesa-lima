@@ -149,16 +149,26 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0.0f, 0.0f, 0.0f, 0.0f },
         1, 1
     },
-    // padding (0x5)
+    // R64G64_FLOAT (0x5)
     {
-        nullptr,
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 },
-        0, 0, 0, false, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1
+        "R64G64_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 1, 0, 0 }, // Swizzle
+        { 64, 64, 0, 0 }, // Bits per component
+        128, // Bits per element
+        16, // Bytes per element
+        2, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        false, // isLuminance
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
     },
+
     // R32G32B32X32_FLOAT (0x6)
     {
         "R32G32B32X32_FLOAT",
@@ -1719,16 +1729,26 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         { 0.0f, 0.0f, 0.0f, 0.0f },
         1, 1
     },
-    // padding (0x8D)
+    // R64_FLOAT (0x8D)
     {
-        nullptr,
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 },
-        0, 0, 0, false, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1
+        "R64_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 0, 0, 0 }, // Swizzle
+        { 64, 0, 0, 0 }, // Bits per component
+        64, // Bits per element
+        8, // Bytes per element
+        1, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        false, // isLuminance
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 0, 0, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
     },
+
     // R16G16B16X16_UNORM (0x8E)
     {
         "R16G16B16X16_UNORM",
@@ -5529,26 +5549,46 @@ const SWR_FORMAT_INFO gFormatInfo[] = {
         1, // bcHeight
     },
 
-    // padding (0x197)
+    // R64G64B64A64_FLOAT (0x197)
     {
-        nullptr,
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 },
-        0, 0, 0, false, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1
+        "R64G64B64A64_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_FLOAT },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 1, 2, 3 }, // Swizzle
+        { 64, 64, 64, 64 }, // Bits per component
+        256, // Bits per element
+        32, // Bytes per element
+        4, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        false, // isLuminance
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 1.0f, 1.0f }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
     },
-    // padding (0x198)
+
+    // R64G64B64_FLOAT (0x198)
     {
-        nullptr,
-        { SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN, SWR_TYPE_UNKNOWN },
-        { 0, 0, 0, 0 },{ 0, 0, 0, 0 },{ 0, 0, 0, 0 },
-        0, 0, 0, false, false, false, false,
-        { false, false, false, false },
-        { 0.0f, 0.0f, 0.0f, 0.0f },
-        1, 1
+        "R64G64B64_FLOAT",
+        { SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_FLOAT, SWR_TYPE_UNKNOWN },
+        { 0, 0, 0, 0x3f800000 }, // Defaults for missing components
+        { 0, 1, 2, 0 }, // Swizzle
+        { 64, 64, 64, 0 }, // Bits per component
+        192, // Bits per element
+        24, // Bytes per element
+        3, // Num components
+        false, // isSRGB
+        false, // isBC
+        false, // isSubsampled
+        false, // isLuminance
+        { false, false, false, false }, // Is normalized?
+        { 1.0f, 1.0f, 1.0f, 0 }, // To float scale factor
+        1, // bcWidth
+        1, // bcHeight
     },
+
     // BC4_SNORM (0x199)
     {
         "BC4_SNORM",

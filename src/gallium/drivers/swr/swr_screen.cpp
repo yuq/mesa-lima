@@ -537,6 +537,11 @@ mesa_to_swr_format(enum pipe_format format)
       {PIPE_FORMAT_R32G32B32_FIXED,        R32G32B32_SFIXED},
       {PIPE_FORMAT_R32G32B32A32_FIXED,     R32G32B32A32_SFIXED},
 
+      {PIPE_FORMAT_R64_FLOAT,              R64_FLOAT},
+      {PIPE_FORMAT_R64G64_FLOAT,           R64G64_FLOAT},
+      {PIPE_FORMAT_R64G64B64_FLOAT,        R64G64B64_FLOAT},
+      {PIPE_FORMAT_R64G64B64A64_FLOAT,     R64G64B64A64_FLOAT},
+
       /* These formats have entries in SWR but don't have Load/StoreTile
        * implementations. That means these aren't renderable, and thus having
        * a mapping entry here is detrimental.

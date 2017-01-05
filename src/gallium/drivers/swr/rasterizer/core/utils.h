@@ -856,6 +856,70 @@ struct Transpose11_11_10
 #endif
 };
 
+//////////////////////////////////////////////////////////////////////////
+/// Transpose64
+//////////////////////////////////////////////////////////////////////////
+struct Transpose64
+{
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Performs an SOA to AOS conversion
+    /// @param pSrc - source data in SOA form
+    /// @param pDst - output data in AOS form
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#if ENABLE_AVX512_SIMD16
+
+    static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// Transpose64_64
+//////////////////////////////////////////////////////////////////////////
+struct Transpose64_64
+{
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Performs an SOA to AOS conversion
+    /// @param pSrc - source data in SOA form
+    /// @param pDst - output data in AOS form
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#if ENABLE_AVX512_SIMD16
+
+    static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// Transpose64_64_64
+//////////////////////////////////////////////////////////////////////////
+struct Transpose64_64_64
+{
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Performs an SOA to AOS conversion
+    /// @param pSrc - source data in SOA form
+    /// @param pDst - output data in AOS form
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#if ENABLE_AVX512_SIMD16
+
+    static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#endif
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// Transpose64_64_64_64
+//////////////////////////////////////////////////////////////////////////
+struct Transpose64_64_64_64
+{
+    //////////////////////////////////////////////////////////////////////////
+    /// @brief Performs an SOA to AOS conversion
+    /// @param pSrc - source data in SOA form
+    /// @param pDst - output data in AOS form
+    static void Transpose(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#if ENABLE_AVX512_SIMD16
+
+    static void Transpose_16(const uint8_t* pSrc, uint8_t* pDst) = delete;
+#endif
+};
+
 // helper function to unroll loops
 template<int Begin, int End, int Step = 1>
 struct UnrollerL {

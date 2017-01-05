@@ -134,6 +134,28 @@ template<> struct FormatTraits<R32G32B32A32_UINT> :
 };
 
 //////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R64G64_FLOAT> - Format traits specialization for R64G64_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R64G64_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 64, SWR_TYPE_FLOAT, 64>,
+    FormatSwizzle<0, 1>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 128 };
+    static const uint32_t numComps{ 2 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose64_64  TransposeT;
+    typedef Format2<64, 64> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
 /// FormatTraits<R32G32B32X32_FLOAT> - Format traits specialization for R32G32B32X32_FLOAT
 //////////////////////////////////////////////////////////////////////////
 template<> struct FormatTraits<R32G32B32X32_FLOAT> :
@@ -593,6 +615,28 @@ template<> struct FormatTraits<L32A32_FLOAT> :
 
     typedef Transpose32_32  TransposeT;
     typedef Format2<32, 32> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R64_FLOAT> - Format traits specialization for R64_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R64_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 64>,
+    FormatSwizzle<0>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 64 };
+    static const uint32_t numComps{ 1 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef TransposeSingleComponent<64> TransposeT;
+    typedef Format1<64>                  FormatT;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -3123,6 +3167,50 @@ template<> struct FormatTraits<R8G8B8_USCALED> :
 
     typedef Transpose8_8_8   TransposeT;
     typedef Format3<8, 8, 8> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R64G64B64A64_FLOAT> - Format traits specialization for R64G64B64A64_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R64G64B64A64_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 64, SWR_TYPE_FLOAT, 64, SWR_TYPE_FLOAT, 64, SWR_TYPE_FLOAT, 64>,
+    FormatSwizzle<0, 1, 2, 3>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 256 };
+    static const uint32_t numComps{ 4 };
+    static const bool hasAlpha{ true };
+    static const uint32_t alphaComp{ 3 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose64_64_64_64    TransposeT;
+    typedef Format4<64, 64, 64, 64> FormatT;
+};
+
+//////////////////////////////////////////////////////////////////////////
+/// FormatTraits<R64G64B64_FLOAT> - Format traits specialization for R64G64B64_FLOAT
+//////////////////////////////////////////////////////////////////////////
+template<> struct FormatTraits<R64G64B64_FLOAT> :
+    ComponentTraits<SWR_TYPE_FLOAT, 64, SWR_TYPE_FLOAT, 64, SWR_TYPE_FLOAT, 64>,
+    FormatSwizzle<0, 1, 2>,
+    Defaults<0, 0, 0, 0x3f800000>
+{
+    static const uint32_t bpp{ 192 };
+    static const uint32_t numComps{ 3 };
+    static const bool hasAlpha{ false };
+    static const uint32_t alphaComp{ 0 };
+    static const bool isSRGB{ false };
+    static const bool isBC{ false };
+    static const bool isSubsampled{ false };
+    static const uint32_t bcWidth{ 1 };
+    static const uint32_t bcHeight{ 1 };
+
+    typedef Transpose64_64_64   TransposeT;
+    typedef Format3<64, 64, 64> FormatT;
 };
 
 //////////////////////////////////////////////////////////////////////////
