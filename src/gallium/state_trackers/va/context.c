@@ -184,7 +184,7 @@ error_csc_matrix:
    vl_compositor_cleanup_state(&drv->cstate);
 
 error_compositor_state:
-   vl_compositor_cleanup(&drv->cstate);
+   vl_compositor_cleanup(&drv->compositor);
 
 error_compositor:
    handle_table_destroy(drv->htab);
