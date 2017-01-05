@@ -542,7 +542,7 @@ lp_build_fetch_rgba_aos(struct gallivm_state *gallivm,
       conv_type = lp_type_int_vec(type.width*4, type.width * type.length);
       dst_vec_type = lp_build_vec_type(gallivm, type);
       conv_vec_type = lp_build_vec_type(gallivm, conv_type);
-      lp_build_context_init(&bld, gallivm, conv_type);
+      lp_build_context_init(&bld_conv, gallivm, conv_type);
 
       packed = lp_build_gather(gallivm, type.length/4,
                                format_desc->block.bits, fetch_type,
