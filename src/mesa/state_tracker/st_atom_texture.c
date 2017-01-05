@@ -123,11 +123,13 @@ update_textures(struct st_context *st,
       struct pipe_sampler_view *sampler_view = NULL;
 
       if (samplers_used & 1) {
+         /* prog->sh.data is NULL if it's ARB_fragment_program */
+         unsigned glsl_version = prog->sh.data ? prog->sh.data->Version : 0;
          const GLuint texUnit = prog->SamplerUnits[unit];
          GLboolean retval;
 
          retval = update_single_texture(st, &sampler_view, texUnit,
-                                        prog->sh.data->Version);
+                                        glsl_version);
          if (retval == GL_FALSE)
             continue;
 
