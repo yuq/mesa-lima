@@ -186,6 +186,8 @@ make_surface(const struct anv_device *dev,
          anv_finishme("Implement gen7 HiZ");
       } else if (vk_info->mipLevels > 1) {
          anv_finishme("Test multi-LOD HiZ");
+      } else if (vk_info->arrayLayers > 1) {
+         anv_finishme("Implement multi-arrayLayer HiZ clears and resolves");
       } else if (dev->info.gen == 8 && vk_info->samples > 1) {
          anv_finishme("Test gen8 multisampled HiZ");
       } else {
