@@ -25,11 +25,21 @@
  *
  * Helper functions from vc4_tiling.c that will be compiled for using NEON
  * assembly or not.
+ *
+ * If VC4_BUILD_NEON is set, then the functions will be suffixed with _neon.
+ * They will only use NEON assembly if __ARM_ARCH is also set, to keep the x86
+ * sim build working.
  */
 
 #include <string.h>
 #include "pipe/p_state.h"
 #include "vc4_tiling.h"
+
+#ifdef VC4_BUILD_NEON
+#define NEON_TAG(x) x ## _neon
+#else
+#define NEON_TAG(x) x ## _base
+#endif
 
 /** Returns the stride in bytes of a 64-byte microtile. */
 static uint32_t
@@ -48,14 +58,59 @@ vc4_utile_stride(int cpp)
 }
 
 static void
-vc4_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp)
+vc4_load_utile(void *cpu, void *gpu, uint32_t cpu_stride, uint32_t cpp)
 {
-        uint32_t src_stride = vc4_utile_stride(cpp);
-
-        for (uint32_t src_offset = 0; src_offset < 64; src_offset += src_stride) {
-                memcpy(dst, src + src_offset, src_stride);
-                dst += dst_stride;
+        uint32_t gpu_stride = vc4_utile_stride(cpp);
+#if defined(VC4_BUILD_NEON) && defined(__ARM_ARCH)
+        if (gpu_stride == 8) {
+                __asm__ volatile (
+                        /* Load from the GPU in one shot, no interleave, to
+                         * d0-d7.
+                         */
+                        "vldm %0, {q0, q1, q2, q3};\n"
+                        /* Store each 8-byte line to cpu-side destination,
+                         * incrementing it by the stride each time.
+                         */
+                        "vst1.8 d0, [%1], %r2;\n"
+                        "vst1.8 d1, [%1], %r2;\n"
+                        "vst1.8 d2, [%1], %r2;\n"
+                        "vst1.8 d3, [%1], %r2;\n"
+                        "vst1.8 d4, [%1], %r2;\n"
+                        "vst1.8 d5, [%1], %r2;\n"
+                        "vst1.8 d6, [%1], %r2;\n"
+                        "vst1.8 d7, [%1];\n"
+                        :
+                        : "r"(gpu), "r"(cpu), "r"(cpu_stride)
+                        : "q0", "q1", "q2", "q3");
+        } else {
+                assert(gpu_stride == 16);
+                __asm__ volatile (
+                        /* Load from the GPU in one shot, no interleave, to
+                         * d0-d7.
+                         */
+                        "vldm %0, {q0, q1, q2, q3};\n"
+                        /* Store each 16-byte line in 2 parts to the cpu-side
+                         * destination.  (vld1 can only store one d-register
+                         * at a time).
+                         */
+                        "vst1.8 d0, [%1], %r3;\n"
+                        "vst1.8 d1, [%2], %r3;\n"
+                        "vst1.8 d2, [%1], %r3;\n"
+                        "vst1.8 d3, [%2], %r3;\n"
+                        "vst1.8 d4, [%1], %r3;\n"
+                        "vst1.8 d5, [%2], %r3;\n"
+                        "vst1.8 d6, [%1];\n"
+                        "vst1.8 d7, [%2];\n"
+                        :
+                        : "r"(gpu), "r"(cpu), "r"(cpu + 8), "r"(cpu_stride)
+                        : "q0", "q1", "q2", "q3");
         }
+#else
+        for (uint32_t gpu_offset = 0; gpu_offset < 64; gpu_offset += gpu_stride) {
+                memcpy(cpu, gpu + gpu_offset, gpu_stride);
+                cpu += cpu_stride;
+        }
+#endif
 }
 
 static void
@@ -70,9 +125,9 @@ vc4_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp)
 }
 
 void
-vc4_load_lt_image(void *dst, uint32_t dst_stride,
-                  void *src, uint32_t src_stride,
-                  int cpp, const struct pipe_box *box)
+NEON_TAG(vc4_load_lt_image)(void *dst, uint32_t dst_stride,
+                            void *src, uint32_t src_stride,
+                            int cpp, const struct pipe_box *box)
 {
         uint32_t utile_w = vc4_utile_width(cpp);
         uint32_t utile_h = vc4_utile_height(cpp);
@@ -91,9 +146,9 @@ vc4_load_lt_image(void *dst, uint32_t dst_stride,
 }
 
 void
-vc4_store_lt_image(void *dst, uint32_t dst_stride,
-                   void *src, uint32_t src_stride,
-                   int cpp, const struct pipe_box *box)
+NEON_TAG(vc4_store_lt_image)(void *dst, uint32_t dst_stride,
+                             void *src, uint32_t src_stride,
+                             int cpp, const struct pipe_box *box)
 {
         uint32_t utile_w = vc4_utile_width(cpp);
         uint32_t utile_h = vc4_utile_height(cpp);
