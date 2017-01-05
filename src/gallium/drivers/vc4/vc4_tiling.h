@@ -27,8 +27,6 @@
 uint32_t vc4_utile_width(int cpp) ATTRIBUTE_CONST;
 uint32_t vc4_utile_height(int cpp) ATTRIBUTE_CONST;
 bool vc4_size_is_lt(uint32_t width, uint32_t height, int cpp) ATTRIBUTE_CONST;
-void vc4_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp);
-void vc4_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp);
 void vc4_load_tiled_image(void *dst, uint32_t dst_stride,
                           void *src, uint32_t src_stride,
                           uint8_t tiling_format, int cpp,

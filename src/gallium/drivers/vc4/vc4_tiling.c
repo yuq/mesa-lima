@@ -114,7 +114,7 @@ vc4_size_is_lt(uint32_t width, uint32_t height, int cpp)
                 height <= 4 * vc4_utile_height(cpp));
 }
 
-void
+static void
 vc4_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp)
 {
         uint32_t src_stride = vc4_utile_stride(cpp);
@@ -125,7 +125,7 @@ vc4_load_utile(void *dst, void *src, uint32_t dst_stride, uint32_t cpp)
         }
 }
 
-void
+static void
 vc4_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp)
 {
         uint32_t dst_stride = vc4_utile_stride(cpp);
