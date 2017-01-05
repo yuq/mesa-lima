@@ -325,12 +325,20 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
 #  define swiz sbe
 #endif
 
+   /* Skip the VUE header and position slots by default */
+   unsigned urb_entry_read_offset = 1;
    int max_source_attr = 0;
    for (int attr = 0; attr < VARYING_SLOT_MAX; attr++) {
       int input_index = wm_prog_data->urb_setup[attr];
 
       if (input_index < 0)
          continue;
+
+      /* gl_Layer is stored in the VUE header */
+      if (attr == VARYING_SLOT_LAYER) {
+         urb_entry_read_offset = 0;
+         continue;
+      }
 
       if (attr == VARYING_SLOT_PNTC) {
          sbe.PointSpriteTextureCoordinateEnable = 1 << input_index;
@@ -356,18 +364,22 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
          swiz.Attribute[input_index].ComponentOverrideZ = true;
          swiz.Attribute[input_index].ComponentOverrideW = true;
       } else {
-         assert(slot >= 2);
-         const int source_attr = slot - 2;
-         max_source_attr = MAX2(max_source_attr, source_attr);
          /* We have to subtract two slots to accout for the URB entry output
           * read offset in the VS and GS stages.
           */
+         assert(slot >= 2);
+         const int source_attr = slot - 2 * urb_entry_read_offset;
+         max_source_attr = MAX2(max_source_attr, source_attr);
          swiz.Attribute[input_index].SourceAttribute = source_attr;
       }
    }
 
-   sbe.VertexURBEntryReadOffset = 1; /* Skip the VUE header and position slots */
+   sbe.VertexURBEntryReadOffset = urb_entry_read_offset;
    sbe.VertexURBEntryReadLength = DIV_ROUND_UP(max_source_attr + 1, 2);
+#if GEN_GEN >= 8
+   sbe.ForceVertexURBEntryReadOffset = true;
+   sbe.ForceVertexURBEntryReadLength = true;
+#endif
 
    uint32_t *dw = anv_batch_emit_dwords(&pipeline->batch,
                                         GENX(3DSTATE_SBE_length));
