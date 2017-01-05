@@ -26,6 +26,7 @@
 
 #include "nine_helpers.h"
 #include "nine_pdata.h"
+#include "nine_lock.h"
 
 #define DBG_CHANNEL DBG_UNKNOWN
 
@@ -130,6 +131,31 @@ NineUnknown_Release( struct NineUnknown *This )
         /* Containers (here with !forward) take care of item destruction */
         if (!This->container && This->bind == 0) {
             This->dtor(This);
+        }
+    }
+    return r;
+}
+
+/* No need to lock the mutex protecting nine (when D3DCREATE_MULTITHREADED)
+ * for AddRef and Release, except for dtor as some of the dtors require it. */
+ULONG NINE_WINAPI
+NineUnknown_ReleaseWithDtorLock( struct NineUnknown *This )
+{
+    if (This->forward)
+        return NineUnknown_ReleaseWithDtorLock(This->container);
+
+    ULONG r = p_atomic_dec_return(&This->refs);
+
+    if (r == 0) {
+        if (This->device) {
+            if (NineUnknown_ReleaseWithDtorLock(NineUnknown(This->device)) == 0)
+                return r; /* everything's gone */
+        }
+        /* Containers (here with !forward) take care of item destruction */
+        if (!This->container && This->bind == 0) {
+            NineLockGlobalMutex();
+            This->dtor(This);
+            NineUnlockGlobalMutex();
         }
     }
     return r;

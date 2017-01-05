@@ -100,6 +100,9 @@ NineUnknown_AddRef( struct NineUnknown *This );
 ULONG NINE_WINAPI
 NineUnknown_Release( struct NineUnknown *This );
 
+ULONG NINE_WINAPI
+NineUnknown_ReleaseWithDtorLock( struct NineUnknown *This );
+
 HRESULT NINE_WINAPI
 NineUnknown_GetDevice( struct NineUnknown *This,
                        IDirect3DDevice9 **ppDevice );
