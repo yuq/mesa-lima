@@ -169,9 +169,6 @@ brw_codegen_vs_prog(struct brw_context *brw,
    if (unlikely(INTEL_DEBUG & DEBUG_VS)) {
       if (!prog)
          brw_dump_arb_asm("vertex", &vp->program);
-
-      fprintf(stderr, "VS Output ");
-      brw_print_vue_map(stderr, &prog_data.base.vue_map);
    }
 
    int st_index = -1;

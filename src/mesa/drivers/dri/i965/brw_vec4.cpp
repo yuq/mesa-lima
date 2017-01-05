@@ -2786,6 +2786,11 @@ brw_compile_vs(const struct brw_compiler *compiler, void *log_data,
    else
       prog_data->base.urb_entry_size = DIV_ROUND_UP(vue_entries, 4);
 
+   if (INTEL_DEBUG & DEBUG_VS) {
+      fprintf(stderr, "VS Output ");
+      brw_print_vue_map(stderr, &prog_data->base.vue_map);
+   }
+
    if (is_scalar) {
       prog_data->base.dispatch_mode = DISPATCH_MODE_SIMD8;
 
