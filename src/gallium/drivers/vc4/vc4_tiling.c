@@ -52,41 +52,6 @@
 #include "vc4_context.h"
 #include "vc4_tiling.h"
 
-/** Return the width in pixels of a 64-byte microtile. */
-uint32_t
-vc4_utile_width(int cpp)
-{
-        switch (cpp) {
-        case 1:
-        case 2:
-                return 8;
-        case 4:
-                return 4;
-        case 8:
-                return 2;
-        default:
-                fprintf(stderr, "unknown cpp: %d\n", cpp);
-                abort();
-        }
-}
-
-/** Return the height in pixels of a 64-byte microtile. */
-uint32_t
-vc4_utile_height(int cpp)
-{
-        switch (cpp) {
-        case 1:
-                return 8;
-        case 2:
-        case 4:
-        case 8:
-                return 4;
-        default:
-                fprintf(stderr, "unknown cpp: %d\n", cpp);
-                abort();
-        }
-}
-
 /** Returns the stride in bytes of a 64-byte microtile. */
 static uint32_t
 vc4_utile_stride(int cpp)
