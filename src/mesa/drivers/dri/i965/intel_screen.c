@@ -239,8 +239,14 @@ static struct intel_image_format intel_image_formats[] = {
    { __DRI_IMAGE_FOURCC_R8, __DRI_IMAGE_COMPONENTS_R, 1,
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_R8, 1 }, } },
 
+   { __DRI_IMAGE_FOURCC_R16, __DRI_IMAGE_COMPONENTS_R, 1,
+     { { 0, 0, 0, __DRI_IMAGE_FORMAT_R16, 1 }, } },
+
    { __DRI_IMAGE_FOURCC_GR88, __DRI_IMAGE_COMPONENTS_RG, 1,
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_GR88, 2 }, } },
+
+   { __DRI_IMAGE_FOURCC_GR1616, __DRI_IMAGE_COMPONENTS_RG, 1,
+     { { 0, 0, 0, __DRI_IMAGE_FORMAT_GR1616, 2 }, } },
 
    { __DRI_IMAGE_FOURCC_YUV410, __DRI_IMAGE_COMPONENTS_Y_U_V, 3,
      { { 0, 0, 0, __DRI_IMAGE_FORMAT_R8, 1 },
