@@ -565,7 +565,9 @@ brw_update_texture_surface(struct gl_context *ctx,
       /* Implement gen6 and gen7 gather work-around */
       bool need_green_to_blue = false;
       if (for_gather) {
-         if (brw->gen == 7 && format == BRW_SURFACEFORMAT_R32G32_FLOAT) {
+         if (brw->gen == 7 && (format == BRW_SURFACEFORMAT_R32G32_FLOAT ||
+                               format == BRW_SURFACEFORMAT_R32G32_SINT ||
+                               format == BRW_SURFACEFORMAT_R32G32_UINT)) {
             format = BRW_SURFACEFORMAT_R32G32_FLOAT_LD;
             need_green_to_blue = brw->is_haswell;
          } else if (brw->gen == 6) {

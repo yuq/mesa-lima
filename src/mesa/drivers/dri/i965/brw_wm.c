@@ -347,13 +347,40 @@ brw_populate_sampler_prog_key_data(struct gl_context *ctx,
                key->gl_clamp_mask[2] |= 1 << s;
          }
 
-         /* gather4's channel select for green from RG32F is broken; requires
-          * a shader w/a on IVB; fixable with just SCS on HSW.
-          */
-         if (brw->gen == 7 && !brw->is_haswell &&
-             prog->nir->info->uses_texture_gather) {
-            if (img->InternalFormat == GL_RG32F)
-               key->gather_channel_quirk_mask |= 1 << s;
+         /* gather4 for RG32* is broken in multiple ways on Gen7. */
+         if (brw->gen == 7 && prog->nir->info->uses_texture_gather) {
+            switch (img->InternalFormat) {
+            case GL_RG32I:
+            case GL_RG32UI: {
+               /* We have to override the format to R32G32_FLOAT_LD.
+                * This means that SCS_ALPHA and SCS_ONE will return 0x3f8
+                * (1.0) rather than integer 1.  This needs shader hacks.
+                *
+                * On Ivybridge, we whack W (alpha) to ONE in our key's
+                * swizzle.  On Haswell, we look at the original texture
+                * swizzle, and use XYZW with channels overridden to ONE,
+                * leaving normal texture swizzling to SCS.
+                */
+               unsigned src_swizzle =
+                  brw->is_haswell ? t->_Swizzle : key->swizzles[s];
+               for (int i = 0; i < 4; i++) {
+                  unsigned src_comp = GET_SWZ(src_swizzle, i);
+                  if (src_comp == SWIZZLE_ONE || src_comp == SWIZZLE_W) {
+                     key->swizzles[i] &= ~(0x7 << (3 * i));
+                     key->swizzles[i] |= SWIZZLE_ONE << (3 * i);
+                  }
+               }
+               /* fallthrough */
+            }
+            case GL_RG32F:
+               /* The channel select for green doesn't work - we have to
+                * request blue.  Haswell can use SCS for this, but Ivybridge
+                * needs a shader workaround.
+                */
+               if (!brw->is_haswell)
+                  key->gather_channel_quirk_mask |= 1 << s;
+               break;
+            }
          }
 
          /* Gen6's gather4 is broken for UINT/SINT; we treat them as
