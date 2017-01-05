@@ -434,7 +434,11 @@ static void declare_input_vs(
 	}
 
 	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (4 * input_index)) & 0xf;
-	if (fix_fetch) {
+
+	switch (fix_fetch) {
+	case SI_FIX_FETCH_A2_SNORM:
+	case SI_FIX_FETCH_A2_SSCALED:
+	case SI_FIX_FETCH_A2_SINT: {
 		/* The hardware returns an unsigned value; convert it to a
 		 * signed one.
 		 */
@@ -470,6 +474,52 @@ static void declare_input_vs(
 		}
 
 		out[3] = tmp;
+		break;
+	}
+	case SI_FIX_FETCH_RGBA_32_UNORM:
+	case SI_FIX_FETCH_RGBX_32_UNORM:
+		for (chan = 0; chan < 4; chan++) {
+			out[chan] = LLVMBuildBitCast(gallivm->builder, out[chan],
+						     ctx->i32, "");
+			out[chan] = LLVMBuildUIToFP(gallivm->builder,
+						    out[chan], ctx->f32, "");
+			out[chan] = LLVMBuildFMul(gallivm->builder, out[chan],
+						  LLVMConstReal(ctx->f32, 1.0 / UINT_MAX), "");
+		}
+		/* RGBX UINT returns 1 in alpha, which would be rounded to 0 by normalizing. */
+		if (fix_fetch == SI_FIX_FETCH_RGBX_32_UNORM)
+			out[3] = LLVMConstReal(ctx->f32, 1);
+		break;
+	case SI_FIX_FETCH_RGBA_32_SNORM:
+	case SI_FIX_FETCH_RGBX_32_SNORM:
+		for (chan = 0; chan < 4; chan++) {
+			out[chan] = LLVMBuildBitCast(gallivm->builder, out[chan],
+						     ctx->i32, "");
+			out[chan] = LLVMBuildSIToFP(gallivm->builder,
+						    out[chan], ctx->f32, "");
+			out[chan] = LLVMBuildFMul(gallivm->builder, out[chan],
+						  LLVMConstReal(ctx->f32, 1.0 / INT_MAX), "");
+		}
+		/* RGBX SINT returns 1 in alpha, which would be rounded to 0 by normalizing. */
+		if (fix_fetch == SI_FIX_FETCH_RGBX_32_SNORM)
+			out[3] = LLVMConstReal(ctx->f32, 1);
+		break;
+	case SI_FIX_FETCH_RGBA_32_USCALED:
+		for (chan = 0; chan < 4; chan++) {
+			out[chan] = LLVMBuildBitCast(gallivm->builder, out[chan],
+						     ctx->i32, "");
+			out[chan] = LLVMBuildUIToFP(gallivm->builder,
+						    out[chan], ctx->f32, "");
+		}
+		break;
+	case SI_FIX_FETCH_RGBA_32_SSCALED:
+		for (chan = 0; chan < 4; chan++) {
+			out[chan] = LLVMBuildBitCast(gallivm->builder, out[chan],
+						     ctx->i32, "");
+			out[chan] = LLVMBuildSIToFP(gallivm->builder,
+						    out[chan], ctx->f32, "");
+		}
+		break;
 	}
 }
 

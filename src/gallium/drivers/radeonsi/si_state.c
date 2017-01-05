@@ -1746,14 +1746,6 @@ static uint32_t si_translate_buffer_dataformat(struct pipe_screen *screen,
 		}
 		break;
 	case 32:
-		/* From the Southern Islands ISA documentation about MTBUF:
-		 * 'Memory reads of data in memory that is 32 or 64 bits do not
-		 * undergo any format conversion.'
-		 */
-		if (type != UTIL_FORMAT_TYPE_FLOAT &&
-		    !desc->channel[first_non_void].pure_integer)
-			return V_008F0C_BUF_DATA_FORMAT_INVALID;
-
 		switch (desc->nr_channels) {
 		case 1:
 			return V_008F0C_BUF_DATA_FORMAT_32;
@@ -1781,18 +1773,20 @@ static uint32_t si_translate_buffer_numformat(struct pipe_screen *screen,
 
 	switch (desc->channel[first_non_void].type) {
 	case UTIL_FORMAT_TYPE_SIGNED:
-		if (desc->channel[first_non_void].normalized)
-			return V_008F0C_BUF_NUM_FORMAT_SNORM;
-		else if (desc->channel[first_non_void].pure_integer)
+		if (desc->channel[first_non_void].size >= 32 ||
+		    desc->channel[first_non_void].pure_integer)
 			return V_008F0C_BUF_NUM_FORMAT_SINT;
+		else if (desc->channel[first_non_void].normalized)
+			return V_008F0C_BUF_NUM_FORMAT_SNORM;
 		else
 			return V_008F0C_BUF_NUM_FORMAT_SSCALED;
 		break;
 	case UTIL_FORMAT_TYPE_UNSIGNED:
-		if (desc->channel[first_non_void].normalized)
-			return V_008F0C_BUF_NUM_FORMAT_UNORM;
-		else if (desc->channel[first_non_void].pure_integer)
+		if (desc->channel[first_non_void].size >= 32 ||
+		    desc->channel[first_non_void].pure_integer)
 			return V_008F0C_BUF_NUM_FORMAT_UINT;
+		else if (desc->channel[first_non_void].normalized)
+			return V_008F0C_BUF_NUM_FORMAT_UNORM;
 		else
 			return V_008F0C_BUF_NUM_FORMAT_USCALED;
 		break;
@@ -3342,6 +3336,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 	v->count = count;
 	for (i = 0; i < count; ++i) {
 		const struct util_format_description *desc;
+		const struct util_format_channel_description *channel;
 		unsigned data_format, num_format;
 		int first_non_void;
 
@@ -3349,6 +3344,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		first_non_void = util_format_get_first_non_void_channel(elements[i].src_format);
 		data_format = si_translate_buffer_dataformat(ctx->screen, desc, first_non_void);
 		num_format = si_translate_buffer_numformat(ctx->screen, desc, first_non_void);
+		channel = &desc->channel[first_non_void];
 
 		v->rsrc_word3[i] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
 				   S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
@@ -3369,6 +3365,26 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SINT) {
 				/* This isn't actually used in OpenGL. */
 				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SINT << (4 * i);
+			}
+		} else if (channel->size == 32 && !channel->pure_integer) {
+			if (channel->type == UTIL_FORMAT_TYPE_SIGNED) {
+				if (channel->normalized) {
+					if (desc->swizzle[3] == PIPE_SWIZZLE_1)
+						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBX_32_SNORM << (4 * i);
+					else
+						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_SNORM << (4 * i);
+				} else {
+					v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_SSCALED << (4 * i);
+				}
+			} else if (channel->type == UTIL_FORMAT_TYPE_UNSIGNED) {
+				if (channel->normalized) {
+					if (desc->swizzle[3] == PIPE_SWIZZLE_1)
+						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBX_32_UNORM << (4 * i);
+					else
+						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_UNORM << (4 * i);
+				} else {
+					v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_USCALED << (4 * i);
+				}
 			}
 		}
 
