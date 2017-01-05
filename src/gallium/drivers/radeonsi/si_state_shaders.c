@@ -934,7 +934,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 
 			key->mono.vs.fix_fetch =
 				sctx->vertex_elements->fix_fetch &
-				u_bit_consecutive(0, 2 * count);
+				u_bit_consecutive64(0, 4 * count);
 		}
 		if (sctx->tes_shader.cso)
 			key->as_ls = 1;

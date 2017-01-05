@@ -3363,12 +3363,12 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		 */
 		if (data_format == V_008F0C_BUF_DATA_FORMAT_2_10_10_10) {
 			if (num_format == V_008F0C_BUF_NUM_FORMAT_SNORM) {
-				v->fix_fetch |= SI_FIX_FETCH_A2_SNORM << (2 * i);
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SNORM << (4 * i);
 			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SSCALED) {
-				v->fix_fetch |= SI_FIX_FETCH_A2_SSCALED << (2 * i);
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SSCALED << (4 * i);
 			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SINT) {
 				/* This isn't actually used in OpenGL. */
-				v->fix_fetch |= SI_FIX_FETCH_A2_SINT << (2 * i);
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SINT << (4 * i);
 			}
 		}
 

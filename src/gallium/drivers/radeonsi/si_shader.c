@@ -433,7 +433,7 @@ static void declare_input_vs(
 						    input, llvm_chan, "");
 	}
 
-	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (2 * input_index)) & 3;
+	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (4 * input_index)) & 0xf;
 	if (fix_fetch) {
 		/* The hardware returns an unsigned value; convert it to a
 		 * signed one.
@@ -6583,7 +6583,7 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n", key->part.vs.epilog.export_prim_id);
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
-		fprintf(f, "  mono.vs.fix_fetch = 0x%x\n", key->mono.vs.fix_fetch);
+		fprintf(f, "  mono.vs.fix_fetch = 0x%"PRIx64"\n", key->mono.vs.fix_fetch);
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:

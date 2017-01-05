@@ -425,8 +425,8 @@ struct si_shader_key {
 	/* Flags for monolithic compilation only. */
 	union {
 		struct {
-			/* One pair of bits for every input: SI_FIX_FETCH_* enums. */
-			uint32_t	fix_fetch;
+			/* One nibble for every input: SI_FIX_FETCH_* enums. */
+			uint64_t	fix_fetch;
 		} vs;
 		struct {
 			uint64_t	inputs_to_copy; /* for fixed-func TCS */
