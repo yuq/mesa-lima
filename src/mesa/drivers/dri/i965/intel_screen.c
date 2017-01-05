@@ -1773,7 +1773,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->cmd_parser_version = 0;
    }
 
-   if (screen->cmd_parser_version >= 2)
+   if (screen->devinfo.gen >= 8 || screen->cmd_parser_version >= 2)
       screen->kernel_features |= KERNEL_ALLOWS_PREDICATE_WRITES;
 
    /* Haswell requires command parser version 4 in order to have L3
