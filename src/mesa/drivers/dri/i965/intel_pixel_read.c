@@ -242,16 +242,16 @@ intelReadPixels(struct gl_context * ctx,
       perf_debug("%s: fallback to CPU mapping in PBO case\n", __func__);
    }
 
-   ok = intel_readpixels_tiled_memcpy(ctx, x, y, width, height,
-                                      format, type, pixels, pack);
-   if(ok)
-      return;
-
-   /* glReadPixels() wont dirty the front buffer, so reset the dirty
+   /* Reading pixels wont dirty the front buffer, so reset the dirty
     * flag after calling intel_prepare_render(). */
    dirty = brw->front_buffer_dirty;
    intel_prepare_render(brw);
    brw->front_buffer_dirty = dirty;
+
+   ok = intel_readpixels_tiled_memcpy(ctx, x, y, width, height,
+                                      format, type, pixels, pack);
+   if(ok)
+      return;
 
    /* Update Mesa state before calling _mesa_readpixels().
     * XXX this may not be needed since ReadPixels no longer uses the
