@@ -1593,6 +1593,11 @@ struct anv_image {
    struct anv_surface aux_surface;
 };
 
+void
+anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
+                        const struct anv_image *image,
+                        enum blorp_hiz_op op);
+
 static inline uint32_t
 anv_get_layerCount(const struct anv_image *image,
                    const VkImageSubresourceRange *range)

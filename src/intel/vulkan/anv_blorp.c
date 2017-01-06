@@ -1559,3 +1559,86 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
    blorp_batch_finish(&batch);
 }
+
+void
+anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
+                        const struct anv_image *image,
+                        enum blorp_hiz_op op)
+{
+   assert(image);
+
+   /* Don't resolve depth buffers without an auxiliary HiZ buffer and
+    * don't perform such a resolve on gens that don't support it.
+    */
+   if (cmd_buffer->device->info.gen < 8 ||
+       image->aux_usage != ISL_AUX_USAGE_HIZ)
+      return;
+
+   const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
+
+   /* Section 7.4. of the Vulkan 1.0.27 spec states:
+    *
+    *   "The render area must be contained within the framebuffer dimensions."
+    *
+    * Therefore, the only way the extent of the render area can match that of
+    * the image view is if the render area offset equals (0, 0).
+    */
+   const bool full_surface_op =
+             cmd_state->render_area.extent.width == image->extent.width &&
+             cmd_state->render_area.extent.height == image->extent.height;
+   if (full_surface_op)
+      assert(cmd_state->render_area.offset.x == 0 &&
+             cmd_state->render_area.offset.y == 0);
+
+   /* Check the subpass index to determine if skipping a resolve is allowed */
+   const uint32_t subpass_idx = cmd_state->subpass - cmd_state->pass->subpasses;
+   switch (op) {
+   case BLORP_HIZ_OP_DEPTH_RESOLVE:
+      if (cmd_buffer->state.pass->attachments[ds].store_op !=
+          VK_ATTACHMENT_STORE_OP_STORE &&
+          subpass_idx == cmd_state->pass->subpass_count - 1)
+         return;
+      break;
+   case BLORP_HIZ_OP_HIZ_RESOLVE:
+      /* If the render area covers the entire surface *and* load_op is either
+       * CLEAR or DONT_CARE then the previous contents of the depth buffer
+       * will be entirely discarded.  In this case, we can skip the HiZ
+       * resolve.
+       *
+       * If the render area is not the full surface, we need to do
+       * the resolve because otherwise data outside the render area may get
+       * garbled by the resolve at the end of the render pass.
+       */
+      if (full_surface_op &&
+          cmd_buffer->state.pass->attachments[ds].load_op !=
+          VK_ATTACHMENT_LOAD_OP_LOAD && subpass_idx == 0)
+         return;
+      break;
+   case BLORP_HIZ_OP_DEPTH_CLEAR:
+   case BLORP_HIZ_OP_NONE:
+      unreachable("Invalid HiZ OP");
+   }
+
+
+   struct blorp_batch batch;
+   blorp_batch_init(&cmd_buffer->device->blorp, &batch, cmd_buffer, 0);
+
+   struct blorp_surf surf;
+   get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_DEPTH_BIT,
+                                ISL_AUX_USAGE_NONE, &surf);
+
+   /* Manually add the aux HiZ surf */
+   surf.aux_surf = &image->aux_surface.isl,
+   surf.aux_addr = (struct blorp_address) {
+      .buffer = image->bo,
+      .offset = image->offset + image->aux_surface.offset,
+   };
+   surf.aux_usage = ISL_AUX_USAGE_HIZ;
+
+   surf.clear_color.u32[0] = (uint32_t)
+      cmd_state->attachments[ds].clear_value.depthStencil.depth;
+
+   blorp_gen6_hiz_op(&batch, &surf, 0, 0, op);
+   blorp_batch_finish(&batch);
+}
