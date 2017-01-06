@@ -113,12 +113,14 @@ get_surftype(enum isl_surf_dim dim, isl_surf_usage_flags_t usage)
       assert(!(usage & ISL_SURF_USAGE_CUBE_BIT));
       return SURFTYPE_1D;
    case ISL_SURF_DIM_2D:
-      if (usage & ISL_SURF_USAGE_STORAGE_BIT) {
-         /* Storage images are always plain 2-D, not cube */
-         return SURFTYPE_2D;
-      } else if (usage & ISL_SURF_USAGE_CUBE_BIT) {
+      if ((usage & ISL_SURF_USAGE_CUBE_BIT) &&
+          (usage & ISL_SURF_USAGE_TEXTURE_BIT)) {
+         /* We need SURFTYPE_CUBE to make cube sampling work */
          return SURFTYPE_CUBE;
       } else {
+         /* Everything else (render and storage) treat cubes as plain
+          * 2D array textures
+          */
          return SURFTYPE_2D;
       }
    case ISL_SURF_DIM_3D:
