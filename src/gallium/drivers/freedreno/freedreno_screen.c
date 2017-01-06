@@ -245,9 +245,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_GLSL_FEATURE_LEVEL:
 		if (glsl120)
 			return 120;
-		// XXX temporary, avoid issues with glamor:
-		if (is_a5xx(screen))
-			return 120;
 		return is_ir3(screen) ? 140 : 120;
 
 	/* Unsupported features. */
