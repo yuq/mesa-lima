@@ -1163,6 +1163,8 @@ void
 anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
+   const VkRect2D render_area = cmd_buffer->state.render_area;
+
 
    if (!subpass_needs_clear(cmd_buffer))
       return;
@@ -1196,8 +1198,6 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
       get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
                                    att_state->aux_usage, &surf);
       surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
-
-      const VkRect2D render_area = cmd_buffer->state.render_area;
 
       if (att_state->fast_clear) {
          blorp_fast_clear(&batch, &surf, iview->isl.format,
@@ -1238,8 +1238,54 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
          .clearValue = cmd_state->attachments[ds].clear_value,
       };
 
-      clear_depth_stencil_attachment(cmd_buffer, &batch,
-                                     &clear_att, 1, &clear_rect);
+
+      const uint8_t gen = cmd_buffer->device->info.gen;
+      bool clear_with_hiz = gen >= 8 && cmd_state->attachments[ds].aux_usage ==
+                            ISL_AUX_USAGE_HIZ;
+      const struct anv_image_view *iview = fb->attachments[ds];
+
+      if (clear_with_hiz) {
+         const bool clear_depth = clear_att.aspectMask &
+                                  VK_IMAGE_ASPECT_DEPTH_BIT;
+         const bool clear_stencil = clear_att.aspectMask &
+                                    VK_IMAGE_ASPECT_STENCIL_BIT;
+
+         /* Check against restrictions for depth buffer clearing. A great GPU
+          * performance benefit isn't expected when using the HZ sequence for
+          * stencil-only clears. Therefore, we don't emit a HZ op sequence for
+          * a stencil clear in addition to using the BLORP-fallback for depth.
+          */
+         if (clear_depth) {
+            if (!blorp_can_hiz_clear_depth(gen, iview->isl.format,
+                                           iview->image->samples,
+                                           render_area.offset.x,
+                                           render_area.offset.y,
+                                           render_area.offset.x +
+                                           render_area.extent.width,
+                                           render_area.offset.y +
+                                           render_area.extent.height)) {
+               clear_with_hiz = false;
+            }
+         }
+
+         if (clear_with_hiz) {
+            blorp_gen8_hiz_clear_attachments(&batch, iview->image->samples,
+                                             render_area.offset.x,
+                                             render_area.offset.y,
+                                             render_area.offset.x +
+                                             render_area.extent.width,
+                                             render_area.offset.y +
+                                             render_area.extent.height,
+                                             clear_depth, clear_stencil,
+                                             clear_att.clearValue.
+                                                depthStencil.stencil);
+         }
+      }
+
+      if (!clear_with_hiz) {
+         clear_depth_stencil_attachment(cmd_buffer, &batch,
+                                        &clear_att, 1, &clear_rect);
+      }
 
       cmd_state->attachments[ds].pending_clear_aspects = 0;
    }
