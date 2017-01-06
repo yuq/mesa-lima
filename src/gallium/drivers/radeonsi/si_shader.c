@@ -492,18 +492,28 @@ static void declare_input_vs(
 		break;
 	case SI_FIX_FETCH_RGBA_32_SNORM:
 	case SI_FIX_FETCH_RGBX_32_SNORM:
+	case SI_FIX_FETCH_RGBA_32_FIXED:
+	case SI_FIX_FETCH_RGBX_32_FIXED: {
+		double scale;
+		if (fix_fetch >= SI_FIX_FETCH_RGBA_32_FIXED)
+			scale = 1.0 / 0x10000;
+		else
+			scale = 1.0 / INT_MAX;
+
 		for (chan = 0; chan < 4; chan++) {
 			out[chan] = LLVMBuildBitCast(gallivm->builder, out[chan],
 						     ctx->i32, "");
 			out[chan] = LLVMBuildSIToFP(gallivm->builder,
 						    out[chan], ctx->f32, "");
 			out[chan] = LLVMBuildFMul(gallivm->builder, out[chan],
-						  LLVMConstReal(ctx->f32, 1.0 / INT_MAX), "");
+						  LLVMConstReal(ctx->f32, scale), "");
 		}
 		/* RGBX SINT returns 1 in alpha, which would be rounded to 0 by normalizing. */
-		if (fix_fetch == SI_FIX_FETCH_RGBX_32_SNORM)
+		if (fix_fetch == SI_FIX_FETCH_RGBX_32_SNORM ||
+		    fix_fetch == SI_FIX_FETCH_RGBX_32_FIXED)
 			out[3] = LLVMConstReal(ctx->f32, 1);
 		break;
+	}
 	case SI_FIX_FETCH_RGBA_32_USCALED:
 		for (chan = 0; chan < 4; chan++) {
 			out[chan] = LLVMBuildBitCast(gallivm->builder, out[chan],

@@ -1697,17 +1697,12 @@ static uint32_t si_translate_buffer_dataformat(struct pipe_screen *screen,
 					       const struct util_format_description *desc,
 					       int first_non_void)
 {
-	unsigned type;
 	int i;
 
 	if (desc->format == PIPE_FORMAT_R11G11B10_FLOAT)
 		return V_008F0C_BUF_DATA_FORMAT_10_11_11;
 
 	assert(first_non_void >= 0);
-	type = desc->channel[first_non_void].type;
-
-	if (type == UTIL_FORMAT_TYPE_FIXED)
-		return V_008F0C_BUF_DATA_FORMAT_INVALID;
 
 	if (desc->nr_channels == 4 &&
 	    desc->channel[0].size == 10 &&
@@ -1773,6 +1768,7 @@ static uint32_t si_translate_buffer_numformat(struct pipe_screen *screen,
 
 	switch (desc->channel[first_non_void].type) {
 	case UTIL_FORMAT_TYPE_SIGNED:
+	case UTIL_FORMAT_TYPE_FIXED:
 		if (desc->channel[first_non_void].size >= 32 ||
 		    desc->channel[first_non_void].pure_integer)
 			return V_008F0C_BUF_NUM_FORMAT_SINT;
@@ -3366,6 +3362,11 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				/* This isn't actually used in OpenGL. */
 				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SINT << (4 * i);
 			}
+		} else if (channel->type == UTIL_FORMAT_TYPE_FIXED) {
+			if (desc->swizzle[3] == PIPE_SWIZZLE_1)
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBX_32_FIXED << (4 * i);
+			else
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_FIXED << (4 * i);
 		} else if (channel->size == 32 && !channel->pure_integer) {
 			if (channel->type == UTIL_FORMAT_TYPE_SIGNED) {
 				if (channel->normalized) {
