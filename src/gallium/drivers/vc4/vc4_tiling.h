@@ -24,6 +24,9 @@
 #ifndef VC4_TILING_H
 #define VC4_TILING_H
 
+#include <stdbool.h>
+#include <stdint.h>
+#include "util/macros.h"
 
 /** Return the width in pixels of a 64-byte microtile. */
 static inline uint32_t
@@ -59,6 +62,12 @@ vc4_utile_height(int cpp)
 }
 
 bool vc4_size_is_lt(uint32_t width, uint32_t height, int cpp) ATTRIBUTE_CONST;
+void vc4_load_lt_image(void *dst, uint32_t dst_stride,
+                       void *src, uint32_t src_stride,
+                       int cpp, const struct pipe_box *box);
+void vc4_store_lt_image(void *dst, uint32_t dst_stride,
+                        void *src, uint32_t src_stride,
+                        int cpp, const struct pipe_box *box);
 void vc4_load_tiled_image(void *dst, uint32_t dst_stride,
                           void *src, uint32_t src_stride,
                           uint8_t tiling_format, int cpp,
