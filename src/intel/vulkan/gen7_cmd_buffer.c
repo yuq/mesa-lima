@@ -256,13 +256,6 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
    cmd_buffer->state.dirty = 0;
 }
 
-void
-genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
-                          enum blorp_hiz_op op)
-{
-   anv_finishme("Implement Gen7 HZ ops");
-}
-
 void genX(CmdSetEvent)(
     VkCommandBuffer                             commandBuffer,
     VkEvent                                     event,
