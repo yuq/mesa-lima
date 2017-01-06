@@ -545,7 +545,9 @@ static void r600_dma_clear_buffer_fallback(struct pipe_context *ctx,
 					   uint64_t offset, uint64_t size,
 					   unsigned value)
 {
-	ctx->clear_buffer(ctx, dst, offset, size, &value, 4);
+	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
+
+	rctx->clear_buffer(ctx, dst, offset, size, value, R600_COHERENCY_NONE);
 }
 
 bool r600_common_context_init(struct r600_common_context *rctx,
