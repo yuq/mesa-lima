@@ -38,8 +38,7 @@ vc4_utile_width(int cpp)
         case 8:
                 return 2;
         default:
-                fprintf(stderr, "unknown cpp: %d\n", cpp);
-                abort();
+                unreachable("unknown cpp");
         }
 }
 
@@ -55,8 +54,7 @@ vc4_utile_height(int cpp)
         case 8:
                 return 4;
         default:
-                fprintf(stderr, "unknown cpp: %d\n", cpp);
-                abort();
+                unreachable("unknown cpp");
         }
 }
 
