@@ -149,7 +149,7 @@ void
 ir_set_program_inouts_visitor::mark_whole_variable(ir_variable *var)
 {
    const glsl_type *type = var->type;
-
+   bool is_vertex_input = false;
    if (this->shader_stage == MESA_SHADER_GEOMETRY &&
        var->data.mode == ir_var_shader_in && type->is_array()) {
       type = type->fields.array;
@@ -173,8 +173,11 @@ ir_set_program_inouts_visitor::mark_whole_variable(ir_variable *var)
       type = type->fields.array;
    }
 
-   mark(this->prog, var, 0,
-        var->count_attribute_slots(this->shader_stage == MESA_SHADER_VERTEX),
+   if (this->shader_stage == MESA_SHADER_VERTEX &&
+       var->data.mode == ir_var_shader_in)
+      is_vertex_input = true;
+
+   mark(this->prog, var, 0, type->count_attribute_slots(is_vertex_input),
         this->shader_stage);
 }
 
@@ -330,27 +333,6 @@ is_multiple_vertices(gl_shader_stage stage, ir_variable *var)
    return false;
 }
 
-/**
- * Return true if \p var is a GLSL built-in array that controls fixed-function
- * aspects of the pipeline.  These have to be used as a whole.
- */
-static bool
-is_fixed_function_array(ir_variable *var)
-{
-   if (var->data.mode != ir_var_shader_in &&
-       var->data.mode != ir_var_shader_out)
-      return false;
-
-   switch (var->data.location) {
-   case VARYING_SLOT_TESS_LEVEL_OUTER:
-   case VARYING_SLOT_TESS_LEVEL_INNER:
-   case VARYING_SLOT_CLIP_DIST0:
-      return true;
-   default:
-      return false;
-   }
-}
-
 ir_visitor_status
 ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
 {
@@ -383,12 +365,9 @@ ir_set_program_inouts_visitor::visit_enter(ir_dereference_array *ir)
    } else if (ir_dereference_variable * const deref_var =
               ir->array->as_dereference_variable()) {
       /* ir => foo[i], where foo is a variable. */
-      if (is_multiple_vertices(this->shader_stage, deref_var->var) ||
-          is_fixed_function_array(deref_var->var)) {
-         /* In the first case, foo is a geometry or tessellation shader input,
-          * so i is the vertex, and we're accessing the entire input.  In the
-          * second case, foo is a GLSL built-in array that controls
-          * fixed-function hardware, which is consumed as a whole.
+      if (is_multiple_vertices(this->shader_stage, deref_var->var)) {
+         /* foo is a geometry or tessellation shader input, so i is
+          * the vertex, and we're accessing the entire input.
           */
          mark_whole_variable(deref_var->var);
          /* We've now taken care of foo, but i might contain a subexpression
