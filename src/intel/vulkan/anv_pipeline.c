@@ -131,23 +131,16 @@ anv_shader_compile_to_nir(struct anv_device *device,
 
    free(spec_entries);
 
-   if (stage == MESA_SHADER_FRAGMENT) {
-      nir_lower_wpos_center(nir);
-      nir_validate_shader(nir);
-   }
+   if (stage == MESA_SHADER_FRAGMENT)
+      NIR_PASS_V(nir, nir_lower_wpos_center);
 
    /* We have to lower away local constant initializers right before we
     * inline functions.  That way they get properly initialized at the top
     * of the function and not at the top of its caller.
     */
-   nir_lower_constant_initializers(nir, nir_var_local);
-   nir_validate_shader(nir);
-
-   nir_lower_returns(nir);
-   nir_validate_shader(nir);
-
-   nir_inline_functions(nir);
-   nir_validate_shader(nir);
+   NIR_PASS_V(nir, nir_lower_constant_initializers, nir_var_local);
+   NIR_PASS_V(nir, nir_lower_returns);
+   NIR_PASS_V(nir, nir_inline_functions);
 
    /* Pick off the single entrypoint that we want */
    foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
@@ -157,36 +150,27 @@ anv_shader_compile_to_nir(struct anv_device *device,
    assert(exec_list_length(&nir->functions) == 1);
    entry_point->name = ralloc_strdup(entry_point, "main");
 
-   nir_remove_dead_variables(nir, nir_var_shader_in |
-                                  nir_var_shader_out |
-                                  nir_var_system_value);
-   nir_validate_shader(nir);
+   NIR_PASS_V(nir, nir_remove_dead_variables,
+              nir_var_shader_in | nir_var_shader_out | nir_var_system_value);
 
    /* Now that we've deleted all but the main function, we can go ahead and
     * lower the rest of the constant initializers.
     */
-   nir_lower_constant_initializers(nir, ~0);
-   nir_validate_shader(nir);
-
-   nir_propagate_invariant(nir);
-   nir_validate_shader(nir);
-
-   nir_lower_io_to_temporaries(entry_point->shader, entry_point->impl,
-                               true, false);
-
-   nir_lower_system_values(nir);
-   nir_validate_shader(nir);
+   NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
+   NIR_PASS_V(nir, nir_propagate_invariant);
+   NIR_PASS_V(nir, nir_lower_io_to_temporaries,
+              entry_point->impl, true, false);
+   NIR_PASS_V(nir, nir_lower_system_values);
 
    /* Vulkan uses the separate-shader linking model */
    nir->info->separate_shader = true;
 
    nir = brw_preprocess_nir(compiler, nir);
 
-   nir_lower_clip_cull_distance_arrays(nir);
-   nir_validate_shader(nir);
+   NIR_PASS_V(nir, nir_lower_clip_cull_distance_arrays);
 
    if (stage == MESA_SHADER_FRAGMENT)
-      anv_nir_lower_input_attachments(nir);
+      NIR_PASS_V(nir, anv_nir_lower_input_attachments);
 
    nir_shader_gather_info(nir, entry_point->impl);
 
@@ -325,7 +309,7 @@ anv_pipeline_compile(struct anv_pipeline *pipeline,
    if (nir == NULL)
       return NULL;
 
-   anv_nir_lower_push_constants(nir);
+   NIR_PASS_V(nir, anv_nir_lower_push_constants);
 
    /* Figure out the number of parameters */
    prog_data->nr_params = 0;
