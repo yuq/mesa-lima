@@ -172,7 +172,8 @@ get_blorp_surf_for_anv_image(const struct anv_image *image,
                              enum isl_aux_usage aux_usage,
                              struct blorp_surf *blorp_surf)
 {
-   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT)
+   if (aspect == VK_IMAGE_ASPECT_STENCIL_BIT ||
+       aux_usage == ISL_AUX_USAGE_HIZ)
       aux_usage = ISL_AUX_USAGE_NONE;
 
    const struct anv_surface *surface =
