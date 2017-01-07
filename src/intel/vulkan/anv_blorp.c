@@ -858,7 +858,7 @@ void anv_CmdClearDepthStencilImage(
    struct blorp_surf depth, stencil;
    if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
       get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_DEPTH_BIT,
-                                   image->aux_usage, &depth);
+                                   ISL_AUX_USAGE_NONE, &depth);
    } else {
       memset(&depth, 0, sizeof(depth));
    }

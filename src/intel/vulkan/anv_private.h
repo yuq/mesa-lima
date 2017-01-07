@@ -1581,7 +1581,13 @@ struct anv_image {
       };
    };
 
-   /** The aux usage for this surface when outside a render pass */
+   /**
+    * For color images, this is the aux usage for this image when not used as a
+    * color attachment.
+    * 
+    * For depth/stencil images, this is set to ISL_AUX_USAGE_HIZ if the image
+    * has a HiZ buffer.
+    */
    enum isl_aux_usage aux_usage;
 
    struct anv_surface aux_surface;
@@ -1641,16 +1647,6 @@ VkResult anv_image_create(VkDevice _device,
 const struct anv_surface *
 anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
                                       VkImageAspectFlags aspect_mask);
-
-static inline bool
-anv_image_has_hiz(const struct anv_image *image)
-{
-   /* We must check the aspect because anv_image::aux_surface may be used for
-    * any type of auxiliary surface, not just HiZ.
-    */
-   return (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) &&
-          image->aux_surface.isl.size > 0;
-}
 
 struct anv_buffer_view {
    enum isl_format format; /**< VkBufferViewCreateInfo::format */

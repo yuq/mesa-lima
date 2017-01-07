@@ -337,7 +337,7 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
    const struct anv_image_view *iview =
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
-   if (iview == NULL || !anv_image_has_hiz(iview->image))
+   if (iview == NULL || iview->image->aux_usage != ISL_AUX_USAGE_HIZ)
       return;
 
    /* FINISHME: Implement multi-subpass HiZ */

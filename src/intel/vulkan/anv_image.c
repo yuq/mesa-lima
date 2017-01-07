@@ -195,6 +195,7 @@ make_surface(const struct anv_device *dev,
          isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
                                &image->aux_surface.isl);
          add_surface(image, &image->aux_surface);
+         image->aux_usage = ISL_AUX_USAGE_HIZ;
       }
    } else if (aspect == VK_IMAGE_ASPECT_COLOR_BIT && vk_info->samples == 1) {
       if (!unlikely(INTEL_DEBUG & DEBUG_NO_RBC)) {
@@ -523,6 +524,11 @@ anv_CreateImageView(VkDevice _device,
       iview->isl.usage = 0;
    }
 
+   /* Sampling from HiZ is not yet enabled */
+   enum isl_aux_usage surf_usage = image->aux_usage;
+   if (surf_usage == ISL_AUX_USAGE_HIZ)
+      surf_usage = ISL_AUX_USAGE_NONE;
+
    /* Input attachment surfaces for color or depth are allocated and filled
     * out at BeginRenderPass time because they need compression information.
     * Stencil image do not support compression so we just use the texture
@@ -540,7 +546,7 @@ anv_CreateImageView(VkDevice _device,
                           .surf = &surface->isl,
                           .view = &view,
                           .aux_surf = &image->aux_surface.isl,
-                          .aux_usage = image->aux_usage,
+                          .aux_usage = surf_usage,
                           .mocs = device->default_mocs);
 
       if (!device->info.has_llc)
@@ -564,7 +570,7 @@ anv_CreateImageView(VkDevice _device,
                              .surf = &surface->isl,
                              .view = &view,
                              .aux_surf = &image->aux_surface.isl,
-                             .aux_usage = image->aux_usage,
+                             .aux_usage = surf_usage,
                              .mocs = device->default_mocs);
       } else {
          anv_fill_buffer_surface_state(device, iview->storage_surface_state,
