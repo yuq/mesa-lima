@@ -1222,7 +1222,19 @@ create_new_program(struct gl_context *ctx, struct state_key *key)
     */
    p.shader_program->SeparateShader = GL_TRUE;
 
-   state->language_version = 130;
+   /* The legacy GLSL shadow functions follow the depth texture
+    * mode and return vec4. The GLSL 1.30 shadow functions return float and
+    * ignore the depth texture mode. That's a shader and state dependency
+    * that's difficult to deal with. st/mesa uses a simple but not
+    * completely correct solution: if the shader declares GLSL >= 1.30 and
+    * the depth texture mode is GL_ALPHA (000X), it sets the XXXX swizzle
+    * instead. Thus, the GLSL 1.30 shadow function will get the result in .x
+    * and legacy shadow functions will get it in .w as expected.
+    * For the fixed-function fragment shader, use 120 to get correct behavior
+    * for GL_ALPHA.
+    */
+   state->language_version = 120;
+
    state->es_shader = false;
    if (_mesa_is_gles(ctx) && ctx->Extensions.OES_EGL_image_external)
       state->OES_EGL_image_external_enable = true;
