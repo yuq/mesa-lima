@@ -337,6 +337,10 @@ is_multiple_vertices(gl_shader_stage stage, ir_variable *var)
 static bool
 is_fixed_function_array(ir_variable *var)
 {
+   if (var->data.mode != ir_var_shader_in &&
+       var->data.mode != ir_var_shader_out)
+      return false;
+
    switch (var->data.location) {
    case VARYING_SLOT_TESS_LEVEL_OUTER:
    case VARYING_SLOT_TESS_LEVEL_INNER:
