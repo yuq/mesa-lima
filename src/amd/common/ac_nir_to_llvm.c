@@ -2185,13 +2185,17 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
                                           nir_intrinsic_instr *instr)
 {
-	LLVMValueRef results[4], ret;
+	LLVMValueRef results[8], ret;
 	LLVMValueRef rsrc = get_src(ctx, instr->src[0]);
 	LLVMValueRef offset = get_src(ctx, instr->src[1]);
+	int num_components = instr->num_components;
 
 	rsrc = LLVMBuildBitCast(ctx->builder, rsrc, LLVMVectorType(ctx->i8, 16), "");
 
-	for (unsigned i = 0; i < instr->num_components; ++i) {
+	if (instr->dest.ssa.bit_size == 64)
+		num_components *= 2;
+
+	for (unsigned i = 0; i < num_components; ++i) {
 		LLVMValueRef params[] = {
 			rsrc,
 			LLVMBuildAdd(ctx->builder, LLVMConstInt(ctx->i32, 4 * i, 0),
