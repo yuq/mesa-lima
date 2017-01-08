@@ -9,7 +9,7 @@ Missing Features:
 
 Performance:
  - Sampling from HiZ (Nanley)
- - Multi-{sampled/gen8,LOD,subpass} HiZ
+ - Multi-{sampled/gen8,LOD} HiZ
  - Compressed multisample support
  - Pushing pieces of UBOs?
  - Enable guardband clipping

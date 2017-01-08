@@ -340,10 +340,6 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
    if (iview == NULL || iview->image->aux_usage != ISL_AUX_USAGE_HIZ)
       return;
 
-   /* FINISHME: Implement multi-subpass HiZ */
-   if (cmd_buffer->state.pass->subpass_count > 1)
-      return;
-
    const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
 
    /* Section 7.4. of the Vulkan 1.0.27 spec states:
@@ -365,6 +361,8 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
 
    /* This variable corresponds to the Pixel Dim column in the table below */
    struct isl_extent2d px_dim;
+
+   const uint32_t subpass_idx = cmd_state->subpass - cmd_state->pass->subpasses;
 
    /* Validate that we can perform the HZ operation and that it's necessary. */
    switch (op) {
@@ -446,7 +444,8 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
       break;
    case BLORP_HIZ_OP_DEPTH_RESOLVE:
       if (cmd_buffer->state.pass->attachments[ds].store_op !=
-          VK_ATTACHMENT_STORE_OP_STORE)
+          VK_ATTACHMENT_STORE_OP_STORE &&
+          subpass_idx == cmd_state->pass->subpass_count - 1)
          return;
       break;
    case BLORP_HIZ_OP_HIZ_RESOLVE:
@@ -461,7 +460,7 @@ genX(cmd_buffer_emit_hz_op)(struct anv_cmd_buffer *cmd_buffer,
        */
       if (full_surface_op &&
           cmd_buffer->state.pass->attachments[ds].load_op !=
-          VK_ATTACHMENT_LOAD_OP_LOAD)
+          VK_ATTACHMENT_LOAD_OP_LOAD && subpass_idx == 0)
          return;
       break;
    case BLORP_HIZ_OP_NONE:
