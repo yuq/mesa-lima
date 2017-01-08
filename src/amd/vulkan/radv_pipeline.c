@@ -209,14 +209,9 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		 * inline functions.  That way they get properly initialized at the top
 		 * of the function and not at the top of its caller.
 		 */
-		nir_lower_constant_initializers(nir, nir_var_local);
-		nir_validate_shader(nir);
-
-		nir_lower_returns(nir);
-		nir_validate_shader(nir);
-
-		nir_inline_functions(nir);
-		nir_validate_shader(nir);
+		NIR_PASS_V(nir, nir_lower_constant_initializers, nir_var_local);
+		NIR_PASS_V(nir, nir_lower_returns);
+		NIR_PASS_V(nir, nir_inline_functions);
 
 		/* Pick off the single entrypoint that we want */
 		foreach_list_typed_safe(nir_function, func, node, &nir->functions) {
@@ -226,19 +221,14 @@ radv_shader_compile_to_nir(struct radv_device *device,
 		assert(exec_list_length(&nir->functions) == 1);
 		entry_point->name = ralloc_strdup(entry_point, "main");
 
-		nir_remove_dead_variables(nir, nir_var_shader_in |
-		                               nir_var_shader_out |
-		                               nir_var_system_value);
-		nir_validate_shader(nir);
+		NIR_PASS_V(nir, nir_remove_dead_variables,
+		           nir_var_shader_in | nir_var_shader_out | nir_var_system_value);
 
 		/* Now that we've deleted all but the main function, we can go ahead and
 		 * lower the rest of the constant initializers.
 		 */
-		nir_lower_constant_initializers(nir, ~0);
-		nir_validate_shader(nir);
-
-		nir_lower_system_values(nir);
-		nir_validate_shader(nir);
+		NIR_PASS_V(nir, nir_lower_constant_initializers, ~0);
+		NIR_PASS_V(nir, nir_lower_system_values);
 	}
 
 	/* Vulkan uses the separate-shader linking model */
