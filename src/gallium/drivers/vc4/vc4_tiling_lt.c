@@ -114,14 +114,59 @@ vc4_load_utile(void *cpu, void *gpu, uint32_t cpu_stride, uint32_t cpp)
 }
 
 static void
-vc4_store_utile(void *dst, void *src, uint32_t src_stride, uint32_t cpp)
+vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
 {
-        uint32_t dst_stride = vc4_utile_stride(cpp);
+        uint32_t gpu_stride = vc4_utile_stride(cpp);
 
-        for (uint32_t dst_offset = 0; dst_offset < 64; dst_offset += dst_stride) {
-                memcpy(dst + dst_offset, src, dst_stride);
-                src += src_stride;
+#if defined(VC4_BUILD_NEON) && defined(__ARM_ARCH)
+        if (gpu_stride == 8) {
+                __asm__ volatile (
+                        /* Load each 8-byte line from cpu-side source,
+                         * incrementing it by the stride each time.
+                         */
+                        "vld1.8 d0, [%1], %r2;\n"
+                        "vld1.8 d1, [%1], %r2;\n"
+                        "vld1.8 d2, [%1], %r2;\n"
+                        "vld1.8 d3, [%1], %r2;\n"
+                        "vld1.8 d4, [%1], %r2;\n"
+                        "vld1.8 d5, [%1], %r2;\n"
+                        "vld1.8 d6, [%1], %r2;\n"
+                        "vld1.8 d7, [%1];\n"
+                        /* Load from the GPU in one shot, no interleave, to
+                         * d0-d7.
+                         */
+                        "vstm %0, {q0, q1, q2, q3};\n"
+                        :
+                        : "r"(gpu), "r"(cpu), "r"(cpu_stride)
+                        : "q0", "q1", "q2", "q3");
+        } else {
+                assert(gpu_stride == 16);
+                __asm__ volatile (
+                        /* Load each 16-byte line in 2 parts from the cpu-side
+                         * destination.  (vld1 can only store one d-register
+                         * at a time).
+                         */
+                        "vld1.8 d0, [%1], %r3;\n"
+                        "vld1.8 d1, [%2], %r3;\n"
+                        "vld1.8 d2, [%1], %r3;\n"
+                        "vld1.8 d3, [%2], %r3;\n"
+                        "vld1.8 d4, [%1], %r3;\n"
+                        "vld1.8 d5, [%2], %r3;\n"
+                        "vld1.8 d6, [%1];\n"
+                        "vld1.8 d7, [%2];\n"
+                        /* Store to the GPU in one shot, no interleave. */
+                        "vstm %0, {q0, q1, q2, q3};\n"
+                        :
+                        : "r"(gpu), "r"(cpu), "r"(cpu + 8), "r"(cpu_stride)
+                        : "q0", "q1", "q2", "q3");
         }
+#else
+        for (uint32_t gpu_offset = 0; gpu_offset < 64; gpu_offset += gpu_stride) {
+                memcpy(gpu + gpu_offset, cpu, gpu_stride);
+                cpu += cpu_stride;
+        }
+#endif
+
 }
 
 void
