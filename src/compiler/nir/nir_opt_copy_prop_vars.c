@@ -762,7 +762,7 @@ copy_prop_vars_block(struct copy_prop_var_state *state,
          } else {
             value = (struct value) {
                .is_ssa = false,
-               .deref = src,
+               { .deref = src },
             };
          }
 
