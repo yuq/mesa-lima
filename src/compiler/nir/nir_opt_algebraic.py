@@ -267,9 +267,9 @@ optimizations = [
    (('~frcp', ('frsq', a)), ('fsqrt', a), '!options->lower_fsqrt'),
    # Boolean simplifications
    (('ieq', 'a@bool', True), a),
-   (('ine', 'a@bool', True), ('inot', a)),
+   (('ine(is_not_used_by_if)', 'a@bool', True), ('inot', a)),
    (('ine', 'a@bool', False), a),
-   (('ieq', 'a@bool', False), ('inot', 'a')),
+   (('ieq(is_not_used_by_if)', 'a@bool', False), ('inot', 'a')),
    (('bcsel', a, True, False), a),
    (('bcsel', a, False, True), ('inot', a)),
    (('bcsel@32', a, 1.0, 0.0), ('b2f', a)),

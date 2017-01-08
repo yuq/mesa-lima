@@ -130,4 +130,10 @@ is_used_more_than_once(nir_alu_instr *instr)
    return true;
 }
 
+static inline bool
+is_not_used_by_if(nir_alu_instr *instr)
+{
+   return list_empty(&instr->dest.dest.ssa.if_uses);
+}
+
 #endif /* _NIR_SEARCH_ */
