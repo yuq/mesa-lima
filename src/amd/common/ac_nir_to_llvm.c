@@ -2148,35 +2148,58 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
 static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
                                       nir_intrinsic_instr *instr)
 {
-	const char *load_name;
-	LLVMTypeRef data_type = ctx->f32;
-	if (instr->num_components == 3)
-		data_type = LLVMVectorType(ctx->f32, 4);
-	else if (instr->num_components > 1)
-		data_type = LLVMVectorType(ctx->f32, instr->num_components);
+	LLVMValueRef results[2];
+	int load_components;
+	int num_components = instr->num_components;
+	if (instr->dest.ssa.bit_size == 64)
+		num_components *= 2;
 
-	if (instr->num_components == 4 || instr->num_components == 3)
-		load_name = "llvm.amdgcn.buffer.load.v4f32";
-	else if (instr->num_components == 2)
-		load_name = "llvm.amdgcn.buffer.load.v2f32";
-	else if (instr->num_components == 1)
-		load_name = "llvm.amdgcn.buffer.load.f32";
-	else
-		abort();
+	for (int i = 0; i < num_components; i += load_components) {
+		load_components = MIN2(num_components - i, 4);
+		const char *load_name;
+		LLVMTypeRef data_type = ctx->f32;
+		LLVMValueRef offset = LLVMConstInt(ctx->i32, i * 4, false);
+		offset = LLVMBuildAdd(ctx->builder, get_src(ctx, instr->src[1]), offset, "");
 
-	LLVMValueRef params[] = {
-	    get_src(ctx, instr->src[0]),
-	    LLVMConstInt(ctx->i32, 0, false),
-	    get_src(ctx, instr->src[1]),
-	    LLVMConstInt(ctx->i1, 0, false),
-	    LLVMConstInt(ctx->i1, 0, false),
-	};
+		if (load_components == 3)
+			data_type = LLVMVectorType(ctx->f32, 4);
+		else if (load_components > 1)
+			data_type = LLVMVectorType(ctx->f32, load_components);
 
-	LLVMValueRef ret =
-	    ac_emit_llvm_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
+		if (load_components >= 3)
+			load_name = "llvm.amdgcn.buffer.load.v4f32";
+		else if (load_components == 2)
+			load_name = "llvm.amdgcn.buffer.load.v2f32";
+		else if (load_components == 1)
+			load_name = "llvm.amdgcn.buffer.load.f32";
+		else
+			unreachable("unhandled number of components");
 
-	if (instr->num_components == 3)
-		ret = trim_vector(ctx, ret, 3);
+		LLVMValueRef params[] = {
+			get_src(ctx, instr->src[0]),
+			LLVMConstInt(ctx->i32, 0, false),
+			offset,
+			LLVMConstInt(ctx->i1, 0, false),
+			LLVMConstInt(ctx->i1, 0, false),
+		};
+
+		results[i] = ac_emit_llvm_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
+
+	}
+
+	LLVMValueRef ret = results[0];
+	if (num_components > 4 || num_components == 3) {
+		LLVMValueRef masks[] = {
+		        LLVMConstInt(ctx->i32, 0, false), LLVMConstInt(ctx->i32, 1, false),
+		        LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false),
+			LLVMConstInt(ctx->i32, 4, false), LLVMConstInt(ctx->i32, 5, false),
+		        LLVMConstInt(ctx->i32, 6, false), LLVMConstInt(ctx->i32, 7, false)
+		};
+
+		LLVMValueRef swizzle = LLVMConstVector(masks, num_components);
+		ret = LLVMBuildShuffleVector(ctx->builder, results[0],
+					     results[num_components > 4 ? 1 : 0], swizzle, "");
+	}
 
 	return LLVMBuildBitCast(ctx->builder, ret,
 	                        get_def_type(ctx, &instr->dest.ssa), "");
