@@ -2305,24 +2305,31 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 				   nir_intrinsic_instr *instr)
 {
-	LLVMValueRef values[4];
+	LLVMValueRef values[8];
 	int idx = instr->variables[0]->var->data.driver_location;
 	int ve = instr->dest.ssa.num_components;
 	LLVMValueRef indir_index;
+	LLVMValueRef ret;
 	unsigned const_index;
+	bool vs_in = ctx->stage == MESA_SHADER_VERTEX &&
+	             instr->variables[0]->var->data.mode == nir_var_shader_in;
+	radv_get_deref_offset(ctx, &instr->variables[0]->deref, vs_in, NULL,
+				      &const_index, &indir_index);
+
+	if (instr->dest.ssa.bit_size == 64)
+		ve *= 2;
+
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_in:
 		if (ctx->stage == MESA_SHADER_GEOMETRY) {
 			return load_gs_input(ctx, instr);
 		}
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref,
-				      ctx->stage == MESA_SHADER_VERTEX, NULL,
-				      &const_index, &indir_index);
 		for (unsigned chan = 0; chan < ve; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 						instr->variables[0]->var->type,
 						ctx->stage == MESA_SHADER_VERTEX);
+				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->inputs + idx + chan, count,
 						4, false);
@@ -2333,15 +2340,13 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 			} else
 				values[chan] = ctx->inputs[idx + chan + const_index * 4];
 		}
-		return to_integer(ctx, ac_build_gather_values(&ctx->ac, values, ve));
 		break;
 	case nir_var_local:
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      NULL, &const_index, &indir_index);
 		for (unsigned chan = 0; chan < ve; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 					instr->variables[0]->var->type, false);
+				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->locals + idx + chan, count,
 						4, true);
@@ -2353,14 +2358,13 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 				values[chan] = LLVMBuildLoad(ctx->builder, ctx->locals[idx + chan + const_index * 4], "");
 			}
 		}
-		return to_integer(ctx, ac_build_gather_values(&ctx->ac, values, ve));
+		break;
 	case nir_var_shader_out:
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      NULL, &const_index, &indir_index);
 		for (unsigned chan = 0; chan < ve; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 						instr->variables[0]->var->type, false);
+				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->outputs + idx + chan, count,
 						4, true);
@@ -2374,10 +2378,8 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 						     "");
 			}
 		}
-		return to_integer(ctx, ac_build_gather_values(&ctx->ac, values, ve));
+		break;
 	case nir_var_shared: {
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      NULL, &const_index, &indir_index);
 		LLVMValueRef ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
 		LLVMValueRef derived_ptr;
 
@@ -2386,14 +2388,16 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 			if (indir_index)
 				index = LLVMBuildAdd(ctx->builder, index, indir_index, "");
 			derived_ptr = LLVMBuildGEP(ctx->builder, ptr, &index, 1, "");
+
 			values[chan] = LLVMBuildLoad(ctx->builder, derived_ptr, "");
 		}
-		return to_integer(ctx, ac_build_gather_values(&ctx->ac, values, ve));
-	}
-	default:
 		break;
 	}
-	return NULL;
+	default:
+		unreachable("unhandle variable mode");
+	}
+	ret = ac_build_gather_values(&ctx->ac, values, ve);
+	return LLVMBuildBitCast(ctx->builder, ret, get_def_type(ctx, &instr->dest.ssa), "");
 }
 
 static void
@@ -2406,21 +2410,31 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 	int writemask = instr->const_index[0];
 	LLVMValueRef indir_index;
 	unsigned const_index;
+	radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
+	                      NULL, &const_index, &indir_index);
+
+	if (get_elem_bits(ctx, LLVMTypeOf(src)) == 64) {
+		int old_writemask = writemask;
+
+		src = LLVMBuildBitCast(ctx->builder, src,
+		                       LLVMVectorType(ctx->f32, get_llvm_num_components(src) * 2),
+		                       "");
+
+		writemask = 0;
+		for (unsigned chan = 0; chan < 4; chan++) {
+			if (old_writemask & (1 << chan))
+				writemask |= 3u << (2 * chan);
+		}
+	}
+
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_out:
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      NULL, &const_index, &indir_index);
-		for (unsigned chan = 0; chan < 4; chan++) {
+		for (unsigned chan = 0; chan < 8; chan++) {
 			int stride = 4;
 			if (!(writemask & (1 << chan)))
 				continue;
-			if (get_llvm_num_components(src) == 1)
-				value = src;
-			else
-				value = LLVMBuildExtractElement(ctx->builder, src,
-								LLVMConstInt(ctx->i32,
-									     chan, false),
-								"");
+
+			value = llvm_extract_elem(ctx, src, chan);
 
 			if (instr->variables[0]->var->data.location == VARYING_SLOT_CLIP_DIST0 ||
 			    instr->variables[0]->var->data.location == VARYING_SLOT_CULL_DIST0)
@@ -2428,6 +2442,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 						instr->variables[0]->var->type, false);
+				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 						&ctx->ac, ctx->outputs + idx + chan, count,
 						stride, true);
@@ -2448,20 +2463,15 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 		}
 		break;
 	case nir_var_local:
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      NULL, &const_index, &indir_index);
-		for (unsigned chan = 0; chan < 4; chan++) {
+		for (unsigned chan = 0; chan < 8; chan++) {
 			if (!(writemask & (1 << chan)))
 				continue;
 
-			if (get_llvm_num_components(src) == 1)
-				value = src;
-			else
-				value = LLVMBuildExtractElement(ctx->builder, src,
-								LLVMConstInt(ctx->i32, chan, false), "");
+			value = llvm_extract_elem(ctx, src, chan);
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
 					instr->variables[0]->var->type, false);
+				count -= chan / 4;
 				LLVMValueRef tmp_vec = ac_build_gather_values_extended(
 					&ctx->ac, ctx->locals + idx + chan, count,
 					4, true);
@@ -2478,33 +2488,18 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 		}
 		break;
 	case nir_var_shared: {
-		LLVMValueRef ptr;
-		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      NULL, &const_index, &indir_index);
-
-		ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
-		LLVMValueRef derived_ptr;
-
-		for (unsigned chan = 0; chan < 4; chan++) {
+		LLVMValueRef ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
+		for (unsigned chan = 0; chan < 8; chan++) {
 			if (!(writemask & (1 << chan)))
 				continue;
-
 			LLVMValueRef index = LLVMConstInt(ctx->i32, chan, false);
-
-			if (get_llvm_num_components(src) == 1)
-				value = src;
-			else
-				value = LLVMBuildExtractElement(ctx->builder, src,
-								LLVMConstInt(ctx->i32,
-									     chan, false),
-								"");
+			LLVMValueRef derived_ptr;
 
 			if (indir_index)
 				index = LLVMBuildAdd(ctx->builder, index, indir_index, "");
-
 			derived_ptr = LLVMBuildGEP(ctx->builder, ptr, &index, 1, "");
 			LLVMBuildStore(ctx->builder,
-				       to_integer(ctx, value), derived_ptr);
+			               to_integer(ctx, src), derived_ptr);
 		}
 		break;
 	}
