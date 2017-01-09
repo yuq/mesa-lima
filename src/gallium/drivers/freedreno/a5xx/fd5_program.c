@@ -342,8 +342,8 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 
 	pos_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_POS);
 	psize_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_PSIZ);
-	vertex_regid = ir3_find_output_regid(s[VS].v, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE);
-	instance_regid = ir3_find_output_regid(s[VS].v, SYSTEM_VALUE_INSTANCE_ID);
+	vertex_regid = ir3_find_sysval_regid(s[VS].v, SYSTEM_VALUE_VERTEX_ID);
+	instance_regid = ir3_find_sysval_regid(s[VS].v, SYSTEM_VALUE_INSTANCE_ID);
 
 	if (s[FS].v->color0_mrt) {
 		color_regid[0] = color_regid[1] = color_regid[2] = color_regid[3] =
@@ -710,7 +710,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	OUT_PKT4(ring, REG_A5XX_VFD_CONTROL_1, 5);
 	OUT_RING(ring, A5XX_VFD_CONTROL_1_REGID4VTX(vertex_regid) |
 			A5XX_VFD_CONTROL_1_REGID4INST(instance_regid) |
-			0xfc);
+			0xfc0000);
 	OUT_RING(ring, 0x0000fcfc);   /* VFD_CONTROL_2 */
 	OUT_RING(ring, 0x0000fcfc);   /* VFD_CONTROL_3 */
 	OUT_RING(ring, 0x000000fc);   /* VFD_CONTROL_4 */

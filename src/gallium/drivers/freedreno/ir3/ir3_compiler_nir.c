@@ -1246,10 +1246,12 @@ emit_intrinsic(struct ir3_compile *ctx, nir_intrinsic_instr *intr)
 		dst[0] = ctx->basevertex;
 		break;
 	case nir_intrinsic_load_vertex_id_zero_base:
+	case nir_intrinsic_load_vertex_id:
 		if (!ctx->vertex_id) {
+			gl_system_value sv = (intr->intrinsic == nir_intrinsic_load_vertex_id) ?
+				SYSTEM_VALUE_VERTEX_ID : SYSTEM_VALUE_VERTEX_ID_ZERO_BASE;
 			ctx->vertex_id = create_input(b, 0);
-			add_sysval_input(ctx, SYSTEM_VALUE_VERTEX_ID_ZERO_BASE,
-					ctx->vertex_id);
+			add_sysval_input(ctx, sv, ctx->vertex_id);
 		}
 		dst[0] = ctx->vertex_id;
 		break;

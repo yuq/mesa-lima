@@ -176,10 +176,12 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VERTEX_BUFFER_STRIDE_4BYTE_ALIGNED_ONLY:
 	case PIPE_CAP_VERTEX_ELEMENT_SRC_OFFSET_4BYTE_ALIGNED_ONLY:
 	case PIPE_CAP_BUFFER_MAP_PERSISTENT_COHERENT:
-	case PIPE_CAP_VERTEXID_NOBASE:
 	case PIPE_CAP_STRING_MARKER:
 	case PIPE_CAP_MIXED_COLOR_DEPTH_BITS:
 		return 1;
+
+	case PIPE_CAP_VERTEXID_NOBASE:
+		return is_a3xx(screen) || is_a4xx(screen);
 
 	case PIPE_CAP_USER_CONSTANT_BUFFERS:
 		return is_a4xx(screen) ? 0 : 1;
