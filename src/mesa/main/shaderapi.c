@@ -1221,8 +1221,15 @@ use_shader_program(struct gl_context *ctx, gl_shader_stage stage,
    if ((shProg != NULL) && (shProg->_LinkedShaders[stage] == NULL))
       shProg = NULL;
 
-   if (shProg)
-      _mesa_shader_program_init_subroutine_defaults(ctx, shProg);
+   if (shProg) {
+      for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
+         struct gl_linked_shader *sh = shProg->_LinkedShaders[i];
+         if (!sh)
+            continue;
+
+         _mesa_program_init_subroutine_defaults(ctx, sh->Program);
+      }
+   }
 
    if (*target != shProg) {
       /* Program is current, flush it */
@@ -2875,7 +2882,7 @@ _mesa_shader_write_subroutine_indices(struct gl_context *ctx,
                                           ctx->_Shader->CurrentProgram[stage]->_LinkedShaders[stage]->Program);
 }
 
-static void
+void
 _mesa_program_init_subroutine_defaults(struct gl_context *ctx,
                                        struct gl_program *p)
 {
@@ -2895,22 +2902,5 @@ _mesa_program_init_subroutine_defaults(struct gl_context *ctx,
          continue;
 
       binding->IndexPtr[i] = find_compat_subroutine(p, uni->type);
-   }
-}
-
-void
-_mesa_shader_program_init_subroutine_defaults(struct gl_context *ctx,
-                                              struct gl_shader_program *shProg)
-{
-   int i;
-
-   if (!shProg)
-      return;
-
-   for (i = 0; i < MESA_SHADER_STAGES; i++) {
-      if (!shProg->_LinkedShaders[i])
-         continue;
-
-      _mesa_program_init_subroutine_defaults(ctx, shProg->_LinkedShaders[i]->Program);
    }
 }

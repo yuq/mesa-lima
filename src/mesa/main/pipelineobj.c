@@ -468,8 +468,14 @@ _mesa_bind_pipeline(struct gl_context *ctx,
 
       FLUSH_VERTICES(ctx, _NEW_PROGRAM | _NEW_PROGRAM_CONSTANTS);
 
-      for (i = 0; i < MESA_SHADER_STAGES; i++)
-         _mesa_shader_program_init_subroutine_defaults(ctx, ctx->_Shader->CurrentProgram[i]);
+      for (i = 0; i < MESA_SHADER_STAGES; i++) {
+         if (ctx->_Shader->CurrentProgram[i]) {
+            struct gl_linked_shader *sh =
+               ctx->_Shader->CurrentProgram[i]->_LinkedShaders[i];
+            if (sh)
+               _mesa_program_init_subroutine_defaults(ctx, sh->Program);
+         }
+      }
    }
 }
 
