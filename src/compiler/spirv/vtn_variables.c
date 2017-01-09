@@ -908,7 +908,10 @@ vtn_get_builtin_location(struct vtn_builder *b,
       set_mode_system_value(mode);
       break;
    case SpvBuiltInPrimitiveId:
-      if (*mode == nir_var_shader_out) {
+      if (b->shader->stage == MESA_SHADER_FRAGMENT) {
+         assert(*mode == nir_var_shader_in);
+         *location = VARYING_SLOT_PRIMITIVE_ID;
+      } else if (*mode == nir_var_shader_out) {
          *location = VARYING_SLOT_PRIMITIVE_ID;
       } else {
          *location = SYSTEM_VALUE_PRIMITIVE_ID;
