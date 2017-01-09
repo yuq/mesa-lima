@@ -1169,6 +1169,12 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_upload_vertex_buffer_descriptors(sctx))
 		return;
 
+	/* GFX9 scissor bug workaround. There is also a more efficient but
+	 * more involved alternative workaround. */
+	if (sctx->b.chip_class == GFX9 &&
+	    si_is_atom_dirty(sctx, &sctx->b.scissors.atom))
+		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH;
+
 	/* Flush caches before the first state atom, which does L2 prefetches. */
 	if (sctx->b.flags)
 		si_emit_cache_flush(sctx);
