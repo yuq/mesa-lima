@@ -1097,9 +1097,30 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
       return;
    }
 
-   FLUSH_VERTICES(ctx, _NEW_PROGRAM);
+   unsigned programs_in_use = 0;
+   if (ctx->_Shader)
+      for (unsigned stage = 0; stage < MESA_SHADER_STAGES; stage++) {
+         if (ctx->_Shader->CurrentProgram[stage] == shProg) {
+            programs_in_use |= 1 << stage;
+         }
+   }
 
+   FLUSH_VERTICES(ctx, 0);
    _mesa_glsl_link_shader(ctx, shProg);
+
+   /* From section 7.3 (Program Objects) of the OpenGL 4.5 spec:
+    *
+    *    "If LinkProgram or ProgramBinary successfully re-links a program
+    *     object that is active for any shader stage, then the newly generated
+    *     executable code will be installed as part of the current rendering
+    *     state for all shader stages where the program is active.
+    *     Additionally, the newly generated executable code is made part of
+    *     the state of any program pipeline for all stages where the program
+    *     is attached."
+    */
+   if (shProg->data->LinkStatus && programs_in_use) {
+      ctx->NewState |= _NEW_PROGRAM;
+   }
 
    /* Capture .shader_test files. */
    const char *capture_path = _mesa_get_shader_capture_path();
