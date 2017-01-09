@@ -459,7 +459,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                   state->attachments[i].aux_usage,
                                   state->attachments[i].color_rt_state);
          } else {
-            state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
+            state->attachments[i].aux_usage = iview->image->aux_usage;
             state->attachments[i].input_aux_usage = ISL_AUX_USAGE_NONE;
          }
 
@@ -2087,7 +2087,9 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
    const bool has_depth = image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
-   const bool has_hiz = image != NULL && image->aux_usage == ISL_AUX_USAGE_HIZ;
+   const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment;
+   const bool has_hiz = image != NULL &&
+      cmd_buffer->state.attachments[ds].aux_usage == ISL_AUX_USAGE_HIZ;
    const bool has_stencil =
       image && (image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT);
 
