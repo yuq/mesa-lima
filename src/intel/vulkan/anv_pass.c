@@ -118,6 +118,7 @@ VkResult anv_CreateRenderPass(
             subpass->input_attachments[j] = a;
             pass->attachments[a].usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
             pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_INPUT;
+            pass->attachments[a].last_subpass_idx = i;
 
             if (desc->pDepthStencilAttachment &&
                 a == desc->pDepthStencilAttachment->attachment)
@@ -134,6 +135,7 @@ VkResult anv_CreateRenderPass(
             subpass->color_attachments[j] = a;
             pass->attachments[a].usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
             pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_DRAW;
+            pass->attachments[a].last_subpass_idx = i;
          }
       }
 
@@ -156,6 +158,7 @@ VkResult anv_CreateRenderPass(
                   ANV_SUBPASS_USAGE_RESOLVE_SRC;
                pass->attachments[a].subpass_usage[i] |=
                   ANV_SUBPASS_USAGE_RESOLVE_DST;
+               pass->attachments[a].last_subpass_idx = i;
             }
          }
       }

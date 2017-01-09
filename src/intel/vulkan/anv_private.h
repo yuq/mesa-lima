@@ -1770,6 +1770,9 @@ struct anv_render_pass_attachment {
 
    /* An array, indexed by subpass id, of how the attachment will be used. */
    enum anv_subpass_usage *                     subpass_usage;
+
+   /* The subpass id in which the attachment will be used last. */
+   uint32_t                                     last_subpass_idx;
 };
 
 struct anv_render_pass {
