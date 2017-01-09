@@ -142,18 +142,17 @@ typedef struct shader_info {
          unsigned shared_size;
       } cs;
 
+      /* Applies to both TCS and TES. */
       struct {
          /** The number of vertices in the TCS output patch. */
-         unsigned vertices_out;
-      } tcs;
+         unsigned tcs_vertices_out;
 
-      struct {
          uint32_t primitive_mode; /* GL_TRIANGLES, GL_QUADS or GL_ISOLINES */
          enum gl_tess_spacing spacing;
          /** Is the vertex order counterclockwise? */
          bool ccw;
          bool point_mode;
-      } tes;
+      } tess;
    };
 } shader_info;
 

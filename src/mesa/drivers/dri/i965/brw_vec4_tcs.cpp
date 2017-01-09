@@ -94,9 +94,10 @@ vec4_tcs_visitor::emit_prolog()
     * HS instance dispatched will only have its bottom half doing real
     * work, and so we need to disable the upper half:
     */
-   if (nir->info->tcs.vertices_out % 2) {
+   if (nir->info->tess.tcs_vertices_out % 2) {
       emit(CMP(dst_null_d(), invocation_id,
-               brw_imm_ud(nir->info->tcs.vertices_out), BRW_CONDITIONAL_L));
+               brw_imm_ud(nir->info->tess.tcs_vertices_out),
+               BRW_CONDITIONAL_L));
 
       /* Matching ENDIF is in emit_thread_end() */
       emit(IF(BRW_PREDICATE_NORMAL));
@@ -110,7 +111,7 @@ vec4_tcs_visitor::emit_thread_end()
    vec4_instruction *inst;
    current_annotation = "thread end";
 
-   if (nir->info->tcs.vertices_out % 2) {
+   if (nir->info->tess.tcs_vertices_out % 2) {
       emit(BRW_OPCODE_ENDIF);
    }
 
@@ -420,9 +421,9 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    nir = brw_postprocess_nir(nir, compiler, is_scalar);
 
    if (is_scalar)
-      prog_data->instances = DIV_ROUND_UP(nir->info->tcs.vertices_out, 8);
+      prog_data->instances = DIV_ROUND_UP(nir->info->tess.tcs_vertices_out, 8);
    else
-      prog_data->instances = DIV_ROUND_UP(nir->info->tcs.vertices_out, 2);
+      prog_data->instances = DIV_ROUND_UP(nir->info->tess.tcs_vertices_out, 2);
 
    /* Compute URB entry size.  The maximum allowed URB entry size is 32k.
     * That divides up as follows:
@@ -441,7 +442,8 @@ brw_compile_tcs(const struct brw_compiler *compiler,
    unsigned output_size_bytes = 0;
    /* Note that the patch header is counted in num_per_patch_slots. */
    output_size_bytes += num_per_patch_slots * 16;
-   output_size_bytes += nir->info->tcs.vertices_out * num_per_vertex_slots * 16;
+   output_size_bytes += nir->info->tess.tcs_vertices_out *
+                        num_per_vertex_slots * 16;
 
    assert(output_size_bytes >= 1);
    if (output_size_bytes > GEN7_MAX_HS_URB_ENTRY_SIZE_BYTES)

@@ -336,7 +336,7 @@ brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue_map)
          nir_builder_init(&b, function->impl);
          nir_foreach_block(block, function->impl) {
             remap_patch_urb_offsets(block, &b, vue_map,
-                                    nir->info->tes.primitive_mode);
+                                    nir->info->tess.primitive_mode);
          }
       }
    }

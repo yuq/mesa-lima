@@ -1577,7 +1577,7 @@ st_translate_tessctrl_program(struct st_context *st,
       return false;
 
    ureg_property(ureg, TGSI_PROPERTY_TCS_VERTICES_OUT,
-                 sttcp->Base.info.tcs.vertices_out);
+                 sttcp->Base.info.tess.tcs_vertices_out);
 
    st_translate_program_common(st, &sttcp->Base, sttcp->glsl_to_tgsi, ureg,
                                PIPE_SHADER_TESS_CTRL, &sttcp->tgsi);
@@ -1601,11 +1601,11 @@ st_translate_tesseval_program(struct st_context *st,
    if (ureg == NULL)
       return false;
 
-   if (sttep->Base.info.tes.primitive_mode == GL_ISOLINES)
+   if (sttep->Base.info.tess.primitive_mode == GL_ISOLINES)
       ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE, GL_LINES);
    else
       ureg_property(ureg, TGSI_PROPERTY_TES_PRIM_MODE,
-                    sttep->Base.info.tes.primitive_mode);
+                    sttep->Base.info.tess.primitive_mode);
 
    STATIC_ASSERT((TESS_SPACING_EQUAL + 1) % 3 == PIPE_TESS_SPACING_EQUAL);
    STATIC_ASSERT((TESS_SPACING_FRACTIONAL_ODD + 1) % 3 ==
@@ -1614,12 +1614,12 @@ st_translate_tesseval_program(struct st_context *st,
                  PIPE_TESS_SPACING_FRACTIONAL_EVEN);
 
    ureg_property(ureg, TGSI_PROPERTY_TES_SPACING,
-                 (sttep->Base.info.tes.spacing + 1) % 3);
+                 (sttep->Base.info.tess.spacing + 1) % 3);
 
    ureg_property(ureg, TGSI_PROPERTY_TES_VERTEX_ORDER_CW,
-                 !sttep->Base.info.tes.ccw);
+                 !sttep->Base.info.tess.ccw);
    ureg_property(ureg, TGSI_PROPERTY_TES_POINT_MODE,
-                 sttep->Base.info.tes.point_mode);
+                 sttep->Base.info.tess.point_mode);
 
    st_translate_program_common(st, &sttep->Base, sttep->glsl_to_tgsi,
                                ureg, PIPE_SHADER_TESS_EVAL, &sttep->tgsi);

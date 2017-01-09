@@ -5925,15 +5925,15 @@ fs_visitor::run_tcs_single_patch()
    }
 
    /* Fix the disptach mask */
-   if (nir->info->tcs.vertices_out % 8) {
+   if (nir->info->tess.tcs_vertices_out % 8) {
       bld.CMP(bld.null_reg_ud(), invocation_id,
-              brw_imm_ud(nir->info->tcs.vertices_out), BRW_CONDITIONAL_L);
+              brw_imm_ud(nir->info->tess.tcs_vertices_out), BRW_CONDITIONAL_L);
       bld.IF(BRW_PREDICATE_NORMAL);
    }
 
    emit_nir_code();
 
-   if (nir->info->tcs.vertices_out % 8) {
+   if (nir->info->tess.tcs_vertices_out % 8) {
       bld.emit(BRW_OPCODE_ENDIF);
    }
 

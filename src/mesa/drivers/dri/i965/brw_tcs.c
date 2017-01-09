@@ -54,7 +54,7 @@ create_passthrough_tcs(void *mem_ctx, const struct brw_compiler *compiler,
    nir->info->inputs_read = key->outputs_written &
       ~(VARYING_BIT_TESS_LEVEL_INNER | VARYING_BIT_TESS_LEVEL_OUTER);
    nir->info->outputs_written = key->outputs_written;
-   nir->info->tcs.vertices_out = key->input_vertices;
+   nir->info->tess.tcs_vertices_out = key->input_vertices;
    nir->info->name = ralloc_strdup(nir, "passthrough");
    nir->num_uniforms = 8 * sizeof(uint32_t);
 
@@ -328,10 +328,10 @@ brw_tcs_populate_key(struct brw_context *brw,
    /* We need to specialize our code generation for tessellation levels
     * based on the domain the DS is expecting to tessellate.
     */
-   key->tes_primitive_mode = tep->program.info.tes.primitive_mode;
+   key->tes_primitive_mode = tep->program.info.tess.primitive_mode;
    key->quads_workaround = brw->gen < 9 &&
-                           tep->program.info.tes.primitive_mode == GL_QUADS &&
-                           tep->program.info.tes.spacing == TESS_SPACING_EQUAL;
+                           tep->program.info.tess.primitive_mode == GL_QUADS &&
+                           tep->program.info.tess.spacing == TESS_SPACING_EQUAL;
 
    if (tcp) {
       key->program_string_id = tcp->id;

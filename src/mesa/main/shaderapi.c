@@ -2183,14 +2183,14 @@ _mesa_copy_linked_program_data(const struct gl_shader_program *src,
       dst->CullDistanceArraySize = src->Vert.CullDistanceArraySize;
       break;
    case MESA_SHADER_TESS_CTRL: {
-      dst->info.tcs.vertices_out = dst_sh->info.TessCtrl.VerticesOut;
+      dst->info.tess.tcs_vertices_out = dst_sh->info.TessCtrl.VerticesOut;
       break;
    }
    case MESA_SHADER_TESS_EVAL: {
-      dst->info.tes.primitive_mode = dst_sh->info.TessEval.PrimitiveMode;
-      dst->info.tes.spacing = dst_sh->info.TessEval.Spacing;
-      dst->info.tes.ccw = dst_sh->info.TessEval.VertexOrder == GL_CCW;
-      dst->info.tes.point_mode = dst_sh->info.TessEval.PointMode;
+      dst->info.tess.primitive_mode = dst_sh->info.TessEval.PrimitiveMode;
+      dst->info.tess.spacing = dst_sh->info.TessEval.Spacing;
+      dst->info.tess.ccw = dst_sh->info.TessEval.VertexOrder == GL_CCW;
+      dst->info.tess.point_mode = dst_sh->info.TessEval.PointMode;
       dst->ClipDistanceArraySize = src->TessEval.ClipDistanceArraySize;
       dst->CullDistanceArraySize = src->TessEval.CullDistanceArraySize;
       break;

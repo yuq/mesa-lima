@@ -1351,9 +1351,9 @@ brw_compile_tes(const struct brw_compiler *compiler,
                  TESS_SPACING_FRACTIONAL_EVEN - 1);
 
    prog_data->partitioning =
-      (enum brw_tess_partitioning) (nir->info->tes.spacing - 1);
+      (enum brw_tess_partitioning) (nir->info->tess.spacing - 1);
 
-   switch (nir->info->tes.primitive_mode) {
+   switch (nir->info->tess.primitive_mode) {
    case GL_QUADS:
       prog_data->domain = BRW_TESS_DOMAIN_QUAD;
       break;
@@ -1367,15 +1367,15 @@ brw_compile_tes(const struct brw_compiler *compiler,
       unreachable("invalid domain shader primitive mode");
    }
 
-   if (nir->info->tes.point_mode) {
+   if (nir->info->tess.point_mode) {
       prog_data->output_topology = BRW_TESS_OUTPUT_TOPOLOGY_POINT;
-   } else if (nir->info->tes.primitive_mode == GL_ISOLINES) {
+   } else if (nir->info->tess.primitive_mode == GL_ISOLINES) {
       prog_data->output_topology = BRW_TESS_OUTPUT_TOPOLOGY_LINE;
    } else {
       /* Hardware winding order is backwards from OpenGL */
       prog_data->output_topology =
-         nir->info->tes.ccw ? BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW
-                            : BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW;
+         nir->info->tess.ccw ? BRW_TESS_OUTPUT_TOPOLOGY_TRI_CW
+                             : BRW_TESS_OUTPUT_TOPOLOGY_TRI_CCW;
    }
 
    if (unlikely(INTEL_DEBUG & DEBUG_TES)) {
