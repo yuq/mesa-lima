@@ -257,13 +257,13 @@ fd5_sampler_view_create(struct pipe_context *pctx, struct pipe_resource *prsc,
 			A5XX_TEX_CONST_2_PITCH(elements * rsc->cpp);
 		so->offset = cso->u.buf.offset;
 	} else {
-//		unsigned miplevels;
+		unsigned miplevels;
 
 		lvl = fd_sampler_first_level(cso);
-//		miplevels = fd_sampler_last_level(cso) - lvl;
+		miplevels = fd_sampler_last_level(cso) - lvl;
 		layers = cso->u.tex.last_layer - cso->u.tex.first_layer + 1;
 
-//		so->texconst0 |= A5XX_TEX_CONST_0_MIPLVLS(miplevels);
+		so->texconst0 |= A5XX_TEX_CONST_0_MIPLVLS(miplevels);
 		so->texconst1 =
 			A5XX_TEX_CONST_1_WIDTH(u_minify(prsc->width0, lvl)) |
 			A5XX_TEX_CONST_1_HEIGHT(u_minify(prsc->height0, lvl));
