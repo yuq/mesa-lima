@@ -30,6 +30,8 @@ LOCAL_MODULE := libmesa_amd_common
 
 LOCAL_SRC_FILES := $(AMD_COMPILER_FILES)
 
+LOCAL_CFLAGS += -DFORCE_BUILD_AMDGPU   # instructs LLVM to declare LLVMInitializeAMDGPU* functions
+
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/include \
 	$(MESA_TOP)/src \
