@@ -322,9 +322,8 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
              minify(mt->physical_width0, 2);
        }
 
-       if (mip1_width > mt->total_width) {
-           mt->total_width = mip1_width;
-       }
+      if (mip1_width > mt->total_width)
+         mt->total_width = mip1_width;
    }
 
    mt->total_width /= bw;
