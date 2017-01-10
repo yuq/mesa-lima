@@ -463,7 +463,7 @@ VkResult wsi_create_wl_surface(const VkAllocationCallbacks *pAllocator,
    surface->display = pCreateInfo->display;
    surface->surface = pCreateInfo->surface;
 
-   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
+   *pSurface = VkIcdSurfaceBase_to_handle(&surface->base);
 
    return VK_SUCCESS;
 }

@@ -453,7 +453,7 @@ VkResult wsi_create_xcb_surface(const VkAllocationCallbacks *pAllocator,
    surface->connection = pCreateInfo->connection;
    surface->window = pCreateInfo->window;
 
-   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
+   *pSurface = VkIcdSurfaceBase_to_handle(&surface->base);
    return VK_SUCCESS;
 }
 
@@ -472,7 +472,7 @@ VkResult wsi_create_xlib_surface(const VkAllocationCallbacks *pAllocator,
    surface->dpy = pCreateInfo->dpy;
    surface->window = pCreateInfo->window;
 
-   *pSurface = _VkIcdSurfaceBase_to_handle(&surface->base);
+   *pSurface = VkIcdSurfaceBase_to_handle(&surface->base);
    return VK_SUCCESS;
 }
 
