@@ -1609,6 +1609,13 @@ struct anv_image {
    struct anv_surface aux_surface;
 };
 
+/* Returns true if a HiZ-enabled depth buffer can be sampled from. */
+static inline bool
+anv_can_sample_with_hiz(uint8_t gen, uint32_t samples)
+{
+   return gen >= 8 && samples == 1;
+}
+
 void
 anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
