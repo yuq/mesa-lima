@@ -378,6 +378,7 @@ fd5_emit_vertex_bufs(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 			OUT_PKT4(ring, REG_A5XX_VFD_DECODE(j), 2);
 			OUT_RING(ring, A5XX_VFD_DECODE_INSTR_IDX(j) |
 					A5XX_VFD_DECODE_INSTR_FORMAT(fmt) |
+					COND(elem->instance_divisor, A5XX_VFD_DECODE_INSTR_INSTANCED) |
 					0xc0000000);  // XXX
 			OUT_RING(ring, MAX2(1, elem->instance_divisor)); /* VFD_DECODE[j].STEP_RATE */
 
