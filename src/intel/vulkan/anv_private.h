@@ -1465,7 +1465,7 @@ anv_pipeline_has_stage(const struct anv_pipeline *pipeline,
 
 #define ANV_DECL_GET_PROG_DATA_FUNC(prefix, stage)                   \
 static inline const struct brw_##prefix##_prog_data *                \
-get_##prefix##_prog_data(struct anv_pipeline *pipeline)              \
+get_##prefix##_prog_data(const struct anv_pipeline *pipeline)        \
 {                                                                    \
    if (anv_pipeline_has_stage(pipeline, stage)) {                    \
       return (const struct brw_##prefix##_prog_data *)               \
