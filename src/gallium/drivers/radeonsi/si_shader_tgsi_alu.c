@@ -959,6 +959,62 @@ static void build_cube_intrinsic(struct gallivm_state *gallivm,
 	}
 }
 
+/**
+ * Build a manual selection sequence for cube face sc/tc coordinates and
+ * major axis vector (multiplied by 2 for consistency) for the given
+ * vec3 \p coords, for the face implied by \p selcoords.
+ *
+ * For the major axis, we always adjust the sign to be in the direction of
+ * selcoords.ma; i.e., a positive out_ma means that coords is pointed towards
+ * the selcoords major axis.
+ */
+static void build_cube_select(LLVMBuilderRef builder,
+			      const struct cube_selection_coords *selcoords,
+			      const LLVMValueRef *coords,
+			      LLVMValueRef *out_st,
+			      LLVMValueRef *out_ma)
+{
+	LLVMTypeRef f32 = LLVMTypeOf(coords[0]);
+	LLVMValueRef is_ma_positive;
+	LLVMValueRef sgn_ma;
+	LLVMValueRef is_ma_z, is_not_ma_z;
+	LLVMValueRef is_ma_y;
+	LLVMValueRef is_ma_x;
+	LLVMValueRef sgn;
+	LLVMValueRef tmp;
+
+	is_ma_positive = LLVMBuildFCmp(builder, LLVMRealUGE,
+		selcoords->ma, LLVMConstReal(f32, 0.0), "");
+	sgn_ma = LLVMBuildSelect(builder, is_ma_positive,
+		LLVMConstReal(f32, 1.0), LLVMConstReal(f32, -1.0), "");
+
+	is_ma_z = LLVMBuildFCmp(builder, LLVMRealUGE, selcoords->id, LLVMConstReal(f32, 4.0), "");
+	is_not_ma_z = LLVMBuildNot(builder, is_ma_z, "");
+	is_ma_y = LLVMBuildAnd(builder, is_not_ma_z,
+		LLVMBuildFCmp(builder, LLVMRealUGE, selcoords->id, LLVMConstReal(f32, 2.0), ""), "");
+	is_ma_x = LLVMBuildAnd(builder, is_not_ma_z, LLVMBuildNot(builder, is_ma_y, ""), "");
+
+	/* Select sc */
+	tmp = LLVMBuildSelect(builder, is_ma_z, coords[2], coords[0], "");
+	sgn = LLVMBuildSelect(builder, is_ma_y, LLVMConstReal(f32, 1.0),
+		LLVMBuildSelect(builder, is_ma_x, sgn_ma,
+			LLVMBuildFNeg(builder, sgn_ma, ""), ""), "");
+	out_st[0] = LLVMBuildFMul(builder, tmp, sgn, "");
+
+	/* Select tc */
+	tmp = LLVMBuildSelect(builder, is_ma_y, coords[2], coords[1], "");
+	sgn = LLVMBuildSelect(builder, is_ma_y, LLVMBuildFNeg(builder, sgn_ma, ""),
+		LLVMConstReal(f32, -1.0), "");
+	out_st[1] = LLVMBuildFMul(builder, tmp, sgn, "");
+
+	/* Select ma */
+	tmp = LLVMBuildSelect(builder, is_ma_z, coords[2],
+		LLVMBuildSelect(builder, is_ma_y, coords[1], coords[0], ""), "");
+	sgn = LLVMBuildSelect(builder, is_ma_positive,
+		LLVMConstReal(f32, 2.0), LLVMConstReal(f32, -2.0), "");
+	*out_ma = LLVMBuildFMul(builder, tmp, sgn, "");
+}
+
 static void si_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base,
 				      LLVMValueRef *in, LLVMValueRef *out)
 {
@@ -997,10 +1053,21 @@ void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
 	unsigned opcode = emit_data->inst->Instruction.Opcode;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
+	LLVMTypeRef type = bld_base->base.elem_type;
+	struct cube_selection_coords selcoords;
 	LLVMValueRef coords[4];
-	unsigned i;
+	LLVMValueRef invma;
 
-	si_llvm_cube_to_2d_coords(bld_base, coords_arg, coords);
+	build_cube_intrinsic(gallivm, coords_arg, &selcoords);
+
+	invma = lp_build_intrinsic(builder, "llvm.fabs.f32",
+			type, &selcoords.ma, 1, LP_FUNC_ATTR_READNONE);
+	invma = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_RCP, invma);
+
+	for (int i = 0; i < 2; ++i)
+		coords[i] = LLVMBuildFMul(builder, selcoords.stc[i], invma, "");
+
+	coords[2] = selcoords.id;
 
 	if (opcode == TGSI_OPCODE_TXD && derivs_arg) {
 		LLVMValueRef derivs[4];
@@ -1008,33 +1075,50 @@ void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
 
 		/* Convert cube derivatives to 2D derivatives. */
 		for (axis = 0; axis < 2; axis++) {
-			LLVMValueRef shifted_cube_coords[4], shifted_coords[4];
+			LLVMValueRef deriv_st[2];
+			LLVMValueRef deriv_ma;
 
-			/* Shift the cube coordinates by the derivatives to get
-			 * the cube coordinates of the "neighboring pixel".
+			/* Transform the derivative alongside the texture
+			 * coordinate. Mathematically, the correct formula is
+			 * as follows. Assume we're projecting onto the +Z face
+			 * and denote by dx/dh the derivative of the (original)
+			 * X texture coordinate with respect to horizontal
+			 * window coordinates. The projection onto the +Z face
+			 * plane is:
+			 *
+			 *   f(x,z) = x/z
+			 *
+			 * Then df/dh = df/dx * dx/dh + df/dz * dz/dh
+			 *            = 1/z * dx/dh - x/z * 1/z * dz/dh.
+			 *
+			 * This motivatives the implementation below.
+			 *
+			 * Whether this actually gives the expected results for
+			 * apps that might feed in derivatives obtained via
+			 * finite differences is anyone's guess. The OpenGL spec
+			 * seems awfully quiet about how textureGrad for cube
+			 * maps should be handled.
 			 */
-			for (i = 0; i < 3; i++)
-				shifted_cube_coords[i] =
-					LLVMBuildFAdd(builder, coords_arg[i],
-						      derivs_arg[axis*3+i], "");
-			shifted_cube_coords[3] = LLVMGetUndef(bld_base->base.elem_type);
+			build_cube_select(builder, &selcoords, &derivs_arg[axis * 3],
+					  deriv_st, &deriv_ma);
 
-			/* Project the shifted cube coordinates onto the face. */
-			si_llvm_cube_to_2d_coords(bld_base, shifted_cube_coords,
-						      shifted_coords);
+			deriv_ma = LLVMBuildFMul(builder, deriv_ma, invma, "");
 
-			/* Subtract both sets of 2D coordinates to get 2D derivatives.
-			 * This won't work if the shifted coordinates ended up
-			 * in a different face.
-			 */
-			for (i = 0; i < 2; i++)
+			for (int i = 0; i < 2; ++i)
 				derivs[axis * 2 + i] =
-					LLVMBuildFSub(builder, shifted_coords[i],
-						      coords[i], "");
+					LLVMBuildFSub(builder,
+						LLVMBuildFMul(builder, deriv_st[i], invma, ""),
+						LLVMBuildFMul(builder, deriv_ma, coords[i], ""), "");
 		}
 
 		memcpy(derivs_arg, derivs, sizeof(derivs));
 	}
+
+	/* Shift the texture coordinate. This must be applied after the
+	 * derivative calculation.
+	 */
+	for (int i = 0; i < 2; ++i)
+		coords[i] = LLVMBuildFAdd(builder, coords[i], LLVMConstReal(type, 1.5), "");
 
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
 	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
