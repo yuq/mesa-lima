@@ -1027,7 +1027,7 @@ void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMTypeRef type = bld_base->base.elem_type;
 	struct cube_selection_coords selcoords;
-	LLVMValueRef coords[4];
+	LLVMValueRef coords[3];
 	LLVMValueRef invma;
 
 	build_cube_intrinsic(gallivm, coords_arg, &selcoords);
@@ -1098,17 +1098,6 @@ void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
 		/* coords_arg.w component - array_index for cube arrays */
 		coords[2] = lp_build_emit_llvm_ternary(bld_base, TGSI_OPCODE_MAD,
 						       coords_arg[3], lp_build_const_float(gallivm, 8.0), coords[2]);
-	}
-
-	/* Preserve compare/lod/bias. Put it in coords.w. */
-	if (opcode == TGSI_OPCODE_TEX2 ||
-	    opcode == TGSI_OPCODE_TXB2 ||
-	    opcode == TGSI_OPCODE_TXL2) {
-		coords[3] = coords_arg[4];
-	} else if (opcode == TGSI_OPCODE_TXB ||
-		   opcode == TGSI_OPCODE_TXL ||
-		   target == TGSI_TEXTURE_SHADOWCUBE) {
-		coords[3] = coords_arg[3];
 	}
 
 	memcpy(coords_arg, coords, sizeof(coords));
