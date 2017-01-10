@@ -285,8 +285,6 @@ emit_urb_setup(struct anv_pipeline *pipeline)
 static void
 emit_3dstate_sbe(struct anv_pipeline *pipeline)
 {
-   const struct brw_vs_prog_data *vs_prog_data = get_vs_prog_data(pipeline);
-   const struct brw_gs_prog_data *gs_prog_data = get_gs_prog_data(pipeline);
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
    const struct brw_vue_map *fs_input_map;
 
@@ -298,10 +296,7 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
       return;
    }
 
-   if (gs_prog_data)
-      fs_input_map = &gs_prog_data->base.vue_map;
-   else
-      fs_input_map = &vs_prog_data->base.vue_map;
+   fs_input_map = anv_pipeline_get_fs_input_map(pipeline);
 
    struct GENX(3DSTATE_SBE) sbe = {
       GENX(3DSTATE_SBE_header),
