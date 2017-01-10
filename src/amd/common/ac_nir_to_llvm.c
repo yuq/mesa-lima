@@ -113,10 +113,8 @@ struct nir_to_llvm_context {
 
 	unsigned range_md_kind;
 	unsigned uniform_md_kind;
-	unsigned fpmath_md_kind;
 	unsigned invariant_load_md_kind;
 	LLVMValueRef empty_md;
-	LLVMValueRef fpmath_md_2p5_ulp;
 	gl_shader_stage stage;
 
 	LLVMValueRef lds;
@@ -583,10 +581,7 @@ static void setup_types(struct nir_to_llvm_context *ctx)
 	    LLVMGetMDKindIDInContext(ctx->context, "amdgpu.uniform", 14);
 	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
 
-	ctx->fpmath_md_kind = LLVMGetMDKindIDInContext(ctx->context, "fpmath", 6);
-
 	args[0] = LLVMConstReal(ctx->f32, 2.5);
-	ctx->fpmath_md_2p5_ulp = LLVMMDNodeInContext(ctx->context, args, 1);
 }
 
 static int get_llvm_num_components(LLVMValueRef value)
@@ -1193,17 +1188,6 @@ static LLVMValueRef emit_ddxy_interp(
 	return ac_build_gather_values(&ctx->ac, result, 4);
 }
 
-static LLVMValueRef emit_fdiv(struct nir_to_llvm_context *ctx,
-			      LLVMValueRef num,
-			      LLVMValueRef den)
-{
-	LLVMValueRef ret = LLVMBuildFDiv(ctx->builder, num, den, "");
-
-	if (!LLVMIsConstant(ret))
-		LLVMSetMetadata(ret, ctx->fpmath_md_kind, ctx->fpmath_md_2p5_ulp);
-	return ret;
-}
-
 static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 {
 	LLVMValueRef src[4], result = NULL;
@@ -1273,7 +1257,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_fmod:
 		src[0] = to_float(ctx, src[0]);
 		src[1] = to_float(ctx, src[1]);
-		result = emit_fdiv(ctx, src[0], src[1]);
+		result = ac_emit_fdiv(&ctx->ac, src[0], src[1]);
 		result = emit_intrin_1f_param(ctx, "llvm.floor.f32", result);
 		result = LLVMBuildFMul(ctx->builder, src[1] , result, "");
 		result = LLVMBuildFSub(ctx->builder, src[0], result, "");
@@ -1297,11 +1281,11 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_fdiv:
 		src[0] = to_float(ctx, src[0]);
 		src[1] = to_float(ctx, src[1]);
-		result = emit_fdiv(ctx, src[0], src[1]);
+		result = ac_emit_fdiv(&ctx->ac, src[0], src[1]);
 		break;
 	case nir_op_frcp:
 		src[0] = to_float(ctx, src[0]);
-		result = emit_fdiv(ctx, ctx->f32one, src[0]);
+		result = ac_emit_fdiv(&ctx->ac, ctx->f32one, src[0]);
 		break;
 	case nir_op_iand:
 		result = LLVMBuildAnd(ctx->builder, src[0], src[1], "");
@@ -1408,7 +1392,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 		break;
 	case nir_op_frsq:
 		result = emit_intrin_1f_param(ctx, "llvm.sqrt.f32", src[0]);
-		result = emit_fdiv(ctx, ctx->f32one, result);
+		result = ac_emit_fdiv(&ctx->ac, ctx->f32one, result);
 		break;
 	case nir_op_fpow:
 		result = emit_intrin_2f_param(ctx, "llvm.pow.f32", src[0], src[1]);
@@ -1637,7 +1621,7 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 			half_texel[c] = LLVMBuildExtractElement(ctx->builder, size,
 								LLVMConstInt(ctx->i32, c, false), "");
 			half_texel[c] = LLVMBuildUIToFP(ctx->builder, half_texel[c], ctx->f32, "");
-			half_texel[c] = emit_fdiv(ctx, ctx->f32one, half_texel[c]);
+			half_texel[c] = ac_emit_fdiv(&ctx->ac, ctx->f32one, half_texel[c]);
 			half_texel[c] = LLVMBuildFMul(ctx->builder, half_texel[c],
 						      LLVMConstReal(ctx->f32, -0.5), "");
 		}
@@ -3837,7 +3821,7 @@ handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
 			for(int i = 0; i < 3; ++i)
 				inputs[i] = ctx->frag_pos[i];
 
-			inputs[3] = emit_fdiv(ctx, ctx->f32one, ctx->frag_pos[3]);
+			inputs[3] = ac_emit_fdiv(&ctx->ac, ctx->f32one, ctx->frag_pos[3]);
 		}
 	}
 	ctx->shader_info->fs.num_interp = index;
