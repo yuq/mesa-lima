@@ -907,23 +907,33 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 	bld_base->op_actions[TGSI_OPCODE_I64DIV].emit = emit_idiv;
 }
 
-static LLVMValueRef build_cube_intrinsic(struct gallivm_state *gallivm,
-					 LLVMValueRef in[3])
+/* Coordinates for cube map selection. sc, tc, and ma are as in Table 8.27
+ * of the OpenGL 4.5 (Compatibility Profile) specification, except ma is
+ * already multiplied by two. id is the cube face number.
+ */
+struct cube_selection_coords {
+	LLVMValueRef stc[2];
+	LLVMValueRef ma;
+	LLVMValueRef id;
+};
+
+static void build_cube_intrinsic(struct gallivm_state *gallivm,
+				 LLVMValueRef in[3],
+				 struct cube_selection_coords *out)
 {
+	LLVMBuilderRef builder = gallivm->builder;
+
 	if (HAVE_LLVM >= 0x0309) {
 		LLVMTypeRef f32 = LLVMTypeOf(in[0]);
-		LLVMValueRef out[4];
 
-		out[0] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubetc",
+		out->stc[1] = lp_build_intrinsic(builder, "llvm.amdgcn.cubetc",
 					    f32, in, 3, LP_FUNC_ATTR_READNONE);
-		out[1] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubesc",
+		out->stc[0] = lp_build_intrinsic(builder, "llvm.amdgcn.cubesc",
 					    f32, in, 3, LP_FUNC_ATTR_READNONE);
-		out[2] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubema",
+		out->ma = lp_build_intrinsic(builder, "llvm.amdgcn.cubema",
 					    f32, in, 3, LP_FUNC_ATTR_READNONE);
-		out[3] = lp_build_intrinsic(gallivm->builder, "llvm.amdgcn.cubeid",
+		out->id = lp_build_intrinsic(builder, "llvm.amdgcn.cubeid",
 					    f32, in, 3, LP_FUNC_ATTR_READNONE);
-
-		return lp_build_gather_values(gallivm, out, 4);
 	} else {
 		LLVMValueRef c[4] = {
 			in[0],
@@ -933,9 +943,19 @@ static LLVMValueRef build_cube_intrinsic(struct gallivm_state *gallivm,
 		};
 		LLVMValueRef vec = lp_build_gather_values(gallivm, c, 4);
 
-		return lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.cube",
+		LLVMValueRef tmp =
+			lp_build_intrinsic(builder, "llvm.AMDGPU.cube",
 					  LLVMTypeOf(vec), &vec, 1,
 					  LP_FUNC_ATTR_READNONE);
+
+		out->stc[1] = LLVMBuildExtractElement(builder, tmp,
+				lp_build_const_int32(gallivm, 0), "");
+		out->stc[0] = LLVMBuildExtractElement(builder, tmp,
+				lp_build_const_int32(gallivm, 1), "");
+		out->ma = LLVMBuildExtractElement(builder, tmp,
+				lp_build_const_int32(gallivm, 2), "");
+		out->id = LLVMBuildExtractElement(builder, tmp,
+				lp_build_const_int32(gallivm, 3), "");
 	}
 }
 
@@ -945,36 +965,26 @@ static void si_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base,
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMTypeRef type = bld_base->base.elem_type;
-	LLVMValueRef coords[4];
+	struct cube_selection_coords coords;
+	LLVMValueRef invma;
 	LLVMValueRef mad_args[3];
-	LLVMValueRef v;
-	unsigned i;
 
-	v = build_cube_intrinsic(gallivm, in);
+	build_cube_intrinsic(gallivm, in, &coords);
 
-	for (i = 0; i < 4; ++i)
-		coords[i] = LLVMBuildExtractElement(builder, v,
-						    lp_build_const_int32(gallivm, i), "");
+	invma = lp_build_intrinsic(builder, "llvm.fabs.f32",
+			type, &coords.ma, 1, LP_FUNC_ATTR_READNONE);
+	invma = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_RCP, invma);
 
-	coords[2] = lp_build_intrinsic(builder, "llvm.fabs.f32",
-			type, &coords[2], 1, LP_FUNC_ATTR_READNONE);
-	coords[2] = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_RCP, coords[2]);
-
-	mad_args[1] = coords[2];
+	mad_args[1] = invma;
 	mad_args[2] = LLVMConstReal(type, 1.5);
 
-	mad_args[0] = coords[0];
-	coords[0] = lp_build_emit_llvm_ternary(bld_base, TGSI_OPCODE_MAD,
-			mad_args[0], mad_args[1], mad_args[2]);
+	for (int i = 0; i < 2; ++i) {
+		mad_args[0] = coords.stc[i];
+		out[i] = lp_build_emit_llvm_ternary(bld_base, TGSI_OPCODE_MAD,
+				mad_args[0], mad_args[1], mad_args[2]);
+	}
 
-	mad_args[0] = coords[1];
-	coords[1] = lp_build_emit_llvm_ternary(bld_base, TGSI_OPCODE_MAD,
-			mad_args[0], mad_args[1], mad_args[2]);
-
-	/* apply xyz = yxw swizzle to cooords */
-	out[0] = coords[1];
-	out[1] = coords[0];
-	out[2] = coords[3];
+	out[2] = coords.id;
 }
 
 void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
