@@ -3442,13 +3442,8 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
          unreachable("Invalid MCS miptree");
       }
    } else if (mt->hiz_buf) {
-      if (mt->hiz_buf->mt) {
-         aux_pitch = mt->hiz_buf->mt->pitch;
-         aux_qpitch = mt->hiz_buf->mt->qpitch;
-      } else {
-         aux_pitch = mt->hiz_buf->aux_base.pitch;
-         aux_qpitch = mt->hiz_buf->aux_base.qpitch;
-      }
+      aux_pitch = mt->hiz_buf->aux_base.pitch;
+      aux_qpitch = mt->hiz_buf->aux_base.qpitch;
 
       *usage = ISL_AUX_USAGE_HIZ;
    } else {

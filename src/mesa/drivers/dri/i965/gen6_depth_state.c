@@ -173,8 +173,8 @@ gen6_emit_depth_stencil_hiz(struct brw_context *brw,
 
 	 BEGIN_BATCH(3);
 	 OUT_BATCH((_3DSTATE_HIER_DEPTH_BUFFER << 16) | (3 - 2));
-	 OUT_BATCH(hiz_mt->pitch - 1);
-	 OUT_RELOC(hiz_mt->bo,
+	 OUT_BATCH(depth_mt->hiz_buf->aux_base.pitch - 1);
+	 OUT_RELOC(depth_mt->hiz_buf->aux_base.bo,
 		   I915_GEM_DOMAIN_RENDER, I915_GEM_DOMAIN_RENDER,
 		   offset);
 	 ADVANCE_BATCH();
