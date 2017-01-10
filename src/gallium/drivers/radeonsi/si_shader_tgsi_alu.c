@@ -1015,34 +1015,6 @@ static void build_cube_select(LLVMBuilderRef builder,
 	*out_ma = LLVMBuildFMul(builder, tmp, sgn, "");
 }
 
-static void si_llvm_cube_to_2d_coords(struct lp_build_tgsi_context *bld_base,
-				      LLVMValueRef *in, LLVMValueRef *out)
-{
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
-	LLVMTypeRef type = bld_base->base.elem_type;
-	struct cube_selection_coords coords;
-	LLVMValueRef invma;
-	LLVMValueRef mad_args[3];
-
-	build_cube_intrinsic(gallivm, in, &coords);
-
-	invma = lp_build_intrinsic(builder, "llvm.fabs.f32",
-			type, &coords.ma, 1, LP_FUNC_ATTR_READNONE);
-	invma = lp_build_emit_llvm_unary(bld_base, TGSI_OPCODE_RCP, invma);
-
-	mad_args[1] = invma;
-	mad_args[2] = LLVMConstReal(type, 1.5);
-
-	for (int i = 0; i < 2; ++i) {
-		mad_args[0] = coords.stc[i];
-		out[i] = lp_build_emit_llvm_ternary(bld_base, TGSI_OPCODE_MAD,
-				mad_args[0], mad_args[1], mad_args[2]);
-	}
-
-	out[2] = coords.id;
-}
-
 void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
 			    struct lp_build_emit_data *emit_data,
 			    LLVMValueRef *coords_arg,
