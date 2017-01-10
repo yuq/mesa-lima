@@ -1998,7 +1998,7 @@ nir_type_conversion_op(nir_alu_type src, nir_alu_type dst)
             return nir_op_f2i;
          };
       default:
-         assert(!"Invalid conversion");
+         unreachable("Invalid conversion");
       };
    }
 
@@ -2031,9 +2031,9 @@ nir_type_conversion_op(nir_alu_type src, nir_alu_type dst)
       case nir_type_float:
          return nir_op_d2f;
       default:
-         assert(!"Invalid conversion");
+         unreachable("Invalid conversion");
       };
    default:
-      assert(!"Invalid conversion");
+      unreachable("Invalid conversion");
    };
 }
