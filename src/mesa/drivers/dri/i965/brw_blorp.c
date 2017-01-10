@@ -250,15 +250,15 @@ blorp_surf_for_miptree(struct brw_context *brw,
 
          struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
          if (hiz_mt) {
-            if (brw->gen == 6 &&
-                hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
-               /* gen6 requires the HiZ buffer to be manually offset to the
-                * right location.  We could fixup the surf but it doesn't
-                * matter since most of those fields don't matter.
-                */
-               apply_gen6_stencil_hiz_offset(aux_surf, hiz_mt, *level,
-                                             &surf->aux_addr.offset);
-            }
+            assert(brw->gen == 6 &&
+                   hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD);
+
+            /* gen6 requires the HiZ buffer to be manually offset to the
+             * right location.  We could fixup the surf but it doesn't
+             * matter since most of those fields don't matter.
+             */
+            apply_gen6_stencil_hiz_offset(aux_surf, hiz_mt, *level,
+                                          &surf->aux_addr.offset);
             assert(hiz_mt->pitch == aux_surf->row_pitch);
          }
       }
