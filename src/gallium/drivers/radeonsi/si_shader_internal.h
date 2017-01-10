@@ -215,9 +215,5 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			LLVMValueRef dst[4]);
 
 void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base);
-void si_prepare_cube_coords(struct lp_build_tgsi_context *bld_base,
-			    struct lp_build_emit_data *emit_data,
-			    LLVMValueRef *coords_arg,
-			    LLVMValueRef *derivs_arg);
 
 #endif
