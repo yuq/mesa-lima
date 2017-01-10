@@ -295,7 +295,8 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
    unsigned y = 0;
    unsigned width = mt->physical_width0;
    unsigned height = mt->physical_height0;
-   unsigned depth = mt->physical_depth0; /* number of array layers. */
+   /* Number of layers of array texture or slices of 3d texture (gen9+). */
+   unsigned depth = mt->physical_depth0;
    unsigned int bw, bh;
 
    _mesa_get_format_block_size(mt->format, &bw, &bh);
