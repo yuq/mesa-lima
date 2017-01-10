@@ -244,9 +244,12 @@ blorp_surf_for_miptree(struct brw_context *brw,
          surf->aux_addr.offset = mt->mcs_buf->offset;
       } else {
          assert(surf->aux_usage == ISL_AUX_USAGE_HIZ);
+
+         surf->aux_addr.buffer = mt->hiz_buf->aux_base.bo;
+         surf->aux_addr.offset = mt->hiz_buf->aux_base.offset;
+
          struct intel_mipmap_tree *hiz_mt = mt->hiz_buf->mt;
          if (hiz_mt) {
-            surf->aux_addr.buffer = hiz_mt->bo;
             if (brw->gen == 6 &&
                 hiz_mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
                /* gen6 requires the HiZ buffer to be manually offset to the
@@ -255,13 +258,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
                 */
                apply_gen6_stencil_hiz_offset(aux_surf, hiz_mt, *level,
                                              &surf->aux_addr.offset);
-            } else {
-               surf->aux_addr.offset = 0;
             }
             assert(hiz_mt->pitch == aux_surf->row_pitch);
-         } else {
-            surf->aux_addr.buffer = mt->hiz_buf->aux_base.bo;
-            surf->aux_addr.offset = mt->hiz_buf->aux_base.offset;
          }
       }
    } else {
