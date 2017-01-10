@@ -880,18 +880,11 @@ swr_resource_destroy(struct pipe_screen *p_screen, struct pipe_resource *pt)
       winsys->displaytarget_destroy(winsys, spr->display_target);
 
    } else {
-      /* For regular resources, if the resource is being used, defer deletion
-       * (use aligned-free) */
-      if (pipe && spr->status) {
-         swr_resource_unused(pt);
-         swr_fence_work_free(screen->flush_fence,
-                             spr->swr.pBaseAddress, true);
-         swr_fence_work_free(screen->flush_fence, 
-                             spr->secondary.pBaseAddress, true);
-      } else {
-         AlignedFree(spr->swr.pBaseAddress);
-         AlignedFree(spr->secondary.pBaseAddress);
-      }
+      /* For regular resources, defer deletion */
+      swr_resource_unused(pt);
+      swr_fence_work_free(screen->flush_fence, spr->swr.pBaseAddress, true);
+      swr_fence_work_free(screen->flush_fence,
+                          spr->secondary.pBaseAddress, true);
    }
 
    FREE(spr);
