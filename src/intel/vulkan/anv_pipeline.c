@@ -256,17 +256,22 @@ populate_gs_prog_key(const struct gen_device_info *devinfo,
 }
 
 static void
-populate_wm_prog_key(const struct gen_device_info *devinfo,
+populate_wm_prog_key(const struct anv_pipeline *pipeline,
                      const VkGraphicsPipelineCreateInfo *info,
                      struct brw_wm_prog_key *key)
 {
+   const struct gen_device_info *devinfo = &pipeline->device->info;
    ANV_FROM_HANDLE(anv_render_pass, render_pass, info->renderPass);
 
    memset(key, 0, sizeof(*key));
 
    populate_sampler_prog_key(devinfo, &key->tex);
 
-   /* TODO: Fill out key->input_slots_valid */
+   /* TODO: we could set this to 0 based on the information in nir_shader, but
+    * this function is called before spirv_to_nir. */
+   const struct brw_vue_map *vue_map =
+      anv_pipeline_get_fs_input_map(pipeline);
+   key->input_slots_valid = vue_map->slots_valid;
 
    /* Vulkan doesn't specify a default */
    key->high_quality_derivatives = false;
@@ -592,7 +597,7 @@ anv_pipeline_compile_fs(struct anv_pipeline *pipeline,
    struct anv_shader_bin *bin = NULL;
    unsigned char sha1[20];
 
-   populate_wm_prog_key(&pipeline->device->info, info, &key);
+   populate_wm_prog_key(pipeline, info, &key);
 
    if (cache) {
       anv_hash_shader(sha1, &key, sizeof(key), module, entrypoint,
