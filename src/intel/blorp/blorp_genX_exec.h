@@ -1237,6 +1237,86 @@ blorp_emit_3dstate_multisample(struct blorp_batch *batch,
    }
 }
 
+#if GEN_GEN >= 8
+/* Emits the Optimized HiZ sequence specified in the BDW+ PRMs. The
+ * depth/stencil buffer extents are ignored to handle APIs which perform
+ * clearing operations without such information.
+ * */
+static void
+blorp_emit_gen8_hiz_op(struct blorp_batch *batch,
+                       const struct blorp_params *params)
+{
+   /* We should be performing an operation on a depth or stencil buffer.
+    */
+   assert(params->depth.enabled || params->stencil.enabled);
+
+   /* The stencil buffer should only be enabled if a fast clear operation is
+    * requested.
+    */
+   if (params->stencil.enabled)
+      assert(params->hiz_op == BLORP_HIZ_OP_DEPTH_CLEAR);
+
+   /* If we can't alter the depth stencil config and multiple layers are
+    * involved, the HiZ op will fail. This is because the op requires that a
+    * new config is emitted for each additional layer.
+    */
+   if (batch->flags & BLORP_BATCH_NO_EMIT_DEPTH_STENCIL) {
+      assert(params->num_layers <= 1);
+   } else {
+      blorp_emit_depth_stencil_config(batch, params);
+   }
+
+   blorp_emit(batch, GENX(3DSTATE_WM_HZ_OP), hzp) {
+      switch (params->hiz_op) {
+      case BLORP_HIZ_OP_DEPTH_CLEAR:
+         hzp.StencilBufferClearEnable = params->stencil.enabled;
+         hzp.DepthBufferClearEnable = params->depth.enabled;
+         hzp.StencilClearValue = params->stencil_ref;
+         break;
+      case BLORP_HIZ_OP_DEPTH_RESOLVE:
+         hzp.DepthBufferResolveEnable = true;
+         break;
+      case BLORP_HIZ_OP_HIZ_RESOLVE:
+         hzp.HierarchicalDepthBufferResolveEnable = true;
+         break;
+      case BLORP_HIZ_OP_NONE:
+         unreachable("Invalid HIZ op");
+      }
+
+      hzp.NumberofMultisamples = ffs(params->num_samples) - 1;
+      hzp.SampleMask = 0xFFFF;
+
+      /* Due to a hardware issue, this bit MBZ */
+      assert(hzp.ScissorRectangleEnable == false);
+
+      /* Contrary to the HW docs both fields are inclusive */
+      hzp.ClearRectangleXMin = params->x0;
+      hzp.ClearRectangleYMin = params->y0;
+
+      /* Contrary to the HW docs both fields are exclusive */
+      hzp.ClearRectangleXMax = params->x1;
+      hzp.ClearRectangleYMax = params->y1;
+   }
+
+   /* PIPE_CONTROL w/ all bits clear except for “Post-Sync Operation” must set
+    * to “Write Immediate Data” enabled.
+    */
+   blorp_emit(batch, GENX(PIPE_CONTROL), pc) {
+      pc.PostSyncOperation = WriteImmediateData;
+   }
+
+   blorp_emit(batch, GENX(3DSTATE_WM_HZ_OP), hzp);
+
+   /* Perform depth clear specific flushing */
+   if (params->hiz_op == BLORP_HIZ_OP_DEPTH_CLEAR && params->depth.enabled) {
+      blorp_emit(batch, GENX(PIPE_CONTROL), pc) {
+         pc.DepthStallEnable = true;
+         pc.DepthCacheFlushEnable = true;
+      }
+   }
+}
+#endif
+
 /* 3DSTATE_VIEWPORT_STATE_POINTERS */
 static void
 blorp_emit_viewport_state(struct blorp_batch *batch,
@@ -1282,6 +1362,13 @@ blorp_exec(struct blorp_batch *batch, const struct blorp_params *params)
    uint32_t blend_state_offset = 0;
    uint32_t color_calc_state_offset = 0;
    uint32_t depth_stencil_state_offset;
+
+#if GEN_GEN >= 8
+   if (params->hiz_op != BLORP_HIZ_OP_NONE) {
+      blorp_emit_gen8_hiz_op(batch, params);
+      return;
+   }
+#endif
 
    blorp_emit_vertex_buffers(batch, params);
    blorp_emit_vertex_elements(batch, params);
