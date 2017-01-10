@@ -948,7 +948,7 @@ VkResult anv_CreateDevice(
    anv_state_pool_init(&device->dynamic_state_pool,
                        &device->dynamic_state_block_pool);
 
-   anv_block_pool_init(&device->instruction_block_pool, device, 128 * 1024);
+   anv_block_pool_init(&device->instruction_block_pool, device, 1024 * 1024);
    anv_state_pool_init(&device->instruction_state_pool,
                        &device->instruction_block_pool);
 
