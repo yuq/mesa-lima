@@ -302,9 +302,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
    _mesa_get_format_block_size(mt->format, &bw, &bh);
 
    mt->total_width = mt->physical_width0;
-
-   if (mt->compressed)
-       mt->total_width = ALIGN_NPOT(mt->total_width, bw);
+   mt->total_width = ALIGN_NPOT(mt->total_width, bw);
 
    /* May need to adjust width to accommodate the placement of
     * the 2nd mipmap.  This occurs when the alignment
@@ -314,13 +312,8 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
    if (mt->first_level != mt->last_level) {
        unsigned mip1_width;
 
-       if (mt->compressed) {
-          mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->halign) +
-             ALIGN_NPOT(minify(mt->physical_width0, 2), bw);
-       } else {
-          mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->halign) +
-             minify(mt->physical_width0, 2);
-       }
+      mip1_width = ALIGN_NPOT(minify(mt->physical_width0, 1), mt->halign) +
+                   ALIGN_NPOT(minify(mt->physical_width0, 2), bw);
 
       if (mip1_width > mt->total_width)
          mt->total_width = mip1_width;
@@ -335,8 +328,7 @@ brw_miptree_layout_2d(struct intel_mipmap_tree *mt)
       intel_miptree_set_level_info(mt, level, x, y, depth);
 
       img_height = ALIGN_NPOT(height, mt->valign);
-      if (mt->compressed)
-	 img_height /= bh;
+      img_height /= bh;
 
       if (mt->array_layout == ALL_SLICES_AT_EACH_LOD) {
          /* Compact arrays with separated miplevels */
