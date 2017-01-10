@@ -1266,6 +1266,10 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->gallivm.builder = lp_create_builder(ctx->gallivm.context,
 						 unsafe_fpmath);
 
+	ac_llvm_context_init(&ctx->ac, ctx->gallivm.context);
+	ctx->ac.module = ctx->gallivm.module;
+	ctx->ac.builder = ctx->gallivm.builder;
+
 	struct lp_build_tgsi_context *bld_base = &ctx->soa.bld_base;
 
 	bld_base->info = info;

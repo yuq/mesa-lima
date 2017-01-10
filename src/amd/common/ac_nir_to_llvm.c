@@ -51,6 +51,7 @@ enum desc_type {
 };
 
 struct nir_to_llvm_context {
+	struct ac_llvm_context ac;
 	const struct ac_nir_compiler_options *options;
 	struct ac_shader_variant_info *shader_info;
 
@@ -140,77 +141,6 @@ struct ac_tex_info {
 	LLVMTypeRef dst_type;
 	bool has_offset;
 };
-
-enum ac_func_attr {
-	AC_FUNC_ATTR_ALWAYSINLINE = (1 << 0),
-	AC_FUNC_ATTR_BYVAL        = (1 << 1),
-	AC_FUNC_ATTR_INREG        = (1 << 2),
-	AC_FUNC_ATTR_NOALIAS      = (1 << 3),
-	AC_FUNC_ATTR_NOUNWIND     = (1 << 4),
-	AC_FUNC_ATTR_READNONE     = (1 << 5),
-	AC_FUNC_ATTR_READONLY     = (1 << 6),
-	AC_FUNC_ATTR_LAST         = (1 << 7)
-};
-
-#if HAVE_LLVM < 0x0400
-static LLVMAttribute ac_attr_to_llvm_attr(enum ac_func_attr attr)
-{
-   switch (attr) {
-   case AC_FUNC_ATTR_ALWAYSINLINE: return LLVMAlwaysInlineAttribute;
-   case AC_FUNC_ATTR_BYVAL: return LLVMByValAttribute;
-   case AC_FUNC_ATTR_INREG: return LLVMInRegAttribute;
-   case AC_FUNC_ATTR_NOALIAS: return LLVMNoAliasAttribute;
-   case AC_FUNC_ATTR_NOUNWIND: return LLVMNoUnwindAttribute;
-   case AC_FUNC_ATTR_READNONE: return LLVMReadNoneAttribute;
-   case AC_FUNC_ATTR_READONLY: return LLVMReadOnlyAttribute;
-   default:
-	   fprintf(stderr, "Unhandled function attribute: %x\n", attr);
-	   return 0;
-   }
-}
-
-#else
-
-static const char *attr_to_str(enum ac_func_attr attr)
-{
-   switch (attr) {
-   case AC_FUNC_ATTR_ALWAYSINLINE: return "alwaysinline";
-   case AC_FUNC_ATTR_BYVAL: return "byval";
-   case AC_FUNC_ATTR_INREG: return "inreg";
-   case AC_FUNC_ATTR_NOALIAS: return "noalias";
-   case AC_FUNC_ATTR_NOUNWIND: return "nounwind";
-   case AC_FUNC_ATTR_READNONE: return "readnone";
-   case AC_FUNC_ATTR_READONLY: return "readonly";
-   default:
-	   fprintf(stderr, "Unhandled function attribute: %x\n", attr);
-	   return 0;
-   }
-}
-
-#endif
-
-static void
-ac_add_function_attr(LLVMValueRef function,
-                     int attr_idx,
-                     enum ac_func_attr attr)
-{
-
-#if HAVE_LLVM < 0x0400
-   LLVMAttribute llvm_attr = ac_attr_to_llvm_attr(attr);
-   if (attr_idx == -1) {
-      LLVMAddFunctionAttr(function, llvm_attr);
-   } else {
-      LLVMAddAttribute(LLVMGetParam(function, attr_idx - 1), llvm_attr);
-   }
-#else
-   LLVMContextRef context = LLVMGetModuleContext(LLVMGetGlobalParent(function));
-   const char *attr_name = attr_to_str(attr);
-   unsigned kind_id = LLVMGetEnumAttributeKindForName(attr_name,
-                                                      strlen(attr_name));
-   LLVMAttributeRef llvm_attr = LLVMCreateEnumAttribute(context, kind_id, 0);
-   LLVMAddAttributeAtIndex(function, attr_idx, llvm_attr);
-#endif
-}
 
 static LLVMValueRef
 emit_llvm_intrinsic(struct nir_to_llvm_context *ctx, const char *name,
@@ -3319,130 +3249,6 @@ static void tex_fetch_ptrs(struct nir_to_llvm_context *ctx,
 		*fmask_ptr = get_sampler_desc(ctx, instr->texture, DESC_FMASK);
 }
 
-static LLVMValueRef build_cube_intrinsic(struct nir_to_llvm_context *ctx,
-					 LLVMValueRef *in)
-{
-
-	LLVMValueRef v, cube_vec;
-
-	if (1) {
-		LLVMTypeRef f32 = LLVMTypeOf(in[0]);
-		LLVMValueRef out[4];
-
-		out[0] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubetc",
-					     f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out[1] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubesc",
-					     f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out[2] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubema",
-					     f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out[3] = emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubeid",
-					     f32, in, 3, AC_FUNC_ATTR_READNONE);
-
-		return build_gather_values(ctx, out, 4);
-	} else {
-		LLVMValueRef c[4];
-		c[0] = in[0];
-		c[1] = in[1];
-		c[2] = in[2];
-		c[3] = LLVMGetUndef(LLVMTypeOf(in[0]));
-		cube_vec = build_gather_values(ctx, c, 4);
-		v = emit_llvm_intrinsic(ctx, "llvm.AMDGPU.cube", LLVMTypeOf(cube_vec),
-					&cube_vec, 1, AC_FUNC_ATTR_READNONE);
-	}
-	return v;
-}
-
-static void cube_to_2d_coords(struct nir_to_llvm_context *ctx,
-			      LLVMValueRef *in, LLVMValueRef *out)
-{
-	LLVMValueRef coords[4];
-	LLVMValueRef mad_args[3];
-	LLVMValueRef v;
-	LLVMValueRef tmp;
-	int i;
-
-	v = build_cube_intrinsic(ctx, in);
-	for (i = 0; i < 4; i++)
-		coords[i] = LLVMBuildExtractElement(ctx->builder, v,
-						    LLVMConstInt(ctx->i32, i, false), "");
-
-	coords[2] = emit_llvm_intrinsic(ctx, "llvm.fabs.f32", ctx->f32,
-					&coords[2], 1, AC_FUNC_ATTR_READNONE);
-	coords[2] = emit_fdiv(ctx, ctx->f32one, coords[2]);
-
-	mad_args[1] = coords[2];
-	mad_args[2] = LLVMConstReal(ctx->f32, 1.5);
-	mad_args[0] = coords[0];
-
-	/* emit MAD */
-	tmp = LLVMBuildFMul(ctx->builder, mad_args[0], mad_args[1], "");
-	coords[0] = LLVMBuildFAdd(ctx->builder, tmp, mad_args[2], "");
-
-	mad_args[0] = coords[1];
-
-	/* emit MAD */
-	tmp = LLVMBuildFMul(ctx->builder, mad_args[0], mad_args[1], "");
-	coords[1] = LLVMBuildFAdd(ctx->builder, tmp, mad_args[2], "");
-
-	/* apply xyz = yxw swizzle to cooords */
-	out[0] = coords[1];
-	out[1] = coords[0];
-	out[2] = coords[3];
-}
-
-static void emit_prepare_cube_coords(struct nir_to_llvm_context *ctx,
-				     LLVMValueRef *coords_arg, int num_coords,
-				     bool is_deriv,
-				     bool is_array, LLVMValueRef *derivs_arg)
-{
-	LLVMValueRef coords[4];
-	int i;
-	cube_to_2d_coords(ctx, coords_arg, coords);
-
-	if (is_deriv && derivs_arg) {
-		LLVMValueRef derivs[4];
-		int axis;
-
-		/* Convert cube derivatives to 2D derivatives. */
-		for (axis = 0; axis < 2; axis++) {
-			LLVMValueRef shifted_cube_coords[4], shifted_coords[4];
-
-			/* Shift the cube coordinates by the derivatives to get
-			 * the cube coordinates of the "neighboring pixel".
-			 */
-			for (i = 0; i < 3; i++)
-				shifted_cube_coords[i] =
-					LLVMBuildFAdd(ctx->builder, coords_arg[i],
-						      derivs_arg[axis*3+i], "");
-			shifted_cube_coords[3] = LLVMGetUndef(ctx->f32);
-
-			/* Project the shifted cube coordinates onto the face. */
-			cube_to_2d_coords(ctx, shifted_cube_coords,
-					  shifted_coords);
-
-			/* Subtract both sets of 2D coordinates to get 2D derivatives.
-			 * This won't work if the shifted coordinates ended up
-			 * in a different face.
-			 */
-			for (i = 0; i < 2; i++)
-				derivs[axis * 2 + i] =
-					LLVMBuildFSub(ctx->builder, shifted_coords[i],
-						      coords[i], "");
-		}
-
-		memcpy(derivs_arg, derivs, sizeof(derivs));
-	}
-
-	if (is_array) {
-		/* for cube arrays coord.z = coord.w(array_index) * 8 + face */
-		/* coords_arg.w component - array_index for cube arrays */
-		LLVMValueRef tmp = LLVMBuildFMul(ctx->builder, coords_arg[3], LLVMConstReal(ctx->f32, 8.0), "");
-		coords[2] = LLVMBuildFAdd(ctx->builder, tmp, coords[2], "");
-	}
-
-	memcpy(coords_arg, coords, sizeof(coords));
-}
-
 static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 {
 	LLVMValueRef result = NULL;
@@ -3584,7 +3390,9 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 			coords[chan] = to_float(ctx, coords[chan]);
 		if (instr->coord_components == 3)
 			coords[3] = LLVMGetUndef(ctx->f32);
-		emit_prepare_cube_coords(ctx, coords, instr->coord_components, instr->op == nir_texop_txd, instr->is_array, derivs);
+		ac_prepare_cube_coords(&ctx->ac,
+			instr->op == nir_texop_txd, instr->is_array,
+			coords, derivs);
 		if (num_deriv_comp)
 			num_deriv_comp--;
 	}
@@ -4694,6 +4502,9 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	ctx.context = LLVMContextCreate();
 	ctx.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
 
+	ac_llvm_context_init(&ctx.ac, ctx.context);
+	ctx.ac.module = ctx.module;
+
 	ctx.has_ds_bpermute = ctx.options->chip_class >= VI;
 
 	memset(shader_info, 0, sizeof(*shader_info));
@@ -4702,6 +4513,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 	setup_types(&ctx);
 
 	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
+	ctx.ac.builder = ctx.builder;
 	ctx.stage = nir->stage;
 
 	for (i = 0; i < AC_UD_MAX_SETS; i++)

@@ -28,6 +28,7 @@
 #include "gallivm/lp_bld_init.h"
 #include "gallivm/lp_bld_tgsi.h"
 #include "tgsi/tgsi_parse.h"
+#include "ac_llvm_util.h"
 
 #include <llvm-c/Core.h>
 #include <llvm-c/TargetMachine.h>
@@ -48,6 +49,7 @@ struct si_llvm_flow;
 struct si_shader_context {
 	struct lp_build_tgsi_soa_context soa;
 	struct gallivm_state gallivm;
+	struct ac_llvm_context ac;
 	struct si_shader *shader;
 	struct si_screen *screen;
 

@@ -4606,7 +4606,11 @@ static void tex_fetch_args(
 	    target == TGSI_TEXTURE_CUBE_ARRAY ||
 	    target == TGSI_TEXTURE_SHADOWCUBE ||
 	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY)
-		si_prepare_cube_coords(bld_base, emit_data, coords, derivs);
+		ac_prepare_cube_coords(&ctx->ac,
+				       opcode == TGSI_OPCODE_TXD,
+				       target == TGSI_TEXTURE_CUBE_ARRAY ||
+				       target == TGSI_TEXTURE_SHADOWCUBE_ARRAY,
+				       coords, derivs);
 
 	if (opcode == TGSI_OPCODE_TXD)
 		for (int i = 0; i < num_deriv_channels * 2; i++)
