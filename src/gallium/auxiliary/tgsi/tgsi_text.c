@@ -208,14 +208,17 @@ static boolean parse_int( const char **pcur, int *val )
    return FALSE;
 }
 
-static boolean parse_identifier( const char **pcur, char *ret )
+static boolean parse_identifier( const char **pcur, char *ret, size_t len )
 {
    const char *cur = *pcur;
    int i = 0;
    if (is_alpha_underscore( cur )) {
       ret[i++] = *cur++;
-      while (is_alpha_underscore( cur ) || is_digit( cur ))
+      while (is_alpha_underscore( cur ) || is_digit( cur )) {
+         if (i == len - 1)
+            return FALSE;
          ret[i++] = *cur++;
+      }
       ret[i++] = '\0';
       *pcur = cur;
       return TRUE;
@@ -1787,7 +1790,7 @@ static boolean parse_property( struct translate_ctx *ctx )
       report_error( ctx, "Syntax error" );
       return FALSE;
    }
-   if (!parse_identifier( &ctx->cur, id )) {
+   if (!parse_identifier( &ctx->cur, id, sizeof(id) )) {
       report_error( ctx, "Syntax error" );
       return FALSE;
    }
