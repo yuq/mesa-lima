@@ -1064,17 +1064,18 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       vtn_get_builtin_location(b, builtin, &nir_var->data.location, &mode);
       nir_var->data.mode = mode;
 
-      if (builtin == SpvBuiltInTessLevelOuter ||
-          builtin == SpvBuiltInTessLevelInner) {
+      switch (builtin) {
+      case SpvBuiltInTessLevelOuter:
+      case SpvBuiltInTessLevelInner:
          nir_var->data.compact = true;
-      }
-
-      if (builtin == SpvBuiltInFragCoord || builtin == SpvBuiltInSamplePosition)
+         break;
+      case SpvBuiltInSamplePosition:
          nir_var->data.origin_upper_left = b->origin_upper_left;
-
-      if (builtin == SpvBuiltInFragCoord)
+         /* fallthrough */
+      case SpvBuiltInFragCoord:
          nir_var->data.pixel_center_integer = b->pixel_center_integer;
-      break;
+         break;
+      }
    }
 
    case SpvDecorationSpecId:
