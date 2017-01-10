@@ -1497,7 +1497,7 @@
     </field>
     <field name="Illegal Opcode Exception Enable" start="45" end="45" type="bool"/>
     <field name="Software Exception Enable" start="44" end="44" type="bool"/>
-    <field name="Enable" start="95" end="95" type="bool"/>
+    <field name="Function Enable" start="95" end="95" type="bool"/>
     <field name="Statistics Enable" start="93" end="93" type="bool"/>
     <field name="Maximum Number of Threads" start="72" end="80" type="uint"/>
     <field name="Instance Count" start="64" end="67" type="uint"/>
