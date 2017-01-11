@@ -79,8 +79,7 @@ typedef uint32_t xcb_window_t;
 #define MAX_SCISSORS    16
 #define MAX_PUSH_CONSTANTS_SIZE 128
 #define MAX_DYNAMIC_BUFFERS 16
-#define MAX_IMAGES 8
-#define MAX_SAMPLES_LOG2 4 /* SKL supports 16 samples */
+#define MAX_SAMPLES_LOG2 4
 #define NUM_META_FS_KEYS 11
 
 #define NUM_DEPTH_CLEAR_PIPELINES 3
@@ -112,7 +111,6 @@ enum {
 	RADV_DEBUG_UNSAFE_MATH       =  0x80,
 };
 
-#define radv_noreturn __attribute__((__noreturn__))
 #define radv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
 static inline uint32_t
@@ -247,9 +245,6 @@ void radv_loge_v(const char *format, va_list va);
 #else
 #define radv_assert(x)
 #endif
-
-void radv_abortf(const char *format, ...) radv_noreturn radv_printflike(1, 2);
-void radv_abortfv(const char *format, va_list va) radv_noreturn;
 
 #define stub_return(v)					\
 	do {						\
@@ -1327,13 +1322,5 @@ RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_query_pool, VkQueryPool)
 RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_render_pass, VkRenderPass)
 RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_sampler, VkSampler)
 RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_shader_module, VkShaderModule)
-
-#define RADV_DEFINE_STRUCT_CASTS(__radv_type, __VkType)			\
-									\
-	static inline const __VkType *					\
-	__radv_type ## _to_ ## __VkType(const struct __radv_type *__radv_obj) \
-	{								\
-		return (const __VkType *) __radv_obj;			\
-	}
 
 #endif /* RADV_PRIVATE_H */
