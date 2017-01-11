@@ -765,12 +765,6 @@ intel_miptree_get_aux_isl_usage(const struct brw_context *brw,
                                 const struct intel_mipmap_tree *mt);
 
 void
-intel_miptree_get_aux_isl_surf(struct brw_context *brw,
-                               const struct intel_mipmap_tree *mt,
-                               enum isl_aux_usage usage,
-                               struct isl_surf *surf);
-
-void
 intel_get_image_dims(struct gl_texture_image *image,
                      int *width, int *height, int *depth);
 

@@ -137,7 +137,7 @@ brw_emit_surface_state(struct brw_context *brw,
    union isl_color_value clear_color = { .u32 = { 0, 0, 0, 0 } };
 
    struct brw_bo *aux_bo;
-   struct isl_surf *aux_surf = NULL, aux_surf_s;
+   struct isl_surf *aux_surf = NULL;
    uint64_t aux_offset = 0;
    enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
    if ((mt->mcs_buf || intel_miptree_sample_with_hiz(brw, mt)) &&
@@ -151,8 +151,7 @@ brw_emit_surface_state(struct brw_context *brw,
          aux_bo = mt->mcs_buf->bo;
          aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
       } else {
-         intel_miptree_get_aux_isl_surf(brw, mt, aux_usage, &aux_surf_s);
-         aux_surf = &aux_surf_s;
+         aux_surf = &mt->hiz_buf->surf;
 
          aux_bo = mt->hiz_buf->bo;
          aux_offset = mt->hiz_buf->bo->offset64;
