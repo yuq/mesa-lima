@@ -142,7 +142,8 @@ brw_emit_surface_state(struct brw_context *brw,
    enum isl_aux_usage aux_usage = ISL_AUX_USAGE_NONE;
    if ((mt->mcs_buf || intel_miptree_sample_with_hiz(brw, mt)) &&
        !(flags & INTEL_AUX_BUFFER_DISABLED)) {
-      intel_miptree_get_aux_isl_surf(brw, mt, &aux_surf_s, &aux_usage);
+      aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
+      intel_miptree_get_aux_isl_surf(brw, mt, aux_usage, &aux_surf_s);
       aux_surf = &aux_surf_s;
 
       if (mt->mcs_buf) {

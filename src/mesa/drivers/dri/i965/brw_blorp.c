@@ -163,8 +163,10 @@ blorp_surf_for_miptree(struct brw_context *brw,
       .write_domain = is_render_target ? I915_GEM_DOMAIN_RENDER : 0,
    };
 
+   surf->aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
+
    struct isl_surf *aux_surf = &tmp_surfs[1];
-   intel_miptree_get_aux_isl_surf(brw, mt, aux_surf, &surf->aux_usage);
+   intel_miptree_get_aux_isl_surf(brw, mt, surf->aux_usage, aux_surf);
 
    if (wants_resolve) {
       bool supports_aux = surf->aux_usage != ISL_AUX_USAGE_NONE &&

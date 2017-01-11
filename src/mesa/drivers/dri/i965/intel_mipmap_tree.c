@@ -3966,6 +3966,32 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
       surf->usage |= ISL_SURF_USAGE_CUBE_BIT;
 }
 
+enum isl_aux_usage
+intel_miptree_get_aux_isl_usage(const struct brw_context *brw,
+                                const struct intel_mipmap_tree *mt)
+{
+   if (mt->hiz_buf)
+      return ISL_AUX_USAGE_HIZ;
+
+   if (!mt->mcs_buf)
+      return ISL_AUX_USAGE_NONE;
+
+   if (mt->num_samples > 1) {
+      assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
+      return ISL_AUX_USAGE_MCS;
+   }
+
+   if (intel_miptree_is_lossless_compressed(brw, mt)) {
+      assert(brw->gen >= 9);
+      return ISL_AUX_USAGE_CCS_E;
+   }
+
+   if ((mt->aux_disable & INTEL_AUX_DISABLE_CCS) == 0)
+      return ISL_AUX_USAGE_CCS_D;
+
+   unreachable("Invalid MCS miptree");
+}
+
 /* WARNING: THE SURFACE CREATED BY THIS FUNCTION IS NOT COMPLETE AND CANNOT BE
  * USED FOR ANY REAL CALCULATIONS.  THE ONLY VALID USE OF SUCH A SURFACE IS TO
  * PASS IT INTO isl_surf_fill_state.
@@ -3973,32 +3999,17 @@ intel_miptree_get_isl_surf(struct brw_context *brw,
 void
 intel_miptree_get_aux_isl_surf(struct brw_context *brw,
                                const struct intel_mipmap_tree *mt,
-                               struct isl_surf *surf,
-                               enum isl_aux_usage *usage)
+                               enum isl_aux_usage usage,
+                               struct isl_surf *surf)
 {
    uint32_t aux_pitch, aux_qpitch;
    if (mt->mcs_buf) {
       aux_pitch = mt->mcs_buf->pitch;
       aux_qpitch = mt->mcs_buf->qpitch;
-
-      if (mt->num_samples > 1) {
-         assert(mt->msaa_layout == INTEL_MSAA_LAYOUT_CMS);
-         *usage = ISL_AUX_USAGE_MCS;
-      } else if (intel_miptree_is_lossless_compressed(brw, mt)) {
-         assert(brw->gen >= 9);
-         *usage = ISL_AUX_USAGE_CCS_E;
-      } else if ((mt->aux_disable & INTEL_AUX_DISABLE_CCS) == 0) {
-         *usage = ISL_AUX_USAGE_CCS_D;
-      } else {
-         unreachable("Invalid MCS miptree");
-      }
    } else if (mt->hiz_buf) {
       aux_pitch = mt->hiz_buf->aux_base.pitch;
       aux_qpitch = mt->hiz_buf->aux_base.qpitch;
-
-      *usage = ISL_AUX_USAGE_HIZ;
    } else {
-      *usage = ISL_AUX_USAGE_NONE;
       return;
    }
 
@@ -4006,7 +4017,7 @@ intel_miptree_get_aux_isl_surf(struct brw_context *brw,
    intel_miptree_get_isl_surf(brw, mt, surf);
 
    /* Figure out the format and tiling of the auxiliary surface */
-   switch (*usage) {
+   switch (usage) {
    case ISL_AUX_USAGE_NONE:
       unreachable("Invalid auxiliary usage");
 
