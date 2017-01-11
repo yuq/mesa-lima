@@ -677,14 +677,14 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		if (tgsi_type_is_64bit(type)) {
 			result = LLVMGetUndef(LLVMVectorType(LLVMIntTypeInContext(bld_base->base.gallivm->context, 32), bld_base->base.type.length * 2));
 			result = LLVMConstInsertElement(result,
-							bld->immediates[reg->Register.Index][swizzle],
+							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle],
 							bld_base->int_bld.zero);
 			result = LLVMConstInsertElement(result,
-							bld->immediates[reg->Register.Index][swizzle + 1],
+							ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle + 1],
 							bld_base->int_bld.one);
 			return LLVMConstBitCast(result, ctype);
 		} else {
-			return LLVMConstBitCast(bld->immediates[reg->Register.Index][swizzle], ctype);
+			return LLVMConstBitCast(ctx->imms[reg->Register.Index * TGSI_NUM_CHANNELS + swizzle], ctype);
 		}
 	}
 
@@ -1230,11 +1230,11 @@ static void emit_immediate(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	for (i = 0; i < 4; ++i) {
-		ctx->soa.immediates[ctx->soa.num_immediates][i] =
+		ctx->imms[ctx->imms_num * TGSI_NUM_CHANNELS + i] =
 				LLVMConstInt(bld_base->uint_bld.elem_type, imm->u[i].Uint, false   );
 	}
 
-	ctx->soa.num_immediates++;
+	ctx->imms_num++;
 }
 
 void si_llvm_context_init(struct si_shader_context *ctx,
@@ -1283,6 +1283,11 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 		if (tokens)
 			tgsi_scan_arrays(tokens, TGSI_FILE_TEMPORARY, size,
 					 ctx->temp_arrays);
+	}
+
+	if (info && info->file_max[TGSI_FILE_IMMEDIATE] >= 0) {
+		int size = info->file_max[TGSI_FILE_IMMEDIATE] + 1;
+		ctx->imms = MALLOC(size * TGSI_NUM_CHANNELS * sizeof(LLVMValueRef));
 	}
 
 	type.floating = true;
@@ -1418,6 +1423,9 @@ void si_llvm_dispose(struct si_shader_context *ctx)
 	FREE(ctx->temps);
 	ctx->temps = NULL;
 	ctx->temps_count = 0;
+	FREE(ctx->imms);
+	ctx->imms = NULL;
+	ctx->imms_num = 0;
 	FREE(ctx->flow);
 	ctx->flow = NULL;
 	ctx->flow_depth_max = 0;

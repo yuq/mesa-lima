@@ -89,6 +89,9 @@ struct si_shader_context {
 	unsigned temps_count;
 	LLVMValueRef system_values[RADEON_LLVM_MAX_SYSTEM_VALUES];
 
+	LLVMValueRef *imms;
+	unsigned imms_num;
+
 	struct si_llvm_flow *flow;
 	unsigned flow_depth;
 	unsigned flow_depth_max;

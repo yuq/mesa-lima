@@ -4724,7 +4724,6 @@ static void tex_fetch_args(
 		/* add tex offsets */
 		if (inst->Texture.NumOffsets) {
 			struct lp_build_context *uint_bld = &bld_base->uint_bld;
-			struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 			const struct tgsi_texture_offset *off = inst->TexOffsets;
 
 			assert(inst->Texture.NumOffsets == 1);
@@ -4732,7 +4731,7 @@ static void tex_fetch_args(
 			switch (target) {
 			case TGSI_TEXTURE_3D:
 				address[2] = lp_build_add(uint_bld, address[2],
-						bld->immediates[off->Index][off->SwizzleZ]);
+						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleZ]);
 				/* fall through */
 			case TGSI_TEXTURE_2D:
 			case TGSI_TEXTURE_SHADOW2D:
@@ -4742,7 +4741,7 @@ static void tex_fetch_args(
 			case TGSI_TEXTURE_SHADOW2D_ARRAY:
 				address[1] =
 					lp_build_add(uint_bld, address[1],
-						bld->immediates[off->Index][off->SwizzleY]);
+						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleY]);
 				/* fall through */
 			case TGSI_TEXTURE_1D:
 			case TGSI_TEXTURE_SHADOW1D:
@@ -4750,7 +4749,7 @@ static void tex_fetch_args(
 			case TGSI_TEXTURE_SHADOW1D_ARRAY:
 				address[0] =
 					lp_build_add(uint_bld, address[0],
-						bld->immediates[off->Index][off->SwizzleX]);
+						ctx->imms[off->Index * TGSI_NUM_CHANNELS + off->SwizzleX]);
 				break;
 				/* texture offsets do not apply to other texture targets */
 			}
@@ -4770,13 +4769,12 @@ static void tex_fetch_args(
 
 		/* Get the component index from src1.x for Gather4. */
 		if (!tgsi_is_shadow_target(target)) {
-			LLVMValueRef (*imms)[4] = lp_soa_context(bld_base)->immediates;
 			LLVMValueRef comp_imm;
 			struct tgsi_src_register src1 = inst->Src[1].Register;
 
 			assert(src1.File == TGSI_FILE_IMMEDIATE);
 
-			comp_imm = imms[src1.Index][src1.SwizzleX];
+			comp_imm = ctx->imms[src1.Index * TGSI_NUM_CHANNELS + src1.SwizzleX];
 			gather_comp = LLVMConstIntGetZExtValue(comp_imm);
 			gather_comp = CLAMP(gather_comp, 0, 3);
 		}
@@ -5250,13 +5248,15 @@ static void build_interp_intrinsic(const struct lp_build_tgsi_action *action,
 static unsigned si_llvm_get_stream(struct lp_build_tgsi_context *bld_base,
 				       struct lp_build_emit_data *emit_data)
 {
-	LLVMValueRef (*imms)[4] = lp_soa_context(bld_base)->immediates;
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct tgsi_src_register src0 = emit_data->inst->Src[0].Register;
+	LLVMValueRef imm;
 	unsigned stream;
 
 	assert(src0.File == TGSI_FILE_IMMEDIATE);
 
-	stream = LLVMConstIntGetZExtValue(imms[src0.Index][src0.SwizzleX]) & 0x3;
+	imm = ctx->imms[src0.Index * TGSI_NUM_CHANNELS + src0.SwizzleX];
+	stream = LLVMConstIntGetZExtValue(imm) & 0x3;
 	return stream;
 }
 
