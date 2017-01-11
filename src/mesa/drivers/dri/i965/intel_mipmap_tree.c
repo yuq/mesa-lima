@@ -1904,7 +1904,13 @@ intel_hiz_miptree_buf_create(struct brw_context *brw,
    buf->aux_base.bo = buf->mt->bo;
    buf->aux_base.size = buf->mt->total_height * buf->mt->pitch;
    buf->aux_base.pitch = buf->mt->pitch;
-   buf->aux_base.qpitch = buf->mt->qpitch;
+
+   /* On gen6 hiz is unconditionally laid out packing all slices
+    * at each level-of-detail (LOD). This means there is no valid qpitch
+    * setting. In fact, this is ignored when hardware is setup - there is no
+    * hardware qpitch setting of hiz on gen6.
+    */
+   buf->aux_base.qpitch = 0;
 
    return buf;
 }
