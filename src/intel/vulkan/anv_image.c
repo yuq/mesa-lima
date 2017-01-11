@@ -538,10 +538,23 @@ anv_CreateImageView(VkDevice _device,
       iview->isl.usage = 0;
    }
 
-   /* Sampling from HiZ is not yet enabled */
+   /* If the HiZ buffer can be sampled from, set the constant clear color.
+    * If it cannot, disable the isl aux usage flag.
+    */
+   float red_clear_color = 0.0f;
    enum isl_aux_usage surf_usage = image->aux_usage;
-   if (surf_usage == ISL_AUX_USAGE_HIZ)
-      surf_usage = ISL_AUX_USAGE_NONE;
+   if (image->aux_usage == ISL_AUX_USAGE_HIZ) {
+      if (iview->aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT &&
+          anv_can_sample_with_hiz(device->info.gen, image->samples)) {
+         /* When a HiZ buffer is sampled on gen9+, ensure that
+          * the constant fast clear value is set in the surface state.
+          */
+         if (device->info.gen >= 9)
+            red_clear_color = ANV_HZ_FC_VAL;
+      } else {
+         surf_usage = ISL_AUX_USAGE_NONE;
+      }
+   }
 
    /* Input attachment surfaces for color are allocated and filled
     * out at BeginRenderPass time because they need compression information.
@@ -560,6 +573,7 @@ anv_CreateImageView(VkDevice _device,
                           iview->sampler_surface_state.map,
                           .surf = &surface->isl,
                           .view = &view,
+                          .clear_color.f32 = { red_clear_color,},
                           .aux_surf = &image->aux_surface.isl,
                           .aux_usage = surf_usage,
                           .mocs = device->default_mocs);

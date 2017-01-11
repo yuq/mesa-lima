@@ -8,7 +8,6 @@ Missing Features:
  - Sparse memory
 
 Performance:
- - Sampling from HiZ (Nanley)
  - Multi-{sampled/gen8,LOD} HiZ
  - Compressed multisample support
  - Pushing pieces of UBOs?
