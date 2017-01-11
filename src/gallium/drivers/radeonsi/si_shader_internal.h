@@ -43,6 +43,7 @@ struct radeon_shader_binary;
 #define RADEON_LLVM_INITIAL_CF_DEPTH 4
 
 #define RADEON_LLVM_MAX_SYSTEM_VALUES 4
+#define RADEON_LLVM_MAX_ADDRS 16
 
 struct si_llvm_flow;
 
@@ -80,6 +81,7 @@ struct si_shader_context {
 	struct tgsi_full_declaration input_decls[RADEON_LLVM_MAX_INPUT_SLOTS];
 	LLVMValueRef inputs[RADEON_LLVM_MAX_INPUTS];
 	LLVMValueRef outputs[RADEON_LLVM_MAX_OUTPUTS][TGSI_NUM_CHANNELS];
+	LLVMValueRef addrs[RADEON_LLVM_MAX_ADDRS][TGSI_NUM_CHANNELS];
 
 	/** This pointer is used to contain the temporary values.
 	  * The amount of temporary used in tgsi can't be bound to a max value and

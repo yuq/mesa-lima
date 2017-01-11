@@ -419,16 +419,16 @@ get_array_range(struct lp_build_tgsi_context *bld_base,
 }
 
 static LLVMValueRef
-emit_array_index(struct lp_build_tgsi_soa_context *bld,
+emit_array_index(struct si_shader_context *ctx,
 		 const struct tgsi_ind_register *reg,
 		 unsigned offset)
 {
-	struct gallivm_state *gallivm = bld->bld_base.base.gallivm;
+	struct gallivm_state *gallivm = ctx->soa.bld_base.base.gallivm;
 
 	if (!reg) {
 		return lp_build_const_int32(gallivm, offset);
 	}
-	LLVMValueRef addr = LLVMBuildLoad(gallivm->builder, bld->addr[reg->Index][reg->Swizzle], "");
+	LLVMValueRef addr = LLVMBuildLoad(gallivm->builder, ctx->addrs[reg->Index][reg->Swizzle], "");
 	return LLVMBuildAdd(gallivm->builder, addr, lp_build_const_int32(gallivm, offset), "");
 }
 
@@ -470,7 +470,7 @@ get_pointer_into_array(struct si_shader_context *ctx,
 	if (!(array->writemask & (1 << swizzle)))
 		return ctx->undef_alloca;
 
-	index = emit_array_index(&ctx->soa, reg_indirect,
+	index = emit_array_index(ctx, reg_indirect,
 				 reg_index - ctx->temp_arrays[array_id - 1].range.First);
 
 	/* Ensure that the index is within a valid range, to guard against
@@ -559,7 +559,6 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 		      const struct tgsi_ind_register *reg_indirect)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef ptr;
@@ -579,7 +578,7 @@ load_value_from_array(struct lp_build_tgsi_context *bld_base,
 		struct tgsi_declaration_range range =
 			get_array_range(bld_base, file, reg_index, reg_indirect);
 		LLVMValueRef index =
-			emit_array_index(bld, reg_indirect, reg_index - range.First);
+			emit_array_index(ctx, reg_indirect, reg_index - range.First);
 		LLVMValueRef array =
 			emit_array_fetch(bld_base, file, type, range, swizzle);
 		return LLVMBuildExtractElement(builder, array, index, "");
@@ -606,7 +605,7 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 	} else {
 		unsigned i, size;
 		struct tgsi_declaration_range range = get_array_range(bld_base, file, reg_index, reg_indirect);
-		LLVMValueRef index = emit_array_index(bld, reg_indirect, reg_index - range.First);
+		LLVMValueRef index = emit_array_index(ctx, reg_indirect, reg_index - range.First);
 		LLVMValueRef array =
 			emit_array_fetch(bld_base, file, TGSI_TYPE_FLOAT, range, chan_index);
 		LLVMValueRef temp_ptr;
@@ -773,7 +772,7 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
-				 ctx->soa.addr[idx][chan] = lp_build_alloca_undef(
+				 ctx->addrs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
 					ctx->soa.bld_base.uint_bld.elem_type, "");
 			}
@@ -995,7 +994,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			value = si_llvm_saturate(bld_base, value);
 
 		if (reg->Register.File == TGSI_FILE_ADDRESS) {
-			temp_ptr = bld->addr[reg->Register.Index][chan_index];
+			temp_ptr = ctx->addrs[reg->Register.Index][chan_index];
 			LLVMBuildStore(builder, value, temp_ptr);
 			continue;
 		}

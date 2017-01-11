@@ -511,7 +511,7 @@ static LLVMValueRef get_indirect_index(struct si_shader_context *ctx,
 	struct gallivm_state *gallivm = ctx->soa.bld_base.base.gallivm;
 	LLVMValueRef result;
 
-	result = ctx->soa.addr[ind->Index][ind->Swizzle];
+	result = ctx->addrs[ind->Index][ind->Swizzle];
 	result = LLVMBuildLoad(gallivm->builder, result, "");
 	result = LLVMBuildAdd(gallivm->builder, result,
 			      lp_build_const_int32(gallivm, rel_index), "");
@@ -1863,7 +1863,7 @@ static LLVMValueRef fetch_constant(
 		bufp = load_const_buffer_desc(ctx, buf);
 
 	if (reg->Register.Indirect) {
-		addr = ctx->soa.addr[ireg->Index][ireg->Swizzle];
+		addr = ctx->addrs[ireg->Index][ireg->Swizzle];
 		addr = LLVMBuildLoad(base->gallivm->builder, addr, "load addr reg");
 		addr = lp_build_mul_imm(&bld_base->uint_bld, addr, 16);
 		addr = lp_build_add(&bld_base->uint_bld, addr,
