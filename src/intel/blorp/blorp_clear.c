@@ -470,6 +470,87 @@ blorp_clear_depth_stencil(struct blorp_batch *batch,
    }
 }
 
+bool
+blorp_can_hiz_clear_depth(uint8_t gen, enum isl_format format,
+                          uint32_t num_samples,
+                          uint32_t x0, uint32_t y0, uint32_t x1, uint32_t y1)
+{
+   /* This function currently doesn't support any gen prior to gen8 */
+   assert(gen >= 8);
+
+   if (gen == 8 && format == ISL_FORMAT_R16_UNORM) {
+      /* Apply the D16 alignment restrictions. On BDW, HiZ has an 8x4 sample
+       * block with the following property: as the number of samples increases,
+       * the number of pixels representable by this block decreases by a factor
+       * of the sample dimensions. Sample dimensions scale following the MSAA
+       * interleaved pattern.
+       *
+       * Sample|Sample|Pixel
+       * Count |Dim   |Dim
+       * ===================
+       *    1  | 1x1  | 8x4
+       *    2  | 2x1  | 4x4
+       *    4  | 2x2  | 4x2
+       *    8  | 4x2  | 2x2
+       *   16  | 4x4  | 2x1
+       *
+       * Table: Pixel Dimensions in a HiZ Sample Block Pre-SKL
+       */
+      const struct isl_extent2d sa_block_dim =
+         isl_get_interleaved_msaa_px_size_sa(num_samples);
+      const uint8_t align_px_w = 8 / sa_block_dim.w;
+      const uint8_t align_px_h = 4 / sa_block_dim.h;
+
+      /* Fast depth clears clear an entire sample block at a time. As a result,
+       * the rectangle must be aligned to the dimensions of the encompassing
+       * pixel block for a successful operation.
+       *
+       * Fast clears can still work if the upper-left corner is aligned and the
+       * bottom-rigtht corner touches the edge of a depth buffer whose extent
+       * is unaligned. This is because each miplevel in the depth buffer is
+       * padded by the Pixel Dim (similar to a standard compressed texture).
+       * In this case, the clear rectangle could be padded by to match the full
+       * depth buffer extent but to support multiple clearing techniques, we
+       * chose to be unaware of the depth buffer's extent and thus don't handle
+       * this case.
+       */
+      if (x0 % align_px_w || y0 % align_px_h ||
+          x1 % align_px_w || y1 % align_px_h)
+         return false;
+   }
+   return true;
+}
+
+/* Given a depth stencil attachment, this function performs a fast depth clear
+ * on a depth portion and a regular clear on the stencil portion. When
+ * performing a fast depth clear on the depth portion, the HiZ buffer is simply
+ * tagged as cleared so the depth clear value is not actually needed.
+ */
+void
+blorp_gen8_hiz_clear_attachments(struct blorp_batch *batch,
+                                 uint32_t num_samples,
+                                 uint32_t x0, uint32_t y0,
+                                 uint32_t x1, uint32_t y1,
+                                 bool clear_depth, bool clear_stencil,
+                                 uint8_t stencil_value)
+{
+   assert(batch->flags & BLORP_BATCH_NO_EMIT_DEPTH_STENCIL);
+
+   struct blorp_params params;
+   blorp_params_init(&params);
+   params.num_layers = 1;
+   params.hiz_op = BLORP_HIZ_OP_DEPTH_CLEAR;
+   params.x0 = x0;
+   params.y0 = y0;
+   params.x1 = x1;
+   params.y1 = y1;
+   params.num_samples = num_samples;
+   params.depth.enabled = clear_depth;
+   params.stencil.enabled = clear_stencil;
+   params.stencil_ref = stencil_value;
+   batch->blorp->exec(batch, &params);
+}
+
 /** Clear active color/depth/stencili attachments
  *
  * This function performs a clear operation on the currently bound
