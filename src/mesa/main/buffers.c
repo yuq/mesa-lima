@@ -204,6 +204,8 @@ read_buffer_enum_to_index(const struct gl_context *ctx, GLenum buffer)
          return BUFFER_FRONT_LEFT;
       case GL_AUX0:
          return BUFFER_AUX0;
+      case GL_FRONT_AND_BACK:
+         return BUFFER_FRONT_LEFT;
       case GL_AUX1:
       case GL_AUX2:
       case GL_AUX3:
