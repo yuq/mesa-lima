@@ -4529,11 +4529,16 @@ get_fpu_lowered_simd_width(const struct gen_device_info *devinfo,
     */
    if (devinfo->gen < 8) {
       for (unsigned i = 0; i < inst->sources; i++) {
+         /* IVB implements DF scalars as <0;2,1> regions. */
+         const bool is_scalar_exception = is_uniform(inst->src[i]) &&
+            (devinfo->is_haswell || type_sz(inst->src[i].type) != 8);
+         const bool is_packed_word_exception =
+            type_sz(inst->dst.type) == 4 && inst->dst.stride == 1 &&
+            type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1;
+
          if (inst->size_written > REG_SIZE &&
              inst->size_read(i) != 0 && inst->size_read(i) <= REG_SIZE &&
-             !is_uniform(inst->src[i]) &&
-             !(type_sz(inst->dst.type) == 4 && inst->dst.stride == 1 &&
-               type_sz(inst->src[i].type) == 2 && inst->src[i].stride == 1)) {
+             !is_scalar_exception && !is_packed_word_exception) {
             const unsigned reg_count = DIV_ROUND_UP(inst->size_written, REG_SIZE);
             max_width = MIN2(max_width, inst->exec_size / reg_count);
          }
