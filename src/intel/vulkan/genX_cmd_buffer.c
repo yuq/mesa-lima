@@ -2248,8 +2248,15 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
+   const struct anv_image_view *iview =
+      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
+
+   if (iview) {
+      anv_gen8_hiz_op_resolve(cmd_buffer, iview->image,
+                              BLORP_HIZ_OP_HIZ_RESOLVE);
+   }
+
    cmd_buffer_emit_depth_stencil(cmd_buffer);
-   genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_HIZ_RESOLVE);
 
    anv_cmd_buffer_clear_subpass(cmd_buffer);
 }
@@ -2281,7 +2288,14 @@ void genX(CmdNextSubpass)(
 
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-   genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_DEPTH_RESOLVE);
+   const struct anv_image_view *iview =
+      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
+
+   if (iview) {
+      anv_gen8_hiz_op_resolve(cmd_buffer, iview->image,
+                              BLORP_HIZ_OP_DEPTH_RESOLVE);
+   }
+
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
    genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
@@ -2291,7 +2305,14 @@ void genX(CmdEndRenderPass)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   genX(cmd_buffer_emit_hz_op)(cmd_buffer, BLORP_HIZ_OP_DEPTH_RESOLVE);
+   const struct anv_image_view *iview =
+      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
+
+   if (iview) {
+      anv_gen8_hiz_op_resolve(cmd_buffer, iview->image,
+                              BLORP_HIZ_OP_DEPTH_RESOLVE);
+   }
+
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
 
 #ifndef NDEBUG
