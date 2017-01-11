@@ -2779,7 +2779,7 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 	/* Write outputs to LDS. The next shader (TCS aka HS) will read
 	 * its inputs from it. */
 	for (i = 0; i < info->num_outputs; i++) {
-		LLVMValueRef *out_ptr = ctx->soa.outputs[i];
+		LLVMValueRef *out_ptr = ctx->outputs[i];
 		unsigned name = info->output_semantic_name[i];
 		unsigned index = info->output_semantic_index[i];
 		int param = si_shader_io_get_unique_index(name, index);
@@ -2805,8 +2805,7 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 	int i;
 
 	for (i = 0; i < info->num_outputs; i++) {
-		LLVMValueRef *out_ptr =
-			ctx->soa.outputs[i];
+		LLVMValueRef *out_ptr = ctx->outputs[i];
 		int param_index;
 
 		if (info->output_semantic_name[i] == TGSI_SEMANTIC_VIEWPORT_INDEX ||
@@ -2883,7 +2882,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 			}
 
 			for (j = 0; j < 4; j++) {
-				addr = ctx->soa.outputs[i][j];
+				addr = ctx->outputs[i][j];
 				val = LLVMBuildLoad(gallivm->builder, addr, "");
 				val = si_llvm_saturate(bld_base, val);
 				LLVMBuildStore(gallivm->builder, val, addr);
@@ -2901,7 +2900,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 		for (j = 0; j < 4; j++) {
 			outputs[i].values[j] =
 				LLVMBuildLoad(gallivm->builder,
-					      ctx->soa.outputs[i][j],
+					      ctx->outputs[i][j],
 					      "");
 			outputs[i].vertex_stream[j] =
 				(info->output_streams[i] >> (2 * j)) & 3;
@@ -3151,22 +3150,22 @@ static void si_llvm_return_fs_outputs(struct lp_build_tgsi_context *bld_base)
 		case TGSI_SEMANTIC_COLOR:
 			assert(semantic_index < 8);
 			for (j = 0; j < 4; j++) {
-				LLVMValueRef ptr = ctx->soa.outputs[i][j];
+				LLVMValueRef ptr = ctx->outputs[i][j];
 				LLVMValueRef result = LLVMBuildLoad(builder, ptr, "");
 				color[semantic_index][j] = result;
 			}
 			break;
 		case TGSI_SEMANTIC_POSITION:
 			depth = LLVMBuildLoad(builder,
-					      ctx->soa.outputs[i][2], "");
+					      ctx->outputs[i][2], "");
 			break;
 		case TGSI_SEMANTIC_STENCIL:
 			stencil = LLVMBuildLoad(builder,
-						ctx->soa.outputs[i][1], "");
+						ctx->outputs[i][1], "");
 			break;
 		case TGSI_SEMANTIC_SAMPLEMASK:
 			samplemask = LLVMBuildLoad(builder,
-						   ctx->soa.outputs[i][0], "");
+						   ctx->outputs[i][0], "");
 			break;
 		default:
 			fprintf(stderr, "Warning: SI unhandled fs output type:%d\n",
@@ -5314,8 +5313,7 @@ static void si_llvm_emit_vertex(
 
 	offset = 0;
 	for (i = 0; i < info->num_outputs; i++) {
-		LLVMValueRef *out_ptr =
-			ctx->soa.outputs[i];
+		LLVMValueRef *out_ptr = ctx->outputs[i];
 
 		for (chan = 0; chan < 4; chan++) {
 			if (!(info->output_usagemask[i] & (1 << chan)) ||

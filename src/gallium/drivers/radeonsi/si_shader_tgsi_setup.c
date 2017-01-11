@@ -594,7 +594,6 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 		     const struct tgsi_ind_register *reg_indirect)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef ptr;
@@ -616,7 +615,7 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 		for (i = 0; i < size; ++i) {
 			switch(file) {
 			case TGSI_FILE_OUTPUT:
-				temp_ptr = bld->outputs[i + range.First][chan_index];
+				temp_ptr = ctx->outputs[i + range.First][chan_index];
 				break;
 
 			case TGSI_FILE_TEMPORARY:
@@ -644,13 +643,22 @@ static bool si_preload_fs_inputs(struct si_shader_context *ctx)
 	return ctx->shader->selector->info.uses_derivatives;
 }
 
+static LLVMValueRef
+get_output_ptr(struct lp_build_tgsi_context *bld_base, unsigned index,
+	       unsigned chan)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	assert(index <= ctx->bld_base.info->file_max[TGSI_FILE_OUTPUT]);
+	return ctx->outputs[index][chan];
+}
+
 LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 				const struct tgsi_full_src_register *reg,
 				enum tgsi_opcode_type type,
 				unsigned swizzle)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_tgsi_soa_context *bld = lp_soa_context(bld_base);
 	LLVMBuilderRef builder = bld_base->base.gallivm->builder;
 	LLVMValueRef result = NULL, ptr, ptr2;
 
@@ -726,9 +734,9 @@ LLVMValueRef si_llvm_emit_fetch(struct lp_build_tgsi_context *bld_base,
 		break;
 
 	case TGSI_FILE_OUTPUT:
-		ptr = lp_get_output_ptr(bld, reg->Register.Index, swizzle);
+		ptr = get_output_ptr(bld_base, reg->Register.Index, swizzle);
 		if (tgsi_type_is_64bit(type)) {
-			ptr2 = lp_get_output_ptr(bld, reg->Register.Index, swizzle + 1);
+			ptr2 = get_output_ptr(bld_base, reg->Register.Index, swizzle + 1);
 			return si_llvm_emit_fetch_64bit(bld_base, type,
 							LLVMBuildLoad(builder, ptr, ""),
 							LLVMBuildLoad(builder, ptr2, ""));
@@ -915,14 +923,14 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 		for (idx = decl->Range.First; idx <= decl->Range.Last; idx++) {
 			unsigned chan;
 			assert(idx < RADEON_LLVM_MAX_OUTPUTS);
-			if (ctx->soa.outputs[idx][0])
+			if (ctx->outputs[idx][0])
 				continue;
 			for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 #ifdef DEBUG
 				snprintf(name, sizeof(name), "OUT%d.%c",
 					 idx, "xyzw"[chan % 4]);
 #endif
-				ctx->soa.outputs[idx][chan] = lp_build_alloca_undef(
+				ctx->outputs[idx][chan] = lp_build_alloca_undef(
 					&ctx->gallivm,
 					ctx->soa.bld_base.base.elem_type, name);
 			}
@@ -1010,9 +1018,9 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 		} else {
 			switch(reg->Register.File) {
 			case TGSI_FILE_OUTPUT:
-				temp_ptr = bld->outputs[reg->Register.Index][chan_index];
+				temp_ptr = ctx->outputs[reg->Register.Index][chan_index];
 				if (tgsi_type_is_64bit(dtype))
-					temp_ptr2 = bld->outputs[reg->Register.Index][chan_index + 1];
+					temp_ptr2 = ctx->outputs[reg->Register.Index][chan_index + 1];
 				break;
 
 			case TGSI_FILE_TEMPORARY:
@@ -1322,9 +1330,6 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	LLVMValueRef arg = lp_build_const_float(&ctx->gallivm, 2.5);
 	ctx->fpmath_md_2p5_ulp = LLVMMDNodeInContext(ctx->gallivm.context,
 						     &arg, 1);
-
-	/* Allocate outputs */
-	ctx->soa.outputs = ctx->outputs;
 
 	bld_base->op_actions[TGSI_OPCODE_BGNLOOP].emit = bgnloop_emit;
 	bld_base->op_actions[TGSI_OPCODE_BRK].emit = brk_emit;
