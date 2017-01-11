@@ -303,11 +303,11 @@ need_input_attachment_state(const struct anv_render_pass_attachment *att)
    if (!(att->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT))
       return false;
 
-   /* We only allocate input attachment states for color and depth surfaces.
-    * Stencil doesn't allow compression so we can just use the texture surface
-    * state from the view
+   /* We only allocate input attachment states for color surfaces. Compression
+    * is not yet enabled for depth textures and stencil doesn't allow
+    * compression so we can just use the texture surface state from the view.
     */
-   return vk_format_is_color(att->format) || vk_format_has_depth(att->format);
+   return vk_format_is_color(att->format);
 }
 
 static enum isl_aux_usage
@@ -515,18 +515,11 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          }
 
          if (need_input_attachment_state(&pass->attachments[i])) {
-            const struct isl_surf *surf;
-            if (att_aspects == VK_IMAGE_ASPECT_COLOR_BIT) {
-               surf = &iview->image->color_surface.isl;
-            } else {
-               surf = &iview->image->depth_surface.isl;
-            }
-
             struct isl_view view = iview->isl;
             view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
             isl_surf_fill_state(isl_dev,
                                 state->attachments[i].input_att_state.map,
-                                .surf = surf,
+                                .surf = &iview->image->color_surface.isl,
                                 .view = &view,
                                 .aux_surf = &iview->image->aux_surface.isl,
                                 .aux_usage = state->attachments[i].input_aux_usage,
