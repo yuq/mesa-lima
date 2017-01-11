@@ -193,8 +193,6 @@ vlVdpVideoMixerDestroy(VdpVideoMixer mixer)
 
    pipe_mutex_lock(vmixer->device->mutex);
 
-   vlVdpResolveDelayedRendering(vmixer->device, NULL, NULL);
-
    vlRemoveDataHTAB(mixer);
 
    vl_compositor_cleanup_state(&vmixer->cstate);
@@ -293,7 +291,6 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
    }
 
    pipe_mutex_lock(vmixer->device->mutex);
-   vlVdpResolveDelayedRendering(vmixer->device, NULL, NULL);
 
    vl_compositor_clear_layers(&vmixer->cstate);
 
@@ -403,63 +400,59 @@ VdpStatus vlVdpVideoMixerRender(VdpVideoMixer mixer,
       ++layers;
    }
 
-   if (!vmixer->noise_reduction.filter && !vmixer->sharpness.filter && !vmixer->bicubic.filter)
-      vlVdpSave4DelayedRendering(vmixer->device, destination_surface, &vmixer->cstate);
-   else {
-      vl_compositor_render(&vmixer->cstate, compositor, surface, &dirty_area, true);
+   vl_compositor_render(&vmixer->cstate, compositor, surface, &dirty_area, true);
 
-      if (vmixer->noise_reduction.filter) {
-         if (!vmixer->sharpness.filter && !vmixer->bicubic.filter) {
-            vl_median_filter_render(vmixer->noise_reduction.filter,
-                                    sampler_view, dst->surface);
-         } else {
-            res = pipe->screen->resource_create(pipe->screen, &res_tmpl);
-            struct pipe_sampler_view *sampler_view_temp = pipe->create_sampler_view(pipe, res, &sv_templ);
-            struct pipe_surface *surface_temp = pipe->create_surface(pipe, res, &surf_templ);
-            pipe_resource_reference(&res, NULL);
+   if (vmixer->noise_reduction.filter) {
+      if (!vmixer->sharpness.filter && !vmixer->bicubic.filter) {
+         vl_median_filter_render(vmixer->noise_reduction.filter,
+                                 sampler_view, dst->surface);
+      } else {
+         res = pipe->screen->resource_create(pipe->screen, &res_tmpl);
+         struct pipe_sampler_view *sampler_view_temp = pipe->create_sampler_view(pipe, res, &sv_templ);
+         struct pipe_surface *surface_temp = pipe->create_surface(pipe, res, &surf_templ);
+         pipe_resource_reference(&res, NULL);
 
-            vl_median_filter_render(vmixer->noise_reduction.filter,
-                                    sampler_view, surface_temp);
+         vl_median_filter_render(vmixer->noise_reduction.filter,
+                                 sampler_view, surface_temp);
 
-            pipe_sampler_view_reference(&sampler_view, NULL);
-            pipe_surface_reference(&surface, NULL);
-
-            sampler_view = sampler_view_temp;
-            surface = surface_temp;
-         }
-      }
-
-      if (vmixer->sharpness.filter) {
-         if (!vmixer->bicubic.filter) {
-            vl_matrix_filter_render(vmixer->sharpness.filter,
-                                    sampler_view, dst->surface);
-         } else {
-            res = pipe->screen->resource_create(pipe->screen, &res_tmpl);
-            struct pipe_sampler_view *sampler_view_temp = pipe->create_sampler_view(pipe, res, &sv_templ);
-            struct pipe_surface *surface_temp = pipe->create_surface(pipe, res, &surf_templ);
-            pipe_resource_reference(&res, NULL);
-
-            vl_matrix_filter_render(vmixer->sharpness.filter,
-                                    sampler_view, surface_temp);
-
-            pipe_sampler_view_reference(&sampler_view, NULL);
-            pipe_surface_reference(&surface, NULL);
-
-            sampler_view = sampler_view_temp;
-            surface = surface_temp;
-         }
-      }
-
-      if (vmixer->bicubic.filter)
-         vl_bicubic_filter_render(vmixer->bicubic.filter,
-                                 sampler_view, dst->surface,
-                                 RectToPipe(destination_video_rect, &rect),
-                                 RectToPipe(destination_rect, &clip));
-
-      if(surface != dst->surface) {
          pipe_sampler_view_reference(&sampler_view, NULL);
          pipe_surface_reference(&surface, NULL);
+
+         sampler_view = sampler_view_temp;
+         surface = surface_temp;
       }
+   }
+
+   if (vmixer->sharpness.filter) {
+      if (!vmixer->bicubic.filter) {
+         vl_matrix_filter_render(vmixer->sharpness.filter,
+                                 sampler_view, dst->surface);
+      } else {
+         res = pipe->screen->resource_create(pipe->screen, &res_tmpl);
+         struct pipe_sampler_view *sampler_view_temp = pipe->create_sampler_view(pipe, res, &sv_templ);
+         struct pipe_surface *surface_temp = pipe->create_surface(pipe, res, &surf_templ);
+         pipe_resource_reference(&res, NULL);
+
+         vl_matrix_filter_render(vmixer->sharpness.filter,
+                                 sampler_view, surface_temp);
+
+         pipe_sampler_view_reference(&sampler_view, NULL);
+         pipe_surface_reference(&surface, NULL);
+
+         sampler_view = sampler_view_temp;
+         surface = surface_temp;
+      }
+   }
+
+   if (vmixer->bicubic.filter)
+      vl_bicubic_filter_render(vmixer->bicubic.filter,
+                               sampler_view, dst->surface,
+                               RectToPipe(destination_video_rect, &rect),
+                               RectToPipe(destination_rect, &clip));
+
+   if(surface != dst->surface) {
+      pipe_sampler_view_reference(&sampler_view, NULL);
+      pipe_surface_reference(&surface, NULL);
    }
    pipe_mutex_unlock(vmixer->device->mutex);
 

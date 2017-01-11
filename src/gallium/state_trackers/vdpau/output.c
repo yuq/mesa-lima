@@ -146,7 +146,6 @@ vlVdpOutputSurfaceDestroy(VdpOutputSurface surface)
    pipe = vlsurface->device->context;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
 
    pipe_surface_reference(&vlsurface->surface, NULL);
    pipe_sampler_view_reference(&vlsurface->sampler_view, NULL);
@@ -211,7 +210,6 @@ vlVdpOutputSurfaceGetBitsNative(VdpOutputSurface surface,
        return VDP_STATUS_INVALID_POINTER;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
 
    res = vlsurface->sampler_view->texture;
    box = RectToPipeBox(source_rect, res);
@@ -256,7 +254,6 @@ vlVdpOutputSurfacePutBitsNative(VdpOutputSurface surface,
        return VDP_STATUS_INVALID_POINTER;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
 
    dst_box = RectToPipeBox(destination_rect, vlsurface->sampler_view->texture);
    pipe->texture_subdata(pipe, vlsurface->sampler_view->texture, 0,
@@ -334,7 +331,6 @@ vlVdpOutputSurfacePutBitsIndexed(VdpOutputSurface surface,
    res_tmpl.bind = PIPE_BIND_SAMPLER_VIEW;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
 
    if (!CheckSurfaceParams(context->screen, &res_tmpl))
       goto error_resource;
@@ -452,7 +448,6 @@ vlVdpOutputSurfacePutBitsYCbCr(VdpOutputSurface surface,
        return VDP_STATUS_INVALID_POINTER;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
    memset(&vtmpl, 0, sizeof(vtmpl));
    vtmpl.buffer_format = format;
    vtmpl.chroma_format = FormatYCBCRToPipeChroma(source_ycbcr_format);
@@ -671,7 +666,6 @@ vlVdpOutputSurfaceRenderOutputSurface(VdpOutputSurface destination_surface,
    }
 
    pipe_mutex_lock(dst_vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(dst_vlsurface->device, NULL, NULL);
 
    context = dst_vlsurface->device->context;
    compositor = &dst_vlsurface->device->compositor;
@@ -746,7 +740,6 @@ vlVdpOutputSurfaceRenderBitmapSurface(VdpOutputSurface destination_surface,
    cstate = &dst_vlsurface->cstate;
 
    pipe_mutex_lock(dst_vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(dst_vlsurface->device, NULL, NULL);
 
    blend = BlenderToPipe(context, blend_state);
 
@@ -774,7 +767,6 @@ struct pipe_resource *vlVdpOutputSurfaceGallium(VdpOutputSurface surface)
       return NULL;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
    vlsurface->device->context->flush(vlsurface->device->context, NULL, 0);
    pipe_mutex_unlock(vlsurface->device->mutex);
 
@@ -796,7 +788,6 @@ VdpStatus vlVdpOutputSurfaceDMABuf(VdpOutputSurface surface,
       return VDP_STATUS_INVALID_HANDLE;
 
    pipe_mutex_lock(vlsurface->device->mutex);
-   vlVdpResolveDelayedRendering(vlsurface->device, NULL, NULL);
    vlsurface->device->context->flush(vlsurface->device->context, NULL, 0);
 
    memset(&whandle, 0, sizeof(struct winsys_handle));
