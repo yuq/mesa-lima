@@ -1078,6 +1078,8 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       case SpvBuiltInFragCoord:
          nir_var->data.pixel_center_integer = b->pixel_center_integer;
          break;
+      default:
+         break;
       }
    }
 
