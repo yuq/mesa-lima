@@ -158,6 +158,10 @@ optimizations = [
    # a != 0.0
    (('flt', 0.0, ('fabs', a)), ('fne', a, 0.0)),
 
+   # ignore this opt when the result is used by a bcsel or if so we can make
+   # use of conditional modifiers on supported hardware.
+   (('flt(is_not_used_by_conditional)', ('fadd(is_used_once)', a, ('fneg', b)), 0.0), ('flt', a, b)),
+
    (('fge', ('fneg', ('fabs', a)), 0.0), ('feq', a, 0.0)),
    (('bcsel', ('flt', b, a), b, a), ('fmin', a, b)),
    (('bcsel', ('flt', a, b), b, a), ('fmax', a, b)),
