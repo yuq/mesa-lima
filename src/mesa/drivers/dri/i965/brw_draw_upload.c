@@ -566,6 +566,7 @@ brw_prepare_vertices(struct brw_context *brw)
    brw->vb.nr_enabled = 0;
    while (vs_inputs) {
       GLuint first = ffsll(vs_inputs) - 1;
+      assert (first < 64);
       GLuint index =
          first - DIV_ROUND_UP(_mesa_bitcount_64(vs_prog_data->double_inputs_read &
                                                 BITFIELD64_MASK(first)), 2);
