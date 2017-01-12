@@ -40,6 +40,8 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include "amd/common/amdgpu_id.h"
+#include "amd/common/sid.h"
+#include "amd/common/gfx9d.h"
 
 #define CIK_TILE_MODE_COLOR_2D			14
 
@@ -352,8 +354,15 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    ws->info.num_render_backends = ws->amdinfo.rb_pipes;
    ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
    ws->info.tcc_cache_line_size = 64; /* TC L2 line size on GCN */
-   ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
-   ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
+   if (ws->info.chip_class == GFX9) {
+      ws->info.num_tile_pipes = 1 << G_0098F8_NUM_PIPES(ws->amdinfo.gb_addr_cfg);
+      ws->info.pipe_interleave_bytes =
+         256 << G_0098F8_PIPE_INTERLEAVE_SIZE_GFX9(ws->amdinfo.gb_addr_cfg);
+   } else {
+      ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
+      ws->info.pipe_interleave_bytes =
+         256 << G_0098F8_PIPE_INTERLEAVE_SIZE_GFX6(ws->amdinfo.gb_addr_cfg);
+   }
    ws->info.has_virtual_memory = true;
    ws->info.has_sdma = dma.available_rings != 0;
 
