@@ -25,6 +25,7 @@ include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
 	$(GALLIUM_DRIVER_CFLAGS) \
+	-I$(top_builddir)/src/amd/common \
 	-I$(top_srcdir)/src/amd/common \
 	$(RADEON_CFLAGS) \
 	$(LLVM_CFLAGS)

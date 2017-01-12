@@ -30,6 +30,7 @@ common_libamd_common_la_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
+	-I$(top_builddir)/src/amd/common \
 	-I$(top_srcdir)/src/amd/common \
 	-I$(top_builddir)/src/compiler \
 	-I$(top_builddir)/src/compiler/nir \
