@@ -320,7 +320,7 @@ gcm_schedule_late_def(nir_ssa_def *def, void *void_state)
    if (lca == NULL)
       return true;
 
-   /* We know have the LCA of all of the uses.  If our invariants hold,
+   /* We now have the LCA of all of the uses.  If our invariants hold,
     * this is dominated by the block that we chose when scheduling early.
     * We now walk up the dominance tree and pick the lowest block that is
     * as far outside loops as we can get.
