@@ -138,12 +138,14 @@ VULKAN_LIB_DEPS += \
 nodist_EXTRA_libvulkan_intel_la_SOURCES = dummy.cpp
 libvulkan_intel_la_SOURCES = $(VULKAN_GEM_FILES)
 
-anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN) cat $(vulkan_include_HEADERS) |\
+vulkan_api_xml = $(top_srcdir)/src/vulkan/registry/vk.xml
+
+anv_entrypoints.h : anv_entrypoints_gen.py $(vulkan_api_xml)
+	$(AM_V_GEN) cat $(vulkan_api_xml) |\
 	$(PYTHON2) $(srcdir)/anv_entrypoints_gen.py header > $@
 
-anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_include_HEADERS)
-	$(AM_V_GEN) cat $(vulkan_include_HEADERS) |\
+anv_entrypoints.c : anv_entrypoints_gen.py $(vulkan_api_xml)
+	$(AM_V_GEN) cat $(vulkan_api_xml) |\
 	$(PYTHON2) $(srcdir)/anv_entrypoints_gen.py code > $@
 
 BUILT_SOURCES = $(VULKAN_GENERATED_FILES)
