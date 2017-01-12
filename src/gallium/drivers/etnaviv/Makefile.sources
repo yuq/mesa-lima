@@ -1,4 +1,10 @@
 C_SOURCES :=  \
+	hw/cmdstream.xml.h \
+	hw/common.xml.h \
+	hw/isa.xml.h \
+	hw/state_3d.xml.h \
+	hw/state.xml.h \
+	\
 	etnaviv_asm.c \
 	etnaviv_asm.h \
 	etnaviv_blend.c \
@@ -18,6 +24,7 @@ C_SOURCES :=  \
 	etnaviv_fence.h \
 	etnaviv_format.c \
 	etnaviv_format.h \
+	etnaviv_internal.h \
 	etnaviv_query.c \
 	etnaviv_query.h \
 	etnaviv_query_sw.c \
@@ -42,8 +49,9 @@ C_SOURCES :=  \
 	etnaviv_tiling.h \
 	etnaviv_transfer.c \
 	etnaviv_transfer.h \
+	etnaviv_translate.h \
 	etnaviv_uniforms.c \
 	etnaviv_uniforms.h \
-	etnaviv_utils.h \
+	etnaviv_util.h \
 	etnaviv_zsa.c \
 	etnaviv_zsa.h
