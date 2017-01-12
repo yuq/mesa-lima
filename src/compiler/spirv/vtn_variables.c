@@ -1361,8 +1361,29 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
 
       case vtn_variable_mode_input:
       case vtn_variable_mode_output: {
+         /* In order to know whether or not we're a per-vertex inout, we need
+          * the patch qualifier.  This means walking the variable decorations
+          * early before we actually create any variables.  Not a big deal.
+          *
+          * GLSLang really likes to place decorations in the most interior
+          * thing it possibly can.  In particular, if you have a struct, it
+          * will place the patch decorations on the struct members.  This
+          * should be handled by the variable splitting below just fine.
+          *
+          * If you have an array-of-struct, things get even more weird as it
+          * will place the patch decorations on the struct even though it's
+          * inside an array and some of the members being patch and others not
+          * makes no sense whatsoever.  Since the only sensible thing is for
+          * it to be all or nothing, we'll call it patch if any of the members
+          * are declared patch.
+          */
          var->patch = false;
          vtn_foreach_decoration(b, val, var_is_patch_cb, &var->patch);
+         if (glsl_type_is_array(var->type->type) &&
+             glsl_type_is_struct(without_array->type)) {
+            vtn_foreach_decoration(b, without_array->val,
+                                   var_is_patch_cb, &var->patch);
+         }
 
          /* For inputs and outputs, we immediately split structures.  This
           * is for a couple of reasons.  For one, builtins may all come in
@@ -1402,6 +1423,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
                var->members[i]->interface_type =
                   interface_type->members[i]->type;
                var->members[i]->data.mode = nir_mode;
+               var->members[i]->data.patch = var->patch;
             }
          } else {
             var->var = rzalloc(b->shader, nir_variable);
@@ -1409,6 +1431,7 @@ vtn_handle_variables(struct vtn_builder *b, SpvOp opcode,
             var->var->type = var->type->type;
             var->var->interface_type = interface_type->type;
             var->var->data.mode = nir_mode;
+            var->var->data.patch = var->patch;
          }
 
          /* For inputs and outputs, we need to grab locations and builtin
