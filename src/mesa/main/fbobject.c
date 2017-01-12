@@ -3495,6 +3495,7 @@ framebuffer_renderbuffer(struct gl_context *ctx,
                          const char *func)
 {
    struct gl_renderbuffer_attachment *att;
+   bool is_color_attachment;
 
    if (_mesa_is_winsys_fbo(fb)) {
       /* Can't attach new renderbuffers to a window system framebuffer */
@@ -3503,11 +3504,29 @@ framebuffer_renderbuffer(struct gl_context *ctx,
       return;
    }
 
-   att = get_attachment(ctx, fb, attachment, NULL);
+   att = get_attachment(ctx, fb, attachment, &is_color_attachment);
    if (att == NULL) {
-      _mesa_error(ctx, GL_INVALID_ENUM,
-                  "%s(invalid attachment %s)", func,
-                  _mesa_enum_to_string(attachment));
+      /*
+       * From OpenGL 4.5 spec, section 9.2.7 "Attaching Renderbuffer Images to
+       * a Framebuffer":
+       *
+       *    "An INVALID_OPERATION error is generated if attachment is COLOR_-
+       *     ATTACHMENTm where m is greater than or equal to the value of
+       *     MAX_COLOR_- ATTACHMENTS ."
+       *
+       * If we are at this point, is because the attachment is not valid, so
+       * if is_color_attachment is true, is because of the previous reason.
+       */
+      if (is_color_attachment) {
+         _mesa_error(ctx, GL_INVALID_OPERATION,
+                     "%s(invalid color attachment %s)", func,
+                     _mesa_enum_to_string(attachment));
+      } else {
+         _mesa_error(ctx, GL_INVALID_ENUM,
+                     "%s(invalid attachment %s)", func,
+                     _mesa_enum_to_string(attachment));
+      }
+
       return;
    }
 
@@ -3609,6 +3628,7 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
                                            GLint *params, const char *caller)
 {
    const struct gl_renderbuffer_attachment *att;
+   bool is_color_attachment;
    GLenum err;
 
    /* The error code for an attachment type of GL_NONE differs between APIs.
@@ -3676,12 +3696,27 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
    }
    else {
       /* user-created framebuffer FBO */
-      att = get_attachment(ctx, buffer, attachment, NULL);
+      att = get_attachment(ctx, buffer, attachment, &is_color_attachment);
    }
 
    if (att == NULL) {
-      _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", caller,
-                  _mesa_enum_to_string(attachment));
+      /*
+       * From OpenGL 4.5 spec, section 9.2.3 "Framebuffer Object Queries":
+       *
+       *    "An INVALID_OPERATION error is generated if a framebuffer object
+       *     is bound to target and attachment is COLOR_ATTACHMENTm where m is
+       *     greater than or equal to the value of MAX_COLOR_ATTACHMENTS."
+       *
+       * If we are at this point, is because the attachment is not valid, so
+       * if is_color_attachment is true, is because of the previous reason.
+       */
+      if (is_color_attachment) {
+         _mesa_error(ctx, GL_INVALID_OPERATION, "%s(invalid color attachment %s)",
+                     caller, _mesa_enum_to_string(attachment));
+      } else {
+         _mesa_error(ctx, GL_INVALID_ENUM, "%s(invalid attachment %s)", caller,
+                     _mesa_enum_to_string(attachment));
+      }
       return;
    }
 
