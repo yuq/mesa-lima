@@ -522,6 +522,10 @@ late_optimizations = [
 
    (('b2f(is_used_more_than_once)', ('inot', a)), ('bcsel', a, 0.0, 1.0)),
    (('fneg(is_used_more_than_once)', ('b2f', ('inot', a))), ('bcsel', a, -0.0, -1.0)),
+
+   # we do these late so that we don't get in the way of creating ffmas
+   (('fmin', ('fadd(is_used_once)', '#c', a), ('fadd(is_used_once)', '#c', b)), ('fadd', c, ('fmin', a, b))),
+   (('fmax', ('fadd(is_used_once)', '#c', a), ('fadd(is_used_once)', '#c', b)), ('fadd', c, ('fmax', a, b))),
 ]
 
 print nir_algebraic.AlgebraicPass("nir_opt_algebraic", optimizations).render()
