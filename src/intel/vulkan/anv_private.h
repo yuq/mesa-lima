@@ -95,6 +95,7 @@ struct gen_l3_config;
 #define MAX_PUSH_CONSTANTS_SIZE 128
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
+#define MAX_PUSH_DESCRIPTORS 32 /* Minimum requirement */
 
 #define ANV_SVGS_VB_INDEX    MAX_VBS
 #define ANV_DRAWID_VB_INDEX (MAX_VBS + 1)
@@ -928,6 +929,16 @@ struct anv_buffer_view {
    struct brw_image_param storage_image_param;
 };
 
+struct anv_push_descriptor_set {
+   struct anv_descriptor_set set;
+
+   /* Put this field right behind anv_descriptor_set so it fills up the
+    * descriptors[0] field. */
+   struct anv_descriptor descriptors[MAX_PUSH_DESCRIPTORS];
+
+   struct anv_buffer_view buffer_views[MAX_PUSH_DESCRIPTORS];
+};
+
 struct anv_descriptor_pool {
    uint32_t size;
    uint32_t next;
@@ -1210,6 +1221,8 @@ struct anv_cmd_state {
    struct anv_state                             samplers[MESA_SHADER_STAGES];
    struct anv_dynamic_state                     dynamic;
    bool                                         need_query_wa;
+
+   struct anv_push_descriptor_set               push_descriptor;
 
    /**
     * Whether or not the gen8 PMA fix is enabled.  We ensure that, at the top

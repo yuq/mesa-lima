@@ -197,6 +197,9 @@ static VkResult anv_create_cmd_buffer(
    anv_state_stream_init(&cmd_buffer->dynamic_state_stream,
                          &device->dynamic_state_block_pool);
 
+   memset(&cmd_buffer->state.push_descriptor, 0,
+          sizeof(cmd_buffer->state.push_descriptor));
+
    if (pool) {
       list_addtail(&cmd_buffer->pool_link, &pool->cmd_buffers);
    } else {
@@ -815,4 +818,92 @@ anv_cmd_buffer_get_depth_stencil_view(const struct anv_cmd_buffer *cmd_buffer)
                                 VK_IMAGE_ASPECT_STENCIL_BIT));
 
    return iview;
+}
+
+void anv_CmdPushDescriptorSetKHR(
+    VkCommandBuffer commandBuffer,
+    VkPipelineBindPoint pipelineBindPoint,
+    VkPipelineLayout _layout,
+    uint32_t _set,
+    uint32_t descriptorWriteCount,
+    const VkWriteDescriptorSet* pDescriptorWrites)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
+
+   assert(pipelineBindPoint == VK_PIPELINE_BIND_POINT_GRAPHICS ||
+          pipelineBindPoint == VK_PIPELINE_BIND_POINT_COMPUTE);
+   assert(_set < MAX_SETS);
+
+   const struct anv_descriptor_set_layout *set_layout =
+      layout->set[_set].layout;
+   struct anv_descriptor_set *set = &cmd_buffer->state.push_descriptor.set;
+
+   set->layout = set_layout;
+   set->size = anv_descriptor_set_layout_size(set_layout);
+   set->buffer_count = set_layout->buffer_count;
+   set->buffer_views = cmd_buffer->state.push_descriptor.buffer_views;
+
+   /* Go through the user supplied descriptors. */
+   for (uint32_t i = 0; i < descriptorWriteCount; i++) {
+      const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
+
+      switch (write->descriptorType) {
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
+            anv_descriptor_set_write_image_view(set,
+                                                write->descriptorType,
+                                                write->pImageInfo[j].imageView,
+                                                write->pImageInfo[j].sampler,
+                                                write->dstBinding,
+                                                write->dstArrayElement + j);
+         }
+         break;
+
+      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
+            ANV_FROM_HANDLE(anv_buffer_view, bview,
+                            write->pTexelBufferView[j]);
+
+            anv_descriptor_set_write_buffer_view(set,
+                                                 write->descriptorType,
+                                                 bview,
+                                                 write->dstBinding,
+                                                 write->dstArrayElement + j);
+         }
+         break;
+
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+         for (uint32_t j = 0; j < write->descriptorCount; j++) {
+            assert(write->pBufferInfo[j].buffer);
+            ANV_FROM_HANDLE(anv_buffer, buffer, write->pBufferInfo[j].buffer);
+            assert(buffer);
+
+            anv_descriptor_set_write_buffer(set,
+                                            cmd_buffer->device,
+                                            &cmd_buffer->surface_state_stream,
+                                            write->descriptorType,
+                                            buffer,
+                                            write->dstBinding,
+                                            write->dstArrayElement + j,
+                                            write->pBufferInfo[j].offset,
+                                            write->pBufferInfo[j].range);
+         }
+         break;
+
+      default:
+         break;
+      }
+   }
+
+   cmd_buffer->state.descriptors[_set] = set;
+   cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
 }
