@@ -48,7 +48,7 @@ struct radeon_shader_binary;
 struct si_llvm_flow;
 
 struct si_shader_context {
-	struct lp_build_tgsi_soa_context soa;
+	struct lp_build_tgsi_context bld_base;
 	struct gallivm_state gallivm;
 	struct ac_llvm_context ac;
 	struct si_shader *shader;
