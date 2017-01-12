@@ -62,9 +62,9 @@ common_libamd_common_la_SOURCES = \
 if HAVE_RADEON_VULKAN
 common_libamd_common_la_SOURCES += $(AMD_NIR_FILES)
 endif
+endif
 
-$(srcdir)/common/sid_tables.h: $(srcdir)/common/sid_tables.py $(srcdir)/common/sid.h
+common/sid_tables.h: $(srcdir)/common/sid_tables.py $(srcdir)/common/sid.h
 	$(AM_V_GEN) $(PYTHON2) $(srcdir)/common/sid_tables.py $(srcdir)/common/sid.h > $@
 
 BUILT_SOURCES = $(AMD_GENERATED_FILES)
-endif
