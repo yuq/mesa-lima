@@ -32,21 +32,12 @@ LOCAL_SRC_FILES := $(C_SOURCES)
 
 LOCAL_CFLAGS += -DFORCE_BUILD_AMDGPU   # instructs LLVM to declare LLVMInitializeAMDGPU* functions
 
-LOCAL_C_INCLUDES := $(MESA_TOP)/src/amd/common
+LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/src/amd/common \
+	$(call intermediates-dir-for,STATIC_LIBRARIES,libmesa_amd_common)/common
 
 LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_radeonsi
-
-# generate sources
-LOCAL_MODULE_CLASS := STATIC_LIBRARIES
-intermediates := $(call local-generated-sources-dir)
-LOCAL_GENERATED_SOURCES := $(addprefix $(intermediates)/, $(GENERATED_SOURCES))
-
-$(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
-$(LOCAL_GENERATED_SOURCES): PRIVATE_CUSTOM_TOOL = $(PRIVATE_PYTHON) $^ > $@
-
-$(intermediates)/sid_tables.h:  $(intermediates)/%.h: $(LOCAL_PATH)/%.py $(MESA_TOP)/src/amd/common/sid.h
-	$(transform-generated-source)
 
 include $(GALLIUM_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
