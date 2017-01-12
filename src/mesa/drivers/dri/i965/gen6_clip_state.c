@@ -203,32 +203,6 @@ upload_clip_state(struct brw_context *brw)
       }
    }
 
-   /* If the viewport dimensions are smaller than the drawable dimensions,
-    * we have to disable guardband clipping prior to Gen8.  We always program
-    * the guardband to a fixed size, which is almost always larger than the
-    * viewport.  Any geometry which intersects the viewport but lies within
-    * the guardband would bypass the 3D clipping stage, so it wouldn't be
-    * clipped to the viewport.  Rendering would happen beyond the viewport,
-    * but still inside the drawable.
-    *
-    * Gen8+ introduces a viewport extents test which restricts rendering to
-    * the viewport, so we can ignore this restriction.
-    */
-   if (brw->gen < 8) {
-      const float fb_width = (float)_mesa_geometric_width(fb);
-      const float fb_height = (float)_mesa_geometric_height(fb);
-
-      for (unsigned i = 0; i < viewport_count; i++) {
-         if (ctx->ViewportArray[i].X != 0 ||
-             ctx->ViewportArray[i].Y != 0 ||
-             ctx->ViewportArray[i].Width != fb_width ||
-             ctx->ViewportArray[i].Height != fb_height) {
-            dw2 &= ~GEN6_CLIP_GB_TEST;
-            break;
-         }
-      }
-   }
-
    /* BRW_NEW_RASTERIZER_DISCARD */
    if (ctx->RasterDiscard) {
       dw2 |= GEN6_CLIP_MODE_REJECT_ALL;
