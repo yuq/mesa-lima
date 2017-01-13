@@ -45,6 +45,11 @@
 
 struct brw_fence {
    struct brw_context *brw;
+
+   enum brw_fence_type {
+      BRW_FENCE_TYPE_BO_WAIT,
+   } type;
+
    /** The fence waits for completion of this batch. */
    drm_intel_bo *batch_bo;
 
@@ -58,18 +63,29 @@ struct brw_gl_sync {
 };
 
 static void
-brw_fence_init(struct brw_context *brw, struct brw_fence *fence)
+brw_fence_init(struct brw_context *brw, struct brw_fence *fence,
+               enum brw_fence_type type)
 {
    fence->brw = brw;
-   fence->batch_bo = NULL;
+   fence->type = type;
    mtx_init(&fence->mutex, mtx_plain);
+
+   switch (type) {
+   case BRW_FENCE_TYPE_BO_WAIT:
+      fence->batch_bo = NULL;
+      break;
+   }
 }
 
 static void
 brw_fence_finish(struct brw_fence *fence)
 {
-   if (fence->batch_bo)
-      drm_intel_bo_unreference(fence->batch_bo);
+   switch (fence->type) {
+   case BRW_FENCE_TYPE_BO_WAIT:
+      if (fence->batch_bo)
+         drm_intel_bo_unreference(fence->batch_bo);
+      break;
+   }
 
    mtx_destroy(&fence->mutex);
 }
@@ -77,13 +93,18 @@ brw_fence_finish(struct brw_fence *fence)
 static void
 brw_fence_insert(struct brw_context *brw, struct brw_fence *fence)
 {
-   assert(!fence->batch_bo);
-   assert(!fence->signalled);
-
    brw_emit_mi_flush(brw);
-   fence->batch_bo = brw->batch.bo;
-   drm_intel_bo_reference(fence->batch_bo);
-   intel_batchbuffer_flush(brw);
+
+   switch (fence->type) {
+   case BRW_FENCE_TYPE_BO_WAIT:
+      assert(!fence->batch_bo);
+      assert(!fence->signalled);
+
+      fence->batch_bo = brw->batch.bo;
+      drm_intel_bo_reference(fence->batch_bo);
+      intel_batchbuffer_flush(brw);
+      break;
+   }
 }
 
 static bool
@@ -92,10 +113,18 @@ brw_fence_has_completed_locked(struct brw_fence *fence)
    if (fence->signalled)
       return true;
 
-   if (fence->batch_bo && !drm_intel_bo_busy(fence->batch_bo)) {
+   switch (fence->type) {
+   case BRW_FENCE_TYPE_BO_WAIT:
+      if (!fence->batch_bo)
+         return false;
+
+      if (drm_intel_bo_busy(fence->batch_bo))
+         return false;
+
       drm_intel_bo_unreference(fence->batch_bo);
       fence->batch_bo = NULL;
       fence->signalled = true;
+
       return true;
    }
 
@@ -121,24 +150,30 @@ brw_fence_client_wait_locked(struct brw_context *brw, struct brw_fence *fence,
    if (fence->signalled)
       return true;
 
-   assert(fence->batch_bo);
+   switch (fence->type) {
+   case BRW_FENCE_TYPE_BO_WAIT:
+      assert(fence->batch_bo);
 
-   /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and returns
-    * immediately for timeouts <= 0.  The best we can do is to clamp the
-    * timeout to INT64_MAX.  This limits the maximum timeout from 584 years to
-    * 292 years - likely not a big deal.
-    */
-   if (timeout > INT64_MAX)
-      timeout = INT64_MAX;
+      /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and returns
+       * immediately for timeouts <= 0.  The best we can do is to clamp the
+       * timeout to INT64_MAX.  This limits the maximum timeout from 584 years to
+       * 292 years - likely not a big deal.
+       */
+      if (timeout > INT64_MAX)
+         timeout = INT64_MAX;
 
-   if (drm_intel_gem_bo_wait(fence->batch_bo, timeout) != 0)
-      return false;
+      if (drm_intel_gem_bo_wait(fence->batch_bo, timeout) != 0)
+         return false;
 
-   fence->signalled = true;
-   drm_intel_bo_unreference(fence->batch_bo);
-   fence->batch_bo = NULL;
+      fence->signalled = true;
+      drm_intel_bo_unreference(fence->batch_bo);
+      fence->batch_bo = NULL;
 
-   return true;
+      return true;
+   }
+
+   assert(!"bad enum brw_fence_type");
+   return false;
 }
 
 /**
@@ -161,11 +196,15 @@ brw_fence_client_wait(struct brw_context *brw, struct brw_fence *fence,
 static void
 brw_fence_server_wait(struct brw_context *brw, struct brw_fence *fence)
 {
-   /* We have nothing to do for WaitSync.  Our GL command stream is sequential,
-    * so given that the sync object has already flushed the batchbuffer, any
-    * batchbuffers coming after this waitsync will naturally not occur until
-    * the previous one is done.
-    */
+   switch (fence->type) {
+   case BRW_FENCE_TYPE_BO_WAIT:
+      /* We have nothing to do for WaitSync.  Our GL command stream is sequential,
+       * so given that the sync object has already flushed the batchbuffer, any
+       * batchbuffers coming after this waitsync will naturally not occur until
+       * the previous one is done.
+       */
+      break;
+   }
 }
 
 static struct gl_sync_object *
@@ -196,7 +235,7 @@ brw_gl_fence_sync(struct gl_context *ctx, struct gl_sync_object *_sync,
    struct brw_context *brw = brw_context(ctx);
    struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
-   brw_fence_init(brw, &sync->fence);
+   brw_fence_init(brw, &sync->fence, BRW_FENCE_TYPE_BO_WAIT);
    brw_fence_insert(brw, &sync->fence);
 }
 
@@ -251,7 +290,7 @@ brw_dri_create_fence(__DRIcontext *ctx)
    if (!fence)
       return NULL;
 
-   brw_fence_init(brw, fence);
+   brw_fence_init(brw, fence, BRW_FENCE_TYPE_BO_WAIT);
    brw_fence_insert(brw, fence);
 
    return fence;
