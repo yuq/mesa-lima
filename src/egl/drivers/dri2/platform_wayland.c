@@ -1283,6 +1283,8 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
  cleanup_registry:
    wl_registry_destroy(dri2_dpy->wl_registry);
    wl_event_queue_destroy(dri2_dpy->wl_queue);
+   if (disp->PlatformDisplay == NULL)
+      wl_display_disconnect(dri2_dpy->wl_dpy);
  cleanup_dpy:
    free(dri2_dpy);
    disp->DriverData = NULL;
@@ -1921,6 +1923,8 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
  cleanup_registry:
    wl_registry_destroy(dri2_dpy->wl_registry);
    wl_event_queue_destroy(dri2_dpy->wl_queue);
+   if (disp->PlatformDisplay == NULL)
+      wl_display_disconnect(dri2_dpy->wl_dpy);
  cleanup_dpy:
    free(dri2_dpy);
    disp->DriverData = NULL;
