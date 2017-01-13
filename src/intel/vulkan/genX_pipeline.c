@@ -286,7 +286,6 @@ static void
 emit_3dstate_sbe(struct anv_pipeline *pipeline)
 {
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
-   const struct brw_vue_map *fs_input_map;
 
    if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT)) {
       anv_batch_emit(&pipeline->batch, GENX(3DSTATE_SBE), sbe);
@@ -296,7 +295,8 @@ emit_3dstate_sbe(struct anv_pipeline *pipeline)
       return;
    }
 
-   fs_input_map = anv_pipeline_get_fs_input_map(pipeline);
+   const struct brw_vue_map *fs_input_map =
+      &anv_pipeline_get_last_vue_prog_data(pipeline)->vue_map;
 
    struct GENX(3DSTATE_SBE) sbe = {
       GENX(3DSTATE_SBE_header),
@@ -846,19 +846,6 @@ emit_cb_state(struct anv_pipeline *pipeline,
    }
 }
 
-/**
- * Get the brw_vue_prog_data for the last stage which outputs VUEs.
- */
-static inline struct brw_vue_prog_data *
-get_last_vue_prog_data(struct anv_pipeline *pipeline)
-{
-   for (int s = MESA_SHADER_GEOMETRY; s >= 0; s--) {
-      if (pipeline->shaders[s])
-         return (struct brw_vue_prog_data *) pipeline->shaders[s]->prog_data;
-   }
-   return NULL;
-}
-
 static void
 emit_3dstate_clip(struct anv_pipeline *pipeline,
                   const VkPipelineViewportStateCreateInfo *vp_info,
@@ -886,7 +873,8 @@ emit_3dstate_clip(struct anv_pipeline *pipeline,
       clip.FrontWinding            = vk_to_gen_front_face[rs_info->frontFace];
       clip.CullMode                = vk_to_gen_cullmode[rs_info->cullMode];
       clip.ViewportZClipTestEnable = !pipeline->depth_clamp_enable;
-      const struct brw_vue_prog_data *last = get_last_vue_prog_data(pipeline);
+      const struct brw_vue_prog_data *last =
+         anv_pipeline_get_last_vue_prog_data(pipeline);
       if (last) {
          clip.UserClipDistanceClipTestEnableBitmask = last->clip_distance_mask;
          clip.UserClipDistanceCullTestEnableBitmask = last->cull_distance_mask;

@@ -1498,15 +1498,15 @@ ANV_DECL_GET_PROG_DATA_FUNC(gs, MESA_SHADER_GEOMETRY)
 ANV_DECL_GET_PROG_DATA_FUNC(wm, MESA_SHADER_FRAGMENT)
 ANV_DECL_GET_PROG_DATA_FUNC(cs, MESA_SHADER_COMPUTE)
 
-static inline const struct brw_vue_map *
-anv_pipeline_get_fs_input_map(const struct anv_pipeline *pipeline)
+static inline const struct brw_vue_prog_data *
+anv_pipeline_get_last_vue_prog_data(const struct anv_pipeline *pipeline)
 {
    if (anv_pipeline_has_stage(pipeline, MESA_SHADER_GEOMETRY))
-      return &get_gs_prog_data(pipeline)->base.vue_map;
+      return &get_gs_prog_data(pipeline)->base;
    else if (anv_pipeline_has_stage(pipeline, MESA_SHADER_TESS_EVAL))
-      return &get_tes_prog_data(pipeline)->base.vue_map;
+      return &get_tes_prog_data(pipeline)->base;
    else
-      return &get_vs_prog_data(pipeline)->base.vue_map;
+      return &get_vs_prog_data(pipeline)->base;
 }
 
 VkResult

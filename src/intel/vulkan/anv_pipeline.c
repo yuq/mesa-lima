@@ -270,7 +270,7 @@ populate_wm_prog_key(const struct anv_pipeline *pipeline,
    /* TODO: we could set this to 0 based on the information in nir_shader, but
     * this function is called before spirv_to_nir. */
    const struct brw_vue_map *vue_map =
-      anv_pipeline_get_fs_input_map(pipeline);
+      &anv_pipeline_get_last_vue_prog_data(pipeline)->vue_map;
    key->input_slots_valid = vue_map->slots_valid;
 
    /* Vulkan doesn't specify a default */
