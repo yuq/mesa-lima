@@ -90,7 +90,7 @@ brw_fence_finish(struct brw_fence *fence)
    mtx_destroy(&fence->mutex);
 }
 
-static void
+static bool MUST_CHECK
 brw_fence_insert(struct brw_context *brw, struct brw_fence *fence)
 {
    brw_emit_mi_flush(brw);
@@ -102,9 +102,16 @@ brw_fence_insert(struct brw_context *brw, struct brw_fence *fence)
 
       fence->batch_bo = brw->batch.bo;
       drm_intel_bo_reference(fence->batch_bo);
-      intel_batchbuffer_flush(brw);
+
+      if (intel_batchbuffer_flush(brw) < 0) {
+         drm_intel_bo_unreference(fence->batch_bo);
+         fence->batch_bo = NULL;
+         return false;
+      }
       break;
    }
+
+   return true;
 }
 
 static bool
@@ -115,8 +122,10 @@ brw_fence_has_completed_locked(struct brw_fence *fence)
 
    switch (fence->type) {
    case BRW_FENCE_TYPE_BO_WAIT:
-      if (!fence->batch_bo)
+      if (!fence->batch_bo) {
+         /* There may be no batch if intel_batchbuffer_flush() failed. */
          return false;
+      }
 
       if (drm_intel_bo_busy(fence->batch_bo))
          return false;
@@ -152,7 +161,10 @@ brw_fence_client_wait_locked(struct brw_context *brw, struct brw_fence *fence,
 
    switch (fence->type) {
    case BRW_FENCE_TYPE_BO_WAIT:
-      assert(fence->batch_bo);
+      if (!fence->batch_bo) {
+         /* There may be no batch if intel_batchbuffer_flush() failed. */
+         return false;
+      }
 
       /* DRM_IOCTL_I915_GEM_WAIT uses a signed 64 bit timeout and returns
        * immediately for timeouts <= 0.  The best we can do is to clamp the
@@ -236,7 +248,12 @@ brw_gl_fence_sync(struct gl_context *ctx, struct gl_sync_object *_sync,
    struct brw_gl_sync *sync = (struct brw_gl_sync *) _sync;
 
    brw_fence_init(brw, &sync->fence, BRW_FENCE_TYPE_BO_WAIT);
-   brw_fence_insert(brw, &sync->fence);
+
+   if (!brw_fence_insert(brw, &sync->fence)) {
+      /* FIXME: There exists no way to report a GL error here. If an error
+       * occurs, continue silently and hope for the best.
+       */
+   }
 }
 
 static void
@@ -291,7 +308,12 @@ brw_dri_create_fence(__DRIcontext *ctx)
       return NULL;
 
    brw_fence_init(brw, fence, BRW_FENCE_TYPE_BO_WAIT);
-   brw_fence_insert(brw, fence);
+
+   if (!brw_fence_insert(brw, fence)) {
+      brw_fence_finish(fence);
+      free(fence);
+      return NULL;
+   }
 
    return fence;
 }
