@@ -208,6 +208,7 @@ struct dri2_egl_display
 
 #ifdef HAVE_WAYLAND_PLATFORM
    struct wl_display        *wl_dpy;
+   struct wl_display        *wl_dpy_wrapper;
    struct wl_registry       *wl_registry;
    struct wl_drm            *wl_server_drm;
    struct wl_drm            *wl_drm;

@@ -74,9 +74,8 @@ roundtrip(struct dri2_egl_display *dri2_dpy)
    struct wl_callback *callback;
    int done = 0, ret = 0;
 
-   callback = wl_display_sync(dri2_dpy->wl_dpy);
+   callback = wl_display_sync(dri2_dpy->wl_dpy_wrapper);
    wl_callback_add_listener(callback, &sync_listener, &done);
-   wl_proxy_set_queue((struct wl_proxy *) callback, dri2_dpy->wl_queue);
    while (ret != -1 && !done)
       ret = wl_display_dispatch_queue(dri2_dpy->wl_dpy, dri2_dpy->wl_queue);
 
@@ -780,11 +779,9 @@ dri2_wl_swap_buffers_with_damage(_EGLDriver *drv,
     * handle the commit and send a release event before checking for a free
     * buffer */
    if (dri2_surf->throttle_callback == NULL) {
-      dri2_surf->throttle_callback = wl_display_sync(dri2_dpy->wl_dpy);
+      dri2_surf->throttle_callback = wl_display_sync(dri2_dpy->wl_dpy_wrapper);
       wl_callback_add_listener(dri2_surf->throttle_callback,
                                &throttle_listener, dri2_surf);
-      wl_proxy_set_queue((struct wl_proxy *) dri2_surf->throttle_callback,
-                         dri2_dpy->wl_queue);
    }
 
    wl_display_flush(dri2_dpy->wl_dpy);
@@ -1159,12 +1156,17 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_dpy->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
 
+   dri2_dpy->wl_dpy_wrapper = wl_proxy_create_wrapper(dri2_dpy->wl_dpy);
+   if (dri2_dpy->wl_dpy_wrapper == NULL)
+      goto cleanup_dpy_wrapper;
+
+   wl_proxy_set_queue((struct wl_proxy *) dri2_dpy->wl_dpy_wrapper,
+                      dri2_dpy->wl_queue);
+
    if (dri2_dpy->own_device)
       wl_display_dispatch_pending(dri2_dpy->wl_dpy);
 
-   dri2_dpy->wl_registry = wl_display_get_registry(dri2_dpy->wl_dpy);
-   wl_proxy_set_queue((struct wl_proxy *) dri2_dpy->wl_registry,
-                      dri2_dpy->wl_queue);
+   dri2_dpy->wl_registry = wl_display_get_registry(dri2_dpy->wl_dpy_wrapper);
    wl_registry_add_listener(dri2_dpy->wl_registry,
                             &registry_listener_drm, dri2_dpy);
    if (roundtrip(dri2_dpy) < 0 || dri2_dpy->wl_drm == NULL)
@@ -1282,6 +1284,8 @@ dri2_initialize_wayland_drm(_EGLDriver *drv, _EGLDisplay *disp)
    wl_drm_destroy(dri2_dpy->wl_drm);
  cleanup_registry:
    wl_registry_destroy(dri2_dpy->wl_registry);
+   wl_proxy_wrapper_destroy(dri2_dpy->wl_dpy_wrapper);
+ cleanup_dpy_wrapper:
    wl_event_queue_destroy(dri2_dpy->wl_queue);
    if (disp->PlatformDisplay == NULL)
       wl_display_disconnect(dri2_dpy->wl_dpy);
@@ -1595,11 +1599,9 @@ dri2_wl_swrast_commit_backbuffer(struct dri2_egl_surface *dri2_surf)
     * handle the commit and send a release event before checking for a free
     * buffer */
    if (dri2_surf->throttle_callback == NULL) {
-      dri2_surf->throttle_callback = wl_display_sync(dri2_dpy->wl_dpy);
+      dri2_surf->throttle_callback = wl_display_sync(dri2_dpy->wl_dpy_wrapper);
       wl_callback_add_listener(dri2_surf->throttle_callback,
                                &throttle_listener, dri2_surf);
-      wl_proxy_set_queue((struct wl_proxy *) dri2_surf->throttle_callback,
-                         dri2_dpy->wl_queue);
    }
 
    wl_display_flush(dri2_dpy->wl_dpy);
@@ -1875,12 +1877,17 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
 
    dri2_dpy->wl_queue = wl_display_create_queue(dri2_dpy->wl_dpy);
 
+   dri2_dpy->wl_dpy_wrapper = wl_proxy_create_wrapper(dri2_dpy->wl_dpy);
+   if (dri2_dpy->wl_dpy_wrapper == NULL)
+      goto cleanup_dpy_wrapper;
+
+   wl_proxy_set_queue((struct wl_proxy *) dri2_dpy->wl_dpy_wrapper,
+                      dri2_dpy->wl_queue);
+
    if (dri2_dpy->own_device)
       wl_display_dispatch_pending(dri2_dpy->wl_dpy);
 
-   dri2_dpy->wl_registry = wl_display_get_registry(dri2_dpy->wl_dpy);
-   wl_proxy_set_queue((struct wl_proxy *) dri2_dpy->wl_registry,
-                      dri2_dpy->wl_queue);
+   dri2_dpy->wl_registry = wl_display_get_registry(dri2_dpy->wl_dpy_wrapper);
    wl_registry_add_listener(dri2_dpy->wl_registry,
                             &registry_listener_swrast, dri2_dpy);
 
@@ -1922,6 +1929,8 @@ dri2_initialize_wayland_swrast(_EGLDriver *drv, _EGLDisplay *disp)
    wl_shm_destroy(dri2_dpy->wl_shm);
  cleanup_registry:
    wl_registry_destroy(dri2_dpy->wl_registry);
+   wl_proxy_wrapper_destroy(dri2_dpy->wl_dpy_wrapper);
+ cleanup_dpy_wrapper:
    wl_event_queue_destroy(dri2_dpy->wl_queue);
    if (disp->PlatformDisplay == NULL)
       wl_display_disconnect(dri2_dpy->wl_dpy);
