@@ -118,7 +118,7 @@ NVC0LegalizeSSA::handleFTZ(Instruction *i)
 void
 NVC0LegalizeSSA::handleTEXLOD(TexInstruction *i)
 {
-   if (i->tex.target.isMS())
+   if (i->tex.levelZero)
       return;
 
    ImmediateValue lod;
