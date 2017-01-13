@@ -21,8 +21,6 @@
  * IN THE SOFTWARE.
  */
 
-#ifdef ENABLE_SHADER_CACHE
-
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
@@ -707,5 +705,3 @@ disk_cache_has_key(struct disk_cache *cache, cache_key key)
 
    return memcmp(entry, key, CACHE_KEY_SIZE) == 0;
 }
-
-#endif

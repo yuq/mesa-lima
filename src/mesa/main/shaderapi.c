@@ -1612,7 +1612,6 @@ _mesa_LinkProgram(GLuint programObj)
                                                            "glLinkProgram"));
 }
 
-#if defined(HAVE_SHA1)
 /**
  * Generate a SHA-1 hash value string for given source string.
  */
@@ -1723,7 +1722,6 @@ read_shader(const gl_shader_stage stage, const char *source)
 
    return buffer;
 }
-#endif /* HAVE_SHA1 */
 
 /**
  * Called via glShaderSource() and glShaderSourceARB() API functions.
@@ -1740,9 +1738,7 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    GLcharARB *source;
    struct gl_shader *sh;
 
-#if defined(HAVE_SHA1)
    GLcharARB *replacement;
-#endif /* HAVE_SHA1 */
 
    sh = _mesa_lookup_shader_err(ctx, shaderObj, "glShaderSourceARB");
    if (!sh)
@@ -1799,7 +1795,6 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    source[totalLength - 1] = '\0';
    source[totalLength - 2] = '\0';
 
-#if defined(HAVE_SHA1)
    /* Dump original shader source to MESA_SHADER_DUMP_PATH and replace
     * if corresponding entry found from MESA_SHADER_READ_PATH.
     */
@@ -1810,7 +1805,6 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
       free(source);
       source = replacement;
    }
-#endif /* HAVE_SHA1 */
 
    shader_source(sh, source);
 
