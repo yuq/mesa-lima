@@ -1739,7 +1739,7 @@ vec4_vs_visitor::setup_attributes(int payload_reg)
       int needed_slots =
          (vs_prog_data->double_inputs_read & BITFIELD64_BIT(first)) ? 2 : 1;
       for (int c = 0; c < needed_slots; c++) {
-         attribute_map[nr_attributes] = payload_reg + nr_attributes;
+         attribute_map[first + c] = payload_reg + nr_attributes;
          nr_attributes++;
          vs_inputs &= ~BITFIELD64_BIT(first + c);
       }

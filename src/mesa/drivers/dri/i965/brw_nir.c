@@ -95,19 +95,9 @@ add_const_offset_to_base(nir_shader *nir, nir_variable_mode mode)
    }
 }
 
-struct remap_vs_attrs_params {
-   shader_info *nir_info;
-   bool is_scalar;
-};
-
 static bool
-remap_vs_attrs(nir_block *block, void *closure)
+remap_vs_attrs(nir_block *block, shader_info *nir_info)
 {
-   struct remap_vs_attrs_params *params =
-      (struct remap_vs_attrs_params *) closure;
-   shader_info *nir_info = params->nir_info;
-   bool is_scalar = params->is_scalar;
-
    nir_foreach_instr(instr, block) {
       if (instr->type != nir_instr_type_intrinsic)
          continue;
@@ -123,7 +113,7 @@ remap_vs_attrs(nir_block *block, void *closure)
          int attr = intrin->const_index[0];
          int slot = _mesa_bitcount_64(nir_info->inputs_read &
                                       BITFIELD64_MASK(attr));
-         intrin->const_index[0] = is_scalar ? 4 * slot : slot;
+         intrin->const_index[0] = 4 * slot;
       }
    }
    return true;
@@ -267,11 +257,6 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
                         bool use_legacy_snorm_formula,
                         const uint8_t *vs_attrib_wa_flags)
 {
-   struct remap_vs_attrs_params params = {
-      .nir_info = nir->info,
-      .is_scalar = is_scalar
-   };
-
    /* Start with the location of the variable's base. */
    foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       var->data.driver_location = var->data.location;
@@ -291,11 +276,14 @@ brw_nir_lower_vs_inputs(nir_shader *nir,
    brw_nir_apply_attribute_workarounds(nir, use_legacy_snorm_formula,
                                        vs_attrib_wa_flags);
 
-   /* Finally, translate VERT_ATTRIB_* values into the actual registers. */
-   nir_foreach_function(function, nir) {
-      if (function->impl) {
-         nir_foreach_block(block, function->impl) {
-            remap_vs_attrs(block, &params);
+   if (is_scalar) {
+      /* Finally, translate VERT_ATTRIB_* values into the actual registers. */
+
+      nir_foreach_function(function, nir) {
+         if (function->impl) {
+            nir_foreach_block(block, function->impl) {
+               remap_vs_attrs(block, nir->info);
+            }
          }
       }
    }
