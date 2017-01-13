@@ -147,7 +147,7 @@ radv_physical_device_finish(struct radv_physical_device *device)
 	device->ws->destroy(device->ws);
 }
 
-static const VkExtensionProperties global_extensions[] = {
+static const VkExtensionProperties instance_extensions[] = {
 	{
 		.extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
 		.specVersion = 25,
@@ -172,7 +172,7 @@ static const VkExtensionProperties global_extensions[] = {
 #endif
 };
 
-static const VkExtensionProperties device_extensions[] = {
+static const VkExtensionProperties common_device_extensions[] = {
 	{
 		.extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
 		.specVersion = 1,
@@ -258,9 +258,9 @@ VkResult radv_CreateInstance(
 
 	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
 		bool found = false;
-		for (uint32_t j = 0; j < ARRAY_SIZE(global_extensions); j++) {
+		for (uint32_t j = 0; j < ARRAY_SIZE(instance_extensions); j++) {
 			if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-				   global_extensions[j].extensionName) == 0) {
+				   instance_extensions[j].extensionName) == 0) {
 				found = true;
 				break;
 			}
@@ -697,9 +697,9 @@ VkResult radv_CreateDevice(
 
 	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
 		bool found = false;
-		for (uint32_t j = 0; j < ARRAY_SIZE(device_extensions); j++) {
+		for (uint32_t j = 0; j < ARRAY_SIZE(common_device_extensions); j++) {
 			if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-				   device_extensions[j].extensionName) == 0) {
+				   common_device_extensions[j].extensionName) == 0) {
 				found = true;
 				break;
 			}
@@ -826,14 +826,14 @@ VkResult radv_EnumerateInstanceExtensionProperties(
 	VkExtensionProperties*                      pProperties)
 {
 	if (pProperties == NULL) {
-		*pPropertyCount = ARRAY_SIZE(global_extensions);
+		*pPropertyCount = ARRAY_SIZE(instance_extensions);
 		return VK_SUCCESS;
 	}
 
-	*pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(global_extensions));
-	typed_memcpy(pProperties, global_extensions, *pPropertyCount);
+	*pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(instance_extensions));
+	typed_memcpy(pProperties, instance_extensions, *pPropertyCount);
 
-	if (*pPropertyCount < ARRAY_SIZE(global_extensions))
+	if (*pPropertyCount < ARRAY_SIZE(instance_extensions))
 		return VK_INCOMPLETE;
 
 	return VK_SUCCESS;
@@ -846,14 +846,14 @@ VkResult radv_EnumerateDeviceExtensionProperties(
 	VkExtensionProperties*                      pProperties)
 {
 	if (pProperties == NULL) {
-		*pPropertyCount = ARRAY_SIZE(device_extensions);
+		*pPropertyCount = ARRAY_SIZE(common_device_extensions);
 		return VK_SUCCESS;
 	}
 
-	*pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(device_extensions));
-	typed_memcpy(pProperties, device_extensions, *pPropertyCount);
+	*pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(common_device_extensions));
+	typed_memcpy(pProperties, common_device_extensions, *pPropertyCount);
 
-	if (*pPropertyCount < ARRAY_SIZE(device_extensions))
+	if (*pPropertyCount < ARRAY_SIZE(common_device_extensions))
 		return VK_INCOMPLETE;
 
 	return VK_SUCCESS;
