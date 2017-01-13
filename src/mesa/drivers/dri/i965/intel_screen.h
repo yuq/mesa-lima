@@ -47,8 +47,8 @@ struct intel_screen
    uint64_t max_gtt_map_object_size;
 
    bool no_hw;
-
    bool hw_has_swizzling;
+   bool has_exec_fence; /**< I915_PARAM_HAS_EXEC_FENCE */
 
    int hw_has_timestamp;
 

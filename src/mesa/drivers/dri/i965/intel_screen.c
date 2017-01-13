@@ -1817,6 +1817,9 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
         intel_get_boolean(screen, I915_PARAM_HAS_RESOURCE_STREAMER);
    }
 
+   screen->has_exec_fence =
+     intel_get_boolean(screen, I915_PARAM_HAS_EXEC_FENCE);
+
    return (const __DRIconfig**) intel_screen_make_configs(dri_screen);
 }
 
