@@ -3754,11 +3754,13 @@ _mesa_get_framebuffer_attachment_parameter(struct gl_context *ctx,
        *  either no framebuffer is bound to target; or the default framebuffer
        *  is bound, attachment is DEPTH or STENCIL, and the number of depth or
        *  stencil bits, respectively, is zero."
+       *
+       * Note that we don't need explicit checks on DEPTH and STENCIL, because
+       * on the case the spec is pointing, att->Type is already NONE, so we
+       * just need to check att->Type.
        */
-      *params = (_mesa_is_winsys_fbo(buffer) &&
-                 ((attachment != GL_DEPTH && attachment != GL_STENCIL) ||
-                  (att->Type != GL_NONE)))
-         ? GL_FRAMEBUFFER_DEFAULT : att->Type;
+      *params = (_mesa_is_winsys_fbo(buffer) && att->Type != GL_NONE) ?
+         GL_FRAMEBUFFER_DEFAULT : att->Type;
       return;
    case GL_FRAMEBUFFER_ATTACHMENT_OBJECT_NAME_EXT:
       if (att->Type == GL_RENDERBUFFER_EXT) {
