@@ -95,9 +95,7 @@ extern "C" {
 #define MAX_PUSH_CONSTANTS_SIZE 128
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
-#define MAX_SAMPLES_LOG2 4 /* SKL supports 16 samples */
 
-#define anv_noreturn __attribute__((__noreturn__))
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
 static inline uint32_t
@@ -242,9 +240,6 @@ void anv_loge_v(const char *format, va_list va);
 #else
 #define anv_validate if (0)
 #endif
-
-void anv_abortf(const char *format, ...) anv_noreturn anv_printflike(1, 2);
-void anv_abortfv(const char *format, va_list va) anv_noreturn;
 
 #define stub_return(v) \
    do { \
@@ -494,8 +489,6 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
                                       unsigned per_thread_scratch);
 
 extern struct anv_dispatch_table dtable;
-
-#define VK_ICD_WSI_PLATFORM_MAX 5
 
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
@@ -1892,14 +1885,6 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_query_pool, VkQueryPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
-
-#define ANV_DEFINE_STRUCT_CASTS(__anv_type, __VkType) \
-   \
-   static inline const __VkType * \
-   __anv_type ## _to_ ## __VkType(const struct __anv_type *__anv_obj) \
-   { \
-      return (const __VkType *) __anv_obj; \
-   }
 
 /* Gen-specific function declarations */
 #ifdef genX
