@@ -263,6 +263,11 @@ void *radv_lookup_entrypoint(const char *name);
 
 extern struct radv_dispatch_table dtable;
 
+struct radv_extensions {
+	VkExtensionProperties       *ext_array;
+	uint32_t                    num_ext;
+};
+
 struct radv_physical_device {
 	VK_LOADER_DATA                              _loader_data;
 
@@ -275,6 +280,7 @@ struct radv_physical_device {
 	uint8_t                                     uuid[VK_UUID_SIZE];
 
 	struct wsi_device                       wsi_device;
+	struct radv_extensions                      extensions;
 };
 
 struct radv_instance {

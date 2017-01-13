@@ -77,6 +77,108 @@ radv_device_get_cache_uuid(enum radeon_family family, void *uuid)
 	return 0;
 }
 
+static const VkExtensionProperties instance_extensions[] = {
+	{
+		.extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
+		.specVersion = 25,
+	},
+#ifdef VK_USE_PLATFORM_XCB_KHR
+	{
+		.extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+		.specVersion = 6,
+	},
+#endif
+#ifdef VK_USE_PLATFORM_XLIB_KHR
+	{
+		.extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+		.specVersion = 6,
+	},
+#endif
+#ifdef VK_USE_PLATFORM_WAYLAND_KHR
+	{
+		.extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
+		.specVersion = 5,
+	},
+#endif
+};
+
+static const VkExtensionProperties common_device_extensions[] = {
+	{
+		.extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+	{
+		.extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		.specVersion = 68,
+	},
+	{
+		.extensionName = VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+	{
+		.extensionName = VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+};
+
+static VkResult
+radv_extensions_register(struct radv_instance *instance,
+			struct radv_extensions *extensions,
+			const VkExtensionProperties *new_ext,
+			uint32_t num_ext)
+{
+	size_t new_size;
+	VkExtensionProperties *new_ptr;
+
+	assert(new_ext && num_ext > 0);
+
+	if (!new_ext)
+		return VK_ERROR_INITIALIZATION_FAILED;
+
+	new_size = (extensions->num_ext + num_ext) * sizeof(VkExtensionProperties);
+	new_ptr = vk_realloc(&instance->alloc, extensions->ext_array,
+				new_size, 8, VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
+
+	/* Old array continues to be valid, update nothing */
+	if (!new_ptr)
+		return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+	memcpy(&new_ptr[extensions->num_ext], new_ext,
+		num_ext * sizeof(VkExtensionProperties));
+	extensions->ext_array = new_ptr;
+	extensions->num_ext += num_ext;
+
+	return VK_SUCCESS;
+}
+
+static void
+radv_extensions_finish(struct radv_instance *instance,
+			struct radv_extensions *extensions)
+{
+	assert(extensions);
+
+	if (!extensions)
+		radv_loge("Attemted to free invalid extension struct\n");
+
+	if (extensions->ext_array)
+		vk_free(&instance->alloc, extensions->ext_array);
+}
+
+static bool
+is_extension_enabled(const VkExtensionProperties *extensions,
+			size_t num_ext,
+			const char *name)
+{
+	assert(extensions && name);
+
+	for (uint32_t i = 0; i < num_ext; i++) {
+		if (strcmp(name, extensions[i].extensionName) == 0)
+			return true;
+	}
+
+	return false;
+}
+
 static VkResult
 radv_physical_device_init(struct radv_physical_device *device,
 			  struct radv_instance *instance,
@@ -130,6 +232,13 @@ radv_physical_device_init(struct radv_physical_device *device,
 		goto fail;
 	}
 
+	result = radv_extensions_register(instance,
+					&device->extensions,
+					common_device_extensions,
+					ARRAY_SIZE(common_device_extensions));
+	if (result != VK_SUCCESS)
+		goto fail;
+
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
 	close(fd);
@@ -143,53 +252,11 @@ fail:
 static void
 radv_physical_device_finish(struct radv_physical_device *device)
 {
+	radv_extensions_finish(device->instance, &device->extensions);
 	radv_finish_wsi(device);
 	device->ws->destroy(device->ws);
 }
 
-static const VkExtensionProperties instance_extensions[] = {
-	{
-		.extensionName = VK_KHR_SURFACE_EXTENSION_NAME,
-		.specVersion = 25,
-	},
-#ifdef VK_USE_PLATFORM_XCB_KHR
-	{
-		.extensionName = VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-		.specVersion = 6,
-	},
-#endif
-#ifdef VK_USE_PLATFORM_XLIB_KHR
-	{
-		.extensionName = VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-		.specVersion = 6,
-	},
-#endif
-#ifdef VK_USE_PLATFORM_WAYLAND_KHR
-	{
-		.extensionName = VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME,
-		.specVersion = 5,
-	},
-#endif
-};
-
-static const VkExtensionProperties common_device_extensions[] = {
-	{
-		.extensionName = VK_KHR_SAMPLER_MIRROR_CLAMP_TO_EDGE_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
-		.extensionName = VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-		.specVersion = 68,
-	},
-	{
-		.extensionName = VK_AMD_DRAW_INDIRECT_COUNT_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
-		.extensionName = VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-};
 
 static void *
 default_alloc_func(void *pUserData, size_t size, size_t align,
@@ -257,15 +324,9 @@ VkResult radv_CreateInstance(
 	}
 
 	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-		bool found = false;
-		for (uint32_t j = 0; j < ARRAY_SIZE(instance_extensions); j++) {
-			if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-				   instance_extensions[j].extensionName) == 0) {
-				found = true;
-				break;
-			}
-		}
-		if (!found)
+		if (!is_extension_enabled(instance_extensions,
+					ARRAY_SIZE(instance_extensions),
+					pCreateInfo->ppEnabledExtensionNames[i]))
 			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
 	}
 
@@ -273,6 +334,8 @@ VkResult radv_CreateInstance(
 			       VK_SYSTEM_ALLOCATION_SCOPE_INSTANCE);
 	if (!instance)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+	memset(instance, 0, sizeof(*instance));
 
 	instance->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 
@@ -696,15 +759,9 @@ VkResult radv_CreateDevice(
 	struct radv_device *device;
 
 	for (uint32_t i = 0; i < pCreateInfo->enabledExtensionCount; i++) {
-		bool found = false;
-		for (uint32_t j = 0; j < ARRAY_SIZE(common_device_extensions); j++) {
-			if (strcmp(pCreateInfo->ppEnabledExtensionNames[i],
-				   common_device_extensions[j].extensionName) == 0) {
-				found = true;
-				break;
-			}
-		}
-		if (!found)
+		if (!is_extension_enabled(physical_device->extensions.ext_array,
+					physical_device->extensions.num_ext,
+					pCreateInfo->ppEnabledExtensionNames[i]))
 			return vk_error(VK_ERROR_EXTENSION_NOT_PRESENT);
 	}
 
@@ -845,15 +902,17 @@ VkResult radv_EnumerateDeviceExtensionProperties(
 	uint32_t*                                   pPropertyCount,
 	VkExtensionProperties*                      pProperties)
 {
+	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
+
 	if (pProperties == NULL) {
-		*pPropertyCount = ARRAY_SIZE(common_device_extensions);
+		*pPropertyCount = pdevice->extensions.num_ext;
 		return VK_SUCCESS;
 	}
 
-	*pPropertyCount = MIN2(*pPropertyCount, ARRAY_SIZE(common_device_extensions));
-	typed_memcpy(pProperties, common_device_extensions, *pPropertyCount);
+	*pPropertyCount = MIN2(*pPropertyCount, pdevice->extensions.num_ext);
+	typed_memcpy(pProperties, pdevice->extensions.ext_array, *pPropertyCount);
 
-	if (*pPropertyCount < ARRAY_SIZE(common_device_extensions))
+	if (*pPropertyCount < pdevice->extensions.num_ext)
 		return VK_INCOMPLETE;
 
 	return VK_SUCCESS;
