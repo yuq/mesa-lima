@@ -605,6 +605,12 @@ brw_postprocess_nir(nir_shader *nir, const struct brw_compiler *compiler,
 
    UNUSED bool progress; /* Written by OPT */
 
+
+   do {
+      progress = false;
+      OPT(nir_opt_algebraic_before_ffma);
+   } while (progress);
+
    nir = nir_optimize(nir, compiler, is_scalar);
 
    if (devinfo->gen >= 6) {
