@@ -459,6 +459,7 @@ enum ring_type radv_queue_family_to_ring(int f);
 struct radv_queue {
 	VK_LOADER_DATA                              _loader_data;
 	struct radv_device *                         device;
+	struct radeon_winsys_ctx                    *hw_ctx;
 	int queue_family_index;
 	int queue_idx;
 };
@@ -470,7 +471,6 @@ struct radv_device {
 
 	struct radv_instance *                       instance;
 	struct radeon_winsys *ws;
-	struct radeon_winsys_ctx *hw_ctx;
 
 	struct radv_meta_state                       meta_state;
 

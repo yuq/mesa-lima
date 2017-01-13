@@ -364,7 +364,7 @@ VkResult radv_QueuePresentKHR(
 
 		RADV_FROM_HANDLE(radv_fence, fence, swapchain->fences[0]);
 		struct radeon_winsys_fence *base_fence = fence->fence;
-		struct radeon_winsys_ctx *ctx = queue->device->hw_ctx;
+		struct radeon_winsys_ctx *ctx = queue->hw_ctx;
 		queue->device->ws->cs_submit(ctx, queue->queue_idx,
 					     &queue->device->empty_cs[queue->queue_family_index],
 					     1,

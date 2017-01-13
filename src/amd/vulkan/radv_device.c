@@ -662,7 +662,7 @@ void radv_GetPhysicalDeviceMemoryProperties(
 	};
 }
 
-static void
+static int
 radv_queue_init(struct radv_device *device, struct radv_queue *queue,
 		int queue_family_index, int idx)
 {
@@ -670,11 +670,19 @@ radv_queue_init(struct radv_device *device, struct radv_queue *queue,
 	queue->device = device;
 	queue->queue_family_index = queue_family_index;
 	queue->queue_idx = idx;
+
+	queue->hw_ctx = device->ws->ctx_create(device->ws);
+	if (!queue->hw_ctx)
+		return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+	return VK_SUCCESS;
 }
 
 static void
 radv_queue_finish(struct radv_queue *queue)
 {
+	if (queue->hw_ctx)
+		queue->device->ws->ctx_destroy(queue->hw_ctx);
 }
 
 VkResult radv_CreateDevice(
@@ -730,23 +738,20 @@ VkResult radv_CreateDevice(
 			goto fail;
 		}
 
+		memset(device->queues[qfi], 0, queue_create->queueCount * sizeof(struct radv_queue));
+
 		device->queue_count[qfi] = queue_create->queueCount;
 
-		for (unsigned q = 0; q < queue_create->queueCount; q++)
-			radv_queue_init(device, &device->queues[qfi][q], qfi, q);
-	}
-
-	device->hw_ctx = device->ws->ctx_create(device->ws);
-	if (!device->hw_ctx) {
-		result = VK_ERROR_OUT_OF_HOST_MEMORY;
-		goto fail;
+		for (unsigned q = 0; q < queue_create->queueCount; q++) {
+			result = radv_queue_init(device, &device->queues[qfi][q], qfi, q);
+			if (result != VK_SUCCESS)
+				goto fail;
+		}
 	}
 
 	result = radv_device_init_meta(device);
-	if (result != VK_SUCCESS) {
-		device->ws->ctx_destroy(device->hw_ctx);
+	if (result != VK_SUCCESS)
 		goto fail;
-	}
 
 	radv_device_init_msaa(device);
 
@@ -791,9 +796,6 @@ fail:
 			vk_free(&device->alloc, device->queues[i]);
 	}
 
-	if (device->hw_ctx)
-		device->ws->ctx_destroy(device->hw_ctx);
-
 	vk_free(&device->alloc, device);
 	return result;
 }
@@ -807,7 +809,6 @@ void radv_DestroyDevice(
 	if (device->trace_bo)
 		device->ws->buffer_destroy(device->trace_bo);
 
-	device->ws->ctx_destroy(device->hw_ctx);
 	for (unsigned i = 0; i < RADV_MAX_QUEUE_FAMILIES; i++) {
 		for (unsigned q = 0; q < device->queue_count[i]; q++)
 			radv_queue_finish(&device->queues[i][q]);
@@ -920,7 +921,7 @@ VkResult radv_QueueSubmit(
 	RADV_FROM_HANDLE(radv_queue, queue, _queue);
 	RADV_FROM_HANDLE(radv_fence, fence, _fence);
 	struct radeon_winsys_fence *base_fence = fence ? fence->fence : NULL;
-	struct radeon_winsys_ctx *ctx = queue->device->hw_ctx;
+	struct radeon_winsys_ctx *ctx = queue->hw_ctx;
 	int ret;
 	uint32_t max_cs_submission = queue->device->trace_bo ? 1 : UINT32_MAX;
 
@@ -968,7 +969,7 @@ VkResult radv_QueueSubmit(
 			}
 			if (queue->device->trace_bo) {
 				bool success = queue->device->ws->ctx_wait_idle(
-							queue->device->hw_ctx,
+							queue->hw_ctx,
 							radv_queue_family_to_ring(
 								queue->queue_family_index),
 							queue->queue_idx);
@@ -999,7 +1000,7 @@ VkResult radv_QueueWaitIdle(
 {
 	RADV_FROM_HANDLE(radv_queue, queue, _queue);
 
-	queue->device->ws->ctx_wait_idle(queue->device->hw_ctx,
+	queue->device->ws->ctx_wait_idle(queue->hw_ctx,
 	                                 radv_queue_family_to_ring(queue->queue_family_index),
 	                                 queue->queue_idx);
 	return VK_SUCCESS;
