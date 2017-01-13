@@ -45,6 +45,10 @@
 #define DRM_FORMAT_MOD_INVALID ((1ULL<<56) - 1)
 #endif
 
+#ifndef DRM_FORMAT_MOD_LINEAR
+#define DRM_FORMAT_MOD_LINEAR 0
+#endif
+
 static const __DRIconfigOptionsExtension brw_config_options = {
    .base = { __DRI_CONFIG_OPTIONS, 1 },
    .xml =
@@ -511,13 +515,36 @@ intel_destroy_image(__DRIimage *image)
    free(image);
 }
 
+enum modifier_priority {
+   MODIFIER_PRIORITY_INVALID = 0,
+   MODIFIER_PRIORITY_LINEAR,
+};
+
+const uint64_t priority_to_modifier[] = {
+   [MODIFIER_PRIORITY_INVALID] = DRM_FORMAT_MOD_INVALID,
+   [MODIFIER_PRIORITY_LINEAR] = DRM_FORMAT_MOD_LINEAR,
+};
+
 static uint64_t
 select_best_modifier(struct gen_device_info *devinfo,
                      const uint64_t *modifiers,
                      const unsigned count)
 {
-   /* Modifiers are not supported by this DRI driver */
-   return DRM_FORMAT_MOD_INVALID;
+
+   enum modifier_priority prio = MODIFIER_PRIORITY_INVALID;
+
+   for (int i = 0; i < count; i++) {
+      switch (modifiers[i]) {
+      case DRM_FORMAT_MOD_LINEAR:
+         prio = MAX2(prio, MODIFIER_PRIORITY_LINEAR);
+         break;
+      case DRM_FORMAT_MOD_INVALID:
+      default:
+         break;
+      }
+   }
+
+   return priority_to_modifier[prio];
 }
 
 static __DRIimage *
@@ -530,7 +557,10 @@ intel_create_image_common(__DRIscreen *dri_screen,
 {
    __DRIimage *image;
    struct intel_screen *screen = dri_screen->driverPrivate;
-   uint32_t tiling;
+   /* Historically, X-tiled was the default, and so lack of modifier means
+    * X-tiled.
+    */
+   uint32_t tiling = I915_TILING_X;
    int cpp;
    unsigned long pitch;
 
@@ -541,15 +571,17 @@ intel_create_image_common(__DRIscreen *dri_screen,
    assert(!(use && count));
 
    uint64_t modifier = select_best_modifier(&screen->devinfo, modifiers, count);
-   assert(modifier == DRM_FORMAT_MOD_INVALID);
+   switch (modifier) {
+   case DRM_FORMAT_MOD_LINEAR:
+      tiling = I915_TILING_NONE;
+      break;
+   case DRM_FORMAT_MOD_INVALID:
+      if (modifiers)
+         return NULL;
+   default:
+         break;
+   }
 
-   if (modifier == DRM_FORMAT_MOD_INVALID && modifiers)
-      return NULL;
-
-   /* Historically, X-tiled was the default, and so lack of modifier means
-    * X-tiled.
-    */
-   tiling = I915_TILING_X;
    if (use & __DRI_IMAGE_USE_CURSOR) {
       if (width != 64 || height != 64)
 	 return NULL;
@@ -574,6 +606,7 @@ intel_create_image_common(__DRIscreen *dri_screen,
    image->width = width;
    image->height = height;
    image->pitch = pitch;
+   image->modifier = modifier;
 
    return image;
 }
