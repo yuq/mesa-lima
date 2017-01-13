@@ -1958,18 +1958,7 @@ generate_code(struct brw_codegen *p,
 
          brw_set_default_access_mode(p, BRW_ALIGN_1);
 
-         struct brw_reg tmp = retype(dst, src[0].type);
-         tmp.hstride = BRW_HORIZONTAL_STRIDE_2;
-         tmp.width = BRW_WIDTH_4;
-         src[0].vstride = BRW_VERTICAL_STRIDE_4;
-         src[0].hstride = BRW_HORIZONTAL_STRIDE_1;
-         src[0].width = BRW_WIDTH_4;
-         brw_MOV(p, tmp, src[0]);
-
-         tmp.vstride = BRW_VERTICAL_STRIDE_8;
-         tmp.hstride = BRW_HORIZONTAL_STRIDE_2;
-         tmp.width = BRW_WIDTH_4;
-         brw_MOV(p, dst, tmp);
+         brw_MOV(p, dst, src[0]);
 
          brw_set_default_access_mode(p, BRW_ALIGN_16);
          break;

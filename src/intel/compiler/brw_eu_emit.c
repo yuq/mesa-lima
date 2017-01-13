@@ -1089,7 +1089,6 @@ void brw_##OP(struct brw_codegen *p,					      \
 }
 
 
-ALU1(MOV)
 ALU2(SEL)
 ALU1(NOT)
 ALU2(AND)
@@ -1123,6 +1122,33 @@ ALU2(SUBB)
 ROUND(RNDZ)
 ROUND(RNDE)
 
+brw_inst *
+brw_MOV(struct brw_codegen *p, struct brw_reg dest, struct brw_reg src0)
+{
+   const struct gen_device_info *devinfo = p->devinfo;
+
+   /* When converting F->DF on IVB/BYT, every odd source channel is ignored.
+    * To avoid the problems that causes, we use a <1,2,0> source region to read
+    * each element twice.
+    */
+   if (devinfo->gen == 7 && !devinfo->is_haswell &&
+       brw_inst_access_mode(devinfo, p->current) == BRW_ALIGN_1 &&
+       dest.type == BRW_REGISTER_TYPE_DF &&
+       (src0.type == BRW_REGISTER_TYPE_F ||
+        src0.type == BRW_REGISTER_TYPE_D ||
+        src0.type == BRW_REGISTER_TYPE_UD) &&
+       !has_scalar_region(src0)) {
+      assert(src0.vstride == BRW_VERTICAL_STRIDE_4 &&
+             src0.width == BRW_WIDTH_4 &&
+             src0.hstride == BRW_HORIZONTAL_STRIDE_1);
+
+      src0.vstride = BRW_VERTICAL_STRIDE_1;
+      src0.width = BRW_WIDTH_2;
+      src0.hstride = BRW_HORIZONTAL_STRIDE_0;
+   }
+
+   return brw_alu1(p, BRW_OPCODE_MOV, dest, src0);
+}
 
 brw_inst *
 brw_ADD(struct brw_codegen *p, struct brw_reg dest,
