@@ -178,9 +178,6 @@ handlePictureParameterBuffer(vlVaDriver *drv, vlVaContext *context, vlVaBuffer *
 
       if (!context->decoder)
          return VA_STATUS_ERROR_ALLOCATION_FAILED;
-
-      context->decoder->begin_frame(context->decoder, context->target,
-         &context->desc.base);
    }
 
    return vaStatus;
@@ -310,6 +307,9 @@ handleVASliceDataBufferType(vlVaContext *context, vlVaBuffer *buf)
    buffers[num_buffers] = buf->data;
    sizes[num_buffers] = buf->size;
    ++num_buffers;
+
+   context->decoder->begin_frame(context->decoder, context->target,
+      &context->desc.base);
    context->decoder->decode_bitstream(context->decoder, context->target, &context->desc.base,
       num_buffers, (const void * const*)buffers, sizes);
 }
