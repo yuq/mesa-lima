@@ -319,7 +319,7 @@ throttle(struct brw_context *brw)
 /* TODO: Push this whole function into bufmgr.
  */
 static int
-do_flush_locked(struct brw_context *brw)
+do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
 {
    struct intel_batchbuffer *batch = &brw->batch;
    int ret = 0;
@@ -353,11 +353,15 @@ do_flush_locked(struct brw_context *brw)
             brw_annotate_aub(brw);
 
 	 if (brw->hw_ctx == NULL || batch->ring != RENDER_RING) {
+            assert(in_fence_fd == -1);
+            assert(out_fence_fd == NULL);
             ret = drm_intel_bo_mrb_exec(batch->bo, 4 * USED_BATCH(*batch),
                                         NULL, 0, 0, flags);
 	 } else {
-	    ret = drm_intel_gem_bo_context_exec(batch->bo, brw->hw_ctx,
-                                                4 * USED_BATCH(*batch), flags);
+	    ret = drm_intel_gem_bo_fence_exec(batch->bo, brw->hw_ctx,
+                                                4 * USED_BATCH(*batch),
+                                                in_fence_fd, out_fence_fd,
+                                                flags);
 	 }
       }
 
@@ -378,9 +382,17 @@ do_flush_locked(struct brw_context *brw)
    return ret;
 }
 
+/**
+ * The in_fence_fd is ignored if -1.  Otherwise this function takes ownership
+ * of the fd.
+ *
+ * The out_fence_fd is ignored if NULL. Otherwise, the caller takes ownership
+ * of the returned fd.
+ */
 int
-_intel_batchbuffer_flush(struct brw_context *brw,
-			 const char *file, int line)
+_intel_batchbuffer_flush_fence(struct brw_context *brw,
+                               int in_fence_fd, int *out_fence_fd,
+                               const char *file, int line)
 {
    int ret;
 
@@ -419,7 +431,7 @@ _intel_batchbuffer_flush(struct brw_context *brw,
    /* Check that we didn't just wrap our batchbuffer at a bad time. */
    assert(!brw->no_batch_wrap);
 
-   ret = do_flush_locked(brw);
+   ret = do_flush_locked(brw, in_fence_fd, out_fence_fd);
 
    if (unlikely(INTEL_DEBUG & DEBUG_SYNC)) {
       fprintf(stderr, "waiting for idle\n");

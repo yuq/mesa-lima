@@ -46,14 +46,16 @@ void intel_batchbuffer_save_state(struct brw_context *brw);
 void intel_batchbuffer_reset_to_saved(struct brw_context *brw);
 void intel_batchbuffer_require_space(struct brw_context *brw, GLuint sz,
                                      enum brw_gpu_ring ring);
+int _intel_batchbuffer_flush_fence(struct brw_context *brw,
+                                   int in_fence_fd, int *out_fence_fd,
+                                   const char *file, int line);
 
-int _intel_batchbuffer_flush(struct brw_context *brw,
-			     const char *file, int line);
+#define intel_batchbuffer_flush(brw) \
+   _intel_batchbuffer_flush_fence((brw), -1, NULL, __FILE__, __LINE__)
 
-#define intel_batchbuffer_flush(intel) \
-	_intel_batchbuffer_flush(intel, __FILE__, __LINE__)
-
-
+#define intel_batchbuffer_flush_fence(brw, in_fence_fd, out_fence_fd) \
+   _intel_batchbuffer_flush_fence((brw), (in_fence_fd), (out_fence_fd), \
+                                  __FILE__, __LINE__)
 
 /* Unlike bmBufferData, this currently requires the buffer be mapped.
  * Consider it a convenience function wrapping multple
