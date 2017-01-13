@@ -658,14 +658,6 @@ try_damage_buffer(struct dri2_egl_surface *dri2_surf,
                   const EGLint *rects,
                   EGLint n_rects)
 {
-/* The WL_SURFACE_DAMAGE_BUFFER_SINCE_VERSION macro and
- * wl_proxy_get_version() were both introduced in wayland 1.10.
- * Instead of bumping our wayland dependency we just make this
- * function conditional on the required 1.10 features, falling
- * back to old (correct but suboptimal) behaviour for older
- * wayland.
- */
-#ifdef WL_SURFACE_DAMAGE_BUFFER_SINCE_VERSION
    int i;
 
    if (wl_proxy_get_version((struct wl_proxy *) dri2_surf->wl_win->surface)
@@ -681,8 +673,6 @@ try_damage_buffer(struct dri2_egl_surface *dri2_surf,
                                rect[2], rect[3]);
    }
    return EGL_TRUE;
-#endif
-   return EGL_FALSE;
 }
 /**
  * Called via eglSwapBuffers(), drv->API.SwapBuffers().
