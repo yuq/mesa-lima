@@ -139,7 +139,7 @@ brw_upload_clip_prog(struct brw_context *brw)
                         _NEW_POLYGON |
                         _NEW_TRANSFORM,
                         BRW_NEW_BLORP |
-                        BRW_NEW_FRAGMENT_PROGRAM |
+                        BRW_NEW_FS_PROG_DATA |
                         BRW_NEW_REDUCED_PRIMITIVE |
                         BRW_NEW_VUE_MAP_GEOM_OUT))
       return;
@@ -149,15 +149,14 @@ brw_upload_clip_prog(struct brw_context *brw)
    /* Populate the key:
     */
 
-   const struct gl_program *fprog = brw->fragment_program;
-   if (fprog) {
-      assert(brw->gen < 6);
-      struct gen4_fragment_program *p = (struct gen4_fragment_program *) fprog;
-
-      /* BRW_NEW_FRAGMENT_PROGRAM */
-      key.contains_flat_varying = p->contains_flat_varying;
-      key.contains_noperspective_varying = p->contains_noperspective_varying;
-      key.interp_mode = p->interp_mode;
+   /* BRW_NEW_FS_PROG_DATA */
+   const struct brw_wm_prog_data *wm_prog_data =
+      brw_wm_prog_data(brw->wm.base.prog_data);
+   if (wm_prog_data) {
+      key.contains_flat_varying = wm_prog_data->contains_flat_varying;
+      key.contains_noperspective_varying =
+         wm_prog_data->contains_noperspective_varying;
+      key.interp_mode = wm_prog_data->interp_mode;
    }
 
    /* BRW_NEW_REDUCED_PRIMITIVE */

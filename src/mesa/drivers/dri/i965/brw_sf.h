@@ -47,7 +47,7 @@
 struct brw_sf_prog_key {
    GLbitfield64 attrs;
    bool contains_flat_varying;
-   unsigned char *interp_mode;
+   const unsigned char *interp_mode;
    uint8_t point_sprite_coord_replace;
    GLuint primitive:2;
    GLuint do_twoside_color:1;

@@ -49,7 +49,7 @@ struct brw_clip_prog_key {
    GLbitfield64 attrs;
    bool contains_flat_varying;
    bool contains_noperspective_varying;
-   unsigned char *interp_mode;
+   const unsigned char *interp_mode;
    GLuint primitive:4;
    GLuint nr_userclip:4;
    GLuint pv_first:1;

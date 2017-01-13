@@ -412,6 +412,9 @@ struct brw_wm_prog_data {
    bool has_side_effects;
    bool pulls_bary;
 
+   bool contains_flat_varying;
+   bool contains_noperspective_varying;
+
    /**
     * Mask of which interpolation modes are required by the fragment shader.
     * Used in hardware setup on gen6+.
@@ -423,6 +426,11 @@ struct brw_wm_prog_data {
     * needed for setting up 3DSTATE_SF/SBE.
     */
    uint32_t flat_inputs;
+
+   /* Mapping of VUE slots to interpolation modes.
+    * Used by the Gen4-5 clip/sf/wm stages.
+    */
+   unsigned char interp_mode[65]; /* BRW_VARYING_SLOT_COUNT */
 
    /**
     * Map from gl_varying_slot to the position within the FS setup data
@@ -580,7 +588,7 @@ void brw_compute_tess_vue_map(struct brw_vue_map *const vue_map,
 /* brw_interpolation_map.c */
 void brw_setup_vue_interpolation(struct brw_vue_map *vue_map,
                                  struct nir_shader *nir,
-                                 struct gl_program *prog,
+                                 struct brw_wm_prog_data *prog_data,
                                  const struct gen_device_info *devinfo);
 
 enum shader_dispatch_mode {

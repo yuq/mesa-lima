@@ -37,20 +37,20 @@ static char const *get_qual_name(int mode)
 }
 
 static void
-gen4_frag_prog_set_interp_modes(struct gen4_fragment_program *prog,
+gen4_frag_prog_set_interp_modes(struct brw_wm_prog_data *prog_data,
                                 struct brw_vue_map *vue_map,
                                 unsigned location, unsigned slot_count,
                                 enum glsl_interp_mode interp)
 {
    for (unsigned k = 0; k < slot_count; k++) {
       unsigned slot = vue_map->varying_to_slot[location + k];
-      if (slot != -1 && prog->interp_mode[slot] == INTERP_MODE_NONE) {
-         prog->interp_mode[slot] = interp;
+      if (slot != -1 && prog_data->interp_mode[slot] == INTERP_MODE_NONE) {
+         prog_data->interp_mode[slot] = interp;
 
-         if (prog->interp_mode[slot] == INTERP_MODE_FLAT) {
-            prog->contains_flat_varying = true;
-         } else if (prog->interp_mode[slot] == INTERP_MODE_NOPERSPECTIVE) {
-            prog->contains_noperspective_varying = true;
+         if (prog_data->interp_mode[slot] == INTERP_MODE_FLAT) {
+            prog_data->contains_flat_varying = true;
+         } else if (prog_data->interp_mode[slot] == INTERP_MODE_NOPERSPECTIVE) {
+            prog_data->contains_noperspective_varying = true;
          }
       }
    }
@@ -59,13 +59,11 @@ gen4_frag_prog_set_interp_modes(struct gen4_fragment_program *prog,
 /* Set up interpolation modes for every element in the VUE */
 void
 brw_setup_vue_interpolation(struct brw_vue_map *vue_map, nir_shader *nir,
-                            struct gl_program *prog,
+                            struct brw_wm_prog_data *prog_data,
                             const struct gen_device_info *devinfo)
 {
-   struct gen4_fragment_program *fprog = (struct gen4_fragment_program *) prog;
-
    /* Initialise interp_mode. INTERP_MODE_NONE == 0 */
-   memset(fprog->interp_mode, 0, sizeof(fprog->interp_mode));
+   memset(prog_data->interp_mode, 0, sizeof(prog_data->interp_mode));
 
    if (!vue_map)
       return;
@@ -75,20 +73,20 @@ brw_setup_vue_interpolation(struct brw_vue_map *vue_map, nir_shader *nir,
     */
    unsigned pos_slot = vue_map->varying_to_slot[VARYING_SLOT_POS];
    if (pos_slot != -1) {;
-      fprog->interp_mode[pos_slot] = INTERP_MODE_NOPERSPECTIVE;
-      fprog->contains_noperspective_varying = true;
+      prog_data->interp_mode[pos_slot] = INTERP_MODE_NOPERSPECTIVE;
+      prog_data->contains_noperspective_varying = true;
    }
 
    foreach_list_typed(nir_variable, var, node, &nir->inputs) {
       unsigned location = var->data.location;
       unsigned slot_count = glsl_count_attribute_slots(var->type, false);
 
-      gen4_frag_prog_set_interp_modes(fprog, vue_map, location, slot_count,
+      gen4_frag_prog_set_interp_modes(prog_data, vue_map, location, slot_count,
                                       var->data.interpolation);
 
       if (location == VARYING_SLOT_COL0 || location == VARYING_SLOT_COL1) {
          location = location + VARYING_SLOT_BFC0 - VARYING_SLOT_COL0;
-         gen4_frag_prog_set_interp_modes(fprog, vue_map, location,
+         gen4_frag_prog_set_interp_modes(prog_data, vue_map, location,
                                          slot_count, var->data.interpolation);
       }
    }
@@ -105,7 +103,7 @@ brw_setup_vue_interpolation(struct brw_vue_map *vue_map, nir_shader *nir,
 
          fprintf(stderr, "%d: %d %s ofs %d\n",
                  i, varying,
-                 get_qual_name(fprog->interp_mode[i]),
+                 get_qual_name(prog_data->interp_mode[i]),
                  brw_vue_slot_to_offset(i));
       }
    }

@@ -6382,10 +6382,17 @@ brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                unsigned *final_assembly_size,
                char **error_str)
 {
+   const struct gen_device_info *devinfo = compiler->devinfo;
+
    nir_shader *shader = nir_shader_clone(mem_ctx, src_shader);
    shader = brw_nir_apply_sampler_key(shader, compiler, &key->tex, true);
-   brw_nir_lower_fs_inputs(shader, vue_map, prog, compiler->devinfo, key);
+   brw_nir_lower_fs_inputs(shader, devinfo, key);
    brw_nir_lower_fs_outputs(shader);
+
+   if (devinfo->gen < 6) {
+      brw_setup_vue_interpolation(vue_map, shader, prog_data, devinfo);
+   }
+
    if (!key->multisample_fbo)
       NIR_PASS_V(shader, demote_sample_qualifiers);
    NIR_PASS_V(shader, move_interpolation_to_top);

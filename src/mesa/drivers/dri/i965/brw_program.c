@@ -158,14 +158,7 @@ static struct gl_program *brwNewProgram(struct gl_context *ctx, GLenum target,
    }
 
    case GL_FRAGMENT_PROGRAM_ARB: {
-      struct brw_program *prog;
-      if (brw->gen < 6) {
-         struct gen4_fragment_program *g4_prog =
-            rzalloc(NULL, struct gen4_fragment_program);
-         prog = &g4_prog->base;
-      } else {
-         prog = rzalloc(NULL, struct brw_program);
-      }
+      struct brw_program *prog = rzalloc(NULL, struct brw_program);
 
       if (prog) {
 	 prog->id = get_new_program_id(brw->screen);

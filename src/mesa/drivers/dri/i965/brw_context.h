@@ -338,20 +338,6 @@ struct brw_program {
 };
 
 
-struct gen4_fragment_program {
-   struct brw_program base;
-
-   bool contains_flat_varying;
-   bool contains_noperspective_varying;
-
-   /*
-    * Mapping of varying slots to interpolation modes.
-    * Used Gen4/5 by the clip|sf|wm stages.
-    */
-   unsigned char interp_mode[BRW_VARYING_SLOT_COUNT];
-};
-
-
 /**
  * Bitmask indicating which fragment shader inputs represent varyings (and
  * hence have to be delivered to the fragment shader by the SF/SBE stage).

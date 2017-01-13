@@ -103,8 +103,7 @@ void brw_nir_lower_vs_inputs(nir_shader *nir,
 void brw_nir_lower_vue_inputs(nir_shader *nir, bool is_scalar,
                               const struct brw_vue_map *vue_map);
 void brw_nir_lower_tes_inputs(nir_shader *nir, const struct brw_vue_map *vue);
-void brw_nir_lower_fs_inputs(nir_shader *nir, struct brw_vue_map *vue_map,
-                             struct gl_program *prog,
+void brw_nir_lower_fs_inputs(nir_shader *nir,
                              const struct gen_device_info *devinfo,
                              const struct brw_wm_prog_key *key);
 void brw_nir_lower_vue_outputs(nir_shader *nir, bool is_scalar);
