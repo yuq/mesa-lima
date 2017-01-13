@@ -420,8 +420,16 @@ emit_rs_state(struct anv_pipeline *pipeline,
    sf.TriangleStripListProvokingVertexSelect = 0;
    sf.LineStripListProvokingVertexSelect = 0;
    sf.TriangleFanProvokingVertexSelect = 1;
-   sf.PointWidthSource = Vertex;
-   sf.PointWidth = 1.0;
+
+   const struct brw_vue_prog_data *last_vue_prog_data =
+      anv_pipeline_get_last_vue_prog_data(pipeline);
+
+   if (last_vue_prog_data->vue_map.slots_valid & VARYING_BIT_PSIZ) {
+      sf.PointWidthSource = Vertex;
+   } else {
+      sf.PointWidthSource = State;
+      sf.PointWidth = 1.0;
+   }
 
 #if GEN_GEN >= 8
    struct GENX(3DSTATE_RASTER) raster = {
