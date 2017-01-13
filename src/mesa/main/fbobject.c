@@ -1505,6 +1505,24 @@ get_framebuffer_parameteriv(struct gl_context *ctx, struct gl_framebuffer *fb,
    case GL_FRAMEBUFFER_DEFAULT_FIXED_SAMPLE_LOCATIONS:
       *params = fb->DefaultGeometry.FixedSampleLocations;
       break;
+   case GL_DOUBLEBUFFER:
+      *params = fb->Visual.doubleBufferMode;
+      break;
+   case GL_IMPLEMENTATION_COLOR_READ_FORMAT:
+      *params = _mesa_get_color_read_format(ctx, fb, func);
+      break;
+   case GL_IMPLEMENTATION_COLOR_READ_TYPE:
+      *params = _mesa_get_color_read_type(ctx, fb, func);
+      break;
+   case GL_SAMPLES:
+      *params = _mesa_geometric_samples(fb);
+      break;
+   case GL_SAMPLE_BUFFERS:
+      *params = _mesa_geometric_samples(fb) > 0;
+      break;
+   case GL_STEREO:
+      *params = fb->Visual.stereoMode;
+      break;
    default:
       _mesa_error(ctx, GL_INVALID_ENUM,
                   "%s(pname=0x%x)", func, pname);
