@@ -1275,8 +1275,10 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
 
          strip_hyphens(s);
          if (!LIST_IS_EMPTY(&pane->graph_list)) {
-            strcpy(LIST_ENTRY(struct hud_graph,
-                              pane->graph_list.prev, head)->name, s);
+            struct hud_graph *graph;
+            graph = LIST_ENTRY(struct hud_graph, pane->graph_list.prev, head);
+            strncpy(graph->name, s, sizeof(graph->name)-1);
+            graph->name[sizeof(graph->name)-1] = 0;
          }
       }
 
