@@ -456,15 +456,15 @@ gcm_place_instr(nir_instr *instr, struct gcm_state *state)
 static bool
 opt_gcm_impl(nir_function_impl *impl, bool value_number)
 {
+   nir_metadata_require(impl, nir_metadata_block_index |
+                              nir_metadata_dominance);
+
    struct gcm_state state;
 
    state.impl = impl;
    state.instr = NULL;
    exec_list_make_empty(&state.instrs);
    state.blocks = rzalloc_array(NULL, struct gcm_block_info, impl->num_blocks);
-
-   nir_metadata_require(impl, nir_metadata_block_index |
-                              nir_metadata_dominance);
 
    gcm_build_block_info(&impl->body, &state, 0);
 
