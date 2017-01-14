@@ -168,6 +168,8 @@ blorp_surf_for_miptree(struct brw_context *brw,
    struct isl_surf *aux_surf;
    if (brw->gen == 6 && mt->hiz_buf) {
       aux_surf = &mt->hiz_buf->aux_base.surf;
+   } else if (mt->mcs_buf) {
+      aux_surf = &mt->mcs_buf->surf;
    } else {
       aux_surf = &tmp_surfs[1];
       intel_miptree_get_aux_isl_surf(brw, mt, surf->aux_usage, aux_surf);

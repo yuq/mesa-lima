@@ -143,13 +143,17 @@ brw_emit_surface_state(struct brw_context *brw,
    if ((mt->mcs_buf || intel_miptree_sample_with_hiz(brw, mt)) &&
        !(flags & INTEL_AUX_BUFFER_DISABLED)) {
       aux_usage = intel_miptree_get_aux_isl_usage(brw, mt);
-      intel_miptree_get_aux_isl_surf(brw, mt, aux_usage, &aux_surf_s);
-      aux_surf = &aux_surf_s;
 
       if (mt->mcs_buf) {
+         aux_surf = &mt->mcs_buf->surf;
+
+         assert(mt->mcs_buf->offset == 0);
          aux_bo = mt->mcs_buf->bo;
          aux_offset = mt->mcs_buf->bo->offset64 + mt->mcs_buf->offset;
       } else {
+         intel_miptree_get_aux_isl_surf(brw, mt, aux_usage, &aux_surf_s);
+         aux_surf = &aux_surf_s;
+
          aux_bo = mt->hiz_buf->aux_base.bo;
          aux_offset = mt->hiz_buf->aux_base.bo->offset64;
       }

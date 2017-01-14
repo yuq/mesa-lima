@@ -1622,56 +1622,6 @@ intel_miptree_init_mcs(struct brw_context *brw,
 }
 
 static struct intel_miptree_aux_buffer *
-intel_mcs_miptree_buf_create(struct brw_context *brw,
-                             struct intel_mipmap_tree *mt,
-                             mesa_format format,
-                             unsigned mcs_width,
-                             unsigned mcs_height,
-                             uint32_t layout_flags)
-{
-   struct intel_miptree_aux_buffer *buf = calloc(sizeof(*buf), 1);
-   struct intel_mipmap_tree *temp_mt;
-
-   if (!buf)
-      return NULL;
-
-   /* From the Ivy Bridge PRM, Vol4 Part1 p76, "MCS Base Address":
-    *
-    *     "The MCS surface must be stored as Tile Y."
-    */
-   layout_flags |= MIPTREE_LAYOUT_TILING_Y;
-   temp_mt = miptree_create(brw,
-                            mt->target,
-                            format,
-                            mt->first_level,
-                            mt->last_level,
-                            mcs_width,
-                            mcs_height,
-                            mt->logical_depth0,
-                            0 /* num_samples */,
-                            layout_flags);
-   if (!temp_mt) {
-      free(buf);
-      return NULL;
-   }
-
-   buf->bo = temp_mt->bo;
-   buf->offset = temp_mt->offset;
-   buf->size = temp_mt->total_height * temp_mt->pitch;
-   buf->pitch = temp_mt->pitch;
-   buf->qpitch = temp_mt->qpitch;
-
-   /* Just hang on to the BO which backs the AUX buffer; the rest of the miptree
-    * structure should go away. We use miptree create simply as a means to make
-    * sure all the constraints for the buffer are satisfied.
-    */
-   brw_bo_reference(temp_mt->bo);
-   intel_miptree_release(&temp_mt);
-
-   return buf;
-}
-
-static struct intel_miptree_aux_buffer *
 intel_alloc_aux_buffer(struct brw_context *brw,
                        const char *name,
                        const struct isl_surf *aux_surf,
@@ -1711,36 +1661,6 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
    assert(mt->mcs_buf == NULL);
    assert((mt->aux_disable & INTEL_AUX_DISABLE_MCS) == 0);
 
-   /* Choose the correct format for the MCS buffer.  All that really matters
-    * is that we allocate the right buffer size, since we'll always be
-    * accessing this miptree using MCS-specific hardware mechanisms, which
-    * infer the correct format based on num_samples.
-    */
-   mesa_format format;
-   switch (num_samples) {
-   case 2:
-   case 4:
-      /* 8 bits/pixel are required for MCS data when using 4x MSAA (2 bits for
-       * each sample).
-       */
-      format = MESA_FORMAT_R_UNORM8;
-      break;
-   case 8:
-      /* 32 bits/pixel are required for MCS data when using 8x MSAA (3 bits
-       * for each sample, plus 8 padding bits).
-       */
-      format = MESA_FORMAT_R_UINT32;
-      break;
-   case 16:
-      /* 64 bits/pixel are required for MCS data when using 16x MSAA (4 bits
-       * for each sample).
-       */
-      format = MESA_FORMAT_RG_UINT32;
-      break;
-   default:
-      unreachable("Unrecognized sample count in intel_miptree_alloc_mcs");
-   };
-
    /* Multisampled miptrees are only supported for single level. */
    assert(mt->first_level == 0);
    enum isl_aux_state **aux_state =
@@ -1748,12 +1668,19 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
    if (!aux_state)
       return false;
 
-   mt->mcs_buf =
-      intel_mcs_miptree_buf_create(brw, mt,
-                                   format,
-                                   mt->logical_width0,
-                                   mt->logical_height0,
-                                   MIPTREE_LAYOUT_ACCELERATED_UPLOAD);
+   struct isl_surf temp_main_surf;
+   struct isl_surf temp_mcs_surf;
+
+   /* Create first an ISL presentation for the main color surface and let ISL
+    * calculate equivalent MCS surface against it.
+    */
+   intel_miptree_get_isl_surf(brw, mt, &temp_main_surf);
+   assert(isl_surf_get_mcs_surf(&brw->isl_dev, &temp_main_surf,
+                                &temp_mcs_surf));
+
+   const uint32_t alloc_flags = BO_ALLOC_FOR_RENDER;
+   mt->mcs_buf = intel_alloc_aux_buffer(brw, "mcs-miptree",
+                                        &temp_mcs_surf, alloc_flags, mt);
    if (!mt->mcs_buf) {
       free(aux_state);
       return false;
