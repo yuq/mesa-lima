@@ -1730,6 +1730,7 @@ AlgebraicOpt::tryADDToMADOrSAD(Instruction *add, operation toOp)
 
    add->op = toOp;
    add->subOp = src->getInsn()->subOp; // potentially mul-high
+   add->dnz = src->getInsn()->dnz;
    add->dType = src->getInsn()->dType; // sign matters for imad hi
    add->sType = src->getInsn()->sType;
 

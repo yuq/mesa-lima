@@ -1166,6 +1166,9 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
    case TGSI_PROPERTY_FS_EARLY_DEPTH_STENCIL:
       info->prop.fp.earlyFragTests = prop->u[0].Data;
       break;
+   case TGSI_PROPERTY_MUL_ZERO_WINS:
+      info->io.mul_zero_wins = prop->u[0].Data;
+      break;
    default:
       INFO("unhandled TGSI property %d\n", prop->Property.PropertyName);
       break;
@@ -2058,12 +2061,14 @@ Converter::buildDot(int dim)
    Value *src0 = fetchSrc(0, 0), *src1 = fetchSrc(1, 0);
    Value *dotp = getScratch();
 
-   mkOp2(OP_MUL, TYPE_F32, dotp, src0, src1);
+   mkOp2(OP_MUL, TYPE_F32, dotp, src0, src1)
+      ->dnz = info->io.mul_zero_wins;
 
    for (int c = 1; c < dim; ++c) {
       src0 = fetchSrc(0, c);
       src1 = fetchSrc(1, c);
-      mkOp3(OP_MAD, TYPE_F32, dotp, src0, src1, dotp);
+      mkOp3(OP_MAD, TYPE_F32, dotp, src0, src1, dotp)
+         ->dnz = info->io.mul_zero_wins;
    }
    return dotp;
 }
@@ -3033,6 +3038,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          src1 = fetchSrc(1, c);
          geni = mkOp2(op, dstTy, dst0[c], src0, src1);
          geni->subOp = tgsi::opcodeToSubOp(tgsi.getOpcode());
+         if (op == OP_MUL && dstTy == TYPE_F32)
+            geni->dnz = info->io.mul_zero_wins;
       }
       break;
    case TGSI_OPCODE_MAD:
@@ -3043,7 +3050,9 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          src0 = fetchSrc(0, c);
          src1 = fetchSrc(1, c);
          src2 = fetchSrc(2, c);
-         mkOp3(op, dstTy, dst0[c], src0, src1, src2);
+         geni = mkOp3(op, dstTy, dst0[c], src0, src1, src2);
+         if (dstTy == TYPE_F32)
+            geni->dnz = info->io.mul_zero_wins;
       }
       break;
    case TGSI_OPCODE_MOV:
@@ -3142,7 +3151,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       if (dst0[1]) {
          mkOp1(OP_EX2, TYPE_F32, dst0[1], val1);
          mkOp1(OP_RCP, TYPE_F32, dst0[1], dst0[1]);
-         mkOp2(OP_MUL, TYPE_F32, dst0[1], dst0[1], src0);
+         mkOp2(OP_MUL, TYPE_F32, dst0[1], dst0[1], src0)
+            ->dnz = info->io.mul_zero_wins;
       }
       if (dst0[3])
          loadImm(dst0[3], 1.0f);
@@ -3175,7 +3185,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       if (dst0[1]) {
          src0 = fetchSrc(0, 1);
          src1 = fetchSrc(1, 1);
-         mkOp2(OP_MUL, TYPE_F32, dst0[1], src0, src1);
+         mkOp2(OP_MUL, TYPE_F32, dst0[1], src0, src1)
+            ->dnz = info->io.mul_zero_wins;
       }
       if (dst0[2])
          mkMov(dst0[2], fetchSrc(0, 2));
@@ -3188,7 +3199,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          src1 = fetchSrc(1, c);
          src2 = fetchSrc(2, c);
          mkOp3(OP_MAD, TYPE_F32, dst0[c],
-               mkOp2v(OP_SUB, TYPE_F32, getSSA(), src1, src2), src0, src2);
+               mkOp2v(OP_SUB, TYPE_F32, getSSA(), src1, src2), src0, src2)
+            ->dnz = info->io.mul_zero_wins;
       }
       break;
    case TGSI_OPCODE_LIT:
@@ -3200,12 +3212,14 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
             val0 = getSSA();
             src0 = fetchSrc(1, (c + 1) % 3);
             src1 = fetchSrc(0, (c + 2) % 3);
-            mkOp2(OP_MUL, TYPE_F32, val0, src0, src1);
+            mkOp2(OP_MUL, TYPE_F32, val0, src0, src1)
+               ->dnz = info->io.mul_zero_wins;
             mkOp1(OP_NEG, TYPE_F32, val0, val0);
 
             src0 = fetchSrc(0, (c + 1) % 3);
             src1 = fetchSrc(1, (c + 2) % 3);
-            mkOp3(OP_MAD, TYPE_F32, dst0[c], src0, src1, val0);
+            mkOp3(OP_MAD, TYPE_F32, dst0[c], src0, src1, val0)
+               ->dnz = info->io.mul_zero_wins;
          } else {
             loadImm(dst0[c], 1.0f);
          }
