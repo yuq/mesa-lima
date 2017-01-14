@@ -3547,12 +3547,25 @@ Which shader stage will MOST LIKELY follow after this shader when the shader
 is bound. This is only a hint to the driver and doesn't have to be precise.
 Only set for VS and TES.
 
-TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH / HEIGHT / DEPTH
-"""""""""""""""""""""""""""""""""""""""""""""""""""
+CS_FIXED_BLOCK_WIDTH / HEIGHT / DEPTH
+"""""""""""""""""""""""""""""""""""""
 
 Threads per block in each dimension, if known at compile time. If the block size
 is known all three should be at least 1. If it is unknown they should all be set
 to 0 or not set.
+
+MUL_ZERO_WINS
+"""""""""""""
+
+The MUL TGSI operation (FP32 multiplication) will return 0 if either
+of the operands are equal to 0. That means that 0 * Inf = 0. This
+should be set the same way for an entire pipeline. Note that this
+applies not only to the literal MUL TGSI opcode, but all FP32
+multiplications implied by other operations, such as MAD, FMA, DP2,
+DP3, DP4, DPH, DST, LOG, LRP, XPD, and possibly others. If there is a
+mismatch between shaders, then it is unspecified whether this behavior
+will be enabled.
+
 
 Texture Sampling and Texture Formats
 ------------------------------------
