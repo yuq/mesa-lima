@@ -537,6 +537,10 @@ CodeEmitterNVC0::emitFMAD(const Instruction *i)
 
       if (i->saturate)
          code[0] |= 1 << 5;
+
+      if (i->dnz)
+         code[0] |= 1 << 7;
+      else
       if (i->ftz)
          code[0] |= 1 << 6;
    } else {
