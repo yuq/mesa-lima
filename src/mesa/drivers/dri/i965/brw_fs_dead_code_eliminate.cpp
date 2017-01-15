@@ -34,6 +34,42 @@
  * yet in the tail end of this block.
  */
 
+/**
+ * Is it safe to eliminate the instruction?
+ */
+static bool
+can_eliminate(const fs_inst *inst, BITSET_WORD *flag_live)
+{
+    return !inst->is_control_flow() &&
+           !inst->has_side_effects() &&
+           !(flag_live[0] & inst->flags_written()) &&
+           !inst->writes_accumulator;
+}
+
+/**
+ * Is it safe to omit the write, making the destination ARF null?
+ */
+static bool
+can_omit_write(const fs_inst *inst)
+{
+   switch (inst->opcode) {
+   case SHADER_OPCODE_UNTYPED_ATOMIC:
+   case SHADER_OPCODE_UNTYPED_ATOMIC_LOGICAL:
+   case SHADER_OPCODE_TYPED_ATOMIC:
+   case SHADER_OPCODE_TYPED_ATOMIC_LOGICAL:
+      return true;
+   default:
+      /* We can eliminate the destination write for ordinary instructions,
+       * but not most SENDs.
+       */
+      if (inst->opcode < 128 && inst->mlen == 0)
+         return true;
+
+      /* It might not be safe for other virtual opcodes. */
+      return false;
+   }
+}
+
 bool
 fs_visitor::dead_code_eliminate()
 {
@@ -52,29 +88,21 @@ fs_visitor::dead_code_eliminate()
              sizeof(BITSET_WORD));
 
       foreach_inst_in_block_reverse_safe(fs_inst, inst, block) {
-         if (inst->dst.file == VGRF && !inst->has_side_effects()) {
+         if (inst->dst.file == VGRF) {
             const unsigned var = live_intervals->var_from_reg(inst->dst);
             bool result_live = false;
 
             for (unsigned i = 0; i < regs_written(inst); i++)
                result_live |= BITSET_TEST(live, var + i);
 
-            if (!result_live) {
+            if (!result_live &&
+                (can_omit_write(inst) || can_eliminate(inst, flag_live))) {
+               inst->dst = fs_reg(retype(brw_null_reg(), inst->dst.type));
                progress = true;
-
-               if (inst->writes_accumulator || inst->flags_written()) {
-                  inst->dst = fs_reg(retype(brw_null_reg(), inst->dst.type));
-               } else {
-                  inst->opcode = BRW_OPCODE_NOP;
-               }
             }
          }
 
-         if (inst->dst.is_null() &&
-             !inst->is_control_flow() &&
-             !inst->has_side_effects() &&
-             !(flag_live[0] & inst->flags_written()) &&
-             !inst->writes_accumulator) {
+         if (inst->dst.is_null() && can_eliminate(inst, flag_live)) {
             inst->opcode = BRW_OPCODE_NOP;
             progress = true;
          }
