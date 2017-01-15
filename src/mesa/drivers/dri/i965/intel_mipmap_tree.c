@@ -1678,7 +1678,12 @@ intel_miptree_alloc_mcs(struct brw_context *brw,
    assert(isl_surf_get_mcs_surf(&brw->isl_dev, &temp_main_surf,
                                 &temp_mcs_surf));
 
-   const uint32_t alloc_flags = BO_ALLOC_FOR_RENDER;
+   /* Buffer needs to be initialised requiring the buffer to be immediately
+    * mapped to cpu space for writing. Therefore do not use the gpu access
+    * flag which can cause an unnecessary delay if the backing pages happened
+    * to be just used by the GPU.
+    */
+   const uint32_t alloc_flags = 0;
    mt->mcs_buf = intel_alloc_aux_buffer(brw, "mcs-miptree",
                                         &temp_mcs_surf, alloc_flags, mt);
    if (!mt->mcs_buf) {
