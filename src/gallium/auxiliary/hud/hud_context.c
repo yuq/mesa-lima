@@ -564,7 +564,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_set_constant_buffer(cso, PIPE_SHADER_VERTEX, 0, &hud->constbuf);
 
    /* prepare vertex buffers */
-   hud_alloc_vertices(hud, &hud->bg, 4 * 256, 2 * sizeof(float));
+   hud_alloc_vertices(hud, &hud->bg, 16 * 256, 2 * sizeof(float));
    hud_alloc_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
    hud_alloc_vertices(hud, &hud->text, 16 * 1024, 4 * sizeof(float));
 
