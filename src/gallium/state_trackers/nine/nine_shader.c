@@ -3564,6 +3564,9 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info,
             ureg_property(tx->ureg, TGSI_PROPERTY_FS_COORD_PIXEL_CENTER, TGSI_FS_COORD_PIXEL_CENTER_INTEGER);
     }
 
+    if (GET_CAP(TGSI_MUL_ZERO_WINS))
+       ureg_property(tx->ureg, TGSI_PROPERTY_MUL_ZERO_WINS, 1);
+
     while (!sm1_parse_eof(tx) && !tx->failure)
         sm1_parse_instruction(tx);
     tx->parse++; /* for byte_size */
