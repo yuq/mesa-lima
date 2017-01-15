@@ -3587,6 +3587,8 @@ brw_barrier(struct brw_codegen *p, struct brw_reg src)
 
    assert(devinfo->gen >= 7);
 
+   brw_push_insn_state(p);
+   brw_set_default_access_mode(p, BRW_ALIGN_1);
    inst = next_insn(p, BRW_OPCODE_SEND);
    brw_set_dest(p, inst, retype(brw_null_reg(), BRW_REGISTER_TYPE_UW));
    brw_set_src0(p, inst, src);
@@ -3603,6 +3605,7 @@ brw_barrier(struct brw_codegen *p, struct brw_reg src)
                                   BRW_MESSAGE_GATEWAY_SFID_BARRIER_MSG);
 
    brw_inst_set_mask_control(devinfo, inst, BRW_MASK_DISABLE);
+   brw_pop_insn_state(p);
 }
 
 
