@@ -357,6 +357,7 @@ void ac_parse_ib(FILE *f, uint32_t *ib, int num_dw, int trace_id,
 			if (ib[0] == 0x80000000) {
 				fprintf(f, COLOR_GREEN "NOP (type 2)" COLOR_RESET "\n");
 				ib++;
+				num_dw--;
 				break;
 			}
 			/* fall through */
