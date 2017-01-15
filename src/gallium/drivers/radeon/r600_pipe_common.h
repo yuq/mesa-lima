@@ -352,6 +352,14 @@ struct r600_surface {
 	unsigned db_preload_control;	/* EG and later */
 };
 
+union r600_grbm_counters {
+	struct {
+		unsigned gui_busy;
+		unsigned gui_idle;
+	} named;
+	unsigned array[0];
+};
+
 struct r600_common_screen {
 	struct pipe_screen		b;
 	struct radeon_winsys		*ws;
@@ -385,8 +393,7 @@ struct r600_common_screen {
 	/* GPU load thread. */
 	pipe_mutex			gpu_load_mutex;
 	pipe_thread			gpu_load_thread;
-	unsigned			gpu_load_counter_busy;
-	unsigned			gpu_load_counter_idle;
+	union r600_grbm_counters	grbm_counters;
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 
 	char				renderer_string[100];
@@ -739,8 +746,8 @@ bool r600_check_device_reset(struct r600_common_context *rctx);
 
 /* r600_gpu_load.c */
 void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
-uint64_t r600_gpu_load_begin(struct r600_common_screen *rscreen);
-unsigned r600_gpu_load_end(struct r600_common_screen *rscreen, uint64_t begin);
+uint64_t r600_begin_counter_gui(struct r600_common_screen *rscreen);
+unsigned r600_end_counter_gui(struct r600_common_screen *rscreen, uint64_t begin);
 
 /* r600_perfcounters.c */
 void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
