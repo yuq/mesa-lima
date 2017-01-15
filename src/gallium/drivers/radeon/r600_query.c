@@ -147,6 +147,9 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_GPU_LOAD:
 		query->begin_result = r600_begin_counter_gui(rctx->screen);
 		break;
+	case R600_QUERY_GPU_SHADERS_BUSY:
+		query->begin_result = r600_begin_counter_spi(rctx->screen);
+		break;
 	case R600_QUERY_NUM_COMPILATIONS:
 		query->begin_result = p_atomic_read(&rctx->screen->num_compilations);
 		break;
@@ -237,6 +240,11 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	}
 	case R600_QUERY_GPU_LOAD:
 		query->end_result = r600_end_counter_gui(rctx->screen,
+							 query->begin_result);
+		query->begin_result = 0;
+		break;
+	case R600_QUERY_GPU_SHADERS_BUSY:
+		query->end_result = r600_end_counter_spi(rctx->screen,
 							 query->begin_result);
 		query->begin_result = 0;
 		break;
@@ -1716,6 +1724,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	/* The following queries must be at the end of the list because their
 	 * availability is adjusted dynamically based on the DRM version. */
 	X("GPU-load",			GPU_LOAD,		UINT64, AVERAGE),
+	X("GPU-shaders-busy",		GPU_SHADERS_BUSY,	UINT64, AVERAGE),
 	X("temperature",		GPU_TEMPERATURE,	UINT64, AVERAGE),
 	X("shader-clock",		CURRENT_GPU_SCLK,	HZ, AVERAGE),
 	X("memory-clock",		CURRENT_GPU_MCLK,	HZ, AVERAGE),
@@ -1732,7 +1741,7 @@ static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
 	else if (rscreen->info.drm_major == 3)
 		return ARRAY_SIZE(r600_driver_query_list) - 3;
 	else
-		return ARRAY_SIZE(r600_driver_query_list) - 4;
+		return ARRAY_SIZE(r600_driver_query_list) - 5;
 }
 
 static int r600_get_driver_query_info(struct pipe_screen *screen,

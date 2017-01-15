@@ -42,6 +42,7 @@
 #define SAMPLES_PER_SEC 10000
 
 #define GRBM_STATUS		0x8010
+#define SPI_BUSY(x)		(((x) >> 22) & 0x1)
 #define GUI_ACTIVE(x)		(((x) >> 31) & 0x1)
 
 static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
@@ -50,6 +51,11 @@ static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
 	uint32_t value = 0;
 
 	rscreen->ws->read_registers(rscreen->ws, GRBM_STATUS, 1, &value);
+
+	if (SPI_BUSY(value))
+		p_atomic_inc(&counters->named.spi_busy);
+	else
+		p_atomic_inc(&counters->named.spi_idle);
 
 	if (GUI_ACTIVE(value))
 		p_atomic_inc(&counters->named.gui_busy);
@@ -143,6 +149,16 @@ static unsigned r600_end_counter(struct r600_common_screen *rscreen,
 
 #define BUSY_INDEX(rscreen, field) (&rscreen->grbm_counters.named.field##_busy - \
 				    rscreen->grbm_counters.array)
+
+uint64_t r600_begin_counter_spi(struct r600_common_screen *rscreen)
+{
+	return r600_read_counter(rscreen, BUSY_INDEX(rscreen, spi));
+}
+
+unsigned r600_end_counter_spi(struct r600_common_screen *rscreen, uint64_t begin)
+{
+	return r600_end_counter(rscreen, begin, BUSY_INDEX(rscreen, spi));
+}
 
 uint64_t r600_begin_counter_gui(struct r600_common_screen *rscreen)
 {
