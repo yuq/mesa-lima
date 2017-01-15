@@ -205,7 +205,7 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
 
    if (screen->base.drm->version >= 0x01000101) {
       if (screen->compute) {
-         if (screen->base.class_3d <= NVF0_3D_CLASS) {
+         if (screen->base.class_3d <= GM200_3D_CLASS) {
             count += 2;
          }
       }
@@ -229,7 +229,7 @@ nvc0_screen_get_driver_query_group_info(struct pipe_screen *pscreen,
    } else
    if (id == NVC0_HW_METRIC_QUERY_GROUP) {
       if (screen->compute) {
-          if (screen->base.class_3d <= NVF0_3D_CLASS) {
+          if (screen->base.class_3d <= GM200_3D_CLASS) {
             info->name = "Performance metrics";
             info->max_active_queries = 4; /* A metric uses at least 2 queries */
             info->num_queries = nvc0_hw_metric_get_num_queries(screen);
