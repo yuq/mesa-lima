@@ -662,6 +662,16 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_restore_constant_buffer_slot0(cso, PIPE_SHADER_VERTEX);
 
    pipe_surface_reference(&surf, NULL);
+
+   /* Start queries. */
+   hud_batch_query_begin(hud->batch_query);
+
+   LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
+      LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
+         if (gr->begin_query)
+            gr->begin_query(gr);
+      }
+   }
 }
 
 static void
