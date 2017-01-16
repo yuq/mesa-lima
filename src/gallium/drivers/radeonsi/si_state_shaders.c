@@ -1129,7 +1129,7 @@ static int si_shader_select_with_key(struct si_screen *sscreen,
 	struct si_shader *current = state->current;
 	struct si_shader *iter, *shader = NULL;
 
-	if (unlikely(sscreen->b.chip_class & DBG_NO_OPT_VARIANT)) {
+	if (unlikely(sscreen->b.debug_flags & DBG_NO_OPT_VARIANT)) {
 		memset(&key->opt, 0, sizeof(key->opt));
 	}
 
