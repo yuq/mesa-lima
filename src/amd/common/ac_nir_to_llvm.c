@@ -4557,17 +4557,14 @@ out:
 	return retval;
 }
 
-void ac_compile_nir_shader(LLVMTargetMachineRef tm,
-                           struct ac_shader_binary *binary,
-                           struct ac_shader_config *config,
-                           struct ac_shader_variant_info *shader_info,
-                           struct nir_shader *nir,
-                           const struct ac_nir_compiler_options *options,
-			   bool dump_shader)
+static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
+				   LLVMModuleRef llvm_module,
+				   struct ac_shader_binary *binary,
+				   struct ac_shader_config *config,
+				   struct ac_shader_variant_info *shader_info,
+				   gl_shader_stage stage,
+				   bool dump_shader)
 {
-
-	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, shader_info,
-	                                                     options);
 	if (dump_shader)
 		LLVMDumpModule(llvm_module);
 
@@ -4586,7 +4583,7 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	LLVMDisposeModule(llvm_module);
 	LLVMContextDispose(ctx);
 
-	if (nir->stage == MESA_SHADER_FRAGMENT) {
+	if (stage == MESA_SHADER_FRAGMENT) {
 		shader_info->num_input_vgprs = 0;
 		if (G_0286CC_PERSP_SAMPLE_ENA(config->spi_ps_input_addr))
 			shader_info->num_input_vgprs += 2;
@@ -4626,7 +4623,21 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	/* +3 for scratch wave offset and VCC */
 	config->num_sgprs = MAX2(config->num_sgprs,
 	                         shader_info->num_input_sgprs + 3);
+}
 
+void ac_compile_nir_shader(LLVMTargetMachineRef tm,
+                           struct ac_shader_binary *binary,
+                           struct ac_shader_config *config,
+                           struct ac_shader_variant_info *shader_info,
+                           struct nir_shader *nir,
+                           const struct ac_nir_compiler_options *options,
+			   bool dump_shader)
+{
+
+	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, shader_info,
+	                                                     options);
+
+	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir->stage, dump_shader);
 	switch (nir->stage) {
 	case MESA_SHADER_COMPUTE:
 		for (int i = 0; i < 3; ++i)
