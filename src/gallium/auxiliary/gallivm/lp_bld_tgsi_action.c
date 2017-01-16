@@ -1355,6 +1355,7 @@ lp_set_default_actions(struct lp_build_tgsi_context * bld_base)
    bld_base->op_actions[TGSI_OPCODE_DMAX].emit = fmax_emit;
    bld_base->op_actions[TGSI_OPCODE_DMIN].emit = fmin_emit;
    bld_base->op_actions[TGSI_OPCODE_DMUL].emit = mul_emit;
+   bld_base->op_actions[TGSI_OPCODE_DDIV].emit = fdiv_emit;
 
    bld_base->op_actions[TGSI_OPCODE_D2F].emit = d2f_emit;
    bld_base->op_actions[TGSI_OPCODE_D2I].emit = d2i_emit;
@@ -2623,6 +2624,7 @@ lp_set_default_actions_cpu(
    bld_base->op_actions[TGSI_OPCODE_DSLT].emit = dslt_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_DSNE].emit = dsne_emit_cpu;
 
+   bld_base->op_actions[TGSI_OPCODE_DDIV].emit = div_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_DRSQ].emit = drecip_sqrt_emit_cpu;
    bld_base->op_actions[TGSI_OPCODE_DSQRT].emit = dsqrt_emit_cpu;
 

@@ -287,6 +287,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 2, 0, 0, 0, 0, 0, COMP, "U64DIV", TGSI_OPCODE_U64DIV },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "I64MOD", TGSI_OPCODE_I64MOD },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "U64MOD", TGSI_OPCODE_U64MOD },
+   { 1, 2, 0, 0, 0, 0, 0, COMP, "DDIV", TGSI_OPCODE_DDIV },
 };
 
 const struct tgsi_opcode_info *
@@ -417,6 +418,7 @@ tgsi_opcode_infer_type( uint opcode )
    case TGSI_OPCODE_DNEG:
    case TGSI_OPCODE_DMUL:
    case TGSI_OPCODE_DMAX:
+   case TGSI_OPCODE_DDIV:
    case TGSI_OPCODE_DMIN:
    case TGSI_OPCODE_DRCP:
    case TGSI_OPCODE_DSQRT:

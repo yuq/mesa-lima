@@ -2005,6 +2005,15 @@ Perform a * b + c with no intermediate rounding step.
   dst.zw = src0.zw \times src1.zw + src2.zw
 
 
+.. opcode:: DDIV - Divide
+
+.. math::
+
+  dst.xy = \frac{src0.xy}{src1.xy}
+
+  dst.zw = \frac{src0.zw}{src1.zw}
+
+
 .. opcode:: DRCP - Reciprocal
 
 .. math::
