@@ -45,6 +45,7 @@ AM_CFLAGS = \
 
 AM_CXXFLAGS = $(AM_CFLAGS)
 
+MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 brw_nir_trig_workarounds.c: brw_nir_trig_workarounds.py $(top_srcdir)/src/compiler/nir/nir_algebraic.py
 	$(MKDIR_GEN)
 	$(AM_V_GEN) PYTHONPATH=$(top_srcdir)/src/compiler/nir $(PYTHON2) $(PYTHON_FLAGS) $(srcdir)/brw_nir_trig_workarounds.py > $@ || ($(RM) $@; false)
