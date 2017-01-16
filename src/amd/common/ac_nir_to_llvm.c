@@ -1831,7 +1831,7 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
 		params[0] = data;
 		params[3] = offset;
 		ac_emit_llvm_intrinsic(&ctx->ac, store_name,
-				    LLVMVoidTypeInContext(ctx->context), params, 6, 0);
+				       ctx->voidt, params, 6, 0);
 	}
 }
 
@@ -2614,8 +2614,8 @@ static void emit_discard_if(struct nir_to_llvm_context *ctx,
 			       LLVMConstReal(ctx->f32, -1.0f),
 			       ctx->f32zero, "");
 	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
-			    LLVMVoidTypeInContext(ctx->context),
-			    &cond, 1, 0);
+			       ctx->voidt,
+			       &cond, 1, 0);
 }
 
 static LLVMValueRef
@@ -2941,8 +2941,8 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 	case nir_intrinsic_discard:
 		ctx->shader_info->fs.can_discard = true;
 		ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.kilp",
-				    LLVMVoidTypeInContext(ctx->context),
-				    NULL, 0, 0);
+				       ctx->voidt,
+				       NULL, 0, 0);
 		break;
 	case nir_intrinsic_discard_if:
 		emit_discard_if(ctx, instr);
@@ -4181,9 +4181,9 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 			       args, sizeof(args));
 		} else {
 			ac_emit_llvm_intrinsic(&ctx->ac,
-					    "llvm.SI.export",
-					    LLVMVoidTypeInContext(ctx->context),
-					    args, 9, 0);
+					       "llvm.SI.export",
+					       ctx->voidt,
+					       args, 9, 0);
 		}
 	}
 
@@ -4229,9 +4229,9 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		if (pos_idx == num_pos_exports)
 			pos_args[i][2] = ctx->i32one;
 		ac_emit_llvm_intrinsic(&ctx->ac,
-				    "llvm.SI.export",
-				    LLVMVoidTypeInContext(ctx->context),
-				    pos_args[i], 9, 0);
+				       "llvm.SI.export",
+				       ctx->voidt,
+				       pos_args[i], 9, 0);
 	}
 
 	ctx->shader_info->vs.pos_exports = num_pos_exports;
