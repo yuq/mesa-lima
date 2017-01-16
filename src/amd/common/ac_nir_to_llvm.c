@@ -4626,11 +4626,16 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	/* +3 for scratch wave offset and VCC */
 	config->num_sgprs = MAX2(config->num_sgprs,
 	                         shader_info->num_input_sgprs + 3);
-	if (nir->stage == MESA_SHADER_COMPUTE) {
+
+	switch (nir->stage) {
+	case MESA_SHADER_COMPUTE:
 		for (int i = 0; i < 3; ++i)
 			shader_info->cs.block_size[i] = nir->info->cs.local_size[i];
-	}
-
-	if (nir->stage == MESA_SHADER_FRAGMENT)
+		break;
+	case MESA_SHADER_FRAGMENT:
 		shader_info->fs.early_fragment_test = nir->info->fs.early_fragment_tests;
+		break;
+	default:
+		break;
+	}
 }
