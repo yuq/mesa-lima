@@ -217,7 +217,7 @@ sha1_update_descriptor_set_layout(struct mesa_sha1 *ctx,
 
 /*
  * Pipeline layouts.  These have nothing to do with the pipeline.  They are
- * just muttiple descriptor set layouts pasted together
+ * just multiple descriptor set layouts pasted together
  */
 
 VkResult anv_CreatePipelineLayout(
