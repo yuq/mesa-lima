@@ -500,7 +500,11 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	radeon_set_context_reg(cmd_buffer->cs, R_02881C_PA_CL_VS_OUT_CNTL,
 			       S_02881C_USE_VTX_POINT_SIZE(vs->info.vs.writes_pointsize) |
-			       S_02881C_VS_OUT_MISC_VEC_ENA(vs->info.vs.writes_pointsize) |
+			       S_02881C_USE_VTX_RENDER_TARGET_INDX(vs->info.vs.writes_layer) |
+			       S_02881C_USE_VTX_VIEWPORT_INDX(vs->info.vs.writes_viewport_index) |
+			       S_02881C_VS_OUT_MISC_VEC_ENA(vs->info.vs.writes_pointsize ||
+							    vs->info.vs.writes_layer ||
+							    vs->info.vs.writes_viewport_index) |
 			       S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0f) != 0) |
 			       S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xf0) != 0) |
 			       pipeline->graphics.raster.pa_cl_vs_out_cntl |

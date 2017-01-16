@@ -4107,7 +4107,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 	unsigned pos_idx, num_pos_exports = 0;
 	LLVMValueRef args[9];
 	LLVMValueRef pos_args[4][9] = { { 0 } };
-	LLVMValueRef psize_value = 0;
+	LLVMValueRef psize_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	int i;
 	const uint64_t clip_mask = ctx->output_mask & ((1ull << VARYING_SLOT_CLIP_DIST0) |
 						       (1ull << VARYING_SLOT_CLIP_DIST1) |
@@ -4167,6 +4167,14 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 			ctx->shader_info->vs.writes_pointsize = true;
 			psize_value = values[0];
 			continue;
+		} else if (i == VARYING_SLOT_LAYER) {
+			ctx->shader_info->vs.writes_layer = true;
+			layer_value = values[0];
+			continue;
+		} else if (i == VARYING_SLOT_VIEWPORT) {
+			ctx->shader_info->vs.writes_viewport_index = true;
+			viewport_index_value = values[0];
+			continue;
 		} else if (i >= VARYING_SLOT_VAR0) {
 			ctx->shader_info->vs.export_mask |= 1u << (i - VARYING_SLOT_VAR0);
 			target = V_008DFC_SQ_EXP_PARAM + param_count;
@@ -4200,8 +4208,11 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		pos_args[0][8] = ctx->f32one;  /* W */
 	}
 
-	if (ctx->shader_info->vs.writes_pointsize == true) {
-		pos_args[1][0] = LLVMConstInt(ctx->i32, (ctx->shader_info->vs.writes_pointsize == true), false); /* writemask */
+	uint32_t mask = ((ctx->shader_info->vs.writes_pointsize == true ? 1 : 0) |
+			 (ctx->shader_info->vs.writes_layer == true ? 4 : 0) |
+			 (ctx->shader_info->vs.writes_viewport_index == true ? 8 : 0));
+	if (mask) {
+		pos_args[1][0] = LLVMConstInt(ctx->i32, mask, false); /* writemask */
 		pos_args[1][1] = ctx->i32zero;  /* EXEC mask */
 		pos_args[1][2] = ctx->i32zero;  /* last export? */
 		pos_args[1][3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_POS + 1, false);
@@ -4213,6 +4224,10 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 
 		if (ctx->shader_info->vs.writes_pointsize == true)
 			pos_args[1][5] = psize_value;
+		if (ctx->shader_info->vs.writes_layer == true)
+			pos_args[1][7] = layer_value;
+		if (ctx->shader_info->vs.writes_viewport_index == true)
+			pos_args[1][8] = viewport_index_value;
 	}
 	for (i = 0; i < 4; i++) {
 		if (pos_args[i][0])
