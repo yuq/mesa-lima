@@ -1327,6 +1327,26 @@ emit_3dstate_ps(struct anv_pipeline *pipeline,
    }
 }
 
+static inline bool
+has_color_buffer_write_enabled(const struct anv_pipeline *pipeline)
+{
+   const struct anv_shader_bin *shader_bin =
+      pipeline->shaders[MESA_SHADER_FRAGMENT];
+   if (!shader_bin)
+      return false;
+
+   const struct anv_pipeline_bind_map *bind_map = &shader_bin->bind_map;
+   for (int i = 0; i < bind_map->surface_count; i++) {
+      if (bind_map->surface_to_descriptor[i].set !=
+          ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS)
+         continue;
+      if (bind_map->surface_to_descriptor[i].index != UINT8_MAX)
+         return true;
+   }
+
+   return false;
+}
+
 #if GEN_GEN >= 8
 static void
 emit_3dstate_ps_extra(struct anv_pipeline *pipeline,
@@ -1356,6 +1376,37 @@ emit_3dstate_ps_extra(struct anv_pipeline *pipeline,
        */
       ps.PixelShaderKillsPixel         = subpass->has_ds_self_dep ||
                                          wm_prog_data->uses_kill;
+
+      /* The stricter cross-primitive coherency guarantees that the hardware
+       * gives us with the "Accesses UAV" bit set for at least one shader stage
+       * and the "UAV coherency required" bit set on the 3DPRIMITIVE command are
+       * redundant within the current image, atomic counter and SSBO GL APIs,
+       * which all have very loose ordering and coherency requirements and
+       * generally rely on the application to insert explicit barriers when a
+       * shader invocation is expected to see the memory writes performed by the
+       * invocations of some previous primitive.  Regardless of the value of
+       * "UAV coherency required", the "Accesses UAV" bits will implicitly cause
+       * an in most cases useless DC flush when the lowermost stage with the bit
+       * set finishes execution.
+       *
+       * It would be nice to disable it, but in some cases we can't because on
+       * Gen8+ it also has an influence on rasterization via the PS UAV-only
+       * signal (which could be set independently from the coherency mechanism
+       * in the 3DSTATE_WM command on Gen7), and because in some cases it will
+       * determine whether the hardware skips execution of the fragment shader
+       * or not via the ThreadDispatchEnable signal.  However if we know that
+       * GEN8_PS_BLEND_HAS_WRITEABLE_RT is going to be set and
+       * GEN8_PSX_PIXEL_SHADER_NO_RT_WRITE is not set it shouldn't make any
+       * difference so we may just disable it here.
+       *
+       * Gen8 hardware tries to compute ThreadDispatchEnable for us but doesn't
+       * take into account KillPixels when no depth or stencil writes are
+       * enabled. In order for occlusion queries to work correctly with no
+       * attachments, we need to force-enable here.
+       */
+      if ((wm_prog_data->has_side_effects || wm_prog_data->uses_kill) &&
+          !has_color_buffer_write_enabled(pipeline))
+         ps.PixelShaderHasUAV = true;
 
 #if GEN_GEN >= 9
       ps.PixelShaderPullsBary    = wm_prog_data->pulls_bary;
