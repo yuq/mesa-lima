@@ -205,12 +205,50 @@ create_pipeline(struct radv_device *device,
 }
 
 static VkResult
+create_color_renderpass(struct radv_device *device,
+			VkFormat vk_format,
+			uint32_t samples,
+			VkRenderPass *pass)
+{
+	return radv_CreateRenderPass(radv_device_to_handle(device),
+				       &(VkRenderPassCreateInfo) {
+					       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+						       .attachmentCount = 1,
+						       .pAttachments = &(VkAttachmentDescription) {
+						       .format = vk_format,
+						       .samples = samples,
+						       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
+						       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+						       .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
+						       .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
+					       },
+						       .subpassCount = 1,
+								.pSubpasses = &(VkSubpassDescription) {
+						       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+						       .inputAttachmentCount = 0,
+						       .colorAttachmentCount = 1,
+						       .pColorAttachments = &(VkAttachmentReference) {
+							       .attachment = 0,
+							       .layout = VK_IMAGE_LAYOUT_GENERAL,
+						       },
+						       .pResolveAttachments = NULL,
+						       .pDepthStencilAttachment = &(VkAttachmentReference) {
+							       .attachment = VK_ATTACHMENT_UNUSED,
+							       .layout = VK_IMAGE_LAYOUT_GENERAL,
+						       },
+						       .preserveAttachmentCount = 1,
+						       .pPreserveAttachments = (uint32_t[]) { 0 },
+					       },
+								.dependencyCount = 0,
+									 }, &device->meta_state.alloc, pass);
+}
+
+static VkResult
 create_color_pipeline(struct radv_device *device,
-                      VkFormat vk_format,
 		      uint32_t samples,
                       uint32_t frag_output,
                       struct radv_pipeline **pipeline,
-		      VkRenderPass *pass)
+		      VkRenderPass pass)
 {
 	struct nir_shader *vs_nir;
 	struct nir_shader *fs_nir;
@@ -270,44 +308,11 @@ create_color_pipeline(struct radv_device *device,
 		.pAttachments = blend_attachment_state
 	};
 
-	result = radv_CreateRenderPass(radv_device_to_handle(device),
-				       &(VkRenderPassCreateInfo) {
-					       .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-						       .attachmentCount = 1,
-						       .pAttachments = &(VkAttachmentDescription) {
-						       .format = vk_format,
-						       .samples = samples,
-						       .loadOp = VK_ATTACHMENT_LOAD_OP_LOAD,
-						       .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-						       .initialLayout = VK_IMAGE_LAYOUT_GENERAL,
-						       .finalLayout = VK_IMAGE_LAYOUT_GENERAL,
-					       },
-						       .subpassCount = 1,
-								.pSubpasses = &(VkSubpassDescription) {
-						       .pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-						       .inputAttachmentCount = 0,
-						       .colorAttachmentCount = 1,
-						       .pColorAttachments = &(VkAttachmentReference) {
-							       .attachment = 0,
-							       .layout = VK_IMAGE_LAYOUT_GENERAL,
-						       },
-						       .pResolveAttachments = NULL,
-						       .pDepthStencilAttachment = &(VkAttachmentReference) {
-							       .attachment = VK_ATTACHMENT_UNUSED,
-							       .layout = VK_IMAGE_LAYOUT_GENERAL,
-						       },
-						       .preserveAttachmentCount = 1,
-						       .pPreserveAttachments = (uint32_t[]) { 0 },
-					       },
-								.dependencyCount = 0,
-									 }, &device->meta_state.alloc, pass);
 
-	if (result != VK_SUCCESS)
-		return result;
 	struct radv_graphics_pipeline_create_info extra = {
 		.use_rectlist = true,
 	};
-	result = create_pipeline(device, radv_render_pass_from_handle(*pass),
+	result = create_pipeline(device, radv_render_pass_from_handle(pass),
 				 samples, vs_nir, fs_nir, &vi_state, &ds_state, &cb_state,
 				 &extra, &device->meta_state.alloc, pipeline);
 
@@ -743,8 +748,14 @@ radv_device_init_meta_clear_state(struct radv_device *device)
 			VkFormat format = pipeline_formats[j];
 			unsigned fs_key = radv_format_meta_fs_key(format);
 			assert(!state->clear[i].color_pipelines[fs_key]);
-			res = create_color_pipeline(device, format, samples, 0, &state->clear[i].color_pipelines[fs_key],
-						    &state->clear[i].render_pass[fs_key]);
+
+			res = create_color_renderpass(device, format, samples,
+						      &state->clear[i].render_pass[fs_key]);
+			if (res != VK_SUCCESS)
+				goto fail;
+
+			res = create_color_pipeline(device, samples, 0, &state->clear[i].color_pipelines[fs_key],
+						    state->clear[i].render_pass[fs_key]);
 			if (res != VK_SUCCESS)
 				goto fail;
 
