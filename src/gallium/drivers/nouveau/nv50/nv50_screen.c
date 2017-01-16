@@ -1017,7 +1017,7 @@ nv50_screen_create(struct nouveau_device *dev)
       goto fail;
    }
 
-   nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
+   nouveau_fence_new(&screen->base, &screen->base.fence.current);
 
    return &screen->base;
 

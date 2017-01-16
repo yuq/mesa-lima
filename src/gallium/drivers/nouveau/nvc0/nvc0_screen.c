@@ -1233,7 +1233,7 @@ nvc0_screen_create(struct nouveau_device *dev)
    screen->default_tsc = CALLOC_STRUCT(nv50_tsc_entry);
    screen->default_tsc->tsc[0] = G80_TSC_0_SRGB_CONVERSION;
 
-   nouveau_fence_new(&screen->base, &screen->base.fence.current, false);
+   nouveau_fence_new(&screen->base, &screen->base.fence.current);
 
    return &screen->base;
 
