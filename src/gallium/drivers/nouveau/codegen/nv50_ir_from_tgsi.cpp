@@ -612,6 +612,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_DNEG:
    case TGSI_OPCODE_DADD:
    case TGSI_OPCODE_DMUL:
+   case TGSI_OPCODE_DDIV:
    case TGSI_OPCODE_DMAX:
    case TGSI_OPCODE_DMIN:
    case TGSI_OPCODE_DSLT:
@@ -810,6 +811,7 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(DNEG, NEG);
    NV50_IR_OPCODE_CASE(DADD, ADD);
    NV50_IR_OPCODE_CASE(DMUL, MUL);
+   NV50_IR_OPCODE_CASE(DDIV, DIV);
    NV50_IR_OPCODE_CASE(DMAX, MAX);
    NV50_IR_OPCODE_CASE(DMIN, MIN);
    NV50_IR_OPCODE_CASE(DSLT, SET);
@@ -3745,6 +3747,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    }
    case TGSI_OPCODE_DADD:
    case TGSI_OPCODE_DMUL:
+   case TGSI_OPCODE_DDIV:
    case TGSI_OPCODE_DMAX:
    case TGSI_OPCODE_DMIN:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
