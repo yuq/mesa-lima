@@ -251,7 +251,7 @@ VkResult radv_CreateSwapchainKHR(
 	RADV_FROM_HANDLE(radv_device, device, _device);
 	ICD_FROM_HANDLE(VkIcdSurfaceBase, surface, pCreateInfo->surface);
 	struct wsi_interface *iface =
-		device->instance->physicalDevice.wsi_device.wsi[surface->platform];
+		device->physical_device->wsi_device.wsi[surface->platform];
 	struct wsi_swapchain *swapchain;
 	const VkAllocationCallbacks *alloc;
 	if (pAllocator)
@@ -259,7 +259,7 @@ VkResult radv_CreateSwapchainKHR(
 	else
 		alloc = &device->alloc;
 	VkResult result = iface->create_swapchain(surface, _device,
-						  &device->instance->physicalDevice.wsi_device,
+						  &device->physical_device->wsi_device,
 						  pCreateInfo,
 						  alloc, &radv_wsi_image_fns,
 						  &swapchain);

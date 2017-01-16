@@ -775,6 +775,7 @@ VkResult radv_CreateDevice(
 
 	device->_loader_data.loaderMagic = ICD_LOADER_MAGIC;
 	device->instance = physical_device->instance;
+	device->physical_device = physical_device;
 
 	device->debug_flags = device->instance->debug_flags;
 
@@ -1658,14 +1659,14 @@ radv_initialise_color_surface(struct radv_device *device,
 
 	if (iview->image->fmask.size) {
 		va = device->ws->buffer_get_va(iview->bo) + iview->image->offset + iview->image->fmask.offset;
-		if (device->instance->physicalDevice.rad_info.chip_class >= CIK)
+		if (device->physical_device->rad_info.chip_class >= CIK)
 			cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(iview->image->fmask.pitch_in_pixels / 8 - 1);
 		cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(iview->image->fmask.tile_mode_index);
 		cb->cb_color_fmask = va >> 8;
 		cb->cb_color_fmask_slice = S_028C88_TILE_MAX(iview->image->fmask.slice_tile_max);
 	} else {
 		/* This must be set for fast clear to work without FMASK. */
-		if (device->instance->physicalDevice.rad_info.chip_class >= CIK)
+		if (device->physical_device->rad_info.chip_class >= CIK)
 			cb->cb_color_pitch |= S_028C64_FMASK_TILE_MAX(pitch_tile_max);
 		cb->cb_color_attrib |= S_028C74_FMASK_TILE_MODE_INDEX(tile_mode_index);
 		cb->cb_color_fmask = cb->cb_color_base;
@@ -1725,7 +1726,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	if (iview->image->surface.dcc_size && level_info->dcc_enabled)
 		cb->cb_color_info |= S_028C70_DCC_ENABLE(1);
 
-	if (device->instance->physicalDevice.rad_info.chip_class >= VI) {
+	if (device->physical_device->rad_info.chip_class >= VI) {
 		unsigned max_uncompressed_block_size = 2;
 		if (iview->image->samples > 1) {
 			if (iview->image->surface.bpe == 1)
@@ -1740,7 +1741,7 @@ radv_initialise_color_surface(struct radv_device *device,
 
 	/* This must be set for fast clear to work without FMASK. */
 	if (!iview->image->fmask.size &&
-	    device->instance->physicalDevice.rad_info.chip_class == SI) {
+	    device->physical_device->rad_info.chip_class == SI) {
 		unsigned bankh = util_logbase2(iview->image->surface.bankh);
 		cb->cb_color_attrib |= S_028C74_FMASK_BANK_HEIGHT(bankh);
 	}
@@ -1800,8 +1801,8 @@ radv_initialise_ds_surface(struct radv_device *device,
 	else
 		ds->db_stencil_info = S_028044_FORMAT(V_028044_STENCIL_INVALID);
 
-	if (device->instance->physicalDevice.rad_info.chip_class >= CIK) {
-		struct radeon_info *info = &device->instance->physicalDevice.rad_info;
+	if (device->physical_device->rad_info.chip_class >= CIK) {
+		struct radeon_info *info = &device->physical_device->rad_info;
 		unsigned tiling_index = iview->image->surface.tiling_index[level];
 		unsigned stencil_index = iview->image->surface.stencil_tiling_index[level];
 		unsigned macro_index = iview->image->surface.macro_tile_index;
@@ -2031,7 +2032,7 @@ radv_init_sampler(struct radv_device *device,
 	uint32_t max_aniso = pCreateInfo->anisotropyEnable && pCreateInfo->maxAnisotropy > 1.0 ?
 					(uint32_t) pCreateInfo->maxAnisotropy : 0;
 	uint32_t max_aniso_ratio = radv_tex_aniso_filter(max_aniso);
-	bool is_vi = (device->instance->physicalDevice.rad_info.chip_class >= VI);
+	bool is_vi = (device->physical_device->rad_info.chip_class >= VI);
 
 	sampler->state[0] = (S_008F30_CLAMP_X(radv_tex_wrap(pCreateInfo->addressModeU)) |
 			     S_008F30_CLAMP_Y(radv_tex_wrap(pCreateInfo->addressModeV)) |

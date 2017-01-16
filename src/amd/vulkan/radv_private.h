@@ -495,6 +495,8 @@ struct radv_device {
 
 	struct radeon_winsys_bo                      *trace_bo;
 	uint32_t                                     *trace_id_ptr;
+
+	struct radv_physical_device                  *physical_device;
 };
 
 struct radv_device_memory {

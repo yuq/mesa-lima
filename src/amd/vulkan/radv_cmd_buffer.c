@@ -117,7 +117,7 @@ radv_dynamic_state_copy(struct radv_dynamic_state *dest,
 bool radv_cmd_buffer_uses_mec(struct radv_cmd_buffer *cmd_buffer)
 {
 	return cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE &&
-	       cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK;
+	       cmd_buffer->device->physical_device->rad_info.chip_class >= CIK;
 }
 
 enum ring_type radv_queue_family_to_ring(int f) {
@@ -645,7 +645,7 @@ radv_emit_fb_color_state(struct radv_cmd_buffer *cmd_buffer,
 			 int index,
 			 struct radv_color_buffer_info *cb)
 {
-	bool is_vi = cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= VI;
+	bool is_vi = cmd_buffer->device->physical_device->rad_info.chip_class >= VI;
 	radeon_set_context_reg_seq(cmd_buffer->cs, R_028C60_CB_COLOR0_BASE + index * 0x3c, 11);
 	radeon_emit(cmd_buffer->cs, cb->cb_color_base);
 	radeon_emit(cmd_buffer->cs, cb->cb_color_pitch);
@@ -911,13 +911,13 @@ void radv_set_db_count_control(struct radv_cmd_buffer *cmd_buffer)
 	uint32_t db_count_control;
 
 	if(!cmd_buffer->state.active_occlusion_queries) {
-		if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK) {
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 			db_count_control = 0;
 		} else {
 			db_count_control = S_028004_ZPASS_INCREMENT_DISABLE(1);
 		}
 	} else {
-		if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK) {
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 			db_count_control = S_028004_PERFECT_ZPASS_COUNTS(1) |
 				S_028004_SAMPLE_RATE(0) | /* TODO: set this to the number of samples of the current framebuffer */
 				S_028004_ZPASS_ENABLE(1) |
@@ -1129,7 +1129,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 			va += offset + buffer->offset;
 			desc[0] = va;
 			desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) | S_008F04_STRIDE(stride);
-			if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class <= CIK && stride)
+			if (cmd_buffer->device->physical_device->rad_info.chip_class <= CIK && stride)
 				desc[2] = (buffer->size - offset - cmd_buffer->state.pipeline->va_format_size[i]) / stride + 1;
 			else
 				desc[2] = buffer->size - offset;
@@ -1161,7 +1161,7 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer)
 		radeon_set_context_reg(cmd_buffer->cs, R_028B54_VGT_SHADER_STAGES_EN, 0);
 		ia_multi_vgt_param = si_get_ia_multi_vgt_param(cmd_buffer);
 
-		if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK) {
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 			radeon_set_context_reg_idx(cmd_buffer->cs, R_028AA8_IA_MULTI_VGT_PARAM, 1, ia_multi_vgt_param);
 			radeon_set_context_reg_idx(cmd_buffer->cs, R_028B58_VGT_LS_HS_CONFIG, 2, ls_hs_config);
 			radeon_set_uconfig_reg_idx(cmd_buffer->cs, R_030908_VGT_PRIMITIVE_TYPE, 1, cmd_buffer->state.pipeline->graphics.prim);
@@ -1433,7 +1433,7 @@ VkResult radv_BeginCommandBuffer(
 				RADV_CMD_FLAG_INV_SMEM_L1 |
 				RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER |
 				RADV_CMD_FLAG_INV_GLOBAL_L2;
-			si_init_config(&cmd_buffer->device->instance->physicalDevice, cmd_buffer);
+			si_init_config(cmd_buffer->device->physical_device, cmd_buffer);
 			radv_set_db_count_control(cmd_buffer);
 			si_emit_cache_flush(cmd_buffer);
 			break;
@@ -1443,7 +1443,7 @@ VkResult radv_BeginCommandBuffer(
 				RADV_CMD_FLAG_INV_VMEM_L1 |
 				RADV_CMD_FLAG_INV_SMEM_L1 |
 				RADV_CMD_FLAG_INV_GLOBAL_L2;
-			si_init_compute(&cmd_buffer->device->instance->physicalDevice, cmd_buffer);
+			si_init_compute(cmd_buffer->device->physical_device, cmd_buffer);
 			si_emit_cache_flush(cmd_buffer);
 			break;
 		case RADV_QUEUE_TRANSFER:
@@ -2628,7 +2628,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	/* TODO: this is overkill. Probably should figure something out from
 	 * the stage mask. */
 
-	if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class == CIK) {
+	if (cmd_buffer->device->physical_device->rad_info.chip_class == CIK) {
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 		radeon_emit(cs, EVENT_TYPE(EVENT_TYPE_BOTTOM_OF_PIPE_TS) |
 				EVENT_INDEX(5));

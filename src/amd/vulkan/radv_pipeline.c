@@ -278,7 +278,7 @@ static const char *radv_get_shader_name(struct radv_shader_variant *var,
 }
 static void radv_dump_pipeline_stats(struct radv_device *device, struct radv_pipeline *pipeline)
 {
-	unsigned lds_increment = device->instance->physicalDevice.rad_info.chip_class >= CIK ? 512 : 256;
+	unsigned lds_increment = device->physical_device->rad_info.chip_class >= CIK ? 512 : 256;
 	struct radv_shader_variant *var;
 	struct ac_shader_config *conf;
 	int i;
@@ -299,7 +299,7 @@ static void radv_dump_pipeline_stats(struct radv_device *device, struct radv_pip
 		}
 
 		if (conf->num_sgprs) {
-			if (device->instance->physicalDevice.rad_info.chip_class >= VI)
+			if (device->physical_device->rad_info.chip_class >= VI)
 				max_simd_waves = MIN2(max_simd_waves, 800 / conf->num_sgprs);
 			else
 				max_simd_waves = MIN2(max_simd_waves, 512 / conf->num_sgprs);
@@ -409,7 +409,7 @@ static struct radv_shader_variant *radv_shader_variant_create(struct radv_device
 							      bool dump)
 {
 	struct radv_shader_variant *variant = calloc(1, sizeof(struct radv_shader_variant));
-	enum radeon_family chip_family = device->instance->physicalDevice.rad_info.family;
+	enum radeon_family chip_family = device->physical_device->rad_info.family;
 	LLVMTargetMachineRef tm;
 	if (!variant)
 		return NULL;
@@ -423,7 +423,7 @@ static struct radv_shader_variant *radv_shader_variant_create(struct radv_device
 
 	options.unsafe_math = !!(device->debug_flags & RADV_DEBUG_UNSAFE_MATH);
 	options.family = chip_family;
-	options.chip_class = device->instance->physicalDevice.rad_info.chip_class;
+	options.chip_class = device->physical_device->rad_info.chip_class;
 	tm = ac_create_target_machine(chip_family);
 	ac_compile_nir_shader(tm, &binary, &variant->config,
 			      &variant->info, shader, &options, dump);
@@ -1034,7 +1034,7 @@ radv_pipeline_init_multisample_state(struct radv_pipeline *pipeline,
 	const VkPipelineMultisampleStateCreateInfo *vkms = pCreateInfo->pMultisampleState;
 	struct radv_blend_state *blend = &pipeline->graphics.blend;
 	struct radv_multisample_state *ms = &pipeline->graphics.ms;
-	unsigned num_tile_pipes = pipeline->device->instance->physicalDevice.rad_info.num_tile_pipes;
+	unsigned num_tile_pipes = pipeline->device->physical_device->rad_info.num_tile_pipes;
 	int ps_iter_samples = 1;
 	uint32_t mask = 0xffff;
 

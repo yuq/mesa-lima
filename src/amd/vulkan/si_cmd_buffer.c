@@ -511,8 +511,8 @@ si_write_scissors(struct radeon_winsys_cs *cs, int first,
 uint32_t
 si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 {
-	enum chip_class chip_class = cmd_buffer->device->instance->physicalDevice.rad_info.chip_class;
-	struct radeon_info *info = &cmd_buffer->device->instance->physicalDevice.rad_info;
+	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
+	struct radeon_info *info = &cmd_buffer->device->physical_device->rad_info;
 	unsigned prim = cmd_buffer->state.pipeline->graphics.prim;
 	unsigned primgroup_size = 128; /* recommended without a GS */
 	unsigned max_primgroup_in_wave = 2;
@@ -599,7 +599,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 void
 si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 {
-	enum chip_class chip_class = cmd_buffer->device->instance->physicalDevice.rad_info.chip_class;
+	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
 	unsigned cp_coher_cntl = 0;
 	bool is_compute = cmd_buffer->queue_family_index == RADV_QUEUE_COMPUTE;
 
@@ -638,7 +638,7 @@ si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer)
 			S_0085F0_CB7_DEST_BASE_ENA(1);
 
 		/* Necessary for DCC */
-		if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= VI) {
+		if (cmd_buffer->device->physical_device->rad_info.chip_class >= VI) {
 			radeon_emit(cmd_buffer->cs, PKT3(PKT3_EVENT_WRITE_EOP, 4, 0));
 			radeon_emit(cmd_buffer->cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_DATA_TS) |
 			                            EVENT_INDEX(5));
@@ -756,7 +756,7 @@ static void si_emit_cp_dma_copy_buffer(struct radv_cmd_buffer *cmd_buffer,
 
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
 
-	if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK) {
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));
 		radeon_emit(cs, sync_flag | sel);	/* CP_SYNC [31] */
 		radeon_emit(cs, src_va);		/* SRC_ADDR_LO [31:0] */
@@ -802,7 +802,7 @@ static void si_emit_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer,
 
 	radeon_check_space(cmd_buffer->device->ws, cmd_buffer->cs, 9);
 
-	if (cmd_buffer->device->instance->physicalDevice.rad_info.chip_class >= CIK) {
+	if (cmd_buffer->device->physical_device->rad_info.chip_class >= CIK) {
 		radeon_emit(cs, PKT3(PKT3_DMA_DATA, 5, 0));
 		radeon_emit(cs, sync_flag | dst_sel | S_411_SRC_SEL(V_411_DATA)); /* CP_SYNC [31] | SRC_SEL[30:29] */
 		radeon_emit(cs, clear_value);		/* DATA [31:0] */
@@ -875,8 +875,8 @@ void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t skipped_size = 0, realign_size = 0;
 
 
-	if (cmd_buffer->device->instance->physicalDevice.rad_info.family <= CHIP_CARRIZO ||
-	    cmd_buffer->device->instance->physicalDevice.rad_info.family == CHIP_STONEY) {
+	if (cmd_buffer->device->physical_device->rad_info.family <= CHIP_CARRIZO ||
+	    cmd_buffer->device->physical_device->rad_info.family == CHIP_STONEY) {
 		/* If the size is not aligned, we must add a dummy copy at the end
 		 * just to align the internal counter. Otherwise, the DMA engine
 		 * would slow down by an order of magnitude for following copies.
