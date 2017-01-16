@@ -336,6 +336,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	uint32_t pos_regid, psize_regid, color_regid[8];
 	uint32_t face_regid, coord_regid, zwcoord_regid;
 	uint32_t vcoord_regid, vertex_regid, instance_regid;
+	uint8_t psize_loc = ~0;
 	int i, j;
 
 	setup_stages(emit, s);
@@ -472,8 +473,10 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	if (pos_regid != regid(63,0))
 		ir3_link_add(&l, pos_regid, 0xf, l.max_loc);
 
-	if (psize_regid != regid(63,0))
+	if (psize_regid != regid(63,0)) {
+		psize_loc = l.max_loc;
 		ir3_link_add(&l, psize_regid, 0x1, l.max_loc);
+	}
 
 	if ((s[VS].v->shader->stream_output.num_outputs > 0) &&
 			!emit->key.binning_pass) {
@@ -692,7 +695,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 
 		OUT_PKT4(ring, REG_A5XX_VPC_PACK, 1);
 		OUT_RING(ring, A5XX_VPC_PACK_NUMNONPOSVAR(s[FS].v->total_in) |
-				(s[VS].v->writes_psize ? 0x0c00 : 0xff00)); // XXX
+				A5XX_VPC_PACK_PSIZELOC(psize_loc));
 
 		OUT_PKT4(ring, REG_A5XX_VPC_VARYING_INTERP_MODE(0), 8);
 		for (i = 0; i < 8; i++)
