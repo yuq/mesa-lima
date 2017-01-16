@@ -81,6 +81,7 @@ typedef uint32_t xcb_window_t;
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_SAMPLES_LOG2 4
 #define NUM_META_FS_KEYS 11
+#define RADV_MAX_DRM_DEVICES 8
 
 #define NUM_DEPTH_CLEAR_PIPELINES 3
 
@@ -290,7 +291,7 @@ struct radv_instance {
 
 	uint32_t                                    apiVersion;
 	int                                         physicalDeviceCount;
-	struct radv_physical_device                  physicalDevice;
+	struct radv_physical_device                 physicalDevices[RADV_MAX_DRM_DEVICES];
 
 	uint64_t debug_flags;
 };

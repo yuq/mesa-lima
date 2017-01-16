@@ -190,8 +190,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	fd = open(path, O_RDWR | O_CLOEXEC);
 	if (fd < 0)
-		return vk_errorf(VK_ERROR_INCOMPATIBLE_DRIVER,
-				 "failed to open %s: %m", path);
+		return VK_ERROR_INCOMPATIBLE_DRIVER;
 
 	version = drmGetVersion(fd);
 	if (!version) {
@@ -365,10 +364,8 @@ void radv_DestroyInstance(
 {
 	RADV_FROM_HANDLE(radv_instance, instance, _instance);
 
-	if (instance->physicalDeviceCount > 0) {
-		/* We support at most one physical device. */
-		assert(instance->physicalDeviceCount == 1);
-		radv_physical_device_finish(&instance->physicalDevice);
+	for (int i = 0; i < instance->physicalDeviceCount; ++i) {
+		radv_physical_device_finish(instance->physicalDevices + i);
 	}
 
 	VG(VALGRIND_DESTROY_MEMPOOL(instance));
@@ -388,52 +385,29 @@ VkResult radv_EnumeratePhysicalDevices(
 
 	if (instance->physicalDeviceCount < 0) {
 		char path[20];
-		for (unsigned i = 0; i < 8; i++) {
+		instance->physicalDeviceCount = 0;
+		for (unsigned i = 0; i < RADV_MAX_DRM_DEVICES; i++) {
 			snprintf(path, sizeof(path), "/dev/dri/renderD%d", 128 + i);
-			result = radv_physical_device_init(&instance->physicalDevice,
-							   instance, path);
-			if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
-				break;
-		}
-
-		if (result == VK_ERROR_INCOMPATIBLE_DRIVER) {
-			instance->physicalDeviceCount = 0;
-		} else if (result == VK_SUCCESS) {
-			instance->physicalDeviceCount = 1;
-		} else {
-			return result;
+			result = radv_physical_device_init(instance->physicalDevices +
+			                                   instance->physicalDeviceCount,
+			                                   instance, path);
+			if (result == VK_SUCCESS)
+				++instance->physicalDeviceCount;
+			else if (result != VK_ERROR_INCOMPATIBLE_DRIVER)
+				return result;
 		}
 	}
 
-	/* pPhysicalDeviceCount is an out parameter if pPhysicalDevices is NULL;
-	 * otherwise it's an inout parameter.
-	 *
-	 * The Vulkan spec (git aaed022) says:
-	 *
-	 *    pPhysicalDeviceCount is a pointer to an unsigned integer variable
-	 *    that is initialized with the number of devices the application is
-	 *    prepared to receive handles to. pname:pPhysicalDevices is pointer to
-	 *    an array of at least this many VkPhysicalDevice handles [...].
-	 *
-	 *    Upon success, if pPhysicalDevices is NULL, vkEnumeratePhysicalDevices
-	 *    overwrites the contents of the variable pointed to by
-	 *    pPhysicalDeviceCount with the number of physical devices in in the
-	 *    instance; otherwise, vkEnumeratePhysicalDevices overwrites
-	 *    pPhysicalDeviceCount with the number of physical handles written to
-	 *    pPhysicalDevices.
-	 */
 	if (!pPhysicalDevices) {
 		*pPhysicalDeviceCount = instance->physicalDeviceCount;
-	} else if (*pPhysicalDeviceCount >= 1) {
-		pPhysicalDevices[0] = radv_physical_device_to_handle(&instance->physicalDevice);
-		*pPhysicalDeviceCount = 1;
-	} else if (*pPhysicalDeviceCount < instance->physicalDeviceCount) {
-		return VK_INCOMPLETE;
 	} else {
-		*pPhysicalDeviceCount = 0;
+		*pPhysicalDeviceCount = MIN2(*pPhysicalDeviceCount, instance->physicalDeviceCount);
+		for (unsigned i = 0; i < *pPhysicalDeviceCount; ++i)
+			pPhysicalDevices[i] = radv_physical_device_to_handle(instance->physicalDevices + i);
 	}
 
-	return VK_SUCCESS;
+	return *pPhysicalDeviceCount < instance->physicalDeviceCount ? VK_INCOMPLETE
+	                                                             : VK_SUCCESS;
 }
 
 void radv_GetPhysicalDeviceFeatures(
