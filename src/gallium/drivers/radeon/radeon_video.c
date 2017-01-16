@@ -279,7 +279,11 @@ int rvid_get_video_param(struct pipe_screen *screen,
 	case PIPE_VIDEO_CAP_MAX_HEIGHT:
 		return (rscreen->family < CHIP_TONGA) ? 1152 : 4096;
 	case PIPE_VIDEO_CAP_PREFERED_FORMAT:
-		return PIPE_FORMAT_NV12;
+		if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
+			return PIPE_FORMAT_P016;
+		else
+			return PIPE_FORMAT_NV12;
+
 	case PIPE_VIDEO_CAP_PREFERS_INTERLACED:
 	case PIPE_VIDEO_CAP_SUPPORTS_INTERLACED:
 		if (rscreen->family < CHIP_PALM) {
@@ -331,6 +335,11 @@ boolean rvid_is_format_supported(struct pipe_screen *screen,
 				 enum pipe_video_profile profile,
 				 enum pipe_video_entrypoint entrypoint)
 {
+	/* HEVC 10 bit decoding should use P016 instead of NV12 if possible */
+	if (profile == PIPE_VIDEO_PROFILE_HEVC_MAIN_10)
+		return (format == PIPE_FORMAT_NV12) ||
+			(format == PIPE_FORMAT_P016);
+
 	/* we can only handle this one with UVD */
 	if (profile != PIPE_VIDEO_PROFILE_UNKNOWN)
 		return format == PIPE_FORMAT_NV12;
