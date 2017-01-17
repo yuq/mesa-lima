@@ -950,6 +950,46 @@ struct anv_descriptor_pool {
    char data[0];
 };
 
+enum anv_descriptor_template_entry_type {
+   ANV_DESCRIPTOR_TEMPLATE_ENTRY_TYPE_IMAGE,
+   ANV_DESCRIPTOR_TEMPLATE_ENTRY_TYPE_BUFFER,
+   ANV_DESCRIPTOR_TEMPLATE_ENTRY_TYPE_BUFFER_VIEW
+};
+
+struct anv_descriptor_template_entry {
+   /* The type of descriptor in this entry */
+   VkDescriptorType type;
+
+   /* Binding in the descriptor set */
+   uint32_t binding;
+
+   /* Offset at which to write into the descriptor set binding */
+   uint32_t array_element;
+
+   /* Number of elements to write into the descriptor set binding */
+   uint32_t array_count;
+
+   /* Offset into the user provided data */
+   size_t offset;
+
+   /* Stride between elements into the user provided data */
+   size_t stride;
+};
+
+struct anv_descriptor_update_template {
+   /* The descriptor set this template corresponds to. This value is only
+    * valid if the template was created with the templateType
+    * VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET_KHR.
+    */
+   uint8_t set;
+
+   /* Number of entries in this template */
+   uint32_t entry_count;
+
+   /* Entries of the template */
+   struct anv_descriptor_template_entry entries[0];
+};
+
 size_t
 anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout);
 
@@ -978,6 +1018,13 @@ anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
                                 uint32_t element,
                                 VkDeviceSize offset,
                                 VkDeviceSize range);
+
+void
+anv_descriptor_set_write_template(struct anv_descriptor_set *set,
+                                  struct anv_device *device,
+                                  struct anv_state_stream *alloc_stream,
+                                  const struct anv_descriptor_update_template *template,
+                                  const void *data);
 
 VkResult
 anv_descriptor_set_create(struct anv_device *device,
@@ -1981,6 +2028,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_buffer_view, VkBufferView)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_pool, VkDescriptorPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set, VkDescriptorSet)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_set_layout, VkDescriptorSetLayout)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_descriptor_update_template, VkDescriptorUpdateTemplateKHR)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_device_memory, VkDeviceMemory)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_fence, VkFence)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_event, VkEvent)

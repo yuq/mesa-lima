@@ -28,6 +28,7 @@ import xml.etree.ElementTree as ET
 max_api_version = 1.0
 
 supported_extensions = [
+   'VK_KHR_descriptor_update_template',
    'VK_KHR_get_physical_device_properties2',
    'VK_KHR_maintenance1',
    'VK_KHR_push_descriptor',

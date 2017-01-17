@@ -780,3 +780,149 @@ void anv_UpdateDescriptorSets(
          dst_desc[j] = src_desc[j];
    }
 }
+
+/*
+ * Descriptor update templates.
+ */
+
+void
+anv_descriptor_set_write_template(struct anv_descriptor_set *set,
+                                  struct anv_device *device,
+                                  struct anv_state_stream *alloc_stream,
+                                  const struct anv_descriptor_update_template *template,
+                                  const void *data)
+{
+   const struct anv_descriptor_set_layout *layout = set->layout;
+
+   for (uint32_t i = 0; i < template->entry_count; i++) {
+      const struct anv_descriptor_template_entry *entry =
+         &template->entries[i];
+      const struct anv_descriptor_set_binding_layout *bind_layout =
+         &layout->binding[entry->binding];
+      struct anv_descriptor *desc = &set->descriptors[bind_layout->descriptor_index];
+      desc += entry->array_element;
+
+      switch (entry->type) {
+      case VK_DESCRIPTOR_TYPE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+      case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+      case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+      case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+         for (uint32_t j = 0; j < entry->array_count; j++) {
+            const VkDescriptorImageInfo *info =
+               data + entry->offset + j * entry->stride;
+            anv_descriptor_set_write_image_view(set,
+                                                entry->type,
+                                                info->imageView,
+                                                info->sampler,
+                                                entry->binding,
+                                                entry->array_element + j);
+         }
+         break;
+
+      case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+         for (uint32_t j = 0; j < entry->array_count; j++) {
+            const VkBufferView *_bview =
+               data + entry->offset + j * entry->stride;
+            ANV_FROM_HANDLE(anv_buffer_view, bview, *_bview);
+
+            anv_descriptor_set_write_buffer_view(set,
+                                                 entry->type,
+                                                 bview,
+                                                 entry->binding,
+                                                 entry->array_element + j);
+         }
+         break;
+
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+      case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+      case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+         for (uint32_t j = 0; j < entry->array_count; j++) {
+            const VkDescriptorBufferInfo *info =
+               data + entry->offset + j * entry->stride;
+            ANV_FROM_HANDLE(anv_buffer, buffer, info->buffer);
+
+            anv_descriptor_set_write_buffer(set,
+                                            device,
+                                            alloc_stream,
+                                            entry->type,
+                                            buffer,
+                                            entry->binding,
+                                            entry->array_element + j,
+                                            info->offset, info->range);
+         }
+         break;
+
+      default:
+         break;
+      }
+   }
+}
+
+VkResult anv_CreateDescriptorUpdateTemplateKHR(
+    VkDevice                                    _device,
+    const VkDescriptorUpdateTemplateCreateInfoKHR* pCreateInfo,
+    const VkAllocationCallbacks*                pAllocator,
+    VkDescriptorUpdateTemplateKHR*              pDescriptorUpdateTemplate)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_descriptor_update_template *template;
+
+   size_t size = sizeof(*template) +
+      pCreateInfo->descriptorUpdateEntryCount * sizeof(template->entries[0]);
+   template = vk_alloc2(&device->alloc, pAllocator, size, 8,
+                        VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (template == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   if (pCreateInfo->templateType == VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET_KHR)
+      template->set = pCreateInfo->set;
+
+   template->entry_count = pCreateInfo->descriptorUpdateEntryCount;
+   for (uint32_t i = 0; i < template->entry_count; i++) {
+      const VkDescriptorUpdateTemplateEntryKHR *pEntry =
+         &pCreateInfo->pDescriptorUpdateEntries[i];
+
+      template->entries[i] = (struct anv_descriptor_template_entry) {
+         .type = pEntry->descriptorType,
+         .binding = pEntry->dstBinding,
+         .array_element = pEntry->dstArrayElement,
+         .array_count = pEntry->descriptorCount,
+         .offset = pEntry->offset,
+         .stride = pEntry->stride,
+      };
+   }
+
+   *pDescriptorUpdateTemplate =
+      anv_descriptor_update_template_to_handle(template);
+
+   return VK_SUCCESS;
+}
+
+void anv_DestroyDescriptorUpdateTemplateKHR(
+    VkDevice                                    _device,
+    VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+    const VkAllocationCallbacks*                pAllocator)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_update_template, template,
+                   descriptorUpdateTemplate);
+
+   vk_free2(&device->alloc, pAllocator, template);
+}
+
+void anv_UpdateDescriptorSetWithTemplateKHR(
+    VkDevice                                    _device,
+    VkDescriptorSet                             descriptorSet,
+    VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+    const void*                                 pData)
+{
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_descriptor_set, set, descriptorSet);
+   ANV_FROM_HANDLE(anv_descriptor_update_template, template,
+                   descriptorUpdateTemplate);
+
+   anv_descriptor_set_write_template(set, device, NULL, template, pData);
+}

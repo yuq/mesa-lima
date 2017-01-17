@@ -907,3 +907,36 @@ void anv_CmdPushDescriptorSetKHR(
    cmd_buffer->state.descriptors[_set] = set;
    cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
 }
+
+void anv_CmdPushDescriptorSetWithTemplateKHR(
+    VkCommandBuffer                             commandBuffer,
+    VkDescriptorUpdateTemplateKHR               descriptorUpdateTemplate,
+    VkPipelineLayout                            _layout,
+    uint32_t                                    _set,
+    const void*                                 pData)
+{
+   ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
+   ANV_FROM_HANDLE(anv_descriptor_update_template, template,
+                   descriptorUpdateTemplate);
+   ANV_FROM_HANDLE(anv_pipeline_layout, layout, _layout);
+
+   assert(_set < MAX_PUSH_DESCRIPTORS);
+
+   const struct anv_descriptor_set_layout *set_layout =
+      layout->set[_set].layout;
+   struct anv_descriptor_set *set = &cmd_buffer->state.push_descriptor.set;
+
+   set->layout = set_layout;
+   set->size = anv_descriptor_set_layout_size(set_layout);
+   set->buffer_count = set_layout->buffer_count;
+   set->buffer_views = cmd_buffer->state.push_descriptor.buffer_views;
+
+   anv_descriptor_set_write_template(set,
+                                     cmd_buffer->device,
+                                     &cmd_buffer->surface_state_stream,
+                                     template,
+                                     pData);
+
+   cmd_buffer->state.descriptors[_set] = set;
+   cmd_buffer->state.descriptors_dirty |= set_layout->shader_stages;
+}
