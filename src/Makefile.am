@@ -118,8 +118,8 @@ endif
 
 if HAVE_VULKAN_COMMON
 SUBDIRS += vulkan/wsi
-EXTRA_DIST += vulkan/registry/vk.xml
 endif
+EXTRA_DIST += vulkan/registry/vk.xml
 
 ## Requires the i965 compiler (part of mesa) and wayland-drm
 if HAVE_INTEL_VULKAN
