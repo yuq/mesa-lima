@@ -133,6 +133,12 @@ static void si_cp_dma_prepare(struct si_context *sctx, struct pipe_resource *dst
 			      uint64_t remaining_size, unsigned user_flags,
 			      bool *is_first, unsigned *packet_flags)
 {
+	/* Fast exit for a CPDMA prefetch. */
+	if ((user_flags & SI_CPDMA_SKIP_ALL) == SI_CPDMA_SKIP_ALL) {
+		*is_first = false;
+		return;
+	}
+
 	if (!(user_flags & SI_CPDMA_SKIP_BO_LIST_UPDATE)) {
 		/* Count memory usage in so that need_cs_space can take it into account. */
 		r600_context_add_resource_size(&sctx->b.b, dst);
@@ -395,11 +401,7 @@ void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf
 {
 	assert(sctx->b.chip_class >= CIK);
 
-	si_copy_buffer(sctx, buf, buf, offset, offset, size,
-		       SI_CPDMA_SKIP_CHECK_CS_SPACE |
-		       SI_CPDMA_SKIP_SYNC_AFTER |
-		       SI_CPDMA_SKIP_SYNC_BEFORE |
-		       SI_CPDMA_SKIP_GFX_SYNC);
+	si_copy_buffer(sctx, buf, buf, offset, offset, size, SI_CPDMA_SKIP_ALL);
 }
 
 void si_init_cp_dma_functions(struct si_context *sctx)
