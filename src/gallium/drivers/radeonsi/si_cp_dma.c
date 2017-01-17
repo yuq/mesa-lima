@@ -315,11 +315,13 @@ void si_copy_buffer(struct si_context *sctx,
 	if (!size)
 		return;
 
-	/* Mark the buffer range of destination as valid (initialized),
-	 * so that transfer_map knows it should wait for the GPU when mapping
-	 * that range. */
-	util_range_add(&r600_resource(dst)->valid_buffer_range, dst_offset,
-		       dst_offset + size);
+	if (dst != src || dst_offset != src_offset) {
+		/* Mark the buffer range of destination as valid (initialized),
+		 * so that transfer_map knows it should wait for the GPU when mapping
+		 * that range. */
+		util_range_add(&r600_resource(dst)->valid_buffer_range, dst_offset,
+			       dst_offset + size);
+	}
 
 	dst_offset += r600_resource(dst)->gpu_address;
 	src_offset += r600_resource(src)->gpu_address;
