@@ -1086,7 +1086,7 @@ static void si_build_shader_variant(void *job, int thread_index)
 	struct si_shader_selector *sel = shader->selector;
 	struct si_screen *sscreen = sel->screen;
 	LLVMTargetMachineRef tm;
-	struct pipe_debug_callback *debug = &sel->debug;
+	struct pipe_debug_callback *debug = &sel->compiler_ctx_state.debug;
 	int r;
 
 	if (thread_index >= 0) {
@@ -1095,7 +1095,7 @@ static void si_build_shader_variant(void *job, int thread_index)
 		if (!debug->async)
 			debug = NULL;
 	} else {
-		tm = sel->tm;
+		tm = sel->compiler_ctx_state.tm;
 	}
 
 	r = si_shader_create(sscreen, tm, shader, debug);
@@ -1106,7 +1106,7 @@ static void si_build_shader_variant(void *job, int thread_index)
 		return;
 	}
 
-	if (sel->is_debug_context) {
+	if (sel->compiler_ctx_state.is_debug_context) {
 		FILE *f = open_memstream(&shader->shader_log,
 					 &shader->shader_log_size);
 		if (f) {
@@ -1292,7 +1292,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 	struct si_shader_selector *sel = (struct si_shader_selector *)job;
 	struct si_screen *sscreen = sel->screen;
 	LLVMTargetMachineRef tm;
-	struct pipe_debug_callback *debug = &sel->debug;
+	struct pipe_debug_callback *debug = &sel->compiler_ctx_state.debug;
 	unsigned i;
 
 	if (thread_index >= 0) {
@@ -1301,7 +1301,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 		if (!debug->async)
 			debug = NULL;
 	} else {
-		tm = sel->tm;
+		tm = sel->compiler_ctx_state.tm;
 	}
 
 	/* Compile the main shader part for use with a prolog and/or epilog.
@@ -1455,9 +1455,9 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 		return NULL;
 
 	sel->screen = sscreen;
-	sel->tm = sctx->tm;
-	sel->debug = sctx->b.debug;
-	sel->is_debug_context = sctx->is_debug;
+	sel->compiler_ctx_state.tm = sctx->tm;
+	sel->compiler_ctx_state.debug = sctx->b.debug;
+	sel->compiler_ctx_state.is_debug_context = sctx->is_debug;
 	sel->tokens = tgsi_dup_tokens(state->tokens);
 	if (!sel->tokens) {
 		FREE(sel);

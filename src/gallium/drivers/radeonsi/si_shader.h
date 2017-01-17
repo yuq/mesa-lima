@@ -251,18 +251,26 @@ enum {
 
 struct si_shader;
 
+/* State of the context creating the shader object. */
+struct si_compiler_ctx_state {
+	/* Should only be used by si_init_shader_selector_async and
+	 * si_build_shader_variant if thread_index == -1 (non-threaded). */
+	LLVMTargetMachineRef		tm;
+
+	/* Used if thread_index == -1 or if debug.async is true. */
+	struct pipe_debug_callback	debug;
+
+	/* Used for creating the log string for gallium/ddebug. */
+	bool				is_debug_context;
+};
+
 /* A shader selector is a gallium CSO and contains shader variants and
  * binaries for one TGSI program. This can be shared by multiple contexts.
  */
 struct si_shader_selector {
 	struct si_screen	*screen;
 	struct util_queue_fence ready;
-
-	/* Should only be used by si_init_shader_selector_async
-	 * if thread_index == -1 (non-threaded). */
-	LLVMTargetMachineRef	tm;
-	struct pipe_debug_callback debug;
-	bool			is_debug_context;
+	struct si_compiler_ctx_state compiler_ctx_state;
 
 	pipe_mutex		mutex;
 	struct si_shader	*first_variant; /* immutable after the first variant */
