@@ -643,6 +643,7 @@ anv_descriptor_set_write_buffer_view(struct anv_descriptor_set *set,
 void
 anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
                                 struct anv_device *device,
+                                struct anv_state_stream *alloc_stream,
                                 VkDescriptorType type,
                                 struct anv_buffer *buffer,
                                 uint32_t binding,
@@ -671,6 +672,13 @@ anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
       bview->range = buffer->size - offset;
    else
       bview->range = range;
+
+   /* If we're writing descriptors through a push command, we need to allocate
+    * the surface state from the command buffer. Otherwise it will be
+    * allocated by the descriptor pool when calling
+    * vkAllocateDescriptorSets. */
+   if (alloc_stream)
+      bview->surface_state = anv_state_stream_alloc(alloc_stream, 64, 64);
 
    anv_fill_buffer_surface_state(device, bview->surface_state,
                                  bview->format,
@@ -736,6 +744,7 @@ void anv_UpdateDescriptorSets(
 
             anv_descriptor_set_write_buffer(set,
                                             device,
+                                            NULL,
                                             write->descriptorType,
                                             buffer,
                                             write->dstBinding,

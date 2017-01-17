@@ -960,6 +960,7 @@ anv_descriptor_set_write_buffer_view(struct anv_descriptor_set *set,
 void
 anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
                                 struct anv_device *device,
+                                struct anv_state_stream *alloc_stream,
                                 VkDescriptorType type,
                                 struct anv_buffer *buffer,
                                 uint32_t binding,
