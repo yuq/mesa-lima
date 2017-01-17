@@ -88,7 +88,6 @@ process_glsl_ir(struct brw_context *brw,
                 struct gl_linked_shader *shader)
 {
    struct gl_context *ctx = &brw->ctx;
-   const struct brw_compiler *compiler = brw->screen->compiler;
    const struct gl_shader_compiler_options *options =
       &ctx->Const.ShaderCompilerOptions[shader->Stage];
 
@@ -131,21 +130,6 @@ process_glsl_ir(struct brw_context *brw,
    lower_offset_arrays(shader->ir);
    lower_noise(shader->ir);
    lower_quadop_vector(shader->ir, false);
-
-   bool progress;
-   do {
-      progress = false;
-
-      if (compiler->scalar_stage[shader->Stage]) {
-         if (shader->Stage == MESA_SHADER_VERTEX ||
-             shader->Stage == MESA_SHADER_FRAGMENT)
-            brw_do_channel_expressions(shader->ir);
-         brw_do_vector_splitting(shader->ir);
-      }
-
-      progress = do_common_optimization(shader->ir, true, true,
-                                        options, ctx->Const.NativeIntegers) || progress;
-   } while (progress);
 
    validate_ir_tree(shader->ir);
 
