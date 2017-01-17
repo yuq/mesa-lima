@@ -911,6 +911,19 @@ struct anv_descriptor_set {
    struct anv_descriptor descriptors[0];
 };
 
+struct anv_buffer_view {
+   enum isl_format format; /**< VkBufferViewCreateInfo::format */
+   struct anv_bo *bo;
+   uint32_t offset; /**< Offset into bo. */
+   uint64_t range; /**< VkBufferViewCreateInfo::range */
+
+   struct anv_state surface_state;
+   struct anv_state storage_surface_state;
+   struct anv_state writeonly_storage_surface_state;
+
+   struct brw_image_param storage_image_param;
+};
+
 struct anv_descriptor_pool {
    uint32_t size;
    uint32_t next;
@@ -1730,19 +1743,6 @@ VkResult anv_image_create(VkDevice _device,
 const struct anv_surface *
 anv_image_get_surface_for_aspect_mask(const struct anv_image *image,
                                       VkImageAspectFlags aspect_mask);
-
-struct anv_buffer_view {
-   enum isl_format format; /**< VkBufferViewCreateInfo::format */
-   struct anv_bo *bo;
-   uint32_t offset; /**< Offset into bo. */
-   uint64_t range; /**< VkBufferViewCreateInfo::range */
-
-   struct anv_state surface_state;
-   struct anv_state storage_surface_state;
-   struct anv_state writeonly_storage_surface_state;
-
-   struct brw_image_param storage_image_param;
-};
 
 enum isl_format
 anv_isl_format_for_descriptor_type(VkDescriptorType type);
