@@ -937,16 +937,17 @@ static void si_vertex_buffers_begin_new_cs(struct si_context *sctx)
 
 bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 {
+	struct si_vertex_element *velems = sctx->vertex_elements;
 	struct si_descriptors *desc = &sctx->vertex_buffers;
 	bool bound[SI_NUM_VERTEX_BUFFERS] = {};
-	unsigned i, count = sctx->vertex_elements->count;
+	unsigned i, count = velems->count;
 	uint64_t va;
 	uint32_t *ptr;
 
-	if (!sctx->vertex_buffers_dirty)
+	if (!sctx->vertex_buffers_dirty || !count || !velems)
 		return true;
-	if (!count || !sctx->vertex_elements)
-		return true;
+
+	unsigned fix_size3 = velems->fix_size3;
 
 	/* Vertex buffer descriptors are the only ones which are uploaded
 	 * directly through a staging buffer and don't go through
@@ -964,7 +965,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	assert(count <= SI_NUM_VERTEX_BUFFERS);
 
 	for (i = 0; i < count; i++) {
-		struct pipe_vertex_element *ve = &sctx->vertex_elements->elements[i];
+		struct pipe_vertex_element *ve = &velems->elements[i];
 		struct pipe_vertex_buffer *vb;
 		struct r600_resource *rbuffer;
 		unsigned offset;
@@ -988,7 +989,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		if (sctx->b.chip_class <= CIK && vb->stride) {
 			/* Round up by rounding down and adding 1 */
 			desc[2] = (vb->buffer->width0 - offset -
-				   sctx->vertex_elements->format_size[i]) /
+				   velems->format_size[i]) /
 				  vb->stride + 1;
 		} else {
 			uint32_t size3;
@@ -1007,7 +1008,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 			 * 4-byte aligned, this alignment will never cross the
 			 * winsys buffer boundary.
 			 */
-			size3 = (sctx->vertex_elements->fix_size3 >> (2 * i)) & 3;
+			size3 = (fix_size3 >> (2 * i)) & 3;
 			if (vb->stride && size3) {
 				assert(offset % 4 == 0 && vb->stride % 4 == 0);
 				assert(size3 <= 2);
@@ -1015,7 +1016,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 			}
 		}
 
-		desc[3] = sctx->vertex_elements->rsrc_word3[i];
+		desc[3] = velems->rsrc_word3[i];
 
 		if (!bound[ve->vertex_buffer_index]) {
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
