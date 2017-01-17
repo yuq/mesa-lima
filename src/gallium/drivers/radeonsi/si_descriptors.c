@@ -246,7 +246,6 @@ static bool si_upload_descriptors(struct si_context *sctx,
 		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx, desc->buffer,
 	                            RADEON_USAGE_READ, RADEON_PRIO_DESCRIPTORS);
 	}
-	desc->pointer_dirty = true;
 	desc->dirty_mask = 0;
 
 	if (atom)
@@ -1035,9 +1034,9 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * on performance (confirmed by testing). New descriptors are always
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
-	desc->pointer_dirty = true;
 	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 	sctx->vertex_buffers_dirty = false;
+	sctx->vertex_buffer_pointer_dirty = true;
 	return true;
 }
 
@@ -1735,26 +1734,21 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 static void si_mark_shader_pointers_dirty(struct si_context *sctx,
 					  unsigned shader)
 {
-	struct si_descriptors *descs =
-		&sctx->descriptors[SI_DESCS_FIRST_SHADER + shader * SI_NUM_SHADER_DESCS];
-
-	for (unsigned i = 0; i < SI_NUM_SHADER_DESCS; ++i, ++descs)
-		descs->pointer_dirty = true;
+	sctx->shader_pointers_dirty |=
+		u_bit_consecutive(SI_DESCS_FIRST_SHADER + shader * SI_NUM_SHADER_DESCS,
+				  SI_NUM_SHADER_DESCS);
 
 	if (shader == PIPE_SHADER_VERTEX)
-		sctx->vertex_buffers.pointer_dirty = true;
+		sctx->vertex_buffer_pointer_dirty = sctx->vertex_buffers.buffer != NULL;
 
 	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 }
 
 static void si_shader_userdata_begin_new_cs(struct si_context *sctx)
 {
-	int i;
-
-	for (i = 0; i < SI_NUM_SHADERS; i++) {
-		si_mark_shader_pointers_dirty(sctx, i);
-	}
-	sctx->descriptors[SI_DESCS_RW_BUFFERS].pointer_dirty = true;
+	sctx->shader_pointers_dirty = u_bit_consecutive(0, SI_NUM_DESCS);
+	sctx->vertex_buffer_pointer_dirty = sctx->vertex_buffers.buffer != NULL;
+	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
 }
 
 /* Set a base register address for user data constants in the given shader.
@@ -1807,13 +1801,12 @@ void si_shader_change_notify(struct si_context *sctx)
 
 static void si_emit_shader_pointer(struct si_context *sctx,
 				   struct si_descriptors *desc,
-				   unsigned sh_base, bool keep_dirty)
+				   unsigned sh_base)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	uint64_t va;
 
-	if (!desc->pointer_dirty || !desc->buffer)
-		return;
+	assert(desc->buffer);
 
 	va = desc->buffer->gpu_address +
 	     desc->buffer_offset;
@@ -1822,55 +1815,66 @@ static void si_emit_shader_pointer(struct si_context *sctx,
 	radeon_emit(cs, (sh_base + desc->shader_userdata_offset - SI_SH_REG_OFFSET) >> 2);
 	radeon_emit(cs, va);
 	radeon_emit(cs, va >> 32);
-
-	desc->pointer_dirty = keep_dirty;
 }
 
 void si_emit_graphics_shader_userdata(struct si_context *sctx,
                                       struct r600_atom *atom)
 {
-	unsigned shader;
+	unsigned mask;
 	uint32_t *sh_base = sctx->shader_userdata.sh_base;
 	struct si_descriptors *descs;
 
 	descs = &sctx->descriptors[SI_DESCS_RW_BUFFERS];
 
-	if (descs->pointer_dirty) {
+	if (sctx->shader_pointers_dirty & (1 << SI_DESCS_RW_BUFFERS)) {
 		si_emit_shader_pointer(sctx, descs,
-				       R_00B030_SPI_SHADER_USER_DATA_PS_0, true);
+				       R_00B030_SPI_SHADER_USER_DATA_PS_0);
 		si_emit_shader_pointer(sctx, descs,
-				       R_00B130_SPI_SHADER_USER_DATA_VS_0, true);
+				       R_00B130_SPI_SHADER_USER_DATA_VS_0);
 		si_emit_shader_pointer(sctx, descs,
-				       R_00B230_SPI_SHADER_USER_DATA_GS_0, true);
+				       R_00B230_SPI_SHADER_USER_DATA_GS_0);
 		si_emit_shader_pointer(sctx, descs,
-				       R_00B330_SPI_SHADER_USER_DATA_ES_0, true);
+				       R_00B330_SPI_SHADER_USER_DATA_ES_0);
 		si_emit_shader_pointer(sctx, descs,
-				       R_00B430_SPI_SHADER_USER_DATA_HS_0, true);
-		descs->pointer_dirty = false;
+				       R_00B430_SPI_SHADER_USER_DATA_HS_0);
 	}
 
-	descs = &sctx->descriptors[SI_DESCS_FIRST_SHADER];
+	mask = sctx->shader_pointers_dirty &
+	       u_bit_consecutive(SI_DESCS_FIRST_SHADER,
+				 SI_DESCS_FIRST_COMPUTE - SI_DESCS_FIRST_SHADER);
 
-	for (shader = 0; shader < SI_NUM_GRAPHICS_SHADERS; shader++) {
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+		unsigned shader = (i - SI_DESCS_FIRST_SHADER) / SI_NUM_SHADER_DESCS;
 		unsigned base = sh_base[shader];
-		unsigned i;
 
-		if (!base)
-			continue;
-
-		for (i = 0; i < SI_NUM_SHADER_DESCS; i++, descs++)
-			si_emit_shader_pointer(sctx, descs, base, false);
+		if (base)
+			si_emit_shader_pointer(sctx, descs + i, base);
 	}
-	si_emit_shader_pointer(sctx, &sctx->vertex_buffers, sh_base[PIPE_SHADER_VERTEX], false);
+	sctx->shader_pointers_dirty &=
+		~u_bit_consecutive(SI_DESCS_RW_BUFFERS, SI_DESCS_FIRST_COMPUTE);
+
+	if (sctx->vertex_buffer_pointer_dirty) {
+		si_emit_shader_pointer(sctx, &sctx->vertex_buffers,
+				       sh_base[PIPE_SHADER_VERTEX]);
+		sctx->vertex_buffer_pointer_dirty = false;
+	}
 }
 
 void si_emit_compute_shader_userdata(struct si_context *sctx)
 {
 	unsigned base = R_00B900_COMPUTE_USER_DATA_0;
-	struct si_descriptors *descs = &sctx->descriptors[SI_DESCS_FIRST_COMPUTE];
+	struct si_descriptors *descs = sctx->descriptors;
+	unsigned compute_mask =
+		u_bit_consecutive(SI_DESCS_FIRST_COMPUTE, SI_NUM_SHADER_DESCS);
+	unsigned mask = sctx->shader_pointers_dirty & compute_mask;
 
-	for (unsigned i = 0; i < SI_NUM_SHADER_DESCS; ++i, ++descs)
-		si_emit_shader_pointer(sctx, descs, base, false);
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+
+		si_emit_shader_pointer(sctx, descs + i, base);
+	}
+	sctx->shader_pointers_dirty &= ~compute_mask;
 }
 
 /* INIT/DEINIT/UPLOAD */
@@ -1939,6 +1943,9 @@ bool si_upload_graphics_shader_descriptors(struct si_context *sctx)
 	const unsigned mask = u_bit_consecutive(0, SI_DESCS_FIRST_COMPUTE);
 	unsigned dirty = sctx->descriptors_dirty & mask;
 
+	/* Assume nothing will go wrong: */
+	sctx->shader_pointers_dirty |= dirty;
+
 	while (dirty) {
 		unsigned i = u_bit_scan(&dirty);
 
@@ -1959,6 +1966,9 @@ bool si_upload_compute_shader_descriptors(struct si_context *sctx)
 	const unsigned mask = u_bit_consecutive(SI_DESCS_FIRST_COMPUTE,
 						SI_NUM_DESCS - SI_DESCS_FIRST_COMPUTE);
 	unsigned dirty = sctx->descriptors_dirty & mask;
+
+	/* Assume nothing will go wrong: */
+	sctx->shader_pointers_dirty |= dirty;
 
 	while (dirty) {
 		unsigned i = u_bit_scan(&dirty);

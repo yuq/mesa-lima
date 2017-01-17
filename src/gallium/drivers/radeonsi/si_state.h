@@ -237,8 +237,6 @@ struct si_descriptors {
 	/* The shader userdata offset within a shader where the 64-bit pointer to the descriptor
 	 * array will be stored. */
 	unsigned shader_userdata_offset;
-	/* Whether the pointer should be re-emitted. */
-	bool pointer_dirty;
 };
 
 struct si_sampler_views {

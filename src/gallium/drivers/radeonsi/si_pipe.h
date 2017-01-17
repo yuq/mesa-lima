@@ -268,6 +268,7 @@ struct si_context {
 	struct si_descriptors		vertex_buffers;
 	struct si_descriptors		descriptors[SI_NUM_DESCS];
 	unsigned			descriptors_dirty;
+	unsigned			shader_pointers_dirty;
 	unsigned			compressed_tex_shader_mask;
 	struct si_buffer_resources	rw_buffers;
 	struct si_buffer_resources	const_buffers[SI_NUM_SHADERS];
@@ -288,6 +289,7 @@ struct si_context {
 
 	/* Vertex and index buffers. */
 	bool				vertex_buffers_dirty;
+	bool				vertex_buffer_pointer_dirty;
 	struct pipe_index_buffer	index_buffer;
 	struct pipe_vertex_buffer	vertex_buffer[SI_NUM_VERTEX_BUFFERS];
 

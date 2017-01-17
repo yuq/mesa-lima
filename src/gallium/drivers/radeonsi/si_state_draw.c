@@ -1146,7 +1146,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 
 		/* Vertex buffer descriptors are uploaded uncached, so prefetch
 		 * them right after the VS binary. */
-		if (sctx->vertex_buffers.pointer_dirty) {
+		if (sctx->vertex_buffer_pointer_dirty) {
 			cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
 						sctx->vertex_buffers.buffer_offset,
 						sctx->vertex_elements->count * 16);
