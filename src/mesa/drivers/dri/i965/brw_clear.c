@@ -234,7 +234,12 @@ brw_fast_clear_depth(struct gl_context *ctx)
        *      by a PIPE_CONTROL command with DEPTH_STALL bit set and Then
        *      followed by Depth FLUSH'
       */
-      brw_emit_mi_flush(brw);
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_DEPTH_STALL);
+
+      brw_emit_pipe_control_flush(brw,
+                                  PIPE_CONTROL_DEPTH_CACHE_FLUSH |
+                                  PIPE_CONTROL_CS_STALL);
    }
 
    /* Now, the HiZ buffer contains data that needs to be resolved to the depth
