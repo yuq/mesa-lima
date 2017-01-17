@@ -261,9 +261,4 @@ retry:
 
    if (params->dst.enabled)
       brw_render_cache_set_add_bo(brw, params->dst.addr.buffer);
-
-   /* Flush the sampler cache so any texturing from the destination is
-    * coherent.
-    */
-   brw_emit_mi_flush(brw);
 }
