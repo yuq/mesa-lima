@@ -618,10 +618,9 @@ static void si_check_render_feedback(struct si_context *sctx)
 	sctx->need_check_render_feedback = false;
 }
 
-static void si_decompress_textures(struct si_context *sctx, int shader_start,
-                                   int shader_end)
+static void si_decompress_textures(struct si_context *sctx, unsigned shader_mask)
 {
-	unsigned compressed_colortex_counter;
+	unsigned compressed_colortex_counter, mask;
 
 	if (sctx->blitter->running)
 		return;
@@ -633,8 +632,11 @@ static void si_decompress_textures(struct si_context *sctx, int shader_start,
 		si_update_compressed_colortex_masks(sctx);
 	}
 
-	/* Flush depth textures which need to be flushed. */
-	for (int i = shader_start; i < shader_end; i++) {
+	/* Decompress color & depth textures if needed. */
+	mask = sctx->compressed_tex_shader_mask & shader_mask;
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+
 		if (sctx->samplers[i].depth_texture_mask) {
 			si_flush_depth_textures(sctx, &sctx->samplers[i]);
 		}
@@ -651,12 +653,12 @@ static void si_decompress_textures(struct si_context *sctx, int shader_start,
 
 void si_decompress_graphics_textures(struct si_context *sctx)
 {
-	si_decompress_textures(sctx, 0, SI_NUM_GRAPHICS_SHADERS);
+	si_decompress_textures(sctx, u_bit_consecutive(0, SI_NUM_GRAPHICS_SHADERS));
 }
 
 void si_decompress_compute_textures(struct si_context *sctx)
 {
-	si_decompress_textures(sctx, SI_NUM_GRAPHICS_SHADERS, SI_NUM_SHADERS);
+	si_decompress_textures(sctx, 1 << PIPE_SHADER_COMPUTE);
 }
 
 static void si_clear(struct pipe_context *ctx, unsigned buffers,

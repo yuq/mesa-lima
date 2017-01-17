@@ -490,6 +490,20 @@ static bool is_compressed_colortex(struct r600_texture *rtex)
 	       (rtex->dcc_offset && rtex->dirty_level_mask);
 }
 
+static void si_update_compressed_tex_shader_mask(struct si_context *sctx,
+						 unsigned shader)
+{
+	struct si_textures_info *samplers = &sctx->samplers[shader];
+	unsigned shader_bit = 1 << shader;
+
+	if (samplers->depth_texture_mask ||
+	    samplers->compressed_colortex_mask ||
+	    sctx->images[shader].compressed_colortex_mask)
+		sctx->compressed_tex_shader_mask |= shader_bit;
+	else
+		sctx->compressed_tex_shader_mask &= ~shader_bit;
+}
+
 static void si_set_sampler_views(struct pipe_context *ctx,
 				 enum pipe_shader_type shader, unsigned start,
                                  unsigned count,
@@ -539,6 +553,8 @@ static void si_set_sampler_views(struct pipe_context *ctx,
 			samplers->compressed_colortex_mask &= ~(1u << slot);
 		}
 	}
+
+	si_update_compressed_tex_shader_mask(sctx, shader);
 }
 
 static void
@@ -759,6 +775,8 @@ si_set_shader_images(struct pipe_context *pipe,
 		for (i = 0, slot = start_slot; i < count; ++i, ++slot)
 			si_set_shader_image(ctx, shader, slot, NULL);
 	}
+
+	si_update_compressed_tex_shader_mask(ctx, shader);
 }
 
 static void
@@ -1491,6 +1509,7 @@ void si_update_compressed_colortex_masks(struct si_context *sctx)
 	for (int i = 0; i < SI_NUM_SHADERS; ++i) {
 		si_samplers_update_compressed_colortex_mask(&sctx->samplers[i]);
 		si_images_update_compressed_colortex_mask(&sctx->images[i]);
+		si_update_compressed_tex_shader_mask(sctx, i);
 	}
 }
 
@@ -1706,6 +1725,8 @@ void si_update_all_texture_descriptors(struct si_context *sctx)
 			si_set_sampler_view(sctx, shader, i,
 					    samplers->views[i], true);
 		}
+
+		si_update_compressed_tex_shader_mask(sctx, shader);
 	}
 }
 
