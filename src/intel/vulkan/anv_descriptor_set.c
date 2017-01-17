@@ -391,8 +391,8 @@ struct pool_free_list_entry {
    uint32_t size;
 };
 
-static size_t
-layout_size(const struct anv_descriptor_set_layout *layout)
+size_t
+anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout)
 {
    return
       sizeof(struct anv_descriptor_set) +
@@ -412,7 +412,7 @@ anv_descriptor_set_create(struct anv_device *device,
                           struct anv_descriptor_set **out_set)
 {
    struct anv_descriptor_set *set;
-   const size_t size = layout_size(layout);
+   const size_t size = anv_descriptor_set_layout_size(layout);
 
    set = NULL;
    if (size <= pool->size - pool->next) {

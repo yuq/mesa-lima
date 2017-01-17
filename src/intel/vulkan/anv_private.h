@@ -935,6 +935,9 @@ struct anv_descriptor_pool {
    char data[0];
 };
 
+size_t
+anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout);
+
 VkResult
 anv_descriptor_set_create(struct anv_device *device,
                           struct anv_descriptor_pool *pool,
