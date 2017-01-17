@@ -526,7 +526,10 @@ intel_miptree_create_layout(struct brw_context *brw,
              (layout_flags & MIPTREE_LAYOUT_FORCE_HALIGN16) == 0);
    }
 
-   brw_miptree_layout(brw, mt, layout_flags);
+   if (!brw_miptree_layout(brw, mt, layout_flags)) {
+      intel_miptree_release(&mt);
+      return NULL;
+   }
 
    if (mt->aux_disable & INTEL_AUX_DISABLE_MCS)
       assert(mt->msaa_layout != INTEL_MSAA_LAYOUT_CMS);

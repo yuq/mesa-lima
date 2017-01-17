@@ -763,7 +763,7 @@ intel_miptree_set_alignment(struct brw_context *brw,
    }
 }
 
-void
+bool
 brw_miptree_layout(struct brw_context *brw,
                    struct intel_mipmap_tree *mt,
                    uint32_t layout_flags)
@@ -773,10 +773,8 @@ brw_miptree_layout(struct brw_context *brw,
    intel_miptree_set_alignment(brw, mt, layout_flags);
    intel_miptree_set_total_width_height(brw, mt);
 
-   if (!mt->total_width || !mt->total_height) {
-      intel_miptree_release(&mt);
-      return;
-   }
+   if (!mt->total_width || !mt->total_height)
+      return false;
 
    /* On Gen9+ the alignment values are expressed in multiples of the block
     * size
@@ -790,5 +788,7 @@ brw_miptree_layout(struct brw_context *brw,
 
    if ((layout_flags & MIPTREE_LAYOUT_FOR_BO) == 0)
       mt->tiling = brw_miptree_choose_tiling(brw, mt, layout_flags);
+
+   return true;
 }
 
