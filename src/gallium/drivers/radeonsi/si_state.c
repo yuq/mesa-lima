@@ -3323,6 +3323,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				       const struct pipe_vertex_element *elements)
 {
 	struct si_vertex_element *v = CALLOC_STRUCT(si_vertex_element);
+	bool used[SI_NUM_VERTEX_BUFFERS] = {};
 	int i;
 
 	assert(count <= SI_MAX_ATTRIBS);
@@ -3340,6 +3341,11 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		if (vbo_index >= SI_NUM_VERTEX_BUFFERS) {
 			FREE(v);
 			return NULL;
+		}
+
+		if (!used[vbo_index]) {
+			v->first_vb_use_mask |= 1 << i;
+			used[vbo_index] = true;
 		}
 
 		desc = util_format_description(elements[i].src_format);

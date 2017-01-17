@@ -939,7 +939,6 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 {
 	struct si_vertex_element *velems = sctx->vertex_elements;
 	struct si_descriptors *desc = &sctx->vertex_buffers;
-	bool bound[SI_NUM_VERTEX_BUFFERS] = {};
 	unsigned i, count = velems->count;
 	uint64_t va;
 	uint32_t *ptr;
@@ -948,6 +947,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		return true;
 
 	unsigned fix_size3 = velems->fix_size3;
+	unsigned first_vb_use_mask = velems->first_vb_use_mask;
 
 	/* Vertex buffer descriptors are the only ones which are uploaded
 	 * directly through a staging buffer and don't go through
@@ -969,9 +969,10 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		struct pipe_vertex_buffer *vb;
 		struct r600_resource *rbuffer;
 		unsigned offset;
+		unsigned vbo_index = ve->vertex_buffer_index;
 		uint32_t *desc = &ptr[i*4];
 
-		vb = &sctx->vertex_buffer[ve->vertex_buffer_index];
+		vb = &sctx->vertex_buffer[vbo_index];
 		rbuffer = (struct r600_resource*)vb->buffer;
 		if (!rbuffer) {
 			memset(desc, 0, 16);
@@ -1018,11 +1019,10 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 
 		desc[3] = velems->rsrc_word3[i];
 
-		if (!bound[ve->vertex_buffer_index]) {
+		if (first_vb_use_mask & (1 << i)) {
 			radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
 					      (struct r600_resource*)vb->buffer,
 					      RADEON_USAGE_READ, RADEON_PRIO_VERTEX_BUFFER);
-			bound[ve->vertex_buffer_index] = true;
 		}
 	}
 

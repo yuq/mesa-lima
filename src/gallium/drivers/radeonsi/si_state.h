@@ -99,6 +99,7 @@ struct si_stencil_ref {
 struct si_vertex_element
 {
 	unsigned			count;
+	unsigned			first_vb_use_mask;
 
 	/* Two bits per attribute indicating the size of each vector component
 	 * in bytes if the size 3-workaround must be applied.
