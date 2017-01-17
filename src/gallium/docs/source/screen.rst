@@ -371,6 +371,8 @@ The integer capabilities:
   and lowering.
 * ``PIPE_CAP_TGSI_FS_FBFETCH``: Whether a fragment shader can use the FBFETCH
   opcode to retrieve the current value in the framebuffer.
+* ``PIPE_CAP_TGSI_MUL_ZERO_WINS``: Whether TGSI shaders support the
+  ``TGSI_PROPERTY_MUL_ZERO_WINS`` shader property.
 
 
 .. _pipe_capf:
