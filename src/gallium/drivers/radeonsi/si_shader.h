@@ -498,6 +498,8 @@ struct si_shader_info {
 };
 
 struct si_shader {
+	struct si_compiler_ctx_state	compiler_ctx_state;
+
 	struct si_shader_selector	*selector;
 	struct si_shader		*next_variant;
 
