@@ -98,6 +98,16 @@ build_color_shaders(struct nir_shader **out_vs,
 	nir_copy_var(&vs_b, vs_out_color, vs_in_color);
 	nir_copy_var(&fs_b, fs_out_color, fs_in_color);
 
+	const struct glsl_type *layer_type = glsl_int_type();
+	nir_variable *vs_out_layer =
+		nir_variable_create(vs_b.shader, nir_var_shader_out, layer_type,
+				    "v_layer");
+	vs_out_layer->data.location = VARYING_SLOT_LAYER;
+	vs_out_layer->data.interpolation = INTERP_MODE_FLAT;
+	nir_ssa_def *inst_id = nir_load_system_value(&vs_b, nir_intrinsic_load_instance_id, 0);
+
+	nir_store_var(&vs_b, vs_out_layer, inst_id, 0x1);
+
 	*out_vs = vs_b.shader;
 	*out_fs = fs_b.shader;
 }
@@ -447,7 +457,7 @@ emit_color_clear(struct radv_cmd_buffer *cmd_buffer,
 					   pipeline_h);
 	}
 
-	radv_CmdDraw(cmd_buffer_h, 3, 1, 0, 0);
+	radv_CmdDraw(cmd_buffer_h, 3, clear_rect->layerCount, 0, 0);
 
 	radv_cmd_buffer_set_subpass(cmd_buffer, subpass, false);
 }
@@ -476,6 +486,15 @@ build_depthstencil_shader(struct nir_shader **out_vs, struct nir_shader **out_fs
 	vs_out_pos->data.location = VARYING_SLOT_POS;
 
 	nir_copy_var(&vs_b, vs_out_pos, vs_in_pos);
+
+	const struct glsl_type *layer_type = glsl_int_type();
+	nir_variable *vs_out_layer =
+		nir_variable_create(vs_b.shader, nir_var_shader_out, layer_type,
+				    "v_layer");
+	vs_out_layer->data.location = VARYING_SLOT_LAYER;
+	vs_out_layer->data.interpolation = INTERP_MODE_FLAT;
+	nir_ssa_def *inst_id = nir_load_system_value(&vs_b, nir_intrinsic_load_instance_id, 0);
+	nir_store_var(&vs_b, vs_out_layer, inst_id, 0x1);
 
 	*out_vs = vs_b.shader;
 	*out_fs = fs_b.shader;
@@ -717,7 +736,7 @@ emit_depthstencil_clear(struct radv_cmd_buffer *cmd_buffer,
 	if (depth_view_can_fast_clear(iview, subpass->depth_stencil_attachment.layout, clear_rect))
 		radv_set_depth_clear_regs(cmd_buffer, iview->image, clear_value, aspects);
 
-	radv_CmdDraw(cmd_buffer_h, 3, 1, 0, 0);
+	radv_CmdDraw(cmd_buffer_h, 3, clear_rect->layerCount, 0, 0);
 }
 
 
@@ -948,13 +967,10 @@ radv_cmd_buffer_clear_subpass(struct radv_cmd_buffer *cmd_buffer)
 
 	radv_meta_save_graphics_reset_vport_scissor(&saved_state, cmd_buffer);
 
-	if (cmd_state->framebuffer->layers > 1)
-		radv_finishme("clearing multi-layer framebuffer");
-
 	VkClearRect clear_rect = {
 		.rect = cmd_state->render_area,
 		.baseArrayLayer = 0,
-		.layerCount = 1, /* FINISHME: clear multi-layer framebuffer */
+		.layerCount = cmd_state->framebuffer->layers,
 	};
 
 	for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
