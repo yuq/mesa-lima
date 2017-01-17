@@ -3335,6 +3335,12 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		const struct util_format_channel_description *channel;
 		unsigned data_format, num_format;
 		int first_non_void;
+		unsigned vbo_index = elements[i].vertex_buffer_index;
+
+		if (vbo_index >= SI_NUM_VERTEX_BUFFERS) {
+			FREE(v);
+			return NULL;
+		}
 
 		desc = util_format_description(elements[i].src_format);
 		first_non_void = util_format_get_first_non_void_channel(elements[i].src_format);
