@@ -76,7 +76,6 @@ class Value(object):
          return Constant(val, name_base)
 
    __template = mako.template.Template("""
-#include "compiler/nir/nir_search_helpers.h"
 static const ${val.c_type} ${val.name} = {
    { ${val.type_enum}, ${val.bit_size} },
 % if isinstance(val, Constant):
@@ -500,6 +499,7 @@ class SearchAndReplace(object):
 _algebraic_pass_template = mako.template.Template("""
 #include "nir.h"
 #include "nir_search.h"
+#include "nir_search_helpers.h"
 
 #ifndef NIR_OPT_ALGEBRAIC_STRUCT_DEFS
 #define NIR_OPT_ALGEBRAIC_STRUCT_DEFS
