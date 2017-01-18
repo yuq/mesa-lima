@@ -1612,6 +1612,7 @@ _mesa_LinkProgram(GLuint programObj)
                                                            "glLinkProgram"));
 }
 
+#ifdef ENABLE_SHADER_CACHE
 /**
  * Generate a SHA-1 hash value string for given source string.
  */
@@ -1723,6 +1724,8 @@ read_shader(const gl_shader_stage stage, const char *source)
    return buffer;
 }
 
+#endif /* ENABLE_SHADER_CACHE */
+
 /**
  * Called via glShaderSource() and glShaderSourceARB() API functions.
  * Basically, concatenate the source code strings into one long string
@@ -1795,6 +1798,7 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    source[totalLength - 1] = '\0';
    source[totalLength - 2] = '\0';
 
+#ifdef ENABLE_SHADER_CACHE
    /* Dump original shader source to MESA_SHADER_DUMP_PATH and replace
     * if corresponding entry found from MESA_SHADER_READ_PATH.
     */
@@ -1805,6 +1809,7 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
       free(source);
       source = replacement;
    }
+#endif /* ENABLE_SHADER_CACHE */
 
    shader_source(sh, source);
 

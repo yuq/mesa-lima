@@ -40,6 +40,8 @@ struct disk_cache;
 
 /* Provide inlined stub functions if the shader cache is disabled. */
 
+#ifdef ENABLE_SHADER_CACHE
+
 /**
  * Create a new cache object.
  *
@@ -128,6 +130,46 @@ disk_cache_put_key(struct disk_cache *cache, cache_key key);
  */
 bool
 disk_cache_has_key(struct disk_cache *cache, cache_key key);
+
+#else
+
+static inline struct disk_cache *
+disk_cache_create(void)
+{
+   return NULL;
+}
+
+static inline void
+disk_cache_destroy(struct disk_cache *cache) {
+   return;
+}
+
+static inline void
+disk_cache_put(struct disk_cache *cache, cache_key key,
+          const void *data, size_t size)
+{
+   return;
+}
+
+static inline uint8_t *
+disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
+{
+   return NULL;
+}
+
+static inline void
+disk_cache_put_key(struct disk_cache *cache, cache_key key)
+{
+   return;
+}
+
+static inline bool
+disk_cache_has_key(struct disk_cache *cache, cache_key key)
+{
+   return false;
+}
+
+#endif /* ENABLE_SHADER_CACHE */
 
 #ifdef __cplusplus
 }

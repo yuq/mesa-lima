@@ -1766,6 +1766,7 @@ if test -n "$with_vulkan_drivers"; then
 fi
 
 
+DEFINES="$DEFINES -DENABLE_SHADER_CACHE"
 AM_CONDITIONAL(NEED_MEGADRIVER, test -n "$DRI_DIRS")
 AM_CONDITIONAL(NEED_LIBMESA, test "x$enable_glx" = xxlib -o \
                                   "x$enable_osmesa" = xyes -o \
