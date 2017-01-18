@@ -587,8 +587,13 @@ void anv_UpdateDescriptorSets(
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
          for (uint32_t j = 0; j < write->descriptorCount; j++) {
-            ANV_FROM_HANDLE(anv_sampler, sampler,
-                            write->pImageInfo[j].sampler);
+            /* If this descriptor has an immutable sampler, we don't want to
+             * stomp on it.
+             */
+            struct anv_sampler *sampler =
+               bind_layout->immutable_samplers ?
+               bind_layout->immutable_samplers[j] :
+               anv_sampler_from_handle(write->pImageInfo[j].sampler);
 
             desc[j] = (struct anv_descriptor) {
                .type = VK_DESCRIPTOR_TYPE_SAMPLER,
@@ -601,17 +606,19 @@ void anv_UpdateDescriptorSets(
          for (uint32_t j = 0; j < write->descriptorCount; j++) {
             ANV_FROM_HANDLE(anv_image_view, iview,
                             write->pImageInfo[j].imageView);
-            ANV_FROM_HANDLE(anv_sampler, sampler,
-                            write->pImageInfo[j].sampler);
-
-            desc[j].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            desc[j].image_view = iview;
-
-            /* If this descriptor has an immutable sampler, we don't want
-             * to stomp on it.
+            /* If this descriptor has an immutable sampler, we don't want to
+             * stomp on it.
              */
-            if (sampler)
-               desc[j].sampler = sampler;
+            struct anv_sampler *sampler =
+               bind_layout->immutable_samplers ?
+               bind_layout->immutable_samplers[j] :
+               anv_sampler_from_handle(write->pImageInfo[j].sampler);
+
+            desc[j] = (struct anv_descriptor) {
+               .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+               .image_view = iview,
+               .sampler = sampler,
+            };
          }
          break;
 
