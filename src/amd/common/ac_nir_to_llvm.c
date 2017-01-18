@@ -86,6 +86,13 @@ struct nir_to_llvm_context {
 	LLVMValueRef vs_prim_id;
 	LLVMValueRef instance_id;
 
+	LLVMValueRef gsvs_ring_stride;
+	LLVMValueRef gsvs_num_entries;
+	LLVMValueRef gs2vs_offset;
+	LLVMValueRef gs_wave_id;
+	LLVMValueRef gs_vtx_offset[6];
+	LLVMValueRef gs_prim_id, gs_invocation_id;
+
 	LLVMValueRef prim_mask;
 	LLVMValueRef sample_positions;
 	LLVMValueRef persp_sample, persp_center, persp_centroid;
@@ -435,6 +442,22 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		arg_types[arg_idx++] = ctx->i32; // vs prim id
 		arg_types[arg_idx++] = ctx->i32; // instance id
 		break;
+	case MESA_SHADER_GEOMETRY:
+		arg_types[arg_idx++] = ctx->i32; // gsvs stride
+		arg_types[arg_idx++] = ctx->i32; // gsvs num entires
+		user_sgpr_count = arg_idx;
+		arg_types[arg_idx++] = ctx->i32; // gs2vs offset
+	        arg_types[arg_idx++] = ctx->i32; // wave id
+		sgpr_count = arg_idx;
+		arg_types[arg_idx++] = ctx->i32; // vtx0
+		arg_types[arg_idx++] = ctx->i32; // vtx1
+		arg_types[arg_idx++] = ctx->i32; // prim id
+		arg_types[arg_idx++] = ctx->i32; // vtx2
+		arg_types[arg_idx++] = ctx->i32; // vtx3
+		arg_types[arg_idx++] = ctx->i32; // vtx4
+		arg_types[arg_idx++] = ctx->i32; // vtx5
+		arg_types[arg_idx++] = ctx->i32; // GS instance id
+		break;
 	case MESA_SHADER_FRAGMENT:
 		arg_types[arg_idx++] = const_array(ctx->f32, 32); /* sample positions */
 		user_sgpr_count = arg_idx;
@@ -530,6 +553,22 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		ctx->rel_auto_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->vs_prim_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->instance_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		break;
+	case MESA_SHADER_GEOMETRY:
+		set_userdata_location_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES, user_sgpr_idx, 2);
+		user_sgpr_idx += 2;
+		ctx->gsvs_ring_stride = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gsvs_num_entries = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs2vs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_wave_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_vtx_offset[0] = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_vtx_offset[1] = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_prim_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_vtx_offset[2] = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_vtx_offset[3] = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_vtx_offset[4] = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_vtx_offset[5] = LLVMGetParam(ctx->main_function, arg_idx++);
+		ctx->gs_invocation_id = LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_FRAGMENT:
 		set_userdata_location_shader(ctx, AC_UD_PS_SAMPLE_POS, user_sgpr_idx, 2);
