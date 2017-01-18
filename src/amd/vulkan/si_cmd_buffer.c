@@ -512,6 +512,7 @@ uint32_t
 si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 {
 	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
+	enum radeon_family family = cmd_buffer->device->physical_device->rad_info.family;
 	struct radeon_info *info = &cmd_buffer->device->physical_device->rad_info;
 	unsigned prim = cmd_buffer->state.pipeline->graphics.prim;
 	unsigned primgroup_size = 128; /* recommended without a GS */
@@ -523,7 +524,8 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 	bool partial_vs_wave = false;
 	bool partial_es_wave = false;
 
-	/* TODO GS */
+	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
+		primgroup_size = 64;  /* recommended with a GS */
 
 	/* TODO TES */
 
@@ -549,17 +551,15 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 			ia_switch_on_eoi = true;
 
 		/* Required by Hawaii and, for some special cases, by VI. */
-#if 0
 		if (ia_switch_on_eoi &&
-		    (sctx->b.family == CHIP_HAWAII ||
-		     (sctx->b.chip_class == VI &&
-		      (sctx->gs_shader.cso || max_primgroup_in_wave != 2))))
+		    (family == CHIP_HAWAII ||
+		     (chip_class == VI &&
+		      (radv_pipeline_has_gs(cmd_buffer->state.pipeline) || max_primgroup_in_wave != 2))))
 			partial_vs_wave = true;
-#endif
 
 #if 0
 		/* Instancing bug on Bonaire. */
-		if (sctx->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
+		if (family == CHIP_BONAIRE && ia_switch_on_eoi &&
 		    (info->indirect || info->instance_count > 1))
 			partial_vs_wave = true;
 #endif
@@ -571,15 +571,13 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 		partial_es_wave = true;
 
 	/* GS requirement. */
-#if 0
-	if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
+	if (SI_GS_PER_ES / primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
 		partial_es_wave = true;
-#endif
 
 	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
 	 * on multi-SE chips. */
 #if 0
-	if (sctx->b.screen->info.max_se >= 2 && ia_switch_on_eoi &&
+	if (info->max_se >= 2 && ia_switch_on_eoi &&
 	    (info->indirect ||
 	     (info->instance_count > 1 &&
 	      si_num_prims_for_vertices(info) <= 1)))
