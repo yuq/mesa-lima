@@ -36,6 +36,7 @@ struct radv_pipeline_layout;
 
 struct ac_vs_variant_key {
 	uint32_t instance_rate_inputs;
+	uint32_t as_es:1;
 };
 
 struct ac_fs_variant_key {
@@ -65,7 +66,7 @@ struct ac_userdata_info {
 };
 
 enum ac_ud_index {
-	AC_UD_SCRATCH = 0,
+	AC_UD_SCRATCH_RING_OFFSETS = 0,
 	AC_UD_PUSH_CONSTANTS = 1,
 	AC_UD_SHADER_START = 2,
 	AC_UD_VS_VERTEX_BUFFERS = AC_UD_SHADER_START,
