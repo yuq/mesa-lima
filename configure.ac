@@ -927,16 +927,13 @@ strip_unwanted_llvm_flags() {
 llvm_set_environment_variables() {
     if test "x$LLVM_CONFIG" != xno; then
         LLVM_VERSION=`$LLVM_CONFIG --version | egrep -o '^[[0-9.]]+'`
-        LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
         LLVM_CPPFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cppflags"`
-        LLVM_CFLAGS=$LLVM_CPPFLAGS   # CPPFLAGS seem to be sufficient
-        LLVM_CXXFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cxxflags"`
         LLVM_INCLUDEDIR=`$LLVM_CONFIG --includedir`
         LLVM_LIBDIR=`$LLVM_CONFIG --libdir`
 
-        # We need to respect LLVM_CFLAGS when compiling LLVM headers.
+        # We need to respect LLVM_CPPFLAGS when compiling LLVM headers.
         save_CFLAGS="$CFLAGS"
-        CFLAGS="$CFLAGS $LLVM_CFLAGS"
+        CFLAGS="$CFLAGS $LLVM_CPPFLAGS"
 
         AC_COMPUTE_INT([LLVM_VERSION_MAJOR], [LLVM_VERSION_MAJOR],
             [#include "${LLVM_INCLUDEDIR}/llvm/Config/llvm-config.h"])
@@ -2390,6 +2387,10 @@ dnl Set defines and buildtime variables only when using LLVM.
 dnl
 if test "x$enable_gallium_llvm" = xyes; then
     DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
+
+    LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
+    LLVM_CFLAGS=$LLVM_CPPFLAGS   # CPPFLAGS seem to be sufficient
+    LLVM_CXXFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cxxflags"`
 
     dnl Set LLVM_LIBS - This is done after the driver configuration so
     dnl that drivers can add additional components to LLVM_COMPONENTS.
