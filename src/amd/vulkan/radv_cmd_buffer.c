@@ -453,47 +453,38 @@ radv_emit_graphics_raster_state(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
-radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
-			struct radv_pipeline *pipeline)
+radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
+		struct radv_pipeline *pipeline,
+		struct radv_shader_variant *shader)
 {
 	struct radeon_winsys *ws = cmd_buffer->device->ws;
-	struct radv_shader_variant *vs;
-	uint64_t va;
+	uint64_t va = ws->buffer_get_va(shader->bo);
 	unsigned export_count;
-	unsigned clip_dist_mask, cull_dist_mask, total_mask;
 
-	assert (pipeline->shaders[MESA_SHADER_VERTEX]);
+	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
 
-	vs = pipeline->shaders[MESA_SHADER_VERTEX];
-	va = ws->buffer_get_va(vs->bo);
-	ws->cs_add_buffer(cmd_buffer->cs, vs->bo, 8);
-
-	clip_dist_mask = vs->info.vs.clip_dist_mask;
-	cull_dist_mask = vs->info.vs.cull_dist_mask;
-	total_mask = clip_dist_mask | cull_dist_mask;
-	radeon_set_context_reg(cmd_buffer->cs, R_028A40_VGT_GS_MODE, 0);
-	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, 0);
-
-	export_count = MAX2(1, vs->info.vs.param_exports);
+	export_count = MAX2(1, shader->info.vs.param_exports);
 	radeon_set_context_reg(cmd_buffer->cs, R_0286C4_SPI_VS_OUT_CONFIG,
 			       S_0286C4_VS_EXPORT_COUNT(export_count - 1));
+
 	radeon_set_context_reg(cmd_buffer->cs, R_02870C_SPI_SHADER_POS_FORMAT,
 			       S_02870C_POS0_EXPORT_FORMAT(V_02870C_SPI_SHADER_4COMP) |
-			       S_02870C_POS1_EXPORT_FORMAT(vs->info.vs.pos_exports > 1 ?
+			       S_02870C_POS1_EXPORT_FORMAT(shader->info.vs.pos_exports > 1 ?
 							   V_02870C_SPI_SHADER_4COMP :
 							   V_02870C_SPI_SHADER_NONE) |
-			       S_02870C_POS2_EXPORT_FORMAT(vs->info.vs.pos_exports > 2 ?
+			       S_02870C_POS2_EXPORT_FORMAT(shader->info.vs.pos_exports > 2 ?
 							   V_02870C_SPI_SHADER_4COMP :
 							   V_02870C_SPI_SHADER_NONE) |
-			       S_02870C_POS3_EXPORT_FORMAT(vs->info.vs.pos_exports > 3 ?
+			       S_02870C_POS3_EXPORT_FORMAT(shader->info.vs.pos_exports > 3 ?
 							   V_02870C_SPI_SHADER_4COMP :
 							   V_02870C_SPI_SHADER_NONE));
+
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B120_SPI_SHADER_PGM_LO_VS, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
 	radeon_emit(cmd_buffer->cs, va >> 40);
-	radeon_emit(cmd_buffer->cs, vs->rsrc1);
-	radeon_emit(cmd_buffer->cs, vs->rsrc2);
+	radeon_emit(cmd_buffer->cs, shader->rsrc1);
+	radeon_emit(cmd_buffer->cs, shader->rsrc2);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028818_PA_CL_VTE_CNTL,
 			       S_028818_VTX_W0_FMT(1) |
@@ -501,13 +492,18 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 			       S_028818_VPORT_Y_SCALE_ENA(1) | S_028818_VPORT_Y_OFFSET_ENA(1) |
 			       S_028818_VPORT_Z_SCALE_ENA(1) | S_028818_VPORT_Z_OFFSET_ENA(1));
 
+	unsigned clip_dist_mask, cull_dist_mask, total_mask;
+	clip_dist_mask = shader->info.vs.clip_dist_mask;
+	cull_dist_mask = shader->info.vs.cull_dist_mask;
+	total_mask = clip_dist_mask | cull_dist_mask;
+
 	radeon_set_context_reg(cmd_buffer->cs, R_02881C_PA_CL_VS_OUT_CNTL,
-			       S_02881C_USE_VTX_POINT_SIZE(vs->info.vs.writes_pointsize) |
-			       S_02881C_USE_VTX_RENDER_TARGET_INDX(vs->info.vs.writes_layer) |
-			       S_02881C_USE_VTX_VIEWPORT_INDX(vs->info.vs.writes_viewport_index) |
-			       S_02881C_VS_OUT_MISC_VEC_ENA(vs->info.vs.writes_pointsize ||
-							    vs->info.vs.writes_layer ||
-							    vs->info.vs.writes_viewport_index) |
+			       S_02881C_USE_VTX_POINT_SIZE(shader->info.vs.writes_pointsize) |
+			       S_02881C_USE_VTX_RENDER_TARGET_INDX(shader->info.vs.writes_layer) |
+			       S_02881C_USE_VTX_VIEWPORT_INDX(shader->info.vs.writes_viewport_index) |
+			       S_02881C_VS_OUT_MISC_VEC_ENA(shader->info.vs.writes_pointsize ||
+							    shader->info.vs.writes_layer ||
+							    shader->info.vs.writes_viewport_index) |
 			       S_02881C_VS_OUT_CCDIST0_VEC_ENA((total_mask & 0x0f) != 0) |
 			       S_02881C_VS_OUT_CCDIST1_VEC_ENA((total_mask & 0xf0) != 0) |
 			       pipeline->graphics.raster.pa_cl_vs_out_cntl |
@@ -515,7 +511,22 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 			       clip_dist_mask);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028AB4_VGT_REUSE_OFF,
-			       S_028AB4_REUSE_OFF(vs->info.vs.writes_viewport_index));
+			       S_028AB4_REUSE_OFF(shader->info.vs.writes_viewport_index));
+}
+
+static void
+radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
+			struct radv_pipeline *pipeline)
+{
+	struct radv_shader_variant *vs;
+
+	assert (pipeline->shaders[MESA_SHADER_VERTEX]);
+
+	vs = pipeline->shaders[MESA_SHADER_VERTEX];
+
+	radv_emit_hw_vs(cmd_buffer, pipeline, vs);
+
+	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, 0);
 }
 
 
