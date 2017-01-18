@@ -768,6 +768,36 @@ radv_queue_finish(struct radv_queue *queue)
 		queue->device->ws->buffer_destroy(queue->compute_scratch_bo);
 }
 
+static void
+radv_device_init_gs_info(struct radv_device *device)
+{
+	switch (device->physical_device->rad_info.family) {
+	case CHIP_OLAND:
+	case CHIP_HAINAN:
+	case CHIP_KAVERI:
+	case CHIP_KABINI:
+	case CHIP_MULLINS:
+	case CHIP_ICELAND:
+	case CHIP_CARRIZO:
+	case CHIP_STONEY:
+		device->gs_table_depth = 16;
+		return;
+	case CHIP_TAHITI:
+	case CHIP_PITCAIRN:
+	case CHIP_VERDE:
+	case CHIP_BONAIRE:
+	case CHIP_HAWAII:
+	case CHIP_TONGA:
+	case CHIP_FIJI:
+	case CHIP_POLARIS10:
+	case CHIP_POLARIS11:
+		device->gs_table_depth = 32;
+		return;
+	default:
+		unreachable("unknown GPU");
+	}
+}
+
 VkResult radv_CreateDevice(
 	VkPhysicalDevice                            physicalDevice,
 	const VkDeviceCreateInfo*                   pCreateInfo,
@@ -848,6 +878,8 @@ VkResult radv_CreateDevice(
 	uint32_t max_threads_per_block = 2048;
 	device->scratch_waves = MAX2(32 * physical_device->rad_info.num_good_compute_units,
 				     max_threads_per_block / 64);
+
+	radv_device_init_gs_info(device);
 
 	result = radv_device_init_meta(device);
 	if (result != VK_SUCCESS)

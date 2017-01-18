@@ -495,6 +495,9 @@ struct radv_device {
 
 	bool llvm_supports_spill;
 	uint32_t scratch_waves;
+
+	uint32_t gs_table_depth;
+
 	/* MSAA sample locations.
 	 * The first index is the sample index.
 	 * The second index is the coordinate: X, Y. */
