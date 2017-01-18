@@ -4664,6 +4664,12 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	case MESA_SHADER_FRAGMENT:
 		shader_info->fs.early_fragment_test = nir->info->fs.early_fragment_tests;
 		break;
+	case MESA_SHADER_GEOMETRY:
+		shader_info->gs.vertices_in = nir->info->gs.vertices_in;
+		shader_info->gs.vertices_out = nir->info->gs.vertices_out;
+		shader_info->gs.output_prim = nir->info->gs.output_primitive;
+		shader_info->gs.invocations = nir->info->gs.invocations;
+		break;
 	default:
 		break;
 	}

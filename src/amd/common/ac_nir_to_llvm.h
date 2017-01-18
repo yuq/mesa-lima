@@ -118,6 +118,12 @@ struct ac_shader_variant_info {
 		struct {
 			unsigned block_size[3];
 		} cs;
+		struct {
+			unsigned vertices_in;
+			unsigned vertices_out;
+			unsigned output_prim;
+			unsigned invocations;
+		} gs;
 	};
 };
 
