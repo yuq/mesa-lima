@@ -54,6 +54,21 @@ mark_buffer_inactive(struct intel_buffer_object *intel_obj)
    intel_obj->gpu_active_end = 0;
 }
 
+static void
+mark_buffer_valid_data(struct intel_buffer_object *intel_obj,
+                       uint32_t offset, uint32_t size)
+{
+   intel_obj->valid_data_start = MIN2(intel_obj->valid_data_start, offset);
+   intel_obj->valid_data_end = MAX2(intel_obj->valid_data_end, offset + size);
+}
+
+static void
+mark_buffer_invalid(struct intel_buffer_object *intel_obj)
+{
+   intel_obj->valid_data_start = ~0;
+   intel_obj->valid_data_end = 0;
+}
+
 /** Allocates a new brw_bo to store the data for the buffer object. */
 static void
 alloc_buffer_object(struct brw_context *brw,
@@ -74,6 +89,7 @@ alloc_buffer_object(struct brw_context *brw,
       brw->ctx.NewDriverState |= BRW_NEW_ATOMIC_BUFFER;
 
    mark_buffer_inactive(intel_obj);
+   mark_buffer_invalid(intel_obj);
 }
 
 static void
@@ -173,8 +189,10 @@ brw_buffer_data(struct gl_context *ctx,
       if (!intel_obj->buffer)
          return false;
 
-      if (data != NULL)
+      if (data != NULL) {
 	 brw_bo_subdata(intel_obj->buffer, 0, size, data);
+         mark_buffer_valid_data(intel_obj, 0, size);
+      }
    }
 
    return true;
@@ -223,6 +241,8 @@ brw_buffer_subdata(struct gl_context *ctx,
 
       if (intel_obj->gpu_active_end > intel_obj->gpu_active_start)
          intel_obj->prefer_stall_to_blit = true;
+
+      mark_buffer_valid_data(intel_obj, offset, size);
       return;
    }
 
@@ -231,17 +251,21 @@ brw_buffer_subdata(struct gl_context *ctx,
       brw_batch_references(&brw->batch, intel_obj->buffer);
 
    if (busy) {
-      if (size == intel_obj->Base.Size) {
+      if (size == intel_obj->Base.Size ||
+          (intel_obj->valid_data_start >= offset &&
+           intel_obj->valid_data_end <= offset + size)) {
 	 /* Replace the current busy bo so the subdata doesn't stall. */
 	 brw_bo_unreference(intel_obj->buffer);
 	 alloc_buffer_object(brw, intel_obj);
       } else if (!intel_obj->prefer_stall_to_blit) {
          perf_debug("Using a blit copy to avoid stalling on "
                     "glBufferSubData(%ld, %ld) (%ldkb) to a busy "
-                    "(%d-%d) buffer object.\n",
+                    "(%d-%d) / valid (%d-%d) buffer object.\n",
                     (long)offset, (long)offset + size, (long)(size/1024),
                     intel_obj->gpu_active_start,
-                    intel_obj->gpu_active_end);
+                    intel_obj->gpu_active_end,
+                    intel_obj->valid_data_start,
+                    intel_obj->valid_data_end);
 	 struct brw_bo *temp_bo =
 	    brw_bo_alloc(brw->bufmgr, "subdata temp", size, 64);
 
@@ -253,6 +277,7 @@ brw_buffer_subdata(struct gl_context *ctx,
 				size);
 
 	 brw_bo_unreference(temp_bo);
+         mark_buffer_valid_data(intel_obj, offset, size);
          return;
       } else {
          perf_debug("Stalling on glBufferSubData(%ld, %ld) (%ldkb) to a busy "
@@ -267,6 +292,7 @@ brw_buffer_subdata(struct gl_context *ctx,
 
    brw_bo_subdata(intel_obj->buffer, offset, size, data);
    mark_buffer_inactive(intel_obj);
+   mark_buffer_valid_data(intel_obj, offset, size);
 }
 
 
@@ -377,6 +403,9 @@ brw_map_buffer_range(struct gl_context *ctx,
 	 alloc_buffer_object(brw, intel_obj);
       }
    }
+
+   if (access & MAP_WRITE)
+      mark_buffer_valid_data(intel_obj, offset, length);
 
    /* If the user is mapping a range of an active buffer object but
     * doesn't require the current contents of that range, make a new
@@ -550,6 +579,10 @@ intel_bufferobj_buffer(struct brw_context *brw,
       alloc_buffer_object(brw, intel_obj);
 
    mark_buffer_gpu_usage(intel_obj, offset, size);
+
+   /* If writing, (conservatively) mark this section as having valid data. */
+   if (write)
+      mark_buffer_valid_data(intel_obj, offset, size);
 
    return intel_obj->buffer;
 }
