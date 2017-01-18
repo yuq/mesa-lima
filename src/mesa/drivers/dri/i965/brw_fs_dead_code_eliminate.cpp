@@ -77,9 +77,8 @@ fs_visitor::dead_code_eliminate()
             }
          }
 
-         if ((inst->opcode != BRW_OPCODE_IF &&
-              inst->opcode != BRW_OPCODE_WHILE) &&
-             inst->dst.is_null() &&
+         if (inst->dst.is_null() &&
+             !inst->is_control_flow() &&
              !inst->has_side_effects() &&
              !inst->flags_written() &&
              !inst->writes_accumulator) {
