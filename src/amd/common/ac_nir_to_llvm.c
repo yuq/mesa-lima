@@ -43,6 +43,14 @@ enum radeon_llvm_calling_convention {
 #define RADEON_LLVM_MAX_INPUTS (VARYING_SLOT_VAR31 + 1)
 #define RADEON_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
 
+#define SENDMSG_GS 2
+#define SENDMSG_GS_DONE 3
+
+#define SENDMSG_GS_OP_NOP      (0 << 4)
+#define SENDMSG_GS_OP_CUT      (1 << 4)
+#define SENDMSG_GS_OP_EMIT     (2 << 4)
+#define SENDMSG_GS_OP_EMIT_CUT (3 << 4)
+
 enum desc_type {
 	DESC_IMAGE,
 	DESC_FMASK,
