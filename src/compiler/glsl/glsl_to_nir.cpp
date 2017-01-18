@@ -308,6 +308,13 @@ constant_copy(ir_constant *ir, void *mem_ctx)
 void
 nir_visitor::visit(ir_variable *ir)
 {
+   /* TODO: In future we should switch to using the NIR lowering pass but for
+    * now just ignore these variables as GLSL IR should have lowered them.
+    * Anything remaining are just dead vars that weren't cleaned up.
+    */
+   if (ir->data.mode == ir_var_shader_shared)
+      return;
+
    nir_variable *var = ralloc(shader, nir_variable);
    var->type = ir->type;
    var->name = ralloc_strdup(var, ir->name);
