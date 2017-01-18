@@ -952,11 +952,7 @@ llvm_set_environment_variables() {
             LLVM_VERSION_PATCH=0
         fi
 
-        if test "$LLVM_VERSION_MINOR" -lt 10; then
-            LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}"
-        else
-            LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}"
-        fi
+        LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}"
 
         FOUND_LLVM=yes
     else
