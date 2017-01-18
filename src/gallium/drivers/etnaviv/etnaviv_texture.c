@@ -317,7 +317,7 @@ etna_set_sampler_views(struct pipe_context *pctx, unsigned shader,
 }
 
 static void
-etna_texture_barrier(struct pipe_context *pctx)
+etna_texture_barrier(struct pipe_context *pctx, unsigned flags)
 {
    struct etna_context *ctx = etna_context(pctx);
    /* clear color and texture cache to make sure that texture unit reads
