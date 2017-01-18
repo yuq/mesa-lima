@@ -599,9 +599,11 @@ ntq_ffract(struct vc4_compile *c, struct qreg src)
         struct qreg trunc = qir_ITOF(c, qir_FTOI(c, src));
         struct qreg diff = qir_FSUB(c, src, trunc);
         qir_SF(c, diff);
-        return qir_MOV(c, qir_SEL(c, QPU_COND_NS,
-                                  qir_FADD(c, diff, qir_uniform_f(c, 1.0)),
-                                  diff));
+
+        qir_FADD_dest(c, diff,
+                      diff, qir_uniform_f(c, 1.0))->cond = QPU_COND_NS;
+
+        return qir_MOV(c, diff);
 }
 
 /**
@@ -611,16 +613,18 @@ ntq_ffract(struct vc4_compile *c, struct qreg src)
 static struct qreg
 ntq_ffloor(struct vc4_compile *c, struct qreg src)
 {
-        struct qreg trunc = qir_ITOF(c, qir_FTOI(c, src));
+        struct qreg result = qir_ITOF(c, qir_FTOI(c, src));
 
         /* This will be < 0 if we truncated and the truncation was of a value
          * that was < 0 in the first place.
          */
-        qir_SF(c, qir_FSUB(c, src, trunc));
+        qir_SF(c, qir_FSUB(c, src, result));
 
-        return qir_MOV(c, qir_SEL(c, QPU_COND_NS,
-                                  qir_FSUB(c, trunc, qir_uniform_f(c, 1.0)),
-                                  trunc));
+        struct qinst *sub = qir_FSUB_dest(c, result,
+                                          result, qir_uniform_f(c, 1.0));
+        sub->cond = QPU_COND_NS;
+
+        return qir_MOV(c, result);
 }
 
 /**
@@ -630,16 +634,17 @@ ntq_ffloor(struct vc4_compile *c, struct qreg src)
 static struct qreg
 ntq_fceil(struct vc4_compile *c, struct qreg src)
 {
-        struct qreg trunc = qir_ITOF(c, qir_FTOI(c, src));
+        struct qreg result = qir_ITOF(c, qir_FTOI(c, src));
 
         /* This will be < 0 if we truncated and the truncation was of a value
          * that was > 0 in the first place.
          */
-        qir_SF(c, qir_FSUB(c, trunc, src));
+        qir_SF(c, qir_FSUB(c, result, src));
 
-        return qir_MOV(c, qir_SEL(c, QPU_COND_NS,
-                                  qir_FADD(c, trunc, qir_uniform_f(c, 1.0)),
-                                  trunc));
+        qir_FADD_dest(c, result,
+                      result, qir_uniform_f(c, 1.0))->cond = QPU_COND_NS;
+
+        return qir_MOV(c, result);
 }
 
 static struct qreg
