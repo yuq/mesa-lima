@@ -1003,19 +1003,16 @@ llvm_set_environment_variables() {
             LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}"
         fi
 
-        FOUND_LLVM=yes
-        USE_LLVM=no
+        DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
+        MESA_LLVM=1
     else
-        FOUND_LLVM=no
-        USE_LLVM=no
+        MESA_LLVM=0
         LLVM_VERSION_INT=0
     fi
 }
 
-llvm_require_version() {
-    USE_LLVM=yes
-
-    if test "x$FOUND_LLVM" = xno; then
+llvm_check_version_for() {
+    if test "x$MESA_LLVM" = x0; then
         AC_MSG_ERROR([LLVM $1 or newer is required for $2])
         return
     fi
@@ -1059,7 +1056,7 @@ radeon_llvm_check() {
         amdgpu_llvm_target_name='amdgpu'
     fi
 
-    llvm_require_version $*
+    llvm_check_version_for $*
 
     llvm_add_target $amdgpu_llvm_target_name $2
 
@@ -1075,6 +1072,7 @@ radeon_llvm_check() {
 
 llvm_set_environment_variables
 
+AC_SUBST([MESA_LLVM])
 AC_SUBST([LLVM_BINDIR])
 AC_SUBST([LLVM_CFLAGS])
 AC_SUBST([LLVM_CPPFLAGS])
@@ -2189,7 +2187,7 @@ if test "x$enable_opencl" = xyes; then
        AC_MSG_ERROR([Clover requires libelf])
     fi
 
-    llvm_require_version $LLVM_REQUIRED_OPENCL "opencl"
+    llvm_check_version_for $LLVM_REQUIRED_OPENCL "opencl"
 
     llvm_add_default_components "opencl"
     llvm_add_component "all-targets" "opencl"
@@ -2393,7 +2391,9 @@ dnl
 dnl Gallium helper functions
 dnl
 gallium_require_llvm() {
-    if test "x$enable_gallium_llvm" != "xyes"; then
+    if test "x$enable_gallium_llvm" = "xyes"; then
+        llvm_check_version_for $LLVM_REQUIRED_GALLIUM "gallium"
+    else
         AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
     fi
 }
@@ -2525,12 +2525,12 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
-            if test "x$FOUND_LLVM" = xyes -a "x$enable_gallium_llvm" = xyes;  then
+            if test "x$MESA_LLVM" = x1 && test "x$enable_gallium_llvm" == "xyes";  then
                 HAVE_GALLIUM_LLVMPIPE=yes
             fi
             ;;
         xswr)
-            llvm_require_version $LLVM_REQUIRED_SWR "swr"
+            llvm_check_version_for $LLVM_REQUIRED_SWR "swr"
             gallium_require_llvm "swr"
 
             swr_require_cxx_feature_flags "C++11" "__cplusplus >= 201103L" \
@@ -2573,11 +2573,8 @@ if test -n "$with_gallium_drivers"; then
 fi
 
 if test "x$enable_gallium_llvm" == "xyes"; then
-    llvm_require_version $LLVM_REQUIRED_GALLIUM "gallium"
+    llvm_check_version_for $LLVM_REQUIRED_GALLIUM "gallium"
     llvm_add_default_components "gallium"
-
-    HAVE_GALLIUM_LLVM=yes
-    DEFINES="${DEFINES} -DHAVE_GALLIUM_LLVM"
 fi
 
 dnl We need to validate some needed dependencies for renderonly drivers.
@@ -2586,17 +2583,14 @@ if test "x$HAVE_GALLIUM_ETNAVIV" != xyes -a "x$HAVE_GALLIUM_IMX" == xyes  ; then
     AC_ERROR([Building with imx requires etnaviv])
 fi
 
-dnl Set HAVE_LLVM compiler define if LLVM is used.
+dnl Set LLVM_LIBS - This is done after the driver configuration so
+dnl that drivers can add additional components to LLVM_COMPONENTS.
+dnl Previously, gallium drivers were updating LLVM_LIBS directly
+dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
+dnl this was causing the same libraries to be appear multiple times
+dnl in LLVM_LIBS.
 
-if test "x$USE_LLVM" == xyes; then
-    DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
-
-    dnl Set LLVM_LIBS - This is done after the driver configuration so
-    dnl that drivers can add additional components to LLVM_COMPONENTS.
-    dnl Previously, gallium drivers were updating LLVM_LIBS directly
-    dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
-    dnl this was causing the same libraries to be appear multiple times
-    dnl in LLVM_LIBS.
+if test "x$MESA_LLVM" != x0; then
 
     if ! $LLVM_CONFIG --libs ${LLVM_COMPONENTS} >/dev/null; then
        AC_MSG_ERROR([Calling ${LLVM_CONFIG} failed])
@@ -2698,7 +2692,8 @@ AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
 AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$enable_glx" = xgallium-xlib)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
-AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$HAVE_GALLIUM_LLVM" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$MESA_LLVM" = x1 -a \
+                                       "x$enable_gallium_llvm" = xyes)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)
 if test "x$USE_VC4_SIMULATOR" = xyes -a "x$HAVE_GALLIUM_ILO" = xyes; then
     AC_MSG_ERROR([VC4 simulator on x86 replaces i965 driver build, so ilo must be disabled.])
@@ -2983,28 +2978,18 @@ else
 fi
 
 echo ""
-if test "x$FOUND_LLVM" = xyes; then
-    echo "        llvm found:      yes"
+if test "x$MESA_LLVM" = x1; then
+    echo "        llvm:            yes"
     echo "        llvm-config:     $LLVM_CONFIG"
     echo "        llvm-version:    $LLVM_VERSION"
 else
-    echo "        llvm found:      no"
-fi
-if test "x$USE_LLVM" = xyes; then
-    echo "        llvm used:       yes"
-else
-    echo "        llvm used:       no"
+    echo "        llvm:            no"
 fi
 
 echo ""
 if test -n "$with_gallium_drivers"; then
     echo "        Gallium drivers: $gallium_drivers"
     echo "        Gallium st:      $gallium_st"
-    if test "x$HAVE_GALLIUM_LLVM" = xyes; then
-        echo "        Gallium llvm:    yes"
-    else
-        echo "        Gallium llvm:    no"
-    fi
 else
     echo "        Gallium:         no"
 fi
@@ -3047,7 +3032,7 @@ echo "        CFLAGS:          $cflags"
 echo "        CXXFLAGS:        $cxxflags"
 echo "        Macros:          $defines"
 echo ""
-if test "x$FOUND_LLVM" = xyes; then
+if test "x$MESA_LLVM" = x1; then
     echo "        LLVM_CFLAGS:     $LLVM_CFLAGS"
     echo "        LLVM_CXXFLAGS:   $LLVM_CXXFLAGS"
     echo "        LLVM_CPPFLAGS:   $LLVM_CPPFLAGS"

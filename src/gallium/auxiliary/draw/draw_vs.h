@@ -163,7 +163,7 @@ draw_create_vs_exec(struct draw_context *draw,
 struct draw_vs_variant_key;
 struct draw_vertex_shader;
 
-#if HAVE_GALLIUM_LLVM
+#if HAVE_LLVM
 struct draw_vertex_shader *
 draw_create_vs_llvm(struct draw_context *draw,
 		    const struct pipe_shader_state *state);

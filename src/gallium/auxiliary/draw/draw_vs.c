@@ -59,7 +59,7 @@ draw_create_vertex_shader(struct draw_context *draw,
       tgsi_dump(shader->tokens, 0);
    }
 
-#if HAVE_GALLIUM_LLVM
+#if HAVE_LLVM
    if (draw->pt.middle.llvm) {
       vs = draw_create_vs_llvm(draw, shader);
    }
