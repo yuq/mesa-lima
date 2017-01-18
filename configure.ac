@@ -1729,10 +1729,14 @@ AC_ARG_ENABLE([gallium-llvm],
     [enable_gallium_llvm=auto])
 
 if test "x$enable_gallium_llvm" = xauto; then
-    case "$host_cpu" in
-    i*86|x86_64|amd64) enable_gallium_llvm=yes;;
-    *) enable_gallium_llvm=no;;
-    esac
+    if test "x$FOUND_LLVM" = xyes; then
+        case "$host_cpu" in
+        i*86|x86_64|amd64) enable_gallium_llvm=yes;;
+        *) enable_gallium_llvm=no;;
+        esac
+    else
+        enable_gallium_llvm=no
+    fi
 fi
 
 if test "x$enable_gallium_llvm" = xyes -a "x$FOUND_LLVM" = xno; then
