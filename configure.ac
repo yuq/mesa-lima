@@ -928,7 +928,6 @@ llvm_set_environment_variables() {
     if test "x$LLVM_CONFIG" != xno; then
         LLVM_VERSION=`$LLVM_CONFIG --version | egrep -o '^[[0-9.]]+'`
         LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
-        LLVM_BINDIR=`$LLVM_CONFIG --bindir`
         LLVM_CPPFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cppflags"`
         LLVM_CFLAGS=$LLVM_CPPFLAGS   # CPPFLAGS seem to be sufficient
         LLVM_CXXFLAGS=`strip_unwanted_llvm_flags "$LLVM_CONFIG --cxxflags"`
@@ -1030,15 +1029,11 @@ radeon_llvm_check() {
 
 llvm_set_environment_variables
 
-AC_SUBST([LLVM_BINDIR])
 AC_SUBST([LLVM_CFLAGS])
-AC_SUBST([LLVM_CPPFLAGS])
 AC_SUBST([LLVM_CXXFLAGS])
-AC_SUBST([LLVM_LIBDIR])
 AC_SUBST([LLVM_LIBS])
 AC_SUBST([LLVM_LDFLAGS])
 AC_SUBST([LLVM_INCLUDEDIR])
-AC_SUBST([LLVM_VERSION])
 
 dnl Options for APIs
 AC_ARG_ENABLE([opengl],
