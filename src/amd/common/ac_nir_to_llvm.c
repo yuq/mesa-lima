@@ -4776,6 +4776,9 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 		shader_info->gs.output_prim = nir->info->gs.output_primitive;
 		shader_info->gs.invocations = nir->info->gs.invocations;
 		break;
+	case MESA_SHADER_VERTEX:
+		shader_info->vs.as_es = options->key.vs.as_es;
+		break;
 	default:
 		break;
 	}

@@ -102,6 +102,7 @@ struct ac_shader_variant_info {
 			bool writes_pointsize;
 			bool writes_layer;
 			bool writes_viewport_index;
+			bool as_es;
 			uint8_t clip_dist_mask;
 			uint8_t cull_dist_mask;
 		} vs;
