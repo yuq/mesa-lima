@@ -173,6 +173,21 @@ static unsigned radeon_llvm_reg_index_soa(unsigned index, unsigned chan)
 	return (index * 4) + chan;
 }
 
+static unsigned shader_io_get_unique_index(gl_varying_slot slot)
+{
+	if (slot == VARYING_SLOT_POS)
+		return 0;
+	if (slot == VARYING_SLOT_PSIZ)
+		return 1;
+	if (slot == VARYING_SLOT_CLIP_DIST0)
+		return 2;
+	if (slot == VARYING_SLOT_CLIP_DIST1)
+		return 3;
+	if (slot >= VARYING_SLOT_VAR0 && slot <= VARYING_SLOT_VAR31)
+		return 4 + (slot - VARYING_SLOT_VAR0);
+	unreachable("illegal slot in get unique index\n");
+}
+
 static unsigned llvm_get_type_size(LLVMTypeRef type)
 {
 	LLVMTypeKind kind = LLVMGetTypeKind(type);
@@ -2153,6 +2168,44 @@ radv_get_deref_offset(struct nir_to_llvm_context *ctx, nir_deref *tail,
 	*indir_out = offset;
 }
 
+static LLVMValueRef
+load_gs_input(struct nir_to_llvm_context *ctx,
+	      nir_intrinsic_instr *instr)
+{
+	LLVMValueRef indir_index, vtx_offset;
+	unsigned const_index;
+	LLVMValueRef args[9];
+	unsigned param, vtx_offset_param;
+	LLVMValueRef value[4], result;
+	unsigned vertex_index;
+	radv_get_deref_offset(ctx, &instr->variables[0]->deref,
+			      false, &vertex_index,
+			      &const_index, &indir_index);
+	vtx_offset_param = vertex_index;
+	assert(vtx_offset_param < 6);
+	vtx_offset = LLVMBuildMul(ctx->builder, ctx->gs_vtx_offset[vtx_offset_param],
+				  LLVMConstInt(ctx->i32, 4, false), "");
+
+	for (unsigned i = 0; i < instr->num_components; i++) {
+		param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
+		args[0] = ctx->esgs_ring;
+		args[1] = vtx_offset;
+		args[2] = LLVMConstInt(ctx->i32, (param * 4 + i) * 256, false);
+		args[3] = ctx->i32zero;
+		args[4] = ctx->i32one; /* OFFEN */
+		args[5] = ctx->i32zero; /* IDXEN */
+		args[6] = ctx->i32one; /* GLC */
+		args[7] = ctx->i32zero; /* SLC */
+		args[8] = ctx->i32zero; /* TFE */
+
+		value[i] = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.buffer.load.dword.i32.i32",
+					    ctx->i32, args, 9, AC_FUNC_ATTR_READONLY);
+	}
+	result = ac_build_gather_values(&ctx->ac, value, instr->num_components);
+
+	return result;
+}
+
 static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 				   nir_intrinsic_instr *instr)
 {
@@ -2163,6 +2216,9 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 	unsigned const_index;
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_in:
+		if (ctx->stage == MESA_SHADER_GEOMETRY) {
+			return load_gs_input(ctx, instr);
+		}
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref,
 				      ctx->stage == MESA_SHADER_VERTEX, NULL,
 				      &const_index, &indir_index);
