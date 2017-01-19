@@ -227,6 +227,15 @@ dd_screen_resource_from_user_memory(struct pipe_screen *_screen,
 }
 
 static void
+dd_screen_resource_changed(struct pipe_screen *_screen,
+                           struct pipe_resource *res)
+{
+   struct pipe_screen *screen = dd_screen(_screen)->screen;
+
+   screen->resource_changed(screen, res);
+}
+
+static void
 dd_screen_resource_destroy(struct pipe_screen *_screen,
                            struct pipe_resource *res)
 {
@@ -385,6 +394,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    dscreen->base.resource_from_handle = dd_screen_resource_from_handle;
    SCR_INIT(resource_from_user_memory);
    dscreen->base.resource_get_handle = dd_screen_resource_get_handle;
+   SCR_INIT(resource_changed);
    dscreen->base.resource_destroy = dd_screen_resource_destroy;
    SCR_INIT(flush_frontbuffer);
    SCR_INIT(fence_reference);
