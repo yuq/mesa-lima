@@ -117,6 +117,82 @@ add_surface(struct anv_image *image, struct anv_surface *surf)
 }
 
 /**
+ * For color images that have an auxiliary surface, request allocation for an
+ * additional buffer that mainly stores fast-clear values. Use of this buffer
+ * allows us to access the image's subresources while being aware of their
+ * fast-clear values in non-trivial cases (e.g., outside of a render pass in
+ * which a fast clear has occurred).
+ *
+ * For the purpose of discoverability, the algorithm used to manage this buffer
+ * is described here. A clear value in this buffer is updated when a fast clear
+ * is performed on a subresource. One of two synchronization operations is
+ * performed in order for a following memory access to use the fast-clear
+ * value:
+ *    a. Copy the value from the buffer to the surface state object used for
+ *       reading. This is done implicitly when the value is the clear value
+ *       predetermined to be the default in other surface state objects. This
+ *       is currently only done explicitly for the operation below.
+ *    b. Do (a) and use the surface state object to resolve the subresource.
+ *       This is only done during layout transitions for decent performance.
+ *
+ * With the above scheme, we can fast-clear whenever the hardware allows except
+ * for two cases in which synchronization becomes impossible or undesirable:
+ *    * The subresource is in the GENERAL layout and is cleared to a value
+ *      other than the special default value.
+ *
+ *      Performing a synchronization operation in order to read from the
+ *      subresource is undesirable in this case. Firstly, b) is not an option
+ *      because a layout transition isn't required between a write and read of
+ *      an image in the GENERAL layout. Secondly, it's undesirable to do a)
+ *      explicitly because it would require large infrastructural changes. The
+ *      Vulkan API supports us in deciding not to optimize this layout by
+ *      stating that using this layout may cause suboptimal performance. NOTE:
+ *      the auxiliary buffer must always be enabled to support a) implicitly.
+ *
+ *
+ *    * For the given miplevel, only some of the layers are cleared at once.
+ *
+ *      If the user clears each layer to a different value, then tries to
+ *      render to multiple layers at once, we have no ability to perform a
+ *      synchronization operation in between. a) is not helpful because the
+ *      object can only hold one clear value. b) is not an option because a
+ *      layout transition isn't required in this case.
+ */
+static void
+add_fast_clear_state_buffer(struct anv_image *image,
+                            const struct anv_device *device)
+{
+   assert(image && device);
+   assert(image->aux_surface.isl.size > 0 &&
+          image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+
+   /* The offset to the buffer of clear values must be dword-aligned for GPU
+    * memcpy operations. It is located immediately after the auxiliary surface.
+    */
+
+   /* Tiled images are guaranteed to be 4K aligned, so the image alignment
+    * should also be dword-aligned.
+    */
+   assert(image->alignment % 4 == 0);
+
+   /* Auxiliary buffers should be a multiple of 4K, so the start of the clear
+    * values buffer should already be dword-aligned.
+    */
+   assert(image->aux_surface.isl.size % 4 == 0);
+
+   /* This buffer should be at the very end of the image. */
+   assert(image->size ==
+          image->aux_surface.offset + image->aux_surface.isl.size);
+
+   const unsigned entry_size = anv_fast_clear_state_entry_size(device);
+   /* There's no padding between entries, so ensure that they're always a
+    * multiple of 32 bits in order to enable GPU memcpy operations.
+    */
+   assert(entry_size % 4 == 0);
+   image->size += entry_size * anv_image_aux_levels(image);
+}
+
+/**
  * Initialize the anv_image::*_surface selected by \a aspect. Then update the
  * image's memory requirements (that is, the image's size and alignment).
  *
@@ -230,6 +306,7 @@ make_surface(const struct anv_device *dev,
             }
 
             add_surface(image, &image->aux_surface);
+            add_fast_clear_state_buffer(image, dev);
 
             /* For images created without MUTABLE_FORMAT_BIT set, we know that
              * they will always be used with the original format.  In
@@ -253,6 +330,7 @@ make_surface(const struct anv_device *dev,
                                  &image->aux_surface.isl);
       if (ok) {
          add_surface(image, &image->aux_surface);
+         add_fast_clear_state_buffer(image, dev);
          image->aux_usage = ISL_AUX_USAGE_MCS;
       }
    }

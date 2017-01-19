@@ -2084,6 +2084,18 @@ anv_image_aux_layers(const struct anv_image * const image,
    }
 }
 
+static inline unsigned
+anv_fast_clear_state_entry_size(const struct anv_device *device)
+{
+   assert(device);
+   /* Entry contents:
+    *   +----------------------+
+    *   | clear value dword(s) |
+    *   +----------------------+
+    */
+   return device->isl_dev.ss.clear_value_size;
+}
+
 /* Returns true if a HiZ-enabled depth buffer can be sampled from. */
 static inline bool
 anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,
