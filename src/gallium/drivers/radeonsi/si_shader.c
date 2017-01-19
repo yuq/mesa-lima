@@ -5251,6 +5251,10 @@ static void si_create_function(struct si_shader_context *ctx,
 			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
 	}
 
+	LLVMAddTargetDependentFunctionAttr(ctx->main_fn,
+					   "no-signed-zeros-fp-math",
+					   "true");
+
 	if (ctx->screen->b.debug_flags & DBG_UNSAFE_MATH) {
 		/* These were copied from some LLVM test. */
 		LLVMAddTargetDependentFunctionAttr(ctx->main_fn,
