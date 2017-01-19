@@ -375,6 +375,48 @@ static LLVMValueRef build_indexed_load_const(struct nir_to_llvm_context *ctx,
 	return result;
 }
 
+static void build_tbuffer_store(struct nir_to_llvm_context *ctx,
+				LLVMValueRef rsrc,
+				LLVMValueRef vdata,
+				unsigned num_channels,
+				LLVMValueRef vaddr,
+				LLVMValueRef soffset,
+				unsigned inst_offset,
+				unsigned dfmt,
+				unsigned nfmt,
+				unsigned offen,
+				unsigned idxen,
+				unsigned glc,
+				unsigned slc,
+				unsigned tfe)
+{
+	LLVMValueRef args[] = {
+		rsrc,
+		vdata,
+		LLVMConstInt(ctx->i32, num_channels, 0),
+		vaddr,
+		soffset,
+		LLVMConstInt(ctx->i32, inst_offset, 0),
+		LLVMConstInt(ctx->i32, dfmt, 0),
+		LLVMConstInt(ctx->i32, nfmt, 0),
+		LLVMConstInt(ctx->i32, offen, 0),
+		LLVMConstInt(ctx->i32, idxen, 0),
+		LLVMConstInt(ctx->i32, glc, 0),
+		LLVMConstInt(ctx->i32, slc, 0),
+		LLVMConstInt(ctx->i32, tfe, 0)
+	};
+
+	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
+	unsigned func = CLAMP(num_channels, 1, 3) - 1;
+	const char *types[] = {"i32", "v2i32", "v4i32"};
+	char name[256];
+	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
+
+	ac_emit_llvm_intrinsic(&ctx->ac, name, ctx->voidt,
+			    args, ARRAY_SIZE(args), 0);
+
+}
+
 static void set_userdata_location(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs)
 {
 	ud_info->sgpr_idx = sgpr_idx;
@@ -2938,6 +2980,84 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 	return ac_build_gather_values(&ctx->ac, result, 2);
 }
 
+static void
+visit_emit_vertex(struct nir_to_llvm_context *ctx,
+		  nir_intrinsic_instr *instr)
+{
+	LLVMValueRef gs_next_vertex;
+	LLVMValueRef can_emit, kill;
+	LLVMValueRef args[2];
+	int idx;
+
+	assert(instr->const_index[0] == 0);
+	/* Write vertex attribute values to GSVS ring */
+	gs_next_vertex = LLVMBuildLoad(ctx->builder,
+				       ctx->gs_next_vertex,
+				       "");
+
+	/* If this thread has already emitted the declared maximum number of
+	 * vertices, kill it: excessive vertex emissions are not supposed to
+	 * have any effect, and GS threads have no externally observable
+	 * effects other than emitting vertices.
+	 */
+	can_emit = LLVMBuildICmp(ctx->builder, LLVMIntULT, gs_next_vertex,
+				 LLVMConstInt(ctx->i32, ctx->gs_max_out_vertices, false), "");
+
+	kill = LLVMBuildSelect(ctx->builder, can_emit,
+			       LLVMConstReal(ctx->f32, 1.0f),
+			       LLVMConstReal(ctx->f32, -1.0f), "");
+	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
+			    ctx->voidt, &kill, 1, 0);
+
+	/* loop num outputs */
+	idx = 0;
+	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+		LLVMValueRef *out_ptr = &ctx->outputs[i * 4];
+		if (!(ctx->output_mask & (1ull << i)))
+			continue;
+
+		for (unsigned j = 0; j < 4; j++) {
+			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder,
+							     out_ptr[j], "");
+			LLVMValueRef voffset = LLVMConstInt(ctx->i32, (idx * 4 + j) * ctx->gs_max_out_vertices, false);
+			voffset = LLVMBuildAdd(ctx->builder, voffset, gs_next_vertex, "");
+			voffset = LLVMBuildMul(ctx->builder, voffset, LLVMConstInt(ctx->i32, 4, false), "");
+
+			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
+
+			build_tbuffer_store(ctx, ctx->gsvs_ring,
+					    out_val, 1,
+					    voffset, ctx->gs2vs_offset, 0,
+					    V_008F0C_BUF_DATA_FORMAT_32,
+					    V_008F0C_BUF_NUM_FORMAT_UINT,
+					    1, 0, 1, 1, 0);
+		}
+		idx++;
+	}
+
+	gs_next_vertex = LLVMBuildAdd(ctx->builder, gs_next_vertex,
+				      ctx->i32one, "");
+	LLVMBuildStore(ctx->builder, gs_next_vertex, ctx->gs_next_vertex);
+	args[0] = LLVMConstInt(ctx->i32, SENDMSG_GS_OP_EMIT | SENDMSG_GS | (0 << 8), false);
+	args[1] = ctx->gs_wave_id;
+	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.sendmsg",
+			       ctx->voidt, args, 2, 0);
+}
+
+static void
+visit_end_primitive(struct nir_to_llvm_context *ctx,
+		    nir_intrinsic_instr *instr)
+{
+	LLVMValueRef args[2];
+
+	assert(instr->const_index[0] == 0);
+	args[0] = LLVMConstInt(ctx->i32, SENDMSG_GS_OP_CUT | SENDMSG_GS | (0 << 8), false);
+	args[1] = ctx->gs_wave_id;
+
+	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.sendmsg", ctx->voidt,
+			       args, 2, 0);
+}
+
 static void visit_intrinsic(struct nir_to_llvm_context *ctx,
                             nir_intrinsic_instr *instr)
 {
@@ -3071,6 +3191,12 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 	case nir_intrinsic_interp_var_at_sample:
 	case nir_intrinsic_interp_var_at_offset:
 		result = visit_interp(ctx, instr);
+		break;
+	case nir_intrinsic_emit_vertex:
+		visit_emit_vertex(ctx, instr);
+		break;
+	case nir_intrinsic_end_primitive:
+		visit_end_primitive(ctx, instr);
 		break;
 	default:
 		fprintf(stderr, "Unknown intrinsic: ");
