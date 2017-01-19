@@ -517,6 +517,22 @@ radv_emit_hw_vs(struct radv_cmd_buffer *cmd_buffer,
 }
 
 static void
+radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
+		struct radv_shader_variant *shader)
+{
+	struct radeon_winsys *ws = cmd_buffer->device->ws;
+	uint64_t va = ws->buffer_get_va(shader->bo);
+
+	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
+
+	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B320_SPI_SHADER_PGM_LO_ES, 4);
+	radeon_emit(cmd_buffer->cs, va >> 8);
+	radeon_emit(cmd_buffer->cs, va >> 40);
+	radeon_emit(cmd_buffer->cs, shader->rsrc1);
+	radeon_emit(cmd_buffer->cs, shader->rsrc2);
+}
+
+static void
 radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 			struct radv_pipeline *pipeline)
 {
@@ -526,7 +542,10 @@ radv_emit_vertex_shader(struct radv_cmd_buffer *cmd_buffer,
 
 	vs = pipeline->shaders[MESA_SHADER_VERTEX];
 
-	radv_emit_hw_vs(cmd_buffer, pipeline, vs);
+	if (vs->info.vs.as_es)
+		radv_emit_hw_es(cmd_buffer, vs);
+	else
+		radv_emit_hw_vs(cmd_buffer, pipeline, vs);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028A84_VGT_PRIMITIVEID_EN, 0);
 }
