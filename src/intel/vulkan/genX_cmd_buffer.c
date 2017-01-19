@@ -483,6 +483,51 @@ init_fast_clear_state_entry(struct anv_cmd_buffer *cmd_buffer,
    }
 }
 
+/* Copy the fast-clear value dword(s) between a surface state object and an
+ * image's fast clear state buffer.
+ */
+static void
+genX(copy_fast_clear_dwords)(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_state surface_state,
+                             const struct anv_image *image,
+                             unsigned level,
+                             bool copy_from_surface_state)
+{
+   assert(cmd_buffer && image);
+   assert(image->aspects == VK_IMAGE_ASPECT_COLOR_BIT);
+   assert(level < anv_image_aux_levels(image));
+
+   struct anv_bo *ss_bo =
+      &cmd_buffer->device->surface_state_pool.block_pool.bo;
+   uint32_t ss_clear_offset = surface_state.offset +
+      cmd_buffer->device->isl_dev.ss.clear_value_offset;
+   uint32_t entry_offset =
+      get_fast_clear_state_entry_offset(cmd_buffer->device, image, level);
+   unsigned copy_size = cmd_buffer->device->isl_dev.ss.clear_value_size;
+
+   if (copy_from_surface_state) {
+      genX(cmd_buffer_mi_memcpy)(cmd_buffer, image->bo, entry_offset,
+                                 ss_bo, ss_clear_offset, copy_size);
+   } else {
+      genX(cmd_buffer_mi_memcpy)(cmd_buffer, ss_bo, ss_clear_offset,
+                                 image->bo, entry_offset, copy_size);
+
+      /* Updating a surface state object may require that the state cache be
+       * invalidated. From the SKL PRM, Shared Functions -> State -> State
+       * Caching:
+       *
+       *    Whenever the RENDER_SURFACE_STATE object in memory pointed to by
+       *    the Binding Table Pointer (BTP) and Binding Table Index (BTI) is
+       *    modified [...], the L1 state cache must be invalidated to ensure
+       *    the new surface or sampler state is fetched from system memory.
+       *
+       * In testing, SKL doesn't actually seem to need this, but HSW does.
+       */
+      cmd_buffer->state.pending_pipe_bits |=
+         ANV_PIPE_STATE_CACHE_INVALIDATE_BIT;
+   }
+}
+
 static void
 transition_color_buffer(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
@@ -2634,6 +2679,66 @@ cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
    }
 }
 
+/* Update the clear value dword(s) in surface state objects or the fast clear
+ * state buffer entry for the color attachments used in this subpass.
+ */
+static void
+cmd_buffer_subpass_sync_fast_clear_values(struct anv_cmd_buffer *cmd_buffer)
+{
+   assert(cmd_buffer && cmd_buffer->state.subpass);
+
+   const struct anv_cmd_state *state = &cmd_buffer->state;
+
+   /* Iterate through every color attachment used in this subpass. */
+   for (uint32_t i = 0; i < state->subpass->color_count; ++i) {
+
+      /* The attachment should be one of the attachments described in the
+       * render pass and used in the subpass.
+       */
+      const uint32_t a = state->subpass->color_attachments[i].attachment;
+      assert(a < state->pass->attachment_count);
+      if (a == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      /* Store some information regarding this attachment. */
+      const struct anv_attachment_state *att_state = &state->attachments[a];
+      const struct anv_image_view *iview = state->framebuffer->attachments[a];
+      const struct anv_render_pass_attachment *rp_att =
+         &state->pass->attachments[a];
+
+      if (att_state->aux_usage == ISL_AUX_USAGE_NONE)
+         continue;
+
+      /* The fast clear state entry must be updated if a fast clear is going to
+       * happen. The surface state must be updated if the clear value from a
+       * prior fast clear may be needed.
+       */
+      if (att_state->pending_clear_aspects && att_state->fast_clear) {
+         /* Update the fast clear state entry. */
+         genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color_rt_state,
+                                      iview->image, iview->isl.base_level,
+                                      true /* copy from ss */);
+      } else if (rp_att->load_op == VK_ATTACHMENT_LOAD_OP_LOAD) {
+         /* The attachment may have been fast-cleared in a previous render
+          * pass and the value is needed now. Update the surface state(s).
+          *
+          * TODO: Do this only once per render pass instead of every subpass.
+          */
+         genX(copy_fast_clear_dwords)(cmd_buffer, att_state->color_rt_state,
+                                      iview->image, iview->isl.base_level,
+                                      false /* copy to ss */);
+
+         if (need_input_attachment_state(rp_att) &&
+             att_state->input_aux_usage != ISL_AUX_USAGE_NONE) {
+            genX(copy_fast_clear_dwords)(cmd_buffer, att_state->input_att_state,
+                                         iview->image, iview->isl.base_level,
+                                         false /* copy to ss */);
+         }
+      }
+   }
+}
+
+
 static void
 genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
@@ -2656,6 +2761,15 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
     * occurred.
     */
    cmd_buffer_subpass_transition_layouts(cmd_buffer, false);
+
+   /* Update clear values *after* performing automatic layout transitions.
+    * This ensures that transitions from the UNDEFINED layout have had a chance
+    * to populate the clear value buffer with the correct values for the
+    * LOAD_OP_LOAD loadOp and that the fast-clears will update the buffer
+    * without the aforementioned layout transition overwriting the fast-clear
+    * value.
+    */
+   cmd_buffer_subpass_sync_fast_clear_values(cmd_buffer);
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 
