@@ -87,6 +87,8 @@ struct nir_to_llvm_context {
 	LLVMValueRef vs_prim_id;
 	LLVMValueRef instance_id;
 
+	LLVMValueRef es2gs_offset;
+
 	LLVMValueRef gsvs_ring_stride;
 	LLVMValueRef gsvs_num_entries;
 	LLVMValueRef gs2vs_offset;
@@ -452,14 +454,21 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		arg_types[arg_idx++] = LLVMVectorType(ctx->i32, 3);
 		break;
 	case MESA_SHADER_VERTEX:
-		arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* vertex buffers */
-		arg_types[arg_idx++] = ctx->i32; // base vertex
-		arg_types[arg_idx++] = ctx->i32; // start instance
-		user_sgpr_count = sgpr_count = arg_idx;
+		if (!ctx->is_gs_copy_shader) {
+			arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* vertex buffers */
+			arg_types[arg_idx++] = ctx->i32; // base vertex
+			arg_types[arg_idx++] = ctx->i32; // start instance
+		}
+		user_sgpr_count = arg_idx;
+		if (ctx->options->key.vs.as_es)
+			arg_types[arg_idx++] = ctx->i32; //es2gs offset
+		sgpr_count = arg_idx;
 		arg_types[arg_idx++] = ctx->i32; // vertex id
-		arg_types[arg_idx++] = ctx->i32; // rel auto id
-		arg_types[arg_idx++] = ctx->i32; // vs prim id
-		arg_types[arg_idx++] = ctx->i32; // instance id
+		if (!ctx->is_gs_copy_shader) {
+			arg_types[arg_idx++] = ctx->i32; // rel auto id
+			arg_types[arg_idx++] = ctx->i32; // vs prim id
+			arg_types[arg_idx++] = ctx->i32; // instance id
+		}
 		break;
 	case MESA_SHADER_GEOMETRY:
 		arg_types[arg_idx++] = ctx->i32; // gsvs stride
@@ -569,17 +578,23 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		    LLVMGetParam(ctx->main_function, arg_idx++);
 		break;
 	case MESA_SHADER_VERTEX:
-		set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
-		ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
-		set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, 2);
-		user_sgpr_idx += 2;
-		ctx->base_vertex = LLVMGetParam(ctx->main_function, arg_idx++);
-		ctx->start_instance = LLVMGetParam(ctx->main_function, arg_idx++);
+		if (!ctx->is_gs_copy_shader) {
+			set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
+			user_sgpr_idx += 2;
+			ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
+			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, 2);
+			user_sgpr_idx += 2;
+			ctx->base_vertex = LLVMGetParam(ctx->main_function, arg_idx++);
+			ctx->start_instance = LLVMGetParam(ctx->main_function, arg_idx++);
+		}
+		if (ctx->options->key.vs.as_es)
+			ctx->es2gs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
 		ctx->vertex_id = LLVMGetParam(ctx->main_function, arg_idx++);
-		ctx->rel_auto_id = LLVMGetParam(ctx->main_function, arg_idx++);
-		ctx->vs_prim_id = LLVMGetParam(ctx->main_function, arg_idx++);
-		ctx->instance_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		if (!ctx->is_gs_copy_shader) {
+			ctx->rel_auto_id = LLVMGetParam(ctx->main_function, arg_idx++);
+			ctx->vs_prim_id = LLVMGetParam(ctx->main_function, arg_idx++);
+			ctx->instance_id = LLVMGetParam(ctx->main_function, arg_idx++);
+		}
 		break;
 	case MESA_SHADER_GEOMETRY:
 		set_userdata_location_shader(ctx, AC_UD_GS_VS_RING_STRIDE_ENTRIES, user_sgpr_idx, 2);
