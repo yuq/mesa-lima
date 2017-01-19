@@ -1168,6 +1168,10 @@ dri2_from_planar(__DRIimage *image, int plane, void *loaderPrivate)
    if (img == NULL)
       return NULL;
 
+   if (img->texture->screen->resource_changed)
+      img->texture->screen->resource_changed(img->texture->screen,
+                                             img->texture);
+
    /* set this to 0 for sub images. */
    img->dri_components = 0;
    return img;
