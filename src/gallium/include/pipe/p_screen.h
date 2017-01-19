@@ -224,6 +224,14 @@ struct pipe_screen {
 				  struct winsys_handle *handle,
 				  unsigned usage);
 
+   /**
+    * Mark the resource as changed so derived internal resources will be
+    * recreated on next use.
+    *
+    * This is necessary when reimporting external images that can't be directly
+    * used as texture sampler source, to avoid sampling from old copies.
+    */
+   void (*resource_changed)(struct pipe_screen *, struct pipe_resource *pt);
 
    void (*resource_destroy)(struct pipe_screen *,
 			    struct pipe_resource *pt);

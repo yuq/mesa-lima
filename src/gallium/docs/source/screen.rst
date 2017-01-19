@@ -707,6 +707,20 @@ which isn't multisampled.
 
 
 
+resource_changed
+^^^^^^^^^^^^^^^^
+
+Mark a resource as changed so derived internal resources will be recreated
+on next use.
+
+When importing external images that can't be directly used as texture sampler
+source, internal copies may have to be created that the hardware can sample
+from. When those resources are reimported, the image data may have changed, and
+the previously derived internal resources must be invalidated to avoid sampling
+from old copies.
+
+
+
 resource_destroy
 ^^^^^^^^^^^^^^^^
 
