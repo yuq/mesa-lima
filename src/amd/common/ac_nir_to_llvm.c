@@ -4558,6 +4558,39 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 }
 
 static void
+handle_es_outputs_post(struct nir_to_llvm_context *ctx)
+{
+	int j;
+	uint64_t max_output_written = 0;
+	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+		LLVMValueRef *out_ptr = &ctx->outputs[i * 4];
+		int param_index;
+		if (!(ctx->output_mask & (1ull << i)))
+			continue;
+
+		param_index = shader_io_get_unique_index(i);
+
+		if (param_index > max_output_written)
+			max_output_written = param_index;
+
+		for (j = 0; j < 4; j++) {
+			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder, out_ptr[j], "");
+			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
+
+			build_tbuffer_store(ctx,
+					    ctx->esgs_ring,
+					    out_val, 1,
+					    LLVMGetUndef(ctx->i32), ctx->es2gs_offset,
+					    (4 * param_index + j) * 4,
+					    V_008F0C_BUF_DATA_FORMAT_32,
+					    V_008F0C_BUF_NUM_FORMAT_UINT,
+					    0, 0, 1, 1, 0);
+		}
+	}
+	ctx->shader_info->vs.esgs_itemsize = (max_output_written + 1) * 16;
+}
+
+static void
 si_export_mrt_color(struct nir_to_llvm_context *ctx,
 		    LLVMValueRef *color, unsigned param, bool is_last)
 {
@@ -4678,7 +4711,10 @@ handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	switch (ctx->stage) {
 	case MESA_SHADER_VERTEX:
-		handle_vs_outputs_post(ctx);
+		if (ctx->options->key.vs.as_es)
+			handle_es_outputs_post(ctx);
+		else
+			handle_vs_outputs_post(ctx);
 		break;
 	case MESA_SHADER_FRAGMENT:
 		handle_fs_outputs_post(ctx);

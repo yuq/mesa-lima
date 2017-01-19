@@ -105,6 +105,7 @@ struct ac_shader_variant_info {
 			bool as_es;
 			uint8_t clip_dist_mask;
 			uint8_t cull_dist_mask;
+			uint32_t esgs_itemsize;
 		} vs;
 		struct {
 			unsigned num_interp;
