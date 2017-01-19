@@ -4185,41 +4185,63 @@ static int egcm_double_to_int(struct r600_shader_ctx *ctx)
 	return 0;
 }
 
+static int cayman_emit_unary_double_raw(struct r600_bytecode *bc,
+					unsigned op,
+					int dst_reg,
+					struct r600_shader_src *src,
+					bool abs)
+{
+	struct r600_bytecode_alu alu;
+	const int last_slot = 3;
+	int r;
+
+	/* these have to write the result to X/Y by the looks of it */
+	for (int i = 0 ; i < last_slot; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = op;
+
+		r600_bytecode_src(&alu.src[0], src, 1);
+		r600_bytecode_src(&alu.src[1], src, 0);
+
+		if (abs)
+			r600_bytecode_src_set_abs(&alu.src[1]);
+
+		alu.dst.sel = dst_reg;
+		alu.dst.chan = i;
+		alu.dst.write = (i == 0 || i == 1);
+
+		if (bc->chip_class != CAYMAN || i == last_slot - 1)
+			alu.last = 1;
+		r = r600_bytecode_add_alu(bc, &alu);
+		if (r)
+			return r;
+	}
+
+	return 0;
+}
+
 static int cayman_emit_double_instr(struct r600_shader_ctx *ctx)
 {
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	int i, r;
 	struct r600_bytecode_alu alu;
-	int last_slot = 3;
 	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
 	int t1 = ctx->temp_reg;
 
-	/* these have to write the result to X/Y by the looks of it */
-	for (i = 0 ; i < last_slot; i++) {
-		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ctx->inst_info->op;
+	/* should only be one src regs */
+	assert(inst->Instruction.NumSrcRegs == 1);
 
-		/* should only be one src regs */
-		assert (inst->Instruction.NumSrcRegs == 1);
+	/* only support one double at a time */
+	assert(inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_XY ||
+	       inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_ZW);
 
-		r600_bytecode_src(&alu.src[0], &ctx->src[0], 1);
-		r600_bytecode_src(&alu.src[1], &ctx->src[0], 0);
-
-		/* RSQ should take the absolute value of src */
-		if (ctx->parse.FullToken.FullInstruction.Instruction.Opcode == TGSI_OPCODE_DRSQ ||
-		    ctx->parse.FullToken.FullInstruction.Instruction.Opcode == TGSI_OPCODE_DSQRT) {
-			r600_bytecode_src_set_abs(&alu.src[1]);
-		}
-		alu.dst.sel = t1;
-		alu.dst.chan = i;
-		alu.dst.write = (i == 0 || i == 1);
-
-		if (ctx->bc->chip_class != CAYMAN || i == last_slot - 1)
-			alu.last = 1;
-		r = r600_bytecode_add_alu(ctx->bc, &alu);
-		if (r)
-			return r;
-	}
+	r = cayman_emit_unary_double_raw(
+		ctx->bc, ctx->inst_info->op, t1,
+		&ctx->src[0],
+		ctx->parse.FullToken.FullInstruction.Instruction.Opcode == TGSI_OPCODE_DRSQ ||
+		ctx->parse.FullToken.FullInstruction.Instruction.Opcode == TGSI_OPCODE_DSQRT);
+	if (r)
+		return r;
 
 	for (i = 0 ; i <= lasti; i++) {
 		if (!(inst->Dst[0].Register.WriteMask & (1 << i)))
