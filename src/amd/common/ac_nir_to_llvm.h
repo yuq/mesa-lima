@@ -127,6 +127,8 @@ struct ac_shader_variant_info {
 			unsigned vertices_out;
 			unsigned output_prim;
 			unsigned invocations;
+			unsigned gsvs_vertex_size;
+			unsigned max_gsvs_emit_size;
 		} gs;
 	};
 };
