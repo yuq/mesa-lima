@@ -4466,6 +4466,17 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 }
 
 static void
+emit_gs_epilogue(struct nir_to_llvm_context *ctx)
+{
+	LLVMValueRef args[2];
+
+	args[0] = LLVMConstInt(ctx->i32, SENDMSG_GS_OP_NOP | SENDMSG_GS_DONE, false);
+	args[1] = ctx->gs_wave_id;
+	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.sendmsg",
+			       ctx->voidt, args, 2, 0);
+}
+
+static void
 handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 {
 	switch (ctx->stage) {
@@ -4474,6 +4485,9 @@ handle_shader_outputs_post(struct nir_to_llvm_context *ctx)
 		break;
 	case MESA_SHADER_FRAGMENT:
 		handle_fs_outputs_post(ctx);
+		break;
+	case MESA_SHADER_GEOMETRY:
+		emit_gs_epilogue(ctx);
 		break;
 	default:
 		break;
