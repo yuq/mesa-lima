@@ -4391,6 +4391,63 @@ static int cayman_mul_double_instr(struct r600_shader_ctx *ctx)
 }
 
 /*
+ * Emit RECIP_64 + MUL_64 to implement division.
+ */
+static int cayman_ddiv_instr(struct r600_shader_ctx *ctx)
+{
+	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
+	int r;
+	struct r600_bytecode_alu alu;
+	int t1 = ctx->temp_reg;
+	int k;
+
+	/* Only support one double at a time. This is the same constraint as
+	 * in DMUL lowering. */
+	assert(inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_XY ||
+	       inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_ZW);
+
+	k = inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_XY ? 0 : 1;
+
+	r = cayman_emit_unary_double_raw(ctx->bc, ALU_OP2_RECIP_64, t1, &ctx->src[1], false);
+	if (r)
+		return r;
+
+	for (int i = 0; i < 4; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP2_MUL_64;
+
+		r600_bytecode_src(&alu.src[0], &ctx->src[0], k * 2 + ((i == 3) ? 0 : 1));
+
+		alu.src[1].sel = t1;
+		alu.src[1].chan = (i == 3) ? 0 : 1;
+
+		alu.dst.sel = t1;
+		alu.dst.chan = i;
+		alu.dst.write = 1;
+		if (i == 3)
+			alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+
+	for (int i = 0; i < 2; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ALU_OP1_MOV;
+		alu.src[0].sel = t1;
+		alu.src[0].chan = i;
+		tgsi_dst(ctx, &inst->Dst[0], k * 2 + i, &alu.dst);
+		alu.dst.write = 1;
+		if (i == 1)
+			alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
+	}
+	return 0;
+}
+
+/*
  * r600 - trunc to -PI..PI range
  * r700 - normalize by dividing by 2PI
  * see fdo bug 27901
@@ -9400,6 +9457,7 @@ static const struct r600_shader_tgsi_instruction eg_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_DNEG]	= { ALU_OP2_ADD_64, tgsi_dneg},
 	[TGSI_OPCODE_DADD]	= { ALU_OP2_ADD_64, tgsi_op2_64},
 	[TGSI_OPCODE_DMUL]	= { ALU_OP2_MUL_64, cayman_mul_double_instr},
+	[TGSI_OPCODE_DDIV]	= { 0, cayman_ddiv_instr },
 	[TGSI_OPCODE_DMAX]	= { ALU_OP2_MAX_64, tgsi_op2_64},
 	[TGSI_OPCODE_DMIN]	= { ALU_OP2_MIN_64, tgsi_op2_64},
 	[TGSI_OPCODE_DSLT]	= { ALU_OP2_SETGT_64, tgsi_op2_64_single_dest_s},
@@ -9622,6 +9680,7 @@ static const struct r600_shader_tgsi_instruction cm_shader_tgsi_instruction[] = 
 	[TGSI_OPCODE_DNEG]	= { ALU_OP2_ADD_64, tgsi_dneg},
 	[TGSI_OPCODE_DADD]	= { ALU_OP2_ADD_64, tgsi_op2_64},
 	[TGSI_OPCODE_DMUL]	= { ALU_OP2_MUL_64, cayman_mul_double_instr},
+	[TGSI_OPCODE_DDIV]	= { 0, cayman_ddiv_instr },
 	[TGSI_OPCODE_DMAX]	= { ALU_OP2_MAX_64, tgsi_op2_64},
 	[TGSI_OPCODE_DMIN]	= { ALU_OP2_MIN_64, tgsi_op2_64},
 	[TGSI_OPCODE_DSLT]	= { ALU_OP2_SETGT_64, tgsi_op2_64_single_dest_s},
