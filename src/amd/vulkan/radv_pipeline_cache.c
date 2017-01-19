@@ -88,7 +88,8 @@ radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
 		 const char *entrypoint,
 		 const VkSpecializationInfo *spec_info,
 		 const struct radv_pipeline_layout *layout,
-		 const union ac_shader_variant_key *key)
+		 const union ac_shader_variant_key *key,
+		 uint32_t is_geom_copy_shader)
 {
 	struct mesa_sha1 *ctx;
 
@@ -104,6 +105,7 @@ radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
 				  spec_info->mapEntryCount * sizeof spec_info->pMapEntries[0]);
 		_mesa_sha1_update(ctx, spec_info->pData, spec_info->dataSize);
 	}
+	_mesa_sha1_update(ctx, &is_geom_copy_shader, 4);
 	_mesa_sha1_final(ctx, hash);
 }
 

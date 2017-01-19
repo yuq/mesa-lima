@@ -834,7 +834,8 @@ radv_hash_shader(unsigned char *hash, struct radv_shader_module *module,
 		 const char *entrypoint,
 		 const VkSpecializationInfo *spec_info,
 		 const struct radv_pipeline_layout *layout,
-		 const union ac_shader_variant_key *key);
+		 const union ac_shader_variant_key *key,
+		 uint32_t is_geom_copy_shader);
 
 static inline gl_shader_stage
 vk_to_mesa_shader_stage(VkShaderStageFlagBits vk_stage)
@@ -919,6 +920,7 @@ struct radv_pipeline {
 	bool                                         needs_data_cache;
 
 	struct radv_shader_variant *                 shaders[MESA_SHADER_STAGES];
+	struct radv_shader_variant *gs_copy_shader;
 	VkShaderStageFlags                           active_stages;
 
 	uint32_t va_rsrc_word3[MAX_VERTEX_ATTRIBS];
