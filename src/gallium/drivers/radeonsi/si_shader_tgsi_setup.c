@@ -637,11 +637,15 @@ store_value_to_array(struct lp_build_tgsi_context *bld_base,
 
 /* If this is true, preload FS inputs at the beginning of shaders. Otherwise,
  * reload them at each use. This must be true if the shader is using
- * derivatives, because all inputs should be loaded in the WQM mode.
+ * derivatives and KILL, because KILL can leave the WQM and then a lazy
+ * input load isn't in the WQM anymore.
  */
 static bool si_preload_fs_inputs(struct si_shader_context *ctx)
 {
-	return ctx->shader->selector->info.uses_derivatives;
+	struct si_shader_selector *sel = ctx->shader->selector;
+
+	return sel->info.uses_derivatives &&
+	       sel->info.uses_kill;
 }
 
 static LLVMValueRef
