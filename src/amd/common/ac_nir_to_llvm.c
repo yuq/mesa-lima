@@ -2098,11 +2098,17 @@ static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
 
 static void
 radv_get_deref_offset(struct nir_to_llvm_context *ctx, nir_deref *tail,
-                      bool vs_in, unsigned *const_out, LLVMValueRef *indir_out)
+		      bool vs_in, unsigned *vertex_index_out,
+		      unsigned *const_out, LLVMValueRef *indir_out)
 {
 	unsigned const_offset = 0;
 	LLVMValueRef offset = NULL;
 
+	if (vertex_index_out != NULL) {
+		tail = tail->child;
+		nir_deref_array *deref_array = nir_deref_as_array(tail);
+		*vertex_index_out = deref_array->base_offset;
+	}
 
 	while (tail->child != NULL) {
 		const struct glsl_type *parent_type = tail->type;
@@ -2158,7 +2164,7 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_in:
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref,
-				      ctx->stage == MESA_SHADER_VERTEX,
+				      ctx->stage == MESA_SHADER_VERTEX, NULL,
 				      &const_index, &indir_index);
 		for (unsigned chan = 0; chan < ve; chan++) {
 			if (indir_index) {
@@ -2179,7 +2185,7 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 		break;
 	case nir_var_local:
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      &const_index, &indir_index);
+				      NULL, &const_index, &indir_index);
 		for (unsigned chan = 0; chan < ve; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
@@ -2198,7 +2204,7 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 		return to_integer(ctx, ac_build_gather_values(&ctx->ac, values, ve));
 	case nir_var_shader_out:
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      &const_index, &indir_index);
+				      NULL, &const_index, &indir_index);
 		for (unsigned chan = 0; chan < ve; chan++) {
 			if (indir_index) {
 				unsigned count = glsl_count_attribute_slots(
@@ -2219,7 +2225,7 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 		return to_integer(ctx, ac_build_gather_values(&ctx->ac, values, ve));
 	case nir_var_shared: {
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      &const_index, &indir_index);
+				      NULL, &const_index, &indir_index);
 		LLVMValueRef ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
 		LLVMValueRef derived_ptr;
 
@@ -2251,7 +2257,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 	switch (instr->variables[0]->var->data.mode) {
 	case nir_var_shader_out:
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      &const_index, &indir_index);
+				      NULL, &const_index, &indir_index);
 		for (unsigned chan = 0; chan < 4; chan++) {
 			int stride = 4;
 			if (!(writemask & (1 << chan)))
@@ -2291,7 +2297,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 		break;
 	case nir_var_local:
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      &const_index, &indir_index);
+				      NULL, &const_index, &indir_index);
 		for (unsigned chan = 0; chan < 4; chan++) {
 			if (!(writemask & (1 << chan)))
 				continue;
@@ -2322,7 +2328,7 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 	case nir_var_shared: {
 		LLVMValueRef ptr;
 		radv_get_deref_offset(ctx, &instr->variables[0]->deref, false,
-				      &const_index, &indir_index);
+				      NULL, &const_index, &indir_index);
 
 		ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
 		LLVMValueRef derived_ptr;
