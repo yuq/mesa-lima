@@ -158,6 +158,9 @@ To setup the branchpoint:
 	git checkout master # make sure we're in master first
 	git tag -s X.Y-branchpoint -m "Mesa X.Y branchpoint"
 	git checkout -b X.Y
+	git checkout master
+	$EDITOR VERSION # bump the version number
+	git commit -as
 	git push origin X.Y-branchpoint X.Y
 </pre>
 
