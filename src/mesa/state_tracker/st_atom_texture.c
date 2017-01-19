@@ -91,6 +91,10 @@ update_single_texture(struct st_context *st,
       stObj->prev_sRGBDecode = samp->sRGBDecode;
    }
 
+   if (texObj->TargetIndex == TEXTURE_EXTERNAL_INDEX &&
+       stObj->pt->screen->resource_changed)
+         stObj->pt->screen->resource_changed(stObj->pt->screen, stObj->pt);
+
    *sampler_view =
       st_get_texture_sampler_view_from_stobj(st, stObj, samp, glsl_version);
    return GL_TRUE;
