@@ -178,6 +178,7 @@ static struct radeon_winsys_ctx *amdgpu_ctx_create(struct radeon_winsys *ws)
 
    ctx->ws = amdgpu_winsys(ws);
    ctx->refcount = 1;
+   ctx->initial_num_total_rejected_cs = ctx->ws->num_total_rejected_cs;
 
    r = amdgpu_cs_ctx_create(ctx->ws->dev, &ctx->ctx);
    if (r) {
@@ -227,6 +228,13 @@ amdgpu_ctx_query_reset_status(struct radeon_winsys_ctx *rwctx)
    uint32_t result, hangs;
    int r;
 
+   /* Return a failure due to a rejected command submission. */
+   if (ctx->ws->num_total_rejected_cs > ctx->initial_num_total_rejected_cs) {
+      return ctx->num_rejected_cs ? PIPE_GUILTY_CONTEXT_RESET :
+                                    PIPE_INNOCENT_CONTEXT_RESET;
+   }
+
+   /* Return a failure due to a GPU hang. */
    r = amdgpu_cs_query_reset_state(ctx->ctx, &result, &hangs);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_cs_query_reset_state failed. (%i)\n", r);
@@ -1041,6 +1049,9 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
                  "see dmesg for more information (%i).\n", r);
 
       amdgpu_fence_signalled(cs->fence);
+
+      acs->ctx->num_rejected_cs++;
+      ws->num_total_rejected_cs++;
    } else {
       /* Success. */
       uint64_t *user_fence = NULL;
