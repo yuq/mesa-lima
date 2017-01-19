@@ -4326,25 +4326,27 @@ static int cayman_mul_double_instr(struct r600_shader_ctx *ctx)
 	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
 	int t1 = ctx->temp_reg;
 
-	for (k = 0; k < 2; k++) {
-		if (!(inst->Dst[0].Register.WriteMask & (0x3 << (k * 2))))
-			continue;
+	/* t1 would get overwritten below if we actually tried to
+	 * multiply two pairs of doubles at a time. */
+	assert(inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_XY ||
+	       inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_ZW);
 
-		for (i = 0; i < 4; i++) {
-			memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-			alu.op = ctx->inst_info->op;
-			for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
-				r600_bytecode_src(&alu.src[j], &ctx->src[j], k * 2 + ((i == 3) ? 0 : 1));
-			}
-			alu.dst.sel = t1;
-			alu.dst.chan = i;
-			alu.dst.write = 1;
-			if (i == 3)
-				alu.last = 1;
-			r = r600_bytecode_add_alu(ctx->bc, &alu);
-			if (r)
-				return r;
+	k = inst->Dst[0].Register.WriteMask == TGSI_WRITEMASK_XY ? 0 : 1;
+
+	for (i = 0; i < 4; i++) {
+		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
+		alu.op = ctx->inst_info->op;
+		for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
+			r600_bytecode_src(&alu.src[j], &ctx->src[j], k * 2 + ((i == 3) ? 0 : 1));
 		}
+		alu.dst.sel = t1;
+		alu.dst.chan = i;
+		alu.dst.write = 1;
+		if (i == 3)
+			alu.last = 1;
+		r = r600_bytecode_add_alu(ctx->bc, &alu);
+		if (r)
+			return r;
 	}
 
 	for (i = 0; i <= lasti; i++) {
