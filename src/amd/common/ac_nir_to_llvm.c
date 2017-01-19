@@ -4803,3 +4803,84 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 		break;
 	}
 }
+
+static void
+ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
+{
+	LLVMValueRef args[9];
+	args[0] = ctx->gsvs_ring;
+	args[1] = LLVMBuildMul(ctx->builder, ctx->vertex_id, LLVMConstInt(ctx->i32, 4, false), "");
+	args[3] = ctx->i32zero;
+	args[4] = ctx->i32one;  /* OFFEN */
+	args[5] = ctx->i32zero; /* IDXEN */
+	args[6] = ctx->i32one;  /* GLC */
+	args[7] = ctx->i32one;  /* SLC */
+	args[8] = ctx->i32zero; /* TFE */
+
+	int idx = 0;
+	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+		if (!(ctx->output_mask & (1ull << i)))
+			continue;
+
+		for (unsigned j = 0; j < 4; j++) {
+			LLVMValueRef value;
+			args[2] = LLVMConstInt(ctx->i32,
+					       (idx * 4 + j) *
+					       ctx->gs_max_out_vertices * 16 * 4, false);
+
+			value = ac_emit_llvm_intrinsic(&ctx->ac,
+						       "llvm.SI.buffer.load.dword.i32.i32",
+						       ctx->i32, args, 9,
+						       AC_FUNC_ATTR_READONLY);
+
+			LLVMBuildStore(ctx->builder,
+				       to_float(ctx, value), ctx->outputs[radeon_llvm_reg_index_soa(i, j)]);
+		}
+		idx++;
+	}
+	handle_vs_outputs_post(ctx);
+}
+
+void ac_create_gs_copy_shader(LLVMTargetMachineRef tm,
+			      struct nir_shader *geom_shader,
+			      struct ac_shader_binary *binary,
+			      struct ac_shader_config *config,
+			      struct ac_shader_variant_info *shader_info,
+			      const struct ac_nir_compiler_options *options,
+			      bool dump_shader)
+{
+	struct nir_to_llvm_context ctx = {0};
+	ctx.context = LLVMContextCreate();
+	ctx.module = LLVMModuleCreateWithNameInContext("shader", ctx.context);
+	ctx.options = options;
+	ctx.shader_info = shader_info;
+
+	ac_llvm_context_init(&ctx.ac, ctx.context);
+	ctx.ac.module = ctx.module;
+
+	ctx.is_gs_copy_shader = true;
+	LLVMSetTarget(ctx.module, "amdgcn--");
+	setup_types(&ctx);
+
+	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
+	ctx.ac.builder = ctx.builder;
+	ctx.stage = MESA_SHADER_VERTEX;
+
+	create_function(&ctx);
+
+	ctx.gs_max_out_vertices = geom_shader->info->gs.vertices_out;
+	ac_setup_rings(&ctx);
+
+	nir_foreach_variable(variable, &geom_shader->outputs)
+		handle_shader_output_decl(&ctx, variable);
+
+	ac_gs_copy_shader_emit(&ctx);
+
+	LLVMBuildRetVoid(ctx.builder);
+
+	ac_llvm_finalize_module(&ctx);
+
+	ac_compile_llvm_module(tm, ctx.module, binary, config, shader_info,
+			       MESA_SHADER_VERTEX,
+			       dump_shader, options->supports_spill);
+}
