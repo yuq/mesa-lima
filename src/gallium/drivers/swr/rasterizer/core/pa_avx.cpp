@@ -37,6 +37,11 @@
 bool PaTriList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaTriList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaTriList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaTriList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
 void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaTriStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
@@ -68,6 +73,11 @@ void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128
 bool PaRectList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaRectList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaRectList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaRectList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaRectList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaRectList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
 void PaRectListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 template <uint32_t TotalControlPoints>
@@ -235,9 +245,9 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 #elif KNOB_ARCH >= KNOB_ARCH_AVX2
 
-    simdvector &a = PaGetSimdVector(pa, 0, slot);
-    simdvector &b = PaGetSimdVector(pa, 1, slot);
-    simdvector &c = PaGetSimdVector(pa, 2, slot);
+    const simdvector &a = PaGetSimdVector(pa, 0, slot);
+    const simdvector &b = PaGetSimdVector(pa, 1, slot);
+    const simdvector &c = PaGetSimdVector(pa, 2, slot);
 
     //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
     //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
@@ -251,6 +261,7 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     simdvector &v1 = verts[1];
     simdvector &v2 = verts[2];
 
+    // for simd x, y, z, and w
     for (int i = 0; i < 4; ++i)
     {
         v0[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
@@ -269,15 +280,156 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+bool PaTriList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaTriList1_simd16, PaTriListSingle0);
+    return false;    // Not enough vertices to assemble 16 triangles
+}
+
+bool PaTriList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaTriList2_simd16, PaTriListSingle0);
+    return false;    // Not enough vertices to assemble 16 triangles
+}
+
+bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+#if 0
+    const simdscalari perm0 = _simd_set_epi32(5, 2, 7, 4, 1, 6, 3, 0);
+    const simdscalari perm1 = _simd_set_epi32(6, 3, 0, 5, 2, 7, 4, 1);
+    const simdscalari perm2 = _simd_set_epi32(7, 4, 1, 6, 3, 0, 5, 2);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
+    {
+        const simdvector &a = PaGetSimdVector(pa, 0, slot);
+        const simdvector &b = PaGetSimdVector(pa, 1, slot);
+        const simdvector &c = PaGetSimdVector(pa, 2, slot);
+
+        //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
+        //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
+        //  v2 -> a2 a5 b0 b3 b6 c1 c4 c7
+
+        // for simd x, y, z, and w
+        for (int i = 0; i < 4; i += 1)
+        {
+            v0[i].lo = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
+            v0[i].lo = _mm256_permutevar8x32_ps(v0[i].lo, perm0);
+
+            v1[i].lo = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
+            v1[i].lo = _mm256_permutevar8x32_ps(v1[i].lo, perm1);
+
+            v2[i].lo = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
+            v2[i].lo = _mm256_permutevar8x32_ps(v2[i].lo, perm2);
+        }
+    }
+
+    {
+        const simdvector &a = PaGetSimdVector(pa, 3, slot);
+        const simdvector &b = PaGetSimdVector(pa, 4, slot);
+        const simdvector &c = PaGetSimdVector(pa, 5, slot);
+
+        //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
+        //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
+        //  v2 -> a2 a5 b0 b3 b6 c1 c4 c7
+
+        // for simd x, y, z, and w
+        for (int i = 0; i < 4; i += 1)
+        {
+            v0[i].hi = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
+            v0[i].hi = _mm256_permutevar8x32_ps(v0[i].hi, perm0);
+
+            v1[i].hi = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
+            v1[i].hi = _mm256_permutevar8x32_ps(v1[i].hi, perm1);
+
+            v2[i].hi = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
+            v2[i].hi = _mm256_permutevar8x32_ps(v2[i].hi, perm2);
+        }
+    }
+
+#else
+#if 1
+    const simdvector &a_lo = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 0, slot));
+    const simdvector &a_hi = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 1, slot));
+    const simdvector &b_lo = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 2, slot));
+    const simdvector &b_hi = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 3, slot));
+    const simdvector &c_lo = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 4, slot));
+    const simdvector &c_hi = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 5, slot));
+
+    simd16vector a;
+    simd16vector b;
+    simd16vector c;
+
+    for (uint32_t i = 0; i < 4; i += 1)
+    {
+        a[i].lo = a_lo[i];
+        a[i].hi = a_hi[i];
+        b[i].lo = b_lo[i];
+        b[i].hi = b_hi[i];
+        c[i].lo = c_lo[i];
+        c[i].hi = c_hi[i];
+    }
+
+#else
+    const simd16vector &a = reinterpret_cast<const simd16vector &>(PaGetSimdVector(pa, 0 * 2, slot));
+    const simd16vector &b = reinterpret_cast<const simd16vector &>(PaGetSimdVector(pa, 1 * 2, slot));
+    const simd16vector &c = reinterpret_cast<const simd16vector &>(PaGetSimdVector(pa, 2 * 2, slot));
+
+#endif
+    const simd16scalari perm0 = _simd16_set_epi32(13, 10, 7, 4, 1, 14, 11,  8, 5, 2, 15, 12,  9, 6, 3, 0);
+    const simd16scalari perm1 = _simd16_set_epi32(14, 11, 8, 5, 2, 15, 12,  9, 6, 3,  0, 13, 10, 7, 4, 1);
+    const simd16scalari perm2 = _simd16_set_epi32(15, 12, 9, 6, 3,  0, 13, 10, 7, 4,  1, 14, 11, 8, 5, 2);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
+    //  v0 -> a0 a3 a6 a9 aC aF b2 b5 b8 bB bE c1 c4 c7 cA cD
+    //  v1 -> a1 a4 a7 aA aD b0 b3 b6 b9 bC bF c2 c5 c8 cB cE
+    //  v2 -> a2 a5 b8 aB aE b1 b4 b7 bA bD c0 c3 c6 c9 cC cF
+
+    // for simd16 x, y, z, and w
+    for (int i = 0; i < 4; i += 1)
+    {
+        v0[i] = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x4924), c[i], 0x2492);
+        v0[i] = _simd16_permute_ps(v0[i], perm0);
+
+        v1[i] = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x9249), c[i], 0x4924);
+        v1[i] = _simd16_permute_ps(v1[i], perm1);
+
+        v2[i] = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x2492), c[i], 0x9249);
+        v2[i] = _simd16_permute_ps(v2[i], perm2);
+    }
+
+#endif
+    SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    return true;
+}
+
+#endif
 void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
     // We have 12 simdscalars contained within 3 simdvectors which
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
+#if ENABLE_AVX512_SIMD16
+    const uint32_t i0 = pa.useAlternateOffset ? 3 : 0;
+    const uint32_t i1 = pa.useAlternateOffset ? 4 : 1;
+    const uint32_t i2 = pa.useAlternateOffset ? 5 : 2;
+
+    simdvector& a = PaGetSimdVector(pa, i0, slot);
+    simdvector& b = PaGetSimdVector(pa, i1, slot);
+    simdvector& c = PaGetSimdVector(pa, i2, slot);
+
+#else
     simdvector& a = PaGetSimdVector(pa, 0, slot);
     simdvector& b = PaGetSimdVector(pa, 1, slot);
     simdvector& c = PaGetSimdVector(pa, 2, slot);
 
+#endif
     // Convert from vertical to horizontal.
     // Tri Pattern - provoking vertex is always v0
     //  v0 -> 0 3 6 9  12 15 18 21
@@ -940,6 +1092,112 @@ bool PaRectList2(
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+//////////////////////////////////////////////////////////////////////////
+/// @brief State 1 for RECT_LIST topology.
+///        There is not enough to assemble 8 triangles.
+bool PaRectList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectListSingle0);
+    return false;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief State 1 for RECT_LIST topology.
+///   Rect lists has the following format.
+///             w          x          y           z
+///      v2 o---o   v5 o---o   v8 o---o   v11 o---o
+///         | \ |      | \ |      | \ |       | \ |
+///      v1 o---o   v4 o---o   v7 o---o   v10 o---o
+///            v0         v3         v6          v9
+/// 
+///   Only 3 vertices of the rectangle are supplied. The 4th vertex is implied.
+/// 
+///   tri0 = { v0, v1, v2 }  tri1 = { v0, v2, w } <-- w = v0 - v1 + v2
+///   tri2 = { v3, v4, v5 }  tri3 = { v3, v5, x } <-- x = v3 - v4 + v5
+///   etc.
+/// 
+///   PA outputs 3 simdvectors for each of the triangle vertices v0, v1, v2
+///   where v0 contains all the first vertices for 8 triangles.
+/// 
+///     Result:
+///      verts[0] = { v0, v0, v3, v3, v6, v6, v9, v9 }
+///      verts[1] = { v1, v2, v4, v5, v7, v8, v10, v11 }
+///      verts[2] = { v2,  w, v5,  x, v8,  y, v11, z }
+///
+/// @param pa - State for PA state machine.
+/// @param slot - Index into VS output which is either a position (slot 0) or attribute.
+/// @param verts - triangle output for binner. SOA - Array of v0 for 8 triangles, followed by v1, etc.
+bool PaRectList1_simd16(
+    PA_STATE_OPT& pa,
+    uint32_t slot,
+    simd16vector verts[])
+{
+    // SIMD vectors a and b are the last two vertical outputs from the vertex shader.
+    simdvector& a = PaGetSimdVector(pa, 0, slot);   // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7 }
+    simdvector& b = PaGetSimdVector(pa, 1, slot);   // b[] = { v8, v9, v10, v11, v12, v13, v14, v15 }
+
+    __m256 tmp0, tmp1, tmp2;
+
+    // Loop over each component in the simdvector.
+    for (int i = 0; i < 4; i += 1)
+    {
+        simd16vector& v0 = verts[0];                          // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
+        tmp0 = _mm256_permute2f128_ps(b[i], b[i], 0x01);  // tmp0 = { v12, v13, v14, v15, v8, v9, v10, v11 }
+        v0[i].lo = _mm256_blend_ps(a[i], tmp0, 0x20);        //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
+        tmp1 = _mm256_permute_ps(v0[i].lo, 0xF0);           // tmp1 = {  v0,  v0,  v3,  v3,  *,  *,  *,  * }
+        v0[i].lo = _mm256_permute_ps(v0[i].lo, 0x5A);           //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
+        v0[i].lo = _mm256_blend_ps(tmp1, v0[i].lo, 0xF0);       //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
+
+                                                                /// NOTE This is a bit expensive due to conflicts between vertices in 'a' and 'b'.
+                                                                ///      AVX2 should make this much cheaper.
+        simd16vector& v1 = verts[1];                          // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
+        v1[i].lo = _mm256_permute_ps(a[i], 0x09);            //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
+        tmp1 = _mm256_permute_ps(a[i], 0x43);            // tmp1 = {  *,  *,  *,  *, v7, *, v4, v5 }
+        tmp2 = _mm256_blend_ps(v1[i].lo, tmp1, 0xF0);       // tmp2 = { v1, v2,  *,  *, v7, *, v4, v5 }
+        tmp1 = _mm256_permute2f128_ps(tmp2, tmp2, 0x1);  // tmp1 = { v7,  *, v4,  v5, *  *,  *,  * }
+        v1[i].lo = _mm256_permute_ps(tmp0, 0xE0);            //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
+        v1[i].lo = _mm256_blend_ps(tmp2, v1[i].lo, 0xE0);       //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
+        v1[i].lo = _mm256_blend_ps(v1[i].lo, tmp1, 0x0C);       //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
+
+                                                                // verts[2] = { v2,  w, v5,  x, v8,  y, v11, z }
+        simd16vector& v2 = verts[2];                          // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
+        v2[i].lo = _mm256_permute_ps(tmp0, 0x30);            //   v2 = { *, *, *, *, v8, *, v11, * }
+        tmp1 = _mm256_permute_ps(tmp2, 0x31);            // tmp1 = { v2, *, v5, *, *, *, *, * }
+        v2[i].lo = _mm256_blend_ps(tmp1, v2[i].lo, 0xF0);
+
+        // Need to compute 4th implied vertex for the rectangle.
+        tmp2 = _mm256_sub_ps(v0[i].lo, v1[i].lo);
+        tmp2 = _mm256_add_ps(tmp2, v2[i].lo);               // tmp2 = {  w,  *,  x, *, y,  *,  z,  * }
+        tmp2 = _mm256_permute_ps(tmp2, 0xA0);            // tmp2 = {  *,  w,  *, x, *,   y,  *,  z }
+        v2[i].lo = _mm256_blend_ps(v2[i].lo, tmp2, 0xAA);       //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
+
+        v0[i].hi = _simd_setzero_ps();
+        v1[i].hi = _simd_setzero_ps();
+        v2[i].hi = _simd_setzero_ps();
+    }
+
+    SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////
+/// @brief State 2 for RECT_LIST topology.
+///        Not implemented unless there is a use case for more then 8 rects.
+/// @param pa - State for PA state machine.
+/// @param slot - Index into VS output which is either a position (slot 0) or attribute.
+/// @param verts - triangle output for binner. SOA - Array of v0 for 8 triangles, followed by v1, etc.
+bool PaRectList2_simd16(
+    PA_STATE_OPT& pa,
+    uint32_t slot,
+    simd16vector verts[])
+{
+    SWR_ASSERT(0); // Is rect list used for anything other then clears?
+    SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    return true;
+}
+
+#endif
 //////////////////////////////////////////////////////////////////////////
 /// @brief This procedure is called by the Binner to assemble the attributes.
 ///        Unlike position, which is stored vertically, the attributes are
@@ -959,8 +1217,15 @@ void PaRectListSingle0(
     // We have 12 simdscalars contained within 3 simdvectors which
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
+#if ENABLE_AVX512_SIMD16
+    const uint32_t i0 = pa.useAlternateOffset ? 3 : 0;
+
+    simdvector& a = PaGetSimdVector(pa, i0, slot);
+
+#else
     simdvector& a = PaGetSimdVector(pa, 0, slot);
 
+#endif
     // Convert from vertical to horizontal.
     switch(primIndex)
     {
@@ -993,10 +1258,17 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
 
     this->binTopology = topo == TOP_UNKNOWN ? state.topology : topo;
 
+#if ENABLE_AVX512_SIMD16
+    pfnPaFunc_simd16 = nullptr;
+
+#endif
     switch (this->binTopology)
     {
         case TOP_TRIANGLE_LIST:
             this->pfnPaFunc = PaTriList0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaTriList0_simd16;
+#endif
             break;
         case TOP_TRIANGLE_STRIP:
             this->pfnPaFunc = PaTriStrip0;
@@ -1032,6 +1304,9 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             break;
         case TOP_RECT_LIST:
             this->pfnPaFunc = PaRectList0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaRectList0_simd16;
+#endif
             this->numPrims = in_numPrims * 2;
             break;
 
@@ -1138,6 +1413,9 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
     };
 
     this->pfnPaFuncReset = this->pfnPaFunc;
+#if ENABLE_AVX512_SIMD16
+    this->pfnPaFuncReset_simd16 = this->pfnPaFunc_simd16;
+#endif
 
     //    simdscalari id8 = _mm256_set_epi32(0, 1, 2, 3, 4, 5, 6, 7);
     //    simdscalari id4 = _mm256_set_epi32(0, 0, 1, 1, 2, 2, 3, 3);

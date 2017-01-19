@@ -170,8 +170,8 @@ void calcDeterminantIntVertical(const simdscalari vA[3], const simdscalari vB[3]
     simdscalari detHi = _simd_sub_epi64(vA1B2Hi, vA2B1Hi);
 
     // shuffle 0 1 4 5 -> 0 1 2 3
-    simdscalari vResultLo = _mm256_permute2f128_si256(detLo, detHi, 0x20);
-    simdscalari vResultHi = _mm256_permute2f128_si256(detLo, detHi, 0x31);
+    simdscalari vResultLo = _simd_permute2f128_si(detLo, detHi, 0x20);
+    simdscalari vResultHi = _simd_permute2f128_si(detLo, detHi, 0x31);
 
     pvDet[0] = vResultLo;
     pvDet[1] = vResultHi;

@@ -1027,7 +1027,7 @@ static void TessellationStages(
         SWR_TS_TESSELLATED_DATA tsData = { 0 };
         AR_BEGIN(FETessellation, pDC->drawId);
         TSTessellate(tsCtx, hsContext.pCPout[p].tessFactors, tsData);
-		AR_EVENT(TessPrimCount(1));
+        AR_EVENT(TessPrimCount(1));
         AR_END(FETessellation, 0);
 
         if (tsData.NumPrimitives == 0)
@@ -1161,12 +1161,9 @@ void ProcessDraw(
 
     DRAW_WORK&          work = *(DRAW_WORK*)pUserData;
     const API_STATE&    state = GetApiState(pDC);
-    __m256i             vScale = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
-    SWR_VS_CONTEXT      vsContext;
-    simdvertex          vin;
 
-    int indexSize = 0;
-    uint32_t endVertex = work.numVerts; 
+    uint32_t indexSize = 0;
+    uint32_t endVertex = work.numVerts;
 
     const int32_t* pLastRequestedIndex = nullptr;
     if (IsIndexedT::value)
@@ -1195,30 +1192,6 @@ void ProcessDraw(
     {
         // No cuts, prune partial primitives.
         endVertex = GetNumVerts(state.topology, GetNumPrims(state.topology, work.numVerts));
-    }
-
-    SWR_FETCH_CONTEXT fetchInfo = { 0 };
-    fetchInfo.pStreams = &state.vertexBuffers[0];
-    fetchInfo.StartInstance = work.startInstance;
-    fetchInfo.StartVertex = 0;
-
-    vsContext.pVin = &vin;
-
-    if (IsIndexedT::value)
-    {
-        fetchInfo.BaseVertex = work.baseVertex;
-
-        // if the entire index buffer isn't being consumed, set the last index
-        // so that fetches < a SIMD wide will be masked off
-        fetchInfo.pLastIndex = (const int32_t*)(((uint8_t*)state.indexBuffer.pIndices) + state.indexBuffer.size);
-        if (pLastRequestedIndex < fetchInfo.pLastIndex)
-        {
-            fetchInfo.pLastIndex = pLastRequestedIndex;
-        }
-    }
-    else
-    {
-        fetchInfo.StartVertex = work.startVertex;
     }
 
 #if defined(KNOB_ENABLE_RDTSC) || defined(KNOB_ENABLE_AR)
@@ -1258,6 +1231,267 @@ void ProcessDraw(
     // choose primitive assembler
     PA_FACTORY<IsIndexedT, IsCutIndexEnabledT> paFactory(pDC, state.topology, work.numVerts);
     PA_STATE& pa = paFactory.GetPA();
+
+#if USE_SIMD16_FRONTEND
+    simdvertex          vin_lo;
+    simdvertex          vin_hi;
+    SWR_VS_CONTEXT      vsContext_lo;
+    SWR_VS_CONTEXT      vsContext_hi;
+
+    vsContext_lo.pVin = &vin_lo;
+    vsContext_hi.pVin = &vin_hi;
+
+    SWR_FETCH_CONTEXT   fetchInfo_lo = { 0 };
+
+    fetchInfo_lo.pStreams = &state.vertexBuffers[0];
+    fetchInfo_lo.StartInstance = work.startInstance;
+    fetchInfo_lo.StartVertex = 0;
+
+    if (IsIndexedT::value)
+    {
+        fetchInfo_lo.BaseVertex = work.baseVertex;
+
+        // if the entire index buffer isn't being consumed, set the last index
+        // so that fetches < a SIMD wide will be masked off
+        fetchInfo_lo.pLastIndex = (const int32_t*)(((uint8_t*)state.indexBuffer.pIndices) + state.indexBuffer.size);
+        if (pLastRequestedIndex < fetchInfo_lo.pLastIndex)
+        {
+            fetchInfo_lo.pLastIndex = pLastRequestedIndex;
+        }
+    }
+    else
+    {
+        fetchInfo_lo.StartVertex = work.startVertex;
+    }
+
+    SWR_FETCH_CONTEXT   fetchInfo_hi = fetchInfo_lo;
+
+    const simd16scalari vScale = _simd16_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+
+    for (uint32_t instanceNum = 0; instanceNum < work.numInstances; instanceNum++)
+    {
+        uint32_t  i = 0;
+
+        simd16scalari vIndex;
+
+        if (IsIndexedT::value)
+        {
+            fetchInfo_lo.pIndices = work.pIB;
+            fetchInfo_hi.pIndices = (int32_t *)((uint8_t *)fetchInfo_lo.pIndices + KNOB_SIMD_WIDTH * indexSize);    // 1/2 of KNOB_SIMD16_WIDTH
+        }
+        else
+        {
+            vIndex = _simd16_add_epi32(_simd16_set1_epi32(work.startVertexID), vScale);
+
+            fetchInfo_lo.pIndices = (const int32_t *)&vIndex.lo;
+            fetchInfo_hi.pIndices = (const int32_t *)&vIndex.hi;
+        }
+
+        fetchInfo_lo.CurInstance = instanceNum;
+        fetchInfo_hi.CurInstance = instanceNum;
+
+        vsContext_lo.InstanceID = instanceNum;
+        vsContext_hi.InstanceID = instanceNum;
+
+        while (pa.HasWork())
+        {
+            // PaGetNextVsOutput currently has the side effect of updating some PA state machine state.
+            // So we need to keep this outside of (i < endVertex) check.
+
+            simdmask *pvCutIndices_lo = nullptr;
+            simdmask *pvCutIndices_hi = nullptr;
+
+            if (IsIndexedT::value)
+            {
+                pvCutIndices_lo = &pa.GetNextVsIndices();
+                pvCutIndices_hi = &pa.GetNextVsIndices();
+            }
+
+            simdvertex &vout_lo = pa.GetNextVsOutput_simd16_lo();
+            simdvertex &vout_hi = pa.GetNextVsOutput_simd16_hi();
+
+            vsContext_lo.pVout = &vout_lo;
+            vsContext_hi.pVout = &vout_hi;
+
+            if (i < endVertex)
+            {
+                // 1. Execute FS/VS for a single SIMD.
+                AR_BEGIN(FEFetchShader, pDC->drawId);
+                state.pfnFetchFunc(fetchInfo_lo, vin_lo);
+                if ((i + KNOB_SIMD_WIDTH) < endVertex)
+                {
+                    state.pfnFetchFunc(fetchInfo_hi, vin_hi);
+                }
+                AR_END(FEFetchShader, 0);
+
+                // forward fetch generated vertex IDs to the vertex shader
+                vsContext_lo.VertexID = fetchInfo_lo.VertexID;
+                vsContext_hi.VertexID = fetchInfo_hi.VertexID;
+
+                // Setup active mask for vertex shader.
+                vsContext_lo.mask = GenerateMask(endVertex - i);
+                vsContext_hi.mask = GenerateMask(endVertex - (i + KNOB_SIMD_WIDTH));
+
+                // forward cut mask to the PA
+                if (IsIndexedT::value)
+                {
+                    *pvCutIndices_lo = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_lo.CutMask));
+                    *pvCutIndices_hi = _simd_movemask_ps(_simd_castsi_ps(fetchInfo_hi.CutMask));
+                }
+
+                UPDATE_STAT_FE(IaVertices, GetNumInvocations(i, endVertex));
+
+#if KNOB_ENABLE_TOSS_POINTS
+                if (!KNOB_TOSS_FETCH)
+#endif
+                {
+                    AR_BEGIN(FEVertexShader, pDC->drawId);
+                    state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
+                    if ((i + KNOB_SIMD_WIDTH) < endVertex)
+                    {
+                        state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_hi);
+                    }
+                    AR_END(FEVertexShader, 0);
+
+                    UPDATE_STAT_FE(VsInvocations, GetNumInvocations(i, endVertex));
+                }
+            }
+
+            // 2. Assemble primitives given the last two SIMD.
+            do
+            {
+                simd16vector prim_simd16[MAX_NUM_VERTS_PER_PRIM];
+
+                RDTSC_START(FEPAAssemble);
+                bool assemble = pa.Assemble_simd16(VERTEX_POSITION_SLOT, prim_simd16);
+                RDTSC_STOP(FEPAAssemble, 1, 0);
+
+#if KNOB_ENABLE_TOSS_POINTS
+                if (!KNOB_TOSS_FETCH)
+#endif
+                {
+#if KNOB_ENABLE_TOSS_POINTS
+                    if (!KNOB_TOSS_VS)
+#endif
+                    {
+                        if (assemble)
+                        {
+                            UPDATE_STAT_FE(IaPrimitives, pa.NumPrims());
+
+#if 0
+                            if (HasTessellationT::value)
+                            {
+                                TessellationStages<HasGeometryShaderT, HasStreamOutT, HasRastT>(
+                                    pDC, workerId, pa, pGsOut, pCutBuffer, pStreamCutBuffer, pSoPrimData, pa.GetPrimID(work.startPrimID));
+                            }
+                            else if (HasGeometryShaderT::value)
+                            {
+                                GeometryShaderStage<HasStreamOutT, HasRastT>(
+                                    pDC, workerId, pa, pGsOut, pCutBuffer, pStreamCutBuffer, pSoPrimData, pa.GetPrimID(work.startPrimID));
+                            }
+                            else
+#endif
+                            {
+#if 0
+                                // If streamout is enabled then stream vertices out to memory.
+                                if (HasStreamOutT::value)
+                                {
+                                    StreamOut(pDC, pa, workerId, pSoPrimData, 0);
+                                }
+
+#endif
+                                if (HasRastT::value)
+                                {
+                                    SWR_ASSERT(pDC->pState->pfnProcessPrims);
+
+                                    uint32_t genMask = GenMask(pa.NumPrims_simd16());
+                                    uint32_t genMask_lo = genMask & 255;
+                                    uint32_t genMask_hi = (genMask >> 8) & 255;
+
+                                    simdscalari getPrimId_lo = pa.GetPrimID_simd16_lo(work.startPrimID);
+                                    simdscalari getPrimId_hi = pa.GetPrimID_simd16_hi(work.startPrimID);
+
+                                    simdvector prim[MAX_NUM_VERTS_PER_PRIM];
+
+                                    for (uint32_t i = 0; i < 3; i += 1)
+                                    {
+                                        for (uint32_t j = 0; j < 4; j += 1)
+                                        {
+                                            prim[i][j] = prim_simd16[i][j].lo;
+                                        }
+                                    }
+
+                                    pa.useAlternateOffset = false;
+                                    pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
+                                        genMask_lo, getPrimId_lo, _simd_set1_epi32(0));
+
+                                    if (genMask_hi)
+                                    {
+                                        for (uint32_t i = 0; i < 3; i += 1)
+                                        {
+                                            for (uint32_t j = 0; j < 4; j += 1)
+                                            {
+                                                prim[i][j] = prim_simd16[i][j].hi;
+                                            }
+                                        }
+
+                                        pa.useAlternateOffset = true;
+                                        pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
+                                            genMask_hi, getPrimId_hi, _simd_set1_epi32(0));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } while (pa.NextPrim());
+
+            if (IsIndexedT::value)
+            {
+                fetchInfo_lo.pIndices = (int32_t *)((uint8_t*)fetchInfo_lo.pIndices + KNOB_SIMD16_WIDTH * indexSize);
+                fetchInfo_hi.pIndices = (int32_t *)((uint8_t*)fetchInfo_hi.pIndices + KNOB_SIMD16_WIDTH * indexSize);
+            }
+            else
+            {
+                vIndex = _simd16_add_epi32(vIndex, _simd16_set1_epi32(KNOB_SIMD16_WIDTH));
+            }
+
+            i += KNOB_SIMD16_WIDTH;
+        }
+
+        pa.Reset();
+    }
+
+#else
+    simdvertex          vin;
+    SWR_VS_CONTEXT      vsContext;
+
+    vsContext.pVin = &vin;
+
+    SWR_FETCH_CONTEXT   fetchInfo = { 0 };
+
+    fetchInfo.pStreams = &state.vertexBuffers[0];
+    fetchInfo.StartInstance = work.startInstance;
+    fetchInfo.StartVertex = 0;
+
+    if (IsIndexedT::value)
+    {
+        fetchInfo.BaseVertex = work.baseVertex;
+
+        // if the entire index buffer isn't being consumed, set the last index
+        // so that fetches < a SIMD wide will be masked off
+        fetchInfo.pLastIndex = (const int32_t*)(((uint8_t*)state.indexBuffer.pIndices) + state.indexBuffer.size);
+        if (pLastRequestedIndex < fetchInfo.pLastIndex)
+        {
+            fetchInfo.pLastIndex = pLastRequestedIndex;
+        }
+    }
+    else
+    {
+        fetchInfo.StartVertex = work.startVertex;
+    }
+
+    const simdscalari   vScale = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
 
     /// @todo: temporarily move instance loop in the FE to ensure SO ordering
     for (uint32_t instanceNum = 0; instanceNum < work.numInstances; instanceNum++)
@@ -1367,6 +1601,7 @@ void ProcessDraw(
                                 if (HasRastT::value)
                                 {
                                     SWR_ASSERT(pDC->pState->pfnProcessPrims);
+
                                     pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
                                         GenMask(pa.NumPrims()), pa.GetPrimID(work.startPrimID), _simd_set1_epi32(0));
                                 }
@@ -1376,7 +1611,6 @@ void ProcessDraw(
                 }
             } while (pa.NextPrim());
 
-            i += KNOB_SIMD_WIDTH;
             if (IsIndexedT::value)
             {
                 fetchInfo.pIndices = (int*)((uint8_t*)fetchInfo.pIndices + KNOB_SIMD_WIDTH * indexSize);
@@ -1385,10 +1619,13 @@ void ProcessDraw(
             {
                 vIndex = _simd_add_epi32(vIndex, _simd_set1_epi32(KNOB_SIMD_WIDTH));
             }
+
+            i += KNOB_SIMD_WIDTH;
         }
         pa.Reset();
     }
 
+#endif
 
     AR_END(FEProcessDraw, numPrims * work.numInstances);
 }
