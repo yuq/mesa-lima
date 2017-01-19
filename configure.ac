@@ -1436,6 +1436,22 @@ if test "x$enable_gallium_osmesa" = xyes; then
     fi
 fi
 
+require_dri_shared_libs_and_glapi() {
+    if test "x$enable_static" = xyes; then
+        AC_MSG_ERROR([$1 cannot be build as static library])
+    fi
+
+    if test "x$enable_dri" != xyes; then
+        # There is only a single backend which won't be build/used otherwise.
+        # XXX: Revisit this as the egl/haiku is a thing.
+        AC_MSG_ERROR([$1 requires --enable-dri])
+    fi
+
+    if test "x$enable_shared_glapi" != xyes; then
+        AC_MSG_ERROR([$1 requires --enable-shared-glapi])
+    fi
+}
+
 if test "x$enable_dri" = xyes; then
     require_dri_shared_libs_and_glapi "DRI"
 
@@ -1814,22 +1830,6 @@ fi
 AC_SUBST([OSMESA_LIB_DEPS])
 AC_SUBST([OSMESA_PC_REQ])
 AC_SUBST([OSMESA_PC_LIB_PRIV])
-
-require_dri_shared_libs_and_glapi() {
-    if test "x$enable_static" = xyes; then
-        AC_MSG_ERROR([$1 cannot be build as static library])
-    fi
-
-    if test "x$enable_dri" != xyes; then
-        # There is only a single backend which won't be build/used otherwise.
-        # XXX: Revisit this as the egl/haiku is a thing.
-        AC_MSG_ERROR([$1 requires --enable-dri])
-    fi
-
-    if test "x$enable_shared_glapi" != xyes; then
-        AC_MSG_ERROR([$1 requires --enable-shared-glapi])
-    fi
-}
 
 dnl
 dnl gbm configuration
