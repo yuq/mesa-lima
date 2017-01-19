@@ -331,13 +331,15 @@ static unsigned radv_pack_float_12p4(float x)
 }
 
 static uint32_t
-shader_stage_to_user_data_0(gl_shader_stage stage)
+shader_stage_to_user_data_0(gl_shader_stage stage, bool has_gs)
 {
 	switch (stage) {
 	case MESA_SHADER_FRAGMENT:
 		return R_00B030_SPI_SHADER_USER_DATA_PS_0;
 	case MESA_SHADER_VERTEX:
-		return R_00B130_SPI_SHADER_USER_DATA_VS_0;
+		return has_gs ? R_00B330_SPI_SHADER_USER_DATA_ES_0 : R_00B130_SPI_SHADER_USER_DATA_VS_0;
+	case MESA_SHADER_GEOMETRY:
+		return R_00B230_SPI_SHADER_USER_DATA_GS_0;
 	case MESA_SHADER_COMPUTE:
 		return R_00B900_COMPUTE_USER_DATA_0;
 	default:
@@ -360,7 +362,7 @@ radv_emit_userdata_address(struct radv_cmd_buffer *cmd_buffer,
 			   int idx, uint64_t va)
 {
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(pipeline, stage, idx);
-	uint32_t base_reg = shader_stage_to_user_data_0(stage);
+	uint32_t base_reg = shader_stage_to_user_data_0(stage, radv_pipeline_has_gs(pipeline));
 	if (loc->sgpr_idx == -1)
 		return;
 	assert(loc->num_sgprs == 2);
@@ -1022,7 +1024,7 @@ emit_stage_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 				   gl_shader_stage stage)
 {
 	struct ac_userdata_info *desc_set_loc = &pipeline->shaders[stage]->info.user_sgprs_locs.descriptor_sets[idx];
-	uint32_t base_reg = shader_stage_to_user_data_0(stage);
+	uint32_t base_reg = shader_stage_to_user_data_0(stage, radv_pipeline_has_gs(pipeline));
 
 	if (desc_set_loc->sgpr_idx == -1)
 		return;
@@ -1051,6 +1053,11 @@ radv_emit_descriptor_set_userdata(struct radv_cmd_buffer *cmd_buffer,
 		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
 						   idx, set->va,
 						   MESA_SHADER_VERTEX);
+
+	if ((stages & VK_SHADER_STAGE_GEOMETRY_BIT) && radv_pipeline_has_gs(pipeline))
+		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
+						   idx, set->va,
+						   MESA_SHADER_GEOMETRY);
 
 	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
 		emit_stage_descriptor_set_userdata(cmd_buffer, pipeline,
@@ -1110,6 +1117,10 @@ radv_flush_constants(struct radv_cmd_buffer *cmd_buffer,
 
 	if (stages & VK_SHADER_STAGE_FRAGMENT_BIT)
 		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_FRAGMENT,
+					   AC_UD_PUSH_CONSTANTS, va);
+
+	if ((stages & VK_SHADER_STAGE_GEOMETRY_BIT) && radv_pipeline_has_gs(pipeline))
+		radv_emit_userdata_address(cmd_buffer, pipeline, MESA_SHADER_GEOMETRY,
 					   AC_UD_PUSH_CONSTANTS, va);
 
 	if (stages & VK_SHADER_STAGE_COMPUTE_BIT)
@@ -1994,7 +2005,8 @@ void radv_CmdDraw(
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
 	if (loc->sgpr_idx != -1) {
-		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B130_SPI_SHADER_USER_DATA_VS_0 + loc->sgpr_idx * 4, 2);
+		uint32_t base_reg = shader_stage_to_user_data_0(MESA_SHADER_VERTEX, radv_pipeline_has_gs(cmd_buffer->state.pipeline));
+		radeon_set_sh_reg_seq(cmd_buffer->cs, base_reg + loc->sgpr_idx * 4, 2);
 		radeon_emit(cmd_buffer->cs, firstVertex);
 		radeon_emit(cmd_buffer->cs, firstInstance);
 	}
@@ -2047,7 +2059,8 @@ void radv_CmdDrawIndexed(
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
 	if (loc->sgpr_idx != -1) {
-		radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B130_SPI_SHADER_USER_DATA_VS_0 + loc->sgpr_idx * 4, 2);
+		uint32_t base_reg = shader_stage_to_user_data_0(MESA_SHADER_VERTEX, radv_pipeline_has_gs(cmd_buffer->state.pipeline));
+		radeon_set_sh_reg_seq(cmd_buffer->cs, base_reg + loc->sgpr_idx * 4, 2);
 		radeon_emit(cmd_buffer->cs, vertexOffset);
 		radeon_emit(cmd_buffer->cs, firstInstance);
 	}
@@ -2098,6 +2111,7 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 
 	struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_VERTEX,
 							     AC_UD_VS_BASE_VERTEX_START_INSTANCE);
+	uint32_t base_reg = shader_stage_to_user_data_0(MESA_SHADER_VERTEX, radv_pipeline_has_gs(cmd_buffer->state.pipeline));
 	assert(loc->sgpr_idx != -1);
 	radeon_emit(cs, PKT3(PKT3_SET_BASE, 2, 0));
 	radeon_emit(cs, 1);
@@ -2108,8 +2122,8 @@ radv_emit_indirect_draw(struct radv_cmd_buffer *cmd_buffer,
 				       PKT3_DRAW_INDIRECT_MULTI,
 			     8, false));
 	radeon_emit(cs, 0);
-	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + loc->sgpr_idx * 4) - SI_SH_REG_OFFSET) >> 2);
-	radeon_emit(cs, ((R_00B130_SPI_SHADER_USER_DATA_VS_0 + (loc->sgpr_idx + 1) * 4) - SI_SH_REG_OFFSET) >> 2);
+	radeon_emit(cs, ((base_reg + loc->sgpr_idx * 4) - SI_SH_REG_OFFSET) >> 2);
+	radeon_emit(cs, ((base_reg + (loc->sgpr_idx + 1) * 4) - SI_SH_REG_OFFSET) >> 2);
 	radeon_emit(cs, S_2C3_COUNT_INDIRECT_ENABLE(!!count_va)); /* draw_index and count_indirect enable */
 	radeon_emit(cs, draw_count); /* count */
 	radeon_emit(cs, count_va); /* count_addr */
