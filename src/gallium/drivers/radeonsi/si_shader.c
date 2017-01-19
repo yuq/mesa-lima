@@ -5863,8 +5863,7 @@ static void create_function(struct si_shader_context *ctx)
 						    LOCAL_ADDR_SPACE);
 
 	if ((ctx->type == PIPE_SHADER_VERTEX && shader->key.as_ls) ||
-	    ctx->type == PIPE_SHADER_TESS_CTRL ||
-	    ctx->type == PIPE_SHADER_TESS_EVAL)
+	    ctx->type == PIPE_SHADER_TESS_CTRL)
 		declare_tess_lds(ctx);
 }
 
