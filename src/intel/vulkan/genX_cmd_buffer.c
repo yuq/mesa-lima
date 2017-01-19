@@ -266,12 +266,23 @@ color_attachment_compute_aux_usage(struct anv_device *device,
       att_state->fast_clear = false;
    }
 
-   if (isl_format_supports_ccs_e(&device->info, iview->isl.format)) {
+   /**
+    * TODO: Consider using a heuristic to determine if temporarily enabling
+    * CCS_E for this image view would be beneficial.
+    *
+    * While fast-clear resolves and partial resolves are fairly cheap in the
+    * case where you render to most of the pixels, full resolves are not
+    * because they potentially involve reading and writing the entire
+    * framebuffer.  If we can't texture with CCS_E, we should leave it off and
+    * limit ourselves to fast clears.
+    */
+   if (iview->image->aux_usage == ISL_AUX_USAGE_CCS_E) {
       att_state->aux_usage = ISL_AUX_USAGE_CCS_E;
       att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
    } else if (att_state->fast_clear) {
       att_state->aux_usage = ISL_AUX_USAGE_CCS_D;
-      if (GEN_GEN >= 9) {
+      if (GEN_GEN >= 9 &&
+          !isl_format_supports_ccs_e(&device->info, iview->isl.format)) {
          /* From the Sky Lake PRM, RENDER_SURFACE_STATE::AuxiliarySurfaceMode:
           *
           *    "If Number of Multisamples is MULTISAMPLECOUNT_1, AUX_CCS_D
