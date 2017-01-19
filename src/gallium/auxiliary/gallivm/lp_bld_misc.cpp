@@ -607,7 +607,8 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 
 #if defined(PIPE_ARCH_PPC)
    MAttrs.push_back(util_cpu_caps.has_altivec ? "+altivec" : "-altivec");
-#if HAVE_LLVM >= 0x0304
+#if (HAVE_LLVM >= 0x0304)
+#if (HAVE_LLVM <= 0x0307) || (HAVE_LLVM == 0x0308 && MESA_LLVM_VERSION_PATCH == 0)
    /*
     * Make sure VSX instructions are disabled
     * See LLVM bug https://llvm.org/bugs/show_bug.cgi?id=25503#c7
@@ -615,6 +616,17 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
    if (util_cpu_caps.has_altivec) {
       MAttrs.push_back("-vsx");
    }
+#else
+   /*
+    * However, bug 25503 is fixed, by the same fix that fixed
+    * bug 26775, in versions of LLVM later than 3.8 (starting with 3.8.1):
+    * Make sure VSX instructions are ENABLED
+    * See LLVM bug https://llvm.org/bugs/show_bug.cgi?id=26775
+    */
+   if (util_cpu_caps.has_altivec) {
+      MAttrs.push_back("+vsx");
+   }
+#endif
 #endif
 #endif
 
