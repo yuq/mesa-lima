@@ -325,6 +325,8 @@ etna_resource_from_handle(struct pipe_screen *pscreen,
    if (!rsc->bo)
       goto fail;
 
+   rsc->seqno = 1;
+
    level->width = tmpl->width0;
    level->height = tmpl->height0;
 
