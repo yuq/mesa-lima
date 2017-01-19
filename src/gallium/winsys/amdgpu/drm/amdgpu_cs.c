@@ -1039,11 +1039,17 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       goto cleanup;
    }
 
-   r = amdgpu_cs_submit(acs->ctx->ctx, 0, &cs->request, 1);
+   if (acs->ctx->num_rejected_cs)
+      r = -ECANCELED;
+   else
+      r = amdgpu_cs_submit(acs->ctx->ctx, 0, &cs->request, 1);
+
    cs->error_code = r;
    if (r) {
       if (r == -ENOMEM)
          fprintf(stderr, "amdgpu: Not enough memory for command submission.\n");
+      else if (r == -ECANCELED)
+         fprintf(stderr, "amdgpu: The CS has been cancelled because the context is lost.\n");
       else
          fprintf(stderr, "amdgpu: The CS has been rejected, "
                  "see dmesg for more information (%i).\n", r);
