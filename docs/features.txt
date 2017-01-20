@@ -303,7 +303,7 @@ Khronos, ARB, and OES extensions that are not part of any OpenGL or OpenGL ES ve
   GL_ARB_sparse_texture2                                not started
   GL_ARB_sparse_texture_clamp                           not started
   GL_ARB_texture_filter_minmax                          not started
-  GL_ARB_transform_feedback_overflow_query              not started
+  GL_ARB_transform_feedback_overflow_query              DONE (i965/gen6+)
   GL_KHR_blend_equation_advanced_coherent               DONE (i965/gen9+)
   GL_KHR_no_error                                       not started
   GL_KHR_texture_compression_astc_hdr                   DONE (core only)
