@@ -31,10 +31,6 @@
 #pragma warning(disable: 4800 4146 4244 4267 4355 4996)
 #endif
 
-#include "jit_api.h"
-#include "JitManager.h"
-#include "fetch_jit.h"
-
 #pragma push_macro("DEBUG")
 #undef DEBUG
 
@@ -56,6 +52,10 @@
 #endif
 
 #pragma pop_macro("DEBUG")
+
+#include "JitManager.h"
+#include "jit_api.h"
+#include "fetch_jit.h"
 
 #include "core/state.h"
 

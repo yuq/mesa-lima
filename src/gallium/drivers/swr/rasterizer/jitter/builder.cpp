@@ -64,7 +64,7 @@ namespace SwrJit
         mSimdInt64Ty = VectorType::get(mInt64Ty, mVWidth);
         mSimdFP16Ty = VectorType::get(mFP16Ty, mVWidth);
         mSimdFP32Ty = VectorType::get(mFP32Ty, mVWidth);
-        mSimdVectorTy = StructType::get(pJitMgr->mContext, std::vector<Type*>(4, mSimdFP32Ty), false);
+        mSimdVectorTy = ArrayType::get(mSimdFP32Ty, 4);
         mSimdVectorTRTy = StructType::get(pJitMgr->mContext, std::vector<Type*>(5, mSimdFP32Ty), false);
 
         if (sizeof(uint32_t*) == 4)

@@ -27,9 +27,9 @@
 * Notes:
 *
 ******************************************************************************/
+#include "builder.h"
 #include "jit_api.h"
 #include "streamout_jit.h"
-#include "builder.h"
 #include "state_llvm.h"
 #include "llvm/IR/DataLayout.h"
 

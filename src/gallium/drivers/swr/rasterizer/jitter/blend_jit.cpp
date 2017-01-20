@@ -27,9 +27,9 @@
 * Notes:
 *
 ******************************************************************************/
+#include "builder.h"
 #include "jit_api.h"
 #include "blend_jit.h"
-#include "builder.h"
 #include "state_llvm.h"
 
 #include <sstream>

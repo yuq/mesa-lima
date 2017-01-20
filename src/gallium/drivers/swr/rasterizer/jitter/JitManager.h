@@ -29,9 +29,6 @@
 ******************************************************************************/
 #pragma once
 
-#include "common/os.h"
-#include "common/isa.hpp"
-
 #if defined(_WIN32)
 #pragma warning(disable : 4146 4244 4267 4800 4996)
 #endif
@@ -83,6 +80,9 @@ using PassManager = llvm::legacy::PassManager;
 #include "llvm/Support/Host.h"
 #include "llvm/Support/DynamicLibrary.h"
 
+
+#include "common/os.h"
+#include "common/isa.hpp"
 
 #pragma pop_macro("DEBUG")
 
