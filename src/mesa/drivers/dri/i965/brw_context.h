@@ -1264,6 +1264,9 @@ void brw_write_timestamp(struct brw_context *brw, drm_intel_bo *bo, int idx);
 void brw_write_depth_count(struct brw_context *brw, drm_intel_bo *bo, int idx);
 
 /** hsw_queryobj.c */
+void hsw_overflow_result_to_gpr0(struct brw_context *brw,
+                                 struct brw_query_object *query,
+                                 int count);
 void hsw_init_queryobj_functions(struct dd_function_table *functions);
 
 /** brw_conditional_render.c */
