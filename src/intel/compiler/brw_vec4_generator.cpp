@@ -1526,11 +1526,19 @@ generate_code(struct brw_codegen *p,
       assert(inst->group % inst->exec_size == 0);
       assert(inst->group % 4 == 0);
 
+      /* There are some instructions where the destination is 64-bit
+       * but we retype it to a smaller type. In that case, we cannot
+       * double the exec_size.
+       */
+      const bool is_df = (get_exec_type_size(inst) == 8 ||
+                          inst->dst.type == BRW_REGISTER_TYPE_DF) &&
+                         inst->opcode != VEC4_OPCODE_PICK_LOW_32BIT &&
+                         inst->opcode != VEC4_OPCODE_PICK_HIGH_32BIT &&
+                         inst->opcode != VEC4_OPCODE_SET_LOW_32BIT &&
+                         inst->opcode != VEC4_OPCODE_SET_HIGH_32BIT;
+
       unsigned exec_size = inst->exec_size;
-      if (devinfo->gen == 7 &&
-          !devinfo->is_haswell &&
-          (get_exec_type_size(inst) == 8 ||
-           inst->dst.type == BRW_REGISTER_TYPE_DF))
+      if (devinfo->gen == 7 && !devinfo->is_haswell && is_df)
          exec_size *= 2;
 
       brw_set_default_exec_size(p, cvt(exec_size) - 1);
