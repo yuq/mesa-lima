@@ -2995,6 +2995,10 @@ struct gl_query_state
    struct gl_query_object *PrimitivesGenerated[MAX_VERTEX_STREAMS];
    struct gl_query_object *PrimitivesWritten[MAX_VERTEX_STREAMS];
 
+   /** GL_ARB_transform_feedback_overflow_query */
+   struct gl_query_object *TransformFeedbackOverflow[MAX_VERTEX_STREAMS];
+   struct gl_query_object *TransformFeedbackOverflowAny;
+
    /** GL_ARB_timer_query */
    struct gl_query_object *TimeElapsed;
 
@@ -3889,6 +3893,7 @@ struct gl_extensions
    GLboolean ARB_transform_feedback2;
    GLboolean ARB_transform_feedback3;
    GLboolean ARB_transform_feedback_instanced;
+   GLboolean ARB_transform_feedback_overflow_query;
    GLboolean ARB_uniform_buffer_object;
    GLboolean ARB_vertex_attrib_64bit;
    GLboolean ARB_vertex_program;
