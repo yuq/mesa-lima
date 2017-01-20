@@ -5694,11 +5694,6 @@ fs_visitor::optimize()
       OPT(dead_code_eliminate);
    }
 
-   if (OPT(lower_d2x)) {
-      OPT(opt_copy_propagation);
-      OPT(dead_code_eliminate);
-   }
-
    OPT(lower_simd_width);
 
    /* After SIMD lowering just in case we had to unroll the EOT send. */
@@ -5743,6 +5738,12 @@ fs_visitor::optimize()
       OPT(opt_cse);
       OPT(opt_copy_propagation);
       OPT(dead_code_eliminate);
+   }
+
+   if (OPT(lower_d2x)) {
+      OPT(opt_copy_propagation);
+      OPT(dead_code_eliminate);
+      OPT(lower_simd_width);
    }
 
    lower_uniform_pull_constant_loads();

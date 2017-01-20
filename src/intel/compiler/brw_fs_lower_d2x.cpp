@@ -27,48 +27,77 @@
 
 using namespace brw;
 
+static bool
+supports_type_conversion(const fs_inst *inst) {
+   switch (inst->opcode) {
+   case BRW_OPCODE_MOV:
+   case SHADER_OPCODE_MOV_INDIRECT:
+      return true;
+   case BRW_OPCODE_SEL:
+      return inst->dst.type == get_exec_type(inst);
+   default:
+      /* FIXME: We assume the opcodes don't explicitly mentioned
+       * before just work fine with arbitrary conversions.
+       */
+      return true;
+   }
+}
+
 bool
 fs_visitor::lower_d2x()
 {
    bool progress = false;
 
-   foreach_block_and_inst_safe(block, fs_inst, inst, cfg) {
-      if (inst->opcode != BRW_OPCODE_MOV)
-         continue;
-
-      if (inst->dst.type != BRW_REGISTER_TYPE_F &&
-          inst->dst.type != BRW_REGISTER_TYPE_D &&
-          inst->dst.type != BRW_REGISTER_TYPE_UD)
-         continue;
-
-      if (inst->src[0].type != BRW_REGISTER_TYPE_DF &&
-          inst->src[0].type != BRW_REGISTER_TYPE_UQ &&
-          inst->src[0].type != BRW_REGISTER_TYPE_Q)
-         continue;
-
-      assert(inst->dst.file == VGRF);
-      assert(inst->saturate == false);
-      fs_reg dst = inst->dst;
-
+   foreach_block_and_inst(block, fs_inst, inst, cfg) {
       const fs_builder ibld(this, block, inst);
+      fs_reg dst = inst->dst;
+      bool saturate = inst->saturate;
 
-      /* From the Broadwell PRM, 3D Media GPGPU, "Double Precision Float to
-       * Single Precision Float":
-       *
-       *    The upper Dword of every Qword will be written with undefined
-       *    value when converting DF to F.
-       *
-       * So we need to allocate a temporary that's two registers, and then do
-       * a strided MOV to get the lower DWord of every Qword that has the
-       * result.
-       */
-      fs_reg temp = ibld.vgrf(inst->src[0].type, 1);
-      fs_reg strided_temp = subscript(temp, inst->dst.type, 0);
-      ibld.MOV(strided_temp, inst->src[0]);
-      ibld.MOV(dst, strided_temp);
+      if (supports_type_conversion(inst)) {
+         if (get_exec_type_size(inst) == 8 && type_sz(inst->dst.type) < 8) {
+            /* From the Broadwell PRM, 3D Media GPGPU, "Double Precision Float to
+             * Single Precision Float":
+             *
+             *    The upper Dword of every Qword will be written with undefined
+             *    value when converting DF to F.
+             *
+             * So we need to allocate a temporary that's two registers, and then do
+             * a strided MOV to get the lower DWord of every Qword that has the
+             * result.
+             */
+            fs_reg temp = ibld.vgrf(get_exec_type(inst));
+            fs_reg strided_temp = subscript(temp, dst.type, 0);
 
-      inst->remove(block);
-      progress = true;
+            assert(inst->size_written == inst->dst.component_size(inst->exec_size));
+            inst->dst = strided_temp;
+            inst->saturate = false;
+            /* As it is an strided destination, we write n-times more being n the
+             * size ratio between source and destination types. Update
+             * size_written accordingly.
+             */
+            inst->size_written = inst->dst.component_size(inst->exec_size);
+            ibld.at(block, inst->next).MOV(dst, strided_temp)->saturate = saturate;
+
+            progress = true;
+         }
+      } else {
+         fs_reg temp0 = ibld.vgrf(get_exec_type(inst));
+
+         assert(inst->size_written == inst->dst.component_size(inst->exec_size));
+         inst->dst = temp0;
+         /* As it is an strided destination, we write n-times more being n the
+          * size ratio between source and destination types. Update
+          * size_written accordingly.
+          */
+         inst->size_written = inst->dst.component_size(inst->exec_size);
+         inst->saturate = false;
+         /* Now, do the conversion to original destination's type. In next iteration,
+          * we will lower it if it is a d2f conversion.
+          */
+         ibld.at(block, inst->next).MOV(dst, temp0)->saturate = saturate;
+
+         progress = true;
+      }
    }
 
    if (progress)
