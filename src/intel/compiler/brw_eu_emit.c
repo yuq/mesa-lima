@@ -511,13 +511,25 @@ brw_set_src0(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
          brw_inst_set_src0_da16_swiz_w(devinfo, inst,
             BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_W));
 
-	 /* This is an oddity of the fact we're using the same
-	  * descriptions for registers in align_16 as align_1:
-	  */
-	 if (reg.vstride == BRW_VERTICAL_STRIDE_8)
+         if (reg.vstride == BRW_VERTICAL_STRIDE_8) {
+            /* This is an oddity of the fact we're using the same
+             * descriptions for registers in align_16 as align_1:
+             */
             brw_inst_set_src0_vstride(devinfo, inst, BRW_VERTICAL_STRIDE_4);
-	 else
+         } else if (devinfo->gen == 7 && !devinfo->is_haswell &&
+                    reg.type == BRW_REGISTER_TYPE_DF &&
+                    reg.vstride == BRW_VERTICAL_STRIDE_2) {
+            /* From SNB PRM:
+             *
+             * "For Align16 access mode, only encodings of 0000 and 0011
+             *  are allowed. Other codes are reserved."
+             *
+             * Presumably the DevSNB behavior applies to IVB as well.
+             */
+            brw_inst_set_src0_vstride(devinfo, inst, BRW_VERTICAL_STRIDE_4);
+         } else {
             brw_inst_set_src0_vstride(devinfo, inst, reg.vstride);
+         }
       }
    }
 }
@@ -593,13 +605,25 @@ brw_set_src1(struct brw_codegen *p, brw_inst *inst, struct brw_reg reg)
          brw_inst_set_src1_da16_swiz_w(devinfo, inst,
             BRW_GET_SWZ(reg.swizzle, BRW_CHANNEL_W));
 
-	 /* This is an oddity of the fact we're using the same
-	  * descriptions for registers in align_16 as align_1:
-	  */
-	 if (reg.vstride == BRW_VERTICAL_STRIDE_8)
+         if (reg.vstride == BRW_VERTICAL_STRIDE_8) {
+            /* This is an oddity of the fact we're using the same
+             * descriptions for registers in align_16 as align_1:
+             */
             brw_inst_set_src1_vstride(devinfo, inst, BRW_VERTICAL_STRIDE_4);
-	 else
+         } else if (devinfo->gen == 7 && !devinfo->is_haswell &&
+                    reg.type == BRW_REGISTER_TYPE_DF &&
+                    reg.vstride == BRW_VERTICAL_STRIDE_2) {
+            /* From SNB PRM:
+             *
+             * "For Align16 access mode, only encodings of 0000 and 0011
+             *  are allowed. Other codes are reserved."
+             *
+             * Presumably the DevSNB behavior applies to IVB as well.
+             */
+            brw_inst_set_src1_vstride(devinfo, inst, BRW_VERTICAL_STRIDE_4);
+         } else {
             brw_inst_set_src1_vstride(devinfo, inst, reg.vstride);
+         }
       }
    }
 }
