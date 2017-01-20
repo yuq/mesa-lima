@@ -1184,7 +1184,9 @@ r600_choose_tiling(struct r600_common_screen *rscreen,
 		/* Textures with a very small height are recommended to be linear. */
 		if (templ->target == PIPE_TEXTURE_1D ||
 		    templ->target == PIPE_TEXTURE_1D_ARRAY ||
-		    templ->height0 <= 4)
+		    /* Only very thin and long 2D textures should benefit from
+		     * linear_aligned. */
+		    (templ->width0 > 8 && templ->height0 <= 2))
 			return RADEON_SURF_MODE_LINEAR_ALIGNED;
 
 		/* Textures likely to be mapped often. */
