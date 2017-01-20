@@ -145,10 +145,9 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 		break;
 	}
 	case R600_QUERY_GPU_LOAD:
-		query->begin_result = r600_begin_counter_gui(rctx->screen);
-		break;
 	case R600_QUERY_GPU_SHADERS_BUSY:
-		query->begin_result = r600_begin_counter_spi(rctx->screen);
+		query->begin_result = r600_begin_counter(rctx->screen,
+							 query->b.type);
 		break;
 	case R600_QUERY_NUM_COMPILATIONS:
 		query->begin_result = p_atomic_read(&rctx->screen->num_compilations);
@@ -239,13 +238,10 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		break;
 	}
 	case R600_QUERY_GPU_LOAD:
-		query->end_result = r600_end_counter_gui(rctx->screen,
-							 query->begin_result);
-		query->begin_result = 0;
-		break;
 	case R600_QUERY_GPU_SHADERS_BUSY:
-		query->end_result = r600_end_counter_spi(rctx->screen,
-							 query->begin_result);
+		query->end_result = r600_end_counter(rctx->screen,
+						     query->b.type,
+						     query->begin_result);
 		query->begin_result = 0;
 		break;
 	case R600_QUERY_NUM_COMPILATIONS:

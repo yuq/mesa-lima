@@ -35,6 +35,7 @@
  */
 
 #include "r600_pipe_common.h"
+#include "r600_query.h"
 #include "os/os_time.h"
 
 /* For good accuracy at 1000 fps or lower. This will be inaccurate for higher
@@ -45,6 +46,12 @@
 #define SPI_BUSY(x)		(((x) >> 22) & 0x1)
 #define GUI_ACTIVE(x)		(((x) >> 31) & 0x1)
 
+#define UPDATE_COUNTER(field, mask)				\
+	if (mask(value))					\
+		p_atomic_inc(&counters->named.field.busy);	\
+	else							\
+		p_atomic_inc(&counters->named.field.idle);
+
 static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
 				      union r600_grbm_counters *counters)
 {
@@ -52,15 +59,8 @@ static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
 
 	rscreen->ws->read_registers(rscreen->ws, GRBM_STATUS, 1, &value);
 
-	if (SPI_BUSY(value))
-		p_atomic_inc(&counters->named.spi_busy);
-	else
-		p_atomic_inc(&counters->named.spi_idle);
-
-	if (GUI_ACTIVE(value))
-		p_atomic_inc(&counters->named.gui_busy);
-	else
-		p_atomic_inc(&counters->named.gui_idle);
+	UPDATE_COUNTER(spi, SPI_BUSY);
+	UPDATE_COUNTER(gui, GUI_ACTIVE);
 }
 
 static PIPE_THREAD_ROUTINE(r600_gpu_load_thread, param)
@@ -104,8 +104,8 @@ void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen)
 	rscreen->gpu_load_thread = 0;
 }
 
-static uint64_t r600_read_counter(struct r600_common_screen *rscreen,
-				  unsigned busy_index)
+static uint64_t r600_read_grbm_counter(struct r600_common_screen *rscreen,
+				       unsigned busy_index)
 {
 	/* Start the thread if needed. */
 	if (!rscreen->gpu_load_thread) {
@@ -123,10 +123,10 @@ static uint64_t r600_read_counter(struct r600_common_screen *rscreen,
 	return busy | ((uint64_t)idle << 32);
 }
 
-static unsigned r600_end_counter(struct r600_common_screen *rscreen,
-				 uint64_t begin, unsigned busy_index)
+static unsigned r600_end_grbm_counter(struct r600_common_screen *rscreen,
+				      uint64_t begin, unsigned busy_index)
 {
-	uint64_t end = r600_read_counter(rscreen, busy_index);
+	uint64_t end = r600_read_grbm_counter(rscreen, busy_index);
 	unsigned busy = (end & 0xffffffff) - (begin & 0xffffffff);
 	unsigned idle = (end >> 32) - (begin >> 32);
 
@@ -147,25 +147,31 @@ static unsigned r600_end_counter(struct r600_common_screen *rscreen,
 	}
 }
 
-#define BUSY_INDEX(rscreen, field) (&rscreen->grbm_counters.named.field##_busy - \
+#define BUSY_INDEX(rscreen, field) (&rscreen->grbm_counters.named.field.busy - \
 				    rscreen->grbm_counters.array)
 
-uint64_t r600_begin_counter_spi(struct r600_common_screen *rscreen)
+static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
+				     unsigned type)
 {
-	return r600_read_counter(rscreen, BUSY_INDEX(rscreen, spi));
+	switch (type) {
+	case R600_QUERY_GPU_LOAD:
+		return BUSY_INDEX(rscreen, gui);
+	case R600_QUERY_GPU_SHADERS_BUSY:
+		return BUSY_INDEX(rscreen, spi);
+	default:
+		unreachable("query type does not correspond to grbm id");
+	}
 }
 
-unsigned r600_end_counter_spi(struct r600_common_screen *rscreen, uint64_t begin)
+uint64_t r600_begin_counter(struct r600_common_screen *rscreen, unsigned type)
 {
-	return r600_end_counter(rscreen, begin, BUSY_INDEX(rscreen, spi));
+	unsigned busy_index = busy_index_from_type(rscreen, type);
+	return r600_read_grbm_counter(rscreen, busy_index);
 }
 
-uint64_t r600_begin_counter_gui(struct r600_common_screen *rscreen)
+unsigned r600_end_counter(struct r600_common_screen *rscreen, unsigned type,
+			  uint64_t begin)
 {
-	return r600_read_counter(rscreen, BUSY_INDEX(rscreen, gui));
-}
-
-unsigned r600_end_counter_gui(struct r600_common_screen *rscreen, uint64_t begin)
-{
-	return r600_end_counter(rscreen, begin, BUSY_INDEX(rscreen, gui));
+	unsigned busy_index = busy_index_from_type(rscreen, type);
+	return r600_end_grbm_counter(rscreen, begin, busy_index);
 }

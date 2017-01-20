@@ -352,12 +352,15 @@ struct r600_surface {
 	unsigned db_preload_control;	/* EG and later */
 };
 
+struct r600_grbm_counter {
+	unsigned busy;
+	unsigned idle;
+};
+
 union r600_grbm_counters {
 	struct {
-		unsigned spi_busy;
-		unsigned spi_idle;
-		unsigned gui_busy;
-		unsigned gui_idle;
+		struct r600_grbm_counter spi;
+		struct r600_grbm_counter gui;
 	} named;
 	unsigned array[0];
 };
@@ -748,10 +751,9 @@ bool r600_check_device_reset(struct r600_common_context *rctx);
 
 /* r600_gpu_load.c */
 void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen);
-uint64_t r600_begin_counter_spi(struct r600_common_screen *rscreen);
-unsigned r600_end_counter_spi(struct r600_common_screen *rscreen, uint64_t begin);
-uint64_t r600_begin_counter_gui(struct r600_common_screen *rscreen);
-unsigned r600_end_counter_gui(struct r600_common_screen *rscreen, uint64_t begin);
+uint64_t r600_begin_counter(struct r600_common_screen *rscreen, unsigned type);
+unsigned r600_end_counter(struct r600_common_screen *rscreen, unsigned type,
+			  uint64_t begin);
 
 /* r600_perfcounters.c */
 void r600_perfcounters_destroy(struct r600_common_screen *rscreen);
