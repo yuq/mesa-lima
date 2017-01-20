@@ -29,7 +29,6 @@
 
 #include "isl/isl.h"
 
-struct brw_context;
 struct brw_stage_prog_data;
 
 #ifdef __cplusplus
