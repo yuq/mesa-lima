@@ -93,33 +93,47 @@ brw_reg_from_fs_reg(const struct gen_device_info *devinfo, fs_inst *inst,
          const unsigned width = MIN2(reg_width, phys_width);
          brw_reg = brw_vecn_reg(width, brw_file_from_reg(reg), reg->nr, 0);
          brw_reg = stride(brw_reg, width * reg->stride, width, reg->stride);
-         /* From the IvyBridge PRM (EU Changes by Processor Generation, page 13):
-          *  "Each DF (Double Float) operand uses an element size of 4 rather
-          *   than 8 and all regioning parameters are twice what the values
-          *   would be based on the true element size: ExecSize, Width,
-          *   HorzStride, and VertStride. Each DF operand uses a pair of
-          *   channels and all masking and swizzing should be adjusted
-          *   appropriately."
-          *
-          * From the IvyBridge PRM (Special Requirements for Handling Double
-          * Precision Data Types, page 71):
-          *  "In Align1 mode, all regioning parameters like stride, execution
-          *   size, and width must use the syntax of a pair of packed
-          *   floats. The offsets for these data types must be 64-bit
-          *   aligned. The execution size and regioning parameters are in terms
-          *   of floats."
-          *
-          * Summarized: when handling DF-typed arguments, ExecSize,
-          * VertStride, and Width must be doubled.
-          *
-          * It applies to BayTrail too.
-          */
-         if (devinfo->gen == 7 && !devinfo->is_haswell &&
-             type_sz(reg->type) == 8) {
-            brw_reg.width++;
-            if (brw_reg.vstride > 0)
-               brw_reg.vstride++;
-            assert(brw_reg.hstride == BRW_HORIZONTAL_STRIDE_1);
+
+         if (devinfo->gen == 7 && !devinfo->is_haswell) {
+            /* From the IvyBridge PRM (EU Changes by Processor Generation, page 13):
+             *  "Each DF (Double Float) operand uses an element size of 4 rather
+             *   than 8 and all regioning parameters are twice what the values
+             *   would be based on the true element size: ExecSize, Width,
+             *   HorzStride, and VertStride. Each DF operand uses a pair of
+             *   channels and all masking and swizzing should be adjusted
+             *   appropriately."
+             *
+             * From the IvyBridge PRM (Special Requirements for Handling Double
+             * Precision Data Types, page 71):
+             *  "In Align1 mode, all regioning parameters like stride, execution
+             *   size, and width must use the syntax of a pair of packed
+             *   floats. The offsets for these data types must be 64-bit
+             *   aligned. The execution size and regioning parameters are in terms
+             *   of floats."
+             *
+             * Summarized: when handling DF-typed arguments, ExecSize,
+             * VertStride, and Width must be doubled.
+             *
+             * It applies to BayTrail too.
+             */
+            if (type_sz(reg->type) == 8) {
+               brw_reg.width++;
+               if (brw_reg.vstride > 0)
+                  brw_reg.vstride++;
+               assert(brw_reg.hstride == BRW_HORIZONTAL_STRIDE_1);
+            }
+
+            /* When converting from DF->F, we set the destination stride to 2
+             * because each d2f conversion implicitly writes 2 floats, being
+             * the first one the converted value. IVB/BYT actually writes two
+             * F components per SIMD channel, and every other component is
+             * filled with garbage.
+             */
+            if (reg == &inst->dst && get_exec_type_size(inst) == 8 &&
+                type_sz(inst->dst.type) < 8) {
+               assert(brw_reg.hstride > BRW_HORIZONTAL_STRIDE_1);
+               brw_reg.hstride--;
+            }
          }
       }
 
