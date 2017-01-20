@@ -939,6 +939,8 @@ struct radv_pipeline {
 			unsigned prim;
 			unsigned gs_out;
 			bool prim_restart_enable;
+			unsigned esgs_ring_size;
+			unsigned gsvs_ring_size;
 		} graphics;
 	};
 

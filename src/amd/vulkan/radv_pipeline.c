@@ -1450,6 +1450,37 @@ radv_compute_vs_key(const VkGraphicsPipelineCreateInfo *pCreateInfo, bool as_es)
 	return key;
 }
 
+static void
+calculate_gs_ring_sizes(struct radv_pipeline *pipeline)
+{
+	struct radv_device *device = pipeline->device;
+	unsigned num_se = device->physical_device->rad_info.max_se;
+	unsigned wave_size = 64;
+	unsigned max_gs_waves = 32 * num_se; /* max 32 per SE on GCN */
+	unsigned gs_vertex_reuse = 16 * num_se; /* GS_VERTEX_REUSE register (per SE) */
+	unsigned alignment = 256 * num_se;
+	/* The maximum size is 63.999 MB per SE. */
+	unsigned max_size = ((unsigned)(63.999 * 1024 * 1024) & ~255) * num_se;
+
+	struct ac_shader_variant_info *gs_info = &pipeline->shaders[MESA_SHADER_GEOMETRY]->info;
+	struct ac_shader_variant_info *es_info = &pipeline->shaders[MESA_SHADER_VERTEX]->info;
+	/* Calculate the minimum size. */
+	unsigned min_esgs_ring_size = align(es_info->vs.esgs_itemsize * gs_vertex_reuse *
+					    wave_size, alignment);
+	/* These are recommended sizes, not minimum sizes. */
+	unsigned esgs_ring_size = max_gs_waves * 2 * wave_size *
+		es_info->vs.esgs_itemsize * gs_info->gs.vertices_in;
+	unsigned gsvs_ring_size = max_gs_waves * 2 * wave_size *
+		gs_info->gs.max_gsvs_emit_size * 1; // no streams in VK (gs->max_gs_stream + 1);
+
+	min_esgs_ring_size = align(min_esgs_ring_size, alignment);
+	esgs_ring_size = align(esgs_ring_size, alignment);
+	gsvs_ring_size = align(gsvs_ring_size, alignment);
+
+	pipeline->graphics.esgs_ring_size = CLAMP(esgs_ring_size, min_esgs_ring_size, max_size);
+	pipeline->graphics.gsvs_ring_size = MIN2(gsvs_ring_size, max_size);
+}
+
 VkResult
 radv_pipeline_init(struct radv_pipeline *pipeline,
 		   struct radv_device *device,
@@ -1504,6 +1535,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 					       pipeline->layout, &key);
 
 		pipeline->active_stages |= mesa_to_vk_shader_stage(MESA_SHADER_GEOMETRY);
+		calculate_gs_ring_sizes(pipeline);
 	}
 
 	if (!modules[MESA_SHADER_FRAGMENT]) {
