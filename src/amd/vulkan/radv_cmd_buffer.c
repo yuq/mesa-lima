@@ -525,6 +525,8 @@ radv_emit_hw_es(struct radv_cmd_buffer *cmd_buffer,
 
 	ws->cs_add_buffer(cmd_buffer->cs, shader->bo, 8);
 
+	radeon_set_context_reg(cmd_buffer->cs, R_028AAC_VGT_ESGS_RING_ITEMSIZE,
+			       shader->info.vs.esgs_itemsize / 4);
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B320_SPI_SHADER_PGM_LO_ES, 4);
 	radeon_emit(cmd_buffer->cs, va >> 8);
 	radeon_emit(cmd_buffer->cs, va >> 40);
