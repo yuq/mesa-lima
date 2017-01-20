@@ -361,6 +361,18 @@ union r600_grbm_counters {
 	struct {
 		struct r600_grbm_counter spi;
 		struct r600_grbm_counter gui;
+		struct r600_grbm_counter ta;
+		struct r600_grbm_counter gds;
+		struct r600_grbm_counter vgt;
+		struct r600_grbm_counter ia;
+		struct r600_grbm_counter sx;
+		struct r600_grbm_counter wd;
+		struct r600_grbm_counter bci;
+		struct r600_grbm_counter sc;
+		struct r600_grbm_counter pa;
+		struct r600_grbm_counter db;
+		struct r600_grbm_counter cp;
+		struct r600_grbm_counter cb;
 	} named;
 	unsigned array[0];
 };

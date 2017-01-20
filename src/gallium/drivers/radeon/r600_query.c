@@ -146,6 +146,18 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	}
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_GPU_SHADERS_BUSY:
+	case R600_QUERY_GPU_TA_BUSY:
+	case R600_QUERY_GPU_GDS_BUSY:
+	case R600_QUERY_GPU_VGT_BUSY:
+	case R600_QUERY_GPU_IA_BUSY:
+	case R600_QUERY_GPU_SX_BUSY:
+	case R600_QUERY_GPU_WD_BUSY:
+	case R600_QUERY_GPU_BCI_BUSY:
+	case R600_QUERY_GPU_SC_BUSY:
+	case R600_QUERY_GPU_PA_BUSY:
+	case R600_QUERY_GPU_DB_BUSY:
+	case R600_QUERY_GPU_CP_BUSY:
+	case R600_QUERY_GPU_CB_BUSY:
 		query->begin_result = r600_begin_counter(rctx->screen,
 							 query->b.type);
 		break;
@@ -239,6 +251,18 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	}
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_GPU_SHADERS_BUSY:
+	case R600_QUERY_GPU_TA_BUSY:
+	case R600_QUERY_GPU_GDS_BUSY:
+	case R600_QUERY_GPU_VGT_BUSY:
+	case R600_QUERY_GPU_IA_BUSY:
+	case R600_QUERY_GPU_SX_BUSY:
+	case R600_QUERY_GPU_WD_BUSY:
+	case R600_QUERY_GPU_BCI_BUSY:
+	case R600_QUERY_GPU_SC_BUSY:
+	case R600_QUERY_GPU_PA_BUSY:
+	case R600_QUERY_GPU_DB_BUSY:
+	case R600_QUERY_GPU_CP_BUSY:
+	case R600_QUERY_GPU_CB_BUSY:
 		query->end_result = r600_end_counter(rctx->screen,
 						     query->b.type,
 						     query->begin_result);
@@ -1721,6 +1745,19 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	 * availability is adjusted dynamically based on the DRM version. */
 	X("GPU-load",			GPU_LOAD,		UINT64, AVERAGE),
 	X("GPU-shaders-busy",		GPU_SHADERS_BUSY,	UINT64, AVERAGE),
+	X("GPU-ta-busy",		GPU_TA_BUSY,		UINT64, AVERAGE),
+	X("GPU-gds-busy",		GPU_GDS_BUSY,		UINT64, AVERAGE),
+	X("GPU-vgt-busy",		GPU_VGT_BUSY,		UINT64, AVERAGE),
+	X("GPU-ia-busy",		GPU_IA_BUSY,		UINT64, AVERAGE),
+	X("GPU-sx-busy",		GPU_SX_BUSY,		UINT64, AVERAGE),
+	X("GPU-wd-busy",		GPU_WD_BUSY,		UINT64, AVERAGE),
+	X("GPU-bci-busy",		GPU_BCI_BUSY,		UINT64, AVERAGE),
+	X("GPU-sc-busy",		GPU_SC_BUSY,		UINT64, AVERAGE),
+	X("GPU-pa-busy",		GPU_PA_BUSY,		UINT64, AVERAGE),
+	X("GPU-db-busy",		GPU_DB_BUSY,		UINT64, AVERAGE),
+	X("GPU-cp-busy",		GPU_CP_BUSY,		UINT64, AVERAGE),
+	X("GPU-cb-busy",		GPU_CB_BUSY,		UINT64, AVERAGE),
+
 	X("temperature",		GPU_TEMPERATURE,	UINT64, AVERAGE),
 	X("shader-clock",		CURRENT_GPU_SCLK,	HZ, AVERAGE),
 	X("memory-clock",		CURRENT_GPU_MCLK,	HZ, AVERAGE),
@@ -1737,7 +1774,7 @@ static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
 	else if (rscreen->info.drm_major == 3)
 		return ARRAY_SIZE(r600_driver_query_list) - 3;
 	else
-		return ARRAY_SIZE(r600_driver_query_list) - 5;
+		return ARRAY_SIZE(r600_driver_query_list) - 17;
 }
 
 static int r600_get_driver_query_info(struct pipe_screen *screen,

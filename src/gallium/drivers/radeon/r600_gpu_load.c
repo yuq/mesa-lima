@@ -43,7 +43,19 @@
 #define SAMPLES_PER_SEC 10000
 
 #define GRBM_STATUS		0x8010
+#define TA_BUSY(x)		(((x) >> 14) & 0x1)
+#define GDS_BUSY(x)		(((x) >> 15) & 0x1)
+#define VGT_BUSY(x)		(((x) >> 17) & 0x1)
+#define IA_BUSY(x)		(((x) >> 19) & 0x1)
+#define SX_BUSY(x)		(((x) >> 20) & 0x1)
+#define WD_BUSY(x)		(((x) >> 21) & 0x1)
 #define SPI_BUSY(x)		(((x) >> 22) & 0x1)
+#define BCI_BUSY(x)		(((x) >> 23) & 0x1)
+#define SC_BUSY(x)		(((x) >> 24) & 0x1)
+#define PA_BUSY(x)		(((x) >> 25) & 0x1)
+#define DB_BUSY(x)		(((x) >> 26) & 0x1)
+#define CP_BUSY(x)		(((x) >> 29) & 0x1)
+#define CB_BUSY(x)		(((x) >> 30) & 0x1)
 #define GUI_ACTIVE(x)		(((x) >> 31) & 0x1)
 
 #define UPDATE_COUNTER(field, mask)				\
@@ -59,7 +71,19 @@ static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
 
 	rscreen->ws->read_registers(rscreen->ws, GRBM_STATUS, 1, &value);
 
+	UPDATE_COUNTER(ta, TA_BUSY);
+	UPDATE_COUNTER(gds, GDS_BUSY);
+	UPDATE_COUNTER(vgt, VGT_BUSY);
+	UPDATE_COUNTER(ia, IA_BUSY);
+	UPDATE_COUNTER(sx, SX_BUSY);
+	UPDATE_COUNTER(wd, WD_BUSY);
 	UPDATE_COUNTER(spi, SPI_BUSY);
+	UPDATE_COUNTER(bci, BCI_BUSY);
+	UPDATE_COUNTER(sc, SC_BUSY);
+	UPDATE_COUNTER(pa, PA_BUSY);
+	UPDATE_COUNTER(db, DB_BUSY);
+	UPDATE_COUNTER(cp, CP_BUSY);
+	UPDATE_COUNTER(cb, CB_BUSY);
 	UPDATE_COUNTER(gui, GUI_ACTIVE);
 }
 
@@ -158,6 +182,30 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 		return BUSY_INDEX(rscreen, gui);
 	case R600_QUERY_GPU_SHADERS_BUSY:
 		return BUSY_INDEX(rscreen, spi);
+	case R600_QUERY_GPU_TA_BUSY:
+		return BUSY_INDEX(rscreen, ta);
+	case R600_QUERY_GPU_GDS_BUSY:
+		return BUSY_INDEX(rscreen, gds);
+	case R600_QUERY_GPU_VGT_BUSY:
+		return BUSY_INDEX(rscreen, vgt);
+	case R600_QUERY_GPU_IA_BUSY:
+		return BUSY_INDEX(rscreen, ia);
+	case R600_QUERY_GPU_SX_BUSY:
+		return BUSY_INDEX(rscreen, sx);
+	case R600_QUERY_GPU_WD_BUSY:
+		return BUSY_INDEX(rscreen, wd);
+	case R600_QUERY_GPU_BCI_BUSY:
+		return BUSY_INDEX(rscreen, bci);
+	case R600_QUERY_GPU_SC_BUSY:
+		return BUSY_INDEX(rscreen, sc);
+	case R600_QUERY_GPU_PA_BUSY:
+		return BUSY_INDEX(rscreen, pa);
+	case R600_QUERY_GPU_DB_BUSY:
+		return BUSY_INDEX(rscreen, db);
+	case R600_QUERY_GPU_CP_BUSY:
+		return BUSY_INDEX(rscreen, cp);
+	case R600_QUERY_GPU_CB_BUSY:
+		return BUSY_INDEX(rscreen, cb);
 	default:
 		unreachable("query type does not correspond to grbm id");
 	}
