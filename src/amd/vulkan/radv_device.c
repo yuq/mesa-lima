@@ -764,6 +764,10 @@ radv_queue_finish(struct radv_queue *queue)
 		queue->device->ws->buffer_destroy(queue->descriptor_bo);
 	if (queue->scratch_bo)
 		queue->device->ws->buffer_destroy(queue->scratch_bo);
+	if (queue->esgs_ring_bo)
+		queue->device->ws->buffer_destroy(queue->esgs_ring_bo);
+	if (queue->gsvs_ring_bo)
+		queue->device->ws->buffer_destroy(queue->gsvs_ring_bo);
 	if (queue->compute_scratch_bo)
 		queue->device->ws->buffer_destroy(queue->compute_scratch_bo);
 }
@@ -1046,24 +1050,118 @@ static void radv_dump_trace(struct radv_device *device,
 	fclose(f);
 }
 
+static void
+fill_geom_rings(struct radv_queue *queue,
+		uint32_t *map,
+		uint32_t esgs_ring_size,
+		struct radeon_winsys_bo *esgs_ring_bo,
+		uint32_t gsvs_ring_size,
+		struct radeon_winsys_bo *gsvs_ring_bo)
+{
+	uint64_t esgs_va, gsvs_va;
+	esgs_va = queue->device->ws->buffer_get_va(esgs_ring_bo);
+	gsvs_va = queue->device->ws->buffer_get_va(gsvs_ring_bo);
+	uint32_t *desc = &map[4];
+
+	/* stride 0, num records - size, add tid, swizzle, elsize4,
+	   index stride 64 */
+	desc[0] = esgs_va;
+	desc[1] = S_008F04_BASE_ADDRESS_HI(esgs_va >> 32) |
+		S_008F04_STRIDE(0) |
+		S_008F04_SWIZZLE_ENABLE(true);
+	desc[2] = esgs_ring_size;
+	desc[3] = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+		S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+		S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+		S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+		S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+		S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32) |
+		S_008F0C_ELEMENT_SIZE(1) |
+		S_008F0C_INDEX_STRIDE(3) |
+		S_008F0C_ADD_TID_ENABLE(true);
+
+	desc += 4;
+	/* GS entry for ES->GS ring */
+	/* stride 0, num records - size, elsize0,
+	   index stride 0 */
+	desc[0] = esgs_va;
+	desc[1] = S_008F04_BASE_ADDRESS_HI(esgs_va >> 32)|
+		S_008F04_STRIDE(0) |
+		S_008F04_SWIZZLE_ENABLE(false);
+	desc[2] = esgs_ring_size;
+	desc[3] = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+		S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+		S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+		S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+		S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+		S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32) |
+		S_008F0C_ELEMENT_SIZE(0) |
+		S_008F0C_INDEX_STRIDE(0) |
+		S_008F0C_ADD_TID_ENABLE(false);
+
+	desc += 4;
+	/* VS entry for GS->VS ring */
+	/* stride 0, num records - size, elsize0,
+	   index stride 0 */
+	desc[0] = gsvs_va;
+	desc[1] = S_008F04_BASE_ADDRESS_HI(gsvs_va >> 32)|
+		S_008F04_STRIDE(0) |
+		S_008F04_SWIZZLE_ENABLE(false);
+	desc[2] = gsvs_ring_size;
+	desc[3] = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+		S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+		S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+		S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+		S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+		S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32) |
+		S_008F0C_ELEMENT_SIZE(0) |
+		S_008F0C_INDEX_STRIDE(0) |
+		S_008F0C_ADD_TID_ENABLE(false);
+	desc += 4;
+
+	/* stride gsvs_itemsize, num records 64
+	   elsize 4, index stride 16 */
+	/* shader will patch stride and desc[2] */
+	desc[0] = gsvs_va;
+	desc[1] = S_008F04_BASE_ADDRESS_HI(gsvs_va >> 32)|
+		S_008F04_STRIDE(0) |
+		S_008F04_SWIZZLE_ENABLE(true);
+	desc[2] = 0;
+	desc[3] = S_008F0C_DST_SEL_X(V_008F0C_SQ_SEL_X) |
+		S_008F0C_DST_SEL_Y(V_008F0C_SQ_SEL_Y) |
+		S_008F0C_DST_SEL_Z(V_008F0C_SQ_SEL_Z) |
+		S_008F0C_DST_SEL_W(V_008F0C_SQ_SEL_W) |
+		S_008F0C_NUM_FORMAT(V_008F0C_BUF_NUM_FORMAT_FLOAT) |
+		S_008F0C_DATA_FORMAT(V_008F0C_BUF_DATA_FORMAT_32) |
+		S_008F0C_ELEMENT_SIZE(1) |
+		S_008F0C_INDEX_STRIDE(1) |
+		S_008F0C_ADD_TID_ENABLE(true);
+}
+
 static VkResult
 radv_get_preamble_cs(struct radv_queue *queue,
                      uint32_t scratch_size,
                      uint32_t compute_scratch_size,
+		     uint32_t esgs_ring_size,
+		     uint32_t gsvs_ring_size,
                      struct radeon_winsys_cs **preamble_cs)
 {
 	struct radeon_winsys_bo *scratch_bo = NULL;
 	struct radeon_winsys_bo *descriptor_bo = NULL;
 	struct radeon_winsys_bo *compute_scratch_bo = NULL;
+	struct radeon_winsys_bo *esgs_ring_bo = NULL;
+	struct radeon_winsys_bo *gsvs_ring_bo = NULL;
 	struct radeon_winsys_cs *cs = NULL;
 
-	if (!scratch_size && !compute_scratch_size) {
+	if (!scratch_size && !compute_scratch_size && !esgs_ring_size && !gsvs_ring_size) {
 		*preamble_cs = NULL;
 		return VK_SUCCESS;
 	}
 
 	if (scratch_size <= queue->scratch_size &&
-	    compute_scratch_size <= queue->compute_scratch_size) {
+	    compute_scratch_size <= queue->compute_scratch_size &&
+	    esgs_ring_size <= queue->esgs_ring_size &&
+	    gsvs_ring_size <= queue->gsvs_ring_size) {
 		*preamble_cs = queue->preamble_cs;
 		return VK_SUCCESS;
 	}
@@ -1091,9 +1189,43 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	} else
 		compute_scratch_bo = queue->compute_scratch_bo;
 
-	if (scratch_bo != queue->scratch_bo) {
+	if (esgs_ring_size > queue->esgs_ring_size) {
+		esgs_ring_bo = queue->device->ws->buffer_create(queue->device->ws,
+								esgs_ring_size,
+								4096,
+								RADEON_DOMAIN_VRAM,
+								RADEON_FLAG_NO_CPU_ACCESS);
+		if (!esgs_ring_bo)
+			goto fail;
+	} else {
+		esgs_ring_bo = queue->esgs_ring_bo;
+		esgs_ring_size = queue->esgs_ring_size;
+	}
+
+	if (gsvs_ring_size > queue->gsvs_ring_size) {
+		gsvs_ring_bo = queue->device->ws->buffer_create(queue->device->ws,
+								gsvs_ring_size,
+								4096,
+								RADEON_DOMAIN_VRAM,
+								RADEON_FLAG_NO_CPU_ACCESS);
+		if (!gsvs_ring_bo)
+			goto fail;
+	} else {
+		gsvs_ring_bo = queue->gsvs_ring_bo;
+		gsvs_ring_size = queue->gsvs_ring_size;
+	}
+
+	if (scratch_bo != queue->scratch_bo ||
+	    esgs_ring_bo != queue->esgs_ring_bo ||
+	    gsvs_ring_bo != queue->gsvs_ring_bo) {
+		uint32_t size = 0;
+		if (gsvs_ring_bo || esgs_ring_bo)
+			size = 80; /* 2 dword + 2 padding + 4 dword * 4 */
+		else if (scratch_bo)
+			size = 8; /* 2 dword */
+
 		descriptor_bo = queue->device->ws->buffer_create(queue->device->ws,
-		                                                 8,
+		                                                 size,
 		                                                 4096,
 		                                                 RADEON_DOMAIN_VRAM,
 		                                                 RADEON_FLAG_CPU_ACCESS);
@@ -1111,20 +1243,47 @@ radv_get_preamble_cs(struct radv_queue *queue,
 	if (scratch_bo)
 		queue->device->ws->cs_add_buffer(cs, scratch_bo, 8);
 
+	if (esgs_ring_bo)
+		queue->device->ws->cs_add_buffer(cs, esgs_ring_bo, 8);
+
+	if (gsvs_ring_bo)
+		queue->device->ws->cs_add_buffer(cs, gsvs_ring_bo, 8);
+
 	if (descriptor_bo)
 		queue->device->ws->cs_add_buffer(cs, descriptor_bo, 8);
 
 	if (descriptor_bo != queue->descriptor_bo) {
-		uint64_t scratch_va = queue->device->ws->buffer_get_va(scratch_bo);
-		uint32_t rsrc1 = S_008F04_BASE_ADDRESS_HI(scratch_va >> 32) |
-		                 S_008F04_SWIZZLE_ENABLE(1);
-
 		uint32_t *map = (uint32_t*)queue->device->ws->buffer_map(descriptor_bo);
 
-		map[0] = scratch_va;
-		map[1] = rsrc1;
+		if (scratch_bo) {
+			uint64_t scratch_va = queue->device->ws->buffer_get_va(scratch_bo);
+			uint32_t rsrc1 = S_008F04_BASE_ADDRESS_HI(scratch_va >> 32) |
+				S_008F04_SWIZZLE_ENABLE(1);
+			map[0] = scratch_va;
+			map[1] = rsrc1;
+		}
+
+		if (esgs_ring_bo || gsvs_ring_bo)
+			fill_geom_rings(queue, map, esgs_ring_size, esgs_ring_bo, gsvs_ring_size, gsvs_ring_bo);
 
 		queue->device->ws->buffer_unmap(descriptor_bo);
+	}
+
+	if (esgs_ring_bo || gsvs_ring_bo) {
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_VS_PARTIAL_FLUSH) | EVENT_INDEX(4));
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_VGT_FLUSH) | EVENT_INDEX(0));
+
+		if (queue->device->physical_device->rad_info.chip_class >= CIK) {
+			radeon_set_uconfig_reg_seq(cs, R_030900_VGT_ESGS_RING_SIZE, 2);
+			radeon_emit(cs, esgs_ring_size >> 8);
+			radeon_emit(cs, gsvs_ring_size >> 8);
+		} else {
+			radeon_set_config_reg_seq(cs, R_0088C8_VGT_ESGS_RING_SIZE, 2);
+			radeon_emit(cs, esgs_ring_size >> 8);
+			radeon_emit(cs, gsvs_ring_size >> 8);
+		}
 	}
 
 	if (descriptor_bo) {
@@ -1178,6 +1337,20 @@ radv_get_preamble_cs(struct radv_queue *queue,
 		queue->compute_scratch_size = compute_scratch_size;
 	}
 
+	if (esgs_ring_bo != queue->esgs_ring_bo) {
+		if (queue->esgs_ring_bo)
+			queue->device->ws->buffer_destroy(queue->esgs_ring_bo);
+		queue->esgs_ring_bo = esgs_ring_bo;
+		queue->esgs_ring_size = esgs_ring_size;
+	}
+
+	if (gsvs_ring_bo != queue->gsvs_ring_bo) {
+		if (queue->gsvs_ring_bo)
+			queue->device->ws->buffer_destroy(queue->gsvs_ring_bo);
+		queue->gsvs_ring_bo = gsvs_ring_bo;
+		queue->gsvs_ring_size = gsvs_ring_size;
+	}
+
 	if (descriptor_bo != queue->descriptor_bo) {
 		if (queue->descriptor_bo)
 			queue->device->ws->buffer_destroy(queue->descriptor_bo);
@@ -1196,6 +1369,10 @@ fail:
 		queue->device->ws->buffer_destroy(scratch_bo);
 	if (compute_scratch_bo && compute_scratch_bo != queue->compute_scratch_bo)
 		queue->device->ws->buffer_destroy(compute_scratch_bo);
+	if (esgs_ring_bo && esgs_ring_bo != queue->esgs_ring_bo)
+		queue->device->ws->buffer_destroy(esgs_ring_bo);
+	if (gsvs_ring_bo && gsvs_ring_bo != queue->gsvs_ring_bo)
+		queue->device->ws->buffer_destroy(gsvs_ring_bo);
 	return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 }
 
@@ -1213,6 +1390,7 @@ VkResult radv_QueueSubmit(
 	uint32_t max_cs_submission = queue->device->trace_bo ? 1 : UINT32_MAX;
 	uint32_t scratch_size = 0;
 	uint32_t compute_scratch_size = 0;
+	uint32_t esgs_ring_size = 0, gsvs_ring_size = 0;
 	struct radeon_winsys_cs *preamble_cs = NULL;
 	VkResult result;
 
@@ -1226,10 +1404,12 @@ VkResult radv_QueueSubmit(
 			scratch_size = MAX2(scratch_size, cmd_buffer->scratch_size_needed);
 			compute_scratch_size = MAX2(compute_scratch_size,
 			                            cmd_buffer->compute_scratch_size_needed);
+			esgs_ring_size = MAX2(esgs_ring_size, cmd_buffer->esgs_ring_size_needed);
+			gsvs_ring_size = MAX2(gsvs_ring_size, cmd_buffer->gsvs_ring_size_needed);
 		}
 	}
 
-	result = radv_get_preamble_cs(queue, scratch_size, compute_scratch_size, &preamble_cs);
+	result = radv_get_preamble_cs(queue, scratch_size, compute_scratch_size, esgs_ring_size, gsvs_ring_size, &preamble_cs);
 	if (result != VK_SUCCESS)
 		return result;
 

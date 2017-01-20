@@ -1457,12 +1457,17 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 
 	cmd_buffer->scratch_size_needed = 0;
 	cmd_buffer->compute_scratch_size_needed = 0;
+	cmd_buffer->esgs_ring_size_needed = 0;
+	cmd_buffer->gsvs_ring_size_needed = 0;
+
 	if (cmd_buffer->upload.upload_bo)
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs,
 						      cmd_buffer->upload.upload_bo, 8);
 	cmd_buffer->upload.offset = 0;
 
 	cmd_buffer->record_fail = false;
+
+	cmd_buffer->ring_offsets_idx = -1;
 }
 
 VkResult radv_ResetCommandBuffer(
@@ -1649,6 +1654,7 @@ VkResult radv_EndCommandBuffer(
 
 	if (cmd_buffer->queue_family_index != RADV_QUEUE_TRANSFER)
 		si_emit_cache_flush(cmd_buffer);
+
 	if (!cmd_buffer->device->ws->cs_finalize(cmd_buffer->cs) ||
 	    cmd_buffer->record_fail)
 		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
@@ -1735,6 +1741,20 @@ void radv_CmdBindPipeline(
 		radv_dynamic_state_copy(&cmd_buffer->state.dynamic,
 					&pipeline->dynamic_state,
 					pipeline->dynamic_state_mask);
+
+		if (pipeline->graphics.esgs_ring_size > cmd_buffer->esgs_ring_size_needed)
+			cmd_buffer->esgs_ring_size_needed = pipeline->graphics.esgs_ring_size;
+		if (pipeline->graphics.gsvs_ring_size > cmd_buffer->gsvs_ring_size_needed)
+			cmd_buffer->gsvs_ring_size_needed = pipeline->graphics.gsvs_ring_size;
+
+		if (radv_pipeline_has_gs(pipeline)) {
+			struct ac_userdata_info *loc = radv_lookup_user_sgpr(cmd_buffer->state.pipeline, MESA_SHADER_GEOMETRY,
+									     AC_UD_SCRATCH_RING_OFFSETS);
+			if (cmd_buffer->ring_offsets_idx == -1)
+				cmd_buffer->ring_offsets_idx = loc->sgpr_idx;
+			else if (loc->sgpr_idx != -1)
+				assert(loc->sgpr_idx != cmd_buffer->ring_offsets_idx);
+		}
 		break;
 	default:
 		assert(!"invalid bind point");
@@ -1887,6 +1907,17 @@ void radv_CmdExecuteCommands(
 		primary->compute_scratch_size_needed = MAX2(primary->compute_scratch_size_needed,
 		                                            secondary->compute_scratch_size_needed);
 
+		if (secondary->esgs_ring_size_needed > primary->esgs_ring_size_needed)
+			primary->esgs_ring_size_needed = secondary->esgs_ring_size_needed;
+		if (secondary->gsvs_ring_size_needed > primary->gsvs_ring_size_needed)
+			primary->gsvs_ring_size_needed = secondary->gsvs_ring_size_needed;
+
+		if (secondary->ring_offsets_idx != -1) {
+			if (primary->ring_offsets_idx == -1)
+				primary->ring_offsets_idx = secondary->ring_offsets_idx;
+			else
+				assert(secondary->ring_offsets_idx == primary->ring_offsets_idx);
+		}
 		primary->device->ws->cs_execute_secondary(primary->cs, secondary->cs);
 	}
 
