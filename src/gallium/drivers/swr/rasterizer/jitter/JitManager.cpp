@@ -88,7 +88,7 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     tOpts.AllowFPOpFusion = FPOpFusion::Fast;
     tOpts.NoInfsFPMath = false;
     tOpts.NoNaNsFPMath = false;
-    tOpts.UnsafeFPMath = true;
+    tOpts.UnsafeFPMath = false;
 #if defined(_DEBUG)
 #if LLVM_VERSION_MAJOR == 3 && LLVM_VERSION_MINOR < 7
     tOpts.NoFramePointerElim = true;
