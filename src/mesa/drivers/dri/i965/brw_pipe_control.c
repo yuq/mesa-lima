@@ -271,7 +271,6 @@ gen7_emit_cs_stall_flush(struct brw_context *brw)
                                brw->workaround_bo, 0, 0);
 }
 
-
 /**
  * Emits a PIPE_CONTROL with a non-zero post-sync operation, for
  * implementing two workarounds on gen6.  From section 1.4.7.1
@@ -318,6 +317,105 @@ brw_emit_post_sync_nonzero_flush(struct brw_context *brw)
 
    brw_emit_pipe_control_write(brw, PIPE_CONTROL_WRITE_IMMEDIATE,
                                brw->workaround_bo, 0, 0);
+}
+
+/*
+ * From Sandybridge PRM, volume 2, "1.7.2 End-of-Pipe Synchronization":
+ *
+ *  Write synchronization is a special case of end-of-pipe
+ *  synchronization that requires that the render cache and/or depth
+ *  related caches are flushed to memory, where the data will become
+ *  globally visible. This type of synchronization is required prior to
+ *  SW (CPU) actually reading the result data from memory, or initiating
+ *  an operation that will use as a read surface (such as a texture
+ *  surface) a previous render target and/or depth/stencil buffer
+ *
+ *
+ * From Haswell PRM, volume 2, part 1, "End-of-Pipe Synchronization":
+ *
+ *  Exercising the write cache flush bits (Render Target Cache Flush
+ *  Enable, Depth Cache Flush Enable, DC Flush) in PIPE_CONTROL only
+ *  ensures the write caches are flushed and doesn't guarantee the data
+ *  is globally visible.
+ *
+ *  SW can track the completion of the end-of-pipe-synchronization by
+ *  using "Notify Enable" and "PostSync Operation - Write Immediate
+ *  Data" in the PIPE_CONTROL command. 
+ */
+void
+brw_emit_end_of_pipe_sync(struct brw_context *brw, uint32_t flags)
+{
+   if (brw->gen >= 6) {
+      /* From Sandybridge PRM, volume 2, "1.7.3.1 Writing a Value to Memory":
+       *
+       *    "The most common action to perform upon reaching a synchronization
+       *    point is to write a value out to memory. An immediate value
+       *    (included with the synchronization command) may be written."
+       *
+       *
+       * From Broadwell PRM, volume 7, "End-of-Pipe Synchronization":
+       *
+       *    "In case the data flushed out by the render engine is to be read
+       *    back in to the render engine in coherent manner, then the render
+       *    engine has to wait for the fence completion before accessing the
+       *    flushed data. This can be achieved by following means on various
+       *    products: PIPE_CONTROL command with CS Stall and the required
+       *    write caches flushed with Post-Sync-Operation as Write Immediate
+       *    Data.
+       *
+       *    Example:
+       *       - Workload-1 (3D/GPGPU/MEDIA)
+       *       - PIPE_CONTROL (CS Stall, Post-Sync-Operation Write Immediate
+       *         Data, Required Write Cache Flush bits set)
+       *       - Workload-2 (Can use the data produce or output by Workload-1)
+       */
+      brw_emit_pipe_control_write(brw,
+                                  flags | PIPE_CONTROL_CS_STALL |
+                                  PIPE_CONTROL_WRITE_IMMEDIATE,
+                                  brw->workaround_bo, 0, 0);
+
+      if (brw->is_haswell) {
+         /* Haswell needs addition work-arounds:
+          *
+          * From Haswell PRM, volume 2, part 1, "End-of-Pipe Synchronization":
+          *
+          *    Option 1:
+          *    PIPE_CONTROL command with the CS Stall and the required write
+          *    caches flushed with Post-SyncOperation as Write Immediate Data
+          *    followed by eight dummy MI_STORE_DATA_IMM (write to scratch
+          *    spce) commands.
+          *
+          *    Example:
+          *       - Workload-1
+          *       - PIPE_CONTROL (CS Stall, Post-Sync-Operation Write
+          *         Immediate Data, Required Write Cache Flush bits set)
+          *       - MI_STORE_DATA_IMM (8 times) (Dummy data, Scratch Address)
+          *       - Workload-2 (Can use the data produce or output by
+          *         Workload-1)
+          *
+          * Unfortunately, both the PRMs and the internal docs are a bit
+          * out-of-date in this regard.  What the windows driver does (and
+          * this appears to actually work) is to emit a register read from the
+          * memory address written by the pipe control above.
+          *
+          * What register we load into doesn't matter.  We choose an indirect
+          * rendering register because we know it always exists and it's one
+          * of the first registers the command parser allows us to write.  If
+          * you don't have command parser support in your kernel (pre-4.2),
+          * this will get turned into MI_NOOP and you won't get the
+          * workaround.  Unfortunately, there's just not much we can do in
+          * that case.  This register is perfectly safe to write since we
+          * always re-load all of the indirect draw registers right before
+          * 3DPRIMITIVE when needed anyway.
+          */
+         brw_load_register_mem(brw, GEN7_3DPRIM_START_INSTANCE,
+                               brw->workaround_bo,
+                               I915_GEM_DOMAIN_INSTRUCTION, 0, 0);
+      }
+   } else {
+      /* On gen4-5, a regular pipe control seems to suffice. */
+      brw_emit_pipe_control_flush(brw, flags);
+   }
 }
 
 /* Emit a pipelined flush to either flush render and texture cache for
