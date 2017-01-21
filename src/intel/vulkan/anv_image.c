@@ -529,7 +529,7 @@ anv_CreateImageView(VkDevice _device,
       .depth  = anv_minify(image->extent.depth , range->baseMipLevel),
    };
 
-   if (image->type == VK_IMAGE_TYPE_3D) {
+   if (pCreateInfo->viewType == VK_IMAGE_VIEW_TYPE_3D) {
       iview->isl.base_array_layer = 0;
       iview->isl.array_len = iview->extent.depth;
    }
