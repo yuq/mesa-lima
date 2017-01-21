@@ -59,8 +59,8 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
          .YMaxClipGuardband = 1.0f,
          .XMinViewPort = vp->x,
          .XMaxViewPort = vp->x + vp->width - 1,
-         .YMinViewPort = vp->y,
-         .YMaxViewPort = vp->y + vp->height - 1,
+         .YMinViewPort = MIN2(vp->y, vp->y + vp->height),
+         .YMaxViewPort = MAX2(vp->y, vp->y + vp->height) - 1,
       };
 
       GENX(SF_CLIP_VIEWPORT_pack)(NULL, sf_clip_state.map + i * 64,
