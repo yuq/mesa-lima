@@ -137,7 +137,7 @@ static bool match_layout_qualifier(const char *s1, const char *s2,
 %token ATTRIBUTE CONST_TOK BOOL_TOK FLOAT_TOK INT_TOK UINT_TOK DOUBLE_TOK
 %token BREAK BUFFER CONTINUE DO ELSE FOR IF DISCARD RETURN SWITCH CASE DEFAULT
 %token BVEC2 BVEC3 BVEC4 IVEC2 IVEC3 IVEC4 UVEC2 UVEC3 UVEC4 VEC2 VEC3 VEC4 DVEC2 DVEC3 DVEC4
-%token INT64 UINT64 I64VEC2 I64VEC3 I64VEC4 U64VEC2 U64VEC3 U64VEC4
+%token INT64_TOK UINT64_TOK I64VEC2 I64VEC3 I64VEC4 U64VEC2 U64VEC3 U64VEC4
 %token CENTROID IN_TOK OUT_TOK INOUT_TOK UNIFORM VARYING SAMPLE
 %token NOPERSPECTIVE FLAT SMOOTH
 %token MAT2X2 MAT2X3 MAT2X4
@@ -2321,11 +2321,11 @@ basic_type_specifier_nonarray:
    | UIMAGE2DMS             { $$ = "uimage2DMS"; }
    | UIMAGE2DMSARRAY        { $$ = "uimage2DMSArray"; }
    | ATOMIC_UINT            { $$ = "atomic_uint"; }
-   | INT64                  { $$ = "int64_t";	   }
+   | INT64_TOK              { $$ = "int64_t";	   }
    | I64VEC2                { $$ = "i64vec2";	   }
    | I64VEC3                { $$ = "i64vec3";	   }
    | I64VEC4                { $$ = "i64vec4";	   }
-   | UINT64                 { $$ = "uint64_t";	   }
+   | UINT64_TOK             { $$ = "uint64_t";	   }
    | U64VEC2                { $$ = "u64vec2";	   }
    | U64VEC3                { $$ = "u64vec3";	   }
    | U64VEC4                { $$ = "u64vec4";	   }
