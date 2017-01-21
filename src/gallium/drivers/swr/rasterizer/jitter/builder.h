@@ -69,8 +69,6 @@ namespace SwrJit
         Type*                mSimdIntPtrTy;
         Type*                mSimdVectorTy;
         Type*                mSimdVectorTRTy;
-        StructType*          mV4FP32Ty;
-        StructType*          mV4Int32Ty;
 
 #include "builder_gen.h"
 #include "builder_x86.h"

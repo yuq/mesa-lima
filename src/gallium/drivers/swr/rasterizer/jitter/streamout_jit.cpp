@@ -159,7 +159,11 @@ struct StreamOutJit : public Builder
 
             // cast input to <4xfloat>
             Value* src = BITCAST(vpackedAttrib, simd4Ty);
-            CALL(maskStore, {pOut, ToMask(packedMask), src});
+
+            // cast mask to <4xint>
+            Value* mask = ToMask(packedMask);
+            mask = BITCAST(mask, VectorType::get(IRB()->getInt32Ty(), 4));
+            CALL(maskStore, {pOut, mask, src});
         }
 
         // increment SO buffer
