@@ -432,8 +432,13 @@ anv_descriptor_set_create(struct anv_device *device,
       }
    }
 
-   if (set == NULL)
-      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+   if (set == NULL) {
+      if (pool->free_list != EMPTY) {
+         return vk_error(VK_ERROR_FRAGMENTED_POOL);
+      } else {
+         return vk_error(VK_ERROR_OUT_OF_POOL_MEMORY_KHR);
+      }
+   }
 
    set->size = size;
    set->layout = layout;
