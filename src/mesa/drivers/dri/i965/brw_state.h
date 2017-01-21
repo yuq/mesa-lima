@@ -454,6 +454,11 @@ use_state_point_size(const struct brw_context *brw)
           (brw->vue_map_geom_out.slots_valid & VARYING_BIT_PSIZ) == 0;
 }
 
+void brw_calculate_guardband_size(const struct gen_device_info *devinfo,
+                                  uint32_t fb_width, uint32_t fb_height,
+                                  float m00, float m11, float m30, float m31,
+                                  float *xmin, float *xmax,
+                                  float *ymin, float *ymax);
 
 #ifdef __cplusplus
 }
