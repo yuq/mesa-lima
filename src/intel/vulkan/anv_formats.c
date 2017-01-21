@@ -348,6 +348,11 @@ get_image_format_properties(const struct gen_device_info *devinfo,
    if (base == ISL_FORMAT_R32_SINT || base == ISL_FORMAT_R32_UINT)
       flags |= VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT;
 
+   if (flags) {
+      flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+   }
+
    return flags;
 }
 
@@ -372,6 +377,11 @@ get_buffer_format_properties(const struct gen_device_info *devinfo,
    if (format == ISL_FORMAT_R32_SINT || format == ISL_FORMAT_R32_UINT)
       flags |= VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT;
 
+   if (flags) {
+      flags |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+   }
+
    return flags;
 }
 
@@ -393,7 +403,9 @@ anv_physical_device_get_format_properties(struct anv_physical_device *physical_d
          tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
 
       tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
-               VK_FORMAT_FEATURE_BLIT_DST_BIT;
+               VK_FORMAT_FEATURE_BLIT_DST_BIT |
+               VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+               VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
    } else {
       struct anv_format linear_fmt, tiled_fmt;
       linear_fmt = anv_get_format(&physical_device->info, format,
