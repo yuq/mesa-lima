@@ -367,14 +367,6 @@ anv_multialloc_alloc2(struct anv_multialloc *ma,
    return anv_multialloc_alloc(ma, alloc ? alloc : parent_alloc, scope);
 }
 
-/**
- * A dynamically growable, circular buffer.  Elements are added at head and
- * removed from tail. head and tail are free-running uint32_t indices and we
- * only compute the modulo with size when accessing the array.  This way,
- * number of bytes in the queue is always head - tail, even in case of
- * wraparound.
- */
-
 struct anv_bo {
    uint32_t gem_handle;
 
