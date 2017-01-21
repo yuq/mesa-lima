@@ -787,6 +787,14 @@ VkResult anv_ResetCommandPool(
    return VK_SUCCESS;
 }
 
+void anv_TrimCommandPoolKHR(
+    VkDevice                                    device,
+    VkCommandPool                               commandPool,
+    VkCommandPoolTrimFlagsKHR                   flags)
+{
+   /* Nothing for us to do here.  Our pools stay pretty tidy. */
+}
+
 /**
  * Return NULL if the current subpass has no depthstencil attachment.
  */
