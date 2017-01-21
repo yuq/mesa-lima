@@ -94,14 +94,6 @@ unsigned
 brw_reg_type_to_hw_type(const struct gen_device_info *devinfo,
                         enum brw_reg_type type, enum brw_reg_file file)
 {
-   /* If the type is Q or UQ and Gen < 8, change the type to DF.  On Gen < 8,
-    * the only Q or UQ moves the should occur are actually to move doubles
-    * anyway.
-    */
-   if (devinfo->gen < 8 && (type == BRW_REGISTER_TYPE_UQ ||
-                            type == BRW_REGISTER_TYPE_Q))
-      type = BRW_REGISTER_TYPE_DF;
-
    if (file == BRW_IMMEDIATE_VALUE) {
       static const int imm_hw_types[] = {
          [BRW_REGISTER_TYPE_UD] = BRW_HW_REG_TYPE_UD,
