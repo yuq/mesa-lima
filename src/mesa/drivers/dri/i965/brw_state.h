@@ -110,7 +110,7 @@ extern const struct brw_tracked_state gen7_cs_push_constants;
 extern const struct brw_tracked_state gen6_binding_table_pointers;
 extern const struct brw_tracked_state gen6_blend_state;
 extern const struct brw_tracked_state gen6_clip_state;
-extern const struct brw_tracked_state gen6_clip_vp;
+extern const struct brw_tracked_state gen6_sf_and_clip_viewports;
 extern const struct brw_tracked_state gen6_color_calc_state;
 extern const struct brw_tracked_state gen6_depth_stencil_state;
 extern const struct brw_tracked_state gen6_gs_state;

@@ -33,61 +33,12 @@
 #include "main/framebuffer.h"
 #include "main/viewport.h"
 
-/* The clip VP defines the guardband region where expensive clipping is skipped
- * and fragments are allowed to be generated and clipped out cheaply by the SF.
- */
 static void
-gen6_upload_clip_vp(struct brw_context *brw)
-{
-   struct gl_context *ctx = &brw->ctx;
-   struct brw_clipper_viewport *vp;
-
-   /* BRW_NEW_VIEWPORT_COUNT */
-   const unsigned viewport_count = brw->clip.viewport_count;
-
-   vp = brw_state_batch(brw, AUB_TRACE_CLIP_VP_STATE,
-                        sizeof(*vp) * viewport_count, 32, &brw->clip.vp_offset);
-
-   for (unsigned i = 0; i < viewport_count; i++) {
-      /* According to the "Vertex X,Y Clamping and Quantization" section of the
-       * Strips and Fans documentation, objects must not have a screen-space
-       * extents of over 8192 pixels, or they may be mis-rasterized.  The maximum
-       * screen space coordinates of a small object may larger, but we have no
-       * way to enforce the object size other than through clipping.
-       *
-       * If you're surprised that we set clip to -gbx to +gbx and it seems like
-       * we'll end up with 16384 wide, note that for a 8192-wide render target,
-       * we'll end up with a normal (-1, 1) clip volume that just covers the
-       * drawable.
-       */
-      const float maximum_post_clamp_delta = 8192;
-      float gbx = maximum_post_clamp_delta / ctx->ViewportArray[i].Width;
-      float gby = maximum_post_clamp_delta / ctx->ViewportArray[i].Height;
-
-      vp[i].xmin = -gbx;
-      vp[i].xmax = gbx;
-      vp[i].ymin = -gby;
-      vp[i].ymax = gby;
-   }
-
-   brw->ctx.NewDriverState |= BRW_NEW_CLIP_VP;
-}
-
-const struct brw_tracked_state gen6_clip_vp = {
-   .dirty = {
-      .mesa = _NEW_VIEWPORT,
-      .brw = BRW_NEW_BATCH |
-             BRW_NEW_BLORP |
-             BRW_NEW_VIEWPORT_COUNT,
-   },
-   .emit = gen6_upload_clip_vp,
-};
-
-static void
-gen6_upload_sf_vp(struct brw_context *brw)
+gen6_upload_sf_and_clip_viewports(struct brw_context *brw)
 {
    struct gl_context *ctx = &brw->ctx;
    struct gen6_sf_viewport *sfv;
+   struct brw_clipper_viewport *clv;
    GLfloat y_scale, y_bias;
    const bool render_to_fbo = _mesa_is_user_fbo(ctx->DrawBuffer);
 
@@ -98,6 +49,10 @@ gen6_upload_sf_vp(struct brw_context *brw)
                          sizeof(*sfv) * viewport_count,
                          32, &brw->sf.vp_offset);
    memset(sfv, 0, sizeof(*sfv) * viewport_count);
+
+   clv = brw_state_batch(brw, AUB_TRACE_CLIP_VP_STATE,
+                         sizeof(*clv) * viewport_count,
+                         32, &brw->clip.vp_offset);
 
    /* _NEW_BUFFERS */
    if (render_to_fbo) {
@@ -120,12 +75,31 @@ gen6_upload_sf_vp(struct brw_context *brw)
       sfv[i].m31 = translate[1] * y_scale + y_bias;
       sfv[i].m32 = translate[2];
 
+      /* According to the "Vertex X,Y Clamping and Quantization" section of the
+       * Strips and Fans documentation, objects must not have a screen-space
+       * extents of over 8192 pixels, or they may be mis-rasterized.  The maximum
+       * screen space coordinates of a small object may larger, but we have no
+       * way to enforce the object size other than through clipping.
+       *
+       * If you're surprised that we set clip to -gbx to +gbx and it seems like
+       * we'll end up with 16384 wide, note that for a 8192-wide render target,
+       * we'll end up with a normal (-1, 1) clip volume that just covers the
+       * drawable.
+       */
+      const float maximum_post_clamp_delta = 8192;
+      float gbx = maximum_post_clamp_delta / ctx->ViewportArray[i].Width;
+      float gby = maximum_post_clamp_delta / ctx->ViewportArray[i].Height;
+
+      clv[i].xmin = -gbx;
+      clv[i].xmax = gbx;
+      clv[i].ymin = -gby;
+      clv[i].ymax = gby;
    }
 
-   brw->ctx.NewDriverState |= BRW_NEW_SF_VP;
+   brw->ctx.NewDriverState |= BRW_NEW_SF_VP | BRW_NEW_CLIP_VP;
 }
 
-const struct brw_tracked_state gen6_sf_vp = {
+const struct brw_tracked_state gen6_sf_and_clip_viewports = {
    .dirty = {
       .mesa = _NEW_BUFFERS |
               _NEW_VIEWPORT,
@@ -133,7 +107,7 @@ const struct brw_tracked_state gen6_sf_vp = {
              BRW_NEW_BLORP |
              BRW_NEW_VIEWPORT_COUNT,
    },
-   .emit = gen6_upload_sf_vp,
+   .emit = gen6_upload_sf_and_clip_viewports,
 };
 
 static void upload_viewport_state_pointers(struct brw_context *brw)
