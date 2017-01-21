@@ -419,7 +419,7 @@ fs_visitor::optimize_extract_to_float(nir_alu_instr *instr,
       src0->op == nir_op_extract_i16 || src0->op == nir_op_extract_i8);
 
    fs_reg op0 = get_nir_src(src0->src[0].src);
-   op0.type = brw_type_for_nir_type(
+   op0.type = brw_type_for_nir_type(devinfo,
       (nir_alu_type)(nir_op_infos[src0->op].input_types[0] |
                      nir_src_bit_size(src0->src[0].src)));
    op0 = offset(op0, bld, src0->src[0].swizzle[0]);
@@ -554,14 +554,14 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    fs_inst *inst;
 
    fs_reg result = get_nir_dest(instr->dest.dest);
-   result.type = brw_type_for_nir_type(
+   result.type = brw_type_for_nir_type(devinfo,
       (nir_alu_type)(nir_op_infos[instr->op].output_type |
                      nir_dest_bit_size(instr->dest.dest)));
 
    fs_reg op[4];
    for (unsigned i = 0; i < nir_op_infos[instr->op].num_inputs; i++) {
       op[i] = get_nir_src(instr->src[i].src);
-      op[i].type = brw_type_for_nir_type(
+      op[i].type = brw_type_for_nir_type(devinfo,
          (nir_alu_type)(nir_op_infos[instr->op].input_types[i] |
                         nir_src_bit_size(instr->src[i].src)));
       op[i].abs = instr->src[i].abs;
@@ -4525,7 +4525,7 @@ fs_visitor::nir_emit_texture(const fs_builder &bld, nir_tex_instr *instr)
       }
    }
 
-   fs_reg dst = bld.vgrf(brw_type_for_nir_type(instr->dest_type), 4);
+   fs_reg dst = bld.vgrf(brw_type_for_nir_type(devinfo, instr->dest_type), 4);
    fs_inst *inst = bld.emit(opcode, dst, srcs, ARRAY_SIZE(srcs));
    inst->offset = header_bits;
 

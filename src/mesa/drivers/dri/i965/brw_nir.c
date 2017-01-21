@@ -704,7 +704,7 @@ brw_nir_apply_sampler_key(nir_shader *nir,
 }
 
 enum brw_reg_type
-brw_type_for_nir_type(nir_alu_type type)
+brw_type_for_nir_type(const struct gen_device_info *devinfo, nir_alu_type type)
 {
    switch (type) {
    case nir_type_uint:
@@ -721,9 +721,9 @@ brw_type_for_nir_type(nir_alu_type type)
    case nir_type_float64:
       return BRW_REGISTER_TYPE_DF;
    case nir_type_int64:
-      return BRW_REGISTER_TYPE_Q;
+      return devinfo->gen < 8 ? BRW_REGISTER_TYPE_DF : BRW_REGISTER_TYPE_Q;
    case nir_type_uint64:
-      return BRW_REGISTER_TYPE_UQ;
+      return devinfo->gen < 8 ? BRW_REGISTER_TYPE_DF : BRW_REGISTER_TYPE_UQ;
    default:
       unreachable("unknown type");
    }

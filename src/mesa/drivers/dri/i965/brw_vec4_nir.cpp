@@ -296,7 +296,7 @@ vec4_visitor::get_nir_dest(const nir_dest &dest, enum brw_reg_type type)
 dst_reg
 vec4_visitor::get_nir_dest(const nir_dest &dest, nir_alu_type type)
 {
-   return get_nir_dest(dest, brw_type_for_nir_type(type));
+   return get_nir_dest(dest, brw_type_for_nir_type(devinfo, type));
 }
 
 src_reg
@@ -325,7 +325,8 @@ src_reg
 vec4_visitor::get_nir_src(const nir_src &src, nir_alu_type type,
                           unsigned num_components)
 {
-   return get_nir_src(src, brw_type_for_nir_type(type), num_components);
+   return get_nir_src(src, brw_type_for_nir_type(devinfo, type),
+                      num_components);
 }
 
 src_reg

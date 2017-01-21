@@ -129,7 +129,8 @@ nir_shader *brw_nir_apply_sampler_key(nir_shader *nir,
                                       const struct brw_sampler_prog_key_data *key,
                                       bool is_scalar);
 
-enum brw_reg_type brw_type_for_nir_type(nir_alu_type type);
+enum brw_reg_type brw_type_for_nir_type(const struct gen_device_info *devinfo,
+                                        nir_alu_type type);
 
 enum glsl_base_type brw_glsl_base_type_for_nir_type(nir_alu_type type);
 
