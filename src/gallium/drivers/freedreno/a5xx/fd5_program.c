@@ -336,10 +336,13 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	uint32_t pos_regid, psize_regid, color_regid[8];
 	uint32_t face_regid, coord_regid, zwcoord_regid;
 	uint32_t vcoord_regid, vertex_regid, instance_regid;
+	enum a3xx_threadsize fssz;
 	uint8_t psize_loc = ~0;
 	int i, j;
 
 	setup_stages(emit, s);
+
+	fssz = (s[FS].i->max_reg >= 24) ? TWO_QUADS : FOUR_QUADS;
 
 	pos_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_POS);
 	psize_regid = ir3_find_output_regid(s[VS].v, VARYING_SLOT_PSIZ);
@@ -554,7 +557,8 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	}
 
 	OUT_PKT4(ring, REG_A5XX_HLSQ_CONTROL_0_REG, 5);
-	OUT_RING(ring, 0x00000881);        /* XXX HLSQ_CONTROL_0 */
+	OUT_RING(ring, A5XX_HLSQ_CONTROL_0_REG_FSTHREADSIZE(fssz) |
+			0x00000880);               /* XXX HLSQ_CONTROL_0 */
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_1_REG_PRIMALLOCTHRESHOLD(63));
 	OUT_RING(ring, A5XX_HLSQ_CONTROL_2_REG_FACEREGID(face_regid) |
 			0xfcfcfc00);               /* XXX */
@@ -567,7 +571,8 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	OUT_PKT4(ring, REG_A5XX_SP_FS_CTRL_REG0, 1);
 	OUT_RING(ring, COND(s[FS].v->total_in > 0, A5XX_SP_FS_CTRL_REG0_VARYING) |
 			COND(s[FS].v->frag_coord, A5XX_SP_FS_CTRL_REG0_VARYING) |
-			0x4000e | /* XXX set pretty much everywhere */
+			0x40006 | /* XXX set pretty much everywhere */
+			A5XX_SP_FS_CTRL_REG0_THREADSIZE(fssz) |
 			A5XX_SP_FS_CTRL_REG0_HALFREGFOOTPRINT(s[FS].i->max_half_reg + 1) |
 			A5XX_SP_FS_CTRL_REG0_FULLREGFOOTPRINT(s[FS].i->max_reg + 1) |
 			A5XX_SP_FS_CTRL_REG0_BRANCHSTACK(0x3) |  // XXX need to figure this out somehow..
