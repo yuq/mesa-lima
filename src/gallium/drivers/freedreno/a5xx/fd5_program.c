@@ -365,7 +365,7 @@ fd5_program_emit(struct fd_ringbuffer *ring, struct fd5_emit *emit)
 	face_regid = s[FS].v->frag_face ? regid(0,0) : regid(63,0);
 	coord_regid = s[FS].v->frag_coord ? regid(0,0) : regid(63,0);
 	zwcoord_regid = s[FS].v->frag_coord ? regid(0,2) : regid(63,0);
-	vcoord_regid = (s[FS].v->total_in > 0) ? regid(0,0) : regid(63,0);
+	vcoord_regid = (s[FS].v->total_in > 0) ? s[FS].v->pos_regid : regid(63,0);
 
 	/* we could probably divide this up into things that need to be
 	 * emitted if frag-prog is dirty vs if vert-prog is dirty..
