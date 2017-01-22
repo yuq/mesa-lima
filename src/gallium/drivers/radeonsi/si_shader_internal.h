@@ -121,11 +121,6 @@ struct si_shader_context {
 	int param_es2gs_offset;
 	int param_oc_lds;
 
-	/* Sets a bit if the dynamic HS control word was 0x80000000. The bit is
-	 * 0x800000 for VS, 0x1 for ES.
-	 */
-	int param_tess_offchip;
-
 	LLVMTargetMachineRef tm;
 
 	unsigned invariant_load_md_kind;

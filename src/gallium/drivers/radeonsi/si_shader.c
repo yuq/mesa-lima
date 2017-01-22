@@ -5540,7 +5540,7 @@ static void declare_streamout_params(struct si_shader_context *ctx,
 		if (ctx->type != PIPE_SHADER_TESS_EVAL)
 			params[ctx->param_streamout_config = (*num_params)++] = i32;
 		else
-			ctx->param_streamout_config = ctx->param_tess_offchip;
+			ctx->param_streamout_config = *num_params - 1;
 
 		params[ctx->param_streamout_write_index = (*num_params)++] = i32;
 	}
@@ -5704,10 +5704,10 @@ static void create_function(struct si_shader_context *ctx)
 
 		if (shader->key.as_es) {
 			params[ctx->param_oc_lds = num_params++] = ctx->i32;
-			params[ctx->param_tess_offchip = num_params++] = ctx->i32;
+			params[num_params++] = ctx->i32;
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
 		} else {
-			params[ctx->param_tess_offchip = num_params++] = ctx->i32;
+			params[num_params++] = ctx->i32;
 			declare_streamout_params(ctx, &shader->selector->so,
 						 params, ctx->i32, &num_params);
 			params[ctx->param_oc_lds = num_params++] = ctx->i32;
