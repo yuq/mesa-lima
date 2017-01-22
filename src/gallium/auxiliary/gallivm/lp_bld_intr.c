@@ -152,6 +152,7 @@ static const char *attr_to_str(enum lp_func_attr attr)
    case LP_FUNC_ATTR_READONLY: return "readonly";
    case LP_FUNC_ATTR_WRITEONLY: return "writeonly";
    case LP_FUNC_ATTR_INACCESSIBLE_MEM_ONLY: return "inaccessiblememonly";
+   case LP_FUNC_ATTR_CONVERGENT: return "convergent";
    default:
       _debug_printf("Unhandled function attribute: %x\n", attr);
       return 0;
