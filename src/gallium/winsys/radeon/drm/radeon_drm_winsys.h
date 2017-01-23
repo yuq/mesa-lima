@@ -81,6 +81,7 @@ struct radeon_drm_winsys {
     uint64_t buffer_wait_time; /* time spent in buffer_wait in ns */
     uint64_t num_gfx_IBs;
     uint64_t num_sdma_IBs;
+    uint64_t num_mapped_buffers;
     uint32_t next_bo_hash;
 
     enum radeon_generation gen;

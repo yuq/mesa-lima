@@ -181,6 +181,7 @@ void amdgpu_bo_destroy(struct pb_buffer *_buf)
          bo->ws->mapped_vram -= bo->base.size;
       else if (bo->initial_domain & RADEON_DOMAIN_GTT)
          bo->ws->mapped_gtt -= bo->base.size;
+      bo->ws->num_mapped_buffers--;
    }
 
    FREE(bo);
@@ -308,6 +309,7 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
          real->ws->mapped_vram += real->base.size;
       else if (real->initial_domain & RADEON_DOMAIN_GTT)
          real->ws->mapped_gtt += real->base.size;
+      real->ws->num_mapped_buffers++;
    }
    return (uint8_t*)cpu + offset;
 }
@@ -327,6 +329,7 @@ static void amdgpu_bo_unmap(struct pb_buffer *buf)
          real->ws->mapped_vram -= real->base.size;
       else if (real->initial_domain & RADEON_DOMAIN_GTT)
          real->ws->mapped_gtt -= real->base.size;
+      real->ws->num_mapped_buffers--;
    }
 
    amdgpu_bo_cpu_unmap(real->bo);

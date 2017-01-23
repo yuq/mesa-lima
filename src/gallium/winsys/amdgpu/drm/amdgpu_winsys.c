@@ -424,6 +424,8 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
       return ws->mapped_gtt;
    case RADEON_BUFFER_WAIT_TIME_NS:
       return ws->buffer_wait_time;
+   case RADEON_NUM_MAPPED_BUFFERS:
+      return ws->num_mapped_buffers;
    case RADEON_TIMESTAMP:
       amdgpu_query_info(ws->dev, AMDGPU_INFO_TIMESTAMP, 8, &retval);
       return retval;

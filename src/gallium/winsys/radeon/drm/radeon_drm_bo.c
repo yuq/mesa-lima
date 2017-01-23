@@ -382,6 +382,7 @@ void radeon_bo_destroy(struct pb_buffer *_buf)
             bo->rws->mapped_vram -= bo->base.size;
         else
             bo->rws->mapped_gtt -= bo->base.size;
+        bo->rws->num_mapped_buffers--;
     }
 
     FREE(bo);
@@ -458,6 +459,7 @@ void *radeon_bo_do_map(struct radeon_bo *bo)
        bo->rws->mapped_vram += bo->base.size;
     else
        bo->rws->mapped_gtt += bo->base.size;
+    bo->rws->num_mapped_buffers++;
 
     pipe_mutex_unlock(bo->u.real.map_mutex);
     return (uint8_t*)bo->u.real.ptr + offset;
@@ -570,6 +572,7 @@ static void radeon_bo_unmap(struct pb_buffer *_buf)
        bo->rws->mapped_vram -= bo->base.size;
     else
        bo->rws->mapped_gtt -= bo->base.size;
+    bo->rws->num_mapped_buffers--;
 
     pipe_mutex_unlock(bo->u.real.map_mutex);
 }

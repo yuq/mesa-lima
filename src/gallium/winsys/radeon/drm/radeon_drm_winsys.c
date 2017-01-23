@@ -614,6 +614,8 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
        return ws->mapped_gtt;
     case RADEON_BUFFER_WAIT_TIME_NS:
         return ws->buffer_wait_time;
+    case RADEON_NUM_MAPPED_BUFFERS:
+        return ws->num_mapped_buffers;
     case RADEON_TIMESTAMP:
         if (ws->info.drm_minor < 20 || ws->gen < DRV_R600) {
             assert(0);
