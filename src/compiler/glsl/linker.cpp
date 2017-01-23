@@ -1804,13 +1804,13 @@ link_tes_in_layout_qualifiers(struct gl_shader_program *prog,
    if (gl_prog->info.tess.spacing == TESS_SPACING_UNSPECIFIED)
       gl_prog->info.tess.spacing = TESS_SPACING_EQUAL;
 
-   if (vertex_order == 0)
+   if (vertex_order == 0 || vertex_order == GL_CCW)
       gl_prog->info.tess.ccw = true;
    else
       gl_prog->info.tess.ccw = false;
 
 
-   if (point_mode == -1)
+   if (point_mode == -1 || point_mode == GL_FALSE)
       gl_prog->info.tess.point_mode = false;
    else
       gl_prog->info.tess.point_mode = true;
