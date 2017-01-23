@@ -286,7 +286,7 @@ validate_reg(const struct gen_device_info *devinfo,
        * destination horiz stride has to be a word.
        */
       if (reg.type == BRW_REGISTER_TYPE_V) {
-         unsigned elem_size = brw_element_size(devinfo, inst, dst);
+         unsigned UNUSED elem_size = brw_element_size(devinfo, inst, dst);
          assert(hstride_for_reg[brw_inst_dst_hstride(devinfo, inst)] *
                 elem_size == 2);
       }
