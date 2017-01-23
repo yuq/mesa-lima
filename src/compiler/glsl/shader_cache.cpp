@@ -208,6 +208,84 @@ decode_type_from_blob(struct blob_reader *blob)
 }
 
 static void
+write_xfb(struct blob *metadata, struct gl_shader_program *shProg)
+{
+   struct gl_program *prog = shProg->last_vert_prog;
+
+   if (!prog) {
+      blob_write_uint32(metadata, ~0u);
+      return;
+   }
+
+   struct gl_transform_feedback_info *ltf = prog->sh.LinkedTransformFeedback;
+
+   blob_write_uint32(metadata, prog->info.stage);
+
+   blob_write_uint32(metadata, ltf->NumOutputs);
+   blob_write_uint32(metadata, ltf->ActiveBuffers);
+   blob_write_uint32(metadata, ltf->NumVarying);
+
+   blob_write_bytes(metadata, ltf->Outputs,
+                    sizeof(struct gl_transform_feedback_output) *
+                       ltf->NumOutputs);
+
+   for (int i = 0; i < ltf->NumVarying; i++) {
+      blob_write_string(metadata, ltf->Varyings[i].Name);
+      blob_write_uint32(metadata, ltf->Varyings[i].Type);
+      blob_write_uint32(metadata, ltf->Varyings[i].BufferIndex);
+      blob_write_uint32(metadata, ltf->Varyings[i].Size);
+      blob_write_uint32(metadata, ltf->Varyings[i].Offset);
+   }
+
+   blob_write_bytes(metadata, ltf->Buffers,
+                    sizeof(struct gl_transform_feedback_buffer) *
+                       MAX_FEEDBACK_BUFFERS);
+}
+
+static void
+read_xfb(struct blob_reader *metadata, struct gl_shader_program *shProg)
+{
+   unsigned xfb_stage = blob_read_uint32(metadata);
+
+   if (xfb_stage == ~0u)
+      return;
+
+   struct gl_program *prog = shProg->_LinkedShaders[xfb_stage]->Program;
+   struct gl_transform_feedback_info *ltf =
+      rzalloc(prog, struct gl_transform_feedback_info);
+
+   prog->sh.LinkedTransformFeedback = ltf;
+   shProg->last_vert_prog = prog;
+
+   ltf->NumOutputs = blob_read_uint32(metadata);
+   ltf->ActiveBuffers = blob_read_uint32(metadata);
+   ltf->NumVarying = blob_read_uint32(metadata);
+
+   ltf->Outputs = rzalloc_array(prog, struct gl_transform_feedback_output,
+                                ltf->NumOutputs);
+
+   blob_copy_bytes(metadata, (uint8_t *) ltf->Outputs,
+                   sizeof(struct gl_transform_feedback_output) *
+                      ltf->NumOutputs);
+
+   ltf->Varyings = rzalloc_array(prog,
+                                 struct gl_transform_feedback_varying_info,
+                                 ltf->NumVarying);
+
+   for (int i = 0; i < ltf->NumVarying; i++) {
+      ltf->Varyings[i].Name = ralloc_strdup(prog, blob_read_string(metadata));
+      ltf->Varyings[i].Type = blob_read_uint32(metadata);
+      ltf->Varyings[i].BufferIndex = blob_read_uint32(metadata);
+      ltf->Varyings[i].Size = blob_read_uint32(metadata);
+      ltf->Varyings[i].Offset = blob_read_uint32(metadata);
+   }
+
+   blob_copy_bytes(metadata, (uint8_t *) ltf->Buffers,
+                   sizeof(struct gl_transform_feedback_buffer) *
+                      MAX_FEEDBACK_BUFFERS);
+}
+
+static void
 write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
 {
    blob_write_uint32(metadata, prog->SamplersValidated);
@@ -458,6 +536,24 @@ write_program_resource_data(struct blob *metadata,
          }
       }
       break;
+   case GL_TRANSFORM_FEEDBACK_BUFFER:
+      for (unsigned i = 0; i < MAX_FEEDBACK_BUFFERS; i++) {
+         if (((gl_transform_feedback_buffer *)res->Data)->Binding ==
+             prog->last_vert_prog->sh.LinkedTransformFeedback->Buffers[i].Binding) {
+            blob_write_uint32(metadata, i);
+            break;
+         }
+      }
+      break;
+   case GL_TRANSFORM_FEEDBACK_VARYING:
+      for (int i = 0; i < prog->last_vert_prog->sh.LinkedTransformFeedback->NumVarying; i++) {
+         if (strcmp(((gl_transform_feedback_varying_info *)res->Data)->Name,
+                    prog->last_vert_prog->sh.LinkedTransformFeedback->Varyings[i].Name) == 0) {
+            blob_write_uint32(metadata, i);
+            break;
+         }
+      }
+      break;
    default:
       assert(!"Support for writing resource not yet implemented.");
    }
@@ -496,6 +592,14 @@ read_program_resource_data(struct blob_reader *metadata,
    case GL_TESS_EVALUATION_SUBROUTINE_UNIFORM:
    case GL_UNIFORM:
       res->Data = &prog->data->UniformStorage[blob_read_uint32(metadata)];
+      break;
+   case GL_TRANSFORM_FEEDBACK_BUFFER:
+      res->Data = &prog->last_vert_prog->
+         sh.LinkedTransformFeedback->Buffers[blob_read_uint32(metadata)];
+      break;
+   case GL_TRANSFORM_FEEDBACK_VARYING:
+      res->Data = &prog->last_vert_prog->
+         sh.LinkedTransformFeedback->Varyings[blob_read_uint32(metadata)];
       break;
    default:
       assert(!"Support for reading resource not yet implemented.");
@@ -709,6 +813,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
       }
    }
 
+   write_xfb(metadata, prog);
+
    write_uniform_remap_table(metadata, prog);
 
    write_program_resource_list(metadata, prog);
@@ -813,6 +919,8 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
       create_linked_shader_and_program(ctx, (gl_shader_stage) j, prog,
                                        &metadata);
    }
+
+   read_xfb(&metadata, prog);
 
    read_uniform_remap_table(&metadata, prog);
 

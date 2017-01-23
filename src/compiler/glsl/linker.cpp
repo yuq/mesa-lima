@@ -4621,7 +4621,19 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       return;
    }
 
-   if (shader_cache_read_program_metadata(ctx, prog))
+   /* If transform feedback used on the program then compile all shaders. */
+   bool skip_cache = false;
+   if (prog->TransformFeedback.NumVarying > 0) {
+      for (unsigned i = 0; i < prog->NumShaders; i++) {
+         if (prog->Shaders[i]->ir) {
+            continue;
+         }
+         _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
+      }
+      skip_cache = true;
+   }
+
+   if (!skip_cache && shader_cache_read_program_metadata(ctx, prog))
       return;
 
    void *mem_ctx = ralloc_context(NULL); // temporary linker context
