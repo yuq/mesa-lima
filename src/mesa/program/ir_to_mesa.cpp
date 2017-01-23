@@ -46,6 +46,7 @@
 #include "compiler/glsl_types.h"
 #include "compiler/glsl/linker.h"
 #include "compiler/glsl/program.h"
+#include "compiler/glsl/shader_cache.h"
 #include "program/prog_instruction.h"
 #include "program/prog_optimize.h"
 #include "program/prog_print.h"
@@ -3114,6 +3115,10 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
+   /* Return early if we are loading the shader from on-disk cache */
+   if (prog->data->LinkStatus == linking_skipped)
+      return;
+
    if (ctx->_Shader->Flags & GLSL_DUMP) {
       if (!prog->data->LinkStatus) {
 	 fprintf(stderr, "GLSL shader program %d failed to link\n", prog->Name);
@@ -3124,6 +3129,9 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
          fprintf(stderr, "%s\n", prog->data->InfoLog);
       }
    }
+
+   if (prog->data->LinkStatus)
+      shader_cache_write_program_metadata(ctx, prog);
 }
 
 } /* extern "C" */

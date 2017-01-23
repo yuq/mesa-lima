@@ -33,6 +33,8 @@
 #include "main/shaderobj.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 #include "util/ralloc.h"
+#include "util/disk_cache.h"
+#include "util/mesa-sha1.h"
 #include "ast.h"
 #include "glsl_parser_extras.h"
 #include "glsl_parser.h"
@@ -1933,6 +1935,20 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 
    state->error = glcpp_preprocess(state, &source, &state->info_log,
                              add_builtin_defines, state, ctx);
+
+   if (!force_recompile) {
+      char buf[41];
+      _mesa_sha1_compute(source, strlen(source), shader->sha1);
+      if (ctx->Cache && disk_cache_has_key(ctx->Cache, shader->sha1)) {
+         /* We've seen this shader before and know it compiles */
+         if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+            fprintf(stderr, "deferring compile of shader: %s\n",
+                    _mesa_sha1_format(buf, shader->sha1));
+         }
+         shader->CompileStatus = true;
+         return;
+      }
+   }
 
    if (!state->error) {
      _mesa_glsl_lexer_ctor(state, source);
