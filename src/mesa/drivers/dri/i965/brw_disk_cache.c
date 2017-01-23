@@ -250,6 +250,14 @@ brw_disk_cache_upload_program(struct brw_context *brw, gl_shader_stage stage)
    if (prog == NULL)
       return false;
 
+   /* FIXME: For now we don't read from the cache if transform feedback is
+    * enabled via the API. However the shader cache does support transform
+    * feedback when enabled via in shader xfb qualifiers.
+    */
+   if (prog->sh.LinkedTransformFeedback &&
+       prog->sh.LinkedTransformFeedback->api_enabled)
+      return false;
+
    if (prog->sh.data->LinkStatus != linking_skipped)
       goto fail;
 
