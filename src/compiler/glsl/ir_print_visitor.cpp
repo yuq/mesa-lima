@@ -21,6 +21,8 @@
  * DEALINGS IN THE SOFTWARE.
  */
 
+#define __STDC_FORMAT_MACROS 1
+#include <inttypes.h> /* for PRIx64 macro */
 #include "ir_print_visitor.h"
 #include "compiler/glsl_types.h"
 #include "glsl_parser_extras.h"
