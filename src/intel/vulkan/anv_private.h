@@ -56,6 +56,10 @@ typedef struct xcb_connection_t xcb_connection_t;
 typedef uint32_t xcb_visualid_t;
 typedef uint32_t xcb_window_t;
 
+struct anv_buffer;
+struct anv_buffer_view;
+struct anv_image_view;
+
 struct gen_l3_config;
 
 #include <vulkan/vulkan.h>
@@ -937,6 +941,31 @@ struct anv_descriptor_pool {
 
 size_t
 anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout);
+
+void
+anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
+                                    VkDescriptorType type,
+                                    VkImageView _image_view,
+                                    VkSampler _sampler,
+                                    uint32_t binding,
+                                    uint32_t element);
+
+void
+anv_descriptor_set_write_buffer_view(struct anv_descriptor_set *set,
+                                     VkDescriptorType type,
+                                     struct anv_buffer_view *buffer_view,
+                                     uint32_t binding,
+                                     uint32_t element);
+
+void
+anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
+                                struct anv_device *device,
+                                VkDescriptorType type,
+                                struct anv_buffer *buffer,
+                                uint32_t binding,
+                                uint32_t element,
+                                VkDeviceSize offset,
+                                VkDeviceSize range);
 
 VkResult
 anv_descriptor_set_create(struct anv_device *device,

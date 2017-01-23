@@ -569,6 +569,119 @@ VkResult anv_FreeDescriptorSets(
    return VK_SUCCESS;
 }
 
+void
+anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
+                                    VkDescriptorType type,
+                                    VkImageView _image_view,
+                                    VkSampler _sampler,
+                                    uint32_t binding,
+                                    uint32_t element)
+{
+   const struct anv_descriptor_set_binding_layout *bind_layout =
+      &set->layout->binding[binding];
+   struct anv_descriptor *desc =
+      &set->descriptors[bind_layout->descriptor_index + element];
+   struct anv_image_view *image_view = NULL;
+   struct anv_sampler *sampler = NULL;
+
+   assert(type == bind_layout->type);
+
+   switch (type) {
+   case VK_DESCRIPTOR_TYPE_SAMPLER:
+      sampler = anv_sampler_from_handle(_sampler);
+      break;
+
+   case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+      image_view = anv_image_view_from_handle(_image_view);
+      sampler = anv_sampler_from_handle(_sampler);
+      break;
+
+   case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+   case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+   case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+      image_view = anv_image_view_from_handle(_image_view);
+      break;
+
+   default:
+      unreachable("invalid descriptor type");
+   }
+
+   /* If this descriptor has an immutable sampler, we don't want to stomp on
+    * it.
+    */
+   sampler = bind_layout->immutable_samplers ?
+             bind_layout->immutable_samplers[element] :
+             sampler;
+
+   *desc = (struct anv_descriptor) {
+      .type = type,
+      .image_view = image_view,
+      .sampler = sampler,
+   };
+}
+
+void
+anv_descriptor_set_write_buffer_view(struct anv_descriptor_set *set,
+                                     VkDescriptorType type,
+                                     struct anv_buffer_view *buffer_view,
+                                     uint32_t binding,
+                                     uint32_t element)
+{
+   const struct anv_descriptor_set_binding_layout *bind_layout =
+      &set->layout->binding[binding];
+   struct anv_descriptor *desc =
+      &set->descriptors[bind_layout->descriptor_index + element];
+
+   assert(type == bind_layout->type);
+
+   *desc = (struct anv_descriptor) {
+      .type = type,
+      .buffer_view = buffer_view,
+   };
+}
+
+void
+anv_descriptor_set_write_buffer(struct anv_descriptor_set *set,
+                                struct anv_device *device,
+                                VkDescriptorType type,
+                                struct anv_buffer *buffer,
+                                uint32_t binding,
+                                uint32_t element,
+                                VkDeviceSize offset,
+                                VkDeviceSize range)
+{
+   const struct anv_descriptor_set_binding_layout *bind_layout =
+      &set->layout->binding[binding];
+   struct anv_descriptor *desc =
+      &set->descriptors[bind_layout->descriptor_index + element];
+
+   assert(type == bind_layout->type);
+
+   struct anv_buffer_view *bview =
+      &set->buffer_views[bind_layout->buffer_index + element];
+
+   bview->format = anv_isl_format_for_descriptor_type(type);
+   bview->bo = buffer->bo;
+   bview->offset = buffer->offset + offset;
+
+   /* For buffers with dynamic offsets, we use the full possible range in the
+    * surface state and do the actual range-checking in the shader.
+    */
+   if (bind_layout->dynamic_offset_index >= 0 || range == VK_WHOLE_SIZE)
+      bview->range = buffer->size - offset;
+   else
+      bview->range = range;
+
+   anv_fill_buffer_surface_state(device, bview->surface_state,
+                                 bview->format,
+                                 bview->offset, bview->range, 1);
+
+   *desc = (struct anv_descriptor) {
+      .type = type,
+      .buffer_view = bview,
+   };
+}
+
 void anv_UpdateDescriptorSets(
     VkDevice                                    _device,
     uint32_t                                    descriptorWriteCount,
@@ -581,63 +694,20 @@ void anv_UpdateDescriptorSets(
    for (uint32_t i = 0; i < descriptorWriteCount; i++) {
       const VkWriteDescriptorSet *write = &pDescriptorWrites[i];
       ANV_FROM_HANDLE(anv_descriptor_set, set, write->dstSet);
-      const struct anv_descriptor_set_binding_layout *bind_layout =
-         &set->layout->binding[write->dstBinding];
-      struct anv_descriptor *desc =
-         &set->descriptors[bind_layout->descriptor_index];
-      desc += write->dstArrayElement;
-
-      assert(write->descriptorType == bind_layout->type);
 
       switch (write->descriptorType) {
       case VK_DESCRIPTOR_TYPE_SAMPLER:
-         for (uint32_t j = 0; j < write->descriptorCount; j++) {
-            /* If this descriptor has an immutable sampler, we don't want to
-             * stomp on it.
-             */
-            struct anv_sampler *sampler =
-               bind_layout->immutable_samplers ?
-               bind_layout->immutable_samplers[j] :
-               anv_sampler_from_handle(write->pImageInfo[j].sampler);
-
-            desc[j] = (struct anv_descriptor) {
-               .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-               .sampler = sampler,
-            };
-         }
-         break;
-
       case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-         for (uint32_t j = 0; j < write->descriptorCount; j++) {
-            ANV_FROM_HANDLE(anv_image_view, iview,
-                            write->pImageInfo[j].imageView);
-            /* If this descriptor has an immutable sampler, we don't want to
-             * stomp on it.
-             */
-            struct anv_sampler *sampler =
-               bind_layout->immutable_samplers ?
-               bind_layout->immutable_samplers[j] :
-               anv_sampler_from_handle(write->pImageInfo[j].sampler);
-
-            desc[j] = (struct anv_descriptor) {
-               .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-               .image_view = iview,
-               .sampler = sampler,
-            };
-         }
-         break;
-
       case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          for (uint32_t j = 0; j < write->descriptorCount; j++) {
-            ANV_FROM_HANDLE(anv_image_view, iview,
-                            write->pImageInfo[j].imageView);
-
-            desc[j] = (struct anv_descriptor) {
-               .type = write->descriptorType,
-               .image_view = iview,
-            };
+            anv_descriptor_set_write_image_view(set,
+                                                write->descriptorType,
+                                                write->pImageInfo[j].imageView,
+                                                write->pImageInfo[j].sampler,
+                                                write->dstBinding,
+                                                write->dstArrayElement + j);
          }
          break;
 
@@ -647,10 +717,11 @@ void anv_UpdateDescriptorSets(
             ANV_FROM_HANDLE(anv_buffer_view, bview,
                             write->pTexelBufferView[j]);
 
-            desc[j] = (struct anv_descriptor) {
-               .type = write->descriptorType,
-               .buffer_view = bview,
-            };
+            anv_descriptor_set_write_buffer_view(set,
+                                                 write->descriptorType,
+                                                 bview,
+                                                 write->dstBinding,
+                                                 write->dstArrayElement + j);
          }
          break;
 
@@ -663,35 +734,16 @@ void anv_UpdateDescriptorSets(
             ANV_FROM_HANDLE(anv_buffer, buffer, write->pBufferInfo[j].buffer);
             assert(buffer);
 
-            struct anv_buffer_view *view =
-               &set->buffer_views[bind_layout->buffer_index];
-            view += write->dstArrayElement + j;
-
-            view->format =
-               anv_isl_format_for_descriptor_type(write->descriptorType);
-            view->bo = buffer->bo;
-            view->offset = buffer->offset + write->pBufferInfo[j].offset;
-
-            /* For buffers with dynamic offsets, we use the full possible
-             * range in the surface state and do the actual range-checking
-             * in the shader.
-             */
-            if (bind_layout->dynamic_offset_index >= 0 ||
-                write->pBufferInfo[j].range == VK_WHOLE_SIZE)
-               view->range = buffer->size - write->pBufferInfo[j].offset;
-            else
-               view->range = write->pBufferInfo[j].range;
-
-            anv_fill_buffer_surface_state(device, view->surface_state,
-                                          view->format,
-                                          view->offset, view->range, 1);
-
-            desc[j] = (struct anv_descriptor) {
-               .type = write->descriptorType,
-               .buffer_view = view,
-            };
-
+            anv_descriptor_set_write_buffer(set,
+                                            device,
+                                            write->descriptorType,
+                                            buffer,
+                                            write->dstBinding,
+                                            write->dstArrayElement + j,
+                                            write->pBufferInfo[j].offset,
+                                            write->pBufferInfo[j].range);
          }
+         break;
 
       default:
          break;
