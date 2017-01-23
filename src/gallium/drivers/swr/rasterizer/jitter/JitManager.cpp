@@ -133,8 +133,6 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     mInt8Ty = Type::getInt8Ty(mContext);
     mInt32Ty = Type::getInt32Ty(mContext);   // int type
     mInt64Ty = Type::getInt64Ty(mContext);   // int type
-    mV4FP32Ty = StructType::get(mContext, std::vector<Type*>(4, mFP32Ty), false); // vector4 float type (represented as structure)
-    mV4Int32Ty = StructType::get(mContext, std::vector<Type*>(4, mInt32Ty), false); // vector4 int type
 
     // fetch function signature
     // typedef void(__cdecl *PFN_FETCH_FUNC)(SWR_FETCH_CONTEXT& fetchInfo, simdvertex& out);
@@ -147,8 +145,8 @@ JitManager::JitManager(uint32_t simdWidth, const char *arch, const char* core)
     mSimtFP32Ty = VectorType::get(mFP32Ty, mVWidth);
     mSimtInt32Ty = VectorType::get(mInt32Ty, mVWidth);
 
-    mSimdVectorTy = StructType::get(mContext, std::vector<Type*>(4, mSimtFP32Ty), false);
-    mSimdVectorInt32Ty = StructType::get(mContext, std::vector<Type*>(4, mSimtInt32Ty), false);
+    mSimdVectorTy = ArrayType::get(mSimtFP32Ty, 4);
+    mSimdVectorInt32Ty = ArrayType::get(mSimtInt32Ty, 4);
 
 #if defined(_WIN32)
     // explicitly instantiate used symbols from potentially staticly linked libs

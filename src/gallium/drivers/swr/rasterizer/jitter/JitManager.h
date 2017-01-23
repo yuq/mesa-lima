@@ -164,8 +164,6 @@ struct JitManager
     llvm::Type*                mInt32Ty;
     llvm::Type*                mInt64Ty;
     llvm::Type*                mFP32Ty;
-    llvm::StructType*          mV4FP32Ty;
-    llvm::StructType*          mV4Int32Ty;
 
     llvm::Type* mSimtFP32Ty;
     llvm::Type* mSimtInt32Ty;
