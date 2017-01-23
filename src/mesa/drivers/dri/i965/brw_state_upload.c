@@ -418,6 +418,8 @@ brw_upload_programs(struct brw_context *brw,
          brw_upload_clip_prog(brw);
          brw_upload_sf_prog(brw);
       }
+
+      brw_disk_cache_write_program(brw);
    } else if (pipeline == BRW_COMPUTE_PIPELINE) {
       brw_upload_cs_prog(brw);
    }

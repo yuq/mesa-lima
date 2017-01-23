@@ -342,13 +342,19 @@ brw_upload_vs_prog(struct brw_context *brw)
 
    brw_vs_populate_key(brw, &key);
 
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
-			 &key, sizeof(key),
-			 &brw->vs.base.prog_offset, &brw->vs.base.prog_data)) {
-      bool success = brw_codegen_vs_prog(brw, vp, &key);
-      (void) success;
-      assert(success);
-   }
+   if (brw_search_cache(&brw->cache, BRW_CACHE_VS_PROG,
+                        &key, sizeof(key),
+                        &brw->vs.base.prog_offset, &brw->vs.base.prog_data))
+      return;
+
+   if (brw_disk_cache_upload_program(brw, MESA_SHADER_VERTEX))
+      return;
+
+   vp = (struct brw_program *) brw->programs[MESA_SHADER_VERTEX];
+   vp->id = key.program_string_id;
+
+   MAYBE_UNUSED bool success = brw_codegen_vs_prog(brw, vp, &key);
+   assert(success);
 }
 
 bool

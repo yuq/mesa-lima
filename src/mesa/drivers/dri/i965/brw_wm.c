@@ -595,15 +595,21 @@ brw_upload_wm_prog(struct brw_context *brw)
 
    brw_wm_populate_key(brw, &key);
 
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
-                         &key, sizeof(key),
-                         &brw->wm.base.prog_offset,
-                         &brw->wm.base.prog_data)) {
-      bool success = brw_codegen_wm_prog(brw, fp, &key,
-                                         &brw->vue_map_geom_out);
-      (void) success;
-      assert(success);
-   }
+   if (brw_search_cache(&brw->cache, BRW_CACHE_FS_PROG,
+                        &key, sizeof(key),
+                        &brw->wm.base.prog_offset,
+                        &brw->wm.base.prog_data))
+      return;
+
+   if (brw_disk_cache_upload_program(brw, MESA_SHADER_FRAGMENT))
+      return;
+
+   fp = (struct brw_program *) brw->programs[MESA_SHADER_FRAGMENT];
+   fp->id = key.program_string_id;
+
+   MAYBE_UNUSED bool success = brw_codegen_wm_prog(brw, fp, &key,
+                                                   &brw->vue_map_geom_out);
+   assert(success);
 }
 
 bool
