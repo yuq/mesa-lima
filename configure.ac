@@ -2213,6 +2213,19 @@ gallium_require_llvm() {
 }
 
 dnl
+dnl r300 doesn't strictly require LLVM, but for performance reasons we
+dnl highly recommend LLVM usage. So require it at least on x86 and x86_64
+dnl architectures.
+dnl
+r300_require_llvm() {
+    case "$host" in *gnux32) return;; esac
+    case "$host_cpu" in
+    i*86|x86_64|amd64) gallium_require_llvm $1
+        ;;
+    esac
+}
+
+dnl
 dnl DRM is needed by X, Wayland, and offscreen rendering.
 dnl Surfaceless is an alternative for the last one.
 dnl
@@ -2298,7 +2311,7 @@ if test -n "$with_gallium_drivers"; then
             HAVE_GALLIUM_R300=yes
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r300"
-            gallium_require_llvm "r300"
+            r300_require_llvm "r300"
             ;;
         xr600)
             HAVE_GALLIUM_R600=yes
