@@ -3604,11 +3604,31 @@ builtin_builder::_atan2(const glsl_type *type)
    body.emit(assign(rcp_scaled_t, rcp(mul(t, scale))));
    ir_expression *s_over_t = mul(mul(s, scale), rcp_scaled_t);
 
+   /* For |x| = |y| assume tan = 1 even if infinite (i.e. pretend momentarily
+    * that ∞/∞ = 1) in order to comply with the rather artificial rules
+    * inherited from IEEE 754-2008, namely:
+    *
+    *  "atan2(±∞, −∞) is ±3π/4
+    *   atan2(±∞, +∞) is ±π/4"
+    *
+    * Note that this is inconsistent with the rules for the neighborhood of
+    * zero that are based on iterated limits:
+    *
+    *  "atan2(±0, −0) is ±π
+    *   atan2(±0, +0) is ±0"
+    *
+    * but GLSL specifically allows implementations to deviate from IEEE rules
+    * at (0,0), so we take that license (i.e. pretend that 0/0 = 1 here as
+    * well).
+    */
+   ir_expression *tan = csel(equal(abs(x), abs(y)),
+                             imm(1.0f, n), abs(s_over_t));
+
    /* Calculate the arctangent and fix up the result if we had flipped the
     * coordinate system.
     */
    ir_variable *arc = body.make_temp(type, "arc");
-   do_atan(body, type, arc, abs(s_over_t));
+   do_atan(body, type, arc, tan);
    body.emit(assign(arc, add(arc, mul(b2f(flip), imm(M_PI_2f)))));
 
    /* Rather convoluted calculation of the sign of the result.  When x < 0 we
