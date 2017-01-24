@@ -259,18 +259,19 @@ VkResult anv_CreatePipelineLayout(
       }
    }
 
-   struct mesa_sha1 *ctx = _mesa_sha1_init();
+   struct mesa_sha1 ctx;
+   _mesa_sha1_init(&ctx);
    for (unsigned s = 0; s < layout->num_sets; s++) {
-      sha1_update_descriptor_set_layout(ctx, layout->set[s].layout);
-      _mesa_sha1_update(ctx, &layout->set[s].dynamic_offset_start,
+      sha1_update_descriptor_set_layout(&ctx, layout->set[s].layout);
+      _mesa_sha1_update(&ctx, &layout->set[s].dynamic_offset_start,
                         sizeof(layout->set[s].dynamic_offset_start));
    }
-   _mesa_sha1_update(ctx, &layout->num_sets, sizeof(layout->num_sets));
+   _mesa_sha1_update(&ctx, &layout->num_sets, sizeof(layout->num_sets));
    for (unsigned s = 0; s < MESA_SHADER_STAGES; s++) {
-      _mesa_sha1_update(ctx, &layout->stage[s].has_dynamic_offsets,
+      _mesa_sha1_update(&ctx, &layout->stage[s].has_dynamic_offsets,
                         sizeof(layout->stage[s].has_dynamic_offsets));
    }
-   _mesa_sha1_final(ctx, layout->sha1);
+   _mesa_sha1_final(&ctx, layout->sha1);
 
    *pPipelineLayout = anv_pipeline_layout_to_handle(layout);
 

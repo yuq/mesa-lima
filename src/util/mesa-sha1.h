@@ -24,21 +24,24 @@
 #define SHA1_H
 
 #include <stdlib.h>
+#include "sha1/sha1.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct mesa_sha1;
+#define mesa_sha1 _SHA1_CTX
 
-struct mesa_sha1 *
-_mesa_sha1_init(void);
+#define _mesa_sha1_init SHA1Init
 
 int
 _mesa_sha1_update(struct mesa_sha1 *ctx, const void *data, int size);
 
-int
-_mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20]);
+static inline void
+_mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20])
+{
+   SHA1Final(result, ctx);
+}
 
 char *
 _mesa_sha1_format(char *buf, const unsigned char *sha1);
