@@ -298,11 +298,6 @@ static void r600_texture_init_metadata(struct r600_texture *rtex,
 	metadata->scanout = (surface->flags & RADEON_SURF_SCANOUT) != 0;
 }
 
-static void r600_dirty_all_framebuffer_states(struct r600_common_screen *rscreen)
-{
-	p_atomic_inc(&rscreen->dirty_fb_counter);
-}
-
 static void r600_eliminate_fast_color_clear(struct r600_common_context *rctx,
 					    struct r600_texture *rtex)
 {
@@ -341,7 +336,7 @@ static void r600_texture_discard_cmask(struct r600_common_screen *rscreen,
 	    r600_resource_reference(&rtex->cmask_buffer, NULL);
 
 	/* Notify all contexts about the change. */
-	r600_dirty_all_framebuffer_states(rscreen);
+	p_atomic_inc(&rscreen->dirty_tex_counter);
 	p_atomic_inc(&rscreen->compressed_colortex_counter);
 }
 
@@ -365,7 +360,7 @@ static bool r600_texture_discard_dcc(struct r600_common_screen *rscreen,
 	rtex->dcc_offset = 0;
 
 	/* Notify all contexts about the change. */
-	r600_dirty_all_framebuffer_states(rscreen);
+	p_atomic_inc(&rscreen->dirty_tex_counter);
 	return true;
 }
 
@@ -480,8 +475,7 @@ static void r600_degrade_tile_mode_to_linear(struct r600_common_context *rctx,
 
 	r600_texture_reference(&new_tex, NULL);
 
-	r600_dirty_all_framebuffer_states(rctx->screen);
-	p_atomic_inc(&rctx->screen->dirty_tex_descriptor_counter);
+	p_atomic_inc(&rctx->screen->dirty_tex_counter);
 }
 
 static boolean r600_texture_get_handle(struct pipe_screen* screen,
@@ -1419,8 +1413,7 @@ static void r600_texture_invalidate_storage(struct r600_common_context *rctx,
 	rtex->cmask.base_address_reg =
 		(rtex->resource.gpu_address + rtex->cmask.offset) >> 8;
 
-	r600_dirty_all_framebuffer_states(rscreen);
-	p_atomic_inc(&rscreen->dirty_tex_descriptor_counter);
+	p_atomic_inc(&rscreen->dirty_tex_counter);
 
 	rctx->num_alloc_tex_transfer_bytes += rtex->size;
 }
@@ -2403,8 +2396,7 @@ static void si_set_optimal_micro_tile_mode(struct r600_common_screen *rscreen,
 
 	rtex->surface.micro_tile_mode = rtex->last_msaa_resolve_target_micro_mode;
 
-	p_atomic_inc(&rscreen->dirty_fb_counter);
-	p_atomic_inc(&rscreen->dirty_tex_descriptor_counter);
+	p_atomic_inc(&rscreen->dirty_tex_counter);
 }
 
 void evergreen_do_fast_color_clear(struct r600_common_context *rctx,

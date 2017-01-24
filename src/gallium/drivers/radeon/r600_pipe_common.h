@@ -431,24 +431,20 @@ struct r600_common_screen {
 	/* Performance counters. */
 	struct r600_perfcounters	*perfcounters;
 
-	/* If pipe_screen wants to re-emit the framebuffer state of all
-	 * contexts, it should atomically increment this. Each context will
-	 * compare this with its own last known value of the counter before
-	 * drawing and re-emit the framebuffer state accordingly.
+	/* If pipe_screen wants to recompute and re-emit the framebuffer,
+	 * sampler, and image states of all contexts, it should atomically
+	 * increment this.
+	 *
+	 * Each context will compare this with its own last known value of
+	 * the counter before drawing and re-emit the states accordingly.
 	 */
-	unsigned			dirty_fb_counter;
+	unsigned			dirty_tex_counter;
 
 	/* Atomically increment this counter when an existing texture's
 	 * metadata is enabled or disabled in a way that requires changing
 	 * contexts' compressed texture binding masks.
 	 */
 	unsigned			compressed_colortex_counter;
-
-	/* Atomically increment this counter when an existing texture's
-	 * backing buffer or tile mode parameters have changed that requires
-	 * recomputation of shader descriptors.
-	 */
-	unsigned			dirty_tex_descriptor_counter;
 
 	struct {
 		/* Context flags to set so that all writes from earlier jobs
@@ -568,9 +564,8 @@ struct r600_common_context {
 	unsigned			num_gfx_cs_flushes;
 	unsigned			initial_gfx_cs_size;
 	unsigned			gpu_reset_counter;
-	unsigned			last_dirty_fb_counter;
+	unsigned			last_dirty_tex_counter;
 	unsigned			last_compressed_colortex_counter;
-	unsigned			last_dirty_tex_descriptor_counter;
 
 	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_zeroed_memory;

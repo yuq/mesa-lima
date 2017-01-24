@@ -1669,7 +1669,7 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	struct radeon_winsys_cs *cs = rctx->b.gfx.cs;
 	bool render_cond_bit = rctx->b.render_cond && !rctx->b.render_cond_force_off;
 	uint64_t mask;
-	unsigned num_patches, dirty_fb_counter;
+	unsigned num_patches, dirty_tex_counter;
 
 	if (!info.indirect && !info.count && (info.indexed || !info.count_from_stream_output)) {
 		return;
@@ -1686,9 +1686,9 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 	}
 
 	/* Re-emit the framebuffer state if needed. */
-	dirty_fb_counter = p_atomic_read(&rctx->b.screen->dirty_fb_counter);
-	if (dirty_fb_counter != rctx->b.last_dirty_fb_counter) {
-		rctx->b.last_dirty_fb_counter = dirty_fb_counter;
+	dirty_tex_counter = p_atomic_read(&rctx->b.screen->dirty_tex_counter);
+	if (dirty_tex_counter != rctx->b.last_dirty_tex_counter) {
+		rctx->b.last_dirty_tex_counter = dirty_tex_counter;
 		r600_mark_atom_dirty(rctx, &rctx->framebuffer.atom);
 	}
 

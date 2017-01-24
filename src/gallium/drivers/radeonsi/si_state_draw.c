@@ -957,7 +957,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	struct si_context *sctx = (struct si_context *)ctx;
 	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 	struct pipe_index_buffer ib = {};
-	unsigned mask, dirty_fb_counter, dirty_tex_counter, rast_prim;
+	unsigned mask, dirty_tex_counter, rast_prim;
 
 	if (likely(!info->indirect)) {
 		/* SI-CI treat instance_count==0 as instance_count==1. There is
@@ -986,21 +986,15 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		return;
 	}
 
-	/* Re-emit the framebuffer state if needed. */
-	dirty_fb_counter = p_atomic_read(&sctx->b.screen->dirty_fb_counter);
-	if (unlikely(dirty_fb_counter != sctx->b.last_dirty_fb_counter)) {
-		sctx->b.last_dirty_fb_counter = dirty_fb_counter;
+	/* Recompute and re-emit the texture resource states if needed. */
+	dirty_tex_counter = p_atomic_read(&sctx->b.screen->dirty_tex_counter);
+	if (unlikely(dirty_tex_counter != sctx->b.last_dirty_tex_counter)) {
+		sctx->b.last_dirty_tex_counter = dirty_tex_counter;
 		sctx->framebuffer.dirty_cbufs |=
 			((1 << sctx->framebuffer.state.nr_cbufs) - 1);
 		sctx->framebuffer.dirty_zsbuf = true;
 		sctx->framebuffer.do_update_surf_dirtiness = true;
 		si_mark_atom_dirty(sctx, &sctx->framebuffer.atom);
-	}
-
-	/* Invalidate & recompute texture descriptors if needed. */
-	dirty_tex_counter = p_atomic_read(&sctx->b.screen->dirty_tex_descriptor_counter);
-	if (unlikely(dirty_tex_counter != sctx->b.last_dirty_tex_descriptor_counter)) {
-		sctx->b.last_dirty_tex_descriptor_counter = dirty_tex_counter;
 		si_update_all_texture_descriptors(sctx);
 	}
 
