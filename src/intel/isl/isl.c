@@ -73,6 +73,15 @@ isl_device_init(struct isl_device *dev,
    dev->ss.size = RENDER_SURFACE_STATE_length(info) * 4;
    dev->ss.align = isl_align(dev->ss.size, 32);
 
+   dev->ss.clear_value_size =
+      isl_align(RENDER_SURFACE_STATE_RedClearColor_bits(info) +
+                RENDER_SURFACE_STATE_GreenClearColor_bits(info) +
+                RENDER_SURFACE_STATE_BlueClearColor_bits(info) +
+                RENDER_SURFACE_STATE_AlphaClearColor_bits(info), 32) / 8;
+
+   dev->ss.clear_value_offset =
+      RENDER_SURFACE_STATE_RedClearColor_start(info) / 32 * 4;
+
    assert(RENDER_SURFACE_STATE_SurfaceBaseAddress_start(info) % 8 == 0);
    dev->ss.addr_offset =
       RENDER_SURFACE_STATE_SurfaceBaseAddress_start(info) / 8;

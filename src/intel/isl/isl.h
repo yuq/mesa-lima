@@ -919,6 +919,10 @@ struct isl_device {
       uint8_t align;
       uint8_t addr_offset;
       uint8_t aux_addr_offset;
+
+      /* Rounded up to the nearest dword to simplify GPU memcpy operations. */
+      uint8_t clear_value_size;
+      uint8_t clear_value_offset;
    } ss;
 
    /**
