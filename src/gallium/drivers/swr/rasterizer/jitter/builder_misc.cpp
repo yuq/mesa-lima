@@ -350,6 +350,13 @@ namespace SwrJit
     }
     #endif
 
+    //////////////////////////////////////////////////////////////////////////
+    Value *Builder::DEBUGTRAP()
+    {
+        Function *func = Intrinsic::getDeclaration(JM()->mpCurrentModule, Intrinsic::debugtrap);
+        return CALL(func);
+    }
+
     Value *Builder::VRCP(Value *va)
     {
         return FDIV(VIMMED1(1.0f), va);  // 1 / a

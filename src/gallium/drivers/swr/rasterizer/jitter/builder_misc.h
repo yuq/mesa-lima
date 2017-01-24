@@ -152,7 +152,8 @@ void STACKRESTORE(Value* pSaved);
 
 Value* POPCNT(Value* a);
 
-Value* INT3() { return INTERRUPT(C((uint8_t)3)); }
+Value* DEBUGTRAP();
+Value* INT3() { return DEBUGTRAP(); }
 
 
 Value *VEXTRACTI128(Value* a, Constant* imm8);
