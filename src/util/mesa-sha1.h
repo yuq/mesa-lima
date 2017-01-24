@@ -34,7 +34,7 @@ extern "C" {
 
 #define _mesa_sha1_init SHA1Init
 
-int
+void
 _mesa_sha1_update(struct mesa_sha1 *ctx, const void *data, int size);
 
 static inline void
@@ -43,7 +43,7 @@ _mesa_sha1_final(struct mesa_sha1 *ctx, unsigned char result[20])
    SHA1Final(result, ctx);
 }
 
-char *
+void
 _mesa_sha1_format(char *buf, const unsigned char *sha1);
 
 void

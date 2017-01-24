@@ -1265,8 +1265,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       disk_cache_put_key(cache, prog->Shaders[i]->sha1);
       if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
-         fprintf(stderr, "marking shader: %s\n",
-                 _mesa_sha1_format(sha1_buf, prog->Shaders[i]->sha1));
+         _mesa_sha1_format(sha1_buf, prog->Shaders[i]->sha1);
+         fprintf(stderr, "marking shader: %s\n", sha1_buf);
       }
    }
 
@@ -1275,8 +1275,8 @@ shader_cache_write_program_metadata(struct gl_context *ctx,
    free(metadata);
 
    if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
-      fprintf(stderr, "putting program metadata in cache: %s\n",
-              _mesa_sha1_format(sha1_buf, prog->data->sha1));
+      _mesa_sha1_format(sha1_buf, prog->data->sha1);
+      fprintf(stderr, "putting program metadata in cache: %s\n", sha1_buf);
    }
 }
 
@@ -1327,9 +1327,9 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
 
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       struct gl_shader *sh = prog->Shaders[i];
+      _mesa_sha1_format(sha1buf, sh->sha1);
       ralloc_asprintf_append(&buf, "%s: %s\n",
-                             _mesa_shader_stage_to_abbrev(sh->Stage),
-                             _mesa_sha1_format(sha1buf, sh->sha1));
+                             _mesa_shader_stage_to_abbrev(sh->Stage), sha1buf);
    }
    _mesa_sha1_compute(buf, strlen(buf), prog->data->sha1);
    ralloc_free(buf);
@@ -1353,8 +1353,9 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    }
 
    if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
+      _mesa_sha1_format(sha1buf, prog->data->sha1);
       fprintf(stderr, "loading shader program meta data from cache: %s\n",
-              _mesa_sha1_format(sha1buf, prog->data->sha1));
+              sha1buf);
    }
 
    struct blob_reader metadata;

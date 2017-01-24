@@ -1943,8 +1943,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
       if (ctx->Cache && disk_cache_has_key(ctx->Cache, shader->sha1)) {
          /* We've seen this shader before and know it compiles */
          if (ctx->_Shader->Flags & GLSL_CACHE_INFO) {
-            fprintf(stderr, "deferring compile of shader: %s\n",
-                    _mesa_sha1_format(buf, shader->sha1));
+            _mesa_sha1_format(buf, shader->sha1);
+            fprintf(stderr, "deferring compile of shader: %s\n", buf);
          }
          shader->CompileStatus = compile_skipped;
 
