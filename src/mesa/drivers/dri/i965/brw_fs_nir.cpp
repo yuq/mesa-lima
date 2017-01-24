@@ -701,7 +701,14 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_fsign: {
-      if (type_sz(op[0].type) < 8) {
+      if (op[0].abs) {
+         /* Straightforward since the source can be assumed to be
+          * non-negative.
+          */
+         set_condmod(BRW_CONDITIONAL_NZ, bld.MOV(result, op[0]));
+         set_predicate(BRW_PREDICATE_NORMAL, bld.MOV(result, brw_imm_f(1.0f)));
+
+      } else if (type_sz(op[0].type) < 8) {
          /* AND(val, 0x80000000) gives the sign bit.
           *
           * Predicated OR ORs 1.0 (0x3f800000) with the sign bit if val is not
