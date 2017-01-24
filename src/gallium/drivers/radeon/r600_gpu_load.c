@@ -58,11 +58,13 @@
 #define CB_BUSY(x)		(((x) >> 30) & 0x1)
 #define GUI_ACTIVE(x)		(((x) >> 31) & 0x1)
 
-#define UPDATE_COUNTER(field, mask)				\
-	if (mask(value))					\
-		p_atomic_inc(&counters->named.field.busy);	\
-	else							\
-		p_atomic_inc(&counters->named.field.idle);
+#define UPDATE_COUNTER(field, mask)					\
+	do {								\
+		if (mask(value))					\
+			p_atomic_inc(&counters->named.field.busy);	\
+		else							\
+			p_atomic_inc(&counters->named.field.idle);	\
+	} while (0)
 
 static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
 				      union r600_grbm_counters *counters)
@@ -86,6 +88,8 @@ static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
 	UPDATE_COUNTER(cb, CB_BUSY);
 	UPDATE_COUNTER(gui, GUI_ACTIVE);
 }
+
+#undef UPDATE_COUNTER
 
 static PIPE_THREAD_ROUTINE(r600_gpu_load_thread, param)
 {
