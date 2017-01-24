@@ -940,17 +940,6 @@ void si_ce_post_draw_synchronization(struct si_context *sctx)
 	}
 }
 
-static void cik_prefetch_shader_async(struct si_context *sctx,
-				      struct si_pm4_state *state)
-{
-	if (state) {
-		struct pipe_resource *bo = &state->bo[0]->b.b;
-		assert(state->nbo == 1);
-
-		cik_prefetch_TC_L2_async(sctx, bo, 0, bo->width0);
-	}
-}
-
 void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 {
 	struct si_context *sctx = (struct si_context *)ctx;
@@ -1129,33 +1118,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (!si_upload_vertex_buffer_descriptors(sctx))
 		return;
 
-	/* Flushed caches prior to prefetching shaders. */
+	/* Flush caches before the first state atom, which does L2 prefetches. */
 	if (sctx->b.flags)
 		si_emit_cache_flush(sctx);
-
-	/* Prefetch shaders and VBO descriptors to TC L2. */
-	if (sctx->b.chip_class >= CIK) {
-		if (si_pm4_state_changed(sctx, ls))
-			cik_prefetch_shader_async(sctx, sctx->queued.named.ls);
-		if (si_pm4_state_changed(sctx, hs))
-			cik_prefetch_shader_async(sctx, sctx->queued.named.hs);
-		if (si_pm4_state_changed(sctx, es))
-			cik_prefetch_shader_async(sctx, sctx->queued.named.es);
-		if (si_pm4_state_changed(sctx, gs))
-			cik_prefetch_shader_async(sctx, sctx->queued.named.gs);
-		if (si_pm4_state_changed(sctx, vs))
-			cik_prefetch_shader_async(sctx, sctx->queued.named.vs);
-
-		/* Vertex buffer descriptors are uploaded uncached, so prefetch
-		 * them right after the VS binary. */
-		if (sctx->vertex_buffer_pointer_dirty) {
-			cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
-						sctx->vertex_buffers.buffer_offset,
-						sctx->vertex_elements->count * 16);
-		}
-		if (si_pm4_state_changed(sctx, ps))
-			cik_prefetch_shader_async(sctx, sctx->queued.named.ps);
-	}
 
 	/* Emit states. */
 	mask = sctx->dirty_atoms;

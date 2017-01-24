@@ -207,6 +207,9 @@ void si_begin_new_cs(struct si_context *ctx)
 	if (ctx->ce_preamble_ib)
 		si_ce_reinitialize_all_descriptors(ctx);
 
+	if (ctx->b.chip_class >= CIK)
+		si_mark_atom_dirty(ctx, &ctx->prefetch_L2);
+
 	ctx->framebuffer.dirty_cbufs = (1 << 8) - 1;
 	ctx->framebuffer.dirty_zsbuf = true;
 	si_mark_atom_dirty(ctx, &ctx->framebuffer.atom);

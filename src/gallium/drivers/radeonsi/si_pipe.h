@@ -232,6 +232,7 @@ struct si_context {
 	union si_state			emitted;
 
 	/* Atom declarations. */
+	struct r600_atom		prefetch_L2;
 	struct si_framebuffer		framebuffer;
 	struct si_sample_locs		msaa_sample_locs;
 	struct r600_atom		db_render_state;

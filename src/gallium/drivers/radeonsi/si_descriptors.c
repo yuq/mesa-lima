@@ -1038,6 +1038,8 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * uploaded to a fresh new buffer, so I don't think flushing the const
 	 * cache is needed. */
 	si_mark_atom_dirty(sctx, &sctx->shader_userdata.atom);
+	if (sctx->b.chip_class >= CIK)
+		si_mark_atom_dirty(sctx, &sctx->prefetch_L2);
 	sctx->vertex_buffers_dirty = false;
 	sctx->vertex_buffer_pointer_dirty = true;
 	return true;

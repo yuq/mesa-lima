@@ -406,7 +406,46 @@ void cik_prefetch_TC_L2_async(struct si_context *sctx, struct pipe_resource *buf
 	si_copy_buffer(sctx, buf, buf, offset, offset, size, SI_CPDMA_SKIP_ALL);
 }
 
+static void cik_prefetch_shader_async(struct si_context *sctx,
+				      struct si_pm4_state *state)
+{
+	if (state) {
+		struct pipe_resource *bo = &state->bo[0]->b.b;
+		assert(state->nbo == 1);
+
+		cik_prefetch_TC_L2_async(sctx, bo, 0, bo->width0);
+	}
+}
+
+static void cik_emit_prefetch_L2(struct si_context *sctx, struct r600_atom *atom)
+{
+	/* Prefetch shaders and VBO descriptors to TC L2. */
+	if (si_pm4_state_changed(sctx, ls))
+		cik_prefetch_shader_async(sctx, sctx->queued.named.ls);
+	if (si_pm4_state_changed(sctx, hs))
+		cik_prefetch_shader_async(sctx, sctx->queued.named.hs);
+	if (si_pm4_state_changed(sctx, es))
+		cik_prefetch_shader_async(sctx, sctx->queued.named.es);
+	if (si_pm4_state_changed(sctx, gs))
+		cik_prefetch_shader_async(sctx, sctx->queued.named.gs);
+	if (si_pm4_state_changed(sctx, vs))
+		cik_prefetch_shader_async(sctx, sctx->queued.named.vs);
+
+	/* Vertex buffer descriptors are uploaded uncached, so prefetch
+	 * them right after the VS binary. */
+	if (sctx->vertex_buffer_pointer_dirty) {
+		cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
+					 sctx->vertex_buffers.buffer_offset,
+					 sctx->vertex_elements->count * 16);
+	}
+	if (si_pm4_state_changed(sctx, ps))
+		cik_prefetch_shader_async(sctx, sctx->queued.named.ps);
+}
+
 void si_init_cp_dma_functions(struct si_context *sctx)
 {
 	sctx->b.clear_buffer = si_clear_buffer;
+
+	si_init_atom(sctx, &sctx->prefetch_L2, &sctx->atoms.s.prefetch_L2,
+		     cik_emit_prefetch_L2);
 }
