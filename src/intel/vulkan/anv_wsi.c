@@ -24,6 +24,7 @@
 #include "anv_private.h"
 #include "wsi_common.h"
 #include "vk_format_info.h"
+#include "util/vk_util.h"
 
 static const struct wsi_callbacks wsi_cbs = {
    .get_phys_device_format_properties = anv_GetPhysicalDeviceFormatProperties,
@@ -355,9 +356,16 @@ VkResult anv_QueuePresentKHR(
    ANV_FROM_HANDLE(anv_queue, queue, _queue);
    VkResult result = VK_SUCCESS;
 
+   const VkPresentRegionsKHR *regions =
+      vk_find_struct_const(pPresentInfo->pNext, PRESENT_REGIONS_KHR);
+
    for (uint32_t i = 0; i < pPresentInfo->swapchainCount; i++) {
       ANV_FROM_HANDLE(wsi_swapchain, swapchain, pPresentInfo->pSwapchains[i]);
       VkResult item_result;
+
+      const VkPresentRegionKHR *region = NULL;
+      if (regions && regions->pRegions)
+         region = &regions->pRegions[i];
 
       assert(anv_device_from_handle(swapchain->device) == queue->device);
 
@@ -381,7 +389,7 @@ VkResult anv_QueuePresentKHR(
 
       item_result = swapchain->queue_present(swapchain,
                                              pPresentInfo->pImageIndices[i],
-                                             NULL);
+                                             region);
       /* TODO: What if one of them returns OUT_OF_DATE? */
       if (pPresentInfo->pResults != NULL)
          pPresentInfo->pResults[i] = item_result;
