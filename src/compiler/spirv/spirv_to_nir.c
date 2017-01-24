@@ -854,8 +854,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          val->type->access_qualifier = SpvAccessQualifierReadWrite;
 
       if (multisampled) {
-         assert(dim == GLSL_SAMPLER_DIM_2D);
-         dim = GLSL_SAMPLER_DIM_MS;
+         if (dim == GLSL_SAMPLER_DIM_2D)
+            dim = GLSL_SAMPLER_DIM_MS;
+         else if (dim == GLSL_SAMPLER_DIM_SUBPASS)
+            dim = GLSL_SAMPLER_DIM_SUBPASS_MS;
+         else
+            assert(!"Unsupported multisampled image type");
       }
 
       val->type->image_format = translate_image_format(format);
@@ -864,7 +868,8 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
          val->type->type = glsl_sampler_type(dim, is_shadow, is_array,
                                              glsl_get_base_type(sampled_type));
       } else if (sampled == 2) {
-         assert((dim == GLSL_SAMPLER_DIM_SUBPASS) || format);
+         assert((dim == GLSL_SAMPLER_DIM_SUBPASS ||
+                 dim == GLSL_SAMPLER_DIM_SUBPASS_MS) || format);
          assert(!is_shadow);
          val->type->type = glsl_image_type(dim, is_array,
                                            glsl_get_base_type(sampled_type));
