@@ -1283,7 +1283,8 @@ swr_update_derived(struct pipe_context *pipe,
       SwrSetPixelShaderState(ctx->swrContext, &psState);
 
       /* JIT sampler state */
-      if (ctx->dirty & SWR_NEW_SAMPLER) {
+      if (ctx->dirty & (SWR_NEW_SAMPLER |
+                        SWR_NEW_FS)) {
          swr_update_sampler_state(ctx,
                                   PIPE_SHADER_FRAGMENT,
                                   key.nr_samplers,
@@ -1291,7 +1292,9 @@ swr_update_derived(struct pipe_context *pipe,
       }
 
       /* JIT sampler view state */
-      if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW | SWR_NEW_FRAMEBUFFER)) {
+      if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW |
+                        SWR_NEW_FRAMEBUFFER |
+                        SWR_NEW_FS)) {
          swr_update_texture_state(ctx,
                                   PIPE_SHADER_FRAGMENT,
                                   key.nr_sampler_views,
