@@ -776,9 +776,9 @@ struct BlendJit : public Builder
         if(state.desc.sampleMaskEnable || state.desc.alphaToCoverageEnable ||
            state.desc.oMaskEnable)
         {
-            // load current mask
+            // load coverage mask
             Value* pMask = LOAD(ppMask);
-            currentMask = S_EXT(ICMP_SGT(currentMask, VBROADCAST(C(0))), mSimdInt32Ty);
+            currentMask = S_EXT(ICMP_UGT(currentMask, VBROADCAST(C(0))), mSimdInt32Ty);
             Value* outputMask = AND(pMask, currentMask);
             // store new mask
             STORE(outputMask, GEP(ppMask, C(0)));
