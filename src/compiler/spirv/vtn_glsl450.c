@@ -339,12 +339,32 @@ build_atan2(nir_builder *b, nir_ssa_def *y, nir_ssa_def *x)
    nir_ssa_def *rcp_scaled_t = nir_frcp(b, nir_fmul(b, t, scale));
    nir_ssa_def *s_over_t = nir_fmul(b, nir_fmul(b, s, scale), rcp_scaled_t);
 
+   /* For |x| = |y| assume tan = 1 even if infinite (i.e. pretend momentarily
+    * that ∞/∞ = 1) in order to comply with the rather artificial rules
+    * inherited from IEEE 754-2008, namely:
+    *
+    *  "atan2(±∞, −∞) is ±3π/4
+    *   atan2(±∞, +∞) is ±π/4"
+    *
+    * Note that this is inconsistent with the rules for the neighborhood of
+    * zero that are based on iterated limits:
+    *
+    *  "atan2(±0, −0) is ±π
+    *   atan2(±0, +0) is ±0"
+    *
+    * but GLSL specifically allows implementations to deviate from IEEE rules
+    * at (0,0), so we take that license (i.e. pretend that 0/0 = 1 here as
+    * well).
+    */
+   nir_ssa_def *tan = nir_bcsel(b, nir_feq(b, nir_fabs(b, x), nir_fabs(b, y)),
+                                one, nir_fabs(b, s_over_t));
+
    /* Calculate the arctangent and fix up the result if we had flipped the
     * coordinate system.
     */
    nir_ssa_def *arc = nir_fadd(b, nir_fmul(b, nir_b2f(b, flip),
                                            nir_imm_float(b, M_PI_2f)),
-                               build_atan(b, nir_fabs(b, s_over_t)));
+                               build_atan(b, tan));
 
    /* Rather convoluted calculation of the sign of the result.  When x < 0 we
     * cannot use fsign because we need to be able to distinguish between
