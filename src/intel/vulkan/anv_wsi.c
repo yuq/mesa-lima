@@ -380,7 +380,8 @@ VkResult anv_QueuePresentKHR(
       anv_QueueSubmit(_queue, 0, NULL, swapchain->fences[0]);
 
       item_result = swapchain->queue_present(swapchain,
-                                             pPresentInfo->pImageIndices[i]);
+                                             pPresentInfo->pImageIndices[i],
+                                             NULL);
       /* TODO: What if one of them returns OUT_OF_DATE? */
       if (pPresentInfo->pResults != NULL)
          pPresentInfo->pResults[i] = item_result;

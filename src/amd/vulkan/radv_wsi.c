@@ -485,7 +485,8 @@ VkResult radv_QueuePresentKHR(
 		fence->submitted = true;
 
 		result = swapchain->queue_present(swapchain,
-						  pPresentInfo->pImageIndices[i]);
+						  pPresentInfo->pImageIndices[i],
+						  NULL);
 		/* TODO: What if one of them returns OUT_OF_DATE? */
 		if (result != VK_SUCCESS)
 			return result;
