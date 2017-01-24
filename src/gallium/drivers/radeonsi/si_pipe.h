@@ -435,7 +435,7 @@ static inline void
 si_set_atom_dirty(struct si_context *sctx,
 		  struct r600_atom *atom, bool dirty)
 {
-	unsigned bit = 1 << (atom->id - 1);
+	unsigned bit = 1 << atom->id;
 
 	if (dirty)
 		sctx->dirty_atoms |= bit;
@@ -447,7 +447,7 @@ static inline bool
 si_is_atom_dirty(struct si_context *sctx,
 		  struct r600_atom *atom)
 {
-	unsigned bit = 1 << (atom->id - 1);
+	unsigned bit = 1 << atom->id;
 
 	return sctx->dirty_atoms & bit;
 }
