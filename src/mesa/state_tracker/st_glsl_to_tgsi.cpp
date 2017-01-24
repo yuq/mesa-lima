@@ -169,7 +169,7 @@ public:
    uint16_t swizzle; /**< SWIZZLE_XYZWONEZERO swizzles from Mesa. */
    int negate:4; /**< NEGATE_XYZW mask from mesa */
    unsigned abs:1;
-   enum glsl_base_type type:4; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   enum glsl_base_type type:5; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    unsigned has_index2:1;
    gl_register_file file:5; /**< PROGRAM_* from Mesa */
    /*
@@ -242,7 +242,7 @@ public:
    int16_t index2D;
    gl_register_file file:5; /**< PROGRAM_* from Mesa */
    unsigned writemask:4; /**< Bitfield of WRITEMASK_[XYZW] */
-   enum glsl_base_type type:4; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
+   enum glsl_base_type type:5; /** GLSL_TYPE_* from GLSL IR (enum glsl_base_type) */
    unsigned has_index2:1;
    unsigned array_id:10;
 
@@ -299,7 +299,7 @@ public:
    unsigned sampler_base:5;
    unsigned sampler_array_size:6; /**< 1-based size of sampler array, 1 if not array */
    unsigned tex_target:4; /**< One of TEXTURE_*_INDEX */
-   glsl_base_type tex_type:4;
+   glsl_base_type tex_type:5;
    unsigned tex_shadow:1;
    unsigned image_format:9;
    unsigned tex_offset_num_offset:3;
