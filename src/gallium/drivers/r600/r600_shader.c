@@ -3906,6 +3906,11 @@ static int tgsi_op2_s(struct r600_shader_ctx *ctx, int swap, int trans_only)
 	int i, j, r, lasti = tgsi_last_instruction(write_mask);
 	/* use temp register if trans_only and more than one dst component */
 	int use_tmp = trans_only && (write_mask ^ (1 << lasti));
+	unsigned op = ctx->inst_info->op;
+
+	if (op == ALU_OP2_MUL_IEEE &&
+	    ctx->info.properties[TGSI_PROPERTY_MUL_ZERO_WINS])
+		op = ALU_OP2_MUL;
 
 	for (i = 0; i <= lasti; i++) {
 		if (!(write_mask & (1 << i)))
@@ -3919,7 +3924,7 @@ static int tgsi_op2_s(struct r600_shader_ctx *ctx, int swap, int trans_only)
 		} else
 			tgsi_dst(ctx, &inst->Dst[0], i, &alu.dst);
 
-		alu.op = ctx->inst_info->op;
+		alu.op = op;
 		if (!swap) {
 			for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
 				r600_bytecode_src(&alu.src[j], &ctx->src[j], i);
@@ -6543,6 +6548,11 @@ static int tgsi_op3(struct r600_shader_ctx *ctx)
 	int i, j, r;
 	int lasti = tgsi_last_instruction(inst->Dst[0].Register.WriteMask);
 	int temp_regs[4];
+	unsigned op = ctx->inst_info->op;
+
+	if (op == ALU_OP3_MULADD_IEEE &&
+	    ctx->info.properties[TGSI_PROPERTY_MUL_ZERO_WINS])
+		op = ALU_OP3_MULADD;
 
 	for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
 		temp_regs[j] = 0;
@@ -6554,7 +6564,7 @@ static int tgsi_op3(struct r600_shader_ctx *ctx)
 			continue;
 
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ctx->inst_info->op;
+		alu.op = op;
 		for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
 			r = tgsi_make_src_for_op3(ctx, temp_regs[j], i, &alu.src[j], &ctx->src[j]);
 			if (r)
@@ -6580,10 +6590,14 @@ static int tgsi_dp(struct r600_shader_ctx *ctx)
 	struct tgsi_full_instruction *inst = &ctx->parse.FullToken.FullInstruction;
 	struct r600_bytecode_alu alu;
 	int i, j, r;
+	unsigned op = ctx->inst_info->op;
+	if (op == ALU_OP2_DOT4_IEEE &&
+	    ctx->info.properties[TGSI_PROPERTY_MUL_ZERO_WINS])
+		op = ALU_OP2_DOT4;
 
 	for (i = 0; i < 4; i++) {
 		memset(&alu, 0, sizeof(struct r600_bytecode_alu));
-		alu.op = ctx->inst_info->op;
+		alu.op = op;
 		for (j = 0; j < inst->Instruction.NumSrcRegs; j++) {
 			r600_bytecode_src(&alu.src[j], &ctx->src[j], i);
 		}
