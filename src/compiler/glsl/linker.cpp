@@ -4608,6 +4608,24 @@ link_varyings_and_uniforms(unsigned first, unsigned last,
    return true;
 }
 
+static void
+linker_optimisation_loop(struct gl_context *ctx, exec_list *ir,
+                         unsigned stage)
+{
+      if (ctx->Const.GLSLOptimizeConservatively) {
+         /* Run it just once. */
+         do_common_optimization(ir, true, false,
+                                &ctx->Const.ShaderCompilerOptions[stage],
+                                ctx->Const.NativeIntegers);
+      } else {
+         /* Repeat it until it stops making changes. */
+         while (do_common_optimization(ir, true, false,
+                                       &ctx->Const.ShaderCompilerOptions[stage],
+                                       ctx->Const.NativeIntegers))
+            ;
+      }
+}
+
 void
 link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 {
@@ -4882,20 +4900,15 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          lower_tess_level(prog->_LinkedShaders[i]);
       }
 
-      if (ctx->Const.GLSLOptimizeConservatively) {
-         /* Run it just once. */
-         do_common_optimization(prog->_LinkedShaders[i]->ir, true, false,
-                                &ctx->Const.ShaderCompilerOptions[i],
-                                ctx->Const.NativeIntegers);
-      } else {
-         /* Repeat it until it stops making changes. */
-         while (do_common_optimization(prog->_LinkedShaders[i]->ir, true, false,
-                                       &ctx->Const.ShaderCompilerOptions[i],
-                                       ctx->Const.NativeIntegers))
-            ;
-      }
+      /* Call opts before lowering const arrays to uniforms so we can const
+       * propagate any elements accessed directly.
+       */
+      linker_optimisation_loop(ctx, prog->_LinkedShaders[i]->ir, i);
 
-      lower_const_arrays_to_uniforms(prog->_LinkedShaders[i]->ir, i);
+      /* Call opts after lowering const arrays to copy propagate things. */
+      if (lower_const_arrays_to_uniforms(prog->_LinkedShaders[i]->ir, i))
+         linker_optimisation_loop(ctx, prog->_LinkedShaders[i]->ir, i);
+
       propagate_invariance(prog->_LinkedShaders[i]->ir);
    }
 
