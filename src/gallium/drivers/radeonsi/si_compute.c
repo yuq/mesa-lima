@@ -372,6 +372,18 @@ static bool si_switch_compute_shader(struct si_context *sctx,
 			      RADEON_PRIO_SCRATCH_BUFFER);
 	}
 
+	/* Prefetch the compute shader to TC L2.
+	 *
+	 * We should also prefetch graphics shaders if a compute dispatch was
+	 * the last command, and the compute shader if a draw call was the last
+	 * command. However, that would add more complexity and we're likely
+	 * to get a shader state change in that case anyway.
+	 */
+	if (sctx->b.chip_class >= CIK) {
+		cik_prefetch_TC_L2_async(sctx, &program->shader.bo->b.b,
+					 0, program->shader.bo->b.b.width0);
+	}
+
 	shader_va = shader->bo->gpu_address + offset;
 	if (program->use_code_object_v2) {
 		/* Shader code is placed after the amd_kernel_code_t
