@@ -1665,9 +1665,11 @@ static unsigned si_tex_compare(unsigned compare)
 	}
 }
 
-static unsigned si_tex_dim(unsigned res_target, unsigned view_target,
-			   unsigned nr_samples)
+static unsigned si_tex_dim(struct si_screen *sscreen, struct r600_texture *rtex,
+			   unsigned view_target, unsigned nr_samples)
 {
+	unsigned res_target = rtex->resource.b.b.target;
+
 	if (view_target == PIPE_TEXTURE_CUBE ||
 	    view_target == PIPE_TEXTURE_CUBE_ARRAY)
 		res_target = view_target;
@@ -1675,6 +1677,17 @@ static unsigned si_tex_dim(unsigned res_target, unsigned view_target,
 	else if (res_target == PIPE_TEXTURE_CUBE ||
 		 res_target == PIPE_TEXTURE_CUBE_ARRAY)
 		res_target = PIPE_TEXTURE_2D_ARRAY;
+
+	/* GFX9 allocates 1D textures as 2D. */
+	if ((res_target == PIPE_TEXTURE_1D ||
+	     res_target == PIPE_TEXTURE_1D_ARRAY) &&
+	    sscreen->b.chip_class >= GFX9 &&
+	    rtex->surface.u.gfx9.resource_type == RADEON_RESOURCE_2D) {
+		if (res_target == PIPE_TEXTURE_1D)
+			res_target = PIPE_TEXTURE_2D;
+		else
+			res_target = PIPE_TEXTURE_2D_ARRAY;
+	}
 
 	switch (res_target) {
 	default:
@@ -2210,24 +2223,10 @@ static void si_initialize_color_surface(struct si_context *sctx,
 
 	if (sctx->b.chip_class >= GFX9) {
 		unsigned mip0_depth = util_max_layer(&rtex->resource.b.b, 0);
-		unsigned type;
-
-		switch (rtex->resource.b.b.target) {
-		case PIPE_TEXTURE_1D:
-		case PIPE_TEXTURE_1D_ARRAY:
-			type = V_028C74_1D;
-			break;
-		default:
-			type = V_028C74_2D;
-			break;
-		case PIPE_TEXTURE_3D:
-			type = V_028C74_3D;
-			break;
-		}
 
 		surf->cb_color_view |= S_028C6C_MIP_LEVEL(surf->base.u.tex.level);
 		surf->cb_color_attrib |= S_028C74_MIP0_DEPTH(mip0_depth) |
-					 S_028C74_RESOURCE_TYPE(type);
+					 S_028C74_RESOURCE_TYPE(rtex->surface.u.gfx9.resource_type);
 		surf->cb_color_attrib2 = S_028C68_MIP0_WIDTH(rtex->resource.b.b.width0 - 1) |
 					 S_028C68_MIP0_HEIGHT(rtex->resource.b.b.height0 - 1) |
 					 S_028C68_MAX_MIP(rtex->resource.b.b.last_level);
@@ -3108,7 +3107,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 
 		assert(res->target != PIPE_TEXTURE_3D || (first_level == 0 && last_level == 0));
 	} else {
-		type = si_tex_dim(res->target, target, res->nr_samples);
+		type = si_tex_dim(screen, tex, target, res->nr_samples);
 	}
 
 	if (type == V_008F1C_SQ_RSRC_IMG_1D_ARRAY) {
@@ -3227,7 +3226,7 @@ si_make_texture_descriptor(struct si_screen *screen,
 				 S_008F1C_DST_SEL_Y(V_008F1C_SQ_SEL_X) |
 				 S_008F1C_DST_SEL_Z(V_008F1C_SQ_SEL_X) |
 				 S_008F1C_DST_SEL_W(V_008F1C_SQ_SEL_X) |
-				 S_008F1C_TYPE(si_tex_dim(res->target, target, 0));
+				 S_008F1C_TYPE(si_tex_dim(screen, tex, target, 0));
 		fmask_state[4] = 0;
 		fmask_state[5] = S_008F24_BASE_ARRAY(first_layer);
 		fmask_state[6] = 0;

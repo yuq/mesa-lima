@@ -3297,6 +3297,7 @@ static LLVMValueRef image_fetch_coords(
 		const struct tgsi_full_instruction *inst,
 		unsigned src)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	unsigned target = inst->Memory.Texture;
@@ -3309,6 +3310,17 @@ static LLVMValueRef image_fetch_coords(
 		tmp = lp_build_emit_fetch(bld_base, inst, src, chan);
 		tmp = LLVMBuildBitCast(builder, tmp, bld_base->uint_bld.elem_type, "");
 		coords[chan] = tmp;
+	}
+
+	/* 1D textures are allocated and used as 2D on GFX9. */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		if (target == TGSI_TEXTURE_1D) {
+			coords[1] = bld_base->uint_bld.zero;
+			num_coords++;
+		} else if (target == TGSI_TEXTURE_1D_ARRAY) {
+			coords[2] = coords[1];
+			coords[1] = bld_base->uint_bld.zero;
+		}
 	}
 
 	if (num_coords == 1)
@@ -4440,11 +4452,12 @@ static void tex_fetch_args(
 
 	/* Pack user derivatives */
 	if (opcode == TGSI_OPCODE_TXD) {
-		int param, num_src_deriv_channels;
+		int param, num_src_deriv_channels, num_dst_deriv_channels;
 
 		switch (target) {
 		case TGSI_TEXTURE_3D:
 			num_src_deriv_channels = 3;
+			num_dst_deriv_channels = 3;
 			num_deriv_channels = 3;
 			break;
 		case TGSI_TEXTURE_2D:
@@ -4454,6 +4467,7 @@ static void tex_fetch_args(
 		case TGSI_TEXTURE_2D_ARRAY:
 		case TGSI_TEXTURE_SHADOW2D_ARRAY:
 			num_src_deriv_channels = 2;
+			num_dst_deriv_channels = 2;
 			num_deriv_channels = 2;
 			break;
 		case TGSI_TEXTURE_CUBE:
@@ -4462,6 +4476,7 @@ static void tex_fetch_args(
 		case TGSI_TEXTURE_SHADOWCUBE_ARRAY:
 			/* Cube derivatives will be converted to 2D. */
 			num_src_deriv_channels = 3;
+			num_dst_deriv_channels = 3;
 			num_deriv_channels = 2;
 			break;
 		case TGSI_TEXTURE_1D:
@@ -4469,16 +4484,31 @@ static void tex_fetch_args(
 		case TGSI_TEXTURE_1D_ARRAY:
 		case TGSI_TEXTURE_SHADOW1D_ARRAY:
 			num_src_deriv_channels = 1;
-			num_deriv_channels = 1;
+
+			/* 1D textures are allocated and used as 2D on GFX9. */
+			if (ctx->screen->b.chip_class >= GFX9) {
+				num_dst_deriv_channels = 2;
+				num_deriv_channels = 2;
+			} else {
+				num_dst_deriv_channels = 1;
+				num_deriv_channels = 1;
+			}
 			break;
 		default:
 			unreachable("invalid target");
 		}
 
-		for (param = 0; param < 2; param++)
+		for (param = 0; param < 2; param++) {
 			for (chan = 0; chan < num_src_deriv_channels; chan++)
-				derivs[param * num_src_deriv_channels + chan] =
+				derivs[param * num_dst_deriv_channels + chan] =
 					lp_build_emit_fetch(bld_base, inst, param+1, chan);
+
+			/* Fill in the rest with zeros. */
+			for (chan = num_src_deriv_channels;
+			     chan < num_dst_deriv_channels; chan++)
+				derivs[param * num_dst_deriv_channels + chan] =
+					bld_base->base.zero;
+		}
 	}
 
 	if (target == TGSI_TEXTURE_CUBE ||
@@ -4501,6 +4531,27 @@ static void tex_fetch_args(
 		address[count++] = coords[1];
 	if (num_coords > 2)
 		address[count++] = coords[2];
+
+	/* 1D textures are allocated and used as 2D on GFX9. */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		LLVMValueRef filler;
+
+		/* Use 0.5, so that we don't sample the border color. */
+		if (opcode == TGSI_OPCODE_TXF)
+			filler = bld_base->uint_bld.zero;
+		else
+			filler = LLVMConstReal(ctx->f32, 0.5);
+
+		if (target == TGSI_TEXTURE_1D ||
+		    target == TGSI_TEXTURE_SHADOW1D) {
+			address[count++] = filler;
+		} else if (target == TGSI_TEXTURE_1D_ARRAY ||
+			   target == TGSI_TEXTURE_SHADOW1D_ARRAY) {
+			address[count] = coords[count - 1];
+			address[count - 1] = filler;
+			count++;
+		}
+	}
 
 	/* Pack LOD or sample index */
 	if (opcode == TGSI_OPCODE_TXL || opcode == TGSI_OPCODE_TXF)

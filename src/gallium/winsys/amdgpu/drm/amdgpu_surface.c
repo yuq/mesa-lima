@@ -847,15 +847,11 @@ static int gfx9_surface_init(struct radeon_winsys *rws,
    AddrSurfInfoIn.numFrags = AddrSurfInfoIn.numSamples;
 
    switch (tex->target) {
+   /* GFX9 doesn't support 1D depth textures, so allocate all 1D textures
+    * as 2D to avoid having shader variants for 1D vs 2D, so all shaders
+    * must sample 1D textures as 2D. */
    case PIPE_TEXTURE_1D:
    case PIPE_TEXTURE_1D_ARRAY:
-      AddrSurfInfoIn.resourceType = ADDR_RSRC_TEX_1D;
-      AddrSurfInfoIn.width = tex->width0;
-      AddrSurfInfoIn.height = 1;
-      AddrSurfInfoIn.numSlices = tex->array_size;
-      AddrSurfInfoIn.swizzleMode = ADDR_SW_LINEAR; /* the only allowed mode */
-      break;
-
    case PIPE_TEXTURE_2D:
    case PIPE_TEXTURE_2D_ARRAY:
    case PIPE_TEXTURE_RECT:
@@ -900,6 +896,8 @@ static int gfx9_surface_init(struct radeon_winsys *rws,
    default:
       assert(0);
    }
+
+   surf->u.gfx9.resource_type = AddrSurfInfoIn.resourceType;
 
    surf->surf_size = 0;
    surf->dcc_size = 0;

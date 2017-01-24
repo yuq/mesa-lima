@@ -327,6 +327,13 @@ struct legacy_surf_layout {
     uint8_t                     stencil_tiling_index[RADEON_SURF_MAX_LEVELS];
 };
 
+/* Same as addrlib - AddrResourceType. */
+enum gfx9_resource_type {
+    RADEON_RESOURCE_1D = 0,
+    RADEON_RESOURCE_2D,
+    RADEON_RESOURCE_3D,
+};
+
 struct gfx9_surf_flags {
     uint16_t                    swizzle_mode; /* tile mode */
     uint16_t                    epitch; /* (pitch - 1) or (height - 1) */
@@ -346,6 +353,7 @@ struct gfx9_surf_layout {
     struct gfx9_surf_meta_flags htile; /* metadata of depth and stencil */
     struct gfx9_surf_meta_flags cmask; /* metadata of fmask */
 
+    enum gfx9_resource_type     resource_type; /* 1D, 2D or 3D */
     /* The size of the 2D plane containing all mipmap levels. */
     uint64_t                    surf_slice_size;
     uint16_t                    surf_pitch; /* in blocks */
