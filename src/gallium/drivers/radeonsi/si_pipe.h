@@ -228,6 +228,7 @@ struct si_context {
 	union si_state_atoms		atoms;
 	unsigned			dirty_atoms; /* mask */
 	/* PM4 states (precomputed immutable states) */
+	unsigned			dirty_states;
 	union si_state			queued;
 	union si_state			emitted;
 

@@ -129,6 +129,8 @@ union si_state {
 	struct si_pm4_state	*array[0];
 };
 
+#define SI_NUM_STATES (sizeof(union si_state) / sizeof(struct si_pm4_state *))
+
 union si_state_atoms {
 	struct {
 		/* The order matters. */
@@ -267,6 +269,7 @@ struct si_buffer_resources {
 #define si_pm4_bind_state(sctx, member, value) \
 	do { \
 		(sctx)->queued.named.member = (value); \
+		(sctx)->dirty_states |= 1 << si_pm4_block_idx(member); \
 	} while(0)
 
 #define si_pm4_delete_state(sctx, member, value) \

@@ -1122,7 +1122,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	if (sctx->b.flags)
 		si_emit_cache_flush(sctx);
 
-	/* Emit states. */
+	/* Emit state atoms. */
 	mask = sctx->dirty_atoms;
 	while (mask) {
 		struct r600_atom *atom = sctx->atoms.array[u_bit_scan(&mask)];
@@ -1131,7 +1131,20 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 	sctx->dirty_atoms = 0;
 
-	si_pm4_emit_dirty(sctx);
+	/* Emit states. */
+	mask = sctx->dirty_states;
+	while (mask) {
+		unsigned i = u_bit_scan(&mask);
+		struct si_pm4_state *state = sctx->queued.array[i];
+
+		if (!state || sctx->emitted.array[i] == state)
+			continue;
+
+		si_pm4_emit(sctx, state);
+		sctx->emitted.array[i] = state;
+	}
+	sctx->dirty_states = 0;
+
 	si_emit_scratch_reloc(sctx);
 	si_emit_rasterizer_prim_state(sctx);
 	si_emit_draw_registers(sctx, info);
