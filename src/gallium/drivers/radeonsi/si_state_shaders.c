@@ -2439,6 +2439,9 @@ bool si_update_shaders(struct si_context *sctx)
 		if (r)
 			return false;
 		si_pm4_bind_state(sctx, es, sctx->vs_shader.current->pm4);
+
+		si_pm4_bind_state(sctx, ls, NULL);
+		si_pm4_bind_state(sctx, hs, NULL);
 	} else {
 		/* VS as VS */
 		r = si_shader_select(ctx, &sctx->vs_shader, &compiler_state);
@@ -2446,6 +2449,9 @@ bool si_update_shaders(struct si_context *sctx)
 			return false;
 		si_pm4_bind_state(sctx, vs, sctx->vs_shader.current->pm4);
 		si_update_so(sctx, sctx->vs_shader.cso);
+
+		si_pm4_bind_state(sctx, ls, NULL);
+		si_pm4_bind_state(sctx, hs, NULL);
 	}
 
 	/* Update GS. */
