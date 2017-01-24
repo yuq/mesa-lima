@@ -975,8 +975,12 @@ vtn_get_builtin_location(struct vtn_builder *b,
       set_mode_system_value(mode);
       break;
    case SpvBuiltInSampleMask:
-      *location = SYSTEM_VALUE_SAMPLE_MASK_IN; /* XXX out? */
-      set_mode_system_value(mode);
+      if (*mode == nir_var_shader_out) {
+         *location = FRAG_RESULT_SAMPLE_MASK;
+      } else {
+         *location = SYSTEM_VALUE_SAMPLE_MASK_IN;
+         set_mode_system_value(mode);
+      }
       break;
    case SpvBuiltInFragDepth:
       *location = FRAG_RESULT_DEPTH;
