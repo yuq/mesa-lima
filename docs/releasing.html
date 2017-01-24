@@ -345,7 +345,7 @@ Here is one solution that I've been using.
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version &amp;&amp; scons &amp;&amp; cd ..
 
 	# Test the automake binaries
-	rm -rf cd mesa-$__version
+	rm -rf mesa-$__version
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
 	./configure \
 		--with-dri-drivers=i965,swrast \
