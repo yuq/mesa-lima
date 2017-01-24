@@ -36,6 +36,9 @@
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 
+#include "util/disk_cache.h"
+#include "util/mesa-sha1.h"
+
 /* SHADER_CACHE */
 
 /**
@@ -182,10 +185,12 @@ static bool si_load_shader_binary(struct si_shader *shader, void *binary)
  */
 static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 					  void *tgsi_binary,
-					  struct si_shader *shader)
+					  struct si_shader *shader,
+					  bool insert_into_disk_cache)
 {
 	void *hw_binary;
 	struct hash_entry *entry;
+	uint8_t key[CACHE_KEY_SIZE];
 
 	entry = _mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
 	if (entry)
@@ -201,6 +206,12 @@ static bool si_shader_cache_insert_shader(struct si_screen *sscreen,
 		return false;
 	}
 
+	if (sscreen->b.disk_shader_cache && insert_into_disk_cache) {
+		_mesa_sha1_compute(tgsi_binary, *((uint32_t *)tgsi_binary), key);
+		disk_cache_put(sscreen->b.disk_shader_cache, key, hw_binary,
+			       *((uint32_t *) hw_binary));
+	}
+
 	return true;
 }
 
@@ -210,12 +221,54 @@ static bool si_shader_cache_load_shader(struct si_screen *sscreen,
 {
 	struct hash_entry *entry =
 		_mesa_hash_table_search(sscreen->shader_cache, tgsi_binary);
-	if (!entry)
-		return false;
+	if (!entry) {
+		if (sscreen->b.disk_shader_cache) {
+			unsigned char sha1[CACHE_KEY_SIZE];
+			size_t tg_size = *((uint32_t *) tgsi_binary);
 
-	if (!si_load_shader_binary(shader, entry->data))
-		return false;
+			_mesa_sha1_compute(tgsi_binary, tg_size, sha1);
 
+			size_t binary_size;
+			uint8_t *buffer =
+				disk_cache_get(sscreen->b.disk_shader_cache,
+					       sha1, &binary_size);
+			if (!buffer)
+				return false;
+
+			if (binary_size < sizeof(uint32_t) ||
+			    *((uint32_t*)buffer) != binary_size) {
+				 /* Something has gone wrong discard the item
+				  * from the cache and rebuild/link from
+				  * source.
+				  */
+				assert(!"Invalid radeonsi shader disk cache "
+				       "item!");
+
+				disk_cache_remove(sscreen->b.disk_shader_cache,
+						  sha1);
+				free(buffer);
+
+				return false;
+			}
+
+			if (!si_load_shader_binary(shader, buffer)) {
+				free(buffer);
+				return false;
+			}
+			free(buffer);
+
+			if (!si_shader_cache_insert_shader(sscreen, tgsi_binary,
+							   shader, false))
+				FREE(tgsi_binary);
+		} else {
+			return false;
+		}
+	} else {
+		if (si_load_shader_binary(shader, entry->data))
+			FREE(tgsi_binary);
+		else
+			return false;
+	}
 	p_atomic_inc(&sscreen->b.num_shader_cache_hits);
 	return true;
 }
@@ -251,6 +304,7 @@ bool si_init_shader_cache(struct si_screen *sscreen)
 		_mesa_hash_table_create(NULL,
 					si_shader_cache_key_hash,
 					si_shader_cache_key_equals);
+
 	return sscreen->shader_cache != NULL;
 }
 
@@ -1407,7 +1461,6 @@ void si_init_shader_selector_async(void *job, int thread_index)
 
 		if (tgsi_binary &&
 		    si_shader_cache_load_shader(sscreen, tgsi_binary, shader)) {
-			FREE(tgsi_binary);
 			pipe_mutex_unlock(sscreen->shader_cache_mutex);
 		} else {
 			pipe_mutex_unlock(sscreen->shader_cache_mutex);
@@ -1423,7 +1476,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 
 			if (tgsi_binary) {
 				pipe_mutex_lock(sscreen->shader_cache_mutex);
-				if (!si_shader_cache_insert_shader(sscreen, tgsi_binary, shader))
+				if (!si_shader_cache_insert_shader(sscreen, tgsi_binary, shader, true))
 					FREE(tgsi_binary);
 				pipe_mutex_unlock(sscreen->shader_cache_mutex);
 			}
