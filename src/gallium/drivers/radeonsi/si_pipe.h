@@ -177,6 +177,7 @@ struct si_framebuffer {
 	unsigned			dirty_cbufs;
 	bool				dirty_zsbuf;
 	bool				any_dst_linear;
+	bool				do_update_surf_dirtiness;
 };
 
 struct si_clip_state {

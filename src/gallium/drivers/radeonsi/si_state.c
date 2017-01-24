@@ -2487,6 +2487,7 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 
 	sctx->need_check_render_feedback = true;
 	sctx->do_update_shaders = true;
+	sctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
 static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom *atom)
@@ -3533,6 +3534,7 @@ static void si_texture_barrier(struct pipe_context *ctx, unsigned flags)
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
 			 SI_CONTEXT_FLUSH_AND_INV_CB;
+	sctx->framebuffer.do_update_surf_dirtiness = true;
 }
 
 /* This only ensures coherency for shader image/buffer stores. */
