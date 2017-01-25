@@ -1831,6 +1831,11 @@ void anv_dump_finish(void);
 void anv_dump_add_framebuffer(struct anv_cmd_buffer *cmd_buffer,
                               struct anv_framebuffer *fb);
 
+struct anv_common {
+    VkStructureType sType;
+    struct anv_common *pNext;
+};
+
 #define ANV_DEFINE_HANDLE_CASTS(__anv_type, __VkType)                      \
                                                                            \
    static inline struct __anv_type *                                       \
