@@ -69,5 +69,10 @@ void genX(cmd_buffer_so_memcpy)(struct anv_cmd_buffer *cmd_buffer,
                                 struct anv_bo *src, uint32_t src_offset,
                                 uint32_t size);
 
+void genX(cmd_buffer_mi_memcpy)(struct anv_cmd_buffer *cmd_buffer,
+                                struct anv_bo *dst, uint32_t dst_offset,
+                                struct anv_bo *src, uint32_t src_offset,
+                                uint32_t size);
+
 void genX(blorp_exec)(struct blorp_batch *batch,
                       const struct blorp_params *params);
