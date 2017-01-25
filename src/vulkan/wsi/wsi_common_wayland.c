@@ -379,7 +379,8 @@ wsi_wl_surface_get_capabilities(VkIcdSurfaceBase *surface,
 
    caps->currentExtent = (VkExtent2D) { -1, -1 };
    caps->minImageExtent = (VkExtent2D) { 1, 1 };
-   caps->maxImageExtent = (VkExtent2D) { INT16_MAX, INT16_MAX };
+   /* This is the maximum supported size on Intel */
+   caps->maxImageExtent = (VkExtent2D) { 1 << 14, 1 << 14 };
    caps->supportedTransforms = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->currentTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
    caps->maxImageArrayLayers = 1;
