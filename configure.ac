@@ -528,8 +528,6 @@ else
    DEFINES="$DEFINES -DNDEBUG"
 fi
 
-DEFAULT_GL_LIB_NAME=GL
-
 dnl
 dnl Check if linker supports -Bsymbolic
 dnl
@@ -627,23 +625,6 @@ esac
 
 AM_CONDITIONAL(HAVE_COMPAT_SYMLINKS, test "x$HAVE_COMPAT_SYMLINKS" = xyes)
 
-DEFAULT_GL_LIB_NAME=GL
-
-dnl
-dnl Libglvnd configuration
-dnl
-AC_ARG_ENABLE([libglvnd],
-    [AS_HELP_STRING([--enable-libglvnd],
-        [Build for libglvnd @<:@default=disabled@:>@])],
-    [enable_libglvnd="$enableval"],
-    [enable_libglvnd=no])
-AM_CONDITIONAL(USE_LIBGLVND_GLX, test "x$enable_libglvnd" = xyes)
-#AM_COND_IF([USE_LIBGLVND_GLX], [DEFINES="${DEFINES} -DUSE_LIBGLVND_GLX=1"])
-if test "x$enable_libglvnd" = xyes ; then
-    DEFINES="${DEFINES} -DUSE_LIBGLVND_GLX=1"
-    DEFAULT_GL_LIB_NAME=GLX_mesa
-fi
-
 dnl
 dnl library names
 dnl
@@ -676,36 +657,6 @@ aix* )
 esac
 
 AC_SUBST([LIB_EXT])
-
-AC_ARG_WITH([gl-lib-name],
-  [AS_HELP_STRING([--with-gl-lib-name@<:@=NAME@:>@],
-    [specify GL library name @<:@default=GL@:>@])],
-  [GL_LIB=$withval],
-  [GL_LIB="$DEFAULT_GL_LIB_NAME"])
-AC_ARG_WITH([osmesa-lib-name],
-  [AS_HELP_STRING([--with-osmesa-lib-name@<:@=NAME@:>@],
-    [specify OSMesa library name @<:@default=OSMesa@:>@])],
-  [OSMESA_LIB=$withval],
-  [OSMESA_LIB=OSMesa])
-AS_IF([test "x$GL_LIB" = xyes], [GL_LIB="$DEFAULT_GL_LIB_NAME"])
-AS_IF([test "x$OSMESA_LIB" = xyes], [OSMESA_LIB=OSMesa])
-
-dnl
-dnl Mangled Mesa support
-dnl
-AC_ARG_ENABLE([mangling],
-  [AS_HELP_STRING([--enable-mangling],
-    [enable mangled symbols and library name @<:@default=disabled@:>@])],
-  [enable_mangling="${enableval}"],
-  [enable_mangling=no]
-)
-if test "x${enable_mangling}" = "xyes" ; then
-  DEFINES="${DEFINES} -DUSE_MGL_NAMESPACE"
-  GL_LIB="Mangled${GL_LIB}"
-  OSMESA_LIB="Mangled${OSMESA_LIB}"
-fi
-AC_SUBST([GL_LIB])
-AC_SUBST([OSMESA_LIB])
 
 dnl
 dnl potentially-infringing-but-nobody-knows-for-sure stuff
@@ -1332,6 +1283,8 @@ AM_CONDITIONAL(HAVE_DRI_GLX, test "x$enable_glx" = xdri)
 AM_CONDITIONAL(HAVE_XLIB_GLX, test "x$enable_glx" = xxlib)
 AM_CONDITIONAL(HAVE_GALLIUM_XLIB_GLX, test "x$enable_glx" = xgallium-xlib)
 
+DEFAULT_GL_LIB_NAME=GL
+
 dnl
 dnl Libglvnd configuration
 dnl
@@ -1360,6 +1313,36 @@ if test "x$enable_libglvnd" = xyes ; then
     DEFINES="${DEFINES} -DUSE_LIBGLVND_GLX=1"
     DEFAULT_GL_LIB_NAME=GLX_mesa
 fi
+
+AC_ARG_WITH([gl-lib-name],
+  [AS_HELP_STRING([--with-gl-lib-name@<:@=NAME@:>@],
+    [specify GL library name @<:@default=GL@:>@])],
+  [GL_LIB=$withval],
+  [GL_LIB="$DEFAULT_GL_LIB_NAME"])
+AC_ARG_WITH([osmesa-lib-name],
+  [AS_HELP_STRING([--with-osmesa-lib-name@<:@=NAME@:>@],
+    [specify OSMesa library name @<:@default=OSMesa@:>@])],
+  [OSMESA_LIB=$withval],
+  [OSMESA_LIB=OSMesa])
+AS_IF([test "x$GL_LIB" = xyes], [GL_LIB="$DEFAULT_GL_LIB_NAME"])
+AS_IF([test "x$OSMESA_LIB" = xyes], [OSMESA_LIB=OSMesa])
+
+dnl
+dnl Mangled Mesa support
+dnl
+AC_ARG_ENABLE([mangling],
+  [AS_HELP_STRING([--enable-mangling],
+    [enable mangled symbols and library name @<:@default=disabled@:>@])],
+  [enable_mangling="${enableval}"],
+  [enable_mangling=no]
+)
+if test "x${enable_mangling}" = "xyes" ; then
+  DEFINES="${DEFINES} -DUSE_MGL_NAMESPACE"
+  GL_LIB="Mangled${GL_LIB}"
+  OSMESA_LIB="Mangled${OSMESA_LIB}"
+fi
+AC_SUBST([GL_LIB])
+AC_SUBST([OSMESA_LIB])
 
 # Check for libdrm
 PKG_CHECK_MODULES([LIBDRM], [libdrm >= $LIBDRM_REQUIRED],
