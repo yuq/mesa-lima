@@ -326,7 +326,6 @@ struct si_context {
 	int			last_multi_vgt_param;
 	int			last_rast_prim;
 	unsigned		last_sc_line_stipple;
-	int			last_vtx_reuse_depth;
 	int			current_rast_prim; /* primitive type after TES, GS */
 	bool			gs_tri_strip_adj_fix;
 

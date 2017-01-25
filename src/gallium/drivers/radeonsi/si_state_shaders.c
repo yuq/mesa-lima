@@ -331,6 +331,45 @@ static void si_set_tesseval_regs(struct si_screen *sscreen,
 		       S_028B6C_DISTRIBUTION_MODE(distribution_mode));
 }
 
+/* Polaris needs different VTX_REUSE_DEPTH settings depending on
+ * whether the "fractional odd" tessellation spacing is used.
+ *
+ * Possible VGT configurations and which state should set the register:
+ *
+ *   Reg set in | VGT shader configuration   | Value
+ * ------------------------------------------------------
+ *     VS as VS | VS                         | 30
+ *     VS as ES | ES -> GS -> VS             | 30
+ *    TES as VS | LS -> HS -> VS             | 14 or 30
+ *    TES as ES | LS -> HS -> ES -> GS -> VS | 14 or 30
+ */
+static void polaris_set_vgt_vertex_reuse(struct si_screen *sscreen,
+					 struct si_shader *shader,
+					 struct si_pm4_state *pm4)
+{
+	unsigned type = shader->selector->type;
+
+	if (sscreen->b.family < CHIP_POLARIS10)
+		return;
+
+	/* VS as VS, or VS as ES: */
+	if ((type == PIPE_SHADER_VERTEX &&
+	     !shader->key.as_ls &&
+	     !shader->is_gs_copy_shader) ||
+	    /* TES as VS, or TES as ES: */
+	    type == PIPE_SHADER_TESS_EVAL) {
+		unsigned vtx_reuse_depth = 30;
+
+		if (type == PIPE_SHADER_TESS_EVAL &&
+		    shader->selector->info.properties[TGSI_PROPERTY_TES_SPACING] ==
+		    PIPE_TESS_SPACING_FRACTIONAL_ODD)
+			vtx_reuse_depth = 14;
+
+		si_pm4_set_reg(pm4, R_028C58_VGT_VERTEX_REUSE_BLOCK_CNTL,
+			       vtx_reuse_depth);
+	}
+}
+
 static struct si_pm4_state *si_get_shader_pm4_state(struct si_shader *shader)
 {
 	if (shader->pm4)
@@ -438,6 +477,8 @@ static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
 		si_set_tesseval_regs(sscreen, shader, pm4);
+
+	polaris_set_vgt_vertex_reuse(sscreen, shader, pm4);
 }
 
 /**
@@ -625,6 +666,8 @@ static void si_shader_vs(struct si_screen *sscreen, struct si_shader *shader,
 
 	if (shader->selector->type == PIPE_SHADER_TESS_EVAL)
 		si_set_tesseval_regs(sscreen, shader, pm4);
+
+	polaris_set_vgt_vertex_reuse(sscreen, shader, pm4);
 }
 
 static unsigned si_get_ps_num_interp(struct si_shader *ps)
