@@ -30,6 +30,14 @@
 #include "context.h"
 #include <type_traits>
 
+#if ENABLE_AVX512_SIMD16
+// TODO: this belongs in state.h alongside the simdvector definition, but there is a llvm codegen issue
+struct simd16vertex
+{
+    simd16vector    attrib[KNOB_NUM_ATTRIBUTES];
+};
+
+#endif
 // Calculates the A and B coefficients for the 3 edges of the triangle
 // 
 // maths for edge equations:

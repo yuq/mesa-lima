@@ -51,6 +51,9 @@ struct PA_STATE
 
     virtual bool HasWork() = 0;
     virtual simdvector& GetSimdVector(uint32_t index, uint32_t slot) = 0;
+#if ENABLE_AVX512_SIMD16
+    virtual simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot) = 0;
+#endif
     virtual bool Assemble(uint32_t slot, simdvector verts[]) = 0;
 #if ENABLE_AVX512_SIMD16
     virtual bool Assemble_simd16(uint32_t slot, simd16vector verts[]) = 0;
@@ -61,6 +64,7 @@ struct PA_STATE
 #if ENABLE_AVX512_SIMD16
     virtual simdvertex& GetNextVsOutput_simd16_lo() = 0;
     virtual simdvertex& GetNextVsOutput_simd16_hi() = 0;
+    virtual simd16vertex& GetNextVsOutput_simd16() = 0;
 #endif
     virtual bool GetNextStreamOutput() = 0;
     virtual simdmask& GetNextVsIndices() = 0;
@@ -151,6 +155,14 @@ struct PA_STATE_OPT : public PA_STATE
         return pVertex[index].attrib[slot];
     }
 
+#if ENABLE_AVX512_SIMD16
+    simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot)
+    {
+        simd16vertex* pVertex = (simd16vertex*)pStreamBase;
+        return pVertex[index].attrib[slot];
+    }
+
+#endif
     // Assembles 4 triangles. Each simdvector is a single vertex from 4
     // triangles (xxxx yyyy zzzz wwww) and there are 3 verts per triangle.
     bool Assemble(uint32_t slot, simdvector verts[])
@@ -243,6 +255,17 @@ struct PA_STATE_OPT : public PA_STATE
 
         simdvertex* pVertex = (simdvertex*)pStreamBase;
         return pVertex[this->cur * 2 + 1];
+    }
+
+    simd16vertex& GetNextVsOutput_simd16()
+    {
+        // increment cur and prev indices
+        const uint32_t numSimdVerts = this->streamSizeInVerts / KNOB_SIMD16_WIDTH;
+        this->prev = this->cur;  // prev is undefined for first state.
+        this->cur = this->counter % numSimdVerts;
+
+        simd16vertex* pVertex = (simd16vertex*)pStreamBase;
+        return pVertex[this->cur];
     }
 
 #endif
@@ -375,6 +398,13 @@ INLINE simdvector& PaGetSimdVector(PA_STATE& pa, uint32_t index, uint32_t slot)
     return pa.GetSimdVector(index, slot);
 }
 
+#if ENABLE_AVX512_SIMD16
+INLINE simd16vector& PaGetSimdVector_simd16(PA_STATE& pa, uint32_t index, uint32_t slot)
+{
+    return pa.GetSimdVector_simd16(index, slot);
+}
+
+#endif
 INLINE __m128 swizzleLane0(const simdvector &a)
 {
     simdscalar tmp0 = _mm256_unpacklo_ps(a.x, a.z);
@@ -561,6 +591,14 @@ struct PA_STATE_CUT : public PA_STATE
         return ((simdvertex*)pStreamBase)[vertexIndex * 2 + 1];
     }
 
+    simd16vertex& GetNextVsOutput_simd16()
+    {
+        uint32_t vertexIndex = this->headVertex / KNOB_SIMD16_WIDTH;
+        this->headVertex = (this->headVertex + KNOB_SIMD16_WIDTH) % this->numVerts;
+        this->needOffsets = true;
+        return ((simd16vertex*)pStreamBase)[vertexIndex];
+    }
+
 #endif
     simdmask& GetNextVsIndices()
     {
@@ -576,6 +614,16 @@ struct PA_STATE_CUT : public PA_STATE
         return this->tmpVertex.attrib[0];
     }
 
+#if ENABLE_AVX512_SIMD16
+    simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot)
+    {
+        // unused
+        SWR_ASSERT(0 && "Not implemented");
+        static simd16vector junk;
+        return junk;
+    }
+
+#endif
     bool GetNextStreamOutput()
     {
         this->headVertex += KNOB_SIMD_WIDTH;
@@ -1191,6 +1239,15 @@ struct PA_TESS : PA_STATE
         return junk;
     }
 
+#if ENABLE_AVX512_SIMD16
+    simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot)
+    {
+        SWR_ASSERT(0, "%s NOT IMPLEMENTED", __FUNCTION__);
+        static simd16vector junk;
+        return junk;
+    }
+
+#endif
     static simdscalari GenPrimMask(uint32_t numPrims)
     {
         SWR_ASSERT(numPrims <= KNOB_SIMD_WIDTH);
@@ -1341,6 +1398,13 @@ struct PA_TESS : PA_STATE
     {
         SWR_ASSERT(0, "%s", __FUNCTION__);
         static simdvertex junk;
+        return junk;
+    }
+
+    simd16vertex& GetNextVsOutput_simd16()
+    {
+        SWR_ASSERT(0, "%s", __FUNCTION__);
+        static simd16vertex junk;
         return junk;
     }
 

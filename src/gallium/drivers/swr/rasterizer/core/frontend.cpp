@@ -1307,11 +1307,13 @@ void ProcessDraw(
                 pvCutIndices_hi = &pa.GetNextVsIndices();
             }
 
-            simdvertex &vout_lo = pa.GetNextVsOutput_simd16_lo();
-            simdvertex &vout_hi = pa.GetNextVsOutput_simd16_hi();
+            simdvertex vout_lo;
+            simdvertex vout_hi;
 
             vsContext_lo.pVout = &vout_lo;
             vsContext_hi.pVout = &vout_hi;
+
+            simd16vertex &vout = pa.GetNextVsOutput_simd16();
 
             if (i < endVertex)
             {
@@ -1347,9 +1349,36 @@ void ProcessDraw(
                 {
                     AR_BEGIN(FEVertexShader, pDC->drawId);
                     state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_lo);
+
+                    // copy SIMD vout_lo to lo part of SIMD16 vout
+                    {
+                        const uint32_t voutNumSlots = VERTEX_ATTRIB_START_SLOT + state.feNumAttributes;
+
+                        for (uint32_t i = 0; i < voutNumSlots; i += 1)
+                        {
+                            for (uint32_t j = 0; j < 4; j += 1)
+                            {
+                                vout.attrib[i][j].lo = vout_lo.attrib[i][j];
+                            }
+                        }
+                    }
+
                     if ((i + KNOB_SIMD_WIDTH) < endVertex)
                     {
                         state.pfnVertexFunc(GetPrivateState(pDC), &vsContext_hi);
+
+                        // copy SIMD vout_hi to hi part of SIMD16 vout
+                        {
+                            const uint32_t voutNumSlots = VERTEX_ATTRIB_START_SLOT + state.feNumAttributes;
+
+                            for (uint32_t i = 0; i < voutNumSlots; i += 1)
+                            {
+                                for (uint32_t j = 0; j < 4; j += 1)
+                                {
+                                    vout.attrib[i][j].hi = vout_hi.attrib[i][j];
+                                }
+                            }
+                        }
                     }
                     AR_END(FEVertexShader, 0);
 

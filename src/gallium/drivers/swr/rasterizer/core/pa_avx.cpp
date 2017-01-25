@@ -265,13 +265,13 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     for (int i = 0; i < 4; ++i)
     {
         v0[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
-        v0[i] = _mm256_permutevar8x32_ps(v0[i], perm0);
+        v0[i] = _simd_permute_ps(v0[i], perm0);
 
         v1[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
-        v1[i] = _mm256_permutevar8x32_ps(v1[i], perm1);
+        v1[i] = _simd_permute_ps(v1[i], perm1);
 
         v2[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
-        v2[i] = _mm256_permutevar8x32_ps(v2[i], perm2);
+        v2[i] = _simd_permute_ps(v2[i], perm2);
     }
 
 #endif
@@ -295,93 +295,13 @@ bool PaTriList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 
 bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-#if 0
-    const simdscalari perm0 = _simd_set_epi32(5, 2, 7, 4, 1, 6, 3, 0);
-    const simdscalari perm1 = _simd_set_epi32(6, 3, 0, 5, 2, 7, 4, 1);
-    const simdscalari perm2 = _simd_set_epi32(7, 4, 1, 6, 3, 0, 5, 2);
-
-    simd16vector &v0 = verts[0];
-    simd16vector &v1 = verts[1];
-    simd16vector &v2 = verts[2];
-
-    {
-        const simdvector &a = PaGetSimdVector(pa, 0, slot);
-        const simdvector &b = PaGetSimdVector(pa, 1, slot);
-        const simdvector &c = PaGetSimdVector(pa, 2, slot);
-
-        //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
-        //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
-        //  v2 -> a2 a5 b0 b3 b6 c1 c4 c7
-
-        // for simd x, y, z, and w
-        for (int i = 0; i < 4; i += 1)
-        {
-            v0[i].lo = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
-            v0[i].lo = _mm256_permutevar8x32_ps(v0[i].lo, perm0);
-
-            v1[i].lo = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
-            v1[i].lo = _mm256_permutevar8x32_ps(v1[i].lo, perm1);
-
-            v2[i].lo = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
-            v2[i].lo = _mm256_permutevar8x32_ps(v2[i].lo, perm2);
-        }
-    }
-
-    {
-        const simdvector &a = PaGetSimdVector(pa, 3, slot);
-        const simdvector &b = PaGetSimdVector(pa, 4, slot);
-        const simdvector &c = PaGetSimdVector(pa, 5, slot);
-
-        //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
-        //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
-        //  v2 -> a2 a5 b0 b3 b6 c1 c4 c7
-
-        // for simd x, y, z, and w
-        for (int i = 0; i < 4; i += 1)
-        {
-            v0[i].hi = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
-            v0[i].hi = _mm256_permutevar8x32_ps(v0[i].hi, perm0);
-
-            v1[i].hi = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
-            v1[i].hi = _mm256_permutevar8x32_ps(v1[i].hi, perm1);
-
-            v2[i].hi = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
-            v2[i].hi = _mm256_permutevar8x32_ps(v2[i].hi, perm2);
-        }
-    }
-
-#else
-#if 1
-    const simdvector &a_lo = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 0, slot));
-    const simdvector &a_hi = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 1, slot));
-    const simdvector &b_lo = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 2, slot));
-    const simdvector &b_hi = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 3, slot));
-    const simdvector &c_lo = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 4, slot));
-    const simdvector &c_hi = reinterpret_cast<const simdvector &>(PaGetSimdVector(pa, 5, slot));
-
-    simd16vector a;
-    simd16vector b;
-    simd16vector c;
-
-    for (uint32_t i = 0; i < 4; i += 1)
-    {
-        a[i].lo = a_lo[i];
-        a[i].hi = a_hi[i];
-        b[i].lo = b_lo[i];
-        b[i].hi = b_hi[i];
-        c[i].lo = c_lo[i];
-        c[i].hi = c_hi[i];
-    }
-
-#else
-    const simd16vector &a = reinterpret_cast<const simd16vector &>(PaGetSimdVector(pa, 0 * 2, slot));
-    const simd16vector &b = reinterpret_cast<const simd16vector &>(PaGetSimdVector(pa, 1 * 2, slot));
-    const simd16vector &c = reinterpret_cast<const simd16vector &>(PaGetSimdVector(pa, 2 * 2, slot));
-
-#endif
     const simd16scalari perm0 = _simd16_set_epi32(13, 10, 7, 4, 1, 14, 11,  8, 5, 2, 15, 12,  9, 6, 3, 0);
     const simd16scalari perm1 = _simd16_set_epi32(14, 11, 8, 5, 2, 15, 12,  9, 6, 3,  0, 13, 10, 7, 4, 1);
     const simd16scalari perm2 = _simd16_set_epi32(15, 12, 9, 6, 3,  0, 13, 10, 7, 4,  1, 14, 11, 8, 5, 2);
+
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
+    const simd16vector &c = PaGetSimdVector_simd16(pa, 2, slot);
 
     simd16vector &v0 = verts[0];
     simd16vector &v1 = verts[1];
@@ -404,7 +324,6 @@ bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
         v2[i] = _simd16_permute_ps(v2[i], perm2);
     }
 
-#endif
     SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
@@ -416,13 +335,29 @@ void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m12
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
 #if ENABLE_AVX512_SIMD16
-    const uint32_t i0 = pa.useAlternateOffset ? 3 : 0;
-    const uint32_t i1 = pa.useAlternateOffset ? 4 : 1;
-    const uint32_t i2 = pa.useAlternateOffset ? 5 : 2;
+    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+    const simd16vector &c_16 = PaGetSimdVector_simd16(pa, 2, slot);
 
-    simdvector& a = PaGetSimdVector(pa, i0, slot);
-    simdvector& b = PaGetSimdVector(pa, i1, slot);
-    simdvector& c = PaGetSimdVector(pa, i2, slot);
+    simdvector a;
+    simdvector b;
+    simdvector c;
+
+    for (uint32_t i = 0; i < 4; i += 1)
+    {
+        if (pa.useAlternateOffset)
+        {
+            a[i] = b_16[i].hi;
+            b[i] = c_16[i].lo;
+            c[i] = c_16[i].hi;
+        }
+        else
+        {
+            a[i] = a_16[i].lo;
+            b[i] = a_16[i].hi;
+            c[i] = b_16[i].lo;
+        }
+    }
 
 #else
     simdvector& a = PaGetSimdVector(pa, 0, slot);
@@ -522,6 +457,39 @@ bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if 0 // ENABLE_AVX512_SIMD16
+bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
+{
+    const simd16vector &a = PaGetSimdVector(pa, pa.prev, slot);
+    const simd16vector &b = PaGetSimdVector(pa, pa.cur, slot);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
+    //  v0 -> a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+    //  v1 -> a1 a3 a3 a5 a5 a7 a7 a9 a9 aB aB aD aD aF aF b1
+    //  v2 -> a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
+
+    // for simd16 x, y, z, and w
+    for (int i = 0; i < 4; i += 1)
+    {
+        simd16scalar perm0 = _simd16_permute2f128_ps(a[i], a[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF a0 a1 a2 a3
+        simd16scalar perm1 = _simd16_permute2f128_ps(b[i], b[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
+
+        simd16scalar blend = _simd16_blend_ps(perm0, perm1, 0xF000);     //                         // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1 b2 b3
+        simd16scalar shuff = _simd16_shuffle_ps(a[i], blend, _MM_SHUFFLE(1, 0, 3, 2));              // a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1
+
+        v0[i] = a[i];                                                                               // a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+        v1[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(3, 1, 3, 1));                           // a1 a3 a3 a5 a5 a7 a7 a9 a9 aB aB aD aD aF aF b1
+        v2[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(2, 2, 2, 2));                           // a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
+    }
+
+    SetNextPaState(pa, PaTriStrip1, PaTriStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    return true;
+}
+
+#endif
 void PaTriStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
     simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
@@ -1033,8 +1001,8 @@ bool PaRectList1(
     simdvector verts[])
 {
     // SIMD vectors a and b are the last two vertical outputs from the vertex shader.
-    simdvector& a = PaGetSimdVector(pa, 0, slot);   // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7 }
-    simdvector& b = PaGetSimdVector(pa, 1, slot);   // b[] = { v8, v9, v10, v11, v12, v13, v14, v15 }
+    simdvector& a = PaGetSimdVector(pa, 0, slot);           // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7 }
+    simdvector& b = PaGetSimdVector(pa, 1, slot);           // b[] = { v8, v9, v10, v11, v12, v13, v14, v15 }
 
     __m256 tmp0, tmp1, tmp2;
 
@@ -1042,34 +1010,34 @@ bool PaRectList1(
     for(int i = 0; i < 4; ++i)
     {
         simdvector& v0 = verts[0];                          // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
-        tmp0 = _mm256_permute2f128_ps(b[i], b[i], 0x01);  // tmp0 = { v12, v13, v14, v15, v8, v9, v10, v11 }
-        v0[i] = _mm256_blend_ps(a[i], tmp0, 0x20);        //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
-        tmp1  = _mm256_permute_ps(v0[i], 0xF0);           // tmp1 = {  v0,  v0,  v3,  v3,  *,  *,  *,  * }
-        v0[i] = _mm256_permute_ps(v0[i], 0x5A);           //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
-        v0[i] = _mm256_blend_ps(tmp1, v0[i], 0xF0);       //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
+        tmp0 = _mm256_permute2f128_ps(b[i], b[i], 0x01);    // tmp0 = { v12, v13, v14, v15, v8, v9, v10, v11 }
+        v0[i] = _mm256_blend_ps(a[i], tmp0, 0x20);          //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
+        tmp1  = _mm256_permute_ps(v0[i], 0xF0);             // tmp1 = {  v0,  v0,  v3,  v3,  *,  *,  *,  * }
+        v0[i] = _mm256_permute_ps(v0[i], 0x5A);             //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
+        v0[i] = _mm256_blend_ps(tmp1, v0[i], 0xF0);         //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
 
         /// NOTE This is a bit expensive due to conflicts between vertices in 'a' and 'b'.
         ///      AVX2 should make this much cheaper.
         simdvector& v1 = verts[1];                          // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
-        v1[i] = _mm256_permute_ps(a[i], 0x09);            //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
-        tmp1  = _mm256_permute_ps(a[i], 0x43);            // tmp1 = {  *,  *,  *,  *, v7, *, v4, v5 }
-        tmp2  = _mm256_blend_ps(v1[i], tmp1, 0xF0);       // tmp2 = { v1, v2,  *,  *, v7, *, v4, v5 }
-        tmp1  = _mm256_permute2f128_ps(tmp2, tmp2, 0x1);  // tmp1 = { v7,  *, v4,  v5, *  *,  *,  * }
-        v1[i] = _mm256_permute_ps(tmp0, 0xE0);            //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
-        v1[i] = _mm256_blend_ps(tmp2, v1[i], 0xE0);       //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
-        v1[i] = _mm256_blend_ps(v1[i], tmp1, 0x0C);       //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
+        v1[i] = _mm256_permute_ps(a[i], 0x09);              //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
+        tmp1  = _mm256_permute_ps(a[i], 0x43);              // tmp1 = {  *,  *,  *,  *, v7, *, v4, v5 }
+        tmp2  = _mm256_blend_ps(v1[i], tmp1, 0xF0);         // tmp2 = { v1, v2,  *,  *, v7, *, v4, v5 }
+        tmp1  = _mm256_permute2f128_ps(tmp2, tmp2, 0x1);    // tmp1 = { v7,  *, v4,  v5, *  *,  *,  * }
+        v1[i] = _mm256_permute_ps(tmp0, 0xE0);              //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
+        v1[i] = _mm256_blend_ps(tmp2, v1[i], 0xE0);         //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
+        v1[i] = _mm256_blend_ps(v1[i], tmp1, 0x0C);         //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
 
         // verts[2] = { v2,  w, v5,  x, v8,  y, v11, z }
         simdvector& v2 = verts[2];                          // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
-        v2[i] = _mm256_permute_ps(tmp0, 0x30);            //   v2 = { *, *, *, *, v8, *, v11, * }
-        tmp1  = _mm256_permute_ps(tmp2, 0x31);            // tmp1 = { v2, *, v5, *, *, *, *, * }
+        v2[i] = _mm256_permute_ps(tmp0, 0x30);              //   v2 = { *, *, *, *, v8, *, v11, * }
+        tmp1  = _mm256_permute_ps(tmp2, 0x31);              // tmp1 = { v2, *, v5, *, *, *, *, * }
         v2[i] = _mm256_blend_ps(tmp1, v2[i], 0xF0);
 
         // Need to compute 4th implied vertex for the rectangle.
         tmp2  = _mm256_sub_ps(v0[i], v1[i]);
-        tmp2  = _mm256_add_ps(tmp2, v2[i]);               // tmp2 = {  w,  *,  x, *, y,  *,  z,  * }
-        tmp2  = _mm256_permute_ps(tmp2, 0xA0);            // tmp2 = {  *,  w,  *, x, *,   y,  *,  z }
-        v2[i] = _mm256_blend_ps(v2[i], tmp2, 0xAA);       //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
+        tmp2  = _mm256_add_ps(tmp2, v2[i]);                 // tmp2 = {  w,  *,  x, *, y,  *,  z,  * }
+        tmp2  = _mm256_permute_ps(tmp2, 0xA0);              // tmp2 = {  *,  w,  *, x, *,   y,  *,  z }
+        v2[i] = _mm256_blend_ps(v2[i], tmp2, 0xAA);         //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
     }
 
     SetNextPaState(pa, PaRectList1, PaRectListSingle0, 0, KNOB_SIMD_WIDTH, true);
@@ -1133,44 +1101,60 @@ bool PaRectList1_simd16(
     uint32_t slot,
     simd16vector verts[])
 {
-    // SIMD vectors a and b are the last two vertical outputs from the vertex shader.
-    simdvector& a = PaGetSimdVector(pa, 0, slot);   // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7 }
-    simdvector& b = PaGetSimdVector(pa, 1, slot);   // b[] = { v8, v9, v10, v11, v12, v13, v14, v15 }
+    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot); // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7, v8, v9, v10, v11, v12, v13, v14, v15 }
+    const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot); // b[] = { v16...but not used by this implementation.. }
+
+    simdvector a;
+    simdvector b;
+
+    for (uint32_t i = 0; i < 4; i += 1)
+    {
+        if (pa.useAlternateOffset)
+        {
+            a[i] = b_16[i].lo;
+            b[i] = b_16[i].hi;
+        }
+        else
+        {
+            a[i] = a_16[i].lo;
+            b[i] = a_16[i].hi;
+        }
+    }
 
     __m256 tmp0, tmp1, tmp2;
 
     // Loop over each component in the simdvector.
     for (int i = 0; i < 4; i += 1)
     {
-        simd16vector& v0 = verts[0];                          // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
-        tmp0 = _mm256_permute2f128_ps(b[i], b[i], 0x01);  // tmp0 = { v12, v13, v14, v15, v8, v9, v10, v11 }
-        v0[i].lo = _mm256_blend_ps(a[i], tmp0, 0x20);        //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
+        simd16vector& v0 = verts[0];                        // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
+        tmp0 = _mm256_permute2f128_ps(b[i], b[i], 0x01);    // tmp0 = { v12, v13, v14, v15, v8, v9, v10, v11 }
+        v0[i].lo = _mm256_blend_ps(a[i], tmp0, 0x20);       //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
         tmp1 = _mm256_permute_ps(v0[i].lo, 0xF0);           // tmp1 = {  v0,  v0,  v3,  v3,  *,  *,  *,  * }
-        v0[i].lo = _mm256_permute_ps(v0[i].lo, 0x5A);           //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
-        v0[i].lo = _mm256_blend_ps(tmp1, v0[i].lo, 0xF0);       //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
+        v0[i].lo = _mm256_permute_ps(v0[i].lo, 0x5A);       //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
+        v0[i].lo = _mm256_blend_ps(tmp1, v0[i].lo, 0xF0);   //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
 
-                                                                /// NOTE This is a bit expensive due to conflicts between vertices in 'a' and 'b'.
-                                                                ///      AVX2 should make this much cheaper.
-        simd16vector& v1 = verts[1];                          // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
-        v1[i].lo = _mm256_permute_ps(a[i], 0x09);            //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
-        tmp1 = _mm256_permute_ps(a[i], 0x43);            // tmp1 = {  *,  *,  *,  *, v7, *, v4, v5 }
+        /// NOTE This is a bit expensive due to conflicts between vertices in 'a' and 'b'.
+        ///      AVX2 should make this much cheaper.
+        simd16vector& v1 = verts[1];                        // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
+        v1[i].lo = _mm256_permute_ps(a[i], 0x09);           //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
+        tmp1 = _mm256_permute_ps(a[i], 0x43);               // tmp1 = {  *,  *,  *,  *, v7, *, v4, v5 }
         tmp2 = _mm256_blend_ps(v1[i].lo, tmp1, 0xF0);       // tmp2 = { v1, v2,  *,  *, v7, *, v4, v5 }
-        tmp1 = _mm256_permute2f128_ps(tmp2, tmp2, 0x1);  // tmp1 = { v7,  *, v4,  v5, *  *,  *,  * }
-        v1[i].lo = _mm256_permute_ps(tmp0, 0xE0);            //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
-        v1[i].lo = _mm256_blend_ps(tmp2, v1[i].lo, 0xE0);       //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
-        v1[i].lo = _mm256_blend_ps(v1[i].lo, tmp1, 0x0C);       //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
+        tmp1 = _mm256_permute2f128_ps(tmp2, tmp2, 0x1);     // tmp1 = { v7,  *, v4,  v5, *  *,  *,  * }
+        v1[i].lo = _mm256_permute_ps(tmp0, 0xE0);           //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
+        v1[i].lo = _mm256_blend_ps(tmp2, v1[i].lo, 0xE0);   //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
+        v1[i].lo = _mm256_blend_ps(v1[i].lo, tmp1, 0x0C);   //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
 
-                                                                // verts[2] = { v2,  w, v5,  x, v8,  y, v11, z }
-        simd16vector& v2 = verts[2];                          // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
-        v2[i].lo = _mm256_permute_ps(tmp0, 0x30);            //   v2 = { *, *, *, *, v8, *, v11, * }
-        tmp1 = _mm256_permute_ps(tmp2, 0x31);            // tmp1 = { v2, *, v5, *, *, *, *, * }
+        // verts[2] = { v2,  w, v5,  x, v8,  y, v11, z }
+        simd16vector& v2 = verts[2];                        // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
+        v2[i].lo = _mm256_permute_ps(tmp0, 0x30);           //   v2 = { *, *, *, *, v8, *, v11, * }
+        tmp1 = _mm256_permute_ps(tmp2, 0x31);               // tmp1 = { v2, *, v5, *, *, *, *, * }
         v2[i].lo = _mm256_blend_ps(tmp1, v2[i].lo, 0xF0);
 
         // Need to compute 4th implied vertex for the rectangle.
         tmp2 = _mm256_sub_ps(v0[i].lo, v1[i].lo);
         tmp2 = _mm256_add_ps(tmp2, v2[i].lo);               // tmp2 = {  w,  *,  x, *, y,  *,  z,  * }
-        tmp2 = _mm256_permute_ps(tmp2, 0xA0);            // tmp2 = {  *,  w,  *, x, *,   y,  *,  z }
-        v2[i].lo = _mm256_blend_ps(v2[i].lo, tmp2, 0xAA);       //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
+        tmp2 = _mm256_permute_ps(tmp2, 0xA0);               // tmp2 = {  *,  w,  *, x, *,   y,  *,  z }
+        v2[i].lo = _mm256_blend_ps(v2[i].lo, tmp2, 0xAA);   //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
 
         v0[i].hi = _simd_setzero_ps();
         v1[i].hi = _simd_setzero_ps();
@@ -1218,9 +1202,25 @@ void PaRectListSingle0(
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
 #if ENABLE_AVX512_SIMD16
-    const uint32_t i0 = pa.useAlternateOffset ? 3 : 0;
+    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
 
-    simdvector& a = PaGetSimdVector(pa, i0, slot);
+    simdvector a;
+    simdvector b;
+
+    for (uint32_t i = 0; i < 4; i += 1)
+    {
+        if (pa.useAlternateOffset)
+        {
+            a[i] = b_16[i].lo;
+            b[i] = b_16[i].hi;
+        }
+        else
+        {
+            a[i] = a_16[i].lo;
+            b[i] = a_16[i].hi;
+        }
+    }
 
 #else
     simdvector& a = PaGetSimdVector(pa, 0, slot);
