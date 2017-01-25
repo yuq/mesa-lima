@@ -443,11 +443,13 @@ wsi_wl_surface_get_present_modes(VkIcdSurfaceBase *surface,
       return VK_SUCCESS;
    }
 
-   assert(*pPresentModeCount >= ARRAY_SIZE(present_modes));
+   *pPresentModeCount = MIN2(*pPresentModeCount, ARRAY_SIZE(present_modes));
    typed_memcpy(pPresentModes, present_modes, *pPresentModeCount);
-   *pPresentModeCount = ARRAY_SIZE(present_modes);
 
-   return VK_SUCCESS;
+   if (*pPresentModeCount < ARRAY_SIZE(present_modes))
+      return VK_INCOMPLETE;
+   else
+      return VK_SUCCESS;
 }
 
 VkResult wsi_create_wl_surface(const VkAllocationCallbacks *pAllocator,
