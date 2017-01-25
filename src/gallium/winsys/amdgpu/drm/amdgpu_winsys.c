@@ -100,7 +100,7 @@ static unsigned cik_get_num_tile_pipes(struct amdgpu_gpu_info *info)
 static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
 {
    struct amdgpu_buffer_size_alignments alignment_info = {};
-   struct amdgpu_heap_info vram, gtt;
+   struct amdgpu_heap_info vram, vram_vis, gtt;
    struct drm_amdgpu_info_hw_ip dma = {}, uvd = {}, vce = {};
    uint32_t vce_version = 0, vce_feature = 0, uvd_version = 0, uvd_feature = 0;
    uint32_t unused_feature;
@@ -135,6 +135,14 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    r = amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM, 0, &vram);
    if (r) {
       fprintf(stderr, "amdgpu: amdgpu_query_heap_info(vram) failed.\n");
+      goto fail;
+   }
+
+   r = amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM,
+                              AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED,
+                              &vram_vis);
+   if (r) {
+      fprintf(stderr, "amdgpu: amdgpu_query_heap_info(vram_vis) failed.\n");
       goto fail;
    }
 
@@ -322,6 +330,7 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    /* Set hardware information. */
    ws->info.gart_size = gtt.heap_size;
    ws->info.vram_size = vram.heap_size;
+   ws->info.vram_vis_size = vram_vis.heap_size;
    /* The kernel can split large buffers, so we can do large allocations. */
    ws->info.max_alloc_size = MAX2(ws->info.vram_size, ws->info.gart_size) * 0.9;
    /* convert the shader clock from KHz to MHz */

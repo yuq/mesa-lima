@@ -372,6 +372,7 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     }
     ws->info.gart_size = gem_info.gart_size;
     ws->info.vram_size = gem_info.vram_size;
+    ws->info.vram_vis_size = gem_info.vram_visible;
 
     /* Radeon allocates all buffers as contigous, which makes large allocations
      * unlikely to succeed. */

@@ -1279,6 +1279,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("chip_class = %i\n", rscreen->info.chip_class);
 		printf("gart_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.gart_size, 1024*1024));
 		printf("vram_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.vram_size, 1024*1024));
+		printf("vram_vis_size = %i MB\n", (int)DIV_ROUND_UP(rscreen->info.vram_vis_size, 1024*1024));
 		printf("max_alloc_size = %i MB\n",
 		       (int)DIV_ROUND_UP(rscreen->info.max_alloc_size, 1024*1024));
 		printf("has_virtual_memory = %i\n", rscreen->info.has_virtual_memory);
