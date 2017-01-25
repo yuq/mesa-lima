@@ -462,6 +462,24 @@ void anv_GetPhysicalDeviceFormatProperties(
                pFormatProperties);
 }
 
+void anv_GetPhysicalDeviceFormatProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkFormat                                    format,
+    VkFormatProperties2KHR*                     pFormatProperties)
+{
+   anv_GetPhysicalDeviceFormatProperties(physicalDevice, format,
+                                         &pFormatProperties->formatProperties);
+
+   for (struct anv_common *c = pFormatProperties->pNext;
+        c != NULL; c = c->pNext) {
+      switch (c->sType) {
+      default:
+         anv_debug_ignored_stype(c->sType);
+         break;
+      }
+   }
+}
+
 static VkResult
 anv_get_image_format_properties(
    struct anv_physical_device *physical_device,
@@ -637,6 +655,31 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
                                           pImageFormatProperties);
 }
 
+VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    const VkPhysicalDeviceImageFormatInfo2KHR*  pImageFormatInfo,
+    VkImageFormatProperties2KHR*                pImageFormatProperties)
+{
+   ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   VkResult result;
+
+   result = anv_get_image_format_properties(physical_device, pImageFormatInfo,
+               &pImageFormatProperties->imageFormatProperties);
+   if (result != VK_SUCCESS)
+      return result;
+
+   for (struct anv_common *c = pImageFormatProperties->pNext;
+        c != NULL; c = c->pNext) {
+      switch (c->sType) {
+      default:
+         anv_debug_ignored_stype(c->sType);
+         break;
+      }
+   }
+
+   return VK_SUCCESS;
+}
+
 void anv_GetPhysicalDeviceSparseImageFormatProperties(
     VkPhysicalDevice                            physicalDevice,
     VkFormat                                    format,
@@ -649,4 +692,14 @@ void anv_GetPhysicalDeviceSparseImageFormatProperties(
 {
    /* Sparse images are not yet supported. */
    *pNumProperties = 0;
+}
+
+void anv_GetPhysicalDeviceSparseImageFormatProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    const VkPhysicalDeviceSparseImageFormatInfo2KHR* pFormatInfo,
+    uint32_t*                                   pPropertyCount,
+    VkSparseImageFormatProperties2KHR*          pProperties)
+{
+   /* Sparse images are not yet supported. */
+   *pPropertyCount = 0;
 }

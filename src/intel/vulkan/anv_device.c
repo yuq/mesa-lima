@@ -253,6 +253,10 @@ static const VkExtensionProperties global_extensions[] = {
       .specVersion = 5,
    },
 #endif
+   {
+      .extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
+      .specVersion = 1,
+   },
 };
 
 static const VkExtensionProperties device_extensions[] = {
@@ -497,6 +501,21 @@ void anv_GetPhysicalDeviceFeatures(
       pdevice->compiler->scalar_stage[MESA_SHADER_GEOMETRY];
 }
 
+void anv_GetPhysicalDeviceFeatures2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceFeatures2KHR*               pFeatures)
+{
+   anv_GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
+
+   for (struct anv_common *c = pFeatures->pNext; c != NULL; c = c->pNext) {
+      switch (c->sType) {
+      default:
+         anv_debug_ignored_stype(c->sType);
+         break;
+      }
+   }
+}
+
 void anv_GetPhysicalDeviceProperties(
     VkPhysicalDevice                            physicalDevice,
     VkPhysicalDeviceProperties*                 pProperties)
@@ -640,6 +659,21 @@ void anv_GetPhysicalDeviceProperties(
    memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
 }
 
+void anv_GetPhysicalDeviceProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceProperties2KHR*             pProperties)
+{
+   anv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
+
+   for (struct anv_common *c = pProperties->pNext; c != NULL; c = c->pNext) {
+      switch (c->sType) {
+      default:
+         anv_debug_ignored_stype(c->sType);
+         break;
+      }
+   }
+}
+
 static void
 anv_get_queue_family_properties(struct anv_physical_device *phys_dev,
                                 VkQueueFamilyProperties *props)
@@ -677,6 +711,45 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
 
    *pCount = 1;
    anv_get_queue_family_properties(phys_dev, pQueueFamilyProperties);
+}
+
+void anv_GetPhysicalDeviceQueueFamilyProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    uint32_t*                                   pQueueFamilyPropertyCount,
+    VkQueueFamilyProperties2KHR*                pQueueFamilyProperties)
+{
+
+   ANV_FROM_HANDLE(anv_physical_device, phys_dev, physicalDevice);
+
+   if (pQueueFamilyProperties == NULL) {
+      *pQueueFamilyPropertyCount = 1;
+      return;
+   }
+
+   /* The spec implicitly allows the incoming count to be 0. From the Vulkan
+    * 1.0.38 spec, Section 4.1 Physical Devices:
+    *
+    *     If the value referenced by pQueueFamilyPropertyCount is not 0 [then
+    *     do stuff].
+    */
+   if (*pQueueFamilyPropertyCount == 0)
+      return;
+
+   /* We support exactly one queue family. So need to traverse only the first
+    * array element's pNext chain.
+    */
+   *pQueueFamilyPropertyCount = 1;
+   anv_get_queue_family_properties(phys_dev,
+         &pQueueFamilyProperties->queueFamilyProperties);
+
+   for (struct anv_common *c = pQueueFamilyProperties->pNext;
+        c != NULL; c = c->pNext) {
+      switch (c->sType) {
+      default:
+         anv_debug_ignored_stype(c->sType);
+         break;
+      }
+   }
 }
 
 void anv_GetPhysicalDeviceMemoryProperties(
@@ -729,6 +802,23 @@ void anv_GetPhysicalDeviceMemoryProperties(
       .size = heap_size,
       .flags = VK_MEMORY_HEAP_DEVICE_LOCAL_BIT,
    };
+}
+
+void anv_GetPhysicalDeviceMemoryProperties2KHR(
+    VkPhysicalDevice                            physicalDevice,
+    VkPhysicalDeviceMemoryProperties2KHR*       pMemoryProperties)
+{
+   anv_GetPhysicalDeviceMemoryProperties(physicalDevice,
+                                         &pMemoryProperties->memoryProperties);
+
+   for (struct anv_common *c = pMemoryProperties->pNext;
+        c != NULL; c = c->pNext) {
+      switch (c->sType) {
+      default:
+         anv_debug_ignored_stype(c->sType);
+         break;
+      }
+   }
 }
 
 PFN_vkVoidFunction anv_GetInstanceProcAddr(
