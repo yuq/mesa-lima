@@ -640,11 +640,27 @@ void anv_GetPhysicalDeviceProperties(
    memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
 }
 
+static void
+anv_get_queue_family_properties(struct anv_physical_device *phys_dev,
+                                VkQueueFamilyProperties *props)
+{
+   *props = (VkQueueFamilyProperties) {
+      .queueFlags = VK_QUEUE_GRAPHICS_BIT |
+                    VK_QUEUE_COMPUTE_BIT |
+                    VK_QUEUE_TRANSFER_BIT,
+      .queueCount = 1,
+      .timestampValidBits = 36, /* XXX: Real value here */
+      .minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
+   };
+}
+
 void anv_GetPhysicalDeviceQueueFamilyProperties(
     VkPhysicalDevice                            physicalDevice,
     uint32_t*                                   pCount,
     VkQueueFamilyProperties*                    pQueueFamilyProperties)
 {
+   ANV_FROM_HANDLE(anv_physical_device, phys_dev, physicalDevice);
+
    if (pQueueFamilyProperties == NULL) {
       *pCount = 1;
       return;
@@ -659,16 +675,8 @@ void anv_GetPhysicalDeviceQueueFamilyProperties(
    if (*pCount == 0)
       return;
 
-   *pQueueFamilyProperties = (VkQueueFamilyProperties) {
-      .queueFlags = VK_QUEUE_GRAPHICS_BIT |
-                    VK_QUEUE_COMPUTE_BIT |
-                    VK_QUEUE_TRANSFER_BIT,
-      .queueCount = 1,
-      .timestampValidBits = 36, /* XXX: Real value here */
-      .minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
-   };
-
    *pCount = 1;
+   anv_get_queue_family_properties(phys_dev, pQueueFamilyProperties);
 }
 
 void anv_GetPhysicalDeviceMemoryProperties(
