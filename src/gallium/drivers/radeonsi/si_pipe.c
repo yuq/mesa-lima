@@ -234,6 +234,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	si_init_all_descriptors(sctx);
 	si_init_state_functions(sctx);
 	si_init_shader_functions(sctx);
+	si_init_ia_multi_vgt_param_table(sctx);
 
 	if (sctx->b.chip_class >= CIK)
 		cik_init_sdma_functions(sctx);

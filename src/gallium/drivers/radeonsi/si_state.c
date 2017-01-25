@@ -918,6 +918,8 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 	si_update_poly_offset_state(sctx);
 
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
+	sctx->ia_multi_vgt_param_key.u.line_stipple_enabled =
+		rs->line_stipple_enable;
 	sctx->do_update_shaders = true;
 }
 

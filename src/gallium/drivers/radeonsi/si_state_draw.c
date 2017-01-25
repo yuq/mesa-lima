@@ -261,13 +261,11 @@ static unsigned si_num_prims_for_vertices(const struct pipe_draw_info *info)
 	}
 }
 
-static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
-					  const struct pipe_draw_info *info,
-					  unsigned num_patches)
+static unsigned
+si_get_init_multi_vgt_param(struct si_screen *sscreen,
+			    union si_vgt_param_key *key)
 {
-	struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
-	unsigned prim = info->mode;
-	unsigned primgroup_size = 128; /* recommended without a GS */
+	STATIC_ASSERT(sizeof(union si_vgt_param_key) == 4);
 	unsigned max_primgroup_in_wave = 2;
 
 	/* SWITCH_ON_EOP(0) is always preferable. */
@@ -277,35 +275,28 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	bool partial_vs_wave = false;
 	bool partial_es_wave = false;
 
-	if (sctx->gs_shader.cso)
-		primgroup_size = 64; /* recommended with a GS */
-
-	if (sctx->tes_shader.cso) {
-		/* primgroup_size must be set to a multiple of NUM_PATCHES */
-		primgroup_size = num_patches;
-
+	if (key->u.uses_tess) {
 		/* SWITCH_ON_EOI must be set if PrimID is used. */
-		if ((sctx->tcs_shader.cso && sctx->tcs_shader.cso->info.uses_primid) ||
-		    sctx->tes_shader.cso->info.uses_primid)
+		if (key->u.tcs_tes_uses_prim_id)
 			ia_switch_on_eoi = true;
 
 		/* Bug with tessellation and GS on Bonaire and older 2 SE chips. */
-		if ((sctx->b.family == CHIP_TAHITI ||
-		     sctx->b.family == CHIP_PITCAIRN ||
-		     sctx->b.family == CHIP_BONAIRE) &&
-		    sctx->gs_shader.cso)
+		if ((sscreen->b.family == CHIP_TAHITI ||
+		     sscreen->b.family == CHIP_PITCAIRN ||
+		     sscreen->b.family == CHIP_BONAIRE) &&
+		    key->u.uses_gs)
 			partial_vs_wave = true;
 
 		/* Needed for 028B6C_DISTRIBUTION_MODE != 0 */
-		if (sctx->screen->has_distributed_tess) {
-			if (sctx->gs_shader.cso) {
+		if (sscreen->has_distributed_tess) {
+			if (key->u.uses_gs) {
 				partial_es_wave = true;
 
 				/* GPU hang workaround. */
-				if (sctx->b.family == CHIP_TONGA ||
-				    sctx->b.family == CHIP_FIJI ||
-				    sctx->b.family == CHIP_POLARIS10 ||
-				    sctx->b.family == CHIP_POLARIS11)
+				if (sscreen->b.family == CHIP_TONGA ||
+				    sscreen->b.family == CHIP_FIJI ||
+				    sscreen->b.family == CHIP_POLARIS10 ||
+				    sscreen->b.family == CHIP_POLARIS11)
 					partial_vs_wave = true;
 			} else {
 				partial_vs_wave = true;
@@ -314,13 +305,13 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	}
 
 	/* This is a hardware requirement. */
-	if ((rs && rs->line_stipple_enable) ||
-	    (sctx->b.screen->debug_flags & DBG_SWITCH_ON_EOP)) {
+	if (key->u.line_stipple_enabled ||
+	    (sscreen->b.debug_flags & DBG_SWITCH_ON_EOP)) {
 		ia_switch_on_eop = true;
 		wd_switch_on_eop = true;
 	}
 
-	if (sctx->b.chip_class >= CIK) {
+	if (sscreen->b.chip_class >= CIK) {
 		/* WD_SWITCH_ON_EOP has no effect on GPUs with less than
 		 * 4 shader engines. Set 1 to pass the assertion below.
 		 * The other cases are hardware requirements.
@@ -328,24 +319,24 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		 * Polaris supports primitive restart with WD_SWITCH_ON_EOP=0
 		 * for points, line strips, and tri strips.
 		 */
-		if (sctx->b.screen->info.max_se < 4 ||
-		    prim == PIPE_PRIM_POLYGON ||
-		    prim == PIPE_PRIM_LINE_LOOP ||
-		    prim == PIPE_PRIM_TRIANGLE_FAN ||
-		    prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY ||
-		    (info->primitive_restart &&
-		     (sctx->b.family < CHIP_POLARIS10 ||
-		      (prim != PIPE_PRIM_POINTS &&
-		       prim != PIPE_PRIM_LINE_STRIP &&
-		       prim != PIPE_PRIM_TRIANGLE_STRIP))) ||
-		    info->count_from_stream_output)
+		if (sscreen->b.info.max_se < 4 ||
+		    key->u.prim == PIPE_PRIM_POLYGON ||
+		    key->u.prim == PIPE_PRIM_LINE_LOOP ||
+		    key->u.prim == PIPE_PRIM_TRIANGLE_FAN ||
+		    key->u.prim == PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY ||
+		    (key->u.primitive_restart &&
+		     (sscreen->b.family < CHIP_POLARIS10 ||
+		      (key->u.prim != PIPE_PRIM_POINTS &&
+		       key->u.prim != PIPE_PRIM_LINE_STRIP &&
+		       key->u.prim != PIPE_PRIM_TRIANGLE_STRIP))) ||
+		    key->u.count_from_stream_output)
 			wd_switch_on_eop = true;
 
 		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
 		 * We don't know that for indirect drawing, so treat it as
 		 * always problematic. */
-		if (sctx->b.family == CHIP_HAWAII &&
-		    (info->indirect || info->instance_count > 1))
+		if (sscreen->b.family == CHIP_HAWAII &&
+		    key->u.uses_instancing)
 			wd_switch_on_eop = true;
 
 		/* Performance recommendation for 4 SE Gfx7-8 parts if
@@ -353,41 +344,26 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		 * Assume indirect draws always use small instances.
 		 * This is needed for good VS wave utilization.
 		 */
-		if (sctx->b.chip_class <= VI &&
-		    sctx->b.screen->info.max_se >= 4 &&
-		    (info->indirect ||
-		     (info->instance_count > 1 &&
-		      si_num_prims_for_vertices(info) < primgroup_size)))
+		if (sscreen->b.chip_class <= VI &&
+		    sscreen->b.info.max_se == 4 &&
+		    key->u.multi_instances_smaller_than_primgroup)
 			wd_switch_on_eop = true;
 
 		/* Required on CIK and later. */
-		if (sctx->b.screen->info.max_se > 2 && !wd_switch_on_eop)
+		if (sscreen->b.info.max_se > 2 && !wd_switch_on_eop)
 			ia_switch_on_eoi = true;
 
 		/* Required by Hawaii and, for some special cases, by VI. */
 		if (ia_switch_on_eoi &&
-		    (sctx->b.family == CHIP_HAWAII ||
-		     (sctx->b.chip_class == VI &&
-		      (sctx->gs_shader.cso || max_primgroup_in_wave != 2))))
+		    (sscreen->b.family == CHIP_HAWAII ||
+		     (sscreen->b.chip_class == VI &&
+		      (key->u.uses_gs || max_primgroup_in_wave != 2))))
 			partial_vs_wave = true;
 
 		/* Instancing bug on Bonaire. */
-		if (sctx->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
-		    (info->indirect || info->instance_count > 1))
+		if (sscreen->b.family == CHIP_BONAIRE && ia_switch_on_eoi &&
+		    key->u.uses_instancing)
 			partial_vs_wave = true;
-
-		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.
-		 * The hw doc says all multi-SE chips are affected, but Vulkan
-		 * only applies it to Hawaii. Do what Vulkan does.
-		 */
-		if (sctx->b.family == CHIP_HAWAII &&
-		    sctx->gs_shader.cso &&
-		    ia_switch_on_eoi &&
-		    (info->indirect ||
-		     (info->instance_count > 1 &&
-		      si_num_prims_for_vertices(info) <= 1)))
-			sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
-
 
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
@@ -397,18 +373,90 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	if (ia_switch_on_eoi)
 		partial_es_wave = true;
 
-	/* GS requirement. */
-	if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
-		partial_es_wave = true;
-
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
 		S_028AA8_PARTIAL_ES_WAVE_ON(partial_es_wave) |
-		S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1) |
-		S_028AA8_WD_SWITCH_ON_EOP(sctx->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
-		S_028AA8_MAX_PRIMGRP_IN_WAVE(sctx->b.chip_class >= VI ?
+		S_028AA8_WD_SWITCH_ON_EOP(sscreen->b.chip_class >= CIK ? wd_switch_on_eop : 0) |
+		S_028AA8_MAX_PRIMGRP_IN_WAVE(sscreen->b.chip_class >= VI ?
 					     max_primgroup_in_wave : 0);
+}
+
+void si_init_ia_multi_vgt_param_table(struct si_context *sctx)
+{
+	for (int prim = 0; prim <= R600_PRIM_RECTANGLE_LIST; prim++)
+	for (int uses_instancing = 0; uses_instancing < 2; uses_instancing++)
+	for (int multi_instances = 0; multi_instances < 2; multi_instances++)
+	for (int primitive_restart = 0; primitive_restart < 2; primitive_restart++)
+	for (int count_from_so = 0; count_from_so < 2; count_from_so++)
+	for (int line_stipple = 0; line_stipple < 2; line_stipple++)
+	for (int uses_tess = 0; uses_tess < 2; uses_tess++)
+	for (int tess_uses_primid = 0; tess_uses_primid < 2; tess_uses_primid++)
+	for (int uses_gs = 0; uses_gs < 2; uses_gs++) {
+		union si_vgt_param_key key;
+
+		key.index = 0;
+		key.u.prim = prim;
+		key.u.uses_instancing = uses_instancing;
+		key.u.multi_instances_smaller_than_primgroup = multi_instances;
+		key.u.primitive_restart = primitive_restart;
+		key.u.count_from_stream_output = count_from_so;
+		key.u.line_stipple_enabled = line_stipple;
+		key.u.uses_tess = uses_tess;
+		key.u.tcs_tes_uses_prim_id = tess_uses_primid;
+		key.u.uses_gs = uses_gs;
+
+		sctx->ia_multi_vgt_param[key.index] =
+			si_get_init_multi_vgt_param(sctx->screen, &key);
+	}
+}
+
+static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
+					  const struct pipe_draw_info *info,
+					  unsigned num_patches)
+{
+	union si_vgt_param_key key = sctx->ia_multi_vgt_param_key;
+	unsigned primgroup_size;
+	unsigned ia_multi_vgt_param;
+
+	if (sctx->tes_shader.cso) {
+		primgroup_size = num_patches; /* must be a multiple of NUM_PATCHES */
+	} else if (sctx->gs_shader.cso) {
+		primgroup_size = 64; /* recommended with a GS */
+	} else {
+		primgroup_size = 128; /* recommended without a GS and tess */
+	}
+
+	key.u.prim = info->mode;
+	key.u.uses_instancing = info->indirect || info->instance_count > 1;
+	key.u.multi_instances_smaller_than_primgroup =
+		info->indirect ||
+		(info->instance_count > 1 &&
+		 si_num_prims_for_vertices(info) < primgroup_size);
+	key.u.primitive_restart = info->primitive_restart;
+	key.u.count_from_stream_output = info->count_from_stream_output != NULL;
+
+	ia_multi_vgt_param = sctx->ia_multi_vgt_param[key.index] |
+			     S_028AA8_PRIMGROUP_SIZE(primgroup_size - 1);
+
+	if (sctx->gs_shader.cso) {
+		/* GS requirement. */
+		if (SI_GS_PER_ES / primgroup_size >= sctx->screen->gs_table_depth - 3)
+			ia_multi_vgt_param |= S_028AA8_PARTIAL_ES_WAVE_ON(1);
+
+		/* GS hw bug with single-primitive instances and SWITCH_ON_EOI.
+		 * The hw doc says all multi-SE chips are affected, but Vulkan
+		 * only applies it to Hawaii. Do what Vulkan does.
+		 */
+		if (sctx->b.family == CHIP_HAWAII &&
+		    G_028AA8_SWITCH_ON_EOI(ia_multi_vgt_param) &&
+		    (info->indirect ||
+		     (info->instance_count > 1 &&
+		      si_num_prims_for_vertices(info) <= 1)))
+			sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
+	}
+
+	return ia_multi_vgt_param;
 }
 
 static void si_emit_scratch_reloc(struct si_context *sctx)

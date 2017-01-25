@@ -355,6 +355,7 @@ void si_destroy_shader_cache(struct si_screen *sscreen);
 void si_init_shader_selector_async(void *job, int thread_index);
 
 /* si_state_draw.c */
+void si_init_ia_multi_vgt_param_table(struct si_context *sctx);
 void si_emit_cache_flush(struct si_context *sctx);
 void si_ce_pre_draw_synchronization(struct si_context *sctx);
 void si_ce_post_draw_synchronization(struct si_context *sctx);

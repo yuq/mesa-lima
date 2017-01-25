@@ -204,6 +204,28 @@ struct si_shader_ctx_state {
 	struct si_shader		*current;
 };
 
+#define SI_NUM_VGT_PARAM_KEY_BITS 12
+#define SI_NUM_VGT_PARAM_STATES (1 << SI_NUM_VGT_PARAM_KEY_BITS)
+
+/* The IA_MULTI_VGT_PARAM key used to index the table of precomputed values.
+ * Some fields are set by state-change calls, most are set by draw_vbo.
+ */
+union si_vgt_param_key {
+	struct {
+		unsigned prim:4;
+		unsigned uses_instancing:1;
+		unsigned multi_instances_smaller_than_primgroup:1;
+		unsigned primitive_restart:1;
+		unsigned count_from_stream_output:1;
+		unsigned line_stipple_enabled:1;
+		unsigned uses_tess:1;
+		unsigned tcs_tes_uses_prim_id:1;
+		unsigned uses_gs:1;
+		unsigned _pad:32 - SI_NUM_VGT_PARAM_KEY_BITS;
+	} u;
+	uint32_t index;
+};
+
 struct si_context {
 	struct r600_common_context	b;
 	struct blitter_context		*blitter;
@@ -355,6 +377,10 @@ struct si_context {
 
 	/* Other state */
 	bool need_check_render_feedback;
+
+	/* Precomputed IA_MULTI_VGT_PARAM */
+	union si_vgt_param_key  ia_multi_vgt_param_key;
+	unsigned		ia_multi_vgt_param[SI_NUM_VGT_PARAM_STATES];
 };
 
 /* cik_sdma.c */

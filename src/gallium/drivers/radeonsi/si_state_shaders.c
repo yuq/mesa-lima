@@ -1720,6 +1720,7 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 
 	sctx->gs_shader.cso = sel;
 	sctx->gs_shader.current = sel ? sel->first_variant : NULL;
+	sctx->ia_multi_vgt_param_key.u.uses_gs = sel != NULL;
 	sctx->do_update_shaders = true;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
@@ -1727,6 +1728,15 @@ static void si_bind_gs_shader(struct pipe_context *ctx, void *state)
 	if (enable_changed)
 		si_shader_change_notify(sctx);
 	r600_update_vs_writes_viewport_index(&sctx->b, si_get_vs_info(sctx));
+}
+
+static void si_update_tcs_tes_uses_prim_id(struct si_context *sctx)
+{
+	sctx->ia_multi_vgt_param_key.u.tcs_tes_uses_prim_id =
+		(sctx->tes_shader.cso &&
+		 sctx->tes_shader.cso->info.uses_primid) ||
+		(sctx->tcs_shader.cso &&
+		 sctx->tcs_shader.cso->info.uses_primid);
 }
 
 static void si_bind_tcs_shader(struct pipe_context *ctx, void *state)
@@ -1740,6 +1750,7 @@ static void si_bind_tcs_shader(struct pipe_context *ctx, void *state)
 
 	sctx->tcs_shader.cso = sel;
 	sctx->tcs_shader.current = sel ? sel->first_variant : NULL;
+	si_update_tcs_tes_uses_prim_id(sctx);
 	sctx->do_update_shaders = true;
 
 	if (enable_changed)
@@ -1757,6 +1768,8 @@ static void si_bind_tes_shader(struct pipe_context *ctx, void *state)
 
 	sctx->tes_shader.cso = sel;
 	sctx->tes_shader.current = sel ? sel->first_variant : NULL;
+	sctx->ia_multi_vgt_param_key.u.uses_tess = sel != NULL;
+	si_update_tcs_tes_uses_prim_id(sctx);
 	sctx->do_update_shaders = true;
 	si_mark_atom_dirty(sctx, &sctx->clip_regs);
 	sctx->last_rast_prim = -1; /* reset this so that it gets updated */
