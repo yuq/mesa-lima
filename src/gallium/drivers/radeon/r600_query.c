@@ -71,6 +71,7 @@ static enum radeon_value_id winsys_id_from_type(unsigned type)
 	case R600_QUERY_NUM_BYTES_MOVED: return RADEON_NUM_BYTES_MOVED;
 	case R600_QUERY_NUM_EVICTIONS: return RADEON_NUM_EVICTIONS;
 	case R600_QUERY_VRAM_USAGE: return RADEON_VRAM_USAGE;
+	case R600_QUERY_VRAM_VIS_USAGE: return RADEON_VRAM_VIS_USAGE;
 	case R600_QUERY_GTT_USAGE: return RADEON_GTT_USAGE;
 	case R600_QUERY_GPU_TEMPERATURE: return RADEON_GPU_TEMPERATURE;
 	case R600_QUERY_CURRENT_GPU_SCLK: return RADEON_CURRENT_SCLK;
@@ -129,6 +130,7 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_MAPPED_VRAM:
 	case R600_QUERY_MAPPED_GTT:
 	case R600_QUERY_VRAM_USAGE:
+	case R600_QUERY_VRAM_VIS_USAGE:
 	case R600_QUERY_GTT_USAGE:
 	case R600_QUERY_GPU_TEMPERATURE:
 	case R600_QUERY_CURRENT_GPU_SCLK:
@@ -238,6 +240,7 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	case R600_QUERY_MAPPED_VRAM:
 	case R600_QUERY_MAPPED_GTT:
 	case R600_QUERY_VRAM_USAGE:
+	case R600_QUERY_VRAM_VIS_USAGE:
 	case R600_QUERY_GTT_USAGE:
 	case R600_QUERY_GPU_TEMPERATURE:
 	case R600_QUERY_CURRENT_GPU_SCLK:
@@ -1731,6 +1734,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-bytes-moved",		NUM_BYTES_MOVED,	BYTES, CUMULATIVE),
 	X("num-evictions",		NUM_EVICTIONS,		UINT64, CUMULATIVE),
 	X("VRAM-usage",			VRAM_USAGE,		BYTES, AVERAGE),
+	X("VRAM-vis-usage",		VRAM_VIS_USAGE,		BYTES, AVERAGE),
 	X("GTT-usage",			GTT_USAGE,		BYTES, AVERAGE),
 	X("back-buffer-ps-draw-ratio",	BACK_BUFFER_PS_DRAW_RATIO, UINT64, AVERAGE),
 
@@ -1813,6 +1817,9 @@ static int r600_get_driver_query_info(struct pipe_screen *screen,
 		break;
 	case R600_QUERY_GPU_TEMPERATURE:
 		info->max_value.u64 = 125;
+		break;
+	case R600_QUERY_VRAM_VIS_USAGE:
+		info->max_value.u64 = rscreen->info.vram_vis_size;
 		break;
 	}
 

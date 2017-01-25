@@ -451,6 +451,10 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
    case RADEON_VRAM_USAGE:
       amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM, 0, &heap);
       return heap.heap_usage;
+   case RADEON_VRAM_VIS_USAGE:
+      amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_VRAM,
+                             AMDGPU_GEM_CREATE_CPU_ACCESS_REQUIRED, &heap);
+      return heap.heap_usage;
    case RADEON_GTT_USAGE:
       amdgpu_query_heap_info(ws->dev, AMDGPU_GEM_DOMAIN_GTT, 0, &heap);
       return heap.heap_usage;
