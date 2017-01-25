@@ -1139,6 +1139,9 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       vtn_warn("Decoration only allowed for CL-style kernels: %s",
                spirv_decoration_to_string(dec->decoration));
       break;
+
+   default:
+      unreachable("Unhandled decoration");
    }
 }
 

@@ -561,6 +561,9 @@ struct_member_decoration_cb(struct vtn_builder *b,
       vtn_warn("Decoration only allowed for CL-style kernels: %s",
                spirv_decoration_to_string(dec->decoration));
       break;
+
+   default:
+      unreachable("Unhandled decoration");
    }
 }
 
@@ -638,6 +641,9 @@ type_decoration_cb(struct vtn_builder *b,
       vtn_warn("Decoration only allowed for CL-style kernels: %s",
                spirv_decoration_to_string(dec->decoration));
       break;
+
+   default:
+      unreachable("Unhandled decoration");
    }
 }
 
@@ -2653,6 +2659,9 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilityTessellationPointSize:
          spv_check_supported(tessellation, cap);
          break;
+
+      default:
+         unreachable("Unhandled capability");
       }
       break;
    }
@@ -2842,6 +2851,9 @@ vtn_handle_execution_mode(struct vtn_builder *b, struct vtn_value *entry_point,
    case SpvExecutionModeVecTypeHint:
    case SpvExecutionModeContractionOff:
       break; /* OpenCL */
+
+   default:
+      unreachable("Unhandled execution mode");
    }
 }
 
