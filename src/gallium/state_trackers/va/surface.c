@@ -488,8 +488,7 @@ vlVaQuerySurfaceAttributes(VADriverContextP ctx, VAConfigID config_id,
 static VAStatus
 suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
                             VASurfaceAttribExternalBuffers *memory_attibute,
-                            int index, VASurfaceID *surfaces,
-                            struct pipe_video_buffer *templat)
+                            unsigned index, struct pipe_video_buffer *templat)
 {
    vlVaDriver *drv;
    struct pipe_screen *pscreen;
@@ -497,9 +496,6 @@ suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    struct pipe_resource res_templ;
    struct winsys_handle whandle;
    struct pipe_resource *resources[VL_NUM_COMPONENTS];
-
-   if (!ctx)
-      return VA_STATUS_ERROR_INVALID_PARAMETER;
 
    pscreen = VL_VA_PSCREEN(ctx);
    drv = VL_VA_DRIVER(ctx);
@@ -554,14 +550,6 @@ suface_from_external_memory(VADriverContextP ctx, vlVaSurface *surface,
    if (!surface->buffer)
       return VA_STATUS_ERROR_ALLOCATION_FAILED;
 
-   util_dynarray_init(&surface->subpics);
-   surfaces[index] = handle_table_add(drv->htab, surface);
-
-   if (!surfaces[index]) {
-      surface->buffer->destroy(surface->buffer);
-      return VA_STATUS_ERROR_ALLOCATION_FAILED;
-   }
-
    return VA_STATUS_SUCCESS;
 }
 
@@ -579,6 +567,7 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
    int memory_type;
    int expected_fourcc;
    VAStatus vaStatus;
+   vlVaSurface *surf;
 
    if (!ctx)
       return VA_STATUS_ERROR_INVALID_CONTEXT;
@@ -688,9 +677,11 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
 
    mtx_lock(&drv->mutex);
    for (i = 0; i < num_surfaces; i++) {
-      vlVaSurface *surf = CALLOC(1, sizeof(vlVaSurface));
-      if (!surf)
+      surf = CALLOC(1, sizeof(vlVaSurface));
+      if (!surf) {
+         vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
          goto no_res;
+      }
 
       surf->templat = templat;
 
@@ -706,33 +697,44 @@ vlVaCreateSurfaces2(VADriverContextP ctx, unsigned int format,
 
          surf->buffer = drv->pipe->create_video_buffer(drv->pipe, &templat);
          if (!surf->buffer) {
-            FREE(surf);
-            goto no_res;
+            vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
+            goto free_surf;
          }
-         util_dynarray_init(&surf->subpics);
-         surfaces[i] = handle_table_add(drv->htab, surf);
          break;
+
       case VA_SURFACE_ATTRIB_MEM_TYPE_DRM_PRIME:
-         vaStatus = suface_from_external_memory(ctx, surf, memory_attibute, i, surfaces, &templat);
-         if (vaStatus != VA_STATUS_SUCCESS) {
-            FREE(surf);
-            goto no_res;
-         }
+         vaStatus = suface_from_external_memory(ctx, surf, memory_attibute, i, &templat);
+         if (vaStatus != VA_STATUS_SUCCESS)
+            goto free_surf;
          break;
+
       default:
          assert(0);
+      }
+
+      util_dynarray_init(&surf->subpics);
+      surfaces[i] = handle_table_add(drv->htab, surf);
+      if (!surfaces[i]) {
+         vaStatus = VA_STATUS_ERROR_ALLOCATION_FAILED;
+         goto destroy_surf;
       }
    }
    mtx_unlock(&drv->mutex);
 
    return VA_STATUS_SUCCESS;
 
+destroy_surf:
+   surf->buffer->destroy(surf->buffer);
+
+free_surf:
+   FREE(surf);
+
 no_res:
    mtx_unlock(&drv->mutex);
    if (i)
       vlVaDestroySurfaces(ctx, surfaces, i);
 
-   return VA_STATUS_ERROR_ALLOCATION_FAILED;
+   return vaStatus;
 }
 
 VAStatus
