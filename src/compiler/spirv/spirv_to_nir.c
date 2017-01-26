@@ -2919,6 +2919,7 @@ vtn_handle_variable_or_type_instruction(struct vtn_builder *b, SpvOp opcode,
       vtn_handle_constant(b, opcode, w, count);
       break;
 
+   case SpvOpUndef:
    case SpvOpVariable:
       vtn_handle_variables(b, opcode, w, count);
       break;
