@@ -83,9 +83,11 @@ __vk_errorf(VkResult error, const char *file, int line, const char *format, ...)
    ERROR_CASE(VK_ERROR_LAYER_NOT_PRESENT)
    ERROR_CASE(VK_ERROR_EXTENSION_NOT_PRESENT)
    ERROR_CASE(VK_ERROR_INCOMPATIBLE_DRIVER)
+   ERROR_CASE(VK_ERROR_FRAGMENTED_POOL)
 
    /* Extension errors */
    ERROR_CASE(VK_ERROR_OUT_OF_DATE_KHR)
+   ERROR_CASE(VK_ERROR_OUT_OF_POOL_MEMORY_KHR)
 
    default:
       assert(!"Unknown error");
