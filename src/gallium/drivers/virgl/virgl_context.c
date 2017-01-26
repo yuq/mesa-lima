@@ -950,6 +950,8 @@ struct pipe_context *virgl_context_create(struct pipe_screen *pscreen,
                                      PIPE_BIND_INDEX_BUFFER, PIPE_USAGE_STREAM);
    if (!vctx->uploader)
            goto fail;
+   vctx->base.stream_uploader = vctx->uploader;
+   vctx->base.const_uploader = vctx->uploader;
 
    vctx->hw_sub_ctx_id = rs->sub_ctx_id++;
    virgl_encoder_create_sub_ctx(vctx, vctx->hw_sub_ctx_id);

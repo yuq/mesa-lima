@@ -103,6 +103,8 @@ svga_destroy(struct pipe_context *pipe)
    util_bitmask_destroy(svga->stream_output_id_bm);
    util_bitmask_destroy(svga->query_id_bm);
    u_upload_destroy(svga->const0_upload);
+   u_upload_destroy(svga->pipe.stream_uploader);
+   u_upload_destroy(svga->pipe.const_uploader);
    svga_texture_transfer_map_upload_destroy(svga);
 
    /* free user's constant buffers */
@@ -132,6 +134,18 @@ svga_context_create(struct pipe_screen *screen, void *priv, unsigned flags)
    svga->pipe.screen = screen;
    svga->pipe.priv = priv;
    svga->pipe.destroy = svga_destroy;
+   svga->pipe.stream_uploader = u_upload_create(&svga->pipe, 1024 * 1024,
+                                                PIPE_BIND_VERTEX_BUFFER |
+                                                PIPE_BIND_INDEX_BUFFER,
+                                                PIPE_USAGE_STREAM);
+   if (!svga->pipe.stream_uploader)
+      goto cleanup;
+
+   svga->pipe.const_uploader = u_upload_create(&svga->pipe, 128 * 1024,
+                                               PIPE_BIND_CONSTANT_BUFFER,
+                                               PIPE_USAGE_STREAM);
+   if (!svga->pipe.const_uploader)
+      goto cleanup;
 
    svga->swc = svgascreen->sws->context_create(svgascreen->sws);
    if (!svga->swc)
@@ -283,6 +297,10 @@ cleanup:
 
    if (svga->const0_upload)
       u_upload_destroy(svga->const0_upload);
+   if (svga->pipe.const_uploader)
+      u_upload_destroy(svga->pipe.const_uploader);
+   if (svga->pipe.stream_uploader)
+      u_upload_destroy(svga->pipe.stream_uploader);
    svga_texture_transfer_map_upload_destroy(svga);
    if (svga->hwtnl)
       svga_hwtnl_destroy(svga->hwtnl);

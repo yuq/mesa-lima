@@ -1212,6 +1212,8 @@ rbug_context_create(struct pipe_screen *_screen, struct pipe_context *pipe)
    rb_pipe->base.screen = _screen;
    rb_pipe->base.priv = pipe->priv; /* expose wrapped data */
    rb_pipe->base.draw = NULL;
+   rb_pipe->base.stream_uploader = pipe->stream_uploader;
+   rb_pipe->base.const_uploader = pipe->const_uploader;
 
    rb_pipe->base.destroy = rbug_destroy;
    rb_pipe->base.draw_vbo = rbug_draw_vbo;

@@ -606,6 +606,8 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 					PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
 	if (!rctx->uploader)
 		return false;
+	rctx->b.stream_uploader = rctx->uploader;
+	rctx->b.const_uploader = rctx->uploader;
 
 	rctx->ctx = rctx->ws->ctx_create(rctx->ws);
 	if (!rctx->ctx)

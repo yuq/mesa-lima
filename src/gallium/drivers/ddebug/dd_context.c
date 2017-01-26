@@ -763,6 +763,8 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    dctx->pipe = pipe;
    dctx->base.priv = pipe->priv; /* expose wrapped priv data */
    dctx->base.screen = &dscreen->base;
+   dctx->base.stream_uploader = pipe->stream_uploader;
+   dctx->base.const_uploader = pipe->const_uploader;
 
    dctx->base.destroy = dd_context_destroy;
 
