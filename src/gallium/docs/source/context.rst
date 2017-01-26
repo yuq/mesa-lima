@@ -252,6 +252,29 @@ multi-byte element value starting at offset bytes from resource start, going
 for size bytes. It is guaranteed that size % clear_value_size == 0.
 
 
+Uploading
+^^^^^^^^^
+
+For simple single-use uploads, use ``pipe_context::stream_uploader`` or
+``pipe_context::const_uploader``. The latter should be used for uploading
+constants, while the former should be used for uploading everything else.
+PIPE_USAGE_STREAM is implied in both cases, so don't use the uploaders
+for static allocations.
+
+Usage:
+
+Call u_upload_alloc or u_upload_data as many times as you want. After you are
+done, call u_upload_unmap. If the driver doesn't support persistent mappings,
+u_upload_unmap makes sure the previously mapped memory is unmapped.
+
+Gotchas:
+- Always fill the memory immediately after u_upload_alloc. Any following call
+to u_upload_alloc and u_upload_data can unmap memory returned by previous
+u_upload_alloc.
+- Don't interleave calls using stream_uploader and const_uploader. If you use
+one of them, do the upload, unmap, and only then can you use the other one.
+
+
 Drawing
 ^^^^^^^
 

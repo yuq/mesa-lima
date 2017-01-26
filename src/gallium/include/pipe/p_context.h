@@ -76,6 +76,7 @@ struct pipe_viewport_state;
 struct pipe_compute_state;
 union pipe_color_union;
 union pipe_query_result;
+struct u_upload_mgr;
 
 /**
  * Gallium rendering context.  Basically:
@@ -88,6 +89,16 @@ struct pipe_context {
 
    void *priv;  /**< context private data (for DRI for example) */
    void *draw;  /**< private, for draw module (temporary?) */
+
+   /**
+    * Stream uploaders created by the driver. All drivers, state trackers, and
+    * modules should use them.
+    *
+    * Use u_upload_alloc or u_upload_data as many times as you want.
+    * Once you are done, use u_upload_unmap.
+    */
+   struct u_upload_mgr *stream_uploader; /* everything but shader constants */
+   struct u_upload_mgr *const_uploader;  /* shader constants only */
 
    void (*destroy)( struct pipe_context * );
 
