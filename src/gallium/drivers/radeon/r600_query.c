@@ -435,6 +435,7 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 
 	if (query->b.type == PIPE_QUERY_OCCLUSION_COUNTER ||
 	    query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE) {
+		unsigned enabled_rb_mask = ctx->screen->info.enabled_rb_mask;
 		unsigned num_results;
 		unsigned i, j;
 
@@ -442,7 +443,7 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 		num_results = buffer->b.b.width0 / query->result_size;
 		for (j = 0; j < num_results; j++) {
 			for (i = 0; i < ctx->max_db; i++) {
-				if (!(ctx->backend_mask & (1<<i))) {
+				if (!(enabled_rb_mask & (1<<i))) {
 					results[(i * 4)+1] = 0x80000000;
 					results[(i * 4)+3] = 0x80000000;
 				}
@@ -1611,19 +1612,22 @@ void r600_resume_queries(struct r600_common_context *ctx)
 	}
 }
 
-/* Get backends mask */
-void r600_query_init_backend_mask(struct r600_common_context *ctx)
+/* Fix radeon_info::enabled_rb_mask for R600, R700, EVERGREEN, NI. */
+void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 {
+	struct r600_common_context *ctx =
+		(struct r600_common_context*)rscreen->aux_context;
 	struct radeon_winsys_cs *cs = ctx->gfx.cs;
 	struct r600_resource *buffer;
 	uint32_t *results;
-	unsigned num_backends = ctx->screen->info.num_render_backends;
 	unsigned i, mask = 0;
 
+	assert(rscreen->chip_class <= CAYMAN);
+
 	/* if backend_map query is supported by the kernel */
-	if (ctx->screen->info.r600_gb_backend_map_valid) {
-		unsigned num_tile_pipes = ctx->screen->info.num_tile_pipes;
-		unsigned backend_map = ctx->screen->info.r600_gb_backend_map;
+	if (rscreen->info.r600_gb_backend_map_valid) {
+		unsigned num_tile_pipes = rscreen->info.num_tile_pipes;
+		unsigned backend_map = rscreen->info.r600_gb_backend_map;
 		unsigned item_width, item_mask;
 
 		if (ctx->chip_class >= EVERGREEN) {
@@ -1640,7 +1644,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 			backend_map >>= item_width;
 		}
 		if (mask != 0) {
-			ctx->backend_mask = mask;
+			rscreen->info.enabled_rb_mask = mask;
 			return;
 		}
 	}
@@ -1652,7 +1656,7 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 		pipe_buffer_create(ctx->b.screen, 0,
 				   PIPE_USAGE_STAGING, ctx->max_db*16);
 	if (!buffer)
-		goto err;
+		return;
 
 	/* initialize buffer with zeroes */
 	results = r600_buffer_map_sync_with_rings(ctx, buffer, PIPE_TRANSFER_WRITE);
@@ -1681,15 +1685,8 @@ void r600_query_init_backend_mask(struct r600_common_context *ctx)
 
 	r600_resource_reference(&buffer, NULL);
 
-	if (mask != 0) {
-		ctx->backend_mask = mask;
-		return;
-	}
-
-err:
-	/* fallback to old method - set num_backends lower bits to 1 */
-	ctx->backend_mask = (~((uint32_t)0))>>(32-num_backends);
-	return;
+	if (mask)
+		rscreen->info.enabled_rb_mask = mask;
 }
 
 #define XFULL(name_, query_type_, type_, result_type_, group_id_) \

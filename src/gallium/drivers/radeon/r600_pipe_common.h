@@ -586,7 +586,6 @@ struct r600_common_context {
 	struct list_head		active_queries;
 	unsigned			num_cs_dw_queries_suspend;
 	/* Additional hardware info. */
-	unsigned			backend_mask;
 	unsigned			max_db; /* for OQ */
 	/* Misc stats. */
 	unsigned			num_draw_calls;
@@ -775,7 +774,7 @@ void r600_init_screen_query_functions(struct r600_common_screen *rscreen);
 void r600_query_init(struct r600_common_context *rctx);
 void r600_suspend_queries(struct r600_common_context *ctx);
 void r600_resume_queries(struct r600_common_context *ctx);
-void r600_query_init_backend_mask(struct r600_common_context *ctx);
+void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen);
 
 /* r600_streamout.c */
 void r600_streamout_buffers_dirty(struct r600_common_context *rctx);

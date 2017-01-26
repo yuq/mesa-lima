@@ -253,7 +253,6 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 	/* these must be last */
 	si_begin_new_cs(sctx);
-	r600_query_init_backend_mask(&sctx->b); /* this emits commands and must be last */
 
 	/* CIK cannot unbind a constant buffer (S_BUFFER_LOAD doesn't skip loads
 	 * if NUM_RECORDS == 0). We need to use a dummy buffer instead. */

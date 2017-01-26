@@ -1308,6 +1308,7 @@ bool r600_common_screen_init(struct r600_common_screen *rscreen,
 		printf("num_render_backends = %i\n", rscreen->info.num_render_backends);
 		printf("num_tile_pipes = %i\n", rscreen->info.num_tile_pipes);
 		printf("pipe_interleave_bytes = %i\n", rscreen->info.pipe_interleave_bytes);
+		printf("enabled_rb_mask = 0x%x\n", rscreen->info.enabled_rb_mask);
 	}
 	return true;
 }

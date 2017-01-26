@@ -207,7 +207,6 @@ static struct pipe_context *r600_create_context(struct pipe_screen *screen,
 	rctx->blitter->draw_rectangle = r600_draw_rectangle;
 
 	r600_begin_new_cs(rctx);
-	r600_query_init_backend_mask(&rctx->b); /* this emits commands and must be last */
 
 	rctx->dummy_pixel_shader =
 		util_make_fragment_cloneinput_shader(&rctx->b.b, 0,
@@ -736,5 +735,6 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 	if (rscreen->b.debug_flags & DBG_TEST_DMA)
 		r600_test_dma(&rscreen->b);
 
+	r600_query_fix_enabled_rb_mask(rscreen);
 	return &rscreen->b.b;
 }
