@@ -41,11 +41,6 @@ loadersource = env.ParseSourceList('Makefile.sources', [
     'LOADER_SOURCES'
 ])
 
-env.Append(CPPDEFINES = [
-    '__STDC_CONSTANT_MACROS',
-    '__STDC_LIMIT_MACROS'
-    ])
-
 if not env['msvc'] :
     env.Append(CCFLAGS = [
         '-std=c++11',
