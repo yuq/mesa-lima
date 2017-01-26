@@ -111,7 +111,7 @@ ADDR_HANDLE amdgpu_addr_create(struct amdgpu_winsys *ws)
    regValue.gbAddrConfig = ws->amdinfo.gb_addr_cfg;
    regValue.noOfRanks = (ws->amdinfo.mc_arb_ramcfg & 0x4) >> 2;
 
-   regValue.backendDisables = ws->amdinfo.backend_disable[0];
+   regValue.backendDisables = ws->amdinfo.enabled_rb_pipes_mask;
    regValue.pTileConfig = ws->amdinfo.gb_tile_mode;
    regValue.noOfEntries = ARRAY_SIZE(ws->amdinfo.gb_tile_mode);
    if (ws->info.chip_class == SI) {
