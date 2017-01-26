@@ -444,6 +444,15 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    struct amdgpu_cs_buffer *buffer;
    int index;
 
+   /* Fast exit for no-op calls.
+    * This is very effective with suballocators and linear uploaders that
+    * are outside of the winsys.
+    */
+   if (bo == cs->last_added_bo &&
+       (usage & cs->last_added_bo_usage) == usage &&
+       (1ull << priority) & cs->last_added_bo_priority_usage)
+      return cs->last_added_bo_index;
+
    if (!bo->bo) {
       index = amdgpu_lookup_or_add_slab_buffer(acs, bo);
       if (index < 0)
@@ -464,6 +473,11 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    buffer->u.real.priority_usage |= 1llu << priority;
    buffer->usage |= usage;
    cs->flags[index] = MAX2(cs->flags[index], priority / 4);
+
+   cs->last_added_bo = bo;
+   cs->last_added_bo_index = index;
+   cs->last_added_bo_usage = buffer->usage;
+   cs->last_added_bo_priority_usage = buffer->u.real.priority_usage;
    return index;
 }
 
@@ -645,6 +659,7 @@ static bool amdgpu_init_cs_context(struct amdgpu_cs_context *cs,
    for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
       cs->buffer_indices_hashlist[i] = -1;
    }
+   cs->last_added_bo = NULL;
 
    cs->request.number_of_ibs = 1;
    cs->request.ibs = &cs->ib[IB_MAIN];
@@ -676,6 +691,7 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
    for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
       cs->buffer_indices_hashlist[i] = -1;
    }
+   cs->last_added_bo = NULL;
 }
 
 static void amdgpu_destroy_cs_context(struct amdgpu_cs_context *cs)
