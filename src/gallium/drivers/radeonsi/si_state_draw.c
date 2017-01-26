@@ -1102,20 +1102,21 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		r600_resource(ib.buffer)->TC_L2_dirty = false;
 	}
 
-	if (info->indirect && r600_resource(info->indirect)->TC_L2_dirty) {
-		sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-		r600_resource(info->indirect)->TC_L2_dirty = false;
-	}
-
-	if (info->indirect_params &&
-	    r600_resource(info->indirect_params)->TC_L2_dirty) {
-		sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-		r600_resource(info->indirect_params)->TC_L2_dirty = false;
-	}
-
-	/* Add buffer sizes for memory checking in need_cs_space. */
-	if (info->indirect)
+	if (info->indirect) {
+		/* Add the buffer size for memory checking in need_cs_space. */
 		r600_context_add_resource_size(ctx, info->indirect);
+
+		if (r600_resource(info->indirect)->TC_L2_dirty) {
+			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+			r600_resource(info->indirect)->TC_L2_dirty = false;
+		}
+
+		if (info->indirect_params &&
+		    r600_resource(info->indirect_params)->TC_L2_dirty) {
+			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+			r600_resource(info->indirect_params)->TC_L2_dirty = false;
+		}
+	}
 
 	si_need_cs_space(sctx);
 
