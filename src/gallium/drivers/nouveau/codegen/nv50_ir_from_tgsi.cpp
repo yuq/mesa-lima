@@ -1140,7 +1140,6 @@ bool Source::scanSource()
    }
 
    info->io.viewportId = -1;
-   info->prop.cp.numThreads = 1;
 
    info->immd.data = (uint32_t *)MALLOC(scan.immediate_count * 16);
    info->immd.type = (ubyte *)MALLOC(scan.immediate_count * sizeof(ubyte));
@@ -1243,9 +1242,13 @@ void Source::scanProperty(const struct tgsi_full_property *prop)
          info->prop.tp.outputPrim = PIPE_PRIM_TRIANGLES; /* anything but points */
       break;
    case TGSI_PROPERTY_CS_FIXED_BLOCK_WIDTH:
+      info->prop.cp.numThreads[0] = prop->u[0].Data;
+      break;
    case TGSI_PROPERTY_CS_FIXED_BLOCK_HEIGHT:
+      info->prop.cp.numThreads[1] = prop->u[0].Data;
+      break;
    case TGSI_PROPERTY_CS_FIXED_BLOCK_DEPTH:
-      info->prop.cp.numThreads *= prop->u[0].Data;
+      info->prop.cp.numThreads[2] = prop->u[0].Data;
       break;
    case TGSI_PROPERTY_NUM_CLIPDIST_ENABLED:
       info->io.clipDistances = prop->u[0].Data;
@@ -2034,6 +2037,9 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
       return ld->getDef(0);
    case TGSI_FILE_SYSTEM_VALUE:
       assert(!ptr);
+      if (info->sv[idx].sn == TGSI_SEMANTIC_THREAD_ID &&
+          info->prop.cp.numThreads[swz] == 1)
+         return zero;
       ld = mkOp1(OP_RDSV, TYPE_U32, getSSA(), srcToSym(src, c));
       ld->perPatch = info->sv[idx].patch;
       return ld->getDef(0);
