@@ -2875,6 +2875,8 @@ struct gl_pipeline_object
     */
    struct gl_program *CurrentProgram[MESA_SHADER_STAGES];
 
+   struct gl_shader_program *ReferencedPrograms[MESA_SHADER_STAGES];
+
    struct gl_program *_CurrentFragmentProgram;
 
    /**

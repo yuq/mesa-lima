@@ -1128,7 +1128,7 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
          if (shProg->_LinkedShaders[stage])
             prog = shProg->_LinkedShaders[stage]->Program;
 
-         _mesa_use_program(ctx, stage, prog, ctx->_Shader);
+         _mesa_use_program(ctx, stage, shProg, prog, ctx->_Shader);
       }
    }
 
@@ -1243,7 +1243,8 @@ _mesa_active_program(struct gl_context *ctx, struct gl_shader_program *shProg,
 
 static void
 use_program(struct gl_context *ctx, gl_shader_stage stage,
-            struct gl_program *new_prog, struct gl_pipeline_object *shTarget)
+            struct gl_shader_program *shProg, struct gl_program *new_prog,
+            struct gl_pipeline_object *shTarget)
 {
    struct gl_program **target;
 
@@ -1279,6 +1280,9 @@ use_program(struct gl_context *ctx, gl_shader_stage stage,
 	 break;
       }
 
+      _mesa_reference_shader_program(ctx,
+                                     &shTarget->ReferencedPrograms[stage],
+                                     shProg);
       _mesa_reference_program(ctx, target, new_prog);
       return;
    }
@@ -1296,7 +1300,7 @@ _mesa_use_shader_program(struct gl_context *ctx,
       struct gl_program *new_prog = NULL;
       if (shProg && shProg->_LinkedShaders[i])
          new_prog = shProg->_LinkedShaders[i]->Program;
-      use_program(ctx, i, new_prog, &ctx->Shader);
+      use_program(ctx, i, shProg, new_prog, &ctx->Shader);
    }
    _mesa_active_program(ctx, shProg, "glUseProgram");
 }
@@ -2180,10 +2184,10 @@ invalid_value:
 
 void
 _mesa_use_program(struct gl_context *ctx, gl_shader_stage stage,
-                  struct gl_program *prog,
+                  struct gl_shader_program *shProg, struct gl_program *prog,
                   struct gl_pipeline_object *shTarget)
 {
-   use_program(ctx, stage, prog, shTarget);
+   use_program(ctx, stage, shProg, prog, shTarget);
 }
 
 
