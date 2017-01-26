@@ -23,7 +23,6 @@
 #include "codegen/nv50_ir.h"
 #include "codegen/nv50_ir_target.h"
 
-#define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
 namespace nv50_ir {
