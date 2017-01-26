@@ -152,6 +152,7 @@ union si_state_atoms {
 		struct r600_atom *viewports;
 		struct r600_atom *stencil_ref;
 		struct r600_atom *spi_map;
+		struct r600_atom *scratch_state;
 	} s;
 	struct r600_atom *array[0];
 };

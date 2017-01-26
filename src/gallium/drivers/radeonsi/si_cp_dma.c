@@ -283,7 +283,8 @@ static void si_cp_dma_realign_engine(struct si_context *sctx, unsigned size,
 					   PIPE_USAGE_DEFAULT, scratch_size);
 		if (!sctx->scratch_buffer)
 			return;
-		sctx->emit_scratch_reloc = true;
+
+		si_mark_atom_dirty(sctx, &sctx->scratch_state);
 	}
 
 	si_cp_dma_prepare(sctx, &sctx->scratch_buffer->b.b,

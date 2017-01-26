@@ -352,8 +352,8 @@ struct si_context {
 	bool			gs_tri_strip_adj_fix;
 
 	/* Scratch buffer */
+	struct r600_atom	scratch_state;
 	struct r600_resource	*scratch_buffer;
-	bool			emit_scratch_reloc;
 	unsigned		scratch_waves;
 	unsigned		spi_tmpring_size;
 

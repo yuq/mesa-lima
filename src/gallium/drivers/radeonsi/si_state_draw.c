@@ -459,25 +459,6 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	return ia_multi_vgt_param;
 }
 
-static void si_emit_scratch_reloc(struct si_context *sctx)
-{
-	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-
-	if (!sctx->emit_scratch_reloc)
-		return;
-
-	radeon_set_context_reg(cs, R_0286E8_SPI_TMPRING_SIZE,
-			       sctx->spi_tmpring_size);
-
-	if (sctx->scratch_buffer) {
-		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
-				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
-				      RADEON_PRIO_SCRATCH_BUFFER);
-
-	}
-	sctx->emit_scratch_reloc = false;
-}
-
 /* rast_prim is the primitive type after GS. */
 static void si_emit_rasterizer_prim_state(struct si_context *sctx)
 {
@@ -1133,8 +1114,6 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 
 	/* Add buffer sizes for memory checking in need_cs_space. */
-	if (sctx->emit_scratch_reloc && sctx->scratch_buffer)
-		r600_context_add_resource_size(ctx, &sctx->scratch_buffer->b.b);
 	if (info->indirect)
 		r600_context_add_resource_size(ctx, info->indirect);
 
@@ -1174,14 +1153,11 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 	}
 	sctx->dirty_states = 0;
 
-	si_emit_scratch_reloc(sctx);
 	si_emit_rasterizer_prim_state(sctx);
 	si_emit_draw_registers(sctx, info);
 
 	si_ce_pre_draw_synchronization(sctx);
-
 	si_emit_draw_packets(sctx, info, &ib);
-
 	si_ce_post_draw_synchronization(sctx);
 
 	if (sctx->trace_buf)

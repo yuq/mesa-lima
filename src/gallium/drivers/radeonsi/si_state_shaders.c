@@ -2200,7 +2200,10 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 	                                PIPE_USAGE_DEFAULT, scratch_needed_size);
 			if (!sctx->scratch_buffer)
 				return false;
-			sctx->emit_scratch_reloc = true;
+
+			si_mark_atom_dirty(sctx, &sctx->scratch_state);
+			r600_context_add_resource_size(&sctx->b.b,
+						       &sctx->scratch_buffer->b.b);
 		}
 
 		/* Update the shaders, so they are using the latest scratch.  The
@@ -2259,7 +2262,7 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 			   S_0286E8_WAVESIZE(scratch_bytes_per_wave >> 10);
 	if (spi_tmpring_size != sctx->spi_tmpring_size) {
 		sctx->spi_tmpring_size = spi_tmpring_size;
-		sctx->emit_scratch_reloc = true;
+		si_mark_atom_dirty(sctx, &sctx->scratch_state);
 	}
 	return true;
 }
@@ -2588,9 +2591,26 @@ bool si_update_shaders(struct si_context *sctx)
 	return true;
 }
 
+static void si_emit_scratch_state(struct si_context *sctx,
+				  struct r600_atom *atom)
+{
+	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
+
+	radeon_set_context_reg(cs, R_0286E8_SPI_TMPRING_SIZE,
+			       sctx->spi_tmpring_size);
+
+	if (sctx->scratch_buffer) {
+		radeon_add_to_buffer_list(&sctx->b, &sctx->b.gfx,
+				      sctx->scratch_buffer, RADEON_USAGE_READWRITE,
+				      RADEON_PRIO_SCRATCH_BUFFER);
+	}
+}
+
 void si_init_shader_functions(struct si_context *sctx)
 {
 	si_init_atom(sctx, &sctx->spi_map, &sctx->atoms.s.spi_map, si_emit_spi_map);
+	si_init_atom(sctx, &sctx->scratch_state, &sctx->atoms.s.scratch_state,
+		     si_emit_scratch_state);
 
 	sctx->b.b.create_vs_state = si_create_shader_selector;
 	sctx->b.b.create_tcs_state = si_create_shader_selector;
