@@ -161,6 +161,8 @@ To setup the branchpoint:
 	git checkout master
 	$EDITOR VERSION # bump the version number
 	git commit -as
+	cp docs/relnotes/{X.Y,X.Y+1}.html # copy/create relnotes template
+	git commit -as
 	git push origin X.Y-branchpoint X.Y
 </pre>
 
