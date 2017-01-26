@@ -561,13 +561,6 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->family = rscreen->family;
 	rctx->chip_class = rscreen->chip_class;
 
-	if (rscreen->chip_class >= CIK)
-		rctx->max_db = MAX2(8, rscreen->info.num_render_backends);
-	else if (rscreen->chip_class >= EVERGREEN)
-		rctx->max_db = 8;
-	else
-		rctx->max_db = 4;
-
 	rctx->b.invalidate_resource = r600_invalidate_resource;
 	rctx->b.transfer_map = u_transfer_map_vtbl;
 	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;

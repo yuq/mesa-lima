@@ -585,8 +585,6 @@ struct r600_common_context {
 	int				num_perfect_occlusion_queries;
 	struct list_head		active_queries;
 	unsigned			num_cs_dw_queries_suspend;
-	/* Additional hardware info. */
-	unsigned			max_db; /* for OQ */
 	/* Misc stats. */
 	unsigned			num_draw_calls;
 	unsigned			num_spill_draw_calls;

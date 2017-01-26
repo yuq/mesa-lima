@@ -435,6 +435,7 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 
 	if (query->b.type == PIPE_QUERY_OCCLUSION_COUNTER ||
 	    query->b.type == PIPE_QUERY_OCCLUSION_PREDICATE) {
+		unsigned max_rbs = ctx->screen->info.num_render_backends;
 		unsigned enabled_rb_mask = ctx->screen->info.enabled_rb_mask;
 		unsigned num_results;
 		unsigned i, j;
@@ -442,13 +443,13 @@ static bool r600_query_hw_prepare_buffer(struct r600_common_context *ctx,
 		/* Set top bits for unused backends. */
 		num_results = buffer->b.b.width0 / query->result_size;
 		for (j = 0; j < num_results; j++) {
-			for (i = 0; i < ctx->max_db; i++) {
+			for (i = 0; i < max_rbs; i++) {
 				if (!(enabled_rb_mask & (1<<i))) {
 					results[(i * 4)+1] = 0x80000000;
 					results[(i * 4)+3] = 0x80000000;
 				}
 			}
-			results += 4 * ctx->max_db;
+			results += 4 * max_rbs;
 		}
 	}
 
@@ -518,7 +519,7 @@ static struct pipe_query *r600_query_hw_create(struct r600_common_context *rctx,
 	switch (query_type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER:
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
-		query->result_size = 16 * rctx->max_db;
+		query->result_size = 16 * rctx->screen->info.num_render_backends;
 		query->result_size += 16; /* for the fence + alignment */
 		query->num_cs_dw_begin = 6;
 		query->num_cs_dw_end = 6 + r600_gfx_write_fence_dwords(rctx->screen);
@@ -693,7 +694,7 @@ static void r600_query_hw_do_emit_stop(struct r600_common_context *ctx,
 		radeon_emit(cs, va);
 		radeon_emit(cs, (va >> 32) & 0xFFFF);
 
-		fence_va = va + ctx->max_db * 16 - 8;
+		fence_va = va + ctx->screen->info.num_render_backends * 16 - 8;
 		break;
 	case PIPE_QUERY_PRIMITIVES_EMITTED:
 	case PIPE_QUERY_PRIMITIVES_GENERATED:
@@ -929,6 +930,8 @@ static void r600_get_hw_query_params(struct r600_common_context *rctx,
 				     struct r600_query_hw *rquery, int index,
 				     struct r600_hw_query_params *params)
 {
+	unsigned max_rbs = rctx->screen->info.num_render_backends;
+
 	params->pair_stride = 0;
 	params->pair_count = 1;
 
@@ -937,9 +940,9 @@ static void r600_get_hw_query_params(struct r600_common_context *rctx,
 	case PIPE_QUERY_OCCLUSION_PREDICATE:
 		params->start_offset = 0;
 		params->end_offset = 8;
-		params->fence_offset = rctx->max_db * 16;
+		params->fence_offset = max_rbs * 16;
 		params->pair_stride = 16;
-		params->pair_count = rctx->max_db;
+		params->pair_count = max_rbs;
 		break;
 	case PIPE_QUERY_TIME_ELAPSED:
 		params->start_offset = 0;
@@ -1003,9 +1006,11 @@ static void r600_query_hw_add_result(struct r600_common_context *ctx,
 				     void *buffer,
 				     union pipe_query_result *result)
 {
+	unsigned max_rbs = ctx->screen->info.num_render_backends;
+
 	switch (query->b.type) {
 	case PIPE_QUERY_OCCLUSION_COUNTER: {
-		for (unsigned i = 0; i < ctx->max_db; ++i) {
+		for (unsigned i = 0; i < max_rbs; ++i) {
 			unsigned results_base = i * 16;
 			result->u64 +=
 				r600_query_read_result(buffer + results_base, 0, 2, true);
@@ -1013,7 +1018,7 @@ static void r600_query_hw_add_result(struct r600_common_context *ctx,
 		break;
 	}
 	case PIPE_QUERY_OCCLUSION_PREDICATE: {
-		for (unsigned i = 0; i < ctx->max_db; ++i) {
+		for (unsigned i = 0; i < max_rbs; ++i) {
 			unsigned results_base = i * 16;
 			result->b = result->b ||
 				r600_query_read_result(buffer + results_base, 0, 2, true) != 0;
@@ -1621,6 +1626,7 @@ void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 	struct r600_resource *buffer;
 	uint32_t *results;
 	unsigned i, mask = 0;
+	unsigned max_rbs = ctx->screen->info.num_render_backends;
 
 	assert(rscreen->chip_class <= CAYMAN);
 
@@ -1654,14 +1660,14 @@ void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 	/* create buffer for event data */
 	buffer = (struct r600_resource*)
 		pipe_buffer_create(ctx->b.screen, 0,
-				   PIPE_USAGE_STAGING, ctx->max_db*16);
+				   PIPE_USAGE_STAGING, max_rbs * 16);
 	if (!buffer)
 		return;
 
 	/* initialize buffer with zeroes */
 	results = r600_buffer_map_sync_with_rings(ctx, buffer, PIPE_TRANSFER_WRITE);
 	if (results) {
-		memset(results, 0, ctx->max_db * 4 * 4);
+		memset(results, 0, max_rbs * 4 * 4);
 
 		/* emit EVENT_WRITE for ZPASS_DONE */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 2, 0));
@@ -1675,7 +1681,7 @@ void r600_query_fix_enabled_rb_mask(struct r600_common_screen *rscreen)
 		/* analyze results */
 		results = r600_buffer_map_sync_with_rings(ctx, buffer, PIPE_TRANSFER_READ);
 		if (results) {
-			for(i = 0; i < ctx->max_db; i++) {
+			for(i = 0; i < max_rbs; i++) {
 				/* at least highest bit will be set if backend is used */
 				if (results[i*4 + 1])
 					mask |= (1<<i);
