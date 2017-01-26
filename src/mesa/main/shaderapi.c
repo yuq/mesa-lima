@@ -1768,8 +1768,6 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    GLcharARB *source;
    struct gl_shader *sh;
 
-   GLcharARB *replacement;
-
    sh = _mesa_lookup_shader_err(ctx, shaderObj, "glShaderSourceARB");
    if (!sh)
       return;
@@ -1826,6 +1824,8 @@ _mesa_ShaderSource(GLuint shaderObj, GLsizei count,
    source[totalLength - 2] = '\0';
 
 #ifdef ENABLE_SHADER_CACHE
+   GLcharARB *replacement;
+
    /* Dump original shader source to MESA_SHADER_DUMP_PATH and replace
     * if corresponding entry found from MESA_SHADER_READ_PATH.
     */
