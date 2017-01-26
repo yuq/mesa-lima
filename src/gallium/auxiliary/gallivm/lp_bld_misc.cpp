@@ -32,14 +32,6 @@
  */
 
 
-#ifndef __STDC_LIMIT_MACROS
-#define __STDC_LIMIT_MACROS
-#endif
-
-#ifndef __STDC_CONSTANT_MACROS
-#define __STDC_CONSTANT_MACROS
-#endif
-
 // Undef these vars just to silence warnings
 #undef PACKAGE_BUGREPORT
 #undef PACKAGE_NAME
