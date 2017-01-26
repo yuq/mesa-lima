@@ -83,7 +83,14 @@ namespace clover {
          inline void
          add_link_bitcode_file(clang::CodeGenOptions &opts,
                                const std::string &path) {
-#if HAVE_LLVM >= 0x0308
+#if HAVE_LLVM >= 0x0500
+            clang::CodeGenOptions::BitcodeFileToLink F;
+
+            F.Filename = path;
+            F.PropagateAttrs = true;
+            F.LinkFlags = ::llvm::Linker::Flags::None;
+            opts.LinkBitcodeFiles.emplace_back(F);
+#elif HAVE_LLVM >= 0x0308
             opts.LinkBitcodeFiles.emplace_back(::llvm::Linker::Flags::None, path);
 #else
             opts.LinkBitcodeFile = path;
