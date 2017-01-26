@@ -2714,6 +2714,7 @@ while_jumps_before_offset(const struct gen_device_info *devinfo,
    int scale = 16 / brw_jump_scale(devinfo);
    int jip = devinfo->gen == 6 ? brw_inst_gen6_jump_count(devinfo, insn)
                                : brw_inst_jip(devinfo, insn);
+   assert(jip < 0);
    return while_offset + jip * scale <= start_offset;
 }
 
