@@ -305,6 +305,7 @@ struct radeon_winsys {
 			 int queue_index,
 			 struct radeon_winsys_cs **cs_array,
 			 unsigned cs_count,
+			 struct radeon_winsys_cs *preamble_cs,
 			 struct radeon_winsys_sem **wait_sem,
 			 unsigned wait_sem_count,
 			 struct radeon_winsys_sem **signal_sem,
