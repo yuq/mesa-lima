@@ -245,7 +245,8 @@ emit_arith_inst(struct st_translate *t,
                 struct ureg_dst *dst, struct ureg_src *args, unsigned argcount)
 {
    if (desc->TGSI_opcode == TGSI_OPCODE_NOP) {
-      return emit_special_inst(t, desc, dst, args, argcount);
+      emit_special_inst(t, desc, dst, args, argcount);
+      return;
    }
 
    ureg_insn(t->ureg, desc->TGSI_opcode, dst, 1, args, argcount);
