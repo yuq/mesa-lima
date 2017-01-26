@@ -352,27 +352,28 @@ struct r600_surface {
 	unsigned db_preload_control;	/* EG and later */
 };
 
-struct r600_grbm_counter {
+struct r600_mmio_counter {
 	unsigned busy;
 	unsigned idle;
 };
 
-union r600_grbm_counters {
+union r600_mmio_counters {
 	struct {
-		struct r600_grbm_counter spi;
-		struct r600_grbm_counter gui;
-		struct r600_grbm_counter ta;
-		struct r600_grbm_counter gds;
-		struct r600_grbm_counter vgt;
-		struct r600_grbm_counter ia;
-		struct r600_grbm_counter sx;
-		struct r600_grbm_counter wd;
-		struct r600_grbm_counter bci;
-		struct r600_grbm_counter sc;
-		struct r600_grbm_counter pa;
-		struct r600_grbm_counter db;
-		struct r600_grbm_counter cp;
-		struct r600_grbm_counter cb;
+		/* GRBM_STATUS */
+		struct r600_mmio_counter spi;
+		struct r600_mmio_counter gui;
+		struct r600_mmio_counter ta;
+		struct r600_mmio_counter gds;
+		struct r600_mmio_counter vgt;
+		struct r600_mmio_counter ia;
+		struct r600_mmio_counter sx;
+		struct r600_mmio_counter wd;
+		struct r600_mmio_counter bci;
+		struct r600_mmio_counter sc;
+		struct r600_mmio_counter pa;
+		struct r600_mmio_counter db;
+		struct r600_mmio_counter cp;
+		struct r600_mmio_counter cb;
 	} named;
 	unsigned array[0];
 };
@@ -410,7 +411,7 @@ struct r600_common_screen {
 	/* GPU load thread. */
 	pipe_mutex			gpu_load_mutex;
 	pipe_thread			gpu_load_thread;
-	union r600_grbm_counters	grbm_counters;
+	union r600_mmio_counters	mmio_counters;
 	volatile unsigned		gpu_load_stop_thread; /* bool */
 
 	char				renderer_string[100];

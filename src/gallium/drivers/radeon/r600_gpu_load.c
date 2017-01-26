@@ -66,8 +66,8 @@
 			p_atomic_inc(&counters->named.field.idle);	\
 	} while (0)
 
-static void r600_update_grbm_counters(struct r600_common_screen *rscreen,
-				      union r600_grbm_counters *counters)
+static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
+				      union r600_mmio_counters *counters)
 {
 	uint32_t value = 0;
 
@@ -116,7 +116,7 @@ static PIPE_THREAD_ROUTINE(r600_gpu_load_thread, param)
 		last_time = cur_time;
 
 		/* Update the counters. */
-		r600_update_grbm_counters(rscreen, &rscreen->grbm_counters);
+		r600_update_mmio_counters(rscreen, &rscreen->mmio_counters);
 	}
 	p_atomic_dec(&rscreen->gpu_load_stop_thread);
 	return 0;
@@ -132,7 +132,7 @@ void r600_gpu_load_kill_thread(struct r600_common_screen *rscreen)
 	rscreen->gpu_load_thread = 0;
 }
 
-static uint64_t r600_read_grbm_counter(struct r600_common_screen *rscreen,
+static uint64_t r600_read_mmio_counter(struct r600_common_screen *rscreen,
 				       unsigned busy_index)
 {
 	/* Start the thread if needed. */
@@ -145,16 +145,16 @@ static uint64_t r600_read_grbm_counter(struct r600_common_screen *rscreen,
 		pipe_mutex_unlock(rscreen->gpu_load_mutex);
 	}
 
-	unsigned busy = p_atomic_read(&rscreen->grbm_counters.array[busy_index]);
-	unsigned idle = p_atomic_read(&rscreen->grbm_counters.array[busy_index + 1]);
+	unsigned busy = p_atomic_read(&rscreen->mmio_counters.array[busy_index]);
+	unsigned idle = p_atomic_read(&rscreen->mmio_counters.array[busy_index + 1]);
 
 	return busy | ((uint64_t)idle << 32);
 }
 
-static unsigned r600_end_grbm_counter(struct r600_common_screen *rscreen,
+static unsigned r600_end_mmio_counter(struct r600_common_screen *rscreen,
 				      uint64_t begin, unsigned busy_index)
 {
-	uint64_t end = r600_read_grbm_counter(rscreen, busy_index);
+	uint64_t end = r600_read_mmio_counter(rscreen, busy_index);
 	unsigned busy = (end & 0xffffffff) - (begin & 0xffffffff);
 	unsigned idle = (end >> 32) - (begin >> 32);
 
@@ -167,16 +167,16 @@ static unsigned r600_end_grbm_counter(struct r600_common_screen *rscreen,
 	if (idle || busy) {
 		return busy*100 / (busy + idle);
 	} else {
-		union r600_grbm_counters counters;
+		union r600_mmio_counters counters;
 
 		memset(&counters, 0, sizeof(counters));
-		r600_update_grbm_counters(rscreen, &counters);
+		r600_update_mmio_counters(rscreen, &counters);
 		return counters.array[busy_index] ? 100 : 0;
 	}
 }
 
-#define BUSY_INDEX(rscreen, field) (&rscreen->grbm_counters.named.field.busy - \
-				    rscreen->grbm_counters.array)
+#define BUSY_INDEX(rscreen, field) (&rscreen->mmio_counters.named.field.busy - \
+				    rscreen->mmio_counters.array)
 
 static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 				     unsigned type)
@@ -211,19 +211,19 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 	case R600_QUERY_GPU_CB_BUSY:
 		return BUSY_INDEX(rscreen, cb);
 	default:
-		unreachable("query type does not correspond to grbm id");
+		unreachable("invalid query type");
 	}
 }
 
 uint64_t r600_begin_counter(struct r600_common_screen *rscreen, unsigned type)
 {
 	unsigned busy_index = busy_index_from_type(rscreen, type);
-	return r600_read_grbm_counter(rscreen, busy_index);
+	return r600_read_mmio_counter(rscreen, busy_index);
 }
 
 unsigned r600_end_counter(struct r600_common_screen *rscreen, unsigned type,
 			  uint64_t begin)
 {
 	unsigned busy_index = busy_index_from_type(rscreen, type);
-	return r600_end_grbm_counter(rscreen, begin, busy_index);
+	return r600_end_mmio_counter(rscreen, begin, busy_index);
 }
