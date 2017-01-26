@@ -24,7 +24,7 @@ include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
 AM_CFLAGS = \
-	-Wall -pedantic \
+	-pedantic \
 	$(GALLIUM_CFLAGS) \
 	$(VISIBILITY_CFLAGS)
 
