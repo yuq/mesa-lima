@@ -52,6 +52,13 @@ u_upload_create(struct pipe_context *pipe, unsigned default_size,
                 unsigned bind, enum pipe_resource_usage usage);
 
 /**
+ * Create the default uploader for pipe_context. Only pipe_context::screen
+ * needs to be set for this to succeed.
+ */
+struct u_upload_mgr *
+u_upload_create_default(struct pipe_context *pipe);
+
+/**
  * Destroy the upload manager.
  */
 void u_upload_destroy( struct u_upload_mgr *upload );

@@ -86,6 +86,15 @@ u_upload_create(struct pipe_context *pipe, unsigned default_size,
    return upload;
 }
 
+struct u_upload_mgr *
+u_upload_create_default(struct pipe_context *pipe)
+{
+   return u_upload_create(pipe, 1024 * 1024,
+                          PIPE_BIND_VERTEX_BUFFER |
+                          PIPE_BIND_INDEX_BUFFER |
+                          PIPE_BIND_CONSTANT_BUFFER,
+                          PIPE_USAGE_STREAM);
+}
 
 static void upload_unmap_internal(struct u_upload_mgr *upload, boolean destroying)
 {
