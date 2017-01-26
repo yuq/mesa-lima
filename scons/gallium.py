@@ -291,8 +291,9 @@ def generate(env):
     # C preprocessor options
     cppdefines = []
     cppdefines += [
-        '__STDC_LIMIT_MACROS',
         '__STDC_CONSTANT_MACROS',
+        '__STDC_FORMAT_MACROS',
+        '__STDC_LIMIT_MACROS',
         'HAVE_NO_AUTOCONF',
     ]
     if env['build'] in ('debug', 'checked'):
