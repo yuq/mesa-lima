@@ -81,6 +81,8 @@
 static struct dri3_drawable *
 loader_drawable_to_dri3_drawable(struct loader_dri3_drawable *draw) {
    size_t offset = offsetof(struct dri3_drawable, loader_drawable);
+   if (!draw)
+      return NULL;
    return (struct dri3_drawable *)(((void*) draw) - offset);
 }
 
