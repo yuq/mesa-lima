@@ -348,7 +348,13 @@ static VAStatus
 handleVAEncMiscParameterTypeFrameRate(vlVaContext *context, VAEncMiscParameterBuffer *misc)
 {
    VAEncMiscParameterFrameRate *fr = (VAEncMiscParameterFrameRate *)misc->data;
-   context->desc.h264enc.rate_ctrl.frame_rate_num = fr->framerate;
+   if (fr->framerate & 0xffff0000) {
+      context->desc.h264enc.rate_ctrl.frame_rate_num = fr->framerate       & 0xffff;
+      context->desc.h264enc.rate_ctrl.frame_rate_den = fr->framerate >> 16 & 0xffff;
+   } else {
+      context->desc.h264enc.rate_ctrl.frame_rate_num = fr->framerate;
+      context->desc.h264enc.rate_ctrl.frame_rate_den = 1;
+   }
    return VA_STATUS_SUCCESS;
 }
 
