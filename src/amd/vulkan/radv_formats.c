@@ -570,6 +570,8 @@ radv_physical_device_get_format_properties(struct radv_physical_device *physical
 			tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
 			tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
 			         VK_FORMAT_FEATURE_BLIT_DST_BIT;
+			tiled |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+			         VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
 		}
 	} else {
 		bool linear_sampling;
@@ -591,6 +593,15 @@ radv_physical_device_get_format_properties(struct radv_physical_device *physical
 				tiled |= VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT;
 			}
 		}
+		if (util_is_power_of_two(vk_format_get_blocksize(format))) {
+			tiled |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+			         VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
+		}
+	}
+
+	if (util_is_power_of_two(vk_format_get_blocksize(format))) {
+		linear |= VK_FORMAT_FEATURE_TRANSFER_SRC_BIT_KHR |
+		          VK_FORMAT_FEATURE_TRANSFER_DST_BIT_KHR;
 	}
 
 	if (format == VK_FORMAT_R32_UINT || format == VK_FORMAT_R32_SINT) {
