@@ -1738,7 +1738,7 @@ fi
 AC_ARG_WITH([vulkan-drivers],
     [AS_HELP_STRING([--with-vulkan-drivers@<:@=DIRS...@:>@],
         [comma delimited Vulkan drivers list, e.g.
-        "intel"
+        "intel,radeon"
         @<:@default=no@:>@])],
     [with_vulkan_drivers="$withval"],
     [with_vulkan_drivers="no"])
