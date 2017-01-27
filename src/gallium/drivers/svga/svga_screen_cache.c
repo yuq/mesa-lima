@@ -32,6 +32,7 @@
 #include "svga_winsys.h"
 #include "svga_screen.h"
 #include "svga_screen_cache.h"
+#include "svga_context.h"
 
 
 #define SVGA_SURFACE_CACHE_ENABLED 1
@@ -310,6 +311,7 @@ svga_screen_cache_add(struct svga_screen *svgascreen,
  */
 void
 svga_screen_cache_flush(struct svga_screen *svgascreen,
+                        struct svga_context *svga,
                         struct pipe_fence_handle *fence)
 {
    struct svga_host_surface_cache *cache = &svgascreen->cache;
@@ -357,8 +359,10 @@ svga_screen_cache_flush(struct svga_screen *svgascreen,
          /* remove entry from the validated list */
          LIST_DEL(&entry->head);
 
-         /* it is now safe to invalidate the surface content. */
-         sws->surface_invalidate(sws, entry->handle);
+         /* It is now safe to invalidate the surface content.
+          * It will be done using the current context.
+          */
+         svga->swc->surface_invalidate(svga->swc, entry->handle);
 
          /* add the entry to the invalidated list */
          LIST_ADD(&entry->head, &cache->invalidated);

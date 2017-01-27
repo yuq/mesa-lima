@@ -94,5 +94,8 @@ void
 vmw_svga_winsys_surface_unmap(struct svga_winsys_context *swc,
                               struct svga_winsys_surface *srf,
                               boolean *rebind);
+void
+vmw_svga_winsys_surface_invalidate(struct svga_winsys_context *swc,
+                                   struct svga_winsys_surface *srf);
 
 #endif /* VMW_SURFACE_H_ */

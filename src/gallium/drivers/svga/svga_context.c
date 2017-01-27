@@ -367,7 +367,7 @@ svga_context_flush(struct svga_context *svga,
 
    svga->hud.num_flushes++;
 
-   svga_screen_cache_flush(svgascreen, fence);
+   svga_screen_cache_flush(svgascreen, svga, fence);
 
    SVGA3D_ResetLastCommand(svga->swc);
 

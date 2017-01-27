@@ -53,6 +53,7 @@
 
 struct svga_winsys_surface;
 struct svga_screen;
+struct svga_context;
 
 /**
  * Same as svga_winsys_screen::surface_create.
@@ -136,6 +137,7 @@ svga_screen_cache_cleanup(struct svga_screen *svgascreen);
 
 void
 svga_screen_cache_flush(struct svga_screen *svgascreen,
+                        struct svga_context *svga,
                         struct pipe_fence_handle *fence);
 
 enum pipe_error
