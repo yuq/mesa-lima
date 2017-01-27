@@ -1142,9 +1142,9 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
    }
 
    /* If the CS is not empty or overflowed.... */
-   if (radeon_emitted(&cs->main.base, 0) &&
+   if (likely(radeon_emitted(&cs->main.base, 0) &&
        cs->main.base.current.cdw <= cs->main.base.current.max_dw &&
-       !debug_get_option_noop()) {
+       !debug_get_option_noop())) {
       struct amdgpu_cs_context *cur = cs->csc;
       unsigned i, num_buffers;
 
