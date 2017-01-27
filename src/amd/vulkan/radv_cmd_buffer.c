@@ -1915,6 +1915,13 @@ VkResult radv_ResetCommandPool(
 	return VK_SUCCESS;
 }
 
+void radv_TrimCommandPoolKHR(
+    VkDevice                                    device,
+    VkCommandPool                               commandPool,
+    VkCommandPoolTrimFlagsKHR                   flags)
+{
+}
+
 void radv_CmdBeginRenderPass(
 	VkCommandBuffer                             commandBuffer,
 	const VkRenderPassBeginInfo*                pRenderPassBegin,
