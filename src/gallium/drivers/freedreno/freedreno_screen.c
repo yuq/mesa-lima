@@ -298,6 +298,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
 	case PIPE_CAP_TGSI_FS_FBFETCH:
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
+	case PIPE_CAP_DOUBLES:
 	case PIPE_CAP_INT64:
 		return 0;
 
@@ -487,7 +488,6 @@ fd_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
 		/* a2xx compiler doesn't handle indirect: */
 		return is_ir3(screen) ? 1 : 0;
 	case PIPE_SHADER_CAP_SUBROUTINES:
-	case PIPE_SHADER_CAP_DOUBLES:
 	case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:

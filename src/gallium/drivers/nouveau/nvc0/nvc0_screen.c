@@ -243,6 +243,7 @@ nvc0_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_POLYGON_OFFSET_UNITS_UNSCALED:
    case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
    case PIPE_CAP_TGSI_MUL_ZERO_WINS:
+   case PIPE_CAP_DOUBLES:
       return 1;
    case PIPE_CAP_COMPUTE:
       return (class_3d < GP100_3D_CLASS);
@@ -372,8 +373,6 @@ nvc0_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
    case PIPE_SHADER_CAP_SUBROUTINES:
       return 1;
    case PIPE_SHADER_CAP_INTEGERS:
-      return 1;
-   case PIPE_SHADER_CAP_DOUBLES:
       return 1;
    case PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED:
       return 1;

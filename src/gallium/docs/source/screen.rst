@@ -373,6 +373,9 @@ The integer capabilities:
   opcode to retrieve the current value in the framebuffer.
 * ``PIPE_CAP_TGSI_MUL_ZERO_WINS``: Whether TGSI shaders support the
   ``TGSI_PROPERTY_MUL_ZERO_WINS`` shader property.
+* ``PIPE_CAP_DOUBLES``: Whether double precision floating-point operations
+  are supported.
+* ``PIPE_CAP_INT64``: Whether 64-bit integer operations are supported.
 
 
 .. _pipe_capf:
@@ -451,8 +454,6 @@ to be 0.
   program.  It should be one of the ``pipe_shader_ir`` enum values.
 * ``PIPE_SHADER_CAP_MAX_SAMPLER_VIEWS``: The maximum number of texture
   sampler views. Must not be lower than PIPE_SHADER_CAP_MAX_TEXTURE_SAMPLERS.
-* ``PIPE_SHADER_CAP_DOUBLES``: Whether double precision floating-point
-  operations are supported.
 * ``PIPE_SHADER_CAP_TGSI_DROUND_SUPPORTED``: Whether double precision rounding
   is supported. If it is, DTRUNC/DCEIL/DFLR/DROUND opcodes may be used.
 * ``PIPE_SHADER_CAP_TGSI_DFRACEXP_DLDEXP_SUPPORTED``: Whether DFRACEXP and

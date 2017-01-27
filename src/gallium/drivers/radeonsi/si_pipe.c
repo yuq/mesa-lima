@@ -414,8 +414,12 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 	case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
 	case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
-	case PIPE_CAP_INT64:
 		return 1;
+
+	case PIPE_CAP_DOUBLES:
+		return HAVE_LLVM >= 0x0307;
+	case PIPE_CAP_INT64:
+		return HAVE_LLVM >= 0x0309;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:
 		return !SI_BIG_ENDIAN && sscreen->b.info.has_userptr;
@@ -591,8 +595,6 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 
 			return ir;
 		}
-		case PIPE_SHADER_CAP_DOUBLES:
-			return HAVE_LLVM >= 0x0307;
 
 		case PIPE_SHADER_CAP_MAX_CONST_BUFFER_SIZE: {
 			uint64_t max_const_buffer_size;
@@ -654,9 +656,6 @@ static int si_get_shader_param(struct pipe_screen* pscreen, unsigned shader, enu
 	case PIPE_SHADER_CAP_TGSI_FMA_SUPPORTED:
 	case PIPE_SHADER_CAP_TGSI_ANY_INOUT_DECL_RANGE:
 		return 1;
-
-	case PIPE_SHADER_CAP_DOUBLES:
-		return HAVE_LLVM >= 0x0307;
 
 	case PIPE_SHADER_CAP_INDIRECT_INPUT_ADDR:
 		/* TODO: Indirection of geometry shader input dimension is not
