@@ -298,14 +298,6 @@ st_destroy_context_priv(struct st_context *st, bool destroy_pipe)
       }
    }
 
-   u_upload_destroy(st->uploader);
-   if (st->indexbuf_uploader) {
-      u_upload_destroy(st->indexbuf_uploader);
-   }
-   if (st->constbuf_uploader) {
-      u_upload_destroy(st->constbuf_uploader);
-   }
-
    /* free glDrawPixels cache data */
    free(st->drawpix_cache.image);
    pipe_resource_reference(&st->drawpix_cache.texture, NULL);
@@ -345,22 +337,10 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    st->dirty = ST_ALL_STATES_MASK;
 
-   /* Create upload manager for vertex data for glBitmap, glDrawPixels,
-    * glClear, etc.
-    */
-   st->uploader = u_upload_create(pipe, 65536, PIPE_BIND_VERTEX_BUFFER,
-                                  PIPE_USAGE_STREAM);
-
-   if (!screen->get_param(screen, PIPE_CAP_USER_INDEX_BUFFERS)) {
-      st->indexbuf_uploader = u_upload_create(pipe, 128 * 1024,
-                                              PIPE_BIND_INDEX_BUFFER,
-                                              PIPE_USAGE_STREAM);
-   }
-
-   if (!screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS))
-      st->constbuf_uploader = u_upload_create(pipe, 128 * 1024,
-                                              PIPE_BIND_CONSTANT_BUFFER,
-                                              PIPE_USAGE_STREAM);
+   st->has_user_indexbuf =
+      screen->get_param(screen, PIPE_CAP_USER_INDEX_BUFFERS);
+   st->has_user_constbuf =
+      screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
    st->cso_context = cso_create_context(pipe);
 
