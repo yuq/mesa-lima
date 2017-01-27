@@ -567,7 +567,6 @@ struct r600_common_context {
 	unsigned			last_dirty_tex_counter;
 	unsigned			last_compressed_colortex_counter;
 
-	struct u_upload_mgr		*uploader;
 	struct u_suballocator		*allocator_zeroed_memory;
 	struct slab_child_pool		pool_transfers;
 

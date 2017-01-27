@@ -1093,10 +1093,13 @@ static void r600_set_constant_buffer(struct pipe_context *ctx, uint shader, uint
 				tmpPtr[i] = util_cpu_to_le32(((uint32_t *)ptr)[i]);
 			}
 
-			u_upload_data(rctx->b.uploader, 0, size, 256, tmpPtr, &cb->buffer_offset, &cb->buffer);
+			u_upload_data(ctx->stream_uploader, 0, size, 256,
+                                      tmpPtr, &cb->buffer_offset, &cb->buffer);
 			free(tmpPtr);
 		} else {
-			u_upload_data(rctx->b.uploader, 0, input->buffer_size, 256, ptr, &cb->buffer_offset, &cb->buffer);
+			u_upload_data(ctx->stream_uploader, 0,
+                                      input->buffer_size, 256, ptr,
+                                      &cb->buffer_offset, &cb->buffer);
 		}
 		/* account it in gtt */
 		rctx->b.gtt += input->buffer_size;
@@ -1736,8 +1739,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 				}
 			}
 
-			u_upload_alloc(rctx->b.uploader, start, count * 2, 256,
-				       &out_offset, &out_buffer, &ptr);
+			u_upload_alloc(ctx->stream_uploader, start, count * 2,
+                                       256, &out_offset, &out_buffer, &ptr);
 
 			util_shorten_ubyte_elts_to_userptr(
 						&rctx->b.b, &ib, 0, ib.offset + start, count, ptr);
@@ -1757,7 +1760,8 @@ static void r600_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info 
 		if (ib.user_buffer && (R600_BIG_ENDIAN || info.indirect ||
 						 info.instance_count > 1 ||
 						 info.count*ib.index_size > 20)) {
-			u_upload_data(rctx->b.uploader, 0, info.count * ib.index_size, 256,
+			u_upload_data(ctx->stream_uploader, 0,
+                                      info.count * ib.index_size, 256,
 				      ib.user_buffer, &ib.offset, &ib.buffer);
 			ib.user_buffer = NULL;
 		}

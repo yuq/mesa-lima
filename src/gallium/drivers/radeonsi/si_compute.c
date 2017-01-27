@@ -503,9 +503,9 @@ static void si_setup_user_sgprs_co_v2(struct si_context *sctx,
 
 		dispatch.kernarg_address = kernel_args_va;
 
-		u_upload_data(sctx->b.uploader, 0, sizeof(dispatch), 256,
-				&dispatch, &dispatch_offset,
-				(struct pipe_resource**)&dispatch_buf);
+		u_upload_data(sctx->b.b.stream_uploader, 0, sizeof(dispatch),
+                              256, &dispatch, &dispatch_offset,
+                              (struct pipe_resource**)&dispatch_buf);
 
 		if (!dispatch_buf) {
 			fprintf(stderr, "Error: Failed to allocate dispatch "
@@ -565,7 +565,7 @@ static void si_upload_compute_input(struct si_context *sctx,
 	/* The extra num_work_size_bytes are for work group / work item size information */
 	kernel_args_size = program->input_size + num_work_size_bytes;
 
-	u_upload_alloc(sctx->b.uploader, 0, kernel_args_size, 256,
+	u_upload_alloc(sctx->b.b.stream_uploader, 0, kernel_args_size, 256,
 		       &kernel_args_offset,
 		       (struct pipe_resource**)&input_buffer, &kernel_args_ptr);
 

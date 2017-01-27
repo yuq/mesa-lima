@@ -193,7 +193,8 @@ void r600_draw_rectangle(struct blitter_context *blitter,
 	/* Upload vertices. The hw rectangle has only 3 vertices,
 	 * I guess the 4th one is derived from the first 3.
 	 * The vertex specification should match u_blitter's vertex element state. */
-	u_upload_alloc(rctx->uploader, 0, sizeof(float) * 24, 256, &offset, &buf, (void**)&vb);
+	u_upload_alloc(rctx->b.stream_uploader, 0, sizeof(float) * 24, 256,
+                       &offset, &buf, (void**)&vb);
 	if (!buf)
 		return;
 
@@ -601,13 +602,11 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	if (!rctx->allocator_zeroed_memory)
 		return false;
 
-	rctx->uploader = u_upload_create(&rctx->b, 1024 * 1024,
-					PIPE_BIND_INDEX_BUFFER |
-					PIPE_BIND_CONSTANT_BUFFER, PIPE_USAGE_STREAM);
-	if (!rctx->uploader)
+	rctx->b.stream_uploader = u_upload_create(&rctx->b, 1024 * 1024,
+						  0, PIPE_USAGE_STREAM);
+	if (!rctx->b.stream_uploader)
 		return false;
-	rctx->b.stream_uploader = rctx->uploader;
-	rctx->b.const_uploader = rctx->uploader;
+	rctx->b.const_uploader = rctx->b.stream_uploader;
 
 	rctx->ctx = rctx->ws->ctx_create(rctx->ws);
 	if (!rctx->ctx)
@@ -649,8 +648,8 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	if (rctx->ctx)
 		rctx->ws->ctx_destroy(rctx->ctx);
 
-	if (rctx->uploader) {
-		u_upload_destroy(rctx->uploader);
+	if (rctx->b.stream_uploader) {
+		u_upload_destroy(rctx->b.stream_uploader);
 	}
 
 	slab_destroy_child(&rctx->pool_transfers);
