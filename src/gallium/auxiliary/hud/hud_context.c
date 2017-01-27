@@ -60,7 +60,6 @@ static boolean huds_visible = TRUE;
 struct hud_context {
    struct pipe_context *pipe;
    struct cso_context *cso;
-   struct u_upload_mgr *uploader;
 
    struct hud_batch_query_context *batch_query;
    struct list_head pane_list;
@@ -463,7 +462,7 @@ hud_alloc_vertices(struct hud_context *hud, struct vertex_queue *v,
    v->num_vertices = 0;
    v->max_num_vertices = num_vertices;
    v->vbuf.stride = stride;
-   u_upload_alloc(hud->uploader, 0, v->vbuf.stride * v->max_num_vertices,
+   u_upload_alloc(hud->pipe->stream_uploader, 0, v->vbuf.stride * v->max_num_vertices,
                   16, &v->vbuf.buffer_offset, &v->vbuf.buffer,
                   (void**)&v->vertices);
 }
@@ -597,7 +596,7 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    }
 
    /* unmap the uploader's vertex buffer before drawing */
-   u_upload_unmap(hud->uploader);
+   u_upload_unmap(pipe->stream_uploader);
 
    /* draw accumulated vertices for background quads */
    cso_set_blend(cso, &hud->alpha_blend);
@@ -1476,12 +1475,9 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
 
    hud->pipe = pipe;
    hud->cso = cso;
-   hud->uploader = u_upload_create(pipe, 256 * 1024,
-                                   PIPE_BIND_VERTEX_BUFFER, PIPE_USAGE_STREAM);
 
    /* font */
    if (!util_font_create(pipe, UTIL_FONT_FIXED_8X13, &hud->font)) {
-      u_upload_destroy(hud->uploader);
       FREE(hud);
       return NULL;
    }
@@ -1531,7 +1527,6 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
       if (!tgsi_text_translate(fragment_shader_text, tokens, ARRAY_SIZE(tokens))) {
          assert(0);
          pipe_resource_reference(&hud->font.texture, NULL);
-         u_upload_destroy(hud->uploader);
          FREE(hud);
          return NULL;
       }
@@ -1580,7 +1575,6 @@ hud_create(struct pipe_context *pipe, struct cso_context *cso)
       if (!tgsi_text_translate(vertex_shader_text, tokens, ARRAY_SIZE(tokens))) {
          assert(0);
          pipe_resource_reference(&hud->font.texture, NULL);
-         u_upload_destroy(hud->uploader);
          FREE(hud);
          return NULL;
       }
@@ -1655,6 +1649,5 @@ hud_destroy(struct hud_context *hud)
    pipe->delete_vs_state(pipe, hud->vs);
    pipe_sampler_view_reference(&hud->font_sampler_view, NULL);
    pipe_resource_reference(&hud->font.texture, NULL);
-   u_upload_destroy(hud->uploader);
    FREE(hud);
 }
