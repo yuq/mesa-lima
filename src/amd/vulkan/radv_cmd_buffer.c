@@ -1351,6 +1351,9 @@ VkResult radv_AllocateCommandBuffers(
 	VkResult result = VK_SUCCESS;
 	uint32_t i;
 
+	memset(pCommandBuffers, 0,
+			sizeof(*pCommandBuffers)*pAllocateInfo->commandBufferCount);
+
 	for (i = 0; i < pAllocateInfo->commandBufferCount; i++) {
 		result = radv_create_cmd_buffer(device, pool, pAllocateInfo->level,
 						&pCommandBuffers[i]);
