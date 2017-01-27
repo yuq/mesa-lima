@@ -230,10 +230,6 @@ vlVaCreateContext(VADriverContextP ctx, VAConfigID config_id, int picture_width,
 
    if (is_vpp) {
       context->decoder = NULL;
-      if (!drv->compositor.upload) {
-         FREE(context);
-         return VA_STATUS_ERROR_INVALID_CONTEXT;
-      }
    } else {
       context->templat.profile = config->profile;
       context->templat.entrypoint = config->entrypoint;

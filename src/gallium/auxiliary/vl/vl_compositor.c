@@ -782,7 +782,7 @@ gen_vertex_data(struct vl_compositor *c, struct vl_compositor_state *s, struct u
    assert(c);
 
    /* Allocate new memory for vertices. */
-   u_upload_alloc(c->upload, 0,
+   u_upload_alloc(c->pipe->stream_uploader, 0,
                   c->vertex_buf.stride * VL_COMPOSITOR_MAX_LAYERS * 4, /* size */
                   4, /* alignment */
                   &c->vertex_buf.buffer_offset, &c->vertex_buf.buffer,
@@ -817,7 +817,7 @@ gen_vertex_data(struct vl_compositor *c, struct vl_compositor_state *s, struct u
       }
    }
 
-   u_upload_unmap(c->upload);
+   u_upload_unmap(c->pipe->stream_uploader);
 }
 
 static void
@@ -913,7 +913,6 @@ vl_compositor_cleanup(struct vl_compositor *c)
 {
    assert(c);
 
-   u_upload_destroy(c->upload);
    cleanup_buffers(c);
    cleanup_shaders(c);
    cleanup_pipe_state(c);
@@ -1197,25 +1196,16 @@ vl_compositor_init(struct vl_compositor *c, struct pipe_context *pipe)
 
    c->pipe = pipe;
 
-   c->upload = u_upload_create(pipe, 128 * 1024, PIPE_BIND_VERTEX_BUFFER,
-                               PIPE_USAGE_STREAM);
-
-   if (!c->upload)
-      return false;
-
    if (!init_pipe_state(c)) {
-      u_upload_destroy(c->upload);
       return false;
    }
 
    if (!init_shaders(c)) {
-      u_upload_destroy(c->upload);
       cleanup_pipe_state(c);
       return false;
    }
 
    if (!init_buffers(c)) {
-      u_upload_destroy(c->upload);
       cleanup_shaders(c);
       cleanup_pipe_state(c);
       return false;
