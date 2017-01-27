@@ -941,22 +941,6 @@ static void amdgpu_add_fence_dependency(struct amdgpu_cs *acs,
    bo->num_fences = new_num_fences;
 }
 
-/* Since the kernel driver doesn't synchronize execution between different
- * rings automatically, we have to add fence dependencies manually.
- */
-static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
-{
-   struct amdgpu_cs_context *cs = acs->csc;
-   int i;
-
-   cs->request.number_of_dependencies = 0;
-
-   for (i = 0; i < cs->num_real_buffers; i++)
-      amdgpu_add_fence_dependency(acs, &cs->real_buffers[i]);
-   for (i = 0; i < cs->num_slab_buffers; i++)
-      amdgpu_add_fence_dependency(acs, &cs->slab_buffers[i]);
-}
-
 static void amdgpu_add_fence(struct amdgpu_winsys_bo *bo,
                              struct pipe_fence_handle *fence)
 {
@@ -982,6 +966,38 @@ static void amdgpu_add_fence(struct amdgpu_winsys_bo *bo,
    bo->fences[bo->num_fences] = NULL;
    amdgpu_fence_reference(&bo->fences[bo->num_fences], fence);
    bo->num_fences++;
+}
+
+/* Since the kernel driver doesn't synchronize execution between different
+ * rings automatically, we have to add fence dependencies manually.
+ */
+static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
+{
+   struct amdgpu_cs_context *cs = acs->csc;
+   unsigned num_buffers;
+   int i;
+
+   cs->request.number_of_dependencies = 0;
+
+   num_buffers = cs->num_real_buffers;
+   for (i = 0; i < num_buffers; i++) {
+      struct amdgpu_cs_buffer *buffer = &cs->real_buffers[i];
+      struct amdgpu_winsys_bo *bo = buffer->bo;
+
+      amdgpu_add_fence_dependency(acs, buffer);
+      p_atomic_inc(&bo->num_active_ioctls);
+      amdgpu_add_fence(bo, cs->fence);
+   }
+
+   num_buffers = cs->num_slab_buffers;
+   for (i = 0; i < num_buffers; i++) {
+      struct amdgpu_cs_buffer *buffer = &cs->slab_buffers[i];
+      struct amdgpu_winsys_bo *bo = buffer->bo;
+
+      amdgpu_add_fence_dependency(acs, buffer);
+      p_atomic_inc(&bo->num_active_ioctls);
+      amdgpu_add_fence(bo, cs->fence);
+   }
 }
 
 void amdgpu_cs_submit_ib(void *job, int thread_index)
@@ -1146,7 +1162,6 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
        cs->main.base.current.cdw <= cs->main.base.current.max_dw &&
        !debug_get_option_noop())) {
       struct amdgpu_cs_context *cur = cs->csc;
-      unsigned i, num_buffers;
 
       /* Set IB sizes. */
       amdgpu_ib_finalize(&cs->main);
@@ -1182,20 +1197,6 @@ static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
        */
       pipe_mutex_lock(ws->bo_fence_lock);
       amdgpu_add_fence_dependencies(cs);
-
-      num_buffers = cur->num_real_buffers;
-      for (i = 0; i < num_buffers; i++) {
-         struct amdgpu_winsys_bo *bo = cur->real_buffers[i].bo;
-         p_atomic_inc(&bo->num_active_ioctls);
-         amdgpu_add_fence(bo, cur->fence);
-      }
-
-      num_buffers = cur->num_slab_buffers;
-      for (i = 0; i < num_buffers; i++) {
-         struct amdgpu_winsys_bo *bo = cur->slab_buffers[i].bo;
-         p_atomic_inc(&bo->num_active_ioctls);
-         amdgpu_add_fence(bo, cur->fence);
-      }
 
       /* Swap command streams. "cst" is going to be submitted. */
       cs->csc = cs->cst;
