@@ -695,6 +695,7 @@ gbm_dri_bo_import(struct gbm_device *gbm,
          gbm_format = GBM_FORMAT_YUYV;
          break;
       default:
+         dri->image->destroyImage(image);
          return NULL;
       }
       break;
@@ -715,6 +716,7 @@ gbm_dri_bo_import(struct gbm_device *gbm,
       gbm_format = gbm_dri_to_gbm_format(dri_format);
       if (gbm_format == 0) {
          errno = EINVAL;
+         dri->image->destroyImage(image);
          return NULL;
       }
       break;
@@ -759,8 +761,10 @@ gbm_dri_bo_import(struct gbm_device *gbm,
 
 
    bo = calloc(1, sizeof *bo);
-   if (bo == NULL)
+   if (bo == NULL) {
+      dri->image->destroyImage(image);
       return NULL;
+   }
 
    bo->image = image;
 
@@ -771,6 +775,7 @@ gbm_dri_bo_import(struct gbm_device *gbm,
    if (dri->image->base.version >= 2 &&
        !dri->image->validateUsage(bo->image, dri_use)) {
       errno = EINVAL;
+      dri->image->destroyImage(bo->image);
       free(bo);
       return NULL;
    }
