@@ -56,7 +56,6 @@ struct primconvert_context
    struct pipe_index_buffer saved_ib;
    uint32_t primtypes_mask;
    unsigned api_pv;
-   struct u_upload_mgr *upload;
 };
 
 
@@ -74,8 +73,6 @@ util_primconvert_create(struct pipe_context *pipe, uint32_t primtypes_mask)
 void
 util_primconvert_destroy(struct primconvert_context *pc)
 {
-   if (pc->upload)
-      u_upload_destroy(pc->upload);
    util_primconvert_save_index_buffer(pc, NULL);
    FREE(pc);
 }
@@ -152,12 +149,7 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
                         &gen_func);
    }
 
-   if (!pc->upload) {
-      pc->upload = u_upload_create(pc->pipe, 4096, PIPE_BIND_INDEX_BUFFER,
-                                   PIPE_USAGE_STREAM);
-   }
-
-   u_upload_alloc(pc->upload, 0, new_ib.index_size * new_info.count, 4,
+   u_upload_alloc(pc->pipe->stream_uploader, 0, new_ib.index_size * new_info.count, 4,
                   &new_ib.offset, &new_ib.buffer, &dst);
 
    if (info->indexed) {
@@ -170,7 +162,7 @@ util_primconvert_draw_vbo(struct primconvert_context *pc,
    if (src_transfer)
       pipe_buffer_unmap(pc->pipe, src_transfer);
 
-   u_upload_unmap(pc->upload);
+   u_upload_unmap(pc->pipe->stream_uploader);
 
    /* bind new index buffer: */
    pc->pipe->set_index_buffer(pc->pipe, &new_ib);
