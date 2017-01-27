@@ -565,11 +565,12 @@ radv_physical_device_get_format_properties(struct radv_physical_device *physical
 	}
 
 	if (vk_format_is_depth_or_stencil(format)) {
-		if (radv_is_zs_format_supported(format))
+		if (radv_is_zs_format_supported(format)) {
 			tiled |= VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-		tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
-			VK_FORMAT_FEATURE_BLIT_DST_BIT;
+			tiled |= VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
+			tiled |= VK_FORMAT_FEATURE_BLIT_SRC_BIT |
+			         VK_FORMAT_FEATURE_BLIT_DST_BIT;
+		}
 	} else {
 		bool linear_sampling;
 		if (radv_is_sampler_format_supported(format, &linear_sampling)) {
