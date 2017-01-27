@@ -116,10 +116,6 @@ static const VkExtensionProperties common_device_extensions[] = {
 		.specVersion = 1,
 	},
 	{
-		.extensionName = VK_AMD_NEGATIVE_VIEWPORT_HEIGHT_EXTENSION_NAME,
-		.specVersion = 1,
-	},
-	{
 		.extensionName = VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
 		.specVersion = 1,
 	},
