@@ -128,32 +128,33 @@ nve4_m2mf_transfer_rect(struct nvc0_context *nvc0,
 
    exec = 0x200 /* 2D_ENABLE */ | 0x6 /* UNK */;
 
-   if (!nouveau_bo_memtype(dst->bo)) {
+   if (nouveau_bo_memtype(dst->bo)) {
+      BEGIN_NVC0(push, SUBC_COPY(0x070c), 6);
+      PUSH_DATA (push, 0x1000 | dst->tile_mode);
+      PUSH_DATA (push, dst->pitch);
+      PUSH_DATA (push, dst->height);
+      PUSH_DATA (push, dst->depth);
+      PUSH_DATA (push, dst->z);
+      PUSH_DATA (push, (dst->y << 16) | (dst->x * cpp));
+   } else {
       assert(!dst->z);
       dst_base += dst->y * dst->pitch + dst->x * cpp;
       exec |= 0x100; /* DST_MODE_2D_LINEAR */
    }
-   if (!nouveau_bo_memtype(src->bo)) {
+
+   if (nouveau_bo_memtype(src->bo)) {
+      BEGIN_NVC0(push, SUBC_COPY(0x0728), 6);
+      PUSH_DATA (push, 0x1000 | src->tile_mode);
+      PUSH_DATA (push, src->pitch);
+      PUSH_DATA (push, src->height);
+      PUSH_DATA (push, src->depth);
+      PUSH_DATA (push, src->z);
+      PUSH_DATA (push, (src->y << 16) | (src->x * cpp));
+   } else {
       assert(!src->z);
       src_base += src->y * src->pitch + src->x * cpp;
       exec |= 0x080; /* SRC_MODE_2D_LINEAR */
    }
-
-   BEGIN_NVC0(push, SUBC_COPY(0x070c), 6);
-   PUSH_DATA (push, 0x1000 | dst->tile_mode);
-   PUSH_DATA (push, dst->pitch);
-   PUSH_DATA (push, dst->height);
-   PUSH_DATA (push, dst->depth);
-   PUSH_DATA (push, dst->z);
-   PUSH_DATA (push, (dst->y << 16) | (dst->x * cpp));
-
-   BEGIN_NVC0(push, SUBC_COPY(0x0728), 6);
-   PUSH_DATA (push, 0x1000 | src->tile_mode);
-   PUSH_DATA (push, src->pitch);
-   PUSH_DATA (push, src->height);
-   PUSH_DATA (push, src->depth);
-   PUSH_DATA (push, src->z);
-   PUSH_DATA (push, (src->y << 16) | (src->x * cpp));
 
    BEGIN_NVC0(push, SUBC_COPY(0x0400), 8);
    PUSH_DATAh(push, src->bo->offset + src_base);
