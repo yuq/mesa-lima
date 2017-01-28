@@ -126,11 +126,11 @@ static const char *ac_get_llvm_processor_name(enum radeon_family family)
 	}
 }
 
-LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family)
+LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, bool supports_spill)
 {
 	assert(family >= CHIP_TAHITI);
 
-	const char *triple = "amdgcn--";
+	const char *triple = supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--";
 	LLVMTargetRef target = ac_get_llvm_target(triple);
 	LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
 	                             target,

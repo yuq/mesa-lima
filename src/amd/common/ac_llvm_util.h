@@ -56,7 +56,7 @@ struct ac_llvm_context {
 	LLVMValueRef fpmath_md_2p5_ulp;
 };
 
-LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family);
+LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, bool supports_spill);
 
 void ac_add_attr_dereferenceable(LLVMValueRef val, uint64_t bytes);
 bool ac_is_sgpr_param(LLVMValueRef param);

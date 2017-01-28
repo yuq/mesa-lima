@@ -52,6 +52,7 @@ struct ac_nir_compiler_options {
 	struct radv_pipeline_layout *layout;
 	union ac_shader_variant_key key;
 	bool unsafe_math;
+	bool supports_spill;
 	enum radeon_family family;
 	enum chip_class chip_class;
 };
@@ -64,8 +65,9 @@ struct ac_userdata_info {
 };
 
 enum ac_ud_index {
-	AC_UD_PUSH_CONSTANTS = 0,
-	AC_UD_SHADER_START = 1,
+	AC_UD_SCRATCH = 0,
+	AC_UD_PUSH_CONSTANTS = 1,
+	AC_UD_SHADER_START = 2,
 	AC_UD_VS_VERTEX_BUFFERS = AC_UD_SHADER_START,
 	AC_UD_VS_BASE_VERTEX_START_INSTANCE,
 	AC_UD_VS_MAX_UD,

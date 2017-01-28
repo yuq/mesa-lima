@@ -458,10 +458,10 @@ static void create_function(struct nir_to_llvm_context *ctx)
 	    arg_idx, array_params_mask, sgpr_count, ctx->options->unsafe_math);
 	set_llvm_calling_convention(ctx->main_function, ctx->stage);
 
-
 	ctx->shader_info->num_input_sgprs = 0;
 	ctx->shader_info->num_input_vgprs = 0;
 
+	ctx->shader_info->num_user_sgprs = ctx->options->supports_spill ? 2 : 0;
 	for (i = 0; i < user_sgpr_count; i++)
 		ctx->shader_info->num_user_sgprs += llvm_get_type_size(arg_types[i]) / 4;
 
@@ -475,6 +475,12 @@ static void create_function(struct nir_to_llvm_context *ctx)
 
 	arg_idx = 0;
 	user_sgpr_idx = 0;
+
+	if (ctx->options->supports_spill) {
+		set_userdata_location_shader(ctx, AC_UD_SCRATCH, user_sgpr_idx, 2);
+		user_sgpr_idx += 2;
+	}
+
 	for (unsigned i = 0; i < num_sets; ++i) {
 		if (ctx->options->layout->set[i].layout->shader_stages & (1 << ctx->stage)) {
 			set_userdata_location(&ctx->shader_info->user_sgprs_locs.descriptor_sets[i], user_sgpr_idx, 2);
@@ -4432,7 +4438,7 @@ LLVMModuleRef ac_translate_nir_to_llvm(LLVMTargetMachineRef tm,
 
 	memset(shader_info, 0, sizeof(*shader_info));
 
-	LLVMSetTarget(ctx.module, "amdgcn--");
+	LLVMSetTarget(ctx.module, options->supports_spill ? "amdgcn-mesa-mesa3d" : "amdgcn--");
 	setup_types(&ctx);
 
 	ctx.builder = LLVMCreateBuilderInContext(ctx.context);
@@ -4566,7 +4572,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 				   struct ac_shader_config *config,
 				   struct ac_shader_variant_info *shader_info,
 				   gl_shader_stage stage,
-				   bool dump_shader)
+				   bool dump_shader, bool supports_spill)
 {
 	if (dump_shader)
 		ac_dump_module(llvm_module);
@@ -4580,7 +4586,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 	if (dump_shader)
 		fprintf(stderr, "disasm:\n%s\n", binary->disasm_string);
 
-	ac_shader_binary_read_config(binary, config, 0);
+	ac_shader_binary_read_config(binary, config, 0, supports_spill);
 
 	LLVMContextRef ctx = LLVMGetModuleContext(llvm_module);
 	LLVMDisposeModule(llvm_module);
@@ -4640,7 +4646,7 @@ void ac_compile_nir_shader(LLVMTargetMachineRef tm,
 	LLVMModuleRef llvm_module = ac_translate_nir_to_llvm(tm, nir, shader_info,
 	                                                     options);
 
-	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir->stage, dump_shader);
+	ac_compile_llvm_module(tm, llvm_module, binary, config, shader_info, nir->stage, dump_shader, options->supports_spill);
 	switch (nir->stage) {
 	case MESA_SHADER_COMPUTE:
 		for (int i = 0; i < 3; ++i)
