@@ -960,9 +960,9 @@ llvm_set_environment_variables() {
         fi
 
         DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
-        MESA_LLVM=1
+        FOUND_LLVM=yes
     else
-        MESA_LLVM=0
+        FOUND_LLVM=no
         LLVM_VERSION_INT=0
     fi
 }
@@ -974,10 +974,6 @@ require_llvm() {
 }
 
 llvm_require_version() {
-    if test "x$MESA_LLVM" = x0; then
-        AC_MSG_ERROR([LLVM $1 or newer is required for $2])
-        return
-    fi
     require_llvm $2
 
     llvm_target_version_major=`echo $1 | cut -d. -f1 | egrep -o '^[[0-9]]+'`
@@ -1735,6 +1731,10 @@ fi
 dnl
 dnl Gallium LLVM
 dnl
+dnl With follow-up commits we'll rework --enable-gallium-llvm to --enable-llvm
+dnl Since that is too invasive to stable, do the more conservative thing for now
+dnl and consider it as a global LLVM toggle.
+dnl
 AC_ARG_ENABLE([gallium-llvm],
     [AS_HELP_STRING([--enable-gallium-llvm],
         [build gallium LLVM support @<:@default=enabled on x86/x86_64@:>@])],
@@ -1745,6 +1745,10 @@ if test "x$enable_gallium_llvm" = xauto; then
     case "$host_cpu" in
     i*86|x86_64|amd64) enable_gallium_llvm=yes;;
     esac
+fi
+
+if test "x$enable_gallium_llvm" = xyes -a "x$FOUND_LLVM" = xno; then
+    AC_MSG_ERROR([--enable-gallium-llvm selected but llvm-config is not found])
 fi
 
 #
@@ -2334,7 +2338,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
-            if test "x$MESA_LLVM" = x1 && test "x$enable_gallium_llvm" == "xyes";  then
+            if test "x$enable_gallium_llvm" = xyes; then
                 HAVE_GALLIUM_LLVMPIPE=yes
             fi
             ;;
@@ -2398,7 +2402,7 @@ dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
 dnl this was causing the same libraries to be appear multiple times
 dnl in LLVM_LIBS.
 
-if test "x$MESA_LLVM" != x0; then
+if test "x$enable_gallium_llvm" = xyes; then
 
     if ! $LLVM_CONFIG --libs ${LLVM_COMPONENTS} >/dev/null; then
        AC_MSG_ERROR([Calling ${LLVM_CONFIG} failed])
@@ -2499,8 +2503,7 @@ AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
 AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$enable_glx" = xgallium-xlib)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
-AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$MESA_LLVM" = x1 -a \
-                                       "x$enable_gallium_llvm" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$enable_gallium_llvm" = xyes)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)
 
 AM_CONDITIONAL(HAVE_LIBDRM, test "x$have_libdrm" = xyes)
@@ -2780,7 +2783,7 @@ else
 fi
 
 echo ""
-if test "x$MESA_LLVM" = x1; then
+if test "x$enable_gallium_llvm" = xyes; then
     echo "        llvm:            yes"
     echo "        llvm-config:     $LLVM_CONFIG"
     echo "        llvm-version:    $LLVM_VERSION"
@@ -2827,7 +2830,7 @@ echo "        CFLAGS:          $cflags"
 echo "        CXXFLAGS:        $cxxflags"
 echo "        Macros:          $defines"
 echo ""
-if test "x$MESA_LLVM" = x1; then
+if test "x$enable_gallium_llvm" = xyes; then
     echo "        LLVM_CFLAGS:     $LLVM_CFLAGS"
     echo "        LLVM_CXXFLAGS:   $LLVM_CXXFLAGS"
     echo "        LLVM_CPPFLAGS:   $LLVM_CPPFLAGS"
