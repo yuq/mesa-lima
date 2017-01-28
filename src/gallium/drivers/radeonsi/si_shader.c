@@ -6400,7 +6400,7 @@ int si_compile_llvm(struct si_screen *sscreen,
 
 		if (!(sscreen->b.debug_flags & (DBG_NO_IR | DBG_PREOPT_IR))) {
 			fprintf(stderr, "%s LLVM IR:\n\n", name);
-			LLVMDumpModule(mod);
+			ac_dump_module(mod);
 			fprintf(stderr, "\n");
 		}
 	}
@@ -6599,7 +6599,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 	/* Dump LLVM IR before any optimization passes */
 	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
 	    r600_can_dump_shader(&sscreen->b, PIPE_SHADER_GEOMETRY))
-		LLVMDumpModule(bld_base->base.gallivm->module);
+		ac_dump_module(bld_base->base.gallivm->module);
 
 	si_llvm_finalize_module(&ctx,
 		r600_extra_shader_checks(&sscreen->b, PIPE_SHADER_GEOMETRY));
@@ -7603,7 +7603,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	/* Dump LLVM IR before any optimization passes */
 	if (sscreen->b.debug_flags & DBG_PREOPT_IR &&
 	    r600_can_dump_shader(&sscreen->b, ctx.type))
-		LLVMDumpModule(mod);
+		ac_dump_module(mod);
 
 	si_llvm_finalize_module(&ctx,
 				    r600_extra_shader_checks(&sscreen->b, ctx.type));

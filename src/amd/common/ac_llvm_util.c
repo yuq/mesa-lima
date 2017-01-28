@@ -504,3 +504,11 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 
 	memcpy(coords_arg, coords, sizeof(coords));
 }
+
+void
+ac_dump_module(LLVMModuleRef module)
+{
+	char *str = LLVMPrintModuleToString(module);
+	fprintf(stderr, "%s", str);
+	LLVMDisposeMessage(str);
+}

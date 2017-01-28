@@ -4569,7 +4569,7 @@ static void ac_compile_llvm_module(LLVMTargetMachineRef tm,
 				   bool dump_shader)
 {
 	if (dump_shader)
-		LLVMDumpModule(llvm_module);
+		ac_dump_module(llvm_module);
 
 	memset(binary, 0, sizeof(*binary));
 	int v = ac_llvm_compile(llvm_module, binary, tm);

@@ -95,6 +95,9 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 		       LLVMValueRef *coords_arg,
 		       LLVMValueRef *derivs_arg);
 
+void
+ac_dump_module(LLVMModuleRef module);
+
 #ifdef __cplusplus
 }
 #endif
