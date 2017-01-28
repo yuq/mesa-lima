@@ -1745,9 +1745,12 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
                                              nir_intrinsic_instr *instr)
 {
-	LLVMValueRef ptr;
+	LLVMValueRef ptr, addr;
 
-	ptr = build_gep0(ctx, ctx->push_constants, get_src(ctx, instr->src[0]));
+	addr = LLVMConstInt(ctx->i32, nir_intrinsic_base(instr), 0);
+	addr = LLVMBuildAdd(ctx->builder, addr, get_src(ctx, instr->src[0]), "");
+
+	ptr = build_gep0(ctx, ctx->push_constants, addr);
 	ptr = cast_ptr(ctx, ptr, get_def_type(ctx, &instr->dest.ssa));
 
 	return LLVMBuildLoad(ctx->builder, ptr, "");
