@@ -272,6 +272,10 @@ static const VkExtensionProperties device_extensions[] = {
       .extensionName = VK_KHR_MAINTENANCE1_EXTENSION_NAME,
       .specVersion = 1,
    },
+   {
+      .extensionName = VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+      .specVersion = 1,
+   }
 };
 
 static void *
