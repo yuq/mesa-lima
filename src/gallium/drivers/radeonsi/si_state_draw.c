@@ -432,7 +432,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 	key.u.multi_instances_smaller_than_primgroup =
 		info->indirect ||
 		(info->instance_count > 1 &&
-		 si_num_prims_for_vertices(info) < primgroup_size);
+		 (info->count_from_stream_output ||
+		  si_num_prims_for_vertices(info) < primgroup_size));
 	key.u.primitive_restart = info->primitive_restart;
 	key.u.count_from_stream_output = info->count_from_stream_output != NULL;
 
@@ -452,7 +453,8 @@ static unsigned si_get_ia_multi_vgt_param(struct si_context *sctx,
 		    G_028AA8_SWITCH_ON_EOI(ia_multi_vgt_param) &&
 		    (info->indirect ||
 		     (info->instance_count > 1 &&
-		      si_num_prims_for_vertices(info) <= 1)))
+		      (info->count_from_stream_output ||
+		       si_num_prims_for_vertices(info) <= 1))))
 			sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
 	}
 
