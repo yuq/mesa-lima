@@ -241,6 +241,7 @@ void value::remove_use(const node *n) {
 	{
 		// TODO assert((*it)->kind == kind) ?
 		// TODO assert((*it)->arg == arg) ?
+		delete *it;
 		uses.erase(it);
 	}
 }
@@ -290,7 +291,12 @@ bool value::is_prealloc() {
 }
 
 void value::delete_uses() {
-	uses.erase(uses.begin(), uses.end());
+	for (uselist::iterator it = uses.begin(); it != uses.end(); ++it)
+	{
+		delete *it;
+	}
+
+	uses.clear();
 }
 
 void ra_constraint::update_values() {
