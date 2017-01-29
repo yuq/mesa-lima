@@ -104,6 +104,19 @@ void radv_DestroyShaderModule(
 	vk_free2(&device->alloc, pAllocator, module);
 }
 
+
+static void
+radv_pipeline_destroy(struct radv_device *device,
+                      struct radv_pipeline *pipeline,
+                      const VkAllocationCallbacks* allocator)
+{
+	for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i)
+		if (pipeline->shaders[i])
+			radv_shader_variant_destroy(device, pipeline->shaders[i]);
+
+	vk_free2(&device->alloc, allocator, pipeline);
+}
+
 void radv_DestroyPipeline(
 	VkDevice                                    _device,
 	VkPipeline                                  _pipeline,
@@ -115,11 +128,7 @@ void radv_DestroyPipeline(
 	if (!_pipeline)
 		return;
 
-	for (unsigned i = 0; i < MESA_SHADER_STAGES; ++i)
-		if (pipeline->shaders[i])
-			radv_shader_variant_destroy(device, pipeline->shaders[i]);
-
-	vk_free2(&device->alloc, pAllocator, pipeline);
+	radv_pipeline_destroy(device, pipeline, pAllocator);
 }
 
 
@@ -497,6 +506,48 @@ radv_pipeline_compile(struct radv_pipeline *pipeline,
 	if (code)
 		free(code);
 	return variant;
+}
+
+static VkResult
+radv_pipeline_scratch_init(struct radv_device *device,
+                           struct radv_pipeline *pipeline)
+{
+	unsigned scratch_bytes_per_wave = 0;
+	unsigned max_waves = 0;
+	unsigned min_waves = 1;
+
+	for (int i = 0; i < MESA_SHADER_STAGES; ++i) {
+		if (pipeline->shaders[i]) {
+			unsigned max_stage_waves = device->scratch_waves;
+
+			scratch_bytes_per_wave = MAX2(scratch_bytes_per_wave,
+			                              pipeline->shaders[i]->config.scratch_bytes_per_wave);
+
+			max_stage_waves = MIN2(max_stage_waves,
+			          4 * device->physical_device->rad_info.num_good_compute_units *
+			          (256 / pipeline->shaders[i]->config.num_vgprs));
+			max_waves = MAX2(max_waves, max_stage_waves);
+		}
+	}
+
+	if (pipeline->shaders[MESA_SHADER_COMPUTE]) {
+		unsigned group_size = pipeline->shaders[MESA_SHADER_COMPUTE]->info.cs.block_size[0] *
+		                      pipeline->shaders[MESA_SHADER_COMPUTE]->info.cs.block_size[1] *
+		                      pipeline->shaders[MESA_SHADER_COMPUTE]->info.cs.block_size[2];
+		min_waves = MAX2(min_waves, round_up_u32(group_size, 64));
+	}
+
+	if (scratch_bytes_per_wave)
+		max_waves = MIN2(max_waves, 0xffffffffu / scratch_bytes_per_wave);
+
+	if (scratch_bytes_per_wave && max_waves < min_waves) {
+		/* Not really true at this moment, but will be true on first
+		 * execution. Avoid having hanging shaders. */
+		return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+	}
+	pipeline->scratch_bytes_per_wave = scratch_bytes_per_wave;
+	pipeline->max_waves = max_waves;
+	return VK_SUCCESS;
 }
 
 static uint32_t si_translate_blend_function(VkBlendOp op)
@@ -1313,6 +1364,7 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		   const VkAllocationCallbacks *alloc)
 {
 	struct radv_shader_module fs_m = {0};
+	VkResult result;
 
 	if (alloc == NULL)
 		alloc = &device->alloc;
@@ -1421,7 +1473,8 @@ radv_pipeline_init(struct radv_pipeline *pipeline,
 		radv_dump_pipeline_stats(device, pipeline);
 	}
 
-	return VK_SUCCESS;
+	result = radv_pipeline_scratch_init(device, pipeline);
+	return result;
 }
 
 VkResult
@@ -1447,7 +1500,7 @@ radv_graphics_pipeline_create(
 	result = radv_pipeline_init(pipeline, device, cache,
 				    pCreateInfo, extra, pAllocator);
 	if (result != VK_SUCCESS) {
-		vk_free2(&device->alloc, pAllocator, pipeline);
+		radv_pipeline_destroy(device, pipeline, pAllocator);
 		return result;
 	}
 
@@ -1493,6 +1546,7 @@ static VkResult radv_compute_pipeline_create(
 	RADV_FROM_HANDLE(radv_pipeline_cache, cache, _cache);
 	RADV_FROM_HANDLE(radv_shader_module, module, pCreateInfo->stage.module);
 	struct radv_pipeline *pipeline;
+	VkResult result;
 
 	pipeline = vk_alloc2(&device->alloc, pAllocator, sizeof(*pipeline), 8,
 			       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
@@ -1509,6 +1563,13 @@ static VkResult radv_compute_pipeline_create(
 				       MESA_SHADER_COMPUTE,
 				       pCreateInfo->stage.pSpecializationInfo,
 				       pipeline->layout, NULL);
+
+
+	result = radv_pipeline_scratch_init(device, pipeline);
+	if (result != VK_SUCCESS) {
+		radv_pipeline_destroy(device, pipeline, pAllocator);
+		return result;
+	}
 
 	*pPipeline = radv_pipeline_to_handle(pipeline);
 

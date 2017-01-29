@@ -627,6 +627,13 @@ radv_emit_graphics_pipeline(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_028A94_VGT_MULTI_PRIM_IB_RESET_EN,
 			       pipeline->graphics.prim_restart_enable);
 
+	cmd_buffer->scratch_size_needed =
+	                          MAX2(cmd_buffer->scratch_size_needed,
+	                               pipeline->max_waves * pipeline->scratch_bytes_per_wave);
+
+	radeon_set_context_reg(cmd_buffer->cs, R_0286E8_SPI_TMPRING_SIZE,
+			       S_0286E8_WAVES(pipeline->max_waves) |
+			       S_0286E8_WAVESIZE(pipeline->scratch_bytes_per_wave >> 10));
 	cmd_buffer->state.emitted_pipeline = pipeline;
 }
 
@@ -1402,6 +1409,8 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 		free(up);
 	}
 
+	cmd_buffer->scratch_size_needed = 0;
+	cmd_buffer->compute_scratch_size_needed = 0;
 	if (cmd_buffer->upload.upload_bo)
 		cmd_buffer->device->ws->cs_add_buffer(cmd_buffer->cs,
 						      cmd_buffer->upload.upload_bo, 8);
@@ -1629,9 +1638,15 @@ radv_emit_compute_pipeline(struct radv_cmd_buffer *cmd_buffer)
 	radeon_emit(cmd_buffer->cs, compute_shader->rsrc1);
 	radeon_emit(cmd_buffer->cs, compute_shader->rsrc2);
 
+
+	cmd_buffer->compute_scratch_size_needed =
+	                          MAX2(cmd_buffer->compute_scratch_size_needed,
+	                               pipeline->max_waves * pipeline->scratch_bytes_per_wave);
+
 	/* change these once we have scratch support */
 	radeon_set_sh_reg(cmd_buffer->cs, R_00B860_COMPUTE_TMPRING_SIZE,
-			  S_00B860_WAVES(32) | S_00B860_WAVESIZE(0));
+			  S_00B860_WAVES(pipeline->max_waves) |
+			  S_00B860_WAVESIZE(pipeline->scratch_bytes_per_wave >> 10));
 
 	radeon_set_sh_reg_seq(cmd_buffer->cs, R_00B81C_COMPUTE_NUM_THREAD_X, 3);
 	radeon_emit(cmd_buffer->cs,
@@ -1820,6 +1835,11 @@ void radv_CmdExecuteCommands(
 
 	for (uint32_t i = 0; i < commandBufferCount; i++) {
 		RADV_FROM_HANDLE(radv_cmd_buffer, secondary, pCmdBuffers[i]);
+
+		primary->scratch_size_needed = MAX2(primary->scratch_size_needed,
+		                                    secondary->scratch_size_needed);
+		primary->compute_scratch_size_needed = MAX2(primary->compute_scratch_size_needed,
+		                                            secondary->compute_scratch_size_needed);
 
 		primary->device->ws->cs_execute_secondary(primary->cs, secondary->cs);
 	}

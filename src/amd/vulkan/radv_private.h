@@ -485,6 +485,8 @@ struct radv_device {
 
 	uint64_t debug_flags;
 
+	bool llvm_supports_spill;
+	uint32_t scratch_waves;
 	/* MSAA sample locations.
 	 * The first index is the sample index.
 	 * The second index is the coordinate: X, Y. */
@@ -726,6 +728,9 @@ struct radv_cmd_buffer {
 	struct radv_cmd_buffer_upload upload;
 
 	bool record_fail;
+
+	uint32_t scratch_size_needed;
+	uint32_t compute_scratch_size_needed;
 };
 
 struct radv_image;
@@ -923,6 +928,9 @@ struct radv_pipeline {
 			bool prim_restart_enable;
 		} graphics;
 	};
+
+	unsigned max_waves;
+	unsigned scratch_bytes_per_wave;
 };
 
 struct radv_graphics_pipeline_create_info {

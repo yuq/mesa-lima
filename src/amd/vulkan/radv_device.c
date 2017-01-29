@@ -813,6 +813,28 @@ VkResult radv_CreateDevice(
 		}
 	}
 
+#if HAVE_LLVM < 0x0400
+	device->llvm_supports_spill = false;
+#else
+	device->llvm_supports_spill = true;
+#endif
+
+	/* The maximum number of scratch waves. Scratch space isn't divided
+	 * evenly between CUs. The number is only a function of the number of CUs.
+	 * We can decrease the constant to decrease the scratch buffer size.
+	 *
+	 * sctx->scratch_waves must be >= the maximum posible size of
+	 * 1 threadgroup, so that the hw doesn't hang from being unable
+	 * to start any.
+	 *
+	 * The recommended value is 4 per CU at most. Higher numbers don't
+	 * bring much benefit, but they still occupy chip resources (think
+	 * async compute). I've seen ~2% performance difference between 4 and 32.
+	 */
+	uint32_t max_threads_per_block = 2048;
+	device->scratch_waves = MAX2(32 * physical_device->rad_info.num_good_compute_units,
+				     max_threads_per_block / 64);
+
 	result = radv_device_init_meta(device);
 	if (result != VK_SUCCESS)
 		goto fail;
