@@ -467,6 +467,14 @@ struct radv_queue {
 	struct radeon_winsys_ctx                    *hw_ctx;
 	int queue_family_index;
 	int queue_idx;
+
+	uint32_t scratch_size;
+	uint32_t compute_scratch_size;
+
+	struct radeon_winsys_bo *scratch_bo;
+	struct radeon_winsys_bo *descriptor_bo;
+	struct radeon_winsys_bo *compute_scratch_bo;
+	struct radeon_winsys_cs *preamble_cs;
 };
 
 struct radv_device {

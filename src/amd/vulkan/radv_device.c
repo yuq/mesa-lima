@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include "radv_private.h"
+#include "radv_cs.h"
 #include "util/strtod.h"
 
 #include <xf86drm.h>
@@ -752,6 +753,15 @@ radv_queue_finish(struct radv_queue *queue)
 {
 	if (queue->hw_ctx)
 		queue->device->ws->ctx_destroy(queue->hw_ctx);
+
+	if (queue->preamble_cs)
+		queue->device->ws->cs_destroy(queue->preamble_cs);
+	if (queue->descriptor_bo)
+		queue->device->ws->buffer_destroy(queue->descriptor_bo);
+	if (queue->scratch_bo)
+		queue->device->ws->buffer_destroy(queue->scratch_bo);
+	if (queue->compute_scratch_bo)
+		queue->device->ws->buffer_destroy(queue->compute_scratch_bo);
 }
 
 VkResult radv_CreateDevice(
@@ -1000,6 +1010,159 @@ static void radv_dump_trace(struct radv_device *device,
 	fclose(f);
 }
 
+static VkResult
+radv_get_preamble_cs(struct radv_queue *queue,
+                     uint32_t scratch_size,
+                     uint32_t compute_scratch_size,
+                     struct radeon_winsys_cs **preamble_cs)
+{
+	struct radeon_winsys_bo *scratch_bo = NULL;
+	struct radeon_winsys_bo *descriptor_bo = NULL;
+	struct radeon_winsys_bo *compute_scratch_bo = NULL;
+	struct radeon_winsys_cs *cs = NULL;
+
+	if (!scratch_size && !compute_scratch_size) {
+		*preamble_cs = NULL;
+		return VK_SUCCESS;
+	}
+
+	if (scratch_size <= queue->scratch_size &&
+	    compute_scratch_size <= queue->compute_scratch_size) {
+		*preamble_cs = queue->preamble_cs;
+		return VK_SUCCESS;
+	}
+
+	if (scratch_size > queue->scratch_size) {
+		scratch_bo = queue->device->ws->buffer_create(queue->device->ws,
+		                                              scratch_size,
+		                                              4096,
+		                                              RADEON_DOMAIN_VRAM,
+		                                              RADEON_FLAG_NO_CPU_ACCESS);
+		if (!scratch_bo)
+			goto fail;
+	} else
+		scratch_bo = queue->scratch_bo;
+
+	if (compute_scratch_size > queue->compute_scratch_size) {
+		compute_scratch_bo = queue->device->ws->buffer_create(queue->device->ws,
+		                                                      compute_scratch_size,
+		                                                      4096,
+		                                                      RADEON_DOMAIN_VRAM,
+		                                                      RADEON_FLAG_NO_CPU_ACCESS);
+		if (!compute_scratch_bo)
+			goto fail;
+
+	} else
+		compute_scratch_bo = queue->compute_scratch_bo;
+
+	if (scratch_bo != queue->scratch_bo) {
+		descriptor_bo = queue->device->ws->buffer_create(queue->device->ws,
+		                                                 8,
+		                                                 4096,
+		                                                 RADEON_DOMAIN_VRAM,
+		                                                 RADEON_FLAG_CPU_ACCESS);
+		if (!descriptor_bo)
+			goto fail;
+	} else
+		descriptor_bo = queue->descriptor_bo;
+
+	cs = queue->device->ws->cs_create(queue->device->ws,
+	                                  queue->queue_family_index ? RING_COMPUTE : RING_GFX);
+	if (!cs)
+		goto fail;
+
+
+	if (scratch_bo)
+		queue->device->ws->cs_add_buffer(cs, scratch_bo, 8);
+
+	if (descriptor_bo)
+		queue->device->ws->cs_add_buffer(cs, descriptor_bo, 8);
+
+	if (descriptor_bo != queue->descriptor_bo) {
+		uint64_t scratch_va = queue->device->ws->buffer_get_va(scratch_bo);
+		uint32_t rsrc1 = S_008F04_BASE_ADDRESS_HI(scratch_va >> 32) |
+		                 S_008F04_SWIZZLE_ENABLE(1);
+
+		uint32_t *map = (uint32_t*)queue->device->ws->buffer_map(descriptor_bo);
+
+		map[0] = scratch_va;
+		map[1] = rsrc1;
+
+		queue->device->ws->buffer_unmap(descriptor_bo);
+	}
+
+	if (descriptor_bo) {
+		uint32_t regs[] = {R_00B030_SPI_SHADER_USER_DATA_PS_0,
+		                   R_00B130_SPI_SHADER_USER_DATA_VS_0,
+		                   R_00B230_SPI_SHADER_USER_DATA_GS_0,
+		                   R_00B330_SPI_SHADER_USER_DATA_ES_0,
+				   R_00B430_SPI_SHADER_USER_DATA_HS_0,
+				   R_00B530_SPI_SHADER_USER_DATA_LS_0};
+
+		uint64_t va = queue->device->ws->buffer_get_va(descriptor_bo);
+
+		for (int i = 0; i < ARRAY_SIZE(regs); ++i) {
+			radeon_set_sh_reg_seq(cs, regs[i], 2);
+			radeon_emit(cs, va);
+			radeon_emit(cs, va >> 32);
+		}
+	}
+
+	if (compute_scratch_bo) {
+		uint64_t scratch_va = queue->device->ws->buffer_get_va(compute_scratch_bo);
+		uint32_t rsrc1 = S_008F04_BASE_ADDRESS_HI(scratch_va >> 32) |
+		                 S_008F04_SWIZZLE_ENABLE(1);
+
+		queue->device->ws->cs_add_buffer(cs, compute_scratch_bo, 8);
+
+		radeon_set_sh_reg_seq(cs, R_00B900_COMPUTE_USER_DATA_0, 2);
+		radeon_emit(cs, scratch_va);
+		radeon_emit(cs, rsrc1);
+	}
+
+	if (!queue->device->ws->cs_finalize(cs))
+		goto fail;
+
+	if (queue->preamble_cs)
+		queue->device->ws->cs_destroy(queue->preamble_cs);
+
+	queue->preamble_cs = cs;
+
+	if (scratch_bo != queue->scratch_bo) {
+		if (queue->scratch_bo)
+			queue->device->ws->buffer_destroy(queue->scratch_bo);
+		queue->scratch_bo = scratch_bo;
+		queue->scratch_size = scratch_size;
+	}
+
+	if (compute_scratch_bo != queue->compute_scratch_bo) {
+		if (queue->compute_scratch_bo)
+			queue->device->ws->buffer_destroy(queue->compute_scratch_bo);
+		queue->compute_scratch_bo = compute_scratch_bo;
+		queue->compute_scratch_size = compute_scratch_size;
+	}
+
+	if (descriptor_bo != queue->descriptor_bo) {
+		if (queue->descriptor_bo)
+			queue->device->ws->buffer_destroy(queue->descriptor_bo);
+
+		queue->descriptor_bo = descriptor_bo;
+	}
+
+	*preamble_cs = cs;
+	return VK_SUCCESS;
+fail:
+	if (cs)
+		queue->device->ws->cs_destroy(cs);
+	if (descriptor_bo && descriptor_bo != queue->descriptor_bo)
+		queue->device->ws->buffer_destroy(descriptor_bo);
+	if (scratch_bo && scratch_bo != queue->scratch_bo)
+		queue->device->ws->buffer_destroy(scratch_bo);
+	if (compute_scratch_bo && compute_scratch_bo != queue->compute_scratch_bo)
+		queue->device->ws->buffer_destroy(compute_scratch_bo);
+	return VK_ERROR_OUT_OF_DEVICE_MEMORY;
+}
+
 VkResult radv_QueueSubmit(
 	VkQueue                                     _queue,
 	uint32_t                                    submitCount,
@@ -1012,6 +1175,27 @@ VkResult radv_QueueSubmit(
 	struct radeon_winsys_ctx *ctx = queue->hw_ctx;
 	int ret;
 	uint32_t max_cs_submission = queue->device->trace_bo ? 1 : UINT32_MAX;
+	uint32_t scratch_size = 0;
+	uint32_t compute_scratch_size = 0;
+	struct radeon_winsys_cs *preamble_cs = NULL;
+	VkResult result;
+
+	/* Do this first so failing to allocate scratch buffers can't result in
+	 * partially executed submissions. */
+	for (uint32_t i = 0; i < submitCount; i++) {
+		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
+			RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer,
+					 pSubmits[i].pCommandBuffers[j]);
+
+			scratch_size = MAX2(scratch_size, cmd_buffer->scratch_size_needed);
+			compute_scratch_size = MAX2(compute_scratch_size,
+			                            cmd_buffer->compute_scratch_size_needed);
+		}
+	}
+
+	result = radv_get_preamble_cs(queue, scratch_size, compute_scratch_size, &preamble_cs);
+	if (result != VK_SUCCESS)
+		return result;
 
 	for (uint32_t i = 0; i < submitCount; i++) {
 		struct radeon_winsys_cs **cs_array;
@@ -1044,7 +1228,7 @@ VkResult radv_QueueSubmit(
 				*queue->device->trace_id_ptr = 0;
 
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array + j,
-							advance, NULL,
+							advance, preamble_cs,
 							(struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
 							b ? pSubmits[i].waitSemaphoreCount : 0,
 							(struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,

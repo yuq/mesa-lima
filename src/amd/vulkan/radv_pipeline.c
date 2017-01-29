@@ -363,12 +363,13 @@ static void radv_fill_shader_variant(struct radv_device *device,
 				     struct ac_shader_binary *binary,
 				     gl_shader_stage stage)
 {
-	variant->code_size = binary->code_size;
 	bool scratch_enabled = variant->config.scratch_bytes_per_wave > 0;
 	unsigned vgpr_comp_cnt = 0;
 
-	if (scratch_enabled)
-		radv_finishme("shader scratch space");
+	if (scratch_enabled && !device->llvm_supports_spill)
+		radv_finishme("shader scratch support only available with LLVM 4.0");
+
+	variant->code_size = binary->code_size;
 
 	switch (stage) {
 	case MESA_SHADER_VERTEX:
@@ -433,8 +434,8 @@ static struct radv_shader_variant *radv_shader_variant_create(struct radv_device
 	options.unsafe_math = !!(device->debug_flags & RADV_DEBUG_UNSAFE_MATH);
 	options.family = chip_family;
 	options.chip_class = device->physical_device->rad_info.chip_class;
-	options.supports_spill = false;
-	tm = ac_create_target_machine(chip_family, false);
+	options.supports_spill = device->llvm_supports_spill;
+	tm = ac_create_target_machine(chip_family, options.supports_spill);
 	ac_compile_nir_shader(tm, &binary, &variant->config,
 			      &variant->info, shader, &options, dump);
 	LLVMDisposeTargetMachine(tm);
