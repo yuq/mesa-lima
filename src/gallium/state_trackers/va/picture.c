@@ -119,14 +119,21 @@ getEncParamPreset(vlVaContext *context)
    context->desc.h264enc.rate_ctrl.fill_data_enable = 1;
    context->desc.h264enc.rate_ctrl.enforce_hrd = 1;
    context->desc.h264enc.enable_vui = false;
-   if (context->desc.h264enc.rate_ctrl.frame_rate_num == 0)
-      context->desc.h264enc.rate_ctrl.frame_rate_num = 30;
+   if (context->desc.h264enc.rate_ctrl.frame_rate_num == 0 ||
+       context->desc.h264enc.rate_ctrl.frame_rate_den == 0) {
+         context->desc.h264enc.rate_ctrl.frame_rate_num = 30;
+         context->desc.h264enc.rate_ctrl.frame_rate_den = 1;
+   }
    context->desc.h264enc.rate_ctrl.target_bits_picture =
-      context->desc.h264enc.rate_ctrl.target_bitrate / context->desc.h264enc.rate_ctrl.frame_rate_num;
+      context->desc.h264enc.rate_ctrl.target_bitrate *
+      ((float)context->desc.h264enc.rate_ctrl.frame_rate_den /
+      context->desc.h264enc.rate_ctrl.frame_rate_num);
    context->desc.h264enc.rate_ctrl.peak_bits_picture_integer =
-      context->desc.h264enc.rate_ctrl.peak_bitrate / context->desc.h264enc.rate_ctrl.frame_rate_num;
-   context->desc.h264enc.rate_ctrl.peak_bits_picture_fraction = 0;
+      context->desc.h264enc.rate_ctrl.peak_bitrate *
+      ((float)context->desc.h264enc.rate_ctrl.frame_rate_den /
+      context->desc.h264enc.rate_ctrl.frame_rate_num);
 
+   context->desc.h264enc.rate_ctrl.peak_bits_picture_fraction = 0;
    context->desc.h264enc.ref_pic_mode = 0x00000201;
 }
 
@@ -362,7 +369,7 @@ handleVAEncSequenceParameterBufferType(vlVaDriver *drv, vlVaContext *context, vl
       context->gop_coeff = VL_VA_ENC_GOP_COEFF;
    context->desc.h264enc.gop_size = h264->intra_idr_period * context->gop_coeff;
    context->desc.h264enc.rate_ctrl.frame_rate_num = h264->time_scale / 2;
-   context->desc.h264enc.rate_ctrl.frame_rate_den = 1;
+   context->desc.h264enc.rate_ctrl.frame_rate_den = h264->num_units_in_tick;
    return VA_STATUS_SUCCESS;
 }
 
