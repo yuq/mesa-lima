@@ -227,7 +227,7 @@ lp_jit_create_types(struct lp_fragment_shader_variant *lp)
       fprintf(stderr, "%s", str);
       LLVMDisposeMessage(str);
 #else
-      DumpModule(gallivm->module);
+      LLVMDumpModule(gallivm->module);
 #endif
    }
 }
