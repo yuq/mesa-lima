@@ -97,6 +97,7 @@ extern "C" {
 #define MAX_IMAGES 8
 
 #define ANV_SVGS_VB_INDEX    MAX_VBS
+#define ANV_DRAWID_VB_INDEX (MAX_VBS + 1)
 
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
@@ -1630,7 +1631,7 @@ struct anv_image {
    /**
     * For color images, this is the aux usage for this image when not used as a
     * color attachment.
-    * 
+    *
     * For depth/stencil images, this is set to ISL_AUX_USAGE_HIZ if the image
     * has a HiZ buffer.
     */

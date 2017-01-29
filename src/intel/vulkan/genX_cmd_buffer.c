@@ -1587,27 +1587,35 @@ genX(cmd_buffer_flush_state)(struct anv_cmd_buffer *cmd_buffer)
 }
 
 static void
-emit_base_vertex_instance_bo(struct anv_cmd_buffer *cmd_buffer,
-                             struct anv_bo *bo, uint32_t offset)
+emit_vertex_bo(struct anv_cmd_buffer *cmd_buffer,
+               struct anv_bo *bo, uint32_t offset,
+               uint32_t size, uint32_t index)
 {
    uint32_t *p = anv_batch_emitn(&cmd_buffer->batch, 5,
                                  GENX(3DSTATE_VERTEX_BUFFERS));
 
    GENX(VERTEX_BUFFER_STATE_pack)(&cmd_buffer->batch, p + 1,
       &(struct GENX(VERTEX_BUFFER_STATE)) {
-         .VertexBufferIndex = ANV_SVGS_VB_INDEX, /* Reserved for this */
+         .VertexBufferIndex = index,
          .AddressModifyEnable = true,
          .BufferPitch = 0,
 #if (GEN_GEN >= 8)
          .MemoryObjectControlState = GENX(MOCS),
          .BufferStartingAddress = { bo, offset },
-         .BufferSize = 8
+         .BufferSize = size
 #else
          .VertexBufferMemoryObjectControlState = GENX(MOCS),
          .BufferStartingAddress = { bo, offset },
-         .EndAddress = { bo, offset + 8 },
+         .EndAddress = { bo, offset + size },
 #endif
       });
+}
+
+static void
+emit_base_vertex_instance_bo(struct anv_cmd_buffer *cmd_buffer,
+                             struct anv_bo *bo, uint32_t offset)
+{
+   emit_vertex_bo(cmd_buffer, bo, offset, 8, ANV_SVGS_VB_INDEX);
 }
 
 static void
@@ -1627,6 +1635,22 @@ emit_base_vertex_instance(struct anv_cmd_buffer *cmd_buffer,
       &cmd_buffer->device->dynamic_state_block_pool.bo, id_state.offset);
 }
 
+static void
+emit_draw_index(struct anv_cmd_buffer *cmd_buffer, uint32_t draw_index)
+{
+   struct anv_state state =
+      anv_cmd_buffer_alloc_dynamic_state(cmd_buffer, 4, 4);
+
+   ((uint32_t *)state.map)[0] = draw_index;
+
+   if (!cmd_buffer->device->info.has_llc)
+      anv_state_clflush(state);
+
+   emit_vertex_bo(cmd_buffer,
+                  &cmd_buffer->device->dynamic_state_block_pool.bo,
+                  state.offset, 4, ANV_DRAWID_VB_INDEX);
+}
+
 void genX(CmdDraw)(
     VkCommandBuffer                             commandBuffer,
     uint32_t                                    vertexCount,
@@ -1642,6 +1666,8 @@ void genX(CmdDraw)(
 
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, firstVertex, firstInstance);
+   if (vs_prog_data->uses_drawid)
+      emit_draw_index(cmd_buffer, 0);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType         = SEQUENTIAL;
@@ -1670,6 +1696,8 @@ void genX(CmdDrawIndexed)(
 
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance(cmd_buffer, vertexOffset, firstInstance);
+   if (vs_prog_data->uses_drawid)
+      emit_draw_index(cmd_buffer, 0);
 
    anv_batch_emit(&cmd_buffer->batch, GENX(3DPRIMITIVE), prim) {
       prim.VertexAccessType         = RANDOM;
@@ -1708,6 +1736,8 @@ void genX(CmdDrawIndirect)(
 
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 8);
+   if (vs_prog_data->uses_drawid)
+      emit_draw_index(cmd_buffer, 0);
 
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);
@@ -1741,6 +1771,8 @@ void genX(CmdDrawIndexedIndirect)(
    /* TODO: We need to stomp base vertex to 0 somehow */
    if (vs_prog_data->uses_basevertex || vs_prog_data->uses_baseinstance)
       emit_base_vertex_instance_bo(cmd_buffer, bo, bo_offset + 12);
+   if (vs_prog_data->uses_drawid)
+      emit_draw_index(cmd_buffer, 0);
 
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_VERTEX_COUNT, bo, bo_offset);
    emit_lrm(&cmd_buffer->batch, GEN7_3DPRIM_INSTANCE_COUNT, bo, bo_offset + 4);

@@ -102,7 +102,8 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    uint32_t elem_count = __builtin_popcount(elements) -
       __builtin_popcount(elements_double) / 2;
 
-   uint32_t total_elems = elem_count + needs_svgs_elem;
+   const uint32_t total_elems =
+      elem_count + needs_svgs_elem + vs_prog_data->uses_drawid;
    if (total_elems == 0)
       return;
 
@@ -201,6 +202,28 @@ emit_vertex_input(struct anv_pipeline *pipeline,
       sgvs.InstanceIDElementOffset     = id_slot;
    }
 #endif
+
+   const uint32_t drawid_slot = elem_count + needs_svgs_elem;
+   if (vs_prog_data->uses_drawid) {
+      struct GENX(VERTEX_ELEMENT_STATE) element = {
+         .VertexBufferIndex = ANV_DRAWID_VB_INDEX,
+         .Valid = true,
+         .SourceElementFormat = ISL_FORMAT_R32_UINT,
+         .Component0Control = VFCOMP_STORE_SRC,
+         .Component1Control = VFCOMP_STORE_0,
+         .Component2Control = VFCOMP_STORE_0,
+         .Component3Control = VFCOMP_STORE_0,
+      };
+      GENX(VERTEX_ELEMENT_STATE_pack)(NULL,
+                                      &p[1 + drawid_slot * 2],
+                                      &element);
+
+#if GEN_GEN >= 8
+      anv_batch_emit(&pipeline->batch, GENX(3DSTATE_VF_INSTANCING), vfi) {
+         vfi.VertexElementIndex = drawid_slot;
+      }
+#endif
+   }
 }
 
 void
