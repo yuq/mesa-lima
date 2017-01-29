@@ -133,7 +133,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                                                   VK_IMAGE_ASPECT_COLOR_BIT,
                                                   VK_IMAGE_TILING_LINEAR);
 
-      assert(desc->binding < 32);
+      assert(desc->binding < MAX_VBS);
 
       if ((elements & (1 << desc->location)) == 0)
          continue; /* Binding unused */
