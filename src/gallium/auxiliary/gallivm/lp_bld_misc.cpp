@@ -781,15 +781,24 @@ lp_is_function(LLVMValueRef v)
 }
 
 extern "C" LLVMBuilderRef
-lp_create_builder(LLVMContextRef ctx, bool unsafe_fpmath)
+lp_create_builder(LLVMContextRef ctx, enum lp_float_mode float_mode)
 {
    LLVMBuilderRef builder = LLVMCreateBuilderInContext(ctx);
 
 #if HAVE_LLVM >= 0x0308
-   if (unsafe_fpmath) {
-      llvm::FastMathFlags flags;
+   llvm::FastMathFlags flags;
+
+   switch (float_mode) {
+   case LP_FLOAT_MODE_DEFAULT:
+      break;
+   case LP_FLOAT_MODE_NO_SIGNED_ZEROS_FP_MATH:
+      flags.setNoSignedZeros();
+      llvm::unwrap(builder)->setFastMathFlags(flags);
+      break;
+   case LP_FLOAT_MODE_UNSAFE_FP_MATH:
       flags.setUnsafeAlgebra();
       llvm::unwrap(builder)->setFastMathFlags(flags);
+      break;
    }
 #endif
 
