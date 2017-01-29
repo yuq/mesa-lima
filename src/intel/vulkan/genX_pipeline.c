@@ -187,7 +187,7 @@ emit_vertex_input(struct anv_pipeline *pipeline,
                            VFCOMP_STORE_SRC : VFCOMP_STORE_0;
 
       struct GENX(VERTEX_ELEMENT_STATE) element = {
-         .VertexBufferIndex = 32, /* Reserved for this */
+         .VertexBufferIndex = ANV_SVGS_VB_INDEX,
          .Valid = true,
          .SourceElementFormat = ISL_FORMAT_R32G32_UINT,
          .Component0Control = base_ctrl,

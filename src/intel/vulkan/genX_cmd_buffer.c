@@ -1595,7 +1595,7 @@ emit_base_vertex_instance_bo(struct anv_cmd_buffer *cmd_buffer,
 
    GENX(VERTEX_BUFFER_STATE_pack)(&cmd_buffer->batch, p + 1,
       &(struct GENX(VERTEX_BUFFER_STATE)) {
-         .VertexBufferIndex = 32, /* Reserved for this */
+         .VertexBufferIndex = ANV_SVGS_VB_INDEX, /* Reserved for this */
          .AddressModifyEnable = true,
          .BufferPitch = 0,
 #if (GEN_GEN >= 8)

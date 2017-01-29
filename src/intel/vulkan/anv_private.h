@@ -96,6 +96,8 @@ extern "C" {
 #define MAX_DYNAMIC_BUFFERS 16
 #define MAX_IMAGES 8
 
+#define ANV_SVGS_VB_INDEX    MAX_VBS
+
 #define anv_printflike(a, b) __attribute__((__format__(__printf__, a, b)))
 
 static inline uint32_t
