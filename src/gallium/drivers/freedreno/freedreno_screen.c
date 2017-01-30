@@ -294,7 +294,6 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 	case PIPE_CAP_VIEWPORT_SUBPIXEL_BITS:
 	case PIPE_CAP_TGSI_ARRAY_COMPONENTS:
 	case PIPE_CAP_TGSI_CAN_READ_OUTPUTS:
-	case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
 	case PIPE_CAP_TGSI_FS_FBFETCH:
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
 	case PIPE_CAP_DOUBLES:
@@ -306,6 +305,7 @@ fd_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
 		return 1;
 
 	case PIPE_CAP_SHAREABLE_SHADERS:
+	case PIPE_CAP_GLSL_OPTIMIZE_CONSERVATIVELY:
 	/* manage the variants for these ourself, to avoid breaking precompile: */
 	case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
 	case PIPE_CAP_VERTEX_COLOR_CLAMPED:
