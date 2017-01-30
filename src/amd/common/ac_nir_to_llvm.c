@@ -1273,6 +1273,9 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 		src[1] = to_float(ctx, src[1]);
 		result = LLVMBuildFRem(ctx->builder, src[0], src[1], "");
 		break;
+	case nir_op_irem:
+		result = LLVMBuildSRem(ctx->builder, src[0], src[1], "");
+		break;
 	case nir_op_idiv:
 		result = LLVMBuildSDiv(ctx->builder, src[0], src[1], "");
 		break;
