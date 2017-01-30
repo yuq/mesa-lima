@@ -87,7 +87,7 @@ void vc4_store_tiled_image(void *dst, uint32_t dst_stride,
  * should extend this to have some runtime detection of being built for ARMv6
  * on a Pi 2+.
  */
-#if defined(__ARM_ARCH) && __ARM_ARCH >= 7
+#if defined(__ARM_ARCH) && __ARM_ARCH == 7
 #define NEON_SUFFIX(x) x ## _neon
 #else
 #define NEON_SUFFIX(x) x ## _base
