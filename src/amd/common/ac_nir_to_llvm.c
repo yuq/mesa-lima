@@ -3224,6 +3224,11 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 		}
 	}
 
+	if (instr->op == nir_texop_txs && instr->sampler_dim == GLSL_SAMPLER_DIM_BUF) {
+		result = get_buffer_size(ctx, res_ptr, false);
+		goto write_result;
+	}
+
 	if (instr->op == nir_texop_texture_samples) {
 		LLVMValueRef res, samples, is_msaa;
 		res = LLVMBuildBitCast(ctx->builder, res_ptr, ctx->v8i32, "");
