@@ -4114,7 +4114,7 @@ handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
 			continue;
 
 		if (i >= VARYING_SLOT_VAR0 || i == VARYING_SLOT_PNTC ||
-		    i == VARYING_SLOT_PRIMITIVE_ID) {
+		    i == VARYING_SLOT_PRIMITIVE_ID || i == VARYING_SLOT_LAYER) {
 			interp_param = *inputs;
 			interp_fs_input(ctx, index, interp_param, ctx->prim_mask,
 					inputs);
@@ -4134,6 +4134,8 @@ handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
 		ctx->shader_info->fs.has_pcoord = true;
 	if (ctx->input_mask & (1 << VARYING_SLOT_PRIMITIVE_ID))
 		ctx->shader_info->fs.prim_id_input = true;
+	if (ctx->input_mask & (1 << VARYING_SLOT_LAYER))
+		ctx->shader_info->fs.layer_input = true;
 	ctx->shader_info->fs.input_mask = ctx->input_mask >> VARYING_SLOT_VAR0;
 }
 
@@ -4422,6 +4424,7 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 						       (1ull << VARYING_SLOT_CULL_DIST1));
 
 	ctx->shader_info->vs.prim_id_output = 0xffffffff;
+	ctx->shader_info->vs.layer_output = 0xffffffff;
 	if (clip_mask) {
 		LLVMValueRef slots[8];
 		unsigned j;
@@ -4478,7 +4481,9 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		} else if (i == VARYING_SLOT_LAYER) {
 			ctx->shader_info->vs.writes_layer = true;
 			layer_value = values[0];
-			continue;
+			ctx->shader_info->vs.layer_output = param_count;
+			target = V_008DFC_SQ_EXP_PARAM + param_count;
+			param_count++;
 		} else if (i == VARYING_SLOT_VIEWPORT) {
 			ctx->shader_info->vs.writes_viewport_index = true;
 			viewport_index_value = values[0];
