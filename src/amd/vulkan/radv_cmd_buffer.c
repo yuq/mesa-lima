@@ -415,6 +415,8 @@ radv_update_multisample_state(struct radv_cmd_buffer *cmd_buffer,
 	case 16:
 		src = cmd_buffer->device->sample_locations_16x;
 		break;
+	default:
+		unreachable("unknown number of samples");
 	}
 	memcpy(samples_ptr, src, num_samples * 4 * 2);
 
