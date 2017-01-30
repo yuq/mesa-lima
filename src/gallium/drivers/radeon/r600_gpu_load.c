@@ -61,6 +61,15 @@
 #define SRBM_STATUS2		0x0e4c
 #define SDMA_BUSY(x)		(((x) >> 5) & 0x1)
 
+#define CP_STAT                 0x8680
+#define PFP_BUSY(x)		(((x) >> 15) & 0x1)
+#define MEQ_BUSY(x)		(((x) >> 16) & 0x1)
+#define ME_BUSY(x)		(((x) >> 17) & 0x1)
+#define SURFACE_SYNC_BUSY(x)	(((x) >> 21) & 0x1)
+#define DMA_BUSY(x)		(((x) >> 22) & 0x1)
+#define SCRATCH_RAM_BUSY(x)	(((x) >> 24) & 0x1)
+#define CE_BUSY(x)		(((x) >> 26) & 0x1)
+
 #define UPDATE_COUNTER(field, mask)					\
 	do {								\
 		if (mask(value))					\
@@ -97,6 +106,19 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 		rscreen->ws->read_registers(rscreen->ws, SRBM_STATUS2, 1, &value);
 
 		UPDATE_COUNTER(sdma, SDMA_BUSY);
+	}
+
+	if (rscreen->chip_class >= VI) {
+		/* CP_STAT */
+		rscreen->ws->read_registers(rscreen->ws, CP_STAT, 1, &value);
+
+		UPDATE_COUNTER(pfp, PFP_BUSY);
+		UPDATE_COUNTER(meq, MEQ_BUSY);
+		UPDATE_COUNTER(me, ME_BUSY);
+		UPDATE_COUNTER(surf_sync, SURFACE_SYNC_BUSY);
+		UPDATE_COUNTER(dma, DMA_BUSY);
+		UPDATE_COUNTER(scratch_ram, SCRATCH_RAM_BUSY);
+		UPDATE_COUNTER(ce, CE_BUSY);
 	}
 }
 
@@ -223,6 +245,20 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 		return BUSY_INDEX(rscreen, cb);
 	case R600_QUERY_GPU_SDMA_BUSY:
 		return BUSY_INDEX(rscreen, sdma);
+	case R600_QUERY_GPU_PFP_BUSY:
+		return BUSY_INDEX(rscreen, pfp);
+	case R600_QUERY_GPU_MEQ_BUSY:
+		return BUSY_INDEX(rscreen, meq);
+	case R600_QUERY_GPU_ME_BUSY:
+		return BUSY_INDEX(rscreen, me);
+	case R600_QUERY_GPU_SURF_SYNC_BUSY:
+		return BUSY_INDEX(rscreen, surf_sync);
+	case R600_QUERY_GPU_DMA_BUSY:
+		return BUSY_INDEX(rscreen, dma);
+	case R600_QUERY_GPU_SCRATCH_RAM_BUSY:
+		return BUSY_INDEX(rscreen, scratch_ram);
+	case R600_QUERY_GPU_CE_BUSY:
+		return BUSY_INDEX(rscreen, ce);
 	default:
 		unreachable("invalid query type");
 	}

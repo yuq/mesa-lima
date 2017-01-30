@@ -377,6 +377,15 @@ union r600_mmio_counters {
 
 		/* SRBM_STATUS2 */
 		struct r600_mmio_counter sdma;
+
+		/* CP_STAT */
+		struct r600_mmio_counter pfp;
+		struct r600_mmio_counter meq;
+		struct r600_mmio_counter me;
+		struct r600_mmio_counter surf_sync;
+		struct r600_mmio_counter dma;
+		struct r600_mmio_counter scratch_ram;
+		struct r600_mmio_counter ce;
 	} named;
 	unsigned array[0];
 };

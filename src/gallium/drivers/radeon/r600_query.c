@@ -163,6 +163,13 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 	case R600_QUERY_GPU_CP_BUSY:
 	case R600_QUERY_GPU_CB_BUSY:
 	case R600_QUERY_GPU_SDMA_BUSY:
+	case R600_QUERY_GPU_PFP_BUSY:
+	case R600_QUERY_GPU_MEQ_BUSY:
+	case R600_QUERY_GPU_ME_BUSY:
+	case R600_QUERY_GPU_SURF_SYNC_BUSY:
+	case R600_QUERY_GPU_DMA_BUSY:
+	case R600_QUERY_GPU_SCRATCH_RAM_BUSY:
+	case R600_QUERY_GPU_CE_BUSY:
 		query->begin_result = r600_begin_counter(rctx->screen,
 							 query->b.type);
 		break;
@@ -271,6 +278,13 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 	case R600_QUERY_GPU_CP_BUSY:
 	case R600_QUERY_GPU_CB_BUSY:
 	case R600_QUERY_GPU_SDMA_BUSY:
+	case R600_QUERY_GPU_PFP_BUSY:
+	case R600_QUERY_GPU_MEQ_BUSY:
+	case R600_QUERY_GPU_ME_BUSY:
+	case R600_QUERY_GPU_SURF_SYNC_BUSY:
+	case R600_QUERY_GPU_DMA_BUSY:
+	case R600_QUERY_GPU_SCRATCH_RAM_BUSY:
+	case R600_QUERY_GPU_CE_BUSY:
 		query->end_result = r600_end_counter(rctx->screen,
 						     query->b.type,
 						     query->begin_result);
@@ -1771,6 +1785,13 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("GPU-cp-busy",		GPU_CP_BUSY,		UINT64, AVERAGE),
 	X("GPU-cb-busy",		GPU_CB_BUSY,		UINT64, AVERAGE),
 	X("GPU-sdma-busy",		GPU_SDMA_BUSY,		UINT64, AVERAGE),
+	X("GPU-pfp-busy",		GPU_PFP_BUSY,		UINT64, AVERAGE),
+	X("GPU-meq-busy",		GPU_MEQ_BUSY,		UINT64, AVERAGE),
+	X("GPU-me-busy",		GPU_ME_BUSY,		UINT64, AVERAGE),
+	X("GPU-surf-sync-busy",		GPU_SURF_SYNC_BUSY,	UINT64, AVERAGE),
+	X("GPU-dma-busy",		GPU_DMA_BUSY,		UINT64, AVERAGE),
+	X("GPU-scratch-ram-busy",	GPU_SCRATCH_RAM_BUSY,	UINT64, AVERAGE),
+	X("GPU-ce-busy",		GPU_CE_BUSY,		UINT64, AVERAGE),
 
 	X("temperature",		GPU_TEMPERATURE,	UINT64, AVERAGE),
 	X("shader-clock",		CURRENT_GPU_SCLK,	HZ, AVERAGE),
@@ -1785,10 +1806,14 @@ static unsigned r600_get_num_queries(struct r600_common_screen *rscreen)
 {
 	if (rscreen->info.drm_major == 2 && rscreen->info.drm_minor >= 42)
 		return ARRAY_SIZE(r600_driver_query_list);
-	else if (rscreen->info.drm_major == 3)
-		return ARRAY_SIZE(r600_driver_query_list) - 3;
+	else if (rscreen->info.drm_major == 3) {
+		if (rscreen->chip_class >= VI)
+			return ARRAY_SIZE(r600_driver_query_list) - 3;
+		else
+			return ARRAY_SIZE(r600_driver_query_list) - 10;
+	}
 	else
-		return ARRAY_SIZE(r600_driver_query_list) - 18;
+		return ARRAY_SIZE(r600_driver_query_list) - 25;
 }
 
 static int r600_get_driver_query_info(struct pipe_screen *screen,
