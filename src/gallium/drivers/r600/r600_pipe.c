@@ -735,6 +735,6 @@ struct pipe_screen *r600_screen_create(struct radeon_winsys *ws)
 	if (rscreen->b.debug_flags & DBG_TEST_DMA)
 		r600_test_dma(&rscreen->b);
 
-	r600_query_fix_enabled_rb_mask(rscreen);
+	r600_query_fix_enabled_rb_mask(&rscreen->b);
 	return &rscreen->b.b;
 }
