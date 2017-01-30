@@ -2227,8 +2227,8 @@ static void si_initialize_color_surface(struct si_context *sctx,
 		surf->cb_color_view |= S_028C6C_MIP_LEVEL(surf->base.u.tex.level);
 		surf->cb_color_attrib |= S_028C74_MIP0_DEPTH(mip0_depth) |
 					 S_028C74_RESOURCE_TYPE(rtex->surface.u.gfx9.resource_type);
-		surf->cb_color_attrib2 = S_028C68_MIP0_WIDTH(rtex->resource.b.b.width0 - 1) |
-					 S_028C68_MIP0_HEIGHT(rtex->resource.b.b.height0 - 1) |
+		surf->cb_color_attrib2 = S_028C68_MIP0_WIDTH(surf->width0 - 1) |
+					 S_028C68_MIP0_HEIGHT(surf->height0 - 1) |
 					 S_028C68_MAX_MIP(rtex->resource.b.b.last_level);
 	}
 
@@ -3315,7 +3315,7 @@ si_create_sampler_view_custom(struct pipe_context *ctx,
 	height = height0;
 	depth = texture->depth0;
 
-	if (force_level) {
+	if (sctx->b.chip_class <= VI && force_level) {
 		assert(force_level == first_level &&
 		       force_level == last_level);
 		base_level = force_level;

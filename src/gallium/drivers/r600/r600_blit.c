@@ -726,7 +726,10 @@ void r600_resource_copy_region(struct pipe_context *ctx,
 		}
 	}
 
-	dst_view = r600_create_surface_custom(ctx, dst, &dst_templ, dst_width, dst_height);
+	dst_view = r600_create_surface_custom(ctx, dst, &dst_templ,
+					      /* we don't care about these two for r600g */
+					      dst->width0, dst->height0,
+					      dst_width, dst_height);
 
 	if (rctx->b.chip_class >= EVERGREEN) {
 		src_view = evergreen_create_sampler_view_custom(ctx, src, &src_templ,

@@ -737,10 +737,6 @@ unsigned r600_tex_wrap(unsigned wrap);
 unsigned r600_tex_mipfilter(unsigned filter);
 unsigned r600_tex_compare(unsigned compare);
 bool sampler_state_needs_border_color(const struct pipe_sampler_state *state);
-struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
-						struct pipe_resource *texture,
-						const struct pipe_surface *templ,
-						unsigned width, unsigned height);
 unsigned r600_get_swizzle_combined(const unsigned char *swizzle_format,
 				   const unsigned char *swizzle_view,
 				   boolean vtx);

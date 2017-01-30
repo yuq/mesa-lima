@@ -845,7 +845,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 	struct pipe_surface *dst_view, dst_templ;
 	struct pipe_sampler_view src_templ, *src_view;
 	unsigned dst_width, dst_height, src_width0, src_height0;
-	unsigned src_force_level = 0;
+	unsigned dst_width0, dst_height0, src_force_level = 0;
 	struct pipe_box sbox, dstbox;
 
 	/* Handle buffers first. */
@@ -863,6 +863,8 @@ void si_resource_copy_region(struct pipe_context *ctx,
 
 	dst_width = u_minify(dst->width0, dst_level);
 	dst_height = u_minify(dst->height0, dst_level);
+	dst_width0 = dst->width0;
+	dst_height0 = dst->height0;
 	src_width0 = src->width0;
 	src_height0 = src->height0;
 
@@ -881,6 +883,8 @@ void si_resource_copy_region(struct pipe_context *ctx,
 
 		dst_width = util_format_get_nblocksx(dst->format, dst_width);
 		dst_height = util_format_get_nblocksy(dst->format, dst_height);
+		dst_width0 = util_format_get_nblocksx(dst->format, dst_width0);
+		dst_height0 = util_format_get_nblocksy(dst->format, dst_height0);
 		src_width0 = util_format_get_nblocksx(src->format, src_width0);
 		src_height0 = util_format_get_nblocksy(src->format, src_height0);
 
@@ -904,6 +908,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 			dst_templ.format = PIPE_FORMAT_R8G8B8A8_UINT;
 
 			dst_width = util_format_get_nblocksx(dst->format, dst_width);
+			dst_width0 = util_format_get_nblocksx(dst->format, dst_width0);
 			src_width0 = util_format_get_nblocksx(src->format, src_width0);
 
 			dstx = util_format_get_nblocksx(dst->format, dstx);
@@ -946,6 +951,7 @@ void si_resource_copy_region(struct pipe_context *ctx,
 
 	/* Initialize the surface. */
 	dst_view = r600_create_surface_custom(ctx, dst, &dst_templ,
+					      dst_width0, dst_height0,
 					      dst_width, dst_height);
 
 	/* Initialize the sampler view. */

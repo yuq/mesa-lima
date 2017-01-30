@@ -275,6 +275,10 @@ struct r600_texture {
 struct r600_surface {
 	struct pipe_surface		base;
 
+	/* These can vary with block-compressed textures. */
+	unsigned width0;
+	unsigned height0;
+
 	bool color_initialized;
 	bool depth_initialized;
 
@@ -804,6 +808,7 @@ void vi_dcc_disable_if_incompatible_format(struct r600_common_context *rctx,
 struct pipe_surface *r600_create_surface_custom(struct pipe_context *pipe,
 						struct pipe_resource *texture,
 						const struct pipe_surface *templ,
+						unsigned width0, unsigned height0,
 						unsigned width, unsigned height);
 unsigned r600_translate_colorswap(enum pipe_format format, bool do_endian_swap);
 void vi_separate_dcc_start_query(struct pipe_context *ctx,
