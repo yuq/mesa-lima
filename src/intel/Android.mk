@@ -29,3 +29,4 @@ include $(LOCAL_PATH)/Android.blorp.mk
 include $(LOCAL_PATH)/Android.common.mk
 include $(LOCAL_PATH)/Android.genxml.mk
 include $(LOCAL_PATH)/Android.isl.mk
+include $(LOCAL_PATH)/vulkan/Android.mk
