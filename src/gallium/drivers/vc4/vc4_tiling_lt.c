@@ -67,18 +67,18 @@ vc4_load_utile(void *cpu, void *gpu, uint32_t cpu_stride, uint32_t cpp)
                         /* Load from the GPU in one shot, no interleave, to
                          * d0-d7.
                          */
-                        "vldm %0, {q0, q1, q2, q3};\n"
+                        "vldm %0, {q0, q1, q2, q3}\n"
                         /* Store each 8-byte line to cpu-side destination,
                          * incrementing it by the stride each time.
                          */
-                        "vst1.8 d0, [%1], %r2;\n"
-                        "vst1.8 d1, [%1], %r2;\n"
-                        "vst1.8 d2, [%1], %r2;\n"
-                        "vst1.8 d3, [%1], %r2;\n"
-                        "vst1.8 d4, [%1], %r2;\n"
-                        "vst1.8 d5, [%1], %r2;\n"
-                        "vst1.8 d6, [%1], %r2;\n"
-                        "vst1.8 d7, [%1];\n"
+                        "vst1.8 d0, [%1], %2\n"
+                        "vst1.8 d1, [%1], %2\n"
+                        "vst1.8 d2, [%1], %2\n"
+                        "vst1.8 d3, [%1], %2\n"
+                        "vst1.8 d4, [%1], %2\n"
+                        "vst1.8 d5, [%1], %2\n"
+                        "vst1.8 d6, [%1], %2\n"
+                        "vst1.8 d7, [%1]\n"
                         :
                         : "r"(gpu), "r"(cpu), "r"(cpu_stride)
                         : "q0", "q1", "q2", "q3");
@@ -93,14 +93,14 @@ vc4_load_utile(void *cpu, void *gpu, uint32_t cpu_stride, uint32_t cpp)
                          * destination.  (vld1 can only store one d-register
                          * at a time).
                          */
-                        "vst1.8 d0, [%1], %r3;\n"
-                        "vst1.8 d1, [%2], %r3;\n"
-                        "vst1.8 d2, [%1], %r3;\n"
-                        "vst1.8 d3, [%2], %r3;\n"
-                        "vst1.8 d4, [%1], %r3;\n"
-                        "vst1.8 d5, [%2], %r3;\n"
-                        "vst1.8 d6, [%1];\n"
-                        "vst1.8 d7, [%2];\n"
+                        "vst1.8 d0, [%1], %3\n"
+                        "vst1.8 d1, [%2], %3\n"
+                        "vst1.8 d2, [%1], %3\n"
+                        "vst1.8 d3, [%2], %3\n"
+                        "vst1.8 d4, [%1], %3\n"
+                        "vst1.8 d5, [%2], %3\n"
+                        "vst1.8 d6, [%1]\n"
+                        "vst1.8 d7, [%2]\n"
                         :
                         : "r"(gpu), "r"(cpu), "r"(cpu + 8), "r"(cpu_stride)
                         : "q0", "q1", "q2", "q3");
@@ -124,18 +124,18 @@ vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
                         /* Load each 8-byte line from cpu-side source,
                          * incrementing it by the stride each time.
                          */
-                        "vld1.8 d0, [%1], %r2;\n"
-                        "vld1.8 d1, [%1], %r2;\n"
-                        "vld1.8 d2, [%1], %r2;\n"
-                        "vld1.8 d3, [%1], %r2;\n"
-                        "vld1.8 d4, [%1], %r2;\n"
-                        "vld1.8 d5, [%1], %r2;\n"
-                        "vld1.8 d6, [%1], %r2;\n"
-                        "vld1.8 d7, [%1];\n"
+                        "vld1.8 d0, [%1], %2\n"
+                        "vld1.8 d1, [%1], %2\n"
+                        "vld1.8 d2, [%1], %2\n"
+                        "vld1.8 d3, [%1], %2\n"
+                        "vld1.8 d4, [%1], %2\n"
+                        "vld1.8 d5, [%1], %2\n"
+                        "vld1.8 d6, [%1], %2\n"
+                        "vld1.8 d7, [%1]\n"
                         /* Load from the GPU in one shot, no interleave, to
                          * d0-d7.
                          */
-                        "vstm %0, {q0, q1, q2, q3};\n"
+                        "vstm %0, {q0, q1, q2, q3}\n"
                         :
                         : "r"(gpu), "r"(cpu), "r"(cpu_stride)
                         : "q0", "q1", "q2", "q3");
@@ -146,16 +146,16 @@ vc4_store_utile(void *gpu, void *cpu, uint32_t cpu_stride, uint32_t cpp)
                          * destination.  (vld1 can only store one d-register
                          * at a time).
                          */
-                        "vld1.8 d0, [%1], %r3;\n"
-                        "vld1.8 d1, [%2], %r3;\n"
-                        "vld1.8 d2, [%1], %r3;\n"
-                        "vld1.8 d3, [%2], %r3;\n"
-                        "vld1.8 d4, [%1], %r3;\n"
-                        "vld1.8 d5, [%2], %r3;\n"
-                        "vld1.8 d6, [%1];\n"
-                        "vld1.8 d7, [%2];\n"
+                        "vld1.8 d0, [%1], %3\n"
+                        "vld1.8 d1, [%2], %3\n"
+                        "vld1.8 d2, [%1], %3\n"
+                        "vld1.8 d3, [%2], %3\n"
+                        "vld1.8 d4, [%1], %3\n"
+                        "vld1.8 d5, [%2], %3\n"
+                        "vld1.8 d6, [%1]\n"
+                        "vld1.8 d7, [%2]\n"
                         /* Store to the GPU in one shot, no interleave. */
-                        "vstm %0, {q0, q1, q2, q3};\n"
+                        "vstm %0, {q0, q1, q2, q3}\n"
                         :
                         : "r"(gpu), "r"(cpu), "r"(cpu + 8), "r"(cpu_stride)
                         : "q0", "q1", "q2", "q3");
