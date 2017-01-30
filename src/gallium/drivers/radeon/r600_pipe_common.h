@@ -374,6 +374,9 @@ union r600_mmio_counters {
 		struct r600_mmio_counter db;
 		struct r600_mmio_counter cp;
 		struct r600_mmio_counter cb;
+
+		/* SRBM_STATUS2 */
+		struct r600_mmio_counter sdma;
 	} named;
 	unsigned array[0];
 };

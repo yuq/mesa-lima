@@ -58,6 +58,9 @@
 #define CB_BUSY(x)		(((x) >> 30) & 0x1)
 #define GUI_ACTIVE(x)		(((x) >> 31) & 0x1)
 
+#define SRBM_STATUS2		0x0e4c
+#define SDMA_BUSY(x)		(((x) >> 5) & 0x1)
+
 #define UPDATE_COUNTER(field, mask)					\
 	do {								\
 		if (mask(value))					\
@@ -71,6 +74,7 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 {
 	uint32_t value = 0;
 
+	/* GRBM_STATUS */
 	rscreen->ws->read_registers(rscreen->ws, GRBM_STATUS, 1, &value);
 
 	UPDATE_COUNTER(ta, TA_BUSY);
@@ -87,6 +91,13 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 	UPDATE_COUNTER(cp, CP_BUSY);
 	UPDATE_COUNTER(cb, CB_BUSY);
 	UPDATE_COUNTER(gui, GUI_ACTIVE);
+
+	if (rscreen->chip_class >= EVERGREEN) {
+		/* SRBM_STATUS2 */
+		rscreen->ws->read_registers(rscreen->ws, SRBM_STATUS2, 1, &value);
+
+		UPDATE_COUNTER(sdma, SDMA_BUSY);
+	}
 }
 
 #undef UPDATE_COUNTER
@@ -210,6 +221,8 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 		return BUSY_INDEX(rscreen, cp);
 	case R600_QUERY_GPU_CB_BUSY:
 		return BUSY_INDEX(rscreen, cb);
+	case R600_QUERY_GPU_SDMA_BUSY:
+		return BUSY_INDEX(rscreen, sdma);
 	default:
 		unreachable("invalid query type");
 	}
