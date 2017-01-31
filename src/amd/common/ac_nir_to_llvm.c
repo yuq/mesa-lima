@@ -3453,6 +3453,15 @@ static void tex_fetch_ptrs(struct nir_to_llvm_context *ctx,
 		*fmask_ptr = get_sampler_desc(ctx, instr->texture, DESC_FMASK);
 }
 
+static LLVMValueRef apply_round_slice(struct nir_to_llvm_context *ctx,
+				      LLVMValueRef coord)
+{
+	coord = to_float(ctx, coord);
+	coord = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32, &coord, 1, 0);
+	coord = to_integer(ctx, coord);
+	return coord;
+}
+
 static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 {
 	LLVMValueRef result = NULL;
@@ -3614,15 +3623,16 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	/* Pack texture coordinates */
 	if (coord) {
 		address[count++] = coords[0];
-		if (instr->coord_components > 1)
+		if (instr->coord_components > 1) {
+			if (instr->sampler_dim == GLSL_SAMPLER_DIM_1D && instr->is_array && instr->op != nir_texop_txf) {
+				coords[1] = apply_round_slice(ctx, coords[1]);
+			}
 			address[count++] = coords[1];
+		}
 		if (instr->coord_components > 2) {
 			/* This seems like a bit of a hack - but it passes Vulkan CTS with it */
 			if (instr->sampler_dim != GLSL_SAMPLER_DIM_3D && instr->op != nir_texop_txf) {
-				coords[2] = to_float(ctx, coords[2]);
-				coords[2] = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32, &coords[2],
-								1, 0);
-				coords[2] = to_integer(ctx, coords[2]);
+				coords[2] = apply_round_slice(ctx, coords[2]);
 			}
 			address[count++] = coords[2];
 		}
