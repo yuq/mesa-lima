@@ -348,6 +348,7 @@ struct _mesa_glsl_parse_state {
    } supported_versions[16];
 
    bool es_shader;
+   bool compat_shader;
    unsigned language_version;
    unsigned forced_language_version;
    bool zero_init;

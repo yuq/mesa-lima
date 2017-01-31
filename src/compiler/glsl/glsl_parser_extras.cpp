@@ -83,6 +83,7 @@ _mesa_glsl_parse_state::_mesa_glsl_parse_state(struct gl_context *_ctx,
    this->forced_language_version = ctx->Const.ForceGLSLVersion;
    this->zero_init = ctx->Const.GLSLZeroInit;
    this->gl_version = 20;
+   this->compat_shader = true;
    this->es_shader = false;
    this->ARB_texture_rectangle_enable = true;
 
@@ -370,6 +371,7 @@ _mesa_glsl_parse_state::process_version_directive(YYLTYPE *locp, int version,
                                                   const char *ident)
 {
    bool es_token_present = false;
+   bool compat_token_present = false;
    if (ident) {
       if (strcmp(ident, "es") == 0) {
          es_token_present = true;
@@ -379,8 +381,12 @@ _mesa_glsl_parse_state::process_version_directive(YYLTYPE *locp, int version,
              * a core profile shader since that's the only profile we support.
              */
          } else if (strcmp(ident, "compatibility") == 0) {
-            _mesa_glsl_error(locp, this,
-                             "the compatibility profile is not supported");
+            compat_token_present = true;
+
+            if (this->ctx->API != API_OPENGL_COMPAT) {
+               _mesa_glsl_error(locp, this,
+                                "the compatibility profile is not supported");
+            }
          } else {
             _mesa_glsl_error(locp, this,
                              "\"%s\" is not a valid shading language profile; "
@@ -411,6 +417,9 @@ _mesa_glsl_parse_state::process_version_directive(YYLTYPE *locp, int version,
       this->language_version = this->forced_language_version;
    else
       this->language_version = version;
+
+   this->compat_shader = compat_token_present ||
+                         (!this->es_shader && this->language_version < 140);
 
    bool supported = false;
    for (unsigned i = 0; i < this->num_supported_versions; i++) {
