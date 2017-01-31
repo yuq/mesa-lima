@@ -82,6 +82,7 @@ struct nir_to_llvm_context {
 	LLVMValueRef vertex_buffers;
 	LLVMValueRef base_vertex;
 	LLVMValueRef start_instance;
+	LLVMValueRef draw_index;
 	LLVMValueRef vertex_id;
 	LLVMValueRef rel_auto_id;
 	LLVMValueRef vs_prim_id;
@@ -560,6 +561,7 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			arg_types[arg_idx++] = const_array(ctx->v16i8, 16); /* vertex buffers */
 			arg_types[arg_idx++] = ctx->i32; // base vertex
 			arg_types[arg_idx++] = ctx->i32; // start instance
+			arg_types[arg_idx++] = ctx->i32; // draw index
 		}
 		user_sgpr_count = arg_idx;
 		if (ctx->options->key.vs.as_es)
@@ -684,10 +686,11 @@ static void create_function(struct nir_to_llvm_context *ctx)
 			set_userdata_location_shader(ctx, AC_UD_VS_VERTEX_BUFFERS, user_sgpr_idx, 2);
 			user_sgpr_idx += 2;
 			ctx->vertex_buffers = LLVMGetParam(ctx->main_function, arg_idx++);
-			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, 2);
-			user_sgpr_idx += 2;
+			set_userdata_location_shader(ctx, AC_UD_VS_BASE_VERTEX_START_INSTANCE, user_sgpr_idx, 3);
+			user_sgpr_idx += 3;
 			ctx->base_vertex = LLVMGetParam(ctx->main_function, arg_idx++);
 			ctx->start_instance = LLVMGetParam(ctx->main_function, arg_idx++);
+			ctx->draw_index = LLVMGetParam(ctx->main_function, arg_idx++);
 		}
 		if (ctx->options->key.vs.as_es)
 			ctx->es2gs_offset = LLVMGetParam(ctx->main_function, arg_idx++);
@@ -3262,6 +3265,9 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 	}
 	case nir_intrinsic_load_base_instance:
 		result = ctx->start_instance;
+		break;
+	case nir_intrinsic_load_draw_id:
+		result = ctx->draw_index;
 		break;
 	case nir_intrinsic_load_invocation_id:
 		result = ctx->gs_invocation_id;
