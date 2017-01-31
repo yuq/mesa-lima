@@ -855,10 +855,9 @@ void anv_CmdPushDescriptorSetKHR(
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          for (uint32_t j = 0; j < write->descriptorCount; j++) {
-            anv_descriptor_set_write_image_view(set,
+            anv_descriptor_set_write_image_view(set, &cmd_buffer->device->info,
+                                                write->pImageInfo + j,
                                                 write->descriptorType,
-                                                write->pImageInfo[j].imageView,
-                                                write->pImageInfo[j].sampler,
                                                 write->dstBinding,
                                                 write->dstArrayElement + j);
          }

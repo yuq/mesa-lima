@@ -902,6 +902,11 @@ struct anv_descriptor {
       struct {
          struct anv_image_view *image_view;
          struct anv_sampler *sampler;
+
+         /* Used to determine whether or not we need the surface state to have
+          * the auxiliary buffer enabled.
+          */
+         enum isl_aux_usage aux_usage;
       };
 
       struct anv_buffer_view *buffer_view;
@@ -995,9 +1000,9 @@ anv_descriptor_set_layout_size(const struct anv_descriptor_set_layout *layout);
 
 void
 anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
+                                    const struct gen_device_info * const devinfo,
+                                    const VkDescriptorImageInfo * const info,
                                     VkDescriptorType type,
-                                    VkImageView _image_view,
-                                    VkSampler _sampler,
                                     uint32_t binding,
                                     uint32_t element);
 

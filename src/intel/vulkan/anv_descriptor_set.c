@@ -571,9 +571,9 @@ VkResult anv_FreeDescriptorSets(
 
 void
 anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
+                                    const struct gen_device_info * const devinfo,
+                                    const VkDescriptorImageInfo * const info,
                                     VkDescriptorType type,
-                                    VkImageView _image_view,
-                                    VkSampler _sampler,
                                     uint32_t binding,
                                     uint32_t element)
 {
@@ -588,18 +588,18 @@ anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
 
    switch (type) {
    case VK_DESCRIPTOR_TYPE_SAMPLER:
-      sampler = anv_sampler_from_handle(_sampler);
+      sampler = anv_sampler_from_handle(info->sampler);
       break;
 
    case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-      image_view = anv_image_view_from_handle(_image_view);
-      sampler = anv_sampler_from_handle(_sampler);
+      image_view = anv_image_view_from_handle(info->imageView);
+      sampler = anv_sampler_from_handle(info->sampler);
       break;
 
    case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
    case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
    case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-      image_view = anv_image_view_from_handle(_image_view);
+      image_view = anv_image_view_from_handle(info->imageView);
       break;
 
    default:
@@ -617,6 +617,10 @@ anv_descriptor_set_write_image_view(struct anv_descriptor_set *set,
       .type = type,
       .image_view = image_view,
       .sampler = sampler,
+      .aux_usage = image_view == NULL ? ISL_AUX_USAGE_NONE :
+                   anv_layout_to_aux_usage(devinfo, image_view->image,
+                                           image_view->aspect_mask,
+                                           info->imageLayout),
    };
 }
 
@@ -710,10 +714,9 @@ void anv_UpdateDescriptorSets(
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
       case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
          for (uint32_t j = 0; j < write->descriptorCount; j++) {
-            anv_descriptor_set_write_image_view(set,
+            anv_descriptor_set_write_image_view(set, &device->info,
+                                                write->pImageInfo + j,
                                                 write->descriptorType,
-                                                write->pImageInfo[j].imageView,
-                                                write->pImageInfo[j].sampler,
                                                 write->dstBinding,
                                                 write->dstArrayElement + j);
          }
@@ -811,10 +814,8 @@ anv_descriptor_set_write_template(struct anv_descriptor_set *set,
          for (uint32_t j = 0; j < entry->array_count; j++) {
             const VkDescriptorImageInfo *info =
                data + entry->offset + j * entry->stride;
-            anv_descriptor_set_write_image_view(set,
-                                                entry->type,
-                                                info->imageView,
-                                                info->sampler,
+            anv_descriptor_set_write_image_view(set, &device->info,
+                                                info, entry->type,
                                                 entry->binding,
                                                 entry->array_element + j);
          }
