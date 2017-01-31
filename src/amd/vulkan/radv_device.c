@@ -1058,10 +1058,13 @@ fill_geom_rings(struct radv_queue *queue,
 		uint32_t gsvs_ring_size,
 		struct radeon_winsys_bo *gsvs_ring_bo)
 {
-	uint64_t esgs_va, gsvs_va;
-	esgs_va = queue->device->ws->buffer_get_va(esgs_ring_bo);
-	gsvs_va = queue->device->ws->buffer_get_va(gsvs_ring_bo);
+	uint64_t esgs_va = 0, gsvs_va = 0;
 	uint32_t *desc = &map[4];
+
+	if (esgs_ring_bo)
+		esgs_va = queue->device->ws->buffer_get_va(esgs_ring_bo);
+	if (gsvs_ring_bo)
+		gsvs_va = queue->device->ws->buffer_get_va(gsvs_ring_bo);
 
 	/* stride 0, num records - size, add tid, swizzle, elsize4,
 	   index stride 64 */
