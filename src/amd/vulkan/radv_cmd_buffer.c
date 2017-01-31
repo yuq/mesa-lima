@@ -38,8 +38,8 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 VkImageLayout src_layout,
 					 VkImageLayout dst_layout,
-					 int src_family,
-					 int dst_family,
+					 uint32_t src_family,
+					 uint32_t dst_family,
 					 VkImageSubresourceRange range,
 					 VkImageAspectFlags pending_clears);
 
@@ -2719,8 +2719,8 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 struct radv_image *image,
 					 VkImageLayout src_layout,
 					 VkImageLayout dst_layout,
-					 int src_family,
-					 int dst_family,
+					 uint32_t src_family,
+					 uint32_t dst_family,
 					 VkImageSubresourceRange range,
 					 VkImageAspectFlags pending_clears)
 {
@@ -2741,8 +2741,8 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 			return;
 	}
 
-	unsigned src_queue_mask = radv_image_queue_family_mask(image, src_family);
-	unsigned dst_queue_mask = radv_image_queue_family_mask(image, dst_family);
+	unsigned src_queue_mask = radv_image_queue_family_mask(image, src_family, cmd_buffer->queue_family_index);
+	unsigned dst_queue_mask = radv_image_queue_family_mask(image, dst_family, cmd_buffer->queue_family_index);
 
 	if (image->htile.size)
 		radv_handle_depth_image_transition(cmd_buffer, image, src_layout,
