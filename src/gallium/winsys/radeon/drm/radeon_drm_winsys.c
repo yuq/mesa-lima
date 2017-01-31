@@ -372,7 +372,12 @@ static bool do_winsys_init(struct radeon_drm_winsys *ws)
     }
     ws->info.gart_size = gem_info.gart_size;
     ws->info.vram_size = gem_info.vram_size;
-    ws->info.vram_vis_size = MIN2(gem_info.vram_visible, 256*1024*1024);
+    ws->info.vram_vis_size = gem_info.vram_visible;
+    /* Older versions of the kernel driver reported incorrect values, and
+     * didn't support more than 256MB of visible VRAM anyway
+     */
+    if (ws->info.drm_minor < 49)
+        ws->info.vram_vis_size = MIN2(ws->info.vram_vis_size, 256*1024*1024);
 
     /* Radeon allocates all buffers as contigous, which makes large allocations
      * unlikely to succeed. */
