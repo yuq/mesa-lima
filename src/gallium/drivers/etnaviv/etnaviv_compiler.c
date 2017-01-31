@@ -1021,7 +1021,7 @@ label_mark_use(struct etna_compile *c, struct etna_compile_label *label)
 static struct etna_compile_frame *
 find_frame(struct etna_compile *c, enum etna_compile_frame_type type)
 {
-   for (unsigned sp = c->frame_sp; sp >= 0; sp--)
+   for (int sp = c->frame_sp; sp >= 0; sp--)
       if (c->frame_stack[sp].type == type)
          return &c->frame_stack[sp];
 
