@@ -4082,6 +4082,35 @@ static void set_tex_fetch_args(struct si_shader_context *ctx,
 	memcpy(emit_data->args, &args, sizeof(args));
 }
 
+static LLVMValueRef fix_resinfo(struct si_shader_context *ctx,
+				unsigned target, LLVMValueRef out)
+{
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+
+	/* 1D textures are allocated and used as 2D on GFX9. */
+        if (ctx->screen->b.chip_class >= GFX9 &&
+	    (target == TGSI_TEXTURE_1D_ARRAY ||
+	     target == TGSI_TEXTURE_SHADOW1D_ARRAY)) {
+		LLVMValueRef layers =
+			LLVMBuildExtractElement(builder, out,
+						LLVMConstInt(ctx->i32, 2, 0), "");
+		out = LLVMBuildInsertElement(builder, out, layers,
+					     LLVMConstInt(ctx->i32, 1, 0), "");
+	}
+
+	/* Divide the number of layers by 6 to get the number of cubes. */
+	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
+	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
+		LLVMValueRef imm2 = LLVMConstInt(ctx->i32, 2, 0);
+
+		LLVMValueRef z = LLVMBuildExtractElement(builder, out, imm2, "");
+		z = LLVMBuildSDiv(builder, z, LLVMConstInt(ctx->i32, 6, 0), "");
+
+		out = LLVMBuildInsertElement(builder, out, z, imm2, "");
+	}
+	return out;
+}
+
 static void resq_fetch_args(
 		struct lp_build_tgsi_context * bld_base,
 		struct lp_build_emit_data * emit_data)
@@ -4139,15 +4168,7 @@ static void resq_emit(
 		args.opcode = ac_image_get_resinfo;
 		out = ac_build_image_opcode(&ctx->ac, &args);
 
-		/* Divide the number of layers by 6 to get the number of cubes. */
-		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
-			LLVMValueRef imm2 = lp_build_const_int32(gallivm, 2);
-			LLVMValueRef imm6 = lp_build_const_int32(gallivm, 6);
-
-			LLVMValueRef z = LLVMBuildExtractElement(builder, out, imm2, "");
-			z = LLVMBuildSDiv(builder, z, imm6, "");
-			out = LLVMBuildInsertElement(builder, out, z, imm2, "");
-		}
+		out = fix_resinfo(ctx, inst->Memory.Texture, out);
 	}
 
 	emit_data->output[emit_data->chan] = out;
@@ -4327,23 +4348,9 @@ static void txq_emit(const struct lp_build_tgsi_action *action,
 	memcpy(&args, emit_data->args, sizeof(args)); /* ugly */
 
 	args.opcode = ac_image_get_resinfo;
-	emit_data->output[emit_data->chan] =
-		ac_build_image_opcode(&ctx->ac, &args);
+	LLVMValueRef result = ac_build_image_opcode(&ctx->ac, &args);
 
-	/* Divide the number of layers by 6 to get the number of cubes. */
-	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
-	    target == TGSI_TEXTURE_SHADOWCUBE_ARRAY) {
-		LLVMBuilderRef builder = bld_base->base.gallivm->builder;
-		LLVMValueRef two = lp_build_const_int32(bld_base->base.gallivm, 2);
-		LLVMValueRef six = lp_build_const_int32(bld_base->base.gallivm, 6);
-
-		LLVMValueRef v4 = emit_data->output[emit_data->chan];
-		LLVMValueRef z = LLVMBuildExtractElement(builder, v4, two, "");
-		z = LLVMBuildSDiv(builder, z, six, "");
-
-		emit_data->output[emit_data->chan] =
-			LLVMBuildInsertElement(builder, v4, z, two, "");
-	}
+	emit_data->output[emit_data->chan] = fix_resinfo(ctx, target, result);
 }
 
 static void tex_fetch_args(
