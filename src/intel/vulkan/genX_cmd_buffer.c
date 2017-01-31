@@ -338,56 +338,43 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
 {
    assert(image);
 
-   if (image->aux_usage != ISL_AUX_USAGE_HIZ || final_layout == initial_layout)
+   /* A transition is a no-op if HiZ is not enabled, or if the initial and
+    * final layouts are equal.
+    *
+    * The undefined layout indicates that the user doesn't care about the data
+    * that's currently in the buffer. Therefore, a data-preserving resolve
+    * operation is not needed.
+    *
+    * The pre-initialized layout is equivalent to the undefined layout for
+    * optimally-tiled images. Anv only exposes support for optimally-tiled
+    * depth buffers.
+    */
+   if (image->aux_usage != ISL_AUX_USAGE_HIZ ||
+       initial_layout == final_layout ||
+       initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
+       initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
       return;
 
-   enum blorp_hiz_op hiz_op;
-   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
-       initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
-      /* We've already initialized the aux HiZ buffer at BindImageMemory time,
-       * so there's no need to perform a HIZ resolve or clear to avoid GPU hangs.
-       * This initial layout indicates that the user doesn't care about the data
-       * that's currently in the buffer, so resolves are not necessary except
-       * for the special case noted below.
-       */
-      hiz_op = BLORP_HIZ_OP_NONE;
-   } else {
-      const bool hiz_enabled = ISL_AUX_USAGE_HIZ ==
-         anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
-                                 image->aspects, initial_layout);
-      const bool enable_hiz = ISL_AUX_USAGE_HIZ ==
-         anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
-                                 image->aspects, final_layout);
+   const bool hiz_enabled = ISL_AUX_USAGE_HIZ ==
+      anv_layout_to_aux_usage(&cmd_buffer->device->info, image, image->aspects,
+                              initial_layout);
+   const bool enable_hiz = ISL_AUX_USAGE_HIZ ==
+      anv_layout_to_aux_usage(&cmd_buffer->device->info, image, image->aspects,
+                              final_layout);
 
-      if (hiz_enabled && !enable_hiz) {
-         hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
-      } else if (!hiz_enabled && enable_hiz) {
-         hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
-      } else {
-         assert(hiz_enabled == enable_hiz);
-         /* If the same buffer will be used, no resolves are necessary except for
-          * the special case noted below.
-          */
-         hiz_op = BLORP_HIZ_OP_NONE;
-      }
+   enum blorp_hiz_op hiz_op;
+   if (hiz_enabled && !enable_hiz) {
+      hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
+   } else if (!hiz_enabled && enable_hiz) {
+      hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
+   } else {
+      assert(hiz_enabled == enable_hiz);
+      /* If the same buffer will be used, no resolves are necessary. */
+      hiz_op = BLORP_HIZ_OP_NONE;
    }
 
    if (hiz_op != BLORP_HIZ_OP_NONE)
       anv_gen8_hiz_op_resolve(cmd_buffer, image, hiz_op);
-
-   /* Images that have sampling with HiZ enabled cause all shader sampling to
-    * load data with the HiZ buffer. Therefore, in the case of transitioning to
-    * the general layout - which currently routes all writes to the depth
-    * buffer - we must ensure that the HiZ buffer remains consistent with the
-    * depth buffer by performing an additional HIZ resolve if the operation
-    * required by this transition was not already a HiZ resolve.
-    */
-   if (final_layout == VK_IMAGE_LAYOUT_GENERAL &&
-       anv_can_sample_with_hiz(&cmd_buffer->device->info, image->aspects,
-                               image->samples) &&
-       hiz_op != BLORP_HIZ_OP_HIZ_RESOLVE) {
-      anv_gen8_hiz_op_resolve(cmd_buffer, image, BLORP_HIZ_OP_HIZ_RESOLVE);
-   }
 }
 
 
