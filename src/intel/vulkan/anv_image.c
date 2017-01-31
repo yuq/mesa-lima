@@ -692,8 +692,19 @@ anv_CreateImageView(VkDevice _device,
        (image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
         !(iview->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT))) {
       iview->sampler_surface_state = alloc_surface_state(device);
+      iview->no_aux_sampler_surface_state = alloc_surface_state(device);
 
-      /* Select the optimal aux_usage for sampling. */
+      /* Sampling is performed in one of two buffer configurations in anv: with
+       * an auxiliary buffer or without it. Sampler states aren't always needed
+       * for both configurations, but are currently created unconditionally for
+       * simplicity.
+       *
+       * TODO: Consider allocating each surface state only when necessary.
+       */
+
+      /* Create a sampler state with the optimal aux_usage for sampling. This
+       * may use the aux_buffer.
+       */
       const enum isl_aux_usage surf_usage =
          anv_layout_to_aux_usage(&device->info, image, iview->aspect_mask,
                                  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -716,9 +727,18 @@ anv_CreateImageView(VkDevice _device,
                           .aux_usage = surf_usage,
                           .mocs = device->default_mocs);
 
+      /* Create a sampler state that only uses the main buffer. */
+      isl_surf_fill_state(&device->isl_dev,
+                          iview->no_aux_sampler_surface_state.map,
+                          .surf = &surface->isl,
+                          .view = &view,
+                          .mocs = device->default_mocs);
+
       anv_state_flush(device, iview->sampler_surface_state);
+      anv_state_flush(device, iview->no_aux_sampler_surface_state);
    } else {
       iview->sampler_surface_state.alloc_size = 0;
+      iview->no_aux_sampler_surface_state.alloc_size = 0;
    }
 
    /* NOTE: This one needs to go last since it may stomp isl_view.format */

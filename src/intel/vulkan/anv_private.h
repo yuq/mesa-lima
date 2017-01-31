@@ -1819,6 +1819,12 @@ struct anv_image_view {
    struct anv_state sampler_surface_state;
 
    /**
+    * RENDER_SURFACE_STATE when using image as a sampler surface with the
+    * auxiliary buffer disabled.
+    */
+   struct anv_state no_aux_sampler_surface_state;
+
+   /**
     * RENDER_SURFACE_STATE when using image as a storage image. Separate states
     * for write-only and readable, using the real format for write-only and the
     * lowered format for readable.
