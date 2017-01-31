@@ -190,20 +190,6 @@ make_surface(const struct anv_device *dev,
        */
       if (!(image->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
          /* It will never be used as an attachment, HiZ is pointless. */
-      } else if (image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
-         /* From the 1.0.37 spec:
-          *
-          *    "An attachment used as an input attachment and depth/stencil
-          *    attachment must be in either VK_IMAGE_LAYOUT_GENERAL or
-          *    VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL."
-          *
-          * It will never have a layout of
-          * VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, so HiZ is
-          * currently pointless. If transfer operations learn to use the HiZ
-          * buffer, we can enable HiZ for VK_IMAGE_LAYOUT_GENERAL and support
-          * input attachments.
-          */
-         anv_finishme("Implement HiZ for input attachments");
       } else if (!env_var_as_boolean("INTEL_VK_HIZ", dev->info.gen >= 8)) {
          anv_finishme("Implement gen7 HiZ");
       } else if (vk_info->mipLevels > 1) {
