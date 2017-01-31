@@ -34,6 +34,39 @@
 
 struct PA_STATE
 {
+#if USE_SIMD16_FRONTEND
+    enum
+    {
+        SIMD_WIDTH      = KNOB_SIMD16_WIDTH,
+        SIMD_WIDTH_DIV2 = KNOB_SIMD16_WIDTH / 2,
+        SIMD_WIDTH_LOG2 = 4
+    };
+
+    typedef         simd16mask          SIMDMASK;
+
+    typedef         simd16scalar        SIMDSCALAR;
+    typedef         simd16vector        SIMDVECTOR;
+    typedef         simd16vertex        SIMDVERTEX;
+
+    typedef         simd16scalari       SIMDSCALARI;
+
+#else
+    enum
+    {
+        SIMD_WIDTH      = KNOB_SIMD_WIDTH,
+        SIMD_WIDTH_DIV2 = KNOB_SIMD_WIDTH / 2,
+        SIMD_WIDTH_LOG2 = 3
+    };
+
+    typedef         simdmask            SIMDMASK;
+
+    typedef         simdscalar          SIMDSCALAR;
+    typedef         simdvector          SIMDVECTOR;
+    typedef         simdvertex          SIMDVERTEX;
+
+    typedef         simdscalari         SIMDSCALARI;
+
+#endif
     DRAW_CONTEXT *pDC{ nullptr };              // draw context
     uint8_t* pStreamBase{ nullptr };           // vertex stream
     uint32_t streamSizeInVerts{ 0 };     // total size of the input stream in verts
@@ -60,24 +93,12 @@ struct PA_STATE
 #endif
     virtual void AssembleSingle(uint32_t slot, uint32_t primIndex, __m128 verts[]) = 0;
     virtual bool NextPrim() = 0;
-    virtual simdvertex& GetNextVsOutput() = 0;
-#if ENABLE_AVX512_SIMD16
-    virtual simdvertex& GetNextVsOutput_simd16_lo() = 0;
-    virtual simdvertex& GetNextVsOutput_simd16_hi() = 0;
-    virtual simd16vertex& GetNextVsOutput_simd16() = 0;
-#endif
+    virtual SIMDVERTEX& GetNextVsOutput() = 0;
     virtual bool GetNextStreamOutput() = 0;
-    virtual simdmask& GetNextVsIndices() = 0;
+    virtual SIMDMASK& GetNextVsIndices() = 0;
     virtual uint32_t NumPrims() = 0;
-#if ENABLE_AVX512_SIMD16
-    virtual uint32_t NumPrims_simd16() = 0;
-#endif
     virtual void Reset() = 0;
-    virtual simdscalari GetPrimID(uint32_t startID) = 0;
-#if ENABLE_AVX512_SIMD16
-    virtual simdscalari GetPrimID_simd16_lo(uint32_t startID) = 0;
-    virtual simdscalari GetPrimID_simd16_hi(uint32_t startID) = 0;
-#endif
+    virtual SIMDSCALARI GetPrimID(uint32_t startID) = 0;
 };
 
 // The Optimized PA is a state machine that assembles triangles from vertex shader simd
@@ -98,7 +119,8 @@ struct PA_STATE
 // cuts
 struct PA_STATE_OPT : public PA_STATE
 {
-    simdvertex leadingVertex;            // For tri-fan
+    SIMDVERTEX leadingVertex;            // For tri-fan
+
     uint32_t numPrims{ 0 };              // Total number of primitives for draw.
     uint32_t numPrimsComplete{ 0 };      // Total number of complete primitives.
 
@@ -112,20 +134,22 @@ struct PA_STATE_OPT : public PA_STATE
     bool reset{ false };                 // reset state
 
     uint32_t primIDIncr{ 0 };            // how much to increment for each vector (typically vector / {1, 2})
-    simdscalari primID;
+    SIMDSCALARI primID;
 
     typedef bool(*PFN_PA_FUNC)(PA_STATE_OPT& state, uint32_t slot, simdvector verts[]);
-    typedef void(*PFN_PA_SINGLE_FUNC)(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 #if ENABLE_AVX512_SIMD16
     typedef bool(*PFN_PA_FUNC_SIMD16)(PA_STATE_OPT& state, uint32_t slot, simd16vector verts[]);
 #endif
+    typedef void(*PFN_PA_SINGLE_FUNC)(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
     PFN_PA_FUNC        pfnPaFunc{ nullptr };        // PA state machine function for assembling 4 triangles.
+#if ENABLE_AVX512_SIMD16
+    PFN_PA_FUNC_SIMD16 pfnPaFunc_simd16{ nullptr };
+#endif
     PFN_PA_SINGLE_FUNC pfnPaSingleFunc{ nullptr };  // PA state machine function for assembling single triangle.
     PFN_PA_FUNC        pfnPaFuncReset{ nullptr };   // initial state to set on reset
 #if ENABLE_AVX512_SIMD16
-    PFN_PA_FUNC_SIMD16 pfnPaFunc_simd16{ nullptr };         // PA state machine function for assembling 16 triangles
-    PFN_PA_FUNC_SIMD16 pfnPaFuncReset_simd16{ nullptr };    // initial state to set on reset
+    PFN_PA_FUNC_SIMD16 pfnPaFuncReset_simd16{ nullptr };
 #endif
 
     // state used to advance the PA when Next is called
@@ -138,7 +162,7 @@ struct PA_STATE_OPT : public PA_STATE
     bool               nextReset{ false };
     bool               isStreaming{ false };
 
-    simdmask tmpIndices{ 0 };            // temporary index store for unused virtual function
+    SIMDMASK tmpIndices{ 0 };            // temporary index store for unused virtual function
     
     PA_STATE_OPT() {}
     PA_STATE_OPT(DRAW_CONTEXT* pDC, uint32_t numPrims, uint8_t* pStream, uint32_t streamSizeInVerts,
@@ -221,55 +245,18 @@ struct PA_STATE_OPT : public PA_STATE
         return morePrims;
     }
 
-    simdvertex& GetNextVsOutput()
+    SIMDVERTEX& GetNextVsOutput()
     {
         // increment cur and prev indices
-        const uint32_t numSimdVerts = this->streamSizeInVerts / KNOB_SIMD_WIDTH;
+        const uint32_t numSimdVerts = this->streamSizeInVerts / SIMD_WIDTH;
         this->prev = this->cur;  // prev is undefined for first state.
         this->cur = this->counter % numSimdVerts;
 
-        simdvertex* pVertex = (simdvertex*)pStreamBase;
+        SIMDVERTEX* pVertex = (SIMDVERTEX*)pStreamBase;
         return pVertex[this->cur];
     }
 
-#if ENABLE_AVX512_SIMD16
-    simdvertex& GetNextVsOutput_simd16_lo()
-    {
-        // increment cur and prev indices
-        const uint32_t numSimdVerts = this->streamSizeInVerts / KNOB_SIMD16_WIDTH;
-        this->prev = this->cur;  // prev is undefined for first state.
-        this->cur = this->counter % numSimdVerts;
-
-        simdvertex* pVertex = (simdvertex*)pStreamBase;
-        return pVertex[this->cur * 2];
-    }
-
-    simdvertex& GetNextVsOutput_simd16_hi()
-    {
-        // increment cur and prev indices
-        const uint32_t numSimdVerts = this->streamSizeInVerts / KNOB_SIMD16_WIDTH;
-#if 1
-        this->prev = this->cur;  // prev is undefined for first state.
-        this->cur = this->counter % numSimdVerts;
-#endif
-
-        simdvertex* pVertex = (simdvertex*)pStreamBase;
-        return pVertex[this->cur * 2 + 1];
-    }
-
-    simd16vertex& GetNextVsOutput_simd16()
-    {
-        // increment cur and prev indices
-        const uint32_t numSimdVerts = this->streamSizeInVerts / KNOB_SIMD16_WIDTH;
-        this->prev = this->cur;  // prev is undefined for first state.
-        this->cur = this->counter % numSimdVerts;
-
-        simd16vertex* pVertex = (simd16vertex*)pStreamBase;
-        return pVertex[this->cur];
-    }
-
-#endif
-    simdmask& GetNextVsIndices()
+    SIMDMASK& GetNextVsIndices()
     {
         // unused in optimized PA, pass tmp buffer back
         return tmpIndices;
@@ -286,17 +273,9 @@ struct PA_STATE_OPT : public PA_STATE
     uint32_t NumPrims()
     {
         return (this->numPrimsComplete + this->nextNumPrimsIncrement > this->numPrims) ?
-            (KNOB_SIMD_WIDTH - (this->numPrimsComplete + this->nextNumPrimsIncrement - this->numPrims)) : KNOB_SIMD_WIDTH;
+            (SIMD_WIDTH - (this->numPrimsComplete + this->nextNumPrimsIncrement - this->numPrims)) : SIMD_WIDTH;
     }
 
-#if ENABLE_AVX512_SIMD16
-    uint32_t NumPrims_simd16()
-    {
-        return (this->numPrimsComplete + this->nextNumPrimsIncrement > this->numPrims) ?
-            (KNOB_SIMD16_WIDTH - (this->numPrimsComplete + this->nextNumPrimsIncrement - this->numPrims)) : KNOB_SIMD16_WIDTH;
-    }
-
-#endif
     void SetNextState(PA_STATE_OPT::PFN_PA_FUNC pfnPaNextFunc,
         PA_STATE_OPT::PFN_PA_SINGLE_FUNC pfnPaNextSingleFunc,
         uint32_t numSimdPrims = 0,
@@ -343,33 +322,16 @@ struct PA_STATE_OPT : public PA_STATE
         this->reset = false;
     }
 
-    simdscalari GetPrimID(uint32_t startID)
+    SIMDSCALARI GetPrimID(uint32_t startID)
     {
-        return _simd_add_epi32(this->primID,
-            _simd_set1_epi32(startID + this->primIDIncr * (this->numPrimsComplete / KNOB_SIMD_WIDTH)));
-    }
-#if ENABLE_AVX512_SIMD16
-
-    simdscalari GetPrimID_simd16_lo(uint32_t startID)
-    {
-#if 1
-        return _simd_add_epi32(this->primID,
-            _simd_set1_epi32(startID + (this->primIDIncr / 2) * (this->numPrimsComplete / KNOB_SIMD_WIDTH) * 2));
+#if USE_SIMD16_FRONTEND
+        return _simd16_add_epi32(this->primID,
+            _simd16_set1_epi32(startID + this->primIDIncr * (this->numPrimsComplete / SIMD_WIDTH)));
 #else
-        return _simd_set1_epi32(0);
-#endif
-    }
-
-    simdscalari GetPrimID_simd16_hi(uint32_t startID)
-    {
-#if 1
         return _simd_add_epi32(this->primID,
-            _simd_set1_epi32(startID + (this->primIDIncr / 2) * ((this->numPrimsComplete / KNOB_SIMD_WIDTH) * 2 + 1)));
-#else
-        return _simd_set1_epi32(0);
+            _simd_set1_epi32(startID + this->primIDIncr * (this->numPrimsComplete / SIMD_WIDTH)));
 #endif
     }
-#endif
 };
 
 // helper C wrappers to avoid having to rewrite all the PA topology state functions
@@ -489,22 +451,26 @@ INLINE __m128 swizzleLaneN(const simdvector &a, int lane)
 // Cut-aware primitive assembler.
 struct PA_STATE_CUT : public PA_STATE
 {
-    simdmask* pCutIndices{ nullptr };    // cut indices buffer, 1 bit per vertex
+    SIMDMASK* pCutIndices{ nullptr };    // cut indices buffer, 1 bit per vertex
     uint32_t numVerts{ 0 };              // number of vertices available in buffer store
     uint32_t numAttribs{ 0 };            // number of attributes
     int32_t numRemainingVerts{ 0 };      // number of verts remaining to be assembled
     uint32_t numVertsToAssemble{ 0 };    // total number of verts to assemble for the draw
-    OSALIGNSIMD(uint32_t) indices[MAX_NUM_VERTS_PER_PRIM][KNOB_SIMD_WIDTH];    // current index buffer for gather
-    simdscalari vOffsets[MAX_NUM_VERTS_PER_PRIM];           // byte offsets for currently assembling simd
+#if ENABLE_AVX512_SIMD16
+    OSALIGNSIMD16(uint32_t) indices[MAX_NUM_VERTS_PER_PRIM][SIMD_WIDTH];    // current index buffer for gather
+#else
+    OSALIGNSIMD(uint32_t) indices[MAX_NUM_VERTS_PER_PRIM][SIMD_WIDTH];    // current index buffer for gather
+#endif
+    SIMDSCALARI vOffsets[MAX_NUM_VERTS_PER_PRIM];           // byte offsets for currently assembling simd
     uint32_t numPrimsAssembled{ 0 };     // number of primitives that are fully assembled
     uint32_t headVertex{ 0 };            // current unused vertex slot in vertex buffer store
     uint32_t tailVertex{ 0 };            // beginning vertex currently assembling
     uint32_t curVertex{ 0 };             // current unprocessed vertex
     uint32_t startPrimId{ 0 };           // starting prim id
-    simdscalari vPrimId;                 // vector of prim ID
+    SIMDSCALARI vPrimId;                 // vector of prim ID
     bool needOffsets{ false };           // need to compute gather offsets for current SIMD
     uint32_t vertsPerPrim{ 0 };
-    simdvertex tmpVertex;                // temporary simdvertex for unimplemented API
+    SIMDVERTEX tmpVertex;                // temporary simdvertex for unimplemented API
     bool processCutVerts{ false };       // vertex indices with cuts should be processed as normal, otherwise they
                                          // are ignored.  Fetch shader sends invalid verts on cuts that should be ignored
                                          // while the GS sends valid verts for every index 
@@ -518,7 +484,7 @@ struct PA_STATE_CUT : public PA_STATE
     PFN_PA_FUNC pfnPa{ nullptr };        // per-topology function that processes a single vert
 
     PA_STATE_CUT() {}
-    PA_STATE_CUT(DRAW_CONTEXT* pDC, uint8_t* in_pStream, uint32_t in_streamSizeInVerts, simdmask* in_pIndices, uint32_t in_numVerts, 
+    PA_STATE_CUT(DRAW_CONTEXT* pDC, uint8_t* in_pStream, uint32_t in_streamSizeInVerts, SIMDMASK* in_pIndices, uint32_t in_numVerts,
         uint32_t in_numAttribs, PRIMITIVE_TOPOLOGY topo, bool in_processCutVerts)
         : PA_STATE(pDC, in_pStream, in_streamSizeInVerts)
     {
@@ -535,7 +501,11 @@ struct PA_STATE_CUT : public PA_STATE
         curIndex = 0;
         pCutIndices = in_pIndices;
         memset(indices, 0, sizeof(indices));
-        vPrimId = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+#if USE_SIMD16_FRONTEND
+        vPrimId = _simd16_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+#else
+        vPrimId = _simd_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+#endif
         reverseWinding = false;
         adjExtraVert = -1;
 
@@ -566,44 +536,18 @@ struct PA_STATE_CUT : public PA_STATE
         }
     }
 
-    simdvertex& GetNextVsOutput()
+    SIMDVERTEX& GetNextVsOutput()
     {
-        uint32_t vertexIndex = this->headVertex / KNOB_SIMD_WIDTH;
-        this->headVertex = (this->headVertex + KNOB_SIMD_WIDTH) % this->numVerts;
+        uint32_t vertexIndex = this->headVertex / SIMD_WIDTH;
+        this->headVertex = (this->headVertex + SIMD_WIDTH) % this->numVerts;
         this->needOffsets = true;
-        return ((simdvertex*)pStreamBase)[vertexIndex];
+        return ((SIMDVERTEX*)pStreamBase)[vertexIndex];
     }
 
-#if ENABLE_AVX512_SIMD16
-    simdvertex& GetNextVsOutput_simd16_lo()
+    SIMDMASK& GetNextVsIndices()
     {
-        uint32_t vertexIndex = this->headVertex / KNOB_SIMD16_WIDTH;
-        this->headVertex = (this->headVertex + KNOB_SIMD16_WIDTH) % this->numVerts;
-        this->needOffsets = true;
-        return ((simdvertex*)pStreamBase)[vertexIndex * 2];
-    }
-
-    simdvertex& GetNextVsOutput_simd16_hi()
-    {
-        uint32_t vertexIndex = this->headVertex / KNOB_SIMD16_WIDTH;
-        this->headVertex = (this->headVertex + KNOB_SIMD16_WIDTH) % this->numVerts;
-        this->needOffsets = true;
-        return ((simdvertex*)pStreamBase)[vertexIndex * 2 + 1];
-    }
-
-    simd16vertex& GetNextVsOutput_simd16()
-    {
-        uint32_t vertexIndex = this->headVertex / KNOB_SIMD16_WIDTH;
-        this->headVertex = (this->headVertex + KNOB_SIMD16_WIDTH) % this->numVerts;
-        this->needOffsets = true;
-        return ((simd16vertex*)pStreamBase)[vertexIndex];
-    }
-
-#endif
-    simdmask& GetNextVsIndices()
-    {
-        uint32_t vertexIndex = this->headVertex / KNOB_SIMD_WIDTH;
-        simdmask* pCurCutIndex = this->pCutIndices + vertexIndex;
+        uint32_t vertexIndex = this->headVertex / SIMD_WIDTH;
+        SIMDMASK* pCurCutIndex = this->pCutIndices + vertexIndex;
         return *pCurCutIndex;
     }
 
@@ -611,7 +555,8 @@ struct PA_STATE_CUT : public PA_STATE
     {
         // unused
         SWR_ASSERT(0 && "Not implemented");
-        return this->tmpVertex.attrib[0];
+        static simdvector junk;
+        return junk;
     }
 
 #if ENABLE_AVX512_SIMD16
@@ -626,28 +571,20 @@ struct PA_STATE_CUT : public PA_STATE
 #endif
     bool GetNextStreamOutput()
     {
-        this->headVertex += KNOB_SIMD_WIDTH;
+        this->headVertex += SIMD_WIDTH;
         this->needOffsets = true;
         return HasWork();
     }
 
-    simdscalari GetPrimID(uint32_t startID)
+    SIMDSCALARI GetPrimID(uint32_t startID)
     {
+#if USE_SIMD16_FRONTEND
+        return _simd16_add_epi32(_simd16_set1_epi32(startID), this->vPrimId);
+#else
         return _simd_add_epi32(_simd_set1_epi32(startID), this->vPrimId);
-    }
-
-#if ENABLE_AVX512_SIMD16
-    simdscalari GetPrimID_simd16_lo(uint32_t startID)
-    {
-        return _simd_add_epi32(_simd_set1_epi32(startID), this->vPrimId);
-    }
-
-    simdscalari GetPrimID_simd16_hi(uint32_t startID)
-    {
-        return _simd_add_epi32(_simd_set1_epi32(startID + KNOB_SIMD_WIDTH), this->vPrimId);
-    }
-
 #endif
+    }
+
     void Reset()
     {
 #if ENABLE_AVX512_SIMD16
@@ -662,7 +599,11 @@ struct PA_STATE_CUT : public PA_STATE
         this->headVertex = 0;
         this->reverseWinding = false;
         this->adjExtraVert = -1;
-        this->vPrimId = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+#if USE_SIMD16_FRONTEND
+        this->vPrimId = _simd16_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+#else
+        this->vPrimId = _simd_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+#endif
     }
 
     bool HasWork()
@@ -672,7 +613,7 @@ struct PA_STATE_CUT : public PA_STATE
 
     bool IsVertexStoreFull()
     {
-        return ((this->headVertex + KNOB_SIMD_WIDTH) % this->numVerts) == this->tailVertex;
+        return ((this->headVertex + SIMD_WIDTH) % this->numVerts) == this->tailVertex;
     }
 
     void RestartTopology()
@@ -684,8 +625,8 @@ struct PA_STATE_CUT : public PA_STATE
 
     bool IsCutIndex(uint32_t vertex)
     {
-        uint32_t vertexIndex = vertex / KNOB_SIMD_WIDTH;
-        uint32_t vertexOffset = vertex & (KNOB_SIMD_WIDTH - 1);
+        uint32_t vertexIndex = vertex / SIMD_WIDTH;
+        uint32_t vertexOffset = vertex & (SIMD_WIDTH - 1);
         return _bittest((const LONG*)&this->pCutIndices[vertexIndex], vertexOffset) == 1;
     }
 
@@ -693,7 +634,7 @@ struct PA_STATE_CUT : public PA_STATE
     // have assembled SIMD prims
     void ProcessVerts()
     {
-        while (this->numPrimsAssembled != KNOB_SIMD_WIDTH &&
+        while (this->numPrimsAssembled != SIMD_WIDTH &&
             this->numRemainingVerts > 0 &&
             this->curVertex != this->headVertex)
         {
@@ -724,7 +665,7 @@ struct PA_STATE_CUT : public PA_STATE
         }
 
         // special case last primitive for tri strip w/ adj
-        if (this->numPrimsAssembled != KNOB_SIMD_WIDTH && this->numRemainingVerts == 0 && this->adjExtraVert != -1)
+        if (this->numPrimsAssembled != SIMD_WIDTH && this->numRemainingVerts == 0 && this->adjExtraVert != -1)
         {
             (this->*pfnPa)(this->curVertex, true);
         }
@@ -736,13 +677,17 @@ struct PA_STATE_CUT : public PA_STATE
         // advance tail to the current unsubmitted vertex
         this->tailVertex = this->curVertex;
         this->numPrimsAssembled = 0;
-        this->vPrimId = _simd_add_epi32(vPrimId, _simd_set1_epi32(KNOB_SIMD_WIDTH));
+#if USE_SIMD16_FRONTEND
+        this->vPrimId = _simd16_add_epi32(vPrimId, _simd16_set1_epi32(SIMD_WIDTH));
+#else
+        this->vPrimId = _simd_add_epi32(vPrimId, _simd_set1_epi32(SIMD_WIDTH));
+#endif
     }
 
     bool NextPrim()
     {
         // if we've assembled enough prims, we can advance to the next set of verts
-        if (this->numPrimsAssembled == KNOB_SIMD_WIDTH || this->numRemainingVerts <= 0)
+        if (this->numPrimsAssembled == SIMD_WIDTH || this->numRemainingVerts <= 0)
         {
             Advance();
         }
@@ -753,27 +698,37 @@ struct PA_STATE_CUT : public PA_STATE
     {
         for (uint32_t v = 0; v < this->vertsPerPrim; ++v)
         {
-            simdscalari vIndices = *(simdscalari*)&this->indices[v][0];
+            SIMDSCALARI vIndices = *(SIMDSCALARI*)&this->indices[v][0];
 
             // step to simdvertex batch
-            const uint32_t simdShift = 3; // @todo make knob
-            simdscalari vVertexBatch = _simd_srai_epi32(vIndices, simdShift);
-            this->vOffsets[v] = _simd_mullo_epi32(vVertexBatch, _simd_set1_epi32(sizeof(simdvertex)));
+            const uint32_t simdShift = SIMD_WIDTH_LOG2;
+#if USE_SIMD16_FRONTEND
+            SIMDSCALARI vVertexBatch = _simd16_srai_epi32(vIndices, simdShift);
+            this->vOffsets[v] = _simd16_mullo_epi32(vVertexBatch, _simd16_set1_epi32(sizeof(SIMDVERTEX)));
+#else
+            SIMDSCALARI vVertexBatch = _simd_srai_epi32(vIndices, simdShift);
+            this->vOffsets[v] = _simd_mullo_epi32(vVertexBatch, _simd_set1_epi32(sizeof(SIMDVERTEX)));
+#endif
 
             // step to index
-            const uint32_t simdMask = 0x7; // @todo make knob
-            simdscalari vVertexIndex = _simd_and_si(vIndices, _simd_set1_epi32(simdMask));
+            const uint32_t simdMask = SIMD_WIDTH - 1;
+#if USE_SIMD16_FRONTEND
+            SIMDSCALARI vVertexIndex = _simd16_and_si(vIndices, _simd16_set1_epi32(simdMask));
+            this->vOffsets[v] = _simd16_add_epi32(this->vOffsets[v], _simd16_mullo_epi32(vVertexIndex, _simd16_set1_epi32(sizeof(float))));
+#else
+            SIMDSCALARI vVertexIndex = _simd_and_si(vIndices, _simd_set1_epi32(simdMask));
             this->vOffsets[v] = _simd_add_epi32(this->vOffsets[v], _simd_mullo_epi32(vVertexIndex, _simd_set1_epi32(sizeof(float))));
+#endif
         }
     }
 
-    bool Assemble(uint32_t slot, simdvector result[])
+    bool Assemble(uint32_t slot, simdvector verts[])
     {
         // process any outstanding verts
         ProcessVerts();
 
         // return false if we don't have enough prims assembled
-        if (this->numPrimsAssembled != KNOB_SIMD_WIDTH && this->numRemainingVerts > 0)
+        if (this->numPrimsAssembled != SIMD_WIDTH && this->numRemainingVerts > 0)
         {
             return false;
         }
@@ -787,18 +742,28 @@ struct PA_STATE_CUT : public PA_STATE
 
         for (uint32_t v = 0; v < this->vertsPerPrim; ++v)
         {
-            simdscalari offsets = this->vOffsets[v];
+            SIMDSCALARI offsets = this->vOffsets[v];
 
             // step to attribute
-            offsets = _simd_add_epi32(offsets, _simd_set1_epi32(slot * sizeof(simdvector)));
+#if USE_SIMD16_FRONTEND
+            offsets = _simd16_add_epi32(offsets, _simd16_set1_epi32(slot * sizeof(SIMDVECTOR)));
+#else
+            offsets = _simd_add_epi32(offsets, _simd_set1_epi32(slot * sizeof(SIMDVECTOR)));
+#endif
 
             float* pBase = (float*)this->pStreamBase;
             for (uint32_t c = 0; c < 4; ++c)
             {
-                result[v].v[c] = _simd_i32gather_ps(pBase, offsets, 1);
+#if USE_SIMD16_FRONTEND
+                simd16scalar temp = _simd16_i32gather_ps(pBase, offsets, 1);
+
+                verts[v].v[c] = useAlternateOffset ? temp.hi : temp.lo;
+#else
+                verts[v].v[c] = _simd_i32gather_ps(pBase, offsets, 1);
+#endif
 
                 // move base to next component
-                pBase += KNOB_SIMD_WIDTH;
+                pBase += SIMD_WIDTH;
             }
         }
 
@@ -808,8 +773,49 @@ struct PA_STATE_CUT : public PA_STATE
 #if ENABLE_AVX512_SIMD16
     bool Assemble_simd16(uint32_t slot, simd16vector verts[])
     {
-        SWR_ASSERT(false);
-        return false;
+        // process any outstanding verts
+        ProcessVerts();
+
+        // return false if we don't have enough prims assembled
+        if (this->numPrimsAssembled != SIMD_WIDTH && this->numRemainingVerts > 0)
+        {
+            return false;
+        }
+
+        // cache off gather offsets given the current SIMD set of indices the first time we get an assemble
+        if (this->needOffsets)
+        {
+            ComputeOffsets();
+            this->needOffsets = false;
+        }
+
+        for (uint32_t v = 0; v < this->vertsPerPrim; ++v)
+        {
+            SIMDSCALARI offsets = this->vOffsets[v];
+
+            // step to attribute
+#if USE_SIMD16_FRONTEND
+            offsets = _simd16_add_epi32(offsets, _simd16_set1_epi32(slot * sizeof(SIMDVECTOR)));
+#else
+            offsets = _simd_add_epi32(offsets, _simd_set1_epi32(slot * sizeof(simdvector)));
+#endif
+
+            float* pBase = (float*)this->pStreamBase;
+            for (uint32_t c = 0; c < 4; ++c)
+            {
+#if USE_SIMD16_FRONTEND
+                verts[v].v[c] = _simd16_i32gather_ps(pBase, offsets, 1);
+#else
+                verts[v].v[c].lo = _simd_i32gather_ps(pBase, offsets, 1);
+                verts[v].v[c].hi = _simd_setzero_ps();
+#endif
+
+                // move base to next component
+                pBase += SIMD_WIDTH;
+            }
+        }
+
+        return true;
     }
 
 #endif
@@ -819,14 +825,18 @@ struct PA_STATE_CUT : public PA_STATE
         for (uint32_t v = 0; v < this->vertsPerPrim; ++v)
         {
             uint32_t* pOffset = (uint32_t*)&this->vOffsets[v];
+#if USE_SIMD16_FRONTEND
+            uint32_t offset = useAlternateOffset ? pOffset[triIndex + SIMD_WIDTH_DIV2] : pOffset[triIndex];
+#else
             uint32_t offset = pOffset[triIndex];
-            offset += sizeof(simdvector) * slot;
+#endif
+            offset += sizeof(SIMDVECTOR) * slot;
             float* pVert = (float*)&tri[v];
             for (uint32_t c = 0; c < 4; ++c)
             {
                 float* pComponent = (float*)(this->pStreamBase + offset);
                 pVert[c] = *pComponent;
-                offset += KNOB_SIMD_WIDTH * sizeof(float);
+                offset += SIMD_WIDTH * sizeof(float);
             }
         }
     }
@@ -836,13 +846,6 @@ struct PA_STATE_CUT : public PA_STATE
         return this->numPrimsAssembled;
     }
 
-#if ENABLE_AVX512_SIMD16
-    uint32_t NumPrims_simd16()
-    {
-        return this->numPrimsAssembled;
-    }
-
-#endif
     // Per-topology functions
     void ProcessVertTriStrip(uint32_t index, bool finish)
     {
@@ -1188,7 +1191,7 @@ struct PA_TESS : PA_STATE
 {
     PA_TESS(
         DRAW_CONTEXT *in_pDC,
-        const simdscalar* in_pVertData,
+        const SIMDSCALAR* in_pVertData,
         uint32_t in_attributeStrideInVectors,
         uint32_t in_numAttributes,
         uint32_t* (&in_ppIndices)[3],
@@ -1201,7 +1204,11 @@ struct PA_TESS : PA_STATE
         m_numAttributes(in_numAttributes),
         m_numPrims(in_numPrims)
     {
+#if USE_SIMD16_FRONTEND
+        m_vPrimId = _simd16_setzero_si();
+#else
         m_vPrimId = _simd_setzero_si();
+#endif
         binTopology = in_binTopology;
         m_ppIndices[0] = in_ppIndices[0];
         m_ppIndices[1] = in_ppIndices[1];
@@ -1248,40 +1255,30 @@ struct PA_TESS : PA_STATE
     }
 
 #endif
-    static simdscalari GenPrimMask(uint32_t numPrims)
+    static SIMDSCALARI GenPrimMask(uint32_t numPrims)
     {
-        SWR_ASSERT(numPrims <= KNOB_SIMD_WIDTH);
-#if KNOB_SIMD_WIDTH == 8
-        static const OSALIGNLINE(int32_t) maskGen[KNOB_SIMD_WIDTH * 2] =
-        {
-            -1, -1, -1, -1, -1, -1, -1, -1,
-             0,  0,  0,  0,  0,  0,  0,  0
-        };
-#else
-#error "Help, help, I can't get up!"
-#endif
-
-        return _simd_loadu_si((const simdscalari*)&maskGen[KNOB_SIMD_WIDTH - numPrims]);
-    }
-
-#if ENABLE_AVX512_SIMD16
-    static simd16scalari GenPrimMask_simd16(uint32_t numPrims)
-    {
-        SWR_ASSERT(numPrims <= KNOB_SIMD16_WIDTH);
-
-        static const OSALIGNSIMD16(int32_t) maskGen_16[KNOB_SIMD16_WIDTH * 2] =
+        SWR_ASSERT(numPrims <= SIMD_WIDTH);
+#if USE_SIMD16_FRONTEND
+        static const OSALIGNLINE(int32_t) maskGen[SIMD_WIDTH * 2] =
         {
             -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
             0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0
         };
 
-        return _simd16_loadu_si((const simd16scalari*)&maskGen_16[KNOB_SIMD16_WIDTH - numPrims]);
+        return _simd16_loadu_si((const SIMDSCALARI*)&maskGen[SIMD_WIDTH - numPrims]);
+#else
+        static const OSALIGNLINE(int32_t) maskGen[SIMD_WIDTH * 2] =
+        {
+            -1, -1, -1, -1, -1, -1, -1, -1,
+            0,  0,  0,  0,  0,  0,  0,  0
+        };
+
+        return _simd_loadu_si((const SIMDSCALARI*)&maskGen[SIMD_WIDTH - numPrims]);
+#endif
     }
 
-#endif
     bool Assemble(uint32_t slot, simdvector verts[])
     {
-        static_assert(KNOB_SIMD_WIDTH == 8, "Need to revisit this when AVX512 is implemented");
         SWR_ASSERT(slot < m_numAttributes);
 
         uint32_t numPrimsToAssemble = PA_TESS::NumPrims();
@@ -1290,23 +1287,38 @@ struct PA_TESS : PA_STATE
             return false;
         }
 
-        simdscalari mask = GenPrimMask(numPrimsToAssemble);
+        SIMDSCALARI mask = GenPrimMask(numPrimsToAssemble);
 
         const float* pBaseAttrib = (const float*)&m_pVertexData[slot * m_attributeStrideInVectors * 4];
         for (uint32_t i = 0; i < m_numVertsPerPrim; ++i)
         {
-            simdscalari indices = _simd_load_si((const simdscalari*)m_ppIndices[i]);
+#if USE_SIMD16_FRONTEND
+            SIMDSCALARI indices = _simd16_load_si((const SIMDSCALARI*)m_ppIndices[i]);
+#else
+            SIMDSCALARI indices = _simd_load_si((const SIMDSCALARI*)m_ppIndices[i]);
+#endif
 
             const float* pBase = pBaseAttrib;
             for (uint32_t c = 0; c < 4; ++c)
             {
+#if USE_SIMD16_FRONTEND
+                simd16scalar temp = _simd16_mask_i32gather_ps(
+                    _simd16_setzero_ps(),
+                    pBase,
+                    indices,
+                    mask,
+                    4 /* gcc doesn't like sizeof(float) */);
+
+                verts[i].v[c] = useAlternateOffset ? temp.hi : temp.lo;
+#else
                 verts[i].v[c] = _simd_mask_i32gather_ps(
                     _simd_setzero_ps(),
                     pBase,
                     indices,
                     _simd_castsi_ps(mask),
                     4 /* gcc doesn't like sizeof(float) */);
-                pBase += m_attributeStrideInVectors * KNOB_SIMD_WIDTH;
+#endif
+                pBase += m_attributeStrideInVectors * SIMD_WIDTH;
             }
         }
 
@@ -1318,29 +1330,43 @@ struct PA_TESS : PA_STATE
     {
         SWR_ASSERT(slot < m_numAttributes);
 
-        uint32_t numPrimsToAssemble = PA_TESS::NumPrims_simd16();
+        uint32_t numPrimsToAssemble = PA_TESS::NumPrims();
         if (0 == numPrimsToAssemble)
         {
             return false;
         }
 
-        simd16scalari mask = GenPrimMask_simd16(numPrimsToAssemble);
+        SIMDSCALARI mask = GenPrimMask(numPrimsToAssemble);
 
         const float* pBaseAttrib = (const float*)&m_pVertexData[slot * m_attributeStrideInVectors * 4];
         for (uint32_t i = 0; i < m_numVertsPerPrim; ++i)
         {
-            simd16scalari indices = _simd16_load_si((const simd16scalari*)m_ppIndices[i]);
+#if USE_SIMD16_FRONTEND
+            SIMDSCALARI indices = _simd16_load_si((const SIMDSCALARI*)m_ppIndices[i]);
+#else
+            SIMDSCALARI indices = _simd_load_si((const SIMDSCALARI*)m_ppIndices[i]);
+#endif
 
             const float* pBase = pBaseAttrib;
             for (uint32_t c = 0; c < 4; ++c)
             {
+#if USE_SIMD16_FRONTEND
                 verts[i].v[c] = _simd16_mask_i32gather_ps(
                     _simd16_setzero_ps(),
                     pBase,
                     indices,
                     mask,
                     4 /* gcc doesn't like sizeof(float) */);
-                pBase += m_attributeStrideInVectors * KNOB_SIMD16_WIDTH;
+#else
+                verts[i].v[c].lo = _simd_mask_i32gather_ps(
+                    _simd_setzero_ps(),
+                    pBase,
+                    indices,
+                    _simd_castsi_ps(mask),
+                    4 /* gcc doesn't like sizeof(float) */);
+                verts[i].v[c].hi = _simd_setzero_ps();
+#endif
+                pBase += m_attributeStrideInVectors * SIMD_WIDTH;
             }
         }
 
@@ -1356,14 +1382,18 @@ struct PA_TESS : PA_STATE
         const float* pVertDataBase = (const float*)&m_pVertexData[slot * m_attributeStrideInVectors * 4];
         for (uint32_t i = 0; i < m_numVertsPerPrim; ++i)
         {
+#if USE_SIMD16_FRONTEND
+            uint32_t index = useAlternateOffset ? m_ppIndices[i][primIndex + SIMD_WIDTH_DIV2] : m_ppIndices[i][primIndex];
+#else
             uint32_t index = m_ppIndices[i][primIndex];
+#endif
             const float* pVertData = pVertDataBase;
             float* pVert = (float*)&verts[i];
 
             for (uint32_t c = 0; c < 4; ++c)
             {
                 pVert[c] = pVertData[index];
-                pVertData += m_attributeStrideInVectors * KNOB_SIMD_WIDTH;
+                pVertData += m_attributeStrideInVectors * SIMD_WIDTH;
             }
         }
     }
@@ -1379,82 +1409,44 @@ struct PA_TESS : PA_STATE
         return HasWork();
     }
 
-    simdvertex& GetNextVsOutput()
+    SIMDVERTEX& GetNextVsOutput()
     {
         SWR_ASSERT(0, "%s", __FUNCTION__);
-        static simdvertex junk;
+        static SIMDVERTEX junk;
         return junk;
     }
 
-#if ENABLE_AVX512_SIMD16
-    simdvertex& GetNextVsOutput_simd16_lo()
-    {
-        SWR_ASSERT(0, "%s", __FUNCTION__);
-        static simdvertex junk;
-        return junk;
-    }
-
-    simdvertex& GetNextVsOutput_simd16_hi()
-    {
-        SWR_ASSERT(0, "%s", __FUNCTION__);
-        static simdvertex junk;
-        return junk;
-    }
-
-    simd16vertex& GetNextVsOutput_simd16()
-    {
-        SWR_ASSERT(0, "%s", __FUNCTION__);
-        static simd16vertex junk;
-        return junk;
-    }
-
-#endif
     bool GetNextStreamOutput()
     {
         SWR_ASSERT(0, "%s", __FUNCTION__);
         return false;
     }
 
-    simdmask& GetNextVsIndices()
+    SIMDMASK& GetNextVsIndices()
     {
         SWR_ASSERT(0, "%s", __FUNCTION__);
-        static simdmask junk;
+        static SIMDMASK junk;
         return junk;
     }
 
     uint32_t NumPrims()
     {
-        return std::min<uint32_t>(m_numPrims, KNOB_SIMD_WIDTH);
+        return std::min<uint32_t>(m_numPrims, SIMD_WIDTH);
     }
 
-#if ENABLE_AVX512_SIMD16
-    uint32_t NumPrims_simd16()
-    {
-        return std::min<uint32_t>(m_numPrims, KNOB_SIMD16_WIDTH);
-    }
-
-#endif
     void Reset() { SWR_ASSERT(0); };
 
-    simdscalari GetPrimID(uint32_t startID)
+    SIMDSCALARI GetPrimID(uint32_t startID)
     {
+#if USE_SIMD16_FRONTEND
+        return _simd16_add_epi32(_simd16_set1_epi32(startID), m_vPrimId);
+#else
         return _simd_add_epi32(_simd_set1_epi32(startID), m_vPrimId);
-    }
-
-#if ENABLE_AVX512_SIMD16
-    simdscalari GetPrimID_simd16_lo(uint32_t startID)
-    {
-        return _simd_add_epi32(_simd_set1_epi32(startID), m_vPrimId);
-    }
-
-    simdscalari GetPrimID_simd16_hi(uint32_t startID)
-    {
-        return _simd_add_epi32(_simd_set1_epi32(startID + KNOB_SIMD_WIDTH), m_vPrimId);
-    }
-
 #endif
+    }
+
 private:
-    const simdscalar*   m_pVertexData = nullptr;
+    const SIMDSCALAR*   m_pVertexData = nullptr;
     uint32_t            m_attributeStrideInVectors = 0;
     uint32_t            m_numAttributes = 0;
     uint32_t            m_numPrims = 0;
@@ -1462,7 +1454,7 @@ private:
 
     uint32_t            m_numVertsPerPrim = 0;
 
-    simdscalari         m_vPrimId;
+    SIMDSCALARI         m_vPrimId;
 };
 
 // Primitive Assembler factory class, responsible for creating and initializing the correct assembler
@@ -1486,7 +1478,7 @@ struct PA_FACTORY
             memset(&indexStore, 0, sizeof(indexStore));
             uint32_t numAttribs = state.feNumAttributes;
 
-            new (&this->paCut) PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, 
+            new (&this->paCut) PA_STATE_CUT(pDC, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * PA_STATE::SIMD_WIDTH,
                 &this->indexStore[0], numVerts, numAttribs, state.topology, false);
             cutPA = true;
         }
@@ -1494,7 +1486,7 @@ struct PA_FACTORY
 #endif
         {
             uint32_t numPrims = GetNumPrims(in_topo, numVerts);
-            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * KNOB_SIMD_WIDTH, false);
+            new (&this->paOpt) PA_STATE_OPT(pDC, numPrims, (uint8_t*)&this->vertexStore[0], MAX_NUM_VERTS_PER_PRIM * PA_STATE::SIMD_WIDTH, false);
             cutPA = false;
         }
 
@@ -1520,6 +1512,6 @@ struct PA_FACTORY
 
     PRIMITIVE_TOPOLOGY topo{ TOP_UNKNOWN };
 
-    simdvertex vertexStore[MAX_NUM_VERTS_PER_PRIM];
-    simdmask indexStore[MAX_NUM_VERTS_PER_PRIM];
+    PA_STATE::SIMDVERTEX    vertexStore[MAX_NUM_VERTS_PER_PRIM];
+    PA_STATE::SIMDMASK      indexStore[MAX_NUM_VERTS_PER_PRIM];
 };

@@ -1295,7 +1295,7 @@ void ProcessDraw(
 
         while (pa.HasWork())
         {
-            // PaGetNextVsOutput currently has the side effect of updating some PA state machine state.
+            // GetNextVsOutput currently has the side effect of updating some PA state machine state.
             // So we need to keep this outside of (i < endVertex) check.
 
             simdmask *pvCutIndices_lo = nullptr;
@@ -1303,8 +1303,10 @@ void ProcessDraw(
 
             if (IsIndexedT::value)
             {
-                pvCutIndices_lo = &pa.GetNextVsIndices();
-                pvCutIndices_hi = &pa.GetNextVsIndices();
+                // simd16mask <=> simdmask[2]
+
+                pvCutIndices_lo = &reinterpret_cast<simdmask *>(&pa.GetNextVsIndices())[0];
+                pvCutIndices_hi = &reinterpret_cast<simdmask *>(&pa.GetNextVsIndices())[1];
             }
 
             simdvertex vout_lo;
@@ -1313,7 +1315,7 @@ void ProcessDraw(
             vsContext_lo.pVout = &vout_lo;
             vsContext_hi.pVout = &vout_hi;
 
-            simd16vertex &vout = pa.GetNextVsOutput_simd16();
+            simd16vertex &vout = pa.GetNextVsOutput();
 
             if (i < endVertex)
             {
@@ -1433,12 +1435,13 @@ void ProcessDraw(
                                 {
                                     SWR_ASSERT(pDC->pState->pfnProcessPrims);
 
-                                    uint32_t genMask = GenMask(pa.NumPrims_simd16());
-                                    uint32_t genMask_lo = genMask & 255;
-                                    uint32_t genMask_hi = (genMask >> 8) & 255;
+                                    uint32_t mask = GenMask(pa.NumPrims());
+                                    uint32_t mask_lo = mask & 255;
+                                    uint32_t mask_hi = (mask >> 8) & 255;
 
-                                    simdscalari getPrimId_lo = pa.GetPrimID_simd16_lo(work.startPrimID);
-                                    simdscalari getPrimId_hi = pa.GetPrimID_simd16_hi(work.startPrimID);
+                                    simd16scalari primid = pa.GetPrimID(work.startPrimID);
+                                    simdscalari primid_lo = primid.lo;
+                                    simdscalari primid_hi = primid.hi;
 
                                     simdvector prim[MAX_NUM_VERTS_PER_PRIM];
 
@@ -1451,10 +1454,9 @@ void ProcessDraw(
                                     }
 
                                     pa.useAlternateOffset = false;
-                                    pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
-                                        genMask_lo, getPrimId_lo, _simd_set1_epi32(0));
+                                    pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim, mask_lo, primid_lo, _simd_setzero_si());
 
-                                    if (genMask_hi)
+                                    if (mask_hi)
                                     {
                                         for (uint32_t i = 0; i < 3; i += 1)
                                         {
@@ -1465,8 +1467,7 @@ void ProcessDraw(
                                         }
 
                                         pa.useAlternateOffset = true;
-                                        pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim,
-                                            genMask_hi, getPrimId_hi, _simd_set1_epi32(0));
+                                        pDC->pState->pfnProcessPrims(pDC, pa, workerId, prim, mask_hi, primid_hi, _simd_setzero_si());
                                     }
                                 }
                             }
@@ -1543,7 +1544,7 @@ void ProcessDraw(
 
         while (pa.HasWork())
         {
-            // PaGetNextVsOutput currently has the side effect of updating some PA state machine state.
+            // GetNextVsOutput currently has the side effect of updating some PA state machine state.
             // So we need to keep this outside of (i < endVertex) check.
             simdmask* pvCutIndices = nullptr;
             if (IsIndexedT::value)

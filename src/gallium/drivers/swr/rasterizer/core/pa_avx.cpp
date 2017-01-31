@@ -245,6 +245,10 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 #elif KNOB_ARCH >= KNOB_ARCH_AVX2
 
+    const simdscalari perm0 = _simd_set_epi32(5, 2, 7, 4, 1, 6, 3, 0);
+    const simdscalari perm1 = _simd_set_epi32(6, 3, 0, 5, 2, 7, 4, 1);
+    const simdscalari perm2 = _simd_set_epi32(7, 4, 1, 6, 3, 0, 5, 2);
+
     const simdvector &a = PaGetSimdVector(pa, 0, slot);
     const simdvector &b = PaGetSimdVector(pa, 1, slot);
     const simdvector &c = PaGetSimdVector(pa, 2, slot);
@@ -252,10 +256,6 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
     //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
     //  v2 -> a2 a5 b0 b3 b6 c1 c4 c7
-
-    const simdscalari perm0 = _simd_set_epi32(5, 2, 7, 4, 1, 6, 3, 0);
-    const simdscalari perm1 = _simd_set_epi32(6, 3, 0, 5, 2, 7, 4, 1);
-    const simdscalari perm2 = _simd_set_epi32(7, 4, 1, 6, 3, 0, 5, 2);
 
     simdvector &v0 = verts[0];
     simdvector &v1 = verts[1];
@@ -334,7 +334,7 @@ void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m12
     // We have 12 simdscalars contained within 3 simdvectors which
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
-#if ENABLE_AVX512_SIMD16
+#if USE_SIMD16_FRONTEND
     const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
     const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
     const simd16vector &c_16 = PaGetSimdVector_simd16(pa, 2, slot);
@@ -559,7 +559,7 @@ bool PaTriFan0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     }
 
     // store off leading vertex for attributes
-    simdvertex* pVertex = (simdvertex*)pa.pStreamBase;
+    PA_STATE_OPT::SIMDVERTEX* pVertex = (PA_STATE_OPT::SIMDVERTEX*)pa.pStreamBase;
     pa.leadingVertex = pVertex[pa.cur];
 
     SetNextPaState(pa, PaTriFan1, PaTriFanSingle0);
@@ -568,7 +568,7 @@ bool PaTriFan0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& leadVert = pa.leadingVertex.attrib[slot];
+    PA_STATE_OPT::SIMDVECTOR& leadVert = pa.leadingVertex.attrib[slot];
     simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
     simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
     simdscalar    s;
@@ -579,7 +579,11 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         simdscalar a0 = a[i];
         simdscalar b0 = b[i];
 
+#if USE_SIMD16_FRONTEND
+        __m256 comp = leadVert[i].lo;
+#else
         __m256 comp = leadVert[i];
+#endif
         simdvector& v0 = verts[0];
         v0[i] = _simd_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 0, 0));
         v0[i] = _mm256_permute2f128_ps(v0[i], comp, 0x00);
@@ -599,8 +603,19 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 void PaTriFanSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
     // vert 0 from leading vertex
-    simdvector& lead = pa.leadingVertex.attrib[slot];
+#if USE_SIMD16_FRONTEND
+    PA_STATE_OPT::SIMDVECTOR& temp = pa.leadingVertex.attrib[slot];
+
+    simdvector lead;
+    lead[0] = temp[0].lo;
+    lead[1] = temp[1].lo;
+    lead[2] = temp[2].lo;
+    lead[3] = temp[3].lo;
     verts[0] = swizzleLane0(lead);
+#else
+    PA_STATE_OPT::SIMDVECTOR& lead = pa.leadingVertex.attrib[slot];
+    verts[0] = swizzleLane0(lead);
+#endif
 
     simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
     simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
@@ -1201,7 +1216,7 @@ void PaRectListSingle0(
     // We have 12 simdscalars contained within 3 simdvectors which
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
-#if ENABLE_AVX512_SIMD16
+#if USE_SIMD16_FRONTEND
     const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
     const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
 
@@ -1417,11 +1432,15 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
     this->pfnPaFuncReset_simd16 = this->pfnPaFunc_simd16;
 #endif
 
-    //    simdscalari id8 = _mm256_set_epi32(0, 1, 2, 3, 4, 5, 6, 7);
-    //    simdscalari id4 = _mm256_set_epi32(0, 0, 1, 1, 2, 2, 3, 3);
-    simdscalari id8 = _mm256_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
-    simdscalari id4 = _mm256_set_epi32(3, 3, 2, 2, 1, 1, 0, 0);
+#if USE_SIMD16_FRONTEND
+    simd16scalari id16 = _simd16_set_epi32(15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0);
+    simd16scalari id82 = _simd16_set_epi32( 7,  7,  6,  6,  5,  5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0);
 
+#else
+    simdscalari id8 = _simd_set_epi32(7, 6, 5, 4, 3, 2, 1, 0);
+    simdscalari id4 = _simd_set_epi32(3, 3, 2, 2, 1, 1, 0, 0);
+
+#endif
     switch(this->binTopology)
     {
         case TOP_TRIANGLE_LIST:
@@ -1430,18 +1449,33 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
         case TOP_LINE_STRIP:
         case TOP_LINE_LIST:
         case TOP_LINE_LOOP:
+#if USE_SIMD16_FRONTEND
+            this->primIDIncr = 16;
+            this->primID = id16;
+#else
             this->primIDIncr = 8;
             this->primID = id8;
+#endif
             break;
         case TOP_QUAD_LIST:
         case TOP_QUAD_STRIP:
         case TOP_RECT_LIST:
+#if USE_SIMD16_FRONTEND
+            this->primIDIncr = 8;
+            this->primID = id82;
+#else
             this->primIDIncr = 4;
             this->primID = id4;
+#endif
             break;
         case TOP_POINT_LIST:
+#if USE_SIMD16_FRONTEND
+            this->primIDIncr = 16;
+            this->primID = id16;
+#else
             this->primIDIncr = 8;
             this->primID = id8;
+#endif
             break;
         case TOP_PATCHLIST_1:
         case TOP_PATCHLIST_2:
@@ -1476,8 +1510,13 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
         case TOP_PATCHLIST_31:
         case TOP_PATCHLIST_32:
             // Always run KNOB_SIMD_WIDTH number of patches at a time.
+#if USE_SIMD16_FRONTEND
+            this->primIDIncr = 16;
+            this->primID = id16;
+#else
             this->primIDIncr = 8;
             this->primID = id8;
+#endif
             break;
 
         default:
