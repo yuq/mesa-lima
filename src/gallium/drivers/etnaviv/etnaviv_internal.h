@@ -59,6 +59,8 @@ struct etna_specs {
    unsigned has_sign_floor_ceil : 1;
    /* can use VS_RANGE, PS_RANGE registers*/
    unsigned has_shader_range_registers : 1;
+   /* has the new sin/cos functions */
+   unsigned has_new_sin_cos : 1;
    /* can use any kind of wrapping mode on npot textures */
    unsigned npot_tex_any_wrap;
    /* number of bits per TS tile */
