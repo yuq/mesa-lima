@@ -178,7 +178,7 @@ struct JitManager
     std::string mCore;
 
     void SetupNewModule();
-    bool SetupModuleFromIR(const uint8_t *pIR);
+    bool SetupModuleFromIR(const uint8_t *pIR, size_t length);
 
     void DumpAsm(llvm::Function* pFunction, const char* fileName);
     static void DumpToFile(llvm::Function *f, const char *fileName);

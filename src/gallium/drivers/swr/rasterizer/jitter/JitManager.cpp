@@ -190,9 +190,9 @@ void JitManager::SetupNewModule()
 
 //////////////////////////////////////////////////////////////////////////
 /// @brief Create new LLVM module from IR.
-bool JitManager::SetupModuleFromIR(const uint8_t *pIR)
+bool JitManager::SetupModuleFromIR(const uint8_t *pIR, size_t length)
 {
-    std::unique_ptr<MemoryBuffer> pMem = MemoryBuffer::getMemBuffer(StringRef((const char*)pIR), "");
+    std::unique_ptr<MemoryBuffer> pMem = MemoryBuffer::getMemBuffer(StringRef((const char*)pIR, length), "");
 
     SMDiagnostic Err;
     std::unique_ptr<Module> newModule = parseIR(pMem.get()->getMemBufferRef(), Err, mContext);
