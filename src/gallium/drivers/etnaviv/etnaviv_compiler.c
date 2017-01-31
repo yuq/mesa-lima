@@ -183,6 +183,8 @@ struct etna_compile {
    unsigned labels_count, labels_sz;
    struct etna_compile_label *labels;
 
+   unsigned num_loops;
+
    /* Code generation */
    int inst_ptr; /* current instruction pointer */
    uint32_t code[ETNA_MAX_INSTRUCTIONS * ETNA_INST_SIZE];
@@ -1166,6 +1168,8 @@ trans_loop_bgn(const struct instr_translater *t, struct etna_compile *c,
    f->lbl_loop_end = alloc_new_label(c);
 
    label_place(c, f->lbl_loop_bgn);
+
+   c->num_loops++;
 }
 
 static void
@@ -2418,6 +2422,7 @@ etna_compile_shader(const struct etna_specs *specs,
    shader->processor = c->info.processor;
    shader->code_size = c->inst_ptr * 4;
    shader->code = mem_dup(c->code, c->inst_ptr * 16);
+   shader->num_loops = c->num_loops;
    shader->num_temps = c->next_free_native;
    shader->vs_pos_out_reg = -1;
    shader->vs_pointsize_out_reg = -1;
@@ -2455,6 +2460,7 @@ etna_dump_shader(const struct etna_shader *shader)
 
    etna_disasm(shader->code, shader->code_size, PRINT_RAW);
 
+   printf("num loops: %i\n", shader->num_loops);
    printf("num temps: %i\n", shader->num_temps);
    printf("num const: %i\n", shader->uniforms.const_count);
    printf("immediates:\n");
