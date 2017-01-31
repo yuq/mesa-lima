@@ -489,6 +489,7 @@ void radv_GetPhysicalDeviceFeatures(
 		.shaderFloat64                            = true,
 		.shaderInt64                              = false,
 		.shaderInt16                              = false,
+		.sparseBinding                            = true,
 		.variableMultisampleRate                  = false,
 		.inheritedQueries                         = false,
 	};
@@ -542,7 +543,7 @@ void radv_GetPhysicalDeviceProperties(
 		.maxMemoryAllocationCount                 = UINT32_MAX,
 		.maxSamplerAllocationCount                = 64 * 1024,
 		.bufferImageGranularity                   = 64, /* A cache line */
-		.sparseAddressSpaceSize                   = 0,
+		.sparseAddressSpaceSize                   = 0xffffffffu, /* buffer max size */
 		.maxBoundDescriptorSets                   = MAX_SETS,
 		.maxPerStageDescriptorSamplers            = 64,
 		.maxPerStageDescriptorUniformBuffers      = 64,
@@ -687,8 +688,9 @@ static void radv_get_physical_device_queue_family_properties(
 	if (*pCount >= 1) {
 		*pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
 			.queueFlags = VK_QUEUE_GRAPHICS_BIT |
-			VK_QUEUE_COMPUTE_BIT |
-			VK_QUEUE_TRANSFER_BIT,
+			              VK_QUEUE_COMPUTE_BIT |
+			              VK_QUEUE_TRANSFER_BIT |
+			              VK_QUEUE_SPARSE_BINDING_BIT,
 			.queueCount = 1,
 			.timestampValidBits = 64,
 			.minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
@@ -701,7 +703,9 @@ static void radv_get_physical_device_queue_family_properties(
 	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE)) {
 		if (*pCount > idx) {
 			*pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
-				.queueFlags = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
+				.queueFlags = VK_QUEUE_COMPUTE_BIT |
+				              VK_QUEUE_TRANSFER_BIT |
+				              VK_QUEUE_SPARSE_BINDING_BIT,
 				.queueCount = pdevice->rad_info.compute_rings,
 				.timestampValidBits = 64,
 				.minImageTransferGranularity = (VkExtent3D) { 1, 1, 1 },
