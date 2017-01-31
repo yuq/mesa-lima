@@ -207,6 +207,7 @@ radv_shader_compile_to_nir(struct radv_device *device,
 			}
 		}
 		const struct nir_spirv_supported_extensions supported_ext = {
+			.draw_parameters = true,
 			.float64 = true
 		};
 		entry_point = spirv_to_nir(spirv, module->size / 4,
