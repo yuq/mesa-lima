@@ -94,22 +94,10 @@ emit_vertex_input(struct anv_pipeline *pipeline,
    assert((inputs_read & ((1 << VERT_ATTRIB_GENERIC0) - 1)) == 0);
    const uint32_t elements = inputs_read >> VERT_ATTRIB_GENERIC0;
    const uint32_t elements_double = double_inputs_read >> VERT_ATTRIB_GENERIC0;
-
-#if GEN_GEN >= 8
-   /* On BDW+, we only need to allocate space for base ids.  Setting up
-    * the actual vertex and instance id is a separate packet.
-    */
-   const bool needs_svgs_elem = vs_prog_data->uses_basevertex ||
-                                vs_prog_data->uses_baseinstance;
-#else
-   /* On Haswell and prior, vertex and instance id are created by using the
-    * ComponentControl fields, so we need an element for any of them.
-    */
    const bool needs_svgs_elem = vs_prog_data->uses_vertexid ||
                                 vs_prog_data->uses_instanceid ||
                                 vs_prog_data->uses_basevertex ||
                                 vs_prog_data->uses_baseinstance;
-#endif
 
    uint32_t elem_count = __builtin_popcount(elements) -
       __builtin_popcount(elements_double) / 2;
