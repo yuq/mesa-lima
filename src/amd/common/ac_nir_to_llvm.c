@@ -136,7 +136,6 @@ struct nir_to_llvm_context {
 
 	unsigned range_md_kind;
 	unsigned uniform_md_kind;
-	unsigned invariant_load_md_kind;
 	LLVMValueRef empty_md;
 	gl_shader_stage stage;
 
@@ -404,78 +403,6 @@ static LLVMValueRef unpack_param(struct nir_to_llvm_context *ctx,
 				     LLVMConstInt(ctx->i32, mask, false), "");
 	}
 	return value;
-}
-
-static LLVMValueRef build_gep0(struct nir_to_llvm_context *ctx,
-			       LLVMValueRef base_ptr, LLVMValueRef index)
-{
-	LLVMValueRef indices[2] = {
-		ctx->i32zero,
-		index,
-	};
-	return LLVMBuildGEP(ctx->builder, base_ptr,
-			    indices, 2, "");
-}
-
-static LLVMValueRef build_indexed_load(struct nir_to_llvm_context *ctx,
-				       LLVMValueRef base_ptr, LLVMValueRef index,
-				       bool uniform)
-{
-	LLVMValueRef pointer;
-	pointer = build_gep0(ctx, base_ptr, index);
-	if (uniform)
-		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
-	return LLVMBuildLoad(ctx->builder, pointer, "");
-}
-
-static LLVMValueRef build_indexed_load_const(struct nir_to_llvm_context *ctx,
-					     LLVMValueRef base_ptr, LLVMValueRef index)
-{
-	LLVMValueRef result = build_indexed_load(ctx, base_ptr, index, true);
-	LLVMSetMetadata(result, ctx->invariant_load_md_kind, ctx->empty_md);
-	return result;
-}
-
-static void build_tbuffer_store(struct nir_to_llvm_context *ctx,
-				LLVMValueRef rsrc,
-				LLVMValueRef vdata,
-				unsigned num_channels,
-				LLVMValueRef vaddr,
-				LLVMValueRef soffset,
-				unsigned inst_offset,
-				unsigned dfmt,
-				unsigned nfmt,
-				unsigned offen,
-				unsigned idxen,
-				unsigned glc,
-				unsigned slc,
-				unsigned tfe)
-{
-	LLVMValueRef args[] = {
-		rsrc,
-		vdata,
-		LLVMConstInt(ctx->i32, num_channels, 0),
-		vaddr,
-		soffset,
-		LLVMConstInt(ctx->i32, inst_offset, 0),
-		LLVMConstInt(ctx->i32, dfmt, 0),
-		LLVMConstInt(ctx->i32, nfmt, 0),
-		LLVMConstInt(ctx->i32, offen, 0),
-		LLVMConstInt(ctx->i32, idxen, 0),
-		LLVMConstInt(ctx->i32, glc, 0),
-		LLVMConstInt(ctx->i32, slc, 0),
-		LLVMConstInt(ctx->i32, tfe, 0)
-	};
-
-	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
-	unsigned func = CLAMP(num_channels, 1, 3) - 1;
-	const char *types[] = {"i32", "v2i32", "v4i32"};
-	char name[256];
-	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
-
-	ac_emit_llvm_intrinsic(&ctx->ac, name, ctx->voidt,
-			    args, ARRAY_SIZE(args), 0);
-
 }
 
 static void set_userdata_location(struct ac_userdata_info *ud_info, uint8_t sgpr_idx, uint8_t num_sgprs)
@@ -776,8 +703,6 @@ static void setup_types(struct nir_to_llvm_context *ctx)
 
 	ctx->range_md_kind = LLVMGetMDKindIDInContext(ctx->context,
 						      "range", 5);
-	ctx->invariant_load_md_kind = LLVMGetMDKindIDInContext(ctx->context,
-							       "invariant.load", 14);
 	ctx->uniform_md_kind =
 	    LLVMGetMDKindIDInContext(ctx->context, "amdgpu.uniform", 14);
 	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
@@ -1366,9 +1291,9 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 	} else {
 		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 
-		store_ptr = build_gep0(ctx, ctx->lds, thread_id);
-		load_ptr0 = build_gep0(ctx, ctx->lds, tl_tid);
-		load_ptr1 = build_gep0(ctx, ctx->lds, trbl_tid);
+		store_ptr = ac_build_gep0(&ctx->ac, ctx->lds, thread_id);
+		load_ptr0 = ac_build_gep0(&ctx->ac, ctx->lds, tl_tid);
+		load_ptr1 = ac_build_gep0(&ctx->ac, ctx->lds, trbl_tid);
 
 		LLVMBuildStore(ctx->builder, src0, store_ptr);
 		tl = LLVMBuildLoad(ctx->builder, load_ptr0, "");
@@ -1978,7 +1903,7 @@ static LLVMValueRef visit_vulkan_resource_index(struct nir_to_llvm_context *ctx,
 	index = LLVMBuildMul(ctx->builder, index, stride, "");
 	offset = LLVMBuildAdd(ctx->builder, offset, index, "");
 	
-	desc_ptr = build_gep0(ctx, desc_ptr, offset);
+	desc_ptr = ac_build_gep0(&ctx->ac, desc_ptr, offset);
 	desc_ptr = cast_ptr(ctx, desc_ptr, ctx->v4i32);
 	LLVMSetMetadata(desc_ptr, ctx->uniform_md_kind, ctx->empty_md);
 
@@ -1993,7 +1918,7 @@ static LLVMValueRef visit_load_push_constant(struct nir_to_llvm_context *ctx,
 	addr = LLVMConstInt(ctx->i32, nir_intrinsic_base(instr), 0);
 	addr = LLVMBuildAdd(ctx->builder, addr, get_src(ctx, instr->src[0]), "");
 
-	ptr = build_gep0(ctx, ctx->push_constants, addr);
+	ptr = ac_build_gep0(&ctx->ac, ctx->push_constants, addr);
 	ptr = cast_ptr(ctx, ptr, get_def_type(ctx, &instr->dest.ssa));
 
 	return LLVMBuildLoad(ctx->builder, ptr, "");
@@ -3052,8 +2977,8 @@ static LLVMValueRef load_sample_position(struct nir_to_llvm_context *ctx,
 	LLVMValueRef offset1 = LLVMBuildAdd(ctx->builder, offset0, LLVMConstInt(ctx->i32, 4, false), "");
 	LLVMValueRef result[2];
 
-	result[0] = build_indexed_load_const(ctx, ctx->sample_positions, offset0);
-	result[1] = build_indexed_load_const(ctx, ctx->sample_positions, offset1);
+	result[0] = ac_build_indexed_load_const(&ctx->ac, ctx->sample_positions, offset0);
+	result[1] = ac_build_indexed_load_const(&ctx->ac, ctx->sample_positions, offset1);
 
 	return ac_build_gather_values(&ctx->ac, result, 2);
 }
@@ -3208,12 +3133,12 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 
 			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
 
-			build_tbuffer_store(ctx, ctx->gsvs_ring,
-					    out_val, 1,
-					    voffset, ctx->gs2vs_offset, 0,
-					    V_008F0C_BUF_DATA_FORMAT_32,
-					    V_008F0C_BUF_NUM_FORMAT_UINT,
-					    1, 0, 1, 1, 0);
+			ac_build_tbuffer_store(&ctx->ac, ctx->gsvs_ring,
+					       out_val, 1,
+					       voffset, ctx->gs2vs_offset, 0,
+					       V_008F0C_BUF_DATA_FORMAT_32,
+					       V_008F0C_BUF_NUM_FORMAT_UINT,
+					       1, 0, 1, 1, 0);
 		}
 		idx++;
 	}
@@ -3463,10 +3388,10 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 
 	index = LLVMBuildMul(builder, index, LLVMConstInt(ctx->i32, stride / type_size, 0), "");
 
-	list = build_gep0(ctx, list, LLVMConstInt(ctx->i32, offset, 0));
+	list = ac_build_gep0(&ctx->ac, list, LLVMConstInt(ctx->i32, offset, 0));
 	list = LLVMBuildPointerCast(builder, list, const_array(type, 0), "");
 
-	return build_indexed_load_const(ctx, list, index);
+	return ac_build_indexed_load_const(&ctx->ac, list, index);
 }
 
 static void set_tex_fetch_args(struct nir_to_llvm_context *ctx,
@@ -4132,7 +4057,7 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 	for (unsigned i = 0; i < attrib_count; ++i, ++idx) {
 		t_offset = LLVMConstInt(ctx->i32, index + i, false);
 
-		t_list = build_indexed_load_const(ctx, t_list_ptr, t_offset);
+		t_list = ac_build_indexed_load_const(&ctx->ac, t_list_ptr, t_offset);
 		args[0] = t_list;
 		args[1] = LLVMConstInt(ctx->i32, 0, false);
 		args[2] = buffer_index;
@@ -4726,14 +4651,14 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx)
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder, out_ptr[j], "");
 			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
 
-			build_tbuffer_store(ctx,
-					    ctx->esgs_ring,
-					    out_val, 1,
-					    LLVMGetUndef(ctx->i32), ctx->es2gs_offset,
-					    (4 * param_index + j) * 4,
-					    V_008F0C_BUF_DATA_FORMAT_32,
-					    V_008F0C_BUF_NUM_FORMAT_UINT,
-					    0, 0, 1, 1, 0);
+			ac_build_tbuffer_store(&ctx->ac,
+					       ctx->esgs_ring,
+					       out_val, 1,
+					       LLVMGetUndef(ctx->i32), ctx->es2gs_offset,
+					       (4 * param_index + j) * 4,
+					       V_008F0C_BUF_DATA_FORMAT_32,
+					       V_008F0C_BUF_NUM_FORMAT_UINT,
+					       0, 0, 1, 1, 0);
 		}
 	}
 	ctx->shader_info->vs.esgs_itemsize = (max_output_written + 1) * 16;
@@ -4915,16 +4840,16 @@ static void
 ac_setup_rings(struct nir_to_llvm_context *ctx)
 {
 	if (ctx->stage == MESA_SHADER_VERTEX && ctx->options->key.vs.as_es) {
-		ctx->esgs_ring = build_indexed_load_const(ctx, ctx->ring_offsets, ctx->i32one);
+		ctx->esgs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, ctx->i32one);
 	}
 
 	if (ctx->is_gs_copy_shader) {
-		ctx->gsvs_ring = build_indexed_load_const(ctx, ctx->ring_offsets, LLVMConstInt(ctx->i32, 3, false));
+		ctx->gsvs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, 3, false));
 	}
 	if (ctx->stage == MESA_SHADER_GEOMETRY) {
 		LLVMValueRef tmp;
-		ctx->esgs_ring = build_indexed_load_const(ctx, ctx->ring_offsets, LLVMConstInt(ctx->i32, 2, false));
-		ctx->gsvs_ring = build_indexed_load_const(ctx, ctx->ring_offsets, LLVMConstInt(ctx->i32, 4, false));
+		ctx->esgs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, 2, false));
+		ctx->gsvs_ring = ac_build_indexed_load_const(&ctx->ac, ctx->ring_offsets, LLVMConstInt(ctx->i32, 4, false));
 
 		ctx->gsvs_ring = LLVMBuildBitCast(ctx->builder, ctx->gsvs_ring, ctx->v4i32, "");
 
