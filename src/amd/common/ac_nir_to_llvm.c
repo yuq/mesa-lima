@@ -1169,44 +1169,13 @@ static LLVMValueRef emit_unpack_half_2x16(struct nir_to_llvm_context *ctx,
 	return result;
 }
 
-/*
- * SI implements derivatives using the local data store (LDS)
- * All writes to the LDS happen in all executing threads at
- * the same time. TID is the Thread ID for the current
- * thread and is a value between 0 and 63, representing
- * the thread's position in the wavefront.
- *
- * For the pixel shader threads are grouped into quads of four pixels.
- * The TIDs of the pixels of a quad are:
- *
- *  +------+------+
- *  |4n + 0|4n + 1|
- *  +------+------+
- *  |4n + 2|4n + 3|
- *  +------+------+
- *
- * So, masking the TID with 0xfffffffc yields the TID of the top left pixel
- * of the quad, masking with 0xfffffffd yields the TID of the top pixel of
- * the current pixel's column, and masking with 0xfffffffe yields the TID
- * of the left pixel of the current pixel's row.
- *
- * Adding 1 yields the TID of the pixel to the right of the left pixel, and
- * adding 2 yields the TID of the pixel below the top pixel.
- */
-/* masks for thread ID. */
-#define TID_MASK_TOP_LEFT 0xfffffffc
-#define TID_MASK_TOP      0xfffffffd
-#define TID_MASK_LEFT     0xfffffffe
 static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 			      nir_op op,
 			      LLVMValueRef src0)
 {
-	LLVMValueRef tl, trbl, result;
-	LLVMValueRef tl_tid, trbl_tid;
-	LLVMValueRef args[2];
-	LLVMValueRef thread_id;
 	unsigned mask;
 	int idx;
+	LLVMValueRef result;
 	ctx->has_ddxy = true;
 
 	if (!ctx->lds && !ctx->has_ds_bpermute)
@@ -1214,16 +1183,13 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 						       LLVMArrayType(ctx->i32, 64),
 						       "ddxy_lds", LOCAL_ADDR_SPACE);
 
-	thread_id = ac_get_thread_id(&ctx->ac);
 	if (op == nir_op_fddx_fine || op == nir_op_fddx)
-		mask = TID_MASK_LEFT;
+		mask = AC_TID_MASK_LEFT;
 	else if (op == nir_op_fddy_fine || op == nir_op_fddy)
-		mask = TID_MASK_TOP;
+		mask = AC_TID_MASK_TOP;
 	else
-		mask = TID_MASK_TOP_LEFT;
+		mask = AC_TID_MASK_TOP_LEFT;
 
-	tl_tid = LLVMBuildAnd(ctx->builder, thread_id,
-			      LLVMConstInt(ctx->i32, mask, false), "");
 	/* for DDX we want to next X pixel, DDY next Y pixel. */
 	if (op == nir_op_fddx_fine ||
 	    op == nir_op_fddx_coarse ||
@@ -1232,36 +1198,9 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 	else
 		idx = 2;
 
-	trbl_tid = LLVMBuildAdd(ctx->builder, tl_tid,
-				LLVMConstInt(ctx->i32, idx, false), "");
-
-	if (ctx->has_ds_bpermute) {
-		args[0] = LLVMBuildMul(ctx->builder, tl_tid,
-				       LLVMConstInt(ctx->i32, 4, false), "");
-		args[1] = src0;
-		tl = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.ds.bpermute",
-					 ctx->i32, args, 2,
-					 AC_FUNC_ATTR_READNONE);
-
-		args[0] = LLVMBuildMul(ctx->builder, trbl_tid,
-				       LLVMConstInt(ctx->i32, 4, false), "");
-		trbl = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.ds.bpermute",
-					   ctx->i32, args, 2,
-					   AC_FUNC_ATTR_READNONE);
-	} else {
-		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
-
-		store_ptr = ac_build_gep0(&ctx->ac, ctx->lds, thread_id);
-		load_ptr0 = ac_build_gep0(&ctx->ac, ctx->lds, tl_tid);
-		load_ptr1 = ac_build_gep0(&ctx->ac, ctx->lds, trbl_tid);
-
-		LLVMBuildStore(ctx->builder, src0, store_ptr);
-		tl = LLVMBuildLoad(ctx->builder, load_ptr0, "");
-		trbl = LLVMBuildLoad(ctx->builder, load_ptr1, "");
-	}
-	tl = LLVMBuildBitCast(ctx->builder, tl, ctx->f32, "");
-	trbl = LLVMBuildBitCast(ctx->builder, trbl, ctx->f32, "");
-	result = LLVMBuildFSub(ctx->builder, trbl, tl, "");
+	result = ac_emit_ddxy(&ctx->ac, ctx->has_ds_bpermute,
+			      mask, idx, ctx->lds,
+			      src0);
 	return result;
 }
 
