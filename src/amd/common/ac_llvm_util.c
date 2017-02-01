@@ -35,6 +35,8 @@
 #include "util/bitscan.h"
 #include "util/macros.h"
 
+#include "sid.h"
+
 static void ac_init_llvm_target()
 {
 #if HAVE_LLVM < 0x0307
@@ -157,8 +159,14 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context)
 	ctx->module = NULL;
 	ctx->builder = NULL;
 
+	ctx->voidt = LLVMVoidTypeInContext(ctx->context);
+	ctx->i1 = LLVMInt1TypeInContext(ctx->context);
+	ctx->i8 = LLVMInt8TypeInContext(ctx->context);
 	ctx->i32 = LLVMIntTypeInContext(ctx->context, 32);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
+	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
+	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
+	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
 
 	ctx->invariant_load_md_kind = LLVMGetMDKindIDInContext(ctx->context,
 							       "invariant.load", 14);
@@ -647,4 +655,151 @@ ac_build_indexed_load_const(struct ac_llvm_context *ctx,
 	LLVMValueRef result = ac_build_indexed_load(ctx, base_ptr, index, true);
 	LLVMSetMetadata(result, ctx->invariant_load_md_kind, ctx->empty_md);
 	return result;
+}
+
+/* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.
+ * The type of vdata must be one of i32 (num_channels=1), v2i32 (num_channels=2),
+ * or v4i32 (num_channels=3,4).
+ */
+void
+ac_build_tbuffer_store(struct ac_llvm_context *ctx,
+		       LLVMValueRef rsrc,
+		       LLVMValueRef vdata,
+		       unsigned num_channels,
+		       LLVMValueRef vaddr,
+		       LLVMValueRef soffset,
+		       unsigned inst_offset,
+		       unsigned dfmt,
+		       unsigned nfmt,
+		       unsigned offen,
+		       unsigned idxen,
+		       unsigned glc,
+		       unsigned slc,
+		       unsigned tfe)
+{
+	LLVMValueRef args[] = {
+		rsrc,
+		vdata,
+		LLVMConstInt(ctx->i32, num_channels, 0),
+		vaddr,
+		soffset,
+		LLVMConstInt(ctx->i32, inst_offset, 0),
+		LLVMConstInt(ctx->i32, dfmt, 0),
+		LLVMConstInt(ctx->i32, nfmt, 0),
+		LLVMConstInt(ctx->i32, offen, 0),
+		LLVMConstInt(ctx->i32, idxen, 0),
+		LLVMConstInt(ctx->i32, glc, 0),
+		LLVMConstInt(ctx->i32, slc, 0),
+		LLVMConstInt(ctx->i32, tfe, 0)
+	};
+
+	/* The instruction offset field has 12 bits */
+	assert(offen || inst_offset < (1 << 12));
+
+	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
+	unsigned func = CLAMP(num_channels, 1, 3) - 1;
+	const char *types[] = {"i32", "v2i32", "v4i32"};
+	char name[256];
+	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
+
+	ac_emit_llvm_intrinsic(ctx, name, ctx->voidt,
+			       args, ARRAY_SIZE(args), 0);
+}
+
+void
+ac_build_tbuffer_store_dwords(struct ac_llvm_context *ctx,
+			      LLVMValueRef rsrc,
+			      LLVMValueRef vdata,
+			      unsigned num_channels,
+			      LLVMValueRef vaddr,
+			      LLVMValueRef soffset,
+			      unsigned inst_offset)
+{
+	static unsigned dfmt[] = {
+		V_008F0C_BUF_DATA_FORMAT_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
+	};
+	assert(num_channels >= 1 && num_channels <= 4);
+
+	ac_build_tbuffer_store(ctx, rsrc, vdata, num_channels, vaddr, soffset,
+			       inst_offset, dfmt[num_channels - 1],
+			       V_008F0C_BUF_NUM_FORMAT_UINT, 1, 0, 1, 1, 0);
+}
+
+LLVMValueRef
+ac_build_buffer_load(struct ac_llvm_context *ctx,
+		     LLVMValueRef rsrc,
+		     int num_channels,
+		     LLVMValueRef vindex,
+		     LLVMValueRef voffset,
+		     LLVMValueRef soffset,
+		     unsigned inst_offset,
+		     unsigned glc,
+		     unsigned slc)
+{
+	unsigned func = CLAMP(num_channels, 1, 3) - 1;
+
+	if (HAVE_LLVM >= 0x309) {
+		LLVMValueRef args[] = {
+			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
+			vindex ? vindex : LLVMConstInt(ctx->i32, 0, 0),
+			LLVMConstInt(ctx->i32, inst_offset, 0),
+			LLVMConstInt(ctx->i1, glc, 0),
+			LLVMConstInt(ctx->i1, slc, 0)
+		};
+
+		LLVMTypeRef types[] = {ctx->f32, LLVMVectorType(ctx->f32, 2),
+		                       ctx->v4f32};
+		const char *type_names[] = {"f32", "v2f32", "v4f32"};
+		char name[256];
+
+		if (voffset) {
+			args[2] = LLVMBuildAdd(ctx->builder, args[2], voffset,
+			                       "");
+		}
+
+		if (soffset) {
+			args[2] = LLVMBuildAdd(ctx->builder, args[2], soffset,
+			                       "");
+		}
+
+		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.load.%s",
+		         type_names[func]);
+
+		return ac_emit_llvm_intrinsic(ctx, name, types[func], args,
+					      ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
+	} else {
+		LLVMValueRef args[] = {
+			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v16i8, ""),
+			voffset ? voffset : vindex,
+			soffset,
+			LLVMConstInt(ctx->i32, inst_offset, 0),
+			LLVMConstInt(ctx->i32, voffset ? 1 : 0, 0), // offen
+			LLVMConstInt(ctx->i32, vindex ? 1 : 0, 0), //idxen
+			LLVMConstInt(ctx->i32, glc, 0),
+			LLVMConstInt(ctx->i32, slc, 0),
+			LLVMConstInt(ctx->i32, 0, 0), // TFE
+		};
+
+		LLVMTypeRef types[] = {ctx->i32, LLVMVectorType(ctx->i32, 2),
+		                       ctx->v4i32};
+		const char *type_names[] = {"i32", "v2i32", "v4i32"};
+		const char *arg_type = "i32";
+		char name[256];
+
+		if (voffset && vindex) {
+			LLVMValueRef vaddr[] = {vindex, voffset};
+
+			arg_type = "v2i32";
+			args[1] = ac_build_gather_values(ctx, vaddr, 2);
+		}
+
+		snprintf(name, sizeof(name), "llvm.SI.buffer.load.dword.%s.%s",
+		         type_names[func], arg_type);
+
+		return ac_emit_llvm_intrinsic(ctx, name, types[func], args,
+					       ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
+	}
 }

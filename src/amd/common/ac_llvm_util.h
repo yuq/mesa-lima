@@ -49,9 +49,15 @@ struct ac_llvm_context {
 	LLVMModuleRef module;
 	LLVMBuilderRef builder;
 
+	LLVMTypeRef voidt;
+	LLVMTypeRef i1;
+	LLVMTypeRef i8;
 	LLVMTypeRef i32;
 	LLVMTypeRef f32;
-
+	LLVMTypeRef v4i32;
+	LLVMTypeRef v4f32;
+	LLVMTypeRef v16i8;
+  
 	unsigned invariant_load_md_kind;
 	unsigned uniform_md_kind;
 	unsigned fpmath_md_kind;
@@ -134,6 +140,42 @@ ac_build_indexed_load(struct ac_llvm_context *ctx,
 LLVMValueRef
 ac_build_indexed_load_const(struct ac_llvm_context *ctx,
 			    LLVMValueRef base_ptr, LLVMValueRef index);
+
+void
+ac_build_tbuffer_store_dwords(struct ac_llvm_context *ctx,
+			      LLVMValueRef rsrc,
+			      LLVMValueRef vdata,
+			      unsigned num_channels,
+			      LLVMValueRef vaddr,
+			      LLVMValueRef soffset,
+			      unsigned inst_offset);
+
+void
+ac_build_tbuffer_store(struct ac_llvm_context *ctx,
+		       LLVMValueRef rsrc,
+		       LLVMValueRef vdata,
+		       unsigned num_channels,
+		       LLVMValueRef vaddr,
+		       LLVMValueRef soffset,
+		       unsigned inst_offset,
+		       unsigned dfmt,
+		       unsigned nfmt,
+		       unsigned offen,
+		       unsigned idxen,
+		       unsigned glc,
+		       unsigned slc,
+		       unsigned tfe);
+
+LLVMValueRef
+ac_build_buffer_load(struct ac_llvm_context *ctx,
+		     LLVMValueRef rsrc,
+		     int num_channels,
+		     LLVMValueRef vindex,
+		     LLVMValueRef voffset,
+		     LLVMValueRef soffset,
+		     unsigned inst_offset,
+		     unsigned glc,
+		     unsigned slc);
 #ifdef __cplusplus
 }
 #endif

@@ -750,151 +750,6 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 	return get_tcs_tes_buffer_address(ctx, vertex_index, param_index);
 }
 
-/* TBUFFER_STORE_FORMAT_{X,XY,XYZ,XYZW} <- the suffix is selected by num_channels=1..4.
- * The type of vdata must be one of i32 (num_channels=1), v2i32 (num_channels=2),
- * or v4i32 (num_channels=3,4). */
-static void build_tbuffer_store(struct si_shader_context *ctx,
-				LLVMValueRef rsrc,
-				LLVMValueRef vdata,
-				unsigned num_channels,
-				LLVMValueRef vaddr,
-				LLVMValueRef soffset,
-				unsigned inst_offset,
-				unsigned dfmt,
-				unsigned nfmt,
-				unsigned offen,
-				unsigned idxen,
-				unsigned glc,
-				unsigned slc,
-				unsigned tfe)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef args[] = {
-		rsrc,
-		vdata,
-		LLVMConstInt(ctx->i32, num_channels, 0),
-		vaddr,
-		soffset,
-		LLVMConstInt(ctx->i32, inst_offset, 0),
-		LLVMConstInt(ctx->i32, dfmt, 0),
-		LLVMConstInt(ctx->i32, nfmt, 0),
-		LLVMConstInt(ctx->i32, offen, 0),
-		LLVMConstInt(ctx->i32, idxen, 0),
-		LLVMConstInt(ctx->i32, glc, 0),
-		LLVMConstInt(ctx->i32, slc, 0),
-		LLVMConstInt(ctx->i32, tfe, 0)
-	};
-
-	/* The instruction offset field has 12 bits */
-	assert(offen || inst_offset < (1 << 12));
-
-	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
-	unsigned func = CLAMP(num_channels, 1, 3) - 1;
-	const char *types[] = {"i32", "v2i32", "v4i32"};
-	char name[256];
-	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
-
-	lp_build_intrinsic(gallivm->builder, name, ctx->voidt,
-			   args, ARRAY_SIZE(args), 0);
-}
-
-static void build_tbuffer_store_dwords(struct si_shader_context *ctx,
-				     LLVMValueRef rsrc,
-				     LLVMValueRef vdata,
-				     unsigned num_channels,
-				     LLVMValueRef vaddr,
-				     LLVMValueRef soffset,
-				     unsigned inst_offset)
-{
-	static unsigned dfmt[] = {
-		V_008F0C_BUF_DATA_FORMAT_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
-	};
-	assert(num_channels >= 1 && num_channels <= 4);
-
-	build_tbuffer_store(ctx, rsrc, vdata, num_channels, vaddr, soffset,
-			    inst_offset, dfmt[num_channels-1],
-			    V_008F0C_BUF_NUM_FORMAT_UINT, 1, 0, 1, 1, 0);
-}
-
-static LLVMValueRef build_buffer_load(struct si_shader_context *ctx,
-                                      LLVMValueRef rsrc,
-                                      int num_channels,
-                                      LLVMValueRef vindex,
-                                      LLVMValueRef voffset,
-                                      LLVMValueRef soffset,
-                                      unsigned inst_offset,
-                                      unsigned glc,
-                                      unsigned slc)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	unsigned func = CLAMP(num_channels, 1, 3) - 1;
-
-	if (HAVE_LLVM >= 0x309) {
-		LLVMValueRef args[] = {
-			LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v4i32, ""),
-			vindex ? vindex : LLVMConstInt(ctx->i32, 0, 0),
-			LLVMConstInt(ctx->i32, inst_offset, 0),
-			LLVMConstInt(ctx->i1, glc, 0),
-			LLVMConstInt(ctx->i1, slc, 0)
-		};
-
-		LLVMTypeRef types[] = {ctx->f32, LLVMVectorType(ctx->f32, 2),
-		                       ctx->v4f32};
-		const char *type_names[] = {"f32", "v2f32", "v4f32"};
-		char name[256];
-
-		if (voffset) {
-			args[2] = LLVMBuildAdd(gallivm->builder, args[2], voffset,
-			                       "");
-		}
-
-		if (soffset) {
-			args[2] = LLVMBuildAdd(gallivm->builder, args[2], soffset,
-			                       "");
-		}
-
-		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.load.%s",
-		         type_names[func]);
-
-		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
-		                          ARRAY_SIZE(args), LP_FUNC_ATTR_READONLY);
-	} else {
-		LLVMValueRef args[] = {
-			LLVMBuildBitCast(gallivm->builder, rsrc, ctx->v16i8, ""),
-			voffset ? voffset : vindex,
-			soffset,
-			LLVMConstInt(ctx->i32, inst_offset, 0),
-			LLVMConstInt(ctx->i32, voffset ? 1 : 0, 0), // offen
-			LLVMConstInt(ctx->i32, vindex ? 1 : 0, 0), //idxen
-			LLVMConstInt(ctx->i32, glc, 0),
-			LLVMConstInt(ctx->i32, slc, 0),
-			LLVMConstInt(ctx->i32, 0, 0), // TFE
-		};
-
-		LLVMTypeRef types[] = {ctx->i32, LLVMVectorType(ctx->i32, 2),
-		                       ctx->v4i32};
-		const char *type_names[] = {"i32", "v2i32", "v4i32"};
-		const char *arg_type = "i32";
-		char name[256];
-
-		if (voffset && vindex) {
-			LLVMValueRef vaddr[] = {vindex, voffset};
-
-			arg_type = "v2i32";
-			args[1] = lp_build_gather_values(gallivm, vaddr, 2);
-		}
-
-		snprintf(name, sizeof(name), "llvm.SI.buffer.load.dword.%s.%s",
-		         type_names[func], arg_type);
-
-		return lp_build_intrinsic(gallivm->builder, name, types[func], args,
-		                          ARRAY_SIZE(args), LP_FUNC_ATTR_READONLY);
-	}
-}
-
 static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
                                 enum tgsi_opcode_type type, unsigned swizzle,
                                 LLVMValueRef buffer, LLVMValueRef offset,
@@ -907,25 +762,25 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	LLVMTypeRef vec_type = LLVMVectorType(llvm_type, 4);
 
 	if (swizzle == ~0) {
-		value = build_buffer_load(ctx, buffer, 4, NULL, base, offset,
-		                          0, 1, 0);
+		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
+					     0, 1, 0);
 
 		return LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 	}
 
 	if (!tgsi_type_is_64bit(type)) {
-		value = build_buffer_load(ctx, buffer, 4, NULL, base, offset,
-		                          0, 1, 0);
+		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
+					     0, 1, 0);
 
 		value = LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 		return LLVMBuildExtractElement(gallivm->builder, value,
 		                    lp_build_const_int32(gallivm, swizzle), "");
 	}
 
-	value = build_buffer_load(ctx, buffer, 1, NULL, base, offset,
+	value = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
 	                          swizzle * 4, 1, 0);
 
-	value2 = build_buffer_load(ctx, buffer, 1, NULL, base, offset,
+	value2 = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
 	                           swizzle * 4 + 4, 1, 0);
 
 	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
@@ -1101,17 +956,17 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		values[chan_index] = value;
 
 		if (inst->Dst[0].Register.WriteMask != 0xF) {
-			build_tbuffer_store_dwords(ctx, buffer, value, 1,
-			                           buf_addr, base,
-			                           4 * chan_index);
+			ac_build_tbuffer_store_dwords(&ctx->ac, buffer, value, 1,
+						      buf_addr, base,
+						      4 * chan_index);
 		}
 	}
 
 	if (inst->Dst[0].Register.WriteMask == 0xF) {
 		LLVMValueRef value = lp_build_gather_values(bld_base->base.gallivm,
 		                                            values, 4);
-		build_tbuffer_store_dwords(ctx, buffer, value, 4, buf_addr,
-		                           base, 0);
+		ac_build_tbuffer_store_dwords(&ctx->ac, buffer, value, 4, buf_addr,
+					      base, 0);
 	}
 }
 
@@ -2188,11 +2043,11 @@ static void emit_streamout_output(struct si_shader_context *ctx,
 		break;
 	}
 
-	build_tbuffer_store_dwords(ctx, so_buffers[buf_idx],
-				   vdata, num_comps,
-				   so_write_offsets[buf_idx],
-				   LLVMConstInt(ctx->i32, 0, 0),
-				   stream_out->dst_offset * 4);
+	ac_build_tbuffer_store_dwords(&ctx->ac, so_buffers[buf_idx],
+				      vdata, num_comps,
+				      so_write_offsets[buf_idx],
+				      LLVMConstInt(ctx->i32, 0, 0),
+				      stream_out->dst_offset * 4);
 }
 
 /**
@@ -2521,8 +2376,8 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 		LLVMValueRef value = lds_load(bld_base, TGSI_TYPE_SIGNED, ~0,
 		                              lds_ptr);
 
-		build_tbuffer_store_dwords(ctx, buffer, value, 4, buffer_addr,
-		                           buffer_offset, 0);
+		ac_build_tbuffer_store_dwords(&ctx->ac, buffer, value, 4, buffer_addr,
+					      buffer_offset, 0);
 	}
 }
 
@@ -2625,18 +2480,18 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  rel_patch_id, bld_base->uint_bld.zero, ""));
 
 	/* Store the dynamic HS control word. */
-	build_tbuffer_store_dwords(ctx, buffer,
-	                           lp_build_const_int32(gallivm, 0x80000000),
-	                           1, lp_build_const_int32(gallivm, 0), tf_base, 0);
+	ac_build_tbuffer_store_dwords(&ctx->ac, buffer,
+				      lp_build_const_int32(gallivm, 0x80000000),
+				      1, lp_build_const_int32(gallivm, 0), tf_base, 0);
 
 	lp_build_endif(&inner_if_ctx);
 
 	/* Store the tessellation factors. */
-	build_tbuffer_store_dwords(ctx, buffer, vec0,
-				   MIN2(stride, 4), byteoffset, tf_base, 4);
+	ac_build_tbuffer_store_dwords(&ctx->ac, buffer, vec0,
+				      MIN2(stride, 4), byteoffset, tf_base, 4);
 	if (vec1)
-		build_tbuffer_store_dwords(ctx, buffer, vec1,
-					   stride - 4, byteoffset, tf_base, 20);
+		ac_build_tbuffer_store_dwords(&ctx->ac, buffer, vec1,
+					      stride - 4, byteoffset, tf_base, 20);
 	lp_build_endif(&if_ctx);
 }
 
@@ -2745,14 +2600,14 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
 			out_val = LLVMBuildBitCast(gallivm->builder, out_val, ctx->i32, "");
 
-			build_tbuffer_store(ctx,
-					    ctx->esgs_ring,
-					    out_val, 1,
-					    LLVMGetUndef(ctx->i32), soffset,
-					    (4 * param_index + chan) * 4,
-					    V_008F0C_BUF_DATA_FORMAT_32,
-					    V_008F0C_BUF_NUM_FORMAT_UINT,
-					    0, 0, 1, 1, 0);
+			ac_build_tbuffer_store(&ctx->ac,
+					       ctx->esgs_ring,
+					       out_val, 1,
+					       LLVMGetUndef(ctx->i32), soffset,
+					       (4 * param_index + chan) * 4,
+					       V_008F0C_BUF_DATA_FORMAT_32,
+					       V_008F0C_BUF_NUM_FORMAT_UINT,
+					       0, 0, 1, 1, 0);
 		}
 	}
 }
@@ -5257,13 +5112,13 @@ static void si_llvm_emit_vertex(
 
 			out_val = LLVMBuildBitCast(gallivm->builder, out_val, ctx->i32, "");
 
-			build_tbuffer_store(ctx,
-					    ctx->gsvs_ring[stream],
-					    out_val, 1,
-					    voffset, soffset, 0,
-					    V_008F0C_BUF_DATA_FORMAT_32,
-					    V_008F0C_BUF_NUM_FORMAT_UINT,
-					    1, 0, 1, 1, 0);
+			ac_build_tbuffer_store(&ctx->ac,
+					       ctx->gsvs_ring[stream],
+					       out_val, 1,
+					       voffset, soffset, 0,
+					       V_008F0C_BUF_DATA_FORMAT_32,
+					       V_008F0C_BUF_NUM_FORMAT_UINT,
+					       1, 0, 1, 1, 0);
 		}
 	}
 
