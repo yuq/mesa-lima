@@ -2316,7 +2316,7 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 		param = shader_io_get_unique_index(instr->variables[0]->var->data.location);
 		args[0] = ctx->esgs_ring;
 		args[1] = vtx_offset;
-		args[2] = LLVMConstInt(ctx->i32, (param * 4 + i) * 256, false);
+		args[2] = LLVMConstInt(ctx->i32, (param * 4 + i + const_index) * 256, false);
 		args[3] = ctx->i32zero;
 		args[4] = ctx->i32one; /* OFFEN */
 		args[5] = ctx->i32zero; /* IDXEN */
