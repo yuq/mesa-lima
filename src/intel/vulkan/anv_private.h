@@ -1922,16 +1922,12 @@ struct anv_framebuffer {
 
 struct anv_subpass {
    uint32_t                                     input_count;
-   uint32_t *                                   input_attachments;
+   VkAttachmentReference *                      input_attachments;
    uint32_t                                     color_count;
-   uint32_t *                                   color_attachments;
-   uint32_t *                                   resolve_attachments;
+   VkAttachmentReference *                      color_attachments;
+   VkAttachmentReference *                      resolve_attachments;
 
-   /* TODO: Consider storing the depth/stencil VkAttachmentReference
-    * instead of its two structure members (below) individually.
-    */
-   uint32_t                                     depth_stencil_attachment;
-   VkImageLayout                                depth_stencil_layout;
+   VkAttachmentReference                        depth_stencil_attachment;
 
    /** Subpass has a depth/stencil self-dependency */
    bool                                         has_ds_self_dep;
@@ -1970,7 +1966,7 @@ struct anv_render_pass_attachment {
 struct anv_render_pass {
    uint32_t                                     attachment_count;
    uint32_t                                     subpass_count;
-   uint32_t *                                   subpass_attachments;
+   VkAttachmentReference *                      subpass_attachments;
    enum anv_subpass_usage *                     subpass_usages;
    struct anv_render_pass_attachment *          attachments;
    struct anv_subpass                           subpasses[0];

@@ -1143,7 +1143,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          assert(stage == MESA_SHADER_FRAGMENT);
          assert(binding->binding == 0);
          if (binding->index < subpass->color_count) {
-            const unsigned att = subpass->color_attachments[binding->index];
+            const unsigned att = subpass->color_attachments[binding->index].attachment;
             surface_state = cmd_buffer->state.attachments[att].color_rt_state;
          } else {
             surface_state = cmd_buffer->state.null_surface_state;
@@ -1191,7 +1191,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
              */
             assert(binding->input_attachment_index < subpass->input_count);
             const unsigned subpass_att = binding->input_attachment_index;
-            const unsigned att = subpass->input_attachments[subpass_att];
+            const unsigned att = subpass->input_attachments[subpass_att].attachment;
             surface_state = cmd_buffer->state.attachments[att].input_att_state;
          }
          break;
@@ -2202,7 +2202,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
    const struct anv_image *image = iview ? iview->image : NULL;
    const bool has_depth = image && (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT);
-   const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment;
+   const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
    const bool has_hiz = image != NULL &&
       cmd_buffer->state.attachments[ds].aux_usage == ISL_AUX_USAGE_HIZ;
    const bool has_stencil =
@@ -2364,16 +2364,16 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
    if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      const uint32_t ds = subpass->depth_stencil_attachment;
+      const uint32_t ds = subpass->depth_stencil_attachment.attachment;
       transition_depth_buffer(cmd_buffer, iview->image,
                               cmd_buffer->state.attachments[ds].current_layout,
-                              cmd_buffer->state.subpass->depth_stencil_layout);
+                              cmd_buffer->state.subpass->depth_stencil_attachment.layout);
       cmd_buffer->state.attachments[ds].current_layout =
-         cmd_buffer->state.subpass->depth_stencil_layout;
+         cmd_buffer->state.subpass->depth_stencil_attachment.layout;
       cmd_buffer->state.attachments[ds].aux_usage =
          anv_layout_to_aux_usage(&cmd_buffer->device->info, iview->image,
             iview->aspect_mask,
-            cmd_buffer->state.subpass->depth_stencil_layout);
+            cmd_buffer->state.subpass->depth_stencil_attachment.layout);
    }
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
@@ -2412,7 +2412,7 @@ void genX(CmdNextSubpass)(
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
    if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment;
+      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
 
       if (cmd_buffer->state.subpass - cmd_buffer->state.pass->subpasses ==
           cmd_buffer->state.pass->attachments[ds].last_subpass_idx) {
@@ -2435,7 +2435,7 @@ void genX(CmdEndRenderPass)(
       anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
 
    if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment;
+      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
 
       if (cmd_buffer->state.subpass - cmd_buffer->state.pass->subpasses ==
           cmd_buffer->state.pass->attachments[ds].last_subpass_idx) {

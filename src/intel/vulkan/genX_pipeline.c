@@ -489,9 +489,9 @@ emit_rs_state(struct anv_pipeline *pipeline,
    /* Gen7 requires that we provide the depth format in 3DSTATE_SF so that it
     * can get the depth offsets correct.
     */
-   if (subpass->depth_stencil_attachment < pass->attachment_count) {
+   if (subpass->depth_stencil_attachment.attachment < pass->attachment_count) {
       VkFormat vk_format =
-         pass->attachments[subpass->depth_stencil_attachment].format;
+         pass->attachments[subpass->depth_stencil_attachment.attachment].format;
       assert(vk_format_is_depth_or_stencil(vk_format));
       if (vk_format_aspects(vk_format) & VK_IMAGE_ASPECT_DEPTH_BIT) {
          enum isl_format isl_format =
@@ -807,9 +807,9 @@ emit_ds_state(struct anv_pipeline *pipeline,
    }
 
    VkImageAspectFlags ds_aspects = 0;
-   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+   if (subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
       VkFormat depth_stencil_format =
-         pass->attachments[subpass->depth_stencil_attachment].format;
+         pass->attachments[subpass->depth_stencil_attachment.attachment].format;
       ds_aspects = vk_format_aspects(depth_stencil_format);
    }
 

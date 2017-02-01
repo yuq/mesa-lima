@@ -950,7 +950,7 @@ clear_color_attachment(struct anv_cmd_buffer *cmd_buffer,
 {
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
    const uint32_t color_att = attachment->colorAttachment;
-   const uint32_t att_idx = subpass->color_attachments[color_att];
+   const uint32_t att_idx = subpass->color_attachments[color_att].attachment;
 
    if (att_idx == VK_ATTACHMENT_UNUSED)
       return;
@@ -987,7 +987,7 @@ clear_depth_stencil_attachment(struct anv_cmd_buffer *cmd_buffer,
 {
    static const union isl_color_value color_value = { .u32 = { 0, } };
    const struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   const uint32_t att_idx = subpass->depth_stencil_attachment;
+   const uint32_t att_idx = subpass->depth_stencil_attachment.attachment;
 
    if (att_idx == VK_ATTACHMENT_UNUSED)
       return;
@@ -1119,7 +1119,7 @@ anv_cmd_buffer_flush_attachments(struct anv_cmd_buffer *cmd_buffer,
    struct anv_render_pass *pass = cmd_buffer->state.pass;
 
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
-      uint32_t att = subpass->color_attachments[i];
+      uint32_t att = subpass->color_attachments[i].attachment;
       assert(att < pass->attachment_count);
       if (attachment_needs_flush(cmd_buffer, &pass->attachments[att], stage)) {
          cmd_buffer->state.pending_pipe_bits |=
@@ -1128,8 +1128,8 @@ anv_cmd_buffer_flush_attachments(struct anv_cmd_buffer *cmd_buffer,
       }
    }
 
-   if (subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
-      uint32_t att = subpass->depth_stencil_attachment;
+   if (subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
+      uint32_t att = subpass->depth_stencil_attachment.attachment;
       assert(att < pass->attachment_count);
       if (attachment_needs_flush(cmd_buffer, &pass->attachments[att], stage)) {
          cmd_buffer->state.pending_pipe_bits |=
@@ -1143,10 +1143,10 @@ static bool
 subpass_needs_clear(const struct anv_cmd_buffer *cmd_buffer)
 {
    const struct anv_cmd_state *cmd_state = &cmd_buffer->state;
-   uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
+   uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
 
    for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
-      uint32_t a = cmd_state->subpass->color_attachments[i];
+      uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
       if (cmd_state->attachments[a].pending_clear_aspects) {
          return true;
       }
@@ -1185,7 +1185,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
 
    struct anv_framebuffer *fb = cmd_buffer->state.framebuffer;
    for (uint32_t i = 0; i < cmd_state->subpass->color_count; ++i) {
-      const uint32_t a = cmd_state->subpass->color_attachments[i];
+      const uint32_t a = cmd_state->subpass->color_attachments[i].attachment;
       struct anv_attachment_state *att_state = &cmd_state->attachments[a];
 
       if (!att_state->pending_clear_aspects)
@@ -1231,7 +1231,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
       att_state->pending_clear_aspects = 0;
    }
 
-   const uint32_t ds = cmd_state->subpass->depth_stencil_attachment;
+   const uint32_t ds = cmd_state->subpass->depth_stencil_attachment.attachment;
 
    if (ds != VK_ATTACHMENT_UNUSED &&
        cmd_state->attachments[ds].pending_clear_aspects) {
@@ -1536,15 +1536,15 @@ anv_cmd_buffer_resolve_subpass(struct anv_cmd_buffer *cmd_buffer)
 
    for (uint32_t i = 0; i < subpass->color_count; ++i) {
       ccs_resolve_attachment(cmd_buffer, &batch,
-                             subpass->color_attachments[i]);
+                             subpass->color_attachments[i].attachment);
    }
 
    anv_cmd_buffer_flush_attachments(cmd_buffer, SUBPASS_STAGE_DRAW);
 
    if (subpass->has_resolve) {
       for (uint32_t i = 0; i < subpass->color_count; ++i) {
-         uint32_t src_att = subpass->color_attachments[i];
-         uint32_t dst_att = subpass->resolve_attachments[i];
+         uint32_t src_att = subpass->color_attachments[i].attachment;
+         uint32_t dst_att = subpass->resolve_attachments[i].attachment;
 
          if (dst_att == VK_ATTACHMENT_UNUSED)
             continue;

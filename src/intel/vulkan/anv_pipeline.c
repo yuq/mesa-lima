@@ -1056,7 +1056,7 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
     */
    bool uses_color_att = false;
    for (unsigned i = 0; i < subpass->color_count; ++i) {
-      if (subpass->color_attachments[i] != VK_ATTACHMENT_UNUSED) {
+      if (subpass->color_attachments[i].attachment != VK_ATTACHMENT_UNUSED) {
          uses_color_att = true;
          break;
       }
@@ -1084,7 +1084,7 @@ copy_non_dynamic_state(struct anv_pipeline *pipeline,
     *    against does not use a depth/stencil attachment.
     */
    if (!pCreateInfo->pRasterizationState->rasterizerDiscardEnable &&
-       subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED) {
+       subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED) {
       assert(pCreateInfo->pDepthStencilState);
 
       if (states & (1 << VK_DYNAMIC_STATE_DEPTH_BOUNDS)) {
@@ -1144,7 +1144,7 @@ anv_pipeline_validate_create_info(const VkGraphicsPipelineCreateInfo *info)
       assert(info->pViewportState);
       assert(info->pMultisampleState);
 
-      if (subpass && subpass->depth_stencil_attachment != VK_ATTACHMENT_UNUSED)
+      if (subpass && subpass->depth_stencil_attachment.attachment != VK_ATTACHMENT_UNUSED)
          assert(info->pDepthStencilState);
 
       if (subpass && subpass->color_count > 0)

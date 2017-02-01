@@ -80,7 +80,8 @@ VkResult anv_CreateRenderPass(
       usages += pass->subpass_count;
    }
 
-   uint32_t subpass_attachment_count = 0, *p;
+   uint32_t subpass_attachment_count = 0;
+   VkAttachmentReference *p;
    for (uint32_t i = 0; i < pCreateInfo->subpassCount; i++) {
       const VkSubpassDescription *desc = &pCreateInfo->pSubpasses[i];
 
@@ -93,7 +94,7 @@ VkResult anv_CreateRenderPass(
 
    pass->subpass_attachments =
       vk_alloc2(&device->alloc, pAllocator,
-                 subpass_attachment_count * sizeof(uint32_t), 8,
+                 subpass_attachment_count * sizeof(VkAttachmentReference), 8,
                  VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
    if (pass->subpass_attachments == NULL) {
       vk_free2(&device->alloc, pAllocator, pass->subpass_usages);
@@ -115,7 +116,7 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->inputAttachmentCount; j++) {
             uint32_t a = desc->pInputAttachments[j].attachment;
-            subpass->input_attachments[j] = a;
+            subpass->input_attachments[j] = desc->pInputAttachments[j];
             if (a != VK_ATTACHMENT_UNUSED) {
                pass->attachments[a].usage |= VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
                pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_INPUT;
@@ -134,7 +135,7 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             uint32_t a = desc->pColorAttachments[j].attachment;
-            subpass->color_attachments[j] = a;
+            subpass->color_attachments[j] = desc->pColorAttachments[j];
             if (a != VK_ATTACHMENT_UNUSED) {
                pass->attachments[a].usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
                pass->attachments[a].subpass_usage[i] |= ANV_SUBPASS_USAGE_DRAW;
@@ -150,7 +151,7 @@ VkResult anv_CreateRenderPass(
 
          for (uint32_t j = 0; j < desc->colorAttachmentCount; j++) {
             uint32_t a = desc->pResolveAttachments[j].attachment;
-            subpass->resolve_attachments[j] = a;
+            subpass->resolve_attachments[j] = desc->pResolveAttachments[j];
             if (a != VK_ATTACHMENT_UNUSED) {
                subpass->has_resolve = true;
                uint32_t color_att = desc->pColorAttachments[j].attachment;
@@ -169,9 +170,7 @@ VkResult anv_CreateRenderPass(
 
       if (desc->pDepthStencilAttachment) {
          uint32_t a = desc->pDepthStencilAttachment->attachment;
-         subpass->depth_stencil_attachment = a;
-         subpass->depth_stencil_layout =
-            desc->pDepthStencilAttachment->layout;
+         subpass->depth_stencil_attachment = *desc->pDepthStencilAttachment;
          if (a != VK_ATTACHMENT_UNUSED) {
             pass->attachments[a].usage |=
                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
@@ -179,8 +178,8 @@ VkResult anv_CreateRenderPass(
             pass->attachments[a].last_subpass_idx = i;
          }
       } else {
-         subpass->depth_stencil_attachment = VK_ATTACHMENT_UNUSED;
-         subpass->depth_stencil_layout = VK_IMAGE_LAYOUT_UNDEFINED;
+         subpass->depth_stencil_attachment.attachment = VK_ATTACHMENT_UNUSED;
+         subpass->depth_stencil_attachment.layout = VK_IMAGE_LAYOUT_UNDEFINED;
       }
    }
 
@@ -216,7 +215,7 @@ void anv_GetRenderAreaGranularity(
     * for all sample counts.
     */
    for (unsigned i = 0; i < pass->subpass_count; ++i) {
-      if (pass->subpasses[i].depth_stencil_attachment !=
+      if (pass->subpasses[i].depth_stencil_attachment.attachment !=
           VK_ATTACHMENT_UNUSED) {
          *pGranularity = (VkExtent2D) { .width = 8, .height = 4 };
          return;
