@@ -134,7 +134,6 @@ struct nir_to_llvm_context {
 	LLVMValueRef f32one;
 	LLVMValueRef v4f32empty;
 
-	unsigned range_md_kind;
 	unsigned uniform_md_kind;
 	LLVMValueRef empty_md;
 	gl_shader_stage stage;
@@ -701,8 +700,6 @@ static void setup_types(struct nir_to_llvm_context *ctx)
 	args[3] = ctx->f32one;
 	ctx->v4f32empty = LLVMConstVector(args, 4);
 
-	ctx->range_md_kind = LLVMGetMDKindIDInContext(ctx->context,
-						      "range", 5);
 	ctx->uniform_md_kind =
 	    LLVMGetMDKindIDInContext(ctx->context, "amdgpu.uniform", 14);
 	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
@@ -1172,43 +1169,6 @@ static LLVMValueRef emit_unpack_half_2x16(struct nir_to_llvm_context *ctx,
 	return result;
 }
 
-/**
- * Set range metadata on an instruction.  This can only be used on load and
- * call instructions.  If you know an instruction can only produce the values
- * 0, 1, 2, you would do set_range_metadata(value, 0, 3);
- * \p lo is the minimum value inclusive.
- * \p hi is the maximum value exclusive.
- */
-static void set_range_metadata(struct nir_to_llvm_context *ctx,
-			       LLVMValueRef value, unsigned lo, unsigned hi)
-{
-	LLVMValueRef range_md, md_args[2];
-	LLVMTypeRef type = LLVMTypeOf(value);
-	LLVMContextRef context = LLVMGetTypeContext(type);
-
-	md_args[0] = LLVMConstInt(type, lo, false);
-	md_args[1] = LLVMConstInt(type, hi, false);
-	range_md = LLVMMDNodeInContext(context, md_args, 2);
-	LLVMSetMetadata(value, ctx->range_md_kind, range_md);
-}
-
-static LLVMValueRef get_thread_id(struct nir_to_llvm_context *ctx)
-{
-	LLVMValueRef tid;
-	LLVMValueRef tid_args[2];
-	tid_args[0] = LLVMConstInt(ctx->i32, 0xffffffff, false);
-	tid_args[1] = ctx->i32zero;
-	tid_args[1] = ac_emit_llvm_intrinsic(&ctx->ac,
-					  "llvm.amdgcn.mbcnt.lo", ctx->i32,
-					  tid_args, 2, AC_FUNC_ATTR_READNONE);
-
-	tid = ac_emit_llvm_intrinsic(&ctx->ac,
-				  "llvm.amdgcn.mbcnt.hi", ctx->i32,
-				  tid_args, 2, AC_FUNC_ATTR_READNONE);
-	set_range_metadata(ctx, tid, 0, 64);
-	return tid;
-}
-
 /*
  * SI implements derivatives using the local data store (LDS)
  * All writes to the LDS happen in all executing threads at
@@ -1254,7 +1214,7 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 						       LLVMArrayType(ctx->i32, 64),
 						       "ddxy_lds", LOCAL_ADDR_SPACE);
 
-	thread_id = get_thread_id(ctx);
+	thread_id = ac_get_thread_id(&ctx->ac);
 	if (op == nir_op_fddx_fine || op == nir_op_fddx)
 		mask = TID_MASK_LEFT;
 	else if (op == nir_op_fddy_fine || op == nir_op_fddy)
@@ -2874,7 +2834,7 @@ static LLVMValueRef
 visit_load_local_invocation_index(struct nir_to_llvm_context *ctx)
 {
 	LLVMValueRef result;
-	LLVMValueRef thread_id = get_thread_id(ctx);
+	LLVMValueRef thread_id = ac_get_thread_id(&ctx->ac);
 	result = LLVMBuildAnd(ctx->builder, ctx->tg_size,
 			      LLVMConstInt(ctx->i32, 0xfc0, false), "");
 
