@@ -366,24 +366,28 @@ Here is one solution that I've been using.
 		--enable-egl \
 		--with-egl-platforms=x11,drm,wayland
 	make -j2 &amp;&amp; DESTDIR=`pwd`/test make -j6 install
+	__glxinfo_cmd='glxinfo 2>&amp;1 | egrep -o "Mesa.*|Gallium.*|.*dri\.so"'
+	__glxgears_cmd='glxgears 2>&amp;1 | grep -v "configuration file"'
+	__es2info_cmd='es2_info 2>&amp;1 | egrep "GL_VERSION|GL_RENDERER|.*dri\.so"'
+	__es2gears_cmd='es2gears_x11 2>&amp;1 | grep -v "configuration file"'
 	export LD_LIBRARY_PATH=`pwd`/test/usr/local/lib/
 	export LIBGL_DRIVERS_PATH=`pwd`/test/usr/local/lib/dri/
 	export LIBGL_DEBUG=verbose
-	glxinfo | egrep -o "Mesa.*"
-	glxgears
-	es2_info | egrep "GL_VERSION|GL_RENDERER"
-	es2gears_x11
+	eval $__glxinfo_cmd
+	eval $__glxgears_cmd
+	eval $__es2info_cmd
+	eval $__es2gears_cmd
 	export LIBGL_ALWAYS_SOFTWARE=1
-	glxinfo | egrep -o "Mesa.*|Gallium.*"
-	glxgears
-	es2_info | egrep "GL_VERSION|GL_RENDERER"
-	es2gears_x11
+	eval $__glxinfo_cmd
+	eval $__glxgears_cmd
+	eval $__es2info_cmd
+	eval $__es2gears_cmd
 	export LIBGL_ALWAYS_SOFTWARE=1
 	export GALLIUM_DRIVER=softpipe
-	glxinfo | egrep -o "Mesa.*|Gallium.*"
-	glxgears
-	es2_info | egrep "GL_VERSION|GL_RENDERER"
-	es2gears_x11
+	eval $__glxinfo_cmd
+	eval $__glxgears_cmd
+	eval $__es2info_cmd
+	eval $__es2gears_cmd
 	# Smoke test DOTA2
 	unset LD_LIBRARY_PATH
 	unset LIBGL_DRIVERS_PATH
