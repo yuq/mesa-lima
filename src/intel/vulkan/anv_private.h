@@ -1777,6 +1777,11 @@ anv_gen8_hiz_op_resolve(struct anv_cmd_buffer *cmd_buffer,
                         const struct anv_image *image,
                         enum blorp_hiz_op op);
 
+enum isl_aux_usage
+anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
+                        const struct anv_image *image,
+                        const VkImageAspectFlags aspects,
+                        const VkImageLayout layout);
 static inline uint32_t
 anv_get_layerCount(const struct anv_image *image,
                    const VkImageSubresourceRange *range)
