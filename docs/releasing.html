@@ -343,11 +343,17 @@ Here is one solution that I've been using.
 
 	$__mesa_root/autogen.sh --enable-llvm-shared-libs &amp;&amp; make -j2 distcheck
 
-	# Build check the tarballs (scons)
-	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version &amp;&amp; scons &amp;&amp; cd ..
+	# Build check the tarballs (scons, linux)
+	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
+	scons
+	cd .. &amp;&amp; rm -rf mesa-$__version
+
+	# Build check the tarballs (scons, windows/mingw)
+	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
+	scons platform=windows toolchain=crossmingw
+	cd .. &amp;&amp; rm -rf mesa-$__version
 
 	# Test the automake binaries
-	rm -rf mesa-$__version
 	tar -xaf mesa-$__version.tar.xz &amp;&amp; cd mesa-$__version
 	./configure \
 		--with-dri-drivers=i965,swrast \
