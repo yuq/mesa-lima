@@ -177,6 +177,7 @@ num_sources_from_inst(const struct gen_device_info *devinfo,
          return 0;
       }
    } else {
+      assert(desc->nsrc < 4);
       return desc->nsrc;
    }
 
