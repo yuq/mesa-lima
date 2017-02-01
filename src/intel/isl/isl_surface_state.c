@@ -537,6 +537,12 @@ isl_genX(surf_fill_state_s)(const struct isl_device *dev, void *state,
 
 #if GEN_GEN >= 7
    if (info->aux_surf && info->aux_usage != ISL_AUX_USAGE_NONE) {
+      /* The docs don't appear to say anything whatsoever about compression
+       * and the data port.  Testing seems to indicate that the data port
+       * completely ignores the AuxiliarySurfaceMode field.
+       */
+      assert(!(info->view->usage & ISL_SURF_USAGE_STORAGE_BIT));
+
       struct isl_tile_info tile_info;
       isl_surf_get_tile_info(dev, info->aux_surf, &tile_info);
       uint32_t pitch_in_tiles =
