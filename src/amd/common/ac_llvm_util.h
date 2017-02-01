@@ -57,7 +57,8 @@ struct ac_llvm_context {
 	LLVMTypeRef v4i32;
 	LLVMTypeRef v4f32;
 	LLVMTypeRef v16i8;
-  
+
+	unsigned range_md_kind;
 	unsigned invariant_load_md_kind;
 	unsigned uniform_md_kind;
 	unsigned fpmath_md_kind;
@@ -176,6 +177,9 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     unsigned inst_offset,
 		     unsigned glc,
 		     unsigned slc);
+
+LLVMValueRef
+ac_get_thread_id(struct ac_llvm_context *ctx);
 #ifdef __cplusplus
 }
 #endif

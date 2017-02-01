@@ -1266,49 +1266,6 @@ static LLVMValueRef get_sample_id(struct si_shader_context *radeon_bld)
 			    SI_PARAM_ANCILLARY, 8, 4);
 }
 
-/**
- * Set range metadata on an instruction.  This can only be used on load and
- * call instructions.  If you know an instruction can only produce the values
- * 0, 1, 2, you would do set_range_metadata(value, 0, 3);
- * \p lo is the minimum value inclusive.
- * \p hi is the maximum value exclusive.
- */
-static void set_range_metadata(struct si_shader_context *ctx,
-			       LLVMValueRef value, unsigned lo, unsigned hi)
-{
-	LLVMValueRef range_md, md_args[2];
-	LLVMTypeRef type = LLVMTypeOf(value);
-	LLVMContextRef context = LLVMGetTypeContext(type);
-
-	md_args[0] = LLVMConstInt(type, lo, false);
-	md_args[1] = LLVMConstInt(type, hi, false);
-	range_md = LLVMMDNodeInContext(context, md_args, 2);
-	LLVMSetMetadata(value, ctx->range_md_kind, range_md);
-}
-
-static LLVMValueRef get_thread_id(struct si_shader_context *ctx)
-{
-	struct gallivm_state *gallivm = &ctx->gallivm;
-	LLVMValueRef tid;
-
-	if (HAVE_LLVM < 0x0308) {
-		tid = lp_build_intrinsic(gallivm->builder, "llvm.SI.tid",
-				ctx->i32,   NULL, 0, LP_FUNC_ATTR_READNONE);
-	} else {
-		LLVMValueRef tid_args[2];
-		tid_args[0] = lp_build_const_int32(gallivm, 0xffffffff);
-		tid_args[1] = lp_build_const_int32(gallivm, 0);
-		tid_args[1] = lp_build_intrinsic(gallivm->builder,
-					"llvm.amdgcn.mbcnt.lo", ctx->i32,
-					tid_args, 2, LP_FUNC_ATTR_READNONE);
-
-		tid = lp_build_intrinsic(gallivm->builder,
-					"llvm.amdgcn.mbcnt.hi", ctx->i32,
-					tid_args, 2, LP_FUNC_ATTR_READNONE);
-	}
-	set_range_metadata(ctx, tid, 0, 64);
-	return tid;
-}
 
 /**
  * Load a dword from a constant buffer.
@@ -2069,7 +2026,7 @@ static void si_llvm_emit_streamout(struct si_shader_context *ctx,
 	LLVMValueRef so_vtx_count =
 		unpack_param(ctx, ctx->param_streamout_config, 16, 7);
 
-	LLVMValueRef tid = get_thread_id(ctx);
+	LLVMValueRef tid = ac_get_thread_id(&ctx->ac);
 
 	/* can_emit = tid < so_vtx_count; */
 	LLVMValueRef can_emit =
@@ -4806,7 +4763,7 @@ static void si_llvm_emit_ddxy(
 	int idx;
 	unsigned mask;
 
-	thread_id = get_thread_id(ctx);
+	thread_id = ac_get_thread_id(&ctx->ac);
 
 	if (opcode == TGSI_OPCODE_DDX_FINE)
 		mask = TID_MASK_LEFT;
@@ -5235,14 +5192,6 @@ static void si_create_function(struct si_shader_context *ctx,
 						   "unsafe-fp-math",
 						   "true");
 	}
-}
-
-static void create_meta_data(struct si_shader_context *ctx)
-{
-	struct gallivm_state *gallivm = ctx->bld_base.base.gallivm;
-
-	ctx->range_md_kind = LLVMGetMDKindIDInContext(gallivm->context,
-						     "range", 5);
 }
 
 static void declare_streamout_params(struct si_shader_context *ctx,
@@ -6216,7 +6165,6 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 
 	builder = gallivm->builder;
 
-	create_meta_data(&ctx);
 	create_function(&ctx);
 	preload_ring_buffers(&ctx);
 
@@ -6714,7 +6662,6 @@ static bool si_compile_tgsi_main(struct si_shader_context *ctx,
 		return false;
 	}
 
-	create_meta_data(ctx);
 	create_function(ctx);
 	preload_ring_buffers(ctx);
 

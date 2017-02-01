@@ -168,6 +168,9 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context)
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
 	ctx->v16i8 = LLVMVectorType(ctx->i8, 16);
 
+	ctx->range_md_kind = LLVMGetMDKindIDInContext(ctx->context,
+						     "range", 5);
+
 	ctx->invariant_load_md_kind = LLVMGetMDKindIDInContext(ctx->context,
 							       "invariant.load", 14);
 
@@ -802,4 +805,49 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		return ac_emit_llvm_intrinsic(ctx, name, types[func], args,
 					       ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
 	}
+}
+
+/**
+ * Set range metadata on an instruction.  This can only be used on load and
+ * call instructions.  If you know an instruction can only produce the values
+ * 0, 1, 2, you would do set_range_metadata(value, 0, 3);
+ * \p lo is the minimum value inclusive.
+ * \p hi is the maximum value exclusive.
+ */
+static void set_range_metadata(struct ac_llvm_context *ctx,
+			       LLVMValueRef value, unsigned lo, unsigned hi)
+{
+	LLVMValueRef range_md, md_args[2];
+	LLVMTypeRef type = LLVMTypeOf(value);
+	LLVMContextRef context = LLVMGetTypeContext(type);
+
+	md_args[0] = LLVMConstInt(type, lo, false);
+	md_args[1] = LLVMConstInt(type, hi, false);
+	range_md = LLVMMDNodeInContext(context, md_args, 2);
+	LLVMSetMetadata(value, ctx->range_md_kind, range_md);
+}
+
+LLVMValueRef
+ac_get_thread_id(struct ac_llvm_context *ctx)
+{
+	LLVMValueRef tid;
+
+	if (HAVE_LLVM < 0x0308) {
+		tid = ac_emit_llvm_intrinsic(ctx, "llvm.SI.tid",
+					     ctx->i32,
+					     NULL, 0, AC_FUNC_ATTR_READNONE);
+	} else {
+		LLVMValueRef tid_args[2];
+		tid_args[0] = LLVMConstInt(ctx->i32, 0xffffffff, false);
+		tid_args[1] = LLVMConstInt(ctx->i32, 0, false);
+		tid_args[1] = ac_emit_llvm_intrinsic(ctx,
+						     "llvm.amdgcn.mbcnt.lo", ctx->i32,
+						     tid_args, 2, AC_FUNC_ATTR_READNONE);
+
+		tid = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.mbcnt.hi",
+					     ctx->i32, tid_args,
+					     2, AC_FUNC_ATTR_READNONE);
+	}
+	set_range_metadata(ctx, tid, 0, 64);
+	return tid;
 }
