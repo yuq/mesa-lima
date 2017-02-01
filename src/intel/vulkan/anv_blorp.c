@@ -503,7 +503,8 @@ void anv_CmdBlitImage(
          blorp_blit(&batch, &src, src_res->mipLevel, src_z,
                     src_format.isl_format, src_format.swizzle,
                     &dst, dst_res->mipLevel, dst_z,
-                    dst_format.isl_format, dst_format.swizzle,
+                    dst_format.isl_format,
+                    anv_swizzle_for_render(dst_format.swizzle),
                     src_x0, src_y0, src_x1, src_y1,
                     dst_x0, dst_y0, dst_x1, dst_y1,
                     gl_filter, flip_x, flip_y);
@@ -831,7 +832,8 @@ void anv_CmdClearColorImage(
          }
 
          blorp_clear(&batch, &surf,
-                     src_format.isl_format, src_format.swizzle,
+                     src_format.isl_format,
+                     anv_swizzle_for_render(src_format.swizzle),
                      level, base_layer, layer_count,
                      0, 0, level_width, level_height,
                      vk_to_isl_color(*pColor), color_write_disable);
@@ -1216,7 +1218,8 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
          cmd_buffer->state.pending_pipe_bits |=
             ANV_PIPE_RENDER_TARGET_CACHE_FLUSH_BIT | ANV_PIPE_CS_STALL_BIT;
       } else {
-         blorp_clear(&batch, &surf, iview->isl.format, iview->isl.swizzle,
+         blorp_clear(&batch, &surf, iview->isl.format,
+                     anv_swizzle_for_render(iview->isl.swizzle),
                      iview->isl.base_level,
                      iview->isl.base_array_layer, fb->layers,
                      render_area.offset.x, render_area.offset.y,

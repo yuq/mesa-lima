@@ -528,6 +528,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
 
             struct isl_view view = iview->isl;
             view.usage |= ISL_SURF_USAGE_RENDER_TARGET_BIT;
+            view.swizzle = anv_swizzle_for_render(view.swizzle);
             isl_surf_fill_state(isl_dev,
                                 state->attachments[i].color_rt_state.map,
                                 .surf = &iview->image->color_surface.isl,
