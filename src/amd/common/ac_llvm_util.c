@@ -160,10 +160,18 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context)
 	ctx->i32 = LLVMIntTypeInContext(ctx->context, 32);
 	ctx->f32 = LLVMFloatTypeInContext(ctx->context);
 
+	ctx->invariant_load_md_kind = LLVMGetMDKindIDInContext(ctx->context,
+							       "invariant.load", 14);
+
 	ctx->fpmath_md_kind = LLVMGetMDKindIDInContext(ctx->context, "fpmath", 6);
 
 	args[0] = LLVMConstReal(ctx->f32, 2.5);
 	ctx->fpmath_md_2p5_ulp = LLVMMDNodeInContext(ctx->context, args, 1);
+
+	ctx->uniform_md_kind = LLVMGetMDKindIDInContext(ctx->context,
+							"amdgpu.uniform", 14);
+
+	ctx->empty_md = LLVMMDNodeInContext(ctx->context, NULL, 0);
 }
 
 #if HAVE_LLVM < 0x0400
@@ -582,4 +590,61 @@ ac_build_fs_interp_mov(struct ac_llvm_context *ctx,
 
 	return ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.mov",
 				      ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
+}
+
+LLVMValueRef
+ac_build_gep0(struct ac_llvm_context *ctx,
+	      LLVMValueRef base_ptr,
+	      LLVMValueRef index)
+{
+	LLVMValueRef indices[2] = {
+		LLVMConstInt(ctx->i32, 0, 0),
+		index,
+	};
+	return LLVMBuildGEP(ctx->builder, base_ptr,
+			    indices, 2, "");
+}
+
+void
+ac_build_indexed_store(struct ac_llvm_context *ctx,
+		       LLVMValueRef base_ptr, LLVMValueRef index,
+		       LLVMValueRef value)
+{
+	LLVMBuildStore(ctx->builder, value,
+		       ac_build_gep0(ctx, base_ptr, index));
+}
+
+/**
+ * Build an LLVM bytecode indexed load using LLVMBuildGEP + LLVMBuildLoad.
+ * It's equivalent to doing a load from &base_ptr[index].
+ *
+ * \param base_ptr  Where the array starts.
+ * \param index     The element index into the array.
+ * \param uniform   Whether the base_ptr and index can be assumed to be
+ *                  dynamically uniform
+ */
+LLVMValueRef
+ac_build_indexed_load(struct ac_llvm_context *ctx,
+		      LLVMValueRef base_ptr, LLVMValueRef index,
+		      bool uniform)
+{
+	LLVMValueRef pointer;
+
+	pointer = ac_build_gep0(ctx, base_ptr, index);
+	if (uniform)
+		LLVMSetMetadata(pointer, ctx->uniform_md_kind, ctx->empty_md);
+	return LLVMBuildLoad(ctx->builder, pointer, "");
+}
+
+/**
+ * Do a load from &base_ptr[index], but also add a flag that it's loading
+ * a constant from a dynamically uniform index.
+ */
+LLVMValueRef
+ac_build_indexed_load_const(struct ac_llvm_context *ctx,
+			    LLVMValueRef base_ptr, LLVMValueRef index)
+{
+	LLVMValueRef result = ac_build_indexed_load(ctx, base_ptr, index, true);
+	LLVMSetMetadata(result, ctx->invariant_load_md_kind, ctx->empty_md);
+	return result;
 }

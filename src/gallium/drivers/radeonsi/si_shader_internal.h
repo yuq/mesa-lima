@@ -123,12 +123,9 @@ struct si_shader_context {
 
 	LLVMTargetMachineRef tm;
 
-	unsigned invariant_load_md_kind;
 	unsigned range_md_kind;
-	unsigned uniform_md_kind;
 	unsigned fpmath_md_kind;
 	LLVMValueRef fpmath_md_2p5_ulp;
-	LLVMValueRef empty_md;
 
 	/* Preloaded descriptors. */
 	LLVMValueRef esgs_ring;

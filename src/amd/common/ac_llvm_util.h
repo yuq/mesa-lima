@@ -52,8 +52,11 @@ struct ac_llvm_context {
 	LLVMTypeRef i32;
 	LLVMTypeRef f32;
 
+	unsigned invariant_load_md_kind;
+	unsigned uniform_md_kind;
 	unsigned fpmath_md_kind;
 	LLVMValueRef fpmath_md_2p5_ulp;
+	LLVMValueRef empty_md;
 };
 
 LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, bool supports_spill);
@@ -112,6 +115,25 @@ ac_build_fs_interp_mov(struct ac_llvm_context *ctx,
 		       LLVMValueRef llvm_chan,
 		       LLVMValueRef attr_number,
 		       LLVMValueRef params);
+
+LLVMValueRef
+ac_build_gep0(struct ac_llvm_context *ctx,
+	      LLVMValueRef base_ptr,
+	      LLVMValueRef index);
+
+void
+ac_build_indexed_store(struct ac_llvm_context *ctx,
+		       LLVMValueRef base_ptr, LLVMValueRef index,
+		       LLVMValueRef value);
+
+LLVMValueRef
+ac_build_indexed_load(struct ac_llvm_context *ctx,
+		      LLVMValueRef base_ptr, LLVMValueRef index,
+		      bool uniform);
+
+LLVMValueRef
+ac_build_indexed_load_const(struct ac_llvm_context *ctx,
+			    LLVMValueRef base_ptr, LLVMValueRef index);
 #ifdef __cplusplus
 }
 #endif
