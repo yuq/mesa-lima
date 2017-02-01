@@ -1007,7 +1007,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 		desc[1] = S_008F04_BASE_ADDRESS_HI(va >> 32) |
 			  S_008F04_STRIDE(vb->stride);
 
-		if (sctx->b.chip_class <= CIK && vb->stride) {
+		if (sctx->b.chip_class != VI && vb->stride) {
 			/* Round up by rounding down and adding 1 */
 			desc[2] = (vb->buffer->width0 - offset -
 				   velems->format_size[i]) /

@@ -3079,7 +3079,7 @@ static LLVMValueRef get_buffer_size(
 		LLVMBuildExtractElement(builder, descriptor,
 					lp_build_const_int32(gallivm, 2), "");
 
-	if (ctx->screen->b.chip_class >= VI) {
+	if (ctx->screen->b.chip_class == VI) {
 		/* On VI, the descriptor contains the size in bytes,
 		 * but TXQ must return the size in elements.
 		 * The stride is always non-zero for resources using TXQ.

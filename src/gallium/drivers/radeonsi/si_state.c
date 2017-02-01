@@ -2764,7 +2764,7 @@ si_make_buffer_descriptor(struct si_screen *screen, struct r600_resource *buf,
 	num_records = size / stride;
 	num_records = MIN2(num_records, (buf->b.b.width0 - offset) / stride);
 
-	if (screen->b.chip_class >= VI)
+	if (screen->b.chip_class == VI)
 		num_records *= stride;
 
 	state[4] = 0;
