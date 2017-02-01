@@ -105,11 +105,6 @@ static const struct drm_driver_descriptor driver_descriptors[] = {
     },
 #endif
     {
-        .driver_name = "i965",
-        .create_screen = pipe_ilo_create_screen,
-        .configuration = configuration_query,
-    },
-    {
         .driver_name = "nouveau",
         .create_screen = pipe_nouveau_create_screen,
         .configuration = configuration_query,

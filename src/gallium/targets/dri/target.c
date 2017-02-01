@@ -151,9 +151,6 @@ const __DRIextension **__driDriverGetExtensions_i965(void);
  * i965 driver so that you can just make a directory with a link from
  * i965_dri.so to the built vc4_dri.so, and point LIBGL_DRIVERS_PATH to that
  * on your i965-using host to run the driver under simulation.
- *
- * This is, of course, incompatible with building with the ilo driver, but you
- * shouldn't be building that anyway.
  */
 PUBLIC const __DRIextension **__driDriverGetExtensions_i965(void)
 {
