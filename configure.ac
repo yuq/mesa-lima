@@ -1621,7 +1621,7 @@ dnl Which drivers to build - default is chosen by platform
 AC_ARG_WITH([dri-drivers],
     [AS_HELP_STRING([--with-dri-drivers@<:@=DIRS...@:>@],
         [comma delimited classic DRI drivers list, e.g.
-        "swrast,i965,radeon" @<:@default=auto@:>@])],
+        "i915,i965,nouveau,radeon,r200,swrast" @<:@default=auto@:>@])],
     [with_dri_drivers="$withval"],
     [with_dri_drivers=auto])
 
