@@ -229,7 +229,7 @@ make_surface(const struct anv_device *dev,
              * leave compression on at all times for these formats.
              */
             if (!(vk_info->flags & VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT) &&
-                isl_format_supports_lossless_compression(&dev->info, format)) {
+                isl_format_supports_ccs_e(&dev->info, format)) {
                if (vk_info->usage & VK_IMAGE_USAGE_STORAGE_BIT) {
                   /*
                    * For now, we leave compression off for anything that may

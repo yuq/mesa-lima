@@ -447,8 +447,7 @@ brw_texture_view_sane(const struct brw_context *brw,
    if (!intel_miptree_is_lossless_compressed(brw, mt))
       return true;
 
-   if (isl_format_supports_lossless_compression(&brw->screen->devinfo,
-                                                view->format))
+   if (isl_format_supports_ccs_e(&brw->screen->devinfo, view->format))
       return true;
 
    /* Logic elsewhere needs to take care to resolve the color buffer prior

@@ -37,7 +37,7 @@ struct surface_format_info {
    uint8_t input_vb;
    uint8_t streamed_output_vb;
    uint8_t color_processing;
-   uint8_t lossless_compression;
+   uint8_t ccs_e;
 };
 
 /* This macro allows us to write the table almost as it appears in the PRM,
@@ -438,13 +438,13 @@ isl_format_supports_vertex_fetch(const struct gen_device_info *devinfo,
 }
 
 bool
-isl_format_supports_lossless_compression(const struct gen_device_info *devinfo,
-                                         enum isl_format format)
+isl_format_supports_ccs_e(const struct gen_device_info *devinfo,
+                          enum isl_format format)
 {
    if (!format_info[format].exists)
       return false;
 
-   return format_gen(devinfo) >= format_info[format].lossless_compression;
+   return format_gen(devinfo) >= format_info[format].ccs_e;
 }
 
 bool

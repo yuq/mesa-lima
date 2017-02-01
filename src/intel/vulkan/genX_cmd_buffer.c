@@ -266,8 +266,7 @@ color_attachment_compute_aux_usage(struct anv_device *device,
       att_state->fast_clear = false;
    }
 
-   if (isl_format_supports_lossless_compression(&device->info,
-                                                iview->isl.format)) {
+   if (isl_format_supports_ccs_e(&device->info, iview->isl.format)) {
       att_state->aux_usage = ISL_AUX_USAGE_CCS_E;
       att_state->input_aux_usage = ISL_AUX_USAGE_CCS_E;
    } else if (att_state->fast_clear) {

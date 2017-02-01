@@ -1040,8 +1040,8 @@ bool isl_format_supports_filtering(const struct gen_device_info *devinfo,
                                    enum isl_format format);
 bool isl_format_supports_vertex_fetch(const struct gen_device_info *devinfo,
                                       enum isl_format format);
-bool isl_format_supports_lossless_compression(const struct gen_device_info *devinfo,
-                                              enum isl_format format);
+bool isl_format_supports_ccs_e(const struct gen_device_info *devinfo,
+                               enum isl_format format);
 bool isl_format_supports_multisampling(const struct gen_device_info *devinfo,
                                        enum isl_format format);
 
