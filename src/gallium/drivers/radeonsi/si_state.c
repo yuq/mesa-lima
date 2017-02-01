@@ -3342,6 +3342,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				       unsigned count,
 				       const struct pipe_vertex_element *elements)
 {
+	struct si_screen *sscreen = (struct si_screen*)ctx->screen;
 	struct si_vertex_element *v = CALLOC_STRUCT(si_vertex_element);
 	bool used[SI_NUM_VERTEX_BUFFERS] = {};
 	int i;
@@ -3381,9 +3382,12 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		v->format_size[i] = desc->block.bits / 8;
 
 		/* The hardware always treats the 2-bit alpha channel as
-		 * unsigned, so a shader workaround is needed.
+		 * unsigned, so a shader workaround is needed. The affected
+		 * chips are VI and older except Stoney (GFX8.1).
 		 */
-		if (data_format == V_008F0C_BUF_DATA_FORMAT_2_10_10_10) {
+		if (data_format == V_008F0C_BUF_DATA_FORMAT_2_10_10_10 &&
+		    sscreen->b.chip_class <= VI &&
+		    sscreen->b.family != CHIP_STONEY) {
 			if (num_format == V_008F0C_BUF_NUM_FORMAT_SNORM) {
 				v->fix_fetch[i] = SI_FIX_FETCH_A2_SNORM;
 			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SSCALED) {
