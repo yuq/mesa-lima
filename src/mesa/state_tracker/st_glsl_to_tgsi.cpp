@@ -6951,37 +6951,6 @@ set_prog_affected_state_flags(struct gl_program *prog)
    }
 }
 
-static struct gl_program *
-get_mesa_program(struct gl_context *ctx,
-                 struct gl_shader_program *shader_program,
-                 struct gl_linked_shader *shader)
-{
-   struct pipe_screen *pscreen = ctx->st->pipe->screen;
-   enum pipe_shader_type ptarget = st_shader_stage_to_ptarget(shader->Stage);
-   enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
-      pscreen->get_shader_param(pscreen, ptarget, PIPE_SHADER_CAP_PREFERRED_IR);
-   struct gl_program *prog = NULL;
-
-   if (preferred_ir == PIPE_SHADER_IR_NIR) {
-      /* TODO only for GLSL VS/FS for now: */
-      switch (shader->Stage) {
-      case MESA_SHADER_VERTEX:
-      case MESA_SHADER_FRAGMENT:
-         prog = st_nir_get_mesa_program(ctx, shader_program, shader);
-      default:
-         break;
-      }
-   } else {
-      prog = get_mesa_program_tgsi(ctx, shader_program, shader);
-   }
-
-   if (prog) {
-      set_prog_affected_state_flags(prog);
-   }
-
-   return prog;
-}
-
 /* See if there are unsupported control flow statements. */
 class ir_control_flow_info_visitor : public ir_hierarchical_visitor {
 private:
@@ -7163,19 +7132,36 @@ st_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
    build_program_resource_list(ctx, prog);
 
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
-      struct gl_program *linked_prog;
-
-      if (prog->_LinkedShaders[i] == NULL)
+      struct gl_linked_shader *shader = prog->_LinkedShaders[i];
+      if (shader == NULL)
          continue;
 
-      linked_prog = get_mesa_program(ctx, prog, prog->_LinkedShaders[i]);
+      enum pipe_shader_type ptarget =
+         st_shader_stage_to_ptarget(shader->Stage);
+      enum pipe_shader_ir preferred_ir = (enum pipe_shader_ir)
+         pscreen->get_shader_param(pscreen, ptarget,
+                                   PIPE_SHADER_CAP_PREFERRED_IR);
+
+      struct gl_program *linked_prog = NULL;
+      if (preferred_ir == PIPE_SHADER_IR_NIR) {
+         /* TODO only for GLSL VS/FS for now: */
+         switch (shader->Stage) {
+         case MESA_SHADER_VERTEX:
+         case MESA_SHADER_FRAGMENT:
+            linked_prog = st_nir_get_mesa_program(ctx, prog, shader);
+         default:
+            break;
+         }
+      } else {
+         linked_prog = get_mesa_program_tgsi(ctx, prog, shader);
+      }
 
       if (linked_prog) {
+         set_prog_affected_state_flags(linked_prog);
          if (!ctx->Driver.ProgramStringNotify(ctx,
                                               _mesa_shader_stage_to_program(i),
                                               linked_prog)) {
-            _mesa_reference_program(ctx, &prog->_LinkedShaders[i]->Program,
-                                    NULL);
+            _mesa_reference_program(ctx, &shader->Program, NULL);
             return GL_FALSE;
          }
       }
