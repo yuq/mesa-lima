@@ -98,6 +98,20 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 void
 ac_dump_module(LLVMModuleRef module);
 
+LLVMValueRef
+ac_build_fs_interp(struct ac_llvm_context *ctx,
+		   LLVMValueRef llvm_chan,
+		   LLVMValueRef attr_number,
+		   LLVMValueRef params,
+		   LLVMValueRef i,
+		   LLVMValueRef j);
+
+LLVMValueRef
+ac_build_fs_interp_mov(struct ac_llvm_context *ctx,
+		       LLVMValueRef parameter,
+		       LLVMValueRef llvm_chan,
+		       LLVMValueRef attr_number,
+		       LLVMValueRef params);
 #ifdef __cplusplus
 }
 #endif

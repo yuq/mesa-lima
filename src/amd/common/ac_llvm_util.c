@@ -512,3 +512,74 @@ ac_dump_module(LLVMModuleRef module)
 	fprintf(stderr, "%s", str);
 	LLVMDisposeMessage(str);
 }
+
+LLVMValueRef
+ac_build_fs_interp(struct ac_llvm_context *ctx,
+		   LLVMValueRef llvm_chan,
+		   LLVMValueRef attr_number,
+		   LLVMValueRef params,
+		   LLVMValueRef i,
+		   LLVMValueRef j)
+{
+	LLVMValueRef args[5];
+	LLVMValueRef p1;
+	
+	if (HAVE_LLVM < 0x0400) {
+		LLVMValueRef ij[2];
+		ij[0] = LLVMBuildBitCast(ctx->builder, i, ctx->i32, "");
+		ij[1] = LLVMBuildBitCast(ctx->builder, j, ctx->i32, "");
+
+		args[0] = llvm_chan;
+		args[1] = attr_number;
+		args[2] = params;
+		args[3] = ac_build_gather_values(ctx, ij, 2);
+		return ac_emit_llvm_intrinsic(ctx, "llvm.SI.fs.interp",
+					      ctx->f32, args, 4,
+					      AC_FUNC_ATTR_READNONE);
+	}
+
+	args[0] = i;
+	args[1] = llvm_chan;
+	args[2] = attr_number;
+	args[3] = params;
+
+	p1 = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.p1",
+				    ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
+
+	args[0] = p1;
+	args[1] = j;
+	args[2] = llvm_chan;
+	args[3] = attr_number;
+	args[4] = params;
+
+	return ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.p2",
+				      ctx->f32, args, 5, AC_FUNC_ATTR_READNONE);
+}
+
+LLVMValueRef
+ac_build_fs_interp_mov(struct ac_llvm_context *ctx,
+		       LLVMValueRef parameter,
+		       LLVMValueRef llvm_chan,
+		       LLVMValueRef attr_number,
+		       LLVMValueRef params)
+{
+	LLVMValueRef args[4];
+	if (HAVE_LLVM < 0x0400) {
+		args[0] = llvm_chan;
+		args[1] = attr_number;
+		args[2] = params;
+
+		return ac_emit_llvm_intrinsic(ctx,
+					      "llvm.SI.fs.constant",
+					      ctx->f32, args, 3,
+					      AC_FUNC_ATTR_READNONE);
+	}
+
+	args[0] = parameter;
+	args[1] = llvm_chan;
+	args[2] = attr_number;
+	args[3] = params;
+
+	return ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.mov",
+				      ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
+}
