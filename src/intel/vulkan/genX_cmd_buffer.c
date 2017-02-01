@@ -2352,6 +2352,91 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
    }
 }
 
+
+/**
+ * @brief Perform any layout transitions required at the beginning and/or end
+ *        of the current subpass for depth buffers.
+ *
+ * TODO: Consider preprocessing the attachment reference array at render pass
+ *       create time to determine if no layout transition is needed at the
+ *       beginning and/or end of each subpass.
+ *
+ * @param cmd_buffer The command buffer the transition is happening within.
+ * @param subpass_end If true, marks that the transition is happening at the
+ *                    end of the subpass.
+ */
+static void
+cmd_buffer_subpass_transition_layouts(struct anv_cmd_buffer * const cmd_buffer,
+                                      const bool subpass_end)
+{
+   /* We need a non-NULL command buffer. */
+   assert(cmd_buffer);
+
+   const struct anv_cmd_state * const cmd_state = &cmd_buffer->state;
+   const struct anv_subpass * const subpass = cmd_state->subpass;
+
+   /* This function must be called within a subpass. */
+   assert(subpass);
+
+   /* If there are attachment references, the array shouldn't be NULL.
+    */
+   if (subpass->attachment_count > 0)
+      assert(subpass->attachments);
+
+   /* Iterate over the array of attachment references. */
+   for (const VkAttachmentReference *att_ref = subpass->attachments;
+        att_ref < subpass->attachments + subpass->attachment_count; att_ref++) {
+
+      /* If the attachment is unused, we can't perform a layout transition. */
+      if (att_ref->attachment == VK_ATTACHMENT_UNUSED)
+         continue;
+
+      /* This attachment index shouldn't go out of bounds. */
+      assert(att_ref->attachment < cmd_state->pass->attachment_count);
+
+      const struct anv_render_pass_attachment * const att_desc =
+         &cmd_state->pass->attachments[att_ref->attachment];
+      struct anv_attachment_state * const att_state =
+         &cmd_buffer->state.attachments[att_ref->attachment];
+
+      /* The attachment should not be used in a subpass after its last. */
+      assert(att_desc->last_subpass_idx >= anv_get_subpass_id(cmd_state));
+
+      if (subpass_end && anv_get_subpass_id(cmd_state) <
+          att_desc->last_subpass_idx) {
+         /* We're calling this function on a buffer twice in one subpass and
+          * this is not the last use of the buffer. The layout should not have
+          * changed from the first call and no transition is necessary.
+          */
+         assert(att_ref->layout == att_state->current_layout);
+         continue;
+      }
+
+      /* Get the appropriate target layout for this attachment. */
+      const VkImageLayout target_layout = subpass_end ?
+         att_desc->final_layout : att_ref->layout;
+
+      /* The attachment index must be less than the number of attachments
+       * within the framebuffer.
+       */
+      assert(att_ref->attachment < cmd_state->framebuffer->attachment_count);
+
+      const struct anv_image * const image =
+         cmd_state->framebuffer->attachments[att_ref->attachment]->image;
+
+      /* Perform the layout transition. */
+      if (image->aspects & VK_IMAGE_ASPECT_DEPTH_BIT) {
+         transition_depth_buffer(cmd_buffer, image,
+                                 att_state->current_layout, target_layout);
+         att_state->aux_usage =
+            anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
+                                    image->aspects, target_layout);
+      }
+
+      att_state->current_layout = target_layout;
+   }
+}
+
 static void
 genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
                              struct anv_subpass *subpass)
