@@ -53,11 +53,6 @@ gallium_DRIVERS += libmesa_winsys_i915 libmesa_pipe_i915
 LOCAL_SHARED_LIBRARIES += libdrm_intel
 LOCAL_CFLAGS += -DGALLIUM_I915
 endif
-ifneq ($(filter ilo,$(MESA_GPU_DRIVERS)),)
-gallium_DRIVERS += libmesa_winsys_intel libmesa_pipe_ilo
-LOCAL_SHARED_LIBRARIES += libdrm_intel
-LOCAL_CFLAGS += -DGALLIUM_ILO
-endif
 ifneq ($(filter nouveau,$(MESA_GPU_DRIVERS)),)
 gallium_DRIVERS +=  libmesa_winsys_nouveau libmesa_pipe_nouveau
 LOCAL_CFLAGS += -DGALLIUM_NOUVEAU
