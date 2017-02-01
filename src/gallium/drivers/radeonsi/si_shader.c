@@ -4722,35 +4722,6 @@ static void si_llvm_emit_txqs(
 	emit_data->output[emit_data->chan] = samples;
 }
 
-/*
- * SI implements derivatives using the local data store (LDS)
- * All writes to the LDS happen in all executing threads at
- * the same time. TID is the Thread ID for the current
- * thread and is a value between 0 and 63, representing
- * the thread's position in the wavefront.
- *
- * For the pixel shader threads are grouped into quads of four pixels.
- * The TIDs of the pixels of a quad are:
- *
- *  +------+------+
- *  |4n + 0|4n + 1|
- *  +------+------+
- *  |4n + 2|4n + 3|
- *  +------+------+
- *
- * So, masking the TID with 0xfffffffc yields the TID of the top left pixel
- * of the quad, masking with 0xfffffffd yields the TID of the top pixel of
- * the current pixel's column, and masking with 0xfffffffe yields the TID
- * of the left pixel of the current pixel's row.
- *
- * Adding 1 yields the TID of the pixel to the right of the left pixel, and
- * adding 2 yields the TID of the pixel below the top pixel.
- */
-/* masks for thread ID. */
-#define TID_MASK_TOP_LEFT 0xfffffffc
-#define TID_MASK_TOP      0xfffffffd
-#define TID_MASK_LEFT     0xfffffffe
-
 static void si_llvm_emit_ddxy(
 	const struct lp_build_tgsi_action *action,
 	struct lp_build_tgsi_context *bld_base,
@@ -4759,59 +4730,24 @@ static void si_llvm_emit_ddxy(
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	unsigned opcode = emit_data->info->opcode;
-	LLVMValueRef thread_id, tl, trbl, tl_tid, trbl_tid, val, args[2];
+	LLVMValueRef val;
 	int idx;
 	unsigned mask;
 
-	thread_id = ac_get_thread_id(&ctx->ac);
-
 	if (opcode == TGSI_OPCODE_DDX_FINE)
-		mask = TID_MASK_LEFT;
+		mask = AC_TID_MASK_LEFT;
 	else if (opcode == TGSI_OPCODE_DDY_FINE)
-		mask = TID_MASK_TOP;
+		mask = AC_TID_MASK_TOP;
 	else
-		mask = TID_MASK_TOP_LEFT;
-
-	tl_tid = LLVMBuildAnd(gallivm->builder, thread_id,
-				lp_build_const_int32(gallivm, mask), "");
+		mask = AC_TID_MASK_TOP_LEFT;
 
 	/* for DDX we want to next X pixel, DDY next Y pixel. */
 	idx = (opcode == TGSI_OPCODE_DDX || opcode == TGSI_OPCODE_DDX_FINE) ? 1 : 2;
-	trbl_tid = LLVMBuildAdd(gallivm->builder, tl_tid,
-				  lp_build_const_int32(gallivm, idx), "");
 
 	val = LLVMBuildBitCast(gallivm->builder, emit_data->args[0], ctx->i32, "");
-
-	if (ctx->screen->has_ds_bpermute) {
-		args[0] = LLVMBuildMul(gallivm->builder, tl_tid,
-				       lp_build_const_int32(gallivm, 4), "");
-		args[1] = val;
-		tl = lp_build_intrinsic(gallivm->builder,
-					"llvm.amdgcn.ds.bpermute", ctx->i32,
-					args, 2, LP_FUNC_ATTR_READNONE);
-
-		args[0] = LLVMBuildMul(gallivm->builder, trbl_tid,
-				       lp_build_const_int32(gallivm, 4), "");
-		trbl = lp_build_intrinsic(gallivm->builder,
-					  "llvm.amdgcn.ds.bpermute", ctx->i32,
-					  args, 2, LP_FUNC_ATTR_READNONE);
-	} else {
-		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
-
-		store_ptr = ac_build_gep0(&ctx->ac, ctx->lds, thread_id);
-		load_ptr0 = ac_build_gep0(&ctx->ac, ctx->lds, tl_tid);
-		load_ptr1 = ac_build_gep0(&ctx->ac, ctx->lds, trbl_tid);
-
-		LLVMBuildStore(gallivm->builder, val, store_ptr);
-		tl = LLVMBuildLoad(gallivm->builder, load_ptr0, "");
-		trbl = LLVMBuildLoad(gallivm->builder, load_ptr1, "");
-	}
-
-	tl = LLVMBuildBitCast(gallivm->builder, tl, ctx->f32, "");
-	trbl = LLVMBuildBitCast(gallivm->builder, trbl,	ctx->f32, "");
-
-	emit_data->output[emit_data->chan] =
-		LLVMBuildFSub(gallivm->builder, trbl, tl, "");
+	val = ac_emit_ddxy(&ctx->ac, ctx->screen->has_ds_bpermute,
+			   mask, idx, ctx->lds, val);
+	emit_data->output[emit_data->chan] = val;
 }
 
 /*

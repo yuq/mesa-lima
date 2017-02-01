@@ -180,6 +180,18 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 
 LLVMValueRef
 ac_get_thread_id(struct ac_llvm_context *ctx);
+
+#define AC_TID_MASK_TOP_LEFT 0xfffffffc
+#define AC_TID_MASK_TOP      0xfffffffd
+#define AC_TID_MASK_LEFT     0xfffffffe
+
+LLVMValueRef
+ac_emit_ddxy(struct ac_llvm_context *ctx,
+	     bool has_ds_bpermute,
+	     uint32_t mask,
+	     int idx,
+	     LLVMValueRef lds,
+	     LLVMValueRef val);
 #ifdef __cplusplus
 }
 #endif
