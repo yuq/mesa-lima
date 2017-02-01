@@ -504,6 +504,37 @@ isl_format_supports_multisampling(const struct gen_device_info *devinfo,
    }
 }
 
+/**
+ * Returns true if the two formats are "CCS_E compatible" meaning that you can
+ * render in one format with CCS_E enabled and then texture using the other
+ * format without needing a resolve.
+ *
+ * Note: Even if the formats are compatible, special care must be taken if a
+ * clear color is involved because the encoding of the clear color is heavily
+ * format-dependent.
+ */
+bool
+isl_formats_are_ccs_e_compatible(const struct gen_device_info *devinfo,
+                                 enum isl_format format1,
+                                 enum isl_format format2)
+{
+   /* They must support CCS_E */
+   if (!isl_format_supports_ccs_e(devinfo, format1) ||
+       !isl_format_supports_ccs_e(devinfo, format2))
+      return false;
+
+   const struct isl_format_layout *fmtl1 = isl_format_get_layout(format1);
+   const struct isl_format_layout *fmtl2 = isl_format_get_layout(format2);
+
+   /* The compression used by CCS is not dependent on the actual data encoding
+    * of the format but only depends on the bit-layout of the channels.
+    */
+   return fmtl1->channels.r.bits == fmtl2->channels.r.bits &&
+          fmtl1->channels.g.bits == fmtl2->channels.g.bits &&
+          fmtl1->channels.b.bits == fmtl2->channels.b.bits &&
+          fmtl1->channels.a.bits == fmtl2->channels.a.bits;
+}
+
 static inline bool
 isl_format_has_channel_type(enum isl_format fmt, enum isl_base_type type)
 {
