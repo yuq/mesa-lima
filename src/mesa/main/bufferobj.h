@@ -348,5 +348,12 @@ _mesa_InvalidateBufferSubData(GLuint buffer, GLintptr offset,
 void GLAPIENTRY
 _mesa_InvalidateBufferData(GLuint buffer);
 
+void GLAPIENTRY
+_mesa_BufferPageCommitmentARB(GLenum target, GLintptr offset, GLsizeiptr size,
+                              GLboolean commit);
+
+void GLAPIENTRY
+_mesa_NamedBufferPageCommitmentARB(GLuint buffer, GLintptr offset,
+                                   GLsizeiptr size, GLboolean commit);
 
 #endif

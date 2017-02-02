@@ -4043,3 +4043,15 @@ _mesa_InvalidateBufferData(GLuint buffer)
    if (ctx->Driver.InvalidateBufferSubData)
       ctx->Driver.InvalidateBufferSubData(ctx, bufObj, 0, bufObj->Size);
 }
+
+void GLAPIENTRY
+_mesa_BufferPageCommitmentARB(GLenum target, GLintptr offset, GLsizeiptr size,
+                              GLboolean commit)
+{
+}
+
+void GLAPIENTRY
+_mesa_NamedBufferPageCommitmentARB(GLuint buffer, GLintptr offset,
+                                   GLsizeiptr size, GLboolean commit)
+{
+}

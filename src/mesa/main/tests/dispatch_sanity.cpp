@@ -961,6 +961,10 @@ const struct function common_desktop_functions_possible[] = {
    /* GL_KHR_blend_equation_advanced */
    { "glBlendBarrierKHR", 20, -1 },
 
+   /* GL_ARB_sparse_buffer */
+   { "glBufferPageCommitmentARB", 43, -1 },
+   { "glNamedBufferPageCommitmentARB", 43, -1 },
+
    { NULL, 0, -1 }
 };
 

@@ -3905,6 +3905,7 @@ struct gl_extensions
    GLboolean ARB_shading_language_packing;
    GLboolean ARB_shading_language_420pack;
    GLboolean ARB_shadow;
+   GLboolean ARB_sparse_buffer;
    GLboolean ARB_stencil_texturing;
    GLboolean ARB_sync;
    GLboolean ARB_tessellation_shader;
