@@ -461,6 +461,9 @@ void st_init_limits(struct pipe_screen *screen,
 
    c->MaxWindowRectangles =
       screen->get_param(screen, PIPE_CAP_MAX_WINDOW_RECTANGLES);
+
+   c->SparseBufferPageSize =
+      screen->get_param(screen, PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE);
 }
 
 
@@ -606,6 +609,7 @@ void st_init_extensions(struct pipe_screen *screen,
       { o(ARB_shader_texture_image_samples), PIPE_CAP_TGSI_TXQS                        },
       { o(ARB_shader_texture_lod),           PIPE_CAP_SM3                              },
       { o(ARB_shadow),                       PIPE_CAP_TEXTURE_SHADOW_MAP               },
+      { o(ARB_sparse_buffer),                PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE          },
       { o(ARB_texture_buffer_object),        PIPE_CAP_TEXTURE_BUFFER_OBJECTS           },
       { o(ARB_texture_cube_map_array),       PIPE_CAP_CUBE_MAP_ARRAY                   },
       { o(ARB_texture_gather),               PIPE_CAP_MAX_TEXTURE_GATHER_COMPONENTS    },
