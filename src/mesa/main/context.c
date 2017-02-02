@@ -1550,7 +1550,7 @@ _mesa_check_init_viewport(struct gl_context *ctx, GLuint width, GLuint height)
 static void
 handle_first_current(struct gl_context *ctx)
 {
-   if (ctx->Version == 0) {
+   if (ctx->Version == 0 || !ctx->DrawBuffer) {
       /* probably in the process of tearing down the context */
       return;
    }
