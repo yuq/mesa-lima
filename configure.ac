@@ -1700,22 +1700,27 @@ if test -n "$with_dri_drivers"; then
         DRI_DIRS="$DRI_DIRS $driver"
         case "x$driver" in
         xi915)
+            require_libdrm "i915"
             HAVE_I915_DRI=yes;
             PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xi965)
+            require_libdrm "i965"
             HAVE_I965_DRI=yes;
             PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xnouveau)
+            require_libdrm "nouveau"
             HAVE_NOUVEAU_DRI=yes;
             PKG_CHECK_MODULES([NVVIEUX], [libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
             ;;
         xradeon)
+            require_libdrm "radeon"
             HAVE_RADEON_DRI=yes;
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             ;;
         xr200)
+            require_libdrm "r200"
             HAVE_R200_DRI=yes;
             PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             ;;
