@@ -1702,27 +1702,27 @@ if test -n "$with_dri_drivers"; then
         xi915)
             require_libdrm "i915"
             HAVE_I915_DRI=yes;
-            PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
+            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xi965)
             require_libdrm "i965"
             HAVE_I965_DRI=yes;
-            PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
+            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xnouveau)
             require_libdrm "nouveau"
             HAVE_NOUVEAU_DRI=yes;
-            PKG_CHECK_MODULES([NVVIEUX], [libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
+            PKG_CHECK_MODULES([NVVIEUX], [libdrm >= $LIBDRM_NVVIEUX_REQUIRED libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
             ;;
         xradeon)
             require_libdrm "radeon"
             HAVE_RADEON_DRI=yes;
-            PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
+            PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             ;;
         xr200)
             require_libdrm "r200"
             HAVE_R200_DRI=yes;
-            PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
+            PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             ;;
         xswrast)
             HAVE_SWRAST_DRI=yes;
@@ -1774,7 +1774,7 @@ if test -n "$with_vulkan_drivers"; then
 
             ;;
         xradeon)
-            PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
+            PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             radeon_llvm_check $LLVM_REQUIRED_RADV "radv"
             HAVE_RADEON_VULKAN=yes;
             ;;
@@ -2304,23 +2304,23 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xi915)
             HAVE_GALLIUM_I915=yes
-            PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
+            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             require_libdrm "Gallium i915"
             ;;
         xilo)
             HAVE_GALLIUM_ILO=yes
-            PKG_CHECK_MODULES([INTEL], [libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
+            PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             require_libdrm "Gallium i965/ilo"
             ;;
         xr300)
             HAVE_GALLIUM_R300=yes
-            PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
+            PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r300"
             r300_require_llvm "r300"
             ;;
         xr600)
             HAVE_GALLIUM_R600=yes
-            PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
+            PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r600"
             if test "x$enable_opencl" = xyes; then
                 radeon_gallium_llvm_check $LLVM_REQUIRED_R600 "r600"
@@ -2331,25 +2331,25 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xradeonsi)
             HAVE_GALLIUM_RADEONSI=yes
-            PKG_CHECK_MODULES([RADEON], [libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
-            PKG_CHECK_MODULES([AMDGPU], [libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
+            PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
+            PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             require_libdrm "radeonsi"
             radeon_gallium_llvm_check $LLVM_REQUIRED_RADEONSI "radeonsi"
             require_basic_egl "radeonsi"
             ;;
         xnouveau)
             HAVE_GALLIUM_NOUVEAU=yes
-            PKG_CHECK_MODULES([NOUVEAU], [libdrm_nouveau >= $LIBDRM_NOUVEAU_REQUIRED])
+            PKG_CHECK_MODULES([NOUVEAU], [libdrm >= $LIBDRM_NOUVEAU_REQUIRED libdrm_nouveau >= $LIBDRM_NOUVEAU_REQUIRED])
             require_libdrm "nouveau"
             ;;
         xfreedreno)
             HAVE_GALLIUM_FREEDRENO=yes
-            PKG_CHECK_MODULES([FREEDRENO], [libdrm_freedreno >= $LIBDRM_FREEDRENO_REQUIRED])
+            PKG_CHECK_MODULES([FREEDRENO], [libdrm >= $LIBDRM_FREEDRENO_REQUIRED libdrm_freedreno >= $LIBDRM_FREEDRENO_REQUIRED])
             require_libdrm "freedreno"
             ;;
         xetnaviv)
             HAVE_GALLIUM_ETNAVIV=yes
-            PKG_CHECK_MODULES([ETNAVIV], [libdrm_etnaviv >= $LIBDRM_ETNAVIV_REQUIRED])
+            PKG_CHECK_MODULES([ETNAVIV], [libdrm >= $LIBDRM_ETNAVIV_REQUIRED libdrm_etnaviv >= $LIBDRM_ETNAVIV_REQUIRED])
             require_libdrm "etnaviv"
             ;;
        ximx)
@@ -2384,7 +2384,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xvc4)
             HAVE_GALLIUM_VC4=yes
-            PKG_CHECK_MODULES([VC4], [libdrm_vc4 >= $LIBDRM_VC4_REQUIRED])
+            PKG_CHECK_MODULES([VC4], [libdrm >= $LIBDRM_VC4_REQUIRED libdrm_vc4 >= $LIBDRM_VC4_REQUIRED])
             require_libdrm "vc4"
 
             PKG_CHECK_MODULES([SIMPENROSE], [simpenrose],
