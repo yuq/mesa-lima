@@ -459,6 +459,12 @@ isl_format_supports_ccs_d(const struct gen_device_info *devinfo,
    return fmtl->bpb == 32 || fmtl->bpb == 64 || fmtl->bpb == 128;
 }
 
+/**
+ * Returns true if the given format can support single-sample color
+ * compression.  This function only checks the format.  In order to determine
+ * if a surface supports CCS_E, several other factors need to be considered
+ * such as tiling and sample count.  See isl_surf_get_ccs_surf for details.
+ */
 bool
 isl_format_supports_ccs_e(const struct gen_device_info *devinfo,
                           enum isl_format format)
