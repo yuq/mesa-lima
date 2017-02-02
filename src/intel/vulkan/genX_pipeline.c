@@ -799,6 +799,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
        * to make sure it's initialized to something useful.
        */
       pipeline->writes_stencil = false;
+      pipeline->stencil_test_enable = false;
       pipeline->writes_depth = false;
       pipeline->depth_test_enable = false;
       memset(depth_stencil_dw, 0, sizeof(depth_stencil_dw));
@@ -814,6 +815,7 @@ emit_ds_state(struct anv_pipeline *pipeline,
 
    VkPipelineDepthStencilStateCreateInfo info = *pCreateInfo;
    sanitize_ds_state(&info, &pipeline->writes_stencil, ds_aspects);
+   pipeline->stencil_test_enable = info.stencilTestEnable;
    pipeline->writes_depth = info.depthWriteEnable;
    pipeline->depth_test_enable = info.depthTestEnable;
 
@@ -1574,8 +1576,8 @@ compute_kill_pixel(struct anv_pipeline *pipeline,
    const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
 
    /* This computes the KillPixel portion of the computation for whether or
-    * not we want to enable the PMA fix on gen8.  It's given by this chunk of
-    * the giant formula:
+    * not we want to enable the PMA fix on gen8 or gen9.  It's given by this
+    * chunk of the giant formula:
     *
     *    (3DSTATE_PS_EXTRA::PixelShaderKillsPixels ||
     *     3DSTATE_PS_EXTRA::oMask Present to RenderTarget ||

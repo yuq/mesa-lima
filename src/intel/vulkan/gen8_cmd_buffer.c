@@ -157,15 +157,38 @@ __emit_sf_state(struct anv_cmd_buffer *cmd_buffer)
 void
 genX(cmd_buffer_enable_pma_fix)(struct anv_cmd_buffer *cmd_buffer, bool enable)
 {
-#if GEN_GEN == 8
    if (cmd_buffer->state.pma_fix_enabled == enable)
       return;
 
+   cmd_buffer->state.pma_fix_enabled = enable;
+
+   /* According to the Broadwell PIPE_CONTROL documentation, software should
+    * emit a PIPE_CONTROL with the CS Stall and Depth Cache Flush bits set
+    * prior to the LRI.  If stencil buffer writes are enabled, then a Render
+    * Cache Flush is also necessary.
+    *
+    * The Skylake docs say to use a depth stall rather than a command
+    * streamer stall.  However, the hardware seems to violently disagree.
+    * A full command streamer stall seems to be needed in both cases.
+    */
    anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
       pc.DepthCacheFlushEnable = true;
       pc.CommandStreamerStallEnable = true;
       pc.RenderTargetCacheFlushEnable = true;
    }
+
+#if GEN_GEN == 9
+
+   uint32_t cache_mode;
+   anv_pack_struct(&cache_mode, GENX(CACHE_MODE_0),
+                   .STCPMAOptimizationEnable = enable,
+                   .STCPMAOptimizationEnableMask = true);
+   anv_batch_emit(&cmd_buffer->batch, GENX(MI_LOAD_REGISTER_IMM), lri) {
+      lri.RegisterOffset   = GENX(CACHE_MODE_0_num);
+      lri.DataDWord        = cache_mode;
+   }
+
+#elif GEN_GEN == 8
 
    uint32_t cache_mode;
    anv_pack_struct(&cache_mode, GENX(CACHE_MODE_1),
@@ -178,18 +201,20 @@ genX(cmd_buffer_enable_pma_fix)(struct anv_cmd_buffer *cmd_buffer, bool enable)
       lri.DataDWord        = cache_mode;
    }
 
+#endif /* GEN_GEN == 8 */
+
    /* After the LRI, a PIPE_CONTROL with both the Depth Stall and Depth Cache
     * Flush bits is often necessary.  We do it regardless because it's easier.
     * The render cache flush is also necessary if stencil writes are enabled.
+    *
+    * Again, the Skylake docs give a different set of flushes but the BDW
+    * flushes seem to work just as well.
     */
    anv_batch_emit(&cmd_buffer->batch, GENX(PIPE_CONTROL), pc) {
       pc.DepthStallEnable = true;
       pc.DepthCacheFlushEnable = true;
       pc.RenderTargetCacheFlushEnable = true;
    }
-
-   cmd_buffer->state.pma_fix_enabled = enable;
-#endif /* GEN_GEN == 8 */
 }
 
 static inline bool
@@ -278,6 +303,126 @@ want_depth_pma_fix(struct anv_cmd_buffer *cmd_buffer)
     */
    return (pipeline->kill_pixel && (pipeline->writes_depth ||
                                     pipeline->writes_stencil)) ||
+          wm_prog_data->computed_depth_mode != PSCDEPTH_OFF;
+}
+
+static inline bool
+want_stencil_pma_fix(struct anv_cmd_buffer *cmd_buffer)
+{
+   assert(GEN_GEN == 9);
+
+   /* From the Skylake PRM Vol. 2c CACHE_MODE_1::STC PMA Optimization Enable:
+    *
+    *    Clearing this bit will force the STC cache to wait for pending
+    *    retirement of pixels at the HZ-read stage and do the STC-test for
+    *    Non-promoted, R-computed and Computed depth modes instead of
+    *    postponing the STC-test to RCPFE.
+    *
+    *    STC_TEST_EN = 3DSTATE_STENCIL_BUFFER::STENCIL_BUFFER_ENABLE &&
+    *                  3DSTATE_WM_DEPTH_STENCIL::StencilTestEnable
+    *
+    *    STC_WRITE_EN = 3DSTATE_STENCIL_BUFFER::STENCIL_BUFFER_ENABLE &&
+    *                   (3DSTATE_WM_DEPTH_STENCIL::Stencil Buffer Write Enable &&
+    *                    3DSTATE_DEPTH_BUFFER::STENCIL_WRITE_ENABLE)
+    *
+    *    COMP_STC_EN = STC_TEST_EN &&
+    *                  3DSTATE_PS_EXTRA::PixelShaderComputesStencil
+    *
+    *    SW parses the pipeline states to generate the following logical
+    *    signal indicating if PMA FIX can be enabled.
+    *
+    *    STC_PMA_OPT =
+    *       3DSTATE_WM::ForceThreadDispatch != 1 &&
+    *       !(3DSTATE_RASTER::ForceSampleCount != NUMRASTSAMPLES_0) &&
+    *       3DSTATE_DEPTH_BUFFER::SURFACE_TYPE != NULL &&
+    *       3DSTATE_DEPTH_BUFFER::HIZ Enable &&
+    *       !(3DSTATE_WM::EDSC_Mode == 2) &&
+    *       3DSTATE_PS_EXTRA::PixelShaderValid &&
+    *       !(3DSTATE_WM_HZ_OP::DepthBufferClear ||
+    *         3DSTATE_WM_HZ_OP::DepthBufferResolve ||
+    *         3DSTATE_WM_HZ_OP::Hierarchical Depth Buffer Resolve Enable ||
+    *         3DSTATE_WM_HZ_OP::StencilBufferClear) &&
+    *       (COMP_STC_EN || STC_WRITE_EN) &&
+    *       ((3DSTATE_PS_EXTRA::PixelShaderKillsPixels ||
+    *         3DSTATE_WM::ForceKillPix == ON ||
+    *         3DSTATE_PS_EXTRA::oMask Present to RenderTarget ||
+    *         3DSTATE_PS_BLEND::AlphaToCoverageEnable ||
+    *         3DSTATE_PS_BLEND::AlphaTestEnable ||
+    *         3DSTATE_WM_CHROMAKEY::ChromaKeyKillEnable) ||
+    *        (3DSTATE_PS_EXTRA::Pixel Shader Computed Depth mode != PSCDEPTH_OFF))
+    */
+
+   /* These are always true:
+    *    3DSTATE_WM::ForceThreadDispatch != 1 &&
+    *    !(3DSTATE_RASTER::ForceSampleCount != NUMRASTSAMPLES_0)
+    */
+
+   /* We only enable the PMA fix if we know for certain that HiZ is enabled.
+    * If we don't know whether HiZ is enabled or not, we disable the PMA fix
+    * and there is no harm.
+    *
+    * (3DSTATE_DEPTH_BUFFER::SURFACE_TYPE != NULL) &&
+    * 3DSTATE_DEPTH_BUFFER::HIZ Enable
+    */
+   if (!cmd_buffer->state.hiz_enabled)
+      return false;
+
+   /* We can't possibly know if HiZ is enabled without the framebuffer */
+   assert(cmd_buffer->state.framebuffer);
+
+   /* HiZ is enabled so we had better have a depth buffer with HiZ */
+   const struct anv_image_view *ds_iview =
+      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
+   assert(ds_iview && ds_iview->image->aux_usage == ISL_AUX_USAGE_HIZ);
+
+   /* 3DSTATE_PS_EXTRA::PixelShaderValid */
+   struct anv_pipeline *pipeline = cmd_buffer->state.pipeline;
+   if (!anv_pipeline_has_stage(pipeline, MESA_SHADER_FRAGMENT))
+      return false;
+
+   /* !(3DSTATE_WM::EDSC_Mode == 2) */
+   const struct brw_wm_prog_data *wm_prog_data = get_wm_prog_data(pipeline);
+   if (wm_prog_data->early_fragment_tests)
+      return false;
+
+   /* We never use anv_pipeline for HiZ ops so this is trivially true:
+   *    !(3DSTATE_WM_HZ_OP::DepthBufferClear ||
+    *      3DSTATE_WM_HZ_OP::DepthBufferResolve ||
+    *      3DSTATE_WM_HZ_OP::Hierarchical Depth Buffer Resolve Enable ||
+    *      3DSTATE_WM_HZ_OP::StencilBufferClear)
+    */
+
+   /* 3DSTATE_STENCIL_BUFFER::STENCIL_BUFFER_ENABLE &&
+    * 3DSTATE_WM_DEPTH_STENCIL::StencilTestEnable
+    */
+   const bool stc_test_en =
+      (ds_iview->image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT) &&
+      pipeline->stencil_test_enable;
+
+   /* 3DSTATE_STENCIL_BUFFER::STENCIL_BUFFER_ENABLE &&
+    * (3DSTATE_WM_DEPTH_STENCIL::Stencil Buffer Write Enable &&
+    *  3DSTATE_DEPTH_BUFFER::STENCIL_WRITE_ENABLE)
+    */
+   const bool stc_write_en =
+      (ds_iview->image->aspects & VK_IMAGE_ASPECT_STENCIL_BIT) &&
+      pipeline->writes_stencil;
+
+   /* STC_TEST_EN && 3DSTATE_PS_EXTRA::PixelShaderComputesStencil */
+   const bool comp_stc_en = stc_test_en && wm_prog_data->computed_stencil;
+
+   /* COMP_STC_EN || STC_WRITE_EN */
+   if (!(comp_stc_en || stc_write_en))
+      return false;
+
+   /* (3DSTATE_PS_EXTRA::PixelShaderKillsPixels ||
+    *  3DSTATE_WM::ForceKillPix == ON ||
+    *  3DSTATE_PS_EXTRA::oMask Present to RenderTarget ||
+    *  3DSTATE_PS_BLEND::AlphaToCoverageEnable ||
+    *  3DSTATE_PS_BLEND::AlphaTestEnable ||
+    *  3DSTATE_WM_CHROMAKEY::ChromaKeyKillEnable) ||
+    * (3DSTATE_PS_EXTRA::Pixel Shader Computed Depth mode != PSCDEPTH_OFF)
+    */
+   return pipeline->kill_pixel ||
           wm_prog_data->computed_depth_mode != PSCDEPTH_OFF;
 }
 
@@ -390,6 +535,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (cmd_buffer->state.dirty & (ANV_CMD_DIRTY_PIPELINE |
+                                  ANV_CMD_DIRTY_RENDER_TARGETS |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_COMPARE_MASK |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_WRITE_MASK |
                                   ANV_CMD_DIRTY_DYNAMIC_STENCIL_REFERENCE)) {
@@ -415,6 +561,9 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
 
       anv_batch_emit_merge(&cmd_buffer->batch, dwords,
                            pipeline->gen9.wm_depth_stencil);
+
+      genX(cmd_buffer_enable_pma_fix)(cmd_buffer,
+                                      want_stencil_pma_fix(cmd_buffer));
    }
 #endif
 
