@@ -37,6 +37,7 @@ env:
     - LIBXCB_VERSION=libxcb-1.11
     - LIBXSHMFENCE_VERSION=libxshmfence-1.2
     - PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
+    - MAKEFLAGS=-j2
   matrix:
     - BUILD=make
     - BUILD=scons
