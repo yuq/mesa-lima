@@ -478,6 +478,16 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 		       (sscreen->b.info.drm_major == 2 &&
 			sscreen->b.info.drm_minor < 50);
 
+	case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
+		/* Disable on SI due to VM faults in CP DMA. Enable once these
+		 * faults are mitigated in software.
+		 */
+		if (sscreen->b.chip_class >= CIK &&
+		    sscreen->b.info.drm_major == 3 &&
+		    sscreen->b.info.drm_minor >= 13)
+			return RADEON_SPARSE_PAGE_SIZE;
+		return 0;
+
 	/* Unsupported features. */
 	case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
 	case PIPE_CAP_TGSI_FS_COORD_ORIGIN_LOWER_LEFT:
@@ -493,7 +503,6 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_TGSI_MUL_ZERO_WINS:
 	case PIPE_CAP_UMA:
 	case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
-	case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
 		return 0;
 
 	case PIPE_CAP_QUERY_BUFFER_OBJECT:
