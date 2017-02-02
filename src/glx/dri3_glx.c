@@ -119,6 +119,10 @@ static bool
 glx_dri3_in_current_context(struct loader_dri3_drawable *draw)
 {
    struct dri3_drawable *priv = loader_drawable_to_dri3_drawable(draw);
+
+   if (!priv)
+      return false;
+
    struct dri3_context *pcp = (struct dri3_context *) __glXGetCurrentContext();
    struct dri3_screen *psc = (struct dri3_screen *) priv->base.psc;
 
