@@ -381,6 +381,9 @@ The integer capabilities:
   PIPE_POLYGON_MODE_FILL_RECTANGLE mode is supported for
   ``pipe_rasterizer_state::fill_front`` and
   ``pipe_rasterizer_state::fill_back``.
+* ``PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE``: The page size of sparse buffers in
+  bytes, or 0 if sparse buffers are not supported. The page size must be at
+  most 64KB.
 
 
 .. _pipe_capf:

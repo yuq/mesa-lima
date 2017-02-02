@@ -249,6 +249,7 @@ vc4_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_TEX_TXF_LZ:
         case PIPE_CAP_TGSI_CLOCK:
         case PIPE_CAP_POLYGON_MODE_FILL_RECTANGLE:
+        case PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE:
                 return 0;
 
                 /* Stream output. */

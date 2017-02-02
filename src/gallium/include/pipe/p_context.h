@@ -585,6 +585,19 @@ struct pipe_context {
    void (*memory_barrier)(struct pipe_context *, unsigned flags);
 
    /**
+    * Change the commitment status of a part of the given resource, which must
+    * have been created with the PIPE_RESOURCE_FLAG_SPARSE bit.
+    *
+    * \param level The texture level whose commitment should be changed.
+    * \param box The region of the resource whose commitment should be changed.
+    * \param commit Whether memory should be committed or un-committed.
+    *
+    * \return false if out of memory, true on success.
+    */
+   bool (*resource_commit)(struct pipe_context *, struct pipe_resource *,
+                           unsigned level, struct pipe_box *box, bool commit);
+
+   /**
     * Creates a video codec for a specific video format/profile
     */
    struct pipe_video_codec *(*create_video_codec)( struct pipe_context *context,

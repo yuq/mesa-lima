@@ -618,6 +618,31 @@ are set.
 
 
 
+.. _resource_commit:
+
+resource_commit
+%%%%%%%%%%%%%%%
+
+This function changes the commit state of a part of a sparse resource. Sparse
+resources are created by setting the ``PIPE_RESOURCE_FLAG_SPARSE`` flag when
+calling ``resource_create``. Initially, sparse resources only reserve a virtual
+memory region that is not backed by memory (i.e., it is uncommitted). The
+``resource_commit`` function can be called to commit or uncommit parts (or all)
+of a resource. The driver manages the underlying backing memory.
+
+The contents of newly committed memory regions are undefined. Calling this
+function to commit an already committed memory region is allowed and leaves its
+content unchanged. Similarly, calling this function to uncommit an already
+uncommitted memory region is allowed.
+
+For buffers, the given box must be aligned to multiples of
+``PIPE_CAP_SPARSE_BUFFER_PAGE_SIZE``. As an exception to this rule, if the size
+of the buffer is not a multiple of the page size, changing the commit state of
+the last (partial) page requires a box that ends at the end of the buffer
+(i.e., box->x + box->width == buffer->width0).
+
+
+
 .. _pipe_transfer:
 
 PIPE_TRANSFER
