@@ -26,6 +26,8 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/broadcom/ \
 	-I$(top_srcdir)/src/broadcom/include \
+	-I$(top_srcdir)/src/gallium/auxiliary \
+	-I$(top_srcdir)/src/gallium/include \
 	$(VALGRIND_CFLAGS) \
 	$(DEFINES)
 

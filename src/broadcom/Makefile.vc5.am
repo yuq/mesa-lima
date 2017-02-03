@@ -13,6 +13,7 @@ check_PROGRAMS += \
 
 LDADD = \
 	libbroadcom.la \
+	$(top_builddir)/src/compiler/nir/libnir.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(NULL)
 

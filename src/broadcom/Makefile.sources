@@ -16,6 +16,19 @@ BROADCOM_FILES = \
 	clif/clif_dump.c \
 	clif/clif_dump.h \
 	common/v3d_device_info.h \
+	compiler/nir_to_vir.c \
+	compiler/vir.c \
+	compiler/vir_dump.c \
+	compiler/vir_live_variables.c \
+	compiler/vir_lower_uniforms.c \
+	compiler/vir_opt_copy_propagate.c \
+	compiler/vir_opt_dead_code.c \
+	compiler/vir_register_allocate.c \
+	compiler/vir_to_qpu.c \
+	compiler/qpu_schedule.c \
+	compiler/qpu_validate.c \
+	compiler/v3d_compiler.h \
+	compiler/v3d_nir_lower_io.c \
 	qpu/qpu_disasm.c \
 	qpu/qpu_disasm.h \
 	qpu/qpu_instr.c \
