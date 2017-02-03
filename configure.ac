@@ -2878,6 +2878,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/drivers/etnaviv/Makefile
                  src/gallium/drivers/imx/Makefile
                  src/gallium/drivers/vc4/Makefile
+                 src/gallium/drivers/vc5/Makefile
                  src/gallium/drivers/virgl/Makefile
                  src/gallium/state_trackers/clover/Makefile
                  src/gallium/state_trackers/dri/Makefile
@@ -2921,6 +2922,7 @@ AC_CONFIG_FILES([Makefile
                  src/gallium/winsys/sw/wrapper/Makefile
                  src/gallium/winsys/sw/xlib/Makefile
                  src/gallium/winsys/vc4/drm/Makefile
+                 src/gallium/winsys/vc5/drm/Makefile
                  src/gallium/winsys/virgl/drm/Makefile
                  src/gallium/winsys/virgl/vtest/Makefile
                  src/gbm/Makefile

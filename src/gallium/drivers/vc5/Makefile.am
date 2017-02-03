@@ -22,36 +22,19 @@
 include Makefile.sources
 include $(top_srcdir)/src/gallium/Automake.inc
 
-if USE_VC4_SIMULATOR
-SIM_LDFLAGS = -lsimpenrose
-endif
-
 AM_CFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
-	-I$(top_srcdir)/include/drm-uapi \
-	-I$(top_builddir)/src \
-	-I$(top_srcdir)/src/broadcom/cle \
+	-I$(top_builddir)/src/broadcom \
 	$(LIBDRM_CFLAGS) \
+	$(VC5_SIMULATOR_CFLAGS) \
 	$(GALLIUM_DRIVER_CFLAGS) \
-	$(SIM_CFLAGS) \
 	$(VALGRIND_CFLAGS) \
 	$()
 
-noinst_LTLIBRARIES = libvc4.la
+noinst_LTLIBRARIES = libvc5.la
 
-libvc4_la_SOURCES = $(C_SOURCES)
+libvc5_la_SOURCES = $(C_SOURCES)
 
-libvc4_la_LIBADD = \
-	$(SIM_LIB) \
-	$()
-
-if HAVE_ARM_ASM
-noinst_LTLIBRARIES += libvc4_neon.la
-libvc4_la_LIBADD += libvc4_neon.la
-libvc4_neon_la_SOURCES = $(NEON_C_SOURCES)
-libvc4_neon_la_CFLAGS = $(AM_CFLAGS) -mfpu=neon
-endif
-
-libvc4_la_LDFLAGS = $(SIM_LDFLAGS)
-
-EXTRA_DIST = kernel/README
+libvc5_la_LDFLAGS = \
+	$(VC5_SIMULATOR_LIBS) \
+	$(NULL)
