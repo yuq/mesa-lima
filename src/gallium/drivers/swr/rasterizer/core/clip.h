@@ -56,11 +56,7 @@ enum SWR_CLIPCODES
     GUARDBAND_BOTTOM = (0x80 << CLIPCODE_SHIFT | 0x8)
 };
 
-#define FRUSTUM_CLIP_MASK (FRUSTUM_LEFT|FRUSTUM_TOP|FRUSTUM_RIGHT|FRUSTUM_BOTTOM|FRUSTUM_NEAR|FRUSTUM_FAR)
 #define GUARDBAND_CLIP_MASK (FRUSTUM_NEAR|FRUSTUM_FAR|GUARDBAND_LEFT|GUARDBAND_TOP|GUARDBAND_RIGHT|GUARDBAND_BOTTOM|NEGW)
-
-void Clip(const float *pTriangle, const float *pAttribs, int numAttribs, float *pOutTriangles, 
-          int *numVerts, float *pOutAttribs);
 
 INLINE
 void ComputeClipCodes(const API_STATE& state, const simdvector& vertex, simdscalar& clipCodes, simdscalari viewportIndexes)
