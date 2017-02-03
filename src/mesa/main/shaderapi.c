@@ -636,7 +636,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
       *params = shProg->DeletePending;
       return;
    case GL_LINK_STATUS:
-      *params = shProg->data->LinkStatus;
+      *params = shProg->data->LinkStatus ? GL_TRUE : GL_FALSE;
       return;
    case GL_VALIDATE_STATUS:
       *params = shProg->data->Validated;
@@ -815,7 +815,7 @@ get_programiv(struct gl_context *ctx, GLuint program, GLenum pname,
    }
    case GL_PROGRAM_SEPARABLE:
       /* If the program has not been linked, return initial value 0. */
-      *params = (shProg->data->LinkStatus == GL_FALSE) ? 0 : shProg->SeparateShader;
+      *params = (shProg->data->LinkStatus == linking_failure) ? 0 : shProg->SeparateShader;
       return;
 
    /* ARB_tessellation_shader */
@@ -1160,7 +1160,7 @@ _mesa_link_program(struct gl_context *ctx, struct gl_shader_program *shProg)
       ralloc_free(filename);
    }
 
-   if (shProg->data->LinkStatus == GL_FALSE &&
+   if (shProg->data->LinkStatus == linking_failure &&
        (ctx->_Shader->Flags & GLSL_REPORT_ERRORS)) {
       _mesa_debug(ctx, "Error linking program %u:\n%s\n",
                   shProg->Name, shProg->data->InfoLog);
@@ -2095,7 +2095,7 @@ _mesa_ProgramBinary(GLuint program, GLenum binaryFormat,
     * Since any value of binaryFormat passed "is not one of those specified as
     * allowable for [this] command, an INVALID_ENUM error is generated."
     */
-   shProg->data->LinkStatus = GL_FALSE;
+   shProg->data->LinkStatus = linking_failure;
    _mesa_error(ctx, GL_INVALID_ENUM, "glProgramBinary");
 }
 
@@ -2270,7 +2270,7 @@ _mesa_CreateShaderProgramv(GLenum type, GLsizei count,
 	    /* Possibly... */
 	    if (active-user-defined-varyings-in-linked-program) {
 	       append-error-to-info-log;
-               shProg->data->LinkStatus = GL_FALSE;
+               shProg->data->LinkStatus = linking_failure;
 	    }
 #endif
 	 }

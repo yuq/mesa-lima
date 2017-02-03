@@ -3096,7 +3096,7 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
    _mesa_clear_shader_program_data(ctx, prog);
 
-   prog->data->LinkStatus = GL_TRUE;
+   prog->data->LinkStatus = linking_success;
 
    for (i = 0; i < prog->NumShaders; i++) {
       if (!prog->Shaders[i]->CompileStatus) {
@@ -3110,7 +3110,7 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
 
    if (prog->data->LinkStatus) {
       if (!ctx->Driver.LinkShader(ctx, prog)) {
-         prog->data->LinkStatus = GL_FALSE;
+         prog->data->LinkStatus = linking_failure;
       }
    }
 

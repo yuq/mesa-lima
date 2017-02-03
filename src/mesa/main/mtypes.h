@@ -2647,6 +2647,17 @@ struct gl_program_resource
 };
 
 /**
+ * Link status enum. linking_skipped is used to indicate linking
+ * was skipped due to the shader being loaded from the on-disk cache.
+ */
+enum gl_link_status
+{
+   linking_failure = 0,
+   linking_success,
+   linking_skipped
+};
+
+/**
  * A data structure to be shared by gl_shader_program and gl_program.
  */
 struct gl_shader_program_data
@@ -2677,7 +2688,7 @@ struct gl_shader_program_data
    struct gl_program_resource *ProgramResourceList;
    unsigned NumProgramResourceList;
 
-   GLboolean LinkStatus;   /**< GL_LINK_STATUS */
+   enum gl_link_status LinkStatus;   /**< GL_LINK_STATUS */
    GLboolean Validated;
    GLchar *InfoLog;
 

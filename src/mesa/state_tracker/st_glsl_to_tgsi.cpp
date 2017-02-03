@@ -588,7 +588,7 @@ fail_link(struct gl_shader_program *prog, const char *fmt, ...)
    ralloc_vasprintf_append(&prog->data->InfoLog, fmt, args);
    va_end(args);
 
-   prog->data->LinkStatus = GL_FALSE;
+   prog->data->LinkStatus = linking_failure;
 }
 
 static int

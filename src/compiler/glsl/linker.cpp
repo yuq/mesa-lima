@@ -421,7 +421,7 @@ linker_error(gl_shader_program *prog, const char *fmt, ...)
    ralloc_vasprintf_append(&prog->data->InfoLog, fmt, ap);
    va_end(ap);
 
-   prog->data->LinkStatus = false;
+   prog->data->LinkStatus = linking_failure;
 }
 
 
@@ -2190,7 +2190,7 @@ link_intrastage_shaders(void *mem_ctx,
                              _mesa_shader_stage_to_program(shader_list[0]->Stage),
                              prog->Name, false);
    if (!gl_prog) {
-      prog->data->LinkStatus = false;
+      prog->data->LinkStatus = linking_failure;
       _mesa_delete_linked_shader(ctx, linked);
       return NULL;
    }
@@ -4629,7 +4629,7 @@ linker_optimisation_loop(struct gl_context *ctx, exec_list *ir,
 void
 link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 {
-   prog->data->LinkStatus = true; /* All error paths will set this to false */
+   prog->data->LinkStatus = linking_success; /* All error paths will set this to false */
    prog->data->Validated = false;
 
    /* Section 7.3 (Program Objects) of the OpenGL 4.5 Core Profile spec says:
