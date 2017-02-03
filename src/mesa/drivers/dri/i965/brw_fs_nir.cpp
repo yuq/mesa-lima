@@ -644,6 +644,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    switch (instr->op) {
    case nir_op_i2f:
    case nir_op_u2f:
+   case nir_op_i642d:
+   case nir_op_u642d:
       if (optimize_extract_to_float(instr, result))
          return;
       inst = bld.MOV(result, op[0]);
