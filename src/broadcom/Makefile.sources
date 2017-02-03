@@ -14,6 +14,11 @@ BROADCOM_FILES = \
 	common/v3d_debug.c \
 	common/v3d_debug.h \
 	common/v3d_device_info.h \
+	qpu/qpu_disasm.c \
+	qpu/qpu_disasm.h \
+	qpu/qpu_instr.c \
+	qpu/qpu_instr.h \
+	qpu/qpu_pack.c \
 	$()
 
 BROADCOM_DECODER_FILES = \
