@@ -2351,9 +2351,11 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 
 			if (indir_index)
 				index = LLVMBuildAdd(ctx->builder, index, indir_index, "");
+
+			value = llvm_extract_elem(ctx, src, chan);
 			derived_ptr = LLVMBuildGEP(ctx->builder, ptr, &index, 1, "");
 			LLVMBuildStore(ctx->builder,
-			               to_integer(ctx, src), derived_ptr);
+			               to_integer(ctx, value), derived_ptr);
 		}
 		break;
 	}
