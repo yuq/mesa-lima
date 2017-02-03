@@ -1174,6 +1174,26 @@ emit_3dstate_gs(struct anv_pipeline *pipeline)
    }
 }
 
+static inline bool
+has_color_buffer_write_enabled(const struct anv_pipeline *pipeline)
+{
+   const struct anv_shader_bin *shader_bin =
+      pipeline->shaders[MESA_SHADER_FRAGMENT];
+   if (!shader_bin)
+      return false;
+
+   const struct anv_pipeline_bind_map *bind_map = &shader_bin->bind_map;
+   for (int i = 0; i < bind_map->surface_count; i++) {
+      if (bind_map->surface_to_descriptor[i].set !=
+          ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS)
+         continue;
+      if (bind_map->surface_to_descriptor[i].index != UINT8_MAX)
+         return true;
+   }
+
+   return false;
+}
+
 static void
 emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
                 const VkPipelineMultisampleStateCreateInfo *multisample)
@@ -1202,9 +1222,6 @@ emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
             wm_prog_data->barycentric_interp_modes;
 
 #if GEN_GEN < 8
-         /* FIXME: This needs a lot more work, cf gen7 upload_wm_state(). */
-         wm.ThreadDispatchEnable          = true;
-
          wm.PixelShaderComputedDepthMode  = wm_prog_data->computed_depth_mode;
          wm.PixelShaderUsesSourceDepth    = wm_prog_data->uses_src_depth;
          wm.PixelShaderUsesSourceW        = wm_prog_data->uses_src_w;
@@ -1219,6 +1236,12 @@ emit_3dstate_wm(struct anv_pipeline *pipeline, struct anv_subpass *subpass,
           */
          wm.PixelShaderKillsPixel         = subpass->has_ds_self_dep ||
                                             wm_prog_data->uses_kill;
+
+         if (wm.PixelShaderComputedDepthMode != PSCDEPTH_OFF ||
+             wm_prog_data->has_side_effects ||
+             wm.PixelShaderKillsPixel ||
+             has_color_buffer_write_enabled(pipeline))
+            wm.ThreadDispatchEnable = true;
 
          if (samples > 1) {
             wm.MultisampleRasterizationMode = MSRASTMODE_ON_PATTERN;
@@ -1336,26 +1359,6 @@ emit_3dstate_ps(struct anv_pipeline *pipeline,
       ps.ScratchSpaceBasePointer =
          get_scratch_address(pipeline, MESA_SHADER_FRAGMENT, fs_bin);
    }
-}
-
-static inline bool
-has_color_buffer_write_enabled(const struct anv_pipeline *pipeline)
-{
-   const struct anv_shader_bin *shader_bin =
-      pipeline->shaders[MESA_SHADER_FRAGMENT];
-   if (!shader_bin)
-      return false;
-
-   const struct anv_pipeline_bind_map *bind_map = &shader_bin->bind_map;
-   for (int i = 0; i < bind_map->surface_count; i++) {
-      if (bind_map->surface_to_descriptor[i].set !=
-          ANV_DESCRIPTOR_SET_COLOR_ATTACHMENTS)
-         continue;
-      if (bind_map->surface_to_descriptor[i].index != UINT8_MAX)
-         return true;
-   }
-
-   return false;
 }
 
 #if GEN_GEN >= 8
