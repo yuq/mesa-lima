@@ -13,6 +13,8 @@ BROADCOM_FILES = \
 	cle/v3d_packet_helpers.h \
 	common/v3d_debug.c \
 	common/v3d_debug.h \
+	clif/clif_dump.c \
+	clif/clif_dump.h \
 	common/v3d_device_info.h \
 	qpu/qpu_disasm.c \
 	qpu/qpu_disasm.h \
