@@ -345,6 +345,17 @@ loader_get_driver_for_fd(int fd)
    int vendor_id, chip_id, i, j;
    char *driver = NULL;
 
+   /* Allow an environment variable to force choosing a different driver
+    * binary.  If that driver binary can't survive on this FD, that's the
+    * user's problem, but this allows vc4 simulator to run on an i965 host,
+    * and may be useful for some touch testing of i915 on an i965 host.
+    */
+   if (geteuid() == getuid()) {
+      driver = getenv("MESA_LOADER_DRIVER_OVERRIDE");
+      if (driver)
+         return strdup(driver);
+   }
+
    if (!loader_get_pci_id_for_fd(fd, &vendor_id, &chip_id)) {
 
 #if HAVE_LIBDRM
