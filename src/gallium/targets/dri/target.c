@@ -73,16 +73,6 @@ DEFINE_LOADER_DRM_ENTRYPOINT(virtio_gpu)
 
 #if defined(GALLIUM_VC4)
 DEFINE_LOADER_DRM_ENTRYPOINT(vc4)
-
-#if defined(USE_VC4_SIMULATOR)
-/**
- * When building using the simulator (on x86), we advertise ourselves as the
- * i965 driver so that you can just make a directory with a link from
- * i965_dri.so to the built vc4_dri.so, and point LIBGL_DRIVERS_PATH to that
- * on your i965-using host to run the driver under simulation.
- */
-DEFINE_LOADER_DRM_ENTRYPOINT(i965)
-#endif
 #endif
 
 #if defined(GALLIUM_ETNAVIV)
