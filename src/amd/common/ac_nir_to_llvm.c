@@ -2237,6 +2237,9 @@ static LLVMValueRef visit_load_var(struct nir_to_llvm_context *ctx,
 		LLVMValueRef ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
 		LLVMValueRef derived_ptr;
 
+		if (indir_index)
+			indir_index = LLVMBuildMul(ctx->builder, indir_index, LLVMConstInt(ctx->i32, 4, false), "");
+
 		for (unsigned chan = 0; chan < ve; chan++) {
 			LLVMValueRef index = LLVMConstInt(ctx->i32, chan, false);
 			if (indir_index)
@@ -2343,6 +2346,10 @@ visit_store_var(struct nir_to_llvm_context *ctx,
 		break;
 	case nir_var_shared: {
 		LLVMValueRef ptr = get_shared_memory_ptr(ctx, idx, ctx->i32);
+
+		if (indir_index)
+			indir_index = LLVMBuildMul(ctx->builder, indir_index, LLVMConstInt(ctx->i32, 4, false), "");
+
 		for (unsigned chan = 0; chan < 8; chan++) {
 			if (!(writemask & (1 << chan)))
 				continue;
