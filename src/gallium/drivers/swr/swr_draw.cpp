@@ -143,6 +143,7 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    struct swr_vertex_element_state *velems = ctx->velems;
    velems->fsState.cutIndex = info->restart_index;
    velems->fsState.bEnableCutIndex = info->primitive_restart;
+   velems->fsState.bPartialVertexBuffer = (info->min_index > 0);
 
    swr_jit_fetch_key key;
    swr_generate_fetch_key(key, velems);

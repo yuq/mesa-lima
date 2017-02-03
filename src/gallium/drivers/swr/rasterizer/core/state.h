@@ -524,6 +524,7 @@ struct SWR_VERTEX_BUFFER_STATE
     const uint8_t *pData;
     uint32_t size;
     uint32_t numaNode;
+    uint32_t minVertex;             // min vertex (for bounds checking)
     uint32_t maxVertex;             // size / pitch.  precalculated value used by fetch shader for OOB checks
     uint32_t partialInboundsSize;   // size % pitch.  precalculated value used by fetch shader for partially OOB vertices
 };
