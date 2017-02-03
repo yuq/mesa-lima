@@ -22,6 +22,7 @@
  */
 
 #include "ac_nir_to_llvm.h"
+#include "ac_llvm_build.h"
 #include "ac_llvm_util.h"
 #include "ac_binary.h"
 #include "sid.h"
