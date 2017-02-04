@@ -1011,13 +1011,18 @@ CodeEmitterNVC0::emitMINMAX(const Instruction *i)
    if (i->ftz)
       op |= 1 << 5;
    else
-   if (!isFloatType(i->dType))
+   if (!isFloatType(i->dType)) {
       op |= isSignedType(i->dType) ? 0x23 : 0x03;
+      op |= i->subOp << 6;
+   }
    if (i->dType == TYPE_F64)
       op |= 0x01;
 
    emitForm_A(i, op);
    emitNegAbs12(i);
+
+   if (i->flagsDef >= 0)
+      code[1] |= 1 << 16;
 }
 
 void

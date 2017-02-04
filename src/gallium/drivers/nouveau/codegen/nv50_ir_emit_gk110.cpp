@@ -993,6 +993,9 @@ CodeEmitterGK110::emitMINMAX(const Instruction *i)
    if (i->dType == TYPE_S32)
       code[1] |= 1 << 19;
    code[1] |= (i->op == OP_MIN) ? 0x1c00 : 0x3c00; // [!]pt
+   code[1] |= i->subOp << 14;
+   if (i->flagsDef >= 0)
+      code[1] |= i->subOp << 18;
 
    FTZ_(2f);
    ABS_(31, 0);

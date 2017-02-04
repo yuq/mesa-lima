@@ -1867,6 +1867,7 @@ CodeEmitterGM107::emitIMNMX()
 
    emitField(0x30, 1, isSignedType(insn->dType));
    emitCC   (0x2f);
+   emitField(0x2b, 2, insn->subOp);
    emitField(0x2a, 1, insn->op == OP_MAX);
    emitPRED (0x27);
    emitGPR  (0x08, insn->src(0));

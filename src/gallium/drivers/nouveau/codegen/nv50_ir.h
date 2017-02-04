@@ -251,6 +251,10 @@ enum operation
 #define NV50_IR_SUBOP_VOTE_ANY 1
 #define NV50_IR_SUBOP_VOTE_UNI 2
 
+#define NV50_IR_SUBOP_MINMAX_LOW  1
+#define NV50_IR_SUBOP_MINMAX_MED  2
+#define NV50_IR_SUBOP_MINMAX_HIGH 3
+
 enum DataType
 {
    TYPE_NONE,
