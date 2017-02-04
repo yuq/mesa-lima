@@ -47,6 +47,7 @@ enum radeon_bo_flag { /* bitfield */
 	RADEON_FLAG_GTT_WC =        (1 << 0),
 	RADEON_FLAG_CPU_ACCESS =    (1 << 1),
 	RADEON_FLAG_NO_CPU_ACCESS = (1 << 2),
+	RADEON_FLAG_VIRTUAL =       (1 << 3)
 };
 
 enum radeon_bo_usage { /* bitfield */
@@ -289,6 +290,10 @@ struct radeon_winsys {
 
 	void (*buffer_set_metadata)(struct radeon_winsys_bo *bo,
 				    struct radeon_bo_metadata *md);
+
+	void (*buffer_virtual_bind)(struct radeon_winsys_bo *parent,
+	                            uint64_t offset, uint64_t size,
+	                            struct radeon_winsys_bo *bo, uint64_t bo_offset);
 	struct radeon_winsys_ctx *(*ctx_create)(struct radeon_winsys *ws);
 	void (*ctx_destroy)(struct radeon_winsys_ctx *ctx);
 
