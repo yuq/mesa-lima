@@ -1881,8 +1881,12 @@ void radv_GetBufferMemoryRequirements(
 
 	pMemoryRequirements->memoryTypeBits = (1u << RADV_MEM_TYPE_COUNT) - 1;
 
-	pMemoryRequirements->size = buffer->size;
-	pMemoryRequirements->alignment = 16;
+	if (buffer->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)
+		pMemoryRequirements->alignment = 4096;
+	else
+		pMemoryRequirements->alignment = 16;
+
+	pMemoryRequirements->size = align64(buffer->size, pMemoryRequirements->alignment);
 }
 
 void radv_GetImageMemoryRequirements(
@@ -2208,6 +2212,17 @@ VkResult radv_CreateBuffer(
 	buffer->usage = pCreateInfo->usage;
 	buffer->bo = NULL;
 	buffer->offset = 0;
+	buffer->flags = pCreateInfo->flags;
+
+	if (pCreateInfo->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT) {
+		buffer->bo = device->ws->buffer_create(device->ws,
+		                                       align64(buffer->size, 4096),
+		                                       4096, 0, RADEON_FLAG_VIRTUAL);
+		if (!buffer->bo) {
+			vk_free2(&device->alloc, pAllocator, buffer);
+			return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+		}
+	}
 
 	*pBuffer = radv_buffer_to_handle(buffer);
 
@@ -2224,6 +2239,9 @@ void radv_DestroyBuffer(
 
 	if (!buffer)
 		return;
+
+	if (buffer->flags & VK_BUFFER_CREATE_SPARSE_BINDING_BIT)
+		device->ws->buffer_destroy(buffer->bo);
 
 	vk_free2(&device->alloc, pAllocator, buffer);
 }
