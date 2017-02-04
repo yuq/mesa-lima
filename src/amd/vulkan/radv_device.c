@@ -1959,13 +1959,89 @@ VkResult radv_BindImageMemory(
 	return VK_SUCCESS;
 }
 
-VkResult radv_QueueBindSparse(
-	VkQueue                                     queue,
+
+static void
+radv_sparse_buffer_bind_memory(struct radv_device *device,
+                               const VkSparseBufferMemoryBindInfo *bind)
+{
+	RADV_FROM_HANDLE(radv_buffer, buffer, bind->buffer);
+
+	for (uint32_t i = 0; i < bind->bindCount; ++i) {
+		struct radv_device_memory *mem = NULL;
+
+		if (bind->pBinds[i].memory != VK_NULL_HANDLE)
+			mem = radv_device_memory_from_handle(bind->pBinds[i].memory);
+
+		device->ws->buffer_virtual_bind(buffer->bo,
+		                                bind->pBinds[i].resourceOffset,
+		                                bind->pBinds[i].size,
+		                                mem ? mem->bo : NULL,
+		                                bind->pBinds[i].memoryOffset);
+	}
+}
+
+static void
+radv_sparse_image_opaque_bind_memory(struct radv_device *device,
+                                     const VkSparseImageOpaqueMemoryBindInfo *bind)
+{
+	RADV_FROM_HANDLE(radv_image, image, bind->image);
+
+	for (uint32_t i = 0; i < bind->bindCount; ++i) {
+		struct radv_device_memory *mem = NULL;
+
+		if (bind->pBinds[i].memory != VK_NULL_HANDLE)
+			mem = radv_device_memory_from_handle(bind->pBinds[i].memory);
+
+		device->ws->buffer_virtual_bind(image->bo,
+		                                bind->pBinds[i].resourceOffset,
+		                                bind->pBinds[i].size,
+		                                mem ? mem->bo : NULL,
+		                                bind->pBinds[i].memoryOffset);
+	}
+}
+
+ VkResult radv_QueueBindSparse(
+	VkQueue                                     _queue,
 	uint32_t                                    bindInfoCount,
 	const VkBindSparseInfo*                     pBindInfo,
-	VkFence                                     fence)
+	VkFence                                     _fence)
 {
-	stub_return(VK_ERROR_INCOMPATIBLE_DRIVER);
+	RADV_FROM_HANDLE(radv_fence, fence, _fence);
+	RADV_FROM_HANDLE(radv_queue, queue, _queue);
+	struct radeon_winsys_fence *base_fence = fence ? fence->fence : NULL;
+	bool fence_emitted = false;
+
+	for (uint32_t i = 0; i < bindInfoCount; ++i) {
+		for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; ++j) {
+			radv_sparse_buffer_bind_memory(queue->device,
+			                               pBindInfo[i].pBufferBinds + j);
+		}
+
+		for (uint32_t j = 0; j < pBindInfo[i].imageOpaqueBindCount; ++j) {
+			radv_sparse_image_opaque_bind_memory(queue->device,
+			                                     pBindInfo[i].pImageOpaqueBinds + j);
+		}
+
+		if (pBindInfo[i].waitSemaphoreCount || pBindInfo[i].signalSemaphoreCount) {
+			queue->device->ws->cs_submit(queue->hw_ctx, queue->queue_idx,
+			                             &queue->device->empty_cs[queue->queue_family_index],
+			                             1, NULL, NULL,
+			                             (struct radeon_winsys_sem **)pBindInfo[i].pWaitSemaphores,
+			                             pBindInfo[i].waitSemaphoreCount,
+			                             (struct radeon_winsys_sem **)pBindInfo[i].pSignalSemaphores,
+			                             pBindInfo[i].signalSemaphoreCount,
+			                             false, base_fence);
+			fence_emitted = true;
+			if (fence)
+				fence->submitted = true;
+		}
+	}
+
+	if (fence && !fence_emitted) {
+		fence->signalled = true;
+	}
+
+	return VK_SUCCESS;
 }
 
 VkResult radv_CreateFence(
