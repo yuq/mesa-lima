@@ -1070,6 +1070,7 @@ struct radv_image {
 	uint32_t samples; /**< VkImageCreateInfo::samples */
 	VkImageUsageFlags usage; /**< Superset of VkImageCreateInfo::usage. */
 	VkImageTiling tiling; /** VkImageCreateInfo::tiling */
+	VkImageCreateFlags flags; /** VkImageCreateInfo::flags */
 
 	VkDeviceSize size;
 	uint32_t alignment;

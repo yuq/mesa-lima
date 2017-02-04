@@ -636,6 +636,7 @@ radv_image_create(VkDevice _device,
 	image->samples = pCreateInfo->samples;
 	image->tiling = pCreateInfo->tiling;
 	image->usage = pCreateInfo->usage;
+	image->flags = pCreateInfo->flags;
 
 	image->exclusive = pCreateInfo->sharingMode == VK_SHARING_MODE_EXCLUSIVE;
 	if (pCreateInfo->sharingMode == VK_SHARING_MODE_CONCURRENT) {
@@ -676,6 +677,20 @@ radv_image_create(VkDevice _device,
 		image->surface.level[0].pitch_bytes = create_info->stride;
 		image->surface.level[0].slice_size = create_info->stride * image->surface.level[0].nblk_y;
 	}
+
+	if (pCreateInfo->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT) {
+		image->alignment = MAX2(image->alignment, 4096);
+		image->size = align64(image->size, image->alignment);
+		image->offset = 0;
+
+		image->bo = device->ws->buffer_create(device->ws, image->size, image->alignment,
+		                                      0, RADEON_FLAG_VIRTUAL);
+		if (!image->bo) {
+			vk_free2(&device->alloc, alloc, image);
+			return vk_error(VK_ERROR_OUT_OF_DEVICE_MEMORY);
+		}
+	}
+
 	*pImage = radv_image_to_handle(image);
 
 	return VK_SUCCESS;
@@ -872,11 +887,15 @@ radv_DestroyImage(VkDevice _device, VkImage _image,
 		  const VkAllocationCallbacks *pAllocator)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
+	RADV_FROM_HANDLE(radv_image, image, _image);
 
-	if (!_image)
+	if (!image)
 		return;
 
-	vk_free2(&device->alloc, pAllocator, radv_image_from_handle(_image));
+	if (image->flags & VK_IMAGE_CREATE_SPARSE_BINDING_BIT)
+		device->ws->buffer_destroy(image->bo);
+
+	vk_free2(&device->alloc, pAllocator, image);
 }
 
 void radv_GetImageSubresourceLayout(
