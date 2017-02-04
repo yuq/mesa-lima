@@ -34,6 +34,11 @@
 #include <amdgpu_drm.h>
 #include <inttypes.h>
 
+#include "util/u_atomic.h"
+
+
+static void radv_amdgpu_winsys_bo_destroy(struct radeon_winsys_bo *_bo);
+
 static void
 radv_amdgpu_winsys_virtual_map(struct radv_amdgpu_winsys_bo *bo,
                                const struct radv_amdgpu_map_range *range)
@@ -43,6 +48,7 @@ radv_amdgpu_winsys_virtual_map(struct radv_amdgpu_winsys_bo *bo,
 	if (!range->bo)
 		return; /* TODO: PRT mapping */
 
+	p_atomic_inc(&range->bo->ref_count);
 	int r = amdgpu_bo_va_op(range->bo->bo, range->bo_offset, range->size,
 	                        range->offset + bo->va, 0, AMDGPU_VA_OP_MAP);
 	if (r)
@@ -62,6 +68,7 @@ radv_amdgpu_winsys_virtual_unmap(struct radv_amdgpu_winsys_bo *bo,
 	                        range->offset + bo->va, 0, AMDGPU_VA_OP_UNMAP);
 	if (r)
 		abort();
+	radv_amdgpu_winsys_bo_destroy((struct radeon_winsys_bo *)range->bo);
 }
 
 static void
@@ -212,6 +219,8 @@ static void radv_amdgpu_winsys_bo_destroy(struct radeon_winsys_bo *_bo)
 {
 	struct radv_amdgpu_winsys_bo *bo = radv_amdgpu_winsys_bo(_bo);
 
+	if (p_atomic_dec_return(&bo->ref_count))
+		return;
 	if (bo->is_virtual) {
 		for (uint32_t i = 0; i < bo->range_count; ++i) {
 			radv_amdgpu_winsys_virtual_unmap(bo, bo->ranges + i);
@@ -273,6 +282,7 @@ radv_amdgpu_winsys_bo_create(struct radeon_winsys *_ws,
 	bo->size = size;
 	bo->ws = ws;
 	bo->is_virtual = !!(flags & RADEON_FLAG_VIRTUAL);
+	bo->ref_count = 1;
 
 	if (flags & RADEON_FLAG_VIRTUAL) {
 		bo->ranges = realloc(NULL, sizeof(struct radv_amdgpu_map_range));

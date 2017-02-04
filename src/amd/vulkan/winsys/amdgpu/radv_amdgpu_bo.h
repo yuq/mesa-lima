@@ -45,6 +45,7 @@ struct radv_amdgpu_winsys_bo {
 	uint64_t size;
 	struct radv_amdgpu_winsys *ws;
 	bool is_virtual;
+	int ref_count;
 
 	union {
 		/* physical bo */
