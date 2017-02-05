@@ -1142,6 +1142,8 @@ CodeEmitterGK110::emitSET(const CmpInstruction *i)
    } else {
       code[1] |= 0x7 << 10;
    }
+   if (i->flagsSrc >= 0)
+      code[1] |= 1 << 14;
    emitCondCode(i->setCond,
                 isFloatType(i->sType) ? 0x33 : 0x34,
                 isFloatType(i->sType) ? 0xf : 0x7);
@@ -1161,6 +1163,8 @@ CodeEmitterGK110::emitSLCT(const CmpInstruction *i)
    } else {
       emitForm_21(i, 0x1a0, 0xb20);
       emitCondCode(cc, 0x34, 0x7);
+      if (i->dType == TYPE_S32)
+         code[1] |= 1 << 19;
    }
 }
 

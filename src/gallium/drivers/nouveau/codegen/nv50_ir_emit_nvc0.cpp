@@ -1194,6 +1194,8 @@ CodeEmitterNVC0::emitSET(const CmpInstruction *i)
 
    if (i->ftz)
       code[1] |= 1 << 27;
+   if (i->flagsSrc >= 0)
+      code[0] |= 1 << 6;
 
    emitCondCode(i->setCond, 32 + 23);
    emitNegAbs12(i);
