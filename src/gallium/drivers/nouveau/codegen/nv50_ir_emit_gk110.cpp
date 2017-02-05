@@ -109,6 +109,7 @@ private:
    void emitBFIND(const Instruction *);
    void emitPERMT(const Instruction *);
    void emitShift(const Instruction *);
+   void emitShift64(const Instruction *);
 
    void emitSFnOp(const Instruction *, uint8_t subOp);
 
@@ -933,6 +934,24 @@ CodeEmitterGK110::emitShift(const Instruction *i)
 
    if (i->subOp == NV50_IR_SUBOP_SHIFT_WRAP)
       code[1] |= 1 << 10;
+}
+
+void
+CodeEmitterGK110::emitShift64(const Instruction *i)
+{
+   if (i->op == OP_SHR) {
+      emitForm_21(i, 0x27c, 0xc7c);
+      if (isSignedType(i->sType))
+         code[1] |= 0x100;
+      if (i->subOp & NV50_IR_SUBOP_SHIFT_HIGH)
+         code[1] |= 1 << 19;
+   } else {
+      emitForm_21(i, 0xdfc, 0xf7c);
+   }
+   code[1] |= 0x200;
+
+   if (i->subOp & NV50_IR_SUBOP_SHIFT_WRAP)
+      code[1] |= 1 << 21;
 }
 
 void
@@ -2475,7 +2494,10 @@ CodeEmitterGK110::emitInstruction(Instruction *insn)
       break;
    case OP_SHL:
    case OP_SHR:
-      emitShift(insn);
+      if (typeSizeof(insn->sType) == 8)
+         emitShift64(insn);
+      else
+         emitShift(insn);
       break;
    case OP_SET:
    case OP_SET_AND:

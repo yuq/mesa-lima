@@ -161,6 +161,7 @@ private:
    void emitISETP();
    void emitSHL();
    void emitSHR();
+   void emitSHF();
    void emitPOPC();
    void emitBFI();
    void emitBFE();
@@ -2072,6 +2073,47 @@ CodeEmitterGM107::emitSHR()
 }
 
 void
+CodeEmitterGM107::emitSHF()
+{
+   unsigned type;
+
+   switch (insn->src(1).getFile()) {
+   case FILE_GPR:
+      emitInsn(insn->op == OP_SHL ? 0x5bf80000 : 0x5cf80000);
+      emitGPR(0x14, insn->src(1));
+      break;
+   case FILE_IMMEDIATE:
+      emitInsn(insn->op == OP_SHL ? 0x36f80000 : 0x38f80000);
+      emitIMMD(0x14, 19, insn->src(1));
+      break;
+   default:
+      assert(!"bad src1 file");
+      break;
+   }
+
+   switch (insn->sType) {
+   case TYPE_U64:
+      type = 2;
+      break;
+   case TYPE_S64:
+      type = 3;
+      break;
+   default:
+      type = 0;
+      break;
+   }
+
+   emitField(0x32, 1, !!(insn->subOp & NV50_IR_SUBOP_SHIFT_WRAP));
+   emitX    (0x31);
+   emitField(0x30, 1, !!(insn->subOp & NV50_IR_SUBOP_SHIFT_HIGH));
+   emitCC   (0x2f);
+   emitGPR  (0x27, insn->src(2));
+   emitField(0x25, 2, type);
+   emitGPR  (0x08, insn->src(0));
+   emitGPR  (0x00, insn->def(0));
+}
+
+void
 CodeEmitterGM107::emitPOPC()
 {
    switch (insn->src(0).getFile()) {
@@ -3169,10 +3211,16 @@ CodeEmitterGM107::emitInstruction(Instruction *i)
       }
       break;
    case OP_SHL:
-      emitSHL();
+      if (typeSizeof(insn->sType) == 8)
+         emitSHF();
+      else
+         emitSHL();
       break;
    case OP_SHR:
-      emitSHR();
+      if (typeSizeof(insn->sType) == 8)
+         emitSHF();
+      else
+         emitSHR();
       break;
    case OP_POPCNT:
       emitPOPC();
