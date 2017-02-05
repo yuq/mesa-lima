@@ -252,7 +252,8 @@ CodeEmitterGM107::emitInsn(uint32_t hi, bool pred)
 void
 CodeEmitterGM107::emitGPR(int pos, const Value *val)
 {
-   emitField(pos, 8, val ? val->reg.data.id : 255);
+   emitField(pos, 8, val && !val->inFile(FILE_FLAGS) ?
+             val->reg.data.id : 255);
 }
 
 void

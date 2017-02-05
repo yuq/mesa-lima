@@ -249,7 +249,7 @@ NVC0LegalizeSSA::handleSET(CmpInstruction *cmp)
    bld.mkSplit(src0, 4, cmp->getSrc(0));
    bld.mkSplit(src1, 4, cmp->getSrc(1));
    bld.mkOp2(OP_SUB, hTy, NULL, src0[0], src1[0])
-      ->setFlagsDef(1, (carry = bld.getSSA(1, FILE_FLAGS)));
+      ->setFlagsDef(0, (carry = bld.getSSA(1, FILE_FLAGS)));
    cmp->setFlagsSrc(cmp->srcCount(), carry);
    cmp->setSrc(0, src0[1]);
    cmp->setSrc(1, src1[1]);

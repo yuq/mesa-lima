@@ -198,7 +198,7 @@ void CodeEmitterGK110::srcAddr32(const ValueRef& src, const int pos)
 
 void CodeEmitterGK110::defId(const ValueDef& def, const int pos)
 {
-   code[pos / 32] |= (def.get() ? DDATA(def).id : GK110_GPR_ZERO) << (pos % 32);
+   code[pos / 32] |= (def.get() && def.getFile() != FILE_FLAGS ? DDATA(def).id : GK110_GPR_ZERO) << (pos % 32);
 }
 
 bool CodeEmitterGK110::isLIMM(const ValueRef& ref, DataType ty, bool mod)
@@ -703,7 +703,7 @@ CodeEmitterGK110::emitUADD(const Instruction *i)
       if (addOp & 2)
          code[1] |= 1 << 27;
 
-      assert(!i->defExists(1));
+      assert(i->flagsDef < 0);
       assert(i->flagsSrc < 0);
 
       SAT_(39);
@@ -714,7 +714,7 @@ CodeEmitterGK110::emitUADD(const Instruction *i)
 
       code[1] |= addOp << 19;
 
-      if (i->defExists(1))
+      if (i->flagsDef >= 0)
          code[1] |= 1 << 18; // write carry
       if (i->flagsSrc >= 0)
          code[1] |= 1 << 14; // add carry

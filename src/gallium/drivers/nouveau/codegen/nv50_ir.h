@@ -662,7 +662,7 @@ public:
    inline const Symbol *asSym() const;
    inline const ImmediateValue *asImm() const;
 
-   inline bool inFile(DataFile f) { return reg.file == f; }
+   inline bool inFile(DataFile f) const { return reg.file == f; }
 
    static inline Value *get(Iterator&);
 
