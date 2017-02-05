@@ -417,6 +417,19 @@ struct st_context_iface
     */
    boolean (*get_resource_for_egl_image)(struct st_context_iface *stctxi,
                                          struct st_context_resource *stres);
+
+   /**
+    * Start the thread if the API has a worker thread.
+    * Called after the context has been created and fully initialized on both
+    * sides (e.g. st/mesa and st/dri).
+    */
+   void (*start_thread)(struct st_context_iface *stctxi);
+
+   /**
+    * If the API is multithreaded, wait for all queued commands to complete.
+    * Called from the main thread.
+    */
+   void (*thread_finish)(struct st_context_iface *stctxi);
 };
 
 
@@ -454,6 +467,12 @@ struct st_manager
     */
    int (*get_param)(struct st_manager *smapi,
                     enum st_manager_param param);
+
+   /**
+    * Call the loader function setBackgroundContext. Called from the worker
+    * thread.
+    */
+   void (*set_background_context)(struct st_context_iface *stctxi);
 };
 
 /**

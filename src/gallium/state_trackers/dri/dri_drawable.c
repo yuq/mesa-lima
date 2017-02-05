@@ -217,8 +217,12 @@ dri_set_tex_buffer2(__DRIcontext *pDRICtx, GLint target,
                     GLint format, __DRIdrawable *dPriv)
 {
    struct dri_context *ctx = dri_context(pDRICtx);
+   struct st_context_iface *st = ctx->st;
    struct dri_drawable *drawable = dri_drawable(dPriv);
    struct pipe_resource *pt;
+
+   if (st->thread_finish)
+      st->thread_finish(st);
 
    dri_drawable_validate_att(ctx, drawable, ST_ATTACHMENT_FRONT_LEFT);
 
@@ -453,6 +457,8 @@ dri_flush(__DRIcontext *cPriv,
    }
 
    st = ctx->st;
+   if (st->thread_finish)
+      st->thread_finish(st);
 
    if (drawable) {
       /* prevent recursion */

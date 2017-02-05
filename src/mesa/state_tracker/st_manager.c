@@ -29,6 +29,7 @@
 #include "main/extensions.h"
 #include "main/context.h"
 #include "main/debug_output.h"
+#include "main/glthread.h"
 #include "main/texobj.h"
 #include "main/teximage.h"
 #include "main/texstate.h"
@@ -629,6 +630,22 @@ st_context_destroy(struct st_context_iface *stctxi)
    st_destroy_context(st);
 }
 
+static void
+st_start_thread(struct st_context_iface *stctxi)
+{
+   struct st_context *st = (struct st_context *) stctxi;
+
+   _mesa_glthread_init(st->ctx);
+}
+
+static void
+st_thread_finish(struct st_context_iface *stctxi)
+{
+   struct st_context *st = (struct st_context *) stctxi;
+
+   _mesa_glthread_finish(st->ctx);
+}
+
 static struct st_context_iface *
 st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
                       const struct st_context_attribs *attribs,
@@ -723,6 +740,8 @@ st_api_create_context(struct st_api *stapi, struct st_manager *smapi,
    st->iface.teximage = st_context_teximage;
    st->iface.copy = st_context_copy;
    st->iface.share = st_context_share;
+   st->iface.start_thread = st_start_thread;
+   st->iface.thread_finish = st_thread_finish;
    st->iface.st_context_private = (void *) smapi;
    st->iface.cso_context = st->cso_context;
    st->iface.pipe = st->pipe;

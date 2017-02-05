@@ -33,6 +33,7 @@
 #include "xmlpool.h"
 
 #include "dri_screen.h"
+#include "dri_context.h"
 
 #include "util/u_inlines.h"
 #include "pipe/p_screen.h"
@@ -53,6 +54,10 @@ const __DRIconfigOptionsExtension gallium_config_options = {
    .xml =
 
    DRI_CONF_BEGIN
+      DRI_CONF_SECTION_PERFORMANCE
+         DRI_CONF_MESA_GLTHREAD("false")
+      DRI_CONF_SECTION_END
+
       DRI_CONF_SECTION_QUALITY
          DRI_CONF_FORCE_S3TC_ENABLE("false")
          DRI_CONF_PP_CELSHADE(0)
@@ -432,6 +437,21 @@ dri_postprocessing_init(struct dri_screen *screen)
    }
 }
 
+static void
+dri_set_background_context(struct st_context_iface *st)
+{
+   struct dri_context *ctx = (struct dri_context *)st->st_manager_private;
+   const __DRIbackgroundCallableExtension *backgroundCallable =
+      ctx->sPriv->dri2.backgroundCallable;
+
+   /* Note: Mesa will only call this function if GL multithreading is enabled
+    * We only do that if the loader exposed the __DRI_BACKGROUND_CALLABLE
+    * extension. So we know that backgroundCallable is not NULL.
+    */
+   assert(backgroundCallable);
+   backgroundCallable->setBackgroundContext(ctx->cPriv->loaderPrivate);
+}
+
 const __DRIconfig **
 dri_init_screen_helper(struct dri_screen *screen,
                        struct pipe_screen *pscreen,
@@ -440,6 +460,7 @@ dri_init_screen_helper(struct dri_screen *screen,
    screen->base.screen = pscreen;
    screen->base.get_egl_image = dri_get_egl_image;
    screen->base.get_param = dri_get_param;
+   screen->base.set_background_context = dri_set_background_context;
 
    screen->st_api = st_gl_api_create();
    if (!screen->st_api)

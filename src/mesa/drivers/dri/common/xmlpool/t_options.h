@@ -313,6 +313,10 @@ DRI_CONF_OPT_BEGIN_V(texture_heaps,enum,def,"0:2") \
 	DRI_CONF_DESC_END \
 DRI_CONF_OPT_END
 
+#define DRI_CONF_MESA_GLTHREAD(def) \
+DRI_CONF_OPT_BEGIN_B(mesa_glthread, def) \
+        DRI_CONF_DESC(en,gettext("Enable offloading GL driver work to a separate thread")) \
+DRI_CONF_OPT_END
 
 
 /**

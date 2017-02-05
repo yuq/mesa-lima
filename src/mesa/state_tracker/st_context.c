@@ -29,6 +29,7 @@
 #include "main/accum.h"
 #include "main/api_exec.h"
 #include "main/context.h"
+#include "main/glthread.h"
 #include "main/samplerobj.h"
 #include "main/shaderobj.h"
 #include "main/version.h"
@@ -612,6 +613,17 @@ st_emit_string_marker(struct gl_context *ctx, const GLchar *string, GLsizei len)
    st->pipe->emit_string_marker(st->pipe, string, len);
 }
 
+static void
+st_set_background_context(struct gl_context *ctx)
+{
+   struct st_context *st = ctx->st;
+   struct st_manager *smapi =
+      (struct st_manager*)st->iface.st_context_private;
+
+   assert(smapi->set_background_context);
+   smapi->set_background_context(&st->iface);
+}
+
 void st_init_driver_functions(struct pipe_screen *screen,
                               struct dd_function_table *functions)
 {
@@ -656,4 +668,5 @@ void st_init_driver_functions(struct pipe_screen *screen,
    functions->Enable = st_Enable;
    functions->UpdateState = st_invalidate_state;
    functions->QueryMemoryInfo = st_query_memory_info;
+   functions->SetBackgroundContext = st_set_background_context;
 }
