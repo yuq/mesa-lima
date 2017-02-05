@@ -419,6 +419,7 @@ static int si_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
 	case PIPE_CAP_DOUBLES:
 		return HAVE_LLVM >= 0x0307;
 	case PIPE_CAP_INT64:
+	case PIPE_CAP_INT64_DIVMOD:
 		return HAVE_LLVM >= 0x0309;
 
 	case PIPE_CAP_RESOURCE_FROM_USER_MEMORY:

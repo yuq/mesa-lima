@@ -376,6 +376,8 @@ The integer capabilities:
 * ``PIPE_CAP_DOUBLES``: Whether double precision floating-point operations
   are supported.
 * ``PIPE_CAP_INT64``: Whether 64-bit integer operations are supported.
+* ``PIPE_CAP_INT64_DIVMOD``: Whether 64-bit integer division/modulo
+  operations are supported.
 
 
 .. _pipe_capf:

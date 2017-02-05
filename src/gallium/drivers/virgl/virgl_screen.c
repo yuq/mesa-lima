@@ -255,6 +255,7 @@ virgl_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_TGSI_FS_FBFETCH:
    case PIPE_CAP_TGSI_MUL_ZERO_WINS:
    case PIPE_CAP_INT64:
+   case PIPE_CAP_INT64_DIVMOD:
       return 0;
    case PIPE_CAP_VENDOR_ID:
       return 0x1af4;

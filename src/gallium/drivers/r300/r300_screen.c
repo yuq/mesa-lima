@@ -232,6 +232,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_MUL_ZERO_WINS:
         case PIPE_CAP_DOUBLES:
         case PIPE_CAP_INT64:
+        case PIPE_CAP_INT64_DIVMOD:
             return 0;
 
         /* SWTCL-only features. */
