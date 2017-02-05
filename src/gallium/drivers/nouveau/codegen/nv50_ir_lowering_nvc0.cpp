@@ -150,21 +150,77 @@ NVC0LegalizeSSA::handleTEXLOD(TexInstruction *i)
 void
 NVC0LegalizeSSA::handleShift(Instruction *lo)
 {
-   Instruction *hi = new_Instruction(func, lo->op, TYPE_U32);
-   lo->bb->insertAfter(lo, hi);
+   Value *shift = lo->getSrc(1);
+   Value *dst64 = lo->getDef(0);
+   Value *src[2], *dst[2];
+   operation op = lo->op;
+
    bld.setPosition(lo, false);
 
-   Value *src[2], *dst[2] = {bld.getSSA(), bld.getSSA()};
-   Value *dst64 = lo->getDef(0), *shift = lo->getSrc(1);
    bld.mkSplit(src, 4, lo->getSrc(0));
+
+   // SM30 and prior don't have the fancy new SHF.L/R ops. So the logic has to
+   // be completely emulated. For SM35+, we can use the more directed SHF
+   // operations.
+   if (prog->getTarget()->getChipset() < NVISA_GK20A_CHIPSET) {
+      // The strategy here is to handle shifts >= 32 and less than 32 as
+      // separate parts.
+      //
+      // For SHL:
+      // If the shift is <= 32, then
+      //   (HI,LO) << x = (HI << x | (LO >> (32 - x)), LO << x)
+      // If the shift is > 32, then
+      //   (HI,LO) << x = (LO << (x - 32), 0)
+      //
+      // For SHR:
+      // If the shift is <= 32, then
+      //   (HI,LO) >> x = (HI >> x, (HI << (32 - x)) | LO >> x)
+      // If the shift is > 32, then
+      //   (HI,LO) >> x = (0, HI >> (x - 32))
+      //
+      // Note that on NVIDIA hardware, a shift > 32 yields a 0 value, which we
+      // can use to our advantage. Also note the structural similarities
+      // between the right/left cases. The main difference is swapping hi/lo
+      // on input and output.
+
+      Value *x32_minus_shift, *pred, *hi1, *hi2;
+      DataType type = isSignedIntType(lo->dType) ? TYPE_S32 : TYPE_U32;
+      operation antiop = op == OP_SHR ? OP_SHL : OP_SHR;
+      if (op == OP_SHR)
+         std::swap(src[0], src[1]);
+      bld.mkOp2(OP_ADD, TYPE_U32, (x32_minus_shift = bld.getSSA()), shift, bld.mkImm(0x20))
+         ->src(0).mod = Modifier(NV50_IR_MOD_NEG);
+      bld.mkCmp(OP_SET, CC_LE, TYPE_U8, (pred = bld.getSSA(1, FILE_PREDICATE)),
+                TYPE_U32, shift, bld.mkImm(32));
+      // Compute HI (shift <= 32)
+      bld.mkOp2(OP_OR, TYPE_U32, (hi1 = bld.getSSA()),
+                bld.mkOp2v(op, TYPE_U32, bld.getSSA(), src[1], shift),
+                bld.mkOp2v(antiop, TYPE_U32, bld.getSSA(), src[0], x32_minus_shift))
+         ->setPredicate(CC_P, pred);
+      // Compute LO (all shift values)
+      bld.mkOp2(op, type, (dst[0] = bld.getSSA()), src[0], shift);
+      // Compute HI (shift > 32)
+      bld.mkOp2(op, type, (hi2 = bld.getSSA()), src[1],
+                bld.mkOp1v(OP_NEG, TYPE_S32, bld.getSSA(), x32_minus_shift))
+         ->setPredicate(CC_NOT_P, pred);
+      bld.mkOp2(OP_UNION, TYPE_U32, (dst[1] = bld.getSSA()), hi1, hi2);
+      if (op == OP_SHR)
+         std::swap(dst[0], dst[1]);
+      bld.mkOp2(OP_MERGE, TYPE_U64, dst64, dst[0], dst[1]);
+      delete_Instruction(prog, lo);
+      return;
+   }
+
+   Instruction *hi = new_Instruction(func, op, TYPE_U32);
+   lo->bb->insertAfter(lo, hi);
 
    hi->sType = lo->sType;
    lo->dType = TYPE_U32;
 
-   hi->setDef(0, dst[1]);
+   hi->setDef(0, (dst[1] = bld.getSSA()));
    if (lo->op == OP_SHR)
       hi->subOp |= NV50_IR_SUBOP_SHIFT_HIGH;
-   lo->setDef(0, dst[0]);
+   lo->setDef(0, (dst[0] = bld.getSSA()));
 
    bld.setPosition(hi, true);
 
