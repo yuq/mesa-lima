@@ -354,6 +354,14 @@ unsigned int Instruction::srcMask(unsigned int s) const
    case TGSI_OPCODE_DSGE:
    case TGSI_OPCODE_DSEQ:
    case TGSI_OPCODE_DSNE:
+   case TGSI_OPCODE_U64SEQ:
+   case TGSI_OPCODE_U64SNE:
+   case TGSI_OPCODE_I64SLT:
+   case TGSI_OPCODE_U64SLT:
+   case TGSI_OPCODE_I64SGE:
+   case TGSI_OPCODE_U64SGE:
+   case TGSI_OPCODE_I642F:
+   case TGSI_OPCODE_U642F:
       switch (util_bitcount(mask)) {
       case 1: return 0x3;
       case 2: return 0xf;
@@ -557,6 +565,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_SHL:
    case TGSI_OPCODE_U2F:
    case TGSI_OPCODE_U2D:
+   case TGSI_OPCODE_U2I64:
    case TGSI_OPCODE_UADD:
    case TGSI_OPCODE_UDIV:
    case TGSI_OPCODE_UMOD:
@@ -587,6 +596,7 @@ nv50_ir::DataType Instruction::inferSrcType() const
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_I2D:
+   case TGSI_OPCODE_I2I64:
    case TGSI_OPCODE_IDIV:
    case TGSI_OPCODE_IMUL_HI:
    case TGSI_OPCODE_IMAX:
@@ -608,6 +618,8 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_D2F:
    case TGSI_OPCODE_D2I:
    case TGSI_OPCODE_D2U:
+   case TGSI_OPCODE_D2I64:
+   case TGSI_OPCODE_D2U64:
    case TGSI_OPCODE_DABS:
    case TGSI_OPCODE_DNEG:
    case TGSI_OPCODE_DADD:
@@ -630,6 +642,34 @@ nv50_ir::DataType Instruction::inferSrcType() const
    case TGSI_OPCODE_DFLR:
    case TGSI_OPCODE_DROUND:
       return nv50_ir::TYPE_F64;
+   case TGSI_OPCODE_U64SEQ:
+   case TGSI_OPCODE_U64SNE:
+   case TGSI_OPCODE_U64SLT:
+   case TGSI_OPCODE_U64SGE:
+   case TGSI_OPCODE_U64MIN:
+   case TGSI_OPCODE_U64MAX:
+   case TGSI_OPCODE_U64ADD:
+   case TGSI_OPCODE_U64MUL:
+   case TGSI_OPCODE_U64SHL:
+   case TGSI_OPCODE_U64SHR:
+   case TGSI_OPCODE_U64DIV:
+   case TGSI_OPCODE_U64MOD:
+   case TGSI_OPCODE_U642F:
+   case TGSI_OPCODE_U642D:
+      return nv50_ir::TYPE_U64;
+   case TGSI_OPCODE_I64ABS:
+   case TGSI_OPCODE_I64SSG:
+   case TGSI_OPCODE_I64NEG:
+   case TGSI_OPCODE_I64SLT:
+   case TGSI_OPCODE_I64SGE:
+   case TGSI_OPCODE_I64MIN:
+   case TGSI_OPCODE_I64MAX:
+   case TGSI_OPCODE_I64SHR:
+   case TGSI_OPCODE_I64DIV:
+   case TGSI_OPCODE_I64MOD:
+   case TGSI_OPCODE_I642F:
+   case TGSI_OPCODE_I642D:
+      return nv50_ir::TYPE_S64;
    default:
       return nv50_ir::TYPE_F32;
    }
@@ -650,17 +690,35 @@ nv50_ir::DataType Instruction::inferDstType() const
    case TGSI_OPCODE_DSGE:
    case TGSI_OPCODE_DSLT:
    case TGSI_OPCODE_DSNE:
+   case TGSI_OPCODE_I64SLT:
+   case TGSI_OPCODE_I64SGE:
+   case TGSI_OPCODE_U64SEQ:
+   case TGSI_OPCODE_U64SNE:
+   case TGSI_OPCODE_U64SLT:
+   case TGSI_OPCODE_U64SGE:
    case TGSI_OPCODE_PK2H:
       return nv50_ir::TYPE_U32;
    case TGSI_OPCODE_I2F:
    case TGSI_OPCODE_U2F:
    case TGSI_OPCODE_D2F:
+   case TGSI_OPCODE_I642F:
+   case TGSI_OPCODE_U642F:
    case TGSI_OPCODE_UP2H:
       return nv50_ir::TYPE_F32;
    case TGSI_OPCODE_I2D:
    case TGSI_OPCODE_U2D:
    case TGSI_OPCODE_F2D:
+   case TGSI_OPCODE_I642D:
+   case TGSI_OPCODE_U642D:
       return nv50_ir::TYPE_F64;
+   case TGSI_OPCODE_I2I64:
+   case TGSI_OPCODE_U2I64:
+   case TGSI_OPCODE_F2I64:
+   case TGSI_OPCODE_D2I64:
+      return nv50_ir::TYPE_S64;
+   case TGSI_OPCODE_F2U64:
+   case TGSI_OPCODE_D2U64:
+      return nv50_ir::TYPE_U64;
    default:
       return inferSrcType();
    }
@@ -676,6 +734,8 @@ nv50_ir::CondCode Instruction::getSetCond() const
    case TGSI_OPCODE_USLT:
    case TGSI_OPCODE_FSLT:
    case TGSI_OPCODE_DSLT:
+   case TGSI_OPCODE_I64SLT:
+   case TGSI_OPCODE_U64SLT:
       return CC_LT;
    case TGSI_OPCODE_SLE:
       return CC_LE;
@@ -684,6 +744,8 @@ nv50_ir::CondCode Instruction::getSetCond() const
    case TGSI_OPCODE_USGE:
    case TGSI_OPCODE_FSGE:
    case TGSI_OPCODE_DSGE:
+   case TGSI_OPCODE_I64SGE:
+   case TGSI_OPCODE_U64SGE:
       return CC_GE;
    case TGSI_OPCODE_SGT:
       return CC_GT;
@@ -691,10 +753,12 @@ nv50_ir::CondCode Instruction::getSetCond() const
    case TGSI_OPCODE_USEQ:
    case TGSI_OPCODE_FSEQ:
    case TGSI_OPCODE_DSEQ:
+   case TGSI_OPCODE_U64SEQ:
       return CC_EQ;
    case TGSI_OPCODE_SNE:
    case TGSI_OPCODE_FSNE:
    case TGSI_OPCODE_DSNE:
+   case TGSI_OPCODE_U64SNE:
       return CC_NEU;
    case TGSI_OPCODE_USNE:
       return CC_NE;
@@ -831,6 +895,35 @@ static nv50_ir::operation translateOpcode(uint opcode)
    NV50_IR_OPCODE_CASE(DCEIL, CEIL);
    NV50_IR_OPCODE_CASE(DFLR, FLOOR);
    NV50_IR_OPCODE_CASE(DROUND, CVT);
+
+   NV50_IR_OPCODE_CASE(U64SEQ, SET);
+   NV50_IR_OPCODE_CASE(U64SNE, SET);
+   NV50_IR_OPCODE_CASE(U64SLT, SET);
+   NV50_IR_OPCODE_CASE(U64SGE, SET);
+   NV50_IR_OPCODE_CASE(I64SLT, SET);
+   NV50_IR_OPCODE_CASE(I64SGE, SET);
+   NV50_IR_OPCODE_CASE(I2I64, CVT);
+   NV50_IR_OPCODE_CASE(U2I64, CVT);
+   NV50_IR_OPCODE_CASE(F2I64, CVT);
+   NV50_IR_OPCODE_CASE(F2U64, CVT);
+   NV50_IR_OPCODE_CASE(D2I64, CVT);
+   NV50_IR_OPCODE_CASE(D2U64, CVT);
+   NV50_IR_OPCODE_CASE(I642F, CVT);
+   NV50_IR_OPCODE_CASE(U642F, CVT);
+   NV50_IR_OPCODE_CASE(I642D, CVT);
+   NV50_IR_OPCODE_CASE(U642D, CVT);
+
+   NV50_IR_OPCODE_CASE(I64MIN, MIN);
+   NV50_IR_OPCODE_CASE(U64MIN, MIN);
+   NV50_IR_OPCODE_CASE(I64MAX, MAX);
+   NV50_IR_OPCODE_CASE(U64MAX, MAX);
+   NV50_IR_OPCODE_CASE(I64ABS, ABS);
+   NV50_IR_OPCODE_CASE(I64NEG, NEG);
+   NV50_IR_OPCODE_CASE(U64ADD, ADD);
+   NV50_IR_OPCODE_CASE(U64MUL, MUL);
+   NV50_IR_OPCODE_CASE(U64SHL, SHL);
+   NV50_IR_OPCODE_CASE(I64SHR, SHR);
+   NV50_IR_OPCODE_CASE(U64SHR, SHR);
 
    NV50_IR_OPCODE_CASE(IMUL_HI, MUL);
    NV50_IR_OPCODE_CASE(UMUL_HI, MUL);
@@ -3721,6 +3814,8 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
    case TGSI_OPCODE_INTERP_OFFSET:
       handleINTERP(dst0);
       break;
+   case TGSI_OPCODE_I642F:
+   case TGSI_OPCODE_U642F:
    case TGSI_OPCODE_D2I:
    case TGSI_OPCODE_D2U:
    case TGSI_OPCODE_D2F: {
@@ -3737,13 +3832,76 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       }
       break;
    }
+   case TGSI_OPCODE_I2I64:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         dst0[c] = fetchSrc(0, c / 2);
+         mkOp2(OP_SHR, TYPE_S32, dst0[c + 1], dst0[c], loadImm(NULL, 31));
+         c++;
+      }
+      break;
+   case TGSI_OPCODE_U2I64:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         dst0[c] = fetchSrc(0, c / 2);
+         dst0[c + 1] = zero;
+         c++;
+      }
+      break;
+   case TGSI_OPCODE_F2I64:
+   case TGSI_OPCODE_F2U64:
    case TGSI_OPCODE_I2D:
    case TGSI_OPCODE_U2D:
    case TGSI_OPCODE_F2D:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          Value *dreg = getSSA(8);
-         mkCvt(OP_CVT, dstTy, dreg, srcTy, fetchSrc(0, c / 2));
+         Instruction *cvt = mkCvt(OP_CVT, dstTy, dreg, srcTy, fetchSrc(0, c / 2));
+         if (!isFloatType(dstTy))
+            cvt->rnd = ROUND_Z;
          mkSplit(&dst0[c], 4, dreg);
+         c++;
+      }
+      break;
+   case TGSI_OPCODE_D2I64:
+   case TGSI_OPCODE_D2U64:
+   case TGSI_OPCODE_I642D:
+   case TGSI_OPCODE_U642D:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         src0 = getSSA(8);
+         Value *dst = getSSA(8), *tmp[2];
+         tmp[0] = fetchSrc(0, c);
+         tmp[1] = fetchSrc(0, c + 1);
+         mkOp2(OP_MERGE, TYPE_U64, src0, tmp[0], tmp[1]);
+         Instruction *cvt = mkCvt(OP_CVT, dstTy, dst, srcTy, src0);
+         if (!isFloatType(dstTy))
+            cvt->rnd = ROUND_Z;
+         mkSplit(&dst0[c], 4, dst);
+         c++;
+      }
+      break;
+   case TGSI_OPCODE_I64NEG:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         src0 = getSSA(8);
+         Value *dst = getSSA(8), *tmp[2];
+         tmp[0] = fetchSrc(0, c);
+         tmp[1] = fetchSrc(0, c + 1);
+         mkOp2(OP_MERGE, TYPE_U64, src0, tmp[0], tmp[1]);
+         mkOp2(OP_SUB, dstTy, dst, zero, src0);
+         mkSplit(&dst0[c], 4, dst);
+         c++;
+      }
+      break;
+   case TGSI_OPCODE_I64ABS:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         src0 = getSSA(8);
+         Value *neg = getSSA(8), *srcComp[2], *negComp[2];
+         srcComp[0] = fetchSrc(0, c);
+         srcComp[1] = fetchSrc(0, c + 1);
+         mkOp2(OP_MERGE, TYPE_U64, src0, srcComp[0], srcComp[1]);
+         mkOp2(OP_SUB, dstTy, neg, zero, src0);
+         mkSplit(negComp, 4, neg);
+         mkCmp(OP_SLCT, CC_LT, TYPE_S32, dst0[c], TYPE_S32,
+               negComp[0], srcComp[0], srcComp[1]);
+         mkCmp(OP_SLCT, CC_LT, TYPE_S32, dst0[c + 1], TYPE_S32,
+               negComp[1], srcComp[1], srcComp[1]);
          c++;
       }
       break;
@@ -3779,6 +3937,12 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          c++;
       }
       break;
+   case TGSI_OPCODE_U64SEQ:
+   case TGSI_OPCODE_U64SNE:
+   case TGSI_OPCODE_U64SLT:
+   case TGSI_OPCODE_U64SGE:
+   case TGSI_OPCODE_I64SLT:
+   case TGSI_OPCODE_I64SGE:
    case TGSI_OPCODE_DSLT:
    case TGSI_OPCODE_DSGE:
    case TGSI_OPCODE_DSEQ:
@@ -3800,6 +3964,46 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
       }
       break;
    }
+   case TGSI_OPCODE_U64MIN:
+   case TGSI_OPCODE_U64MAX:
+   case TGSI_OPCODE_I64MIN:
+   case TGSI_OPCODE_I64MAX: {
+      dstTy = isSignedIntType(dstTy) ? TYPE_S32 : TYPE_U32;
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         Value *flag = getSSA(1, FILE_FLAGS);
+         src0 = fetchSrc(0, c + 1);
+         src1 = fetchSrc(1, c + 1);
+         geni = mkOp2(op, dstTy, dst0[c + 1], src0, src1);
+         geni->subOp = NV50_IR_SUBOP_MINMAX_HIGH;
+         geni->setFlagsDef(1, flag);
+
+         src0 = fetchSrc(0, c);
+         src1 = fetchSrc(1, c);
+         geni = mkOp2(op, TYPE_U32, dst0[c], src0, src1);
+         geni->subOp = NV50_IR_SUBOP_MINMAX_LOW;
+         geni->setFlagsSrc(2, flag);
+
+         c++;
+      }
+      break;
+   }
+   case TGSI_OPCODE_U64SHL:
+   case TGSI_OPCODE_I64SHR:
+   case TGSI_OPCODE_U64SHR:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         src0 = getSSA(8);
+         Value *dst = getSSA(8), *tmp[2];
+         tmp[0] = fetchSrc(0, c);
+         tmp[1] = fetchSrc(0, c + 1);
+         mkOp2(OP_MERGE, TYPE_U64, src0, tmp[0], tmp[1]);
+         src1 = fetchSrc(1, c / 2);
+         mkOp2(op, dstTy, dst, src0, src1);
+         mkSplit(&dst0[c], 4, dst);
+         c++;
+      }
+      break;
+   case TGSI_OPCODE_U64ADD:
+   case TGSI_OPCODE_U64MUL:
    case TGSI_OPCODE_DADD:
    case TGSI_OPCODE_DMUL:
    case TGSI_OPCODE_DDIV:
@@ -3871,6 +4075,22 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          mkOp2(OP_SUB, TYPE_F32, dstF32, val0, val1);
          mkCvt(OP_CVT, TYPE_F64, dst, TYPE_F32, dstF32);
          mkSplit(&dst0[c], 4, dst);
+         c++;
+      }
+   case TGSI_OPCODE_I64SSG:
+      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
+         src0 = getSSA(8);
+         Value *tmp[2];
+         tmp[0] = fetchSrc(0, c);
+         tmp[1] = fetchSrc(0, c + 1);
+         mkOp2(OP_MERGE, TYPE_U64, src0, tmp[0], tmp[1]);
+
+         val0 = getScratch();
+         val1 = getScratch();
+         mkCmp(OP_SET, CC_GT, TYPE_U32, val0, TYPE_S64, src0, zero);
+         mkCmp(OP_SET, CC_LT, TYPE_U32, val1, TYPE_S64, src0, zero);
+         mkOp2(OP_SUB, TYPE_S32, dst0[c], val1, val0);
+         mkOp2(OP_SHR, TYPE_S32, dst0[c + 1], dst0[c], loadImm(0, 31));
          c++;
       }
       break;

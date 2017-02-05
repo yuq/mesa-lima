@@ -329,6 +329,10 @@ TargetNVC0::insnCanLoad(const Instruction *i, int s,
    // indirect loads can only be done by OP_LOAD/VFETCH/INTERP on nvc0
    if (ld->src(0).isIndirect(0))
       return false;
+   // these are implemented using shf.r and shf.l which can't load consts
+   if ((i->op == OP_SHL || i->op == OP_SHR) && typeSizeof(i->sType) == 8 &&
+       sf == FILE_MEMORY_CONST)
+      return false;
 
    for (int k = 0; i->srcExists(k); ++k) {
       if (i->src(k).getFile() == FILE_IMMEDIATE) {
@@ -340,7 +344,8 @@ TargetNVC0::insnCanLoad(const Instruction *i, int s,
             return false;
       } else
       if (i->src(k).getFile() != FILE_GPR &&
-          i->src(k).getFile() != FILE_PREDICATE) {
+          i->src(k).getFile() != FILE_PREDICATE &&
+          i->src(k).getFile() != FILE_FLAGS) {
          return false;
       }
    }

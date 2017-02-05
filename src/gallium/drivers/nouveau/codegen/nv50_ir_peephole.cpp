@@ -1054,8 +1054,12 @@ ConstantFolding::opnd(Instruction *i, ImmediateValue &imm0, int s)
          i->setSrc(1, new_ImmediateValue(prog, imm0.reg.data.u32));
       }
       break;
-   case OP_ADD:
    case OP_SUB:
+      if (imm0.isInteger(0) && s == 0 && typeSizeof(i->dType) == 8 &&
+          !isFloatType(i->dType))
+         break;
+      /* fallthrough */
+   case OP_ADD:
       if (i->usesFlags())
          break;
       if (imm0.isInteger(0)) {

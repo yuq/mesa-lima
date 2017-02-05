@@ -147,6 +147,59 @@ NVC0LegalizeSSA::handleTEXLOD(TexInstruction *i)
    i->moveSources(arg + 1, -1);
 }
 
+void
+NVC0LegalizeSSA::handleShift(Instruction *lo)
+{
+   Instruction *hi = new_Instruction(func, lo->op, TYPE_U32);
+   lo->bb->insertAfter(lo, hi);
+   bld.setPosition(lo, false);
+
+   Value *src[2], *dst[2] = {bld.getSSA(), bld.getSSA()};
+   Value *dst64 = lo->getDef(0), *shift = lo->getSrc(1);
+   bld.mkSplit(src, 4, lo->getSrc(0));
+
+   hi->sType = lo->sType;
+   lo->dType = TYPE_U32;
+
+   hi->setDef(0, dst[1]);
+   if (lo->op == OP_SHR)
+      hi->subOp |= NV50_IR_SUBOP_SHIFT_HIGH;
+   lo->setDef(0, dst[0]);
+
+   bld.setPosition(hi, true);
+
+   if (lo->op == OP_SHL)
+      std::swap(hi, lo);
+
+   hi->setSrc(0, new_ImmediateValue(prog, 0u));
+   hi->setSrc(1, shift);
+   hi->setSrc(2, lo->op == OP_SHL ? src[0] : src[1]);
+
+   lo->setSrc(0, src[0]);
+   lo->setSrc(1, shift);
+   lo->setSrc(2, src[1]);
+
+   bld.mkOp2(OP_MERGE, TYPE_U64, dst64, dst[0], dst[1]);
+}
+
+void
+NVC0LegalizeSSA::handleSET(CmpInstruction *cmp)
+{
+   DataType hTy = cmp->sType == TYPE_S64 ? TYPE_S32 : TYPE_U32;
+   Value *carry;
+   Value *src0[2], *src1[2];
+   bld.setPosition(cmp, false);
+
+   bld.mkSplit(src0, 4, cmp->getSrc(0));
+   bld.mkSplit(src1, 4, cmp->getSrc(1));
+   bld.mkOp2(OP_SUB, hTy, NULL, src0[0], src1[0])
+      ->setFlagsDef(1, (carry = bld.getSSA(1, FILE_FLAGS)));
+   cmp->setFlagsSrc(cmp->srcCount(), carry);
+   cmp->setSrc(0, src0[1]);
+   cmp->setSrc(1, src1[1]);
+   cmp->sType = hTy;
+}
+
 bool
 NVC0LegalizeSSA::visit(Function *fn)
 {
@@ -178,6 +231,18 @@ NVC0LegalizeSSA::visit(BasicBlock *bb)
       case OP_TXL:
       case OP_TXF:
          handleTEXLOD(i->asTex());
+         break;
+      case OP_SHR:
+      case OP_SHL:
+         if (typeSizeof(i->sType) == 8)
+            handleShift(i);
+         break;
+      case OP_SET:
+      case OP_SET_AND:
+      case OP_SET_OR:
+      case OP_SET_XOR:
+         if (typeSizeof(i->sType) == 8 && i->sType != TYPE_F64)
+            handleSET(i->asCmp());
          break;
       default:
          break;
@@ -612,7 +677,7 @@ NVC0LegalizePostRA::visit(BasicBlock *bb)
       } else {
          // TODO: Move this to before register allocation for operations that
          // need the $c register !
-         if (typeSizeof(i->dType) == 8) {
+         if (typeSizeof(i->sType) == 8 || typeSizeof(i->dType) == 8) {
             Instruction *hi;
             hi = BuildUtil::split64BitOpPostRA(func, i, rZero, carry);
             if (hi)
