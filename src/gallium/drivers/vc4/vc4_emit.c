@@ -115,20 +115,7 @@ vc4_emit_state(struct pipe_context *pctx)
         }
 
         if (vc4->dirty & VC4_DIRTY_RASTERIZER) {
-                cl_emit(&job->bcl, DEPTH_OFFSET, depth) {
-                        depth.depth_offset_units =
-                                vc4->rasterizer->offset_units;
-                        depth.depth_offset_factor =
-                                vc4->rasterizer->offset_factor;
-                }
-
-                cl_emit(&job->bcl, POINT_SIZE, points) {
-                        points.point_size = vc4->rasterizer->point_size;
-                }
-
-                cl_emit(&job->bcl, LINE_WIDTH, points) {
-                        points.line_width = vc4->rasterizer->base.line_width;
-                }
+                cl_emit_prepacked(&job->bcl, &vc4->rasterizer->packed);
         }
 
         if (vc4->dirty & VC4_DIRTY_VIEWPORT) {

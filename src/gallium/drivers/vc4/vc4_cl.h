@@ -279,6 +279,11 @@ cl_get_emit_space(struct vc4_cl_out **cl, size_t size)
                 _loop_terminate = NULL;                          \
         }))                                                      \
 
+#define cl_emit_prepacked(cl, packet) do {                       \
+        memcpy((cl)->next, packet, sizeof(*packet));             \
+        cl_advance(&(cl)->next, sizeof(*packet));                \
+} while (0)
+
 /**
  * Helper function called by the XML-generated pack functions for filling in
  * an address field in shader records.

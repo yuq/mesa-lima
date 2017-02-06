@@ -94,6 +94,9 @@ vc4_create_rasterizer_state(struct pipe_context *pctx,
                             const struct pipe_rasterizer_state *cso)
 {
         struct vc4_rasterizer_state *so;
+        struct V3D21_DEPTH_OFFSET depth_offset = { V3D21_DEPTH_OFFSET_header };
+        struct V3D21_POINT_SIZE point_size = { V3D21_POINT_SIZE_header };
+        struct V3D21_LINE_WIDTH line_width = { V3D21_LINE_WIDTH_header };
 
         so = CALLOC_STRUCT(vc4_rasterizer_state);
         if (!so)
@@ -109,7 +112,9 @@ vc4_create_rasterizer_state(struct pipe_context *pctx,
         /* Workaround: HW-2726 PTB does not handle zero-size points (BCM2835,
          * BCM21553).
          */
-        so->point_size = MAX2(cso->point_size, .125f);
+        point_size.point_size = MAX2(cso->point_size, .125f);
+
+        line_width.line_width = cso->line_width;
 
         if (cso->front_ccw)
                 so->config_bits[0] |= VC4_CONFIG_BITS_CW_PRIMITIVES;
@@ -117,12 +122,18 @@ vc4_create_rasterizer_state(struct pipe_context *pctx,
         if (cso->offset_tri) {
                 so->config_bits[0] |= VC4_CONFIG_BITS_ENABLE_DEPTH_OFFSET;
 
-                so->offset_units = float_to_187_half(cso->offset_units);
-                so->offset_factor = float_to_187_half(cso->offset_scale);
+                depth_offset.depth_offset_units =
+                        float_to_187_half(cso->offset_units);
+                depth_offset.depth_offset_factor =
+                        float_to_187_half(cso->offset_scale);
         }
 
         if (cso->multisample)
                 so->config_bits[0] |= VC4_CONFIG_BITS_RASTERIZER_OVERSAMPLE_4X;
+
+        V3D21_DEPTH_OFFSET_pack(NULL, so->packed.depth_offset, &depth_offset);
+        V3D21_POINT_SIZE_pack(NULL, so->packed.point_size, &point_size);
+        V3D21_LINE_WIDTH_pack(NULL, so->packed.line_width, &line_width);
 
         return so;
 }

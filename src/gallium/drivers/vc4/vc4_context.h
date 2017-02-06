@@ -386,18 +386,11 @@ struct vc4_rasterizer_state {
         /* VC4_CONFIGURATION_BITS */
         uint8_t config_bits[3];
 
-        float point_size;
-
-        /**
-         * Half-float (1/8/7 bits) value of polygon offset units for
-         * VC4_PACKET_DEPTH_OFFSET
-         */
-        uint16_t offset_units;
-        /**
-         * Half-float (1/8/7 bits) value of polygon offset scale for
-         * VC4_PACKET_DEPTH_OFFSET
-         */
-        uint16_t offset_factor;
+        struct PACKED {
+                uint8_t depth_offset[V3D21_DEPTH_OFFSET_length];
+                uint8_t point_size[V3D21_POINT_SIZE_length];
+                uint8_t line_width[V3D21_LINE_WIDTH_length];
+        } packed;
 };
 
 struct vc4_depth_stencil_alpha_state {
