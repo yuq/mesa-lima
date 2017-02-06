@@ -384,7 +384,7 @@ struct vc4_rasterizer_state {
         struct pipe_rasterizer_state base;
 
         /* VC4_CONFIGURATION_BITS */
-        uint8_t config_bits[3];
+        uint8_t config_bits[V3D21_CONFIGURATION_BITS_length];
 
         struct PACKED {
                 uint8_t depth_offset[V3D21_DEPTH_OFFSET_length];
@@ -397,7 +397,7 @@ struct vc4_depth_stencil_alpha_state {
         struct pipe_depth_stencil_alpha_state base;
 
         /* VC4_CONFIGURATION_BITS */
-        uint8_t config_bits[3];
+        uint8_t config_bits[V3D21_CONFIGURATION_BITS_length];
 
         /** Uniforms for stencil state.
          *
