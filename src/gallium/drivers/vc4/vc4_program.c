@@ -1708,8 +1708,7 @@ ntq_emit_ssa_undef(struct vc4_compile *c, nir_ssa_undef_instr *instr)
 static void
 ntq_emit_color_read(struct vc4_compile *c, nir_intrinsic_instr *instr)
 {
-        nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
-        assert(const_offset->u32[0] == 0);
+        assert(nir_src_as_const_value(instr->src[0])->u32[0] == 0);
 
         /* Reads of the per-sample color need to be done in
          * order.
