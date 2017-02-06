@@ -69,7 +69,7 @@ struct disk_cache;
  * assistance in computing SHA-1 signatures.
  */
 struct disk_cache *
-disk_cache_create(void);
+disk_cache_create(const char *gpu_name, const char *timestamp);
 
 /**
  * Destroy a cache object, (freeing all associated resources).
@@ -140,7 +140,7 @@ disk_cache_has_key(struct disk_cache *cache, cache_key key);
 #else
 
 static inline struct disk_cache *
-disk_cache_create(void)
+disk_cache_create(const char *gpu_name, const char *timestamp)
 {
    return NULL;
 }

@@ -115,7 +115,7 @@ mkdir_if_needed(char *path)
  *      <path>/<name> cannot be created as a directory
  */
 static char *
-concatenate_and_mkdir(void *ctx, char *path, char *name)
+concatenate_and_mkdir(void *ctx, char *path, const char *name)
 {
    char *new_path;
    struct stat sb;
@@ -131,8 +131,27 @@ concatenate_and_mkdir(void *ctx, char *path, char *name)
       return NULL;
 }
 
+static char *
+create_mesa_cache_dir(void *mem_ctx, char *path, const char *timestamp,
+                      const char *gpu_name)
+{
+   char *new_path = concatenate_and_mkdir(mem_ctx, path, "mesa");
+   if (new_path == NULL)
+      return NULL;
+
+   new_path = concatenate_and_mkdir(mem_ctx, new_path, timestamp);
+   if (new_path == NULL)
+      return NULL;
+
+   new_path = concatenate_and_mkdir(mem_ctx, new_path, gpu_name);
+   if (new_path == NULL)
+      return NULL;
+
+   return new_path;
+}
+
 struct disk_cache *
-disk_cache_create(void)
+disk_cache_create(const char *gpu_name, const char *timestamp)
 {
    void *local;
    struct disk_cache *cache = NULL;
@@ -176,7 +195,8 @@ disk_cache_create(void)
          if (mkdir_if_needed(xdg_cache_home) == -1)
             goto fail;
 
-         path = concatenate_and_mkdir(local, xdg_cache_home, "mesa");
+         path = create_mesa_cache_dir(local, xdg_cache_home, timestamp,
+                                      gpu_name);
          if (path == NULL)
             goto fail;
       }
@@ -212,7 +232,7 @@ disk_cache_create(void)
       if (path == NULL)
          goto fail;
 
-      path = concatenate_and_mkdir(local, path, "mesa");
+      path = create_mesa_cache_dir(local, path, timestamp, gpu_name);
       if (path == NULL)
          goto fail;
    }
