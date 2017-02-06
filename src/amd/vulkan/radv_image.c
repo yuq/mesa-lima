@@ -582,6 +582,7 @@ radv_image_alloc_dcc(struct radv_device *device,
 	/* + 8 for storing the clear values */
 	image->clear_value_offset = image->dcc_offset + image->surface.dcc_size;
 	image->size = image->dcc_offset + image->surface.dcc_size + 8;
+	image->alignment = MAX2(image->alignment, image->surface.dcc_alignment);
 }
 
 static unsigned
