@@ -24,6 +24,7 @@
 #ifdef ENABLE_SHADER_CACHE
 
 #include <ctype.h>
+#include <ftw.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -131,6 +132,39 @@ concatenate_and_mkdir(void *ctx, char *path, const char *name)
       return NULL;
 }
 
+static int
+remove_dir(const char *fpath, const struct stat *sb,
+           int typeflag, struct FTW *ftwbuf)
+{
+   if (S_ISREG(sb->st_mode))
+      unlink(fpath);
+   else if (S_ISDIR(sb->st_mode))
+      rmdir(fpath);
+
+   return 0;
+}
+
+static void
+remove_old_cache_directories(void *mem_ctx, char *path, const char *timestamp)
+{
+   DIR *dir = opendir(path);
+
+   struct dirent* d_entry;
+   while((d_entry = readdir(dir)) != NULL)
+   {
+      struct stat sb;
+      stat(d_entry->d_name, &sb);
+      if (S_ISDIR(sb.st_mode) &&
+          strcmp(d_entry->d_name, timestamp) != 0 &&
+          strcmp(d_entry->d_name, "..") != 0 &&
+          strcmp(d_entry->d_name, ".") != 0) {
+         char *full_path =
+            ralloc_asprintf(mem_ctx, "%s/%s", path, d_entry->d_name);
+         nftw(full_path, remove_dir, 20, FTW_DEPTH);
+      }
+   }
+}
+
 static char *
 create_mesa_cache_dir(void *mem_ctx, char *path, const char *timestamp,
                       const char *gpu_name)
@@ -138,6 +172,9 @@ create_mesa_cache_dir(void *mem_ctx, char *path, const char *timestamp,
    char *new_path = concatenate_and_mkdir(mem_ctx, path, "mesa");
    if (new_path == NULL)
       return NULL;
+
+   /* Remove cache directories for old Mesa versions */
+   remove_old_cache_directories(mem_ctx, new_path, timestamp);
 
    new_path = concatenate_and_mkdir(mem_ctx, new_path, timestamp);
    if (new_path == NULL)
