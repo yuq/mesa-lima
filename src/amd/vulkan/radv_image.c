@@ -571,6 +571,7 @@ radv_image_alloc_cmask(struct radv_device *device,
 	/* + 8 for storing the clear values */
 	image->clear_value_offset = image->cmask.offset + image->cmask.size;
 	image->size = image->cmask.offset + image->cmask.size + 8;
+	image->alignment = MAX2(image->alignment, image->cmask.alignment);
 }
 
 static void
