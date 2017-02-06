@@ -294,7 +294,7 @@ static const VkAllocationCallbacks default_alloc = {
 };
 
 static const struct debug_control radv_debug_options[] = {
-	{"fastclears", RADV_DEBUG_FAST_CLEARS},
+	{"nofastclears", RADV_DEBUG_NO_FAST_CLEARS},
 	{"nodcc", RADV_DEBUG_NO_DCC},
 	{"shaders", RADV_DEBUG_DUMP_SHADERS},
 	{"nocache", RADV_DEBUG_NO_CACHE},
@@ -2157,7 +2157,7 @@ radv_initialise_color_surface(struct radv_device *device,
 			cb->cb_color_info |= S_028C70_COMPRESSION(1);
 
 	if (iview->image->cmask.size &&
-	    (device->debug_flags & RADV_DEBUG_FAST_CLEARS))
+	    !(device->debug_flags & RADV_DEBUG_NO_FAST_CLEARS))
 		cb->cb_color_info |= S_028C70_FAST_CLEAR(1);
 
 	if (iview->image->surface.dcc_size && level_info->dcc_enabled)

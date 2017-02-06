@@ -102,7 +102,7 @@ enum radv_mem_type {
 
 
 enum {
-	RADV_DEBUG_FAST_CLEARS       =   0x1,
+	RADV_DEBUG_NO_FAST_CLEARS    =   0x1,
 	RADV_DEBUG_NO_DCC            =   0x2,
 	RADV_DEBUG_DUMP_SHADERS      =   0x4,
 	RADV_DEBUG_NO_CACHE          =   0x8,
