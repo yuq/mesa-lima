@@ -3649,7 +3649,8 @@ static void visit_tex(struct nir_to_llvm_context *ctx, nir_tex_instr *instr)
 	 * The sample index should be adjusted as follows:
 	 *   sample_index = (fmask >> (sample_index * 4)) & 0xF;
 	 */
-	if (instr->sampler_dim == GLSL_SAMPLER_DIM_MS) {
+	if (instr->sampler_dim == GLSL_SAMPLER_DIM_MS &&
+	    instr->op != nir_texop_txs) {
 		LLVMValueRef txf_address[4];
 		struct ac_tex_info txf_info = { 0 };
 		unsigned txf_count = count;
