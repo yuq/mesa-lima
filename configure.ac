@@ -1741,9 +1741,6 @@ AC_ARG_ENABLE([gallium-llvm],
     [enable_gallium_llvm="$enableval"],
     [enable_gallium_llvm=auto])
 
-if test -z "$with_gallium_drivers"; then
-    enable_gallium_llvm=no
-fi
 if test "x$enable_gallium_llvm" = xauto; then
     case "$host_cpu" in
     i*86|x86_64|amd64) enable_gallium_llvm=yes;;
@@ -2383,7 +2380,7 @@ if test -n "$with_gallium_drivers"; then
     done
 fi
 
-if test "x$enable_gallium_llvm" == "xyes"; then
+if test "x$enable_gallium_llvm" == "xyes" -a "$with_gallium_drivers"; then
     llvm_require_version $LLVM_REQUIRED_GALLIUM "gallium"
     llvm_add_default_components "gallium"
 fi
