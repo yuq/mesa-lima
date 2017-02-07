@@ -959,7 +959,6 @@ llvm_set_environment_variables() {
             LLVM_VERSION_INT="${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}"
         fi
 
-        DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
         FOUND_LLVM=yes
     else
         FOUND_LLVM=no
@@ -2395,14 +2394,18 @@ if test "x$HAVE_GALLIUM_ETNAVIV" != xyes -a "x$HAVE_GALLIUM_IMX" == xyes  ; then
     AC_ERROR([Building with imx requires etnaviv])
 fi
 
-dnl Set LLVM_LIBS - This is done after the driver configuration so
-dnl that drivers can add additional components to LLVM_COMPONENTS.
-dnl Previously, gallium drivers were updating LLVM_LIBS directly
-dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
-dnl this was causing the same libraries to be appear multiple times
-dnl in LLVM_LIBS.
-
+dnl
+dnl Set defines and buildtime variables only when using LLVM.
+dnl
 if test "x$enable_gallium_llvm" = xyes; then
+    DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
+
+    dnl Set LLVM_LIBS - This is done after the driver configuration so
+    dnl that drivers can add additional components to LLVM_COMPONENTS.
+    dnl Previously, gallium drivers were updating LLVM_LIBS directly
+    dnl by calling llvm-config --libs ${DRIVER_LLVM_COMPONENTS}, but
+    dnl this was causing the same libraries to be appear multiple times
+    dnl in LLVM_LIBS.
 
     if ! $LLVM_CONFIG --libs ${LLVM_COMPONENTS} >/dev/null; then
        AC_MSG_ERROR([Calling ${LLVM_CONFIG} failed])
