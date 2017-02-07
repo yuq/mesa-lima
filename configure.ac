@@ -66,7 +66,12 @@ AC_SUBST([OSMESA_VERSION])
 OPENCL_VERSION=1
 AC_SUBST([OPENCL_VERSION])
 
-dnl Versions for external dependencies
+# The idea is that libdrm is distributed as one cohesive package, even
+# though it is composed of multiple libraries. However some drivers
+# may have different version requirements than others. This list
+# codifies which drivers need which version of libdrm. Any libdrm
+# version dependencies in non-driver-specific code should be reflected
+# in the first entry.
 LIBDRM_REQUIRED=2.4.66
 LIBDRM_RADEON_REQUIRED=2.4.56
 LIBDRM_AMDGPU_REQUIRED=2.4.63
@@ -76,6 +81,8 @@ LIBDRM_NOUVEAU_REQUIRED=2.4.66
 LIBDRM_FREEDRENO_REQUIRED=2.4.74
 LIBDRM_VC4_REQUIRED=2.4.69
 LIBDRM_ETNAVIV_REQUIRED=2.4.74
+
+dnl Versions for external dependencies
 DRI2PROTO_REQUIRED=2.6
 DRI3PROTO_REQUIRED=1.0
 PRESENTPROTO_REQUIRED=1.0
