@@ -240,6 +240,9 @@ amdgpu_bo_is_referenced_by_any_cs(struct amdgpu_winsys_bo *bo)
 
 bool amdgpu_fence_wait(struct pipe_fence_handle *fence, uint64_t timeout,
                        bool absolute);
+void amdgpu_add_fences(struct amdgpu_winsys_bo *bo,
+                       unsigned num_fences,
+                       struct pipe_fence_handle **fences);
 void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs);
 void amdgpu_cs_init_functions(struct amdgpu_winsys *ws);
 void amdgpu_cs_submit_ib(void *job, int thread_index);

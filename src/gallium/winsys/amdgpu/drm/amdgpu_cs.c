@@ -952,31 +952,44 @@ static void amdgpu_add_fence_dependency(struct amdgpu_cs *acs,
    bo->num_fences = new_num_fences;
 }
 
-static void amdgpu_add_fence(struct amdgpu_winsys_bo *bo,
-                             struct pipe_fence_handle *fence)
+/* Add the given list of fences to the buffer's fence list.
+ *
+ * Must be called with the winsys bo_fence_lock held.
+ */
+void amdgpu_add_fences(struct amdgpu_winsys_bo *bo,
+                       unsigned num_fences,
+                       struct pipe_fence_handle **fences)
 {
-   if (bo->num_fences >= bo->max_fences) {
-      unsigned new_max_fences = MAX2(1, bo->max_fences * 2);
+   if (bo->num_fences + num_fences > bo->max_fences) {
+      unsigned new_max_fences = MAX2(bo->num_fences + num_fences, bo->max_fences * 2);
       struct pipe_fence_handle **new_fences =
          REALLOC(bo->fences,
                  bo->num_fences * sizeof(*new_fences),
                  new_max_fences * sizeof(*new_fences));
-      if (new_fences) {
+      if (likely(new_fences)) {
          bo->fences = new_fences;
          bo->max_fences = new_max_fences;
       } else {
-         fprintf(stderr, "amdgpu_add_fence: allocation failure, dropping fence\n");
+         unsigned drop;
+
+         fprintf(stderr, "amdgpu_add_fences: allocation failure, dropping fence(s)\n");
          if (!bo->num_fences)
             return;
 
-         bo->num_fences--; /* prefer to keep a more recent fence if possible */
+         bo->num_fences--; /* prefer to keep the most recent fence if possible */
          amdgpu_fence_reference(&bo->fences[bo->num_fences], NULL);
+
+         drop = bo->num_fences + num_fences - bo->max_fences;
+         num_fences -= drop;
+         fences += drop;
       }
    }
 
-   bo->fences[bo->num_fences] = NULL;
-   amdgpu_fence_reference(&bo->fences[bo->num_fences], fence);
-   bo->num_fences++;
+   for (unsigned i = 0; i < num_fences; ++i) {
+      bo->fences[bo->num_fences] = NULL;
+      amdgpu_fence_reference(&bo->fences[bo->num_fences], fences[i]);
+      bo->num_fences++;
+   }
 }
 
 static void amdgpu_add_fence_dependencies_list(struct amdgpu_cs *acs,
@@ -990,7 +1003,7 @@ static void amdgpu_add_fence_dependencies_list(struct amdgpu_cs *acs,
 
       amdgpu_add_fence_dependency(acs, buffer);
       p_atomic_inc(&bo->num_active_ioctls);
-      amdgpu_add_fence(bo, fence);
+      amdgpu_add_fences(bo, 1, &fence);
    }
 }
 
