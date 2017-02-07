@@ -2334,15 +2334,30 @@ vtn_vector_construct(struct vtn_builder *b, unsigned num_components,
    nir_alu_instr *vec = create_vec(b->shader, num_components,
                                    srcs[0]->bit_size);
 
+   /* From the SPIR-V 1.1 spec for OpCompositeConstruct:
+    *
+    *    "When constructing a vector, there must be at least two Constituent
+    *    operands."
+    */
+   assert(num_srcs >= 2);
+
    unsigned dest_idx = 0;
    for (unsigned i = 0; i < num_srcs; i++) {
       nir_ssa_def *src = srcs[i];
+      assert(dest_idx + src->num_components <= num_components);
       for (unsigned j = 0; j < src->num_components; j++) {
          vec->src[dest_idx].src = nir_src_for_ssa(src);
          vec->src[dest_idx].swizzle[0] = j;
          dest_idx++;
       }
    }
+
+   /* From the SPIR-V 1.1 spec for OpCompositeConstruct:
+    *
+    *    "When constructing a vector, the total number of components in all
+    *    the operands must equal the number of components in Result Type."
+    */
+   assert(dest_idx == num_components);
 
    nir_builder_instr_insert(&b->nb, &vec->instr);
 
