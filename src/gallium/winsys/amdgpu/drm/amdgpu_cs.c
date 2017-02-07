@@ -315,15 +315,10 @@ int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *
 }
 
 static int
-amdgpu_lookup_or_add_real_buffer(struct amdgpu_cs *acs, struct amdgpu_winsys_bo *bo)
+amdgpu_do_add_real_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *bo)
 {
-   struct amdgpu_cs_context *cs = acs->csc;
    struct amdgpu_cs_buffer *buffer;
-   unsigned hash;
-   int idx = amdgpu_lookup_buffer(cs, bo);
-
-   if (idx >= 0)
-      return idx;
+   int idx;
 
    /* New buffer, check if the backing array is large enough. */
    if (cs->num_real_buffers >= cs->max_real_buffers) {
@@ -338,7 +333,7 @@ amdgpu_lookup_or_add_real_buffer(struct amdgpu_cs *acs, struct amdgpu_winsys_bo 
       new_flags = MALLOC(new_max * sizeof(*new_flags));
 
       if (!new_buffers || !new_handles || !new_flags) {
-         fprintf(stderr, "amdgpu_lookup_or_add_buffer: allocation failed\n");
+         fprintf(stderr, "amdgpu_do_add_buffer: allocation failed\n");
          FREE(new_buffers);
          FREE(new_handles);
          FREE(new_flags);
@@ -368,6 +363,21 @@ amdgpu_lookup_or_add_real_buffer(struct amdgpu_cs *acs, struct amdgpu_winsys_bo 
    cs->flags[idx] = 0;
    p_atomic_inc(&bo->num_cs_references);
    cs->num_real_buffers++;
+
+   return idx;
+}
+
+static int
+amdgpu_lookup_or_add_real_buffer(struct amdgpu_cs *acs, struct amdgpu_winsys_bo *bo)
+{
+   struct amdgpu_cs_context *cs = acs->csc;
+   unsigned hash;
+   int idx = amdgpu_lookup_buffer(cs, bo);
+
+   if (idx >= 0)
+      return idx;
+
+   idx = amdgpu_do_add_real_buffer(cs, bo);
 
    hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
    cs->buffer_indices_hashlist[hash] = idx;
