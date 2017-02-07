@@ -1859,7 +1859,7 @@ adjust_split_source_coords(const struct blt_axis *orig,
    split_coords->src1 = orig->src1 + (scale >= 0.0 ? delta1 : delta0);
 }
 
-static const struct isl_extent2d
+static struct isl_extent2d
 get_px_size_sa(const struct isl_surf *surf)
 {
    static const struct isl_extent2d one_to_one = { .w = 1, .h = 1 };
