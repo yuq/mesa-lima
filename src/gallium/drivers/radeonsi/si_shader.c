@@ -4395,15 +4395,11 @@ static void tex_fetch_args(
 		struct lp_build_context *uint_bld = &bld_base->uint_bld;
 		struct lp_build_emit_data txf_emit_data = *emit_data;
 		LLVMValueRef txf_address[4];
-		unsigned txf_count = count;
+		/* We only need .xy for non-arrays, and .xyz for arrays. */
+		unsigned txf_count = target == TGSI_TEXTURE_2D_MSAA ? 2 : 3;
 		struct tgsi_full_instruction inst = {};
 
 		memcpy(txf_address, address, sizeof(txf_address));
-
-		if (target == TGSI_TEXTURE_2D_MSAA) {
-			txf_address[2] = bld_base->uint_bld.zero;
-		}
-		txf_address[3] = bld_base->uint_bld.zero;
 
 		/* Read FMASK using TXF. */
 		inst.Instruction.Opcode = TGSI_OPCODE_TXF;
@@ -4425,7 +4421,7 @@ static void tex_fetch_args(
 						txf_emit_data.output[0],
 						uint_bld->zero, "");
 
-		unsigned sample_chan = target == TGSI_TEXTURE_2D_MSAA ? 2 : 3;
+		unsigned sample_chan = txf_count; /* the sample index is last */
 
 		LLVMValueRef sample_index4 =
 			LLVMBuildMul(gallivm->builder, address[sample_chan], four, "");
