@@ -1028,7 +1028,6 @@ radeon_llvm_check() {
 
 llvm_set_environment_variables
 
-AC_SUBST([MESA_LLVM])
 AC_SUBST([LLVM_BINDIR])
 AC_SUBST([LLVM_CFLAGS])
 AC_SUBST([LLVM_CPPFLAGS])
