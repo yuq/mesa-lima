@@ -2225,13 +2225,6 @@ require_basic_egl() {
     esac
 }
 
-radeon_gallium_llvm_check() {
-    if test "x$enable_gallium_llvm" != "xyes"; then
-        AC_MSG_ERROR([--enable-gallium-llvm is required when building $2])
-    fi
-    radeon_llvm_check $*
-}
-
 swr_require_cxx_feature_flags() {
     feature_name="$1"
     preprocessor_test="$2"
@@ -2296,7 +2289,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r600"
             if test "x$enable_opencl" = xyes; then
-                radeon_gallium_llvm_check $LLVM_REQUIRED_R600 "r600"
+                radeon_llvm_check $LLVM_REQUIRED_R600 "r600"
 
                 llvm_add_component "asmparser" "r600"
                 llvm_add_component "bitreader" "r600"
@@ -2307,7 +2300,7 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             require_libdrm "radeonsi"
-            radeon_gallium_llvm_check $LLVM_REQUIRED_RADEONSI "radeonsi"
+            radeon_llvm_check $LLVM_REQUIRED_RADEONSI "radeonsi"
             require_basic_egl "radeonsi"
             ;;
         xnouveau)
