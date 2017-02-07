@@ -84,9 +84,11 @@ struct amdgpu_cs_context {
    /* Buffers. */
    unsigned                    max_real_buffers;
    unsigned                    num_real_buffers;
+   struct amdgpu_cs_buffer     *real_buffers;
+
+   unsigned                    max_real_submit;
    amdgpu_bo_handle            *handles;
    uint8_t                     *flags;
-   struct amdgpu_cs_buffer     *real_buffers;
 
    unsigned                    num_slab_buffers;
    unsigned                    max_slab_buffers;

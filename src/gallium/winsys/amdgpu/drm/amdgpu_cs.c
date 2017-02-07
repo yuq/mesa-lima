@@ -325,33 +325,21 @@ amdgpu_do_add_real_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo 
       unsigned new_max =
          MAX2(cs->max_real_buffers + 16, (unsigned)(cs->max_real_buffers * 1.3));
       struct amdgpu_cs_buffer *new_buffers;
-      amdgpu_bo_handle *new_handles;
-      uint8_t *new_flags;
 
       new_buffers = MALLOC(new_max * sizeof(*new_buffers));
-      new_handles = MALLOC(new_max * sizeof(*new_handles));
-      new_flags = MALLOC(new_max * sizeof(*new_flags));
 
-      if (!new_buffers || !new_handles || !new_flags) {
+      if (!new_buffers) {
          fprintf(stderr, "amdgpu_do_add_buffer: allocation failed\n");
          FREE(new_buffers);
-         FREE(new_handles);
-         FREE(new_flags);
          return -1;
       }
 
       memcpy(new_buffers, cs->real_buffers, cs->num_real_buffers * sizeof(*new_buffers));
-      memcpy(new_handles, cs->handles, cs->num_real_buffers * sizeof(*new_handles));
-      memcpy(new_flags, cs->flags, cs->num_real_buffers * sizeof(*new_flags));
 
       FREE(cs->real_buffers);
-      FREE(cs->handles);
-      FREE(cs->flags);
 
       cs->max_real_buffers = new_max;
       cs->real_buffers = new_buffers;
-      cs->handles = new_handles;
-      cs->flags = new_flags;
    }
 
    idx = cs->num_real_buffers;
@@ -359,8 +347,6 @@ amdgpu_do_add_real_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo 
 
    memset(buffer, 0, sizeof(*buffer));
    amdgpu_winsys_bo_reference(&buffer->bo, bo);
-   cs->handles[idx] = bo->bo;
-   cs->flags[idx] = 0;
    p_atomic_inc(&bo->num_cs_references);
    cs->num_real_buffers++;
 
@@ -482,7 +468,6 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
    buffer = &cs->real_buffers[index];
    buffer->u.real.priority_usage |= 1llu << priority;
    buffer->usage |= usage;
-   cs->flags[index] = MAX2(cs->flags[index], priority / 4);
 
    cs->last_added_bo = bo;
    cs->last_added_bo_index = index;
@@ -1064,10 +1049,34 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       free(handles);
       mtx_unlock(&ws->global_bo_list_lock);
    } else {
+      if (cs->max_real_submit < cs->num_real_buffers) {
+         FREE(cs->handles);
+         FREE(cs->flags);
+
+         cs->handles = MALLOC(sizeof(*cs->handles) * cs->num_real_buffers);
+         cs->flags = MALLOC(sizeof(*cs->flags) * cs->num_real_buffers);
+
+         if (!cs->handles || !cs->flags) {
+            cs->max_real_submit = 0;
+            r = -ENOMEM;
+            goto bo_list_error;
+         }
+      }
+
+      for (i = 0; i < cs->num_real_buffers; ++i) {
+         struct amdgpu_cs_buffer *buffer = &cs->real_buffers[i];
+
+         assert(buffer->u.real.priority_usage != 0);
+
+         cs->handles[i] = buffer->bo->bo;
+         cs->flags[i] = (util_last_bit64(buffer->u.real.priority_usage) - 1) / 4;
+      }
+
       r = amdgpu_bo_list_create(ws->dev, cs->num_real_buffers,
                                 cs->handles, cs->flags,
                                 &cs->request.resources);
    }
+bo_list_error:
 
    if (r) {
       fprintf(stderr, "amdgpu: buffer list creation failed (%d)\n", r);
