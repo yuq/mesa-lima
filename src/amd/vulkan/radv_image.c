@@ -510,6 +510,7 @@ radv_image_alloc_fmask(struct radv_device *device,
 
 	image->fmask.offset = align64(image->size, image->fmask.alignment);
 	image->size = image->fmask.offset + image->fmask.size;
+	image->alignment = MAX2(image->alignment, image->fmask.alignment);
 }
 
 static void
