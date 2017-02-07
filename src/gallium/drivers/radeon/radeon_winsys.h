@@ -53,6 +53,7 @@ enum radeon_bo_flag { /* bitfield */
     RADEON_FLAG_CPU_ACCESS =    (1 << 1),
     RADEON_FLAG_NO_CPU_ACCESS = (1 << 2),
     RADEON_FLAG_HANDLE =        (1 << 3), /* the buffer most not be suballocated */
+    RADEON_FLAG_SPARSE =        (1 << 4),
 };
 
 enum radeon_bo_usage { /* bitfield */
@@ -65,6 +66,8 @@ enum radeon_bo_usage { /* bitfield */
      */
     RADEON_USAGE_SYNCHRONIZED = 8
 };
+
+#define RADEON_SPARSE_PAGE_SIZE (64 * 1024)
 
 enum ring_type {
     RING_GFX = 0,
@@ -573,6 +576,20 @@ struct radeon_winsys {
                               unsigned stride, unsigned offset,
                               unsigned slice_size,
                               struct winsys_handle *whandle);
+
+    /**
+     * Change the commitment of a (64KB-page aligned) region of the given
+     * sparse buffer.
+     *
+     * \warning There is no automatic synchronization with command submission.
+     *
+     * \note Only implemented by the amdgpu winsys.
+     *
+     * \return false on out of memory or other failure, true on success.
+     */
+    bool (*buffer_commit)(struct pb_buffer *buf,
+                          uint64_t offset, uint64_t size,
+                          bool commit);
 
     /**
      * Return the virtual address of a buffer.
