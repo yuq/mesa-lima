@@ -1725,6 +1725,24 @@ if test -n "$with_dri_drivers"; then
 fi
 
 
+dnl
+dnl Gallium LLVM
+dnl
+AC_ARG_ENABLE([gallium-llvm],
+    [AS_HELP_STRING([--enable-gallium-llvm],
+        [build gallium LLVM support @<:@default=enabled on x86/x86_64@:>@])],
+    [enable_gallium_llvm="$enableval"],
+    [enable_gallium_llvm=auto])
+
+if test -z "$with_gallium_drivers"; then
+    enable_gallium_llvm=no
+fi
+if test "x$enable_gallium_llvm" = xauto; then
+    case "$host_cpu" in
+    i*86|x86_64|amd64) enable_gallium_llvm=yes;;
+    esac
+fi
+
 #
 # Vulkan driver configuration
 #
@@ -2129,24 +2147,6 @@ AC_SUBST([EGL_CFLAGS])
 if ! echo "$egl_platforms" | grep -q 'x11'; then
     DEFINES="$DEFINES -DMESA_EGL_NO_X11_HEADERS"
     GL_PC_CFLAGS="$GL_PC_CFLAGS -DMESA_EGL_NO_X11_HEADERS"
-fi
-
-dnl
-dnl Gallium LLVM
-dnl
-AC_ARG_ENABLE([gallium-llvm],
-    [AS_HELP_STRING([--enable-gallium-llvm],
-        [build gallium LLVM support @<:@default=enabled on x86/x86_64@:>@])],
-    [enable_gallium_llvm="$enableval"],
-    [enable_gallium_llvm=auto])
-
-if test -z "$with_gallium_drivers"; then
-    enable_gallium_llvm=no
-fi
-if test "x$enable_gallium_llvm" = xauto; then
-    case "$host_cpu" in
-    i*86|x86_64|amd64) enable_gallium_llvm=yes;;
-    esac
 fi
 
 dnl Directory for XVMC libs
