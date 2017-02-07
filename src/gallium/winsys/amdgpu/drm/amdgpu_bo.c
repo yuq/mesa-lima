@@ -667,9 +667,16 @@ sparse_backing_alloc(struct amdgpu_winsys_bo *bo, uint32_t *pstart_page, uint32_
 }
 
 static void
-sparse_free_backing_buffer(struct amdgpu_sparse_backing *backing)
+sparse_free_backing_buffer(struct amdgpu_winsys_bo *bo,
+                           struct amdgpu_sparse_backing *backing)
 {
+   struct amdgpu_winsys *ws = backing->bo->ws;
+
    bo->u.sparse.num_backing_pages -= backing->bo->base.size / RADEON_SPARSE_PAGE_SIZE;
+
+   mtx_lock(&ws->bo_fence_lock);
+   amdgpu_add_fences(backing->bo, bo->num_fences, bo->fences);
+   mtx_unlock(&ws->bo_fence_lock);
 
    list_del(&backing->list);
    amdgpu_winsys_bo_reference(&backing->bo, NULL);
@@ -737,7 +744,7 @@ sparse_backing_free(struct amdgpu_winsys_bo *bo,
 
    if (backing->num_chunks == 1 && backing->chunks[0].begin == 0 &&
        backing->chunks[0].end == backing->bo->base.size / RADEON_SPARSE_PAGE_SIZE)
-      sparse_free_backing_buffer(backing);
+      sparse_free_backing_buffer(bo, backing);
 
    return true;
 }
@@ -758,7 +765,8 @@ static void amdgpu_bo_sparse_destroy(struct pb_buffer *_buf)
 
    while (!list_empty(&bo->u.sparse.backing)) {
       struct amdgpu_sparse_backing *dummy = NULL;
-      sparse_free_backing_buffer(container_of(bo->u.sparse.backing.next,
+      sparse_free_backing_buffer(bo,
+                                 container_of(bo->u.sparse.backing.next,
                                               dummy, list));
    }
 
