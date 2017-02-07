@@ -51,6 +51,8 @@ void *r600_buffer_map_sync_with_rings(struct r600_common_context *ctx,
 	enum radeon_bo_usage rusage = RADEON_USAGE_READWRITE;
 	bool busy = false;
 
+	assert(!(resource->flags & RADEON_FLAG_SPARSE));
+
 	if (usage & PIPE_TRANSFER_UNSYNCHRONIZED) {
 		return ctx->ws->buffer_map(resource->buf, NULL, usage);
 	}
@@ -249,6 +251,10 @@ r600_invalidate_buffer(struct r600_common_context *rctx,
 	if (rbuffer->is_shared)
 		return false;
 
+	/* Sparse buffers can't be reallocated. */
+	if (rbuffer->flags & RADEON_FLAG_SPARSE)
+		return false;
+
 	/* In AMD_pinned_memory, the user pointer association only gets
 	 * broken when the buffer is explicitly re-allocated.
 	 */
@@ -355,14 +361,17 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 
 	if ((usage & PIPE_TRANSFER_DISCARD_RANGE) &&
-	    !(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
-		       PIPE_TRANSFER_PERSISTENT)) &&
 	    !(rscreen->debug_flags & DBG_NO_DISCARD_RANGE) &&
-	    r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) {
+	    ((!(usage & (PIPE_TRANSFER_UNSYNCHRONIZED |
+			 PIPE_TRANSFER_PERSISTENT)) &&
+	      r600_can_dma_copy_buffer(rctx, box->x, 0, box->width)) ||
+	     (rbuffer->flags & RADEON_FLAG_SPARSE))) {
 		assert(usage & PIPE_TRANSFER_WRITE);
 
-		/* Check if mapping this buffer would cause waiting for the GPU. */
-		if (r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
+		/* Check if mapping this buffer would cause waiting for the GPU.
+		 */
+		if (rbuffer->flags & RADEON_FLAG_SPARSE ||
+		    r600_rings_is_buffer_referenced(rctx, rbuffer->buf, RADEON_USAGE_READWRITE) ||
 		    !rctx->ws->buffer_wait(rbuffer->buf, 0, RADEON_USAGE_READWRITE)) {
 			/* Do a wait-free write-only transfer using a temporary buffer. */
 			unsigned offset;
@@ -378,6 +387,8 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 				data += box->x % R600_MAP_BUFFER_ALIGNMENT;
 				return r600_buffer_get_transfer(ctx, resource, usage, box,
 								ptransfer, data, staging, offset);
+			} else if (rbuffer->flags & RADEON_FLAG_SPARSE) {
+				return NULL;
 			}
 		} else {
 			/* At this point, the buffer is always idle (we checked it above). */
@@ -385,11 +396,12 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		}
 	}
 	/* Use a staging buffer in cached GTT for reads. */
-	else if ((usage & PIPE_TRANSFER_READ) &&
-		 !(usage & PIPE_TRANSFER_PERSISTENT) &&
-		 (rbuffer->domains & RADEON_DOMAIN_VRAM ||
-		  rbuffer->flags & RADEON_FLAG_GTT_WC) &&
-		 r600_can_dma_copy_buffer(rctx, 0, box->x, box->width)) {
+	else if (((usage & PIPE_TRANSFER_READ) &&
+		  !(usage & PIPE_TRANSFER_PERSISTENT) &&
+		  (rbuffer->domains & RADEON_DOMAIN_VRAM ||
+		   rbuffer->flags & RADEON_FLAG_GTT_WC) &&
+		  r600_can_dma_copy_buffer(rctx, 0, box->x, box->width)) ||
+		 (rbuffer->flags & RADEON_FLAG_SPARSE)) {
 		struct r600_resource *staging;
 
 		staging = (struct r600_resource*) pipe_buffer_create(
@@ -411,6 +423,8 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 
 			return r600_buffer_get_transfer(ctx, resource, usage, box,
 							ptransfer, data, staging, 0);
+		} else if (rbuffer->flags & RADEON_FLAG_SPARSE) {
+			return NULL;
 		}
 	}
 
