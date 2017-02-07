@@ -286,9 +286,12 @@ int amdgpu_lookup_buffer(struct amdgpu_cs_context *cs, struct amdgpu_winsys_bo *
    if (bo->bo) {
       buffers = cs->real_buffers;
       num_buffers = cs->num_real_buffers;
-   } else {
+   } else if (!bo->sparse) {
       buffers = cs->slab_buffers;
       num_buffers = cs->num_slab_buffers;
+   } else {
+      buffers = cs->sparse_buffers;
+      num_buffers = cs->num_sparse_buffers;
    }
 
    /* not found or found */
@@ -425,6 +428,63 @@ static int amdgpu_lookup_or_add_slab_buffer(struct amdgpu_cs *acs,
    return idx;
 }
 
+static int amdgpu_lookup_or_add_sparse_buffer(struct amdgpu_cs *acs,
+                                              struct amdgpu_winsys_bo *bo)
+{
+   struct amdgpu_cs_context *cs = acs->csc;
+   struct amdgpu_cs_buffer *buffer;
+   unsigned hash;
+   int idx = amdgpu_lookup_buffer(cs, bo);
+
+   if (idx >= 0)
+      return idx;
+
+   /* New buffer, check if the backing array is large enough. */
+   if (cs->num_sparse_buffers >= cs->max_sparse_buffers) {
+      unsigned new_max =
+         MAX2(cs->max_sparse_buffers + 16, (unsigned)(cs->max_sparse_buffers * 1.3));
+      struct amdgpu_cs_buffer *new_buffers;
+
+      new_buffers = REALLOC(cs->sparse_buffers,
+                            cs->max_sparse_buffers * sizeof(*new_buffers),
+                            new_max * sizeof(*new_buffers));
+      if (!new_buffers) {
+         fprintf(stderr, "amdgpu_lookup_or_add_sparse_buffer: allocation failed\n");
+         return -1;
+      }
+
+      cs->max_sparse_buffers = new_max;
+      cs->sparse_buffers = new_buffers;
+   }
+
+   idx = cs->num_sparse_buffers;
+   buffer = &cs->sparse_buffers[idx];
+
+   memset(buffer, 0, sizeof(*buffer));
+   amdgpu_winsys_bo_reference(&buffer->bo, bo);
+   p_atomic_inc(&bo->num_cs_references);
+   cs->num_sparse_buffers++;
+
+   hash = bo->unique_id & (ARRAY_SIZE(cs->buffer_indices_hashlist)-1);
+   cs->buffer_indices_hashlist[hash] = idx;
+
+   /* We delay adding the backing buffers until we really have to. However,
+    * we cannot delay accounting for memory use.
+    */
+   mtx_lock(&bo->u.sparse.commit_lock);
+
+   list_for_each_entry(struct amdgpu_sparse_backing, backing, &bo->u.sparse.backing, list) {
+      if (bo->initial_domain & RADEON_DOMAIN_VRAM)
+         acs->main.base.used_vram += backing->bo->base.size;
+      else if (bo->initial_domain & RADEON_DOMAIN_GTT)
+         acs->main.base.used_gart += backing->bo->base.size;
+   }
+
+   mtx_unlock(&bo->u.sparse.commit_lock);
+
+   return idx;
+}
+
 static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
                                     struct pb_buffer *buf,
                                     enum radeon_bo_usage usage,
@@ -449,25 +509,35 @@ static unsigned amdgpu_cs_add_buffer(struct radeon_winsys_cs *rcs,
        (1ull << priority) & cs->last_added_bo_priority_usage)
       return cs->last_added_bo_index;
 
-   if (!bo->bo) {
-      index = amdgpu_lookup_or_add_slab_buffer(acs, bo);
-      if (index < 0)
-         return 0;
+   if (!bo->sparse) {
+      if (!bo->bo) {
+         index = amdgpu_lookup_or_add_slab_buffer(acs, bo);
+         if (index < 0)
+            return 0;
 
-      buffer = &cs->slab_buffers[index];
+         buffer = &cs->slab_buffers[index];
+         buffer->usage |= usage;
+
+         usage &= ~RADEON_USAGE_SYNCHRONIZED;
+         index = buffer->u.slab.real_idx;
+      } else {
+         index = amdgpu_lookup_or_add_real_buffer(acs, bo);
+         if (index < 0)
+            return 0;
+      }
+
+      buffer = &cs->real_buffers[index];
+      buffer->u.real.priority_usage |= 1llu << priority;
       buffer->usage |= usage;
-
-      usage &= ~RADEON_USAGE_SYNCHRONIZED;
-      index = buffer->u.slab.real_idx;
    } else {
-      index = amdgpu_lookup_or_add_real_buffer(acs, bo);
+      index = amdgpu_lookup_or_add_sparse_buffer(acs, bo);
       if (index < 0)
          return 0;
-   }
 
-   buffer = &cs->real_buffers[index];
-   buffer->u.real.priority_usage |= 1llu << priority;
-   buffer->usage |= usage;
+      buffer = &cs->sparse_buffers[index];
+      buffer->usage |= usage;
+      buffer->u.real.priority_usage |= 1llu << priority;
+   }
 
    cs->last_added_bo = bo;
    cs->last_added_bo_index = index;
@@ -678,9 +748,14 @@ static void amdgpu_cs_context_cleanup(struct amdgpu_cs_context *cs)
       p_atomic_dec(&cs->slab_buffers[i].bo->num_cs_references);
       amdgpu_winsys_bo_reference(&cs->slab_buffers[i].bo, NULL);
    }
+   for (i = 0; i < cs->num_sparse_buffers; i++) {
+      p_atomic_dec(&cs->sparse_buffers[i].bo->num_cs_references);
+      amdgpu_winsys_bo_reference(&cs->sparse_buffers[i].bo, NULL);
+   }
 
    cs->num_real_buffers = 0;
    cs->num_slab_buffers = 0;
+   cs->num_sparse_buffers = 0;
    amdgpu_fence_reference(&cs->fence, NULL);
 
    for (i = 0; i < ARRAY_SIZE(cs->buffer_indices_hashlist); i++) {
@@ -696,6 +771,7 @@ static void amdgpu_destroy_cs_context(struct amdgpu_cs_context *cs)
    FREE(cs->real_buffers);
    FREE(cs->handles);
    FREE(cs->slab_buffers);
+   FREE(cs->sparse_buffers);
    FREE(cs->request.dependencies);
 }
 
@@ -1018,6 +1094,42 @@ static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
 
    amdgpu_add_fence_dependencies_list(acs, cs->fence, cs->num_real_buffers, cs->real_buffers);
    amdgpu_add_fence_dependencies_list(acs, cs->fence, cs->num_slab_buffers, cs->slab_buffers);
+   amdgpu_add_fence_dependencies_list(acs, cs->fence, cs->num_sparse_buffers, cs->sparse_buffers);
+}
+
+/* Add backing of sparse buffers to the buffer list.
+ *
+ * This is done late, during submission, to keep the buffer list short before
+ * submit, and to avoid managing fences for the backing buffers.
+ */
+static bool amdgpu_add_sparse_backing_buffers(struct amdgpu_cs_context *cs)
+{
+   for (unsigned i = 0; i < cs->num_sparse_buffers; ++i) {
+      struct amdgpu_cs_buffer *buffer = &cs->sparse_buffers[i];
+      struct amdgpu_winsys_bo *bo = buffer->bo;
+
+      mtx_lock(&bo->u.sparse.commit_lock);
+
+      list_for_each_entry(struct amdgpu_sparse_backing, backing, &bo->u.sparse.backing, list) {
+         /* We can directly add the buffer here, because we know that each
+          * backing buffer occurs only once.
+          */
+         int idx = amdgpu_do_add_real_buffer(cs, backing->bo);
+         if (idx < 0) {
+            fprintf(stderr, "%s: failed to add buffer\n", __FUNCTION__);
+            mtx_unlock(&bo->u.sparse.commit_lock);
+            return false;
+         }
+
+         cs->real_buffers[idx].usage = buffer->usage & ~RADEON_USAGE_SYNCHRONIZED;
+         cs->real_buffers[idx].u.real.priority_usage = buffer->u.real.priority_usage;
+         p_atomic_inc(&backing->bo->num_active_ioctls);
+      }
+
+      mtx_unlock(&bo->u.sparse.commit_lock);
+   }
+
+   return true;
 }
 
 void amdgpu_cs_submit_ib(void *job, int thread_index)
@@ -1062,6 +1174,11 @@ void amdgpu_cs_submit_ib(void *job, int thread_index)
       free(handles);
       mtx_unlock(&ws->global_bo_list_lock);
    } else {
+      if (!amdgpu_add_sparse_backing_buffers(cs)) {
+         r = -ENOMEM;
+         goto bo_list_error;
+      }
+
       if (cs->max_real_submit < cs->num_real_buffers) {
          FREE(cs->handles);
          FREE(cs->flags);
@@ -1136,6 +1253,8 @@ cleanup:
       p_atomic_dec(&cs->real_buffers[i].bo->num_active_ioctls);
    for (i = 0; i < cs->num_slab_buffers; i++)
       p_atomic_dec(&cs->slab_buffers[i].bo->num_active_ioctls);
+   for (i = 0; i < cs->num_sparse_buffers; i++)
+      p_atomic_dec(&cs->sparse_buffers[i].bo->num_active_ioctls);
 
    amdgpu_cs_context_cleanup(cs);
 }

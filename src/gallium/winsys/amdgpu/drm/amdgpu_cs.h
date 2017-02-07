@@ -94,6 +94,10 @@ struct amdgpu_cs_context {
    unsigned                    max_slab_buffers;
    struct amdgpu_cs_buffer     *slab_buffers;
 
+   unsigned                    num_sparse_buffers;
+   unsigned                    max_sparse_buffers;
+   struct amdgpu_cs_buffer     *sparse_buffers;
+
    int                         buffer_indices_hashlist[4096];
 
    struct amdgpu_winsys_bo     *last_added_bo;
@@ -226,8 +230,9 @@ amdgpu_bo_is_referenced_by_cs_with_usage(struct amdgpu_cs *cs,
    if (index == -1)
       return false;
 
-   buffer = bo->bo ? &cs->csc->real_buffers[index]
-                   : &cs->csc->slab_buffers[index];
+   buffer = bo->bo ? &cs->csc->real_buffers[index] :
+            bo->sparse ? &cs->csc->sparse_buffers[index] :
+            &cs->csc->slab_buffers[index];
 
    return (buffer->usage & usage) != 0;
 }
