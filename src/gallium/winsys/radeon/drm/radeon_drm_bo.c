@@ -936,6 +936,8 @@ radeon_winsys_bo_create(struct radeon_winsys *rws,
     struct radeon_bo *bo;
     unsigned usage = 0, pb_cache_bucket;
 
+    assert(!(flags & RADEON_FLAG_SPARSE)); /* not supported */
+
     /* Only 32-bit sizes are supported. */
     if (size > UINT_MAX)
         return NULL;
