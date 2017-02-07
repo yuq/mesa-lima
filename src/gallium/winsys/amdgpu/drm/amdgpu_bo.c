@@ -38,6 +38,11 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+
+struct amdgpu_sparse_backing_chunk {
+   uint32_t begin, end;
+};
+
 static struct pb_buffer *
 amdgpu_bo_create(struct radeon_winsys *rws,
                  uint64_t size,
@@ -210,6 +215,8 @@ static void *amdgpu_bo_map(struct pb_buffer *buf,
    void *cpu = NULL;
    uint64_t offset = 0;
 
+   assert(!bo->sparse);
+
    /* If it's not unsynchronized bo_map, flush CS if needed and then wait. */
    if (!(usage & PIPE_TRANSFER_UNSYNCHRONIZED)) {
       /* DONTBLOCK doesn't make sense with UNSYNCHRONIZED. */
@@ -321,6 +328,8 @@ static void amdgpu_bo_unmap(struct pb_buffer *buf)
 {
    struct amdgpu_winsys_bo *bo = (struct amdgpu_winsys_bo*)buf;
    struct amdgpu_winsys_bo *real;
+
+   assert(!bo->sparse);
 
    if (bo->user_ptr)
       return;
