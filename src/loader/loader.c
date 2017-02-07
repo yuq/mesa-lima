@@ -33,6 +33,8 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
+#include <stdlib.h>
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
 #endif
@@ -42,8 +44,6 @@
 #include "loader.h"
 
 #ifdef HAVE_LIBDRM
-#include <stdlib.h>
-#include <unistd.h>
 #include <xf86drm.h>
 #ifdef USE_DRICONF
 #include "xmlconfig.h"
