@@ -543,6 +543,8 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 
 	if (templ->bind & PIPE_BIND_SHARED)
 		rbuffer->flags |= RADEON_FLAG_HANDLE;
+	if (templ->flags & PIPE_RESOURCE_FLAG_SPARSE)
+		rbuffer->flags |= RADEON_FLAG_SPARSE;
 
 	if (!r600_alloc_resource(rscreen, rbuffer)) {
 		FREE(rbuffer);
