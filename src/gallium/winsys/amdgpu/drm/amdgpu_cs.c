@@ -994,36 +994,32 @@ static void amdgpu_add_fence(struct amdgpu_winsys_bo *bo,
    bo->num_fences++;
 }
 
+static void amdgpu_add_fence_dependencies_list(struct amdgpu_cs *acs,
+                                               struct pipe_fence_handle *fence,
+                                               unsigned num_buffers,
+                                               struct amdgpu_cs_buffer *buffers)
+{
+   for (unsigned i = 0; i < num_buffers; i++) {
+      struct amdgpu_cs_buffer *buffer = &buffers[i];
+      struct amdgpu_winsys_bo *bo = buffer->bo;
+
+      amdgpu_add_fence_dependency(acs, buffer);
+      p_atomic_inc(&bo->num_active_ioctls);
+      amdgpu_add_fence(bo, fence);
+   }
+}
+
 /* Since the kernel driver doesn't synchronize execution between different
  * rings automatically, we have to add fence dependencies manually.
  */
 static void amdgpu_add_fence_dependencies(struct amdgpu_cs *acs)
 {
    struct amdgpu_cs_context *cs = acs->csc;
-   unsigned num_buffers;
-   int i;
 
    cs->request.number_of_dependencies = 0;
 
-   num_buffers = cs->num_real_buffers;
-   for (i = 0; i < num_buffers; i++) {
-      struct amdgpu_cs_buffer *buffer = &cs->real_buffers[i];
-      struct amdgpu_winsys_bo *bo = buffer->bo;
-
-      amdgpu_add_fence_dependency(acs, buffer);
-      p_atomic_inc(&bo->num_active_ioctls);
-      amdgpu_add_fence(bo, cs->fence);
-   }
-
-   num_buffers = cs->num_slab_buffers;
-   for (i = 0; i < num_buffers; i++) {
-      struct amdgpu_cs_buffer *buffer = &cs->slab_buffers[i];
-      struct amdgpu_winsys_bo *bo = buffer->bo;
-
-      amdgpu_add_fence_dependency(acs, buffer);
-      p_atomic_inc(&bo->num_active_ioctls);
-      amdgpu_add_fence(bo, cs->fence);
-   }
+   amdgpu_add_fence_dependencies_list(acs, cs->fence, cs->num_real_buffers, cs->real_buffers);
+   amdgpu_add_fence_dependencies_list(acs, cs->fence, cs->num_slab_buffers, cs->slab_buffers);
 }
 
 void amdgpu_cs_submit_ib(void *job, int thread_index)
