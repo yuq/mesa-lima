@@ -393,8 +393,7 @@ brw_update_sampler_state(struct brw_context *brw,
                          GLenum target, bool tex_cube_map_seamless,
                          GLfloat tex_unit_lod_bias,
                          mesa_format format, GLenum base_format,
-                         bool is_integer_format,
-                         bool is_stencil_sampling,
+                         const struct gl_texture_object *texObj,
                          const struct gl_sampler_object *sampler,
                          uint32_t *sampler_state,
                          uint32_t batch_offset_for_sampler_state)
@@ -477,7 +476,7 @@ brw_update_sampler_state(struct brw_context *brw,
        * integer formats.  Fall back to CLAMP for now.
        */
       if ((tex_cube_map_seamless || sampler->CubeMapSeamless) &&
-          !(brw->gen == 7 && !brw->is_haswell && is_integer_format)) {
+          !(brw->gen == 7 && !brw->is_haswell && texObj->_IsIntegerFormat)) {
 	 wrap_s = BRW_TEXCOORDMODE_CUBE;
 	 wrap_t = BRW_TEXCOORDMODE_CUBE;
 	 wrap_r = BRW_TEXCOORDMODE_CUBE;
@@ -520,7 +519,7 @@ brw_update_sampler_state(struct brw_context *brw,
        wrap_mode_needs_border_color(wrap_t) ||
        wrap_mode_needs_border_color(wrap_r)) {
       upload_default_color(brw, sampler, format, base_format,
-                           is_integer_format, is_stencil_sampling,
+                           texObj->_IsIntegerFormat, texObj->StencilSampling,
                            &border_color_offset);
    }
 
@@ -558,8 +557,7 @@ update_sampler_state(struct brw_context *brw,
    brw_update_sampler_state(brw, texObj->Target, ctx->Texture.CubeMapSeamless,
                             texUnit->LodBias,
                             firstImage->TexFormat, firstImage->_BaseFormat,
-                            texObj->_IsIntegerFormat, texObj->StencilSampling,
-                            sampler,
+                            texObj, sampler,
                             sampler_state, batch_offset_for_sampler_state);
 }
 
