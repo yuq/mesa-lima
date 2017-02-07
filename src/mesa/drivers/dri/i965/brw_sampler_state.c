@@ -503,8 +503,11 @@ brw_update_sampler_state(struct brw_context *brw,
    }
 
    const int lod_bits = brw->gen >= 7 ? 8 : 6;
-   const unsigned min_lod = U_FIXED(CLAMP(sampler->MinLod, 0, 13), lod_bits);
-   const unsigned max_lod = U_FIXED(CLAMP(sampler->MaxLod, 0, 13), lod_bits);
+   const float hw_max_lod = brw->gen >= 7 ? 14 : 13;
+   const unsigned min_lod =
+      U_FIXED(CLAMP(sampler->MinLod, 0, hw_max_lod), lod_bits);
+   const unsigned max_lod =
+      U_FIXED(CLAMP(sampler->MaxLod, 0, hw_max_lod), lod_bits);
    const int lod_bias =
       S_FIXED(CLAMP(tex_unit_lod_bias + sampler->LodBias, -16, 15), lod_bits);
 
