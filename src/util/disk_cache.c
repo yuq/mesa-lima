@@ -377,7 +377,8 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
 void
 disk_cache_destroy(struct disk_cache *cache)
 {
-   munmap(cache->index_mmap, cache->index_mmap_size);
+   if (cache)
+      munmap(cache->index_mmap, cache->index_mmap_size);
 
    ralloc_free(cache);
 }
