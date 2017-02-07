@@ -959,8 +959,8 @@ llvm_set_environment_variables() {
 }
 
 require_llvm() {
-    if test "x$enable_gallium_llvm" != "xyes"; then
-        AC_MSG_ERROR([--enable-gallium-llvm is required when building $1])
+    if test "x$enable_llvm" != "xyes"; then
+        AC_MSG_ERROR([--enable-llvm is required when building $1])
     fi
 }
 
@@ -1717,30 +1717,41 @@ fi
 
 dnl
 dnl Gallium LLVM
-dnl
-dnl With follow-up commits we'll rework --enable-gallium-llvm to --enable-llvm
-dnl Since that is too invasive to stable, do the more conservative thing for now
-dnl and consider it as a global LLVM toggle.
+dnl Deprecated: kept for backwards compatibility
 dnl
 AC_ARG_ENABLE([gallium-llvm],
     [AS_HELP_STRING([--enable-gallium-llvm],
-        [build gallium LLVM support @<:@default=enabled on x86/x86_64@:>@])],
+        [DEPRECATED: use --enable-llvm instead])],
     [enable_gallium_llvm="$enableval"],
     [enable_gallium_llvm=auto])
 
-if test "x$enable_gallium_llvm" = xauto; then
+if test "x$enable_gallium_llvm" != xauto; then
+   AC_MSG_WARN([The --enable-gallium-llvm option has been deprecated. Use --enable-llvm instead.])
+   enable_llvm=$enable_gallium_llvm
+fi
+
+dnl
+dnl LLVM
+dnl
+AC_ARG_ENABLE([llvm],
+    [AS_HELP_STRING([--enable-llvm],
+        [build with LLVM support @<:@default=enabled on x86/x86_64@:>@])],
+    [enable_llvm="$enableval"],
+    [enable_llvm=auto])
+
+if test "x$enable_llvm" = xauto -a "x$FOUND_LLVM" = xyes; then
     if test "x$FOUND_LLVM" = xyes; then
         case "$host_cpu" in
-        i*86|x86_64|amd64) enable_gallium_llvm=yes;;
-        *) enable_gallium_llvm=no;;
+        i*86|x86_64|amd64) enable_llvm=yes;;
+        *) enable_llvm=no;;
         esac
     else
-        enable_gallium_llvm=no
+        enable_llvm=no
     fi
 fi
 
-if test "x$enable_gallium_llvm" = xyes -a "x$FOUND_LLVM" = xno; then
-    AC_MSG_ERROR([--enable-gallium-llvm selected but llvm-config is not found])
+if test "x$enable_llvm" = xyes -a "x$FOUND_LLVM" = xno; then
+    AC_MSG_ERROR([--enable-llvm selected but llvm-config is not found])
 fi
 
 #
@@ -2323,7 +2334,7 @@ if test -n "$with_gallium_drivers"; then
             ;;
         xswrast)
             HAVE_GALLIUM_SOFTPIPE=yes
-            if test "x$enable_gallium_llvm" = xyes; then
+            if test "x$enable_llvm" = xyes; then
                 HAVE_GALLIUM_LLVMPIPE=yes
             fi
             ;;
@@ -2369,7 +2380,7 @@ if test -n "$with_gallium_drivers"; then
     done
 fi
 
-if test "x$enable_gallium_llvm" = "xyes" -a "$with_gallium_drivers"; then
+if test "x$enable_llvm" = "xyes" -a "$with_gallium_drivers"; then
     llvm_require_version $LLVM_REQUIRED_GALLIUM "gallium"
     llvm_add_default_components "gallium"
 fi
@@ -2383,7 +2394,7 @@ fi
 dnl
 dnl Set defines and buildtime variables only when using LLVM.
 dnl
-if test "x$enable_gallium_llvm" = xyes; then
+if test "x$enable_llvm" = xyes; then
     DEFINES="${DEFINES} -DHAVE_LLVM=0x0$LLVM_VERSION_INT -DMESA_LLVM_VERSION_PATCH=$LLVM_VERSION_PATCH"
 
     LLVM_LDFLAGS=`$LLVM_CONFIG --ldflags`
@@ -2496,7 +2507,7 @@ AM_CONDITIONAL(NEED_RADEON_DRM_WINSYS, test "x$HAVE_GALLIUM_R300" = xyes -o \
 AM_CONDITIONAL(NEED_WINSYS_XLIB, test "x$enable_glx" = xgallium-xlib)
 AM_CONDITIONAL(NEED_RADEON_LLVM, test x$NEED_RADEON_LLVM = xyes)
 AM_CONDITIONAL(HAVE_GALLIUM_COMPUTE, test x$enable_opencl = xyes)
-AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$enable_gallium_llvm" = xyes)
+AM_CONDITIONAL(HAVE_GALLIUM_LLVM, test "x$enable_llvm" = xyes)
 AM_CONDITIONAL(USE_VC4_SIMULATOR, test x$USE_VC4_SIMULATOR = xyes)
 
 AM_CONDITIONAL(HAVE_LIBDRM, test "x$have_libdrm" = xyes)
@@ -2776,7 +2787,7 @@ else
 fi
 
 echo ""
-if test "x$enable_gallium_llvm" = xyes; then
+if test "x$enable_llvm" = xyes; then
     echo "        llvm:            yes"
     echo "        llvm-config:     $LLVM_CONFIG"
     echo "        llvm-version:    $LLVM_VERSION"
@@ -2823,7 +2834,7 @@ echo "        CFLAGS:          $cflags"
 echo "        CXXFLAGS:        $cxxflags"
 echo "        Macros:          $defines"
 echo ""
-if test "x$enable_gallium_llvm" = xyes; then
+if test "x$enable_llvm" = xyes; then
     echo "        LLVM_CFLAGS:     $LLVM_CFLAGS"
     echo "        LLVM_CXXFLAGS:   $LLVM_CXXFLAGS"
     echo "        LLVM_CPPFLAGS:   $LLVM_CPPFLAGS"
