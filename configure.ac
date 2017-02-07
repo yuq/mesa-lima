@@ -442,7 +442,7 @@ int main () {
 CFLAGS=$save_CFLAGS
 
 AC_ARG_ENABLE(pwr8,
-   [AC_HELP_STRING([--disable-pwr8-inst],
+   [AS_HELP_STRING([--disable-pwr8-inst],
                    [disable POWER8-specific instructions])],
    [enable_pwr8=$enableval], [enable_pwr8=auto])
 
@@ -2379,7 +2379,7 @@ fi
 dnl We need to validate some needed dependencies for renderonly drivers.
 
 if test "x$HAVE_GALLIUM_ETNAVIV" != xyes -a "x$HAVE_GALLIUM_IMX" = xyes  ; then
-    AC_ERROR([Building with imx requires etnaviv])
+    AC_MSG_ERROR([Building with imx requires etnaviv])
 fi
 
 dnl
