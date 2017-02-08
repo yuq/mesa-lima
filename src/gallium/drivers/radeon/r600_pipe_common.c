@@ -567,6 +567,40 @@ static void r600_dma_clear_buffer_fallback(struct pipe_context *ctx,
 	rctx->clear_buffer(ctx, dst, offset, size, value, R600_COHERENCY_NONE);
 }
 
+static bool r600_resource_commit(struct pipe_context *pctx,
+				 struct pipe_resource *resource,
+				 unsigned level, struct pipe_box *box,
+				 bool commit)
+{
+	struct r600_common_context *ctx = (struct r600_common_context *)pctx;
+	struct r600_resource *res = r600_resource(resource);
+
+	/*
+	 * Since buffer commitment changes cannot be pipelined, we need to
+	 * (a) flush any pending commands that refer to the buffer we're about
+	 *     to change, and
+	 * (b) wait for threaded submit to finish, including those that were
+	 *     triggered by some other, earlier operation.
+	 */
+	if (radeon_emitted(ctx->gfx.cs, ctx->initial_gfx_cs_size) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->gfx.cs,
+					     res->buf, RADEON_USAGE_READWRITE)) {
+		ctx->gfx.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+	}
+	if (radeon_emitted(ctx->dma.cs, 0) &&
+	    ctx->ws->cs_is_buffer_referenced(ctx->dma.cs,
+					     res->buf, RADEON_USAGE_READWRITE)) {
+		ctx->dma.flush(ctx, RADEON_FLUSH_ASYNC, NULL);
+	}
+
+	ctx->ws->cs_sync_flush(ctx->dma.cs);
+	ctx->ws->cs_sync_flush(ctx->gfx.cs);
+
+	assert(resource->target == PIPE_BUFFER);
+
+	return ctx->ws->buffer_commit(res->buf, box->x, box->width, commit);
+}
+
 bool r600_common_context_init(struct r600_common_context *rctx,
 			      struct r600_common_screen *rscreen,
 			      unsigned context_flags)
@@ -579,6 +613,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 	rctx->chip_class = rscreen->chip_class;
 
 	rctx->b.invalidate_resource = r600_invalidate_resource;
+	rctx->b.resource_commit = r600_resource_commit;
 	rctx->b.transfer_map = u_transfer_map_vtbl;
 	rctx->b.transfer_flush_region = u_transfer_flush_region_vtbl;
 	rctx->b.transfer_unmap = u_transfer_unmap_vtbl;
