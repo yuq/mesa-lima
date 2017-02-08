@@ -32,9 +32,11 @@ LOCAL_SRC_FILES := $(C_SOURCES)
 
 LOCAL_CFLAGS += -DFORCE_BUILD_AMDGPU   # instructs LLVM to declare LLVMInitializeAMDGPU* functions
 
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+
 LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/amd/common \
-	$(call intermediates-dir-for,STATIC_LIBRARIES,libmesa_amd_common)/common
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_amd_common,,)/common
 
 LOCAL_SHARED_LIBRARIES := libdrm_radeon
 LOCAL_MODULE := libmesa_pipe_radeonsi
