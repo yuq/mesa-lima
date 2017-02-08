@@ -1501,6 +1501,7 @@ nir_visitor::visit(ir_expression *ir)
    case ir_unop_i642i: result = nir_i2i32(&b, srcs[0]);   break;
    case ir_unop_i642u: result = nir_i2u32(&b, srcs[0]);   break;
    case ir_unop_i642f: result = nir_i642f(&b, srcs[0]);   break;
+   case ir_unop_i642b: result = nir_i642b(&b, srcs[0]);   break;
    case ir_unop_i642d: result = nir_i642d(&b, srcs[0]);   break;
 
    case ir_unop_u642i: result = nir_u2i32(&b, srcs[0]);   break;

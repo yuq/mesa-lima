@@ -183,6 +183,7 @@ unop_convert("i2u64", tuint64, tint,  "src0")  # General int (int8_t, int64_t, e
 unop_convert("u2u64", tuint64, tuint, "src0")  # General uint (uint8_t, uint32_t, etc.) to uint64_t conversion
 unop_convert("f2u64", tuint64, tfloat, "src0") # General float (float or double) to uint64_t conversion
 unop_convert("i642f", tfloat32, tint64, "src0")  # int64_t-to-float conversion.
+unop_convert("i642b", tbool, tint64, "src0")  # int64_t-to-bool conversion.
 unop_convert("i642d", tfloat64, tint64, "src0")  # int64_t-to-double conversion.
 unop_convert("u642f", tfloat32, tuint64, "src0") # uint64_t-to-float conversion.
 unop_convert("u642d", tfloat64, tuint64, "src0") # uint64_t-to-double conversion.
