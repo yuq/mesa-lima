@@ -573,13 +573,13 @@ log_uniform(const void *values, enum glsl_base_type basicType,
       case GLSL_TYPE_UINT64: {
          uint64_t tmp;
          memcpy(&tmp, &v[i * 2].u, sizeof(tmp));
-         printf("%lu ", tmp);
+         printf("%" PRIu64 " ", tmp);
          break;
       }
       case GLSL_TYPE_INT64: {
          int64_t tmp;
          memcpy(&tmp, &v[i * 2].u, sizeof(tmp));
-         printf("%ld ", tmp);
+         printf("%" PRId64 " ", tmp);
          break;
       }
       case GLSL_TYPE_FLOAT:
