@@ -336,11 +336,12 @@ static char *
 get_cache_file(struct disk_cache *cache, cache_key key)
 {
    char buf[41];
+   char *filename;
 
    _mesa_sha1_format(buf, key);
+   asprintf(&filename, "%s/%c%c/%s", cache->path, buf[0], buf[1], buf + 2);
 
-   return ralloc_asprintf(cache, "%s/%c%c/%s",
-                          cache->path, buf[0], buf[1], buf + 2);
+   return filename;
 }
 
 /* Create the directory that will be needed for the cache file for \key.
@@ -355,12 +356,10 @@ make_cache_file_directory(struct disk_cache *cache, cache_key key)
    char buf[41];
 
    _mesa_sha1_format(buf, key);
-
-   dir = ralloc_asprintf(cache, "%s/%c%c", cache->path, buf[0], buf[1]);
-
+   asprintf(&dir, "%s/%c%c", cache->path, buf[0], buf[1]);
    mkdir_if_needed(dir);
 
-   ralloc_free(dir);
+   free(dir);
 }
 
 /* Given a directory path and predicate function, count all entries in
@@ -548,12 +547,12 @@ disk_cache_remove(struct disk_cache *cache, cache_key key)
    }
 
    if (stat(filename, &sb) == -1) {
-      ralloc_free(filename);
+      free(filename);
       return;
    }
 
    unlink(filename);
-   ralloc_free(filename);
+   free(filename);
 
    if (sb.st_size)
       p_atomic_add(cache->size, - sb.st_size);
@@ -578,7 +577,7 @@ disk_cache_put(struct disk_cache *cache,
     * final destination filename, (to prevent any readers from seeing
     * a partially written file).
     */
-   filename_tmp = ralloc_asprintf(cache, "%s.tmp", filename);
+   asprintf(&filename_tmp, "%s.tmp", filename);
    if (filename_tmp == NULL)
       goto done;
 
@@ -650,9 +649,9 @@ disk_cache_put(struct disk_cache *cache,
    if (fd != -1)
       close(fd);
    if (filename_tmp)
-      ralloc_free(filename_tmp);
+      free(filename_tmp);
    if (filename)
-      ralloc_free(filename);
+      free(filename);
 }
 
 void *
@@ -687,7 +686,7 @@ disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
          goto fail;
    }
 
-   ralloc_free(filename);
+   free(filename);
    close(fd);
 
    if (size)
@@ -699,7 +698,7 @@ disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
    if (data)
       free(data);
    if (filename)
-      ralloc_free(filename);
+      free(filename);
    if (fd != -1)
       close(fd);
 
