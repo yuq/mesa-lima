@@ -41,35 +41,19 @@ in the same directory, and are recognisable by the
 <h1>Unpacking</h1>
 
 <p>
-Mesa releases are available in three formats: .tar.bz2, .tar.gz, and .zip
+Mesa releases are available in two formats: <tt>.tar.xz</tt> and <tt>.tar.gz</tt>.
 </p>
 
 <p>
-To unpack .tar.gz files:
-</p>
+To unpack the tarball:
 <pre>
-	tar zxf MesaLib-x.y.z.tar.gz
+	tar xf mesa-Y.N.P.tar.xz
 </pre>
 or
 <pre>
-	gzcat MesaLib-x.y.z.tar.gz | tar xf -
+	tar xf mesa-Y.N.P.tar.gz
 </pre>
-or
-<pre>
-	gunzip MesaLib-x.y.z.tar.gz ; tar xf MesaLib-x.y.z.tar
-</pre>
-<p>
-To unpack .tar.bz2 files:
 </p>
-<pre>
-	bunzip2 -c MesaLib-x.y.z.tar.gz | tar xf -
-</pre>
-<p>
-To unpack .zip files:
-</p>
-<pre>
-	unzip MesaLib-x.y.z.zip
-</pre>
 
 
 <h1>Contents</h1>
