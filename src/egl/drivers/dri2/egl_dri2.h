@@ -300,6 +300,15 @@ struct dri2_egl_surface
 
    /* EGL-owned buffers */
    __DRIbuffer           *local_buffers[__DRI_BUFFER_COUNT];
+
+   /* Used to record all the buffers created by ANativeWindow and their ages.
+    * Usually Android uses at most triple buffers in ANativeWindow
+    * so hardcode the number of color_buffers to 3.
+    */
+   struct {
+      struct ANativeWindowBuffer *buffer;
+      int age;
+   } color_buffers[3], *back;
 #endif
 
 #if defined(HAVE_SURFACELESS_PLATFORM)
