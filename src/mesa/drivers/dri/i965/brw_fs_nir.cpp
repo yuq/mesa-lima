@@ -689,6 +689,8 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
    case nir_op_d2f:
    case nir_op_d2i:
    case nir_op_d2u:
+   case nir_op_i642f:
+   case nir_op_u642f:
       if (instr->op == nir_op_b2i64) {
          bld.MOV(result, negate(op[0]));
       } else {
