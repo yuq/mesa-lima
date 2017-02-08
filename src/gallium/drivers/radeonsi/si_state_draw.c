@@ -749,7 +749,8 @@ void si_emit_cache_flush(struct si_context *sctx)
 	struct radeon_winsys_cs *cs = rctx->gfx.cs;
 	uint32_t cp_coher_cntl = 0;
 
-	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER)
+	if (rctx->flags & (SI_CONTEXT_FLUSH_AND_INV_CB |
+			   SI_CONTEXT_FLUSH_AND_INV_DB))
 		sctx->b.num_fb_cache_flushes++;
 
 	/* SI has a bug that it always flushes ICACHE and KCACHE if either

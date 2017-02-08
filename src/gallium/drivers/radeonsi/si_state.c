@@ -2371,7 +2371,8 @@ static void si_set_framebuffer_state(struct pipe_context *ctx,
 	 */
 	sctx->b.flags |= SI_CONTEXT_INV_VMEM_L1 |
 			 SI_CONTEXT_INV_GLOBAL_L2 |
-			 SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER |
+			 SI_CONTEXT_FLUSH_AND_INV_CB |
+			 SI_CONTEXT_FLUSH_AND_INV_DB |
 			 SI_CONTEXT_CS_PARTIAL_FLUSH;
 
 	/* Take the maximum of the old and new count. If the new count is lower,
@@ -3574,7 +3575,8 @@ static void si_memory_barrier(struct pipe_context *ctx, unsigned flags)
 	}
 
 	if (flags & PIPE_BARRIER_FRAMEBUFFER)
-		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER;
+		sctx->b.flags |= SI_CONTEXT_FLUSH_AND_INV_CB |
+				 SI_CONTEXT_FLUSH_AND_INV_DB;
 
 	if (flags & (PIPE_BARRIER_FRAMEBUFFER |
 		     PIPE_BARRIER_INDIRECT_BUFFER))
