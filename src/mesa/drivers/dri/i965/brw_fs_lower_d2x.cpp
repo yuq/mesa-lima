@@ -41,7 +41,9 @@ fs_visitor::lower_d2x()
           inst->dst.type != BRW_REGISTER_TYPE_UD)
          continue;
 
-      if (inst->src[0].type != BRW_REGISTER_TYPE_DF)
+      if (inst->src[0].type != BRW_REGISTER_TYPE_DF &&
+          inst->src[0].type != BRW_REGISTER_TYPE_UQ &&
+          inst->src[0].type != BRW_REGISTER_TYPE_Q)
          continue;
 
       assert(inst->dst.file == VGRF);
