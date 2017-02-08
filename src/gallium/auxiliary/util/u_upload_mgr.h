@@ -109,23 +109,4 @@ void u_upload_data(struct u_upload_mgr *upload,
                    unsigned *out_offset,
                    struct pipe_resource **outbuf);
 
-
-/**
- * Allocate space in an upload buffer and copy an input buffer to it.
- *
- * Same as u_upload_data, except that the input data comes from a buffer
- * instead of a user pointer.
- */
-void u_upload_buffer(struct u_upload_mgr *upload,
-                     unsigned min_out_offset,
-                     unsigned offset,
-                     unsigned size,
-                     unsigned alignment,
-                     struct pipe_resource *inbuf,
-                     unsigned *out_offset,
-                     struct pipe_resource **outbuf);
-
-
-
 #endif
-

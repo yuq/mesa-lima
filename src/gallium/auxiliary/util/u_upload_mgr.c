@@ -264,35 +264,3 @@ void u_upload_data(struct u_upload_mgr *upload,
    if (ptr)
       memcpy(ptr, data, size);
 }
-
-/* XXX: Remove. It's basically a CPU fallback of resource_copy_region. */
-void u_upload_buffer(struct u_upload_mgr *upload,
-                     unsigned min_out_offset,
-                     unsigned offset,
-                     unsigned size,
-                     unsigned alignment,
-                     struct pipe_resource *inbuf,
-                     unsigned *out_offset,
-                     struct pipe_resource **outbuf)
-{
-   struct pipe_transfer *transfer = NULL;
-   const char *map = NULL;
-
-   map = (const char *)pipe_buffer_map_range(upload->pipe,
-                                             inbuf,
-                                             offset, size,
-                                             PIPE_TRANSFER_READ,
-                                             &transfer);
-
-   if (!map) {
-      pipe_resource_reference(outbuf, NULL);
-      return;
-   }
-
-   if (0)
-      debug_printf("upload ptr %p ofs %d sz %d\n", map, offset, size);
-
-   u_upload_data(upload, min_out_offset, size, alignment,
-                 map, out_offset, outbuf);
-   pipe_buffer_unmap( upload->pipe, transfer );
-}
