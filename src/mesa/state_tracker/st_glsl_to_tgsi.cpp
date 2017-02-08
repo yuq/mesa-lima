@@ -3363,15 +3363,13 @@ glsl_to_tgsi_visitor::visit(ir_constant *ir)
    case GLSL_TYPE_INT64:
       gl_type = GL_INT64_ARB;
       for (i = 0; i < ir->type->vector_elements; i++) {
-         values[i * 2].i = *(uint32_t *)&ir->value.d[i];
-         values[i * 2 + 1].i = *(((uint32_t *)&ir->value.d[i]) + 1);
+         memcpy(&values[i * 2], &ir->value.d[i], sizeof(int64_t));
       }
       break;
    case GLSL_TYPE_UINT64:
       gl_type = GL_UNSIGNED_INT64_ARB;
       for (i = 0; i < ir->type->vector_elements; i++) {
-         values[i * 2].i = *(uint32_t *)&ir->value.d[i];
-         values[i * 2 + 1].i = *(((uint32_t *)&ir->value.d[i]) + 1);
+         memcpy(&values[i * 2], &ir->value.d[i], sizeof(uint64_t));
       }
       break;
    case GLSL_TYPE_UINT:
