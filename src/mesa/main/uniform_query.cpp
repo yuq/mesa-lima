@@ -25,6 +25,7 @@
  */
 
 #include <stdlib.h>
+#include <inttypes.h>  /* for PRIx64 macro */
 
 #include "main/core.h"
 #include "main/context.h"
