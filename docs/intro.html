@@ -17,22 +17,31 @@
 <h1>Introduction</h1>
 
 <p>
-Mesa is an open-source implementation of the
+The Mesa project began as an open-source implementation of the
 <a href="http://www.opengl.org/">OpenGL</a> specification -
 a system for rendering interactive 3D graphics.
 </p>
 
 <p>
-A variety of device drivers allows Mesa to be used in many different
-environments ranging from software emulation to complete hardware acceleration
-for modern GPUs.
+Over the years the project has grown to implement more graphics APIs,
+including
+<a href="http://www.khronos.org/opengles/">OpenGL ES</a> (versions 1, 2, 3),
+<a href="http://www.khronos.org/opencl/">OpenCL</a>,
+<a href="https://en.wikipedia.org/wiki/VDPAU">VDPAU</a> and
+<a href="http://www.khronos.org/vulkan/">Vulkan</a>.
 </p>
 
 <p>
-Mesa ties into several other open-source projects: the 
-<a href="http://dri.freedesktop.org/">Direct Rendering 
-Infrastructure</a> and <a href="http://x.org">X.org</a> to 
-provide OpenGL support to users of X on Linux, FreeBSD and other operating 
+A variety of device drivers allows the Mesa libraries to be used in many
+different environments ranging from software emulation to complete hardware
+acceleration for modern GPUs.
+</p>
+
+<p>
+Mesa ties into several other open-source projects: the
+<a href="http://dri.freedesktop.org/">Direct Rendering
+Infrastructure</a> and <a href="http://x.org">X.org</a> to
+provide OpenGL support on Linux, FreeBSD and other operating
 systems.
 </p>
 
@@ -153,13 +162,21 @@ and version 1.30 of the OpenGL Shading Language.
 </p>
 
 <p>
+July 2016: Mesa 12.0 is released, including OpenGL 4.3 support and initial
+support for Vulkan for Intel GPUs.  Plus, there's another gallium software
+driver ("swr") based on LLVM and developed by Intel.
+</p>
+
+<p>
 Ongoing: Mesa is the OpenGL implementation for several types of hardware
 made by Intel, AMD and NVIDIA, plus the VMware virtual GPU.
 There's also several software-based renderers: swrast (the legacy
-Mesa rasterizer), softpipe (a gallium reference driver) and llvmpipe
-(LLVM/JIT-based high-speed rasterizer).
+Mesa rasterizer), softpipe (a gallium reference driver), llvmpipe
+(LLVM/JIT-based high-speed rasterizer) and swr (another LLVM-based driver).
+</p>
+<p>
 Work continues on the drivers and core Mesa to implement newer versions
-of the OpenGL specification.
+of the OpenGL, OpenGL ES and Vulkan specifications.
 </p>
 
 
@@ -177,6 +194,9 @@ of the OpenGL specification is implemented.
 <p>
 Version 12.x of Mesa implements the OpenGL 4.3 API, but not all drivers
 support OpenGL 4.3.
+</p>
+<p>
+Initial support for Vulkan is also included.
 </p>
 
 
