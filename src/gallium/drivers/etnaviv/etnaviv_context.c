@@ -267,15 +267,10 @@ etna_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
 {
    struct etna_context *ctx = CALLOC_STRUCT(etna_context);
    struct etna_screen *screen;
-   struct pipe_context *pctx = NULL;
+   struct pipe_context *pctx;
 
    if (ctx == NULL)
       return NULL;
-
-   screen = etna_screen(pscreen);
-   ctx->stream = etna_cmd_stream_new(screen->pipe, 0x2000, &etna_cmd_stream_reset_notify, ctx);
-   if (ctx->stream == NULL)
-      goto fail;
 
    pctx = &ctx->base;
    pctx->priv = ctx;
@@ -284,6 +279,11 @@ etna_context_create(struct pipe_screen *pscreen, void *priv, unsigned flags)
    if (!pctx->stream_uploader)
       goto fail;
    pctx->const_uploader = pctx->stream_uploader;
+
+   screen = etna_screen(pscreen);
+   ctx->stream = etna_cmd_stream_new(screen->pipe, 0x2000, &etna_cmd_stream_reset_notify, ctx);
+   if (ctx->stream == NULL)
+      goto fail;
 
    /* context ctxate setup */
    ctx->specs = screen->specs;
