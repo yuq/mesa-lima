@@ -117,8 +117,7 @@ static unsigned get_flush_flags(struct si_context *sctx, enum r600_coherency coh
 		       SI_CONTEXT_INV_VMEM_L1 |
 		       (sctx->b.chip_class == SI ? SI_CONTEXT_INV_GLOBAL_L2 : 0);
 	case R600_COHERENCY_CB_META:
-		return SI_CONTEXT_FLUSH_AND_INV_CB |
-		       SI_CONTEXT_FLUSH_AND_INV_CB_META;
+		return SI_CONTEXT_FLUSH_AND_INV_CB;
 	}
 }
 

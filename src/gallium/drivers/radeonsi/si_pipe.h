@@ -53,9 +53,8 @@
 /* Write dirty L2 lines back to memory (shader and CP DMA stores), but don't
  * invalidate L2. SI-CIK can't do it, so they will do complete invalidation. */
 #define SI_CONTEXT_WRITEBACK_GLOBAL_L2	(R600_CONTEXT_PRIVATE_FLAG << 4)
+/* gaps */
 /* Framebuffer caches. */
-#define SI_CONTEXT_FLUSH_AND_INV_CB_META (R600_CONTEXT_PRIVATE_FLAG << 5)
-#define SI_CONTEXT_FLUSH_AND_INV_DB_META (R600_CONTEXT_PRIVATE_FLAG << 6)
 #define SI_CONTEXT_FLUSH_AND_INV_DB	(R600_CONTEXT_PRIVATE_FLAG << 7)
 #define SI_CONTEXT_FLUSH_AND_INV_CB	(R600_CONTEXT_PRIVATE_FLAG << 8)
 /* Engine synchronization. */
@@ -66,9 +65,7 @@
 #define SI_CONTEXT_VGT_STREAMOUT_SYNC	(R600_CONTEXT_PRIVATE_FLAG << 13)
 
 #define SI_CONTEXT_FLUSH_AND_INV_FRAMEBUFFER (SI_CONTEXT_FLUSH_AND_INV_CB | \
-					      SI_CONTEXT_FLUSH_AND_INV_CB_META | \
-					      SI_CONTEXT_FLUSH_AND_INV_DB | \
-					      SI_CONTEXT_FLUSH_AND_INV_DB_META)
+					      SI_CONTEXT_FLUSH_AND_INV_DB)
 
 #define SI_MAX_BORDER_COLORS	4096
 

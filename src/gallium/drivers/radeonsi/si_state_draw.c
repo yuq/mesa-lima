@@ -780,23 +780,18 @@ void si_emit_cache_flush(struct si_context *sctx)
 		if (rctx->chip_class == VI)
 			r600_gfx_write_event_eop(rctx, V_028A90_FLUSH_AND_INV_CB_DATA_TS,
 						 0, 0, NULL, 0, 0, 0);
+
+		/* Flush CMASK/FMASK/DCC. SURFACE_SYNC will wait for idle. */
+		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
+		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
 	}
 	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB) {
 		cp_coher_cntl |= S_0085F0_DB_ACTION_ENA(1) |
 				 S_0085F0_DB_DEST_BASE_ENA(1);
-	}
 
-	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB_META) {
-		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
-		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_CB_META) | EVENT_INDEX(0));
-		/* needed for wait for idle in SURFACE_SYNC */
-		assert(rctx->flags & SI_CONTEXT_FLUSH_AND_INV_CB);
-	}
-	if (rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB_META) {
+		/* Flush HTILE. SURFACE_SYNC will wait for idle. */
 		radeon_emit(cs, PKT3(PKT3_EVENT_WRITE, 0, 0));
 		radeon_emit(cs, EVENT_TYPE(V_028A90_FLUSH_AND_INV_DB_META) | EVENT_INDEX(0));
-		/* needed for wait for idle in SURFACE_SYNC */
-		assert(rctx->flags & SI_CONTEXT_FLUSH_AND_INV_DB);
 	}
 
 	/* Wait for shader engines to go idle.
