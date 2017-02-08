@@ -110,7 +110,7 @@ void radv_DestroyShaderModule(
 	vk_free2(&device->alloc, pAllocator, module);
 }
 
-static void
+void
 radv_optimize_nir(struct nir_shader *shader)
 {
         bool progress;

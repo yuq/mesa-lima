@@ -67,6 +67,9 @@ struct radv_shader_slab {
 	char *ptr;
 };
 
+void
+radv_optimize_nir(struct nir_shader *shader);
+
 nir_shader *
 radv_shader_compile_to_nir(struct radv_device *device,
 			   struct radv_shader_module *module,

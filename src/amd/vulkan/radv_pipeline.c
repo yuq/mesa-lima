@@ -1522,6 +1522,46 @@ static void calculate_ps_inputs(struct radv_pipeline *pipeline)
 	pipeline->graphics.ps_input_cntl_num = ps_offset;
 }
 
+static void
+radv_link_shaders(struct radv_pipeline *pipeline, nir_shader **shaders)
+{
+	nir_shader* ordered_shaders[MESA_SHADER_STAGES];
+	int shader_count = 0;
+
+	if(shaders[MESA_SHADER_FRAGMENT]) {
+		ordered_shaders[shader_count++] = shaders[MESA_SHADER_FRAGMENT];
+	}
+	if(shaders[MESA_SHADER_GEOMETRY]) {
+		ordered_shaders[shader_count++] = shaders[MESA_SHADER_GEOMETRY];
+	}
+	if(shaders[MESA_SHADER_TESS_EVAL]) {
+		ordered_shaders[shader_count++] = shaders[MESA_SHADER_TESS_EVAL];
+	}
+	if(shaders[MESA_SHADER_TESS_CTRL]) {
+		ordered_shaders[shader_count++] = shaders[MESA_SHADER_TESS_CTRL];
+	}
+	if(shaders[MESA_SHADER_VERTEX]) {
+		ordered_shaders[shader_count++] = shaders[MESA_SHADER_VERTEX];
+	}
+
+	for (int i = 1; i < shader_count; ++i)  {
+		nir_remove_dead_variables(ordered_shaders[i],
+					  nir_var_shader_out);
+		nir_remove_dead_variables(ordered_shaders[i - 1],
+					  nir_var_shader_in);
+
+		bool progress = nir_remove_unused_varyings(ordered_shaders[i],
+							   ordered_shaders[i - 1]);
+
+		if (progress) {
+			nir_lower_global_vars_to_local(ordered_shaders[i]);
+			radv_optimize_nir(ordered_shaders[i]);
+			nir_lower_global_vars_to_local(ordered_shaders[i - 1]);
+			radv_optimize_nir(ordered_shaders[i - 1]);
+		}
+	}
+}
+
 static
 void radv_create_shaders(struct radv_pipeline *pipeline,
                          struct radv_device *device,
@@ -1587,6 +1627,8 @@ void radv_create_shaders(struct radv_pipeline *pipeline,
 
 		nir_lower_tes_patch_vertices(nir[MESA_SHADER_TESS_EVAL], nir[MESA_SHADER_TESS_CTRL]->info.tess.tcs_vertices_out);
 	}
+
+	radv_link_shaders(pipeline, nir);
 
 	if (nir[MESA_SHADER_FRAGMENT]) {
 		pipeline->shaders[MESA_SHADER_FRAGMENT] =
