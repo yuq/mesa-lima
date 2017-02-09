@@ -1400,6 +1400,7 @@ VkResult radv_QueueSubmit(
 	uint32_t esgs_ring_size = 0, gsvs_ring_size = 0;
 	struct radeon_winsys_cs *preamble_cs = NULL;
 	VkResult result;
+	bool fence_emitted = false;
 
 	/* Do this first so failing to allocate scratch buffers can't result in
 	 * partially executed submissions. */
@@ -1425,8 +1426,24 @@ VkResult radv_QueueSubmit(
 		bool can_patch = true;
 		uint32_t advance;
 
-		if (!pSubmits[i].commandBufferCount)
+		if (!pSubmits[i].commandBufferCount) {
+			if (pSubmits[i].waitSemaphoreCount || pSubmits[i].signalSemaphoreCount) {
+				ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
+								   &queue->device->empty_cs[queue->queue_family_index],
+								   1, NULL,
+								   (struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
+								   pSubmits[i].waitSemaphoreCount,
+								   (struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
+								   pSubmits[i].signalSemaphoreCount,
+								   false, base_fence);
+				if (ret) {
+					radv_loge("failed to submit CS %d\n", i);
+					abort();
+				}
+				fence_emitted = true;
+			}
 			continue;
+		}
 
 		cs_array = malloc(sizeof(struct radeon_winsys_cs *) *
 					        pSubmits[i].commandBufferCount);
@@ -1462,6 +1479,7 @@ VkResult radv_QueueSubmit(
 				radv_loge("failed to submit CS %d\n", i);
 				abort();
 			}
+			fence_emitted = true;
 			if (queue->device->trace_bo) {
 				bool success = queue->device->ws->ctx_wait_idle(
 							queue->hw_ctx,
@@ -1479,7 +1497,7 @@ VkResult radv_QueueSubmit(
 	}
 
 	if (fence) {
-		if (!submitCount)
+		if (!fence_emitted)
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 							   &queue->device->empty_cs[queue->queue_family_index],
 							   1, NULL, NULL, 0, NULL, 0,
