@@ -94,6 +94,7 @@ WAYLAND_REQUIRED=1.11
 XCB_REQUIRED=1.9.3
 XCBDRI2_REQUIRED=1.8
 XCBGLX_REQUIRED=1.8.1
+XDAMAGE_REQUIRED=1.1
 XSHMFENCE_REQUIRED=1.1
 XVMC_REQUIRED=1.0.6
 PYTHON_MAKO_REQUIRED=0.8.0
@@ -1459,7 +1460,7 @@ xdri)
     # DRI-based GLX
 
     # find the DRI deps for libGL
-    dri_modules="x11 xext xdamage xfixes x11-xcb xcb xcb-glx >= $XCBGLX_REQUIRED"
+    dri_modules="x11 xext xdamage >= $XDAMAGE_REQUIRED xfixes x11-xcb xcb xcb-glx >= $XCBGLX_REQUIRED"
 
     if test x"$driglx_direct" = xyes; then
         if test x"$dri_platform" = xdrm ; then
