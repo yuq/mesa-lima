@@ -99,6 +99,13 @@ const char *tgsi_semantic_names[TGSI_SEMANTIC_COUNT] =
    "BASEINSTANCE",
    "DRAWID",
    "WORK_DIM",
+   "SUBGROUP_SIZE",
+   "SUBGROUP_INVOCATION",
+   "SUBGROUP_EQ_MASK",
+   "SUBGROUP_GE_MASK",
+   "SUBGROUP_GT_MASK",
+   "SUBGROUP_LE_MASK",
+   "SUBGROUP_LT_MASK",
 };
 
 const char *tgsi_texture_names[TGSI_TEXTURE_COUNT] =

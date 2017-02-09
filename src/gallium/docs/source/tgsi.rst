@@ -3430,6 +3430,57 @@ For compute shaders, this semantic indicates the (x, y, z) coordinates of the
 current thread inside of the block.
 
 
+TGSI_SEMANTIC_SUBGROUP_SIZE
+"""""""""""""""""""""""""""
+
+This semantic indicates the subgroup size for the current invocation. This is
+an integer of at most 64, as it indicates the width of lanemasks. It does not
+depend on the number of invocations that are active.
+
+
+TGSI_SEMANTIC_SUBGROUP_INVOCATION
+"""""""""""""""""""""""""""""""""
+
+The index of the current invocation within its subgroup.
+
+
+TGSI_SEMANTIC_SUBGROUP_EQ_MASK
+""""""""""""""""""""""""""""""
+
+A bit mask of ``bit index == TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
+``1 << subgroup_invocation`` in arbitrary precision arithmetic.
+
+
+TGSI_SEMANTIC_SUBGROUP_GE_MASK
+""""""""""""""""""""""""""""""
+
+A bit mask of ``bit index >= TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
+``((1 << (subgroup_size - subgroup_invocation)) - 1) << subgroup_invocation``
+in arbitrary precision arithmetic.
+
+
+TGSI_SEMANTIC_SUBGROUP_GT_MASK
+""""""""""""""""""""""""""""""
+
+A bit mask of ``bit index > TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
+``((1 << (subgroup_size - subgroup_invocation - 1)) - 1) << (subgroup_invocation + 1)``
+in arbitrary precision arithmetic.
+
+
+TGSI_SEMANTIC_SUBGROUP_LE_MASK
+""""""""""""""""""""""""""""""
+
+A bit mask of ``bit index <= TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
+``(1 << (subgroup_invocation + 1)) - 1`` in arbitrary precision arithmetic.
+
+
+TGSI_SEMANTIC_SUBGROUP_LT_MASK
+""""""""""""""""""""""""""""""
+
+A bit mask of ``bit index > TGSI_SEMANTIC_SUBGROUP_INVOCATION``, i.e.
+``(1 << subgroup_invocation) - 1`` in arbitrary precision arithmetic.
+
+
 Declaration Interpolate
 ^^^^^^^^^^^^^^^^^^^^^^^
 
