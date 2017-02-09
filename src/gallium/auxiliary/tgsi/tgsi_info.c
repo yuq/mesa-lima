@@ -113,7 +113,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 0, 0, 0, 0, 0, 0, 0, NONE, "BRK", TGSI_OPCODE_BRK },
    { 0, 1, 0, 0, 1, 0, 1, NONE, "IF", TGSI_OPCODE_IF },
    { 0, 1, 0, 0, 1, 0, 1, NONE, "UIF", TGSI_OPCODE_UIF },
-   { 0, 1, 0, 0, 0, 0, 1, NONE, "", 76 },      /* removed */
+   { 1, 2, 0, 0, 0, 0, 0, COMP, "READ_INVOC", TGSI_OPCODE_READ_INVOC },
    { 0, 0, 0, 0, 1, 1, 1, NONE, "ELSE", TGSI_OPCODE_ELSE },
    { 0, 0, 0, 0, 0, 1, 0, NONE, "ENDIF", TGSI_OPCODE_ENDIF },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "DDX_FINE", TGSI_OPCODE_DDX_FINE },
@@ -125,7 +125,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, 0, COMP, "NOT", TGSI_OPCODE_NOT },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "TRUNC", TGSI_OPCODE_TRUNC },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "SHL", TGSI_OPCODE_SHL },
-   { 0, 0, 0, 0, 0, 0, 0, NONE, "", 88 },      /* removed */
+   { 1, 1, 0, 0, 0, 0, 0, OTHR, "BALLOT", TGSI_OPCODE_BALLOT },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "AND", TGSI_OPCODE_AND },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "OR", TGSI_OPCODE_OR },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "MOD", TGSI_OPCODE_MOD },
@@ -143,7 +143,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 1, 0, 0, 0, 0, OTHR, "TXQ_LZ", TGSI_OPCODE_TXQ_LZ },
    { 1, 1, 1, 0, 0, 0, 0, OTHR, "TXQS", TGSI_OPCODE_TXQS },
    { 1, 1, 0, 0, 0, 0, 0, OTHR, "RESQ", TGSI_OPCODE_RESQ },
-   { 0, 0, 0, 0, 0, 0, 0, NONE, "", 106 },     /* removed */
+   { 1, 1, 0, 0, 0, 0, 0, COMP, "READ_FIRST", TGSI_OPCODE_READ_FIRST },
    { 0, 0, 0, 0, 0, 0, 0, NONE, "NOP", TGSI_OPCODE_NOP },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "FSEQ", TGSI_OPCODE_FSEQ },
    { 1, 2, 0, 0, 0, 0, 0, COMP, "FSGE", TGSI_OPCODE_FSGE },

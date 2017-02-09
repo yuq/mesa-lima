@@ -404,7 +404,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_BRK                 73
 #define TGSI_OPCODE_IF                  74
 #define TGSI_OPCODE_UIF                 75
-                                /* gap */
+#define TGSI_OPCODE_READ_INVOC          76
 #define TGSI_OPCODE_ELSE                77
 #define TGSI_OPCODE_ENDIF               78
 
@@ -418,7 +418,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_NOT                 85
 #define TGSI_OPCODE_TRUNC               86
 #define TGSI_OPCODE_SHL                 87
-                                /* gap */
+#define TGSI_OPCODE_BALLOT              88
 #define TGSI_OPCODE_AND                 89
 #define TGSI_OPCODE_OR                  90
 #define TGSI_OPCODE_MOD                 91
@@ -436,7 +436,7 @@ struct tgsi_property_data {
 #define TGSI_OPCODE_TXQ_LZ              103 /* TXQ for mipmap level 0 */
 #define TGSI_OPCODE_TXQS                104
 #define TGSI_OPCODE_RESQ                105
-                                /* gap */
+#define TGSI_OPCODE_READ_FIRST          106
 #define TGSI_OPCODE_NOP                 107
 
 #define TGSI_OPCODE_FSEQ                108
