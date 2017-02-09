@@ -832,8 +832,7 @@ void anv_CmdClearColorImage(
          }
 
          blorp_clear(&batch, &surf,
-                     src_format.isl_format,
-                     anv_swizzle_for_render(src_format.swizzle),
+                     src_format.isl_format, src_format.swizzle,
                      level, base_layer, layer_count,
                      0, 0, level_width, level_height,
                      vk_to_isl_color(*pColor), color_write_disable);
