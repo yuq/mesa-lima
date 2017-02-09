@@ -5259,11 +5259,13 @@ ast_declarator_list::hir(exec_list *instructions,
           *     sized by an earlier input primitive layout qualifier, when
           *     present, as per the following table."
           */
+         const enum ir_variable_mode mode = (const enum ir_variable_mode)
+            (earlier == NULL ? var->data.mode : earlier->data.mode);
          const bool implicitly_sized =
-            (var->data.mode == ir_var_shader_in &&
+            (mode == ir_var_shader_in &&
              state->stage >= MESA_SHADER_TESS_CTRL &&
              state->stage <= MESA_SHADER_GEOMETRY) ||
-            (var->data.mode == ir_var_shader_out &&
+            (mode == ir_var_shader_out &&
              state->stage == MESA_SHADER_TESS_CTRL);
 
          if (t->is_unsized_array() && !implicitly_sized)
