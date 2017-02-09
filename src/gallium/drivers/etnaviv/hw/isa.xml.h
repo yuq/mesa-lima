@@ -8,8 +8,8 @@ http://0x04.net/cgit/index.cgi/rules-ng-ng
 git clone git://0x04.net/rules-ng-ng
 
 The rules-ng-ng source files this header was generated from are:
-- isa.xml       (  24392 bytes, from 2016-11-16 18:54:37)
-- copyright.xml (   1597 bytes, from 2016-10-02 14:26:13)
+- isa.xml       (  30048 bytes, from 2016-12-12 13:26:33)
+- copyright.xml (   1597 bytes, from 2016-10-29 07:29:22)
 
 Copyright (C) 2012-2016 by the following authors:
 - Wladimir J. van der Laan <laanwj@gmail.com>
@@ -78,6 +78,7 @@ DEALINGS IN THE SOFTWARE.
 #define INST_OPCODE_CEIL					0x00000026
 #define INST_OPCODE_SIGN					0x00000027
 #define INST_OPCODE_I2F						0x0000002d
+#define INST_OPCODE_F2I						0x0000002e
 #define INST_OPCODE_CMP						0x00000031
 #define INST_OPCODE_LOAD					0x00000032
 #define INST_OPCODE_STORE					0x00000033
@@ -92,6 +93,7 @@ DEALINGS IN THE SOFTWARE.
 #define INST_OPCODE_AND						0x0000005d
 #define INST_OPCODE_XOR						0x0000005e
 #define INST_OPCODE_NOT						0x0000005f
+#define INST_OPCODE_POPCOUNT					0x00000061
 #define INST_CONDITION_TRUE					0x00000000
 #define INST_CONDITION_GT					0x00000001
 #define INST_CONDITION_LT					0x00000002
