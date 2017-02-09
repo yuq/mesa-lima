@@ -1204,13 +1204,13 @@ Support for these opcodes indicated by PIPE_SHADER_CAP_INTEGERS (all of them?)
 
 .. math::
 
-  dst.x = src0.x \ src1.x
+  dst.x = \frac{src0.x}{src1.x}
 
-  dst.y = src0.y \ src1.y
+  dst.y = \frac{src0.y}{src1.y}
 
-  dst.z = src0.z \ src1.z
+  dst.z = \frac{src0.z}{src1.z}
 
-  dst.w = src0.w \ src1.w
+  dst.w = \frac{src0.w}{src1.w}
 
 
 .. opcode:: UDIV - Unsigned Integer Division
@@ -1219,13 +1219,13 @@ Support for these opcodes indicated by PIPE_SHADER_CAP_INTEGERS (all of them?)
 
 .. math::
 
-  dst.x = src0.x \ src1.x
+  dst.x = \frac{src0.x}{src1.x}
 
-  dst.y = src0.y \ src1.y
+  dst.y = \frac{src0.y}{src1.y}
 
-  dst.z = src0.z \ src1.z
+  dst.z = \frac{src0.z}{src1.z}
 
-  dst.w = src0.w \ src1.w
+  dst.w = \frac{src0.w}{src1.w}
 
 
 .. opcode:: UMOD - Unsigned Integer Remainder
@@ -1234,13 +1234,13 @@ Support for these opcodes indicated by PIPE_SHADER_CAP_INTEGERS (all of them?)
 
 .. math::
 
-  dst.x = src0.x \ src1.x
+  dst.x = src0.x \bmod src1.x
 
-  dst.y = src0.y \ src1.y
+  dst.y = src0.y \bmod src1.y
 
-  dst.z = src0.z \ src1.z
+  dst.z = src0.z \bmod src1.z
 
-  dst.w = src0.w \ src1.w
+  dst.w = src0.w \bmod src1.w
 
 
 .. opcode:: NOT - Bitwise Not
@@ -2259,17 +2259,17 @@ two-component vectors with 64-bits in each component.
 
 .. math::
 
-  dst.xy = src0.xy \ src1.xy
+  dst.xy = \frac{src0.xy}{src1.xy}
 
-  dst.zw = src0.zw \ src1.zw
+  dst.zw = \frac{src0.zw}{src1.zw}
 
 .. opcode:: U64DIV - 64-bit Unsigned Integer Division
 
 .. math::
 
-  dst.xy = src0.xy \ src1.xy
+  dst.xy = \frac{src0.xy}{src1.xy}
 
-  dst.zw = src0.zw \ src1.zw
+  dst.zw = \frac{src0.zw}{src1.zw}
 
 .. opcode:: U64MOD - 64-bit Unsigned Integer Remainder
 
