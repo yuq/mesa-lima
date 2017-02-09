@@ -1038,6 +1038,20 @@ XXX doesn't look like most of the opcodes really belong here.
 
    dst.xy = lodq(uint, coord);
 
+.. opcode:: CLOCK - retrieve the current shader time
+
+   Invoking this instruction multiple times in the same shader should
+   cause monotonically increasing values to be returned. The values
+   are implicitly 64-bit, so if fewer than 64 bits of precision are
+   available, to provide expected wraparound semantics, the value
+   should be shifted up so that the most significant bit of the time
+   is the most significant bit of the 64-bit value.
+
+.. math::
+
+   dst.xy = clock()
+
+
 Integer ISA
 ^^^^^^^^^^^^^^^^^^^^^^^^
 These opcodes are used for integer operations.
