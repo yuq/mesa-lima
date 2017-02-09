@@ -339,7 +339,9 @@ get_cache_file(struct disk_cache *cache, cache_key key)
    char *filename;
 
    _mesa_sha1_format(buf, key);
-   asprintf(&filename, "%s/%c%c/%s", cache->path, buf[0], buf[1], buf + 2);
+   if (asprintf(&filename, "%s/%c%c/%s", cache->path, buf[0],
+                buf[1], buf + 2) == -1)
+      return NULL;
 
    return filename;
 }
@@ -356,9 +358,10 @@ make_cache_file_directory(struct disk_cache *cache, cache_key key)
    char buf[41];
 
    _mesa_sha1_format(buf, key);
-   asprintf(&dir, "%s/%c%c", cache->path, buf[0], buf[1]);
-   mkdir_if_needed(dir);
+   if (asprintf(&dir, "%s/%c%c", cache->path, buf[0], buf[1]) == -1)
+      return;
 
+   mkdir_if_needed(dir);
    free(dir);
 }
 
@@ -577,8 +580,7 @@ disk_cache_put(struct disk_cache *cache,
     * final destination filename, (to prevent any readers from seeing
     * a partially written file).
     */
-   asprintf(&filename_tmp, "%s.tmp", filename);
-   if (filename_tmp == NULL)
+   if (asprintf(&filename_tmp, "%s.tmp", filename) == -1)
       goto done;
 
    fd = open(filename_tmp, O_WRONLY | O_CLOEXEC | O_CREAT, 0644);
