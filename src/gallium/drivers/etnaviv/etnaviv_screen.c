@@ -627,14 +627,30 @@ etna_get_specs(struct etna_screen *screen)
    screen->specs.has_new_sin_cos =
       VIV_FEATURE(screen, chipMinorFeatures3, HAS_FAST_TRANSCENDENTALS);
 
-   if (instruction_count > 256) { /* unified instruction memory? */
+   if (VIV_FEATURE(screen, chipMinorFeatures3, INSTRUCTION_CACHE)) {
+      /* GC3000 - this core is capable of loading shaders from
+       * memory. It can also run shaders from registers, as a fallback, but
+       * "max_instructions" does not have the correct value. It has place for
+       * 2*256 instructions just like GC2000, but the offsets are slightly
+       * different.
+       */
       screen->specs.vs_offset = 0xC000;
-      screen->specs.ps_offset = 0xD000; /* like vivante driver */
+      /* State 08000-0C000 mirrors 0C000-0E000, and the Vivante driver uses
+       * this mirror for writing PS instructions, probably safest to do the
+       * same.
+       */
+      screen->specs.ps_offset = 0x8000 + 0x1000;
       screen->specs.max_instructions = 256;
    } else {
-      screen->specs.vs_offset = 0x4000;
-      screen->specs.ps_offset = 0x6000;
-      screen->specs.max_instructions = instruction_count / 2;
+      if (instruction_count > 256) { /* unified instruction memory? */
+         screen->specs.vs_offset = 0xC000;
+         screen->specs.ps_offset = 0xD000; /* like vivante driver */
+         screen->specs.max_instructions = 256;
+      } else {
+         screen->specs.vs_offset = 0x4000;
+         screen->specs.ps_offset = 0x6000;
+         screen->specs.max_instructions = instruction_count / 2;
+      }
    }
 
    if (VIV_FEATURE(screen, chipMinorFeatures1, HALTI0)) {
