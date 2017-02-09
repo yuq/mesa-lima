@@ -281,7 +281,6 @@ DRI2Connect(Display * dpy, XID window, char **driverName, char **deviceName)
    req->window = window;
 
    req->driverType = DRI2DriverDRI;
-#ifdef DRI2DriverPrimeShift
    {
       char *prime = getenv("DRI_PRIME");
       if (prime) {
@@ -293,7 +292,6 @@ DRI2Connect(Display * dpy, XID window, char **driverName, char **deviceName)
                ((primeid & DRI2DriverPrimeMask) << DRI2DriverPrimeShift);
       }
    }
-#endif
 
    if (!_XReply(dpy, (xReply *) & rep, 0, xFalse)) {
       UnlockDisplay(dpy);
