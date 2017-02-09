@@ -278,8 +278,6 @@ disk_cache_create(void)
       if (end == max_size_str) {
          max_size = 0;
       } else {
-         while (*end && isspace(*end))
-            end++;
          switch (*end) {
          case 'K':
          case 'k':
