@@ -2406,10 +2406,12 @@ NVC0LoweringPass::handleLDST(Instruction *i)
          if (ind) {
             // Clamp the UBO index when an indirect access is used to avoid
             // loading information from the wrong place in the driver cb.
+            // TODO - synchronize the max with the driver.
             ind = bld.mkOp2v(OP_MIN, TYPE_U32, ind,
                              bld.mkOp2v(OP_ADD, TYPE_U32, bld.getSSA(),
                                         ind, bld.loadImm(NULL, fileIndex)),
-                             bld.loadImm(NULL, 12));
+                             bld.loadImm(NULL, 13));
+            fileIndex = 0;
          }
 
          Value *offset = bld.loadImm(NULL, i->getSrc(0)->reg.data.offset + typeSizeof(i->sType));
