@@ -91,6 +91,12 @@ struct ruvd_decoder {
 	bool				use_legacy;
 	struct rvid_buffer		ctx;
 	struct rvid_buffer		sessionctx;
+	struct {
+		unsigned 		data0;
+		unsigned		data1;
+		unsigned		cmd;
+		unsigned		cntl;
+	} reg;
 };
 
 /* flush IB to the hardware */
@@ -120,14 +126,14 @@ static void send_cmd(struct ruvd_decoder *dec, unsigned cmd,
 		uint64_t addr;
 		addr = dec->ws->buffer_get_virtual_address(buf);
 		addr = addr + off;
-		set_reg(dec, RUVD_GPCOM_VCPU_DATA0, addr);
-		set_reg(dec, RUVD_GPCOM_VCPU_DATA1, addr >> 32);
+		set_reg(dec, dec->reg.data0, addr);
+		set_reg(dec, dec->reg.data1, addr >> 32);
 	} else {
 		off += dec->ws->buffer_get_reloc_offset(buf);
 		set_reg(dec, RUVD_GPCOM_VCPU_DATA0, off);
 		set_reg(dec, RUVD_GPCOM_VCPU_DATA1, reloc_idx * 4);
 	}
-	set_reg(dec, RUVD_GPCOM_VCPU_CMD, cmd << 1);
+	set_reg(dec, dec->reg.cmd, cmd << 1);
 }
 
 /* do the codec needs an IT buffer ?*/
@@ -1150,7 +1156,7 @@ static void ruvd_end_frame(struct pipe_video_codec *decoder,
 	if (have_it(dec))
 		send_cmd(dec, RUVD_CMD_ITSCALING_TABLE_BUFFER, msg_fb_it_buf->res->buf,
 			 FB_BUFFER_OFFSET + dec->fb_size, RADEON_USAGE_READ, RADEON_DOMAIN_GTT);
-	set_reg(dec, RUVD_ENGINE_CNTL, 1);
+	set_reg(dec, dec->reg.cntl, 1);
 
 	flush(dec, RADEON_FLUSH_ASYNC);
 	next_buffer(dec);
@@ -1282,6 +1288,18 @@ struct pipe_video_codec *ruvd_create_decoder(struct pipe_context *context,
 			goto error;
 		}
 		rvid_clear_buffer(context, &dec->sessionctx);
+	}
+
+	if (info.family >= CHIP_VEGA10) {
+		dec->reg.data0 = RUVD_GPCOM_VCPU_DATA0_SOC15;
+		dec->reg.data1 = RUVD_GPCOM_VCPU_DATA1_SOC15;
+		dec->reg.cmd = RUVD_GPCOM_VCPU_CMD_SOC15;
+		dec->reg.cntl = RUVD_ENGINE_CNTL_SOC15;
+	} else {
+		dec->reg.data0 = RUVD_GPCOM_VCPU_DATA0;
+		dec->reg.data1 = RUVD_GPCOM_VCPU_DATA1;
+		dec->reg.cmd = RUVD_GPCOM_VCPU_CMD;
+		dec->reg.cntl = RUVD_ENGINE_CNTL;
 	}
 
 	map_msg_fb_it_buf(dec);
