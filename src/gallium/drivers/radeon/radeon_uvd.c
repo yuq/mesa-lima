@@ -1337,10 +1337,20 @@ error:
 }
 
 /* calculate top/bottom offset */
-static unsigned texture_offset(struct radeon_surf *surface, unsigned layer)
+static unsigned texture_offset(struct radeon_surf *surface, unsigned layer,
+				enum ruvd_surface_type type)
 {
-	return surface->u.legacy.level[0].offset +
-		layer * surface->u.legacy.level[0].slice_size;
+	switch (type) {
+	default:
+	case RUVD_SURFACE_TYPE_LEGACY:
+		return surface->u.legacy.level[0].offset +
+			layer * surface->u.legacy.level[0].slice_size;
+		break;
+	case RUVD_SURFACE_TYPE_GFX9:
+		return surface->u.gfx9.surf_offset +
+			layer * surface->u.gfx9.surf_slice_size;
+		break;
+	}
 }
 
 /* hw encode the aspect of macro tiles */
@@ -1373,42 +1383,63 @@ static unsigned bank_wh(unsigned bankwh)
  * fill decoding target field from the luma and chroma surfaces
  */
 void ruvd_set_dt_surfaces(struct ruvd_msg *msg, struct radeon_surf *luma,
-			  struct radeon_surf *chroma)
+			struct radeon_surf *chroma, enum ruvd_surface_type type)
 {
-	msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x;
-	switch (luma->u.legacy.level[0].mode) {
-	case RADEON_SURF_MODE_LINEAR_ALIGNED:
+	switch (type) {
+	default:
+	case RUVD_SURFACE_TYPE_LEGACY:
+		msg->body.decode.dt_pitch = luma->u.legacy.level[0].nblk_x;
+		switch (luma->u.legacy.level[0].mode) {
+		case RADEON_SURF_MODE_LINEAR_ALIGNED:
+			msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
+			msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_LINEAR;
+			break;
+		case RADEON_SURF_MODE_1D:
+			msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
+			msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_1D_THIN;
+			break;
+		case RADEON_SURF_MODE_2D:
+			msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
+			msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_2D_THIN;
+			break;
+		default:
+			assert(0);
+			break;
+		}
+
+		msg->body.decode.dt_luma_top_offset = texture_offset(luma, 0, type);
+		msg->body.decode.dt_chroma_top_offset = texture_offset(chroma, 0, type);
+		if (msg->body.decode.dt_field_mode) {
+			msg->body.decode.dt_luma_bottom_offset = texture_offset(luma, 1, type);
+			msg->body.decode.dt_chroma_bottom_offset = texture_offset(chroma, 1, type);
+		} else {
+			msg->body.decode.dt_luma_bottom_offset = msg->body.decode.dt_luma_top_offset;
+			msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
+		}
+
+		assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
+		assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
+		assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
+
+		msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->u.legacy.bankw));
+		msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->u.legacy.bankh));
+		msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->u.legacy.mtilea));
+		break;
+	case RUVD_SURFACE_TYPE_GFX9:
+		msg->body.decode.dt_pitch = luma->u.gfx9.surf_pitch * luma->bpe;
+		/* SWIZZLE LINEAR MODE */
 		msg->body.decode.dt_tiling_mode = RUVD_TILE_LINEAR;
 		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_LINEAR;
-		break;
-	case RADEON_SURF_MODE_1D:
-		msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
-		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_1D_THIN;
-		break;
-	case RADEON_SURF_MODE_2D:
-		msg->body.decode.dt_tiling_mode = RUVD_TILE_8X8;
-		msg->body.decode.dt_array_mode = RUVD_ARRAY_MODE_2D_THIN;
-		break;
-	default:
-		assert(0);
+		msg->body.decode.dt_luma_top_offset = texture_offset(luma, 0, type);
+		msg->body.decode.dt_chroma_top_offset = texture_offset(chroma, 0, type);
+		if (msg->body.decode.dt_field_mode) {
+			msg->body.decode.dt_luma_bottom_offset = texture_offset(luma, 1, type);
+			msg->body.decode.dt_chroma_bottom_offset = texture_offset(chroma, 1, type);
+		} else {
+			msg->body.decode.dt_luma_bottom_offset = msg->body.decode.dt_luma_top_offset;
+			msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
+		}
+		msg->body.decode.dt_surf_tile_config = 0;
 		break;
 	}
-
-	msg->body.decode.dt_luma_top_offset = texture_offset(luma, 0);
-	msg->body.decode.dt_chroma_top_offset = texture_offset(chroma, 0);
-	if (msg->body.decode.dt_field_mode) {
-		msg->body.decode.dt_luma_bottom_offset = texture_offset(luma, 1);
-		msg->body.decode.dt_chroma_bottom_offset = texture_offset(chroma, 1);
-	} else {
-		msg->body.decode.dt_luma_bottom_offset = msg->body.decode.dt_luma_top_offset;
-		msg->body.decode.dt_chroma_bottom_offset = msg->body.decode.dt_chroma_top_offset;
-	}
-
-	assert(luma->u.legacy.bankw == chroma->u.legacy.bankw);
-	assert(luma->u.legacy.bankh == chroma->u.legacy.bankh);
-	assert(luma->u.legacy.mtilea == chroma->u.legacy.mtilea);
-
-	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_WIDTH(bank_wh(luma->u.legacy.bankw));
-	msg->body.decode.dt_surf_tile_config |= RUVD_BANK_HEIGHT(bank_wh(luma->u.legacy.bankh));
-	msg->body.decode.dt_surf_tile_config |= RUVD_MACRO_TILE_ASPECT_RATIO(macro_tile_aspect(luma->u.legacy.mtilea));
 }
