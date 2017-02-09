@@ -961,7 +961,8 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * directly through a staging buffer and don't go through
 	 * the fine-grained upload path.
 	 */
-	u_upload_alloc(sctx->b.uploader, 0, count * 16, 256, &desc->buffer_offset,
+	u_upload_alloc(sctx->b.uploader, 0, velems->desc_list_byte_size, 256,
+		       &desc->buffer_offset,
 		       (struct pipe_resource**)&desc->buffer, (void**)&ptr);
 	if (!desc->buffer)
 		return false;

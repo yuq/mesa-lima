@@ -100,6 +100,8 @@ struct si_vertex_element
 {
 	unsigned			count;
 	unsigned			first_vb_use_mask;
+	/* Vertex buffer descriptor list size aligned for optimal prefetch. */
+	unsigned			desc_list_byte_size;
 
 	/* Two bits per attribute indicating the size of each vector component
 	 * in bytes if the size 3-workaround must be applied.

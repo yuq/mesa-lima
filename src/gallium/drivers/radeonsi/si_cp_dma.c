@@ -434,7 +434,7 @@ static void cik_emit_prefetch_L2(struct si_context *sctx, struct r600_atom *atom
 	if (sctx->vertex_buffer_pointer_dirty) {
 		cik_prefetch_TC_L2_async(sctx, &sctx->vertex_buffers.buffer->b.b,
 					 sctx->vertex_buffers.buffer_offset,
-					 sctx->vertex_elements->count * 16);
+					 sctx->vertex_elements->desc_list_byte_size);
 	}
 	if (si_pm4_state_changed(sctx, ps))
 		cik_prefetch_shader_async(sctx, sctx->queued.named.ps);
