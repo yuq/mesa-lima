@@ -335,4 +335,4 @@ we DO NOT WANT implementations of these extensions for Mesa.
 
 
 A graphical representation of this information can be found at
-http://mesamatrix.net/
+https://mesamatrix.net/
