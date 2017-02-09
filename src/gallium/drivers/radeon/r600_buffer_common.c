@@ -279,7 +279,6 @@ void r600_invalidate_resource(struct pipe_context *ctx,
 
 static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 				      struct pipe_resource *resource,
-                                      unsigned level,
                                       unsigned usage,
                                       const struct pipe_box *box,
 				      struct pipe_transfer **ptransfer,
@@ -290,7 +289,7 @@ static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 	struct r600_transfer *transfer = slab_alloc(&rctx->pool_transfers);
 
 	transfer->transfer.resource = resource;
-	transfer->transfer.level = level;
+	transfer->transfer.level = 0;
 	transfer->transfer.usage = usage;
 	transfer->transfer.box = *box;
 	transfer->transfer.stride = 0;
@@ -373,7 +372,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 
 			if (staging) {
 				data += box->x % R600_MAP_BUFFER_ALIGNMENT;
-				return r600_buffer_get_transfer(ctx, resource, level, usage, box,
+				return r600_buffer_get_transfer(ctx, resource, usage, box,
 								ptransfer, data, staging, offset);
 			}
 		} else {
@@ -406,7 +405,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 			}
 			data += box->x % R600_MAP_BUFFER_ALIGNMENT;
 
-			return r600_buffer_get_transfer(ctx, resource, level, usage, box,
+			return r600_buffer_get_transfer(ctx, resource, usage, box,
 							ptransfer, data, staging, 0);
 		}
 	}
@@ -417,7 +416,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 	}
 	data += box->x;
 
-	return r600_buffer_get_transfer(ctx, resource, level, usage, box,
+	return r600_buffer_get_transfer(ctx, resource, usage, box,
 					ptransfer, data, NULL, 0);
 }
 
