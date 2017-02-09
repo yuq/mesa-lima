@@ -34,6 +34,250 @@
 
 #if (KNOB_SIMD_WIDTH == 8)
 
+INLINE __m128 swizzleLane0(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpacklo_ps(x, z);
+    simdscalar tmp1 = _mm256_unpacklo_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 0);
+}
+
+INLINE __m128 swizzleLane1(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpacklo_ps(x, z);
+    simdscalar tmp1 = _mm256_unpacklo_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 0);
+}
+
+INLINE __m128 swizzleLane2(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpackhi_ps(x, z);
+    simdscalar tmp1 = _mm256_unpackhi_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 0);
+}
+
+INLINE __m128 swizzleLane3(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpackhi_ps(x, z);
+    simdscalar tmp1 = _mm256_unpackhi_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 0);
+}
+
+INLINE __m128 swizzleLane4(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpacklo_ps(x, z);
+    simdscalar tmp1 = _mm256_unpacklo_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 1);
+}
+
+INLINE __m128 swizzleLane5(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpacklo_ps(x, z);
+    simdscalar tmp1 = _mm256_unpacklo_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 1);
+}
+
+INLINE __m128 swizzleLane6(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpackhi_ps(x, z);
+    simdscalar tmp1 = _mm256_unpackhi_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 1);
+}
+
+INLINE __m128 swizzleLane7(const simdscalar &x, const simdscalar &y, const simdscalar &z, const simdscalar &w)
+{
+    simdscalar tmp0 = _mm256_unpackhi_ps(x, z);
+    simdscalar tmp1 = _mm256_unpackhi_ps(y, w);
+    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 1);
+}
+
+INLINE __m128 swizzleLane0(const simdvector &v)
+{
+    return swizzleLane0(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane1(const simdvector &v)
+{
+    return swizzleLane1(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane2(const simdvector &v)
+{
+    return swizzleLane2(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane3(const simdvector &v)
+{
+    return swizzleLane3(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane4(const simdvector &v)
+{
+    return swizzleLane4(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane5(const simdvector &v)
+{
+    return swizzleLane5(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane6(const simdvector &v)
+{
+    return swizzleLane6(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLane7(const simdvector &v)
+{
+    return swizzleLane7(v.x, v.y, v.z, v.w);
+}
+
+INLINE __m128 swizzleLaneN(const simdvector &v, int lane)
+{
+    switch (lane)
+    {
+    case 0:
+        return swizzleLane0(v);
+    case 1:
+        return swizzleLane1(v);
+    case 2:
+        return swizzleLane2(v);
+    case 3:
+        return swizzleLane3(v);
+    case 4:
+        return swizzleLane4(v);
+    case 5:
+        return swizzleLane5(v);
+    case 6:
+        return swizzleLane6(v);
+    case 7:
+        return swizzleLane7(v);
+    default:
+        return _mm_setzero_ps();
+    }
+}
+
+#if ENABLE_AVX512_SIMD16
+INLINE __m128 swizzleLane0(const simd16vector &v)
+{
+    return swizzleLane0(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane1(const simd16vector &v)
+{
+    return swizzleLane1(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane2(const simd16vector &v)
+{
+    return swizzleLane2(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane3(const simd16vector &v)
+{
+    return swizzleLane3(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane4(const simd16vector &v)
+{
+    return swizzleLane4(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane5(const simd16vector &v)
+{
+    return swizzleLane5(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane6(const simd16vector &v)
+{
+    return swizzleLane6(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane7(const simd16vector &v)
+{
+    return swizzleLane7(_simd16_extract_ps(v.x, 0), _simd16_extract_ps(v.y, 0), _simd16_extract_ps(v.z, 0), _simd16_extract_ps(v.w, 0));
+}
+
+INLINE __m128 swizzleLane8(const simd16vector &v)
+{
+    return swizzleLane0(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLane9(const simd16vector &v)
+{
+    return swizzleLane1(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneA(const simd16vector &v)
+{
+    return swizzleLane2(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneB(const simd16vector &v)
+{
+    return swizzleLane3(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneC(const simd16vector &v)
+{
+    return swizzleLane4(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneD(const simd16vector &v)
+{
+    return swizzleLane5(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneE(const simd16vector &v)
+{
+    return swizzleLane6(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneF(const simd16vector &v)
+{
+    return swizzleLane7(_simd16_extract_ps(v.x, 1), _simd16_extract_ps(v.y, 1), _simd16_extract_ps(v.z, 1), _simd16_extract_ps(v.w, 1));
+}
+
+INLINE __m128 swizzleLaneN(const simd16vector &v, int lane)
+{
+    switch (lane)
+    {
+    case 0:
+        return swizzleLane0(v);
+    case 1:
+        return swizzleLane1(v);
+    case 2:
+        return swizzleLane2(v);
+    case 3:
+        return swizzleLane3(v);
+    case 4:
+        return swizzleLane4(v);
+    case 5:
+        return swizzleLane5(v);
+    case 6:
+        return swizzleLane6(v);
+    case 7:
+        return swizzleLane7(v);
+    case 8:
+        return swizzleLane8(v);
+    case 9:
+        return swizzleLane9(v);
+    case 10:
+        return swizzleLaneA(v);
+    case 11:
+        return swizzleLaneB(v);
+    case 12:
+        return swizzleLaneC(v);
+    case 13:
+        return swizzleLaneD(v);
+    case 14:
+        return swizzleLaneE(v);
+    case 15:
+        return swizzleLaneF(v);
+    default:
+        return _mm_setzero_ps();
+    }
+}
+
+#endif
 bool PaTriList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaTriList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
@@ -46,28 +290,56 @@ void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m12
 
 bool PaTriStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaTriStrip0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
 void PaTriStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaTriFan0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaTriFan0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
 void PaTriFanSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaQuadList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaQuadList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaQuadList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaQuadList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
 void PaQuadListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaLineLoop0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaLineLoop1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaLineLoop0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaLineLoop1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
+void PaLineLoopSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaLineList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaLineList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
-void PaLineListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t index, __m128 verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaLineList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaLineList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
+void PaLineListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaLineStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
 bool PaLineStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
-void PaLineStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 lineverts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaLineStrip0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+bool PaLineStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
+void PaLineStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
+#if ENABLE_AVX512_SIMD16
+bool PaPoints0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[]);
+#endif
 void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[]);
 
 bool PaRectList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[]);
@@ -208,11 +480,43 @@ bool PaTriList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
 #if KNOB_ARCH == KNOB_ARCH_AVX
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
+    simdvector c;
 
-    simdvector& a = PaGetSimdVector(pa, 0, slot);
-    simdvector& b = PaGetSimdVector(pa, 1, slot);
-    simdvector& c = PaGetSimdVector(pa, 2, slot);
-    simdscalar    s;
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+            c[i] = _simd16_extract_ps(b_16[i], 0);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+        const simd16vector &c_16 = PaGetSimdVector_simd16(pa, 2, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 1);
+            b[i] = _simd16_extract_ps(c_16[i], 0);
+            c[i] = _simd16_extract_ps(c_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, 0, slot);
+    simdvector &b = PaGetSimdVector(pa, 1, slot);
+    simdvector &c = PaGetSimdVector(pa, 2, slot);
+
+#endif
+    simdscalar s;
 
     // Tri Pattern - provoking vertex is always v0
     //  v0 -> 0 3 6 9  12 15 18 21
@@ -244,15 +548,46 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     }
 
 #elif KNOB_ARCH >= KNOB_ARCH_AVX2
-
     const simdscalari perm0 = _simd_set_epi32(5, 2, 7, 4, 1, 6, 3, 0);
     const simdscalari perm1 = _simd_set_epi32(6, 3, 0, 5, 2, 7, 4, 1);
     const simdscalari perm2 = _simd_set_epi32(7, 4, 1, 6, 3, 0, 5, 2);
 
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
+    simdvector c;
+
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+            c[i] = _simd16_extract_ps(b_16[i], 0);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+        const simd16vector &c_16 = PaGetSimdVector_simd16(pa, 2, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 1);
+            b[i] = _simd16_extract_ps(c_16[i], 0);
+            c[i] = _simd16_extract_ps(c_16[i], 1);
+        }
+    }
+
+#else
     const simdvector &a = PaGetSimdVector(pa, 0, slot);
     const simdvector &b = PaGetSimdVector(pa, 1, slot);
     const simdvector &c = PaGetSimdVector(pa, 2, slot);
 
+#endif
     //  v0 -> a0 a3 a6 b1 b4 b7 c2 c5
     //  v1 -> a1 a4 a7 b2 b5 c0 c3 c6
     //  v2 -> a2 a5 b0 b3 b6 c1 c4 c7
@@ -264,18 +599,16 @@ bool PaTriList2(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     // for simd x, y, z, and w
     for (int i = 0; i < 4; ++i)
     {
-        v0[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
-        v0[i] = _simd_permute_ps(v0[i], perm0);
+        simdscalar temp0 = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x92), c[i], 0x24);
+        simdscalar temp1 = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
+        simdscalar temp2 = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
 
-        v1[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x24), c[i], 0x49);
-        v1[i] = _simd_permute_ps(v1[i], perm1);
-
-        v2[i] = _simd_blend_ps(_simd_blend_ps(a[i], b[i], 0x49), c[i], 0x92);
-        v2[i] = _simd_permute_ps(v2[i], perm2);
+        v0[i] = _simd_permute_ps(temp0, perm0);
+        v1[i] = _simd_permute_ps(temp1, perm1);
+        v2[i] = _simd_permute_ps(temp2, perm2);
     }
 
 #endif
-
     SetNextPaState(pa, PaTriList0, PaTriListSingle0, 0, KNOB_SIMD_WIDTH, true);
     return true;
 }
@@ -314,14 +647,13 @@ bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
     // for simd16 x, y, z, and w
     for (int i = 0; i < 4; i += 1)
     {
-        v0[i] = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x4924), c[i], 0x2492);
-        v0[i] = _simd16_permute_ps(v0[i], perm0);
+        simd16scalar temp0 = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x4924), c[i], 0x2492);
+        simd16scalar temp1 = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x9249), c[i], 0x4924);
+        simd16scalar temp2 = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x2492), c[i], 0x9249);
 
-        v1[i] = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x9249), c[i], 0x4924);
-        v1[i] = _simd16_permute_ps(v1[i], perm1);
-
-        v2[i] = _simd16_blend_ps(_simd16_blend_ps(a[i], b[i], 0x2492), c[i], 0x9249);
-        v2[i] = _simd16_permute_ps(v2[i], perm2);
+        v0[i] = _simd16_permute_ps(temp0, perm0);
+        v1[i] = _simd16_permute_ps(temp1, perm1);
+        v2[i] = _simd16_permute_ps(temp2, perm2);
     }
 
     SetNextPaState_simd16(pa, PaTriList0_simd16, PaTriListSingle0, 0, KNOB_SIMD16_WIDTH, true);
@@ -331,46 +663,119 @@ bool PaTriList2_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 #endif
 void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
+#if USE_SIMD16_FRONTEND
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
+    const simd16vector &c = PaGetSimdVector_simd16(pa, 2, slot);
+
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
+
+    //  v0 -> a0 a3 a6 a9 aC aF b2 b5 b8 bB bE c1 c4 c7 cA cD
+    //  v1 -> a1 a4 a7 aA aD b0 b3 b6 b9 bC bF c2 c5 c8 cB cE
+    //  v2 -> a2 a5 b8 aB aE b1 b4 b7 bA bD c0 c3 c6 c9 cC cF
+
+    switch (primIndex)
+    {
+    case 0:
+        verts[0] = swizzleLane0(a);
+        verts[1] = swizzleLane1(a);
+        verts[2] = swizzleLane2(a);
+        break;
+    case 1:
+        verts[0] = swizzleLane3(a);
+        verts[1] = swizzleLane4(a);
+        verts[2] = swizzleLane5(a);
+        break;
+    case 2:
+        verts[0] = swizzleLane6(a);
+        verts[1] = swizzleLane7(a);
+        verts[2] = swizzleLane8(a);
+        break;
+    case 3:
+        verts[0] = swizzleLane9(a);
+        verts[1] = swizzleLaneA(a);
+        verts[2] = swizzleLaneB(a);
+        break;
+    case 4:
+        verts[0] = swizzleLaneC(a);
+        verts[1] = swizzleLaneD(a);
+        verts[2] = swizzleLaneE(a);
+        break;
+    case 5:
+        verts[0] = swizzleLaneF(a);
+        verts[1] = swizzleLane0(b);
+        verts[2] = swizzleLane1(b);
+        break;
+    case 6:
+        verts[0] = swizzleLane2(b);
+        verts[1] = swizzleLane3(b);
+        verts[2] = swizzleLane4(b);
+        break;
+    case 7:
+        verts[0] = swizzleLane5(b);
+        verts[1] = swizzleLane6(b);
+        verts[2] = swizzleLane7(b);
+        break;
+    case 8:
+        verts[0] = swizzleLane8(b);
+        verts[1] = swizzleLane9(b);
+        verts[2] = swizzleLaneA(b);
+        break;
+    case 9:
+        verts[0] = swizzleLaneB(b);
+        verts[1] = swizzleLaneC(b);
+        verts[2] = swizzleLaneD(b);
+        break;
+    case 10:
+        verts[0] = swizzleLaneE(b);
+        verts[1] = swizzleLaneF(b);
+        verts[2] = swizzleLane0(c);
+        break;
+    case 11:
+        verts[0] = swizzleLane1(c);
+        verts[1] = swizzleLane2(c);
+        verts[2] = swizzleLane3(c);
+        break;
+    case 12:
+        verts[0] = swizzleLane4(c);
+        verts[1] = swizzleLane5(c);
+        verts[2] = swizzleLane6(c);
+        break;
+    case 13:
+        verts[0] = swizzleLane7(c);
+        verts[1] = swizzleLane8(c);
+        verts[2] = swizzleLane9(c);
+        break;
+    case 14:
+        verts[0] = swizzleLaneA(c);
+        verts[1] = swizzleLaneB(c);
+        verts[2] = swizzleLaneC(c);
+        break;
+    case 15:
+        verts[0] = swizzleLaneD(c);
+        verts[1] = swizzleLaneE(c);
+        verts[2] = swizzleLaneF(c);
+        break;
+    };
+#else
     // We have 12 simdscalars contained within 3 simdvectors which
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
-#if USE_SIMD16_FRONTEND
-    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
-    const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
-    const simd16vector &c_16 = PaGetSimdVector_simd16(pa, 2, slot);
 
-    simdvector a;
-    simdvector b;
-    simdvector c;
+    const simdvector &a = PaGetSimdVector(pa, 0, slot);
+    const simdvector &b = PaGetSimdVector(pa, 1, slot);
+    const simdvector &c = PaGetSimdVector(pa, 2, slot);
 
-    for (uint32_t i = 0; i < 4; i += 1)
-    {
-        if (pa.useAlternateOffset)
-        {
-            a[i] = b_16[i].hi;
-            b[i] = c_16[i].lo;
-            c[i] = c_16[i].hi;
-        }
-        else
-        {
-            a[i] = a_16[i].lo;
-            b[i] = a_16[i].hi;
-            c[i] = b_16[i].lo;
-        }
-    }
-
-#else
-    simdvector& a = PaGetSimdVector(pa, 0, slot);
-    simdvector& b = PaGetSimdVector(pa, 1, slot);
-    simdvector& c = PaGetSimdVector(pa, 2, slot);
-
-#endif
     // Convert from vertical to horizontal.
     // Tri Pattern - provoking vertex is always v0
     //  v0 -> 0 3 6 9  12 15 18 21
     //  v1 -> 1 4 7 10 13 16 19 22
     //  v2 -> 2 5 8 11 14 17 20 23
-    switch(primIndex)
+
+    switch (primIndex)
     {
     case 0:
         verts[0] = swizzleLane0(a);
@@ -413,6 +818,7 @@ void PaTriListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m12
         verts[2] = swizzleLane7(c);
         break;
     };
+#endif
 }
 
 bool PaTriStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
@@ -423,9 +829,37 @@ bool PaTriStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
-    simdscalar  s;
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
+
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, pa.prev, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+
+#endif
+    simdscalar s;
 
     for(int i = 0; i < 4; ++i)
     {
@@ -440,7 +874,7 @@ bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         v0[i] = a0;
 
         //  s -> 4567891011 
-        s = _mm256_permute2f128_ps(a0, b0, 0x21);
+        s = _simd_permute2f128_ps(a0, b0, 0x21);
         //  s -> 23456789
         s = _simd_shuffle_ps(a0, s, _MM_SHUFFLE(1, 0, 3, 2));
 
@@ -457,11 +891,17 @@ bool PaTriStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
-#if 0 // ENABLE_AVX512_SIMD16
-bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
+#if  ENABLE_AVX512_SIMD16
+bool PaTriStrip0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    const simd16vector &a = PaGetSimdVector(pa, pa.prev, slot);
-    const simd16vector &b = PaGetSimdVector(pa, pa.cur, slot);
+    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStripSingle0);
+    return false;    // Not enough vertices to assemble 16 triangles.
+}
+
+bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
     simd16vector &v0 = verts[0];
     simd16vector &v1 = verts[1];
@@ -477,7 +917,7 @@ bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         simd16scalar perm0 = _simd16_permute2f128_ps(a[i], a[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF a0 a1 a2 a3
         simd16scalar perm1 = _simd16_permute2f128_ps(b[i], b[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
 
-        simd16scalar blend = _simd16_blend_ps(perm0, perm1, 0xF000);     //                         // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1 b2 b3
+        simd16scalar blend = _simd16_blend_ps(perm0, perm1, 0xF000);                                // a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1 b2 b3
         simd16scalar shuff = _simd16_shuffle_ps(a[i], blend, _MM_SHUFFLE(1, 0, 3, 2));              // a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0 b1
 
         v0[i] = a[i];                                                                               // a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
@@ -485,22 +925,120 @@ bool PaTriStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         v2[i] = _simd16_shuffle_ps(a[i], shuff, _MM_SHUFFLE(2, 2, 2, 2));                           // a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
     }
 
-    SetNextPaState(pa, PaTriStrip1, PaTriStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    SetNextPaState_simd16(pa, PaTriStrip1_simd16, PaTriStripSingle0, 0, KNOB_SIMD16_WIDTH);
     return true;
 }
 
 #endif
 void PaTriStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
+#if USE_SIMD16_FRONTEND
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
+
+    //  v0 -> a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+    //  v1 -> a1 a3 a3 a5 a5 a7 a7 a9 a9 aB aB aD aD aF aF b1
+    //  v2 -> a2 a2 a4 a4 a6 a6 a8 a8 aA aA aC aC aE aE b0 b0
+
+    switch (primIndex)
+    {
+    case 0:
+        verts[0] = swizzleLane0(a);
+        verts[1] = swizzleLane1(a);
+        verts[2] = swizzleLane2(a);
+        break;
+    case 1:
+        verts[0] = swizzleLane1(a);
+        verts[1] = swizzleLane3(a);
+        verts[2] = swizzleLane2(a);
+        break;
+    case 2:
+        verts[0] = swizzleLane2(a);
+        verts[1] = swizzleLane3(a);
+        verts[2] = swizzleLane4(a);
+        break;
+    case 3:
+        verts[0] = swizzleLane3(a);
+        verts[1] = swizzleLane5(a);
+        verts[2] = swizzleLane4(a);
+        break;
+    case 4:
+        verts[0] = swizzleLane4(a);
+        verts[1] = swizzleLane5(a);
+        verts[2] = swizzleLane6(a);
+        break;
+    case 5:
+        verts[0] = swizzleLane5(a);
+        verts[1] = swizzleLane7(a);
+        verts[2] = swizzleLane6(a);
+        break;
+    case 6:
+        verts[0] = swizzleLane6(a);
+        verts[1] = swizzleLane7(a);
+        verts[2] = swizzleLane8(a);
+        break;
+    case 7:
+        verts[0] = swizzleLane7(a);
+        verts[1] = swizzleLane9(a);
+        verts[2] = swizzleLane8(a);
+        break;
+    case 8:
+        verts[0] = swizzleLane8(a);
+        verts[1] = swizzleLane9(a);
+        verts[2] = swizzleLaneA(a);
+        break;
+    case 9:
+        verts[0] = swizzleLane9(a);
+        verts[1] = swizzleLaneB(a);
+        verts[2] = swizzleLaneA(a);
+        break;
+    case 10:
+        verts[0] = swizzleLaneA(a);
+        verts[1] = swizzleLaneB(a);
+        verts[2] = swizzleLaneC(a);
+        break;
+    case 11:
+        verts[0] = swizzleLaneB(a);
+        verts[1] = swizzleLaneD(a);
+        verts[2] = swizzleLaneC(a);
+        break;
+    case 12:
+        verts[0] = swizzleLaneC(a);
+        verts[1] = swizzleLaneD(a);
+        verts[2] = swizzleLaneE(a);
+        break;
+    case 13:
+        verts[0] = swizzleLaneD(a);
+        verts[1] = swizzleLaneF(a);
+        verts[2] = swizzleLaneE(a);
+        break;
+    case 14:
+        verts[0] = swizzleLaneE(a);
+        verts[1] = swizzleLaneF(a);
+        verts[2] = swizzleLane0(b);
+        break;
+    case 15:
+        verts[0] = swizzleLaneF(a);
+        verts[1] = swizzleLane1(b);
+        verts[2] = swizzleLane0(b);
+        break;
+    };
+#else
+    const simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    const simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
 
     // Convert from vertical to horizontal.
     // Tri Pattern - provoking vertex is always v0
     //  v0 -> 01234567
     //  v1 -> 13355779
     //  v2 -> 22446688
-    switch(primIndex)
+
+    switch (primIndex)
     {
     case 0:
         verts[0] = swizzleLane0(a);
@@ -543,35 +1081,57 @@ void PaTriStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
         verts[2] = swizzleLane0(b);
         break;
     };
+#endif
 }
 
 bool PaTriFan0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
-
-    // Extract vertex 0 to every lane of first vector
-    for(int i = 0; i < 4; ++i)
-    {
-        __m256 a0 = a[i];
-        simdvector& v0 = verts[0];
-        v0[i] = _simd_shuffle_ps(a0, a0, _MM_SHUFFLE(0, 0, 0, 0));
-        v0[i] = _mm256_permute2f128_ps(v0[i], a0, 0x00);
-    }
-
-    // store off leading vertex for attributes
-    PA_STATE_OPT::SIMDVERTEX* pVertex = (PA_STATE_OPT::SIMDVERTEX*)pa.pStreamBase;
-    pa.leadingVertex = pVertex[pa.cur];
-
     SetNextPaState(pa, PaTriFan1, PaTriFanSingle0);
     return false;    // Not enough vertices to assemble 8 triangles.
 }
 
 bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    PA_STATE_OPT::SIMDVECTOR& leadVert = pa.leadingVertex.attrib[slot];
-    simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
-    simdscalar    s;
+#if USE_SIMD16_FRONTEND
+    simdvector leadVert;
+    simdvector a;
+    simdvector b;
+
+    const simd16vector &leadvert_16 = PaGetSimdVector_simd16(pa, pa.first, slot);
+
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, pa.prev, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            leadVert[i] = _simd16_extract_ps(leadvert_16[i], 0);
+
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            leadVert[i] = _simd16_extract_ps(leadvert_16[i], 0);
+
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &leadVert = PaGetSimdVector(pa, pa.first, slot);
+
+    simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+
+#endif
+    simdscalar s;
 
     // need to fill vectors 1/2 with new verts, and v0 with anchor vert.
     for(int i = 0; i < 4; ++i)
@@ -579,17 +1139,14 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
         simdscalar a0 = a[i];
         simdscalar b0 = b[i];
 
-#if USE_SIMD16_FRONTEND
-        __m256 comp = leadVert[i].lo;
-#else
-        __m256 comp = leadVert[i];
-#endif
+        simdscalar comp = leadVert[i];
+
         simdvector& v0 = verts[0];
         v0[i] = _simd_shuffle_ps(comp, comp, _MM_SHUFFLE(0, 0, 0, 0));
-        v0[i] = _mm256_permute2f128_ps(v0[i], comp, 0x00);
+        v0[i] = _simd_permute2f128_ps(v0[i], comp, 0x00);
 
         simdvector& v2 = verts[2];
-        s = _mm256_permute2f128_ps(a0, b0, 0x21);
+        s = _simd_permute2f128_ps(a0, b0, 0x21);
         v2[i] = _simd_shuffle_ps(a0, s, _MM_SHUFFLE(1, 0, 3, 2));
 
         simdvector& v1 = verts[1];
@@ -600,45 +1157,114 @@ bool PaTriFan1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+bool PaTriFan0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFanSingle0);
+    return false;    // Not enough vertices to assemble 16 triangles.
+}
+
+bool PaTriFan1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.first, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
+    //  v0 -> a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0
+    //  v1 -> b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
+    //  v2 -> b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
+
+    // for simd16 x, y, z, and w
+    for (uint32_t i = 0; i < 4; i += 1)
+    {
+        simd16scalar shuff = _simd16_shuffle_ps(a[i], a[i], _MM_SHUFFLE(0, 0, 0, 0));               // a0 a0 a0 a0 a4 a4 a4 a4 a0 a0 a0 a0 a4 a4 a4 a4
+
+        v0[i] = _simd16_permute2f128_ps(shuff, shuff, 0x00);                                        // a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0
+
+        simd16scalar temp0 = _simd16_permute2f128_ps(b[i], b[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF b0 b1 b2 b3
+        simd16scalar temp1 = _simd16_permute2f128_ps(c[i], c[i], 0x39);  // (0 3 2 1) = 00 11 10 01 // c4 c5 c6 c7 c8 c9 cA cB cC cD cE cF c0 c1 c2 c3
+
+        simd16scalar blend = _simd16_blend_ps(temp0, temp1, 0xF000);                                // b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1 c2 c3
+
+        v2[i] = _simd16_shuffle_ps(b[i], blend, _MM_SHUFFLE(1, 0, 3, 2));                           // b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
+        v1[i] = _simd16_shuffle_ps(b[i], v2[i], _MM_SHUFFLE(2, 1, 2, 1));                           // b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
+    }
+
+    SetNextPaState_simd16(pa, PaTriFan1_simd16, PaTriFanSingle0, 0, KNOB_SIMD16_WIDTH);
+    return true;
+}
+
+#endif
 void PaTriFanSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    // vert 0 from leading vertex
 #if USE_SIMD16_FRONTEND
-    PA_STATE_OPT::SIMDVECTOR& temp = pa.leadingVertex.attrib[slot];
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.first, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &c = PaGetSimdVector_simd16(pa, pa.cur, slot);
 
-    simdvector lead;
-    lead[0] = temp[0].lo;
-    lead[1] = temp[1].lo;
-    lead[2] = temp[2].lo;
-    lead[3] = temp[3].lo;
-    verts[0] = swizzleLane0(lead);
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
+
+    //  v0 -> a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0 a0
+    //  v1 -> b1 b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0
+    //  v2 -> b2 b3 b4 b5 b6 b7 b8 b9 bA bB bC bD bE bF c0 c1
+
+    // vert 0 from leading vertex
+    verts[0] = swizzleLane0(a);
+
+    // vert 1
+    if (primIndex < 15)
+    {
+        verts[1] = swizzleLaneN(b, primIndex + 1);
+    }
+    else
+    {
+        verts[1] = swizzleLane0(c);
+    }
+
+    // vert 2
+    if (primIndex < 14)
+    {
+        verts[2] = swizzleLaneN(b, primIndex + 2);
+    }
+    else
+    {
+        verts[2] = swizzleLaneN(c, primIndex - 14);
+    }
 #else
-    PA_STATE_OPT::SIMDVECTOR& lead = pa.leadingVertex.attrib[slot];
-    verts[0] = swizzleLane0(lead);
-#endif
+    const simdvector &a = PaGetSimdVector(pa, pa.first, slot);
+    const simdvector &b = PaGetSimdVector(pa, pa.prev, slot);
+    const simdvector &c = PaGetSimdVector(pa, pa.cur, slot);
 
-    simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
+    // vert 0 from leading vertex
+    verts[0] = swizzleLane0(a);
 
     // vert 1
     if (primIndex < 7)
     {
-        verts[1] = swizzleLaneN(a, primIndex + 1);
+        verts[1] = swizzleLaneN(b, primIndex + 1);
     }
     else
     {
-        verts[1] = swizzleLane0(b);
+        verts[1] = swizzleLane0(c);
     }
 
     // vert 2
     if (primIndex < 6)
     {
-        verts[2] = swizzleLaneN(a, primIndex + 2);
+        verts[2] = swizzleLaneN(b, primIndex + 2);
     }
     else
     {
-        verts[2] = swizzleLaneN(b, primIndex - 6);
+        verts[2] = swizzleLaneN(c, primIndex - 6);
     }
+#endif
 }
 
 bool PaQuadList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
@@ -649,9 +1275,37 @@ bool PaQuadList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 bool PaQuadList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, 0, slot);
-    simdvector& b = PaGetSimdVector(pa, 1, slot);
-    simdscalar    s1, s2;
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
+
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, 0, slot);
+    simdvector &b = PaGetSimdVector(pa, 1, slot);
+
+#endif
+    simdscalar s1, s2;
 
     for(int i = 0; i < 4; ++i)
     {
@@ -675,10 +1329,52 @@ bool PaQuadList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+bool PaQuadList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaQuadList1_simd16, PaQuadListSingle0);
+    return false;    // Not enough vertices to assemble 16 triangles.
+}
+
+bool PaQuadList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+    simd16vector &v2 = verts[2];
+
+    //  v0 -> a0 a0 a4 a4 a8 a8 aC aC b0 b0 b0 b0 b0 b0 bC bC
+    //  v1 -> a1 a2 a5 a6 a9 aA aD aE b1 b2 b5 b6 b9 bA bD bE
+    //  v2 -> a2 a3 a6 a7 aA aB aE aF b2 b3 b6 b7 bA bB bE bF
+
+    // for simd16 x, y, z, and w
+    for (uint32_t i = 0; i < 4; i += 1)
+    {
+        simd16scalar temp0 = _simd16_permute2f128_ps(a[i], b[i], 0x88); // (2 0 2 0) = 10 00 10 00  // a0 a1 a2 a3 a8 a9 aA aB b0 b1 b2 b3 b8 b9 bA bB
+        simd16scalar temp1 = _simd16_permute2f128_ps(a[i], b[i], 0xDD); // (3 1 3 1) = 11 01 11 01  // a4 a5 a6 a7 aC aD aE aF b4 b5 b6 b7 bC bD bE bF
+
+        v0[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(0, 0, 0, 0));                          // a0 a0 a4 a4 a8 a8 aC aC b0 b0 b4 b4 b8 b8 bC bC
+        v1[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(2, 1, 2, 1));                          // a1 a2 a5 a6 a9 aA aD aE b1 b2 b6 b6 b9 bA bD bE
+        v2[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 2, 3, 2));                          // a2 a3 a6 a7 aA aB aE aF b2 b3 b6 b7 bA bB bE bF
+    }
+
+    SetNextPaState_simd16(pa, PaQuadList0_simd16, PaQuadListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    return true;
+}
+
+#endif
 void PaQuadListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, 0, slot);
-    simdvector& b = PaGetSimdVector(pa, 1, slot);
+#if USE_SIMD16_FRONTEND
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
+
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
 
     switch (primIndex)
     {
@@ -688,49 +1384,145 @@ void PaQuadListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
         verts[1] = swizzleLane1(a);
         verts[2] = swizzleLane2(a);
         break;
-
     case 1:
         // triangle 1 - 0 2 3
         verts[0] = swizzleLane0(a);
         verts[1] = swizzleLane2(a);
         verts[2] = swizzleLane3(a);
         break;
-
     case 2:
         // triangle 2 - 4 5 6
         verts[0] = swizzleLane4(a);
         verts[1] = swizzleLane5(a);
         verts[2] = swizzleLane6(a);
         break;
-
     case 3:
         // triangle 3 - 4 6 7
         verts[0] = swizzleLane4(a);
         verts[1] = swizzleLane6(a);
         verts[2] = swizzleLane7(a);
         break;
+    case 4:
+        // triangle 4 - 8 9 A
+        verts[0] = swizzleLane8(a);
+        verts[1] = swizzleLane9(a);
+        verts[2] = swizzleLaneA(a);
+        break;
+    case 5:
+        // triangle 5 - 8 A B
+        verts[0] = swizzleLane8(a);
+        verts[1] = swizzleLaneA(a);
+        verts[2] = swizzleLaneB(a);
+        break;
+    case 6:
+        // triangle 6 - C D E
+        verts[0] = swizzleLaneC(a);
+        verts[1] = swizzleLaneD(a);
+        verts[2] = swizzleLaneE(a);
+        break;
+    case 7:
+        // triangle 7 - C E F
+        verts[0] = swizzleLaneC(a);
+        verts[1] = swizzleLaneE(a);
+        verts[2] = swizzleLaneF(a);
+        break;
+    case 8:
+        // triangle 0 - 0 1 2
+        verts[0] = swizzleLane0(b);
+        verts[1] = swizzleLane1(b);
+        verts[2] = swizzleLane2(b);
+        break;
+    case 9:
+        // triangle 1 - 0 2 3
+        verts[0] = swizzleLane0(b);
+        verts[1] = swizzleLane2(b);
+        verts[2] = swizzleLane3(b);
+        break;
+    case 10:
+        // triangle 2 - 4 5 6
+        verts[0] = swizzleLane4(b);
+        verts[1] = swizzleLane5(b);
+        verts[2] = swizzleLane6(b);
+        break;
+    case 11:
+        // triangle 3 - 4 6 7
+        verts[0] = swizzleLane4(b);
+        verts[1] = swizzleLane6(b);
+        verts[2] = swizzleLane7(b);
+        break;
+    case 12:
+        // triangle 4 - 8 9 A
+        verts[0] = swizzleLane8(b);
+        verts[1] = swizzleLane9(b);
+        verts[2] = swizzleLaneA(b);
+        break;
+    case 13:
+        // triangle 5 - 8 A B
+        verts[0] = swizzleLane8(b);
+        verts[1] = swizzleLaneA(b);
+        verts[2] = swizzleLaneB(b);
+        break;
+    case 14:
+        // triangle 6 - C D E
+        verts[0] = swizzleLaneC(b);
+        verts[1] = swizzleLaneD(b);
+        verts[2] = swizzleLaneE(b);
+        break;
+    case 15:
+        // triangle 7 - C E F
+        verts[0] = swizzleLaneC(b);
+        verts[1] = swizzleLaneE(b);
+        verts[2] = swizzleLaneF(b);
+        break;
+    }
+#else
+    const simdvector &a = PaGetSimdVector(pa, 0, slot);
+    const simdvector &b = PaGetSimdVector(pa, 1, slot);
 
+    switch (primIndex)
+    {
+    case 0:
+        // triangle 0 - 0 1 2
+        verts[0] = swizzleLane0(a);
+        verts[1] = swizzleLane1(a);
+        verts[2] = swizzleLane2(a);
+        break;
+    case 1:
+        // triangle 1 - 0 2 3
+        verts[0] = swizzleLane0(a);
+        verts[1] = swizzleLane2(a);
+        verts[2] = swizzleLane3(a);
+        break;
+    case 2:
+        // triangle 2 - 4 5 6
+        verts[0] = swizzleLane4(a);
+        verts[1] = swizzleLane5(a);
+        verts[2] = swizzleLane6(a);
+        break;
+    case 3:
+        // triangle 3 - 4 6 7
+        verts[0] = swizzleLane4(a);
+        verts[1] = swizzleLane6(a);
+        verts[2] = swizzleLane7(a);
+        break;
     case 4:
         // triangle 4 - 8 9 10 (0 1 2)
         verts[0] = swizzleLane0(b);
         verts[1] = swizzleLane1(b);
         verts[2] = swizzleLane2(b);
         break;
-
     case 5:
         // triangle 1 - 0 2 3
         verts[0] = swizzleLane0(b);
         verts[1] = swizzleLane2(b);
         verts[2] = swizzleLane3(b);
         break;
-
     case 6:
         // triangle 2 - 4 5 6
         verts[0] = swizzleLane4(b);
         verts[1] = swizzleLane5(b);
         verts[2] = swizzleLane6(b);
         break;
-
     case 7:
         // triangle 3 - 4 6 7
         verts[0] = swizzleLane4(b);
@@ -738,16 +1530,7 @@ void PaQuadListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
         verts[2] = swizzleLane7(b);
         break;
     }
-}
-
-void PaLineLoopSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t lineIndex, __m128 verts[])
-{
-    PaLineStripSingle0(pa, slot, lineIndex, verts);
-
-    if (pa.numPrimsComplete + lineIndex == pa.numPrims - 1) {
-        simdvector &start = PaGetSimdVector(pa, pa.first, slot);
-        verts[1] = swizzleLane0(start);
-    }
+#endif
 }
 
 bool PaLineLoop0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
@@ -760,14 +1543,40 @@ bool PaLineLoop1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
     PaLineStrip1(pa, slot, verts);
 
-    if (pa.numPrimsComplete + KNOB_SIMD_WIDTH > pa.numPrims - 1) {
+    if (pa.numPrimsComplete + KNOB_SIMD_WIDTH > pa.numPrims - 1)
+    {
         // loop reconnect now
-        int lane = pa.numPrims - pa.numPrimsComplete - 1;
-        simdvector &start = PaGetSimdVector(pa, pa.first, slot);
-        for (int i = 0; i < 4; i++) {
-            float *startVtx = (float *)&(start[i]);
+        const int lane = pa.numPrims - pa.numPrimsComplete - 1;
+
+#if USE_SIMD16_FRONTEND
+        simdvector first;
+
+        const simd16vector &first_16 = PaGetSimdVector_simd16(pa, pa.first, slot);
+
+        if (!pa.useAlternateOffset)
+        {
+            for (uint32_t i = 0; i < 4; i += 1)
+            {
+                first[i] = _simd16_extract_ps(first_16[i], 0);
+            }
+        }
+        else
+        {
+            for (uint32_t i = 0; i < 4; i += 1)
+            {
+                first[i] = _simd16_extract_ps(first_16[i], 1);
+            }
+        }
+
+#else
+        simdvector &first = PaGetSimdVector(pa, pa.first, slot);
+
+#endif
+        for (int i = 0; i < 4; i++)
+        {
+            float *firstVtx = (float *)&(first[i]);
             float *targetVtx = (float *)&(verts[1][i]);
-            targetVtx[lane] = startVtx[0];
+            targetVtx[lane] = firstVtx[0];
         }
     }
 
@@ -775,6 +1584,54 @@ bool PaLineLoop1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+bool PaLineLoop0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoopSingle0);
+    return false;
+}
+
+bool PaLineLoop1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    PaLineStrip1_simd16(pa, slot, verts);
+
+    if (pa.numPrimsComplete + KNOB_SIMD16_WIDTH > pa.numPrims - 1)
+    {
+        // loop reconnect now
+        const int lane = pa.numPrims - pa.numPrimsComplete - 1;
+
+        const simd16vector &first = PaGetSimdVector_simd16(pa, pa.first, slot);
+
+        for (int i = 0; i < 4; i++)
+        {
+            float *firstVtx = (float *)&(first[i]);
+            float *targetVtx = (float *)&(verts[1][i]);
+            targetVtx[lane] = firstVtx[0];
+        }
+    }
+
+    SetNextPaState_simd16(pa, PaLineLoop1_simd16, PaLineLoopSingle0, 0, KNOB_SIMD16_WIDTH);
+    return true;
+}
+
+#endif
+void PaLineLoopSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
+{
+    PaLineStripSingle0(pa, slot, primIndex, verts);
+
+    if (pa.numPrimsComplete + primIndex == pa.numPrims - 1)
+    {
+#if USE_SIMD16_FRONTEND
+        const simd16vector &first = PaGetSimdVector_simd16(pa, pa.first, slot);
+
+        verts[1] = swizzleLane0(first);
+#else
+        const simdvector &first = PaGetSimdVector(pa, pa.first, slot);
+
+        verts[1] = swizzleLane0(first);
+#endif
+    }
+}
 
 bool PaLineList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
@@ -784,8 +1641,36 @@ bool PaLineList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 bool PaLineList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, 0, slot);
-    simdvector& b = PaGetSimdVector(pa, 1, slot);
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
+
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, 0, slot);
+    simdvector &b = PaGetSimdVector(pa, 1, slot);
+
+#endif
     /// @todo: verify provoking vertex is correct
     // Line list 0  1  2  3  4  5  6  7
     //           8  9 10 11 12 13 14 15
@@ -811,10 +1696,120 @@ bool PaLineList1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+bool PaLineList0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(pa, PaLineList1_simd16, PaLineListSingle0);
+    return false;    // Not enough vertices to assemble 16 lines
+}
+
+bool PaLineList1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    const simd16vector &a = PaGetSimdVector_simd16(pa, 0, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, 1, slot);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+
+    // v0 -> a0 a2 a4 a6 a8 aA aC aE b0 b2 b4 b6 b8 bA bC bE
+    // v1 -> a1 a3 a5 a7 a9 aB aD aF b1 b3 b4 b7 b9 bB bD bF
+
+    // for simd16 x, y, z, and w
+    for (int i = 0; i < 4; i += 1)
+    {
+        simd16scalar temp0 = _simd16_permute2f128_ps(a[i], b[i], 0x88); // (2 0 2 0) 10 00 10 00    // a0 a1 a2 a3 a8 a9 aA aB b0 b1 b2 b3 b9 b9 bA bB
+        simd16scalar temp1 = _simd16_permute2f128_ps(a[i], b[i], 0xDD); // (3 1 3 1) 11 01 11 01    // a4 a5 a6 a7 aC aD aE aF b4 b5 b6 b7 bC bD bE bF
+
+        v0[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(2, 0, 2, 0));                          // a0 a2 a4 a6 a8 aA aC aE b0 b2 b4 b6 b8 bA bC bE
+        v1[i] = _simd16_shuffle_ps(temp0, temp1, _MM_SHUFFLE(3, 1, 3, 1));                          // a1 a3 a5 a7 a9 aB aD aF b1 b3 b5 b7 b9 bB bD bF
+    }
+
+    SetNextPaState_simd16(pa, PaLineList0_simd16, PaLineListSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    return true;
+}
+
+#endif
 void PaLineListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+#if USE_SIMD16_FRONTEND
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
+
+    switch (primIndex)
+    {
+    case 0:
+        verts[0] = swizzleLane0(a);
+        verts[1] = swizzleLane1(a);
+        break;
+    case 1:
+        verts[0] = swizzleLane2(a);
+        verts[1] = swizzleLane3(a);
+        break;
+    case 2:
+        verts[0] = swizzleLane4(a);
+        verts[1] = swizzleLane5(a);
+        break;
+    case 3:
+        verts[0] = swizzleLane6(a);
+        verts[1] = swizzleLane7(a);
+        break;
+    case 4:
+        verts[0] = swizzleLane8(a);
+        verts[1] = swizzleLane9(a);
+        break;
+    case 5:
+        verts[0] = swizzleLaneA(a);
+        verts[1] = swizzleLaneB(a);
+        break;
+    case 6:
+        verts[0] = swizzleLaneC(a);
+        verts[1] = swizzleLaneD(a);
+        break;
+    case 7:
+        verts[0] = swizzleLaneE(a);
+        verts[1] = swizzleLaneF(a);
+        break;
+    case 8:
+        verts[0] = swizzleLane0(b);
+        verts[1] = swizzleLane1(b);
+        break;
+    case 9:
+        verts[0] = swizzleLane2(b);
+        verts[1] = swizzleLane3(b);
+        break;
+    case 10:
+        verts[0] = swizzleLane4(b);
+        verts[1] = swizzleLane5(b);
+        break;
+    case 11:
+        verts[0] = swizzleLane6(b);
+        verts[1] = swizzleLane7(b);
+        break;
+    case 12:
+        verts[0] = swizzleLane8(b);
+        verts[1] = swizzleLane9(b);
+        break;
+    case 13:
+        verts[0] = swizzleLaneA(b);
+        verts[1] = swizzleLaneB(b);
+        break;
+    case 14:
+        verts[0] = swizzleLaneC(b);
+        verts[1] = swizzleLaneD(b);
+        break;
+    case 15:
+        verts[0] = swizzleLaneE(b);
+        verts[1] = swizzleLaneF(b);
+        break;
+    }
+#else
+    const simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    const simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
 
     switch (primIndex)
     {
@@ -851,6 +1846,7 @@ void PaLineListSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
         verts[1] = swizzleLane7(b);
         break;
     }
+#endif
 }
 
 bool PaLineStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
@@ -861,9 +1857,36 @@ bool PaLineStrip0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
 bool PaLineStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
 
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, pa.prev, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+
+#endif
     /// @todo: verify provoking vertex is correct
     // Line list 0  1  2  3  4  5  6  7
     //           8  9 10 11 12 13 14 15
@@ -891,12 +1914,124 @@ bool PaLineStrip1(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
-void PaLineStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t lineIndex, __m128 verts[])
+#if ENABLE_AVX512_SIMD16
+bool PaLineStrip0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, pa.prev, slot);
-    simdvector& b = PaGetSimdVector(pa, pa.cur, slot);
+    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStripSingle0);
+    return false;    // Not enough vertices to assemble 16 lines
+}
 
-    switch (lineIndex)
+bool PaLineStrip1_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    const simd16scalari perm = _simd16_set_epi32(0, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1);
+
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    simd16vector &v0 = verts[0];
+    simd16vector &v1 = verts[1];
+
+    // v0 -> a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+    // v1 -> a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0
+
+    v0 = a;                                                                                         // a0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+
+    // for simd16 x, y, z, and w
+    for (int i = 0; i < 4; i += 1)
+    {
+        simd16scalar temp = _simd16_blend_ps(a[i], b[i], 0x0001);                                   // b0 a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF
+
+        v1[i] = _simd16_permute_ps(temp, perm);                                                     // a1 a2 a3 a4 a5 a6 a7 a8 a9 aA aB aC aD aE aF b0
+    }
+
+    SetNextPaState_simd16(pa, PaLineStrip1_simd16, PaLineStripSingle0, 0, KNOB_SIMD16_WIDTH);
+    return true;
+}
+
+#endif
+void PaLineStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
+{
+#if USE_SIMD16_FRONTEND
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.prev, slot);
+    const simd16vector &b = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
+
+    switch (primIndex)
+    {
+    case 0:
+        verts[0] = swizzleLane0(a);
+        verts[1] = swizzleLane1(a);
+        break;
+    case 1:
+        verts[0] = swizzleLane1(a);
+        verts[1] = swizzleLane2(a);
+        break;
+    case 2:
+        verts[0] = swizzleLane2(a);
+        verts[1] = swizzleLane3(a);
+        break;
+    case 3:
+        verts[0] = swizzleLane3(a);
+        verts[1] = swizzleLane4(a);
+        break;
+    case 4:
+        verts[0] = swizzleLane4(a);
+        verts[1] = swizzleLane5(a);
+        break;
+    case 5:
+        verts[0] = swizzleLane5(a);
+        verts[1] = swizzleLane6(a);
+        break;
+    case 6:
+        verts[0] = swizzleLane6(a);
+        verts[1] = swizzleLane7(a);
+        break;
+    case 7:
+        verts[0] = swizzleLane7(a);
+        verts[1] = swizzleLane8(a);
+        break;
+    case 8:
+        verts[0] = swizzleLane8(a);
+        verts[1] = swizzleLane9(a);
+        break;
+    case 9:
+        verts[0] = swizzleLane9(a);
+        verts[1] = swizzleLaneA(a);
+        break;
+    case 10:
+        verts[0] = swizzleLaneA(a);
+        verts[1] = swizzleLaneB(a);
+        break;
+    case 11:
+        verts[0] = swizzleLaneB(a);
+        verts[1] = swizzleLaneC(a);
+        break;
+    case 12:
+        verts[0] = swizzleLaneC(a);
+        verts[1] = swizzleLaneD(a);
+        break;
+    case 13:
+        verts[0] = swizzleLaneD(a);
+        verts[1] = swizzleLaneE(a);
+        break;
+    case 14:
+        verts[0] = swizzleLaneE(a);
+        verts[1] = swizzleLaneF(a);
+        break;
+    case 15:
+        verts[0] = swizzleLaneF(a);
+        verts[1] = swizzleLane0(b);
+        break;
+    }
+#else
+    const simdvector &a = PaGetSimdVector(pa, pa.prev, slot);
+    const simdvector &b = PaGetSimdVector(pa, pa.cur, slot);
+
+    switch (primIndex)
     {
     case 0:
         verts[0] = swizzleLane0(a);
@@ -931,48 +2066,70 @@ void PaLineStripSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t lineIndex, __m
         verts[1] = swizzleLane0(b);
         break;
     }
+#endif
 }
 
 bool PaPoints0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
-    simdvector& a = PaGetSimdVector(pa, pa.cur, slot);
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
 
+    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    if (!pa.useAlternateOffset)
+    {
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+        }
+    }
+    else
+    {
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, pa.cur, slot);
+
+#endif
     verts[0] = a;  // points only have 1 vertex.
 
     SetNextPaState(pa, PaPoints0, PaPointsSingle0, 0, KNOB_SIMD_WIDTH, true);
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+bool PaPoints0_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    simd16vector &a = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    verts[0] = a;  // points only have 1 vertex.
+
+    SetNextPaState_simd16(pa, PaPoints0_simd16, PaPointsSingle0, 0, KNOB_SIMD16_WIDTH, true);
+    return true;
+}
+
+#endif
 void PaPointsSingle0(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m128 verts[])
 {
-    simdvector &a = PaGetSimdVector(pa, pa.cur, slot);
-    switch(primIndex)
+#if USE_SIMD16_FRONTEND
+    const simd16vector &a = PaGetSimdVector_simd16(pa, pa.cur, slot);
+
+    if (pa.useAlternateOffset)
     {
-    case 0: 
-        verts[0] = swizzleLane0(a);
-        break;
-    case 1: 
-        verts[0] = swizzleLane1(a);
-        break;
-    case 2: 
-        verts[0] = swizzleLane2(a);
-        break;
-    case 3: 
-        verts[0] = swizzleLane3(a);
-        break;
-    case 4: 
-        verts[0] = swizzleLane4(a);
-        break;
-    case 5: 
-        verts[0] = swizzleLane5(a);
-        break;
-    case 6: 
-        verts[0] = swizzleLane6(a);
-        break;
-    case 7: 
-        verts[0] = swizzleLane7(a);
-        break;
+        primIndex += KNOB_SIMD_WIDTH;
     }
+
+    verts[0] = swizzleLaneN(a, primIndex);
+#else
+    const simdvector &a = PaGetSimdVector(pa, pa.cur, slot);
+
+    verts[0] = swizzleLaneN(a, primIndex);
+#endif
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1016,9 +2173,36 @@ bool PaRectList1(
     simdvector verts[])
 {
     // SIMD vectors a and b are the last two vertical outputs from the vertex shader.
-    simdvector& a = PaGetSimdVector(pa, 0, slot);           // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7 }
-    simdvector& b = PaGetSimdVector(pa, 1, slot);           // b[] = { v8, v9, v10, v11, v12, v13, v14, v15 }
+#if USE_SIMD16_FRONTEND
+    simdvector a;
+    simdvector b;
 
+    if (!pa.useAlternateOffset)
+    {
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
+        }
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
+        {
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);;
+        }
+    }
+
+#else
+    simdvector &a = PaGetSimdVector(pa, 0, slot);           // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7 }
+    simdvector &b = PaGetSimdVector(pa, 1, slot);           // b[] = { v8, v9, v10, v11, v12, v13, v14, v15 }
+
+#endif
     __m256 tmp0, tmp1, tmp2;
 
     // Loop over each component in the simdvector.
@@ -1116,23 +2300,27 @@ bool PaRectList1_simd16(
     uint32_t slot,
     simd16vector verts[])
 {
-    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot); // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7, v8, v9, v10, v11, v12, v13, v14, v15 }
-    const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot); // b[] = { v16...but not used by this implementation.. }
-
     simdvector a;
     simdvector b;
 
-    for (uint32_t i = 0; i < 4; i += 1)
+    if (!pa.useAlternateOffset)
     {
-        if (pa.useAlternateOffset)
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot); // a[] = { v0, v1,  v2,  v3,  v4,  v5,  v6,  v7, v8, v9, v10, v11, v12, v13, v14, v15 }
+
+        for (uint32_t i = 0; i < 4; i += 1)
         {
-            a[i] = b_16[i].lo;
-            b[i] = b_16[i].hi;
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
         }
-        else
+    }
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot); // b[] = { v16...but not used by this implementation.. }
+
+        for (uint32_t i = 0; i < 4; i += 1)
         {
-            a[i] = a_16[i].lo;
-            b[i] = a_16[i].hi;
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);
         }
     }
 
@@ -1217,23 +2405,27 @@ void PaRectListSingle0(
     // hold at least 8 triangles worth of data. We want to assemble a single
     // triangle with data in horizontal form.
 #if USE_SIMD16_FRONTEND
-    const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
-    const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
-
     simdvector a;
     simdvector b;
 
-    for (uint32_t i = 0; i < 4; i += 1)
+    if (!pa.useAlternateOffset)
     {
-        if (pa.useAlternateOffset)
+        const simd16vector &a_16 = PaGetSimdVector_simd16(pa, 0, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
         {
-            a[i] = b_16[i].lo;
-            b[i] = b_16[i].hi;
+            a[i] = _simd16_extract_ps(a_16[i], 0);
+            b[i] = _simd16_extract_ps(a_16[i], 1);
         }
-        else
+}
+    else
+    {
+        const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
+
+        for (uint32_t i = 0; i < 4; i += 1)
         {
-            a[i] = a_16[i].lo;
-            b[i] = a_16[i].hi;
+            a[i] = _simd16_extract_ps(b_16[i], 0);
+            b[i] = _simd16_extract_ps(b_16[i], 1);;
         }
     }
 
@@ -1287,34 +2479,57 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             break;
         case TOP_TRIANGLE_STRIP:
             this->pfnPaFunc = PaTriStrip0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaTriStrip0_simd16;
+#endif
             break;
         case TOP_TRIANGLE_FAN:
             this->pfnPaFunc = PaTriFan0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaTriFan0_simd16;
+#endif
             break;
         case TOP_QUAD_LIST:
             this->pfnPaFunc = PaQuadList0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaQuadList0_simd16;
+#endif
             this->numPrims = in_numPrims * 2;    // Convert quad primitives into triangles
             break;
         case TOP_QUAD_STRIP:
             // quad strip pattern when decomposed into triangles is the same as verts strips
             this->pfnPaFunc = PaTriStrip0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaTriStrip0_simd16;
+#endif
             this->numPrims = in_numPrims * 2;    // Convert quad primitives into triangles
             break;
         case TOP_LINE_LIST:
             this->pfnPaFunc = PaLineList0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaLineList0_simd16;
+#endif
             this->numPrims = in_numPrims;
             break;
         case TOP_LINE_STRIP:
             this->pfnPaFunc = PaLineStrip0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaLineStrip0_simd16;
+#endif
             this->numPrims = in_numPrims;
             break;
         case TOP_LINE_LOOP:
             this->pfnPaFunc = PaLineLoop0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaLineLoop0_simd16;
+#endif
             this->numPrims = in_numPrims;
             break;
         case TOP_POINT_LIST:
-            // use point binner and rasterizer if supported
             this->pfnPaFunc = PaPoints0;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPoints0_simd16;
+#endif
             this->numPrims = in_numPrims;
             break;
         case TOP_RECT_LIST:

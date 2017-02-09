@@ -119,8 +119,6 @@ struct PA_STATE
 // cuts
 struct PA_STATE_OPT : public PA_STATE
 {
-    SIMDVERTEX leadingVertex;            // For tri-fan
-
     uint32_t numPrims{ 0 };              // Total number of primitives for draw.
     uint32_t numPrimsComplete{ 0 };      // Total number of complete primitives.
 
@@ -367,87 +365,6 @@ INLINE simd16vector& PaGetSimdVector_simd16(PA_STATE& pa, uint32_t index, uint32
 }
 
 #endif
-INLINE __m128 swizzleLane0(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpacklo_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpacklo_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 0);
-}
-
-INLINE __m128 swizzleLane1(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpacklo_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpacklo_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 0);
-}
-
-INLINE __m128 swizzleLane2(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpackhi_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpackhi_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 0);
-}
-
-INLINE __m128 swizzleLane3(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpackhi_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpackhi_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 0);
-}
-
-INLINE __m128 swizzleLane4(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpacklo_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpacklo_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 1);
-
-}
-
-INLINE __m128 swizzleLane5(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpacklo_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpacklo_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 1);
-}
-
-INLINE __m128 swizzleLane6(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpackhi_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpackhi_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpacklo_ps(tmp0, tmp1), 1);
-}
-
-INLINE __m128 swizzleLane7(const simdvector &a)
-{
-    simdscalar tmp0 = _mm256_unpackhi_ps(a.x, a.z);
-    simdscalar tmp1 = _mm256_unpackhi_ps(a.y, a.w);
-    return _mm256_extractf128_ps(_mm256_unpackhi_ps(tmp0, tmp1), 1);
-}
-
-INLINE __m128 swizzleLaneN(const simdvector &a, int lane)
-{
-    switch (lane) {
-    case 0:
-        return swizzleLane0(a);
-    case 1:
-        return swizzleLane1(a);
-    case 2:
-        return swizzleLane2(a);
-    case 3:
-        return swizzleLane3(a);
-    case 4:
-        return swizzleLane4(a);
-    case 5:
-        return swizzleLane5(a);
-    case 6:
-        return swizzleLane6(a);
-    case 7:
-        return swizzleLane7(a);
-    default:
-        return _mm_setzero_ps();
-    }
-}
-
 // Cut-aware primitive assembler.
 struct PA_STATE_CUT : public PA_STATE
 {
@@ -470,7 +387,6 @@ struct PA_STATE_CUT : public PA_STATE
     SIMDSCALARI vPrimId;                 // vector of prim ID
     bool needOffsets{ false };           // need to compute gather offsets for current SIMD
     uint32_t vertsPerPrim{ 0 };
-    SIMDVERTEX tmpVertex;                // temporary simdvertex for unimplemented API
     bool processCutVerts{ false };       // vertex indices with cuts should be processed as normal, otherwise they
                                          // are ignored.  Fetch shader sends invalid verts on cuts that should be ignored
                                          // while the GS sends valid verts for every index 
