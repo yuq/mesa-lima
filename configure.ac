@@ -901,27 +901,18 @@ llvm_add_target() {
 # $1 is the llvm-config command with arguments.
 strip_unwanted_llvm_flags() {
     # Use \> (marks the end of the word)
-    echo `$1` | sed \
-        -e 's/-march=\S*//g' \
-        -e 's/-mtune=\S*//g' \
-        -e 's/-mcpu=\S*//g' \
-        -e 's/-DNDEBUG\>//g' \
-        -e 's/-D_GNU_SOURCE\>//g' \
-        -e 's/-pedantic\>//g' \
-        -e 's/-Wcovered-switch-default\>//g' \
-        -e 's/-O.\>//g' \
-        -e 's/-g\>//g' \
-        -e 's/-Wall\>//g' \
-        -e 's/-Wcast-qual\>//g' \
-        -e 's/-Woverloaded-virtual\>//g' \
-        -e 's/-fcolor-diagnostics\>//g' \
-        -e 's/-fdata-sections\>//g' \
-        -e 's/-ffunction-sections\>//g' \
-        -e 's/-fno-exceptions\>//g' \
-        -e 's/-fomit-frame-pointer\>//g' \
-        -e 's/-fvisibility-inlines-hidden\>//g' \
-        -e 's/-fPIC\>//g' \
-        -e 's/-fstack-protector-strong\>//g'
+    echo " `$1`" | sed \
+        -e 's/\s\+-m\S*//g' \
+        -e 's/\s\+-DNDEBUG\>//g' \
+        -e 's/\s\+-D_GNU_SOURCE\>//g' \
+        -e 's/\s\+-pedantic\>//g' \
+        -e 's/\s\+-W\S*//g' \
+        -e 's/\s\+-O\S*//g' \
+        -e 's/\s\+-g\S*//g' \
+        -e 's/-fno-rtti\>/-Fno-rtti/g' \
+        -e 's/\s\+-f\S*//g' \
+        -e 's/-Fno-rtti\>/-fno-rtti/g' \
+        -e 's/^ //'
 }
 
 llvm_set_environment_variables() {
