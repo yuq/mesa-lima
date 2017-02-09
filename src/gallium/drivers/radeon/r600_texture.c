@@ -1456,8 +1456,8 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		/* Tiled textures need to be converted into a linear texture for CPU
 		 * access. The staging texture is always linear and is placed in GART.
 		 *
-		 * Reading from VRAM is slow, always use the staging texture in
-		 * this case.
+		 * Reading from VRAM or GTT WC is slow, always use the staging
+		 * texture in this case.
 		 *
 		 * Use the staging texture for uploads if the underlying BO
 		 * is busy.
@@ -1465,8 +1465,9 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		if (!rtex->surface.is_linear)
 			use_staging_texture = true;
 		else if (usage & PIPE_TRANSFER_READ)
-			use_staging_texture = (rtex->resource.domains &
-					       RADEON_DOMAIN_VRAM) != 0;
+			use_staging_texture =
+				rtex->resource.domains & RADEON_DOMAIN_VRAM ||
+				rtex->resource.flags & RADEON_FLAG_GTT_WC;
 		/* Write & linear only: */
 		else if (r600_rings_is_buffer_referenced(rctx, rtex->resource.buf,
 							 RADEON_USAGE_READWRITE) ||
