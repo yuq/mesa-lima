@@ -442,7 +442,7 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
       brw_MOV(p, dst, reg);
    } else {
       /* Prior to Broadwell, there are only 8 address registers. */
-      assert(inst->exec_size == 8 || devinfo->gen >= 8);
+      assert(inst->exec_size <= 8 || devinfo->gen >= 8);
 
       /* We use VxH indirect addressing, clobbering a0.0 through a0.7. */
       struct brw_reg addr = vec8(brw_address_reg(0));
@@ -480,7 +480,30 @@ fs_generator::generate_mov_indirect(fs_inst *inst,
        * code, using it saves us 0 instructions and would require quite a bit
        * of case-by-case work.  It's just not worth it.
        */
-      brw_ADD(p, addr, indirect_byte_offset, brw_imm_uw(imm_byte_offset));
+      if (devinfo->gen >= 8 || devinfo->is_haswell || type_sz(reg.type) < 8) {
+         brw_ADD(p, addr, indirect_byte_offset, brw_imm_uw(imm_byte_offset));
+      } else {
+         /* IVB reads two address register components per channel for
+          * indirectly addressed 64-bit sources, so we need to initialize
+          * adjacent address components to consecutive dwords of the source
+          * region by emitting two separate ADD instructions.  Found
+          * empirically.
+          */
+         assert(inst->exec_size <= 4);
+         brw_push_insn_state(p);
+         brw_set_default_exec_size(p, cvt(inst->exec_size) - 1);
+
+         brw_ADD(p, spread(addr, 2), indirect_byte_offset,
+                 brw_imm_uw(imm_byte_offset));
+         brw_inst_set_no_dd_clear(devinfo, brw_last_inst, true);
+
+         brw_ADD(p, spread(suboffset(addr, 1), 2), indirect_byte_offset,
+                 brw_imm_uw(imm_byte_offset + 4));
+         brw_inst_set_no_dd_check(devinfo, brw_last_inst, true);
+
+         brw_pop_insn_state(p);
+      }
+
       struct brw_reg ind_src = brw_VxH_indirect(0, 0);
 
       brw_inst *mov = brw_MOV(p, dst, retype(ind_src, reg.type));
