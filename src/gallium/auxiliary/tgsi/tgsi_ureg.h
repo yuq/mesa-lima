@@ -571,13 +571,6 @@ ureg_tex_insn(struct ureg_program *ureg,
 
 
 void
-ureg_label_insn(struct ureg_program *ureg,
-                unsigned opcode,
-                const struct ureg_src *src,
-                unsigned nr_src,
-                unsigned *label);
-
-void
 ureg_memory_insn(struct ureg_program *ureg,
                  unsigned opcode,
                  const struct ureg_dst *dst,

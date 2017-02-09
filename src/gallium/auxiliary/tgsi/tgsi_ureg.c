@@ -1488,37 +1488,6 @@ ureg_tex_insn(struct ureg_program *ureg,
 
 
 void
-ureg_label_insn(struct ureg_program *ureg,
-                unsigned opcode,
-                const struct ureg_src *src,
-                unsigned nr_src,
-                unsigned *label_token )
-{
-   struct ureg_emit_insn_result insn;
-   unsigned i;
-
-   insn = ureg_emit_insn(ureg,
-                         opcode,
-                         FALSE,
-                         FALSE,
-                         FALSE,
-                         TGSI_SWIZZLE_X,
-                         TGSI_SWIZZLE_Y,
-                         TGSI_SWIZZLE_Z,
-                         TGSI_SWIZZLE_W,
-                         0,
-                         nr_src);
-
-   ureg_emit_label( ureg, insn.extended_token, label_token );
-
-   for (i = 0; i < nr_src; i++)
-      ureg_emit_src( ureg, src[i] );
-
-   ureg_fixup_insn_size( ureg, insn.insn_token );
-}
-
-
-void
 ureg_memory_insn(struct ureg_program *ureg,
                  unsigned opcode,
                  const struct ureg_dst *dst,
