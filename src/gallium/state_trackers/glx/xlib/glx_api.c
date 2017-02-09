@@ -956,7 +956,6 @@ choose_visual( Display *dpy, int screen, const int *list, GLboolean fbConfig )
             parselist += 2; /* ignore the parameter */
             break;
 
-#ifdef GLX_EXT_texture_from_pixmap
          case GLX_BIND_TO_TEXTURE_RGB_EXT:
             parselist++; /*skip*/
             break;
@@ -978,7 +977,6 @@ choose_visual( Display *dpy, int screen, const int *list, GLboolean fbConfig )
          case GLX_Y_INVERTED_EXT:
             parselist++; /*skip*/
             break;
-#endif
 
 	 case None:
             /* end of list */
@@ -1664,7 +1662,6 @@ get_config( XMesaVisual xmvis, int attrib, int *value, GLboolean fbconfig )
          *value = xmvis->visinfo->visualid;
          break;
 
-#ifdef GLX_EXT_texture_from_pixmap
       case GLX_BIND_TO_TEXTURE_RGB_EXT:
          *value = True; /*XXX*/
          break;
@@ -1683,7 +1680,6 @@ get_config( XMesaVisual xmvis, int attrib, int *value, GLboolean fbconfig )
       case GLX_Y_INVERTED_EXT:
          *value = True; /*XXX*/
          break;
-#endif
 
       default:
 	 return GLX_BAD_ATTRIBUTE;
@@ -2163,7 +2159,6 @@ glXQueryDrawable(Display *dpy, GLXDrawable draw, int attribute,
       case GLX_FBCONFIG_ID:
          *value = xmbuf->xm_visual->visinfo->visualid;
          return;
-#ifdef GLX_EXT_texture_from_pixmap
       case GLX_TEXTURE_FORMAT_EXT:
          *value = xmbuf->TextureFormat;
          break;
@@ -2173,7 +2168,6 @@ glXQueryDrawable(Display *dpy, GLXDrawable draw, int attribute,
       case GLX_MIPMAP_TEXTURE_EXT:
          *value = xmbuf->TextureMipmap;
          break;
-#endif
 
       default:
          generate_error(dpy, BadValue, 0, X_GLXCreateContextAttribsARB, true);
