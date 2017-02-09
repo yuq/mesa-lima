@@ -157,6 +157,8 @@ static void map_msg_fb_it_buf(struct ruvd_decoder *dec)
 
 	/* calc buffer offsets */
 	dec->msg = (struct ruvd_msg *)ptr;
+	memset(dec->msg, 0, sizeof(*dec->msg));
+
 	dec->fb = (uint32_t *)(ptr + FB_BUFFER_OFFSET);
 	if (have_it(dec))
 		dec->it = (uint8_t *)(ptr + FB_BUFFER_OFFSET + dec->fb_size);
@@ -941,7 +943,6 @@ static void ruvd_destroy(struct pipe_video_codec *decoder)
 	assert(decoder);
 
 	map_msg_fb_it_buf(dec);
-	memset(dec->msg, 0, sizeof(*dec->msg));
 	dec->msg->size = sizeof(*dec->msg);
 	dec->msg->msg_type = RUVD_MSG_DESTROY;
 	dec->msg->stream_handle = dec->stream_handle;
