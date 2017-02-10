@@ -1762,6 +1762,19 @@ static uint32_t si_translate_buffer_dataformat(struct pipe_screen *screen,
 			return V_008F0C_BUF_DATA_FORMAT_32_32_32_32;
 		}
 		break;
+	case 64:
+		/* Legacy double formats. */
+		switch (desc->nr_channels) {
+		case 1: /* 1 load */
+			return V_008F0C_BUF_DATA_FORMAT_32_32;
+		case 2: /* 1 load */
+			return V_008F0C_BUF_DATA_FORMAT_32_32_32_32;
+		case 3: /* 3 loads */
+			return V_008F0C_BUF_DATA_FORMAT_32_32;
+		case 4: /* 2 loads */
+			return V_008F0C_BUF_DATA_FORMAT_32_32_32_32;
+		}
+		break;
 	}
 
 	return V_008F0C_BUF_DATA_FORMAT_INVALID;
@@ -3359,6 +3372,7 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		unsigned data_format, num_format;
 		int first_non_void;
 		unsigned vbo_index = elements[i].vertex_buffer_index;
+		unsigned char swizzle[4];
 
 		if (vbo_index >= SI_NUM_VERTEX_BUFFERS) {
 			FREE(v);
@@ -3375,13 +3389,8 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		data_format = si_translate_buffer_dataformat(ctx->screen, desc, first_non_void);
 		num_format = si_translate_buffer_numformat(ctx->screen, desc, first_non_void);
 		channel = first_non_void >= 0 ? &desc->channel[first_non_void] : NULL;
+		memcpy(swizzle, desc->swizzle, sizeof(swizzle));
 
-		v->rsrc_word3[i] = S_008F0C_DST_SEL_X(si_map_swizzle(desc->swizzle[0])) |
-				   S_008F0C_DST_SEL_Y(si_map_swizzle(desc->swizzle[1])) |
-				   S_008F0C_DST_SEL_Z(si_map_swizzle(desc->swizzle[2])) |
-				   S_008F0C_DST_SEL_W(si_map_swizzle(desc->swizzle[3])) |
-				   S_008F0C_NUM_FORMAT(num_format) |
-				   S_008F0C_DATA_FORMAT(data_format);
 		v->format_size[i] = desc->block.bits / 8;
 
 		/* The hardware always treats the 2-bit alpha channel as
@@ -3421,7 +3430,42 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 					v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_USCALED << (4 * i);
 				}
 			}
+		} else if (channel && channel->size == 64 &&
+			   channel->type == UTIL_FORMAT_TYPE_FLOAT) {
+			switch (desc->nr_channels) {
+			case 1:
+			case 2:
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RG_64_FLOAT << (4 * i);
+				swizzle[0] = PIPE_SWIZZLE_X;
+				swizzle[1] = PIPE_SWIZZLE_Y;
+				swizzle[2] = desc->nr_channels == 2 ? PIPE_SWIZZLE_Z : PIPE_SWIZZLE_0;
+				swizzle[3] = desc->nr_channels == 2 ? PIPE_SWIZZLE_W : PIPE_SWIZZLE_0;
+				break;
+			case 3:
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGB_64_FLOAT << (4 * i);
+				swizzle[0] = PIPE_SWIZZLE_X; /* 3 loads */
+				swizzle[1] = PIPE_SWIZZLE_Y;
+				swizzle[2] = PIPE_SWIZZLE_0;
+				swizzle[3] = PIPE_SWIZZLE_0;
+				break;
+			case 4:
+				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_64_FLOAT << (4 * i);
+				swizzle[0] = PIPE_SWIZZLE_X; /* 2 loads */
+				swizzle[1] = PIPE_SWIZZLE_Y;
+				swizzle[2] = PIPE_SWIZZLE_Z;
+				swizzle[3] = PIPE_SWIZZLE_W;
+				break;
+			default:
+				assert(0);
+			}
 		}
+
+		v->rsrc_word3[i] = S_008F0C_DST_SEL_X(si_map_swizzle(swizzle[0])) |
+				   S_008F0C_DST_SEL_Y(si_map_swizzle(swizzle[1])) |
+				   S_008F0C_DST_SEL_Z(si_map_swizzle(swizzle[2])) |
+				   S_008F0C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
+				   S_008F0C_NUM_FORMAT(num_format) |
+				   S_008F0C_DATA_FORMAT(data_format);
 
 		/* We work around the fact that 8_8_8 and 16_16_16 data formats
 		 * do not exist by using the corresponding 4-component formats.

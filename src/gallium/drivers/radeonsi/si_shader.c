@@ -319,6 +319,21 @@ static LLVMValueRef get_instance_index_for_fetch(
 			    LLVMGetParam(radeon_bld->main_fn, param_start_instance), "");
 }
 
+/* Bitcast <4 x float> to <2 x double>, extract the component, and convert
+ * to float. */
+static LLVMValueRef extract_double_to_float(struct si_shader_context *ctx,
+					    LLVMValueRef vec4,
+					    unsigned double_index)
+{
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMTypeRef f64 = LLVMDoubleTypeInContext(ctx->gallivm.context);
+	LLVMValueRef dvec2 = LLVMBuildBitCast(builder, vec4,
+					      LLVMVectorType(f64, 2), "");
+	LLVMValueRef index = LLVMConstInt(ctx->i32, double_index, 0);
+	LLVMValueRef value = LLVMBuildExtractElement(builder, dvec2, index, "");
+	return LLVMBuildFPTrunc(builder, value, ctx->f32, "");
+}
+
 static void declare_input_vs(
 	struct si_shader_context *ctx,
 	unsigned input_index,
@@ -330,14 +345,15 @@ static void declare_input_vs(
 
 	unsigned chan;
 	unsigned fix_fetch;
+	unsigned num_fetches;
+	unsigned fetch_stride;
 
 	LLVMValueRef t_list_ptr;
 	LLVMValueRef t_offset;
 	LLVMValueRef t_list;
-	LLVMValueRef attribute_offset;
-	LLVMValueRef buffer_index;
+	LLVMValueRef vertex_index;
 	LLVMValueRef args[3];
-	LLVMValueRef input;
+	LLVMValueRef input[3];
 
 	/* Load the T list */
 	t_list_ptr = LLVMGetParam(ctx->main_fn, SI_PARAM_VERTEX_BUFFERS);
@@ -346,28 +362,41 @@ static void declare_input_vs(
 
 	t_list = ac_build_indexed_load_const(&ctx->ac, t_list_ptr, t_offset);
 
-	/* Build the attribute offset */
-	attribute_offset = lp_build_const_int32(gallivm, 0);
-
-	buffer_index = LLVMGetParam(ctx->main_fn,
+	vertex_index = LLVMGetParam(ctx->main_fn,
 				    ctx->param_vertex_index0 +
 				    input_index);
 
+	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (4 * input_index)) & 0xf;
+
+	/* Do multiple loads for double formats. */
+	if (fix_fetch == SI_FIX_FETCH_RGB_64_FLOAT) {
+		num_fetches = 3; /* 3 2-dword loads */
+		fetch_stride = 8;
+	} else if (fix_fetch == SI_FIX_FETCH_RGBA_64_FLOAT) {
+		num_fetches = 2; /* 2 4-dword loads */
+		fetch_stride = 16;
+	} else {
+		num_fetches = 1;
+		fetch_stride = 0;
+	}
+
 	args[0] = t_list;
-	args[1] = attribute_offset;
-	args[2] = buffer_index;
-	input = lp_build_intrinsic(gallivm->builder,
-		"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-		LP_FUNC_ATTR_READNONE);
+	args[2] = vertex_index;
+
+	for (unsigned i = 0; i < num_fetches; i++) {
+		args[1] = LLVMConstInt(ctx->i32, fetch_stride * i, 0);
+
+		input[i] = lp_build_intrinsic(gallivm->builder,
+			"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
+			LP_FUNC_ATTR_READNONE);
+	}
 
 	/* Break up the vec4 into individual components */
 	for (chan = 0; chan < 4; chan++) {
 		LLVMValueRef llvm_chan = lp_build_const_int32(gallivm, chan);
 		out[chan] = LLVMBuildExtractElement(gallivm->builder,
-						    input, llvm_chan, "");
+						    input[0], llvm_chan, "");
 	}
-
-	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (4 * input_index)) & 0xf;
 
 	switch (fix_fetch) {
 	case SI_FIX_FETCH_A2_SNORM:
@@ -462,6 +491,25 @@ static void declare_input_vs(
 						     ctx->i32, "");
 			out[chan] = LLVMBuildSIToFP(gallivm->builder,
 						    out[chan], ctx->f32, "");
+		}
+		break;
+	case SI_FIX_FETCH_RG_64_FLOAT:
+		for (chan = 0; chan < 2; chan++)
+			out[chan] = extract_double_to_float(ctx, input[0], chan);
+
+		out[2] = LLVMConstReal(ctx->f32, 0);
+		out[3] = LLVMConstReal(ctx->f32, 1);
+		break;
+	case SI_FIX_FETCH_RGB_64_FLOAT:
+		for (chan = 0; chan < 3; chan++)
+			out[chan] = extract_double_to_float(ctx, input[chan], 0);
+
+		out[3] = LLVMConstReal(ctx->f32, 1);
+		break;
+	case SI_FIX_FETCH_RGBA_64_FLOAT:
+		for (chan = 0; chan < 4; chan++) {
+			out[chan] = extract_double_to_float(ctx, input[chan / 2],
+							    chan % 2);
 		}
 		break;
 	}
