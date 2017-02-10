@@ -141,19 +141,22 @@ swr_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
    struct swr_vertex_element_state *velems = ctx->velems;
-   if (!velems->fsFunc
-       || (velems->fsState.cutIndex != info->restart_index)
-       || (velems->fsState.bEnableCutIndex != info->primitive_restart)) {
+   velems->fsState.cutIndex = info->restart_index;
+   velems->fsState.bEnableCutIndex = info->primitive_restart;
 
-      velems->fsState.cutIndex = info->restart_index;
-      velems->fsState.bEnableCutIndex = info->primitive_restart;
-
-      /* Create Fetch Shader */
+   swr_jit_fetch_key key;
+   swr_generate_fetch_key(key, velems);
+   auto search = velems->map.find(key);
+   if (search != velems->map.end()) {
+      velems->fsFunc = search->second;
+   } else {
       HANDLE hJitMgr = swr_screen(ctx->pipe.screen)->hJitMgr;
       velems->fsFunc = JitCompileFetch(hJitMgr, velems->fsState);
 
       debug_printf("fetch shader %p\n", velems->fsFunc);
       assert(velems->fsFunc && "Error: FetchShader = NULL");
+
+      velems->map.insert(std::make_pair(key, velems->fsFunc));
    }
 
    SwrSetFetchFunc(ctx->swrContext, velems->fsFunc);

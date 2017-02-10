@@ -61,6 +61,11 @@ bool operator==(const swr_jit_vs_key &lhs, const swr_jit_vs_key &rhs)
    return !memcmp(&lhs, &rhs, sizeof(lhs));
 }
 
+bool operator==(const swr_jit_fetch_key &lhs, const swr_jit_fetch_key &rhs)
+{
+   return !memcmp(&lhs, &rhs, sizeof(lhs));
+}
+
 static void
 swr_generate_sampler_key(const struct lp_tgsi_info &info,
                          struct swr_context *ctx,
@@ -155,6 +160,15 @@ swr_generate_vs_key(struct swr_jit_vs_key &key,
       ctx->rasterizer->clip_plane_enable;
 
    swr_generate_sampler_key(swr_vs->info, ctx, PIPE_SHADER_VERTEX, key);
+}
+
+void
+swr_generate_fetch_key(struct swr_jit_fetch_key &key,
+                       struct swr_vertex_element_state *velems)
+{
+   memset(&key, 0, sizeof(key));
+
+   key.fsState = velems->fsState;
 }
 
 struct BuilderSWR : public Builder {

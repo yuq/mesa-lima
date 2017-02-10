@@ -42,6 +42,9 @@ void swr_generate_vs_key(struct swr_jit_vs_key &key,
                          struct swr_context *ctx,
                          swr_vertex_shader *swr_vs);
 
+void swr_generate_fetch_key(struct swr_jit_fetch_key &key,
+                            struct swr_vertex_element_state *velems);
+
 struct swr_jit_sampler_key {
    unsigned nr_samplers;
    unsigned nr_sampler_views;
@@ -60,6 +63,10 @@ struct swr_jit_vs_key : swr_jit_sampler_key {
    unsigned clip_plane_mask; // from rasterizer state & vs_info
 };
 
+struct swr_jit_fetch_key {
+   FETCH_COMPILE_STATE fsState;
+};
+
 namespace std
 {
 template <> struct hash<swr_jit_fs_key> {
@@ -75,7 +82,15 @@ template <> struct hash<swr_jit_vs_key> {
       return util_hash_crc32(&k, sizeof(k));
    }
 };
+
+template <> struct hash<swr_jit_fetch_key> {
+   std::size_t operator()(const swr_jit_fetch_key &k) const
+   {
+      return util_hash_crc32(&k, sizeof(k));
+   }
+};
 };
 
 bool operator==(const swr_jit_fs_key &lhs, const swr_jit_fs_key &rhs);
 bool operator==(const swr_jit_vs_key &lhs, const swr_jit_vs_key &rhs);
+bool operator==(const swr_jit_fetch_key &lhs, const swr_jit_fetch_key &rhs);

@@ -94,7 +94,7 @@ enum ComponentControl
 //////////////////////////////////////////////////////////////////////////
 struct FETCH_COMPILE_STATE
 {
-    uint32_t numAttribs;
+    uint32_t numAttribs {0};
     INPUT_ELEMENT_DESC layout[KNOB_NUM_ATTRIBUTES];
     SWR_FORMAT indexType;
     uint32_t cutIndex{ 0xffffffff };

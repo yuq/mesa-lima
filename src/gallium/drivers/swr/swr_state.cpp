@@ -451,7 +451,7 @@ swr_create_vertex_elements_state(struct pipe_context *pipe,
 {
    struct swr_vertex_element_state *velems;
    assert(num_elements <= PIPE_MAX_ATTRIBS);
-   velems = CALLOC_STRUCT(swr_vertex_element_state);
+   velems = new swr_vertex_element_state;
    if (velems) {
       velems->fsState.bVertexIDOffsetEnable = true;
       velems->fsState.numAttribs = num_elements;
@@ -521,8 +521,10 @@ swr_bind_vertex_elements_state(struct pipe_context *pipe, void *velems)
 static void
 swr_delete_vertex_elements_state(struct pipe_context *pipe, void *velems)
 {
+   struct swr_vertex_element_state *swr_velems =
+      (struct swr_vertex_element_state *) velems;
    /* XXX Need to destroy fetch shader? */
-   FREE(velems);
+   delete swr_velems;
 }
 
 
