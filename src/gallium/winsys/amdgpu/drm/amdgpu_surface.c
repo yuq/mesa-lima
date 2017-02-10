@@ -657,6 +657,7 @@ static int gfx9_compute_miptree(struct amdgpu_winsys *ws,
                                                    out.mipChainPitch - 1;
    surf->u.gfx9.surf_slice_size = out.sliceSize;
    surf->u.gfx9.surf_pitch = out.pitch;
+   surf->u.gfx9.surf_height = out.height;
    surf->surf_size = out.surfSize;
    surf->surf_alignment = out.baseAlign;
 

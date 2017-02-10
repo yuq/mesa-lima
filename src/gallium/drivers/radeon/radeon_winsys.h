@@ -363,6 +363,7 @@ struct gfx9_surf_layout {
     /* The size of the 2D plane containing all mipmap levels. */
     uint64_t                    surf_slice_size;
     uint16_t                    surf_pitch; /* in blocks */
+    uint16_t                    surf_height;
     /* Y mipmap level offset in blocks. Only valid for LINEAR. */
     uint16_t                    surf_ymip_offset[RADEON_SURF_MAX_LEVELS];
 
