@@ -76,6 +76,7 @@
 #include "pipe/p_context.h"
 #include "util/u_inlines.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_vbuf.h"
 #include "cso_cache/cso_context.h"
 
 
@@ -342,7 +343,13 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st->has_user_constbuf =
       screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
-   st->cso_context = cso_create_context(pipe, 0);
+   /* Drivers still have to upload zero-stride vertex attribs manually
+    * with the GL core profile, but they don't have to deal with any complex
+    * user vertex buffer uploads.
+    */
+   unsigned vbuf_flags =
+      ctx->API == API_OPENGL_CORE ? U_VBUF_FLAG_NO_USER_VBOS : 0;
+   st->cso_context = cso_create_context(pipe, vbuf_flags);
 
    st_init_atoms( st );
    st_init_clear(st);
