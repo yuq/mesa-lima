@@ -57,7 +57,7 @@ static void cik_sdma_copy_buffer(struct si_context *ctx,
 		radeon_emit(cs, CIK_SDMA_PACKET(CIK_SDMA_OPCODE_COPY,
 						CIK_SDMA_COPY_SUB_OPCODE_LINEAR,
 						0));
-		radeon_emit(cs, csize);
+		radeon_emit(cs, ctx->b.chip_class >= GFX9 ? csize - 1 : csize);
 		radeon_emit(cs, 0); /* src/dst endian swap */
 		radeon_emit(cs, src_offset);
 		radeon_emit(cs, src_offset >> 32);
@@ -103,7 +103,7 @@ static void cik_sdma_clear_buffer(struct pipe_context *ctx,
 		radeon_emit(cs, offset);
 		radeon_emit(cs, offset >> 32);
 		radeon_emit(cs, clear_value);
-		radeon_emit(cs, csize);
+		radeon_emit(cs, sctx->b.chip_class >= GFX9 ? csize - 1 : csize);
 		offset += csize;
 		size -= csize;
 	}
@@ -534,7 +534,8 @@ static void cik_sdma_copy(struct pipe_context *ctx,
 		return;
 	}
 
-	if (cik_sdma_copy_texture(sctx, dst, dst_level, dstx, dsty, dstz,
+	if ((sctx->b.chip_class == CIK || sctx->b.chip_class == VI) &&
+	    cik_sdma_copy_texture(sctx, dst, dst_level, dstx, dsty, dstz,
 				  src, src_level, src_box))
 		return;
 
