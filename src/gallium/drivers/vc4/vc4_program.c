@@ -1511,7 +1511,7 @@ emit_vert_end(struct vc4_compile *c,
 static void
 emit_coord_end(struct vc4_compile *c)
 {
-        struct qreg rcp_w = qir_RCP(c, c->outputs[c->output_position_index + 3]);
+        struct qreg rcp_w = ntq_rcp(c, c->outputs[c->output_position_index + 3]);
 
         emit_stub_vpm_read(c);
 
