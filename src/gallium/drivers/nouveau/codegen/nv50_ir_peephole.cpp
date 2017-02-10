@@ -3549,6 +3549,11 @@ DeadCodeElim::visit(BasicBlock *bb)
              i->op == OP_SUREDP ||
              i->op == OP_SUREDB) {
             i->setDef(0, NULL);
+            if (i->op == OP_ATOM && i->subOp == NV50_IR_SUBOP_ATOM_EXCH) {
+               i->cache = CACHE_CV;
+               i->op = OP_STORE;
+               i->subOp = 0;
+            }
          } else if (i->op == OP_LOAD && i->subOp == NV50_IR_SUBOP_LOAD_LOCKED) {
             i->setDef(0, i->getDef(1));
             i->setDef(1, NULL);
