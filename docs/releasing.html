@@ -487,22 +487,9 @@ Use the generated template during the releasing process.
 <h1 id="website">Update the mesa3d.org website</h1>
 
 <p>
-NOTE: The recent release managers have not been performing this step
-themselves, but leaving this to Brian Paul, (who has access to the
-sourceforge.net hosting for mesa3d.org). Brian is more than willing to grant
-the permission necessary to future release managers to do this step on their
-own.
+As the hosting was moved to freedesktop, git hooks are deployed to update the
+website. Manually check that it is updated 5-10 minutes after the final <code>git push</code>
 </p>
-
-<p>
-Update the web site by copying the docs/ directory's files to
-/home/users/b/br/brianp/mesa-www/htdocs/ with:
-<br>
-<code>
-sftp USERNAME,mesa3d@web.sourceforge.net
-</code>
-</p>
-
 
 <h1 id="bugzilla">Update Bugzilla</h1>
 
