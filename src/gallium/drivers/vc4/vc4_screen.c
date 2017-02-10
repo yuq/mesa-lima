@@ -365,10 +365,7 @@ vc4_screen_get_shader_param(struct pipe_screen *pscreen, unsigned shader,
                 return vc4_screen(pscreen)->has_control_flow;
 
         case PIPE_SHADER_CAP_MAX_INPUTS:
-                if (shader == PIPE_SHADER_FRAGMENT)
-                        return 8;
-                else
-                        return 16;
+                return 8;
         case PIPE_SHADER_CAP_MAX_OUTPUTS:
                 return shader == PIPE_SHADER_FRAGMENT ? 1 : 8;
         case PIPE_SHADER_CAP_MAX_TEMPS:
