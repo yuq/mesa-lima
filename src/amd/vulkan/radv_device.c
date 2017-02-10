@@ -623,12 +623,11 @@ void radv_GetPhysicalDeviceProperties2KHR(
 	return radv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
 }
 
-void radv_GetPhysicalDeviceQueueFamilyProperties(
-	VkPhysicalDevice                            physicalDevice,
+static void radv_get_physical_device_queue_family_properties(
+	struct radv_physical_device*                pdevice,
 	uint32_t*                                   pCount,
-	VkQueueFamilyProperties*                    pQueueFamilyProperties)
+	VkQueueFamilyProperties**                    pQueueFamilyProperties)
 {
-	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
 	int num_queue_families = 1;
 	int idx;
 	if (pdevice->rad_info.compute_rings > 0 &&
@@ -646,7 +645,7 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 
 	idx = 0;
 	if (*pCount >= 1) {
-		pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
+		*pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
 			.queueFlags = VK_QUEUE_GRAPHICS_BIT |
 			VK_QUEUE_COMPUTE_BIT |
 			VK_QUEUE_TRANSFER_BIT,
@@ -661,7 +660,7 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 	    pdevice->rad_info.chip_class >= CIK &&
 	    !(pdevice->instance->debug_flags & RADV_DEBUG_NO_COMPUTE_QUEUE)) {
 		if (*pCount > idx) {
-			pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
+			*pQueueFamilyProperties[idx] = (VkQueueFamilyProperties) {
 				.queueFlags = VK_QUEUE_COMPUTE_BIT | VK_QUEUE_TRANSFER_BIT,
 				.queueCount = pdevice->rad_info.compute_rings,
 				.timestampValidBits = 64,
@@ -673,14 +672,42 @@ void radv_GetPhysicalDeviceQueueFamilyProperties(
 	*pCount = idx;
 }
 
+void radv_GetPhysicalDeviceQueueFamilyProperties(
+	VkPhysicalDevice                            physicalDevice,
+	uint32_t*                                   pCount,
+	VkQueueFamilyProperties*                    pQueueFamilyProperties)
+{
+	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
+	if (!pQueueFamilyProperties) {
+		return radv_get_physical_device_queue_family_properties(pdevice, pCount, NULL);
+		return;
+	}
+	VkQueueFamilyProperties *properties[] = {
+		pQueueFamilyProperties + 0,
+		pQueueFamilyProperties + 1,
+		pQueueFamilyProperties + 2,
+	};
+	radv_get_physical_device_queue_family_properties(pdevice, pCount, properties);
+	assert(*pCount <= 3);
+}
+
 void radv_GetPhysicalDeviceQueueFamilyProperties2KHR(
 	VkPhysicalDevice                            physicalDevice,
 	uint32_t*                                   pCount,
 	VkQueueFamilyProperties2KHR                *pQueueFamilyProperties)
 {
-	return radv_GetPhysicalDeviceQueueFamilyProperties(physicalDevice,
-							   pCount,
-							   &pQueueFamilyProperties->queueFamilyProperties);
+	RADV_FROM_HANDLE(radv_physical_device, pdevice, physicalDevice);
+	if (!pQueueFamilyProperties) {
+		return radv_get_physical_device_queue_family_properties(pdevice, pCount, NULL);
+		return;
+	}
+	VkQueueFamilyProperties *properties[] = {
+		&pQueueFamilyProperties[0].queueFamilyProperties,
+		&pQueueFamilyProperties[1].queueFamilyProperties,
+		&pQueueFamilyProperties[2].queueFamilyProperties,
+	};
+	radv_get_physical_device_queue_family_properties(pdevice, pCount, properties);
+	assert(*pCount <= 3);
 }
 
 void radv_GetPhysicalDeviceMemoryProperties(
