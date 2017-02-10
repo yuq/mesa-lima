@@ -7903,10 +7903,9 @@ ast_interface_block::hir(exec_list *instructions,
          }
 
          if (var->type->is_unsized_array()) {
-            if (var->is_in_shader_storage_block()) {
-               if (is_unsized_array_last_element(var)) {
-                  var->data.from_ssbo_unsized_array = true;
-               }
+            if (var->is_in_shader_storage_block() &&
+                is_unsized_array_last_element(var)) {
+               var->data.from_ssbo_unsized_array = true;
             } else {
                /* From GLSL ES 3.10 spec, section 4.1.9 "Arrays":
                 *
@@ -7914,6 +7913,10 @@ ast_interface_block::hir(exec_list *instructions,
                 * block and the size is not specified at compile-time, it is
                 * sized at run-time. In all other cases, arrays are sized only
                 * at compile-time."
+                *
+                * In desktop GLSL it is allowed to have unsized-arrays that are
+                * not last, as long as we can determine that they are implicitly
+                * sized.
                 */
                if (state->es_shader) {
                   _mesa_glsl_error(&loc, state, "unsized array `%s' "
