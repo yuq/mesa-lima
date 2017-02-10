@@ -631,16 +631,7 @@ vc4_nir_lower_blend_instr(struct vc4_compile *c, nir_builder *b,
         nir_ssa_def *frag_color = intr->src[0].ssa;
 
         if (c->fs_key->sample_coverage) {
-                nir_intrinsic_instr *load =
-                        nir_intrinsic_instr_create(b->shader,
-                                                   nir_intrinsic_load_sample_mask_in);
-                load->num_components = 1;
-                nir_ssa_dest_init(&load->instr, &load->dest, 1, 32, NULL);
-                nir_builder_instr_insert(b, &load->instr);
-
-                nir_ssa_def *bitmask = &load->dest.ssa;
-
-                vc4_nir_store_sample_mask(c, b, bitmask);
+                vc4_nir_store_sample_mask(c, b, nir_load_sample_mask_in(b));
         } else if (c->fs_key->sample_alpha_to_coverage) {
                 nir_ssa_def *a = nir_channel(b, frag_color, 3);
 
