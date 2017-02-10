@@ -361,18 +361,35 @@ void PaPatchListSingle(PA_STATE_OPT& pa, uint32_t slot, uint32_t primIndex, __m1
 
     /// @todo Optimize this
 
+#if USE_SIMD16_FRONTEND
+    if (pa.useAlternateOffset)
+    {
+        primIndex += KNOB_SIMD_WIDTH;
+    }
+
+#endif
     float* pOutVec = (float*)verts;
 
     for (uint32_t cp = 0; cp < TotalControlPoints; ++cp)
     {
         uint32_t input_cp = primIndex * TotalControlPoints + cp;
+#if USE_SIMD16_FRONTEND
+        uint32_t input_vec = input_cp / KNOB_SIMD16_WIDTH;
+        uint32_t input_lane = input_cp % KNOB_SIMD16_WIDTH;
+
+#else
         uint32_t input_vec = input_cp / KNOB_SIMD_WIDTH;
         uint32_t input_lane = input_cp % KNOB_SIMD_WIDTH;
 
+#endif
         // Loop over all components of the attribute
         for (uint32_t i = 0; i < 4; ++i)
         {
+#if USE_SIMD16_FRONTEND
+            const float* pInputVec = (const float*)(&PaGetSimdVector_simd16(pa, input_vec, slot)[i]);
+#else
             const float* pInputVec = (const float*)(&PaGetSimdVector(pa, input_vec, slot)[i]);
+#endif
             pOutVec[cp * 4 + i] = pInputVec[input_lane];
         }
     }
@@ -398,6 +415,15 @@ static bool PaPatchListTerm(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 
     /// @todo Optimize this
 
+#if USE_SIMD16_FRONTEND
+    uint32_t lane_offset = 0;
+
+    if (pa.useAlternateOffset)
+    {
+        lane_offset = KNOB_SIMD_WIDTH;
+    }
+
+#endif
     // Loop over all components of the attribute
     for (uint32_t i = 0; i < 4; ++i)
     {
@@ -406,11 +432,19 @@ static bool PaPatchListTerm(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
             float vec[KNOB_SIMD_WIDTH];
             for (uint32_t lane = 0; lane < KNOB_SIMD_WIDTH; ++lane)
             {
+#if USE_SIMD16_FRONTEND
+                uint32_t input_cp = (lane + lane_offset) * TotalControlPoints + cp;
+                uint32_t input_vec = input_cp / KNOB_SIMD16_WIDTH;
+                uint32_t input_lane = input_cp % KNOB_SIMD16_WIDTH;
+
+                const float* pInputVec = (const float*)(&PaGetSimdVector_simd16(pa, input_vec, slot)[i]);
+#else
                 uint32_t input_cp = lane * TotalControlPoints + cp;
                 uint32_t input_vec = input_cp / KNOB_SIMD_WIDTH;
                 uint32_t input_lane = input_cp % KNOB_SIMD_WIDTH;
 
                 const float* pInputVec = (const float*)(&PaGetSimdVector(pa, input_vec, slot)[i]);
+#endif
                 vec[lane] = pInputVec[input_lane];
             }
             verts[cp][i] = _simd_loadu_ps(vec);
@@ -428,6 +462,58 @@ static bool PaPatchListTerm(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
     return true;
 }
 
+#if ENABLE_AVX512_SIMD16
+template<uint32_t TotalControlPoints, uint32_t CurrentControlPoints = 1>
+static bool PaPatchList_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    SetNextPaState_simd16(
+        pa,
+        PaPatchList_simd16<TotalControlPoints, CurrentControlPoints + 1>,
+        PaPatchListSingle<TotalControlPoints>);
+
+    return false;
+}
+
+template<uint32_t TotalControlPoints>
+static bool PaPatchListTerm_simd16(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])
+{
+    // We have an input of KNOB_SIMD_WIDTH * TotalControlPoints and we output
+    // KNOB_SIMD16_WIDTH * 1 patch.  This function is called once per attribute.
+    // Each attribute has 4 components.
+
+    /// @todo Optimize this
+
+    // Loop over all components of the attribute
+    for (uint32_t i = 0; i < 4; ++i)
+    {
+        for (uint32_t cp = 0; cp < TotalControlPoints; ++cp)
+        {
+            float vec[KNOB_SIMD16_WIDTH];
+            for (uint32_t lane = 0; lane < KNOB_SIMD16_WIDTH; ++lane)
+            {
+                uint32_t input_cp = lane * TotalControlPoints + cp;
+                uint32_t input_vec = input_cp / KNOB_SIMD16_WIDTH;
+                uint32_t input_lane = input_cp % KNOB_SIMD16_WIDTH;
+
+                const float* pInputVec = (const float*)(&PaGetSimdVector(pa, input_vec, slot)[i]);
+                vec[lane] = pInputVec[input_lane];
+            }
+            verts[cp][i] = _simd16_loadu_ps(vec);
+        }
+    }
+
+    SetNextPaState_simd16(
+        pa,
+        PaPatchList_simd16<TotalControlPoints>,
+        PaPatchListSingle<TotalControlPoints>,
+        0,
+        KNOB_SIMD16_WIDTH,
+        true);
+
+    return true;
+}
+
+#endif
 #define PA_PATCH_LIST_TERMINATOR(N) \
     template<> bool PaPatchList<N, N>(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])\
                            { return PaPatchListTerm<N>(pa, slot, verts); }
@@ -465,6 +551,45 @@ PA_PATCH_LIST_TERMINATOR(31)
 PA_PATCH_LIST_TERMINATOR(32)
 #undef PA_PATCH_LIST_TERMINATOR
 
+#if ENABLE_AVX512_SIMD16
+#define PA_PATCH_LIST_TERMINATOR_SIMD16(N) \
+    template<> bool PaPatchList_simd16<N, N>(PA_STATE_OPT& pa, uint32_t slot, simd16vector verts[])\
+                           { return PaPatchListTerm_simd16<N>(pa, slot, verts); }
+PA_PATCH_LIST_TERMINATOR_SIMD16(1)
+PA_PATCH_LIST_TERMINATOR_SIMD16(2)
+PA_PATCH_LIST_TERMINATOR_SIMD16(3)
+PA_PATCH_LIST_TERMINATOR_SIMD16(4)
+PA_PATCH_LIST_TERMINATOR_SIMD16(5)
+PA_PATCH_LIST_TERMINATOR_SIMD16(6)
+PA_PATCH_LIST_TERMINATOR_SIMD16(7)
+PA_PATCH_LIST_TERMINATOR_SIMD16(8)
+PA_PATCH_LIST_TERMINATOR_SIMD16(9)
+PA_PATCH_LIST_TERMINATOR_SIMD16(10)
+PA_PATCH_LIST_TERMINATOR_SIMD16(11)
+PA_PATCH_LIST_TERMINATOR_SIMD16(12)
+PA_PATCH_LIST_TERMINATOR_SIMD16(13)
+PA_PATCH_LIST_TERMINATOR_SIMD16(14)
+PA_PATCH_LIST_TERMINATOR_SIMD16(15)
+PA_PATCH_LIST_TERMINATOR_SIMD16(16)
+PA_PATCH_LIST_TERMINATOR_SIMD16(17)
+PA_PATCH_LIST_TERMINATOR_SIMD16(18)
+PA_PATCH_LIST_TERMINATOR_SIMD16(19)
+PA_PATCH_LIST_TERMINATOR_SIMD16(20)
+PA_PATCH_LIST_TERMINATOR_SIMD16(21)
+PA_PATCH_LIST_TERMINATOR_SIMD16(22)
+PA_PATCH_LIST_TERMINATOR_SIMD16(23)
+PA_PATCH_LIST_TERMINATOR_SIMD16(24)
+PA_PATCH_LIST_TERMINATOR_SIMD16(25)
+PA_PATCH_LIST_TERMINATOR_SIMD16(26)
+PA_PATCH_LIST_TERMINATOR_SIMD16(27)
+PA_PATCH_LIST_TERMINATOR_SIMD16(28)
+PA_PATCH_LIST_TERMINATOR_SIMD16(29)
+PA_PATCH_LIST_TERMINATOR_SIMD16(30)
+PA_PATCH_LIST_TERMINATOR_SIMD16(31)
+PA_PATCH_LIST_TERMINATOR_SIMD16(32)
+#undef PA_PATCH_LIST_TERMINATOR_SIMD16
+
+#endif
 bool PaTriList0(PA_STATE_OPT& pa, uint32_t slot, simdvector verts[])
 {
     SetNextPaState(pa, PaTriList1, PaTriListSingle0);
@@ -2324,44 +2449,49 @@ bool PaRectList1_simd16(
         }
     }
 
-    __m256 tmp0, tmp1, tmp2;
+    simd16vector &v0 = verts[0];                            // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
+    simd16vector &v1 = verts[1];                            // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
+    simd16vector &v2 = verts[2];                            // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
 
     // Loop over each component in the simdvector.
     for (int i = 0; i < 4; i += 1)
     {
-        simd16vector& v0 = verts[0];                        // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
+        simdscalar v0_lo;                                   // verts[0] needs to be { v0, v0, v3, v3, v6, v6, v9, v9 }
+        simdscalar v1_lo;                                   // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
+        simdscalar v2_lo;                                   // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
+
+        __m256 tmp0, tmp1, tmp2;
+
         tmp0 = _mm256_permute2f128_ps(b[i], b[i], 0x01);    // tmp0 = { v12, v13, v14, v15, v8, v9, v10, v11 }
-        v0[i].lo = _mm256_blend_ps(a[i], tmp0, 0x20);       //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
-        tmp1 = _mm256_permute_ps(v0[i].lo, 0xF0);           // tmp1 = {  v0,  v0,  v3,  v3,  *,  *,  *,  * }
-        v0[i].lo = _mm256_permute_ps(v0[i].lo, 0x5A);       //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
-        v0[i].lo = _mm256_blend_ps(tmp1, v0[i].lo, 0xF0);   //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
+        v0_lo = _mm256_blend_ps(a[i], tmp0, 0x20);          //   v0 = {  v0,   *,   *,  v3,  *, v9,  v6,  * } where * is don't care.
+        tmp1 = _mm256_permute_ps(v0_lo, 0xF0);              // tmp1 = {  v0,  v0,  v3,  v3,  *,  *,  *,  * }
+        v0_lo = _mm256_permute_ps(v0_lo, 0x5A);             //   v0 = {   *,   *,   *,   *,  v6, v6, v9, v9 }
+        v0_lo = _mm256_blend_ps(tmp1, v0_lo, 0xF0);         //   v0 = {  v0,  v0,  v3,  v3,  v6, v6, v9, v9 }
 
         /// NOTE This is a bit expensive due to conflicts between vertices in 'a' and 'b'.
         ///      AVX2 should make this much cheaper.
-        simd16vector& v1 = verts[1];                        // verts[1] needs to be { v1, v2, v4, v5, v7, v8, v10, v11 }
-        v1[i].lo = _mm256_permute_ps(a[i], 0x09);           //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
+        v1_lo = _mm256_permute_ps(a[i], 0x09);              //   v1 = { v1, v2,  *,  *,  *, *,  *, * }
         tmp1 = _mm256_permute_ps(a[i], 0x43);               // tmp1 = {  *,  *,  *,  *, v7, *, v4, v5 }
-        tmp2 = _mm256_blend_ps(v1[i].lo, tmp1, 0xF0);       // tmp2 = { v1, v2,  *,  *, v7, *, v4, v5 }
+        tmp2 = _mm256_blend_ps(v1_lo, tmp1, 0xF0);          // tmp2 = { v1, v2,  *,  *, v7, *, v4, v5 }
         tmp1 = _mm256_permute2f128_ps(tmp2, tmp2, 0x1);     // tmp1 = { v7,  *, v4,  v5, *  *,  *,  * }
-        v1[i].lo = _mm256_permute_ps(tmp0, 0xE0);           //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
-        v1[i].lo = _mm256_blend_ps(tmp2, v1[i].lo, 0xE0);   //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
-        v1[i].lo = _mm256_blend_ps(v1[i].lo, tmp1, 0x0C);   //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
+        v1_lo = _mm256_permute_ps(tmp0, 0xE0);              //   v1 = {  *,  *,  *,  *,  *, v8, v10, v11 }
+        v1_lo = _mm256_blend_ps(tmp2, v1_lo, 0xE0);         //   v1 = { v1, v2,  *,  *, v7, v8, v10, v11 }
+        v1_lo = _mm256_blend_ps(v1_lo, tmp1, 0x0C);         //   v1 = { v1, v2, v4, v5, v7, v8, v10, v11 }
 
         // verts[2] = { v2,  w, v5,  x, v8,  y, v11, z }
-        simd16vector& v2 = verts[2];                        // verts[2] needs to be { v2,  w, v5,  x, v8,  y, v11, z }
-        v2[i].lo = _mm256_permute_ps(tmp0, 0x30);           //   v2 = { *, *, *, *, v8, *, v11, * }
+        v2_lo = _mm256_permute_ps(tmp0, 0x30);              //   v2 = { *, *, *, *, v8, *, v11, * }
         tmp1 = _mm256_permute_ps(tmp2, 0x31);               // tmp1 = { v2, *, v5, *, *, *, *, * }
-        v2[i].lo = _mm256_blend_ps(tmp1, v2[i].lo, 0xF0);
+        v2_lo = _mm256_blend_ps(tmp1, v2_lo, 0xF0);
 
         // Need to compute 4th implied vertex for the rectangle.
-        tmp2 = _mm256_sub_ps(v0[i].lo, v1[i].lo);
-        tmp2 = _mm256_add_ps(tmp2, v2[i].lo);               // tmp2 = {  w,  *,  x, *, y,  *,  z,  * }
+        tmp2 = _mm256_sub_ps(v0_lo, v1_lo);
+        tmp2 = _mm256_add_ps(tmp2, v2_lo);                  // tmp2 = {  w,  *,  x, *, y,  *,  z,  * }
         tmp2 = _mm256_permute_ps(tmp2, 0xA0);               // tmp2 = {  *,  w,  *, x, *,   y,  *,  z }
-        v2[i].lo = _mm256_blend_ps(v2[i].lo, tmp2, 0xAA);   //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
+        v2_lo = _mm256_blend_ps(v2_lo, tmp2, 0xAA);         //   v2 = { v2,  w, v5, x, v8,  y, v11, z }
 
-        v0[i].hi = _simd_setzero_ps();
-        v1[i].hi = _simd_setzero_ps();
-        v2[i].hi = _simd_setzero_ps();
+        v0[i] = _simd16_insert_ps(_simd16_setzero_ps(), v0_lo, 0);
+        v1[i] = _simd16_insert_ps(_simd16_setzero_ps(), v1_lo, 0);
+        v2[i] = _simd16_insert_ps(_simd16_setzero_ps(), v2_lo, 0);
     }
 
     SetNextPaState_simd16(pa, PaRectList1_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
@@ -2542,99 +2672,195 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
 
         case TOP_PATCHLIST_1:
             this->pfnPaFunc = PaPatchList<1>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<1>;
+#endif
             break;
         case TOP_PATCHLIST_2:
             this->pfnPaFunc = PaPatchList<2>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<2>;
+#endif
             break;
         case TOP_PATCHLIST_3:
             this->pfnPaFunc = PaPatchList<3>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<3>;
+#endif
             break;
         case TOP_PATCHLIST_4:
             this->pfnPaFunc = PaPatchList<4>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<4>;
+#endif
             break;
         case TOP_PATCHLIST_5:
             this->pfnPaFunc = PaPatchList<5>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<5>;
+#endif
             break;
         case TOP_PATCHLIST_6:
             this->pfnPaFunc = PaPatchList<6>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<6>;
+#endif
             break;
         case TOP_PATCHLIST_7:
             this->pfnPaFunc = PaPatchList<7>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<7>;
+#endif
             break;
         case TOP_PATCHLIST_8:
             this->pfnPaFunc = PaPatchList<8>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<8>;
+#endif
             break;
         case TOP_PATCHLIST_9:
             this->pfnPaFunc = PaPatchList<9>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<9>;
+#endif
             break;
         case TOP_PATCHLIST_10:
             this->pfnPaFunc = PaPatchList<10>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<10>;
+#endif
             break;
         case TOP_PATCHLIST_11:
             this->pfnPaFunc = PaPatchList<11>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<11>;
+#endif
             break;
         case TOP_PATCHLIST_12:
             this->pfnPaFunc = PaPatchList<12>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<12>;
+#endif
             break;
         case TOP_PATCHLIST_13:
             this->pfnPaFunc = PaPatchList<13>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<13>;
+#endif
             break;
         case TOP_PATCHLIST_14:
             this->pfnPaFunc = PaPatchList<14>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<14>;
+#endif
             break;
         case TOP_PATCHLIST_15:
             this->pfnPaFunc = PaPatchList<15>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<15>;
+#endif
             break;
         case TOP_PATCHLIST_16:
             this->pfnPaFunc = PaPatchList<16>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<16>;
+#endif
             break;
         case TOP_PATCHLIST_17:
             this->pfnPaFunc = PaPatchList<17>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<17>;
+#endif
             break;
         case TOP_PATCHLIST_18:
             this->pfnPaFunc = PaPatchList<18>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<18>;
+#endif
             break;
         case TOP_PATCHLIST_19:
             this->pfnPaFunc = PaPatchList<19>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<19>;
+#endif
             break;
         case TOP_PATCHLIST_20:
             this->pfnPaFunc = PaPatchList<20>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<20>;
+#endif
             break;
         case TOP_PATCHLIST_21:
             this->pfnPaFunc = PaPatchList<21>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<21>;
+#endif
             break;
         case TOP_PATCHLIST_22:
             this->pfnPaFunc = PaPatchList<22>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<22>;
+#endif
             break;
         case TOP_PATCHLIST_23:
             this->pfnPaFunc = PaPatchList<23>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<23>;
+#endif
             break;
         case TOP_PATCHLIST_24:
             this->pfnPaFunc = PaPatchList<24>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<24>;
+#endif
             break;
         case TOP_PATCHLIST_25:
             this->pfnPaFunc = PaPatchList<25>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<25>;
+#endif
             break;
         case TOP_PATCHLIST_26:
             this->pfnPaFunc = PaPatchList<26>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<26>;
+#endif
             break;
         case TOP_PATCHLIST_27:
             this->pfnPaFunc = PaPatchList<27>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<27>;
+#endif
             break;
         case TOP_PATCHLIST_28:
             this->pfnPaFunc = PaPatchList<28>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<28>;
+#endif
             break;
         case TOP_PATCHLIST_29:
             this->pfnPaFunc = PaPatchList<29>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<29>;
+#endif
             break;
         case TOP_PATCHLIST_30:
             this->pfnPaFunc = PaPatchList<30>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<30>;
+#endif
             break;
         case TOP_PATCHLIST_31:
             this->pfnPaFunc = PaPatchList<31>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<31>;
+#endif
             break;
         case TOP_PATCHLIST_32:
             this->pfnPaFunc = PaPatchList<32>;
+#if ENABLE_AVX512_SIMD16
+            this->pfnPaFunc_simd16 = PaPatchList_simd16<32>;
+#endif
             break;
 
         default:
