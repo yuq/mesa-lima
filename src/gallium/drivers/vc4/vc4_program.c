@@ -2699,8 +2699,7 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         }
         if (job->msaa) {
                 key->msaa = vc4->rasterizer->base.multisample;
-                key->sample_coverage = (vc4->rasterizer->base.multisample &&
-                                        vc4->sample_mask != (1 << VC4_MAX_SAMPLES) - 1);
+                key->sample_coverage = (vc4->sample_mask != (1 << VC4_MAX_SAMPLES) - 1);
                 key->sample_alpha_to_coverage = vc4->blend->alpha_to_coverage;
                 key->sample_alpha_to_one = vc4->blend->alpha_to_one;
         }
