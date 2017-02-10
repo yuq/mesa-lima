@@ -25,14 +25,13 @@
  * IN THE SOFTWARE.
  */
 
-#include <dlfcn.h>
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <sys/stat.h>
 #include "radv_private.h"
 #include "radv_cs.h"
+#include "util/disk_cache.h"
 #include "util/strtod.h"
 
 #include <xf86drm.h>
@@ -46,28 +45,13 @@
 #include "util/debug.h"
 
 static int
-radv_get_function_timestamp(void *ptr, uint32_t* timestamp)
-{
-	Dl_info info;
-	struct stat st;
-	if (!dladdr(ptr, &info) || !info.dli_fname) {
-		return -1;
-	}
-	if (stat(info.dli_fname, &st)) {
-		return -1;
-	}
-	*timestamp = st.st_mtim.tv_sec;
-	return 0;
-}
-
-static int
 radv_device_get_cache_uuid(enum radeon_family family, void *uuid)
 {
 	uint32_t mesa_timestamp, llvm_timestamp;
 	uint16_t f = family;
 	memset(uuid, 0, VK_UUID_SIZE);
-	if (radv_get_function_timestamp(radv_device_get_cache_uuid, &mesa_timestamp) ||
-	    radv_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo, &llvm_timestamp))
+	if (!disk_cache_get_function_timestamp(radv_device_get_cache_uuid, &mesa_timestamp) ||
+	    !disk_cache_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo, &llvm_timestamp))
 		return -1;
 
 	memcpy(uuid, &mesa_timestamp, 4);
