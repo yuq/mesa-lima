@@ -828,7 +828,7 @@ static void si_emit_cp_dma_clear_buffer(struct radv_cmd_buffer *cmd_buffer,
 static void si_cp_dma_prepare(struct radv_cmd_buffer *cmd_buffer, uint64_t byte_count,
 			      uint64_t remaining_size, unsigned *flags)
 {
-
+	cmd_buffer->no_draws = false;
 	/* Flush the caches for the first copy only.
 	 * Also wait for the previous CP DMA operations.
 	 */
