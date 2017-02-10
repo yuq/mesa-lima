@@ -52,6 +52,7 @@
 #define FW_52_0_3 ((52 << 24) | (0 << 16) | (3 << 8))
 #define FW_52_4_3 ((52 << 24) | (4 << 16) | (3 << 8))
 #define FW_52_8_3 ((52 << 24) | (8 << 16) | (3 << 8))
+#define FW_53_19_4 ((53 << 24) | (19 << 16) | (4 << 8))
 
 /**
  * flush commands to the hardware
@@ -509,6 +510,10 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 		radeon_vce_52_init(enc);
 		get_pic_param = radeon_vce_52_get_param;
 		break;
+	case FW_53_19_4:
+		radeon_vce_52_init(enc);
+		get_pic_param = radeon_vce_52_get_param;
+		break;
 
 	default:
 		goto error;
@@ -541,6 +546,7 @@ bool rvce_is_fw_version_supported(struct r600_common_screen *rscreen)
 	case FW_52_0_3:
 	case FW_52_4_3:
 	case FW_52_8_3:
+	case FW_53_19_4:
 		return true;
 	default:
 		return false;
