@@ -342,7 +342,7 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
    st->has_user_constbuf =
       screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
-   st->cso_context = cso_create_context(pipe);
+   st->cso_context = cso_create_context(pipe, 0);
 
    st_init_atoms( st );
    st_init_clear(st);

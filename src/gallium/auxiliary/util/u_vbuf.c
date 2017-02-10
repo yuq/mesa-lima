@@ -255,7 +255,8 @@ static const struct {
    { PIPE_FORMAT_R8G8B8A8_SSCALED,     PIPE_FORMAT_R32G32B32A32_FLOAT },
 };
 
-boolean u_vbuf_get_caps(struct pipe_screen *screen, struct u_vbuf_caps *caps)
+boolean u_vbuf_get_caps(struct pipe_screen *screen, struct u_vbuf_caps *caps,
+                        unsigned flags)
 {
    unsigned i;
    boolean fallback = FALSE;
@@ -293,7 +294,7 @@ boolean u_vbuf_get_caps(struct pipe_screen *screen, struct u_vbuf_caps *caps)
    if (!caps->buffer_offset_unaligned ||
        !caps->buffer_stride_unaligned ||
        !caps->velem_src_offset_unaligned ||
-       !caps->user_vertex_buffers) {
+       (!(flags & U_VBUF_FLAG_NO_USER_VBOS) && !caps->user_vertex_buffers)) {
       fallback = TRUE;
    }
 

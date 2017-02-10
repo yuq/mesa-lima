@@ -277,18 +277,19 @@ sanitize_hash(struct cso_hash *hash, enum cso_cache_type type,
    }
 }
 
-static void cso_init_vbuf(struct cso_context *cso)
+static void cso_init_vbuf(struct cso_context *cso, unsigned flags)
 {
    struct u_vbuf_caps caps;
 
    /* Install u_vbuf if there is anything unsupported. */
-   if (u_vbuf_get_caps(cso->pipe->screen, &caps)) {
+   if (u_vbuf_get_caps(cso->pipe->screen, &caps, flags)) {
       cso->vbuf = u_vbuf_create(cso->pipe, &caps,
                                 cso->aux_vertex_buffer_index);
    }
 }
 
-struct cso_context *cso_create_context( struct pipe_context *pipe )
+struct cso_context *
+cso_create_context(struct pipe_context *pipe, unsigned u_vbuf_flags)
 {
    struct cso_context *ctx = CALLOC_STRUCT(cso_context);
    if (!ctx)
@@ -306,7 +307,7 @@ struct cso_context *cso_create_context( struct pipe_context *pipe )
 
    ctx->aux_vertex_buffer_index = 0; /* 0 for now */
 
-   cso_init_vbuf(ctx);
+   cso_init_vbuf(ctx, u_vbuf_flags);
 
    /* Enable for testing: */
    if (0) cso_set_maximum_cache_size( ctx->cache, 4 );

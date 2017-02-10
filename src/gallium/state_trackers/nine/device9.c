@@ -199,9 +199,9 @@ NineDevice9_ctor( struct NineDevice9 *This,
     This->pipe_sw = This->screen_sw->context_create(This->screen_sw, NULL, 0);
     if (!This->pipe_sw) { return E_OUTOFMEMORY; }
 
-    This->context.cso = cso_create_context(This->context.pipe);
+    This->context.cso = cso_create_context(This->context.pipe, 0);
     if (!This->context.cso) { return E_OUTOFMEMORY; } /* also a guess */
-    This->cso_sw = cso_create_context(This->pipe_sw);
+    This->cso_sw = cso_create_context(This->pipe_sw, 0);
     if (!This->cso_sw) { return E_OUTOFMEMORY; }
 
     /* Create first, it messes up our state. */

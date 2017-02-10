@@ -41,7 +41,8 @@ extern "C" {
 struct cso_context;
 struct u_vbuf;
 
-struct cso_context *cso_create_context( struct pipe_context *pipe );
+struct cso_context *cso_create_context(struct pipe_context *pipe,
+                                       unsigned u_vbuf_flags);
 void cso_destroy_context( struct cso_context *cso );
 
 
