@@ -224,9 +224,17 @@ struct rvce_cpb_slot *l1_slot(struct rvce_encoder *enc)
 void rvce_frame_offset(struct rvce_encoder *enc, struct rvce_cpb_slot *slot,
 		       signed *luma_offset, signed *chroma_offset)
 {
-	unsigned pitch = align(enc->luma->u.legacy.level[0].nblk_x * enc->luma->bpe, 128);
-	unsigned vpitch = align(enc->luma->u.legacy.level[0].nblk_y, 16);
-	unsigned fsize = pitch * (vpitch + vpitch / 2);
+	struct r600_common_screen *rscreen = (struct r600_common_screen *)enc->screen;
+	unsigned pitch, vpitch, fsize;
+
+	if (rscreen->chip_class < GFX9) {
+		pitch = align(enc->luma->u.legacy.level[0].nblk_x * enc->luma->bpe, 128);
+		vpitch = align(enc->luma->u.legacy.level[0].nblk_y, 16);
+	} else {
+		pitch = align(enc->luma->u.gfx9.surf_pitch * enc->luma->bpe, 256);
+		vpitch = align(enc->luma->u.gfx9.surf_height, 16);
+	}
+	fsize = pitch * (vpitch + vpitch / 2);
 
 	*luma_offset = slot->index * fsize;
 	*chroma_offset = *luma_offset + pitch * vpitch;
@@ -456,8 +464,14 @@ struct pipe_video_codec *rvce_create_encoder(struct pipe_context *context,
 		goto error;
 
 	get_buffer(((struct vl_video_buffer *)tmp_buf)->resources[0], NULL, &tmp_surf);
-	cpb_size = align(tmp_surf->u.legacy.level[0].nblk_x * tmp_surf->bpe, 128);
-	cpb_size = cpb_size * align(tmp_surf->u.legacy.level[0].nblk_y, 32);
+
+	cpb_size = (rscreen->chip_class < GFX9) ?
+		align(tmp_surf->u.legacy.level[0].nblk_x * tmp_surf->bpe, 128) *
+		align(tmp_surf->u.legacy.level[0].nblk_y, 32) :
+
+		align(tmp_surf->u.gfx9.surf_pitch * tmp_surf->bpe, 256) *
+		align(tmp_surf->u.gfx9.surf_height, 32);
+
 	cpb_size = cpb_size * 3 / 2;
 	cpb_size = cpb_size * enc->cpb_num;
 	if (enc->dual_pipe)
