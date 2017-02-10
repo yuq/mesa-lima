@@ -1193,6 +1193,9 @@ builtin_variable_generator::generate_fs_special_vars()
    if (state->is_version(110, 300))
       add_output(FRAG_RESULT_DEPTH, float_t, "gl_FragDepth");
 
+   if (state->EXT_frag_depth_enable)
+      add_output(FRAG_RESULT_DEPTH, float_t, "gl_FragDepthEXT");
+
    if (state->ARB_shader_stencil_export_enable) {
       ir_variable *const var =
          add_output(FRAG_RESULT_STENCIL, int_t, "gl_FragStencilRefARB");
