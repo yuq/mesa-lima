@@ -644,6 +644,19 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
     * when not using MCJIT so no instructions are generated which the old JIT
     * can't handle. Not entirely sure if we really need to do anything yet.
     */
+#if defined(PIPE_ARCH_LITTLE_ENDIAN)  && defined(PIPE_ARCH_PPC_64)
+   /*
+    * Versions of LLVM prior to 4.0 lacked a table entry for "POWER8NVL",
+    * resulting in (big-endian) "generic" being returned on
+    * little-endian Power8NVL systems.  The result was that code that
+    * attempted to load the least significant 32 bits of a 64-bit quantity
+    * from memory loaded the wrong half.  This resulted in failures in some
+    * Piglit tests, e.g.
+    * .../arb_gpu_shader_fp64/execution/conversion/frag-conversion-explicit-double-uint
+    */
+   if (MCPU == "generic")
+      MCPU = "pwr8";
+#endif
    builder.setMCPU(MCPU);
    if (gallivm_debug & (GALLIVM_DEBUG_IR | GALLIVM_DEBUG_ASM | GALLIVM_DEBUG_DUMP_BC)) {
       debug_printf("llc -mcpu option: %s\n", MCPU.str().c_str());
