@@ -4721,7 +4721,15 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
          goto done;
       }
 
-      /* The spec is self-contradictory here. It allows linking without a tess
+      /* Section 7.3 of the OpenGL ES 3.2 specification says:
+       *
+       *    "Linking can fail for [...] any of the following reasons:
+       *
+       *     * program contains an object to form a tessellation control
+       *       shader [...] and [...] the program is not separable and
+       *       contains no object to form a tessellation evaluation shader"
+       *
+       * The OpenGL spec is contradictory. It allows linking without a tess
        * eval shader, but that can only be used with transform feedback and
        * rasterization disabled. However, transform feedback isn't allowed
        * with GL_PATCHES, so it can't be used.
