@@ -34,6 +34,7 @@
 #include "util/u_format_s3tc.h"
 #include "util/u_memory.h"
 #include "util/u_resource.h"
+#include "util/u_upload_mgr.h"
 
 /* Initialize an external atom (owned by ../radeon). */
 static void
@@ -3514,14 +3515,28 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 		for (i = 0; i < count; i++) {
 			const struct pipe_vertex_buffer *src = buffers + i;
 			struct pipe_vertex_buffer *dsti = dst + i;
-			struct pipe_resource *buf = src->buffer;
 
-			pipe_resource_reference(&dsti->buffer, buf);
-			dsti->buffer_offset = src->buffer_offset;
-			dsti->stride = src->stride;
-			r600_context_add_resource_size(ctx, buf);
-			if (buf)
-				r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
+			if (unlikely(src->user_buffer)) {
+				/* Zero-stride attribs only. */
+				assert(src->stride == 0);
+
+				/* Assume the attrib has 4 dwords like the vbo
+				 * module. This is also a good upper bound. */
+				u_upload_data(sctx->b.b.stream_uploader, 0, 16, 16,
+					      src->user_buffer,
+					      &dsti->buffer_offset,
+					      &dsti->buffer);
+				dsti->stride = 0;
+			} else {
+				struct pipe_resource *buf = src->buffer;
+
+				pipe_resource_reference(&dsti->buffer, buf);
+				dsti->buffer_offset = src->buffer_offset;
+				dsti->stride = src->stride;
+				r600_context_add_resource_size(ctx, buf);
+				if (buf)
+					r600_resource(buf)->bind_history |= PIPE_BIND_VERTEX_BUFFER;
+			}
 		}
 	} else {
 		for (i = 0; i < count; i++) {
