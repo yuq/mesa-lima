@@ -669,6 +669,8 @@ static uint64_t radeon_query_value(struct radeon_winsys *rws,
         radeon_get_drm_value(ws->fd, RADEON_INFO_GPU_RESET_COUNTER,
                              "gpu-reset-counter", (uint32_t*)&retval);
         return retval;
+    case RADEON_CS_THREAD_TIME:
+        return util_queue_get_thread_time_nano(&ws->cs_queue, 0);
     }
     return 0;
 }

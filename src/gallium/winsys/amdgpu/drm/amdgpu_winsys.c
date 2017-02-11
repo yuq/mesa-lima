@@ -465,6 +465,8 @@ static uint64_t amdgpu_query_value(struct radeon_winsys *rws,
    case RADEON_GPU_RESET_COUNTER:
       assert(0);
       return 0;
+   case RADEON_CS_THREAD_TIME:
+      return util_queue_get_thread_time_nano(&ws->cs_queue, 0);
    }
    return 0;
 }

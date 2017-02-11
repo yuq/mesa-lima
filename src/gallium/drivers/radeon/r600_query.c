@@ -26,7 +26,7 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
-
+#include "os/os_time.h"
 #include "tgsi/tgsi_text.h"
 
 struct r600_hw_query_params {
@@ -43,6 +43,10 @@ struct r600_query_sw {
 
 	uint64_t begin_result;
 	uint64_t end_result;
+
+	uint64_t begin_time;
+	uint64_t end_time;
+
 	/* Fence for GPU_FINISHED. */
 	struct pipe_fence_handle *fence;
 };
@@ -76,6 +80,7 @@ static enum radeon_value_id winsys_id_from_type(unsigned type)
 	case R600_QUERY_GPU_TEMPERATURE: return RADEON_GPU_TEMPERATURE;
 	case R600_QUERY_CURRENT_GPU_SCLK: return RADEON_CURRENT_SCLK;
 	case R600_QUERY_CURRENT_GPU_MCLK: return RADEON_CURRENT_MCLK;
+	case R600_QUERY_CS_THREAD_BUSY: return RADEON_CS_THREAD_TIME;
 	default: unreachable("query type does not correspond to winsys id");
 	}
 }
@@ -84,6 +89,7 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 				struct r600_query *rquery)
 {
 	struct r600_query_sw *query = (struct r600_query_sw *)rquery;
+	enum radeon_value_id ws_id;
 
 	switch(query->b.type) {
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
@@ -148,6 +154,11 @@ static bool r600_query_sw_begin(struct r600_common_context *rctx,
 		query->begin_result = rctx->ws->query_value(rctx->ws, ws_id);
 		break;
 	}
+	case R600_QUERY_CS_THREAD_BUSY:
+		ws_id = winsys_id_from_type(query->b.type);
+		query->begin_result = rctx->ws->query_value(rctx->ws, ws_id);
+		query->begin_time = os_time_get_nano();
+		break;
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_GPU_SHADERS_BUSY:
 	case R600_QUERY_GPU_TA_BUSY:
@@ -200,6 +211,7 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 			      struct r600_query *rquery)
 {
 	struct r600_query_sw *query = (struct r600_query_sw *)rquery;
+	enum radeon_value_id ws_id;
 
 	switch(query->b.type) {
 	case PIPE_QUERY_TIMESTAMP_DISJOINT:
@@ -263,6 +275,11 @@ static bool r600_query_sw_end(struct r600_common_context *rctx,
 		query->end_result = rctx->ws->query_value(rctx->ws, ws_id);
 		break;
 	}
+	case R600_QUERY_CS_THREAD_BUSY:
+		ws_id = winsys_id_from_type(query->b.type);
+		query->end_result = rctx->ws->query_value(rctx->ws, ws_id);
+		query->end_time = os_time_get_nano();
+		break;
 	case R600_QUERY_GPU_LOAD:
 	case R600_QUERY_GPU_SHADERS_BUSY:
 	case R600_QUERY_GPU_TA_BUSY:
@@ -337,6 +354,10 @@ static bool r600_query_sw_get_result(struct r600_common_context *rctx,
 		return result->b;
 	}
 
+	case R600_QUERY_CS_THREAD_BUSY:
+		result->u64 = (query->end_result - query->begin_result) * 100 /
+			      (query->end_time - query->begin_time);
+		return true;
 	case R600_QUERY_GPIN_ASIC_ID:
 		result->u32 = 0;
 		return true;
@@ -1742,6 +1763,7 @@ static struct pipe_driver_query_info r600_driver_query_list[] = {
 	X("num-fb-cache-flushes",	NUM_FB_CACHE_FLUSHES,	UINT64, AVERAGE),
 	X("num-L2-invalidates",		NUM_L2_INVALIDATES,	UINT64, AVERAGE),
 	X("num-L2-writebacks",		NUM_L2_WRITEBACKS,	UINT64, AVERAGE),
+	X("CS-thread-busy",		CS_THREAD_BUSY,		UINT64, AVERAGE),
 	X("requested-VRAM",		REQUESTED_VRAM,		BYTES, AVERAGE),
 	X("requested-GTT",		REQUESTED_GTT,		BYTES, AVERAGE),
 	X("mapped-VRAM",		MAPPED_VRAM,		BYTES, AVERAGE),
