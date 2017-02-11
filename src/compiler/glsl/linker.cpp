@@ -3709,17 +3709,6 @@ create_shader_variable(struct gl_shader_program *shProg,
    return out;
 }
 
-static const glsl_type *
-resize_to_max_patch_vertices(const struct gl_context *ctx,
-                             const glsl_type *type)
-{
-   if (!type)
-      return NULL;
-
-   return glsl_type::get_array_instance(type->fields.array,
-                                        ctx->Const.MaxPatchVertices);
-}
-
 static bool
 add_shader_variable(const struct gl_context *ctx,
                     struct gl_shader_program *shProg,
@@ -3733,27 +3722,6 @@ add_shader_variable(const struct gl_context *ctx,
    const glsl_type *interface_type = var->get_interface_type();
 
    if (outermost_struct_type == NULL) {
-      /* Unsized (non-patch) TCS output/TES input arrays are implicitly
-       * sized to gl_MaxPatchVertices.  Internally, we shrink them to a
-       * smaller size.
-       *
-       * This can cause trouble with SSO programs.  Since the TCS declares
-       * the number of output vertices, we can always shrink TCS output
-       * arrays.  However, the TES might not be linked with a TCS, in
-       * which case it won't know the size of the patch.  In other words,
-       * the TCS and TES may disagree on the (smaller) array sizes.  This
-       * can result in the resource names differing across stages, causing
-       * SSO validation failures and other cascading issues.
-       *
-       * Expanding the array size to the full gl_MaxPatchVertices fixes
-       * these issues.  It's also what program interface queries expect,
-       * as that is the official size of the array.
-       */
-      if (var->data.tess_varying_implicit_sized_array) {
-         type = resize_to_max_patch_vertices(ctx, type);
-         interface_type = resize_to_max_patch_vertices(ctx, interface_type);
-      }
-
       if (var->data.from_named_ifc_block) {
          const char *interface_name = interface_type->name;
 
