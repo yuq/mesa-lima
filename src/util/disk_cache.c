@@ -445,10 +445,10 @@ is_regular_non_tmp_file(struct dirent *entry, const char *path)
       return false;
 
    struct stat sb;
-   stat(filename, &sb);
+   int res = stat(filename, &sb);
    free(filename);
 
-   if (!S_ISREG(sb.st_mode))
+   if (res == -1 || !S_ISREG(sb.st_mode))
       return false;
 
    size_t len = strlen (entry->d_name);
@@ -492,10 +492,10 @@ is_two_character_sub_directory(struct dirent *entry, const char *path)
       return false;
 
    struct stat sb;
-   stat(path, &sb);
+   int res = stat(subdir, &sb);
    free(subdir);
 
-   if (!S_ISDIR(sb.st_mode))
+   if (res == -1 || !S_ISDIR(sb.st_mode))
       return false;
 
    if (strlen(entry->d_name) != 2)
