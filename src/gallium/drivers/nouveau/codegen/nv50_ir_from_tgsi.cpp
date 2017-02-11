@@ -4083,6 +4083,7 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          mkSplit(&dst0[c], 4, dst);
          c++;
       }
+      break;
    case TGSI_OPCODE_I64SSG:
       FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
          src0 = getSSA(8);
