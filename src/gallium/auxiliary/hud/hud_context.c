@@ -97,6 +97,7 @@ struct hud_context {
       struct pipe_vertex_buffer vbuf;
       unsigned max_num_vertices;
       unsigned num_vertices;
+      unsigned buffer_size;
    } text, bg, whitelines;
 
    bool has_srgb;
@@ -456,15 +457,13 @@ hud_pane_draw_colored_objects(struct hud_context *hud,
 }
 
 static void
-hud_alloc_vertices(struct hud_context *hud, struct vertex_queue *v,
-                   unsigned num_vertices, unsigned stride)
+hud_prepare_vertices(struct hud_context *hud, struct vertex_queue *v,
+                     unsigned num_vertices, unsigned stride)
 {
    v->num_vertices = 0;
    v->max_num_vertices = num_vertices;
    v->vbuf.stride = stride;
-   u_upload_alloc(hud->pipe->stream_uploader, 0, v->vbuf.stride * v->max_num_vertices,
-                  16, &v->vbuf.buffer_offset, &v->vbuf.buffer,
-                  (void**)&v->vertices);
+   v->buffer_size = stride * num_vertices;
 }
 
 /**
@@ -563,9 +562,31 @@ hud_draw(struct hud_context *hud, struct pipe_resource *tex)
    cso_set_constant_buffer(cso, PIPE_SHADER_VERTEX, 0, &hud->constbuf);
 
    /* prepare vertex buffers */
-   hud_alloc_vertices(hud, &hud->bg, 16 * 256, 2 * sizeof(float));
-   hud_alloc_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
-   hud_alloc_vertices(hud, &hud->text, 16 * 1024, 4 * sizeof(float));
+   hud_prepare_vertices(hud, &hud->bg, 16 * 256, 2 * sizeof(float));
+   hud_prepare_vertices(hud, &hud->whitelines, 4 * 256, 2 * sizeof(float));
+   hud_prepare_vertices(hud, &hud->text, 16 * 1024, 4 * sizeof(float));
+
+   /* Allocate everything once and divide the storage into 3 portions
+    * manually, because u_upload_alloc can unmap memory from previous calls.
+    */
+   u_upload_alloc(hud->pipe->stream_uploader, 0,
+                  hud->bg.buffer_size +
+                  hud->whitelines.buffer_size +
+                  hud->text.buffer_size,
+                  16, &hud->bg.vbuf.buffer_offset, &hud->bg.vbuf.buffer,
+                  (void**)&hud->bg.vertices);
+   pipe_resource_reference(&hud->whitelines.vbuf.buffer, hud->bg.vbuf.buffer);
+   pipe_resource_reference(&hud->text.vbuf.buffer, hud->bg.vbuf.buffer);
+
+   hud->whitelines.vbuf.buffer_offset = hud->bg.vbuf.buffer_offset +
+                                        hud->bg.buffer_size;
+   hud->whitelines.vertices = hud->bg.vertices +
+                              hud->bg.buffer_size / sizeof(float);
+
+   hud->text.vbuf.buffer_offset = hud->whitelines.vbuf.buffer_offset +
+                                  hud->whitelines.buffer_size;
+   hud->text.vertices = hud->whitelines.vertices +
+                        hud->whitelines.buffer_size / sizeof(float);
 
    /* prepare all graphs */
    hud_batch_query_update(hud->batch_query);
