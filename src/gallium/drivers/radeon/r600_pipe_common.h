@@ -359,6 +359,9 @@ struct r600_mmio_counter {
 
 union r600_mmio_counters {
 	struct {
+		/* For global GPU load including SDMA. */
+		struct r600_mmio_counter gpu;
+
 		/* GRBM_STATUS */
 		struct r600_mmio_counter spi;
 		struct r600_mmio_counter gui;

@@ -70,6 +70,8 @@
 #define SCRATCH_RAM_BUSY(x)	(((x) >> 24) & 0x1)
 #define CE_BUSY(x)		(((x) >> 26) & 0x1)
 
+#define IDENTITY(x) x
+
 #define UPDATE_COUNTER(field, mask)					\
 	do {								\
 		if (mask(value))					\
@@ -82,6 +84,7 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 				      union r600_mmio_counters *counters)
 {
 	uint32_t value = 0;
+	bool gui_busy, sdma_busy = false;
 
 	/* GRBM_STATUS */
 	rscreen->ws->read_registers(rscreen->ws, GRBM_STATUS, 1, &value);
@@ -100,12 +103,14 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 	UPDATE_COUNTER(cp, CP_BUSY);
 	UPDATE_COUNTER(cb, CB_BUSY);
 	UPDATE_COUNTER(gui, GUI_ACTIVE);
+	gui_busy = GUI_ACTIVE(value);
 
 	if (rscreen->chip_class >= EVERGREEN) {
 		/* SRBM_STATUS2 */
 		rscreen->ws->read_registers(rscreen->ws, SRBM_STATUS2, 1, &value);
 
 		UPDATE_COUNTER(sdma, SDMA_BUSY);
+		sdma_busy = SDMA_BUSY(value);
 	}
 
 	if (rscreen->chip_class >= VI) {
@@ -120,6 +125,9 @@ static void r600_update_mmio_counters(struct r600_common_screen *rscreen,
 		UPDATE_COUNTER(scratch_ram, SCRATCH_RAM_BUSY);
 		UPDATE_COUNTER(ce, CE_BUSY);
 	}
+
+	value = gui_busy || sdma_busy;
+	UPDATE_COUNTER(gpu, IDENTITY);
 }
 
 #undef UPDATE_COUNTER
@@ -216,7 +224,7 @@ static unsigned busy_index_from_type(struct r600_common_screen *rscreen,
 {
 	switch (type) {
 	case R600_QUERY_GPU_LOAD:
-		return BUSY_INDEX(rscreen, gui);
+		return BUSY_INDEX(rscreen, gpu);
 	case R600_QUERY_GPU_SHADERS_BUSY:
 		return BUSY_INDEX(rscreen, spi);
 	case R600_QUERY_GPU_TA_BUSY:
