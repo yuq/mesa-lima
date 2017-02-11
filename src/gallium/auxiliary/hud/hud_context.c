@@ -1149,6 +1149,9 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       else if (sscanf(name, "cpu%u%s", &i, s) == 1) {
          hud_cpu_graph_install(pane, i);
       }
+      else if (strcmp(name, "API-thread-busy") == 0) {
+         hud_api_thread_busy_install(pane);
+      }
 #if HAVE_GALLIUM_EXTRA_HUD
       else if (sscanf(name, "nic-rx-%s", arg_name) == 1) {
          hud_nic_graph_install(pane, arg_name, NIC_DIRECTION_RX);
