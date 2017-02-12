@@ -239,7 +239,8 @@ class PrintCode(gl_XML.gl_print_base):
             if func.marshal_fail:
                 out('if ({0}) {{'.format(func.marshal_fail))
                 with indent():
-                    out('_mesa_glthread_destroy(ctx);')
+                    out('_mesa_glthread_finish(ctx);')
+                    out('_mesa_glthread_restore_dispatch(ctx);')
                     self.print_sync_dispatch(func)
                     out('return;')
                 out('}')

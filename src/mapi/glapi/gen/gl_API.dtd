@@ -131,9 +131,9 @@ param:
         If "draw", it will follow the "async" rules except that "indices" are
         ignored (since they may come from a VBO).
      marshal_fail - an expression that, if it evaluates true, causes glthread
-        to finish and tear down before the Mesa implementation is called
-        directly.  Used to disable glthread for GL compatibility interactions
-        that we don't want to track state for.
+        to switch back to the Mesa implementation and call it directly.  Used
+        to disable glthread for GL compatibility interactions that we don't
+        want to track state for.
 
 glx:
      rop - Opcode value for "render" commands

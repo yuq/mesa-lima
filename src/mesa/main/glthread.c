@@ -173,6 +173,12 @@ _mesa_glthread_destroy(struct gl_context *ctx)
    free(glthread);
    ctx->GLThread = NULL;
 
+   _mesa_glthread_restore_dispatch(ctx);
+}
+
+void
+_mesa_glthread_restore_dispatch(struct gl_context *ctx)
+{
    /* Remove ourselves from the dispatch table except if another ctx/thread
     * already installed a new dispatch table.
     *
