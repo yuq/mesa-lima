@@ -98,7 +98,7 @@ main(int argc, char **argv)
    const char *filename;
    struct tgsi_token toks[65536];
    struct tgsi_parse_context parse;
-   struct etna_shader *shader_obj;
+   struct etna_shader_variant *shader_obj;
    void *ptr;
    size_t size;
 

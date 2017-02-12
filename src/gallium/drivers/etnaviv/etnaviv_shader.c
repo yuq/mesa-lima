@@ -44,7 +44,7 @@
  */
 static bool
 etna_link_shaders(struct etna_context *ctx, struct compiled_shader_state *cs,
-                  const struct etna_shader *vs, const struct etna_shader *fs)
+                  const struct etna_shader_variant *vs, const struct etna_shader_variant *fs)
 {
    struct etna_shader_link_info link = { };
 
@@ -182,7 +182,7 @@ etna_shader_link(struct etna_context *ctx)
 static bool
 etna_shader_update_vs_inputs(struct etna_context *ctx,
                              struct compiled_shader_state *cs,
-                             const struct etna_shader *vs,
+                             const struct etna_shader_variant *vs,
                              const struct compiled_vertex_elements_state *ves)
 {
    unsigned num_temps, cur_temp, num_vs_inputs;
@@ -224,7 +224,7 @@ etna_shader_update_vs_inputs(struct etna_context *ctx,
 }
 
 static inline const char *
-etna_shader_stage(struct etna_shader *shader)
+etna_shader_stage(struct etna_shader_variant *shader)
 {
    switch (shader->processor) {
    case PIPE_SHADER_VERTEX:     return "VERT";
@@ -237,7 +237,7 @@ etna_shader_stage(struct etna_shader *shader)
 }
 
 static void
-dump_shader_info(struct etna_shader *shader, struct pipe_debug_callback *debug)
+dump_shader_info(struct etna_shader_variant *shader, struct pipe_debug_callback *debug)
 {
    if (!unlikely(etna_mesa_debug & ETNA_DBG_SHADERDB))
       return;
@@ -271,7 +271,7 @@ etna_create_shader_state(struct pipe_context *pctx,
                          const struct pipe_shader_state *pss)
 {
    struct etna_context *ctx = etna_context(pctx);
-   struct etna_shader *shader = etna_compile_shader(&ctx->specs, pss->tokens);
+   struct etna_shader_variant *shader = etna_compile_shader(&ctx->specs, pss->tokens);
 
    static uint32_t id;
    shader->id = id++;
@@ -291,7 +291,7 @@ static void
 etna_bind_fs_state(struct pipe_context *pctx, void *fss_)
 {
    struct etna_context *ctx = etna_context(pctx);
-   struct etna_shader *fss = fss_;
+   struct etna_shader_variant *fss = fss_;
 
    if (ctx->fs == fss) /* skip if already bound */
       return;
@@ -305,7 +305,7 @@ static void
 etna_bind_vs_state(struct pipe_context *pctx, void *vss_)
 {
    struct etna_context *ctx = etna_context(pctx);
-   struct etna_shader *vss = vss_;
+   struct etna_shader_variant *vss = vss_;
 
    if (ctx->vs == vss) /* skip if already bound */
       return;

@@ -2044,7 +2044,7 @@ permute_ps_inputs(struct etna_compile *c)
 
 /* fill in ps inputs into shader object */
 static void
-fill_in_ps_inputs(struct etna_shader *sobj, struct etna_compile *c)
+fill_in_ps_inputs(struct etna_shader_variant *sobj, struct etna_compile *c)
 {
    struct etna_shader_io_file *sf = &sobj->infile;
 
@@ -2074,7 +2074,7 @@ fill_in_ps_inputs(struct etna_shader *sobj, struct etna_compile *c)
 
 /* fill in output mapping for ps into shader object */
 static void
-fill_in_ps_outputs(struct etna_shader *sobj, struct etna_compile *c)
+fill_in_ps_outputs(struct etna_shader_variant *sobj, struct etna_compile *c)
 {
    sobj->outfile.num_reg = 0;
 
@@ -2096,7 +2096,7 @@ fill_in_ps_outputs(struct etna_shader *sobj, struct etna_compile *c)
 
 /* fill in inputs for vs into shader object */
 static void
-fill_in_vs_inputs(struct etna_shader *sobj, struct etna_compile *c)
+fill_in_vs_inputs(struct etna_shader_variant *sobj, struct etna_compile *c)
 {
    struct etna_shader_io_file *sf = &sobj->infile;
 
@@ -2116,7 +2116,7 @@ fill_in_vs_inputs(struct etna_shader *sobj, struct etna_compile *c)
 
 /* build two-level output index [Semantic][Index] for fast linking */
 static void
-build_output_index(struct etna_shader *sobj)
+build_output_index(struct etna_shader_variant *sobj)
 {
    int total = 0;
    int offset = 0;
@@ -2140,7 +2140,7 @@ build_output_index(struct etna_shader *sobj)
 
 /* fill in outputs for vs into shader object */
 static void
-fill_in_vs_outputs(struct etna_shader *sobj, struct etna_compile *c)
+fill_in_vs_outputs(struct etna_shader_variant *sobj, struct etna_compile *c)
 {
    struct etna_shader_io_file *sf = &sobj->outfile;
 
@@ -2240,7 +2240,7 @@ etna_compile_check_limits(struct etna_compile *c)
 }
 
 static void
-copy_uniform_state_to_shader(struct etna_compile *c, struct etna_shader *sobj)
+copy_uniform_state_to_shader(struct etna_compile *c, struct etna_shader_variant *sobj)
 {
    uint32_t count = c->imm_size;
    struct etna_shader_uniform_info *uinfo = &sobj->uniforms;
@@ -2253,7 +2253,7 @@ copy_uniform_state_to_shader(struct etna_compile *c, struct etna_shader *sobj)
    etna_set_shader_uniforms_dirty_flags(sobj);
 }
 
-struct etna_shader *
+struct etna_shader_variant *
 etna_compile_shader(const struct etna_specs *specs,
                     const struct tgsi_token *tokens)
 {
@@ -2261,7 +2261,7 @@ etna_compile_shader(const struct etna_specs *specs,
     */
    bool ret;
    struct etna_compile *c;
-   struct etna_shader *shader;
+   struct etna_shader_variant *shader;
 
    struct tgsi_lowering_config lconfig = {
       .lower_SCS = specs->has_sin_cos_sqrt,
@@ -2280,7 +2280,7 @@ etna_compile_shader(const struct etna_specs *specs,
    if (!c)
       return NULL;
 
-   shader = CALLOC_STRUCT(etna_shader);
+   shader = CALLOC_STRUCT(etna_shader_variant);
    if (!shader)
       goto out;
 
@@ -2450,7 +2450,7 @@ out:
 
 extern const char *tgsi_swizzle_names[];
 void
-etna_dump_shader(const struct etna_shader *shader)
+etna_dump_shader(const struct etna_shader_variant *shader)
 {
    if (shader->processor == PIPE_SHADER_VERTEX)
       printf("VERT\n");
@@ -2498,7 +2498,7 @@ etna_dump_shader(const struct etna_shader *shader)
 }
 
 void
-etna_destroy_shader(struct etna_shader *shader)
+etna_destroy_shader(struct etna_shader_variant *shader)
 {
    assert(shader);
 
@@ -2510,7 +2510,7 @@ etna_destroy_shader(struct etna_shader *shader)
 }
 
 static const struct etna_shader_inout *
-etna_shader_vs_lookup(const struct etna_shader *sobj,
+etna_shader_vs_lookup(const struct etna_shader_variant *sobj,
                       const struct etna_shader_inout *in)
 {
    if (in->semantic.Index < sobj->output_count_per_semantic[in->semantic.Name])
@@ -2521,7 +2521,7 @@ etna_shader_vs_lookup(const struct etna_shader *sobj,
 
 bool
 etna_link_shader(struct etna_shader_link_info *info,
-                 const struct etna_shader *vs, const struct etna_shader *fs)
+                 const struct etna_shader_variant *vs, const struct etna_shader_variant *fs)
 {
    /* For each fragment input we need to find the associated vertex shader
     * output, which can be found by matching on semantic name and index. A
