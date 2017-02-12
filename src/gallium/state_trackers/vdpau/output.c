@@ -263,6 +263,13 @@ vlVdpOutputSurfacePutBitsNative(VdpOutputSurface surface,
    pipe_mutex_lock(vlsurface->device->mutex);
 
    dst_box = RectToPipeBox(destination_rect, vlsurface->sampler_view->texture);
+
+   /* Check for a no-op. (application bug?) */
+   if (!dst_box.width || !dst_box.height) {
+      pipe_mutex_unlock(vlsurface->device->mutex);
+      return VDP_STATUS_OK;
+   }
+
    pipe->texture_subdata(pipe, vlsurface->sampler_view->texture, 0,
                          PIPE_TRANSFER_WRITE, &dst_box, *source_data,
                          *source_pitches, 0);
