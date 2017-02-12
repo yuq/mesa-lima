@@ -2039,7 +2039,7 @@ Converter::fetchSrc(tgsi::Instruction::SrcRegister src, int c, Value *ptr)
       assert(!ptr);
       if (info->sv[idx].sn == TGSI_SEMANTIC_THREAD_ID &&
           info->prop.cp.numThreads[swz] == 1)
-         return zero;
+         return loadImm(NULL, 0u);
       ld = mkOp1(OP_RDSV, TYPE_U32, getSSA(), srcToSym(src, c));
       ld->perPatch = info->sv[idx].patch;
       return ld->getDef(0);
