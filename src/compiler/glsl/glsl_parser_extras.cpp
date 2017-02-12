@@ -1927,7 +1927,8 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
 {
    struct _mesa_glsl_parse_state *state =
       new(shader) _mesa_glsl_parse_state(ctx, shader->Stage, shader);
-   const char *source = shader->Source;
+   const char *source = force_recompile && shader->FallbackSource ?
+      shader->FallbackSource : shader->Source;
 
    if (ctx->Const.GenerateTemporaryNames)
       (void) p_atomic_cmpxchg(&ir_variable::temporaries_allocate_names,
@@ -1946,6 +1947,9 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
                     _mesa_sha1_format(buf, shader->sha1));
          }
          shader->CompileStatus = true;
+
+         free((void *)shader->FallbackSource);
+         shader->FallbackSource = NULL;
          return;
       }
    }
@@ -2066,6 +2070,11 @@ _mesa_glsl_compile_shader(struct gl_context *ctx, struct gl_shader *shader,
    }
 
    _mesa_glsl_initialize_derived_variables(ctx, shader);
+
+   if (!force_recompile) {
+      free((void *)shader->FallbackSource);
+      shader->FallbackSource = NULL;
+   }
 
    delete state->symbols;
    ralloc_free(state);

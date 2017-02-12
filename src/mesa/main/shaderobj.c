@@ -122,6 +122,7 @@ void
 _mesa_delete_shader(struct gl_context *ctx, struct gl_shader *sh)
 {
    free((void *)sh->Source);
+   free((void *)sh->FallbackSource);
    free(sh->Label);
    ralloc_free(sh);
 }

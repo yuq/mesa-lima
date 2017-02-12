@@ -1003,9 +1003,18 @@ shader_source(struct gl_shader *sh, const GLchar *source)
 {
    assert(sh);
 
-   /* free old shader source string and install new one */
-   free((void *)sh->Source);
-   sh->Source = source;
+   if (sh->CompileStatus == GL_TRUE && !sh->FallbackSource) {
+      /* If shader was previously compiled back-up the source in case of cache
+       * fallback.
+       */
+      sh->FallbackSource = sh->Source;
+      sh->Source = source;
+   } else {
+      /* free old shader source string and install new one */
+      free((void *)sh->Source);
+      sh->Source = source;
+   }
+
 #ifdef DEBUG
    sh->SourceChecksum = util_hash_crc32(sh->Source, strlen(sh->Source));
 #endif

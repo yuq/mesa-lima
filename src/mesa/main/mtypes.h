@@ -2397,6 +2397,8 @@ struct gl_shader
 #endif
    const GLchar *Source;  /**< Source code string */
 
+   const GLchar *FallbackSource;  /**< Fallback string used by on-disk cache*/
+
    GLchar *InfoLog;
 
    unsigned Version;       /**< GLSL version used for linking */
