@@ -1434,6 +1434,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	bool use_staging_texture = false;
 
 	assert(!(texture->flags & R600_RESOURCE_FLAG_TRANSFER));
+	assert(box->width && box->height && box->depth);
 
 	/* Depth textures use staging unconditionally. */
 	if (!rtex->is_depth) {
