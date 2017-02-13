@@ -1300,6 +1300,14 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
    ralloc_asprintf_append(&buf, "sso: %s\n",
                           prog->SeparateShader ? "T" : "F");
 
+   /* A shader might end up producing different output depending on the glsl
+    * version supported by the compiler. For example a different path might be
+    * taken by the preprocessor, so add the version to the hash input.
+    */
+   ralloc_asprintf_append(&buf, "api: %d glsl: %d fglsl: %d\n",
+                          ctx->API, ctx->Const.GLSLVersion,
+                          ctx->Const.ForceGLSLVersion);
+
    char sha1buf[41];
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       struct gl_shader *sh = prog->Shaders[i];
