@@ -949,12 +949,18 @@ VkResult radv_CreateDevice(
 			goto fail;
 	}
 
+	if (device->physical_device->rad_info.chip_class >= CIK)
+		cik_create_gfx_config(device);
+
 	*pDevice = radv_device_to_handle(device);
 	return VK_SUCCESS;
 
 fail:
 	if (device->trace_bo)
 		device->ws->buffer_destroy(device->trace_bo);
+
+	if (device->gfx_init)
+		device->ws->buffer_destroy(device->gfx_init);
 
 	for (unsigned i = 0; i < RADV_MAX_QUEUE_FAMILIES; i++) {
 		for (unsigned q = 0; q < device->queue_count[i]; q++)
@@ -975,6 +981,9 @@ void radv_DestroyDevice(
 
 	if (device->trace_bo)
 		device->ws->buffer_destroy(device->trace_bo);
+
+	if (device->gfx_init)
+		device->ws->buffer_destroy(device->gfx_init);
 
 	for (unsigned i = 0; i < RADV_MAX_QUEUE_FAMILIES; i++) {
 		for (unsigned q = 0; q < device->queue_count[i]; q++)

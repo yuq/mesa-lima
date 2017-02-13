@@ -511,6 +511,10 @@ struct radv_device {
 	float sample_locations_8x[8][2];
 	float sample_locations_16x[16][2];
 
+	/* CIK and later */
+	uint32_t gfx_init_size_dw;
+	struct radeon_winsys_bo                      *gfx_init;
+
 	struct radeon_winsys_bo                      *trace_bo;
 	uint32_t                                     *trace_id_ptr;
 
@@ -760,6 +764,9 @@ bool radv_cmd_buffer_uses_mec(struct radv_cmd_buffer *cmd_buffer);
 
 void si_init_compute(struct radv_cmd_buffer *cmd_buffer);
 void si_init_config(struct radv_cmd_buffer *cmd_buffer);
+
+void cik_create_gfx_config(struct radv_device *device);
+
 void si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
 		       int count, const VkViewport *viewports);
 void si_write_scissors(struct radeon_winsys_cs *cs, int first,

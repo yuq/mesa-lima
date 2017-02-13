@@ -432,7 +432,38 @@ si_emit_config(struct radv_physical_device *physical_device,
 void si_init_config(struct radv_cmd_buffer *cmd_buffer)
 {
 	struct radv_physical_device *physical_device = cmd_buffer->device->physical_device;
+
 	si_emit_config(physical_device, cmd_buffer->cs);
+}
+
+void
+cik_create_gfx_config(struct radv_device *device)
+{
+	struct radeon_winsys_cs *cs = device->ws->cs_create(device->ws, RING_GFX);
+	if (!cs)
+		return;
+
+	si_emit_config(device->physical_device, cs);
+
+	device->gfx_init = device->ws->buffer_create(device->ws,
+						     cs->cdw * 4, 4096,
+						     RADEON_DOMAIN_GTT,
+						     RADEON_FLAG_CPU_ACCESS);
+	if (!device->gfx_init)
+		goto fail;
+
+	void *map = device->ws->buffer_map(device->gfx_init);
+	if (!map) {
+		device->ws->buffer_destroy(device->gfx_init);
+		device->gfx_init = NULL;
+		goto fail;
+	}
+	memcpy(map, cs->buf, cs->cdw * 4);
+
+	device->ws->buffer_unmap(device->gfx_init);
+	device->gfx_init_size_dw = cs->cdw;
+fail:
+	device->ws->cs_destroy(cs);
 }
 
 static void

@@ -1605,6 +1605,20 @@ VkResult radv_ResetCommandBuffer(
 	return VK_SUCCESS;
 }
 
+static void emit_gfx_buffer_state(struct radv_cmd_buffer *cmd_buffer)
+{
+	struct radv_device *device = cmd_buffer->device;
+	if (device->gfx_init) {
+		uint64_t va = device->ws->buffer_get_va(device->gfx_init);
+		device->ws->cs_add_buffer(cmd_buffer->cs, device->gfx_init, 8);
+		radeon_emit(cmd_buffer->cs, PKT3(PKT3_INDIRECT_BUFFER_CIK, 2, 0));
+		radeon_emit(cmd_buffer->cs, va);
+		radeon_emit(cmd_buffer->cs, (va >> 32) & 0xffff);
+		radeon_emit(cmd_buffer->cs, device->gfx_init_size_dw & 0xffff);
+	} else
+		si_init_config(cmd_buffer);
+}
+
 VkResult radv_BeginCommandBuffer(
 	VkCommandBuffer commandBuffer,
 	const VkCommandBufferBeginInfo *pBeginInfo)
@@ -1626,7 +1640,7 @@ VkResult radv_BeginCommandBuffer(
 				RADV_CMD_FLAG_INV_SMEM_L1 |
 				RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER |
 				RADV_CMD_FLAG_INV_GLOBAL_L2;
-			si_init_config(cmd_buffer);
+			emit_gfx_buffer_state(cmd_buffer);
 			radv_set_db_count_control(cmd_buffer);
 			si_emit_cache_flush(cmd_buffer);
 			break;
