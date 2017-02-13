@@ -233,17 +233,11 @@ Here are some examples of such a note:
 </p>
 <ul>
   <li>CC: &lt;mesa-stable@lists.freedesktop.org&gt;</li>
-  <li>CC: "9.2 10.0" &lt;mesa-stable@lists.freedesktop.org&gt;</li>
-  <li>CC: "10.0" &lt;mesa-stable@lists.freedesktop.org&gt;</li>
 </ul>
 
 Simply adding the CC to the mesa-stable list address is adequate to nominate
-the commit for the most-recently-created stable branch. It is only necessary
-to specify a specific branch name, (such as "9.2 10.0" or "10.0" in the
-examples above), if you want to nominate the commit for an older stable
-branch. And, as in these examples, you can nominate the commit for the older
-branch in addition to the more recent branch, or nominate the commit
-exclusively for the older branch.
+the commit for all the active stable branches. If the commit is not applicable
+for said branch the stable-release manager will reply stating so.
 
 This "CC" syntax for patch nomination will cause patches to automatically be
 copied to the mesa-stable@ mailing list when you use "git send-email" to send
