@@ -185,28 +185,19 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	struct r600_resource *rdst = r600_resource(dst);
 	unsigned tc_l2_flag = get_tc_l2_flag(sctx, coher);
 	unsigned flush_flags = get_flush_flags(sctx, coher);
+	uint64_t dma_clear_size;
 	bool is_first = true;
 
 	if (!size)
 		return;
 
+	dma_clear_size = size & ~3llu;
+
 	/* Mark the buffer range of destination as valid (initialized),
 	 * so that transfer_map knows it should wait for the GPU when mapping
 	 * that range. */
 	util_range_add(&rdst->valid_buffer_range, offset,
-		       offset + size);
-
-	/* Fallback for unaligned clears. */
-	if (size % 4 != 0) {
-		uint8_t *map = r600_buffer_map_sync_with_rings(&sctx->b, rdst,
-							       PIPE_TRANSFER_WRITE);
-		map += offset;
-		for (uint64_t i = 0; i < size; i++) {
-			unsigned byte_within_dword = (offset + i) % 4;
-			*map++ = (value >> (byte_within_dword * 8)) & 0xff;
-		}
-		return;
-	}
+		       offset + dma_clear_size);
 
 	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
 	 * doesn't happen. We don't want an infinite recursion: */
@@ -223,25 +214,31 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	      * of them are moved to SDMA thanks to this. */
 	     !ws->cs_is_buffer_referenced(sctx->b.gfx.cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
-		sctx->b.dma_clear_buffer(ctx, dst, offset, size, value);
-	} else {
+		sctx->b.dma_clear_buffer(ctx, dst, offset, dma_clear_size, value);
+
+		offset += dma_clear_size;
+		size -= dma_clear_size;
+	} else if (dma_clear_size >= 4) {
 		uint64_t va = rdst->gpu_address + offset;
+
+		offset += dma_clear_size;
+		size -= dma_clear_size;
 
 		/* Flush the caches. */
 		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
 				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
 
-		while (size) {
-			unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
+		while (dma_clear_size) {
+			unsigned byte_count = MIN2(dma_clear_size, CP_DMA_MAX_BYTE_COUNT);
 			unsigned dma_flags = tc_l2_flag  | CP_DMA_CLEAR;
 
-			si_cp_dma_prepare(sctx, dst, NULL, byte_count, size, 0,
+			si_cp_dma_prepare(sctx, dst, NULL, byte_count, dma_clear_size, 0,
 					  &is_first, &dma_flags);
 
 			/* Emit the clear packet. */
 			si_emit_cp_dma(sctx, va, value, byte_count, dma_flags, coher);
 
-			size -= byte_count;
+			dma_clear_size -= byte_count;
 			va += byte_count;
 		}
 
@@ -251,6 +248,17 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		/* If it's not a framebuffer fast clear... */
 		if (coher == R600_COHERENCY_SHADER)
 			sctx->b.num_cp_dma_calls++;
+	}
+
+	if (size) {
+		/* Handle non-dword alignment.
+		 *
+		 * This function is called for embedded texture metadata clears,
+		 * but those should always be properly aligned. */
+		assert(dst->target == PIPE_BUFFER);
+		assert(size < 4);
+
+		pipe_buffer_write(ctx, dst, offset, size, &value);
 	}
 }
 
