@@ -78,6 +78,11 @@ patch comment.  For example:
 <pre>
    Bugzilla: https://bugs.freedesktop.org/show_bug.cgi?id=89689
 </pre>
+<li>If a patch addresses a issue introduced with earlier commit, that should be
+noted in the patch comment.  For example:
+<pre>
+   Fixes: d7b3707c612 "util/disk_cache: use stat() to check if entry is a directory"
+</pre>
 <li>If there have been several revisions to a patch during the review
 process, they should be noted such as in this example:
 <pre>
