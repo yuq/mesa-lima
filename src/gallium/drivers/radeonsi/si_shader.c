@@ -98,14 +98,6 @@ enum {
 	LOCAL_ADDR_SPACE = 3,
 };
 
-#define SENDMSG_GS 2
-#define SENDMSG_GS_DONE 3
-
-#define SENDMSG_GS_OP_NOP      (0 << 4)
-#define SENDMSG_GS_OP_CUT      (1 << 4)
-#define SENDMSG_GS_OP_EMIT     (2 << 4)
-#define SENDMSG_GS_OP_EMIT_CUT (3 << 4)
-
 /**
  * Returns a unique index for a semantic name and index. The index must be
  * less than 64, so that a 64-bit bitmask of used inputs or outputs can be
@@ -2572,13 +2564,9 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMValueRef args[2];
 
-	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_NOP | SENDMSG_GS_DONE);
-	args[1] = LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID);
-	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
-			   ctx->voidt, args, 2, 0);
+	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
+			LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
 }
 
 static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -4945,7 +4933,6 @@ static void si_llvm_emit_vertex(
 					    SI_PARAM_GS2VS_OFFSET);
 	LLVMValueRef gs_next_vertex;
 	LLVMValueRef can_emit, kill;
-	LLVMValueRef args[2];
 	unsigned chan, offset;
 	int i;
 	unsigned stream;
@@ -5017,11 +5004,8 @@ static void si_llvm_emit_vertex(
 	LLVMBuildStore(gallivm->builder, gs_next_vertex, ctx->gs_next_vertex[stream]);
 
 	/* Signal vertex emission */
-	args[0] = lp_build_const_int32(gallivm, SENDMSG_GS_OP_EMIT | SENDMSG_GS | (stream << 8));
-	args[1] = LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID);
-	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
-			   ctx->voidt, args, 2, 0);
-
+	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (stream << 8),
+			LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));	
 	if (!use_kill)
 		lp_build_endif(&if_state);
 }
@@ -5033,16 +5017,12 @@ static void si_llvm_emit_primitive(
 	struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMValueRef args[2];
 	unsigned stream;
 
 	/* Signal primitive cut */
 	stream = si_llvm_get_stream(bld_base, emit_data);
-	args[0] = lp_build_const_int32(gallivm,	SENDMSG_GS_OP_CUT | SENDMSG_GS | (stream << 8));
-	args[1] = LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID);
-	lp_build_intrinsic(gallivm->builder, "llvm.SI.sendmsg",
-			   ctx->voidt, args, 2, 0);
+	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8),
+			LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
 }
 
 static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
