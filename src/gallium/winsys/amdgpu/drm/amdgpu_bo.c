@@ -38,6 +38,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+/* Set to 1 for verbose output showing committed sparse buffer ranges. */
+#define DEBUG_SPARSE_COMMITS 0
 
 struct amdgpu_sparse_backing_chunk {
    uint32_t begin, end;
@@ -575,6 +577,61 @@ void amdgpu_bo_slab_free(void *priv, struct pb_slab *pslab)
    FREE(slab);
 }
 
+#if DEBUG_SPARSE_COMMITS
+static void
+sparse_dump(struct amdgpu_winsys_bo *bo, const char *func)
+{
+   fprintf(stderr, "%s: %p (size=%"PRIu64", num_va_pages=%u) @ %s\n"
+                   "Commitments:\n",
+           __func__, bo, bo->base.size, bo->u.sparse.num_va_pages, func);
+
+   struct amdgpu_sparse_backing *span_backing = NULL;
+   uint32_t span_first_backing_page = 0;
+   uint32_t span_first_va_page = 0;
+   uint32_t va_page = 0;
+
+   for (;;) {
+      struct amdgpu_sparse_backing *backing = 0;
+      uint32_t backing_page = 0;
+
+      if (va_page < bo->u.sparse.num_va_pages) {
+         backing = bo->u.sparse.commitments[va_page].backing;
+         backing_page = bo->u.sparse.commitments[va_page].page;
+      }
+
+      if (span_backing &&
+          (backing != span_backing ||
+           backing_page != span_first_backing_page + (va_page - span_first_va_page))) {
+         fprintf(stderr, " %u..%u: backing=%p:%u..%u\n",
+                 span_first_va_page, va_page - 1, span_backing,
+                 span_first_backing_page,
+                 span_first_backing_page + (va_page - span_first_va_page) - 1);
+
+         span_backing = NULL;
+      }
+
+      if (va_page >= bo->u.sparse.num_va_pages)
+         break;
+
+      if (backing && !span_backing) {
+         span_backing = backing;
+         span_first_backing_page = backing_page;
+         span_first_va_page = va_page;
+      }
+
+      va_page++;
+   }
+
+   fprintf(stderr, "Backing:\n");
+
+   list_for_each_entry(struct amdgpu_sparse_backing, backing, &bo->u.sparse.backing, list) {
+      fprintf(stderr, " %p (size=%"PRIu64")\n", backing, backing->bo->base.size);
+      for (unsigned i = 0; i < backing->num_chunks; ++i)
+         fprintf(stderr, "   %u..%u\n", backing->chunks[i].begin, backing->chunks[i].end);
+   }
+}
+#endif
+
 /*
  * Attempt to allocate the given number of backing pages. Fewer pages may be
  * allocated (depending on the fragmentation of existing backing buffers),
@@ -868,6 +925,10 @@ amdgpu_bo_sparse_commit(struct pb_buffer *buf, uint64_t offset, uint64_t size,
    end_va_page = va_page + DIV_ROUND_UP(size, RADEON_SPARSE_PAGE_SIZE);
 
    mtx_lock(&bo->u.sparse.commit_lock);
+
+#if DEBUG_SPARSE_COMMITS
+   sparse_dump(bo, __func__);
+#endif
 
    if (commit) {
       while (va_page < end_va_page) {
