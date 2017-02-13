@@ -1626,7 +1626,7 @@ VkResult radv_BeginCommandBuffer(
 				RADV_CMD_FLAG_INV_SMEM_L1 |
 				RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER |
 				RADV_CMD_FLAG_INV_GLOBAL_L2;
-			si_init_config(cmd_buffer->device->physical_device, cmd_buffer);
+			si_init_config(cmd_buffer);
 			radv_set_db_count_control(cmd_buffer);
 			si_emit_cache_flush(cmd_buffer);
 			break;
@@ -1636,7 +1636,7 @@ VkResult radv_BeginCommandBuffer(
 				RADV_CMD_FLAG_INV_VMEM_L1 |
 				RADV_CMD_FLAG_INV_SMEM_L1 |
 				RADV_CMD_FLAG_INV_GLOBAL_L2;
-			si_init_compute(cmd_buffer->device->physical_device, cmd_buffer);
+			si_init_compute(cmd_buffer);
 			si_emit_cache_flush(cmd_buffer);
 			break;
 		case RADV_QUEUE_TRANSFER:

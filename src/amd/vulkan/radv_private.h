@@ -758,10 +758,8 @@ struct radv_image;
 
 bool radv_cmd_buffer_uses_mec(struct radv_cmd_buffer *cmd_buffer);
 
-void si_init_compute(struct radv_physical_device *physical_device,
-		     struct radv_cmd_buffer *cmd_buffer);
-void si_init_config(struct radv_physical_device *physical_device,
-		    struct radv_cmd_buffer *cmd_buffer);
+void si_init_compute(struct radv_cmd_buffer *cmd_buffer);
+void si_init_config(struct radv_cmd_buffer *cmd_buffer);
 void si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
 		       int count, const VkViewport *viewports);
 void si_write_scissors(struct radeon_winsys_cs *cs, int first,
