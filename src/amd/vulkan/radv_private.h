@@ -686,8 +686,8 @@ struct radv_attachment_state {
 
 struct radv_cmd_state {
 	uint32_t                                      vb_dirty;
-	bool                                          vertex_descriptors_dirty;
 	radv_cmd_dirty_mask_t                         dirty;
+	bool                                          vertex_descriptors_dirty;
 
 	struct radv_pipeline *                        pipeline;
 	struct radv_pipeline *                        emitted_pipeline;
@@ -710,6 +710,7 @@ struct radv_cmd_state {
 	float					     offset_scale;
 	uint32_t                                      descriptors_dirty;
 	uint32_t                                      trace_id;
+	uint32_t                                      last_ia_multi_vgt_param;
 };
 
 struct radv_cmd_pool {
@@ -771,7 +772,8 @@ void si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
 		       int count, const VkViewport *viewports);
 void si_write_scissors(struct radeon_winsys_cs *cs, int first,
 		       int count, const VkRect2D *scissors);
-uint32_t si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer);
+uint32_t si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
+				   bool instanced_or_indirect_draw, uint32_t draw_vertex_count);
 void si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer);
 void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 			   uint64_t src_va, uint64_t dest_va,
@@ -925,6 +927,11 @@ struct radv_multisample_state {
 	unsigned num_samples;
 };
 
+struct radv_prim_vertex_count {
+	uint8_t min;
+	uint8_t incr;
+};
+
 struct radv_pipeline {
 	struct radv_device *                          device;
 	uint32_t                                     dynamic_state_mask;
@@ -956,6 +963,7 @@ struct radv_pipeline {
 			bool prim_restart_enable;
 			unsigned esgs_ring_size;
 			unsigned gsvs_ring_size;
+			struct radv_prim_vertex_count prim_vertex_count;
 		} graphics;
 	};
 

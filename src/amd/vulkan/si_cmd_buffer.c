@@ -565,8 +565,25 @@ si_write_scissors(struct radeon_winsys_cs *cs, int first,
 	}
 }
 
+static inline unsigned
+radv_prims_for_vertices(struct radv_prim_vertex_count *info, unsigned num)
+{
+	if (num == 0)
+		return 0;
+
+	if (info->incr == 0)
+		return 0;
+
+	if (num < info->min)
+		return 0;
+
+	return 1 + ((num - info->min) / info->incr);
+}
+
 uint32_t
-si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
+si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
+			  bool instanced_or_indirect_draw,
+			  uint32_t draw_vertex_count)
 {
 	enum chip_class chip_class = cmd_buffer->device->physical_device->rad_info.chip_class;
 	enum radeon_family family = cmd_buffer->device->physical_device->rad_info.family;
@@ -580,10 +597,14 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 	bool ia_switch_on_eoi = false;
 	bool partial_vs_wave = false;
 	bool partial_es_wave = false;
+	uint32_t num_prims = radv_prims_for_vertices(&cmd_buffer->state.pipeline->graphics.prim_vertex_count, draw_vertex_count);
+	bool multi_instances_smaller_than_primgroup;
 
 	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline))
 		primgroup_size = 64;  /* recommended with a GS */
 
+	multi_instances_smaller_than_primgroup = (instanced_or_indirect_draw ||
+						  num_prims < primgroup_size);
 	/* TODO TES */
 
 	/* TODO linestipple */
@@ -596,12 +617,30 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 		    prim == V_008958_DI_PT_POLYGON ||
 		    prim == V_008958_DI_PT_LINELOOP ||
 		    prim == V_008958_DI_PT_TRIFAN ||
-		    prim == V_008958_DI_PT_TRISTRIP_ADJ)
-			//	    info->primitive_restart ||
-			//	    info->count_from_stream_output)
+		    prim == V_008958_DI_PT_TRISTRIP_ADJ ||
+		    (cmd_buffer->state.pipeline->graphics.prim_restart_enable &&
+		     (family < CHIP_POLARIS10 ||
+		      (prim != V_008958_DI_PT_POINTLIST &&
+		      prim != V_008958_DI_PT_LINESTRIP &&
+		       prim != V_008958_DI_PT_TRISTRIP))))
 			wd_switch_on_eop = true;
 
-		/* TODO HAWAII */
+		/* Hawaii hangs if instancing is enabled and WD_SWITCH_ON_EOP is 0.
+		 * We don't know that for indirect drawing, so treat it as
+		 * always problematic. */
+		if (family == CHIP_HAWAII &&
+		    instanced_or_indirect_draw)
+			wd_switch_on_eop = true;
+
+		/* Performance recommendation for 4 SE Gfx7-8 parts if
+		 * instances are smaller than a primgroup.
+		 * Assume indirect draws always use small instances.
+		 * This is needed for good VS wave utilization.
+		 */
+		if (chip_class <= VI &&
+		    info->max_se == 4 &&
+		    multi_instances_smaller_than_primgroup)
+			wd_switch_on_eop = true;
 
 		/* Required on CIK and later. */
 		if (info->max_se > 2 && !wd_switch_on_eop)
@@ -614,12 +653,11 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 		      (radv_pipeline_has_gs(cmd_buffer->state.pipeline) || max_primgroup_in_wave != 2))))
 			partial_vs_wave = true;
 
-#if 0
 		/* Instancing bug on Bonaire. */
 		if (family == CHIP_BONAIRE && ia_switch_on_eoi &&
-		    (info->indirect || info->instance_count > 1))
+		    instanced_or_indirect_draw)
 			partial_vs_wave = true;
-#endif
+
 		/* If the WD switch is false, the IA switch must be false too. */
 		assert(wd_switch_on_eop || !ia_switch_on_eop);
 	}
@@ -627,19 +665,19 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer)
 	if (ia_switch_on_eoi)
 		partial_es_wave = true;
 
-	/* GS requirement. */
-	if (SI_GS_PER_ES / primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
-		partial_es_wave = true;
+	if (radv_pipeline_has_gs(cmd_buffer->state.pipeline)) {
+		/* GS requirement. */
+		if (SI_GS_PER_ES / primgroup_size >= cmd_buffer->device->gs_table_depth - 3)
+			partial_es_wave = true;
 
-	/* Hw bug with single-primitive instances and SWITCH_ON_EOI
-	 * on multi-SE chips. */
-#if 0
-	if (info->max_se >= 2 && ia_switch_on_eoi &&
-	    (info->indirect ||
-	     (info->instance_count > 1 &&
-	      si_num_prims_for_vertices(info) <= 1)))
-		sctx->b.flags |= SI_CONTEXT_VGT_FLUSH;
-#endif
+		/* Hw bug with single-primitive instances and SWITCH_ON_EOI
+		 * on multi-SE chips. */
+		if (info->max_se >= 2 && ia_switch_on_eoi &&
+		    (instanced_or_indirect_draw &&
+		     num_prims <= 1))
+			cmd_buffer->state.flush_bits |= RADV_CMD_FLAG_VGT_FLUSH;
+	}
+
 	return S_028AA8_SWITCH_ON_EOP(ia_switch_on_eop) |
 		S_028AA8_SWITCH_ON_EOI(ia_switch_on_eoi) |
 		S_028AA8_PARTIAL_VS_WAVE_ON(partial_vs_wave) |
