@@ -71,7 +71,9 @@ extern char *program_invocation_name, *program_invocation_short_name;
 #    include <stdlib.h>
 #    include <libgen.h>
 
-static const char *__getProgramName () {
+static const char *
+__getProgramName()
+{
     static const char *progname;
 
     if (progname == NULL) {
@@ -96,7 +98,9 @@ static const char *__getProgramName () {
 /* This is a hack. It's said to work on OpenBSD, NetBSD and GNU.
  * Rogelio M.Serrano Jr. reported it's also working with UCLIBC. It's
  * used as a last resort, if there is no documented facility available. */
-static const char *__getProgramName () {
+static const char *
+__getProgramName()
+{
     extern const char *__progname;
     char * arg = strrchr(__progname, '/');
     if (arg)
@@ -112,7 +116,9 @@ static const char *__getProgramName () {
 #endif
 
 /** \brief Find an option in an option cache with the name as key */
-static uint32_t findOption (const driOptionCache *cache, const char *name) {
+static uint32_t
+findOption(const driOptionCache *cache, const char *name)
+{
     uint32_t len = strlen (name);
     uint32_t size = 1 << cache->tableSize, mask = size - 1;
     uint32_t hash = 0;
@@ -152,8 +158,9 @@ static int compare (const void *a, const void *b) {
     return strcmp (*(char *const*)a, *(char *const*)b);
 }
 /** \brief Binary search in a string array. */
-static uint32_t bsearchStr (const XML_Char *name,
-			  const XML_Char *elems[], uint32_t count) {
+static uint32_t
+bsearchStr (const XML_Char *name, const XML_Char *elems[], uint32_t count)
+{
     const XML_Char **found;
     found = bsearch (&name, elems, count, sizeof (XML_Char *), compare);
     if (found)
@@ -171,7 +178,9 @@ static uint32_t bsearchStr (const XML_Char *name,
  * returning tail points to the first character that is not part of
  * the integer number. If no number was found then tail points to the
  * start of the input string. */
-static int strToI (const XML_Char *string, const XML_Char **tail, int base) {
+static int
+strToI(const XML_Char *string, const XML_Char **tail, int base)
+{
     int radix = base == 0 ? 10 : base;
     int result = 0;
     int sign = 1;
@@ -231,7 +240,9 @@ static int strToI (const XML_Char *string, const XML_Char **tail, int base) {
  * to the start of the input string.
  *
  * Uses two passes for maximum accuracy. */
-static float strToF (const XML_Char *string, const XML_Char **tail) {
+static float
+strToF(const XML_Char *string, const XML_Char **tail)
+{
     int nDigits = 0, pointPos, exponent;
     float sign = 1.0f, result = 0.0f, scale;
     const XML_Char *start = string, *numStart;
@@ -293,8 +304,9 @@ static float strToF (const XML_Char *string, const XML_Char **tail) {
 }
 
 /** \brief Parse a value of a given type. */
-static unsigned char parseValue (driOptionValue *v, driOptionType type,
-			     const XML_Char *string) {
+static unsigned char
+parseValue(driOptionValue *v, driOptionType type, const XML_Char *string)
+{
     const XML_Char *tail = NULL;
   /* skip leading white-space */
     string += strspn (string, " \f\n\r\t\v");
@@ -335,7 +347,9 @@ static unsigned char parseValue (driOptionValue *v, driOptionType type,
 }
 
 /** \brief Parse a list of ranges of type info->type. */
-static unsigned char parseRanges (driOptionInfo *info, const XML_Char *string) {
+static unsigned char
+parseRanges(driOptionInfo *info, const XML_Char *string)
+{
     XML_Char *cp, *range;
     uint32_t nRanges, i;
     driOptionRange *ranges;
@@ -395,7 +409,9 @@ static unsigned char parseRanges (driOptionInfo *info, const XML_Char *string) {
 }
 
 /** \brief Check if a value is in one of info->ranges. */
-static bool checkValue (const driOptionValue *v, const driOptionInfo *info) {
+static bool
+checkValue(const driOptionValue *v, const driOptionInfo *info)
+{
     uint32_t i;
     assert (info->type != DRI_BOOL); /* should be caught by the parser */
     if (info->nRanges == 0)
@@ -513,7 +529,9 @@ static const XML_Char *OptInfoElems[] = {
  * We're not actually interested in the data. Just make sure this is ok
  * for external configuration tools.
  */
-static void parseEnumAttr (struct OptInfoData *data, const XML_Char **attr) {
+static void
+parseEnumAttr(struct OptInfoData *data, const XML_Char **attr)
+{
     uint32_t i;
     const XML_Char *value = NULL, *text = NULL;
     driOptionValue v;
@@ -536,7 +554,9 @@ static void parseEnumAttr (struct OptInfoData *data, const XML_Char **attr) {
  * We're not actually interested in the data. Just make sure this is ok
  * for external configuration tools.
  */
-static void parseDescAttr (struct OptInfoData *data, const XML_Char **attr) {
+static void
+parseDescAttr(struct OptInfoData *data, const XML_Char **attr)
+{
     uint32_t i;
     const XML_Char *lang = NULL, *text = NULL;
     for (i = 0; attr[i]; i += 2) {
@@ -549,7 +569,9 @@ static void parseDescAttr (struct OptInfoData *data, const XML_Char **attr) {
 }
 
 /** \brief Parse attributes of an option element. */
-static void parseOptInfoAttr (struct OptInfoData *data, const XML_Char **attr) {
+static void
+parseOptInfoAttr(struct OptInfoData *data, const XML_Char **attr)
+{
     enum OptAttr {OA_DEFAULT = 0, OA_NAME, OA_TYPE, OA_VALID, OA_COUNT};
     static const XML_Char *optAttr[] = {"default", "name", "type", "valid"};
     const XML_Char *attrVal[OA_COUNT] = {NULL, NULL, NULL, NULL};
@@ -614,8 +636,9 @@ static void parseOptInfoAttr (struct OptInfoData *data, const XML_Char **attr) {
 }
 
 /** \brief Handler for start element events. */
-static void optInfoStartElem (void *userData, const XML_Char *name,
-			      const XML_Char **attr) {
+static void
+optInfoStartElem(void *userData, const XML_Char *name, const XML_Char **attr)
+{
     struct OptInfoData *data = (struct OptInfoData *)userData;
     enum OptInfoElem elem = bsearchStr (name, OptInfoElems, OI_COUNT);
     switch (elem) {
@@ -667,7 +690,9 @@ static void optInfoStartElem (void *userData, const XML_Char *name,
 }
 
 /** \brief Handler for end element events. */
-static void optInfoEndElem (void *userData, const XML_Char *name) {
+static void
+optInfoEndElem(void *userData, const XML_Char *name)
+{
     struct OptInfoData *data = (struct OptInfoData *)userData;
     enum OptInfoElem elem = bsearchStr (name, OptInfoElems, OI_COUNT);
     switch (elem) {
@@ -691,7 +716,9 @@ static void optInfoEndElem (void *userData, const XML_Char *name) {
     }
 }
 
-void driParseOptionInfo (driOptionCache *info, const char *configOptions) {
+void
+driParseOptionInfo(driOptionCache *info, const char *configOptions)
+{
     XML_Parser p;
     int status;
     struct OptInfoData userData;
@@ -753,7 +780,9 @@ static const XML_Char *OptConfElems[] = {
 };
 
 /** \brief Parse attributes of a device element. */
-static void parseDeviceAttr (struct OptConfData *data, const XML_Char **attr) {
+static void
+parseDeviceAttr(struct OptConfData *data, const XML_Char **attr)
+{
     uint32_t i;
     const XML_Char *driver = NULL, *screen = NULL;
     for (i = 0; attr[i]; i += 2) {
@@ -773,7 +802,9 @@ static void parseDeviceAttr (struct OptConfData *data, const XML_Char **attr) {
 }
 
 /** \brief Parse attributes of an application element. */
-static void parseAppAttr (struct OptConfData *data, const XML_Char **attr) {
+static void
+parseAppAttr(struct OptConfData *data, const XML_Char **attr)
+{
     uint32_t i;
     const XML_Char *exec = NULL;
     for (i = 0; attr[i]; i += 2) {
@@ -786,7 +817,9 @@ static void parseAppAttr (struct OptConfData *data, const XML_Char **attr) {
 }
 
 /** \brief Parse attributes of an option element. */
-static void parseOptConfAttr (struct OptConfData *data, const XML_Char **attr) {
+static void
+parseOptConfAttr(struct OptConfData *data, const XML_Char **attr)
+{
     uint32_t i;
     const XML_Char *name = NULL, *value = NULL;
     for (i = 0; attr[i]; i += 2) {
@@ -813,8 +846,10 @@ static void parseOptConfAttr (struct OptConfData *data, const XML_Char **attr) {
 }
 
 /** \brief Handler for start element events. */
-static void optConfStartElem (void *userData, const XML_Char *name,
-			      const XML_Char **attr) {
+static void
+optConfStartElem(void *userData, const XML_Char *name,
+                 const XML_Char **attr)
+{
     struct OptConfData *data = (struct OptConfData *)userData;
     enum OptConfElem elem = bsearchStr (name, OptConfElems, OC_COUNT);
     switch (elem) {
@@ -858,7 +893,9 @@ static void optConfStartElem (void *userData, const XML_Char *name,
 }
 
 /** \brief Handler for end element events. */
-static void optConfEndElem (void *userData, const XML_Char *name) {
+static void
+optConfEndElem(void *userData, const XML_Char *name)
+{
     struct OptConfData *data = (struct OptConfData *)userData;
     enum OptConfElem elem = bsearchStr (name, OptConfElems, OC_COUNT);
     switch (elem) {
@@ -882,7 +919,9 @@ static void optConfEndElem (void *userData, const XML_Char *name) {
 }
 
 /** \brief Initialize an option cache based on info */
-static void initOptionCache (driOptionCache *cache, const driOptionCache *info) {
+static void
+initOptionCache(driOptionCache *cache, const driOptionCache *info)
+{
     GLuint i, size = 1 << info->tableSize;
     cache->info = info->info;
     cache->tableSize = info->tableSize;
@@ -900,7 +939,9 @@ static void initOptionCache (driOptionCache *cache, const driOptionCache *info) 
 }
 
 /** \brief Parse the named configuration file */
-static void parseOneConfigFile (XML_Parser p) {
+static void
+parseOneConfigFile(XML_Parser p)
+{
 #define BUF_SIZE 0x1000
     struct OptConfData *data = (struct OptConfData *)XML_GetUserData (p);
     int status;
@@ -942,8 +983,10 @@ static void parseOneConfigFile (XML_Parser p) {
 #define SYSCONFDIR "/etc"
 #endif
 
-void driParseConfigFiles (driOptionCache *cache, const driOptionCache *info,
-			  int screenNum, const char *driverName) {
+void
+driParseConfigFiles(driOptionCache *cache, const driOptionCache *info,
+                    int screenNum, const char *driverName)
+{
     char *filenames[2] = { SYSCONFDIR "/drirc", NULL};
     char *home;
     uint32_t i;
@@ -991,8 +1034,10 @@ void driParseConfigFiles (driOptionCache *cache, const driOptionCache *info,
     free(filenames[1]);
 }
 
-void driDestroyOptionInfo (driOptionCache *info) {
-    driDestroyOptionCache (info);
+void
+driDestroyOptionInfo(driOptionCache *info)
+{
+    driDestroyOptionCache(info);
     if (info->info) {
 	uint32_t i, size = 1 << info->tableSize;
 	for (i = 0; i < size; ++i) {
@@ -1005,7 +1050,9 @@ void driDestroyOptionInfo (driOptionCache *info) {
     }
 }
 
-void driDestroyOptionCache (driOptionCache *cache) {
+void
+driDestroyOptionCache(driOptionCache *cache)
+{
     if (cache->info) {
 	GLuint i, size = 1 << cache->tableSize;
 	for (i = 0; i < size; ++i) {
@@ -1016,13 +1063,17 @@ void driDestroyOptionCache (driOptionCache *cache) {
     free(cache->values);
 }
 
-unsigned char driCheckOption (const driOptionCache *cache, const char *name,
-			  driOptionType type) {
+unsigned char
+driCheckOption(const driOptionCache *cache, const char *name,
+               driOptionType type)
+{
     uint32_t i = findOption (cache, name);
     return cache->info[i].name != NULL && cache->info[i].type == type;
 }
 
-unsigned char driQueryOptionb (const driOptionCache *cache, const char *name) {
+unsigned char
+driQueryOptionb(const driOptionCache *cache, const char *name)
+{
     uint32_t i = findOption (cache, name);
   /* make sure the option is defined and has the correct type */
     assert (cache->info[i].name != NULL);
@@ -1030,7 +1081,9 @@ unsigned char driQueryOptionb (const driOptionCache *cache, const char *name) {
     return cache->values[i]._bool;
 }
 
-int driQueryOptioni (const driOptionCache *cache, const char *name) {
+int
+driQueryOptioni(const driOptionCache *cache, const char *name)
+{
     uint32_t i = findOption (cache, name);
   /* make sure the option is defined and has the correct type */
     assert (cache->info[i].name != NULL);
@@ -1038,7 +1091,9 @@ int driQueryOptioni (const driOptionCache *cache, const char *name) {
     return cache->values[i]._int;
 }
 
-float driQueryOptionf (const driOptionCache *cache, const char *name) {
+float
+driQueryOptionf(const driOptionCache *cache, const char *name)
+{
     uint32_t i = findOption (cache, name);
   /* make sure the option is defined and has the correct type */
     assert (cache->info[i].name != NULL);
@@ -1046,7 +1101,9 @@ float driQueryOptionf (const driOptionCache *cache, const char *name) {
     return cache->values[i]._float;
 }
 
-char *driQueryOptionstr (const driOptionCache *cache, const char *name) {
+char *
+driQueryOptionstr(const driOptionCache *cache, const char *name)
+{
     GLuint i = findOption (cache, name);
   /* make sure the option is defined and has the correct type */
     assert (cache->info[i].name != NULL);
