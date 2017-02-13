@@ -197,7 +197,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 		       offset + size);
 
 	/* Fallback for unaligned clears. */
-	if (offset % 4 != 0 || size % 4 != 0) {
+	if (size % 4 != 0) {
 		uint8_t *map = r600_buffer_map_sync_with_rings(&sctx->b, rdst,
 							       PIPE_TRANSFER_WRITE);
 		map += offset;
@@ -211,6 +211,7 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	/* dma_clear_buffer can use clear_buffer on failure. Make sure that
 	 * doesn't happen. We don't want an infinite recursion: */
 	if (sctx->b.dma.cs &&
+	    (offset % 4 == 0) &&
 	    /* CP DMA is very slow. Always use SDMA for big clears. This
 	     * alone improves DeusEx:MD performance by 70%. */
 	    (size > 128 * 1024 ||
