@@ -2909,7 +2909,6 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 	unsigned location;
 	unsigned chan;
 	LLVMValueRef src_c0, src_c1;
-	const char *intr_name;
 	LLVMValueRef src0;
 	int input_index = instr->variables[0]->var->data.location - VARYING_SLOT_VAR0;
 	switch (instr->intrinsic) {
@@ -2981,18 +2980,27 @@ static LLVMValueRef visit_interp(struct nir_to_llvm_context *ctx,
 		interp_param = ac_build_gather_values(&ctx->ac, ij_out, 2);
 
 	}
-	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
+
 	for (chan = 0; chan < 2; chan++) {
-		LLVMValueRef args[4];
 		LLVMValueRef llvm_chan = LLVMConstInt(ctx->i32, chan, false);
 
-		args[0] = llvm_chan;
-		args[1] = attr_number;
-		args[2] = ctx->prim_mask;
-		args[3] = interp_param;
-		result[chan] = ac_emit_llvm_intrinsic(&ctx->ac, intr_name,
-						   ctx->f32, args, args[3] ? 4 : 3,
-						   AC_FUNC_ATTR_READNONE);
+		if (interp_param) {
+			interp_param = LLVMBuildBitCast(ctx->builder,
+							interp_param, LLVMVectorType(ctx->f32, 2), "");
+			LLVMValueRef i = LLVMBuildExtractElement(
+				ctx->builder, interp_param, ctx->i32zero, "");
+			LLVMValueRef j = LLVMBuildExtractElement(
+				ctx->builder, interp_param, ctx->i32one, "");
+
+			result[chan] = ac_build_fs_interp(&ctx->ac,
+							  llvm_chan, attr_number,
+							  ctx->prim_mask, i, j);
+		} else {
+			result[chan] = ac_build_fs_interp_mov(&ctx->ac,
+							      LLVMConstInt(ctx->i32, 2, false),
+							      llvm_chan, attr_number,
+							      ctx->prim_mask);
+		}
 	}
 	return ac_build_gather_values(&ctx->ac, result, 2);
 }
@@ -3991,9 +3999,10 @@ static void interp_fs_input(struct nir_to_llvm_context *ctx,
 			    LLVMValueRef prim_mask,
 			    LLVMValueRef result[4])
 {
-	const char *intr_name;
 	LLVMValueRef attr_number;
 	unsigned chan;
+	LLVMValueRef i, j;
+	bool interp = interp_param != NULL;
 
 	attr_number = LLVMConstInt(ctx->i32, attr, false);
 
@@ -4007,19 +4016,31 @@ static void interp_fs_input(struct nir_to_llvm_context *ctx,
 	 * fs.interp cannot be used on integers, because they can be equal
 	 * to NaN.
 	 */
-	intr_name = interp_param ? "llvm.SI.fs.interp" : "llvm.SI.fs.constant";
+	if (interp) {
+		interp_param = LLVMBuildBitCast(ctx->builder, interp_param,
+						LLVMVectorType(ctx->f32, 2), "");
+
+		i = LLVMBuildExtractElement(ctx->builder, interp_param,
+						ctx->i32zero, "");
+		j = LLVMBuildExtractElement(ctx->builder, interp_param,
+						ctx->i32one, "");
+	}
 
 	for (chan = 0; chan < 4; chan++) {
-		LLVMValueRef args[4];
 		LLVMValueRef llvm_chan = LLVMConstInt(ctx->i32, chan, false);
 
-		args[0] = llvm_chan;
-		args[1] = attr_number;
-		args[2] = prim_mask;
-		args[3] = interp_param;
-		result[chan] = ac_emit_llvm_intrinsic(&ctx->ac, intr_name,
-						   ctx->f32, args, args[3] ? 4 : 3,
-						  AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND);
+		if (interp) {
+			result[chan] = ac_build_fs_interp(&ctx->ac,
+							  llvm_chan,
+							  attr_number,
+							  prim_mask, i, j);
+		} else {
+			result[chan] = ac_build_fs_interp_mov(&ctx->ac,
+							      LLVMConstInt(ctx->i32, 2, false),
+							      llvm_chan,
+							      attr_number,
+							      prim_mask);
+		}
 	}
 }
 
