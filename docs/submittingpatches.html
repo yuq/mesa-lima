@@ -25,6 +25,7 @@
 <li><a href="#reviewing">Reviewing Patches</a>
 <li><a href="#nominations">Nominating a commit for a stable branch</a>
 <li><a href="#criteria">Criteria for accepting patches to the stable branch</a>
+<li><a href="#backports">Sending backports for the stable branch</a>
 <li><a href="#gittips">Git tips</a>
 </ul>
 
@@ -287,9 +288,9 @@ that have been nominated.
   <li>Patch must be a bug fix and not a new feature.
 
   Note: An exception to this rule, are hardware-enabling "features". For
-  example, backports of new code to support a newly-developed hardware product
-  can be accepted if they can be reasonably determined not to have effects on
-  other hardware.</li>
+  example, <a href="#backports">backports</a> of new code to support a
+  newly-developed hardware product can be accepted if they can be reasonably
+  determined not to have effects on other hardware.</li>
 
   <li>Patch must be reviewed, For example, the commit message has Reviewed-by,
   Signed-off-by, or Tested-by tags from someone but the author.</li>
@@ -312,6 +313,16 @@ stable branches, for example, to drop a previously-picked patch that was later
 identified as causing a regression). These force-pushes may cause changes to
 be lost from the stable branch if developers push things directly. Consider
 yourself warned.
+
+<h2 id="backports">Sending backports for the stable branch</h2>
+By default merge conflicts are resolved by the stable-release manager. In which
+case he/she should provide a comment about the changes required, alongside the
+<code>Conflicts</code> section. Summary of which will be provided in the
+<a href="releasing.html#prerelease">pre-release</a> announcement.
+<br>
+Developers are interested in sending backports are recommended to use either a
+<code>[BACKPORT #branch]</code> subject prefix or provides similar information
+within the commit summary.
 
 <h2 id="gittips">Git tips</h2>
 
