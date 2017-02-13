@@ -44,14 +44,6 @@ enum radeon_llvm_calling_convention {
 #define RADEON_LLVM_MAX_INPUTS (VARYING_SLOT_VAR31 + 1)
 #define RADEON_LLVM_MAX_OUTPUTS (VARYING_SLOT_VAR31 + 1)
 
-#define SENDMSG_GS 2
-#define SENDMSG_GS_DONE 3
-
-#define SENDMSG_GS_OP_NOP      (0 << 4)
-#define SENDMSG_GS_OP_CUT      (1 << 4)
-#define SENDMSG_GS_OP_EMIT     (2 << 4)
-#define SENDMSG_GS_OP_EMIT_CUT (3 << 4)
-
 enum desc_type {
 	DESC_IMAGE,
 	DESC_FMASK,
@@ -3063,24 +3055,15 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	gs_next_vertex = LLVMBuildAdd(ctx->builder, gs_next_vertex,
 				      ctx->i32one, "");
 	LLVMBuildStore(ctx->builder, gs_next_vertex, ctx->gs_next_vertex);
-	args[0] = LLVMConstInt(ctx->i32, SENDMSG_GS_OP_EMIT | SENDMSG_GS | (0 << 8), false);
-	args[1] = ctx->gs_wave_id;
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.sendmsg",
-			       ctx->voidt, args, 2, 0);
+
+	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
 }
 
 static void
 visit_end_primitive(struct nir_to_llvm_context *ctx,
 		    nir_intrinsic_instr *instr)
 {
-	LLVMValueRef args[2];
-
-	assert(instr->const_index[0] == 0);
-	args[0] = LLVMConstInt(ctx->i32, SENDMSG_GS_OP_CUT | SENDMSG_GS | (0 << 8), false);
-	args[1] = ctx->gs_wave_id;
-
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.sendmsg", ctx->voidt,
-			       args, 2, 0);
+	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
 }
 
 static void visit_intrinsic(struct nir_to_llvm_context *ctx,
@@ -4703,12 +4686,7 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 static void
 emit_gs_epilogue(struct nir_to_llvm_context *ctx)
 {
-	LLVMValueRef args[2];
-
-	args[0] = LLVMConstInt(ctx->i32, SENDMSG_GS_OP_NOP | SENDMSG_GS_DONE, false);
-	args[1] = ctx->gs_wave_id;
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.sendmsg",
-			       ctx->voidt, args, 2, 0);
+	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE, ctx->gs_wave_id);
 }
 
 static void
