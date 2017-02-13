@@ -10,8 +10,7 @@
 # $ bin/get-extra-pick-list.sh | tee picklist
 
 # Use the last branchpoint as our limit for the search
-# XXX: there should be a better way for this
-latest_branchpoint=`git branch | grep \* | cut -c 3-`-branchpoint
+latest_branchpoint=`git merge-base origin/master HEAD`
 
 # Grep for commits with "cherry picked from commit" in the commit message.
 git log --reverse --grep="cherry picked from commit" $latest_branchpoint..HEAD |\
