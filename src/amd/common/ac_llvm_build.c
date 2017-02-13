@@ -750,3 +750,16 @@ ac_emit_ddxy(struct ac_llvm_context *ctx,
 	result = LLVMBuildFSub(ctx->builder, trbl, tl, "");
 	return result;
 }
+
+void
+ac_emit_sendmsg(struct ac_llvm_context *ctx,
+		uint32_t msg,
+		LLVMValueRef wave_id)
+{
+	LLVMValueRef args[2];
+	const char *intr_name = (HAVE_LLVM < 0x0400) ? "llvm.SI.sendmsg" : "llvm.amdgcn.s.sendmsg";
+	args[0] = LLVMConstInt(ctx->i32, msg, false);
+	args[1] = wave_id;
+	ac_emit_llvm_intrinsic(ctx, intr_name, ctx->voidt,
+			       args, 2, 0);
+}

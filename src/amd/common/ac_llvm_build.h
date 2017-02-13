@@ -170,6 +170,18 @@ ac_emit_ddxy(struct ac_llvm_context *ctx,
 	     LLVMValueRef lds,
 	     LLVMValueRef val);
 
+#define AC_SENDMSG_GS 2
+#define AC_SENDMSG_GS_DONE 3
+
+#define AC_SENDMSG_GS_OP_NOP      (0 << 4)
+#define AC_SENDMSG_GS_OP_CUT      (1 << 4)
+#define AC_SENDMSG_GS_OP_EMIT     (2 << 4)
+#define AC_SENDMSG_GS_OP_EMIT_CUT (3 << 4)
+
+void ac_emit_sendmsg(struct ac_llvm_context *ctx,
+		     uint32_t msg,
+		     LLVMValueRef wave_id);
+
 #ifdef __cplusplus
 }
 #endif
