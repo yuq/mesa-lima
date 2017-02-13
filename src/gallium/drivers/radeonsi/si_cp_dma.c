@@ -223,35 +223,34 @@ static void si_clear_buffer(struct pipe_context *ctx, struct pipe_resource *dst,
 	     !ws->cs_is_buffer_referenced(sctx->b.gfx.cs, rdst->buf,
 				          RADEON_USAGE_READWRITE))) {
 		sctx->b.dma_clear_buffer(ctx, dst, offset, size, value);
-		return;
+	} else {
+		uint64_t va = rdst->gpu_address + offset;
+
+		/* Flush the caches. */
+		sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
+				 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
+
+		while (size) {
+			unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
+			unsigned dma_flags = tc_l2_flag  | CP_DMA_CLEAR;
+
+			si_cp_dma_prepare(sctx, dst, NULL, byte_count, size, 0,
+					  &is_first, &dma_flags);
+
+			/* Emit the clear packet. */
+			si_emit_cp_dma(sctx, va, value, byte_count, dma_flags, coher);
+
+			size -= byte_count;
+			va += byte_count;
+		}
+
+		if (tc_l2_flag)
+			rdst->TC_L2_dirty = true;
+
+		/* If it's not a framebuffer fast clear... */
+		if (coher == R600_COHERENCY_SHADER)
+			sctx->b.num_cp_dma_calls++;
 	}
-
-	uint64_t va = rdst->gpu_address + offset;
-
-	/* Flush the caches. */
-	sctx->b.flags |= SI_CONTEXT_PS_PARTIAL_FLUSH |
-	                 SI_CONTEXT_CS_PARTIAL_FLUSH | flush_flags;
-
-	while (size) {
-		unsigned byte_count = MIN2(size, CP_DMA_MAX_BYTE_COUNT);
-		unsigned dma_flags = tc_l2_flag  | CP_DMA_CLEAR;
-
-		si_cp_dma_prepare(sctx, dst, NULL, byte_count, size, 0,
-				  &is_first, &dma_flags);
-
-		/* Emit the clear packet. */
-		si_emit_cp_dma(sctx, va, value, byte_count, dma_flags, coher);
-
-		size -= byte_count;
-		va += byte_count;
-	}
-
-	if (tc_l2_flag)
-		rdst->TC_L2_dirty = true;
-
-	/* If it's not a framebuffer fast clear... */
-	if (coher == R600_COHERENCY_SHADER)
-		sctx->b.num_cp_dma_calls++;
 }
 
 /**
