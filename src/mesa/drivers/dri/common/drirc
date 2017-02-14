@@ -112,5 +112,9 @@ TODO: document the other workarounds.
         <application name="Crookz - The Big Heist" executable="Crookz">
             <option name="allow_higher_compat_version" value="true" />
         </application>
+
+        <application name="Tropico 5" executable="Tropico5">
+            <option name="allow_higher_compat_version" value="true" />
+        </application>
     </device>
 </driconf>
