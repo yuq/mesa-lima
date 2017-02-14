@@ -582,18 +582,6 @@ static const struct pb_vtbl radeon_bo_vtbl = {
     /* other functions are never called */
 };
 
-#ifndef RADEON_GEM_GTT_WC
-#define RADEON_GEM_GTT_WC		(1 << 2)
-#endif
-#ifndef RADEON_GEM_CPU_ACCESS
-/* BO is expected to be accessed by the CPU */
-#define RADEON_GEM_CPU_ACCESS		(1 << 3)
-#endif
-#ifndef RADEON_GEM_NO_CPU_ACCESS
-/* CPU access is not expected to work for this BO */
-#define RADEON_GEM_NO_CPU_ACCESS	(1 << 4)
-#endif
-
 static struct radeon_bo *radeon_create_bo(struct radeon_drm_winsys *rws,
                                           unsigned size, unsigned alignment,
                                           unsigned usage,

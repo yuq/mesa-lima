@@ -46,23 +46,6 @@
 #include <fcntl.h>
 #include <radeon_surface.h>
 
-#ifndef RADEON_INFO_ACTIVE_CU_COUNT
-#define RADEON_INFO_ACTIVE_CU_COUNT 0x20
-#endif
-
-#ifndef RADEON_INFO_CURRENT_GPU_TEMP
-#define RADEON_INFO_CURRENT_GPU_TEMP	0x21
-#define RADEON_INFO_CURRENT_GPU_SCLK	0x22
-#define RADEON_INFO_CURRENT_GPU_MCLK	0x23
-#define RADEON_INFO_READ_REG		0x24
-#endif
-
-#define RADEON_INFO_VA_UNMAP_WORKING	0x25
-
-#ifndef RADEON_INFO_GPU_RESET_COUNTER
-#define RADEON_INFO_GPU_RESET_COUNTER   0x26
-#endif
-
 static struct util_hash_table *fd_tab = NULL;
 pipe_static_mutex(fd_tab_mutex);
 
