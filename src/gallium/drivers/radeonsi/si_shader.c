@@ -8240,7 +8240,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct pipe_debug_callback *debug)
 {
 	struct si_shader_selector *sel = shader->selector;
-	struct si_shader *mainp = sel->main_shader_part;
+	struct si_shader *mainp = *si_get_main_shader_part(sel, &shader->key);
 	int r;
 
 	/* LS, ES, VS are compiled on demand if the main part hasn't been

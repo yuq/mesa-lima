@@ -1236,15 +1236,39 @@ again:
 	shader->key = *key;
 	shader->compiler_ctx_state = *compiler_state;
 
+	/* Compile the main shader part if it doesn't exist. This can happen
+	 * if the initial guess was wrong. */
+	struct si_shader **mainp = si_get_main_shader_part(sel, key);
 	bool is_pure_monolithic =
 		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
+
+	if (!*mainp && !is_pure_monolithic) {
+		struct si_shader *main_part = CALLOC_STRUCT(si_shader);
+
+		if (!main_part) {
+			FREE(shader);
+			pipe_mutex_unlock(sel->mutex);
+			return -ENOMEM; /* skip the draw call */
+		}
+
+		main_part->selector = sel;
+		main_part->key.as_es = key->as_es;
+		main_part->key.as_ls = key->as_ls;
+
+		if (si_compile_tgsi_shader(sscreen, compiler_state->tm,
+					   main_part, false,
+					   &compiler_state->debug) != 0) {
+			FREE(main_part);
+			FREE(shader);
+			pipe_mutex_unlock(sel->mutex);
+			return -ENOMEM; /* skip the draw call */
+		}
+		*mainp = main_part;
+	}
 
 	/* Monolithic-only shaders don't make a distinction between optimized
 	 * and unoptimized. */
 	shader->is_monolithic =
-		!sel->main_shader_part ||
-		sel->main_shader_part->key.as_ls != key->as_ls ||
-		sel->main_shader_part->key.as_es != key->as_es ||
 		is_pure_monolithic ||
 		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0;
 
@@ -1399,7 +1423,7 @@ void si_init_shader_selector_async(void *job, int thread_index)
 			}
 		}
 
-		sel->main_shader_part = shader;
+		*si_get_main_shader_part(sel, &shader->key) = shader;
 
 		/* Unset "outputs_written" flags for outputs converted to
 		 * DEFAULT_VAL, so that later inter-shader optimizations don't
@@ -1869,6 +1893,10 @@ static void si_delete_shader_selector(struct pipe_context *ctx, void *state)
 
 	if (sel->main_shader_part)
 		si_delete_shader(sctx, sel->main_shader_part);
+	if (sel->main_shader_part_ls)
+		si_delete_shader(sctx, sel->main_shader_part_ls);
+	if (sel->main_shader_part_es)
+		si_delete_shader(sctx, sel->main_shader_part_es);
 	if (sel->gs_copy_shader)
 		si_delete_shader(sctx, sel->gs_copy_shader);
 

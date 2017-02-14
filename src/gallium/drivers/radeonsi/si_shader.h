@@ -287,6 +287,8 @@ struct si_shader_selector {
 	 * uploaded to a buffer).
 	 */
 	struct si_shader	*main_shader_part;
+	struct si_shader	*main_shader_part_ls; /* as_ls is set in the key */
+	struct si_shader	*main_shader_part_es; /* as_es is set in the key */
 
 	struct si_shader	*gs_copy_shader;
 
@@ -584,5 +586,19 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
 				    bool writes_samplemask);
 const char *si_get_shader_name(struct si_shader *shader, unsigned processor);
+
+/* Inline helpers. */
+
+/* Return the pointer to the main shader part's pointer. */
+static inline struct si_shader **
+si_get_main_shader_part(struct si_shader_selector *sel,
+			struct si_shader_key *key)
+{
+	if (key->as_ls)
+		return &sel->main_shader_part_ls;
+	if (key->as_es)
+		return &sel->main_shader_part_es;
+	return &sel->main_shader_part;
+}
 
 #endif
