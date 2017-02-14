@@ -364,7 +364,7 @@ static void declare_input_vs(
 				    ctx->param_vertex_index0 +
 				    input_index);
 
-	fix_fetch = ctx->shader->key.mono.vs.fix_fetch[input_index];
+	fix_fetch = ctx->shader->key.mono.vs_fix_fetch[input_index];
 
 	/* Do multiple loads for special formats. */
 	switch (fix_fetch) {
@@ -2427,7 +2427,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 	lds_base = get_tcs_in_current_patch_offset(ctx);
 	lds_base = LLVMBuildAdd(gallivm->builder, lds_base, lds_vertex_offset, "");
 
-	inputs = ctx->shader->key.mono.tcs.inputs_to_copy;
+	inputs = ctx->shader->key.mono.ff_tcs_inputs_to_copy;
 	while (inputs) {
 		unsigned i = u_bit_scan64(&inputs);
 
@@ -6661,15 +6661,15 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
 
-		fprintf(f, "  mono.vs.fix_fetch = {");
+		fprintf(f, "  mono.vs_fix_fetch = {");
 		for (i = 0; i < SI_MAX_ATTRIBS; i++)
-			fprintf(f, !i ? "%u" : ", %u", key->mono.vs.fix_fetch[i]);
+			fprintf(f, !i ? "%u" : ", %u", key->mono.vs_fix_fetch[i]);
 		fprintf(f, "}\n");
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:
 		fprintf(f, "  part.tcs.epilog.prim_mode = %u\n", key->part.tcs.epilog.prim_mode);
-		fprintf(f, "  mono.tcs.inputs_to_copy = 0x%"PRIx64"\n", key->mono.tcs.inputs_to_copy);
+		fprintf(f, "  mono.ff_tcs_inputs_to_copy = 0x%"PRIx64"\n", key->mono.ff_tcs_inputs_to_copy);
 		break;
 
 	case PIPE_SHADER_TESS_EVAL:

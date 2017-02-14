@@ -451,14 +451,10 @@ struct si_shader_key {
 	unsigned as_ls:1; /* local shader, which precedes TCS */
 
 	/* Flags for monolithic compilation only. */
-	union {
-		struct {
-			/* One byte for every input: SI_FIX_FETCH_* enums. */
-			uint8_t		fix_fetch[SI_MAX_ATTRIBS];
-		} vs;
-		struct {
-			uint64_t	inputs_to_copy; /* for fixed-func TCS */
-		} tcs;
+	struct {
+		/* One byte for every input: SI_FIX_FETCH_* enums. */
+		uint8_t		vs_fix_fetch[SI_MAX_ATTRIBS];
+		uint64_t	ff_tcs_inputs_to_copy; /* for fixed-func TCS */
 	} mono;
 
 	/* Optimization flags for asynchronous compilation only. */

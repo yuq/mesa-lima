@@ -1035,7 +1035,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				key->part.vs.prolog.instance_divisors[i] =
 					sctx->vertex_elements->elements[i].instance_divisor;
 
-			memcpy(key->mono.vs.fix_fetch,
+			memcpy(key->mono.vs_fix_fetch,
 			       sctx->vertex_elements->fix_fetch, count);
 		}
 		if (sctx->tes_shader.cso)
@@ -1056,7 +1056,7 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 			sctx->tes_shader.cso->info.reads_tess_factors;
 
 		if (sel == sctx->fixed_func_tcs_shader.cso)
-			key->mono.tcs.inputs_to_copy = sctx->vs_shader.cso->outputs_written;
+			key->mono.ff_tcs_inputs_to_copy = sctx->vs_shader.cso->outputs_written;
 		break;
 	case PIPE_SHADER_TESS_EVAL:
 		if (sctx->gs_shader.cso)
