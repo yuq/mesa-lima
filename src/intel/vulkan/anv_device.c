@@ -33,6 +33,7 @@
 #include "anv_private.h"
 #include "util/strtod.h"
 #include "util/debug.h"
+#include "util/vk_util.h"
 
 #include "genxml/gen7_pack.h"
 
@@ -511,10 +512,10 @@ void anv_GetPhysicalDeviceFeatures2KHR(
 {
    anv_GetPhysicalDeviceFeatures(physicalDevice, &pFeatures->features);
 
-   for (struct anv_common *c = pFeatures->pNext; c != NULL; c = c->pNext) {
-      switch (c->sType) {
+   vk_foreach_struct(ext, pFeatures->pNext) {
+      switch (ext->sType) {
       default:
-         anv_debug_ignored_stype(c->sType);
+         anv_debug_ignored_stype(ext->sType);
          break;
       }
    }
@@ -669,10 +670,10 @@ void anv_GetPhysicalDeviceProperties2KHR(
 {
    anv_GetPhysicalDeviceProperties(physicalDevice, &pProperties->properties);
 
-   for (struct anv_common *c = pProperties->pNext; c != NULL; c = c->pNext) {
-      switch (c->sType) {
+   vk_foreach_struct(ext, pProperties->pNext) {
+      switch (ext->sType) {
       default:
-         anv_debug_ignored_stype(c->sType);
+         anv_debug_ignored_stype(ext->sType);
          break;
       }
    }
@@ -746,11 +747,10 @@ void anv_GetPhysicalDeviceQueueFamilyProperties2KHR(
    anv_get_queue_family_properties(phys_dev,
          &pQueueFamilyProperties->queueFamilyProperties);
 
-   for (struct anv_common *c = pQueueFamilyProperties->pNext;
-        c != NULL; c = c->pNext) {
-      switch (c->sType) {
+   vk_foreach_struct(ext, pQueueFamilyProperties->pNext) {
+      switch (ext->sType) {
       default:
-         anv_debug_ignored_stype(c->sType);
+         anv_debug_ignored_stype(ext->sType);
          break;
       }
    }
@@ -815,11 +815,10 @@ void anv_GetPhysicalDeviceMemoryProperties2KHR(
    anv_GetPhysicalDeviceMemoryProperties(physicalDevice,
                                          &pMemoryProperties->memoryProperties);
 
-   for (struct anv_common *c = pMemoryProperties->pNext;
-        c != NULL; c = c->pNext) {
-      switch (c->sType) {
+   vk_foreach_struct(ext, pMemoryProperties->pNext) {
+      switch (ext->sType) {
       default:
-         anv_debug_ignored_stype(c->sType);
+         anv_debug_ignored_stype(ext->sType);
          break;
       }
    }

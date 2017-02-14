@@ -24,6 +24,8 @@
 #include "anv_private.h"
 #include "vk_format_info.h"
 
+#include "util/vk_util.h"
+
 /*
  * gcc-4 and earlier don't allow compound literals where a constant
  * is required in -std=c99/gnu99 mode, so we can't use ISL_SWIZZLE()
@@ -470,11 +472,10 @@ void anv_GetPhysicalDeviceFormatProperties2KHR(
    anv_GetPhysicalDeviceFormatProperties(physicalDevice, format,
                                          &pFormatProperties->formatProperties);
 
-   for (struct anv_common *c = pFormatProperties->pNext;
-        c != NULL; c = c->pNext) {
-      switch (c->sType) {
+   vk_foreach_struct(ext, pFormatProperties->pNext) {
+      switch (ext->sType) {
       default:
-         anv_debug_ignored_stype(c->sType);
+         anv_debug_ignored_stype(ext->sType);
          break;
       }
    }
@@ -668,11 +669,10 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
    if (result != VK_SUCCESS)
       return result;
 
-   for (struct anv_common *c = pImageFormatProperties->pNext;
-        c != NULL; c = c->pNext) {
-      switch (c->sType) {
+   vk_foreach_struct(ext, pImageFormatProperties->pNext) {
+      switch (ext->sType) {
       default:
-         anv_debug_ignored_stype(c->sType);
+         anv_debug_ignored_stype(ext->sType);
          break;
       }
    }
