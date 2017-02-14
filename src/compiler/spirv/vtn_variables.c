@@ -1054,8 +1054,12 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
       assert(nir_var->constant_initializer != NULL);
       nir_var->data.read_only = true;
       break;
+   case SpvDecorationNonReadable:
+      nir_var->data.image.write_only = true;
+      break;
    case SpvDecorationNonWritable:
       nir_var->data.read_only = true;
+      nir_var->data.image.read_only = true;
       break;
    case SpvDecorationComponent:
       nir_var->data.location_frac = dec->literals[0];
@@ -1107,7 +1111,6 @@ apply_var_decoration(struct vtn_builder *b, nir_variable *nir_var,
    case SpvDecorationAliased:
    case SpvDecorationVolatile:
    case SpvDecorationCoherent:
-   case SpvDecorationNonReadable:
    case SpvDecorationUniform:
    case SpvDecorationStream:
    case SpvDecorationOffset:
