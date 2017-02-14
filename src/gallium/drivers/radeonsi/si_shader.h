@@ -423,10 +423,6 @@ struct si_shader_key {
 	/* Prolog and epilog flags. */
 	union {
 		struct {
-			struct si_ps_prolog_bits prolog;
-			struct si_ps_epilog_bits epilog;
-		} ps;
-		struct {
 			struct si_vs_prolog_bits prolog;
 			struct si_vs_epilog_bits epilog;
 		} vs;
@@ -439,13 +435,17 @@ struct si_shader_key {
 		struct {
 			struct si_gs_prolog_bits prolog;
 		} gs;
+		struct {
+			struct si_ps_prolog_bits prolog;
+			struct si_ps_epilog_bits epilog;
+		} ps;
 	} part;
 
 	/* These two are initially set according to the NEXT_SHADER property,
 	 * or guessed if the property doesn't seem correct.
 	 */
-	unsigned as_es:1; /* export shader */
-	unsigned as_ls:1; /* local shader */
+	unsigned as_es:1; /* export shader, which precedes GS */
+	unsigned as_ls:1; /* local shader, which precedes TCS */
 
 	/* Flags for monolithic compilation only. */
 	union {
