@@ -21,18 +21,17 @@
  * IN THE SOFTWARE.
  */
 
-#include <dlfcn.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <fcntl.h>
 
 #include "anv_private.h"
 #include "util/strtod.h"
 #include "util/debug.h"
+#include "util/build_id.h"
 #include "util/vk_util.h"
 
 #include "genxml/gen7_pack.h"
@@ -56,30 +55,17 @@ compiler_perf_log(void *data, const char *fmt, ...)
 }
 
 static bool
-anv_get_function_timestamp(void *ptr, uint32_t* timestamp)
-{
-   Dl_info info;
-   struct stat st;
-   if (!dladdr(ptr, &info) || !info.dli_fname)
-      return false;
-
-   if (stat(info.dli_fname, &st))
-      return false;
-
-   *timestamp = st.st_mtim.tv_sec;
-   return true;
-}
-
-static bool
 anv_device_get_cache_uuid(void *uuid)
 {
-   uint32_t timestamp;
-
-   memset(uuid, 0, VK_UUID_SIZE);
-   if (!anv_get_function_timestamp(anv_device_get_cache_uuid, &timestamp))
+   const struct build_id_note *note = build_id_find_nhdr("libvulkan_intel.so");
+   if (!note)
       return false;
 
-   snprintf(uuid, VK_UUID_SIZE, "anv-%d", timestamp);
+   unsigned len = build_id_length(note);
+   if (len < VK_UUID_SIZE)
+      return false;
+
+   build_id_read(note, uuid, VK_UUID_SIZE);
    return true;
 }
 
