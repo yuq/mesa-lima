@@ -1236,14 +1236,17 @@ again:
 	shader->key = *key;
 	shader->compiler_ctx_state = *compiler_state;
 
+	bool is_pure_monolithic =
+		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
+
 	/* Monolithic-only shaders don't make a distinction between optimized
 	 * and unoptimized. */
 	shader->is_monolithic =
 		!sel->main_shader_part ||
 		sel->main_shader_part->key.as_ls != key->as_ls ||
 		sel->main_shader_part->key.as_es != key->as_es ||
-		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0 ||
-		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
+		is_pure_monolithic ||
+		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0;
 
 	shader->is_optimized =
 		!sscreen->use_monolithic_shaders &&
@@ -1261,6 +1264,7 @@ again:
 
 	/* If it's an optimized shader, compile it asynchronously. */
 	if (shader->is_optimized &&
+	    !is_pure_monolithic &&
 	    thread_index < 0) {
 		/* Compile it asynchronously. */
 		util_queue_add_job(&sscreen->shader_compiler_queue,
