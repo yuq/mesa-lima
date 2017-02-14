@@ -128,10 +128,6 @@ DRI_CONF_END
 };
 #endif
 
-#ifndef RADEON_INFO_TILE_CONFIG
-#define RADEON_INFO_TILE_CONFIG 0x6
-#endif
-
 static int
 radeonGetParam(__DRIscreen *sPriv, int param, void *value)
 {
@@ -148,8 +144,8 @@ radeonGetParam(__DRIscreen *sPriv, int param, void *value)
   case RADEON_PARAM_NUM_Z_PIPES:
     info.request = RADEON_INFO_NUM_Z_PIPES;
     break;
-  case RADEON_INFO_TILE_CONFIG:
-    info.request = RADEON_INFO_TILE_CONFIG;
+  case RADEON_INFO_TILING_CONFIG:
+    info.request = RADEON_INFO_TILING_CONFIG;
     break;
   default:
     return -EINVAL;
