@@ -4849,7 +4849,7 @@ ast_declarator_list::hir(exec_list *instructions,
       if ((var->data.mode == ir_var_auto || var->data.mode == ir_var_temporary)
           && (var->type->is_numeric() || var->type->is_boolean())
           && state->zero_init) {
-         const ir_constant_data data = {0};
+         const ir_constant_data data = { { 0 } };
          var->data.has_initializer = true;
          var->constant_initializer = new(var) ir_constant(var->type, &data);
       }
