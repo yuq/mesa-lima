@@ -108,5 +108,9 @@ TODO: document the other workarounds.
         <application name="Worms W.M.D" executable="Worms W.M.Dx64">
             <option name="allow_higher_compat_version" value="true" />
         </application>
+
+        <application name="Crookz - The Big Heist" executable="Crookz">
+            <option name="allow_higher_compat_version" value="true" />
+        </application>
     </device>
 </driconf>
