@@ -445,6 +445,13 @@ cik_create_gfx_config(struct radv_device *device)
 
 	si_emit_config(device->physical_device, cs);
 
+	while (cs->cdw & 7) {
+		if (device->physical_device->rad_info.gfx_ib_pad_with_type2)
+			radeon_emit(cs, 0x80000000);
+		else
+			radeon_emit(cs, 0xffff1000);
+	}
+
 	device->gfx_init = device->ws->buffer_create(device->ws,
 						     cs->cdw * 4, 4096,
 						     RADEON_DOMAIN_GTT,
