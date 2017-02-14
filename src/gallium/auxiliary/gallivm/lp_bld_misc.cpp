@@ -93,6 +93,7 @@
 #include "util/u_cpu_detect.h"
 
 #include "lp_bld_misc.h"
+#include "lp_bld_debug.h"
 
 namespace {
 
@@ -619,6 +620,16 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
 
    builder.setMAttrs(MAttrs);
 
+   if (gallivm_debug & (GALLIVM_DEBUG_IR | GALLIVM_DEBUG_ASM | GALLIVM_DEBUG_DUMP_BC)) {
+      int n = MAttrs.size();
+      if (n > 0) {
+         debug_printf("llc -mattr option(s): ");
+         for (int i = 0; i < n; i++)
+            debug_printf("%s%s", MAttrs[i].c_str(), (i < n - 1) ? "," : "");
+         debug_printf("\n");
+      }
+   }
+
 #if HAVE_LLVM >= 0x0305
    StringRef MCPU = llvm::sys::getHostCPUName();
    /*
@@ -634,6 +645,9 @@ lp_build_create_jit_compiler_for_module(LLVMExecutionEngineRef *OutJIT,
     * can't handle. Not entirely sure if we really need to do anything yet.
     */
    builder.setMCPU(MCPU);
+   if (gallivm_debug & (GALLIVM_DEBUG_IR | GALLIVM_DEBUG_ASM | GALLIVM_DEBUG_DUMP_BC)) {
+      debug_printf("llc -mcpu option: %s\n", MCPU.str().c_str());
+   }
 #endif
 
    ShaderMemoryManager *MM = NULL;
