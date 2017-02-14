@@ -44,7 +44,8 @@ MESA_UTIL_FILES :=	\
 	u_endian.h \
 	u_vector.c \
 	u_vector.h \
-	vk_alloc.h
+	vk_alloc.h \
+	vk_utils.h
 
 MESA_UTIL_GENERATED_FILES = \
 	format_srgb.c
