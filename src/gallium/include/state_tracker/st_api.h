@@ -245,6 +245,7 @@ struct st_config_options
    unsigned force_glsl_version;
    boolean force_s3tc_enable;
    boolean allow_glsl_extension_directive_midshader;
+   boolean allow_higher_compat_version;
    boolean glsl_zero_init;
 };
 

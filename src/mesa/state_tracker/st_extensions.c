@@ -879,6 +879,8 @@ void st_init_extensions(struct pipe_screen *screen,
       consts->ForceGLSLVersion = options->force_glsl_version;
    }
 
+   consts->AllowHigherCompatVersion = options->allow_higher_compat_version;
+
    if (consts->GLSLVersion >= 400)
       extensions->ARB_gpu_shader5 = GL_TRUE;
    if (consts->GLSLVersion >= 410)
