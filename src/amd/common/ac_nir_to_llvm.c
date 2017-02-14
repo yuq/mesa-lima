@@ -3003,7 +3003,6 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 {
 	LLVMValueRef gs_next_vertex;
 	LLVMValueRef can_emit, kill;
-	LLVMValueRef args[2];
 	int idx;
 
 	assert(instr->const_index[0] == 0);
