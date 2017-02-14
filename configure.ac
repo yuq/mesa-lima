@@ -768,6 +768,8 @@ LIBS="$LIBS $DLOPEN_LIBS"
 AC_CHECK_FUNCS([dladdr])
 LIBS="$save_LIBS"
 
+AC_CHECK_FUNC([dl_iterate_phdr], [DEFINES="$DEFINES -DHAVE_DL_ITERATE_PHDR"])
+
 case "$host_os" in
 darwin*)
     ;;
@@ -1773,6 +1775,10 @@ AC_ARG_WITH([vulkan-icddir],
 AC_SUBST([VULKAN_ICD_INSTALL_DIR])
 
 if test -n "$with_vulkan_drivers"; then
+    if test "x$ac_cv_func_dl_iterate_phdr" = xno; then
+        AC_MSG_ERROR([Vulkan drivers require the dl_iterate_phdr function])
+    fi
+
     VULKAN_DRIVERS=`IFS=', '; echo $with_vulkan_drivers`
     for driver in $VULKAN_DRIVERS; do
         case "x$driver" in
