@@ -949,8 +949,7 @@ VkResult radv_CreateDevice(
 			goto fail;
 	}
 
-	/* temporarily disabled on CIK */
-	if (device->physical_device->rad_info.chip_class > CIK)
+	if (device->physical_device->rad_info.chip_class >= CIK)
 		cik_create_gfx_config(device);
 
 	*pDevice = radv_device_to_handle(device);
