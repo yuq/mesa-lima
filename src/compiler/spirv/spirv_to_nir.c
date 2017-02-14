@@ -2663,7 +2663,6 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
       case SpvCapabilitySparseResidency:
       case SpvCapabilityMinLod:
       case SpvCapabilityTransformFeedback:
-      case SpvCapabilityStorageImageReadWithoutFormat:
          vtn_warn("Unsupported SPIR-V capability: %s",
                   spirv_capability_to_string(cap));
          break;
@@ -2697,6 +2696,10 @@ vtn_handle_preamble_instruction(struct vtn_builder *b, SpvOp opcode,
 
       case SpvCapabilityDrawParameters:
          spv_check_supported(draw_parameters, cap);
+         break;
+
+      case SpvCapabilityStorageImageReadWithoutFormat:
+         spv_check_supported(image_read_without_format, cap);
          break;
 
       case SpvCapabilityStorageImageWriteWithoutFormat:

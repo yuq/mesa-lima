@@ -49,6 +49,7 @@ struct nir_spirv_supported_extensions {
    bool image_ms_array;
    bool tessellation;
    bool draw_parameters;
+   bool image_read_without_format;
    bool image_write_without_format;
 };
 
