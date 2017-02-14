@@ -128,6 +128,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
       .float64 = device->instance->physicalDevice.info.gen >= 8,
       .tessellation = true,
       .draw_parameters = true,
+      .image_write_without_format = true,
    };
 
    nir_function *entry_point =

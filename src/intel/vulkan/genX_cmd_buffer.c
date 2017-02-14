@@ -1211,7 +1211,9 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          break;
 
       case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE: {
-         surface_state = desc->image_view->storage_surface_state;
+         surface_state = (binding->write_only)
+            ? desc->image_view->writeonly_storage_surface_state
+            : desc->image_view->storage_surface_state;
          assert(surface_state.alloc_size);
          add_image_view_relocs(cmd_buffer, desc->image_view,
                                desc->image_view->image->aux_usage,
@@ -1238,7 +1240,9 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
          break;
 
       case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-         surface_state = desc->buffer_view->storage_surface_state;
+         surface_state = (binding->write_only)
+            ? desc->buffer_view->writeonly_storage_surface_state
+            : desc->buffer_view->storage_surface_state;
          assert(surface_state.alloc_size);
          add_surface_state_reloc(cmd_buffer, surface_state,
                                  desc->buffer_view->bo,

@@ -953,6 +953,9 @@ struct anv_pipeline_binding {
 
    /* Input attachment index (relative to the subpass) */
    uint8_t input_attachment_index;
+
+   /* For a storage image, whether it is write-only */
+   bool write_only;
 };
 
 struct anv_pipeline_layout {
@@ -1683,8 +1686,13 @@ struct anv_image_view {
    /** RENDER_SURFACE_STATE when using image as a sampler surface. */
    struct anv_state sampler_surface_state;
 
-   /** RENDER_SURFACE_STATE when using image as a storage image. */
+   /**
+    * RENDER_SURFACE_STATE when using image as a storage image. Separate states
+    * for write-only and readable, using the real format for write-only and the
+    * lowered format for readable.
+    */
    struct anv_state storage_surface_state;
+   struct anv_state writeonly_storage_surface_state;
 
    struct brw_image_param storage_image_param;
 };
@@ -1715,6 +1723,7 @@ struct anv_buffer_view {
 
    struct anv_state surface_state;
    struct anv_state storage_surface_state;
+   struct anv_state writeonly_storage_surface_state;
 
    struct brw_image_param storage_image_param;
 };
