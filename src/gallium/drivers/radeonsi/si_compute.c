@@ -565,7 +565,8 @@ static void si_upload_compute_input(struct si_context *sctx,
 	/* The extra num_work_size_bytes are for work group / work item size information */
 	kernel_args_size = program->input_size + num_work_size_bytes;
 
-	u_upload_alloc(sctx->b.b.stream_uploader, 0, kernel_args_size, 256,
+	u_upload_alloc(sctx->b.b.stream_uploader, 0, kernel_args_size,
+		       sctx->screen->b.info.tcc_cache_line_size,
 		       &kernel_args_offset,
 		       (struct pipe_resource**)&input_buffer, &kernel_args_ptr);
 
