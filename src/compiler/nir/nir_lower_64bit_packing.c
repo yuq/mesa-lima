@@ -49,7 +49,7 @@ lower_unpack_64(nir_builder *b, nir_ssa_def *src)
 }
 
 static void
-lower_double_pack_impl(nir_function_impl *impl)
+lower_64bit_pack_impl(nir_function_impl *impl)
 {
    nir_builder b;
    nir_builder_init(&b, impl);
@@ -88,11 +88,10 @@ lower_double_pack_impl(nir_function_impl *impl)
 }
 
 void
-nir_lower_double_pack(nir_shader *shader)
+nir_lower_64bit_pack(nir_shader *shader)
 {
    nir_foreach_function(function, shader) {
       if (function->impl)
-         lower_double_pack_impl(function->impl);
+         lower_64bit_pack_impl(function->impl);
    }
 }
-
