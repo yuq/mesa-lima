@@ -205,7 +205,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 
 		sctx->ce_suballocator =
 				u_suballocator_create(&sctx->b.b, 1024 * 1024,
-						      0, PIPE_USAGE_DEFAULT, false);
+						      0, PIPE_USAGE_DEFAULT, 0, false);
 		if (!sctx->ce_suballocator)
 			goto fail;
 	}
