@@ -305,7 +305,7 @@ if test "x$GCC" = xyes; then
     AC_LINK_IFELSE([AC_LANG_PROGRAM()],
 		   AC_MSG_RESULT([yes]),
 		   [CFLAGS="$save_CFLAGS -Wmissing-prototypes";
-		    AC_MSG_RESULT([no])]);
+		    AC_MSG_RESULT([no])])
 
     # Enable -fvisibility=hidden if using a gcc that supports it
     save_CFLAGS="$CFLAGS"
@@ -313,7 +313,7 @@ if test "x$GCC" = xyes; then
     VISIBILITY_CFLAGS="-fvisibility=hidden"
     CFLAGS="$CFLAGS $VISIBILITY_CFLAGS"
     AC_LINK_IFELSE([AC_LANG_PROGRAM()], AC_MSG_RESULT([yes]),
-		   [VISIBILITY_CFLAGS=""; AC_MSG_RESULT([no])]);
+		   [VISIBILITY_CFLAGS=""; AC_MSG_RESULT([no])])
 
     # Restore CFLAGS; VISIBILITY_CFLAGS are added to it where needed.
     CFLAGS=$save_CFLAGS
@@ -338,7 +338,7 @@ if test "x$GCC" = xyes; then
 		   [MSVC2013_COMPAT_CFLAGS="$MSVC2013_COMPAT_CFLAGS -Werror=vla";
 		    MSVC2013_COMPAT_CXXFLAGS="$MSVC2013_COMPAT_CXXFLAGS -Werror=vla";
 		    AC_MSG_RESULT([yes])],
-		    AC_MSG_RESULT([no]));
+		    AC_MSG_RESULT([no]))
     CFLAGS="$save_CFLAGS"
 fi
 if test "x$GXX" = xyes; then
@@ -351,7 +351,7 @@ if test "x$GXX" = xyes; then
     CXXFLAGS="$CXXFLAGS $VISIBILITY_CXXFLAGS"
     AC_LANG_PUSH([C++])
     AC_LINK_IFELSE([AC_LANG_PROGRAM()], AC_MSG_RESULT([yes]),
-		   [VISIBILITY_CXXFLAGS="" ; AC_MSG_RESULT([no])]);
+		   [VISIBILITY_CXXFLAGS="" ; AC_MSG_RESULT([no])])
     AC_LANG_POP([C++])
 
     # Restore CXXFLAGS; VISIBILITY_CXXFLAGS are added to it where needed.
@@ -1674,17 +1674,17 @@ if test -n "$with_dri_drivers"; then
         case "x$driver" in
         xi915)
             require_libdrm "i915"
-            HAVE_I915_DRI=yes;
+            HAVE_I915_DRI=yes
             PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xi965)
             require_libdrm "i965"
-            HAVE_I965_DRI=yes;
+            HAVE_I965_DRI=yes
             PKG_CHECK_MODULES([INTEL], [libdrm >= $LIBDRM_INTEL_REQUIRED libdrm_intel >= $LIBDRM_INTEL_REQUIRED])
             ;;
         xnouveau)
             require_libdrm "nouveau"
-            HAVE_NOUVEAU_DRI=yes;
+            HAVE_NOUVEAU_DRI=yes
             PKG_CHECK_MODULES([NVVIEUX], [libdrm >= $LIBDRM_NVVIEUX_REQUIRED libdrm_nouveau >= $LIBDRM_NVVIEUX_REQUIRED])
             ;;
         xradeon)
@@ -1694,11 +1694,11 @@ if test -n "$with_dri_drivers"; then
             ;;
         xr200)
             require_libdrm "r200"
-            HAVE_R200_DRI=yes;
+            HAVE_R200_DRI=yes
             PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             ;;
         xswrast)
-            HAVE_SWRAST_DRI=yes;
+            HAVE_SWRAST_DRI=yes
             ;;
         *)
             AC_MSG_ERROR([classic DRI driver '$driver' does not exist])
@@ -1786,13 +1786,13 @@ if test -n "$with_vulkan_drivers"; then
             if test "x$HAVE_I965_DRI" != xyes; then
                 AC_MSG_ERROR([Intel Vulkan driver requires the i965 dri driver])
             fi
-            HAVE_INTEL_VULKAN=yes;
+            HAVE_INTEL_VULKAN=yes
 
             ;;
         xradeon)
             PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             radeon_llvm_check $LLVM_REQUIRED_RADV "radv"
-            HAVE_RADEON_VULKAN=yes;
+            HAVE_RADEON_VULKAN=yes
             ;;
         *)
             AC_MSG_ERROR([Vulkan driver '$driver' does not exist])
