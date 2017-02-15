@@ -412,6 +412,7 @@ static const struct debug_control radv_debug_options[] = {
 	{"noibs", RADV_DEBUG_NO_IBS},
 	{"spirv", RADV_DEBUG_DUMP_SPIRV},
 	{"vmfaults", RADV_DEBUG_VM_FAULTS},
+	{"zerovram", RADV_DEBUG_ZERO_VRAM},
 	{NULL, 0}
 };
 
