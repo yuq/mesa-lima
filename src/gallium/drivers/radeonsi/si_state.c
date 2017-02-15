@@ -3526,8 +3526,11 @@ static void si_set_vertex_buffers(struct pipe_context *ctx,
 				assert(src->stride == 0);
 
 				/* Assume the attrib has 4 dwords like the vbo
-				 * module. This is also a good upper bound. */
-				u_upload_data(sctx->b.b.stream_uploader, 0, 16, 16,
+				 * module. This is also a good upper bound.
+				 *
+				 * Use const_uploader to upload into VRAM directly.
+				 */
+				u_upload_data(sctx->b.b.const_uploader, 0, 16, 16,
 					      src->user_buffer,
 					      &dsti->buffer_offset,
 					      &dsti->buffer);

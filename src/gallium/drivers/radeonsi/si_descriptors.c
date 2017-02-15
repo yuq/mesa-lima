@@ -235,7 +235,7 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	} else {
 		void *ptr;
 
-		u_upload_alloc(sctx->b.b.stream_uploader, 0, list_size,
+		u_upload_alloc(sctx->b.b.const_uploader, 0, list_size,
 			       sctx->screen->b.info.tcc_cache_line_size,
 			       &desc->buffer_offset,
 			       (struct pipe_resource**)&desc->buffer, &ptr);
@@ -963,7 +963,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * directly through a staging buffer and don't go through
 	 * the fine-grained upload path.
 	 */
-	u_upload_alloc(sctx->b.b.stream_uploader, 0,
+	u_upload_alloc(sctx->b.b.const_uploader, 0,
 		       desc_list_byte_size,
 		       si_optimal_tcc_alignment(sctx, desc_list_byte_size),
 		       &desc->buffer_offset,
@@ -1051,7 +1051,7 @@ void si_upload_const_buffer(struct si_context *sctx, struct r600_resource **rbuf
 {
 	void *tmp;
 
-	u_upload_alloc(sctx->b.b.stream_uploader, 0, size,
+	u_upload_alloc(sctx->b.b.const_uploader, 0, size,
 		       si_optimal_tcc_alignment(sctx, size),
 		       const_offset,
 		       (struct pipe_resource**)rbuffer, &tmp);

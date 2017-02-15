@@ -607,7 +607,11 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 						  0, PIPE_USAGE_STREAM);
 	if (!rctx->b.stream_uploader)
 		return false;
-	rctx->b.const_uploader = rctx->b.stream_uploader;
+
+	rctx->b.const_uploader = u_upload_create(&rctx->b, 128 * 1024,
+						 0, PIPE_USAGE_DEFAULT);
+	if (!rctx->b.const_uploader)
+		return false;
 
 	rctx->ctx = rctx->ws->ctx_create(rctx->ws);
 	if (!rctx->ctx)
@@ -649,9 +653,10 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 	if (rctx->ctx)
 		rctx->ws->ctx_destroy(rctx->ctx);
 
-	if (rctx->b.stream_uploader) {
+	if (rctx->b.stream_uploader)
 		u_upload_destroy(rctx->b.stream_uploader);
-	}
+	if (rctx->b.const_uploader)
+		u_upload_destroy(rctx->b.const_uploader);
 
 	slab_destroy_child(&rctx->pool_transfers);
 
