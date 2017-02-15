@@ -1086,14 +1086,13 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 				return;
 			/* info->start will be added by the drawing code */
 			ib.offset -= start_offset;
+		} else if (sctx->b.chip_class <= CIK &&
+			   r600_resource(ib.buffer)->TC_L2_dirty) {
+			/* VI reads index buffers through TC L2, so it doesn't
+			 * need this. */
+			sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
+			r600_resource(ib.buffer)->TC_L2_dirty = false;
 		}
-	}
-
-	/* VI reads index buffers through TC L2. */
-	if (info->indexed && sctx->b.chip_class <= CIK &&
-	    r600_resource(ib.buffer)->TC_L2_dirty) {
-		sctx->b.flags |= SI_CONTEXT_WRITEBACK_GLOBAL_L2;
-		r600_resource(ib.buffer)->TC_L2_dirty = false;
 	}
 
 	if (info->indirect) {
