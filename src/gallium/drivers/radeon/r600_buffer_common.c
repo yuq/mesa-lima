@@ -550,7 +550,7 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 }
 
 struct pipe_resource *r600_aligned_buffer_create(struct pipe_screen *screen,
-						 unsigned bind,
+						 unsigned flags,
 						 unsigned usage,
 						 unsigned size,
 						 unsigned alignment)
@@ -560,9 +560,9 @@ struct pipe_resource *r600_aligned_buffer_create(struct pipe_screen *screen,
 	memset(&buffer, 0, sizeof buffer);
 	buffer.target = PIPE_BUFFER;
 	buffer.format = PIPE_FORMAT_R8_UNORM;
-	buffer.bind = bind;
+	buffer.bind = 0;
 	buffer.usage = usage;
-	buffer.flags = 0;
+	buffer.flags = flags;
 	buffer.width0 = size;
 	buffer.height0 = 1;
 	buffer.depth0 = 1;

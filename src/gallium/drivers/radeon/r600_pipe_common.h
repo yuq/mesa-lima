@@ -718,7 +718,7 @@ struct pipe_resource *r600_buffer_create(struct pipe_screen *screen,
 					 const struct pipe_resource *templ,
 					 unsigned alignment);
 struct pipe_resource * r600_aligned_buffer_create(struct pipe_screen *screen,
-						  unsigned bind,
+						  unsigned flags,
 						  unsigned usage,
 						  unsigned size,
 						  unsigned alignment);
