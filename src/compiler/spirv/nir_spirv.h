@@ -51,6 +51,7 @@ struct nir_spirv_supported_extensions {
    bool draw_parameters;
    bool image_read_without_format;
    bool image_write_without_format;
+   bool int64;
 };
 
 nir_function *spirv_to_nir(const uint32_t *words, size_t word_count,
