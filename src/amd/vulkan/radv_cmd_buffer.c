@@ -2890,6 +2890,7 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(event->bo);
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, event->bo, 8);
+	cmd_buffer->no_draws = false;
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
 
