@@ -235,6 +235,14 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 				    S_00B42C_LDS_SIZE(lds_size);
 
 		radeon_set_sh_reg(cs, R_00B42C_SPI_SHADER_PGM_RSRC2_HS, hs_rsrc2);
+
+		/* Set userdata SGPRs for merged LS-HS. */
+		radeon_set_sh_reg_seq(cs,
+				      R_00B430_SPI_SHADER_USER_DATA_LS_0 +
+				      GFX9_SGPR_TCS_OFFCHIP_LAYOUT * 4, 3);
+		radeon_emit(cs, offchip_layout);
+		radeon_emit(cs, tcs_out_offsets);
+		radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
 	} else {
 		unsigned ls_rsrc2 = ls_current->config.rsrc2;
 
@@ -251,7 +259,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 
 		/* Set userdata SGPRs for TCS. */
 		radeon_set_sh_reg_seq(cs,
-			R_00B430_SPI_SHADER_USER_DATA_HS_0 + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 4);
+			R_00B430_SPI_SHADER_USER_DATA_HS_0 + GFX6_SGPR_TCS_OFFCHIP_LAYOUT * 4, 4);
 		radeon_emit(cs, offchip_layout);
 		radeon_emit(cs, tcs_out_offsets);
 		radeon_emit(cs, tcs_out_layout | (num_tcs_input_cp << 26));
@@ -259,7 +267,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	}
 
 	/* Set userdata SGPRs for TES. */
-	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TCS_OFFCHIP_LAYOUT * 4, 1);
+	radeon_set_sh_reg_seq(cs, tes_sh_base + SI_SGPR_TES_OFFCHIP_LAYOUT * 4, 1);
 	radeon_emit(cs, offchip_layout);
 
 	ls_hs_config = S_028B58_NUM_PATCHES(*num_patches) |

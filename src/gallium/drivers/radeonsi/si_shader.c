@@ -2648,18 +2648,18 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	tf_soffset = LLVMGetParam(ctx->main_fn,
 				  SI_PARAM_TESS_FACTOR_OFFSET);
 	ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
-				   SI_SGPR_TCS_OFFCHIP_LAYOUT, "");
+				   GFX6_SGPR_TCS_OFFCHIP_LAYOUT, "");
 	ret = LLVMBuildInsertValue(builder, ret, offchip_soffset,
-				   SI_TCS_NUM_USER_SGPR, "");
+				   GFX6_TCS_NUM_USER_SGPR, "");
 	ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
-				   SI_TCS_NUM_USER_SGPR + 1, "");
+				   GFX6_TCS_NUM_USER_SGPR + 1, "");
 
 	/* VGPRs */
 	rel_patch_id = bitcast(bld_base, TGSI_TYPE_FLOAT, rel_patch_id);
 	invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
 	tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
 
-	vgpr = SI_TCS_NUM_USER_SGPR + 2;
+	vgpr = GFX6_TCS_NUM_USER_SGPR + 2;
 	ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
@@ -5715,7 +5715,7 @@ static void create_function(struct si_shader_context *ctx)
 		/* SI_PARAM_TCS_OC_LDS and PARAM_TESS_FACTOR_OFFSET are
 		 * placed after the user SGPRs.
 		 */
-		for (i = 0; i < SI_TCS_NUM_USER_SGPR + 2; i++)
+		for (i = 0; i < GFX6_TCS_NUM_USER_SGPR + 2; i++)
 			returns[num_returns++] = ctx->i32; /* SGPRs */
 
 		for (i = 0; i < 3; i++)

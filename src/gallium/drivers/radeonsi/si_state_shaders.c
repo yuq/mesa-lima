@@ -492,14 +492,15 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
 
 		shader->config.rsrc2 =
-			S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
+			S_00B42C_USER_SGPR(GFX9_TCS_NUM_USER_SGPR) |
+			S_00B42C_USER_SGPR_MSB(GFX9_TCS_NUM_USER_SGPR >> 5) |
 			S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 	} else {
 		si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
 		si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
 
 		shader->config.rsrc2 =
-			S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
+			S_00B42C_USER_SGPR(GFX6_TCS_NUM_USER_SGPR) |
 			S_00B42C_OC_LDS_EN(1) |
 			S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
 	}
