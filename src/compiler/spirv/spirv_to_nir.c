@@ -104,6 +104,8 @@ vtn_const_ssa_value(struct vtn_builder *b, nir_constant *constant,
    switch (glsl_get_base_type(type)) {
    case GLSL_TYPE_INT:
    case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT64:
+   case GLSL_TYPE_UINT64:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_DOUBLE: {
@@ -420,6 +422,8 @@ vtn_type_copy(struct vtn_builder *b, struct vtn_type *src)
       switch (glsl_get_base_type(src->type)) {
       case GLSL_TYPE_INT:
       case GLSL_TYPE_UINT:
+      case GLSL_TYPE_INT64:
+      case GLSL_TYPE_UINT64:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_DOUBLE:
@@ -715,8 +719,12 @@ vtn_handle_type(struct vtn_builder *b, SpvOp opcode,
       val->type->type = glsl_bool_type();
       break;
    case SpvOpTypeInt: {
+      int bit_size = w[2];
       const bool signedness = w[3];
-      val->type->type = (signedness ? glsl_int_type() : glsl_uint_type());
+      if (bit_size == 64)
+         val->type->type = (signedness ? glsl_int64_t_type() : glsl_uint64_t_type());
+      else
+         val->type->type = (signedness ? glsl_int_type() : glsl_uint_type());
       break;
    }
    case SpvOpTypeFloat: {
@@ -917,6 +925,8 @@ vtn_null_constant(struct vtn_builder *b, const struct glsl_type *type)
    switch (glsl_get_base_type(type)) {
    case GLSL_TYPE_INT:
    case GLSL_TYPE_UINT:
+   case GLSL_TYPE_INT64:
+   case GLSL_TYPE_UINT64:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_DOUBLE:
@@ -1071,6 +1081,8 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
       switch (glsl_get_base_type(val->const_type)) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT64:
+      case GLSL_TYPE_INT64:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_BOOL:
       case GLSL_TYPE_DOUBLE: {
@@ -1208,6 +1220,8 @@ vtn_handle_constant(struct vtn_builder *b, SpvOp opcode,
             switch (glsl_get_base_type(type)) {
             case GLSL_TYPE_UINT:
             case GLSL_TYPE_INT:
+            case GLSL_TYPE_UINT64:
+            case GLSL_TYPE_INT64:
             case GLSL_TYPE_FLOAT:
             case GLSL_TYPE_DOUBLE:
             case GLSL_TYPE_BOOL:
@@ -1377,6 +1391,8 @@ vtn_create_ssa_value(struct vtn_builder *b, const struct glsl_type *type)
          switch (glsl_get_base_type(type)) {
          case GLSL_TYPE_INT:
          case GLSL_TYPE_UINT:
+         case GLSL_TYPE_INT64:
+         case GLSL_TYPE_UINT64:
          case GLSL_TYPE_BOOL:
          case GLSL_TYPE_FLOAT:
          case GLSL_TYPE_DOUBLE:

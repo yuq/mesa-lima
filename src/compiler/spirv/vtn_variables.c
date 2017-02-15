@@ -115,6 +115,8 @@ vtn_access_chain_to_deref(struct vtn_builder *b, struct vtn_access_chain *chain)
       switch (base_type) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT64:
+      case GLSL_TYPE_INT64:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
@@ -347,6 +349,8 @@ vtn_access_chain_to_offset(struct vtn_builder *b,
       switch (base_type) {
       case GLSL_TYPE_UINT:
       case GLSL_TYPE_INT:
+      case GLSL_TYPE_UINT64:
+      case GLSL_TYPE_INT64:
       case GLSL_TYPE_FLOAT:
       case GLSL_TYPE_DOUBLE:
       case GLSL_TYPE_BOOL:
@@ -395,6 +399,8 @@ vtn_type_block_size(struct vtn_type *type)
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_DOUBLE: {
@@ -403,7 +409,9 @@ vtn_type_block_size(struct vtn_type *type)
       if (cols > 1) {
          assert(type->stride > 0);
          return type->stride * cols;
-      } else if (base_type == GLSL_TYPE_DOUBLE) {
+      } else if (base_type == GLSL_TYPE_DOUBLE ||
+		 base_type == GLSL_TYPE_UINT64 ||
+		 base_type == GLSL_TYPE_INT64) {
          return glsl_get_vector_elements(type->type) * 8;
       } else {
          return glsl_get_vector_elements(type->type) * 4;
@@ -526,6 +534,8 @@ _vtn_block_load_store(struct vtn_builder *b, nir_intrinsic_op op, bool load,
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_BOOL:
@@ -738,6 +748,8 @@ _vtn_variable_load_store(struct vtn_builder *b, bool load,
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_BOOL:
    case GLSL_TYPE_DOUBLE:
@@ -815,6 +827,8 @@ _vtn_variable_copy(struct vtn_builder *b, struct vtn_access_chain *dest,
    switch (base_type) {
    case GLSL_TYPE_UINT:
    case GLSL_TYPE_INT:
+   case GLSL_TYPE_UINT64:
+   case GLSL_TYPE_INT64:
    case GLSL_TYPE_FLOAT:
    case GLSL_TYPE_DOUBLE:
    case GLSL_TYPE_BOOL:
