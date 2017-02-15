@@ -1213,61 +1213,11 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
       break;
 
    case nir_op_pack_64_2x32_split:
-      /* Optimize the common case where we are re-packing a double with
-       * the result of a previous double unpack. In this case we can take the
-       * 32-bit value to use in the re-pack from the original double and bypass
-       * the unpack operation.
-       */
-      for (int i = 0; i < 2; i++) {
-         if (!instr->src[i].src.is_ssa)
-            continue;
-
-         const nir_instr *parent_instr = instr->src[i].src.ssa->parent_instr;
-         if (parent_instr->type == nir_instr_type_alu)
-            continue;
-
-         const nir_alu_instr *alu_parent = nir_instr_as_alu(parent_instr);
-         if (alu_parent->op == nir_op_unpack_64_2x32_split_x ||
-             alu_parent->op == nir_op_unpack_64_2x32_split_y)
-            continue;
-
-         if (!alu_parent->src[0].src.is_ssa)
-            continue;
-
-         op[i] = get_nir_src(alu_parent->src[0].src);
-         op[i] = offset(retype(op[i], BRW_REGISTER_TYPE_DF), bld,
-                        alu_parent->src[0].swizzle[channel]);
-         if (alu_parent->op == nir_op_unpack_64_2x32_split_y)
-            op[i] = subscript(op[i], BRW_REGISTER_TYPE_UD, 1);
-         else
-            op[i] = subscript(op[i], BRW_REGISTER_TYPE_UD, 0);
-      }
       bld.emit(FS_OPCODE_PACK, result, op[0], op[1]);
       break;
 
    case nir_op_unpack_64_2x32_split_x:
    case nir_op_unpack_64_2x32_split_y: {
-      /* Optimize the common case where we are unpacking from a double we have
-       * previously packed. In this case we can just bypass the pack operation
-       * and source directly from its arguments.
-       */
-      unsigned index = (instr->op == nir_op_unpack_64_2x32_split_x) ? 0 : 1;
-      if (instr->src[0].src.is_ssa) {
-         nir_instr *parent_instr = instr->src[0].src.ssa->parent_instr;
-         if (parent_instr->type == nir_instr_type_alu) {
-            nir_alu_instr *alu_parent = nir_instr_as_alu(parent_instr);
-            if (alu_parent->op == nir_op_pack_64_2x32_split &&
-                alu_parent->src[index].src.is_ssa) {
-               op[0] = retype(get_nir_src(alu_parent->src[index].src),
-                              BRW_REGISTER_TYPE_UD);
-               op[0] =
-                  offset(op[0], bld, alu_parent->src[index].swizzle[channel]);
-               bld.MOV(result, op[0]);
-               break;
-            }
-         }
-      }
-
       if (instr->op == nir_op_unpack_64_2x32_split_x)
          bld.MOV(result, subscript(op[0], BRW_REGISTER_TYPE_UD, 0));
       else
