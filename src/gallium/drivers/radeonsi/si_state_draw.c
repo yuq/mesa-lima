@@ -1048,14 +1048,16 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 		/* 8-bit indices are supported on VI. */
 		if (sctx->b.chip_class <= CIK && ib.index_size == 1) {
 			struct pipe_resource *out_buffer = NULL;
-			unsigned out_offset, start, count, start_offset;
+			unsigned out_offset, start, count, start_offset, size;
 			void *ptr;
 
 			si_get_draw_start_count(sctx, info, &start, &count);
 			start_offset = start * ib.index_size;
+			size = count * 2;
 
 			u_upload_alloc(ctx->stream_uploader, start_offset,
-                                       count * 2, 256,
+				       size,
+				       si_optimal_tcc_alignment(sctx, size),
 				       &out_offset, &out_buffer, &ptr);
 			if (!out_buffer) {
 				pipe_resource_reference(&ib.buffer, NULL);
@@ -1079,8 +1081,9 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			start_offset = start * ib.index_size;
 
 			u_upload_data(ctx->stream_uploader, start_offset,
-                                      count * ib.index_size,
-				      256, (char*)ib.user_buffer + start_offset,
+				      count * ib.index_size,
+				      sctx->screen->b.info.tcc_cache_line_size,
+				      (char*)ib.user_buffer + start_offset,
 				      &ib.offset, &ib.buffer);
 			if (!ib.buffer)
 				return;
