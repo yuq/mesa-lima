@@ -234,9 +234,10 @@ static bool si_upload_descriptors(struct si_context *sctx,
 	} else {
 		void *ptr;
 
-		u_upload_alloc(sctx->b.b.stream_uploader, 0, list_size, 256,
-			&desc->buffer_offset,
-			(struct pipe_resource**)&desc->buffer, &ptr);
+		u_upload_alloc(sctx->b.b.stream_uploader, 0, list_size,
+			       sctx->screen->b.info.tcc_cache_line_size,
+			       &desc->buffer_offset,
+			       (struct pipe_resource**)&desc->buffer, &ptr);
 		if (!desc->buffer)
 			return false; /* skip the draw call */
 
@@ -948,6 +949,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	struct si_vertex_element *velems = sctx->vertex_elements;
 	struct si_descriptors *desc = &sctx->vertex_buffers;
 	unsigned i, count = velems->count;
+	unsigned desc_list_byte_size = velems->desc_list_byte_size;
 	uint64_t va;
 	uint32_t *ptr;
 
@@ -961,7 +963,8 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	 * the fine-grained upload path.
 	 */
 	u_upload_alloc(sctx->b.b.stream_uploader, 0,
-		       velems->desc_list_byte_size, 256,
+		       desc_list_byte_size,
+		       si_optimal_tcc_alignment(sctx, desc_list_byte_size),
 		       &desc->buffer_offset,
 		       (struct pipe_resource**)&desc->buffer, (void**)&ptr);
 	if (!desc->buffer)
