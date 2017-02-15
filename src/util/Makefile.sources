@@ -45,7 +45,7 @@ MESA_UTIL_FILES :=	\
 	u_vector.c \
 	u_vector.h \
 	vk_alloc.h \
-	vk_utils.h
+	vk_util.h
 
 MESA_UTIL_GENERATED_FILES = \
 	format_srgb.c
