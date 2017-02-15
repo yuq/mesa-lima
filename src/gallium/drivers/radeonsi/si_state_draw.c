@@ -1052,7 +1052,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			void *ptr;
 
 			si_get_draw_start_count(sctx, info, &start, &count);
-			start_offset = start * ib.index_size;
+			start_offset = start * 2;
 			size = count * 2;
 
 			u_upload_alloc(ctx->stream_uploader, start_offset,
@@ -1065,7 +1065,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 			}
 
 			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, &ib, 0,
-							   ib.offset + start_offset,
+							   ib.offset + start,
 							   count, ptr);
 
 			pipe_resource_reference(&ib.buffer, NULL);
