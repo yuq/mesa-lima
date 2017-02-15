@@ -398,6 +398,8 @@ void si_set_mutable_tex_desc_fields(struct si_screen *sscreen,
 		/* Only stencil_offset needs to be added here. */
 		if (is_stencil)
 			va += tex->surface.u.gfx9.stencil_offset;
+		else
+			va += tex->surface.u.gfx9.surf_offset;
 	} else {
 		va += base_level_info->offset;
 	}

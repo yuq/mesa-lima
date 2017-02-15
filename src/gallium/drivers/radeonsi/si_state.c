@@ -2271,6 +2271,7 @@ static void si_init_depth_surface(struct si_context *sctx,
 	surf->db_htile_surface = 0;
 
 	if (sctx->b.chip_class >= GFX9) {
+		assert(rtex->surface.u.gfx9.surf_offset == 0);
 		surf->db_depth_base = rtex->resource.gpu_address >> 8;
 		surf->db_stencil_base = (rtex->resource.gpu_address +
 					 rtex->surface.u.gfx9.stencil_offset) >> 8;
@@ -2658,6 +2659,7 @@ static void si_emit_framebuffer_state(struct si_context *sctx, struct r600_atom 
 				meta = tex->surface.u.gfx9.cmask;
 
 			/* Set mutable surface parameters. */
+			cb_color_base += tex->surface.u.gfx9.surf_offset >> 8;
 			cb_color_attrib |= S_028C74_COLOR_SW_MODE(tex->surface.u.gfx9.surf.swizzle_mode) |
 					   S_028C74_FMASK_SW_MODE(tex->surface.u.gfx9.fmask.swizzle_mode) |
 					   S_028C74_RB_ALIGNED(meta.rb_aligned) |

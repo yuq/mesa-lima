@@ -902,6 +902,7 @@ static int gfx9_surface_init(struct radeon_winsys *rws,
    surf->surf_size = 0;
    surf->dcc_size = 0;
    surf->htile_size = 0;
+   surf->u.gfx9.surf_offset = 0;
    surf->u.gfx9.stencil_offset = 0;
    surf->u.gfx9.fmask_size = 0;
    surf->u.gfx9.cmask_size = 0;

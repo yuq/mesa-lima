@@ -354,6 +354,7 @@ struct gfx9_surf_layout {
     struct gfx9_surf_meta_flags cmask; /* metadata of fmask */
 
     enum gfx9_resource_type     resource_type; /* 1D, 2D or 3D */
+    uint64_t                    surf_offset; /* 0 unless imported with an offset */
     /* The size of the 2D plane containing all mipmap levels. */
     uint64_t                    surf_slice_size;
     uint16_t                    surf_pitch; /* in blocks */

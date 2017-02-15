@@ -555,7 +555,7 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
 	}
 
 	if (rscreen->chip_class >= GFX9) {
-		offset = 0;
+		offset = rtex->surface.u.gfx9.surf_offset;
 		stride = rtex->surface.u.gfx9.surf_pitch *
 			 rtex->surface.bpe;
 		slice_size = rtex->surface.u.gfx9.surf_slice_size;
