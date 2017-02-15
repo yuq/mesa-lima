@@ -96,7 +96,8 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 				       unsigned *num_patches)
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
-	struct si_shader_ctx_state *ls = &sctx->vs_shader;
+	struct si_shader *ls_current;
+	struct si_shader_selector *ls;
 	/* The TES pointer will only be used for sctx->last_tcs.
 	 * It would be wrong to think that TCS = TES. */
 	struct si_shader_selector *tcs =
@@ -111,7 +112,20 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	unsigned tcs_in_layout, tcs_out_layout, tcs_out_offsets;
 	unsigned offchip_layout, hardware_lds_size, ls_hs_config;
 
-	if (sctx->last_ls == ls->current &&
+	/* Since GFX9 has merged LS-HS in the TCS state, set LS = TCS. */
+	if (sctx->b.chip_class >= GFX9) {
+		if (sctx->tcs_shader.cso)
+			ls_current = sctx->tcs_shader.current;
+		else
+			ls_current = sctx->fixed_func_tcs_shader.current;
+
+		ls = ls_current->key.part.tcs.ls;
+	} else {
+		ls_current = sctx->vs_shader.current;
+		ls = sctx->vs_shader.cso;
+	}
+
+	if (sctx->last_ls == ls_current &&
 	    sctx->last_tcs == tcs &&
 	    sctx->last_tes_sh_base == tes_sh_base &&
 	    sctx->last_num_tcs_input_cp == num_tcs_input_cp) {
@@ -119,14 +133,14 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 		return;
 	}
 
-	sctx->last_ls = ls->current;
+	sctx->last_ls = ls_current;
 	sctx->last_tcs = tcs;
 	sctx->last_tes_sh_base = tes_sh_base;
 	sctx->last_num_tcs_input_cp = num_tcs_input_cp;
 
 	/* This calculates how shader inputs and outputs among VS, TCS, and TES
 	 * are laid out in LDS. */
-	num_tcs_inputs = util_last_bit64(ls->cso->outputs_written);
+	num_tcs_inputs = util_last_bit64(ls->outputs_written);
 
 	if (sctx->tcs_shader.cso) {
 		num_tcs_outputs = util_last_bit64(tcs->outputs_written);
@@ -217,9 +231,12 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 	sctx->current_vs_state |= tcs_in_layout;
 
 	if (sctx->b.chip_class >= GFX9) {
-		// TODO
+		unsigned hs_rsrc2 = ls_current->config.rsrc2 |
+				    S_00B42C_LDS_SIZE(lds_size);
+
+		radeon_set_sh_reg(cs, R_00B42C_SPI_SHADER_PGM_RSRC2_HS, hs_rsrc2);
 	} else {
-		unsigned ls_rsrc2 = ls->current->config.rsrc2;
+		unsigned ls_rsrc2 = ls_current->config.rsrc2;
 
 		si_multiwave_lds_size_workaround(sctx->screen, &lds_size);
 		ls_rsrc2 |= S_00B52C_LDS_SIZE(lds_size);
@@ -229,7 +246,7 @@ static void si_emit_derived_tess_state(struct si_context *sctx,
 		if (sctx->b.chip_class == CIK && sctx->b.family != CHIP_HAWAII)
 			radeon_set_sh_reg(cs, R_00B52C_SPI_SHADER_PGM_RSRC2_LS, ls_rsrc2);
 		radeon_set_sh_reg_seq(cs, R_00B528_SPI_SHADER_PGM_RSRC1_LS, 2);
-		radeon_emit(cs, ls->current->config.rsrc1);
+		radeon_emit(cs, ls_current->config.rsrc1);
 		radeon_emit(cs, ls_rsrc2);
 
 		/* Set userdata SGPRs for TCS. */

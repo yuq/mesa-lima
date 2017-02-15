@@ -362,7 +362,8 @@ struct si_context {
 	struct r600_resource	*compute_scratch_buffer;
 
 	/* Emitted derived tessellation state. */
-	struct si_shader	*last_ls; /* local shader (VS) */
+	/* Local shader (VS), or HS if LS-HS are merged. */
+	struct si_shader	*last_ls;
 	struct si_shader_selector *last_tcs;
 	int			last_num_tcs_input_cp;
 	int			last_tes_sh_base;

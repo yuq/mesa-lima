@@ -474,6 +474,7 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 {
 	struct si_pm4_state *pm4;
 	uint64_t va;
+	unsigned ls_vgpr_comp_cnt = 0;
 
 	pm4 = si_get_shader_pm4_state(shader);
 	if (!pm4)
@@ -482,17 +483,38 @@ static void si_shader_hs(struct si_screen *sscreen, struct si_shader *shader)
 	va = shader->bo->gpu_address;
 	si_pm4_add_bo(pm4, shader->bo, RADEON_USAGE_READ, RADEON_PRIO_SHADER_BINARY);
 
-	si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
-	si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
+	if (sscreen->b.chip_class >= GFX9) {
+		si_pm4_set_reg(pm4, R_00B410_SPI_SHADER_PGM_LO_LS, va >> 8);
+		si_pm4_set_reg(pm4, R_00B414_SPI_SHADER_PGM_HI_LS, va >> 40);
+
+		/* We need at least 2 components for LS.
+		 * VGPR0-3: (VertexID, RelAutoindex, ???, InstanceID). */
+		ls_vgpr_comp_cnt = shader->info.uses_instanceid ? 3 : 1;
+
+		shader->config.rsrc2 =
+			S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
+			S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
+	} else {
+		si_pm4_set_reg(pm4, R_00B420_SPI_SHADER_PGM_LO_HS, va >> 8);
+		si_pm4_set_reg(pm4, R_00B424_SPI_SHADER_PGM_HI_HS, va >> 40);
+
+		shader->config.rsrc2 =
+			S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
+			S_00B42C_OC_LDS_EN(1) |
+			S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0);
+	}
+
 	si_pm4_set_reg(pm4, R_00B428_SPI_SHADER_PGM_RSRC1_HS,
 		       S_00B428_VGPRS((shader->config.num_vgprs - 1) / 4) |
 		       S_00B428_SGPRS((shader->config.num_sgprs - 1) / 8) |
 		       S_00B428_DX10_CLAMP(1) |
-		       S_00B428_FLOAT_MODE(shader->config.float_mode));
-	si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
-		       S_00B42C_USER_SGPR(SI_TCS_NUM_USER_SGPR) |
-		       S_00B42C_OC_LDS_EN(sscreen->b.chip_class <= VI) |
-		       S_00B42C_SCRATCH_EN(shader->config.scratch_bytes_per_wave > 0));
+		       S_00B428_FLOAT_MODE(shader->config.float_mode) |
+		       S_00B428_LS_VGPR_COMP_CNT(ls_vgpr_comp_cnt));
+
+	if (sscreen->b.chip_class <= VI) {
+		si_pm4_set_reg(pm4, R_00B42C_SPI_SHADER_PGM_RSRC2_HS,
+			       shader->config.rsrc2);
+	}
 }
 
 static void si_shader_es(struct si_screen *sscreen, struct si_shader *shader)
