@@ -345,6 +345,7 @@ static bool do_winsys_init(struct amdgpu_winsys *ws, int fd)
    ws->info.has_userptr = true;
    ws->info.num_render_backends = ws->amdinfo.rb_pipes;
    ws->info.clock_crystal_freq = ws->amdinfo.gpu_counter_freq;
+   ws->info.tcc_cache_line_size = 64; /* TC L2 line size on GCN */
    ws->info.num_tile_pipes = cik_get_num_tile_pipes(&ws->amdinfo);
    ws->info.pipe_interleave_bytes = 256 << ((ws->amdinfo.gb_addr_cfg >> 4) & 0x7);
    ws->info.has_virtual_memory = true;

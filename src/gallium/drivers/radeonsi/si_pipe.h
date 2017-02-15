@@ -512,4 +512,19 @@ static inline bool si_vs_exports_prim_id(struct si_shader *shader)
 		return false;
 }
 
+static inline unsigned
+si_optimal_tcc_alignment(struct si_context *sctx, unsigned upload_size)
+{
+	unsigned alignment, tcc_cache_line_size;
+
+	/* If the upload size is less than the cache line size (e.g. 16, 32),
+	 * the whole thing will fit into a cache line if we align it to its size.
+	 * The idea is that multiple small uploads can share a cache line.
+	 * If the upload size is greater, align it to the cache line size.
+	 */
+	alignment = util_next_power_of_two(upload_size);
+	tcc_cache_line_size = sctx->screen->b.info.tcc_cache_line_size;
+	return MIN2(alignment, tcc_cache_line_size);
+}
+
 #endif
