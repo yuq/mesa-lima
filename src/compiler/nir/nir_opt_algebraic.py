@@ -434,7 +434,7 @@ def fexp2i(exp, bits):
    if bits == 32:
       return ('ishl', ('iadd', exp, 127), 23)
    elif bits == 64:
-      return ('pack_double_2x32_split', 0, ('ishl', ('iadd', exp, 1023), 20))
+      return ('pack_64_2x32_split', 0, ('ishl', ('iadd', exp, 1023), 20))
    else:
       assert False
 

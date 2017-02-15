@@ -1762,7 +1762,7 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
-   case nir_op_pack_double_2x32_split: {
+   case nir_op_pack_64_2x32_split: {
       dst_reg result = dst_reg(this, glsl_type::dvec4_type);
       dst_reg tmp = dst_reg(this, glsl_type::uvec4_type);
       emit(MOV(tmp, retype(op[0], BRW_REGISTER_TYPE_UD)));
@@ -1773,9 +1773,9 @@ vec4_visitor::nir_emit_alu(nir_alu_instr *instr)
       break;
    }
 
-   case nir_op_unpack_double_2x32_split_x:
-   case nir_op_unpack_double_2x32_split_y: {
-      enum opcode oper = (instr->op == nir_op_unpack_double_2x32_split_x) ?
+   case nir_op_unpack_64_2x32_split_x:
+   case nir_op_unpack_64_2x32_split_y: {
+      enum opcode oper = (instr->op == nir_op_unpack_64_2x32_split_x) ?
          VEC4_OPCODE_PICK_LOW_32BIT : VEC4_OPCODE_PICK_HIGH_32BIT;
       dst_reg tmp = dst_reg(this, glsl_type::dvec4_type);
       emit(MOV(tmp, op[0]));

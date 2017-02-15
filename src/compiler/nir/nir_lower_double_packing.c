@@ -35,31 +35,17 @@
  */
 
 static nir_ssa_def *
-lower_pack_double(nir_builder *b, nir_ssa_def *src)
+lower_pack_64(nir_builder *b, nir_ssa_def *src)
 {
-   return nir_pack_double_2x32_split(b, nir_channel(b, src, 0),
-                                        nir_channel(b, src, 1));
+   return nir_pack_64_2x32_split(b, nir_channel(b, src, 0),
+                                    nir_channel(b, src, 1));
 }
 
 static nir_ssa_def *
-lower_unpack_double(nir_builder *b, nir_ssa_def *src)
+lower_unpack_64(nir_builder *b, nir_ssa_def *src)
 {
-   return nir_vec2(b, nir_unpack_double_2x32_split_x(b, src),
-                      nir_unpack_double_2x32_split_y(b, src));
-}
-
-static nir_ssa_def *
-lower_pack_int(nir_builder *b, nir_ssa_def *src)
-{
-   return nir_pack_int_2x32_split(b, nir_channel(b, src, 0),
-                                     nir_channel(b, src, 1));
-}
-
-static nir_ssa_def *
-lower_unpack_int(nir_builder *b, nir_ssa_def *src)
-{
-   return nir_vec2(b, nir_unpack_int_2x32_split_x(b, src),
-                      nir_unpack_int_2x32_split_y(b, src));
+   return nir_vec2(b, nir_unpack_64_2x32_split_x(b, src),
+                      nir_unpack_64_2x32_split_y(b, src));
 }
 
 static void
@@ -75,10 +61,8 @@ lower_double_pack_impl(nir_function_impl *impl)
 
          nir_alu_instr *alu_instr = (nir_alu_instr *) instr;
 
-         if (alu_instr->op != nir_op_pack_double_2x32 &&
-             alu_instr->op != nir_op_unpack_double_2x32 &&
-             alu_instr->op != nir_op_pack_int_2x32 &&
-             alu_instr->op != nir_op_unpack_int_2x32)
+         if (alu_instr->op != nir_op_pack_64_2x32 &&
+             alu_instr->op != nir_op_unpack_64_2x32)
             continue;
 
          b.cursor = nir_before_instr(&alu_instr->instr);
@@ -87,17 +71,11 @@ lower_double_pack_impl(nir_function_impl *impl)
          nir_ssa_def *dest;
 
          switch (alu_instr->op) {
-         case nir_op_pack_double_2x32:
-            dest = lower_pack_double(&b, src);
+         case nir_op_pack_64_2x32:
+            dest = lower_pack_64(&b, src);
             break;
-         case nir_op_unpack_double_2x32:
-            dest = lower_unpack_double(&b, src);
-            break;
-         case nir_op_pack_int_2x32:
-            dest = lower_pack_int(&b, src);
-            break;
-         case nir_op_unpack_int_2x32:
-            dest = lower_unpack_int(&b, src);
+         case nir_op_unpack_64_2x32:
+            dest = lower_unpack_64(&b, src);
             break;
          default:
             unreachable("Impossible opcode");

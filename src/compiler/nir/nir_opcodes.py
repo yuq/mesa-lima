@@ -285,16 +285,10 @@ dst.x = (src0.x <<  0) |
         (src0.w << 24);
 """)
 
-unop_horiz("pack_double_2x32", 1, tuint64, 2, tuint32,
+unop_horiz("pack_64_2x32", 1, tuint64, 2, tuint32,
            "dst.x = src0.x | ((uint64_t)src0.y << 32);")
 
-unop_horiz("pack_int_2x32", 1, tint64, 2, tint32,
-           "dst.x = src0.x | ((int64_t)src0.y << 32);")
-
-unop_horiz("unpack_double_2x32", 2, tuint32, 1, tuint64,
-           "dst.x = src0.x; dst.y = src0.x >> 32;")
-
-unop_horiz("unpack_int_2x32", 2, tint32, 1, tint64,
+unop_horiz("unpack_64_2x32", 2, tuint32, 1, tuint64,
            "dst.x = src0.x; dst.y = src0.x >> 32;")
 
 # Lowered floating point unpacking operations.
@@ -305,10 +299,8 @@ unop_horiz("unpack_half_2x16_split_x", 1, tfloat32, 1, tuint32,
 unop_horiz("unpack_half_2x16_split_y", 1, tfloat32, 1, tuint32,
            "unpack_half_1x16((uint16_t)(src0.x >> 16))")
 
-unop_convert("unpack_double_2x32_split_x", tuint32, tuint64, "src0")
-unop_convert("unpack_double_2x32_split_y", tuint32, tuint64, "src0 >> 32")
-unop_convert("unpack_int_2x32_split_x", tuint32, tuint64, "src0")
-unop_convert("unpack_int_2x32_split_y", tuint32, tuint64, "src0 >> 32")
+unop_convert("unpack_64_2x32_split_x", tuint32, tuint64, "src0")
+unop_convert("unpack_64_2x32_split_y", tuint32, tuint64, "src0 >> 32")
 
 # Bit operations, part of ARB_gpu_shader5.
 
@@ -588,10 +580,7 @@ binop("fpow", tfloat, "", "bit_size == 64 ? powf(src0, src1) : pow(src0, src1)")
 binop_horiz("pack_half_2x16_split", 1, tuint32, 1, tfloat32, 1, tfloat32,
             "pack_half_1x16(src0.x) | (pack_half_1x16(src1.x) << 16)")
 
-binop_convert("pack_double_2x32_split", tuint64, tuint32, "",
-              "src0 | ((uint64_t)src1 << 32)")
-
-binop_convert("pack_int_2x32_split", tuint64, tuint32, "",
+binop_convert("pack_64_2x32_split", tuint64, tuint32, "",
               "src0 | ((uint64_t)src1 << 32)")
 
 # bfm implements the behavior of the first operation of the SM5 "bfi" assembly
