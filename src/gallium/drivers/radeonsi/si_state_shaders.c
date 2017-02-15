@@ -2079,18 +2079,22 @@ static bool si_update_gs_ring_buffers(struct si_context *sctx)
 
 	if (update_esgs) {
 		pipe_resource_reference(&sctx->esgs_ring, NULL);
-		sctx->esgs_ring = pipe_buffer_create(sctx->b.b.screen, 0,
-						     PIPE_USAGE_DEFAULT,
-						     esgs_ring_size);
+		sctx->esgs_ring =
+			r600_aligned_buffer_create(sctx->b.b.screen,
+						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   PIPE_USAGE_DEFAULT,
+						   esgs_ring_size, alignment);
 		if (!sctx->esgs_ring)
 			return false;
 	}
 
 	if (update_gsvs) {
 		pipe_resource_reference(&sctx->gsvs_ring, NULL);
-		sctx->gsvs_ring = pipe_buffer_create(sctx->b.b.screen, 0,
-						     PIPE_USAGE_DEFAULT,
-						     gsvs_ring_size);
+		sctx->gsvs_ring =
+			r600_aligned_buffer_create(sctx->b.b.screen,
+						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   PIPE_USAGE_DEFAULT,
+						   gsvs_ring_size, alignment);
 		if (!sctx->gsvs_ring)
 			return false;
 	}
@@ -2227,8 +2231,10 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 			r600_resource_reference(&sctx->scratch_buffer, NULL);
 
 			sctx->scratch_buffer = (struct r600_resource*)
-					pipe_buffer_create(&sctx->screen->b.b, 0,
-	                                PIPE_USAGE_DEFAULT, scratch_needed_size);
+				r600_aligned_buffer_create(&sctx->screen->b.b,
+							   R600_RESOURCE_FLAG_UNMAPPABLE,
+							   PIPE_USAGE_DEFAULT,
+							   scratch_needed_size, 256);
 			if (!sctx->scratch_buffer)
 				return false;
 
@@ -2332,18 +2338,23 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 	}
 
 	assert(!sctx->tf_ring);
-	sctx->tf_ring = pipe_buffer_create(sctx->b.b.screen, 0,
-					   PIPE_USAGE_DEFAULT,
-					   32768 * sctx->screen->b.info.max_se);
+	sctx->tf_ring = r600_aligned_buffer_create(sctx->b.b.screen,
+						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   PIPE_USAGE_DEFAULT,
+						   32768 * sctx->screen->b.info.max_se,
+						   256);
 	if (!sctx->tf_ring)
 		return;
 
 	assert(((sctx->tf_ring->width0 / 4) & C_030938_SIZE) == 0);
 
-	sctx->tess_offchip_ring = pipe_buffer_create(sctx->b.b.screen, 0,
-	                                             PIPE_USAGE_DEFAULT,
-	                                             max_offchip_buffers *
-	                                             sctx->screen->tess_offchip_block_dw_size * 4);
+	sctx->tess_offchip_ring =
+		r600_aligned_buffer_create(sctx->b.b.screen,
+					   R600_RESOURCE_FLAG_UNMAPPABLE,
+					   PIPE_USAGE_DEFAULT,
+					   max_offchip_buffers *
+					   sctx->screen->tess_offchip_block_dw_size * 4,
+					   256);
 	if (!sctx->tess_offchip_ring)
 		return;
 

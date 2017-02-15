@@ -763,7 +763,9 @@ static void r600_texture_alloc_cmask_separate(struct r600_common_screen *rscreen
 	}
 
 	rtex->cmask_buffer = (struct r600_resource *)
-		r600_aligned_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
+		r600_aligned_buffer_create(&rscreen->b,
+					   R600_RESOURCE_FLAG_UNMAPPABLE,
+					   PIPE_USAGE_DEFAULT,
 					   rtex->cmask.size,
 					   rtex->cmask.alignment);
 	if (rtex->cmask_buffer == NULL) {
@@ -874,7 +876,9 @@ static void r600_texture_allocate_htile(struct r600_common_screen *rscreen,
 		return;
 
 	rtex->htile_buffer = (struct r600_resource*)
-		r600_aligned_buffer_create(&rscreen->b, 0, PIPE_USAGE_DEFAULT,
+		r600_aligned_buffer_create(&rscreen->b,
+					   R600_RESOURCE_FLAG_UNMAPPABLE,
+					   PIPE_USAGE_DEFAULT,
 					   rtex->surface.htile_size,
 					   rtex->surface.htile_alignment);
 	if (rtex->htile_buffer == NULL) {
@@ -2106,7 +2110,8 @@ static void vi_separate_dcc_try_enable(struct r600_common_context *rctx,
 		tex->last_dcc_separate_buffer = NULL;
 	} else {
 		tex->dcc_separate_buffer = (struct r600_resource*)
-			r600_aligned_buffer_create(rctx->b.screen, 0,
+			r600_aligned_buffer_create(rctx->b.screen,
+						   R600_RESOURCE_FLAG_UNMAPPABLE,
 						   PIPE_USAGE_DEFAULT,
 						   tex->surface.dcc_size,
 						   tex->surface.dcc_alignment);

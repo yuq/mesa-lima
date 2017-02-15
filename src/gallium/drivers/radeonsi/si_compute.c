@@ -289,8 +289,10 @@ static bool si_setup_compute_scratch_buffer(struct si_context *sctx,
 		r600_resource_reference(&sctx->compute_scratch_buffer, NULL);
 
 		sctx->compute_scratch_buffer = (struct r600_resource*)
-			pipe_buffer_create(&sctx->screen->b.b, 0,
-					   PIPE_USAGE_DEFAULT, scratch_needed);
+			r600_aligned_buffer_create(&sctx->screen->b.b,
+						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   PIPE_USAGE_DEFAULT,
+						   scratch_needed, 256);
 
 		if (!sctx->compute_scratch_buffer)
 			return false;

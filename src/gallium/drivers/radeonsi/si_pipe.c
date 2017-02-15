@@ -204,8 +204,9 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		}
 
 		sctx->ce_suballocator =
-				u_suballocator_create(&sctx->b.b, 1024 * 1024,
-						      0, PIPE_USAGE_DEFAULT, 0, false);
+			u_suballocator_create(&sctx->b.b, 1024 * 1024, 0,
+					      PIPE_USAGE_DEFAULT,
+					      R600_RESOURCE_FLAG_UNMAPPABLE, false);
 		if (!sctx->ce_suballocator)
 			goto fail;
 	}
@@ -257,8 +258,11 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 	/* CIK cannot unbind a constant buffer (S_BUFFER_LOAD doesn't skip loads
 	 * if NUM_RECORDS == 0). We need to use a dummy buffer instead. */
 	if (sctx->b.chip_class == CIK) {
-		sctx->null_const_buf.buffer = pipe_buffer_create(screen, PIPE_BIND_CONSTANT_BUFFER,
-								 PIPE_USAGE_DEFAULT, 16);
+		sctx->null_const_buf.buffer =
+			r600_aligned_buffer_create(screen,
+						   R600_RESOURCE_FLAG_UNMAPPABLE,
+						   PIPE_USAGE_DEFAULT, 16,
+						   sctx->screen->b.info.tcc_cache_line_size);
 		if (!sctx->null_const_buf.buffer)
 			goto fail;
 		sctx->null_const_buf.buffer_size = sctx->null_const_buf.buffer->width0;
