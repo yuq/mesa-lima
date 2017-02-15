@@ -1219,7 +1219,7 @@ fs_visitor::nir_emit_alu(const fs_builder &bld, nir_alu_instr *instr)
        * the unpack operation.
        */
       for (int i = 0; i < 2; i++) {
-         if (instr->src[i].src.is_ssa)
+         if (!instr->src[i].src.is_ssa)
             continue;
 
          const nir_instr *parent_instr = instr->src[i].src.ssa->parent_instr;
