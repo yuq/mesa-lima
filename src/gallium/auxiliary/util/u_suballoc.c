@@ -105,13 +105,20 @@ u_suballocator_alloc(struct u_suballocator *allocator, unsigned size,
 
       /* Clear the memory if needed. */
       if (allocator->zero_buffer_memory) {
-         struct pipe_transfer *transfer = NULL;
-         void *ptr;
+         struct pipe_context *pipe = allocator->pipe;
 
-         ptr = pipe_buffer_map(allocator->pipe, allocator->buffer,
-			       PIPE_TRANSFER_WRITE, &transfer);
-         memset(ptr, 0, allocator->size);
-         pipe_buffer_unmap(allocator->pipe, transfer);
+         if (pipe->clear_buffer) {
+            unsigned clear_value = 0;
+
+            pipe->clear_buffer(pipe, allocator->buffer, 0, allocator->size,
+                               &clear_value, 4);
+         } else {
+            struct pipe_transfer *transfer = NULL;
+            void *ptr = pipe_buffer_map(pipe, allocator->buffer,
+                                        PIPE_TRANSFER_WRITE, &transfer);
+            memset(ptr, 0, allocator->size);
+            pipe_buffer_unmap(pipe, transfer);
+         }
       }
    }
 
