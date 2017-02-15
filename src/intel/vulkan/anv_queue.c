@@ -493,23 +493,43 @@ done:
 // Queue semaphore functions
 
 VkResult anv_CreateSemaphore(
-    VkDevice                                    device,
+    VkDevice                                    _device,
     const VkSemaphoreCreateInfo*                pCreateInfo,
     const VkAllocationCallbacks*                pAllocator,
     VkSemaphore*                                pSemaphore)
 {
-   /* The DRM execbuffer ioctl always execute in-oder, even between different
-    * rings. As such, there's nothing to do for the user space semaphore.
-    */
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   struct anv_semaphore *semaphore;
 
-   *pSemaphore = (VkSemaphore)1;
+   assert(pCreateInfo->sType == VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO);
+
+   semaphore = vk_alloc2(&device->alloc, pAllocator, sizeof(*semaphore), 8,
+                         VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
+   if (semaphore == NULL)
+      return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+   /* The DRM execbuffer ioctl always execute in-oder, even between
+    * different rings. As such, a dummy no-op semaphore is a perfectly
+    * valid implementation.
+    */
+   semaphore->permanent.type = ANV_SEMAPHORE_TYPE_DUMMY;
+   semaphore->temporary.type = ANV_SEMAPHORE_TYPE_NONE;
+
+   *pSemaphore = anv_semaphore_to_handle(semaphore);
 
    return VK_SUCCESS;
 }
 
 void anv_DestroySemaphore(
-    VkDevice                                    device,
-    VkSemaphore                                 semaphore,
+    VkDevice                                    _device,
+    VkSemaphore                                 _semaphore,
     const VkAllocationCallbacks*                pAllocator)
 {
+   ANV_FROM_HANDLE(anv_device, device, _device);
+   ANV_FROM_HANDLE(anv_semaphore, semaphore, _semaphore);
+
+   if (semaphore == NULL)
+      return;
+
+   vk_free2(&device->alloc, pAllocator, semaphore);
 }

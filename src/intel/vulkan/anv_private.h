@@ -1706,6 +1706,33 @@ struct anv_event {
    struct anv_state                             state;
 };
 
+enum anv_semaphore_type {
+   ANV_SEMAPHORE_TYPE_NONE = 0,
+   ANV_SEMAPHORE_TYPE_DUMMY
+};
+
+struct anv_semaphore_impl {
+   enum anv_semaphore_type type;
+};
+
+struct anv_semaphore {
+   /* Permanent semaphore state.  Every semaphore has some form of permanent
+    * state (type != ANV_SEMAPHORE_TYPE_NONE).  This may be a BO to fence on
+    * (for cross-process semaphores0 or it could just be a dummy for use
+    * internally.
+    */
+   struct anv_semaphore_impl permanent;
+
+   /* Temporary semaphore state.  A semaphore *may* have temporary state.
+    * That state is added to the semaphore by an import operation and is reset
+    * back to ANV_SEMAPHORE_TYPE_NONE when the semaphore is waited on.  A
+    * semaphore with temporary state cannot be signaled because the semaphore
+    * must already be signaled before the temporary state can be exported from
+    * the semaphore in the other process and imported here.
+    */
+   struct anv_semaphore_impl temporary;
+};
+
 struct anv_shader_module {
    unsigned char                                sha1[20];
    uint32_t                                     size;
@@ -2316,6 +2343,7 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_pipeline_layout, VkPipelineLayout)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_query_pool, VkQueryPool)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_render_pass, VkRenderPass)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_sampler, VkSampler)
+ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_semaphore, VkSemaphore)
 ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 
 /* Gen-specific function declarations */
