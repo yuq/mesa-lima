@@ -688,6 +688,12 @@ nir_get_nir_type_for_glsl_type(const struct glsl_type *type)
    case GLSL_TYPE_INT:
       return nir_type_int32;
       break;
+   case GLSL_TYPE_UINT64:
+      return nir_type_uint64;
+      break;
+   case GLSL_TYPE_INT64:
+      return nir_type_int64;
+      break;
    case GLSL_TYPE_FLOAT:
       return nir_type_float32;
       break;
