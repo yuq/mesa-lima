@@ -132,12 +132,25 @@ env.CodeGenerate(
     command = python_cmd + ' $SCRIPT --proto $SOURCE --output $TARGET --gen_eventhandlerfile_h'
 )
 
+# 5 SWR_MULTISAMPLE_TYPE_COUNT
+# 2 SWR_MSAA_SAMPLE_PATTERN_COUNT
+# 3 SWR_INPUT_COVERAGE_COUNT
+# 2 centroid
+# 2 forcedSampleCount
+# 2 canEarlyZ
+env.CodeGenerate(
+    target = 'rasterizer/core/BackendPixelRate0.cpp',
+    script = swrroot + 'rasterizer/scripts/gen_backends.py',
+    command = python_cmd + ' $SCRIPT --output rasterizer/core --dim 5 2 3 2 2 2 --split 0 --cpp'
+)
+
 # Auto-generated .cpp files (that need to generate object files)
 built_sources = [
     'rasterizer/scripts/gen_knobs.cpp',
     'rasterizer/jitter/builder_gen.cpp',
     'rasterizer/jitter/builder_x86.cpp',
     'rasterizer/archrast/gen_ar_event.cpp',
+    'rasterizer/core/BackendPixelRate0.cpp',
     ]
 
 source = built_sources

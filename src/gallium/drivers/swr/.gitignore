@@ -10,3 +10,4 @@ rasterizer/jitter/builder_x86.h
 rasterizer/jitter/state_llvm.h
 rasterizer/scripts/gen_knobs.cpp
 rasterizer/scripts/gen_knobs.h
+rasterizer/core/BackendPixelRate0.cpp

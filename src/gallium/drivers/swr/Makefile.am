@@ -61,7 +61,8 @@ BUILT_SOURCES = \
 	rasterizer/archrast/gen_ar_event.h \
 	rasterizer/archrast/gen_ar_event.cpp \
 	rasterizer/archrast/gen_ar_eventhandler.h \
-	rasterizer/archrast/gen_ar_eventhandlerfile.h
+	rasterizer/archrast/gen_ar_eventhandlerfile.h \
+	rasterizer/core/BackendPixelRate0.cpp
 
 MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
@@ -155,6 +156,21 @@ rasterizer/archrast/gen_ar_eventhandlerfile.h: rasterizer/scripts/gen_archrast.p
 		--proto $(srcdir)/rasterizer/archrast/events.proto \
 		--output rasterizer/archrast/gen_ar_eventhandlerfile.h \
 		--gen_eventhandlerfile_h
+
+# 5 SWR_MULTISAMPLE_TYPE_COUNT
+# 2 SWR_MSAA_SAMPLE_PATTERN_COUNT
+# 3 SWR_INPUT_COVERAGE_COUNT
+# 2 centroid
+# 2 forcedSampleCount
+# 2 canEarlyZ
+rasterizer/core/BackendPixelRate0.cpp: rasterizer/scripts/gen_backends.py rasterizer/scripts/templates/backend_template.cpp
+	$(MKDIR_GEN)
+	$(PYTHON_GEN) \
+		$(srcdir)/rasterizer/scripts/gen_backends.py \
+		--outdir rasterizer/core \
+		--dim 5 2 3 2 2 2 \
+		--split 0 \
+		--cpp
 
 COMMON_LIBADD = \
 	$(top_builddir)/src/gallium/auxiliary/libgallium.la \
@@ -250,6 +266,7 @@ EXTRA_DIST = \
 	rasterizer/jitter/scripts/gen_llvm_ir_macros.py \
 	rasterizer/jitter/scripts/gen_llvm_types.py \
 	rasterizer/scripts/gen_archrast.py \
+	rasterizer/scripts/gen_backends.py \
 	rasterizer/scripts/gen_knobs.py \
 	rasterizer/scripts/knob_defs.py \
 	rasterizer/scripts/mako/ast.py \
@@ -273,4 +290,5 @@ EXTRA_DIST = \
 	rasterizer/scripts/templates/ar_event_h.template \
 	rasterizer/scripts/templates/ar_event_cpp.template \
 	rasterizer/scripts/templates/ar_eventhandler_h.template \
-	rasterizer/scripts/templates/ar_eventhandlerfile_h.template
+	rasterizer/scripts/templates/ar_eventhandlerfile_h.template \
+	rasterizer/scripts/templates/backend_template.cpp
