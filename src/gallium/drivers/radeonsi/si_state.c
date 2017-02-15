@@ -3399,36 +3399,36 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 		 */
 		if (data_format == V_008F0C_BUF_DATA_FORMAT_2_10_10_10) {
 			if (num_format == V_008F0C_BUF_NUM_FORMAT_SNORM) {
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SNORM << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_A2_SNORM;
 			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SSCALED) {
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SSCALED << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_A2_SSCALED;
 			} else if (num_format == V_008F0C_BUF_NUM_FORMAT_SINT) {
 				/* This isn't actually used in OpenGL. */
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_A2_SINT << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_A2_SINT;
 			}
 		} else if (channel && channel->type == UTIL_FORMAT_TYPE_FIXED) {
 			if (desc->swizzle[3] == PIPE_SWIZZLE_1)
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBX_32_FIXED << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_RGBX_32_FIXED;
 			else
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_FIXED << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_RGBA_32_FIXED;
 		} else if (channel && channel->size == 32 && !channel->pure_integer) {
 			if (channel->type == UTIL_FORMAT_TYPE_SIGNED) {
 				if (channel->normalized) {
 					if (desc->swizzle[3] == PIPE_SWIZZLE_1)
-						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBX_32_SNORM << (4 * i);
+						v->fix_fetch[i] = SI_FIX_FETCH_RGBX_32_SNORM;
 					else
-						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_SNORM << (4 * i);
+						v->fix_fetch[i] = SI_FIX_FETCH_RGBA_32_SNORM;
 				} else {
-					v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_SSCALED << (4 * i);
+					v->fix_fetch[i] = SI_FIX_FETCH_RGBA_32_SSCALED;
 				}
 			} else if (channel->type == UTIL_FORMAT_TYPE_UNSIGNED) {
 				if (channel->normalized) {
 					if (desc->swizzle[3] == PIPE_SWIZZLE_1)
-						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBX_32_UNORM << (4 * i);
+						v->fix_fetch[i] = SI_FIX_FETCH_RGBX_32_UNORM;
 					else
-						v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_UNORM << (4 * i);
+						v->fix_fetch[i] = SI_FIX_FETCH_RGBA_32_UNORM;
 				} else {
-					v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_32_USCALED << (4 * i);
+					v->fix_fetch[i] = SI_FIX_FETCH_RGBA_32_USCALED;
 				}
 			}
 		} else if (channel && channel->size == 64 &&
@@ -3436,21 +3436,21 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 			switch (desc->nr_channels) {
 			case 1:
 			case 2:
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RG_64_FLOAT << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_RG_64_FLOAT;
 				swizzle[0] = PIPE_SWIZZLE_X;
 				swizzle[1] = PIPE_SWIZZLE_Y;
 				swizzle[2] = desc->nr_channels == 2 ? PIPE_SWIZZLE_Z : PIPE_SWIZZLE_0;
 				swizzle[3] = desc->nr_channels == 2 ? PIPE_SWIZZLE_W : PIPE_SWIZZLE_0;
 				break;
 			case 3:
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGB_64_FLOAT << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_RGB_64_FLOAT;
 				swizzle[0] = PIPE_SWIZZLE_X; /* 3 loads */
 				swizzle[1] = PIPE_SWIZZLE_Y;
 				swizzle[2] = PIPE_SWIZZLE_0;
 				swizzle[3] = PIPE_SWIZZLE_0;
 				break;
 			case 4:
-				v->fix_fetch |= (uint64_t)SI_FIX_FETCH_RGBA_64_FLOAT << (4 * i);
+				v->fix_fetch[i] = SI_FIX_FETCH_RGBA_64_FLOAT;
 				swizzle[0] = PIPE_SWIZZLE_X; /* 2 loads */
 				swizzle[1] = PIPE_SWIZZLE_Y;
 				swizzle[2] = PIPE_SWIZZLE_Z;

@@ -107,7 +107,7 @@ struct si_vertex_element
 	 * in bytes if the size 3-workaround must be applied.
 	 */
 	uint32_t			fix_size3;
-	uint64_t			fix_fetch;
+	uint8_t				fix_fetch[SI_MAX_ATTRIBS];
 
 	uint32_t			rsrc_word3[SI_MAX_ATTRIBS];
 	uint32_t			format_size[SI_MAX_ATTRIBS];

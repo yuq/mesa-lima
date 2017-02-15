@@ -975,9 +975,8 @@ static inline void si_shader_selector_key(struct pipe_context *ctx,
 				key->part.vs.prolog.instance_divisors[i] =
 					sctx->vertex_elements->elements[i].instance_divisor;
 
-			key->mono.vs.fix_fetch =
-				sctx->vertex_elements->fix_fetch &
-				u_bit_consecutive64(0, 4 * count);
+			memcpy(key->mono.vs.fix_fetch,
+			       sctx->vertex_elements->fix_fetch, count);
 		}
 		if (sctx->tes_shader.cso)
 			key->as_ls = 1;

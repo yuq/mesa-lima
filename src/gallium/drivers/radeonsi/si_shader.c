@@ -366,7 +366,7 @@ static void declare_input_vs(
 				    ctx->param_vertex_index0 +
 				    input_index);
 
-	fix_fetch = (ctx->shader->key.mono.vs.fix_fetch >> (4 * input_index)) & 0xf;
+	fix_fetch = ctx->shader->key.mono.vs.fix_fetch[input_index];
 
 	/* Do multiple loads for double formats. */
 	if (fix_fetch == SI_FIX_FETCH_RGB_64_FLOAT) {
@@ -6270,7 +6270,11 @@ static void si_dump_shader_key(unsigned shader, struct si_shader_key *key,
 		fprintf(f, "  part.vs.epilog.export_prim_id = %u\n", key->part.vs.epilog.export_prim_id);
 		fprintf(f, "  as_es = %u\n", key->as_es);
 		fprintf(f, "  as_ls = %u\n", key->as_ls);
-		fprintf(f, "  mono.vs.fix_fetch = 0x%"PRIx64"\n", key->mono.vs.fix_fetch);
+
+		fprintf(f, "  mono.vs.fix_fetch = {");
+		for (i = 0; i < SI_MAX_ATTRIBS; i++)
+			fprintf(f, !i ? "%u" : ", %u", key->mono.vs.fix_fetch[i]);
+		fprintf(f, "}\n");
 		break;
 
 	case PIPE_SHADER_TESS_CTRL:

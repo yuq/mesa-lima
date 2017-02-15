@@ -250,7 +250,6 @@ enum {
 	SI_FIX_FETCH_RG_64_FLOAT,
 	SI_FIX_FETCH_RGB_64_FLOAT,
 	SI_FIX_FETCH_RGBA_64_FLOAT,
-	SI_FIX_FETCH_RESERVED_15, /* maximum */
 };
 
 struct si_shader;
@@ -445,8 +444,8 @@ struct si_shader_key {
 	/* Flags for monolithic compilation only. */
 	union {
 		struct {
-			/* One nibble for every input: SI_FIX_FETCH_* enums. */
-			uint64_t	fix_fetch;
+			/* One byte for every input: SI_FIX_FETCH_* enums. */
+			uint8_t		fix_fetch[SI_MAX_ATTRIBS];
 		} vs;
 		struct {
 			uint64_t	inputs_to_copy; /* for fixed-func TCS */
