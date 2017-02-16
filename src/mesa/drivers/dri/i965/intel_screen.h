@@ -37,6 +37,10 @@
 #include "i915_drm.h"
 #include "xmlconfig.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct intel_screen
 {
    int deviceID;
@@ -153,5 +157,9 @@ can_do_predicate_writes(const struct intel_screen *screen)
 {
    return screen->kernel_features & KERNEL_ALLOWS_PREDICATE_WRITES;
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

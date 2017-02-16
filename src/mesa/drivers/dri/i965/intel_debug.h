@@ -24,6 +24,9 @@
  */
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /**
  * \file intel_debug.h
  *
@@ -122,3 +125,7 @@ extern uint64_t INTEL_DEBUG;
 extern uint64_t intel_debug_flag_for_shader_stage(gl_shader_stage stage);
 
 extern void brw_process_intel_debug_variable(void);
+
+#ifdef __cplusplus
+}
+#endif
