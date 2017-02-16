@@ -88,10 +88,10 @@ namespace ArchRast
         EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id) {}
 
         // These are events that we're not interested in saving in stats event files.
-        virtual void Handle(Start& event) {}
-        virtual void Handle(End& event) {}
+        virtual void Handle(Start event) {}
+        virtual void Handle(End event) {}
 
-        virtual void Handle(EarlyDepthStencilInfoSingleSample& event)
+        virtual void Handle(EarlyDepthStencilInfoSingleSample event)
         {
             //earlyZ test compute
             DSSingleSample.earlyZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
@@ -112,7 +112,7 @@ namespace ArchRast
             DSOmZ.earlyStencilTestCount += DSSingleSample.earlyStencilTestCount;
         }
 
-        virtual void Handle(EarlyDepthStencilInfoSampleRate& event)
+        virtual void Handle(EarlyDepthStencilInfoSampleRate event)
         {
             //earlyZ test compute
             DSSampleRate.earlyZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
@@ -133,7 +133,7 @@ namespace ArchRast
             DSOmZ.earlyStencilTestCount += DSSampleRate.earlyStencilTestCount;
         }
 
-        virtual void Handle(EarlyDepthStencilInfoNullPS& event)
+        virtual void Handle(EarlyDepthStencilInfoNullPS event)
         {
             //earlyZ test compute
             DSNullPS.earlyZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
@@ -154,7 +154,7 @@ namespace ArchRast
             DSOmZ.earlyStencilTestCount += DSNullPS.earlyStencilTestCount;
         }
 
-        virtual void Handle(LateDepthStencilInfoSingleSample& event)
+        virtual void Handle(LateDepthStencilInfoSingleSample event)
         {
             //lateZ test compute
             DSSingleSample.lateZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
@@ -175,7 +175,7 @@ namespace ArchRast
             DSOmZ.lateStencilTestCount += DSSingleSample.lateStencilTestCount;
         }
 
-        virtual void Handle(LateDepthStencilInfoSampleRate& event)
+        virtual void Handle(LateDepthStencilInfoSampleRate event)
         {
             //lateZ test compute
             DSSampleRate.lateZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
@@ -196,7 +196,7 @@ namespace ArchRast
             DSOmZ.lateStencilTestCount += DSSampleRate.lateStencilTestCount;
         }
 
-        virtual void Handle(LateDepthStencilInfoNullPS& event)
+        virtual void Handle(LateDepthStencilInfoNullPS event)
         {
             //lateZ test compute
             DSNullPS.lateZTestPassCount += _mm_popcnt_u32(event.data.depthPassMask);
@@ -217,7 +217,7 @@ namespace ArchRast
             DSOmZ.lateStencilTestCount += DSNullPS.lateStencilTestCount;
         }
 
-        virtual void Handle(EarlyDepthInfoPixelRate& event)
+        virtual void Handle(EarlyDepthInfoPixelRate event)
         {
             //earlyZ test compute
             DSPixelRate.earlyZTestCount += _mm_popcnt_u32(event.data.activeLanes);
@@ -231,7 +231,7 @@ namespace ArchRast
         }
 
 
-        virtual void Handle(LateDepthInfoPixelRate& event)
+        virtual void Handle(LateDepthInfoPixelRate event)
         {
             //lateZ test compute
             DSPixelRate.lateZTestCount += _mm_popcnt_u32(event.data.activeLanes);
@@ -246,7 +246,7 @@ namespace ArchRast
         }
 
 
-        virtual void Handle(BackendDrawEndEvent& event)
+        virtual void Handle(BackendDrawEndEvent event)
         {
             //singleSample
             EventHandlerFile::Handle(EarlyZSingleSample(event.data.drawId, DSSingleSample.earlyZTestPassCount, DSSingleSample.earlyZTestFailCount, DSSingleSample.earlyZTestCount));
@@ -283,7 +283,7 @@ namespace ArchRast
             DSOmZ = {};
         }
 
-        virtual void Handle(FrontendDrawEndEvent& event)
+        virtual void Handle(FrontendDrawEndEvent event)
         {
             //Clipper
             EventHandlerFile::Handle(VertsClipped(event.data.drawId, CS.clippedVerts));
@@ -302,19 +302,19 @@ namespace ArchRast
             GS = {};
         }
 
-        virtual void Handle(GSPrimInfo& event)
+        virtual void Handle(GSPrimInfo event)
         {
             GS.inputPrimCount += event.data.inputPrimCount;
             GS.primGeneratedCount += event.data.primGeneratedCount;
             GS.vertsInput += event.data.vertsInput;
         }
 
-        virtual void Handle(ClipVertexCount& event)
+        virtual void Handle(ClipVertexCount event)
         {
             CS.clippedVerts += (_mm_popcnt_u32(event.data.primMask) * event.data.vertsPerPrim);
         }
 
-        virtual void Handle(TessPrimCount& event)
+        virtual void Handle(TessPrimCount event)
         {
             TS.inputPrims += event.data.primCount;
         }
