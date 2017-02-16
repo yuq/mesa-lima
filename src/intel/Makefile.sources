@@ -202,6 +202,7 @@ VULKAN_FILES := \
 	vulkan/anv_pipeline.c \
 	vulkan/anv_pipeline_cache.c \
 	vulkan/anv_private.h \
+	vulkan/anv_queue.c \
 	vulkan/anv_util.c \
 	vulkan/anv_wsi.c \
 	vulkan/vk_format_info.h
