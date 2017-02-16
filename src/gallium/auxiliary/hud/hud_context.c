@@ -939,7 +939,20 @@ hud_graph_destroy(struct hud_graph *graph)
    FREE(graph);
 }
 
-void
+static void strcat_without_spaces(char *dst, const char *src)
+{
+   dst += strlen(dst);
+   while (*src) {
+      if (*src == ' ')
+         *dst++ = '_';
+      else
+         *dst++ = *src;
+      src++;
+   }
+   *dst = 0;
+}
+
+static void
 hud_graph_set_dump_file(struct hud_graph *gr)
 {
 #ifndef PIPE_OS_WINDOWS
@@ -951,7 +964,7 @@ hud_graph_set_dump_file(struct hud_graph *gr)
       if (dump_file) {
          strcpy(dump_file, hud_dump_dir);
          strcat(dump_file, "/");
-         strcat(dump_file, gr->name);
+         strcat_without_spaces(dump_file, gr->name);
          gr->fd = fopen(dump_file, "w+");
          free(dump_file);
       }
@@ -1374,6 +1387,14 @@ hud_parse_env_var(struct hud_context *hud, const char *env)
       }
       else {
          FREE(pane);
+      }
+   }
+
+   LIST_FOR_EACH_ENTRY(pane, &hud->pane_list, head) {
+      struct hud_graph *gr;
+
+      LIST_FOR_EACH_ENTRY(gr, &pane->graph_list, head) {
+         hud_graph_set_dump_file(gr);
       }
    }
 }

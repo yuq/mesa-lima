@@ -214,8 +214,6 @@ hud_cpu_graph_install(struct hud_pane *pane, unsigned cpu_index)
    info = gr->query_data;
    info->cpu_index = cpu_index;
 
-   hud_graph_set_dump_file(gr);
-
    hud_pane_add_graph(pane, gr);
    hud_pane_set_max_value(pane, 100);
 }
@@ -284,8 +282,6 @@ hud_api_thread_busy_install(struct hud_pane *pane)
     * memory debugger.  Use simple free_query_data() wrapper.
     */
    gr->free_query_data = free_query_data;
-
-   hud_graph_set_dump_file(gr);
 
    hud_pane_add_graph(pane, gr);
    hud_pane_set_max_value(pane, 100);
