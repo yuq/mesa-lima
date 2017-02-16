@@ -40,6 +40,10 @@
 #include "compiler/shader_info.h"
 #include <stdio.h>
 
+#ifdef DEBUG
+#include "util/debug.h"
+#endif /* DEBUG */
+
 #include "nir_opcodes.h"
 
 #ifdef __cplusplus
@@ -2279,7 +2283,6 @@ void nir_validate_shader(nir_shader *shader);
 void nir_metadata_set_validation_flag(nir_shader *shader);
 void nir_metadata_check_validation_flag(nir_shader *shader);
 
-#include "util/debug.h"
 static inline bool
 should_clone_nir(void)
 {
