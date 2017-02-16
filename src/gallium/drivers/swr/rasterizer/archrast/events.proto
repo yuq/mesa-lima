@@ -140,6 +140,42 @@ event FrameEndEvent
     uint32_t nextDrawId;
 };
 
+///@brief API Stat: Split draw event for DrawInstanced. In certain cases, Rasty can split draws up into smaller draws.
+event DrawInstancedSplitEvent
+{
+    uint32_t drawId;
+};
+
+///@brief API Stat: Split draw event for DrawIndexedInstanced.
+event DrawIndexedInstancedSplitEvent
+{
+    uint32_t drawId;
+};
+
+///@brief API Stat: Synchonization event.
+event SwrSyncEvent
+{
+    uint32_t drawId;
+};
+
+///@brief API Stat: Invalidate hot tiles (i.e. tile cache)
+event SwrInvalidateTilesEvent
+{
+    uint32_t drawId;
+};
+
+///@brief API Stat: Invalidate and discard hot tiles within pixel region
+event SwrDiscardRectEvent
+{
+    uint32_t drawId;
+};
+
+///@brief API Stat: Flush tiles out to memory that is typically owned by driver (e.g. Flush RT cache)
+event SwrStoreTilesEvent
+{
+    uint32_t drawId;
+};
+
 event FrontendStatsEvent
 {
     uint32_t drawId;

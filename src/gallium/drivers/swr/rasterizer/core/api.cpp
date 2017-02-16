@@ -455,6 +455,8 @@ void SwrSync(HANDLE hContext, PFN_CALLBACK_FUNC pfnFunc, uint64_t userData, uint
     pDC->retireCallback.userData2 = userData2;
     pDC->retireCallback.userData3 = userData3;
 
+    AR_API_EVENT(SwrSyncEvent(pDC->drawId));
+
     //enqueue
     QueueDraw(pContext);
 
@@ -1138,6 +1140,8 @@ void DrawInstanced(
         //enqueue DC
         QueueDraw(pContext);
 
+        AR_API_EVENT(DrawInstancedSplitEvent(pDC->drawId));
+
         remainingVerts -= numVertsForDraw;
         draw++;
     }
@@ -1283,6 +1287,8 @@ void DrawIndexedInstance(
         //enqueue DC
         QueueDraw(pContext);
 
+        AR_API_EVENT(DrawIndexedInstancedSplitEvent(pDC->drawId));
+
         pIB += maxIndicesPerDraw * indexSize;
         remainingIndices -= numIndicesForDraw;
         draw++;
@@ -1366,6 +1372,8 @@ void SWR_API SwrInvalidateTiles(
 
     //enqueue
     QueueDraw(pContext);
+
+    AR_API_EVENT(SwrInvalidateTilesEvent(pDC->drawId));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1399,6 +1407,8 @@ void SWR_API SwrDiscardRect(
 
     //enqueue
     QueueDraw(pContext);
+
+    AR_API_EVENT(SwrDiscardRectEvent(pDC->drawId));
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -1467,6 +1477,8 @@ void SWR_API SwrStoreTiles(
 
     //enqueue
     QueueDraw(pContext);
+
+    AR_API_EVENT(SwrStoreTilesEvent(pDC->drawId));
 
     AR_API_END(APIStoreTiles, 1);
 }
