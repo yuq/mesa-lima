@@ -982,6 +982,7 @@ static VkResult
 anv_execbuf_add_bo(struct anv_execbuf *exec,
                    struct anv_bo *bo,
                    struct anv_reloc_list *relocs,
+                   uint32_t extra_flags,
                    const VkAllocationCallbacks *alloc)
 {
    struct drm_i915_gem_exec_object2 *obj = NULL;
@@ -1036,7 +1037,7 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
       obj->relocs_ptr = 0;
       obj->alignment = 0;
       obj->offset = bo->offset;
-      obj->flags = bo->flags;
+      obj->flags = bo->flags | extra_flags;
       obj->rsvd1 = 0;
       obj->rsvd2 = 0;
    }
@@ -1052,7 +1053,8 @@ anv_execbuf_add_bo(struct anv_execbuf *exec,
       for (size_t i = 0; i < relocs->num_relocs; i++) {
          /* A quick sanity check on relocations */
          assert(relocs->relocs[i].offset < bo->size);
-         anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL, alloc);
+         anv_execbuf_add_bo(exec, relocs->reloc_bos[i], NULL,
+                            extra_flags, alloc);
       }
    }
 
@@ -1261,7 +1263,7 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
    adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs,
                                       cmd_buffer->last_ss_pool_center);
    VkResult result =
-      anv_execbuf_add_bo(execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
+      anv_execbuf_add_bo(execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs, 0,
                          &cmd_buffer->device->alloc);
    if (result != VK_SUCCESS)
       return result;
@@ -1274,7 +1276,7 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
       adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        cmd_buffer->last_ss_pool_center);
 
-      result = anv_execbuf_add_bo(execbuf, &(*bbo)->bo, &(*bbo)->relocs,
+      result = anv_execbuf_add_bo(execbuf, &(*bbo)->bo, &(*bbo)->relocs, 0,
                                   &cmd_buffer->device->alloc);
       if (result != VK_SUCCESS)
          return result;
@@ -1387,12 +1389,51 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
 
 VkResult
 anv_cmd_buffer_execbuf(struct anv_device *device,
-                       struct anv_cmd_buffer *cmd_buffer)
+                       struct anv_cmd_buffer *cmd_buffer,
+                       const VkSemaphore *in_semaphores,
+                       uint32_t num_in_semaphores,
+                       const VkSemaphore *out_semaphores,
+                       uint32_t num_out_semaphores)
 {
    struct anv_execbuf execbuf;
    anv_execbuf_init(&execbuf);
 
-   VkResult result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
+   VkResult result = VK_SUCCESS;
+   for (uint32_t i = 0; i < num_in_semaphores; i++) {
+      ANV_FROM_HANDLE(anv_semaphore, semaphore, in_semaphores[i]);
+      assert(semaphore->temporary.type == ANV_SEMAPHORE_TYPE_NONE);
+      struct anv_semaphore_impl *impl = &semaphore->permanent;
+
+      switch (impl->type) {
+      case ANV_SEMAPHORE_TYPE_BO:
+         result = anv_execbuf_add_bo(&execbuf, impl->bo, NULL,
+                                     0, &device->alloc);
+         if (result != VK_SUCCESS)
+            return result;
+         break;
+      default:
+         break;
+      }
+   }
+
+   for (uint32_t i = 0; i < num_out_semaphores; i++) {
+      ANV_FROM_HANDLE(anv_semaphore, semaphore, out_semaphores[i]);
+      assert(semaphore->temporary.type == ANV_SEMAPHORE_TYPE_NONE);
+      struct anv_semaphore_impl *impl = &semaphore->permanent;
+
+      switch (impl->type) {
+      case ANV_SEMAPHORE_TYPE_BO:
+         result = anv_execbuf_add_bo(&execbuf, impl->bo, NULL,
+                                     EXEC_OBJECT_WRITE, &device->alloc);
+         if (result != VK_SUCCESS)
+            return result;
+         break;
+      default:
+         break;
+      }
+   }
+
+   result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
    if (result != VK_SUCCESS)
       return result;
 

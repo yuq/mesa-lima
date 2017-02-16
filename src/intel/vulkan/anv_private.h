@@ -1618,7 +1618,11 @@ void anv_cmd_buffer_add_secondary(struct anv_cmd_buffer *primary,
                                   struct anv_cmd_buffer *secondary);
 void anv_cmd_buffer_prepare_execbuf(struct anv_cmd_buffer *cmd_buffer);
 VkResult anv_cmd_buffer_execbuf(struct anv_device *device,
-                                struct anv_cmd_buffer *cmd_buffer);
+                                struct anv_cmd_buffer *cmd_buffer,
+                                const VkSemaphore *in_semaphores,
+                                uint32_t num_in_semaphores,
+                                const VkSemaphore *out_semaphores,
+                                uint32_t num_out_semaphores);
 
 VkResult anv_cmd_buffer_reset(struct anv_cmd_buffer *cmd_buffer);
 
@@ -1708,11 +1712,19 @@ struct anv_event {
 
 enum anv_semaphore_type {
    ANV_SEMAPHORE_TYPE_NONE = 0,
-   ANV_SEMAPHORE_TYPE_DUMMY
+   ANV_SEMAPHORE_TYPE_DUMMY,
+   ANV_SEMAPHORE_TYPE_BO,
 };
 
 struct anv_semaphore_impl {
    enum anv_semaphore_type type;
+
+   /* A BO representing this semaphore when type == ANV_SEMAPHORE_TYPE_BO.
+    * This BO will be added to the object list on any execbuf2 calls for
+    * which this semaphore is used as a wait or signal fence.  When used as
+    * a signal fence, the EXEC_OBJECT_WRITE flag will be set.
+    */
+   struct anv_bo *bo;
 };
 
 struct anv_semaphore {
