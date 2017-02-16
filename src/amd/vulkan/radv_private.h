@@ -536,7 +536,6 @@ struct radv_descriptor_range {
 
 struct radv_descriptor_set {
 	const struct radv_descriptor_set_layout *layout;
-	struct list_head descriptor_pool;
 	uint32_t size;
 
 	struct radv_buffer_view *buffer_views;
@@ -544,28 +543,19 @@ struct radv_descriptor_set {
 	uint64_t va;
 	uint32_t *mapped_ptr;
 	struct radv_descriptor_range *dynamic_descriptors;
+
+	struct list_head vram_list;
+
 	struct radeon_winsys_bo *descriptors[0];
 };
 
-struct radv_descriptor_pool_free_node {
-	int next;
-	uint32_t offset;
-	uint32_t size;
-};
-
 struct radv_descriptor_pool {
-	struct list_head descriptor_sets;
-
 	struct radeon_winsys_bo *bo;
 	uint8_t *mapped_ptr;
 	uint64_t current_offset;
 	uint64_t size;
 
-	int free_list;
-	int full_list;
-	uint32_t max_sets;
-	uint32_t allocated_sets;
-	struct radv_descriptor_pool_free_node free_nodes[];
+	struct list_head vram_list;
 };
 
 struct radv_buffer {
