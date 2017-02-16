@@ -605,8 +605,10 @@ struct PixelRateZTestLoop
 
             if(psState.writesODepth)
             {
-                // broadcast and test oDepth(psContext.vZ) written from the PS for each sample
-                vZ[sample] = psContext.vZ;
+                {
+                    // broadcast and test oDepth(psContext.vZ) written from the PS for each sample
+                    vZ[sample] = psContext.vZ;
+                }
             }
             else
             {
@@ -713,23 +715,26 @@ INLINE void OutputMerger4x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
         uint8_t *pColorSample = pColorBase[rt] + rasterTileColorOffset;
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
-        // pfnBlendFunc may not update all channels.  Initialize with PS output.
-        /// TODO: move this into the blend JIT.
-        blendOut = psContext.shaded[rt];
 
-        // Blend outputs and update coverage mask for alpha test
-        if(pfnBlendFunc[rt] != nullptr)
         {
-            pfnBlendFunc[rt](
-                pBlendState,
-                psContext.shaded[rt],
-                psContext.shaded[1],
-                psContext.shaded[0].w,
-                sample,
-                pColorSample,
-                blendOut,
-                &psContext.oMask,
-                (simdscalari*)&coverageMask);
+            // pfnBlendFunc may not update all channels.  Initialize with PS output.
+            /// TODO: move this into the blend JIT.
+            blendOut = psContext.shaded[rt];
+
+            // Blend outputs and update coverage mask for alpha test
+            if(pfnBlendFunc[rt] != nullptr)
+            {
+                pfnBlendFunc[rt](
+                    pBlendState,
+                    psContext.shaded[rt],
+                    psContext.shaded[1],
+                    psContext.shaded[0].w,
+                    sample,
+                    pColorSample,
+                    blendOut,
+                    &psContext.oMask,
+                    (simdscalari*)&coverageMask);
+            }
         }
 
         // final write mask 
@@ -782,9 +787,6 @@ INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
         simdscalar *pColorSample = reinterpret_cast<simdscalar *>(pColorBase[rt] + rasterTileColorOffset);
 
         const SWR_RENDER_TARGET_BLEND_STATE *pRTBlend = &pBlendState->renderTarget[rt];
-        // pfnBlendFunc may not update all channels.  Initialize with PS output.
-        /// TODO: move this into the blend JIT.
-        blendOut = psContext.shaded[rt];
 
         if (colorBufferBit & colorBufferEnableMask)
         {
@@ -794,19 +796,25 @@ INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
             blendSrc[3] = pColorSample[6];
         }
 
-        // Blend outputs and update coverage mask for alpha test
-        if (pfnBlendFunc[rt] != nullptr)
         {
-            pfnBlendFunc[rt](
-                pBlendState,
-                psContext.shaded[rt],
-                psContext.shaded[1],
-                psContext.shaded[0].w,
-                sample,
-                reinterpret_cast<uint8_t *>(&blendSrc),
-                blendOut,
-                &psContext.oMask,
-                reinterpret_cast<simdscalari *>(&coverageMask));
+            // pfnBlendFunc may not update all channels.  Initialize with PS output.
+            /// TODO: move this into the blend JIT.
+            blendOut = psContext.shaded[rt];
+
+            // Blend outputs and update coverage mask for alpha test
+            if(pfnBlendFunc[rt] != nullptr)
+            {
+                pfnBlendFunc[rt](
+                    pBlendState,
+                    psContext.shaded[rt],
+                    psContext.shaded[1],
+                    psContext.shaded[0].w,
+                    sample,
+                    reinterpret_cast<uint8_t *>(&blendSrc),
+                    blendOut,
+                    &psContext.oMask,
+                    reinterpret_cast<simdscalari *>(&coverageMask));
+            }
         }
 
         // final write mask 
@@ -840,6 +848,9 @@ INLINE void OutputMerger8x2(SWR_PS_CONTEXT &psContext, uint8_t* (&pColorBase)[SW
 template<typename T>
 void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t y, SWR_TRIANGLE_DESC &work, RenderOutputBuffers &renderBuffers)
 {
+    ///@todo: Need to move locals off stack to prevent __chkstk's from being generated for the backend
+
+
     SWR_CONTEXT *pContext = pDC->pContext;
 
     AR_BEGIN(BEPixelRateBackend, pDC->drawId);
@@ -850,11 +861,11 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
     BarycentricCoeffs coeffs;
     SetupBarycentricCoeffs(&coeffs, work);
 
-    uint8_t *pColorBuffer[SWR_NUM_RENDERTARGETS], *pDepthBuffer, *pStencilBuffer;
-    SetupRenderBuffers(pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
-
     SWR_PS_CONTEXT psContext;
     SetupPixelShaderContext<T>(&psContext, work);
+
+    uint8_t *pDepthBuffer, *pStencilBuffer;
+    SetupRenderBuffers(psContext.pColorBuffer, &pDepthBuffer, &pStencilBuffer, state.psState.numRenderTargets, renderBuffers);
 
     AR_END(BESetup, 0);
 
@@ -975,10 +986,10 @@ void BackendPixelRate(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t x, uint32_t
                 
                 // broadcast the results of the PS to all passing pixels
 #if USE_8x2_TILE_BACKEND
-                OutputMerger8x2(psContext, pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.numRenderTargets, state.colorHottileEnable, useAlternateOffset);
-#else
-                OutputMerger4x2(psContext, pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.numRenderTargets);
-#endif
+                OutputMerger8x2(psContext, psContext.pColorBuffer, sample, &state.blendState,state.pfnBlendFunc, coverageMask, depthMask, state.psState.numRenderTargets, state.colorHottileEnable, useAlternateOffset);
+#else // USE_8x2_TILE_BACKEND
+                OutputMerger4x2(psContext, psContext.pColorBuffer, sample, &state.blendState, state.pfnBlendFunc, coverageMask, depthMask, state.psState.numRenderTargets);
+#endif // USE_8x2_TILE_BACKEND
 
                 if(!state.psState.forceEarlyZ && !T::bForcedSampleCount)
                 {
@@ -1009,13 +1020,13 @@ Endtile:
             {
                 for (uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
                 {
-                    pColorBuffer[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                    psContext.pColorBuffer[rt] += (2 * KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
                 }
             }
 #else
             for(uint32_t rt = 0; rt < state.psState.numRenderTargets; ++rt)
             {
-                pColorBuffer[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
+                psContext.pColorBuffer[rt] += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_COLOR_HOT_TILE_FORMAT>::bpp) / 8;
             }
             pDepthBuffer += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_DEPTH_HOT_TILE_FORMAT>::bpp) / 8;
             pStencilBuffer += (KNOB_SIMD_WIDTH * FormatTraits<KNOB_STENCIL_HOT_TILE_FORMAT>::bpp) / 8;
@@ -1035,7 +1046,8 @@ Endtile:
 }
 
 template<uint32_t sampleCountT = SWR_MULTISAMPLE_1X, uint32_t samplePattern = SWR_MSAA_STANDARD_PATTERN,
-         uint32_t coverage = 0, uint32_t centroid = 0, uint32_t forced = 0, uint32_t canEarlyZ = 0>
+         uint32_t coverage = 0, uint32_t centroid = 0, uint32_t forced = 0, uint32_t canEarlyZ = 0
+    >
 struct SwrBackendTraits
 {
     static const bool bIsStandardPattern = (samplePattern == SWR_MSAA_STANDARD_PATTERN);

@@ -330,6 +330,8 @@ struct SWR_PS_CONTEXT
 
     uint32_t rasterizerSampleCount; // IN: sample count used by the rasterizer
 
+    uint8_t* pColorBuffer[SWR_NUM_RENDERTARGETS];
+                                       // IN: Pointers to render target hottiles
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -510,6 +512,7 @@ struct SWR_SURFACE_STATE
 
     uint8_t *pAuxBaseAddress;   // Used for compression, append/consume counter, etc.
     SWR_AUX_MODE auxMode;      // @llvm_enum
+
 
     bool bInterleavedSamples;   // are MSAA samples stored interleaved or planar
 };
@@ -1087,7 +1090,6 @@ struct SWR_PS_STATE
     uint32_t barycentricsMask   : 3;    // which type(s) of barycentric coords does the PS interpolate attributes with
     uint32_t usesUAV            : 1;    // pixel shader accesses UAV 
     uint32_t forceEarlyZ        : 1;    // force execution of early depth/stencil test
-
 };
 
 // depth bounds state
