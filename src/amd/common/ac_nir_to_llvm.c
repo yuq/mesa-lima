@@ -936,23 +936,7 @@ static LLVMValueRef emit_ifind_msb(struct nir_to_llvm_context *ctx,
 static LLVMValueRef emit_ufind_msb(struct nir_to_llvm_context *ctx,
 				   LLVMValueRef src0)
 {
-	LLVMValueRef args[2] = {
-		src0,
-		ctx->i32one,
-	};
-	LLVMValueRef msb = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.ctlz.i32",
-					       ctx->i32, args, ARRAY_SIZE(args),
-					       AC_FUNC_ATTR_READNONE);
-
-	/* The HW returns the last bit index from MSB, but NIR wants
-	 * the index from LSB. Invert it by doing "31 - msb". */
-	msb = LLVMBuildSub(ctx->builder, LLVMConstInt(ctx->i32, 31, false),
-			   msb, "");
-
-	return LLVMBuildSelect(ctx->builder,
-			       LLVMBuildICmp(ctx->builder, LLVMIntEQ, src0,
-					     ctx->i32zero, ""),
-			       LLVMConstInt(ctx->i32, -1, true), msb, "");
+	return ac_emit_umsb(&ctx->ac, src0, ctx->i32);
 }
 
 static LLVMValueRef emit_minmax_int(struct nir_to_llvm_context *ctx,
