@@ -47,10 +47,6 @@
 #include "tnl_dd/t_dd_vertex.h"
 #undef TAG
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #define DV_PF_555  (1<<8)
 #define DV_PF_565  (2<<8)
 #define DV_PF_8888 (3<<8)
@@ -445,9 +441,5 @@ intel_context(struct gl_context * ctx)
 {
    return (struct intel_context *) ctx;
 }
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
