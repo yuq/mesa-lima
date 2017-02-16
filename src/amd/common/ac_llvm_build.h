@@ -186,6 +186,10 @@ LLVMValueRef ac_emit_imsb(struct ac_llvm_context *ctx,
 			  LLVMValueRef arg,
 			  LLVMTypeRef dst_type);
 
+LLVMValueRef ac_emit_umsb(struct ac_llvm_context *ctx,
+			  LLVMValueRef arg,
+			  LLVMTypeRef dst_type);
+
 #ifdef __cplusplus
 }
 #endif

@@ -788,3 +788,28 @@ ac_emit_imsb(struct ac_llvm_context *ctx,
 
 	return LLVMBuildSelect(ctx->builder, cond, all_ones, msb, "");
 }
+
+LLVMValueRef
+ac_emit_umsb(struct ac_llvm_context *ctx,
+	     LLVMValueRef arg,
+	     LLVMTypeRef dst_type)
+{
+	LLVMValueRef args[2] = {
+		arg,
+		LLVMConstInt(ctx->i32, 1, 0),
+	};
+	LLVMValueRef msb = ac_emit_llvm_intrinsic(ctx, "llvm.ctlz.i32",
+						  dst_type, args, ARRAY_SIZE(args),
+						  AC_FUNC_ATTR_READNONE);
+
+	/* The HW returns the last bit index from MSB, but TGSI/NIR wants
+	 * the index from LSB. Invert it by doing "31 - msb". */
+	msb = LLVMBuildSub(ctx->builder, LLVMConstInt(ctx->i32, 31, false),
+			   msb, "");
+
+	/* check for zero */
+	return LLVMBuildSelect(ctx->builder,
+			       LLVMBuildICmp(ctx->builder, LLVMIntEQ, arg,
+					     LLVMConstInt(ctx->i32, 0, 0), ""),
+			       LLVMConstInt(ctx->i32, -1, true), msb, "");
+}
