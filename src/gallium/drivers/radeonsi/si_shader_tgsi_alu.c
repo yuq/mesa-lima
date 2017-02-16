@@ -586,32 +586,10 @@ static void emit_imsb(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
-	LLVMValueRef arg = emit_data->args[0];
-
-	LLVMValueRef msb =
-		lp_build_intrinsic(builder, "llvm.AMDGPU.flbit.i32",
-				emit_data->dst_type, &arg, 1,
-				LP_FUNC_ATTR_READNONE);
-
-	/* The HW returns the last bit index from MSB, but TGSI wants
-	 * the index from LSB. Invert it by doing "31 - msb". */
-	msb = LLVMBuildSub(builder, lp_build_const_int32(gallivm, 31),
-			   msb, "");
-
-	/* If arg == 0 || arg == -1 (0xffffffff), return -1. */
-	LLVMValueRef all_ones = lp_build_const_int32(gallivm, -1);
-
-	LLVMValueRef cond =
-		LLVMBuildOr(builder,
-			    LLVMBuildICmp(builder, LLVMIntEQ, arg,
-					  bld_base->uint_bld.zero, ""),
-			    LLVMBuildICmp(builder, LLVMIntEQ, arg,
-					  all_ones, ""), "");
-
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder, cond, all_ones, msb, "");
+		ac_emit_imsb(&ctx->ac, emit_data->args[0],
+			     emit_data->dst_type);
 }
 
 static void emit_iabs(const struct lp_build_tgsi_action *action,
