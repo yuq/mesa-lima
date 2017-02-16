@@ -375,6 +375,10 @@ static const VkExtensionProperties device_extensions[] = {
       .specVersion = 1,
    },
    {
+      .extensionName = VK_KHX_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+      .specVersion = 1,
+   },
+   {
       .extensionName = VK_KHX_MULTIVIEW_EXTENSION_NAME,
       .specVersion = 1,
    },

@@ -508,6 +508,14 @@ VkResult anv_CreateSemaphore(
    if (semaphore == NULL)
       return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
+   const VkExportSemaphoreCreateInfoKHX *export =
+      vk_find_struct_const(pCreateInfo->pNext, EXPORT_SEMAPHORE_CREATE_INFO_KHX);
+    VkExternalSemaphoreHandleTypeFlagsKHX handleTypes =
+      export ? export->handleTypes : 0;
+
+   /* External semaphores are not yet supported */
+   assert(handleTypes == 0);
+
    /* The DRM execbuffer ioctl always execute in-oder, even between
     * different rings. As such, a dummy no-op semaphore is a perfectly
     * valid implementation.
