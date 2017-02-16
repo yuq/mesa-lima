@@ -341,7 +341,7 @@ struct si_shader_selector {
 
 /* Common VS bits between the shader key and the prolog key. */
 struct si_vs_prolog_bits {
-	unsigned	instance_divisors[SI_NUM_VERTEX_BUFFERS];
+	unsigned	instance_divisors[SI_MAX_ATTRIBS];
 };
 
 /* Common VS bits between the shader key and the epilog key. */

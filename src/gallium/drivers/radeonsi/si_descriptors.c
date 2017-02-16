@@ -971,7 +971,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 			      desc->buffer, RADEON_USAGE_READ,
 			      RADEON_PRIO_DESCRIPTORS);
 
-	assert(count <= SI_NUM_VERTEX_BUFFERS);
+	assert(count <= SI_MAX_ATTRIBS);
 
 	for (i = 0; i < count; i++) {
 		struct pipe_vertex_element *ve = &velems->elements[i];

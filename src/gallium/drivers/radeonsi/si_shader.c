@@ -5266,7 +5266,7 @@ static void create_function(struct si_shader_context *ctx)
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	struct si_shader *shader = ctx->shader;
-	LLVMTypeRef params[SI_NUM_PARAMS + SI_NUM_VERTEX_BUFFERS], v3i32;
+	LLVMTypeRef params[SI_NUM_PARAMS + SI_MAX_ATTRIBS], v3i32;
 	LLVMTypeRef returns[16+32*4];
 	unsigned i, last_sgpr, num_params, num_return_sgprs;
 	unsigned num_returns = 0;
@@ -5282,7 +5282,7 @@ static void create_function(struct si_shader_context *ctx)
 
 	switch (ctx->type) {
 	case PIPE_SHADER_VERTEX:
-		params[SI_PARAM_VERTEX_BUFFERS] = const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
+		params[SI_PARAM_VERTEX_BUFFERS] = const_array(ctx->v16i8, SI_MAX_ATTRIBS);
 		params[SI_PARAM_BASE_VERTEX] = ctx->i32;
 		params[SI_PARAM_START_INSTANCE] = ctx->i32;
 		params[SI_PARAM_DRAWID] = ctx->i32;
