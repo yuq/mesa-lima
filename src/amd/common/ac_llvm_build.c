@@ -769,7 +769,8 @@ ac_emit_imsb(struct ac_llvm_context *ctx,
 	     LLVMValueRef arg,
 	     LLVMTypeRef dst_type)
 {
-	LLVMValueRef msb = ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.flbit.i32",
+	const char *intr_name = (HAVE_LLVM < 0x0400) ? "llvm.AMDGPU.flbit.i32" : "llvm.amdgcn.sffbh";
+	LLVMValueRef msb = ac_emit_llvm_intrinsic(ctx, intr_name,
 						  dst_type, &arg, 1,
 						  AC_FUNC_ATTR_READNONE);
 
