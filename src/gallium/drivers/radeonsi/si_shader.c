@@ -368,14 +368,27 @@ static void declare_input_vs(
 
 	fix_fetch = ctx->shader->key.mono.vs.fix_fetch[input_index];
 
-	/* Do multiple loads for double formats. */
-	if (fix_fetch == SI_FIX_FETCH_RGB_64_FLOAT) {
+	/* Do multiple loads for special formats. */
+	switch (fix_fetch) {
+	case SI_FIX_FETCH_RGB_64_FLOAT:
 		num_fetches = 3; /* 3 2-dword loads */
 		fetch_stride = 8;
-	} else if (fix_fetch == SI_FIX_FETCH_RGBA_64_FLOAT) {
+		break;
+	case SI_FIX_FETCH_RGBA_64_FLOAT:
 		num_fetches = 2; /* 2 4-dword loads */
 		fetch_stride = 16;
-	} else {
+		break;
+	case SI_FIX_FETCH_RGB_8:
+	case SI_FIX_FETCH_RGB_8_INT:
+		num_fetches = 3;
+		fetch_stride = 1;
+		break;
+	case SI_FIX_FETCH_RGB_16:
+	case SI_FIX_FETCH_RGB_16_INT:
+		num_fetches = 3;
+		fetch_stride = 2;
+		break;
+	default:
 		num_fetches = 1;
 		fetch_stride = 0;
 	}
@@ -510,6 +523,23 @@ static void declare_input_vs(
 		for (chan = 0; chan < 4; chan++) {
 			out[chan] = extract_double_to_float(ctx, input[chan / 2],
 							    chan % 2);
+		}
+		break;
+	case SI_FIX_FETCH_RGB_8:
+	case SI_FIX_FETCH_RGB_8_INT:
+	case SI_FIX_FETCH_RGB_16:
+	case SI_FIX_FETCH_RGB_16_INT:
+		for (chan = 0; chan < 3; chan++) {
+			out[chan] = LLVMBuildExtractElement(gallivm->builder,
+							    input[chan],
+							    ctx->i32_0, "");
+		}
+		if (fix_fetch == SI_FIX_FETCH_RGB_8 ||
+		    fix_fetch == SI_FIX_FETCH_RGB_16) {
+			out[3] = LLVMConstReal(ctx->f32, 1);
+		} else {
+			out[3] = LLVMBuildBitCast(gallivm->builder, ctx->i32_1,
+						  ctx->f32, "");
 		}
 		break;
 	}

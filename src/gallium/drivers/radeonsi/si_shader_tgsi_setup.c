@@ -1366,6 +1366,9 @@ void si_llvm_context_init(struct si_shader_context *ctx,
 	ctx->v4i32 = LLVMVectorType(ctx->i32, 4);
 	ctx->v4f32 = LLVMVectorType(ctx->f32, 4);
 	ctx->v8i32 = LLVMVectorType(ctx->i32, 8);
+
+	ctx->i32_0 = LLVMConstInt(ctx->i32, 0, 0);
+	ctx->i32_1 = LLVMConstInt(ctx->i32, 1, 0);
 }
 
 void si_llvm_create_func(struct si_shader_context *ctx,

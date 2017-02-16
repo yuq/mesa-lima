@@ -149,6 +149,9 @@ struct si_shader_context {
 	LLVMTypeRef v4f32;
 	LLVMTypeRef v8i32;
 
+	LLVMValueRef i32_0;
+	LLVMValueRef i32_1;
+
 	LLVMValueRef shared_memory;
 };
 

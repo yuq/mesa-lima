@@ -1732,10 +1732,10 @@ static uint32_t si_translate_buffer_dataformat(struct pipe_screen *screen,
 	case 8:
 		switch (desc->nr_channels) {
 		case 1:
+		case 3: /* 3 loads */
 			return V_008F0C_BUF_DATA_FORMAT_8;
 		case 2:
 			return V_008F0C_BUF_DATA_FORMAT_8_8;
-		case 3:
 		case 4:
 			return V_008F0C_BUF_DATA_FORMAT_8_8_8_8;
 		}
@@ -1743,10 +1743,10 @@ static uint32_t si_translate_buffer_dataformat(struct pipe_screen *screen,
 	case 16:
 		switch (desc->nr_channels) {
 		case 1:
+		case 3: /* 3 loads */
 			return V_008F0C_BUF_DATA_FORMAT_16;
 		case 2:
 			return V_008F0C_BUF_DATA_FORMAT_16_16;
-		case 3:
 		case 4:
 			return V_008F0C_BUF_DATA_FORMAT_16_16_16_16;
 		}
@@ -3458,6 +3458,20 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				break;
 			default:
 				assert(0);
+			}
+		} else if (channel && desc->nr_channels == 3) {
+			assert(desc->swizzle[0] == PIPE_SWIZZLE_X);
+
+			if (channel->size == 8) {
+				if (channel->pure_integer)
+					v->fix_fetch[i] = SI_FIX_FETCH_RGB_8_INT;
+				else
+					v->fix_fetch[i] = SI_FIX_FETCH_RGB_8;
+			} else if (channel->size == 16) {
+				if (channel->pure_integer)
+					v->fix_fetch[i] = SI_FIX_FETCH_RGB_16_INT;
+				else
+					v->fix_fetch[i] = SI_FIX_FETCH_RGB_16;
 			}
 		}
 
