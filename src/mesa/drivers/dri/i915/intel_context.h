@@ -34,18 +34,9 @@
 #include "main/mtypes.h"
 #include "main/mm.h"
 
-#ifdef __cplusplus
-extern "C" {
-	/* Evil hack for using libdrm in a c++ compiler. */
-	#define virtual virt
-#endif
-
 #include <drm.h>
 #include <intel_bufmgr.h>
 #include <i915_drm.h>
-#ifdef __cplusplus
-	#undef virtual
-#endif
 
 #include "intel_screen.h"
 #include "intel_tex_obj.h"
@@ -55,6 +46,10 @@ extern "C" {
 #define TAG(x) intel##x
 #include "tnl_dd/t_dd_vertex.h"
 #undef TAG
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define DV_PF_555  (1<<8)
 #define DV_PF_565  (2<<8)
