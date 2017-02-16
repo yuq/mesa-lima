@@ -331,6 +331,10 @@ static const VkExtensionProperties global_extensions[] = {
       .extensionName = VK_KHX_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
       .specVersion = 1,
    },
+   {
+      .extensionName = VK_KHX_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
+      .specVersion = 1,
+   },
 };
 
 static const VkExtensionProperties device_extensions[] = {

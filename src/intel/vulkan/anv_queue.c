@@ -533,3 +533,16 @@ void anv_DestroySemaphore(
 
    vk_free2(&device->alloc, pAllocator, semaphore);
 }
+
+void anv_GetPhysicalDeviceExternalSemaphorePropertiesKHX(
+    VkPhysicalDevice                            physicalDevice,
+    const VkPhysicalDeviceExternalSemaphoreInfoKHX* pExternalSemaphoreInfo,
+    VkExternalSemaphorePropertiesKHX*           pExternalSemaphoreProperties)
+{
+   switch (pExternalSemaphoreInfo->handleType) {
+   default:
+      pExternalSemaphoreProperties->exportFromImportedHandleTypes = 0;
+      pExternalSemaphoreProperties->compatibleHandleTypes = 0;
+      pExternalSemaphoreProperties->externalSemaphoreFeatures = 0;
+   }
+}
