@@ -763,3 +763,27 @@ ac_emit_sendmsg(struct ac_llvm_context *ctx,
 	ac_emit_llvm_intrinsic(ctx, intr_name, ctx->voidt,
 			       args, 2, 0);
 }
+
+LLVMValueRef
+ac_emit_imsb(struct ac_llvm_context *ctx,
+	     LLVMValueRef arg,
+	     LLVMTypeRef dst_type)
+{
+	LLVMValueRef msb = ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.flbit.i32",
+						  dst_type, &arg, 1,
+						  AC_FUNC_ATTR_READNONE);
+
+	/* The HW returns the last bit index from MSB, but NIR/TGSI wants
+	 * the index from LSB. Invert it by doing "31 - msb". */
+	msb = LLVMBuildSub(ctx->builder, LLVMConstInt(ctx->i32, 31, false),
+			   msb, "");
+
+	LLVMValueRef all_ones = LLVMConstInt(ctx->i32, -1, true);
+	LLVMValueRef cond = LLVMBuildOr(ctx->builder,
+					LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+						      arg, LLVMConstInt(ctx->i32, 0, 0), ""),
+					LLVMBuildICmp(ctx->builder, LLVMIntEQ,
+						      arg, all_ones, ""), "");
+
+	return LLVMBuildSelect(ctx->builder, cond, all_ones, msb, "");
+}
