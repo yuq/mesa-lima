@@ -930,23 +930,7 @@ static LLVMValueRef emit_find_lsb(struct nir_to_llvm_context *ctx,
 static LLVMValueRef emit_ifind_msb(struct nir_to_llvm_context *ctx,
 				   LLVMValueRef src0)
 {
-	LLVMValueRef msb = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.flbit.i32",
-					       ctx->i32, &src0, 1,
-					       AC_FUNC_ATTR_READNONE);
-
-	/* The HW returns the last bit index from MSB, but NIR wants
-	 * the index from LSB. Invert it by doing "31 - msb". */
-	msb = LLVMBuildSub(ctx->builder, LLVMConstInt(ctx->i32, 31, false),
-			   msb, "");
-
-	LLVMValueRef all_ones = LLVMConstInt(ctx->i32, -1, true);
-	LLVMValueRef cond = LLVMBuildOr(ctx->builder,
-					LLVMBuildICmp(ctx->builder, LLVMIntEQ,
-						      src0, ctx->i32zero, ""),
-					LLVMBuildICmp(ctx->builder, LLVMIntEQ,
-						      src0, all_ones, ""), "");
-
-	return LLVMBuildSelect(ctx->builder, cond, all_ones, msb, "");
+	return ac_emit_imsb(&ctx->ac, src0, ctx->i32);
 }
 
 static LLVMValueRef emit_ufind_msb(struct nir_to_llvm_context *ctx,
