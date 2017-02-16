@@ -3481,15 +3481,6 @@ static void *si_create_vertex_elements(struct pipe_context *ctx,
 				   S_008F0C_DST_SEL_W(si_map_swizzle(swizzle[3])) |
 				   S_008F0C_NUM_FORMAT(num_format) |
 				   S_008F0C_DATA_FORMAT(data_format);
-
-		/* We work around the fact that 8_8_8 and 16_16_16 data formats
-		 * do not exist by using the corresponding 4-component formats.
-		 * This requires a fixup of the descriptor for bounds checks.
-		 */
-		if (desc->block.bits == 3 * 8 ||
-		    desc->block.bits == 3 * 16) {
-			v->fix_size3 |= (desc->block.bits / 24) << (2 * i);
-		}
 	}
 	memcpy(v->elements, elements, sizeof(struct pipe_vertex_element) * count);
 

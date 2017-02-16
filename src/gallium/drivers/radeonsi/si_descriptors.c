@@ -954,7 +954,6 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 	if (!sctx->vertex_buffers_dirty || !count || !velems)
 		return true;
 
-	unsigned fix_size3 = velems->fix_size3;
 	unsigned first_vb_use_mask = velems->first_vb_use_mask;
 
 	/* Vertex buffer descriptors are the only ones which are uploaded
@@ -1003,28 +1002,7 @@ bool si_upload_vertex_buffer_descriptors(struct si_context *sctx)
 				   velems->format_size[i]) /
 				  vb->stride + 1;
 		} else {
-			uint32_t size3;
-
 			desc[2] = vb->buffer->width0 - offset;
-
-			/* For attributes of size 3 with byte or short
-			 * components, we use a 4-component data format.
-			 *
-			 * As a consequence, we have to round the buffer size
-			 * up so that the hardware sees four components as
-			 * being inside the buffer if and only if the first
-			 * three components are in the buffer.
-			 *
-			 * Since the offset and stride are guaranteed to be
-			 * 4-byte aligned, this alignment will never cross the
-			 * winsys buffer boundary.
-			 */
-			size3 = (fix_size3 >> (2 * i)) & 3;
-			if (vb->stride && size3) {
-				assert(offset % 4 == 0 && vb->stride % 4 == 0);
-				assert(size3 <= 2);
-				desc[2] = align(desc[2], size3 * 2);
-			}
 		}
 
 		desc[3] = velems->rsrc_word3[i];
