@@ -817,6 +817,23 @@ ac_emit_umsb(struct ac_llvm_context *ctx,
 
 LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 {
+	if (HAVE_LLVM >= 0x0500) {
+		LLVMValueRef max[2] = {
+			value,
+			LLVMConstReal(ctx->f32, 0),
+		};
+		LLVMValueRef min[2] = {
+			LLVMConstReal(ctx->f32, 1),
+		};
+
+		min[1] = ac_emit_llvm_intrinsic(ctx, "llvm.maxnum.f32",
+						ctx->f32, max, 2,
+						AC_FUNC_ATTR_READNONE);
+		return ac_emit_llvm_intrinsic(ctx, "llvm.minnum.f32",
+					      ctx->f32, min, 2,
+					      AC_FUNC_ATTR_READNONE);
+	}
+
 	const char *intr = HAVE_LLVM >= 0x0308 ? "llvm.AMDGPU.clamp." :
 						 "llvm.AMDIL.clamp.";
 	LLVMValueRef args[3] = {
