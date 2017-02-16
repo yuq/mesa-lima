@@ -2030,7 +2030,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
           * we might read up to nir->info->gs.vertices_in registers.
           */
          bld.emit(SHADER_OPCODE_MOV_INDIRECT, icp_handle,
-                  fs_reg(brw_vec8_grf(first_icp_handle, 0)),
+                  retype(brw_vec8_grf(first_icp_handle, 0), icp_handle.type),
                   fs_reg(icp_offset_bytes),
                   brw_imm_ud(nir->info->gs.vertices_in * REG_SIZE));
       }
@@ -2061,7 +2061,7 @@ fs_visitor::emit_gs_input_load(const fs_reg &dst,
           * we might read up to ceil(nir->info->gs.vertices_in / 8) registers.
           */
          bld.emit(SHADER_OPCODE_MOV_INDIRECT, icp_handle,
-                  fs_reg(brw_vec8_grf(first_icp_handle, 0)),
+                  retype(brw_vec8_grf(first_icp_handle, 0), icp_handle.type),
                   fs_reg(icp_offset_bytes),
                   brw_imm_ud(DIV_ROUND_UP(nir->info->gs.vertices_in, 8) *
                              REG_SIZE));
@@ -2401,7 +2401,7 @@ fs_visitor::nir_emit_tcs_intrinsic(const fs_builder &bld,
 
          /* Start at g1.  We might read up to 4 registers. */
          bld.emit(SHADER_OPCODE_MOV_INDIRECT, icp_handle,
-                  fs_reg(brw_vec8_grf(1, 0)), vertex_offset_bytes,
+                  retype(brw_vec8_grf(1, 0), icp_handle.type), vertex_offset_bytes,
                   brw_imm_ud(4 * REG_SIZE));
       }
 
