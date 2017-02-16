@@ -25,13 +25,13 @@
 #ifndef BLOB_H
 #define BLOB_H
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* The blob functions implement a simple, low-level API for serializing and
  * deserializing.
