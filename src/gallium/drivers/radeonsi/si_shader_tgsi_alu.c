@@ -555,30 +555,10 @@ static void emit_umsb(const struct lp_build_tgsi_action *action,
 		      struct lp_build_tgsi_context *bld_base,
 		      struct lp_build_emit_data *emit_data)
 {
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
-	LLVMValueRef args[2] = {
-		emit_data->args[0],
-		/* Don't generate code for handling zero: */
-		LLVMConstInt(LLVMInt1TypeInContext(gallivm->context), 1, 0)
-	};
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 
-	LLVMValueRef msb =
-		lp_build_intrinsic(builder, "llvm.ctlz.i32",
-				emit_data->dst_type, args, ARRAY_SIZE(args),
-				LP_FUNC_ATTR_READNONE);
-
-	/* The HW returns the last bit index from MSB, but TGSI wants
-	 * the index from LSB. Invert it by doing "31 - msb". */
-	msb = LLVMBuildSub(builder, lp_build_const_int32(gallivm, 31),
-			   msb, "");
-
-	/* Check for zero: */
 	emit_data->output[emit_data->chan] =
-		LLVMBuildSelect(builder,
-				LLVMBuildICmp(builder, LLVMIntEQ, args[0],
-					      bld_base->uint_bld.zero, ""),
-				lp_build_const_int32(gallivm, -1), msb, "");
+		ac_emit_umsb(&ctx->ac, emit_data->args[0], emit_data->dst_type);
 }
 
 /* Find the last bit opposite of the sign bit. */
