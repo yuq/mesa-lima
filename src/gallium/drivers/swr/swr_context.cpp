@@ -34,11 +34,8 @@
 #include "util/u_format.h"
 #include "util/u_atomic.h"
 #include "util/u_upload_mgr.h"
-
-extern "C" {
 #include "util/u_transfer.h"
 #include "util/u_surface.h"
-}
 
 #include "api.h"
 #include "backend.h"
