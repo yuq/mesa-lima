@@ -127,18 +127,6 @@ micro_ceil(union tgsi_exec_channel *dst,
 }
 
 static void
-micro_clamp(union tgsi_exec_channel *dst,
-            const union tgsi_exec_channel *src0,
-            const union tgsi_exec_channel *src1,
-            const union tgsi_exec_channel *src2)
-{
-   dst->f[0] = src0->f[0] < src1->f[0] ? src1->f[0] : src0->f[0] > src2->f[0] ? src2->f[0] : src0->f[0];
-   dst->f[1] = src0->f[1] < src1->f[1] ? src1->f[1] : src0->f[1] > src2->f[1] ? src2->f[1] : src0->f[1];
-   dst->f[2] = src0->f[2] < src1->f[2] ? src1->f[2] : src0->f[2] > src2->f[2] ? src2->f[2] : src0->f[2];
-   dst->f[3] = src0->f[3] < src1->f[3] ? src1->f[3] : src0->f[3] > src2->f[3] ? src2->f[3] : src0->f[3];
-}
-
-static void
 micro_cmp(union tgsi_exec_channel *dst,
           const union tgsi_exec_channel *src0,
           const union tgsi_exec_channel *src1,
@@ -5232,10 +5220,6 @@ exec_instruction(
 
    case TGSI_OPCODE_FRC:
       exec_vector_unary(mach, inst, micro_frc, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
-      break;
-
-   case TGSI_OPCODE_CLAMP:
-      exec_vector_trinary(mach, inst, micro_clamp, TGSI_EXEC_DATA_FLOAT, TGSI_EXEC_DATA_FLOAT);
       break;
 
    case TGSI_OPCODE_FLR:

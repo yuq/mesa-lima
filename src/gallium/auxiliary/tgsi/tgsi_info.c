@@ -62,7 +62,7 @@ static const struct tgsi_opcode_info opcode_info[TGSI_OPCODE_LAST] =
    { 1, 1, 0, 0, 0, 0, 0, COMP, "F2U64", TGSI_OPCODE_F2U64 },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "F2I64", TGSI_OPCODE_F2I64 },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "FRC", TGSI_OPCODE_FRC },
-   { 1, 3, 0, 0, 0, 0, 0, COMP, "CLAMP", TGSI_OPCODE_CLAMP },
+   { 1, 3, 0, 0, 0, 0, 0, COMP, "", 25 }, /* removed */
    { 1, 1, 0, 0, 0, 0, 0, COMP, "FLR", TGSI_OPCODE_FLR },
    { 1, 1, 0, 0, 0, 0, 0, COMP, "ROUND", TGSI_OPCODE_ROUND },
    { 1, 1, 0, 0, 0, 0, 0, REPL, "EX2", TGSI_OPCODE_EX2 },

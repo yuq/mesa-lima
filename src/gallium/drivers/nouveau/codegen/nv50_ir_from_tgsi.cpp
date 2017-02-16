@@ -3366,16 +3366,6 @@ Converter::handleInstruction(const struct tgsi_full_instruction *insn)
          mkCvt(OP_CVT, TYPE_F32, dst0[c], TYPE_F32, fetchSrc(0, c))
          ->rnd = ROUND_NI;
       break;
-   case TGSI_OPCODE_CLAMP:
-      FOR_EACH_DST_ENABLED_CHANNEL(0, c, tgsi) {
-         src0 = fetchSrc(0, c);
-         src1 = fetchSrc(1, c);
-         src2 = fetchSrc(2, c);
-         val0 = getScratch();
-         mkOp2(OP_MIN, TYPE_F32, val0, src0, src1);
-         mkOp2(OP_MAX, TYPE_F32, dst0[c], val0, src2);
-      }
-      break;
    case TGSI_OPCODE_SLT:
    case TGSI_OPCODE_SGE:
    case TGSI_OPCODE_SEQ:

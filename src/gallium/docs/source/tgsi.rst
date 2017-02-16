@@ -300,19 +300,6 @@ Perform a * b + c with no intermediate rounding step.
   dst.w = src.w - \lfloor src.w\rfloor
 
 
-.. opcode:: CLAMP - Clamp
-
-.. math::
-
-  dst.x = clamp(src0.x, src1.x, src2.x)
-
-  dst.y = clamp(src0.y, src1.y, src2.y)
-
-  dst.z = clamp(src0.z, src1.z, src2.z)
-
-  dst.w = clamp(src0.w, src1.w, src2.w)
-
-
 .. opcode:: FLR - Floor
 
 .. math::
