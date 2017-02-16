@@ -68,10 +68,6 @@ struct gen_l3_config;
 
 #include "wsi_common.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 /* Allowing different clear colors requires us to perform a depth resolve at
  * the end of certain render passes. This is because while slow clears store
  * the clear color in the HiZ buffer, fast clears (without a resolve) don't.
@@ -1969,10 +1965,6 @@ ANV_DEFINE_NONDISP_HANDLE_CASTS(anv_shader_module, VkShaderModule)
 #  define genX(x) gen9_##x
 #  include "anv_genX.h"
 #  undef genX
-#endif
-
-#ifdef __cplusplus
-}
 #endif
 
 #endif /* ANV_PRIVATE_H */
