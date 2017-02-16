@@ -1018,7 +1018,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef value = dst[chan_index];
 
 		if (inst->Instruction.Saturate)
-			value = si_llvm_saturate(bld_base, value);
+			value = ac_emit_clamp(&ctx->ac, value);
 
 		lds_store(bld_base, chan_index, dw_addr, value);
 
@@ -1810,7 +1810,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 
 	case V_028714_SPI_SHADER_UNORM16_ABGR:
 		for (chan = 0; chan < 4; chan++) {
-			val[chan] = si_llvm_saturate(bld_base, values[chan]);
+			val[chan] = ac_emit_clamp(&ctx->ac, values[chan]);
 			val[chan] = LLVMBuildFMul(builder, val[chan],
 						  lp_build_const_float(gallivm, 65535), "");
 			val[chan] = LLVMBuildFAdd(builder, val[chan],
@@ -2688,7 +2688,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 			for (j = 0; j < 4; j++) {
 				addr = ctx->outputs[i][j];
 				val = LLVMBuildLoad(gallivm->builder, addr, "");
-				val = si_llvm_saturate(bld_base, val);
+				val = ac_emit_clamp(&ctx->ac, val);
 				LLVMBuildStore(gallivm->builder, val, addr);
 			}
 		}
@@ -2834,7 +2834,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 	/* Clamp color */
 	if (ctx->shader->key.part.ps.epilog.clamp_color)
 		for (i = 0; i < 4; i++)
-			color[i] = si_llvm_saturate(bld_base, color[i]);
+			color[i] = ac_emit_clamp(&ctx->ac, color[i]);
 
 	/* Alpha to one */
 	if (ctx->shader->key.part.ps.epilog.alpha_to_one)
@@ -4357,7 +4357,7 @@ static void tex_fetch_args(
 		 * Z32_FLOAT, but we don't know that here.
 		 */
 		if (ctx->screen->b.chip_class == VI)
-			z = si_llvm_saturate(bld_base, z);
+			z = ac_emit_clamp(&ctx->ac, z);
 
 		address[count++] = z;
 	}

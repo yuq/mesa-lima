@@ -952,21 +952,6 @@ static void emit_declaration(struct lp_build_tgsi_context *bld_base,
 	}
 }
 
-LLVMValueRef si_llvm_saturate(struct lp_build_tgsi_context *bld_base,
-			      LLVMValueRef value)
-{
-	struct lp_build_emit_data clamp_emit_data;
-
-	memset(&clamp_emit_data, 0, sizeof(clamp_emit_data));
-	clamp_emit_data.arg_count = 3;
-	clamp_emit_data.args[0] = value;
-	clamp_emit_data.args[2] = bld_base->base.one;
-	clamp_emit_data.args[1] = bld_base->base.zero;
-
-	return lp_build_emit_llvm(bld_base, TGSI_OPCODE_CLAMP,
-				  &clamp_emit_data);
-}
-
 void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 			const struct tgsi_full_instruction *inst,
 			const struct tgsi_opcode_info *info,
@@ -1003,7 +988,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 		if (tgsi_type_is_64bit(dtype) && (chan_index == 1 || chan_index == 3))
 			continue;
 		if (inst->Instruction.Saturate)
-			value = si_llvm_saturate(bld_base, value);
+			value = ac_emit_clamp(&ctx->ac, value);
 
 		if (reg->Register.File == TGSI_FILE_ADDRESS) {
 			temp_ptr = ctx->addrs[reg->Register.Index][chan_index];
