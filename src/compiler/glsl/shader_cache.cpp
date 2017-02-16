@@ -1318,7 +1318,13 @@ shader_cache_read_program_metadata(struct gl_context *ctx,
                           ctx->API, ctx->Const.GLSLVersion,
                           ctx->Const.ForceGLSLVersion);
 
+   /* DRI config options may also change the output from the compiler so
+    * include them as an input to sha1 creation.
+    */
    char sha1buf[41];
+   _mesa_sha1_format(sha1buf, ctx->Const.dri_config_options_sha1);
+   ralloc_strcat(&buf, sha1buf);
+
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       struct gl_shader *sh = prog->Shaders[i];
       ralloc_asprintf_append(&buf, "%s: %s\n",

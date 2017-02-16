@@ -3773,6 +3773,9 @@ struct gl_constants
 
    /** GL_OES_primitive_bounding_box */
    bool NoPrimitiveBoundingBoxOutput;
+
+   /** Used as an input for sha1 generation in the on-disk shader cache */
+   unsigned char *dri_config_options_sha1;
 };
 
 

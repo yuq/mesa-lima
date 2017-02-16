@@ -103,6 +103,8 @@ dri_fill_st_options(struct st_config_options *options,
    options->allow_higher_compat_version =
       driQueryOptionb(optionCache, "allow_higher_compat_version");
    options->glsl_zero_init = driQueryOptionb(optionCache, "glsl_zero_init");
+
+   driComputeOptionsSha1(optionCache, options->config_options_sha1);
 }
 
 static const __DRIconfig **

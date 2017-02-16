@@ -247,6 +247,7 @@ struct st_config_options
    boolean allow_glsl_extension_directive_midshader;
    boolean allow_higher_compat_version;
    boolean glsl_zero_init;
+   unsigned char config_options_sha1[20];
 };
 
 /**
