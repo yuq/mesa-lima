@@ -43,26 +43,16 @@
 #include "isl/isl.h"
 #include "blorp/blorp.h"
 
-#ifdef __cplusplus
-extern "C" {
-	/* Evil hack for using libdrm in a c++ compiler. */
-        #define virtual virt
-#endif
-
 #include <intel_bufmgr.h>
-#ifdef __cplusplus
-	#undef virtual
-}
-#endif
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 #include "intel_debug.h"
 #include "intel_screen.h"
 #include "intel_tex_obj.h"
 #include "intel_resolve_map.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 /* Glossary:
  *
  * URB - uniform resource buffer.  A mid-sized buffer which is
