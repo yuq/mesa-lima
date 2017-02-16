@@ -241,6 +241,7 @@ static int r300_get_param(struct pipe_screen* pscreen, enum pipe_cap param)
         case PIPE_CAP_TGSI_TES_LAYER_VIEWPORT:
         case PIPE_CAP_CAN_BIND_CONST_BUFFER_AS_VERTEX:
         case PIPE_CAP_POST_DEPTH_COVERAGE:
+        case PIPE_CAP_BINDLESS_TEXTURE:
             return 0;
 
         /* SWTCL-only features. */
