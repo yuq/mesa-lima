@@ -38,6 +38,9 @@
 struct pipe_context;
 struct pipe_resource;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Create the upload manager.
@@ -108,5 +111,9 @@ void u_upload_data(struct u_upload_mgr *upload,
                    const void *data,
                    unsigned *out_offset,
                    struct pipe_resource **outbuf);
+
+#ifdef __cplusplus
+} // extern "C" {
+#endif
 
 #endif
