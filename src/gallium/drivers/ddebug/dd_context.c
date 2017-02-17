@@ -691,6 +691,16 @@ dd_context_memory_barrier(struct pipe_context *_pipe, unsigned flags)
    pipe->memory_barrier(pipe, flags);
 }
 
+static bool
+dd_context_resource_commit(struct pipe_context *_pipe,
+                           struct pipe_resource *resource,
+                           unsigned level, struct pipe_box *box, bool commit)
+{
+   struct pipe_context *pipe = dd_context(_pipe)->pipe;
+
+   return pipe->resource_commit(pipe, resource, level, box, commit);
+}
+
 static void
 dd_context_get_sample_position(struct pipe_context *_pipe,
                                unsigned sample_count, unsigned sample_index,
@@ -839,6 +849,7 @@ dd_context_create(struct dd_screen *dscreen, struct pipe_context *pipe)
    CTX_INIT(texture_subdata);
    CTX_INIT(texture_barrier);
    CTX_INIT(memory_barrier);
+   CTX_INIT(resource_commit);
    /* create_video_codec */
    /* create_video_buffer */
    /* set_compute_resources */
