@@ -31,6 +31,7 @@
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 #include "util/u_format.h"
+#include "util/u_helpers.h"
 
 #include "freedreno_draw.h"
 #include "freedreno_context.h"
@@ -81,6 +82,14 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		util_primconvert_save_index_buffer(ctx->primconvert, &ctx->indexbuf);
 		util_primconvert_save_rasterizer_state(ctx->primconvert, ctx->rasterizer);
 		util_primconvert_draw_vbo(ctx->primconvert, info);
+		return;
+	}
+
+	/* Upload a user index buffer. */
+	struct pipe_index_buffer ibuffer_saved = {};
+	if (info->indexed && ctx->indexbuf.user_buffer &&
+	    !util_save_and_upload_index_buffer(pctx, info, &ctx->indexbuf,
+					       &ibuffer_saved)) {
 		return;
 	}
 
@@ -201,6 +210,9 @@ fd_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
 		ctx->dirty = 0xffffffff;
 
 	fd_batch_check_size(batch);
+
+	if (info->indexed && ibuffer_saved.user_buffer)
+           pctx->set_index_buffer(pctx, &ibuffer_saved);
 }
 
 /* Generic clear implementation (partially) using u_blitter: */
