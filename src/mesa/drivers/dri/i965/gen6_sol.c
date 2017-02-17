@@ -230,11 +230,16 @@ brw_delete_transform_feedback(struct gl_context *ctx,
  * For each stream, we subtract the pair of values (end - start) to get the
  * number of primitives generated during one section.  We accumulate these
  * values, adding them up to get the total number of primitives generated.
+ *
+ * Note that we expose one stream pre-Gen7, so the above is just (start, end).
  */
 static void
 tally_prims_generated(struct brw_context *brw,
                       struct brw_transform_feedback_object *obj)
 {
+   const struct gl_context *ctx = &brw->ctx;
+   const int streams = ctx->Const.MaxVertexStreams;
+
    /* If the current batch is still contributing to the number of primitives
     * generated, flush it now so the results will be present when mapped.
     */
@@ -247,15 +252,14 @@ tally_prims_generated(struct brw_context *brw,
    drm_intel_bo_map(obj->prim_count_bo, false);
    uint64_t *prim_counts = obj->prim_count_bo->virtual;
 
-   assert(obj->prim_count_buffer_index % (2 * BRW_MAX_XFB_STREAMS) == 0);
-   int pairs = obj->prim_count_buffer_index / (2 * BRW_MAX_XFB_STREAMS);
+   assert(obj->prim_count_buffer_index % (2 * streams) == 0);
+   int pairs = obj->prim_count_buffer_index / (2 * streams);
 
    for (int i = 0; i < pairs; i++) {
-      for (int s = 0; s < BRW_MAX_XFB_STREAMS; s++) {
-         obj->prims_generated[s] +=
-            prim_counts[BRW_MAX_XFB_STREAMS + s] - prim_counts[s];
+      for (int s = 0; s < streams; s++) {
+         obj->prims_generated[s] += prim_counts[streams + s] - prim_counts[s];
       }
-      prim_counts += 2 * BRW_MAX_XFB_STREAMS; /* move to the next pair */
+      prim_counts += 2 * streams; /* move to the next pair */
    }
 
    drm_intel_bo_unmap(obj->prim_count_bo);
@@ -279,7 +283,8 @@ void
 brw_save_primitives_written_counters(struct brw_context *brw,
                                      struct brw_transform_feedback_object *obj)
 {
-   const int streams = BRW_MAX_XFB_STREAMS;
+   const struct gl_context *ctx = &brw->ctx;
+   const int streams = ctx->Const.MaxVertexStreams;
 
    /* Check if there's enough space for a new pair of four values. */
    if (obj->prim_count_bo != NULL &&
@@ -310,6 +315,8 @@ void
 brw_compute_xfb_vertices_written(struct brw_context *brw,
                                  struct brw_transform_feedback_object *obj)
 {
+   const struct gl_context *ctx = &brw->ctx;
+
    if (obj->vertices_written_valid || !obj->base.EndedAnytime)
       return;
 
@@ -332,7 +339,7 @@ brw_compute_xfb_vertices_written(struct brw_context *brw,
    /* Get the number of primitives generated. */
    tally_prims_generated(brw, obj);
 
-   for (int i = 0; i < BRW_MAX_XFB_STREAMS; i++) {
+   for (int i = 0; i < ctx->Const.MaxVertexStreams; i++) {
       obj->vertices_written[i] = vertices_per_prim * obj->prims_generated[i];
    }
    obj->vertices_written_valid = true;
@@ -354,7 +361,7 @@ brw_get_transform_feedback_vertex_count(struct gl_context *ctx,
       (struct brw_transform_feedback_object *) obj;
 
    assert(obj->EndedAnytime);
-   assert(stream < BRW_MAX_XFB_STREAMS);
+   assert(stream < ctx->Const.MaxVertexStreams);
 
    brw_compute_xfb_vertices_written(brw, brw_obj);
    return brw_obj->vertices_written[stream];
