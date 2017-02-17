@@ -297,11 +297,17 @@ brw_save_primitives_written_counters(struct brw_context *brw,
    brw_emit_mi_flush(brw);
 
    /* Emit MI_STORE_REGISTER_MEM commands to write the values. */
-   for (int i = 0; i < streams; i++) {
-      int offset = (obj->prim_count_buffer_index + i) * sizeof(uint64_t);
+   if (brw->gen >= 7) {
+      for (int i = 0; i < streams; i++) {
+         int offset = (obj->prim_count_buffer_index + i) * sizeof(uint64_t);
+         brw_store_register_mem64(brw, obj->prim_count_bo,
+                                  GEN7_SO_NUM_PRIMS_WRITTEN(i),
+                                  offset);
+      }
+   } else {
       brw_store_register_mem64(brw, obj->prim_count_bo,
-                               GEN7_SO_NUM_PRIMS_WRITTEN(i),
-                               offset);
+                               GEN6_SO_NUM_PRIMS_WRITTEN,
+                               obj->prim_count_buffer_index * sizeof(uint64_t));
    }
 
    /* Update where to write data to. */
