@@ -24,22 +24,22 @@
 
 import sys
 import textwrap
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as et
 
 max_api_version = 1.0
 
 supported_extensions = [
-   'VK_KHR_descriptor_update_template',
-   'VK_KHR_get_physical_device_properties2',
-   'VK_KHR_maintenance1',
-   'VK_KHR_push_descriptor',
-   'VK_KHR_sampler_mirror_clamp_to_edge',
-   'VK_KHR_shader_draw_parameters',
-   'VK_KHR_surface',
-   'VK_KHR_swapchain',
-   'VK_KHR_wayland_surface',
-   'VK_KHR_xcb_surface',
-   'VK_KHR_xlib_surface',
+    'VK_KHR_descriptor_update_template',
+    'VK_KHR_get_physical_device_properties2',
+    'VK_KHR_maintenance1',
+    'VK_KHR_push_descriptor',
+    'VK_KHR_sampler_mirror_clamp_to_edge',
+    'VK_KHR_shader_draw_parameters',
+    'VK_KHR_surface',
+    'VK_KHR_swapchain',
+    'VK_KHR_wayland_surface',
+    'VK_KHR_xcb_surface',
+    'VK_KHR_xlib_surface',
 ]
 
 # We generate a static hash table for entry point lookup
@@ -55,33 +55,37 @@ hash_mask = hash_size - 1
 prime_factor = 5024183
 prime_step = 19
 
+opt_header = False
+opt_code = False
+
+if sys.argv[1] == "header":
+    opt_header = True
+    sys.argv.pop()
+elif sys.argv[1] == "code":
+    opt_code = True
+    sys.argv.pop()
+
+
 def hash(name):
-    h = 0;
+    h = 0
     for c in name:
         h = (h * prime_factor + ord(c)) & u32_mask
 
     return h
 
+
 def print_guard_start(guard):
     if guard is not None:
         print "#ifdef {0}".format(guard)
+
 
 def print_guard_end(guard):
     if guard is not None:
         print "#endif // {0}".format(guard)
 
-opt_header = False
-opt_code = False
 
-if (sys.argv[1] == "header"):
-    opt_header = True
-    sys.argv.pop()
-elif (sys.argv[1] == "code"):
-    opt_code = True
-    sys.argv.pop()
-
-# Extract the entry points from the registry
 def get_entrypoints(doc, entrypoints_to_defines):
+    """Extract the entry points from the registry."""
     entrypoints = []
 
     enabled_commands = set()
@@ -110,7 +114,7 @@ def get_entrypoints(doc, entrypoints_to_defines):
             continue
 
         shortname = fullname[2:]
-        params = map(lambda p: "".join(p.itertext()), command.findall('./param'))
+        params = (''.join(p.itertext()) for p in command.findall('./param'))
         params = ', '.join(params)
         if fullname in entrypoints_to_defines:
             guard = entrypoints_to_defines[fullname]
@@ -121,8 +125,9 @@ def get_entrypoints(doc, entrypoints_to_defines):
 
     return entrypoints
 
-# Maps entry points to extension defines
+
 def get_entrypoints_defines(doc):
+    """Maps entry points to extension defines."""
     entrypoints_to_defines = {}
     extensions = doc.findall('./extensions/extension')
     for extension in extensions:
@@ -135,7 +140,7 @@ def get_entrypoints_defines(doc):
 
 
 def main():
-    doc = ET.parse(sys.stdin)
+    doc = et.parse(sys.stdin)
     entrypoints = get_entrypoints(doc, get_entrypoints_defines(doc))
 
     # Manually add CreateDmaBufImageINTEL for which we don't have an extension
@@ -227,7 +232,7 @@ def main():
     static const char strings[] =""")
 
     offsets = []
-    i = 0;
+    i = 0
     for type, name, args, num, h, guard in entrypoints:
         print "   \"vk%s\\0\"" % name
         offsets.append(i)
@@ -249,7 +254,7 @@ def main():
      */
     """)
 
-    for layer in [ "anv", "gen7", "gen75", "gen8", "gen9" ]:
+    for layer in ["anv", "gen7", "gen75", "gen8", "gen9"]:
         for type, name, args, num, h, guard in entrypoints:
             print_guard_start(guard)
             print "%s %s_%s(%s) __attribute__ ((weak));" % (type, layer, name, args)
@@ -297,8 +302,8 @@ def main():
     # uint16_t table of entry point indices. We use 0xffff to indicate an entry
     # in the hash table is empty.
 
-    map = [none for f in xrange(hash_size)]
-    collisions = [0 for f in xrange(10)]
+    map = [none] * hash_size
+    collisions = [0] * 10
     for type, name, args, num, h, guard in entrypoints:
         level = 0
         while map[h & hash_mask] != none:
@@ -314,7 +319,7 @@ def main():
     print " * size %d entries" % hash_size
     print " * collisions  entries"
     for i in xrange(10):
-        if (i == 9):
+        if i == 9:
             plus = "+"
         else:
             plus = " "
