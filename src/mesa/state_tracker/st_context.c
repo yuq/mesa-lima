@@ -338,8 +338,6 @@ st_create_context_priv( struct gl_context *ctx, struct pipe_context *pipe,
 
    st->dirty = ST_ALL_STATES_MASK;
 
-   st->has_user_indexbuf =
-      screen->get_param(screen, PIPE_CAP_USER_INDEX_BUFFERS);
    st->has_user_constbuf =
       screen->get_param(screen, PIPE_CAP_USER_CONSTANT_BUFFERS);
 
