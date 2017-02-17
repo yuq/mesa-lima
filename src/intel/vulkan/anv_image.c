@@ -238,6 +238,15 @@ make_surface(const struct anv_device *dev,
             }
          }
       }
+   } else if (aspect == VK_IMAGE_ASPECT_COLOR_BIT && vk_info->samples > 1) {
+      assert(image->aux_surface.isl.size == 0);
+      assert(!(vk_info->usage & VK_IMAGE_USAGE_STORAGE_BIT));
+      ok = isl_surf_get_mcs_surf(&dev->isl_dev, &anv_surf->isl,
+                                 &image->aux_surface.isl);
+      if (ok) {
+         add_surface(image, &image->aux_surface);
+         image->aux_usage = ISL_AUX_USAGE_MCS;
+      }
    }
 
    return VK_SUCCESS;

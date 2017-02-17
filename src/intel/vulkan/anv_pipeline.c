@@ -228,6 +228,25 @@ static void
 populate_sampler_prog_key(const struct gen_device_info *devinfo,
                           struct brw_sampler_prog_key_data *key)
 {
+   /* Almost all multisampled textures are compressed.  The only time when we
+    * don't compress a multisampled texture is for 16x MSAA with a surface
+    * width greater than 8k which is a bit of an edge case.  Since the sampler
+    * just ignores the MCS parameter to ld2ms when MCS is disabled, it's safe
+    * to tell the compiler to always assume compression.
+    */
+   key->compressed_multisample_layout_mask = ~0;
+
+   /* SkyLake added support for 16x MSAA.  With this came a new message for
+    * reading from a 16x MSAA surface with compression.  The new message was
+    * needed because now the MCS data is 64 bits instead of 32 or lower as is
+    * the case for 8x, 4x, and 2x.  The key->msaa_16 bit-field controls which
+    * message we use.  Fortunately, the 16x message works for 8x, 4x, and 2x
+    * so we can just use it unconditionally.  This may not be quite as
+    * efficient but it saves us from recompiling.
+    */
+   if (devinfo->gen >= 9)
+      key->msaa_16 = ~0;
+
    /* XXX: Handle texture swizzle on HSW- */
    for (int i = 0; i < MAX_SAMPLERS; i++) {
       /* Assume color sampler, no swizzling. (Works for BDW+) */

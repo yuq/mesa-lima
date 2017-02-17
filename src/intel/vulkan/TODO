@@ -8,7 +8,7 @@ Missing Features:
 
 Performance:
  - Multi-{sampled/gen8,LOD} HiZ
- - Compressed multisample support
+ - MSAA fast clears
  - Pushing pieces of UBOs?
  - Enable guardband clipping
  - Use soft-pin to avoid relocations

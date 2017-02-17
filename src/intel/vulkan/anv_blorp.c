@@ -1398,7 +1398,8 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
    struct anv_attachment_state *att_state =
       &cmd_buffer->state.attachments[att];
 
-   if (att_state->aux_usage == ISL_AUX_USAGE_NONE)
+   if (att_state->aux_usage == ISL_AUX_USAGE_NONE ||
+       att_state->aux_usage == ISL_AUX_USAGE_MCS)
       return; /* Nothing to resolve */
 
    assert(att_state->aux_usage == ISL_AUX_USAGE_CCS_E ||

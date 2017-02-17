@@ -222,6 +222,11 @@ color_attachment_compute_aux_usage(struct anv_device *device,
       att_state->input_aux_usage = ISL_AUX_USAGE_NONE;
       att_state->fast_clear = false;
       return;
+   } else if (iview->image->aux_usage == ISL_AUX_USAGE_MCS) {
+      att_state->aux_usage = ISL_AUX_USAGE_MCS;
+      att_state->input_aux_usage = ISL_AUX_USAGE_MCS;
+      att_state->fast_clear = false;
+      return;
    }
 
    assert(iview->image->aux_surface.isl.usage & ISL_SURF_USAGE_CCS_BIT);
