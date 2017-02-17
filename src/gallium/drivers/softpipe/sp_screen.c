@@ -160,7 +160,6 @@ softpipe_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_COMPUTE:
       return 1;
    case PIPE_CAP_USER_VERTEX_BUFFERS:
-   case PIPE_CAP_USER_INDEX_BUFFERS:
    case PIPE_CAP_USER_CONSTANT_BUFFERS:
    case PIPE_CAP_STREAM_OUTPUT_PAUSE_RESUME:
    case PIPE_CAP_STREAM_OUTPUT_INTERLEAVE_BUFFERS:
