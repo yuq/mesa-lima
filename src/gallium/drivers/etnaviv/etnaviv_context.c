@@ -47,6 +47,7 @@
 #include "pipe/p_context.h"
 #include "pipe/p_state.h"
 #include "util/u_blitter.h"
+#include "util/u_helpers.h"
 #include "util/u_memory.h"
 #include "util/u_prim.h"
 #include "util/u_upload_mgr.h"
@@ -137,6 +138,15 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       return;
    }
 
+   /* Upload a user index buffer. */
+   struct pipe_index_buffer ibuffer_saved = {};
+   if (info->indexed && ctx->index_buffer.ib.user_buffer &&
+       !util_save_and_upload_index_buffer(pctx, info, &ctx->index_buffer.ib,
+                                          &ibuffer_saved)) {
+      BUG("Index buffer upload failed.");
+      return;
+   }
+
    if (info->indexed && !ctx->index_buffer.FE_INDEX_STREAM_BASE_ADDR.bo) {
       BUG("Unsupported or no index buffer");
       return;
@@ -211,6 +221,8 @@ etna_draw_vbo(struct pipe_context *pctx, const struct pipe_draw_info *info)
       etna_resource(ctx->framebuffer.cbuf->texture)->seqno++;
    if (ctx->framebuffer.zsbuf)
       etna_resource(ctx->framebuffer.zsbuf->texture)->seqno++;
+   if (info->indexed && ibuffer_saved.user_buffer)
+      pctx->set_index_buffer(pctx, &ibuffer_saved);
 }
 
 static void

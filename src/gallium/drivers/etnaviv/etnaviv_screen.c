@@ -136,6 +136,7 @@ etna_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_USER_CONSTANT_BUFFERS:
    case PIPE_CAP_TGSI_TEXCOORD:
    case PIPE_CAP_VERTEX_COLOR_UNCLAMPED:
+   case PIPE_CAP_USER_INDEX_BUFFERS:
       return 1;
 
    /* Memory */
@@ -180,7 +181,6 @@ etna_screen_get_param(struct pipe_screen *pscreen, enum pipe_cap param)
    case PIPE_CAP_FRAGMENT_COLOR_CLAMPED:
    case PIPE_CAP_VERTEX_COLOR_CLAMPED:
    case PIPE_CAP_USER_VERTEX_BUFFERS:
-   case PIPE_CAP_USER_INDEX_BUFFERS:
    case PIPE_CAP_TEXTURE_BUFFER_OBJECTS:
    case PIPE_CAP_TEXTURE_BUFFER_OFFSET_ALIGNMENT:
    case PIPE_CAP_BUFFER_SAMPLER_VIEW_RGBA_ONLY:
