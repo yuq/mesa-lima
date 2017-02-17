@@ -128,7 +128,7 @@ namespace ArchRast
 % for name in protos['event_names']:
         //////////////////////////////////////////////////////////////////////////
         /// @brief Handle ${name} event
-        virtual void Handle(${name} event)
+        virtual void Handle(const ${name}& event)
         {
 % if protos['events'][name]['num_fields'] == 0:
             Write(${protos['events'][name]['event_id']}, (char*)&event.data, 0);

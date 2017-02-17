@@ -43,7 +43,7 @@ namespace ArchRast
         virtual ~EventHandler() {}
 
 % for name in protos['event_names']:
-        virtual void Handle(${name} event) {}
+        virtual void Handle(const ${name}& event) {}
 % endfor
     };
 }
