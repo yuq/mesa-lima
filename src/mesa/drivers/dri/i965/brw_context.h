@@ -1461,6 +1461,12 @@ void
 brw_end_transform_feedback(struct gl_context *ctx,
                            struct gl_transform_feedback_object *obj);
 void
+brw_pause_transform_feedback(struct gl_context *ctx,
+                             struct gl_transform_feedback_object *obj);
+void
+brw_resume_transform_feedback(struct gl_context *ctx,
+                              struct gl_transform_feedback_object *obj);
+void
 brw_save_primitives_written_counters(struct brw_context *brw,
                                      struct brw_transform_feedback_object *obj);
 void
