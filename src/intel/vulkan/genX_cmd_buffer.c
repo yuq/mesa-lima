@@ -326,27 +326,6 @@ need_input_attachment_state(const struct anv_render_pass_attachment *att)
    return vk_format_is_color(att->format);
 }
 
-static enum isl_aux_usage
-layout_to_hiz_usage(VkImageLayout layout, uint8_t samples)
-{
-   switch (layout) {
-   case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-      return ISL_AUX_USAGE_HIZ;
-   case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
-   case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-      if (anv_can_sample_with_hiz(GEN_GEN, samples))
-         return ISL_AUX_USAGE_HIZ;
-      /* Fall-through */
-   case VK_IMAGE_LAYOUT_GENERAL:
-      /* This buffer could be used as a source or destination in a transfer
-       * operation. Transfer operations current don't perform HiZ-enabled reads
-       * and writes.
-       */
-   default:
-      return ISL_AUX_USAGE_NONE;
-   }
-}
-
 /* Transitions a HiZ-enabled depth buffer from one layout to another. Unless
  * the initial layout is undefined, the HiZ buffer and depth buffer will
  * represent the same data at the end of this operation.
@@ -362,13 +341,9 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
    if (image->aux_usage != ISL_AUX_USAGE_HIZ || final_layout == initial_layout)
       return;
 
-   const bool hiz_enabled = layout_to_hiz_usage(initial_layout, image->samples) ==
-                            ISL_AUX_USAGE_HIZ;
-   const bool enable_hiz = layout_to_hiz_usage(final_layout, image->samples) ==
-                           ISL_AUX_USAGE_HIZ;
-
    enum blorp_hiz_op hiz_op;
-   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
+   if (initial_layout == VK_IMAGE_LAYOUT_UNDEFINED ||
+       initial_layout == VK_IMAGE_LAYOUT_PREINITIALIZED) {
       /* We've already initialized the aux HiZ buffer at BindImageMemory time,
        * so there's no need to perform a HIZ resolve or clear to avoid GPU hangs.
        * This initial layout indicates that the user doesn't care about the data
@@ -376,16 +351,25 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
        * for the special case noted below.
        */
       hiz_op = BLORP_HIZ_OP_NONE;
-   } else if (hiz_enabled && !enable_hiz) {
-      hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
-   } else if (!hiz_enabled && enable_hiz) {
-      hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
    } else {
-      assert(hiz_enabled == enable_hiz);
-      /* If the same buffer will be used, no resolves are necessary except for
-       * the special case noted below.
-       */
-      hiz_op = BLORP_HIZ_OP_NONE;
+      const bool hiz_enabled = ISL_AUX_USAGE_HIZ ==
+         anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
+                                 image->aspects, initial_layout);
+      const bool enable_hiz = ISL_AUX_USAGE_HIZ ==
+         anv_layout_to_aux_usage(&cmd_buffer->device->info, image,
+                                 image->aspects, final_layout);
+
+      if (hiz_enabled && !enable_hiz) {
+         hiz_op = BLORP_HIZ_OP_DEPTH_RESOLVE;
+      } else if (!hiz_enabled && enable_hiz) {
+         hiz_op = BLORP_HIZ_OP_HIZ_RESOLVE;
+      } else {
+         assert(hiz_enabled == enable_hiz);
+         /* If the same buffer will be used, no resolves are necessary except for
+          * the special case noted below.
+          */
+         hiz_op = BLORP_HIZ_OP_NONE;
+      }
    }
 
    if (hiz_op != BLORP_HIZ_OP_NONE)
@@ -557,12 +541,11 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
                                   state->attachments[i].aux_usage,
                                   state->attachments[i].color_rt_state);
          } else {
-            if (iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-               state->attachments[i].aux_usage =
-                  layout_to_hiz_usage(att->initial_layout, iview->image->samples);
-            } else {
-               state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
-            }
+            /* This field will be initialized after the first subpass
+             * transition.
+             */
+            state->attachments[i].aux_usage = ISL_AUX_USAGE_NONE;
+
             state->attachments[i].input_aux_usage = ISL_AUX_USAGE_NONE;
          }
 
@@ -2399,8 +2382,9 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
       cmd_buffer->state.attachments[ds].current_layout =
          cmd_buffer->state.subpass->depth_stencil_layout;
       cmd_buffer->state.attachments[ds].aux_usage =
-         layout_to_hiz_usage(cmd_buffer->state.subpass->depth_stencil_layout,
-                             iview->image->samples);
+         anv_layout_to_aux_usage(&cmd_buffer->device->info, iview->image,
+            iview->aspect_mask,
+            cmd_buffer->state.subpass->depth_stencil_layout);
    }
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
