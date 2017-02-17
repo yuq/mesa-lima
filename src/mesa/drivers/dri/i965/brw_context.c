@@ -483,6 +483,8 @@ brw_init_driver_functions(struct brw_context *brw,
       functions->EndTransformFeedback = brw_end_transform_feedback;
       functions->PauseTransformFeedback = brw_pause_transform_feedback;
       functions->ResumeTransformFeedback = brw_resume_transform_feedback;
+      functions->GetTransformFeedbackVertexCount =
+         brw_get_transform_feedback_vertex_count;
    }
 
    if (brw->gen >= 6)

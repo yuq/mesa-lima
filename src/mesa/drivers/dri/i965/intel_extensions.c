@@ -158,6 +158,9 @@ intelInitExtensions(struct gl_context *ctx)
       ctx->Extensions.EXT_timer_query = true;
    }
 
+   if (brw->gen == 6)
+      ctx->Extensions.ARB_transform_feedback2 = true;
+
    if (brw->gen >= 6) {
       ctx->Extensions.ARB_blend_func_extended =
          !driQueryOptionb(&brw->optionCache, "disable_blend_func_extended");
