@@ -2,7 +2,6 @@ Intel Vulkan ToDo
 =================
 
 Missing Features:
- - Storage Image Without Format
  - Investigate CTS failures on HSW
  - Pipeline statistics queries
  - Sparse memory
