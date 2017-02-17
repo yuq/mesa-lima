@@ -107,20 +107,81 @@ struct si_shader_context {
 	LLVMValueRef main_fn;
 	LLVMTypeRef return_type;
 
-	int param_streamout_config;
-	int param_streamout_write_index;
-	int param_streamout_offset[4];
+	/* Parameter indices for LLVMGetParam. */
+	int param_rw_buffers;
+	int param_const_buffers;
+	int param_samplers;
+	int param_images;
+	int param_shader_buffers;
+	/* API VS */
+	int param_vertex_buffers;
+	int param_base_vertex;
+	int param_start_instance;
+	int param_draw_id;
 	int param_vertex_id;
 	int param_rel_auto_id;
 	int param_vs_prim_id;
 	int param_instance_id;
 	int param_vertex_index0;
+	/* VS states and layout of LS outputs / TCS inputs at the end
+	 *   [0] = clamp vertex color
+	 *   [1] = indexed
+	 *   [8:20] = stride between patches in DW = num_inputs * num_vertices * 4
+	 *            max = 32*32*4
+	 *   [24:31] = stride between vertices in DW = num_inputs * 4
+	 *             max = 32*4
+	 */
+	int param_vs_state_bits;
+	/* HW VS */
+	int param_streamout_config;
+	int param_streamout_write_index;
+	int param_streamout_offset[4];
+
+	/* API TCS & TES */
+	/* Layout of TCS outputs in the offchip buffer
+	 *   [0:8] = the number of patches per threadgroup.
+	 *   [9:15] = the number of output vertices per patch.
+	 *   [16:31] = the offset of per patch attributes in the buffer in bytes. */
+	int param_tcs_offchip_layout;
+
+	/* API TCS */
+	/* Offsets where TCS outputs and TCS patch outputs live in LDS:
+	 *   [0:15] = TCS output patch0 offset / 16, max = NUM_PATCHES * 32 * 32
+	 *   [16:31] = TCS output patch0 offset for per-patch / 16
+	 *             max = NUM_PATCHES*32*32* + 32*32
+	 */
+	int param_tcs_out_lds_offsets;
+	/* Layout of TCS outputs / TES inputs:
+	 *   [0:12] = stride between output patches in DW, num_outputs * num_vertices * 4
+	 *            max = 32*32*4
+	 *   [13:20] = stride between output vertices in DW = num_inputs * 4
+	 *             max = 32*4
+	 *   [26:31] = gl_PatchVerticesIn, max = 32
+	 */
+	int param_tcs_out_lds_layout;
+	int param_tcs_offchip_offset;
+	int param_tcs_factor_offset;
+	int param_tcs_patch_id;
+	int param_tcs_rel_ids;
+
+	/* API TES */
 	int param_tes_u;
 	int param_tes_v;
 	int param_tes_rel_patch_id;
 	int param_tes_patch_id;
+	/* HW ES */
 	int param_es2gs_offset;
-	int param_oc_lds;
+	/* API GS */
+	int param_gs2vs_offset;
+	int param_gs_wave_id;
+	int param_gs_vtx0_offset;
+	int param_gs_vtx1_offset;
+	int param_gs_prim_id;
+	int param_gs_vtx2_offset;
+	int param_gs_vtx3_offset;
+	int param_gs_vtx4_offset;
+	int param_gs_vtx5_offset;
+	int param_gs_instance_id;
 
 	LLVMTargetMachineRef tm;
 

@@ -143,65 +143,7 @@ enum {
 
 /* LLVM function parameter indices */
 enum {
-	SI_PARAM_RW_BUFFERS,
-	SI_PARAM_CONST_BUFFERS,
-	SI_PARAM_SAMPLERS,
-	SI_PARAM_IMAGES,
-	SI_PARAM_SHADER_BUFFERS,
-	SI_NUM_RESOURCE_PARAMS,
-
-	/* VS only parameters */
-	SI_PARAM_VERTEX_BUFFERS	= SI_NUM_RESOURCE_PARAMS,
-	SI_PARAM_BASE_VERTEX,
-	SI_PARAM_START_INSTANCE,
-	SI_PARAM_DRAWID,
-	SI_PARAM_VS_STATE_BITS,
-
-	/* Layout of TCS outputs in the offchip buffer
-	 *   [0:8] = the number of patches per threadgroup.
-	 *   [9:15] = the number of output vertices per patch.
-	 *   [16:31] = the offset of per patch attributes in the buffer in bytes.
-	 */
-	SI_PARAM_TCS_OFFCHIP_LAYOUT = SI_NUM_RESOURCE_PARAMS, /* for TCS & TES */
-
-	/* TCS only parameters. */
-
-	/* Offsets where TCS outputs and TCS patch outputs live in LDS:
-	 *   [0:15] = TCS output patch0 offset / 16, max = NUM_PATCHES * 32 * 32
-	 *   [16:31] = TCS output patch0 offset for per-patch / 16, max = NUM_PATCHES*32*32* + 32*32
-	 */
-	SI_PARAM_TCS_OUT_OFFSETS,
-
-	/* Layout of TCS outputs / TES inputs:
-	 *   [0:12] = stride between output patches in dwords, num_outputs * num_vertices * 4, max = 32*32*4
-	 *   [13:20] = stride between output vertices in dwords = num_inputs * 4, max = 32*4
-	 *   [26:31] = gl_PatchVerticesIn, max = 32
-	 */
-	SI_PARAM_TCS_OUT_LAYOUT,
-
-	/* Layout of LS outputs / TCS inputs
-	 *   [8:20] = stride between patches in dwords = num_inputs * num_vertices * 4, max = 32*32*4
-	 *   [24:31] = stride between vertices in dwords = num_inputs * 4, max = 32*4
-	 * (same layout as SI_PARAM_VS_STATE_BITS)
-	 */
-	SI_PARAM_TCS_IN_LAYOUT,
-
-	SI_PARAM_TCS_OC_LDS,
-	SI_PARAM_TESS_FACTOR_OFFSET,
-	SI_PARAM_PATCH_ID,
-	SI_PARAM_REL_IDS,
-
-	/* GS only parameters */
-	SI_PARAM_GS2VS_OFFSET = SI_NUM_RESOURCE_PARAMS,
-	SI_PARAM_GS_WAVE_ID,
-	SI_PARAM_VTX0_OFFSET,
-	SI_PARAM_VTX1_OFFSET,
-	SI_PARAM_PRIMITIVE_ID,
-	SI_PARAM_VTX2_OFFSET,
-	SI_PARAM_VTX3_OFFSET,
-	SI_PARAM_VTX4_OFFSET,
-	SI_PARAM_VTX5_OFFSET,
-	SI_PARAM_GS_INSTANCE_ID,
+	SI_NUM_RESOURCE_PARAMS = 5,
 
 	/* PS only parameters */
 	SI_PARAM_ALPHA_REF = SI_NUM_RESOURCE_PARAMS,
