@@ -557,6 +557,12 @@ struct brw_transform_feedback_object {
    GLenum primitive_mode;
 
    /**
+    * The maximum number of vertices that we can write without overflowing
+    * any of the buffers currently being used for transform feedback.
+    */
+   unsigned max_index;
+
+   /**
     * Count of primitives generated during this transform feedback operation.
     *  @{
     */

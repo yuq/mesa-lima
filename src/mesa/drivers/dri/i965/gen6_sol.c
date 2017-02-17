@@ -382,6 +382,8 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
    const struct gl_transform_feedback_info *linked_xfb_info;
    struct gl_transform_feedback_object *xfb_obj =
       ctx->TransformFeedback.CurrentObject;
+   struct brw_transform_feedback_object *brw_obj =
+      (struct brw_transform_feedback_object *) xfb_obj;
 
    assert(brw->gen == 6);
 
@@ -397,7 +399,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
    /* Compute the maximum number of vertices that we can write without
     * overflowing any of the buffers currently being used for feedback.
     */
-   unsigned max_index
+   brw_obj->max_index
       = _mesa_compute_max_transform_feedback_vertices(ctx, xfb_obj,
                                                       linked_xfb_info);
 
@@ -406,7 +408,7 @@ brw_begin_transform_feedback(struct gl_context *ctx, GLenum mode,
    OUT_BATCH(_3DSTATE_GS_SVB_INDEX << 16 | (4 - 2));
    OUT_BATCH(0); /* SVBI 0 */
    OUT_BATCH(0); /* starting index */
-   OUT_BATCH(max_index);
+   OUT_BATCH(brw_obj->max_index);
    ADVANCE_BATCH();
 
    /* Initialize the rest of the unused streams to sane values.  Otherwise,
