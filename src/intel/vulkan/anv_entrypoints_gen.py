@@ -27,6 +27,8 @@ import os
 import textwrap
 import xml.etree.ElementTree as et
 
+from mako.template import Template
+
 MAX_API_VERSION = 1.0
 
 SUPPORTED_EXTENSIONS = [
@@ -47,6 +49,44 @@ SUPPORTED_EXTENSIONS = [
 # (vkGetProcAddress). We use a linear congruential generator for our hash
 # function and a power-of-two size table. The prime numbers are determined
 # experimentally.
+
+TEMPLATE_H = Template(textwrap.dedent("""\
+    /* This file generated from ${filename}, don't edit directly. */
+
+    struct anv_dispatch_table {
+       union {
+          void *entrypoints[${len(entrypoints)}];
+          struct {
+          % for _, name, _, _, _, guard in entrypoints:
+            % if guard is not None:
+    #ifdef ${guard}
+              PFN_vk${name} ${name};
+    #else
+              void *${name};
+    # endif
+            % else:
+              PFN_vk${name} ${name};
+            % endif
+          % endfor
+          };
+       };
+    };
+
+    void anv_set_dispatch_devinfo(const struct gen_device_info *info);
+    % for type_, name, args, num, h, guard in entrypoints:
+      % if guard is not None:
+    #ifdef ${guard}
+      % endif
+      ${type_} anv_${name}(${args});
+      ${type_} gen7_${name}(${args});
+      ${type_} gen75_${name}(${args});
+      ${type_} gen8_${name}(${args});
+      ${type_} gen9_${name}(${args});
+      % if guard is not None:
+    #endif // ${guard}
+      % endif
+    % endfor
+    """))
 
 NONE = 0xffff
 HASH_SIZE = 256
@@ -131,40 +171,6 @@ def get_entrypoints_defines(doc):
             fullname = entrypoint.get('name')
             entrypoints_to_defines[fullname] = define
     return entrypoints_to_defines
-
-
-def gen_header(entrypoints):
-    print "/* This file generated from {}, don't edit directly. */\n".format(
-        os.path.basename(__file__))
-
-    print "struct anv_dispatch_table {"
-    print "   union {"
-    print "      void *entrypoints[%d];" % len(entrypoints)
-    print "      struct {"
-
-    for type, name, args, num, h, guard in entrypoints:
-        if guard is not None:
-            print "#ifdef {0}".format(guard)
-            print "         PFN_vk{0} {0};".format(name)
-            print "#else"
-            print "         void *{0};".format(name)
-            print "#endif"
-        else:
-            print "         PFN_vk{0} {0};".format(name)
-    print "      };\n"
-    print "   };\n"
-    print "};\n"
-
-    print "void anv_set_dispatch_devinfo(const struct gen_device_info *info);\n"
-
-    for type, name, args, num, h, guard in entrypoints:
-        print_guard_start(guard)
-        print "%s anv_%s(%s);" % (type, name, args)
-        print "%s gen7_%s(%s);" % (type, name, args)
-        print "%s gen75_%s(%s);" % (type, name, args)
-        print "%s gen8_%s(%s);" % (type, name, args)
-        print "%s gen9_%s(%s);" % (type, name, args)
-        print_guard_end(guard)
 
 
 def gen_code(entrypoints):
@@ -375,7 +381,8 @@ def main():
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
     if args.target == 'header':
-        gen_header(entrypoints)
+        print TEMPLATE_H.render(entrypoints=entrypoints,
+                                filename=os.path.basename(__file__))
     else:
         gen_code(entrypoints)
 
