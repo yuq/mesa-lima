@@ -132,64 +132,40 @@ def get_entrypoints_defines(doc):
     return entrypoints_to_defines
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('target', choices=['header', 'code'],
-                        help='Which file to generate.')
-    parser.add_argument('--xml', help='Vulkan API XML file.')
-    args = parser.parse_args()
+def gen_header(entrypoints):
+    print "/* This file generated from vk_gen.py, don't edit directly. */\n"
 
-    doc = et.parse(args.xml)
-    entrypoints = get_entrypoints(doc, get_entrypoints_defines(doc))
+    print "struct anv_dispatch_table {"
+    print "   union {"
+    print "      void *entrypoints[%d];" % len(entrypoints)
+    print "      struct {"
 
-    # Manually add CreateDmaBufImageINTEL for which we don't have an extension
-    # defined.
-    entrypoints.append(('VkResult', 'CreateDmaBufImageINTEL',
-                        'VkDevice device, ' +
-                        'const VkDmaBufImageCreateInfo* pCreateInfo, ' +
-                        'const VkAllocationCallbacks* pAllocator,' +
-                        'VkDeviceMemory* pMem,' +
-                        'VkImage* pImage', len(entrypoints),
-                        hash('vkCreateDmaBufImageINTEL'), None))
+    for type, name, args, num, h, guard in entrypoints:
+        if guard is not None:
+            print "#ifdef {0}".format(guard)
+            print "         PFN_vk{0} {0};".format(name)
+            print "#else"
+            print "         void *{0};".format(name)
+            print "#endif"
+        else:
+            print "         PFN_vk{0} {0};".format(name)
+    print "      };\n"
+    print "   };\n"
+    print "};\n"
 
-    # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
-    # per entry point.
+    print "void anv_set_dispatch_devinfo(const struct gen_device_info *info);\n"
 
-    if args.target == 'header':
-        print "/* This file generated from vk_gen.py, don't edit directly. */\n"
-
-        print "struct anv_dispatch_table {"
-        print "   union {"
-        print "      void *entrypoints[%d];" % len(entrypoints)
-        print "      struct {"
-
-        for type, name, args, num, h, guard in entrypoints:
-            if guard is not None:
-                print "#ifdef {0}".format(guard)
-                print "         PFN_vk{0} {0};".format(name)
-                print "#else"
-                print "         void *{0};".format(name)
-                print "#endif"
-            else:
-                print "         PFN_vk{0} {0};".format(name)
-        print "      };\n"
-        print "   };\n"
-        print "};\n"
-
-        print "void anv_set_dispatch_devinfo(const struct gen_device_info *info);\n"
-
-        for type, name, args, num, h, guard in entrypoints:
-            print_guard_start(guard)
-            print "%s anv_%s(%s);" % (type, name, args)
-            print "%s gen7_%s(%s);" % (type, name, args)
-            print "%s gen75_%s(%s);" % (type, name, args)
-            print "%s gen8_%s(%s);" % (type, name, args)
-            print "%s gen9_%s(%s);" % (type, name, args)
-            print_guard_end(guard)
-        exit()
+    for type, name, args, num, h, guard in entrypoints:
+        print_guard_start(guard)
+        print "%s anv_%s(%s);" % (type, name, args)
+        print "%s gen7_%s(%s);" % (type, name, args)
+        print "%s gen75_%s(%s);" % (type, name, args)
+        print "%s gen8_%s(%s);" % (type, name, args)
+        print "%s gen9_%s(%s);" % (type, name, args)
+        print_guard_end(guard)
 
 
-
+def gen_code(entrypoints):
     print textwrap.dedent("""\
     /*
      * Copyright © 2015 Intel Corporation
@@ -372,6 +348,34 @@ def main():
        return anv_resolve_entrypoint(devinfo, i);
     }
     """) % (PRIME_FACTOR, PRIME_STEP, HASH_MASK)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('target', choices=['header', 'code'],
+                        help='Which file to generate.')
+    parser.add_argument('--xml', help='Vulkan API XML file.')
+    args = parser.parse_args()
+
+    doc = et.parse(args.xml)
+    entrypoints = get_entrypoints(doc, get_entrypoints_defines(doc))
+
+    # Manually add CreateDmaBufImageINTEL for which we don't have an extension
+    # defined.
+    entrypoints.append(('VkResult', 'CreateDmaBufImageINTEL',
+                        'VkDevice device, ' +
+                        'const VkDmaBufImageCreateInfo* pCreateInfo, ' +
+                        'const VkAllocationCallbacks* pAllocator,' +
+                        'VkDeviceMemory* pMem,' +
+                        'VkImage* pImage', len(entrypoints),
+                        hash('vkCreateDmaBufImageINTEL'), None))
+
+    # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
+    # per entry point.
+    if args.target == 'header':
+        gen_header(entrypoints)
+    else:
+        gen_code(entrypoints)
 
 
 if __name__ == '__main__':
