@@ -3130,8 +3130,10 @@ _mesa_glsl_link_shader(struct gl_context *ctx, struct gl_shader_program *prog)
       }
    }
 
+#ifdef ENABLE_SHADER_CACHE
    if (prog->data->LinkStatus)
       shader_cache_write_program_metadata(ctx, prog);
+#endif
 }
 
 } /* extern "C" */

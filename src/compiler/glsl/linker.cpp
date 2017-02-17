@@ -4626,6 +4626,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
       return;
    }
 
+#ifdef ENABLE_SHADER_CACHE
    /* If transform feedback used on the program then compile all shaders. */
    bool skip_cache = false;
    if (prog->TransformFeedback.NumVarying > 0) {
@@ -4640,6 +4641,7 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
 
    if (!skip_cache && shader_cache_read_program_metadata(ctx, prog))
       return;
+#endif
 
    void *mem_ctx = ralloc_context(NULL); // temporary linker context
 
