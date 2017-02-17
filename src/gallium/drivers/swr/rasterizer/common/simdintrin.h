@@ -1123,6 +1123,19 @@ static INLINE simdscalar InterpolateComponent(simdscalar vI, simdscalar vJ, cons
 }
 
 //////////////////////////////////////////////////////////////////////////
+/// @brief Interpolates a single component (flat shade).
+/// @param pInterpBuffer - pointer to attribute barycentric coeffs
+template<UINT Attrib, UINT Comp, UINT numComponents = 4>
+static INLINE simdscalar InterpolateComponentFlat(const float *pInterpBuffer)
+{
+    const float *pInterpA = &pInterpBuffer[Attrib * 3 * numComponents + 0 + Comp];
+
+    simdscalar vA = _simd_broadcast_ss(pInterpA);
+
+    return vA;
+}
+
+//////////////////////////////////////////////////////////////////////////
 /// @brief Interpolates a single component.
 /// @param vI - barycentric I
 /// @param vJ - barycentric J
