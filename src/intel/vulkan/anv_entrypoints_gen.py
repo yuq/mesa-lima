@@ -22,7 +22,7 @@
 # IN THE SOFTWARE.
 #
 
-import sys
+import argparse
 import textwrap
 import xml.etree.ElementTree as et
 
@@ -57,13 +57,6 @@ PRIME_STEP = 19
 
 opt_header = False
 opt_code = False
-
-if sys.argv[1] == "header":
-    opt_header = True
-    sys.argv.pop()
-elif sys.argv[1] == "code":
-    opt_code = True
-    sys.argv.pop()
 
 
 def hash(name):
@@ -140,7 +133,13 @@ def get_entrypoints_defines(doc):
 
 
 def main():
-    doc = et.parse(sys.stdin)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('target', choices=['header', 'code'],
+                        help='Which file to generate.')
+    parser.add_argument('--xml', help='Vulkan API XML file.')
+    args = parser.parse_args()
+
+    doc = et.parse(args.xml)
     entrypoints = get_entrypoints(doc, get_entrypoints_defines(doc))
 
     # Manually add CreateDmaBufImageINTEL for which we don't have an extension
@@ -156,7 +155,7 @@ def main():
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
 
-    if opt_header:
+    if args.target == 'header':
         print "/* This file generated from vk_gen.py, don't edit directly. */\n"
 
         print "struct anv_dispatch_table {"

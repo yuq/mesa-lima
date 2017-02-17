@@ -24,15 +24,11 @@
 # out and we'll fail at `make dist'
 vulkan_api_xml = $(top_srcdir)/src/vulkan/registry/vk.xml
 
-vulkan/anv_entrypoints.h: vulkan/anv_entrypoints_gen.py $(vulkan_api_xml)
-	$(MKDIR_GEN)
-	$(AM_V_GEN) cat $(vulkan_api_xml) |\
-	$(PYTHON2) $(srcdir)/vulkan/anv_entrypoints_gen.py header > $@
+vulkan/anv_entrypoints.h : vulkan/anv_entrypoints_gen.py $(vulkan_api_xml)
+	$(AM_V_GEN)$(PYTHON2) $(srcdir)/vulkan/anv_entrypoints_gen.py header --xml $(vulkan_api_xml) > $@
 
-vulkan/anv_entrypoints.c: vulkan/anv_entrypoints_gen.py $(vulkan_api_xml)
-	$(MKDIR_GEN)
-	$(AM_V_GEN) cat $(vulkan_api_xml) |\
-	$(PYTHON2) $(srcdir)/vulkan/anv_entrypoints_gen.py code > $@
+vulkan/anv_entrypoints.c : vulkan/anv_entrypoints_gen.py $(vulkan_api_xml)
+	$(AM_V_GEN)$(PYTHON2) $(srcdir)/vulkan/anv_entrypoints_gen.py code --xml $(vulkan_api_xml) > $@
 
 BUILT_SOURCES += $(VULKAN_GENERATED_FILES)
 CLEANFILES += \

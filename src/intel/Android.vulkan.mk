@@ -59,8 +59,7 @@ $(intermediates)/vulkan/dummy.c:
 	$(hide) touch $@
 
 $(intermediates)/vulkan/anv_entrypoints.h:
-	@mkdir -p $(dir $@)
-	$(hide) cat $(MESA_TOP)/src/vulkan/registry/vk.xml | $(VK_ENTRYPOINTS_SCRIPT) header > $@
+	$(VK_ENTRYPOINTS_SCRIPT) header --xml $(MESA_TOP)/src/vulkan/registry/vk.xml > $@
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
         $(intermediates)
@@ -180,8 +179,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_entrypoints.c
 
 $(intermediates)/vulkan/anv_entrypoints.c:
-	@mkdir -p $(dir $@)
-	$(hide) cat $(MESA_TOP)/src/vulkan/registry/vk.xml | $(VK_ENTRYPOINTS_SCRIPT) code > $@
+	$(VK_ENTRYPOINTS_SCRIPT) code --xml $(MESA_TOP)/src/vulkan/registry/vk.xml > $@
 
 LOCAL_SHARED_LIBRARIES := libdrm_intel
 
