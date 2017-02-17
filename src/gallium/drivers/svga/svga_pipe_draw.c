@@ -25,6 +25,7 @@
 
 
 #include "util/u_format.h"
+#include "util/u_helpers.h"
 #include "util/u_inlines.h"
 #include "util/u_prim.h"
 #include "util/u_prim_restart.h"
@@ -194,6 +195,14 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
        svga->curr.rast->templ.cull_face == PIPE_FACE_FRONT_AND_BACK)
       goto done;
 
+   /* Upload a user index buffer. */
+   struct pipe_index_buffer ibuffer_saved = {};
+   if (info->indexed && svga->curr.ib.user_buffer &&
+       !util_save_and_upload_index_buffer(pipe, info, &svga->curr.ib,
+                                          &ibuffer_saved)) {
+      return;
+   }
+
    /*
     * Mark currently bound target surfaces as dirty
     * doesn't really matter if it is done before drawing.
@@ -277,8 +286,10 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
    }
 
 done:
+   if (info->indexed && ibuffer_saved.user_buffer)
+      pipe->set_index_buffer(pipe, &ibuffer_saved);
+
    SVGA_STATS_TIME_POP(svga_sws(svga));
-;
 }
 
 
