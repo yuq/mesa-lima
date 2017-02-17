@@ -26,9 +26,9 @@ import sys
 import textwrap
 import xml.etree.ElementTree as et
 
-max_api_version = 1.0
+MAX_API_VERSION = 1.0
 
-supported_extensions = [
+SUPPORTED_EXTENSIONS = [
     'VK_KHR_descriptor_update_template',
     'VK_KHR_get_physical_device_properties2',
     'VK_KHR_maintenance1',
@@ -47,13 +47,13 @@ supported_extensions = [
 # function and a power-of-two size table. The prime numbers are determined
 # experimentally.
 
-none = 0xffff
-hash_size = 256
-u32_mask = 2**32 - 1
-hash_mask = hash_size - 1
+NONE = 0xffff
+HASH_SIZE = 256
+U32_MASK = 2**32 - 1
+HASH_MASK = HASH_SIZE - 1
 
-prime_factor = 5024183
-prime_step = 19
+PRIME_FACTOR = 5024183
+PRIME_STEP = 19
 
 opt_header = False
 opt_code = False
@@ -69,7 +69,7 @@ elif sys.argv[1] == "code":
 def hash(name):
     h = 0
     for c in name:
-        h = (h * prime_factor + ord(c)) & u32_mask
+        h = (h * PRIME_FACTOR + ord(c)) & U32_MASK
 
     return h
 
@@ -91,14 +91,14 @@ def get_entrypoints(doc, entrypoints_to_defines):
     enabled_commands = set()
     for feature in doc.findall('./feature'):
         assert feature.attrib['api'] == 'vulkan'
-        if float(feature.attrib['number']) > max_api_version:
+        if float(feature.attrib['number']) > MAX_API_VERSION:
             continue
 
         for command in feature.findall('./require/command'):
             enabled_commands.add(command.attrib['name'])
 
     for extension in doc.findall('.extensions/extension'):
-        if extension.attrib['name'] not in supported_extensions:
+        if extension.attrib['name'] not in SUPPORTED_EXTENSIONS:
             continue
 
         assert extension.attrib['supported'] == 'vulkan'
@@ -302,21 +302,21 @@ def main():
     # uint16_t table of entry point indices. We use 0xffff to indicate an entry
     # in the hash table is empty.
 
-    map = [none] * hash_size
+    map = [NONE] * HASH_SIZE
     collisions = [0] * 10
     for type, name, args, num, h, guard in entrypoints:
         level = 0
-        while map[h & hash_mask] != none:
-            h = h + prime_step
+        while map[h & HASH_MASK] != NONE:
+            h = h + PRIME_STEP
             level = level + 1
         if level > 9:
             collisions[9] += 1
         else:
             collisions[level] += 1
-        map[h & hash_mask] = num
+        map[h & HASH_MASK] = num
 
     print "/* Hash table stats:"
-    print " * size %d entries" % hash_size
+    print " * size %d entries" % HASH_SIZE
     print " * collisions  entries"
     for i in xrange(10):
         if i == 9:
@@ -327,10 +327,10 @@ def main():
         print " *     %2d%s     %4d" % (i, plus, collisions[i])
     print " */\n"
 
-    print "#define none 0x%04x\n" % none
+    print "#define none 0x%04x\n" % NONE
 
     print "static const uint16_t map[] = {"
-    for i in xrange(0, hash_size, 8):
+    for i in xrange(0, HASH_SIZE, 8):
         print "   ",
         for j in xrange(i, i + 8):
             if map[j] & 0xffff == 0xffff:
@@ -372,7 +372,7 @@ def main():
 
        return anv_resolve_entrypoint(devinfo, i);
     }
-    """) % (prime_factor, prime_step, hash_mask)
+    """) % (PRIME_FACTOR, PRIME_STEP, HASH_MASK)
 
 
 if __name__ == '__main__':
