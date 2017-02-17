@@ -1064,7 +1064,7 @@ void si_draw_vbo(struct pipe_context *ctx, const struct pipe_draw_info *info)
 				return;
 			}
 
-			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, &ib, 0,
+			util_shorten_ubyte_elts_to_userptr(&sctx->b.b, &ib, 0, 0,
 							   ib.offset + start,
 							   count, ptr);
 
