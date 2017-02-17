@@ -1767,9 +1767,14 @@ struct anv_image {
 
 /* Returns true if a HiZ-enabled depth buffer can be sampled from. */
 static inline bool
-anv_can_sample_with_hiz(uint8_t gen, uint32_t samples)
+anv_can_sample_with_hiz(const struct gen_device_info * const devinfo,
+                        const VkImageAspectFlags aspect_mask,
+                        const uint32_t samples)
 {
-   return gen >= 8 && samples == 1;
+   /* Validate the inputs. */
+   assert(devinfo && aspect_mask && samples);
+   return devinfo->gen >= 8 && (aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) &&
+          samples == 1;
 }
 
 void

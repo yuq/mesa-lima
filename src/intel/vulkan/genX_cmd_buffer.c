@@ -383,7 +383,8 @@ transition_depth_buffer(struct anv_cmd_buffer *cmd_buffer,
     * required by this transition was not already a HiZ resolve.
     */
    if (final_layout == VK_IMAGE_LAYOUT_GENERAL &&
-       anv_can_sample_with_hiz(GEN_GEN, image->samples) &&
+       anv_can_sample_with_hiz(&cmd_buffer->device->info, image->aspects,
+                               image->samples) &&
        hiz_op != BLORP_HIZ_OP_HIZ_RESOLVE) {
       anv_gen8_hiz_op_resolve(cmd_buffer, image, BLORP_HIZ_OP_HIZ_RESOLVE);
    }

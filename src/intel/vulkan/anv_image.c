@@ -483,7 +483,6 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
    if (devinfo->gen < 8 && aspects == VK_IMAGE_ASPECT_STENCIL_BIT)
       return ISL_AUX_USAGE_NONE;
 
-   const bool has_depth = aspects & VK_IMAGE_ASPECT_DEPTH_BIT;
    const bool color_aspect = aspects == VK_IMAGE_ASPECT_COLOR_BIT;
 
    /* The following switch currently only handles depth stencil aspects.
@@ -523,7 +522,7 @@ anv_layout_to_aux_usage(const struct gen_device_info * const devinfo,
       assert(!color_aspect);
       /* Fall-through */
    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-      if (has_depth && anv_can_sample_with_hiz(devinfo->gen, image->samples))
+      if (anv_can_sample_with_hiz(devinfo, aspects, image->samples))
          return ISL_AUX_USAGE_HIZ;
       else
          return ISL_AUX_USAGE_NONE;
@@ -684,8 +683,8 @@ anv_CreateImageView(VkDevice _device,
    float red_clear_color = 0.0f;
    enum isl_aux_usage surf_usage = image->aux_usage;
    if (image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      if (iview->aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT &&
-          anv_can_sample_with_hiz(device->info.gen, image->samples)) {
+      if (anv_can_sample_with_hiz(&device->info, iview->aspect_mask,
+                                  image->samples)) {
          /* When a HiZ buffer is sampled on gen9+, ensure that
           * the constant fast clear value is set in the surface state.
           */
