@@ -158,7 +158,7 @@ disk_cache_put(struct disk_cache *cache, cache_key key,
 }
 
 static inline void
-disk_cache_remove(struct program_cache *cache, cache_key key)
+disk_cache_remove(struct disk_cache *cache, cache_key key)
 {
    return;
 }
