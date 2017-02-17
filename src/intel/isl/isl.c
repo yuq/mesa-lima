@@ -1323,7 +1323,7 @@ isl_surf_get_tile_info(const struct isl_device *dev,
    isl_tiling_get_info(dev, surf->tiling, fmtl->bpb, tile_info);
 }
 
-void
+bool
 isl_surf_get_hiz_surf(const struct isl_device *dev,
                       const struct isl_surf *surf,
                       struct isl_surf *hiz_surf)
@@ -1391,20 +1391,20 @@ isl_surf_get_hiz_surf(const struct isl_device *dev,
     */
    const unsigned samples = ISL_DEV_GEN(dev) >= 9 ? 1 : surf->samples;
 
-   isl_surf_init(dev, hiz_surf,
-                 .dim = surf->dim,
-                 .format = ISL_FORMAT_HIZ,
-                 .width = surf->logical_level0_px.width,
-                 .height = surf->logical_level0_px.height,
-                 .depth = surf->logical_level0_px.depth,
-                 .levels = surf->levels,
-                 .array_len = surf->logical_level0_px.array_len,
-                 .samples = samples,
-                 .usage = ISL_SURF_USAGE_HIZ_BIT,
-                 .tiling_flags = ISL_TILING_HIZ_BIT);
+   return isl_surf_init(dev, hiz_surf,
+                        .dim = surf->dim,
+                        .format = ISL_FORMAT_HIZ,
+                        .width = surf->logical_level0_px.width,
+                        .height = surf->logical_level0_px.height,
+                        .depth = surf->logical_level0_px.depth,
+                        .levels = surf->levels,
+                        .array_len = surf->logical_level0_px.array_len,
+                        .samples = samples,
+                        .usage = ISL_SURF_USAGE_HIZ_BIT,
+                        .tiling_flags = ISL_TILING_HIZ_BIT);
 }
 
-void
+bool
 isl_surf_get_mcs_surf(const struct isl_device *dev,
                       const struct isl_surf *surf,
                       struct isl_surf *mcs_surf)
@@ -1427,17 +1427,17 @@ isl_surf_get_mcs_surf(const struct isl_device *dev,
       unreachable("Invalid sample count");
    }
 
-   isl_surf_init(dev, mcs_surf,
-                 .dim = ISL_SURF_DIM_2D,
-                 .format = mcs_format,
-                 .width = surf->logical_level0_px.width,
-                 .height = surf->logical_level0_px.height,
-                 .depth = 1,
-                 .levels = 1,
-                 .array_len = surf->logical_level0_px.array_len,
-                 .samples = 1, /* MCS surfaces are really single-sampled */
-                 .usage = ISL_SURF_USAGE_MCS_BIT,
-                 .tiling_flags = ISL_TILING_Y0_BIT);
+   return isl_surf_init(dev, mcs_surf,
+                        .dim = ISL_SURF_DIM_2D,
+                        .format = mcs_format,
+                        .width = surf->logical_level0_px.width,
+                        .height = surf->logical_level0_px.height,
+                        .depth = 1,
+                        .levels = 1,
+                        .array_len = surf->logical_level0_px.array_len,
+                        .samples = 1, /* MCS surfaces are really single-sampled */
+                        .usage = ISL_SURF_USAGE_MCS_BIT,
+                        .tiling_flags = ISL_TILING_Y0_BIT);
 }
 
 bool
@@ -1491,19 +1491,17 @@ isl_surf_get_ccs_surf(const struct isl_device *dev,
       return false;
    }
 
-   isl_surf_init(dev, ccs_surf,
-                 .dim = surf->dim,
-                 .format = ccs_format,
-                 .width = surf->logical_level0_px.width,
-                 .height = surf->logical_level0_px.height,
-                 .depth = surf->logical_level0_px.depth,
-                 .levels = surf->levels,
-                 .array_len = surf->logical_level0_px.array_len,
-                 .samples = 1,
-                 .usage = ISL_SURF_USAGE_CCS_BIT,
-                 .tiling_flags = ISL_TILING_CCS_BIT);
-
-   return true;
+   return isl_surf_init(dev, ccs_surf,
+                        .dim = surf->dim,
+                        .format = ccs_format,
+                        .width = surf->logical_level0_px.width,
+                        .height = surf->logical_level0_px.height,
+                        .depth = surf->logical_level0_px.depth,
+                        .levels = surf->levels,
+                        .array_len = surf->logical_level0_px.array_len,
+                        .samples = 1,
+                        .usage = ISL_SURF_USAGE_CCS_BIT,
+                        .tiling_flags = ISL_TILING_CCS_BIT);
 }
 
 void

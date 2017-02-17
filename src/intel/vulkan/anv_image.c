@@ -209,8 +209,9 @@ make_surface(const struct anv_device *dev,
          anv_finishme("Test gen8 multisampled HiZ");
       } else {
          assert(image->aux_surface.isl.size == 0);
-         isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
-                               &image->aux_surface.isl);
+         ok = isl_surf_get_hiz_surf(&dev->isl_dev, &image->depth_surface.isl,
+                                    &image->aux_surface.isl);
+         assert(ok);
          add_surface(image, &image->aux_surface);
          image->aux_usage = ISL_AUX_USAGE_HIZ;
       }
