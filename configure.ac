@@ -2691,8 +2691,7 @@ AC_CONFIG_FILES([Makefile
 		src/mesa/main/tests/Makefile
 		src/util/Makefile
 		src/util/tests/hash_table/Makefile
-		src/vulkan/util/Makefile
-		src/vulkan/wsi/Makefile])
+		src/vulkan/Makefile])
 
 AC_OUTPUT
 

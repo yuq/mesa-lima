@@ -159,8 +159,8 @@ def xml_parser(filename):
 
 def main():
     enums = xml_parser(VK_XML)
-    for template, file_ in [(C_TEMPLATE, 'vk_enum_to_str.c'),
-                            (H_TEMPLATE, 'vk_enum_to_str.h')]:
+    for template, file_ in [(C_TEMPLATE, 'util/vk_enum_to_str.c'),
+                            (H_TEMPLATE, 'util/vk_enum_to_str.h')]:
         with open(file_, 'wb') as f:
             f.write(template.render(
                 file=os.path.basename(__file__),

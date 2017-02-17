@@ -1,9 +1,21 @@
-
 include Makefile.sources
 
-vulkan_includedir = $(includedir)/vulkan
+noinst_LTLIBRARIES = libvulkan_wsi.la libvulkan_util.la
 
-noinst_LTLIBRARIES = libvulkan_wsi.la
+vulkan_includedir = $(includedir)/vulkan
+vulkan_api_xml = $(top_srcdir)/src/vulkan/registry/vk.xml
+
+EXTRA_DIST = \
+	util/gen_enum_to_str.py
+
+BUILT_SOURCES = \
+	util/vk_enum_to_str.c \
+	util/vk_enum_to_str.h
+
+util/vk_enum_to_str.c util/vk_enum_to_str.h: util/gen_enum_to_str.py $(vulkan_api_xml)
+	$(AM_V_GEN)$(PYTHON2) $(srcdir)/util/gen_enum_to_str.py
+
+libvulkan_util_la_SOURCES = $(VULKAN_UTIL_FILES)
 
 AM_CPPFLAGS = \
 	$(DEFINES) \

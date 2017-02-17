@@ -117,7 +117,7 @@ SUBDIRS += intel/tools
 endif
 
 if HAVE_VULKAN_COMMON
-SUBDIRS += vulkan/util vulkan/wsi
+SUBDIRS += vulkan
 endif
 EXTRA_DIST += vulkan/registry/vk.xml
 
