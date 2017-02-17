@@ -246,19 +246,6 @@ This instruction replicates its result.
   dst.w = src0.w \times src1.w + src2.w
 
 
-.. opcode:: SUB - Subtract
-
-.. math::
-
-  dst.x = src0.x - src1.x
-
-  dst.y = src0.y - src1.y
-
-  dst.z = src0.z - src1.z
-
-  dst.w = src0.w - src1.w
-
-
 .. opcode:: LRP - Linear Interpolate
 
 .. math::
@@ -389,19 +376,6 @@ This instruction replicates its result.
   dst.z = src0.x \times src1.y - src1.x \times src0.y
 
   dst.w = 1
-
-
-.. opcode:: ABS - Absolute
-
-.. math::
-
-  dst.x = |src.x|
-
-  dst.y = |src.y|
-
-  dst.z = |src.z|
-
-  dst.w = |src.w|
 
 
 .. opcode:: DPH - Homogeneous Dot Product
