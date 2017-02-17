@@ -2547,7 +2547,7 @@ void PaRectListSingle0(
             a[i] = _simd16_extract_ps(a_16[i], 0);
             b[i] = _simd16_extract_ps(a_16[i], 1);
         }
-}
+    }
     else
     {
         const simd16vector &b_16 = PaGetSimdVector_simd16(pa, 1, slot);
@@ -2574,7 +2574,7 @@ void PaRectListSingle0(
     case 1:
         verts[0] = swizzleLane0(a);
         verts[1] = swizzleLane2(a);
-        verts[2] = _mm_blend_ps(verts[0], verts[1], 0x2);
+        verts[2] = _mm_blend_ps(verts[0], verts[1], 0xA);
         break;
     case 2:
     case 3:
