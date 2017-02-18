@@ -60,6 +60,7 @@ LOCAL_CFLAGS += \
 	-DHAVE___BUILTIN_UNREACHABLE \
 	-DHAVE_PTHREAD=1 \
 	-DHAVE_DLOPEN \
+	-DHAVE_DL_ITERATE_PHDR \
 	-fvisibility=hidden \
 	-Wno-sign-compare
 
