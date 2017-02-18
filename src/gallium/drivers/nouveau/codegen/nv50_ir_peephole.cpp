@@ -410,6 +410,8 @@ ConstantFolding::findOriginForTestWithZero(Value *value)
    if (!value)
       return NULL;
    Instruction *insn = value->getInsn();
+   if (!insn)
+      return NULL;
 
    if (insn->asCmp() && insn->op != OP_SLCT)
       return insn->asCmp();
