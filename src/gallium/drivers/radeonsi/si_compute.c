@@ -113,6 +113,7 @@ static void si_create_compute_state_async(void *job, int thread_index)
 
 	memset(&sel, 0, sizeof(sel));
 
+	sel.screen = program->screen;
 	tgsi_scan_shader(program->tokens, &sel.info);
 	sel.tokens = program->tokens;
 	sel.type = PIPE_SHADER_COMPUTE;

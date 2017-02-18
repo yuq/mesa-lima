@@ -100,6 +100,17 @@ enum {
 	LOCAL_ADDR_SPACE = 3,
 };
 
+static bool is_merged_shader(struct si_shader *shader)
+{
+	if (shader->selector->screen->b.chip_class <= VI)
+		return false;
+
+	return shader->key.as_ls ||
+	       shader->key.as_es ||
+	       shader->selector->type == PIPE_SHADER_TESS_CTRL ||
+	       shader->selector->type == PIPE_SHADER_GEOMETRY;
+}
+
 /**
  * Returns a unique index for a semantic name and index. The index must be
  * less than 64, so that a 64-bit bitmask of used inputs or outputs can be
@@ -7689,7 +7700,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 	}
 
 	/* Add the scratch offset to input SGPRs. */
-	if (shader->config.scratch_bytes_per_wave)
+	if (shader->config.scratch_bytes_per_wave && !is_merged_shader(shader))
 		shader->info.num_input_sgprs += 1; /* scratch byte offset */
 
 	/* Calculate the number of fragment input VGPRs. */
