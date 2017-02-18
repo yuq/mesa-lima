@@ -352,6 +352,7 @@ struct si_vs_epilog_bits {
 /* Common TCS bits between the shader key and the epilog key. */
 struct si_tcs_epilog_bits {
 	unsigned	prim_mode:3;
+	unsigned	tes_reads_tess_factors:1;
 };
 
 struct si_gs_prolog_bits {
