@@ -40,6 +40,7 @@ struct stw_context
    DHGLRC dhglrc;
    int iPixelFormat;
    HDC hdc;
+   BOOL shared;
 
    struct stw_framebuffer *current_framebuffer;
 

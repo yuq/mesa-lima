@@ -104,8 +104,11 @@ DrvShareLists(DHGLRC dhglrc1, DHGLRC dhglrc2)
    ctx1 = stw_lookup_context_locked( dhglrc1 );
    ctx2 = stw_lookup_context_locked( dhglrc2 );
 
-   if (ctx1 && ctx2 && ctx2->st->share)
+   if (ctx1 && ctx2 && ctx2->st->share) {
       ret = ctx2->st->share(ctx2->st, ctx1->st);
+      ctx1->shared = TRUE;
+      ctx2->shared = TRUE;
+   }
 
    stw_unlock_contexts(stw_dev);
 
@@ -175,6 +178,7 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
    if (hShareContext != 0) {
       stw_lock_contexts(stw_dev);
       shareCtx = stw_lookup_context_locked( hShareContext );
+      shareCtx->shared = TRUE;
       stw_unlock_contexts(stw_dev);
    }
 
@@ -184,6 +188,7 @@ stw_create_context_attribs(HDC hdc, INT iLayerPlane, DHGLRC hShareContext,
 
    ctx->hdc = hdc;
    ctx->iPixelFormat = iPixelFormat;
+   ctx->shared = shareCtx != NULL;
 
    memset(&attribs, 0, sizeof(attribs));
    attribs.visual = pfi->stvis;
@@ -403,7 +408,14 @@ stw_make_current(HDC hdc, DHGLRC dhglrc)
             return TRUE;
          }
       } else {
-         old_ctx->st->flush(old_ctx->st, ST_FLUSH_FRONT, NULL);
+         if (old_ctx->shared) {
+            struct pipe_fence_handle *fence = NULL;
+            old_ctx->st->flush(old_ctx->st,
+                               ST_FLUSH_FRONT | ST_FLUSH_WAIT, &fence);
+         }
+         else {
+            old_ctx->st->flush(old_ctx->st, ST_FLUSH_FRONT, NULL);
+         }
       }
    }
 
