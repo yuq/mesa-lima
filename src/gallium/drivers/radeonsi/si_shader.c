@@ -982,10 +982,12 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	const struct tgsi_full_dst_register *reg = &inst->Dst[0];
+	const struct tgsi_shader_info *sh_info = &ctx->shader->selector->info;
 	unsigned chan_index;
 	LLVMValueRef dw_addr, stride;
 	LLVMValueRef rw_buffers, buffer, base, buf_addr;
 	LLVMValueRef values[4];
+	bool skip_lds_store;
 
 	/* Only handle per-patch and per-vertex outputs here.
 	 * Vectors will be lowered to scalars and this function will be called again.
@@ -1000,9 +1002,20 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		stride = unpack_param(ctx, SI_PARAM_TCS_OUT_LAYOUT, 13, 8);
 		dw_addr = get_tcs_out_current_patch_offset(ctx);
 		dw_addr = get_dw_address(ctx, reg, NULL, stride, dw_addr);
+		skip_lds_store = !sh_info->reads_pervertex_outputs;
 	} else {
 		dw_addr = get_tcs_out_current_patch_data_offset(ctx);
 		dw_addr = get_dw_address(ctx, reg, NULL, NULL, dw_addr);
+		skip_lds_store = !sh_info->reads_perpatch_outputs;
+
+		if (!reg->Register.Indirect) {
+			int name = sh_info->output_semantic_name[reg->Register.Index];
+
+			/* Always write tess factors into LDS for the TCS epilog. */
+			if (name == TGSI_SEMANTIC_TESSINNER ||
+			    name == TGSI_SEMANTIC_TESSOUTER)
+				skip_lds_store = false;
+		}
 	}
 
 	rw_buffers = LLVMGetParam(ctx->main_fn,
@@ -1020,7 +1033,9 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		if (inst->Instruction.Saturate)
 			value = ac_emit_clamp(&ctx->ac, value);
 
-		lds_store(bld_base, chan_index, dw_addr, value);
+		/* Skip LDS stores if there is no LDS read of this output. */
+		if (!skip_lds_store)
+			lds_store(bld_base, chan_index, dw_addr, value);
 
 		value = LLVMBuildBitCast(gallivm->builder, value, ctx->i32, "");
 		values[chan_index] = value;
