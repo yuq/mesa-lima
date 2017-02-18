@@ -169,25 +169,3 @@ VkResult anv_GetQueryPoolResults(
 
    return VK_SUCCESS;
 }
-
-void anv_CmdResetQueryPool(
-    VkCommandBuffer                             commandBuffer,
-    VkQueryPool                                 queryPool,
-    uint32_t                                    firstQuery,
-    uint32_t                                    queryCount)
-{
-   ANV_FROM_HANDLE(anv_query_pool, pool, queryPool);
-
-   for (uint32_t i = 0; i < queryCount; i++) {
-      switch (pool->type) {
-      case VK_QUERY_TYPE_OCCLUSION:
-      case VK_QUERY_TYPE_TIMESTAMP: {
-         struct anv_query_pool_slot *slot = pool->bo.map;
-         slot[firstQuery + i].available = 0;
-         break;
-      }
-      default:
-         assert(!"Invalid query type");
-      }
-   }
-}
