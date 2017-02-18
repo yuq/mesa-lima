@@ -1245,6 +1245,7 @@ again:
 	 * if the initial guess was wrong. */
 	struct si_shader **mainp = si_get_main_shader_part(sel, key);
 	bool is_pure_monolithic =
+		sscreen->use_monolithic_shaders ||
 		memcmp(&key->mono, &zeroed.mono, sizeof(key->mono)) != 0;
 
 	if (!*mainp && !is_pure_monolithic) {
@@ -1278,7 +1279,7 @@ again:
 		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0;
 
 	shader->is_optimized =
-		!sscreen->use_monolithic_shaders &&
+		!is_pure_monolithic &&
 		memcmp(&key->opt, &zeroed.opt, sizeof(key->opt)) != 0;
 	if (shader->is_optimized)
 		util_queue_fence_init(&shader->optimized_ready);
