@@ -5624,38 +5624,97 @@ static unsigned si_get_max_workgroup_size(struct si_shader *shader)
 	return max_work_group_size;
 }
 
+static void declare_per_stage_desc_pointers(struct si_shader_context *ctx,
+					    LLVMTypeRef *params,
+					    unsigned *num_params,
+					    bool assign_params)
+{
+	params[(*num_params)++] = const_array(ctx->v16i8, SI_NUM_CONST_BUFFERS);
+	params[(*num_params)++] = const_array(ctx->v8i32, SI_NUM_SAMPLERS);
+	params[(*num_params)++] = const_array(ctx->v8i32, SI_NUM_IMAGES);
+	params[(*num_params)++] = const_array(ctx->v4i32, SI_NUM_SHADER_BUFFERS);
+
+	if (assign_params) {
+		ctx->param_const_buffers  = *num_params - 4;
+		ctx->param_samplers	  = *num_params - 3;
+		ctx->param_images	  = *num_params - 2;
+		ctx->param_shader_buffers = *num_params - 1;
+	}
+}
+
+static void declare_default_desc_pointers(struct si_shader_context *ctx,
+					  LLVMTypeRef *params,
+				          unsigned *num_params)
+{
+	params[ctx->param_rw_buffers = (*num_params)++] =
+		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+	declare_per_stage_desc_pointers(ctx, params, num_params, true);
+}
+
+static void declare_vs_specific_input_sgprs(struct si_shader_context *ctx,
+					    LLVMTypeRef *params,
+					    unsigned *num_params)
+{
+	params[ctx->param_vertex_buffers = (*num_params)++] =
+		const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
+	params[ctx->param_base_vertex = (*num_params)++] = ctx->i32;
+	params[ctx->param_start_instance = (*num_params)++] = ctx->i32;
+	params[ctx->param_draw_id = (*num_params)++] = ctx->i32;
+	params[ctx->param_vs_state_bits = (*num_params)++] = ctx->i32;
+}
+
+static void declare_vs_input_vgprs(struct si_shader_context *ctx,
+				   LLVMTypeRef *params, unsigned *num_params,
+				   unsigned *num_prolog_vgprs)
+{
+	struct si_shader *shader = ctx->shader;
+
+	params[ctx->param_vertex_id = (*num_params)++] = ctx->i32;
+	params[ctx->param_rel_auto_id = (*num_params)++] = ctx->i32;
+	params[ctx->param_vs_prim_id = (*num_params)++] = ctx->i32;
+	params[ctx->param_instance_id = (*num_params)++] = ctx->i32;
+
+	if (!shader->is_gs_copy_shader) {
+		/* Vertex load indices. */
+		ctx->param_vertex_index0 = (*num_params);
+		for (unsigned i = 0; i < shader->selector->info.num_inputs; i++)
+			params[(*num_params)++] = ctx->i32;
+		*num_prolog_vgprs += shader->selector->info.num_inputs;
+	}
+}
+
+enum {
+	/* Convenient merged shader definitions. */
+	SI_SHADER_MERGED_VERTEX_TESSCTRL = PIPE_SHADER_TYPES,
+	SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY,
+};
+
 static void create_function(struct si_shader_context *ctx)
 {
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	struct si_shader *shader = ctx->shader;
-	LLVMTypeRef params[SI_NUM_PARAMS + SI_MAX_ATTRIBS], v3i32;
+	LLVMTypeRef params[100]; /* just make it large enough */
 	LLVMTypeRef returns[16+32*4];
 	unsigned i, last_sgpr, num_params = 0, num_return_sgprs;
 	unsigned num_returns = 0;
 	unsigned num_prolog_vgprs = 0;
+	unsigned type = ctx->type;
 
-	v3i32 = LLVMVectorType(ctx->i32, 3);
+	/* Set MERGED shaders. */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		if (shader->key.as_ls || type == PIPE_SHADER_TESS_CTRL)
+			type = SI_SHADER_MERGED_VERTEX_TESSCTRL; /* LS or HS */
+		else if (shader->key.as_es || type == PIPE_SHADER_GEOMETRY)
+			type = SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY;
+	}
 
-	params[ctx->param_rw_buffers = num_params++] =
-		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
-	params[ctx->param_const_buffers = num_params++] =
-		const_array(ctx->v16i8, SI_NUM_CONST_BUFFERS);
-	params[ctx->param_samplers = num_params++] =
-		const_array(ctx->v8i32, SI_NUM_SAMPLERS);
-	params[ctx->param_images = num_params++] =
-		const_array(ctx->v8i32, SI_NUM_IMAGES);
-	params[ctx->param_shader_buffers = num_params++] =
-		const_array(ctx->v4i32, SI_NUM_SHADER_BUFFERS);
+	LLVMTypeRef v3i32 = LLVMVectorType(ctx->i32, 3);
 
-	switch (ctx->type) {
+	switch (type) {
 	case PIPE_SHADER_VERTEX:
-		params[ctx->param_vertex_buffers = num_params++] =
-			const_array(ctx->v16i8, SI_NUM_VERTEX_BUFFERS);
-		params[ctx->param_base_vertex = num_params++] = ctx->i32;
-		params[ctx->param_start_instance = num_params++] = ctx->i32;
-		params[ctx->param_draw_id = num_params++] = ctx->i32;
-		params[ctx->param_vs_state_bits = num_params++] = ctx->i32;
+		declare_default_desc_pointers(ctx, params, &num_params);
+		declare_vs_specific_input_sgprs(ctx, params, &num_params);
 
 		if (shader->key.as_es) {
 			params[ctx->param_es2gs_offset = num_params++] = ctx->i32;
@@ -5673,28 +5732,19 @@ static void create_function(struct si_shader_context *ctx)
 		last_sgpr = num_params-1;
 
 		/* VGPRs */
-		params[ctx->param_vertex_id = num_params++] = ctx->i32;
-		params[ctx->param_rel_auto_id = num_params++] = ctx->i32;
-		params[ctx->param_vs_prim_id = num_params++] = ctx->i32;
-		params[ctx->param_instance_id = num_params++] = ctx->i32;
+		declare_vs_input_vgprs(ctx, params, &num_params,
+				       &num_prolog_vgprs);
 
-		if (!shader->is_gs_copy_shader) {
-			/* Vertex load indices. */
-			ctx->param_vertex_index0 = num_params;
-
-			for (i = 0; i < shader->selector->info.num_inputs; i++)
-				params[num_params++] = ctx->i32;
-
-			num_prolog_vgprs += shader->selector->info.num_inputs;
-
-			/* PrimitiveID output. */
-			if (!shader->key.as_es && !shader->key.as_ls)
-				for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
-					returns[num_returns++] = ctx->f32;
+		/* PrimitiveID output. */
+		if (!shader->is_gs_copy_shader &&
+		    !shader->key.as_es && !shader->key.as_ls) {
+			for (i = 0; i <= VS_EPILOG_PRIMID_LOC; i++)
+				returns[num_returns++] = ctx->f32;
 		}
 		break;
 
-	case PIPE_SHADER_TESS_CTRL:
+	case PIPE_SHADER_TESS_CTRL: /* SI-CI-VI */
+		declare_default_desc_pointers(ctx, params, &num_params);
 		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
 		params[ctx->param_tcs_out_lds_offsets = num_params++] = ctx->i32;
 		params[ctx->param_tcs_out_lds_layout = num_params++] = ctx->i32;
@@ -5712,12 +5762,68 @@ static void create_function(struct si_shader_context *ctx)
 		 */
 		for (i = 0; i < GFX6_TCS_NUM_USER_SGPR + 2; i++)
 			returns[num_returns++] = ctx->i32; /* SGPRs */
-
 		for (i = 0; i < 3; i++)
 			returns[num_returns++] = ctx->f32; /* VGPRs */
 		break;
 
+	case SI_SHADER_MERGED_VERTEX_TESSCTRL:
+		/* Merged stages have 8 system SGPRs at the beginning. */
+		params[num_params++] = ctx->i32; /* unused */
+		params[num_params++] = ctx->i32; /* unused */
+		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32; /* wave thread counts for LS and HS */
+		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32; /* scratch wave offset */
+		params[num_params++] = ctx->i32; /* unused */
+		params[num_params++] = ctx->i32; /* unused */
+
+		params[ctx->param_rw_buffers = num_params++] =
+			const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
+		declare_per_stage_desc_pointers(ctx, params, &num_params,
+						ctx->type == PIPE_SHADER_VERTEX);
+		declare_vs_specific_input_sgprs(ctx, params, &num_params);
+
+		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
+		params[ctx->param_tcs_out_lds_offsets = num_params++] = ctx->i32;
+		params[ctx->param_tcs_out_lds_layout = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32; /* unused */
+
+		declare_per_stage_desc_pointers(ctx, params, &num_params,
+						ctx->type == PIPE_SHADER_TESS_CTRL);
+		last_sgpr = num_params - 1;
+
+		/* VGPRs (first TCS, then VS) */
+		params[ctx->param_tcs_patch_id = num_params++] = ctx->i32;
+		params[ctx->param_tcs_rel_ids = num_params++] = ctx->i32;
+
+		if (ctx->type == PIPE_SHADER_VERTEX) {
+			declare_vs_input_vgprs(ctx, params, &num_params,
+					       &num_prolog_vgprs);
+
+			/* LS return values are inputs to the TCS main shader part. */
+			for (i = 0; i < 8 + GFX9_TCS_NUM_USER_SGPR; i++)
+				returns[num_returns++] = ctx->i32; /* SGPRs */
+			for (i = 0; i < 2; i++)
+				returns[num_returns++] = ctx->f32; /* VGPRs */
+		} else {
+			/* TCS return values are inputs to the TCS epilog.
+			 *
+			 * param_tcs_offchip_offset and param_tcs_factor_offset
+			 * should be passed to the epilog.
+			 */
+			for (i = 0; i <= ctx->param_tcs_factor_offset; i++)
+				returns[num_returns++] = ctx->i32; /* SGPRs */
+			for (i = 0; i < 3; i++)
+				returns[num_returns++] = ctx->f32; /* VGPRs */
+		}
+		break;
+
+	case SI_SHADER_MERGED_VERTEX_OR_TESSEVAL_GEOMETRY:
+		assert(!"unimplemented merged ES-GS shader");
+		break;
+
 	case PIPE_SHADER_TESS_EVAL:
+		declare_default_desc_pointers(ctx, params, &num_params);
 		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
 
 		if (shader->key.as_es) {
@@ -5745,6 +5851,7 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_GEOMETRY:
+		declare_default_desc_pointers(ctx, params, &num_params);
 		params[ctx->param_gs2vs_offset = num_params++] = ctx->i32;
 		params[ctx->param_gs_wave_id = num_params++] = ctx->i32;
 		last_sgpr = num_params - 1;
@@ -5761,6 +5868,7 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_FRAGMENT:
+		declare_default_desc_pointers(ctx, params, &num_params);
 		params[SI_PARAM_ALPHA_REF] = ctx->f32;
 		params[SI_PARAM_PRIM_MASK] = ctx->i32;
 		last_sgpr = SI_PARAM_PRIM_MASK;
@@ -5816,6 +5924,7 @@ static void create_function(struct si_shader_context *ctx)
 		break;
 
 	case PIPE_SHADER_COMPUTE:
+		declare_default_desc_pointers(ctx, params, &num_params);
 		params[SI_PARAM_GRID_SIZE] = v3i32;
 		params[SI_PARAM_BLOCK_SIZE] = v3i32;
 		params[SI_PARAM_BLOCK_ID] = v3i32;
