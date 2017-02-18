@@ -86,7 +86,7 @@ TEMPLATE_H = Template(textwrap.dedent("""\
     #endif // ${guard}
       % endif
     % endfor
-    """))
+    """), output_encoding='utf-8')
 
 TEMPLATE_C = Template(textwrap.dedent(u"""\
     /*
@@ -340,22 +340,23 @@ def gen_code(entrypoints):
             collisions[level] += 1
         mapping[h & HASH_MASK] = num
 
-    print TEMPLATE_C.render(entrypoints=entrypoints,
-                            offsets=offsets,
-                            collisions=collisions,
-                            mapping=mapping,
-                            hash_mask=HASH_MASK,
-                            prime_step=PRIME_STEP,
-                            prime_factor=PRIME_FACTOR,
-                            none=NONE,
-                            hash_size=HASH_SIZE,
-                            filename=os.path.basename(__file__))
+    return TEMPLATE_C.render(entrypoints=entrypoints,
+                             offsets=offsets,
+                             collisions=collisions,
+                             mapping=mapping,
+                             hash_mask=HASH_MASK,
+                             prime_step=PRIME_STEP,
+                             prime_factor=PRIME_FACTOR,
+                             none=NONE,
+                             hash_size=HASH_SIZE,
+                             filename=os.path.basename(__file__))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('target', choices=['header', 'code'],
                         help='Which file to generate.')
+    parser.add_argument('file', help='Where to write the file.')
     parser.add_argument('--xml', help='Vulkan API XML file.')
     args = parser.parse_args()
 
@@ -375,10 +376,12 @@ def main():
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
     if args.target == 'header':
-        print TEMPLATE_H.render(entrypoints=entrypoints,
-                                filename=os.path.basename(__file__))
+        with open(args.file, 'wb') as f:
+            f.write(TEMPLATE_H.render(entrypoints=entrypoints,
+                                      filename=os.path.basename(__file__)))
     else:
-        gen_code(entrypoints)
+        with open(args.file, 'wb') as f:
+            f.write(gen_code(entrypoints))
 
 
 if __name__ == '__main__':
