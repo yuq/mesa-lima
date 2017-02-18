@@ -88,6 +88,165 @@ TEMPLATE_H = Template(textwrap.dedent("""\
     % endfor
     """))
 
+TEMPLATE_C = Template(textwrap.dedent(u"""\
+    /*
+     * Copyright © 2015 Intel Corporation
+     *
+     * Permission is hereby granted, free of charge, to any person obtaining a
+     * copy of this software and associated documentation files (the "Software"),
+     * to deal in the Software without restriction, including without limitation
+     * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+     * and/or sell copies of the Software, and to permit persons to whom the
+     * Software is furnished to do so, subject to the following conditions:
+     *
+     * The above copyright notice and this permission notice (including the next
+     * paragraph) shall be included in all copies or substantial portions of the
+     * Software.
+     *
+     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+     * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+     * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+     * IN THE SOFTWARE.
+     */
+
+    /* This file generated from ${filename}, don't edit directly. */
+
+    #include "anv_private.h"
+
+    struct anv_entrypoint {
+       uint32_t name;
+       uint32_t hash;
+    };
+
+    /* We use a big string constant to avoid lots of reloctions from the entry
+     * point table to lots of little strings. The entries in the entry point table
+     * store the index into this big string.
+     */
+
+    static const char strings[] =
+    % for _, name, _, _, _, _ in entrypoints:
+        "vk${name}\\0"
+    % endfor
+    ;
+
+    static const struct anv_entrypoint entrypoints[] = {
+    % for _, _, _, num, h, _ in entrypoints:
+        { ${offsets[num]}, ${'{:0=#8x}'.format(h)} },
+    % endfor
+    };
+
+    /* Weak aliases for all potential implementations. These will resolve to
+     * NULL if they're not defined, which lets the resolve_entrypoint() function
+     * either pick the correct entry point.
+     */
+
+    % for layer in ['anv', 'gen7', 'gen75', 'gen8', 'gen9']:
+      % for type_, name, args, _, _, guard in entrypoints:
+        % if guard is not None:
+    #ifdef ${guard}
+        % endif
+        ${type_} ${layer}_${name}(${args}) __attribute__ ((weak));
+        % if guard is not None:
+    #endif // ${guard}
+        % endif
+      % endfor
+
+      const struct anv_dispatch_table ${layer}_layer = {
+      % for _, name, args, _, _, guard in entrypoints:
+        % if guard is not None:
+    #ifdef ${guard}
+        % endif
+        .${name} = ${layer}_${name},
+        % if guard is not None:
+    #endif // ${guard}
+        % endif
+      % endfor
+      };
+    % endfor
+
+    static void * __attribute__ ((noinline))
+    anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
+    {
+       if (devinfo == NULL) {
+          return anv_layer.entrypoints[index];
+       }
+
+       switch (devinfo->gen) {
+       case 9:
+          if (gen9_layer.entrypoints[index])
+             return gen9_layer.entrypoints[index];
+          /* fall through */
+       case 8:
+          if (gen8_layer.entrypoints[index])
+             return gen8_layer.entrypoints[index];
+          /* fall through */
+       case 7:
+          if (devinfo->is_haswell && gen75_layer.entrypoints[index])
+             return gen75_layer.entrypoints[index];
+
+          if (gen7_layer.entrypoints[index])
+             return gen7_layer.entrypoints[index];
+          /* fall through */
+       case 0:
+          return anv_layer.entrypoints[index];
+       default:
+          unreachable("unsupported gen\\n");
+       }
+    }
+
+    /* Hash table stats:
+     * size ${hash_size} entries
+     * collisions entries:
+    % for i in xrange(10):
+     *     ${i}${'+' if i == 9 else ''}     ${collisions[i]}
+    % endfor
+     */
+
+    #define none ${'{:#x}'.format(none)}
+    static const uint16_t map[] = {
+    % for i in xrange(0, hash_size, 8):
+      % for j in xrange(i, i + 8):
+        ## This is 6 because the 0x is counted in the length
+        % if mapping[j] & 0xffff == 0xffff:
+          none,
+        % else:
+          ${'{:0=#6x}'.format(mapping[j] & 0xffff)},
+        % endif
+      % endfor
+    % endfor
+    };
+
+    void *
+    anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
+    {
+       static const uint32_t prime_factor = ${prime_factor};
+       static const uint32_t prime_step = ${prime_step};
+       const struct anv_entrypoint *e;
+       uint32_t hash, h, i;
+       const char *p;
+
+       hash = 0;
+       for (p = name; *p; p++)
+          hash = hash * prime_factor + *p;
+
+       h = hash;
+       do {
+          i = map[h & ${hash_mask}];
+          if (i == none)
+             return NULL;
+          e = &entrypoints[i];
+          h += prime_step;
+       } while (e->hash != hash);
+
+       if (strcmp(name, strings + e->name) != 0)
+          return NULL;
+
+       return anv_resolve_entrypoint(devinfo, i);
+    }"""), output_encoding='utf-8')
+
 NONE = 0xffff
 HASH_SIZE = 256
 U32_MASK = 2**32 - 1
@@ -96,9 +255,6 @@ HASH_MASK = HASH_SIZE - 1
 PRIME_FACTOR = 5024183
 PRIME_STEP = 19
 
-opt_header = False
-opt_code = False
-
 
 def hash(name):
     h = 0
@@ -106,16 +262,6 @@ def hash(name):
         h = (h * PRIME_FACTOR + ord(c)) & U32_MASK
 
     return h
-
-
-def print_guard_start(guard):
-    if guard is not None:
-        print "#ifdef {0}".format(guard)
-
-
-def print_guard_end(guard):
-    if guard is not None:
-        print "#endif // {0}".format(guard)
 
 
 def get_entrypoints(doc, entrypoints_to_defines):
@@ -174,188 +320,36 @@ def get_entrypoints_defines(doc):
 
 
 def gen_code(entrypoints):
-    print textwrap.dedent("""\
-    /*
-     * Copyright © 2015 Intel Corporation
-     *
-     * Permission is hereby granted, free of charge, to any person obtaining a
-     * copy of this software and associated documentation files (the "Software"),
-     * to deal in the Software without restriction, including without limitation
-     * the rights to use, copy, modify, merge, publish, distribute, sublicense,
-     * and/or sell copies of the Software, and to permit persons to whom the
-     * Software is furnished to do so, subject to the following conditions:
-     *
-     * The above copyright notice and this permission notice (including the next
-     * paragraph) shall be included in all copies or substantial portions of the
-     * Software.
-     *
-     * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-     * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-     * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
-     * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-     * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-     * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-     * IN THE SOFTWARE.
-     */
-
-    /* This file generated from {}, don't edit directly. */
-
-    #include "anv_private.h"
-
-    struct anv_entrypoint {{
-       uint32_t name;
-       uint32_t hash;
-    }};
-
-    /* We use a big string constant to avoid lots of reloctions from the entry
-     * point table to lots of little strings. The entries in the entry point table
-     * store the index into this big string.
-     */
-
-    static const char strings[] =""".format(os.path.basename(__file__)))
-
-    offsets = []
+    """Generate the C code."""
     i = 0
-    for type, name, args, num, h, guard in entrypoints:
-        print "   \"vk%s\\0\"" % name
+    offsets = []
+    for _, name, _, _, _, _ in entrypoints:
         offsets.append(i)
         i += 2 + len(name) + 1
-    print "   ;"
 
-    # Now generate the table of all entry points
-
-    print "\nstatic const struct anv_entrypoint entrypoints[] = {"
-    for type, name, args, num, h, guard in entrypoints:
-        print "   { %5d, 0x%08x }," % (offsets[num], h)
-    print "};\n"
-
-    print textwrap.dedent("""
-
-    /* Weak aliases for all potential implementations. These will resolve to
-     * NULL if they're not defined, which lets the resolve_entrypoint() function
-     * either pick the correct entry point.
-     */
-    """)
-
-    for layer in ["anv", "gen7", "gen75", "gen8", "gen9"]:
-        for type, name, args, num, h, guard in entrypoints:
-            print_guard_start(guard)
-            print "%s %s_%s(%s) __attribute__ ((weak));" % (type, layer, name, args)
-            print_guard_end(guard)
-        print "\nconst struct anv_dispatch_table %s_layer = {" % layer
-        for type, name, args, num, h, guard in entrypoints:
-            print_guard_start(guard)
-            print "   .%s = %s_%s," % (name, layer, name)
-            print_guard_end(guard)
-        print "};\n"
-
-    print textwrap.dedent("""
-    static void * __attribute__ ((noinline))
-    anv_resolve_entrypoint(const struct gen_device_info *devinfo, uint32_t index)
-    {
-       if (devinfo == NULL) {
-          return anv_layer.entrypoints[index];
-       }
-
-       switch (devinfo->gen) {
-       case 9:
-          if (gen9_layer.entrypoints[index])
-             return gen9_layer.entrypoints[index];
-          /* fall through */
-       case 8:
-          if (gen8_layer.entrypoints[index])
-             return gen8_layer.entrypoints[index];
-          /* fall through */
-       case 7:
-          if (devinfo->is_haswell && gen75_layer.entrypoints[index])
-             return gen75_layer.entrypoints[index];
-
-          if (gen7_layer.entrypoints[index])
-             return gen7_layer.entrypoints[index];
-          /* fall through */
-       case 0:
-          return anv_layer.entrypoints[index];
-       default:
-          unreachable("unsupported gen\\n");
-       }
-    }
-    """)
-
-    # Now generate the hash table used for entry point look up.  This is a
-    # uint16_t table of entry point indices. We use 0xffff to indicate an entry
-    # in the hash table is empty.
-
-    map = [NONE] * HASH_SIZE
+    mapping = [NONE] * HASH_SIZE
     collisions = [0] * 10
-    for type, name, args, num, h, guard in entrypoints:
+    for _, name, _, num, h, _ in entrypoints:
         level = 0
-        while map[h & HASH_MASK] != NONE:
+        while mapping[h & HASH_MASK] != NONE:
             h = h + PRIME_STEP
             level = level + 1
         if level > 9:
             collisions[9] += 1
         else:
             collisions[level] += 1
-        map[h & HASH_MASK] = num
+        mapping[h & HASH_MASK] = num
 
-    print "/* Hash table stats:"
-    print " * size %d entries" % HASH_SIZE
-    print " * collisions  entries"
-    for i in xrange(10):
-        if i == 9:
-            plus = "+"
-        else:
-            plus = " "
-
-        print " *     %2d%s     %4d" % (i, plus, collisions[i])
-    print " */\n"
-
-    print "#define none 0x%04x\n" % NONE
-
-    print "static const uint16_t map[] = {"
-    for i in xrange(0, HASH_SIZE, 8):
-        print "   ",
-        for j in xrange(i, i + 8):
-            if map[j] & 0xffff == 0xffff:
-                print "  none,",
-            else:
-                print "0x%04x," % (map[j] & 0xffff),
-        print
-
-    print "};"
-
-    # Finally we generate the hash table lookup function.  The hash function and
-    # linear probing algorithm matches the hash table generated above.
-
-    print textwrap.dedent("""
-    void *
-    anv_lookup_entrypoint(const struct gen_device_info *devinfo, const char *name)
-    {
-       static const uint32_t prime_factor = %d;
-       static const uint32_t prime_step = %d;
-       const struct anv_entrypoint *e;
-       uint32_t hash, h, i;
-       const char *p;
-
-       hash = 0;
-       for (p = name; *p; p++)
-          hash = hash * prime_factor + *p;
-
-       h = hash;
-       do {
-          i = map[h & %d];
-          if (i == none)
-             return NULL;
-          e = &entrypoints[i];
-          h += prime_step;
-       } while (e->hash != hash);
-
-       if (strcmp(name, strings + e->name) != 0)
-          return NULL;
-
-       return anv_resolve_entrypoint(devinfo, i);
-    }
-    """) % (PRIME_FACTOR, PRIME_STEP, HASH_MASK)
+    print TEMPLATE_C.render(entrypoints=entrypoints,
+                            offsets=offsets,
+                            collisions=collisions,
+                            mapping=mapping,
+                            hash_mask=HASH_MASK,
+                            prime_step=PRIME_STEP,
+                            prime_factor=PRIME_FACTOR,
+                            none=NONE,
+                            hash_size=HASH_SIZE,
+                            filename=os.path.basename(__file__))
 
 
 def main():
