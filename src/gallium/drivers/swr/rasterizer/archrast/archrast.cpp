@@ -72,7 +72,7 @@ namespace ArchRast
     class EventHandlerStatsFile : public EventHandlerFile
     {
     public:
-        EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id) {}
+        EventHandlerStatsFile(uint32_t id) : EventHandlerFile(id), mNeedFlush(false) {}
 
         // These are events that we're not interested in saving in stats event files.
         virtual void Handle(const Start& event) {}
@@ -87,6 +87,7 @@ namespace ArchRast
             //earlyStencil test compute
             mDSSingleSample.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSingleSample.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+            mNeedFlush = true;
         }
 
         virtual void Handle(const EarlyDepthStencilInfoSampleRate& event)
@@ -98,6 +99,7 @@ namespace ArchRast
             //earlyStencil test compute
             mDSSampleRate.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSampleRate.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+            mNeedFlush = true;
         }
 
         virtual void Handle(const EarlyDepthStencilInfoNullPS& event)
@@ -109,6 +111,7 @@ namespace ArchRast
             //earlyStencil test compute
             mDSNullPS.earlyStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSNullPS.earlyStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+            mNeedFlush = true;
         }
 
         virtual void Handle(const LateDepthStencilInfoSingleSample& event)
@@ -120,6 +123,7 @@ namespace ArchRast
             //lateStencil test compute
             mDSSingleSample.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSingleSample.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+            mNeedFlush = true;
         }
 
         virtual void Handle(const LateDepthStencilInfoSampleRate& event)
@@ -131,6 +135,7 @@ namespace ArchRast
             //lateStencil test compute
             mDSSampleRate.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSSampleRate.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+            mNeedFlush = true;
         }
 
         virtual void Handle(const LateDepthStencilInfoNullPS& event)
@@ -142,6 +147,7 @@ namespace ArchRast
             //lateStencil test compute
             mDSNullPS.lateStencilTestPassCount += _mm_popcnt_u32(event.data.stencilPassMask);
             mDSNullPS.lateStencilTestFailCount += _mm_popcnt_u32((!event.data.stencilPassMask) & event.data.coverageMask);
+            mNeedFlush = true;
         }
 
         virtual void Handle(const EarlyDepthInfoPixelRate& event)
@@ -149,6 +155,7 @@ namespace ArchRast
             //earlyZ test compute
             mDSPixelRate.earlyZTestPassCount += event.data.depthPassCount;
             mDSPixelRate.earlyZTestFailCount += (_mm_popcnt_u32(event.data.activeLanes) - event.data.depthPassCount);
+            mNeedFlush = true;
         }
 
 
@@ -157,38 +164,43 @@ namespace ArchRast
             //lateZ test compute
             mDSPixelRate.lateZTestPassCount += event.data.depthPassCount;
             mDSPixelRate.lateZTestFailCount += (_mm_popcnt_u32(event.data.activeLanes) - event.data.depthPassCount);
-
+            mNeedFlush = true;
         }
 
 
-        virtual void Handle(const BackendDrawEndEvent& event)
+        // Flush cached events for this draw
+        virtual void FlushDraw(uint32_t drawId)
         {
+            if (mNeedFlush == false) return;
+
             //singleSample
-            EventHandlerFile::Handle(EarlyZSingleSample(event.data.drawId, mDSSingleSample.earlyZTestPassCount, mDSSingleSample.earlyZTestFailCount));
-            EventHandlerFile::Handle(LateZSingleSample(event.data.drawId, mDSSingleSample.lateZTestPassCount, mDSSingleSample.lateZTestFailCount));
-            EventHandlerFile::Handle(EarlyStencilSingleSample(event.data.drawId, mDSSingleSample.earlyStencilTestPassCount, mDSSingleSample.earlyStencilTestFailCount));
-            EventHandlerFile::Handle(LateStencilSingleSample(event.data.drawId, mDSSingleSample.lateStencilTestPassCount, mDSSingleSample.lateStencilTestFailCount));
+            EventHandlerFile::Handle(EarlyZSingleSample(drawId, mDSSingleSample.earlyZTestPassCount, mDSSingleSample.earlyZTestFailCount));
+            EventHandlerFile::Handle(LateZSingleSample(drawId, mDSSingleSample.lateZTestPassCount, mDSSingleSample.lateZTestFailCount));
+            EventHandlerFile::Handle(EarlyStencilSingleSample(drawId, mDSSingleSample.earlyStencilTestPassCount, mDSSingleSample.earlyStencilTestFailCount));
+            EventHandlerFile::Handle(LateStencilSingleSample(drawId, mDSSingleSample.lateStencilTestPassCount, mDSSingleSample.lateStencilTestFailCount));
 
             //sampleRate
-            EventHandlerFile::Handle(EarlyZSampleRate(event.data.drawId, mDSSampleRate.earlyZTestPassCount, mDSSampleRate.earlyZTestFailCount));
-            EventHandlerFile::Handle(LateZSampleRate(event.data.drawId, mDSSampleRate.lateZTestPassCount, mDSSampleRate.lateZTestFailCount));
-            EventHandlerFile::Handle(EarlyStencilSampleRate(event.data.drawId, mDSSampleRate.earlyStencilTestPassCount, mDSSampleRate.earlyStencilTestFailCount));
-            EventHandlerFile::Handle(LateStencilSampleRate(event.data.drawId, mDSSampleRate.lateStencilTestPassCount, mDSSampleRate.lateStencilTestFailCount));
+            EventHandlerFile::Handle(EarlyZSampleRate(drawId, mDSSampleRate.earlyZTestPassCount, mDSSampleRate.earlyZTestFailCount));
+            EventHandlerFile::Handle(LateZSampleRate(drawId, mDSSampleRate.lateZTestPassCount, mDSSampleRate.lateZTestFailCount));
+            EventHandlerFile::Handle(EarlyStencilSampleRate(drawId, mDSSampleRate.earlyStencilTestPassCount, mDSSampleRate.earlyStencilTestFailCount));
+            EventHandlerFile::Handle(LateStencilSampleRate(drawId, mDSSampleRate.lateStencilTestPassCount, mDSSampleRate.lateStencilTestFailCount));
 
             //pixelRate
-            EventHandlerFile::Handle(EarlyZPixelRate(event.data.drawId, mDSPixelRate.earlyZTestPassCount, mDSPixelRate.earlyZTestFailCount));
-            EventHandlerFile::Handle(LateZPixelRate(event.data.drawId, mDSPixelRate.lateZTestPassCount, mDSPixelRate.lateZTestFailCount));
+            EventHandlerFile::Handle(EarlyZPixelRate(drawId, mDSPixelRate.earlyZTestPassCount, mDSPixelRate.earlyZTestFailCount));
+            EventHandlerFile::Handle(LateZPixelRate(drawId, mDSPixelRate.lateZTestPassCount, mDSPixelRate.lateZTestFailCount));
 
 
             //NullPS
-            EventHandlerFile::Handle(EarlyZNullPS(event.data.drawId, mDSNullPS.earlyZTestPassCount, mDSNullPS.earlyZTestFailCount));
-            EventHandlerFile::Handle(EarlyStencilNullPS(event.data.drawId, mDSNullPS.earlyStencilTestPassCount, mDSNullPS.earlyStencilTestFailCount));
+            EventHandlerFile::Handle(EarlyZNullPS(drawId, mDSNullPS.earlyZTestPassCount, mDSNullPS.earlyZTestFailCount));
+            EventHandlerFile::Handle(EarlyStencilNullPS(drawId, mDSNullPS.earlyStencilTestPassCount, mDSNullPS.earlyStencilTestFailCount));
 
             //Reset Internal Counters
             mDSSingleSample = {};
             mDSSampleRate = {};
             mDSPixelRate = {};
             mDSNullPS = {};
+
+            mNeedFlush = false;
         }
 
         virtual void Handle(const FrontendDrawEndEvent& event)
@@ -228,7 +240,7 @@ namespace ArchRast
         }
 
     protected:
-
+        bool mNeedFlush;
         // Per draw stats
         DepthStencilStats mDSSingleSample = {};
         DepthStencilStats mDSSampleRate = {};
@@ -294,4 +306,12 @@ namespace ArchRast
         pManager->Dispatch(event);
     }
 
+    // Flush for this thread.
+    void FlushDraw(HANDLE hThreadContext, uint32_t drawId)
+    {
+        EventManager* pManager = FromHandle(hThreadContext);
+        SWR_ASSERT(pManager != nullptr);
+
+        pManager->FlushDraw(drawId);
+    }
 }

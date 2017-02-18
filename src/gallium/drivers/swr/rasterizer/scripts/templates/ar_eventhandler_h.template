@@ -42,6 +42,8 @@ namespace ArchRast
         EventHandler() {}
         virtual ~EventHandler() {}
 
+        virtual void FlushDraw(uint32_t drawId) {}
+
 % for name in protos['event_names']:
         virtual void Handle(const ${name}& event) {}
 % endfor

@@ -69,6 +69,14 @@ namespace ArchRast
                 event.Accept(pHandler);
             }
         }
+
+        void FlushDraw(uint32_t drawId)
+        {
+            for (auto pHandler : mHandlers)
+            {
+                pHandler->FlushDraw(drawId);
+            }
+        }
     private:
 
         // Handlers stay registered for life

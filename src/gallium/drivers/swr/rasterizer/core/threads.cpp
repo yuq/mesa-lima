@@ -396,6 +396,8 @@ INLINE int32_t CompleteDrawContextInl(SWR_CONTEXT* pContext, uint32_t workerId, 
     int32_t result = InterlockedDecrement((volatile LONG*)&pDC->threadsDone);
     SWR_ASSERT(result >= 0);
 
+    AR_FLUSH(pDC->drawId);
+
     if (result == 0)
     {
         ExecuteCallbacks(pContext, workerId, pDC);
