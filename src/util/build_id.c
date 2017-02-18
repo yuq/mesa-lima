@@ -28,6 +28,14 @@
 
 #include "build_id.h"
 
+#ifndef NT_GNU_BUILD_ID
+#define NT_GNU_BUILD_ID 3
+#endif
+
+#ifndef ElfW
+#define ElfW(type) Elf_##type
+#endif
+
 #define ALIGN(val, align)      (((val) + (align) - 1) & ~((align) - 1))
 
 struct build_id_note {
