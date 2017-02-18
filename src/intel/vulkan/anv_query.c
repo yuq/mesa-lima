@@ -129,6 +129,9 @@ VkResult anv_GetQueryPoolResults(
    void *data_end = pData + dataSize;
    struct anv_query_pool_slot *slot = pool->bo.map;
 
+   if (!device->info.has_llc)
+      anv_invalidate_range(slot, MIN2(queryCount * sizeof(*slot), pool->bo.size));
+
    for (uint32_t i = 0; i < queryCount; i++) {
       switch (pool->type) {
       case VK_QUERY_TYPE_OCCLUSION: {
