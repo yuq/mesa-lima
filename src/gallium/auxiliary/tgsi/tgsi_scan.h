@@ -84,11 +84,19 @@ struct tgsi_shader_info
 
    uint opcode_count[TGSI_OPCODE_LAST];  /**< opcode histogram */
 
+   /**
+    * If a tessellation control shader reads outputs, this describes which ones.
+    */
+   boolean reads_pervertex_outputs;
+   boolean reads_perpatch_outputs;
+   boolean reads_tessfactor_outputs;
+
    ubyte colors_read; /**< which color components are read by the FS */
    ubyte colors_written;
    boolean reads_position; /**< does fragment shader read position? */
    boolean reads_z; /**< does fragment shader read depth? */
    boolean reads_samplemask; /**< does fragment shader read sample mask? */
+   boolean reads_tess_factors; /**< If TES reads TESSINNER or TESSOUTER */
    boolean writes_z;  /**< does fragment shader write Z value? */
    boolean writes_stencil; /**< does fragment shader write stencil value? */
    boolean writes_samplemask; /**< does fragment shader write sample mask? */

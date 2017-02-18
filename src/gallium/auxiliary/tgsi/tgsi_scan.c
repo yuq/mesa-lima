@@ -199,6 +199,28 @@ scan_src_operand(struct tgsi_shader_info *info,
       }
    }
 
+   if (info->processor == PIPE_SHADER_TESS_CTRL &&
+       src->Register.File == TGSI_FILE_OUTPUT) {
+      unsigned input;
+
+      if (src->Register.Indirect && src->Indirect.ArrayID)
+         input = info->output_array_first[src->Indirect.ArrayID];
+      else
+         input = src->Register.Index;
+
+      switch (info->output_semantic_name[input]) {
+      case TGSI_SEMANTIC_PATCH:
+         info->reads_perpatch_outputs = true;
+         break;
+      case TGSI_SEMANTIC_TESSINNER:
+      case TGSI_SEMANTIC_TESSOUTER:
+         info->reads_tessfactor_outputs = true;
+         break;
+      default:
+         info->reads_pervertex_outputs = true;
+      }
+   }
+
    /* check for indirect register reads */
    if (src->Register.Indirect) {
       info->indirect_files |= (1 << src->Register.File);
@@ -538,6 +560,10 @@ scan_declaration(struct tgsi_shader_info *info,
             break;
          case TGSI_SEMANTIC_SAMPLEMASK:
             info->reads_samplemask = TRUE;
+            break;
+         case TGSI_SEMANTIC_TESSINNER:
+         case TGSI_SEMANTIC_TESSOUTER:
+            info->reads_tess_factors = true;
             break;
          }
          break;
