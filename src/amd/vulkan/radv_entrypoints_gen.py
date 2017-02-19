@@ -203,7 +203,7 @@ for layer in [ "radv" ]:
 
 print """
 
-void * __attribute__ ((noinline))
+static void * __attribute__ ((noinline))
 radv_resolve_entrypoint(uint32_t index)
 {
    return radv_layer.entrypoints[index];

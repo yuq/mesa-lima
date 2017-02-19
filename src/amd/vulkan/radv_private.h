@@ -259,7 +259,6 @@ void radv_loge_v(const char *format, va_list va);
 		return;					\
 	} while (0)
 
-void *radv_resolve_entrypoint(uint32_t index);
 void *radv_lookup_entrypoint(const char *name);
 
 struct radv_extensions {
