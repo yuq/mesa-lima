@@ -262,8 +262,6 @@ void radv_loge_v(const char *format, va_list va);
 void *radv_resolve_entrypoint(uint32_t index);
 void *radv_lookup_entrypoint(const char *name);
 
-extern struct radv_dispatch_table dtable;
-
 struct radv_extensions {
 	VkExtensionProperties       *ext_array;
 	uint32_t                    num_ext;

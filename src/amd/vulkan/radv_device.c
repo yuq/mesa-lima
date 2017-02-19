@@ -44,7 +44,6 @@
 #include "vk_format.h"
 #include "sid.h"
 #include "util/debug.h"
-struct radv_dispatch_table dtable;
 
 static int
 radv_get_function_timestamp(void *ptr, uint32_t* timestamp)
