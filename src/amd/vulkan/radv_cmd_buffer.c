@@ -40,7 +40,7 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 VkImageLayout dst_layout,
 					 uint32_t src_family,
 					 uint32_t dst_family,
-					 VkImageSubresourceRange range,
+					 const VkImageSubresourceRange *range,
 					 VkImageAspectFlags pending_clears);
 
 const struct radv_dynamic_state default_dynamic_state = {
@@ -1426,7 +1426,7 @@ static void radv_handle_subpass_image_transition(struct radv_cmd_buffer *cmd_buf
 	radv_handle_image_transition(cmd_buffer,
 				     view->image,
 				     cmd_buffer->state.attachments[idx].current_layout,
-				     att.layout, 0, 0, range,
+				     att.layout, 0, 0, &range,
 				     cmd_buffer->state.attachments[idx].pending_clear_aspects);
 
 	cmd_buffer->state.attachments[idx].current_layout = att.layout;
@@ -2641,7 +2641,7 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 					       struct radv_image *image,
 					       VkImageLayout src_layout,
 					       VkImageLayout dst_layout,
-					       VkImageSubresourceRange range,
+					       const VkImageSubresourceRange *range,
 					       VkImageAspectFlags pending_clears)
 {
 	if (dst_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL &&
@@ -2662,12 +2662,12 @@ static void radv_handle_depth_image_transition(struct radv_cmd_buffer *cmd_buffe
 	            !radv_layout_has_htile(image, dst_layout)) ||
 	           (radv_layout_is_htile_compressed(image, src_layout) &&
 	            !radv_layout_is_htile_compressed(image, dst_layout))) {
+		VkImageSubresourceRange local_range = *range;
+		local_range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		local_range.baseMipLevel = 0;
+		local_range.levelCount = 1;
 
-		range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-		range.baseMipLevel = 0;
-		range.levelCount = 1;
-
-		radv_decompress_depth_image_inplace(cmd_buffer, image, &range);
+		radv_decompress_depth_image_inplace(cmd_buffer, image, &local_range);
 	}
 }
 
@@ -2692,7 +2692,7 @@ static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffe
 					       VkImageLayout dst_layout,
 					       unsigned src_queue_mask,
 					       unsigned dst_queue_mask,
-					       VkImageSubresourceRange range,
+					       const VkImageSubresourceRange *range,
 					       VkImageAspectFlags pending_clears)
 {
 	if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
@@ -2729,7 +2729,7 @@ static void radv_handle_dcc_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					     VkImageLayout dst_layout,
 					     unsigned src_queue_mask,
 					     unsigned dst_queue_mask,
-					     VkImageSubresourceRange range,
+					     const VkImageSubresourceRange *range,
 					     VkImageAspectFlags pending_clears)
 {
 	if (src_layout == VK_IMAGE_LAYOUT_UNDEFINED) {
@@ -2746,7 +2746,7 @@ static void radv_handle_image_transition(struct radv_cmd_buffer *cmd_buffer,
 					 VkImageLayout dst_layout,
 					 uint32_t src_family,
 					 uint32_t dst_family,
-					 VkImageSubresourceRange range,
+					 const VkImageSubresourceRange *range,
 					 VkImageAspectFlags pending_clears)
 {
 	if (image->exclusive && src_family != dst_family) {
@@ -2845,7 +2845,7 @@ void radv_CmdPipelineBarrier(
 					     pImageMemoryBarriers[i].newLayout,
 					     pImageMemoryBarriers[i].srcQueueFamilyIndex,
 					     pImageMemoryBarriers[i].dstQueueFamilyIndex,
-					     pImageMemoryBarriers[i].subresourceRange,
+					     &pImageMemoryBarriers[i].subresourceRange,
 					     0);
 	}
 
@@ -2981,7 +2981,7 @@ void radv_CmdWaitEvents(VkCommandBuffer commandBuffer,
 					     pImageMemoryBarriers[i].newLayout,
 					     pImageMemoryBarriers[i].srcQueueFamilyIndex,
 					     pImageMemoryBarriers[i].dstQueueFamilyIndex,
-					     pImageMemoryBarriers[i].subresourceRange,
+					     &pImageMemoryBarriers[i].subresourceRange,
 					     0);
 	}
 
