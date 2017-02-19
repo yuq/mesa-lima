@@ -1900,7 +1900,7 @@ void radv_CmdBindPipeline(
 			if (cmd_buffer->ring_offsets_idx == -1)
 				cmd_buffer->ring_offsets_idx = loc->sgpr_idx;
 			else if (loc->sgpr_idx != -1)
-				assert(loc->sgpr_idx != cmd_buffer->ring_offsets_idx);
+				assert(loc->sgpr_idx == cmd_buffer->ring_offsets_idx);
 		}
 		break;
 	default:
