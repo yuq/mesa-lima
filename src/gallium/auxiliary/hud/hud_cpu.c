@@ -244,10 +244,16 @@ query_api_thread_busy_status(struct hud_graph *gr)
    if (info->last_time) {
       if (info->last_time + gr->pane->period*1000 <= now) {
          int64_t thread_now = pipe_current_thread_get_time_nano();
+         unsigned percent = (thread_now - info->last_thread_time) * 100 /
+                            (now - info->last_time);
 
-         hud_graph_add_value(gr,
-                             (thread_now - info->last_thread_time) * 100 /
-                             (now - info->last_time));
+         /* Check if the context changed a thread, so that we don't show
+          * a random value. When a thread is changed, the new thread clock
+          * is different, which can result in "percent" being very high.
+          */
+         if (percent > 100)
+            percent = 0;
+         hud_graph_add_value(gr, percent);
 
          info->last_thread_time = thread_now;
          info->last_time = now;
