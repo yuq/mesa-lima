@@ -532,6 +532,7 @@ struct anv_physical_device {
     uint8_t                                     uuid[VK_UUID_SIZE];
 
     struct wsi_device                       wsi_device;
+    int                                         local_fd;
 };
 
 struct anv_instance {

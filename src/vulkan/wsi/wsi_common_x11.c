@@ -33,8 +33,9 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-
+#include <fcntl.h>
 #include <poll.h>
+#include <xf86drm.h>
 #include "util/hash_table.h"
 
 #include "wsi_common.h"
@@ -58,6 +59,66 @@ struct wsi_x11 {
    /* Hash table of xcb_connection -> wsi_x11_connection mappings */
    struct hash_table *connections;
 };
+
+
+/** wsi_dri3_open
+ *
+ * Wrapper around xcb_dri3_open
+ */
+static int
+wsi_dri3_open(xcb_connection_t *conn,
+	      xcb_window_t root,
+	      uint32_t provider)
+{
+   xcb_dri3_open_cookie_t       cookie;
+   xcb_dri3_open_reply_t        *reply;
+   int                          fd;
+
+   cookie = xcb_dri3_open(conn,
+                          root,
+                          provider);
+
+   reply = xcb_dri3_open_reply(conn, cookie, NULL);
+   if (!reply)
+      return -1;
+
+   if (reply->nfd != 1) {
+      free(reply);
+      return -1;
+   }
+
+   fd = xcb_dri3_open_reply_fds(conn, reply)[0];
+   free(reply);
+   fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
+
+   return fd;
+}
+
+static bool
+wsi_x11_check_dri3_compatible(xcb_connection_t *conn, int local_fd)
+{
+   xcb_screen_iterator_t screen_iter =
+      xcb_setup_roots_iterator(xcb_get_setup(conn));
+   xcb_screen_t *screen = screen_iter.data;
+
+   int dri3_fd = wsi_dri3_open(conn, screen->root, None);
+   if (dri3_fd != -1) {
+      char *local_dev = drmGetRenderDeviceNameFromFd(local_fd);
+      char *dri3_dev = drmGetRenderDeviceNameFromFd(dri3_fd);
+      int ret;
+
+      close(dri3_fd);
+
+      ret = strcmp(local_dev, dri3_dev);
+
+      free(local_dev);
+      free(dri3_dev);
+
+      if (ret != 0)
+         return false;
+   }
+   return true;
+}
 
 static struct wsi_x11_connection *
 wsi_x11_connection_create(const VkAllocationCallbacks *alloc,
@@ -255,6 +316,7 @@ VkBool32 wsi_get_physical_device_xcb_presentation_support(
     struct wsi_device *wsi_device,
     VkAllocationCallbacks *alloc,
     uint32_t                                    queueFamilyIndex,
+    int fd,
     xcb_connection_t*                           connection,
     xcb_visualid_t                              visual_id)
 {
@@ -269,6 +331,9 @@ VkBool32 wsi_get_physical_device_xcb_presentation_support(
       fprintf(stderr, "Note: Buggy applications may crash, if they do please report to vendor\n");
       return false;
    }
+
+   if (!wsi_x11_check_dri3_compatible(connection, fd))
+      return false;
 
    unsigned visual_depth;
    if (!connection_get_visualtype(connection, visual_id, &visual_depth))
@@ -303,6 +368,7 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
                         struct wsi_device *wsi_device,
                         const VkAllocationCallbacks *alloc,
                         uint32_t queueFamilyIndex,
+                        int local_fd,
                         VkBool32* pSupported)
 {
    xcb_connection_t *conn = x11_surface_get_connection(icd_surface);
@@ -319,6 +385,9 @@ x11_surface_get_support(VkIcdSurfaceBase *icd_surface,
       *pSupported = false;
       return VK_SUCCESS;
    }
+
+   if (!wsi_x11_check_dri3_compatible(conn, local_fd))
+      return false;
 
    unsigned visual_depth;
    if (!get_visualtype_for_window(conn, window, &visual_depth)) {

@@ -351,6 +351,7 @@ wsi_wl_surface_get_support(VkIcdSurfaceBase *surface,
                            struct wsi_device *wsi_device,
                            const VkAllocationCallbacks *alloc,
                            uint32_t queueFamilyIndex,
+                           int local_fd,
                            VkBool32* pSupported)
 {
    *pSupported = true;

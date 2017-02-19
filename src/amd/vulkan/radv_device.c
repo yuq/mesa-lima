@@ -225,6 +225,8 @@ radv_physical_device_init(struct radv_physical_device *device,
 		result = VK_ERROR_INCOMPATIBLE_DRIVER;
 		goto fail;
 	}
+
+	device->local_fd = fd;
 	device->ws->query_info(device->ws, &device->rad_info);
 	result = radv_init_wsi(device);
 	if (result != VK_SUCCESS) {
@@ -249,7 +251,7 @@ radv_physical_device_init(struct radv_physical_device *device,
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = device->rad_info.name;
-	close(fd);
+
 	return VK_SUCCESS;
 
 fail:
@@ -263,6 +265,7 @@ radv_physical_device_finish(struct radv_physical_device *device)
 	radv_extensions_finish(device->instance, &device->extensions);
 	radv_finish_wsi(device);
 	device->ws->destroy(device->ws);
+	close(device->local_fd);
 }
 
 

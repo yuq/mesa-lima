@@ -202,7 +202,7 @@ anv_physical_device_init(struct anv_physical_device *device,
 
    isl_device_init(&device->isl_dev, &device->info, swizzled);
 
-   close(fd);
+   device->local_fd = fd;
    return VK_SUCCESS;
 
 fail:
@@ -215,6 +215,7 @@ anv_physical_device_finish(struct anv_physical_device *device)
 {
    anv_finish_wsi(device);
    ralloc_free(device->compiler);
+   close(device->local_fd);
 }
 
 static const VkExtensionProperties global_extensions[] = {

@@ -13,6 +13,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/gallium/include
 
 AM_CFLAGS = \
+	$(LIBDRM_CFLAGS) \
 	$(VISIBILITY_CFLAGS)
 
 VULKAN_LIB_DEPS =

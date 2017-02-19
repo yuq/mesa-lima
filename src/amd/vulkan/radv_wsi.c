@@ -92,7 +92,7 @@ VkResult radv_GetPhysicalDeviceSurfaceSupportKHR(
 
 	return iface->get_support(surface, &device->wsi_device,
 				  &device->instance->alloc,
-				  queueFamilyIndex, pSupported);
+				  queueFamilyIndex, device->local_fd, pSupported);
 }
 
 VkResult radv_GetPhysicalDeviceSurfaceCapabilitiesKHR(
