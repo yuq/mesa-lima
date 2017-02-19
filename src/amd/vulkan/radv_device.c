@@ -1461,18 +1461,8 @@ VkResult radv_QueueSubmit(
 		struct radeon_winsys_cs **cs_array;
 		bool can_patch = true;
 		uint32_t advance;
-		int draw_cmd_buffers_count = 0;
 
-		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
-			RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer,
-					 pSubmits[i].pCommandBuffers[j]);
-			assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-			if (cmd_buffer->no_draws == true)
-				continue;
-			draw_cmd_buffers_count++;
-		}
-
-		if (!draw_cmd_buffers_count) {
+		if (!pSubmits[i].commandBufferCount) {
 			if (pSubmits[i].waitSemaphoreCount || pSubmits[i].signalSemaphoreCount) {
 				ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 								   &queue->device->empty_cs[queue->queue_family_index],
@@ -1491,27 +1481,24 @@ VkResult radv_QueueSubmit(
 			continue;
 		}
 
-		cs_array = malloc(sizeof(struct radeon_winsys_cs *) * draw_cmd_buffers_count);
+		cs_array = malloc(sizeof(struct radeon_winsys_cs *) *
+					        pSubmits[i].commandBufferCount);
 
-		int draw_cmd_buffer_idx = 0;
 		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
 			RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer,
 					 pSubmits[i].pCommandBuffers[j]);
 			assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-			if (cmd_buffer->no_draws == true)
-				continue;
 
-			cs_array[draw_cmd_buffer_idx] = cmd_buffer->cs;
-			draw_cmd_buffer_idx++;
+			cs_array[j] = cmd_buffer->cs;
 			if ((cmd_buffer->usage_flags & VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT))
 				can_patch = false;
 		}
 
-		for (uint32_t j = 0; j < draw_cmd_buffers_count; j += advance) {
+		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j += advance) {
 			advance = MIN2(max_cs_submission,
-				       draw_cmd_buffers_count - j);
+				       pSubmits[i].commandBufferCount - j);
 			bool b = j == 0;
-			bool e = j + advance == draw_cmd_buffers_count;
+			bool e = j + advance == pSubmits[i].commandBufferCount;
 
 			if (queue->device->trace_bo)
 				*queue->device->trace_id_ptr = 0;

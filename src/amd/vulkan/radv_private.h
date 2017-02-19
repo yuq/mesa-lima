@@ -746,8 +746,6 @@ struct radv_cmd_buffer {
 	uint32_t gsvs_ring_size_needed;
 
 	int ring_offsets_idx; /* just used for verification */
-
-	bool no_draws;
 };
 
 struct radv_image;

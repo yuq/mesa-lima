@@ -1278,7 +1278,6 @@ radv_cmd_buffer_flush_state(struct radv_cmd_buffer *cmd_buffer, bool instanced_o
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws,
 							   cmd_buffer->cs, 4096);
 
-	cmd_buffer->no_draws = false;
 	if ((cmd_buffer->state.vertex_descriptors_dirty || cmd_buffer->state.vb_dirty) &&
 	    cmd_buffer->state.pipeline->num_vertex_attribs) {
 		unsigned vb_offset;
@@ -1600,7 +1599,6 @@ static void  radv_reset_cmd_buffer(struct radv_cmd_buffer *cmd_buffer)
 	cmd_buffer->record_fail = false;
 
 	cmd_buffer->ring_offsets_idx = -1;
-	cmd_buffer->no_draws = true;
 }
 
 VkResult radv_ResetCommandBuffer(
@@ -2447,7 +2445,6 @@ void radv_CmdDrawIndexedIndirectCountAMD(
 static void
 radv_flush_compute_state(struct radv_cmd_buffer *cmd_buffer)
 {
-	cmd_buffer->no_draws = false;
 	radv_emit_compute_pipeline(cmd_buffer);
 	radv_flush_descriptors(cmd_buffer, cmd_buffer->state.compute_pipeline,
 			       VK_SHADER_STAGE_COMPUTE_BIT);
@@ -2890,7 +2887,6 @@ static void write_event(struct radv_cmd_buffer *cmd_buffer,
 	uint64_t va = cmd_buffer->device->ws->buffer_get_va(event->bo);
 
 	cmd_buffer->device->ws->cs_add_buffer(cs, event->bo, 8);
-	cmd_buffer->no_draws = false;
 
 	MAYBE_UNUSED unsigned cdw_max = radeon_check_space(cmd_buffer->device->ws, cs, 12);
 
