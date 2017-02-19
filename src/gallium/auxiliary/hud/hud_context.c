@@ -731,9 +731,10 @@ hud_pane_set_max_value(struct hud_pane *pane, uint64_t value)
     * hard-to-read numbers like 1.753.
     */
 
-   /* Find the left-most digit. */
+   /* Find the left-most digit. Make sure exp10 * 10 and fixup_bytes doesn't
+    * overflow. (11 is safe) */
    exp10 = 1;
-   for (i = 0; value > 9 * exp10; i++) {
+   for (i = 0; exp10 <= UINT64_MAX / 11 && exp10 * 9 < value; i++) {
       exp10 *= 10;
       fixup_bytes(pane->type, i + 1, &exp10);
    }
