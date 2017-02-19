@@ -944,7 +944,7 @@ bool radv_format_pack_clear_color(VkFormat format,
 		clear_vals[0] = ((uint16_t)util_iround(CLAMP(value->float32[0], 0.0f, 1.0f) * 0x3ff)) & 0x3ff;
 		clear_vals[0] |= (((uint16_t)util_iround(CLAMP(value->float32[1], 0.0f, 1.0f) * 0x3ff)) & 0x3ff) << 10;
 		clear_vals[0] |= (((uint16_t)util_iround(CLAMP(value->float32[2], 0.0f, 1.0f) * 0x3ff)) & 0x3ff) << 20;
-		clear_vals[0] |= (((uint16_t)util_iround(CLAMP(value->float32[1], 0.0f, 1.0f) * 0x3)) & 0x3) << 30;
+		clear_vals[0] |= (((uint16_t)util_iround(CLAMP(value->float32[3], 0.0f, 1.0f) * 0x3)) & 0x3) << 30;
 		clear_vals[1] = 0;
 		return true;
 	case VK_FORMAT_R32G32_SFLOAT:
