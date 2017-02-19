@@ -507,8 +507,6 @@ struct anv_bo *anv_scratch_pool_alloc(struct anv_device *device,
                                       gl_shader_stage stage,
                                       unsigned per_thread_scratch);
 
-extern struct anv_dispatch_table dtable;
-
 struct anv_physical_device {
     VK_LOADER_DATA                              _loader_data;
 

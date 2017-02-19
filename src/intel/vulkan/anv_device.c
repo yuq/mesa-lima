@@ -36,8 +36,6 @@
 
 #include "genxml/gen7_pack.h"
 
-struct anv_dispatch_table dtable;
-
 static void
 compiler_debug_log(void *data, const char *fmt, ...)
 { }
