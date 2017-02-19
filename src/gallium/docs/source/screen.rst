@@ -763,6 +763,16 @@ The driver-specific query group is described with the
 pipe_driver_query_group_info structure.
 
 
+
+get_disk_shader_cache
+^^^^^^^^^^^^^^^^^^^^^
+
+Returns a pointer to a driver-specific on-disk shader cache. If the driver
+failed to create the cache or does not support an on-disk shader cache NULL is
+returned. The callback itself may also be NULL if the driver doesn't support
+an on-disk shader cache.
+
+
 Thread safety
 -------------
 

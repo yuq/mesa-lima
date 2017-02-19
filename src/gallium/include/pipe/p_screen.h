@@ -58,6 +58,7 @@ struct pipe_surface;
 struct pipe_transfer;
 struct pipe_box;
 struct pipe_memory_info;
+struct disk_cache;
 
 
 /**
@@ -318,6 +319,14 @@ struct pipe_screen {
    const void *(*get_compiler_options)(struct pipe_screen *screen,
                                       enum pipe_shader_ir ir,
                                       unsigned shader);
+
+   /**
+    * Returns a pointer to a driver-specific on-disk shader cache. If the
+    * driver failed to create the cache or does not support an on-disk shader
+    * cache NULL is returned. The callback itself may also be NULL if the
+    * driver doesn't support an on-disk shader cache.
+    */
+   struct disk_cache *(*get_disk_shader_cache)(struct pipe_screen *screen);
 };
 
 
