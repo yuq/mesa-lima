@@ -2107,6 +2107,11 @@ si_tile_mode_index(const struct radv_image *image, unsigned level, bool stencil)
 		return image->surface.tiling_index[level];
 }
 
+static uint32_t radv_surface_layer_count(struct radv_image_view *iview)
+{
+	return iview->type == VK_IMAGE_VIEW_TYPE_3D ? iview->extent.depth : iview->layer_count;
+}
+
 static void
 radv_initialise_color_surface(struct radv_device *device,
 			      struct radv_color_buffer_info *cb,
@@ -2138,7 +2143,7 @@ radv_initialise_color_surface(struct radv_device *device,
 	va += iview->image->dcc_offset;
 	cb->cb_dcc_base = va >> 8;
 
-	uint32_t max_slice = iview->type == VK_IMAGE_VIEW_TYPE_3D ? iview->extent.depth : iview->layer_count;
+	uint32_t max_slice = radv_surface_layer_count(iview);
 	cb->cb_color_view = S_028C6C_SLICE_START(iview->base_layer) |
 		S_028C6C_SLICE_MAX(iview->base_layer + max_slice - 1);
 
@@ -2292,7 +2297,7 @@ radv_initialise_ds_surface(struct radv_device *device,
 	z_offs += iview->image->surface.level[level].offset;
 	s_offs += iview->image->surface.stencil_level[level].offset;
 
-	uint32_t max_slice = iview->type == VK_IMAGE_VIEW_TYPE_3D ? iview->extent.depth : iview->layer_count;
+	uint32_t max_slice = radv_surface_layer_count(iview);
 	ds->db_depth_view = S_028008_SLICE_START(iview->base_layer) |
 		S_028008_SLICE_MAX(iview->base_layer + max_slice - 1);
 	ds->db_depth_info = S_02803C_ADDR5_SWIZZLE_MASK(1);
@@ -2389,6 +2394,9 @@ VkResult radv_CreateFramebuffer(
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
 
 	framebuffer->attachment_count = pCreateInfo->attachmentCount;
+	framebuffer->width = pCreateInfo->width;
+	framebuffer->height = pCreateInfo->height;
+	framebuffer->layers = pCreateInfo->layers;
 	for (uint32_t i = 0; i < pCreateInfo->attachmentCount; i++) {
 		VkImageView _iview = pCreateInfo->pAttachments[i];
 		struct radv_image_view *iview = radv_image_view_from_handle(_iview);
@@ -2398,11 +2406,10 @@ VkResult radv_CreateFramebuffer(
 		} else if (iview->aspect_mask & (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT)) {
 			radv_initialise_ds_surface(device, &framebuffer->attachments[i].ds, iview);
 		}
+		framebuffer->width = MIN2(framebuffer->width, iview->extent.width);
+		framebuffer->height = MIN2(framebuffer->height, iview->extent.height);
+		framebuffer->layers = MIN2(framebuffer->layers, radv_surface_layer_count(iview));
 	}
-
-	framebuffer->width = pCreateInfo->width;
-	framebuffer->height = pCreateInfo->height;
-	framebuffer->layers = pCreateInfo->layers;
 
 	*pFramebuffer = radv_framebuffer_to_handle(framebuffer);
 	return VK_SUCCESS;
