@@ -194,7 +194,8 @@ void radv_resummarize_depth_image_inplace(struct radv_cmd_buffer *cmd_buffer,
 					  struct radv_image *image,
 					  VkImageSubresourceRange *subresourceRange);
 void radv_fast_clear_flush_image_inplace(struct radv_cmd_buffer *cmd_buffer,
-					 struct radv_image *image);
+					 struct radv_image *image,
+					 const VkImageSubresourceRange *subresourceRange);
 
 void radv_meta_save_graphics_reset_vport_scissor(struct radv_meta_saved_state *saved_state,
 						 struct radv_cmd_buffer *cmd_buffer);

@@ -2702,7 +2702,7 @@ static void radv_handle_cmask_image_transition(struct radv_cmd_buffer *cmd_buffe
 			radv_initialise_cmask(cmd_buffer, image, 0xffffffffu);
 	} else if (radv_layout_can_fast_clear(image, src_layout, src_queue_mask) &&
 		   !radv_layout_can_fast_clear(image, dst_layout, dst_queue_mask)) {
-		radv_fast_clear_flush_image_inplace(cmd_buffer, image);
+		radv_fast_clear_flush_image_inplace(cmd_buffer, image, range);
 	}
 }
 
@@ -2736,7 +2736,7 @@ static void radv_handle_dcc_image_transition(struct radv_cmd_buffer *cmd_buffer,
 		radv_initialize_dcc(cmd_buffer, image, 0x20202020u);
 	} else if (radv_layout_can_fast_clear(image, src_layout, src_queue_mask) &&
 		   !radv_layout_can_fast_clear(image, dst_layout, dst_queue_mask)) {
-		radv_fast_clear_flush_image_inplace(cmd_buffer, image);
+		radv_fast_clear_flush_image_inplace(cmd_buffer, image, range);
 	}
 }
 
