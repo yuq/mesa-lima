@@ -1403,11 +1403,67 @@ static void radv_stage_flush(struct radv_cmd_buffer *cmd_buffer,
 	}
 }
 
+static void radv_src_access_flush(struct radv_cmd_buffer *cmd_buffer,
+				  VkAccessFlags src_flags)
+{
+	enum radv_cmd_flush_bits flush_bits = 0;
+	uint32_t b;
+	for_each_bit(b, src_flags) {
+		switch ((VkAccessFlagBits)(1 << b)) {
+		case VK_ACCESS_SHADER_WRITE_BIT:
+			flush_bits |= RADV_CMD_FLAG_INV_GLOBAL_L2;
+			break;
+		case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
+			break;
+		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB;
+			break;
+		case VK_ACCESS_TRANSFER_WRITE_BIT:
+			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
+			break;
+		default:
+			break;
+		}
+	}
+	cmd_buffer->state.flush_bits |= flush_bits;
+}
+
+static void radv_dst_access_flush(struct radv_cmd_buffer *cmd_buffer,
+				  VkAccessFlags dst_flags)
+{
+	enum radv_cmd_flush_bits flush_bits = 0;
+	uint32_t b;
+	for_each_bit(b, dst_flags) {
+		switch ((VkAccessFlagBits)(1 << b)) {
+		case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
+		case VK_ACCESS_INDEX_READ_BIT:
+		case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
+			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1;
+			break;
+		case VK_ACCESS_UNIFORM_READ_BIT:
+			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1 | RADV_CMD_FLAG_INV_SMEM_L1;
+			break;
+		case VK_ACCESS_SHADER_READ_BIT:
+			flush_bits |= RADV_CMD_FLAG_INV_GLOBAL_L2;
+			break;
+		case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
+		case VK_ACCESS_TRANSFER_READ_BIT:
+		case VK_ACCESS_TRANSFER_WRITE_BIT:
+		case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
+			flush_bits |= RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER | RADV_CMD_FLAG_INV_GLOBAL_L2;
+		default:
+			break;
+		}
+	}
+	cmd_buffer->state.flush_bits |= flush_bits;
+}
+
 static void radv_subpass_barrier(struct radv_cmd_buffer *cmd_buffer, const struct radv_subpass_barrier *barrier)
 {
+	radv_src_access_flush(cmd_buffer, barrier->src_access_mask);
 	radv_stage_flush(cmd_buffer, barrier->src_stage_mask);
-
-	/* TODO: actual cache flushes */
+	radv_dst_access_flush(cmd_buffer, barrier->dst_access_mask);
 }
 
 static void radv_handle_subpass_image_transition(struct radv_cmd_buffer *cmd_buffer,
@@ -2798,7 +2854,7 @@ void radv_CmdPipelineBarrier(
 	RADV_FROM_HANDLE(radv_cmd_buffer, cmd_buffer, commandBuffer);
 	VkAccessFlags src_flags = 0;
 	VkAccessFlags dst_flags = 0;
-	uint32_t b;
+
 	for (uint32_t i = 0; i < memoryBarrierCount; i++) {
 		src_flags |= pMemoryBarriers[i].srcAccessMask;
 		dst_flags |= pMemoryBarriers[i].dstAccessMask;
@@ -2814,26 +2870,7 @@ void radv_CmdPipelineBarrier(
 		dst_flags |= pImageMemoryBarriers[i].dstAccessMask;
 	}
 
-	enum radv_cmd_flush_bits flush_bits = 0;
-	for_each_bit(b, src_flags) {
-		switch ((VkAccessFlagBits)(1 << b)) {
-		case VK_ACCESS_SHADER_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_INV_GLOBAL_L2;
-			break;
-		case VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
-			break;
-		case VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_DB;
-			break;
-		case VK_ACCESS_TRANSFER_WRITE_BIT:
-			flush_bits |= RADV_CMD_FLAG_FLUSH_AND_INV_CB;
-			break;
-		default:
-			break;
-		}
-	}
-	cmd_buffer->state.flush_bits |= flush_bits;
+	radv_src_access_flush(cmd_buffer, src_flags);
 
 	for (uint32_t i = 0; i < imageMemoryBarrierCount; i++) {
 		RADV_FROM_HANDLE(radv_image, image, pImageMemoryBarriers[i].image);
@@ -2846,32 +2883,10 @@ void radv_CmdPipelineBarrier(
 					     0);
 	}
 
-	flush_bits = 0;
+	radv_dst_access_flush(cmd_buffer, src_flags);
 
-	for_each_bit(b, dst_flags) {
-		switch ((VkAccessFlagBits)(1 << b)) {
-		case VK_ACCESS_INDIRECT_COMMAND_READ_BIT:
-		case VK_ACCESS_INDEX_READ_BIT:
-		case VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT:
-			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1;
-			break;
-		case VK_ACCESS_UNIFORM_READ_BIT:
-			flush_bits |= RADV_CMD_FLAG_INV_VMEM_L1 | RADV_CMD_FLAG_INV_SMEM_L1;
-			break;
-		case VK_ACCESS_SHADER_READ_BIT:
-			flush_bits |= RADV_CMD_FLAG_INV_GLOBAL_L2;
-			break;
-		case VK_ACCESS_COLOR_ATTACHMENT_READ_BIT:
-		case VK_ACCESS_TRANSFER_READ_BIT:
-		case VK_ACCESS_TRANSFER_WRITE_BIT:
-		case VK_ACCESS_INPUT_ATTACHMENT_READ_BIT:
-			flush_bits |= RADV_CMD_FLUSH_AND_INV_FRAMEBUFFER | RADV_CMD_FLAG_INV_GLOBAL_L2;
-		default:
-			break;
-		}
-	}
-
-	flush_bits |= RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
+	/* TODO reduce this */
+	enum radv_cmd_flush_bits flush_bits = RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
 		RADV_CMD_FLAG_PS_PARTIAL_FLUSH;
 
 	cmd_buffer->state.flush_bits |= flush_bits;
