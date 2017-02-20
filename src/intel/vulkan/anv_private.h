@@ -786,20 +786,6 @@ _anv_combine_address(struct anv_batch *batch, void *location,
            _dst = NULL;                                                 \
          }))
 
-#define anv_state_pool_emit(pool, cmd, align, ...) ({                   \
-      const uint32_t __size = __anv_cmd_length(cmd) * 4;                \
-      struct anv_state __state =                                        \
-         anv_state_pool_alloc((pool), __size, align);                   \
-      struct cmd __template = {                                         \
-         __VA_ARGS__                                                    \
-      };                                                                \
-      __anv_cmd_pack(cmd)(NULL, __state.map, &__template);              \
-      VG(VALGRIND_CHECK_MEM_IS_DEFINED(__state.map, __anv_cmd_length(cmd) * 4)); \
-      if (!(pool)->block_pool->device->info.has_llc)                    \
-         anv_state_clflush(__state);                                    \
-      __state;                                                          \
-   })
-
 #define GEN7_MOCS (struct GEN7_MEMORY_OBJECT_CONTROL_STATE) {  \
    .GraphicsDataTypeGFDT                        = 0,           \
    .LLCCacheabilityControlLLCCC                 = 0,           \
