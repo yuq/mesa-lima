@@ -636,8 +636,10 @@ struct pipe_index_buffer
 struct pipe_draw_info
 {
    boolean indexed;  /**< use index buffer */
-
    enum pipe_prim_type mode;  /**< the mode of the primitive */
+   boolean primitive_restart;
+   ubyte vertices_per_patch; /**< the number of vertices per patch */
+
    unsigned start;  /**< the index of the first vertex */
    unsigned count;  /**< number of vertices */
 
@@ -645,8 +647,6 @@ struct pipe_draw_info
    unsigned instance_count; /**< number of instances */
 
    unsigned drawid; /**< id of this draw in a multidraw */
-
-   unsigned vertices_per_patch; /**< the number of vertices per patch */
 
    /**
     * For indexed drawing, these fields apply after index lookup.
@@ -658,24 +658,15 @@ struct pipe_draw_info
    /**
     * Primitive restart enable/index (only applies to indexed drawing)
     */
-   boolean primitive_restart;
    unsigned restart_index;
 
-   /**
-    * Stream output target. If not NULL, it's used to provide the 'count'
-    * parameter based on the number vertices captured by the stream output
-    * stage. (or generally, based on the number of bytes captured)
-    *
-    * Only 'mode', 'start_instance', and 'instance_count' are taken into
-    * account, all the other variables from pipe_draw_info are ignored.
-    *
-    * 'start' is implicitly 0 and 'count' is set as discussed above.
-    * The draw command is non-indexed.
-    *
-    * Note that this only provides the count. The vertex buffers must
-    * be set via set_vertex_buffers manually.
-    */
-   struct pipe_stream_output_target *count_from_stream_output;
+   unsigned indirect_offset; /**< must be 4 byte aligned */
+   unsigned indirect_stride; /**< must be 4 byte aligned */
+   unsigned indirect_count; /**< number of indirect draws */
+
+   unsigned indirect_params_offset; /**< must be 4 byte aligned */
+
+   /* Pointers must be at the end for an optimal structure layout on 64-bit. */
 
    /* Indirect draw parameters resource: If not NULL, most values are taken
     * from this buffer instead, which is laid out as follows:
@@ -697,16 +688,28 @@ struct pipe_draw_info
     *  };
     */
    struct pipe_resource *indirect;
-   unsigned indirect_offset; /**< must be 4 byte aligned */
-   unsigned indirect_stride; /**< must be 4 byte aligned */
-   unsigned indirect_count; /**< number of indirect draws */
 
    /* Indirect draw count resource: If not NULL, contains a 32-bit value which
     * is to be used as the real indirect_count. In that case indirect_count
     * becomes the maximum possible value.
     */
    struct pipe_resource *indirect_params;
-   unsigned indirect_params_offset; /**< must be 4 byte aligned */
+
+   /**
+    * Stream output target. If not NULL, it's used to provide the 'count'
+    * parameter based on the number vertices captured by the stream output
+    * stage. (or generally, based on the number of bytes captured)
+    *
+    * Only 'mode', 'start_instance', and 'instance_count' are taken into
+    * account, all the other variables from pipe_draw_info are ignored.
+    *
+    * 'start' is implicitly 0 and 'count' is set as discussed above.
+    * The draw command is non-indexed.
+    *
+    * Note that this only provides the count. The vertex buffers must
+    * be set via set_vertex_buffers manually.
+    */
+   struct pipe_stream_output_target *count_from_stream_output;
 };
 
 
