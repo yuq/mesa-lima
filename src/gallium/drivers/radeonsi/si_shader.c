@@ -7078,6 +7078,9 @@ static void si_get_vs_prolog_key(const struct tgsi_shader_info *info,
 	key->vs_prolog.num_input_sgprs = num_input_sgprs;
 	key->vs_prolog.last_input = MAX2(1, info->num_inputs) - 1;
 
+	if (shader_out->selector->type == PIPE_SHADER_TESS_CTRL)
+		key->vs_prolog.num_merged_next_stage_vgprs = 2;
+
 	/* Set the instanceID flag. */
 	for (unsigned i = 0; i < info->num_inputs; i++)
 		if (key->vs_prolog.states.instance_divisors[i])
@@ -7861,15 +7864,19 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	LLVMTypeRef *params, *returns;
 	LLVMValueRef ret, func;
 	int last_sgpr, num_params, num_returns, i;
+	unsigned first_vs_vgpr = key->vs_prolog.num_input_sgprs +
+				 key->vs_prolog.num_merged_next_stage_vgprs;
+	unsigned num_input_vgprs = key->vs_prolog.num_merged_next_stage_vgprs + 4;
+	unsigned num_all_input_regs = key->vs_prolog.num_input_sgprs +
+				      num_input_vgprs;
+	unsigned user_sgpr_base = key->vs_prolog.num_merged_next_stage_vgprs ? 8 : 0;
 
-	ctx->param_vertex_id = key->vs_prolog.num_input_sgprs;
-	ctx->param_instance_id = key->vs_prolog.num_input_sgprs + 3;
+	ctx->param_vertex_id = first_vs_vgpr;
+	ctx->param_instance_id = first_vs_vgpr + 3;
 
 	/* 4 preloaded VGPRs + vertex load indices as prolog outputs */
-	params = alloca((key->vs_prolog.num_input_sgprs + 4) *
-			sizeof(LLVMTypeRef));
-	returns = alloca((key->vs_prolog.num_input_sgprs + 4 +
-			  key->vs_prolog.last_input + 1) *
+	params = alloca(num_all_input_regs * sizeof(LLVMTypeRef));
+	returns = alloca((num_all_input_regs + key->vs_prolog.last_input + 1) *
 			 sizeof(LLVMTypeRef));
 	num_params = 0;
 	num_returns = 0;
@@ -7882,8 +7889,8 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 	}
 	last_sgpr = num_params - 1;
 
-	/* 4 preloaded VGPRs (outputs must be floats) */
-	for (i = 0; i < 4; i++) {
+	/* Preloaded VGPRs (outputs must be floats) */
+	for (i = 0; i < num_input_vgprs; i++) {
 		params[num_params++] = ctx->i32;
 		returns[num_returns++] = ctx->f32;
 	}
@@ -7905,7 +7912,7 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 		LLVMValueRef p = LLVMGetParam(func, i);
 		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
 	}
-	for (i = num_params - 4; i < num_params; i++) {
+	for (; i < num_params; i++) {
 		LLVMValueRef p = LLVMGetParam(func, i);
 		p = LLVMBuildBitCast(gallivm->builder, p, ctx->f32, "");
 		ret = LLVMBuildInsertValue(gallivm->builder, ret, p, i, "");
@@ -7919,13 +7926,15 @@ static void si_build_vs_prolog_function(struct si_shader_context *ctx,
 		if (divisor) {
 			/* InstanceID / Divisor + StartInstance */
 			index = get_instance_index_for_fetch(ctx,
+							     user_sgpr_base +
 							     SI_SGPR_START_INSTANCE,
 							     divisor);
 		} else {
 			/* VertexID + BaseVertex */
 			index = LLVMBuildAdd(gallivm->builder,
 					     LLVMGetParam(func, ctx->param_vertex_id),
-					     LLVMGetParam(func, SI_SGPR_BASE_VERTEX), "");
+					     LLVMGetParam(func, user_sgpr_base +
+								SI_SGPR_BASE_VERTEX), "");
 		}
 
 		index = LLVMBuildBitCast(gallivm->builder, index, ctx->f32, "");

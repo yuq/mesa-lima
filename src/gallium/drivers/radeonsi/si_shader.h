@@ -352,6 +352,8 @@ union si_shader_part_key {
 	struct {
 		struct si_vs_prolog_bits states;
 		unsigned	num_input_sgprs:6;
+		/* For merged stages such as LS-HS, HS input VGPRs are first. */
+		unsigned	num_merged_next_stage_vgprs:3;
 		unsigned	last_input:4;
 	} vs_prolog;
 	struct {
