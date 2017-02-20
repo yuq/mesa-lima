@@ -88,7 +88,7 @@ remove_from_atexit_list(struct util_queue *queue)
 }
 
 /****************************************************************************
- * util_queue implementation
+ * util_queue_fence
  */
 
 static void
@@ -101,13 +101,34 @@ util_queue_fence_signal(struct util_queue_fence *fence)
 }
 
 void
-util_queue_job_wait(struct util_queue_fence *fence)
+util_queue_fence_wait(struct util_queue_fence *fence)
 {
    pipe_mutex_lock(fence->mutex);
    while (!fence->signalled)
       pipe_condvar_wait(fence->cond, fence->mutex);
    pipe_mutex_unlock(fence->mutex);
 }
+
+void
+util_queue_fence_init(struct util_queue_fence *fence)
+{
+   memset(fence, 0, sizeof(*fence));
+   pipe_mutex_init(fence->mutex);
+   pipe_condvar_init(fence->cond);
+   fence->signalled = true;
+}
+
+void
+util_queue_fence_destroy(struct util_queue_fence *fence)
+{
+   assert(fence->signalled);
+   pipe_condvar_destroy(fence->cond);
+   pipe_mutex_destroy(fence->mutex);
+}
+
+/****************************************************************************
+ * util_queue implementation
+ */
 
 struct thread_input {
    struct util_queue *queue;
@@ -264,23 +285,6 @@ util_queue_destroy(struct util_queue *queue)
    pipe_mutex_destroy(queue->lock);
    FREE(queue->jobs);
    FREE(queue->threads);
-}
-
-void
-util_queue_fence_init(struct util_queue_fence *fence)
-{
-   memset(fence, 0, sizeof(*fence));
-   pipe_mutex_init(fence->mutex);
-   pipe_condvar_init(fence->cond);
-   fence->signalled = true;
-}
-
-void
-util_queue_fence_destroy(struct util_queue_fence *fence)
-{
-   assert(fence->signalled);
-   pipe_condvar_destroy(fence->cond);
-   pipe_mutex_destroy(fence->mutex);
 }
 
 void

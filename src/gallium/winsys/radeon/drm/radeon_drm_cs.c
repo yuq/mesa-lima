@@ -486,7 +486,7 @@ void radeon_drm_cs_sync_flush(struct radeon_winsys_cs *rcs)
 
     /* Wait for any pending ioctl of this CS to complete. */
     if (util_queue_is_initialized(&cs->ws->cs_queue))
-        util_queue_job_wait(&cs->flush_completed);
+        util_queue_fence_wait(&cs->flush_completed);
 }
 
 /* Add the given fence to a slab buffer fence list.

@@ -230,7 +230,7 @@ fd_batch_sync(struct fd_batch *batch)
 {
 	if (!batch->ctx->screen->reorder)
 		return;
-	util_queue_job_wait(&batch->flush_fence);
+	util_queue_fence_wait(&batch->flush_fence);
 }
 
 static void

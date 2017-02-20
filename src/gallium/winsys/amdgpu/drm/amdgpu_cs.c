@@ -1118,7 +1118,7 @@ void amdgpu_cs_sync_flush(struct radeon_winsys_cs *rcs)
    struct amdgpu_cs *cs = amdgpu_cs(rcs);
 
    /* Wait for any pending ioctl of this CS to complete. */
-   util_queue_job_wait(&cs->flush_completed);
+   util_queue_fence_wait(&cs->flush_completed);
 }
 
 static int amdgpu_cs_flush(struct radeon_winsys_cs *rcs,
