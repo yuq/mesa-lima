@@ -36,6 +36,7 @@
 
 #include "radeon/radeon_winsys.h"
 
+#include "util/disk_cache.h"
 #include "util/u_blitter.h"
 #include "util/list.h"
 #include "util/u_range.h"
@@ -404,6 +405,8 @@ struct r600_common_screen {
 	uint64_t			debug_flags;
 	bool				has_cp_dma;
 	bool				has_streamout;
+
+	struct disk_cache		*disk_shader_cache;
 
 	struct slab_parent_pool		pool_transfers;
 
