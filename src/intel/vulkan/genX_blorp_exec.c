@@ -102,7 +102,7 @@ blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
    }
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(bt_state);
+      anv_state_flush(bt_state);
 }
 
 static void *
@@ -126,7 +126,7 @@ blorp_flush_range(struct blorp_batch *batch, void *start, size_t size)
 {
    struct anv_device *device = batch->blorp->driver_ctx;
    if (!device->info.has_llc)
-      anv_clflush_range(start, size);
+      anv_flush_range(start, size);
 }
 
 static void

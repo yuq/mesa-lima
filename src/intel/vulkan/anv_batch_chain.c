@@ -1063,7 +1063,7 @@ write_reloc(const struct anv_device *device, void *p, uint64_t v, bool flush)
    }
 
    if (flush && !device->info.has_llc)
-      anv_clflush_range(p, reloc_size);
+      anv_flush_range(p, reloc_size);
 }
 
 static void

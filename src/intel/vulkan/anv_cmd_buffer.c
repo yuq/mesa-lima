@@ -588,7 +588,7 @@ anv_cmd_buffer_emit_dynamic(struct anv_cmd_buffer *cmd_buffer,
    memcpy(state.map, data, size);
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(state.map, size));
 
@@ -610,7 +610,7 @@ anv_cmd_buffer_merge_dynamic(struct anv_cmd_buffer *cmd_buffer,
       p[i] = a[i] | b[i];
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(p, dwords * 4));
 
@@ -647,7 +647,7 @@ anv_cmd_buffer_push_constants(struct anv_cmd_buffer *cmd_buffer,
    }
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 
    return state;
 }
@@ -707,7 +707,7 @@ anv_cmd_buffer_cs_push_constants(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 
    return state;
 }

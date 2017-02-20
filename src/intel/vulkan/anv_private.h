@@ -436,7 +436,7 @@ struct anv_state_stream {
 #define CACHELINE_MASK 63
 
 static inline void
-anv_clflush_range(void *start, size_t size)
+anv_flush_range(void *start, size_t size)
 {
    void *p = (void *) (((uintptr_t) start) & ~CACHELINE_MASK);
    void *end = start + size;
@@ -462,9 +462,9 @@ anv_invalidate_range(void *start, size_t size)
 }
 
 static void inline
-anv_state_clflush(struct anv_state state)
+anv_state_flush(struct anv_state state)
 {
-   anv_clflush_range(state.map, state.alloc_size);
+   anv_flush_range(state.map, state.alloc_size);
 }
 
 VkResult anv_block_pool_init(struct anv_block_pool *pool,

@@ -580,7 +580,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
       }
 
       if (!cmd_buffer->device->info.has_llc)
-         anv_state_clflush(state->render_pass_states);
+         anv_state_flush(state->render_pass_states);
    }
 }
 
@@ -1276,7 +1276,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
 
  out:
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(*bt_state);
+      anv_state_flush(*bt_state);
 
    return VK_SUCCESS;
 }
@@ -1334,7 +1334,7 @@ emit_samplers(struct anv_cmd_buffer *cmd_buffer,
    }
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(*state);
+      anv_state_flush(*state);
 
    return VK_SUCCESS;
 }
@@ -1653,7 +1653,7 @@ emit_base_vertex_instance(struct anv_cmd_buffer *cmd_buffer,
    ((uint32_t *)id_state.map)[1] = base_instance;
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(id_state);
+      anv_state_flush(id_state);
 
    emit_base_vertex_instance_bo(cmd_buffer,
       &cmd_buffer->device->dynamic_state_block_pool.bo, id_state.offset);
@@ -1668,7 +1668,7 @@ emit_draw_index(struct anv_cmd_buffer *cmd_buffer, uint32_t draw_index)
    ((uint32_t *)state.map)[0] = draw_index;
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 
    emit_vertex_bo(cmd_buffer,
                   &cmd_buffer->device->dynamic_state_block_pool.bo,
@@ -1947,7 +1947,7 @@ void genX(CmdDispatch)(
       sizes[1] = y;
       sizes[2] = z;
       if (!cmd_buffer->device->info.has_llc)
-         anv_state_clflush(state);
+         anv_state_flush(state);
       cmd_buffer->state.num_workgroups_offset = state.offset;
       cmd_buffer->state.num_workgroups_bo =
          &cmd_buffer->device->dynamic_state_block_pool.bo;

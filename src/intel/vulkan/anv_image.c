@@ -575,7 +575,7 @@ anv_CreateImageView(VkDevice _device,
                           .mocs = device->default_mocs);
 
       if (!device->info.has_llc)
-         anv_state_clflush(iview->sampler_surface_state);
+         anv_state_flush(iview->sampler_surface_state);
    } else {
       iview->sampler_surface_state.alloc_size = 0;
    }
@@ -627,8 +627,8 @@ anv_CreateImageView(VkDevice _device,
                                 &surface->isl, &iview->isl);
 
       if (!device->info.has_llc) {
-         anv_state_clflush(iview->storage_surface_state);
-         anv_state_clflush(iview->writeonly_storage_surface_state);
+         anv_state_flush(iview->storage_surface_state);
+         anv_state_flush(iview->writeonly_storage_surface_state);
       }
    } else {
       iview->storage_surface_state.alloc_size = 0;

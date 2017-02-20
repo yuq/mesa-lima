@@ -91,7 +91,7 @@ gen7_cmd_buffer_emit_scissor(struct anv_cmd_buffer *cmd_buffer)
    }
 
    if (!cmd_buffer->device->info.has_llc)
-      anv_state_clflush(scissor_state);
+      anv_state_flush(scissor_state);
 }
 #endif
 
@@ -192,7 +192,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       };
       GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
       if (!cmd_buffer->device->info.has_llc)
-         anv_state_clflush(cc_state);
+         anv_state_flush(cc_state);
 
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), ccp) {
          ccp.ColorCalcStatePointer = cc_state.offset;

@@ -862,7 +862,7 @@ anv_state_pool_emit_data(struct anv_state_pool *pool, size_t size, size_t align,
    memcpy(state.map, p, size);
 
    if (!pool->block_pool->device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 
    return state;
 }
@@ -913,7 +913,7 @@ anv_device_submit_simple_batch(struct anv_device *device,
 
    memcpy(bo.map, batch->start, size);
    if (!device->info.has_llc)
-      anv_clflush_range(bo.map, size);
+      anv_flush_range(bo.map, size);
 
    exec_bos[0] = &bo;
    exec2_objects[0].handle = bo.gem_handle;
@@ -2063,7 +2063,7 @@ anv_fill_buffer_surface_state(struct anv_device *device, struct anv_state state,
                          .stride = stride);
 
    if (!device->info.has_llc)
-      anv_state_clflush(state);
+      anv_state_flush(state);
 }
 
 void anv_DestroySampler(
