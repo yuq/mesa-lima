@@ -436,12 +436,11 @@ struct anv_state_stream {
 #define CACHELINE_MASK 63
 
 static inline void
-anv_flush_range(void *start, size_t size)
+anv_clflush_range(void *start, size_t size)
 {
    void *p = (void *) (((uintptr_t) start) & ~CACHELINE_MASK);
    void *end = start + size;
 
-   __builtin_ia32_mfence();
    while (p < end) {
       __builtin_ia32_clflush(p);
       p += CACHELINE_SIZE;
@@ -449,15 +448,16 @@ anv_flush_range(void *start, size_t size)
 }
 
 static inline void
+anv_flush_range(void *start, size_t size)
+{
+   __builtin_ia32_mfence();
+   anv_clflush_range(start, size);
+}
+
+static inline void
 anv_invalidate_range(void *start, size_t size)
 {
-   void *p = (void *) (((uintptr_t) start) & ~CACHELINE_MASK);
-   void *end = start + size;
-
-   while (p < end) {
-      __builtin_ia32_clflush(p);
-      p += CACHELINE_SIZE;
-   }
+   anv_clflush_range(start, size);
    __builtin_ia32_mfence();
 }
 
