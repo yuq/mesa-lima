@@ -1417,6 +1417,16 @@ isl_surf_get_mcs_surf(const struct isl_device *dev,
    assert(surf->levels == 1);
    assert(surf->logical_level0_px.depth == 1);
 
+   /* The "Auxiliary Surface Pitch" field in RENDER_SURFACE_STATE is only 9
+    * bits which means the maximum pitch of a compression surface is 512
+    * tiles or 64KB (since MCS is always Y-tiled).  Since a 16x MCS buffer is
+    * 64bpp, this gives us a maximum width of 8192 pixels.  We can create
+    * larger multisampled surfaces, we just can't compress them.   For 2x, 4x,
+    * and 8x, we have enough room for the full 16k supported by the hardware.
+    */
+   if (surf->samples == 16 && surf->logical_level0_px.width > 8192)
+      return false;
+
    enum isl_format mcs_format;
    switch (surf->samples) {
    case 2:  mcs_format = ISL_FORMAT_MCS_2X;  break;
