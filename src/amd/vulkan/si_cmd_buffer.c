@@ -689,7 +689,7 @@ si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 
 }
 
-static void
+void
 si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
                        enum chip_class chip_class,
                        bool is_mec,

@@ -479,7 +479,8 @@ struct radv_queue {
 	struct radeon_winsys_bo *compute_scratch_bo;
 	struct radeon_winsys_bo *esgs_ring_bo;
 	struct radeon_winsys_bo *gsvs_ring_bo;
-	struct radeon_winsys_cs *preamble_cs;
+	struct radeon_winsys_cs *initial_preamble_cs;
+	struct radeon_winsys_cs *continue_preamble_cs;
 };
 
 struct radv_device {
@@ -495,6 +496,7 @@ struct radv_device {
 	struct radv_queue *queues[RADV_MAX_QUEUE_FAMILIES];
 	int queue_count[RADV_MAX_QUEUE_FAMILIES];
 	struct radeon_winsys_cs *empty_cs[RADV_MAX_QUEUE_FAMILIES];
+	struct radeon_winsys_cs *flush_cs[RADV_MAX_QUEUE_FAMILIES];
 
 	uint64_t debug_flags;
 
@@ -764,6 +766,14 @@ void si_write_scissors(struct radeon_winsys_cs *cs, int first,
 		       int count, const VkRect2D *scissors);
 uint32_t si_get_ia_multi_vgt_param(struct radv_cmd_buffer *cmd_buffer,
 				   bool instanced_or_indirect_draw, uint32_t draw_vertex_count);
+void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
+                            enum chip_class chip_class,
+                            bool is_mec,
+                            enum radv_cmd_flush_bits flush_bits);
+void si_cs_emit_cache_flush(struct radeon_winsys_cs *cs,
+                            enum chip_class chip_class,
+                            bool is_mec,
+                            enum radv_cmd_flush_bits flush_bits);
 void si_emit_cache_flush(struct radv_cmd_buffer *cmd_buffer);
 void si_cp_dma_buffer_copy(struct radv_cmd_buffer *cmd_buffer,
 			   uint64_t src_va, uint64_t dest_va,
