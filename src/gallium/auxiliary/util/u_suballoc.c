@@ -43,7 +43,7 @@ struct u_suballocator {
    unsigned size;          /* Size of the whole buffer, in bytes. */
    unsigned bind;          /* Bitmask of PIPE_BIND_* flags. */
    enum pipe_resource_usage usage;
-   unsigned flags;         /* pipe_resource::flags */
+   unsigned flags;         /* bitmask of PIPE_RESOURCE_FLAG_x */
    boolean zero_buffer_memory; /* If the buffer contents should be zeroed. */
 
    struct pipe_resource *buffer;   /* The buffer we suballocate from. */
@@ -54,8 +54,10 @@ struct u_suballocator {
 /**
  * Create a suballocator.
  *
- * \p zero_buffer_memory determines whether the buffer contents should be
- * cleared to 0 after the allocation.
+ * \param flags               bitmask of PIPE_RESOURCE_FLAG_x
+ * \param zero_buffer_memory  determines whether the buffer contents should be
+ *                            cleared to 0 after the allocation.
+ *
  */
 struct u_suballocator *
 u_suballocator_create(struct pipe_context *pipe, unsigned size, unsigned bind,
