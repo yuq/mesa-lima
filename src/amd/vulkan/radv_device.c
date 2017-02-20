@@ -1471,7 +1471,7 @@ VkResult radv_QueueSubmit(
 			if (pSubmits[i].waitSemaphoreCount || pSubmits[i].signalSemaphoreCount) {
 				ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 								   &queue->device->empty_cs[queue->queue_family_index],
-								   1, NULL,
+								   1, NULL, NULL,
 								   (struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
 								   pSubmits[i].waitSemaphoreCount,
 								   (struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
@@ -1509,7 +1509,7 @@ VkResult radv_QueueSubmit(
 				*queue->device->trace_id_ptr = 0;
 
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array + j,
-							advance, preamble_cs,
+							advance, preamble_cs, preamble_cs,
 							(struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
 							b ? pSubmits[i].waitSemaphoreCount : 0,
 							(struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
@@ -1541,7 +1541,7 @@ VkResult radv_QueueSubmit(
 		if (!fence_emitted)
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 							   &queue->device->empty_cs[queue->queue_family_index],
-							   1, NULL, NULL, 0, NULL, 0,
+							   1, NULL, NULL, NULL, 0, NULL, 0,
 							   false, base_fence);
 
 		fence->submitted = true;
