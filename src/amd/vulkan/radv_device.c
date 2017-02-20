@@ -993,6 +993,8 @@ void radv_DestroyDevice(
 			radv_queue_finish(&device->queues[i][q]);
 		if (device->queue_count[i])
 			vk_free(&device->alloc, device->queues[i]);
+		if (device->empty_cs[i])
+			device->ws->cs_destroy(device->empty_cs[i]);
 	}
 	radv_device_finish_meta(device);
 
