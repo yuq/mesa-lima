@@ -538,6 +538,9 @@ struct st_context *st_create_context(gl_api api, struct pipe_context *pipe,
       return NULL;
    }
 
+   if (pipe->screen->get_disk_shader_cache)
+      ctx->Cache = pipe->screen->get_disk_shader_cache(pipe->screen);
+
    st_init_driver_flags(&ctx->DriverFlags);
 
    /* XXX: need a capability bit in gallium to query if the pipe
