@@ -579,8 +579,7 @@ genX(cmd_buffer_setup_attachments)(struct anv_cmd_buffer *cmd_buffer,
          }
       }
 
-      if (!cmd_buffer->device->info.has_llc)
-         anv_state_flush(state->render_pass_states);
+      anv_state_flush(cmd_buffer->device, state->render_pass_states);
    }
 }
 
@@ -1275,8 +1274,7 @@ emit_binding_table(struct anv_cmd_buffer *cmd_buffer,
    assert(image == map->image_count);
 
  out:
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(*bt_state);
+   anv_state_flush(cmd_buffer->device, *bt_state);
 
    return VK_SUCCESS;
 }
@@ -1333,8 +1331,7 @@ emit_samplers(struct anv_cmd_buffer *cmd_buffer,
              sampler->state, sizeof(sampler->state));
    }
 
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(*state);
+   anv_state_flush(cmd_buffer->device, *state);
 
    return VK_SUCCESS;
 }
@@ -1652,8 +1649,7 @@ emit_base_vertex_instance(struct anv_cmd_buffer *cmd_buffer,
    ((uint32_t *)id_state.map)[0] = base_vertex;
    ((uint32_t *)id_state.map)[1] = base_instance;
 
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(id_state);
+   anv_state_flush(cmd_buffer->device, id_state);
 
    emit_base_vertex_instance_bo(cmd_buffer,
       &cmd_buffer->device->dynamic_state_block_pool.bo, id_state.offset);
@@ -1667,8 +1663,7 @@ emit_draw_index(struct anv_cmd_buffer *cmd_buffer, uint32_t draw_index)
 
    ((uint32_t *)state.map)[0] = draw_index;
 
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(state);
+   anv_state_flush(cmd_buffer->device, state);
 
    emit_vertex_bo(cmd_buffer,
                   &cmd_buffer->device->dynamic_state_block_pool.bo,
@@ -1946,8 +1941,7 @@ void genX(CmdDispatch)(
       sizes[0] = x;
       sizes[1] = y;
       sizes[2] = z;
-      if (!cmd_buffer->device->info.has_llc)
-         anv_state_flush(state);
+      anv_state_flush(cmd_buffer->device, state);
       cmd_buffer->state.num_workgroups_offset = state.offset;
       cmd_buffer->state.num_workgroups_bo =
          &cmd_buffer->device->dynamic_state_block_pool.bo;

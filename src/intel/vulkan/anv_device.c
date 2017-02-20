@@ -861,8 +861,7 @@ anv_state_pool_emit_data(struct anv_state_pool *pool, size_t size, size_t align,
    state = anv_state_pool_alloc(pool, size, align);
    memcpy(state.map, p, size);
 
-   if (!pool->block_pool->device->info.has_llc)
-      anv_state_flush(state);
+   anv_state_flush(pool->block_pool->device, state);
 
    return state;
 }
@@ -2055,8 +2054,7 @@ anv_fill_buffer_surface_state(struct anv_device *device, struct anv_state state,
                          .format = format,
                          .stride = stride);
 
-   if (!device->info.has_llc)
-      anv_state_flush(state);
+   anv_state_flush(device, state);
 }
 
 void anv_DestroySampler(

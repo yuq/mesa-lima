@@ -67,8 +67,7 @@ gen8_cmd_buffer_emit_viewport(struct anv_cmd_buffer *cmd_buffer)
                                  &sf_clip_viewport);
    }
 
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(sf_clip_state);
+   anv_state_flush(cmd_buffer->device, sf_clip_state);
 
    anv_batch_emit(&cmd_buffer->batch,
                   GENX(3DSTATE_VIEWPORT_STATE_POINTERS_SF_CLIP), clip) {
@@ -96,8 +95,7 @@ gen8_cmd_buffer_emit_depth_viewport(struct anv_cmd_buffer *cmd_buffer,
       GENX(CC_VIEWPORT_pack)(NULL, cc_state.map + i * 8, &cc_viewport);
    }
 
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(cc_state);
+   anv_state_flush(cmd_buffer->device, cc_state);
 
    anv_batch_emit(&cmd_buffer->batch,
                   GENX(3DSTATE_VIEWPORT_STATE_POINTERS_CC), cc) {
@@ -473,8 +471,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       };
       GENX(COLOR_CALC_STATE_pack)(NULL, cc_state.map, &cc);
 
-      if (!cmd_buffer->device->info.has_llc)
-         anv_state_flush(cc_state);
+      anv_state_flush(cmd_buffer->device, cc_state);
 
       anv_batch_emit(&cmd_buffer->batch, GENX(3DSTATE_CC_STATE_POINTERS), ccp) {
          ccp.ColorCalcStatePointer        = cc_state.offset;
@@ -525,8 +522,7 @@ genX(cmd_buffer_flush_dynamic_state)(struct anv_cmd_buffer *cmd_buffer)
       };
       GEN9_COLOR_CALC_STATE_pack(NULL, cc_state.map, &cc);
 
-      if (!cmd_buffer->device->info.has_llc)
-         anv_state_flush(cc_state);
+      anv_state_flush(cmd_buffer->device, cc_state);
 
       anv_batch_emit(&cmd_buffer->batch, GEN9_3DSTATE_CC_STATE_POINTERS, ccp) {
          ccp.ColorCalcStatePointer = cc_state.offset;

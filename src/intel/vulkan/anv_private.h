@@ -461,12 +461,6 @@ anv_invalidate_range(void *start, size_t size)
    __builtin_ia32_mfence();
 }
 
-static void inline
-anv_state_flush(struct anv_state state)
-{
-   anv_flush_range(state.map, state.alloc_size);
-}
-
 VkResult anv_block_pool_init(struct anv_block_pool *pool,
                              struct anv_device *device, uint32_t block_size);
 void anv_block_pool_finish(struct anv_block_pool *pool);
@@ -629,6 +623,15 @@ struct anv_device {
     pthread_mutex_t                             mutex;
     pthread_cond_t                              queue_submit;
 };
+
+static void inline
+anv_state_flush(struct anv_device *device, struct anv_state state)
+{
+   if (device->info.has_llc)
+      return;
+
+   anv_flush_range(state.map, state.alloc_size);
+}
 
 void anv_device_init_blorp(struct anv_device *device);
 void anv_device_finish_blorp(struct anv_device *device);

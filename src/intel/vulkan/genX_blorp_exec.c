@@ -101,8 +101,7 @@ blorp_alloc_binding_table(struct blorp_batch *batch, unsigned num_entries,
       surface_maps[i] = surface_state.map;
    }
 
-   if (!cmd_buffer->device->info.has_llc)
-      anv_state_flush(bt_state);
+   anv_state_flush(cmd_buffer->device, bt_state);
 }
 
 static void *
