@@ -914,13 +914,59 @@ static void si_get_draw_start_count(struct si_context *sctx,
 				    unsigned *start, unsigned *count)
 {
 	if (info->indirect) {
-		struct r600_resource *indirect =
-			(struct r600_resource*)info->indirect;
-		int *data = r600_buffer_map_sync_with_rings(&sctx->b,
-					indirect, PIPE_TRANSFER_READ);
-                data += info->indirect_offset/sizeof(int);
-		*start = data[2];
-		*count = data[0];
+		unsigned indirect_count;
+		struct pipe_transfer *transfer;
+		unsigned begin, end;
+		unsigned map_size;
+		unsigned *data;
+
+		if (info->indirect_params) {
+			data = pipe_buffer_map_range(&sctx->b.b,
+					info->indirect_params,
+					info->indirect_params_offset,
+					sizeof(unsigned),
+					PIPE_TRANSFER_READ, &transfer);
+
+			indirect_count = *data;
+
+			pipe_buffer_unmap(&sctx->b.b, transfer);
+		} else {
+			indirect_count = info->indirect_count;
+		}
+
+		if (!indirect_count) {
+			*start = *count = 0;
+			return;
+		}
+
+		map_size = (indirect_count - 1) * info->indirect_stride + 3 * sizeof(unsigned);
+		data = pipe_buffer_map_range(&sctx->b.b, info->indirect,
+					     info->indirect_offset, map_size,
+					     PIPE_TRANSFER_READ, &transfer);
+
+		begin = UINT_MAX;
+		end = 0;
+
+		for (unsigned i = 0; i < indirect_count; ++i) {
+			unsigned count = data[0];
+			unsigned start = data[2];
+
+			if (count > 0) {
+				begin = MIN2(begin, start);
+				end = MAX2(end, start + count);
+			}
+
+			data += info->indirect_stride / sizeof(unsigned);
+		}
+
+		pipe_buffer_unmap(&sctx->b.b, transfer);
+
+		if (begin < end) {
+			*start = begin;
+			*count = end - begin;
+		} else {
+			*start = *count = 0;
+		}
 	} else {
 		*start = info->start;
 		*count = info->count;
