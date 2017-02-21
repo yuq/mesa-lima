@@ -141,8 +141,8 @@ struct nir_to_llvm_context {
 	int num_locals;
 	LLVMValueRef *locals;
 	bool has_ddxy;
-	unsigned num_clips;
-	unsigned num_culls;
+	uint8_t num_output_clips;
+	uint8_t num_output_culls;
 
 	bool has_ds_bpermute;
 
@@ -4132,10 +4132,10 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 			if (ctx->stage == MESA_SHADER_VERTEX) {
 				if (idx == VARYING_SLOT_CLIP_DIST0) {
 					ctx->shader_info->vs.clip_dist_mask = (1 << length) - 1;
-					ctx->num_clips = length;
+					ctx->num_output_clips = length;
 				} else if (idx == VARYING_SLOT_CULL_DIST0) {
 					ctx->shader_info->vs.cull_dist_mask = (1 << length) - 1;
-					ctx->num_culls = length;
+					ctx->num_output_culls = length;
 				}
 			}
 			if (length > 4)
@@ -4372,21 +4372,21 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		unsigned j;
 
 		if (ctx->shader_info->vs.cull_dist_mask)
-			ctx->shader_info->vs.cull_dist_mask <<= ctx->num_clips;
+			ctx->shader_info->vs.cull_dist_mask <<= ctx->num_output_clips;
 
 		i = VARYING_SLOT_CLIP_DIST0;
-		for (j = 0; j < ctx->num_clips; j++)
+		for (j = 0; j < ctx->num_output_clips; j++)
 			slots[j] = to_float(ctx, LLVMBuildLoad(ctx->builder,
 							       ctx->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
 		i = VARYING_SLOT_CULL_DIST0;
-		for (j = 0; j < ctx->num_culls; j++)
-			slots[ctx->num_clips + j] = to_float(ctx, LLVMBuildLoad(ctx->builder,
+		for (j = 0; j < ctx->num_output_culls; j++)
+			slots[ctx->num_output_clips + j] = to_float(ctx, LLVMBuildLoad(ctx->builder,
 									   ctx->outputs[radeon_llvm_reg_index_soa(i, j)], ""));
 
-		for (i = ctx->num_clips + ctx->num_culls; i < 8; i++)
+		for (i = ctx->num_output_clips + ctx->num_output_culls; i < 8; i++)
 			slots[i] = LLVMGetUndef(ctx->f32);
 
-		if (ctx->num_clips + ctx->num_culls > 4) {
+		if (ctx->num_output_clips + ctx->num_output_culls > 4) {
 			target = V_008DFC_SQ_EXP_POS + 3;
 			si_llvm_init_export_args(ctx, &slots[4], target, args);
 			memcpy(pos_args[target - V_008DFC_SQ_EXP_POS],
