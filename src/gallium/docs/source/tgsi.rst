@@ -1803,6 +1803,8 @@ two-component vectors with doubled precision in each component.
 
 .. opcode:: DABS - Absolute
 
+.. math::
+
   dst.xy = |src0.xy|
   dst.zw = |src0.zw|
 
@@ -2054,6 +2056,8 @@ The 64-bit integer opcodes reinterpret four-component vectors into
 two-component vectors with 64-bits in each component.
 
 .. opcode:: I64ABS - 64-bit Integer Absolute Value
+
+.. math::
 
   dst.xy = |src0.xy|
   dst.zw = |src0.zw|
