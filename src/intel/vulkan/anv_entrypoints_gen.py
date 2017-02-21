@@ -26,7 +26,7 @@ import argparse
 import functools
 import os
 import textwrap
-import xml.etree.ElementTree as et
+import xml.etree.cElementTree as et
 
 from mako.template import Template
 
