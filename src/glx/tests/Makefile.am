@@ -12,7 +12,7 @@ AM_CPPFLAGS = \
 	$(LIBDRM_CFLAGS) \
 	$(X11_INCLUDES)
 
-TESTS = glx-test
+TESTS = glx-test dispatch-index-check
 check_PROGRAMS = glx-test
 
 glx_test_SOURCES =			\
