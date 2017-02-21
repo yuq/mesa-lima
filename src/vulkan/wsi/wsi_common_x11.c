@@ -565,7 +565,6 @@ struct x11_swapchain {
    xcb_gc_t                                     gc;
    uint32_t                                     depth;
    VkExtent2D                                   extent;
-   uint32_t                                     image_count;
 
    xcb_present_event_t                          event_id;
    xcb_special_event_t *                        special_event;
@@ -591,13 +590,13 @@ x11_get_images(struct wsi_swapchain *anv_chain,
    VkResult result;
 
    if (pSwapchainImages == NULL) {
-      *pCount = chain->image_count;
+      *pCount = chain->base.image_count;
       return VK_SUCCESS;
    }
 
    result = VK_SUCCESS;
-   ret_count = chain->image_count;
-   if (chain->image_count > *pCount) {
+   ret_count = chain->base.image_count;
+   if (chain->base.image_count > *pCount) {
      ret_count = *pCount;
      result = VK_INCOMPLETE;
    }
@@ -626,7 +625,7 @@ x11_handle_dri3_present_event(struct x11_swapchain *chain,
    case XCB_PRESENT_EVENT_IDLE_NOTIFY: {
       xcb_present_idle_notify_event_t *idle = (void *) event;
 
-      for (unsigned i = 0; i < chain->image_count; i++) {
+      for (unsigned i = 0; i < chain->base.image_count; i++) {
          if (chain->images[i].pixmap == idle->pixmap) {
             chain->images[i].busy = false;
             if (chain->threaded)
@@ -680,7 +679,7 @@ x11_acquire_next_image_poll_x11(struct x11_swapchain *chain,
    struct pollfd pfds;
    uint64_t atimeout;
    while (1) {
-      for (uint32_t i = 0; i < chain->image_count; i++) {
+      for (uint32_t i = 0; i < chain->base.image_count; i++) {
          if (!chain->images[i].busy) {
             /* We found a non-busy image */
             xshmfence_await(chain->images[i].shm_fence);
@@ -747,7 +746,7 @@ x11_acquire_next_image_from_queue(struct x11_swapchain *chain,
       return chain->status;
    }
 
-   assert(image_index < chain->image_count);
+   assert(image_index < chain->base.image_count);
    xshmfence_await(chain->images[image_index].shm_fence);
 
    *image_index_out = image_index;
@@ -761,7 +760,7 @@ x11_present_to_x11(struct x11_swapchain *chain, uint32_t image_index,
 {
    struct x11_image *image = &chain->images[image_index];
 
-   assert(image_index < chain->image_count);
+   assert(image_index < chain->base.image_count);
 
    uint32_t options = XCB_PRESENT_OPTION_NONE;
 
@@ -971,7 +970,7 @@ x11_swapchain_destroy(struct wsi_swapchain *anv_chain,
    struct x11_swapchain *chain = (struct x11_swapchain *)anv_chain;
    xcb_void_cookie_t cookie;
 
-   for (uint32_t i = 0; i < chain->image_count; i++)
+   for (uint32_t i = 0; i < chain->base.image_count; i++)
       x11_image_finish(chain, pAllocator, &chain->images[i]);
 
    if (chain->threaded) {
@@ -1032,11 +1031,11 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    chain->base.queue_present = x11_queue_present;
    chain->base.image_fns = image_fns;
    chain->base.present_mode = pCreateInfo->presentMode;
+   chain->base.image_count = num_images;
    chain->conn = conn;
    chain->window = window;
    chain->depth = geometry->depth;
    chain->extent = pCreateInfo->imageExtent;
-   chain->image_count = num_images;
    chain->send_sbc = 0;
    chain->last_present_msc = 0;
    chain->threaded = false;
@@ -1072,7 +1071,7 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    xcb_discard_reply(chain->conn, cookie.sequence);
 
    uint32_t image = 0;
-   for (; image < chain->image_count; image++) {
+   for (; image < chain->base.image_count; image++) {
       result = x11_image_init(device, chain, pCreateInfo, pAllocator,
                               &chain->images[image]);
       if (result != VK_SUCCESS)
@@ -1082,23 +1081,23 @@ x11_surface_create_swapchain(VkIcdSurfaceBase *icd_surface,
    if (chain->base.present_mode == VK_PRESENT_MODE_FIFO_KHR) {
       chain->threaded = true;
 
-      /* Initialize our queues.  We make them image_count + 1 because we will
+      /* Initialize our queues.  We make them base.image_count + 1 because we will
        * occasionally use UINT32_MAX to signal the other thread that an error
        * has occurred and we don't want an overflow.
        */
       int ret;
-      ret = wsi_queue_init(&chain->acquire_queue, chain->image_count + 1);
+      ret = wsi_queue_init(&chain->acquire_queue, chain->base.image_count + 1);
       if (ret) {
          goto fail_init_images;
       }
 
-      ret = wsi_queue_init(&chain->present_queue, chain->image_count + 1);
+      ret = wsi_queue_init(&chain->present_queue, chain->base.image_count + 1);
       if (ret) {
          wsi_queue_destroy(&chain->acquire_queue);
          goto fail_init_images;
       }
 
-      for (unsigned i = 0; i < chain->image_count; i++)
+      for (unsigned i = 0; i < chain->base.image_count; i++)
          wsi_queue_push(&chain->acquire_queue, i);
 
       ret = pthread_create(&chain->queue_manager, NULL,

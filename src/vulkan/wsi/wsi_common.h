@@ -54,6 +54,7 @@ struct wsi_swapchain {
    const struct wsi_image_fns *image_fns;
    VkFence fences[3];
    VkPresentModeKHR present_mode;
+   uint32_t image_count;
 
    VkResult (*destroy)(struct wsi_swapchain *swapchain,
                        const VkAllocationCallbacks *pAllocator);
