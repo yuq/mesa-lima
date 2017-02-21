@@ -295,10 +295,7 @@ def get_entrypoints(doc, entrypoints_to_defines):
         shortname = fullname[2:]
         params = (''.join(p.itertext()) for p in command.findall('./param'))
         params = ', '.join(params)
-        if fullname in entrypoints_to_defines:
-            guard = entrypoints_to_defines[fullname]
-        else:
-            guard = None
+        guard = entrypoints_to_defines.get(fullname)
         entrypoints.append((type, shortname, params, index, cal_hash(fullname), guard))
         index += 1
 
