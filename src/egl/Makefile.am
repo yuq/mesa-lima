@@ -129,7 +129,7 @@ egl_HEADERS = \
 TESTS = egl-symbols-check
 
 EXTRA_DIST = \
-	egl-symbols-check \
+	$(TESTS) \
 	SConscript \
 	drivers/haiku \
 	main/egl.def \
