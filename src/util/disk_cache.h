@@ -24,7 +24,9 @@
 #ifndef DISK_CACHE_H
 #define DISK_CACHE_H
 
+#ifdef ENABLE_SHADER_CACHE
 #include <dlfcn.h>
+#endif
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/stat.h>
@@ -43,16 +45,20 @@ struct disk_cache;
 static inline bool
 disk_cache_get_function_timestamp(void *ptr, uint32_t* timestamp)
 {
-	Dl_info info;
-	struct stat st;
-	if (!dladdr(ptr, &info) || !info.dli_fname) {
-		return false;
-	}
-	if (stat(info.dli_fname, &st)) {
-		return false;
-	}
-	*timestamp = st.st_mtim.tv_sec;
-	return true;
+#ifdef ENABLE_SHADER_CACHE
+   Dl_info info;
+   struct stat st;
+   if (!dladdr(ptr, &info) || !info.dli_fname) {
+      return false;
+   }
+   if (stat(info.dli_fname, &st)) {
+      return false;
+   }
+   *timestamp = st.st_mtim.tv_sec;
+   return true;
+#else
+   return false;
+#endif
 }
 
 /* Provide inlined stub functions if the shader cache is disabled. */
