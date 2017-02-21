@@ -1952,6 +1952,9 @@ fs_visitor::assign_constant_locations()
                }
             }
             is_live[last] = true;
+            if (type_sz(inst->src[i].type) == 8) {
+                  is_live_64bit[last] = true;
+            }
          } else {
             if (constant_nr >= 0 && constant_nr < (int) uniforms) {
                int regs_read = inst->components_read(i) *
