@@ -424,47 +424,47 @@ prepare_vs_constants_userbuf_swvp(struct NineDevice9 *device)
 
     if (!device->driver_caps.user_cbufs) {
         struct pipe_constant_buffer *cb = &(context->pipe_data.cb0_swvp);
-        u_upload_data(device->constbuf_uploader,
+        u_upload_data(device->context.pipe->const_uploader,
                       0,
                       cb->buffer_size,
                       device->constbuf_alignment,
                       cb->user_buffer,
                       &(cb->buffer_offset),
                       &(cb->buffer));
-        u_upload_unmap(device->constbuf_uploader);
+        u_upload_unmap(device->context.pipe->const_uploader);
         cb->user_buffer = NULL;
 
         cb = &(context->pipe_data.cb1_swvp);
-        u_upload_data(device->constbuf_uploader,
+        u_upload_data(device->context.pipe->const_uploader,
                       0,
                       cb->buffer_size,
                       device->constbuf_alignment,
                       cb->user_buffer,
                       &(cb->buffer_offset),
                       &(cb->buffer));
-        u_upload_unmap(device->constbuf_uploader);
+        u_upload_unmap(device->context.pipe->const_uploader);
         cb->user_buffer = NULL;
 
         cb = &(context->pipe_data.cb2_swvp);
-        u_upload_data(device->constbuf_uploader,
+        u_upload_data(device->context.pipe->const_uploader,
                       0,
                       cb->buffer_size,
                       device->constbuf_alignment,
                       cb->user_buffer,
                       &(cb->buffer_offset),
                       &(cb->buffer));
-        u_upload_unmap(device->constbuf_uploader);
+        u_upload_unmap(device->context.pipe->const_uploader);
         cb->user_buffer = NULL;
 
         cb = &(context->pipe_data.cb3_swvp);
-        u_upload_data(device->constbuf_uploader,
+        u_upload_data(device->context.pipe->const_uploader,
                       0,
                       cb->buffer_size,
                       device->constbuf_alignment,
                       cb->user_buffer,
                       &(cb->buffer_offset),
                       &(cb->buffer));
-        u_upload_unmap(device->constbuf_uploader);
+        u_upload_unmap(device->context.pipe->const_uploader);
         cb->user_buffer = NULL;
     }
 
@@ -523,14 +523,14 @@ prepare_vs_constants_userbuf(struct NineDevice9 *device)
 
     if (!device->driver_caps.user_cbufs) {
         context->pipe_data.cb_vs.buffer_size = cb.buffer_size;
-        u_upload_data(device->constbuf_uploader,
+        u_upload_data(device->context.pipe->const_uploader,
                       0,
                       cb.buffer_size,
                       device->constbuf_alignment,
                       cb.user_buffer,
                       &context->pipe_data.cb_vs.buffer_offset,
                       &context->pipe_data.cb_vs.buffer);
-        u_upload_unmap(device->constbuf_uploader);
+        u_upload_unmap(device->context.pipe->const_uploader);
         context->pipe_data.cb_vs.user_buffer = NULL;
     } else
         context->pipe_data.cb_vs = cb;
@@ -594,14 +594,14 @@ prepare_ps_constants_userbuf(struct NineDevice9 *device)
 
     if (!device->driver_caps.user_cbufs) {
         context->pipe_data.cb_ps.buffer_size = cb.buffer_size;
-        u_upload_data(device->constbuf_uploader,
+        u_upload_data(device->context.pipe->const_uploader,
                       0,
                       cb.buffer_size,
                       device->constbuf_alignment,
                       cb.user_buffer,
                       &context->pipe_data.cb_ps.buffer_offset,
                       &context->pipe_data.cb_ps.buffer);
-        u_upload_unmap(device->constbuf_uploader);
+        u_upload_unmap(device->context.pipe->const_uploader);
         context->pipe_data.cb_ps.user_buffer = NULL;
     } else
         context->pipe_data.cb_ps = cb;
@@ -3296,14 +3296,14 @@ update_vertex_buffers_sw(struct NineDevice9 *device, int start_vertice, int num_
                                                         &(sw_internal->transfers_so[i]));
                 vtxbuf.buffer = NULL;
                 if (!device->driver_caps.user_sw_vbufs) {
-                    u_upload_data(device->vertex_sw_uploader,
+                    u_upload_data(device->pipe_sw->stream_uploader,
                                   0,
                                   box.width,
                                   16,
                                   vtxbuf.user_buffer,
                                   &(vtxbuf.buffer_offset),
                                   &(vtxbuf.buffer));
-                    u_upload_unmap(device->vertex_sw_uploader);
+                    u_upload_unmap(device->pipe_sw->stream_uploader);
                     vtxbuf.user_buffer = NULL;
                 }
                 pipe_sw->set_vertex_buffers(pipe_sw, i, 1, &vtxbuf);
@@ -3352,14 +3352,14 @@ update_vs_constants_sw(struct NineDevice9 *device)
 
         buf = cb.user_buffer;
         if (!device->driver_caps.user_sw_cbufs) {
-            u_upload_data(device->constbuf_sw_uploader,
+            u_upload_data(device->pipe_sw->const_uploader,
                           0,
                           cb.buffer_size,
                           16,
                           cb.user_buffer,
                           &(cb.buffer_offset),
                           &(cb.buffer));
-            u_upload_unmap(device->constbuf_sw_uploader);
+            u_upload_unmap(device->pipe_sw->const_uploader);
             cb.user_buffer = NULL;
         }
 
@@ -3369,14 +3369,14 @@ update_vs_constants_sw(struct NineDevice9 *device)
 
         cb.user_buffer = (char *)buf + 4096 * sizeof(float[4]);
         if (!device->driver_caps.user_sw_cbufs) {
-            u_upload_data(device->constbuf_sw_uploader,
+            u_upload_data(device->pipe_sw->const_uploader,
                           0,
                           cb.buffer_size,
                           16,
                           cb.user_buffer,
                           &(cb.buffer_offset),
                           &(cb.buffer));
-            u_upload_unmap(device->constbuf_sw_uploader);
+            u_upload_unmap(device->pipe_sw->const_uploader);
             cb.user_buffer = NULL;
         }
 
@@ -3394,14 +3394,14 @@ update_vs_constants_sw(struct NineDevice9 *device)
         cb.user_buffer = state->vs_const_i;
 
         if (!device->driver_caps.user_sw_cbufs) {
-            u_upload_data(device->constbuf_sw_uploader,
+            u_upload_data(device->pipe_sw->const_uploader,
                           0,
                           cb.buffer_size,
                           16,
                           cb.user_buffer,
                           &(cb.buffer_offset),
                           &(cb.buffer));
-            u_upload_unmap(device->constbuf_sw_uploader);
+            u_upload_unmap(device->pipe_sw->const_uploader);
             cb.user_buffer = NULL;
         }
 
@@ -3419,14 +3419,14 @@ update_vs_constants_sw(struct NineDevice9 *device)
         cb.user_buffer = state->vs_const_b;
 
         if (!device->driver_caps.user_sw_cbufs) {
-            u_upload_data(device->constbuf_sw_uploader,
+            u_upload_data(device->pipe_sw->const_uploader,
                           0,
                           cb.buffer_size,
                           16,
                           cb.user_buffer,
                           &(cb.buffer_offset),
                           &(cb.buffer));
-            u_upload_unmap(device->constbuf_sw_uploader);
+            u_upload_unmap(device->pipe_sw->const_uploader);
             cb.user_buffer = NULL;
         }
 
@@ -3450,14 +3450,14 @@ update_vs_constants_sw(struct NineDevice9 *device)
         cb.user_buffer = viewport_data;
 
         {
-            u_upload_data(device->constbuf_sw_uploader,
+            u_upload_data(device->pipe_sw->const_uploader,
                           0,
                           cb.buffer_size,
                           16,
                           cb.user_buffer,
                           &(cb.buffer_offset),
                           &(cb.buffer));
-            u_upload_unmap(device->constbuf_sw_uploader);
+            u_upload_unmap(device->pipe_sw->const_uploader);
             cb.user_buffer = NULL;
         }
 

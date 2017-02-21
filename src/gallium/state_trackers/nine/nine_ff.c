@@ -2063,14 +2063,14 @@ nine_ff_update(struct NineDevice9 *device)
 
         if (!device->driver_caps.user_cbufs) {
             context->pipe_data.cb_vs_ff.buffer_size = cb.buffer_size;
-            u_upload_data(device->constbuf_uploader,
+            u_upload_data(device->context.pipe->const_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
                           &context->pipe_data.cb_vs_ff.buffer_offset,
                           &context->pipe_data.cb_vs_ff.buffer);
-            u_upload_unmap(device->constbuf_uploader);
+            u_upload_unmap(device->context.pipe->const_uploader);
             context->pipe_data.cb_vs_ff.user_buffer = NULL;
         } else
             context->pipe_data.cb_vs_ff = cb;
@@ -2087,14 +2087,14 @@ nine_ff_update(struct NineDevice9 *device)
 
         if (!device->driver_caps.user_cbufs) {
             context->pipe_data.cb_ps_ff.buffer_size = cb.buffer_size;
-            u_upload_data(device->constbuf_uploader,
+            u_upload_data(device->context.pipe->const_uploader,
                           0,
                           cb.buffer_size,
                           device->constbuf_alignment,
                           cb.user_buffer,
                           &context->pipe_data.cb_ps_ff.buffer_offset,
                           &context->pipe_data.cb_ps_ff.buffer);
-            u_upload_unmap(device->constbuf_uploader);
+            u_upload_unmap(device->context.pipe->const_uploader);
             context->pipe_data.cb_ps_ff.user_buffer = NULL;
         } else
             context->pipe_data.cb_ps_ff = cb;
