@@ -1574,15 +1574,11 @@ eglCreateImage(EGLDisplay dpy, EGLContext ctx, EGLenum target,
 }
 
 
-EGLBoolean EGLAPIENTRY
-eglDestroyImage(EGLDisplay dpy, EGLImage image)
+static EGLBoolean
+_eglDestroyImageCommon(_EGLDisplay *disp, _EGLImage *img)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLImage *img = _eglLookupImage(image, disp);
    _EGLDriver *drv;
    EGLBoolean ret;
-
-   _EGL_FUNC_START(disp, EGL_OBJECT_IMAGE_KHR, img, EGL_FALSE);
 
    _EGL_CHECK_DISPLAY(disp, EGL_FALSE, drv);
    if (!disp->Extensions.KHR_image_base)
@@ -1594,6 +1590,24 @@ eglDestroyImage(EGLDisplay dpy, EGLImage image)
    ret = drv->API.DestroyImageKHR(drv, disp, img);
 
    RETURN_EGL_EVAL(disp, ret);
+}
+
+EGLBoolean EGLAPIENTRY
+eglDestroyImage(EGLDisplay dpy, EGLImage image)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLImage *img = _eglLookupImage(image, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_IMAGE_KHR, img, EGL_FALSE);
+   return _eglDestroyImageCommon(disp, img);
+}
+
+static EGLBoolean EGLAPIENTRY
+eglDestroyImageKHR(EGLDisplay dpy, EGLImage image)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLImage *img = _eglLookupImage(image, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_IMAGE_KHR, img, EGL_FALSE);
+   return _eglDestroyImageCommon(disp, img);
 }
 
 
@@ -2361,7 +2375,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreatePlatformWindowSurface", (_EGLProc) eglCreatePlatformWindowSurface },
       { "eglCreatePlatformPixmapSurface", (_EGLProc) eglCreatePlatformPixmapSurface },
       { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
-      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImage },
+      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
       { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
       { "eglDestroySyncKHR", (_EGLProc) eglDestroySync },
