@@ -2612,6 +2612,22 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	lp_build_endif(&if_ctx);
 }
 
+static LLVMValueRef
+si_insert_input_ptr_as_2xi32(struct si_shader_context *ctx, LLVMValueRef ret,
+			     unsigned param, unsigned return_index)
+{
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMValueRef ptr, lo, hi;
+
+	ptr = LLVMGetParam(ctx->main_fn, param);
+	ptr = LLVMBuildPtrToInt(builder, ptr, ctx->i64, "");
+	ptr = LLVMBuildBitCast(builder, ptr, ctx->v2i32, "");
+	lo = LLVMBuildExtractElement(builder, ptr, ctx->i32_0, "");
+	hi = LLVMBuildExtractElement(builder, ptr, ctx->i32_1, "");
+	ret = LLVMBuildInsertValue(builder, ret, lo, return_index, "");
+	return LLVMBuildInsertValue(builder, ret, hi, return_index + 1, "");
+}
+
 /* This only writes the tessellation factor levels. */
 static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
@@ -2628,41 +2644,43 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	/* Return epilog parameters from this function. */
 	LLVMBuilderRef builder = ctx->gallivm.builder;
 	LLVMValueRef ret = ctx->return_value;
-	LLVMValueRef rw_buffers, rw0, rw1, tf_soffset;
+	LLVMValueRef tf_soffset;
 	unsigned vgpr;
 
-	/* RW_BUFFERS pointer */
-	rw_buffers = LLVMGetParam(ctx->main_fn,
-				  ctx->param_rw_buffers);
-	rw_buffers = LLVMBuildPtrToInt(builder, rw_buffers, ctx->i64, "");
-	rw_buffers = LLVMBuildBitCast(builder, rw_buffers, ctx->v2i32, "");
-	rw0 = LLVMBuildExtractElement(builder, rw_buffers,
-				      ctx->i32_0, "");
-	rw1 = LLVMBuildExtractElement(builder, rw_buffers,
-				      ctx->i32_1, "");
-	ret = LLVMBuildInsertValue(builder, ret, rw0, 0, "");
-	ret = LLVMBuildInsertValue(builder, ret, rw1, 1, "");
-
-	/* Tess offchip and factor buffer soffset are after user SGPRs. */
 	offchip_layout = LLVMGetParam(ctx->main_fn,
 				      ctx->param_tcs_offchip_layout);
 	offchip_soffset = LLVMGetParam(ctx->main_fn,
 				       ctx->param_tcs_offchip_offset);
 	tf_soffset = LLVMGetParam(ctx->main_fn,
 				  ctx->param_tcs_factor_offset);
-	ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
-				   GFX6_SGPR_TCS_OFFCHIP_LAYOUT, "");
-	ret = LLVMBuildInsertValue(builder, ret, offchip_soffset,
-				   GFX6_TCS_NUM_USER_SGPR, "");
-	ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
-				   GFX6_TCS_NUM_USER_SGPR + 1, "");
+
+	if (ctx->screen->b.chip_class >= GFX9) {
+		ret = si_insert_input_ptr_as_2xi32(ctx, ret,
+						   ctx->param_rw_buffers, 8);
+		ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
+					   8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT, "");
+		/* Tess offchip and tess factor offsets are at the beginning. */
+		ret = LLVMBuildInsertValue(builder, ret, offchip_soffset, 2, "");
+		ret = LLVMBuildInsertValue(builder, ret, tf_soffset, 4, "");
+		vgpr = 8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT + 1;
+	} else {
+		ret = si_insert_input_ptr_as_2xi32(ctx, ret,
+						   ctx->param_rw_buffers, 0);
+		ret = LLVMBuildInsertValue(builder, ret, offchip_layout,
+					   GFX6_SGPR_TCS_OFFCHIP_LAYOUT, "");
+		/* Tess offchip and tess factor offsets are after user SGPRs. */
+		ret = LLVMBuildInsertValue(builder, ret, offchip_soffset,
+					   GFX6_TCS_NUM_USER_SGPR, "");
+		ret = LLVMBuildInsertValue(builder, ret, tf_soffset,
+					   GFX6_TCS_NUM_USER_SGPR + 1, "");
+		vgpr = GFX6_TCS_NUM_USER_SGPR + 2;
+	}
 
 	/* VGPRs */
 	rel_patch_id = bitcast(bld_base, TGSI_TYPE_FLOAT, rel_patch_id);
 	invocation_id = bitcast(bld_base, TGSI_TYPE_FLOAT, invocation_id);
 	tf_lds_offset = bitcast(bld_base, TGSI_TYPE_FLOAT, tf_lds_offset);
 
-	vgpr = GFX6_TCS_NUM_USER_SGPR + 2;
 	ret = LLVMBuildInsertValue(builder, ret, rel_patch_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, invocation_id, vgpr++, "");
 	ret = LLVMBuildInsertValue(builder, ret, tf_lds_offset, vgpr++, "");
@@ -5819,10 +5837,11 @@ static void create_function(struct si_shader_context *ctx)
 		} else {
 			/* TCS return values are inputs to the TCS epilog.
 			 *
-			 * param_tcs_offchip_offset and param_tcs_factor_offset
+			 * param_tcs_offchip_offset, param_tcs_factor_offset,
+			 * param_tcs_offchip_layout, and param_rw_buffers
 			 * should be passed to the epilog.
 			 */
-			for (i = 0; i <= ctx->param_tcs_factor_offset; i++)
+			for (i = 0; i <= 8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT; i++)
 				returns[num_returns++] = ctx->i32; /* SGPRs */
 			for (i = 0; i < 3; i++)
 				returns[num_returns++] = ctx->f32; /* VGPRs */
@@ -8089,23 +8108,46 @@ static void si_build_tcs_epilog_function(struct si_shader_context *ctx,
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	struct lp_build_tgsi_context *bld_base = &ctx->bld_base;
-	LLVMTypeRef params[16];
+	LLVMTypeRef params[32];
 	LLVMValueRef func;
 	int last_sgpr, num_params = 0;
 
 	/* Declare inputs. Only RW_BUFFERS and TESS_FACTOR_OFFSET are used. */
+	if (ctx->screen->b.chip_class >= GFX9) {
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32; /* wave info */
+		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+	}
 	params[ctx->param_rw_buffers = num_params++] =
 		const_array(ctx->v16i8, SI_NUM_RW_BUFFERS);
-	params[ctx->param_const_buffers = num_params++] = ctx->i64;
-	params[ctx->param_samplers = num_params++] = ctx->i64;
-	params[ctx->param_images = num_params++] = ctx->i64;
-	params[ctx->param_shader_buffers = num_params++] = ctx->i64;
-	params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
-	params[ctx->param_tcs_out_lds_offsets = num_params++] = ctx->i32;
-	params[ctx->param_tcs_out_lds_layout = num_params++] = ctx->i32;
-	params[ctx->param_vs_state_bits = num_params++] = ctx->i32;
-	params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
-	params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
+	if (ctx->screen->b.chip_class >= GFX9) {
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
+	} else {
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[num_params++] = ctx->i64;
+		params[ctx->param_tcs_offchip_layout = num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[num_params++] = ctx->i32;
+		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
+		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
+	}
 	last_sgpr = num_params - 1;
 
 	params[num_params++] = ctx->i32; /* patch index within the wave (REL_PATCH_ID) */
