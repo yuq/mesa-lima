@@ -1762,15 +1762,12 @@ eglDestroySyncKHR(EGLDisplay dpy, EGLSync sync)
 }
 
 
-EGLint EGLAPIENTRY
-eglClientWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags, EGLTime timeout)
+static EGLint
+_eglClientWaitSyncCommon(_EGLDisplay *disp, EGLDisplay dpy,
+                         _EGLSync *s, EGLint flags, EGLTime timeout)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLSync *s = _eglLookupSync(sync, disp);
    _EGLDriver *drv;
    EGLint ret;
-
-   _EGL_FUNC_START(disp, EGL_OBJECT_SYNC_KHR, s, EGL_FALSE);
 
    _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
    assert(disp->Extensions.KHR_reusable_sync ||
@@ -1798,6 +1795,26 @@ eglClientWaitSync(EGLDisplay dpy, EGLSync sync, EGLint flags, EGLTime timeout)
       RETURN_EGL_EVAL(NULL, ret);
    else
       RETURN_EGL_EVAL(disp, ret);
+}
+
+EGLint EGLAPIENTRY
+eglClientWaitSync(EGLDisplay dpy, EGLSync sync,
+                  EGLint flags, EGLTime timeout)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_SYNC_KHR, s, EGL_FALSE);
+   return _eglClientWaitSyncCommon(disp, dpy, s, flags, timeout);
+}
+
+static EGLint EGLAPIENTRY
+eglClientWaitSyncKHR(EGLDisplay dpy, EGLSync sync,
+                     EGLint flags, EGLTime timeout)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_SYNC_KHR, s, EGL_FALSE);
+   return _eglClientWaitSyncCommon(disp, dpy, s, flags, timeout);
 }
 
 
@@ -2393,7 +2410,7 @@ eglGetProcAddress(const char *procname)
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
       { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
       { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
-      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSync },
+      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
       { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
       { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
       { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
