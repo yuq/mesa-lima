@@ -305,13 +305,14 @@ def get_entrypoints(doc, entrypoints_to_defines):
 def get_entrypoints_defines(doc):
     """Maps entry points to extension defines."""
     entrypoints_to_defines = {}
-    extensions = doc.findall('./extensions/extension')
-    for extension in extensions:
-        define = extension.get('protect')
-        entrypoints = extension.findall('./require/command')
-        for entrypoint in entrypoints:
-            fullname = entrypoint.get('name')
+
+    for extension in doc.findall('./extensions/extension[@protect]'):
+        define = extension.attrib['protect']
+
+        for entrypoint in extension.findall('./require/command'):
+            fullname = entrypoint.attrib['name']
             entrypoints_to_defines[fullname] = define
+
     return entrypoints_to_defines
 
 
