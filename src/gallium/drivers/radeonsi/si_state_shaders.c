@@ -1610,6 +1610,10 @@ static void *si_create_shader_selector(struct pipe_context *ctx,
 	sel->type = sel->info.processor;
 	p_atomic_inc(&sscreen->b.num_shaders_created);
 
+	/* The prolog is a no-op if there are no inputs. */
+	sel->vs_needs_prolog = sel->type == PIPE_SHADER_VERTEX &&
+			       sel->info.num_inputs;
+
 	/* Set which opcode uses which (i,j) pair. */
 	if (sel->info.uses_persp_opcode_interp_centroid)
 		sel->info.uses_persp_centroid = true;

@@ -7539,7 +7539,7 @@ int si_compile_tgsi_shader(struct si_screen *sscreen,
 		bool need_prolog;
 		bool need_epilog;
 
-		need_prolog = sel->info.num_inputs;
+		need_prolog = sel->vs_needs_prolog;
 		need_epilog = !shader->key.as_es && !shader->key.as_ls;
 
 		parts[need_prolog ? 1 : 0] = ctx.main_fn;
@@ -7992,14 +7992,12 @@ static bool si_shader_select_vs_parts(struct si_screen *sscreen,
 				      struct si_shader *shader,
 				      struct pipe_debug_callback *debug)
 {
-	struct tgsi_shader_info *info = &shader->selector->info;
-	union si_shader_part_key prolog_key;
+	if (shader->selector->vs_needs_prolog) {
+		union si_shader_part_key prolog_key;
 
-	/* Get the prolog. */
-	si_get_vs_prolog_key(shader, &prolog_key);
+		/* Get the prolog. */
+		si_get_vs_prolog_key(shader, &prolog_key);
 
-	/* The prolog is a no-op if there are no inputs. */
-	if (info->num_inputs) {
 		shader->prolog =
 			si_get_shader_part(sscreen, &sscreen->vs_prologs,
 					   PIPE_SHADER_VERTEX, true,
