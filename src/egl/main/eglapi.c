@@ -2357,84 +2357,85 @@ eglGetProcAddress(const char *procname)
       const char *name;
       _EGLProc function;
    } egl_functions[] = {
+#define EGL_ENTRYPOINT(f) { .name = #f, .function = (_EGLProc) f },
       /* core functions queryable in the presence of
        * EGL_KHR_get_all_proc_addresses or EGL 1.5
        */
       /* alphabetical order */
-      { "eglBindAPI", (_EGLProc) eglBindAPI },
-      { "eglBindTexImage", (_EGLProc) eglBindTexImage },
-      { "eglChooseConfig", (_EGLProc) eglChooseConfig },
-      { "eglCopyBuffers", (_EGLProc) eglCopyBuffers },
-      { "eglCreateContext", (_EGLProc) eglCreateContext },
-      { "eglCreatePbufferFromClientBuffer", (_EGLProc) eglCreatePbufferFromClientBuffer },
-      { "eglCreatePbufferSurface", (_EGLProc) eglCreatePbufferSurface },
-      { "eglCreatePixmapSurface", (_EGLProc) eglCreatePixmapSurface },
-      { "eglCreateWindowSurface", (_EGLProc) eglCreateWindowSurface },
-      { "eglDestroyContext", (_EGLProc) eglDestroyContext },
-      { "eglDestroySurface", (_EGLProc) eglDestroySurface },
-      { "eglGetConfigAttrib", (_EGLProc) eglGetConfigAttrib },
-      { "eglGetConfigs", (_EGLProc) eglGetConfigs },
-      { "eglGetCurrentContext", (_EGLProc) eglGetCurrentContext },
-      { "eglGetCurrentDisplay", (_EGLProc) eglGetCurrentDisplay },
-      { "eglGetCurrentSurface", (_EGLProc) eglGetCurrentSurface },
-      { "eglGetDisplay", (_EGLProc) eglGetDisplay },
-      { "eglGetError", (_EGLProc) eglGetError },
-      { "eglGetProcAddress", (_EGLProc) eglGetProcAddress },
-      { "eglInitialize", (_EGLProc) eglInitialize },
-      { "eglMakeCurrent", (_EGLProc) eglMakeCurrent },
-      { "eglQueryAPI", (_EGLProc) eglQueryAPI },
-      { "eglQueryContext", (_EGLProc) eglQueryContext },
-      { "eglQueryString", (_EGLProc) eglQueryString },
-      { "eglQuerySurface", (_EGLProc) eglQuerySurface },
-      { "eglReleaseTexImage", (_EGLProc) eglReleaseTexImage },
-      { "eglReleaseThread", (_EGLProc) eglReleaseThread },
-      { "eglSurfaceAttrib", (_EGLProc) eglSurfaceAttrib },
-      { "eglSwapBuffers", (_EGLProc) eglSwapBuffers },
-      { "eglSwapInterval", (_EGLProc) eglSwapInterval },
-      { "eglTerminate", (_EGLProc) eglTerminate },
-      { "eglWaitClient", (_EGLProc) eglWaitClient },
-      { "eglWaitGL", (_EGLProc) eglWaitGL },
-      { "eglWaitNative", (_EGLProc) eglWaitNative },
-      { "eglCreateSync", (_EGLProc) eglCreateSync },
-      { "eglDestroySync", (_EGLProc) eglDestroySync },
-      { "eglClientWaitSync", (_EGLProc) eglClientWaitSync },
-      { "eglGetSyncAttrib", (_EGLProc) eglGetSyncAttrib },
-      { "eglWaitSync", (_EGLProc) eglWaitSync },
-      { "eglCreateImage", (_EGLProc) eglCreateImage },
-      { "eglDestroyImage", (_EGLProc) eglDestroyImage },
-      { "eglGetPlatformDisplay", (_EGLProc) eglGetPlatformDisplay },
-      { "eglCreatePlatformWindowSurface", (_EGLProc) eglCreatePlatformWindowSurface },
-      { "eglCreatePlatformPixmapSurface", (_EGLProc) eglCreatePlatformPixmapSurface },
-      { "eglCreateImageKHR", (_EGLProc) eglCreateImageKHR },
-      { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
-      { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
-      { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
-      { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
-      { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSyncKHR },
-      { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
-      { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
-      { "eglGetSyncAttribKHR", (_EGLProc) eglGetSyncAttribKHR },
-      { "eglSwapBuffersRegionNOK", (_EGLProc) eglSwapBuffersRegionNOK },
-      { "eglCreateDRMImageMESA", (_EGLProc) eglCreateDRMImageMESA },
-      { "eglExportDRMImageMESA", (_EGLProc) eglExportDRMImageMESA },
-      { "eglBindWaylandDisplayWL", (_EGLProc) eglBindWaylandDisplayWL },
-      { "eglUnbindWaylandDisplayWL", (_EGLProc) eglUnbindWaylandDisplayWL },
-      { "eglQueryWaylandBufferWL", (_EGLProc) eglQueryWaylandBufferWL },
-      { "eglCreateWaylandBufferFromImageWL", (_EGLProc) eglCreateWaylandBufferFromImageWL },
-      { "eglPostSubBufferNV", (_EGLProc) eglPostSubBufferNV },
-      { "eglSwapBuffersWithDamageEXT", (_EGLProc) eglSwapBuffersWithDamageEXT },
-      { "eglSwapBuffersWithDamageKHR", (_EGLProc) eglSwapBuffersWithDamageKHR },
-      { "eglGetPlatformDisplayEXT", (_EGLProc) eglGetPlatformDisplayEXT },
-      { "eglCreatePlatformWindowSurfaceEXT", (_EGLProc) eglCreatePlatformWindowSurfaceEXT },
-      { "eglCreatePlatformPixmapSurfaceEXT", (_EGLProc) eglCreatePlatformPixmapSurfaceEXT },
-      { "eglGetSyncValuesCHROMIUM", (_EGLProc) eglGetSyncValuesCHROMIUM },
-      { "eglExportDMABUFImageQueryMESA", (_EGLProc) eglExportDMABUFImageQueryMESA },
-      { "eglExportDMABUFImageMESA", (_EGLProc) eglExportDMABUFImageMESA },
-      { "eglLabelObjectKHR", (_EGLProc) eglLabelObjectKHR },
-      { "eglDebugMessageControlKHR", (_EGLProc) eglDebugMessageControlKHR },
-      { "eglQueryDebugKHR", (_EGLProc) eglQueryDebugKHR },
-      { "eglDupNativeFenceFDANDROID", (_EGLProc) eglDupNativeFenceFDANDROID },
-      { NULL, NULL }
+      EGL_ENTRYPOINT(eglBindAPI)
+      EGL_ENTRYPOINT(eglBindTexImage)
+      EGL_ENTRYPOINT(eglChooseConfig)
+      EGL_ENTRYPOINT(eglCopyBuffers)
+      EGL_ENTRYPOINT(eglCreateContext)
+      EGL_ENTRYPOINT(eglCreatePbufferFromClientBuffer)
+      EGL_ENTRYPOINT(eglCreatePbufferSurface)
+      EGL_ENTRYPOINT(eglCreatePixmapSurface)
+      EGL_ENTRYPOINT(eglCreateWindowSurface)
+      EGL_ENTRYPOINT(eglDestroyContext)
+      EGL_ENTRYPOINT(eglDestroySurface)
+      EGL_ENTRYPOINT(eglGetConfigAttrib)
+      EGL_ENTRYPOINT(eglGetConfigs)
+      EGL_ENTRYPOINT(eglGetCurrentContext)
+      EGL_ENTRYPOINT(eglGetCurrentDisplay)
+      EGL_ENTRYPOINT(eglGetCurrentSurface)
+      EGL_ENTRYPOINT(eglGetDisplay)
+      EGL_ENTRYPOINT(eglGetError)
+      EGL_ENTRYPOINT(eglGetProcAddress)
+      EGL_ENTRYPOINT(eglInitialize)
+      EGL_ENTRYPOINT(eglMakeCurrent)
+      EGL_ENTRYPOINT(eglQueryAPI)
+      EGL_ENTRYPOINT(eglQueryContext)
+      EGL_ENTRYPOINT(eglQueryString)
+      EGL_ENTRYPOINT(eglQuerySurface)
+      EGL_ENTRYPOINT(eglReleaseTexImage)
+      EGL_ENTRYPOINT(eglReleaseThread)
+      EGL_ENTRYPOINT(eglSurfaceAttrib)
+      EGL_ENTRYPOINT(eglSwapBuffers)
+      EGL_ENTRYPOINT(eglSwapInterval)
+      EGL_ENTRYPOINT(eglTerminate)
+      EGL_ENTRYPOINT(eglWaitClient)
+      EGL_ENTRYPOINT(eglWaitGL)
+      EGL_ENTRYPOINT(eglWaitNative)
+      EGL_ENTRYPOINT(eglCreateSync)
+      EGL_ENTRYPOINT(eglDestroySync)
+      EGL_ENTRYPOINT(eglClientWaitSync)
+      EGL_ENTRYPOINT(eglGetSyncAttrib)
+      EGL_ENTRYPOINT(eglWaitSync)
+      EGL_ENTRYPOINT(eglCreateImage)
+      EGL_ENTRYPOINT(eglDestroyImage)
+      EGL_ENTRYPOINT(eglGetPlatformDisplay)
+      EGL_ENTRYPOINT(eglCreatePlatformWindowSurface)
+      EGL_ENTRYPOINT(eglCreatePlatformPixmapSurface)
+      EGL_ENTRYPOINT(eglCreateImageKHR)
+      EGL_ENTRYPOINT(eglDestroyImageKHR)
+      EGL_ENTRYPOINT(eglCreateSyncKHR)
+      EGL_ENTRYPOINT(eglCreateSync64KHR)
+      EGL_ENTRYPOINT(eglDestroySyncKHR)
+      EGL_ENTRYPOINT(eglClientWaitSyncKHR)
+      EGL_ENTRYPOINT(eglWaitSyncKHR)
+      EGL_ENTRYPOINT(eglSignalSyncKHR)
+      EGL_ENTRYPOINT(eglGetSyncAttribKHR)
+      EGL_ENTRYPOINT(eglSwapBuffersRegionNOK)
+      EGL_ENTRYPOINT(eglCreateDRMImageMESA)
+      EGL_ENTRYPOINT(eglExportDRMImageMESA)
+      EGL_ENTRYPOINT(eglBindWaylandDisplayWL)
+      EGL_ENTRYPOINT(eglUnbindWaylandDisplayWL)
+      EGL_ENTRYPOINT(eglQueryWaylandBufferWL)
+      EGL_ENTRYPOINT(eglCreateWaylandBufferFromImageWL)
+      EGL_ENTRYPOINT(eglPostSubBufferNV)
+      EGL_ENTRYPOINT(eglSwapBuffersWithDamageEXT)
+      EGL_ENTRYPOINT(eglSwapBuffersWithDamageKHR)
+      EGL_ENTRYPOINT(eglGetPlatformDisplayEXT)
+      EGL_ENTRYPOINT(eglCreatePlatformWindowSurfaceEXT)
+      EGL_ENTRYPOINT(eglCreatePlatformPixmapSurfaceEXT)
+      EGL_ENTRYPOINT(eglGetSyncValuesCHROMIUM)
+      EGL_ENTRYPOINT(eglExportDMABUFImageQueryMESA)
+      EGL_ENTRYPOINT(eglExportDMABUFImageMESA)
+      EGL_ENTRYPOINT(eglLabelObjectKHR)
+      EGL_ENTRYPOINT(eglDebugMessageControlKHR)
+      EGL_ENTRYPOINT(eglQueryDebugKHR)
+      EGL_ENTRYPOINT(eglDupNativeFenceFDANDROID)
+#undef EGL_ENTRYPOINT
    };
    EGLint i;
    _EGLProc ret;
