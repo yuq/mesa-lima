@@ -113,6 +113,9 @@ struct si_shader_context {
 	int param_samplers;
 	int param_images;
 	int param_shader_buffers;
+	/* Common inputs for merged shaders. */
+	int param_merged_wave_info;
+	int param_merged_scratch_offset;
 	/* API VS */
 	int param_vertex_buffers;
 	int param_base_vertex;

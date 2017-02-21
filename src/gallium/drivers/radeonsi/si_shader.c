@@ -2613,6 +2613,27 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 }
 
 static LLVMValueRef
+si_insert_input_ret(struct si_shader_context *ctx, LLVMValueRef ret,
+		    unsigned param, unsigned return_index)
+{
+	return LLVMBuildInsertValue(ctx->gallivm.builder, ret,
+				    LLVMGetParam(ctx->main_fn, param),
+				    return_index, "");
+}
+
+static LLVMValueRef
+si_insert_input_ret_float(struct si_shader_context *ctx, LLVMValueRef ret,
+			  unsigned param, unsigned return_index)
+{
+	LLVMBuilderRef builder = ctx->gallivm.builder;
+	LLVMValueRef p = LLVMGetParam(ctx->main_fn, param);
+
+	return LLVMBuildInsertValue(builder, ret,
+				    LLVMBuildBitCast(builder, p, ctx->f32, ""),
+				    return_index, "");
+}
+
+static LLVMValueRef
 si_insert_input_ptr_as_2xi32(struct si_shader_context *ctx, LLVMValueRef ret,
 			     unsigned param, unsigned return_index)
 {
@@ -2687,6 +2708,46 @@ static void si_llvm_emit_tcs_epilogue(struct lp_build_tgsi_context *bld_base)
 	ctx->return_value = ret;
 }
 
+/* Pass TCS inputs from LS to TCS on GFX9. */
+static void si_set_ls_return_value_for_tcs(struct si_shader_context *ctx)
+{
+	LLVMValueRef ret = ctx->return_value;
+
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_offset, 2);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_wave_info, 3);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_factor_offset, 4);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_merged_scratch_offset, 5);
+
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, ctx->param_rw_buffers,
+					   8 + SI_SGPR_RW_BUFFERS);
+
+	ret = si_insert_input_ret(ctx, ret, ctx->param_vs_state_bits,
+				  8 + SI_SGPR_VS_STATE_BITS);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_offchip_layout,
+				  8 + GFX9_SGPR_TCS_OFFCHIP_LAYOUT);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_out_lds_offsets,
+				  8 + GFX9_SGPR_TCS_OUT_OFFSETS);
+	ret = si_insert_input_ret(ctx, ret, ctx->param_tcs_out_lds_layout,
+				  8 + GFX9_SGPR_TCS_OUT_LAYOUT);
+
+	unsigned desc_param = ctx->param_tcs_out_lds_layout + 2;
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param,
+					   8 + GFX9_SGPR_TCS_CONST_BUFFERS);
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 1,
+					   8 + GFX9_SGPR_TCS_SAMPLERS);
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 2,
+					   8 + GFX9_SGPR_TCS_IMAGES);
+	ret = si_insert_input_ptr_as_2xi32(ctx, ret, desc_param + 3,
+					   8 + GFX9_SGPR_TCS_SHADER_BUFFERS);
+
+	unsigned vgpr = 8 + GFX9_TCS_NUM_USER_SGPR;
+	ret = si_insert_input_ret_float(ctx, ret,
+					ctx->param_tcs_patch_id, vgpr++);
+	ret = si_insert_input_ret_float(ctx, ret,
+					ctx->param_tcs_rel_ids, vgpr++);
+	ctx->return_value = ret;
+}
+
 static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
@@ -2736,6 +2797,9 @@ static void si_llvm_emit_ls_epilogue(struct lp_build_tgsi_context *bld_base)
 				  LLVMBuildLoad(gallivm->builder, out_ptr[chan], ""));
 		}
 	}
+
+	if (ctx->screen->b.chip_class >= GFX9)
+		si_set_ls_return_value_for_tcs(ctx);
 }
 
 static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -5800,9 +5864,9 @@ static void create_function(struct si_shader_context *ctx)
 		params[num_params++] = ctx->i32; /* unused */
 		params[num_params++] = ctx->i32; /* unused */
 		params[ctx->param_tcs_offchip_offset = num_params++] = ctx->i32;
-		params[num_params++] = ctx->i32; /* wave thread counts for LS and HS */
+		params[ctx->param_merged_wave_info = num_params++] = ctx->i32;
 		params[ctx->param_tcs_factor_offset = num_params++] = ctx->i32;
-		params[num_params++] = ctx->i32; /* scratch wave offset */
+		params[ctx->param_merged_scratch_offset = num_params++] = ctx->i32;
 		params[num_params++] = ctx->i32; /* unused */
 		params[num_params++] = ctx->i32; /* unused */
 
