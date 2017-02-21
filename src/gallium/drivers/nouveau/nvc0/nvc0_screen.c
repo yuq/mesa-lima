@@ -898,7 +898,14 @@ nvc0_screen_create(struct nouveau_device *dev)
 
    switch (dev->chipset & ~0xf) {
    case 0x130:
-      obj_class = GP100_3D_CLASS;
+      switch (dev->chipset) {
+      case 0x130:
+         obj_class = GP100_3D_CLASS;
+         break;
+      default:
+         obj_class = GP102_3D_CLASS;
+         break;
+      }
       break;
    case 0x120:
       obj_class = GM200_3D_CLASS;
