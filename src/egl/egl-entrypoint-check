@@ -1,0 +1,5 @@
+#!/bin/sh
+
+entrypoints=$(grep EGL_ENTRYPOINT "$srcdir"/main/eglentrypoint.h)
+sorted=$(sort <<< "$entrypoints")
+test "$entrypoints" = "$sorted"

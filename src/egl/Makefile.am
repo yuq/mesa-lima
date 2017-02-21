@@ -126,7 +126,8 @@ egl_HEADERS = \
 	$(top_srcdir)/include/EGL/eglmesaext.h \
 	$(top_srcdir)/include/EGL/eglplatform.h
 
-TESTS = egl-symbols-check
+TESTS = egl-symbols-check \
+	egl-entrypoint-check
 
 EXTRA_DIST = \
 	$(TESTS) \
