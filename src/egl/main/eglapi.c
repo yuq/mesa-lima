@@ -1726,15 +1726,11 @@ eglCreateSync(EGLDisplay dpy, EGLenum type, const EGLAttrib *attrib_list)
 }
 
 
-EGLBoolean EGLAPIENTRY
-eglDestroySync(EGLDisplay dpy, EGLSync sync)
+static EGLBoolean
+_eglDestroySync(_EGLDisplay *disp, _EGLSync *s)
 {
-   _EGLDisplay *disp = _eglLockDisplay(dpy);
-   _EGLSync *s = _eglLookupSync(sync, disp);
    _EGLDriver *drv;
    EGLBoolean ret;
-
-   _EGL_FUNC_START(disp, EGL_OBJECT_SYNC_KHR, s, EGL_FALSE);
 
    _EGL_CHECK_SYNC(disp, s, EGL_FALSE, drv);
    assert(disp->Extensions.KHR_reusable_sync ||
@@ -1745,6 +1741,24 @@ eglDestroySync(EGLDisplay dpy, EGLSync sync)
    ret = drv->API.DestroySyncKHR(drv, disp, s);
 
    RETURN_EGL_EVAL(disp, ret);
+}
+
+EGLBoolean EGLAPIENTRY
+eglDestroySync(EGLDisplay dpy, EGLSync sync)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_SYNC_KHR, s, EGL_FALSE);
+   return _eglDestroySync(disp, s);
+}
+
+static EGLBoolean EGLAPIENTRY
+eglDestroySyncKHR(EGLDisplay dpy, EGLSync sync)
+{
+   _EGLDisplay *disp = _eglLockDisplay(dpy);
+   _EGLSync *s = _eglLookupSync(sync, disp);
+   _EGL_FUNC_START(disp, EGL_OBJECT_SYNC_KHR, s, EGL_FALSE);
+   return _eglDestroySync(disp, s);
 }
 
 
@@ -2378,7 +2392,7 @@ eglGetProcAddress(const char *procname)
       { "eglDestroyImageKHR", (_EGLProc) eglDestroyImageKHR },
       { "eglCreateSyncKHR", (_EGLProc) eglCreateSyncKHR },
       { "eglCreateSync64KHR", (_EGLProc) eglCreateSync64KHR },
-      { "eglDestroySyncKHR", (_EGLProc) eglDestroySync },
+      { "eglDestroySyncKHR", (_EGLProc) eglDestroySyncKHR },
       { "eglClientWaitSyncKHR", (_EGLProc) eglClientWaitSync },
       { "eglWaitSyncKHR", (_EGLProc) eglWaitSyncKHR },
       { "eglSignalSyncKHR", (_EGLProc) eglSignalSyncKHR },
