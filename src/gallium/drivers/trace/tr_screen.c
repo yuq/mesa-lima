@@ -103,6 +103,26 @@ trace_screen_get_device_vendor(struct pipe_screen *_screen)
 }
 
 
+static struct disk_cache *
+trace_screen_get_disk_shader_cache(struct pipe_screen *_screen)
+{
+   struct trace_screen *tr_scr = trace_screen(_screen);
+   struct pipe_screen *screen = tr_scr->screen;
+
+   trace_dump_call_begin("pipe_screen", "get_disk_shader_cache");
+
+   trace_dump_arg(ptr, screen);
+
+   struct disk_cache *result = screen->get_disk_shader_cache(screen);
+
+   trace_dump_ret(ptr, result);
+
+   trace_dump_call_end();
+
+   return result;
+}
+
+
 static int
 trace_screen_get_param(struct pipe_screen *_screen,
                        enum pipe_cap param)
@@ -525,6 +545,7 @@ trace_screen_create(struct pipe_screen *screen)
    tr_scr->base.get_name = trace_screen_get_name;
    tr_scr->base.get_vendor = trace_screen_get_vendor;
    tr_scr->base.get_device_vendor = trace_screen_get_device_vendor;
+   SCR_INIT(get_disk_shader_cache);
    tr_scr->base.get_param = trace_screen_get_param;
    tr_scr->base.get_shader_param = trace_screen_get_shader_param;
    tr_scr->base.get_paramf = trace_screen_get_paramf;

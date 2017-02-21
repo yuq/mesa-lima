@@ -55,6 +55,14 @@ dd_screen_get_device_vendor(struct pipe_screen *_screen)
    return screen->get_device_vendor(screen);
 }
 
+static struct disk_cache *
+dd_screen_get_disk_shader_cache(struct pipe_screen *_screen)
+{
+   struct pipe_screen *screen = dd_screen(_screen)->screen;
+
+   return screen->get_disk_shader_cache(screen);
+}
+
 static int
 dd_screen_get_param(struct pipe_screen *_screen,
                     enum pipe_cap param)
@@ -378,6 +386,7 @@ ddebug_screen_create(struct pipe_screen *screen)
    dscreen->base.get_name = dd_screen_get_name;
    dscreen->base.get_vendor = dd_screen_get_vendor;
    dscreen->base.get_device_vendor = dd_screen_get_device_vendor;
+   SCR_INIT(get_disk_shader_cache);
    dscreen->base.get_param = dd_screen_get_param;
    dscreen->base.get_paramf = dd_screen_get_paramf;
    dscreen->base.get_compute_param = dd_screen_get_compute_param;
