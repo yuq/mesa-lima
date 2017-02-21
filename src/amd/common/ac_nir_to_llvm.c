@@ -2980,7 +2980,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	LLVMValueRef gs_next_vertex;
 	LLVMValueRef can_emit, kill;
 	int idx;
-
+	int clip_cull_slot = -1;
 	assert(instr->const_index[0] == 0);
 	/* Write vertex attribute values to GSVS ring */
 	gs_next_vertex = LLVMBuildLoad(ctx->builder,
@@ -3005,13 +3005,40 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	idx = 0;
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
 		LLVMValueRef *out_ptr = &ctx->outputs[i * 4];
+		int length = 4;
+		int start = 0;
+		int slot = idx;
+		int slot_inc = 1;
+
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		for (unsigned j = 0; j < 4; j++) {
+		if (i == VARYING_SLOT_CLIP_DIST1 ||
+		    i == VARYING_SLOT_CULL_DIST1)
+			continue;
+
+		if (i == VARYING_SLOT_CLIP_DIST0 ||
+		    i == VARYING_SLOT_CULL_DIST0) {
+			/* pack clip and cull into a single set of slots */
+			if (clip_cull_slot == -1) {
+				clip_cull_slot = idx;
+				if (ctx->num_output_clips + ctx->num_output_culls > 4)
+					slot_inc = 2;
+			} else {
+				slot = clip_cull_slot;
+				slot_inc = 0;
+			}
+			if (i == VARYING_SLOT_CLIP_DIST0)
+				length = ctx->num_output_clips;
+			if (i == VARYING_SLOT_CULL_DIST0) {
+				start = ctx->num_output_clips;
+				length = ctx->num_output_culls;
+			}
+		}
+		for (unsigned j = 0; j < length; j++) {
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder,
 							     out_ptr[j], "");
-			LLVMValueRef voffset = LLVMConstInt(ctx->i32, (idx * 4 + j) * ctx->gs_max_out_vertices, false);
+			LLVMValueRef voffset = LLVMConstInt(ctx->i32, (slot * 4 + j + start) * ctx->gs_max_out_vertices, false);
 			voffset = LLVMBuildAdd(ctx->builder, voffset, gs_next_vertex, "");
 			voffset = LLVMBuildMul(ctx->builder, voffset, LLVMConstInt(ctx->i32, 4, false), "");
 
@@ -3024,7 +3051,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 					       V_008F0C_BUF_NUM_FORMAT_UINT,
 					       1, 0, 1, 1, 0);
 		}
-		idx++;
+		idx += slot_inc;
 	}
 
 	gs_next_vertex = LLVMBuildAdd(ctx->builder, gs_next_vertex,
@@ -4155,14 +4182,14 @@ handle_shader_output_decl(struct nir_to_llvm_context *ctx,
 		if (idx == VARYING_SLOT_CLIP_DIST0 ||
 		    idx == VARYING_SLOT_CULL_DIST0) {
 			int length = glsl_get_length(variable->type);
-			if (ctx->stage == MESA_SHADER_VERTEX) {
-				if (idx == VARYING_SLOT_CLIP_DIST0) {
+			if (idx == VARYING_SLOT_CLIP_DIST0) {
+				if (ctx->stage == MESA_SHADER_VERTEX)
 					ctx->shader_info->vs.clip_dist_mask = (1 << length) - 1;
-					ctx->num_output_clips = length;
-				} else if (idx == VARYING_SLOT_CULL_DIST0) {
+				ctx->num_output_clips = length;
+			} else if (idx == VARYING_SLOT_CULL_DIST0) {
+				if (ctx->stage == MESA_SHADER_VERTEX)
 					ctx->shader_info->vs.cull_dist_mask = (1 << length) - 1;
-					ctx->num_output_culls = length;
-				}
+				ctx->num_output_culls = length;
 			}
 			if (length > 4)
 				attrib_count = 2;
@@ -5049,14 +5076,42 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 	args[8] = ctx->i32zero; /* TFE */
 
 	int idx = 0;
+	int clip_cull_slot = -1;
 	for (unsigned i = 0; i < RADEON_LLVM_MAX_OUTPUTS; ++i) {
+		int length = 4;
+		int start = 0;
+		int slot = idx;
+		int slot_inc = 1;
 		if (!(ctx->output_mask & (1ull << i)))
 			continue;
 
-		for (unsigned j = 0; j < 4; j++) {
+		if (i == VARYING_SLOT_CLIP_DIST1 ||
+		    i == VARYING_SLOT_CULL_DIST1)
+			continue;
+
+		if (i == VARYING_SLOT_CLIP_DIST0 ||
+		    i == VARYING_SLOT_CULL_DIST0) {
+			/* unpack clip and cull from a single set of slots */
+			if (clip_cull_slot == -1) {
+				clip_cull_slot = idx;
+				if (ctx->num_output_clips + ctx->num_output_culls > 4)
+					slot_inc = 2;
+			} else {
+				slot = clip_cull_slot;
+				slot_inc = 0;
+			}
+			if (i == VARYING_SLOT_CLIP_DIST0)
+				length = ctx->num_output_clips;
+			if (i == VARYING_SLOT_CULL_DIST0) {
+				start = ctx->num_output_clips;
+				length = ctx->num_output_culls;
+			}
+		}
+
+		for (unsigned j = 0; j < length; j++) {
 			LLVMValueRef value;
 			args[2] = LLVMConstInt(ctx->i32,
-					       (idx * 4 + j) *
+					       (slot * 4 + j + start) *
 					       ctx->gs_max_out_vertices * 16 * 4, false);
 
 			value = ac_emit_llvm_intrinsic(&ctx->ac,
@@ -5067,7 +5122,7 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 			LLVMBuildStore(ctx->builder,
 				       to_float(ctx, value), ctx->outputs[radeon_llvm_reg_index_soa(i, j)]);
 		}
-		idx++;
+		idx += slot_inc;
 	}
 	handle_vs_outputs_post(ctx);
 }
