@@ -225,8 +225,14 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
     *   <pwd.pw_dir>/.cache/mesa
     */
    path = getenv("MESA_GLSL_CACHE_DIR");
-   if (path && mkdir_if_needed(path) == -1) {
-      goto fail;
+   if (path) {
+      if (mkdir_if_needed(path) == -1)
+         goto fail;
+
+      path = create_mesa_cache_dir(local, path, timestamp,
+                                   gpu_name);
+      if (path == NULL)
+         goto fail;
    }
 
    if (path == NULL) {

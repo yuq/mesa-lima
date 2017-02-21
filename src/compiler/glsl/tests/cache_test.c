@@ -31,6 +31,8 @@
 #include <errno.h>
 #include <stdarg.h>
 #include <inttypes.h>
+#include <limits.h>
+#include <unistd.h>
 
 #include "util/mesa-sha1.h"
 #include "util/disk_cache.h"
@@ -38,6 +40,16 @@
 bool error = false;
 
 #ifdef ENABLE_SHADER_CACHE
+
+static void
+expect_true(bool result, const char *test)
+{
+   if (!result) {
+      fprintf(stderr, "Error: Test '%s' failed: Expected=true"
+              ", Actual=false\n", test);
+      error = true;
+   }
+}
 
 static void
 expect_equal(uint64_t actual, uint64_t expected, const char *test)
@@ -114,6 +126,26 @@ rmrf_local(const char *path)
    return nftw(path, remove_entry, 64, FTW_DEPTH | FTW_PHYS | FTW_MOUNT);
 }
 
+static void
+check_timestamp_and_gpu_id_directories_created(const char *cache_dir)
+{
+   bool sub_dirs_created = false;
+
+   char buf[PATH_MAX];
+   if (getcwd(buf, PATH_MAX)) {
+      char *full_path = NULL;
+      if (asprintf(&full_path, "%s%s", buf, ++cache_dir) != -1 ) {
+         struct stat sb;
+         if (stat(full_path, &sb) != -1 && S_ISDIR(sb.st_mode))
+            sub_dirs_created = true;
+
+         free(full_path);
+      }
+   }
+
+   expect_true(sub_dirs_created, "create timestamp and gpu ip sub dirs");
+}
+
 #define CACHE_TEST_TMP "./cache-test-tmp"
 
 static void
@@ -152,6 +184,10 @@ test_disk_cache_create(void)
    cache = disk_cache_create("test", "make_check");
    expect_non_null(cache, "disk_cache_create with XDG_CACHE_HOME set");
 
+   check_timestamp_and_gpu_id_directories_created(CACHE_TEST_TMP
+                                                  "/xdg-cache-home"
+                                                  "/mesa/make_check/test");
+
    disk_cache_destroy(cache);
 
    /* Test with MESA_GLSL_CACHE_DIR set */
@@ -166,6 +202,10 @@ test_disk_cache_create(void)
    mkdir(CACHE_TEST_TMP, 0755);
    cache = disk_cache_create("test", "make_check");
    expect_non_null(cache, "disk_cache_create with MESA_GLSL_CACHE_DIR set");
+
+   check_timestamp_and_gpu_id_directories_created(CACHE_TEST_TMP
+                                                  "/mesa-glsl-cache-dir"
+                                                  "/mesa/make_check/test");
 
    disk_cache_destroy(cache);
 }
