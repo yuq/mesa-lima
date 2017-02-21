@@ -256,7 +256,8 @@ PRIME_FACTOR = 5024183
 PRIME_STEP = 19
 
 
-def hash(name):
+def cal_hash(name):
+    """Calculate the same hash value that Mesa will calculate in C."""
     h = 0
     for c in name:
         h = (h * PRIME_FACTOR + ord(c)) & U32_MASK
@@ -300,7 +301,7 @@ def get_entrypoints(doc, entrypoints_to_defines):
             guard = entrypoints_to_defines[fullname]
         else:
             guard = None
-        entrypoints.append((type, shortname, params, index, hash(fullname), guard))
+        entrypoints.append((type, shortname, params, index, cal_hash(fullname), guard))
         index += 1
 
     return entrypoints
@@ -370,7 +371,7 @@ def main():
                         'const VkAllocationCallbacks* pAllocator,' +
                         'VkDeviceMemory* pMem,' +
                         'VkImage* pImage', len(entrypoints),
-                        hash('vkCreateDmaBufImageINTEL'), None))
+                        cal_hash('vkCreateDmaBufImageINTEL'), None))
 
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
