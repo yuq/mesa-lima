@@ -157,6 +157,12 @@
    _EGL_CHECK_OBJECT(disp, Sync, s, ret, drv)
 
 
+struct _egl_entrypoint {
+   const char *name;
+   _EGLProc function;
+};
+
+
 static inline _EGLDriver *
 _eglCheckDisplay(_EGLDisplay *disp, const char *msg)
 {
@@ -2350,34 +2356,39 @@ eglQueryDebugKHR(EGLint attribute, EGLAttrib *value)
    return EGL_TRUE;
 }
 
+static int
+_eglFunctionCompare(const void *key, const void *elem)
+{
+   const char *procname = key;
+   const struct _egl_entrypoint *entrypoint = elem;
+   return strcmp(procname, entrypoint->name);
+}
+
 __eglMustCastToProperFunctionPointerType EGLAPIENTRY
 eglGetProcAddress(const char *procname)
 {
-   static const struct {
-      const char *name;
-      _EGLProc function;
-   } egl_functions[] = {
+   static const struct _egl_entrypoint egl_functions[] = {
 #define EGL_ENTRYPOINT(f) { .name = #f, .function = (_EGLProc) f },
 #include "eglentrypoint.h"
 #undef EGL_ENTRYPOINT
    };
-   EGLint i;
-   _EGLProc ret;
+   _EGLProc ret = NULL;
 
    if (!procname)
       RETURN_EGL_SUCCESS(NULL, NULL);
 
    _EGL_FUNC_START(NULL, EGL_NONE, NULL, NULL);
 
-   ret = NULL;
    if (strncmp(procname, "egl", 3) == 0) {
-      for (i = 0; egl_functions[i].name; i++) {
-         if (strcmp(egl_functions[i].name, procname) == 0) {
-            ret = egl_functions[i].function;
-            break;
-         }
-      }
+      const struct _egl_entrypoint *entrypoint =
+         bsearch(procname,
+                 egl_functions, ARRAY_SIZE(egl_functions),
+                 sizeof(egl_functions[0]),
+                 _eglFunctionCompare);
+      if (entrypoint)
+         ret = entrypoint->function;
    }
+
    if (!ret)
       ret = _eglGetDriverProc(procname);
 
