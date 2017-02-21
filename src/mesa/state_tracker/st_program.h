@@ -423,6 +423,8 @@ st_get_generic_varying_index(struct st_context *st, GLuint attr)
    return 0;
 }
 
+extern void
+st_set_prog_affected_state_flags(struct gl_program *prog);
 
 extern struct st_vp_variant *
 st_get_vp_variant(struct st_context *st,
