@@ -23,6 +23,7 @@
 #
 
 import argparse
+import functools
 import os
 import textwrap
 import xml.etree.ElementTree as et
@@ -258,11 +259,8 @@ PRIME_STEP = 19
 
 def cal_hash(name):
     """Calculate the same hash value that Mesa will calculate in C."""
-    h = 0
-    for c in name:
-        h = (h * PRIME_FACTOR + ord(c)) & U32_MASK
-
-    return h
+    return functools.reduce(
+        lambda h, c: (h * PRIME_FACTOR + ord(c)) & U32_MASK, name, 0)
 
 
 def get_entrypoints(doc, entrypoints_to_defines):
