@@ -671,7 +671,7 @@ isl_genX(buffer_fill_state_s)(void *state,
        */
       if (info->format == ISL_FORMAT_RAW) {
          assert(num_elements <= (1ull << 30));
-         assert((num_elements & 3) == 0);
+         assert(num_elements > 0);
       } else {
          assert(num_elements <= (1ull << 27));
       }
