@@ -401,7 +401,8 @@ static void declare_input_vs(
 
 		input[i] = lp_build_intrinsic(gallivm->builder,
 			"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-			LP_FUNC_ATTR_READNONE);
+			LP_FUNC_ATTR_READNONE |
+			LP_FUNC_ATTR_LEGACY);
 	}
 
 	/* Break up the vec4 into individual components */
@@ -1123,14 +1124,16 @@ static LLVMValueRef fetch_input_gs(
 	value = lp_build_intrinsic(gallivm->builder,
 				   "llvm.SI.buffer.load.dword.i32.i32",
 				   ctx->i32, args, 9,
-				   LP_FUNC_ATTR_READONLY);
+				   LP_FUNC_ATTR_READONLY |
+				   LP_FUNC_ATTR_LEGACY);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		args[2] = lp_build_const_int32(gallivm, (param * 4 + swizzle + 1) * 256);
 		value2 = lp_build_intrinsic(gallivm->builder,
 					    "llvm.SI.buffer.load.dword.i32.i32",
 					    ctx->i32, args, 9,
-					    LP_FUNC_ATTR_READONLY);
+					    LP_FUNC_ATTR_READONLY |
+					    LP_FUNC_ATTR_LEGACY);
 		return si_llvm_emit_fetch_64bit(bld_base, type,
 						value, value2);
 	}
@@ -1368,7 +1371,8 @@ static LLVMValueRef buffer_load_const(struct si_shader_context *ctx,
 	LLVMValueRef args[2] = {resource, offset};
 
 	return lp_build_intrinsic(builder, "llvm.SI.load.const", ctx->f32, args, 2,
-			       LP_FUNC_ATTR_READNONE);
+				  LP_FUNC_ATTR_READNONE |
+				  LP_FUNC_ATTR_LEGACY);
 }
 
 static LLVMValueRef load_sample_position(struct si_shader_context *radeon_bld, LLVMValueRef sample_id)
@@ -1822,7 +1826,8 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			packed = lp_build_intrinsic(base->gallivm->builder,
 						    "llvm.SI.packf16",
 						    ctx->i32, pack_args, 2,
-						    LP_FUNC_ATTR_READNONE);
+						    LP_FUNC_ATTR_READNONE |
+						    LP_FUNC_ATTR_LEGACY);
 			args[chan + 5] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed, ctx->f32, "");
@@ -1954,10 +1959,10 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 					lp_build_const_float(gallivm, -1.0f));
 
 		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-				   ctx->voidt, &arg, 1, 0);
+				   ctx->voidt, &arg, 1, LP_FUNC_ATTR_LEGACY);
 	} else {
 		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kilp",
-				   ctx->voidt, NULL, 0, 0);
+				   ctx->voidt, NULL, 0, LP_FUNC_ATTR_LEGACY);
 	}
 }
 
@@ -2302,7 +2307,7 @@ handle_semantic:
 		} else {
 			lp_build_intrinsic(base->gallivm->builder,
 					   "llvm.SI.export", ctx->voidt,
-					   args, 9, 0);
+					   args, 9, LP_FUNC_ATTR_LEGACY);
 		}
 
 		if (semantic_name == TGSI_SEMANTIC_CLIPDIST) {
@@ -2388,7 +2393,8 @@ handle_semantic:
 			pos_args[i][2] = uint->one;
 
 		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   ctx->voidt, pos_args[i], 9, 0);
+				   ctx->voidt, pos_args[i], 9,
+				   LP_FUNC_ATTR_LEGACY);
 	}
 }
 
@@ -2979,7 +2985,7 @@ static void si_emit_ps_exports(struct si_shader_context *ctx,
 	for (unsigned i = 0; i < exp->num; i++)
 		lp_build_intrinsic(ctx->gallivm.builder,
 				   "llvm.SI.export", ctx->voidt,
-				   exp->args[i], 9, 0);
+				   exp->args[i], 9, LP_FUNC_ATTR_LEGACY);
 }
 
 static void si_export_null(struct lp_build_tgsi_context *bld_base)
@@ -3000,7 +3006,7 @@ static void si_export_null(struct lp_build_tgsi_context *bld_base)
 	args[8] = base->undef; /* A */
 
 	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-			   ctx->voidt, args, 9, 0);
+			   ctx->voidt, args, 9, LP_FUNC_ATTR_LEGACY);
 }
 
 /**
@@ -4089,7 +4095,7 @@ static void resq_emit(
 		out = lp_build_intrinsic(
 			builder, "llvm.SI.getresinfo.i32", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LP_FUNC_ATTR_READNONE);
+			LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
 
 		/* Divide the number of layers by 6 to get the number of cubes. */
 		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
@@ -4326,7 +4332,7 @@ static void txq_emit(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, "llvm.SI.getresinfo.i32",
 		emit_data->dst_type, emit_data->args, emit_data->arg_count,
-		LP_FUNC_ATTR_READNONE);
+		LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
 
 	/* Divide the number of layers by 6 to get the number of cubes. */
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
@@ -4735,7 +4741,7 @@ static void si_lower_gather4_integer(struct si_shader_context *ctx,
 	emit_data->output[emit_data->chan] =
 		lp_build_intrinsic(builder, intr_name, emit_data->dst_type,
 				   emit_data->args, emit_data->arg_count,
-				   LP_FUNC_ATTR_READNONE);
+				   LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
 }
 
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
@@ -4759,7 +4765,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 			base->gallivm->builder,
 			"llvm.SI.vs.load.input", emit_data->dst_type,
 			emit_data->args, emit_data->arg_count,
-			LP_FUNC_ATTR_READNONE);
+			LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
 		return;
 	}
 
@@ -4836,7 +4842,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	emit_data->output[emit_data->chan] = lp_build_intrinsic(
 		base->gallivm->builder, intr_name, emit_data->dst_type,
 		emit_data->args, emit_data->arg_count,
-		LP_FUNC_ATTR_READNONE);
+		LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
 }
 
 static void si_llvm_emit_txqs(
@@ -5125,7 +5131,7 @@ static void si_llvm_emit_vertex(
 				       lp_build_const_float(gallivm, -1.0f));
 
 		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-				   ctx->voidt, &kill, 1, 0);
+				   ctx->voidt, &kill, 1, LP_FUNC_ATTR_LEGACY);
 	} else {
 		lp_build_if(&if_state, gallivm, can_emit);
 	}
@@ -5747,7 +5753,8 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	/* The intrinsic kills the thread if arg < 0. */
 	bit = LLVMBuildSelect(builder, bit, LLVMConstReal(ctx->f32, 0),
 			      LLVMConstReal(ctx->f32, -1), "");
-	lp_build_intrinsic(builder, "llvm.AMDGPU.kill", ctx->voidt, &bit, 1, 0);
+	lp_build_intrinsic(builder, "llvm.AMDGPU.kill", ctx->voidt, &bit, 1,
+			   LP_FUNC_ATTR_LEGACY);
 }
 
 void si_shader_binary_read_config(struct ac_shader_binary *binary,
@@ -6315,9 +6322,10 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 				outputs[i].values[chan] =
 					LLVMBuildBitCast(gallivm->builder,
 						 lp_build_intrinsic(gallivm->builder,
-								 "llvm.SI.buffer.load.dword.i32.i32",
-								 ctx.i32, args, 9,
-								 LP_FUNC_ATTR_READONLY),
+								    "llvm.SI.buffer.load.dword.i32.i32",
+								    ctx.i32, args, 9,
+								    LP_FUNC_ATTR_READONLY |
+								    LP_FUNC_ATTR_LEGACY),
 						 ctx.f32, "");
 			}
 		}
@@ -7686,7 +7694,7 @@ static void si_build_vs_epilog_function(struct si_shader_context *ctx,
 
 		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
 				   LLVMVoidTypeInContext(base->gallivm->context),
-				   args, 9, 0);
+				   args, 9, LP_FUNC_ATTR_LEGACY);
 	}
 
 	LLVMBuildRetVoid(gallivm->builder);

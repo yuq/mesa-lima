@@ -58,13 +58,9 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	unsigned i;
-	for (i = 0; i < emit_data->arg_count; i++) {
-		emit_data->output[i] = lp_build_intrinsic_unary(
-			bld_base->base.gallivm->builder,
-			action->intr_name,
-			emit_data->dst_type, emit_data->args[i]);
-	}
+	lp_build_intrinsic(bld_base->base.gallivm->builder,
+			   action->intr_name, emit_data->dst_type,
+			   &emit_data->args[0], 1, LP_FUNC_ATTR_LEGACY);
 }
 
 static void emit_icmp(const struct lp_build_tgsi_action *action,
@@ -507,7 +503,9 @@ static void emit_bfe(const struct lp_build_tgsi_action *action,
 
 	bfe_sm5 = lp_build_intrinsic(builder, action->intr_name,
 				     emit_data->dst_type, emit_data->args,
-				     emit_data->arg_count, LP_FUNC_ATTR_READNONE);
+				     emit_data->arg_count,
+				     LP_FUNC_ATTR_READNONE |
+				     LP_FUNC_ATTR_LEGACY);
 
 	/* Correct for GLSL semantics. */
 	cond = LLVMBuildICmp(builder, LLVMIntUGE, emit_data->args[2],

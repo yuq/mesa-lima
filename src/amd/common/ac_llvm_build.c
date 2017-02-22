@@ -82,7 +82,9 @@ ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
 		       LLVMTypeRef return_type, LLVMValueRef *params,
 		       unsigned param_count, unsigned attrib_mask)
 {
-	LLVMValueRef function;
+	LLVMValueRef function, call;
+	bool set_callsite_attrs = HAVE_LLVM >= 0x0400 &&
+				  !(attrib_mask & AC_FUNC_ATTR_LEGACY);
 
 	function = LLVMGetNamedFunction(ctx->module, name);
 	if (!function) {
@@ -102,13 +104,14 @@ ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
 		LLVMSetFunctionCallConv(function, LLVMCCallConv);
 		LLVMSetLinkage(function, LLVMExternalLinkage);
 
-		attrib_mask |= AC_FUNC_ATTR_NOUNWIND;
-		while (attrib_mask) {
-			enum ac_func_attr attr = 1u << u_bit_scan(&attrib_mask);
-			ac_add_function_attr(function, -1, attr);
-		}
+		if (!set_callsite_attrs)
+			ac_add_func_attributes(ctx->context, function, attrib_mask);
 	}
-	return LLVMBuildCall(ctx->builder, function, params, param_count, "");
+
+	call = LLVMBuildCall(ctx->builder, function, params, param_count, "");
+	if (set_callsite_attrs)
+		ac_add_func_attributes(ctx->context, call, attrib_mask);
+	return call;
 }
 
 LLVMValueRef
@@ -530,7 +533,8 @@ ac_build_tbuffer_store(struct ac_llvm_context *ctx,
 	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
 
 	ac_emit_llvm_intrinsic(ctx, name, ctx->voidt,
-			       args, ARRAY_SIZE(args), 0);
+			       args, ARRAY_SIZE(args),
+			       AC_FUNC_ATTR_LEGACY);
 }
 
 void
@@ -842,5 +846,6 @@ LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 	};
 
 	return ac_emit_llvm_intrinsic(ctx, intr, ctx->f32, args, 3,
-				      AC_FUNC_ATTR_READNONE);
+				      AC_FUNC_ATTR_READNONE |
+				      AC_FUNC_ATTR_LEGACY);
 }
