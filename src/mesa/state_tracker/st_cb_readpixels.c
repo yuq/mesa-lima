@@ -131,6 +131,7 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
    cso_save_state(cso, (CSO_BIT_FRAGMENT_SAMPLER_VIEWS |
                         CSO_BIT_FRAGMENT_SAMPLERS |
                         CSO_BIT_FRAGMENT_IMAGE0 |
+                        CSO_BIT_BLEND |
                         CSO_BIT_VERTEX_ELEMENTS |
                         CSO_BIT_AUX_VERTEX_BUFFER_SLOT |
                         CSO_BIT_FRAMEBUFFER |
@@ -212,6 +213,11 @@ try_pbo_readpixels(struct st_context *st, struct st_renderbuffer *strb,
    fb.samples = 1;
    fb.layers = 1;
    cso_set_framebuffer(cso, &fb);
+
+   /* Any blend state would do. Set this just to prevent drivers having
+    * blend == NULL.
+    */
+   cso_set_blend(cso, &st->pbo.upload_blend);
 
    cso_set_viewport_dims(cso, fb.width, fb.height, invert_y);
 
