@@ -2312,7 +2312,9 @@ static bool si_update_spi_tmpring_size(struct si_context *sctx)
 
 static void si_init_tess_factor_ring(struct si_context *sctx)
 {
-	bool double_offchip_buffers = sctx->b.chip_class >= CIK;
+	bool double_offchip_buffers = sctx->b.chip_class >= CIK &&
+				      sctx->b.family != CHIP_CARRIZO &&
+				      sctx->b.family != CHIP_STONEY;
 	unsigned max_offchip_buffers_per_se = double_offchip_buffers ? 128 : 64;
 	unsigned max_offchip_buffers = max_offchip_buffers_per_se *
 				       sctx->screen->b.info.max_se;
