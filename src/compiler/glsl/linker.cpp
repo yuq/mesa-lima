@@ -1881,7 +1881,7 @@ link_fs_inout_layout_qualifiers(struct gl_shader_program *prog,
       }
 
       linked_shader->Program->info.fs.early_fragment_tests |=
-         shader->EarlyFragmentTests;
+         shader->EarlyFragmentTests || shader->PostDepthCoverage;
       linked_shader->Program->info.fs.inner_coverage |= shader->InnerCoverage;
       linked_shader->Program->info.fs.post_depth_coverage |=
          shader->PostDepthCoverage;
