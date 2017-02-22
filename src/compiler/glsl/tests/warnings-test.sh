@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 # Execute several shaders, and check that the InfoLog outcome is the expected.
 
@@ -24,7 +24,7 @@ echo ""
 echo "$pass/$total tests returned correct results"
 echo ""
 
-if [[ $pass == $total ]]; then
+if [ $pass = $total ]; then
     exit 0
 else
     exit 1

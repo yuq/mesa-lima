@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 if [ ! -z "$srcdir" ]; then
    compare_ir=`pwd`/tests/compare_ir.py
@@ -35,7 +35,7 @@ echo ""
 echo "$pass/$total tests returned correct results"
 echo ""
 
-if [[ $pass == $total ]]; then
+if [ $pass = $total ]; then
     exit 0
 else
     exit 1
