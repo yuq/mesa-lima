@@ -41,7 +41,6 @@ enum ac_func_attr {
 	AC_FUNC_ATTR_NOUNWIND     = (1 << 4),
 	AC_FUNC_ATTR_READNONE     = (1 << 5),
 	AC_FUNC_ATTR_READONLY     = (1 << 6),
-	AC_FUNC_ATTR_LAST         = (1 << 7)
 };
 
 LLVMTargetMachineRef ac_create_target_machine(enum radeon_family family, bool supports_spill);
