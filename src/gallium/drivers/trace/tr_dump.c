@@ -625,20 +625,6 @@ void trace_dump_ptr(const void *value)
       trace_dump_null();
 }
 
-
-void trace_dump_resource_ptr(struct pipe_resource *_resource)
-{
-   if (!dumping)
-      return;
-
-   if (_resource) {
-      struct trace_resource *tr_resource = trace_resource(_resource);
-      trace_dump_ptr(tr_resource->resource);
-   } else {
-      trace_dump_null();
-   }
-}
-
 void trace_dump_surface_ptr(struct pipe_surface *_surface)
 {
    if (!dumping)
