@@ -513,28 +513,36 @@ vlVaPutImage(VADriverContextP ctx, VASurfaceID surface, VAImageID image,
 
    for (i = 0; i < vaimage->num_planes; ++i) {
       unsigned width, height;
-      if (!views[i]) continue;
-      vlVaVideoSurfaceSize(surf, i, &width, &height);
-      if (((format == PIPE_FORMAT_YV12) || (format == PIPE_FORMAT_IYUV)) &&
-            (surf->buffer->buffer_format == PIPE_FORMAT_NV12)) {
-         struct pipe_transfer *transfer = NULL;
-         uint8_t *map = NULL;
-         struct pipe_box dst_box_1 = {0, 0, 0, width, height, 1};
-         map = drv->pipe->transfer_map(drv->pipe,
-                                       views[i]->texture,
-                                       0,
-                                       PIPE_TRANSFER_DISCARD_RANGE,
-                                       &dst_box_1, &transfer);
-         if (map == NULL)
-            return VA_STATUS_ERROR_OPERATION_FAILED;
+      struct pipe_resource *tex;
 
-         u_copy_yv12_img_to_nv12_surf ((ubyte * const*)data, map, width, height,
-				       pitches[i], transfer->stride, i);
-         pipe_transfer_unmap(drv->pipe, transfer);
-      } else {
-         for (j = 0; j < views[i]->texture->array_size; ++j) {
-            struct pipe_box dst_box = {0, 0, j, width, height, 1};
-            drv->pipe->texture_subdata(drv->pipe, views[i]->texture, 0,
+      if (!views[i]) continue;
+      tex = views[i]->texture;
+
+      vlVaVideoSurfaceSize(surf, i, &width, &height);
+      for (j = 0; j < tex->array_size; ++j) {
+         struct pipe_box dst_box = {0, 0, j, width, height, 1};
+
+         if (((format == PIPE_FORMAT_YV12) || (format == PIPE_FORMAT_IYUV))
+             && (surf->buffer->buffer_format == PIPE_FORMAT_NV12)
+             && i == 1) {
+            struct pipe_transfer *transfer = NULL;
+            uint8_t *map = NULL;
+
+            map = drv->pipe->transfer_map(drv->pipe,
+                                          tex,
+                                          0,
+                                          PIPE_TRANSFER_WRITE |
+                                          PIPE_TRANSFER_DISCARD_RANGE,
+                                          &dst_box, &transfer);
+            if (map == NULL)
+               return VA_STATUS_ERROR_OPERATION_FAILED;
+
+            u_copy_nv12_from_yv12((const void * const*) data, pitches, i, j,
+                                  transfer->stride, tex->array_size,
+                                  map, dst_box.width, dst_box.height);
+            pipe_transfer_unmap(drv->pipe, transfer);
+         } else {
+            drv->pipe->texture_subdata(drv->pipe, tex, 0,
                                        PIPE_TRANSFER_WRITE, &dst_box,
                                        data[i] + pitches[i] * j,
                                        pitches[i] * views[i]->texture->array_size, 0);
