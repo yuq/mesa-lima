@@ -2268,8 +2268,7 @@ cmd_buffer_emit_depth_stencil(struct anv_cmd_buffer *cmd_buffer)
 
          assert(image->depth_surface.isl.dim != ISL_SURF_DIM_3D);
          db.Depth =
-         db.RenderTargetViewExtent =
-            iview->isl.array_len - iview->isl.base_array_layer - 1;
+         db.RenderTargetViewExtent = iview->isl.array_len - 1;
 
 #if GEN_GEN >= 8
          db.SurfaceQPitch =
