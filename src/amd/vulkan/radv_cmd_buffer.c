@@ -2868,7 +2868,7 @@ void radv_CmdPipelineBarrier(
 					     0);
 	}
 
-	radv_dst_access_flush(cmd_buffer, src_flags);
+	radv_dst_access_flush(cmd_buffer, dst_flags);
 
 	/* TODO reduce this */
 	enum radv_cmd_flush_bits flush_bits = RADV_CMD_FLAG_CS_PARTIAL_FLUSH |
