@@ -1198,9 +1198,10 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
       struct blorp_surf surf;
       get_blorp_surf_for_anv_image(image, VK_IMAGE_ASPECT_COLOR_BIT,
                                    att_state->aux_usage, &surf);
-      surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
 
       if (att_state->fast_clear) {
+         surf.clear_color = vk_to_isl_color(att_state->clear_value.color);
+
          blorp_fast_clear(&batch, &surf, iview->isl.format,
                           iview->isl.base_level,
                           iview->isl.base_array_layer, fb->layers,
@@ -1224,7 +1225,7 @@ anv_cmd_buffer_clear_subpass(struct anv_cmd_buffer *cmd_buffer)
                      render_area.offset.x, render_area.offset.y,
                      render_area.offset.x + render_area.extent.width,
                      render_area.offset.y + render_area.extent.height,
-                     surf.clear_color, NULL);
+                     vk_to_isl_color(att_state->clear_value.color), NULL);
       }
 
       att_state->pending_clear_aspects = 0;
