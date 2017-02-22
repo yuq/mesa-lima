@@ -2367,60 +2367,6 @@ static int image_type_to_components_count(enum glsl_sampler_dim dim, bool array)
 	return 0;
 }
 
-static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
-				     nir_intrinsic_instr *instr)
-{
-	const struct glsl_type *type = instr->variables[0]->var->type;
-	if(instr->variables[0]->deref.child)
-		type = instr->variables[0]->deref.child->type;
-
-	LLVMValueRef src0 = get_src(ctx, instr->src[0]);
-	LLVMValueRef coords[4];
-	LLVMValueRef masks[] = {
-		LLVMConstInt(ctx->i32, 0, false), LLVMConstInt(ctx->i32, 1, false),
-		LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false),
-	};
-	LLVMValueRef res;
-	int count;
-	enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
-	bool add_frag_pos = (dim == GLSL_SAMPLER_DIM_SUBPASS ||
-			     dim == GLSL_SAMPLER_DIM_SUBPASS_MS);
-	bool is_ms = (dim == GLSL_SAMPLER_DIM_MS ||
-		      dim == GLSL_SAMPLER_DIM_SUBPASS_MS);
-
-	count = image_type_to_components_count(dim,
-					       glsl_sampler_type_is_array(type));
-
-	if (count == 1) {
-		if (instr->src[0].ssa->num_components)
-			res = LLVMBuildExtractElement(ctx->builder, src0, masks[0], "");
-		else
-			res = src0;
-	} else {
-		int chan;
-		if (is_ms)
-			count--;
-		for (chan = 0; chan < count; ++chan) {
-			coords[chan] = LLVMBuildExtractElement(ctx->builder, src0, masks[chan], "");
-		}
-
-		if (add_frag_pos) {
-			for (chan = 0; chan < count; ++chan)
-				coords[chan] = LLVMBuildAdd(ctx->builder, coords[chan], LLVMBuildFPToUI(ctx->builder, ctx->frag_pos[chan], ctx->i32, ""), "");
-		}
-		if (is_ms) {
-			coords[count] = llvm_extract_elem(ctx, get_src(ctx, instr->src[1]), 0);
-			count++;
-		}
-
-		if (count == 3) {
-			coords[3] = LLVMGetUndef(ctx->i32);
-			count = 4;
-		}
-		res = ac_build_gather_values(&ctx->ac, coords, count);
-	}
-	return res;
-}
 
 static void build_type_name_for_intr(
         LLVMTypeRef type,
@@ -2481,6 +2427,132 @@ static void get_image_intr_name(const char *base_name,
                 snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
                          data_type_name, coords_type_name, rsrc_type_name);
         }
+}
+
+static LLVMValueRef get_image_coords(struct nir_to_llvm_context *ctx,
+				     nir_intrinsic_instr *instr)
+{
+	const struct glsl_type *type = instr->variables[0]->var->type;
+	if(instr->variables[0]->deref.child)
+		type = instr->variables[0]->deref.child->type;
+
+	LLVMValueRef src0 = get_src(ctx, instr->src[0]);
+	LLVMValueRef coords[4];
+	LLVMValueRef masks[] = {
+		LLVMConstInt(ctx->i32, 0, false), LLVMConstInt(ctx->i32, 1, false),
+		LLVMConstInt(ctx->i32, 2, false), LLVMConstInt(ctx->i32, 3, false),
+	};
+	LLVMValueRef res;
+	LLVMValueRef sample_index = llvm_extract_elem(ctx, get_src(ctx, instr->src[1]), 0);
+
+	int count;
+	enum glsl_sampler_dim dim = glsl_get_sampler_dim(type);
+	bool add_frag_pos = (dim == GLSL_SAMPLER_DIM_SUBPASS ||
+			     dim == GLSL_SAMPLER_DIM_SUBPASS_MS);
+	bool is_ms = (dim == GLSL_SAMPLER_DIM_MS ||
+		      dim == GLSL_SAMPLER_DIM_SUBPASS_MS);
+
+	count = image_type_to_components_count(dim,
+					       glsl_sampler_type_is_array(type));
+
+	if (is_ms) {
+		LLVMValueRef fmask_load_address[4];
+		LLVMValueRef params[7];
+		LLVMValueRef glc = LLVMConstInt(ctx->i1, 0, false);
+		LLVMValueRef slc = LLVMConstInt(ctx->i1, 0, false);
+		LLVMValueRef da = ctx->i32zero;
+		char intrinsic_name[64];
+		int chan;
+		fmask_load_address[0] = LLVMBuildExtractElement(ctx->builder, src0, masks[0], "");
+		fmask_load_address[1] = LLVMBuildExtractElement(ctx->builder, src0, masks[1], "");
+		fmask_load_address[2] = LLVMGetUndef(ctx->i32);
+		fmask_load_address[3] = LLVMGetUndef(ctx->i32);
+		if (add_frag_pos) {
+			for (chan = 0; chan < 2; ++chan)
+				fmask_load_address[chan] = LLVMBuildAdd(ctx->builder, fmask_load_address[chan], LLVMBuildFPToUI(ctx->builder, ctx->frag_pos[chan], ctx->i32, ""), "");
+		}
+		params[0] = ac_build_gather_values(&ctx->ac, fmask_load_address, 4);
+		params[1] = get_sampler_desc(ctx, instr->variables[0], DESC_FMASK);
+		params[2] = LLVMConstInt(ctx->i32, 15, false); /* dmask */
+		LLVMValueRef lwe = LLVMConstInt(ctx->i1, 0, false);
+		params[3] = glc;
+		params[4] = slc;
+		params[5] = lwe;
+		params[6] = da;
+		
+		get_image_intr_name("llvm.amdgcn.image.load",
+				    ctx->v4f32, /* vdata */
+				    LLVMTypeOf(params[0]), /* coords */
+				    LLVMTypeOf(params[1]), /* rsrc */
+				    intrinsic_name, sizeof(intrinsic_name));
+
+		res = ac_emit_llvm_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
+					     params, 7, AC_FUNC_ATTR_READONLY);
+
+		res = to_integer(ctx, res);
+		LLVMValueRef four = LLVMConstInt(ctx->i32, 4, false);
+		LLVMValueRef F = LLVMConstInt(ctx->i32, 0xf, false);
+
+		LLVMValueRef fmask = LLVMBuildExtractElement(ctx->builder,
+							     res,
+							     ctx->i32zero, "");
+
+		LLVMValueRef sample_index4 =
+			LLVMBuildMul(ctx->builder, sample_index, four, "");
+		LLVMValueRef shifted_fmask =
+			LLVMBuildLShr(ctx->builder, fmask, sample_index4, "");
+		LLVMValueRef final_sample =
+			LLVMBuildAnd(ctx->builder, shifted_fmask, F, "");
+
+		/* Don't rewrite the sample index if WORD1.DATA_FORMAT of the FMASK
+		 * resource descriptor is 0 (invalid),
+		 */
+		LLVMValueRef fmask_desc =
+			LLVMBuildBitCast(ctx->builder, params[1],
+					 ctx->v8i32, "");
+
+		LLVMValueRef fmask_word1 =
+			LLVMBuildExtractElement(ctx->builder, fmask_desc,
+						ctx->i32one, "");
+
+		LLVMValueRef word1_is_nonzero =
+			LLVMBuildICmp(ctx->builder, LLVMIntNE,
+				      fmask_word1, ctx->i32zero, "");
+
+		/* Replace the MSAA sample index. */
+		sample_index =
+			LLVMBuildSelect(ctx->builder, word1_is_nonzero,
+					final_sample, sample_index, "");
+	}
+	if (count == 1) {
+		if (instr->src[0].ssa->num_components)
+			res = LLVMBuildExtractElement(ctx->builder, src0, masks[0], "");
+		else
+			res = src0;
+	} else {
+		int chan;
+		if (is_ms)
+			count--;
+		for (chan = 0; chan < count; ++chan) {
+			coords[chan] = LLVMBuildExtractElement(ctx->builder, src0, masks[chan], "");
+		}
+
+		if (add_frag_pos) {
+			for (chan = 0; chan < count; ++chan)
+				coords[chan] = LLVMBuildAdd(ctx->builder, coords[chan], LLVMBuildFPToUI(ctx->builder, ctx->frag_pos[chan], ctx->i32, ""), "");
+		}
+		if (is_ms) {
+			coords[count] = sample_index;
+			count++;
+		}
+
+		if (count == 3) {
+			coords[3] = LLVMGetUndef(ctx->i32);
+			count = 4;
+		}
+		res = ac_build_gather_values(&ctx->ac, coords, count);
+	}
+	return res;
 }
 
 static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
