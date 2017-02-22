@@ -152,17 +152,19 @@ remove_old_cache_directories(void *mem_ctx, char *path, const char *timestamp)
    struct dirent* d_entry;
    while((d_entry = readdir(dir)) != NULL)
    {
+      char *full_path =
+         ralloc_asprintf(mem_ctx, "%s/%s", path, d_entry->d_name);
+
       struct stat sb;
-      stat(d_entry->d_name, &sb);
-      if (S_ISDIR(sb.st_mode) &&
+      if (stat(full_path, &sb) == 0 && S_ISDIR(sb.st_mode) &&
           strcmp(d_entry->d_name, timestamp) != 0 &&
           strcmp(d_entry->d_name, "..") != 0 &&
           strcmp(d_entry->d_name, ".") != 0) {
-         char *full_path =
-            ralloc_asprintf(mem_ctx, "%s/%s", path, d_entry->d_name);
          nftw(full_path, remove_dir, 20, FTW_DEPTH);
       }
    }
+
+   closedir(dir);
 }
 
 static char *
