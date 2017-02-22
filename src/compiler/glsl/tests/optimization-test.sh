@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 if [ ! -z "$srcdir" ]; then
-   compare_ir=`pwd`/tests/compare_ir
+   compare_ir=`pwd`/tests/compare_ir.py
 else
-   compare_ir=./compare_ir
+   compare_ir=./compare_ir.py
 fi
 
 total=0

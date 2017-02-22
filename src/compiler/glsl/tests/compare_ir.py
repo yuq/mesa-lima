@@ -34,7 +34,7 @@ import tempfile
 from sexps import *
 
 if len(sys.argv) != 3:
-    print 'Usage: compare_ir <file1> <file2>'
+    print 'Usage: python2 ./compare_ir.py <file1> <file2>'
     exit(1)
 
 with open(sys.argv[1]) as f:

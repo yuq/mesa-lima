@@ -30,15 +30,15 @@ EXTRA_DIST += glsl/tests glsl/glcpp/tests glsl/README	\
 	glsl/glcpp/glcpp-parse.y			\
 	SConscript.glsl
 
-TESTS += glsl/glcpp/tests/glcpp-test			\
-	glsl/glcpp/tests/glcpp-test-cr-lf		\
+TESTS += glsl/glcpp/tests/glcpp-test.sh			\
+	glsl/glcpp/tests/glcpp-test-cr-lf.sh		\
 	glsl/tests/blob-test				\
 	glsl/tests/cache-test				\
 	glsl/tests/general-ir-test			\
-	glsl/tests/optimization-test			\
+	glsl/tests/optimization-test.sh			\
 	glsl/tests/sampler-types-test			\
 	glsl/tests/uniform-initializer-test             \
-	glsl/tests/warnings-test
+	glsl/tests/warnings-test.sh
 
 TESTS_ENVIRONMENT= \
 	export PYTHON2=$(PYTHON2); \

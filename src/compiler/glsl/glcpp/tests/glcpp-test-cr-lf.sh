@@ -7,10 +7,10 @@
 
 if [ ! -z "$srcdir" ]; then
    testdir="$srcdir/glsl/glcpp/tests"
-   glcpp_test="$srcdir/glsl/glcpp/tests/glcpp-test"
+   glcpp_test="$srcdir/glsl/glcpp/tests/glcpp-test.sh"
 else
    testdir=.
-   glcpp_test=./glcpp-test
+   glcpp_test=./glcpp-test.sh
 fi
 
 total=0
