@@ -114,6 +114,20 @@ ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
 	return call;
 }
 
+static LLVMValueRef bitcast_to_float(struct ac_llvm_context *ctx,
+				     LLVMValueRef value)
+{
+	LLVMTypeRef type = LLVMTypeOf(value);
+	LLVMTypeRef new_type;
+
+	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind)
+		new_type = LLVMVectorType(ctx->f32, LLVMGetVectorSize(type));
+	else
+		new_type = ctx->f32;
+
+	return LLVMBuildBitCast(ctx->builder, value, new_type, "");
+}
+
 /**
  * Given the i32 or vNi32 \p type, generate the textual name (e.g. for use with
  * intrinsic names).
@@ -941,6 +955,72 @@ LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
 	unsigned num_args = 0;
 	const char *name;
 	char intr_name[128], type[64];
+
+	if (HAVE_LLVM >= 0x0400) {
+		bool sample = a->opcode == ac_image_sample ||
+			      a->opcode == ac_image_gather4 ||
+			      a->opcode == ac_image_get_lod;
+
+		if (sample)
+			args[num_args++] = bitcast_to_float(ctx, a->addr);
+		else
+			args[num_args++] = a->addr;
+
+		args[num_args++] = a->resource;
+		if (sample)
+			args[num_args++] = a->sampler;
+		args[num_args++] = LLVMConstInt(ctx->i32, a->dmask, 0);
+		if (sample)
+			args[num_args++] = LLVMConstInt(ctx->i1, a->unorm, 0);
+		args[num_args++] = LLVMConstInt(ctx->i1, 0, 0); /* glc */
+		args[num_args++] = LLVMConstInt(ctx->i1, 0, 0); /* slc */
+		args[num_args++] = LLVMConstInt(ctx->i1, 0, 0); /* lwe */
+		args[num_args++] = LLVMConstInt(ctx->i1, a->da, 0);
+
+		switch (a->opcode) {
+		case ac_image_sample:
+			name = "llvm.amdgcn.image.sample";
+			break;
+		case ac_image_gather4:
+			name = "llvm.amdgcn.image.gather4";
+			break;
+		case ac_image_load:
+			name = "llvm.amdgcn.image.load";
+			break;
+		case ac_image_load_mip:
+			name = "llvm.amdgcn.image.load.mip";
+			break;
+		case ac_image_get_lod:
+			name = "llvm.amdgcn.image.getlod";
+			break;
+		case ac_image_get_resinfo:
+			name = "llvm.amdgcn.image.getresinfo";
+			break;
+		}
+
+		ac_build_type_name_for_intr(LLVMTypeOf(args[0]), type,
+					    sizeof(type));
+
+		snprintf(intr_name, sizeof(intr_name), "%s%s%s%s.v4f32.%s.v8i32",
+			name,
+			a->compare ? ".c" : "",
+			a->bias ? ".b" :
+			a->lod ? ".l" :
+			a->deriv ? ".d" :
+			a->level_zero ? ".lz" : "",
+			a->offset ? ".o" : "",
+			type);
+
+		LLVMValueRef result =
+			ac_emit_llvm_intrinsic(ctx, intr_name,
+					       ctx->v4f32, args, num_args,
+					       AC_FUNC_ATTR_READNONE);
+		if (!sample) {
+			result = LLVMBuildBitCast(ctx->builder, result,
+						  ctx->v4i32, "");
+		}
+		return result;
+	}
 
 	args[num_args++] = a->addr;
 	args[num_args++] = a->resource;
