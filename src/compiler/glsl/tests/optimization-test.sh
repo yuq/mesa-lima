@@ -16,6 +16,19 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+if [ -z "$srcdir" -o -z "$abs_builddir" ]; then
+    echo ""
+    echo "Warning: you're invoking the script manually and things may fail."
+    echo "Attempting to determine/set srcdir and abs_builddir variables."
+    echo ""
+
+    # Variable should point to the Makefile.glsl.am
+    srcdir=./../../
+    cd `dirname "$0"`
+    # Variable should point to the folder two levels above glsl_test
+    abs_builddir=`pwd`/../../
+fi
+
 total=0
 pass=0
 
