@@ -27,6 +27,7 @@ compare_ir=$srcdir/glsl/tests/compare_ir.py
 
 total=0
 pass=0
+has_tests=0
 
 # Store our location before we start diving into subdirectories.
 ORIGDIR=`pwd`
@@ -36,11 +37,21 @@ for dir in $srcdir/glsl/tests/*/; do
         # construct the correct builddir
         completedir="$abs_builddir/glsl/tests/`echo ${dir} | sed 's|.*/glsl/tests/||g'`"
         mkdir -p $completedir
-        cd $dir; $PYTHON2 create_test_cases.py --outdir $completedir; cd ..
+        cd $dir;
+        $PYTHON2 create_test_cases.py --outdir $completedir;
+        if [ $? -eq 0 ]; then
+            has_tests=1
+        fi
+        cd ..
     fi
     echo "$dir"
 done
 cd "$ORIGDIR"
+
+if [ $has_tests -eq 0 ]; then
+    echo "Could not generate any tests."
+    exit 1
+fi
 
 if [ ! -f "$compare_ir" ]; then
     echo "Could not find compare_ir. Make sure that srcdir variable is correctly set."
