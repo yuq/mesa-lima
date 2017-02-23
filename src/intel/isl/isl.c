@@ -480,7 +480,22 @@ isl_choose_image_alignment_el(const struct isl_device *dev,
                               enum isl_msaa_layout msaa_layout,
                               struct isl_extent3d *image_align_el)
 {
-   if (info->format == ISL_FORMAT_HIZ) {
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+   if (fmtl->txc == ISL_TXC_MCS) {
+      assert(tiling == ISL_TILING_Y0);
+
+      /*
+       * IvyBrigde PRM Vol 2, Part 1, "11.7 MCS Buffer for Render Target(s)":
+       *
+       * Height, width, and layout of MCS buffer in this case must match with
+       * Render Target height, width, and layout. MCS buffer is tiledY.
+       *
+       * To avoid wasting memory, choose the smallest alignment possible:
+       * HALIGN_4 and VALIGN_4.
+       */
+      *image_align_el = isl_extent3d(4, 4, 1);
+      return;
+   } else if (info->format == ISL_FORMAT_HIZ) {
       assert(ISL_DEV_GEN(dev) >= 6);
       /* HiZ surfaces are always aligned to 16x8 pixels in the primary surface
        * which works out to 2x2 HiZ elments.
