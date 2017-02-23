@@ -6,6 +6,16 @@ else
    compare_ir=./compare_ir.py
 fi
 
+if [ -z "$PYTHON2" ]; then
+    PYTHON2=python2
+fi
+
+which $PYTHON2 >/dev/null
+if [ $? -ne 0 ]; then
+    echo "Could not find python2. Make sure that PYTHON2 variable is correctly set."
+    exit 1
+fi
+
 total=0
 pass=0
 
