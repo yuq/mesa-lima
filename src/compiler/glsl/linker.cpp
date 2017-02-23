@@ -4743,6 +4743,16 @@ link_shaders(struct gl_context *ctx, struct gl_shader_program *prog)
                       "tessellation evaluation shader\n");
          goto done;
       }
+
+      if (prog->IsES) {
+         if (num_shaders[MESA_SHADER_TESS_EVAL] > 0 &&
+             num_shaders[MESA_SHADER_TESS_CTRL] == 0) {
+            linker_error(prog, "GLSL ES requires non-separable programs "
+                         "containing a tessellation evaluation shader to also "
+                         "be linked with a tessellation control shader\n");
+            goto done;
+         }
+      }
    }
 
    /* Compute shaders have additional restrictions. */
