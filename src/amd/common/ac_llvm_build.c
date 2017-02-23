@@ -119,9 +119,8 @@ ac_build_gather_values_extended(struct ac_llvm_context *ctx,
 				bool load)
 {
 	LLVMBuilderRef builder = ctx->builder;
-	LLVMValueRef vec;
+	LLVMValueRef vec = NULL;
 	unsigned i;
-
 
 	if (value_count == 1) {
 		if (load)
