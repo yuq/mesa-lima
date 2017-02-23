@@ -4122,7 +4122,8 @@ static void set_tex_fetch_args(struct si_shader_context *ctx,
 {
 	struct gallivm_state *gallivm = &ctx->gallivm;
 	unsigned num_args;
-	unsigned is_rect = target == TGSI_TEXTURE_RECT;
+	unsigned is_rect = target == TGSI_TEXTURE_RECT ||
+			   target == TGSI_TEXTURE_SHADOWRECT;
 
 	/* Pad to power of two vector */
 	while (count < util_next_power_of_two(count))
