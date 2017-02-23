@@ -699,6 +699,11 @@ inline void exec_node::insert_before(exec_list *before)
 	(__node)->__field.next != NULL; 				\
 	(__node) = exec_node_data(__type, (__node)->__field.next, __field))
 
+#define foreach_list_typed_from(__type, __node, __field, __list, __start)  \
+   for (__type * __node = exec_node_data(__type, (__start), __field);      \
+	(__node)->__field.next != NULL;                                    \
+	(__node) = exec_node_data(__type, (__node)->__field.next, __field))
+
 #define foreach_list_typed_reverse(__type, __node, __field, __list)        \
    for (__type * __node =                                                \
            exec_node_data(__type, (__list)->tail_sentinel.prev, __field);  \
