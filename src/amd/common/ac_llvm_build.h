@@ -194,6 +194,17 @@ LLVMValueRef ac_emit_umsb(struct ac_llvm_context *ctx,
 
 LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value);
 
+struct ac_export_args {
+	LLVMValueRef out[4];
+        unsigned target;
+        unsigned enabled_channels;
+        bool compr;
+        bool done;
+        bool valid_mask;
+};
+
+void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a);
+
 #ifdef __cplusplus
 }
 #endif

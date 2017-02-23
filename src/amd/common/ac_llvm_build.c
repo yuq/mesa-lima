@@ -886,3 +886,18 @@ LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 				      AC_FUNC_ATTR_READNONE |
 				      AC_FUNC_ATTR_LEGACY);
 }
+
+void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
+{
+	LLVMValueRef args[9];
+
+	args[0] = LLVMConstInt(ctx->i32, a->enabled_channels, 0);
+	args[1] = LLVMConstInt(ctx->i32, a->valid_mask, 0);
+	args[2] = LLVMConstInt(ctx->i32, a->done, 0);
+	args[3] = LLVMConstInt(ctx->i32, a->target, 0);
+	args[4] = LLVMConstInt(ctx->i32, a->compr, 0);
+	memcpy(args + 5, a->out, sizeof(a->out[0]) * 4);
+
+	ac_emit_llvm_intrinsic(ctx, "llvm.SI.export", ctx->voidt, args, 9,
+			       AC_FUNC_ATTR_LEGACY);
+}

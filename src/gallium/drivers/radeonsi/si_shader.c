@@ -1749,10 +1749,9 @@ static LLVMValueRef si_llvm_pack_two_int32_as_int16(struct gallivm_state *galliv
 static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 				     LLVMValueRef *values,
 				     unsigned target,
-				     LLVMValueRef *args)
+				     struct ac_export_args *args)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *uint = &ctx->bld_base.uint_bld;
 	struct lp_build_context *base = &bld_base->base;
 	struct gallivm_state *gallivm = base->gallivm;
 	LLVMBuilderRef builder = base->gallivm->builder;
@@ -1762,16 +1761,16 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 	bool is_int8, is_int10;
 
 	/* Default is 0xf. Adjusted below depending on the format. */
-	args[0] = lp_build_const_int32(base->gallivm, 0xf); /* writemask */
+	args->enabled_channels = 0xf; /* writemask */
 
 	/* Specify whether the EXEC mask represents the valid mask */
-	args[1] = uint->zero;
+	args->valid_mask = 0;
 
 	/* Specify whether this is the last export */
-	args[2] = uint->zero;
+	args->done = 0;
 
 	/* Specify the target we are exporting */
-	args[3] = lp_build_const_int32(base->gallivm, target);
+	args->target = target;
 
 	if (ctx->type == PIPE_SHADER_FRAGMENT) {
 		const struct si_shader_key *key = &ctx->shader->key;
@@ -1784,37 +1783,37 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 		is_int10 = (key->part.ps.epilog.color_is_int10 >> cbuf) & 0x1;
 	}
 
-	args[4] = uint->zero; /* COMPR flag */
-	args[5] = base->undef;
-	args[6] = base->undef;
-	args[7] = base->undef;
-	args[8] = base->undef;
+	args->compr = false;
+	args->out[0] = base->undef;
+	args->out[1] = base->undef;
+	args->out[2] = base->undef;
+	args->out[3] = base->undef;
 
 	switch (spi_shader_col_format) {
 	case V_028714_SPI_SHADER_ZERO:
-		args[0] = uint->zero; /* writemask */
-		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
+		args->enabled_channels = 0; /* writemask */
+		args->target = V_008DFC_SQ_EXP_NULL;
 		break;
 
 	case V_028714_SPI_SHADER_32_R:
-		args[0] = uint->one; /* writemask */
-		args[5] = values[0];
+		args->enabled_channels = 1; /* writemask */
+		args->out[0] = values[0];
 		break;
 
 	case V_028714_SPI_SHADER_32_GR:
-		args[0] = lp_build_const_int32(base->gallivm, 0x3); /* writemask */
-		args[5] = values[0];
-		args[6] = values[1];
+		args->enabled_channels = 0x3; /* writemask */
+		args->out[0] = values[0];
+		args->out[1] = values[1];
 		break;
 
 	case V_028714_SPI_SHADER_32_AR:
-		args[0] = lp_build_const_int32(base->gallivm, 0x9); /* writemask */
-		args[5] = values[0];
-		args[8] = values[3];
+		args->enabled_channels = 0x9; /* writemask */
+		args->out[0] = values[0];
+		args->out[3] = values[3];
 		break;
 
 	case V_028714_SPI_SHADER_FP16_ABGR:
-		args[4] = uint->one; /* COMPR flag */
+		args->compr = 1; /* COMPR flag */
 
 		for (chan = 0; chan < 2; chan++) {
 			LLVMValueRef pack_args[2] = {
@@ -1828,7 +1827,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 						    ctx->i32, pack_args, 2,
 						    LP_FUNC_ATTR_READNONE |
 						    LP_FUNC_ATTR_LEGACY);
-			args[chan + 5] =
+			args->out[chan] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed, ctx->f32, "");
 		}
@@ -1845,10 +1844,10 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 						    ctx->i32, "");
 		}
 
-		args[4] = uint->one; /* COMPR flag */
-		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->compr = 1; /* COMPR flag */
+		args->out[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int16(gallivm, val));
-		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->out[1] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int16(gallivm, val+2));
 		break;
 
@@ -1874,10 +1873,10 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			val[chan] = LLVMBuildFPToSI(builder, val[chan], ctx->i32, "");
 		}
 
-		args[4] = uint->one; /* COMPR flag */
-		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->compr = 1; /* COMPR flag */
+		args->out[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int32_as_int16(gallivm, val));
-		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->out[1] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int32_as_int16(gallivm, val+2));
 		break;
 
@@ -1895,10 +1894,10 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 					chan == 3 ? max_alpha : max_rgb);
 		}
 
-		args[4] = uint->one; /* COMPR flag */
-		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->compr = 1; /* COMPR flag */
+		args->out[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int16(gallivm, val));
-		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->out[1] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int16(gallivm, val+2));
 		break;
 	}
@@ -1924,16 +1923,16 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 					val[chan], chan == 3 ? min_alpha : min_rgb);
 		}
 
-		args[4] = uint->one; /* COMPR flag */
-		args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->compr = 1; /* COMPR flag */
+		args->out[0] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int32_as_int16(gallivm, val));
-		args[6] = bitcast(bld_base, TGSI_TYPE_FLOAT,
+		args->out[1] = bitcast(bld_base, TGSI_TYPE_FLOAT,
 				  si_llvm_pack_two_int32_as_int16(gallivm, val+2));
 		break;
 	}
 
 	case V_028714_SPI_SHADER_32_ABGR:
-		memcpy(&args[5], values, sizeof(values[0]) * 4);
+		memcpy(&args->out[0], values, sizeof(values[0]) * 4);
 		break;
 	}
 }
@@ -1994,11 +1993,10 @@ static LLVMValueRef si_scale_alpha_by_sample_mask(struct lp_build_tgsi_context *
 }
 
 static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
-				    LLVMValueRef (*pos)[9], LLVMValueRef *out_elts)
+				    struct ac_export_args *pos, LLVMValueRef *out_elts)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
-	struct lp_build_context *uint = &ctx->bld_base.uint_bld;
 	unsigned reg_index;
 	unsigned chan;
 	unsigned const_chan;
@@ -2009,34 +2007,33 @@ static void si_llvm_emit_clipvertex(struct lp_build_tgsi_context *bld_base,
 	LLVMValueRef const_resource = ac_build_indexed_load_const(&ctx->ac, ptr, constbuf_index);
 
 	for (reg_index = 0; reg_index < 2; reg_index ++) {
-		LLVMValueRef *args = pos[2 + reg_index];
+		struct ac_export_args *args = &pos[2 + reg_index];
 
-		args[5] =
-		args[6] =
-		args[7] =
-		args[8] = lp_build_const_float(base->gallivm, 0.0f);
+		args->out[0] =
+		args->out[1] =
+		args->out[2] =
+		args->out[3] = lp_build_const_float(base->gallivm, 0.0f);
 
 		/* Compute dot products of position and user clip plane vectors */
 		for (chan = 0; chan < TGSI_NUM_CHANNELS; chan++) {
 			for (const_chan = 0; const_chan < TGSI_NUM_CHANNELS; const_chan++) {
-				args[1] = lp_build_const_int32(base->gallivm,
-							       ((reg_index * 4 + chan) * 4 +
-								const_chan) * 4);
+				LLVMValueRef addr =
+					LLVMConstInt(ctx->i32, ((reg_index * 4 + chan) * 4 +
+								const_chan) * 4, 0);
 				base_elt = buffer_load_const(ctx, const_resource,
-							     args[1]);
-				args[5 + chan] =
-					lp_build_add(base, args[5 + chan],
+							     addr);
+				args->out[chan] =
+					lp_build_add(base, args->out[chan],
 						     lp_build_mul(base, base_elt,
 								  out_elts[const_chan]));
 			}
 		}
 
-		args[0] = lp_build_const_int32(base->gallivm, 0xf);
-		args[1] = uint->zero;
-		args[2] = uint->zero;
-		args[3] = lp_build_const_int32(base->gallivm,
-					       V_008DFC_SQ_EXP_POS + 2 + reg_index);
-		args[4] = uint->zero;
+		args->enabled_channels = 0xf;
+		args->valid_mask = 0;
+		args->done = 0;
+		args->target = V_008DFC_SQ_EXP_POS + 2 + reg_index;
+		args->compr = 0;
 	}
 }
 
@@ -2206,9 +2203,7 @@ static void si_llvm_export_vs(struct lp_build_tgsi_context *bld_base,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct si_shader *shader = ctx->shader;
 	struct lp_build_context *base = &bld_base->base;
-	struct lp_build_context *uint = &ctx->bld_base.uint_bld;
-	LLVMValueRef args[9];
-	LLVMValueRef pos_args[4][9] = { { 0 } };
+	struct ac_export_args args, pos_args[4] = {};
 	LLVMValueRef psize_value = NULL, edgeflag_value = NULL, layer_value = NULL, viewport_index_value = NULL;
 	unsigned semantic_name, semantic_index;
 	unsigned target;
@@ -2298,16 +2293,14 @@ handle_semantic:
 				semantic_name);
 		}
 
-		si_llvm_init_export_args(bld_base, outputs[i].values, target, args);
+		si_llvm_init_export_args(bld_base, outputs[i].values, target, &args);
 
 		if (target >= V_008DFC_SQ_EXP_POS &&
 		    target <= (V_008DFC_SQ_EXP_POS + 3)) {
-			memcpy(pos_args[target - V_008DFC_SQ_EXP_POS],
-			       args, sizeof(args));
+			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
+			       &args, sizeof(args));
 		} else {
-			lp_build_intrinsic(base->gallivm->builder,
-					   "llvm.SI.export", ctx->voidt,
-					   args, 9, LP_FUNC_ATTR_LEGACY);
+			ac_emit_export(&ctx->ac, &args);
 		}
 
 		if (semantic_name == TGSI_SEMANTIC_CLIPDIST) {
@@ -2319,16 +2312,16 @@ handle_semantic:
 	shader->info.nr_param_exports = param_count;
 
 	/* We need to add the position output manually if it's missing. */
-	if (!pos_args[0][0]) {
-		pos_args[0][0] = lp_build_const_int32(base->gallivm, 0xf); /* writemask */
-		pos_args[0][1] = uint->zero; /* EXEC mask */
-		pos_args[0][2] = uint->zero; /* last export? */
-		pos_args[0][3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_POS);
-		pos_args[0][4] = uint->zero; /* COMPR flag */
-		pos_args[0][5] = base->zero; /* X */
-		pos_args[0][6] = base->zero; /* Y */
-		pos_args[0][7] = base->zero; /* Z */
-		pos_args[0][8] = base->one;  /* W */
+	if (!pos_args[0].out[0]) {
+		pos_args[0].enabled_channels = 0xf; /* writemask */
+		pos_args[0].valid_mask = 0; /* EXEC mask */
+		pos_args[0].done = 0; /* last export? */
+		pos_args[0].target = V_008DFC_SQ_EXP_POS;
+		pos_args[0].compr = 0; /* COMPR flag */
+		pos_args[0].out[0] = base->zero; /* X */
+		pos_args[0].out[1] = base->zero; /* Y */
+		pos_args[0].out[2] = base->zero; /* Z */
+		pos_args[0].out[3] = base->one;  /* W */
 	}
 
 	/* Write the misc vector (point size, edgeflag, layer, viewport). */
@@ -2336,22 +2329,21 @@ handle_semantic:
 	    shader->selector->info.writes_edgeflag ||
 	    shader->selector->info.writes_viewport_index ||
 	    shader->selector->info.writes_layer) {
-		pos_args[1][0] = lp_build_const_int32(base->gallivm, /* writemask */
-						      shader->selector->info.writes_psize |
-						      (shader->selector->info.writes_edgeflag << 1) |
-						      (shader->selector->info.writes_layer << 2) |
-						      (shader->selector->info.writes_viewport_index << 3));
-		pos_args[1][1] = uint->zero; /* EXEC mask */
-		pos_args[1][2] = uint->zero; /* last export? */
-		pos_args[1][3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_POS + 1);
-		pos_args[1][4] = uint->zero; /* COMPR flag */
-		pos_args[1][5] = base->zero; /* X */
-		pos_args[1][6] = base->zero; /* Y */
-		pos_args[1][7] = base->zero; /* Z */
-		pos_args[1][8] = base->zero; /* W */
+		pos_args[1].enabled_channels = shader->selector->info.writes_psize |
+					       (shader->selector->info.writes_edgeflag << 1) |
+					       (shader->selector->info.writes_layer << 2) |
+					       (shader->selector->info.writes_viewport_index << 3);
+		pos_args[1].valid_mask = 0; /* EXEC mask */
+		pos_args[1].done = 0; /* last export? */
+		pos_args[1].target = V_008DFC_SQ_EXP_POS + 1;
+		pos_args[1].compr = 0; /* COMPR flag */
+		pos_args[1].out[0] = base->zero; /* X */
+		pos_args[1].out[1] = base->zero; /* Y */
+		pos_args[1].out[2] = base->zero; /* Z */
+		pos_args[1].out[3] = base->zero; /* W */
 
 		if (shader->selector->info.writes_psize)
-			pos_args[1][5] = psize_value;
+			pos_args[1].out[0] = psize_value;
 
 		if (shader->selector->info.writes_edgeflag) {
 			/* The output is a float, but the hw expects an integer
@@ -2364,37 +2356,35 @@ handle_semantic:
 						      bld_base->int_bld.one);
 
 			/* The LLVM intrinsic expects a float. */
-			pos_args[1][6] = LLVMBuildBitCast(base->gallivm->builder,
+			pos_args[1].out[1] = LLVMBuildBitCast(base->gallivm->builder,
 							  edgeflag_value,
 							  ctx->f32, "");
 		}
 
 		if (shader->selector->info.writes_layer)
-			pos_args[1][7] = layer_value;
+			pos_args[1].out[2] = layer_value;
 
 		if (shader->selector->info.writes_viewport_index)
-			pos_args[1][8] = viewport_index_value;
+			pos_args[1].out[3] = viewport_index_value;
 	}
 
 	for (i = 0; i < 4; i++)
-		if (pos_args[i][0])
+		if (pos_args[i].out[0])
 			shader->info.nr_pos_exports++;
 
 	pos_idx = 0;
 	for (i = 0; i < 4; i++) {
-		if (!pos_args[i][0])
+		if (!pos_args[i].out[0])
 			continue;
 
 		/* Specify the target we are exporting */
-		pos_args[i][3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_POS + pos_idx++);
+		pos_args[i].target = V_008DFC_SQ_EXP_POS + pos_idx++;
 
 		if (pos_idx == shader->info.nr_pos_exports)
 			/* Specify that this is the last export */
-			pos_args[i][2] = uint->one;
+			pos_args[i].done = 1;
 
-		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   ctx->voidt, pos_args[i], 9,
-				   LP_FUNC_ATTR_LEGACY);
+		ac_emit_export(&ctx->ac, &pos_args[i]);
 	}
 }
 
@@ -2818,7 +2808,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 
 struct si_ps_exports {
 	unsigned num;
-	LLVMValueRef args[10][9];
+	struct ac_export_args args[10];
 };
 
 unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
@@ -2846,8 +2836,7 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
-	struct lp_build_context *uint = &bld_base->uint_bld;
-	LLVMValueRef args[9];
+	struct ac_export_args args;
 	unsigned mask = 0;
 	unsigned format = si_get_spi_shader_z_format(depth != NULL,
 						     stencil != NULL,
@@ -2855,46 +2844,46 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 
 	assert(depth || stencil || samplemask);
 
-	args[1] = uint->one; /* whether the EXEC mask is valid */
-	args[2] = uint->one; /* DONE bit */
+	args.valid_mask = 1; /* whether the EXEC mask is valid */
+	args.done = 1; /* DONE bit */
 
 	/* Specify the target we are exporting */
-	args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_MRTZ);
+	args.target = V_008DFC_SQ_EXP_MRTZ;
 
-	args[4] = uint->zero; /* COMP flag */
-	args[5] = base->undef; /* R, depth */
-	args[6] = base->undef; /* G, stencil test value[0:7], stencil op value[8:15] */
-	args[7] = base->undef; /* B, sample mask */
-	args[8] = base->undef; /* A, alpha to mask */
+	args.compr = 0; /* COMP flag */
+	args.out[0] = base->undef; /* R, depth */
+	args.out[1] = base->undef; /* G, stencil test value[0:7], stencil op value[8:15] */
+	args.out[2] = base->undef; /* B, sample mask */
+	args.out[3] = base->undef; /* A, alpha to mask */
 
 	if (format == V_028710_SPI_SHADER_UINT16_ABGR) {
 		assert(!depth);
-		args[4] = uint->one; /* COMPR flag */
+		args.compr = 1; /* COMPR flag */
 
 		if (stencil) {
 			/* Stencil should be in X[23:16]. */
 			stencil = bitcast(bld_base, TGSI_TYPE_UNSIGNED, stencil);
 			stencil = LLVMBuildShl(base->gallivm->builder, stencil,
 					       LLVMConstInt(ctx->i32, 16, 0), "");
-			args[5] = bitcast(bld_base, TGSI_TYPE_FLOAT, stencil);
+			args.out[0] = bitcast(bld_base, TGSI_TYPE_FLOAT, stencil);
 			mask |= 0x3;
 		}
 		if (samplemask) {
 			/* SampleMask should be in Y[15:0]. */
-			args[6] = samplemask;
+			args.out[1] = samplemask;
 			mask |= 0xc;
 		}
 	} else {
 		if (depth) {
-			args[5] = depth;
+			args.out[0] = depth;
 			mask |= 0x1;
 		}
 		if (stencil) {
-			args[6] = stencil;
+			args.out[1] = stencil;
 			mask |= 0x2;
 		}
 		if (samplemask) {
-			args[7] = samplemask;
+			args.out[2] = samplemask;
 			mask |= 0x4;
 		}
 	}
@@ -2907,9 +2896,9 @@ static void si_export_mrt_z(struct lp_build_tgsi_context *bld_base,
 		mask |= 0x1;
 
 	/* Specify which components to enable */
-	args[0] = lp_build_const_int32(base->gallivm, mask);
+	args.enabled_channels = mask;
 
-	memcpy(exp->args[exp->num++], args, sizeof(args));
+	memcpy(&exp->args[exp->num++], &args, sizeof(args));
 }
 
 static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
@@ -2942,40 +2931,40 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 
 	/* If last_cbuf > 0, FS_COLOR0_WRITES_ALL_CBUFS is true. */
 	if (ctx->shader->key.part.ps.epilog.last_cbuf > 0) {
-		LLVMValueRef args[8][9];
+		struct ac_export_args args[8];
 		int c, last = -1;
 
 		/* Get the export arguments, also find out what the last one is. */
 		for (c = 0; c <= ctx->shader->key.part.ps.epilog.last_cbuf; c++) {
 			si_llvm_init_export_args(bld_base, color,
-						 V_008DFC_SQ_EXP_MRT + c, args[c]);
-			if (args[c][0] != bld_base->uint_bld.zero)
+						 V_008DFC_SQ_EXP_MRT + c, &args[c]);
+			if (args[c].enabled_channels)
 				last = c;
 		}
 
 		/* Emit all exports. */
 		for (c = 0; c <= ctx->shader->key.part.ps.epilog.last_cbuf; c++) {
 			if (is_last && last == c) {
-				args[c][1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
-				args[c][2] = bld_base->uint_bld.one; /* DONE bit */
-			} else if (args[c][0] == bld_base->uint_bld.zero)
+				args[c].valid_mask = 1; /* whether the EXEC mask is valid */
+				args[c].done = 1; /* DONE bit */
+			} else if (!args[c].enabled_channels)
 				continue; /* unnecessary NULL export */
 
-			memcpy(exp->args[exp->num++], args[c], sizeof(args[c]));
+			memcpy(&exp->args[exp->num++], &args[c], sizeof(args[c]));
 		}
 	} else {
-		LLVMValueRef args[9];
+		struct ac_export_args args;
 
 		/* Export */
 		si_llvm_init_export_args(bld_base, color, V_008DFC_SQ_EXP_MRT + index,
-					 args);
+					 &args);
 		if (is_last) {
-			args[1] = bld_base->uint_bld.one; /* whether the EXEC mask is valid */
-			args[2] = bld_base->uint_bld.one; /* DONE bit */
-		} else if (args[0] == bld_base->uint_bld.zero)
+			args.valid_mask = 1; /* whether the EXEC mask is valid */
+			args.done = 1; /* DONE bit */
+		} else if (!args.enabled_channels)
 			return; /* unnecessary NULL export */
 
-		memcpy(exp->args[exp->num++], args, sizeof(args));
+		memcpy(&exp->args[exp->num++], &args, sizeof(args));
 	}
 }
 
@@ -2983,30 +2972,26 @@ static void si_emit_ps_exports(struct si_shader_context *ctx,
 			       struct si_ps_exports *exp)
 {
 	for (unsigned i = 0; i < exp->num; i++)
-		lp_build_intrinsic(ctx->gallivm.builder,
-				   "llvm.SI.export", ctx->voidt,
-				   exp->args[i], 9, LP_FUNC_ATTR_LEGACY);
+		ac_emit_export(&ctx->ac, &exp->args[i]);
 }
 
 static void si_export_null(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct lp_build_context *base = &bld_base->base;
-	struct lp_build_context *uint = &bld_base->uint_bld;
-	LLVMValueRef args[9];
+	struct ac_export_args args;
 
-	args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
-	args[1] = uint->one; /* whether the EXEC mask is valid */
-	args[2] = uint->one; /* DONE bit */
-	args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_NULL);
-	args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
-	args[5] = base->undef; /* R */
-	args[6] = base->undef; /* G */
-	args[7] = base->undef; /* B */
-	args[8] = base->undef; /* A */
+	args.enabled_channels = 0x0; /* enabled channels */
+	args.valid_mask = 1; /* whether the EXEC mask is valid */
+	args.done = 1; /* DONE bit */
+	args.target = V_008DFC_SQ_EXP_NULL;
+	args.compr = 0; /* COMPR flag (0 = 32-bit export) */
+	args.out[0] = base->undef; /* R */
+	args.out[1] = base->undef; /* G */
+	args.out[2] = base->undef; /* B */
+	args.out[3] = base->undef; /* A */
 
-	lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-			   ctx->voidt, args, 9, LP_FUNC_ATTR_LEGACY);
+	ac_emit_export(&ctx->ac, &args);
 }
 
 /**
@@ -7641,24 +7626,21 @@ static void si_build_vs_epilog_function(struct si_shader_context *ctx,
 	/* Emit exports. */
 	if (key->vs_epilog.states.export_prim_id) {
 		struct lp_build_context *base = &bld_base->base;
-		struct lp_build_context *uint = &bld_base->uint_bld;
-		LLVMValueRef args[9];
+		struct ac_export_args args;
 
-		args[0] = lp_build_const_int32(base->gallivm, 0x0); /* enabled channels */
-		args[1] = uint->zero; /* whether the EXEC mask is valid */
-		args[2] = uint->zero; /* DONE bit */
-		args[3] = lp_build_const_int32(base->gallivm, V_008DFC_SQ_EXP_PARAM +
-					       key->vs_epilog.prim_id_param_offset);
-		args[4] = uint->zero; /* COMPR flag (0 = 32-bit export) */
-		args[5] = LLVMGetParam(ctx->main_fn,
+		args.enabled_channels = 0x1; /* enabled channels */
+		args.valid_mask = 0; /* whether the EXEC mask is valid */
+		args.done = 0; /* DONE bit */
+		args.target = V_008DFC_SQ_EXP_PARAM +
+			      key->vs_epilog.prim_id_param_offset;
+		args.compr = 0; /* COMPR flag (0 = 32-bit export) */
+		args.out[0] = LLVMGetParam(ctx->main_fn,
 				       VS_EPILOG_PRIMID_LOC); /* X */
-		args[6] = base->undef; /* Y */
-		args[7] = base->undef; /* Z */
-		args[8] = base->undef; /* W */
+		args.out[1] = base->undef; /* Y */
+		args.out[2] = base->undef; /* Z */
+		args.out[3] = base->undef; /* W */
 
-		lp_build_intrinsic(base->gallivm->builder, "llvm.SI.export",
-				   LLVMVoidTypeInContext(base->gallivm->context),
-				   args, 9, LP_FUNC_ATTR_LEGACY);
+		ac_emit_export(&ctx->ac, &args);
 	}
 
 	LLVMBuildRetVoid(gallivm->builder);
