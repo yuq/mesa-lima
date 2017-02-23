@@ -36,6 +36,11 @@ for dir in tests/*/; do
     echo "$dir"
 done
 
+if [ ! -f "$compare_ir" ]; then
+    echo "Could not find compare_ir. Make sure that srcdir variable is correctly set."
+    exit 1
+fi
+
 echo "====== Testing optimization passes ======"
 for test in `find . -iname '*.opt_test'`; do
     echo -n "Testing $test..."
