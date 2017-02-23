@@ -2540,6 +2540,15 @@ void nir_lower_to_source_mods(nir_shader *shader);
 bool nir_lower_gs_intrinsics(nir_shader *shader);
 
 typedef enum {
+   nir_lower_imul64 = (1 << 0),
+   nir_lower_isign64 = (1 << 1),
+   /** Lower all int64 modulus and division opcodes */
+   nir_lower_divmod64 = (1 << 2),
+} nir_lower_int64_options;
+
+bool nir_lower_int64(nir_shader *shader, nir_lower_int64_options options);
+
+typedef enum {
    nir_lower_drcp = (1 << 0),
    nir_lower_dsqrt = (1 << 1),
    nir_lower_drsq = (1 << 2),
