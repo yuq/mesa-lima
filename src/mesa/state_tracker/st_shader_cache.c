@@ -233,6 +233,14 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
       ralloc_free(buf);
    }
 
+   /* Now that we have created the sha1 keys that will be used for writting to
+    * the tgsi cache fallback to the regular glsl to tgsi path if we didn't
+    * load the GLSL IR from cache. We do this as glsl to tgsi can alter things
+    * such as gl_program_parameter_list which holds things like uniforms.
+    */
+   if (prog->data->LinkStatus != linking_skipped)
+      return false;
+
    struct st_context *st = st_context(ctx);
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
@@ -388,12 +396,6 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
    return true;
 
 fallback_recompile:
-
-   /* GLSL IR was compiled and linked so just fallback to the regular
-    * glsl to tgsi path.
-    */
-   if (prog->data->LinkStatus != linking_skipped)
-      return false;
 
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
