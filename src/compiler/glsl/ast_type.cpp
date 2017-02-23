@@ -715,7 +715,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     "%s '%s':"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-                    "%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                     message, name,
                     bad.flags.q.invariant ? " invariant" : "",
                     bad.flags.q.precise ? " precise" : "",
@@ -773,6 +773,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     bad.flags.q.vertices ? " vertices" : "",
                     bad.flags.q.subroutine ? " subroutine" : "",
                     bad.flags.q.subroutine_def ? " subroutine_def" : "",
+                    bad.flags.q.blend_support ? " blend_support" : "",
                     bad.flags.q.inner_coverage ? " inner_coverage" : "",
                     bad.flags.q.post_depth_coverage ? " post_depth_coverage" : "");
    return false;
