@@ -1318,8 +1318,7 @@ layout_qualifier_id:
       }
 
       /* Layout qualifiers for ARB_shader_image_load_store. */
-      if (state->ARB_shader_image_load_store_enable ||
-          state->is_version(420, 310)) {
+      if (state->has_shader_image_load_store()) {
          if (!$$.flags.i) {
             static const struct {
                const char *name;
