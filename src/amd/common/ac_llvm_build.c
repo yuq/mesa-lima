@@ -891,6 +891,37 @@ void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 {
 	LLVMValueRef args[9];
 
+	if (HAVE_LLVM >= 0x0500) {
+		args[0] = LLVMConstInt(ctx->i32, a->target, 0);
+		args[1] = LLVMConstInt(ctx->i32, a->enabled_channels, 0);
+
+		if (a->compr) {
+			LLVMTypeRef i16 = LLVMInt16TypeInContext(ctx->context);
+			LLVMTypeRef v2i16 = LLVMVectorType(i16, 2);
+
+			args[2] = LLVMBuildBitCast(ctx->builder, a->out[0],
+						   v2i16, "");
+			args[3] = LLVMBuildBitCast(ctx->builder, a->out[1],
+						   v2i16, "");
+			args[4] = LLVMConstInt(ctx->i1, a->done, 0);
+			args[5] = LLVMConstInt(ctx->i1, a->valid_mask, 0);
+
+			ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.exp.compr.v2i16",
+					       ctx->voidt, args, 6, 0);
+		} else {
+			args[2] = a->out[0];
+			args[3] = a->out[1];
+			args[4] = a->out[2];
+			args[5] = a->out[3];
+			args[6] = LLVMConstInt(ctx->i1, a->done, 0);
+			args[7] = LLVMConstInt(ctx->i1, a->valid_mask, 0);
+
+			ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.exp.f32",
+					       ctx->voidt, args, 8, 0);
+		}
+		return;
+	}
+
 	args[0] = LLVMConstInt(ctx->i32, a->enabled_channels, 0);
 	args[1] = LLVMConstInt(ctx->i32, a->valid_mask, 0);
 	args[2] = LLVMConstInt(ctx->i32, a->done, 0);

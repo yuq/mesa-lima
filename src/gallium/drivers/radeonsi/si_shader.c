@@ -6490,7 +6490,7 @@ static bool si_eliminate_const_output(struct si_shader_context *ctx,
 
 	for (i = 0; i < 4; i++) {
 		LLVMBool loses_info;
-		LLVMValueRef p = LLVMGetOperand(inst, 5 + i);
+		LLVMValueRef p = LLVMGetOperand(inst, (HAVE_LLVM >= 0x0500 ? 2 : 5) + i);
 
 		/* It's a constant expression. Undef outputs are eliminated too. */
 		if (LLVMIsUndef(p)) {
@@ -6574,10 +6574,12 @@ static void si_eliminate_const_vs_outputs(struct si_shader_context *ctx)
 			unsigned num_args = LLVMCountParams(callee);
 
 			/* Check if this is an export instruction. */
-			if (num_args != 9 || strcmp(name, "llvm.SI.export"))
+			if ((num_args != 9 && num_args != 8) ||
+			    (strcmp(name, "llvm.SI.export") &&
+			     strcmp(name, "llvm.amdgcn.exp.")))
 				continue;
 
-			LLVMValueRef arg = LLVMGetOperand(cur, 3);
+			LLVMValueRef arg = LLVMGetOperand(cur, HAVE_LLVM >= 0x0500 ? 0 : 3);
 			unsigned target = LLVMConstIntGetZExtValue(arg);
 
 			if (target < V_008DFC_SQ_EXP_PARAM)
