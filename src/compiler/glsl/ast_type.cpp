@@ -63,10 +63,7 @@ ast_type_qualifier::has_layout() const
 {
    return this->flags.q.origin_upper_left
           || this->flags.q.pixel_center_integer
-          || this->flags.q.depth_any
-          || this->flags.q.depth_greater
-          || this->flags.q.depth_less
-          || this->flags.q.depth_unchanged
+          || this->flags.q.depth_type
           || this->flags.q.std140
           || this->flags.q.std430
           || this->flags.q.shared
@@ -718,7 +715,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     "%s '%s':"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
                     "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s"
-                    "%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
+                    "%s%s%s%s%s%s%s%s%s%s%s%s%s\n",
                     message, name,
                     bad.flags.q.invariant ? " invariant" : "",
                     bad.flags.q.precise ? " precise" : "",
@@ -744,10 +741,7 @@ ast_type_qualifier::validate_flags(YYLTYPE *loc,
                     bad.flags.q.explicit_index ? " index" : "",
                     bad.flags.q.explicit_binding ? " binding" : "",
                     bad.flags.q.explicit_offset ? " offset" : "",
-                    bad.flags.q.depth_any ? " depth_any" : "",
-                    bad.flags.q.depth_greater ? " depth_greater" : "",
-                    bad.flags.q.depth_less ? " depth_less" : "",
-                    bad.flags.q.depth_unchanged ? " depth_unchanged" : "",
+                    bad.flags.q.depth_type ? " depth_type" : "",
                     bad.flags.q.std140 ? " std140" : "",
                     bad.flags.q.std430 ? " std430" : "",
                     bad.flags.q.shared ? " shared" : "",

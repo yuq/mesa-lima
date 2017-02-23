@@ -3629,11 +3629,7 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
    /* Layout qualifiers for gl_FragDepth, which are enabled by extension
     * AMD_conservative_depth.
     */
-   int depth_layout_count = qual->flags.q.depth_any
-      + qual->flags.q.depth_greater
-      + qual->flags.q.depth_less
-      + qual->flags.q.depth_unchanged;
-   if (depth_layout_count > 0
+   if (qual->flags.q.depth_type
        && !state->is_version(420, 0)
        && !state->AMD_conservative_depth_enable
        && !state->ARB_conservative_depth_enable) {
@@ -3641,27 +3637,30 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
                         "extension GL_AMD_conservative_depth or "
                         "GL_ARB_conservative_depth must be enabled "
                         "to use depth layout qualifiers");
-   } else if (depth_layout_count > 0
+   } else if (qual->flags.q.depth_type
               && strcmp(var->name, "gl_FragDepth") != 0) {
        _mesa_glsl_error(loc, state,
                         "depth layout qualifiers can be applied only to "
                         "gl_FragDepth");
-   } else if (depth_layout_count > 1
-              && strcmp(var->name, "gl_FragDepth") == 0) {
-      _mesa_glsl_error(loc, state,
-                       "at most one depth layout qualifier can be applied to "
-                       "gl_FragDepth");
    }
-   if (qual->flags.q.depth_any)
+
+   switch (qual->depth_type) {
+   case ast_depth_any:
       var->data.depth_layout = ir_depth_layout_any;
-   else if (qual->flags.q.depth_greater)
+      break;
+   case ast_depth_greater:
       var->data.depth_layout = ir_depth_layout_greater;
-   else if (qual->flags.q.depth_less)
+      break;
+   case ast_depth_less:
       var->data.depth_layout = ir_depth_layout_less;
-   else if (qual->flags.q.depth_unchanged)
-       var->data.depth_layout = ir_depth_layout_unchanged;
-   else
-       var->data.depth_layout = ir_depth_layout_none;
+      break;
+   case ast_depth_unchanged:
+      var->data.depth_layout = ir_depth_layout_unchanged;
+      break;
+   default:
+      var->data.depth_layout = ir_depth_layout_none;
+      break;
+   }
 
    if (qual->flags.q.std140 ||
        qual->flags.q.std430 ||

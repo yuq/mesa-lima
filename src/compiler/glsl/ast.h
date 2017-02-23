@@ -463,6 +463,14 @@ enum {
    ast_precision_low
 };
 
+enum {
+   ast_depth_none = 0, /**< Absence of depth qualifier. */
+   ast_depth_any,
+   ast_depth_greater,
+   ast_depth_less,
+   ast_depth_unchanged
+};
+
 struct ast_type_qualifier {
    DECLARE_RALLOC_CXX_OPERATORS(ast_type_qualifier);
 
@@ -528,10 +536,7 @@ struct ast_type_qualifier {
 
          /** \name Layout qualifiers for GL_AMD_conservative_depth */
          /** \{ */
-         unsigned depth_any:1;
-         unsigned depth_greater:1;
-         unsigned depth_less:1;
-         unsigned depth_unchanged:1;
+         unsigned depth_type:1;
          /** \} */
 
 	 /** \name Layout qualifiers for GL_ARB_uniform_buffer_object */
@@ -629,6 +634,9 @@ struct ast_type_qualifier {
 
    /** Precision of the type (highp/medium/lowp). */
    unsigned precision:2;
+
+   /** Type of layout qualifiers for GL_AMD_conservative_depth. */
+   unsigned depth_type:3;
 
    /**
     * Alignment specified via GL_ARB_enhanced_layouts "align" layout qualifier

@@ -1227,14 +1227,18 @@ layout_qualifier_id:
            state->ARB_conservative_depth_enable ||
            state->is_version(420, 0))) {
          if (match_layout_qualifier($1, "depth_any", state) == 0) {
-            $$.flags.q.depth_any = 1;
+            $$.flags.q.depth_type = 1;
+            $$.depth_type = ast_depth_any;
          } else if (match_layout_qualifier($1, "depth_greater", state) == 0) {
-            $$.flags.q.depth_greater = 1;
+            $$.flags.q.depth_type = 1;
+            $$.depth_type = ast_depth_greater;
          } else if (match_layout_qualifier($1, "depth_less", state) == 0) {
-            $$.flags.q.depth_less = 1;
+            $$.flags.q.depth_type = 1;
+            $$.depth_type = ast_depth_less;
          } else if (match_layout_qualifier($1, "depth_unchanged",
                                            state) == 0) {
-            $$.flags.q.depth_unchanged = 1;
+            $$.flags.q.depth_type = 1;
+            $$.depth_type = ast_depth_unchanged;
          }
 
          if ($$.flags.i && state->AMD_conservative_depth_warn) {
