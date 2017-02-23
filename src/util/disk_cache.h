@@ -54,7 +54,7 @@ disk_cache_get_function_timestamp(void *ptr, uint32_t* timestamp)
    if (stat(info.dli_fname, &st)) {
       return false;
    }
-   *timestamp = st.st_mtim.tv_sec;
+   *timestamp = st.st_mtime;
    return true;
 #else
    return false;
