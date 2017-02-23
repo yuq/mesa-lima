@@ -682,24 +682,6 @@ anv_CreateImageView(VkDevice _device,
       iview->isl.usage = 0;
    }
 
-   /* If the HiZ buffer can be sampled from, set the constant clear color.
-    * If it cannot, disable the isl aux usage flag.
-    */
-   float red_clear_color = 0.0f;
-   enum isl_aux_usage surf_usage = image->aux_usage;
-   if (image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      if (anv_can_sample_with_hiz(&device->info, iview->aspect_mask,
-                                  image->samples)) {
-         /* When a HiZ buffer is sampled on gen9+, ensure that
-          * the constant fast clear value is set in the surface state.
-          */
-         if (device->info.gen >= 9)
-            red_clear_color = ANV_HZ_FC_VAL;
-      } else {
-         surf_usage = ISL_AUX_USAGE_NONE;
-      }
-   }
-
    /* Input attachment surfaces for color are allocated and filled
     * out at BeginRenderPass time because they need compression information.
     * Compression is not yet enabled for depth textures and stencil doesn't
@@ -710,6 +692,18 @@ anv_CreateImageView(VkDevice _device,
        (image->usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT &&
         !(iview->aspect_mask & VK_IMAGE_ASPECT_COLOR_BIT))) {
       iview->sampler_surface_state = alloc_surface_state(device);
+
+      /* Select the optimal aux_usage for sampling. */
+      const enum isl_aux_usage surf_usage =
+         anv_layout_to_aux_usage(&device->info, image, iview->aspect_mask,
+                                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+      /* If this is a HiZ buffer we can sample from with a programmable clear
+       * value (SKL+), define the clear value to the optimal constant.
+       */
+      const float red_clear_color = surf_usage == ISL_AUX_USAGE_HIZ &&
+                                    device->info.gen >= 9 ?
+                                    ANV_HZ_FC_VAL : 0.0f;
 
       struct isl_view view = iview->isl;
       view.usage |= ISL_SURF_USAGE_TEXTURE_BIT;
