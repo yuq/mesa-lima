@@ -118,11 +118,6 @@ process_glsl_ir(struct brw_context *brw,
    }
 
    lower_instructions(shader->ir, instructions_to_lower);
-   lower_64bit_integer_instructions(shader->ir,
-                                    MUL64 |
-                                    DIV64 |
-                                    MOD64 |
-                                    SIGN64);
 
    /* Pre-gen6 HW can only nest if-statements 16 deep.  Beyond this,
     * if-statements need to be flattened.

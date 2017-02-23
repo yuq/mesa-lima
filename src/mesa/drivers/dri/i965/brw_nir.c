@@ -579,6 +579,10 @@ brw_preprocess_nir(const struct brw_compiler *compiler, nir_shader *nir)
 
    nir_lower_indirect_derefs(nir, indirect_mask);
 
+   nir_lower_int64(nir, nir_lower_imul64 |
+                        nir_lower_isign64 |
+                        nir_lower_divmod64);
+
    /* Get rid of split copies */
    nir = nir_optimize(nir, compiler, is_scalar);
 

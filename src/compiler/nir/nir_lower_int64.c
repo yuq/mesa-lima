@@ -25,7 +25,7 @@
 #include "nir_builder.h"
 
 static nir_ssa_def *
-lower_umul64(nir_builder *b, nir_ssa_def *x, nir_ssa_def *y)
+lower_imul64(nir_builder *b, nir_ssa_def *x, nir_ssa_def *y)
 {
    nir_ssa_def *x_lo = nir_unpack_64_2x32_split_x(b, x);
    nir_ssa_def *x_hi = nir_unpack_64_2x32_split_y(b, x);
@@ -187,6 +187,50 @@ lower_imod64(nir_builder *b, nir_ssa_def *n, nir_ssa_def *d)
    return nir_bcsel(b, negate, nir_ineg(b, r), r);
 }
 
+static nir_lower_int64_options
+opcode_to_options_mask(nir_op opcode)
+{
+   switch (opcode) {
+   case nir_op_imul:
+      return nir_lower_imul64;
+   case nir_op_isign:
+      return nir_lower_isign64;
+   case nir_op_udiv:
+   case nir_op_idiv:
+   case nir_op_umod:
+   case nir_op_imod:
+   case nir_op_irem:
+      return nir_lower_divmod64;
+   default:
+      return 0;
+   }
+}
+
+static nir_ssa_def *
+lower_int64_alu_instr(nir_builder *b, nir_alu_instr *alu)
+{
+   nir_ssa_def *src[4];
+   for (unsigned i = 0; i < nir_op_infos[alu->op].num_inputs; i++)
+      src[i] = nir_ssa_for_alu_src(b, alu, i);
+
+   switch (alu->op) {
+   case nir_op_imul:
+      return lower_imul64(b, src[0], src[1]);
+   case nir_op_isign:
+      return lower_isign64(b, src[0]);
+   case nir_op_udiv:
+      return lower_udiv64(b, src[0], src[1]);
+   case nir_op_idiv:
+      return lower_idiv64(b, src[0], src[1]);
+   case nir_op_umod:
+      return lower_umod64(b, src[0], src[1]);
+   case nir_op_imod:
+      return lower_imod64(b, src[0], src[1]);
+   default:
+      unreachable("Invalid ALU opcode to lower");
+   }
+}
+
 static bool
 lower_int64_impl(nir_function_impl *impl, nir_lower_int64_options options)
 {
@@ -204,61 +248,16 @@ lower_int64_impl(nir_function_impl *impl, nir_lower_int64_options options)
          if (alu->dest.dest.ssa.bit_size != 64)
             continue;
 
+         if (!(options & opcode_to_options_mask(alu->op)))
+            continue;
+
          b.cursor = nir_before_instr(instr);
 
-         nir_ssa_def *new_def = NULL;
-         switch (alu->op) {
-         case nir_op_imul:
-            if (options & nir_lower_imul64) {
-               new_def = lower_umul64(&b, nir_ssa_for_alu_src(&b, alu, 0),
-                                          nir_ssa_for_alu_src(&b, alu, 1));
-            }
-            break;
-
-         case nir_op_isign:
-            if (options & nir_lower_isign64)
-               new_def = lower_isign64(&b, nir_ssa_for_alu_src(&b, alu, 0));
-            break;
-
-         case nir_op_udiv:
-            if (options & nir_lower_divmod64) {
-               new_def = lower_udiv64(&b, nir_ssa_for_alu_src(&b, alu, 0),
-                                          nir_ssa_for_alu_src(&b, alu, 1));
-            }
-            break;
-
-         case nir_op_idiv:
-            if (options & nir_lower_divmod64) {
-               new_def = lower_idiv64(&b, nir_ssa_for_alu_src(&b, alu, 0),
-                                          nir_ssa_for_alu_src(&b, alu, 1));
-            }
-            break;
-
-         case nir_op_umod:
-            if (options & nir_lower_divmod64) {
-               new_def = lower_umod64(&b, nir_ssa_for_alu_src(&b, alu, 0),
-                                          nir_ssa_for_alu_src(&b, alu, 1));
-            }
-            break;
-
-         case nir_op_imod:
-            if (options & nir_lower_divmod64) {
-               new_def = lower_imod64(&b, nir_ssa_for_alu_src(&b, alu, 0),
-                                          nir_ssa_for_alu_src(&b, alu, 1));
-            }
-            break;
-
-         default:
-            /* Not lowered */
-            continue;
-         }
-
-         if (new_def) {
-            nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa,
-                                     nir_src_for_ssa(new_def));
-            nir_instr_remove(&alu->instr);
-            progress = true;
-         }
+         nir_ssa_def *lowered = lower_int64_alu_instr(&b, alu);
+         nir_ssa_def_rewrite_uses(&alu->dest.dest.ssa,
+                                  nir_src_for_ssa(lowered));
+         nir_instr_remove(&alu->instr);
+         progress = true;
       }
    }
 
