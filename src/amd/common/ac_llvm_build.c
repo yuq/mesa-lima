@@ -114,6 +114,43 @@ ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
 	return call;
 }
 
+/**
+ * Given the i32 or vNi32 \p type, generate the textual name (e.g. for use with
+ * intrinsic names).
+ */
+void ac_build_type_name_for_intr(LLVMTypeRef type, char *buf, unsigned bufsize)
+{
+	LLVMTypeRef elem_type = type;
+
+	assert(bufsize >= 8);
+
+	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind) {
+		int ret = snprintf(buf, bufsize, "v%u",
+					LLVMGetVectorSize(type));
+		if (ret < 0) {
+			char *type_name = LLVMPrintTypeToString(type);
+			fprintf(stderr, "Error building type name for: %s\n",
+				type_name);
+			return;
+		}
+		elem_type = LLVMGetElementType(type);
+		buf += ret;
+		bufsize -= ret;
+	}
+	switch (LLVMGetTypeKind(elem_type)) {
+	default: break;
+	case LLVMIntegerTypeKind:
+		snprintf(buf, bufsize, "i%d", LLVMGetIntTypeWidth(elem_type));
+		break;
+	case LLVMFloatTypeKind:
+		snprintf(buf, bufsize, "f32");
+		break;
+	case LLVMDoubleTypeKind:
+		snprintf(buf, bufsize, "f64");
+		break;
+	}
+}
+
 LLVMValueRef
 ac_build_gather_values_extended(struct ac_llvm_context *ctx,
 				LLVMValueRef *values,

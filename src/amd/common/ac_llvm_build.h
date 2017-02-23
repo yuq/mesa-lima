@@ -62,6 +62,8 @@ ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
 		       LLVMTypeRef return_type, LLVMValueRef *params,
 		       unsigned param_count, unsigned attrib_mask);
 
+void ac_build_type_name_for_intr(LLVMTypeRef type, char *buf, unsigned bufsize);
+
 LLVMValueRef
 ac_build_gather_values_extended(struct ac_llvm_context *ctx,
 				LLVMValueRef *values,

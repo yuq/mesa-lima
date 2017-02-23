@@ -3137,45 +3137,6 @@ static LLVMValueRef get_buffer_size(
 	return size;
 }
 
-/**
- * Given the i32 or vNi32 \p type, generate the textual name (e.g. for use with
- * intrinsic names).
- */
-static void build_type_name_for_intr(
-	LLVMTypeRef type,
-	char *buf, unsigned bufsize)
-{
-	LLVMTypeRef elem_type = type;
-
-	assert(bufsize >= 8);
-
-	if (LLVMGetTypeKind(type) == LLVMVectorTypeKind) {
-		int ret = snprintf(buf, bufsize, "v%u",
-					LLVMGetVectorSize(type));
-		if (ret < 0) {
-			char *type_name = LLVMPrintTypeToString(type);
-			fprintf(stderr, "Error building type name for: %s\n",
-				type_name);
-			return;
-		}
-		elem_type = LLVMGetElementType(type);
-		buf += ret;
-		bufsize -= ret;
-	}
-	switch (LLVMGetTypeKind(elem_type)) {
-	default: break;
-	case LLVMIntegerTypeKind:
-		snprintf(buf, bufsize, "i%d", LLVMGetIntTypeWidth(elem_type));
-		break;
-	case LLVMFloatTypeKind:
-		snprintf(buf, bufsize, "f32");
-		break;
-	case LLVMDoubleTypeKind:
-		snprintf(buf, bufsize, "f64");
-		break;
-	}
-}
-
 static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_tgsi_context *bld_base,
 				struct lp_build_emit_data *emit_data);
@@ -3603,7 +3564,7 @@ static void get_image_intr_name(const char *base_name,
 {
 	char coords_type_name[8];
 
-	build_type_name_for_intr(coords_type, coords_type_name,
+	ac_build_type_name_for_intr(coords_type, coords_type_name,
 			    sizeof(coords_type_name));
 
 	if (HAVE_LLVM <= 0x0309) {
@@ -3612,9 +3573,9 @@ static void get_image_intr_name(const char *base_name,
 		char data_type_name[8];
 		char rsrc_type_name[8];
 
-		build_type_name_for_intr(data_type, data_type_name,
+		ac_build_type_name_for_intr(data_type, data_type_name,
 					sizeof(data_type_name));
-		build_type_name_for_intr(rsrc_type, rsrc_type_name,
+		ac_build_type_name_for_intr(rsrc_type, rsrc_type_name,
 					sizeof(rsrc_type_name));
 		snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
 			 data_type_name, coords_type_name, rsrc_type_name);
@@ -4030,7 +3991,7 @@ static void atomic_emit(
 		else
 			coords = emit_data->args[1];
 
-		build_type_name_for_intr(LLVMTypeOf(coords), coords_type, sizeof(coords_type));
+		ac_build_type_name_for_intr(LLVMTypeOf(coords), coords_type, sizeof(coords_type));
 		snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "llvm.amdgcn.image.atomic.%s.%s",
 			 action->intr_name, coords_type);
@@ -4814,7 +4775,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 
 	/* Add the type and suffixes .c, .o if needed. */
-	build_type_name_for_intr(LLVMTypeOf(emit_data->args[0]), type, sizeof(type));
+	ac_build_type_name_for_intr(LLVMTypeOf(emit_data->args[0]), type, sizeof(type));
 	sprintf(intr_name, "%s%s%s%s.%s",
 		name, is_shadow ? ".c" : "", infix,
 		has_offset ? ".o" : "", type);

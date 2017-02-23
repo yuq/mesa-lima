@@ -2396,41 +2396,6 @@ static int image_type_to_components_count(enum glsl_sampler_dim dim, bool array)
 }
 
 
-static void build_type_name_for_intr(
-        LLVMTypeRef type,
-        char *buf, unsigned bufsize)
-{
-        LLVMTypeRef elem_type = type;
-
-        assert(bufsize >= 8);
-
-        if (LLVMGetTypeKind(type) == LLVMVectorTypeKind) {
-                int ret = snprintf(buf, bufsize, "v%u",
-                                        LLVMGetVectorSize(type));
-                if (ret < 0) {
-                        char *type_name = LLVMPrintTypeToString(type);
-                        fprintf(stderr, "Error building type name for: %s\n",
-                                type_name);
-                        return;
-                }
-                elem_type = LLVMGetElementType(type);
-                buf += ret;
-                bufsize -= ret;
-        }
-        switch (LLVMGetTypeKind(elem_type)) {
-        default: break;
-        case LLVMIntegerTypeKind:
-                snprintf(buf, bufsize, "i%d", LLVMGetIntTypeWidth(elem_type));
-                break;
-        case LLVMFloatTypeKind:
-                snprintf(buf, bufsize, "f32");
-                break;
-        case LLVMDoubleTypeKind:
-                snprintf(buf, bufsize, "f64");
-                break;
-        }
-}
-
 static void get_image_intr_name(const char *base_name,
                                 LLVMTypeRef data_type,
                                 LLVMTypeRef coords_type,
@@ -2439,7 +2404,7 @@ static void get_image_intr_name(const char *base_name,
 {
         char coords_type_name[8];
 
-        build_type_name_for_intr(coords_type, coords_type_name,
+        ac_build_type_name_for_intr(coords_type, coords_type_name,
                             sizeof(coords_type_name));
 
         if (HAVE_LLVM <= 0x0309) {
@@ -2448,9 +2413,9 @@ static void get_image_intr_name(const char *base_name,
                 char data_type_name[8];
                 char rsrc_type_name[8];
 
-                build_type_name_for_intr(data_type, data_type_name,
+                ac_build_type_name_for_intr(data_type, data_type_name,
                                         sizeof(data_type_name));
-                build_type_name_for_intr(rsrc_type, rsrc_type_name,
+                ac_build_type_name_for_intr(rsrc_type, rsrc_type_name,
                                         sizeof(rsrc_type_name));
                 snprintf(out_name, out_len, "%s.%s.%s.%s", base_name,
                          data_type_name, coords_type_name, rsrc_type_name);
