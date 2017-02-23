@@ -3989,76 +3989,6 @@ static void atomic_emit(
 		LLVMBuildBitCast(builder, tmp, bld_base->base.elem_type, "");
 }
 
-static void resq_fetch_args(
-		struct lp_build_tgsi_context * bld_base,
-		struct lp_build_emit_data * emit_data)
-{
-	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	const struct tgsi_full_src_register *reg = &inst->Src[0];
-
-	emit_data->dst_type = ctx->v4i32;
-
-	if (reg->Register.File == TGSI_FILE_BUFFER) {
-		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg);
-		emit_data->arg_count = 1;
-	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
-		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
-				 &emit_data->args[0]);
-		emit_data->arg_count = 1;
-	} else {
-		emit_data->args[0] = bld_base->uint_bld.zero; /* mip level */
-		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
-				 &emit_data->args[1]);
-		emit_data->args[2] = lp_build_const_int32(gallivm, 15); /* dmask */
-		emit_data->args[3] = bld_base->uint_bld.zero; /* unorm */
-		emit_data->args[4] = bld_base->uint_bld.zero; /* r128 */
-		emit_data->args[5] = tgsi_is_array_image(inst->Memory.Texture) ?
-			bld_base->uint_bld.one : bld_base->uint_bld.zero; /* da */
-		emit_data->args[6] = bld_base->uint_bld.zero; /* glc */
-		emit_data->args[7] = bld_base->uint_bld.zero; /* slc */
-		emit_data->args[8] = bld_base->uint_bld.zero; /* tfe */
-		emit_data->args[9] = bld_base->uint_bld.zero; /* lwe */
-		emit_data->arg_count = 10;
-	}
-}
-
-static void resq_emit(
-		const struct lp_build_tgsi_action *action,
-		struct lp_build_tgsi_context *bld_base,
-		struct lp_build_emit_data *emit_data)
-{
-	struct gallivm_state *gallivm = bld_base->base.gallivm;
-	LLVMBuilderRef builder = gallivm->builder;
-	const struct tgsi_full_instruction *inst = emit_data->inst;
-	LLVMValueRef out;
-
-	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
-		out = LLVMBuildExtractElement(builder, emit_data->args[0],
-					      lp_build_const_int32(gallivm, 2), "");
-	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
-		out = get_buffer_size(bld_base, emit_data->args[0]);
-	} else {
-		out = lp_build_intrinsic(
-			builder, "llvm.SI.getresinfo.i32", emit_data->dst_type,
-			emit_data->args, emit_data->arg_count,
-			LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
-
-		/* Divide the number of layers by 6 to get the number of cubes. */
-		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
-			LLVMValueRef imm2 = lp_build_const_int32(gallivm, 2);
-			LLVMValueRef imm6 = lp_build_const_int32(gallivm, 6);
-
-			LLVMValueRef z = LLVMBuildExtractElement(builder, out, imm2, "");
-			z = LLVMBuildSDiv(builder, z, imm6, "");
-			out = LLVMBuildInsertElement(builder, out, z, imm2, "");
-		}
-	}
-
-	emit_data->output[emit_data->chan] = out;
-}
-
 static void set_tex_fetch_args(struct si_shader_context *ctx,
 			       struct lp_build_emit_data *emit_data,
 			       unsigned target,
@@ -4088,6 +4018,77 @@ static void set_tex_fetch_args(struct si_shader_context *ctx,
 	/* Ugly, but we seem to have no other choice right now. */
 	STATIC_ASSERT(sizeof(args) <= sizeof(emit_data->args));
 	memcpy(emit_data->args, &args, sizeof(args));
+}
+
+static void resq_fetch_args(
+		struct lp_build_tgsi_context * bld_base,
+		struct lp_build_emit_data * emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	const struct tgsi_full_src_register *reg = &inst->Src[0];
+
+	emit_data->dst_type = ctx->v4i32;
+
+	if (reg->Register.File == TGSI_FILE_BUFFER) {
+		emit_data->args[0] = shader_buffer_fetch_rsrc(ctx, reg);
+		emit_data->arg_count = 1;
+	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
+				 &emit_data->args[0]);
+		emit_data->arg_count = 1;
+	} else {
+		LLVMValueRef res_ptr;
+		unsigned image_target;
+
+		if (inst->Memory.Texture == TGSI_TEXTURE_3D)
+			image_target = TGSI_TEXTURE_2D_ARRAY;
+		else
+			image_target = inst->Memory.Texture;
+
+		image_fetch_rsrc(bld_base, reg, false, inst->Memory.Texture,
+				 &res_ptr);
+		set_tex_fetch_args(ctx, emit_data, image_target,
+				   res_ptr, NULL, &bld_base->uint_bld.zero, 1,
+				   0xf);
+	}
+}
+
+static void resq_emit(
+		const struct lp_build_tgsi_action *action,
+		struct lp_build_tgsi_context *bld_base,
+		struct lp_build_emit_data *emit_data)
+{
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+	struct gallivm_state *gallivm = bld_base->base.gallivm;
+	LLVMBuilderRef builder = gallivm->builder;
+	const struct tgsi_full_instruction *inst = emit_data->inst;
+	LLVMValueRef out;
+
+	if (inst->Src[0].Register.File == TGSI_FILE_BUFFER) {
+		out = LLVMBuildExtractElement(builder, emit_data->args[0],
+					      lp_build_const_int32(gallivm, 2), "");
+	} else if (inst->Memory.Texture == TGSI_TEXTURE_BUFFER) {
+		out = get_buffer_size(bld_base, emit_data->args[0]);
+	} else {
+		struct ac_image_args args;
+
+		memcpy(&args, emit_data->args, sizeof(args)); /* ugly */
+		args.opcode = ac_image_get_resinfo;
+		out = ac_emit_image_opcode(&ctx->ac, &args);
+
+		/* Divide the number of layers by 6 to get the number of cubes. */
+		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
+			LLVMValueRef imm2 = lp_build_const_int32(gallivm, 2);
+			LLVMValueRef imm6 = lp_build_const_int32(gallivm, 6);
+
+			LLVMValueRef z = LLVMBuildExtractElement(builder, out, imm2, "");
+			z = LLVMBuildSDiv(builder, z, imm6, "");
+			out = LLVMBuildInsertElement(builder, out, z, imm2, "");
+		}
+	}
+
+	emit_data->output[emit_data->chan] = out;
 }
 
 static const struct lp_build_tgsi_action tex_action;
