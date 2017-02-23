@@ -205,6 +205,35 @@ struct ac_export_args {
 
 void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a);
 
+enum ac_image_opcode {
+	ac_image_sample,
+	ac_image_gather4,
+	ac_image_load,
+	ac_image_load_mip,
+	ac_image_get_lod,
+	ac_image_get_resinfo,
+};
+
+struct ac_image_args {
+	enum ac_image_opcode opcode;
+	bool level_zero;
+	bool bias;
+	bool lod;
+	bool deriv;
+	bool compare;
+	bool offset;
+
+	LLVMValueRef resource;
+	LLVMValueRef sampler;
+	LLVMValueRef addr;
+	unsigned dmask;
+	bool unorm;
+	bool da;
+};
+
+LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
+				  struct ac_image_args *a);
+
 #ifdef __cplusplus
 }
 #endif

@@ -932,3 +932,71 @@ void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 	ac_emit_llvm_intrinsic(ctx, "llvm.SI.export", ctx->voidt, args, 9,
 			       AC_FUNC_ATTR_LEGACY);
 }
+
+LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
+				  struct ac_image_args *a)
+{
+	LLVMTypeRef dst_type;
+	LLVMValueRef args[11];
+	unsigned num_args = 0;
+	const char *name;
+	char intr_name[128], type[64];
+
+	args[num_args++] = a->addr;
+	args[num_args++] = a->resource;
+
+	if (a->opcode == ac_image_load ||
+	    a->opcode == ac_image_load_mip ||
+	    a->opcode == ac_image_get_resinfo) {
+		dst_type = ctx->v4i32;
+	} else {
+		dst_type = ctx->v4f32;
+		args[num_args++] = a->sampler;
+	}
+
+	args[num_args++] = LLVMConstInt(ctx->i32, a->dmask, 0);
+	args[num_args++] = LLVMConstInt(ctx->i32, a->unorm, 0);
+	args[num_args++] = LLVMConstInt(ctx->i32, 0, 0); /* r128 */
+	args[num_args++] = LLVMConstInt(ctx->i32, a->da, 0);
+	args[num_args++] = LLVMConstInt(ctx->i32, 0, 0); /* glc */
+	args[num_args++] = LLVMConstInt(ctx->i32, 0, 0); /* slc */
+	args[num_args++] = LLVMConstInt(ctx->i32, 0, 0); /* tfe */
+	args[num_args++] = LLVMConstInt(ctx->i32, 0, 0); /* lwe */
+
+	switch (a->opcode) {
+	case ac_image_sample:
+		name = "llvm.SI.image.sample";
+		break;
+	case ac_image_gather4:
+		name = "llvm.SI.gather4";
+		break;
+	case ac_image_load:
+		name = "llvm.SI.image.load";
+		break;
+	case ac_image_load_mip:
+		name = "llvm.SI.image.load.mip";
+		break;
+	case ac_image_get_lod:
+		name = "llvm.SI.getlod";
+		break;
+	case ac_image_get_resinfo:
+		name = "llvm.SI.getresinfo";
+		break;
+	}
+
+	ac_build_type_name_for_intr(LLVMTypeOf(a->addr), type, sizeof(type));
+	snprintf(intr_name, sizeof(intr_name), "%s%s%s%s.%s",
+		name,
+		a->compare ? ".c" : "",
+		a->bias ? ".b" :
+		a->lod ? ".l" :
+		a->deriv ? ".d" :
+		a->level_zero ? ".lz" : "",
+		a->offset ? ".o" : "",
+		type);
+
+	return ac_emit_llvm_intrinsic(ctx, intr_name,
+				      dst_type, args, num_args,
+				      AC_FUNC_ATTR_READNONE |
+				      AC_FUNC_ATTR_LEGACY);
+}
