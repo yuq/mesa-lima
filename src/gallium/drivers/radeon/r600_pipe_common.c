@@ -43,7 +43,7 @@
 #define HAVE_LLVM 0
 #endif
 
-#if HAVE_LLVM
+#if HAVE_LLVM >= 0x0306
 #include <llvm-c/TargetMachine.h>
 #endif
 
@@ -793,7 +793,7 @@ static void r600_disk_cache_create(struct r600_common_screen *rscreen)
 		if (rscreen->chip_class < SI) {
 			res = asprintf(&timestamp_str, "%u",mesa_timestamp);
 		}
-#if HAVE_LLVM
+#if HAVE_LLVM >= 0x0306
 		else {
 			uint32_t llvm_timestamp;
 			if (disk_cache_get_function_timestamp(LLVMInitializeAMDGPUTargetInfo,
