@@ -2445,21 +2445,10 @@ genX(cmd_buffer_set_subpass)(struct anv_cmd_buffer *cmd_buffer,
 
    cmd_buffer->state.dirty |= ANV_CMD_DIRTY_RENDER_TARGETS;
 
-   const struct anv_image_view *iview =
-      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-
-   if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      const uint32_t ds = subpass->depth_stencil_attachment.attachment;
-      transition_depth_buffer(cmd_buffer, iview->image,
-                              cmd_buffer->state.attachments[ds].current_layout,
-                              cmd_buffer->state.subpass->depth_stencil_attachment.layout);
-      cmd_buffer->state.attachments[ds].current_layout =
-         cmd_buffer->state.subpass->depth_stencil_attachment.layout;
-      cmd_buffer->state.attachments[ds].aux_usage =
-         anv_layout_to_aux_usage(&cmd_buffer->device->info, iview->image,
-            iview->aspect_mask,
-            cmd_buffer->state.subpass->depth_stencil_attachment.layout);
-   }
+   /* Perform transitions to the subpass layout before any writes have
+    * occurred.
+    */
+   cmd_buffer_subpass_transition_layouts(cmd_buffer, false);
 
    cmd_buffer_emit_depth_stencil(cmd_buffer);
 
@@ -2493,21 +2482,12 @@ void genX(CmdNextSubpass)(
 
    assert(cmd_buffer->level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
-   const struct anv_image_view *iview =
-      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-
-   if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
-
-      if (cmd_buffer->state.subpass - cmd_buffer->state.pass->subpasses ==
-          cmd_buffer->state.pass->attachments[ds].last_subpass_idx) {
-         transition_depth_buffer(cmd_buffer, iview->image,
-                                 cmd_buffer->state.attachments[ds].current_layout,
-                                 cmd_buffer->state.pass->attachments[ds].final_layout);
-      }
-   }
-
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
+
+   /* Perform transitions to the final layout after all writes have occurred.
+    */
+   cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
+
    genX(cmd_buffer_set_subpass)(cmd_buffer, cmd_buffer->state.subpass + 1);
 }
 
@@ -2516,21 +2496,11 @@ void genX(CmdEndRenderPass)(
 {
    ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer, commandBuffer);
 
-   const struct anv_image_view *iview =
-      anv_cmd_buffer_get_depth_stencil_view(cmd_buffer);
-
-   if (iview && iview->image->aux_usage == ISL_AUX_USAGE_HIZ) {
-      const uint32_t ds = cmd_buffer->state.subpass->depth_stencil_attachment.attachment;
-
-      if (cmd_buffer->state.subpass - cmd_buffer->state.pass->subpasses ==
-          cmd_buffer->state.pass->attachments[ds].last_subpass_idx) {
-         transition_depth_buffer(cmd_buffer, iview->image,
-                                 cmd_buffer->state.attachments[ds].current_layout,
-                                 cmd_buffer->state.pass->attachments[ds].final_layout);
-      }
-   }
-
    anv_cmd_buffer_resolve_subpass(cmd_buffer);
+
+   /* Perform transitions to the final layout after all writes have occurred.
+    */
+   cmd_buffer_subpass_transition_layouts(cmd_buffer, true);
 
    cmd_buffer->state.hiz_enabled = false;
 
