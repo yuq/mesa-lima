@@ -804,14 +804,14 @@ struct dd_function_table {
                                                        unsigned queryIndex);
    void (*DeletePerfQuery)(struct gl_context *ctx,
                            struct gl_perf_query_object *obj);
-   GLboolean (*BeginPerfQuery)(struct gl_context *ctx,
-                               struct gl_perf_query_object *obj);
+   bool (*BeginPerfQuery)(struct gl_context *ctx,
+                          struct gl_perf_query_object *obj);
    void (*EndPerfQuery)(struct gl_context *ctx,
                         struct gl_perf_query_object *obj);
    void (*WaitPerfQuery)(struct gl_context *ctx,
                          struct gl_perf_query_object *obj);
-   GLboolean (*IsPerfQueryReady)(struct gl_context *ctx,
-                                 struct gl_perf_query_object *obj);
+   bool (*IsPerfQueryReady)(struct gl_context *ctx,
+                            struct gl_perf_query_object *obj);
    void (*GetPerfQueryData)(struct gl_context *ctx,
                             struct gl_perf_query_object *obj,
                             GLsizei dataSize,

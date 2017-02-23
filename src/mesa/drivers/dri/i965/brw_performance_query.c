@@ -202,7 +202,7 @@ snapshot_statistics_registers(struct brw_context *brw,
 /**
  * Driver hook for glBeginPerfQueryINTEL().
  */
-static GLboolean
+static bool
 brw_begin_perf_query(struct gl_context *ctx,
                      struct gl_perf_query_object *o)
 {
@@ -351,7 +351,7 @@ brw_wait_perf_query(struct gl_context *ctx, struct gl_perf_query_object *o)
    drm_intel_bo_wait_rendering(bo);
 }
 
-static GLboolean
+static bool
 brw_is_perf_query_ready(struct gl_context *ctx,
                         struct gl_perf_query_object *o)
 {
