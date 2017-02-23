@@ -2310,7 +2310,9 @@ if test -n "$with_gallium_drivers"; then
             PKG_CHECK_MODULES([AMDGPU], [libdrm >= $LIBDRM_AMDGPU_REQUIRED libdrm_amdgpu >= $LIBDRM_AMDGPU_REQUIRED])
             require_libdrm "radeonsi"
             radeon_llvm_check $LLVM_REQUIRED_RADEONSI "radeonsi"
-            require_basic_egl "radeonsi"
+            if test "x$enable_egl" = xyes; then
+                require_basic_egl "radeonsi"
+            fi
             ;;
         xnouveau)
             HAVE_GALLIUM_NOUVEAU=yes
