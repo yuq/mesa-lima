@@ -73,7 +73,6 @@ TEMPLATE_H = Template(textwrap.dedent("""\
        };
     };
 
-    void anv_set_dispatch_devinfo(const struct gen_device_info *info);
     % for type_, name, args, num, h, guard in entrypoints:
       % if guard is not None:
     #ifdef ${guard}
