@@ -674,6 +674,7 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 			       S_02880C_Z_EXPORT_ENABLE(ps->info.fs.writes_z) |
 			       S_02880C_STENCIL_TEST_VAL_EXPORT_ENABLE(ps->info.fs.writes_stencil) |
 			       S_02880C_KILL_ENABLE(!!ps->info.fs.can_discard) |
+			       S_02880C_MASK_EXPORT_ENABLE(ps->info.fs.writes_sample_mask) |
 			       S_02880C_Z_ORDER(z_order) |
 			       S_02880C_DEPTH_BEFORE_SHADER(ps->info.fs.early_fragment_test) |
 			       S_02880C_EXEC_ON_HIER_FAIL(ps->info.fs.writes_memory) |
@@ -694,6 +695,7 @@ radv_emit_fragment_shader(struct radv_cmd_buffer *cmd_buffer,
 	radeon_set_context_reg(cmd_buffer->cs, R_0286E0_SPI_BARYC_CNTL, spi_baryc_cntl);
 
 	radeon_set_context_reg(cmd_buffer->cs, R_028710_SPI_SHADER_Z_FORMAT,
+			       ps->info.fs.writes_sample_mask ? V_028710_SPI_SHADER_32_ABGR :
 			       ps->info.fs.writes_stencil ? V_028710_SPI_SHADER_32_GR :
 			       ps->info.fs.writes_z ? V_028710_SPI_SHADER_32_R :
 			       V_028710_SPI_SHADER_ZERO);
