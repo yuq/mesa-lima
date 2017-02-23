@@ -242,13 +242,14 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
       return false;
 
    struct st_context *st = st_context(ctx);
+   uint8_t *buffer = NULL;
    for (unsigned i = 0; i < MESA_SHADER_STAGES; i++) {
       if (prog->_LinkedShaders[i] == NULL)
          continue;
 
       unsigned char *sha1 = stage_sha1[i];
       size_t size;
-      uint8_t *buffer = (uint8_t *) disk_cache_get(ctx->Cache, sha1, &size);
+      buffer = (uint8_t *) disk_cache_get(ctx->Cache, sha1, &size);
       if (buffer) {
          struct blob_reader blob_reader;
          blob_reader_init(&blob_reader, buffer, size);
@@ -396,6 +397,7 @@ st_load_tgsi_from_disk_cache(struct gl_context *ctx,
    return true;
 
 fallback_recompile:
+   free(buffer);
 
    for (unsigned i = 0; i < prog->NumShaders; i++) {
       _mesa_glsl_compile_shader(ctx, prog->Shaders[i], false, false, true);
