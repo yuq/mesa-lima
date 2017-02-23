@@ -96,6 +96,7 @@ files_libnir = files(
   'nir_loop_analyze.h',
   'nir_lower_64bit_packing.c',
   'nir_lower_alu_to_scalar.c',
+  'nir_lower_alpha_test.c',
   'nir_lower_atomics.c',
   'nir_lower_atomics_to_ssbo.c',
   'nir_lower_bitmap.c',

@@ -2250,8 +2250,15 @@ vc4_shader_ntq(struct vc4_context *vc4, enum qstage stage,
 
         c->s = nir_shader_clone(c, key->shader_state->base.ir.nir);
 
-        if (stage == QSTAGE_FRAG)
+        if (stage == QSTAGE_FRAG) {
+                if (c->fs_key->alpha_test_func != COMPARE_FUNC_ALWAYS) {
+                        NIR_PASS_V(c->s, nir_lower_alpha_test,
+                                   c->fs_key->alpha_test_func,
+                                   c->fs_key->sample_alpha_to_one &&
+                                   c->fs_key->msaa);
+                }
                 NIR_PASS_V(c->s, vc4_nir_lower_blend, c);
+        }
 
         struct nir_lower_tex_options tex_options = {
                 /* We would need to implement txs, but we don't want the
@@ -2748,10 +2755,10 @@ vc4_update_compiled_fs(struct vc4_context *vc4, uint8_t prim_mode)
         key->stencil_full_writemasks = vc4->zsa->stencil_uniforms[2] != 0;
         key->depth_enabled = (vc4->zsa->base.depth.enabled ||
                               key->stencil_enabled);
-        if (vc4->zsa->base.alpha.enabled) {
-                key->alpha_test = true;
+        if (vc4->zsa->base.alpha.enabled)
                 key->alpha_test_func = vc4->zsa->base.alpha.func;
-        }
+        else
+                key->alpha_test_func = COMPARE_FUNC_ALWAYS;
 
         if (key->is_points) {
                 key->point_sprite_mask =
