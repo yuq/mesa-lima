@@ -46,3 +46,5 @@ libvc4_la_LIBADD += libvc4_neon.la
 
 libvc4_neon_la_SOURCES = vc4_tiling_lt.c
 libvc4_neon_la_CFLAGS = $(AM_CFLAGS) -DVC4_BUILD_NEON
+
+EXTRA_DIST = kernel/README
