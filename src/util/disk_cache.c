@@ -242,13 +242,6 @@ disk_cache_create(const char *gpu_name, const char *timestamp)
    if (getenv("MESA_GLSL_CACHE_DISABLE"))
       goto fail;
 
-   /* As a temporary measure, (while the shader cache is under
-    * development, and known to not be fully functional), also require
-    * the MESA_GLSL_CACHE_ENABLE variable to be set.
-    */
-   if (!getenv("MESA_GLSL_CACHE_ENABLE"))
-      goto fail;
-
    /* Determine path for cache based on the first defined name as follows:
     *
     *   $MESA_GLSL_CACHE_DIR

@@ -428,11 +428,6 @@ main(void)
 #ifdef ENABLE_SHADER_CACHE
    int err;
 
-   /* While the shader cache is still experimental, this variable must
-    * be set or the cache does nothing.
-    */
-   setenv("MESA_GLSL_CACHE_ENABLE", "1", 1);
-
    test_disk_cache_create();
 
    test_put_and_get();
