@@ -1706,6 +1706,47 @@ ntq_emit_ssa_undef(struct vc4_compile *c, nir_ssa_undef_instr *instr)
 }
 
 static void
+ntq_emit_color_read(struct vc4_compile *c, nir_intrinsic_instr *instr)
+{
+        nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+        assert(const_offset->u32[0] == 0);
+
+        /* Reads of the per-sample color need to be done in
+         * order.
+         */
+        int sample_index = (nir_intrinsic_base(instr) -
+                            VC4_NIR_TLB_COLOR_READ_INPUT);
+        for (int i = 0; i <= sample_index; i++) {
+                if (c->color_reads[i].file == QFILE_NULL) {
+                        c->color_reads[i] =
+                                qir_TLB_COLOR_READ(c);
+                }
+        }
+        ntq_store_dest(c, &instr->dest, 0,
+                       qir_MOV(c, c->color_reads[sample_index]));
+}
+
+static void
+ntq_emit_load_input(struct vc4_compile *c, nir_intrinsic_instr *instr)
+{
+        assert(instr->num_components == 1);
+
+        nir_const_value *const_offset = nir_src_as_const_value(instr->src[0]);
+        assert(const_offset && "vc4 doesn't support indirect inputs");
+
+        if (c->stage == QSTAGE_FRAG &&
+            nir_intrinsic_base(instr) >= VC4_NIR_TLB_COLOR_READ_INPUT) {
+                ntq_emit_color_read(c, instr);
+                return;
+        }
+
+        uint32_t offset = nir_intrinsic_base(instr) + const_offset->u32[0];
+        int comp = nir_intrinsic_component(instr);
+        ntq_store_dest(c, &instr->dest, 0,
+                       qir_MOV(c, c->inputs[offset * 4 + comp]));
+}
+
+static void
 ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
 {
         nir_const_value *const_offset;
@@ -1782,31 +1823,7 @@ ntq_emit_intrinsic(struct vc4_compile *c, nir_intrinsic_instr *instr)
                 break;
 
         case nir_intrinsic_load_input:
-                assert(instr->num_components == 1);
-                const_offset = nir_src_as_const_value(instr->src[0]);
-                assert(const_offset && "vc4 doesn't support indirect inputs");
-                if (c->stage == QSTAGE_FRAG &&
-                    nir_intrinsic_base(instr) >= VC4_NIR_TLB_COLOR_READ_INPUT) {
-                        assert(const_offset->u32[0] == 0);
-                        /* Reads of the per-sample color need to be done in
-                         * order.
-                         */
-                        int sample_index = (nir_intrinsic_base(instr) -
-                                           VC4_NIR_TLB_COLOR_READ_INPUT);
-                        for (int i = 0; i <= sample_index; i++) {
-                                if (c->color_reads[i].file == QFILE_NULL) {
-                                        c->color_reads[i] =
-                                                qir_TLB_COLOR_READ(c);
-                                }
-                        }
-                        ntq_store_dest(c, &instr->dest, 0,
-                                       qir_MOV(c, c->color_reads[sample_index]));
-                } else {
-                        offset = nir_intrinsic_base(instr) + const_offset->u32[0];
-                        int comp = nir_intrinsic_component(instr);
-                        ntq_store_dest(c, &instr->dest, 0,
-                                       qir_MOV(c, c->inputs[offset * 4 + comp]));
-                }
+                ntq_emit_load_input(c, instr);
                 break;
 
         case nir_intrinsic_store_output:
