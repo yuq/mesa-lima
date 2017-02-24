@@ -754,6 +754,7 @@ private:
 
       this->uniforms[id].is_shader_storage =
          current_var->is_in_shader_storage_block();
+      this->uniforms[id].is_bindless = current_var->data.bindless;
 
       /* Do not assign storage if the uniform is a builtin or buffer object */
       if (!this->uniforms[id].builtin &&

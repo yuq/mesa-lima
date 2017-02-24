@@ -297,12 +297,17 @@ _mesa_Uniform4iv(GLint location, GLsizei count, const GLint * value)
 void GLAPIENTRY
 _mesa_UniformHandleui64ARB(GLint location, GLuint64 value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform_handle(location, 1, &value, ctx, ctx->_Shader->ActiveProgram);
 }
 
 void GLAPIENTRY
 _mesa_UniformHandleui64vARB(GLint location, GLsizei count,
                             const GLuint64 *value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   _mesa_uniform_handle(location, count, value, ctx,
+                        ctx->_Shader->ActiveProgram);
 }
 
 
@@ -501,12 +506,22 @@ void GLAPIENTRY
 _mesa_ProgramUniformHandleui64ARB(GLuint program, GLint location,
                                   GLuint64 value)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+            "glProgramUniformHandleui64ARB");
+   _mesa_uniform_handle(location, 1, &value, ctx, shProg);
 }
 
 void GLAPIENTRY
 _mesa_ProgramUniformHandleui64vARB(GLuint program, GLint location,
                                    GLsizei count, const GLuint64 *values)
 {
+   GET_CURRENT_CONTEXT(ctx);
+   struct gl_shader_program *shProg =
+      _mesa_lookup_shader_program_err(ctx, program,
+            "glProgramUniformHandleui64vARB");
+   _mesa_uniform_handle(location, count, values, ctx, shProg);
 }
 
 

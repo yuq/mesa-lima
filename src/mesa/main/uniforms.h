@@ -453,6 +453,10 @@ _mesa_uniform_matrix(GLint location, GLsizei count,
                      GLuint cols, GLuint rows, enum glsl_base_type basicType);
 
 void
+_mesa_uniform_handle(GLint location, GLsizei count, const GLvoid *values,
+                     struct gl_context *, struct gl_shader_program *);
+
+void
 _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 		  GLsizei bufSize, enum glsl_base_type returnType,
 		  GLvoid *paramsOut);

@@ -578,6 +578,7 @@ write_uniforms(struct blob *metadata, struct gl_shader_program *prog)
       blob_write_uint32(metadata, prog->data->UniformStorage[i].is_shader_storage);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].matrix_stride);
       blob_write_uint32(metadata, prog->data->UniformStorage[i].row_major);
+      blob_write_uint32(metadata, prog->data->UniformStorage[i].is_bindless);
       blob_write_uint32(metadata,
                         prog->data->UniformStorage[i].num_compatible_subroutines);
       blob_write_uint32(metadata,
@@ -642,6 +643,7 @@ read_uniforms(struct blob_reader *metadata, struct gl_shader_program *prog)
       uniforms[i].is_shader_storage = blob_read_uint32(metadata);
       uniforms[i].matrix_stride = blob_read_uint32(metadata);
       uniforms[i].row_major = blob_read_uint32(metadata);
+      uniforms[i].is_bindless = blob_read_uint32(metadata);
       uniforms[i].num_compatible_subroutines = blob_read_uint32(metadata);
       uniforms[i].top_level_array_size = blob_read_uint32(metadata);
       uniforms[i].top_level_array_stride = blob_read_uint32(metadata);
