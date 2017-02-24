@@ -38,6 +38,7 @@
 #include <errno.h>
 #include <dirent.h>
 
+#include "util/crc32.h"
 #include "util/u_atomic.h"
 #include "util/mesa-sha1.h"
 #include "util/ralloc.h"
@@ -709,6 +710,19 @@ disk_cache_put(struct disk_cache *cache,
    if (*cache->size + size > cache->max_size)
       evict_random_item(cache);
 
+   /* Create CRC of the data and store at the start of the file. We will
+    * read this when restoring the cache and use it to check for corruption.
+    */
+   uint32_t crc32 = util_hash_crc32(data, size);
+   size_t crc_size = sizeof(crc32);
+   for (len = 0; len < crc_size; len += ret) {
+      ret = write(fd, ((uint8_t *) &crc32) + len, crc_size - len);
+      if (ret == -1) {
+         unlink(filename_tmp);
+         goto done;
+      }
+   }
+
    /* Now, finally, write out the contents to the temporary file, then
     * rename them atomically to the destination filename, and also
     * perform an atomic increment of the total cache size.
@@ -723,6 +737,7 @@ disk_cache_put(struct disk_cache *cache,
 
    rename(filename_tmp, filename);
 
+   size += crc_size;
    p_atomic_add(cache->size, size);
 
  done:
@@ -765,17 +780,33 @@ disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
    if (data == NULL)
       goto fail;
 
-   for (len = 0; len < sb.st_size; len += ret) {
-      ret = read(fd, data + len, sb.st_size - len);
+   /* Load the CRC that was created when the file was written. */
+   uint32_t crc32;
+   size_t crc_size = sizeof(crc32);
+   assert(sb.st_size > crc_size);
+   for (len = 0; len < crc_size; len += ret) {
+      ret = read(fd, ((uint8_t *) &crc32) + len, crc_size - len);
       if (ret == -1)
          goto fail;
    }
+
+   /* Load the actual cache data. */
+   size_t cache_data_size = sb.st_size - crc_size;
+   for (len = 0; len < cache_data_size; len += ret) {
+      ret = read(fd, data + len, cache_data_size - len);
+      if (ret == -1)
+         goto fail;
+   }
+
+   /* Check the data for corruption */
+   if (crc32 != util_hash_crc32(data, cache_data_size))
+      goto fail;
 
    free(filename);
    close(fd);
 
    if (size)
-      *size = sb.st_size;
+      *size = cache_data_size;
 
    return data;
 
