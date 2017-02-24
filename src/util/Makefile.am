@@ -50,7 +50,10 @@ TESTS = $(check_PROGRAMS)
 
 BUILT_SOURCES = $(MESA_UTIL_GENERATED_FILES)
 CLEANFILES = $(BUILT_SOURCES)
-EXTRA_DIST = format_srgb.py SConscript
+EXTRA_DIST = \
+	format_srgb.py \
+	SConscript \
+	sha1/README
 
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
 
