@@ -126,6 +126,7 @@ anv_shader_compile_to_nir(struct anv_device *device,
 
    const struct nir_spirv_supported_extensions supported_ext = {
       .float64 = device->instance->physicalDevice.info.gen >= 8,
+      .int64 = device->instance->physicalDevice.info.gen >= 8,
       .tessellation = true,
       .draw_parameters = true,
       .image_write_without_format = true,
