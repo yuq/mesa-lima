@@ -423,6 +423,7 @@ util_clear_color_texture_helper(struct pipe_transfer *dst_trans,
 static void
 util_clear_color_texture(struct pipe_context *pipe,
                          struct pipe_resource *texture,
+                         enum pipe_format format,
                          const union pipe_color_union *color,
                          unsigned level,
                          unsigned dstx, unsigned dsty, unsigned dstz,
@@ -430,7 +431,6 @@ util_clear_color_texture(struct pipe_context *pipe,
 {
    struct pipe_transfer *dst_trans;
    ubyte *dst_map;
-   enum pipe_format format = texture->format;
 
    dst_map = pipe_transfer_map_3d(pipe,
                                   texture,
@@ -491,16 +491,16 @@ util_clear_render_target(struct pipe_context *pipe,
                                   dx, 0, w, 1,
                                   &dst_trans);
       if (dst_map) {
-         util_clear_color_texture_helper(dst_trans, dst_map, dst->format, color,
-                                         width, height, 1);
+         util_clear_color_texture_helper(dst_trans, dst_map, dst->format,
+                                         color, width, height, 1);
          pipe->transfer_unmap(pipe, dst_trans);
       }
    }
    else {
       unsigned depth = dst->u.tex.last_layer - dst->u.tex.first_layer + 1;
-      util_clear_color_texture(pipe, dst->texture, color, dst->u.tex.level,
-                               dstx, dsty, dst->u.tex.first_layer,
-                               width, height, depth);
+      util_clear_color_texture(pipe, dst->texture, dst->format, color,
+                               dst->u.tex.level, dstx, dsty,
+                               dst->u.tex.first_layer, width, height, depth);
    }
 }
 
@@ -674,7 +674,8 @@ util_clear_texture(struct pipe_context *pipe,
       else
          desc->unpack_rgba_float(color.f, 0, data, 0, 1, 1);
 
-      util_clear_color_texture(pipe, tex, &color, level, box->x, box->y, box->z,
+      util_clear_color_texture(pipe, tex, tex->format, &color, level,
+                               box->x, box->y, box->z,
                                box->width, box->height, box->depth);
    }
 }
