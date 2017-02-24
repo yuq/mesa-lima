@@ -737,11 +737,15 @@ nir_lower_vars_to_ssa_impl(nir_function_impl *impl)
    return progress;
 }
 
-void
+bool
 nir_lower_vars_to_ssa(nir_shader *shader)
 {
+   bool progress = false;
+
    nir_foreach_function(function, shader) {
       if (function->impl)
-         nir_lower_vars_to_ssa_impl(function->impl);
+         progress |= nir_lower_vars_to_ssa_impl(function->impl);
    }
+
+   return progress;
 }
