@@ -23,6 +23,7 @@
 #
 
 import argparse
+import os
 import textwrap
 import xml.etree.ElementTree as et
 
@@ -133,7 +134,8 @@ def get_entrypoints_defines(doc):
 
 
 def gen_header(entrypoints):
-    print "/* This file generated from vk_gen.py, don't edit directly. */\n"
+    print "/* This file generated from {}, don't edit directly. */\n".format(
+        os.path.basename(__file__))
 
     print "struct anv_dispatch_table {"
     print "   union {"
@@ -190,21 +192,21 @@ def gen_code(entrypoints):
      * IN THE SOFTWARE.
      */
 
-    /* DO NOT EDIT! This is a generated file. */
+    /* This file generated from {}, don't edit directly. */
 
     #include "anv_private.h"
 
-    struct anv_entrypoint {
+    struct anv_entrypoint {{
        uint32_t name;
        uint32_t hash;
-    };
+    }};
 
     /* We use a big string constant to avoid lots of reloctions from the entry
      * point table to lots of little strings. The entries in the entry point table
      * store the index into this big string.
      */
 
-    static const char strings[] =""")
+    static const char strings[] =""".format(os.path.basename(__file__)))
 
     offsets = []
     i = 0
