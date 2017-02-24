@@ -355,7 +355,7 @@ _mesa_get_uniform(struct gl_context *ctx, GLuint program, GLint location,
 	      &&
 	      (uni->type->base_type == GLSL_TYPE_INT
 	       || uni->type->base_type == GLSL_TYPE_UINT
-               || uni->type->base_type == GLSL_TYPE_SAMPLER
+               || uni->type->is_sampler()
                || uni->type->is_image()))
           || ((returnType == GLSL_TYPE_UINT64 ||
                returnType == GLSL_TYPE_INT64 ) &&

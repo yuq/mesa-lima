@@ -2407,13 +2407,13 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
    case GLSL_TYPE_SAMPLER: {
       const unsigned type_idx =
          type->sampler_array + 2 * type->sampler_shadow;
-      const unsigned offset = type->base_type == GLSL_TYPE_SAMPLER ? 0 : 4;
+      const unsigned offset = type->is_sampler() ? 0 : 4;
       assert(type_idx < 4);
       switch (type->sampled_type) {
       case GLSL_TYPE_FLOAT:
          switch (type->sampler_dimensionality) {
          case GLSL_SAMPLER_DIM_1D: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "sampler1D", "sampler1DArray",
               "sampler1DShadow", "sampler1DArrayShadow"
@@ -2444,14 +2444,14 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[offset + type_idx];
          }
          case GLSL_SAMPLER_DIM_MS: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "sampler2DMS", "sampler2DMSArray", NULL, NULL
             };
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_RECT: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "samplerRect", NULL, "samplerRectShadow", NULL
             };
@@ -2465,7 +2465,7 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[offset + type_idx];
          }
          case GLSL_SAMPLER_DIM_EXTERNAL: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "samplerExternalOES", NULL, NULL, NULL
             };
@@ -2478,7 +2478,7 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
       case GLSL_TYPE_INT:
          switch (type->sampler_dimensionality) {
          case GLSL_SAMPLER_DIM_1D: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "isampler1D", "isampler1DArray", NULL, NULL
             };
@@ -2506,14 +2506,14 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[offset + type_idx];
          }
          case GLSL_SAMPLER_DIM_MS: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "isampler2DMS", "isampler2DMSArray", NULL, NULL
             };
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_RECT: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "isamplerRect", NULL, "isamplerRectShadow", NULL
             };
@@ -2533,7 +2533,7 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
       case GLSL_TYPE_UINT:
          switch (type->sampler_dimensionality) {
          case GLSL_SAMPLER_DIM_1D: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "usampler1D", "usampler1DArray", NULL, NULL
             };
@@ -2561,14 +2561,14 @@ get_type_name_for_precision_qualifier(const glsl_type *type)
             return names[offset + type_idx];
          }
          case GLSL_SAMPLER_DIM_MS: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "usampler2DMS", "usampler2DMSArray", NULL, NULL
             };
             return names[type_idx];
          }
          case GLSL_SAMPLER_DIM_RECT: {
-            assert(type->base_type == GLSL_TYPE_SAMPLER);
+            assert(type->is_sampler());
             static const char *const names[4] = {
               "usamplerRect", NULL, "usamplerRectShadow", NULL
             };

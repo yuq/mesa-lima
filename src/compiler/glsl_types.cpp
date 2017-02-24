@@ -95,7 +95,7 @@ glsl_type::glsl_type(GLenum gl_type, glsl_base_type base_type,
 
    memset(& fields, 0, sizeof(fields));
 
-   if (base_type == GLSL_TYPE_SAMPLER) {
+   if (is_sampler()) {
       /* Samplers take no storage whatsoever. */
       matrix_columns = vector_elements = 0;
    } else {
