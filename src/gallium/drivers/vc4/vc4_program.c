@@ -1956,11 +1956,12 @@ ntq_emit_if(struct vc4_compile *c, nir_if *if_stmt)
         qir_link_blocks(c->cur_block, after_block);
 
         qir_set_emit_block(c, after_block);
-        if (was_top_level)
+        if (was_top_level) {
                 c->execute = c->undef;
-        else
+                c->last_top_block = c->cur_block;
+        } else {
                 ntq_activate_execute_for_block(c);
-
+        }
 }
 
 static void
@@ -2084,10 +2085,12 @@ ntq_emit_loop(struct vc4_compile *c, nir_loop *loop)
         qir_link_blocks(c->cur_block, c->loop_break_block);
 
         qir_set_emit_block(c, c->loop_break_block);
-        if (was_top_level)
+        if (was_top_level) {
                 c->execute = c->undef;
-        else
+                c->last_top_block = c->cur_block;
+        } else {
                 ntq_activate_execute_for_block(c);
+        }
 
         c->loop_break_block = save_loop_break_block;
         c->loop_cont_block = save_loop_cont_block;
