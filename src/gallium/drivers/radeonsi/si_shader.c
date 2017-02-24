@@ -1049,7 +1049,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		if (inst->Dst[0].Register.WriteMask != 0xF && !is_tess_factor) {
 			ac_build_buffer_store_dword(&ctx->ac, buffer, value, 1,
 						    buf_addr, base,
-						    4 * chan_index, 1, 1, 1);
+						    4 * chan_index, 1, 1, 0);
 		}
 	}
 
@@ -1057,7 +1057,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef value = lp_build_gather_values(bld_base->base.gallivm,
 		                                            values, 4);
 		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buf_addr,
-					    base, 0, 1, 1, 1);
+					    base, 0, 1, 1, 0);
 	}
 }
 
@@ -2412,7 +2412,7 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 		                              lds_ptr);
 
 		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buffer_addr,
-					    buffer_offset, 0, 1, 1, 1);
+					    buffer_offset, 0, 1, 1, 0);
 	}
 }
 
@@ -2527,18 +2527,18 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 	ac_build_buffer_store_dword(&ctx->ac, buffer,
 				    lp_build_const_int32(gallivm, 0x80000000),
 				    1, lp_build_const_int32(gallivm, 0), tf_base,
-				    0, 1, 1, 1);
+				    0, 1, 1, 0);
 
 	lp_build_endif(&inner_if_ctx);
 
 	/* Store the tessellation factors. */
 	ac_build_buffer_store_dword(&ctx->ac, buffer, vec0,
 				    MIN2(stride, 4), byteoffset, tf_base,
-				    4, 1, 1, 1);
+				    4, 1, 1, 0);
 	if (vec1)
 		ac_build_buffer_store_dword(&ctx->ac, buffer, vec1,
 					    stride - 4, byteoffset, tf_base,
-					    20, 1, 1, 1);
+					    20, 1, 1, 0);
 
 	/* Store the tess factors into the offchip buffer if TES reads them. */
 	if (shader->key.part.tcs.epilog.tes_reads_tess_factors) {
@@ -2560,7 +2560,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 
 		ac_build_buffer_store_dword(&ctx->ac, buf, outer_vec,
 					    outer_comps, tf_outer_offset,
-					    base, 0, 1, 1, 1);
+					    base, 0, 1, 1, 0);
 		if (inner_comps) {
 			param_inner = si_shader_io_get_unique_index(
 					      TGSI_SEMANTIC_TESSINNER, 0);
@@ -2571,7 +2571,7 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				    lp_build_gather_values(gallivm, inner, inner_comps);
 			ac_build_buffer_store_dword(&ctx->ac, buf, inner_vec,
 						    inner_comps, tf_inner_offset,
-						    base, 0, 1, 1, 1);
+						    base, 0, 1, 1, 0);
 		}
 	}
 
