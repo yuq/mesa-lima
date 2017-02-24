@@ -456,61 +456,61 @@ lower_mod(nir_builder *b, nir_ssa_def *src0, nir_ssa_def *src1)
                     nir_imm_double(b, 0.0));
 }
 
-static void
+static bool
 lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
 {
    assert(instr->dest.dest.is_ssa);
    if (instr->dest.dest.ssa.bit_size != 64)
-      return;
+      return false;
 
    switch (instr->op) {
    case nir_op_frcp:
       if (!(options & nir_lower_drcp))
-         return;
+         return false;
       break;
 
    case nir_op_fsqrt:
       if (!(options & nir_lower_dsqrt))
-         return;
+         return false;
       break;
 
    case nir_op_frsq:
       if (!(options & nir_lower_drsq))
-         return;
+         return false;
       break;
 
    case nir_op_ftrunc:
       if (!(options & nir_lower_dtrunc))
-         return;
+         return false;
       break;
 
    case nir_op_ffloor:
       if (!(options & nir_lower_dfloor))
-         return;
+         return false;
       break;
 
    case nir_op_fceil:
       if (!(options & nir_lower_dceil))
-         return;
+         return false;
       break;
 
    case nir_op_ffract:
       if (!(options & nir_lower_dfract))
-         return;
+         return false;
       break;
 
    case nir_op_fround_even:
       if (!(options & nir_lower_dround_even))
-         return;
+         return false;
       break;
 
    case nir_op_fmod:
       if (!(options & nir_lower_dmod))
-         return;
+         return false;
       break;
 
    default:
-      return;
+      return false;
    }
 
    nir_builder bld;
@@ -560,20 +560,40 @@ lower_doubles_instr(nir_alu_instr *instr, nir_lower_doubles_options options)
 
    nir_ssa_def_rewrite_uses(&instr->dest.dest.ssa, nir_src_for_ssa(result));
    nir_instr_remove(&instr->instr);
+   return true;
 }
 
-void
-nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options)
+static bool
+nir_lower_doubles_impl(nir_function_impl *impl,
+                       nir_lower_doubles_options options)
 {
-   nir_foreach_function(function, shader) {
-      if (!function->impl)
-         continue;
+   bool progress = false;
 
-      nir_foreach_block(block, function->impl) {
-         nir_foreach_instr_safe(instr, block) {
-            if (instr->type == nir_instr_type_alu)
-               lower_doubles_instr(nir_instr_as_alu(instr), options);
-         }
+   nir_foreach_block(block, impl) {
+      nir_foreach_instr_safe(instr, block) {
+         if (instr->type == nir_instr_type_alu)
+            progress |= lower_doubles_instr(nir_instr_as_alu(instr),
+                                            options);
       }
    }
+
+   if (progress)
+      nir_metadata_preserve(impl, nir_metadata_block_index |
+                                  nir_metadata_dominance);
+
+   return progress;
+}
+
+bool
+nir_lower_doubles(nir_shader *shader, nir_lower_doubles_options options)
+{
+   bool progress = false;
+
+   nir_foreach_function(function, shader) {
+      if (function->impl) {
+         progress |= nir_lower_doubles_impl(function->impl, options);
+      }
+   }
+
+   return progress;
 }
