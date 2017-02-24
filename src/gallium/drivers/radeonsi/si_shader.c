@@ -5152,6 +5152,7 @@ static void si_create_function(struct si_shader_context *ctx,
 		 */
 		if (LLVMGetTypeKind(LLVMTypeOf(P)) == LLVMPointerTypeKind) {
 			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_BYVAL);
+			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_NOALIAS);
 			lp_add_attr_dereferenceable(P, UINT64_MAX);
 		} else
 			lp_add_function_attr(ctx->main_fn, i + 1, LP_FUNC_ATTR_INREG);
