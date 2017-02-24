@@ -130,7 +130,9 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			    LLVMValueRef soffset,
 			    unsigned inst_offset,
 		            bool glc,
-		            bool slc);
+		            bool slc,
+			    bool writeonly_memory,
+			    bool has_add_tid);
 LLVMValueRef
 ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     LLVMValueRef rsrc,

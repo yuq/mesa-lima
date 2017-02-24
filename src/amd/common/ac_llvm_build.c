@@ -551,8 +551,64 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			    LLVMValueRef soffset,
 			    unsigned inst_offset,
 			    bool glc,
-			    bool slc)
+			    bool slc,
+			    bool writeonly_memory,
+			    bool has_add_tid)
 {
+	/* TODO: Fix stores with ADD_TID and remove the "has_add_tid" flag. */
+	if (HAVE_LLVM >= 0x0309 && !has_add_tid) {
+		/* Split 3 channel stores, becase LLVM doesn't support 3-channel
+		 * intrinsics. */
+		if (num_channels == 3) {
+			LLVMValueRef v[3], v01;
+
+			for (int i = 0; i < 3; i++) {
+				v[i] = LLVMBuildExtractElement(ctx->builder, vdata,
+						LLVMConstInt(ctx->i32, i, 0), "");
+			}
+			v01 = ac_build_gather_values(ctx, v, 2);
+
+			ac_build_buffer_store_dword(ctx, rsrc, v01, 2, voffset,
+						    soffset, inst_offset, glc, slc,
+						    writeonly_memory, has_add_tid);
+			ac_build_buffer_store_dword(ctx, rsrc, v[2], 1, voffset,
+						    soffset, inst_offset + 8,
+						    glc, slc,
+						    writeonly_memory, has_add_tid);
+			return;
+		}
+
+		unsigned func = CLAMP(num_channels, 1, 3) - 1;
+		static const char *types[] = {"f32", "v2f32", "v4f32"};
+		char name[256];
+		LLVMValueRef offset = soffset;
+
+		if (inst_offset)
+			offset = LLVMBuildAdd(ctx->builder, offset,
+					      LLVMConstInt(ctx->i32, inst_offset, 0), "");
+		if (voffset)
+			offset = LLVMBuildAdd(ctx->builder, offset, voffset, "");
+
+		LLVMValueRef args[] = {
+			bitcast_to_float(ctx, vdata),
+			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
+			LLVMConstInt(ctx->i32, 0, 0),
+			offset,
+			LLVMConstInt(ctx->i1, glc, 0),
+			LLVMConstInt(ctx->i1, slc, 0),
+		};
+
+		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.store.%s",
+			 types[func]);
+
+		ac_emit_llvm_intrinsic(ctx, name, ctx->voidt,
+				       args, ARRAY_SIZE(args),
+				       writeonly_memory ?
+					AC_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
+					AC_FUNC_ATTR_WRITEONLY);
+		return;
+	}
+
 	static unsigned dfmt[] = {
 		V_008F0C_BUF_DATA_FORMAT_32,
 		V_008F0C_BUF_DATA_FORMAT_32_32,
