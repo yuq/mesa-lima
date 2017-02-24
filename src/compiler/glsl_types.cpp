@@ -2032,8 +2032,7 @@ glsl_type::coordinate_components() const
     * cubemap faces.
     */
    if (sampler_array &&
-       !(base_type == GLSL_TYPE_IMAGE &&
-         sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE))
+       !(is_image() && sampler_dimensionality == GLSL_SAMPLER_DIM_CUBE))
       size += 1;
 
    return size;

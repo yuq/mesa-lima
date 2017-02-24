@@ -140,7 +140,7 @@ set_opaque_binding(void *mem_ctx, gl_shader_program *prog,
                      storage->storage[i].i;
                }
 
-            } else if (storage->type->base_type == GLSL_TYPE_IMAGE &&
+            } else if (storage->type->is_image() &&
                     storage->opaque[sh].active) {
                for (unsigned i = 0; i < elements; i++) {
                   const unsigned index = storage->opaque[sh].index + i;
