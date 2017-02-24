@@ -90,8 +90,12 @@ index_to_queryid(unsigned index)
 static inline bool
 queryid_valid(const struct gl_context *ctx, unsigned numQueries, GLuint queryid)
 {
-   GLuint index = queryid_to_index(queryid);
-   return index >= 0 && index < numQueries;
+   /* The GL_INTEL_performance_query spec says:
+    *
+    *  "Performance counter ids values start with 1. Performance counter id 0
+    *  is reserved as an invalid counter."
+    */
+   return queryid != 0 && queryid_to_index(queryid) < numQueries;
 }
 
 static inline GLuint
