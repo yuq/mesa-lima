@@ -2499,7 +2499,7 @@ bool nir_lower_idiv(nir_shader *shader);
 
 void nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables);
 void nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables);
-void nir_lower_clip_cull_distance_arrays(nir_shader *nir);
+bool nir_lower_clip_cull_distance_arrays(nir_shader *nir);
 
 void nir_lower_two_sided_color(nir_shader *shader);
 
