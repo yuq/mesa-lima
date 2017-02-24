@@ -122,30 +122,16 @@ ac_build_indexed_load_const(struct ac_llvm_context *ctx,
 			    LLVMValueRef base_ptr, LLVMValueRef index);
 
 void
-ac_build_tbuffer_store_dwords(struct ac_llvm_context *ctx,
-			      LLVMValueRef rsrc,
-			      LLVMValueRef vdata,
-			      unsigned num_channels,
-			      LLVMValueRef vaddr,
-			      LLVMValueRef soffset,
-			      unsigned inst_offset);
-
-void
-ac_build_tbuffer_store(struct ac_llvm_context *ctx,
-		       LLVMValueRef rsrc,
-		       LLVMValueRef vdata,
-		       unsigned num_channels,
-		       LLVMValueRef vaddr,
-		       LLVMValueRef soffset,
-		       unsigned inst_offset,
-		       unsigned dfmt,
-		       unsigned nfmt,
-		       unsigned offen,
-		       unsigned idxen,
-		       unsigned glc,
-		       unsigned slc,
-		       unsigned tfe);
-
+ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
+			    LLVMValueRef rsrc,
+			    LLVMValueRef vdata,
+			    unsigned num_channels,
+			    LLVMValueRef vaddr,
+			    LLVMValueRef soffset,
+			    unsigned inst_offset,
+			    bool offen,
+		            bool glc,
+		            bool slc);
 LLVMValueRef
 ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     LLVMValueRef rsrc,

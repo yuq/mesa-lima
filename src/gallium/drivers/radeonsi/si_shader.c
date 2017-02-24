@@ -1047,17 +1047,17 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		values[chan_index] = value;
 
 		if (inst->Dst[0].Register.WriteMask != 0xF && !is_tess_factor) {
-			ac_build_tbuffer_store_dwords(&ctx->ac, buffer, value, 1,
-						      buf_addr, base,
-						      4 * chan_index);
+			ac_build_buffer_store_dword(&ctx->ac, buffer, value, 1,
+						    buf_addr, base,
+						    4 * chan_index, 1, 1, 1);
 		}
 	}
 
 	if (inst->Dst[0].Register.WriteMask == 0xF && !is_tess_factor) {
 		LLVMValueRef value = lp_build_gather_values(bld_base->base.gallivm,
 		                                            values, 4);
-		ac_build_tbuffer_store_dwords(&ctx->ac, buffer, value, 4, buf_addr,
-					      base, 0);
+		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buf_addr,
+					    base, 0, 1, 1, 1);
 	}
 }
 
@@ -2083,11 +2083,11 @@ static void emit_streamout_output(struct si_shader_context *ctx,
 		break;
 	}
 
-	ac_build_tbuffer_store_dwords(&ctx->ac, so_buffers[buf_idx],
-				      vdata, num_comps,
-				      so_write_offsets[buf_idx],
-				      LLVMConstInt(ctx->i32, 0, 0),
-				      stream_out->dst_offset * 4);
+	ac_build_buffer_store_dword(&ctx->ac, so_buffers[buf_idx],
+				    vdata, num_comps,
+				    so_write_offsets[buf_idx],
+				    LLVMConstInt(ctx->i32, 0, 0),
+				    stream_out->dst_offset * 4, 1, 1, 1);
 }
 
 /**
@@ -2411,8 +2411,8 @@ static void si_copy_tcs_inputs(struct lp_build_tgsi_context *bld_base)
 		LLVMValueRef value = lds_load(bld_base, TGSI_TYPE_SIGNED, ~0,
 		                              lds_ptr);
 
-		ac_build_tbuffer_store_dwords(&ctx->ac, buffer, value, 4, buffer_addr,
-					      buffer_offset, 0);
+		ac_build_buffer_store_dword(&ctx->ac, buffer, value, 4, buffer_addr,
+					    buffer_offset, 0, 1, 1, 1);
 	}
 }
 
@@ -2524,18 +2524,21 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 				  rel_patch_id, bld_base->uint_bld.zero, ""));
 
 	/* Store the dynamic HS control word. */
-	ac_build_tbuffer_store_dwords(&ctx->ac, buffer,
-				      lp_build_const_int32(gallivm, 0x80000000),
-				      1, lp_build_const_int32(gallivm, 0), tf_base, 0);
+	ac_build_buffer_store_dword(&ctx->ac, buffer,
+				    lp_build_const_int32(gallivm, 0x80000000),
+				    1, lp_build_const_int32(gallivm, 0), tf_base,
+				    0, 1, 1, 1);
 
 	lp_build_endif(&inner_if_ctx);
 
 	/* Store the tessellation factors. */
-	ac_build_tbuffer_store_dwords(&ctx->ac, buffer, vec0,
-				      MIN2(stride, 4), byteoffset, tf_base, 4);
+	ac_build_buffer_store_dword(&ctx->ac, buffer, vec0,
+				    MIN2(stride, 4), byteoffset, tf_base,
+				    4, 1, 1, 1);
 	if (vec1)
-		ac_build_tbuffer_store_dwords(&ctx->ac, buffer, vec1,
-					      stride - 4, byteoffset, tf_base, 20);
+		ac_build_buffer_store_dword(&ctx->ac, buffer, vec1,
+					    stride - 4, byteoffset, tf_base,
+					    20, 1, 1, 1);
 
 	/* Store the tess factors into the offchip buffer if TES reads them. */
 	if (shader->key.part.tcs.epilog.tes_reads_tess_factors) {
@@ -2555,9 +2558,9 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 		outer_vec = lp_build_gather_values(gallivm, outer,
 						   util_next_power_of_two(outer_comps));
 
-		ac_build_tbuffer_store_dwords(&ctx->ac, buf, outer_vec,
-					      outer_comps, tf_outer_offset,
-					      base, 0);
+		ac_build_buffer_store_dword(&ctx->ac, buf, outer_vec,
+					    outer_comps, tf_outer_offset,
+					    base, 0, 1, 1, 1);
 		if (inner_comps) {
 			param_inner = si_shader_io_get_unique_index(
 					      TGSI_SEMANTIC_TESSINNER, 0);
@@ -2566,9 +2569,9 @@ static void si_write_tess_factors(struct lp_build_tgsi_context *bld_base,
 
 			inner_vec = inner_comps == 1 ? inner[0] :
 				    lp_build_gather_values(gallivm, inner, inner_comps);
-			ac_build_tbuffer_store_dwords(&ctx->ac, buf, inner_vec,
-						      inner_comps, tf_inner_offset,
-						      base, 0);
+			ac_build_buffer_store_dword(&ctx->ac, buf, inner_vec,
+						    inner_comps, tf_inner_offset,
+						    base, 0, 1, 1, 1);
 		}
 	}
 
@@ -2688,14 +2691,12 @@ static void si_llvm_emit_es_epilogue(struct lp_build_tgsi_context *bld_base)
 			LLVMValueRef out_val = LLVMBuildLoad(gallivm->builder, out_ptr[chan], "");
 			out_val = LLVMBuildBitCast(gallivm->builder, out_val, ctx->i32, "");
 
-			ac_build_tbuffer_store(&ctx->ac,
-					       ctx->esgs_ring,
-					       out_val, 1,
-					       LLVMGetUndef(ctx->i32), soffset,
-					       (4 * param_index + chan) * 4,
-					       V_008F0C_BUF_DATA_FORMAT_32,
-					       V_008F0C_BUF_NUM_FORMAT_UINT,
-					       0, 0, 1, 1, 0);
+			ac_build_buffer_store_dword(&ctx->ac,
+						    ctx->esgs_ring,
+						    out_val, 1,
+						    LLVMGetUndef(ctx->i32), soffset,
+						    (4 * param_index + chan) * 4,
+						    0, 1, 1);
 		}
 	}
 }
@@ -5056,13 +5057,11 @@ static void si_llvm_emit_vertex(
 
 			out_val = LLVMBuildBitCast(gallivm->builder, out_val, ctx->i32, "");
 
-			ac_build_tbuffer_store(&ctx->ac,
-					       ctx->gsvs_ring[stream],
-					       out_val, 1,
-					       voffset, soffset, 0,
-					       V_008F0C_BUF_DATA_FORMAT_32,
-					       V_008F0C_BUF_NUM_FORMAT_UINT,
-					       1, 0, 1, 1, 0);
+			ac_build_buffer_store_dword(&ctx->ac,
+						    ctx->gsvs_ring[stream],
+						    out_val, 1,
+						    voffset, soffset, 0,
+						    1, 1, 1);
 		}
 	}
 

@@ -3156,12 +3156,10 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 
 			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
 
-			ac_build_tbuffer_store(&ctx->ac, ctx->gsvs_ring,
-					       out_val, 1,
-					       voffset, ctx->gs2vs_offset, 0,
-					       V_008F0C_BUF_DATA_FORMAT_32,
-					       V_008F0C_BUF_NUM_FORMAT_UINT,
-					       1, 0, 1, 1, 0);
+			ac_build_buffer_store_dword(&ctx->ac, ctx->gsvs_ring,
+						    out_val, 1,
+						    voffset, ctx->gs2vs_offset, 0,
+						    1, 1, 1);
 		}
 		idx += slot_inc;
 	}
@@ -4672,14 +4670,12 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx)
 			LLVMValueRef out_val = LLVMBuildLoad(ctx->builder, out_ptr[j], "");
 			out_val = LLVMBuildBitCast(ctx->builder, out_val, ctx->i32, "");
 
-			ac_build_tbuffer_store(&ctx->ac,
+			ac_build_buffer_store_dword(&ctx->ac,
 					       ctx->esgs_ring,
 					       out_val, 1,
 					       LLVMGetUndef(ctx->i32), ctx->es2gs_offset,
 					       (4 * param_index + j + start) * 4,
-					       V_008F0C_BUF_DATA_FORMAT_32,
-					       V_008F0C_BUF_NUM_FORMAT_UINT,
-					       0, 0, 1, 1, 0);
+					       0, 1, 1);
 		}
 	}
 	ctx->shader_info->vs.esgs_itemsize = (max_output_written + 1) * 16;

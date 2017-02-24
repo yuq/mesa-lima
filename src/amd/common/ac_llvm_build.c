@@ -543,21 +543,25 @@ ac_build_indexed_load_const(struct ac_llvm_context *ctx,
  * or v4i32 (num_channels=3,4).
  */
 void
-ac_build_tbuffer_store(struct ac_llvm_context *ctx,
-		       LLVMValueRef rsrc,
-		       LLVMValueRef vdata,
-		       unsigned num_channels,
-		       LLVMValueRef vaddr,
-		       LLVMValueRef soffset,
-		       unsigned inst_offset,
-		       unsigned dfmt,
-		       unsigned nfmt,
-		       unsigned offen,
-		       unsigned idxen,
-		       unsigned glc,
-		       unsigned slc,
-		       unsigned tfe)
+ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
+			    LLVMValueRef rsrc,
+			    LLVMValueRef vdata,
+			    unsigned num_channels,
+			    LLVMValueRef vaddr,
+			    LLVMValueRef soffset,
+			    unsigned inst_offset,
+			    bool offen,
+			    bool glc,
+			    bool slc)
 {
+	static unsigned dfmt[] = {
+		V_008F0C_BUF_DATA_FORMAT_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32,
+		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
+	};
+	assert(num_channels >= 1 && num_channels <= 4);
+
 	LLVMValueRef args[] = {
 		rsrc,
 		vdata,
@@ -565,13 +569,13 @@ ac_build_tbuffer_store(struct ac_llvm_context *ctx,
 		vaddr,
 		soffset,
 		LLVMConstInt(ctx->i32, inst_offset, 0),
-		LLVMConstInt(ctx->i32, dfmt, 0),
-		LLVMConstInt(ctx->i32, nfmt, 0),
+		LLVMConstInt(ctx->i32, dfmt[num_channels - 1], 0),
+		LLVMConstInt(ctx->i32, V_008F0C_BUF_NUM_FORMAT_UINT, 0),
 		LLVMConstInt(ctx->i32, offen, 0),
-		LLVMConstInt(ctx->i32, idxen, 0),
+		LLVMConstInt(ctx->i32, 0, 0), /* idxen */
 		LLVMConstInt(ctx->i32, glc, 0),
 		LLVMConstInt(ctx->i32, slc, 0),
-		LLVMConstInt(ctx->i32, tfe, 0)
+		LLVMConstInt(ctx->i32, 0, 0), /* tfe*/
 	};
 
 	/* The instruction offset field has 12 bits */
@@ -586,28 +590,6 @@ ac_build_tbuffer_store(struct ac_llvm_context *ctx,
 	ac_emit_llvm_intrinsic(ctx, name, ctx->voidt,
 			       args, ARRAY_SIZE(args),
 			       AC_FUNC_ATTR_LEGACY);
-}
-
-void
-ac_build_tbuffer_store_dwords(struct ac_llvm_context *ctx,
-			      LLVMValueRef rsrc,
-			      LLVMValueRef vdata,
-			      unsigned num_channels,
-			      LLVMValueRef vaddr,
-			      LLVMValueRef soffset,
-			      unsigned inst_offset)
-{
-	static unsigned dfmt[] = {
-		V_008F0C_BUF_DATA_FORMAT_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32,
-		V_008F0C_BUF_DATA_FORMAT_32_32_32_32
-	};
-	assert(num_channels >= 1 && num_channels <= 4);
-
-	ac_build_tbuffer_store(ctx, rsrc, vdata, num_channels, vaddr, soffset,
-			       inst_offset, dfmt[num_channels - 1],
-			       V_008F0C_BUF_NUM_FORMAT_UINT, 1, 0, 1, 1, 0);
 }
 
 LLVMValueRef
