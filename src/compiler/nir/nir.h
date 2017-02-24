@@ -2542,7 +2542,7 @@ void nir_lower_bitmap(nir_shader *shader, const nir_lower_bitmap_options *option
 
 void nir_lower_atomics(nir_shader *shader,
                        const struct gl_shader_program *shader_program);
-void nir_lower_to_source_mods(nir_shader *shader);
+bool nir_lower_to_source_mods(nir_shader *shader);
 
 bool nir_lower_gs_intrinsics(nir_shader *shader);
 
