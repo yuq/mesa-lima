@@ -1080,3 +1080,21 @@ LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
 				      AC_FUNC_ATTR_READNONE |
 				      AC_FUNC_ATTR_LEGACY);
 }
+
+LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
+				   LLVMValueRef args[2])
+{
+	if (HAVE_LLVM >= 0x0500) {
+		LLVMTypeRef v2f16 =
+			LLVMVectorType(LLVMHalfTypeInContext(ctx->context), 2);
+		LLVMValueRef res =
+			ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.cvt.pkrtz",
+					       v2f16, args, 2,
+					       AC_FUNC_ATTR_READNONE);
+		return LLVMBuildBitCast(ctx->builder, res, ctx->i32, "");
+	}
+
+	return ac_emit_llvm_intrinsic(ctx, "llvm.SI.packf16", ctx->i32, args, 2,
+				      AC_FUNC_ATTR_READNONE |
+				      AC_FUNC_ATTR_LEGACY);
+}

@@ -1822,11 +1822,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			};
 			LLVMValueRef packed;
 
-			packed = lp_build_intrinsic(base->gallivm->builder,
-						    "llvm.SI.packf16",
-						    ctx->i32, pack_args, 2,
-						    LP_FUNC_ATTR_READNONE |
-						    LP_FUNC_ATTR_LEGACY);
+			packed = ac_emit_cvt_pkrtz_f16(&ctx->ac, pack_args);
 			args->out[chan] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed, ctx->f32, "");
