@@ -1105,3 +1105,19 @@ LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				      AC_FUNC_ATTR_READNONE |
 				      AC_FUNC_ATTR_LEGACY);
 }
+
+/**
+ * KILL, AKA discard in GLSL.
+ *
+ * \param value  kill if value < 0.0 or value == NULL.
+ */
+void ac_emit_kill(struct ac_llvm_context *ctx, LLVMValueRef value)
+{
+	if (value) {
+		ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.kill", ctx->voidt,
+				       &value, 1, AC_FUNC_ATTR_LEGACY);
+	} else {
+		ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.kilp", ctx->voidt,
+				       NULL, 0, AC_FUNC_ATTR_LEGACY);
+	}
+}

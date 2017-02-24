@@ -1940,11 +1940,9 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 					lp_build_const_float(gallivm, 1.0f),
 					lp_build_const_float(gallivm, -1.0f));
 
-		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-				   ctx->voidt, &arg, 1, LP_FUNC_ATTR_LEGACY);
+		ac_emit_kill(&ctx->ac, arg);
 	} else {
-		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kilp",
-				   ctx->voidt, NULL, 0, LP_FUNC_ATTR_LEGACY);
+		ac_emit_kill(&ctx->ac, NULL);
 	}
 }
 
@@ -5033,8 +5031,7 @@ static void si_llvm_emit_vertex(
 				       lp_build_const_float(gallivm, 1.0f),
 				       lp_build_const_float(gallivm, -1.0f));
 
-		lp_build_intrinsic(gallivm->builder, "llvm.AMDGPU.kill",
-				   ctx->voidt, &kill, 1, LP_FUNC_ATTR_LEGACY);
+		ac_emit_kill(&ctx->ac, kill);
 	} else {
 		lp_build_if(&if_state, gallivm, can_emit);
 	}
@@ -5656,8 +5653,7 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	/* The intrinsic kills the thread if arg < 0. */
 	bit = LLVMBuildSelect(builder, bit, LLVMConstReal(ctx->f32, 0),
 			      LLVMConstReal(ctx->f32, -1), "");
-	lp_build_intrinsic(builder, "llvm.AMDGPU.kill", ctx->voidt, &bit, 1,
-			   LP_FUNC_ATTR_LEGACY);
+	ac_emit_kill(&ctx->ac, bit);
 }
 
 void si_shader_binary_read_config(struct ac_shader_binary *binary,

@@ -236,6 +236,7 @@ LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
 				  struct ac_image_args *a);
 LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				   LLVMValueRef args[2]);
+void ac_emit_kill(struct ac_llvm_context *ctx, LLVMValueRef value);
 
 #ifdef __cplusplus
 }

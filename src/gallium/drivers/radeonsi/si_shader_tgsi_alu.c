@@ -26,6 +26,7 @@
 #include "gallivm/lp_bld_intr.h"
 #include "gallivm/lp_bld_gather.h"
 #include "tgsi/tgsi_parse.h"
+#include "amd/common/ac_llvm_build.h"
 
 static void kill_if_fetch_args(struct lp_build_tgsi_context *bld_base,
 			       struct lp_build_emit_data *emit_data)
@@ -58,9 +59,12 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
-	lp_build_intrinsic(bld_base->base.gallivm->builder,
-			   action->intr_name, emit_data->dst_type,
-			   &emit_data->args[0], 1, LP_FUNC_ATTR_LEGACY);
+	struct si_shader_context *ctx = si_shader_context(bld_base);
+
+	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF)
+		ac_emit_kill(&ctx->ac, emit_data->args[0]);
+	else
+		ac_emit_kill(&ctx->ac, NULL);
 }
 
 static void emit_icmp(const struct lp_build_tgsi_action *action,
@@ -779,9 +783,7 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 	bld_base->op_actions[TGSI_OPCODE_I2F].emit = emit_i2f;
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].fetch_args = kill_if_fetch_args;
 	bld_base->op_actions[TGSI_OPCODE_KILL_IF].emit = kil_emit;
-	bld_base->op_actions[TGSI_OPCODE_KILL_IF].intr_name = "llvm.AMDGPU.kill";
-	bld_base->op_actions[TGSI_OPCODE_KILL].emit = lp_build_tgsi_intrinsic;
-	bld_base->op_actions[TGSI_OPCODE_KILL].intr_name = "llvm.AMDGPU.kilp";
+	bld_base->op_actions[TGSI_OPCODE_KILL].emit = kil_emit;
 	bld_base->op_actions[TGSI_OPCODE_LSB].emit = emit_lsb;
 	bld_base->op_actions[TGSI_OPCODE_LG2].emit = build_tgsi_intrinsic_nomem;
 	bld_base->op_actions[TGSI_OPCODE_LG2].intr_name = "llvm.log2.f32";
