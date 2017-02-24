@@ -619,7 +619,8 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     LLVMValueRef soffset,
 		     unsigned inst_offset,
 		     unsigned glc,
-		     unsigned slc)
+		     unsigned slc,
+		     bool readonly_memory)
 {
 	unsigned func = CLAMP(num_channels, 1, 3) - 1;
 
@@ -651,7 +652,13 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		         type_names[func]);
 
 		return ac_emit_llvm_intrinsic(ctx, name, types[func], args,
-					      ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
+					      ARRAY_SIZE(args),
+					      /* READNONE means writes can't
+					       * affect it, while READONLY means
+					       * that writes can affect it. */
+					      readonly_memory ?
+						      AC_FUNC_ATTR_READNONE :
+						      AC_FUNC_ATTR_READONLY);
 	} else {
 		LLVMValueRef args[] = {
 			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v16i8, ""),

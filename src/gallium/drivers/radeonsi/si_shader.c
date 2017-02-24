@@ -826,7 +826,7 @@ static LLVMValueRef get_tcs_tes_buffer_address_from_reg(
 static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
                                 enum tgsi_opcode_type type, unsigned swizzle,
                                 LLVMValueRef buffer, LLVMValueRef offset,
-                                LLVMValueRef base)
+                                LLVMValueRef base, bool readonly_memory)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
@@ -836,14 +836,14 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 
 	if (swizzle == ~0) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
-					     0, 1, 0);
+					     0, 1, 0, readonly_memory);
 
 		return LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 	}
 
 	if (!tgsi_type_is_64bit(type)) {
 		value = ac_build_buffer_load(&ctx->ac, buffer, 4, NULL, base, offset,
-					     0, 1, 0);
+					     0, 1, 0, readonly_memory);
 
 		value = LLVMBuildBitCast(gallivm->builder, value, vec_type, "");
 		return LLVMBuildExtractElement(gallivm->builder, value,
@@ -851,10 +851,10 @@ static LLVMValueRef buffer_load(struct lp_build_tgsi_context *bld_base,
 	}
 
 	value = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
-	                          swizzle * 4, 1, 0);
+	                          swizzle * 4, 1, 0, readonly_memory);
 
 	value2 = ac_build_buffer_load(&ctx->ac, buffer, 1, NULL, base, offset,
-	                           swizzle * 4 + 4, 1, 0);
+	                           swizzle * 4 + 4, 1, 0, readonly_memory);
 
 	return si_llvm_emit_fetch_64bit(bld_base, type, value, value2);
 }
@@ -974,7 +974,7 @@ static LLVMValueRef fetch_input_tes(
 	base = LLVMGetParam(ctx->main_fn, ctx->param_oc_lds);
 	addr = get_tcs_tes_buffer_address_from_reg(ctx, NULL, reg);
 
-	return buffer_load(bld_base, type, swizzle, buffer, base, addr);
+	return buffer_load(bld_base, type, swizzle, buffer, base, addr, true);
 }
 
 static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
@@ -1113,14 +1113,14 @@ static LLVMValueRef fetch_input_gs(
 	soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle) * 256, 0);
 
 	value = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1, uint->zero,
-				     vtx_offset, soffset, 0, 1, 0);
+				     vtx_offset, soffset, 0, 1, 0, true);
 	if (tgsi_type_is_64bit(type)) {
 		LLVMValueRef value2;
 		soffset = LLVMConstInt(ctx->i32, (param * 4 + swizzle + 1) * 256, 0);
 
 		value2 = ac_build_buffer_load(&ctx->ac, ctx->esgs_ring, 1,
 					      uint->zero, vtx_offset, soffset,
-					      0, 1, 0);
+					      0, 1, 0, true);
 		return si_llvm_emit_fetch_64bit(bld_base, type,
 						value, value2);
 	}
@@ -1530,7 +1530,7 @@ static void declare_system_value(
 		                          lp_build_const_int32(gallivm, param));
 
 		value = buffer_load(&radeon_bld->bld_base, TGSI_TYPE_FLOAT,
-		                    ~0, buffer, base, addr);
+		                    ~0, buffer, base, addr, true);
 
 		break;
 	}
@@ -6216,7 +6216,7 @@ si_generate_gs_copy_shader(struct si_screen *sscreen,
 					ac_build_buffer_load(&ctx.ac,
 							     ctx.gsvs_ring[0], 1,
 							     uint->zero, voffset,
-							     soffset, 0, 1, 1);
+							     soffset, 0, 1, 1, true);
 			}
 		}
 

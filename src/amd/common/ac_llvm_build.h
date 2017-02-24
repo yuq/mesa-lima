@@ -155,7 +155,8 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		     LLVMValueRef soffset,
 		     unsigned inst_offset,
 		     unsigned glc,
-		     unsigned slc);
+		     unsigned slc,
+		     bool readonly_memory);
 
 LLVMValueRef
 ac_get_thread_id(struct ac_llvm_context *ctx);
