@@ -934,6 +934,12 @@ struct isl_view {
     * for texturing, they are ignored.
     */
    uint32_t base_array_layer;
+
+   /**
+    * Array Length
+    *
+    * Indicates the number of array elements starting at  Base Array Layer.
+    */
    uint32_t array_len;
 
    struct isl_swizzle swizzle;
