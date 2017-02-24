@@ -3727,7 +3727,8 @@ static void store_emit_buffer(
 
 		lp_build_intrinsic(
 			builder, intrinsic_name, emit_data->dst_type,
-			emit_data->args, emit_data->arg_count, 0);
+			emit_data->args, emit_data->arg_count,
+			LP_FUNC_ATTR_WRITEONLY);
 	}
 }
 
@@ -3785,7 +3786,8 @@ static void store_emit(
 		emit_data->output[emit_data->chan] = lp_build_intrinsic(
 			builder, "llvm.amdgcn.buffer.store.format.v4f32",
 			emit_data->dst_type, emit_data->args,
-			emit_data->arg_count, 0);
+			emit_data->arg_count,
+			LP_FUNC_ATTR_WRITEONLY);
 	} else {
 		get_image_intr_name("llvm.amdgcn.image.store",
 				LLVMTypeOf(emit_data->args[0]), /* vdata */
@@ -3796,7 +3798,8 @@ static void store_emit(
 		emit_data->output[emit_data->chan] =
 			lp_build_intrinsic(
 				builder, intrinsic_name, emit_data->dst_type,
-				emit_data->args, emit_data->arg_count, 0);
+				emit_data->args, emit_data->arg_count,
+				LP_FUNC_ATTR_WRITEONLY);
 	}
 }
 
