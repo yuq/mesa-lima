@@ -172,6 +172,8 @@ static const char *attr_to_str(enum ac_func_attr attr)
    case AC_FUNC_ATTR_NOUNWIND: return "nounwind";
    case AC_FUNC_ATTR_READNONE: return "readnone";
    case AC_FUNC_ATTR_READONLY: return "readonly";
+   case AC_FUNC_ATTR_WRITEONLY: return "writeonly";
+   case AC_FUNC_ATTR_INACCESSIBLE_MEM_ONLY: return "inaccessiblememonly";
    default:
 	   fprintf(stderr, "Unhandled function attribute: %x\n", attr);
 	   return 0;
