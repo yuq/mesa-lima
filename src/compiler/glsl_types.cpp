@@ -40,7 +40,7 @@ void
 glsl_type::init_ralloc_type_ctx(void)
 {
    if (glsl_type::mem_ctx == NULL) {
-      glsl_type::mem_ctx = ralloc_autofree_context();
+      glsl_type::mem_ctx = ralloc_context(NULL);
       assert(glsl_type::mem_ctx != NULL);
    }
 }
@@ -416,6 +416,9 @@ _mesa_glsl_release_types(void)
       _mesa_hash_table_destroy(glsl_type::interface_types, NULL);
       glsl_type::interface_types = NULL;
    }
+
+   ralloc_free(glsl_type::mem_ctx);
+   glsl_type::mem_ctx = NULL;
 }
 
 
