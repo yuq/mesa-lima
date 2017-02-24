@@ -547,10 +547,9 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			    LLVMValueRef rsrc,
 			    LLVMValueRef vdata,
 			    unsigned num_channels,
-			    LLVMValueRef vaddr,
+			    LLVMValueRef voffset,
 			    LLVMValueRef soffset,
 			    unsigned inst_offset,
-			    bool offen,
 			    bool glc,
 			    bool slc)
 {
@@ -566,12 +565,12 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 		rsrc,
 		vdata,
 		LLVMConstInt(ctx->i32, num_channels, 0),
-		vaddr,
+		voffset ? voffset : LLVMGetUndef(ctx->i32),
 		soffset,
 		LLVMConstInt(ctx->i32, inst_offset, 0),
 		LLVMConstInt(ctx->i32, dfmt[num_channels - 1], 0),
 		LLVMConstInt(ctx->i32, V_008F0C_BUF_NUM_FORMAT_UINT, 0),
-		LLVMConstInt(ctx->i32, offen, 0),
+		LLVMConstInt(ctx->i32, voffset != NULL, 0),
 		LLVMConstInt(ctx->i32, 0, 0), /* idxen */
 		LLVMConstInt(ctx->i32, glc, 0),
 		LLVMConstInt(ctx->i32, slc, 0),
@@ -579,7 +578,7 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 	};
 
 	/* The instruction offset field has 12 bits */
-	assert(offen || inst_offset < (1 << 12));
+	assert(voffset || inst_offset < (1 << 12));
 
 	/* The intrinsic is overloaded, we need to add a type suffix for overloading to work. */
 	unsigned func = CLAMP(num_channels, 1, 3) - 1;

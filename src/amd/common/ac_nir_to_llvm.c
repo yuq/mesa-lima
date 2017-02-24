@@ -3159,7 +3159,7 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 			ac_build_buffer_store_dword(&ctx->ac, ctx->gsvs_ring,
 						    out_val, 1,
 						    voffset, ctx->gs2vs_offset, 0,
-						    1, 1, 1);
+						    1, 1);
 		}
 		idx += slot_inc;
 	}
@@ -4673,9 +4673,9 @@ handle_es_outputs_post(struct nir_to_llvm_context *ctx)
 			ac_build_buffer_store_dword(&ctx->ac,
 					       ctx->esgs_ring,
 					       out_val, 1,
-					       LLVMGetUndef(ctx->i32), ctx->es2gs_offset,
+					       NULL, ctx->es2gs_offset,
 					       (4 * param_index + j + start) * 4,
-					       0, 1, 1);
+					       1, 1);
 		}
 	}
 	ctx->shader_info->vs.esgs_itemsize = (max_output_written + 1) * 16;

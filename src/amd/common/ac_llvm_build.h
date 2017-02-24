@@ -126,10 +126,9 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 			    LLVMValueRef rsrc,
 			    LLVMValueRef vdata,
 			    unsigned num_channels,
-			    LLVMValueRef vaddr,
+			    LLVMValueRef voffset,
 			    LLVMValueRef soffset,
 			    unsigned inst_offset,
-			    bool offen,
 		            bool glc,
 		            bool slc);
 LLVMValueRef
