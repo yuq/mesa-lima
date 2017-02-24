@@ -174,10 +174,10 @@ struct vc4_compiled_shader {
 
         uint8_t num_inputs;
 
-        /* Byte offsets for the start of the vertex attributes 0-7, and the
-         * total size as "attribute" 8.
-         */
-        uint8_t vattr_offsets[9];
+        /** Byte offsets for the start of the vertex attributes. */
+        uint8_t vattr_offsets[8];
+        /** Total size of the vertex inputs, in bytes. */
+        uint8_t vattr_total_size;
         uint8_t vattrs_live;
 
         const struct vc4_fs_inputs *fs_inputs;
