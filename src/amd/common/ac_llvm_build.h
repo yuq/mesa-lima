@@ -237,6 +237,9 @@ LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
 LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
 				   LLVMValueRef args[2]);
 void ac_emit_kill(struct ac_llvm_context *ctx, LLVMValueRef value);
+LLVMValueRef ac_emit_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
+			 LLVMValueRef offset, LLVMValueRef width,
+			 bool is_signed);
 
 #ifdef __cplusplus
 }

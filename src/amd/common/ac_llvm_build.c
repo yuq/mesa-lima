@@ -1121,3 +1121,29 @@ void ac_emit_kill(struct ac_llvm_context *ctx, LLVMValueRef value)
 				       NULL, 0, AC_FUNC_ATTR_LEGACY);
 	}
 }
+
+LLVMValueRef ac_emit_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
+			 LLVMValueRef offset, LLVMValueRef width,
+			 bool is_signed)
+{
+	LLVMValueRef args[] = {
+		input,
+		offset,
+		width,
+	};
+
+	if (HAVE_LLVM >= 0x0500) {
+		return ac_emit_llvm_intrinsic(ctx,
+					      is_signed ? "llvm.amdgcn.sbfe.i32" :
+							  "llvm.amdgcn.ubfe.i32",
+					      ctx->i32, args, 3,
+					      AC_FUNC_ATTR_READNONE);
+	}
+
+	return ac_emit_llvm_intrinsic(ctx,
+				      is_signed ? "llvm.AMDGPU.bfe.i32" :
+						  "llvm.AMDGPU.bfe.u32",
+				      ctx->i32, args, 3,
+				      AC_FUNC_ATTR_READNONE |
+				      AC_FUNC_ATTR_LEGACY);
+}

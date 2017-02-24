@@ -500,16 +500,15 @@ static void emit_bfe(const struct lp_build_tgsi_action *action,
 		     struct lp_build_tgsi_context *bld_base,
 		     struct lp_build_emit_data *emit_data)
 {
+	struct si_shader_context *ctx = si_shader_context(bld_base);
 	struct gallivm_state *gallivm = bld_base->base.gallivm;
 	LLVMBuilderRef builder = gallivm->builder;
 	LLVMValueRef bfe_sm5;
 	LLVMValueRef cond;
 
-	bfe_sm5 = lp_build_intrinsic(builder, action->intr_name,
-				     emit_data->dst_type, emit_data->args,
-				     emit_data->arg_count,
-				     LP_FUNC_ATTR_READNONE |
-				     LP_FUNC_ATTR_LEGACY);
+	bfe_sm5 = ac_emit_bfe(&ctx->ac, emit_data->args[0],
+			      emit_data->args[1], emit_data->args[2],
+			      emit_data->info->opcode == TGSI_OPCODE_IBFE);
 
 	/* Correct for GLSL semantics. */
 	cond = LLVMBuildICmp(builder, LLVMIntUGE, emit_data->args[2],
@@ -770,7 +769,6 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 	bld_base->op_actions[TGSI_OPCODE_FSNE].emit = emit_fcmp;
 	bld_base->op_actions[TGSI_OPCODE_IABS].emit = emit_iabs;
 	bld_base->op_actions[TGSI_OPCODE_IBFE].emit = emit_bfe;
-	bld_base->op_actions[TGSI_OPCODE_IBFE].intr_name = "llvm.AMDGPU.bfe.i32";
 	bld_base->op_actions[TGSI_OPCODE_IDIV].emit = emit_idiv;
 	bld_base->op_actions[TGSI_OPCODE_IMAX].emit = emit_minmax_int;
 	bld_base->op_actions[TGSI_OPCODE_IMIN].emit = emit_minmax_int;
@@ -820,7 +818,6 @@ void si_shader_context_init_alu(struct lp_build_tgsi_context *bld_base)
 	bld_base->op_actions[TGSI_OPCODE_TRUNC].intr_name = "llvm.trunc.f32";
 	bld_base->op_actions[TGSI_OPCODE_UADD].emit = emit_uadd;
 	bld_base->op_actions[TGSI_OPCODE_UBFE].emit = emit_bfe;
-	bld_base->op_actions[TGSI_OPCODE_UBFE].intr_name = "llvm.AMDGPU.bfe.u32";
 	bld_base->op_actions[TGSI_OPCODE_UDIV].emit = emit_udiv;
 	bld_base->op_actions[TGSI_OPCODE_UMAX].emit = emit_minmax_int;
 	bld_base->op_actions[TGSI_OPCODE_UMIN].emit = emit_minmax_int;
