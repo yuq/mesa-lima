@@ -2400,7 +2400,7 @@ bool nir_lower_constant_initializers(nir_shader *shader,
 void nir_move_vec_src_uses_to_dest(nir_shader *shader);
 bool nir_lower_vec_to_movs(nir_shader *shader);
 bool nir_lower_alu_to_scalar(nir_shader *shader);
-void nir_lower_load_const_to_scalar(nir_shader *shader);
+bool nir_lower_load_const_to_scalar(nir_shader *shader);
 
 bool nir_lower_phis_to_scalar(nir_shader *shader);
 void nir_lower_io_to_scalar(nir_shader *shader, nir_variable_mode mask);
