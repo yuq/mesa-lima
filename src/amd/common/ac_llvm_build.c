@@ -736,6 +736,26 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 					 LLVMValueRef voffset,
 					 bool readonly_memory)
 {
+	if (HAVE_LLVM >= 0x0309) {
+		LLVMValueRef args [] = {
+			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v4i32, ""),
+			vindex,
+			voffset,
+			LLVMConstInt(ctx->i1, 0, 0), /* glc */
+			LLVMConstInt(ctx->i1, 0, 0), /* slc */
+		};
+
+		return ac_emit_llvm_intrinsic(ctx,
+					      "llvm.amdgcn.buffer.load.format.v4f32",
+					      ctx->v4f32, args, ARRAY_SIZE(args),
+					      /* READNONE means writes can't
+					       * affect it, while READONLY means
+					       * that writes can affect it. */
+					      readonly_memory ?
+						      AC_FUNC_ATTR_READNONE :
+						      AC_FUNC_ATTR_READONLY);
+	}
+
 	LLVMValueRef args[] = {
 		rsrc,
 		voffset,
