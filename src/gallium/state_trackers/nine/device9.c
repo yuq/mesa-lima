@@ -473,7 +473,6 @@ NineDevice9_ctor( struct NineDevice9 *This,
     /* Allocate upload helper for drivers that suck (from st pov ;). */
 
     This->driver_caps.user_vbufs = GET_PCAP(USER_VERTEX_BUFFERS) && !This->csmt_active;
-    This->driver_caps.user_ibufs = GET_PCAP(USER_INDEX_BUFFERS) && !This->csmt_active;
     This->driver_caps.user_cbufs = GET_PCAP(USER_CONSTANT_BUFFERS);
     This->driver_caps.user_sw_vbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_VERTEX_BUFFERS);
     This->driver_caps.user_sw_cbufs = This->screen_sw->get_param(This->screen_sw, PIPE_CAP_USER_CONSTANT_BUFFERS);
@@ -2896,7 +2895,7 @@ NineDevice9_DrawIndexedPrimitiveUP( struct NineDevice9 *This,
         vbuf.buffer_offset -= base;
         vbuf.user_buffer = NULL;
     }
-    if (!This->driver_caps.user_ibufs) {
+    if (This->csmt_active) {
         u_upload_data(This->context.pipe->stream_uploader,
                       0,
                       (prim_count_to_vertex_count(PrimitiveType, PrimitiveCount)) * ibuf.index_size,

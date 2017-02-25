@@ -127,7 +127,6 @@ struct NineDevice9
 
     struct {
         boolean user_vbufs;
-        boolean user_ibufs;
         boolean user_cbufs;
         boolean user_sw_vbufs;
         boolean user_sw_cbufs;
