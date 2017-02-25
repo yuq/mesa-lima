@@ -995,19 +995,12 @@ isl_calc_array_pitch_el_rows(const struct isl_device *dev,
    return pitch_el_rows;
 }
 
-/**
- * Calculate the pitch of each surface row, in bytes.
- */
 static uint32_t
-isl_calc_linear_row_pitch(const struct isl_device *dev,
-                          const struct isl_surf_init_info *restrict info,
-                          const struct isl_extent2d *phys_slice0_sa)
+isl_calc_row_pitch_alignment(const struct isl_surf_init_info *surf_info,
+                             const struct isl_tile_info *tile_info)
 {
-   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
-   uint32_t row_pitch = info->min_pitch;
-   assert(phys_slice0_sa->w % fmtl->bw == 0);
-   const uint32_t bs = fmtl->bpb / 8;
-   row_pitch = MAX(row_pitch, bs * (phys_slice0_sa->w / fmtl->bw));
+   if (tile_info->tiling != ISL_TILING_LINEAR)
+      return tile_info->phys_extent_B.width;
 
    /* From the Broadwel PRM >> Volume 2d: Command Reference: Structures >>
     * RENDER_SURFACE_STATE Surface Pitch (p349):
@@ -1023,15 +1016,91 @@ isl_calc_linear_row_pitch(const struct isl_device *dev,
     *    - For other linear surfaces, the pitch can be any multiple of
     *      bytes.
     */
-   if (info->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
-      if (isl_format_is_yuv(info->format)) {
-         row_pitch = isl_align_npot(row_pitch, 2 * bs);
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf_info->format);
+   const uint32_t bs = fmtl->bpb / 8;
+
+   if (surf_info->usage & ISL_SURF_USAGE_RENDER_TARGET_BIT) {
+      if (isl_format_is_yuv(surf_info->format)) {
+         return 2 * bs;
       } else  {
-         row_pitch = isl_align_npot(row_pitch, bs);
+         return bs;
       }
    }
 
-   return row_pitch;
+   return 1;
+}
+
+static uint32_t
+isl_calc_linear_min_row_pitch(const struct isl_device *dev,
+                              const struct isl_surf_init_info *info,
+                              const struct isl_extent2d *phys_slice0_sa,
+                              uint32_t alignment)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(info->format);
+   const uint32_t bs = fmtl->bpb / 8;
+
+   assert(phys_slice0_sa->w % fmtl->bw == 0);
+
+   uint32_t min_row_pitch = bs * (phys_slice0_sa->w / fmtl->bw);
+   min_row_pitch = MAX2(min_row_pitch, info->min_pitch);
+   min_row_pitch = isl_align_npot(min_row_pitch, alignment);
+
+   return min_row_pitch;
+}
+
+static uint32_t
+isl_calc_tiled_min_row_pitch(const struct isl_device *dev,
+                             const struct isl_surf_init_info *surf_info,
+                             const struct isl_tile_info *tile_info,
+                             const struct isl_extent2d *phys_slice0_sa,
+                             uint32_t alignment)
+{
+   const struct isl_format_layout *fmtl = isl_format_get_layout(surf_info->format);
+
+   assert(fmtl->bpb % tile_info->format_bpb == 0);
+   assert(phys_slice0_sa->w % fmtl->bw == 0);
+
+   const uint32_t tile_el_scale = fmtl->bpb / tile_info->format_bpb;
+   const uint32_t total_w_el = phys_slice0_sa->width / fmtl->bw;
+   const uint32_t total_w_tl =
+      isl_align_div(total_w_el * tile_el_scale,
+                    tile_info->logical_extent_el.width);
+
+   uint32_t min_row_pitch = total_w_tl * tile_info->phys_extent_B.width;
+   min_row_pitch = MAX2(min_row_pitch, surf_info->min_pitch);
+   min_row_pitch = isl_align_npot(min_row_pitch, alignment);
+
+   return min_row_pitch;
+}
+
+static uint32_t
+isl_calc_min_row_pitch(const struct isl_device *dev,
+                       const struct isl_surf_init_info *surf_info,
+                       const struct isl_tile_info *tile_info,
+                       const struct isl_extent2d *phys_slice0_sa,
+                       uint32_t alignment)
+{
+   if (tile_info->tiling == ISL_TILING_LINEAR) {
+      return isl_calc_linear_min_row_pitch(dev, surf_info, phys_slice0_sa,
+                                           alignment);
+   } else {
+      return isl_calc_tiled_min_row_pitch(dev, surf_info, tile_info,
+                                          phys_slice0_sa, alignment);
+   }
+}
+
+static uint32_t
+isl_calc_row_pitch(const struct isl_device *dev,
+                   const struct isl_surf_init_info *surf_info,
+                   const struct isl_tile_info *tile_info,
+                   enum isl_dim_layout dim_layout,
+                   const struct isl_extent2d *phys_slice0_sa)
+{
+   const uint32_t alignment =
+      isl_calc_row_pitch_alignment(surf_info, tile_info);
+
+   return isl_calc_min_row_pitch(dev, surf_info, tile_info, phys_slice0_sa,
+                                 alignment);
 }
 
 /**
@@ -1206,9 +1275,11 @@ isl_surf_init_s(const struct isl_device *dev,
    uint32_t pad_bytes;
    isl_apply_surface_padding(dev, info, &tile_info, &total_h_el, &pad_bytes);
 
-   uint32_t row_pitch, size, base_alignment;
+   const uint32_t row_pitch = isl_calc_row_pitch(dev, info, &tile_info,
+                                                 dim_layout, &phys_slice0_sa);
+
+   uint32_t size, base_alignment;
    if (tiling == ISL_TILING_LINEAR) {
-      row_pitch = isl_calc_linear_row_pitch(dev, info, &phys_slice0_sa);
       size = row_pitch * total_h_el + pad_bytes;
 
       /* From the Broadwell PRM Vol 2d, RENDER_SURFACE_STATE::SurfaceBaseAddress:
@@ -1230,21 +1301,6 @@ isl_surf_init_s(const struct isl_device *dev,
       }
       base_alignment = isl_round_up_to_power_of_two(base_alignment);
    } else {
-      assert(fmtl->bpb % tile_info.format_bpb == 0);
-      const uint32_t tile_el_scale = fmtl->bpb / tile_info.format_bpb;
-
-      assert(phys_slice0_sa.w % fmtl->bw == 0);
-      const uint32_t total_w_el = phys_slice0_sa.width / fmtl->bw;
-      const uint32_t total_w_tl =
-         isl_align_div(total_w_el * tile_el_scale,
-                       tile_info.logical_extent_el.width);
-
-      row_pitch = total_w_tl * tile_info.phys_extent_B.width;
-      if (row_pitch < info->min_pitch) {
-         row_pitch = isl_align_npot(info->min_pitch,
-                                    tile_info.phys_extent_B.width);
-      }
-
       total_h_el += isl_align_div_npot(pad_bytes, row_pitch);
       const uint32_t total_h_tl =
          isl_align_div(total_h_el, tile_info.logical_extent_el.height);
