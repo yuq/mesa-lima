@@ -1375,6 +1375,8 @@ static void
 surf_convert_to_single_slice(const struct isl_device *isl_dev,
                              struct brw_blorp_surface_info *info)
 {
+   bool ok UNUSED;
+
    /* Just bail if we have nothing to do. */
    if (info->surf.dim == ISL_SURF_DIM_2D &&
        info->view.base_level == 0 && info->view.base_array_layer == 0 &&
@@ -1421,13 +1423,13 @@ surf_convert_to_single_slice(const struct isl_device *isl_dev,
       .levels = 1,
       .array_len = 1,
       .samples = info->surf.samples,
-      .min_pitch = info->surf.row_pitch,
+      .row_pitch = info->surf.row_pitch,
       .usage = info->surf.usage,
       .tiling_flags = 1 << info->surf.tiling,
    };
 
-   isl_surf_init_s(isl_dev, &info->surf, &init_info);
-   assert(info->surf.row_pitch == init_info.min_pitch);
+   ok = isl_surf_init_s(isl_dev, &info->surf, &init_info);
+   assert(ok);
 
    /* The view is also different now. */
    info->view.base_level = 0;

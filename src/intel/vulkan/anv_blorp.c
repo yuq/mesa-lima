@@ -133,6 +133,7 @@ get_blorp_surf_for_anv_buffer(struct anv_device *device,
 {
    const struct isl_format_layout *fmtl =
       isl_format_get_layout(format);
+   bool ok UNUSED;
 
    /* ASTC is the only format which doesn't support linear layouts.
     * Create an equivalently sized surface with ISL to get around this.
@@ -155,20 +156,20 @@ get_blorp_surf_for_anv_buffer(struct anv_device *device,
       },
    };
 
-   isl_surf_init(&device->isl_dev, isl_surf,
-                 .dim = ISL_SURF_DIM_2D,
-                 .format = format,
-                 .width = width,
-                 .height = height,
-                 .depth = 1,
-                 .levels = 1,
-                 .array_len = 1,
-                 .samples = 1,
-                 .min_pitch = row_pitch,
-                 .usage = ISL_SURF_USAGE_TEXTURE_BIT |
-                          ISL_SURF_USAGE_RENDER_TARGET_BIT,
-                 .tiling_flags = ISL_TILING_LINEAR_BIT);
-   assert(isl_surf->row_pitch == row_pitch);
+   ok = isl_surf_init(&device->isl_dev, isl_surf,
+                     .dim = ISL_SURF_DIM_2D,
+                     .format = format,
+                     .width = width,
+                     .height = height,
+                     .depth = 1,
+                     .levels = 1,
+                     .array_len = 1,
+                     .samples = 1,
+                     .row_pitch = row_pitch,
+                     .usage = ISL_SURF_USAGE_TEXTURE_BIT |
+                              ISL_SURF_USAGE_RENDER_TARGET_BIT,
+                     .tiling_flags = ISL_TILING_LINEAR_BIT);
+   assert(ok);
 }
 
 static void
