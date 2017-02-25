@@ -1037,6 +1037,8 @@ brwCreateContext(gl_api api,
    vbo_use_buffer_objects(ctx);
    vbo_always_unmap_buffers(ctx);
 
+   brw_disk_cache_init(brw);
+
    return true;
 }
 

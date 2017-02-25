@@ -26,6 +26,8 @@
 #include "compiler/glsl/shader_cache.h"
 #include "compiler/nir/nir_serialize.h"
 #include "main/mtypes.h"
+#include "util/build_id.h"
+#include "util/debug.h"
 #include "util/disk_cache.h"
 #include "util/macros.h"
 #include "util/mesa-sha1.h"
@@ -412,4 +414,30 @@ brw_disk_cache_write_compute_program(struct brw_context *brw)
                          brw->cs.base.prog_offset, cache,
                          MESA_SHADER_COMPUTE);
    }
+}
+
+void
+brw_disk_cache_init(struct brw_context *brw)
+{
+#ifdef ENABLE_SHADER_CACHE
+   if (env_var_as_boolean("MESA_GLSL_CACHE_DISABLE", true))
+      return;
+
+   char renderer[10];
+   MAYBE_UNUSED int len = snprintf(renderer, sizeof(renderer), "i965_%04x",
+                                   brw->screen->deviceID);
+   assert(len == sizeof(renderer) - 1);
+
+   const struct build_id_note *note =
+      build_id_find_nhdr_for_addr(brw_disk_cache_init);
+   assert(note && build_id_length(note) == 20 /* sha1 */);
+
+   const uint8_t *id_sha1 = build_id_data(note);
+   assert(id_sha1);
+
+   char timestamp[41];
+   _mesa_sha1_format(timestamp, id_sha1);
+
+   brw->ctx.Cache = disk_cache_create(renderer, timestamp, 0);
+#endif
 }
