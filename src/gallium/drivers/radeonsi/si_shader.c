@@ -352,7 +352,6 @@ static void declare_input_vs(
 	LLVMValueRef t_offset;
 	LLVMValueRef t_list;
 	LLVMValueRef vertex_index;
-	LLVMValueRef args[3];
 	LLVMValueRef input[3];
 
 	/* Load the T list */
@@ -393,16 +392,12 @@ static void declare_input_vs(
 		fetch_stride = 0;
 	}
 
-	args[0] = t_list;
-	args[2] = vertex_index;
-
 	for (unsigned i = 0; i < num_fetches; i++) {
-		args[1] = LLVMConstInt(ctx->i32, fetch_stride * i, 0);
+		LLVMValueRef voffset = LLVMConstInt(ctx->i32, fetch_stride * i, 0);
 
-		input[i] = lp_build_intrinsic(gallivm->builder,
-			"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
-			LP_FUNC_ATTR_READNONE |
-			LP_FUNC_ATTR_LEGACY);
+		input[i] = ac_build_buffer_load_format(&ctx->ac, t_list,
+						       vertex_index, voffset,
+						       true);
 	}
 
 	/* Break up the vec4 into individual components */
@@ -4763,18 +4758,18 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 				struct lp_build_emit_data *emit_data)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
-	struct lp_build_context *base = &bld_base->base;
 	const struct tgsi_full_instruction *inst = emit_data->inst;
 	struct ac_image_args args;
 	unsigned opcode = inst->Instruction.Opcode;
 	unsigned target = inst->Texture.Texture;
 
 	if (target == TGSI_TEXTURE_BUFFER) {
-		emit_data->output[emit_data->chan] = lp_build_intrinsic(
-			base->gallivm->builder,
-			"llvm.SI.vs.load.input", emit_data->dst_type,
-			emit_data->args, emit_data->arg_count,
-			LP_FUNC_ATTR_READNONE | LP_FUNC_ATTR_LEGACY);
+		emit_data->output[emit_data->chan] =
+			ac_build_buffer_load_format(&ctx->ac,
+						    emit_data->args[0],
+						    emit_data->args[2],
+						    emit_data->args[1],
+						    true);
 		return;
 	}
 

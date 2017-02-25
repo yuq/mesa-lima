@@ -730,6 +730,23 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 	}
 }
 
+LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
+					 LLVMValueRef rsrc,
+					 LLVMValueRef vindex,
+					 LLVMValueRef voffset,
+					 bool readonly_memory)
+{
+	LLVMValueRef args[] = {
+		rsrc,
+		voffset,
+		vindex,
+	};
+	return ac_emit_llvm_intrinsic(ctx, "llvm.SI.vs.load.input",
+				      ctx->v4f32, args, 3,
+				      AC_FUNC_ATTR_READNONE |
+				      AC_FUNC_ATTR_LEGACY);
+}
+
 /**
  * Set range metadata on an instruction.  This can only be used on load and
  * call instructions.  If you know an instruction can only produce the values
