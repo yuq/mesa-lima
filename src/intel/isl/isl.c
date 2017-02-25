@@ -1118,9 +1118,21 @@ isl_calc_row_pitch(const struct isl_device *dev,
    const uint32_t alignment =
       isl_calc_row_pitch_alignment(surf_info, tile_info);
 
-   const uint32_t row_pitch =
+   const uint32_t min_row_pitch =
       isl_calc_min_row_pitch(dev, surf_info, tile_info, phys_slice0_sa,
                              alignment);
+
+   uint32_t row_pitch = min_row_pitch;
+
+   if (surf_info->row_pitch != 0) {
+      row_pitch = surf_info->row_pitch;
+
+      if (row_pitch < min_row_pitch)
+         return false;
+
+      if (row_pitch % alignment != 0)
+         return false;
+   }
 
    const uint32_t row_pitch_tiles = row_pitch / tile_info->phys_extent_B.width;
 
