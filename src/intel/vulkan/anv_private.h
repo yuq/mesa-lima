@@ -1921,6 +1921,13 @@ struct anv_framebuffer {
 };
 
 struct anv_subpass {
+   uint32_t                                     attachment_count;
+
+   /**
+    * A pointer to all attachment references used in this subpass.
+    * Only valid if ::attachment_count > 0.
+    */
+   VkAttachmentReference *                      attachments;
    uint32_t                                     input_count;
    VkAttachmentReference *                      input_attachments;
    uint32_t                                     color_count;

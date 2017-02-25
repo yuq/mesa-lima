@@ -86,9 +86,11 @@ VkResult anv_CreateRenderPass(
       const VkSubpassDescription *desc = &pCreateInfo->pSubpasses[i];
 
       subpass_attachment_count +=
+      pass->subpasses[i].attachment_count =
          desc->inputAttachmentCount +
          desc->colorAttachmentCount +
-         (desc->pResolveAttachments ? desc->colorAttachmentCount : 0);
+         (desc->pResolveAttachments ? desc->colorAttachmentCount : 0) +
+         (desc->pDepthStencilAttachment != NULL);
    }
 
    pass->subpass_attachments =
@@ -108,6 +110,7 @@ VkResult anv_CreateRenderPass(
 
       subpass->input_count = desc->inputAttachmentCount;
       subpass->color_count = desc->colorAttachmentCount;
+      subpass->attachments = p;
 
       if (desc->inputAttachmentCount > 0) {
          subpass->input_attachments = p;
@@ -169,7 +172,8 @@ VkResult anv_CreateRenderPass(
 
       if (desc->pDepthStencilAttachment) {
          uint32_t a = desc->pDepthStencilAttachment->attachment;
-         subpass->depth_stencil_attachment = *desc->pDepthStencilAttachment;
+         *p++ = subpass->depth_stencil_attachment =
+            *desc->pDepthStencilAttachment;
          if (a != VK_ATTACHMENT_UNUSED) {
             pass->attachments[a].usage |=
                VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
