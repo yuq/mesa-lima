@@ -196,7 +196,7 @@ svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
       goto done;
 
    /* Upload a user index buffer. */
-   struct pipe_index_buffer ibuffer_saved = {};
+   struct pipe_index_buffer ibuffer_saved = {0};
    if (info->indexed && svga->curr.ib.user_buffer &&
        !util_save_and_upload_index_buffer(pipe, info, &svga->curr.ib,
                                           &ibuffer_saved)) {
