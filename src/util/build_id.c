@@ -107,11 +107,10 @@ build_id_length(const struct build_id_note *note)
    return note->nhdr.n_descsz;
 }
 
-void
-build_id_read(const struct build_id_note *note,
-              unsigned char *build_id, size_t n)
+const uint8_t *
+build_id_data(const struct build_id_note *note)
 {
-   memcpy(build_id, note->build_id, n);
+   return note->build_id;
 }
 
 #endif

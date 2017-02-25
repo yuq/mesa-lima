@@ -63,7 +63,7 @@ anv_device_get_cache_uuid(void *uuid)
    if (len < VK_UUID_SIZE)
       return false;
 
-   build_id_read(note, uuid, VK_UUID_SIZE);
+   memcpy(uuid, build_id_data(note), VK_UUID_SIZE);
    return true;
 }
 
