@@ -1032,7 +1032,7 @@ static void store_output_tcs(struct lp_build_tgsi_context *bld_base,
 		LLVMValueRef value = dst[chan_index];
 
 		if (inst->Instruction.Saturate)
-			value = ac_emit_clamp(&ctx->ac, value);
+			value = ac_build_clamp(&ctx->ac, value);
 
 		/* Skip LDS stores if there is no LDS read of this output. */
 		if (!skip_lds_store)
@@ -1804,7 +1804,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 			};
 			LLVMValueRef packed;
 
-			packed = ac_emit_cvt_pkrtz_f16(&ctx->ac, pack_args);
+			packed = ac_build_cvt_pkrtz_f16(&ctx->ac, pack_args);
 			args->out[chan] =
 				LLVMBuildBitCast(base->gallivm->builder,
 						 packed, ctx->f32, "");
@@ -1813,7 +1813,7 @@ static void si_llvm_init_export_args(struct lp_build_tgsi_context *bld_base,
 
 	case V_028714_SPI_SHADER_UNORM16_ABGR:
 		for (chan = 0; chan < 4; chan++) {
-			val[chan] = ac_emit_clamp(&ctx->ac, values[chan]);
+			val[chan] = ac_build_clamp(&ctx->ac, values[chan]);
 			val[chan] = LLVMBuildFMul(builder, val[chan],
 						  lp_build_const_float(gallivm, 65535), "");
 			val[chan] = LLVMBuildFAdd(builder, val[chan],
@@ -1935,9 +1935,9 @@ static void si_alpha_test(struct lp_build_tgsi_context *bld_base,
 					lp_build_const_float(gallivm, 1.0f),
 					lp_build_const_float(gallivm, -1.0f));
 
-		ac_emit_kill(&ctx->ac, arg);
+		ac_build_kill(&ctx->ac, arg);
 	} else {
-		ac_emit_kill(&ctx->ac, NULL);
+		ac_build_kill(&ctx->ac, NULL);
 	}
 }
 
@@ -2276,7 +2276,7 @@ handle_semantic:
 			memcpy(&pos_args[target - V_008DFC_SQ_EXP_POS],
 			       &args, sizeof(args));
 		} else {
-			ac_emit_export(&ctx->ac, &args);
+			ac_build_export(&ctx->ac, &args);
 		}
 
 		if (semantic_name == TGSI_SEMANTIC_CLIPDIST) {
@@ -2360,7 +2360,7 @@ handle_semantic:
 			/* Specify that this is the last export */
 			pos_args[i].done = 1;
 
-		ac_emit_export(&ctx->ac, &pos_args[i]);
+		ac_build_export(&ctx->ac, &pos_args[i]);
 	}
 }
 
@@ -2699,8 +2699,8 @@ static void si_llvm_emit_gs_epilogue(struct lp_build_tgsi_context *bld_base)
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
-	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
-			LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE,
+			 LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
 }
 
 static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
@@ -2744,7 +2744,7 @@ static void si_llvm_emit_vs_epilogue(struct lp_build_tgsi_context *bld_base)
 			for (j = 0; j < 4; j++) {
 				addr = ctx->outputs[i][j];
 				val = LLVMBuildLoad(gallivm->builder, addr, "");
-				val = ac_emit_clamp(&ctx->ac, val);
+				val = ac_build_clamp(&ctx->ac, val);
 				LLVMBuildStore(gallivm->builder, val, addr);
 			}
 		}
@@ -2889,7 +2889,7 @@ static void si_export_mrt_color(struct lp_build_tgsi_context *bld_base,
 	/* Clamp color */
 	if (ctx->shader->key.part.ps.epilog.clamp_color)
 		for (i = 0; i < 4; i++)
-			color[i] = ac_emit_clamp(&ctx->ac, color[i]);
+			color[i] = ac_build_clamp(&ctx->ac, color[i]);
 
 	/* Alpha to one */
 	if (ctx->shader->key.part.ps.epilog.alpha_to_one)
@@ -2948,7 +2948,7 @@ static void si_emit_ps_exports(struct si_shader_context *ctx,
 			       struct si_ps_exports *exp)
 {
 	for (unsigned i = 0; i < exp->num; i++)
-		ac_emit_export(&ctx->ac, &exp->args[i]);
+		ac_build_export(&ctx->ac, &exp->args[i]);
 }
 
 static void si_export_null(struct lp_build_tgsi_context *bld_base)
@@ -2967,7 +2967,7 @@ static void si_export_null(struct lp_build_tgsi_context *bld_base)
 	args.out[2] = base->undef; /* B */
 	args.out[3] = base->undef; /* A */
 
-	ac_emit_export(&ctx->ac, &args);
+	ac_build_export(&ctx->ac, &args);
 }
 
 /**
@@ -4149,7 +4149,7 @@ static void resq_emit(
 
 		memcpy(&args, emit_data->args, sizeof(args)); /* ugly */
 		args.opcode = ac_image_get_resinfo;
-		out = ac_emit_image_opcode(&ctx->ac, &args);
+		out = ac_build_image_opcode(&ctx->ac, &args);
 
 		/* Divide the number of layers by 6 to get the number of cubes. */
 		if (inst->Memory.Texture == TGSI_TEXTURE_CUBE_ARRAY) {
@@ -4342,7 +4342,7 @@ static void txq_emit(const struct lp_build_tgsi_action *action,
 
 	args.opcode = ac_image_get_resinfo;
 	emit_data->output[emit_data->chan] =
-		ac_emit_image_opcode(&ctx->ac, &args);
+		ac_build_image_opcode(&ctx->ac, &args);
 
 	/* Divide the number of layers by 6 to get the number of cubes. */
 	if (target == TGSI_TEXTURE_CUBE_ARRAY ||
@@ -4457,7 +4457,7 @@ static void tex_fetch_args(
 		 * Z32_FLOAT, but we don't know that here.
 		 */
 		if (ctx->screen->b.chip_class == VI)
-			z = ac_emit_clamp(&ctx->ac, z);
+			z = ac_build_clamp(&ctx->ac, z);
 
 		address[count++] = z;
 	}
@@ -4836,7 +4836,7 @@ static void build_tex_intrinsic(const struct lp_build_tgsi_action *action,
 	}
 
 	emit_data->output[emit_data->chan] =
-		ac_emit_image_opcode(&ctx->ac, &args);
+		ac_build_image_opcode(&ctx->ac, &args);
 }
 
 static void si_llvm_emit_txqs(
@@ -4891,8 +4891,8 @@ static void si_llvm_emit_ddxy(
 	idx = (opcode == TGSI_OPCODE_DDX || opcode == TGSI_OPCODE_DDX_FINE) ? 1 : 2;
 
 	val = LLVMBuildBitCast(gallivm->builder, emit_data->args[0], ctx->i32, "");
-	val = ac_emit_ddxy(&ctx->ac, ctx->screen->has_ds_bpermute,
-			   mask, idx, ctx->lds, val);
+	val = ac_build_ddxy(&ctx->ac, ctx->screen->has_ds_bpermute,
+			    mask, idx, ctx->lds, val);
 	emit_data->output[emit_data->chan] = val;
 }
 
@@ -5124,7 +5124,7 @@ static void si_llvm_emit_vertex(
 				       lp_build_const_float(gallivm, 1.0f),
 				       lp_build_const_float(gallivm, -1.0f));
 
-		ac_emit_kill(&ctx->ac, kill);
+		ac_build_kill(&ctx->ac, kill);
 	} else {
 		lp_build_if(&if_state, gallivm, can_emit);
 	}
@@ -5163,8 +5163,8 @@ static void si_llvm_emit_vertex(
 	LLVMBuildStore(gallivm->builder, gs_next_vertex, ctx->gs_next_vertex[stream]);
 
 	/* Signal vertex emission */
-	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (stream << 8),
-			LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));	
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (stream << 8),
+			 LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
 	if (!use_kill)
 		lp_build_endif(&if_state);
 }
@@ -5180,8 +5180,8 @@ static void si_llvm_emit_primitive(
 
 	/* Signal primitive cut */
 	stream = si_llvm_get_stream(bld_base, emit_data);
-	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8),
-			LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (stream << 8),
+			 LLVMGetParam(ctx->main_fn, SI_PARAM_GS_WAVE_ID));
 }
 
 static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
@@ -5745,7 +5745,7 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	/* The intrinsic kills the thread if arg < 0. */
 	bit = LLVMBuildSelect(builder, bit, LLVMConstReal(ctx->f32, 0),
 			      LLVMConstReal(ctx->f32, -1), "");
-	ac_emit_kill(&ctx->ac, bit);
+	ac_build_kill(&ctx->ac, bit);
 }
 
 void si_shader_binary_read_config(struct ac_shader_binary *binary,
@@ -7671,7 +7671,7 @@ static void si_build_vs_epilog_function(struct si_shader_context *ctx,
 		args.out[2] = base->undef; /* Z */
 		args.out[3] = base->undef; /* W */
 
-		ac_emit_export(&ctx->ac, &args);
+		ac_build_export(&ctx->ac, &args);
 	}
 
 	LLVMBuildRetVoid(gallivm->builder);

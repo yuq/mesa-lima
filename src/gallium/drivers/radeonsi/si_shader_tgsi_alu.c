@@ -62,9 +62,9 @@ static void kil_emit(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	if (emit_data->inst->Instruction.Opcode == TGSI_OPCODE_KILL_IF)
-		ac_emit_kill(&ctx->ac, emit_data->args[0]);
+		ac_build_kill(&ctx->ac, emit_data->args[0]);
 	else
-		ac_emit_kill(&ctx->ac, NULL);
+		ac_build_kill(&ctx->ac, NULL);
 }
 
 static void emit_icmp(const struct lp_build_tgsi_action *action,
@@ -506,9 +506,9 @@ static void emit_bfe(const struct lp_build_tgsi_action *action,
 	LLVMValueRef bfe_sm5;
 	LLVMValueRef cond;
 
-	bfe_sm5 = ac_emit_bfe(&ctx->ac, emit_data->args[0],
-			      emit_data->args[1], emit_data->args[2],
-			      emit_data->info->opcode == TGSI_OPCODE_IBFE);
+	bfe_sm5 = ac_build_bfe(&ctx->ac, emit_data->args[0],
+			       emit_data->args[1], emit_data->args[2],
+			       emit_data->info->opcode == TGSI_OPCODE_IBFE);
 
 	/* Correct for GLSL semantics. */
 	cond = LLVMBuildICmp(builder, LLVMIntUGE, emit_data->args[2],
@@ -559,7 +559,7 @@ static void emit_umsb(const struct lp_build_tgsi_action *action,
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 
 	emit_data->output[emit_data->chan] =
-		ac_emit_umsb(&ctx->ac, emit_data->args[0], emit_data->dst_type);
+		ac_build_umsb(&ctx->ac, emit_data->args[0], emit_data->dst_type);
 }
 
 /* Find the last bit opposite of the sign bit. */
@@ -569,8 +569,8 @@ static void emit_imsb(const struct lp_build_tgsi_action *action,
 {
 	struct si_shader_context *ctx = si_shader_context(bld_base);
 	emit_data->output[emit_data->chan] =
-		ac_emit_imsb(&ctx->ac, emit_data->args[0],
-			     emit_data->dst_type);
+		ac_build_imsb(&ctx->ac, emit_data->args[0],
+			      emit_data->dst_type);
 }
 
 static void emit_iabs(const struct lp_build_tgsi_action *action,

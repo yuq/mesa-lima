@@ -78,9 +78,9 @@ ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context)
 }
 
 LLVMValueRef
-ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
-		       LLVMTypeRef return_type, LLVMValueRef *params,
-		       unsigned param_count, unsigned attrib_mask)
+ac_build_intrinsic(struct ac_llvm_context *ctx, const char *name,
+		   LLVMTypeRef return_type, LLVMValueRef *params,
+		   unsigned param_count, unsigned attrib_mask)
 {
 	LLVMValueRef function, call;
 	bool set_callsite_attrs = HAVE_LLVM >= 0x0400 &&
@@ -205,9 +205,9 @@ ac_build_gather_values(struct ac_llvm_context *ctx,
 }
 
 LLVMValueRef
-ac_emit_fdiv(struct ac_llvm_context *ctx,
-	     LLVMValueRef num,
-	     LLVMValueRef den)
+ac_build_fdiv(struct ac_llvm_context *ctx,
+	      LLVMValueRef num,
+	      LLVMValueRef den)
 {
 	LLVMValueRef ret = LLVMBuildFDiv(ctx->builder, num, den, "");
 
@@ -236,13 +236,13 @@ build_cube_intrinsic(struct ac_llvm_context *ctx,
 	if (HAVE_LLVM >= 0x0309) {
 		LLVMTypeRef f32 = ctx->f32;
 
-		out->stc[1] = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubetc",
+		out->stc[1] = ac_build_intrinsic(ctx, "llvm.amdgcn.cubetc",
 					f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out->stc[0] = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubesc",
+		out->stc[0] = ac_build_intrinsic(ctx, "llvm.amdgcn.cubesc",
 					f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out->ma = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubema",
+		out->ma = ac_build_intrinsic(ctx, "llvm.amdgcn.cubema",
 					f32, in, 3, AC_FUNC_ATTR_READNONE);
-		out->id = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.cubeid",
+		out->id = ac_build_intrinsic(ctx, "llvm.amdgcn.cubeid",
 					f32, in, 3, AC_FUNC_ATTR_READNONE);
 	} else {
 		LLVMValueRef c[4] = {
@@ -254,9 +254,9 @@ build_cube_intrinsic(struct ac_llvm_context *ctx,
 		LLVMValueRef vec = ac_build_gather_values(ctx, c, 4);
 
 		LLVMValueRef tmp =
-			ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.cube",
-					  LLVMTypeOf(vec), &vec, 1,
-					  AC_FUNC_ATTR_READNONE);
+			ac_build_intrinsic(ctx, "llvm.AMDGPU.cube",
+					   LLVMTypeOf(vec), &vec, 1,
+					   AC_FUNC_ATTR_READNONE);
 
 		out->stc[1] = LLVMBuildExtractElement(builder, tmp,
 				LLVMConstInt(ctx->i32, 0, 0), "");
@@ -339,9 +339,9 @@ ac_prepare_cube_coords(struct ac_llvm_context *ctx,
 
 	build_cube_intrinsic(ctx, coords_arg, &selcoords);
 
-	invma = ac_emit_llvm_intrinsic(ctx, "llvm.fabs.f32",
+	invma = ac_build_intrinsic(ctx, "llvm.fabs.f32",
 			ctx->f32, &selcoords.ma, 1, AC_FUNC_ATTR_READNONE);
-	invma = ac_emit_fdiv(ctx, LLVMConstReal(ctx->f32, 1.0), invma);
+	invma = ac_build_fdiv(ctx, LLVMConstReal(ctx->f32, 1.0), invma);
 
 	for (int i = 0; i < 2; ++i)
 		coords[i] = LLVMBuildFMul(builder, selcoords.stc[i], invma, "");
@@ -430,9 +430,9 @@ ac_build_fs_interp(struct ac_llvm_context *ctx,
 		args[1] = attr_number;
 		args[2] = params;
 		args[3] = ac_build_gather_values(ctx, ij, 2);
-		return ac_emit_llvm_intrinsic(ctx, "llvm.SI.fs.interp",
-					      ctx->f32, args, 4,
-					      AC_FUNC_ATTR_READNONE);
+		return ac_build_intrinsic(ctx, "llvm.SI.fs.interp",
+					  ctx->f32, args, 4,
+					  AC_FUNC_ATTR_READNONE);
 	}
 
 	args[0] = i;
@@ -440,8 +440,8 @@ ac_build_fs_interp(struct ac_llvm_context *ctx,
 	args[2] = attr_number;
 	args[3] = params;
 
-	p1 = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.p1",
-				    ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
+	p1 = ac_build_intrinsic(ctx, "llvm.amdgcn.interp.p1",
+				ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
 
 	args[0] = p1;
 	args[1] = j;
@@ -449,8 +449,8 @@ ac_build_fs_interp(struct ac_llvm_context *ctx,
 	args[3] = attr_number;
 	args[4] = params;
 
-	return ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.p2",
-				      ctx->f32, args, 5, AC_FUNC_ATTR_READNONE);
+	return ac_build_intrinsic(ctx, "llvm.amdgcn.interp.p2",
+				  ctx->f32, args, 5, AC_FUNC_ATTR_READNONE);
 }
 
 LLVMValueRef
@@ -466,10 +466,10 @@ ac_build_fs_interp_mov(struct ac_llvm_context *ctx,
 		args[1] = attr_number;
 		args[2] = params;
 
-		return ac_emit_llvm_intrinsic(ctx,
-					      "llvm.SI.fs.constant",
-					      ctx->f32, args, 3,
-					      AC_FUNC_ATTR_READNONE);
+		return ac_build_intrinsic(ctx,
+					  "llvm.SI.fs.constant",
+					  ctx->f32, args, 3,
+					  AC_FUNC_ATTR_READNONE);
 	}
 
 	args[0] = parameter;
@@ -477,8 +477,8 @@ ac_build_fs_interp_mov(struct ac_llvm_context *ctx,
 	args[2] = attr_number;
 	args[3] = params;
 
-	return ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.interp.mov",
-				      ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
+	return ac_build_intrinsic(ctx, "llvm.amdgcn.interp.mov",
+				  ctx->f32, args, 4, AC_FUNC_ATTR_READNONE);
 }
 
 LLVMValueRef
@@ -601,11 +601,11 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.store.%s",
 			 types[func]);
 
-		ac_emit_llvm_intrinsic(ctx, name, ctx->voidt,
-				       args, ARRAY_SIZE(args),
-				       writeonly_memory ?
-					AC_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
-					AC_FUNC_ATTR_WRITEONLY);
+		ac_build_intrinsic(ctx, name, ctx->voidt,
+				   args, ARRAY_SIZE(args),
+				   writeonly_memory ?
+					   AC_FUNC_ATTR_INACCESSIBLE_MEM_ONLY :
+					   AC_FUNC_ATTR_WRITEONLY);
 		return;
 	}
 
@@ -642,9 +642,9 @@ ac_build_buffer_store_dword(struct ac_llvm_context *ctx,
 	char name[256];
 	snprintf(name, sizeof(name), "llvm.SI.tbuffer.store.%s", types[func]);
 
-	ac_emit_llvm_intrinsic(ctx, name, ctx->voidt,
-			       args, ARRAY_SIZE(args),
-			       AC_FUNC_ATTR_LEGACY);
+	ac_build_intrinsic(ctx, name, ctx->voidt,
+			   args, ARRAY_SIZE(args),
+			   AC_FUNC_ATTR_LEGACY);
 }
 
 LLVMValueRef
@@ -688,14 +688,14 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		snprintf(name, sizeof(name), "llvm.amdgcn.buffer.load.%s",
 		         type_names[func]);
 
-		return ac_emit_llvm_intrinsic(ctx, name, types[func], args,
-					      ARRAY_SIZE(args),
-					      /* READNONE means writes can't
-					       * affect it, while READONLY means
-					       * that writes can affect it. */
-					      readonly_memory ?
-						      AC_FUNC_ATTR_READNONE :
-						      AC_FUNC_ATTR_READONLY);
+		return ac_build_intrinsic(ctx, name, types[func], args,
+					  ARRAY_SIZE(args),
+					  /* READNONE means writes can't
+					   * affect it, while READONLY means
+					   * that writes can affect it. */
+					  readonly_memory ?
+						  AC_FUNC_ATTR_READNONE :
+						  AC_FUNC_ATTR_READONLY);
 	} else {
 		LLVMValueRef args[] = {
 			LLVMBuildBitCast(ctx->builder, rsrc, ctx->v16i8, ""),
@@ -725,8 +725,8 @@ ac_build_buffer_load(struct ac_llvm_context *ctx,
 		snprintf(name, sizeof(name), "llvm.SI.buffer.load.dword.%s.%s",
 		         type_names[func], arg_type);
 
-		return ac_emit_llvm_intrinsic(ctx, name, types[func], args,
-					       ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
+		return ac_build_intrinsic(ctx, name, types[func], args,
+					  ARRAY_SIZE(args), AC_FUNC_ATTR_READONLY);
 	}
 }
 
@@ -745,15 +745,15 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 			LLVMConstInt(ctx->i1, 0, 0), /* slc */
 		};
 
-		return ac_emit_llvm_intrinsic(ctx,
-					      "llvm.amdgcn.buffer.load.format.v4f32",
-					      ctx->v4f32, args, ARRAY_SIZE(args),
-					      /* READNONE means writes can't
-					       * affect it, while READONLY means
-					       * that writes can affect it. */
-					      readonly_memory ?
-						      AC_FUNC_ATTR_READNONE :
-						      AC_FUNC_ATTR_READONLY);
+		return ac_build_intrinsic(ctx,
+					  "llvm.amdgcn.buffer.load.format.v4f32",
+					  ctx->v4f32, args, ARRAY_SIZE(args),
+					  /* READNONE means writes can't
+					   * affect it, while READONLY means
+					   * that writes can affect it. */
+					  readonly_memory ?
+						  AC_FUNC_ATTR_READNONE :
+						  AC_FUNC_ATTR_READONLY);
 	}
 
 	LLVMValueRef args[] = {
@@ -761,10 +761,10 @@ LLVMValueRef ac_build_buffer_load_format(struct ac_llvm_context *ctx,
 		voffset,
 		vindex,
 	};
-	return ac_emit_llvm_intrinsic(ctx, "llvm.SI.vs.load.input",
-				      ctx->v4f32, args, 3,
-				      AC_FUNC_ATTR_READNONE |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(ctx, "llvm.SI.vs.load.input",
+				  ctx->v4f32, args, 3,
+				  AC_FUNC_ATTR_READNONE |
+				  AC_FUNC_ATTR_LEGACY);
 }
 
 /**
@@ -793,20 +793,20 @@ ac_get_thread_id(struct ac_llvm_context *ctx)
 	LLVMValueRef tid;
 
 	if (HAVE_LLVM < 0x0308) {
-		tid = ac_emit_llvm_intrinsic(ctx, "llvm.SI.tid",
-					     ctx->i32,
-					     NULL, 0, AC_FUNC_ATTR_READNONE);
+		tid = ac_build_intrinsic(ctx, "llvm.SI.tid",
+					 ctx->i32,
+					 NULL, 0, AC_FUNC_ATTR_READNONE);
 	} else {
 		LLVMValueRef tid_args[2];
 		tid_args[0] = LLVMConstInt(ctx->i32, 0xffffffff, false);
 		tid_args[1] = LLVMConstInt(ctx->i32, 0, false);
-		tid_args[1] = ac_emit_llvm_intrinsic(ctx,
-						     "llvm.amdgcn.mbcnt.lo", ctx->i32,
-						     tid_args, 2, AC_FUNC_ATTR_READNONE);
+		tid_args[1] = ac_build_intrinsic(ctx,
+						 "llvm.amdgcn.mbcnt.lo", ctx->i32,
+						 tid_args, 2, AC_FUNC_ATTR_READNONE);
 
-		tid = ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.mbcnt.hi",
-					     ctx->i32, tid_args,
-					     2, AC_FUNC_ATTR_READNONE);
+		tid = ac_build_intrinsic(ctx, "llvm.amdgcn.mbcnt.hi",
+					 ctx->i32, tid_args,
+					 2, AC_FUNC_ATTR_READNONE);
 	}
 	set_range_metadata(ctx, tid, 0, 64);
 	return tid;
@@ -837,12 +837,12 @@ ac_get_thread_id(struct ac_llvm_context *ctx)
  * adding 2 yields the TID of the pixel below the top pixel.
  */
 LLVMValueRef
-ac_emit_ddxy(struct ac_llvm_context *ctx,
-	     bool has_ds_bpermute,
-	     uint32_t mask,
-	     int idx,
-	     LLVMValueRef lds,
-	     LLVMValueRef val)
+ac_build_ddxy(struct ac_llvm_context *ctx,
+	      bool has_ds_bpermute,
+	      uint32_t mask,
+	      int idx,
+	      LLVMValueRef lds,
+	      LLVMValueRef val)
 {
 	LLVMValueRef thread_id, tl, trbl, tl_tid, trbl_tid, args[2];
 	LLVMValueRef result;
@@ -859,15 +859,15 @@ ac_emit_ddxy(struct ac_llvm_context *ctx,
 		args[0] = LLVMBuildMul(ctx->builder, tl_tid,
 				       LLVMConstInt(ctx->i32, 4, false), "");
 		args[1] = val;
-		tl = ac_emit_llvm_intrinsic(ctx,
-					    "llvm.amdgcn.ds.bpermute", ctx->i32,
-					    args, 2, AC_FUNC_ATTR_READNONE);
+		tl = ac_build_intrinsic(ctx,
+					"llvm.amdgcn.ds.bpermute", ctx->i32,
+					args, 2, AC_FUNC_ATTR_READNONE);
 
 		args[0] = LLVMBuildMul(ctx->builder, trbl_tid,
 				       LLVMConstInt(ctx->i32, 4, false), "");
-		trbl = ac_emit_llvm_intrinsic(ctx,
-					      "llvm.amdgcn.ds.bpermute", ctx->i32,
-					      args, 2, AC_FUNC_ATTR_READNONE);
+		trbl = ac_build_intrinsic(ctx,
+					  "llvm.amdgcn.ds.bpermute", ctx->i32,
+					  args, 2, AC_FUNC_ATTR_READNONE);
 	} else {
 		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 
@@ -887,28 +887,27 @@ ac_emit_ddxy(struct ac_llvm_context *ctx,
 }
 
 void
-ac_emit_sendmsg(struct ac_llvm_context *ctx,
-		uint32_t msg,
-		LLVMValueRef wave_id)
+ac_build_sendmsg(struct ac_llvm_context *ctx,
+		 uint32_t msg,
+		 LLVMValueRef wave_id)
 {
 	LLVMValueRef args[2];
 	const char *intr_name = (HAVE_LLVM < 0x0400) ? "llvm.SI.sendmsg" : "llvm.amdgcn.s.sendmsg";
 	args[0] = LLVMConstInt(ctx->i32, msg, false);
 	args[1] = wave_id;
-	ac_emit_llvm_intrinsic(ctx, intr_name, ctx->voidt,
-			       args, 2, 0);
+	ac_build_intrinsic(ctx, intr_name, ctx->voidt, args, 2, 0);
 }
 
 LLVMValueRef
-ac_emit_imsb(struct ac_llvm_context *ctx,
-	     LLVMValueRef arg,
-	     LLVMTypeRef dst_type)
+ac_build_imsb(struct ac_llvm_context *ctx,
+	      LLVMValueRef arg,
+	      LLVMTypeRef dst_type)
 {
 	const char *intr_name = (HAVE_LLVM < 0x0400) ? "llvm.AMDGPU.flbit.i32" :
 						       "llvm.amdgcn.sffbh.i32";
-	LLVMValueRef msb = ac_emit_llvm_intrinsic(ctx, intr_name,
-						  dst_type, &arg, 1,
-						  AC_FUNC_ATTR_READNONE);
+	LLVMValueRef msb = ac_build_intrinsic(ctx, intr_name,
+					      dst_type, &arg, 1,
+					      AC_FUNC_ATTR_READNONE);
 
 	/* The HW returns the last bit index from MSB, but NIR/TGSI wants
 	 * the index from LSB. Invert it by doing "31 - msb". */
@@ -926,17 +925,17 @@ ac_emit_imsb(struct ac_llvm_context *ctx,
 }
 
 LLVMValueRef
-ac_emit_umsb(struct ac_llvm_context *ctx,
-	     LLVMValueRef arg,
-	     LLVMTypeRef dst_type)
+ac_build_umsb(struct ac_llvm_context *ctx,
+	      LLVMValueRef arg,
+	      LLVMTypeRef dst_type)
 {
 	LLVMValueRef args[2] = {
 		arg,
 		LLVMConstInt(ctx->i1, 1, 0),
 	};
-	LLVMValueRef msb = ac_emit_llvm_intrinsic(ctx, "llvm.ctlz.i32",
-						  dst_type, args, ARRAY_SIZE(args),
-						  AC_FUNC_ATTR_READNONE);
+	LLVMValueRef msb = ac_build_intrinsic(ctx, "llvm.ctlz.i32",
+					      dst_type, args, ARRAY_SIZE(args),
+					      AC_FUNC_ATTR_READNONE);
 
 	/* The HW returns the last bit index from MSB, but TGSI/NIR wants
 	 * the index from LSB. Invert it by doing "31 - msb". */
@@ -950,7 +949,7 @@ ac_emit_umsb(struct ac_llvm_context *ctx,
 			       LLVMConstInt(ctx->i32, -1, true), msb, "");
 }
 
-LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
+LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 {
 	if (HAVE_LLVM >= 0x0500) {
 		LLVMValueRef max[2] = {
@@ -961,12 +960,12 @@ LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 			LLVMConstReal(ctx->f32, 1),
 		};
 
-		min[1] = ac_emit_llvm_intrinsic(ctx, "llvm.maxnum.f32",
-						ctx->f32, max, 2,
-						AC_FUNC_ATTR_READNONE);
-		return ac_emit_llvm_intrinsic(ctx, "llvm.minnum.f32",
-					      ctx->f32, min, 2,
-					      AC_FUNC_ATTR_READNONE);
+		min[1] = ac_build_intrinsic(ctx, "llvm.maxnum.f32",
+					    ctx->f32, max, 2,
+					    AC_FUNC_ATTR_READNONE);
+		return ac_build_intrinsic(ctx, "llvm.minnum.f32",
+					  ctx->f32, min, 2,
+					  AC_FUNC_ATTR_READNONE);
 	}
 
 	const char *intr = HAVE_LLVM >= 0x0308 ? "llvm.AMDGPU.clamp." :
@@ -977,12 +976,12 @@ LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value)
 		LLVMConstReal(ctx->f32, 1),
 	};
 
-	return ac_emit_llvm_intrinsic(ctx, intr, ctx->f32, args, 3,
-				      AC_FUNC_ATTR_READNONE |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(ctx, intr, ctx->f32, args, 3,
+				  AC_FUNC_ATTR_READNONE |
+				  AC_FUNC_ATTR_LEGACY);
 }
 
-void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
+void ac_build_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 {
 	LLVMValueRef args[9];
 
@@ -1001,8 +1000,8 @@ void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 			args[4] = LLVMConstInt(ctx->i1, a->done, 0);
 			args[5] = LLVMConstInt(ctx->i1, a->valid_mask, 0);
 
-			ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.exp.compr.v2i16",
-					       ctx->voidt, args, 6, 0);
+			ac_build_intrinsic(ctx, "llvm.amdgcn.exp.compr.v2i16",
+					   ctx->voidt, args, 6, 0);
 		} else {
 			args[2] = a->out[0];
 			args[3] = a->out[1];
@@ -1011,8 +1010,8 @@ void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 			args[6] = LLVMConstInt(ctx->i1, a->done, 0);
 			args[7] = LLVMConstInt(ctx->i1, a->valid_mask, 0);
 
-			ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.exp.f32",
-					       ctx->voidt, args, 8, 0);
+			ac_build_intrinsic(ctx, "llvm.amdgcn.exp.f32",
+					   ctx->voidt, args, 8, 0);
 		}
 		return;
 	}
@@ -1024,12 +1023,12 @@ void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a)
 	args[4] = LLVMConstInt(ctx->i32, a->compr, 0);
 	memcpy(args + 5, a->out, sizeof(a->out[0]) * 4);
 
-	ac_emit_llvm_intrinsic(ctx, "llvm.SI.export", ctx->voidt, args, 9,
-			       AC_FUNC_ATTR_LEGACY);
+	ac_build_intrinsic(ctx, "llvm.SI.export", ctx->voidt, args, 9,
+			   AC_FUNC_ATTR_LEGACY);
 }
 
-LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
-				  struct ac_image_args *a)
+LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
+				   struct ac_image_args *a)
 {
 	LLVMTypeRef dst_type;
 	LLVMValueRef args[11];
@@ -1093,9 +1092,9 @@ LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
 			type);
 
 		LLVMValueRef result =
-			ac_emit_llvm_intrinsic(ctx, intr_name,
-					       ctx->v4f32, args, num_args,
-					       AC_FUNC_ATTR_READNONE);
+			ac_build_intrinsic(ctx, intr_name,
+					   ctx->v4f32, args, num_args,
+					   AC_FUNC_ATTR_READNONE);
 		if (!sample) {
 			result = LLVMBuildBitCast(ctx->builder, result,
 						  ctx->v4i32, "");
@@ -1156,28 +1155,28 @@ LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
 		a->offset ? ".o" : "",
 		type);
 
-	return ac_emit_llvm_intrinsic(ctx, intr_name,
-				      dst_type, args, num_args,
-				      AC_FUNC_ATTR_READNONE |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(ctx, intr_name,
+				  dst_type, args, num_args,
+				  AC_FUNC_ATTR_READNONE |
+				  AC_FUNC_ATTR_LEGACY);
 }
 
-LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
-				   LLVMValueRef args[2])
+LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
+				    LLVMValueRef args[2])
 {
 	if (HAVE_LLVM >= 0x0500) {
 		LLVMTypeRef v2f16 =
 			LLVMVectorType(LLVMHalfTypeInContext(ctx->context), 2);
 		LLVMValueRef res =
-			ac_emit_llvm_intrinsic(ctx, "llvm.amdgcn.cvt.pkrtz",
-					       v2f16, args, 2,
-					       AC_FUNC_ATTR_READNONE);
+			ac_build_intrinsic(ctx, "llvm.amdgcn.cvt.pkrtz",
+					   v2f16, args, 2,
+					   AC_FUNC_ATTR_READNONE);
 		return LLVMBuildBitCast(ctx->builder, res, ctx->i32, "");
 	}
 
-	return ac_emit_llvm_intrinsic(ctx, "llvm.SI.packf16", ctx->i32, args, 2,
-				      AC_FUNC_ATTR_READNONE |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(ctx, "llvm.SI.packf16", ctx->i32, args, 2,
+				  AC_FUNC_ATTR_READNONE |
+				  AC_FUNC_ATTR_LEGACY);
 }
 
 /**
@@ -1185,20 +1184,20 @@ LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
  *
  * \param value  kill if value < 0.0 or value == NULL.
  */
-void ac_emit_kill(struct ac_llvm_context *ctx, LLVMValueRef value)
+void ac_build_kill(struct ac_llvm_context *ctx, LLVMValueRef value)
 {
 	if (value) {
-		ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.kill", ctx->voidt,
-				       &value, 1, AC_FUNC_ATTR_LEGACY);
+		ac_build_intrinsic(ctx, "llvm.AMDGPU.kill", ctx->voidt,
+				   &value, 1, AC_FUNC_ATTR_LEGACY);
 	} else {
-		ac_emit_llvm_intrinsic(ctx, "llvm.AMDGPU.kilp", ctx->voidt,
-				       NULL, 0, AC_FUNC_ATTR_LEGACY);
+		ac_build_intrinsic(ctx, "llvm.AMDGPU.kilp", ctx->voidt,
+				   NULL, 0, AC_FUNC_ATTR_LEGACY);
 	}
 }
 
-LLVMValueRef ac_emit_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
-			 LLVMValueRef offset, LLVMValueRef width,
-			 bool is_signed)
+LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
+			  LLVMValueRef offset, LLVMValueRef width,
+			  bool is_signed)
 {
 	LLVMValueRef args[] = {
 		input,
@@ -1207,17 +1206,17 @@ LLVMValueRef ac_emit_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
 	};
 
 	if (HAVE_LLVM >= 0x0500) {
-		return ac_emit_llvm_intrinsic(ctx,
-					      is_signed ? "llvm.amdgcn.sbfe.i32" :
-							  "llvm.amdgcn.ubfe.i32",
-					      ctx->i32, args, 3,
-					      AC_FUNC_ATTR_READNONE);
+		return ac_build_intrinsic(ctx,
+					  is_signed ? "llvm.amdgcn.sbfe.i32" :
+						      "llvm.amdgcn.ubfe.i32",
+					  ctx->i32, args, 3,
+					  AC_FUNC_ATTR_READNONE);
 	}
 
-	return ac_emit_llvm_intrinsic(ctx,
-				      is_signed ? "llvm.AMDGPU.bfe.i32" :
-						  "llvm.AMDGPU.bfe.u32",
-				      ctx->i32, args, 3,
-				      AC_FUNC_ATTR_READNONE |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(ctx,
+				  is_signed ? "llvm.AMDGPU.bfe.i32" :
+					      "llvm.AMDGPU.bfe.u32",
+				  ctx->i32, args, 3,
+				  AC_FUNC_ATTR_READNONE |
+				  AC_FUNC_ATTR_LEGACY);
 }

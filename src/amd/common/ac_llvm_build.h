@@ -58,9 +58,9 @@ void
 ac_llvm_context_init(struct ac_llvm_context *ctx, LLVMContextRef context);
 
 LLVMValueRef
-ac_emit_llvm_intrinsic(struct ac_llvm_context *ctx, const char *name,
-		       LLVMTypeRef return_type, LLVMValueRef *params,
-		       unsigned param_count, unsigned attrib_mask);
+ac_build_intrinsic(struct ac_llvm_context *ctx, const char *name,
+		   LLVMTypeRef return_type, LLVMValueRef *params,
+		   unsigned param_count, unsigned attrib_mask);
 
 void ac_build_type_name_for_intr(LLVMTypeRef type, char *buf, unsigned bufsize);
 
@@ -76,9 +76,9 @@ ac_build_gather_values(struct ac_llvm_context *ctx,
 		       unsigned value_count);
 
 LLVMValueRef
-ac_emit_fdiv(struct ac_llvm_context *ctx,
-	     LLVMValueRef num,
-	     LLVMValueRef den);
+ac_build_fdiv(struct ac_llvm_context *ctx,
+	      LLVMValueRef num,
+	      LLVMValueRef den);
 
 void
 ac_prepare_cube_coords(struct ac_llvm_context *ctx,
@@ -159,12 +159,12 @@ ac_get_thread_id(struct ac_llvm_context *ctx);
 #define AC_TID_MASK_LEFT     0xfffffffe
 
 LLVMValueRef
-ac_emit_ddxy(struct ac_llvm_context *ctx,
-	     bool has_ds_bpermute,
-	     uint32_t mask,
-	     int idx,
-	     LLVMValueRef lds,
-	     LLVMValueRef val);
+ac_build_ddxy(struct ac_llvm_context *ctx,
+	      bool has_ds_bpermute,
+	      uint32_t mask,
+	      int idx,
+	      LLVMValueRef lds,
+	      LLVMValueRef val);
 
 #define AC_SENDMSG_GS 2
 #define AC_SENDMSG_GS_DONE 3
@@ -174,19 +174,19 @@ ac_emit_ddxy(struct ac_llvm_context *ctx,
 #define AC_SENDMSG_GS_OP_EMIT     (2 << 4)
 #define AC_SENDMSG_GS_OP_EMIT_CUT (3 << 4)
 
-void ac_emit_sendmsg(struct ac_llvm_context *ctx,
-		     uint32_t msg,
-		     LLVMValueRef wave_id);
+void ac_build_sendmsg(struct ac_llvm_context *ctx,
+		      uint32_t msg,
+		      LLVMValueRef wave_id);
 
-LLVMValueRef ac_emit_imsb(struct ac_llvm_context *ctx,
+LLVMValueRef ac_build_imsb(struct ac_llvm_context *ctx,
+			   LLVMValueRef arg,
+			   LLVMTypeRef dst_type);
+
+LLVMValueRef ac_build_umsb(struct ac_llvm_context *ctx,
 			  LLVMValueRef arg,
 			  LLVMTypeRef dst_type);
 
-LLVMValueRef ac_emit_umsb(struct ac_llvm_context *ctx,
-			  LLVMValueRef arg,
-			  LLVMTypeRef dst_type);
-
-LLVMValueRef ac_emit_clamp(struct ac_llvm_context *ctx, LLVMValueRef value);
+LLVMValueRef ac_build_clamp(struct ac_llvm_context *ctx, LLVMValueRef value);
 
 struct ac_export_args {
 	LLVMValueRef out[4];
@@ -197,7 +197,7 @@ struct ac_export_args {
         bool valid_mask;
 };
 
-void ac_emit_export(struct ac_llvm_context *ctx, struct ac_export_args *a);
+void ac_build_export(struct ac_llvm_context *ctx, struct ac_export_args *a);
 
 enum ac_image_opcode {
 	ac_image_sample,
@@ -225,14 +225,14 @@ struct ac_image_args {
 	bool da;
 };
 
-LLVMValueRef ac_emit_image_opcode(struct ac_llvm_context *ctx,
-				  struct ac_image_args *a);
-LLVMValueRef ac_emit_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
-				   LLVMValueRef args[2]);
-void ac_emit_kill(struct ac_llvm_context *ctx, LLVMValueRef value);
-LLVMValueRef ac_emit_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
-			 LLVMValueRef offset, LLVMValueRef width,
-			 bool is_signed);
+LLVMValueRef ac_build_image_opcode(struct ac_llvm_context *ctx,
+				   struct ac_image_args *a);
+LLVMValueRef ac_build_cvt_pkrtz_f16(struct ac_llvm_context *ctx,
+				    LLVMValueRef args[2]);
+void ac_build_kill(struct ac_llvm_context *ctx, LLVMValueRef value);
+LLVMValueRef ac_build_bfe(struct ac_llvm_context *ctx, LLVMValueRef input,
+			  LLVMValueRef offset, LLVMValueRef width,
+			  bool is_signed);
 
 #ifdef __cplusplus
 }

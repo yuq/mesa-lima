@@ -987,7 +987,7 @@ void si_llvm_emit_store(struct lp_build_tgsi_context *bld_base,
 		if (tgsi_type_is_64bit(dtype) && (chan_index == 1 || chan_index == 3))
 			continue;
 		if (inst->Instruction.Saturate)
-			value = ac_emit_clamp(&ctx->ac, value);
+			value = ac_build_clamp(&ctx->ac, value);
 
 		if (reg->Register.File == TGSI_FILE_ADDRESS) {
 			temp_ptr = ctx->addrs[reg->Register.Index][chan_index];

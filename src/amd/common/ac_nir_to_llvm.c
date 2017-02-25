@@ -567,9 +567,9 @@ static void create_function(struct nir_to_llvm_context *ctx)
 		set_userdata_location_shader(ctx, AC_UD_SCRATCH_RING_OFFSETS, user_sgpr_idx, 2);
 		user_sgpr_idx += 2;
 		if (ctx->options->supports_spill) {
-			ctx->ring_offsets = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.implicit.buffer.ptr",
-								   LLVMPointerType(ctx->i8, CONST_ADDR_SPACE),
-								   NULL, 0, AC_FUNC_ATTR_READNONE);
+			ctx->ring_offsets = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.implicit.buffer.ptr",
+							       LLVMPointerType(ctx->i8, CONST_ADDR_SPACE),
+							       NULL, 0, AC_FUNC_ATTR_READNONE);
 			ctx->ring_offsets = LLVMBuildBitCast(ctx->builder, ctx->ring_offsets,
 							     const_array(ctx->v16i8, 8), "");
 		} else
@@ -873,7 +873,7 @@ static LLVMValueRef emit_intrin_1f_param(struct nir_to_llvm_context *ctx,
 	};
 
 	sprintf(name, "%s.f%d", intrin, get_elem_bits(ctx, result_type));
-	return ac_emit_llvm_intrinsic(&ctx->ac, name, result_type, params, 1, AC_FUNC_ATTR_READNONE);
+	return ac_build_intrinsic(&ctx->ac, name, result_type, params, 1, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_intrin_2f_param(struct nir_to_llvm_context *ctx,
@@ -888,7 +888,7 @@ static LLVMValueRef emit_intrin_2f_param(struct nir_to_llvm_context *ctx,
 	};
 
 	sprintf(name, "%s.f%d", intrin, get_elem_bits(ctx, result_type));
-	return ac_emit_llvm_intrinsic(&ctx->ac, name, result_type, params, 2, AC_FUNC_ATTR_READNONE);
+	return ac_build_intrinsic(&ctx->ac, name, result_type, params, 2, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_intrin_3f_param(struct nir_to_llvm_context *ctx,
@@ -904,7 +904,7 @@ static LLVMValueRef emit_intrin_3f_param(struct nir_to_llvm_context *ctx,
 	};
 
 	sprintf(name, "%s.f%d", intrin, get_elem_bits(ctx, result_type));
-	return ac_emit_llvm_intrinsic(&ctx->ac, name, result_type, params, 3, AC_FUNC_ATTR_READNONE);
+	return ac_build_intrinsic(&ctx->ac, name, result_type, params, 3, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_bcsel(struct nir_to_llvm_context *ctx,
@@ -930,19 +930,19 @@ static LLVMValueRef emit_find_lsb(struct nir_to_llvm_context *ctx,
 		 */
 		LLVMConstInt(ctx->i32, 1, false),
 	};
-	return ac_emit_llvm_intrinsic(&ctx->ac, "llvm.cttz.i32", ctx->i32, params, 2, AC_FUNC_ATTR_READNONE);
+	return ac_build_intrinsic(&ctx->ac, "llvm.cttz.i32", ctx->i32, params, 2, AC_FUNC_ATTR_READNONE);
 }
 
 static LLVMValueRef emit_ifind_msb(struct nir_to_llvm_context *ctx,
 				   LLVMValueRef src0)
 {
-	return ac_emit_imsb(&ctx->ac, src0, ctx->i32);
+	return ac_build_imsb(&ctx->ac, src0, ctx->i32);
 }
 
 static LLVMValueRef emit_ufind_msb(struct nir_to_llvm_context *ctx,
 				   LLVMValueRef src0)
 {
-	return ac_emit_umsb(&ctx->ac, src0, ctx->i32);
+	return ac_build_umsb(&ctx->ac, src0, ctx->i32);
 }
 
 static LLVMValueRef emit_minmax_int(struct nir_to_llvm_context *ctx,
@@ -994,9 +994,9 @@ static LLVMValueRef emit_ffract(struct nir_to_llvm_context *ctx,
 	LLVMValueRef params[] = {
 		fsrc0,
 	};
-	LLVMValueRef floor = ac_emit_llvm_intrinsic(&ctx->ac, intr,
-						 ctx->f32, params, 1,
-						 AC_FUNC_ATTR_READNONE);
+	LLVMValueRef floor = ac_build_intrinsic(&ctx->ac, intr,
+						ctx->f32, params, 1,
+						AC_FUNC_ATTR_READNONE);
 	return LLVMBuildFSub(ctx->builder, fsrc0, floor, "");
 }
 
@@ -1011,8 +1011,8 @@ static LLVMValueRef emit_uint_carry(struct nir_to_llvm_context *ctx,
 	ret_type = LLVMStructTypeInContext(ctx->context, types,
 					   2, true);
 
-	res = ac_emit_llvm_intrinsic(&ctx->ac, intrin, ret_type,
-				  params, 2, AC_FUNC_ATTR_READNONE);
+	res = ac_build_intrinsic(&ctx->ac, intrin, ret_type,
+				 params, 2, AC_FUNC_ATTR_READNONE);
 
 	res = LLVMBuildExtractValue(ctx->builder, res, 1, "");
 	res = LLVMBuildZExt(ctx->builder, res, ctx->i32, "");
@@ -1057,8 +1057,8 @@ static LLVMValueRef emit_bitfield_extract(struct nir_to_llvm_context *ctx,
 {
 	LLVMValueRef result;
 	LLVMValueRef icond = LLVMBuildICmp(ctx->builder, LLVMIntEQ, srcs[2], LLVMConstInt(ctx->i32, 32, false), "");
-	result = ac_emit_llvm_intrinsic(&ctx->ac, intrin, ctx->i32, srcs, 3,
-					AC_FUNC_ATTR_READNONE | attr_mask);
+	result = ac_build_intrinsic(&ctx->ac, intrin, ctx->i32, srcs, 3,
+				    AC_FUNC_ATTR_READNONE | attr_mask);
 
 	result = LLVMBuildSelect(ctx->builder, icond, srcs[0], result, "");
 	return result;
@@ -1166,7 +1166,7 @@ static LLVMValueRef emit_ddxy(struct nir_to_llvm_context *ctx,
 	else
 		idx = 2;
 
-	result = ac_emit_ddxy(&ctx->ac, ctx->has_ds_bpermute,
+	result = ac_build_ddxy(&ctx->ac, ctx->has_ds_bpermute,
 			      mask, idx, ctx->lds,
 			      src0);
 	return result;
@@ -1263,7 +1263,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_fmod:
 		src[0] = to_float(ctx, src[0]);
 		src[1] = to_float(ctx, src[1]);
-		result = ac_emit_fdiv(&ctx->ac, src[0], src[1]);
+		result = ac_build_fdiv(&ctx->ac, src[0], src[1]);
 		result = emit_intrin_1f_param(ctx, "llvm.floor",
 		                              to_float_type(ctx, def_type), result);
 		result = LLVMBuildFMul(ctx->builder, src[1] , result, "");
@@ -1291,11 +1291,11 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_fdiv:
 		src[0] = to_float(ctx, src[0]);
 		src[1] = to_float(ctx, src[1]);
-		result = ac_emit_fdiv(&ctx->ac, src[0], src[1]);
+		result = ac_build_fdiv(&ctx->ac, src[0], src[1]);
 		break;
 	case nir_op_frcp:
 		src[0] = to_float(ctx, src[0]);
-		result = ac_emit_fdiv(&ctx->ac, ctx->f32one, src[0]);
+		result = ac_build_fdiv(&ctx->ac, ctx->f32one, src[0]);
 		break;
 	case nir_op_iand:
 		result = LLVMBuildAnd(ctx->builder, src[0], src[1], "");
@@ -1413,7 +1413,7 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_frsq:
 		result = emit_intrin_1f_param(ctx, "llvm.sqrt",
 		                              to_float_type(ctx, def_type), src[0]);
-		result = ac_emit_fdiv(&ctx->ac, ctx->f32one, result);
+		result = ac_build_fdiv(&ctx->ac, ctx->f32one, result);
 		break;
 	case nir_op_fpow:
 		result = emit_intrin_2f_param(ctx, "llvm.pow",
@@ -1443,10 +1443,10 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 		result = emit_bitfield_insert(ctx, src[0], src[1], src[2], src[3]);
 		break;
 	case nir_op_bitfield_reverse:
-		result = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.bitreverse.i32", ctx->i32, src, 1, AC_FUNC_ATTR_READNONE);
+		result = ac_build_intrinsic(&ctx->ac, "llvm.bitreverse.i32", ctx->i32, src, 1, AC_FUNC_ATTR_READNONE);
 		break;
 	case nir_op_bit_count:
-		result = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.ctpop.i32", ctx->i32, src, 1, AC_FUNC_ATTR_READNONE);
+		result = ac_build_intrinsic(&ctx->ac, "llvm.ctpop.i32", ctx->i32, src, 1, AC_FUNC_ATTR_READNONE);
 		break;
 	case nir_op_vec2:
 	case nir_op_vec3:
@@ -1668,16 +1668,16 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 		txq_args[txq_arg_count++] = LLVMConstInt(ctx->i32, 0, 0); /* slc */
 		txq_args[txq_arg_count++] = LLVMConstInt(ctx->i32, 0, 0); /* tfe */
 		txq_args[txq_arg_count++] = LLVMConstInt(ctx->i32, 0, 0); /* lwe */
-		size = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.getresinfo.i32", ctx->v4i32,
-					      txq_args, txq_arg_count,
-					      AC_FUNC_ATTR_READNONE |
-					      AC_FUNC_ATTR_LEGACY);
+		size = ac_build_intrinsic(&ctx->ac, "llvm.SI.getresinfo.i32", ctx->v4i32,
+					  txq_args, txq_arg_count,
+					  AC_FUNC_ATTR_READNONE |
+					  AC_FUNC_ATTR_LEGACY);
 
 		for (c = 0; c < 2; c++) {
 			half_texel[c] = LLVMBuildExtractElement(ctx->builder, size,
 								LLVMConstInt(ctx->i32, c, false), "");
 			half_texel[c] = LLVMBuildUIToFP(ctx->builder, half_texel[c], ctx->f32, "");
-			half_texel[c] = ac_emit_fdiv(&ctx->ac, ctx->f32one, half_texel[c]);
+			half_texel[c] = ac_build_fdiv(&ctx->ac, ctx->f32one, half_texel[c]);
 			half_texel[c] = LLVMBuildFMul(ctx->builder, half_texel[c],
 						      LLVMConstReal(ctx->f32, -0.5), "");
 		}
@@ -1694,9 +1694,9 @@ static LLVMValueRef radv_lower_gather4_integer(struct nir_to_llvm_context *ctx,
 	}
 
 	tinfo->args[0] = coord;
-	return ac_emit_llvm_intrinsic(&ctx->ac, intr_name, tinfo->dst_type, tinfo->args, tinfo->arg_count,
-				      AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(&ctx->ac, intr_name, tinfo->dst_type, tinfo->args, tinfo->arg_count,
+				  AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND |
+				  AC_FUNC_ATTR_LEGACY);
 
 }
 
@@ -1763,9 +1763,9 @@ static LLVMValueRef build_tex_intrinsic(struct nir_to_llvm_context *ctx,
 							  (int)has_offset + (int)is_shadow);
 		}
 	}
-	return ac_emit_llvm_intrinsic(&ctx->ac, intr_name, tinfo->dst_type, tinfo->args, tinfo->arg_count,
-				      AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND |
-				      AC_FUNC_ATTR_LEGACY);
+	return ac_build_intrinsic(&ctx->ac, intr_name, tinfo->dst_type, tinfo->args, tinfo->arg_count,
+				  AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND |
+				  AC_FUNC_ATTR_LEGACY);
 
 }
 
@@ -1902,8 +1902,8 @@ static void visit_store_ssbo(struct nir_to_llvm_context *ctx,
 		}
 		params[0] = data;
 		params[3] = offset;
-		ac_emit_llvm_intrinsic(&ctx->ac, store_name,
-				       ctx->voidt, params, 6, 0);
+		ac_build_intrinsic(&ctx->ac, store_name,
+				   ctx->voidt, params, 6, 0);
 	}
 }
 
@@ -1960,7 +1960,7 @@ static LLVMValueRef visit_atomic_ssbo(struct nir_to_llvm_context *ctx,
 		abort();
 	}
 
-	return ac_emit_llvm_intrinsic(&ctx->ac, name, ctx->i32, params, arg_count, 0);
+	return ac_build_intrinsic(&ctx->ac, name, ctx->i32, params, arg_count, 0);
 }
 
 static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
@@ -2001,7 +2001,7 @@ static LLVMValueRef visit_load_buffer(struct nir_to_llvm_context *ctx,
 			LLVMConstInt(ctx->i1, 0, false),
 		};
 
-		results[i] = ac_emit_llvm_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
+		results[i] = ac_build_intrinsic(&ctx->ac, load_name, data_type, params, 5, 0);
 
 	}
 
@@ -2042,10 +2042,10 @@ static LLVMValueRef visit_load_ubo_buffer(struct nir_to_llvm_context *ctx,
 			LLVMBuildAdd(ctx->builder, LLVMConstInt(ctx->i32, 4 * i, 0),
 				     offset, "")
 		};
-		results[i] = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.load.const", ctx->f32,
-						    params, 2,
-						    AC_FUNC_ATTR_READNONE |
-						    AC_FUNC_ATTR_LEGACY);
+		results[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.load.const", ctx->f32,
+						params, 2,
+						AC_FUNC_ATTR_READNONE |
+						AC_FUNC_ATTR_LEGACY);
 	}
 
 
@@ -2145,10 +2145,10 @@ load_gs_input(struct nir_to_llvm_context *ctx,
 		args[7] = ctx->i32zero; /* SLC */
 		args[8] = ctx->i32zero; /* TFE */
 
-		value[i] = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.buffer.load.dword.i32.i32",
-						  ctx->i32, args, 9,
-						  AC_FUNC_ATTR_READONLY |
-						  AC_FUNC_ATTR_LEGACY);
+		value[i] = ac_build_intrinsic(&ctx->ac, "llvm.SI.buffer.load.dword.i32.i32",
+					      ctx->i32, args, 9,
+					      AC_FUNC_ATTR_READONLY |
+					      AC_FUNC_ATTR_LEGACY);
 	}
 	result = ac_build_gather_values(&ctx->ac, value, instr->num_components);
 
@@ -2471,8 +2471,8 @@ static LLVMValueRef adjust_sample_index_using_fmask(struct nir_to_llvm_context *
 			    LLVMTypeOf(params[1]), /* rsrc */
 			    intrinsic_name, sizeof(intrinsic_name));
 
-	res = ac_emit_llvm_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
-				     params, 7, AC_FUNC_ATTR_READONLY);
+	res = ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
+				 params, 7, AC_FUNC_ATTR_READONLY);
 
 	res = to_integer(ctx, res);
 	LLVMValueRef four = LLVMConstInt(ctx->i32, 4, false);
@@ -2608,8 +2608,8 @@ static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
 		params[2] = LLVMConstInt(ctx->i32, 0, false); /* voffset */
 		params[3] = LLVMConstInt(ctx->i1, 0, false);  /* glc */
 		params[4] = LLVMConstInt(ctx->i1, 0, false);  /* slc */
-		res = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.buffer.load.format.v4f32", ctx->v4f32,
-					  params, 5, 0);
+		res = ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.buffer.load.format.v4f32", ctx->v4f32,
+					 params, 5, 0);
 
 		res = trim_vector(ctx, res, instr->dest.ssa.num_components);
 		res = to_integer(ctx, res);
@@ -2642,8 +2642,8 @@ static LLVMValueRef visit_image_load(struct nir_to_llvm_context *ctx,
 				    LLVMTypeOf(params[1]), /* rsrc */
 				    intrinsic_name, sizeof(intrinsic_name));
 
-		res = ac_emit_llvm_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
-					  params, 7, AC_FUNC_ATTR_READONLY);
+		res = ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->v4f32,
+					 params, 7, AC_FUNC_ATTR_READONLY);
 	}
 	return to_integer(ctx, res);
 }
@@ -2669,8 +2669,8 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 		params[3] = LLVMConstInt(ctx->i32, 0, false); /* voffset */
 		params[4] = i1false;  /* glc */
 		params[5] = i1false;  /* slc */
-		ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.buffer.store.format.v4f32", ctx->voidt,
-				    params, 6, 0);
+		ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.buffer.store.format.v4f32", ctx->voidt,
+				   params, 6, 0);
 	} else {
 		bool is_da = glsl_sampler_type_is_array(type) ||
 			     glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE;
@@ -2701,8 +2701,8 @@ static void visit_image_store(struct nir_to_llvm_context *ctx,
 				    LLVMTypeOf(params[2]), /* rsrc */
 				    intrinsic_name, sizeof(intrinsic_name));
 
-		ac_emit_llvm_intrinsic(&ctx->ac, intrinsic_name, ctx->voidt,
-				    params, 8, 0);
+		ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->voidt,
+				   params, 8, 0);
 	}
 
 }
@@ -2779,7 +2779,7 @@ static LLVMValueRef visit_image_atomic(struct nir_to_llvm_context *ctx,
 
 	snprintf(intrinsic_name, sizeof(intrinsic_name),
 			 "%s.%s.%s", base_name, atomic_name, coords_type);
-	return ac_emit_llvm_intrinsic(&ctx->ac, intrinsic_name, ctx->i32, params, param_count, 0);
+	return ac_build_intrinsic(&ctx->ac, intrinsic_name, ctx->i32, params, param_count, 0);
 }
 
 static LLVMValueRef visit_image_size(struct nir_to_llvm_context *ctx,
@@ -2807,10 +2807,10 @@ static LLVMValueRef visit_image_size(struct nir_to_llvm_context *ctx,
 	params[8] = ctx->i32zero;
 	params[9] = ctx->i32zero;
 
-	res = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.getresinfo.i32", ctx->v4i32,
-				     params, 10,
-				     AC_FUNC_ATTR_READNONE |
-				     AC_FUNC_ATTR_LEGACY);
+	res = ac_build_intrinsic(&ctx->ac, "llvm.SI.getresinfo.i32", ctx->v4i32,
+				 params, 10,
+				 AC_FUNC_ATTR_READNONE |
+				 AC_FUNC_ATTR_LEGACY);
 
 	if (glsl_get_sampler_dim(type) == GLSL_SAMPLER_DIM_CUBE &&
 	    glsl_sampler_type_is_array(type)) {
@@ -2828,15 +2828,15 @@ static void emit_waitcnt(struct nir_to_llvm_context *ctx)
 	LLVMValueRef args[1] = {
 		LLVMConstInt(ctx->i32, 0xf70, false),
 	};
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.s.waitcnt",
-			    ctx->voidt, args, 1, 0);
+	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.waitcnt",
+			   ctx->voidt, args, 1, 0);
 }
 
 static void emit_barrier(struct nir_to_llvm_context *ctx)
 {
 	// TODO tess
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.amdgcn.s.barrier",
-			    ctx->voidt, NULL, 0, 0);
+	ac_build_intrinsic(&ctx->ac, "llvm.amdgcn.s.barrier",
+			   ctx->voidt, NULL, 0, 0);
 }
 
 static void emit_discard_if(struct nir_to_llvm_context *ctx,
@@ -2852,9 +2852,9 @@ static void emit_discard_if(struct nir_to_llvm_context *ctx,
 	cond = LLVMBuildSelect(ctx->builder, cond,
 			       LLVMConstReal(ctx->f32, -1.0f),
 			       ctx->f32zero, "");
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
-			       ctx->voidt,
-			       &cond, 1, AC_FUNC_ATTR_LEGACY);
+	ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
+			   ctx->voidt,
+			   &cond, 1, AC_FUNC_ATTR_LEGACY);
 }
 
 static LLVMValueRef
@@ -3110,8 +3110,8 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 	kill = LLVMBuildSelect(ctx->builder, can_emit,
 			       LLVMConstReal(ctx->f32, 1.0f),
 			       LLVMConstReal(ctx->f32, -1.0f), "");
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
-			    ctx->voidt, &kill, 1, AC_FUNC_ATTR_LEGACY);
+	ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kill",
+			   ctx->voidt, &kill, 1, AC_FUNC_ATTR_LEGACY);
 
 	/* loop num outputs */
 	idx = 0;
@@ -3168,14 +3168,14 @@ visit_emit_vertex(struct nir_to_llvm_context *ctx,
 				      ctx->i32one, "");
 	LLVMBuildStore(ctx->builder, gs_next_vertex, ctx->gs_next_vertex);
 
-	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_EMIT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
 }
 
 static void
 visit_end_primitive(struct nir_to_llvm_context *ctx,
 		    nir_intrinsic_instr *instr)
 {
-	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_CUT | AC_SENDMSG_GS | (0 << 8), ctx->gs_wave_id);
 }
 
 static void visit_intrinsic(struct nir_to_llvm_context *ctx,
@@ -3297,9 +3297,9 @@ static void visit_intrinsic(struct nir_to_llvm_context *ctx,
 		break;
 	case nir_intrinsic_discard:
 		ctx->shader_info->fs.can_discard = true;
-		ac_emit_llvm_intrinsic(&ctx->ac, "llvm.AMDGPU.kilp",
-				       ctx->voidt,
-				       NULL, 0, AC_FUNC_ATTR_LEGACY);
+		ac_build_intrinsic(&ctx->ac, "llvm.AMDGPU.kilp",
+				   ctx->voidt,
+				   NULL, 0, AC_FUNC_ATTR_LEGACY);
 		break;
 	case nir_intrinsic_discard_if:
 		emit_discard_if(ctx, instr);
@@ -3537,7 +3537,7 @@ static LLVMValueRef apply_round_slice(struct nir_to_llvm_context *ctx,
 				      LLVMValueRef coord)
 {
 	coord = to_float(ctx, coord);
-	coord = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32, &coord, 1, 0);
+	coord = ac_build_intrinsic(&ctx->ac, "llvm.rint.f32", ctx->f32, &coord, 1, 0);
 	coord = to_integer(ctx, coord);
 	return coord;
 }
@@ -4037,7 +4037,7 @@ handle_vs_input_decl(struct nir_to_llvm_context *ctx,
 		args[0] = t_list;
 		args[1] = LLVMConstInt(ctx->i32, 0, false);
 		args[2] = buffer_index;
-		input = ac_emit_llvm_intrinsic(&ctx->ac,
+		input = ac_build_intrinsic(&ctx->ac,
 			"llvm.SI.vs.load.input", ctx->v4f32, args, 3,
 			AC_FUNC_ATTR_READNONE | AC_FUNC_ATTR_NOUNWIND |
 			AC_FUNC_ATTR_LEGACY);
@@ -4193,7 +4193,7 @@ handle_fs_inputs_pre(struct nir_to_llvm_context *ctx,
 			for(int i = 0; i < 3; ++i)
 				inputs[i] = ctx->frag_pos[i];
 
-			inputs[3] = ac_emit_fdiv(&ctx->ac, ctx->f32one, ctx->frag_pos[3]);
+			inputs[3] = ac_build_fdiv(&ctx->ac, ctx->f32one, ctx->frag_pos[3]);
 		}
 	}
 	ctx->shader_info->fs.num_interp = index;
@@ -4390,10 +4390,10 @@ si_llvm_init_export_args(struct nir_to_llvm_context *ctx,
 				};
 				LLVMValueRef packed;
 
-				packed = ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.packf16",
-								ctx->i32, pack_args, 2,
-								AC_FUNC_ATTR_READNONE |
-								AC_FUNC_ATTR_LEGACY);
+				packed = ac_build_intrinsic(&ctx->ac, "llvm.SI.packf16",
+							    ctx->i32, pack_args, 2,
+							    AC_FUNC_ATTR_READNONE |
+							    AC_FUNC_ATTR_LEGACY);
 				args[chan + 5] = packed;
 			}
 			break;
@@ -4575,11 +4575,11 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 			memcpy(pos_args[target - V_008DFC_SQ_EXP_POS],
 			       args, sizeof(args));
 		} else {
-			ac_emit_llvm_intrinsic(&ctx->ac,
-					       "llvm.SI.export",
-					       ctx->voidt,
-					       args, 9,
-					       AC_FUNC_ATTR_LEGACY);
+			ac_build_intrinsic(&ctx->ac,
+					   "llvm.SI.export",
+					   ctx->voidt,
+					   args, 9,
+					   AC_FUNC_ATTR_LEGACY);
 		}
 	}
 
@@ -4631,11 +4631,11 @@ handle_vs_outputs_post(struct nir_to_llvm_context *ctx)
 		pos_args[i][3] = LLVMConstInt(ctx->i32, V_008DFC_SQ_EXP_POS + pos_idx++, false);
 		if (pos_idx == num_pos_exports)
 			pos_args[i][2] = ctx->i32one;
-		ac_emit_llvm_intrinsic(&ctx->ac,
-				       "llvm.SI.export",
-				       ctx->voidt,
-				       pos_args[i], 9,
-				       AC_FUNC_ATTR_LEGACY);
+		ac_build_intrinsic(&ctx->ac,
+				   "llvm.SI.export",
+				   ctx->voidt,
+				   pos_args[i], 9,
+				   AC_FUNC_ATTR_LEGACY);
 	}
 
 	ctx->shader_info->vs.pos_exports = num_pos_exports;
@@ -4696,9 +4696,9 @@ si_export_mrt_color(struct nir_to_llvm_context *ctx,
 	} else if (args[0] == ctx->i32zero)
 		return; /* unnecessary NULL export */
 
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.export",
-			       ctx->voidt, args, 9,
-			       AC_FUNC_ATTR_LEGACY);
+	ac_build_intrinsic(&ctx->ac, "llvm.SI.export",
+			   ctx->voidt, args, 9,
+			   AC_FUNC_ATTR_LEGACY);
 }
 
 static void
@@ -4741,9 +4741,9 @@ si_export_mrt_z(struct nir_to_llvm_context *ctx,
 		mask |= 0x01;
 
 	args[0] = LLVMConstInt(ctx->i32, mask, false);
-	ac_emit_llvm_intrinsic(&ctx->ac, "llvm.SI.export",
-			       ctx->voidt, args, 9,
-			       AC_FUNC_ATTR_LEGACY);
+	ac_build_intrinsic(&ctx->ac, "llvm.SI.export",
+			   ctx->voidt, args, 9,
+			   AC_FUNC_ATTR_LEGACY);
 }
 
 static void
@@ -4795,7 +4795,7 @@ handle_fs_outputs_post(struct nir_to_llvm_context *ctx)
 static void
 emit_gs_epilogue(struct nir_to_llvm_context *ctx)
 {
-	ac_emit_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE, ctx->gs_wave_id);
+	ac_build_sendmsg(&ctx->ac, AC_SENDMSG_GS_OP_NOP | AC_SENDMSG_GS_DONE, ctx->gs_wave_id);
 }
 
 static void
@@ -5195,11 +5195,11 @@ ac_gs_copy_shader_emit(struct nir_to_llvm_context *ctx)
 					       (slot * 4 + j + start) *
 					       ctx->gs_max_out_vertices * 16 * 4, false);
 
-			value = ac_emit_llvm_intrinsic(&ctx->ac,
-						       "llvm.SI.buffer.load.dword.i32.i32",
-						       ctx->i32, args, 9,
-						       AC_FUNC_ATTR_READONLY |
-						       AC_FUNC_ATTR_LEGACY);
+			value = ac_build_intrinsic(&ctx->ac,
+						   "llvm.SI.buffer.load.dword.i32.i32",
+						   ctx->i32, args, 9,
+						   AC_FUNC_ATTR_READONLY |
+						   AC_FUNC_ATTR_LEGACY);
 
 			LLVMBuildStore(ctx->builder,
 				       to_float(ctx, value), ctx->outputs[radeon_llvm_reg_index_soa(i, j)]);
