@@ -272,6 +272,7 @@ util_queue_killall_and_wait(struct util_queue *queue)
 
    for (i = 0; i < queue->num_threads; i++)
       pipe_thread_wait(queue->threads[i]);
+   queue->num_threads = 0;
 }
 
 void
