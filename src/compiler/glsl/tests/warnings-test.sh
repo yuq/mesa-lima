@@ -42,6 +42,11 @@ for test in $srcdir/$tests_relative_dir/*.vert; do
     fi
 done
 
+if [ $total -eq 0 ]; then
+    echo "Could not find any tests."
+    exit 1
+fi
+
 echo ""
 echo "$pass/$total tests returned correct results"
 echo ""
