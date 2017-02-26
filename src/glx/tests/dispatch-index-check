@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -e
 
+if [ -z "$srcdir" ]
+then
+  srcdir=$(dirname "$0")
+fi
+
 # extract enum definition
 dispatch_list=$(sed '/__GLXdispatchIndex/,/__GLXdispatchIndex/!d' \
   "$srcdir"/../g_glxglvnddispatchindices.h)
