@@ -155,7 +155,7 @@ static struct pipe_context *si_create_context(struct pipe_screen *screen,
 		sscreen->record_llvm_ir = true; /* racy but not critical */
 
 	sctx->b.b.screen = screen; /* this must be set first */
-	sctx->b.b.priv = priv;
+	sctx->b.b.priv = NULL;
 	sctx->b.b.destroy = si_destroy_context;
 	sctx->b.b.emit_string_marker = si_emit_string_marker;
 	sctx->b.set_atom_dirty = (void *)si_set_atom_dirty;

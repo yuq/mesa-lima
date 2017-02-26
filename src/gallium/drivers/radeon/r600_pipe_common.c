@@ -1220,9 +1220,11 @@ static boolean r600_fence_finish(struct pipe_screen *screen,
 {
 	struct radeon_winsys *rws = ((struct r600_common_screen*)screen)->ws;
 	struct r600_multi_fence *rfence = (struct r600_multi_fence *)fence;
-	struct r600_common_context *rctx =
-		ctx ? (struct r600_common_context*)ctx : NULL;
+	struct r600_common_context *rctx;
 	int64_t abs_timeout = os_time_get_absolute_timeout(timeout);
+
+	ctx = threaded_context_unwrap_sync(ctx);
+	rctx = ctx ? (struct r600_common_context*)ctx : NULL;
 
 	if (rfence->sdma) {
 		if (!rws->fence_wait(rws, rfence->sdma, timeout))

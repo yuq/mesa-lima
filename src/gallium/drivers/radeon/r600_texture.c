@@ -530,13 +530,15 @@ static boolean r600_texture_get_handle(struct pipe_screen* screen,
                                        unsigned usage)
 {
 	struct r600_common_screen *rscreen = (struct r600_common_screen*)screen;
-	struct r600_common_context *rctx = (struct r600_common_context*)
-					   (ctx ? ctx : rscreen->aux_context);
+	struct r600_common_context *rctx;
 	struct r600_resource *res = (struct r600_resource*)resource;
 	struct r600_texture *rtex = (struct r600_texture*)resource;
 	struct radeon_bo_metadata metadata;
 	bool update_metadata = false;
 	unsigned stride, offset, slice_size;
+
+	ctx = threaded_context_unwrap_sync(ctx);
+	rctx = (struct r600_common_context*)(ctx ? ctx : rscreen->aux_context);
 
 	/* This is not supported now, but it might be required for OpenCL
 	 * interop in the future.
