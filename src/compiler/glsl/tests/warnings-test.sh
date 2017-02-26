@@ -6,6 +6,11 @@ compiler=./glsl_compiler
 total=0
 pass=0
 
+if [ ! -x "$compiler" ]; then
+    echo "Could not find glsl_compiler. Ensure that it is build via make check"
+    exit 1
+fi
+
 echo "====== Testing compilation output ======"
 for test in `find . -iname '*.vert'`; do
     echo -n "Testing $test..."
