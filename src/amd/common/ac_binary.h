@@ -63,6 +63,7 @@ struct ac_shader_binary {
 
 	/** Disassembled shader in a string. */
 	char *disasm_string;
+	char *llvm_ir_string;
 };
 
 struct ac_shader_config {
