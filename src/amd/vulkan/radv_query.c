@@ -205,8 +205,11 @@ VkResult radv_GetQueryPoolResults(
 		}
 
 		if (flags & VK_QUERY_RESULT_WITH_AVAILABILITY_BIT) {
-			*(uint32_t*)dest = available;
-			dest += 4;
+			if (flags & VK_QUERY_RESULT_64_BIT) {
+				*(uint64_t*)dest = available;
+			} else {
+				*(uint32_t*)dest = available;
+			}
 		}
 	}
 
