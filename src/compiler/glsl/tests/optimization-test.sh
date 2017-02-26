@@ -38,7 +38,7 @@ for dir in $srcdir/glsl/tests/*/; do
         completedir="$abs_builddir/glsl/tests/`echo ${dir} | sed 's|.*/glsl/tests/||g'`"
         mkdir -p $completedir
         cd $dir;
-        $PYTHON2 create_test_cases.py --outdir $completedir;
+        $PYTHON2 create_test_cases.py --runner $abs_builddir/glsl/glsl_test --outdir $completedir;
         if [ $? -eq 0 ]; then
             has_tests=1
         fi
@@ -61,7 +61,7 @@ fi
 echo "====== Testing optimization passes ======"
 for test in `find . -iname '*.opt_test'`; do
     echo -n "Testing $test..."
-    (cd `dirname "$test"`; ./`basename "$test"`) > "$test.out" 2>&1
+    ./$test > "$test.out" 2>&1
     total=$((total+1))
     if $PYTHON2 $PYTHON_FLAGS $compare_ir "$test.expected" "$test.out" >/dev/null 2>&1; then
         echo "PASS"
