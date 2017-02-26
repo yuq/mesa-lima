@@ -30,7 +30,7 @@ echo "====== Testing compilation output ======"
 for test in $srcdir/$tests_relative_dir/*.vert; do
     test_output="$abs_builddir/$tests_relative_dir/`basename $test`"
     mkdir -p $abs_builddir/$tests_relative_dir/
-    echo -n "Testing $test..."
+    echo -n "Testing `basename $test`..."
     $compiler --just-log --version 150 "$test" > "$test_output.out" 2>&1
     total=$((total+1))
     if diff "$test.expected" "$test_output.out" >/dev/null 2>&1; then
