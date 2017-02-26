@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 # extract enum definition
 dispatch_list=$(sed '/__GLXdispatchIndex/,/__GLXdispatchIndex/!d' \

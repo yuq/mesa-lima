@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 entrypoints=$(grep EGL_ENTRYPOINT "$srcdir"/main/eglentrypoint.h)
 sorted=$(sort <<< "$entrypoints")
