@@ -1476,6 +1476,24 @@ static void visit_alu(struct nir_to_llvm_context *ctx, nir_alu_instr *instr)
 	case nir_op_d2f:
 		result = LLVMBuildFPTrunc(ctx->builder, src[0], to_float_type(ctx, def_type), "");
 		break;
+	case nir_op_u2u32:
+	case nir_op_u2u64:
+	case nir_op_u2i32:
+	case nir_op_u2i64:
+		if (get_elem_bits(ctx, LLVMTypeOf(src[0])) < get_elem_bits(ctx, def_type))
+			result = LLVMBuildZExt(ctx->builder, src[0], def_type, "");
+		else
+			result = LLVMBuildTrunc(ctx->builder, src[0], def_type, "");
+		break;
+	case nir_op_i2u32:
+	case nir_op_i2u64:
+	case nir_op_i2i32:
+	case nir_op_i2i64:
+		if (get_elem_bits(ctx, LLVMTypeOf(src[0])) < get_elem_bits(ctx, def_type))
+			result = LLVMBuildSExt(ctx->builder, src[0], def_type, "");
+		else
+			result = LLVMBuildTrunc(ctx->builder, src[0], def_type, "");
+		break;
 	case nir_op_bcsel:
 		result = emit_bcsel(ctx, src[0], src[1], src[2]);
 		break;
