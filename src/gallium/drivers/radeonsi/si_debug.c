@@ -53,7 +53,7 @@ static void si_dump_shader(struct si_screen *sscreen,
  * Shader compiles can be overridden with arbitrary ELF objects by setting
  * the environment variable RADEON_REPLACE_SHADERS=num1:filename1[;num2:filename2]
  */
-bool si_replace_shader(unsigned num, struct radeon_shader_binary *binary)
+bool si_replace_shader(unsigned num, struct ac_shader_binary *binary)
 {
 	const char *p = debug_get_option_replace_shaders();
 	const char *semicolon;

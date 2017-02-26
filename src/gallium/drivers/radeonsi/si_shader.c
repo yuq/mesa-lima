@@ -5750,7 +5750,7 @@ static void si_llvm_emit_polygon_stipple(struct si_shader_context *ctx,
 	lp_build_intrinsic(builder, "llvm.AMDGPU.kill", ctx->voidt, &bit, 1, 0);
 }
 
-void si_shader_binary_read_config(struct radeon_shader_binary *binary,
+void si_shader_binary_read_config(struct ac_shader_binary *binary,
 				  struct si_shader_config *conf,
 				  unsigned symbol_offset)
 {
@@ -5763,7 +5763,7 @@ void si_shader_binary_read_config(struct radeon_shader_binary *binary,
 	 * Find out if we really need the scratch buffer.
 	 */
 	for (i = 0; i < binary->reloc_count; i++) {
-		const struct radeon_shader_reloc *reloc = &binary->relocs[i];
+		const struct ac_shader_reloc *reloc = &binary->relocs[i];
 
 		if (!strcmp(scratch_rsrc_dword0_symbol, reloc->name) ||
 		    !strcmp(scratch_rsrc_dword1_symbol, reloc->name)) {
@@ -5853,7 +5853,7 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			S_008F04_STRIDE(config->scratch_bytes_per_wave / 64);
 
 	for (i = 0 ; i < shader->binary.reloc_count; i++) {
-		const struct radeon_shader_reloc *reloc =
+		const struct ac_shader_reloc *reloc =
 					&shader->binary.relocs[i];
 		if (!strcmp(scratch_rsrc_dword0_symbol, reloc->name)) {
 			util_memcpy_cpu_to_le32(shader->binary.code + reloc->offset,
@@ -5878,11 +5878,11 @@ static unsigned si_get_shader_binary_size(struct si_shader *shader)
 
 int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 {
-	const struct radeon_shader_binary *prolog =
+	const struct ac_shader_binary *prolog =
 		shader->prolog ? &shader->prolog->binary : NULL;
-	const struct radeon_shader_binary *epilog =
+	const struct ac_shader_binary *epilog =
 		shader->epilog ? &shader->epilog->binary : NULL;
-	const struct radeon_shader_binary *mainb = &shader->binary;
+	const struct ac_shader_binary *mainb = &shader->binary;
 	unsigned bo_size = si_get_shader_binary_size(shader) +
 			   (!epilog ? mainb->rodata_size : 0);
 	unsigned char *ptr;
@@ -5920,7 +5920,7 @@ int si_shader_binary_upload(struct si_screen *sscreen, struct si_shader *shader)
 	return 0;
 }
 
-static void si_shader_dump_disassembly(const struct radeon_shader_binary *binary,
+static void si_shader_dump_disassembly(const struct ac_shader_binary *binary,
 				       struct pipe_debug_callback *debug,
 				       const char *name, FILE *file)
 {
@@ -6128,7 +6128,7 @@ void si_shader_dump(struct si_screen *sscreen, struct si_shader *shader,
 }
 
 int si_compile_llvm(struct si_screen *sscreen,
-		    struct radeon_shader_binary *binary,
+		    struct ac_shader_binary *binary,
 		    struct si_shader_config *conf,
 		    LLVMTargetMachineRef tm,
 		    LLVMModuleRef mod,

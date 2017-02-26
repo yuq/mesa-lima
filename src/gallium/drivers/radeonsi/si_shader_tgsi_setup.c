@@ -200,7 +200,7 @@ static void si_diagnostic_handler(LLVMDiagnosticInfoRef di, void *context)
  *
  * @returns 0 for success, 1 for failure
  */
-unsigned si_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
+unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 LLVMTargetMachineRef tm,
 			 struct pipe_debug_callback *debug)
 {

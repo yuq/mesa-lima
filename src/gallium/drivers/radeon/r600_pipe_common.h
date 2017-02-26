@@ -34,6 +34,8 @@
 
 #include <stdio.h>
 
+#include "amd/common/ac_binary.h"
+
 #include "radeon/radeon_winsys.h"
 
 #include "util/disk_cache.h"
@@ -128,45 +130,8 @@ struct r600_perfcounters;
 struct tgsi_shader_info;
 struct r600_qbo_state;
 
-struct radeon_shader_reloc {
-	char name[32];
-	uint64_t offset;
-};
-
-struct radeon_shader_binary {
-	/** Shader code */
-	unsigned char *code;
-	unsigned code_size;
-
-	/** Config/Context register state that accompanies this shader.
-	 * This is a stream of dword pairs.  First dword contains the
-	 * register address, the second dword contains the value.*/
-	unsigned char *config;
-	unsigned config_size;
-
-	/** The number of bytes of config information for each global symbol.
-	 */
-	unsigned config_size_per_symbol;
-
-	/** Constant data accessed by the shader.  This will be uploaded
-	 * into a constant buffer. */
-	unsigned char *rodata;
-	unsigned rodata_size;
-
-	/** List of symbol offsets for the shader */
-	uint64_t *global_symbol_offsets;
-	unsigned global_symbol_count;
-
-	struct radeon_shader_reloc *relocs;
-	unsigned reloc_count;
-
-	/** Disassembled shader in a string. */
-	char *disasm_string;
-	char *llvm_ir_string;
-};
-
-void radeon_shader_binary_init(struct radeon_shader_binary *b);
-void radeon_shader_binary_clean(struct radeon_shader_binary *b);
+void radeon_shader_binary_init(struct ac_shader_binary *b);
+void radeon_shader_binary_clean(struct ac_shader_binary *b);
 
 /* Only 32-bit buffer allocations are supported, gallium doesn't support more
  * at the moment.

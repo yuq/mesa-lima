@@ -35,7 +35,7 @@
 
 static void parse_symbol_table(Elf_Data *symbol_table_data,
 				const GElf_Shdr *symbol_table_header,
-				struct radeon_shader_binary *binary)
+				struct ac_shader_binary *binary)
 {
 	GElf_Sym symbol;
 	unsigned i = 0;
@@ -78,7 +78,7 @@ static void parse_symbol_table(Elf_Data *symbol_table_data,
 
 static void parse_relocs(Elf *elf, Elf_Data *relocs, Elf_Data *symbols,
 			unsigned symbol_sh_link,
-			struct radeon_shader_binary *binary)
+			struct ac_shader_binary *binary)
 {
 	unsigned i;
 
@@ -86,12 +86,12 @@ static void parse_relocs(Elf *elf, Elf_Data *relocs, Elf_Data *symbols,
 		return;
 	}
 	binary->relocs = CALLOC(binary->reloc_count,
-			sizeof(struct radeon_shader_reloc));
+			sizeof(struct ac_shader_reloc));
 	for (i = 0; i < binary->reloc_count; i++) {
 		GElf_Sym symbol;
 		GElf_Rel rel;
 		char *symbol_name;
-		struct radeon_shader_reloc *reloc = &binary->relocs[i];
+		struct ac_shader_reloc *reloc = &binary->relocs[i];
 
 		gelf_getrel(relocs, i, &rel);
 		gelf_getsym(symbols, GELF_R_SYM(rel.r_info), &symbol);
@@ -104,7 +104,7 @@ static void parse_relocs(Elf *elf, Elf_Data *relocs, Elf_Data *symbols,
 }
 
 void radeon_elf_read(const char *elf_data, unsigned elf_size,
-		     struct radeon_shader_binary *binary)
+		     struct ac_shader_binary *binary)
 {
 	char *elf_buffer;
 	Elf *elf;
@@ -183,7 +183,7 @@ void radeon_elf_read(const char *elf_data, unsigned elf_size,
 }
 
 const unsigned char *radeon_shader_binary_config_start(
-	const struct radeon_shader_binary *binary,
+	const struct ac_shader_binary *binary,
 	uint64_t symbol_offset)
 {
 	unsigned i;

@@ -35,7 +35,7 @@
 #include <llvm-c/TargetMachine.h>
 
 struct pipe_debug_callback;
-struct radeon_shader_binary;
+struct ac_shader_binary;
 
 #define RADEON_LLVM_MAX_INPUT_SLOTS 32
 #define RADEON_LLVM_MAX_INPUTS 32 * 4
@@ -166,7 +166,7 @@ void si_llvm_shader_type(LLVMValueRef F, unsigned type);
 
 LLVMTargetRef si_llvm_get_amdgpu_target(const char *triple);
 
-unsigned si_llvm_compile(LLVMModuleRef M, struct radeon_shader_binary *binary,
+unsigned si_llvm_compile(LLVMModuleRef M, struct ac_shader_binary *binary,
 			 LLVMTargetMachineRef tm,
 			 struct pipe_debug_callback *debug);
 

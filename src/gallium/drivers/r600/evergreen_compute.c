@@ -180,7 +180,7 @@ static void evergreen_cs_set_constant_buffer(struct r600_context *rctx,
 
 #ifdef HAVE_OPENCL
 
-static void r600_shader_binary_read_config(const struct radeon_shader_binary *binary,
+static void r600_shader_binary_read_config(const struct ac_shader_binary *binary,
 					   struct r600_bytecode *bc,
 					   uint64_t symbol_offset,
 					   boolean *use_kill)
@@ -216,7 +216,7 @@ static void r600_shader_binary_read_config(const struct radeon_shader_binary *bi
 }
 
 static unsigned r600_create_shader(struct r600_bytecode *bc,
-				   const struct radeon_shader_binary *binary,
+				   const struct ac_shader_binary *binary,
 				   boolean *use_kill)
 
 {

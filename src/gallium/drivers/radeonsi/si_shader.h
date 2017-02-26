@@ -74,8 +74,7 @@
 #include "util/u_queue.h"
 #include "si_state.h"
 
-struct radeon_shader_binary;
-struct radeon_shader_reloc;
+struct ac_shader_binary;
 
 #define SI_MAX_VS_OUTPUTS	40
 
@@ -529,7 +528,7 @@ struct si_shader {
 	bool				is_gs_copy_shader;
 
 	/* The following data is all that's needed for binary shaders. */
-	struct radeon_shader_binary	binary;
+	struct ac_shader_binary	binary;
 	struct si_shader_config		config;
 	struct si_shader_info		info;
 
@@ -543,7 +542,7 @@ struct si_shader {
 struct si_shader_part {
 	struct si_shader_part *next;
 	union si_shader_part_key key;
-	struct radeon_shader_binary binary;
+	struct ac_shader_binary binary;
 	struct si_shader_config config;
 };
 
@@ -562,7 +561,7 @@ int si_shader_create(struct si_screen *sscreen, LLVMTargetMachineRef tm,
 		     struct si_shader *shader,
 		     struct pipe_debug_callback *debug);
 int si_compile_llvm(struct si_screen *sscreen,
-		    struct radeon_shader_binary *binary,
+		    struct ac_shader_binary *binary,
 		    struct si_shader_config *conf,
 		    LLVMTargetMachineRef tm,
 		    LLVMModuleRef mod,
@@ -582,7 +581,7 @@ void si_shader_apply_scratch_relocs(struct si_context *sctx,
 			struct si_shader *shader,
 			struct si_shader_config *config,
 			uint64_t scratch_va);
-void si_shader_binary_read_config(struct radeon_shader_binary *binary,
+void si_shader_binary_read_config(struct ac_shader_binary *binary,
 				  struct si_shader_config *conf,
 				  unsigned symbol_offset);
 unsigned si_get_spi_shader_z_format(bool writes_z, bool writes_stencil,
