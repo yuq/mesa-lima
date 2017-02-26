@@ -486,6 +486,7 @@ swr_create_context(struct pipe_screen *p_screen, void *priv, unsigned flags)
    ctx->pipe.buffer_subdata = u_default_buffer_subdata;
    ctx->pipe.texture_subdata = u_default_texture_subdata;
 
+   ctx->pipe.clear_texture = util_clear_texture;
    ctx->pipe.resource_copy_region = swr_resource_copy;
    ctx->pipe.render_condition = swr_render_condition;
 

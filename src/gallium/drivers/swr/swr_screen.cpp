@@ -243,6 +243,7 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_CLIP_HALFZ:
    case PIPE_CAP_POLYGON_OFFSET_CLAMP:
    case PIPE_CAP_DEPTH_BOUNDS_TEST:
+   case PIPE_CAP_CLEAR_TEXTURE:
    case PIPE_CAP_TEXTURE_FLOAT_LINEAR:
    case PIPE_CAP_TEXTURE_HALF_FLOAT_LINEAR:
    case PIPE_CAP_CULL_DISTANCE:
@@ -283,7 +284,6 @@ swr_get_param(struct pipe_screen *screen, enum pipe_cap param)
    case PIPE_CAP_FORCE_PERSAMPLE_INTERP:
    case PIPE_CAP_SHAREABLE_SHADERS:
    case PIPE_CAP_COPY_BETWEEN_COMPRESSED_AND_PLAIN_FORMATS:
-   case PIPE_CAP_CLEAR_TEXTURE:
    case PIPE_CAP_DRAW_PARAMETERS:
    case PIPE_CAP_TGSI_PACK_HALF_FLOAT:
    case PIPE_CAP_MULTI_DRAW_INDIRECT:
