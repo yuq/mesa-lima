@@ -24,17 +24,21 @@ if [ ! -x "$compiler" ]; then
     exit 1
 fi
 
+tests_relative_dir="glsl/tests/warnings"
+
 echo "====== Testing compilation output ======"
-for test in `find . -iname '*.vert'`; do
+for test in $srcdir/$tests_relative_dir/*.vert; do
+    test_output="$abs_builddir/$tests_relative_dir/`basename $test`"
+    mkdir -p $abs_builddir/$tests_relative_dir/
     echo -n "Testing $test..."
-    $compiler --just-log --version 150 "$test" > "$test.out" 2>&1
+    $compiler --just-log --version 150 "$test" > "$test_output.out" 2>&1
     total=$((total+1))
-    if diff "$test.expected" "$test.out" >/dev/null 2>&1; then
+    if diff "$test.expected" "$test_output.out" >/dev/null 2>&1; then
         echo "PASS"
         pass=$((pass+1))
     else
         echo "FAIL"
-        diff "$test.expected" "$test.out"
+        diff "$test.expected" "$test_output.out"
     fi
 done
 
