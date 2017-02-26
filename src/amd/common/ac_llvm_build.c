@@ -861,13 +861,17 @@ ac_build_ddxy(struct ac_llvm_context *ctx,
 		args[1] = val;
 		tl = ac_build_intrinsic(ctx,
 					"llvm.amdgcn.ds.bpermute", ctx->i32,
-					args, 2, AC_FUNC_ATTR_READNONE);
+					args, 2,
+					AC_FUNC_ATTR_READNONE |
+					AC_FUNC_ATTR_CONVERGENT);
 
 		args[0] = LLVMBuildMul(ctx->builder, trbl_tid,
 				       LLVMConstInt(ctx->i32, 4, false), "");
 		trbl = ac_build_intrinsic(ctx,
 					  "llvm.amdgcn.ds.bpermute", ctx->i32,
-					  args, 2, AC_FUNC_ATTR_READNONE);
+					  args, 2,
+					  AC_FUNC_ATTR_READNONE |
+					  AC_FUNC_ATTR_CONVERGENT);
 	} else {
 		LLVMValueRef store_ptr, load_ptr0, load_ptr1;
 

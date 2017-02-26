@@ -5207,7 +5207,7 @@ static void si_llvm_emit_barrier(const struct lp_build_tgsi_action *action,
 	lp_build_intrinsic(gallivm->builder,
 			   HAVE_LLVM >= 0x0309 ? "llvm.amdgcn.s.barrier"
 					       : "llvm.AMDGPU.barrier.local",
-			   ctx->voidt, NULL, 0, 0);
+			   ctx->voidt, NULL, 0, LP_FUNC_ATTR_CONVERGENT);
 }
 
 static const struct lp_build_tgsi_action tex_action = {
