@@ -148,12 +148,10 @@ radv_wsi_image_create(VkDevice device_h,
 		      uint32_t *offset,
 		      uint32_t *row_pitch, int *fd_p)
 {
-	struct radv_device *device = radv_device_from_handle(device_h);
 	VkResult result = VK_SUCCESS;
 	struct radeon_surf *surface;
 	VkImage image_h;
 	struct radv_image *image;
-	bool bret;
 	int fd;
 
 	result = radv_image_create(device_h,
@@ -183,40 +181,40 @@ radv_wsi_image_create(VkDevice device_h,
 		return result;
 
 	image = radv_image_from_handle(image_h);
+
 	VkDeviceMemory memory_h;
-	struct radv_device_memory *memory;
+
+	const VkDedicatedAllocationMemoryAllocateInfoNV ded_alloc = {
+		.sType = VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV,
+		.pNext = NULL,
+		.buffer = NULL,
+		.image = image_h
+	};
 
 	result = radv_AllocateMemory(device_h,
 				     &(VkMemoryAllocateInfo) {
 					     .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-						     .allocationSize = image->size,
-						     .memoryTypeIndex = linear ? 1 : 0,
-						     },
+					     .pNext = &ded_alloc,
+					     .allocationSize = image->size,
+					     .memoryTypeIndex = linear ? 1 : 0,
+				     },
 				     NULL /* XXX: pAllocator */,
 				     &memory_h);
 	if (result != VK_SUCCESS)
 		goto fail_create_image;
 
-	memory = radv_device_memory_from_handle(memory_h);
-
-	radv_BindImageMemory(VK_NULL_HANDLE, image_h, memory_h, 0);
+	radv_BindImageMemory(device_h, image_h, memory_h, 0);
 
 	/*
 	 * return the fd for the image in the no copy mode,
 	 * or the fd for the linear image if a copy is required.
 	 */
 	if (!needs_linear_copy || (needs_linear_copy && linear)) {
-		bret = device->ws->buffer_get_fd(device->ws,
-						 memory->bo, &fd);
-		if (bret == false)
+		RADV_FROM_HANDLE(radv_device, device, device_h);
+		RADV_FROM_HANDLE(radv_device_memory, memory, memory_h);
+		if (!radv_get_memory_fd(device, memory, &fd))
 			goto fail_alloc_memory;
 		*fd_p = fd;
-	}
-
-	{
-		struct radeon_bo_metadata metadata;
-		radv_init_metadata(device, image, &metadata);
-		device->ws->buffer_set_metadata(memory->bo, &metadata);
 	}
 
 	surface = &image->surface;

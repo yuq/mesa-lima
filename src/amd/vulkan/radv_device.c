@@ -33,7 +33,7 @@
 #include "radv_cs.h"
 #include "util/disk_cache.h"
 #include "util/strtod.h"
-
+#include "util/vk_util.h"
 #include <xf86drm.h>
 #include <amdgpu.h>
 #include <amdgpu_drm.h>
@@ -109,6 +109,10 @@ static const VkExtensionProperties common_device_extensions[] = {
 	},
 	{
 		.extensionName = VK_KHR_SHADER_DRAW_PARAMETERS_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+	{
+		.extensionName = VK_NV_DEDICATED_ALLOCATION_EXTENSION_NAME,
 		.specVersion = 1,
 	},
 };
@@ -1635,6 +1639,21 @@ PFN_vkVoidFunction radv_GetDeviceProcAddr(
 	return radv_lookup_entrypoint(pName);
 }
 
+bool radv_get_memory_fd(struct radv_device *device,
+			struct radv_device_memory *memory,
+			int *pFD)
+{
+	struct radeon_bo_metadata metadata;
+
+	if (memory->image) {
+		radv_init_metadata(device, memory->image, &metadata);
+		device->ws->buffer_set_metadata(memory->bo, &metadata);
+	}
+
+	return device->ws->buffer_get_fd(device->ws, memory->bo,
+					 pFD);
+}
+
 VkResult radv_AllocateMemory(
 	VkDevice                                    _device,
 	const VkMemoryAllocateInfo*                 pAllocateInfo,
@@ -1646,6 +1665,7 @@ VkResult radv_AllocateMemory(
 	VkResult result;
 	enum radeon_bo_domain domain;
 	uint32_t flags = 0;
+	const VkDedicatedAllocationMemoryAllocateInfoNV *dedicate_info = NULL;
 	assert(pAllocateInfo->sType == VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO);
 
 	if (pAllocateInfo->allocationSize == 0) {
@@ -1654,10 +1674,28 @@ VkResult radv_AllocateMemory(
 		return VK_SUCCESS;
 	}
 
+	vk_foreach_struct(ext, pAllocateInfo->pNext) {
+		switch (ext->sType) {
+		case VK_STRUCTURE_TYPE_DEDICATED_ALLOCATION_MEMORY_ALLOCATE_INFO_NV:
+			dedicate_info = (const VkDedicatedAllocationMemoryAllocateInfoNV *)ext;
+			break;
+		default:
+			break;
+		}
+	}
+
 	mem = vk_alloc2(&device->alloc, pAllocator, sizeof(*mem), 8,
 			  VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (mem == NULL)
 		return vk_error(VK_ERROR_OUT_OF_HOST_MEMORY);
+
+	if (dedicate_info) {
+		mem->image = radv_image_from_handle(dedicate_info->image);
+		mem->buffer = radv_buffer_from_handle(dedicate_info->buffer);
+	} else {
+		mem->image = NULL;
+		mem->buffer = NULL;
+	}
 
 	uint64_t alloc_size = align_u64(pAllocateInfo->allocationSize, 4096);
 	if (pAllocateInfo->memoryTypeIndex == RADV_MEM_TYPE_GTT_WRITE_COMBINE ||

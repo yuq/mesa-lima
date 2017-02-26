@@ -523,6 +523,9 @@ struct radv_device {
 
 struct radv_device_memory {
 	struct radeon_winsys_bo                      *bo;
+	/* for dedicated allocations */
+	struct radv_image                            *image;
+	struct radv_buffer                           *buffer;
 	uint32_t                                     type_index;
 	VkDeviceSize                                 map_size;
 	void *                                       map;
@@ -814,7 +817,9 @@ void radv_fill_buffer(struct radv_cmd_buffer *cmd_buffer,
 		      struct radeon_winsys_bo *bo,
 		      uint64_t offset, uint64_t size, uint32_t value);
 void radv_cmd_buffer_trace_emit(struct radv_cmd_buffer *cmd_buffer);
-
+bool radv_get_memory_fd(struct radv_device *device,
+			struct radv_device_memory *memory,
+			int *pFD);
 /*
  * Takes x,y,z as exact numbers of invocations, instead of blocks.
  *

@@ -29,6 +29,7 @@ max_api_version = 1.0
 
 supported_extensions = [
    'VK_AMD_draw_indirect_count',
+   'VK_NV_dedicated_allocation',
    'VK_KHR_get_physical_device_properties2',
    'VK_KHR_maintenance1',
    'VK_KHR_sampler_mirror_clamp_to_edge',
