@@ -1,8 +1,21 @@
 #!/bin/sh
 
+if [ -z "$srcdir" -o -z "$abs_builddir" ]; then
+    echo ""
+    echo "Warning: you're invoking the script manually and things may fail."
+    echo "Attempting to determine/set srcdir and abs_builddir variables."
+    echo ""
+
+    # Variable should point to the Makefile.glsl.am
+    srcdir=./../../
+    cd `dirname "$0"`
+    # Variable should point to glsl_compiler
+    abs_builddir=`pwd`/../../
+fi
+
 # Execute several shaders, and check that the InfoLog outcome is the expected.
 
-compiler=./glsl_compiler
+compiler=$abs_builddir/glsl_compiler
 total=0
 pass=0
 
