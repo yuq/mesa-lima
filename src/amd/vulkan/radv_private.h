@@ -438,6 +438,12 @@ struct radv_meta_state {
 		VkPipeline fill_pipeline;
 		VkPipeline copy_pipeline;
 	} buffer;
+
+	struct {
+		VkDescriptorSetLayout occlusion_query_ds_layout;
+		VkPipelineLayout occlusion_query_p_layout;
+		VkPipeline occlusion_query_pipeline;
+	} query;
 };
 
 /* queue types */
