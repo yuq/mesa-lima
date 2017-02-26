@@ -236,7 +236,7 @@ util_queue_init(struct util_queue *queue,
             goto fail;
          } else {
             /* at least one thread created, so use it */
-            queue->num_threads = i+1;
+            queue->num_threads = i;
             break;
          }
       }
