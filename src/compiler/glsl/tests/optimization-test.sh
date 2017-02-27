@@ -60,7 +60,7 @@ fi
 
 echo "====== Testing optimization passes ======"
 for test in `find . -iname '*.opt_test'`; do
-    echo -n "Testing $test..."
+    echo -n "Testing `echo $test| sed 's|.*/glsl/tests/||g'`..."
     ./$test > "$test.out" 2>&1
     total=$((total+1))
     if $PYTHON2 $PYTHON_FLAGS $compare_ir "$test.expected" "$test.out" >/dev/null 2>&1; then
