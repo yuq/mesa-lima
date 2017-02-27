@@ -27,7 +27,6 @@
 #include "si_pipe.h"
 #include "sid.h"
 #include "sid_tables.h"
-#include "radeon/radeon_elf_util.h"
 #include "ddebug/dd_util.h"
 #include "util/u_memory.h"
 #include "ac_debug.h"
@@ -126,7 +125,7 @@ bool si_replace_shader(unsigned num, struct ac_shader_binary *binary)
 	if (nread != filesize)
 		goto file_error;
 
-	radeon_elf_read(buf, filesize, binary);
+	ac_elf_read(buf, filesize, binary);
 	replaced = true;
 
 out_close:

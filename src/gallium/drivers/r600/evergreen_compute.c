@@ -251,7 +251,7 @@ static void *evergreen_create_compute_state(struct pipe_context *ctx,
 	header = cso->prog;
 	code = cso->prog + sizeof(struct pipe_llvm_program_header);
 	radeon_shader_binary_init(&shader->binary);
-	radeon_elf_read(code, header->num_bytes, &shader->binary);
+	ac_elf_read(code, header->num_bytes, &shader->binary);
 	r600_create_shader(&shader->bc, &shader->binary, &use_kill);
 
 	/* Upload code + ROdata */

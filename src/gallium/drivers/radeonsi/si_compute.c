@@ -25,7 +25,6 @@
 #include "tgsi/tgsi_parse.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
-#include "radeon/radeon_elf_util.h"
 
 #include "amd_kernel_code_t.h"
 #include "radeon/r600_cs.h"
@@ -160,7 +159,7 @@ static void *si_create_compute_state(
 		header = cso->prog;
 		code = cso->prog + sizeof(struct pipe_llvm_program_header);
 
-		radeon_elf_read(code, header->num_bytes, &program->shader.binary);
+		ac_elf_read(code, header->num_bytes, &program->shader.binary);
 		if (program->use_code_object_v2) {
 			const amd_kernel_code_t *code_object =
 				si_compute_get_code_object(program, 0);
