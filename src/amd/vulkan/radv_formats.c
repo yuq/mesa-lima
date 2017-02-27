@@ -864,6 +864,10 @@ bool radv_format_pack_clear_color(VkFormat format,
 		clear_vals[0] = value->uint32[0] & 0xff;
 		clear_vals[1] = 0;
 		break;
+	case VK_FORMAT_R8_SINT:
+		clear_vals[0] = value->int32[0] & 0xff;
+		clear_vals[1] = 0;
+		break;
 	case VK_FORMAT_R16_UINT:
 		clear_vals[0] = value->uint32[0] & 0xffff;
 		clear_vals[1] = 0;
@@ -873,11 +877,23 @@ bool radv_format_pack_clear_color(VkFormat format,
 		clear_vals[0] |= (value->uint32[1] & 0xff) << 8;
 		clear_vals[1] = 0;
 		break;
+	case VK_FORMAT_R8G8_SINT:
+		clear_vals[0] = value->int32[0] & 0xff;
+		clear_vals[0] |= (value->int32[1] & 0xff) << 8;
+		clear_vals[1] = 0;
+		break;
 	case VK_FORMAT_R8G8B8A8_UINT:
 		clear_vals[0] = value->uint32[0] & 0xff;
 		clear_vals[0] |= (value->uint32[1] & 0xff) << 8;
 		clear_vals[0] |= (value->uint32[2] & 0xff) << 16;
 		clear_vals[0] |= (value->uint32[3] & 0xff) << 24;
+		clear_vals[1] = 0;
+		break;
+	case VK_FORMAT_R8G8B8A8_SINT:
+		clear_vals[0] = value->int32[0] & 0xff;
+		clear_vals[0] |= (value->int32[1] & 0xff) << 8;
+		clear_vals[0] |= (value->int32[2] & 0xff) << 16;
+		clear_vals[0] |= (value->int32[3] & 0xff) << 24;
 		clear_vals[1] = 0;
 		break;
 	case VK_FORMAT_A8B8G8R8_UINT_PACK32:
