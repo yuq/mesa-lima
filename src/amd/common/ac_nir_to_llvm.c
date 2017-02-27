@@ -3383,6 +3383,7 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 	LLVMBuilderRef builder = ctx->builder;
 	LLVMTypeRef type;
 	LLVMValueRef index = NULL;
+	unsigned constant_index = 0;
 
 	assert(deref->var->data.binding < layout->binding_count);
 
@@ -3419,6 +3420,21 @@ static LLVMValueRef get_sampler_desc(struct nir_to_llvm_context *ctx,
 		if (child->deref_array_type == nir_deref_array_type_indirect) {
 			index = get_src(ctx, child->indirect);
 		}
+
+		constant_index = child->base_offset;
+	}
+	if (desc_type == DESC_SAMPLER && binding->immutable_samplers &&
+	    (!index || binding->immutable_samplers_equal)) {
+		if (binding->immutable_samplers_equal)
+			constant_index = 0;
+
+		LLVMValueRef constants[] = {
+			LLVMConstInt(ctx->i32, binding->immutable_samplers[constant_index * 4 + 0], 0),
+			LLVMConstInt(ctx->i32, binding->immutable_samplers[constant_index * 4 + 1], 0),
+			LLVMConstInt(ctx->i32, binding->immutable_samplers[constant_index * 4 + 2], 0),
+			LLVMConstInt(ctx->i32, binding->immutable_samplers[constant_index * 4 + 3], 0),
+		};
+		return ac_build_gather_values(&ctx->ac, constants, 4);
 	}
 
 	assert(stride % type_size == 0);
