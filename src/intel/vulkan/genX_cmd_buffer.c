@@ -2452,4 +2452,11 @@ void genX(CmdEndRenderPass)(
 #ifndef NDEBUG
    anv_dump_add_framebuffer(cmd_buffer, cmd_buffer->state.framebuffer);
 #endif
+
+   /* Remove references to render pass specific state. This enables us to
+    * detect whether or not we're in a renderpass.
+    */
+   cmd_buffer->state.framebuffer = NULL;
+   cmd_buffer->state.pass = NULL;
+   cmd_buffer->state.subpass = NULL;
 }
