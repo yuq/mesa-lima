@@ -1470,6 +1470,20 @@ struct radv_query_pool {
 	uint32_t pipeline_stats_mask;
 };
 
+struct radv_semaphore {
+	/* use a winsys sem for non-exportable */
+	struct radeon_winsys_sem *sem;
+	uint32_t syncobj;
+	uint32_t temp_syncobj;
+};
+
+VkResult radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
+			     int num_wait_sems,
+			     const VkSemaphore *wait_sems,
+			     int num_signal_sems,
+			     const VkSemaphore *signal_sems);
+void radv_free_sem_info(struct radv_winsys_sem_info *sem_info);
+
 void
 radv_update_descriptor_sets(struct radv_device *device,
                             struct radv_cmd_buffer *cmd_buffer,
@@ -1563,6 +1577,6 @@ RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_query_pool, VkQueryPool)
 RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_render_pass, VkRenderPass)
 RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_sampler, VkSampler)
 RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_shader_module, VkShaderModule)
-RADV_DEFINE_NONDISP_HANDLE_CASTS(radeon_winsys_sem, VkSemaphore)
+RADV_DEFINE_NONDISP_HANDLE_CASTS(radv_semaphore, VkSemaphore)
 
 #endif /* RADV_PRIVATE_H */

@@ -102,6 +102,10 @@ static const VkExtensionProperties instance_extensions[] = {
 		.extensionName = VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME,
 		.specVersion = 1,
 	},
+	{
+		.extensionName = VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
+		.specVersion = 1,
+	},
 };
 
 static const VkExtensionProperties common_device_extensions[] = {
@@ -159,6 +163,16 @@ static const VkExtensionProperties common_device_extensions[] = {
 	},
 	{
 		.extensionName = VK_KHR_VARIABLE_POINTERS_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+};
+static const VkExtensionProperties ext_sema_device_extensions[] = {
+	{
+		.extensionName = VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME,
+		.specVersion = 1,
+	},
+	{
+		.extensionName = VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
 		.specVersion = 1,
 	},
 };
@@ -311,6 +325,15 @@ radv_physical_device_init(struct radv_physical_device *device,
 					ARRAY_SIZE(common_device_extensions));
 	if (result != VK_SUCCESS)
 		goto fail;
+
+	if (device->rad_info.has_syncobj) {
+		result = radv_extensions_register(instance,
+						  &device->extensions,
+						  ext_sema_device_extensions,
+						  ARRAY_SIZE(ext_sema_device_extensions));
+		if (result != VK_SUCCESS)
+			goto fail;
+	}
 
 	fprintf(stderr, "WARNING: radv is not a conformant vulkan implementation, testing use only.\n");
 	device->name = get_chip_name(device->rad_info.family);
@@ -1885,6 +1908,89 @@ fail:
 	return VK_ERROR_OUT_OF_DEVICE_MEMORY;
 }
 
+static VkResult radv_alloc_sem_counts(struct radv_winsys_sem_counts *counts,
+				      int num_sems,
+				      const VkSemaphore *sems,
+				      bool reset_temp)
+{
+	int syncobj_idx = 0, sem_idx = 0;
+
+	if (num_sems == 0)
+		return VK_SUCCESS;
+	for (uint32_t i = 0; i < num_sems; i++) {
+		RADV_FROM_HANDLE(radv_semaphore, sem, sems[i]);
+
+		if (sem->temp_syncobj || sem->syncobj)
+			counts->syncobj_count++;
+		else
+			counts->sem_count++;
+	}
+
+	if (counts->syncobj_count) {
+		counts->syncobj = (uint32_t *)malloc(sizeof(uint32_t) * counts->syncobj_count);
+		if (!counts->syncobj)
+			return VK_ERROR_OUT_OF_HOST_MEMORY;
+	}
+
+	if (counts->sem_count) {
+		counts->sem = (struct radeon_winsys_sem **)malloc(sizeof(struct radeon_winsys_sem *) * counts->sem_count);
+		if (!counts->sem) {
+			free(counts->syncobj);
+			return VK_ERROR_OUT_OF_HOST_MEMORY;
+		}
+	}
+
+	for (uint32_t i = 0; i < num_sems; i++) {
+		RADV_FROM_HANDLE(radv_semaphore, sem, sems[i]);
+
+		if (sem->temp_syncobj) {
+			counts->syncobj[syncobj_idx++] = sem->temp_syncobj;
+			if (reset_temp) {
+				/* after we wait on a temp import - drop it */
+				sem->temp_syncobj = 0;
+			}
+		}
+		else if (sem->syncobj)
+			counts->syncobj[syncobj_idx++] = sem->syncobj;
+		else {
+			assert(sem->sem);
+			counts->sem[sem_idx++] = sem->sem;
+		}
+	}
+
+	return VK_SUCCESS;
+}
+
+void radv_free_sem_info(struct radv_winsys_sem_info *sem_info)
+{
+	free(sem_info->wait.syncobj);
+	free(sem_info->wait.sem);
+	free(sem_info->signal.syncobj);
+	free(sem_info->signal.sem);
+}
+
+VkResult radv_alloc_sem_info(struct radv_winsys_sem_info *sem_info,
+			     int num_wait_sems,
+			     const VkSemaphore *wait_sems,
+			     int num_signal_sems,
+			     const VkSemaphore *signal_sems)
+{
+	VkResult ret;
+	memset(sem_info, 0, sizeof(*sem_info));
+
+	ret = radv_alloc_sem_counts(&sem_info->wait, num_wait_sems, wait_sems, true);
+	if (ret)
+		return ret;
+	ret = radv_alloc_sem_counts(&sem_info->signal, num_signal_sems, signal_sems, false);
+	if (ret)
+		radv_free_sem_info(sem_info);
+
+	/* caller can override these */
+	sem_info->cs_emit_wait = true;
+	sem_info->cs_emit_signal = true;
+	return ret;
+}
+
 VkResult radv_QueueSubmit(
 	VkQueue                                     _queue,
 	uint32_t                                    submitCount,
@@ -1935,16 +2041,22 @@ VkResult radv_QueueSubmit(
 		bool do_flush = !i || pSubmits[i].pWaitDstStageMask;
 		bool can_patch = !do_flush;
 		uint32_t advance;
+		struct radv_winsys_sem_info sem_info;
+
+		result = radv_alloc_sem_info(&sem_info,
+					     pSubmits[i].waitSemaphoreCount,
+					     pSubmits[i].pWaitSemaphores,
+					     pSubmits[i].signalSemaphoreCount,
+					     pSubmits[i].pSignalSemaphores);
+		if (result != VK_SUCCESS)
+			return result;
 
 		if (!pSubmits[i].commandBufferCount) {
 			if (pSubmits[i].waitSemaphoreCount || pSubmits[i].signalSemaphoreCount) {
 				ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 								   &queue->device->empty_cs[queue->queue_family_index],
 								   1, NULL, NULL,
-								   (struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
-								   pSubmits[i].waitSemaphoreCount,
-								   (struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
-								   pSubmits[i].signalSemaphoreCount,
+								   &sem_info,
 								   false, base_fence);
 				if (ret) {
 					radv_loge("failed to submit CS %d\n", i);
@@ -1952,6 +2064,7 @@ VkResult radv_QueueSubmit(
 				}
 				fence_emitted = true;
 			}
+			radv_free_sem_info(&sem_info);
 			continue;
 		}
 
@@ -1976,18 +2089,16 @@ VkResult radv_QueueSubmit(
 		for (uint32_t j = 0; j < pSubmits[i].commandBufferCount + do_flush; j += advance) {
 			advance = MIN2(max_cs_submission,
 				       pSubmits[i].commandBufferCount + do_flush - j);
-			bool b = j == 0;
-			bool e = j + advance == pSubmits[i].commandBufferCount + do_flush;
 
 			if (queue->device->trace_bo)
 				*queue->device->trace_id_ptr = 0;
 
+			sem_info.cs_emit_wait = j == 0;
+			sem_info.cs_emit_signal = j + advance == pSubmits[i].commandBufferCount + do_flush;
+
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx, cs_array + j,
 							advance, initial_preamble_cs, continue_preamble_cs,
-							(struct radeon_winsys_sem **)pSubmits[i].pWaitSemaphores,
-							b ? pSubmits[i].waitSemaphoreCount : 0,
-							(struct radeon_winsys_sem **)pSubmits[i].pSignalSemaphores,
-							e ? pSubmits[i].signalSemaphoreCount : 0,
+							   &sem_info,
 							can_patch, base_fence);
 
 			if (ret) {
@@ -2008,16 +2119,19 @@ VkResult radv_QueueSubmit(
 				}
 			}
 		}
+
+		radv_free_sem_info(&sem_info);
 		free(cs_array);
 	}
 
 	if (fence) {
-		if (!fence_emitted)
+		if (!fence_emitted) {
+			struct radv_winsys_sem_info sem_info = {0};
 			ret = queue->device->ws->cs_submit(ctx, queue->queue_idx,
 							   &queue->device->empty_cs[queue->queue_family_index],
-							   1, NULL, NULL, NULL, 0, NULL, 0,
+							   1, NULL, NULL, &sem_info,
 							   false, base_fence);
-
+		}
 		fence->submitted = true;
 	}
 
@@ -2445,6 +2559,7 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 	bool fence_emitted = false;
 
 	for (uint32_t i = 0; i < bindInfoCount; ++i) {
+		struct radv_winsys_sem_info sem_info;
 		for (uint32_t j = 0; j < pBindInfo[i].bufferBindCount; ++j) {
 			radv_sparse_buffer_bind_memory(queue->device,
 			                               pBindInfo[i].pBufferBinds + j);
@@ -2455,19 +2570,28 @@ radv_sparse_image_opaque_bind_memory(struct radv_device *device,
 			                                     pBindInfo[i].pImageOpaqueBinds + j);
 		}
 
+		VkResult result;
+		result = radv_alloc_sem_info(&sem_info,
+					     pBindInfo[i].waitSemaphoreCount,
+					     pBindInfo[i].pWaitSemaphores,
+					     pBindInfo[i].signalSemaphoreCount,
+					     pBindInfo[i].pSignalSemaphores);
+		if (result != VK_SUCCESS)
+			return result;
+
 		if (pBindInfo[i].waitSemaphoreCount || pBindInfo[i].signalSemaphoreCount) {
 			queue->device->ws->cs_submit(queue->hw_ctx, queue->queue_idx,
 			                             &queue->device->empty_cs[queue->queue_family_index],
 			                             1, NULL, NULL,
-			                             (struct radeon_winsys_sem **)pBindInfo[i].pWaitSemaphores,
-			                             pBindInfo[i].waitSemaphoreCount,
-			                             (struct radeon_winsys_sem **)pBindInfo[i].pSignalSemaphores,
-			                             pBindInfo[i].signalSemaphoreCount,
+						     &sem_info,
 			                             false, base_fence);
 			fence_emitted = true;
 			if (fence)
 				fence->submitted = true;
 		}
+
+		radv_free_sem_info(&sem_info);
+
 	}
 
 	if (fence && !fence_emitted) {
@@ -2604,13 +2728,38 @@ VkResult radv_CreateSemaphore(
 	VkSemaphore*                                pSemaphore)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
-	struct radeon_winsys_sem *sem;
+	const VkExportSemaphoreCreateInfoKHR *export =
+		vk_find_struct_const(pCreateInfo->pNext, EXPORT_SEMAPHORE_CREATE_INFO_KHR);
+	VkExternalSemaphoreHandleTypeFlagsKHR handleTypes =
+		export ? export->handleTypes : 0;
 
-	sem = device->ws->create_sem(device->ws);
+	struct radv_semaphore *sem = vk_alloc2(&device->alloc, pAllocator,
+					       sizeof(*sem), 8,
+					       VK_SYSTEM_ALLOCATION_SCOPE_OBJECT);
 	if (!sem)
 		return VK_ERROR_OUT_OF_HOST_MEMORY;
 
-	*pSemaphore = radeon_winsys_sem_to_handle(sem);
+	sem->temp_syncobj = 0;
+	/* create a syncobject if we are going to export this semaphore */
+	if (handleTypes) {
+		assert (device->physical_device->rad_info.has_syncobj);
+		assert (handleTypes == VK_EXTERNAL_FENCE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+		int ret = device->ws->create_syncobj(device->ws, &sem->syncobj);
+		if (ret) {
+			vk_free2(&device->alloc, pAllocator, sem);
+			return VK_ERROR_OUT_OF_HOST_MEMORY;
+		}
+		sem->sem = NULL;
+	} else {
+		sem->sem = device->ws->create_sem(device->ws);
+		if (!sem->sem) {
+			vk_free2(&device->alloc, pAllocator, sem);
+			return VK_ERROR_OUT_OF_HOST_MEMORY;
+		}
+		sem->syncobj = 0;
+	}
+
+	*pSemaphore = radv_semaphore_to_handle(sem);
 	return VK_SUCCESS;
 }
 
@@ -2620,11 +2769,15 @@ void radv_DestroySemaphore(
 	const VkAllocationCallbacks*                pAllocator)
 {
 	RADV_FROM_HANDLE(radv_device, device, _device);
-	RADV_FROM_HANDLE(radeon_winsys_sem, sem, _semaphore);
+	RADV_FROM_HANDLE(radv_semaphore, sem, _semaphore);
 	if (!_semaphore)
 		return;
 
-	device->ws->destroy_sem(sem);
+	if (sem->syncobj)
+		device->ws->destroy_syncobj(device->ws, sem->syncobj);
+	else
+		device->ws->destroy_sem(sem->sem);
+	vk_free2(&device->alloc, pAllocator, sem);
 }
 
 VkResult radv_CreateEvent(
@@ -3408,4 +3561,57 @@ VkResult radv_GetMemoryFdPropertiesKHR(VkDevice _device,
     * Since we only handle opaque handles for now, there are no FD properties.
     */
    return VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR;
+}
+
+VkResult radv_ImportSemaphoreFdKHR(VkDevice _device,
+				   const VkImportSemaphoreFdInfoKHR *pImportSemaphoreFdInfo)
+{
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	RADV_FROM_HANDLE(radv_semaphore, sem, pImportSemaphoreFdInfo->semaphore);
+	uint32_t syncobj_handle = 0;
+	assert(pImportSemaphoreFdInfo->handleType == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+
+	int ret = device->ws->import_syncobj(device->ws, pImportSemaphoreFdInfo->fd, &syncobj_handle);
+	if (ret != 0)
+		return VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR;
+
+	if (pImportSemaphoreFdInfo->flags & VK_SEMAPHORE_IMPORT_TEMPORARY_BIT_KHR) {
+		sem->temp_syncobj = syncobj_handle;
+	} else {
+		sem->syncobj = syncobj_handle;
+	}
+	close(pImportSemaphoreFdInfo->fd);
+	return VK_SUCCESS;
+}
+
+VkResult radv_GetSemaphoreFdKHR(VkDevice _device,
+				const VkSemaphoreGetFdInfoKHR *pGetFdInfo,
+				int *pFd)
+{
+	RADV_FROM_HANDLE(radv_device, device, _device);
+	RADV_FROM_HANDLE(radv_semaphore, sem, pGetFdInfo->semaphore);
+	int ret;
+	uint32_t syncobj_handle;
+
+	assert(pGetFdInfo->handleType == VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR);
+	if (sem->temp_syncobj)
+		syncobj_handle = sem->temp_syncobj;
+	else
+		syncobj_handle = sem->syncobj;
+	ret = device->ws->export_syncobj(device->ws, syncobj_handle, pFd);
+	if (ret)
+		return vk_error(VK_ERROR_INVALID_EXTERNAL_HANDLE_KHR);
+	return VK_SUCCESS;
+}
+
+void radv_GetPhysicalDeviceExternalSemaphorePropertiesKHR(
+	VkPhysicalDevice                            physicalDevice,
+	const VkPhysicalDeviceExternalSemaphoreInfoKHR* pExternalSemaphoreInfo,
+	VkExternalSemaphorePropertiesKHR*           pExternalSemaphoreProperties)
+{
+	pExternalSemaphoreProperties->exportFromImportedHandleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+	pExternalSemaphoreProperties->compatibleHandleTypes = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_OPAQUE_FD_BIT_KHR;
+	pExternalSemaphoreProperties->externalSemaphoreFeatures = VK_EXTERNAL_SEMAPHORE_FEATURE_EXPORTABLE_BIT_KHR |
+		VK_EXTERNAL_SEMAPHORE_FEATURE_IMPORTABLE_BIT_KHR;
+
 }
