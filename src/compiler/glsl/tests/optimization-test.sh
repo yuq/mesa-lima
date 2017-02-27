@@ -34,6 +34,7 @@ ORIGDIR=`pwd`
 echo "======       Generating tests      ======"
 for dir in $srcdir/glsl/tests/*/; do
     if [ -e "${dir}create_test_cases.py" ]; then
+        echo "$dir"
         # construct the correct builddir
         completedir="$abs_builddir/glsl/tests/`echo ${dir} | sed 's|.*/glsl/tests/||g'`"
         mkdir -p $completedir
@@ -44,7 +45,6 @@ for dir in $srcdir/glsl/tests/*/; do
         fi
         cd ..
     fi
-    echo "$dir"
 done
 cd "$ORIGDIR"
 
