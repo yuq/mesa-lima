@@ -33,13 +33,13 @@
 #include "gallivm/lp_bld_arit.h"
 #include "gallivm/lp_bld_flow.h"
 #include "gallivm/lp_bld_misc.h"
-#include "radeon/radeon_elf_util.h"
 #include "util/u_memory.h"
 #include "util/u_string.h"
 #include "tgsi/tgsi_build.h"
 #include "tgsi/tgsi_util.h"
 #include "tgsi/tgsi_dump.h"
 
+#include "ac_binary.h"
 #include "ac_llvm_util.h"
 #include "si_shader_internal.h"
 #include "si_pipe.h"
@@ -5756,7 +5756,7 @@ void si_shader_binary_read_config(struct ac_shader_binary *binary,
 {
 	unsigned i;
 	const unsigned char *config =
-		radeon_shader_binary_config_start(binary, symbol_offset);
+		ac_shader_binary_config_start(binary, symbol_offset);
 	bool really_needs_scratch = false;
 
 	/* LLVM adds SGPR spills to the scratch size.

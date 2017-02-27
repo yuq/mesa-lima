@@ -26,6 +26,7 @@
 
 #include <stdio.h>
 #include <errno.h>
+#include "ac_binary.h"
 #include "pipe/p_defines.h"
 #include "pipe/p_state.h"
 #include "pipe/p_context.h"
@@ -187,7 +188,7 @@ static void r600_shader_binary_read_config(const struct ac_shader_binary *binary
 {
        unsigned i;
        const unsigned char *config =
-               radeon_shader_binary_config_start(binary, symbol_offset);
+               ac_shader_binary_config_start(binary, symbol_offset);
 
        for (i = 0; i < binary->config_size_per_symbol; i+= 8) {
                unsigned reg =
