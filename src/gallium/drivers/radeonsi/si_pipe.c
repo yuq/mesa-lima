@@ -750,6 +750,7 @@ static bool si_init_gs_info(struct si_screen *sscreen)
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
 	case CHIP_VEGA10:
+	case CHIP_RAVEN:
 		sscreen->gs_table_depth = 32;
 		return true;
 	default:
@@ -886,7 +887,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	sscreen->has_ds_bpermute = sscreen->b.chip_class >= VI;
 	sscreen->has_msaa_sample_loc_bug = (sscreen->b.family >= CHIP_POLARIS10 &&
 					    sscreen->b.family <= CHIP_POLARIS12) ||
-					   sscreen->b.family == CHIP_VEGA10;
+					   sscreen->b.family == CHIP_VEGA10 ||
+					   sscreen->b.family == CHIP_RAVEN;
 
 	sscreen->b.has_cp_dma = true;
 	sscreen->b.has_streamout = true;
@@ -900,7 +902,8 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 
 		sscreen->b.rbplus_allowed =
 			!(sscreen->b.debug_flags & DBG_NO_RB_PLUS) &&
-			sscreen->b.family == CHIP_STONEY;
+			(sscreen->b.family == CHIP_STONEY ||
+			 sscreen->b.family == CHIP_RAVEN);
 	}
 
 	(void) mtx_init(&sscreen->shader_parts_mutex, mtx_plain);
