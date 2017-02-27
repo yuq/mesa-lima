@@ -132,10 +132,15 @@ VkResult radv_CreateDescriptorSetLayout(
 
 		if (binding->pImmutableSamplers) {
 			set_layout->binding[b].immutable_samplers = samplers;
+			set_layout->binding[b].immutable_samplers_equal = true;
 			samplers += 4 * binding->descriptorCount;
 
 			for (uint32_t i = 0; i < binding->descriptorCount; i++)
 				memcpy(set_layout->binding[b].immutable_samplers + 4 * i, &radv_sampler_from_handle(binding->pImmutableSamplers[i])->state, 16);
+			for (uint32_t i = 1; i < binding->descriptorCount; i++)
+				if (memcmp(set_layout->binding[b].immutable_samplers + 4 * i,
+				           set_layout->binding[b].immutable_samplers, 16) != 0)
+					set_layout->binding[b].immutable_samplers_equal = false;
 		} else {
 			set_layout->binding[b].immutable_samplers = NULL;
 		}

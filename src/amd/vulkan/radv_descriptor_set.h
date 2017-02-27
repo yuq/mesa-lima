@@ -45,6 +45,7 @@ struct radv_descriptor_set_binding_layout {
 
    /* Immutable samplers (or NULL if no immutable samplers) */
    uint32_t *immutable_samplers;
+   bool immutable_samplers_equal;
 };
 
 struct radv_descriptor_set_layout {
