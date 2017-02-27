@@ -19,9 +19,6 @@ AM_CFLAGS += \
 	$(LLVM_CFLAGS) \
 	$(LIBELF_CFLAGS)
 
-libradeon_la_SOURCES += \
-	$(LLVM_C_FILES)
-
 libradeon_la_LIBADD = \
 	$(CLOCK_LIB) \
 	$(LLVM_LIBS) \

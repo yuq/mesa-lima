@@ -47,7 +47,6 @@
 #include "evergreen_compute_internal.h"
 #include "compute_memory_pool.h"
 #include "sb/sb_public.h"
-#include "radeon/radeon_elf_util.h"
 #include <inttypes.h>
 
 /**
