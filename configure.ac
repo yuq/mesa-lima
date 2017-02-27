@@ -2297,7 +2297,7 @@ if test -n "$with_gallium_drivers"; then
             HAVE_GALLIUM_R600=yes
             PKG_CHECK_MODULES([RADEON], [libdrm >= $LIBDRM_RADEON_REQUIRED libdrm_radeon >= $LIBDRM_RADEON_REQUIRED])
             require_libdrm "r600"
-            if test "x$enable_opencl" = xyes; then
+            if test "x$enable_llvm" = xyes; then
                 radeon_llvm_check $LLVM_REQUIRED_R600 "r600"
 
                 llvm_add_component "asmparser" "r600"
