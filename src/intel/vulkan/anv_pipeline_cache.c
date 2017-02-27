@@ -351,7 +351,7 @@ anv_pipeline_cache_load(struct anv_pipeline_cache *cache,
       return;
    if (header.device_id != device->chipset_id)
       return;
-   if (memcmp(header.uuid, pdevice->uuid, VK_UUID_SIZE) != 0)
+   if (memcmp(header.uuid, pdevice->pipeline_cache_uuid, VK_UUID_SIZE) != 0)
       return;
 
    const void *end = data + size;
@@ -498,7 +498,7 @@ VkResult anv_GetPipelineCacheData(
    header->header_version = VK_PIPELINE_CACHE_HEADER_VERSION_ONE;
    header->vendor_id = 0x8086;
    header->device_id = device->chipset_id;
-   memcpy(header->uuid, pdevice->uuid, VK_UUID_SIZE);
+   memcpy(header->uuid, pdevice->pipeline_cache_uuid, VK_UUID_SIZE);
    p += align_u32(header->header_size, 8);
 
    uint32_t *count = p;

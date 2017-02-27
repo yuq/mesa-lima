@@ -630,7 +630,7 @@ struct anv_physical_device {
     uint32_t                                    eu_total;
     uint32_t                                    subslice_total;
 
-    uint8_t                                     uuid[VK_UUID_SIZE];
+    uint8_t                                     pipeline_cache_uuid[VK_UUID_SIZE];
 
     struct wsi_device                       wsi_device;
     int                                         local_fd;

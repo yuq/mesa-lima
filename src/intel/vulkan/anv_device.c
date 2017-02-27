@@ -121,7 +121,7 @@ anv_physical_device_init_uuids(struct anv_physical_device *device)
    _mesa_sha1_update(&sha1_ctx, &device->chipset_id,
                      sizeof(device->chipset_id));
    _mesa_sha1_final(&sha1_ctx, sha1);
-   memcpy(device->uuid, sha1, VK_UUID_SIZE);
+   memcpy(device->pipeline_cache_uuid, sha1, VK_UUID_SIZE);
 
    return VK_SUCCESS;
 }
@@ -721,7 +721,8 @@ void anv_GetPhysicalDeviceProperties(
    };
 
    strcpy(pProperties->deviceName, pdevice->name);
-   memcpy(pProperties->pipelineCacheUUID, pdevice->uuid, VK_UUID_SIZE);
+   memcpy(pProperties->pipelineCacheUUID,
+          pdevice->pipeline_cache_uuid, VK_UUID_SIZE);
 }
 
 void anv_GetPhysicalDeviceProperties2KHR(
