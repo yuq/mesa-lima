@@ -2407,13 +2407,13 @@ static void si_init_tess_factor_ring(struct si_context *sctx)
 		max_offchip_buffers = MIN2(max_offchip_buffers, 126);
 		break;
 	case CIK:
+	case VI:
 	case GFX9:
 		max_offchip_buffers = MIN2(max_offchip_buffers, 508);
 		break;
-	case VI:
 	default:
-		max_offchip_buffers = MIN2(max_offchip_buffers, 512);
-		break;
+		assert(0);
+		return;
 	}
 
 	assert(!sctx->tf_ring);
