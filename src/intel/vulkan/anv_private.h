@@ -2009,6 +2009,21 @@ void anv_dump_finish(void);
 void anv_dump_add_framebuffer(struct anv_cmd_buffer *cmd_buffer,
                               struct anv_framebuffer *fb);
 
+static inline uint32_t
+anv_get_subpass_id(const struct anv_cmd_state * const cmd_state)
+{
+   /* This function must be called from within a subpass. */
+   assert(cmd_state->pass && cmd_state->subpass);
+
+   const uint32_t subpass_id = cmd_state->subpass - cmd_state->pass->subpasses;
+
+   /* The id of this subpass shouldn't exceed the number of subpasses in this
+    * render pass minus 1.
+    */
+   assert(subpass_id < cmd_state->pass->subpass_count);
+   return subpass_id;
+}
+
 #define ANV_DEFINE_HANDLE_CASTS(__anv_type, __VkType)                      \
                                                                            \
    static inline struct __anv_type *                                       \

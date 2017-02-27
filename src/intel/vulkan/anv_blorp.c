@@ -1069,9 +1069,7 @@ attachment_needs_flush(struct anv_cmd_buffer *cmd_buffer,
                        enum subpass_stage stage)
 {
    struct anv_render_pass *pass = cmd_buffer->state.pass;
-   struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   unsigned subpass_idx = subpass - pass->subpasses;
-   assert(subpass_idx < pass->subpass_count);
+   const uint32_t subpass_idx = anv_get_subpass_id(&cmd_buffer->state);
 
    /* We handle this subpass specially based on the current stage */
    enum anv_subpass_usage usage = att->subpass_usage[subpass_idx];
@@ -1407,9 +1405,7 @@ ccs_resolve_attachment(struct anv_cmd_buffer *cmd_buffer,
           att_state->aux_usage == ISL_AUX_USAGE_CCS_D);
 
    struct anv_render_pass *pass = cmd_buffer->state.pass;
-   struct anv_subpass *subpass = cmd_buffer->state.subpass;
-   unsigned subpass_idx = subpass - pass->subpasses;
-   assert(subpass_idx < pass->subpass_count);
+   const uint32_t subpass_idx = anv_get_subpass_id(&cmd_buffer->state);
 
    /* Scan forward to see what all ways this attachment will be used.
     * Ideally, we would like to resolve in the same subpass as the last write
