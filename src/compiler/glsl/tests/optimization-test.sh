@@ -1,11 +1,5 @@
 #!/bin/sh
 
-if [ ! -z "$srcdir" ]; then
-   compare_ir=`pwd`/tests/compare_ir.py
-else
-   compare_ir=./compare_ir.py
-fi
-
 if [ -z "$PYTHON2" ]; then
     PYTHON2=python2
 fi
@@ -28,6 +22,8 @@ if [ -z "$srcdir" -o -z "$abs_builddir" ]; then
     # Variable should point to the folder two levels above glsl_test
     abs_builddir=`pwd`/../../
 fi
+
+compare_ir=$srcdir/glsl/tests/compare_ir.py
 
 total=0
 pass=0
