@@ -258,7 +258,7 @@ static uint64_t radeon_bomgr_find_va(struct radeon_drm_winsys *rws,
 static void radeon_bomgr_free_va(struct radeon_drm_winsys *rws,
                                  uint64_t va, uint64_t size)
 {
-    struct radeon_bo_va_hole *hole;
+    struct radeon_bo_va_hole *hole = NULL;
 
     size = align(size, rws->info.gart_page_size);
 
