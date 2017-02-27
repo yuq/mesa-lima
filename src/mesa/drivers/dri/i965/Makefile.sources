@@ -85,9 +85,7 @@ i965_compiler_FILES = \
 	intel_asm_annotation.c \
 	intel_asm_annotation.h \
 	intel_debug.c \
-	intel_debug.h \
-	intel_resolve_map.c \
-	intel_resolve_map.h
+	intel_debug.h
 
 i965_compiler_GENERATED_FILES = \
 	brw_nir_trig_workarounds.c
@@ -236,6 +234,8 @@ i965_FILES = \
 	intel_pixel_draw.c \
 	intel_pixel.h \
 	intel_pixel_read.c \
+	intel_resolve_map.c \
+	intel_resolve_map.h \
 	intel_screen.c \
 	intel_screen.h \
 	intel_state.c \
