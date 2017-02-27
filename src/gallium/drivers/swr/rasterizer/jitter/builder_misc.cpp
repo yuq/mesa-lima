@@ -1097,7 +1097,7 @@ namespace SwrJit
             }
                 break;
             default:
-                SWR_ASSERT(0, "Invalid float format");
+                SWR_INVALID("Invalid float format");
                 break;
         }
     }
@@ -1184,7 +1184,7 @@ namespace SwrJit
             }
                 break;
             default:
-                SWR_ASSERT(0, "unsupported format");
+                SWR_INVALID("unsupported format");
             break;
         }
     }

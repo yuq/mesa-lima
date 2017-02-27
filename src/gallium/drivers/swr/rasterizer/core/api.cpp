@@ -1231,7 +1231,7 @@ void DrawIndexedInstance(
     case R16_UINT: indexSize = sizeof(uint16_t); break;
     case R8_UINT: indexSize = sizeof(uint8_t); break;
     default:
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid index buffer format: %d", pState->indexBuffer.format);
     }
 
     int draw = 0;

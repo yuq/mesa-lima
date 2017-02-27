@@ -285,7 +285,7 @@ namespace ArchRast
             return pManager;
         }
 
-        SWR_ASSERT(0, "Failed to register thread.");
+        SWR_INVALID("Failed to register thread.");
         return nullptr;
     }
 

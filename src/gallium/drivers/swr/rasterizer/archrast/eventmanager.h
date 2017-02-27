@@ -80,7 +80,7 @@ namespace ArchRast
     private:
 
         // Handlers stay registered for life
-        void Detach(EventHandler* pHandler) { SWR_ASSERT(0); }
+        void Detach(EventHandler* pHandler) { SWR_INVALID("Should not be called"); }
 
         std::vector<EventHandler*> mHandlers;
     };

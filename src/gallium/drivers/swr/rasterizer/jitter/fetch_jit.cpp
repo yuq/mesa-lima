@@ -158,7 +158,7 @@ Function* FetchJit::Create(const FETCH_COMPILE_STATE& fetchState)
             (fetchState.bDisableIndexOOBCheck) ? vIndices = LOAD(BITCAST(indices, PointerType::get(mSimdInt32Ty,0)),{(uint32_t)0})
                                                : vIndices = GetSimdValid32bitIndices(indices, pLastIndex);
             break; // incoming type is already 32bit int
-        default: SWR_ASSERT(0, "Unsupported index type"); vIndices = nullptr; break;
+        default: SWR_INVALID("Unsupported index type"); vIndices = nullptr; break;
     }
 
     Value* vVertexId = vIndices;
@@ -613,7 +613,7 @@ void FetchJit::CreateGatherOddFormats(SWR_FORMAT format, Value* pMask, Value* pB
     case 16: pLoadTy = Type::getInt16PtrTy(JM()->mContext); break;
     case 24:
     case 32: pLoadTy = Type::getInt32PtrTy(JM()->mContext); break;
-    default: SWR_ASSERT(0);
+    default: SWR_INVALID("Invalid bpp: %d", info.bpp);
     }
 
     // allocate temporary memory for masked off lanes
@@ -1015,7 +1015,7 @@ void FetchJit::JitGatherVertices(const FETCH_COMPILE_STATE &fetchState,
                 }
                     break;
                 default:
-                    SWR_ASSERT(0, "Tried to fetch invalid FP format");
+                    SWR_INVALID("Tried to fetch invalid FP format");
                     break;
             }
         }
@@ -1371,7 +1371,7 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
             conversionFactor = VIMMED1((float)(1.0));
             break;
         case CONVERT_USCALED:
-            SWR_ASSERT(0, "Type should not be sign extended!");
+            SWR_INVALID("Type should not be sign extended!");
             conversionFactor = nullptr;
             break;
         default:
@@ -1434,7 +1434,7 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
             conversionFactor = VIMMED1((float)(1.0));
             break;
         case CONVERT_SSCALED:
-            SWR_ASSERT(0, "Type should not be zero extended!");
+            SWR_INVALID("Type should not be zero extended!");
             conversionFactor = nullptr;
             break;
         default:
@@ -1507,7 +1507,7 @@ void FetchJit::Shuffle8bpcGatherd(Shuffle8bpcArgs &args)
     }
     else
     {
-        SWR_ASSERT(0, "Unsupported conversion type");
+        SWR_INVALID("Unsupported conversion type");
     }
 }
 
@@ -1590,7 +1590,7 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
             conversionFactor = VIMMED1((float)(1.0));
             break;
         case CONVERT_USCALED:
-            SWR_ASSERT(0, "Type should not be sign extended!");
+            SWR_INVALID("Type should not be sign extended!");
             conversionFactor = nullptr;
             break;
         default:
@@ -1672,7 +1672,7 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
             conversionFactor = VIMMED1((float)(1.0f));
             break;
         case CONVERT_SSCALED:
-            SWR_ASSERT(0, "Type should not be zero extended!");
+            SWR_INVALID("Type should not be zero extended!");
             conversionFactor = nullptr;
             break;
         default:
@@ -1721,7 +1721,7 @@ void FetchJit::Shuffle16bpcGather(Shuffle16bpcArgs &args)
     }
     else
     {
-        SWR_ASSERT(0, "Unsupported conversion type");
+        SWR_INVALID("Unsupported conversion type");
     }
 }
 
@@ -1780,7 +1780,7 @@ Value* FetchJit::GenerateCompCtrlVector(const ComponentControl ctrl)
             return VBROADCAST(pId);
         }
         case StoreSrc:
-        default:        SWR_ASSERT(0, "Invalid component control"); return VUNDEF_I();
+        default:        SWR_INVALID("Invalid component control"); return VUNDEF_I();
     }
 }
 

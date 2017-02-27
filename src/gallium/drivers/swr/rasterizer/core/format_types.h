@@ -215,7 +215,7 @@ struct PackTraits<8, true>
     {
 #if KNOB_SIMD_WIDTH == 8
 #if KNOB_ARCH==KNOB_ARCH_AVX
-        SWR_ASSERT(0); // I think this may be incorrect.
+        SWR_INVALID("I think this may be incorrect.");
         __m128i src = _mm_castps_si128(_mm256_castps256_ps128(in));
         __m128i resLo = _mm_cvtepi8_epi32(src);
         __m128i resHi = _mm_shuffle_epi8(src,
@@ -428,7 +428,7 @@ struct PackTraits<16, true>
     {
 #if KNOB_SIMD_WIDTH == 8
 #if KNOB_ARCH==KNOB_ARCH_AVX
-        SWR_ASSERT(0); // I think this is incorrectly implemented
+        SWR_INVALID("I think this may be incorrect.");
         __m128i src = _mm_castps_si128(_mm256_castps256_ps128(in));
         __m128i resLo = _mm_cvtepi16_epi32(src);
         __m128i resHi = _mm_shuffle_epi8(src,
@@ -538,8 +538,8 @@ struct TypeTraits : PackTraits<NumBits>
 {
     static const SWR_TYPE MyType = type;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -549,8 +549,8 @@ template<> struct TypeTraits<SWR_TYPE_UINT, 8> : PackTraits<8>
 {
     static const SWR_TYPE MyType = SWR_TYPE_UINT;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -560,8 +560,8 @@ template<> struct TypeTraits<SWR_TYPE_SINT, 8> : PackTraits<8, true>
 {
     static const SWR_TYPE MyType = SWR_TYPE_SINT;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -571,8 +571,8 @@ template<> struct TypeTraits<SWR_TYPE_UINT, 16> : PackTraits<16>
 {
     static const SWR_TYPE MyType = SWR_TYPE_UINT;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -582,8 +582,8 @@ template<> struct TypeTraits<SWR_TYPE_SINT, 16> : PackTraits<16, true>
 {
     static const SWR_TYPE MyType = SWR_TYPE_SINT;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -593,8 +593,8 @@ template<> struct TypeTraits<SWR_TYPE_UINT, 32> : PackTraits<32>
 {
     static const SWR_TYPE MyType = SWR_TYPE_UINT;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -604,8 +604,8 @@ template<> struct TypeTraits<SWR_TYPE_SINT, 32> : PackTraits<32>
 {
     static const SWR_TYPE MyType = SWR_TYPE_SINT;
     static float toFloat() { return 0.0; }
-    static float fromFloat() { SWR_ASSERT(0); return 0.0; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static float fromFloat() { SWR_NOT_IMPL; return 0.0; }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -616,7 +616,7 @@ template<> struct TypeTraits<SWR_TYPE_UNORM, 5> : PackTraits<5>
     static const SWR_TYPE MyType = SWR_TYPE_UNORM;
     static float toFloat() { return 1.0f / 31.0f; }
     static float fromFloat() { return 31.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -627,7 +627,7 @@ template<> struct TypeTraits<SWR_TYPE_UNORM, 6> : PackTraits<6>
     static const SWR_TYPE MyType = SWR_TYPE_UNORM;
     static float toFloat() { return 1.0f / 63.0f; }
     static float fromFloat() { return 63.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -638,7 +638,7 @@ template<> struct TypeTraits<SWR_TYPE_UNORM, 8> : PackTraits<8>
     static const SWR_TYPE MyType = SWR_TYPE_UNORM;
     static float toFloat() { return 1.0f / 255.0f; }
     static float fromFloat() { return 255.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -649,7 +649,7 @@ template<> struct TypeTraits<SWR_TYPE_SNORM, 8> : PackTraits<8, true>
     static const SWR_TYPE MyType = SWR_TYPE_SNORM;
     static float toFloat() { return 1.0f / 127.0f; }
     static float fromFloat() { return 127.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -660,7 +660,7 @@ template<> struct TypeTraits<SWR_TYPE_UNORM, 16> : PackTraits<16>
     static const SWR_TYPE MyType = SWR_TYPE_UNORM;
     static float toFloat() { return 1.0f / 65535.0f; }
     static float fromFloat() { return 65535.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -671,7 +671,7 @@ template<> struct TypeTraits<SWR_TYPE_SNORM, 16> : PackTraits<16, true>
     static const SWR_TYPE MyType = SWR_TYPE_UNORM;
     static float toFloat() { return 1.0f / 32767.0f; }
     static float fromFloat() { return 32767.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -683,7 +683,7 @@ struct TypeTraits < SWR_TYPE_UNORM, 24 > : PackTraits<32>
     static const SWR_TYPE MyType = SWR_TYPE_UNORM;
     static float toFloat() { return 1.0f / 16777215.0f; }
     static float fromFloat() { return 16777215.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -926,7 +926,7 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 16> : PackTraits<16>
     static const SWR_TYPE MyType = SWR_TYPE_FLOAT;
     static float toFloat() { return 1.0f; }
     static float fromFloat() { return 1.0f; }
-    static simdscalar convertSrgb(simdscalar &in) { SWR_ASSERT(0); return _simd_setzero_ps(); }
+    static simdscalar convertSrgb(simdscalar &in) { SWR_NOT_IMPL; return _simd_setzero_ps(); }
 
     static simdscalar pack(const simdscalar &in)
     {
@@ -1037,7 +1037,7 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 16> : PackTraits<16>
     static simdscalar unpack(const simdscalar &in)
     {
         // input is 8 packed float16, output is 8 packed float32
-        SWR_ASSERT(0); // @todo
+        SWR_NOT_IMPL; // @todo
         return _simd_setzero_ps();
     }
 #if ENABLE_AVX512_SIMD16
@@ -1070,7 +1070,7 @@ template<> struct TypeTraits<SWR_TYPE_FLOAT, 16> : PackTraits<16>
     static simd16scalar unpack(const simd16scalar &in)
     {
         // input is 16 packed float16, output is 16 packed float32
-        SWR_ASSERT(0); // @todo
+        SWR_NOT_IMPL; //  @todo
         return _simd16_setzero_ps();
     }
 #endif
@@ -1310,7 +1310,7 @@ struct ComponentTraits
         case 3:
             return (W == SWR_TYPE_UNORM || W == SWR_TYPE_SNORM) ? true : false;
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return false;
     }
 
@@ -1327,7 +1327,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::toFloat();
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::toFloat();
 
     }
@@ -1345,7 +1345,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::fromFloat();
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::fromFloat();
     }
 
@@ -1362,7 +1362,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::loadSOA(pSrc);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::loadSOA(pSrc);
     }
 
@@ -1383,7 +1383,7 @@ struct ComponentTraits
             TypeTraits<W, NumBitsW>::storeSOA(pDst, src);
             return;
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         TypeTraits<X, NumBitsX>::storeSOA(pDst, src);
     }
 
@@ -1400,7 +1400,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::unpack(in);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::unpack(in);
     }
 
@@ -1417,7 +1417,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::pack(in);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::pack(in);
     }
 
@@ -1434,7 +1434,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::convertSrgb(in);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::convertSrgb(in);
     }
 #if ENABLE_AVX512_SIMD16
@@ -1452,7 +1452,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::loadSOA_16(pSrc);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::loadSOA_16(pSrc);
     }
 
@@ -1473,7 +1473,7 @@ struct ComponentTraits
             TypeTraits<W, NumBitsW>::storeSOA(pDst, src);
             return;
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         TypeTraits<X, NumBitsX>::storeSOA(pDst, src);
     }
 
@@ -1490,7 +1490,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::unpack(in);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::unpack(in);
     }
 
@@ -1507,7 +1507,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::pack(in);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::pack(in);
     }
 
@@ -1524,7 +1524,7 @@ struct ComponentTraits
         case 3:
             return TypeTraits<W, NumBitsW>::convertSrgb(in);
         }
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid component: %d", comp);
         return TypeTraits<X, NumBitsX>::convertSrgb(in);
     }
 #endif

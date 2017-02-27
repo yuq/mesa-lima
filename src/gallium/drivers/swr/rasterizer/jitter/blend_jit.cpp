@@ -684,7 +684,7 @@ struct BlendJit : public Builder
 
                 switch (info.type[i]) {
                 default:
-                    SWR_ASSERT(0, "Unsupported type for logic op\n");
+                    SWR_INVALID("Unsupported type for logic op\n");
                     /* fallthrough */
                 case SWR_TYPE_UINT:
                 case SWR_TYPE_SINT:
@@ -725,7 +725,7 @@ struct BlendJit : public Builder
 
                 switch (info.type[i]) {
                 default:
-                    SWR_ASSERT(0, "Unsupported type for logic op\n");
+                    SWR_INVALID("Unsupported type for logic op\n");
                     /* fallthrough */
                 case SWR_TYPE_UINT:
                 case SWR_TYPE_SINT:

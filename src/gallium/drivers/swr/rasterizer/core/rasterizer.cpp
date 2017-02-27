@@ -684,7 +684,7 @@ struct ComputeScissorEdges<std::true_type, std::false_type, RT>
 template <typename ValidEdgeMaskT>
 INLINE bool TrivialRejectTest(const int, const int, const int)
 {
-    SWR_ASSERT(0, "Primary templated function should never be called");
+    SWR_INVALID("Primary templated function should never be called");
     return false;
 };
 

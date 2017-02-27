@@ -92,7 +92,7 @@ namespace ArchRast
 
                 if (!file.is_open())
                 {
-                    SWR_ASSERT(0, "ArchRast: Could not open event file!");
+                    SWR_INVALID("ArchRast: Could not open event file!");
                     return false;
                 }
 

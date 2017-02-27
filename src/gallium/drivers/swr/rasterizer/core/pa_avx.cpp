@@ -2379,7 +2379,7 @@ bool PaRectList2(
     uint32_t slot,
     simdvector verts[])
 {
-    SWR_ASSERT(0); // Is rect list used for anything other then clears?
+    SWR_INVALID("Is rect list used for anything other then clears?");
     SetNextPaState(pa, PaRectList0, PaRectListSingle0, 0, KNOB_SIMD_WIDTH, true);
     return true;
 }
@@ -2509,7 +2509,7 @@ bool PaRectList2_simd16(
     uint32_t slot,
     simd16vector verts[])
 {
-    SWR_ASSERT(0); // Is rect list used for anything other then clears?
+    SWR_INVALID("Is rect list used for anything other then clears?")
     SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
@@ -2582,7 +2582,7 @@ void PaRectListSingle0(
     case 5:
     case 6:
     case 7:
-        SWR_ASSERT(0);
+        SWR_INVALID("Invalid primIndex: %d", primIndex);
         break;
     };
 }
@@ -2864,7 +2864,7 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             break;
 
         default:
-            SWR_ASSERT(0);
+            SWR_INVALID("Invalid topology: %d", this->binTopology);
             break;
     };
 
@@ -2961,7 +2961,7 @@ PA_STATE_OPT::PA_STATE_OPT(DRAW_CONTEXT *in_pDC, uint32_t in_numPrims, uint8_t* 
             break;
 
         default:
-            SWR_ASSERT(0);
+            SWR_INVALID("Invalid topology: %d", this->binTopology);
             break;
     };
 

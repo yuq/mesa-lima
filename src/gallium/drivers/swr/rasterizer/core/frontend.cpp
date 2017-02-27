@@ -1358,9 +1358,7 @@ static void TessellationStages(
                     simd16vector    prim_simd16[3];
 #endif
                     AR_BEGIN(FEPAAssemble, pDC->drawId);
-#if SWR_ENABLE_ASSERTS
                     bool assemble =
-#endif
 #if USE_SIMD16_FRONTEND
                         tessPa.Assemble_simd16(VERTEX_POSITION_SLOT, prim_simd16);
 #else
@@ -1470,7 +1468,7 @@ void ProcessDraw(
             pLastRequestedIndex = (int32_t*)(&(((uint8_t*)work.pIB)[endVertex]));
             break;
         default:
-            SWR_ASSERT(0);
+            SWR_INVALID("Invalid work.type: %d", work.type);
         }
     }
     else

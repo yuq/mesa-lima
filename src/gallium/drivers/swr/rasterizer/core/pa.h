@@ -1145,7 +1145,7 @@ struct PA_TESS : PA_STATE
             break;
 
         default:
-            SWR_ASSERT(0, "Invalid binTopology (%d) for %s", binTopology, __FUNCTION__);
+            SWR_INVALID("Invalid binTopology (%d) for %s", binTopology, __FUNCTION__);
             break;
         }
     }
@@ -1157,7 +1157,7 @@ struct PA_TESS : PA_STATE
 
     simdvector& GetSimdVector(uint32_t index, uint32_t slot)
     {
-        SWR_ASSERT(0, "%s NOT IMPLEMENTED", __FUNCTION__);
+        SWR_INVALID("%s NOT IMPLEMENTED", __FUNCTION__);
         static simdvector junk;
         return junk;
     }
@@ -1165,7 +1165,7 @@ struct PA_TESS : PA_STATE
 #if ENABLE_AVX512_SIMD16
     simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot)
     {
-        SWR_ASSERT(0, "%s NOT IMPLEMENTED", __FUNCTION__);
+        SWR_INVALID("%s NOT IMPLEMENTED", __FUNCTION__);
         static simd16vector junk;
         return junk;
     }
@@ -1327,20 +1327,20 @@ struct PA_TESS : PA_STATE
 
     SIMDVERTEX& GetNextVsOutput()
     {
-        SWR_ASSERT(0, "%s", __FUNCTION__);
+        SWR_NOT_IMPL;
         static SIMDVERTEX junk;
         return junk;
     }
 
     bool GetNextStreamOutput()
     {
-        SWR_ASSERT(0, "%s", __FUNCTION__);
+        SWR_NOT_IMPL;
         return false;
     }
 
     SIMDMASK& GetNextVsIndices()
     {
-        SWR_ASSERT(0, "%s", __FUNCTION__);
+        SWR_NOT_IMPL;
         static SIMDMASK junk;
         return junk;
     }
@@ -1350,7 +1350,10 @@ struct PA_TESS : PA_STATE
         return std::min<uint32_t>(m_numPrims, SIMD_WIDTH);
     }
 
-    void Reset() { SWR_ASSERT(0); };
+    void Reset()
+    {
+        SWR_NOT_IMPL;
+    }
 
     SIMDSCALARI GetPrimID(uint32_t startID)
     {

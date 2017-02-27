@@ -310,7 +310,7 @@ struct GatherScissors
         simdscalari &scisXmin, simdscalari &scisYmin,
         simdscalari &scisXmax, simdscalari &scisYmax)
     {
-        SWR_ASSERT(0, "Unhandled Simd Width in Scissor Rect Gather");
+        SWR_INVALID("Unhandled Simd Width in Scissor Rect Gather");
     }
 };
 
