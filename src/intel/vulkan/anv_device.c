@@ -636,7 +636,7 @@ void anv_GetPhysicalDeviceProperties(
    };
 
    *pProperties = (VkPhysicalDeviceProperties) {
-      .apiVersion = VK_MAKE_VERSION(1, 0, 39),
+      .apiVersion = VK_MAKE_VERSION(1, 0, 42),
       .driverVersion = 1,
       .vendorID = 0x8086,
       .deviceID = pdevice->chipset_id,
