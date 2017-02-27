@@ -88,8 +88,7 @@ VkResult anv_CreateRenderPass(
       subpass_attachment_count +=
          desc->inputAttachmentCount +
          desc->colorAttachmentCount +
-         /* Count colorAttachmentCount again for resolve_attachments */
-         desc->colorAttachmentCount;
+         (desc->pResolveAttachments ? desc->colorAttachmentCount : 0);
    }
 
    pass->subpass_attachments =
