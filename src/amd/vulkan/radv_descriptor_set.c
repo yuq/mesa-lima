@@ -124,12 +124,6 @@ VkResult radv_CreateDescriptorSetLayout(
 		set_layout->binding[b].buffer_offset = buffer_count;
 		set_layout->binding[b].dynamic_offset_offset = dynamic_offset_count;
 
-		set_layout->size += binding->descriptorCount * set_layout->binding[b].size;
-		buffer_count += binding->descriptorCount * set_layout->binding[b].buffer_count;
-		dynamic_offset_count += binding->descriptorCount *
-			set_layout->binding[b].dynamic_offset_count;
-
-
 		if (binding->pImmutableSamplers) {
 			set_layout->binding[b].immutable_samplers = samplers;
 			set_layout->binding[b].immutable_samplers_equal = true;
@@ -141,10 +135,20 @@ VkResult radv_CreateDescriptorSetLayout(
 				if (memcmp(set_layout->binding[b].immutable_samplers + 4 * i,
 				           set_layout->binding[b].immutable_samplers, 16) != 0)
 					set_layout->binding[b].immutable_samplers_equal = false;
-		} else {
-			set_layout->binding[b].immutable_samplers = NULL;
+
+			/* Don't reserve space for the samplers if they're not accessed. */
+			if (set_layout->binding[b].immutable_samplers_equal) {
+				if (binding->descriptorType == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
+					set_layout->binding[b].size -= 32;
+				else if (binding->descriptorType == VK_DESCRIPTOR_TYPE_SAMPLER)
+					set_layout->binding[b].size -= 16;
+			}
 		}
 
+		set_layout->size += binding->descriptorCount * set_layout->binding[b].size;
+		buffer_count += binding->descriptorCount * set_layout->binding[b].buffer_count;
+		dynamic_offset_count += binding->descriptorCount *
+			set_layout->binding[b].dynamic_offset_count;
 		set_layout->shader_stages |= binding->stageFlags;
 	}
 
@@ -326,7 +330,8 @@ radv_descriptor_set_create(struct radv_device *device,
 	}
 
 	for (unsigned i = 0; i < layout->binding_count; ++i) {
-		if (!layout->binding[i].immutable_samplers)
+		if (!layout->binding[i].immutable_samplers ||
+		    layout->binding[i].immutable_samplers_equal)
 			continue;
 
 		unsigned offset = layout->binding[i].offset / 4;
