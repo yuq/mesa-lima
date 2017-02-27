@@ -5463,6 +5463,7 @@ static void si_calculate_max_simd_waves(struct si_shader *shader)
 	case CHIP_POLARIS10:
 	case CHIP_POLARIS11:
 	case CHIP_POLARIS12:
+	case CHIP_VEGAM:
 		max_simd_waves = 8;
 		break;
 	default:

@@ -4783,6 +4783,10 @@ static void si_set_raster_config(struct si_context *sctx, struct si_pm4_state *p
 			raster_config_1 = 0x0000002e;
 		}
 		break;
+	case CHIP_VEGAM:
+		raster_config = 0x3a00161a;
+		raster_config_1 = 0x0000002e;
+		break;
 	case CHIP_POLARIS10:
 		raster_config = 0x16000012;
 		raster_config_1 = 0x0000002a;

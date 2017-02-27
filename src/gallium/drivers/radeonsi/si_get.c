@@ -71,10 +71,11 @@ const char *si_get_family_name(const struct si_screen *sscreen)
 	case CHIP_ICELAND: return "AMD ICELAND";
 	case CHIP_CARRIZO: return "AMD CARRIZO";
 	case CHIP_FIJI: return "AMD FIJI";
+	case CHIP_STONEY: return "AMD STONEY";
 	case CHIP_POLARIS10: return "AMD POLARIS10";
 	case CHIP_POLARIS11: return "AMD POLARIS11";
 	case CHIP_POLARIS12: return "AMD POLARIS12";
-	case CHIP_STONEY: return "AMD STONEY";
+	case CHIP_VEGAM: return "AMD VEGAM";
 	case CHIP_VEGA10: return "AMD VEGA10";
 	case CHIP_VEGA12: return "AMD VEGA12";
 	case CHIP_RAVEN: return "AMD RAVEN";
