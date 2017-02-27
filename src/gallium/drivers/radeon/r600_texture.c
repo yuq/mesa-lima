@@ -193,8 +193,8 @@ static unsigned r600_texture_get_offset(struct r600_common_screen *rscreen,
 		/* Each texture is an array of slices. Each slice is an array
 		 * of mipmap levels. */
 		return box->z * rtex->surface.u.gfx9.surf_slice_size +
-		       ((rtex->surface.u.gfx9.surf_ymip_offset[level] +
-			 box->y / rtex->surface.blk_h) *
+		       rtex->surface.u.gfx9.offset[level] +
+		       (box->y / rtex->surface.blk_h *
 			rtex->surface.u.gfx9.surf_pitch +
 			box->x / rtex->surface.blk_w) * rtex->surface.bpe;
 	} else {
@@ -1623,9 +1623,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 		 * Use the staging texture for uploads if the underlying BO
 		 * is busy.
 		 */
-		/* TODO: Linear CPU mipmap addressing is broken on GFX9: */
-		if (!rtex->surface.is_linear ||
-		    (rctx->chip_class == GFX9 && level))
+		if (!rtex->surface.is_linear)
 			use_staging_texture = true;
 		else if (usage & PIPE_TRANSFER_READ)
 			use_staging_texture =

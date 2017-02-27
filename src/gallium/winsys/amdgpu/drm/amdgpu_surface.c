@@ -663,7 +663,7 @@ static int gfx9_compute_miptree(struct amdgpu_winsys *ws,
 
    if (in->swizzleMode == ADDR_SW_LINEAR) {
       for (unsigned i = 0; i < in->numMipLevels; i++)
-         surf->u.gfx9.surf_ymip_offset[i] = mip_info[i].mipOffsetYPixel;
+         surf->u.gfx9.offset[i] = mip_info[i].offset;
    }
 
    if (in->flags.depth) {

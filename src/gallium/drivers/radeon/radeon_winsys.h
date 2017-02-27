@@ -364,8 +364,8 @@ struct gfx9_surf_layout {
     uint64_t                    surf_slice_size;
     uint16_t                    surf_pitch; /* in blocks */
     uint16_t                    surf_height;
-    /* Y mipmap level offset in blocks. Only valid for LINEAR. */
-    uint16_t                    surf_ymip_offset[RADEON_SURF_MAX_LEVELS];
+    /* Mipmap level offset within the slice in bytes. Only valid for LINEAR. */
+    uint32_t                    offset[RADEON_SURF_MAX_LEVELS];
 
     uint16_t                    dcc_pitch_max;  /* (mip chain pitch - 1) */
 
