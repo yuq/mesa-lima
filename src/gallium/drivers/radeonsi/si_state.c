@@ -921,7 +921,7 @@ static void si_bind_rs_state(struct pipe_context *ctx, void *state)
 		si_mark_atom_dirty(sctx, &sctx->db_render_state);
 
 		/* Update the small primitive filter workaround if necessary. */
-		if (sctx->b.family >= CHIP_POLARIS10 &&
+		if (sctx->screen->has_msaa_sample_loc_bug &&
 		    sctx->framebuffer.nr_samples > 1)
 			si_mark_atom_dirty(sctx, &sctx->msaa_sample_locs.atom);
 	}
@@ -2861,6 +2861,7 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 {
 	struct radeon_winsys_cs *cs = sctx->b.gfx.cs;
 	unsigned nr_samples = sctx->framebuffer.nr_samples;
+	bool has_msaa_sample_loc_bug = sctx->screen->has_msaa_sample_loc_bug;
 
 	/* Smoothing (only possible with nr_samples == 1) uses the same
 	 * sample locations as the MSAA it simulates.
@@ -2871,7 +2872,7 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 	/* On Polaris, the small primitive filter uses the sample locations
 	 * even when MSAA is off, so we need to make sure they're set to 0.
 	 */
-	if (sctx->b.family >= CHIP_POLARIS10)
+	if (has_msaa_sample_loc_bug)
 		nr_samples = MAX2(nr_samples, 1);
 
 	if (nr_samples >= 1 &&
@@ -2884,13 +2885,16 @@ static void si_emit_msaa_sample_locs(struct si_context *sctx,
 		struct si_state_rasterizer *rs = sctx->queued.named.rasterizer;
 		unsigned small_prim_filter_cntl =
 			S_028830_SMALL_PRIM_FILTER_ENABLE(1) |
-			S_028830_LINE_FILTER_DISABLE(sctx->b.chip_class == VI); /* line bug */
+			/* line bug */
+			S_028830_LINE_FILTER_DISABLE(sctx->b.family <= CHIP_POLARIS12);
 
 		/* The alternative of setting sample locations to 0 would
 		 * require a DB flush to avoid Z errors, see
 		 * https://bugs.freedesktop.org/show_bug.cgi?id=96908
 		 */
-		if (sctx->framebuffer.nr_samples > 1 && rs && !rs->multisample_enable)
+		if (has_msaa_sample_loc_bug &&
+		    sctx->framebuffer.nr_samples > 1 &&
+		    rs && !rs->multisample_enable)
 			small_prim_filter_cntl &= C_028830_SMALL_PRIM_FILTER_ENABLE;
 
 		radeon_set_context_reg(cs, R_028830_PA_SU_SMALL_PRIM_FILTER_CNTL,
