@@ -13,9 +13,9 @@ TARGET_RADEON_WINSYS = \
 TARGET_RADEON_COMMON = \
 	$(top_builddir)/src/gallium/drivers/radeon/libradeon.la
 
+if NEED_RADEON_LLVM
+TARGET_RADEON_COMMON += \
+	$(top_builddir)/src/amd/common/libamd_common.la
 endif
 
-if NEED_RADEON_LLVM
-TARGET_LIB_DEPS += \
-        $(top_builddir)/src/amd/common/libamd_common.la
 endif
