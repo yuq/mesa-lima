@@ -3078,16 +3078,18 @@ genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
     * command feels strange -- each dword pair contains a SO_DECL per stream.
     */
    for (unsigned i = 0; i < linked_xfb_info->NumOutputs; i++) {
-      int buffer = linked_xfb_info->Outputs[i].OutputBuffer;
+      const struct gl_transform_feedback_output *output =
+         &linked_xfb_info->Outputs[i];
       struct GENX(SO_DECL) decl = {0};
-      int varying = linked_xfb_info->Outputs[i].OutputRegister;
-      const unsigned components = linked_xfb_info->Outputs[i].NumComponents;
+      const int buffer = output->OutputBuffer;
+      const int varying = output->OutputRegister;
+      const unsigned components = output->NumComponents;
       unsigned component_mask = (1 << components) - 1;
-      unsigned stream_id = linked_xfb_info->Outputs[i].StreamId;
-      unsigned decl_buffer_slot = buffer;
+      const unsigned stream_id = output->StreamId;
+      const unsigned decl_buffer_slot = buffer;
       assert(stream_id < MAX_VERTEX_STREAMS);
 
-      component_mask <<= linked_xfb_info->Outputs[i].ComponentOffset;
+      component_mask <<= output->ComponentOffset;
 
       buffer_mask[stream_id] |= 1 << buffer;
 
@@ -3107,8 +3109,7 @@ genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
        * program as many size = 4 holes as we can, then a final hole to
        * accommodate the final 1, 2, or 3 remaining.
        */
-      int skip_components =
-         linked_xfb_info->Outputs[i].DstOffset - next_offset[buffer];
+      int skip_components = output->DstOffset - next_offset[buffer];
 
       next_offset[buffer] += skip_components;
 
@@ -3127,7 +3128,7 @@ genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
          d->ComponentMask = (1 << skip_components) - 1;
       }
 
-      assert(linked_xfb_info->Outputs[i].DstOffset == next_offset[buffer]);
+      assert(output->DstOffset == next_offset[buffer]);
 
       next_offset[buffer] += components;
 
