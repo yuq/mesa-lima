@@ -3087,32 +3087,14 @@ genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
       unsigned decl_buffer_slot = buffer;
       assert(stream_id < MAX_VERTEX_STREAMS);
 
-      /* gl_PointSize is stored in VARYING_SLOT_PSIZ.w
-       * gl_Layer is stored in VARYING_SLOT_PSIZ.y
-       * gl_ViewportIndex is stored in VARYING_SLOT_PSIZ.z
-       */
-      if (varying == VARYING_SLOT_PSIZ) {
-         assert(components == 1);
-         component_mask <<= 3;
-      } else if (varying == VARYING_SLOT_LAYER) {
-         assert(components == 1);
-         component_mask <<= 1;
-      } else if (varying == VARYING_SLOT_VIEWPORT) {
-         assert(components == 1);
-         component_mask <<= 2;
-      } else {
-         component_mask <<= linked_xfb_info->Outputs[i].ComponentOffset;
-      }
+      component_mask <<= linked_xfb_info->Outputs[i].ComponentOffset;
 
       buffer_mask[stream_id] |= 1 << buffer;
 
+      assert(vue_map->varying_to_slot[varying] >= 0);
+
       decl.OutputBufferSlot = decl_buffer_slot;
-      if (varying == VARYING_SLOT_LAYER || varying == VARYING_SLOT_VIEWPORT) {
-         decl.RegisterIndex = vue_map->varying_to_slot[VARYING_SLOT_PSIZ];
-      } else {
-         assert(vue_map->varying_to_slot[varying] >= 0);
-         decl.RegisterIndex = vue_map->varying_to_slot[varying];
-      }
+      decl.RegisterIndex = vue_map->varying_to_slot[varying];
       decl.ComponentMask = component_mask;
 
       /* Mesa doesn't store entries for gl_SkipComponents in the Outputs[]

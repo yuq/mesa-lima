@@ -687,18 +687,7 @@ gen6_gs_visitor::xfb_program(unsigned vertex, unsigned num_verts)
          emit(MOV(dst_reg(this->vertex_output_offset), brw_imm_d(offset)));
          memcpy(data.reladdr, &this->vertex_output_offset, sizeof(src_reg));
          data.type = output_reg[varying][0].type;
-
-         /* PSIZ, LAYER and VIEWPORT are packed in different channels of the
-          * same slot, so make sure we write the appropriate channel
-          */
-         if (varying == VARYING_SLOT_PSIZ)
-            data.swizzle = BRW_SWIZZLE_WWWW;
-         else if (varying == VARYING_SLOT_LAYER)
-            data.swizzle = BRW_SWIZZLE_YYYY;
-         else if (varying == VARYING_SLOT_VIEWPORT)
-            data.swizzle = BRW_SWIZZLE_ZZZZ;
-         else
-            data.swizzle = gs_prog_data->transform_feedback_swizzles[binding];
+         data.swizzle = gs_prog_data->transform_feedback_swizzles[binding];
 
          /* Write data */
          inst = emit(GS_OPCODE_SVB_WRITE, mrf_reg, data, sol_temp);

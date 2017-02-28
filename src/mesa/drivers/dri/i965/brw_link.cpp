@@ -28,6 +28,7 @@
 #include "compiler/glsl/ir_optimization.h"
 #include "compiler/glsl/program.h"
 #include "program/program.h"
+#include "main/mtypes.h"
 #include "main/shaderapi.h"
 #include "main/shaderobj.h"
 #include "main/uniforms.h"
@@ -176,6 +177,39 @@ unify_interfaces(struct shader_info **infos)
    }
 }
 
+static void
+update_xfb_info(struct gl_transform_feedback_info *xfb_info)
+{
+   if (!xfb_info)
+      return;
+
+   for (unsigned i = 0; i < xfb_info->NumOutputs; i++) {
+      struct gl_transform_feedback_output *output = &xfb_info->Outputs[i];
+
+      /* The VUE header contains three scalar fields packed together:
+       * - gl_PointSize is stored in VARYING_SLOT_PSIZ.w
+       * - gl_Layer is stored in VARYING_SLOT_PSIZ.y
+       * - gl_ViewportIndex is stored in VARYING_SLOT_PSIZ.z
+       */
+      switch (output->OutputRegister) {
+      case VARYING_SLOT_LAYER:
+         assert(output->NumComponents == 1);
+         output->OutputRegister = VARYING_SLOT_PSIZ;
+         output->ComponentOffset = 1;
+         break;
+      case VARYING_SLOT_VIEWPORT:
+         assert(output->NumComponents == 1);
+         output->OutputRegister = VARYING_SLOT_PSIZ;
+         output->ComponentOffset = 2;
+         break;
+      case VARYING_SLOT_PSIZ:
+         assert(output->NumComponents == 1);
+         output->ComponentOffset = 3;
+         break;
+      }
+   }
+}
+
 extern "C" GLboolean
 brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 {
@@ -198,6 +232,8 @@ brw_link_shader(struct gl_context *ctx, struct gl_shader_program *shProg)
 
       prog->ShadowSamplers = shader->shadow_samplers;
       _mesa_update_shader_textures_used(shProg, prog);
+
+      update_xfb_info(prog->sh.LinkedTransformFeedback);
 
       bool debug_enabled =
          (INTEL_DEBUG & intel_debug_flag_for_shader_stage(shader->Stage));
