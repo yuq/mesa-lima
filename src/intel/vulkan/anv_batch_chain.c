@@ -1265,7 +1265,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
                                       cmd_buffer->last_ss_pool_center);
    VkResult result =
       anv_execbuf_add_bo(&execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
-                         &cmd_buffer->pool->alloc);
+                         &device->alloc);
    if (result != VK_SUCCESS)
       return result;
 
@@ -1278,7 +1278,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
                                        cmd_buffer->last_ss_pool_center);
 
       result = anv_execbuf_add_bo(&execbuf, &(*bbo)->bo, &(*bbo)->relocs,
-                                  &cmd_buffer->pool->alloc);
+                                  &device->alloc);
       if (result != VK_SUCCESS)
          return result;
    }
@@ -1387,7 +1387,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
 
    result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
 
-   anv_execbuf_finish(&execbuf, &cmd_buffer->pool->alloc);
+   anv_execbuf_finish(&execbuf, &device->alloc);
 
    return result;
 }
