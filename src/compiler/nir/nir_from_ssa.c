@@ -71,7 +71,7 @@ ssa_def_dominates(nir_ssa_def *a, nir_ssa_def *b)
  * Each SSA definition is associated with a merge_node and the association
  * is represented by a combination of a hash table and the "def" parameter
  * in the merge_node structure.  The merge_set stores a linked list of
- * merge_node's in dominence order of the ssa definitions.  (Since the
+ * merge_nodes in dominence order of the ssa definitions.  (Since the
  * liveness analysis pass indexes the SSA values in dominence order for us,
  * this is an easy thing to keep up.)  It is assumed that no pair of the
  * nodes in a given set interfere.  Merging two sets or checking for
@@ -313,7 +313,7 @@ isolate_phi_nodes_block(nir_block *block, void *dead_ctx)
       last_phi_instr = instr;
    }
 
-   /* If we don't have any phi's, then there's nothing for us to do. */
+   /* If we don't have any phis, then there's nothing for us to do. */
    if (last_phi_instr == NULL)
       return true;
 
@@ -558,7 +558,7 @@ emit_copy(nir_builder *b, nir_src src, nir_src dest_src)
    nir_builder_instr_insert(b, &mov->instr);
 }
 
-/* Resolves a single parallel copy operation into a sequence of mov's
+/* Resolves a single parallel copy operation into a sequence of movs
  *
  * This is based on Algorithm 1 from "Revisiting Out-of-SSA Translation for
  * Correctness, Code Quality, and Efficiency" by Boissinot et. al..
@@ -851,10 +851,10 @@ place_phi_read(nir_shader *shader, nir_register *reg,
    nir_instr_insert(nir_after_block_before_jump(block), &mov->instr);
 }
 
-/** Lower all of the phi nodes in a block to imov's to and from a register
+/** Lower all of the phi nodes in a block to imovs to and from a register
  *
  * This provides a very quick-and-dirty out-of-SSA pass that you can run on a
- * single block to convert all of it's phis to a register and some imov's.
+ * single block to convert all of its phis to a register and some imovs.
  * The code that is generated, while not optimal for actual codegen in a
  * back-end, is easy to generate, correct, and will turn into the same set of
  * phis after you call regs_to_ssa and do some copy propagation.

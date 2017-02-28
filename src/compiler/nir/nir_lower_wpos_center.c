@@ -71,7 +71,7 @@ lower_wpos_center_block(nir_builder *b, nir_block *block)
 
             if (var->data.mode == nir_var_shader_in &&
                 var->data.location == VARYING_SLOT_POS) {
-               /* gl_FragCoord should not have array/struct deref's: */
+               /* gl_FragCoord should not have array/struct derefs: */
                assert(dvar->deref.child == NULL);
                add_half_to_fragcoord(b, intr);
                progress = true;

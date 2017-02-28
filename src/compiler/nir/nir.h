@@ -368,13 +368,13 @@ typedef struct nir_register {
     */
    bool is_packed;
 
-   /** set of nir_src's where this register is used (read from) */
+   /** set of nir_srcs where this register is used (read from) */
    struct list_head uses;
 
-   /** set of nir_dest's where this register is defined (written to) */
+   /** set of nir_dests where this register is defined (written to) */
    struct list_head defs;
 
-   /** set of nir_if's where this register is used as a condition */
+   /** set of nir_ifs where this register is used as a condition */
    struct list_head if_uses;
 } nir_register;
 
@@ -453,10 +453,10 @@ typedef struct nir_ssa_def {
 
    nir_instr *parent_instr;
 
-   /** set of nir_instr's where this register is used (read from) */
+   /** set of nir_instrs where this register is used (read from) */
    struct list_head uses;
 
-   /** set of nir_if's where this register is used as a condition */
+   /** set of nir_ifs where this register is used as a condition */
    struct list_head if_uses;
 
    uint8_t num_components;
@@ -1422,7 +1422,7 @@ typedef struct {
 typedef struct {
    nir_instr instr;
 
-   /* A list of nir_parallel_copy_entry's.  The sources of all of the
+   /* A list of nir_parallel_copy_entrys.  The sources of all of the
     * entries are copied to the corresponding destinations "in parallel".
     * In other words, if we have two entries: a -> b and b -> a, the values
     * get swapped.
@@ -1506,7 +1506,7 @@ typedef struct nir_block {
    unsigned num_dom_children;
    struct nir_block **dom_children;
 
-   /* Set of nir_block's on the dominance frontier of this block */
+   /* Set of nir_blocks on the dominance frontier of this block */
    struct set *dom_frontier;
 
    /*

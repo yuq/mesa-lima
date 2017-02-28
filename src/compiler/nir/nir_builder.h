@@ -495,7 +495,7 @@ nir_ssa_for_src(nir_builder *build, nir_src src, int num_components)
 }
 
 /**
- * Similar to nir_ssa_for_src(), but for alu src's, respecting the
+ * Similar to nir_ssa_for_src(), but for alu srcs, respecting the
  * nir_alu_src's swizzle.
  */
 static inline nir_ssa_def *

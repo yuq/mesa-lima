@@ -31,7 +31,7 @@
 
 /* Generates the lowering code for user-clip-planes, generating CLIPDIST
  * from UCP[n] + CLIPVERTEX or POSITION.  Additionally, an optional pass
- * for fragment shaders to insert conditional kill's based on the inter-
+ * for fragment shaders to insert conditional kills based on the inter-
  * polated CLIPDIST
  *
  * NOTE: should be run after nir_lower_outputs_to_temporaries() (or at
@@ -163,7 +163,7 @@ lower_clip_vs(nir_function_impl *impl, unsigned ucp_enables,
     * should be only a single predecessor block to end_block, which
     * makes the perfect place to insert the clipdist calculations.
     *
-    * NOTE: in case of early return's, these would have to be lowered
+    * NOTE: in case of early returns, these would have to be lowered
     * to jumps to end_block predecessor in a previous pass.  Not sure
     * if there is a good way to sanity check this, but for now the
     * users of this pass don't support sub-routines.
@@ -193,7 +193,7 @@ lower_clip_vs(nir_function_impl *impl, unsigned ucp_enables,
    nir_metadata_preserve(impl, nir_metadata_dominance);
 }
 
-/* ucp_enables is bitmask of enabled ucp's.  Actual ucp values are
+/* ucp_enables is bitmask of enabled ucps.  Actual ucp values are
  * passed in to shader via user_clip_plane system-values
  */
 void

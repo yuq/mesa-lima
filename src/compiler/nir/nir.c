@@ -345,7 +345,7 @@ nir_block_create(nir_shader *shader)
                                           _mesa_key_pointer_equal);
    block->imm_dom = NULL;
    /* XXX maybe it would be worth it to defer allocation?  This
-    * way it doesn't get allocated for shader ref's that never run
+    * way it doesn't get allocated for shader refs that never run
     * nir_calc_dominance?  For example, state-tracker creates an
     * initial IR, clones that, runs appropriate lowering pass, passes
     * to driver which does common lowering/opt, and then stores ref

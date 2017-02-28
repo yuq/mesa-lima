@@ -645,7 +645,7 @@ swizzle_result(nir_builder *b, nir_tex_instr *tex, const uint8_t swizzle[4])
       if (swizzle[0] < 4 && swizzle[1] < 4 &&
           swizzle[2] < 4 && swizzle[3] < 4) {
          unsigned swiz[4] = { swizzle[0], swizzle[1], swizzle[2], swizzle[3] };
-         /* We have no 0's or 1's, just emit a swizzling MOV */
+         /* We have no 0s or 1s, just emit a swizzling MOV */
          swizzled = nir_swizzle(b, &tex->dest.ssa, swiz, 4, false);
       } else {
          nir_ssa_def *srcs[4];

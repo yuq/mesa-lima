@@ -41,7 +41,7 @@
  * ssa_2 = fadd(ssa_1.x, ssa_1.y)
  *
  * While this is "worse" because it adds a bunch of unneeded dependencies, it
- * actually makes it much easier for vec4-based backends to coalesce the MOV's
+ * actually makes it much easier for vec4-based backends to coalesce the MOVs
  * that result from the vec4 operation because it doesn't have to worry about
  * quite as many reads.
  */

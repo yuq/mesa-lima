@@ -49,7 +49,7 @@ nir_assign_var_locations(struct exec_list *var_list, unsigned *size,
 
    nir_foreach_variable(var, var_list) {
       /*
-       * UBO's have their own address spaces, so don't count them towards the
+       * UBOs have their own address spaces, so don't count them towards the
        * number of global uniforms
        */
       if ((var->data.mode == nir_var_uniform || var->data.mode == nir_var_shader_storage) &&
