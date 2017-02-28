@@ -178,8 +178,8 @@ create_pipeline(struct radv_device *device,
 		},
 		.pViewportState = &(VkPipelineViewportStateCreateInfo) {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-			.viewportCount = 0,
-			.scissorCount = 0,
+			.viewportCount = 1,
+			.scissorCount = 1,
 		},
 		.pRasterizationState = &(VkPipelineRasterizationStateCreateInfo) {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -210,7 +210,14 @@ create_pipeline(struct radv_device *device,
 			.depthBoundsTestEnable = false,
 			.stencilTestEnable = false,
 		},
-		.pDynamicState = NULL,
+		.pDynamicState = &(VkPipelineDynamicStateCreateInfo) {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+			.dynamicStateCount = 2,
+			.pDynamicStates = (VkDynamicState[]) {
+				VK_DYNAMIC_STATE_VIEWPORT,
+				VK_DYNAMIC_STATE_SCISSOR,
+			},
+		},
 		.renderPass = device->meta_state.depth_decomp.pass,
 		.subpass = 0,
 	};
@@ -317,20 +324,20 @@ emit_depth_decomp(struct radv_cmd_buffer *cmd_buffer,
 	const struct vertex_attrs vertex_data[3] = {
 		{
 			.position = {
-				dest_offset->x,
-				dest_offset->y,
+				-1.0,
+				-1.0,
 			},
 		},
 		{
 			.position = {
-				dest_offset->x,
-				dest_offset->y + depth_decomp_extent->height,
+				-1.0,
+				1.0,
 			},
 		},
 		{
 			.position = {
-				dest_offset->x + depth_decomp_extent->width,
-				dest_offset->y,
+				1.0,
+				-1.0,
 			},
 		},
 	};
@@ -357,6 +364,20 @@ emit_depth_decomp(struct radv_cmd_buffer *cmd_buffer,
 		radv_CmdBindPipeline(cmd_buffer_h, VK_PIPELINE_BIND_POINT_GRAPHICS,
 				     pipeline_h);
 	}
+
+	radv_CmdSetViewport(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkViewport) {
+		.x = dest_offset->x,
+		.y = dest_offset->y,
+		.width = depth_decomp_extent->width,
+		.height = depth_decomp_extent->height,
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f
+	});
+
+	radv_CmdSetScissor(radv_cmd_buffer_to_handle(cmd_buffer), 0, 1, &(VkRect2D) {
+		.offset = *dest_offset,
+		.extent = *depth_decomp_extent,
+	});
 
 	radv_CmdDraw(cmd_buffer_h, 3, 1, 0, 0);
 }
