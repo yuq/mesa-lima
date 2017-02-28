@@ -607,7 +607,6 @@ struct ast_type_qualifier {
          /** \name Qualifiers for GL_ARB_shader_subroutine */
 	 /** \{ */
          unsigned subroutine:1;  /**< Is this marked 'subroutine' */
-         unsigned subroutine_def:1; /**< Is this marked 'subroutine' with a list of types */
 	 /** \} */
 
          /** \name Qualifiers for GL_KHR_blend_equation_advanced */

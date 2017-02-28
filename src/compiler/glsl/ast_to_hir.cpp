@@ -3510,7 +3510,7 @@ apply_layout_qualifier_to_variable(const struct ast_type_qualifier *qual,
          }
       }
    } else if (qual->flags.q.explicit_index) {
-      if (!qual->flags.q.subroutine_def)
+      if (!qual->subroutine_list)
          _mesa_glsl_error(loc, state,
                           "explicit index requires explicit location");
    } else if (qual->flags.q.explicit_component) {
@@ -5576,7 +5576,7 @@ ast_function::hir(exec_list *instructions,
     *  "Subroutine declarations cannot be prototyped. It is an error to prepend
     *   subroutine(...) to a function declaration."
     */
-   if (this->return_type->qualifier.flags.q.subroutine_def && !is_definition) {
+   if (this->return_type->qualifier.subroutine_list && !is_definition) {
       YYLTYPE loc = this->get_location();
       _mesa_glsl_error(&loc, state,
                        "function declaration `%s' cannot have subroutine prepended",
@@ -5724,7 +5724,7 @@ ast_function::hir(exec_list *instructions,
    sig->replace_parameters(&hir_parameters);
    signature = sig;
 
-   if (this->return_type->qualifier.flags.q.subroutine_def) {
+   if (this->return_type->qualifier.subroutine_list) {
       int idx;
 
       if (this->return_type->qualifier.flags.q.explicit_index) {

@@ -1812,7 +1812,7 @@ subroutine_qualifier:
    | SUBROUTINE '(' subroutine_type_list ')'
    {
       memset(& $$, 0, sizeof($$));
-      $$.flags.q.subroutine_def = 1;
+      $$.flags.q.subroutine = 1;
       $$.subroutine_list = $3;
    }
    ;
