@@ -63,7 +63,7 @@ ssa_def_dominates(nir_ssa_def *a, nir_ssa_def *b)
 
 /* The following data structure, which I have named merge_set is a way of
  * representing a set registers of non-interfering registers.  This is
- * based on the concept of a "dominence forest" presented in "Fast Copy
+ * based on the concept of a "dominance forest" presented in "Fast Copy
  * Coalescing and Live-Range Identification" by Budimlic et. al. but the
  * implementation concept is taken from  "Revisiting Out-of-SSA Translation
  * for Correctness, Code Quality, and Efficiency" by Boissinot et. al..
@@ -71,8 +71,8 @@ ssa_def_dominates(nir_ssa_def *a, nir_ssa_def *b)
  * Each SSA definition is associated with a merge_node and the association
  * is represented by a combination of a hash table and the "def" parameter
  * in the merge_node structure.  The merge_set stores a linked list of
- * merge_nodes in dominence order of the ssa definitions.  (Since the
- * liveness analysis pass indexes the SSA values in dominence order for us,
+ * merge_nodes in dominance order of the ssa definitions.  (Since the
+ * liveness analysis pass indexes the SSA values in dominance order for us,
  * this is an easy thing to keep up.)  It is assumed that no pair of the
  * nodes in a given set interfere.  Merging two sets or checking for
  * interference can be done in a single linear-time merge-sort walk of the

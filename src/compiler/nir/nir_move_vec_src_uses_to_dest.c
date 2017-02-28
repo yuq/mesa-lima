@@ -114,10 +114,10 @@ move_vec_src_uses_to_dest_block(nir_block *block)
             if (vec->src[j].src.ssa != vec->src[i].src.ssa)
                continue;
 
-            /* Mark the given chanle as having been handled */
+            /* Mark the given channel as having been handled */
             srcs_remaining &= ~(1 << j);
 
-            /* Mark the appropreate channel as coming from src j */
+            /* Mark the appropriate channel as coming from src j */
             swizzle[vec->src[j].swizzle[0]] = j;
          }
 

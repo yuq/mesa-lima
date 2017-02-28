@@ -1908,7 +1908,7 @@ nir_register *nir_local_reg_create(nir_function_impl *impl);
 
 void nir_reg_remove(nir_register *reg);
 
-/** Adds a variable to the appropreate list in nir_shader */
+/** Adds a variable to the appropriate list in nir_shader */
 void nir_shader_add_variable(nir_shader *shader, nir_variable *var);
 
 static inline void
