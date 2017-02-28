@@ -22,7 +22,7 @@ trap 'rm $test.valgrind-errors; exit 1' INT QUIT
 usage ()
 {
     cat <<EOF
-Usage: glcpp [options...]
+Usage: `basename "$0"` [options...]
 
 Run the test suite for mesa's GLSL pre-processor.
 

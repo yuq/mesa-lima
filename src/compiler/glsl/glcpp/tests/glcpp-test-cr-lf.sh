@@ -51,7 +51,7 @@ run_test ()
 usage ()
 {
 	cat <<EOF
-Usage: glcpp-cr-lf [options...]
+Usage: `basename "$0"` [options...]
 
 Run the entire glcpp-test suite several times, each time with each source
 file transformed to use a non-standard line-termination character. Each
