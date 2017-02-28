@@ -74,7 +74,8 @@ include $(BUILD_STATIC_LIBRARY)
 ANV_INCLUDES := \
 	$(VULKAN_COMMON_INCLUDES) \
 	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_anv_entrypoints,,) \
-	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_vulkan_util,,)/util
 
 #
 # libanv for gen7
@@ -172,7 +173,10 @@ LOCAL_C_INCLUDES := \
 	$(ANV_INCLUDES) \
 	$(MESA_TOP)/src/compiler
 
-LOCAL_WHOLE_STATIC_LIBRARIES := libmesa_anv_entrypoints libmesa_genxml
+LOCAL_WHOLE_STATIC_LIBRARIES := \
+	libmesa_anv_entrypoints \
+	libmesa_genxml \
+	libmesa_vulkan_util
 
 LOCAL_GENERATED_SOURCES += $(intermediates)/anv_entrypoints.c
 
