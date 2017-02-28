@@ -50,6 +50,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src \
 	-I$(top_srcdir)/src/vulkan/wsi \
 	-I$(top_builddir)/src/vulkan/util \
+	-I$(top_srcdir)/src/vulkan/util \
 	-I$(top_builddir)/src/compiler \
 	-I$(top_srcdir)/src/compiler \
 	-I$(top_builddir)/src/compiler/nir \
