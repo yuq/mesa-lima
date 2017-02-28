@@ -656,6 +656,17 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
                                           pImageFormatProperties);
 }
 
+static const VkExternalMemoryPropertiesKHX prime_fd_props = {
+   /* If we can handle external, then we can both import and export it. */
+   .externalMemoryFeatures = VK_EXTERNAL_MEMORY_FEATURE_EXPORTABLE_BIT_KHX |
+                             VK_EXTERNAL_MEMORY_FEATURE_IMPORTABLE_BIT_KHX,
+   /* For the moment, let's not support mixing and matching */
+   .exportFromImportedHandleTypes =
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX,
+   .compatibleHandleTypes =
+      VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX,
+};
+
 VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
     VkPhysicalDevice                            physicalDevice,
     const VkPhysicalDeviceImageFormatInfo2KHR*  base_info,
@@ -702,13 +713,23 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
     *    present and VkExternalImageFormatPropertiesKHX will be ignored.
     */
    if (external_info && external_info->handleType != 0) {
-      /* FINISHME: Support at least one external memory type for images. */
-      (void) external_props;
-
-      result = vk_errorf(VK_ERROR_FORMAT_NOT_SUPPORTED,
-                         "unsupported VkExternalMemoryTypeFlagBitsKHX 0x%x",
-                         external_info->handleType);
-      goto fail;
+      switch (external_info->handleType) {
+      case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX:
+         external_props->externalMemoryProperties = prime_fd_props;
+         break;
+      default:
+         /* From the Vulkan 1.0.42 spec:
+          *
+          *    If handleType is not compatible with the [parameters] specified
+          *    in VkPhysicalDeviceImageFormatInfo2KHR, then
+          *    vkGetPhysicalDeviceImageFormatProperties2KHR returns
+          *    VK_ERROR_FORMAT_NOT_SUPPORTED.
+          */
+         result = vk_errorf(VK_ERROR_FORMAT_NOT_SUPPORTED,
+                            "unsupported VkExternalMemoryTypeFlagBitsKHX 0x%x",
+                            external_info->handleType);
+         goto fail;
+      }
    }
 
    return VK_SUCCESS;
@@ -757,8 +778,30 @@ void anv_GetPhysicalDeviceExternalBufferPropertiesKHX(
     const VkPhysicalDeviceExternalBufferInfoKHX* pExternalBufferInfo,
     VkExternalBufferPropertiesKHX*               pExternalBufferProperties)
 {
-   anv_finishme("Handle external buffers");
+   /* The Vulkan 1.0.42 spec says "handleType must be a valid
+    * VkExternalMemoryHandleTypeFlagBitsKHX value" in
+    * VkPhysicalDeviceExternalBufferInfoKHX. This differs from
+    * VkPhysicalDeviceExternalImageFormatInfoKHX, which surprisingly permits
+    * handleType == 0.
+    */
+   assert(pExternalBufferInfo->handleType != 0);
 
+   /* All of the current flags are for sparse which we don't support yet.
+    * Even when we do support it, doing sparse on external memory sounds
+    * sketchy.  Also, just disallowing flags is the safe option.
+    */
+   if (pExternalBufferInfo->flags)
+      goto unsupported;
+
+   switch (pExternalBufferInfo->handleType) {
+   case VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT_KHX:
+      pExternalBufferProperties->externalMemoryProperties = prime_fd_props;
+      return;
+   default:
+      goto unsupported;
+   }
+
+ unsupported:
    pExternalBufferProperties->externalMemoryProperties =
       (VkExternalMemoryPropertiesKHX) {0};
 }
