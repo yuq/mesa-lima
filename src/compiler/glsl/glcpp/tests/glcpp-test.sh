@@ -1,14 +1,21 @@
 #!/bin/sh
 
-if [ ! -z "$srcdir" ]; then
-   testdir=$srcdir/glsl/glcpp/tests
-   outdir=`pwd`/glsl/glcpp/tests
-   glcpp=`pwd`/glsl/glcpp/glcpp
-else
-   testdir=.
-   outdir=.
-   glcpp=../glcpp
+if [ -z "$srcdir" -o -z "$abs_builddir" ]; then
+    echo ""
+    echo "Warning: you're invoking the script manually and things may fail."
+    echo "Attempting to determine/set srcdir and abs_builddir variables."
+    echo ""
+
+    # Should point to `dirname Makefile.glsl.am`
+    srcdir=./../../../
+    cd `dirname "$0"`
+    # Should point to `dirname Makefile` equivalent to the above.
+    abs_builddir=`pwd`/../../../
 fi
+
+testdir=$srcdir/glsl/glcpp/tests
+outdir=$abs_builddir/glsl/glcpp/tests
+glcpp=$abs_builddir/glsl/glcpp/glcpp
 
 trap 'rm $test.valgrind-errors; exit 1' INT QUIT
 
