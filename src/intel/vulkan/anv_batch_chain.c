@@ -1250,22 +1250,19 @@ relocate_cmd_buffer(struct anv_cmd_buffer *cmd_buffer,
    return true;
 }
 
-VkResult
-anv_cmd_buffer_execbuf(struct anv_device *device,
-                       struct anv_cmd_buffer *cmd_buffer)
+static VkResult
+setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
+                             struct anv_cmd_buffer *cmd_buffer)
 {
    struct anv_batch *batch = &cmd_buffer->batch;
    struct anv_block_pool *ss_pool =
       &cmd_buffer->device->surface_state_block_pool;
 
-   struct anv_execbuf execbuf;
-   anv_execbuf_init(&execbuf);
-
    adjust_relocations_from_state_pool(ss_pool, &cmd_buffer->surface_relocs,
                                       cmd_buffer->last_ss_pool_center);
    VkResult result =
-      anv_execbuf_add_bo(&execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
-                         &device->alloc);
+      anv_execbuf_add_bo(execbuf, &ss_pool->bo, &cmd_buffer->surface_relocs,
+                         &cmd_buffer->device->alloc);
    if (result != VK_SUCCESS)
       return result;
 
@@ -1277,8 +1274,8 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       adjust_relocations_to_state_pool(ss_pool, &(*bbo)->bo, &(*bbo)->relocs,
                                        cmd_buffer->last_ss_pool_center);
 
-      result = anv_execbuf_add_bo(&execbuf, &(*bbo)->bo, &(*bbo)->relocs,
-                                  &device->alloc);
+      result = anv_execbuf_add_bo(execbuf, &(*bbo)->bo, &(*bbo)->relocs,
+                                  &cmd_buffer->device->alloc);
       if (result != VK_SUCCESS)
          return result;
    }
@@ -1297,19 +1294,19 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
     * corresponding to the first batch_bo in the chain with the last
     * element in the list.
     */
-   if (first_batch_bo->bo.index != execbuf.bo_count - 1) {
+   if (first_batch_bo->bo.index != execbuf->bo_count - 1) {
       uint32_t idx = first_batch_bo->bo.index;
-      uint32_t last_idx = execbuf.bo_count - 1;
+      uint32_t last_idx = execbuf->bo_count - 1;
 
-      struct drm_i915_gem_exec_object2 tmp_obj = execbuf.objects[idx];
-      assert(execbuf.bos[idx] == &first_batch_bo->bo);
+      struct drm_i915_gem_exec_object2 tmp_obj = execbuf->objects[idx];
+      assert(execbuf->bos[idx] == &first_batch_bo->bo);
 
-      execbuf.objects[idx] = execbuf.objects[last_idx];
-      execbuf.bos[idx] = execbuf.bos[last_idx];
-      execbuf.bos[idx]->index = idx;
+      execbuf->objects[idx] = execbuf->objects[last_idx];
+      execbuf->bos[idx] = execbuf->bos[last_idx];
+      execbuf->bos[idx]->index = idx;
 
-      execbuf.objects[last_idx] = tmp_obj;
-      execbuf.bos[last_idx] = &first_batch_bo->bo;
+      execbuf->objects[last_idx] = tmp_obj;
+      execbuf->bos[last_idx] = &first_batch_bo->bo;
       first_batch_bo->bo.index = last_idx;
    }
 
@@ -1330,9 +1327,9 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       }
    }
 
-   execbuf.execbuf = (struct drm_i915_gem_execbuffer2) {
-      .buffers_ptr = (uintptr_t) execbuf.objects,
-      .buffer_count = execbuf.bo_count,
+   execbuf->execbuf = (struct drm_i915_gem_execbuffer2) {
+      .buffers_ptr = (uintptr_t) execbuf->objects,
+      .buffer_count = execbuf->bo_count,
       .batch_start_offset = 0,
       .batch_len = batch->next - batch->start,
       .cliprects_ptr = 0,
@@ -1345,7 +1342,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       .rsvd2 = 0,
    };
 
-   if (relocate_cmd_buffer(cmd_buffer, &execbuf)) {
+   if (relocate_cmd_buffer(cmd_buffer, execbuf)) {
       /* If we were able to successfully relocate everything, tell the kernel
        * that it can skip doing relocations. The requirement for using
        * NO_RELOC is:
@@ -1370,7 +1367,7 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
        * the RENDER_SURFACE_STATE matches presumed_offset, so it should be
        * safe for the kernel to relocate them as needed.
        */
-      execbuf.execbuf.flags |= I915_EXEC_NO_RELOC;
+      execbuf->execbuf.flags |= I915_EXEC_NO_RELOC;
    } else {
       /* In the case where we fall back to doing kernel relocations, we need
        * to ensure that the relocation list is valid.  All relocations on the
@@ -1384,6 +1381,20 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       for (size_t i = 0; i < cmd_buffer->surface_relocs.num_relocs; i++)
          cmd_buffer->surface_relocs.relocs[i].presumed_offset = -1;
    }
+
+   return VK_SUCCESS;
+}
+
+VkResult
+anv_cmd_buffer_execbuf(struct anv_device *device,
+                       struct anv_cmd_buffer *cmd_buffer)
+{
+   struct anv_execbuf execbuf;
+   anv_execbuf_init(&execbuf);
+
+   VkResult result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
+   if (result != VK_SUCCESS)
+      return result;
 
    result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
 
