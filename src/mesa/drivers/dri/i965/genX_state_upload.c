@@ -3080,24 +3080,14 @@ genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
    for (unsigned i = 0; i < linked_xfb_info->NumOutputs; i++) {
       const struct gl_transform_feedback_output *output =
          &linked_xfb_info->Outputs[i];
-      struct GENX(SO_DECL) decl = {0};
       const int buffer = output->OutputBuffer;
       const int varying = output->OutputRegister;
-      const unsigned components = output->NumComponents;
-      unsigned component_mask = (1 << components) - 1;
       const unsigned stream_id = output->StreamId;
-      const unsigned decl_buffer_slot = buffer;
       assert(stream_id < MAX_VERTEX_STREAMS);
-
-      component_mask <<= output->ComponentOffset;
 
       buffer_mask[stream_id] |= 1 << buffer;
 
       assert(vue_map->varying_to_slot[varying] >= 0);
-
-      decl.OutputBufferSlot = decl_buffer_slot;
-      decl.RegisterIndex = vue_map->varying_to_slot[varying];
-      decl.ComponentMask = component_mask;
 
       /* Mesa doesn't store entries for gl_SkipComponents in the Outputs[]
        * array.  Instead, it simply increments DstOffset for the following
@@ -3111,28 +3101,23 @@ genX(upload_3dstate_so_decl_list)(struct brw_context *brw,
        */
       int skip_components = output->DstOffset - next_offset[buffer];
 
-      next_offset[buffer] += skip_components;
-
-      while (skip_components >= 4) {
-         struct GENX(SO_DECL) *d = &so_decl[stream_id][decls[stream_id]++];
-         d->HoleFlag = 1;
-         d->OutputBufferSlot = decl_buffer_slot;
-         d->ComponentMask = 0xf;
+      while (skip_components > 0) {
+         so_decl[stream_id][decls[stream_id]++] = (struct GENX(SO_DECL)) {
+            .HoleFlag = 1,
+            .OutputBufferSlot = output->OutputBuffer,
+            .ComponentMask = (1 << MIN2(skip_components, 4)) - 1,
+         };
          skip_components -= 4;
       }
 
-      if (skip_components > 0) {
-         struct GENX(SO_DECL) *d = &so_decl[stream_id][decls[stream_id]++];
-         d->HoleFlag = 1;
-         d->OutputBufferSlot = decl_buffer_slot;
-         d->ComponentMask = (1 << skip_components) - 1;
-      }
+      next_offset[buffer] = output->DstOffset + output->NumComponents;
 
-      assert(output->DstOffset == next_offset[buffer]);
-
-      next_offset[buffer] += components;
-
-      so_decl[stream_id][decls[stream_id]++] = decl;
+      so_decl[stream_id][decls[stream_id]++] = (struct GENX(SO_DECL)) {
+         .OutputBufferSlot = output->OutputBuffer,
+         .RegisterIndex = vue_map->varying_to_slot[varying],
+         .ComponentMask =
+            ((1 << output->NumComponents) - 1) << output->ComponentOffset,
+      };
 
       if (decls[stream_id] > max_decls)
          max_decls = decls[stream_id];
