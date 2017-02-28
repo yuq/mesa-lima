@@ -244,8 +244,6 @@ brwProgramStringNotify(struct gl_context *ctx,
 	 brw->ctx.NewDriverState |= BRW_NEW_FRAGMENT_PROGRAM;
       newFP->id = get_new_program_id(brw->screen);
 
-      brw_add_texrect_params(prog);
-
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_FRAGMENT, true);
 
       brw_fs_precompile(ctx, prog);
@@ -266,8 +264,6 @@ brwProgramStringNotify(struct gl_context *ctx,
       /* Also tell tnl about it:
        */
       _tnl_program_string(ctx, target, prog);
-
-      brw_add_texrect_params(prog);
 
       prog->nir = brw_create_nir(brw, NULL, prog, MESA_SHADER_VERTEX,
                                  compiler->scalar_stage[MESA_SHADER_VERTEX]);
@@ -342,25 +338,6 @@ brw_blend_barrier(struct gl_context *ctx)
          brw_emit_pipe_control_flush(brw,
                                      PIPE_CONTROL_RENDER_TARGET_FLUSH);
       }
-   }
-}
-
-void
-brw_add_texrect_params(struct gl_program *prog)
-{
-   for (int texunit = 0; texunit < BRW_MAX_TEX_UNIT; texunit++) {
-      if (!(prog->TexturesUsed[texunit] & (1 << TEXTURE_RECT_INDEX)))
-         continue;
-
-      int tokens[STATE_LENGTH] = {
-         STATE_INTERNAL,
-         STATE_TEXRECT_SCALE,
-         texunit,
-         0,
-         0
-      };
-
-      _mesa_add_state_reference(prog->Parameters, (gl_state_index *)tokens);
    }
 }
 
