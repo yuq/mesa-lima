@@ -1,0 +1,10 @@
+brw_nir_trig_workarounds.c
+test_eu_compact
+test_eu_validate
+test_fs_cmod_propagation
+test_fs_copy_propagation
+test_fs_saturate_propagation
+test_vec4_cmod_propagation
+test_vec4_copy_propagation
+test_vec4_register_coalesce
+test_vf_float_conversions

@@ -28,7 +28,7 @@
  */
 
 #include "brw_context.h"
-#include "brw_nir.h"
+#include "compiler/brw_nir.h"
 #include "brw_program.h"
 #include "brw_state.h"
 #include "program/prog_parameter.h"

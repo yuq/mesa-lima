@@ -37,7 +37,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa \
-	$(MESA_TOP)/src/mesa/drivers/dri/i965
+	$(MESA_TOP)/src/intel
 
 LOCAL_STATIC_LIBRARIES := libmesa_nir
 

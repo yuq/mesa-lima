@@ -21,8 +21,7 @@
  * IN THE SOFTWARE.
  */
 
-#include "brw_nir.h"
-#include "brw_shader.h"
+#include "compiler/brw_nir.h"
 #include "compiler/glsl/ir_uniform.h"
 
 static void

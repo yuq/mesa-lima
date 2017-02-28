@@ -25,8 +25,7 @@
 # ---------------------------------------
 
 LIBISL_GENX_COMMON_INCLUDES := \
-	$(MESA_TOP)/src/ \
-	$(MESA_TOP)/src/mesa/drivers/dri/i965
+	$(MESA_TOP)/src/
 
 # ---------------------------------------
 # Build libmesa_isl_gen4
@@ -176,7 +175,7 @@ LOCAL_C_INCLUDES := \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/mapi \
 	$(MESA_TOP)/src/mesa \
-	$(MESA_TOP)/src/mesa/drivers/dri/i965 \
+	$(MESA_TOP)/src/intel
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := $(MESA_TOP)/src/intel
 

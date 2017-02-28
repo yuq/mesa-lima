@@ -31,7 +31,7 @@
 #include "brw_context.h"
 #include "brw_state.h"
 #include "brw_ff_gs.h"
-#include "brw_nir.h"
+#include "compiler/brw_nir.h"
 #include "brw_program.h"
 #include "compiler/glsl/ir_uniform.h"
 

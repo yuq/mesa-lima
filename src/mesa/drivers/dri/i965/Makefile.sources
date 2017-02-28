@@ -1,94 +1,3 @@
-i965_compiler_FILES = \
-	brw_cfg.cpp \
-	brw_cfg.h \
-	brw_compiler.c \
-	brw_compiler.h \
-	brw_dead_control_flow.cpp \
-	brw_dead_control_flow.h \
-	brw_disasm.c \
-	brw_eu.c \
-	brw_eu_compact.c \
-	brw_eu_defines.h \
-	brw_eu_emit.c \
-	brw_eu.h \
-	brw_eu_util.c \
-	brw_eu_validate.c \
-	brw_fs_builder.h \
-	brw_fs_cmod_propagation.cpp \
-	brw_fs_combine_constants.cpp \
-	brw_fs_copy_propagation.cpp \
-	brw_fs.cpp \
-	brw_fs_cse.cpp \
-	brw_fs_dead_code_eliminate.cpp \
-	brw_fs_generator.cpp \
-	brw_fs.h \
-	brw_fs_live_variables.cpp \
-	brw_fs_live_variables.h \
-	brw_fs_lower_d2x.cpp \
-	brw_fs_lower_pack.cpp \
-	brw_fs_nir.cpp \
-	brw_fs_reg_allocate.cpp \
-	brw_fs_register_coalesce.cpp \
-	brw_fs_saturate_propagation.cpp \
-	brw_fs_sel_peephole.cpp \
-	brw_fs_surface_builder.cpp \
-	brw_fs_surface_builder.h \
-	brw_fs_validate.cpp \
-	brw_fs_visitor.cpp \
-	brw_inst.h \
-	brw_interpolation_map.c \
-	brw_ir_allocator.h \
-	brw_ir_fs.h \
-	brw_ir_vec4.h \
-	brw_nir.h \
-	brw_nir.c \
-	brw_nir_analyze_boolean_resolves.c \
-	brw_nir_attribute_workarounds.c \
-	brw_nir_intrinsics.c \
-	brw_nir_opt_peephole_ffma.c \
-	brw_nir_tcs_workarounds.c \
-	brw_packed_float.c \
-	brw_predicated_break.cpp \
-	brw_reg.h \
-	brw_schedule_instructions.cpp \
-	brw_shader.cpp \
-	brw_shader.h \
-	brw_util.c \
-	brw_util.h \
-	brw_vec4_builder.h \
-	brw_vec4_cmod_propagation.cpp \
-	brw_vec4_copy_propagation.cpp \
-	brw_vec4.cpp \
-	brw_vec4_cse.cpp \
-	brw_vec4_dead_code_eliminate.cpp \
-	brw_vec4_generator.cpp \
-	brw_vec4_gs_visitor.cpp \
-	brw_vec4_gs_visitor.h \
-	brw_vec4.h \
-	brw_vec4_live_variables.cpp \
-	brw_vec4_live_variables.h \
-	brw_vec4_nir.cpp \
-	brw_vec4_gs_nir.cpp \
-	brw_vec4_reg_allocate.cpp \
-	brw_vec4_surface_builder.cpp \
-	brw_vec4_surface_builder.h \
-	brw_vec4_tcs.cpp \
-	brw_vec4_tcs.h \
-	brw_vec4_tes.cpp \
-	brw_vec4_tes.h \
-	brw_vec4_visitor.cpp \
-	brw_vec4_vs_visitor.cpp \
-	brw_vec4_vs.h \
-	brw_vue_map.c \
-	brw_wm_iz.cpp \
-	gen6_gs_visitor.cpp \
-	gen6_gs_visitor.h \
-	intel_asm_annotation.c \
-	intel_asm_annotation.h
-
-i965_compiler_GENERATED_FILES = \
-	brw_nir_trig_workarounds.c
-
 i965_FILES = \
 	brw_binding_tables.c \
 	brw_blorp.c \
@@ -158,6 +67,8 @@ i965_FILES = \
 	brw_tes_surface_state.c \
 	brw_tex_layout.c \
 	brw_urb.c \
+	brw_util.c \
+	brw_util.h \
 	brw_vs.c \
 	brw_vs.h \
 	brw_vs_state.c \

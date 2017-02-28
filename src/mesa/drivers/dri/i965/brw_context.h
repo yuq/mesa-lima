@@ -37,7 +37,7 @@
 #include "main/macros.h"
 #include "main/mtypes.h"
 #include "brw_structs.h"
-#include "brw_compiler.h"
+#include "compiler/brw_compiler.h"
 #include "intel_aub.h"
 
 #include "isl/isl.h"

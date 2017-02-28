@@ -30,7 +30,7 @@
 #include "util/mesa-sha1.h"
 #include "common/gen_l3_config.h"
 #include "anv_private.h"
-#include "brw_nir.h"
+#include "compiler/brw_nir.h"
 #include "anv_nir.h"
 #include "spirv/nir_spirv.h"
 

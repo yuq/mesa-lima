@@ -1,4 +1,7 @@
 #
+# Copyright (C) 2011 Intel Corporation
+# Copyright (C) 2010-2011 Chia-I Wu <olvaffe@gmail.com>
+# Copyright (C) 2010-2011 LunarG
 # Copyright (C) 2016 Linaro, Ltd., Rob Herring <robh@kernel.org>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
@@ -20,21 +23,47 @@
 # DEALINGS IN THE SOFTWARE.
 #
 
-ifeq ($(LOCAL_MODULE_CLASS),)
-LOCAL_MODULE_CLASS := SHARED_LIBRARIES
-endif
+# ---------------------------------------
+# Build libmesa_intel_compiler
+# ---------------------------------------
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := libmesa_intel_compiler
+LOCAL_MODULE_CLASS := STATIC_LIBRARIES
+
+LOCAL_SRC_FILES := \
+	$(COMPILER_FILES)
+
+LOCAL_C_INCLUDES := \
+	$(MESA_TOP)/src/intel \
+	$(MESA_TOP)/src/mapi \
+	$(MESA_TOP)/src/mesa \
+	$(MESA_TOP)/src/gallium/auxiliary \
+	$(MESA_TOP)/src/gallium/include \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_glsl,,)/glsl \
+	$(call generated-sources-dir-for,STATIC_LIBRARIES,libmesa_nir,,)/nir \
+	$(MESA_TOP)/src/compiler/nir
+
+LOCAL_SHARED_LIBRARIES := \
+	libdrm_intel
 
 brw_nir_trig_workarounds_deps := \
-	$(LOCAL_PATH)/brw_nir_trig_workarounds.py \
+	$(LOCAL_PATH)/compiler/brw_nir_trig_workarounds.py \
 	$(MESA_TOP)/src/compiler/nir/nir_algebraic.py
 
 intermediates := $(call local-generated-sources-dir)
 
-$(intermediates)/brw_nir_trig_workarounds.c: $(brw_nir_trig_workarounds_deps)
+$(intermediates)/compiler/brw_nir_trig_workarounds.c: $(brw_nir_trig_workarounds_deps)
 	@mkdir -p $(dir $@)
 	$(hide) PYTHONPATH=$(MESA_TOP)/src/compiler/nir $(MESA_PYTHON2) $< > $@
 
 LOCAL_STATIC_LIBRARIES = libmesa_genxml
 
 LOCAL_GENERATED_SOURCES += $(addprefix $(intermediates)/, \
-	$(i965_compiler_GENERATED_FILES))
+	$(COMPILER_GENERATED_FILES))
+
+LOCAL_GENERATED_SOURCES += $(MESA_GEN_GLSL_H)
+
+include $(MESA_COMMON_MK)
+include $(BUILD_STATIC_LIBRARY)

@@ -16,6 +16,95 @@ COMMON_FILES = \
 	common/gen_urb_config.c \
 	common/gen_sample_positions.h
 
+COMPILER_FILES = \
+	compiler/brw_cfg.cpp \
+	compiler/brw_cfg.h \
+	compiler/brw_compiler.c \
+	compiler/brw_compiler.h \
+	compiler/brw_dead_control_flow.cpp \
+	compiler/brw_dead_control_flow.h \
+	compiler/brw_disasm.c \
+	compiler/brw_eu.c \
+	compiler/brw_eu_compact.c \
+	compiler/brw_eu_defines.h \
+	compiler/brw_eu_emit.c \
+	compiler/brw_eu.h \
+	compiler/brw_eu_util.c \
+	compiler/brw_eu_validate.c \
+	compiler/brw_fs_builder.h \
+	compiler/brw_fs_cmod_propagation.cpp \
+	compiler/brw_fs_combine_constants.cpp \
+	compiler/brw_fs_copy_propagation.cpp \
+	compiler/brw_fs.cpp \
+	compiler/brw_fs_cse.cpp \
+	compiler/brw_fs_dead_code_eliminate.cpp \
+	compiler/brw_fs_generator.cpp \
+	compiler/brw_fs.h \
+	compiler/brw_fs_live_variables.cpp \
+	compiler/brw_fs_live_variables.h \
+	compiler/brw_fs_lower_d2x.cpp \
+	compiler/brw_fs_lower_pack.cpp \
+	compiler/brw_fs_nir.cpp \
+	compiler/brw_fs_reg_allocate.cpp \
+	compiler/brw_fs_register_coalesce.cpp \
+	compiler/brw_fs_saturate_propagation.cpp \
+	compiler/brw_fs_sel_peephole.cpp \
+	compiler/brw_fs_surface_builder.cpp \
+	compiler/brw_fs_surface_builder.h \
+	compiler/brw_fs_validate.cpp \
+	compiler/brw_fs_visitor.cpp \
+	compiler/brw_inst.h \
+	compiler/brw_interpolation_map.c \
+	compiler/brw_ir_allocator.h \
+	compiler/brw_ir_fs.h \
+	compiler/brw_ir_vec4.h \
+	compiler/brw_nir.h \
+	compiler/brw_nir.c \
+	compiler/brw_nir_analyze_boolean_resolves.c \
+	compiler/brw_nir_attribute_workarounds.c \
+	compiler/brw_nir_intrinsics.c \
+	compiler/brw_nir_opt_peephole_ffma.c \
+	compiler/brw_nir_tcs_workarounds.c \
+	compiler/brw_packed_float.c \
+	compiler/brw_predicated_break.cpp \
+	compiler/brw_reg.h \
+	compiler/brw_schedule_instructions.cpp \
+	compiler/brw_shader.cpp \
+	compiler/brw_shader.h \
+	compiler/brw_vec4_builder.h \
+	compiler/brw_vec4_cmod_propagation.cpp \
+	compiler/brw_vec4_copy_propagation.cpp \
+	compiler/brw_vec4.cpp \
+	compiler/brw_vec4_cse.cpp \
+	compiler/brw_vec4_dead_code_eliminate.cpp \
+	compiler/brw_vec4_generator.cpp \
+	compiler/brw_vec4_gs_visitor.cpp \
+	compiler/brw_vec4_gs_visitor.h \
+	compiler/brw_vec4.h \
+	compiler/brw_vec4_live_variables.cpp \
+	compiler/brw_vec4_live_variables.h \
+	compiler/brw_vec4_nir.cpp \
+	compiler/brw_vec4_gs_nir.cpp \
+	compiler/brw_vec4_reg_allocate.cpp \
+	compiler/brw_vec4_surface_builder.cpp \
+	compiler/brw_vec4_surface_builder.h \
+	compiler/brw_vec4_tcs.cpp \
+	compiler/brw_vec4_tcs.h \
+	compiler/brw_vec4_tes.cpp \
+	compiler/brw_vec4_tes.h \
+	compiler/brw_vec4_visitor.cpp \
+	compiler/brw_vec4_vs_visitor.cpp \
+	compiler/brw_vec4_vs.h \
+	compiler/brw_vue_map.c \
+	compiler/brw_wm_iz.cpp \
+	compiler/gen6_gs_visitor.cpp \
+	compiler/gen6_gs_visitor.h \
+	compiler/intel_asm_annotation.c \
+	compiler/intel_asm_annotation.h
+
+COMPILER_GENERATED_FILES = \
+	compiler/brw_nir_trig_workarounds.c
+
 GENXML_GENERATED_FILES = \
 	genxml/gen4_pack.h \
 	genxml/gen45_pack.h \

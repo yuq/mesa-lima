@@ -56,8 +56,6 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/compiler/nir \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
-	-I$(top_srcdir)/src/mesa/drivers/dri/common \
-	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
 	-I$(top_builddir)/src/intel \
@@ -123,7 +121,7 @@ VULKAN_LIB_DEPS += \
 	libvulkan_common.la \
 	$(top_builddir)/src/vulkan/libvulkan_util.la \
 	$(top_builddir)/src/vulkan/libvulkan_wsi.la \
-	$(top_builddir)/src/mesa/drivers/dri/i965/libi965_compiler.la \
+	$(top_builddir)/src/intel/compiler/libintel_compiler.la \
 	$(top_builddir)/src/compiler/nir/libnir.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/intel/common/libintel_common.la \

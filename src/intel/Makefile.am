@@ -26,12 +26,15 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/include \
 	-I$(top_builddir)/src \
 	-I$(top_srcdir)/src \
+	-I$(top_builddir)/src/compiler/glsl \
+	-I$(top_srcdir)/src/compiler/glsl \
 	-I$(top_builddir)/src/compiler/nir \
+	-I$(top_srcdir)/src/compiler/nir \
+	-I$(top_srcdir)/src/gtest/include \
 	-I$(top_builddir)/src/intel \
 	-I$(top_srcdir)/src/intel \
 	-I$(top_srcdir)/src/mapi \
 	-I$(top_srcdir)/src/mesa \
-	-I$(top_srcdir)/src/mesa/drivers/dri/i965 \
 	-I$(top_srcdir)/src/gallium/auxiliary \
 	-I$(top_srcdir)/src/gallium/include \
 	$(INTEL_CFLAGS) \
@@ -54,6 +57,7 @@ EXTRA_DIST =
 
 include Makefile.blorp.am
 include Makefile.common.am
+include Makefile.compiler.am
 include Makefile.genxml.am
 include Makefile.isl.am
 

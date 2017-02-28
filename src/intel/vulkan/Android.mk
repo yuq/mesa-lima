@@ -31,9 +31,8 @@ VULKAN_COMMON_INCLUDES := \
 	$(MESA_TOP)/src/gallium/auxiliary \
 	$(MESA_TOP)/src/gallium/include \
 	$(MESA_TOP)/src/mesa \
-	$(MESA_TOP)/src/mesa/drivers/dri/common \
-	$(MESA_TOP)/src/mesa/drivers/dri/i965 \
 	$(MESA_TOP)/src/vulkan/wsi \
+	$(MESA_TOP)/src/intel \
 	$(MESA_TOP)/src/intel/vulkan
 
 # libmesa_anv_entrypoints with header and dummy.c
@@ -220,7 +219,7 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 	libmesa_anv_gen75 \
 	libmesa_anv_gen8 \
 	libmesa_anv_gen9 \
-	libmesa_i965_compiler \
+	libmesa_intel_compiler \
 	libmesa_anv_entrypoints
 
 LOCAL_SHARED_LIBRARIES := \

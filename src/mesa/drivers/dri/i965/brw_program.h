@@ -24,7 +24,7 @@
 #ifndef BRW_PROGRAM_H
 #define BRW_PROGRAM_H
 
-#include "brw_compiler.h"
+#include "compiler/brw_compiler.h"
 
 #ifdef __cplusplus
 extern "C" {

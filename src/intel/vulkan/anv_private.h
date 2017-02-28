@@ -43,7 +43,7 @@
 
 #include "common/gen_device_info.h"
 #include "blorp/blorp.h"
-#include "brw_compiler.h"
+#include "compiler/brw_compiler.h"
 #include "util/macros.h"
 #include "util/list.h"
 #include "util/u_vector.h"
