@@ -14,6 +14,7 @@ AM_CPPFLAGS = \
 
 TESTS = glx-test dispatch-index-check
 check_PROGRAMS = glx-test
+EXTRA_DIST = dispatch-index-check
 
 glx_test_SOURCES =			\
 	clientinfo_unittest.cpp		\
