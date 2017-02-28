@@ -29,8 +29,6 @@ import xml.etree.cElementTree as et
 
 from mako.template import Template
 
-VK_XML = os.path.join(os.path.dirname(__file__), '..', 'registry', 'vk.xml')
-
 COPYRIGHT = textwrap.dedent(u"""\
     * Copyright © 2017 Intel Corporation
     *
@@ -160,13 +158,14 @@ def xml_parser(filename):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
     parser.add_argument('--outdir',
                         help='Directory to put the generated files in',
                         required=True)
 
     args = parser.parse_args()
 
-    enums = xml_parser(VK_XML)
+    enums = xml_parser(args.xml)
     for template, file_ in [(C_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.c')),
                             (H_TEMPLATE, os.path.join(args.outdir, 'vk_enum_to_str.h'))]:
         with open(file_, 'wb') as f:

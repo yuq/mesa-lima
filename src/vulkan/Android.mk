@@ -45,7 +45,7 @@ vulkan_api_xml = $(MESA_TOP)/src/vulkan/registry/vk.xml
 $(LOCAL_GENERATED_SOURCES): $(MESA_TOP)/src/vulkan/util/gen_enum_to_str.py $(vulkan_api_xml)
 	@echo "target Generated: $(PRIVATE_MODULE) <= $(notdir $(@))"
 	@mkdir -p $(dir $@)
-	$(hide) $(MESA_PYTHON2) $(MESA_TOP)/src/vulkan/util/gen_enum_to_str.py --outdir $(intermediates)/util
+	$(hide) $(MESA_PYTHON2) $(MESA_TOP)/src/vulkan/util/gen_enum_to_str.py --xml $(vulkan_api_xml) --outdir $(intermediates)/util
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
         $(intermediates)
