@@ -131,6 +131,11 @@ pipe_r600_la_LIBADD = \
 	$(LIBDRM_LIBS) \
 	$(RADEON_LIBS)
 
+if NEED_RADEON_LLVM
+pipe_r600_la_LIBADD += \
+	$(top_builddir)/src/amd/common/libamd_common.la
+endif
+
 endif
 
 if HAVE_GALLIUM_RADEONSI
