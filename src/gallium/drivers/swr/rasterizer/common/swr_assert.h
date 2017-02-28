@@ -165,7 +165,19 @@ void SwrTrace(
 #define SWR_REL_TRACE(_fmtstr, ...)     _SWR_TRACE(_fmtstr, ##__VA_ARGS__)
 
 // SWR_INVALID is always enabled
-#define SWR_INVALID(fmtStr, ...)                _SWR_INVALID(false, fmtStr, ##__VA_ARGS__)
+// Funky handling to allow 0 arguments with g++/gcc
+// This is needed because you can't "swallow commas" with ##_VA_ARGS__ unless
+// there is a first argument to the macro.  So having a macro that can optionally
+// accept 0 arguments is tricky.
+#define _SWR_INVALID_0()                _SWR_INVALID(false)
+#define _SWR_INVALID_1(...)             _SWR_INVALID(false, ##__VA_ARGS__)
+#define _SWR_INVALID_VARGS_(_10, _9, _8, _7, _6, _5, _4, _3, _2, _1, N, ...) N
+#define _SWR_INVALID_VARGS(...)         _SWR_INVALID_VARGS_(__VA_ARGS__, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1)
+#define _SWR_INVALID_VARGS_0()          1, 2, 3, 4, 5, 6, 7, 9, 9, 10
+#define _SWR_INVALID_CONCAT_(a, b)      a##b
+#define _SWR_INVALID_CONCAT(a, b)       _SWR_INVALID_CONCAT_(a, b)
+#define SWR_INVALID(...)                \
+    _SWR_INVALID_CONCAT(_SWR_INVALID_,_SWR_INVALID_VARGS(_SWR_INVALID_VARGS_0 __VA_ARGS__ ()))(__VA_ARGS__)
 #endif
 
 #endif // C++
