@@ -658,26 +658,74 @@ VkResult anv_GetPhysicalDeviceImageFormatProperties(
 
 VkResult anv_GetPhysicalDeviceImageFormatProperties2KHR(
     VkPhysicalDevice                            physicalDevice,
-    const VkPhysicalDeviceImageFormatInfo2KHR*  pImageFormatInfo,
-    VkImageFormatProperties2KHR*                pImageFormatProperties)
+    const VkPhysicalDeviceImageFormatInfo2KHR*  base_info,
+    VkImageFormatProperties2KHR*                base_props)
 {
    ANV_FROM_HANDLE(anv_physical_device, physical_device, physicalDevice);
+   const VkPhysicalDeviceExternalImageFormatInfoKHX *external_info = NULL;
+   VkExternalImageFormatPropertiesKHX *external_props = NULL;
    VkResult result;
 
-   result = anv_get_image_format_properties(physical_device, pImageFormatInfo,
-               &pImageFormatProperties->imageFormatProperties);
+   result = anv_get_image_format_properties(physical_device, base_info,
+               &base_props->imageFormatProperties);
    if (result != VK_SUCCESS)
-      return result;
+      goto fail;
 
-   vk_foreach_struct(ext, pImageFormatProperties->pNext) {
-      switch (ext->sType) {
+   /* Extract input structs */
+   vk_foreach_struct_const(s, base_info->pNext) {
+      switch (s->sType) {
+      case VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO_KHX:
+         external_info = (const void *) s;
+         break;
       default:
-         anv_debug_ignored_stype(ext->sType);
+         anv_debug_ignored_stype(s->sType);
          break;
       }
    }
 
+   /* Extract output structs */
+   vk_foreach_struct(s, base_props->pNext) {
+      switch (s->sType) {
+      case VK_STRUCTURE_TYPE_EXTERNAL_IMAGE_FORMAT_PROPERTIES_KHX:
+         external_props = (void *) s;
+         break;
+      default:
+         anv_debug_ignored_stype(s->sType);
+         break;
+      }
+   }
+
+   /* From the Vulkan 1.0.42 spec:
+    *
+    *    If handleType is 0, vkGetPhysicalDeviceImageFormatProperties2KHR will
+    *    behave as if VkPhysicalDeviceExternalImageFormatInfoKHX was not
+    *    present and VkExternalImageFormatPropertiesKHX will be ignored.
+    */
+   if (external_info && external_info->handleType != 0) {
+      /* FINISHME: Support at least one external memory type for images. */
+      (void) external_props;
+
+      result = vk_errorf(VK_ERROR_FORMAT_NOT_SUPPORTED,
+                         "unsupported VkExternalMemoryTypeFlagBitsKHX 0x%x",
+                         external_info->handleType);
+      goto fail;
+   }
+
    return VK_SUCCESS;
+
+ fail:
+   if (result == VK_ERROR_FORMAT_NOT_SUPPORTED) {
+      /* From the Vulkan 1.0.42 spec:
+       *
+       *    If the combination of parameters to
+       *    vkGetPhysicalDeviceImageFormatProperties2KHR is not supported by
+       *    the implementation for use in vkCreateImage, then all members of
+       *    imageFormatProperties will be filled with zero.
+       */
+      base_props->imageFormatProperties = (VkImageFormatProperties) {0};
+   }
+
+   return result;
 }
 
 void anv_GetPhysicalDeviceSparseImageFormatProperties(
@@ -702,4 +750,15 @@ void anv_GetPhysicalDeviceSparseImageFormatProperties2KHR(
 {
    /* Sparse images are not yet supported. */
    *pPropertyCount = 0;
+}
+
+void anv_GetPhysicalDeviceExternalBufferPropertiesKHX(
+    VkPhysicalDevice                             physicalDevice,
+    const VkPhysicalDeviceExternalBufferInfoKHX* pExternalBufferInfo,
+    VkExternalBufferPropertiesKHX*               pExternalBufferProperties)
+{
+   anv_finishme("Handle external buffers");
+
+   pExternalBufferProperties->externalMemoryProperties =
+      (VkExternalMemoryPropertiesKHX) {0};
 }
