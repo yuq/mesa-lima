@@ -1,17 +1,20 @@
 #!/bin/sh
 
-# The build system runs this test from a different working directory, and may
-# be in a build directory entirely separate from the source. So if the
-# "srcdir" variable is set, we must use it to locate the test files and the
-# glcpp-test script.
+if [ -z "$srcdir" -o -z "$abs_builddir" ]; then
+    echo ""
+    echo "Warning: you're invoking the script manually and things may fail."
+    echo "Attempting to determine/set srcdir and abs_builddir variables."
+    echo ""
 
-if [ ! -z "$srcdir" ]; then
-   testdir="$srcdir/glsl/glcpp/tests"
-   glcpp_test="$srcdir/glsl/glcpp/tests/glcpp-test.sh"
-else
-   testdir=.
-   glcpp_test=./glcpp-test.sh
+    # Should point to `dirname Makefile.glsl.am`
+    srcdir=./../../../
+    cd `dirname "$0"`
+    # Should point to `dirname Makefile` equivalent to the above.
+    abs_builddir=`pwd`/../../../
 fi
+
+testdir="$srcdir/glsl/glcpp/tests"
+glcpp_test="$srcdir/glsl/glcpp/tests/glcpp-test.sh"
 
 total=0
 pass=0
@@ -99,7 +102,7 @@ mkdir subtest-cr
 for file in "$testdir"/*.c; do
     base=$(basename "$file")
     tr "\n" "\r" < "$file" > subtest-cr/"$base"
-    cp `pwd`/glsl/glcpp/tests/subtest-lf/"$base".out subtest-cr/"$base".expected
+    cp $abs_builddir/glsl/glcpp/tests/subtest-lf/"$base".out subtest-cr/"$base".expected
 done
 
 run_test "${glcpp_test} --testdir=subtest-cr"
@@ -112,7 +115,7 @@ mkdir subtest-cr-lf
 for file in "$testdir"/*.c; do
     base=$(basename "$file")
     sed -e 's/$//' < "$file" > subtest-cr-lf/"$base"
-    cp `pwd`/glsl/glcpp/tests/subtest-lf/"$base".out subtest-cr-lf/"$base".expected
+    cp $abs_builddir/glsl/glcpp/tests/subtest-lf/"$base".out subtest-cr-lf/"$base".expected
 done
 
 run_test "${glcpp_test} --testdir=subtest-cr-lf"
@@ -125,7 +128,7 @@ mkdir subtest-lf-cr
 for file in "$testdir"/*.c; do
     base=$(basename "$file")
     sed -e 's/$//' < "$file" | tr "\n\r" "\r\n" > subtest-lf-cr/"$base"
-    cp `pwd`/glsl/glcpp/tests/subtest-lf/"$base".out subtest-lf-cr/"$base".expected
+    cp $abs_builddir/glsl/glcpp/tests/subtest-lf/"$base".out subtest-lf-cr/"$base".expected
 done
 
 run_test "${glcpp_test} --testdir=subtest-lf-cr"
