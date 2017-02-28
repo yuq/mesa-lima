@@ -159,6 +159,23 @@ VkResult anv_QueueSubmit(
    pthread_mutex_lock(&device->mutex);
 
    for (uint32_t i = 0; i < submitCount; i++) {
+      if (pSubmits[i].commandBufferCount == 0) {
+         /* If we don't have any command buffers, we need to submit a dummy
+          * batch to give GEM something to wait on.  We could, potentially,
+          * come up with something more efficient but this shouldn't be a
+          * common case.
+          */
+         result = anv_cmd_buffer_execbuf(device, NULL,
+                                         pSubmits[i].pWaitSemaphores,
+                                         pSubmits[i].waitSemaphoreCount,
+                                         pSubmits[i].pSignalSemaphores,
+                                         pSubmits[i].signalSemaphoreCount);
+         if (result != VK_SUCCESS)
+            goto out;
+
+         continue;
+      }
+
       for (uint32_t j = 0; j < pSubmits[i].commandBufferCount; j++) {
          ANV_FROM_HANDLE(anv_cmd_buffer, cmd_buffer,
                          pSubmits[i].pCommandBuffers[j]);

@@ -1388,6 +1388,23 @@ setup_execbuf_for_cmd_buffer(struct anv_execbuf *execbuf,
    return VK_SUCCESS;
 }
 
+static void
+setup_empty_execbuf(struct anv_execbuf *execbuf, struct anv_device *device)
+{
+   anv_execbuf_add_bo(execbuf, &device->trivial_batch_bo, NULL, 0,
+                      &device->alloc);
+
+   execbuf->execbuf = (struct drm_i915_gem_execbuffer2) {
+      .buffers_ptr = (uintptr_t) execbuf->objects,
+      .buffer_count = execbuf->bo_count,
+      .batch_start_offset = 0,
+      .batch_len = 8, /* GEN7_MI_BATCH_BUFFER_END and NOOP */
+      .flags = I915_EXEC_HANDLE_LUT | I915_EXEC_RENDER,
+      .rsvd1 = device->context_id,
+      .rsvd2 = 0,
+   };
+}
+
 VkResult
 anv_cmd_buffer_execbuf(struct anv_device *device,
                        struct anv_cmd_buffer *cmd_buffer,
@@ -1448,9 +1465,14 @@ anv_cmd_buffer_execbuf(struct anv_device *device,
       }
    }
 
-   result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
-   if (result != VK_SUCCESS)
-      return result;
+   if (cmd_buffer) {
+      result = setup_execbuf_for_cmd_buffer(&execbuf, cmd_buffer);
+      if (result != VK_SUCCESS)
+         return result;
+   } else {
+      setup_empty_execbuf(&execbuf, device);
+   }
+
 
    result = anv_device_execbuf(device, &execbuf.execbuf, execbuf.bos);
 

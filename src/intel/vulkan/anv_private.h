@@ -745,6 +745,7 @@ struct anv_device {
     struct anv_state_pool                       surface_state_pool;
 
     struct anv_bo                               workaround_bo;
+    struct anv_bo                               trivial_batch_bo;
 
     struct anv_pipeline_cache                   blorp_shader_cache;
     struct blorp_context                        blorp;
