@@ -460,7 +460,10 @@ INLINE simd16scalar _simd16_cmp_ps(simd16scalar a, simd16scalar b)
 #define _simd16_cmple_ps(a, b) _simd16_cmp_ps<_CMP_LE_OQ>(a, b)
 
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_and_ps, _simd_and_ps)
+SIMD16_EMU_AVX512_2(simd16scalar, _simd16_andnot_ps, _simd_andnot_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_or_ps, _simd_or_ps)
+SIMD16_EMU_AVX512_2(simd16scalar, _simd16_xor_ps, _simd_xor_ps)
+
 SIMD16_EMU_AVX512_1(simd16scalar, _simd16_rcp_ps, _simd_rcp_ps)
 SIMD16_EMU_AVX512_2(simd16scalar, _simd16_div_ps, _simd_div_ps)
 
@@ -494,8 +497,6 @@ INLINE simd16scalard _simd16_castps_pd(simd16scalar a)
     return *reinterpret_cast<simd16scalard *>(&a);
 }
 
-SIMD16_EMU_AVX512_2(simd16scalar, _simd16_andnot_ps, _mm256_andnot_ps)
-
 template <int mode>
 INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
 {
@@ -518,10 +519,12 @@ SIMD16_EMU_AVX512_2(simd16scalari, _simd16_max_epi32, _simd_max_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_min_epu32, _simd_min_epu32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_max_epu32, _simd_max_epu32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_add_epi32, _simd_add_epi32)
+
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_and_si, _simd_and_si)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_andnot_si, _simd_andnot_si)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_or_si, _simd_or_si)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_xor_si, _simd_xor_si)
+
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpeq_epi32, _simd_cmpeq_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmpgt_epi32, _simd_cmpgt_epi32)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_cmplt_epi32, _simd_cmplt_epi32)
@@ -592,7 +595,6 @@ INLINE simd16scalari _simd16_srli_epi32_temp(simd16scalari a)
 SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmadd_ps, _simd_fmadd_ps)
 SIMD16_EMU_AVX512_3(simd16scalar, _simd16_fmsub_ps, _simd_fmsub_ps)
 
-//__m256 _simd_i32gather_ps(const float* pBase, __m256i vOffsets, const int scale)
 template <int scale>
 INLINE simd16scalar _simd16_i32gather_ps_temp(const float *m, simd16scalari index)
 {
@@ -606,7 +608,6 @@ INLINE simd16scalar _simd16_i32gather_ps_temp(const float *m, simd16scalari inde
 
 #define _simd16_i32gather_ps(m, index, scale) _simd16_i32gather_ps_temp<scale>(m, index)
 
-//__m256 _simd_mask_i32gather_ps(__m256 vSrc, const float* pBase, __m256i vOffsets, __m256 vMask, const int scale)
 template <int scale>
 INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *m, simd16scalari index, simd16scalari mask)
 {
@@ -618,7 +619,7 @@ INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *
     return result;
 }
 
-#define _simd16_mask_i32gather_ps(a, m, index, mask, scale) _simd16_mask_i32gather_ps_temp<scale>(a, m, mask, index)
+#define _simd16_mask_i32gather_ps(a, m, index, mask, scale) _simd16_mask_i32gather_ps_temp<scale>(a, m, index, mask)
 
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_shuffle_epi8, _simd_shuffle_epi8)
 SIMD16_EMU_AVX512_2(simd16scalari, _simd16_adds_epu8, _simd_adds_epu8)
@@ -941,7 +942,10 @@ INLINE simd16scalar _simd16_cmp_ps_temp(simd16scalar a, simd16scalar b)
 #define _simd16_castpd_ps           _mm512_castpd_ps
 #define _simd16_castps_pd           _mm512_castps_pd
 
+#define _simd16_and_ps              _mm512_and_ps
 #define _simd16_andnot_ps           _mm512_andnot_ps
+#define _simd16_or_ps               _mm512_or_ps
+#define _simd16_xor_ps              _mm512_xor_ps
 
 template <int mode>
 INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
@@ -960,6 +964,7 @@ INLINE simd16scalar _simd16_round_ps_temp(simd16scalar a)
 #define _simd16_min_epu32         _mm512_min_epu32
 #define _simd16_max_epu32         _mm512_max_epu32
 #define _simd16_add_epi32         _mm512_add_epi32
+
 #define _simd16_and_si            _mm512_and_si512
 #define _simd16_andnot_si         _mm512_andnot_si512
 #define _simd16_or_si             _mm512_or_si512
@@ -1023,7 +1028,16 @@ INLINE int _simd16_testz_ps(simd16scalar a, simd16scalar b)
 #define _simd16_fmsub_ps          _mm512_fmsub_ps
 
 #define _simd16_i32gather_ps(m, index, scale)               _mm512_i32gather_ps(index, m, scale)
-#define _simd16_mask_i32gather_ps(a, m, index, mask, scale) _mm512_mask_i32gather_ps(a, m, index, mask, scale)
+
+template <int scale>
+INLINE simd16scalar _simd16_mask_i32gather_ps_temp(simd16scalar a, const float *m, simd16scalari index, simd16scalari mask)
+{
+    __mmask16 k = _mm512_cmpneq_epi32_mask(mask, _mm512_setzero_si512());
+
+    return _mm512_mask_i32gather_ps(a, k, index, m, scale);
+}
+
+#define _simd16_mask_i32gather_ps(a, m, index, mask, scale) _simd16_mask_i32gather_ps_temp<scale>(a, m, index, mask)
 
 #define _simd16_abs_epi32         _mm512_abs_epi32
 #define _simd16_cmpeq_epi64       _mm512_abs_epi32

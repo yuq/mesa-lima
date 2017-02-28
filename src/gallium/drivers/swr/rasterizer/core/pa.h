@@ -160,7 +160,7 @@ struct PA_STATE_OPT : public PA_STATE
     bool               nextReset{ false };
     bool               isStreaming{ false };
 
-    SIMDMASK tmpIndices{ 0 };            // temporary index store for unused virtual function
+    SIMDMASK           junkIndices  { 0 };          // temporary index store for unused virtual function
     
     PA_STATE_OPT() {}
     PA_STATE_OPT(DRAW_CONTEXT* pDC, uint32_t numPrims, uint8_t* pStream, uint32_t streamSizeInVerts,
@@ -257,7 +257,7 @@ struct PA_STATE_OPT : public PA_STATE
     SIMDMASK& GetNextVsIndices()
     {
         // unused in optimized PA, pass tmp buffer back
-        return tmpIndices;
+        return junkIndices;
     }
 
     bool GetNextStreamOutput()
@@ -390,6 +390,12 @@ struct PA_STATE_CUT : public PA_STATE
     bool processCutVerts{ false };       // vertex indices with cuts should be processed as normal, otherwise they
                                          // are ignored.  Fetch shader sends invalid verts on cuts that should be ignored
                                          // while the GS sends valid verts for every index 
+
+    simdvector      junkVector;          // junk simdvector for unimplemented API
+#if ENABLE_AVX512_SIMD16
+    simd16vector    junkVector_simd16;   // junk simd16vector for unimplemented API
+#endif
+
     // Topology state tracking
     uint32_t vert[MAX_NUM_VERTS_PER_PRIM];
     uint32_t curIndex{ 0 };
@@ -471,8 +477,7 @@ struct PA_STATE_CUT : public PA_STATE
     {
         // unused
         SWR_ASSERT(0 && "Not implemented");
-        static simdvector junk;
-        return junk;
+        return junkVector;
     }
 
 #if ENABLE_AVX512_SIMD16
@@ -480,8 +485,7 @@ struct PA_STATE_CUT : public PA_STATE
     {
         // unused
         SWR_ASSERT(0 && "Not implemented");
-        static simd16vector junk;
-        return junk;
+        return junkVector_simd16;
     }
 
 #endif
@@ -673,7 +677,7 @@ struct PA_STATE_CUT : public PA_STATE
 #if USE_SIMD16_FRONTEND
                 simd16scalar temp = _simd16_i32gather_ps(pBase, offsets, 1);
 
-                verts[v].v[c] = useAlternateOffset ? temp.hi : temp.lo;
+                verts[v].v[c] = useAlternateOffset ? _simd16_extract_ps(temp, 1) : _simd16_extract_ps(temp, 0);
 #else
                 verts[v].v[c] = _simd_i32gather_ps(pBase, offsets, 1);
 #endif
@@ -722,8 +726,7 @@ struct PA_STATE_CUT : public PA_STATE
 #if USE_SIMD16_FRONTEND
                 verts[v].v[c] = _simd16_i32gather_ps(pBase, offsets, 1);
 #else
-                verts[v].v[c].lo = _simd_i32gather_ps(pBase, offsets, 1);
-                verts[v].v[c].hi = _simd_setzero_ps();
+                verts[v].v[c] = _simd16_insert_ps(_simd15_setzero_ps(), _simd_i32gather_ps(pBase, offsets, 1));
 #endif
 
                 // move base to next component
@@ -1158,16 +1161,14 @@ struct PA_TESS : PA_STATE
     simdvector& GetSimdVector(uint32_t index, uint32_t slot)
     {
         SWR_INVALID("%s NOT IMPLEMENTED", __FUNCTION__);
-        static simdvector junk;
-        return junk;
+        return junkVector;
     }
 
 #if ENABLE_AVX512_SIMD16
     simd16vector& GetSimdVector_simd16(uint32_t index, uint32_t slot)
     {
         SWR_INVALID("%s NOT IMPLEMENTED", __FUNCTION__);
-        static simd16vector junk;
-        return junk;
+        return junkVector_simd16;
     }
 
 #endif
@@ -1225,7 +1226,7 @@ struct PA_TESS : PA_STATE
                     mask,
                     4 /* gcc doesn't like sizeof(float) */);
 
-                verts[i].v[c] = useAlternateOffset ? temp.hi : temp.lo;
+                verts[i].v[c] = useAlternateOffset ? _simd16_extract_ps(temp, 1) : _simd16_extract_ps(temp, 0);
 #else
                 verts[i].v[c] = _simd_mask_i32gather_ps(
                     _simd_setzero_ps(),
@@ -1274,13 +1275,13 @@ struct PA_TESS : PA_STATE
                     mask,
                     4 /* gcc doesn't like sizeof(float) */);
 #else
-                verts[i].v[c].lo = _simd_mask_i32gather_ps(
+                simdscalar temp = _simd_mask_i32gather_ps(
                     _simd_setzero_ps(),
                     pBase,
                     indices,
                     _simd_castsi_ps(mask),
                     4 /* gcc doesn't like sizeof(float) */);
-                verts[i].v[c].hi = _simd_setzero_ps();
+                verts[i].v[c] = _simd16_insert_ps(_simd16_setzero_ps(), temp, 0);
 #endif
                 pBase += m_attributeStrideInVectors * SIMD_WIDTH;
             }
@@ -1328,8 +1329,7 @@ struct PA_TESS : PA_STATE
     SIMDVERTEX& GetNextVsOutput()
     {
         SWR_NOT_IMPL;
-        static SIMDVERTEX junk;
-        return junk;
+        return junkVertex;
     }
 
     bool GetNextStreamOutput()
@@ -1341,8 +1341,7 @@ struct PA_TESS : PA_STATE
     SIMDMASK& GetNextVsIndices()
     {
         SWR_NOT_IMPL;
-        static SIMDMASK junk;
-        return junk;
+        return junkIndices;
     }
 
     uint32_t NumPrims()
@@ -1374,6 +1373,13 @@ private:
     uint32_t            m_numVertsPerPrim = 0;
 
     SIMDSCALARI         m_vPrimId;
+
+    simdvector          junkVector;         // junk simdvector for unimplemented API
+#if ENABLE_AVX512_SIMD16
+    simd16vector        junkVector_simd16;  // junk simd16vector for unimplemented API
+#endif
+    SIMDVERTEX          junkVertex;         // junk SIMDVERTEX for unimplemented API
+    SIMDMASK            junkIndices;        // temporary index store for unused virtual function
 };
 
 // Primitive Assembler factory class, responsible for creating and initializing the correct assembler

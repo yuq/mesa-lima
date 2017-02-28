@@ -2509,7 +2509,7 @@ bool PaRectList2_simd16(
     uint32_t slot,
     simd16vector verts[])
 {
-    SWR_INVALID("Is rect list used for anything other then clears?")
+    SWR_INVALID("Is rect list used for anything other then clears?");
     SetNextPaState_simd16(pa, PaRectList0_simd16, PaRectListSingle0, 0, KNOB_SIMD16_WIDTH, true);
     return true;
 }
