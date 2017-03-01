@@ -48,6 +48,13 @@ void brw_populate_sampler_prog_key_data(struct gl_context *ctx,
 bool brw_debug_recompile_sampler_key(struct brw_context *brw,
                                      const struct brw_sampler_prog_key_data *old_key,
                                      const struct brw_sampler_prog_key_data *key);
+
+uint32_t
+brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
+                                        const struct gl_program *prog,
+                                        struct brw_stage_prog_data *stage_prog_data,
+                                        uint32_t next_binding_table_offset);
+
 void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
                       unsigned surf_index);

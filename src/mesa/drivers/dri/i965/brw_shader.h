@@ -287,12 +287,6 @@ struct brw_gs_compile
    unsigned control_data_header_size_bits;
 };
 
-uint32_t
-brw_assign_common_binding_table_offsets(const struct gen_device_info *devinfo,
-                                        const struct gl_program *prog,
-                                        struct brw_stage_prog_data *stage_prog_data,
-                                        uint32_t next_binding_table_offset);
-
 bool brw_vs_precompile(struct gl_context *ctx, struct gl_program *prog);
 bool brw_tcs_precompile(struct gl_context *ctx,
                         struct gl_shader_program *shader_prog,
