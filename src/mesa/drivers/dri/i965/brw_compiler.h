@@ -443,6 +443,19 @@ struct brw_stage_prog_data {
    struct brw_image_param *image_param;
 };
 
+static inline void
+brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
+                      unsigned surf_index)
+{
+   /* A binding table index is 8 bits and the top 3 values are reserved for
+    * special things (stateless and SLM).
+    */
+   assert(surf_index <= 252);
+
+   prog_data->binding_table.size_bytes =
+      MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
+}
+
 /* Data about a particular attempt to compile a program.  Note that
  * there can be many of these, each in a different GL state
  * corresponding to a different brw_wm_prog_key struct, with different
