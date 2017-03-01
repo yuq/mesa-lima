@@ -106,7 +106,7 @@ gen7_upload_3dstate_so_decl_list(struct brw_context *brw,
       xfb_obj->program->sh.LinkedTransformFeedback;
    uint16_t so_decl[MAX_VERTEX_STREAMS][128];
    int buffer_mask[MAX_VERTEX_STREAMS] = {0, 0, 0, 0};
-   int next_offset[MAX_VERTEX_STREAMS] = {0, 0, 0, 0};
+   int next_offset[BRW_MAX_SOL_BUFFERS] = {0, 0, 0, 0};
    int decls[MAX_VERTEX_STREAMS] = {0, 0, 0, 0};
    int max_decls = 0;
    STATIC_ASSERT(ARRAY_SIZE(so_decl[0]) >= MAX_PROGRAM_OUTPUTS);
