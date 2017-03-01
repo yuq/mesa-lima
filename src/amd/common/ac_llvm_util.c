@@ -180,7 +180,7 @@ static const char *attr_to_str(enum ac_func_attr attr)
 
 #endif
 
-static void
+void
 ac_add_function_attr(LLVMContextRef ctx, LLVMValueRef function,
                      int attr_idx, enum ac_func_attr attr)
 {

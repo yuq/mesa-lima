@@ -262,11 +262,11 @@ create_llvm_function(LLVMContextRef ctx, LLVMModuleRef module,
 	for (unsigned i = 0; i < sgpr_params; ++i) {
 		if (array_params_mask & (1 << i)) {
 			LLVMValueRef P = LLVMGetParam(main_function, i);
-			ac_add_function_attr(main_function, i + 1, AC_FUNC_ATTR_BYVAL);
+			ac_add_function_attr(ctx, main_function, i + 1, AC_FUNC_ATTR_BYVAL);
 			ac_add_attr_dereferenceable(P, UINT64_MAX);
 		}
 		else {
-			ac_add_function_attr(main_function, i + 1, AC_FUNC_ATTR_INREG);
+			ac_add_function_attr(ctx, main_function, i + 1, AC_FUNC_ATTR_INREG);
 		}
 	}
 
