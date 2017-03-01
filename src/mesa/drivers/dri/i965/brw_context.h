@@ -1558,8 +1558,6 @@ brw_program_reloc(struct brw_context *brw, uint32_t state_offset,
    return brw->cache.bo->offset64 + prog_offset;
 }
 
-bool brw_do_cubemap_normalize(struct exec_list *instructions);
-
 static inline bool
 brw_depth_writes_enabled(const struct brw_context *brw)
 {
