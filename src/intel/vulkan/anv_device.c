@@ -360,6 +360,9 @@ void anv_DestroyInstance(
 {
    ANV_FROM_HANDLE(anv_instance, instance, _instance);
 
+   if (!instance)
+      return;
+
    if (instance->physicalDeviceCount > 0) {
       /* We support at most one physical device. */
       assert(instance->physicalDeviceCount == 1);
@@ -1094,6 +1097,9 @@ void anv_DestroyDevice(
     const VkAllocationCallbacks*                pAllocator)
 {
    ANV_FROM_HANDLE(anv_device, device, _device);
+
+   if (!device)
+      return;
 
    anv_device_finish_blorp(device);
 
