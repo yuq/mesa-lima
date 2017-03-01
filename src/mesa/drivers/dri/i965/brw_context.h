@@ -1543,17 +1543,6 @@ brw_program_const(const struct gl_program *p)
    return (const struct brw_program *) p;
 }
 
-/**
- * Pre-gen6, the register file of the EUs was shared between threads,
- * and each thread used some subset allocated on a 16-register block
- * granularity.  The unit states wanted these block counts.
- */
-static inline int
-brw_register_blocks(int reg_count)
-{
-   return ALIGN(reg_count, 16) / 16 - 1;
-}
-
 static inline uint32_t
 brw_program_reloc(struct brw_context *brw, uint32_t state_offset,
 		  uint32_t prog_offset)

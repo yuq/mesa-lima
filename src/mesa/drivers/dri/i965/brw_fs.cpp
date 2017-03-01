@@ -6392,6 +6392,17 @@ demote_sample_qualifiers(nir_shader *nir)
    }
 }
 
+/**
+ * Pre-gen6, the register file of the EUs was shared between threads,
+ * and each thread used some subset allocated on a 16-register block
+ * granularity.  The unit states wanted these block counts.
+ */
+static inline int
+brw_register_blocks(int reg_count)
+{
+   return ALIGN(reg_count, 16) / 16 - 1;
+}
+
 const unsigned *
 brw_compile_fs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
