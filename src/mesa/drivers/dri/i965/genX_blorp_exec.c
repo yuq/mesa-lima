@@ -212,9 +212,6 @@ retry:
    gen7_l3_state.emit(brw);
 #endif
 
-   if (brw->use_resource_streamer)
-      gen7_disable_hw_binding_tables(brw);
-
    brw_emit_depth_stall_flushes(brw);
 
 #if GEN_GEN == 8

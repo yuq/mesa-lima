@@ -824,26 +824,6 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
    const uint32_t _3DSTATE_PIPELINE_SELECT =
       is_965 ? CMD_PIPELINE_SELECT_965 : CMD_PIPELINE_SELECT_GM45;
 
-   if (brw->use_resource_streamer && pipeline != BRW_RENDER_PIPELINE) {
-      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
-       * PIPELINE_SELECT [DevBWR+]":
-       *
-       *   Project: HSW, BDW, CHV, SKL, BXT
-       *
-       *   Hardware Binding Tables are only supported for 3D
-       *   workloads. Resource streamer must be enabled only for 3D
-       *   workloads. Resource streamer must be disabled for Media and GPGPU
-       *   workloads.
-       */
-      BEGIN_BATCH(1);
-      OUT_BATCH(MI_RS_CONTROL | 0);
-      ADVANCE_BATCH();
-
-      gen7_disable_hw_binding_tables(brw);
-
-      /* XXX - Disable gather constant pool too when we start using it. */
-   }
-
    if (brw->gen >= 8 && brw->gen < 10) {
       /* From the Broadwell PRM, Volume 2a: Instructions, PIPELINE_SELECT:
        *
@@ -934,26 +914,6 @@ brw_emit_select_pipeline(struct brw_context *brw, enum brw_pipeline pipeline)
       OUT_BATCH(0);
       OUT_BATCH(0);
       ADVANCE_BATCH();
-   }
-
-   if (brw->use_resource_streamer && pipeline == BRW_RENDER_PIPELINE) {
-      /* From "BXML » GT » MI » vol1a GPU Overview » [Instruction]
-       * PIPELINE_SELECT [DevBWR+]":
-       *
-       *   Project: HSW, BDW, CHV, SKL, BXT
-       *
-       *   Hardware Binding Tables are only supported for 3D
-       *   workloads. Resource streamer must be enabled only for 3D
-       *   workloads. Resource streamer must be disabled for Media and GPGPU
-       *   workloads.
-       */
-      BEGIN_BATCH(1);
-      OUT_BATCH(MI_RS_CONTROL | 1);
-      ADVANCE_BATCH();
-
-      gen7_enable_hw_binding_tables(brw);
-
-      /* XXX - Re-enable gather constant pool here. */
    }
 }
 

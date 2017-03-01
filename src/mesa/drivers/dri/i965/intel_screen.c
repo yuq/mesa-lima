@@ -1806,11 +1806,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
    screen->program_id = 1;
 
-   if (screen->devinfo.has_resource_streamer) {
-      screen->has_resource_streamer =
-        intel_get_boolean(screen, I915_PARAM_HAS_RESOURCE_STREAMER);
-   }
-
    screen->has_exec_fence =
      intel_get_boolean(screen, I915_PARAM_HAS_EXEC_FENCE);
 

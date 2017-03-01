@@ -146,7 +146,6 @@ extern const struct brw_tracked_state gen7_tes_push_constants;
 extern const struct brw_tracked_state gen7_urb;
 extern const struct brw_tracked_state gen7_vs_state;
 extern const struct brw_tracked_state gen7_wm_state;
-extern const struct brw_tracked_state gen7_hw_binding_tables;
 extern const struct brw_tracked_state haswell_cut_index;
 extern const struct brw_tracked_state gen8_blend_state;
 extern const struct brw_tracked_state gen8_ds_state;
@@ -378,20 +377,6 @@ void
 gen7_upload_constant_state(struct brw_context *brw,
                            const struct brw_stage_state *stage_state,
                            bool active, unsigned opcode);
-
-void gen7_rs_control(struct brw_context *brw, int enable);
-
-void gen7_edit_hw_binding_table_entry(struct brw_context *brw,
-                                      gl_shader_stage stage,
-                                      uint32_t index,
-                                      uint32_t surf_offset);
-void gen7_update_binding_table_from_array(struct brw_context *brw,
-                                          gl_shader_stage stage,
-                                          const uint32_t* binding_table,
-                                          int num_surfaces);
-void gen7_enable_hw_binding_tables(struct brw_context *brw);
-void gen7_disable_hw_binding_tables(struct brw_context *brw);
-void gen7_reset_hw_bt_pool_offsets(struct brw_context *brw);
 
 /* brw_clip.c */
 void brw_upload_clip_prog(struct brw_context *brw);

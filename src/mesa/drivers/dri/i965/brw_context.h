@@ -1060,12 +1060,6 @@ struct brw_context
       struct brw_stage_state base;
    } cs;
 
-   /* RS hardware binding table */
-   struct {
-      drm_intel_bo *bo;
-      uint32_t next_offset;
-   } hw_bt_pool;
-
    struct {
       uint32_t state_offset;
       uint32_t blend_state_offset;

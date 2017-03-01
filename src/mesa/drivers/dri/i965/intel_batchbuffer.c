@@ -337,8 +337,7 @@ do_flush_locked(struct brw_context *brw, int in_fence_fd, int *out_fence_fd)
       if (brw->gen >= 6 && batch->ring == BLT_RING) {
          flags = I915_EXEC_BLT;
       } else {
-         flags = I915_EXEC_RENDER |
-            (brw->use_resource_streamer ? I915_EXEC_RESOURCE_STREAMER : 0);
+         flags = I915_EXEC_RENDER;
       }
       if (batch->needs_sol_reset)
 	 flags |= I915_EXEC_GEN7_SOL_RESET;
@@ -432,9 +431,6 @@ _intel_batchbuffer_flush_fence(struct brw_context *brw,
       fprintf(stderr, "waiting for idle\n");
       drm_intel_bo_wait_rendering(brw->batch.bo);
    }
-
-   if (brw->use_resource_streamer)
-      gen7_reset_hw_bt_pool_offsets(brw);
 
    /* Start a new batch buffer. */
    brw_new_batch(brw);

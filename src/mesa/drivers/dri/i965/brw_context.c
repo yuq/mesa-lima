@@ -1115,10 +1115,6 @@ brwCreateContext(gl_api api,
 
    brw->max_gtt_map_object_size = screen->max_gtt_map_object_size;
 
-   brw->use_resource_streamer = screen->has_resource_streamer &&
-      (env_var_as_boolean("INTEL_USE_HW_BT", false) ||
-       env_var_as_boolean("INTEL_USE_GATHER", false));
-
    ctx->VertexProgram._MaintainTnlProgram = true;
    ctx->FragmentProgram._MaintainTexEnvProgram = true;
 
@@ -1191,10 +1187,6 @@ intelDestroyContext(__DRIcontext * driContextPriv)
       drm_intel_bo_unreference(brw->gs.base.scratch_bo);
    if (brw->wm.base.scratch_bo)
       drm_intel_bo_unreference(brw->wm.base.scratch_bo);
-
-   gen7_reset_hw_bt_pool_offsets(brw);
-   drm_intel_bo_unreference(brw->hw_bt_pool.bo);
-   brw->hw_bt_pool.bo = NULL;
 
    drm_intel_gem_context_destroy(brw->hw_ctx);
 
