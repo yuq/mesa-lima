@@ -1,4 +1,4 @@
-# Copyright © 2016 Intel Corporation
+# Copyright 2015-2017 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -19,45 +19,25 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-# The gallium includes are for the util/u_math.h include from main/macros.h
-AM_CPPFLAGS = \
-	$(INTEL_CFLAGS) \
-	$(VALGRIND_CFLAGS) \
-	$(DEFINES) \
-	-I$(top_srcdir)/include \
-	-I$(top_builddir)/src \
-	-I$(top_srcdir)/src \
-	-I$(top_srcdir)/src/mapi \
-	-I$(top_srcdir)/src/mesa \
-	-I$(top_srcdir)/src/gallium/auxiliary \
-	-I$(top_srcdir)/src/gallium/include \
-	-I$(top_builddir)/src/intel \
-	-I$(top_srcdir)/src/intel
+noinst_PROGRAMS += tools/aubinator
 
-aubinator_DEPS = \
-	$(top_builddir)/src/intel/common/libintel_common.la \
-	$(top_builddir)/src/intel/compiler/libintel_compiler.la \
+tools_aubinator_SOURCES = \
+	tools/aubinator.c \
+	tools/decoder.c \
+	tools/decoder.h \
+	tools/disasm.c \
+	tools/gen_disasm.h
+
+tools_aubinator_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(EXPAT_CFLAGS)
+
+tools_aubinator_LDADD = \
+	common/libintel_common.la \
+	compiler/libintel_compiler.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(PER_GEN_LIBS) \
 	$(PTHREAD_LIBS) \
 	$(DLOPEN_LIBS) \
+	$(EXPAT_LIBS) \
 	-lm
-
-noinst_PROGRAMS = aubinator
-
-aubinator_SOURCES = \
-	aubinator.c \
-	decoder.c \
-	decoder.h \
-	disasm.c \
-	gen_disasm.h
-
-aubinator_LDADD = \
-	$(aubinator_DEPS) \
-	$(EXPAT_LIBS)
-
-aubinator_CFLAGS = \
-	$(AM_CFLAGS) \
-	$(EXPAT_CFLAGS) \
-	-I$(top_srcdir)/include \
-	-I$(top_srcdir)/src

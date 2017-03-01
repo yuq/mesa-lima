@@ -49,6 +49,7 @@ MKDIR_GEN = $(AM_V_at)$(MKDIR_P) $(@D)
 PYTHON_GEN = $(AM_V_GEN)$(PYTHON2) $(PYTHON_FLAGS)
 
 noinst_LTLIBRARIES =
+noinst_PROGRAMS =
 check_PROGRAMS =
 TESTS =
 BUILT_SOURCES =
@@ -60,5 +61,6 @@ include Makefile.common.am
 include Makefile.compiler.am
 include Makefile.genxml.am
 include Makefile.isl.am
+include Makefile.tools.am
 
 CLEANFILES += $(BUILT_SOURCES)
