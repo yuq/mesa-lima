@@ -311,11 +311,6 @@ throttle(struct brw_context *brw)
    }
 }
 
-/* Drop when RS headers get pulled to libdrm */
-#ifndef I915_EXEC_RESOURCE_STREAMER
-#define I915_EXEC_RESOURCE_STREAMER (1<<15)
-#endif
-
 /* TODO: Push this whole function into bufmgr.
  */
 static int

@@ -1597,11 +1597,6 @@ brw_get_revision(int fd)
    return revision;
 }
 
-/* Drop when RS headers get pulled to libdrm */
-#ifndef I915_PARAM_HAS_RESOURCE_STREAMER
-#define I915_PARAM_HAS_RESOURCE_STREAMER 36
-#endif
-
 static void
 shader_debug_log_mesa(void *data, const char *fmt, ...)
 {
@@ -1695,9 +1690,6 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    if (INTEL_DEBUG & DEBUG_AUB)
       drm_intel_bufmgr_gem_set_aub_dump(screen->bufmgr, true);
 
-#ifndef I915_PARAM_MMAP_GTT_VERSION
-#define I915_PARAM_MMAP_GTT_VERSION 40 /* XXX delete me with new libdrm */
-#endif
    if (intel_get_integer(screen, I915_PARAM_MMAP_GTT_VERSION) >= 1) {
       /* Theorectically unlimited! At least for individual objects...
        *
