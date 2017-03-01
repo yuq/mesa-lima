@@ -302,7 +302,7 @@ uint32_t GetNumPrims(
     case TOP_TRI_STRIP_REVERSE:
     case TOP_PATCHLIST_BASE:
     case TOP_UNKNOWN:
-        SWR_ASSERT(false, "Unsupported topology: %d", mode);
+        SWR_INVALID("Unsupported topology: %d", mode);
         return 0;
     }
 
@@ -378,7 +378,7 @@ uint32_t GetNumVerts(
     case TOP_TRI_STRIP_REVERSE:
     case TOP_PATCHLIST_BASE:
     case TOP_UNKNOWN:
-        SWR_ASSERT(false, "Unsupported topology: %d", mode);
+        SWR_INVALID("Unsupported topology: %d", mode);
         return 0;
     }
 
@@ -455,7 +455,7 @@ INLINE uint32_t NumVertsPerPrim(PRIMITIVE_TOPOLOGY topology, bool includeAdjVert
         numVerts = topology - TOP_PATCHLIST_BASE;
         break;
     default:
-        SWR_ASSERT(false, "Unsupported topology: %d", topology);
+        SWR_INVALID("Unsupported topology: %d", topology);
         break;
     }
 
@@ -836,7 +836,7 @@ static void GeometryShaderStage(
         case TOP_TRIANGLE_STRIP:    pfnClipFunc = ClipTriangles; break;
         case TOP_LINE_STRIP:        pfnClipFunc = ClipLines; break;
         case TOP_POINT_LIST:        pfnClipFunc = ClipPoints; break;
-        default: SWR_ASSERT(false, "Unexpected GS output topology: %d", pState->outputTopology);
+        default: SWR_INVALID("Unexpected GS output topology: %d", pState->outputTopology);
         }
     }
 
@@ -1181,7 +1181,7 @@ static void TessellationStages(
         case TOP_TRIANGLE_LIST: pfnClipFunc = ClipTriangles; break;
         case TOP_LINE_LIST:     pfnClipFunc = ClipLines; break;
         case TOP_POINT_LIST:    pfnClipFunc = ClipPoints; break;
-        default: SWR_ASSERT(false, "Unexpected DS output topology: %d", tsState.postDSTopology);
+        default: SWR_INVALID("Unexpected DS output topology: %d", tsState.postDSTopology);
         }
     }
 

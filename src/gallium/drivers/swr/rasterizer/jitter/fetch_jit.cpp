@@ -359,7 +359,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                 case 8: vptr = BITCAST(pointer, PointerType::get(VectorType::get(mInt8Ty, 4), 0)); break;
                 case 16: vptr = BITCAST(pointer, PointerType::get(VectorType::get(mInt16Ty, 4), 0)); break;
                 case 32: vptr = BITCAST(pointer, PointerType::get(VectorType::get(mFP32Ty, 4), 0)); break;
-                default: SWR_ASSERT(false, "Unsupported underlying bpp!");
+                default: SWR_INVALID("Unsupported underlying bpp!");
             }
 
             // load 4 components of attribute
@@ -380,7 +380,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                             vec = FMUL(vec, ConstantVector::get(std::vector<Constant*>(4, ConstantFP::get(mFP32Ty, 1.0 / 65535.0))));
                             break;
                         default:
-                            SWR_ASSERT(false, "Unsupported underlying type!");
+                            SWR_INVALID("Unsupported underlying type!");
                             break;
                     }
                     break;
@@ -396,7 +396,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                             vec = FMUL(vec, ConstantVector::get(std::vector<Constant*>(4, ConstantFP::get(mFP32Ty, 1.0 / 32768.0))));
                             break;
                         default:
-                            SWR_ASSERT(false, "Unsupported underlying type!");
+                            SWR_INVALID("Unsupported underlying type!");
                             break;
                     }
                     break;
@@ -412,7 +412,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                         case 32:
                             break; // Pass through unchanged.
                         default:
-                            SWR_ASSERT(false, "Unsupported underlying type!");
+                            SWR_INVALID("Unsupported underlying type!");
                             break;
                     }
                     break;
@@ -428,7 +428,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                         case 32:
                             break; // Pass through unchanged.
                         default:
-                            SWR_ASSERT(false, "Unsupported underlying type!");
+                            SWR_INVALID("Unsupported underlying type!");
                             break;
                     }
                     break;
@@ -438,7 +438,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                         case 32:
                             break; // Pass through unchanged.
                         default:
-                            SWR_ASSERT(false, "Unsupported underlying type!");
+                            SWR_INVALID("Unsupported underlying type!");
                     }
                     break;
                 case SWR_TYPE_USCALED:
@@ -452,7 +452,7 @@ void FetchJit::JitLoadVertices(const FETCH_COMPILE_STATE &fetchState, Value* str
                     break;
                 case SWR_TYPE_UNKNOWN:
                 case SWR_TYPE_UNUSED:
-                    SWR_ASSERT(false, "Unsupported type %d!", info.type[0]);
+                    SWR_INVALID("Unsupported type %d!", info.type[0]);
             }
 
             // promote mask: sse(0,1,2,3) | avx(0,1,2,3,4,4,4,4)

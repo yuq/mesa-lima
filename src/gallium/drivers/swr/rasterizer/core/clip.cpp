@@ -65,7 +65,7 @@ inline void intersect(
     case FRUSTUM_BOTTOM:    t = ComputeInterpFactor(v1[3] - v1[1], v2[3] - v2[1]); break;
     case FRUSTUM_NEAR:      t = ComputeInterpFactor(v1[2], v2[2]); break;
     case FRUSTUM_FAR:       t = ComputeInterpFactor(v1[3] - v1[2], v2[3] - v2[2]); break;
-    default: SWR_ASSERT(false, "invalid clipping plane: %d", ClippingPlane);
+    default: SWR_INVALID("invalid clipping plane: %d", ClippingPlane);
     };
 
 
@@ -104,7 +104,7 @@ inline int inside(const float v[4])
     case FRUSTUM_NEAR   : return (v[2]>=0.0f);
     case FRUSTUM_FAR    : return (v[2]<= v[3]);
     default:
-        SWR_ASSERT(false, "invalid clipping plane: %d", ClippingPlane);
+        SWR_INVALID("invalid clipping plane: %d", ClippingPlane);
         return 0;
     }
 }

@@ -347,7 +347,7 @@ void ProcessStoreTileBE(DRAW_CONTEXT *pDC, uint32_t workerId, uint32_t macroTile
     case SWR_ATTACHMENT_COLOR7: srcFormat = KNOB_COLOR_HOT_TILE_FORMAT; break;
     case SWR_ATTACHMENT_DEPTH: srcFormat = KNOB_DEPTH_HOT_TILE_FORMAT; break;
     case SWR_ATTACHMENT_STENCIL: srcFormat = KNOB_STENCIL_HOT_TILE_FORMAT; break;
-    default: SWR_ASSERT(false, "Unknown attachment: %d", attachment); srcFormat = KNOB_COLOR_HOT_TILE_FORMAT; break;
+    default: SWR_INVALID("Unknown attachment: %d", attachment); srcFormat = KNOB_COLOR_HOT_TILE_FORMAT; break;
     }
 
     uint32_t x, y;

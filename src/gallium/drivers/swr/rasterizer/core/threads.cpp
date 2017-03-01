@@ -118,7 +118,7 @@ void CalculateProcessorTopology(CPUNumaNodes& out_nodes, uint32_t& out_numThread
                     // have seen more than 32 HW threads for this procGroup
                     // Don't use it
 #if defined(_WIN64)
-                    SWR_ASSERT(false, "Shouldn't get here in 64-bit mode");
+                    SWR_INVALID("Shouldn't get here in 64-bit mode");
 #endif
                     continue;
                 }
@@ -288,7 +288,7 @@ void bindThread(SWR_CONTEXT* pContext, uint32_t threadId, uint32_t procGroupId =
     if (threadId >= 32)
     {
         // Hopefully we don't get here.  Logic in CreateThreadPool should prevent this.
-        SWR_REL_ASSERT(false, "Shouldn't get here");
+        SWR_INVALID("Shouldn't get here");
 
         // In a 32-bit process on Windows it is impossible to bind
         // to logical processors 32-63 within a processor group.

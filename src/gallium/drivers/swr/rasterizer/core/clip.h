@@ -606,7 +606,7 @@ private:
             }
             break;
         case FRUSTUM_FAR:       t = ComputeInterpFactor(_simd_sub_ps(v1[3], v1[2]), _simd_sub_ps(v2[3], v2[2])); break;
-        default: SWR_ASSERT(false, "invalid clipping plane: %d", ClippingPlane);
+        default: SWR_INVALID("invalid clipping plane: %d", ClippingPlane);
         };
 
         // interpolate position and store
@@ -667,7 +667,7 @@ private:
         case FRUSTUM_NEAR:      return _simd_cmpge_ps(v[2], this->state.rastState.clipHalfZ ? _simd_setzero_ps() : _simd_mul_ps(v[3], _simd_set1_ps(-1.0f)));
         case FRUSTUM_FAR:       return _simd_cmple_ps(v[2], v[3]);
         default:
-            SWR_ASSERT(false, "invalid clipping plane: %d", ClippingPlane);
+            SWR_INVALID("invalid clipping plane: %d", ClippingPlane);
             return _simd_setzero_ps();
         }
     }

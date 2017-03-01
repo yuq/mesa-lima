@@ -723,7 +723,7 @@ INLINE __m256i _simdemu_srli_epi32(__m256i a, uint32_t i)
 INLINE
 void _simdvec_transpose(simdvector &v)
 {
-    SWR_ASSERT(false, "Need to implement 8 wide version");
+    SWR_INVALID("Need to implement 8 wide version");
 }
 
 #else

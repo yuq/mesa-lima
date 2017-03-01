@@ -555,7 +555,7 @@ void BinTriangles(
     case SWR_CULLMODE_FRONT: cullTris = frontWindingTris; break;
         // 0 area triangles are marked as backfacing, which is required behavior for conservative rast
     case SWR_CULLMODE_BACK:  cullTris = ~frontWindingTris; break;
-    default: SWR_ASSERT(false, "Invalid cull mode: %d", rastState.cullMode); cullTris = 0x0; break;
+    default: SWR_INVALID("Invalid cull mode: %d", rastState.cullMode); cullTris = 0x0; break;
     }
 
     triMask &= ~cullTris;

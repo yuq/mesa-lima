@@ -957,7 +957,7 @@ void SetupPipeline(DRAW_CONTEXT *pDC)
         case R32_FLOAT: pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ; break;
         case R24_UNORM_X8_TYPELESS: pState->state.pfnQuantizeDepth = QuantizeDepth < R24_UNORM_X8_TYPELESS > ; break;
         case R16_UNORM: pState->state.pfnQuantizeDepth = QuantizeDepth < R16_UNORM > ; break;
-        default: SWR_ASSERT(false, "Unsupported depth format for depth quantiztion.");
+        default: SWR_INVALID("Unsupported depth format for depth quantiztion.");
             pState->state.pfnQuantizeDepth = QuantizeDepth < R32_FLOAT > ;
         }
     }
