@@ -68,6 +68,21 @@ brw_stage_prog_data_free(const void *prog_data);
 void
 brw_dump_arb_asm(const char *stage, struct gl_program *prog);
 
+bool brw_vs_precompile(struct gl_context *ctx, struct gl_program *prog);
+bool brw_tcs_precompile(struct gl_context *ctx,
+                        struct gl_shader_program *shader_prog,
+                        struct gl_program *prog);
+bool brw_tes_precompile(struct gl_context *ctx,
+                        struct gl_shader_program *shader_prog,
+                        struct gl_program *prog);
+bool brw_gs_precompile(struct gl_context *ctx, struct gl_program *prog);
+bool brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog);
+bool brw_cs_precompile(struct gl_context *ctx, struct gl_program *prog);
+
+GLboolean brw_link_shader(struct gl_context *ctx, struct gl_shader_program *prog);
+struct gl_linked_shader *brw_new_shader(gl_shader_stage stage);
+
+
 void brw_upload_tcs_prog(struct brw_context *brw);
 void brw_tcs_populate_key(struct brw_context *brw,
                           struct brw_tcs_prog_key *key);
