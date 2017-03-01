@@ -361,11 +361,6 @@ si_emit_config(struct radv_physical_device *physical_device,
 	radeon_set_context_reg(cs, R_028234_PA_SU_HARDWARE_SCREEN_OFFSET, 0);
 	radeon_set_context_reg(cs, R_028820_PA_CL_NANINF_CNTL, 0);
 
-	radeon_set_context_reg(cs, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, fui(1.0));
-	radeon_set_context_reg(cs, R_028BEC_PA_CL_GB_VERT_DISC_ADJ, fui(1.0));
-	radeon_set_context_reg(cs, R_028BF0_PA_CL_GB_HORZ_CLIP_ADJ, fui(1.0));
-	radeon_set_context_reg(cs, R_028BF4_PA_CL_GB_HORZ_DISC_ADJ, fui(1.0));
-
 	radeon_set_context_reg(cs, R_028AC0_DB_SRESULTS_COMPARE_STATE0, 0x0);
 	radeon_set_context_reg(cs, R_028AC4_DB_SRESULTS_COMPARE_STATE1, 0x0);
 	radeon_set_context_reg(cs, R_028AC8_DB_PRELOAD_CONTROL, 0x0);
@@ -500,6 +495,22 @@ get_viewport_xform(const VkViewport *viewport,
 	translate[2] = n;
 }
 
+static void
+get_viewport_xform_scissor(const VkRect2D *scissor,
+                           float scale[2], float translate[2])
+{
+	float x = scissor->offset.x;
+	float y = scissor->offset.y;
+	float half_width = 0.5f * scissor->extent.width;
+	float half_height = 0.5f * scissor->extent.height;
+
+	scale[0] = half_width;
+	translate[0] = half_width + x;
+	scale[1] = half_height;
+	translate[1] = half_height + y;
+
+}
+
 void
 si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
                   int count, const VkViewport *viewports)
@@ -533,21 +544,84 @@ si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
 	}
 }
 
+static VkRect2D si_scissor_from_viewport(const VkViewport *viewport)
+{
+	float scale[3], translate[3];
+	VkRect2D rect;
+
+	get_viewport_xform(viewport, scale, translate);
+
+	rect.offset.x = translate[0] - abs(scale[0]);
+	rect.offset.y = translate[1] - abs(scale[1]);
+	rect.extent.width = ceilf(translate[0] + abs(scale[0])) - rect.offset.x;
+	rect.extent.height = ceilf(translate[1] + abs(scale[1])) - rect.offset.y;
+
+	return rect;
+}
+
+static VkRect2D si_intersect_scissor(const VkRect2D *a, const VkRect2D *b) {
+	VkRect2D ret;
+	ret.offset.x = MAX2(a->offset.x, b->offset.x);
+	ret.offset.y = MAX2(a->offset.y, b->offset.y);
+	ret.extent.width = MIN2(a->offset.x + a->extent.width,
+	                        b->offset.x + b->extent.width) - ret.offset.x;
+	ret.extent.height = MIN2(a->offset.y + a->extent.height,
+	                         b->offset.y + b->extent.height) - ret.offset.y;
+	return ret;
+}
+
+static VkRect2D si_union_scissor(const VkRect2D *a, const VkRect2D *b) {
+	VkRect2D ret;
+	ret.offset.x = MIN2(a->offset.x, b->offset.x);
+	ret.offset.y = MIN2(a->offset.y, b->offset.y);
+	ret.extent.width = MAX2(a->offset.x + a->extent.width,
+	                        b->offset.x + b->extent.width) - ret.offset.x;
+	ret.extent.height = MAX2(a->offset.y + a->extent.height,
+	                         b->offset.y + b->extent.height) - ret.offset.y;
+	return ret;
+}
+
+
 void
 si_write_scissors(struct radeon_winsys_cs *cs, int first,
-                  int count, const VkRect2D *scissors)
+                  int count, const VkRect2D *scissors,
+                  const VkViewport *viewports, bool can_use_guardband)
 {
 	int i;
+	VkRect2D merged;
+	float scale[2], translate[2], guardband_x = 1.0, guardband_y = 1.0;
+	const float max_range = 32767.0f;
 	assert(count);
 
 	radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + first * 4 * 2, count * 2);
 	for (i = 0; i < count; i++) {
-		radeon_emit(cs, S_028250_TL_X(scissors[i].offset.x) |
-			    S_028250_TL_Y(scissors[i].offset.y) |
+		VkRect2D viewport_scissor = si_scissor_from_viewport(viewports + i);
+		VkRect2D scissor = si_intersect_scissor(&scissors[i], &viewport_scissor);
+
+		if (i)
+			merged = si_union_scissor(&merged, &scissor);
+		else
+			merged = scissor;
+
+		radeon_emit(cs, S_028250_TL_X(scissor.offset.x) |
+			    S_028250_TL_Y(scissor.offset.y) |
 			    S_028250_WINDOW_OFFSET_DISABLE(1));
-		radeon_emit(cs, S_028254_BR_X(scissors[i].offset.x + scissors[i].extent.width) |
-			    S_028254_BR_Y(scissors[i].offset.y + scissors[i].extent.height));
+		radeon_emit(cs, S_028254_BR_X(scissor.offset.x + scissor.extent.width) |
+			    S_028254_BR_Y(scissor.offset.y + scissor.extent.height));
 	}
+
+	get_viewport_xform_scissor(&merged, scale, translate);
+
+	if (can_use_guardband) {
+		guardband_x = (max_range - abs(translate[0])) / scale[0];
+		guardband_y = (max_range - abs(translate[1])) / scale[1];
+	}
+
+	radeon_set_context_reg_seq(cs, R_028BE8_PA_CL_GB_VERT_CLIP_ADJ, 4);
+	radeon_emit(cs, fui(guardband_x));
+	radeon_emit(cs, fui(1.0));
+	radeon_emit(cs, fui(guardband_y));
+	radeon_emit(cs, fui(1.0));
 }
 
 static inline unsigned
