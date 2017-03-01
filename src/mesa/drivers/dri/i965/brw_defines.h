@@ -86,14 +86,6 @@
 #define _3DPRIM_TRIFAN_NOSTIPPLE  0x16
 #define _3DPRIM_PATCHLIST(n) ({ assert(n > 0 && n <= 32); 0x20 + (n - 1); })
 
-
-/* We use this offset to be able to pass native primitive types in struct
- * _mesa_prim::mode.  Native primitive types are BRW_PRIM_OFFSET +
- * native_type, which should be different from all GL types and still fit in
- * the 8 bits avialable. */
-
-#define BRW_PRIM_OFFSET           0x80
-
 #define BRW_ANISORATIO_2     0
 #define BRW_ANISORATIO_4     1
 #define BRW_ANISORATIO_6     2
