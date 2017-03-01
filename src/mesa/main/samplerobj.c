@@ -270,17 +270,11 @@ _mesa_DeleteSamplers(GLsizei count, const GLuint *samplers)
 GLboolean GLAPIENTRY
 _mesa_IsSampler(GLuint sampler)
 {
-   struct gl_sampler_object *sampObj;
    GET_CURRENT_CONTEXT(ctx);
 
    ASSERT_OUTSIDE_BEGIN_END_WITH_RETVAL(ctx, GL_FALSE);
 
-   if (sampler == 0)
-      return GL_FALSE;
-
-   sampObj = _mesa_lookup_samplerobj(ctx, sampler);
-
-   return sampObj != NULL;
+   return _mesa_lookup_samplerobj(ctx, sampler) != NULL;
 }
 
 void
