@@ -390,14 +390,6 @@ struct brw_ff_gs_prog_data {
                             2 + /* shader time, pull constants */       \
                             1 /* cs num work groups */)
 
-/**
- * Stride in bytes between shader_time entries.
- *
- * We separate entries by a cacheline to reduce traffic between EUs writing to
- * different entries.
- */
-#define SHADER_TIME_STRIDE 64
-
 struct brw_cache {
    struct brw_context *brw;
 

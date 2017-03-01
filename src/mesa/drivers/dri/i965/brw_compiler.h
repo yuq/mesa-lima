@@ -374,6 +374,14 @@ struct brw_image_param {
  */
 #define BRW_GEN6_SOL_BINDING_START 0
 
+/**
+ * Stride in bytes between shader_time entries.
+ *
+ * We separate entries by a cacheline to reduce traffic between EUs writing to
+ * different entries.
+ */
+#define BRW_SHADER_TIME_STRIDE 64
+
 struct brw_stage_prog_data {
    struct {
       /** size of our binding table. */

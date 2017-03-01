@@ -586,7 +586,7 @@ fs_visitor::SHADER_TIME_ADD(const fs_builder &bld,
                             fs_reg value)
 {
    int index = shader_time_index * 3 + shader_time_subindex;
-   struct brw_reg offset = brw_imm_d(index * SHADER_TIME_STRIDE);
+   struct brw_reg offset = brw_imm_d(index * BRW_SHADER_TIME_STRIDE);
 
    fs_reg payload;
    if (dispatch_width == 8)

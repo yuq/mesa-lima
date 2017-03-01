@@ -1926,7 +1926,7 @@ vec4_visitor::emit_shader_time_write(int shader_time_subindex, src_reg value)
 
    offset.type = BRW_REGISTER_TYPE_UD;
    int index = shader_time_index * 3 + shader_time_subindex;
-   emit(MOV(offset, brw_imm_d(index * SHADER_TIME_STRIDE)));
+   emit(MOV(offset, brw_imm_d(index * BRW_SHADER_TIME_STRIDE)));
 
    time.type = BRW_REGISTER_TYPE_UD;
    emit(MOV(time, value));
