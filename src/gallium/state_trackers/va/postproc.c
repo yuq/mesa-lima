@@ -184,13 +184,13 @@ vlVaApplyDeint(vlVaDriver *drv, vlVaContext *context,
 {
    vlVaSurface *prevprev, *prev, *next;
 
-   if (param->num_forward_references < 1 ||
-       param->num_backward_references < 2)
+   if (param->num_forward_references < 2 ||
+       param->num_backward_references < 1)
       return current;
 
-   prevprev = handle_table_get(drv->htab, param->backward_references[1]);
-   prev = handle_table_get(drv->htab, param->backward_references[0]);
-   next = handle_table_get(drv->htab, param->forward_references[0]);
+   prevprev = handle_table_get(drv->htab, param->forward_references[1]);
+   prev = handle_table_get(drv->htab, param->forward_references[0]);
+   next = handle_table_get(drv->htab, param->backward_references[0]);
 
    if (!prevprev || !prev || !next)
       return current;

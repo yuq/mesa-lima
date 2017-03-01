@@ -845,8 +845,8 @@ vlVaQueryVideoProcPipelineCaps(VADriverContextP ctx, VAContextID context,
       case VAProcFilterDeinterlacing: {
          VAProcFilterParameterBufferDeinterlacing *deint = buf->data;
          if (deint->algorithm == VAProcDeinterlacingMotionAdaptive) {
-            pipeline_cap->num_forward_references = 1;
-            pipeline_cap->num_backward_references = 2;
+            pipeline_cap->num_forward_references = 2;
+            pipeline_cap->num_backward_references = 1;
          }
          break;
       }
