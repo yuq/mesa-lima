@@ -1676,12 +1676,14 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    if (!gen_get_device_info(screen->deviceID, &screen->devinfo))
       return false;
 
+   const struct gen_device_info *devinfo = &screen->devinfo;
+
    brw_process_intel_debug_variable();
 
    if (INTEL_DEBUG & DEBUG_BUFMGR)
       dri_bufmgr_set_debug(screen->bufmgr, true);
 
-   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && screen->devinfo.gen < 7) {
+   if ((INTEL_DEBUG & DEBUG_SHADER_TIME) && devinfo->gen < 7) {
       fprintf(stderr,
               "shader_time debugging requires gen7 (Ivybridge) or better.\n");
       INTEL_DEBUG &= ~DEBUG_SHADER_TIME;
@@ -1728,10 +1730,10 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    screen->hw_has_timestamp = intel_detect_timestamp(screen);
 
    /* GENs prior to 8 do not support EU/Subslice info */
-   if (screen->devinfo.gen >= 8) {
+   if (devinfo->gen >= 8) {
       intel_detect_sseu(screen);
-   } else if (screen->devinfo.gen == 7) {
-      screen->subslice_total = 1 << (screen->devinfo.gt - 1);
+   } else if (devinfo->gen == 7) {
+      screen->subslice_total = 1 << (devinfo->gt - 1);
    }
 
    if (intel_detect_pipelined_so(screen))
@@ -1758,7 +1760,7 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
     *
     * Don't even try on pre-Gen6, since we don't attempt to use contexts there.
     */
-   if (screen->devinfo.gen >= 6) {
+   if (devinfo->gen >= 6) {
       struct drm_i915_reset_stats stats;
       memset(&stats, 0, sizeof(stats));
 
@@ -1773,13 +1775,13 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       screen->cmd_parser_version = 0;
    }
 
-   if (screen->devinfo.gen >= 8 || screen->cmd_parser_version >= 2)
+   if (devinfo->gen >= 8 || screen->cmd_parser_version >= 2)
       screen->kernel_features |= KERNEL_ALLOWS_PREDICATE_WRITES;
 
    /* Haswell requires command parser version 4 in order to have L3
     * atomic scratch1 and chicken3 bits
     */
-   if (screen->devinfo.is_haswell && screen->cmd_parser_version >= 4) {
+   if (devinfo->is_haswell && screen->cmd_parser_version >= 4) {
       screen->kernel_features |=
          KERNEL_ALLOWS_HSW_SCRATCH1_AND_ROW_CHICKEN3;
    }
@@ -1788,20 +1790,19 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
     * MI_MATH GPR registers, and version 7 in order to use
     * MI_LOAD_REGISTER_REG (which all users of MI_MATH use).
     */
-   if (screen->devinfo.gen >= 8 ||
-       (screen->devinfo.is_haswell && screen->cmd_parser_version >= 7)) {
+   if (devinfo->gen >= 8 ||
+       (devinfo->is_haswell && screen->cmd_parser_version >= 7)) {
       screen->kernel_features |= KERNEL_ALLOWS_MI_MATH_AND_LRR;
    }
 
    /* Gen7 needs at least command parser version 5 to support compute */
-   if (screen->devinfo.gen >= 8 || screen->cmd_parser_version >= 5)
+   if (devinfo->gen >= 8 || screen->cmd_parser_version >= 5)
       screen->kernel_features |= KERNEL_ALLOWS_COMPUTE_DISPATCH;
 
    dri_screen->extensions = !screen->has_context_reset_notification
       ? screenExtensions : intelRobustScreenExtensions;
 
-   screen->compiler = brw_compiler_create(screen,
-                                          &screen->devinfo);
+   screen->compiler = brw_compiler_create(screen, devinfo);
    screen->compiler->shader_debug_log = shader_debug_log_mesa;
    screen->compiler->shader_perf_log = shader_perf_log_mesa;
    screen->program_id = 1;
