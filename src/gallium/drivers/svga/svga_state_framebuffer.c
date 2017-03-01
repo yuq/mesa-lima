@@ -393,7 +393,7 @@ emit_viewport( struct svga_context *svga,
    /* Enable prescale to adjust vertex positions to match
       VGPU10 convention only if rasterization is enabled.
     */
-   if (svga->curr.rast->templ.rasterizer_discard) {
+   if (svga->curr.rast && svga->curr.rast->templ.rasterizer_discard) {
       degenerate = TRUE;
       goto out;
    } else {
@@ -497,7 +497,7 @@ emit_viewport( struct svga_context *svga,
     * screen-space coordinates slightly relative to D3D which is
     * what hardware implements natively.
     */
-   if (svga->curr.rast->templ.half_pixel_center) {
+   if (svga->curr.rast && svga->curr.rast->templ.half_pixel_center) {
       float adjust_x = 0.0;
       float adjust_y = 0.0;
 
