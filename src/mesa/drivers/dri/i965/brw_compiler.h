@@ -546,7 +546,7 @@ struct brw_vue_map {
     * map, and (b) actually written by the shader.  Does not include any of
     * the additional varying slots defined in brw_varying_slot.
     */
-   GLbitfield64 slots_valid;
+   uint64_t slots_valid;
 
    /**
     * Is this VUE map for a separate shader pipeline?
@@ -616,12 +616,12 @@ GLuint brw_varying_to_offset(const struct brw_vue_map *vue_map, GLuint varying)
 
 void brw_compute_vue_map(const struct gen_device_info *devinfo,
                          struct brw_vue_map *vue_map,
-                         GLbitfield64 slots_valid,
+                         uint64_t slots_valid,
                          bool separate_shader);
 
 void brw_compute_tess_vue_map(struct brw_vue_map *const vue_map,
-                              const GLbitfield64 slots_valid,
-                              const GLbitfield is_patch);
+                              uint64_t slots_valid,
+                              uint32_t is_patch);
 
 /* brw_interpolation_map.c */
 void brw_setup_vue_interpolation(struct brw_vue_map *vue_map,

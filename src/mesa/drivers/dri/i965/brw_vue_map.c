@@ -58,7 +58,7 @@ assign_vue_slot(struct brw_vue_map *vue_map, int varying, int slot)
 void
 brw_compute_vue_map(const struct gen_device_info *devinfo,
                     struct brw_vue_map *vue_map,
-                    GLbitfield64 slots_valid,
+                    uint64_t slots_valid,
                     bool separate)
 {
    /* Keep using the packed/contiguous layout on old hardware - we only need
@@ -166,7 +166,7 @@ brw_compute_vue_map(const struct gen_device_info *devinfo,
     * However, it may be output by transform feedback, and we'd rather not
     * recompute state when TF changes, so we just always include it.
     */
-   GLbitfield64 builtins = slots_valid & BITFIELD64_MASK(VARYING_SLOT_VAR0);
+   uint64_t builtins = slots_valid & BITFIELD64_MASK(VARYING_SLOT_VAR0);
    while (builtins != 0) {
       const int varying = ffsll(builtins) - 1;
       if (vue_map->varying_to_slot[varying] == -1) {
@@ -176,7 +176,7 @@ brw_compute_vue_map(const struct gen_device_info *devinfo,
    }
 
    const int first_generic_slot = slot;
-   GLbitfield64 generics = slots_valid & ~BITFIELD64_MASK(VARYING_SLOT_VAR0);
+   uint64_t generics = slots_valid & ~BITFIELD64_MASK(VARYING_SLOT_VAR0);
    while (generics != 0) {
       const int varying = ffsll(generics) - 1;
       if (separate) {
@@ -197,8 +197,8 @@ brw_compute_vue_map(const struct gen_device_info *devinfo,
  */
 void
 brw_compute_tess_vue_map(struct brw_vue_map *vue_map,
-                         GLbitfield64 vertex_slots,
-                         GLbitfield patch_slots)
+                         uint64_t vertex_slots,
+                         uint32_t patch_slots)
 {
    /* I don't think anything actually uses this... */
    vue_map->slots_valid = vertex_slots;
