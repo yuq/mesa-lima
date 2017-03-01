@@ -31,7 +31,7 @@
 extern "C" {
 #endif
 /**
- * \file intel_debug.h
+ * \file gen_debug.h
  *
  * Basic INTEL_DEBUG environment variable handling.  This file defines the
  * list of debugging flags, as well as some macros for handling them.

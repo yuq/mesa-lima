@@ -75,7 +75,7 @@
 #include "brw_eu.h"
 #include "brw_shader.h"
 #include "intel_asm_annotation.h"
-#include "intel_debug.h"
+#include "common/gen_debug.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 
 static const uint32_t g45_control_index_table[32] = {

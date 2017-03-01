@@ -23,14 +23,16 @@
  */
 
 /**
- * \file intel_debug.c
+ * \file gen_debug.c
  *
  * Support for the INTEL_DEBUG environment variable, along with other
  * miscellaneous debugging code.
  */
 
-#include "brw_context.h"
-#include "intel_debug.h"
+#include <stdlib.h>
+
+#include "common/gen_debug.h"
+#include "util/macros.h"
 #include "util/u_atomic.h" /* for p_atomic_cmpxchg */
 #include "util/debug.h"
 

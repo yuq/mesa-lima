@@ -84,9 +84,7 @@ i965_compiler_FILES = \
 	gen6_gs_visitor.cpp \
 	gen6_gs_visitor.h \
 	intel_asm_annotation.c \
-	intel_asm_annotation.h \
-	intel_debug.c \
-	intel_debug.h
+	intel_asm_annotation.h
 
 i965_compiler_GENERATED_FILES = \
 	brw_nir_trig_workarounds.c

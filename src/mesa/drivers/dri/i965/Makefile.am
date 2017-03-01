@@ -98,6 +98,7 @@ EXTRA_DIST = \
 TEST_LIBS = \
 	libi965_compiler.la \
 	$(I965_PERGEN_LIBS) \
+	$(top_builddir)/src/intel/common/libintel_common.la \
 	$(top_builddir)/src/compiler/nir/libnir.la \
 	$(top_builddir)/src/util/libmesautil.la \
 	$(top_builddir)/src/intel/isl/libisl.la \

@@ -31,7 +31,7 @@
 #include "gen6_gs_visitor.h"
 #include "brw_fs.h"
 #include "brw_nir.h"
-#include "intel_debug.h"
+#include "common/gen_debug.h"
 
 namespace brw {
 

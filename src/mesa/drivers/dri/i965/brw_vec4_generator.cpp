@@ -24,7 +24,7 @@
 #include "brw_cfg.h"
 #include "brw_eu.h"
 #include "brw_program.h"
-#include "intel_debug.h"
+#include "common/gen_debug.h"
 
 using namespace brw;
 

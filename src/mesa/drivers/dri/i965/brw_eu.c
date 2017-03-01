@@ -33,7 +33,7 @@
 #include "brw_defines.h"
 #include "brw_eu.h"
 #include "brw_shader.h"
-#include "intel_debug.h"
+#include "common/gen_debug.h"
 
 #include "util/ralloc.h"
 

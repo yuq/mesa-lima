@@ -7,6 +7,8 @@ BLORP_FILES = \
 	blorp/blorp_priv.h
 
 COMMON_FILES = \
+	common/gen_debug.c \
+	common/gen_debug.h \
 	common/gen_device_info.c \
 	common/gen_device_info.h \
 	common/gen_l3_config.c \

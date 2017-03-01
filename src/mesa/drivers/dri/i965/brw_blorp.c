@@ -34,7 +34,7 @@
 #include "brw_meta_util.h"
 #include "brw_state.h"
 #include "intel_fbo.h"
-#include "intel_debug.h"
+#include "common/gen_debug.h"
 
 #define FILE_DEBUG_FLAG DEBUG_BLORP
 
