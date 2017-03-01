@@ -53,6 +53,8 @@ $(LOCAL_GENERATED_SOURCES): PRIVATE_CUSTOM_TOOL = $(PRIVATE_PYTHON) $^ > $@
 $(LOCAL_GENERATED_SOURCES): $(intermediates)/%.c: $(LOCAL_PATH)/%.py
 	$(transform-generated-source)
 
+LOCAL_SHARED_LIBRARIES := libz
+
 include $(MESA_COMMON_MK)
 include $(BUILD_STATIC_LIBRARY)
 
@@ -87,6 +89,8 @@ $(LOCAL_GENERATED_SOURCES): PRIVATE_PYTHON := $(MESA_PYTHON2)
 $(LOCAL_GENERATED_SOURCES): PRIVATE_CUSTOM_TOOL = $(PRIVATE_PYTHON) $^ > $@
 $(LOCAL_GENERATED_SOURCES): $(intermediates)/%.c: $(LOCAL_PATH)/%.py
 	$(transform-generated-source)
+
+LOCAL_SHARED_LIBRARIES := libz
 
 include $(MESA_COMMON_MK)
 include $(BUILD_HOST_STATIC_LIBRARY)

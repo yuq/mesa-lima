@@ -99,6 +99,7 @@ XSHMFENCE_REQUIRED=1.1
 XVMC_REQUIRED=1.0.6
 PYTHON_MAKO_REQUIRED=0.8.0
 LIBSENSORS_REQUIRED=4.0.0
+ZLIB_REQUIRED=1.2.8
 
 dnl LLVM versions
 LLVM_REQUIRED_GALLIUM=3.3.0
@@ -783,6 +784,9 @@ esac
 
 dnl See if posix_memalign is available
 AC_CHECK_FUNC([posix_memalign], [DEFINES="$DEFINES -DHAVE_POSIX_MEMALIGN"])
+
+dnl Check for zlib
+PKG_CHECK_MODULES([ZLIB], [zlib >= $ZLIB_REQUIRED])
 
 dnl Check for pthreads
 AX_PTHREAD

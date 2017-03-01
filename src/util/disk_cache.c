@@ -37,6 +37,7 @@
 #include <pwd.h>
 #include <errno.h>
 #include <dirent.h>
+#include "zlib.h"
 
 #include "util/crc32.h"
 #include "util/u_atomic.h"
@@ -645,6 +646,83 @@ disk_cache_remove(struct disk_cache *cache, cache_key key)
       p_atomic_add(cache->size, - sb.st_size);
 }
 
+/* From the zlib docs:
+ *    "If the memory is available, buffers sizes on the order of 128K or 256K
+ *    bytes should be used."
+ */
+#define BUFSIZE 256 * 1024
+
+/**
+ * Compresses cache entry in memory and writes it to disk. Returns the size
+ * of the data written to disk.
+ */
+static size_t
+deflate_and_write_to_disk(const void *in_data, size_t in_data_size, int dest,
+                          char *filename)
+{
+   unsigned char out[BUFSIZE];
+
+   /* allocate deflate state */
+   z_stream strm;
+   strm.zalloc = Z_NULL;
+   strm.zfree = Z_NULL;
+   strm.opaque = Z_NULL;
+   strm.next_in = (uint8_t *) in_data;
+   strm.avail_in = in_data_size;
+
+   int ret = deflateInit(&strm, Z_BEST_COMPRESSION);
+   if (ret != Z_OK)
+       return 0;
+
+   /* compress until end of in_data */
+   size_t compressed_size = 0;
+   int flush;
+   do {
+      int remaining = in_data_size - BUFSIZE;
+      flush = remaining > 0 ? Z_NO_FLUSH : Z_FINISH;
+      in_data_size -= BUFSIZE;
+
+      /* Run deflate() on input until the output buffer is not full (which
+       * means there is no more data to deflate).
+       */
+      do {
+         strm.avail_out = BUFSIZE;
+         strm.next_out = out;
+
+         ret = deflate(&strm, flush);    /* no bad return value */
+         assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+
+         size_t have = BUFSIZE - strm.avail_out;
+         compressed_size += compressed_size + have;
+
+         size_t written = 0;
+         for (size_t len = 0; len < have; len += written) {
+            written = write(dest, out + len, have - len);
+            if (written == -1) {
+               (void)deflateEnd(&strm);
+               return 0;
+            }
+         }
+      } while (strm.avail_out == 0);
+
+      /* all input should be used */
+      assert(strm.avail_in == 0);
+
+   } while (flush != Z_FINISH);
+
+   /* stream should be complete */
+   assert(ret == Z_STREAM_END);
+
+   /* clean up and return */
+   (void)deflateEnd(&strm);
+   return compressed_size;
+}
+
+struct cache_entry_file_data {
+   uint32_t crc32;
+   uint32_t uncompressed_size;
+};
+
 void
 disk_cache_put(struct disk_cache *cache,
           cache_key key,
@@ -654,7 +732,6 @@ disk_cache_put(struct disk_cache *cache,
    int fd = -1, fd_final = -1, err, ret;
    size_t len;
    char *filename = NULL, *filename_tmp = NULL;
-   const char *p = data;
 
    filename = get_cache_file(cache, key);
    if (filename == NULL)
@@ -713,10 +790,13 @@ disk_cache_put(struct disk_cache *cache,
    /* Create CRC of the data and store at the start of the file. We will
     * read this when restoring the cache and use it to check for corruption.
     */
-   uint32_t crc32 = util_hash_crc32(data, size);
-   size_t crc_size = sizeof(crc32);
-   for (len = 0; len < crc_size; len += ret) {
-      ret = write(fd, ((uint8_t *) &crc32) + len, crc_size - len);
+   struct cache_entry_file_data cf_data;
+   cf_data.crc32 = util_hash_crc32(data, size);
+   cf_data.uncompressed_size = size;
+
+   size_t cf_data_size = sizeof(cf_data);
+   for (len = 0; len < cf_data_size; len += ret) {
+      ret = write(fd, ((uint8_t *) &cf_data) + len, cf_data_size - len);
       if (ret == -1) {
          unlink(filename_tmp);
          goto done;
@@ -727,18 +807,15 @@ disk_cache_put(struct disk_cache *cache,
     * rename them atomically to the destination filename, and also
     * perform an atomic increment of the total cache size.
     */
-   for (len = 0; len < size; len += ret) {
-      ret = write(fd, p + len, size - len);
-      if (ret == -1) {
-         unlink(filename_tmp);
-         goto done;
-      }
+   size_t file_size = deflate_and_write_to_disk(data, size, fd, filename_tmp);
+   if (file_size == 0) {
+      unlink(filename_tmp);
+      goto done;
    }
-
    rename(filename_tmp, filename);
 
-   size += crc_size;
-   p_atomic_add(cache->size, size);
+   file_size += cf_data_size;
+   p_atomic_add(cache->size, file_size);
 
  done:
    if (fd_final != -1)
@@ -754,6 +831,45 @@ disk_cache_put(struct disk_cache *cache,
       free(filename);
 }
 
+/**
+ * Decompresses cache entry, returns true if successful.
+ */
+static bool
+inflate_cache_data(uint8_t *in_data, size_t in_data_size,
+                   uint8_t *out_data, size_t out_data_size)
+{
+   z_stream strm;
+
+   /* allocate inflate state */
+   strm.zalloc = Z_NULL;
+   strm.zfree = Z_NULL;
+   strm.opaque = Z_NULL;
+   strm.next_in = in_data;
+   strm.avail_in = in_data_size;
+   strm.next_out = out_data;
+   strm.avail_out = out_data_size;
+
+   int ret = inflateInit(&strm);
+   if (ret != Z_OK)
+      return false;
+
+   ret = inflate(&strm, Z_NO_FLUSH);
+   assert(ret != Z_STREAM_ERROR);  /* state not clobbered */
+
+   /* Unless there was an error we should have decompressed everything in one
+    * go as we know the uncompressed file size.
+    */
+   if (ret != Z_STREAM_END) {
+      (void)inflateEnd(&strm);
+      return false;
+   }
+   assert(strm.avail_out == 0);
+
+   /* clean up and return */
+   (void)inflateEnd(&strm);
+   return true;
+}
+
 void *
 disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
 {
@@ -761,6 +877,7 @@ disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
    struct stat sb;
    char *filename = NULL;
    uint8_t *data = NULL;
+   uint8_t *uncompressed_data = NULL;
 
    if (size)
       *size = 0;
@@ -781,38 +898,48 @@ disk_cache_get(struct disk_cache *cache, cache_key key, size_t *size)
       goto fail;
 
    /* Load the CRC that was created when the file was written. */
-   uint32_t crc32;
-   size_t crc_size = sizeof(crc32);
-   assert(sb.st_size > crc_size);
-   for (len = 0; len < crc_size; len += ret) {
-      ret = read(fd, ((uint8_t *) &crc32) + len, crc_size - len);
+   struct cache_entry_file_data cf_data;
+   size_t cf_data_size = sizeof(cf_data);
+   assert(sb.st_size > cf_data_size);
+   for (len = 0; len < cf_data_size; len += ret) {
+      ret = read(fd, ((uint8_t *) &cf_data) + len, cf_data_size - len);
       if (ret == -1)
          goto fail;
    }
 
    /* Load the actual cache data. */
-   size_t cache_data_size = sb.st_size - crc_size;
+   size_t cache_data_size = sb.st_size - cf_data_size;
    for (len = 0; len < cache_data_size; len += ret) {
       ret = read(fd, data + len, cache_data_size - len);
       if (ret == -1)
          goto fail;
    }
 
-   /* Check the data for corruption */
-   if (crc32 != util_hash_crc32(data, cache_data_size))
+   /* Uncompress the cache data */
+   uncompressed_data = malloc(cf_data.uncompressed_size);
+   if (!inflate_cache_data(data, cache_data_size, uncompressed_data,
+                           cf_data.uncompressed_size))
       goto fail;
 
+   /* Check the data for corruption */
+   if (cf_data.crc32 != util_hash_crc32(uncompressed_data,
+                                        cf_data.uncompressed_size))
+      goto fail;
+
+   free(data);
    free(filename);
    close(fd);
 
    if (size)
-      *size = cache_data_size;
+      *size = cf_data.uncompressed_size;
 
-   return data;
+   return uncompressed_data;
 
  fail:
    if (data)
       free(data);
+   if (uncompressed_data)
+      free(uncompressed_data);
    if (filename)
       free(filename);
    if (fd != -1)
