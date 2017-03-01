@@ -182,7 +182,7 @@ static void
 svga_draw_vbo(struct pipe_context *pipe, const struct pipe_draw_info *info)
 {
    struct svga_context *svga = svga_context( pipe );
-   unsigned reduced_prim = u_reduced_prim( info->mode );
+   enum pipe_prim_type reduced_prim = u_reduced_prim( info->mode );
    unsigned count = info->count;
    enum pipe_error ret = 0;
    boolean needed_swtnl;

@@ -293,7 +293,7 @@ struct svga_state
    unsigned num_samplers[PIPE_SHADER_TYPES];
    unsigned num_sampler_views[PIPE_SHADER_TYPES];
    unsigned num_vertex_buffers;
-   unsigned reduced_prim;
+   enum pipe_prim_type reduced_prim;
 
    struct {
       unsigned flag_1d;

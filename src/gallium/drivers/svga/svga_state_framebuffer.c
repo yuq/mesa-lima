@@ -525,6 +525,9 @@ emit_viewport( struct svga_context *svga,
             adjust_x = -0.5;
             adjust_y = -0.5;
             break;
+         default:
+            /* nothing */
+            break;
          }
       }
 
