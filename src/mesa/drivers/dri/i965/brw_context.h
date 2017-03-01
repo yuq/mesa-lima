@@ -378,31 +378,6 @@ struct brw_ff_gs_prog_data {
 /** Max number of image uniforms in a shader */
 #define BRW_MAX_IMAGES 32
 
-/**
- * Max number of binding table entries used for stream output.
- *
- * From the OpenGL 3.0 spec, table 6.44 (Transform Feedback State), the
- * minimum value of MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS is 64.
- *
- * On Gen6, the size of transform feedback data is limited not by the number
- * of components but by the number of binding table entries we set aside.  We
- * use one binding table entry for a float, one entry for a vector, and one
- * entry per matrix column.  Since the only way we can communicate our
- * transform feedback capabilities to the client is via
- * MAX_TRANSFORM_FEEDBACK_INTERLEAVED_COMPONENTS, we need to plan for the
- * worst case, in which all the varyings are floats, so we use up one binding
- * table entry per component.  Therefore we need to set aside at least 64
- * binding table entries for use by transform feedback.
- *
- * Note: since we don't currently pack varyings, it is currently impossible
- * for the client to actually use up all of these binding table entries--if
- * all of their varyings were floats, they would run out of varying slots and
- * fail to link.  But that's a bug, so it seems prudent to go ahead and
- * allocate the number of binding table entries we will need once the bug is
- * fixed.
- */
-#define BRW_MAX_SOL_BINDINGS 64
-
 /** Maximum number of actual buffers used for stream output */
 #define BRW_MAX_SOL_BUFFERS 4
 
@@ -414,8 +389,6 @@ struct brw_ff_gs_prog_data {
                             BRW_MAX_IMAGES +                            \
                             2 + /* shader time, pull constants */       \
                             1 /* cs num work groups */)
-
-#define SURF_INDEX_GEN6_SOL_BINDING(t) (t)
 
 /**
  * Stride in bytes between shader_time entries.

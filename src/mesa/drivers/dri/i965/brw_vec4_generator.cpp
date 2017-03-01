@@ -510,7 +510,7 @@ generate_gs_svb_write(struct brw_codegen *p,
                  final_write ? src1 : brw_null_reg(), /* dest == src1 */
                  1, /* msg_reg_nr */
                  dst, /* src0 == previous dst */
-                 SURF_INDEX_GEN6_SOL_BINDING(binding), /* binding_table_index */
+                 BRW_GEN6_SOL_BINDING_START + binding, /* binding_table_index */
                  final_write); /* send_commit_msg */
 
    /* Finally, wait for the write commit to occur so that we can proceed to
