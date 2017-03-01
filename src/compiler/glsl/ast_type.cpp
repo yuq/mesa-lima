@@ -112,6 +112,11 @@ bool ast_type_qualifier::has_memory() const
           || this->flags.q.write_only;
 }
 
+bool ast_type_qualifier::is_subroutine_decl() const
+{
+   return this->flags.q.subroutine && !this->subroutine_list;
+}
+
 static bool
 validate_prim_type(YYLTYPE *loc,
                    _mesa_glsl_parse_state *state,

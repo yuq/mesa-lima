@@ -3256,7 +3256,7 @@ apply_explicit_location(const struct ast_type_qualifier *qual,
       }
 
       /* Check if index was set for the uniform instead of the function */
-      if (qual->flags.q.explicit_index && qual->flags.q.subroutine) {
+      if (qual->flags.q.explicit_index && qual->is_subroutine_decl()) {
          _mesa_glsl_error(loc, state, "an index qualifier can only be "
                           "used with subroutine functions");
          return;
@@ -3742,7 +3742,7 @@ apply_type_qualifier_to_variable(const struct ast_type_qualifier *qual,
       }
    }
 
-   if (qual->flags.q.subroutine && !qual->flags.q.uniform) {
+   if (qual->is_subroutine_decl() && !qual->flags.q.uniform) {
       _mesa_glsl_error(loc, state,
                        "`subroutine' may only be applied to uniforms, "
                        "subroutine type declarations, or function definitions");
@@ -4780,7 +4780,7 @@ ast_declarator_list::hir(exec_list *instructions,
          continue;
       }
 
-      if (this->type->qualifier.flags.q.subroutine) {
+      if (this->type->qualifier.is_subroutine_decl()) {
          const glsl_type *t;
          const char *name;
 
@@ -4879,7 +4879,7 @@ ast_declarator_list::hir(exec_list *instructions,
           */
          if (this->type->qualifier.flags.q.attribute) {
             mode = "attribute";
-         } else if (this->type->qualifier.flags.q.subroutine) {
+         } else if (this->type->qualifier.is_subroutine_decl()) {
             mode = "subroutine uniform";
          } else if (this->type->qualifier.flags.q.uniform) {
             mode = "uniform";
@@ -5629,7 +5629,7 @@ ast_function::hir(exec_list *instructions,
    f = state->symbols->get_function(name);
    if (f == NULL) {
       f = new(ctx) ir_function(name);
-      if (!this->return_type->qualifier.flags.q.subroutine) {
+      if (!this->return_type->qualifier.is_subroutine_decl()) {
          if (!state->symbols->add_function(f)) {
             /* This function name shadows a non-function use of the same name. */
             YYLTYPE loc = this->get_location();
@@ -5787,7 +5787,7 @@ ast_function::hir(exec_list *instructions,
 
    }
 
-   if (this->return_type->qualifier.flags.q.subroutine) {
+   if (this->return_type->qualifier.is_subroutine_decl()) {
       if (!state->symbols->add_type(this->identifier, glsl_type::get_subroutine_instance(this->identifier))) {
          _mesa_glsl_error(& loc, state, "type '%s' previously defined", this->identifier);
          return NULL;

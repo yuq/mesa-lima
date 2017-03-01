@@ -770,6 +770,11 @@ struct ast_type_qualifier {
     */
    bool has_memory() const;
 
+   /**
+    * Return true if the qualifier is a subroutine declaration.
+    */
+   bool is_subroutine_decl() const;
+
    bool merge_qualifier(YYLTYPE *loc,
 			_mesa_glsl_parse_state *state,
                         const ast_type_qualifier &q,
