@@ -51,7 +51,18 @@ _CRTIMP int _vscprintf(const char *format, va_list argptr);
 
 #define CANARY 0x5A1106
 
-struct ralloc_header
+/* Align the header's size so that ralloc() allocations will return with the
+ * same alignment as a libc malloc would have (8 on 32-bit GLIBC, 16 on
+ * 64-bit), avoiding performance penalities on x86 and alignment faults on
+ * ARM.
+ */
+struct
+#ifdef _MSC_VER
+ __declspec(align(8))
+#else
+ __attribute__((aligned))
+#endif
+   ralloc_header
 {
 #ifdef DEBUG
    /* A canary value used to determine whether a pointer is ralloc'd. */
