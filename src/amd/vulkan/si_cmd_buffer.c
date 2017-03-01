@@ -506,21 +506,7 @@ si_write_viewport(struct radeon_winsys_cs *cs, int first_vp,
 {
 	int i;
 
-	if (count == 0) {
-		radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE, 6);
-		radeon_emit(cs, fui(1.0));
-		radeon_emit(cs, fui(0.0));
-		radeon_emit(cs, fui(1.0));
-		radeon_emit(cs, fui(0.0));
-		radeon_emit(cs, fui(1.0));
-		radeon_emit(cs, fui(0.0));
-
-		radeon_set_context_reg_seq(cs, R_0282D0_PA_SC_VPORT_ZMIN_0, 2);
-		radeon_emit(cs, fui(0.0));
-		radeon_emit(cs, fui(1.0));
-
-		return;
-	}
+	assert(count);
 	radeon_set_context_reg_seq(cs, R_02843C_PA_CL_VPORT_XSCALE +
 				   first_vp * 4 * 6, count * 6);
 
@@ -552,8 +538,7 @@ si_write_scissors(struct radeon_winsys_cs *cs, int first,
                   int count, const VkRect2D *scissors)
 {
 	int i;
-	if (count == 0)
-		return;
+	assert(count);
 
 	radeon_set_context_reg_seq(cs, R_028250_PA_SC_VPORT_SCISSOR_0_TL + first * 4 * 2, count * 2);
 	for (i = 0; i < count; i++) {
