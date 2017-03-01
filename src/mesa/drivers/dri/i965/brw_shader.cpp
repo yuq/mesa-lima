@@ -33,7 +33,10 @@ extern "C" void
 brw_mark_surface_used(struct brw_stage_prog_data *prog_data,
                       unsigned surf_index)
 {
-   assert(surf_index < BRW_MAX_SURFACES);
+   /* A binding table index is 8 bits and the top 3 values are reserved for
+    * special things (stateless and SLM).
+    */
+   assert(surf_index <= 252);
 
    prog_data->binding_table.size_bytes =
       MAX2(prog_data->binding_table.size_bytes, (surf_index + 1) * 4);
