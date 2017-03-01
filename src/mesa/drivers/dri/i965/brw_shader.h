@@ -258,6 +258,23 @@ bool opt_predicated_break(struct backend_shader *s);
 extern "C" {
 #endif
 
+/* brw_fs_reg_allocate.cpp */
+void brw_fs_alloc_reg_sets(struct brw_compiler *compiler);
+
+/* brw_vec4_reg_allocate.cpp */
+void brw_vec4_alloc_reg_set(struct brw_compiler *compiler);
+
+/* brw_disasm.c */
+extern const char *const conditional_modifier[16];
+extern const char *const pred_ctrl_align16[16];
+
+/* Per-thread scratch space is a power-of-two multiple of 1KB. */
+static inline int
+brw_get_scratch_size(int size)
+{
+   return MAX2(1024, util_next_power_of_two(size));
+}
+
 /**
  * Scratch data used when compiling a GLSL geometry shader.
  */

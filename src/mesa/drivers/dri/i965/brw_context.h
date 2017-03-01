@@ -1330,12 +1330,6 @@ key_debug(struct brw_context *brw, const char *name, int a, int b)
 
 void brwInitFragProgFuncs( struct dd_function_table *functions );
 
-/* Per-thread scratch space is a power-of-two multiple of 1KB. */
-static inline int
-brw_get_scratch_size(int size)
-{
-   return MAX2(1024, util_next_power_of_two(size));
-}
 void brw_get_scratch_bo(struct brw_context *brw,
 			drm_intel_bo **scratch_bo, int size);
 void brw_alloc_stage_scratch(struct brw_context *brw,
@@ -1357,13 +1351,6 @@ void brw_upload_urb_fence(struct brw_context *brw);
 /* brw_curbe.c
  */
 void brw_upload_cs_urb_state(struct brw_context *brw);
-
-/* brw_fs_reg_allocate.cpp
- */
-void brw_fs_alloc_reg_sets(struct brw_compiler *compiler);
-
-/* brw_vec4_reg_allocate.cpp */
-void brw_vec4_alloc_reg_set(struct brw_compiler *compiler);
 
 /* brw_disasm.c */
 int brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
@@ -1627,9 +1614,6 @@ brw_program_reloc(struct brw_context *brw, uint32_t state_offset,
 }
 
 bool brw_do_cubemap_normalize(struct exec_list *instructions);
-
-extern const char * const conditional_modifier[16];
-extern const char *const pred_ctrl_align16[16];
 
 static inline bool
 brw_depth_writes_enabled(const struct brw_context *brw)
