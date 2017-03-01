@@ -19,7 +19,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-noinst_PROGRAMS += tools/aubinator
+noinst_PROGRAMS += \
+	tools/aubinator \
+	tools/aubinator_error_decode
 
 tools_aubinator_SOURCES = \
 	tools/aubinator.c \
@@ -42,3 +44,18 @@ tools_aubinator_LDADD = \
 	$(EXPAT_LIBS) \
 	$(ZLIB_LIBS) \
 	-lm
+
+
+tools_aubinator_error_decode_SOURCES = \
+	tools/aubinator_error_decode.c
+
+tools_aubinator_error_decode_LDADD = \
+	common/libintel_common.la \
+	$(top_builddir)/src/util/libmesautil.la \
+	$(EXPAT_LIBS) \
+	$(ZLIB_LIBS)
+
+tools_aubinator_error_decode_CFLAGS = \
+	$(AM_CFLAGS) \
+	$(EXPAT_CFLAGS) \
+	$(ZLIB_CFLAGS)

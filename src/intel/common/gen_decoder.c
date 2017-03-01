@@ -108,6 +108,17 @@ gen_spec_find_register(struct gen_spec *spec, uint32_t offset)
    return NULL;
 }
 
+struct gen_group *
+gen_spec_find_register_by_name(struct gen_spec *spec, const char *name)
+{
+   for (int i = 0; i < spec->nregisters; i++) {
+      if (strcmp(spec->registers[i]->name, name) == 0)
+         return spec->registers[i];
+   }
+
+   return NULL;
+}
+
 struct gen_enum *
 gen_spec_find_enum(struct gen_spec *spec, const char *name)
 {
