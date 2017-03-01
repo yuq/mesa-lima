@@ -492,6 +492,22 @@ typedef enum
 } brw_varying_slot;
 
 /**
+ * We always program SF to start reading at an offset of 1 (2 varying slots)
+ * from the start of the vertex URB entry.  This causes it to skip:
+ * - VARYING_SLOT_PSIZ and BRW_VARYING_SLOT_NDC on gen4-5
+ * - VARYING_SLOT_PSIZ and VARYING_SLOT_POS on gen6+
+ */
+#define BRW_SF_URB_ENTRY_READ_OFFSET 1
+
+/**
+ * Bitmask indicating which fragment shader inputs represent varyings (and
+ * hence have to be delivered to the fragment shader by the SF/SBE stage).
+ */
+#define BRW_FS_VARYING_INPUT_MASK \
+   (BITFIELD64_RANGE(0, VARYING_SLOT_MAX) & \
+    ~VARYING_BIT_POS & ~VARYING_BIT_FACE)
+
+/**
  * Data structure recording the relationship between the gl_varying_slot enum
  * and "slots" within the vertex URB entry (VUE).  A "slot" is defined as a
  * single octaword within the VUE (128 bits).
