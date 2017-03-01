@@ -25,8 +25,9 @@
 
 #include <stdint.h>
 #include "brw_reg.h"
+#include "brw_compiler.h"
 #include "brw_defines.h"
-#include "brw_context.h"
+#include "brw_inst.h"
 #include "compiler/nir/nir.h"
 
 #ifdef __cplusplus

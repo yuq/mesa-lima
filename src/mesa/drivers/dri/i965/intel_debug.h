@@ -24,6 +24,9 @@
  */
 #pragma once
 
+#include <stdint.h>
+#include "compiler/shader_enums.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif

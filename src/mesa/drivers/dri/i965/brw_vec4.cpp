@@ -29,6 +29,7 @@
 #include "brw_vec4_live_variables.h"
 #include "brw_vec4_vs.h"
 #include "brw_dead_control_flow.h"
+#include "intel_debug.h"
 #include "program/prog_parameter.h"
 
 #define MAX_INSTRUCTION (1 << 30)

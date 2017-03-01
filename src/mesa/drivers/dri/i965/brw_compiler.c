@@ -22,8 +22,8 @@
  */
 
 #include "brw_compiler.h"
-#include "brw_context.h"
 #include "brw_shader.h"
+#include "intel_debug.h"
 #include "compiler/nir/nir.h"
 #include "main/errors.h"
 #include "util/debug.h"

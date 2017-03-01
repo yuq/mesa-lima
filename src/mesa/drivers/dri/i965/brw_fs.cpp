@@ -29,7 +29,6 @@
  */
 
 #include "main/macros.h"
-#include "brw_context.h"
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_cs.h"
@@ -38,6 +37,7 @@
 #include "brw_cfg.h"
 #include "brw_program.h"
 #include "brw_dead_control_flow.h"
+#include "intel_debug.h"
 #include "compiler/glsl_types.h"
 #include "compiler/nir/nir_builder.h"
 #include "program/prog_parameter.h"

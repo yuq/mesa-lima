@@ -47,11 +47,11 @@
 #include "main/imports.h"
 #include "intel_batchbuffer.h"
 #include "brw_state.h"
-#include "brw_vs.h"
 #include "brw_wm.h"
 #include "brw_gs.h"
 #include "brw_cs.h"
 #include "brw_program.h"
+#include "brw_eu.h"
 
 #define FILE_DEBUG_FLAG DEBUG_STATE
 

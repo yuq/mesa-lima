@@ -30,7 +30,6 @@
 #include "brw_context.h"
 #include "brw_nir.h"
 #include "brw_program.h"
-#include "brw_shader.h"
 #include "brw_state.h"
 #include "program/prog_parameter.h"
 #include "nir_builder.h"

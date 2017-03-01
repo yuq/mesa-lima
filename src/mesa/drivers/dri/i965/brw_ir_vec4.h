@@ -26,7 +26,6 @@
 #define BRW_IR_VEC4_H
 
 #include "brw_shader.h"
-#include "brw_context.h"
 
 namespace brw {
 

@@ -27,7 +27,6 @@
 
 #include "brw_ir_fs.h"
 #include "brw_shader.h"
-#include "brw_context.h"
 
 namespace brw {
    /**

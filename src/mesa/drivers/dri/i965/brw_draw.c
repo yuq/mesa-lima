@@ -45,7 +45,6 @@
 #include "brw_defines.h"
 #include "brw_context.h"
 #include "brw_state.h"
-#include "brw_vs.h"
 
 #include "intel_batchbuffer.h"
 #include "intel_buffers.h"

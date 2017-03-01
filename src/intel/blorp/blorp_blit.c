@@ -24,7 +24,6 @@
 #include "compiler/nir/nir_builder.h"
 
 #include "blorp_priv.h"
-#include "brw_meta_util.h"
 
 /* header-only include needed for _mesa_unorm_to_float and friends. */
 #include "mesa/main/format_utils.h"

@@ -26,7 +26,6 @@
 #define BRW_FS_SURFACE_BUILDER_H
 
 #include "brw_fs_builder.h"
-#include "brw_context.h"
 
 namespace brw {
    namespace surface_access {

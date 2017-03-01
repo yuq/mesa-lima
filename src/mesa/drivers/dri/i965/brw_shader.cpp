@@ -21,13 +21,14 @@
  * IN THE SOFTWARE.
  */
 
-#include "brw_context.h"
 #include "brw_cfg.h"
 #include "brw_eu.h"
 #include "brw_fs.h"
 #include "brw_nir.h"
 #include "brw_vec4_tes.h"
+#include "intel_debug.h"
 #include "main/uniforms.h"
+#include "util/macros.h"
 
 enum brw_reg_type
 brw_type_for_base_type(const struct glsl_type *type)

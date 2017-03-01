@@ -25,7 +25,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include "util/ralloc.h"
-#include "brw_context.h"
 #include "brw_eu.h"
 
 static bool

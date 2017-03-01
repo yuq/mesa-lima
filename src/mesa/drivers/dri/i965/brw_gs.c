@@ -29,7 +29,6 @@
 
 #include "brw_gs.h"
 #include "brw_context.h"
-#include "brw_vec4_gs_visitor.h"
 #include "brw_state.h"
 #include "brw_ff_gs.h"
 #include "brw_nir.h"

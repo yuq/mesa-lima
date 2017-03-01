@@ -23,7 +23,6 @@
 
 #include <stdlib.h>
 
-#include "brw_context.h"
 #include "brw_inst.h"
 #include "brw_eu.h"
 

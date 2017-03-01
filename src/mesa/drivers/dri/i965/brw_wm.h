@@ -36,7 +36,6 @@
 #include <stdbool.h>
 
 #include "brw_context.h"
-#include "brw_eu.h"
 
 #ifdef __cplusplus
 extern "C" {

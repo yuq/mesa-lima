@@ -43,7 +43,6 @@
 
 #include "brw_program.h"
 #include "brw_context.h"
-#include "brw_shader.h"
 #include "brw_nir.h"
 #include "intel_batchbuffer.h"
 

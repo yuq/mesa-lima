@@ -29,6 +29,8 @@
   *   Keith Whitwell <keithw@vmware.com>
   */
 
+#include "util/macros.h"
+
 #define INTEL_MASK(high, low) (((1u<<((high)-(low)+1))-1)<<(low))
 /* Using the GNU statement expression extension */
 #define SET_FIELD(value, field)                                         \

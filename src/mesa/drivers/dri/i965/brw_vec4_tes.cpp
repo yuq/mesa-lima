@@ -29,6 +29,7 @@
 
 #include "brw_vec4_tes.h"
 #include "brw_cfg.h"
+#include "intel_debug.h"
 
 namespace brw {
 

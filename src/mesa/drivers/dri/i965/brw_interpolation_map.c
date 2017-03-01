@@ -22,7 +22,6 @@
  */
 
 #include "brw_compiler.h"
-#include "brw_context.h"
 #include "compiler/nir/nir.h"
 
 static char const *get_qual_name(int mode)

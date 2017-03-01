@@ -27,7 +27,6 @@
 
 #include "brw_ir_vec4.h"
 #include "brw_ir_allocator.h"
-#include "brw_context.h"
 
 namespace brw {
    /**

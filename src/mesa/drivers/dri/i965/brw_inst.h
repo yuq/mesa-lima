@@ -33,7 +33,8 @@
 
 #include <stdint.h>
 
-#include "brw_context.h"
+#include "brw_defines.h"
+#include "common/gen_device_info.h"
 
 #ifdef __cplusplus
 extern "C" {

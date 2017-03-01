@@ -26,7 +26,6 @@
 #include "brw_context.h"
 #include "brw_wm.h"
 #include "brw_state.h"
-#include "brw_shader.h"
 #include "main/enums.h"
 #include "main/formats.h"
 #include "main/fbobject.h"

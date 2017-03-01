@@ -33,8 +33,7 @@
 #ifndef BRW_VS_H
 #define BRW_VS_H
 
-
-#include "brw_vec4.h"
+#include "brw_context.h"
 
 #ifdef __cplusplus
 extern "C" {

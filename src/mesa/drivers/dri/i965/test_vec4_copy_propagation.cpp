@@ -23,7 +23,6 @@
 
 #include <gtest/gtest.h>
 #include "brw_vec4.h"
-#include "brw_vs.h"
 #include "program/program.h"
 
 using namespace brw;

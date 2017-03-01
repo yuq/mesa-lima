@@ -22,8 +22,6 @@
  */
 
 #include "brw_context.h"
-#include "brw_shader.h"
-#include "brw_fs.h"
 #include "brw_nir.h"
 #include "brw_program.h"
 #include "compiler/glsl/ir.h"

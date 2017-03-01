@@ -23,10 +23,9 @@
 
 #include "util/ralloc.h"
 #include "brw_context.h"
+#include "brw_defines.h"
 #include "brw_cs.h"
-#include "brw_eu.h"
 #include "brw_wm.h"
-#include "brw_shader.h"
 #include "intel_mipmap_tree.h"
 #include "intel_batchbuffer.h"
 #include "brw_state.h"
