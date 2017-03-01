@@ -32,6 +32,8 @@
 
 #include "brw_vec4.h"
 
+#define MAX_GS_INPUT_VERTICES 6
+
 #ifdef __cplusplus
 namespace brw {
 
