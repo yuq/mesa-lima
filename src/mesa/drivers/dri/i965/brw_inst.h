@@ -570,7 +570,10 @@ brw_inst_imm_ud(const struct gen_device_info *devinfo, const brw_inst *insn)
 static inline float
 brw_inst_imm_f(const struct gen_device_info *devinfo, const brw_inst *insn)
 {
-   fi_type ft;
+   union {
+      float f;
+      uint32_t u;
+   } ft;
    (void) devinfo;
    ft.u = brw_inst_bits(insn, 127, 96);
    return ft.f;
@@ -608,7 +611,10 @@ static inline void
 brw_inst_set_imm_f(const struct gen_device_info *devinfo,
                    brw_inst *insn, float value)
 {
-   fi_type ft;
+   union {
+      float f;
+      uint32_t u;
+   } ft;
    (void) devinfo;
    ft.f = value;
    brw_inst_set_bits(insn, 127, 96, ft.u);
