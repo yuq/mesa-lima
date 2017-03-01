@@ -726,7 +726,7 @@ struct PA_STATE_CUT : public PA_STATE
 #if USE_SIMD16_FRONTEND
                 verts[v].v[c] = _simd16_i32gather_ps(pBase, offsets, 1);
 #else
-                verts[v].v[c] = _simd16_insert_ps(_simd15_setzero_ps(), _simd_i32gather_ps(pBase, offsets, 1));
+                verts[v].v[c] = _simd16_insert_ps(_simd16_setzero_ps(), _simd_i32gather_ps(pBase, offsets, 1), 0);
 #endif
 
                 // move base to next component
