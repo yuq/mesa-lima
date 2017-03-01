@@ -67,6 +67,57 @@ brw_nir_setup_glsl_builtin_uniform(nir_variable *var,
 }
 
 static void
+setup_vec4_uniform_value(const gl_constant_value **params,
+                         const gl_constant_value *values,
+                         unsigned n)
+{
+   static const gl_constant_value zero = { 0 };
+
+   for (unsigned i = 0; i < n; ++i)
+      params[i] = &values[i];
+
+   for (unsigned i = n; i < 4; ++i)
+      params[i] = &zero;
+}
+
+void
+brw_setup_image_uniform_values(gl_shader_stage stage,
+                               struct brw_stage_prog_data *stage_prog_data,
+                               unsigned param_start_index,
+                               const gl_uniform_storage *storage)
+{
+   const gl_constant_value **param =
+      &stage_prog_data->param[param_start_index];
+
+   for (unsigned i = 0; i < MAX2(storage->array_elements, 1); i++) {
+      const unsigned image_idx = storage->opaque[stage].index + i;
+      const brw_image_param *image_param =
+         &stage_prog_data->image_param[image_idx];
+
+      /* Upload the brw_image_param structure.  The order is expected to match
+       * the BRW_IMAGE_PARAM_*_OFFSET defines.
+       */
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SURFACE_IDX_OFFSET,
+         (const gl_constant_value *)&image_param->surface_idx, 1);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_OFFSET_OFFSET,
+         (const gl_constant_value *)image_param->offset, 2);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SIZE_OFFSET,
+         (const gl_constant_value *)image_param->size, 3);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_STRIDE_OFFSET,
+         (const gl_constant_value *)image_param->stride, 4);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_TILING_OFFSET,
+         (const gl_constant_value *)image_param->tiling, 3);
+      setup_vec4_uniform_value(param + BRW_IMAGE_PARAM_SWIZZLING_OFFSET,
+         (const gl_constant_value *)image_param->swizzling, 2);
+      param += BRW_IMAGE_PARAM_SIZE;
+
+      brw_mark_surface_used(
+         stage_prog_data,
+         stage_prog_data->binding_table.image_start + image_idx);
+   }
+}
+
+static void
 brw_nir_setup_glsl_uniform(gl_shader_stage stage, nir_variable *var,
                            const struct gl_program *prog,
                            struct brw_stage_prog_data *stage_prog_data,
