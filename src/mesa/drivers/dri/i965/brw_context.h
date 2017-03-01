@@ -1352,10 +1352,6 @@ void brw_upload_urb_fence(struct brw_context *brw);
  */
 void brw_upload_cs_urb_state(struct brw_context *brw);
 
-/* brw_disasm.c */
-int brw_disassemble_inst(FILE *file, const struct gen_device_info *devinfo,
-                         struct brw_inst *inst, bool is_compacted);
-
 /* brw_vs.c */
 gl_clip_plane *brw_select_clip_planes(struct gl_context *ctx);
 
