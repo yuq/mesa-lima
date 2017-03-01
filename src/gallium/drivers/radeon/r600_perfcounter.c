@@ -99,7 +99,7 @@ struct r600_query_pc {
 	struct r600_pc_group *groups;
 };
 
-static void r600_pc_query_destroy(struct r600_common_context *ctx,
+static void r600_pc_query_destroy(struct r600_common_screen *rscreen,
 				  struct r600_query *rquery)
 {
 	struct r600_query_pc *query = (struct r600_query_pc *)rquery;
@@ -112,7 +112,7 @@ static void r600_pc_query_destroy(struct r600_common_context *ctx,
 
 	FREE(query->counters);
 
-	r600_query_hw_destroy(ctx, rquery);
+	r600_query_hw_destroy(rscreen, rquery);
 }
 
 static bool r600_pc_query_prepare_buffer(struct r600_common_screen *screen,
@@ -301,8 +301,8 @@ struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
 					   unsigned num_queries,
 					   unsigned *query_types)
 {
-	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
-	struct r600_common_screen *screen = rctx->screen;
+	struct r600_common_screen *screen =
+		(struct r600_common_screen *)ctx->screen;
 	struct r600_perfcounters *pc = screen->perfcounters;
 	struct r600_perfcounter_block *block;
 	struct r600_pc_group *group;
@@ -365,7 +365,7 @@ struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
 		unsigned instances = 1;
 
 		if ((block->flags & R600_PC_BLOCK_SE) && group->se < 0)
-			instances = rctx->screen->info.max_se;
+			instances = screen->info.max_se;
 		if (group->instance < 0)
 			instances *= block->num_instances;
 
@@ -423,7 +423,7 @@ struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
 	return (struct pipe_query *)query;
 
 error:
-	r600_pc_query_destroy(rctx, &query->b.b);
+	r600_pc_query_destroy(screen, &query->b.b);
 	return NULL;
 }
 

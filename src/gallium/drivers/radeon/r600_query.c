@@ -51,13 +51,12 @@ struct r600_query_sw {
 	struct pipe_fence_handle *fence;
 };
 
-static void r600_query_sw_destroy(struct r600_common_context *rctx,
+static void r600_query_sw_destroy(struct r600_common_screen *rscreen,
 				  struct r600_query *rquery)
 {
-	struct pipe_screen *screen = rctx->b.screen;
 	struct r600_query_sw *query = (struct r600_query_sw *)rquery;
 
-	screen->fence_reference(screen, &query->fence, NULL);
+	rscreen->b.fence_reference(&rscreen->b, &query->fence, NULL);
 	FREE(query);
 }
 
@@ -414,7 +413,7 @@ static struct pipe_query *r600_query_sw_create(unsigned query_type)
 	return (struct pipe_query *)query;
 }
 
-void r600_query_hw_destroy(struct r600_common_context *rctx,
+void r600_query_hw_destroy(struct r600_common_screen *rscreen,
 			   struct r600_query *rquery)
 {
 	struct r600_query_hw *query = (struct r600_query_hw *)rquery;
@@ -876,7 +875,7 @@ static void r600_destroy_query(struct pipe_context *ctx, struct pipe_query *quer
 	struct r600_common_context *rctx = (struct r600_common_context *)ctx;
 	struct r600_query *rquery = (struct r600_query *)query;
 
-	rquery->ops->destroy(rctx, rquery);
+	rquery->ops->destroy(rctx->screen, rquery);
 }
 
 static boolean r600_begin_query(struct pipe_context *ctx,
