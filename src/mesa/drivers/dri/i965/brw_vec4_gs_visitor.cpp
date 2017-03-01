@@ -584,6 +584,23 @@ vec4_gs_visitor::gs_end_primitive()
    emit(OR(dst_reg(this->control_data_bits), this->control_data_bits, mask));
 }
 
+static const GLuint gl_prim_to_hw_prim[GL_TRIANGLE_STRIP_ADJACENCY+1] = {
+   [GL_POINTS] =_3DPRIM_POINTLIST,
+   [GL_LINES] = _3DPRIM_LINELIST,
+   [GL_LINE_LOOP] = _3DPRIM_LINELOOP,
+   [GL_LINE_STRIP] = _3DPRIM_LINESTRIP,
+   [GL_TRIANGLES] = _3DPRIM_TRILIST,
+   [GL_TRIANGLE_STRIP] = _3DPRIM_TRISTRIP,
+   [GL_TRIANGLE_FAN] = _3DPRIM_TRIFAN,
+   [GL_QUADS] = _3DPRIM_QUADLIST,
+   [GL_QUAD_STRIP] = _3DPRIM_QUADSTRIP,
+   [GL_POLYGON] = _3DPRIM_POLYGON,
+   [GL_LINES_ADJACENCY] = _3DPRIM_LINELIST_ADJ,
+   [GL_LINE_STRIP_ADJACENCY] = _3DPRIM_LINESTRIP_ADJ,
+   [GL_TRIANGLES_ADJACENCY] = _3DPRIM_TRILIST_ADJ,
+   [GL_TRIANGLE_STRIP_ADJACENCY] = _3DPRIM_TRISTRIP_ADJ,
+};
+
 extern "C" const unsigned *
 brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
                void *mem_ctx,
@@ -796,8 +813,9 @@ brw_compile_gs(const struct brw_compiler *compiler, void *log_data,
    else
       prog_data->base.urb_entry_size = ALIGN(output_size_bytes, 128) / 128;
 
+   assert(shader->info->gs.output_primitive < ARRAY_SIZE(gl_prim_to_hw_prim));
    prog_data->output_topology =
-      get_hw_prim_for_gl_prim(shader->info->gs.output_primitive);
+      gl_prim_to_hw_prim[shader->info->gs.output_primitive];
 
    prog_data->vertices_in = shader->info->gs.vertices_in;
 
