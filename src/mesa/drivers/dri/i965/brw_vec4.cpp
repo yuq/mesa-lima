@@ -24,10 +24,10 @@
 #include "brw_vec4.h"
 #include "brw_fs.h"
 #include "brw_cfg.h"
-#include "brw_vs.h"
 #include "brw_nir.h"
 #include "brw_vec4_builder.h"
 #include "brw_vec4_live_variables.h"
+#include "brw_vec4_vs.h"
 #include "brw_dead_control_flow.h"
 #include "program/prog_parameter.h"
 

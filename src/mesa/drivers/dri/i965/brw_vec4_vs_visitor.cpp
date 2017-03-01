@@ -22,7 +22,7 @@
  */
 
 
-#include "brw_vs.h"
+#include "brw_vec4_vs.h"
 
 
 namespace brw {
