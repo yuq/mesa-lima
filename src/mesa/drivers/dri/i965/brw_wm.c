@@ -457,53 +457,53 @@ brw_wm_populate_key(struct brw_context *brw, struct brw_wm_prog_key *key)
    if (brw->gen < 6) {
       /* _NEW_COLOR */
       if (prog->info.fs.uses_discard || ctx->Color.AlphaEnabled) {
-         lookup |= IZ_PS_KILL_ALPHATEST_BIT;
+         lookup |= BRW_WM_IZ_PS_KILL_ALPHATEST_BIT;
       }
 
       if (prog->info.outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH)) {
-         lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
+         lookup |= BRW_WM_IZ_PS_COMPUTES_DEPTH_BIT;
       }
 
       /* _NEW_DEPTH */
       if (ctx->Depth.Test)
-         lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
+         lookup |= BRW_WM_IZ_DEPTH_TEST_ENABLE_BIT;
 
       if (brw_depth_writes_enabled(brw))
-         lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
+         lookup |= BRW_WM_IZ_DEPTH_WRITE_ENABLE_BIT;
 
       /* _NEW_STENCIL | _NEW_BUFFERS */
       if (ctx->Stencil._Enabled) {
-         lookup |= IZ_STENCIL_TEST_ENABLE_BIT;
+         lookup |= BRW_WM_IZ_STENCIL_TEST_ENABLE_BIT;
 
          if (ctx->Stencil.WriteMask[0] ||
              ctx->Stencil.WriteMask[ctx->Stencil._BackFace])
-            lookup |= IZ_STENCIL_WRITE_ENABLE_BIT;
+            lookup |= BRW_WM_IZ_STENCIL_WRITE_ENABLE_BIT;
       }
       key->iz_lookup = lookup;
    }
 
-   line_aa = AA_NEVER;
+   line_aa = BRW_WM_AA_NEVER;
 
    /* _NEW_LINE, _NEW_POLYGON, BRW_NEW_REDUCED_PRIMITIVE */
    if (ctx->Line.SmoothFlag) {
       if (brw->reduced_primitive == GL_LINES) {
-         line_aa = AA_ALWAYS;
+         line_aa = BRW_WM_AA_ALWAYS;
       }
       else if (brw->reduced_primitive == GL_TRIANGLES) {
          if (ctx->Polygon.FrontMode == GL_LINE) {
-            line_aa = AA_SOMETIMES;
+            line_aa = BRW_WM_AA_SOMETIMES;
 
             if (ctx->Polygon.BackMode == GL_LINE ||
                 (ctx->Polygon.CullFlag &&
                  ctx->Polygon.CullFaceMode == GL_BACK))
-               line_aa = AA_ALWAYS;
+               line_aa = BRW_WM_AA_ALWAYS;
          }
          else if (ctx->Polygon.BackMode == GL_LINE) {
-            line_aa = AA_SOMETIMES;
+            line_aa = BRW_WM_AA_SOMETIMES;
 
             if ((ctx->Polygon.CullFlag &&
                  ctx->Polygon.CullFaceMode == GL_FRONT))
-               line_aa = AA_ALWAYS;
+               line_aa = BRW_WM_AA_ALWAYS;
          }
       }
    }
@@ -610,14 +610,14 @@ brw_fs_precompile(struct gl_context *ctx, struct gl_program *prog)
 
    if (brw->gen < 6) {
       if (prog->info.fs.uses_discard)
-         key.iz_lookup |= IZ_PS_KILL_ALPHATEST_BIT;
+         key.iz_lookup |= BRW_WM_IZ_PS_KILL_ALPHATEST_BIT;
 
       if (outputs_written & BITFIELD64_BIT(FRAG_RESULT_DEPTH))
-         key.iz_lookup |= IZ_PS_COMPUTES_DEPTH_BIT;
+         key.iz_lookup |= BRW_WM_IZ_PS_COMPUTES_DEPTH_BIT;
 
       /* Just assume depth testing. */
-      key.iz_lookup |= IZ_DEPTH_TEST_ENABLE_BIT;
-      key.iz_lookup |= IZ_DEPTH_WRITE_ENABLE_BIT;
+      key.iz_lookup |= BRW_WM_IZ_DEPTH_TEST_ENABLE_BIT;
+      key.iz_lookup |= BRW_WM_IZ_DEPTH_WRITE_ENABLE_BIT;
    }
 
    if (brw->gen < 6 || _mesa_bitcount_64(prog->info.inputs_read &

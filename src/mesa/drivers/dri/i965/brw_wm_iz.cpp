@@ -31,7 +31,6 @@
 
 
 #include "brw_fs.h"
-#include "brw_wm.h"
 
 
 #undef P                        /* prompted depth */
@@ -48,7 +47,7 @@ static const struct {
    GLuint sd_to_rt:1;
    GLuint dd_present:1;
    GLuint ds_present:1;
-} wm_iz_table[IZ_BIT_MAX] =
+} wm_iz_table[BRW_WM_IZ_BIT_MAX] =
 {
  { P, 0, 0, 0, 0 },
  { P, 0, 0, 0, 0 },
@@ -117,8 +116,8 @@ static const struct {
 };
 
 /**
- * \param line_aa  AA_NEVER, AA_ALWAYS or AA_SOMETIMES
- * \param lookup  bitmask of IZ_* flags
+ * \param line_aa  BRW_WM_AA_NEVER, BRW_WM_AA_ALWAYS or BRW_WM_AA_SOMETIMES
+ * \param lookup  bitmask of BRW_WM_IZ_* flags
  */
 void fs_visitor::setup_fs_payload_gen4()
 {
@@ -129,7 +128,7 @@ void fs_visitor::setup_fs_payload_gen4()
    bool kill_stats_promoted_workaround = false;
    int lookup = key->iz_lookup;
 
-   assert(lookup < IZ_BIT_MAX);
+   assert(lookup < BRW_WM_IZ_BIT_MAX);
 
    /* Crazy workaround in the windowizer, which we need to track in
     * our register allocation and render target writes.  See the "If
@@ -137,7 +136,7 @@ void fs_visitor::setup_fs_payload_gen4()
     * Test Cases [Pre-DevGT] of the 3D Pipeline - Windower B-Spec.
     */
    if (key->stats_wm &&
-       (lookup & IZ_PS_KILL_ALPHATEST_BIT) &&
+       (lookup & BRW_WM_IZ_PS_KILL_ALPHATEST_BIT) &&
        wm_iz_table[lookup].mode == P) {
       kill_stats_promoted_workaround = true;
    }
@@ -153,10 +152,10 @@ void fs_visitor::setup_fs_payload_gen4()
    if (wm_iz_table[lookup].sd_to_rt || kill_stats_promoted_workaround)
       source_depth_to_render_target = true;
 
-   if (wm_iz_table[lookup].ds_present || key->line_aa != AA_NEVER) {
+   if (wm_iz_table[lookup].ds_present || key->line_aa != BRW_WM_AA_NEVER) {
       payload.aa_dest_stencil_reg = reg;
       runtime_check_aads_emit =
-         !wm_iz_table[lookup].ds_present && key->line_aa == AA_SOMETIMES;
+         !wm_iz_table[lookup].ds_present && key->line_aa == BRW_WM_AA_SOMETIMES;
       reg++;
    }
 

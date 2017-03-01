@@ -247,8 +247,30 @@ struct brw_gs_prog_key
    struct brw_sampler_prog_key_data tex;
 };
 
+/* A big lookup table is used to figure out which and how many
+ * additional regs will inserted before the main payload in the WM
+ * program execution.  These mainly relate to depth and stencil
+ * processing and the early-depth-test optimization.
+ */
+enum brw_wm_iz_bits {
+   BRW_WM_IZ_PS_KILL_ALPHATEST_BIT     = 0x1,
+   BRW_WM_IZ_PS_COMPUTES_DEPTH_BIT     = 0x2,
+   BRW_WM_IZ_DEPTH_WRITE_ENABLE_BIT    = 0x4,
+   BRW_WM_IZ_DEPTH_TEST_ENABLE_BIT     = 0x8,
+   BRW_WM_IZ_STENCIL_WRITE_ENABLE_BIT  = 0x10,
+   BRW_WM_IZ_STENCIL_TEST_ENABLE_BIT   = 0x20,
+   BRW_WM_IZ_BIT_MAX                   = 0x40
+};
+
+enum brw_wm_aa_enable {
+   BRW_WM_AA_NEVER,
+   BRW_WM_AA_SOMETIMES,
+   BRW_WM_AA_ALWAYS
+};
+
 /** The program key for Fragment/Pixel Shaders. */
 struct brw_wm_prog_key {
+   /* Some collection of BRW_WM_IZ_* */
    uint8_t iz_lookup;
    bool stats_wm:1;
    bool flat_shade:1;
@@ -257,7 +279,7 @@ struct brw_wm_prog_key {
    bool clamp_fragment_color:1;
    bool persample_interp:1;
    bool multisample_fbo:1;
-   unsigned line_aa:2;
+   enum brw_wm_aa_enable line_aa:2;
    bool high_quality_derivatives:1;
    bool force_dual_color_blend:1;
    bool coherent_fb_fetch:1;
