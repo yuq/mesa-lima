@@ -142,7 +142,7 @@ enum {
 };
 
 struct r600_query_hw_ops {
-	bool (*prepare_buffer)(struct r600_common_context *,
+	bool (*prepare_buffer)(struct r600_common_screen *,
 			       struct r600_query_hw *,
 			       struct r600_resource *);
 	void (*emit_start)(struct r600_common_context *,
@@ -187,7 +187,7 @@ struct r600_query_hw {
 	unsigned stream;
 };
 
-bool r600_query_hw_init(struct r600_common_context *rctx,
+bool r600_query_hw_init(struct r600_common_screen *rscreen,
 			struct r600_query_hw *query);
 void r600_query_hw_destroy(struct r600_common_context *rctx,
 			   struct r600_query *rquery);

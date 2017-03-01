@@ -115,7 +115,7 @@ static void r600_pc_query_destroy(struct r600_common_context *ctx,
 	r600_query_hw_destroy(ctx, rquery);
 }
 
-static bool r600_pc_query_prepare_buffer(struct r600_common_context *ctx,
+static bool r600_pc_query_prepare_buffer(struct r600_common_screen *screen,
 					 struct r600_query_hw *hwquery,
 					 struct r600_resource *buffer)
 {
@@ -417,7 +417,7 @@ struct pipe_query *r600_create_batch_query(struct pipe_context *ctx,
 			counter->qwords *= block->num_instances;
 	}
 
-	if (!r600_query_hw_init(rctx, &query->b))
+	if (!r600_query_hw_init(screen, &query->b))
 		goto error;
 
 	return (struct pipe_query *)query;
