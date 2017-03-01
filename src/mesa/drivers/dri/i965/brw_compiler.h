@@ -169,13 +169,25 @@ struct brw_sampler_prog_key_data {
    uint32_t yx_xuxv_image_mask;
 };
 
+/**
+ * The VF can't natively handle certain types of attributes, such as GL_FIXED
+ * or most 10_10_10_2 types.  These flags enable various VS workarounds to
+ * "fix" attributes at the beginning of shaders.
+ */
+#define BRW_ATTRIB_WA_COMPONENT_MASK    7  /* mask for GL_FIXED scale channel count */
+#define BRW_ATTRIB_WA_NORMALIZE     8   /* normalize in shader */
+#define BRW_ATTRIB_WA_BGRA          16  /* swap r/b channels in shader */
+#define BRW_ATTRIB_WA_SIGN          32  /* interpret as signed in shader */
+#define BRW_ATTRIB_WA_SCALE         64  /* interpret as scaled in shader */
 
 /** The program key for Vertex Shaders. */
 struct brw_vs_prog_key {
    unsigned program_string_id;
 
-   /*
+   /**
     * Per-attribute workaround flags
+    *
+    * For each attribute, a combination of BRW_ATTRIB_WA_*.
     */
    uint8_t gl_attrib_wa_flags[VERT_ATTRIB_MAX];
 

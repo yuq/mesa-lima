@@ -23,7 +23,6 @@
 
 #include "compiler/nir/nir_builder.h"
 #include "brw_nir.h"
-#include "brw_vs.h"
 
 /**
  * Prior to Haswell, the hardware can't natively support GL_FIXED or

@@ -36,17 +36,6 @@
 
 #include "brw_vec4.h"
 
-/**
- * The VF can't natively handle certain types of attributes, such as GL_FIXED
- * or most 10_10_10_2 types.  These flags enable various VS workarounds to
- * "fix" attributes at the beginning of shaders.
- */
-#define BRW_ATTRIB_WA_COMPONENT_MASK    7  /* mask for GL_FIXED scale channel count */
-#define BRW_ATTRIB_WA_NORMALIZE     8   /* normalize in shader */
-#define BRW_ATTRIB_WA_BGRA          16  /* swap r/b channels in shader */
-#define BRW_ATTRIB_WA_SIGN          32  /* interpret as signed in shader */
-#define BRW_ATTRIB_WA_SCALE         64  /* interpret as scaled in shader */
-
 #ifdef __cplusplus
 extern "C" {
 #endif
