@@ -344,6 +344,9 @@ struct brw_image_param {
    uint32_t swizzling[2];
 };
 
+/** Max number of render targets in a shader */
+#define BRW_MAX_DRAW_BUFFERS 8
+
 /**
  * Max number of binding table entries used for stream output.
  *
