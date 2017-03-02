@@ -2503,7 +2503,7 @@ bool nir_lower_clip_cull_distance_arrays(nir_shader *nir);
 
 void nir_lower_two_sided_color(nir_shader *shader);
 
-void nir_lower_clamp_color_outputs(nir_shader *shader);
+bool nir_lower_clamp_color_outputs(nir_shader *shader);
 
 void nir_lower_passthrough_edgeflags(nir_shader *shader);
 void nir_lower_tes_patch_vertices(nir_shader *tes, unsigned patch_vertices);
