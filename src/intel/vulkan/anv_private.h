@@ -67,9 +67,9 @@ struct gen_l3_config;
 #include <vulkan/vk_icd.h>
 
 #include "anv_entrypoints.h"
-#include "brw_context.h"
 #include "isl/isl.h"
 
+#include "common/gen_debug.h"
 #include "wsi_common.h"
 
 /* Allowing different clear colors requires us to perform a depth resolve at
