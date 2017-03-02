@@ -61,7 +61,6 @@ get_dummy_fragment_shader(void)
    const struct tgsi_token *tokens;
    struct ureg_src src;
    struct ureg_dst dst;
-   unsigned num_tokens;
 
    ureg = ureg_create(PIPE_SHADER_FRAGMENT);
    if (!ureg)
@@ -72,7 +71,7 @@ get_dummy_fragment_shader(void)
    ureg_MOV(ureg, dst, src);
    ureg_END(ureg);
 
-   tokens = ureg_get_tokens(ureg, &num_tokens);
+   tokens = ureg_get_tokens(ureg, NULL);
 
    ureg_destroy(ureg);
 
