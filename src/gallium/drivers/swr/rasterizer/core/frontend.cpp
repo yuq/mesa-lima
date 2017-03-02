@@ -815,7 +815,7 @@ static void GeometryShaderStage(
                                 {
                                     simdvector primIdAttrib[3];
                                     gsPa.Assemble(VERTEX_PRIMID_SLOT, primIdAttrib);
-                                    vPrimId = _simd_castps_si(primIdAttrib[0].x);
+                                    vPrimId = _simd_castps_si(primIdAttrib[state.frontendState.topologyProvokingVertex].x);
                                 }
                                 else
                                 {
