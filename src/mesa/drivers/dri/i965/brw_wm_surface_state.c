@@ -563,10 +563,10 @@ brw_update_texture_surface(struct gl_context *ctx,
       /* Implement gen6 and gen7 gather work-around */
       bool need_green_to_blue = false;
       if (for_gather) {
-         if (brw->gen == 7 && (format == BRW_SURFACEFORMAT_R32G32_FLOAT ||
-                               format == BRW_SURFACEFORMAT_R32G32_SINT ||
-                               format == BRW_SURFACEFORMAT_R32G32_UINT)) {
-            format = BRW_SURFACEFORMAT_R32G32_FLOAT_LD;
+         if (brw->gen == 7 && (format == ISL_FORMAT_R32G32_FLOAT ||
+                               format == ISL_FORMAT_R32G32_SINT ||
+                               format == ISL_FORMAT_R32G32_UINT)) {
+            format = ISL_FORMAT_R32G32_FLOAT_LD;
             need_green_to_blue = brw->is_haswell;
          } else if (brw->gen == 6) {
             /* Sandybridge's gather4 message is broken for integer formats.
@@ -577,19 +577,19 @@ brw_update_texture_surface(struct gl_context *ctx,
              * bits.
              */
             switch (format) {
-            case BRW_SURFACEFORMAT_R8_SINT:
-            case BRW_SURFACEFORMAT_R8_UINT:
-               format = BRW_SURFACEFORMAT_R8_UNORM;
+            case ISL_FORMAT_R8_SINT:
+            case ISL_FORMAT_R8_UINT:
+               format = ISL_FORMAT_R8_UNORM;
                break;
 
-            case BRW_SURFACEFORMAT_R16_SINT:
-            case BRW_SURFACEFORMAT_R16_UINT:
-               format = BRW_SURFACEFORMAT_R16_UNORM;
+            case ISL_FORMAT_R16_SINT:
+            case ISL_FORMAT_R16_UINT:
+               format = ISL_FORMAT_R16_UNORM;
                break;
 
-            case BRW_SURFACEFORMAT_R32_SINT:
-            case BRW_SURFACEFORMAT_R32_UINT:
-               format = BRW_SURFACEFORMAT_R32_FLOAT;
+            case ISL_FORMAT_R32_SINT:
+            case ISL_FORMAT_R32_UINT:
+               format = ISL_FORMAT_R32_FLOAT;
                break;
 
             default:
@@ -605,11 +605,11 @@ brw_update_texture_surface(struct gl_context *ctx,
          } else {
             mt = mt->stencil_mt;
          }
-         format = BRW_SURFACEFORMAT_R8_UINT;
+         format = ISL_FORMAT_R8_UINT;
       } else if (brw->gen <= 7 && mt->format == MESA_FORMAT_S_UINT8) {
          assert(mt->r8stencil_mt && !mt->r8stencil_needs_update);
          mt = mt->r8stencil_mt;
-         format = BRW_SURFACEFORMAT_R8_UINT;
+         format = ISL_FORMAT_R8_UINT;
       }
 
       const int surf_index = surf_offset - &brw->wm.base.surf_offset[0];
@@ -720,7 +720,7 @@ brw_create_constant_surface(struct brw_context *brw,
 			    uint32_t *out_offset)
 {
    brw_emit_buffer_surface_state(brw, out_offset, bo, offset,
-                                 BRW_SURFACEFORMAT_R32G32B32A32_FLOAT,
+                                 ISL_FORMAT_R32G32B32A32_FLOAT,
                                  size, 1, false);
 }
 
@@ -742,7 +742,7 @@ brw_create_buffer_surface(struct brw_context *brw,
     * with helper invocations, which cannot write to the buffer.
     */
    brw_emit_buffer_surface_state(brw, out_offset, bo, offset,
-                                 BRW_SURFACEFORMAT_RAW,
+                                 ISL_FORMAT_RAW,
                                  size, 1, true);
 }
 
@@ -797,16 +797,16 @@ brw_update_sol_surface(struct brw_context *brw,
 
    switch (num_vector_components) {
    case 1:
-      surface_format = BRW_SURFACEFORMAT_R32_FLOAT;
+      surface_format = ISL_FORMAT_R32_FLOAT;
       break;
    case 2:
-      surface_format = BRW_SURFACEFORMAT_R32G32_FLOAT;
+      surface_format = ISL_FORMAT_R32G32_FLOAT;
       break;
    case 3:
-      surface_format = BRW_SURFACEFORMAT_R32G32B32_FLOAT;
+      surface_format = ISL_FORMAT_R32G32B32_FLOAT;
       break;
    case 4:
-      surface_format = BRW_SURFACEFORMAT_R32G32B32A32_FLOAT;
+      surface_format = ISL_FORMAT_R32G32B32A32_FLOAT;
       break;
    default:
       unreachable("Invalid vector size for transform feedback output");
@@ -930,7 +930,7 @@ brw_emit_null_surface_state(struct brw_context *brw,
    }
 
    surf[0] = (surface_type << BRW_SURFACE_TYPE_SHIFT |
-	      BRW_SURFACEFORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT);
+	      ISL_FORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT);
    if (brw->gen < 6) {
       surf[0] |= (1 << BRW_SURFACE_WRITEDISABLE_R_SHIFT |
 		  1 << BRW_SURFACE_WRITEDISABLE_G_SHIFT |
@@ -1498,7 +1498,7 @@ brw_upload_abo_surfaces(struct brw_context *brw,
             brw, intel_bo, binding->Offset, intel_bo->Base.Size - binding->Offset);
 
          brw_emit_buffer_surface_state(brw, &surf_offsets[i], bo,
-                                       binding->Offset, BRW_SURFACEFORMAT_RAW,
+                                       binding->Offset, ISL_FORMAT_RAW,
                                        bo->size - binding->Offset, 1, true);
       }
 
@@ -1593,7 +1593,7 @@ get_image_format(struct brw_context *brw, mesa_format format, GLenum access)
       /* The hardware doesn't actually support a typed format that we can use
        * so we have to fall back to untyped read/write messages.
        */
-      return BRW_SURFACEFORMAT_RAW;
+      return ISL_FORMAT_RAW;
    }
 }
 
@@ -1709,7 +1709,7 @@ update_image_surface(struct brw_context *brw,
       if (obj->Target == GL_TEXTURE_BUFFER) {
          struct intel_buffer_object *intel_obj =
             intel_buffer_object(obj->BufferObject);
-         const unsigned texel_size = (format == BRW_SURFACEFORMAT_RAW ? 1 :
+         const unsigned texel_size = (format == ISL_FORMAT_RAW ? 1 :
                                       _mesa_get_format_bytes(u->_ActualFormat));
 
          brw_emit_buffer_surface_state(
@@ -1723,7 +1723,7 @@ update_image_surface(struct brw_context *brw,
          struct intel_texture_object *intel_obj = intel_texture_object(obj);
          struct intel_mipmap_tree *mt = intel_obj->mt;
 
-         if (format == BRW_SURFACEFORMAT_RAW) {
+         if (format == ISL_FORMAT_RAW) {
             brw_emit_buffer_surface_state(
                brw, surf_offset, mt->bo, mt->offset,
                format, mt->bo->size - mt->offset, 1 /* pitch */,
@@ -1867,7 +1867,7 @@ brw_upload_cs_work_groups_surface(struct brw_context *brw)
 
       brw_emit_buffer_surface_state(brw, surf_offset,
                                     bo, bo_offset,
-                                    BRW_SURFACEFORMAT_RAW,
+                                    ISL_FORMAT_RAW,
                                     3 * sizeof(GLuint), 1, true);
       brw->ctx.NewDriverState |= BRW_NEW_SURFACES;
    }

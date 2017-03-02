@@ -71,7 +71,7 @@ gen8_emit_null_surface_state(struct brw_context *brw,
    uint32_t *surf = gen8_allocate_surface_state(brw, out_offset, -1);
 
    surf[0] = BRW_SURFACE_NULL << BRW_SURFACE_TYPE_SHIFT |
-             BRW_SURFACEFORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |
+             ISL_FORMAT_B8G8R8A8_UNORM << BRW_SURFACE_FORMAT_SHIFT |
              GEN8_SURFACE_TILING_Y;
    surf[2] = SET_FIELD(width - 1, GEN7_SURFACE_WIDTH) |
              SET_FIELD(height - 1, GEN7_SURFACE_HEIGHT);

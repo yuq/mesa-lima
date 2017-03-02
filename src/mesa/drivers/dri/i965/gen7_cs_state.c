@@ -51,7 +51,7 @@ brw_upload_cs_state(struct brw_context *brw)
       brw_emit_buffer_surface_state(
          brw, &stage_state->surf_offset[
                  prog_data->binding_table.shader_time_start],
-         brw->shader_time.bo, 0, BRW_SURFACEFORMAT_RAW,
+         brw->shader_time.bo, 0, ISL_FORMAT_RAW,
          brw->shader_time.bo->size, 1, true);
    }
 
