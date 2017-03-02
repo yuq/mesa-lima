@@ -39,7 +39,7 @@ $(GENXML_GENERATED_FILES): genxml/gen_pack_header.py
 # prefer to generate our own name here, so it doesn't vary from
 # in/out-of-tree builds.
 
-$(GENXML_GENERATED_FILES): Makefile
+$(GENXML_GENERATED_FILES): Makefile.am
 
 .xml_xml.h:
 	$(MKDIR_GEN)
