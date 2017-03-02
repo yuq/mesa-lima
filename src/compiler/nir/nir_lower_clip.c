@@ -196,7 +196,7 @@ lower_clip_vs(nir_function_impl *impl, unsigned ucp_enables,
 /* ucp_enables is bitmask of enabled ucps.  Actual ucp values are
  * passed in to shader via user_clip_plane system-values
  */
-void
+bool
 nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
 {
    int clipvertex = -1;
@@ -206,7 +206,7 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
    nir_variable *out[2] = { NULL };
 
    if (!ucp_enables)
-      return;
+      return false;
 
    /* find clipvertex/position outputs: */
    nir_foreach_variable(var, &shader->outputs) {
@@ -231,7 +231,7 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
           * there should be no user-clip-planes to deal
           * with.
           */
-         return;
+         return false;
       }
    }
 
@@ -240,7 +240,7 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
    else if (position != -1)
       cv = find_output(shader, position);
    else
-      return;
+      return false;
 
    /* insert CLIPDIST outputs: */
    if (ucp_enables & 0x0f)
@@ -254,6 +254,8 @@ nir_lower_clip_vs(nir_shader *shader, unsigned ucp_enables)
       if (!strcmp(function->name, "main"))
          lower_clip_vs(function->impl, ucp_enables, cv, out);
    }
+
+   return true;
 }
 
 /*
