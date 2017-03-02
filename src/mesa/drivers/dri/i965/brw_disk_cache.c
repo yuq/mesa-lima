@@ -31,6 +31,7 @@
 
 #include "brw_context.h"
 #include "brw_program.h"
+#include "brw_cs.h"
 #include "brw_gs.h"
 #include "brw_state.h"
 #include "brw_vs.h"
@@ -137,6 +138,10 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
       brw_wm_populate_key(brw, &prog_key.wm);
       prog_key.wm.program_string_id = 0;
       break;
+   case MESA_SHADER_COMPUTE:
+      brw_cs_populate_key(brw, &prog_key.cs);
+      prog_key.cs.program_string_id = 0;
+      break;
    default:
       unreachable("Unsupported stage!");
    }
@@ -210,6 +215,11 @@ read_and_upload(struct brw_context *brw, struct disk_cache *cache,
       prog_key.wm.program_string_id = brw_program(prog)->id;
       cache_id = BRW_CACHE_FS_PROG;
       stage_state = &brw->wm.base;
+      break;
+   case MESA_SHADER_COMPUTE:
+      prog_key.cs.program_string_id = brw_program(prog)->id;
+      cache_id = BRW_CACHE_CS_PROG;
+      stage_state = &brw->cs.base;
       break;
    default:
       unreachable("Unsupported stage!");
@@ -288,7 +298,7 @@ write_program_data(struct brw_context *brw, struct gl_program *prog,
 }
 
 void
-brw_disk_cache_write_program(struct brw_context *brw)
+brw_disk_cache_write_render_programs(struct brw_context *brw)
 {
    struct disk_cache *cache = brw->ctx.Cache;
    if (cache == NULL)
@@ -348,5 +358,25 @@ brw_disk_cache_write_program(struct brw_context *brw)
       write_program_data(brw, prog, &wm_key, brw->wm.base.prog_data,
                          brw->wm.base.prog_offset, cache,
                          MESA_SHADER_FRAGMENT);
+   }
+}
+
+void
+brw_disk_cache_write_compute_program(struct brw_context *brw)
+{
+   struct disk_cache *cache = brw->ctx.Cache;
+   if (cache == NULL)
+      return;
+
+   struct gl_program *prog =
+      brw->ctx._Shader->CurrentProgram[MESA_SHADER_COMPUTE];
+   if (prog && !prog->program_written_to_cache) {
+      struct brw_cs_prog_key cs_key;
+      brw_cs_populate_key(brw, &cs_key);
+      cs_key.program_string_id = 0;
+
+      write_program_data(brw, prog, &cs_key, brw->cs.base.prog_data,
+                         brw->cs.base.prog_offset, cache,
+                         MESA_SHADER_COMPUTE);
    }
 }

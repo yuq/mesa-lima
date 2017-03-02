@@ -130,7 +130,7 @@ brw_codegen_cs_prog(struct brw_context *brw,
 }
 
 
-static void
+void
 brw_cs_populate_key(struct brw_context *brw, struct brw_cs_prog_key *key)
 {
    struct gl_context *ctx = &brw->ctx;
@@ -168,14 +168,20 @@ brw_upload_cs_prog(struct brw_context *brw)
 
    brw_cs_populate_key(brw, &key);
 
-   if (!brw_search_cache(&brw->cache, BRW_CACHE_CS_PROG,
-                         &key, sizeof(key),
-                         &brw->cs.base.prog_offset,
-                         &brw->cs.base.prog_data)) {
-      bool success = brw_codegen_cs_prog(brw, cp, &key);
-      (void) success;
-      assert(success);
-   }
+   if (brw_search_cache(&brw->cache, BRW_CACHE_CS_PROG,
+                        &key, sizeof(key),
+                        &brw->cs.base.prog_offset,
+                        &brw->cs.base.prog_data))
+      return;
+
+   if (brw_disk_cache_upload_program(brw, MESA_SHADER_COMPUTE))
+      return;
+
+   cp = (struct brw_program *) brw->programs[MESA_SHADER_COMPUTE];
+   cp->id = key.program_string_id;
+
+   MAYBE_UNUSED bool success = brw_codegen_cs_prog(brw, cp, &key);
+   assert(success);
 }
 
 

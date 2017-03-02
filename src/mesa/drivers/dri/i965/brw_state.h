@@ -134,7 +134,8 @@ void gen8_write_pma_stall_bits(struct brw_context *brw,
 /* brw_disk_cache.c */
 bool brw_disk_cache_upload_program(struct brw_context *brw,
                                    gl_shader_stage stage);
-void brw_disk_cache_write_program(struct brw_context *brw);
+void brw_disk_cache_write_compute_program(struct brw_context *brw);
+void brw_disk_cache_write_render_programs(struct brw_context *brw);
 
 /***********************************************************************
  * brw_state.c
