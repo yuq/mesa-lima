@@ -75,6 +75,11 @@ endif
 # include only conditionally ?
 SUBDIRS += compiler
 
+if HAVE_VULKAN_COMMON
+SUBDIRS += vulkan
+endif
+EXTRA_DIST += vulkan/registry/vk.xml
+
 if HAVE_AMD_DRIVERS
 SUBDIRS += amd
 endif
@@ -115,11 +120,6 @@ endif
 if HAVE_INTEL_DRIVERS
 SUBDIRS += intel/tools
 endif
-
-if HAVE_VULKAN_COMMON
-SUBDIRS += vulkan
-endif
-EXTRA_DIST += vulkan/registry/vk.xml
 
 ## Requires the i965 compiler (part of mesa) and wayland-drm
 if HAVE_INTEL_VULKAN
