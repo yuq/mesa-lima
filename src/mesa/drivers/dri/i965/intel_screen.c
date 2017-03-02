@@ -1654,14 +1654,14 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
       fprintf(stderr,
 	      "\nERROR!  DRI2 loader with getBuffersWithFormat() "
 	      "support required\n");
-      return false;
+      return NULL;
    }
 
    /* Allocate the private area */
    screen = rzalloc(NULL, struct intel_screen);
    if (!screen) {
       fprintf(stderr, "\nERROR!  Allocating private area failed\n");
-      return false;
+      return NULL;
    }
    /* parse information in __driConfigOptions */
    driParseOptionInfo(&screen->optionCache, brw_config_options.xml);
@@ -1670,11 +1670,11 @@ __DRIconfig **intelInitScreen2(__DRIscreen *dri_screen)
    dri_screen->driverPrivate = (void *) screen;
 
    if (!intel_init_bufmgr(screen))
-       return false;
+       return NULL;
 
    screen->deviceID = drm_intel_bufmgr_gem_get_devid(screen->bufmgr);
    if (!gen_get_device_info(screen->deviceID, &screen->devinfo))
-      return false;
+      return NULL;
 
    const struct gen_device_info *devinfo = &screen->devinfo;
 
