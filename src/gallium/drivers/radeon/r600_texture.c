@@ -1490,7 +1490,7 @@ static void *r600_texture_transfer_map(struct pipe_context *ctx,
 	trans = CALLOC_STRUCT(r600_transfer);
 	if (!trans)
 		return NULL;
-	trans->transfer.resource = texture;
+	pipe_resource_reference(&trans->transfer.resource, texture);
 	trans->transfer.level = level;
 	trans->transfer.usage = usage;
 	trans->transfer.box = *box;
@@ -1643,6 +1643,7 @@ static void r600_texture_transfer_unmap(struct pipe_context *ctx,
 		rctx->num_alloc_tex_transfer_bytes = 0;
 	}
 
+	pipe_resource_reference(&transfer->resource, NULL);
 	FREE(transfer);
 }
 
