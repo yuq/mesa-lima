@@ -2033,6 +2033,20 @@ if test "x$enable_opencl" = xyes; then
        AC_MSG_ERROR([Clover requires libelf])
     fi
 
+    if test "x${ac_cv_cxx_compiler_gnu}" = xyes; then
+        altivec_enabled=no
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+        #if !defined(__VEC__) || !defined(__ALTIVEC__)
+        #error "AltiVec not enabled"
+        #endif
+        ])], altivec_enabled=yes)
+
+        if test "$altivec_enabled" = yes; then
+            CLOVER_STD_OVERRIDE="-std=gnu++11"
+        fi
+        AC_SUBST([CLOVER_STD_OVERRIDE])
+    fi
+
     llvm_require_version $LLVM_REQUIRED_OPENCL "opencl"
 
     llvm_add_default_components "opencl"
