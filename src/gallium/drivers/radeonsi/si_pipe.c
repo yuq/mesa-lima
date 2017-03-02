@@ -138,7 +138,7 @@ si_create_llvm_target_machine(struct si_screen *sscreen)
 }
 
 static struct pipe_context *si_create_context(struct pipe_screen *screen,
-                                              void *priv, unsigned flags)
+                                              unsigned flags)
 {
 	struct si_context *sctx = CALLOC_STRUCT(si_context);
 	struct si_screen* sscreen = (struct si_screen *)screen;
@@ -318,6 +318,37 @@ fail:
 	fprintf(stderr, "radeonsi: Failed to create a context.\n");
 	si_destroy_context(&sctx->b.b);
 	return NULL;
+}
+
+static struct pipe_context *si_pipe_create_context(struct pipe_screen *screen,
+						   void *priv, unsigned flags)
+{
+	struct si_screen *sscreen = (struct si_screen *)screen;
+	struct pipe_context *ctx = si_create_context(screen, flags);
+
+	if (!(flags & PIPE_CONTEXT_PREFER_THREADED))
+		return ctx;
+
+	/* Clover (compute-only) is unsupported.
+	 *
+	 * Since the threaded context creates shader states from the non-driver
+	 * thread, asynchronous compilation is required for create_{shader}_-
+	 * state not to use pipe_context. Debug contexts (ddebug) disable
+	 * asynchronous compilation, so don't use the threaded context with
+	 * those.
+	 */
+	if (flags & (PIPE_CONTEXT_COMPUTE_ONLY | PIPE_CONTEXT_DEBUG))
+		return ctx;
+
+	/* When shaders are logged to stderr, asynchronous compilation is
+	 * disabled too. */
+	if (sscreen->b.debug_flags & (DBG_VS | DBG_TCS | DBG_TES | DBG_GS |
+				      DBG_PS | DBG_CS))
+		return ctx;
+
+	return threaded_context_create(ctx, &sscreen->b.pool_transfers,
+				       r600_replace_buffer_storage,
+				       &((struct si_context*)ctx)->b.tc);
 }
 
 /*
@@ -831,7 +862,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 	}
 
 	/* Set functions first. */
-	sscreen->b.b.context_create = si_create_context;
+	sscreen->b.b.context_create = si_pipe_create_context;
 	sscreen->b.b.destroy = si_destroy_screen;
 	sscreen->b.b.get_param = si_get_param;
 	sscreen->b.b.get_shader_param = si_get_shader_param;
@@ -922,7 +953,7 @@ struct pipe_screen *radeonsi_screen_create(struct radeon_winsys *ws)
 		sscreen->tm[i] = si_create_llvm_target_machine(sscreen);
 
 	/* Create the auxiliary context. This must be done last. */
-	sscreen->b.aux_context = sscreen->b.b.context_create(&sscreen->b.b, NULL, 0);
+	sscreen->b.aux_context = si_create_context(&sscreen->b.b, 0);
 
 	if (sscreen->b.debug_flags & DBG_TEST_DMA)
 		r600_test_dma(&sscreen->b);
