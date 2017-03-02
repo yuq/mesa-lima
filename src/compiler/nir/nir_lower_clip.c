@@ -292,18 +292,20 @@ lower_clip_fs(nir_function_impl *impl, unsigned ucp_enables,
          b.shader->info->fs.uses_discard = true;
       }
    }
+
+   nir_metadata_preserve(impl, nir_metadata_dominance);
 }
 
 /* insert conditional kill based on interpolated CLIPDIST
  */
-void
+bool
 nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables)
 {
    nir_variable *in[2];
    int maxloc = -1;
 
    if (!ucp_enables)
-      return;
+      return false;
 
    nir_foreach_variable(var, &shader->inputs) {
       int loc = var->data.driver_location;
@@ -332,4 +334,6 @@ nir_lower_clip_fs(nir_shader *shader, unsigned ucp_enables)
       if (!strcmp(function->name, "main"))
          lower_clip_fs(function->impl, ucp_enables, in);
    }
+
+   return true;
 }
