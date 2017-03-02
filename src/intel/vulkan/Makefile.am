@@ -63,12 +63,6 @@ AM_CPPFLAGS = \
 	-I$(top_builddir)/src/intel \
 	-I$(top_srcdir)/src/intel
 
-if HAVE_PLATFORM_WAYLAND
-AM_CPPFLAGS += \
-	-I$(top_builddir)/src/egl/wayland/wayland-drm \
-	-I$(top_srcdir)/src/egl/wayland/wayland-drm
-endif
-
 AM_CPPFLAGS += \
 	$(LIBDRM_CFLAGS) \
 	$(INTEL_CFLAGS) \
@@ -119,7 +113,6 @@ AM_CPPFLAGS += \
 VULKAN_SOURCES += $(VULKAN_WSI_WAYLAND_FILES)
 
 VULKAN_LIB_DEPS += \
-	$(top_builddir)/src/egl/wayland/wayland-drm/libwayland-drm.la \
 	$(WAYLAND_LIBS)
 endif
 
