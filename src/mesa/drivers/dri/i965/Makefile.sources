@@ -78,7 +78,7 @@ i965_compiler_FILES = \
 	brw_vec4_tes.h \
 	brw_vec4_visitor.cpp \
 	brw_vec4_vs_visitor.cpp \
-	brw_vec4_vs_visitor.h \
+	brw_vec4_vs.h \
 	brw_vue_map.c \
 	brw_wm_iz.cpp \
 	gen6_gs_visitor.cpp \
