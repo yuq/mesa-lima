@@ -610,6 +610,7 @@ bool r600_common_context_init(struct r600_common_context *rctx,
 			      unsigned context_flags)
 {
 	slab_create_child(&rctx->pool_transfers, &rscreen->pool_transfers);
+	slab_create_child(&rctx->pool_transfers_unsync, &rscreen->pool_transfers);
 
 	rctx->screen = rscreen;
 	rctx->ws = rscreen->ws;
@@ -713,6 +714,7 @@ void r600_common_context_cleanup(struct r600_common_context *rctx)
 		u_upload_destroy(rctx->b.const_uploader);
 
 	slab_destroy_child(&rctx->pool_transfers);
+	slab_destroy_child(&rctx->pool_transfers_unsync);
 
 	if (rctx->allocator_zeroed_memory) {
 		u_suballocator_destroy(rctx->allocator_zeroed_memory);

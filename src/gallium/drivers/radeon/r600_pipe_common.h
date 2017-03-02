@@ -555,6 +555,7 @@ struct r600_common_context {
 
 	struct u_suballocator		*allocator_zeroed_memory;
 	struct slab_child_pool		pool_transfers;
+	struct slab_child_pool		pool_transfers_unsync; /* for threaded_context */
 
 	/* Current unaccounted memory usage. */
 	uint64_t			vram;

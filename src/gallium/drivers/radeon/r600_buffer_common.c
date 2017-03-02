@@ -27,6 +27,7 @@
 #include "r600_cs.h"
 #include "util/u_memory.h"
 #include "util/u_upload_mgr.h"
+#include "util/u_threaded_context.h"
 #include <inttypes.h>
 #include <stdio.h>
 
@@ -292,7 +293,12 @@ static void *r600_buffer_get_transfer(struct pipe_context *ctx,
 				      unsigned offset)
 {
 	struct r600_common_context *rctx = (struct r600_common_context*)ctx;
-	struct r600_transfer *transfer = slab_alloc(&rctx->pool_transfers);
+	struct r600_transfer *transfer;
+
+	if (usage & TC_TRANSFER_MAP_THREADED_UNSYNC)
+		transfer = slab_alloc(&rctx->pool_transfers_unsync);
+	else
+		transfer = slab_alloc(&rctx->pool_transfers);
 
 	transfer->transfer.resource = NULL;
 	pipe_resource_reference(&transfer->transfer.resource, resource);
@@ -418,6 +424,7 @@ static void *r600_buffer_transfer_map(struct pipe_context *ctx,
 		 (rbuffer->flags & RADEON_FLAG_SPARSE)) {
 		struct r600_resource *staging;
 
+		assert(!(usage & TC_TRANSFER_MAP_THREADED_UNSYNC));
 		staging = (struct r600_resource*) pipe_buffer_create(
 				ctx->screen, 0, PIPE_USAGE_STAGING,
 				box->width + (box->x % R600_MAP_BUFFER_ALIGNMENT));
@@ -507,6 +514,9 @@ static void r600_buffer_transfer_unmap(struct pipe_context *ctx,
 		r600_resource_reference(&rtransfer->staging, NULL);
 
 	pipe_resource_reference(&transfer->resource, NULL);
+
+	/* Don't use pool_transfers_unsync. We are always in the driver
+	 * thread. */
 	slab_free(&rctx->pool_transfers, transfer);
 }
 
