@@ -162,7 +162,7 @@ struct BlendJit : public Builder
 
         switch (type)
         {
-        case SWR_TYPE_FLOAT:
+        default:
             break;
 
         case SWR_TYPE_UNORM:
@@ -179,7 +179,7 @@ struct BlendJit : public Builder
             src[3] = VMINPS(VMAXPS(src[3], VIMMED1(-1.0f)), VIMMED1(1.0f));
             break;
 
-        default: SWR_INVALID("Unsupport format type: %d", type);
+        case SWR_TYPE_UNKNOWN: SWR_INVALID("Unsupport format type: %d", type);
         }
     }
 
@@ -671,10 +671,13 @@ struct BlendJit : public Builder
                     continue;
                 }
 
-                if (info.bpc[i] >= 32) {
+                if (info.bpc[i] >= 32)
+                {
                     vMask[i] = VIMMED1(0xFFFFFFFF);
                     scale[i] = 0xFFFFFFFF;
-                } else {
+                }
+                else
+                {
                     vMask[i] = VIMMED1((1 << info.bpc[i]) - 1);
                     if (info.type[i] == SWR_TYPE_SNORM)
                         scale[i] = (1 << (info.bpc[i] - 1)) - 1;
@@ -682,10 +685,16 @@ struct BlendJit : public Builder
                         scale[i] = (1 << info.bpc[i]) - 1;
                 }
 
-                switch (info.type[i]) {
+                switch (info.type[i])
+                {
                 default:
-                    SWR_INVALID("Unsupported type for logic op\n");
-                    /* fallthrough */
+                    SWR_INVALID("Unsupported type for logic op: %d", info.type[i]);
+                    break;
+
+                case SWR_TYPE_UNKNOWN:
+                case SWR_TYPE_UNUSED:
+                    // fallthrough
+
                 case SWR_TYPE_UINT:
                 case SWR_TYPE_SINT:
                     src[i] = BITCAST(src[i], mSimdInt32Ty);
@@ -723,10 +732,16 @@ struct BlendJit : public Builder
                 // clear upper bits from PS output not in RT format after doing logic op
                 result[i] = AND(result[i], vMask[i]);
 
-                switch (info.type[i]) {
+                switch (info.type[i])
+                {
                 default:
-                    SWR_INVALID("Unsupported type for logic op\n");
-                    /* fallthrough */
+                    SWR_INVALID("Unsupported type for logic op: %d", info.type[i]);
+                    break;
+
+                case SWR_TYPE_UNKNOWN:
+                case SWR_TYPE_UNUSED:
+                    // fallthrough
+
                 case SWR_TYPE_UINT:
                 case SWR_TYPE_SINT:
                     result[i] = BITCAST(result[i], mSimdFP32Ty);
