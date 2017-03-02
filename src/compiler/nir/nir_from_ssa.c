@@ -32,7 +32,7 @@
 /*
  * This file implements an out-of-SSA pass as described in "Revisiting
  * Out-of-SSA Translation for Correctness, Code Quality, and Efficiency" by
- * Boissinot et. al.
+ * Boissinot et al.
  */
 
 struct from_ssa_state {
@@ -64,9 +64,9 @@ ssa_def_dominates(nir_ssa_def *a, nir_ssa_def *b)
 /* The following data structure, which I have named merge_set is a way of
  * representing a set registers of non-interfering registers.  This is
  * based on the concept of a "dominance forest" presented in "Fast Copy
- * Coalescing and Live-Range Identification" by Budimlic et. al. but the
+ * Coalescing and Live-Range Identification" by Budimlic et al. but the
  * implementation concept is taken from  "Revisiting Out-of-SSA Translation
- * for Correctness, Code Quality, and Efficiency" by Boissinot et. al..
+ * for Correctness, Code Quality, and Efficiency" by Boissinot et al.
  *
  * Each SSA definition is associated with a merge_node and the association
  * is represented by a combination of a hash table and the "def" parameter
@@ -177,7 +177,7 @@ merge_merge_sets(merge_set *a, merge_set *b)
  *
  * This is an implementation of Algorithm 2 in "Revisiting Out-of-SSA
  * Translation for Correctness, Code Quality, and Efficiency" by
- * Boissinot et. al.
+ * Boissinot et al.
  */
 static bool
 merge_sets_interfere(merge_set *a, merge_set *b)
@@ -561,7 +561,7 @@ emit_copy(nir_builder *b, nir_src src, nir_src dest_src)
 /* Resolves a single parallel copy operation into a sequence of movs
  *
  * This is based on Algorithm 1 from "Revisiting Out-of-SSA Translation for
- * Correctness, Code Quality, and Efficiency" by Boissinot et. al..
+ * Correctness, Code Quality, and Efficiency" by Boissinot et al.
  * However, I never got the algorithm to work as written, so this version
  * is slightly modified.
  *

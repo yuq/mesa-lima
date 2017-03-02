@@ -475,7 +475,7 @@ lower_copies_to_load_store(struct deref_node *node,
  *
  * This algorithm is very similar to the one outlined in "Efficiently
  * Computing Static Single Assignment Form and the Control Dependence
- * Graph" by Cytron et. al.  The primary difference is that we only put one
+ * Graph" by Cytron et al.  The primary difference is that we only put one
  * SSA def on the stack per block.
  */
 static bool
