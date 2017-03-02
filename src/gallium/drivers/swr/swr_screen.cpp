@@ -347,10 +347,12 @@ swr_get_shader_param(struct pipe_screen *screen,
                      unsigned shader,
                      enum pipe_shader_cap param)
 {
-   if (shader == PIPE_SHADER_VERTEX || shader == PIPE_SHADER_FRAGMENT)
+   if (shader == PIPE_SHADER_VERTEX ||
+       shader == PIPE_SHADER_FRAGMENT ||
+       shader == PIPE_SHADER_GEOMETRY)
       return gallivm_get_shader_param(param);
 
-   // Todo: geometry, tesselation, compute
+   // Todo: tesselation, compute
    return 0;
 }
 

@@ -48,6 +48,7 @@ struct ShaderVariant {
 
 typedef ShaderVariant<PFN_VERTEX_FUNC> VariantVS;
 typedef ShaderVariant<PFN_PIXEL_KERNEL> VariantFS;
+typedef ShaderVariant<PFN_GS_FUNC> VariantGS;
 
 /* skeleton */
 struct swr_vertex_shader {
@@ -65,6 +66,14 @@ struct swr_fragment_shader {
    uint32_t flatConstantMask;
    uint32_t pointSpriteMask;
    std::unordered_map<swr_jit_fs_key, std::unique_ptr<VariantFS>> map;
+};
+
+struct swr_geometry_shader {
+   struct pipe_shader_state pipe;
+   struct lp_tgsi_info info;
+   SWR_GS_STATE gsState;
+
+   std::unordered_map<swr_jit_gs_key, std::unique_ptr<VariantGS>> map;
 };
 
 /* Vertex element state */
@@ -321,4 +330,45 @@ swr_convert_target_type(const enum pipe_texture_target target)
       return SURFACE_NULL;
    }
 }
+
+/*
+ * Convert mesa PIPE_PRIM_X to SWR enum PRIMITIVE_TOPOLOGY
+ */
+static INLINE enum PRIMITIVE_TOPOLOGY
+swr_convert_prim_topology(const unsigned mode)
+{
+   switch (mode) {
+   case PIPE_PRIM_POINTS:
+      return TOP_POINT_LIST;
+   case PIPE_PRIM_LINES:
+      return TOP_LINE_LIST;
+   case PIPE_PRIM_LINE_LOOP:
+      return TOP_LINE_LOOP;
+   case PIPE_PRIM_LINE_STRIP:
+      return TOP_LINE_STRIP;
+   case PIPE_PRIM_TRIANGLES:
+      return TOP_TRIANGLE_LIST;
+   case PIPE_PRIM_TRIANGLE_STRIP:
+      return TOP_TRIANGLE_STRIP;
+   case PIPE_PRIM_TRIANGLE_FAN:
+      return TOP_TRIANGLE_FAN;
+   case PIPE_PRIM_QUADS:
+      return TOP_QUAD_LIST;
+   case PIPE_PRIM_QUAD_STRIP:
+      return TOP_QUAD_STRIP;
+   case PIPE_PRIM_POLYGON:
+      return TOP_TRIANGLE_FAN; /* XXX TOP_POLYGON; */
+   case PIPE_PRIM_LINES_ADJACENCY:
+      return TOP_LINE_LIST_ADJ;
+   case PIPE_PRIM_LINE_STRIP_ADJACENCY:
+      return TOP_LISTSTRIP_ADJ;
+   case PIPE_PRIM_TRIANGLES_ADJACENCY:
+      return TOP_TRI_LIST_ADJ;
+   case PIPE_PRIM_TRIANGLE_STRIP_ADJACENCY:
+      return TOP_TRI_STRIP_ADJ;
+   default:
+      assert(0 && "Unknown topology");
+      return TOP_UNKNOWN;
+   }
+};
 #endif

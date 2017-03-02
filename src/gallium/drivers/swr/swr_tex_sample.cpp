@@ -123,6 +123,9 @@ swr_texture_member(const struct lp_sampler_dynamic_state *base,
    case PIPE_SHADER_VERTEX:
       indices[1] = lp_build_const_int32(gallivm, swr_draw_context_texturesVS);
       break;
+   case PIPE_SHADER_GEOMETRY:
+      indices[1] = lp_build_const_int32(gallivm, swr_draw_context_texturesGS);
+      break;
    default:
       assert(0 && "unsupported shader type");
       break;
@@ -216,6 +219,9 @@ swr_sampler_member(const struct lp_sampler_dynamic_state *base,
       break;
    case PIPE_SHADER_VERTEX:
       indices[1] = lp_build_const_int32(gallivm, swr_draw_context_samplersVS);
+      break;
+   case PIPE_SHADER_GEOMETRY:
+      indices[1] = lp_build_const_int32(gallivm, swr_draw_context_samplersGS);
       break;
    default:
       assert(0 && "unsupported shader type");

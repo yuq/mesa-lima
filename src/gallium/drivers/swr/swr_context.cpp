@@ -307,7 +307,7 @@ swr_blit(struct pipe_context *pipe, const struct pipe_blit_info *blit_info)
    util_blitter_save_vertex_buffer_slot(ctx->blitter, ctx->vertex_buffer);
    util_blitter_save_vertex_elements(ctx->blitter, (void *)ctx->velems);
    util_blitter_save_vertex_shader(ctx->blitter, (void *)ctx->vs);
-   /*util_blitter_save_geometry_shader(ctx->blitter, (void*)ctx->gs);*/
+   util_blitter_save_geometry_shader(ctx->blitter, (void*)ctx->gs);
    util_blitter_save_so_targets(
       ctx->blitter,
       ctx->num_so_targets,

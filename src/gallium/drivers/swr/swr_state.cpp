@@ -416,6 +416,44 @@ swr_delete_fs_state(struct pipe_context *pipe, void *fs)
    swr_fence_work_delete_fs(screen->flush_fence, swr_fs);
 }
 
+static void *
+swr_create_gs_state(struct pipe_context *pipe,
+                    const struct pipe_shader_state *gs)
+{
+   struct swr_geometry_shader *swr_gs = new swr_geometry_shader;
+   if (!swr_gs)
+      return NULL;
+
+   swr_gs->pipe.tokens = tgsi_dup_tokens(gs->tokens);
+
+   lp_build_tgsi_info(gs->tokens, &swr_gs->info);
+
+   return swr_gs;
+}
+
+
+static void
+swr_bind_gs_state(struct pipe_context *pipe, void *gs)
+{
+   struct swr_context *ctx = swr_context(pipe);
+
+   if (ctx->gs == gs)
+      return;
+
+   ctx->gs = (swr_geometry_shader *)gs;
+   ctx->dirty |= SWR_NEW_GS;
+}
+
+static void
+swr_delete_gs_state(struct pipe_context *pipe, void *gs)
+{
+   struct swr_geometry_shader *swr_gs = (swr_geometry_shader *)gs;
+   FREE((void *)swr_gs->pipe.tokens);
+   struct swr_screen *screen = swr_screen(pipe->screen);
+
+   /* Defer deleton of fs state */
+   swr_fence_work_delete_gs(screen->flush_fence, swr_gs);
+}
 
 static void
 swr_set_constant_buffer(struct pipe_context *pipe,
@@ -432,10 +470,12 @@ swr_set_constant_buffer(struct pipe_context *pipe,
    /* note: reference counting */
    util_copy_constant_buffer(&ctx->constants[shader][index], cb);
 
-   if (shader == PIPE_SHADER_VERTEX || shader == PIPE_SHADER_GEOMETRY) {
+   if (shader == PIPE_SHADER_VERTEX) {
       ctx->dirty |= SWR_NEW_VSCONSTANTS;
    } else if (shader == PIPE_SHADER_FRAGMENT) {
       ctx->dirty |= SWR_NEW_FSCONSTANTS;
+   } else if (shader == PIPE_SHADER_GEOMETRY) {
+      ctx->dirty |= SWR_NEW_GSCONSTANTS;
    }
 
    if (cb && cb->user_buffer) {
@@ -798,6 +838,11 @@ swr_update_constants(struct swr_context *ctx, enum pipe_shader_type shaderType)
       constant = pDC->constantFS;
       num_constants = pDC->num_constantsFS;
       scratch = &ctx->scratch->fs_constants;
+      break;
+   case PIPE_SHADER_GEOMETRY:
+      constant = pDC->constantGS;
+      num_constants = pDC->num_constantsGS;
+      scratch = &ctx->scratch->gs_constants;
       break;
    default:
       debug_printf("Unsupported shader type constants\n");
@@ -1234,6 +1279,47 @@ swr_update_derived(struct pipe_context *pipe,
       }
    }
 
+   /* GeometryShader */
+   if (ctx->dirty & (SWR_NEW_GS |
+                     SWR_NEW_VS |
+                     SWR_NEW_SAMPLER |
+                     SWR_NEW_SAMPLER_VIEW)) {
+      if (ctx->gs) {
+         swr_jit_gs_key key;
+         swr_generate_gs_key(key, ctx, ctx->gs);
+         auto search = ctx->gs->map.find(key);
+         PFN_GS_FUNC func;
+         if (search != ctx->gs->map.end()) {
+            func = search->second->shader;
+         } else {
+            func = swr_compile_gs(ctx, key);
+         }
+         SwrSetGsFunc(ctx->swrContext, func);
+
+         /* JIT sampler state */
+         if (ctx->dirty & SWR_NEW_SAMPLER) {
+            swr_update_sampler_state(ctx,
+                                     PIPE_SHADER_GEOMETRY,
+                                     key.nr_samplers,
+                                     ctx->swrDC.samplersGS);
+         }
+
+         /* JIT sampler view state */
+         if (ctx->dirty & (SWR_NEW_SAMPLER_VIEW | SWR_NEW_FRAMEBUFFER)) {
+            swr_update_texture_state(ctx,
+                                     PIPE_SHADER_GEOMETRY,
+                                     key.nr_sampler_views,
+                                     ctx->swrDC.texturesGS);
+         }
+
+         SwrSetGsState(ctx->swrContext, &ctx->gs->gsState);
+      } else {
+         SWR_GS_STATE state = { 0 };
+         SwrSetGsState(ctx->swrContext, &state);
+         SwrSetGsFunc(ctx->swrContext, NULL);
+      }
+   }
+
    /* VertexShader */
    if (ctx->dirty & (SWR_NEW_VS |
                      SWR_NEW_RASTERIZER | // for clip planes
@@ -1271,6 +1357,7 @@ swr_update_derived(struct pipe_context *pipe,
    /* FragmentShader */
    if (ctx->dirty & (SWR_NEW_FS |
                      SWR_NEW_VS |
+                     SWR_NEW_GS |
                      SWR_NEW_RASTERIZER |
                      SWR_NEW_SAMPLER |
                      SWR_NEW_SAMPLER_VIEW |
@@ -1354,6 +1441,11 @@ swr_update_derived(struct pipe_context *pipe,
    /* FragmentShader Constants */
    if (ctx->dirty & SWR_NEW_FSCONSTANTS) {
       swr_update_constants(ctx, PIPE_SHADER_FRAGMENT);
+   }
+
+   /* GeometryShader Constants */
+   if (ctx->dirty & SWR_NEW_GSCONSTANTS) {
+      swr_update_constants(ctx, PIPE_SHADER_GEOMETRY);
    }
 
    /* Depth/stencil state */
@@ -1557,7 +1649,7 @@ swr_update_derived(struct pipe_context *pipe,
    // set up backend state
    SWR_BACKEND_STATE backendState = {0};
    backendState.numAttributes =
-      ctx->vs->info.base.num_outputs - 1 +
+      ((ctx->gs ? ctx->gs->info.base.num_outputs : ctx->vs->info.base.num_outputs) - 1) +
       (ctx->rasterizer->sprite_coord_enable ? 1 : 0);
    for (unsigned i = 0; i < backendState.numAttributes; i++)
       backendState.numComponents[i] = 4;
@@ -1664,6 +1756,10 @@ swr_state_init(struct pipe_context *pipe)
    pipe->create_fs_state = swr_create_fs_state;
    pipe->bind_fs_state = swr_bind_fs_state;
    pipe->delete_fs_state = swr_delete_fs_state;
+
+   pipe->create_gs_state = swr_create_gs_state;
+   pipe->bind_gs_state = swr_bind_gs_state;
+   pipe->delete_gs_state = swr_delete_gs_state;
 
    pipe->set_constant_buffer = swr_set_constant_buffer;
 
