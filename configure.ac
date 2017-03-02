@@ -2106,7 +2106,7 @@ PKG_CHECK_MODULES([WAYLAND_SCANNER], [wayland-scanner],
         WAYLAND_SCANNER=`$PKG_CONFIG --variable=wayland_scanner wayland-scanner`,
         WAYLAND_SCANNER='')
 if test "x$WAYLAND_SCANNER" = x; then
-    AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner])
+    AC_PATH_PROG([WAYLAND_SCANNER], [wayland-scanner], [:])
 fi
 
 # Do per-EGL platform setups and checks
@@ -2117,7 +2117,7 @@ for plat in $egl_platforms; do
 
 		PKG_CHECK_MODULES([WAYLAND], [wayland-client >= $WAYLAND_REQUIRED wayland-server >= $WAYLAND_REQUIRED])
 
-		if test "x$WAYLAND_SCANNER" = x; then
+		if test "x$WAYLAND_SCANNER" = "x:"; then
 			AC_MSG_ERROR([wayland-scanner is needed to compile the wayland egl platform])
 		fi
 		;;
