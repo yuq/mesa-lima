@@ -1496,8 +1496,6 @@ trace_context_buffer_subdata(struct pipe_context *_context,
    struct pipe_context *context = tr_context->pipe;
    struct pipe_box box;
 
-   assert(resource->screen == context->screen);
-
    trace_dump_call_begin("pipe_context", "buffer_subdata");
 
    trace_dump_arg(ptr, context);
@@ -1530,8 +1528,6 @@ trace_context_texture_subdata(struct pipe_context *_context,
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;
 
-   assert(resource->screen == context->screen);
-
    trace_dump_call_begin("pipe_context", "texture_subdata");
 
    trace_dump_arg(ptr, context);
@@ -1563,8 +1559,6 @@ trace_context_invalidate_resource(struct pipe_context *_context,
 {
    struct trace_context *tr_context = trace_context(_context);
    struct pipe_context *context = tr_context->pipe;
-
-   assert(resource->screen == context->screen);
 
    trace_dump_call_begin("pipe_context", "invalidate_resource");
 
