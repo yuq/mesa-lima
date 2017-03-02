@@ -3705,8 +3705,7 @@ nine_translate_shader(struct NineDevice9 *device, struct nine_shader_info *info,
         ureg_DECL_constant2D(tx->ureg, 0, 2, 4); /* Viewport data */
 
     if (debug_get_bool_option("NINE_TGSI_DUMP", FALSE)) {
-        unsigned count;
-        const struct tgsi_token *toks = ureg_get_tokens(tx->ureg, &count);
+        const struct tgsi_token *toks = ureg_get_tokens(tx->ureg, NULL);
         tgsi_dump(toks, 0);
         ureg_free_tokens(toks);
     }

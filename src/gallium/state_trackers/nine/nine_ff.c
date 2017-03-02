@@ -171,8 +171,7 @@ static void nine_ff_prune_ps(struct NineDevice9 *);
 static void nine_ureg_tgsi_dump(struct ureg_program *ureg, boolean override)
 {
     if (debug_get_bool_option("NINE_FF_DUMP", FALSE) || override) {
-        unsigned count;
-        const struct tgsi_token *toks = ureg_get_tokens(ureg, &count);
+        const struct tgsi_token *toks = ureg_get_tokens(ureg, NULL);
         tgsi_dump(toks, 0);
         ureg_free_tokens(toks);
     }
