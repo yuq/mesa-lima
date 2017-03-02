@@ -162,3 +162,68 @@ ISL_GEN9_FILES = \
 
 ISL_GENERATED_FILES = \
 	isl/isl_format_layout.c
+
+VULKAN_FILES := \
+	vulkan/anv_allocator.c \
+	vulkan/anv_batch_chain.c \
+	vulkan/anv_blorp.c \
+	vulkan/anv_cmd_buffer.c \
+	vulkan/anv_descriptor_set.c \
+	vulkan/anv_device.c \
+	vulkan/anv_dump.c \
+	vulkan/anv_formats.c \
+	vulkan/anv_genX.h \
+	vulkan/anv_image.c \
+	vulkan/anv_intel.c \
+	vulkan/anv_nir.h \
+	vulkan/anv_nir_apply_dynamic_offsets.c \
+	vulkan/anv_nir_apply_pipeline_layout.c \
+	vulkan/anv_nir_lower_input_attachments.c \
+	vulkan/anv_nir_lower_push_constants.c \
+	vulkan/anv_pass.c \
+	vulkan/anv_pipeline.c \
+	vulkan/anv_pipeline_cache.c \
+	vulkan/anv_private.h \
+	vulkan/anv_util.c \
+	vulkan/anv_wsi.c \
+	vulkan/vk_format_info.h
+
+VULKAN_WSI_WAYLAND_FILES := \
+	vulkan/anv_wsi_wayland.c
+
+VULKAN_WSI_X11_FILES := \
+	vulkan/anv_wsi_x11.c
+
+VULKAN_GEM_FILES := \
+	vulkan/anv_gem.c
+
+VULKAN_GEM_STUB_FILES := \
+	vulkan/anv_gem_stubs.c
+
+VULKAN_GENERATED_FILES := \
+	vulkan/anv_entrypoints.c \
+	vulkan/anv_entrypoints.h
+
+VULKAN_GENX_FILES := \
+	vulkan/genX_blorp_exec.c \
+	vulkan/genX_cmd_buffer.c \
+	vulkan/genX_gpu_memcpy.c \
+	vulkan/genX_pipeline.c \
+	vulkan/genX_query.c \
+	vulkan/genX_state.c
+
+VULKAN_GEN7_FILES := \
+	vulkan/gen7_cmd_buffer.c \
+	$(VULKAN_GENX_FILES)
+
+VULKAN_GEN75_FILES := \
+	vulkan/gen7_cmd_buffer.c \
+	$(VULKAN_GENX_FILES)
+
+VULKAN_GEN8_FILES := \
+	vulkan/gen8_cmd_buffer.c \
+	$(VULKAN_GENX_FILES)
+
+VULKAN_GEN9_FILES := \
+	vulkan/gen8_cmd_buffer.c \
+	$(VULKAN_GENX_FILES)

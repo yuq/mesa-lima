@@ -2687,7 +2687,6 @@ AC_CONFIG_FILES([Makefile
 		src/glx/windows/windowsdriproto.pc
 		src/gtest/Makefile
 		src/intel/Makefile
-		src/intel/vulkan/Makefile
 		src/loader/Makefile
 		src/mapi/Makefile
 		src/mapi/es1api/glesv1_cm.pc
