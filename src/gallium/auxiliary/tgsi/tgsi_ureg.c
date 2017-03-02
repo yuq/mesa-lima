@@ -2141,7 +2141,7 @@ const struct tgsi_token *ureg_get_tokens( struct ureg_program *ureg,
    tokens = &ureg->domain[DOMAIN_DECL].tokens[0].token;
 
    if (nr_tokens) 
-      *nr_tokens = ureg->domain[DOMAIN_DECL].size;
+      *nr_tokens = ureg->domain[DOMAIN_DECL].count;
 
    ureg->domain[DOMAIN_DECL].tokens = 0;
    ureg->domain[DOMAIN_DECL].size = 0;
