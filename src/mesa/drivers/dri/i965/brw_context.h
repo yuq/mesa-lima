@@ -576,7 +576,11 @@ enum brw_predicate_state {
    /* In this case whether to draw or not depends on the result of an
     * MI_PREDICATE command so the predicate enable bit needs to be checked.
     */
-   BRW_PREDICATE_STATE_USE_BIT
+   BRW_PREDICATE_STATE_USE_BIT,
+   /* In this case, either MI_PREDICATE doesn't exist or we lack the
+    * necessary kernel features to use it.  Stall for the query result.
+    */
+   BRW_PREDICATE_STATE_STALL_FOR_QUERY,
 };
 
 struct shader_times;
