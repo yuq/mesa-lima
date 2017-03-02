@@ -914,6 +914,39 @@ swr_update_derived(struct pipe_context *pipe,
    struct swr_context *ctx = swr_context(pipe);
    struct swr_screen *screen = swr_screen(pipe->screen);
 
+   /* When called from swr_clear (p_draw_info = null), set any null
+    * state-objects to the dummy state objects to prevent nullptr dereference
+    * in validation below.
+    *
+    * Important that this remains static for zero initialization.  These
+    * aren't meant to be proper state objects, just empty structs. They will
+    * not be written to.
+    *
+    * Shaders can't be part of the union since they contain std::unordered_map
+    */
+   static struct {
+      union {
+         struct pipe_rasterizer_state rasterizer;
+         struct pipe_depth_stencil_alpha_state depth_stencil;
+         struct swr_blend_state blend;
+      } state;
+      struct swr_vertex_shader vs;
+      struct swr_fragment_shader fs;
+   } swr_dummy;
+
+   if (!p_draw_info) {
+      if (!ctx->rasterizer)
+         ctx->rasterizer = &swr_dummy.state.rasterizer;
+      if (!ctx->depth_stencil)
+         ctx->depth_stencil = &swr_dummy.state.depth_stencil;
+      if (!ctx->blend)
+         ctx->blend = &swr_dummy.state.blend;
+      if (!ctx->vs)
+         ctx->vs = &swr_dummy.vs;
+      if (!ctx->fs)
+         ctx->fs = &swr_dummy.fs;
+   }
+
    /* Update screen->pipe to current pipe context. */
    if (screen->pipe != pipe)
       screen->pipe = pipe;
@@ -1236,8 +1269,12 @@ swr_update_derived(struct pipe_context *pipe,
    }
 
    /* FragmentShader */
-   if (ctx->dirty & (SWR_NEW_FS | SWR_NEW_SAMPLER | SWR_NEW_SAMPLER_VIEW
-                     | SWR_NEW_RASTERIZER | SWR_NEW_FRAMEBUFFER)) {
+   if (ctx->dirty & (SWR_NEW_FS |
+                     SWR_NEW_VS |
+                     SWR_NEW_RASTERIZER |
+                     SWR_NEW_SAMPLER |
+                     SWR_NEW_SAMPLER_VIEW |
+                     SWR_NEW_FRAMEBUFFER)) {
       swr_jit_fs_key key;
       swr_generate_fs_key(key, ctx, ctx->fs);
       auto search = ctx->fs->map.find(key);
@@ -1505,7 +1542,7 @@ swr_update_derived(struct pipe_context *pipe,
       }
    }
 
-   if (ctx->dirty & SWR_NEW_CLIP) {
+   if (ctx->dirty & (SWR_NEW_CLIP | SWR_NEW_RASTERIZER | SWR_NEW_VS)) {
       // shader exporting clip distances overrides all user clip planes
       if (ctx->rasterizer->clip_plane_enable &&
           !ctx->vs->info.base.num_written_clipdistance)

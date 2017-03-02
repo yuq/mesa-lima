@@ -366,6 +366,9 @@ BuilderSWR::CompileVS(struct swr_context *ctx, swr_jit_vs_key &key)
 PFN_VERTEX_FUNC
 swr_compile_vs(struct swr_context *ctx, swr_jit_vs_key &key)
 {
+   if (!ctx->vs->pipe.tokens)
+      return NULL;
+
    BuilderSWR builder(
       reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr),
       "VS");
@@ -726,6 +729,9 @@ BuilderSWR::CompileFS(struct swr_context *ctx, swr_jit_fs_key &key)
 PFN_PIXEL_KERNEL
 swr_compile_fs(struct swr_context *ctx, swr_jit_fs_key &key)
 {
+   if (!ctx->fs->pipe.tokens)
+      return NULL;
+
    BuilderSWR builder(
       reinterpret_cast<JitManager *>(swr_screen(ctx->pipe.screen)->hJitMgr),
       "FS");
