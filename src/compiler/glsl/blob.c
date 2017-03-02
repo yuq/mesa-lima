@@ -70,10 +70,13 @@ align_blob(struct blob *blob, size_t alignment)
 {
    const size_t new_size = ALIGN(blob->size, alignment);
 
-   if (! grow_to_fit (blob, new_size - blob->size))
-      return false;
+   if (blob->size < new_size) {
+      if (!grow_to_fit(blob, new_size - blob->size))
+         return false;
 
-   blob->size = new_size;
+      memset(blob->data + blob->size, 0, new_size - blob->size);
+      blob->size = new_size;
+   }
 
    return true;
 }
