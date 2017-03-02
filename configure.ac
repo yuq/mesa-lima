@@ -812,7 +812,7 @@ linux* | cygwin* | darwin* | solaris* | gnu*)
 esac
 
 if test "x$pthread_stubs_possible" = xyes; then
-    PKG_CHECK_MODULES(PTHREADSTUBS, pthread-stubs)
+    PKG_CHECK_MODULES(PTHREADSTUBS, pthread-stubs >= 0.4)
     AC_SUBST(PTHREADSTUBS_CFLAGS)
     AC_SUBST(PTHREADSTUBS_LIBS)
 fi
