@@ -801,9 +801,10 @@ if test "x$android" = xno; then
     test -z "$PTHREAD_LIBS" && PTHREAD_LIBS="-lpthread"
 fi
 
-dnl pthread-stubs is mandatory on targets where it exists
+dnl pthread-stubs is mandatory on BSD platforms, due to the nature of the
+dnl project. Even then there's a notable issue as described in the project README
 case "$host_os" in
-cygwin* )
+linux* | cygwin* | darwin* | solaris* | gnu*)
     pthread_stubs_possible="no"
     ;;
 * )
