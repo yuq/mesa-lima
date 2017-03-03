@@ -1,4 +1,5 @@
 # Copyright © 2017 Mauro Rossi <issor.oruam@gmail.com>
+# Copyright © 2017 Intel Corporation
 #
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
@@ -45,7 +46,7 @@ vulkan_api_xml = $(MESA_TOP)/src/vulkan/registry/vk.xml
 $(LOCAL_GENERATED_SOURCES): $(MESA_TOP)/src/vulkan/util/gen_enum_to_str.py $(vulkan_api_xml)
 	@echo "target Generated: $(PRIVATE_MODULE) <= $(notdir $(@))"
 	@mkdir -p $(dir $@)
-	$(hide) $(MESA_PYTHON2) $(MESA_TOP)/src/vulkan/util/gen_enum_to_str.py --xml $(vulkan_api_xml) --outdir $(intermediates)/util
+	$(hide) $(MESA_PYTHON2) $(MESA_TOP)/src/vulkan/util/gen_enum_to_str.py --xml $(vulkan_api_xml) --outdir $(dir $@)
 
 LOCAL_EXPORT_C_INCLUDE_DIRS := \
         $(intermediates)
