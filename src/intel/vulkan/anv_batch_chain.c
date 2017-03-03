@@ -222,8 +222,13 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
    size = other->next - other->start;
    assert(size % 4 == 0);
 
-   if (batch->next + size > batch->end)
-      batch->extend_cb(batch, batch->user_data);
+   if (batch->next + size > batch->end) {
+      VkResult result = batch->extend_cb(batch, batch->user_data);
+      if (result != VK_SUCCESS) {
+         anv_batch_set_error(batch, result);
+         return;
+      }
+   }
 
    assert(batch->next + size <= batch->end);
 
