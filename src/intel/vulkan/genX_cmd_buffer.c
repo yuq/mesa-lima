@@ -159,8 +159,11 @@ add_surface_state_reloc(struct anv_cmd_buffer *cmd_buffer,
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
 
-   anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                      state.offset + isl_dev->ss.addr_offset, bo, offset);
+   VkResult result =
+      anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
+                         state.offset + isl_dev->ss.addr_offset, bo, offset);
+   if (result != VK_SUCCESS)
+      anv_batch_set_error(&cmd_buffer->batch, result);
 }
 
 static void
@@ -171,9 +174,7 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
 {
    const struct isl_device *isl_dev = &cmd_buffer->device->isl_dev;
 
-   anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                      state.offset + isl_dev->ss.addr_offset,
-                      iview->bo, iview->offset);
+   add_surface_state_reloc(cmd_buffer, state, iview->bo, iview->offset);
 
    if (aux_usage != ISL_AUX_USAGE_NONE) {
       uint32_t aux_offset = iview->offset + iview->image->aux_surface.offset;
@@ -186,9 +187,13 @@ add_image_view_relocs(struct anv_cmd_buffer *cmd_buffer,
       uint32_t *aux_addr_dw = state.map + isl_dev->ss.aux_addr_offset;
       aux_offset += *aux_addr_dw & 0xfff;
 
-      anv_reloc_list_add(&cmd_buffer->surface_relocs, &cmd_buffer->pool->alloc,
-                         state.offset + isl_dev->ss.aux_addr_offset,
-                         iview->bo, aux_offset);
+      VkResult result =
+         anv_reloc_list_add(&cmd_buffer->surface_relocs,
+                            &cmd_buffer->pool->alloc,
+                            state.offset + isl_dev->ss.aux_addr_offset,
+                            iview->bo, aux_offset);
+      if (result != VK_SUCCESS)
+         anv_batch_set_error(&cmd_buffer->batch, result);
    }
 }
 

@@ -140,7 +140,7 @@ anv_reloc_list_grow(struct anv_reloc_list *list,
    return VK_SUCCESS;
 }
 
-uint64_t
+VkResult
 anv_reloc_list_add(struct anv_reloc_list *list,
                    const VkAllocationCallbacks *alloc,
                    uint32_t offset, struct anv_bo *target_bo, uint32_t delta)
@@ -151,8 +151,9 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    const uint32_t domain =
       target_bo->is_winsys_bo ? I915_GEM_DOMAIN_RENDER : 0;
 
-   anv_reloc_list_grow(list, alloc, 1);
-   /* TODO: Handle failure */
+   VkResult result = anv_reloc_list_grow(list, alloc, 1);
+   if (result != VK_SUCCESS)
+      return result;
 
    /* XXX: Can we use I915_EXEC_HANDLE_LUT? */
    index = list->num_relocs++;
@@ -166,16 +167,17 @@ anv_reloc_list_add(struct anv_reloc_list *list,
    entry->write_domain = domain;
    VG(VALGRIND_CHECK_MEM_IS_DEFINED(entry, sizeof(*entry)));
 
-   return target_bo->offset + delta;
+   return VK_SUCCESS;
 }
 
-static void
+static VkResult
 anv_reloc_list_append(struct anv_reloc_list *list,
                       const VkAllocationCallbacks *alloc,
                       struct anv_reloc_list *other, uint32_t offset)
 {
-   anv_reloc_list_grow(list, alloc, other->num_relocs);
-   /* TODO: Handle failure */
+   VkResult result = anv_reloc_list_grow(list, alloc, other->num_relocs);
+   if (result != VK_SUCCESS)
+      return result;
 
    memcpy(&list->relocs[list->num_relocs], &other->relocs[0],
           other->num_relocs * sizeof(other->relocs[0]));
@@ -186,6 +188,7 @@ anv_reloc_list_append(struct anv_reloc_list *list,
       list->relocs[i + list->num_relocs].offset += offset;
 
    list->num_relocs += other->num_relocs;
+   return VK_SUCCESS;
 }
 
 /*-----------------------------------------------------------------------*
@@ -215,8 +218,14 @@ uint64_t
 anv_batch_emit_reloc(struct anv_batch *batch,
                      void *location, struct anv_bo *bo, uint32_t delta)
 {
-   return anv_reloc_list_add(batch->relocs, batch->alloc,
-                             location - batch->start, bo, delta);
+   VkResult result = anv_reloc_list_add(batch->relocs, batch->alloc,
+                                        location - batch->start, bo, delta);
+   if (result != VK_SUCCESS) {
+      anv_batch_set_error(batch, result);
+      return 0;
+   }
+
+   return bo->offset + delta;
 }
 
 void
@@ -241,8 +250,12 @@ anv_batch_emit_batch(struct anv_batch *batch, struct anv_batch *other)
    memcpy(batch->next, other->start, size);
 
    offset = batch->next - batch->start;
-   anv_reloc_list_append(batch->relocs, batch->alloc,
-                         other->relocs, offset);
+   VkResult result = anv_reloc_list_append(batch->relocs, batch->alloc,
+                                           other->relocs, offset);
+   if (result != VK_SUCCESS) {
+      anv_batch_set_error(batch, result);
+      return;
+   }
 
    batch->next += size;
 }
