@@ -695,6 +695,24 @@ brw_update_buffer_texture_surface(struct gl_context *ctx,
       bo = intel_bufferobj_buffer(brw, intel_obj, tObj->BufferOffset, size);
    }
 
+   /* The ARB_texture_buffer_specification says:
+    *
+    *    "The number of texels in the buffer texture's texel array is given by
+    *
+    *       floor(<buffer_size> / (<components> * sizeof(<base_type>)),
+    *
+    *     where <buffer_size> is the size of the buffer object, in basic
+    *     machine units and <components> and <base_type> are the element count
+    *     and base data type for elements, as specified in Table X.1.  The
+    *     number of texels in the texel array is then clamped to the
+    *     implementation-dependent limit MAX_TEXTURE_BUFFER_SIZE_ARB."
+    *
+    * We need to clamp the size in bytes to MAX_TEXTURE_BUFFER_SIZE * stride,
+    * so that when ISL divides by stride to obtain the number of texels, that
+    * texel count is clamped to MAX_TEXTURE_BUFFER_SIZE.
+    */
+   size = MIN2(size, ctx->Const.MaxTextureBufferSize * (unsigned) texel_size);
+
    if (brw_format == 0 && format != MESA_FORMAT_RGBA_FLOAT32) {
       _mesa_problem(NULL, "bad format %s for texture buffer\n",
 		    _mesa_get_format_name(format));
