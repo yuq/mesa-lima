@@ -1568,7 +1568,8 @@ vtn_handle_texture(struct vtn_builder *b, SpvOp opcode,
          coord_components++;
 
       coord = vtn_ssa_value(b, w[idx++])->def;
-      p->src = nir_src_for_ssa(coord);
+      p->src = nir_src_for_ssa(nir_channels(&b->nb, coord,
+                                            (1 << coord_components) - 1));
       p->src_type = nir_tex_src_coord;
       p++;
       break;
