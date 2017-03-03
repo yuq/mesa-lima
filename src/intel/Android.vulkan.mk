@@ -179,8 +179,11 @@ LOCAL_WHOLE_STATIC_LIBRARIES := \
 
 LOCAL_GENERATED_SOURCES += $(intermediates)/vulkan/anv_entrypoints.c
 
-$(intermediates)/vulkan/anv_entrypoints.c:
-	$(VK_ENTRYPOINTS_SCRIPT) code $@ --xml $(MESA_TOP)/src/vulkan/registry/vk.xml
+$(intermediates)/vulknan/anv_entrypoints.c:
+	$(VK_ENTRYPOINTS_SCRIPT) \
+		--xml $(MESA_TOP)/src/vulkan/registry/vk.xml \
+		--outdir $(intermediates)/vulkan
+$(intermediates)/vulkan/anv_entrypoints.h: $(intermediates)/vulkan/anv_entrypoints.c
 
 LOCAL_SHARED_LIBRARIES := libdrm_intel
 

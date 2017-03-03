@@ -354,10 +354,9 @@ def gen_code(entrypoints):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('target', choices=['header', 'code'],
-                        help='Which file to generate.')
-    parser.add_argument('file', help='Where to write the file.')
-    parser.add_argument('--xml', help='Vulkan API XML file.')
+    parser.add_argument('--outdir', help='Where to write the files.',
+                        required=True)
+    parser.add_argument('--xml', help='Vulkan API XML file.', required=True)
     args = parser.parse_args()
 
     doc = et.parse(args.xml)
@@ -375,13 +374,11 @@ def main():
 
     # For outputting entrypoints.h we generate a anv_EntryPoint() prototype
     # per entry point.
-    if args.target == 'header':
-        with open(args.file, 'wb') as f:
-            f.write(TEMPLATE_H.render(entrypoints=entrypoints,
-                                      filename=os.path.basename(__file__)))
-    else:
-        with open(args.file, 'wb') as f:
-            f.write(gen_code(entrypoints))
+    with open(os.path.join(args.outdir, 'anv_entrypoints.h'), 'wb') as f:
+        f.write(TEMPLATE_H.render(entrypoints=entrypoints,
+                                  filename=os.path.basename(__file__)))
+    with open(os.path.join(args.outdir, 'anv_entrypoints.c'), 'wb') as f:
+        f.write(gen_code(entrypoints))
 
 
 if __name__ == '__main__':
