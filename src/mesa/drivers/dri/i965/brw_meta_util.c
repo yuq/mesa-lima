@@ -288,7 +288,7 @@ brw_is_color_fast_clear_compatible(struct brw_context *brw,
     * this case. At least on Gen9 this really does seem to cause problems.
     */
    if (brw->gen >= 9 &&
-       brw_format_for_mesa_format(mt->format) !=
+       brw_isl_format_for_mesa_format(mt->format) !=
        brw->render_target_format[mt->format])
       return false;
 

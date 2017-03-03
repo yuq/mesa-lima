@@ -29,7 +29,7 @@
 #include "brw_defines.h"
 
 uint32_t
-brw_format_for_mesa_format(mesa_format mesa_format)
+brw_isl_format_for_mesa_format(mesa_format mesa_format)
 {
    /* This table is ordered according to the enum ordering in formats.h.  We do
     * expect that enum to be extended without our explicit initialization
@@ -303,7 +303,7 @@ brw_init_surface_formats(struct brw_context *brw)
       uint32_t texture, render;
       bool is_integer = _mesa_is_format_integer_color(format);
 
-      render = texture = brw_format_for_mesa_format(format);
+      render = texture = brw_isl_format_for_mesa_format(format);
 
       /* The value of ISL_FORMAT_R32G32B32A32_FLOAT is 0, so don't skip
        * it.
@@ -536,7 +536,7 @@ translate_tex_format(struct brw_context *brw,
       return ISL_FORMAT_R32_FLOAT_X8X24_TYPELESS;
 
    case MESA_FORMAT_RGBA_FLOAT32:
-      /* The value of this BRW_SURFACEFORMAT is 0, which tricks the
+      /* The value of this ISL surface format is 0, which tricks the
        * assertion below.
        */
       return ISL_FORMAT_R32G32B32A32_FLOAT;
@@ -550,7 +550,7 @@ translate_tex_format(struct brw_context *brw,
          WARN_ONCE(true, "Demoting sRGB DXT1 texture to non-sRGB\n");
          mesa_format = MESA_FORMAT_RGB_DXT1;
       }
-      return brw_format_for_mesa_format(mesa_format);
+      return brw_isl_format_for_mesa_format(mesa_format);
 
    case MESA_FORMAT_RGBA_ASTC_4x4:
    case MESA_FORMAT_RGBA_ASTC_5x4:
@@ -566,7 +566,7 @@ translate_tex_format(struct brw_context *brw,
    case MESA_FORMAT_RGBA_ASTC_10x10:
    case MESA_FORMAT_RGBA_ASTC_12x10:
    case MESA_FORMAT_RGBA_ASTC_12x12: {
-      GLuint brw_fmt = brw_format_for_mesa_format(mesa_format);
+      GLuint brw_fmt = brw_isl_format_for_mesa_format(mesa_format);
 
       /**
        * It is possible to process these formats using the LDR Profile
@@ -583,8 +583,8 @@ translate_tex_format(struct brw_context *brw,
    }
 
    default:
-      assert(brw_format_for_mesa_format(mesa_format) != 0);
-      return brw_format_for_mesa_format(mesa_format);
+      assert(brw_isl_format_for_mesa_format(mesa_format) != 0);
+      return brw_isl_format_for_mesa_format(mesa_format);
    }
 }
 

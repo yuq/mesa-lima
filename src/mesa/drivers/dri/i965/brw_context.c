@@ -205,7 +205,7 @@ intel_texture_view_requires_resolve(struct brw_context *brw,
        !intel_miptree_is_lossless_compressed(brw, intel_tex->mt))
      return false;
 
-   const uint32_t brw_format = brw_format_for_mesa_format(intel_tex->_Format);
+   const uint32_t brw_format = brw_isl_format_for_mesa_format(intel_tex->_Format);
 
    if (isl_format_supports_ccs_e(&brw->screen->devinfo, brw_format))
       return false;

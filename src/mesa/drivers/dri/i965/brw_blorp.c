@@ -294,7 +294,7 @@ brw_blorp_to_isl_format(struct brw_context *brw, mesa_format format,
          assert(brw->format_supported_as_render_target[format]);
          return brw->render_target_format[format];
       } else {
-         return brw_format_for_mesa_format(format);
+         return brw_isl_format_for_mesa_format(format);
       }
       break;
    }
