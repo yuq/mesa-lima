@@ -195,8 +195,13 @@ anv_reloc_list_append(struct anv_reloc_list *list,
 void *
 anv_batch_emit_dwords(struct anv_batch *batch, int num_dwords)
 {
-   if (batch->next + num_dwords * 4 > batch->end)
-      batch->extend_cb(batch, batch->user_data);
+   if (batch->next + num_dwords * 4 > batch->end) {
+      VkResult result = batch->extend_cb(batch, batch->user_data);
+      if (result != VK_SUCCESS) {
+         anv_batch_set_error(batch, result);
+         return NULL;
+      }
+   }
 
    void *p = batch->next;
 
